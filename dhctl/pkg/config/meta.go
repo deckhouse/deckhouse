@@ -1434,9 +1434,8 @@ func (m *MetaConfig) effectiveDefaultCRI() string {
 }
 
 // The document lands in ResourcesYAML whenever its module is absent from the installer's modules
-// dir. Unpacking the provider bundle does not move it back: LoadProviderDir accepts only the names
-// in schemaFileNames, which does not include config-values.yaml. An already-parsed ModuleConfig
-// wins, it went through validation.
+// dir, and unpacking the bundle does not move it back: LoadProviderDir accepts only the names in
+// schemaFileNames. An already-parsed ModuleConfig wins, it went through validation.
 func (m *MetaConfig) recoverExternalProviderModuleConfig() error {
 	if m.ProviderName == "" || m.ResourcesYAML == "" {
 		return nil

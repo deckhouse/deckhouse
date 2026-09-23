@@ -53,14 +53,9 @@ func clusterSaysNothing(err error) bool {
 		apierrors.IsForbidden(err) || apierrors.IsUnauthorized(err)
 }
 
-// Answers from the Module object, never from a ModuleConfig. While the module ships inside the
+// Answers from the Module object, never from a ModuleConfig: while the module ships inside the
 // deckhouse image the controller rewrites properties.source back to the Embedded sentinel on every
-// moduleloader start and stages ModuleReleases without activating them, so Embedded is the truth
-// about what the cluster runs, not a stale answer. It stops being forced in the same build that
-// drops the chart - the build the bootstrap path reads too, so the two stay in step.
-//
-// The modules directory the bootstrap path reads says nothing here: an out-of-cluster caller holds
-// the installer's own tree, not the cluster's.
+// moduleloader start, so Embedded is the truth about what the cluster runs, not a stale answer.
 func moduleDocsFromCluster(ctx context.Context, kubeCl *client.KubernetesClient, provider string, inCluster bool) (*ModuleDocs, error) {
 	moduleName := CloudProviderModuleName(provider)
 	md := &ModuleDocs{ImageTags: map[string]string{}, ProviderConfigs: map[string]*ModuleConfig{}}
@@ -191,9 +186,8 @@ func moduleVersionTag(version string) string {
 }
 
 // registry.d8-system.svc only resolves inside the cluster, yet the built-in "deckhouse"
-// ModuleSource is templated from exactly that address in Direct/Proxy mode. The upstream registry
-// serves the same content at a reachable host under the same path. Mirrors the preference
-// GetRegistryDataPreferUpstream applies to the candi download.
+// ModuleSource is templated from that address in Direct/Proxy mode. The upstream registry serves
+// the same content at a reachable host under the same path, as GetRegistryDataPreferUpstream does.
 func useUpstreamRegistry(ctx context.Context, kubeCl *client.KubernetesClient, src *ModuleSource, inCluster bool) error {
 	repo := src.Spec.Registry.Repo
 	if inCluster || !strings.HasPrefix(repo, registry_const.Host) {

@@ -226,12 +226,9 @@ func (md *ModuleDocs) providerModulePinned(moduleName string) bool {
 	return md.providerSource(moduleName) != "" || md.ImageTags[moduleName] != ""
 }
 
-// A bare ModuleConfig means external only for a module absent from this image, because a bare
-// ModuleConfig is also the only legal shape for a module that is present: the admission webhook
-// rejects a spec.source outside the Module's availableSources, and an embedded module has none.
-// Anchoring on images_digests.json instead would ignore the ModuleConfig for the whole migration
-// window, since a still-shipped module keeps its section there. See
-// dhctl/CLOUD_PROVIDER_MODULE_MIGRATION.md.
+// A bare ModuleConfig means external only for a module absent from this image: the admission
+// webhook rejects a spec.source outside the Module's availableSources, and an embedded module has
+// none. See dhctl/CLOUD_PROVIDER_MODULE_MIGRATION.md.
 func (md *ModuleDocs) providerIsExternal(provider string, globalOptions *options.GlobalOptions) bool {
 	moduleName := CloudProviderModuleName(provider)
 
@@ -305,10 +302,9 @@ func configModuleDocs(docs []string) providerModuleLookup {
 	}
 }
 
-// Resolves through the module chain: release image gives the version, module image gives
-// images_digests.json, its terraformManager entry gives the bundle. Once found is true a registry
-// failure must NOT fall back to the embedded digests - validating a configuration against this
-// installer's stale provider schema is worse than refusing to run.
+// Walks the module chain: release image gives the version, module image gives images_digests.json,
+// its terraformManager entry gives the bundle. Once found is true a registry failure must NOT fall
+// back to the embedded digests: a stale provider schema is worse than refusing to run.
 func resolveModuleProviderBundle(ctx context.Context, provider string, lookup providerModuleLookup, globalOptions *options.GlobalOptions) (providerBundleRef, bool, error) {
 	if lookup == nil {
 		return providerBundleRef{}, false, nil
@@ -337,23 +333,9 @@ func resolveModuleProviderBundle(ctx context.Context, provider string, lookup pr
 	}
 	svc := catalog.Module(moduleName)
 
-	// The controller pulls exactly <repo>/<module>:<imageTag> for an override: no release image,
-	// no version.json, no "v" prefix.
-	moduleTag := md.ImageTags[moduleName]
-	if moduleTag == "" {
-		tag := md.releaseChannelTag()
-
-		rel, err := svc.Releases().Fetch(ctx, tag)
-		if err != nil {
-			return providerBundleRef{}, true, fmt.Errorf("resolve %s/release:%s: %w%s", moduleRepo, tag, err, repoHint(err, provider, md.providerSource(moduleName)))
-		}
-
-		version, err := rel.Version()
-		if err != nil {
-			return providerBundleRef{}, true, fmt.Errorf("resolve %s/release:%s: %w", moduleRepo, tag, err)
-		}
-
-		moduleTag = moduleImageTag(version)
+	moduleTag, err := md.moduleTag(ctx, svc, moduleName, moduleRepo, provider)
+	if err != nil {
+		return providerBundleRef{}, true, err
 	}
 
 	bundle, err := svc.Fetch(ctx, moduleTag)
@@ -378,15 +360,32 @@ func resolveModuleProviderBundle(ctx context.Context, provider string, lookup pr
 	}, true, nil
 }
 
+// Which image of the module to read. The controller pulls exactly <repo>/<module>:<imageTag> for
+// an override: no release image, no version.json, no "v" prefix. Without one the release channel
+// names a release image, and its version.json names the module image.
+func (md *ModuleDocs) moduleTag(ctx context.Context, svc *module.Service, moduleName, moduleRepo, provider string) (string, error) {
+	if tag := md.ImageTags[moduleName]; tag != "" {
+		return tag, nil
+	}
+
+	channel := md.releaseChannelTag()
+
+	rel, err := svc.Releases().Fetch(ctx, channel)
+	if err != nil {
+		return "", fmt.Errorf("resolve %s/release:%s: %w%s", moduleRepo, channel, err, repoHint(err, provider, md.providerSource(moduleName)))
+	}
+
+	version, err := rel.Version()
+	if err != nil {
+		return "", fmt.Errorf("resolve %s/release:%s: %w", moduleRepo, channel, err)
+	}
+
+	return moduleImageTag(version), nil
+}
+
 // Nothing in an installer distinguishes "this edition does not carry the provider" from "the
-// provider is published outside this repository", so a 404 gets both readings. A named source
-// needs none - the operator wrote the address that failed.
-// A named source needs none - the operator wrote the address that failed. A denial gets none
-// either: a token-auth registry answers the same way for a target outside the identity's scope
-// whether or not it exists, and the wrapped error already says access was denied.
-//
-// ErrRepositoryNotFound wraps ErrImageNotFound, so one errors.Is covers a missing repository and a
-// missing tag alike.
+// provider is published outside this repository", so a 404 gets both readings; a named source or a
+// denial gets none. ErrRepositoryNotFound wraps ErrImageNotFound, so one errors.Is covers both.
 func repoHint(err error, provider, sourceName string) string {
 	if sourceName != "" || !errors.Is(err, registry.ErrImageNotFound) {
 		return ""
@@ -418,13 +417,9 @@ func (md *ModuleDocs) moduleRepo(moduleName, sourceName string) (string, *image.
 	return path.Join(conf.GetRegistry(), modulesRepoSuffix), conf, nil
 }
 
-// moduleImageTag turns a release version into the module image tag the way the controller builds
-// it: "v" plus the version. The version stays opaque - a dev build ships {"version": "mr1"} - so
-// the only safe thing is to avoid doubling a prefix that is already there.
-//
-// This is not moduleVersionTag: that one guards a raw ModulePullOverride imageTag, which reaches
-// it through properties.version and must be left alone. A version read out of version.json is
-// always prefixed.
+// The module image tag the controller builds from a release version: "v" plus the version. Not
+// moduleVersionTag - that one guards a raw ModulePullOverride imageTag ("mr1") and must leave it
+// alone, while a version read out of version.json is always prefixed.
 func moduleImageTag(version string) string {
 	if strings.HasPrefix(version, "v") {
 		return version
@@ -433,13 +428,11 @@ func moduleImageTag(version string) string {
 	return "v" + version
 }
 
-// registryRequestTimeout bounds one registry request on its own. LoadConfigFromFile passes a
-// context with no deadline, so a registry that accepts the connection and then stalls would hang
-// dhctl at config load. The value and the REGISTRY_TIMEOUT override are what go_lib/dependency/cr
-// applied before this moved to pkg/registry. A var so tests can shorten it.
+// Bounds one registry request: LoadConfigFromFile passes a context with no deadline, so a registry
+// that stalls after accepting would hang dhctl at config load. The value and REGISTRY_TIMEOUT are
+// what go_lib/dependency/cr applied before this moved to pkg/registry. A var so tests can shorten.
 var registryRequestTimeout = 120 * time.Second
 
-// registryTimeout reads the override an operator may set for a slow registry.
 func registryTimeout() (time.Duration, error) {
 	raw := os.Getenv("REGISTRY_TIMEOUT")
 	if raw == "" {
@@ -454,19 +447,16 @@ func registryTimeout() (time.Duration, error) {
 	return timeout, nil
 }
 
-// splitHostPath splits "host/a/b" into "host" and "a/b". A bare host yields an empty path,
-// which is what strings.Cut already returns when the separator is absent.
+// Splits "host/a/b" into "host" and "a/b"; a bare host yields an empty path.
 func splitHostPath(repo string) (string, string) {
 	host, rest, _ := strings.Cut(strings.Trim(repo, "/"), "/")
 
 	return host, rest
 }
 
-// A var so tests can drive the chain without a registry.
-//
-// repo addresses the module catalog, whose tags are module names; the module name itself goes to
-// catalog.Module. log.Default() rather than the context logger on purpose: lib-dhctl already holds
-// it at fatal level and opens it to debug, routed to the log file, under DHCTL_DEBUG.
+// A var so tests can drive the chain without a registry. repo addresses the module catalog, whose
+// tags are module names. log.Default() rather than the context logger on purpose: lib-dhctl holds
+// that one at fatal level and opens it to debug, routed to the log file, under DHCTL_DEBUG.
 var moduleCatalog = func(conf *image.RegistryConfig, repo string) (*module.Catalog, error) {
 	timeout, err := registryTimeout()
 	if err != nil {

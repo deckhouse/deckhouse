@@ -18,6 +18,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"slices"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -61,7 +62,7 @@ func TestParseResourcesKeepsNodeConfigDocumentsOutOfTheQueues(t *testing.T) {
 
 	require.NoError(t, (&ClusterBootstrapper{}).bootstrapParseResources(t.Context(), bctx))
 
-	queued := append(append(bctx.resourcesToCreateBefore, bctx.resourcesToCreateProvider...), bctx.resourcesToCreateAfter...)
+	queued := slices.Concat(bctx.resourcesToCreateBefore, bctx.resourcesToCreateModules, bctx.resourcesToCreateProvider, bctx.resourcesToCreateAfter)
 	kinds := make([]string, 0, len(queued))
 	for _, resource := range queued {
 		kinds = append(kinds, resource.Object.GetKind())
@@ -586,6 +587,34 @@ spec:
 // Everything that must leave the split exactly as it always was. The divert is for one case only:
 // this cluster's provider module is not in the installer image, which is the only way its
 // ModuleConfig can reach these documents.
+// An override of the provider's own module rides with it whatever spec.imageTag says. The tag
+// decides whether the module is pinned at all, which is the gate's question; once the gate is open
+// the document belongs to a module that is already moving, and leaving it for the final queue
+// applies an override to a module installed long before.
+func TestSplitResources_ProviderOverrideWithoutTagRidesWithItsModule(t *testing.T) {
+	resources := parseResourceDocs(t, providerModuleSourceDoc+providerModuleConfigDoc+`
+---
+apiVersion: deckhouse.io/v1alpha2
+kind: ModulePullOverride
+metadata:
+  name: cloud-provider-dvp
+spec:
+  scanInterval: 60s
+`)
+
+	before, modules, provider, after := splitResourcesOnPreAndPostDeckhouseInstall(
+		context.TODO(), resources, true, "dvp")
+
+	require.Empty(t, before)
+	require.Equal(t, []string{
+		"ModuleSource/deckhouse",
+		"ModulePullOverride/cloud-provider-dvp",
+		"ModuleConfig/cloud-provider-dvp",
+	}, resourceNames(modules))
+	require.Empty(t, provider)
+	require.Empty(t, after)
+}
+
 func TestSplitResources_ModuleDocumentsThatDoNotDivert(t *testing.T) {
 	tests := []struct {
 		name               string

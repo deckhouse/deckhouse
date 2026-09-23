@@ -248,6 +248,21 @@ func TestPhaseInputs_EmptyResourceDocumentIsNotAMissingProducer(t *testing.T) {
 	require.Error(t, b.validateCreateResourcesInputs(context.Background(), bctx))
 }
 
+// The module queue can be the only one filled: a config written the legacy way whose resources are
+// just the provider's ModuleConfig and ModulePullOverride puts every document there, and counting
+// the other three alone called that "the producer never ran".
+func TestPhaseInputs_ModuleQueueAloneSatisfiesTheSplit(t *testing.T) {
+	t.Parallel()
+
+	b, bctx := satisfiedInputs()
+	bctx.resourcesToCreateBefore = nil
+	bctx.resourcesToCreateAfter = nil
+	bctx.resourcesToCreateProvider = nil
+	bctx.resourcesToCreateModules = template.Resources{{}}
+
+	require.NoError(t, b.validateCreateResourcesInputs(context.Background(), bctx))
+}
+
 // TestRequireStateCache_RejectsTheCacheThatKeepsNothing pins the input every node past Preparation
 // shares. The process starts with a DummyCache that accepts every write and returns nothing, so a
 // node run against it rediscovers an empty world at every step - infrastructure recreated rather
