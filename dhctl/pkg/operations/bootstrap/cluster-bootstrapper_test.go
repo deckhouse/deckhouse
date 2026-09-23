@@ -584,10 +584,9 @@ spec:
 	require.Empty(t, after)
 }
 
-// An override of the provider's own module rides with it whatever spec.imageTag says. The tag
-// decides whether the module is pinned at all, which is the gate's question; once the gate is open
-// the document belongs to a module that is already moving, and leaving it for the final queue
-// applies an override to a module installed long before.
+// An override of the provider's own module rides with it whatever spec.imageTag says: the gate has
+// already decided that module is moving. Leaving it for the final queue would apply an override to
+// a module installed long before.
 func TestSplitResources_ProviderOverrideWithoutTagRidesWithItsModule(t *testing.T) {
 	resources := parseResourceDocs(t, providerModuleSourceDoc+providerModuleConfigDoc+`
 ---
@@ -656,6 +655,25 @@ metadata:
   name: cloud-provider-dvp
 spec:
   scanInterval: 60s
+`,
+			nodesFromResources: true,
+			providerName:       "dvp",
+			wantProvider:       []string{"DVPInstanceClass/master-dvp", "NodeGroup/master"},
+			wantAfter:          []string{"ModuleSource/deckhouse", "ModulePullOverride/cloud-provider-dvp"},
+		},
+		{
+			// Only a ModuleConfig enables a module. An override on its own is ignored by the
+			// cluster - the override controller answers "module is disabled" - so hoisting it
+			// ahead of the readiness wait buys nothing.
+			name: "ModulePullOverride without a ModuleConfig",
+			docs: providerModuleSourceDoc + providerNodeDocs + `
+---
+apiVersion: deckhouse.io/v1alpha2
+kind: ModulePullOverride
+metadata:
+  name: cloud-provider-dvp
+spec:
+  imageTag: pr123
 `,
 			nodesFromResources: true,
 			providerName:       "dvp",

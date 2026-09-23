@@ -1782,28 +1782,20 @@ func splitResourcesOnPreAndPostDeckhouseInstall(ctx context.Context, resourcesTo
 	return before, modules, provider, after
 }
 
-// Only the gate asks this. A ModuleConfig proves it on its own: a ModuleConfig naming a module the
-// image carries is parsed into MetaConfig.ModuleConfigs instead, so one that reaches ResourcesYAML
-// names a module the image does not ship. An override without a tag names no image and pins nothing.
+// Only the gate asks this, and a ModuleConfig is the whole answer: one naming a module the image
+// carries is parsed into MetaConfig.ModuleConfigs instead, so one that reaches ResourcesYAML names
+// a module the image does not ship. Nothing else enables a module, so nothing else opens the gate.
 func declaresExternalProviderModule(resource *template.Resource, providerModule string) bool {
-	if resource.GVK.Group != config.ModuleConfigGroup || resource.Object.GetName() != providerModule {
+	if resource.GVK.Group != config.ModuleConfigGroup || resource.GVK.Kind != config.ModuleConfigKind {
 		return false
 	}
 
-	switch resource.GVK.Kind {
-	case config.ModuleConfigKind:
-		return true
-	case config.ModulePullOverrideKind:
-		tag, _, _ := unstructured.NestedString(resource.Object.Object, "spec", "imageTag")
-		return tag != ""
-	}
-
-	return false
+	return resource.Object.GetName() == providerModule
 }
 
 // Every ModuleSource counts: each serves a module this bootstrap needs, and applying one early
-// costs nothing. spec.imageTag is deliberately not read here - whether the module is pinned is the
-// gate's question, and once the gate is open the document belongs to a module already moving.
+// costs nothing. The provider's own override rides along whatever its spec.imageTag says: the gate
+// has already decided that module is moving.
 func isProviderModuleDocument(resource *template.Resource, providerModule string) bool {
 	if resource.GVK.Group != config.ModuleConfigGroup {
 		return false
