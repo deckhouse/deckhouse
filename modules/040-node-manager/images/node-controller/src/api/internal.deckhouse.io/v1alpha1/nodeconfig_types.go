@@ -80,14 +80,14 @@ type NodeConfigStatus struct {
 	// +listType=map
 	// +listMapKey=name
 	Units []UnitStatus `json:"units,omitempty"`
-	// Images and StaticPods are republished every pass, one entry each, and
+	// LocalImages and StaticPods are republished every pass, one entry each, and
 	// empty when the pass checked nothing — like Extensions and Units. Declared
 	// without omitempty on purpose: an empty pass has to say so explicitly, and
 	// the node turns the nil slice into [] before it applies the status.
 	// +optional
 	// +listType=map
-	// +listMapKey=name
-	Images []ImageStatus `json:"images"`
+	// +listMapKey=digest
+	LocalImages []LocalImageStatus `json:"localImages"`
 	// StaticPods is one entry per spec.staticPods item the node wrote or failed to.
 	// +optional
 	// +listType=map
@@ -183,9 +183,13 @@ type UnitStatus struct {
 	Message string `json:"message,omitempty"`
 }
 
-// ImageStatus is the outcome of preloading one image into containerd.
-type ImageStatus struct {
-	Name string `json:"name"`
+// LocalImageStatus is the outcome of importing one artifact into containerd.
+type LocalImageStatus struct {
+	Digest string `json:"digest"`
+	// Ref is the name containerd knows the image by, read from the artifact
+	// after the import.
+	// +optional
+	Ref string `json:"ref,omitempty"`
 	// State is Ready when containerd holds the image, Pending while the node is
 	// still fetching or importing it, Failed with the cause in Message.
 	// +kubebuilder:validation:Enum=Ready;Pending;Failed
@@ -239,15 +243,6 @@ type NodeSpec struct {
 	// +listType=map
 	// +listMapKey=name
 	Extensions []Extension `json:"extensions,omitempty"`
-	// Images are put into containerd before kubelet starts, so a static pod
-	// whose image is on the pull path of every other image can still start.
-	// Rendered by node-controller from what the platform needs, never by a
-	// module.
-	// +optional
-	// +listType=map
-	// +listMapKey=name
-	// +kubebuilder:validation:MaxItems=32
-	Images []Image `json:"images,omitempty"`
 	// StaticPods are the manifests kubelet runs outside the scheduler. Bounded
 	// with Manifest so the worst case (16 x 32 KiB = 512 KiB) stays well under
 	// etcd's 1.5 MiB object limit with the rest of the spec beside it.
@@ -521,25 +516,13 @@ type Extension struct {
 	RequestedBy string `json:"requestedBy,omitempty"`
 }
 
-// Image is one registrypackages artifact holding an OCI layout tar. After the
-// import containerd knows it as deckhouse.local/images:<name> — the name is
-// carried by the artifact itself (org.opencontainers.image.ref.name in its
-// index.json), nodelet only checks it arrived.
-type Image struct {
-	// Name is what containerd knows the image by after the import.
-	// +kubebuilder:validation:MinLength=1
-	// +kubebuilder:validation:MaxLength=63
-	// +kubebuilder:validation:Pattern=`^[a-z0-9]([-a-z0-9]*[a-z0-9])?$`
-	Name string `json:"name"`
+// LocalImage is one registrypackages artifact holding an OCI layout tar, which
+// the node imports into containerd instead of pulling. The artifact names the
+// image itself (org.opencontainers.image.ref.name in its index.json).
+type LocalImage struct {
 	// Digest is the artifact's digest.
 	// +kubebuilder:validation:Pattern=`^sha256:[a-f0-9]{64}$`
 	Digest string `json:"digest"`
-	// Repository and AdditionalPath address the proxy exactly as for an
-	// extension. Empty means the proxy's default registry.
-	// +optional
-	Repository string `json:"repository,omitempty"`
-	// +optional
-	AdditionalPath string `json:"additionalPath,omitempty"`
 }
 
 // StaticPod is one manifest for /etc/kubernetes/manifests. The node prepares two
@@ -783,6 +766,14 @@ type ContainerRuntime struct {
 	// +kubebuilder:validation:Enum=nodelet;agent
 	// +kubebuilder:default=nodelet
 	RegistryOwner string `json:"registryOwner,omitempty"`
+	// LocalImages are imported into containerd before kubelet starts, so a pod
+	// on the pull path of every other image can still start. Rendered by
+	// node-controller from what the platform needs, never by a module.
+	// +optional
+	// +listType=map
+	// +listMapKey=digest
+	// +kubebuilder:validation:MaxItems=32
+	LocalImages []LocalImage `json:"localImages,omitempty"`
 }
 
 // UpdatePolicy controls how/when the node is updated.

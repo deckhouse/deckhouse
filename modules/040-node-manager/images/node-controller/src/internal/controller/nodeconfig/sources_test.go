@@ -626,19 +626,13 @@ func TestPlatformImages(t *testing.T) {
 	t.Run("no agent: pause and nothing else", func(t *testing.T) {
 		images, err := platformImages(digests, false)
 		require.NoError(t, err)
-		require.Equal(t, []internalv1alpha1.Image{{Name: "pause", Digest: pause}}, images)
+		require.Equal(t, []internalv1alpha1.LocalImage{{Digest: pause}}, images)
 	})
 
 	t.Run("agent mode: the agent's own image joins it", func(t *testing.T) {
 		images, err := platformImages(digests, true)
 		require.NoError(t, err)
-		require.Equal(t, []internalv1alpha1.Image{
-			{Name: "pause", Digest: pause},
-			{Name: "registry-agent", Digest: agent},
-		}, images)
-		// Empty on purpose: the proxy's default registry, as for a platform sysext.
-		require.Empty(t, images[1].Repository)
-		require.Empty(t, images[1].AdditionalPath)
+		require.Equal(t, []internalv1alpha1.LocalImage{{Digest: pause}, {Digest: agent}}, images)
 	})
 
 	// Fail-closed, like every other read here. A node told registry.d belongs to

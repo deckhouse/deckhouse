@@ -68,10 +68,7 @@ func renderSpec(ng *v1.NodeGroup, node *corev1.Node, in clusterInputs) internalv
 		APIServerEndpoints:   in.APIServerEndpoints,
 		InternalNetworkCIDRs: in.InternalNetworkCIDRs,
 		Extensions:           mergeExtensions(renderExtensions(in.SysextDigests), extraExtensions),
-		// The preload list is the same for every node of the cluster: it follows
-		// from which modules are enabled, not from this group or this node.
-		Images:     in.Images,
-		StaticPods: staticPods,
+		StaticPods:           staticPods,
 		// A NodeGroup has no disk field; without a selector the boot path refuses
 		// outright ("neither device nor diskSelector set"). Any selector the
 		// operator wrote survives this one through keepBootstrapOnlyFields.
@@ -409,6 +406,9 @@ func renderContainerRuntime(ng *v1.NodeGroup, in clusterInputs) internalv1alpha1
 		SandboxImage:           sandboxImageRef,
 		MaxConcurrentDownloads: ptr.To(defaultMaxConcurrentDownloads),
 		RegistryOwner:          registryOwnerNodelet,
+		// The same for every node of the cluster: it follows from which modules
+		// are enabled, not from this group or this node.
+		LocalImages: in.LocalImages,
 	}
 	// The agent owns the whole directory or none of it: nodelet writing
 	// spec.registry there would put an explicit host directory over the agent's
