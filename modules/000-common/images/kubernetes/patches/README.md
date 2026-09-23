@@ -193,12 +193,8 @@ already ship this code, so the patch is carried on 1.32 (`015`), 1.33 (`014`) an
 
 ### kubelet-checkpoint-state-self-heal.patch (1.33+)
 
-When the CPU or memory manager checkpoint is unusable, the kubelet resets that manager's state
-and starts instead of exiting. Running containers are not stopped.
+When the CPU or memory manager checkpoint is unusable, the kubelet resets that manager's state and starts instead of exiting. Running containers are not stopped.
 
-The CPU manager moves running containers onto their new CPUs by itself. The memory manager
-cannot change a running container's NUMA zone, so such containers are reported until they are
-recreated: gauge `kubelet_checkpoint_state_unpinned_containers`, event `NUMACheckpointReset`
-and alert `D8KubeletCheckpointStateUnpinnedContainers`.
+The CPU manager moves running containers onto their new CPUs by itself. The memory manager cannot change a running container's NUMA zone, so such containers are reported until they are recreated: gauge `kubelet_checkpoint_state_unpinned_containers`, event `NUMACheckpointReset` and alert `D8KubeletCheckpointStateUnpinnedContainers`.
 
 See issue: https://github.com/kubernetes/kubernetes/issues/131253

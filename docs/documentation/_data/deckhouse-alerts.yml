@@ -2386,20 +2386,20 @@ alerts:
       module: node-manager
       edition: ce
       description: |
-        Kubelet on Node `{{ $labels.node }}` reset the memory manager checkpoint and recorded a new NUMA zone for container `{{ $labels.container }}` of Pod `{{ $labels.namespace }}/{{ $labels.pod }}`. Kubelet sets the zone only when it creates a container, so the container keeps running in the zone it had before the reset, which may be a different one.
+        Kubelet on Node `{{ $labels.node }}` reset the memory manager checkpoint and recorded new NUMA zones for the containers of Pod `{{ $labels.namespace }}/{{ $labels.pod }}`. Kubelet sets the zone only when it creates a container, so the containers keep running in the zones they had before the reset, which may be different ones.
 
-        Kubelet may then give the zone the container really uses to another Guaranteed Pod, and both Pods share its memory. With the Topology Manager enabled, the container's CPUs may also be moved to the recorded zone while its memory stays in the old one.
+        Kubelet may then give the zone the Pod really uses to another Guaranteed Pod, and both Pods share its memory. With the Topology Manager enabled, the Pod's CPUs may also be moved to the recorded zone while its memory stays in the old one.
 
-        Kubelet does not stop such a container by itself. Restoring the isolation means recreating it, and whether this Pod may be restarted, and when, is a decision about the workload rather than about the Node.
+        Kubelet does not stop such a Pod by itself. Restoring the isolation means recreating it, and whether this Pod may be restarted, and when, is a decision about the workload rather than about the Node.
 
         What to do, whichever suits the workload:
 
-        - Delete the Pod, or drain the Node, so the container is recreated in a zone from the current state.
+        - Delete the Pod, or drain the Node, so its containers are recreated in zones from the current state.
         - If the Pod is a virtual machine, you can also live migrate it to another Node. The machine keeps running and gets its resources assigned again on arrival.
 
-        The alert resolves by itself within a few minutes of the container going away. No kubelet restart is needed.
+        The alert resolves by itself within a few minutes of the Pod being recreated. No kubelet restart is needed.
       summary: |
-        Container {{ $labels.container }} in Pod {{ $labels.namespace }}/{{ $labels.pod }} may run in a NUMA zone other than the one kubelet recorded for it.
+        Pod {{ $labels.namespace }}/{{ $labels.pod }} may run in a NUMA zone other than the one kubelet recorded for it.
       severity: "4"
       markupFormat: markdown
     - name: D8KubernetesStaleTokensDetected
