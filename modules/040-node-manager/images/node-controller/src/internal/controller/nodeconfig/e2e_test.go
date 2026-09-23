@@ -271,9 +271,9 @@ var _ = Describe("NodeConfig controller", func() {
 		// nodelet owns registry.d until a registry module says otherwise.
 		Eventually(func(g Gomega) {
 			nc := getNodeConfig(ctx, g, nodeName)
-			g.Expect(nc.Spec.Images).To(HaveLen(1))
-			g.Expect(nc.Spec.Images[0].Name).To(Equal("pause"))
-			g.Expect(nc.Spec.Images[0].Digest).To(Equal(testenv.TestPausePackageDigest))
+			g.Expect(nc.Spec.ContainerRuntime.LocalImages).To(Equal([]internalv1alpha1.LocalImage{
+				{Digest: testenv.TestPausePackageDigest},
+			}))
 			g.Expect(nc.Spec.StaticPods).To(BeEmpty())
 			g.Expect(nc.Spec.ContainerRuntime.RegistryOwner).To(Equal(registryOwnerNodelet))
 		}, testenv.EventuallyTimeout, testenv.EventuallyPoll).Should(Succeed())
@@ -323,9 +323,10 @@ var _ = Describe("NodeConfig controller", func() {
 			g.Expect(nc.Spec.ContainerRuntime.RegistryOwner).To(Equal(registryOwnerAgent))
 			// The agent's own image joins the preload list: it is on the pull path
 			// of every other image, so nothing could fetch it.
-			g.Expect(nc.Spec.Images).To(HaveLen(2))
-			g.Expect(nc.Spec.Images[1].Name).To(Equal("registry-agent"))
-			g.Expect(nc.Spec.Images[1].Digest).To(Equal(testenv.TestRegistryAgentDigest))
+			g.Expect(nc.Spec.ContainerRuntime.LocalImages).To(Equal([]internalv1alpha1.LocalImage{
+				{Digest: testenv.TestPausePackageDigest},
+				{Digest: testenv.TestRegistryAgentDigest},
+			}))
 		}, testenv.EventuallyTimeout, testenv.EventuallyPoll).Should(Succeed())
 
 		By("narrowing the static pod to another group")
@@ -337,7 +338,7 @@ var _ = Describe("NodeConfig controller", func() {
 			nc := getNodeConfig(ctx, g, nodeName)
 			g.Expect(nc.Spec.StaticPods).To(BeEmpty())
 			// The preload list stays: it never belonged to the object.
-			g.Expect(nc.Spec.Images).To(HaveLen(2))
+			g.Expect(nc.Spec.ContainerRuntime.LocalImages).To(HaveLen(2))
 		}, testenv.EventuallyTimeout, testenv.EventuallyPoll).Should(Succeed())
 
 		By("taking registry.d back when the agent mode is switched off")
@@ -346,7 +347,7 @@ var _ = Describe("NodeConfig controller", func() {
 		Eventually(func(g Gomega) {
 			nc := getNodeConfig(ctx, g, nodeName)
 			g.Expect(nc.Spec.ContainerRuntime.RegistryOwner).To(Equal(registryOwnerNodelet))
-			g.Expect(nc.Spec.Images).To(HaveLen(1))
+			g.Expect(nc.Spec.ContainerRuntime.LocalImages).To(HaveLen(1))
 		}, testenv.EventuallyTimeout, testenv.EventuallyPoll).Should(Succeed())
 	})
 

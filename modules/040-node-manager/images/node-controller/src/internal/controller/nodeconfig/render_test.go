@@ -1018,9 +1018,9 @@ func crdItems(t *testing.T, field map[string]any) map[string]any {
 func TestShippedCRDCarriesTheStaticPodContract(t *testing.T) {
 	schema := nodeConfigCRDSchema(t)
 
-	images := crdField(t, schema, "spec", "images")
+	images := crdField(t, schema, "spec", "containerRuntime", "localImages")
 	require.Equal(t, "map", images["x-kubernetes-list-type"])
-	require.Equal(t, []any{"name"}, images["x-kubernetes-list-map-keys"])
+	require.Equal(t, []any{"digest"}, images["x-kubernetes-list-map-keys"])
 	require.Equal(t, float64(32), images["maxItems"])
 	require.Equal(t, `^sha256:[a-f0-9]{64}$`, crdField(t, crdItems(t, images), "digest")["pattern"])
 
@@ -1043,8 +1043,9 @@ func TestShippedCRDCarriesTheStaticPodContract(t *testing.T) {
 
 	// The node reports one entry per image and per static pod, the way it already
 	// does for extensions and units.
-	imageState := crdField(t, crdItems(t, crdField(t, schema, "status", "images")), "state")
-	require.Equal(t, []any{"Ready", "Pending", "Failed"}, imageState["enum"])
+	imageStatus := crdField(t, schema, "status", "localImages")
+	require.Equal(t, []any{"digest"}, imageStatus["x-kubernetes-list-map-keys"])
+	require.Equal(t, []any{"Ready", "Pending", "Failed"}, crdField(t, crdItems(t, imageStatus), "state")["enum"])
 
 	// Two states, not three: a node either holds the file the spec asked for or
 	// it does not. What an operator does next is in the reason, because the three
@@ -1080,7 +1081,7 @@ func TestRenderSpecCompilesStaticPods(t *testing.T) {
 	})
 
 	spec := renderSpec(ng, &corev1.Node{ObjectMeta: metav1.ObjectMeta{Name: "worker-0"}}, clusterInputs{
-		Images:                        []internalv1alpha1.Image{{Name: "pause", Digest: pauseDigest}},
+		LocalImages:                   []internalv1alpha1.LocalImage{{Digest: pauseDigest}},
 		NodeStaticPodRequests:         ordered,
 		NodeStaticPodRequestsRejected: rejectedNSPRs(ordered),
 	})
@@ -1092,15 +1093,48 @@ func TestRenderSpecCompilesStaticPods(t *testing.T) {
 
 	// The preload list is the platform's and does not follow the objects: a pod
 	// of another group brought nothing, and pause is there regardless.
-	require.Equal(t, []internalv1alpha1.Image{{Name: "pause", Digest: pauseDigest}}, spec.Images)
+	require.Equal(t, []internalv1alpha1.LocalImage{{Digest: pauseDigest}}, spec.ContainerRuntime.LocalImages)
 
 	// And the sandbox is named by the image that was just preloaded, not by a
 	// reference into a registry: containerd creates the sandbox itself, with no
 	// credentials from kubelet, so preloading pause buys nothing unless the
 	// config asks for it under the name containerd knows it by.
 	require.Equal(t, "deckhouse.local/images:pause", spec.ContainerRuntime.SandboxImage)
-	require.Equal(t, "deckhouse.local/images:"+spec.Images[0].Name, spec.ContainerRuntime.SandboxImage,
-		"the sandbox reference and the preloaded image must not be changed apart")
+}
+
+// The local images reach the node as containerRuntime.localImages, digests only,
+// and nothing is left at spec.images: nodelet parses strictly, so a stray key
+// would make every node refuse its config.
+func TestRenderSpecPutsLocalImagesIntoContainerRuntime(t *testing.T) {
+	pause := "sha256:" + strings.Repeat("c", 64)
+	agent := "sha256:" + strings.Repeat("d", 64)
+	digests := map[string]map[string]string{registryPackagesDigestsKey: {"pause": pause, "registryAgent": agent}}
+	ng := &v1.NodeGroup{ObjectMeta: metav1.ObjectMeta{Name: "worker"}, Spec: v1.NodeGroupSpec{NodeType: v1.NodeTypeCloudEphemeral}}
+
+	for _, tt := range []struct {
+		name      string
+		agentMode bool
+		want      []any
+	}{
+		{name: "no agent", want: []any{map[string]any{"digest": pause}}},
+		{name: "agent mode", agentMode: true, want: []any{map[string]any{"digest": pause}, map[string]any{"digest": agent}}},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			images, err := platformImages(digests, tt.agentMode)
+			require.NoError(t, err)
+			spec := renderSpec(ng, &corev1.Node{ObjectMeta: metav1.ObjectMeta{Name: "worker-0"}}, clusterInputs{
+				LocalImages:       images,
+				RegistryAgentMode: tt.agentMode,
+			})
+
+			raw, err := k8sruntime.DefaultUnstructuredConverter.ToUnstructured(&spec)
+			require.NoError(t, err)
+			require.NotContains(t, raw, "images")
+			containerRuntime, ok := raw["containerRuntime"].(map[string]any)
+			require.True(t, ok)
+			require.Equal(t, tt.want, containerRuntime["localImages"])
+		})
+	}
 }
 
 // A spec holding more pods than the schema accepts is refused whole, which

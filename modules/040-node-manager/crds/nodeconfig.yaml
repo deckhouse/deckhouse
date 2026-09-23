@@ -41,6 +41,29 @@ spec:
               containerRuntime:
                 description: ContainerRuntime holds containerd configuration.
                 properties:
+                  localImages:
+                    description: |-
+                      LocalImages are imported into containerd before kubelet starts, so a pod
+                      on the pull path of every other image can still start. Rendered by
+                      node-controller from what the platform needs, never by a module.
+                    items:
+                      description: |-
+                        LocalImage is one registrypackages artifact holding an OCI layout tar, which
+                        the node imports into containerd instead of pulling. The artifact names the
+                        image itself (org.opencontainers.image.ref.name in its index.json).
+                      properties:
+                        digest:
+                          description: Digest is the artifact's digest.
+                          pattern: ^sha256:[a-f0-9]{64}$
+                          type: string
+                      required:
+                      - digest
+                      type: object
+                    maxItems: 32
+                    type: array
+                    x-kubernetes-list-map-keys:
+                    - digest
+                    x-kubernetes-list-type: map
                   maxConcurrentDownloads:
                     default: 8
                     description: |-
@@ -103,46 +126,6 @@ spec:
                   - digest
                   - name
                   type: object
-                type: array
-                x-kubernetes-list-map-keys:
-                - name
-                x-kubernetes-list-type: map
-              images:
-                description: |-
-                  Images are put into containerd before kubelet starts, so a static pod
-                  whose image is on the pull path of every other image can still start.
-                  Rendered by node-controller from what the platform needs, never by a
-                  module.
-                items:
-                  description: |-
-                    Image is one registrypackages artifact holding an OCI layout tar. After the
-                    import containerd knows it as deckhouse.local/images:<name> — the name is
-                    carried by the artifact itself (org.opencontainers.image.ref.name in its
-                    index.json), nodelet only checks it arrived.
-                  properties:
-                    additionalPath:
-                      type: string
-                    digest:
-                      description: Digest is the artifact's digest.
-                      pattern: ^sha256:[a-f0-9]{64}$
-                      type: string
-                    name:
-                      description: Name is what containerd knows the image by after
-                        the import.
-                      maxLength: 63
-                      minLength: 1
-                      pattern: ^[a-z0-9]([-a-z0-9]*[a-z0-9])?$
-                      type: string
-                    repository:
-                      description: |-
-                        Repository and AdditionalPath address the proxy exactly as for an
-                        extension. Empty means the proxy's default registry.
-                      type: string
-                  required:
-                  - digest
-                  - name
-                  type: object
-                maxItems: 32
                 type: array
                 x-kubernetes-list-map-keys:
                 - name
@@ -843,19 +826,31 @@ spec:
                 x-kubernetes-list-map-keys:
                 - name
                 x-kubernetes-list-type: map
-              images:
+              lastReconcileTime:
                 description: |-
-                  Images and StaticPods are republished every pass, one entry each, and
+                  LastReconcileTime is when the node last finished a reconcile pass — the
+                  only thing in the status that ages, so it is what tells a dead agent from
+                  a healthy one. Republished coarsely: judge staleness in tens of minutes.
+                format: date-time
+                type: string
+              localImages:
+                description: |-
+                  LocalImages and StaticPods are republished every pass, one entry each, and
                   empty when the pass checked nothing — like Extensions and Units. Declared
                   without omitempty on purpose: an empty pass has to say so explicitly, and
                   the node turns the nil slice into [] before it applies the status.
                 items:
-                  description: ImageStatus is the outcome of preloading one image
+                  description: LocalImageStatus is the outcome of importing one artifact
                     into containerd.
                   properties:
+                    digest:
+                      type: string
                     message:
                       type: string
-                    name:
+                    ref:
+                      description: |-
+                        Ref is the name containerd knows the image by, read from the artifact
+                        after the import.
                       type: string
                     state:
                       description: |-
@@ -867,20 +862,13 @@ spec:
                       - Failed
                       type: string
                   required:
-                  - name
+                  - digest
                   - state
                   type: object
                 type: array
                 x-kubernetes-list-map-keys:
-                - name
+                - digest
                 x-kubernetes-list-type: map
-              lastReconcileTime:
-                description: |-
-                  LastReconcileTime is when the node last finished a reconcile pass — the
-                  only thing in the status that ages, so it is what tells a dead agent from
-                  a healthy one. Republished coarsely: judge staleness in tens of minutes.
-                format: date-time
-                type: string
               maintenanceToken:
                 description: |-
                   MaintenanceToken is the bearer token an operator presents to the node's

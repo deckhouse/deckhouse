@@ -63,16 +63,11 @@ const (
 	// artifacts: a tar of the image's OCI layout, which the node imports into
 	// containerd. Not the common/pause image, which is only the reference
 	// containerd resolves a sandbox by — the node cannot pull that one until
-	// something is already running.
-	//
-	// registryAgentImageName is the same image on the other side of the import:
-	// the artifact carries deckhouse.local/images:registry-agent in its
-	// index.json, so that is the name spec.images must use, while the digest is
-	// keyed by the camelCased image directory
-	// (modules/007-registrypackages/images/registry-agent).
+	// something is already running. The artifact names the image itself: its
+	// werf file writes ref.name into index.json. registryAgent is keyed by the
+	// camelCased image directory (modules/007-registrypackages/images/registry-agent).
 	pausePackageName         = "pause"
 	registryAgentPackageName = "registryAgent"
-	registryAgentImageName   = "registry-agent"
 
 	// sandboxImageRef is the pause image as containerd knows it after the import,
 	// and naming it here is the whole point of preloading pause. containerd

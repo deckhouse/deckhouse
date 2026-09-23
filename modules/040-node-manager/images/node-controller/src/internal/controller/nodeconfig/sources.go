@@ -77,14 +77,14 @@ type clusterInputs struct {
 	SysextDigests map[string]string
 	// RegistryPackagesProxyToken authenticates against the packages proxy.
 	RegistryPackagesProxyToken string
-	// Images is what every node puts into containerd before kubelet starts. The
-	// list is the platform's, not a module's and not an object's: it follows from
-	// which modules are enabled, and it is the same for every node, so it is
-	// built once per pass rather than once per node.
-	Images []internalv1alpha1.Image
+	// LocalImages is what every node imports into containerd before kubelet
+	// starts. The list is the platform's, not a module's and not an object's: it
+	// follows from which modules are enabled, and it is the same for every node,
+	// so it is built once per pass rather than once per node.
+	LocalImages []internalv1alpha1.LocalImage
 	// RegistryAgentMode says the registry module has handed containerd's
 	// registry.d to its own node agent. One fact, two consequences: the agent's
-	// image joins Images, and containerRuntime.registryOwner says "agent".
+	// image joins LocalImages, and containerRuntime.registryOwner says "agent".
 	RegistryAgentMode bool
 	// Registry is how a node reaches the cluster's registry on its own. Every
 	// node gets it: the pulls containerd makes for itself — the control-plane
@@ -290,7 +290,7 @@ func (s *sourceReader) readReleaseImages(ctx context.Context, in *clusterInputs)
 		return err
 	}
 
-	in.Images, err = platformImages(images, in.RegistryAgentMode)
+	in.LocalImages, err = platformImages(images, in.RegistryAgentMode)
 	if err != nil {
 		return err
 	}
@@ -394,25 +394,22 @@ func (s *sourceReader) readRegistryAgentMode(ctx context.Context) (bool, error) 
 // registry.d points at an agent that has not started, the agent's own sandbox
 // included. The agent's image joins the list when the registry module has taken
 // the directory over.
-//
-// Repository and AdditionalPath stay empty: the proxy's default registry, the
-// same addressing the platform sysexts use.
-func platformImages(all map[string]map[string]string, agentMode bool) ([]internalv1alpha1.Image, error) {
+func platformImages(all map[string]map[string]string, agentMode bool) ([]internalv1alpha1.LocalImage, error) {
 	pause, err := digestAt(all, registryPackagesDigestsKey, pausePackageName)
 	if err != nil {
 		return nil, err
 	}
-	pauseImage := internalv1alpha1.Image{Name: pausePackageName, Digest: pause}
+	images := []internalv1alpha1.LocalImage{{Digest: pause}}
 
 	if !agentMode {
-		return []internalv1alpha1.Image{pauseImage}, nil
+		return images, nil
 	}
 
 	agent, err := digestAt(all, registryPackagesDigestsKey, registryAgentPackageName)
 	if err != nil {
 		return nil, err
 	}
-	return []internalv1alpha1.Image{pauseImage, {Name: registryAgentImageName, Digest: agent}}, nil
+	return append(images, internalv1alpha1.LocalImage{Digest: agent}), nil
 }
 
 // digestAt returns one image's digest out of the release's digest map. Absent
