@@ -1,0 +1,34 @@
+{%- comment -%}
+Download block for the "Linux OS" getting started guide.
+Edition tabs are rendered by the Jekyll `tabs` plugin (docs/documentation/_plugins/tabs.rb);
+tab labels must be literals, so the edition names are hardcoded here.
+The license key is never validated on the site: it is sent to the download service
+(website-stronghold/registry-proxy) which reports success or an error.
+UI strings live in _data/i18n.yaml (getting_started.stronghold_download) and _data/license.yaml.
+{%- endcomment -%}
+{%- assign i18n = site.data.i18n.getting_started.stronghold_download -%}
+<script type="text/javascript">
+const strongholdDownload = {
+  prefix: '/products/stronghold/get',
+  lang: '{{ page.lang }}',
+  i18n: {
+    empty_input: '{{ site.data.license.response[page.lang].empty_input }}',
+    reject: '{{ site.data.license.response[page.lang].reject }}',
+    resolve: '{{ i18n.key_accepted[page.lang] }}',
+    network: '{{ i18n.network_error[page.lang] }}',
+    no_versions: '{{ i18n.no_versions[page.lang] }}'
+  }
+};
+</script>
+<script type="text/javascript" src='{% javascript_asset_tag stronghold-download %}[_assets/js/stronghold-download.js]{% endjavascript_asset_tag %}'></script>
+
+#### {{ i18n.select_edition[page.lang] }}
+
+{% tabs stronghold-edition %}
+{% tab "Enterprise Edition" %}
+{% include getting_started/stronghold/linux/partials/download_form.liquid revision="ee" %}
+{% endtab %}
+{% tab "Certified Security Edition" %}
+{% include getting_started/stronghold/linux/partials/download_form.liquid revision="cse" %}
+{% endtab %}
+{% endtabs %}

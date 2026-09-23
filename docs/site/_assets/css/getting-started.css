@@ -11,3 +11,50 @@
     background-color: #ffee93 !important;
     color: #02003E !important;
 }
+
+/* Stronghold download block (getting_started/stronghold/linux/partials/download_form.liquid) */
+.stronghold-download__actions {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: stretch;
+    gap: 12px 16px;
+    margin: 0 0 20px;
+}
+
+.stronghold-download__actions .button_alt {
+    flex-shrink: 0;
+}
+
+/* Version selector styled as an outlined counterpart of .button_alt. */
+.stronghold-download__select {
+    -webkit-appearance: none;
+    -moz-appearance: none;
+    appearance: none;
+    box-sizing: border-box;
+    min-width: 180px;
+    margin: 0;
+    padding: 0.75em 3em 0.75em 1.5em;
+    border: 2px solid #004df2;
+    border-radius: 0;
+    background: #fff url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='9' viewBox='0 0 14 9'%3E%3Cpath d='M1 1l6 6 6-6' fill='none' stroke='%23004df2' stroke-width='2'/%3E%3C/svg%3E") no-repeat right 1.25em center;
+    color: #02003E;
+    font-family: inherit;
+    font-size: 14px;
+    font-weight: 600;
+    letter-spacing: .01em;
+    line-height: 1.5;
+    cursor: pointer;
+    outline: none;
+}
+
+.stronghold-download__select::-ms-expand {
+    display: none;
+}
+
+.stronghold-download__select:hover {
+    background-color: #f5f9ff;
+}
+
+.stronghold-download__select:focus-visible {
+    box-shadow: 0 0 0 3px rgba(0, 77, 242, 0.25);
+}

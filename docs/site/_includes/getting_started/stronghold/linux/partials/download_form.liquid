@@ -1,0 +1,30 @@
+{%- assign revision = include.revision -%}
+{%- assign i18n = site.data.i18n.getting_started.stronghold_download -%}
+{%- assign enter_key_title = i18n.enter_license_key[page.lang] | replace: '<EDITION>', site.data.i18n[revision] -%}
+<div data-stronghold-download data-edition="{{ revision }}">
+<div class="license-form__wrap">
+<div class="license-form-enter">
+<h3 class="text text_h3">{{ enter_key_title }}</h3>
+<div class="form form--inline">
+<div class="form__row">
+<label class="label" for="stronghold-license-{{ revision }}">{{ i18n.license_key[page.lang] }}</label>
+<input id="stronghold-license-{{ revision }}" class="textfield" type="password" autocomplete="off" data-license-input />
+</div>
+<a href="#" class="button button_alt" data-versions-btn>{{ i18n.check_key[page.lang] }}</a>
+<span data-message></span>
+</div>
+</div>
+<form method="post" class="stronghold-download__actions" data-version-block data-download-form style="display: none;">
+<input type="hidden" name="license" />
+<input type="hidden" name="edition" value="{{ revision }}" />
+<button type="submit" class="button button_alt">{{ i18n.download_version[page.lang] }}</button>
+<select class="stronghold-download__select" aria-label="{{ i18n.version[page.lang] }}" data-version-select></select>
+</form>
+<div class="license-form-request">
+<h3 class="text text_h3">{{ i18n.no_key[page.lang] }}</h3>
+<div class="button-group">
+<a href="" data-open-modal="request_access" class="button button_alt">{{ i18n.request_trial[page.lang] }}</a>
+</div>
+</div>
+</div>
+</div>
