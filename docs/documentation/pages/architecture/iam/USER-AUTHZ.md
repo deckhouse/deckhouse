@@ -7,6 +7,8 @@ description: Architecture of the user-authz module in Deckhouse Platform.
 
 The [`user-authz`](/modules/user-authz/) module implements role-based access control (RBAC) in Deckhouse Platform (DP). The module creates cluster roles for managing user and group access to cluster resources, and, in the Ultimate, CSE Core, and CSE Pro editions of DP, also supports namespace-scoped authorization ([multitenancy](./multitenancy.html)).
 
+For more details about the role-based access control model, refer to the [corresponding section of the module documentation](/modules/user-authz/#granular-role-based-model).
+
 The module works with the following custom resources of the `deckhouse.io` API group:
 
 - [ClusterAuthorizationRule](/modules/user-authz/cr.html#clusterauthorizationrule): Defines access rules at the cluster level.
@@ -45,15 +47,21 @@ The Ultimate, CSE Core, and CSE Pro editions of DP additionally include the foll
 
 1. **User-authz-webhook** (DaemonSet): An optional component that implements the [Webhook authorization mode](https://kubernetes.io/docs/reference/access-authn-authz/webhook/) for kube-apiserver, placed between the built-in Node and RBAC authorizers in the authorization chain. The component runs on all master nodes with `hostNetwork` enabled.
 
-   The webhook authorization mode for kube-apiserver is configured by the [`control-plane-manager`](/modules/control-plane-manager/) module if the [`.controlPlaneConfigurator.enabled`](/modules/user-authz/configuration.html#parameters-controlplaneconfigurator-enabled) parameter in the module settings is set to `true` (the default). As part of this, the module creates an AuthorizationConfiguration whose `matchConditions` parameter excludes the following subjects from being checked by the webhook:
+   The webhook authorization mode for kube-apiserver is configured by the [`control-plane-manager`](/modules/control-plane-manager/) module if the [`.controlPlaneConfigurator.enabled`](/modules/user-authz/configuration.html#parameters-controlplaneconfigurator-enabled) parameter in the module settings is set to `true` (the default). As part of this, the [`control-plane-manager`](/modules/control-plane-manager/) module creates an AuthorizationConfiguration whose `matchConditions` parameter excludes the following subjects from being checked by the webhook:
 
    - Core control plane system identities, such as `kubernetes-admin`.
    - Node identities, `system:node:*`.
    - Service accounts from the `kube-system` and `d8-*` namespaces.
 
-   Upon receiving a `SubjectAccessReview` request, the webhook checks the namespace access restrictions defined in the ClusterAuthorizationRule custom resource ([multitenancy](./multitenancy.html)).
+   Upon receiving a `SubjectAccessReview` request, the webhook checks the namespace access restrictions defined in the ClusterAuthorizationRule custom resource ([multitenancy](./multitenancy.html)). It does not restrict a subject that has RBAC access regardless of the ClusterAuthorizationRule restrictions. This allows both access models to work together.
 
-   The component can only deny a request explicitly; for every other request it returns no opinion, and the decision falls through to the RBAC authorizer. User-authz-webhook is fail-closed: `failurePolicy` is set to `Deny` with a 3-second timeout, so if the webhook is unavailable or does not respond in time, kube-apiserver denies every non-excluded request instead of falling back to RBAC.
+   The component can only deny a request explicitly; for every other request it returns no opinion, and the decision falls through to the RBAC authorizer. User-authz-webhook is fail-closed, so if the webhook is unavailable or does not respond in time, kube-apiserver denies every non-excluded request instead of falling back to RBAC.
+
+   The following fail-closed parameters are used for the webhook:
+
+   - `failurePolicy` is set to `Deny`.
+   - Timeout: 3 seconds.
+   - Decisions are cached separately for authorized and unauthorized requests (`authorizedTTL: 5m` / `unauthorizedTTL: 30s`).
 
    The Deckhouse controller deploys this component if the [`.enableMultiTenancy`](/modules/user-authz/configuration.html#parameters-enablemultitenancy) parameter in the module settings is set to `true` (default is `false`).
 

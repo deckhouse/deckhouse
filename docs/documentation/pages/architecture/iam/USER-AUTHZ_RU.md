@@ -8,6 +8,8 @@ description: Архитектура модуля user-authz в Deckhouse Platfor
 
 Модуль [`user-authz`](/modules/user-authz/) реализует ролевую модель управления доступом (RBAC) в Deckhouse Platform (DP). Модуль создаёт кластерные роли для управления доступом пользователей и групп пользователей к ресурсам кластера, а в редакциях DP Ultimate, CSE Core и CSE Pro дополнительно поддерживает авторизацию в режиме [мультитенантности](./multitenancy.html).
 
+Подробнее с ролевой моделью управления доступа можно ознакомиться [в соответствующем разделе описания модуля](/modules/user-authz/#гранулярная-ролевая-модель).
+
 Модуль работает со следующими кастомными ресурсами API-группы `deckhouse.io`:
 
 - [ClusterAuthorizationRule](/modules/user-authz/cr.html#clusterauthorizationrule) — задаёт правила доступа на уровне кластера;
@@ -46,15 +48,22 @@ description: Архитектура модуля user-authz в Deckhouse Platfor
 
 1. **User-authz-webhook** (DaemonSet) — опциональный компонент, реализующий для kube-apiserver [вебхук-режим авторизации](https://kubernetes.io/docs/reference/access-authn-authz/webhook/), включённый в цепочку авторизации между встроенными авторайзерами Node и RBAC. Компонент запускается на всех мастер-узлах в режиме `hostNetwork`.
 
-   Настройку вебхука для авторизации в kube-apiserver выполняет модуль [`control-plane-manager`](/modules/control-plane-manager/), если параметр [`.controlPlaneConfigurator.enabled`](/modules/user-authz/configuration.html#parameters-controlplaneconfigurator-enabled) в настройках модуля принимает значение `true` (по умолчанию). При этом модуль создаёт AuthorizationConfiguration, в параметре `matchConditions` которого исключаются следующие субъекты из проверки вебхуком:
+   Настройку вебхука для авторизации в kube-apiserver выполняет модуль [`control-plane-manager`](/modules/control-plane-manager/), если параметр [`.controlPlaneConfigurator.enabled`](/modules/user-authz/configuration.html#parameters-controlplaneconfigurator-enabled) в настройках модуля принимает значение `true` (по умолчанию). При этом модуль [`control-plane-manager`](/modules/control-plane-manager/) создаёт AuthorizationConfiguration, в параметре `matchConditions` которого исключаются следующие субъекты из проверки вебхуком:
 
    - основные системные учётные записи control plane, например `kubernetes-admin`;
    - идентификаторы узлов `system:node:*`;
    - ServiceAccount'ы из неймспейсов `kube-system` и `d8-*`.
 
-   Вебхук при получении запроса SubjectAccessReview проверяет ограничения на доступ к неймспейсам, заданные в кастомном ресурсе ClusterAuthorizationRule ([мультитенантность](./multitenancy.html)).
+   Вебхук при получении запроса SubjectAccessReview проверяет ограничения на доступ к неймспейсам, заданные в кастомном ресурсе ClusterAuthorizationRule ([мультитенантность](./multitenancy.html)). При этом вебхук не ограничивает субъекта, у которого есть доступ RBAC независимо от ClusterAuthorizationRule. Таким образом обеспечивается работа работа двух моделей описания доступов.
 
-   Компонент явно запрещает запросы, по всем остальным запросам он не выносит решения (`no opinion`), и решение передаётся дальше авторайзеру RBAC. User-authz-webhook настроен по принципу fail-closed: параметр `failurePolicy` установлен в `Deny`, таймаут — 3 секунды, поэтому если вебхук недоступен или не успевает ответить за это время, kube-apiserver запрещает все неисключённые запросы, а не передаёт их RBAC.
+   Компонент явно запрещает запросы, по всем остальным запросам он не выносит решения (`no opinion`), и решение передаётся дальше авторайзеру RBAC.
+   User-authz-webhook настроен по принципу fail-closed, поэтому если вебхук недоступен или не успевает ответить за это время, kube-apiserver запрещает все неисключённые запросы, а не передаёт их RBAC.
+
+   Используются следующие параметры fail-closed для вебхука:
+
+   - параметр `failurePolicy` установлен в `Deny`;
+   - таймаут 3 секунды;
+   - кеширование решений раздельно для авторизованных и неавторизованных запросов (`authorizedTTL: 5m` / `unauthorizedTTL: 30s`).
 
    Deckhouse-контроллер разворачивает этот компонент, если параметр [`.enableMultiTenancy`](/modules/user-authz/configuration.html#parameters-enablemultitenancy) в настройках модуля принимает значение `true` (по умолчанию — `false`).
 
