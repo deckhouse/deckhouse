@@ -102,6 +102,7 @@ steps:
 {!{- $run       := coll.Merge (tmpl.Exec $args_tmpl | yaml) $default }!}
 runs-on: [self-hosted, regular]
 steps:
+{!{ tmpl.Exec "docker_config_isolation" | strings.Indent 2 }!}
 {!{ tmpl.Exec "started_at_output"       $ctx | strings.Indent 2 }!}
 {!{ tmpl.Exec "checkout_full_step"      $ctx | strings.Indent 2 }!}
 {!{- $secrets := slice -}!}
@@ -136,6 +137,7 @@ steps:
 {!{- $ctx := index . 0 }!}
 runs-on: [self-hosted, regular]
 steps:
+{!{ tmpl.Exec "docker_config_isolation" | strings.Indent 2 }!}
 {!{ tmpl.Exec "started_at_output"       $ctx | strings.Indent 2 }!}
 {!{ tmpl.Exec "checkout_full_step"      $ctx | strings.Indent 2 }!}
 {!{- $secrets := slice -}!}
@@ -192,6 +194,7 @@ steps:
 {!{- $ctx := index . 0 }!}
 runs-on: [self-hosted, regular]
 steps:
+{!{ tmpl.Exec "docker_config_isolation" | strings.Indent 2 }!}
 {!{ tmpl.Exec "started_at_output"       $ctx | strings.Indent 2 }!}
 {!{ tmpl.Exec "checkout_full_step"      $ctx | strings.Indent 2 }!}
 {!{- $secrets := slice -}!}
