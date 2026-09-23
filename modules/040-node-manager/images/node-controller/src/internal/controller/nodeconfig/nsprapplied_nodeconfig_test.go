@@ -121,3 +121,41 @@ func TestNodeConfigOutcomesOfASilentFleet(t *testing.T) {
 	require.NoError(t, err)
 	require.Empty(t, outcomes)
 }
+
+// A report counts only for the generation that carries the current manifest: a
+// node still running the previous one reports the old manifest Written, and a
+// node refusing its current generation whole has refused the pod in it.
+func TestNodeConfigOutcomesFollowTheCurrentGeneration(t *testing.T) {
+	agent := []internalv1alpha1.StaticPod{{Name: "registry-agent", Manifest: podManifest("registry-agent")}}
+	written := []internalv1alpha1.StaticPodStatus{{Name: "registry-agent", State: "Written"}}
+	atGeneration := func(name string, generation, applied int64, conditions ...metav1.Condition) *internalv1alpha1.NodeConfig {
+		config := nodeConfigWithPod(name, agent, written)
+		config.Generation = generation
+		config.Status.AppliedGeneration = applied
+		config.Status.Conditions = conditions
+		return config
+	}
+	notApplied := func(reason string, generation int64) metav1.Condition {
+		return metav1.Condition{
+			Type: configurationAppliedCondition, Status: metav1.ConditionFalse,
+			ObservedGeneration: generation, Reason: reason, Message: "the node said why",
+		}
+	}
+	held := atGeneration("held", 3, 2, notApplied("DisruptionApprovalPending", 3), metav1.Condition{
+		Type: disruptionRequiredCondition, Status: metav1.ConditionTrue, ObservedGeneration: 3, Reason: "DisruptionPending",
+	})
+
+	cl := fake.NewClientBuilder().WithScheme(nodeConfigScheme(t)).WithObjects(
+		atGeneration("current", 3, 3),
+		atGeneration("behind", 3, 2),
+		atGeneration("rolled-back", 3, 2, notApplied("RolledBackToLastKnownGood", 3)),
+		atGeneration("stale-refusal", 3, 2, notApplied("Rejected", 2)),
+		held,
+	).Build()
+
+	outcomes, err := readNodeConfigOutcomes(context.Background(), cl)
+	require.NoError(t, err)
+	require.Equal(t, int32(1), outcomes["registry-agent"].applied)
+	require.Equal(t, int32(1), outcomes["registry-agent"].failed)
+	require.Equal(t, "RolledBackToLastKnownGood: the node said why", outcomes["registry-agent"].message)
+}
