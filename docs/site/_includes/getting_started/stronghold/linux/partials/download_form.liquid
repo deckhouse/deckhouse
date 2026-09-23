@@ -10,15 +10,17 @@
 <label class="label" for="stronghold-license-{{ revision }}">{{ i18n.license_key[page.lang] }}</label>
 <input id="stronghold-license-{{ revision }}" class="textfield" type="password" autocomplete="off" data-license-input />
 </div>
+<div class="stronghold-download__check">
 <a href="#" class="button button_alt" data-versions-btn>{{ i18n.check_key[page.lang] }}</a>
-<span data-message></span>
+<span class="stronghold-download__status" data-message></span>
+</div>
 </div>
 </div>
 <form method="post" class="stronghold-download__actions" data-version-block data-download-form style="display: none;">
 <input type="hidden" name="license" />
 <input type="hidden" name="edition" value="{{ revision }}" />
-<button type="submit" class="button button_alt">{{ i18n.download_version[page.lang] }}</button>
 <select class="stronghold-download__select" aria-label="{{ i18n.version[page.lang] }}" data-version-select></select>
+<button type="submit" class="button button_alt">{{ i18n.download_version[page.lang] }}</button>
 </form>
 <div class="license-form-request">
 <h3 class="text text_h3">{{ i18n.no_key[page.lang] }}</h3>

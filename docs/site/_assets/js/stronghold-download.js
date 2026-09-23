@@ -47,7 +47,10 @@
 
   function setMessage(el, text, isError) {
     el.innerHTML = text || '';
-    el.className = text ? (isError ? 'license-form__warn' : 'license-form__message') : '';
+    el.classList.remove('license-form__warn', 'license-form__message');
+    if (text) {
+      el.classList.add(isError ? 'license-form__warn' : 'license-form__message');
+    }
   }
 
   function setInputState(input, state) {

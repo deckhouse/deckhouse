@@ -13,6 +13,53 @@
 }
 
 /* Stronghold download block (getting_started/stronghold/linux/partials/download_form.liquid) */
+
+/* The key field and the "Check key" button always stay on one line. */
+[data-stronghold-download] .license-form-enter .form--inline {
+    flex-wrap: nowrap;
+    align-items: flex-end;
+}
+
+[data-stronghold-download] .license-form-enter .form__row {
+    flex: 0 1 383px;
+    min-width: 0;
+}
+
+/* The status message is positioned relative to the button and taken out of
+   the flow, so its text can never move the button. */
+.stronghold-download__check {
+    position: relative;
+    flex-shrink: 0;
+}
+
+.stronghold-download__status {
+    position: absolute;
+    left: calc(100% + 20px);
+    top: 50%;
+    transform: translateY(-50%);
+    width: max-content;
+    max-width: 260px;
+    height: auto !important;
+    margin: 0 !important;
+    line-height: 1.3;
+    font-size: 14px;
+}
+
+.stronghold-download__status:empty {
+    display: none;
+}
+
+@media screen and (max-width: 727px) {
+    .stronghold-download__status {
+        left: 0;
+        top: calc(100% + 6px);
+        transform: none;
+        max-width: none;
+        width: auto;
+        white-space: nowrap;
+    }
+}
+
 .stronghold-download__actions {
     display: flex;
     flex-wrap: wrap;
