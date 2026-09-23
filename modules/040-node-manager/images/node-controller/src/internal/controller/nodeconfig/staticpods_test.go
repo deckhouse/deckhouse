@@ -150,8 +150,8 @@ func TestNodeStaticPodRequests(t *testing.T) {
 			ngName: "worker",
 		},
 		{
-			// Both entries would go into one NodeConfig and the node's loader would
-			// refuse the whole document, taking every other static pod with it.
+			// Both entries would go into one NodeConfig and the node would keep
+			// whichever comes first, not the older object.
 			name: "two objects on one pod: only the older one reaches the node",
 			nsprs: []deckhousev1alpha1.NodeStaticPodRequest{
 				nsprCreated("newer", metav1.NewTime(time.Date(2026, 1, 2, 0, 0, 0, 0, time.UTC)),
