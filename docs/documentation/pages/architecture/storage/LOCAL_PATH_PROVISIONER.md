@@ -20,7 +20,7 @@ The following simplifications are made in the diagram:
 
 The Level 2 C4 architecture of the [`local-path-provisioner`](/modules/local-path-provisioner/) module and its interactions with other components of Deckhouse Platform (DP) are shown in the following diagrams:
 
-![local-path-provisioner module architecture](../../images/architecture/storage/c4-l2-local-path-provisioner.png)
+![local-path-provisioner module architecture](../../images/architecture/storage/c4-l2-local-path-provisioner.svg)
 
 ## Module components
 

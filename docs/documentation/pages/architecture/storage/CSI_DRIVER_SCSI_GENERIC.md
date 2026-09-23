@@ -18,7 +18,7 @@ The following simplifications are made in the diagram:
 
 The Level 2 C4 architecture of the `csi-scsi-generic` CSI driver and its interactions with other components of DP are shown in the following diagram:
 
-![CSI driver architecture (csi-scsi-generic)](../../../images/architecture/storage/c4-l2-csi-driver-scsi-generic.png)
+![CSI driver architecture (csi-scsi-generic)](../../../images/architecture/storage/c4-l2-csi-driver-scsi-generic.svg)
 
 ## Driver components
 

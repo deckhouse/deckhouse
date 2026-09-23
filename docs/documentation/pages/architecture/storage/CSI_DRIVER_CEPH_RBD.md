@@ -18,7 +18,7 @@ The following simplifications are made in the diagram:
 
 The Level 2 C4 architecture of the `csi-rbd` CSI driver and its interactions with other components of Deckhouse Platform (DP) are shown in the following diagram:
 
-![Architecture of the csi-rbd CSI driver](../../../images/architecture/storage/c4-l2-csi-ceph-rbd-driver.png)
+![Architecture of the csi-rbd CSI driver](../../../images/architecture/storage/c4-l2-csi-ceph-rbd-driver.svg)
 
 ## Driver components
 

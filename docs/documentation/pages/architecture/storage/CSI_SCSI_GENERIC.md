@@ -20,7 +20,7 @@ The following simplifications are made in the diagram:
 
 The Level 2 C4 architecture of the [`csi-scsi-generic`](/modules/csi-scsi-generic/) module and its interactions with other components of Deckhouse Platform (DP) are shown in the following diagram:
 
-![csi-scsi-generic module architecture](../../../images/architecture/storage/c4-l2-csi-scsi-generic.png)
+![csi-scsi-generic module architecture](../../../images/architecture/storage/c4-l2-csi-scsi-generic.svg)
 
 ## Module components
 

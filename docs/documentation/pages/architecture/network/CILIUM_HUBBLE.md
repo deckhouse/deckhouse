@@ -20,7 +20,7 @@ The following simplifications are made in the diagram:
 
 The Level 2 C4 architecture of the [`cilium-hubble`](/modules/cilium-hubble/) module and its interactions with other components of Deckhouse Platform (DP) are shown in the following diagram:
 
-![Cilium-hubble module architecture](../../images/architecture/network/c4-l2-cilium-hubble.png)
+![Cilium-hubble module architecture](../../images/architecture/network/c4-l2-cilium-hubble.svg)
 
 {% alert level="info" %}
 The numbers in the diagram indicate the sequence of steps that a user request goes through before reaching the hubble-ui component:

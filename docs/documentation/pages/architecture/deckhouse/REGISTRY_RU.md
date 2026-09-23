@@ -33,15 +33,15 @@ description: Архитектура модуля registry в Deckhouse Platform.
 
 Модуль [`registry`](/modules/registry/) в режиме `Direct`:
 
-![Архитектура модуля registry в режиме Direct](../../images/architecture/deckhouse/c4-l2-deckhouse-registry-direct.ru.png)
+![Архитектура модуля registry в режиме Direct](../../images/architecture/deckhouse/c4-l2-deckhouse-registry-direct.ru.svg)
 
 Модуль [`registry`](/modules/registry/) в режиме `Proxy`:
 
-![Архитектура модуля registry в режиме Proxy](../../images/architecture/deckhouse/c4-l2-deckhouse-registry-proxy.ru.png)
+![Архитектура модуля registry в режиме Proxy](../../images/architecture/deckhouse/c4-l2-deckhouse-registry-proxy.ru.svg)
 
 Модуль [`registry`](/modules/registry/) в режиме `Local`:
 
-![Архитектура модуля registry в режиме Local](../../images/architecture/deckhouse/c4-l2-deckhouse-registry-local.ru.png)
+![Архитектура модуля registry в режиме Local](../../images/architecture/deckhouse/c4-l2-deckhouse-registry-local.ru.svg)
 
 ## Компоненты модуля
 

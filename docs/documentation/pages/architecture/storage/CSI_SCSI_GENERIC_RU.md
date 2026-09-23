@@ -21,7 +21,7 @@ description: Архитектура модуля csi-scsi-generic в Deckhouse P
 
 Архитектура модуля [`csi-scsi-generic`](/modules/csi-scsi-generic/) на уровне 2 модели C4 и его взаимодействия с другими компонентами Deckhouse Platform (DP) изображены на следующей диаграмме:
 
-![Архитектура модуля csi-scsi-generic](../../../images/architecture/storage/c4-l2-csi-scsi-generic.ru.png)
+![Архитектура модуля csi-scsi-generic](../../../images/architecture/storage/c4-l2-csi-scsi-generic.ru.svg)
 
 ## Компоненты модуля
 

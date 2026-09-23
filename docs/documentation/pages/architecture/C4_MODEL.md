@@ -44,11 +44,11 @@ For a detailed view of individual services, refer to the Level 2 and higher diag
 
 The following graphical symbols are used in the diagrams:
 
-![Legend used in DP diagrams](../../images/architecture/c4-legend.png)
+![Legend used in DP diagrams](../../images/architecture/c4-legend.svg)
 
 ## Context diagram
 
-![DP context diagram](../../images/architecture/c4-l1-context.png)
+![DP context diagram](../../images/architecture/c4-l1-context.svg)
 
 The following roles interact with DP:
 
@@ -67,7 +67,7 @@ The diagram below shows the DP subsystems.
 Relationships between subsystems are shown in a generalized form and without detailed interactions.
 {% endalert %}
 
-![DP subsystem diagram](../../images/architecture/c4-subsystems.png)
+![DP subsystem diagram](../../images/architecture/c4-subsystems.svg)
 
 ## Module diagram
 
@@ -77,4 +77,4 @@ The diagram below shows all modules included in the Default [module bundle](../.
 Relationships between modules are shown in a generalized form and without detailed interactions.
 {% endalert %}
 
-![DP module diagram](../../images/architecture/c4-modules.png)
+![DP module diagram](../../images/architecture/c4-modules.svg)

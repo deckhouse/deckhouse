@@ -21,7 +21,7 @@ description: Архитектура модуля csi-huawei в Deckhouse Platfor
 
 Архитектура модуля [`csi-huawei`](/modules/csi-huawei/) на уровне 2 модели C4 и его взаимодействия с другими компонентами Deckhouse Platform (DP) изображены на следующей диаграмме:
 
-![Архитектура модуля csi-huawei](../../../images/architecture/storage/c4-l2-csi-huawei.ru.png)
+![Архитектура модуля csi-huawei](../../../images/architecture/storage/c4-l2-csi-huawei.ru.svg)
 
 ## Компоненты модуля
 

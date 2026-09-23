@@ -19,7 +19,7 @@ description: Архитектура модуля cert-manager в Deckhouse Platf
 
 Архитектура модуля [`cert-manager`](/modules/cert-manager/) на уровне 2 модели C4 и его взаимодействия с другими компонентами DP изображены на следующей диаграмме:
 
-![Архитектура модуля cert-manager](../../images/architecture/security/c4-l2-cert-manager.ru.png)
+![Архитектура модуля cert-manager](../../images/architecture/security/c4-l2-cert-manager.ru.svg)
 
 ## Компоненты модуля
 

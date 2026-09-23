@@ -24,7 +24,7 @@ The following simplifications are made in the diagram:
 
 The reference CSI driver architecture at Level 2 of the C4 model and its interactions with other DP components are shown in the following diagram:
 
-![Reference CSI driver architecture](../../../images/architecture/storage/c4-l2-csi-driver-common.png)
+![Reference CSI driver architecture](../../../images/architecture/storage/c4-l2-csi-driver-common.svg)
 
 ## Driver components
 
