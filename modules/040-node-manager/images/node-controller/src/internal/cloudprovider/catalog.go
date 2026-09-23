@@ -38,7 +38,7 @@ func GetCatalog(ctx context.Context, r client.Reader) (Catalog, error) {
 		return Catalog{}, err
 	}
 
-	defaultProvider, err := getDefaultProvider(ctx, r)
+	defaultProvider, err := Default(ctx, r)
 	if err != nil {
 		return Catalog{}, err
 	}
@@ -171,11 +171,11 @@ func getProviders(ctx context.Context, r client.Reader) ([]Registration, error) 
 	return ret, nil
 }
 
-// getDefaultProvider returns the provider every non-Static NodeGroup runs on: the registration a
+// Default returns the provider every non-Static NodeGroup runs on: the registration a
 // provider module publishes under the fixed name, next to its per-provider copy. No such Secret
 // means no cloud — the cluster configuration is not consulted, so a provider that has not
 // registered yet is indistinguishable from a static cluster.
-func getDefaultProvider(ctx context.Context, r client.Reader) (Registration, error) {
+func Default(ctx context.Context, r client.Reader) (Registration, error) {
 	secret := &corev1.Secret{}
 	err := r.Get(
 		ctx,

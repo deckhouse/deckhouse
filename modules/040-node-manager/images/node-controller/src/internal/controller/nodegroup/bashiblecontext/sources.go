@@ -42,8 +42,7 @@ const (
 
 	apiProxyCertSecretName = "kubernetes-api-proxy-discovery-cert"
 
-	bootstrapTokenNGLabel   = "node-manager.deckhouse.io/node-group"
-	cloudProviderSecretName = nodecommon.CloudProviderSecretName
+	bootstrapTokenNGLabel = "node-manager.deckhouse.io/node-group"
 )
 
 // RootCAFiles are the candidate locations of the projected service-account CA, canonical path
@@ -72,27 +71,6 @@ func (s *Service) reader() client.Reader {
 		return s.Reader
 	}
 	return s.Client
-}
-
-func (s *Service) ReadCloudProvider(ctx context.Context) map[string]interface{} {
-	secret := &corev1.Secret{}
-	if err := s.Client.Get(ctx, types.NamespacedName{Namespace: kubeSystemNS, Name: cloudProviderSecretName}, secret); err != nil {
-		return nil
-	}
-	return decodeSecretData(secret.Data)
-}
-
-func decodeSecretData(data map[string][]byte) map[string]interface{} {
-	res := make(map[string]interface{}, len(data))
-	for k, v := range data {
-		var val interface{}
-		if err := json.Unmarshal(v, &val); err != nil {
-			res[k] = string(v)
-			continue
-		}
-		res[k] = val
-	}
-	return res
 }
 
 func (s *Service) ReadPackagesProxyToken(ctx context.Context) string {

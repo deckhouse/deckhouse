@@ -29,6 +29,7 @@ import (
 
 	v1 "github.com/deckhouse/node-controller/api/deckhouse.io/v1"
 	mcmv1alpha1 "github.com/deckhouse/node-controller/api/machine.sapcloud.io/v1alpha1"
+	"github.com/deckhouse/node-controller/internal/cloudprovider"
 	nodecommon "github.com/deckhouse/node-controller/internal/common"
 	"github.com/deckhouse/node-controller/internal/controller/nodegroup/common"
 	"github.com/deckhouse/node-controller/internal/testenv"
@@ -372,8 +373,8 @@ var _ = Describe("NodeGroup status controller", func() {
 		createBothCapableProviderSecret := func() {
 			providerSecret := &corev1.Secret{
 				ObjectMeta: metav1.ObjectMeta{
-					Name:      nodecommon.CloudProviderSecretName,
-					Namespace: nodecommon.CloudProviderSecretNamespace,
+					Name:      cloudprovider.RegistrationSecretBaseName,
+					Namespace: cloudprovider.RegistrationSecretNamespace,
 				},
 				Data: map[string][]byte{
 					"type":             []byte("yandex"),

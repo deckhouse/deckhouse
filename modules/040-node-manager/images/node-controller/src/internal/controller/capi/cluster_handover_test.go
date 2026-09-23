@@ -272,20 +272,20 @@ func TestRemoveStaleProviderCredentials(t *testing.T) {
 func exampleProviderFixture() (*corev1.Secret, *corev1.Secret, *corev1.ConfigMap, *corev1.Secret) {
 	registration := &corev1.Secret{
 		ObjectMeta: metav1.ObjectMeta{
-			Name: common.CloudProviderSecretName, Namespace: common.CloudProviderSecretNamespace,
+			Name: cloudprovider.RegistrationSecretBaseName, Namespace: cloudprovider.RegistrationSecretNamespace,
 		},
 		Data: map[string][]byte{
-			"type":                            []byte("example"),
-			"region":                          []byte("test-region"),
-			"zones":                           []byte(`["test-zone"]`),
-			common.InstanceClassKindKey:       []byte("ExampleInstanceClass"),
-			"capiClusterName":                 []byte("example"),
-			"capiClusterKind":                 []byte("ExampleCluster"),
-			"capiClusterAPIVersion":           []byte("infrastructure.cluster.x-k8s.io/v1alpha1"),
-			"capiMachineTemplateKind":         []byte("ExampleMachineTemplate"),
-			"capiMachineTemplateAPIVersion":   []byte("infrastructure.cluster.x-k8s.io/v1alpha1"),
-			common.InstanceClassAPIVersionKey: []byte("v1alpha1"),
-			"example":                         []byte(`{"region":"test"}`),
+			"type":                                   []byte("example"),
+			"region":                                 []byte("test-region"),
+			"zones":                                  []byte(`["test-zone"]`),
+			cloudprovider.InstanceClassKindKey:       []byte("ExampleInstanceClass"),
+			"capiClusterName":                        []byte("example"),
+			"capiClusterKind":                        []byte("ExampleCluster"),
+			"capiClusterAPIVersion":                  []byte("infrastructure.cluster.x-k8s.io/v1alpha1"),
+			"capiMachineTemplateKind":                []byte("ExampleMachineTemplate"),
+			"capiMachineTemplateAPIVersion":          []byte("infrastructure.cluster.x-k8s.io/v1alpha1"),
+			cloudprovider.InstanceClassAPIVersionKey: []byte("v1alpha1"),
+			"example":                                []byte(`{"region":"test"}`),
 		},
 	}
 	clusterConfiguration := &corev1.Secret{

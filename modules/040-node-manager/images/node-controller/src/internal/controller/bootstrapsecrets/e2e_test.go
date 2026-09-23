@@ -166,7 +166,7 @@ var _ = Describe("Bootstrap secrets controller", func() {
 
 		Eventually(func(g Gomega) {
 			g.Expect(warningEventMessages(name, eventReasonSkipped)).
-				To(ContainElement(ContainSubstring(nodecommon.InstanceClassAPIVersionKey)))
+				To(ContainElement(ContainSubstring(cloudprovider.InstanceClassAPIVersionKey)))
 		}, eventuallyTimeout, eventuallyPoll).Should(Succeed())
 	})
 
@@ -225,8 +225,8 @@ var _ = Describe("Bootstrap secrets controller", func() {
 		By("adding a zone to the provider registration and nothing else")
 		reg := &corev1.Secret{}
 		regKey := types.NamespacedName{
-			Namespace: nodecommon.CloudProviderSecretNamespace,
-			Name:      nodecommon.CloudProviderSecretName,
+			Namespace: cloudprovider.RegistrationSecretNamespace,
+			Name:      cloudprovider.RegistrationSecretBaseName,
 		}
 		Expect(k8sClient.Get(suiteCtx, regKey, reg)).To(Succeed())
 		reg.Data["zones"] = []byte(`["zone-a","zone-b"]`)
@@ -361,8 +361,8 @@ func createCloudProviderRegistration(data map[string][]byte) {
 	GinkgoHelper()
 	secret := &corev1.Secret{
 		ObjectMeta: metav1.ObjectMeta{
-			Namespace: nodecommon.CloudProviderSecretNamespace,
-			Name:      nodecommon.CloudProviderSecretName,
+			Namespace: cloudprovider.RegistrationSecretNamespace,
+			Name:      cloudprovider.RegistrationSecretBaseName,
 		},
 		Data: data,
 	}
@@ -376,8 +376,8 @@ func createCloudProviderRegistration(data map[string][]byte) {
 // published a kind but not the apiVersion to read it at (derived_status/validate.go:40).
 func rejectingRegistration() map[string][]byte {
 	return map[string][]byte{
-		"type":                          []byte(`"dvp"`),
-		nodecommon.InstanceClassKindKey: []byte("DVPInstanceClass"),
+		"type":                             []byte(`"dvp"`),
+		cloudprovider.InstanceClassKindKey: []byte("DVPInstanceClass"),
 	}
 }
 
@@ -385,11 +385,11 @@ func rejectingRegistration() map[string][]byte {
 // follows from the registration alone — and publishes the given JSON list of zones.
 func capiRegistration(zonesJSON string) map[string][]byte {
 	return map[string][]byte{
-		"type":                                []byte(`"yandex"`),
-		"capiClusterKind":                     []byte("YandexCluster"),
-		nodecommon.InstanceClassKindKey:       []byte(yandexInstanceClassKind),
-		nodecommon.InstanceClassAPIVersionKey: []byte(yandexInstanceClassVersion),
-		"zones":                               []byte(zonesJSON),
+		"type":                                   []byte(`"yandex"`),
+		"capiClusterKind":                        []byte("YandexCluster"),
+		cloudprovider.InstanceClassKindKey:       []byte(yandexInstanceClassKind),
+		cloudprovider.InstanceClassAPIVersionKey: []byte(yandexInstanceClassVersion),
+		"zones":                                  []byte(zonesJSON),
 	}
 }
 

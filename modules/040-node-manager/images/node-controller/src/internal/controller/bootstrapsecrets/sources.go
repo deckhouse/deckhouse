@@ -31,6 +31,7 @@ import (
 
 	deckhousev1 "github.com/deckhouse/node-controller/api/deckhouse.io/v1"
 	"github.com/deckhouse/node-controller/internal/bootstrap"
+	"github.com/deckhouse/node-controller/internal/cloudprovider"
 	nodecommon "github.com/deckhouse/node-controller/internal/common"
 	"github.com/deckhouse/node-controller/internal/controller/nodegroup/bashiblecontext"
 	ngcommon "github.com/deckhouse/node-controller/internal/controller/nodegroup/common"
@@ -82,9 +83,10 @@ func BuildInput(ctx context.Context, svc *bashiblecontext.Service, resolved deri
 		return bootstrap.Input{}, err
 	}
 
-	cloudProvider := svc.ReadCloudProvider(ctx)
-	provider, _ := cloudProvider["type"].(string)
-	sshPublicKey, _ := cloudProvider["sshPublicKey"].(string)
+	registration, err := cloudprovider.Default(ctx, svc.Client)
+	if err != nil {
+		return bootstrap.Input{}, err
+	}
 
 	return bootstrap.Input{
 		NodeGroup:              resolved.ToMap(),
@@ -96,10 +98,10 @@ func BuildInput(ctx context.Context, svc *bashiblecontext.Service, resolved deri
 		// minget is 4KiB (crane export of the image candi/alt_base_images.yml
 		// pins), so inlining its base64 into the script costs ~5KiB per copy.
 		MingetB64:      base64.StdEncoding.EncodeToString(files.Binary("minget")),
-		Provider:       provider,
+		Provider:       registration.Type,
 		KubernetesCA:   kubernetesCA,
 		BootstrapToken: token,
-		SSHPublicKey:   sshPublicKey,
+		SSHPublicKey:   registration.SSHPublicKey,
 		Files:          files,
 	}, nil
 }

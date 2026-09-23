@@ -131,7 +131,7 @@ func (r *MachineDeploymentReconciler) SetupWatches(w register.Watcher) {
 	// may appear only after this pod started.
 	w.WatchesRawSource(cloudprovider.LazyInstanceClassSource(r.Cache,
 		handler.EnqueueRequestsFromMapFunc(func(ctx context.Context, obj client.Object) []reconcile.Request {
-			return common.InstanceClassToNodeGroups(ctx, r.Client, obj)
+			return cloudprovider.InstanceClassToNodeGroups(ctx, r.Client, obj)
 		}),
 		predicate.GenerationChangedPredicate{}))
 }

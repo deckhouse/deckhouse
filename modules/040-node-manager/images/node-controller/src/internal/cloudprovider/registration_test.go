@@ -235,3 +235,39 @@ func TestRegistrationValidation(t *testing.T) {
 	registration.Type = "DVP"
 	require.ErrorContains(t, registration.ValidateCore(), "must be lowercase")
 }
+
+func TestDecodeRegistration_APIVersionIsNeverGuessed(t *testing.T) {
+	tests := []struct {
+		name       string
+		data       map[string][]byte
+		expVersion string
+	}{
+		{
+			name:       "published version is used verbatim",
+			data:       map[string][]byte{InstanceClassAPIVersionKey: []byte("v1")},
+			expVersion: "v1",
+		},
+		{
+			name:       "a provider serving only v1alpha1 is honoured",
+			data:       map[string][]byte{InstanceClassAPIVersionKey: []byte("v1alpha1")},
+			expVersion: "v1alpha1",
+		},
+		{
+			// No guessing: a version picked here would feed the instance-class checksum, and a
+			// wrong guess renames the MachineTemplate and recreates every node in the NodeGroup.
+			name: "provider registered without the key yields no version",
+			data: map[string][]byte{"instanceClassKind": []byte("YandexInstanceClass")},
+		},
+		{
+			name: "no provider secret at all yields no version",
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			registration, err := DecodeRegistration(tc.data)
+			require.NoError(t, err)
+			assert.Equal(t, tc.expVersion, registration.InstanceClassAPIVersion)
+		})
+	}
+}

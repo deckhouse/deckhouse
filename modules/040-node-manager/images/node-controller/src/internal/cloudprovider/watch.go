@@ -163,7 +163,7 @@ func nodeGroupRequests(ctx context.Context, r client.Reader, carried ...Registra
 		return nil
 	}
 
-	clusterProvider, err := getDefaultProvider(ctx, r)
+	clusterProvider, err := Default(ctx, r)
 	if err != nil {
 		logger.Error(err, "read the cluster provider for a cloud provider registration event")
 		return nil
@@ -266,7 +266,7 @@ func IsInputSecret(object client.Object) bool {
 		return false
 	}
 	name := object.GetName()
-	return name == common.CloudProviderSecretName ||
+	return name == RegistrationSecretBaseName ||
 		name == common.ClusterConfigSecretName ||
 		(strings.HasPrefix(name, "d8-cloud-provider-") &&
 			(strings.HasSuffix(name, "-capi") || strings.HasSuffix(name, "-mcm")))

@@ -29,6 +29,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client/interceptor"
 
 	v1 "github.com/deckhouse/node-controller/api/deckhouse.io/v1"
+	"github.com/deckhouse/node-controller/internal/cloudprovider"
 )
 
 // The snapshot is the package's whole input. Building it in one place is what makes the derive and
@@ -57,7 +58,7 @@ func TestBuildSnapshot_StaticNodeGroupReadsStaticConfigOnly(t *testing.T) {
 func TestBuildSnapshot_CloudEphemeralReportsMissingPublishedVersion(t *testing.T) {
 	registration := validMCMRegistrationData("aws", "AWSInstanceClass", "v1")
 	delete(registration, "instanceClassAPIVersion")
-	s := newTestService(t, testSecret(cloudProviderSecretNamespace, cloudProviderSecretName, registration))
+	s := newTestService(t, testSecret(cloudprovider.RegistrationSecretNamespace, cloudprovider.RegistrationSecretBaseName, registration))
 	ng := &v1.NodeGroup{}
 	ng.Name = "worker"
 	ng.Spec.NodeType = v1.NodeTypeCloudEphemeral
@@ -77,7 +78,7 @@ func TestBuildSnapshot_CloudEphemeralReportsMissingPublishedVersion(t *testing.T
 func TestBuildSnapshot_IncompleteRegistrationStillDescribesTheNodeGroup(t *testing.T) {
 	registration := validMCMRegistrationData("aws", "AWSInstanceClass", "v1")
 	delete(registration, "region")
-	s := newTestService(t, testSecret(cloudProviderSecretNamespace, cloudProviderSecretName, registration))
+	s := newTestService(t, testSecret(cloudprovider.RegistrationSecretNamespace, cloudprovider.RegistrationSecretBaseName, registration))
 	ng := &v1.NodeGroup{}
 	ng.Name = "worker"
 	ng.Spec.NodeType = v1.NodeTypeCloudEphemeral
@@ -122,8 +123,8 @@ func TestBuildSnapshot_ClassDeletedMidPassIsRecorded(t *testing.T) {
 	c := fake.NewClientBuilder().
 		WithScheme(scheme).
 		WithObjects(existing, testSecret(
-			cloudProviderSecretNamespace,
-			cloudProviderSecretName,
+			cloudprovider.RegistrationSecretNamespace,
+			cloudprovider.RegistrationSecretBaseName,
 			validMCMRegistrationData("aws", kind, "v1"),
 		)).
 		WithInterceptorFuncs(interceptor.Funcs{
@@ -245,8 +246,8 @@ func newDVPTestService(t *testing.T, className string, cores int64, memory strin
 	c := fake.NewClientBuilder().
 		WithScheme(scheme).
 		WithObjects(ic, testSecret(
-			cloudProviderSecretNamespace,
-			cloudProviderSecretName,
+			cloudprovider.RegistrationSecretNamespace,
+			cloudprovider.RegistrationSecretBaseName,
 			validCAPIRegistrationData("dvp", kind, "v1"),
 		)).
 		Build()
@@ -264,7 +265,7 @@ func TestBuildSnapshot_UnreadableSourceAborts(t *testing.T) {
 	ng.Name = "worker"
 	ng.Spec.NodeType = v1.NodeTypeCloudEphemeral
 
-	_, err := s.BuildSnapshot(t.Context(), ng, CloudProviderRegistration{})
+	_, err := s.BuildSnapshot(t.Context(), ng, cloudprovider.Registration{})
 
 	require.ErrorContains(t, err, "read cluster uuid configmap")
 }

@@ -109,7 +109,7 @@ func (r *Status) SetupWatches(w register.Watcher) {
 	// pod started.
 	w.WatchesRawSource(cloudprovider.LazyInstanceClassSource(r.cache, handler.EnqueueRequestsFromMapFunc(
 		func(ctx context.Context, obj client.Object) []reconcile.Request {
-			return nodecommon.InstanceClassToNodeGroups(ctx, r.Client, obj)
+			return cloudprovider.InstanceClassToNodeGroups(ctx, r.Client, obj)
 		})))
 }
 

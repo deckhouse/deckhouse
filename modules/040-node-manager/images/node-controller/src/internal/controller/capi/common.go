@@ -32,8 +32,8 @@ import (
 
 const (
 	capiNamespace                   = common.MachineNamespace
-	cloudProviderSecretName         = common.CloudProviderSecretName
-	cloudProviderSecretNamespace    = common.CloudProviderSecretNamespace
+	cloudProviderSecretName         = cloudprovider.RegistrationSecretBaseName
+	cloudProviderSecretNamespace    = cloudprovider.RegistrationSecretNamespace
 	providerTemplateSecretNamespace = cloudprovider.ProviderTemplateSecretNamespace
 	machineTemplateContractKey      = cloudprovider.CAPIMachineTemplateKey
 	clusterConfigSecretName         = common.ClusterConfigSecretName
@@ -45,7 +45,7 @@ const (
 type BaseWithReader struct {
 	register.Base
 	APIReader client.Reader
-	// Cache backs the deferred InstanceClass watches (common.LazyInstanceClassSource): the
+	// Cache backs the deferred InstanceClass watches (cloudprovider.LazyInstanceClassSource): the
 	// kind and version are data in the provider registration Secret, which may appear only
 	// after this controller started.
 	Cache cache.Cache

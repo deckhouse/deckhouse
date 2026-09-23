@@ -23,8 +23,6 @@ import (
 	"strings"
 
 	"k8s.io/apimachinery/pkg/runtime/schema"
-
-	"github.com/deckhouse/node-controller/internal/common"
 )
 
 // Registration is the typed view of kube-system/d8-node-manager-cloud-provider.
@@ -81,7 +79,7 @@ func (r Registration) ValidateCore() error {
 		missing = append(missing, "instanceClassKind")
 	}
 	if strings.TrimSpace(r.InstanceClassAPIVersion) == "" {
-		missing = append(missing, common.InstanceClassAPIVersionKey)
+		missing = append(missing, InstanceClassAPIVersionKey)
 	}
 	if strings.TrimSpace(r.Type) != "" && r.CloudVariables == nil {
 		missing = append(missing, "provider subtree "+strings.ToLower(r.Type))
@@ -171,8 +169,8 @@ func DecodeRegistration(data map[string][]byte) (Registration, error) {
 		Type:                           decodeString(data["type"]),
 		Region:                         decodeString(data["region"]),
 		Zones:                          zones,
-		InstanceClassKind:              decodeString(data[common.InstanceClassKindKey]),
-		InstanceClassAPIVersion:        decodeString(data[common.InstanceClassAPIVersionKey]),
+		InstanceClassKind:              decodeString(data[InstanceClassKindKey]),
+		InstanceClassAPIVersion:        decodeString(data[InstanceClassAPIVersionKey]),
 		MachineClassKind:               decodeString(data["machineClassKind"]),
 		SSHPublicKey:                   decodeString(data["sshPublicKey"]),
 		CAPIClusterName:                decodeString(data["capiClusterName"]),

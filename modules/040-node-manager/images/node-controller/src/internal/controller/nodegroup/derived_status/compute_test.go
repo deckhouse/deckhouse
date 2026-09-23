@@ -31,6 +31,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	v1 "github.com/deckhouse/node-controller/api/deckhouse.io/v1"
+	"github.com/deckhouse/node-controller/internal/cloudprovider"
 )
 
 func boolPtr(b bool) *bool { return &b }
@@ -45,40 +46,40 @@ func mustSemver(t *testing.T, s string) *semver.Version {
 func TestDefaultCloudEphemeralEngine(t *testing.T) {
 	cases := []struct {
 		name     string
-		provider CloudProviderRegistration
+		provider cloudprovider.Registration
 		useMCM   bool
 		want     string
 	}{
 		{
 			name:     "neither MCM nor CAPI",
-			provider: CloudProviderRegistration{},
+			provider: cloudprovider.Registration{},
 			want:     engineNone,
 		},
 		{
 			name:     "MCM only",
-			provider: CloudProviderRegistration{MachineClassKind: "AWSInstanceClass"},
+			provider: cloudprovider.Registration{MachineClassKind: "AWSInstanceClass"},
 			want:     engineMCM,
 		},
 		{
 			name:     "CAPI only",
-			provider: CloudProviderRegistration{CAPIClusterKind: "DVPCluster"},
+			provider: cloudprovider.Registration{CAPIClusterKind: "DVPCluster"},
 			want:     engineCAPI,
 		},
 		{
 			name:     "both, useMCM=false defaults to CAPI",
-			provider: CloudProviderRegistration{MachineClassKind: "AWSInstanceClass", CAPIClusterKind: "DVPCluster"},
+			provider: cloudprovider.Registration{MachineClassKind: "AWSInstanceClass", CAPIClusterKind: "DVPCluster"},
 			useMCM:   false,
 			want:     engineCAPI,
 		},
 		{
 			name:     "both, useMCM=true forces MCM",
-			provider: CloudProviderRegistration{MachineClassKind: "AWSInstanceClass", CAPIClusterKind: "DVPCluster"},
+			provider: cloudprovider.Registration{MachineClassKind: "AWSInstanceClass", CAPIClusterKind: "DVPCluster"},
 			useMCM:   true,
 			want:     engineMCM,
 		},
 		{
 			name:     "empty-string kinds are treated as absent",
-			provider: CloudProviderRegistration{},
+			provider: cloudprovider.Registration{},
 			want:     engineNone,
 		},
 	}
@@ -90,13 +91,13 @@ func TestDefaultCloudEphemeralEngine(t *testing.T) {
 }
 
 func TestEngine_PinAndDefaults(t *testing.T) {
-	mcmProvider := CloudProviderRegistration{MachineClassKind: "AWSInstanceClass"}
-	capiProvider := CloudProviderRegistration{CAPIClusterKind: "DVPCluster"}
+	mcmProvider := cloudprovider.Registration{MachineClassKind: "AWSInstanceClass"}
+	capiProvider := cloudprovider.Registration{CAPIClusterKind: "DVPCluster"}
 
 	cases := []struct {
 		name     string
 		ng       *v1.NodeGroup
-		provider CloudProviderRegistration
+		provider cloudprovider.Registration
 		want     string
 	}{
 		{
@@ -120,7 +121,7 @@ func TestEngine_PinAndDefaults(t *testing.T) {
 				ObjectMeta: metav1.ObjectMeta{Annotations: map[string]string{useMCMAnnotation: "true"}},
 				Spec:       v1.NodeGroupSpec{NodeType: v1.NodeTypeCloudEphemeral},
 			},
-			provider: CloudProviderRegistration{MachineClassKind: "AWSInstanceClass", CAPIClusterKind: "DVPCluster"},
+			provider: cloudprovider.Registration{MachineClassKind: "AWSInstanceClass", CAPIClusterKind: "DVPCluster"},
 			want:     engineMCM,
 		},
 		{
@@ -268,7 +269,7 @@ func TestSerializeTaints(t *testing.T) {
 }
 
 func TestEngine_ExistingMachineDeploymentsWin(t *testing.T) {
-	bothCapable := CloudProviderRegistration{
+	bothCapable := cloudprovider.Registration{
 		MachineClassKind: "YandexMachineClass",
 		CAPIClusterKind:  "YandexCluster",
 	}
@@ -327,8 +328,8 @@ func TestEngine_ExistingMachineDeploymentsWin(t *testing.T) {
 }
 
 func TestEngineUndecided(t *testing.T) {
-	bothCapable := CloudProviderRegistration{MachineClassKind: "YandexMachineClass", CAPIClusterKind: "YandexCluster"}
-	capiOnly := CloudProviderRegistration{CAPIClusterKind: "DVPCluster"}
+	bothCapable := cloudprovider.Registration{MachineClassKind: "YandexMachineClass", CAPIClusterKind: "YandexCluster"}
+	capiOnly := cloudprovider.Registration{CAPIClusterKind: "DVPCluster"}
 
 	ng := &v1.NodeGroup{Spec: v1.NodeGroupSpec{NodeType: v1.NodeTypeCloudEphemeral}}
 	assert.True(t, engineUndecided(ng, bothCapable), "an unpinned cloud group on a both-kinds provider is the only case worth a list")
@@ -346,7 +347,7 @@ func TestEngineUndecided(t *testing.T) {
 // An apiserver that does not serve a MachineDeployment kind must not read as "no machines": that
 // would pin the provider default on a group that may run on the other engine, irreversibly.
 func TestResolveEngine_UnservedKindIsAnError(t *testing.T) {
-	bothCapable := CloudProviderRegistration{MachineClassKind: "YandexMachineClass", CAPIClusterKind: "YandexCluster"}
+	bothCapable := cloudprovider.Registration{MachineClassKind: "YandexMachineClass", CAPIClusterKind: "YandexCluster"}
 	ng := &v1.NodeGroup{
 		ObjectMeta: metav1.ObjectMeta{Name: "worker"},
 		Spec:       v1.NodeGroupSpec{NodeType: v1.NodeTypeCloudEphemeral},

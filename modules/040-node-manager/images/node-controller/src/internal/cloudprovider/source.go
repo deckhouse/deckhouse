@@ -185,7 +185,7 @@ func (s Source) loadRegistration(ctx context.Context) (Registration, map[string]
 func (s Source) readRegistration(ctx context.Context) (Registration, map[string]any, error) {
 	secret := &corev1.Secret{}
 	if err := s.Reader.Get(ctx, types.NamespacedName{
-		Name: common.CloudProviderSecretName, Namespace: common.CloudProviderSecretNamespace,
+		Name: RegistrationSecretBaseName, Namespace: RegistrationSecretNamespace,
 	}, secret); err != nil {
 		if apierrors.IsNotFound(err) {
 			return Registration{}, nil, ErrNoCloudProvider

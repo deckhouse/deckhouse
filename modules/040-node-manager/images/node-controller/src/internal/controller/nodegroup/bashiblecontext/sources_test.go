@@ -223,18 +223,3 @@ func TestReadEndpoints_EmptyReturnsError(t *testing.T) {
 	assert.Empty(t, got.APIServerEndpoints)
 	assert.Empty(t, got.ClusterMasterEndpoints)
 }
-
-func TestReadCloudProvider(t *testing.T) {
-	s := newService(t, secret(kubeSystemNS, cloudProviderSecretName, map[string][]byte{
-		"type":             []byte(`"yandex"`),
-		"machineClassKind": []byte(`"YandexMachineClass"`),
-	}))
-	got := s.ReadCloudProvider(context.Background())
-	assert.Equal(t, "yandex", got["type"])
-	assert.Equal(t, "YandexMachineClass", got["machineClassKind"])
-}
-
-func TestReadCloudProvider_AbsentReturnsNil(t *testing.T) {
-	s := newService(t)
-	assert.Nil(t, s.ReadCloudProvider(context.Background()))
-}

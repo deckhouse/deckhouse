@@ -129,7 +129,7 @@ func (r *Reconciler) SetupWatches(w register.Watcher) {
 	// bootstrap for a whole resyncInterval. The nodegroup status controller watches the same
 	// object for its own reasons (nodegroup/controller.go:95).
 	w.Watches(&corev1.Secret{}, handler.EnqueueRequestsFromMapFunc(r.allNodeGroups),
-		builder.WithPredicates(named(nodecommon.CloudProviderSecretNamespace, nodecommon.CloudProviderSecretName)))
+		builder.WithPredicates(named(cloudprovider.RegistrationSecretNamespace, cloudprovider.RegistrationSecretBaseName)))
 }
 
 // named selects one object by namespace and name. Both watched namespaces are covered by the

@@ -31,12 +31,11 @@ import (
 
 	v1 "github.com/deckhouse/node-controller/api/deckhouse.io/v1"
 	"github.com/deckhouse/node-controller/internal/cloudprovider"
-	nodecommon "github.com/deckhouse/node-controller/internal/common"
 	ngcommon "github.com/deckhouse/node-controller/internal/controller/nodegroup/common"
 )
 
 // testProvider resolves the provider a NodeGroup runs on the way a reconcile does.
-func testProvider(t *testing.T, s *Service, ng *v1.NodeGroup) CloudProviderRegistration {
+func testProvider(t *testing.T, s *Service, ng *v1.NodeGroup) cloudprovider.Registration {
 	t.Helper()
 	provider, err := cloudprovider.ForNodeGroup(context.Background(), s.Client, ng)
 	require.NoError(t, err)
@@ -85,13 +84,13 @@ func testSecret(ns, name string, data map[string][]byte) *corev1.Secret {
 
 func validMCMRegistrationData(provider, instanceClassKind, instanceClassVersion string) map[string][]byte {
 	return map[string][]byte{
-		"type":                                []byte(provider),
-		"region":                              []byte("test-region"),
-		"zones":                               []byte(`["test-zone"]`),
-		"instanceClassKind":                   []byte(instanceClassKind),
-		nodecommon.InstanceClassAPIVersionKey: []byte(instanceClassVersion),
-		"machineClassKind":                    []byte("TestMachineClass"),
-		provider:                              []byte(`{"project":"test"}`),
+		"type":                                   []byte(provider),
+		"region":                                 []byte("test-region"),
+		"zones":                                  []byte(`["test-zone"]`),
+		"instanceClassKind":                      []byte(instanceClassKind),
+		cloudprovider.InstanceClassAPIVersionKey: []byte(instanceClassVersion),
+		"machineClassKind":                       []byte("TestMachineClass"),
+		provider:                                 []byte(`{"project":"test"}`),
 	}
 }
 
@@ -104,40 +103,6 @@ func validCAPIRegistrationData(provider, instanceClassKind, instanceClassVersion
 	data["capiMachineTemplateKind"] = []byte("TestMachineTemplate")
 	data["capiMachineTemplateAPIVersion"] = []byte("infrastructure.cluster.x-k8s.io/v1alpha1")
 	return data
-}
-
-func TestDecodeRegistration_APIVersionIsNeverGuessed(t *testing.T) {
-	tests := []struct {
-		name       string
-		data       map[string][]byte
-		expVersion string
-	}{
-		{
-			name:       "published version is used verbatim",
-			data:       map[string][]byte{nodecommon.InstanceClassAPIVersionKey: []byte("v1")},
-			expVersion: "v1",
-		},
-		{
-			name:       "a provider serving only v1alpha1 is honoured",
-			data:       map[string][]byte{nodecommon.InstanceClassAPIVersionKey: []byte("v1alpha1")},
-			expVersion: "v1alpha1",
-		},
-		{
-			// No guessing: a version picked here would feed the instance-class checksum, and a
-			// wrong guess renames the MachineTemplate and recreates every node in the NodeGroup.
-			name: "provider registered without the key yields no version",
-			data: map[string][]byte{"instanceClassKind": []byte("YandexInstanceClass")},
-		},
-		{
-			name: "no provider secret at all yields no version",
-		},
-	}
-
-	for _, tc := range tests {
-		t.Run(tc.name, func(t *testing.T) {
-			assert.Equal(t, tc.expVersion, DecodeRegistration(tc.data).InstanceClassAPIVersion)
-		})
-	}
 }
 
 // An unpublished version must reach the operator as a NodeGroup validation error rather than as a
@@ -156,7 +121,7 @@ func TestRunCloudChecks_UnpublishedAPIVersionIsAValidationError(t *testing.T) {
 	}
 
 	check := Validate(ng, Snapshot{
-		Provider: CloudProviderRegistration{InstanceClassKind: "YandexInstanceClass"},
+		Provider: cloudprovider.Registration{InstanceClassKind: "YandexInstanceClass"},
 	})
 
 	assert.Contains(t, check.Error, "has not published instanceClassAPIVersion")
@@ -198,7 +163,7 @@ func TestReadDefaultZonesIncludesExistingMCMMachineDeploymentZones(t *testing.T)
 	md.SetAnnotations(map[string]string{"zone": "zone-a"})
 
 	s := newTestService(t, md)
-	got, err := s.readDefaultZones(context.Background(), CloudProviderRegistration{Zones: []string{"zone-b", "zone-a"}})
+	got, err := s.readDefaultZones(context.Background(), cloudprovider.Registration{Zones: []string{"zone-b", "zone-a"}})
 	require.NoError(t, err)
 
 	assert.Equal(t, []string{"zone-a", "zone-b"}, got)
@@ -230,8 +195,8 @@ func TestResolveNodeGroup_StaticWiresNameRolloutAndStatic(t *testing.T) {
 
 func TestResolveNodeGroup_CloudKindMismatchErrors(t *testing.T) {
 	s := newTestService(t, testSecret(
-		cloudProviderSecretNamespace,
-		cloudProviderSecretName,
+		cloudprovider.RegistrationSecretNamespace,
+		cloudprovider.RegistrationSecretBaseName,
 		validCAPIRegistrationData("yandex", "YandexInstanceClass", "v1alpha1"),
 	))
 	ng := &v1.NodeGroup{
