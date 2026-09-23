@@ -40,6 +40,9 @@ requirements:
   # The check is evaluated by the version already INSTALLED — it ships in 1.77, in
   # modules/038-registry/requirements/check.go — and this line is what finally asks it.
   "registryImplementation": "V2" # modules/038-registry/requirements/check.go
+  # Custom roles of the legacy experimental RBACv2 scheme stop aggregating in 1.78; the check function
+  # and its discovery hook ship in 1.77 (backported), so the 1.78 release waits until they are migrated.
+  "legacyRBACv2CustomRolesCount": "0" # modules/140-user-authz/requirements/check.go
   # "checkContainerdV1NodesPresent": "false" # modules/040-node-manager/requirements/check.go; injected with 'true' only for CSE via .werf/werf-release-channel.yaml (CSE drops containerd v1)
 
 # map of disruptions, associated with a specific release. You have to register check functions before specified release
