@@ -299,7 +299,7 @@ func handleDVPClusterConfiguration(_ context.Context, input *go_hook.HookInput) 
 
 	// setDefaultZones preserves the "default" zone fallback for the live
 	// cluster-configuration hook. node-manager's get_crds.go
-	// (modules/040-node-manager/hooks/get_crds.go) substitutes defaultZones for
+	// (modules/040-node-manager/hooks/core/get_crds.go) substitutes defaultZones for
 	// NodeGroups whose zones are nil; keeping a non-empty zone here preserves the
 	// historical behavior for clusters that relied on the synthetic "default"
 	// zone. The migration path (create_migration_resources.go) intentionally does

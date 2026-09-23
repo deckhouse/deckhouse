@@ -740,6 +740,11 @@
   stageDependencies:
     install:
         - '**/*'
+- add: /ee/cse/modules/040-node-manager/hooks/common_test.go
+  to: /deckhouse/modules/040-node-manager/hooks/common_test.go
+  stageDependencies:
+    install:
+        - '**/*'
 - add: /ee/cse/modules/040-node-manager/hooks/enable_integrity_controller.go
   to: /deckhouse/modules/040-node-manager/hooks/enable_integrity_controller.go
   stageDependencies:
