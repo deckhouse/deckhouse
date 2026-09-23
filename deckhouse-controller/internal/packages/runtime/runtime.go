@@ -99,22 +99,12 @@ const (
 	apiShutdownTimeout = 5 * time.Second
 )
 
-// Reschedule reasons the runtime hands to the scheduler. They travel on the
-// resulting EventSchedule and become the cancellation cause of the run that the
-// reschedule cut short, so a cancelled install can name its trigger.
+// Reschedule reasons the runtime hands to the scheduler, which logs them with the pass they
+// triggered. What a cancelled run reports is the store's own cause — see lifecycle/cause.go.
 const (
-	reasonSettingsChanged   = "SettingsChanged"
 	reasonEnabledChanged    = "EnabledIntentChanged"
-	reasonConfigChanged     = "ConfigChanged"
 	reasonDriftDetected     = "DriftDetected"
 	reasonHookValuesChanged = "HookValuesChanged"
-)
-
-// Cancellation causes reported by tasks whose context the runtime replaces.
-var (
-	errRescheduled     = lifecycle.CancelCause("package rescheduled")
-	errPackageDisabled = lifecycle.CancelCause("package disabled")
-	errPackageRemoved  = lifecycle.CancelCause("package removed")
 )
 
 // Runtime orchestrates the full lifecycle of application packages: discovery,
@@ -291,7 +281,10 @@ func (r *Runtime) loadGlobal(ctx context.Context) error {
 	r.status.SetConditionTrue(r.global.GetName(), status.ConditionRequirementsMet)
 	r.status.SetConditionTrue(r.global.GetName(), status.ConditionReadyOnFilesystem)
 	r.status.SetConditionTrue(r.global.GetName(), status.ConditionLoaded)
-	r.packages.Update(r.global.GetName(), r.global.GetVersion().String(), 0, make(addonutils.Values), "", false)
+	r.packages.Reconcile(r.global.GetName(), lifecycle.DesiredState{
+		Version:  r.global.GetVersion().String(),
+		Settings: make(addonutils.Values),
+	})
 
 	return nil
 }
@@ -582,18 +575,17 @@ func (r *Runtime) Run() error {
 // set.
 //
 // Both tasks (and globalrun's per-module EnsureCRDs subtasks) run under global's
-// EventSchedule context, mirroring how schedulePackage scopes a package's tasks:
-// rescheduling global renews that context and cancels the in-flight run. onDone
-// completes the global node, unblocking the modules waiting behind it.
+// reconciliation context, as schedulePackage scopes a package's tasks: rescheduling global
+// begins a new one and cancels the in-flight run. onDone completes the global node,
+// unblocking the modules waiting behind it.
 func (r *Runtime) scheduleGlobal(enabled []string, reason string) {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 
 	r.logger.Debug("schedule global package", slog.String("reason", reason))
 
-	ctx := r.packages.HandleEvent(lifecycle.EventSchedule, r.global.GetName(),
-		fmt.Errorf("%w: %s", errRescheduled, reason))
-	if ctx == nil {
+	ctx, ok := r.packages.BeginReconciliation(r.global.GetName(), reason)
+	if !ok {
 		return
 	}
 
@@ -637,8 +629,8 @@ func (r *Runtime) scheduleGlobal(enabled []string, reason string) {
 // The Run task carries an onDone callback that calls scheduler.Complete, letting the
 // scheduler know the package has finished its run cycle.
 //
-// Both schedulePackage and disablePackage use EventSchedule, so enqueueing here
-// implicitly cancels any in-flight disable context for the same package.
+// Both schedulePackage and disablePackage begin a reconciliation, and a package has only
+// one, so enqueueing here cancels an in-flight disable of the same package.
 func (r *Runtime) schedulePackage(name, reason string) {
 	r.mu.Lock()
 	defer r.mu.Unlock()
@@ -649,9 +641,8 @@ func (r *Runtime) schedulePackage(name, reason string) {
 		r.scheduler.Complete(name)
 	})
 
-	ctx := r.packages.HandleEvent(lifecycle.EventSchedule, name,
-		fmt.Errorf("%w: %s", errRescheduled, reason))
-	if ctx == nil {
+	ctx, ok := r.packages.BeginReconciliation(name, reason)
+	if !ok {
 		return
 	}
 
@@ -682,17 +673,16 @@ func (r *Runtime) schedulePackage(name, reason string) {
 // disablePackage handles scheduler disable events by enqueueing a Disable task that
 // tears down the package's hooks and Helm release.
 //
-// Both disablePackage and schedulePackage use EventSchedule, so enqueueing the disable
-// task here implicitly cancels any in-flight startup/run context for the same package.
+// Both disablePackage and schedulePackage begin a reconciliation, and a package has only
+// one, so enqueueing the disable here cancels an in-flight startup or run.
 func (r *Runtime) disablePackage(name, reason, msg string) {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 
 	r.logger.Debug("disable package", slog.String("name", name))
 
-	ctx := r.packages.HandleEvent(lifecycle.EventSchedule, name,
-		fmt.Errorf("%w: %s", errPackageDisabled, reason))
-	if ctx == nil {
+	ctx, ok := r.packages.BeginReconciliation(name, reason)
+	if !ok {
 		return
 	}
 
@@ -981,4 +971,21 @@ func (r *Runtime) ValidatePackageSettings(ctx context.Context, name string, sett
 	}
 
 	return validator.ValidateSettings(ctx, settingsVersion, settings)
+}
+
+// rescheduleReason names the changes behind a reschedule, for the scheduler's log line.
+func rescheduleReason(changes lifecycle.Changes) string {
+	if changes.Settings {
+		return "SettingsChanged"
+	}
+
+	if changes.SettingsVersion {
+		return "SettingsVersionChanged"
+	}
+
+	if changes.Maintenance {
+		return "MaintenanceChanged"
+	}
+
+	return "DesiredStateChanged"
 }
