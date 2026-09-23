@@ -48,7 +48,7 @@ func newTestSyncerWithGlobal(t *testing.T, version, embeddedDir, globalDir strin
 	t.Helper()
 
 	// the module pass is gated off by default, and these tests drive it
-	t.Setenv(app.EnvEnableModulePackageSync, "true")
+	t.Setenv(app.EnvEnableModuleV2, "true")
 
 	setDeckhouseVersion(t, version)
 

@@ -24,6 +24,7 @@ import (
 	"sync"
 	"time"
 
+	klient "github.com/flant/kube-client/client"
 	"github.com/go-logr/logr"
 	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
 	appsv1 "k8s.io/api/apps/v1"
@@ -32,7 +33,6 @@ import (
 	discoveryv1 "k8s.io/api/discovery/v1"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/client-go/rest"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/cache"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -48,6 +48,7 @@ import (
 	pkgruntime "github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/runtime"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/registry"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/addonutils"
+	d8apis "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha2"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1beta1"
@@ -82,6 +83,7 @@ type Controller struct {
 	sync *sync.WaitGroup
 
 	manager *pkgruntime.Runtime
+	kube    *klient.Client
 
 	embeddedPolicy *helpers.ModuleUpdatePolicySpecContainer
 
@@ -94,7 +96,7 @@ type Controller struct {
 }
 
 // Build assembles the manager, the package runtime and the shared containers; it starts nothing.
-func Build(ctx context.Context, rest *rest.Config, ms metricsstorage.Storage, logger *log.Logger) (*Controller, error) {
+func Build(ctx context.Context, ms metricsstorage.Storage, logger *log.Logger) (*Controller, error) {
 	scheme, err := buildSchema()
 	if err != nil {
 		return nil, fmt.Errorf("build schema: %w", err)
@@ -105,6 +107,9 @@ func Build(ctx context.Context, rest *rest.Config, ms metricsstorage.Storage, lo
 	// logger is *very* verbose even at info level. This is not really needed,
 	// but otherwise we get a warning from the controller-runtime.
 	ctrl.SetLogger(logr.New(ctrllog.NullLogSink{}))
+
+	client := klient.New(klient.WithLogger(logger.Named("controller-client")))
+	rest := client.RestConfig()
 
 	// inject otel tripper; the manager reads the transport when it builds its clients, so wrap first
 	rest.Wrap(func(t http.RoundTripper) http.RoundTripper {
@@ -200,6 +205,7 @@ func Build(ctx context.Context, rest *rest.Config, ms metricsstorage.Storage, lo
 		sync: synced,
 
 		manager: manager,
+		kube:    client,
 
 		embeddedPolicy: embeddedPolicy,
 
@@ -316,6 +322,10 @@ func buildCacheByObject() map[client.Object]cache.ByObject {
 // Start runs the manager, rebuilds the module tree from the cluster and hands it to the runtime.
 // The scheduler is resumed only once that tree is whole, so no module is scheduled half-restored.
 func (c *Controller) Start(ctx context.Context) error {
+	if err := d8apis.EnsureCRDs(ctx, c.kube, app.PathDeckhouseCRDs); err != nil {
+		return fmt.Errorf("ensure crds: %w", err)
+	}
+
 	c.sync.Add(1)
 	defer c.sync.Done()
 

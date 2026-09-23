@@ -274,7 +274,7 @@ spec:
 
                     - Configuration or hook changes are not reconciled, which prevents resources from being updated automatically.
                     - Resource monitoring is disabled, which prevents deleted resources from being restored.
-                    - All the module's resources are labeled with `maintenance.deckhouse.io/no-resource-reconciliation`.
+                    - All the module's resources are labeled with `maintenance: NoResourceReconciliation`.
                     - The `ModuleIsInMaintenanceMode` alert is triggered.
                 enum:
                 - NoResourceReconciliation
@@ -287,10 +287,10 @@ spec:
                 x-doc-examples:
                 - deckhouse
               packageVersion:
-                description: Version of the module package to install.
+                description: Version of the module package to install
                 type: string
                 x-doc-examples:
-                - v1.0.0
+                - v1.0.0.
               releaseChannel:
                 description: Release channel for the module package.
                 type: string
@@ -310,7 +310,7 @@ spec:
             properties:
               conditions:
                 description: Conditions reflecting the latest observations of the
-                  module state.
+                  application state.
                 items:
                   description: Condition contains details for one aspect of the current
                     state of this API Resource.
@@ -426,6 +426,6 @@ spec:
         - spec
         type: object
     served: true
-    storage: false
+    storage: true
     subresources:
       status: {}

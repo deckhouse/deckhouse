@@ -26,7 +26,15 @@ import (
 
 	crdinstaller "github.com/deckhouse/module-sdk/pkg/crd-installer"
 
+	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/app"
 	"github.com/deckhouse/deckhouse/pkg/log"
+)
+
+const (
+	// moduleCRDFile is the legacy Module CRD, replaced by moduleV2CRDFile when the Module v2 gate is on.
+	moduleCRDFile = "module.yaml"
+	// moduleV2CRDFile is the Module v2 CRD, installed only when the Module v2 gate is on.
+	moduleV2CRDFile = "modulev2.yaml"
 )
 
 // list of CRDs to delete, like "externalmodulesources.deckhouse.io"
@@ -49,13 +57,25 @@ func EnsureCRDs(ctx context.Context, client kubeClient, crdsGlob string) error {
 		return fmt.Errorf("glob %q: %w", crdsGlob, err)
 	}
 
+	skip := moduleV2CRDFile
+	if app.ModuleV2Enabled() {
+		skip = moduleCRDFile
+	}
+
+	filter := func(crdPath string) bool {
+		name := filepath.Base(crdPath)
+		if name == skip {
+			return false
+		}
+
+		return !strings.HasPrefix(name, "doc-")
+	}
+
 	inst := crdinstaller.NewCRDsInstaller(
 		client.Dynamic(),
 		crds,
 		crdinstaller.WithExtraLabels(defaultLabels),
-		crdinstaller.WithFileFilter(func(crdFilePath string) bool {
-			return !strings.HasPrefix(filepath.Base(crdFilePath), "doc-")
-		}),
+		crdinstaller.WithFileFilter(filter),
 	)
 
 	deletedCRDs, err := inst.DeleteCRDs(ctx, deprecatedCRDs)

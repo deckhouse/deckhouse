@@ -119,7 +119,7 @@ func (s *syncer) sync(ctx context.Context) error {
 		return fmt.Errorf("sync module package versions: %w", err)
 	}
 
-	if app.ModulePackageSyncEnabled() {
+	if app.ModuleV2Enabled() {
 		if err := s.syncModules(ctx); err != nil {
 			return fmt.Errorf("sync modules: %w", err)
 		}

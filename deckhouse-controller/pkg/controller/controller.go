@@ -30,6 +30,7 @@ import (
 
 	addonoperator "github.com/flant/addon-operator/pkg/addon-operator"
 	"github.com/flant/addon-operator/pkg/module_manager/models/modules/events"
+	klient "github.com/flant/kube-client/client"
 	"github.com/go-logr/logr"
 	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
 	appsv1 "k8s.io/api/apps/v1"
@@ -55,6 +56,7 @@ import (
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/metrics"
 	packageruntime "github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/runtime"
 	utils "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/addonutils"
+	d8apis "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha2"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1beta1"
@@ -70,7 +72,6 @@ import (
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/objectkeeper"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/packages/application"
 	applicationpackageversion "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/packages/application-package-version"
-	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/packages/module"
 	modulepackageversion "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/packages/module-package-version"
 	packagerepository "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/packages/package-repository"
 	packagerepositoryoperation "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/packages/package-repository-operation"
@@ -101,6 +102,7 @@ type DeckhouseController struct {
 	preflightCountDown *sync.WaitGroup
 
 	moduleLoader *moduleloader.Loader
+	kube         *klient.Client
 
 	dc dependency.Container
 
@@ -221,17 +223,6 @@ func NewDeckhouseController(
 		opts.Cache.ByObject[&v1alpha1.ApplicationPackageVersion{}] = cache.ByObject{}
 		opts.Cache.ByObject[&v1alpha1.ApplicationPackage{}] = cache.ByObject{}
 		opts.Cache.ByObject[&v1alpha1.Application{}] = cache.ByObject{}
-	}
-
-	// Module package sync (feature flag)
-	if app.ModulePackageSyncEnabled() {
-		opts.Cache.ByObject[&v1alpha1.ModulePackage{}] = cache.ByObject{}
-		opts.Cache.ByObject[&v1alpha1.ModulePackageVersion{}] = cache.ByObject{}
-	}
-
-	// Module v2 controller (feature flag)
-	if app.ModulePackagesEnabled() {
-		opts.Cache.ByObject[&v1beta1.Module{}] = cache.ByObject{}
 	}
 
 	admission, serveWebhooks := app.TakeOverAdmissionServer()
@@ -425,16 +416,6 @@ func NewDeckhouseController(
 		}
 	}
 
-	// Module v2 controller (feature flag)
-	if app.ModulePackagesEnabled() {
-		logger.Info("Module v2 controller is enabled")
-
-		err = module.RegisterController(preflightCountDown, runtimeManager, pkgRuntime, logger)
-		if err != nil {
-			return nil, fmt.Errorf("register module v2 controller: %w", err)
-		}
-	}
-
 	if serveWebhooks {
 		// GetWebhookServer, not the server above: this call adds it to the runnables.
 		validation.RegisterAdmissionHandlers(
@@ -456,6 +437,7 @@ func NewDeckhouseController(
 		runtimeManager:     runtimeManager,
 		moduleLoader:       loader,
 		preflightCountDown: preflightCountDown,
+		kube:               operator.KubeClient(),
 
 		dc: dc,
 
@@ -476,6 +458,10 @@ func setModulesEnvironment(operator *addonoperator.AddonOperator) {
 
 // Start loads and ensures modules from FS, starts controllers and runs deckhouse config event loop
 func (c *DeckhouseController) Start(ctx context.Context) error {
+	if err := d8apis.EnsureCRDs(ctx, c.kube, app.PathDeckhouseCRDs); err != nil {
+		return fmt.Errorf("ensure crds: %w", err)
+	}
+
 	// give the old module stack its package system objects before any
 	// controller runs; the sync reads through the API reader, so it does not
 	// need the manager cache
