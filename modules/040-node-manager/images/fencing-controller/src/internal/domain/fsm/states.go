@@ -45,8 +45,8 @@ const (
 	StateEvicting = State(v1alpha1.PhaseEvicting)
 	// StateDone is S5_DONE: the operations finished.
 	StateDone = State(v1alpha1.PhaseDone)
-	// StateError is S_ERR: a reconcile error to retry with backoff, and the
-	// state of an object whose reference to its Node is invalid or stale.
+	// StateError is S_ERR: an eviction that an API error or a conflict
+	// interrupted, waiting to be retried with backoff.
 	StateError = State(v1alpha1.PhaseError)
 )
 
@@ -78,9 +78,6 @@ const (
 	EventReconcileFailed Event = "ReconcileFailed"
 	// EventRetryAfterBackoff: the failed eviction is retried.
 	EventRetryAfterBackoff Event = "RetryAfterBackoff"
-	// EventInvalidNodeReference: the object does not identify a live Node, so
-	// evacuation is forbidden from whatever state the machine is in.
-	EventInvalidNodeReference Event = "InvalidNodeReference"
 	// EventStateDeleted: the recovered Node deleted its own object.
 	EventStateDeleted Event = "StateDeleted"
 )
@@ -124,14 +121,6 @@ func Transition(from State, event Event) (State, bool) {
 	arrows, known := transitions[from]
 	if !known {
 		return "", false
-	}
-
-	// The ADR allows the terminal skip on an invalid or stale Node reference
-	// from any state, so it is not repeated per state in the table above. The
-	// lookup above still runs first: a phase that is not a state of the machine
-	// leads nowhere, not even to the skip.
-	if event == EventInvalidNodeReference {
-		return StateError, true
 	}
 
 	next, ok := arrows[event]

@@ -6,15 +6,7 @@ memory: 50Mi
 {{- $healthPort := 4292 }}
 {{- $metricsPort := 4291 }}
 
-{{- $fencingEnabled := false }}
-{{- range $ng := .Values.nodeManager.internal.nodeGroups }}
-  {{- $mode := dig "fencing" "mode" "" $ng }}
-  {{- if or (eq $mode "Watchdog") (eq $mode "Notify") }}
-    {{- $fencingEnabled = true }}
-  {{- end }}
-{{- end }}
-
-{{- if $fencingEnabled }}
+{{- if include "fencing_enabled" . }}
   {{- if (.Capabilities.APIVersions.Has "autoscaling.k8s.io/v1/VerticalPodAutoscaler") }}
 ---
 apiVersion: autoscaling.k8s.io/v1
@@ -38,6 +30,7 @@ spec:
       maxAllowed:
         cpu: 50m
         memory: 128Mi
+    {{- include "helm_lib_vpa_kube_rbac_proxy_resources" . | nindent 4 }}
   {{- end }}
 ---
 apiVersion: policy/v1
@@ -117,4 +110,50 @@ spec:
           requests:
             {{- include "helm_lib_module_ephemeral_storage_only_logs" . | nindent 12 }}
             {{- include "fencing_controller_resources" . | nindent 12 }}
+      - name: kube-rbac-proxy
+        {{- include "helm_lib_module_container_security_context_pss_restricted_flexible" dict | nindent 8 }}
+        image: {{ include "helm_lib_module_common_image" (list . "kubeRbacProxy") }}
+        args:
+        - "--secure-listen-address=$(KUBE_RBAC_PROXY_LISTEN_ADDRESS):{{ $metricsPort }}"
+        - "--v=2"
+        - "--logtostderr=true"
+        - "--stale-cache-interval=1h30m"
+        - "--livez-path=/livez"
+        env:
+        - name: KUBE_RBAC_PROXY_LISTEN_ADDRESS
+          valueFrom:
+            fieldRef:
+              fieldPath: status.podIP
+        - name: KUBE_RBAC_PROXY_CONFIG
+          value: |
+            excludePaths:
+            - /healthz
+            upstreams:
+            - upstream: http://127.0.0.1:{{ $metricsPort }}/
+              path: /
+              authorization:
+                resourceAttributes:
+                  namespace: d8-cloud-instance-manager
+                  apiGroup: apps
+                  apiVersion: v1
+                  resource: deployments
+                  subresource: prometheus-metrics
+                  name: fencing-controller
+        ports:
+        - containerPort: {{ $metricsPort }}
+          name: https-metrics
+        livenessProbe:
+          httpGet:
+            path: /livez
+            port: {{ $metricsPort }}
+            scheme: HTTPS
+        readinessProbe:
+          httpGet:
+            path: /livez
+            port: {{ $metricsPort }}
+            scheme: HTTPS
+        resources:
+          requests:
+            {{- include "helm_lib_module_ephemeral_storage_only_logs" . | nindent 12 }}
+            {{- include "helm_lib_container_kube_rbac_proxy_resources" . | nindent 12 }}
 {{- end }}

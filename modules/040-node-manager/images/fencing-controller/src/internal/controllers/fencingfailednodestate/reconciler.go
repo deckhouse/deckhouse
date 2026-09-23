@@ -138,6 +138,10 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 		return r.refuseInvalidNodeReference(ctx, &incident, machine, problem, now)
 	}
 
+	// The reference identifies its Node, so the blocker reported for it is over
+	// no matter what the rest of this reconcile decides.
+	clearInvalidNodeReference(incident.Name)
+
 	params, err := r.profiles.Resolve(ctx, &incident)
 	if err != nil {
 		return r.reportUnusableProfile(ctx, &incident, machine, err, now)
@@ -168,14 +172,15 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 	return ctrl.Result{RequeueAfter: machine.RequeueAfter(&incident, params, now)}, nil
 }
 
-// refuseInvalidNodeReference parks the incident: the object does not identify a
-// live Node, so nothing may be deleted on its behalf, and there is nothing to
-// wait for either. The ADR allows the machine to reach the error state from
-// wherever it is, and the reason of the condition names which invariant broke.
+// refuseInvalidNodeReference blocks the incident: the object does not identify a
+// live Node, so nothing may be deleted on its behalf. The blocker is reported as
+// a condition whose reason names the broken invariant, and the phase is left
+// where the machine reached it, the same way a configuration error is reported.
 //
-// The path is terminal and is therefore not requeued. A reference that does get
-// repaired arrives as an update of the object, and an object that is not
-// repaired is normally collected together with the Node it belongs to.
+// Nothing is requeued, because time alone changes nothing here. A reference that
+// does get repaired arrives as an update of the object and the incident carries
+// on from the phase it kept; an object that is not repaired is collected
+// together with the Node it belongs to, when it has one to be collected by.
 func (r *Reconciler) refuseInvalidNodeReference(
 	ctx context.Context,
 	incident *v1alpha1.FencingFailedNodeState,
@@ -187,11 +192,13 @@ func (r *Reconciler) refuseInvalidNodeReference(
 	// write below records it there.
 	isNew := !blockedOnNodeReference(incident)
 
-	// The ADR describes the arrow out of every state of the machine, and the
-	// machine was restored from a phase that names one, so it is always crossed.
-	machine.Fire(fsm.EventInvalidNodeReference)
-
-	if err := r.writeStatus(ctx, incident, machine.State(), invalidNodeReference(incident, problem, now)); err != nil {
+	// The reference is reported next to a reset of the configuration blocker:
+	// the profile of a refused incident is not evaluated, so a ConfigurationError
+	// left over from an earlier pass would outlive the metric dropped below.
+	if err := r.writeStatus(ctx, incident, machine.State(),
+		invalidNodeReference(incident, problem, now),
+		profileNotEvaluated(incident, now),
+	); err != nil {
 		return ctrl.Result{}, err
 	}
 
@@ -206,12 +213,16 @@ func (r *Reconciler) refuseInvalidNodeReference(
 		r.recorder.Event(incident, corev1.EventTypeWarning, problem.Reason, problem.Message)
 	}
 
-	// The incident is over as far as the controller is concerned, so what it
-	// keeps outside the object goes with it: the profile of an incident that
-	// will not be evacuated is never read again, and the configuration error
-	// series would keep alerting about a blocker that no longer decides
-	// anything.
+	// What the controller keeps outside the object goes with the refusal: the
+	// profile of an incident that is not evacuated is never read again, and the
+	// configuration error series would keep alerting about a blocker that no
+	// longer decides anything.
 	r.dropTraceOf(incident.Name)
+
+	// The refusal is what the controller reports about this node instead, and it
+	// is published after the traces are dropped, because dropping them clears
+	// this series too.
+	reportInvalidNodeReference(incident.Name, problem.Reason)
 
 	return ctrl.Result{}, nil
 }
@@ -220,6 +231,7 @@ func (r *Reconciler) refuseInvalidNodeReference(
 func (r *Reconciler) dropTraceOf(node string) {
 	r.profiles.Forget(node)
 	clearConfigurationError(node)
+	clearInvalidNodeReference(node)
 }
 
 // reportUnusableProfile records a configuration error without touching the phase
@@ -296,6 +308,17 @@ func profileResolved(incident *v1alpha1.FencingFailedNodeState, now time.Time) m
 	return condition(incident, common.ConditionTypeConfigurationError, metav1.ConditionFalse,
 		common.ReasonProfileResolved,
 		fmt.Sprintf("SLA profile %q is in force for this incident.", incident.Spec.ProfileRef.Name), now)
+}
+
+// profileNotEvaluated retracts the configuration blocker of an incident whose
+// profile decides nothing any more. The status is Unknown rather than False,
+// because this path returns before the profile is read: False is reserved for
+// what a pass actually checked, and claiming a healthy configuration nobody
+// looked at would mislead the operator whose metric was just dropped.
+func profileNotEvaluated(incident *v1alpha1.FencingFailedNodeState, now time.Time) metav1.Condition {
+	return condition(incident, common.ConditionTypeConfigurationError, metav1.ConditionUnknown,
+		common.ReasonProfileNotEvaluated,
+		"The object does not identify a live node, so its SLA profile was not read and decides nothing for this incident.", now)
 }
 
 func invalidNodeReference(

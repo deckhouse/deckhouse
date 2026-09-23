@@ -34,8 +34,21 @@ var configurationErrorGauge = prometheus.NewGaugeVec(
 	[]string{"node", "profile"},
 )
 
+// invalidNodeReferenceGauge is the alertable counterpart of the
+// InvalidNodeReference condition: while it reads 1 the object does not identify
+// a live node, so the node behind it is not evacuated. Unlike a broken profile
+// this blocker is not retried and its event is published once, so the series is
+// the only standing signal an operator gets.
+var invalidNodeReferenceGauge = prometheus.NewGaugeVec(
+	prometheus.GaugeOpts{
+		Name: "d8_fencing_invalid_node_reference",
+		Help: "Set to 1 while a fencing incident does not identify the live node it names, which blocks evacuation of the node",
+	},
+	[]string{"node", "reason"},
+)
+
 func init() {
-	ctrlmetrics.Registry.MustRegister(configurationErrorGauge)
+	ctrlmetrics.Registry.MustRegister(configurationErrorGauge, invalidNodeReferenceGauge)
 }
 
 func reportConfigurationError(node string, profile v1alpha1.ProfileName) {
@@ -46,4 +59,17 @@ func reportConfigurationError(node string, profile v1alpha1.ProfileName) {
 // recovered or left the cluster stops being reported at all.
 func clearConfigurationError(node string) {
 	configurationErrorGauge.DeletePartialMatch(prometheus.Labels{"node": node})
+}
+
+func reportInvalidNodeReference(node, reason string) {
+	// The reason is a label, so the previous one goes first: a node that moved
+	// from one broken invariant to another must not report both at once.
+	clearInvalidNodeReference(node)
+	invalidNodeReferenceGauge.WithLabelValues(node, reason).Set(1)
+}
+
+// clearInvalidNodeReference drops the series instead of zeroing it, for the same
+// reason clearConfigurationError does.
+func clearInvalidNodeReference(node string) {
+	invalidNodeReferenceGauge.DeletePartialMatch(prometheus.Labels{"node": node})
 }

@@ -51,14 +51,20 @@ const (
 	EnvLogLevel     = "LOG_LEVEL"
 )
 
+// Conditions report the blockers of an incident. A blocker sits on top of a
+// phase instead of replacing it, so the state machine keeps the phase it
+// reached and carries on from there once the blocker is gone.
+
 // ConditionTypeConfigurationError reports that the incident cannot be processed
-// because its SLA profile is unusable. Conditions sit on top of a phase instead
-// of replacing it, so the state machine keeps the phase it reached.
+// because its SLA profile is unusable.
 const ConditionTypeConfigurationError = "ConfigurationError"
 
 const (
 	ReasonProfileUnavailable = "ProfileUnavailable"
 	ReasonProfileResolved    = "ProfileResolved"
+	// ReasonProfileNotEvaluated: the profile was not read at all, because the
+	// object does not identify a live Node and decides nothing on its own.
+	ReasonProfileNotEvaluated = "ProfileNotEvaluated"
 )
 
 // ConditionTypeInvalidNodeReference reports that the incident does not identify

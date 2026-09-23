@@ -34,6 +34,9 @@ spec:
         - name: Phase
           type: string
           jsonPath: .status.phase
+        - name: Blocked
+          type: string
+          jsonPath: .status.conditions[?(@.type=="InvalidNodeReference")].reason
         - name: FailedAt
           type: date
           jsonPath: .status.failed.detectedAt
@@ -103,7 +106,7 @@ spec:
 
                     `Healthy` is unreachable in practice: a healthy node has no `FencingFailedNodeState`, so absence of the object is the healthy signal.
 
-                    `Error` is also the state of an object that does not identify a live node. It is reached from any other phase, and the `InvalidNodeReference` condition names the invariant that broke.
+                    `Error` is an eviction that an API error or a conflict interrupted, waiting to be retried. A blocker of the incident is not a phase: it is reported in `conditions` and leaves the phase where the machine reached it.
                   enum:
                     - Healthy
                     - Suspected
@@ -205,9 +208,9 @@ spec:
                   description: |
                     Conditions describing the incident, maintained by the fencing controller. A condition is a blocker that sits on top of a phase instead of replacing it, so the same problem can be reported in any phase.
 
-                    `ConfigurationError` is set while the SLA profile named by `spec.profileRef.name` cannot be resolved. The node is not evacuated in that state, because the evacuation delay and the fallback TTL the controller has to respect are unknown.
+                    `ConfigurationError` is set while the SLA profile named by `spec.profileRef.name` cannot be resolved. The node is not evacuated in that state, because the evacuation delay and the fallback TTL the controller has to respect are unknown. The reason `ProfileNotEvaluated` with status `Unknown` means the profile was not read at all, which is how an incident blocked on its node reference reports it: status `False` is reserved for a profile the controller did resolve.
 
-                    `InvalidNodeReference` is set when the object does not identify a live node, and its `reason` names which invariant broke: `NodeNotFound` when the node the object is named after is gone, `MissingOwnerReference` when `metadata.ownerReferences` does not hold exactly one reference to a `v1` `Node`, `NameMismatch` when that reference names another node, and `UIDMismatch` when the node was recreated under the same name. No pods are deleted and no node is deleted on behalf of such an object, and the incident is not retried.
+                    `InvalidNodeReference` is set when the object does not identify a live node, and its `reason` names which invariant broke: `NodeNotFound` when the node the object is named after is gone, `MissingOwnerReference` when `metadata.ownerReferences` does not hold exactly one reference to a `v1` `Node`, `NameMismatch` when that reference names another node, and `UIDMismatch` when the node was recreated under the same name. No pods are deleted and no node is deleted on behalf of such an object. The phase is kept, so an incident whose reference is repaired carries on from where it was, and an object that is not repaired is garbage collected together with the node it belongs to.
                   x-kubernetes-list-type: map
                   x-kubernetes-list-map-keys:
                     - type

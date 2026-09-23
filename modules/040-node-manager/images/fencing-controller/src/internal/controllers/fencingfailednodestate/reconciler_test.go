@@ -232,7 +232,8 @@ func TestReconcileLeavesTheHealthyPhaseUnwritten(t *testing.T) {
 
 // TestReconcileRefusesAnInvalidNodeReference walks the causes the ADR names. The
 // object stays where it is in every one of them: nothing is deleted on behalf of
-// an object that does not identify a live Node.
+// an object that does not identify a live Node, and the blocker is reported next
+// to the phase rather than in it.
 func TestReconcileRefusesAnInvalidNodeReference(t *testing.T) {
 	for name, problem := range map[string]*noderef.Problem{
 		"the node is gone":        {Reason: common.ReasonNodeNotFound, Message: "Node is gone."},
@@ -260,11 +261,20 @@ func TestReconcileRefusesAnInvalidNodeReference(t *testing.T) {
 
 			got := h.get()
 
-			if got.Status.Phase != v1alpha1.PhaseError {
-				t.Errorf("phase is %q, want %q", got.Status.Phase, v1alpha1.PhaseError)
+			// The failure is old enough to reach ReadyToEvict, so an unchanged
+			// phase says both that the blocker does not move the machine and
+			// that the machine was not advanced behind it.
+			if got.Status.Phase != v1alpha1.PhaseSuspected {
+				t.Errorf("phase is %q, want the observed %q", got.Status.Phase, v1alpha1.PhaseSuspected)
 			}
 
 			assertCondition(t, got, common.ConditionTypeInvalidNodeReference, metav1.ConditionTrue, problem.Reason)
+
+			// The profile of a refused incident is not read, so the blocker that
+			// would have been reported for it is not left standing either. It is
+			// retracted as Unknown: nothing on this path checked the profile.
+			assertCondition(t, got, common.ConditionTypeConfigurationError,
+				metav1.ConditionUnknown, common.ReasonProfileNotEvaluated)
 			assertAgentSectionsUntouched(t, incident, got)
 			assertObservedGeneration(t, got)
 
@@ -309,10 +319,11 @@ func TestReconcileValidatesBeforeItResolvesTheProfile(t *testing.T) {
 
 	assertCondition(t, got, common.ConditionTypeInvalidNodeReference, metav1.ConditionTrue, common.ReasonNodeNotFound)
 
-	if blocker := meta.FindStatusCondition(got.Status.Conditions, common.ConditionTypeConfigurationError); blocker != nil {
-		t.Errorf("condition %s was reported as %q on an incident whose node is gone",
-			blocker.Type, blocker.Reason)
-	}
+	// The profile was never read, and the condition says exactly that instead of
+	// claiming a profile is in force, reporting a healthy configuration nobody
+	// checked, or leaving an earlier error standing.
+	assertCondition(t, got, common.ConditionTypeConfigurationError,
+		metav1.ConditionUnknown, common.ReasonProfileNotEvaluated)
 }
 
 // TestReconcileAnnouncesTheRefusalOnce keeps a refused incident from being
@@ -337,20 +348,18 @@ func TestReconcileAnnouncesTheRefusalOnce(t *testing.T) {
 		t.Errorf("the second pass published %v, want the refusal announced once", repeated)
 	}
 
-	// The refusal is idempotent: the second pass finds the machine in Error,
-	// refuses again and has nothing new to write.
+	// The refusal is idempotent: the second pass refuses again and finds the
+	// conditions it would write already there, so it writes nothing.
 	if h.statusPatches != 1 {
 		t.Errorf("two passes over a refused incident wrote the status %d times, want once", h.statusPatches)
 	}
 }
 
-// TestReconcileKeepsARefusedIncidentRefused records the consequence of putting
-// the refusal in the phase: the error state has no arrow back on the signals of
-// the status, so an object that is repaired after it was refused stays parked
-// there. Recovery goes through the object, not through the phase: the garbage
-// collector removes the object of a node that is gone or was recreated, and the
-// agent creates a new one.
-func TestReconcileKeepsARefusedIncidentRefused(t *testing.T) {
+// TestReconcileResumesARepairedIncident covers the reason the refusal is a
+// condition and not a phase: an object whose reference is repaired carries on
+// from where it was. Recovery needs no arrow of its own, because the blocker
+// never moved the machine in the first place.
+func TestReconcileResumesARepairedIncident(t *testing.T) {
 	incident := failedState()
 	incident.Status.Failed.DetectedAt = metav1.NewTime(observedAt.Add(-20 * time.Second))
 
@@ -376,12 +385,14 @@ func TestReconcileKeepsARefusedIncidentRefused(t *testing.T) {
 	assertCondition(t, got, common.ConditionTypeInvalidNodeReference,
 		metav1.ConditionFalse, common.ReasonNodeReferenceValid)
 
-	if got.Status.Phase != v1alpha1.PhaseError {
-		t.Errorf("phase is %q, want the refused incident to stay in %q", got.Status.Phase, v1alpha1.PhaseError)
+	// The failure is older than the evacuation delay, so the incident goes
+	// exactly where it would have gone had it never been refused.
+	if got.Status.Phase != v1alpha1.PhaseReadyToEvict {
+		t.Errorf("phase is %q, want the repaired incident to reach %q", got.Status.Phase, v1alpha1.PhaseReadyToEvict)
 	}
 
 	if res.RequeueAfter != 0 {
-		t.Errorf("reconcile requeued after %s, want no timer for an incident that cannot move", res.RequeueAfter)
+		t.Errorf("reconcile requeued after %s, want no timer at %q", res.RequeueAfter, v1alpha1.PhaseReadyToEvict)
 	}
 }
 
@@ -575,6 +586,49 @@ func TestReconcileTracksTheConfigurationErrorMetric(t *testing.T) {
 	}
 }
 
+// TestReconcileTracksTheInvalidNodeReferenceMetric covers the standing signal of
+// a refusal. The condition alone would not do: the path publishes its event once
+// and is never requeued, so without the series a node that will not be evacuated
+// is only found by reading objects.
+func TestReconcileTracksTheInvalidNodeReferenceMetric(t *testing.T) {
+	incident := failedState()
+	incident.Status.Failed.DetectedAt = metav1.NewTime(observedAt.Add(-20 * time.Second))
+
+	h := newHarness(t, incident)
+	h.nodes.problem = &noderef.Problem{Reason: common.ReasonMissingOwnerReference, Message: "No owner reference."}
+
+	if _, err := h.reconcile(); err != nil {
+		t.Fatalf("reconcile: %v", err)
+	}
+
+	if got := testutil.CollectAndCount(invalidNodeReferenceGauge); got != 1 {
+		t.Fatalf("the gauge holds %d series, want the refused node alone", got)
+	}
+
+	refused := invalidNodeReferenceGauge.WithLabelValues(nodeName, common.ReasonMissingOwnerReference)
+	if got := testutil.ToFloat64(refused); got != 1 {
+		t.Errorf("the gauge of the refused node reads %v, want 1", got)
+	}
+
+	// Dropping the traces of the incident must not take the refusal with them:
+	// the object is still there and still blocked.
+	if len(h.profiles.forgotten) != 1 {
+		t.Errorf("forgot %v, want the timings of the refused node to be dropped", h.profiles.forgotten)
+	}
+
+	h.nodes.problem = nil
+
+	if _, err := h.reconcile(); err != nil {
+		t.Fatalf("reconcile after the reference was repaired: %v", err)
+	}
+
+	// The series is dropped rather than zeroed, for the same reason the
+	// configuration one is.
+	if got := testutil.CollectAndCount(invalidNodeReferenceGauge); got != 0 {
+		t.Errorf("the gauge still holds %d series after the reference was repaired, want none", got)
+	}
+}
+
 // TestReconcileKeepsTransientProfileErrorsRetryable checks an unavailable API is
 // not written to the object as a configuration problem of the operator.
 func TestReconcileKeepsTransientProfileErrorsRetryable(t *testing.T) {
@@ -623,6 +677,7 @@ func TestReconcileTreatsMissingObjectAsHealthy(t *testing.T) {
 	h := newHarness(t)
 
 	reportConfigurationError(nodeName, v1alpha1.ProfileCritical)
+	reportInvalidNodeReference(nodeName, common.ReasonNodeNotFound)
 
 	res, err := h.reconcile()
 	if err != nil {
@@ -641,6 +696,10 @@ func TestReconcileTreatsMissingObjectAsHealthy(t *testing.T) {
 
 	if got := testutil.CollectAndCount(configurationErrorGauge); got != 0 {
 		t.Errorf("the gauge holds %d series for a node with no incident, want none", got)
+	}
+
+	if got := testutil.CollectAndCount(invalidNodeReferenceGauge); got != 0 {
+		t.Errorf("the refusal gauge holds %d series for a node with no incident, want none", got)
 	}
 }
 
@@ -841,9 +900,10 @@ type harness struct {
 func newHarness(t *testing.T, objects ...client.Object) *harness {
 	t.Helper()
 
-	// The gauge is a package-level collector, so every test starts from a clean
-	// one instead of reading what its predecessors left behind.
+	// The gauges are package-level collectors, so every test starts from clean
+	// ones instead of reading what its predecessors left behind.
 	configurationErrorGauge.Reset()
+	invalidNodeReferenceGauge.Reset()
 
 	h := &harness{
 		t:        t,

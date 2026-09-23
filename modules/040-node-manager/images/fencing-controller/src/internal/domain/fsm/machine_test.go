@@ -232,21 +232,15 @@ func TestAdvanceWaitsWhileTheProfileIsUnresolved(t *testing.T) {
 // TestFireCrossesOneArrowTheReconcilerChose covers the events the reconciler
 // decides on itself rather than reading them off the status.
 func TestFireCrossesOneArrowTheReconcilerChose(t *testing.T) {
-	// The refusal on a broken reference to a Node is described out of every
-	// state of the ADR, the terminal ones included.
-	t.Run("the invalid reference arrow leaves every state", func(t *testing.T) {
-		for _, from := range adrStates {
-			t.Run(string(from), func(t *testing.T) {
-				machine := &FSM{state: from}
+	t.Run("an arrow the state does have is crossed", func(t *testing.T) {
+		machine := &FSM{state: StateReadyToEvict}
 
-				if !machine.Fire(EventInvalidNodeReference) {
-					t.Fatalf("%s did not cross the %s arrow", from, EventInvalidNodeReference)
-				}
+		if !machine.Fire(EventEvictionStarted) {
+			t.Fatalf("%s did not cross the %s arrow", StateReadyToEvict, EventEvictionStarted)
+		}
 
-				if machine.State() != StateError {
-					t.Errorf("ended in %s, want %s", machine.State(), StateError)
-				}
-			})
+		if machine.State() != StateEvicting {
+			t.Errorf("ended in %s, want %s", machine.State(), StateEvicting)
 		}
 	})
 
@@ -262,13 +256,14 @@ func TestFireCrossesOneArrowTheReconcilerChose(t *testing.T) {
 		}
 	})
 
-	// A phase that names no state of the machine leads nowhere, not even to the
-	// refusal that every real state has.
+	// A phase that names no state of the machine leads nowhere at all.
 	t.Run("nothing is crossed from a state the ADR does not describe", func(t *testing.T) {
 		machine := &FSM{state: State("Draining")}
 
-		if machine.Fire(EventInvalidNodeReference) {
-			t.Errorf("an unknown state crossed the %s arrow", EventInvalidNodeReference)
+		for _, event := range adrEvents {
+			if machine.Fire(event) {
+				t.Errorf("an unknown state crossed the %s arrow", event)
+			}
 		}
 	})
 }

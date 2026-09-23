@@ -91,8 +91,10 @@ func TestReconcileRefusesTheIncidentOfARecreatedNode(t *testing.T) {
 
 	_, got := reconcileWithRealCollaborators(t, incident, recreated)
 
-	if got.Status.Phase != v1alpha1.PhaseError {
-		t.Errorf("phase is %q, want %q", got.Status.Phase, v1alpha1.PhaseError)
+	// The blocker is reported without moving the machine, and this object never
+	// left the entry state, which is the one phase that is not written at all.
+	if got.Status.Phase != "" {
+		t.Errorf("phase is %q, want it left unwritten", got.Status.Phase)
 	}
 
 	assertCondition(t, got, common.ConditionTypeInvalidNodeReference, metav1.ConditionTrue, common.ReasonUIDMismatch)
@@ -110,8 +112,8 @@ func TestReconcileRefusesAnIncidentWithoutItsNode(t *testing.T) {
 		t.Errorf("reconcile requeued %+v for a node that is gone, want no timer", res)
 	}
 
-	if got.Status.Phase != v1alpha1.PhaseError {
-		t.Errorf("phase is %q, want %q", got.Status.Phase, v1alpha1.PhaseError)
+	if got.Status.Phase != "" {
+		t.Errorf("phase is %q, want it left unwritten", got.Status.Phase)
 	}
 
 	assertCondition(t, got, common.ConditionTypeInvalidNodeReference, metav1.ConditionTrue, common.ReasonNodeNotFound)
@@ -128,6 +130,7 @@ func reconcileWithRealCollaborators(
 	t.Helper()
 
 	configurationErrorGauge.Reset()
+	invalidNodeReferenceGauge.Reset()
 
 	c := fake.NewClientBuilder().
 		WithScheme(newScheme(t)).
