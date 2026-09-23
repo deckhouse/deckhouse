@@ -27,7 +27,7 @@ spec:
                     Целевое окно memberlist detection в человекочитаемом виде, например `0.8-1.2s`. Используется для документации и проверки расчётов и не парсится как duration.
                 memberlist:
                   description: |
-                    Параметры memberlist и Lifeguard, управляющие probe-опросом peer-узлов, suspicion и gossip. Остальные тайминги memberlist агент выводит из профиля: TCP-таймаут `max(fallback.kubernetesAPITimeout, 1s)`, который ограничивает каждый join и обмен push/pull; интервал push/pull `max(gossipToTheDeadTime, 2 * TCP-таймаут)`, который в группах больше 32 узлов memberlist дополнительно увеличивает; время reclaim, равное `gossipToTheDeadTime`; таймаут ухода `min(max(2 * retransmitMult * gossipInterval, 250ms), 4s)` — сколько останавливающийся агент ждёт отправки сообщения о своём уходе.
+                    Параметры memberlist и Lifeguard, управляющие probe-опросом peer-узлов, suspicion и gossip. Остальные тайминги memberlist агент выводит из профиля.
                   properties:
                     probeInterval:
                       description: |
@@ -49,13 +49,13 @@ spec:
                         Максимальное замедление probe interval для локально деградировавшего агента (Lifeguard awareness).
                     gossipInterval:
                       description: |
-                        Интервал распространения gossip-событий. Также задаёт таймаут ухода (см. `memberlist`).
+                        Интервал распространения gossip-событий.
                     retransmitMult:
                       description: |
-                        Множитель retransmit для gossip broadcast: `retransmitMult * ceil(log10(N + 1))`. Также задаёт таймаут ухода (см. `memberlist`).
+                        Множитель retransmit для gossip broadcast: `retransmitMult * ceil(log10(N + 1))`.
                     gossipToTheDeadTime:
                       description: |
-                        Сколько времени dead-узел ещё получает gossip, что даёт ему шанс refute после восстановления. Также задаёт интервал push/pull и время reclaim (см. `memberlist`), после которого пиры принимают dead-узел, вернувшийся под тем же именем с новым адресом. Меньше значение — быстрее выравниваются разошедшиеся картины и принимается новый адрес, но больше трафика push/pull.
+                        Сколько времени dead-узел ещё получает gossip, что даёт ему шанс refute после восстановления.
                 fallback:
                   description: |
                     Параметры fallback heartbeat узла, который потерял gossip quorum, но всё ещё видит API Kubernetes.
@@ -70,14 +70,14 @@ spec:
                         Должно быть не меньше max(`heartbeat`, `kubernetesAPITimeout`) + `kubernetesAPITimeout` + `watchdog.timeout` + 500ms. Узел, потерявший доступ к API Kubernetes, перестаёт кормить watchdog после первой неудачной записи heartbeat и должен перезагрузиться раньше, чем его последний heartbeat устареет. 500ms — запас на расхождение часов узла и fencing-controller.
                     kubernetesAPITimeout:
                       description: |
-                        Timeout каждого запроса агента к объектам `FencingFailedNodeState`, в том числе записи fallback heartbeat (она же проверка API в fallback-пути), и каждой из двух фаз чтения Node в попытке join (см. `rejoin`). Также задаёт TCP-таймаут memberlist (см. `memberlist`). Должен быть меньше `ttl`, чтобы проверка API не блокировала решение.
+                        Timeout каждого запроса агента к объектам `FencingFailedNodeState`.
                 rejoin:
                   description: |
-                    Параметры попыток join агента: стартового join и rejoin loop, который работает, пока у узла нет gossip quorum или пока существует созданный после старта агента `FencingFailedNodeState`, в котором этот узел записан отказавшим. Попытка читает из API Kubernetes свою Node, затем параллельно до трёх Node-кандидатов и выполняет, тоже параллельно, по одному `memberlist.Join` на каждый проверенный seed. Каждая неудачная попытка удваивает задержку перед следующей, от `interval` до `maxInterval`; в rejoin loop задержку так же удваивает и успешная попытка, после которой у узла по-прежнему нет gossip quorum или такой `FencingFailedNodeState` по-прежнему существует.
+                    Параметры попыток join агента: стартового join и rejoin loop, который работает, пока у узла нет gossip quorum или пока существует созданный после старта агента `FencingFailedNodeState`, в котором этот узел записан отказавшим.
                   properties:
                     interval:
                       description: |
-                        Начальная задержка между попытками join и rejoin. Backoff сбрасывается к этому значению, только когда у узла есть gossip quorum и нет собственной failed-записи. Также начальная задержка повторов записи агентом `FencingFailedNodeState` об отказавших пирах.
+                        Начальная задержка между попытками join и rejoin.
                     maxInterval:
                       description: |
                         Верхняя граница exponential backoff между попытками join и rejoin. Должна быть больше или равна `interval`. Время между началами двух попыток включает и саму попытку: до `fallback.kubernetesAPITimeout` на каждую из двух фаз чтения Node и около одного–двух TCP-таймаутов memberlist на join. Также шаг передачи роли: после него следующий по очереди агент записывает отказавший пир, которого не записал designated writer. Столько же failed-запись пира об узле агента должна продержаться, прежде чем writer агента встанет на паузу; запись, которую пиры снимают и пересоздают раньше, начинает это ожидание заново.
