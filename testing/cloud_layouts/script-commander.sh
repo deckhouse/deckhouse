@@ -1033,6 +1033,7 @@ function wait_alerts_resolve() {
   "D8ObsoleteNetworkFieldsInClusterConfiguration" # migration from ClusterConfiguration to ModuleConfig
   "D8MonitoringApplicationsLegacyBearerTokenEnabled" # ignore S9 alert for e2e 1.77+
   "D8MonitoringCustomLegacyBearerTokenEnabled" # ignore S9 alert for e2e 1.77+
+  "D8ObsoleteClusterDomainInClusterConfiguration" # migration from ClusterConfiguration to ModuleConfig
   )
 
   # Alerts
