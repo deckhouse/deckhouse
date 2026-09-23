@@ -343,7 +343,9 @@ spec:
 1. Убедитесь, что в конфигурации модуля `control-plane-manager` включен параметр [`apiserver.publishAPI`](/modules/control-plane-manager/configuration.html#parameters-apiserver-publishapi).
 1. Установите параметр [`enableBasicAuth: true`](/modules/user-authn/cr.html#dexprovider-v1-spec-oidc-enablebasicauth) в ресурсе DexProvider для LDAP.
 
-> **Внимание**. В кластере может быть только один провайдер аутентификации с включенным параметром [`enableBasicAuth`](/modules/user-authn/cr.html#dexprovider-v1-spec-oidc-enablebasicauth).
+{% alert level="info" %}
+В кластере может быть только один провайдер аутентификации с включенным параметром [`enableBasicAuth`](/modules/user-authn/cr.html#dexprovider-v1-spec-oidc-enablebasicauth).
+{% endalert %}
 
 После настройки пользователи смогут обращаться к Kubernetes API с помощью `kubectl`, используя свой логин и пароль в LDAP.
 
