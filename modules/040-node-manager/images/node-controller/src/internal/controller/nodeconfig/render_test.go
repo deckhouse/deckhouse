@@ -1018,12 +1018,6 @@ func crdItems(t *testing.T, field map[string]any) map[string]any {
 func TestShippedCRDCarriesTheStaticPodContract(t *testing.T) {
 	schema := nodeConfigCRDSchema(t)
 
-	images := crdField(t, schema, "spec", "containerRuntime", "localImages")
-	require.Equal(t, "map", images["x-kubernetes-list-type"])
-	require.Equal(t, []any{"digest"}, images["x-kubernetes-list-map-keys"])
-	require.Equal(t, float64(32), images["maxItems"])
-	require.Equal(t, `^sha256:[a-f0-9]{64}$`, crdField(t, crdItems(t, images), "digest")["pattern"])
-
 	// The bounds are one number: 16 manifests of 32 KiB is 512 KiB, which has to
 	// leave room under etcd's 1.5 MiB request limit for the rest of the spec.
 	staticPods := crdField(t, schema, "spec", "staticPods")
@@ -1041,12 +1035,6 @@ func TestShippedCRDCarriesTheStaticPodContract(t *testing.T) {
 	require.Equal(t, "nodelet", owner["default"])
 	require.Equal(t, []any{registryOwnerNodelet, registryOwnerAgent}, owner["enum"])
 
-	// The node reports one entry per image and per static pod, the way it already
-	// does for extensions and units.
-	imageStatus := crdField(t, schema, "status", "localImages")
-	require.Equal(t, []any{"digest"}, imageStatus["x-kubernetes-list-map-keys"])
-	require.Equal(t, []any{"Ready", "Pending", "Failed"}, crdField(t, crdItems(t, imageStatus), "state")["enum"])
-
 	// Two states, not three: a node either holds the file the spec asked for or
 	// it does not. What an operator does next is in the reason, because the three
 	// causes call for three different actions — and an enum is what keeps the two
@@ -1059,19 +1047,48 @@ func TestShippedCRDCarriesTheStaticPodContract(t *testing.T) {
 		crdField(t, podStatus, "reason")["enum"])
 }
 
-// The sandbox image is the pause the node preloads itself, under the ref the
-// registrypackage stamps into its OCI layout — never a registry the node would
-// have to reach before any pod can start.
-func TestTheSandboxImageIsThePreloadedPause(t *testing.T) {
-	ng := &v1.NodeGroup{Spec: v1.NodeGroupSpec{}}
-	require.Equal(t, "deckhouse.local/images:pause", renderContainerRuntime(ng, clusterInputs{}).SandboxImage)
+// pause ships in the containerd extension, which imports it itself, so the
+// render names no sandbox image and preloads nothing: nodelet parses strictly,
+// and a sandboxImage here would override the one the extension imported.
+func TestRenderContainerRuntimeLeavesImagesToTheExtension(t *testing.T) {
+	ng := &v1.NodeGroup{ObjectMeta: metav1.ObjectMeta{Name: "worker"}, Spec: v1.NodeGroupSpec{NodeType: v1.NodeTypeCloudEphemeral}}
+	node := &corev1.Node{ObjectMeta: metav1.ObjectMeta{Name: "worker-0"}}
+
+	for _, tt := range []struct {
+		name      string
+		agentMode bool
+		owner     string
+	}{
+		{name: "no agent", owner: registryOwnerNodelet},
+		{name: "agent mode", agentMode: true, owner: registryOwnerAgent},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			spec := renderSpec(ng, node, clusterInputs{RegistryAgentMode: tt.agentMode})
+
+			raw, err := k8sruntime.DefaultUnstructuredConverter.ToUnstructured(&spec)
+			require.NoError(t, err)
+			containerRuntime, ok := raw["containerRuntime"].(map[string]any)
+			require.True(t, ok)
+			require.NotContains(t, containerRuntime, "sandboxImage")
+			require.NotContains(t, containerRuntime, "localImages")
+			require.Equal(t, tt.owner, containerRuntime["registryOwner"])
+		})
+	}
+}
+
+// With a CRD default the API server would fill sandboxImage in on every object
+// the render leaves it out of, and the node would never see it empty.
+func TestShippedCRDLeavesSandboxImageEmpty(t *testing.T) {
+	schema := nodeConfigCRDSchema(t)
+	require.NotContains(t, crdField(t, schema, "spec", "containerRuntime", "sandboxImage"), "default")
+	require.NotContains(t, crdField(t, schema, "spec", "containerRuntime")["properties"], "localImages")
+	require.NotContains(t, crdField(t, schema, "status")["properties"], "localImages")
 }
 
 // The whole point of the object: what a module published reaches the node's
 // spec, byte for byte, and nothing of the objects meant for another group.
 func TestRenderSpecCompilesStaticPods(t *testing.T) {
 	ng := &v1.NodeGroup{ObjectMeta: metav1.ObjectMeta{Name: "worker"}, Spec: v1.NodeGroupSpec{NodeType: v1.NodeTypeCloudEphemeral}}
-	pauseDigest := "sha256:" + strings.Repeat("c", 64)
 
 	ordered := orderedNSPRs([]deckhousev1alpha1.NodeStaticPodRequest{
 		nspr("registry-agent", deckhousev1alpha1.NodeStaticPodRequestSpec{}),
@@ -1081,7 +1098,6 @@ func TestRenderSpecCompilesStaticPods(t *testing.T) {
 	})
 
 	spec := renderSpec(ng, &corev1.Node{ObjectMeta: metav1.ObjectMeta{Name: "worker-0"}}, clusterInputs{
-		LocalImages:                   []internalv1alpha1.LocalImage{{Digest: pauseDigest}},
 		NodeStaticPodRequests:         ordered,
 		NodeStaticPodRequestsRejected: rejectedNSPRs(ordered),
 	})
@@ -1091,50 +1107,6 @@ func TestRenderSpecCompilesStaticPods(t *testing.T) {
 	require.Equal(t, podManifest("registry-agent"), spec.StaticPods[0].Manifest,
 		"the manifest reaches the node byte for byte")
 
-	// The preload list is the platform's and does not follow the objects: a pod
-	// of another group brought nothing, and pause is there regardless.
-	require.Equal(t, []internalv1alpha1.LocalImage{{Digest: pauseDigest}}, spec.ContainerRuntime.LocalImages)
-
-	// And the sandbox is named by the image that was just preloaded, not by a
-	// reference into a registry: containerd creates the sandbox itself, with no
-	// credentials from kubelet, so preloading pause buys nothing unless the
-	// config asks for it under the name containerd knows it by.
-	require.Equal(t, "deckhouse.local/images:pause", spec.ContainerRuntime.SandboxImage)
-}
-
-// The local images reach the node as containerRuntime.localImages, digests only,
-// and nothing is left at spec.images: nodelet parses strictly, so a stray key
-// would make every node refuse its config.
-func TestRenderSpecPutsLocalImagesIntoContainerRuntime(t *testing.T) {
-	pause := "sha256:" + strings.Repeat("c", 64)
-	agent := "sha256:" + strings.Repeat("d", 64)
-	digests := map[string]map[string]string{registryPackagesDigestsKey: {"pause": pause, "registryAgent": agent}}
-	ng := &v1.NodeGroup{ObjectMeta: metav1.ObjectMeta{Name: "worker"}, Spec: v1.NodeGroupSpec{NodeType: v1.NodeTypeCloudEphemeral}}
-
-	for _, tt := range []struct {
-		name      string
-		agentMode bool
-		want      []any
-	}{
-		{name: "no agent", want: []any{map[string]any{"digest": pause}}},
-		{name: "agent mode", agentMode: true, want: []any{map[string]any{"digest": pause}, map[string]any{"digest": agent}}},
-	} {
-		t.Run(tt.name, func(t *testing.T) {
-			images, err := platformImages(digests, tt.agentMode)
-			require.NoError(t, err)
-			spec := renderSpec(ng, &corev1.Node{ObjectMeta: metav1.ObjectMeta{Name: "worker-0"}}, clusterInputs{
-				LocalImages:       images,
-				RegistryAgentMode: tt.agentMode,
-			})
-
-			raw, err := k8sruntime.DefaultUnstructuredConverter.ToUnstructured(&spec)
-			require.NoError(t, err)
-			require.NotContains(t, raw, "images")
-			containerRuntime, ok := raw["containerRuntime"].(map[string]any)
-			require.True(t, ok)
-			require.Equal(t, tt.want, containerRuntime["localImages"])
-		})
-	}
 }
 
 // A spec holding more pods than the schema accepts is refused whole, which

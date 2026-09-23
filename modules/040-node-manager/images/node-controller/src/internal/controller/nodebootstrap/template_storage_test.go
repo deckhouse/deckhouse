@@ -291,9 +291,9 @@ func templateCluster(t *testing.T, objects ...client.Object) client.Client {
 }
 
 func clusterInputs() []client.Object {
-	digests := fmt.Sprintf(`{"registrypackages":{"containerdSysext224":%q,"kubernetesCniSysext162":%q,"kubeletSysext1356":%q,"nodeletSysext":%q,"pause":%q},"nodeManager":{"engine":%q},"common":{"pause":%q}}`,
+	digests := fmt.Sprintf(`{"registrypackages":{"containerdSysext224":%q,"kubernetesCniSysext162":%q,"kubeletSysext1356":%q,"nodeletSysext":%q},"nodeManager":{"engine":%q},"common":{"pause":%q}}`,
 		testenv.TestContainerdDigest, testenv.TestCNIDigest, testenv.TestKubeletDigest, testenv.TestNodeletDigest,
-		testenv.TestPausePackageDigest, testenv.TestOSImageDigest, testenv.TestPauseDigest)
+		testenv.TestOSImageDigest, testenv.TestPauseDigest)
 
 	return []client.Object{
 		&corev1.ConfigMap{

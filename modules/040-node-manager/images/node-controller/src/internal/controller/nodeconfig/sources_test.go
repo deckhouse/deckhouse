@@ -18,7 +18,6 @@ package nodeconfig
 
 import (
 	"context"
-	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -34,7 +33,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 	sigsyaml "sigs.k8s.io/yaml"
 
-	internalv1alpha1 "github.com/deckhouse/node-controller/api/internal.deckhouse.io/v1alpha1"
 	"github.com/deckhouse/node-controller/internal/network"
 )
 
@@ -604,52 +602,6 @@ func TestSysextDigestsAgent(t *testing.T) {
 
 		_, err := sysextDigests(map[string]map[string]string{registryPackagesDigestsKey: without}, "1.35")
 		require.ErrorContains(t, err, nodeletExtension)
-	})
-}
-
-// Without pause in the preload nothing starts at all once registry.d belongs to
-// an agent that is not running yet: the sandbox is the first pull of any pod,
-// including the agent's own. So it is put there by the platform, on every node,
-// whether or not that node runs a static pod.
-func TestPlatformImages(t *testing.T) {
-	pause := "sha256:" + strings.Repeat("c", 64)
-	agent := "sha256:" + strings.Repeat("d", 64)
-	digests := map[string]map[string]string{
-		registryPackagesDigestsKey: {"pause": pause, "registryAgent": agent},
-		// The common/pause image is still in the release's digest map and is
-		// deliberately not read here: it is the image a registry serves, while
-		// this list is of artifacts a node imports. Since revision 3.3 nothing
-		// reads it at all — the sandbox is named by the imported image instead.
-		"common": {"pause": "sha256:" + strings.Repeat("e", 64)},
-	}
-
-	t.Run("no agent: pause and nothing else", func(t *testing.T) {
-		images, err := platformImages(digests, false)
-		require.NoError(t, err)
-		require.Equal(t, []internalv1alpha1.LocalImage{{Digest: pause}}, images)
-	})
-
-	t.Run("agent mode: the agent's own image joins it", func(t *testing.T) {
-		images, err := platformImages(digests, true)
-		require.NoError(t, err)
-		require.Equal(t, []internalv1alpha1.LocalImage{{Digest: pause}, {Digest: agent}}, images)
-	})
-
-	// Fail-closed, like every other read here. A node told registry.d belongs to
-	// an agent whose image the release did not build pulls nothing at all, so
-	// rendering nothing is the better of two bad answers.
-	t.Run("agent mode with no agent package refuses to render", func(t *testing.T) {
-		_, err := platformImages(map[string]map[string]string{
-			registryPackagesDigestsKey: {"pause": pause},
-		}, true)
-		require.ErrorContains(t, err, "registryAgent")
-	})
-
-	t.Run("no pause package refuses to render", func(t *testing.T) {
-		_, err := platformImages(map[string]map[string]string{
-			registryPackagesDigestsKey: {"registryAgent": agent},
-		}, false)
-		require.ErrorContains(t, err, "pause")
 	})
 }
 

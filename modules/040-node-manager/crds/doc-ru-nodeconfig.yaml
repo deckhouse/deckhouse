@@ -291,7 +291,7 @@ spec:
                         Максимальное количество потоков одновременного скачивания слоёв образов.
                     sandboxImage:
                       description: |
-                        Образ pause, используемый для песочниц подов.
+                        Переопределяет образ pause, используемый для песочниц подов. Если не задан, используется образ pause, который импортирует системное расширение containerd.
                     registryOwner:
                       description: |
                         Кто пишет каталог `registry.d` containerd.
@@ -299,16 +299,6 @@ spec:
                         `nodelet` — агент узла рендерит туда `spec.registry` и удаляет всё лишнее. `agent` — каталогом владеет static pod (registry-агент), и агент узла туда ничего не пишет и ничего не удаляет, включая `spec.registry`: явный каталог хоста перекрыл бы `_default` агента и увёл бы платформенный реестр мимо него.
 
                         Значение выставляет node-controller по режиму registry-модуля.
-                    localImages:
-                      description: |
-                        Образы, которые узел загружает в containerd из артефактов registrypackages, без pull. Имя образа задаёт сам артефакт.
-                      items:
-                        description: |
-                          Один артефакт registrypackages с OCI-архивом образа.
-                        properties:
-                          digest:
-                            description: |
-                              Дайджест артефакта.
                 updatePolicy:
                   description: |
                     Определяет, как и когда обновляется узел.
@@ -450,27 +440,6 @@ spec:
                       state:
                         description: |
                           `Active` — юнит запущен. `Pending` — юнит поставлен в очередь на запуск позже в этом цикле. `Failed` — отказ, причина в `message`.
-                      message:
-                        description: |
-                          Причина, когда `state` равно `Failed`.
-                localImages:
-                  description: |
-                    По записи на образ: digest, имя, под которым образ доступен в containerd, и состояние.
-
-                    Публикуется заново на каждом проходе и остаётся пустым, если проход ничего не проверял.
-                  items:
-                    description: |
-                      Результат загрузки одного образа.
-                    properties:
-                      digest:
-                        description: |
-                          Дайджест артефакта, совпадает с `spec.containerRuntime.localImages[].digest`.
-                      ref:
-                        description: |
-                          Имя, под которым containerd знает образ после импорта. Берётся из артефакта.
-                      state:
-                        description: |
-                          `Ready` — образ импортирован в containerd. `Pending` — скачивание или импорт ещё идут. `Failed` — отказ, причина в `message`.
                       message:
                         description: |
                           Причина, когда `state` равно `Failed`.

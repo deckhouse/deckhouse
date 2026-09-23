@@ -80,15 +80,11 @@ type NodeConfigStatus struct {
 	// +listType=map
 	// +listMapKey=name
 	Units []UnitStatus `json:"units,omitempty"`
-	// LocalImages and StaticPods are republished every pass, one entry each, and
-	// empty when the pass checked nothing — like Extensions and Units. Declared
-	// without omitempty on purpose: an empty pass has to say so explicitly, and
-	// the node turns the nil slice into [] before it applies the status.
-	// +optional
-	// +listType=map
-	// +listMapKey=digest
-	LocalImages []LocalImageStatus `json:"localImages"`
-	// StaticPods is one entry per spec.staticPods item the node wrote or failed to.
+	// StaticPods is one entry per spec.staticPods item the node wrote or failed
+	// to, republished every pass and empty when the pass checked nothing — like
+	// Extensions and Units. Declared without omitempty on purpose: an empty pass
+	// has to say so explicitly, and the node turns the nil slice into [] before
+	// it applies the status.
 	// +optional
 	// +listType=map
 	// +listMapKey=name
@@ -185,21 +181,6 @@ type UnitStatus struct {
 	// +kubebuilder:validation:Enum=Active;Pending;Failed
 	State string `json:"state"`
 	// Message carries the cause when State is Failed.
-	// +optional
-	Message string `json:"message,omitempty"`
-}
-
-// LocalImageStatus is the outcome of importing one artifact into containerd.
-type LocalImageStatus struct {
-	Digest string `json:"digest"`
-	// Ref is the name containerd knows the image by, read from the artifact
-	// after the import.
-	// +optional
-	Ref string `json:"ref,omitempty"`
-	// State is Ready when containerd holds the image, Pending while the node is
-	// still fetching or importing it, Failed with the cause in Message.
-	// +kubebuilder:validation:Enum=Ready;Pending;Failed
-	State string `json:"state"`
 	// +optional
 	Message string `json:"message,omitempty"`
 }
@@ -533,15 +514,6 @@ type Extension struct {
 	RequestedBy string `json:"requestedBy,omitempty"`
 }
 
-// LocalImage is one registrypackages artifact holding an OCI layout tar, which
-// the node imports into containerd instead of pulling. The artifact names the
-// image itself (org.opencontainers.image.ref.name in its index.json).
-type LocalImage struct {
-	// Digest is the artifact's digest.
-	// +kubebuilder:validation:Pattern=`^sha256:[a-f0-9]{64}$`
-	Digest string `json:"digest"`
-}
-
 // StaticPod is one manifest for /etc/kubernetes/manifests. The node prepares two
 // things for such a pod and nothing else: the image in containerd and this file
 // on disk. Whatever the pod needs beyond that, it brings itself.
@@ -762,9 +734,10 @@ type Taint struct {
 // ContainerRuntime configuration for the containerd runtime. nodelet renders
 // these into /run/etc/containerd/config.toml before starting containerd.
 type ContainerRuntime struct {
-	// SandboxImage is the pause image used for pod sandboxes.
+	// SandboxImage overrides the pause image used for pod sandboxes. Empty means
+	// the pause image the containerd extension imports itself. No default here:
+	// a defaulted value would never let the node see it empty.
 	// +optional
-	// +kubebuilder:default="registry.k8s.io/pause:3.10"
 	// +kubebuilder:validation:Pattern=`^[^[:space:]]+$`
 	SandboxImage string `json:"sandboxImage,omitempty"`
 	// MaxConcurrentDownloads limits parallel image layer downloads. Zero is
@@ -783,14 +756,6 @@ type ContainerRuntime struct {
 	// +kubebuilder:validation:Enum=nodelet;agent
 	// +kubebuilder:default=nodelet
 	RegistryOwner string `json:"registryOwner,omitempty"`
-	// LocalImages are imported into containerd before kubelet starts, so a pod
-	// on the pull path of every other image can still start. Rendered by
-	// node-controller from what the platform needs, never by a module.
-	// +optional
-	// +listType=map
-	// +listMapKey=digest
-	// +kubebuilder:validation:MaxItems=32
-	LocalImages []LocalImage `json:"localImages,omitempty"`
 }
 
 // UpdatePolicy controls how/when the node is updated.

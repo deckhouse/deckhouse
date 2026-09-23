@@ -399,16 +399,13 @@ func isCloudNodeType(t v1.NodeType) bool {
 }
 
 // renderContainerRuntime carries over the only containerd knob a NodeGroup
-// exposes; the runtime itself is a platform-chosen system extension. Defaults
-// mirror the CRD defaults so the bootstrap file path gets the same values.
+// exposes; the runtime itself is a platform-chosen system extension, and so is
+// pause, which is why sandboxImage stays empty. Defaults mirror the CRD defaults
+// so the bootstrap file path gets the same values.
 func renderContainerRuntime(ng *v1.NodeGroup, in clusterInputs) internalv1alpha1.ContainerRuntime {
 	runtime := internalv1alpha1.ContainerRuntime{
-		SandboxImage:           sandboxImageRef,
 		MaxConcurrentDownloads: ptr.To(defaultMaxConcurrentDownloads),
 		RegistryOwner:          registryOwnerNodelet,
-		// The same for every node of the cluster: it follows from which modules
-		// are enabled, not from this group or this node.
-		LocalImages: in.LocalImages,
 	}
 	// The agent owns the whole directory or none of it: nodelet writing
 	// spec.registry there would put an explicit host directory over the agent's

@@ -58,9 +58,9 @@ type NodeStaticPodRequest struct {
 }
 
 // NodeStaticPodRequestSpec describes what to run and where, and that is the whole of
-// it. Preloading the image and deciding who owns containerd's registry.d are
-// platform decisions node-controller makes from which modules are enabled, not
-// things a module declares here.
+// it. Shipping the image (in a system extension) and deciding who owns
+// containerd's registry.d are platform decisions, not things a module declares
+// here.
 type NodeStaticPodRequestSpec struct {
 	// NodeGroupSelector narrows the pod to the named NodeGroups. Empty selects
 	// every group.
