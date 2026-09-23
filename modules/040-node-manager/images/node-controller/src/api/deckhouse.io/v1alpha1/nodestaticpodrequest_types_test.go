@@ -64,8 +64,8 @@ func TestValidateStaticPodName(t *testing.T) {
 }
 
 // The manifest is checked where it is written, not on every node that reads it:
-// a node refusing a document it cannot decode has already taken the rollout slot,
-// and it refuses the whole NodeConfig with it. One question — is this a valid Pod
+// a node refuses such a manifest on every node of the group at once, and its
+// author learns it only from the counters. One question — is this a valid Pod
 // — answered by the decoder rather than by a second opinion about kinds.
 func TestValidateStaticPodManifest(t *testing.T) {
 	tests := []struct {

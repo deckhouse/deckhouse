@@ -58,8 +58,8 @@ func makeNSPRRequest(t *testing.T, op admissionv1.Operation, nspr *deckhousev1al
 	}
 }
 
-// The manifest is checked where it is written. A node that refuses it has
-// already taken the rollout slot, and it refuses the whole NodeConfig with it.
+// The manifest is checked where it is written. A node that refuses it reports
+// the entry failed on every node of the group at once.
 // What is NOT checked here is the collision between two objects on one pod: a
 // webhook would have to list the others live to see it, and the losing object
 // still needs a status to be told in — so the controller settles it and writes
@@ -162,8 +162,8 @@ func TestNodeStaticPodRequestValidator(t *testing.T) {
 			wantAllowed: false,
 		},
 		{
-			// The node's loader asks for both, and a node that refuses the manifest
-			// refuses the whole NodeConfig with it.
+			// The node asks for both, and a node that refuses the manifest reports
+			// the entry failed on every node of the group.
 			name:        "a pod with no name is denied",
 			op:          admissionv1.Create,
 			nspr:        makeNSPR("registry-agent", "apiVersion: v1\nkind: Pod\nmetadata:\n  namespace: d8-system\n"),

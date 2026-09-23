@@ -345,8 +345,8 @@ var _ = Describe("NodeConfig controller", func() {
 	// manifest costs one refused object instead of every static pod on the node.
 	//
 	// Both entries would carry one namespace/metadata.name into one NodeConfig,
-	// and the node's loader refuses such a document whole — so the node would
-	// lose the pod that was working as well as the one that arrived.
+	// and the node keeps whichever entry comes first — so which pod runs would
+	// follow the order of the entries, not the age of the objects.
 	It("refuses the younger of two NodeStaticPodRequests asking for one pod", func(ctx context.Context) {
 		ngName := testenv.UniqueName("workers-imm")
 		testenv.CreateImmutableNodeGroup(ctx, k8sClient, ngName)

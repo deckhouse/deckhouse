@@ -80,7 +80,7 @@ spec:
                   description: |
                     The whole Pod document. `metadata.name` and `metadata.namespace` must be set; neither has anything to do with the name of this object, which is only the manifest's file name on the node — kubelet names the mirror pod from the document, never from the file. `$MY_IP` is replaced with the node's address on the way to disk, as in the control-plane manifests.
 
-                    Two objects whose manifests name one pod (`namespace/metadata.name`) would put two entries for it into one NodeConfig, which the node refuses whole; the younger of the two is refused instead, with `Conflict` on its `Ready` condition.
+                    Two objects whose manifests name one pod (`namespace/metadata.name`) would put two entries for it into one NodeConfig, and the node would keep whichever entry comes first. The younger of the two is refused here instead, with `Conflict` on its `Ready` condition, so which one runs does not depend on the order of the entries.
 
                     Bounded at 32 KiB, nine times the registry agent's manifest: a node takes at most sixteen of these, and the whole NodeConfig has to stay under the API server's request limit.
             status:
