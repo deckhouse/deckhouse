@@ -347,7 +347,7 @@
       ],
       "status": "not_affected",
       "justification": "vulnerable_code_not_in_execute_path",
-      "impact_statement": "The vulnerability is in the golang.org/x/crypto/ssh channel multiplexer and requires the process to open an SSH connection to a malicious peer. The operator-trivy module runs the trivy binary only for image and filesystem scans in scan jobs, never for repository scans over SSH, so the vulnerable code is not executed. The fixed x/crypto v0.56.0 requires Go 1.26, which the builder image of the release-1.73 branch does not provide.",
+      "impact_statement": "The vulnerability is in the golang.org/x/crypto/ssh channel multiplexer and requires the process to open an SSH connection to a malicious peer. The operator-trivy module runs the trivy binary only for image and filesystem scans in scan jobs, never for repository scans over SSH, so the vulnerable code is not executed.",
       "timestamp": "2026-09-23T12:00:00Z"
     },
 
@@ -363,7 +363,7 @@
       ],
       "status": "not_affected",
       "justification": "vulnerable_code_not_in_execute_path",
-      "impact_statement": "The vulnerability is in the golang.org/x/crypto/ssh message handling of an established connection. The operator-trivy module runs the trivy binary only for image and filesystem scans in scan jobs, never for repository scans over SSH, so the vulnerable code is not executed. The fixed x/crypto v0.56.0 requires Go 1.26, which the builder image of the release-1.73 branch does not provide.",
+      "impact_statement": "The vulnerability is in the golang.org/x/crypto/ssh message handling of an established connection. The operator-trivy module runs the trivy binary only for image and filesystem scans in scan jobs, never for repository scans over SSH, so the vulnerable code is not executed.",
       "timestamp": "2026-09-23T12:00:00Z"
     },
 
