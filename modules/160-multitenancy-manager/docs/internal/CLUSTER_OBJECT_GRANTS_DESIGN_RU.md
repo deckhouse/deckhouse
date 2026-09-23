@@ -188,9 +188,14 @@ reconciler), на
 ресурс (`resourceName`) задаёт `allowed`/`allowedSelector`/`denied`/`deniedSelector`/`default`/
 `availabilityDefault`. Непустой allow-лист или `allowedSelector` подразумевает базу `None`; пустой `allowed: []` — нет.
 
-### AvailableClusterResource (без изменений)
+### AvailableClusterResource
 
 Каталог доступного для проекта (имена + дефолт), который контроллер рендерит в неймспейсы проекта.
+Живёт ровно столько, сколько живёт его `GrantableClusterResourceDefinition`: при удалении регистрации
+контроллер на следующем реконсайле удаляет каталог из всех неймспейсов проектов. Регистрация,
+удерживаемая финализатором, считается удалённой с момента выставления `deletionTimestamp`. Очистка
+выполняется на каждом реконсайле, даже если другая регистрация не резолвится; каталог самой сбойной
+регистрации остаётся в последнем корректном состоянии.
 
 ## Покрытие: какой CRD какую историю закрывает
 
@@ -281,7 +286,8 @@ Per-путь (`fieldPaths[].defaulting`):
 ## Контроллер
 
 - **Catalog reconciler** (по namespace) — рендерит `AvailableClusterResource` per-проект per-definition
-  из резолва доступности.
+  из резолва доступности и удаляет принадлежащие модулю каталоги неймспейса, у которых больше нет
+  definition (каталог read-only для всех, кроме контроллера, — удалить его больше некому).
 - **Binding reconciler** (по `GrantableClusterResourceReference` и
   `GrantableClusterResourceDefinition`) — проставляет `reference.status.bound`/condition `Bound` и
   обратный индекс `definition.status.references`/`referenceCount`. Также ставит reference condition

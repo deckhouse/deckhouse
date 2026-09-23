@@ -6,7 +6,8 @@ spec:
           description: |
             Содержит информацию о cluster-wide-ресурсах, доступных проекту, и значении, используемом по умолчанию.
 
-            Ресурс автоматически создаётся и обновляется контроллером `multitenancy-manager` в неймспейсе проекта для каждого зарегистрированного ресурса GrantableClusterResourceDefinition.
+            Ресурс автоматически создаётся и обновляется контроллером `multitenancy-manager` в неймспейсе проекта для каждого зарегистрированного GrantableClusterResourceDefinition.
+            Он удаляется при удалении соответствующего GrantableClusterResourceDefinition.
             Имя AvailableClusterResource совпадает с именем соответствующего GrantableClusterResourceDefinition.
 
             Информация о доступных cluster-wide-ресурсах и значении по умолчанию содержится в поле `status`.
