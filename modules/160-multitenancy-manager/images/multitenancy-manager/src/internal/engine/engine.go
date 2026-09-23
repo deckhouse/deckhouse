@@ -23,6 +23,8 @@ import (
 	"fmt"
 	"slices"
 
+	"github.com/theory/jsonpath/spec"
+
 	"controller/api/v1alpha1"
 	"controller/internal/jsonpath"
 )
@@ -73,6 +75,16 @@ func scopeWeight(list []string, weight int) int {
 // pods ($.spec.priorityClassName) versus replicationcontrollers
 // ($.spec.template.spec.priorityClassName).
 func SelectFieldPath(fieldPaths []v1alpha1.FieldPath, group, version, resource string) (v1alpha1.FieldPath, bool) {
+	i := SelectFieldPathIndex(fieldPaths, group, version, resource)
+	if i < 0 {
+		return v1alpha1.FieldPath{}, false
+	}
+	return fieldPaths[i], true
+}
+
+// SelectFieldPathIndex is SelectFieldPath returning the index of the selected entry, -1 when none
+// matches, for callers that report which entry they used.
+func SelectFieldPathIndex(fieldPaths []v1alpha1.FieldPath, group, version, resource string) int {
 	best, bestWeight := -1, -1
 	for i := range fieldPaths {
 		fp := &fieldPaths[i]
@@ -92,10 +104,7 @@ func SelectFieldPath(fieldPaths []v1alpha1.FieldPath, group, version, resource s
 			best, bestWeight = i, weight
 		}
 	}
-	if best < 0 {
-		return v1alpha1.FieldPath{}, false
-	}
-	return fieldPaths[best], true
+	return best
 }
 
 // StringValuesAt returns the string-typed values selected by the JSONPath expression.
@@ -136,4 +145,47 @@ func EvalMatch(factory jsonpath.Factory, pred *v1alpha1.MatchPredicate, obj map[
 		}
 	}
 	return false, nil
+}
+
+// DefaultingActive reports whether a field path asks for defaulting at all. The CRD defaults the
+// field to None, but an object built in code may leave it empty, so both mean "validate only".
+// The mutating webhook and the GrantableClusterResourceReference validator must agree on this, or
+// the validator would reject entries the mutator silently ignores.
+func DefaultingActive(fp v1alpha1.FieldPath) bool {
+	return fp.Defaulting != "" && fp.Defaulting != v1alpha1.DefaultingNone
+}
+
+// ParsePathSegments returns the member names of a path that selects exactly one field by name only,
+// e.g. $.spec.storageClassName or $.metadata.annotations['cert-manager.io/cluster-issuer']. It returns
+// ok=false for anything else: a path the RFC 9535 parser rejects, wildcards, indexes, slices, filters,
+// descendant segments, several selectors in one segment, the bare root, and an empty member name
+// (which would patch an empty root key).
+//
+// The path is parsed by the same factory /is-granted evaluates it with, and the segments are read off
+// that parse tree, so escapes are decoded exactly as the evaluator decodes them and any path accepted
+// here is also accepted there. This is the only parser the defaulting path may use: /defaults writes
+// a JSON Patch at the returned location, and the GrantableClusterResourceReference validating webhook
+// rejects a defaulting entry whose path this function refuses.
+func ParsePathSegments(factory jsonpath.Factory, expr string) ([]string, bool) {
+	parsed, err := factory.Path(expr)
+	if err != nil {
+		return nil, false
+	}
+	query := parsed.Query().Segments()
+	if len(query) == 0 {
+		return nil, false
+	}
+	segs := make([]string, 0, len(query))
+	for _, seg := range query {
+		selectors := seg.Selectors()
+		if seg.IsDescendant() || len(selectors) != 1 {
+			return nil, false
+		}
+		name, ok := selectors[0].(spec.Name)
+		if !ok || name == "" {
+			return nil, false
+		}
+		segs = append(segs, string(name))
+	}
+	return segs, true
 }
