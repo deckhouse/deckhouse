@@ -1739,13 +1739,6 @@ func splitResourcesOnPreAndPostDeckhouseInstall(ctx context.Context, resourcesTo
 
 	providerModule := config.CloudProviderModuleName(providerName)
 
-	// The module ships both the *InstanceClass CRDs the provider queue is written against and the
-	// cloud-controller-manager that clears node.cloudprovider.kubernetes.io/uninitialized, so it
-	// leads in every config shape. Its own documents are the evidence, not how the nodes are written.
-	divertModules := slices.ContainsFunc(resourcesToCreate, func(resource *template.Resource) bool {
-		return declaresExternalProviderModule(resource, providerModule)
-	})
-
 	for _, resource := range resourcesToCreate {
 		annotations := resource.Object.GetAnnotations()
 		hasBeforeAnnotation := annotations != nil && annotations["dhctl.deckhouse.io/bootstrap-resource-place"] == "before-deckhouse"
@@ -1756,7 +1749,7 @@ func splitResourcesOnPreAndPostDeckhouseInstall(ctx context.Context, resourcesTo
 			continue
 		}
 
-		if divertModules && isProviderModuleDocument(resource, providerModule) {
+		if isModuleQueueDocument(resource, providerModule) {
 			dhlog.FromContext(ctx).DebugContext(ctx, fmt.Sprintf("Add resource %s - %s to module queue", resource.String(), resource.Object.GetName()))
 			modules = append(modules, resource)
 
@@ -1782,29 +1775,20 @@ func splitResourcesOnPreAndPostDeckhouseInstall(ctx context.Context, resourcesTo
 	return before, modules, provider, after
 }
 
-// Only the gate asks this, and a ModuleConfig is the whole answer: one naming a module the image
-// carries is parsed into MetaConfig.ModuleConfigs instead, so one that reaches ResourcesYAML names
-// a module the image does not ship. Nothing else enables a module, so nothing else opens the gate.
-func declaresExternalProviderModule(resource *template.Resource, providerModule string) bool {
-	if resource.GVK.Group != config.ModuleConfigGroup || resource.GVK.Kind != config.ModuleConfigKind {
-		return false
-	}
-
-	return resource.Object.GetName() == providerModule
-}
-
-// Every ModuleSource counts: each serves a module this bootstrap needs, and applying one early
-// costs nothing. The provider's own override rides along whatever its spec.imageTag says: the gate
-// has already decided that module is moving.
-func isProviderModuleDocument(resource *template.Resource, providerModule string) bool {
+// A ModuleSource is an address and a ModulePullOverride pins a tag; neither enables a module, so
+// both travel early unconditionally, which also puts them ahead of any ModuleConfig naming them.
+// Enabling is what has to wait, and only this cluster's provider module cannot: it ships the
+// cloud-controller-manager that clears node.cloudprovider.kubernetes.io/uninitialized, and a
+// ModuleConfig reaching these documents at all means the image does not carry that module.
+func isModuleQueueDocument(resource *template.Resource, providerModule string) bool {
 	if resource.GVK.Group != config.ModuleConfigGroup {
 		return false
 	}
 
 	switch resource.GVK.Kind {
-	case config.ModuleSourceKind:
+	case config.ModuleSourceKind, config.ModulePullOverrideKind:
 		return true
-	case config.ModuleConfigKind, config.ModulePullOverrideKind:
+	case config.ModuleConfigKind:
 		return resource.Object.GetName() == providerModule
 	}
 
