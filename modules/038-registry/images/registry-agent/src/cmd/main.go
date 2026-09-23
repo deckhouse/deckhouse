@@ -122,7 +122,8 @@ func main() {
 		trustDir      string
 		bootstrap     string
 		interval      time.Duration
-		forwardLimit  time.Duration
+		responseLimit time.Duration
+		idleLimit     time.Duration
 		metricsListen string
 		logLevel      string
 	)
@@ -149,8 +150,13 @@ func main() {
 	flag.StringVar(&bootstrap, "bootstrap-layout", layout.DefaultBootstrapPath,
 		"Where the layout the node was installed with was written. Used only until the API server answers once.")
 	flag.DurationVar(&interval, "interval", 30*time.Second, "How often the layout is re-read.")
-	flag.DurationVar(&forwardLimit, "forward-timeout", 5*time.Minute,
-		"How long one attempt at one registry may take.")
+	flag.DurationVar(&responseLimit, "response-timeout", proxy.DefaultResponseTimeout,
+		"How long one registry has to answer: the connection, the authentication it demands, "+
+			"and the response headers. Not the transfer that follows.")
+	flag.DurationVar(&idleLimit, "transfer-idle-timeout", proxy.DefaultIdleTimeout,
+		"How long a transfer already under way may produce nothing before the next registry is "+
+			"tried. Reset by every byte that arrives, so an image of any size may take as long as "+
+			"it takes.")
 	flag.StringVar(&metricsListen, "metrics-address", "127.0.0.1:4286",
 		"Where to serve the agent's own metrics. Loopback: nothing scrapes a static pod "+
 			"that has to work while the API server does not.")
@@ -179,7 +185,8 @@ func main() {
 		trustDir:      trustDir,
 		bootstrap:     bootstrap,
 		interval:      interval,
-		forwardLimit:  forwardLimit,
+		responseLimit: responseLimit,
+		idleLimit:     idleLimit,
 		metricsListen: metricsListen,
 	}); err != nil {
 		log.Error("the agent stopped", "error", err.Error())
@@ -199,7 +206,8 @@ type options struct {
 	trustDir      string
 	bootstrap     string
 	interval      time.Duration
-	forwardLimit  time.Duration
+	responseLimit time.Duration
+	idleLimit     time.Duration
 	metricsListen string
 }
 
@@ -267,12 +275,13 @@ func run(ctx context.Context, log *slog.Logger, opts options) error {
 	}()
 
 	server := &proxy.Server{
-		Log:            log,
-		Layout:         proxy.LayoutFunc(loop.Current),
-		Self:           opts.advertise,
-		ForwardTimeout: opts.forwardLimit,
-		Metrics:        collected,
-		TrustDir:       opts.trustDir,
+		Log:             log,
+		Layout:          proxy.LayoutFunc(loop.Current),
+		Self:            opts.advertise,
+		ResponseTimeout: opts.responseLimit,
+		IdleTimeout:     opts.idleLimit,
+		Metrics:         collected,
+		TrustDir:        opts.trustDir,
 	}
 	loop.Serving = server.Serving
 	loop.Usable = server.Usable
