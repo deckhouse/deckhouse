@@ -112,7 +112,6 @@
 500-okmeter/                                                                @vladimirGuryanov @lazovskiy @maksimmadzhuga
 600-secret-copier/                                                          @nabokihms @AlwxSin @Suselz
 600-namespace-configurator/                                                 @nabokihms @AlwxSin @Suselz
-610-service-with-healthchecks                                               @AndreyPavlovFlant @apolovov
 800-deckhouse-tools/                                                        @RomanenkoDenys @borg-z @090809
 810-documentation/                                                          @z9r5
 

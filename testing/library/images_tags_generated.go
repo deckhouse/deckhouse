@@ -432,10 +432,6 @@ var DefaultImagesDigests = map[string]interface{}{
 		"xfsprogs6160":                    "imageHash-registrypackages-xfsprogs6160",
 		"yq4536":                          "imageHash-registrypackages-yq4536",
 	},
-	"serviceWithHealthchecks": map[string]interface{}{
-		"agent":      "imageHash-serviceWithHealthchecks-agent",
-		"controller": "imageHash-serviceWithHealthchecks-controller",
-	},
 	"terraformManager": map[string]interface{}{
 		"baseOpentofu":                "imageHash-terraformManager-baseOpentofu",
 		"baseTerraform":               "imageHash-terraformManager-baseTerraform",

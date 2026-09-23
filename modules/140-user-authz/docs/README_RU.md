@@ -505,7 +505,6 @@ read:
     - network.deckhouse.io/metalloadbalancerclasses
     - network.deckhouse.io/metalloadbalancerconfigurations
     - network.deckhouse.io/metalloadbalancerpools
-    - network.deckhouse.io/servicewithhealthchecks
     - networking.istio.io/destinationrules
     - networking.istio.io/gateways
     - networking.istio.io/serviceentries
@@ -586,7 +585,6 @@ write:
     - gateway.networking.k8s.io/tcproutes
     - gateway.networking.k8s.io/tlsroutes
     - gateway.networking.k8s.io/udproutes
-    - network.deckhouse.io/servicewithhealthchecks
     - networking.istio.io/destinationrules
     - networking.istio.io/gateways
     - networking.istio.io/serviceentries

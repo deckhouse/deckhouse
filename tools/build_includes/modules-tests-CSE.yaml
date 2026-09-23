@@ -683,17 +683,6 @@
   stageDependencies:
     install:
         - '**/*'
-- add: /ee/modules/610-service-with-healthchecks
-  to: /deckhouse/modules/610-service-with-healthchecks
-  excludePaths:
-    - docs
-    - README.md
-    - images
-    - webhooks
-    - crds
-  stageDependencies:
-    setup:
-        - '**/*'
 - add: /ee/cse/modules/002-deckhouse/openapi/config-values.yaml
   to: /deckhouse/modules/002-deckhouse/openapi/config-values.yaml
   stageDependencies:

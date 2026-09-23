@@ -113,7 +113,6 @@
 500-okmeter/ @vladimir.guryanov @vadim.lazovsky @maksim.madzhuga
 600-secret-copier/ @maksim.nabokikh @aleksandr.sinichkin
 600-namespace-configurator/ @maksim.nabokikh @aleksandr.sinichkin
-610-service-with-healthchecks @andrey.pavlov @andrey.polovov
 800-deckhouse-tools/ @denis.romanenko @nikolay.zykov @georgy.kargin
 810-documentation/ @artem.kladov
 

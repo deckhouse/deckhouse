@@ -2918,50 +2918,6 @@
       }
     },
     {
-      "title": "The service-with-healthchecks module",
-      "description": "Readiness Probes with the service-with-healthchecks Module in Deckhouse Platform",
-      "module": "service-with-healthchecks",
-      "embedded": "true",
-      "tags": [
-        "balancing",
-        "embedded",
-        "network",
-        "ssdlc"
-      ],
-      "editionMinimumAvailable": "ee",
-      "url": "service-with-healthchecks/",
-      "ru": {
-        "title": "Модуль service-with-healthchecks",
-        "description": "Readiness-пробы с модулем service-with-healthchecks в Deckhouse Platform"
-      },
-      "extensions": [
-        "advanced_networking"
-      ],
-      "metadata": {
-        "name": "service-with-healthchecks",
-        "stage": "General Availability",
-        "namespace": "d8-service-with-healthchecks",
-        "descriptions": {
-          "en": "Provides an internal LoadBalancer with per-port healthchecks. Allows independent health checks for different ports, unlike the standard Kubernetes Service load balancer.",
-          "ru": "Предоставляет внутренний LoadBalancer с проверками работоспособности для каждого порта. Позволяет выполнять независимые проверки работоспособности для разных портов, в отличие от стандартного балансировщика Service Kubernetes."
-        },
-        "accessibility": {
-          "editions": {
-            "ee": {
-              "available": true
-            },
-            "fe": {
-              "available": true
-            },
-            "cse": {
-              "available": true
-            }
-          }
-        },
-        "oss": []
-      }
-    },
-    {
       "title": "The terraform-manager module",
       "description": "Description of the Deckhouse Platform terraform-manager module. Ensures that the objects in the cluster correspond to the Terraform state.",
       "module": "terraform-manager",
