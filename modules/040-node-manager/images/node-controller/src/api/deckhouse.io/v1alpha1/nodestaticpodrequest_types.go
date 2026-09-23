@@ -94,8 +94,8 @@ type NodeStaticPodRequestStatus struct {
 	Phase string `json:"phase,omitempty"`
 
 	// Conditions carry the details. Ready answers whether the pod resolved:
-	// Resolved, InvalidName, ReservedName, InvalidManifest, Conflict or
-	// RefusedByNodes.
+	// Resolved, InvalidName, ReservedName, InvalidManifest, Conflict,
+	// LimitExceeded or RefusedByNodes.
 	// +optional
 	// +listType=map
 	// +listMapKey=type
