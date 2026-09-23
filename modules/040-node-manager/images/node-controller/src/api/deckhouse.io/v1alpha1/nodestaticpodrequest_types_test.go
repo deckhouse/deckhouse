@@ -268,7 +268,7 @@ func TestTheDegradedReasonsAreDocumented(t *testing.T) {
 	for _, path := range files {
 		raw, err := os.ReadFile(path)
 		require.NoError(t, err)
-		for _, reason := range []string{"InvalidName", "ReservedName", "InvalidManifest", "Conflict", "RefusedByNodes"} {
+		for _, reason := range []string{"InvalidName", "ReservedName", "InvalidManifest", "Conflict", "LimitExceeded", "RefusedByNodes"} {
 			require.Contains(t, string(raw), reason, "%s must be described in %s", reason, path)
 		}
 	}
