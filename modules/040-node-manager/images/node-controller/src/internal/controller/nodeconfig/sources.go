@@ -77,14 +77,8 @@ type clusterInputs struct {
 	SysextDigests map[string]string
 	// RegistryPackagesProxyToken authenticates against the packages proxy.
 	RegistryPackagesProxyToken string
-	// LocalImages is what every node imports into containerd before kubelet
-	// starts. The list is the platform's, not a module's and not an object's: it
-	// follows from which modules are enabled, and it is the same for every node,
-	// so it is built once per pass rather than once per node.
-	LocalImages []internalv1alpha1.LocalImage
 	// RegistryAgentMode says the registry module has handed containerd's
-	// registry.d to its own node agent. One fact, two consequences: the agent's
-	// image joins LocalImages, and containerRuntime.registryOwner says "agent".
+	// registry.d to its own node agent: containerRuntime.registryOwner says "agent".
 	RegistryAgentMode bool
 	// Registry is how a node reaches the cluster's registry on its own. Every
 	// node gets it: the pulls containerd makes for itself — the control-plane
@@ -246,8 +240,8 @@ func providerInternalNetworkCIDR(config map[string]any) (string, error) {
 
 // readReleaseImages fills in what the release ships and how a node reaches it.
 func (s *sourceReader) readReleaseImages(ctx context.Context, in *clusterInputs) error {
-	// One read for the system extensions, the OS image and the preload list: they
-	// come out of the same ConfigMap, and reading it three times pays three times.
+	// One read for the system extensions and the OS image: they come out of the
+	// same ConfigMap, and reading it twice pays twice.
 	images, err := s.readImagesDigests(ctx)
 	if err != nil {
 		return err
@@ -279,11 +273,6 @@ func (s *sourceReader) readReleaseImages(ctx context.Context, in *clusterInputs)
 		return err
 	}
 
-	in.LocalImages, err = platformImages(images, in.RegistryAgentMode)
-	if err != nil {
-		return err
-	}
-
 	ners, err := s.readNodeExtensionRequests(ctx)
 	if err != nil {
 		return err
@@ -302,9 +291,7 @@ func (s *sourceReader) readReleaseImages(ctx context.Context, in *clusterInputs)
 }
 
 // readRegistry describes the cluster's registry: the spec a node needs to reach
-// it. It used to answer with the repository every image of the release lives in
-// as well; nothing asks any more, since the sandbox is named by the image the
-// node imported rather than by one it would have to pull.
+// it.
 func (s *sourceReader) readRegistry(ctx context.Context) (*internalv1alpha1.Registry, error) {
 	secret := &corev1.Secret{}
 	if err := s.Reader.Get(ctx, types.NamespacedName{Namespace: d8SystemNS, Name: deckhouseRegistrySecret}, secret); err != nil {
@@ -363,33 +350,6 @@ func (s *sourceReader) readRegistryAgentMode(ctx context.Context) (bool, error) 
 		return false, err
 	}
 	return config[registryBashibleAgentKey] != nil, nil
-}
-
-// platformImages is what every node puts into containerd before kubelet starts.
-// It is a platform list, exactly as bashible's 034_ctr_import_local_images is:
-// a module does not declare it, the platform knows it from which modules are on.
-//
-// pause is unconditional. The sandbox is the first pull of any pod, so a node
-// that cannot make it runs nothing at all — which is precisely what happens once
-// registry.d points at an agent that has not started, the agent's own sandbox
-// included. The agent's image joins the list when the registry module has taken
-// the directory over.
-func platformImages(all map[string]map[string]string, agentMode bool) ([]internalv1alpha1.LocalImage, error) {
-	pause, err := digestAt(all, registryPackagesDigestsKey, pausePackageName)
-	if err != nil {
-		return nil, err
-	}
-	images := []internalv1alpha1.LocalImage{{Digest: pause}}
-
-	if !agentMode {
-		return images, nil
-	}
-
-	agent, err := digestAt(all, registryPackagesDigestsKey, registryAgentPackageName)
-	if err != nil {
-		return nil, err
-	}
-	return append(images, internalv1alpha1.LocalImage{Digest: agent}), nil
 }
 
 // digestAt returns one image's digest out of the release's digest map. Absent

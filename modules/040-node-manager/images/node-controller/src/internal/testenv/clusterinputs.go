@@ -43,19 +43,12 @@ const (
 	TestCNIDigest               = "sha256:2222222222222222222222222222222222222222222222222222222222222222"
 	TestKubeletDigest           = "sha256:3333333333333333333333333333333333333333333333333333333333333333"
 	TestPauseDigest             = "sha256:4444444444444444444444444444444444444444444444444444444444444444"
-	// TestPausePackageDigest is the pause registrypackage, which every node
-	// preloads; TestPauseDigest above is the common/pause image the sandbox
-	// reference is built from. Two different artifacts, two different digests.
-	TestPausePackageDigest = "sha256:8484848484848484848484848484848484848484848484848484848484848484"
-	// TestRegistryAgentDigest is the registry agent's registrypackage, preloaded
-	// only on a cluster whose registry module says the agent owns registry.d.
-	TestRegistryAgentDigest = "sha256:9494949494949494949494949494949494949494949494949494949494949494"
-	TestNodeletDigest       = "sha256:6666666666666666666666666666666666666666666666666666666666666666"
-	TestOSImageDigest       = "sha256:7777777777777777777777777777777777777777777777777777777777777777"
-	TestRegistryAddress     = "registry.example.com"
-	TestRegistryPath        = "/deckhouse/ce"
-	TestRegistryAuth        = "dXNlcjpwYXNzd29yZA=="
-	TestClusterCA           = "-----BEGIN CERTIFICATE-----\ntest\n-----END CERTIFICATE-----\n"
+	TestNodeletDigest           = "sha256:6666666666666666666666666666666666666666666666666666666666666666"
+	TestOSImageDigest           = "sha256:7777777777777777777777777777777777777777777777777777777777777777"
+	TestRegistryAddress         = "registry.example.com"
+	TestRegistryPath            = "/deckhouse/ce"
+	TestRegistryAuth            = "dXNlcjpwYXNzd29yZA=="
+	TestClusterCA               = "-----BEGIN CERTIFICATE-----\ntest\n-----END CERTIFICATE-----\n"
 )
 
 // The objects a node's configuration is rendered from. Names mirror the
@@ -84,9 +77,9 @@ func EnsureClusterInputs(ctx context.Context, c client.Client) (string, []string
 	EnsureObject(ctx, c, &corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: nodecommon.MachineNamespace}})
 	EnsureObject(ctx, c, &corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: registrySecretNS}})
 
-	digests := fmt.Sprintf(`{"registrypackages":{"containerdSysext224":%q,"kubernetesCniSysext162":%q,"kubeletSysext1356":%q,"nodeletSysext":%q,"pause":%q,"registryAgent":%q},"nodeManager":{"engine":%q},"common":{"pause":%q}}`,
+	digests := fmt.Sprintf(`{"registrypackages":{"containerdSysext224":%q,"kubernetesCniSysext162":%q,"kubeletSysext1356":%q,"nodeletSysext":%q},"nodeManager":{"engine":%q},"common":{"pause":%q}}`,
 		TestContainerdDigest, TestCNIDigest, TestKubeletDigest, TestNodeletDigest,
-		TestPausePackageDigest, TestRegistryAgentDigest, TestOSImageDigest, TestPauseDigest)
+		TestOSImageDigest, TestPauseDigest)
 	EnsureObject(ctx, c, &corev1.ConfigMap{
 		ObjectMeta: metav1.ObjectMeta{Namespace: nodecommon.MachineNamespace, Name: imagesDigestsConfigMap},
 		Data:       map[string]string{imagesDigestsKey: digests},

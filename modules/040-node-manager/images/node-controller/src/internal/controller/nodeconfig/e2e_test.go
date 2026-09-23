@@ -64,7 +64,6 @@ const (
 	testContainerdDigest        = testenv.TestContainerdDigest
 	testContainerdRebuiltDigest = testenv.TestContainerdRebuiltDigest
 	testPauseDigest             = testenv.TestPauseDigest
-	testPausePackageDigest      = testenv.TestPausePackageDigest
 	testRegistryAddress         = testenv.TestRegistryAddress
 	testRegistryPath            = testenv.TestRegistryPath
 	testRegistryAuth            = testenv.TestRegistryAuth
@@ -267,13 +266,9 @@ var _ = Describe("NodeConfig controller", func() {
 		nodeName := testenv.UniqueName("node")
 		createNode(ctx, nodeName, ngName)
 
-		// Every node preloads pause, whether or not it runs a static pod, and
 		// nodelet owns registry.d until a registry module says otherwise.
 		Eventually(func(g Gomega) {
 			nc := getNodeConfig(ctx, g, nodeName)
-			g.Expect(nc.Spec.ContainerRuntime.LocalImages).To(Equal([]internalv1alpha1.LocalImage{
-				{Digest: testenv.TestPausePackageDigest},
-			}))
 			g.Expect(nc.Spec.StaticPods).To(BeEmpty())
 			g.Expect(nc.Spec.ContainerRuntime.RegistryOwner).To(Equal(registryOwnerNodelet))
 		}, testenv.EventuallyTimeout, testenv.EventuallyPoll).Should(Succeed())
@@ -321,12 +316,6 @@ var _ = Describe("NodeConfig controller", func() {
 		Eventually(func(g Gomega) {
 			nc := getNodeConfig(ctx, g, nodeName)
 			g.Expect(nc.Spec.ContainerRuntime.RegistryOwner).To(Equal(registryOwnerAgent))
-			// The agent's own image joins the preload list: it is on the pull path
-			// of every other image, so nothing could fetch it.
-			g.Expect(nc.Spec.ContainerRuntime.LocalImages).To(Equal([]internalv1alpha1.LocalImage{
-				{Digest: testenv.TestPausePackageDigest},
-				{Digest: testenv.TestRegistryAgentDigest},
-			}))
 		}, testenv.EventuallyTimeout, testenv.EventuallyPoll).Should(Succeed())
 
 		By("narrowing the static pod to another group")
@@ -337,8 +326,8 @@ var _ = Describe("NodeConfig controller", func() {
 		Eventually(func(g Gomega) {
 			nc := getNodeConfig(ctx, g, nodeName)
 			g.Expect(nc.Spec.StaticPods).To(BeEmpty())
-			// The preload list stays: it never belonged to the object.
-			g.Expect(nc.Spec.ContainerRuntime.LocalImages).To(HaveLen(2))
+			g.Expect(nc.Spec.ContainerRuntime.RegistryOwner).To(Equal(registryOwnerAgent),
+				"registry.d never belonged to the object")
 		}, testenv.EventuallyTimeout, testenv.EventuallyPoll).Should(Succeed())
 
 		By("taking registry.d back when the agent mode is switched off")
@@ -347,7 +336,6 @@ var _ = Describe("NodeConfig controller", func() {
 		Eventually(func(g Gomega) {
 			nc := getNodeConfig(ctx, g, nodeName)
 			g.Expect(nc.Spec.ContainerRuntime.RegistryOwner).To(Equal(registryOwnerNodelet))
-			g.Expect(nc.Spec.ContainerRuntime.LocalImages).To(HaveLen(1))
 		}, testenv.EventuallyTimeout, testenv.EventuallyPoll).Should(Succeed())
 	})
 
@@ -1620,11 +1608,9 @@ var _ = Describe("NodeConfig controller", func() {
 			// carrying no IP — no exec, no logs, no metrics.
 			g.Expect(nc.Spec.Kubelet.ServerTLSBootstrap).To(BeNil())
 
-			// The sandbox is the image the node imported, named the way containerd
-			// knows it after the import. It used to be <imagesRepo>@<digest>, which
-			// containerd pulls itself with no credentials from kubelet — a pull that
-			// goes to the agent's _default the moment registry.d belongs to an agent.
-			g.Expect(nc.Spec.ContainerRuntime.SandboxImage).To(Equal("deckhouse.local/images:pause"))
+			// Left empty: nodelet names the pause the containerd extension imports.
+			// The CRD must not default it either, or the node would never see it empty.
+			g.Expect(nc.Spec.ContainerRuntime.SandboxImage).To(BeEmpty())
 		}, testenv.EventuallyTimeout, testenv.EventuallyPoll).Should(Succeed())
 	})
 })
@@ -1732,11 +1718,11 @@ func heartbeat(ctx context.Context, nodeName string) {
 func setContainerdDigest(ctx context.Context, digest string) {
 	GinkgoHelper()
 
-	layout := `{"registrypackages":{"containerdSysext224":%q,"kubernetesCniSysext162":%q,"kubeletSysext1356":%q,"nodeletSysext":%q,"pause":%q,"registryAgent":%q},"nodeManager":{"engine":%q},"common":{"pause":%q}}`
+	layout := `{"registrypackages":{"containerdSysext224":%q,"kubernetesCniSysext162":%q,"kubeletSysext1356":%q,"nodeletSysext":%q},"nodeManager":{"engine":%q},"common":{"pause":%q}}`
 	original := fmt.Sprintf(layout, testContainerdDigest, testCNIDigest, testKubeletDigest, testNodeletDigest,
-		testPausePackageDigest, testenv.TestRegistryAgentDigest, testOSImageDigest, testPauseDigest)
+		testOSImageDigest, testPauseDigest)
 	updated := fmt.Sprintf(layout, digest, testCNIDigest, testKubeletDigest, testNodeletDigest,
-		testPausePackageDigest, testenv.TestRegistryAgentDigest, testOSImageDigest, testPauseDigest)
+		testOSImageDigest, testPauseDigest)
 
 	writeDigests := func(ctx context.Context, data string) {
 		cm := &corev1.ConfigMap{}

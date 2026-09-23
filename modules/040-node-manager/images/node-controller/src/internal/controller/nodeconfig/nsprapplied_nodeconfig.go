@@ -48,9 +48,7 @@ type nsprOutcome struct {
 // The manifest on disk is the whole of what the node owes the pod, so
 // status.staticPods[] is the whole of the answer, and it has two states: Written
 // is applied, Failed is refused whatever its reason. A node with no entry has not
-// reported and is counted neither way. The images are deliberately not consulted:
-// the preload list is the platform's and is the same on every node, so a pod is
-// not Degraded because pause is.
+// reported and is counted neither way.
 func readNodeConfigOutcomes(ctx context.Context, reader client.Reader) (map[string]nsprOutcome, error) {
 	configs := &internalv1alpha1.NodeConfigList{}
 	if err := reader.List(ctx, configs); err != nil {
