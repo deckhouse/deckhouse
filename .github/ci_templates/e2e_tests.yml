@@ -511,6 +511,7 @@ check_e2e_labels:
 {!{- end }!}
   runs-on: [self-hosted, {!{ $runsOnLabel }!}]
   steps:
+{!{ tmpl.Exec "docker_config_isolation" | strings.Indent 4 }!}
 {!{ tmpl.Exec "started_at_output" . | strings.Indent 4 }!}
 {!{ tmpl.Exec "checkout_from_event_ref_step" . | strings.Indent 4 }!}
 {!{- if coll.Has $ctx "manualRun" }!}
@@ -953,6 +954,7 @@ check_e2e_labels:
     EVENT_LABEL: ${{ github.event.label.name }}
   runs-on: [self-hosted, {!{ $runsOnLabel }!}]
   steps:
+{!{ tmpl.Exec "docker_config_isolation" | strings.Indent 4 }!}
 {!{ tmpl.Exec "started_at_output" . | strings.Indent 4 }!}
 {!{ tmpl.Exec "checkout_from_event_ref_step" . | strings.Indent 4 }!}
 
