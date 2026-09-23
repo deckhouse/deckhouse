@@ -650,6 +650,8 @@ func buildTargetBashibleDeployment(vcp *controlplanev1alpha1.VirtualControlPlane
 		}
 	}
 
+	applyVCPPlacement(&deployment.Spec.Template.Spec, vcp)
+
 	return deployment, nil
 }
 
@@ -661,6 +663,10 @@ func isBashibleDeploymentInSync(current, target *appsv1.Deployment) bool {
 	}
 	return equality.Semantic.DeepEqual(current.Spec.Replicas, target.Spec.Replicas) &&
 		equality.Semantic.DeepEqual(current.Spec.Selector, target.Spec.Selector) &&
+		// DeepDerivative treats an empty target field as "don't care", so clearing nodeSelector or
+		// tolerations would never be detected. Compare those two exactly.
+		equality.Semantic.DeepEqual(current.Spec.Template.Spec.NodeSelector, target.Spec.Template.Spec.NodeSelector) &&
+		equality.Semantic.DeepEqual(current.Spec.Template.Spec.Tolerations, target.Spec.Template.Spec.Tolerations) &&
 		equality.Semantic.DeepDerivative(target.Spec.Template, current.Spec.Template) &&
 		equality.Semantic.DeepEqual(current.OwnerReferences, target.OwnerReferences)
 }

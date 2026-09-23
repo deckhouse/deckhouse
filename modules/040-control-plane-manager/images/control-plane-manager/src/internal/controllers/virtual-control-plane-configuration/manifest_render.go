@@ -119,7 +119,7 @@ func renderManifests(
 		return nil, err
 	}
 
-	replacer := buildManifestReplacer(
+	replacer, err := buildManifestReplacer(
 		vcp,
 		images,
 		apiAdvertiseAddress,
@@ -127,6 +127,9 @@ func renderManifests(
 		egressDestinations,
 		vcp.Spec.Networking,
 	)
+	if err != nil {
+		return nil, err
+	}
 
 	rendered := make(map[string][]byte)
 	for key, value := range globalData {
@@ -173,7 +176,16 @@ func buildManifestReplacer(
 	clusterUUID string,
 	egressDestinations []string,
 	networking controlplanev1alpha1.VirtualControlPlaneNetworking,
-) *strings.Replacer {
+) (*strings.Replacer, error) {
+	nodeSelector, err := renderNodeSelector(vcp)
+	if err != nil {
+		return nil, err
+	}
+	tolerations, err := renderTolerations(vcp)
+	if err != nil {
+		return nil, err
+	}
+
 	return strings.NewReplacer(
 		"${VCP_API_VIP}", apiAdvertiseAddress,
 		"${VCP_CLUSTER_UUID}", clusterUUID,
@@ -189,7 +201,7 @@ func buildManifestReplacer(
 		"${IMAGE_CILIUM_OPERATOR}", images.CiliumOperator,
 		"${VCP_NAME}", vcp.Name,
 		"${NAMESPACE}", vcp.Namespace,
-		"${VCP_KONNECTIVITY_SERVER_COUNT}", fmt.Sprintf("%d", vcp.Spec.Replicas),
+		"${VCP_KONNECTIVITY_SERVER_COUNT}", fmt.Sprintf("%d", desiredCPNCount(vcp)),
 		"${CLUSTER_DOMAIN}", networking.ClusterDomain,
 		"${SERVICE_SUBNET_CIDR}", networking.ServiceSubnetCIDR,
 		"${POD_SUBNET_CIDR}", networking.PodSubnetCIDR,
@@ -209,7 +221,10 @@ func buildManifestReplacer(
 		"${DATASTORE_CREDS_SECRET_NAME}", constants.VirtualResourceName(constants.VirtualDatastoreCredsSecretName, vcp.Name),
 		"${CILIUM_CONFIG_NAME}", constants.VirtualResourceName("cilium-config", vcp.Name),
 		"${CILIUM_OPERATOR_NAME}", constants.VirtualResourceName("cilium-operator", vcp.Name),
-	)
+		"${METRICS_TOKEN_SECRET_NAME}", metricsTokenSecretName(vcp.Name),
+		"${VCP_NODE_SELECTOR}", nodeSelector,
+		"${VCP_TOLERATIONS}", tolerations,
+	), nil
 }
 
 // konnectivityagentCPIdentifiers builds:

@@ -22,10 +22,10 @@ spec:
       jsonPath: .spec.kubernetesVersion
       name: Version
       type: string
-    - description: Desired number of control plane replicas.
-      jsonPath: .spec.replicas
-      name: Replicas
-      type: integer
+    - description: High availability mode.
+      jsonPath: .spec.highAvailability
+      name: HA
+      type: boolean
     - description: Published Kubernetes API endpoint.
       jsonPath: .status.endpoint
       name: Endpoint
@@ -78,16 +78,44 @@ spec:
                   type:
                     default: LoadBalancer
                     description: |-
-                      How the tenant Kubernetes API is published. Only LoadBalancer is supported for
-                      now (the per-VCP ALB uses a LoadBalancer inlet).
+                      How the tenant Kubernetes API is published.
+
+                      Only `LoadBalancer` is supported for now (the per-VCP ALB uses a `LoadBalancer` inlet).
                     enum:
                     - LoadBalancer
                     type: string
                 type: object
+              highAvailability:
+                default: false
+                description: |-
+                  High availability mode for the tenant control plane.
+
+                  When `true`: two ControlPlaneNodes on different management-cluster nodes,
+                  a PodDisruptionBudget per component, and a PostgreSQL cluster with three instances
+                  and synchronous replication.
+
+                  Costs a network round trip per commit. A failover can still lose the last
+                  transactions: the WAL is guaranteed to reach a standby, not to be flushed to disk.
+
+                  > **Warning.** Switching this on a running tenant interrupts service: the component
+                  StatefulSets are recreated and the datastore is resized.
+
+                  Ignored for the datastore when `datastoreRef` is set. The ControlPlaneNode count
+                  still follows this parameter.
+                type: boolean
               kubernetesVersion:
-                description: Desired Kubernetes version for the tenant control plane.
-                minLength: 1
-                pattern: ^[0-9]+\.[0-9]+(\.[0-9]+)?$
+                description: |-
+                  Desired Kubernetes version for the tenant control plane.
+
+                  Only versions shipped with the current Deckhouse Kubernetes Platform (DKP) release are accepted.
+                  `Default` and `Automatic` are not among them: a virtual control plane has no
+                  mechanism for picking a version on its own.
+                enum:
+                - "1.32"
+                - "1.33"
+                - "1.34"
+                - "1.35"
+                - "1.36"
                 type: string
               networking:
                 description: |-
@@ -99,10 +127,12 @@ spec:
                   clusterDomain:
                     default: cluster.virtual
                     description: |-
-                      Tenant cluster's DNS domain. Used to build the apiserver's `--service-account-issuer`
-                      and the `kubernetes.default.svc.<clusterDomain>` certificate SAN.
+                      Tenant cluster's DNS domain.
 
-                      Warning! Changing this parameter on a running tenant is extremely dangerous: the apiserver
+                      Used to build the apiserver's `--service-account-issuer` and the
+                      `kubernetes.default.svc.<clusterDomain>` certificate SAN.
+
+                      > **Warning.** Changing this parameter on a running tenant is extremely dangerous: the apiserver
                       serving certificate and `--service-account-issuer` are derived from it only once, at
                       creation. Create a new VirtualControlPlane and migrate workloads instead of changing it.
                     maxLength: 253
@@ -113,10 +143,12 @@ spec:
                       rule: self == oldSelf
                   podSubnetCIDR:
                     description: |-
-                      Address space of the tenant cluster's Pods. Passed to kube-controller-manager as
-                      `--cluster-cidr` and to cilium as the Kubernetes-IPAM Pod CIDR source.
+                      Address space of the tenant cluster's Pods.
 
-                      Warning! Changing this parameter on a running tenant is extremely dangerous: existing
+                      Passed to kube-controller-manager as `--cluster-cidr` and to Cilium as the
+                      Kubernetes-IPAM Pod CIDR source.
+
+                      > **Warning.** Changing this parameter on a running tenant is extremely dangerous: existing
                       nodes and Pods already hold addresses from the current range, and switching it means
                       recreating every node. Create a new VirtualControlPlane and migrate workloads instead
                       of changing it.
@@ -130,10 +162,11 @@ spec:
                       rule: self == oldSelf
                   podSubnetNodeCIDRPrefix:
                     description: |-
-                      Prefix size of the Pod network allocated to each node out of `podSubnetCIDR`. Passed to
-                      kube-controller-manager as `--node-cidr-mask-size`.
+                      Prefix size of the Pod network allocated to each node out of `podSubnetCIDR`.
 
-                      Warning! Changing this parameter on a running tenant is extremely dangerous: nodes that
+                      Passed to kube-controller-manager as `--node-cidr-mask-size`.
+
+                      > **Warning.** Changing this parameter on a running tenant is extremely dangerous: nodes that
                       already received a PodCIDR keep the previous prefix, silently fragmenting the Pod address
                       space. Create a new VirtualControlPlane and migrate workloads instead of changing it.
 
@@ -152,11 +185,12 @@ spec:
                       rule: self == oldSelf
                   serviceSubnetCIDR:
                     description: |-
-                      Address space of the tenant cluster's Services. The tenant apiserver serving certificate
-                      carries the range's 1st address as an IP SAN, and the tenant DNS Service is addressed at
-                      the range's 10th address.
+                      Address space of the tenant cluster's Services.
 
-                      Warning! Changing this parameter on a running tenant is extremely dangerous and can lead
+                      The tenant apiserver serving certificate carries the range's 1st address as an IP SAN,
+                      and the tenant DNS Service is addressed at the range's 10th address.
+
+                      > **Warning.** Changing this parameter on a running tenant is extremely dangerous and can lead
                       to complete tenant failure: existing Services keep ClusterIPs from the current range, the
                       apiserver serving certificate silently regenerates with a different SAN (dropping the old
                       `kubernetes.default` SAN), and the tenant DNS Service stays stranded at the old address.
@@ -178,13 +212,87 @@ spec:
                 x-kubernetes-validations:
                 - message: podSubnetNodeCIDRPrefix must be greater than the prefix length of podSubnetCIDR, otherwise no node subnet fits into the Pod address space
                   rule: int(self.podSubnetNodeCIDRPrefix) > cidr(self.podSubnetCIDR).prefixLength()
-                - message: "podSubnetCIDR and serviceSubnetCIDR must not overlap: Pod addresses are allocated by cilium and Service addresses by kube-apiserver, and neither knows about the other's range"
+                - message: "podSubnetCIDR and serviceSubnetCIDR must not overlap: Pod addresses are allocated by Cilium and Service addresses by kube-apiserver, and neither knows about the other's range"
                   rule: '!cidr(self.podSubnetCIDR).containsCIDR(self.serviceSubnetCIDR) && !cidr(self.serviceSubnetCIDR).containsCIDR(self.podSubnetCIDR)'
-              replicas:
-                default: 1
-                description: Desired number of control plane replicas.
-                minimum: 1
-                type: integer
+              nodeSelector:
+                additionalProperties:
+                  type: string
+                description: |-
+                  Node labels for the virtual control plane pods in the management cluster: the control
+                  plane components, `cilium-operator`, `bashible-apiserver`, the tenant's `deckhouse`.
+
+                  Pods inside the tenant cluster are not affected.
+
+                  A dedicated node pool is usually tainted as well as labelled, so a `nodeSelector`
+                  without matching `tolerations` leaves every pod in `Pending` state.
+
+                  > **Warning.** Changing this parameter recreates the component StatefulSets, restarting
+                  the tenant control plane.
+                type: object
+              tolerations:
+                description: |-
+                  Tolerations for the same pods as `nodeSelector`.
+
+                  At most 64 entries.
+
+                  > **Warning.** Changing this parameter restarts the tenant control plane.
+                items:
+                  properties:
+                    effect:
+                      description: |-
+                        Taint effect to match. Empty matches all effects.
+                      enum:
+                      - NoSchedule
+                      - PreferNoSchedule
+                      - NoExecute
+                      type: string
+                    key:
+                      description: |-
+                        Taint key the toleration applies to. Empty matches all keys and then requires
+                        `operator: Exists`.
+
+                        Must be a valid label key.
+                      maxLength: 316
+                      pattern: ^([a-z0-9]([-a-z0-9]*[a-z0-9])?([.][a-z0-9]([-a-z0-9]*[a-z0-9])?)*/)?[A-Za-z0-9]([-A-Za-z0-9_.]*[A-Za-z0-9])?$
+                      type: string
+                    operator:
+                      description: |-
+                        Key's relationship to the value. `Exists` or `Equal` (default).
+
+                        `Exists` matches any value and requires `value` to be empty.
+                      enum:
+                      - Exists
+                      - Equal
+                      type: string
+                    tolerationSeconds:
+                      description: |-
+                        How long the pod tolerates a `NoExecute` taint. Unset means forever, zero or
+                        negative means evict at once.
+
+                        Only allowed together with `effect: NoExecute`.
+                      format: int64
+                      type: integer
+                    value:
+                      description: |-
+                        Taint value the toleration matches. Empty when the operator is `Exists`.
+
+                        Must be a valid label value.
+                      maxLength: 63
+                      pattern: ^([A-Za-z0-9]([-A-Za-z0-9_.]*[A-Za-z0-9])?)?$
+                      type: string
+                  type: object
+                  x-kubernetes-validations:
+                  - message: an empty key matches every taint and requires operator Exists
+                    rule: |-
+                      (has(self.key) && size(self.key) > 0) || (has(self.operator) && self.operator == 'Exists')
+                  - message: value must be empty when operator is Exists
+                    rule: |-
+                      !(has(self.operator) && self.operator == 'Exists') || !has(self.value) || size(self.value) == 0
+                  - message: tolerationSeconds only applies to effect NoExecute
+                    rule: |-
+                      !has(self.tolerationSeconds) || (has(self.effect) && self.effect == 'NoExecute')
+                maxItems: 64
+                type: array
             required:
             - kubernetesVersion
             - networking
@@ -193,7 +301,10 @@ spec:
             description: Observed state of the virtual control plane.
             properties:
               conditions:
-                description: Current service state of the virtual control plane.
+                description: |-
+                  Current service state of the virtual control plane.
+
+                  The main condition is `Ready`.
                 items:
                   properties:
                     lastTransitionTime:
@@ -205,7 +316,7 @@ spec:
                       maxLength: 32768
                       type: string
                     observedGeneration:
-                      description: The .metadata.generation value that the condition was set based upon.
+                      description: The `.metadata.generation` value that the condition was set based upon.
                       format: int64
                       minimum: 0
                       type: integer
