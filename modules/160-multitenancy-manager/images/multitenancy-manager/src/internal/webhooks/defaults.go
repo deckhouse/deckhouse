@@ -136,7 +136,7 @@ func (m *DefaultsMutator) decide(ctx context.Context, req *admissionv1.Admission
 	var patches []jsonPatchOperation
 	var warnings []string
 	for _, mr := range refs {
-		fp, ok := engine.SelectFieldPath(mr.Reference.Spec.FieldPaths, group, version)
+		fp, ok := engine.SelectFieldPath(mr.Reference.Spec.FieldPaths, group, version, resourcePlural)
 		if !ok {
 			continue
 		}

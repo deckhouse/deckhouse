@@ -136,14 +136,19 @@ spec:
       - v1
     resources:
       - persistentvolumeclaims
-  fieldPaths:                                     # where the granted NAME is, per version
-    - path: $.spec.storageClassName               # entry without scope = default (all versions)
+  fieldPaths:                                     # where the granted NAME is, per resource/version
+    - path: $.spec.storageClassName               # entry without scope = default (all resources/versions)
       defaulting: Coerce                          # None | FillEmpty | Coerce
     # version-scoped entry example (IngressClass moved between versions):
     # - apiVersions:
     #     - v1beta1
     #   path: $.metadata.annotations['kubernetes.io/ingress.class']
     #   defaulting: None
+    # resource-scoped entry example (the path differs per resource within one group/version):
+    # - apiGroups: [batch]
+    #   apiVersions: [v1]
+    #   resources: [cronjobs]
+    #   path: $.spec.jobTemplate.spec.template.spec.priorityClassName
 status:
   observedGeneration: 1
   bound: true                                     # grantableClusterResourceName resolves to a definition
@@ -157,17 +162,28 @@ status:
 |-------|---------|
 | `grantableClusterResourceName` | the `GrantableClusterResourceDefinition` this path validates against |
 | `rule.apiGroups/apiVersions/resources` | which usage objects this reference applies to; `*` = any |
-| `fieldPaths[]` | version-scoped name locations: `{apiGroups?, apiVersions?, path, match?, defaulting?}` |
+| `fieldPaths[]` | scoped name locations: `{apiGroups?, apiVersions?, resources?, path, match?, defaulting?}` |
 | `fieldPaths[].path` | JSONPath to the granted name (may target an annotation) |
 | `fieldPaths[].match` | `{fieldPath, equals\|in}` guard: the entry applies only when the predicate holds |
 | `fieldPaths[].defaulting` | `None` (validate only), `FillEmpty` (inject project default into an empty field), `Coerce` (also rewrite a disallowed value — for fields a built-in admission pre-fills) |
 | `status.bound` | true if the named definition exists |
 | `status.conditions[Bound].reason` | `Resolved` or `UnknownResource` |
 
-**Path selection.** For a request of group/version `g/v`, pick the `fieldPaths` entry whose
-`apiGroups`/`apiVersions` match `g/v`; a more specific (scoped) entry beats an unscoped one; the
-unscoped entry is the fallback. At least one entry is required; a fallback (unscoped) entry is
-recommended.
+**Path selection.** For a request of resource `r` in group/version `g/v`, keep the `fieldPaths`
+entries whose `resources`/`apiGroups`/`apiVersions` match (an empty dimension matches anything) and
+pick the most specific one: `resources` scores 4, `apiGroups` 2, `apiVersions` 1, and the scores add
+up, so `resources` alone outranks `apiGroups` + `apiVersions` together. Equal scores go to the
+earliest entry in the list. The unscoped entry scores 0 and is the fallback. A dimension scores only
+when it actually narrows the entry: a list containing `*` matches anything and scores 0, like an
+omitted one, so `apiGroups: ["*"]` ties with the unscoped entry and never outranks an explicit scope.
+The same holds for `fieldPaths[].resources`: `resources: ["*"]` is accepted and behaves exactly like
+an omitted field. At least one entry is required; a fallback (unscoped) entry is recommended.
+
+The resource scope exists because one path is not enough per group/version: in core/v1 a Pod carries
+`$.spec.priorityClassName` while a ReplicationController carries
+`$.spec.template.spec.priorityClassName`, and in batch/v1 a Job carries
+`$.spec.template.spec.priorityClassName` while a CronJob carries
+`$.spec.jobTemplate.spec.template.spec.priorityClassName`.
 
 ### ClusterResourceGrantPolicy (unchanged)
 

@@ -70,14 +70,14 @@ spec:
                 description: |-
                   List of Kubernetes resource fields that contain references to the cluster-wide resource.
 
-                  For each field, you can limit applicability to specific API groups and versions, define a matching condition, and configure default value assignment.
+                  For each field, you can limit applicability to specific resources, API groups and versions, define a matching condition, and configure default value assignment.
 
-                  At least one item is required. If settings for specific API groups or versions are used, also add an item without `apiGroups` and `apiVersions` to apply in all other cases.
+                  At least one item is required. If settings for specific resources, API groups or versions are used, also add an item without `resources`, `apiGroups` and `apiVersions` to apply in all other cases.
                 items:
                   description: |-
                     Settings for a field that contains a reference to the cluster-wide resource.
 
-                    If the API group and version of a resource match multiple items, the item with explicitly specified `apiGroups` or `apiVersions` applies. An item without API group and version restrictions is used in all other cases.
+                    If a request matches multiple items, the most specific one applies: `resources` takes precedence over `apiGroups`, and `apiGroups` takes precedence over `apiVersions`. `*` in `resources`, `apiGroups`, or `apiVersions` does not restrict the item and does not make it more specific. If several items are equally specific, the first one in the list applies. An item without restrictions is used in all other cases.
                   properties:
                     apiGroups:
                       description: |-
@@ -136,6 +136,15 @@ spec:
 
                         The path can also point to an annotation, for example, `$.metadata.annotations['cert-manager.io/cluster-issuer']`.
                       type: string
+                    resources:
+                      description: |-
+                        Kubernetes resource names in plural, for example, `pods` or `cronjobs`, to which the field settings apply.
+
+                        If the parameter is not specified, the settings apply to all resources that match `spec.rule`. `*` has the same effect as omitting the parameter: it does not restrict the item and does not make it more specific.
+                      items:
+                        minLength: 1
+                        type: string
+                      type: array
                   required:
                   - path
                   type: object

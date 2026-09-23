@@ -53,16 +53,188 @@ func TestSelectFieldPath(t *testing.T) {
 		{Path: "$.spec.ingressClassName"}, // unscoped fallback
 		{APIVersions: []string{"v1beta1"}, Path: "$.metadata.annotations['kubernetes.io/ingress.class']"},
 	}
-	if fp, ok := SelectFieldPath(fps, "networking.k8s.io", "v1"); !ok || fp.Path != "$.spec.ingressClassName" {
+	if fp, ok := SelectFieldPath(fps, "networking.k8s.io", "v1", "ingresses"); !ok || fp.Path != "$.spec.ingressClassName" {
 		t.Fatalf("v1 path = %q ok=%v", fp.Path, ok)
 	}
 	// scoped entry wins for v1beta1.
-	if fp, ok := SelectFieldPath(fps, "networking.k8s.io", "v1beta1"); !ok || fp.Path != "$.metadata.annotations['kubernetes.io/ingress.class']" {
+	if fp, ok := SelectFieldPath(fps, "networking.k8s.io", "v1beta1", "ingresses"); !ok || fp.Path != "$.metadata.annotations['kubernetes.io/ingress.class']" {
 		t.Fatalf("v1beta1 path = %q ok=%v", fp.Path, ok)
 	}
 	// no matching entry → ok=false.
-	if _, ok := SelectFieldPath([]v1alpha1.FieldPath{{APIGroups: []string{"x"}, Path: "$.a"}}, "y", "v1"); ok {
+	if _, ok := SelectFieldPath([]v1alpha1.FieldPath{{APIGroups: []string{"x"}, Path: "$.a"}}, "y", "v1", "zs"); ok {
 		t.Fatal("expected no match")
+	}
+}
+
+// TestSelectFieldPathResourceScope covers paths that collide within one group and version, which only
+// the resource scope can separate.
+func TestSelectFieldPathResourceScope(t *testing.T) {
+	core := []v1alpha1.FieldPath{
+		{APIGroups: []string{""}, APIVersions: []string{"v1"}, Resources: []string{"pods"}, Path: "$.spec.priorityClassName"},
+		{APIGroups: []string{""}, APIVersions: []string{"v1"}, Resources: []string{"replicationcontrollers"}, Path: "$.spec.template.spec.priorityClassName"},
+	}
+	batch := []v1alpha1.FieldPath{
+		{APIGroups: []string{"batch"}, APIVersions: []string{"v1"}, Resources: []string{"jobs"}, Path: "$.spec.template.spec.priorityClassName"},
+		{APIGroups: []string{"batch"}, APIVersions: []string{"v1"}, Resources: []string{"cronjobs"}, Path: "$.spec.jobTemplate.spec.template.spec.priorityClassName"},
+	}
+	cases := []struct {
+		name                   string
+		fps                    []v1alpha1.FieldPath
+		group, version, plural string
+		want                   string
+	}{
+		{"core pods", core, "", "v1", "pods", "$.spec.priorityClassName"},
+		{"core replicationcontrollers", core, "", "v1", "replicationcontrollers", "$.spec.template.spec.priorityClassName"},
+		{"batch jobs", batch, "batch", "v1", "jobs", "$.spec.template.spec.priorityClassName"},
+		{"batch cronjobs", batch, "batch", "v1", "cronjobs", "$.spec.jobTemplate.spec.template.spec.priorityClassName"},
+	}
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
+			fp, ok := SelectFieldPath(c.fps, c.group, c.version, c.plural)
+			if !ok || fp.Path != c.want {
+				t.Fatalf("path = %q ok=%v, want %q", fp.Path, ok, c.want)
+			}
+		})
+	}
+	// A resource outside every scoped entry has no fallback here → ok=false.
+	if _, ok := SelectFieldPath(core, "", "v1", "services"); ok {
+		t.Fatal("expected no match for services")
+	}
+}
+
+// TestSelectFieldPathRanking pins the specificity order: resources > apiGroups > apiVersions, with the
+// unscoped entry as the last resort and the lowest index breaking ties.
+func TestSelectFieldPathRanking(t *testing.T) {
+	// Every entry matches core/v1 pods; they differ only in how specific their scope is.
+	fps := []v1alpha1.FieldPath{
+		{Path: "$.unscoped"},
+		{APIVersions: []string{"v1"}, Path: "$.byVersion"},
+		{APIGroups: []string{""}, Path: "$.byGroup"},
+		{Resources: []string{"pods"}, Path: "$.byResource"},
+	}
+	if fp, ok := SelectFieldPath(fps, "", "v1", "pods"); !ok || fp.Path != "$.byResource" {
+		t.Fatalf("resource scope must win: path = %q ok=%v", fp.Path, ok)
+	}
+	if fp, ok := SelectFieldPath(fps[:3], "", "v1", "pods"); !ok || fp.Path != "$.byGroup" {
+		t.Fatalf("group scope must beat version scope: path = %q ok=%v", fp.Path, ok)
+	}
+	if fp, ok := SelectFieldPath(fps[:2], "", "v1", "pods"); !ok || fp.Path != "$.byVersion" {
+		t.Fatalf("version scope must beat the unscoped entry: path = %q ok=%v", fp.Path, ok)
+	}
+	// Resources alone outranks apiGroups+apiVersions together (4 > 2+1).
+	both := []v1alpha1.FieldPath{
+		{APIGroups: []string{""}, APIVersions: []string{"v1"}, Path: "$.byGroupAndVersion"},
+		{Resources: []string{"pods"}, Path: "$.byResource"},
+	}
+	if fp, ok := SelectFieldPath(both, "", "v1", "pods"); !ok || fp.Path != "$.byResource" {
+		t.Fatalf("resource scope must outrank group+version: path = %q ok=%v", fp.Path, ok)
+	}
+	// Unscoped fallback still applies when no scoped entry matches the request.
+	fallback := []v1alpha1.FieldPath{
+		{Resources: []string{"pods"}, Path: "$.byResource"},
+		{Path: "$.unscoped"},
+	}
+	if fp, ok := SelectFieldPath(fallback, "", "v1", "services"); !ok || fp.Path != "$.unscoped" {
+		t.Fatalf("unscoped fallback: path = %q ok=%v", fp.Path, ok)
+	}
+	// Equal weights → the earliest entry wins.
+	tie := []v1alpha1.FieldPath{
+		{Resources: []string{"pods"}, Path: "$.first"},
+		{Resources: []string{"pods", "services"}, Path: "$.second"},
+	}
+	if fp, ok := SelectFieldPath(tie, "", "v1", "pods"); !ok || fp.Path != "$.first" {
+		t.Fatalf("tie must go to the first entry: path = %q ok=%v", fp.Path, ok)
+	}
+}
+
+// TestSelectFieldPathScopeEdges pins how wildcards, multi-item and empty lists weigh in selection.
+func TestSelectFieldPathScopeEdges(t *testing.T) {
+	cases := []struct {
+		name                   string
+		fps                    []v1alpha1.FieldPath
+		group, version, plural string
+		want                   string
+	}{
+		{
+			"resources wildcard does not beat explicit group+version",
+			[]v1alpha1.FieldPath{
+				{Resources: []string{"*"}, Path: "$.wildcard"},
+				{APIGroups: []string{"batch"}, APIVersions: []string{"v1"}, Path: "$.explicit"},
+			},
+			"batch", "v1", "jobs", "$.explicit",
+		},
+		{
+			"resources wildcard does not tie with an explicit resource",
+			[]v1alpha1.FieldPath{
+				{Resources: []string{"*"}, Path: "$.wildcard"},
+				{Resources: []string{"pods"}, Path: "$.explicit"},
+			},
+			"", "v1", "pods", "$.explicit",
+		},
+		{
+			"apiGroups wildcard ties with unscoped, first wins",
+			[]v1alpha1.FieldPath{
+				{APIGroups: []string{"*"}, Path: "$.wildcard"},
+				{Path: "$.unscoped"},
+			},
+			"batch", "v1", "jobs", "$.wildcard",
+		},
+		{
+			"unscoped ties with apiGroups wildcard, first wins",
+			[]v1alpha1.FieldPath{
+				{Path: "$.unscoped"},
+				{APIGroups: []string{"*"}, Path: "$.wildcard"},
+			},
+			"batch", "v1", "jobs", "$.unscoped",
+		},
+		{
+			"two-resource list matches the first resource",
+			[]v1alpha1.FieldPath{
+				{Path: "$.unscoped"},
+				{Resources: []string{"jobs", "cronjobs"}, Path: "$.scoped"},
+			},
+			"batch", "v1", "jobs", "$.scoped",
+		},
+		{
+			"two-resource list matches the second resource",
+			[]v1alpha1.FieldPath{
+				{Path: "$.unscoped"},
+				{Resources: []string{"jobs", "cronjobs"}, Path: "$.scoped"},
+			},
+			"batch", "v1", "cronjobs", "$.scoped",
+		},
+		{
+			"group matches but resource does not, unscoped fallback applies",
+			[]v1alpha1.FieldPath{
+				{APIGroups: []string{"batch"}, Resources: []string{"cronjobs"}, Path: "$.scoped"},
+				{Path: "$.unscoped"},
+			},
+			"batch", "v1", "jobs", "$.unscoped",
+		},
+		{
+			"empty non-nil resources behaves as unrestricted",
+			[]v1alpha1.FieldPath{
+				{Resources: []string{}, Path: "$.empty"},
+				{Path: "$.unscoped"},
+			},
+			"", "v1", "pods", "$.empty",
+		},
+		{
+			"empty non-nil resources loses to an explicit version",
+			[]v1alpha1.FieldPath{
+				{Resources: []string{}, Path: "$.empty"},
+				{APIVersions: []string{"v1"}, Path: "$.byVersion"},
+			},
+			"", "v1", "pods", "$.byVersion",
+		},
+	}
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
+			fp, ok := SelectFieldPath(c.fps, c.group, c.version, c.plural)
+			if !ok || fp.Path != c.want {
+				t.Fatalf("path = %q ok=%v, want %q", fp.Path, ok, c.want)
+			}
+		})
 	}
 }
 
