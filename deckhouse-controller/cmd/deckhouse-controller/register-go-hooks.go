@@ -84,6 +84,7 @@ import (
 	_ "github.com/deckhouse/deckhouse/modules/140-user-authz/requirements"
 	_ "github.com/deckhouse/deckhouse/modules/150-user-authn/hooks"
 	_ "github.com/deckhouse/deckhouse/modules/150-user-authn/hooks/https"
+	_ "github.com/deckhouse/deckhouse/modules/150-user-authn/requirements"
 	_ "github.com/deckhouse/deckhouse/modules/160-multitenancy-manager/hooks"
 	_ "github.com/deckhouse/deckhouse/modules/302-vertical-pod-autoscaler/hooks"
 	_ "github.com/deckhouse/deckhouse/modules/400-descheduler/hooks"
