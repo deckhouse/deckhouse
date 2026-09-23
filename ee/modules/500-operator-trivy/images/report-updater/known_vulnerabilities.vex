@@ -34,7 +34,7 @@
       ],
       "status": "not_affected",
       "justification": "vulnerable_code_not_present",
-      "impact_statement": "When Trivy unpacks an OCI artifact pulled from a registry, such as its vulnerability database, it writes each entry at the path recorded in the artifact without checking that the path stays inside the destination directory, so a crafted artifact can write files outside the cache. Reaching the defect requires calling the artifact download and unpack code of Trivy. The report-updater binary links from Trivy only pkg/fanal/types and pkg/digest, the type definitions it shares with the report format of the operator (see internal/web/hook/trivy_types.go); go list -deps lists no other Trivy package, so the vulnerable code is not compiled into the image. The report-updater downloads no vulnerability database: it serves a webhook that rewrites reports the operator has already produced, and the one OCI artifact it does pull is fetched with oras.land/oras-go/v2, which this advisory does not cover.",
+      "impact_statement": "The defect lets a crafted vulnerability database, or another crafted OCI artifact, write files outside the directory that Trivy unpacks it into. It can only be triggered when Trivy downloads and unpacks such an artifact. The report-updater runs no scan and downloads no vulnerability database; it only rewrites the reports that the operator has already produced. Of Trivy it includes the report data types and nothing else, so the affected download code is not part of the image.",
       "timestamp": "2026-09-23T12:00:00Z"
     },
     {
@@ -50,7 +50,7 @@
       ],
       "status": "not_affected",
       "justification": "vulnerable_code_not_present",
-      "impact_statement": "The Trivy plugin manager installs a plugin from a remote source and extracts its archive without validating the entry paths, so a crafted plugin can write files anywhere the process can write. Reaching the defect requires an explicit plugin installation, which in Trivy is driven by the trivy plugin command. The report-updater binary links from Trivy only pkg/fanal/types and pkg/digest, the type definitions it shares with the report format of the operator (see internal/web/hook/trivy_types.go); go list -deps lists no other Trivy package, so the vulnerable code is not compiled into the image. The report-updater has no command line interface and no plugin support, and it installs nothing at runtime.",
+      "impact_statement": "The defect lets a crafted Trivy plugin write files outside the directory it is installed into. It can only be triggered by installing a plugin. The report-updater has no command line interface and no plugin support; it only rewrites the reports that the operator has already produced. Of Trivy it includes the report data types and nothing else, so the affected plugin manager is not part of the image.",
       "timestamp": "2026-09-23T12:00:00Z"
     }
   ],
