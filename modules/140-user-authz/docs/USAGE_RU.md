@@ -392,7 +392,7 @@ spec:
         ```
 
    * Если прямого доступа до API-сервера нет, используйте один следующих вариантов:
-      * включите доступ к API-серверу через Ingress-контроллер (параметр [publishAPI](../user-authn/configuration.html#parameters-publishapi)) и укажите адреса, с которых будут идти запросы (параметр [whitelistSourceRanges](../user-authn/configuration.html#parameters-publishapi-whitelistsourceranges));
+      * включите доступ к API-серверу через Ingress-контроллер (параметр [apiserver.publishAPI](/modules/control-plane-manager/configuration.html#parameters-apiserver-publishapi) модуля `control-plane-manager`) и укажите адреса, с которых будут идти запросы (параметр [whitelistSourceRanges](/modules/control-plane-manager/configuration.html#parameters-apiserver-publishapi-ingress-whitelistsourceranges));
       * укажите адреса, с которых будут идти запросы, в отдельном Ingress-контроллере (параметр [acceptRequestsFrom](../ingress-nginx/cr.html#ingressnginxcontroller-v1-spec-acceptrequestsfrom)).
 
    * Если используется непубличный CA:
