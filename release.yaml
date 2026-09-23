@@ -40,6 +40,13 @@ requirements:
   # The check is evaluated by the version already INSTALLED — it ships in 1.77, in
   # modules/038-registry/requirements/check.go — and this line is what finally asks it.
   "registryImplementation": "V2" # modules/038-registry/requirements/check.go
+  # RBACv2 of DKP 1.78 renamed the roles and the aggregation labels. Both keys below belong to the
+  # first release after 1.78 (the upgrade to 1.78 itself is not held back): custom roles of the
+  # legacy experimental RBACv2 scheme must be migrated to d8:custom:*, and bindings to the deprecated
+  # d8:manage:* / d8:use:role:* names must be recreated on the new names before the compatibility
+  # aliases go away with this release.
+  "legacyRBACv2CustomRolesCount": "0" # modules/140-user-authz/requirements/check.go
+  "deprecatedRBACv2BindingsCount": "0" # modules/140-user-authz/requirements/check.go (deckhouse#23240)
   # "checkContainerdV1NodesPresent": "false" # modules/040-node-manager/requirements/check.go; injected with 'true' only for CSE via .werf/werf-release-channel.yaml (CSE drops containerd v1)
 
 # map of disruptions, associated with a specific release. You have to register check functions before specified release
