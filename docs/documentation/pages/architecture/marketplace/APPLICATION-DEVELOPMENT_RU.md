@@ -49,11 +49,11 @@ git push --set-upstream origin main
 ```text
 myapp/
 ├── .gitignore
-├── .gitlab-ci.yml          # Пайплайн CI/CD
+├── .gitlab-ci.yml          # Пайплайн CI/CD.
 ├── changelog.yaml
 ├── docs/
-│   └── README.md           # Документация приложения
-├── hooks/                  # Go-хуки
+│   └── README.md           # Документация приложения.
+├── hooks/                  # Go-хуки.
 │   ├── hooks.yaml
 │   └── batch/
 │       ├── go.mod
@@ -61,15 +61,15 @@ myapp/
 │       ├── main.go
 │       └── triggers/
 │           └── hook.go
-├── images/                 # Исходный код образов или инструкции для их загрузки
+├── images/                 # Исходный код образов или инструкции для их загрузки.
 │   └── myapp/
 │       └── werf.inc.yaml
 ├── openapi/
-│   ├── config-values.yaml  # OpenAPI-схема для Application.spec.settings
-│   └── values.yaml         # OpenAPI-схема для значений Helm
+│   ├── config-values.yaml  # OpenAPI-схема для Application.spec.settings.
+│   └── values.yaml         # OpenAPI-схема для значений Helm.
 ├── oss.yaml
-├── package.yaml            # Манифест пакета
-└── templates/              # Helm-шаблоны
+├── package.yaml            # Манифест пакета.
+└── templates/              # Helm-шаблоны.
     ├── deployment.yaml
     ├── registry-secret.yaml
     └── service.yaml
@@ -259,10 +259,10 @@ git push origin v0.1.0
 Основной образ bundle (`<PACKAGE_NAME>:<PACKAGE_VERSION>`) содержит:
 
 ```text
-├── package.yaml       # Манифест пакета
-├── openapi/           # Схемы settings и values
-├── templates/         # Helm-шаблоны
-└── hooks/             # Хуки жизненного цикла
+├── package.yaml       # Манифест пакета.
+├── openapi/           # Схемы settings и values.
+├── templates/         # Helm-шаблоны.
+└── hooks/             # Хуки жизненного цикла.
 ```
 
 ### Содержимое образа метаданных
@@ -270,7 +270,7 @@ git push origin v0.1.0
 Образ метаданных версии (`<PACKAGE_NAME>/version:<PACKAGE_VERSION>`) содержит:
 
 ```text
-├── package.yaml       # Манифест пакета
-├── version.json       # Версия в формате SemVer
-└── changelog.yaml     # История изменений
+├── package.yaml       # Манифест пакета.
+├── version.json       # Версия в формате SemVer.
+└── changelog.yaml     # История изменений.
 ```

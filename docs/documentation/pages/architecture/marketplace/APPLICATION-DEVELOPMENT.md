@@ -47,11 +47,11 @@ In the generated project, the package manifest, schemas, templates, hooks, image
 ```text
 myapp/
 ├── .gitignore
-├── .gitlab-ci.yml          # CI/CD pipeline
+├── .gitlab-ci.yml          # CI/CD pipeline.
 ├── changelog.yaml
 ├── docs/
-│   └── README.md           # Application documentation
-├── hooks/                  # Go hooks
+│   └── README.md           # Application documentation.
+├── hooks/                  # Go hooks.
 │   ├── hooks.yaml
 │   └── batch/
 │       ├── go.mod
@@ -59,15 +59,15 @@ myapp/
 │       ├── main.go
 │       └── triggers/
 │           └── hook.go
-├── images/                 # Image sources or pull instructions
+├── images/                 # Image sources or pull instructions.
 │   └── myapp/
 │       └── werf.inc.yaml
 ├── openapi/
-│   ├── config-values.yaml  # OpenAPI schema for Application.spec.settings
-│   └── values.yaml         # OpenAPI schema for Helm values
+│   ├── config-values.yaml  # OpenAPI schema for Application.spec.settings.
+│   └── values.yaml         # OpenAPI schema for Helm values.
 ├── oss.yaml
-├── package.yaml            # Package manifest
-└── templates/              # Helm templates
+├── package.yaml            # Package manifest.
+└── templates/              # Helm templates.
     ├── deployment.yaml
     ├── registry-secret.yaml
     └── service.yaml
@@ -256,10 +256,10 @@ The package and related data are published to an OCI-compatible registry. The pa
 The main bundle image (`<PACKAGE_NAME>:<PACKAGE_VERSION>`) contains:
 
 ```text
-├── package.yaml       # Package manifest
-├── openapi/           # Settings and values schemas
-├── templates/         # Helm templates
-└── hooks/             # Lifecycle hooks
+├── package.yaml       # Package manifest.
+├── openapi/           # Settings and values schemas.
+├── templates/         # Helm templates.
+└── hooks/             # Lifecycle hooks.
 ```
 
 ### Version metadata image contents
@@ -267,7 +267,7 @@ The main bundle image (`<PACKAGE_NAME>:<PACKAGE_VERSION>`) contains:
 The metadata image (`<PACKAGE_NAME>/version:<PACKAGE_VERSION>`) contains:
 
 ```text
-├── package.yaml       # Package manifest
-├── version.json       # SemVer version
-└── changelog.yaml     # Release notes
+├── package.yaml       # Package manifest.
+├── version.json       # SemVer version.
+└── changelog.yaml     # Release notes.
 ```
