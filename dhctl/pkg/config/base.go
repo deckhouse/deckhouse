@@ -915,9 +915,12 @@ var (
 	// travels along because providerIsExternal reads the modules directory, whose path is not
 	// fixed: ResolveAndApplyPaths roots it at the working directory, or under DownloadDir.
 	resolveProviderBundleRef = func(ctx context.Context, provider string, lookup providerModuleLookup, globalOptions *options.GlobalOptions) (providerBundleRef, error) {
-		ref, found, err := resolveModuleProviderBundle(ctx, provider, lookup, globalOptions)
-		if found || err != nil {
-			return ref, err
+		ref, err := resolveModuleProviderBundle(ctx, provider, lookup, globalOptions)
+		if err != nil {
+			return providerBundleRef{}, err
+		}
+		if ref.Digest != "" {
+			return ref, nil
 		}
 
 		digest, err := digests.GetImage(sectionForProvider(provider), terraformManagerImageName)

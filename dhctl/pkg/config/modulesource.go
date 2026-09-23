@@ -18,7 +18,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"os"
 	"path"
 	"strings"
 	"time"
@@ -303,44 +302,41 @@ func configModuleDocs(docs []string) providerModuleLookup {
 }
 
 // Walks the module chain: release image gives the version, module image gives images_digests.json,
-// its terraformManager entry gives the bundle. Once found is true a registry failure must NOT fall
-// back to the embedded digests: a stale provider schema is worse than refusing to run.
-func resolveModuleProviderBundle(ctx context.Context, provider string, lookup providerModuleLookup, globalOptions *options.GlobalOptions) (providerBundleRef, bool, error) {
+// its terraformManager entry gives the bundle. A zero ref means the provider is not external; an
+// error must never fall back to the embedded digests, a stale provider schema is worse than
+// refusing to run, and returning early on it is what makes that impossible to get wrong.
+func resolveModuleProviderBundle(ctx context.Context, provider string, lookup providerModuleLookup, globalOptions *options.GlobalOptions) (providerBundleRef, error) {
 	if lookup == nil {
-		return providerBundleRef{}, false, nil
+		return providerBundleRef{}, nil
 	}
 
 	md, err := lookup(ctx)
 	if err != nil {
-		return providerBundleRef{}, false, err
+		return providerBundleRef{}, err
 	}
 
 	if !md.providerIsExternal(provider, globalOptions) {
-		return providerBundleRef{}, false, nil
+		return providerBundleRef{}, nil
 	}
 
 	moduleName := CloudProviderModuleName(provider)
 
 	catalogRepo, conf, err := md.moduleRepo(moduleName, md.providerSource(moduleName))
 	if err != nil {
-		return providerBundleRef{}, true, err
+		return providerBundleRef{}, err
 	}
 	moduleRepo := path.Join(catalogRepo, moduleName)
 
-	catalog, err := moduleCatalog(conf, catalogRepo)
-	if err != nil {
-		return providerBundleRef{}, true, fmt.Errorf("registry client for %s: %w", catalogRepo, err)
-	}
-	svc := catalog.Module(moduleName)
+	svc := moduleCatalog(conf, catalogRepo).Module(moduleName)
 
 	moduleTag, err := md.moduleTag(ctx, svc, moduleName, moduleRepo, provider)
 	if err != nil {
-		return providerBundleRef{}, true, err
+		return providerBundleRef{}, err
 	}
 
 	bundle, err := svc.Fetch(ctx, moduleTag)
 	if err != nil {
-		return providerBundleRef{}, true, fmt.Errorf("read images digests of %s:%s: %w", moduleRepo, moduleTag, err)
+		return providerBundleRef{}, fmt.Errorf("read images digests of %s:%s: %w", moduleRepo, moduleTag, err)
 	}
 
 	// Nothing else records which build the bundle came from, and properties.version only
@@ -350,14 +346,14 @@ func resolveModuleProviderBundle(ctx context.Context, provider string, lookup pr
 	// A module image ships a flat images_digests.json, so the module selector stays empty.
 	digest, _ := bundle.Digests().Lookup("", terraformManagerImageName)
 	if digest == "" {
-		return providerBundleRef{}, true, fmt.Errorf("module %s:%s ships no %q image digest, so there is no provider bundle to unpack", moduleRepo, moduleTag, terraformManagerImageName)
+		return providerBundleRef{}, fmt.Errorf("module %s:%s ships no %q image digest, so there is no provider bundle to unpack", moduleRepo, moduleTag, terraformManagerImageName)
 	}
 
 	return providerBundleRef{
 		Image:    moduleRepo + "@" + digest,
 		Digest:   digest,
 		Registry: conf,
-	}, true, nil
+	}, nil
 }
 
 // Which image of the module to read. The controller pulls exactly <repo>/<module>:<imageTag> for
@@ -429,23 +425,8 @@ func moduleImageTag(version string) string {
 }
 
 // Bounds one registry request: LoadConfigFromFile passes a context with no deadline, so a registry
-// that stalls after accepting would hang dhctl at config load. The value and REGISTRY_TIMEOUT are
-// what go_lib/dependency/cr applied before this moved to pkg/registry. A var so tests can shorten.
+// that stalls after accepting would hang dhctl at config load. A var so tests can shorten it.
 var registryRequestTimeout = 120 * time.Second
-
-func registryTimeout() (time.Duration, error) {
-	raw := os.Getenv("REGISTRY_TIMEOUT")
-	if raw == "" {
-		return registryRequestTimeout, nil
-	}
-
-	timeout, err := time.ParseDuration(raw)
-	if err != nil {
-		return 0, fmt.Errorf("parse REGISTRY_TIMEOUT: %w", err)
-	}
-
-	return timeout, nil
-}
 
 // Splits "host/a/b" into "host" and "a/b"; a bare host yields an empty path.
 func splitHostPath(repo string) (string, string) {
@@ -457,24 +438,19 @@ func splitHostPath(repo string) (string, string) {
 // A var so tests can drive the chain without a registry. repo addresses the module catalog, whose
 // tags are module names. log.Default() rather than the context logger on purpose: lib-dhctl holds
 // that one at fatal level and opens it to debug, routed to the log file, under DHCTL_DEBUG.
-var moduleCatalog = func(conf *image.RegistryConfig, repo string) (*module.Catalog, error) {
-	timeout, err := registryTimeout()
-	if err != nil {
-		return nil, err
-	}
-
+var moduleCatalog = func(conf *image.RegistryConfig, repo string) *module.Catalog {
 	host, rest := splitHostPath(repo)
 
 	cli := registry.Client(client.New(host,
 		client.WithLoginPassword(conf.GetUsername(), conf.GetPassword()),
 		client.WithCA(conf.GetCA()),
 		client.WithInsecure(strings.EqualFold(conf.GetScheme(), "HTTP")),
-		client.WithTimeout(timeout),
+		client.WithTimeout(registryRequestTimeout),
 		client.WithLogger(log.Default()),
 	))
 	if rest != "" {
 		cli = cli.WithSegment(strings.Split(rest, "/")...)
 	}
 
-	return module.NewCatalog(service.NewBasicService(module.CatalogServiceName, cli, log.Default())), nil
+	return module.NewCatalog(service.NewBasicService(module.CatalogServiceName, cli, log.Default()))
 }
