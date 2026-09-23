@@ -286,6 +286,35 @@ func LazyInstanceClassSource(informers cache.Cache, eventHandler handler.EventHa
 	})
 }
 
+// InstanceClassToNodeGroups maps an InstanceClass event to the NodeGroups whose classReference
+// points at it. Matching on both kind and name keeps an edit of one provider's class from
+// re-rendering NodeGroups that reference another.
+func InstanceClassToNodeGroups(ctx context.Context, r client.Reader, obj client.Object) []reconcile.Request {
+	u, ok := obj.(*unstructured.Unstructured)
+	if !ok {
+		return nil
+	}
+
+	ngList := &v1.NodeGroupList{}
+	if err := r.List(ctx, ngList); err != nil {
+		log.FromContext(ctx).Error(err, "list nodegroups for instance class event", "kind", u.GetKind(), "name", u.GetName())
+		return nil
+	}
+
+	requests := make([]reconcile.Request, 0, 1)
+	for i := range ngList.Items {
+		ng := &ngList.Items[i]
+		if ng.Spec.CloudInstances == nil {
+			continue
+		}
+		ref := ng.Spec.CloudInstances.ClassReference
+		if ref.Kind == u.GetKind() && ref.Name == u.GetName() {
+			requests = append(requests, reconcile.Request{NamespacedName: types.NamespacedName{Name: ng.Name}})
+		}
+	}
+	return requests
+}
+
 // WatchInputs subscribes a controller to the mutable inputs read by Source.
 func WatchInputs(w register.Watcher, enqueue handler.EventHandler) {
 	w.Watches(&corev1.Secret{}, enqueue, builder.WithPredicates(
