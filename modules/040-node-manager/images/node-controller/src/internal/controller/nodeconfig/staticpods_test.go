@@ -18,6 +18,7 @@ package nodeconfig
 
 import (
 	"reflect"
+	"strings"
 	"testing"
 	"time"
 
@@ -268,6 +269,15 @@ func TestRejectedNSPRs(t *testing.T) {
 		}))
 		require.Equal(t, reasonReservedName, rejected["kube-apiserver"].reason)
 		require.Contains(t, rejected["kube-apiserver"].message, "writes itself")
+	})
+
+	// kubelet collides on the pod, so the file name alone does not protect it.
+	t.Run("a reserved pod under another name is refused", func(t *testing.T) {
+		rejected := reject(nspr("aaa", deckhousev1alpha1.NodeStaticPodRequestSpec{
+			Manifest: strings.Replace(podManifest("etcd"), "d8-system", "kube-system", 1),
+		}))
+		require.Equal(t, reasonReservedName, rejected["aaa"].reason)
+		require.Contains(t, rejected["aaa"].message, "kube-system/etcd")
 	})
 
 	t.Run("a manifest with no namespace is refused with the checker's own reason", func(t *testing.T) {

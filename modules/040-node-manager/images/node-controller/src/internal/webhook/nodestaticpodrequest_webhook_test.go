@@ -127,6 +127,21 @@ func TestNodeStaticPodRequestValidator(t *testing.T) {
 			wantMessage: "the node agent or a bashible step writes itself",
 		},
 		{
+			// kubelet collides on namespace/name, whatever the file is called.
+			name:        "a reserved control-plane pod under another name is denied",
+			op:          admissionv1.Create,
+			nspr:        makeNSPR("aaa", strings.Replace(nsprManifest("kube-apiserver"), "d8-system", "kube-system", 1)),
+			wantAllowed: false,
+			wantMessage: "the pod kube-system/kube-apiserver already has a manifest",
+		},
+		{
+			name:        "a pod a bashible step writes, under another name, is denied",
+			op:          admissionv1.Create,
+			nspr:        makeNSPR("nodeservices", nsprManifest("registry-nodeservices")),
+			wantAllowed: false,
+			wantMessage: "the pod d8-system/registry-nodeservices already has a manifest",
+		},
+		{
 			name:        "a reserved name is refused on UPDATE too",
 			op:          admissionv1.Update,
 			nspr:        makeNSPR("etcd", nsprManifest("etcd")),

@@ -96,7 +96,7 @@ spec:
                   type: string
                   enum: ["Ready", "Degraded"]
                   description: |
-                    `Ready` when the pod resolved and the nodes accept it, `Degraded` when it did not — the `Ready` condition carries the reason: `InvalidName`, `ReservedName`, `InvalidManifest`, `Conflict` or `RefusedByNodes`. `InvalidName` means the object's own name is not a DNS label of at most 63 characters, which is what the node's config field takes.
+                    `Ready` when the pod resolved and the nodes accept it, `Degraded` when it did not — the `Ready` condition carries the reason: `InvalidName`, `ReservedName`, `InvalidManifest`, `Conflict` or `RefusedByNodes`. `InvalidName` means the object's own name is not a DNS label of at most 63 characters, which is what the node's config field takes. `ReservedName` means the object's name or the pod its manifest describes (namespace and name) already belongs to a manifest the node agent or a bashible step writes.
                 matchedNodeGroups:
                   type: array
                   items:

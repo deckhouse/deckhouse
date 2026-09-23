@@ -78,8 +78,8 @@ func orderedNSPRs(nsprs []deckhousev1alpha1.NodeStaticPodRequest) []*deckhousev1
 	return ordered
 }
 
-// rejectedNSPRs runs the four checks in order (a name the node config would not
-// take, reserved name, invalid manifest, pod already claimed by an older object);
+// rejectedNSPRs runs the checks in order (a name the node config would not take,
+// reserved name, invalid manifest, reserved pod, pod already claimed by an older object);
 // the contest is cluster-wide, as in resolveNERConflicts, and a refusal claims nothing.
 func rejectedNSPRs(ordered []*deckhousev1alpha1.NodeStaticPodRequest) map[string]nsprRefusal {
 	rejected := map[string]nsprRefusal{}
@@ -100,6 +100,13 @@ func rejectedNSPRs(ordered []*deckhousev1alpha1.NodeStaticPodRequest) map[string
 		pod, err := deckhousev1alpha1.ValidateStaticPodManifest(nspr.Spec.Manifest)
 		if err != nil {
 			rejected[nspr.Name] = nsprRefusal{reason: reasonInvalidManifest, message: err.Error()}
+			continue
+		}
+		if deckhousev1alpha1.IsReservedStaticPod(pod) {
+			rejected[nspr.Name] = nsprRefusal{
+				reason:  reasonReservedName,
+				message: fmt.Sprintf("the pod %s already has a manifest the node agent or a bashible step writes itself", pod),
+			}
 			continue
 		}
 		if owner, taken := claimed[pod]; taken {
