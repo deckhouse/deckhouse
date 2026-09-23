@@ -1,4 +1,4 @@
-From 9395a99479b448ccf5519c20b316085034dad03c Mon Sep 17 00:00:00 2001
+From e2b242cb83bb0fb0766d5c903f739f6917b5f21d Mon Sep 17 00:00:00 2001
 From: Dmitriy Andreychenko <dmitriy.andreychenko@flant.com>
 Date: Mon, 21 Sep 2026 14:07:11 +0300
 Subject: [PATCH] ces: give a shared pod address a single owner
@@ -16,7 +16,7 @@ Co-Authored-By: Claude Opus 5 (1M context) <noreply@anthropic.com>
 ---
  .../pkg/ciliumendpointslice/controller.go     |   4 +
  .../pkg/ciliumendpointslice/endpointslice.go  |  55 ++-
- operator/pkg/ciliumendpointslice/priority.go  | 333 ++++++++++++++++++
+ operator/pkg/ciliumendpointslice/priority.go  | 338 ++++++++++++++++++
  operator/watchers/cilium_endpoint.go          |   4 +
  pkg/k8s/watchers/cilium_endpoint.go           |  53 +++
  .../cilium_endpoint_slice_subscriber.go       |  60 +++-
@@ -25,9 +25,9 @@ Co-Authored-By: Claude Opus 5 (1M context) <noreply@anthropic.com>
  pkg/labels/labels.go                          |   6 +
  pkg/maps/cells.go                             |   5 +
  pkg/maps/lxcmap/lxcmap.go                     |  31 ++
- pkg/maps/lxcmap/shared_address.go             | 119 +++++++
+ pkg/maps/lxcmap/shared_address.go             | 119 ++++++
  pkg/sharedip/cell.go                          | 129 +++++++
- 13 files changed, 806 insertions(+), 6 deletions(-)
+ 13 files changed, 811 insertions(+), 6 deletions(-)
  create mode 100644 operator/pkg/ciliumendpointslice/priority.go
  create mode 100644 pkg/maps/lxcmap/shared_address.go
  create mode 100644 pkg/sharedip/cell.go
@@ -156,10 +156,10 @@ index dfd03bf452..a1a78d46b2 100644
  	c.initializeQueue()
 diff --git a/operator/pkg/ciliumendpointslice/priority.go b/operator/pkg/ciliumendpointslice/priority.go
 new file mode 100644
-index 0000000000..9899a6ca1a
+index 0000000000..88fa46a989
 --- /dev/null
 +++ b/operator/pkg/ciliumendpointslice/priority.go
-@@ -0,0 +1,333 @@
+@@ -0,0 +1,338 @@
 +// SPDX-License-Identifier: Apache-2.0
 +// Copyright Authors of Cilium
 +
@@ -340,13 +340,18 @@ index 0000000000..9899a6ca1a
 +	defer f.mutex.Unlock()
 +	f.initLocked()
 +
-+	// An address change strands the old record, so drop it first.
-+	if old, known := f.cepToIP[key]; known && old != ip {
-+		f.removeLocked(key, old)
-+	}
-+
++	// An update that carries no address is not an endpoint giving up its claim,
++	// and must leave the record alone. Dropping it here would leave the address
++	// with one claimant fewer: the other endpoint then owns it whatever their
++	// priorities, and if both are dropped the address is not contended at all
++	// and every endpoint publishes it. Only a genuine address change strands the
++	// old record; only a delete removes it.
 +	if ip == "" {
 +		return cepKey{}, cepKey{}, priority
++	}
++
++	if old, known := f.cepToIP[key]; known && old != ip {
++		f.removeLocked(key, old)
 +	}
 +
 +	before, _ = ownerOf(f.ipToCepList[ip])
