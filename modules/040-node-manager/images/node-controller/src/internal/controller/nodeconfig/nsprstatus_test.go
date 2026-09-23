@@ -18,6 +18,7 @@ package nodeconfig
 
 import (
 	"context"
+	"fmt"
 	"testing"
 
 	"github.com/go-logr/logr"
@@ -353,4 +354,35 @@ func TestARenderFailureDoesNotFreezeTheRequestStatuses(t *testing.T) {
 	require.NoError(t, cl.Get(context.Background(), types.NamespacedName{Name: "registry-agent"}, fresh))
 	require.Equal(t, phaseReady, fresh.Status.Phase, "the status reads its own inputs and they were readable")
 	require.Equal(t, int32(1), fresh.Status.MatchedNodes)
+}
+
+// An object the per-group cap left out never reaches a node, so it must not
+// read Ready with "0 of N written" and the reason buried in a log line.
+func TestNSPRStatusReportsTheObjectTheCapLeftOut(t *testing.T) {
+	objects := []client.Object{immutableGroup("engine")}
+	for i := range maxStaticPods + 1 {
+		object := nspr(fmt.Sprintf("pod-%02d", i), deckhousev1alpha1.NodeStaticPodRequestSpec{})
+		objects = append(objects, &object)
+	}
+	cl := fake.NewClientBuilder().
+		WithScheme(nsprStatusScheme(t)).
+		WithObjects(objects...).
+		WithStatusSubresource(&deckhousev1alpha1.NodeStaticPodRequest{}).
+		Build()
+
+	r := &Reconciler{}
+	r.Client = cl
+	require.NoError(t, r.reconcileNSPRStatuses(context.Background(), logr.Discard()))
+
+	dropped := &deckhousev1alpha1.NodeStaticPodRequest{}
+	require.NoError(t, cl.Get(context.Background(), types.NamespacedName{Name: fmt.Sprintf("pod-%02d", maxStaticPods)}, dropped))
+	require.Equal(t, phaseDegraded, dropped.Status.Phase)
+	condition := meta.FindStatusCondition(dropped.Status.Conditions, readyConditionType)
+	require.Equal(t, metav1.ConditionFalse, condition.Status)
+	require.Equal(t, reasonLimitExceeded, condition.Reason)
+	require.Contains(t, condition.Message, "engine")
+
+	kept := &deckhousev1alpha1.NodeStaticPodRequest{}
+	require.NoError(t, cl.Get(context.Background(), types.NamespacedName{Name: "pod-00"}, kept))
+	require.Equal(t, phaseReady, kept.Status.Phase)
 }
