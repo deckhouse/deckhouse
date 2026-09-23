@@ -1,3 +1,4 @@
+{% unless site.d8Revision == 'CSE' %}
 {% comment %}This partial is included onto the module page in the custom_hooks.rb{% endcomment %}
 {%- assign moduleKebabName = page['module-kebab-name'] %}
 {%- assign editions = site.data['modules']['all'][moduleKebabName]['editions'] %}
@@ -14,7 +15,7 @@
 {%- if editionsWithRestrictions %}
 <p>
 {%- if editionsWithRestrictionsComments['all'] -%}
-  <span style='border-bottom: 1px dotted #000' data-tippy-content='{{ editionsWithRestrictionsComments['all'][page.lang] }}'>
+  <span data-tippy-content='{{ editionsWithRestrictionsComments['all'][page.lang] }}' class='alert__info'>
     {{- site.data.i18n.common['module_available_with_limitations_prefix'][page.lang] -}}
   </span>: 
 {%- else -%}
@@ -31,7 +32,7 @@
 {%- endfor %}
 {%- for edition in editionsWithRestrictions %}
    {%- if editionsWithRestrictionsComments[edition] -%}
-     <span style='border-bottom: 1px dotted #000' data-tippy-content='{{ editionsWithRestrictionsComments[edition][page.lang] }}'>
+     <span data-tippy-content='{{ editionsWithRestrictionsComments[edition][page.lang] }}' class='alert__info'>
          {%- if site.data.editions[edition]['name_version'] %}{{ site.data.editions[edition]['name_version'] }}{% else %}{{ site.data.editions[edition]['name'] }}{% endif -%}
      </span>
    {%- else -%}
@@ -74,4 +75,5 @@
   {%- endif %}
 </div>
 </div>
-{% endunless %}
+{%- endunless %}
+{%- endunless %}

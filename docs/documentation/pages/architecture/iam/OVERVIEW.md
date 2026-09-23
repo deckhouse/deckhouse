@@ -2,14 +2,14 @@
 title: IAM subsystem
 permalink: en/architecture/iam/
 search: iam, identity and access management
-description: Architecture of the Identity and Access Management subsystem in Deckhouse Kubernetes Platform.
+description: Architecture of the Identity and Access Management subsystem in Deckhouse Platform.
 extractedLinksOnlyMax: 0
 extractedLinksMax: 0
 ---
 
-This subsection describes the architecture of the IAM subsystem (Identity and Access Management) of Deckhouse Kubernetes Platform (DKP).
+This subsection describes the architecture of the IAM subsystem (Identity and Access Management) of Deckhouse Platform (DP).
 
-The IAM subsystem provides the following features in DKP:
+The IAM subsystem provides the following features in DP:
 
 * [User authentication](authentication.html)
 * Role-based access control (RBAC)

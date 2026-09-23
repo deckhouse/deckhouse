@@ -182,7 +182,7 @@ d8 k --server=$KUBE_SERVER --token=$KUBE_TOKEN get ns
 Authentication via username and password through IdP (LDAP, OIDC).
 
 {% alert level="warning" %}
-The password is sent to DKP and validated through basic-auth-proxy/Dex.
+The password is sent to DP and validated through basic-auth-proxy/Dex.
 {% endalert %}
 
 {% alert level="warning" %}
@@ -276,7 +276,7 @@ The pipeline obtains a token from the IdP, exchanges it at Dex for a token with 
 Recommended for GitLab CI and GitHub Actions.
 {% endalert %}
 
-DKP/Dex does not receive the user password. How `IDP_TOKEN` is obtained depends on the IdP: OIDC job token (GitLab/GitHub) or IdP token endpoint (client_credentials).
+DP/Dex does not receive the user password. How `IDP_TOKEN` is obtained depends on the IdP: OIDC job token (GitLab/GitHub) or IdP token endpoint (client_credentials).
 
 ### Prerequisites
 
@@ -308,6 +308,14 @@ EOF
 
 The annotation `dexclient.deckhouse.io/allow-access-to-kubernetes` allows the client to request tokens with `aud=kubernetes`.
 
+{% alert level="warning" %}
+This grants cluster-wide access to the Kubernetes API. For this reason, adding the annotation or changing it to `"true"` requires access to modify the `user-authn` module configuration — such as the `d8:manage:permission:module:user-authn:edit` role. A namespace-level role that permits creating a DexClient is not enough: the admission-controller rejects the request with a message naming the annotation.
+
+The addition of the annotation is restricted regardless of the specified value, including `"false"`. This is required to ensure compatibility with previous DP versions where access has been granted when the annotation was present, regardless of its value.
+
+This restriction is not applicable to an object, which already has the annotation assigned. Deletion and recreation of DexClient is treated as another addition of the annotation, so a GitOps controller that recreates the object instead of patching it requires the `update` permission on the `moduleconfigs` resource named `user-authn`.
+{% endalert %}
+
 Get client secret:
 
 ```shell
@@ -327,7 +335,7 @@ API_HOST=$(d8 k -n d8-user-authn get ingress kubernetes-api -o jsonpath='{.spec.
 
 ### Grant RBAC
 
-DKP configures kube-apiserver to validate Dex tokens. The `email` and `groups` claims from the token are used for RBAC.
+DP configures kube-apiserver to validate Dex tokens. The `email` and `groups` claims from the token are used for RBAC.
 
 The set of claims required by kube-apiserver for authentication depends on configuration. If kube-apiserver requires the `name` claim, add the `profile` scope.
 
@@ -476,7 +484,7 @@ The output shows which Authorization header is sent. For reliable token usage, u
 **Dex 401** — invalid client credentials or invalid subject token.
 
 **API 401** — token validation failed. Check:
-- Annotation `dexclient.deckhouse.io/allow-access-to-kubernetes` on DexClient.
+- Annotation `dexclient.deckhouse.io/allow-access-to-kubernetes` on DexClient. If it is gone, check whether the admission-controller rejected the request that was supposed to add it, or whether a GitOps controller recreated the object without it: only a subject allowed to update the `user-authn` ModuleConfig may add the annotation.
 - Scope contains `audience:server:client_id:kubernetes` and `profile`.
 - Time synchronization between CI runner and cluster.
 

@@ -1,0 +1,24 @@
+{
+  "@context": "https://openvex.dev/ns/v0.2.0",
+  "@id": "https://openvex.dev/docs/public/vex-8a7deb4136583eb5d06b71b172462b776d7022570cc0a8b0b2c53471e26eb36b",
+  "author": "Deckhouse Deckhouse <contact@deckhouse.io>",
+  "version": 1,
+  "statements": [
+    {
+      "vulnerability": {
+        "name": "GO-2026-5932"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/golang.org/x/crypto@v0.55.0"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_present",
+      "impact_statement": "Advisory о неподдерживаемом пакете golang.org/x/crypto/openpgp, исправленной версии не существует. Пакет openpgp не входит в бинарь d8-bcheck: модуль golang.org/x/crypto подтягивается транзитивно ради других пакетов, сам openpgp не импортируется ни утилитой, ни её зависимостями.",
+      "timestamp": "2026-08-28T14:30:00Z"
+    }
+  ],
+  "timestamp": "2026-08-28T14:30:00Z",
+  "last_updated": "2026-08-28T14:30:00Z"
+}

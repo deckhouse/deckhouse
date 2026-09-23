@@ -54,6 +54,7 @@ spec:
     metadata:
       labels:
         app: {{ $appLabel }}
+        security.deckhouse.io/security-policy-exception: control-plane-proxy
     spec:
       serviceAccountName: d8-control-plane-manager-control-plane-proxy
       automountServiceAccountToken: true

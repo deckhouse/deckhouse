@@ -5,6 +5,7 @@ from: {{ index $.Images "builder/distroless" }}
 shell:
   beforeInstall:
   - pm install python@3.12 gnu-glibc grep sed coreutils bash -d /out
+  - rm -rf /out/usr/lib/python3*/site-packages/pip* /out/usr/bin/pip3*
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}
 from: {{ index $.Images "base/distroless-fin" }}

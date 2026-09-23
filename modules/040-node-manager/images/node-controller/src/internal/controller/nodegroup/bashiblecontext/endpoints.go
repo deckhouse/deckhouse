@@ -29,6 +29,8 @@ import (
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+
+	"github.com/deckhouse/node-controller/internal/common"
 )
 
 const (
@@ -40,25 +42,26 @@ const (
 	kubernetesEndpointSliceName = "kubernetes"
 )
 
-type endpoints struct {
-	apiserverEndpoints     []string
-	clusterMasterEndpoints []map[string]interface{}
+// Endpoints are the master addresses every bootstrapping node is handed.
+type Endpoints struct {
+	APIServerEndpoints     []string
+	ClusterMasterEndpoints []map[string]interface{}
 }
 
-func (s *Service) readEndpoints(ctx context.Context) (endpoints, error) {
+func (s *Service) ReadEndpoints(ctx context.Context) (Endpoints, error) {
 	set := make(map[string]struct{})
 	var discoveryErrs []error
 
 	pods := &corev1.PodList{}
 	if err := s.Client.List(ctx, pods,
 		client.InNamespace(kubeSystemNS),
-		client.MatchingLabels{"component": "kube-apiserver", "tier": "control-plane"},
+		client.MatchingLabels(common.APIServerPodLabels),
 	); err != nil {
 		discoveryErrs = append(discoveryErrs, fmt.Errorf("list kube-apiserver pods: %w", err))
 	} else {
 		for i := range pods.Items {
 			pod := &pods.Items[i]
-			if !podReady(pod) {
+			if !common.PodReady(pod) {
 				continue
 			}
 			set[net.JoinHostPort(pod.Status.PodIP, strconv.Itoa(apiserverPort))] = struct{}{}
@@ -94,9 +97,9 @@ func (s *Service) readEndpoints(ctx context.Context) (endpoints, error) {
 	}
 	sort.Strings(list)
 
-	res := endpoints{
-		apiserverEndpoints:     list,
-		clusterMasterEndpoints: make([]map[string]interface{}, 0, len(list)),
+	res := Endpoints{
+		APIServerEndpoints:     list,
+		ClusterMasterEndpoints: make([]map[string]interface{}, 0, len(list)),
 	}
 	for _, ep := range list {
 		address, port, err := net.SplitHostPort(ep)
@@ -107,28 +110,19 @@ func (s *Service) readEndpoints(ctx context.Context) (endpoints, error) {
 		if err != nil {
 			continue
 		}
-		res.clusterMasterEndpoints = append(res.clusterMasterEndpoints, map[string]interface{}{
+		res.ClusterMasterEndpoints = append(res.ClusterMasterEndpoints, map[string]interface{}{
 			"address":                address,
 			"kubeApiPort":            kubeAPIPort,
 			"rppServerPort":          packagesProxyPort,
 			"rppBootstrapServerPort": packagesProxyBootstrapPort,
 		})
 	}
-	if len(res.apiserverEndpoints) == 0 || len(res.clusterMasterEndpoints) == 0 {
+	if len(res.APIServerEndpoints) == 0 || len(res.ClusterMasterEndpoints) == 0 {
 		err := errors.Join(discoveryErrs...)
 		if err == nil {
 			err = errors.New("no kube-apiserver endpoints discovered")
 		}
-		return endpoints{}, err
+		return Endpoints{}, err
 	}
 	return res, nil
-}
-
-func podReady(pod *corev1.Pod) bool {
-	for _, cond := range pod.Status.Conditions {
-		if cond.Type == corev1.PodReady && cond.Status == corev1.ConditionTrue {
-			return true
-		}
-	}
-	return false
 }

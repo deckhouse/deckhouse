@@ -2,7 +2,7 @@
 title: "Host firewall на узлах"
 permalink: ru/admin/configuration/network/policy/host_firewall.html
 description: |
-  Настройка host firewall в Deckhouse Kubernetes Platform на основе CiliumClusterwideNetworkPolicy с nodeSelector. Безопасный порядок включения, обязательные правила, защита control plane.
+  Настройка host firewall в Deckhouse Platform на основе CiliumClusterwideNetworkPolicy с nodeSelector. Безопасный порядок включения, обязательные правила, защита control plane.
 lang: ru
 relatedLinks:
   - title: "Host Firewall — документация Cilium"
@@ -15,7 +15,7 @@ relatedLinks:
     url: troubleshooting.html
 ---
 
-Host firewall — это режим работы Cilium, в котором сетевые политики применяются не к подам, а к самим узлам кластера. В DKP host firewall настраивается ресурсами [CiliumClusterwideNetworkPolicy](cilium_networkpolicy.html) с полем `nodeSelector`. Доступен только в кластерах с модулем [`cni-cilium`](/modules/cni-cilium/).
+Host firewall — это режим работы Cilium, в котором сетевые политики применяются не к подам, а к самим узлам кластера. В DP host firewall настраивается ресурсами [CiliumClusterwideNetworkPolicy](cilium_networkpolicy.html) с полем `nodeSelector`. Доступен только в кластерах с модулем [`cni-cilium`](/modules/cni-cilium/).
 
 {% alert level="danger" %}
 Ошибка в host-политиках может привести к потере SSH-доступа к узлам, нарушению работы control plane и недоступности kubelet или etcd. Включайте host firewall только через режим [`policyAuditMode`](/modules/cni-cilium/configuration.html#parameters-policyauditmode) и после проверки вердиктов в Hubble.

@@ -1,11 +1,11 @@
 module entrypoint
 
-go 1.25
+go 1.25.0
 
 require (
 	github.com/coreos/go-iptables v0.8.0
 	github.com/vishvananda/netlink v1.1.0
-	golang.org/x/sys v0.13.0
+	golang.org/x/sys v0.44.0
 )
 
 require github.com/vishvananda/netns v0.0.4 // indirect

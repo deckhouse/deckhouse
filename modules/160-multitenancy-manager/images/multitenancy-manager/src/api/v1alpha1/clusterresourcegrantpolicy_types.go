@@ -51,17 +51,20 @@ type GrantResource struct {
 	Default string `json:"default,omitempty"`
 
 	// AvailabilityDefault overrides the resource's defaultAvailability (All/None) for matched projects.
-	// Usually unnecessary: an allow-list (Allowed/AllowedSelector) already implies a None baseline
-	// (restrict to the list). Set this explicitly only to flip the baseline without a list — All to
-	// open the resource fully for matched projects, None to lock it down.
+	// Usually unnecessary: a non-empty Allowed list or a non-nil AllowedSelector already implies a
+	// None baseline (restrict to the list). An empty Allowed with no selector does not. Set this
+	// explicitly only to flip the baseline without a list — All to open the resource fully for
+	// matched projects, None to lock it down.
 	// +optional
 	AvailabilityDefault AvailabilityDefault `json:"availabilityDefault,omitempty"`
 }
 
 // ClusterResourceGrantPolicySpec defines the desired state of ClusterResourceGrantPolicy.
 type ClusterResourceGrantPolicySpec struct {
-	// ProjectSelector selects the Projects (by their labels, propagated to namespaces) this grant
-	// applies to. A nil selector matches no projects; an explicit empty selector matches all.
+	// ProjectSelector selects the namespaces this grant applies to. It is matched against the union
+	// of the labels of the Project object and the labels of the namespace (the namespace wins a
+	// shared key), so a label on the Project selects every namespace of the project. A nil selector
+	// matches no projects; an explicit empty selector matches all.
 	// +optional
 	ProjectSelector *metav1.LabelSelector `json:"projectSelector,omitempty"`
 

@@ -78,8 +78,8 @@ featureSections:
       dkp-ee: supported
       dkp-cse-pro: supported
   - title:
-      ru: Провайдер для развертывания DKP на DVP в режиме полной интеграции
-      en: Provider for deploying DKP on DVP in full integration mode
+      ru: Провайдер для развертывания DP на DP в режиме полной интеграции
+      en: Provider for deploying DP on DP in full integration mode
     editions:
       dvp-ee: supported
       dvp-cse: supported

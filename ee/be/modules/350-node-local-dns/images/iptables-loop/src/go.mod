@@ -1,6 +1,6 @@
 module iptables-loop
 
-go 1.25
+go 1.25.0
 
 require (
 	github.com/coreos/go-iptables v0.8.0
@@ -11,6 +11,6 @@ require (
 
 require (
 	github.com/DataDog/gostackparse v0.7.0 // indirect
-	golang.org/x/sys v0.13.0 // indirect
+	golang.org/x/sys v0.44.0 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 )

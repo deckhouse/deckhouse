@@ -4,18 +4,18 @@ cleanup:
   # All date calculations are based on the dates of the last commits in the branches.
   disableKubernetesBasedPolicy: true
   keepPolicies:
-  # keep 6 days dev builds
+  # keep 5 days dev builds
   - references:
       branch: /.*/
       limit:
-        in: 144h
+        in: 120h
     imagesPerReference:
       last: 1
-  # keep 7 pre-release builds
+  # keep 6 pre-release builds
   - references:
       branch: /release-[0-9]\.[0-9]+/
       limit:
-        last: 7
+        last: 6
     imagesPerReference:
       last: 1
   # keep 5 release builds

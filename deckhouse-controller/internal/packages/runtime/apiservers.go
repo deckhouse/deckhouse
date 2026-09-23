@@ -1,0 +1,84 @@
+// Copyright 2026 Flant JSC
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+package runtime
+
+import (
+	"context"
+	"errors"
+	"fmt"
+
+	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/runtime/api/handlers"
+	v1 "github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/runtime/api/handlers/v1"
+	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/runtime/api/socket"
+	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/runtime/api/tcp"
+	d8requirements "github.com/deckhouse/deckhouse/go_lib/dependency/requirements"
+	"github.com/deckhouse/deckhouse/pkg/log"
+)
+
+// buildAPIServers creates both API servers with the route tree each
+// of them serves. Nothing is bound here: startAPIServers binds the listeners
+// once the runtime is actually running.
+//
+// The socket gets the private tree, which exposes package values, rendered
+// manifests and hook snapshots; the TCP listener gets the public tree only.
+func (r *Runtime) buildAPIServers() {
+	deps := v1.Deps{
+		Packages:     r,
+		Queues:       r,
+		Scheduler:    r.scheduler,
+		Requirements: d8requirements.DumpValues,
+	}
+
+	r.socketServer = socket.NewServer(apiSocketPath, handlers.NewRootHandler(v1.NewPrivateHandler(deps)), r.logger)
+	r.tcpServer = tcp.NewServer(apiTCPAddress, apiTCPPort, handlers.NewRootHandler(v1.NewPublicHandler(deps)), r.logger)
+}
+
+// startAPIServers binds the socket and the loopback TCP listener, then watches
+// both serve loops. A bind failure is returned to the caller; a listener that
+// dies later reaches the runtime through the group, because deciding what a dead
+// listener means belongs here and not inside the transport.
+func (r *Runtime) startAPIServers() error {
+	if err := r.socketServer.Start(); err != nil {
+		return fmt.Errorf("start socket server: %w", err)
+	}
+
+	if err := r.tcpServer.Start(); err != nil {
+		return fmt.Errorf("start tcp server: %w", err)
+	}
+
+	r.apiServers.Go(r.socketServer.Wait)
+	r.apiServers.Go(r.tcpServer.Wait)
+
+	go r.watchAPIServers()
+
+	return nil
+}
+
+// watchAPIServers reports the first listener that stops on its own. Losing an
+// introspection listener does not take the controller down: the packages keep
+// converging, only the API is gone until the process restarts.
+func (r *Runtime) watchAPIServers() {
+	if err := r.apiServers.Wait(); err != nil {
+		r.logger.Error("api server stopped serving", log.Err(err))
+	}
+}
+
+// stopAPIServers closes both listeners and waits for their serve loops to
+// finish; closing the socket unlinks its file.
+func (r *Runtime) stopAPIServers(ctx context.Context) error {
+	err := errors.Join(r.socketServer.Shutdown(ctx), r.tcpServer.Shutdown(ctx))
+
+	return errors.Join(err, r.apiServers.Wait())
+}

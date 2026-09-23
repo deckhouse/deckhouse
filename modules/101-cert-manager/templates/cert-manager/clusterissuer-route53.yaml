@@ -18,7 +18,7 @@ spec:
     - dns01:
         route53:
           region: us-east-1
-          accessKeyID: {{ .Values.certManager.route53AccessKeyID }}
+          accessKeyID: {{ .Values.certManager.route53AccessKeyID | quote }}
           secretAccessKeySecretRef:
             name: route53
             key: secret-access-key

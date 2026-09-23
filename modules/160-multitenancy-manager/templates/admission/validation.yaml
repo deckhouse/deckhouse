@@ -5,15 +5,31 @@
   admission call for a resource a module's Helm release applies (e.g. the deckhouse-controller creating
   a namespace) would fail and addon-operator would retry it forever, locking the module's queue.
   Excluding system writers makes that impossible regardless of backend health, while ordinary users are
-  still validated. Mirrors the same exclusion on the cluster-objects grant webhooks.
+  still validated. The cluster-objects grant webhooks (hooks/configure_grant_validation_webhook.go)
+  keep a similar list but also exclude system:masters: they intercept every grantable
+  cluster-resource write into project namespaces, a far larger surface for a deadlock.
+
+  People are not system writers: system:masters goes through these webhooks like everyone else, so a
+  Project an administrator creates is validated the same way as one a user creates. The one human
+  identity that bypasses them is system:sudouser -- the same identity the heritage
+  ValidatingAdmissionPolicy exempts -- so an administrator who has to bypass a check does it on
+  purpose, by impersonating that user, and the bypass is visible in the audit log.
+
+  The exclusion applies to the Project and ProjectTemplate webhooks only. Nothing in the platform
+  renders a ProjectRoleBinding, a ProjectNamespace or a ClusterProjectRoleBinding, so no release can
+  deadlock on their webhooks, and the exclusion would only drop the managed-by and escalation checks
+  for platform service accounts and system:sudouser. Those three webhooks see every request; their
+  handler privileges the controller and Deckhouse service accounts and nobody else.
 */ -}}
 {{- $excludeSystemWriters := `matchConditions:
 - name: exclude-system-writers
   expression: >-
     request.userInfo.username != "system:apiserver"
+    && request.userInfo.username != "system:sudouser"
     && request.userInfo.username != "system:serviceaccount:d8-system:deckhouse"
     && request.userInfo.username != "system:serviceaccount:d8-multitenancy-manager:multitenancy-manager"
-    && !request.userInfo.groups.exists(g, g == "system:serviceaccounts:d8-system" || g == "system:serviceaccounts:kube-system" || g == "system:masters" || g == "system:nodes")` }}
+    && request.userInfo.username != "system:serviceaccount:d8-user-authz:controller"
+    && !request.userInfo.groups.exists(g, g == "system:serviceaccounts:d8-system" || g == "system:serviceaccounts:kube-system" || g == "system:serviceaccounts:d8-user-authz" || g == "system:nodes")` }}
 ---
 apiVersion: admissionregistration.k8s.io/v1
 kind: ValidatingWebhookConfiguration
@@ -29,7 +45,7 @@ webhooks:
       - apiGroups:
           - deckhouse.io
         apiVersions:
-          - v1alpha2
+          - v1alpha3
         resources:
           - projects
         operations:
@@ -47,13 +63,89 @@ webhooks:
         name: multitenancy-manager
         namespace: d8-multitenancy-manager
         port: 9443
-        path: /validate/v1alpha2/projects
-  - name: projecttemplates.multitenancy-webhook.deckhouse.io
+        path: /validate/v1alpha3/projects
+  - name: projectrolebindings.multitenancy-webhook.deckhouse.io
     rules:
       - apiGroups:
           - deckhouse.io
         apiVersions:
-          - v1alpha1
+          - v1alpha3
+        resources:
+          - projectrolebindings
+        operations:
+          - CREATE
+          - UPDATE
+          - DELETE
+        scope: Namespaced
+    admissionReviewVersions:
+      - v1
+    matchPolicy: Equivalent
+    sideEffects: None
+    clientConfig:
+      caBundle: {{ .Values.multitenancyManager.internal.admissionWebhookCert.ca | b64enc }}
+      service:
+        name: multitenancy-manager
+        namespace: d8-multitenancy-manager
+        port: 9443
+        path: /validate/v1alpha3/projectrolebindings
+  - name: projectnamespaces.multitenancy-webhook.deckhouse.io
+    rules:
+      - apiGroups:
+          - deckhouse.io
+        apiVersions:
+          - v1alpha3
+        resources:
+          - projectnamespaces
+        operations:
+          - CREATE
+          - UPDATE
+        scope: Namespaced
+    admissionReviewVersions:
+      - v1
+    matchPolicy: Equivalent
+    sideEffects: None
+    clientConfig:
+      caBundle: {{ .Values.multitenancyManager.internal.admissionWebhookCert.ca | b64enc }}
+      service:
+        name: multitenancy-manager
+        namespace: d8-multitenancy-manager
+        port: 9443
+        path: /validate/v1alpha3/projectnamespaces
+  - name: clusterprojectrolebindings.multitenancy-webhook.deckhouse.io
+    rules:
+      - apiGroups:
+          - deckhouse.io
+        apiVersions:
+          - v1alpha3
+        resources:
+          - clusterprojectrolebindings
+        operations:
+          - CREATE
+          - UPDATE
+          - DELETE
+        scope: Cluster
+    admissionReviewVersions:
+      - v1
+    matchPolicy: Equivalent
+    sideEffects: None
+    clientConfig:
+      caBundle: {{ .Values.multitenancyManager.internal.admissionWebhookCert.ca | b64enc }}
+      service:
+        name: multitenancy-manager
+        namespace: d8-multitenancy-manager
+        port: 9443
+        path: /validate/v1alpha3/clusterprojectrolebindings
+  - name: projecttemplates.multitenancy-webhook.deckhouse.io
+    rules:
+      - apiGroups:
+          - deckhouse.io
+        # Only the full-fidelity storage version is listed. With matchPolicy: Equivalent the apiserver
+        # losslessly up-converts a v1alpha1 request to v1alpha2 before delivery, so the handler always
+        # receives the structured fields (grantPolicies, fromParam, podSecurityStandard, ...). Listing
+        # v1alpha1 here would let the apiserver deliver the lossy v1alpha1 view, stripping those fields
+        # and silently bypassing the structured validations.
+        apiVersions:
+          - v1alpha2
         resources:
           - projecttemplates
         operations:
@@ -73,28 +165,3 @@ webhooks:
         namespace: d8-multitenancy-manager
         port: 9443
         path: /validate/v1alpha1/templates
-  {{ if not .Values.multitenancyManager.allowNamespacesWithoutProjects }}
-  - name: namespaces.multitenancy-webhook.deckhouse.io
-    rules:
-      - apiGroups:
-          - ""
-        apiVersions:
-          - v1
-        resources:
-          - namespaces
-        operations:
-          - CREATE
-        scope: Cluster
-    admissionReviewVersions:
-      - v1
-    matchPolicy: Equivalent
-    {{- $excludeSystemWriters | nindent 4 }}
-    sideEffects: None
-    clientConfig:
-      caBundle: {{ .Values.multitenancyManager.internal.admissionWebhookCert.ca | b64enc }}
-      service:
-        name: multitenancy-manager
-        namespace: d8-multitenancy-manager
-        port: 9443
-        path: /validate/v1/namespaces
-  {{ end }}

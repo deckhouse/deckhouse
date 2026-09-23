@@ -99,4 +99,9 @@ shell:
     - chown 64535:64535 url-exec-prober
     - chmod 0700 url-exec-prober
 ---
+{{- $_ := set . "FuzzEngine" "go" }}
+{{- $_ := set . "FuzzSrcImage" (printf "%s/%s-oauth2-proxy-artifact" .ModuleName .ImageName) }}
+{{- $_ := set . "FuzzPackages" ". ./pkg/middleware ./pkg/sessions/persistence" }}
+{{- include "fuzz image" . }}
+---
 {{- include "vex mitigation" (list $ (printf "%s/%s" $.ModuleName $.ImageName)) }}

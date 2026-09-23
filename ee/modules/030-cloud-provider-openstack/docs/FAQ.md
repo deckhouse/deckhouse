@@ -18,7 +18,7 @@ The `annotations` field of the corresponding inlet configuration in the [Ingress
 - `loadbalancer.openstack.deckhouse.io/load-balancer-id`: Instructs OpenStack CCM to use a pre-created Octavia load balancer.
 - `loadbalancer.openstack.deckhouse.io/load-balancer-address`: Instructs OpenStack CCM to associate a pre-allocated floating IP with the load balancer it creates.
 
-DKP automatically adds the specified annotations to the generated Service object of type LoadBalancer.
+DP automatically adds the specified annotations to the generated Service object of type LoadBalancer.
 
 When using the `loadbalancer.openstack.deckhouse.io/load-balancer-id` annotation, the load balancer must meet the following requirements:
 
@@ -34,7 +34,7 @@ When using only `loadbalancer.openstack.deckhouse.io/load-balancer-address`, the
 
 If the specified floating IP is unavailable, OpenStack CCM will not be able to assign an external IP address to the Service object.
 
-Do not add the `loadbalancer.openstack.deckhouse.io/load-balancer-id` or `loadbalancer.openstack.deckhouse.io/load-balancer-address` annotations to application Ingress resources. Specify them only in the IngressNginxController configuration. DKP will add them to the generated Service object, which is processed by `openstack-cloud-controller-manager`.
+Do not add the `loadbalancer.openstack.deckhouse.io/load-balancer-id` or `loadbalancer.openstack.deckhouse.io/load-balancer-address` annotations to application Ingress resources. Specify them only in the IngressNginxController configuration. DP will add them to the generated Service object, which is processed by `openstack-cloud-controller-manager`.
 
 ### IngressNginxController with a pre-created load balancer
 
@@ -94,29 +94,6 @@ spec:
     value: frontend
 ```
 
-## How do I set up security policies on cluster nodes?
-
-There may be many reasons why you may need to restrict or expand incoming/outgoing traffic on cluster VMs in OpenStack:
-
-- Allow VMs on a different subnet to connect to cluster nodes.
-- Allow connecting to the ports of the static node so that the application can work.
-- Restrict access to external resources or other VMs in the cloud for security reasons.
-
-For all this, additional security groups should be used. You can only use security groups that are created in the cloud tentatively.
-
-### Enabling additional security groups on static and master nodes
-
-This parameter can be set either in an existing cluster or when creating one. In both cases, additional security groups are declared in the `OpenStackClusterConfiguration`:
-
-- for master nodes, in the `additionalSecurityGroups` of the `masterNodeGroup` section;
-- for static nodes, in the `additionalSecurityGroups` field of the `nodeGroups` subsection that corresponds to the target nodeGroup.
-
-The `additionalSecurityGroups` field contains an array of strings with security group names.
-
-### Enabling additional security groups on ephemeral nodes
-
-You have to set the `additionalSecurityGroups` parameter for all OpenStackInstanceClasses in the cluster that require additional security groups. See the [parameters of the cloud-provider-openstack](/cloud-provider-openstack/configuration.html) module.
-
 ## How do I create NodeGroups in availability zones?
 
 An OpenStack cluster is deployed in a single region, which is set by the [`provider.region`](cluster_configuration.html#openstackclusterconfiguration-provider-region) parameter of the [OpenStackClusterConfiguration](cluster_configuration.html#openstackclusterconfiguration) resource. Nodes can be created only in availability zones of this region. Using zones from other regions is not supported.
@@ -166,7 +143,7 @@ spec:
 A hybrid cluster combines bare metal and OpenStack nodes. To create such a cluster, you need an L2 network between all nodes of the cluster.
 
 {% alert level="info" %}
-The Deckhouse Kubernetes Platform allows to set a prefix for the names of CloudEphemeral nodes added to a hybrid cluster with Static master nodes.
+The Deckhouse Platform allows to set a prefix for the names of CloudEphemeral nodes added to a hybrid cluster with Static master nodes.
 To do this, use the [`instancePrefix`](../node-manager/configuration.html#parameters-instanceprefix) parameter of the `node-manager` module. The prefix specified in the parameter will be added to the name of all CloudEphemeral nodes added to the cluster. It is not possible to set a prefix for a specific NodeGroup.
 {% endalert %}
 

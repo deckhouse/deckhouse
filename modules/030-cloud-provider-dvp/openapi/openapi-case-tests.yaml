@@ -21,12 +21,71 @@ positive:
         zones:
           - zone-a
           - zone-b
+        ingressPorts:
+          - 22
+          - 6443
+        additionalVMLabels:
+          network-access: bastion
     provider:
       parameters:
         namespace: my-ns
         networkPolicy: Isolated
   values:
   - internal: {}
+    storage:
+      parameters: {}
+    nodes:
+      parameters:
+        layout: Standard
+        sshPublicKey: "ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQ test@deckhouse"
+    provider:
+      parameters:
+        namespace: default
+  - internal:
+      providerClusterConfiguration:
+        masterNodeGroup:
+          replicas: 1
+          instanceClass:
+            virtualMachine:
+              cpu:
+                cores: 4
+                coreFraction: Auto
+              memory:
+                size: 8Gi
+            rootDisk:
+              size: 50Gi
+              image:
+                kind: ClusterVirtualImage
+                name: ubuntu-24-04-lts
+            etcdDisk:
+              size: 15Gi
+    storage:
+      parameters: {}
+    nodes:
+      parameters:
+        layout: Standard
+        sshPublicKey: "ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQ test@deckhouse"
+    provider:
+      parameters:
+        namespace: default
+  - internal:
+      providerClusterConfiguration:
+        masterNodeGroup:
+          replicas: 1
+          instanceClass:
+            virtualMachine:
+              cpu:
+                cores: 4
+                coreFraction: 20%
+              memory:
+                size: 8Gi
+            rootDisk:
+              size: 50Gi
+              image:
+                kind: ClusterVirtualImage
+                name: ubuntu-24-04-lts
+            etcdDisk:
+              size: 15Gi
     storage:
       parameters: {}
     nodes:
@@ -58,5 +117,70 @@ negative:
       parameters:
         namespace: default
         networkPolicy: Restricted
+  - storage:
+      parameters: {}
+    nodes:
+      parameters:
+        layout: Standard
+        sshPublicKey: "ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQ test@host"
+        ingressPorts:
+          - 0
+    provider:
+      parameters:
+        namespace: default
   values:
   - { somethingInConfig: yes }
+  - internal:
+      providerClusterConfiguration:
+        masterNodeGroup:
+          replicas: 1
+          instanceClass:
+            virtualMachine:
+              cpu:
+                cores: 4
+                coreFraction: auto
+              memory:
+                size: 8Gi
+            rootDisk:
+              size: 50Gi
+              image:
+                kind: ClusterVirtualImage
+                name: ubuntu-24-04-lts
+            etcdDisk:
+              size: 15Gi
+    storage:
+      parameters: {}
+    nodes:
+      parameters:
+        layout: Standard
+        sshPublicKey: "ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQ test@deckhouse"
+    provider:
+      parameters:
+        namespace: default
+  - internal:
+      providerClusterConfiguration:
+        masterNodeGroup:
+          replicas: 1
+          instanceClass:
+            virtualMachine:
+              cpu:
+                cores: 4
+                coreFraction: 0%
+              memory:
+                size: 8Gi
+            rootDisk:
+              size: 50Gi
+              image:
+                kind: ClusterVirtualImage
+                name: ubuntu-24-04-lts
+            etcdDisk:
+              size: 15Gi
+    storage:
+      parameters: {}
+    nodes:
+      parameters:
+        layout: Standard
+        sshPublicKey: "ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQ test@deckhouse"
+    provider:
+      parameters:
+        namespace: default

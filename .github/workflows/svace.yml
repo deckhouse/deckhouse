@@ -268,7 +268,7 @@ jobs:
 
       # <template: add_ssh_keys>
       - name: Start ssh-agent
-        uses: webfactory/ssh-agent@v0.9.0
+        uses: webfactory/ssh-agent@v0.10.0
         with:
           ssh-private-key: |
             ${{ steps.secrets.outputs.SOURCE_REPO_SSH_KEY }}
@@ -358,8 +358,9 @@ jobs:
           # Signing of the Olcedar sysext roothashes: which Vault role, and where it is
           # allowed. The list mirrors that role's bound_claims; elsewhere no token can be
           # obtained, so signing is skipped rather than failing the build.
-          WERF_OLCEDAR_VAULT_AUTH_ROLE: "deckhouse-olcedar-signer"
+          WERF_OLCEDAR_VAULT_AUTH_ROLE: "dh-engine-signer"
           WERF_OLCEDAR_SYSEXT_SIGN_ENABLED: ${{ contains(fromJSON('["deckhouse/deckhouse", "deckhouse/deckhouse-test-1", "deckhouse/deckhouse-test-2"]'), github.repository) }}
+          REGCTL_CONFIG: "${{ runner.temp }}/regctl-${{ job.check_run_id }}.json"
         run: |
           # Extract REPO_SUFFIX from repository name: trim prefix 'deckhouse/deckhouse-'.
           REPO_SUFFIX=${GITHUB_REPOSITORY#deckhouse/deckhouse-}
@@ -456,12 +457,26 @@ jobs:
             export WERF_SIGN_MANIFEST="0"
             echo "Fallback to WERF_SIGN_MANIFEST=$WERF_SIGN_MANIFEST"
           fi
+          # Statisctics added since werf 2.78.1
+          werf_major="$(werf version | cut -d. -f1)"
+          werf_minor="$(werf version | cut -d. -f2)"
+          werf_build_report_operations_arg=""
+          if (( werf_major >= 3 )); then
+            echo "Using build-report-operations, werf version >=3.0"
+            werf_build_report_operations_arg="--build-report-operations=true"
+          else
+            if (( werf_minor >= 78 )); then
+              echo "Using build-report-operations, werf version >=2.78"
+              werf_build_report_operations_arg="--build-report-operations=true"
+            fi
+          fi
 
           type werf && source $(werf ci-env github --verbose --as-file)
           werf build \
             --parallel=true --parallel-tasks-limit=5 \
             --save-build-report=true \
-            --build-report-path images_tags_werf.json
+            --build-report-path images_tags_werf.json \
+            ${werf_build_report_operations_arg}
 
           # Publish images for Git branch.
           if [[ -n "${CI_COMMIT_BRANCH}" ]]; then

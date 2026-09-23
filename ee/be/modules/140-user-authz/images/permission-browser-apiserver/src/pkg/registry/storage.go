@@ -33,20 +33,47 @@ const (
 	nonSelfReviewSubresource = "nonself"
 )
 
-// GetStorage returns the storage map for the authorization API group (legacy, without namespace resolver)
-func GetStorage(auth authorizer.Authorizer) map[string]rest.Storage {
-	return map[string]rest.Storage{
-		"bulksubjectaccessreviews": NewBulkSARStorage(auth),
-	}
+type subjectBinder interface {
+	BindSubject(context.Context, user.Info) context.Context
 }
 
-// GetStorageWithResolver returns the storage map including the AccessibleNamespace resource.
-// This requires a NamespaceResolver for resolving user-accessible namespaces.
-func GetStorageWithResolver(auth authorizer.Authorizer, nsResolver *resolver.NamespaceResolver) map[string]rest.Storage {
-	return map[string]rest.Storage{
-		"bulksubjectaccessreviews": NewBulkSARStorage(auth),
-		"accessiblenamespaces":     NewAccessibleNamespaceStorage(nsResolver),
+// Storages collects the backends the API group is built from. Every field
+// except Authorizer is optional: a resource whose backend is missing is simply
+// not registered, which is how the server degrades when a dependency (the
+// multi-tenancy engine, discovery, the informer factory) is unavailable.
+type Storages struct {
+	// Authorizer decides forward access checks and gates the non-self reviews.
+	Authorizer authorizer.Authorizer
+	// NamespaceResolver backs the AccessibleNamespace resource.
+	NamespaceResolver *resolver.NamespaceResolver
+	// WhoCan backs the reverse-RBAC WhoCan resource.
+	WhoCan WhoCanResolver
+	// SubjectAccess backs the SubjectAccessReport resource.
+	SubjectAccess SubjectAccessReporter
+	// RoleAccess backs the RoleAccessReport resource.
+	RoleAccess RoleAccessReporter
+}
+
+// GetStorage returns the storage map for the authorization API group.
+func GetStorage(storages Storages) map[string]rest.Storage {
+	storage := map[string]rest.Storage{
+		"bulksubjectaccessreviews": NewBulkSARStorage(storages.Authorizer),
 	}
+
+	if storages.NamespaceResolver != nil {
+		storage["accessiblenamespaces"] = NewAccessibleNamespaceStorage(storages.NamespaceResolver)
+	}
+	if storages.WhoCan != nil {
+		storage["whocans"] = NewWhoCanStorage(storages.WhoCan)
+	}
+	if storages.SubjectAccess != nil {
+		storage[subjectAccessResource] = NewSubjectAccessStorage(storages.SubjectAccess, storages.Authorizer)
+	}
+	if storages.RoleAccess != nil {
+		storage[roleAccessResource] = NewRoleAccessStorage(storages.RoleAccess)
+	}
+
+	return storage
 }
 
 // BulkSARStorage implements the REST storage for BulkSubjectAccessReview
@@ -103,7 +130,7 @@ func (s *BulkSARStorage) Create(ctx context.Context, obj runtime.Object, createV
 	}
 
 	// Get the authenticated user from context
-	userInfo, ok := request.UserFrom(ctx)
+	caller, ok := request.UserFrom(ctx)
 	if !ok {
 		// The generic apiserver always populates the user; its absence is a
 		// server-side invariant violation, not a client input error.
@@ -117,7 +144,7 @@ func (s *BulkSARStorage) Create(ctx context.Context, obj runtime.Object, createV
 	var subjectExtra map[string][]string
 
 	if bsar.Spec.User != "" {
-		if err := s.authorizeNonSelfReview(ctx, userInfo); err != nil {
+		if err := s.authorizeNonSelfReview(ctx, caller); err != nil {
 			return nil, err
 		}
 		// Non-self mode: use the provided subject
@@ -131,11 +158,22 @@ func (s *BulkSARStorage) Create(ctx context.Context, obj runtime.Object, createV
 		klog.V(4).Infof("Non-self mode: checking access for user=%s, groups=%v", subjectUser, subjectGroups)
 	} else {
 		// Self mode: use the authenticated user
-		subjectUser = userInfo.GetName()
-		subjectUID = userInfo.GetUID()
-		subjectGroups = userInfo.GetGroups()
-		subjectExtra = userInfo.GetExtra()
+		subjectUser = caller.GetName()
+		subjectUID = caller.GetUID()
+		subjectGroups = caller.GetGroups()
+		subjectExtra = caller.GetExtra()
 		klog.V(4).Infof("Self mode: checking access for user=%s, groups=%v", subjectUser, subjectGroups)
+	}
+
+	// Bind the review subject after the non-self gate so the caller's
+	// authorization is not evaluated against the subject's snapshot.
+	if b, ok := s.authorizer.(subjectBinder); ok {
+		ctx = b.BindSubject(ctx, &userInfo{
+			name:   subjectUser,
+			uid:    subjectUID,
+			groups: subjectGroups,
+			extra:  subjectExtra,
+		})
 	}
 
 	// Process all requests

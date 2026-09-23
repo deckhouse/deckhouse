@@ -84,4 +84,26 @@ discovery:
 
 	})
 
+	Context("With Gateway API enabled", func() {
+		BeforeEach(func() {
+			f.ValuesSetFromYaml("global", globalValues)
+			f.ValuesSet("global.modulesImages", GetModulesImages())
+			f.ValuesSet("global.discovery.kubernetesVersion", "1.15.6")
+			f.ValuesSetFromYaml("userAuthn.https", `{"mode":"CustomCertificate"}`)
+			f.ValuesSetFromYaml("userAuthn.internal.dexTLS", `{"crt":"plainstring","key":"plainstring", "ca":" plainstring"}`)
+			f.ValuesSetFromYaml("userAuthn.internal.customCertificateData", `{"tls.crt":"CRTCRTCRT","tls.key":"KEYKEYKEY"}`)
+			f.ValuesSet("userAuthn.internal.kubernetesDexClientAppSecret", "plainstring")
+			f.ValuesSet("global.discovery.gatewayAPIDefaultGateway.name", "shared-gateway")
+			f.ValuesSet("global.discovery.gatewayAPIDefaultGateway.namespace", "d8-alb")
+			f.HelmRender()
+		})
+
+		// CustomCertificate has no per-mechanism validation, so Gateway API reuses the Ingress secret.
+		It("Should reuse the ingress secret instead of creating a redundant copy", func() {
+			Expect(f.RenderError).ShouldNot(HaveOccurred())
+			Expect(f.KubernetesResource("Secret", "d8-user-authn", "ingress-tls-customcertificate").Exists()).To(BeTrue())
+			Expect(f.KubernetesResource("Secret", "d8-user-authn", "httproute-tls-customcertificate").Exists()).To(BeFalse())
+		})
+	})
+
 })

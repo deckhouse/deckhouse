@@ -3,7 +3,7 @@ title: Вспомогательные компоненты
 permalink: ru/architecture/virtualization/auxiliary.html
 lang: ru
 search: virtualization-audit, virtualization-dra, dra
-description: Архитектура вспомогательных компонентов модуля virtualization в Deckhouse Kubernetes Platform.
+description: Архитектура вспомогательных компонентов модуля virtualization в Deckhouse Platform.
 ---
 
 В модуле [`virtualization`](/modules/virtualization/) используются компоненты, реализующие следующие вспомогательные функции:
@@ -26,7 +26,7 @@ description: Архитектура вспомогательных компон�
 - Поды могут быть запущены в нескольких репликах, однако на схеме каждый под показан в единственном экземпляре.
 {% endalert %}
 
-Архитектура компонентов, реализующих аудит событий безопасности модуля [`virtualization`](/modules/virtualization/) на уровне 2 модели C4 и их взаимодействия с другими компонентами DKP изображены на следующей диаграмме:
+Архитектура компонентов, реализующих аудит событий безопасности модуля [`virtualization`](/modules/virtualization/) на уровне 2 модели C4 и их взаимодействия с другими компонентами DP изображены на следующей диаграмме:
 
 ![Архитектура компонента virtualization-audit модуля virtualization](../../images/architecture/virtualization/c4-l2-virtualization-audit.ru.png)
 
@@ -54,7 +54,7 @@ Virtualization-audit взаимодействует со следующими к
 
 ### Архитектура
 
-Архитектура прочих вспомогательных компонентов модуля [`virtualization`](/modules/virtualization/) на уровне 2 модели C4 и их взаимодействия с другими компонентами DKP изображены на следующей диаграмме:
+Архитектура прочих вспомогательных компонентов модуля [`virtualization`](/modules/virtualization/) на уровне 2 модели C4 и их взаимодействия с другими компонентами DP изображены на следующей диаграмме:
 
 ![Архитектура прочих вспомогательных компонентов модуля virtualization](../../images/architecture/virtualization/c4-l2-virtualization-misc.ru.png)
 
@@ -77,7 +77,7 @@ Virtualization-audit взаимодействует со следующими к
 
 1. **Vm-route-forge** — контроллер, следящий за кастомными ресурсами [VirtualMachine](/modules/virtualization/cr.html#virtualmachine) API-группы `virtualization.deckhouse.io` и обновляющий сетевые маршруты на узле через Linux netlink/eBPF в таблицах маршрутизации, используемых [CNI Cilium](/modules/cni-cilium/) для маршрутизации трафика между ВМ.
 
-1. **Pre-delete-hook** (Job) — задача, запускаемая контроллером Deckhouse перед удалением модуля [`virtualization`](/modules/virtualization/). Она удаляет кастомные ресурсы InternalVirtualizationKubeVirt и InternalVirtualizationCDI с именем `config`.
+1. **Pre-delete-hook** (Job) — задача, запускаемая контроллером Deckhouse перед удалением модуля [`virtualization`](/modules/virtualization/). Она удаляет кастомный ресурс InternalVirtualizationKubeVirt с именем `config`.
 
 ### Взаимодействия
 
@@ -93,7 +93,7 @@ Vm-route-forge взаимодействует со следующими комп
 
 Pre-delete-hook взаимодействует со следующими компонентами:
 
-1. **Kube-apiserver** — удаляет ресурсы InternalVirtualizationKubeVirt и InternalVirtualizationCDI с именем `config`.
+1. **Kube-apiserver** — удаляет ресурс InternalVirtualizationKubeVirt с именем `config`.
 
 С Virtualization-dra взаимодействуют следующие внешние компоненты:
 

@@ -595,17 +595,6 @@
   stageDependencies:
     setup:
         - '**/*'
-- add: /ee/se-plus/modules/040-node-manager/capi/zvirt
-  to: /deckhouse/modules/040-node-manager/capi/zvirt
-  excludePaths:
-    - docs
-    - README.md
-    - images
-    - webhooks
-    - crds
-  stageDependencies:
-    setup:
-        - '**/*'
 - add: /ee/modules/030-cloud-provider-dynamix
   to: /deckhouse/modules/030-cloud-provider-dynamix
   excludePaths:
@@ -662,39 +651,6 @@
         - '**/*'
 - add: /ee/modules/040-node-manager/cloud-providers/openstack
   to: /deckhouse/modules/040-node-manager/cloud-providers/openstack
-  excludePaths:
-    - docs
-    - README.md
-    - images
-    - webhooks
-    - crds
-  stageDependencies:
-    setup:
-        - '**/*'
-- add: /ee/modules/040-node-manager/capi/dynamix
-  to: /deckhouse/modules/040-node-manager/capi/dynamix
-  excludePaths:
-    - docs
-    - README.md
-    - images
-    - webhooks
-    - crds
-  stageDependencies:
-    setup:
-        - '**/*'
-- add: /ee/modules/040-node-manager/capi/huaweicloud
-  to: /deckhouse/modules/040-node-manager/capi/huaweicloud
-  excludePaths:
-    - docs
-    - README.md
-    - images
-    - webhooks
-    - crds
-  stageDependencies:
-    setup:
-        - '**/*'
-- add: /ee/modules/040-node-manager/capi/vcd
-  to: /deckhouse/modules/040-node-manager/capi/vcd
   excludePaths:
     - docs
     - README.md
@@ -791,11 +747,6 @@
   stageDependencies:
     setup:
         - '**/*'
-- add: /ee/modules/110-istio/templates/validations.yaml
-  to: /deckhouse/modules/110-istio/templates/validations.yaml
-  stageDependencies:
-    install:
-        - '**/*'
 - add: /ee/modules/110-istio/templates/waypoint-controller
   to: /deckhouse/modules/110-istio/templates/waypoint-controller
   excludePaths:
@@ -817,6 +768,21 @@
     - crds
   stageDependencies:
     setup:
+        - '**/*'
+- add: /ee/modules/110-istio/templates/validations/federation.yaml
+  to: /deckhouse/modules/110-istio/templates/validations/federation.yaml
+  stageDependencies:
+    install:
+        - '**/*'
+- add: /ee/modules/110-istio/templates/validations/multicluster.yaml
+  to: /deckhouse/modules/110-istio/templates/validations/multicluster.yaml
+  stageDependencies:
+    install:
+        - '**/*'
+- add: /ee/modules/110-istio/templates/validations/waypointinstances.yaml
+  to: /deckhouse/modules/110-istio/templates/validations/waypointinstances.yaml
+  stageDependencies:
+    install:
         - '**/*'
 - add: /ee/modules/110-istio/hooks/ee
   to: /deckhouse/modules/110-istio/hooks/ee

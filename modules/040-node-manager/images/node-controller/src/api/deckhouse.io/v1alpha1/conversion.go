@@ -44,6 +44,7 @@ func ConvertV1alpha1NodeGroupSpecToV1NodeGroupSpec(in *NodeGroupSpec, out *v1.No
 	}
 
 	out.ProviderType = in.ProviderType
+	out.SystemType = v1.SystemType(in.SystemType)
 
 	// Convert CRI (handle Docker field from v1alpha1)
 	if in.CRI != nil || in.Docker != nil {
@@ -92,6 +93,7 @@ func ConvertV1NodeGroupSpecToV1alpha1NodeGroupSpec(in *v1.NodeGroupSpec, out *No
 	}
 
 	out.ProviderType = in.ProviderType
+	out.SystemType = SystemType(in.SystemType)
 
 	// Convert CRI (extract Docker field for v1alpha1)
 	if in.CRI != nil {

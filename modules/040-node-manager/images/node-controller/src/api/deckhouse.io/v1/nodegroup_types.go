@@ -33,6 +33,17 @@ const (
 	NodeTypeStatic         NodeType = "Static"
 )
 
+// SystemType selects how the node is managed: the classic mutable node
+// configured by bashible, or an immutable node the on-node agent (nodelet)
+// reconciles from a NodeConfig object.
+// +kubebuilder:validation:Enum=Mutable;Immutable
+type SystemType string
+
+const (
+	SystemTypeMutable   SystemType = "Mutable"
+	SystemTypeImmutable SystemType = "Immutable"
+)
+
 // CRIType defines the container runtime type
 // +kubebuilder:validation:Enum=Docker;Containerd;ContainerdV2;NotManaged
 type CRIType string
@@ -73,6 +84,12 @@ type NodeGroupSpec struct {
 	// static node group.
 	// +optional
 	ProviderType string `json:"providerType,omitempty"`
+
+	// SystemType selects how the node is managed. An Immutable node is
+	// reconciled from a NodeConfig object by the agent on the node instead of by
+	// bashible. Once the field names a value it cannot be changed.
+	// +optional
+	SystemType SystemType `json:"systemType,omitempty"`
 
 	// CRI specifies container runtime settings
 	// +optional

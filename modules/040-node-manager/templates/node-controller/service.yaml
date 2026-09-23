@@ -10,8 +10,13 @@ metadata:
   {{- include "helm_lib_module_labels" (list . (dict "app" "node-controller")) | nindent 2 }}
 spec:
   ports:
-  - port: 443
+  - name: webhook
+    port: 443
     targetPort: webhook-server
+    protocol: TCP
+  - name: apiserver
+    port: 4293
+    targetPort: apiserver
     protocol: TCP
   selector:
     app: node-controller

@@ -1,0 +1,56 @@
+diff --git a/plugins/snapshots/erofs/erofs.go b/plugins/snapshots/erofs/erofs.go
+index 19d124f..50dd05d 100644
+--- a/plugins/snapshots/erofs/erofs.go
++++ b/plugins/snapshots/erofs/erofs.go
+@@ -478,6 +478,10 @@ func (s *snapshotter) Commit(ctx context.Context, name, key string, opts ...snap
+ 		}
+ 	}
+ 
++	if err := syncLayerBlob(layerBlob); err != nil {
++		return err
++	}
++
+ 	// Enable fsverity on the EROFS layer if configured
+ 	if s.enableFsverity {
+ 		if err := fsverity.Enable(layerBlob); err != nil {
+diff --git a/plugins/snapshots/erofs/sync.go b/plugins/snapshots/erofs/sync.go
+new file mode 100644
+index 0000000..55cf832
+--- /dev/null
++++ b/plugins/snapshots/erofs/sync.go
+@@ -0,0 +1,35 @@
++package erofs
++
++import (
++	"fmt"
++	"os"
++	"path/filepath"
++)
++
++// syncLayerBlob flushes an EROFS layer blob to stable storage.
++//
++// Nothing else forces the blob out of the page cache, while the metadata
++// transaction that marks the snapshot committed is fsynced: an unclean
++// shutdown in between would leave a committed snapshot whose layer.erofs can
++// never be mounted again. A layer blob is a single regular file created from
++// scratch, so fsyncing the file and then its parent directory is enough to
++// make it durable.
++func syncLayerBlob(path string) error {
++	if err := syncPath(path); err != nil {
++		return err
++	}
++	return syncPath(filepath.Dir(path))
++}
++
++func syncPath(path string) error {
++	f, err := os.Open(path)
++	if err != nil {
++		return fmt.Errorf("failed to open %s: %w", path, err)
++	}
++	defer f.Close()
++
++	if err := f.Sync(); err != nil {
++		return fmt.Errorf("failed to fsync %s: %w", path, err)
++	}
++	return nil
++}

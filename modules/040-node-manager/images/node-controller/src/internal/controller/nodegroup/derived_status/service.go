@@ -54,6 +54,7 @@ type Result struct {
 	CRIType           string
 	Zones             []string
 	NodeCapacity      *capacity.InstanceType
+	TemplateCapacity  *capacity.InstanceType
 	InstanceClass     map[string]any
 	SerializedLabels  string
 	SerializedTaints  string

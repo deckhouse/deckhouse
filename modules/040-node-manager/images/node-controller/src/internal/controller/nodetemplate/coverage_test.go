@@ -537,10 +537,11 @@ func TestTaintSliceEqual(t *testing.T) {
 // --- applyTemplateTaints: removal + nil/nil branches ---
 
 func TestApplyTemplateTaints(t *testing.T) {
-	t.Run("nil template and lastApplied returns empty changed", func(t *testing.T) {
-		got, changed := applyTemplateTaints(nil, nil, nil)
-		if !changed || len(got) != 0 {
-			t.Fatalf("expected empty+changed, got %+v changed=%v", got, changed)
+	t.Run("nil template and lastApplied keeps actual unchanged", func(t *testing.T) {
+		actual := []corev1.Taint{{Key: "dedicated", Effect: corev1.TaintEffectNoSchedule}}
+		got, changed := applyTemplateTaints(actual, nil, nil)
+		if changed || len(got) != 1 || got[0].Key != "dedicated" {
+			t.Fatalf("expected actual kept unchanged, got %+v changed=%v", got, changed)
 		}
 	})
 

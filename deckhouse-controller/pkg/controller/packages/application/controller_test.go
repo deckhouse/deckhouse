@@ -188,19 +188,19 @@ func (suite *ControllerTestSuite) TestReconcile() {
 		assert.True(suite.T(), result.IsZero(), "a settled application must not be requeued")
 
 		require.Len(suite.T(), suite.manager.updated, 1)
-		assert.Equal(suite.T(), registry.Remote{
-			Name:         "deckhouse",
-			Repository:   "registry.example.com/test",
-			DockerConfig: "test-docker-cfg",
-			CA:           "test-ca",
-			Scheme:       "https",
-		}, suite.manager.updated[0].repo)
 		assert.Equal(suite.T(), packageruntime.App{
 			Name:       appName,
 			Namespace:  appNamespace,
 			Definition: apps.Definition{Name: packageName, Version: "v1.0.1"},
 			Settings:   map[string]any{"host": "app.example.com"},
-		}, suite.manager.updated[0].app)
+			Repository: registry.Remote{
+				Name:         "deckhouse",
+				Repository:   "registry.example.com/test",
+				DockerConfig: "test-docker-cfg",
+				CA:           "test-ca",
+				Scheme:       "https",
+			},
+		}, suite.manager.updated[0])
 	})
 
 	suite.Run("maintenance mode reaches the runtime", func() {
@@ -210,7 +210,7 @@ func (suite *ControllerTestSuite) TestReconcile() {
 		require.NoError(suite.T(), err)
 
 		require.Len(suite.T(), suite.manager.updated, 1)
-		assert.Equal(suite.T(), "NoResourceReconciliation", suite.manager.updated[0].app.Maintenance)
+		assert.Equal(suite.T(), "NoResourceReconciliation", suite.manager.updated[0].Maintenance)
 	})
 
 	suite.Run("missing package requeues and claims the finalizer", func() {
@@ -346,7 +346,7 @@ func (suite *ControllerTestSuite) TestReconcile() {
 		require.NoError(suite.T(), err)
 
 		annotations := suite.getApplication(appName, appNamespace).Annotations
-		assert.NotContains(suite.T(), annotations, v1alpha1.ApplicationAnnotationRegistrySpecChanged)
+		assert.NotContains(suite.T(), annotations, v1alpha1.PackageAnnotationRegistrySpecChanged)
 		assert.Contains(suite.T(), annotations, "packages.deckhouse.io/keep-me")
 	})
 
@@ -455,7 +455,8 @@ func TestRelinkFailureKeepsTheApplicationOutOfTheRuntime(t *testing.T) {
 
 	cl := seedFakeClient(t, "successful-reconcile.yaml", interceptor.Funcs{
 		SubResourcePatch: func(context.Context, client.Client, string, client.Object, client.Patch,
-			...client.SubResourcePatchOption) error {
+			...client.SubResourcePatchOption,
+		) error {
 			return patchErr
 		},
 	})
@@ -479,7 +480,8 @@ func TestDeleteFailureKeepsTheFinalizer(t *testing.T) {
 	// released and the package is not.
 	cl := seedFakeClient(t, "delete-after-version-edit.yaml", interceptor.Funcs{
 		SubResourcePatch: func(ctx context.Context, cl client.Client, name string, obj client.Object,
-			patch client.Patch, opts ...client.SubResourcePatchOption) error {
+			patch client.Patch, opts ...client.SubResourcePatchOption,
+		) error {
 			if _, ok := obj.(*v1alpha1.ApplicationPackage); ok {
 				return patchErr
 			}
@@ -498,17 +500,46 @@ func TestDeleteFailureKeepsTheFinalizer(t *testing.T) {
 	_, err := ctr.Reconcile(context.Background(), request(appName, appNamespace))
 	require.ErrorIs(t, err, patchErr)
 
-	// Releasing the finalizer here would drop the application while the package still
-	// counts it as an installation, and nothing would ever come back to fix that.
+	// Runtime teardown has completed, but releasing the finalizer here would drop the
+	// application while the package still counts it as an installation.
 	require.NoError(t, cl.Get(context.Background(), objectKey(appName, appNamespace), app))
 	assert.Contains(t, app.Finalizers, v1alpha1.ApplicationFinalizerStatisticRegistered)
-	assert.Empty(t, manager.removed, "the runtime must keep the application until it is detached")
+	assert.Equal(t, []types.NamespacedName{{Namespace: appNamespace, Name: appName}}, manager.removed)
+}
+
+func TestDeleteWaitsForRuntimeTeardown(t *testing.T) {
+	cl := seedFakeClient(t, "delete-after-version-edit.yaml", interceptor.Funcs{})
+
+	app := new(v1alpha1.Application)
+	require.NoError(t, cl.Get(context.Background(), objectKey(appName, appNamespace), app))
+	require.NoError(t, cl.Delete(context.Background(), app))
+
+	manager := newPackageManagerStub(t)
+	manager.removalDone = false
+	ctr := reconcilerFor(t, cl, manager)
+
+	result, err := ctr.Reconcile(context.Background(), request(appName, appNamespace))
+	require.NoError(t, err)
+	assert.Equal(t, 5*time.Second, result.RequeueAfter)
+	assert.Equal(t, []types.NamespacedName{{Namespace: appNamespace, Name: appName}}, manager.removed)
+
+	require.NoError(t, cl.Get(context.Background(), objectKey(appName, appNamespace), app))
+	assert.Contains(t, app.Finalizers, v1alpha1.ApplicationFinalizerStatisticRegistered)
+
+	pkg := new(v1alpha1.ApplicationPackage)
+	require.NoError(t, cl.Get(context.Background(), client.ObjectKey{Name: packageName}, pkg))
+	assert.True(t, pkg.IsAppInstalled(appNamespace, appName))
+
+	apv := new(v1alpha1.ApplicationPackageVersion)
+	require.NoError(t, cl.Get(context.Background(), client.ObjectKey{Name: versionName}, apv))
+	assert.True(t, apv.IsAppInstalled(appNamespace, appName))
 }
 
 func TestDeleteDistinguishesAMissingVersionFromAnUnreadableOne(t *testing.T) {
 	cl := seedFakeClient(t, "delete-after-version-edit.yaml", interceptor.Funcs{
 		Get: func(ctx context.Context, cl client.WithWatch, key client.ObjectKey, obj client.Object,
-			opts ...client.GetOption) error {
+			opts ...client.GetOption,
+		) error {
 			if _, ok := obj.(*v1alpha1.ApplicationPackageVersion); ok {
 				return apierrors.NewInternalError(errors.New("etcd is unavailable"))
 			}
@@ -528,7 +559,7 @@ func TestDeleteDistinguishesAMissingVersionFromAnUnreadableOne(t *testing.T) {
 	// gone: treating the two alike would leak the installation entry.
 	_, err := ctr.Reconcile(context.Background(), request(appName, appNamespace))
 	require.Error(t, err)
-	assert.Empty(t, manager.removed)
+	assert.Equal(t, []types.NamespacedName{{Namespace: appNamespace, Name: appName}}, manager.removed)
 }
 
 func TestPreflightPreservesEveryApplication(t *testing.T) {
@@ -653,9 +684,10 @@ func (m modulesInited) AreModulesInited() bool { return bool(m) }
 // RegisterController requires it to satisfy the package's manager interface, which is the
 // compile-time check that this stub still matches the real runtime.
 type packageManagerStub struct {
-	updated  []updatedApp
-	removed  []types.NamespacedName
-	cleanups [][]packageruntime.PreservePackage
+	updated     []packageruntime.App
+	removed     []types.NamespacedName
+	cleanups    [][]packageruntime.PreservePackage
+	removalDone bool
 
 	queue workqueue.TypedRateLimitingInterface[string]
 }
@@ -668,20 +700,20 @@ func newPackageManagerStub(t *testing.T) *packageManagerStub {
 	queue := workqueue.NewTypedRateLimitingQueue(workqueue.DefaultTypedControllerRateLimiter[string]())
 	t.Cleanup(queue.ShutDown)
 
-	return &packageManagerStub{queue: queue}
+	return &packageManagerStub{
+		queue:       queue,
+		removalDone: true,
+	}
 }
 
-type updatedApp struct {
-	repo registry.Remote
-	app  packageruntime.App
+func (s *packageManagerStub) UpdateApp(app packageruntime.App) {
+	s.updated = append(s.updated, app)
 }
 
-func (s *packageManagerStub) UpdateApp(repo registry.Remote, app packageruntime.App) {
-	s.updated = append(s.updated, updatedApp{repo: repo, app: app})
-}
-
-func (s *packageManagerStub) RemoveApp(namespace, name string) {
+func (s *packageManagerStub) RemoveApp(namespace, name string) bool {
 	s.removed = append(s.removed, types.NamespacedName{Namespace: namespace, Name: name})
+
+	return s.removalDone
 }
 
 func (s *packageManagerStub) GetStatus(string) packagestatus.Status {

@@ -17,22 +17,17 @@ limitations under the License.
 package helm
 
 import (
-	"bytes"
 	"context"
 	"errors"
 	"fmt"
-	"os"
 	"path/filepath"
 	"strings"
 	"time"
 
-	"github.com/fatih/structs"
 	"github.com/go-logr/logr"
-	"github.com/go-openapi/spec"
 	"helm.sh/helm/v3/pkg/action"
 	"helm.sh/helm/v3/pkg/chart"
 	"helm.sh/helm/v3/pkg/chartutil"
-	"helm.sh/helm/v3/pkg/engine"
 	"helm.sh/helm/v3/pkg/release"
 	"helm.sh/helm/v3/pkg/releaseutil"
 	"helm.sh/helm/v3/pkg/storage/driver"
@@ -40,9 +35,7 @@ import (
 	"k8s.io/cli-runtime/pkg/genericclioptions"
 	"k8s.io/client-go/rest"
 
-	"controller/apis/deckhouse.io/v1alpha1"
-	"controller/apis/deckhouse.io/v1alpha2"
-	"controller/internal/validate"
+	"controller/apis/deckhouse.io/v1alpha3"
 )
 
 const (
@@ -54,11 +47,15 @@ const (
 	ResourceLabelManagedBy = "app.kubernetes.io/managed-by"
 )
 
+// Client drives the Helm release of every project. Helm is the apply engine only -- install,
+// upgrade, prune of what left the render, history, rollback of a pending release -- and templates
+// nothing: the objects are rendered natively from the structured ProjectTemplate
+// (controller/internal/render) and handed to the post-renderer as they are, so no user data ever
+// passes through the Helm template engine.
 type Client struct {
-	conf      *action.Configuration
-	templates map[string][]byte
-	opts      *options
-	logger    logr.Logger
+	conf   *action.Configuration
+	opts   *options
+	logger logr.Logger
 }
 
 type options struct {
@@ -67,17 +64,16 @@ type options struct {
 }
 
 // New initializes helm client with secret backend storage in `namespace` arg namespace.
-func New(namespace, templatesPath string, logger logr.Logger) (*Client, error) {
+func New(namespace string, logger logr.Logger) (*Client, error) {
 	cli := &Client{
 		opts: &options{
 			HistoryMax: 3,
-			Timeout:    time.Duration(15 * float64(time.Second)),
+			Timeout:    15 * time.Second,
 		},
 		conf: &action.Configuration{
 			Capabilities: chartutil.DefaultCapabilities,
 		},
-		logger:    logger.WithName("helm"),
-		templates: make(map[string][]byte),
+		logger: logger.WithName("helm"),
 	}
 
 	cli.logger.Info("initializing action config")
@@ -85,33 +81,8 @@ func New(namespace, templatesPath string, logger logr.Logger) (*Client, error) {
 		return nil, fmt.Errorf("initialize action config: %w", err)
 	}
 
-	var err error
-	cli.templates, err = parseHelmTemplates(templatesPath)
-	if err != nil {
-		return nil, fmt.Errorf("parse helm templates: %w", err)
-	}
-
 	cli.logger.Info("client initialized")
 	return cli, nil
-}
-
-func parseHelmTemplates(templatesPath string) (map[string][]byte, error) {
-	helmTemplates := make(map[string][]byte)
-	dir, err := os.ReadDir(templatesPath)
-	if err != nil {
-		return nil, err
-	}
-	for _, file := range dir {
-		if file.IsDir() {
-			continue
-		}
-		data, err := os.ReadFile(filepath.Join(templatesPath, file.Name()))
-		if err != nil {
-			return nil, err
-		}
-		helmTemplates[file.Name()] = data
-	}
-	return helmTemplates, nil
 }
 
 func (c *Client) initActionConfig(namespace string) error {
@@ -131,69 +102,60 @@ func (c *Client) initActionConfig(namespace string) error {
 	return c.conf.Init(kubeConfig, namespace, helmDriver, c.DebugLog)
 }
 
-func (c *Client) DebugLog(format string, args ...interface{}) {
+func (c *Client) DebugLog(format string, args ...any) {
 	c.logger.Info(fmt.Sprintf(format, args...))
 }
 
-// Upgrade upgrades resources
-func (c *Client) Upgrade(ctx context.Context, project *v1alpha2.Project, template *v1alpha1.ProjectTemplate) error {
-	ch := buildChart(c.templates, project.Name)
-
+// UpgradeManifests installs/upgrades the project release from manifests rendered natively from the
+// structured ProjectTemplate. The chart is a no-op (empty) template: the concrete objects are
+// supplied to the post-renderer, so no user data passes through the Helm template engine while Helm
+// still drives the release lifecycle (install/upgrade/prune/history). The release hash is taken over
+// the rendered manifests, so a structural or parameter change re-applies the release and an
+// unchanged render is a no-op.
+func (c *Client) UpgradeManifests(ctx context.Context, project *v1alpha3.Project, manifests string) error {
 	versions, err := c.discoverAPI()
 	if err != nil {
 		return fmt.Errorf("discover api: %w", err)
 	}
 
-	values := buildValues(project, template)
-	hash := hashMD5(c.templates, values)
+	// The Helm release name is derived from the project name: it equals the project name when it fits
+	// Helm's 53-char limit and is deterministically shortened otherwise (see ReleaseName). The project
+	// namespace stays the raw project name.
+	rel := ReleaseName(project.Name)
+	ch := buildEmptyChart(project.Name)
+	hash := hashString(manifests)
 
-	releases, err := action.NewHistory(c.conf).Run(project.Name)
-	isFirstInstall := false
+	// action.History exposes no context or timeout; the lookup is a single, bounded API read.
+	releases, err := action.NewHistory(c.conf).Run(rel)
 	if err != nil {
-		if errors.Is(err, driver.ErrReleaseNotFound) {
-			isFirstInstall = true
-			c.logger.Info("the release not found, install it", "release", project.Name, "namespace", project.Name)
-
-			// Repeated here rather than left to admission: the release is applied with
-			// cluster-admin, and a project can reach this point without a passing admission check --
-			// the webhook may be bypassed, and an object admitted before this check existed is
-			// reconciled just the same.
-			if err = c.ensureParametersStayValues(project, template); err != nil {
-				return err
-			}
-
-			post := newPostRenderer(project, versions, c.logger, isFirstInstall)
-			install := action.NewInstall(c.conf)
-			install.ReleaseName = project.Name
-			install.Timeout = c.opts.Timeout
-			install.UseReleaseName = true
-			install.Labels = map[string]string{
-				v1alpha2.ReleaseLabelHashsum: hash,
-			}
-			install.PostRenderer = post
-			if _, err = install.RunWithContext(ctx, ch, values); err != nil {
-				return fmt.Errorf("install the release: %w", err)
-			}
-			c.logger.Info("the release installed", "release", project.Name, "namespace", project.Name)
-			return nil
+		if !errors.Is(err, driver.ErrReleaseNotFound) {
+			return fmt.Errorf("retrieve history for the release: %w", err)
 		}
-		return fmt.Errorf("retrieve history for the release: %w", err)
+
+		c.logger.Info("the release not found, install it", "release", rel, "namespace", project.Name)
+		post := newPostRenderer(project, versions, c.logger)
+		post.manifests = manifests
+		install := action.NewInstall(c.conf)
+		install.ReleaseName = rel
+		install.Timeout = c.opts.Timeout
+		install.UseReleaseName = true
+		install.Labels = map[string]string{
+			v1alpha3.ReleaseLabelHashsum: hash,
+		}
+		install.PostRenderer = post
+		if _, err = install.RunWithContext(ctx, ch, map[string]any{}); err != nil {
+			return fmt.Errorf("install the release: %w", err)
+		}
+		c.logger.Info("the release installed", "release", rel, "namespace", project.Name)
+		return nil
 	}
 
 	releaseutil.Reverse(releases, releaseutil.SortByRevision)
-	if releaseHash, ok := releases[0].Labels[v1alpha2.ReleaseLabelHashsum]; ok {
+	if releaseHash, ok := releases[0].Labels[v1alpha3.ReleaseLabelHashsum]; ok {
 		if releaseHash == hash && releases[0].Info.Status == release.StatusDeployed {
-			c.logger.Info("the release is up to date", "release", project.Name, "namespace", project.Name)
+			c.logger.Info("the release is up to date", "release", rel, "namespace", project.Name)
 			return nil
 		}
-	}
-
-	// Below the up-to-date return above, and not at the top of this method: an unchanged release
-	// applies nothing, so re-checking it could only refuse a project that already reconciled --
-	// which a module upgrade would then do to every project whose template turns a parameter into
-	// structure on purpose.
-	if err = c.ensureParametersStayValues(project, template); err != nil {
-		return err
 	}
 
 	if releases[0].Info.Status.IsPending() {
@@ -202,25 +164,28 @@ func (c *Client) Upgrade(ctx context.Context, project *v1alpha2.Project, templat
 		}
 	}
 
-	post := newPostRenderer(project, versions, c.logger, isFirstInstall)
+	post := newPostRenderer(project, versions, c.logger)
+	post.manifests = manifests
 	upgrade := action.NewUpgrade(c.conf)
 	upgrade.Install = true
 	upgrade.MaxHistory = int(c.opts.HistoryMax)
 	upgrade.Timeout = c.opts.Timeout
 	upgrade.Labels = map[string]string{
-		v1alpha2.ReleaseLabelHashsum: hash,
+		v1alpha3.ReleaseLabelHashsum: hash,
 	}
 	upgrade.PostRenderer = post
 
-	if _, err = upgrade.RunWithContext(ctx, project.Name, ch, values); err != nil {
+	if _, err = upgrade.RunWithContext(ctx, rel, ch, map[string]any{}); err != nil {
 		return fmt.Errorf("upgrade the release: %w", err)
 	}
 
-	c.logger.Info("the release upgraded", "release", project.Name, "namespace", project.Name)
+	c.logger.Info("the release upgraded", "release", rel, "namespace", project.Name)
 	return nil
 }
 
-// discoverAPI returns api versions, they will be used in the post renderer
+// discoverAPI returns api versions, they will be used in the post renderer. The discovery client API
+// (ServerGroupsAndResources) accepts neither a context nor a deadline, so this call cannot be bound
+// by ctx; it is limited only by the REST client's own transport timeout.
 func (c *Client) discoverAPI() (map[string]struct{}, error) {
 	dc, err := c.conf.RESTClientGetter.ToDiscoveryClient()
 	if err != nil {
@@ -244,97 +209,40 @@ func (c *Client) discoverAPI() (map[string]struct{}, error) {
 	return versions, nil
 }
 
-func buildChart(templates map[string][]byte, releaseName string) *chart.Chart {
-	ch := &chart.Chart{
+// helmReleaseNameMaxLen is Helm's hard limit on release names (helm.sh/helm/v3/pkg/action rejects
+// longer names). The project CRD allows names up to 61 chars (a project name is also a namespace,
+// capped at 63), so a project name may exceed this limit and must be mapped to a valid release name.
+const helmReleaseNameMaxLen = 53
+
+// ReleaseName maps a project name to its Helm release name. A name within Helm's limit is used
+// verbatim so existing releases keep their names (no migration); a longer name is deterministically
+// shortened to a collision-resistant form (a truncated prefix plus an 8-hex md5 suffix of the full
+// name) that stays a valid, unique release name. The project namespace remains the raw project name.
+func ReleaseName(project string) string {
+	if len(project) <= helmReleaseNameMaxLen {
+		return project
+	}
+	const suffixLen = 9 // '-' + 8 hex characters
+	prefix := strings.TrimRight(project[:helmReleaseNameMaxLen-suffixLen], "-")
+	return prefix + "-" + hashString(project)[:8]
+}
+
+// buildEmptyChart builds a chart whose only template renders to nothing. The real objects are
+// supplied to the post-renderer, so the chart exists only to drive Helm's release machinery and must
+// not template any user data.
+func buildEmptyChart(releaseName string) *chart.Chart {
+	return &chart.Chart{
 		Metadata: &chart.Metadata{
 			Name:    releaseName,
 			Version: "0.0.1",
 		},
+		Templates: []*chart.File{
+			{
+				Name: "templates/manifests.yaml",
+				Data: []byte("# rendered natively by the controller; see internal/render\n"),
+			},
+		},
 	}
-
-	for name, template := range templates {
-		if !strings.HasPrefix(name, "templates/") {
-			name = "templates/" + name
-		}
-		chartFile := chart.File{
-			Name: name,
-			Data: template,
-		}
-		ch.Templates = append(ch.Templates, &chartFile)
-	}
-
-	return ch
-}
-
-func buildValues(project *v1alpha2.Project, template *v1alpha1.ProjectTemplate) map[string]interface{} {
-	// to handle empty template
-	if len(template.Spec.ResourcesTemplate) == 0 {
-		template.Spec.ResourcesTemplate = " "
-	}
-
-	// skip error, invalid template cannot be here due to validation
-	schema, _ := validate.LoadSchema(template.Spec.ParametersSchema.OpenAPIV3Schema)
-
-	preparedProject := struct {
-		Name         string                 `json:"projectName" yaml:"projectName"`
-		TemplateName string                 `json:"projectTemplateName" yaml:"projectTemplateName"`
-		Parameters   map[string]interface{} `json:"parameters" yaml:"parameters"`
-	}{
-		Name:         project.Name,
-		TemplateName: project.Spec.ProjectTemplateName,
-		Parameters:   mergeWithDefaults(schema, project.Spec.Parameters),
-	}
-
-	structs.DefaultTagName = "yaml"
-	return map[string]interface{}{
-		"projectTemplate": structs.Map(template.Spec),
-		"project":         structs.Map(preparedProject),
-	}
-}
-
-func mergeWithDefaults(schema *spec.Schema, projectValues map[string]interface{}) map[string]interface{} {
-	result := make(map[string]interface{})
-
-	for property, propertySchema := range schema.Properties {
-		if projectValue, exists := projectValues[property]; exists {
-			// use project value
-			result[property] = projectValue
-
-			// recursively handle nested objects
-			if propertySchema.Type.Contains("object") {
-				if valueMap, ok := projectValue.(map[string]interface{}); ok {
-					result[property] = mergeWithDefaults(&propertySchema, valueMap)
-				}
-			}
-		} else if propertySchema.Default != nil {
-			// use default value from schema
-			result[property] = propertySchema.Default
-		}
-
-		// recursively apply defaults to nested objects
-		if propertySchema.Type.Contains("object") {
-			if _, ok := result[property]; !ok {
-				result[property] = mergeWithDefaults(&propertySchema, nil)
-			}
-		}
-	}
-
-	// handle additionalProperties (map types)
-	if schema.AdditionalProperties != nil {
-		mapResult := make(map[string]interface{})
-		for key, value := range projectValues {
-			// skip keys that are already handled as properties
-			if _, exists := schema.Properties[key]; exists {
-				continue
-			}
-
-			mapResult[key] = value
-		}
-
-		result = mapResult
-	}
-
-	return result
 }
 
 func (c *Client) rollbackLatestRelease(releases []*release.Release) error {
@@ -362,63 +270,24 @@ func (c *Client) rollbackLatestRelease(releases []*release.Release) error {
 	return rollback.Run(latestRelease.Name)
 }
 
-// Delete deletes resources
-func (c *Client) Delete(_ context.Context, releaseName string) error {
+// Delete deletes resources. The Helm uninstall API does not accept a context, so ctx is honoured by
+// bailing out before starting a teardown that is already cancelled, and an explicit Timeout bounds
+// the uninstall wait (mirroring the install/upgrade timeout) so a slow API server cannot stall it.
+func (c *Client) Delete(ctx context.Context, projectName string) error {
+	rel := ReleaseName(projectName)
+	if err := ctx.Err(); err != nil {
+		return fmt.Errorf("uninstall the '%s' release: %w", rel, err)
+	}
+
 	uninstall := action.NewUninstall(c.conf)
 	uninstall.KeepHistory = false
 	uninstall.IgnoreNotFound = true
+	uninstall.Timeout = c.opts.Timeout
 
-	if _, err := uninstall.Run(releaseName); err != nil {
-		return fmt.Errorf("uninstall the '%s' release: %v", releaseName, err)
+	if _, err := uninstall.Run(rel); err != nil {
+		return fmt.Errorf("uninstall the '%s' release: %w", rel, err)
 	}
 
-	c.logger.Info("the release deleted", "release", releaseName)
+	c.logger.Info("the release deleted", "release", rel)
 	return nil
-}
-
-// ValidateRender tests project render
-func (c *Client) ValidateRender(project *v1alpha2.Project, template *v1alpha1.ProjectTemplate) error {
-	manifests, err := c.renderTemplate(project, template)
-	if err != nil {
-		return err
-	}
-
-	// Before post-rendering: injected manifests tend to fail there too, and "post render: yaml: line
-	// 6: ..." says nothing about the parameter that caused it. Reuses the render above rather than
-	// asking for its own.
-	if err = c.ensureRenderedParametersStayValues(project, template, manifests); err != nil {
-		return err
-	}
-
-	renderer := newPostRenderer(project, nil, c.logger, false)
-	if _, err = renderer.Run(bytes.NewBufferString(manifests)); err != nil {
-		return fmt.Errorf("post render: %w", err)
-	}
-
-	return renderer.warning
-}
-
-// renderTemplate renders the project template without touching the cluster.
-func (c *Client) renderTemplate(project *v1alpha2.Project, template *v1alpha1.ProjectTemplate) (string, error) {
-	ch := buildChart(c.templates, project.Name)
-
-	values, err := chartutil.ToRenderValues(ch, buildValues(project, template), chartutil.ReleaseOptions{
-		Name:      project.Name,
-		Namespace: project.Name,
-	}, nil)
-	if err != nil {
-		return "", fmt.Errorf("render values: %w", err)
-	}
-
-	rendered, err := engine.Render(ch, values)
-	if err != nil {
-		return "", fmt.Errorf("render chart: %w", err)
-	}
-
-	buf := new(strings.Builder)
-	for _, file := range rendered {
-		buf.WriteString(file)
-	}
-
-	return buf.String(), nil
 }

@@ -105,6 +105,44 @@ func TestValidatePreflightRequiresCredentialSecret(t *testing.T) {
 	}
 }
 
+func TestValidatePreflightRejectsReservedAdditionalVMLabels(t *testing.T) {
+	t.Parallel()
+
+	for _, key := range []string{
+		"deckhouse.io/managed-by",
+		"dvp.deckhouse.io/cluster-uuid",
+		"dvp.deckhouse.io/hostname",
+	} {
+		t.Run(key, func(t *testing.T) {
+			t.Parallel()
+
+			state := validState(t)
+			state.ModuleConfig.Spec.Settings.Nodes.Parameters.AdditionalVMLabels = map[string]string{
+				key: "custom",
+			}
+
+			result := ValidatePreflight(state)
+			if !hasViolationCode(result, dvpval.CodeReservedAdditionalVMLabelKey) {
+				t.Fatalf("ValidatePreflight() = %q, want %s", result.Error(), dvpval.CodeReservedAdditionalVMLabelKey)
+			}
+		})
+	}
+}
+
+func TestValidatePreflightAllowsCustomAdditionalVMLabels(t *testing.T) {
+	t.Parallel()
+
+	state := validState(t)
+	state.ModuleConfig.Spec.Settings.Nodes.Parameters.AdditionalVMLabels = map[string]string{
+		"network-access": "bastion",
+	}
+
+	result := ValidatePreflight(state)
+	if result.HasErrors() {
+		t.Fatalf("ValidatePreflight() unexpected errors: %s", result.Error())
+	}
+}
+
 // TestValidatePreflightRequiresManagedCredentialSecret checks that an existing
 // Secret with a non-credential type is not treated as the provider credential:
 // unmanaged Secrets are filtered out by ListCredentialSecrets, so only the

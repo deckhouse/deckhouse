@@ -48,7 +48,7 @@ spec:
                   description: |
                     The TrustDomain of the remote cluster.
 
-                    A mandatory parameter, but it is not currently utilized, as Istio does not yet support mapping TrustDomain to a root Certificate Authority (CA).
+                    Deckhouse uses this value so that certificates from the remote cluster are trusted only for that remote domain, not for services in the local mesh.
                   pattern: '^[0-9a-zA-Z._-]+$'
                   x-doc-examples: ['cluster.local']
                 metadataEndpoint:
@@ -99,6 +99,7 @@ spec:
                     Readiness of metadata exchange with the remote cluster.
 
                     - `PublicMetadataExchangeReady` — remote `public.json` is reachable and valid.
+                      When `status.metadataCache.public.clusterUUID` is already set, the UUID returned by the endpoint must match it; otherwise the condition becomes `False` with reason `ClusterUUIDMismatch`.
                     - `PrivateMetadataExchangeReady` — remote private metadata is reachable and valid.
                     - `DataplaneConnectionReady` — cross-cluster dataplane health probe to the remote `alliance-healthcheck` service succeeded.
                   x-kubernetes-list-map-keys:

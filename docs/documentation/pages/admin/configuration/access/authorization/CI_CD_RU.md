@@ -183,7 +183,7 @@ d8 k --server=$KUBE_SERVER --token=$KUBE_TOKEN get ns
 Аутентификация по логину и паролю через IdP (LDAP, OIDC).
 
 {% alert level="warning" %}
-Пароль передаётся в DKP и проверяется через basic-auth-proxy/Dex.
+Пароль передаётся в DP и проверяется через basic-auth-proxy/Dex.
 {% endalert %}
 
 {% alert level="warning" %}
@@ -277,7 +277,7 @@ deploy:
 Рекомендуется для GitLab CI и GitHub Actions.
 {% endalert %}
 
-DKP/Dex не получает пароль пользователя. Способ получения `IDP_TOKEN` зависит от IdP: OIDC job token (GitLab/GitHub) или эндпоинт токена IdP (client_credentials).
+DP/Dex не получает пароль пользователя. Способ получения `IDP_TOKEN` зависит от IdP: OIDC job token (GitLab/GitHub) или эндпоинт токена IdP (client_credentials).
 
 ### Предварительные требования
 
@@ -309,6 +309,14 @@ EOF
 
 Аннотация `dexclient.deckhouse.io/allow-access-to-kubernetes` позволяет клиенту запрашивать токены с `aud=kubernetes`.
 
+{% alert level="warning" %}
+Предоставляемый таким образом доступ к Kubernetes API действует на уровне всего кластера. По этой причине для добавления аннотации или изменения её значения на `"true"` необходимы права на изменение конфигурации модуля `user-authn` — например, роль `d8:manage:permission:module:user-authn:edit`. Прав на создание DexClient в отдельном неймспейсе недостаточно: admission-контроллер отклонит запрос с сообщением, содержащим имя аннотации.
+
+Добавление аннотации ограничено независимо от указанного значения, включая `"false"`. Это необходимо для совместимости с предыдущими версиями DP, в которых доступ предоставляется при наличии аннотации независимо от её значения.
+
+Ограничение не распространяется на объект, у которого аннотация уже установлена. Удаление и повторное создание DexClient считается повторным добавлением аннотации. Поэтому GitOps-контроллеру, который пересоздаёт объект вместо его обновления, требуется право `update` на ресурс `moduleconfigs` с именем `user-authn`.
+{% endalert %}
+
 Получение client secret:
 
 ```shell
@@ -328,7 +336,7 @@ API_HOST=$(d8 k -n d8-user-authn get ingress kubernetes-api -o jsonpath='{.spec.
 
 ### Выдача RBAC
 
-DKP настраивает kube-apiserver на проверку токенов Dex. Claims `email` и `groups` из токена используются для RBAC.
+DP настраивает kube-apiserver на проверку токенов Dex. Claims `email` и `groups` из токена используются для RBAC.
 
 Набор claims, которые требуются kube-apiserver для аутентификации, зависит от конфигурации. Если kube-apiserver требует `name`, добавьте scope `profile`.
 
@@ -477,7 +485,7 @@ d8 k --server="https://${API_HOST}" --token="${DEX_TOKEN}" auth whoami -v=8
 **Dex 401** — неверные учётные данные клиента или невалидный subject token.
 
 **API 401** — токен не прошёл проверку. Проверьте:
-- Аннотация `dexclient.deckhouse.io/allow-access-to-kubernetes` на DexClient.
+- Аннотация `dexclient.deckhouse.io/allow-access-to-kubernetes` на DexClient. Если её нет, проверьте, не отклонил ли admission-контроллер запрос, который должен был её добавить, и не пересоздал ли GitOps-контроллер объект без неё. Добавить аннотацию может только субъект, которому разрешено обновлять ModuleConfig `user-authn`.
 - Scope содержит `audience:server:client_id:kubernetes` и `profile`.
 - Синхронизация времени между CI-раннером и кластером.
 

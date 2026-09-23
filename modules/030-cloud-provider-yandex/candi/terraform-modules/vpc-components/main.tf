@@ -30,6 +30,13 @@ locals {
 
   #For layout WithNATInstance we use next_hop_address and destination_prefix, for layout Standard we use created gateway
   next_hop_address = local.is_with_nat_instance ? [local.nat_instance_internal_address_calculated] : [null]
+
+  should_create_route_table = var.existing_route_table_id == ""
+
+  # Subnets created here attach to whichever route table is in play, and the module's output has to
+  # name the same one. Mirrors how existing_network_id and existing_zone_to_subnet_id_map already
+  # switch between "use what the operator gave us" and "create it".
+  route_table_id = local.should_create_route_table ? join("", yandex_vpc_route_table.kube.*.id) : var.existing_route_table_id
 }
 
 data "yandex_vpc_subnet" "kube_a" {
@@ -60,6 +67,7 @@ resource "yandex_vpc_gateway" "kube" {
 }
 
 resource "yandex_vpc_route_table" "kube" {
+  count      = local.should_create_route_table ? 1 : 0
   name       = var.prefix
   network_id = var.network_id
 
@@ -86,7 +94,7 @@ resource "yandex_vpc_subnet" "kube_a" {
   name           = "${var.prefix}-a"
   network_id     = var.network_id
   v4_cidr_blocks = [local.kube_a_v4_cidr_block]
-  route_table_id = yandex_vpc_route_table.kube.id
+  route_table_id = local.route_table_id
   zone           = "ru-central1-a"
 
   dynamic "dhcp_options" {
@@ -111,7 +119,7 @@ resource "yandex_vpc_subnet" "kube_b" {
   name           = "${var.prefix}-b"
   network_id     = var.network_id
   v4_cidr_blocks = [local.kube_b_v4_cidr_block]
-  route_table_id = yandex_vpc_route_table.kube.id
+  route_table_id = local.route_table_id
   zone           = "ru-central1-b"
 
   dynamic "dhcp_options" {
@@ -136,7 +144,7 @@ resource "yandex_vpc_subnet" "kube_e" {
   name           = "${var.prefix}-e"
   network_id     = var.network_id
   v4_cidr_blocks = [local.kube_e_v4_cidr_block]
-  route_table_id = yandex_vpc_route_table.kube.id
+  route_table_id = local.route_table_id
   zone           = "ru-central1-e"
 
   dynamic "dhcp_options" {
@@ -161,7 +169,7 @@ resource "yandex_vpc_subnet" "kube_d" {
   name           = "${var.prefix}-d"
   network_id     = var.network_id
   v4_cidr_blocks = [local.kube_d_v4_cidr_block]
-  route_table_id = yandex_vpc_route_table.kube.id
+  route_table_id = local.route_table_id
   zone           = "ru-central1-d"
 
   dynamic "dhcp_options" {

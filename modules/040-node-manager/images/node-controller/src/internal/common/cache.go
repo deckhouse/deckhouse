@@ -29,6 +29,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/cache"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
+	bootstrapv1alpha1 "github.com/deckhouse/node-controller/api/bootstrap.deckhouse.io/v1alpha1"
 	capiv1beta2 "github.com/deckhouse/node-controller/api/cluster.x-k8s.io/v1beta2"
 	mcmv1alpha1 "github.com/deckhouse/node-controller/api/machine.sapcloud.io/v1alpha1"
 )
@@ -61,10 +62,7 @@ func CacheOptions() (cache.Options, client.Options) {
 	dnsServiceReq, _ := labels.NewRequirement("k8s-app", selection.In, []string{"kube-dns", "coredns"})
 	dnsServiceSelector := labels.NewSelector().Add(*dnsServiceReq)
 
-	apiserverPodSelector := labels.SelectorFromSet(labels.Set{
-		"component": "kube-apiserver",
-		"tier":      "control-plane",
-	})
+	apiserverPodSelector := labels.SelectorFromSet(APIServerPodLabels)
 
 	cacheOpts := cache.Options{
 		DefaultTransform: func(obj interface{}) (interface{}, error) {
@@ -111,6 +109,13 @@ func CacheOptions() (cache.Options, client.Options) {
 					"d8-system": {
 						FieldSelector: fields.SelectorFromSet(fields.Set{"metadata.name": "d8-deckhouse-version-info"}),
 					},
+					// Unfiltered for the same reason: two ConfigMaps are read here —
+					// bashible-apiserver-files (the release's image digests, watched by the
+					// nodeconfig controller) and bashible-bootstrap-templates (the candi
+					// templates the bootstrap render needs, watched by the bootstrap-secrets
+					// controller) — and one field selector cannot name both. The namespace
+					// belongs to this module and holds a handful of ConfigMaps.
+					"d8-cloud-instance-manager": {},
 				},
 			},
 			// The one EndpointSlice behind the kubernetes service: it carries the master
@@ -126,6 +131,10 @@ func CacheOptions() (cache.Options, client.Options) {
 			},
 			&mcmv1alpha1.Machine{}: machineNS,
 			&capiv1beta2.Machine{}: machineNS,
+			// Cloned into the machine namespace by the CAPI MachineSet and
+			// watched by the node-bootstrap controller, so the scope cannot go
+			// stale. The CRD ships with this module, so RESTMapping resolves.
+			&bootstrapv1alpha1.NodeBootstrapConfig{}: machineNS,
 			// NOTE: ByObject keys are mapped by GVK, so a typed and an unstructured key of
 			// the same kind (e.g. corev1.Secret and an unstructured v1/Secret) COLLIDE: map
 			// iteration order decides which scope wins and the loser's reads break
@@ -136,11 +145,13 @@ func CacheOptions() (cache.Options, client.Options) {
 			// No MachineHealthCheck entry: the controller only creates it and never reads it
 			// back, so an informer would never even start. Add a scope here if that changes.
 			newUnstructured("infrastructure.cluster.x-k8s.io", "v1alpha1", "DeckhouseControlPlane"): machineNS,
-			// The NodeGroup webhook reads only ModuleConfig "global"; without this scope the
-			// lazily-created informer would watch and cache every ModuleConfig cluster-wide.
-			newUnstructured("deckhouse.io", "v1alpha1", "ModuleConfig"): {
-				Field: fields.SelectorFromSet(fields.Set{"metadata.name": "global"}),
-			},
+			// Unfiltered on purpose: field selectors have no OR, and this binary now reads two
+			// ModuleConfig objects by name — "global" (cluster prefix) and "control-plane-manager"
+			// (network CIDRs). A name FieldSelector can pin exactly one, so narrowing it would
+			// silently starve whichever consumer came second. ModuleConfig objects are small and
+			// bounded by the module count, so one unscoped informer is cheaper than a live GET on
+			// either hot path.
+			newUnstructured("deckhouse.io", "v1alpha1", "ModuleConfig"): {},
 		},
 	}
 

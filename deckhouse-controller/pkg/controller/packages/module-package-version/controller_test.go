@@ -147,9 +147,11 @@ func (suite *ControllerTestSuite) TestReconcile() {
 	suite.Run("successful reconcile with v2 package metadata", func() {
 		dc := dependency.NewMockedContainer()
 		dc.CRClient.ImageMock.Return(reconcilertest.Image(map[string]string{
-			"package.yaml":   testModuleV2YAML,
-			"version.json":   `{"version": "1.0.0"}`,
-			"changelog.yaml": "features:\n- Added new feature\nfixes:\n- Fixed a bug\n",
+			"package.yaml":          testModuleV2YAML,
+			"version.json":          `{"version": "1.0.0"}`,
+			"changelog.yaml":        "features:\n- Added new feature\nfixes:\n- Fixed a bug\n",
+			"openapi/settings.yaml": "type: object\nproperties:\n  logLevel:\n    type: string\n",
+			"openapi/values.yaml":   "type: object\nproperties:\n  internal:\n    type: object\n",
 		}), nil)
 		dc.CRClient.DigestMock.Return("sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855", nil)
 
@@ -170,9 +172,15 @@ stage: Sandbox
 requirements:
   deckhouse: ">= 1.60"
   kubernetes: ">= 1.27"
+disable:
+  confirmation: true
+  message: "Fallback disable message"
+  messages:
+    ru: "RU disable message"
 `,
-			"version.json":   `{"version": "1.0.0"}`,
-			"changelog.yaml": "features:\n- Legacy feature\n",
+			"version.json":               `{"version": "1.0.0"}`,
+			"changelog.yaml":             "features:\n- Legacy feature\n",
+			"openapi/config-values.yaml": "type: object\nproperties:\n  legacyOption:\n    type: boolean\n",
 		}), nil)
 		dc.CRClient.DigestMock.Return("sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855", nil)
 
@@ -207,6 +215,21 @@ stage: Sandbox
 		dc.CRClient.ImageMock.Return(nil, fmt.Errorf("registry error"))
 
 		suite.setupController("registry-error-reconcile.yaml", withDependencyContainer(dc))
+
+		mpv := suite.getModulePackageVersion("deckhouse-test-module-v1.0.0")
+		_, err := suite.ctr.Reconcile(ctx, suite.Request(mpv.Name, ""))
+		require.Error(suite.T(), err)
+	})
+
+	suite.Run("broken schema fails the promotion", func() {
+		dc := dependency.NewMockedContainer()
+		dc.CRClient.ImageMock.Return(reconcilertest.Image(map[string]string{
+			"package.yaml":          testModuleV2YAML,
+			"version.json":          `{"version": "1.0.0"}`,
+			"openapi/settings.yaml": "{broken",
+		}), nil)
+
+		suite.setupController("broken-schema-reconcile.yaml", withDependencyContainer(dc))
 
 		mpv := suite.getModulePackageVersion("deckhouse-test-module-v1.0.0")
 		_, err := suite.ctr.Reconcile(ctx, suite.Request(mpv.Name, ""))
@@ -305,4 +328,71 @@ func TestSetFromModuleDefinitionMapsLegacyAccessibilityToLicensing(t *testing.T)
 	assert.Equal(t, []string{"Default"}, mpv.Status.PackageMetadata.Licensing.Editions["_default"].EnabledInBundles)
 	assert.False(t, mpv.Status.PackageMetadata.Licensing.Editions["ee"].Available)
 	assert.Equal(t, []string{"Minimal", "Managed"}, mpv.Status.PackageMetadata.Licensing.Editions["ee"].EnabledInBundles)
+}
+
+func TestLegacyDisableOptionsToCR(t *testing.T) {
+	t.Run("nil and empty options yield nil", func(t *testing.T) {
+		assert.Nil(t, legacyDisableOptionsToCR(nil))
+		assert.Nil(t, legacyDisableOptionsToCR(&v1alpha1.ModuleDisableOptions{}))
+	})
+
+	t.Run("confirmation survives without messages", func(t *testing.T) {
+		opts := legacyDisableOptionsToCR(&v1alpha1.ModuleDisableOptions{Confirmation: true})
+
+		require.NotNil(t, opts)
+		assert.True(t, opts.Confirmation)
+		assert.Nil(t, opts.Messages)
+	})
+
+	t.Run("a language without its own message falls back to the deprecated one", func(t *testing.T) {
+		opts := legacyDisableOptionsToCR(&v1alpha1.ModuleDisableOptions{
+			Confirmation: true,
+			Message:      "fallback",
+			Messages:     v1alpha1.ModuleDisableMessages{Ru: "ru text"},
+		})
+
+		require.NotNil(t, opts)
+		require.NotNil(t, opts.Messages)
+		assert.Equal(t, "ru text", opts.Messages.Ru)
+		assert.Equal(t, "fallback", opts.Messages.En)
+	})
+}
+
+func TestLegacyRequirementsToCR(t *testing.T) {
+	t.Run("optional suffix routes a dependency to conditional", func(t *testing.T) {
+		req := legacyRequirementsToCR(&v1alpha1.ModuleRequirements{
+			ParentModules: map[string]string{
+				"cert-manager": ">= 1.0.0",
+				"prometheus":   ">= 2.0.0 !optional",
+			},
+		})
+
+		require.NotNil(t, req)
+		require.NotNil(t, req.Modules)
+		require.Len(t, req.Modules.Mandatory, 1)
+		assert.Equal(t, "cert-manager", req.Modules.Mandatory[0].Name)
+		require.Len(t, req.Modules.Conditional, 1)
+		assert.Equal(t, "prometheus", req.Modules.Conditional[0].Name)
+		assert.Equal(t, ">= 2.0.0", req.Modules.Conditional[0].Constraint, "the suffix is stripped")
+	})
+
+	t.Run("dependencies come out sorted by name", func(t *testing.T) {
+		req := legacyRequirementsToCR(&v1alpha1.ModuleRequirements{
+			ParentModules: map[string]string{
+				"delta": ">= 1", "alpha": ">= 1", "charlie": ">= 1", "bravo": ">= 1",
+			},
+		})
+
+		require.NotNil(t, req)
+		names := make([]string, 0, len(req.Modules.Mandatory))
+		for _, dep := range req.Modules.Mandatory {
+			names = append(names, dep.Name)
+		}
+		assert.Equal(t, []string{"alpha", "bravo", "charlie", "delta"}, names,
+			"the projection must not depend on the map iteration order")
+	})
+
+	t.Run("no requirements collapse to nil", func(t *testing.T) {
+		assert.Nil(t, legacyRequirementsToCR(&v1alpha1.ModuleRequirements{}))
+	})
 }

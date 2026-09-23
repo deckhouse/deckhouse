@@ -19,6 +19,16 @@ import "github.com/deckhouse/deckhouse/go_lib/d8env"
 // EmbeddedModulesDir is the directory with modules shipped in the deckhouse image.
 const EmbeddedModulesDir = "/deckhouse/modules"
 
+// GlobalHooksDir is the directory with the global module shipped in the deckhouse image. It
+// holds no definition file — only the hooks the binary compiles in and the openapi schemas.
+const GlobalHooksDir = "/deckhouse/global-hooks"
+
+// DummyModules are entries of the embedded modules dir that hold no module.
+var DummyModules = []string{
+	"000-common",
+	"007-registrypackages",
+}
+
 // DownloadedModulesDir is the directory holding externally downloaded modules.
 // The location is environment-configured and read through the d8env package.
 func DownloadedModulesDir() string { return d8env.GetDownloadedModulesDir() }

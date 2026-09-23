@@ -46,6 +46,11 @@ type Proxy struct {
 	cache          cache.Cache
 	logger         log.Logger
 	config         Config
+
+	// cliRepo remembers which candidate root serves the CLI artifacts for the
+	// current cluster repository; see requestCLIArtifacts. The zero value is
+	// ready to use.
+	cliRepo cliRepoMemo
 }
 
 type RPPClientBinaryServer struct {
@@ -591,12 +596,13 @@ func (h *cliHandler) serveHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-// cliClientConfig resolves the default registry config and returns a private
-// copy pointed at the CLI artifacts repository (see cliRegistryRepository)
-// with SignCheck stamped in. Callers must NOT mutate the value returned
-// directly by the getter: the watcher rewrites those entries under a write
-// lock while readers still hold a pointer to them.
-func (h *cliHandler) cliClientConfig(w http.ResponseWriter, logger log.Logger) (*registry.ClientConfig, bool) {
+// cliBaseConfig resolves the default registry config and returns a private
+// copy with SignCheck stamped in. Repository still names the cluster
+// repository: requestCLIArtifacts rewrites it to each candidate CLI artifacts
+// root in turn. Callers must NOT mutate the value returned directly by the
+// getter: the watcher rewrites those entries under a write lock while readers
+// still hold a pointer to them.
+func (h *cliHandler) cliBaseConfig(w http.ResponseWriter, logger log.Logger) (*registry.ClientConfig, bool) {
 	cfg, err := h.proxy.getter.Get(registry.DefaultRepository)
 	if err != nil {
 		logger.Errorf("get registry config: %v", err)
@@ -608,76 +614,8 @@ func (h *cliHandler) cliClientConfig(w http.ResponseWriter, logger log.Logger) (
 		return nil, false
 	}
 	local := *cfg
-	local.Repository = cliRegistryRepository(cfg.Repository)
 	local.SignCheck = h.proxy.config.SignCheck
 	return &local, true
-}
-
-// editionSegments are the per-edition segments that end a Deckhouse registry
-// repository, e.g. the "ee" of registry.deckhouse.io/deckhouse/ee.
-//
-// The list matches Edition.IsValid in the deckhouse-cli client, which decides
-// where `d8 mirror pull` reads the CLI artifacts from and where `d8 mirror
-// push` writes them. Both sides must agree, so keep them in sync.
-//
-// "cse" is absent on purpose: the CSE registry keeps the editionless
-// artifacts (the installer) under deckhouse/cse, so deckhouse/cse is a root
-// of its own, not an edition sub-path.
-var editionSegments = map[string]struct{}{
-	"ce":      {},
-	"be":      {},
-	"se":      {},
-	"se-plus": {},
-	"ee":      {},
-	"fe":      {},
-}
-
-// cliRegistryRepository returns the repository holding the Deckhouse CLI
-// artifacts: deckhouse-cli and deckhouse-cli/plugins/<name>. They are
-// published once for all editions at the registry root, one level above the
-// cluster's edition repository:
-//
-//	registry.deckhouse.io/deckhouse/ee  ->  registry.deckhouse.io/deckhouse
-//
-// A repository that does not end with an edition segment (dev registries,
-// air-gapped mirrors pushed to a plain path) is that root already.
-func cliRegistryRepository(clusterRepository string) string {
-	repo := strings.TrimRight(clusterRepository, "/")
-
-	idx := strings.LastIndex(repo, "/")
-	if idx < 0 {
-		return repo
-	}
-
-	if _, isEdition := editionSegments[repo[idx+1:]]; !isEdition {
-		return repo
-	}
-
-	root := repo[:idx]
-
-	// The root keeps the host and at least one path segment. A repository
-	// like "registry.example.com/ee" names a project that happens to be
-	// called "ee", not an edition of a Deckhouse repository, and its CLI
-	// artifacts stay where they are.
-	if countPathSegments(root) < 2 {
-		return repo
-	}
-
-	return root
-}
-
-// countPathSegments counts the non-empty slash-separated parts of repo, the
-// host included.
-func countPathSegments(repo string) int {
-	count := 0
-
-	for _, segment := range strings.Split(repo, "/") {
-		if segment != "" {
-			count++
-		}
-	}
-
-	return count
 }
 
 func (h *cliHandler) handleListTags(w http.ResponseWriter, r *http.Request, imagePath string) {
@@ -690,12 +628,14 @@ func (h *cliHandler) handleListTags(w http.ResponseWriter, r *http.Request, imag
 	logger := h.proxy.logger
 	logger.Infof("CLI list-tags for image %q from client %s", imagePath, clientIP)
 
-	cfg, ok := h.cliClientConfig(w, logger)
+	base, ok := h.cliBaseConfig(w, logger)
 	if !ok {
 		return
 	}
 
-	tags, err := h.proxy.registryClient.ListTags(r.Context(), logger, cfg, imagePath)
+	tags, _, err := requestCLIArtifacts(&h.proxy.cliRepo, logger, base, func(cfg *registry.ClientConfig) ([]string, error) {
+		return h.proxy.registryClient.ListTags(r.Context(), logger, cfg, imagePath)
+	})
 	if err != nil {
 		if errors.Is(err, registry.ErrPackageNotFound) {
 			http.Error(w, "image not found", http.StatusNotFound)
@@ -731,12 +671,20 @@ func (h *cliHandler) handleGetManifest(w http.ResponseWriter, r *http.Request, i
 	logger := h.proxy.logger
 	logger.Infof("CLI get-manifest for image %q ref %q from client %s", imagePath, ref, clientIP)
 
-	cfg, ok := h.cliClientConfig(w, logger)
+	base, ok := h.cliBaseConfig(w, logger)
 	if !ok {
 		return
 	}
 
-	manifest, mediaType, err := h.proxy.registryClient.GetRawManifest(r.Context(), logger, cfg, imagePath, ref)
+	type rawManifest struct {
+		bytes     []byte
+		mediaType string
+	}
+
+	res, _, err := requestCLIArtifacts(&h.proxy.cliRepo, logger, base, func(cfg *registry.ClientConfig) (rawManifest, error) {
+		manifest, mediaType, err := h.proxy.registryClient.GetRawManifest(r.Context(), logger, cfg, imagePath, ref)
+		return rawManifest{bytes: manifest, mediaType: mediaType}, err
+	})
 	if err != nil {
 		if errors.Is(err, registry.ErrPackageNotFound) {
 			http.Error(w, "manifest not found", http.StatusNotFound)
@@ -747,6 +695,7 @@ func (h *cliHandler) handleGetManifest(w http.ResponseWriter, r *http.Request, i
 		return
 	}
 
+	manifest, mediaType := res.bytes, res.mediaType
 	if mediaType == "" {
 		mediaType = "application/vnd.oci.image.manifest.v1+json"
 	}
@@ -774,12 +723,16 @@ func (h *cliHandler) handlePullImage(w http.ResponseWriter, r *http.Request, ima
 
 	logger.Infof("CLI pull image %q version %q platform %q from client %s", imagePath, version, platformString(platform), clientIP)
 
-	cfg, ok := h.cliClientConfig(w, logger)
+	base, ok := h.cliBaseConfig(w, logger)
 	if !ok {
 		return
 	}
 
-	manifestDigest, err := h.proxy.registryClient.ResolveTag(r.Context(), logger, cfg, imagePath, version, platform)
+	// cfg is the config of the root that resolved the tag; the package pull
+	// below must stay on the same root.
+	manifestDigest, cfg, err := requestCLIArtifacts(&h.proxy.cliRepo, logger, base, func(cfg *registry.ClientConfig) (string, error) {
+		return h.proxy.registryClient.ResolveTag(r.Context(), logger, cfg, imagePath, version, platform)
+	})
 	if err != nil {
 		if errors.Is(err, registry.ErrPackageNotFound) {
 			http.Error(w, "version not found", http.StatusNotFound)

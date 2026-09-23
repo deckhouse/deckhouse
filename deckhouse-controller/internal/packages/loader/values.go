@@ -19,9 +19,8 @@ import (
 	"os"
 	"path/filepath"
 
-	addonutils "github.com/flant/addon-operator/pkg/utils"
-
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/app"
+	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/addonutils"
 )
 
 const (
@@ -74,6 +73,27 @@ func loadValues(name, path string) (addonutils.Values, []byte, []byte, error) {
 	}
 
 	return static, config, values, nil
+}
+
+// LoadEmbeddedSchemas reads the raw settings and values schemas of an
+// embedded module, without the rest of the config LoadEmbeddedConf brings. A
+// module without the schema files yields nils. The path may name the module
+// directly or carry the on-disk weight prefix.
+func LoadEmbeddedSchemas(moduleDir string) ([]byte, []byte, error) {
+	moduleDir, err := resolveEmbeddedPath(moduleDir)
+	if err != nil {
+		return nil, nil, fmt.Errorf("resolve embedded path: %w", err)
+	}
+
+	return loadPackageSchemas(moduleDir)
+}
+
+// LoadGlobalSchemas reads the raw settings and values schemas of the global
+// module from the given global hooks dir. Unlike LoadEmbeddedSchemas it resolves
+// no weight prefix: the global dir carries none, and it holds no definition file
+// either, so the schemas are all a reader gets. A dir without them yields nils.
+func LoadGlobalSchemas(globalHooksDir string) ([]byte, []byte, error) {
+	return loadPackageSchemas(globalHooksDir)
 }
 
 // loadPackageSchemas reads settings.yaml (or legacy config-values.yaml) and

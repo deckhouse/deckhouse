@@ -13,19 +13,38 @@
     ]
   },
   "alb": {
+    "extensions": [
+      "advanced_networking",
+      "billing",
+      "cluster_union",
+      "multitenancy"
+    ],
     "editions": [
       "ce",
+      "core",
       "be",
       "se",
       "se-plus",
       "ee"
     ],
+    "editionsWithRestrictions": [
+      "core"
+    ],
     "tags": [
       "network",
+      "certified",
       "ssdlc"
     ]
   },
+  "ai-inference": {
+    "extensions": [
+      "ai_inference"
+    ]
+  },
   "ai-models": {
+    "extensions": [
+      "ai_inference"
+    ],
     "editions": [
       "ee"
     ],
@@ -37,6 +56,7 @@
   "ansible": {
     "editions": [
       "ce",
+      "core",
       "se-plus",
       "ee"
     ],
@@ -69,6 +89,10 @@
     ]
   },
   "commander": {
+    "extensions": [
+      "billing",
+      "cluster_union"
+    ],
     "editions": [
       "ce",
       "be",
@@ -93,12 +117,17 @@
       "managing",
       "application",
       "web ui",
+      "certified",
       "ssdlc"
     ]
   },
   "commander-agent": {
+    "extensions": [
+      "billing"
+    ],
     "editions": [
       "ce",
+      "core",
       "be",
       "se",
       "se-plus",
@@ -108,12 +137,14 @@
     ],
     "tags": [
       "helper",
+      "certified",
       "ssdlc"
     ]
   },
   "console": {
     "editions": [
       "ce",
+      "core",
       "be",
       "se",
       "se-plus",
@@ -121,16 +152,30 @@
       "cse-lite",
       "cse-pro"
     ],
+    "editionsWithRestrictions": [
+      "core"
+    ],
+    "editionsWithRestrictionsComments": {
+      "all": {
+        "en": "Restriction on write access to the system part",
+        "ru": "Ограничение на запись в системную часть"
+      }
+    },
     "tags": [
       "managing",
       "observability",
       "web ui",
+      "certified",
       "ssdlc"
     ]
   },
   "csi-ceph": {
+    "extensions": [
+      "storage_integration"
+    ],
     "editions": [
       "ce",
+      "core",
       "se",
       "se-plus",
       "ee",
@@ -139,10 +184,14 @@
     ],
     "tags": [
       "storage",
+      "certified",
       "ssdlc"
     ]
   },
   "csi-hpe": {
+    "extensions": [
+      "storage_integration"
+    ],
     "editions": [
       "ee"
     ],
@@ -162,6 +211,9 @@
     ]
   },
   "csi-huawei": {
+    "extensions": [
+      "storage_integration"
+    ],
     "editions": [
       "ee"
     ],
@@ -177,10 +229,14 @@
     },
     "tags": [
       "storage",
+      "certified",
       "ssdlc"
     ]
   },
   "csi-netapp": {
+    "extensions": [
+      "storage_integration"
+    ],
     "editions": [
       "ee"
     ],
@@ -196,12 +252,17 @@
     },
     "tags": [
       "storage",
+      "certified",
       "ssdlc"
     ]
   },
   "csi-nfs": {
+    "extensions": [
+      "storage_integration"
+    ],
     "editions": [
       "ce",
+      "core",
       "se",
       "se-plus",
       "ee",
@@ -210,10 +271,14 @@
     ],
     "tags": [
       "storage",
+      "certified",
       "ssdlc"
     ]
   },
   "csi-s3": {
+    "extensions": [
+      "storage_integration"
+    ],
     "editions": [
       "ee"
     ],
@@ -223,6 +288,9 @@
     ]
   },
   "csi-scsi-generic": {
+    "extensions": [
+      "storage_integration"
+    ],
     "editions": [
       "ee",
       "cse-lite",
@@ -230,10 +298,14 @@
     ],
     "tags": [
       "storage",
+      "certified",
       "ssdlc"
     ]
   },
   "csi-yadro-tatlin-unified": {
+    "extensions": [
+      "storage_integration"
+    ],
     "editions": [
       "ee",
       "cse-lite",
@@ -241,12 +313,14 @@
     ],
     "tags": [
       "storage",
+      "certified",
       "ssdlc"
     ]
   },
   "dashboard": {
     "editions": [
       "ce",
+      "core",
       "be",
       "se",
       "se-plus",
@@ -271,6 +345,7 @@
   "extended-monitoring": {
     "editions": [
       "ce",
+      "core",
       "be",
       "se",
       "se-plus",
@@ -280,12 +355,18 @@
     ],
     "tags": [
       "observability",
+      "certified",
       "ssdlc"
     ]
   },
   "ingress-nginx": {
+    "extensions": [
+      "billing",
+      "cluster_union"
+    ],
     "editions": [
       "ce",
+      "core",
       "be",
       "se",
       "se-plus",
@@ -295,11 +376,16 @@
     ],
     "tags": [
       "network",
+      "certified",
       "ssdlc"
     ]
   },
   "gpu": {
+    "extensions": [
+      "gpu_management"
+    ],
     "editions": [
+      "core",
       "ee"
     ],
     "editionsWithRestrictions": [
@@ -314,12 +400,14 @@
     },
     "tags": [
       "ml/ai",
+      "certified",
       "ssdlc"
     ]
   },
   "loki": {
     "editions": [
       "ce",
+      "core",
       "be",
       "se",
       "se-plus",
@@ -332,10 +420,14 @@
     "tags": [
       "observability",
       "logging",
+      "certified",
       "ssdlc"
     ]
   },
   "managed-cassandra": {
+    "extensions": [
+      "managed_services"
+    ],
     "editions": [
       "ee"
     ],
@@ -354,6 +446,9 @@
     ]
   },
   "managed-hive-metastore": {
+    "extensions": [
+      "managed_services"
+    ],
     "editions": [
       "ee"
     ],
@@ -363,6 +458,9 @@
     ]
   },
   "managed-kafka": {
+    "extensions": [
+      "managed_services"
+    ],
     "editions": [
       "ee"
     ],
@@ -372,6 +470,9 @@
     ]
   },
   "managed-memcached": {
+    "extensions": [
+      "managed_services"
+    ],
     "editions": [
       "ee",
       "se",
@@ -392,6 +493,9 @@
     ]
   },
   "managed-postgres": {
+    "extensions": [
+      "managed_services"
+    ],
     "editions": [
       "ee",
       "se",
@@ -414,6 +518,9 @@
     ]
   },
   "managed-trino": {
+    "extensions": [
+      "managed_services"
+    ],
     "editions": [
       "ee"
     ],
@@ -423,6 +530,9 @@
     ]
   },
   "managed-valkey": {
+    "extensions": [
+      "managed_services"
+    ],
     "editions": [
       "ee",
       "se",
@@ -436,6 +546,7 @@
   "monitoring-custom": {
     "editions": [
       "ce",
+      "core",
       "be",
       "se",
       "se-plus",
@@ -445,6 +556,7 @@
     ],
     "tags": [
       "observability",
+      "certified",
       "ssdlc"
     ]
   },
@@ -464,8 +576,12 @@
     ]
   },
   "monitoring-kubernetes": {
+    "extensions": [
+      "billing"
+    ],
     "editions": [
       "ce",
+      "core",
       "be",
       "se",
       "se-plus",
@@ -481,6 +597,7 @@
   "monitoring-ping": {
     "editions": [
       "ce",
+      "core",
       "be",
       "se",
       "se-plus",
@@ -490,12 +607,34 @@
     ],
     "tags": [
       "observability",
+      "certified",
+      "ssdlc"
+    ]
+  },
+  "monitoring-kubernetes": {
+    "extensions": [
+      "billing"
+    ],
+    "editions": [
+      "ce",
+      "core",
+      "be",
+      "se",
+      "se-plus",
+      "ee",
+      "cse-lite",
+      "cse-pro"
+    ],
+    "tags": [
+      "observability",
+      "certified",
       "ssdlc"
     ]
   },
   "log-shipper": {
     "editions": [
       "ce",
+      "core",
       "be",
       "se",
       "se-plus",
@@ -506,6 +645,7 @@
     "tags": [
       "observability",
       "logging",
+      "certified",
       "ssdlc"
     ]
   },
@@ -524,12 +664,14 @@
       }
     },
     "tags": [
-      "security"
+      "security",
+      "certified"
     ]
   },
   "observability": {
     "editions": [
       "ce",
+      "core",
       "be",
       "se",
       "se-plus",
@@ -538,6 +680,7 @@
     ],
     "tags": [
       "observability",
+      "certified",
       "ssdlc"
     ]
   },
@@ -577,6 +720,7 @@
     },
     "tags": [
       "delivery",
+      "certified",
       "ssdlc"
     ]
   },
@@ -593,8 +737,12 @@
     ]
   },
   "operator-prometheus": {
+    "extensions": [
+      "billing"
+    ],
     "editions": [
       "ce",
+      "core",
       "be",
       "se",
       "se-plus",
@@ -606,10 +754,14 @@
     "path": "/modules/operator-prometheus/",
     "tags": [
       "observability",
+      "certified",
       "ssdlc"
     ]
   },
   "operator-trivy": {
+    "extensions": [
+      "advanced_security"
+    ],
     "editions": [
       "ee",
       "cse-lite",
@@ -626,6 +778,7 @@
     ],
     "tags": [
       "registry",
+      "certified",
       "ssdlc"
     ]
   },
@@ -643,12 +796,14 @@
     "path": "/modules/prompp/",
     "tags": [
       "observability",
-      "helper"
+      "helper",
+      "certified"
     ]
   },
   "pod-reloader": {
     "editions": [
       "ce",
+      "core",
       "be",
       "se",
       "se-plus",
@@ -656,12 +811,17 @@
     ],
     "tags": [
       "core",
+      "certified",
       "ssdlc"
     ]
   },
   "prometheus": {
+    "extensions": [
+      "billing"
+    ],
     "editions": [
       "ce",
+      "core",
       "be",
       "se",
       "se-plus",
@@ -673,12 +833,14 @@
     "path": "/modules/prometheus/",
     "tags": [
       "observability",
+      "certified",
       "ssdlc"
     ]
   },
   "prometheus-metrics-adapter": {
     "editions": [
       "ce",
+      "core",
       "be",
       "se",
       "se-plus",
@@ -688,12 +850,14 @@
     ],
     "tags": [
       "observability",
+      "certified",
       "ssdlc"
     ]
   },
   "prometheus-pushgateway": {
     "editions": [
       "ce",
+      "core",
       "be",
       "se",
       "se-plus",
@@ -705,6 +869,9 @@
     ]
   },
   "runtime-audit-engine": {
+    "extensions": [
+      "advanced_security"
+    ],
     "editions": [
       "ee",
       "cse-lite",
@@ -712,6 +879,7 @@
     ],
     "tags": [
       "security",
+      "certified",
       "ssdlc"
     ]
   },
@@ -721,19 +889,50 @@
     ],
     "tags": [
       "security",
+      "certified",
       "ssdlc"
     ]
   },
   "sdn": {
-    "editions": [
-      "ee"
+    "extensions": [
+      "advanced_networking",
+      "cluster_union",
+      "multitenancy",
+      "network_security"
     ],
+    "editions": [
+      "ce",
+      "core",
+      "be",
+      "se",
+      "se-plus",
+      "ee",
+      "cse-lite",
+      "cse-pro"
+    ],
+    "editionsWithRestrictions": [
+      "ce",
+      "core",
+      "be",
+      "se",
+      "se-plus"
+    ],
+    "editionsWithRestrictionsComments": {
+      "all": {
+        "en": "Does not include integration with BGP, eBPF, VxLAN integration, Network Security, WAF, Network Policies, DLP, multitenancy",
+        "ru": "Не входит интеграция по BGP, eBPF, VxLAN, Network Security, WAF, Network Policies, DLP, мультитенантность"
+      }
+    },
     "tags": [
       "network",
+      "certified",
       "ssdlc"
     ]
   },
   "sds-elastic": {
+    "extensions": [
+      "advanced_storage"
+    ],
     "editions": [
       "ee"
     ],
@@ -743,6 +942,9 @@
     ]
   },
   "sds-local-volume": {
+    "extensions": [
+      "storage"
+    ],
     "editions": [
       "ce",
       "se",
@@ -762,10 +964,15 @@
     },
     "tags": [
       "storage",
+      "certified",
       "ssdlc"
     ]
   },
   "sds-node-configurator": {
+    "extensions": [
+      "advanced_storage",
+      "storage"
+    ],
     "editions": [
       "ce",
       "se",
@@ -776,10 +983,14 @@
     ],
     "tags": [
       "storage",
+      "certified",
       "ssdlc"
     ]
   },
   "sds-object": {
+    "extensions": [
+      "advanced_storage"
+    ],
     "editions": [
       "ee"
     ],
@@ -789,6 +1000,9 @@
     ]
   },
   "sds-replicated-volume": {
+    "extensions": [
+      "storage"
+    ],
     "editions": [
       "ce",
       "be",
@@ -813,6 +1027,7 @@
   "secrets-store-integration": {
     "editions": [
       "ce",
+      "core",
       "be",
       "se",
       "se-plus",
@@ -822,12 +1037,19 @@
     ],
     "tags": [
       "security",
+      "certified",
       "ssdlc"
     ]
   },
   "snapshot-controller": {
+    "extensions": [
+      "advanced_storage",
+      "storage",
+      "storage_integration"
+    ],
     "editions": [
       "ce",
+      "core",
       "be",
       "se",
       "se-plus",
@@ -837,6 +1059,7 @@
     ],
     "tags": [
       "storage",
+      "certified",
       "ssdlc"
     ]
   },
@@ -846,12 +1069,19 @@
     ],
     "tags": [
       "network",
+      "certified",
       "ssdlc"
     ]
   },
   "storage-foundation": {
+    "extensions": [
+      "advanced_storage",
+      "storage",
+      "storage_integration"
+    ],
     "editions": [
       "ce",
+      "core",
       "be",
       "se",
       "se-plus",
@@ -863,17 +1093,30 @@
     ]
   },
   "storage-volume-data-manager": {
+    "extensions": [
+      "advanced_storage",
+      "storage",
+      "storage_integration"
+    ],
     "editions": [
+      "core",
       "ee"
     ],
     "tags": [
       "storage",
+      "certified",
       "ssdlc"
     ]
   },
   "state-snapshotter": {
+    "extensions": [
+      "advanced_storage",
+      "storage",
+      "storage_integration"
+    ],
     "editions": [
       "ce",
+      "core",
       "be",
       "se",
       "se-plus",
@@ -885,8 +1128,21 @@
     ]
   },
   "stronghold": {
+    "extensions": [
+      "secrets_management"
+    ],
+    "extensionsWithRestrictions": [
+      "secrets_management"
+    ],
+    "extensionsWithRestrictionsComments": {
+      "secrets_management": {
+        "en": "EE functionality only",
+        "ru": "Только функциональность, доступная в EE"
+      }
+    },
     "editionsWithRestrictions": [
       "ce",
+      "core",
       "be",
       "se",
       "se-plus",
@@ -909,6 +1165,7 @@
   "upmeter": {
     "editions": [
       "ce",
+      "core",
       "be",
       "se",
       "se-plus",
@@ -920,21 +1177,25 @@
     "path": "/modules/upmeter/",
     "tags": [
       "observability",
+      "certified",
       "ssdlc"
     ]
   },
   "virtualization": {
     "editions": [
       "ce",
+      "core",
       "se-plus",
       "ee",
       "cse-pro"
     ],
     "editionsWithRestrictions": [
-      "ce"
+      "ce",
+      "core"
     ],
     "tags": [
       "virtualization",
+      "certified",
       "ssdlc"
     ]
   }

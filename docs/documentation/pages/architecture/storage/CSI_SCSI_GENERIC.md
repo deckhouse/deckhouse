@@ -2,7 +2,7 @@
 title: Csi-scsi-generic module
 permalink: en/architecture/storage/external/csi-scsi-generic.html
 search: csi-scsi-generic, iscsi
-description: Architecture of the csi-scsi-generic module in Deckhouse Kubernetes Platform.
+description: Architecture of the csi-scsi-generic module in Deckhouse Platform.
 ---
 
 The [`csi-scsi-generic`](/modules/csi-scsi-generic/) module is designed to manage volumes on storage systems connected over SCSI. It enables creating StorageClass resources in Kubernetes using the SCSIStorageClass resource and supports both iSCSI and Fibre Channel (FC) technologies.
@@ -18,7 +18,7 @@ The following simplifications are made in the diagram:
 * Pods may run multiple replicas. However, each pod is shown as a single replica in the diagram.
 {% endalert %}
 
-The Level 2 C4 architecture of the [`csi-scsi-generic`](/modules/csi-scsi-generic/) module and its interactions with other components of Deckhouse Kubernetes Platform (DKP) are shown in the following diagram:
+The Level 2 C4 architecture of the [`csi-scsi-generic`](/modules/csi-scsi-generic/) module and its interactions with other components of Deckhouse Platform (DP) are shown in the following diagram:
 
 ![csi-scsi-generic module architecture](../../../images/architecture/storage/c4-l2-csi-scsi-generic.png)
 

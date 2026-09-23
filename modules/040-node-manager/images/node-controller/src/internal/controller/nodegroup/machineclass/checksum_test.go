@@ -96,6 +96,31 @@ func TestRenderChecksum_AWSDefaultDiskSizeExcluded(t *testing.T) {
 	assert.Equal(t, b, a, "default diskSizeGb=20 is excluded, so checksum must not change")
 }
 
+func TestRenderChecksum_AWSIMDSv2Included(t *testing.T) {
+	tmpl, err := os.ReadFile(awsChecksumTemplatePath)
+	require.NoError(t, err)
+
+	nodeGroup := map[string]interface{}{
+		"instanceClass": map[string]interface{}{"instanceType": "m5.large"},
+	}
+	cloudProvider := map[string]interface{}{
+		"aws": map[string]interface{}{
+			"imdsv2": true,
+		},
+	}
+
+	before, err := RenderChecksum(tmpl, nodeGroup, nil)
+	require.NoError(t, err)
+	after, err := RenderChecksum(tmpl, nodeGroup, cloudProvider)
+	require.NoError(t, err)
+
+	assert.NotEqual(t, before, after, "enabling IMDSv2 must roll ephemeral nodes")
+	assert.Equal(t, expectedChecksum(t, map[string]interface{}{
+		"instanceType": "m5.large",
+		"imdsv2":       true,
+	}), after)
+}
+
 func TestChecksumDependsOnlyOnInstanceClassAndRollout(t *testing.T) {
 	awsTmpl, err := os.ReadFile(awsChecksumTemplatePath)
 	require.NoError(t, err)

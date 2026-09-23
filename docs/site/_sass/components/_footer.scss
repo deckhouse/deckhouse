@@ -15,20 +15,15 @@ body {
 .content {
   min-width: 250px;
   flex: 1 0 auto;
+
+  @include breakpoints.max-w(s) {
+    overflow-y: hidden;
+  }
 }
 
 .footer {
   flex-shrink: 0;
   background: variables.$color-main;
-  //font-size: $font-size-small;
-
-  //&__content {
-  //  display: flex;
-  //  flex-direction: row;
-  //  justify-content: flex-start;
-  //  align-items: flex-start;
-  //  padding: 50px 0;
-  //}
 
   &__contact-info {
     margin-top: 20px;

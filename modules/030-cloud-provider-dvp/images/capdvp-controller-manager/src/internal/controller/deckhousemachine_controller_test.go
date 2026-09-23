@@ -25,9 +25,11 @@ import (
 	. "github.com/onsi/gomega"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/utils/ptr"
+	clusterv1b2 "sigs.k8s.io/cluster-api/api/core/v1beta2"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
 	infrastructurev1alpha1 "cluster-api-provider-dvp/api/v1alpha1"
@@ -259,4 +261,57 @@ func TestDiskMigrationStartedAnnotationKey(t *testing.T) {
 	}, "worker-1-boot")
 	require.True(t, ok)
 	assert.Equal(t, 2026, startedAt.Year())
+}
+
+// The Machine watch exists for exactly one field. A predicate that lets the
+// constant CAPI status rewrites through re-runs a pass that talks to the DVP
+// API on every one of them; a predicate that misses the dataSecretName change
+// parks the DeckhouseMachine until the requeue backstop.
+func TestDataSecretNameChanged(t *testing.T) {
+	machine := func(secretName *string, phase string) *clusterv1b2.Machine {
+		m := &clusterv1b2.Machine{}
+		m.Spec.Bootstrap.DataSecretName = secretName
+		m.Status.Phase = phase
+		return m
+	}
+
+	tests := []struct {
+		name   string
+		before *clusterv1b2.Machine
+		after  *clusterv1b2.Machine
+		want   bool
+	}{
+		{
+			name:   "the bootstrap provider filled the secret in",
+			before: machine(nil, ""),
+			after:  machine(ptr.To("worker-abc-bootstrap"), ""),
+			want:   true,
+		},
+		{
+			name:   "the secret was replaced",
+			before: machine(ptr.To("old"), ""),
+			after:  machine(ptr.To("new"), ""),
+			want:   true,
+		},
+		{
+			name:   "a status-only rewrite is noise",
+			before: machine(ptr.To("worker-abc-bootstrap"), "Provisioning"),
+			after:  machine(ptr.To("worker-abc-bootstrap"), "Running"),
+			want:   false,
+		},
+		{
+			name:   "nothing set on either side",
+			before: machine(nil, "Pending"),
+			after:  machine(nil, "Provisioning"),
+			want:   false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := dataSecretNameChanged(tt.before, tt.after); got != tt.want {
+				t.Fatalf("dataSecretNameChanged() = %v, want %v", got, tt.want)
+			}
+		})
+	}
 }

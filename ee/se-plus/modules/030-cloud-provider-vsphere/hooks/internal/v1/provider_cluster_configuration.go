@@ -36,6 +36,7 @@ type VsphereProvider struct {
 	Username *string `json:"username,omitempty" yaml:"username,omitempty"`
 	Password *string `json:"password,omitempty" yaml:"password,omitempty"`
 	Insecure *bool   `json:"insecure,omitempty" yaml:"insecure,omitempty"`
+	CaBundle *string `json:"caBundle,omitempty" yaml:"caBundle,omitempty"`
 }
 
 type VsphereMasterNodeGroup struct {

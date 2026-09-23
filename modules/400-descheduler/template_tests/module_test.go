@@ -138,6 +138,15 @@ internal:
 			Expect(args).To(ContainSubstring("15m"))
 		})
 
+		It("Should always enable the EvictionsInBackground feature gate", func() {
+			Expect(f.RenderError).ShouldNot(HaveOccurred())
+			deploy := f.KubernetesResource("Deployment", "d8-descheduler", "descheduler")
+			Expect(deploy.Exists()).To(BeTrue())
+			args := deploy.Field("spec.template.spec.containers.0.args").String()
+			Expect(args).To(ContainSubstring("--feature-gates"))
+			Expect(args).To(ContainSubstring("EvictionsInBackground=true"))
+		})
+
 		It("Everything must render properly", func() {
 			Expect(f.RenderError).ShouldNot(HaveOccurred())
 			cm := f.KubernetesResource("ConfigMap", "d8-descheduler", "descheduler-policy")

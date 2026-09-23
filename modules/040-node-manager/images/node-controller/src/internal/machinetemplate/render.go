@@ -41,8 +41,7 @@ type RenderContext struct {
 	Zone string
 	// NodeGroupName is needed for tags and labels inside spec, nothing else.
 	NodeGroupName string
-	ClusterUUID   string
-	PodSubnet     string
+	Cluster       ClusterFacts
 }
 
 // toMap builds the template context, handing the template its own copy of the two maps.
@@ -56,7 +55,7 @@ type RenderContext struct {
 // mutation would leak across zones.
 //
 // Rendering happens only when a generation is created, so the copy is not on any hot path.
-func (c RenderContext) toMap() (map[string]any, error) {
+func (c RenderContext) ToMap() (map[string]any, error) {
 	instanceClass, err := deepCopy(c.InstanceClass)
 	if err != nil {
 		return nil, fmt.Errorf("copy InstanceClass for rendering: %w", err)
@@ -71,10 +70,7 @@ func (c RenderContext) toMap() (map[string]any, error) {
 		"provider":      provider,
 		"zone":          c.Zone,
 		"nodeGroup":     map[string]any{"name": c.NodeGroupName},
-		"cluster": map[string]any{
-			"uuid":      c.ClusterUUID,
-			"podSubnet": c.PodSubnet,
-		},
+		"cluster":       c.Cluster.ToMap(),
 	}, nil
 }
 
@@ -93,13 +89,45 @@ func deepCopy(m map[string]any) (map[string]any, error) {
 	return out, nil
 }
 
+// parseNamedTemplate uses the restricted function set and fails on missing context keys.
+func parseNamedTemplate(name, text string) (*template.Template, error) {
+	return template.
+		New(name).
+		Funcs(sandboxFuncMap).
+		Option("missingkey=error").
+		Parse(text)
+}
+
+// ParseSandboxed compiles a provider template with the restricted function set.
+func ParseSandboxed(name, text string) (*template.Template, error) {
+	tmpl, err := parseNamedTemplate(name, text)
+	if err != nil {
+		return nil, fmt.Errorf("parse %s: %w", name, err)
+	}
+	return tmpl, nil
+}
+
+// ExecuteSandboxed renders a compiled provider template on a copy of its context.
+func ExecuteSandboxed(tmpl *template.Template, context map[string]any) ([]byte, error) {
+	contextCopy, err := deepCopy(context)
+	if err != nil {
+		return nil, fmt.Errorf("copy %s context: %w", tmpl.Name(), err)
+	}
+
+	var buf bytes.Buffer
+	if err := tmpl.Execute(&buf, contextCopy); err != nil {
+		return nil, fmt.Errorf("render %s: %w", tmpl.Name(), err)
+	}
+
+	return buf.Bytes(), nil
+}
+
 func parseTemplate(text string) (*template.Template, error) {
-	// missingkey=error turns a typo in a context path into a loud render failure. Under the v1
-	// default a missing path rendered "<no value>" into the object and reached the cloud.
-	t, err := template.New("machine-template").Funcs(sandboxFuncMap).Option("missingkey=error").Parse(text)
+	t, err := parseNamedTemplate("machine-template", text)
 	if err != nil {
 		return nil, fmt.Errorf("parse machine template: %w", err)
 	}
+
 	return t, nil
 }
 
@@ -111,18 +139,18 @@ func parseTemplate(text string) (*template.Template, error) {
 // rejected instead of being silently overwritten — under v1 that freedom is what left dead
 // `helm.sh/resource-policy: keep` annotations and hardcoded namespaces in every provider file.
 func Render(c *Contract, rc RenderContext) (map[string]any, error) {
-	context, err := rc.toMap()
+	context, err := rc.ToMap()
 	if err != nil {
 		return nil, err
 	}
 
-	var buf bytes.Buffer
-	if err := c.parsed.Execute(&buf, context); err != nil {
-		return nil, fmt.Errorf("render machine template: %w", err)
+	rendered, err := ExecuteSandboxed(c.parsed, context)
+	if err != nil {
+		return nil, err
 	}
 
 	obj := map[string]any{}
-	if err := yaml.Unmarshal(buf.Bytes(), &obj); err != nil {
+	if err := yaml.Unmarshal(rendered, &obj); err != nil {
 		return nil, fmt.Errorf("parse rendered machine template: %w", err)
 	}
 
@@ -155,18 +183,18 @@ func ApplyMachineDeploymentFields(spec map[string]any, c *Contract, rc RenderCon
 	if len(c.MachineDeployment.parsedFields) == 0 {
 		return nil
 	}
-	context, err := rc.toMap()
+	context, err := rc.ToMap()
 	if err != nil {
 		return err
 	}
 
 	for path, tmpl := range c.MachineDeployment.parsedFields {
-		var buf bytes.Buffer
-		if err := tmpl.Execute(&buf, context); err != nil {
+		rendered, err := ExecuteSandboxed(tmpl, context)
+		if err != nil {
 			return fmt.Errorf("render machineDeployment.additionalFields[%s]: %w", path, err)
 		}
 		fields := append([]string{"template", "spec"}, strings.Split(path, ".")...)
-		if err := unstructured.SetNestedField(spec, buf.String(), fields...); err != nil {
+		if err := unstructured.SetNestedField(spec, string(rendered), fields...); err != nil {
 			return fmt.Errorf("set MachineDeployment field %s: %w", path, err)
 		}
 	}

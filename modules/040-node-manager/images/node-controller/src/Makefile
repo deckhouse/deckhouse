@@ -23,8 +23,17 @@ GOTEST_JSON_ENVTEST ?= /tmp/node-controller-envtest.json
 # envtest integration suites are named Test<Name>ControllerEnvtest; this regex splits them from units.
 ENVTEST_RUN_REGEX ?= ControllerEnvtest$$
 
+# MODULE_DIR is the node-manager module root this source tree lives under; the
+# CRDs it ships are four levels up from here.
+MODULE_DIR ?= $(abspath $(dir $(lastword $(MAKEFILE_LIST)))/../../..)
+
 # Go tools
 CONTROLLER_GEN = $(GOBIN)/controller-gen
+CRD_ENRICHER = $(GOBIN)/crd-enricher
+CRD_ENRICHER_SRC = $(CURDIR)/../../../../../pkg/crd-enricher
+
+# Pinned so the same types always render the same CRD, whatever is installed.
+CONTROLLER_TOOLS_VERSION ?= v0.19.0
 CONVERSION_GEN = $(GOBIN)/conversion-gen
 GOFUMPT = $(GOBIN)/gofumpt
 
@@ -117,11 +126,33 @@ generate-conversion: conversion-gen ## Generate conversion functions.
 manifests: controller-gen ## Generate WebhookConfiguration, ClusterRole and CustomResourceDefinition objects.
 	$(CONTROLLER_GEN) rbac:roleName=node-controller crd webhook paths="./..." output:crd:artifacts:config=config/crd/bases
 
+# The module ships this one CRD from crds/, not from config/crd/bases: it is the
+# only API group here whose types are also the on-node agent's, so the schema has
+# to be regenerated whenever they change instead of being edited by hand.
+NODECONFIG_CRD ?= $(MODULE_DIR)/crds/nodeconfig.yaml
+
+.PHONY: nodeconfig-crd
+nodeconfig-crd: controller-gen crd-enricher ## Regenerate modules/040-node-manager/crds/nodeconfig.yaml from the internal.deckhouse.io types.
+	@set -e; \
+		tmp=$$(mktemp -d); \
+		trap 'rm -rf $$tmp' EXIT; \
+		$(CONTROLLER_GEN) crd paths=./api/internal.deckhouse.io/... output:crd:dir=$$tmp; \
+		$(CRD_ENRICHER) paths=./api/internal.deckhouse.io/... crds=$$tmp dir=$(CURDIR); \
+		mv $$tmp/internal.deckhouse.io_nodeconfigs.yaml $(NODECONFIG_CRD)
+	@echo "==> [nodeconfig-crd] wrote $(NODECONFIG_CRD)"
+
 ##@ Tools
 
 .PHONY: controller-gen
 controller-gen: ## Download controller-gen locally if necessary.
-	@test -f $(CONTROLLER_GEN) || GOBIN=$(GOBIN) go install sigs.k8s.io/controller-tools/cmd/controller-gen@latest
+	@test -f $(CONTROLLER_GEN) || GOBIN=$(GOBIN) go install sigs.k8s.io/controller-tools/cmd/controller-gen@$(CONTROLLER_TOOLS_VERSION)
+
+# Built from this branch rather than installed by version: the released binary
+# has no way to turn its placeholder examples off, and it is a separate module,
+# so the build runs from within its directory.
+.PHONY: crd-enricher
+crd-enricher: ## Build crd-enricher, which writes the schema keys controller-gen cannot emit.
+	@cd $(CRD_ENRICHER_SRC) && go build -o $(CRD_ENRICHER) ./cmd/crd-enricher
 
 .PHONY: conversion-gen
 conversion-gen: ## Download conversion-gen locally if necessary.

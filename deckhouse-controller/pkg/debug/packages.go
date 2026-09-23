@@ -22,7 +22,7 @@ import (
 
 	"github.com/spf13/cobra"
 
-	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/runtime/debug"
+	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/envconfig"
 )
 
 var packagesDebugSocket = "/tmp/deckhouse-debug.socket"
@@ -36,24 +36,12 @@ func DefinePackagesCommands(rootCmd *cobra.Command) {
 
 	{
 		var packageName string
+
 		dumpCmd := &cobra.Command{
 			Use:   "dump",
 			Short: "Dump all/specific packages state from memory.",
 			RunE: func(_ *cobra.Command, _ []string) error {
-				client, err := debug.NewClient(packagesDebugSocket)
-				if err != nil {
-					return err
-				}
-				defer client.Close()
-
-				ctx := context.Background()
-				out, err := client.Get(ctx, withQuery("packages/dump", "name", packageName))
-				if err != nil {
-					return err
-				}
-				fmt.Println(string(out))
-
-				return nil
+				return printResponse(namedURL("api/v1/packages/dump", packageName))
 			},
 		}
 		dumpCmd.Flags().StringVar(&packageName, "name", "", "Filter by package name.")
@@ -69,20 +57,7 @@ func DefinePackagesCommands(rootCmd *cobra.Command) {
 			Use:   "dump",
 			Short: "Dump the global module state from memory.",
 			RunE: func(_ *cobra.Command, _ []string) error {
-				client, err := debug.NewClient(packagesDebugSocket)
-				if err != nil {
-					return err
-				}
-				defer client.Close()
-
-				ctx := context.Background()
-				out, err := client.Get(ctx, "packages/global/dump")
-				if err != nil {
-					return err
-				}
-				fmt.Println(string(out))
-
-				return nil
+				return printResponse(yamlURL("api/v1/packages/global/dump"))
 			},
 		}
 		definePackagesDebugSocketFlag(dumpCmd)
@@ -94,24 +69,12 @@ func DefinePackagesCommands(rootCmd *cobra.Command) {
 		packagesCmd.AddCommand(schedulerCmd)
 
 		var packageName string
+
 		dumpCmd := &cobra.Command{
 			Use:   "dump",
 			Short: "Dump all scheduler node state from memory.",
 			RunE: func(_ *cobra.Command, _ []string) error {
-				client, err := debug.NewClient(packagesDebugSocket)
-				if err != nil {
-					return err
-				}
-				defer client.Close()
-
-				ctx := context.Background()
-				out, err := client.Get(ctx, withQuery("packages/scheduler/dump", "name", packageName))
-				if err != nil {
-					return err
-				}
-				fmt.Println(string(out))
-
-				return nil
+				return printResponse(namedURL("api/v1/scheduler/dump", packageName))
 			},
 		}
 		dumpCmd.Flags().StringVar(&packageName, "name", "", "Filter by package name.")
@@ -124,24 +87,12 @@ func DefinePackagesCommands(rootCmd *cobra.Command) {
 		packagesCmd.AddCommand(queueCmd)
 
 		var packageName string
+
 		dumpCmd := &cobra.Command{
 			Use:   "dump",
 			Short: "Dump all package queues with tasks.",
 			RunE: func(_ *cobra.Command, _ []string) error {
-				client, err := debug.NewClient(packagesDebugSocket)
-				if err != nil {
-					return err
-				}
-				defer client.Close()
-
-				ctx := context.Background()
-				out, err := client.Get(ctx, withQuery("packages/queues/dump", "name", packageName))
-				if err != nil {
-					return err
-				}
-				fmt.Println(string(out))
-
-				return nil
+				return printResponse(namedURL("api/v1/queues/dump", packageName))
 			},
 		}
 		dumpCmd.Flags().StringVar(&packageName, "name", "", "Filter by package name.")
@@ -155,20 +106,8 @@ func DefinePackagesCommands(rootCmd *cobra.Command) {
 			Short: "Render package Helm templates.",
 			Args:  cobra.ExactArgs(1),
 			RunE: func(_ *cobra.Command, args []string) error {
-				client, err := debug.NewClient(packagesDebugSocket)
-				if err != nil {
-					return err
-				}
-				defer client.Close()
-
-				ctx := context.Background()
-				out, err := client.Get(ctx, "packages/render", args[0])
-				if err != nil {
-					return err
-				}
-				fmt.Println(string(out))
-
-				return nil
+				// Rendered manifests are YAML already, so this route serves no other format.
+				return printResponse("api/v1/packages/render/" + args[0])
 			},
 		}
 		definePackagesDebugSocketFlag(renderCmd)
@@ -181,20 +120,7 @@ func DefinePackagesCommands(rootCmd *cobra.Command) {
 			Short: "Dump hook snapshots for a package.",
 			Args:  cobra.ExactArgs(1),
 			RunE: func(_ *cobra.Command, args []string) error {
-				client, err := debug.NewClient(packagesDebugSocket)
-				if err != nil {
-					return err
-				}
-				defer client.Close()
-
-				ctx := context.Background()
-				out, err := client.Get(ctx, "packages/snapshots", args[0])
-				if err != nil {
-					return err
-				}
-				fmt.Println(string(out))
-
-				return nil
+				return printResponse(yamlURL("api/v1/packages/snapshots/" + args[0]))
 			},
 		}
 		definePackagesDebugSocketFlag(snapshotsCmd)
@@ -204,17 +130,42 @@ func DefinePackagesCommands(rootCmd *cobra.Command) {
 
 func definePackagesDebugSocketFlag(cmd *cobra.Command) {
 	defaultSocket := packagesDebugSocket
-	if v, ok := os.LookupEnv("PACKAGES_DEBUG_UNIX_SOCKET"); ok && v != "" {
+	if v, ok := os.LookupEnv(envconfig.EnvPackagesDebugUnixSocket); ok && v != "" {
 		defaultSocket = v
 		packagesDebugSocket = v
 	}
 	cmd.Flags().StringVar(&packagesDebugSocket, "debug-unix-socket", defaultSocket, "Path to Unix socket for packages debug endpoint.")
 }
 
-// withQuery appends a query parameter to a path if value is non-empty.
-func withQuery(path, key, value string) string {
-	if value == "" {
-		return path
+// printResponse requests path over the debug socket and prints what comes back.
+func printResponse(path string) error {
+	client, err := newSocketClient(packagesDebugSocket)
+	if err != nil {
+		return err
 	}
-	return path + "?" + url.QueryEscape(key) + "=" + url.QueryEscape(value)
+	defer client.Close()
+
+	out, err := client.Get(context.Background(), path)
+	if err != nil {
+		return err
+	}
+
+	fmt.Println(string(out))
+
+	return nil
+}
+
+// yamlURL asks the API for YAML: the CLI prints to a terminal, while the API
+// answers JSON by default.
+func yamlURL(path string) string {
+	return path + "?output=yaml"
+}
+
+// namedURL narrows a dump to a single package; an empty name means every package.
+func namedURL(path, name string) string {
+	if name == "" {
+		return yamlURL(path)
+	}
+
+	return yamlURL(path) + "&" + url.Values{"name": {name}}.Encode()
 }

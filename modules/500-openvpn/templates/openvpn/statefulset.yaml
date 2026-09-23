@@ -305,11 +305,11 @@ spec:
         {{- if ne $externalHost "" }}
           {{- if .Values.openvpn.udpEnabled }}
         - --ovpn.server
-        - {{ $externalHost }}:{{ .Values.openvpn.externalPort | default 5416 }}:udp
+        - "{{ $externalHost }}:{{ .Values.openvpn.externalPort | default 5416 }}:udp"
           {{- end }}
           {{- if .Values.openvpn.tcpEnabled }}
         - --ovpn.server
-        - {{ $externalHost }}:{{ .Values.openvpn.externalPort | default 5416 }}:tcp
+        - "{{ $externalHost }}:{{ .Values.openvpn.externalPort | default 5416 }}:tcp"
           {{- end }}
         {{- end }}
         env:
@@ -444,7 +444,7 @@ spec:
       name: certs
     spec:
       accessModes: ["ReadWriteOnce"]
-      storageClassName: {{ $storageClass }}
+      storageClassName: {{ $storageClass | quote }}
       resources:
         requests:
           storage: 256Mi

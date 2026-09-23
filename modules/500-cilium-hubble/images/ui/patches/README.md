@@ -13,7 +13,9 @@ Hubble UI:
 
 ## 002--gomod-gosum.backend.patch
 
-Updated go dependencies to fix vulnerabilities.
+Updated go dependencies to fix vulnerabilities, e.g.:
+
+- `github.com/cilium/ebpf` -> `v0.22.0` (CVE-2026-10722)
 
 ## 003--auth.backend.patch
 

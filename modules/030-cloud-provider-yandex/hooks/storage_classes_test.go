@@ -37,10 +37,101 @@ global:
   discovery: {}
 cloudProviderYandex:
   internal: {}
-  storageClass:
-    exclude:
-    - .*-hdd
-    - bar
+  storage:
+    parameters:
+      excludedStorageClasses:
+      - .*-hdd
+      - bar
+`
+
+		initValuesStringExcludeExactSSD = `
+global:
+  discovery: {}
+cloudProviderYandex:
+  internal: {}
+  storage:
+    parameters:
+      excludedStorageClasses:
+      - network-ssd
+`
+
+		initValuesStringExcludeSSDPrefix = `
+global:
+  discovery: {}
+cloudProviderYandex:
+  internal: {}
+  storage:
+    parameters:
+      excludedStorageClasses:
+      - network-ssd.*
+`
+
+		initValuesStringProvision = `
+global:
+  discovery: {}
+cloudProviderYandex:
+  internal: {}
+  storage:
+    parameters:
+      provisionedStorageClasses:
+      - name: network-ssd-64k
+        type: network-ssd
+        blockSize: 64Ki
+      - name: network-ssd-io-m3
+        type: network-ssd-io-m3
+        blockSize: 128Ki
+      excludedStorageClasses:
+      - .*-hdd
+`
+
+		initValuesStringProvisionOverride = `
+global:
+  discovery: {}
+cloudProviderYandex:
+  internal: {}
+  storage:
+    parameters:
+      provisionedStorageClasses:
+      - name: network-ssd
+        type: network-ssd
+        blockSize: 64Ki
+`
+
+		initValuesStringProvisionExcluded = `
+global:
+  discovery: {}
+cloudProviderYandex:
+  internal: {}
+  storage:
+    parameters:
+      provisionedStorageClasses:
+      - name: network-ssd-64k
+        type: network-ssd
+        blockSize: 64Ki
+      excludedStorageClasses:
+      - network-ssd.*
+`
+
+		modifiedStorageClass = `
+---
+apiVersion: storage.k8s.io/v1
+kind: StorageClass
+metadata:
+  name: network-ssd-64k
+  labels:
+    heritage: deckhouse
+parameters:
+  typeID: network-ssd
+  blockSize: 32Ki
+---
+apiVersion: storage.k8s.io/v1
+kind: StorageClass
+metadata:
+  name: network-ssd
+  labels:
+    heritage: deckhouse
+parameters:
+  typeID: network-ssd
 `
 	)
 
@@ -65,12 +156,12 @@ cloudProviderYandex:
 	"type": "network-ssd"
   },
   {
-	"name": "network-ssd-nonreplicated",
-	"type": "network-ssd-nonreplicated"
-  },
-  {
 	"name": "network-ssd-io-m3",
 	"type": "network-ssd-io-m3"
+  },
+  {
+	"name": "network-ssd-nonreplicated",
+	"type": "network-ssd-nonreplicated"
   }
 ]
 `))
@@ -94,12 +185,161 @@ cloudProviderYandex:
 	"type": "network-ssd"
   },
   {
+	"name": "network-ssd-io-m3",
+	"type": "network-ssd-io-m3"
+  },
+  {
 	"name": "network-ssd-nonreplicated",
 	"type": "network-ssd-nonreplicated"
+  }
+]
+`))
+		})
+	})
+
+	x := HookExecutionConfigInit(initValuesStringExcludeExactSSD, `{}`)
+
+	Context("Cluster with an exact name in excludedStorageClasses", func() {
+		BeforeEach(func() {
+			x.BindingContexts.Set(x.GenerateBeforeHelmContext())
+			x.RunHook()
+		})
+
+		// Patterns are anchored, so `network-ssd` matches the whole name only and does not
+		// touch `network-ssd-nonreplicated`/`network-ssd-io-m3`.
+		It("Should exclude only the storageClass with exactly that name", func() {
+			Expect(x).To(ExecuteSuccessfully())
+			Expect(x.ValuesGet("cloudProviderYandex.internal.storageClasses").String()).To(MatchJSON(`
+[
+  {
+	"name": "network-hdd",
+	"type": "network-hdd"
   },
   {
 	"name": "network-ssd-io-m3",
 	"type": "network-ssd-io-m3"
+  },
+  {
+	"name": "network-ssd-nonreplicated",
+	"type": "network-ssd-nonreplicated"
+  }
+]
+`))
+		})
+	})
+
+	pr := HookExecutionConfigInit(initValuesStringExcludeSSDPrefix, `{}`)
+
+	Context("Cluster with a prefix pattern in excludedStorageClasses", func() {
+		BeforeEach(func() {
+			pr.BindingContexts.Set(pr.GenerateBeforeHelmContext())
+			pr.RunHook()
+		})
+
+		It("Should exclude every storageClass matching the pattern", func() {
+			Expect(pr).To(ExecuteSuccessfully())
+			Expect(pr.ValuesGet("cloudProviderYandex.internal.storageClasses").String()).To(MatchJSON(`
+[
+  {
+	"name": "network-hdd",
+	"type": "network-hdd"
+  }
+]
+`))
+		})
+	})
+
+	p := HookExecutionConfigInit(initValuesStringProvision, `{}`)
+
+	Context("Cluster with provisioned storageClasses", func() {
+		BeforeEach(func() {
+			p.BindingContexts.Set(p.GenerateBeforeHelmContext(), p.KubeStateSet(modifiedStorageClass))
+			p.RunHook()
+		})
+
+		It("Should add the provisioned storageClasses and override the default ones with the same name", func() {
+			Expect(p).To(ExecuteSuccessfully())
+			Expect(p.ValuesGet("cloudProviderYandex.internal.storageClasses").String()).To(MatchJSON(`
+[
+  {
+	"name": "network-ssd",
+	"type": "network-ssd"
+  },
+  {
+	"name": "network-ssd-64k",
+	"type": "network-ssd",
+	"blockSize": "64Ki"
+  },
+  {
+	"name": "network-ssd-io-m3",
+	"type": "network-ssd-io-m3",
+	"blockSize": "128Ki"
+  },
+  {
+	"name": "network-ssd-nonreplicated",
+	"type": "network-ssd-nonreplicated"
+  }
+]
+`))
+		})
+
+		It("Should delete the storageClass with changed parameters", func() {
+			Expect(p).To(ExecuteSuccessfully())
+			Expect(p.KubernetesGlobalResource("StorageClass", "network-ssd-64k").Exists()).To(BeFalse())
+			Expect(p.KubernetesGlobalResource("StorageClass", "network-ssd").Exists()).To(BeTrue())
+		})
+	})
+
+	o := HookExecutionConfigInit(initValuesStringProvisionOverride, `{}`)
+
+	Context("Cluster with a default storageClass overridden by provision", func() {
+		BeforeEach(func() {
+			o.BindingContexts.Set(o.GenerateBeforeHelmContext())
+			o.RunHook()
+		})
+
+		It("Should override only the storageClass with exactly the same name", func() {
+			Expect(o).To(ExecuteSuccessfully())
+			Expect(o.ValuesGet("cloudProviderYandex.internal.storageClasses").String()).To(MatchJSON(`
+[
+  {
+	"name": "network-hdd",
+	"type": "network-hdd"
+  },
+  {
+	"name": "network-ssd",
+	"type": "network-ssd",
+	"blockSize": "64Ki"
+  },
+  {
+	"name": "network-ssd-io-m3",
+	"type": "network-ssd-io-m3"
+  },
+  {
+	"name": "network-ssd-nonreplicated",
+	"type": "network-ssd-nonreplicated"
+  }
+]
+`))
+		})
+	})
+
+	e := HookExecutionConfigInit(initValuesStringProvisionExcluded, `{}`)
+
+	Context("Cluster where excludedStorageClasses matches a provisioned storageClass", func() {
+		BeforeEach(func() {
+			e.BindingContexts.Set(e.GenerateBeforeHelmContext())
+			e.RunHook()
+		})
+
+		// exclude is applied after provision, so it filters the provisioned classes too.
+		It("Should exclude the provisioned storageClass as well as the default ones", func() {
+			Expect(e).To(ExecuteSuccessfully())
+			Expect(e.ValuesGet("cloudProviderYandex.internal.storageClasses").String()).To(MatchJSON(`
+[
+  {
+	"name": "network-hdd",
+	"type": "network-hdd"
   }
 ]
 `))

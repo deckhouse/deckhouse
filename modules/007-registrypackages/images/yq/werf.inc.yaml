@@ -23,7 +23,7 @@ imageSpec:
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $image_version }}
 final: false
-from: {{ index $.Images "builder/alpine" }}
+from: {{ index $.Images "builder/distroless" }}
 git:
 - add: /{{ $.ModulePath }}modules/007-{{ $.ModuleName }}/images/{{ $.ImageName }}/scripts
   to: /
@@ -33,11 +33,8 @@ git:
   stageDependencies:
     setup:
     - '**/*'
-import:
-- from: {{ index $.Images (printf "tools/yq-v%s" $version) }}
-  add: /usr/bin/yq
-  to: /yq
-  before: setup
 shell:
   setup:
+  - pm install yq@{{ $version }} -d /out
+  - cp /out/usr/bin/yq /yq
   - chmod +x /yq /install /uninstall

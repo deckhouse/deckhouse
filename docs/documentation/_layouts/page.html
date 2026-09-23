@@ -3,6 +3,8 @@ layout: sidebar
 ---
 
 <div class="docs {{ page.custom_class | default: '' }}">
+    {% alert level="info" %}{{ site.data.i18n.common.alert_renaming[page.lang] }}{% endalert %}
+
     <div class="docs__wrap-title">
         <h1 class="docs__title">{{ page.title }}</h1>
     </div>

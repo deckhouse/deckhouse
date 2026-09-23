@@ -1,0 +1,75 @@
+---
+image: {{ .ModuleName }}/{{ .ImageName }}/base-jekyll
+from: {{ index $.Images "builder/distroless" }}
+final: false
+shell:
+  beforeInstall:
+  - pm install jq yq ruby ruby-devel gnu-gcc-devel
+  install:
+  - |
+      set -euo pipefail
+      cd /srv/jekyll-data/documentation
+      mkdir -p /tmp/rubygems && chmod 700 /tmp/rubygems && export TMPDIR=/tmp/rubygems
+      bundle config set --global silence_root_warning true
+      bundle config set --global without 'development test'
+      bundler_lockfile_version="$(awk '/BUNDLED WITH/{getline; print $1}' Gemfile.lock)"
+      bundler_system_version="$(bundle --version | sed -nE 's/.*([0-9]+\.[0-9]+\.[0-9]+).*/\1/p' | head -1)"
+      {{- if $.DistroPackagesProxy }}
+      gem_source_orig=$(grep "^source" Gemfile | cut -d"'" -f2)
+      sed -i "s|${gem_source_orig}|http://{{ $.DistroPackagesProxy }}/repository/rubygems.org|g" Gemfile.lock
+      sed -i "s|${gem_source_orig}|http://{{ $.DistroPackagesProxy }}/repository/rubygems.org|g" Gemfile
+      {{- end }}
+      if [[ "$bundler_lockfile_version" != "$bundler_system_version" ]]; then
+          echo "Bundler version in Gemfile.lock ($bundler_lockfile_version) is not equal to system bundler version ($bundler_system_version)"
+          echo "Installing bundler version ($bundler_lockfile_version)"
+          gem_source=$(grep "^source" Gemfile | cut -d"'" -f2)
+          gem install bundler:${bundler_lockfile_version} --no-document --source $gem_source
+      fi
+  - bundle install && bundle clean --force
+  - gem cleanup
+  - find /usr/lib/ruby/gems/ \(
+       -type d -name .git
+    -o -type d -name .github
+    -o -type d -name .circleci
+    -o -type d -name doc
+    -o -type d -name docs
+    -o -type d -name examples
+    -o -type d -name rakelib
+    -o -type d -name test
+    -o -type d -name spec
+    -o -type d -name features
+    -o -type d -path "*/railties-*/lib/rails/generators/rails/app"
+    -o -type f -name .appveyor.yml
+    -o -type f -name .travis.yml
+    -o -type f -name Dockerfile*
+    -o -type f -name gitlab-ci.yml*
+    -o -type f -name Rakefile
+    -o -type f -name "*.c"
+    -o -type f -name "*.o"
+    -o -type f -path "*/bin/console"
+    -o -type f -path "*/bin/pry"
+    -o -type f -path "*/bin/setup"
+    -o -type f -path "*/mini_mime-*/bin/db_pull_request"
+    -o -type f -path "*/acts_as_archival-*/script/setup"
+    \) -exec rm -rf \{} +
+  - find /usr/lib/ruby/gems/ \(
+       -type f -path "*/sidekiq-*/web/assets/images/*"
+    -o -type f -path "*/json-schema-*/lib/json-schema/util/*"
+    \) -exec chmod -x \{} +
+  - rm -rf /usr/lib/ruby/gems/3.4.0/cache
+  - |
+      echo "Bundle: $(bundle --version)"
+      echo "Ruby: $(ruby --version)"
+      echo "Gem: $(gem --version)"
+      jekyll -version
+      yq -V
+      echo "jq: $(jq -V)"
+git:
+- add: /docs/documentation
+  to: /srv/jekyll-data/documentation
+  includePaths:
+    - Gemfile
+    - Gemfile.lock
+  stageDependencies:
+    install: '**/*'
+---

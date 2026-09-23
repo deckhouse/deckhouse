@@ -96,7 +96,7 @@ groups:
     description:
       en: "Deckhouse controller metrics"
       ru: "Метрики контроллера Deckhouse"
-  - ports: "8096"
+  - ports: "4296"
     protocol: TCP
     description:
       en: "`control-plane-manager` metrics"
@@ -180,8 +180,13 @@ groups:
   - ports: "4216"
     protocol: TCP
     description:
+      en: "`storage-status` agent metrics, the address the proxy forwards to"
+      ru: "Метрики агента модуля `storage-status`, адрес, на который проксируется запрос"
+  - ports: "4217"
+    protocol: TCP
+    description:
       en: "`storage-status` agent metrics"
-      ru: "Метрики агента `storage-status`"
+      ru: "Метрики агента модуля `storage-status`"
   - ports: "4218"
     protocol: TCP/UDP
     description:
@@ -232,6 +237,11 @@ groups:
     description:
       en: "`csi-hpe` CSI node healthcheck"
       ru: "Healthcheck CSI-агентов модуля `csi-hpe`"
+  - ports: "4233"
+    protocol: TCP
+    description:
+      en: "`user-authz` authorization webhook metrics"
+      ru: "Метрики webhook авторизации модуля `user-authz`"
   - ports: "4235"
     protocol: TCP
     description:
@@ -272,6 +282,11 @@ groups:
     description:
       en: CNI Cilium operator metrics
       ru: Метрики оператора CNI Cilium
+  - ports: "4243"
+    protocol: TCP
+    description:
+      en: "`user-authz` authorization webhook metrics, the 127.0.0.1 upstream of its kube-rbac-proxy. The port carries no traffic between nodes and needs no firewall rule; it is listed because the webhook runs on the host network and occupies this port on every master node"
+      ru: "Метрики webhook авторизации модуля `user-authz`, upstream его kube-rbac-proxy на 127.0.0.1. Порт не используется для трафика между узлами, и правило файрвола для него не нужно; он указан потому, что webhook работает в host network и занимает этот порт на каждом master-узле"
   - ports: "4244"
     protocol: TCP
     description:
@@ -372,26 +387,71 @@ groups:
     description:
       en: "`service-with-healthchecks` module metrics"
       ru: "Метрики модуля `service-with-healthchecks`"
-  - ports: "4269"
+  - ports: "4264"
     protocol: TCP
     description:
-      en: "`sds-replicated-volume` CSI node healthcheck"
-      ru: "Healthcheck CSI-агентов модуля `sds-replicated-volume`"
-  - ports: "4270"
+      en: "`node-local-dns` safe-updater healthcheck"
+      ru: "Healthcheck компонента safe-updater модуля `node-local-dns`"
+  - ports: "4265"
+    protocol: TCP
+    description:
+      en: "`node-local-dns` safe-updater pprof"
+      ru: "pprof компонента safe-updater модуля `node-local-dns`"
+  - ports: "4266"
+    protocol: TCP
+    description:
+      en: "`csi-scsi-generic` CSI controller metrics"
+      ru: "Метрики CSI-контроллера модуля `csi-scsi-generic`"
+  - ports: "4267"
+    protocol: TCP
+    description:
+      en: "`csi-scsi-generic` CSI node metrics"
+      ru: "Метрики CSI-агентов модуля `csi-scsi-generic`"
+  - ports: "4268"
     protocol: TCP
     description:
       en: "`sds-replicated-volume` CSI node metrics"
       ru: "Метрики CSI-агентов модуля `sds-replicated-volume`"
+  - ports: "4269"
+    protocol: TCP
+    description:
+      en: "`sds-replicated-volume` agent healthcheck"
+      ru: "Healthcheck агента модуля `sds-replicated-volume`"
+  - ports: "4270"
+    protocol: TCP
+    description:
+      en: "`sds-replicated-volume` agent metrics, the address the proxy forwards to"
+      ru: "Метрики агента модуля `sds-replicated-volume`, адрес, на который проксируется запрос"
   - ports: "4271"
     protocol: TCP
     description:
-      en: "`sds-replicated-volume` CSI controller healthcheck"
-      ru: "Healthcheck CSI-контроллера модуля `sds-replicated-volume`"
+      en: "`sds-replicated-volume` controller healthcheck"
+      ru: "Healthcheck контроллера модуля `sds-replicated-volume`"
   - ports: "4272"
     protocol: TCP
     description:
-      en: "`sds-replicated-volume` CSI controller metrics"
-      ru: "Метрики CSI-контроллера модуля `sds-replicated-volume`"
+      en: "`sds-replicated-volume` controller metrics"
+      ru: "Метрики контроллера модуля `sds-replicated-volume`"
+  - ports: "4273"
+    protocol: TCP
+    description:
+      en: "`sds-replicated-volume` DRBD metrics of the agent"
+      ru: "Метрики DRBD агента модуля `sds-replicated-volume`"
+  - ports: "4274"
+    protocol: TCP
+    description:
+      en: "`sds-replicated-volume` DRBD metrics of the agent, the address the proxy forwards to"
+      ru: "Метрики DRBD агента модуля `sds-replicated-volume`, адрес, на который проксируется запрос"
+  - ports: "4275"
+    protocol: TCP
+    description:
+      en: "`sdn` agent healthcheck"
+      ru: "Healthcheck компонента agent модуля `sdn`"
+  - ports: "4276"
+    protocol: TCP
+    description:
+      en: "`user-authz` Permission Browser API server metrics"
+      ru: "Метрики API-сервера Permission Browser модуля `user-authz`"
   - ports: "4135-4199"
     protocol: TCP
     description:
@@ -431,27 +491,27 @@ groups:
     protocol: UDP
     description:
       en: |
-        Used by the `cni-cilium` module for VXLAN encapsulation of inter-pod traffic in multiple nested virtualization — when DKP with the `virtualization` module enabled is deployed inside virtual machines that are also created in DKP with the `virtualization` module enabled
+        Used by the `cni-cilium` module for VXLAN encapsulation of inter-pod traffic in multiple nested virtualization — when DP with the `virtualization` module enabled is deployed inside virtual machines that are also created in DP with the `virtualization` module enabled
       ru: |
-        Используется модулем `cni-cilium` для VXLAN-инкапсуляции трафика между подами при множественной вложенной виртуализации — когда DKP с включенным модулем `virtualization` развернут внутри виртуальных машин, также созданных в DKP с включенным модулем `virtualization`
+        Используется модулем `cni-cilium` для VXLAN-инкапсуляции трафика между подами при множественной вложенной виртуализации — когда DP с включенным модулем `virtualization` развернут внутри виртуальных машин, также созданных в DP с включенным модулем `virtualization`
   - ports: "4298"
     protocol: UDP
     description:
       en: |
-        Used by the `cni-cilium` module for VXLAN encapsulation of traffic between pods if the cluster was deployed on DKP version starting from **1.71** (for clusters deployed on DKP versions up to **1.71**, see the note for ports `4299/UDP`, `8469/UDP`, and `8472/UDP`)
+        Used by the `cni-cilium` module for VXLAN encapsulation of traffic between pods if the cluster was deployed on DP version starting from **1.71** (for clusters deployed on DP versions up to **1.71**, see the note for ports `4299/UDP`, `8469/UDP`, and `8472/UDP`)
       ru: |
-        Используется модулем `cni-cilium` для VXLAN-инкапсуляции трафика между подами, если кластер был развернут на DKP, начиная с версии **1.71** (для кластеров, развернутых на DKP до версии **1.71**, см. примечание для портов `4299/UDP`, `8469/UDP` и `8472/UDP`)
+        Используется модулем `cni-cilium` для VXLAN-инкапсуляции трафика между подами, если кластер был развернут на DP, начиная с версии **1.71** (для кластеров, развернутых на DP до версии **1.71**, см. примечание для портов `4299/UDP`, `8469/UDP` и `8472/UDP`)
   - ports: "4299"
     protocol: UDP
     description:
       en: |
-        **For clusters deployed on DKP versions 1.64–1.70.** Used by the `cni-cilium` module for VXLAN encapsulation of traffic between pods. Updating DKP to newer versions will not change the port used unless the `virtualization` module is enabled.
+        **For clusters deployed on DP versions 1.64–1.70.** Used by the `cni-cilium` module for VXLAN encapsulation of traffic between pods. Updating DP to newer versions will not change the port used unless the `virtualization` module is enabled.
 
-        **Note** that in such clusters, enabling the `virtualization` module on DKP up to version 1.70 changes the port to `4298/UDP`
+        **Note** that in such clusters, enabling the `virtualization` module on DP up to version 1.70 changes the port to `4298/UDP`
       ru: |
-        **Для кластеров, развернутых на DKP версий 1.64–1.70.** Используется модулем `cni-cilium` для VXLAN-инкапсуляции трафика между подами. Обновление DKP до более новых версий не изменит занимаемый порт, если не включается модуль `virtualization`.
+        **Для кластеров, развернутых на DP версий 1.64–1.70.** Используется модулем `cni-cilium` для VXLAN-инкапсуляции трафика между подами. Обновление DP до более новых версий не изменит занимаемый порт, если не включается модуль `virtualization`.
 
-        **Обратите внимание,** что в таких кластерах включение модуля `virtualization` на DKP до версии 1.70 меняет порт на `4298/UDP`
+        **Обратите внимание,** что в таких кластерах включение модуля `virtualization` на DP до версии 1.70 меняет порт на `4298/UDP`
   - ports: "7000&#8209;7999"
     protocol: TCP
     description:
@@ -461,24 +521,24 @@ groups:
     protocol: UDP
     description:
       en: |
-        **For clusters deployed on DKP version 1.63 and below with the `virtualization` module enabled prior to DKP version 1.63.** Used by the `cni-cilium` module for VXLAN encapsulation of traffic between pods. Updating DKP to newer versions will not change the occupied port
+        **For clusters deployed on DP version 1.63 and below with the `virtualization` module enabled prior to DP version 1.63.** Used by the `cni-cilium` module for VXLAN encapsulation of traffic between pods. Updating DP to newer versions will not change the occupied port
       ru: |
-        **Для кластеров, развернутых на DKP версии 1.63 и ниже с модулем `virtualization`, включенным до DKP версии 1.63.** Используется модулем `cni-cilium` для VXLAN-инкапсуляции трафика между подами. Обновление DKP до более новых версий не изменит занимаемый порт
+        **Для кластеров, развернутых на DP версии 1.63 и ниже с модулем `virtualization`, включенным до DP версии 1.63.** Используется модулем `cni-cilium` для VXLAN-инкапсуляции трафика между подами. Обновление DP до более новых версий не изменит занимаемый порт
   - ports: "8472"
     protocol: UDP
     description:
       en: |
-        **For clusters deployed on DKP version 1.63 and below.** Used by the `cni-cilium` module for VXLAN encapsulation of traffic between pods. Updating DKP to newer versions will not change the occupied port if the `virtualization` module is not enabled.
+        **For clusters deployed on DP version 1.63 and below.** Used by the `cni-cilium` module for VXLAN encapsulation of traffic between pods. Updating DP to newer versions will not change the occupied port if the `virtualization` module is not enabled.
 
-        **Note** that in such clusters, enabling the `virtualization` module on DKP before version 1.70 changes the port:
-        - Enabling the `virtualization` module on DKP version 1.63 and below will change it to `8469/UDP` and will not change with subsequent DKP updates
-        - Enabling the `virtualization` module on DKP starting from version 1.64 will change it to `4298/UDP` and will not change with subsequent DKP updates
+        **Note** that in such clusters, enabling the `virtualization` module on DP before version 1.70 changes the port:
+        - Enabling the `virtualization` module on DP version 1.63 and below will change it to `8469/UDP` and will not change with subsequent DP updates
+        - Enabling the `virtualization` module on DP starting from version 1.64 will change it to `4298/UDP` and will not change with subsequent DP updates
       ru: |
-        **Для кластеров, развернутых на DKP версии 1.63 и ниже.** Используется модулем `cni-cilium` для VXLAN-инкапсуляции трафика между подами. Обновление DKP до более новых версий не изменит занимаемый порт, если не включается модуль `virtualization`.
+        **Для кластеров, развернутых на DP версии 1.63 и ниже.** Используется модулем `cni-cilium` для VXLAN-инкапсуляции трафика между подами. Обновление DP до более новых версий не изменит занимаемый порт, если не включается модуль `virtualization`.
 
-        **Обратите внимание,** что в таких кластерах включение модуля `virtualization` на DKP до версии 1.70 меняет порт:
-        - включение модуля `virtualization` на DKP версии 1.63 и ниже изменит его на `8469/UDP` и не изменит при последующих обновлениях DKP
-        - включение модуля `virtualization` на DKP, начиная с версии 1.64, изменит его на `4298/UDP` и не изменит при последующих обновлениях DKP
+        **Обратите внимание,** что в таких кластерах включение модуля `virtualization` на DP до версии 1.70 меняет порт:
+        - включение модуля `virtualization` на DP версии 1.63 и ниже изменит его на `8469/UDP` и не изменит при последующих обновлениях DP
+        - включение модуля `virtualization` на DP, начиная с версии 1.64, изменит его на `4298/UDP` и не изменит при последующих обновлениях DP
 
 - group: VirtualizationStaticPorts
   description:
@@ -519,8 +579,8 @@ groups:
   - ports: "22"
     protocol: TCP
     description:
-      en: SSH for initializing Deckhouse Kubernetes Platform
-      ru: SSH для инициализации Deckhouse Kubernetes Platform
+      en: SSH for initializing Deckhouse Platform
+      ru: SSH для инициализации Deckhouse Platform
   - ports: "6443"
     protocol: TCP
     description:

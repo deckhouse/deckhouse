@@ -15,10 +15,6 @@
 
 package v1alpha2
 
-// ModuleListerExpansion allows custom methods to be added to
-// ModuleLister.
-type ModuleListerExpansion interface{}
-
 // ModulePullOverrideListerExpansion allows custom methods to be added to
 // ModulePullOverrideLister.
 type ModulePullOverrideListerExpansion interface{}

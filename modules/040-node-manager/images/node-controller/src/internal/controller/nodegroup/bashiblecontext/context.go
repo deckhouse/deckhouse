@@ -53,7 +53,7 @@ type Globals struct {
 func (s *Service) Build(ctx context.Context, globals Globals, nodeGroups []map[string]interface{}, pCatalog cloudprovider.Catalog) (map[string]interface{}, error) {
 	cpArgs := s.readControlPlaneArguments(ctx)
 	certs := s.readAPIServerProxyCerts(ctx)
-	eps, err := s.readEndpoints(ctx)
+	eps, err := s.ReadEndpoints(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("read kube-apiserver endpoints: %w", err)
 	}
@@ -70,10 +70,10 @@ func (s *Service) Build(ctx context.Context, globals Globals, nodeGroups []map[s
 		"clusterDNSAddress":       globals.ClusterDNSAddress,
 		"clusterUUID":             defaultString(globals.ClusterUUID, "00000000-0000-0000-0000-000000000000"),
 		"bootstrapTokens":         s.readBootstrapTokens(ctx),
-		"apiserverEndpoints":      eps.apiserverEndpoints,
-		"clusterMasterEndpoints":  eps.clusterMasterEndpoints,
+		"apiserverEndpoints":      eps.APIServerEndpoints,
+		"clusterMasterEndpoints":  eps.ClusterMasterEndpoints,
 		"packagesProxy": map[string]interface{}{
-			"token": s.readPackagesProxyToken(ctx),
+			"token": s.ReadPackagesProxyToken(ctx),
 		},
 		"allowedBundles": allowedBundles,
 		"nodeGroups":     nodeGroups,
@@ -104,7 +104,7 @@ func (s *Service) Build(ctx context.Context, globals Globals, nodeGroups []map[s
 			"key": certs.key,
 		}
 	}
-	if ca := s.readKubernetesCA(); ca != "" {
+	if ca := s.ReadKubernetesCA(); ca != "" {
 		input["kubernetesCA"] = ca
 	}
 	if cpArgs.present {

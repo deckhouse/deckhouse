@@ -32,6 +32,16 @@ const (
 	NodeTypeHybrid NodeType = "Hybrid"
 )
 
+// SystemType selects how the node is managed. The value means the same in every
+// version and is carried through the conversion unchanged.
+// +kubebuilder:validation:Enum=Mutable;Immutable
+type SystemType string
+
+const (
+	SystemTypeMutable   SystemType = "Mutable"
+	SystemTypeImmutable SystemType = "Immutable"
+)
+
 // CRIType defines the container runtime type (v1alpha2 version - includes NotManaged)
 // +kubebuilder:validation:Enum=Docker;Containerd;NotManaged
 type CRIType string
@@ -71,6 +81,11 @@ type NodeGroupSpec struct {
 	// static node group.
 	// +optional
 	ProviderType string `json:"providerType,omitempty"`
+
+	// SystemType selects how the node is managed; the field cannot be changed
+	// after creation.
+	// +optional
+	SystemType SystemType `json:"systemType,omitempty"`
 
 	// CRI specifies container runtime settings
 	// +optional

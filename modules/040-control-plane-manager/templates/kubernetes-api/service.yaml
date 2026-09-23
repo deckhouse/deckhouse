@@ -1,4 +1,8 @@
-{{- if .Values.controlPlaneManager.apiserver.publishAPI.ingress.enabled }}
+{{- $moduleGateway := dict }}
+{{- include "helm_lib_module_gateway" (list . $moduleGateway) }}
+{{- $ingressEnabled := eq (include "helm_lib_module_ingress_enabled" .) "true" }}
+{{- $gatewayEnabled := eq (include "helm_lib_module_gateway_enabled" .) "true" }}
+{{- if and .Values.controlPlaneManager.apiserver.publishAPI.ingress.enabled (or $ingressEnabled $gatewayEnabled) }}
 ---
 apiVersion: v1
 kind: Service

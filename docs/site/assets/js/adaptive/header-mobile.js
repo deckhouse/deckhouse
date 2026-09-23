@@ -10,6 +10,12 @@ document.addEventListener('DOMContentLoaded', function () {
     modulesName.className = 'module-name';
 
     let burgerInited = false;
+
+    // Width at which the row collapses into the burger. The Russian header asks for 1200
+    // through data-burger-breakpoint on its container; the English one sets no attribute
+    // and keeps the historical 1024, so its behaviour is unchanged.
+    const burgerBreakpointEl = document.querySelector('[data-burger-breakpoint]');
+    const BURGER_BREAKPOINT = (burgerBreakpointEl && Number(burgerBreakpointEl.dataset.burgerBreakpoint)) || 1024;
     let mobileSidebarInited = false;
     let cloneSidebar = null;
 
@@ -34,7 +40,7 @@ document.addEventListener('DOMContentLoaded', function () {
     }
 
     function activeMobileItem() {
-        if (window.innerWidth >= 1024) return null;
+        if (window.innerWidth >= BURGER_BREAKPOINT) return null;
         const mobileNavList = getMobileNavList();
         if (!mobileNavList) return null;
 
@@ -230,12 +236,12 @@ document.addEventListener('DOMContentLoaded', function () {
     }
 
     function initBurger() {
-        if (window.innerWidth >= 1024 || burgerInited) return;
+        if (window.innerWidth >= BURGER_BREAKPOINT || burgerInited) return;
         burgerInited = true;
 
         if (hamburgerCollapse) {
             hamburgerCollapse.addEventListener('click', function () {
-                if (window.innerWidth < 1024 && closeFilter()) {
+                if (window.innerWidth < BURGER_BREAKPOINT && closeFilter()) {
                     hamburgerCollapse.classList.remove('show');
                     return;
                 }
@@ -288,7 +294,7 @@ document.addEventListener('DOMContentLoaded', function () {
     }
 
     function initMobileSidebar() {
-        if (window.innerWidth >= 1024) return;
+        if (window.innerWidth >= BURGER_BREAKPOINT) return;
 
         const activeNavMobile = activeMobileItem();
         if (!activeNavMobile || mobileSidebarInited) return;
@@ -358,7 +364,7 @@ document.addEventListener('DOMContentLoaded', function () {
     }
 
     function syncHeaderDisplay() {
-        if (window.innerWidth < 1024) {
+        if (window.innerWidth < BURGER_BREAKPOINT) {
             activeMobileItem();
             initBurger();
             initMobileSidebar();
@@ -375,4 +381,21 @@ document.addEventListener('DOMContentLoaded', function () {
 
     syncHeaderDisplay();
     window.addEventListener('resize', syncHeaderDisplay);
+
+    //Step scrolling in Getting started on mobile devices
+    const activeStep = document.querySelector('.gs-steps__point-num_active');
+    if (activeStep) {
+        function centerActiveStep(behavior) {
+            activeStep.scrollIntoView({
+                inline: 'center',
+                block: 'nearest',
+                behavior: behavior
+            });
+        }
+
+        centerActiveStep('smooth');
+        window.addEventListener('resize', function () {
+            centerActiveStep('auto');
+        });
+    }
 });

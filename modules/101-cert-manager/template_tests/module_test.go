@@ -168,9 +168,6 @@ var _ = Describe("Module :: cert-manager :: helm template ::", func() {
   operator: Exists
 - key: DeletionCandidateOfClusterAutoscaler
 - key: ToBeDeletedByClusterAutoscaler
-- key: drbd.linbit.com/lost-quorum
-- key: drbd.linbit.com/force-io-error
-- key: drbd.linbit.com/ignore-fail-over
 - effect: NoSchedule
   key: node.deckhouse.io/bashible-uninitialized
   operator: Exists
@@ -198,9 +195,6 @@ var _ = Describe("Module :: cert-manager :: helm template ::", func() {
 - key: dedicated.deckhouse.io
   operator: Equal
   value: "system"
-- key: drbd.linbit.com/lost-quorum
-- key: drbd.linbit.com/force-io-error
-- key: drbd.linbit.com/ignore-fail-over
 `))
 			Expect(certManager.Field("spec.replicas").Int()).To(BeEquivalentTo(1))
 			Expect(certManager.Field("spec.strategy").Exists()).To(BeFalse())
@@ -239,9 +233,6 @@ var _ = Describe("Module :: cert-manager :: helm template ::", func() {
   operator: Exists
 - key: DeletionCandidateOfClusterAutoscaler
 - key: ToBeDeletedByClusterAutoscaler
-- key: drbd.linbit.com/lost-quorum
-- key: drbd.linbit.com/force-io-error
-- key: drbd.linbit.com/ignore-fail-over
 - effect: NoSchedule
   key: node.deckhouse.io/bashible-uninitialized
   operator: Exists
@@ -280,9 +271,6 @@ podAntiAffinity:
 - key: dedicated.deckhouse.io
   operator: Equal
   value: "system"
-- key: drbd.linbit.com/lost-quorum
-- key: drbd.linbit.com/force-io-error
-- key: drbd.linbit.com/ignore-fail-over
 `))
 			Expect(certManager.Field("spec.replicas").Int()).To(BeEquivalentTo(2))
 			Expect(certManager.Field("spec.strategy").String()).To(MatchYAML(`
@@ -349,9 +337,6 @@ podAntiAffinity:
   operator: Exists
 - key: DeletionCandidateOfClusterAutoscaler
 - key: ToBeDeletedByClusterAutoscaler
-- key: drbd.linbit.com/lost-quorum
-- key: drbd.linbit.com/force-io-error
-- key: drbd.linbit.com/ignore-fail-over
 - effect: NoSchedule
   key: node.deckhouse.io/bashible-uninitialized
   operator: Exists
@@ -379,9 +364,6 @@ podAntiAffinity:
 - key: dedicated.deckhouse.io
   operator: Equal
   value: "system"
-- key: drbd.linbit.com/lost-quorum
-- key: drbd.linbit.com/force-io-error
-- key: drbd.linbit.com/ignore-fail-over
 `))
 			Expect(certManager.Field("spec.replicas").Int()).To(BeEquivalentTo(1))
 			Expect(certManager.Field("spec.strategy").Exists()).To(BeFalse())
@@ -420,9 +402,6 @@ podAntiAffinity:
   operator: Exists
 - key: DeletionCandidateOfClusterAutoscaler
 - key: ToBeDeletedByClusterAutoscaler
-- key: drbd.linbit.com/lost-quorum
-- key: drbd.linbit.com/force-io-error
-- key: drbd.linbit.com/ignore-fail-over
 - effect: NoSchedule
   key: node.deckhouse.io/bashible-uninitialized
   operator: Exists
@@ -461,9 +440,6 @@ podAntiAffinity:
 - key: dedicated.deckhouse.io
   operator: Equal
   value: "system"
-- key: drbd.linbit.com/lost-quorum
-- key: drbd.linbit.com/force-io-error
-- key: drbd.linbit.com/ignore-fail-over
 `))
 			Expect(certManager.Field("spec.replicas").Int()).To(BeEquivalentTo(2))
 			Expect(certManager.Field("spec.strategy").String()).To(MatchYAML(`
@@ -630,6 +606,38 @@ namespace: d8-ingress-gateway
 			Expect(args).To(ContainSubstring("--feature-gates=ACMEHTTP01IngressPathTypeExact=false,ListenerSets=true"))
 			Expect(args).NotTo(ContainSubstring("--enable-gateway-api=true"))
 			Expect(args).NotTo(ContainSubstring("--enable-gateway-api-listenerset=true"))
+		})
+	})
+
+	Context("Issuer write roles", func() {
+		BeforeEach(func() {
+			f.ValuesSetFromYaml("global", globalValues)
+			f.ValuesSet("global.modulesImages", GetModulesImages())
+			f.ValuesSetFromYaml("certManager", certManager)
+			f.HelmRender()
+		})
+
+		It("gives namespaced Issuer write to Admin and keeps Certificate write on Editor", func() {
+			Expect(f.RenderError).ShouldNot(HaveOccurred())
+
+			editor := f.KubernetesGlobalResource("ClusterRole", "d8:user-authz:cert-manager:editor")
+			Expect(editor.Exists()).To(BeTrue())
+			Expect(editor.Field("rules.0.resources").String()).To(MatchJSON(`["certificates"]`))
+			Expect(editor.Field("rules").String()).NotTo(ContainSubstring("issuers"))
+
+			admin := f.KubernetesGlobalResource("ClusterRole", "d8:user-authz:cert-manager:admin")
+			Expect(admin.Exists()).To(BeTrue())
+			Expect(admin.Field("rules.0.resources").String()).To(MatchJSON(`["issuers"]`))
+
+			useEdit := f.KubernetesGlobalResource("ClusterRole", "d8:namespace-capability:cert-manager:edit")
+			Expect(useEdit.Exists()).To(BeTrue())
+			Expect(useEdit.Field("rules.0.resources").String()).To(MatchJSON(`["certificates"]`))
+			Expect(useEdit.Field("rules").String()).NotTo(ContainSubstring("issuers"))
+
+			useAdmin := f.KubernetesGlobalResource("ClusterRole", "d8:namespace-capability:cert-manager:admin")
+			Expect(useAdmin.Exists()).To(BeTrue())
+			Expect(useAdmin.Field(`metadata.labels.rbac\.deckhouse\.io/aggregate-to-namespace-as`).String()).To(Equal("admin"))
+			Expect(useAdmin.Field("rules.0.resources").String()).To(MatchJSON(`["issuers"]`))
 		})
 	})
 })

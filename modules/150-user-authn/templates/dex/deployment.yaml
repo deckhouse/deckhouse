@@ -78,7 +78,7 @@ spec:
         {{- fail (printf "DexProvider %s: ldap.kerberos.enabled=true but ldap.kerberos.keytabSecretName is missing" $p.id) }}
       {{- end }}
       {{- if $p.ldap.kerberos.keytabSecretName }}
-      - name: {{ printf "kerberos-keytab-%s" $p.id | trunc 63 | trimSuffix "-" }}
+      - name: {{ printf "kerberos-keytab-%s" $p.id | trunc 63 | trimSuffix "-" | quote }}
         secret:
           secretName: {{ $p.ldap.kerberos.keytabSecretName | quote }}
       {{- end }}
@@ -142,7 +142,7 @@ spec:
           {{- fail (printf "DexProvider %s: ldap.kerberos.enabled=true but ldap.kerberos.keytabSecretName is missing" $p.id) }}
         {{- end }}
         {{- if $p.ldap.kerberos.keytabSecretName }}
-        - name: {{ printf "kerberos-keytab-%s" $p.id | trunc 63 | trimSuffix "-" }}
+        - name: {{ printf "kerberos-keytab-%s" $p.id | trunc 63 | trimSuffix "-" | quote }}
           mountPath: {{ printf "/etc/dex/kerberos/%s" $p.id | quote }}
           readOnly: true
         {{- end }}

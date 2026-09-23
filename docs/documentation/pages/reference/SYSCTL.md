@@ -1,6 +1,6 @@
 ---
 title: Sysctl parameters managed by the platform
-description: "List of sysctl parameters that DKP configures and maintains on cluster nodes."
+description: "List of sysctl parameters that DP configures and maintains on cluster nodes."
 permalink: en/reference/sysctl.html
 lang: en
 ---

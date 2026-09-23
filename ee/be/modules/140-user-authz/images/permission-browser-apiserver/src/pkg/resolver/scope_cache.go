@@ -6,13 +6,21 @@ Licensed under the Deckhouse Platform Enterprise Edition (EE) license. See https
 package resolver
 
 import (
+	"slices"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"k8s.io/client-go/discovery"
 	"k8s.io/klog/v2"
+
+	"github.com/deckhouse/deckhouse/go_lib/user-authz/rules"
+
+	"permission-browser-apiserver/pkg/authorizer/multitenancy"
 )
+
+var _ multitenancy.ResourceScope = (*ResourceScopeCache)(nil)
 
 const (
 	// defaultRefreshInterval is how often the scope cache refreshes from discovery.
@@ -21,6 +29,23 @@ const (
 	// This avoids keeping the apiserver not-ready for a long time if discovery
 	// fails transiently during startup.
 	bootstrapRefreshInterval = 10 * time.Second
+	// missRefreshInterval bounds how often a lookup the snapshot cannot answer may pull the next
+	// refresh forward.
+	//
+	// This exists because the two consumers of the shared decision were reading discovery on
+	// schedules an order of magnitude apart. The authorization webhook re-lists a group within ten
+	// seconds of being asked about something it does not hold; this cache waited out its five
+	// minute cycle. So for up to five minutes after a CRD was installed, what this apiserver
+	// reported and what the API server enforced were different answers to the same question - the
+	// exact drift the shared decision was written to end. The direction was the safe one (a
+	// resource nobody has heard of is treated like a namespaced one, so the report understates
+	// access rather than overstating it), but "safe" is not "the same".
+	//
+	// A miss now schedules one refresh, at most this often, and the request is answered from the
+	// snapshot in hand rather than waiting for it. The rate is what keeps this from becoming an
+	// amplifier: refresh() lists every group in the cluster, which is far heavier than the
+	// webhook's single-group listing.
+	missRefreshInterval = 30 * time.Second
 )
 
 // ResourceScopeCache provides O(1) lookups for whether a resource is namespaced or cluster-scoped.
@@ -33,10 +58,44 @@ type ResourceScopeCache struct {
 	// If zero, bootstrapRefreshInterval is used.
 	bootstrapInterval time.Duration
 
-	// mu protects scopeMap.
+	// mu protects scopeMap, details and unavailableGroups.
 	// Key format: "apiGroup/resource" (core group is empty string).
 	mu       sync.RWMutex
 	scopeMap map[string]bool // true = namespaced, false = cluster-scoped
+	// details carries what discovery says about a resource beyond its scope:
+	// the kind and the verbs the API server accepts for it. Kept apart from
+	// scopeMap because the scope alone answers most questions here, and the
+	// hot paths should not pay for the rest.
+	details map[string]resourceDetails
+	// unavailableGroups are the groups the last refresh could not read, whose entries were carried
+	// over from the previous snapshot. A resource missing from one of them is missing because we
+	// could not look, which is a different answer from "it does not exist". ScopeOf reads it, and
+	// Partial reports whether it is non-empty: callers that enumerate the snapshot report less than
+	// the truth while it is, so they need a way to say so. The accessors that used to expose each
+	// half separately are gone, because a caller that recombined them differently got a different
+	// security outcome from the same data.
+	unavailableGroups map[string]struct{}
+
+	// looping is set while StartRefreshLoop runs. A miss pulls the next scheduled refresh forward,
+	// so with no loop there is nothing to pull: a cache nobody is refreshing must not start
+	// spawning refreshes of its own because somebody read from it.
+	looping atomic.Bool
+
+	// muMiss guards the miss-triggered refresh: when it last ran, and whether one is running now.
+	muMiss      sync.Mutex
+	lastMiss    time.Time
+	missPending bool
+
+	// now is the clock, so the interval above can be exercised without sleeping.
+	now func() time.Time
+}
+
+// clock reads the cache's clock, defaulting to the real one.
+func (c *ResourceScopeCache) clock() time.Time {
+	if c.now != nil {
+		return c.now()
+	}
+	return time.Now()
 }
 
 // NewResourceScopeCache creates a new cache and performs initial population from discovery.
@@ -48,6 +107,8 @@ func NewResourceScopeCache(discoveryClient discovery.DiscoveryInterface) *Resour
 		refreshInterval:   defaultRefreshInterval,
 		bootstrapInterval: bootstrapRefreshInterval,
 		scopeMap:          make(map[string]bool),
+		details:           make(map[string]resourceDetails),
+		unavailableGroups: make(map[string]struct{}),
 	}
 
 	// Perform initial population
@@ -81,12 +142,26 @@ func (c *ResourceScopeCache) IsNamespaced(group, resource string) bool {
 // this to make a claim the plain RBAC answer would not support, and a claim
 // about a resource we have never seen is worse than no claim.
 func (c *ResourceScopeCache) HasResource(group, resource string) bool {
+	if c == nil {
+		return false
+	}
+
 	c.mu.RLock()
 	defer c.mu.RUnlock()
 
 	_, ok := c.scopeMap[group+"/"+resource]
 
 	return ok
+}
+
+// Partial reports whether the current snapshot was built from an incomplete
+// discovery response: some groups could not be read and their entries were
+// carried over from the previous snapshot.
+func (c *ResourceScopeCache) Partial() bool {
+	c.mu.RLock()
+	defer c.mu.RUnlock()
+
+	return len(c.unavailableGroups) > 0
 }
 
 // HasNamespacedResourceMatching reports whether the discovery snapshot
@@ -117,6 +192,123 @@ func (c *ResourceScopeCache) HasNamespacedResourceMatching(apiGroups, resources 
 	return false
 }
 
+// GroupResource is a discovered resource identified by its API group and name.
+// Name may carry a subresource ("pods/log"), mirroring discovery output.
+type GroupResource struct {
+	Group      string
+	Resource   string
+	Namespaced bool
+}
+
+// resourceDetails is what discovery says about a resource beyond its scope.
+type resourceDetails struct {
+	kind  string
+	verbs []string
+}
+
+// ResourceInfo is one resource of the cluster as discovery describes it.
+type ResourceInfo struct {
+	Group      string
+	Resource   string
+	Kind       string
+	Namespaced bool
+	// Verbs are the ones the API server accepts for this resource. A coverage
+	// report divides by them rather than by a fixed list of eight: tokenreviews
+	// only ever accept create, and "1 of 8" would read as a gap in the model.
+	Verbs []string
+}
+
+// Inventory returns every resource of the current discovery snapshot, sorted.
+//
+// It answers the question the role catalogue cannot: which resources exist at
+// all. A report built only from what the roles grant cannot show a resource no
+// role covers -- and that is exactly what a coverage review looks for.
+func (c *ResourceScopeCache) Inventory() []ResourceInfo {
+	c.mu.RLock()
+
+	inventory := make([]ResourceInfo, 0, len(c.scopeMap))
+	for key, namespaced := range c.scopeMap {
+		group, resource, ok := strings.Cut(key, "/")
+		if !ok {
+			continue
+		}
+
+		detail := c.details[key]
+		inventory = append(inventory, ResourceInfo{
+			Group:      group,
+			Resource:   resource,
+			Kind:       detail.kind,
+			Namespaced: namespaced,
+			Verbs:      slices.Clone(detail.verbs),
+		})
+	}
+
+	c.mu.RUnlock()
+
+	slices.SortFunc(inventory, func(a, b ResourceInfo) int {
+		if cmp := strings.Compare(a.Group, b.Group); cmp != 0 {
+			return cmp
+		}
+
+		return strings.Compare(a.Resource, b.Resource)
+	})
+
+	return inventory
+}
+
+// ResourcesMatching returns the discovered resources matched by the RBAC
+// apiGroups and resources fields of a single PolicyRule.
+//
+// It is the expansion counterpart of HasNamespacedResourceMatching: instead of
+// answering "does anything match", it enumerates what matches, so a wildcard
+// rule can be turned into concrete rows. Matching uses the same semantics as
+// Kubernetes RBAC, including "*/subresource" rules.
+//
+// Subresources are only returned when the rule names them explicitly (either
+// as "resource/subresource" or "*/subresource"): a bare "*" resources rule
+// grants top-level resources, and listing every subresource of the cluster
+// would bury the meaningful rows.
+//
+// The result is sorted for deterministic output.
+func (c *ResourceScopeCache) ResourcesMatching(apiGroups, resources []string) []GroupResource {
+	wantsSubresources := false
+	for _, ruleResource := range resources {
+		if strings.Contains(ruleResource, "/") {
+			wantsSubresources = true
+			break
+		}
+	}
+
+	c.mu.RLock()
+	matched := make([]GroupResource, 0, len(c.scopeMap))
+	for key, namespaced := range c.scopeMap {
+		group, resource, ok := strings.Cut(key, "/")
+		if !ok {
+			continue
+		}
+		if !wantsSubresources && strings.Contains(resource, "/") {
+			continue
+		}
+		if !matchesAPIGroup(apiGroups, group) {
+			continue
+		}
+		if !matchesResource(resources, resource) {
+			continue
+		}
+		matched = append(matched, GroupResource{Group: group, Resource: resource, Namespaced: namespaced})
+	}
+	c.mu.RUnlock()
+
+	slices.SortFunc(matched, func(a, b GroupResource) int {
+		if cmp := strings.Compare(a.Group, b.Group); cmp != 0 {
+			return cmp
+		}
+		return strings.Compare(a.Resource, b.Resource)
+	})
+
+	return matched
+}
+
 func matchesAPIGroup(ruleGroups []string, group string) bool {
 	for _, ruleGroup := range ruleGroups {
 		if ruleGroup == "*" || ruleGroup == group {
@@ -143,10 +335,83 @@ func matchesResource(ruleResources []string, resource string) bool {
 	return false
 }
 
+// ScopeOf answers the whole question the multi-tenancy decision asks, in the type it consumes.
+//
+// The derivation used to live in the caller, assembled from Scope, HasData and GroupUnavailable.
+// That put the line that decides whether a discovery hole fails open or closed away from the data
+// it reasons about, and made every test fake responsible for reproducing it - a fake that got it
+// wrong left the suite green and the behaviour unsafe.
+//
+// It also took three separate read locks, so the three answers could come from either side of a
+// refresh: a resource could be reported missing from a snapshot while HasData described the next
+// one. One lock now, one snapshot, one answer.
+//
+// Version-agnostic, like the map behind it: see the ResourceScope interface in the multitenancy
+// package for why the webhook's per-version lookup and this one agree in every case the platform
+// produces.
+func (c *ResourceScopeCache) ScopeOf(group, resource string) rules.ResourceScope {
+	if c == nil {
+		return rules.ResourceScope{}
+	}
+
+	c.mu.RLock()
+	defer c.mu.RUnlock()
+
+	namespaced, known := c.scopeMap[group+"/"+resource]
+	if known {
+		return rules.ResourceScope{Known: true, Namespaced: namespaced}
+	}
+
+	// Not in the snapshot. Either the resource does not exist, or it was created since the last
+	// refresh - a CRD installed a minute ago - and the snapshot is simply behind. Ask for a
+	// refresh, rate-limited, and answer from what is held: waiting for discovery here would put a
+	// cluster-wide listing on the request path.
+	c.noteMiss()
+
+	// That is an answer only if there IS a snapshot and it did read this group; otherwise nobody
+	// looked, and the caller has to keep failing closed.
+	_, unavailable := c.unavailableGroups[group]
+	return rules.ResourceScope{Absent: len(c.scopeMap) > 0 && !unavailable}
+}
+
+// noteMiss schedules a refresh because a lookup asked about something the snapshot does not hold.
+//
+// It never blocks the caller and never runs two refreshes at once: the miss is a hint that the
+// snapshot is behind, not a request the caller waits on. ScopeOf holds a read lock when it calls
+// this, which is why the refresh runs in its own goroutine - refresh() takes the write lock at the
+// end.
+func (c *ResourceScopeCache) noteMiss() {
+	if !c.looping.Load() {
+		return
+	}
+
+	c.muMiss.Lock()
+	if c.missPending || c.clock().Sub(c.lastMiss) < missRefreshInterval {
+		c.muMiss.Unlock()
+		return
+	}
+	c.missPending = true
+	c.lastMiss = c.clock()
+	c.muMiss.Unlock()
+
+	go func() {
+		defer func() {
+			c.muMiss.Lock()
+			c.missPending = false
+			c.muMiss.Unlock()
+		}()
+		c.refresh()
+	}()
+}
+
 // HasData returns true if the cache has been populated with any entries.
 // This can be used for readiness checks: an empty cache means we could not
 // fetch discovery data yet and would treat all unknown resources as cluster-scoped.
 func (c *ResourceScopeCache) HasData() bool {
+	if c == nil {
+		return false
+	}
+
 	c.mu.RLock()
 	defer c.mu.RUnlock()
 	return len(c.scopeMap) > 0
@@ -154,6 +419,9 @@ func (c *ResourceScopeCache) HasData() bool {
 
 // StartRefreshLoop starts the background refresh loop. Blocks until stopCh is closed.
 func (c *ResourceScopeCache) StartRefreshLoop(stopCh <-chan struct{}) {
+	c.looping.Store(true)
+	defer c.looping.Store(false)
+
 	for {
 		interval := c.refreshInterval
 		bootstrap := c.bootstrapInterval
@@ -179,28 +447,53 @@ func (c *ResourceScopeCache) StartRefreshLoop(stopCh <-chan struct{}) {
 	}
 }
 
-// refresh fetches all API resources from discovery and rebuilds the scope map.
-// On error, the existing cache is preserved (stale data is better than no data).
+// refresh fetches the served resources from discovery and merges them into the scope map.
+//
+// ServerGroupsAndResources lists every version of every group, subresources included (the
+// preferred-resources call drops the names with a "/"), so HasNamespacedResourceMatching sees the
+// same resources RBAC does. On a partial failure the call returns the lists it did fetch together
+// with an ErrGroupDiscoveryFailed naming the GroupVersions it could not. The entries of those groups
+// are carried over from the previous snapshot: a miss in the map now decides an authorization
+// answer (Scope), so an APIService that is down for a minute must not evict its resources. A group
+// that is neither returned nor reported as failed has left the cluster and its entries go. Any other
+// error, or an empty result, preserves the whole snapshot.
 func (c *ResourceScopeCache) refresh() {
 	if c.discoveryClient == nil {
 		klog.V(4).Info("ResourceScopeCache: no discovery client, skipping refresh")
 		return
 	}
 
-	// ServerPreferredResources returns resources for all groups in one call.
-	// It may return partial results along with an error for some groups.
-	resourceLists, err := c.discoveryClient.ServerPreferredResources()
+	_, resourceLists, err := c.discoveryClient.ServerGroupsAndResources()
+
+	// failedGroups are the groups whose entries are kept from the previous snapshot; a non-empty set
+	// marks the snapshot partial.
+	failedGroups := map[string]struct{}{}
 	if err != nil {
-		// ServerPreferredResources may return partial results with an error.
-		// If we got some results, use them; otherwise preserve the old cache.
-		if len(resourceLists) == 0 {
-			klog.Warningf("ResourceScopeCache: discovery failed completely: %v, preserving existing cache", err)
+		failedVersions, partial := discovery.GroupDiscoveryFailedErrorGroups(err)
+		if !partial || len(resourceLists) == 0 {
+			klog.Warningf("ResourceScopeCache: discovery failed: %v, preserving existing cache", err)
 			return
 		}
-		klog.V(4).Infof("ResourceScopeCache: discovery returned partial results: %v", err)
+		for gv := range failedVersions {
+			failedGroups[gv.Group] = struct{}{}
+		}
+		klog.V(4).Infof("ResourceScopeCache: discovery returned partial results, keeping the previous entries of %d groups: %v", len(failedGroups), err)
 	}
 
 	newMap := make(map[string]bool)
+	newDetails := make(map[string]resourceDetails)
+
+	c.mu.RLock()
+	for key, namespaced := range c.scopeMap {
+		group, _, _ := strings.Cut(key, "/")
+		if _, keep := failedGroups[group]; keep {
+			newMap[key] = namespaced
+			if detail, ok := c.details[key]; ok {
+				newDetails[key] = detail
+			}
+		}
+	}
+	c.mu.RUnlock()
 
 	for _, resourceList := range resourceLists {
 		if resourceList == nil {
@@ -221,6 +514,7 @@ func (c *ResourceScopeCache) refresh() {
 		for _, res := range resourceList.APIResources {
 			key := group + "/" + res.Name
 			newMap[key] = res.Namespaced
+			newDetails[key] = resourceDetails{kind: res.Kind, verbs: slices.Clone(res.Verbs)}
 		}
 	}
 
@@ -231,6 +525,8 @@ func (c *ResourceScopeCache) refresh() {
 
 	c.mu.Lock()
 	c.scopeMap = newMap
+	c.details = newDetails
+	c.unavailableGroups = failedGroups
 	c.mu.Unlock()
 
 	klog.V(4).Infof("ResourceScopeCache: refreshed with %d resources", len(newMap))

@@ -48,6 +48,7 @@ func ValidatePreflight(state *dvpval.State) cpvalapi.Result {
 
 	result.Merge(
 		cpval.ValidateModuleConfig(state),
+		dvpval.ValidateAdditionalVMLabels(state),
 		cpval.ValidateCredentialSecretPresence(state, cpapi.CredentialSecretName),
 		cpval.ValidateCredentialSecretContent(state, cpapi.CredentialSecretName, dvpval.CredentialsValidator),
 		cpval.ValidateMasterNodeGroupPresence(state),

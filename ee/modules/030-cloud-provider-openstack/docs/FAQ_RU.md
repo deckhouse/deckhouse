@@ -18,7 +18,7 @@ title: "Cloud provider — OpenStack: FAQ"
 * `loadbalancer.openstack.deckhouse.io/load-balancer-id` — указывает OpenStack CCM использовать заранее созданный Octavia-балансировщик.
 * `loadbalancer.openstack.deckhouse.io/load-balancer-address` — указывает OpenStack CCM привязать заранее выделенный floating IP к создаваемому им балансировщику.
 
-DKP автоматически добавит указанные аннотации в сгенерированный объект Service типа LoadBalancer.
+DP автоматически добавит указанные аннотации в сгенерированный объект Service типа LoadBalancer.
 
 Если используется аннотация`loadbalancer.openstack.deckhouse.io/load-balancer-id`, балансировщик должен соответствовать следующим требованиям:
 
@@ -34,7 +34,7 @@ DKP автоматически добавит указанные аннотац�
 
 Если указанный floating IP недоступен, OpenStack CCM не сможет назначить внешний IP-адрес объекту Service.
 
-Не добавляйте аннотации `loadbalancer.openstack.deckhouse.io/load-balancer-id` и `loadbalancer.openstack.deckhouse.io/load-balancer-address` к прикладным ресурсам Ingress. Указывайте их только в конфигурации IngressNginxController: DKP добавит их в созданный объект Service, который обрабатывает `openstack-cloud-controller-manager`.
+Не добавляйте аннотации `loadbalancer.openstack.deckhouse.io/load-balancer-id` и `loadbalancer.openstack.deckhouse.io/load-balancer-address` к прикладным ресурсам Ingress. Указывайте их только в конфигурации IngressNginxController: DP добавит их в созданный объект Service, который обрабатывает `openstack-cloud-controller-manager`.
 
 ### IngressNginxController с заранее созданным балансировщиком
 
@@ -94,33 +94,6 @@ spec:
     value: frontend
 ```
 
-## Как настроить политики безопасности на узлах кластера?
-
-Вариантов, зачем может понадобиться ограничить или, наоборот, расширить входящий или исходящий трафик на виртуальных
-машинах кластера, может быть множество. Например:
-
-* Разрешить подключение к узлам кластера с виртуальных машин из другой подсети.
-* Разрешить подключение к портам статического узла для работы приложения.
-* Ограничить доступ к внешним ресурсам или другим ВМ в облаке по требованию службы безопасности.
-
-Для всего этого следует применять дополнительные группы безопасности (security groups). Можно использовать только группы безопасности, предварительно
-созданные в облаке.
-
-### Установка дополнительных групп безопасности (security groups) на статических и master-узлах
-
-Данный параметр можно задать либо при создании кластера, либо в уже существующем кластере. В обоих случаях дополнительные
-группы безопасности указываются в `OpenStackClusterConfiguration`:
-
-* для master-узлов — в секции `masterNodeGroup` в поле `additionalSecurityGroups`;
-* для статических узлов — в секции `nodeGroups` в конфигурации, описывающей желаемую nodeGroup, а также в поле `additionalSecurityGroups`.
-
-Поле `additionalSecurityGroups` представляет собой массив строк с именами групп безопасности.
-
-### Установка дополнительных групп безопасности (security groups) на ephemeral-узлах
-
-Необходимо прописать параметр `additionalSecurityGroups` для всех `OpenStackInstanceClass` в кластере, которым нужны дополнительные
-групп безопасности. Подробнее — [параметры модуля `cloud-provider-openstack`](/cloud-provider-openstack/configuration.html).
-
 ## Как создать NodeGroup в зонах доступности?
 
 Кластер OpenStack разворачивается в одном регионе, который задается параметром [`provider.region`](cluster_configuration.html#openstackclusterconfiguration-provider-region) ресурса [OpenStackClusterConfiguration](cluster_configuration.html#openstackclusterconfiguration). Создавать узлы можно только в зонах доступности этого региона. Использование зон из других регионов не поддерживается.
@@ -170,7 +143,7 @@ spec:
 Гибридный кластер представляет собой кластер, в котором могут быть как узлы bare metal, так и узлы OpenStack. Для создания такого кластера необходимо наличие L2-сети между всеми узлами кластера.
 
 {% alert level="info" %}
-В Deckhouse Kubernetes Platform есть возможность задавать префикс для имени CloudEphemeral-узлов, добавляемых в гибридный кластер c master-узлами типа Static.
+В Deckhouse Platform есть возможность задавать префикс для имени CloudEphemeral-узлов, добавляемых в гибридный кластер c master-узлами типа Static.
 Для этого используйте параметр [`instancePrefix`](../node-manager/configuration.html#parameters-instanceprefix) модуля `node-manager`. Префикс, указанный в параметре, будет добавляться к имени всех добавляемых в кластер узлов типа CloudEphemeral. Задать префикс для определенной NodeGroup нельзя.
 {% endalert %}
 

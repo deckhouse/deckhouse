@@ -21,7 +21,7 @@ spec:
       honorLabels: true
       metricRelabelings:
         - sourceLabels: [ resource_id ]
-          regex: {{ .Values.cloudProviderYandex.internal.providerDiscoveryData.natInstanceName }}
+          regex: {{ .Values.cloudProviderYandex.internal.providerDiscoveryData.natInstanceName | quote }}
           action: keep
         - targetLabel: "nat_instance"
           replacement: "true"

@@ -40,6 +40,7 @@ func main() {
 
 func run(args []string) error {
 	var opts crdenricher.Options
+	var strict bool
 
 	for _, arg := range args {
 		switch {
@@ -79,6 +80,19 @@ func run(args []string) error {
 			}
 			opts.GenerateExamples = value
 
+		// Strictness is opt-in so existing invocations keep their exit code.
+		// Accept the value-less flag forms and an explicit boolean, like the
+		// others.
+		case arg == "strict", arg == "--strict":
+			strict = true
+
+		case strings.HasPrefix(arg, "strict="):
+			value, err := parseBool(trimQuotes(strings.TrimPrefix(arg, "strict=")))
+			if err != nil {
+				return err
+			}
+			strict = value
+
 		// Indented output is opt-in. Accept the value-less flag forms (reindent /
 		// --reindent) and an explicit boolean (reindent=true).
 		case arg == "reindent", arg == "--reindent":
@@ -96,9 +110,17 @@ func run(args []string) error {
 		}
 	}
 
-	changed, err := crdenricher.Run(opts)
+	changed, warnings, err := crdenricher.RunWithWarnings(opts)
 	if err != nil {
 		return err
+	}
+
+	// Warnings go to stderr rather than being dropped: each one is a marker that
+	// did not do what its author wrote it to do -- a path that does not resolve,
+	// a field the schema has no property for -- and the enrichment carries on
+	// regardless, so nothing else would say so.
+	for _, w := range warnings {
+		fmt.Fprintf(os.Stderr, "warning: %s\n", w)
 	}
 
 	for _, file := range changed {
@@ -106,6 +128,16 @@ func run(args []string) error {
 	}
 	if len(changed) == 0 {
 		fmt.Println("no CRDs required enrichment")
+	}
+
+	// Warnings are not fatal by default, so a repository can adopt the tool
+	// without its generation step turning red. They have to be able to become
+	// fatal, though: a re-render gate over a committed crds/ catches a marker
+	// that used to work and stopped, but never one that never worked at all --
+	// the committed manifest matches the broken render, and the gate stays green
+	// for as long as nobody looks at stderr.
+	if strict && len(warnings) > 0 {
+		return fmt.Errorf("%d warning(s) with strict enabled", len(warnings))
 	}
 
 	return nil
@@ -133,7 +165,7 @@ func usage() {
 	fmt.Print(`crd-enricher enriches controller-gen CRDs with custom x-doc-* schema fields.
 
 Usage:
-  crd-enricher paths=<go-packages> crds=<crd-dir> [dir=<workdir>] [auto-examples] [reindent]
+  crd-enricher paths=<go-packages> crds=<crd-dir> [dir=<workdir>] [auto-examples] [reindent] [strict]
 
 Arguments:
   paths=        Comma separated Go package patterns with the API structs (repeatable).
@@ -147,6 +179,11 @@ Arguments:
   reindent      Encode the output with indented block sequences (the goyaml.v3
                 layout) instead of the flush sigs.k8s.io/yaml layout. Off by
                 default. Accepts reindent, --reindent or reindent=<bool>.
+  strict        Exit non-zero when any warning was printed. Off by default.
+                Warnings always go to stderr; this makes a CI job able to fail
+                on a marker that did nothing, which a re-render gate over a
+                committed crds/ cannot see if the marker never worked.
+                Accepts strict, --strict or strict=<bool>.
 
 Example:
   crd-enricher paths="./deckhouse-controller/pkg/apis/deckhouse.io/..." crds=bin/crd/bases auto-examples

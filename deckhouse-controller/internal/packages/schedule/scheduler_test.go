@@ -20,12 +20,12 @@ import (
 	"testing"
 
 	"github.com/Masterminds/semver/v3"
-	addonutils "github.com/flant/addon-operator/pkg/utils"
 	"github.com/stretchr/testify/suite"
 
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/schedule"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/schedule/rule"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/schedule/rule/script"
+	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/addonutils"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/edition"
 	"github.com/deckhouse/deckhouse/pkg/log"
 )
@@ -1013,7 +1013,7 @@ func (s *SchedulerSuite) TestRescheduleFansOutToDirectSubscribers() {
 	s.sched.Complete("unrelated")
 	s.drainEvents()
 
-	s.sched.Reschedule("publisher")
+	s.sched.Reschedule("publisher", schedule.ReasonScheduled)
 
 	scheduled := eventNames(s.collectEvents(), schedule.EventSchedule)
 	s.Contains(scheduled, "publisher", "the rescheduled node must be re-scheduled")

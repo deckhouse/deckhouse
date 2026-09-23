@@ -4,6 +4,7 @@
   excludePaths:
     - docs
     - README.md
+    - '*-threat-model.md'
     - images
     - hooks/**/*.go
     - hooks/*.go
@@ -15,6 +16,7 @@
     - .namespace
     - values_matrix_test.yaml
     - .build.yaml
+    - e2e
   stageDependencies:
     setup:
         - '**/*'
@@ -23,6 +25,7 @@
   excludePaths:
     - docs
     - README.md
+    - '*-threat-model.md'
     - images
     - hooks/**/*.go
     - hooks/*.go
@@ -34,6 +37,7 @@
     - .namespace
     - values_matrix_test.yaml
     - .build.yaml
+    - e2e
   stageDependencies:
     setup:
         - '**/*'
@@ -42,6 +46,7 @@
   excludePaths:
     - docs
     - README.md
+    - '*-threat-model.md'
     - images
     - hooks/**/*.go
     - hooks/*.go
@@ -53,6 +58,7 @@
     - .namespace
     - values_matrix_test.yaml
     - .build.yaml
+    - e2e
   stageDependencies:
     setup:
         - '**/*'
@@ -61,6 +67,7 @@
   excludePaths:
     - docs
     - README.md
+    - '*-threat-model.md'
     - images
     - hooks/**/*.go
     - hooks/*.go
@@ -72,6 +79,7 @@
     - .namespace
     - values_matrix_test.yaml
     - .build.yaml
+    - e2e
   stageDependencies:
     setup:
         - '**/*'
@@ -80,6 +88,7 @@
   excludePaths:
     - docs
     - README.md
+    - '*-threat-model.md'
     - images
     - hooks/**/*.go
     - hooks/*.go
@@ -91,6 +100,7 @@
     - .namespace
     - values_matrix_test.yaml
     - .build.yaml
+    - e2e
   stageDependencies:
     setup:
         - '**/*'
@@ -99,6 +109,7 @@
   excludePaths:
     - docs
     - README.md
+    - '*-threat-model.md'
     - images
     - hooks/**/*.go
     - hooks/*.go
@@ -110,6 +121,7 @@
     - .namespace
     - values_matrix_test.yaml
     - .build.yaml
+    - e2e
   stageDependencies:
     setup:
         - '**/*'
@@ -118,6 +130,7 @@
   excludePaths:
     - docs
     - README.md
+    - '*-threat-model.md'
     - images
     - hooks/**/*.go
     - hooks/*.go
@@ -129,6 +142,7 @@
     - .namespace
     - values_matrix_test.yaml
     - .build.yaml
+    - e2e
   stageDependencies:
     setup:
         - '**/*'
@@ -137,6 +151,7 @@
   excludePaths:
     - docs
     - README.md
+    - '*-threat-model.md'
     - images
     - hooks/**/*.go
     - hooks/*.go
@@ -148,6 +163,7 @@
     - .namespace
     - values_matrix_test.yaml
     - .build.yaml
+    - e2e
   stageDependencies:
     setup:
         - '**/*'
@@ -156,6 +172,7 @@
   excludePaths:
     - docs
     - README.md
+    - '*-threat-model.md'
     - images
     - hooks/**/*.go
     - hooks/*.go
@@ -167,6 +184,7 @@
     - .namespace
     - values_matrix_test.yaml
     - .build.yaml
+    - e2e
   stageDependencies:
     setup:
         - '**/*'
@@ -175,6 +193,7 @@
   excludePaths:
     - docs
     - README.md
+    - '*-threat-model.md'
     - images
     - hooks/**/*.go
     - hooks/*.go
@@ -186,6 +205,7 @@
     - .namespace
     - values_matrix_test.yaml
     - .build.yaml
+    - e2e
   stageDependencies:
     setup:
         - '**/*'
@@ -194,6 +214,7 @@
   excludePaths:
     - docs
     - README.md
+    - '*-threat-model.md'
     - images
     - hooks/**/*.go
     - hooks/*.go
@@ -205,6 +226,7 @@
     - .namespace
     - values_matrix_test.yaml
     - .build.yaml
+    - e2e
   stageDependencies:
     setup:
         - '**/*'
@@ -213,6 +235,7 @@
   excludePaths:
     - docs
     - README.md
+    - '*-threat-model.md'
     - images
     - hooks/**/*.go
     - hooks/*.go
@@ -224,6 +247,7 @@
     - .namespace
     - values_matrix_test.yaml
     - .build.yaml
+    - e2e
   stageDependencies:
     setup:
         - '**/*'
@@ -232,6 +256,7 @@
   excludePaths:
     - docs
     - README.md
+    - '*-threat-model.md'
     - images
     - hooks/**/*.go
     - hooks/*.go
@@ -243,6 +268,7 @@
     - .namespace
     - values_matrix_test.yaml
     - .build.yaml
+    - e2e
   stageDependencies:
     setup:
         - '**/*'
@@ -251,6 +277,7 @@
   excludePaths:
     - docs
     - README.md
+    - '*-threat-model.md'
     - images
     - hooks/**/*.go
     - hooks/*.go
@@ -262,6 +289,7 @@
     - .namespace
     - values_matrix_test.yaml
     - .build.yaml
+    - e2e
   stageDependencies:
     setup:
         - '**/*'
@@ -270,6 +298,7 @@
   excludePaths:
     - docs
     - README.md
+    - '*-threat-model.md'
     - images
     - hooks/**/*.go
     - hooks/*.go
@@ -281,6 +310,7 @@
     - .namespace
     - values_matrix_test.yaml
     - .build.yaml
+    - e2e
   stageDependencies:
     setup:
         - '**/*'
@@ -289,6 +319,7 @@
   excludePaths:
     - docs
     - README.md
+    - '*-threat-model.md'
     - images
     - hooks/**/*.go
     - hooks/*.go
@@ -300,6 +331,7 @@
     - .namespace
     - values_matrix_test.yaml
     - .build.yaml
+    - e2e
   stageDependencies:
     setup:
         - '**/*'
@@ -308,6 +340,7 @@
   excludePaths:
     - docs
     - README.md
+    - '*-threat-model.md'
     - images
     - hooks/**/*.go
     - hooks/*.go
@@ -319,6 +352,7 @@
     - .namespace
     - values_matrix_test.yaml
     - .build.yaml
+    - e2e
   stageDependencies:
     setup:
         - '**/*'
@@ -327,6 +361,7 @@
   excludePaths:
     - docs
     - README.md
+    - '*-threat-model.md'
     - images
     - hooks/**/*.go
     - hooks/*.go
@@ -338,6 +373,7 @@
     - .namespace
     - values_matrix_test.yaml
     - .build.yaml
+    - e2e
   stageDependencies:
     setup:
         - '**/*'
@@ -346,6 +382,7 @@
   excludePaths:
     - docs
     - README.md
+    - '*-threat-model.md'
     - images
     - hooks/**/*.go
     - hooks/*.go
@@ -357,6 +394,7 @@
     - .namespace
     - values_matrix_test.yaml
     - .build.yaml
+    - e2e
   stageDependencies:
     setup:
         - '**/*'
@@ -365,6 +403,7 @@
   excludePaths:
     - docs
     - README.md
+    - '*-threat-model.md'
     - images
     - hooks/**/*.go
     - hooks/*.go
@@ -376,6 +415,7 @@
     - .namespace
     - values_matrix_test.yaml
     - .build.yaml
+    - e2e
   stageDependencies:
     setup:
         - '**/*'
@@ -384,6 +424,7 @@
   excludePaths:
     - docs
     - README.md
+    - '*-threat-model.md'
     - images
     - hooks/**/*.go
     - hooks/*.go
@@ -395,6 +436,7 @@
     - .namespace
     - values_matrix_test.yaml
     - .build.yaml
+    - e2e
   stageDependencies:
     setup:
         - '**/*'
@@ -403,6 +445,7 @@
   excludePaths:
     - docs
     - README.md
+    - '*-threat-model.md'
     - images
     - hooks/**/*.go
     - hooks/*.go
@@ -414,6 +457,7 @@
     - .namespace
     - values_matrix_test.yaml
     - .build.yaml
+    - e2e
   stageDependencies:
     setup:
         - '**/*'
@@ -422,6 +466,7 @@
   excludePaths:
     - docs
     - README.md
+    - '*-threat-model.md'
     - images
     - hooks/**/*.go
     - hooks/*.go
@@ -433,6 +478,7 @@
     - .namespace
     - values_matrix_test.yaml
     - .build.yaml
+    - e2e
   stageDependencies:
     setup:
         - '**/*'
@@ -441,6 +487,7 @@
   excludePaths:
     - docs
     - README.md
+    - '*-threat-model.md'
     - images
     - hooks/**/*.go
     - hooks/*.go
@@ -452,6 +499,7 @@
     - .namespace
     - values_matrix_test.yaml
     - .build.yaml
+    - e2e
   stageDependencies:
     setup:
         - '**/*'
@@ -460,6 +508,7 @@
   excludePaths:
     - docs
     - README.md
+    - '*-threat-model.md'
     - images
     - hooks/**/*.go
     - hooks/*.go
@@ -471,6 +520,7 @@
     - .namespace
     - values_matrix_test.yaml
     - .build.yaml
+    - e2e
   stageDependencies:
     setup:
         - '**/*'
@@ -479,6 +529,7 @@
   excludePaths:
     - docs
     - README.md
+    - '*-threat-model.md'
     - images
     - hooks/**/*.go
     - hooks/*.go
@@ -490,6 +541,7 @@
     - .namespace
     - values_matrix_test.yaml
     - .build.yaml
+    - e2e
   stageDependencies:
     setup:
         - '**/*'
@@ -503,6 +555,7 @@
   excludePaths:
     - docs
     - README.md
+    - '*-threat-model.md'
     - images
     - hooks/**/*.go
     - hooks/*.go
@@ -514,6 +567,7 @@
     - .namespace
     - values_matrix_test.yaml
     - .build.yaml
+    - e2e
   stageDependencies:
     setup:
         - '**/*'
@@ -522,6 +576,7 @@
   excludePaths:
     - docs
     - README.md
+    - '*-threat-model.md'
     - images
     - hooks/**/*.go
     - hooks/*.go
@@ -533,6 +588,7 @@
     - .namespace
     - values_matrix_test.yaml
     - .build.yaml
+    - e2e
   stageDependencies:
     setup:
         - '**/*'
@@ -541,6 +597,7 @@
   excludePaths:
     - docs
     - README.md
+    - '*-threat-model.md'
     - images
     - hooks/**/*.go
     - hooks/*.go
@@ -552,6 +609,7 @@
     - .namespace
     - values_matrix_test.yaml
     - .build.yaml
+    - e2e
   stageDependencies:
     setup:
         - '**/*'
@@ -560,6 +618,7 @@
   excludePaths:
     - docs
     - README.md
+    - '*-threat-model.md'
     - images
     - hooks/**/*.go
     - hooks/*.go
@@ -571,6 +630,7 @@
     - .namespace
     - values_matrix_test.yaml
     - .build.yaml
+    - e2e
   stageDependencies:
     setup:
         - '**/*'
@@ -579,6 +639,7 @@
   excludePaths:
     - docs
     - README.md
+    - '*-threat-model.md'
     - images
     - hooks/**/*.go
     - hooks/*.go
@@ -590,6 +651,7 @@
     - .namespace
     - values_matrix_test.yaml
     - .build.yaml
+    - e2e
   stageDependencies:
     setup:
         - '**/*'
@@ -598,6 +660,7 @@
   excludePaths:
     - docs
     - README.md
+    - '*-threat-model.md'
     - images
     - hooks/**/*.go
     - hooks/*.go
@@ -609,6 +672,7 @@
     - .namespace
     - values_matrix_test.yaml
     - .build.yaml
+    - e2e
   stageDependencies:
     setup:
         - '**/*'
@@ -637,6 +701,7 @@
   excludePaths:
     - docs
     - README.md
+    - '*-threat-model.md'
     - images
     - hooks/**/*.go
     - hooks/*.go
@@ -648,6 +713,7 @@
     - .namespace
     - values_matrix_test.yaml
     - .build.yaml
+    - e2e
   stageDependencies:
     setup:
         - '**/*'
@@ -656,6 +722,7 @@
   excludePaths:
     - docs
     - README.md
+    - '*-threat-model.md'
     - images
     - hooks/**/*.go
     - hooks/*.go
@@ -667,6 +734,7 @@
     - .namespace
     - values_matrix_test.yaml
     - .build.yaml
+    - e2e
   stageDependencies:
     setup:
         - '**/*'
@@ -675,6 +743,7 @@
   excludePaths:
     - docs
     - README.md
+    - '*-threat-model.md'
     - images
     - hooks/**/*.go
     - hooks/*.go
@@ -686,6 +755,7 @@
     - .namespace
     - values_matrix_test.yaml
     - .build.yaml
+    - e2e
   stageDependencies:
     setup:
         - '**/*'
@@ -694,6 +764,7 @@
   excludePaths:
     - docs
     - README.md
+    - '*-threat-model.md'
     - images
     - hooks/**/*.go
     - hooks/*.go
@@ -705,6 +776,7 @@
     - .namespace
     - values_matrix_test.yaml
     - .build.yaml
+    - e2e
   stageDependencies:
     setup:
         - '**/*'
@@ -718,6 +790,7 @@
   excludePaths:
     - docs
     - README.md
+    - '*-threat-model.md'
     - images
     - hooks/**/*.go
     - hooks/*.go
@@ -729,25 +802,7 @@
     - .namespace
     - values_matrix_test.yaml
     - .build.yaml
-  stageDependencies:
-    setup:
-        - '**/*'
-- add: /ee/se-plus/modules/040-node-manager/capi/zvirt
-  to: /deckhouse/modules/040-node-manager/capi/zvirt
-  excludePaths:
-    - docs
-    - README.md
-    - images
-    - hooks/**/*.go
-    - hooks/*.go
-    - hooks/**/testdata
-    - apis
-    - requirements
-    - hack
-    - template_tests
-    - .namespace
-    - values_matrix_test.yaml
-    - .build.yaml
+    - e2e
   stageDependencies:
     setup:
         - '**/*'
@@ -761,6 +816,7 @@
   excludePaths:
     - docs
     - README.md
+    - '*-threat-model.md'
     - images
     - hooks/**/*.go
     - hooks/*.go
@@ -772,63 +828,7 @@
     - .namespace
     - values_matrix_test.yaml
     - .build.yaml
-  stageDependencies:
-    setup:
-        - '**/*'
-- add: /ee/modules/040-node-manager/capi/dynamix
-  to: /deckhouse/modules/040-node-manager/capi/dynamix
-  excludePaths:
-    - docs
-    - README.md
-    - images
-    - hooks/**/*.go
-    - hooks/*.go
-    - hooks/**/testdata
-    - apis
-    - requirements
-    - hack
-    - template_tests
-    - .namespace
-    - values_matrix_test.yaml
-    - .build.yaml
-  stageDependencies:
-    setup:
-        - '**/*'
-- add: /ee/modules/040-node-manager/capi/huaweicloud
-  to: /deckhouse/modules/040-node-manager/capi/huaweicloud
-  excludePaths:
-    - docs
-    - README.md
-    - images
-    - hooks/**/*.go
-    - hooks/*.go
-    - hooks/**/testdata
-    - apis
-    - requirements
-    - hack
-    - template_tests
-    - .namespace
-    - values_matrix_test.yaml
-    - .build.yaml
-  stageDependencies:
-    setup:
-        - '**/*'
-- add: /ee/modules/040-node-manager/capi/vcd
-  to: /deckhouse/modules/040-node-manager/capi/vcd
-  excludePaths:
-    - docs
-    - README.md
-    - images
-    - hooks/**/*.go
-    - hooks/*.go
-    - hooks/**/testdata
-    - apis
-    - requirements
-    - hack
-    - template_tests
-    - .namespace
-    - values_matrix_test.yaml
-    - .build.yaml
+    - e2e
   stageDependencies:
     setup:
         - '**/*'
@@ -847,6 +847,7 @@
   excludePaths:
     - docs
     - README.md
+    - '*-threat-model.md'
     - images
     - hooks/**/*.go
     - hooks/*.go
@@ -858,6 +859,7 @@
     - .namespace
     - values_matrix_test.yaml
     - .build.yaml
+    - e2e
   stageDependencies:
     setup:
         - '**/*'
@@ -866,6 +868,7 @@
   excludePaths:
     - docs
     - README.md
+    - '*-threat-model.md'
     - images
     - hooks/**/*.go
     - hooks/*.go
@@ -877,6 +880,7 @@
     - .namespace
     - values_matrix_test.yaml
     - .build.yaml
+    - e2e
   stageDependencies:
     setup:
         - '**/*'
@@ -885,6 +889,7 @@
   excludePaths:
     - docs
     - README.md
+    - '*-threat-model.md'
     - images
     - hooks/**/*.go
     - hooks/*.go
@@ -896,6 +901,7 @@
     - .namespace
     - values_matrix_test.yaml
     - .build.yaml
+    - e2e
   stageDependencies:
     setup:
         - '**/*'
@@ -904,6 +910,7 @@
   excludePaths:
     - docs
     - README.md
+    - '*-threat-model.md'
     - images
     - hooks/**/*.go
     - hooks/*.go
@@ -915,6 +922,7 @@
     - .namespace
     - values_matrix_test.yaml
     - .build.yaml
+    - e2e
   stageDependencies:
     setup:
         - '**/*'
@@ -923,6 +931,7 @@
   excludePaths:
     - docs
     - README.md
+    - '*-threat-model.md'
     - images
     - hooks/**/*.go
     - hooks/*.go
@@ -934,19 +943,16 @@
     - .namespace
     - values_matrix_test.yaml
     - .build.yaml
+    - e2e
   stageDependencies:
     setup:
-        - '**/*'
-- add: /ee/modules/110-istio/templates/validations.yaml
-  to: /deckhouse/modules/110-istio/templates/validations.yaml
-  stageDependencies:
-    install:
         - '**/*'
 - add: /ee/modules/110-istio/templates/waypoint-controller
   to: /deckhouse/modules/110-istio/templates/waypoint-controller
   excludePaths:
     - docs
     - README.md
+    - '*-threat-model.md'
     - images
     - hooks/**/*.go
     - hooks/*.go
@@ -958,6 +964,7 @@
     - .namespace
     - values_matrix_test.yaml
     - .build.yaml
+    - e2e
   stageDependencies:
     setup:
         - '**/*'
@@ -966,6 +973,7 @@
   excludePaths:
     - docs
     - README.md
+    - '*-threat-model.md'
     - images
     - hooks/**/*.go
     - hooks/*.go
@@ -977,8 +985,24 @@
     - .namespace
     - values_matrix_test.yaml
     - .build.yaml
+    - e2e
   stageDependencies:
     setup:
+        - '**/*'
+- add: /ee/modules/110-istio/templates/validations/federation.yaml
+  to: /deckhouse/modules/110-istio/templates/validations/federation.yaml
+  stageDependencies:
+    install:
+        - '**/*'
+- add: /ee/modules/110-istio/templates/validations/multicluster.yaml
+  to: /deckhouse/modules/110-istio/templates/validations/multicluster.yaml
+  stageDependencies:
+    install:
+        - '**/*'
+- add: /ee/modules/110-istio/templates/validations/waypointinstances.yaml
+  to: /deckhouse/modules/110-istio/templates/validations/waypointinstances.yaml
+  stageDependencies:
+    install:
         - '**/*'
 - add: /ee/modules/110-istio/crds/doc-ru-istiofederation.yaml
   to: /deckhouse/modules/110-istio/crds/doc-ru-istiofederation.yaml
@@ -1045,6 +1069,7 @@
   excludePaths:
     - docs
     - README.md
+    - '*-threat-model.md'
     - images
     - hooks/**/*.go
     - hooks/*.go
@@ -1056,6 +1081,7 @@
     - .namespace
     - values_matrix_test.yaml
     - .build.yaml
+    - e2e
   stageDependencies:
     setup:
         - '**/*'
@@ -1064,6 +1090,7 @@
   excludePaths:
     - docs
     - README.md
+    - '*-threat-model.md'
     - images
     - hooks/**/*.go
     - hooks/*.go
@@ -1075,6 +1102,7 @@
     - .namespace
     - values_matrix_test.yaml
     - .build.yaml
+    - e2e
   stageDependencies:
     setup:
         - '**/*'
@@ -1093,6 +1121,7 @@
   excludePaths:
     - docs
     - README.md
+    - '*-threat-model.md'
     - images
     - hooks/**/*.go
     - hooks/*.go
@@ -1104,8 +1133,19 @@
     - .namespace
     - values_matrix_test.yaml
     - .build.yaml
+    - e2e
   stageDependencies:
     setup:
+        - '**/*'
+- add: /ee/cse/modules/002-deckhouse/openapi/config-values.yaml
+  to: /deckhouse/modules/002-deckhouse/openapi/config-values.yaml
+  stageDependencies:
+    install:
+        - '**/*'
+- add: /ee/cse/modules/002-deckhouse/openapi/doc-ru-config-values.yaml
+  to: /deckhouse/modules/002-deckhouse/openapi/doc-ru-config-values.yaml
+  stageDependencies:
+    install:
         - '**/*'
 - add: /ee/cse/modules/015-admission-policy-engine/openapi/config-values.yaml
   to: /deckhouse/modules/015-admission-policy-engine/openapi/config-values.yaml
@@ -1122,6 +1162,7 @@
   excludePaths:
     - docs
     - README.md
+    - '*-threat-model.md'
     - images
     - hooks/**/*.go
     - hooks/*.go
@@ -1133,6 +1174,7 @@
     - .namespace
     - values_matrix_test.yaml
     - .build.yaml
+    - e2e
   stageDependencies:
     setup:
         - '**/*'
@@ -1156,6 +1198,7 @@
   excludePaths:
     - docs
     - README.md
+    - '*-threat-model.md'
     - images
     - hooks/**/*.go
     - hooks/*.go
@@ -1167,6 +1210,7 @@
     - .namespace
     - values_matrix_test.yaml
     - .build.yaml
+    - e2e
   stageDependencies:
     setup:
         - '**/*'
@@ -1175,6 +1219,7 @@
   excludePaths:
     - docs
     - README.md
+    - '*-threat-model.md'
     - images
     - hooks/**/*.go
     - hooks/*.go
@@ -1186,6 +1231,7 @@
     - .namespace
     - values_matrix_test.yaml
     - .build.yaml
+    - e2e
   stageDependencies:
     setup:
         - '**/*'
@@ -1194,6 +1240,7 @@
   excludePaths:
     - docs
     - README.md
+    - '*-threat-model.md'
     - images
     - hooks/**/*.go
     - hooks/*.go
@@ -1205,6 +1252,7 @@
     - .namespace
     - values_matrix_test.yaml
     - .build.yaml
+    - e2e
   stageDependencies:
     setup:
         - '**/*'
@@ -1213,6 +1261,7 @@
   excludePaths:
     - docs
     - README.md
+    - '*-threat-model.md'
     - images
     - hooks/**/*.go
     - hooks/*.go
@@ -1224,6 +1273,7 @@
     - .namespace
     - values_matrix_test.yaml
     - .build.yaml
+    - e2e
   stageDependencies:
     setup:
         - '**/*'
@@ -1232,6 +1282,7 @@
   excludePaths:
     - docs
     - README.md
+    - '*-threat-model.md'
     - images
     - hooks/**/*.go
     - hooks/*.go
@@ -1243,6 +1294,7 @@
     - .namespace
     - values_matrix_test.yaml
     - .build.yaml
+    - e2e
   stageDependencies:
     setup:
         - '**/*'
@@ -1251,6 +1303,7 @@
   excludePaths:
     - docs
     - README.md
+    - '*-threat-model.md'
     - images
     - hooks/**/*.go
     - hooks/*.go
@@ -1262,6 +1315,7 @@
     - .namespace
     - values_matrix_test.yaml
     - .build.yaml
+    - e2e
   stageDependencies:
     setup:
         - '**/*'
@@ -1285,6 +1339,7 @@
   excludePaths:
     - docs
     - README.md
+    - '*-threat-model.md'
     - images
     - hooks/**/*.go
     - hooks/*.go
@@ -1296,6 +1351,7 @@
     - .namespace
     - values_matrix_test.yaml
     - .build.yaml
+    - e2e
   stageDependencies:
     setup:
         - '**/*'

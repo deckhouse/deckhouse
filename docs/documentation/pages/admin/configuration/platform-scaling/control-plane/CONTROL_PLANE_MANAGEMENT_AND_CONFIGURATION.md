@@ -1,26 +1,26 @@
 ---
 title: "General management and configuration of the control plane"
 permalink: en/admin/configuration/platform-scaling/control-plane/control-plane-management-and-configuration.html
-description: "Configure and manage Kubernetes control plane in Deckhouse Kubernetes Platform. High availability, certificate management, and control plane component configuration."
+description: "Configure and manage Kubernetes control plane in Deckhouse Platform. High availability, certificate management, and control plane component configuration."
 ---
 
 ## Main features
 
-Deckhouse Kubernetes Platform (DKP) manages control plane components using the [`control-plane-manager`](/modules/control-plane-manager/) module, which runs on all master nodes (nodes with the label `node-role.kubernetes.io/control-plane: ""`).
+Deckhouse Platform (DP) manages control plane components using the [`control-plane-manager`](/modules/control-plane-manager/) module, which runs on all master nodes (nodes with the label `node-role.kubernetes.io/control-plane: ""`).
 
 The control plane management functionality includes:
 
 - Managing certificates required for the control plane to function, including their renewal and issuance when the configuration changes. Secure configuration is maintained automatically, with the ability to quickly add additional SANs for secure access to the Kubernetes API.
 
-- Component configuration. DKP generates all necessary configurations and manifests (kube-apiserver, etcd, etc.), reducing the risk of human error.
+- Component configuration. DP generates all necessary configurations and manifests (kube-apiserver, etcd, etc.), reducing the risk of human error.
 
-- Upgrade/downgrade of components. DKP supports consistent version upgrades or downgrades of the control plane, helping maintain version uniformity across the cluster.
+- Upgrade/downgrade of components. DP supports consistent version upgrades or downgrades of the control plane, helping maintain version uniformity across the cluster.
 
-- Managing the etcd cluster configuration and its members. DKP scales master nodes and performs migrations between single-master and multi-master modes.
+- Managing the etcd cluster configuration and its members. DP scales master nodes and performs migrations between single-master and multi-master modes.
 
 - Periodic defragmentation of etcd. In clusters with three or more etcd members, this feature is enabled by default.
 
-- Configuring kubeconfig. DKP generates an up-to-date configuration file (with `cluster-admin` permissions), creates, renews, and updates the kubeconfig for control-plane components and the admin kubeconfig (`admin.conf`), and creates a symlink for the `root` user (`/root/.kube/config` -> `admin.conf`). When the [`user-authz`](/modules/user-authz/) module is enabled, the symlink can be disabled using the [`rootKubeconfigSymlink`](/modules/control-plane-manager/configuration.html#parameters-rootkubeconfigsymlink) parameter in the `control-plane-manager` module (for more details, see the [FAQ](/modules/control-plane-manager/faq.html#cluster-admin-access-model) of the `control-plane-manager` module). DKP also tightens access permissions for the `admin.conf` and `super-admin.conf` files to enhance security.
+- Configuring kubeconfig. DP generates an up-to-date configuration file (with `cluster-admin` permissions), creates, renews, and updates the kubeconfig for control-plane components and the admin kubeconfig (`admin.conf`), and creates a symlink for the `root` user (`/root/.kube/config` → `admin.conf`). When the [`user-authz`](/modules/user-authz/) module is enabled, the symlink can be disabled using the [`rootKubeconfigSymlink`](/modules/control-plane-manager/configuration.html#parameters-rootkubeconfigsymlink) parameter in the `control-plane-manager` module (for more details, see the [FAQ](/modules/control-plane-manager/faq.html#cluster-admin-access-model) of the `control-plane-manager` module). DP also tightens access permissions for the `admin.conf` and `super-admin.conf` files to enhance security.
 
 > Some parameters affecting control plane behavior are taken from the [ClusterConfiguration](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#clusterconfiguration) resource.
 
@@ -82,9 +82,9 @@ spec:
       publishAPI: {}
 ```
 
-### Checking DKP status and queues
+### Checking DP status and queues
 
-How to verify that [`control-plane-manager`](/modules/control-plane-manager/) is running correctly and is not in a pending state, and how to check active DKP tasks (queues):
+How to verify that [`control-plane-manager`](/modules/control-plane-manager/) is running correctly and is not in a pending state, and how to check active DP tasks (queues):
 
 1. Make sure the module is enabled:
 
@@ -133,7 +133,7 @@ Before performing heavy operations (e.g., transitioning from single-master to mu
 
 ## Certificate management
 
-In DKP, the [`control-plane-manager`](/modules/control-plane-manager/) module is responsible for issuing and renewing all SSL certificates for control plane components. It manages:
+In DP, the [`control-plane-manager`](/modules/control-plane-manager/) module is responsible for issuing and renewing all SSL certificates for control plane components. It manages:
 
 1. **Server certificates** for kube-apiserver and etcd, stored in the `d8-pki` secret (namespace: `kube-system`):
    - Kubernetes root CA (`ca.crt`, `ca.key`).
@@ -145,12 +145,12 @@ In DKP, the [`control-plane-manager`](/modules/control-plane-manager/) module is
 
 ### PKI management
 
-DKP also manages the Public Key Infrastructure (PKI) used for encryption and authentication throughout the Kubernetes cluster:
+DP also manages the Public Key Infrastructure (PKI) used for encryption and authentication throughout the Kubernetes cluster:
 
 - PKI for control plane components (kube-apiserver, kube-controller-manager, kube-scheduler, etc.).
 - PKI for the etcd cluster (etcd certificates and inter-node communication).
 
-DKP assumes control of this PKI after the initial cluster installation and once its pods are running. As a result, all key issuance, renewal, and rotation operations (both for control plane and etcd) are performed automatically and centrally, without requiring manual intervention.
+DP assumes control of this PKI after the initial cluster installation and once its pods are running. As a result, all key issuance, renewal, and rotation operations (both for control plane and etcd) are performed automatically and centrally, without requiring manual intervention.
 
 ### Additional SANs and auto-update
 
@@ -158,14 +158,14 @@ Deckhouse simplifies the addition of new Subject Alternative Names (SANs) for th
 
 To add additional SANs (extra DNS names or IP addresses) for the Kubernetes API, specify the new SANs in the [`spec.settings.apiserver.certSANs`](/modules/control-plane-manager/configuration.html#parameters-apiserver-certsans) field of your ModuleConfig/control-plane-manager resource.
 
-DKP will automatically generate new certificates and update all required configuration files (including kubeconfig).
+DP will automatically generate new certificates and update all required configuration files (including kubeconfig).
 
 ### Kubelet certificate rotation
 
-In Deckhouse Kubernetes Platform, kubelet certificate rotation is automatic.
+In Deckhouse Platform, kubelet certificate rotation is automatic.
 The `--tls-cert-file` and `--tls-private-key-file` parameters for kubelet are not set directly. Instead, a dynamic TLS certificate mechanism is used: kubelet applies the client certificate located at `/var/lib/kubelet/pki/kubelet-client-current.pem`, which it uses to request a new client or server certificate (file `/var/lib/kubelet/pki/kubelet-server-current.pem`) from kube-apiserver. Also, the CIS benchmark `AVD-KCV-0088` and `AVD-KCV-0089` checks, which track whether the `--tls-cert-file` and `--tls-private-key-file` arguments were passed to kubelet, are disabled in the [`operator-trivy`](/modules/operator-trivy/) module.
 
-Features of kubelet certificate rotation in Deckhouse Kubernetes Platform:
+Features of kubelet certificate rotation in Deckhouse Platform:
 
 - By default, kubelet generates its own keys in the `/var/lib/kubelet/pki/` directory and, if necessary, independently requests certificate renewal from kube-apiserver.
 - lifetime of certificates is 1 year (8760 hours). When there are between 5 and 10% of the time remaining before expiration (the exact value is randomly selected from this range), kubelet automatically initiates a request for a new certificate. For more details, see the [official documentation Kubernetes](https://kubernetes.io/docs/reference/access-authn-authz/kubelet-tls-bootstrapping/#bootstrap-initialization). If necessary, lifetime of certificates can be changed using `--cluster-signing-duration` parameter in `/etc/kubernetes/manifests/kube-controller-manager.yaml` manifest. However, in order for kubelet to obtain and install a new certificate before the current one expires, it is recommended to set the validity period of certificates to at least 1 hour.

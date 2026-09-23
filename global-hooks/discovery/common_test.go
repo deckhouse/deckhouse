@@ -73,6 +73,20 @@ serviceSubnetCIDR: 10.213.0.0/16
 kubernetesVersion: "Automatic"
 clusterDomain: "test.local"
 `
+
+	// The three network fields are no longer required by the schema, nor does the prefix carry a
+	// default any more. This is what a cluster bootstrapped after the migration looks like, and what
+	// an existing one looks like once the operator has cleaned the deprecated fields up.
+	ccStateNoNetworkClusterConfiguration = `
+apiVersion: deckhouse.io/v1
+kind: ClusterConfiguration
+clusterType: Cloud
+cloud:
+  provider: AWS
+  prefix: lube
+kubernetesVersion: "1.33"
+clusterDomain: "test.local"
+`
 )
 
 // clusterConfigurationSecret wraps a ClusterConfiguration document into the Secret the hooks watch.
@@ -103,5 +117,37 @@ metadata:
 spec:
   enabled: true
   version: 1%s
+`, settings)
+}
+
+// networkModuleConfigYAML renders ModuleConfig/control-plane-manager carrying a settings.network
+// group. An empty value leaves that key out, so "unset" is distinguishable from "set to empty" —
+// exactly the distinction the resolver depends on.
+func networkModuleConfigYAML(podSubnetCIDR, serviceSubnetCIDR, podSubnetNodeCIDRPrefix string) string {
+	network := ""
+	for _, kv := range []struct{ key, value string }{
+		{"podSubnetCIDR", podSubnetCIDR},
+		{"serviceSubnetCIDR", serviceSubnetCIDR},
+		{"podSubnetNodeCIDRPrefix", podSubnetNodeCIDRPrefix},
+	} {
+		if kv.value != "" {
+			network += fmt.Sprintf("\n      %s: %q", kv.key, kv.value)
+		}
+	}
+
+	settings := ""
+	if network != "" {
+		settings = "\n  settings:\n    network:" + network
+	}
+
+	return fmt.Sprintf(`
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleConfig
+metadata:
+  name: control-plane-manager
+spec:
+  enabled: true
+  version: 3%s
 `, settings)
 }

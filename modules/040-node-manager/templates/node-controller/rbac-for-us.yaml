@@ -20,7 +20,8 @@ metadata:
     werf.io/track-termination-mode: WaitUntilResourceReady
   {{- include "helm_lib_module_labels" (list . (dict "app" "node-controller")) | nindent 2 }}
 rules:
-# NodeGroups - full access for status updates
+# NodeGroups - full access for status updates; create is only used to ensure the master NodeGroup
+# exists (master-node-group controller, taken over from the create_master_node_group hook)
 - apiGroups:
   - deckhouse.io
   resources:
@@ -29,6 +30,7 @@ rules:
   - get
   - list
   - watch
+  - create
   - update
   - patch
 - apiGroups:
@@ -156,16 +158,44 @@ rules:
   - update
   - patch
   - delete
-# CAPI infrastructure resources (DeckhouseControlPlane, provider machine templates)
+# Temporary provider InfrastructureCluster permissions. Provider modules will grant them through
+# aggregated ClusterRoles; keep this fallback until that migration is complete.
+- apiGroups:
+  - infrastructure.cluster.x-k8s.io
+  resources:
+  - deckhouseclusters
+  - dynamixclusters
+  - huaweicloudclusters
+  - openstackclusters
+  - vcdclusters
+  - yandexclusters
+  - zvirtclusters
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+# CAPI infrastructure resources owned by node-controller.
 - apiGroups:
   - infrastructure.cluster.x-k8s.io
   resources:
   - deckhousecontrolplanes
-  - deckhousecontrolplanes/status
   verbs:
   - get
   - list
   - watch
+  - create
+  - update
+  - patch
+- apiGroups:
+  - infrastructure.cluster.x-k8s.io
+  resources:
+  - deckhousecontrolplanes/status
+  verbs:
+  - get
   - patch
 - apiGroups:
   - infrastructure.cluster.x-k8s.io
@@ -227,16 +257,34 @@ rules:
   - get
   - patch
   - update
-# NodeUsers + StaticInstances - live LISTs from the admission webhooks
-# (uid/address uniqueness checks read via the APIReader, no watch needed)
+# StaticInstances - live LISTs from the admission webhooks
+# (address uniqueness checks read via the APIReader, no watch needed).
 - apiGroups:
   - deckhouse.io
   resources:
-  - nodeusers
   - staticinstances
   verbs:
   - get
   - list
+# NodeUsers - the same live LISTs from the admission webhook, plus the watch the
+# nodeuser-status controller needs to notice a deleted node.
+- apiGroups:
+  - deckhouse.io
+  resources:
+  - nodeusers
+  verbs:
+  - get
+  - list
+  - watch
+# NodeUser status - clear the error entries left behind by deleted nodes
+# (nodeuser-status controller, taken over from the clear_nodeuser_errors hook).
+- apiGroups:
+  - deckhouse.io
+  resources:
+  - nodeusers/status
+  verbs:
+  - get
+  - patch
 # ModuleConfig - read for validation (customTolerationKeys) and prefix resolution.
 - apiGroups:
   - deckhouse.io
@@ -280,6 +328,23 @@ rules:
   - get
   - list
   - watch
+# InstanceClasses - patch status.nodeGroupConsumers (the deletion webhook reads it).
+- apiGroups:
+  - deckhouse.io
+  resources:
+  - awsinstanceclasses
+  - azureinstanceclasses
+  - dvpinstanceclasses
+  - gcpinstanceclasses
+  - yandexinstanceclasses
+  - dynamixinstanceclasses
+  - huaweicloudinstanceclasses
+  - openstackinstanceclasses
+  - vcdinstanceclasses
+  - vsphereinstanceclasses
+  - zvirtinstanceclasses
+  verbs:
+  - patch
 # ConfigMaps - read for cluster configuration
 - apiGroups:
   - ""
@@ -295,6 +360,16 @@ rules:
   - ""
   resources:
   - services
+  verbs:
+  - get
+  - list
+  - watch
+# CSINodes - read + watch to tell whether a node's CSI driver has registered, which is what
+# lets the csi-taint controller drop node.deckhouse.io/csi-not-bootstrapped.
+- apiGroups:
+  - storage.k8s.io
+  resources:
+  - csinodes
   verbs:
   - get
   - list
@@ -370,6 +445,100 @@ rules:
   - kubernetes.io/kube-apiserver-client
   verbs:
   - approve
+# NodeConfigs - the per-node desired state of Deckhouse Engine nodes. The node-config
+# controller renders one object per node of an immutable NodeGroup; the on-node
+# agent watches it and owns its status, which is why status is not listed here.
+# NodeOperations - the record of every interruption of a node: node-manager
+# creates the ones a node asks for and carries them through their phases, an
+# operator creates the rest.
+- apiGroups:
+  - deckhouse.io
+  resources:
+  - nodeoperations
+  verbs:
+  - get
+  - list
+  - watch
+  - create
+  - patch
+  - update
+  - delete
+- apiGroups:
+  - deckhouse.io
+  resources:
+  - nodeoperations/status
+  verbs:
+  - get
+  - patch
+  - update
+# NodeExtensionRequests - the operator's requests to merge extra system
+# extensions onto matching nodes. node-controller reads them to render the
+# per-node extension set, enforces sysext name/digest uniqueness in an admission
+# webhook, and reports the matched groups and any conflict back through their
+# status. The request itself belongs to the operator, so it is read-only here.
+- apiGroups:
+  - deckhouse.io
+  resources:
+  - nodeextensionrequests
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - deckhouse.io
+  resources:
+  - nodeextensionrequests/status
+  verbs:
+  - get
+  - update
+  - patch
+- apiGroups:
+  - internal.deckhouse.io
+  resources:
+  - nodeconfigs
+  verbs:
+  - get
+  - list
+  - watch
+  - create
+  - patch
+  - update
+  - delete
+# NodeBootstrapConfigs and their templates - the CAPI bootstrap provider for
+# immutable NodeGroups. The per-group template is node-controller's own: it
+# applies it (SSA) and deletes it with the NodeGroup. The per-machine configs are
+# not - the MachineSet clones and deletes them, and the node-bootstrap controller
+# only reads one and writes the v1beta2 bootstrap contract into its status (the
+# rendered Secret is covered by the namespaced d8-cloud-instance-manager secret
+# Role below).
+- apiGroups:
+  - bootstrap.deckhouse.io
+  resources:
+  - nodebootstrapconfigtemplates
+  verbs:
+  - get
+  - list
+  - watch
+  - create
+  - patch
+  - update
+  - delete
+- apiGroups:
+  - bootstrap.deckhouse.io
+  resources:
+  - nodebootstrapconfigs
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - bootstrap.deckhouse.io
+  resources:
+  - nodebootstrapconfigs/status
+  verbs:
+  - get
+  - patch
+  - update
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
@@ -405,9 +574,16 @@ subjects:
   name: node-controller
   namespace: d8-cloud-instance-manager
 ---
-# Namespaced write access for the bashible-apiserver-context Secret, the single-writer
-# replacement for the helm define bashible_input_data. Scoped to d8-cloud-instance-manager
-# (least privilege) instead of widening the cluster-wide secret read to cluster-wide write.
+# Namespaced write access to Secrets in d8-cloud-instance-manager: the
+# bashible-apiserver-context Secret (single-writer replacement for the helm
+# define bashible_input_data), the per-machine bootstrap-data Secrets the
+# nodebootstrap controller writes, and the bootstrap and machine-class Secrets
+# taken over from helm. Scoped to the namespace (least privilege) instead of
+# widening the cluster-wide secret read to cluster-wide write.
+#
+# delete is what collects the ones a removed NodeGroup or zone leaves behind:
+# helm.sh/resource-policy: keep took that duty from helm, and without the verb
+# every sweep 403s and the Secrets pile up forever.
 apiVersion: rbac.authorization.k8s.io/v1
 kind: Role
 metadata:
@@ -427,6 +603,7 @@ rules:
   - create
   - update
   - patch
+  - delete
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: RoleBinding
@@ -487,6 +664,48 @@ subjects:
   name: node-controller
   namespace: d8-cloud-instance-manager
 ---
+# Namespaced write access for the per-NodeGroup bootstrap token Secrets the
+# bootstrap-secrets controller mints and sweeps (taken over from the
+# order_bootstrap_token hook). delete is what collects the expired ones: without
+# it every sweep 403s and the tokens accumulate forever.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: d8:node-manager:node-controller:bootstrap-tokens
+  namespace: kube-system
+  annotations:
+    werf.io/deploy-on: pre-install,pre-upgrade,pre-rollback
+    werf.io/track-termination-mode: WaitUntilResourceReady
+  {{- include "helm_lib_module_labels" (list . (dict "app" "node-controller")) | nindent 2 }}
+rules:
+- apiGroups:
+  - ""
+  resources:
+  - secrets
+  verbs:
+  - get
+  - list
+  - create
+  - delete
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: d8:node-manager:node-controller:bootstrap-tokens
+  namespace: kube-system
+  annotations:
+    werf.io/deploy-on: pre-install,pre-upgrade,pre-rollback
+    werf.io/track-termination-mode: WaitUntilResourceReady
+  {{- include "helm_lib_module_labels" (list . (dict "app" "node-controller")) | nindent 2 }}
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: d8:node-manager:node-controller:bootstrap-tokens
+subjects:
+- kind: ServiceAccount
+  name: node-controller
+  namespace: d8-cloud-instance-manager
+---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
 metadata:
@@ -516,3 +735,131 @@ subjects:
   - kind: ServiceAccount
     name: deckhouse
     namespace: d8-system
+---
+# The agent on an immutable node reaches the API with the kubelet's identity
+# (user system:node:<name>, group system:nodes). The Node authorizer does not
+# cover custom resources, so without this the agent can neither read the
+# NodeConfig it is meant to reconcile nor report what it did with it — and the
+# rollout, which waits for exactly that report, would never move past the first
+# node.
+#
+# The grants are cluster-wide because both resources are cluster-scoped: RBAC
+# cannot narrow them to "this node's own object". Reads are therefore
+# cluster-wide, which is the same trade kubelet self-registration makes. Writes
+# are not: the ValidatingAdmissionPolicies in validation.yaml refuse a create or
+# an update from a system:nodes caller whose identity does not match the object's
+# node (NodeConfig by name, NodeOperation by .spec.nodeName), so a node can only
+# ever write its own.
+#
+# There is deliberately NO rule for nodeconfigs/sensitive, and that is what keeps
+# the one field this trade could not cover out of reach: status.maintenanceToken
+# is the bearer credential for the node's root-equivalent :50000 config push, so
+# it carries x-kubernetes-sensitive-data and the API strips it from every
+# get/list/watch answer served without that subresource. Without this, any holder
+# of a kubelet identity could read a neighbour's token and push it a
+# configuration the moment that node dropped off the API. The agent never needs
+# to read its own token back — it keeps the copy it generated on disk and only
+# writes it — so cluster-admin remains the only reader.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: d8:node-manager:node-agent
+  {{- include "helm_lib_module_labels" (list .) | nindent 2 }}
+rules:
+# The desired state of the node, and the report of what the node made of it.
+- apiGroups:
+  - internal.deckhouse.io
+  resources:
+  - nodeconfigs
+  verbs:
+  - get
+  - list
+  - watch
+  # A node whose object is missing on first contact registers one from the
+  # config it was provisioned with: its status has nowhere else to go. The
+  # admission policy holds it to its own name, so it cannot pre-create a
+  # master's object with a configuration of its choosing.
+  - create
+- apiGroups:
+  - internal.deckhouse.io
+  resources:
+  - nodeconfigs/status
+  # No "get". The API masks sensitive fields on the resource endpoint only, not
+  # on the status subresource, so a node holding get here could read a
+  # neighbour's maintenance token straight out of
+  # GET /nodeconfigs/<other>/status and walk around the mask above. The agent
+  # never reads status back — it watches the resource and only ever writes here.
+  # A write reaches admission, where the policy pins it to the node's own object;
+  # a read would not.
+  verbs:
+  - patch
+  - update
+# Operations tell the node what the cluster has prepared for it — a reboot to
+# carry out, permission to interrupt itself — and the node reports the outcome
+# through their status. Creating one is not the node's to do: that is the
+# cluster's decision, or an operator's.
+- apiGroups:
+  - deckhouse.io
+  resources:
+  - nodeoperations
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - deckhouse.io
+  resources:
+  - nodeoperations/status
+  # No "get", for the same reason as nodeconfigs/status above, minus the
+  # sensitive field: the node reads the operation itself, which carries its
+  # status, and only ever writes here.
+  verbs:
+  - patch
+  - update
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: d8:node-manager:node-agent
+  {{- include "helm_lib_module_labels" (list .) | nindent 2 }}
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: d8:node-manager:node-agent
+subjects:
+- kind: Group
+  name: system:nodes
+  apiGroup: rbac.authorization.k8s.io
+---
+# The aggregated API server delegates authentication and authorization of its
+# callers to the kube-apiserver: TokenReview and SubjectAccessReview.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: d8:node-manager:node-controller:auth-delegator
+  {{- include "helm_lib_module_labels" (list . (dict "app" "node-controller")) | nindent 2 }}
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: system:auth-delegator
+subjects:
+- kind: ServiceAccount
+  name: node-controller
+  namespace: d8-cloud-instance-manager
+---
+# ConfigMap/extension-apiserver-authentication holds the CA bundles the
+# aggregated API server verifies the front proxy and its clients with.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: d8:node-manager:node-controller:auth-reader
+  namespace: kube-system
+  {{- include "helm_lib_module_labels" (list . (dict "app" "node-controller")) | nindent 2 }}
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: extension-apiserver-authentication-reader
+subjects:
+- kind: ServiceAccount
+  name: node-controller
+  namespace: d8-cloud-instance-manager

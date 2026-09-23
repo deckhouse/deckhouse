@@ -13,15 +13,53 @@ memory: 40Mi
 {{- $backupHostPath := $etcdBackup.hostPath | default "/var/lib/etcd" -}}
 {{- $etcdQuotaBackendBytes := (.Values.controlPlaneManager.internal).etcdQuotaBackendBytes | default "2147483648" -}}
 
-{{- if $backupEnabled }}
-  {{- if .Values.global.clusterIsBootstrapped }}
-    {{- if hasKey .Values.controlPlaneManager.internal "mastersNode" }}
-      {{- $nodes := list }}
-      {{- $nodes = concat $nodes .Values.controlPlaneManager.internal.mastersNode }}
-      {{- if $.Values.controlPlaneManager.internal.hasEtcdArbiterNode }}
-        {{- $nodes = append $nodes "etcd-arbiter" }}
-      {{- end }}
-      {{- range $node := $nodes }}
+{{- if and $backupEnabled .Values.global.clusterIsBootstrapped (hasKey .Values.controlPlaneManager.internal "mastersNode") }}
+{{- if or (.Values.global.discovery.apiVersions | has "deckhouse.io/v1alpha1/SecurityPolicyException") (.Capabilities.APIVersions.Has "deckhouse.io/v1alpha1/SecurityPolicyException") }}
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: SecurityPolicyException
+metadata:
+  name: d8-etcd-backup
+  namespace: kube-system
+  {{- include "helm_lib_module_labels" (list . (dict "app" "d8-etcd-backup")) | nindent 2 }}
+spec:
+  securityContext:
+    runAsNonRoot:
+      allowedValue: false
+      metadata:
+        description: |
+          etcd-backup must run as root to read the etcd data directory and PKI
+          material from the master node filesystem.
+    runAsUser:
+      allowedValues:
+        - 0
+      metadata:
+        description: |
+          UID 0 is required for hostPath access to etcd data and certificates.
+  volumes:
+    types:
+      allowedValues:
+        - hostPath
+      metadata:
+        description: |
+          etcd-backup reads etcd data and certificates from the node filesystem.
+    hostPath:
+      allowedValues:
+        - path: {{ $backupHostPath | quote }}
+          readOnly: false
+          metadata:
+            description: Directory where etcd snapshots are written on the node.
+        - path: /etc/kubernetes/pki/etcd
+          readOnly: true
+          metadata:
+            description: etcd TLS certificates used to authenticate to the local etcd.
+{{- end }}
+{{- $nodes := list }}
+{{- $nodes = concat $nodes .Values.controlPlaneManager.internal.mastersNode }}
+{{- if .Values.controlPlaneManager.internal.hasEtcdArbiterNode }}
+  {{- $nodes = append $nodes "etcd-arbiter" }}
+{{- end }}
+{{- range $node := $nodes }}
 ---
 apiVersion: batch/v1
 kind: CronJob
@@ -38,6 +76,10 @@ spec:
     spec:
       backoffLimit: 0
       template:
+        metadata:
+          labels:
+            app: d8-etcd-backup
+            security.deckhouse.io/security-policy-exception: d8-etcd-backup
         spec:
           {{- include "helm_lib_module_pod_security_context_run_as_user_root" $ | nindent 10 }}
           {{- include "helm_lib_priority_class" (tuple $ "cluster-low") | nindent 10 }}
@@ -51,7 +93,7 @@ spec:
           imagePullSecrets:
           - name: deckhouse-registry
           restartPolicy: Never
-          hostNetwork: true
+          hostNetwork: false
           dnsPolicy: ClusterFirstWithHostNet
           containers:
           - name: backup
@@ -63,6 +105,11 @@ spec:
               value: {{ $etcdQuotaBackendBytes | quote }}
             - name: HOSTPATH
               value: {{ $backupHostPath | quote }}
+            - name: NODEIP
+              valueFrom:
+                fieldRef:
+                  apiVersion: v1
+                  fieldPath: status.hostIP            
             resources:
               requests:
               {{- include "helm_lib_module_ephemeral_storage_logs_with_extra" 50 | nindent 16 }}
@@ -88,7 +135,5 @@ spec:
             name: backup-data
           - name: tmp
             emptyDir: {}
-      {{- end }}
-    {{- end }}
-  {{- end }}
+{{- end }}
 {{- end }}

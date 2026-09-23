@@ -37,6 +37,13 @@ import (
 // workloads through the Service, not through the indexer directly.
 const indexName = "package"
 
+// defaultResyncPeriod is how often the informers replay their cached workloads
+// to the event handlers, re-reducing every package from cache. It replays the
+// local cache, not a LIST, and the reduction is deduped one layer up, so it
+// repairs nothing on its own — it bounds how long any future divergence
+// between the cache and the reduced state could last.
+const defaultResyncPeriod = 5 * time.Minute
+
 // workloadKind is a stable map key for per-kind state (indexers, sync funcs).
 // It is intentionally a string so the value can be used directly in log
 // fields and error messages without a separate conversion.
@@ -86,10 +93,8 @@ type Reconcile func(name string, status []WorkloadStatus)
 // matches what the local indexer requires anyway and avoids caching every
 // Deployment/StatefulSet in the cluster.
 func NewMonitor(client kubernetes.Interface, reconcile Reconcile, labelKey string, logger *log.Logger) (*Monitor, error) {
-	// Resync period is 0: the watch is authoritative and we have nothing
-	// useful to do on a periodic full re-list.
 	s := &Monitor{
-		factory: informers.NewSharedInformerFactoryWithOptions(client, 0,
+		factory: informers.NewSharedInformerFactoryWithOptions(client, defaultResyncPeriod,
 			informers.WithTransform(stripUnusedFields),
 			informers.WithTweakListOptions(func(o *metav1.ListOptions) {
 				o.LabelSelector = labelKey
@@ -101,7 +106,6 @@ func NewMonitor(client kubernetes.Interface, reconcile Reconcile, labelKey strin
 			workqueue.DefaultTypedControllerRateLimiter[string](),
 			workqueue.TypedRateLimitingQueueConfig[string]{Name: "health"},
 		),
-
 		reconcile: reconcile,
 		labelKey:  labelKey,
 		logger:    logger,
@@ -191,7 +195,9 @@ func metaFor(obj any) (metav1.Object, error) {
 // workload is relabeled from package A to package B, both packages must
 // be re-reconciled so A drops the workload and B picks it up. The
 // workqueue dedupes when the labels are equal, so the double enqueue is
-// free in the common case.
+// free in the common case. An informer resync arrives through the same
+// UpdateFunc with old and new equal, which is what makes a resync
+// re-enqueue every known package key.
 func (m *Monitor) eventHandler() cache.ResourceEventHandlerFuncs {
 	enqueue := func(obj any) {
 		meta, err := metaFor(obj)

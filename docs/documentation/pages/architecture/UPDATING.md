@@ -1,14 +1,14 @@
 ---
 title: Updating
 permalink: en/architecture/updating.html
-description: Release types, release channels, and the update process for the control plane and nodes in Deckhouse Kubernetes Platform.
+description: Release types, release channels, and the update process for the control plane and nodes in Deckhouse Platform.
 ---
 
 ## Releases
 
-A release is any published version of Deckhouse Kubernetes Platform (DKP).
+A release is any published version of Deckhouse Platform (DP).
 Each release is distributed through release channels with defined delays.
-DKP publishes two types of releases:
+DP publishes two types of releases:
 
 - **Patch version** (for example, from `0.0.1` to `0.0.2`): Includes bug fixes and is published when needed.
 - **Minor version** (for example, from `0.0.1` to `0.1.0`): Includes new features and is published every 3–4 weeks.
@@ -16,11 +16,11 @@ DKP publishes two types of releases:
 ## Release channels
 
 {% alert level="info" %}
-Up-to-date information about DKP versions available on different release channels is available at [releases.deckhouse.io](https://releases.deckhouse.io).
+Up-to-date information about DP versions available on different release channels is available at [releases.deckhouse.io](https://releases.deckhouse.io).
 {% endalert %}
 
-DKP uses **five release channels** to gradually roll out new versions.
-Each new DKP version is first published to the **Alpha** channel and then gradually moves to **Rock Solid**.
+DP uses **five release channels** to gradually roll out new versions.
+Each new DP version is first published to the **Alpha** channel and then gradually moves to **Rock Solid**.
 Updates in less stable channels are made available to a limited number of users,
 which allows to detect and resolve potential issues before they affect production environments.
 
@@ -42,37 +42,37 @@ which allows to detect and resolve potential issues before they affect productio
 
 When switching to a more stable channel (for example, from `Alpha` to `EarlyAccess`):
 
-1. DKP fetches release data from the `EarlyAccess` channel.
+1. DP fetches release data from the `EarlyAccess` channel.
 1. It compares this data with existing DeckhouseRelease custom resources in the cluster.
    - If the cluster contains newer releases with `Pending` status (not yet applied),
      they will be **removed**, since they haven’t been published to the new channel.
    - If newer releases have already been marked as `Deployed`(installed successfully),
      the switch won’t take effect immediately.
-     DKP will remain on the current release until a newer version becomes available in the `EarlyAccess` channel.
+     DP will remain on the current release until a newer version becomes available in the `EarlyAccess` channel.
 
 ### Switching to a less stable channel
 
 When switching to a less stable channel (for example, from `EarlyAccess` to `Alpha`):
 
-1. DKP fetches release data from the `Alpha` channel.
+1. DP fetches release data from the `Alpha` channel.
 1. It compares this data with existing DeckhouseRelease custom resources.
 1. It applies the update according to the [configured update parameters](../admin/configuration/update/configuration.html).
 
 ## Control plane updates
 
-In DKP, the control plane update process is highly automated and safe for both single-master and multi-master clusters.
+In DP, the control plane update process is highly automated and safe for both single-master and multi-master clusters.
 While brief interruptions in API server availability may occur,
 they do not affect the operation of applications running in the cluster.
 In most cases, no additional maintenance window is required.
 
-DKP supports the latest five minor Kubernetes versions.
+DP supports the latest five minor Kubernetes versions.
 A full list of supported versions is available in the [corresponding table](../supported_versions.html#kubernetes).
 
 ### Patch version updates
 
 Patch updates to control plane components
 (within the same minor version, for example, from `1.27.3` to `1.27.5`)
-are applied automatically together with DKP updates.
+are applied automatically together with DP updates.
 Users cannot manage patch updates manually.
 The process is fully automated by the platform.
 
@@ -80,7 +80,7 @@ The process is fully automated by the platform.
 
 To automatically update the control plane to a new minor version (for example, from `1.28.*` to `1.30.*`),
 specify [`kubernetesVersion: Automatic`](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#clusterconfiguration-kubernetesversion) in the ClusterConfiguration resource.
-DKP will select the default Kubernetes version at the time of the update.
+DP will select the default Kubernetes version at the time of the update.
 
 ### Manual minor version updates
 
@@ -92,7 +92,7 @@ For example, `kubernetesVersion: 1.30`.
 d8 system edit cluster-configuration
 ```
 
-This command initiates an upgrade to the default minor Kubernetes version used by DKP at the time.
+This command initiates an upgrade to the default minor Kubernetes version used by DP at the time.
 To track the upgrade progress, check the Kubernetes version in the output of the node description command:
 
 ```shell
@@ -132,13 +132,13 @@ After the control plane has been updated, node updates begin:
 
 ## Retrieving the changelog
 
-Each new version of DKP includes a *changelog*, which is a detailed list of changes,
+Each new version of DP includes a *changelog*, which is a detailed list of changes,
 including new features, bug fixes, component updates, and important compatibility notes.
 
-You can find the changelog for a specific DKP version in the [Deckhouse release list on GitHub](https://github.com/deckhouse/deckhouse/releases).
+You can find the changelog for a specific DP version in the [Deckhouse release list on GitHub](https://github.com/deckhouse/deckhouse/releases).
 
 A summary of key changes, component version updates, and which cluster components will be restarted
-is included in the description of the zero patch release: [example for DKP v1.68](https://github.com/deckhouse/deckhouse/releases/tag/v1.68.0).
+is included in the description of the zero patch release: [example for DP v1.68](https://github.com/deckhouse/deckhouse/releases/tag/v1.68.0).
 
 ### Changelog contents
 
@@ -153,7 +153,7 @@ The changelog includes four sections:
 
 ### Minor versions and zero patch releases
 
-All major changes are listed in the **zero patch release** (for example, `v1.68.0` for the DKP `v1.68`).
+All major changes are listed in the **zero patch release** (for example, `v1.68.0` for the DP `v1.68`).
 Before updating to a new minor version (for example, `v1.68`):
 
 1. Review the changelog for the corresponding version.
@@ -162,7 +162,7 @@ Before updating to a new minor version (for example, `v1.68`):
 
 ## Checking dependencies before update
 
-Before applying a new release, DKP checks the cluster for potential issues.
+Before applying a new release, DP checks the cluster for potential issues.
 If any of the following incompatibilities are detected, the update is aborted:
 
 - Unsupported Kubernetes version.

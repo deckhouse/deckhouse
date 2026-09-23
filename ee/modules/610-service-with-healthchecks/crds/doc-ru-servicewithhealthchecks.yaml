@@ -94,7 +94,7 @@ spec:
                             properties:
                               authSecretName:
                                 description: |-
-                                  Имя секрета (Secret), расположенного в том же пространстве имен, что и этот ресурс. Секрет может содержать следующие поля аутентификации: `tlsMode`, `clientCert`, `clientKey`, `aCert`, `password`, `user`.
+                                  Имя секрета (Secret), расположенного в том же пространстве имен, что и этот ресурс. Секрет может содержать следующие поля аутентификации: `tlsMode`, `clientCert`, `clientKey`, `caCert`, `password`, `user`.
 
                                   > **Внимание.** Тип секрета должен быть `network.deckhouse.io/postgresql-credentials`.
                               dbName:
@@ -348,6 +348,12 @@ spec:
             status:
               description: Определяет наблюдаемое состояние `ServiceWithHealthchecks`.
               properties:
+                clusterIP:
+                  description: |-
+                    Адрес дочернего сервиса: либо запрошенный в `spec.clusterIP`, либо выданный кластером.
+                clusterIPs:
+                  description: |-
+                    Все адреса дочернего сервиса, по одному на каждое семейство IP-адресов.
                 conditions:
                   description: Текущее состояние сервиса
                   items:

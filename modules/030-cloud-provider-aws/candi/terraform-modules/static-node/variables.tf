@@ -33,6 +33,16 @@ variable "node_group" {
   type = any
 }
 
+variable "imdsv2" {
+  type = bool
+  default = false
+}
+
+variable "imdsv2_managed" {
+  type = bool
+  default = false
+}
+
 variable "node_index" {
   type = number
 }

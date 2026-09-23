@@ -24,7 +24,6 @@ import (
 	"sync"
 	"time"
 
-	addonutils "github.com/flant/addon-operator/pkg/utils"
 	"github.com/go-logr/logr"
 	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
 	appsv1 "k8s.io/api/apps/v1"
@@ -43,10 +42,13 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/webhook"
 
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/app"
+	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/controller/pkgsync"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/metrics"
 	pkgruntime "github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/runtime"
+	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/addonutils"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha2"
+	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1beta1"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/module-controllers/docbuilder"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/objectkeeper"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/packages/application"
@@ -215,6 +217,7 @@ func buildSchema() (*runtime.Scheme, error) {
 		coordv1.AddToScheme,
 		v1alpha1.AddToScheme,
 		v1alpha2.AddToScheme,
+		v1beta1.AddToScheme,
 		appsv1.AddToScheme,
 		discoveryv1.AddToScheme,
 	}
@@ -304,7 +307,7 @@ func buildCacheByObject() map[client.Object]cache.ByObject {
 		&v1alpha1.Application{}:                {},
 		&v1alpha1.ModulePackage{}:              {},
 		&v1alpha1.ModulePackageVersion{}:       {},
-		&v1alpha2.Module{}:                     {},
+		&v1beta1.Module{}:                      {},
 	}
 }
 
@@ -315,7 +318,9 @@ func (c *Controller) Start(ctx context.Context) error {
 	defer c.sync.Done()
 
 	// run the manager in the background
-	c.manager.Run()
+	if err := c.manager.Run(); err != nil {
+		return fmt.Errorf("run package runtime: %w", err)
+	}
 
 	// starts all child controllers
 	go func() {
@@ -337,9 +342,25 @@ func (c *Controller) Start(ctx context.Context) error {
 		return fmt.Errorf("resolve module placements: %w", err)
 	}
 
+	// The old module stack recorded its packages in module releases, and the
+	// image ships the embedded modules; give each of them a package version
+	// object, and the user module sources their repositories, while the
+	// controllers still wait for the sync. Runs after the resolver, so a
+	// deployed duplicate it superseded no longer counts.
+	if err := pkgsync.Sync(ctx, c.ctrl.GetAPIReader(), c.ctrl.GetClient(), c.dc, app.Version, app.DefaultReleaseChannel, app.EmbeddedModulesDir, app.GlobalHooksDir, c.logger.Named("pkgsync")); err != nil {
+		return fmt.Errorf("sync package objects: %w", err)
+	}
+
 	modules, err := c.syncModules(ctx, placements)
 	if err != nil {
 		return fmt.Errorf("sync modules: %w", err)
+	}
+
+	// loadModules below enqueues downloads straight away, so this is the last point at which
+	// dropping stale package state cannot race a deploy — as long as this manager registers no
+	// reconciler that deploys on its own. A leak must not stop the tree loading.
+	if err := c.cleanupPackages(ctx, modules); err != nil {
+		c.logger.Warn("failed to cleanup packages", log.Err(err))
 	}
 
 	if err := c.loadModules(ctx, modules); err != nil {

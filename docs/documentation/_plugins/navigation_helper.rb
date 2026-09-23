@@ -146,22 +146,11 @@ module Jekyll
       return nil if path.nil?
 
       normalized_path = path.start_with?('/') ? path : "/#{path}"
-      current_url = current_page_url.to_s.sub(%r{^/(en|ru)/}, '/')
-      channel_pattern = '(?:v[0-9]+\.[0-9]+|alpha|beta|early-access|stable|rock-solid|latest)'
-      current_match = current_url.match(%r{\A/modules/([^/]+)/(#{channel_pattern})(?:/.*)?\z})
+      if normalized_path.match?(%r{\A/modules/[^/]+/})
+        return normalized_path.sub(%r{\A/modules/[^/]+/}, './')
+      end
 
-      return normalized_path unless current_match
-
-      module_name = current_match[1]
-      channel = current_match[2]
-      module_prefix = "/modules/#{module_name}/"
-
-      return normalized_path unless normalized_path.start_with?(module_prefix)
-
-      entry_suffix = normalized_path.sub(module_prefix, '')
-      return normalized_path if entry_suffix.match?(%r{\A#{channel_pattern}(?:/|\z)})
-
-      "/modules/#{module_name}/#{channel}/#{entry_suffix}"
+      get_relative_url(normalized_path, current_page_url)
     end
 
     def self.find_navigation_pages(site, page, sidebar_name = 'main')

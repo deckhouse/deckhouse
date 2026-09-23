@@ -27,13 +27,6 @@ const (
 	ApplicationKind     = "Application"
 
 	ApplicationFinalizerStatisticRegistered = "application.deckhouse.io/statistic-registered"
-
-	ApplicationAnnotationRegistrySpecChanged = "packages.deckhouse.io/registry-spec-changed"
-
-	// ApplicationAnnotationEndpointDescription marks an Ingress in the application
-	// chart as an application endpoint and holds its description; the hosts and
-	// paths of that Ingress are reflected in status.urls.
-	ApplicationAnnotationEndpointDescription = "packages.deckhouse.io/application-endpoint-description"
 )
 
 var (
@@ -168,9 +161,9 @@ type ApplicationStatus struct {
 // machine on top of conditions.
 type ApplicationStatusSummary struct {
 	// State is the high-level lifecycle state observed for the application.
-	// Always one of: Pending, Failed, Updating, Ready, Degraded, Suspended.
+	// Always one of: Pending, Failed, Updating, Ready, Degraded, Suspended, Deleting.
 	// +optional
-	// +crd-enricher:deckhouse:documentation:examples=[Pending, Failed, Updating, Ready, Degraded, Suspended]
+	// +crd-enricher:deckhouse:documentation:examples=[Pending, Failed, Updating, Ready, Degraded, Suspended, Deleting]
 	State string `json:"state,omitempty"`
 
 	// Message is a human-readable description of the current state.

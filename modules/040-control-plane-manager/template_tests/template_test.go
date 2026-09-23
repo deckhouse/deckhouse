@@ -1513,5 +1513,151 @@ apiserver:
 				Expect(supCR.Field("rules").String()).To(ContainSubstring("controlplaneoperations"))
 			})
 		})
+
+		// Regression guard for the ClusterConfiguration -> ModuleConfig network migration:
+		// cluster_configuration.go (the global hook) is the sole decider of whether podSubnetCIDR,
+		// serviceSubnetCIDR and podSubnetNodeCIDRPrefix come from ModuleConfig or the deprecated
+		// ClusterConfiguration field, and it always writes its answer into
+		// global.clusterConfiguration.* before Helm ever runs - these templates read only that key
+		// and are untouched by the migration. Values distinct from every other Context's baseline
+		// here catch a template that stopped reading it, regardless of which document the hook
+		// resolved it from.
+		Context("network parameters resolved into candi/control-plane templates and the DaemonSet", func() {
+			const (
+				podSubnetCIDR           = "10.123.0.0/16"
+				serviceSubnetCIDR       = "10.124.0.0/16"
+				podSubnetNodeCIDRPrefix = "23"
+			)
+
+			BeforeEach(func() {
+				f.ValuesSet("global.clusterConfiguration.podSubnetCIDR", podSubnetCIDR)
+				f.ValuesSet("global.clusterConfiguration.serviceSubnetCIDR", serviceSubnetCIDR)
+				f.ValuesSet("global.clusterConfiguration.podSubnetNodeCIDRPrefix", podSubnetNodeCIDRPrefix)
+				f.HelmRender()
+			})
+
+			decodeManifest := func(secretKey string) corev1.Pod {
+				secret := f.KubernetesResource("Secret", "kube-system", "d8-control-plane-manager-config")
+				Expect(secret.Exists()).To(BeTrue())
+				raw, err := base64.StdEncoding.DecodeString(secret.Field(secretKey).String())
+				Expect(err).ShouldNot(HaveOccurred())
+				var pod corev1.Pod
+				Expect(yaml.Unmarshal(raw, &pod)).To(Succeed())
+				return pod
+			}
+
+			It("sets --cluster-cidr and --node-cidr-mask-size on kube-controller-manager", func() {
+				Expect(f.RenderError).ShouldNot(HaveOccurred())
+				pod := decodeManifest(`data.kube-controller-manager\.yaml\.tpl`)
+				Expect(pod.Spec.Containers[0].Command).To(ContainElements(
+					fmt.Sprintf("--cluster-cidr=%s", podSubnetCIDR),
+					fmt.Sprintf("--node-cidr-mask-size=%s", podSubnetNodeCIDRPrefix),
+				))
+			})
+
+			It("sets --service-cluster-ip-range on kube-apiserver", func() {
+				Expect(f.RenderError).ShouldNot(HaveOccurred())
+				pod := decodeManifest(`data.kube-apiserver\.yaml\.tpl`)
+				Expect(pod.Spec.Containers[0].Command).To(ContainElement(
+					fmt.Sprintf("--service-cluster-ip-range=%s", serviceSubnetCIDR),
+				))
+			})
+
+			It("sets SERVICE_SUBNET_CIDR on the control-plane-manager DaemonSet", func() {
+				Expect(f.RenderError).ShouldNot(HaveOccurred())
+				ds := f.KubernetesResource("DaemonSet", "kube-system", "d8-control-plane-manager")
+				Expect(ds.Exists()).To(BeTrue())
+				Expect(ds.Field(`spec.template.spec.containers.0.env.#(name==SERVICE_SUBNET_CIDR).value`).String()).
+					To(Equal(serviceSubnetCIDR))
+			})
+		})
+	})
+
+	Context("SecurityPolicyException resources", func() {
+		BeforeEach(func() {
+			f.ValuesSetFromYaml("global.discovery.apiVersions", `["deckhouse.io/v1alpha1/SecurityPolicyException"]`)
+		})
+
+		Context("Always rendered exceptions", func() {
+			BeforeEach(func() {
+				f.HelmRender()
+			})
+
+			It("should render SecurityPolicyExceptions for control-plane components", func() {
+				Expect(f.RenderError).ShouldNot(HaveOccurred())
+
+				Expect(f.KubernetesResource("SecurityPolicyException", "kube-system", "etcd").Exists()).To(BeTrue())
+				Expect(f.KubernetesResource("SecurityPolicyException", "kube-system", "kube-apiserver").Exists()).To(BeTrue())
+				Expect(f.KubernetesResource("SecurityPolicyException", "kube-system", "kube-controller-manager").Exists()).To(BeTrue())
+				Expect(f.KubernetesResource("SecurityPolicyException", "kube-system", "kube-scheduler").Exists()).To(BeTrue())
+				Expect(f.KubernetesResource("SecurityPolicyException", "kube-system", "d8-control-plane-manager").Exists()).To(BeTrue())
+			})
+
+			It("should not render control-plane-proxy or etcd-backup exceptions without their prerequisites", func() {
+				Expect(f.RenderError).ShouldNot(HaveOccurred())
+
+				Expect(f.KubernetesResource("SecurityPolicyException", "kube-system", "control-plane-proxy").Exists()).To(BeFalse())
+				Expect(f.KubernetesResource("SecurityPolicyException", "kube-system", "d8-etcd-backup").Exists()).To(BeFalse())
+			})
+		})
+
+		Context("With audit log path customized", func() {
+			BeforeEach(func() {
+				f.ValuesSet("controlPlaneManager.internal.auditPolicy", base64.StdEncoding.EncodeToString([]byte("rules: []")))
+				f.ValuesSetFromYaml("controlPlaneManager.apiserver.auditLog", `{output: File, path: /custom/audit/path}`)
+				f.HelmRender()
+			})
+
+			It("should render the customized path as a kube-apiserver hostPath exception", func() {
+				Expect(f.RenderError).ShouldNot(HaveOccurred())
+				Expect(f.KubernetesResource("SecurityPolicyException", "kube-system", "kube-apiserver").Field("spec.volumes.hostPath.allowedValues").String()).
+					To(ContainSubstring("/custom/audit/path"))
+			})
+		})
+
+		Context("With prometheus enabled", func() {
+			BeforeEach(func() {
+				f.ValuesSetFromYaml("global.enabledModules", `["prometheus"]`)
+				f.HelmRender()
+			})
+
+			It("should render SecurityPolicyException for control-plane-proxy", func() {
+				Expect(f.RenderError).ShouldNot(HaveOccurred())
+				Expect(f.KubernetesResource("SecurityPolicyException", "kube-system", "control-plane-proxy").Exists()).To(BeTrue())
+			})
+		})
+
+		Context("With cluster bootstrapped", func() {
+			BeforeEach(func() {
+				f.ValuesSet("global.clusterIsBootstrapped", true)
+				f.HelmRender()
+			})
+
+			It("should render SecurityPolicyException for etcd-backup", func() {
+				Expect(f.RenderError).ShouldNot(HaveOccurred())
+				Expect(f.KubernetesResource("SecurityPolicyException", "kube-system", "d8-etcd-backup").Exists()).To(BeTrue())
+			})
+		})
+
+		Context("Without SecurityPolicyException API", func() {
+			BeforeEach(func() {
+				f.ValuesSetFromYaml("global.discovery.apiVersions", `[]`)
+				f.ValuesSetFromYaml("global.enabledModules", `["prometheus"]`)
+				f.ValuesSet("global.clusterIsBootstrapped", true)
+				f.HelmRender()
+			})
+
+			It("should not render any SecurityPolicyException", func() {
+				Expect(f.RenderError).ShouldNot(HaveOccurred())
+
+				Expect(f.KubernetesResource("SecurityPolicyException", "kube-system", "etcd").Exists()).To(BeFalse())
+				Expect(f.KubernetesResource("SecurityPolicyException", "kube-system", "kube-apiserver").Exists()).To(BeFalse())
+				Expect(f.KubernetesResource("SecurityPolicyException", "kube-system", "kube-controller-manager").Exists()).To(BeFalse())
+				Expect(f.KubernetesResource("SecurityPolicyException", "kube-system", "kube-scheduler").Exists()).To(BeFalse())
+				Expect(f.KubernetesResource("SecurityPolicyException", "kube-system", "d8-control-plane-manager").Exists()).To(BeFalse())
+				Expect(f.KubernetesResource("SecurityPolicyException", "kube-system", "control-plane-proxy").Exists()).To(BeFalse())
+				Expect(f.KubernetesResource("SecurityPolicyException", "kube-system", "d8-etcd-backup").Exists()).To(BeFalse())
+			})
+		})
 	})
 })

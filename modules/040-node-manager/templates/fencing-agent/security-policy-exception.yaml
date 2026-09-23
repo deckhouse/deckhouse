@@ -6,7 +6,7 @@
 apiVersion: deckhouse.io/v1alpha1
 kind: SecurityPolicyException
 metadata:
-  name: fencing-agent-{{ $ng.name }}
+  name: "fencing-agent-{{ $ng.name }}"
   namespace: d8-cloud-instance-manager
   {{- include "helm_lib_module_labels" (list $ (dict "app" "fencing-agent")) | nindent 2 }}
 spec:

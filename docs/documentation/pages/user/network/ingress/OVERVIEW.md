@@ -1,11 +1,11 @@
 ---
 title: "Incoming traffic processing"
-description: "Configuring Network Load Balancer (NLB) and Application Load Balancer (ALB) in Deckhouse Kubernetes Platform. Balancing TCP/UDP traffic and HTTP/HTTPS requests. Providing external access to applications."
+description: "Configuring Network Load Balancer (NLB) and Application Load Balancer (ALB) in Deckhouse Platform. Balancing TCP/UDP traffic and HTTP/HTTPS requests. Providing external access to applications."
 permalink: en/user/network/ingress/
 ---
 
 Network Load Balancer (NLB) and Application Load Balancer (ALB) are used to provide external access to applications
-deployed in a cluster managed by Deckhouse Kubernetes Platform.
+deployed in a cluster managed by Deckhouse Platform.
 
 ## NLB features and purpose
 

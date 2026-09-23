@@ -171,9 +171,12 @@ recommended.
 
 ### ClusterResourceGrantPolicy (unchanged)
 
-Per-project allow-list and default; selects projects by namespace labels via `projectSelector`, and
+Per-project allow-list and default; `projectSelector` is evaluated per namespace against the union of
+the Project labels and the namespace labels (the namespace wins a shared key), so a label on the Project
+selects all its namespaces (`internal/resolve.GrantsForNamespace`, shared by the webhooks and the
+catalog reconciler), and
 per resource (`resourceName`) sets `allowed` / `allowedSelector` / `denied` / `deniedSelector` /
-`default` / `availabilityDefault`. An allow-list infers a `None` baseline.
+`default` / `availabilityDefault`. A non-empty allow-list or an `allowedSelector` infers a `None` baseline; empty `allowed: []` does not.
 
 ### AvailableClusterResource (unchanged)
 
@@ -206,9 +209,12 @@ Per path (`fieldPaths[].defaulting`):
   annotation like `cert-manager.io/cluster-issuer`).
 - `FillEmpty` — on CREATE, inject the project default into an empty field.
 - `Coerce` — `FillEmpty` plus: rewrite a non-empty value that is not available to the project default.
-  For fields a built-in admission controller pre-fills (e.g. `DefaultStorageClass` on PVCs).
+  For fields a built-in admission controller pre-fills (e.g. `DefaultStorageClass` on PVCs). The rewrite
+  is reported to the author as an admission warning naming the original and the substituted value.
 
-The default *value* comes from the policy's `default`, falling back to the definition's `defaultFrom`.
+The default *value* comes from the policy's `default`, falling back to the definition's `defaultFrom`;
+`defaultFrom` accepts an object only when the annotation value is `true` (case-insensitive), so a class
+marked `is-default-class: "false"` is not a default.
 
 ## Webhooks
 
@@ -229,6 +235,14 @@ GVKs — so registering a reference automatically extends interception to that m
 - **Binding reconciler** (keyed by `GrantableClusterResourceReference` and
   `GrantableClusterResourceDefinition`) — sets `reference.status.bound`/`Bound` condition and the
   definition's `status.references`/`referenceCount` reverse index.
+- **Policy reconciler** (keyed by `ClusterResourceGrantPolicy`) — reports `SelectorsValid` (a selector
+  the schema accepts but the selector library refuses would otherwise silently match nothing) and
+  `AllowedEffective` (an allowed name the definition's `excluded` filter refuses anyway grants nothing;
+  for ClusterRole the message names the `rbac.deckhouse.io/delegatable` label).
+- **Violation scan** (inside the catalog reconciler) — after each catalog render, walks the intercepted
+  objects of the namespace and exposes `d8_cluster_objects_grant_violated{project,grant,violating_resource,
+  violating_object_name,violating_field}` on the controller's `:9091` metrics endpoint for objects whose
+  referenced name is no longer available (grandfathered on UPDATE, so this is the only place they show).
 
 ## Worked examples
 
@@ -360,7 +374,8 @@ spec:
   excluded:
     - matchExpressions:
         - key: rbac.deckhouse.io/delegatable
-          operator: DoesNotExist
+          operator: NotIn
+          values: ["true"]
 ---
 apiVersion: multitenancy.deckhouse.io/v1alpha1
 kind: GrantableClusterResourceReference

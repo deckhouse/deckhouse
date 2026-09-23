@@ -221,6 +221,30 @@ StaticInstance, находящийся в состоянии `Pending` можн�
 
 Необходимо выполнить [очистку узла](#как-вручную-очистить-статический-узел), затем [добавить](#как-добавить-статический-узел-в-кластер-cluster-api-provider-static) узел под управление CAPS.
 
+### Почему SSH-ключ и sudo-пароль в SSHCredentials отображаются как `<omitted>`?
+
+Параметры [`privateSSHKey`](cr.html#sshcredentials-v1alpha1-spec-privatesshkey), [`sudoPassword`](cr.html#sshcredentials-v1alpha1-spec-sudopassword) (`v1alpha1`) и [`sudoPasswordEncoded`](cr.html#sshcredentials-v1alpha2-spec-sudopasswordencoded) (`v1alpha2`) ресурса [SSHCredentials](cr.html#sshcredentials) содержат конфиденциальные данные и защищены от просмотра.
+
+Если у пользователя нет прав на чтение конфиденциальных данных SSHCredentials, API возвращает `<omitted>` вместо фактического значения. При этом остальные параметры — [`user`](cr.html#sshcredentials-v1alpha1-spec-user), [`sshPort`](cr.html#sshcredentials-v1alpha1-spec-sshport), [`sshExtraArgs`](cr.html#sshcredentials-v1alpha1-spec-sshextraargs) — и метаданные ресурса остаются доступными пользователям, которым разрешено чтение SSHCredentials.
+
+Дополнительно kube-apiserver защищает эти данные следующим образом:
+
+- удаляет аннотацию `kubectl.kubernetes.io/last-applied-configuration` из ответов API, если она может содержать копию конфиденциальных значений;
+- заменяет конфиденциальные значения на `"******"` в [событиях аудита](/products/kubernetes-platform/documentation/v1/admin/configuration/security/events/kubernetes-api-audit.html) независимо от прав пользователя и уровня аудита;
+- шифрует ресурс в etcd с использованием того же механизма, что и для секретов Kubernetes, если включён параметр [`apiserver.encryptionEnabled`](/modules/control-plane-manager/configuration.html#parameters-apiserver-encryptionenabled) модуля [`control-plane-manager`](/modules/control-plane-manager/).
+
+Незамаскированные значения доступны контроллеру [CAPS](./#cluster-api-provider-static), которому они необходимы для подключения к узлу по SSH, а также пользователям с уровнем доступа [`SuperAdmin`](/products/kubernetes-platform/documentation/v1/admin/configuration/access/authorization/rbac-current.html#высокоуровневые-роли-используемые-для-реализации-модели) и участникам группы [`kubeadm:cluster-admins`](/products/kubernetes-platform/documentation/v1/admin/configuration/access/authorization/cluster-admin-access-model.html).
+
+Роли [`d8:manage:infrastructure:viewer`](/products/kubernetes-platform/documentation/v1/admin/configuration/access/authorization/rbac-experimental.html#подсистемы-ролевой-модели) и [`d8:manage:infrastructure:manager`](/products/kubernetes-platform/documentation/v1/admin/configuration/access/authorization/rbac-experimental.html#подсистемы-ролевой-модели) позволяют читать ресурс SSHCredentials, но не предоставляют доступ к SSH-ключу и sudo-паролю.
+
+Чтобы проверить, может ли пользователь читать конфиденциальные данные SSHCredentials, выполните:
+
+```shell
+d8 k auth can-i get sshcredentials/sensitive --as=<user>
+```
+
+Значение `<omitted>` означает, что фактическое значение скрыто от текущего пользователя. Это поведение применяется как к `v1alpha1`, так и к `v1alpha2`, поэтому использование другой версии API не позволяет получить скрытые данные.
+
 ## Как изменить NodeGroup у статического узла?
 
 <span id='как-изменить-nodegroup-у-статичного-узла'><span>
@@ -755,7 +779,7 @@ for node in $(d8 k get nodes -l node-role.kubernetes.io/<Название NodeGr
 При добавлении узла в кластер указанные в файлах лейблы будут автоматически проставлены на узел.
 
 {% alert level="warning" %}
-Обратите внимание, что добавить таким образом лейблы, использующиеся в DKP, невозможно. Работать такой метод будет только с кастомными лейблами, не пересекающимися с зарезервированными для Deckhouse.
+Обратите внимание, что добавить таким образом лейблы, использующиеся в DP, невозможно. Работать такой метод будет только с кастомными лейблами, не пересекающимися с зарезервированными для Deckhouse.
 {% endalert %}
 
 ## Как развернуть кастомный конфигурационный файл containerd?
@@ -768,7 +792,7 @@ for node in $(d8 k get nodes -l node-role.kubernetes.io/<Название NodeGr
 Добавление кастомных настроек вызывает перезапуск сервиса containerd.
 {% endalert %}
 
-Bashible на узлах объединяет конфигурацию containerd для DKP с конфигурацией из файла:
+Bashible на узлах объединяет конфигурацию containerd для DP с конфигурацией из файла:
 
 - `/etc/containerd/conf.d/*.toml` — если в качестве CRI на узлах кластера используется containerd v1;
 - `/etc/containerd/conf2.d/*.toml` — если в качестве CRI на узлах кластера используется containerd v2.
@@ -1546,11 +1570,11 @@ metadata:
 ## Как включить задержку выключения или перезагрузки узла, пока на нём работают критичные поды?
 
 {% alert level="info" %}
-Доступно в редакции **EE**.
+Доступно в редакциях EE, Ultimate.
 {% endalert %}
 
 {% alert level="warning" %}
-Для принятия решения о блокировке выключения DKP дополнительно опрашивает NodeGroup. Если текущий узел принадлежит к группе `master` и является единственным master-узлом в кластере, блокировка выключения для него применена не будет.
+Для принятия решения о блокировке выключения DP дополнительно опрашивает NodeGroup. Если текущий узел принадлежит к группе `master` и является единственным master-узлом в кластере, блокировка выключения для него применена не будет.
 {% endalert %}
 
 Чтобы включить механизм задержки перезагрузки или выключения узла (далее просто «выключение узла»), добавьте на под лейбл `pod.deckhouse.io/inhibit-node-shutdown` (для Deployment укажите лейбл в шаблоне пода).
@@ -1637,7 +1661,7 @@ d8 k get node <NODE_NAME> -o jsonpath='{range .status.conditions[?(@.type=="Grac
 ## Как работать с GPU-узлами?
 
 {% alert level="info" %}
-Управление GPU-узлами доступно только в DKP Enterprise Edition.
+Управление GPU-узлами доступно в DP Enterprise Edition и DP Ultimate.
 {% endalert %}
 
 ### Порядок действий по добавлению GPU-узла в кластер
@@ -1900,7 +1924,7 @@ Containerd на GPU-узлах настраивается автоматичес
 
 ## Как выполнять мониторинг GPU?
 
-Deckhouse Kubernetes Platform автоматически устанавливает **DCGM Exporter**; метрики GPU попадают в Prometheus и доступны в Grafana.
+Deckhouse Platform автоматически устанавливает **DCGM Exporter**; метрики GPU попадают в Prometheus и доступны в Grafana.
 
 ## Какие режимы работы GPU поддерживаются?
 
@@ -1995,4 +2019,4 @@ spec:
 
 ## Поддерживаются ли AMD или Intel GPU?
 
-Сейчас Deckhouse Kubernetes Platform автоматически настраивает **только NVIDIA GPU**. Поддержка **AMD (ROCm)** и **Intel GPU** находится в проработке и планируется к добавлению в будущих релизах.
+Сейчас Deckhouse Platform автоматически настраивает **только NVIDIA GPU**. Поддержка **AMD (ROCm)** и **Intel GPU** находится в проработке и планируется к добавлению в будущих релизах.

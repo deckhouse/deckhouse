@@ -38,6 +38,13 @@ const (
 	InstanceCRDFile       NodeManagerCRDFile = "instance.yaml"
 	NodeUserCRDFile       NodeManagerCRDFile = "nodeuser.yaml"
 	StaticInstanceCRDFile NodeManagerCRDFile = "staticinstance.yaml"
+
+	NodeConfigCRDFile           NodeManagerCRDFile = "nodeconfig.yaml"
+	NodeOperationCRDFile        NodeManagerCRDFile = "nodeoperation.yaml"
+	NodeExtensionRequestCRDFile NodeManagerCRDFile = "nodeextensionrequest.yaml"
+	// Under crds/internal: nobody creates the Cluster API bootstrap objects by
+	// hand, so they are kept out of the documentation and installed by a hook.
+	NodeBootstrapConfigCRDFile NodeManagerCRDFile = "internal/nodebootstrapconfig.yaml"
 )
 
 // RealCacheCRDPaths returns the CRDs every envtest manager needs regardless of what the
@@ -46,7 +53,7 @@ const (
 func RealCacheCRDPaths() []string {
 	return slices.Concat(
 		ControllerCRDPaths(MachineCRDFile, MachineDeploymentCRDFile, ClusterCRDFile, MachineHealthCheckCRDFile),
-		NodeManagerCRDPaths(MCMCRDFile),
+		NodeManagerCRDPaths(MCMCRDFile, NodeBootstrapConfigCRDFile),
 		[]string{
 			testdataPath("deckhousecontrolplane-crd.yaml"),
 			testdataPath("moduleconfig-crd.yaml"),
@@ -63,7 +70,7 @@ func NodeManagerCRDPaths(crds ...NodeManagerCRDFile) []string {
 }
 
 // ModuleCRDPaths resolves CRD files under the repo's modules directory (e.g.
-// "030-cloud-provider-yandex/candi/openapi/instance_class.yaml") for suites that
+// "030-cloud-provider-yandex/crds/instance_class.yaml") for suites that
 // exercise another module's CRD against the real apiserver.
 func ModuleCRDPaths(paths ...string) []string {
 	return resolveUpPaths("modules", paths)
@@ -131,6 +138,12 @@ func WithMCMCRDFile() crdOpt {
 
 func WithInstanceCRDFile() crdOpt {
 	return WithNodeManager(InstanceCRDFile)
+}
+
+// WithNodeUserCRDFile installs the NodeUser CRD, including its status subresource — the only part
+// of it node-controller writes.
+func WithNodeUserCRDFile() crdOpt {
+	return WithNodeManager(NodeUserCRDFile)
 }
 
 func CRDPaths(opts ...crdOpt) []string {

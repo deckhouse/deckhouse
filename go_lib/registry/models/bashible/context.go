@@ -17,9 +17,12 @@ limitations under the License.
 package bashible
 
 import (
+	"errors"
 	"fmt"
 
 	validation "github.com/go-ozzo/ozzo-validation/v4"
+
+	"github.com/deckhouse/deckhouse/go_lib/registry/helpers"
 )
 
 var (
@@ -28,8 +31,16 @@ var (
 	_ validation.Validatable = ContextMirrorHost{}
 )
 
+// ContextAgent mirrors ConfigAgent on the node side.
+type ContextAgent struct {
+	Endpoint   string `json:"endpoint" yaml:"endpoint"`
+	DropInFile string `json:"dropInFile,omitempty" yaml:"dropInFile,omitempty"`
+	Layout     string `json:"layout,omitempty" yaml:"layout,omitempty"`
+}
+
 type Context struct {
 	Bootstrap            *ContextBootstrap       `json:"bootstrap,omitempty" yaml:"bootstrap,omitempty"`
+	Agent                *ContextAgent           `json:"agent,omitempty" yaml:"agent,omitempty"`
 	RegistryModuleEnable bool                    `json:"registryModuleEnable" yaml:"registryModuleEnable"`
 	Mode                 string                  `json:"mode" yaml:"mode"`
 	Version              string                  `json:"version" yaml:"version"`
@@ -62,17 +73,40 @@ type ContextRewrite struct {
 }
 
 func (c Context) Validate() error {
-	return validation.ValidateStruct(&c,
+	if err := validation.ValidateStruct(&c,
 		validation.Field(&c.Bootstrap),
 		validation.Field(&c.Mode, validation.Required),
 		validation.Field(&c.Version, validation.Required),
 		validation.Field(&c.ImagesBase, validation.Required),
-		validation.Field(&c.ProxyEndpoints, validation.Each(validation.Required)),
+		// Proxy endpoints are rendered into `server <value>;` in the NGINX
+		// configuration of the node load balancer, which has no quoting of its
+		// own, and into an unquoted heredoc that runs as root. Only the
+		// `<ip>:<port>` form the module generates is accepted, plus the
+		// bootstrap placeholder the bashible step resolves.
+		validation.Field(&c.ProxyEndpoints,
+			validation.Each(validation.Required, validation.By(helpers.ProxyEndpoint)),
+		),
 		// Hosts key must not be empty
 		validation.Field(&c.Hosts, validation.Required),
 		// Validate each host
 		validation.Field(&c.Hosts, validation.Each(validation.Required)),
-	)
+	); err != nil {
+		return err
+	}
+
+	// Each key becomes a directory name under /etc/containerd/registry.d and is
+	// interpolated into the shell commands that create it, so it is constrained
+	// to a registry host. ozzo validates map values, not keys.
+	for host := range c.Hosts {
+		if host == "" {
+			return errors.New("hosts key validation failed: must not be empty")
+		}
+		if err := helpers.HostWithOptionalPort(host); err != nil {
+			return fmt.Errorf("hosts key %q validation failed: %w", host, err)
+		}
+	}
+
+	return nil
 }
 
 func (h ContextHosts) Validate() error {
@@ -98,8 +132,14 @@ func (h ContextHosts) Validate() error {
 
 func (m ContextMirrorHost) Validate() error {
 	return validation.ValidateStruct(&m,
-		validation.Field(&m.Host, validation.Required),
-		validation.Field(&m.Scheme, validation.Required),
+		// The host becomes a table key in hosts.toml and part of the CA file
+		// name beside it, both written through an unquoted heredoc, so the
+		// bootstrap placeholder is admitted and nothing else that carries a
+		// shell metacharacter.
+		validation.Field(&m.Host, validation.Required, validation.By(helpers.MirrorHost)),
+		// The scheme selects skip_verify and ca handling in the generated
+		// hosts.toml, so only the two the bashible step branches on are accepted.
+		validation.Field(&m.Scheme, validation.Required, validation.By(helpers.URLScheme)),
 	)
 }
 
@@ -155,6 +195,15 @@ func (c Context) ToMap() map[string]any {
 
 	if c.Bootstrap != nil {
 		ret["bootstrap"] = c.Bootstrap.ToMap()
+	}
+	// Present only when the agent owns the runtime configuration, so a template can ask
+	// "is there an agent" rather than compare a mode against a list of names.
+	if c.Agent != nil {
+		ret["agent"] = map[string]any{
+			"endpoint":   c.Agent.Endpoint,
+			"dropInFile": c.Agent.DropInFile,
+			"layout":     c.Agent.Layout,
+		}
 	}
 	return ret
 }

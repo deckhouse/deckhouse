@@ -1,7 +1,8 @@
 ---
-title: История изменений Deckhouse Kubernetes Platform
+title: История изменений Deckhouse Platform
 permalink: ru/release-notes.html
-canonical: ru/reference/release-notes/
+description: История изменений Deckhouse Platform.
+editionsNotAvailable: [cse]
 lang: ru
 ---
 

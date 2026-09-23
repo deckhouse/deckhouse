@@ -27,7 +27,6 @@ import (
 	"github.com/flant/addon-operator/pkg"
 	addontypes "github.com/flant/addon-operator/pkg/hook/types"
 	"github.com/flant/addon-operator/pkg/module_manager/models/hooks/kind"
-	addonutils "github.com/flant/addon-operator/pkg/utils"
 	bctx "github.com/flant/shell-operator/pkg/hook/binding_context"
 	hookcontroller "github.com/flant/shell-operator/pkg/hook/controller"
 	shtypes "github.com/flant/shell-operator/pkg/hook/types"
@@ -37,7 +36,6 @@ import (
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/codes"
-	"sigs.k8s.io/yaml"
 
 	"github.com/deckhouse/module-sdk/pkg/settingscheck"
 
@@ -47,6 +45,7 @@ import (
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/schedule/rule/script"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/values"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/registry"
+	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/addonutils"
 	"github.com/deckhouse/deckhouse/go_lib/configtools/conversion"
 	"github.com/deckhouse/deckhouse/pkg/log"
 )
@@ -77,6 +76,7 @@ type Module struct {
 	definition Definition            // Module definition
 	digests    map[string]string     // Package digests
 	repository registry.Remote       // Module repository
+	embedded   bool                  // Package ships inside the Deckhouse image
 	converter  *conversion.Converter // Schema version converter for settings
 
 	hooks         *hooks.Storage      // Hook storage with indices
@@ -105,6 +105,7 @@ type Config struct {
 
 	Digests    map[string]string // Package images digests(images_digests.json)
 	Repository registry.Remote   // Package repository options
+	Embedded   bool              // Package ships inside the Deckhouse image
 
 	ConfigSchema []byte // OpenAPI config schema (YAML)
 	ValuesSchema []byte // OpenAPI values schema (YAML)
@@ -137,6 +138,7 @@ func NewModuleByConfig(name string, cfg *Config, logger *log.Logger) (*Module, e
 	m.definition = cfg.Definition
 	m.digests = cfg.Digests
 	m.repository = cfg.Repository
+	m.embedded = cfg.Embedded
 	m.settingsCheck = cfg.SettingsCheck
 	m.converter = cfg.Conversions
 	m.patcher = cfg.Patcher
@@ -213,6 +215,7 @@ func (m *Module) getRuntimeValues() RuntimeValues {
 			"Digests":  m.digests,
 			"Registry": m.repository,
 			"Version":  m.definition.Version,
+			"Embedded": m.embedded,
 		},
 	}
 }
@@ -280,18 +283,14 @@ func (m *Module) GetHooksQueues() []string {
 	return slices.Compact(res)
 }
 
-// GetHookSnapshotsDump returns a YAML snapshot of hook controller snapshots.
-// If include is provided, only hooks matching those names are included.
-func (m *Module) GetHookSnapshotsDump(include ...string) []byte {
-	d := make(map[string]any)
-	for _, h := range m.hooks.GetHooks() {
-		if len(include) == 0 || slices.Contains(include, h.GetName()) {
-			d[h.GetName()] = h.GetHookController().SnapshotsDump()
-		}
+// GetHookSnapshotsDump returns a snapshot of hook controller snapshots.
+func (m *Module) GetHookSnapshotsDump() map[string]any {
+	snapshots := make(map[string]any)
+	for _, hook := range m.hooks.GetHooks() {
+		snapshots[hook.GetName()] = hook.GetHookController().SnapshotsDump()
 	}
 
-	marshalled, _ := yaml.Marshal(d)
-	return marshalled
+	return snapshots
 }
 
 // GetValuesChecksum returns a checksum of the current values.
@@ -307,18 +306,15 @@ func (m *Module) GetSettingsChecksum() string {
 }
 
 // ValidateSettings converts settings to the latest schema version (if a converter
-// is available and settingsVersion > 0), then validates against OpenAPI schema
-// and calls the settings check hook if defined.
+// is available), then validates against OpenAPI schema and calls the settings check
+// hook if defined.
 func (m *Module) ValidateSettings(ctx context.Context, settingsVersion int, settings addonutils.Values) (settingscheck.Result, error) {
-	// Convert to latest schema version before validation
-	if m.converter != nil && settingsVersion > 0 {
-		var err error
-		_, settings, err = m.converter.ConvertToLatest(settingsVersion, settings)
-		if err != nil {
-			return settingscheck.Result{}, fmt.Errorf("convert settings: %w", err)
-		}
+	settings, err := m.convertSettings(settingsVersion, settings)
+	if err != nil {
+		return settingscheck.Result{}, err
 	}
-	if err := m.values.ValidateSettings(settings); err != nil {
+
+	if err = m.values.ValidateSettings(settings); err != nil {
 		return settingscheck.Result{}, err
 	}
 
@@ -353,19 +349,42 @@ func (m *Module) GetValues() addonutils.Values {
 	)
 }
 
-// ApplySettings applies settings values
 // ApplySettings converts settings to the latest schema version (if a converter
 // is available), then applies them to the values storage.
 func (m *Module) ApplySettings(settingsVersion int, settings addonutils.Values) error {
-	// Convert to latest schema version before applying
-	if m.converter != nil && settingsVersion > 0 {
-		var err error
-		_, settings, err = m.converter.ConvertToLatest(settingsVersion, settings)
-		if err != nil {
-			return fmt.Errorf("convert settings: %w", err)
-		}
+	settings, err := m.convertSettings(settingsVersion, settings)
+	if err != nil {
+		return err
 	}
+
 	return m.values.ApplySettings(settings)
+}
+
+// convertSettings converts settings to the latest schema version.
+// A zero settingsVersion (ModuleConfig without spec.version) is read as version 1:
+// the chain is what materializes fields the latest schema requires, so skipping it
+// leaves an unversioned config permanently invalid.
+func (m *Module) convertSettings(settingsVersion int, settings addonutils.Values) (addonutils.Values, error) {
+	if m.converter == nil {
+		return settings, nil
+	}
+
+	if settingsVersion == 0 {
+		settingsVersion = 1
+	}
+
+	// the converter skips a nil document, and an absent spec.settings is exactly
+	// the case the chain has to fill in
+	if settings == nil {
+		settings = addonutils.Values{}
+	}
+
+	_, converted, err := m.converter.ConvertToLatest(settingsVersion, settings)
+	if err != nil {
+		return nil, fmt.Errorf("convert settings: %w", err)
+	}
+
+	return converted, nil
 }
 
 // GetSettings returns the effective settings: user config merged with

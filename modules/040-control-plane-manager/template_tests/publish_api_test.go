@@ -140,6 +140,26 @@ kubeScheduler:
 		})
 	})
 
+	Context("With SelfSigned mode, ingress disabled and Gateway API enabled", func() {
+		BeforeEach(func() {
+			hec.ValuesSet("global.modules.ingress.enabled", false)
+			hec.ValuesSet("global.discovery.gatewayAPIDefaultGateway.name", "shared-gateway")
+			hec.ValuesSet("global.discovery.gatewayAPIDefaultGateway.namespace", "d8-alb")
+			hec.HelmRender()
+		})
+
+		// SelfSigned uses a local Issuer, not an ACME ClusterIssuer, so there is no per-mechanism
+		// validation to keep Ingress and Gateway API apart — the certificate must still be deployed
+		// when Gateway API is the only enabled mechanism, not just when Ingress is enabled.
+		It("Should deploy the shared self-signed certificate for Gateway API alone", func() {
+			Expect(hec.RenderError).ShouldNot(HaveOccurred())
+			certificate := hec.KubernetesResource("Certificate", "kube-system", "kubernetes-tls-selfsigned")
+			Expect(certificate.Exists()).To(BeTrue())
+			Expect(certificate.Field("spec.issuerRef.kind").String()).To(Equal("Issuer"))
+			Expect(certificate.Field("spec.issuerRef.name").String()).To(Equal("kubernetes-api"))
+		})
+	})
+
 	Context("With global mode CustomCertificate", func() {
 		BeforeEach(func() {
 			hec.ValuesSet("controlPlaneManager.apiserver.publishAPI.ingress.https.mode", "Global")
@@ -157,6 +177,27 @@ tls.key: KEYKEYKEY
 			Expect(hec.KubernetesResource("Certificate", "kube-system", "kubernetes-tls").Exists()).To(BeFalse())
 			Expect(hec.KubernetesResource("Secret", "kube-system", "kubernetes-tls-customcertificate").Exists()).To(BeTrue())
 			Expect(hec.KubernetesResource("Secret", "kube-system", "d8-publish-api-config").Field("data.httpsMode").String()).To(Equal("R2xvYmFs"))
+		})
+	})
+
+	Context("With global mode CustomCertificate and Gateway API enabled", func() {
+		BeforeEach(func() {
+			hec.ValuesSet("controlPlaneManager.apiserver.publishAPI.ingress.https.mode", "Global")
+			hec.ValuesSet("global.modules.https.mode", "CustomCertificate")
+			hec.ValuesSetFromYaml("controlPlaneManager.internal.customCertificateData", `
+tls.crt: CRTCRTCRT
+tls.key: KEYKEYKEY
+`)
+			hec.ValuesSet("global.discovery.gatewayAPIDefaultGateway.name", "shared-gateway")
+			hec.ValuesSet("global.discovery.gatewayAPIDefaultGateway.namespace", "d8-alb")
+
+			hec.HelmRender()
+		})
+
+		// CustomCertificate has no per-mechanism validation, so Gateway API reuses the Ingress secret.
+		It("Should deploy a single shared secret certificate for both Ingress and Gateway API", func() {
+			Expect(hec.KubernetesResource("Secret", "kube-system", "kubernetes-tls-customcertificate").Exists()).To(BeTrue())
+			Expect(hec.KubernetesResource("Secret", "kube-system", "kubernetes-httproute-tls-customcertificate").Exists()).To(BeFalse())
 		})
 	})
 

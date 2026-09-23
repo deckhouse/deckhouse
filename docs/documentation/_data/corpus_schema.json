@@ -1,0 +1,197 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "properties": {
+    "baseUrl": {
+      "description": "Site origin the relative URLs resolve against.",
+      "type": "string"
+    },
+    "documents": {
+      "description": "The exported pages.",
+      "items": {
+        "additionalProperties": false,
+        "properties": {
+          "breadcrumbs": {
+            "description": "Navigation trail from the site root to the page.",
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "channel": {
+            "description": "Release channel of the module, if any.",
+            "type": "string"
+          },
+          "chunks": {
+            "description": "Retrieval-sized pieces of the page.",
+            "items": {
+              "additionalProperties": false,
+              "properties": {
+                "anchor": {
+                  "description": "HTML heading anchor the chunk starts at, if any.",
+                  "type": "string"
+                },
+                "approxTokens": {
+                  "description": "Rough token estimate (charCount / 4).",
+                  "type": "integer"
+                },
+                "charCount": {
+                  "description": "Length of the chunk Markdown in characters.",
+                  "type": "integer"
+                },
+                "headingPath": {
+                  "description": "Titles from the page title down to the chunk heading.",
+                  "items": {
+                    "type": "string"
+                  },
+                  "type": "array"
+                },
+                "id": {
+                  "description": "Identifier of the chunk (document id plus anchor or ordinal).",
+                  "type": "string"
+                },
+                "level": {
+                  "description": "Heading level of the chunk (1 for the preamble).",
+                  "type": "integer"
+                },
+                "markdown": {
+                  "description": "Markdown of the chunk.",
+                  "type": "string"
+                },
+                "url": {
+                  "description": "URL of the page, with the anchor fragment when present.",
+                  "type": "string"
+                }
+              },
+              "required": [
+                "approxTokens",
+                "charCount",
+                "headingPath",
+                "id",
+                "level",
+                "markdown",
+                "url"
+              ],
+              "type": "object"
+            },
+            "type": "array"
+          },
+          "contentHash": {
+            "description": "SHA-256 of the Markdown body.",
+            "type": "string"
+          },
+          "description": {
+            "description": "Short one-line description of the page.",
+            "type": "string"
+          },
+          "editions": {
+            "description": "Editions the module is available in.",
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "id": {
+            "description": "Stable identifier of the page (SHA-1 of its URL).",
+            "type": "string"
+          },
+          "keywords": {
+            "description": "Search keywords and tags.",
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "lang": {
+            "description": "Language of the page (en or ru).",
+            "type": "string"
+          },
+          "markdown": {
+            "description": "Full page body in Markdown.",
+            "type": "string"
+          },
+          "mdUrl": {
+            "description": "Public URL of the Markdown twin of the page.",
+            "type": "string"
+          },
+          "module": {
+            "description": "Module the page belongs to, if any.",
+            "type": "string"
+          },
+          "moduleType": {
+            "description": "Kind of module: embedded or external.",
+            "type": "string"
+          },
+          "path": {
+            "description": "URL path without language prefix or extension; a stable key.",
+            "type": "string"
+          },
+          "stage": {
+            "description": "Module lifecycle stage, if any.",
+            "type": "string"
+          },
+          "title": {
+            "description": "Page title.",
+            "type": "string"
+          },
+          "url": {
+            "description": "Public URL of the HTML page.",
+            "type": "string"
+          },
+          "version": {
+            "description": "Module or documentation version, if known.",
+            "type": "string"
+          }
+        },
+        "required": [
+          "breadcrumbs",
+          "chunks",
+          "contentHash",
+          "description",
+          "editions",
+          "id",
+          "keywords",
+          "lang",
+          "markdown",
+          "mdUrl",
+          "path",
+          "title",
+          "url"
+        ],
+        "type": "object"
+      },
+      "type": "array"
+    },
+    "generator": {
+      "description": "Generator that produced the corpus (hugo or jekyll).",
+      "type": "string"
+    },
+    "lang": {
+      "description": "Language of the corpus (en or ru).",
+      "type": "string"
+    },
+    "productCode": {
+      "description": "Product the corpus belongs to.",
+      "type": "string"
+    },
+    "schema": {
+      "description": "JSON Schema (draft 2020-12) of this corpus, embedded so the file describes itself.",
+      "type": "object"
+    },
+    "version": {
+      "description": "Corpus format version.",
+      "type": "integer"
+    }
+  },
+  "required": [
+    "baseUrl",
+    "documents",
+    "generator",
+    "lang",
+    "productCode",
+    "schema",
+    "version"
+  ],
+  "title": "Deckhouse documentation AI corpus",
+  "type": "object"
+}

@@ -29,6 +29,7 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	toolscache "k8s.io/client-go/tools/cache"
 	"k8s.io/client-go/util/workqueue"
+	"sigs.k8s.io/controller-runtime/pkg/builder"
 	"sigs.k8s.io/controller-runtime/pkg/cache"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/event"
@@ -39,6 +40,9 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/source"
 
 	v1 "github.com/deckhouse/node-controller/api/deckhouse.io/v1"
+	"github.com/deckhouse/node-controller/internal/clusterprefix"
+	"github.com/deckhouse/node-controller/internal/common"
+	"github.com/deckhouse/node-controller/internal/register"
 )
 
 // IsRegistrationSecret reports whether an object is a registration Secret: right namespace, name
@@ -240,4 +244,33 @@ func LazyInstanceClassSource(informers cache.Cache, eventHandler handler.EventHa
 		}()
 		return nil
 	})
+}
+
+// IsInputSecret reports whether a Secret can change provider template rendering.
+func IsInputSecret(object client.Object) bool {
+	if object.GetNamespace() != common.KubeSystemNamespace {
+		return false
+	}
+	name := object.GetName()
+	return name == common.CloudProviderSecretName ||
+		name == common.ClusterConfigSecretName ||
+		(strings.HasPrefix(name, "d8-cloud-provider-") &&
+			(strings.HasSuffix(name, "-capi") || strings.HasSuffix(name, "-mcm")))
+}
+
+// WatchInputs subscribes a controller to the mutable inputs read by Source.
+func WatchInputs(w register.Watcher, enqueue handler.EventHandler) {
+	w.Watches(&corev1.Secret{}, enqueue, builder.WithPredicates(
+		predicate.NewPredicateFuncs(IsInputSecret),
+		predicate.ResourceVersionChangedPredicate{},
+	))
+
+	moduleConfig := &unstructured.Unstructured{}
+	moduleConfig.SetGroupVersionKind(clusterprefix.ModuleConfigGVK())
+	w.Watches(moduleConfig, enqueue, builder.WithPredicates(
+		predicate.NewPredicateFuncs(func(object client.Object) bool {
+			return object.GetName() == clusterprefix.GlobalModuleConfigName
+		}),
+		predicate.ResourceVersionChangedPredicate{},
+	))
 }

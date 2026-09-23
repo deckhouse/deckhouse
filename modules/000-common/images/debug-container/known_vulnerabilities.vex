@@ -2,7 +2,7 @@
   "@context": "https://openvex.dev/ns/v0.2.0",
   "@id": "https://openvex.dev/docs/public/vex-41a5cb02200a981d0e152bffdd0754addf47f69efe2db1b00812aff0a07fe3f3",
   "author": "Deckhouse <contact@deckhouse.io>",
-  "version": 3,
+  "version": 4,
   "statements": [
     {
       "vulnerability": {
@@ -197,15 +197,15 @@
       },
       "products": [
         {
-          "@id": "pkg:golang/golang.org/x/crypto@v0.53.0"
+          "@id": "pkg:golang/golang.org/x/crypto@v0.56.0"
         }
       ],
       "status": "not_affected",
       "justification": "vulnerable_code_not_in_execute_path",
       "impact_statement": "GO-2026-5932 относится к пакету golang.org/x/crypto/openpgp, который помечен как unmaintained. Бинарники istioctl не импортируют golang.org/x/crypto/openpgp; модуль golang.org/x/crypto подтягивается транзитивно (в частности через bcrypt/sprig) без исполняемого пути openpgp. Исправленной версии пакета нет; уязвимый код в данном компоненте не выполняется.",
-      "timestamp": "2026-07-22T14:00:00.000000000Z"
+      "timestamp": "2026-09-10T08:52:27.000000000Z"
     }
   ],
   "timestamp": "2026-07-22T14:00:00Z",
-  "last_updated": "2026-07-22T14:00:00Z"
+  "last_updated": "2026-09-10T08:52:27Z"
 }

@@ -52,6 +52,12 @@ func withVersionChanged() mappingOption {
 	}
 }
 
+func withDeleting() mappingOption {
+	return func(state *condmap.State) {
+		state.Deleting = true
+	}
+}
+
 func withSuccessfulApply() []mappingOption {
 	return []mappingOption{
 		withInternalCondition(string(intstatus.ConditionRequirementsMet), metav1.ConditionTrue, "RequirementsMet"),
@@ -184,6 +190,17 @@ func TestInstalledRule(t *testing.T) {
 			},
 		},
 		{
+			// Scaled alone must not report a finished install: the version, URLs
+			// and settings are committed under ManifestsApplied.
+			name: "absent when Scaled arrives before manifests are applied",
+			opts: []mappingOption{
+				withInternalCondition(string(intstatus.ConditionScaled), metav1.ConditionTrue, "Scaled"),
+			},
+			expected: map[string]*expectedCondition{
+				ConditionInstalled: nil,
+			},
+		},
+		{
 			name: "sticky - not in result when already true externally",
 			opts: []mappingOption{
 				withExternalCondition(ConditionInstalled, metav1.ConditionTrue, "PreviouslyInstalled"),
@@ -284,6 +301,16 @@ func TestReadyRule(t *testing.T) {
 			name: "requirements passed does not explain readiness",
 			opts: []mappingOption{
 				withInternalCondition(string(intstatus.ConditionRequirementsMet), metav1.ConditionTrue, "RequirementsMet"),
+			},
+			expected: map[string]*expectedCondition{
+				ConditionReady: nil,
+			},
+		},
+		{
+			// On first install readiness tracks Installed, which waits for the apply.
+			name: "absent when Scaled arrives before manifests are applied",
+			opts: []mappingOption{
+				withInternalCondition(string(intstatus.ConditionScaled), metav1.ConditionTrue, "Scaled"),
 			},
 			expected: map[string]*expectedCondition{
 				ConditionReady: nil,

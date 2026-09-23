@@ -2,10 +2,10 @@
 title: Prometheus module
 permalink: en/architecture/observability/prometheus.html
 search: prometheus module, monitoring architecture, monitoring components, monitoring, metrics
-description: Architecture of the prometheus module in Deckhouse Kubernetes Platform.
+description: Architecture of the prometheus module in Deckhouse Platform.
 ---
 
-The `prometheus` module deploys a monitoring stack with predefined settings for Deckhouse Kubernetes Platform (DKP) and provides the collection, storage, and processing of cluster and application metrics.
+The `prometheus` module deploys a monitoring stack with predefined settings for Deckhouse Platform (DP) and provides the collection, storage, and processing of cluster and application metrics.
 
 For more details about the module, refer to [the module documentation](/modules/prometheus/) section.
 
@@ -18,7 +18,7 @@ The following simplifications are made in the diagram:
 * Pods may run multiple replicas. However, each pod is shown as a single replica in the diagram.
 {% endalert %}
 
-The Level 2 C4 architecture of the [`prometheus`](/modules/prometheus/) module and its interactions with other components of DKP are shown in the following diagram:
+The Level 2 C4 architecture of the [`prometheus`](/modules/prometheus/) module and its interactions with other components of DP are shown in the following diagram:
 
 ![Prometheus module architecture](../../images/architecture/observability/c4-l2-prometheus.svg)
 
@@ -45,7 +45,7 @@ The module consists of the following components:
 
    For more details about the working of Prometheus Operator, refer to the [`operator-prometheus` module documentation](/modules/operator-prometheus/) section.
 
-   For more details about the prometheus-main operation, refer to the section describing the [architecture of the monitoring in DKP](monitoring.html#prometheus).
+   For more details about the prometheus-main operation, refer to the section describing the [architecture of the monitoring in DP](monitoring.html#prometheus).
 
    Prometheus-main consists of the following containers:
 
@@ -59,10 +59,10 @@ The module consists of the following components:
 
    The original Prometheus or Deckhouse Prom++ can be used in prometheus-longterm too. Prometheus-longterm has the same set of containers as in prometheus-main, as well as operation principles.
 
-3. **Grafana-v10**: Optional Grafana component that provides a web interface for visualizing monitoring data. Grafana displays dashboards supplied with DKP modules. Grafana could work in High Availability mode, does not store state, and is configured with [custom resources](/modules/prometheus/cr.html#grafanaadditionaldatasource). Grafana is enabled by default, but it can be disabled using the [`settings.grafana.enabled`](/modules/prometheus/configuration.html#parameters-grafana-enabled) parameter.
+3. **Grafana-v10**: Optional Grafana component that provides a web interface for visualizing monitoring data. Grafana displays dashboards supplied with DP modules. Grafana could work in High Availability mode, does not store state, and is configured with [custom resources](/modules/prometheus/cr.html#grafanaadditionaldatasource). Grafana is enabled by default, but it can be disabled using the [`settings.grafana.enabled`](/modules/prometheus/configuration.html#parameters-grafana-enabled) parameter.
 
    {% alert level="info" %}
-   Grafana-v10 will be disabled in the future DKP releases. To view the monitoring dashboards, use the [Deckhouse web UI](/modules/console/).
+   Grafana-v10 will be disabled in the future DP releases. To view the monitoring dashboards, use the [Deckhouse web UI](/modules/console/).
    {% endalert %}
 
    It consists of the following containers:
@@ -87,7 +87,7 @@ The module consists of the following components:
    * **memcached**: Main container. It is an [open-source project](https://github.com/memcached/memcached).
    * **exporter**: Sidecar container that exports memcached container metrics. Exporter collects memcached container metrics via a network connection, as well as from the memcached process's PID file. It is an [open-source project](https://github.com/prometheus/memcached_exporter).
 
-6. **Trickster**: Caching proxy server that reduces the load on Prometheus. It is used for caching and proxying prometheus-longterm requests. In the future DKP releases, it's expected to become deprecated and will no longer be supported.
+6. **Trickster**: Caching proxy server that reduces the load on Prometheus. It is used for caching and proxying prometheus-longterm requests. In the future DP releases, it's expected to become deprecated and will no longer be supported.
 
    It consists of the following containers:
 
@@ -95,10 +95,10 @@ The module consists of the following components:
    * **kube-rbac-proxy**: Sidecar container providing authorized access to the proxy server and its metrics (described above).
 
    {% alert level="info" %}
-   In the future DKP releases, alerts-receiver will be removed from the [`prometheus`](/modules/prometheus/) module. The Alertmanager component of the [`observability`](/modules/observability/) module will be used to receive all alerts.
+   In the future DP releases, alerts-receiver will be removed from the [`prometheus`](/modules/prometheus/) module. The Alertmanager component of the [`observability`](/modules/observability/) module will be used to receive all alerts.
    {% endalert %}
 
-7. **Alerts-receiver**: A server compatible with [Alertmanager](https://github.com/prometheus/alertmanager) API. Alerts-receiver receives basic alerts from prometheus-main, creates the [ClusterAlert](/modules/prometheus/cr.html#clusteralert) custom resources based on them, updates their statuses and deletes them if the alert is no longer active. The ClusterAlert custom resources are used to inform DKP users on active alerts and are displayed in the Deckhouse web UI. Alerts-receiver is developed by Flant. It consists of one container.
+7. **Alerts-receiver**: A server compatible with [Alertmanager](https://github.com/prometheus/alertmanager) API. Alerts-receiver receives basic alerts from prometheus-main, creates the [ClusterAlert](/modules/prometheus/cr.html#clusteralert) custom resources based on them, updates their statuses and deletes them if the alert is no longer active. The ClusterAlert custom resources are used to inform DP users on active alerts and are displayed in the Deckhouse web UI. Alerts-receiver is developed by Flant. It consists of one container.
 
 ## Module interactions
 
@@ -112,7 +112,7 @@ The module interacts with the following components:
 
 2. **Alertmanager**: Sends custom alerts.
 
-The Prometheus instance, which is part of the module, collects metrics from all DKP components:
+The Prometheus instance, which is part of the module, collects metrics from all DP components:
 
 * Components of modules
 * Components of cluster control plane
@@ -120,7 +120,7 @@ The Prometheus instance, which is part of the module, collects metrics from all 
 * Exporters that collect Kubernetes resources metrics
 * User applications (additional configuration is required)
 
-To prevent complicating the diagram with a large number of relations, Prometheus interactions related to the collection of metrics from DKP components are omitted.
+To prevent complicating the diagram with a large number of relations, Prometheus interactions related to the collection of metrics from DP components are omitted.
 
 The following external components interact with the module:
 

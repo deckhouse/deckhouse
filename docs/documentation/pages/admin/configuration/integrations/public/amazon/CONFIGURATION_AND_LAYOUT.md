@@ -123,7 +123,7 @@ tags:
 
 ## Defining AWSClusterConfiguration
 
-The [AWSClusterConfiguration](/modules/cloud-provider-aws/cluster_configuration.html#awsclusterconfiguration) resource describes the cluster settings and is used by Deckhouse Kubernetes Platform (DKP) to:
+The [AWSClusterConfiguration](/modules/cloud-provider-aws/cluster_configuration.html#awsclusterconfiguration) resource describes the cluster settings and is used by Deckhouse Platform (DP) to:
 
 - Define the layout and network CIDRs.
 - Configure master and worker nodes.
@@ -171,16 +171,25 @@ vpcNetworkCIDR: 10.241.0.0/16
 ## Security groups
 
 AWS security groups are used to manage incoming and outgoing traffic to virtual machines.
-In DKP, they can be used to:
+In DP, they can be used to:
 
 - Allow access to cluster nodes from other subnets.
 - Open access to applications running on static nodes.
 - Restrict or allow access to external resources based on security policies.
 
-{% alert level="info" %}
-DKP does not create security groups automatically.
-In the cluster configuration, you must specify existing security groups created manually via the AWS Console or other means.
-{% endalert %}
+When the [`disableDefaultSecurityGroup: false`](/modules/cloud-provider-aws/cluster_configuration.html#awsclusterconfiguration-disabledefaultsecuritygroup) parameter is set, DP creates the following default security groups when a cluster is created:
+
+- `<CLUSTER_PREFIX>-node`, assigned to cluster nodes:
+  - Allows any outgoing traffic to `0.0.0.0/0`.
+  - Allows any incoming traffic from the `<CLUSTER_PREFIX>-loadbalancer` group.
+  - Allows any incoming traffic from nodes in the same `<CLUSTER_PREFIX>-node` group.
+  - Allows incoming traffic over the ICMP protocol from the CIDRs listed in [`publicNetworkAllowList`](/modules/cloud-provider-aws/cluster_configuration.html#awsclusterconfiguration-publicnetworkallowlist) (default `0.0.0.0/0`).
+- `<CLUSTER_PREFIX>-loadbalancer`, used by load balancers:
+  - Allows any incoming traffic from the CIDRs listed in [`publicNetworkAllowList`](/modules/cloud-provider-aws/cluster_configuration.html#awsclusterconfiguration-publicnetworkallowlist).
+  - Allows any outgoing traffic to the `<CLUSTER_PREFIX>-node` group.
+- `<CLUSTER_PREFIX>-ssh-accessible`, created if [`sshAllowList`](/modules/cloud-provider-aws/cluster_configuration.html#awsclusterconfiguration-sshallowlist) is set. It allows incoming traffic over the TCP protocol on port `22` from the listed CIDRs (default `0.0.0.0/0`). It is assigned to master nodes or to the bastion host in the WithNAT layout.
+
+In addition to the default groups, you can attach custom security groups created in the cloud beforehand.
 
 You can assign additional security groups in the following cases:
 
@@ -236,7 +245,7 @@ The following scenarios are supported:
 
 - The bastion host is required in the new VPC:
   1. Run the base infrastructure bootstrap: `dhctl bootstrap-phase base-infra`.
-  1. Manually launch the bastion host in the `<prefix>-public-0` subnet.
+  1. Manually launch the bastion host in the `<CLUSTER_PREFIX>-public-0` subnet.
   1. Continue installation using the bastion host: `dhctl bootstrap --ssh-bastion...`.
 
 ### Creating a cluster in a new VPC with an existing bastion host
@@ -263,7 +272,7 @@ The following scenarios are supported:
    dhctl bootstrap-phase base-infra --config config
    ```
 
-1. Manually launch a bastion host in the `<prefix>-public-0` subnet.
+1. Manually launch a bastion host in the `<CLUSTER_PREFIX>-public-0` subnet.
 1. Continue cluster installation.
    When prompted about the Terraform cache, answer with `y`:
 
@@ -274,7 +283,7 @@ The following scenarios are supported:
 ## Using an existing VPC (existingVPCID)
 
 The [`existingVPCID`](/modules/cloud-provider-aws/cluster_configuration.html#awsclusterconfiguration-existingvpcid) parameter in the AWSClusterConfiguration resource lets you use an existing VPC
-for DKP cluster deployment instead of automatically creating a new one.
+for DP cluster deployment instead of automatically creating a new one.
 
 This may be useful when:
 
@@ -284,7 +293,7 @@ This may be useful when:
 
 {% alert level="warning" %}
 If the existing VPC already has an Internet Gateway, the base infrastructure bootstrap will fail.
-Reusing an existing Internet Gateway is not supported in the current DKP version.
+Reusing an existing Internet Gateway is not supported in the current DP version.
 {% endalert %}
 
 Compatibility with other parameters:

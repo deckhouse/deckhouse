@@ -1,7 +1,7 @@
 ---
 title: Application development
 permalink: en/architecture/marketplace/application-development.html
-description: "Create an Application package for Deckhouse Kubernetes Platform Marketplace: bootstrap, project structure, package.yaml, CI/CD setup, local build, and OCI artifact layout."
+description: "Create an Application package for Deckhouse Platform Marketplace: bootstrap, project structure, package.yaml, CI/CD setup, local build, and OCI artifact layout."
 ---
 
 ## Prerequisites
@@ -106,7 +106,7 @@ requirements:
 | `type` | Yes | `Application` or `Module` |
 | `stage` | Yes | Maturity stage (`Preview`, `General Availability`, etc.) |
 | `category` | Yes | Category for catalog classification |
-| `requirements.deckhouse` | No | Minimum DKP version constraint |
+| `requirements.deckhouse` | No | Minimum DP version constraint |
 | `requirements.kubernetes` | No | Minimum Kubernetes version constraint |
 | `requirements.modules` | No | Module dependencies (semver constraints) |
 
@@ -149,6 +149,37 @@ Behavior:
 - The default is resolved per project from the `AvailableClusterResource` in the Application's namespace, so different projects can receive different defaults.
 - An explicit user value always wins over the injected default.
 - If the multitenancy feature is inactive for the resource (the CRD is absent, no catalog exists for the project, or the catalog has no default), the field is left untouched — no defaulting and no validation.
+
+### Fields that cannot be changed after installation (`x-deckhouse-immutable`)
+
+Some settings only make sense at install time: changing a `storageClass` once the volumes are provisioned either has no effect or breaks the application. Mark such a field with `x-deckhouse-immutable: true` and it can be chosen when the application is created and never again.
+
+```yaml
+# openapi/settings.yaml
+type: object
+properties:
+  storageClass:
+    type: string
+    default: default
+    x-deckhouse-immutable: true
+  postgres:
+    type: object
+    properties:
+      storageClass:
+        type: string
+        x-deckhouse-immutable: true
+      volumeSize:
+        type: string
+```
+
+Behavior:
+
+- Only the literal `true` marks a field. Any other value is ignored.
+- The mark on an object freezes the whole block as one value: any change below it is rejected and reported as the block, including fields that would otherwise be editable. Mark an object only when the block makes sense as a single choice; to freeze one field, mark that field, the way `postgres.storageClass` does above while `postgres.volumeSize` stays editable.
+- An update that changes a marked field is rejected by the validating webhook, naming the field.
+- The web console renders a marked field read-only in the edit form of an installed application, and editable in the install form.
+- Comparison happens after schema defaults are applied, so leaving a marked key out of the manifest is allowed only when the key has a `default` that restores the value the application already runs with. Removing a key without a default is rejected, and so is removing a block that contains marked fields: defaults never reach inside a block the manifest no longer has, so the frozen values would be lost.
+- The mark is not inherited into array elements or map entries that the update adds — a new element has no previous value to be frozen against.
 
 ## Local build
 

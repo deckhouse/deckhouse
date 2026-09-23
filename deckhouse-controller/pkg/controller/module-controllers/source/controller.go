@@ -201,7 +201,7 @@ func (r *reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 			return ctrl.Result{}, nil
 		}
 		r.logger.Error("failed to get module source", slog.String("name", req.Name), log.Err(err))
-		return ctrl.Result{Requeue: true}, nil
+		return ctrl.Result{RequeueAfter: 1 * time.Second}, nil
 	}
 
 	// handle delete event
@@ -229,7 +229,10 @@ func (r *reconciler) handleModuleSource(ctx context.Context, source *v1alpha1.Mo
 	opts := utils.GenerateRegistryOptionsFromModuleSource(source, r.clusterUUID, r.logger)
 
 	// create a registry client
-	registryClient, err := r.dc.GetRegistryClient(source.Spec.Registry.Repo, opts...)
+	// Translated because this dials it. The repository is recorded as the in-cluster address,
+	// which is also what the images under it are rendered from, and only the loopback one can
+	// actually be connected to from here.
+	registryClient, err := r.dc.GetRegistryClient(utils.Dial(source.Spec.Registry.Repo), opts...)
 	if err != nil {
 		r.logger.Error("failed to get registry client for the module source", slog.String("source_name", source.Name), log.Err(err))
 		if uerr := r.updateModuleSourceStatusMessage(ctx, source, err.Error()); uerr != nil {
@@ -258,7 +261,7 @@ func (r *reconciler) handleModuleSource(ctx context.Context, source *v1alpha1.Mo
 		}
 		// requeue module source after modifying annotation
 		r.logger.Debug("module source will be requeued", slog.String("source_name", source.Name))
-		return ctrl.Result{Requeue: true}, nil
+		return ctrl.Result{RequeueAfter: 1 * time.Second}, nil
 	}
 
 	span.AddEvent("fetch tags from the registry")
@@ -362,7 +365,7 @@ func (r *reconciler) processModules(ctx context.Context, source *v1alpha1.Module
 
 		availableModule.Policy = policy.Name
 
-		logger = logger.With(slog.String("release channel", policy.Spec.ReleaseChannel))
+		logger = logger.With(slog.String("release_channel", policy.Spec.ReleaseChannel))
 
 		// create or update module
 		module, err := r.ensureModule(ctx, source.Name, moduleName, policy.Spec.ReleaseChannel)
@@ -403,6 +406,44 @@ func (r *reconciler) processModules(ctx context.Context, source *v1alpha1.Module
 
 		metricModuleGroup := metrics.D8ModuleUpdatingGroup + "_" + strcase.ToSnake(moduleName) + "_" + strcase.ToSnake(source.GetName())
 		r.metricStorage.Grouped().ExpireGroupMetrics(metricModuleGroup)
+
+		// Cheaply probe the release channel before pulling the whole release image. The
+		// channel image digest is the module checksum recorded in the source status; when it
+		// has not moved, the version and the module definition inside the image are identical
+		// to what we already have, so there is nothing to download or process for the module.
+		//
+		// An unchanged checksum alone is not enough to skip: the target ModuleRelease may have
+		// been removed, or intermediate minor releases may have been mirrored into the registry
+		// after the target was first created (releaseUpToDate verifies both from the cache). On
+		// any probe/verify error we do not skip - we fall through to the full download below,
+		// which handles the module and its errors exactly as before.
+		if availableModule.Checksum != "" && availableModule.Version != "" && availableModule.Version != "unknown" {
+			channelChecksum, err := md.GetReleaseChannelChecksum(ctx, moduleName, policy.Spec.ReleaseChannel)
+			switch {
+			case err != nil:
+				logger.Debug("failed to probe release channel checksum, downloading metadata", log.Err(err))
+
+			case channelChecksum != availableModule.Checksum:
+				logger.Debug("release channel checksum changed, downloading metadata",
+					slog.String("old_checksum", availableModule.Checksum), slog.String("new_checksum", channelChecksum))
+
+			default:
+				upToDate, err := r.releaseUpToDate(ctx, source.Name, moduleName, availableModule.Checksum, availableModule.Version)
+				switch {
+				case err != nil:
+					logger.Debug("failed to verify release is up to date, downloading metadata", log.Err(err))
+
+				case upToDate:
+					logger.Debug("release channel unchanged and release up to date, skip module",
+						slog.String("checksum", availableModule.Checksum), slog.String("version", availableModule.Version))
+					availableModules = append(availableModules, availableModule)
+					continue
+
+				default:
+					logger.Debug("release channel unchanged but release chain is incomplete, downloading metadata")
+				}
+			}
+		}
 
 		logger.Debug("download module meta from release channel")
 

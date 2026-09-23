@@ -75,13 +75,61 @@ func testSecret(ns, name string, data map[string][]byte) *corev1.Secret {
 	}
 }
 
-// testProvider resolves the provider a NodeGroup runs on the way a reconcile does.
-func testProvider(t *testing.T, s *Service, ng *v1.NodeGroup) cloudprovider.Provider {
-	t.Helper()
-	pCatalog, err := cloudprovider.GetCatalog(context.Background(), s.Client)
-	require.NoError(t, err)
-	provider := pCatalog.ByNodeGroup(ng)
-	return provider
+func validMCMRegistrationData(provider, instanceClassKind, instanceClassVersion string) map[string][]byte {
+	return map[string][]byte{
+		"type":                                []byte(provider),
+		"region":                              []byte("test-region"),
+		"zones":                               []byte(`["test-zone"]`),
+		"instanceClassKind":                   []byte(instanceClassKind),
+		nodecommon.InstanceClassAPIVersionKey: []byte(instanceClassVersion),
+		"machineClassKind":                    []byte("TestMachineClass"),
+		provider:                              []byte(`{"project":"test"}`),
+	}
+}
+
+func validCAPIRegistrationData(provider, instanceClassKind, instanceClassVersion string) map[string][]byte {
+	data := validMCMRegistrationData(provider, instanceClassKind, instanceClassVersion)
+	delete(data, "machineClassKind")
+	data["capiClusterName"] = []byte(provider)
+	data["capiClusterKind"] = []byte("TestCluster")
+	data["capiClusterAPIVersion"] = []byte("infrastructure.cluster.x-k8s.io/v1alpha1")
+	data["capiMachineTemplateKind"] = []byte("TestMachineTemplate")
+	data["capiMachineTemplateAPIVersion"] = []byte("infrastructure.cluster.x-k8s.io/v1alpha1")
+	return data
+}
+
+func TestDecodeRegistration_APIVersionIsNeverGuessed(t *testing.T) {
+	tests := []struct {
+		name       string
+		data       map[string][]byte
+		expVersion string
+	}{
+		{
+			name:       "published version is used verbatim",
+			data:       map[string][]byte{nodecommon.InstanceClassAPIVersionKey: []byte("v1")},
+			expVersion: "v1",
+		},
+		{
+			name:       "a provider serving only v1alpha1 is honoured",
+			data:       map[string][]byte{nodecommon.InstanceClassAPIVersionKey: []byte("v1alpha1")},
+			expVersion: "v1alpha1",
+		},
+		{
+			// No guessing: a version picked here would feed the instance-class checksum, and a
+			// wrong guess renames the MachineTemplate and recreates every node in the NodeGroup.
+			name: "provider registered without the key yields no version",
+			data: map[string][]byte{"instanceClassKind": []byte("YandexInstanceClass")},
+		},
+		{
+			name: "no provider secret at all yields no version",
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			assert.Equal(t, tc.expVersion, DecodeRegistration(tc.data).InstanceClassAPIVersion)
+		})
+	}
 }
 
 // An unpublished version must reach the operator as a NodeGroup validation error rather than as a
@@ -116,6 +164,16 @@ func TestReadStatic_ParsesInternalNetworkCIDRs(t *testing.T) {
 	assert.Equal(t, map[string]interface{}{
 		"internalNetworkCIDRs": []interface{}{"172.18.200.0/24"},
 	}, got)
+}
+
+// A corrupt Secret must not read as "this cluster has no static config": that is exactly what a
+// deliberate removal of internalNetworkCIDRs looks like, and the two need different handling.
+func TestReadStatic_MalformedIsAnError(t *testing.T) {
+	s := newTestService(t, testSecret(staticConfigSecretNamespace, staticConfigSecretName, map[string][]byte{
+		staticConfigKey: []byte("internalNetworkCIDRs: 172.18.200.0/24\n"),
+	}))
+	_, err := s.readStatic(context.Background())
+	require.ErrorContains(t, err, staticConfigKey)
 }
 
 func TestReadStatic_AbsentReturnsNil(t *testing.T) {
@@ -163,11 +221,11 @@ func TestResolveNodeGroup_StaticWiresNameRolloutAndStatic(t *testing.T) {
 }
 
 func TestResolveNodeGroup_CloudKindMismatchErrors(t *testing.T) {
-	s := newTestService(t, providermock.DefaultRegistration(map[string][]byte{
-		"type":                    []byte(`yandex`),
-		"instanceClassKind":       []byte(`"YandexInstanceClass"`),
-		"instanceClassAPIVersion": []byte("v1alpha1"),
-	}))
+	s := newTestService(t, testSecret(
+		cloudProviderSecretNamespace,
+		cloudProviderSecretName,
+		validCAPIRegistrationData("yandex", "YandexInstanceClass", "v1alpha1"),
+	))
 	ng := &v1.NodeGroup{
 		ObjectMeta: metav1.ObjectMeta{Name: "worker"},
 		Spec: v1.NodeGroupSpec{

@@ -452,6 +452,22 @@ func (s *LoaderTestSuite) TestLoadModuleConfWithDigests() {
 	s.Equal("sha256:ccc333ddd444", cfg.Digests["webhook"])
 }
 
+// TestLoadEmbeddedConfMarksPackageEmbedded verifies the loader preserves the package origin.
+func (s *LoaderTestSuite) TestLoadEmbeddedConfMarksPackageEmbedded() {
+	workDir := s.T().TempDir()
+	s.T().Chdir(workDir)
+
+	moduleDir := filepath.Join("modules", "001-embedded-module")
+	require.NoError(s.T(), os.MkdirAll(moduleDir, 0o755))
+	require.NoError(s.T(), os.WriteFile(filepath.Join(moduleDir, "module.yaml"), []byte("name: embedded-module\nweight: 1\n"), 0o600))
+
+	cfg, err := loader.LoadEmbeddedConf(context.Background(), filepath.Join("modules", "embedded-module"), s.logger)
+
+	require.NoError(s.T(), err)
+	require.NotNil(s.T(), cfg)
+	s.True(cfg.Embedded)
+}
+
 // TestLoadModuleConfNotFound tests error when package directory doesn't exist.
 func (s *LoaderTestSuite) TestLoadModuleConfNotFound() {
 	packageDir := filepath.Join(s.testdataDir, "modules", "non-existent")

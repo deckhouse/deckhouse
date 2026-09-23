@@ -37,6 +37,7 @@ import (
 	"go.opentelemetry.io/otel/trace"
 	"sigs.k8s.io/yaml"
 
+	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/envconfig"
 	"github.com/deckhouse/deckhouse/pkg/log"
 )
 
@@ -155,8 +156,8 @@ func New(logger *log.Logger, opts ...Option) *Client {
 	return &Client{
 		opts: defaultOpts,
 
-		driver:      os.Getenv("HELM_DRIVER"),
-		kubeContext: os.Getenv("KUBE_CONTEXT"),
+		driver:      os.Getenv(envconfig.EnvHelmDriver),
+		kubeContext: os.Getenv(envconfig.EnvKubeContext),
 
 		logger: logger.Named(nelmTracer),
 	}
@@ -294,6 +295,8 @@ type InstallOptions struct {
 
 	ResourcesLabels map[string]string // Labels to apply to all resources
 
+	TrackingOptions common.TrackingOptions
+
 	// OnTrackingEvent is an optional callback invoked with progress updates
 	// as Kubernetes resources are being tracked for readiness during install.
 	OnTrackingEvent func(name string, report progrep.ProgressReport)
@@ -326,26 +329,38 @@ func (c *Client) Install(ctx context.Context, namespace, releaseName string, opt
 		maps.Copy(labels, opts.ResourcesLabels)
 	}
 
-	// reportCh receives progress reports from nelm during resource tracking.
-	// A background goroutine converts each report into a tracking event and
-	// forwards it to the caller's callback.
+	// reportCh receives progress reports from nelm during resource tracking; a
+	// background goroutine forwards each one to the caller's callback.
 	//
-	// We must NOT close reportCh: when a Timeout is set, nelm's ReleaseInstall
-	// returns on ctx.Done() without joining the goroutine that actually runs
-	// the install. That detached goroutine keeps sending progress reports via
-	// sendNonBlocking, so closing the channel here would panic it with
-	// "send on closed channel" and crash the process. Instead we stop the
-	// forwarder via done and let the buffered channel be garbage-collected.
+	// We must not close reportCh — ReleaseInstall closes it whenever it runs the
+	// install to completion, and the ok check is what makes the forwarder leave
+	// on that close instead of reading an endless stream of empty reports. done
+	// covers the paths that leave the channel open: a Timeout returns on
+	// ctx.Done() while the installing goroutine still runs, and an early failure
+	// never installs a reporter. The wait keeps a report from arriving after
+	// Install returned and the caller published the apply result.
 	reportCh := make(chan progrep.ProgressReport, 1)
 	done := make(chan struct{})
+
+	var wg sync.WaitGroup
+
+	// Deferred in this order so close(done) runs before the wait.
+	defer wg.Wait()
 	defer close(done)
 
+	wg.Add(1)
 	go func() {
+		defer wg.Done()
+
 		for {
 			select {
 			case <-done:
 				return
-			case report := <-reportCh:
+			case report, ok := <-reportCh:
+				if !ok {
+					return
+				}
+
 				if opts.OnTrackingEvent != nil {
 					opts.OnTrackingEvent(releaseName, report)
 				}
@@ -362,11 +377,7 @@ func (c *Client) Install(ctx context.Context, namespace, releaseName string, opt
 			ValuesFiles: opts.ValuesPaths,
 			RootSetJSON: valuesSet,
 		},
-		TrackingOptions: common.TrackingOptions{
-			NoPodLogs:                    true,
-			NoFinalTracking:              true,
-			LegacyHelmCompatibleTracking: true,
-		},
+		TrackingOptions:        opts.TrackingOptions,
 		Chart:                  opts.Path,
 		DefaultChartName:       releaseName,
 		DefaultChartVersion:    "0.2.0",

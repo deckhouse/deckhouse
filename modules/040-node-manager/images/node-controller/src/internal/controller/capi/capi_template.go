@@ -20,7 +20,7 @@ import (
 	"context"
 	"fmt"
 
-	"k8s.io/apimachinery/pkg/api/errors"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/meta"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime/schema"
@@ -30,6 +30,7 @@ import (
 
 	"github.com/deckhouse/node-controller/internal/cloudprovider"
 	"github.com/deckhouse/node-controller/internal/common"
+	ngcommon "github.com/deckhouse/node-controller/internal/controller/nodegroup/common"
 	"github.com/deckhouse/node-controller/internal/controller/nodegroup/machineclass"
 )
 
@@ -80,12 +81,15 @@ func (r *MachineDeploymentReconciler) applyCAPIMachineTemplate(
 
 // pruneStaleCAPI deletes CAPI MachineDeployments and infrastructure MachineTemplates that
 // belong to the NodeGroup but are no longer desired (e.g. after a zone is removed or the
-// instance-class checksum changed). The bootstrap Secret is still helm-owned and pruned by
-// helm, so it is not touched here.
+// instance-class checksum changed).
+//
+// The bootstrap Secret of a removed zone is left behind: helm no longer owns it and
+// CollectOrphanedSecrets only takes Secrets whose NodeGroup is gone. It is inert — the
+// name is deterministic, so re-adding the zone overwrites it — but nothing collects it.
 func (r *MachineDeploymentReconciler) pruneStaleCAPI(
 	ctx context.Context,
 	ngName string,
-	capiConfig cloudprovider.CAPIConfig,
+	machineTemplateGVK schema.GroupVersionKind,
 	desiredMDs, desiredTemplates map[string]struct{},
 ) error {
 	logger := log.FromContext(ctx)
@@ -96,7 +100,7 @@ func (r *MachineDeploymentReconciler) pruneStaleCAPI(
 	})
 	if err := r.Client.List(ctx, mdList,
 		client.InNamespace(common.MachineNamespace),
-		client.MatchingLabels{"node-group": ngName},
+		client.MatchingLabels{ngcommon.MachineDeploymentNodeGroupLabel: ngName},
 	); err != nil {
 		return fmt.Errorf("list CAPI MachineDeployments for NodeGroup %s: %w", ngName, err)
 	}
@@ -108,19 +112,15 @@ func (r *MachineDeploymentReconciler) pruneStaleCAPI(
 		if !md.GetDeletionTimestamp().IsZero() {
 			continue
 		}
-		if err := r.Client.Delete(ctx, md); err != nil && !errors.IsNotFound(err) {
+		if err := r.Client.Delete(ctx, md); err != nil && !apierrors.IsNotFound(err) {
 			return fmt.Errorf("delete stale CAPI MachineDeployment %s: %w", md.GetName(), err)
 		}
 		logger.Info("pruned stale CAPI MachineDeployment", "name", md.GetName(), "ng", ngName)
 	}
 
-	gv, err := schema.ParseGroupVersion(capiConfig.MachineTemplateAPIVersion)
-	if err != nil {
-		return fmt.Errorf("parse capiMachineTemplateAPIVersion %q: %w", capiConfig.MachineTemplateAPIVersion, err)
-	}
 	tmplList := &unstructured.UnstructuredList{}
 	tmplList.SetGroupVersionKind(schema.GroupVersionKind{
-		Group: gv.Group, Version: gv.Version, Kind: capiConfig.MachineTemplateKind + "List",
+		Group: machineTemplateGVK.Group, Version: machineTemplateGVK.Version, Kind: machineTemplateGVK.Kind + "List",
 	})
 	// Read live, like templatesInUse below: the kind comes from the provider Secret and is not
 	// in cache.Options.ByObject, so a cached list would lazily start a cluster-wide informer for
@@ -129,7 +129,7 @@ func (r *MachineDeploymentReconciler) pruneStaleCAPI(
 	// other cloud) would stop node-controller from starting.
 	if err := r.APIReader.List(ctx, tmplList,
 		client.InNamespace(common.MachineNamespace),
-		client.MatchingLabels{"node-group": ngName},
+		client.MatchingLabels{ngcommon.MachineDeploymentNodeGroupLabel: ngName},
 	); err != nil {
 		return fmt.Errorf("list CAPI MachineTemplates for NodeGroup %s: %w", ngName, err)
 	}
@@ -166,7 +166,7 @@ func (r *MachineDeploymentReconciler) pruneStaleCAPI(
 			logger.V(1).Info("keeping CAPI MachineTemplate still referenced by a MachineSet", "name", tmpl.GetName(), "ng", ngName)
 			continue
 		}
-		if err := r.Client.Delete(ctx, tmpl); err != nil && !errors.IsNotFound(err) {
+		if err := r.Client.Delete(ctx, tmpl); err != nil && !apierrors.IsNotFound(err) {
 			return fmt.Errorf("delete stale CAPI MachineTemplate %s: %w", tmpl.GetName(), err)
 		}
 		logger.Info("pruned stale CAPI MachineTemplate", "name", tmpl.GetName(), "ng", ngName)
@@ -185,36 +185,40 @@ func (r *MachineDeploymentReconciler) pruneStaleCAPI(
 // Deleting them right away (rather than waiting for the Machines, as MCM MachineClasses must)
 // matches what helm did: an infrastructure template is read when a Machine is created, never
 // during its deletion.
-func (r *MachineDeploymentReconciler) deleteInfraMachineTemplates(ctx context.Context, ngName string, capiConfig cloudprovider.CAPIConfig) error {
+func (r *MachineDeploymentReconciler) deleteInfraMachineTemplates(
+	ctx context.Context,
+	ngName string,
+	registration cloudprovider.Registration,
+) error {
 	logger := log.FromContext(ctx)
 
-	if capiConfig.MachineTemplateKind == "" || capiConfig.MachineTemplateAPIVersion == "" {
+	if registration.CAPIMachineTemplateKind == "" || registration.CAPIMachineTemplateAPIVersion == "" {
 		return nil
 	}
-	gv, err := schema.ParseGroupVersion(capiConfig.MachineTemplateAPIVersion)
+	gv, err := schema.ParseGroupVersion(registration.CAPIMachineTemplateAPIVersion)
 	if err != nil {
-		return fmt.Errorf("parse capiMachineTemplateAPIVersion %q: %w", capiConfig.MachineTemplateAPIVersion, err)
+		return fmt.Errorf("parse capiMachineTemplateAPIVersion %q: %w", registration.CAPIMachineTemplateAPIVersion, err)
 	}
 
 	list := &unstructured.UnstructuredList{}
 	list.SetGroupVersionKind(schema.GroupVersionKind{
-		Group: gv.Group, Version: gv.Version, Kind: capiConfig.MachineTemplateKind + "List",
+		Group: gv.Group, Version: gv.Version, Kind: registration.CAPIMachineTemplateKind + "List",
 	})
 	// Live read for the same reason as in pruneStaleCAPI: the kind comes from the provider Secret
 	// and is not in cache.Options.ByObject.
 	if err := r.APIReader.List(ctx, list,
 		client.InNamespace(common.MachineNamespace),
-		client.MatchingLabels{"node-group": ngName},
+		client.MatchingLabels{ngcommon.MachineDeploymentNodeGroupLabel: ngName},
 	); err != nil {
 		if meta.IsNoMatchError(err) {
 			return nil
 		}
-		return fmt.Errorf("list %s for NodeGroup %s: %w", capiConfig.MachineTemplateKind, ngName, err)
+		return fmt.Errorf("list %s for NodeGroup %s: %w", registration.CAPIMachineTemplateKind, ngName, err)
 	}
 
 	for i := range list.Items {
 		tmpl := &list.Items[i]
-		if err := r.Client.Delete(ctx, tmpl); err != nil && !errors.IsNotFound(err) {
+		if err := r.Client.Delete(ctx, tmpl); err != nil && !apierrors.IsNotFound(err) {
 			return fmt.Errorf("delete CAPI MachineTemplate %s: %w", tmpl.GetName(), err)
 		}
 		logger.V(1).Info("deleted CAPI MachineTemplate for removed NodeGroup", "name", tmpl.GetName(), "ng", ngName)
@@ -233,7 +237,7 @@ func (r *MachineDeploymentReconciler) templatesInUse(ctx context.Context, ngName
 	})
 	if err := r.APIReader.List(ctx, msList,
 		client.InNamespace(common.MachineNamespace),
-		client.MatchingLabels{"node-group": ngName},
+		client.MatchingLabels{ngcommon.MachineDeploymentNodeGroupLabel: ngName},
 	); err != nil {
 		return nil, fmt.Errorf("list CAPI MachineSets for NodeGroup %s: %w", ngName, err)
 	}

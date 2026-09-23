@@ -305,8 +305,8 @@ func (r *ObjectKeeperController) reconcileFollowObject(ctx context.Context, obje
 		// Object was recreated with different UID - delete ObjectKeeper
 		r.logger.Info("FollowObject UID mismatch - deleting ObjectKeeper",
 			"objectkeeper", objectkeeper.Name,
-			"expectedUID", ref.UID,
-			"actualUID", objUID)
+			"expected_uid", ref.UID,
+			"actual_uid", objUID)
 		if err := r.Delete(ctx, objectkeeper); err != nil {
 			return ctrl.Result{}, fmt.Errorf("failed to delete ObjectKeeper: %w", err)
 		}
@@ -502,7 +502,7 @@ func (r *ObjectKeeperController) reconcileFollowObjectWithTTL(ctx context.Contex
 				r.logger.Info("TTL expired - deleting ObjectKeeper",
 					"objectkeeper", objectkeeper.Name,
 					"ttl", objectkeeper.Spec.TTL.Duration.Round(time.Minute),
-					"lostAt", objectkeeper.Status.LostAt,
+					"lost_at", objectkeeper.Status.LostAt,
 					"expired", expiresAt.Format(time.RFC3339))
 				if err := r.Delete(ctx, objectkeeper); err != nil {
 					return ctrl.Result{}, fmt.Errorf("failed to delete ObjectKeeper: %w", err)

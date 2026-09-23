@@ -2,10 +2,12 @@
 Description=containerd container runtime
 Documentation=https://containerd.io
 After=network.target local-fs.target
+StartLimitIntervalSec=0
 
 [Service]
 Environment="PATH=/opt/deckhouse/bin:/bin:/sbin:/usr/bin:/usr/sbin:/usr/local/bin:/usr/local/sbin"
 ExecStartPre=-/sbin/modprobe overlay
+ExecStartPre=-/sbin/modprobe erofs
 ExecStartPost=-/opt/deckhouse/bin/ctr -n k8s.io images import /opt/deckhouse/images/pause.tar
 ExecStartPost=-/opt/deckhouse/bin/ctr -n k8s.io images label deckhouse.local/images:pause io.cri-containerd.pinned=pinned
 ExecStartPost=-/opt/deckhouse/bin/ctr -n k8s.io images import /opt/deckhouse/images/kubernetes-api-proxy.tar

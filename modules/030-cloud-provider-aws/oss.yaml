@@ -58,4 +58,4 @@
   logo: /images/logos/aws.svg
   license: Apache License 2.0
   id: node-termination-handler-aws
-  version: v1.25.3
+  version: v1.25.6

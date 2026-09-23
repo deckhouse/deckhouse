@@ -181,7 +181,7 @@ spec:
                                 The secret can contain the following authentication fields:
                                 `tlsMode`, `clientCert`, `clientKey`, `caCert`, `password`, `user`.
 
-                                > **Warining.** The type of the secret must be `network.deckhouse.io/postgresql-credentials`.
+                                > **Warning.** The type of the secret must be `network.deckhouse.io/postgresql-credentials`.
                             dbName:
                               type: string
                               description: Optional Database Name.
@@ -194,7 +194,7 @@ spec:
                                 Must return one of the values `TRUE`: `t`, `true`, `y`, `yes`,`1`.
                                 to be considered successful.
 
-                                > **Warining.** The privileges for the user under whom the requests are executed should be minimal.
+                                > **Warning.** The privileges for the user under whom the requests are executed should be minimal.
                             targetPort:
                               type: integer
                               description: |-
@@ -318,6 +318,7 @@ spec:
                   The default value,
                   `Cluster`, uses the standard behavior of routing to all endpoints evenly
                   (possibly modified by topology and other features).
+                default: Cluster
                 type: string
               ipFamilies:
                 description: |-
@@ -570,13 +571,23 @@ spec:
                   ExternalName aliases this service to the specified `externalName`.
                   Several other fields do not apply to ExternalName services.
                   [More info.](https://kubernetes.io/docs/concepts/services-networking/service/#publishing-services-service-types)
+                default: ClusterIP
                 type: string
-            required:
-            - healthcheck
             type: object
           status:
             description: Defines the observed state of ServiceWithHealthchecks
             properties:
+              clusterIP:
+                description: |-
+                  The address of the child Service: the one requested in `spec.clusterIP`, or the one the cluster allocated.
+                type: string
+              clusterIPs:
+                description: |-
+                  All the addresses of the child Service, one per IP family.
+                items:
+                  type: string
+                type: array
+                x-kubernetes-list-type: atomic
               conditions:
                 description: Current service state
                 items:
@@ -803,9 +814,15 @@ spec:
     - jsonPath: .status.conditions[?(@.type=="Ready")].status
       name: Ready
       type: string
+    - jsonPath: .status.clusterIP
+      name: ClusterIP
+      type: string
     - jsonPath: .status.loadBalancer.ingress[0].ip
       name: ExternalIP
       type: string
     - jsonPath: .spec.ports[].port
       name: Ports
       type: string
+    - jsonPath: .metadata.creationTimestamp
+      name: AGE
+      type: date

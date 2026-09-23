@@ -1,6 +1,6 @@
 ---
 title: "Модуль service-with-healthchecks: примеры"
-description: "Примеры настройки балансировщика с модулем service-with-healthchecks в Deckhouse Kubernetes Platform"
+description: "Примеры настройки балансировщика с модулем service-with-healthchecks в Deckhouse Platform"
 ---
 
 {% alert level="info" %}
@@ -36,7 +36,7 @@ description: "Примеры настройки балансировщика с 
 {% alert level="warning" %}
 После включения модуля не происходит автоматическая замена имеющихся ресурсов типа Service на ServiceWithHealthcheck. Для замены имеющихся сервисов на использование ServiceWithHealthcheck выполните следующие действия:
 
-* Создайте ресурсы ServiceWithHealthcheck с такими же именами и параметрами, как существующие ресурсы Service, которые нужно заменить. При создании ServiceWithHealthcheck укажите обязательные параметры [`healthchecks`](cr.html#servicewithhealthchecks-v1alpha1-spec-healthcheck).
+* Создайте ресурсы ServiceWithHealthcheck с такими же именами и параметрами, как существующие ресурсы Service, которые нужно заменить. Секция [`healthcheck`](cr.html#servicewithhealthchecks-v1alpha1-spec-healthcheck) необязательна: укажите её, чтобы включить активные проверки работоспособности, или опустите, чтобы публиковать эндпоинты только по готовности подов, как у обычного Service.
 * Удалите ресурсы Service, которые требуется заменить ServiceWithHealthcheck.
 {% endalert %}
 
@@ -181,10 +181,10 @@ spec:
 
 ### Конфигурация балансировщиков ServiceWithHealthchecks
 
-Создайте Secret для хранения учетных данных для доступа проб к базе данных:
+Создайте Secret для хранения учетных данных для доступа проб к базе данных. Secret должен быть типа `network.deckhouse.io/postgresql-credentials` (секреты других типов игнорируются) и может содержать поля `user`, `password`, `tlsMode`, `clientCert`, `clientKey`, `caCert`:
 
 ```shell
-d8 k -n my-ns create secret generic cred-secret --from-literal=user=postgres --from-literal=password=example cred-secret
+d8 k -n my-ns create secret generic cred-secret --type=network.deckhouse.io/postgresql-credentials --from-literal=user=postgres --from-literal=password=example
 ```
 
 Пример манифеста балансировщика для чтения:
@@ -234,3 +234,32 @@ spec:
         authSecretName: cred-secret
         query: "SELECT NOT pg_is_in_recovery()"
 ```
+
+## Передача аннотаций и лейблов в дочерний Service
+
+Аннотации и лейблы ServiceWithHealthchecks копируются в Service, который создает модуль. Это необходимо контроллерам, читающим параметры балансировщика только из Service, например MetalLB:
+
+```yaml
+apiVersion: network.deckhouse.io/v1alpha1
+kind: ServiceWithHealthchecks
+metadata:
+  name: postgres-read
+  annotations:
+    network.deckhouse.io/load-balancer-ips: 192.168.217.217
+    network.deckhouse.io/load-balancer-shared-ip-key: key-to-share
+spec:
+  type: LoadBalancer
+  ports:
+  - port: 5432
+    protocol: TCP
+    targetPort: 5432
+  selector:
+    app: postgres
+  healthcheck:
+    probes:
+    - mode: TCP
+      tcp:
+        targetPort: 5432
+```
+
+Список скопированных при последней синхронизации ключей хранится в аннотациях `network.deckhouse.io/propagated-annotations` и `network.deckhouse.io/propagated-labels` дочернего Service. Благодаря этим спискам ключ, удаленный из ServiceWithHealthchecks, удаляется и из Service, а аннотации и лейблы, проставленные другими контроллерами (например, `metallb.universe.tf/ip-allocated-from-pool`), остаются нетронутыми.

@@ -1,0 +1,9 @@
+version: 3
+conversions:
+  - if .modules.ingressClass != null and .modules.ingress.ingressClass == null then .modules.ingress.ingressClass = .modules.ingressClass else . end
+  - del(.modules.ingressClass)
+  - if .modules.gatewayAPIGateway != null and .modules.gatewayAPI.gateway == null then .modules.gatewayAPI.gateway = .modules.gatewayAPIGateway else . end
+  - del(.modules.gatewayAPIGateway)
+description:
+  ru: "Перенесите `modules.ingressClass` в `modules.ingress.ingressClass`, а `modules.gatewayAPIGateway` — в `modules.gatewayAPI.gateway`."
+  en: "Move `modules.ingressClass` to `modules.ingress.ingressClass`, and `modules.gatewayAPIGateway` to `modules.gatewayAPI.gateway`."

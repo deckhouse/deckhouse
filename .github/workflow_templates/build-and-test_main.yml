@@ -53,6 +53,12 @@ jobs:
       - git_info
 {!{ tmpl.Exec "build_tests_template" (slice $ctx "main") | strings.Indent 4 }!}
 
+  build_fuzz:
+    name: Build fuzz images
+    needs:
+      - git_info
+{!{ tmpl.Exec "build_fuzz_template" (slice $ctx "main") | strings.Indent 4 }!}
+
   go_generate:
     name: Go Generate
     needs:

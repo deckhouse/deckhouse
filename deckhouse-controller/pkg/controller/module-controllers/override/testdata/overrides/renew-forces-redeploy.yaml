@@ -1,0 +1,36 @@
+---
+apiVersion: deckhouse.io/v1alpha2
+kind: ModulePullOverride
+metadata:
+  name: test-module
+  uid: 0d9e7f1a-1111-2222-3333-444455556666
+  finalizers:
+  - modules.deckhouse.io/mpo-finalizer
+  annotations:
+    modules.deckhouse.io/renew: "true"
+spec:
+  imageTag: main
+  scanInterval: 15s
+status:
+  message: Ready
+  imageDigest: sha256:cafe
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: Module
+metadata:
+  name: test-module
+properties:
+  source: dev
+status:
+  conditions:
+  - type: EnabledByModuleConfig
+    status: "True"
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleSource
+metadata:
+  name: dev
+spec:
+  registry:
+    repo: registry.example.com/deckhouse/modules
+    scheme: HTTPS

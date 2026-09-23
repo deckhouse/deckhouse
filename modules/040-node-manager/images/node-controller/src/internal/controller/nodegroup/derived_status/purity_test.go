@@ -60,6 +60,7 @@ func TestDerive_IsDeterministic(t *testing.T) {
 	snap := Snapshot{
 		Provider:    cloudprovider.Provider{Type: "aws", MachineClassKind: "AWSMachineClass"},
 		ClusterUUID: "uuid-1",
+		Engine:      engineMCM,
 	}
 
 	first, err := Derive(t.Context(), ng, snap)

@@ -18,7 +18,7 @@ import (
 	"testing"
 
 	cpvalprotocol "github.com/deckhouse/deckhouse/go_lib/cloud-provider/validation/protocol"
-	proto "github.com/deckhouse/deckhouse/go_lib/dhctl-provider-protocol"
+	validatev1 "github.com/deckhouse/deckhouse/go_lib/dhctl-provider-protocol/api/validate/v1"
 	dvpicv1alpha1 "github.com/deckhouse/deckhouse/modules/030-cloud-provider-dvp/pkg/api/instanceclass/v1alpha1"
 	dvpmeta "github.com/deckhouse/deckhouse/modules/030-cloud-provider-dvp/pkg/meta"
 )
@@ -52,7 +52,7 @@ func TestNewProtocolStateBuilderFactoryBuildsAliasedState(t *testing.T) {
 		ModuleName:    dvpmeta.ModuleName,
 	})
 
-	state, err := factory.CreateBuilder().Build(proto.ValidateInput{})
+	state, err := factory.CreateBuilder().Build(validatev1.Input{})
 	if err != nil {
 		t.Fatalf("Build() error = %v", err)
 	}

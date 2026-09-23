@@ -1,7 +1,7 @@
 ---
 title: "Configuring role-based access control"
 permalink: en/admin/configuration/delivery/argocd/rbac/
-description: "Configuring Argo CD role-based access control in Deckhouse Kubernetes Platform."
+description: "Configuring Argo CD role-based access control in Deckhouse Platform."
 lang: en
 relatedLinks:
   - title: "Official Argo CD website"
@@ -10,7 +10,7 @@ relatedLinks:
     url: "https://argocd-operator.readthedocs.io"
 ---
 
-Argo CD uses its own role-based access control (RBAC) model, which is not based on the Kubernetes or Deckhouse Kubernetes Platform role model. The Argo CD role model lets you restrict access to resources and operations through its own policies and roles.
+Argo CD uses its own role-based access control (RBAC) model, which is not based on the Kubernetes or Deckhouse Platform role model. The Argo CD role model lets you restrict access to resources and operations through its own policies and roles.
 
 Before configuring role-based access control, complete [authentication and authorization setup](../authentication/). After that, assign roles to users and groups and set permissions at the level of the entire Argo CD instance or individual projects with an [AppProject](/modules/operator-argo/cr.html#appproject) object.
 
@@ -23,7 +23,7 @@ You can define role-based access control (RBAC) rules in two places:
 
 Argo CD has two predefined roles with a set of policies:
 
-- `role:readonly` — read-only access;
+- `role:readonly` — read-only access (used by default for all authenticated users);
 - `role:admin` — access with administrator privileges.
 
 {% offtopic title="Full description of predefined role policies..." %}
@@ -85,7 +85,7 @@ g, admin, role:admin
 
 ## Default policy for authenticated users
 
-After successful authentication, the user receives the role specified in the [`spec.rbac.defaultPolicy`](/modules/operator-argo/cr.html#argocd-v1beta1-spec-rbac-defaultpolicy) parameter of ArgoCD.
+After successful authentication, the user receives the role specified in the [`spec.rbac.defaultPolicy`](/modules/operator-argo/cr.html#argocd-v1beta1-spec-rbac-defaultpolicy) parameter of ArgoCD (`role:readonly` by default).
 
 {% alert level="warning" %}
 All authenticated users receive at least the permissions defined in the [`spec.rbac.defaultPolicy`](/modules/operator-argo/cr.html#argocd-v1beta1-spec-rbac-defaultpolicy) parameter. These rights cannot be revoked with a `deny` effect rule.
@@ -348,7 +348,7 @@ Access checks are performed in two stages:
 
 If access is explicitly allowed or denied by the default policy, further checks are not performed.
 
-Argo CD supports two matching modes for values set in [`spec.rbac.policyMatchMode`](/modules/operator-argo/cr.html#argocd-v1beta1-spec-rbac-policymatchmode):
+Argo CD supports two matching modes for values set in [`spec.rbac.policyMatcherMode`](/modules/operator-argo/cr.html#argocd-v1beta1-spec-rbac-policymatchmode):
 
 - `glob` — matching by glob patterns;
 - `regex` — matching by regular expressions.

@@ -1,10 +1,10 @@
 ---
-title: Подключение и авторизация в Deckhouse Virtualization Platform
+title: Подключение и авторизация во встроенной виртуализации
 permalink: ru/admin/integrations/virtualization/dvp/authorization.html
 lang: ru
 ---
 
-Для взаимодействия с ресурсами в DVP компоненты Deckhouse Kubernetes Platform используют API DVP. Для настройки подключения создайте пользователя (ServiceAccount), назначьте ему соответствующие права доступа и сгенерируйте kubeconfig.
+Для взаимодействия с ресурсами во встроенной виртуализации компоненты Deckhouse Platform используют API виртуализации. Для настройки подключения создайте пользователя (ServiceAccount), назначьте ему соответствующие права доступа и сгенерируйте kubeconfig.
 
 {% alert level="warning" %}
 Провайдер поддерживает работу только с одним диском в шаблоне виртуальной машины. Убедитесь, что шаблон содержит только один диск.
@@ -28,7 +28,7 @@ cloud_init_modules:
 
 ## Создание пользователя
 
-Создайте нового пользователя в кластере DVP с помощью следующей команды:
+Создайте нового пользователя в кластере встроенной виртуализации с помощью следующей команды:
 
 ```bash
 d8 k create -f -<<EOF
@@ -51,7 +51,7 @@ EOF
 
 ## Добавление роли
 
-Добавьте роль созданному пользователю в кластере DVP с помощью следующей команды:
+Добавьте роль созданному пользователю в кластере встроенной виртуализации с помощью следующей команды:
 
 ```bash
 d8 k create -f -<<EOF
@@ -98,8 +98,41 @@ users:
 EOF
 ```
 
-Закодируйте сгенерированный kubeconfig в кодировке Base64 (он указывается в файле первичной конфигурации в таком виде):
+Закодируйте сгенерированный kubeconfig в кодировке Base64 (укажите его в секрете `d8-credentials` в поле `stringData.secret` файла первичной конфигурации):
 
 ```bash
 base64 kubeconfig | tr -d '\n'
 ```
+
+## Секрет с учётными данными
+
+Учётные данные для доступа к API родительского кластера хранятся не в ModuleConfig, а в отдельном секрете. Провайдер читает его при запуске компонентов, которые обращаются к API DVP.
+
+Секрет создаётся при установке кластера вместе с остальными ресурсами первичной конфигурации. Если модуль подключается к уже работающему кластеру, секрет применяется после того, как модуль создаст неймспейс, порядок описан в разделе [«Гибридный кластер с DVP»](../../hybrid/dvp-hybrid.html). Секрет должен отвечать следующим требованиям:
+
+- имя `d8-credentials`, неймспейс `d8-cloud-provider-dvp`;
+- тип `cloud-provider.deckhouse.io/credentials`;
+- поле `authScheme` со значением `kubeconfig`;
+- поле `secret` с kubeconfig в кодировке Base64.
+
+```yaml
+apiVersion: v1
+kind: Secret
+metadata:
+  name: d8-credentials
+  namespace: d8-cloud-provider-dvp
+type: cloud-provider.deckhouse.io/credentials
+stringData:
+  authScheme: kubeconfig
+  secret: <KUBE_CONFIG_BASE64>
+```
+
+Замените `<KUBE_CONFIG_BASE64>` на kubeconfig в кодировке Base64.
+
+Чтобы сменить учётные данные, обновите поле `secret`:
+
+```shell
+d8 k -n d8-cloud-provider-dvp edit secret d8-credentials
+```
+
+В кластерах, переведённых на ModuleConfig, kubeconfig переносится в этот секрет из параметра `provider.kubeconfigDataBase64` ресурса DVPClusterConfiguration.

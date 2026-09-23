@@ -37,6 +37,7 @@ import (
 
 	v1 "github.com/deckhouse/node-controller/api/deckhouse.io/v1"
 	providermock "github.com/deckhouse/node-controller/internal/cloudprovider/mock"
+	nodecommon "github.com/deckhouse/node-controller/internal/common"
 	ngcommon "github.com/deckhouse/node-controller/internal/controller/nodegroup/common"
 	"github.com/deckhouse/node-controller/internal/controller/nodegroup/derived_status"
 )
@@ -143,7 +144,7 @@ func newGoldenReconciler(t *testing.T) *Reconciler {
 			"region":                  []byte(`"ru-central1"`),
 			"zones":                   []byte(`["ru-central1-a","ru-central1-b"]`),
 		}),
-		secret(cloudInstanceManagerNS, packagesProxyTokenSecretName, map[string][]byte{"token": []byte("packages-proxy-token")}),
+		secret(cloudInstanceManagerNS, PackagesProxyTokenSecretName, map[string][]byte{"token": []byte("packages-proxy-token")}),
 		secret(kubeSystemNS, apiProxyCertSecretName, map[string][]byte{"crt": []byte("PROXY-CERT"), "key": []byte("PROXY-KEY")}),
 		secret(kubeSystemNS, controlPlaneArgsSecretName, map[string][]byte{
 			"arguments.json":    []byte(`{"nodeMonitorGracePeriod":40}`),
@@ -153,7 +154,7 @@ func newGoldenReconciler(t *testing.T) *Reconciler {
 			ObjectMeta: metav1.ObjectMeta{
 				Namespace: kubeSystemNS,
 				Name:      "bootstrap-token-abcdef",
-				Labels:    map[string]string{bootstrapTokenNGLabel: "cloud-worker"},
+				Labels:    map[string]string{nodecommon.BootstrapTokenNodeGroupLabel: "cloud-worker"},
 			},
 			Type: corev1.SecretTypeBootstrapToken,
 			Data: map[string][]byte{"token-id": []byte("abcdef"), "token-secret": []byte("0123456789abcdef")},

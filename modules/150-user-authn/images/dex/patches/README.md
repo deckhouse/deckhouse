@@ -7,6 +7,8 @@ We use it in Dex authenticators to make `allowedUsers` and `allowedGroups` optio
 
 This problem is not solved in upstream, and our patch will not be accepted.
 
+Login-time enforcement is extended to refresh tokens by `019-refresh-client-filters.patch`.
+
 ### 002-gitlab-refresh-context.patch
 
 Refresh can be called only one. By propagating a context of the user request, refresh can accidentally canceled.
@@ -182,7 +184,67 @@ Key changes:
 Upstream is affected as well, including `master`: an upstream PR is to be opened on top of this
 patch.
 
-### 999-fix-cve.patch
+### 018-admin-lock-without-lockout-policy.patch
+
+Honor an administrator lock (`LockedUntil` on Password / OfflineSessions) even
+when `passwordPolicy` is unset or `passwordPolicy.lockout` is not configured.
+
+The lock is checked on the password login form, on `grant_type=password`
+(ROPC / basic-auth-proxy), on refresh-token requests, and on token exchange.
+`passwordPolicy.lockout` still owns automatic lockout after consecutive
+failed attempts; that path now also runs on ROPC (local `Password` counters
+and, when `applyToConnectors` matches, `OfflineSessions`). UserOperation
+`Lock` / `d8 iam user lock` no longer depend on that section.
+
+For a non-local connector (LDAP, Crowd, …) the login-form path now reads
+`OfflineSessions` on every attempt so an administrator lock is visible even
+when no password policy is configured. That is one extra storage GET on the
+authentication hot path. A storage error on that read fails closed (HTTP 500),
+same as the token and refresh paths.
+
+The lock check is connector-scoped: local users read `Password` only, everyone
+else reads `OfflineSessions` only. A local `UserOperation` Lock therefore does
+not block an LDAP login with the same email, and the reverse.
+
+### 019-refresh-client-filters.patch
+
+`001-client-filters.patch` enforced `allowedEmails` / `allowedGroups` only in
+`finalizeLogin`. A refresh token issued before an allow-list change kept
+minting new ID tokens forever. `grant_type=password` (ROPC / basic-auth-proxy)
+had the same gap.
+
+This patch applies the same filters:
+
+- on `grant_type=password`, before tokens are issued;
+- on every refresh-token request, before rotating the token, against the
+  claims stored on it (so changing `allowedGroups` / `allowedEmails` deletes
+  that refresh token and returns `access_denied`);
+- again after connector `Refresh()`, so a directory membership change is
+  enforced when Dex actually contacts the upstream (LDAP already re-queries
+  users and groups in `Refresh()`). A refresh denied at this second check
+  also deletes the stored token, including the rotated credential if
+  rotation already ran.
+
+A refresh served from `expiry.refreshTokens.reuseInterval` does not call the
+connector, so AD/LDAP group removal is visible on the next refresh that
+leaves that window — not on every request. We do not add an extra LDAP
+round-trip on the reuse path: that would multiply directory load by the
+token refresh rate.
+
+An administrator lock (`LockedUntil`) on refresh still returns
+`access_denied` without deleting the token: after the lock expires the
+existing session can continue.
+
+Denied allow-list refresh returns OAuth2 `access_denied` and removes the
+refresh token from storage. Putting the user back on the allow-list does
+not revive that session; they must sign in again.
+
+**Impact / backports.** Existing refresh tokens whose stored email or groups
+no longer match the current DexClient / DexAuthenticator allow-lists start
+failing instead of being extended. Users must sign in again. Changelog must
+say so; backports to 1.77 and 1.76 are appropriate but stricter.
+
+### 998-fix-cve.patch
 
 #### Fix CVEs
 
@@ -208,3 +270,23 @@ patch.
 #### GHSA
 
 - GHSA-hrxh-6v49-42gf
+
+### 999-fuzz-handlers.patch
+
+Go native fuzz tests for every Dex HTTP handler that accepts user-controlled
+input (query, form, headers, cookies, tokens, path parameters). Applied last
+so the tests always compile against the fully patched tree.
+
+Targets: `handleToken`, `handlePublicKeys`, `handleUserInfo`,
+`handleAuthorization`, `handleConnectorLogin`, `handleConnectorCallback`,
+`handlePasswordLogin`, `handleApproval`, `handleDeviceToken`,
+`handleDeviceTokenDeprecated`, `handleDeviceExchange`, `verifyUserCode`,
+`handleDeviceCode`, `handleDeviceCallback`, `handleIntrospect`,
+`handleTOTPVerify`, `handlePasswordChange`, plus `ServeHTTP` (discovery,
+healthz, static) and `FuzzAllHandlers`.
+
+`*_test.go` is not compiled into the Dex image. Run from a patched source tree:
+
+```
+go test -vet=off -run=^$ -fuzz=FuzzAllHandlers -fuzztime=12h ./server
+```

@@ -1,6 +1,6 @@
 ---
 title: "Module service-with-healthchecks: examples"
-description: "Configuring a Load Balancer with the service-with-healthchecks Module in Deckhouse Kubernetes Platform"
+description: "Configuring a Load Balancer with the service-with-healthchecks Module in Deckhouse Platform"
 ---
 
 {% alert level="info" %}
@@ -36,7 +36,7 @@ For the ServiceWithHealthchecks load balancers you create to work, the following
 {% alert level="warning" %}
 Enabling the module does not automatically replace existing Service resources with ServiceWithHealthcheck resources. To replace existing services with ServiceWithHealthcheck, follow these steps:
 
-* Create ServiceWithHealthcheck resources with the same names and parameters as the existing Service resources you want to replace. When creating a ServiceWithHealthcheck, specify the required [`healthchecks`](cr.html#servicewithhealthchecks-v1alpha1-spec-healthcheck) parameters.
+* Create ServiceWithHealthcheck resources with the same names and parameters as the existing Service resources you want to replace. The [`healthcheck`](cr.html#servicewithhealthchecks-v1alpha1-spec-healthcheck) section is optional: add it to enable active health probing, or omit it to publish endpoints based on pod readiness alone, like a plain Service.
 * Delete the Service resources that you want to replace with ServiceWithHealthcheck.
 {% endalert %}
 
@@ -181,10 +181,10 @@ spec:
 
 ### Configuring ServiceWithHealthchecks load balancers
 
-Create a Secret to store credentials so that probes can access the database:
+Create a Secret to store credentials so that probes can access the database. The Secret must be of type `network.deckhouse.io/postgresql-credentials` — secrets of any other type are ignored — and may contain the fields `user`, `password`, `tlsMode`, `clientCert`, `clientKey`, `caCert`:
 
 ```shell
-d8 k -n my-ns create secret generic cred-secret --from-literal=user=postgres --from-literal=password=example cred-secret
+d8 k -n my-ns create secret generic cred-secret --type=network.deckhouse.io/postgresql-credentials --from-literal=user=postgres --from-literal=password=example
 ```
 
 Below is an example of a load balancer manifest for reading:
@@ -234,3 +234,32 @@ spec:
         authSecretName: cred-secret
         query: "SELECT NOT pg_is_in_recovery()"
 ```
+
+## Passing annotations and labels to the child Service
+
+The annotations and labels of a ServiceWithHealthchecks are copied to the Service created by the module. This is required for controllers that read the parameters of a load balancer from the Service only, for example MetalLB:
+
+```yaml
+apiVersion: network.deckhouse.io/v1alpha1
+kind: ServiceWithHealthchecks
+metadata:
+  name: postgres-read
+  annotations:
+    network.deckhouse.io/load-balancer-ips: 192.168.217.217
+    network.deckhouse.io/load-balancer-shared-ip-key: key-to-share
+spec:
+  type: LoadBalancer
+  ports:
+  - port: 5432
+    protocol: TCP
+    targetPort: 5432
+  selector:
+    app: postgres
+  healthcheck:
+    probes:
+    - mode: TCP
+      tcp:
+        targetPort: 5432
+```
+
+The keys copied during the last reconciliation are stored in the `network.deckhouse.io/propagated-annotations` and `network.deckhouse.io/propagated-labels` annotations of the child Service. Thanks to these lists, a key removed from the ServiceWithHealthchecks is removed from the Service too, while annotations and labels set by other controllers (for example, `metallb.universe.tf/ip-allocated-from-pool`) are kept untouched.

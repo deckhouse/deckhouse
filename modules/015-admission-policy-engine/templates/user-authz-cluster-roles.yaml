@@ -107,34 +107,21 @@ apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
 metadata:
   annotations:
-    user-authz.deckhouse.io/access-level: Admin
-  name: d8:user-authz:admission-policy-engine:admin
-  {{- include "helm_lib_module_labels" (list .) | nindent 2 }}
-rules:
-- apiGroups:
-  - deckhouse.io
-  resources:
-  - securitypolicyexceptions
-  verbs:
-  - create
-  - delete
-  - deletecollection
-  - patch
-  - update
----
-apiVersion: rbac.authorization.k8s.io/v1
-kind: ClusterRole
-metadata:
-  annotations:
     user-authz.deckhouse.io/access-level: ClusterAdmin
   name: d8:user-authz:admission-policy-engine:cluster-admin
   {{- include "helm_lib_module_labels" (list .) | nindent 2 }}
 rules:
+{{/*
+  SecurityPolicyException lifts pod-security checks enforced by SecurityPolicy, so writing one is
+  equivalent to editing the policy itself: keep both at ClusterAdmin. A namespace-scoped Admin that
+  can create an exception can grant its own pods hostPath and privileged, which is a node escape.
+*/}}
 - apiGroups:
   - deckhouse.io
   resources:
   - operationpolicies
   - securitypolicies
+  - securitypolicyexceptions
   verbs:
   - create
   - delete

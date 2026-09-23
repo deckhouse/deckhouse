@@ -22,6 +22,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
@@ -247,5 +248,23 @@ func TestNodeGroupHandler_EveryDataEditPasses(t *testing.T) {
 
 			assert.Equal(t, 1, queue.Len())
 		})
+	}
+}
+
+func TestIsInputSecret(t *testing.T) {
+	for _, testCase := range []struct {
+		namespace string
+		name      string
+		want      bool
+	}{
+		{namespace: "kube-system", name: "d8-node-manager-cloud-provider", want: true},
+		{namespace: "kube-system", name: "d8-cluster-configuration", want: true},
+		{namespace: "kube-system", name: "d8-cloud-provider-openstack-capi", want: true},
+		{namespace: "kube-system", name: "d8-cloud-provider-aws-mcm", want: true},
+		{namespace: "d8-system", name: "d8-node-manager-cloud-provider", want: false},
+		{namespace: "kube-system", name: "other", want: false},
+	} {
+		secret := &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Namespace: testCase.namespace, Name: testCase.name}}
+		require.Equal(t, testCase.want, IsInputSecret(secret))
 	}
 }

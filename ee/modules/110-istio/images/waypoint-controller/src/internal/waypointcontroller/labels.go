@@ -21,6 +21,7 @@ const (
 	HeritageLabelValue        = "deckhouse"
 	WaypointFinalizer         = "network.deckhouse.io/waypoint-instance-cleanup"
 	ResourceNamePrefix        = "d8-waypoint-"
+	TopologyNetworkLabelKey   = "topology.istio.io/network"
 )
 
 func resourceBaseName(instanceName string) string {
@@ -36,16 +37,24 @@ func instanceLabels(instance *networkv1alpha1.WaypointInstance) map[string]strin
 }
 
 func istioLabels(instance *networkv1alpha1.WaypointInstance, revision, networkName string) map[string]string {
+	labels := istioGatewayLabels(instance, revision)
+	labels[TopologyNetworkLabelKey] = networkName
+
+	return labels
+}
+
+// The network label is deliberately omitted for istiod not to consider this
+// waypoint a cross-network gateway.
+func istioGatewayLabels(instance *networkv1alpha1.WaypointInstance, revision string) map[string]string {
 	waypointFor := "All"
 	if instance.Spec.WaypointFor != "" {
 		waypointFor = instance.Spec.WaypointFor
 	}
 
 	return map[string]string{
-		"gateway.istio.io/managed":  "istio.io-mesh-controller",
-		"istio.io/rev":              revision,
-		"istio.io/waypoint-for":     strings.ToLower(waypointFor),
-		"topology.istio.io/network": networkName,
+		"gateway.istio.io/managed": "istio.io-mesh-controller",
+		"istio.io/rev":             revision,
+		"istio.io/waypoint-for":    strings.ToLower(waypointFor),
 	}
 }
 
