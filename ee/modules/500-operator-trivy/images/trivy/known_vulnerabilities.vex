@@ -347,7 +347,7 @@
       ],
       "status": "not_affected",
       "justification": "vulnerable_code_not_in_execute_path",
-      "impact_statement": "The vulnerability is in the golang.org/x/crypto/ssh channel multiplexer and requires the process to open an SSH connection to a malicious peer. The operator-trivy module runs the trivy binary only for image and filesystem scans in scan jobs, never for repository scans over SSH, so the vulnerable code is not executed.",
+      "impact_statement": "A channel registered in the connection multiplexer of golang.org/x/crypto/ssh stays unusable until it is established, yet its incomingRequests queue already accepts messages. A peer on the other end of an established SSH transport can flood that queue and deadlock the whole connection. Reaching the defect requires the process to run an SSH transport, as a client or as a server, against a peer it does not control. The trivy binary links golang.org/x/crypto/ssh through two paths: pkg/iac/scanners/terraform/parser/funcs/crypto.go, which uses it to parse a private key for the Terraform rsadecrypt function and opens no connection, and the go-git SSH transport, which is reached only by a repository scan of an ssh:// URL. The operator-trivy module never runs such a scan: the scan job built by the operator invokes the binary with the image, filesystem or rootfs subcommand only (pkg/plugins/trivy/jobspec.go), the module exposes no setting that adds the repo subcommand, and the job arguments are composed by the operator rather than taken from user input. With no repository scan, go-git never dials an SSH host, the connection multiplexer that holds the vulnerable code is never instantiated, and no peer can send the process an SSH message at all.",
       "timestamp": "2026-09-23T12:00:00Z"
     },
 
@@ -363,7 +363,7 @@
       ],
       "status": "not_affected",
       "justification": "vulnerable_code_not_in_execute_path",
-      "impact_statement": "The vulnerability is in the golang.org/x/crypto/ssh message handling of an established connection. The operator-trivy module runs the trivy binary only for image and filesystem scans in scan jobs, never for repository scans over SSH, so the vulnerable code is not executed.",
+      "impact_statement": "After an SSH channel is established, golang.org/x/crypto/ssh buffers channel messages it does not handle instead of treating them as a protocol error. A peer on the other end of the connection can send crafted RFC 4254 messages that block on that buffer and deadlock the whole connection. Reaching the defect requires the process to run an SSH transport, as a client or as a server, against a peer it does not control. The trivy binary links golang.org/x/crypto/ssh through two paths: pkg/iac/scanners/terraform/parser/funcs/crypto.go, which uses it to parse a private key for the Terraform rsadecrypt function and opens no connection, and the go-git SSH transport, which is reached only by a repository scan of an ssh:// URL. The operator-trivy module never runs such a scan: the scan job built by the operator invokes the binary with the image, filesystem or rootfs subcommand only (pkg/plugins/trivy/jobspec.go), the module exposes no setting that adds the repo subcommand, and the job arguments are composed by the operator rather than taken from user input. With no repository scan, go-git never dials an SSH host, the connection multiplexer that holds the vulnerable code is never instantiated, and no peer can send the process an SSH message at all.",
       "timestamp": "2026-09-23T12:00:00Z"
     },
 
@@ -379,7 +379,7 @@
       ],
       "status": "not_affected",
       "justification": "vulnerable_code_not_present",
-      "impact_statement": "The vulnerability is in the BuildKit executor packages executor/oci/user.go and solver/llbsolver/ops/user_linux.go. The operator-trivy binaries link only the BuildKit Dockerfile parser, so the vulnerable packages are not present in the binary. Deckhouse Kubernetes Platform does not ship or run BuildKit.",
+      "impact_statement": "While resolving a user name to a user or group identifier, BuildKit reads /etc/passwd and /etc/group from the build context with io.ReadAll and no upper bound, so a malicious base image or build can supply files large enough to exhaust the memory of the build worker. The defect is in executor/oci/user.go and solver/llbsolver/ops/user_linux.go, which run only inside a BuildKit worker executing a build. Both operator-trivy binaries link BuildKit only for Dockerfile parsing: go list -deps lists frontend/dockerfile/command, frontend/dockerfile/instructions, frontend/dockerfile/linter, frontend/dockerfile/parser, frontend/dockerfile/shell, util/stack and util/suggest, which Trivy uses to read a Dockerfile during a misconfiguration scan. No executor or solver package is linked, so the vulnerable files are not compiled into either image. Deckhouse Kubernetes Platform ships no BuildKit daemon and runs no build worker, so nothing in the platform accepts a build request in the first place.",
       "timestamp": "2026-09-23T12:00:00Z"
     },
 
@@ -395,7 +395,7 @@
       ],
       "status": "not_affected",
       "justification": "vulnerable_code_not_present",
-      "impact_statement": "The vulnerability is in the BuildKit executor package executor/oci/spec_linux.go. The operator-trivy binaries link only the BuildKit Dockerfile parser, so the vulnerable package is not present in the binary. Deckhouse Kubernetes Platform does not ship or run BuildKit.",
+      "impact_statement": "A custom BuildKit frontend can put an unsupported SecurityMode value into a crafted build request, and executor/oci/spec_linux.go treats it as a non-sandbox mode without requiring the security.insecure entitlement, which disables the Seccomp and AppArmor protections of the build container. Reaching the defect requires a BuildKit worker that accepts build requests from a frontend. Both operator-trivy binaries link BuildKit only for Dockerfile parsing: go list -deps lists frontend/dockerfile/command, frontend/dockerfile/instructions, frontend/dockerfile/linter, frontend/dockerfile/parser, frontend/dockerfile/shell, util/stack and util/suggest, which Trivy uses to read a Dockerfile during a misconfiguration scan. No executor or solver package is linked, so the vulnerable files are not compiled into either image. Deckhouse Kubernetes Platform ships no BuildKit daemon and runs no build worker, so nothing in the platform accepts a build request in the first place.",
       "timestamp": "2026-09-23T12:00:00Z"
     }
 

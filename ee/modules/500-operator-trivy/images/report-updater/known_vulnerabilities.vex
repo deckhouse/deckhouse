@@ -34,7 +34,7 @@
       ],
       "status": "not_affected",
       "justification": "vulnerable_code_not_present",
-      "impact_statement": "The vulnerability is in Trivy's OCI artifact downloader, which writes unpacked files without validating their paths. Deckhouse Kubernetes Platform is not affected as operator-trivy report-updater links only github.com/aquasecurity/trivy/pkg/fanal/types and github.com/aquasecurity/trivy/pkg/digest for shared type definitions; the downloader package is not present in the binary.",
+      "impact_statement": "When Trivy unpacks an OCI artifact pulled from a registry, such as its vulnerability database, it writes each entry at the path recorded in the artifact without checking that the path stays inside the destination directory, so a crafted artifact can write files outside the cache. Reaching the defect requires calling the artifact download and unpack code of Trivy. The report-updater binary links from Trivy only pkg/fanal/types and pkg/digest, the type definitions it shares with the report format of the operator (see internal/web/hook/trivy_types.go); go list -deps lists no other Trivy package, so the vulnerable code is not compiled into the image. The report-updater downloads no vulnerability database: it serves a webhook that rewrites reports the operator has already produced, and the one OCI artifact it does pull is fetched with oras.land/oras-go/v2, which this advisory does not cover.",
       "timestamp": "2026-09-23T12:00:00Z"
     },
     {
@@ -50,7 +50,7 @@
       ],
       "status": "not_affected",
       "justification": "vulnerable_code_not_present",
-      "impact_statement": "The vulnerability is in Trivy's plugin manager, which installs plugins from a remote source. Deckhouse Kubernetes Platform is not affected as operator-trivy report-updater links only github.com/aquasecurity/trivy/pkg/fanal/types and github.com/aquasecurity/trivy/pkg/digest for shared type definitions; the plugin manager is not present in the binary, and report-updater installs no plugins.",
+      "impact_statement": "The Trivy plugin manager installs a plugin from a remote source and extracts its archive without validating the entry paths, so a crafted plugin can write files anywhere the process can write. Reaching the defect requires an explicit plugin installation, which in Trivy is driven by the trivy plugin command. The report-updater binary links from Trivy only pkg/fanal/types and pkg/digest, the type definitions it shares with the report format of the operator (see internal/web/hook/trivy_types.go); go list -deps lists no other Trivy package, so the vulnerable code is not compiled into the image. The report-updater has no command line interface and no plugin support, and it installs nothing at runtime.",
       "timestamp": "2026-09-23T12:00:00Z"
     }
   ],
