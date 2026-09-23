@@ -2,6 +2,7 @@ linters-settings:
   no-cyrillic:
     exclude-rules:
       directories:
+        - pkg/api
         # The RBACv2 templates carry the localized title and description of every role and
         # capability they ship. That is product text, not a source comment: the console shows it
         # to whoever is choosing what to grant, and `d8:namespace-capability:kubernetes:view_logs`
@@ -77,3 +78,10 @@ linters-settings:
       - properties.internal.properties.providerClusterConfiguration.properties.nodeGroups.items.properties.instanceClass.properties.diskType
       - properties.internal.properties.providerClusterConfiguration.properties.masterNodeGroup.properties.zones.items
       - properties.internal.properties.providerClusterConfiguration.properties.masterNodeGroup.properties.instanceClass.properties.diskType
+      - properties.nodes.properties.parameters.properties.zones.items
+      - properties.storage.properties.parameters.properties.provisionedStorageClasses.items.properties.type
+      - spec.versions[0].schema.openAPIV3Schema.properties.spec.properties.diskType
+      - spec.versions[0].schema.openAPIV3Schema.properties.spec.properties.platform
+      - spec.versions[1].schema.openAPIV3Schema.properties.spec.properties.diskType
+      - spec.versions[1].schema.openAPIV3Schema.properties.spec.properties.platform
+      - spec.versions[1].schema.openAPIV3Schema.properties.spec.properties.networkType

@@ -1,0 +1,18 @@
+module: modules/030-cloud-provider-yandex
+registration:
+  capiClusterAPIVersion: infrastructure.cluster.x-k8s.io/v1alpha1
+  capiClusterKind: YandexCluster
+  capiClusterName: yandex
+renderData:
+  cluster:
+    name: yandex
+    namespace: d8-cloud-instance-manager
+  controlPlane:
+  - host: 192.0.2.10
+    port: 6443
+  prefix: ""
+  provider:
+    folderID: folder-id
+    zoneToSubnetIdMap:
+      ru-central1-a: subnet-a
+      ru-central1-b: subnet-b

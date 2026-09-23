@@ -21,10 +21,6 @@ import (
 	"fmt"
 	"math/rand"
 
-	"github.com/pkg/errors"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/labels"
-	"k8s.io/apimachinery/pkg/selection"
 	"k8s.io/client-go/rest"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
@@ -70,7 +66,7 @@ func (p *StaticInstancePool) PickStaticInstance(ctx context.Context, staticMachi
 func (p *StaticInstancePool) findStaticInstancesInPhase(ctx context.Context, staticMachine *infrav1.StaticMachine, phase deckhousev1.StaticInstanceStatusCurrentStatusPhase) ([]deckhousev1.StaticInstance, error) {
 	staticInstances := &deckhousev1.StaticInstanceList{}
 
-	labelSelector, err := staticMachineLabelSelector(staticMachine)
+	labelSelector, err := staticMachine.StaticInstanceSelector()
 	if err != nil {
 		return nil, fmt.Errorf("failed to get label selector: %w", err)
 	}
@@ -95,30 +91,4 @@ func (p *StaticInstancePool) findStaticInstancesInPhase(ctx context.Context, sta
 	}
 
 	return staticInstancesInPhase, nil
-}
-
-func staticMachineLabelSelector(staticMachine *infrav1.StaticMachine) (labels.Selector, error) {
-	allowBootstrapRequirement, err := labels.NewRequirement("node.deckhouse.io/allow-bootstrap", selection.NotIn, []string{"false"})
-	if err != nil {
-		panic(err.Error())
-	}
-
-	if staticMachine.Spec.LabelSelector == nil {
-		return labels.NewSelector().Add(*allowBootstrapRequirement), nil
-	}
-
-	labelSelector, err := metav1.LabelSelectorAsSelector(staticMachine.Spec.LabelSelector)
-	if err != nil {
-		return nil, fmt.Errorf("unable to convert StaticMachine label selector: %w", err)
-	}
-
-	requirements, _ := labelSelector.Requirements()
-
-	for _, requirement := range requirements {
-		if requirement.Key() == allowBootstrapRequirement.Key() {
-			return nil, errors.New("label selector requirement for the 'node.deckhouse.io/allow-bootstrap' key can't be added manually")
-		}
-	}
-
-	return labelSelector.Add(*allowBootstrapRequirement), nil
 }

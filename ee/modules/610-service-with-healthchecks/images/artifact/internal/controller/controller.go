@@ -114,7 +114,8 @@ func (r *ServiceWithHealthchecksReconciler) Reconcile(ctx context.Context, req c
 	// this is not asking whose object it is but whether it already looks the way it should. A
 	// reference left over from a parent recreated under the same name still has to be rewritten.
 	case err == nil && metav1.IsControlledBy(&service, serviceWithHC) &&
-		IsSpecForServiceEqual(service, serviceWithHC) && IsMetadataForServiceEqual(service, serviceWithHC):
+		IsSpecForServiceEqual(service, serviceWithHC) && IsMetadataForServiceEqual(service, serviceWithHC) &&
+		hasManagedLabels(service.Labels):
 		r.Logger.Debug("no need to update child Service", "name", req.Name, "namespace", req.Namespace)
 		childService = service
 
@@ -135,13 +136,17 @@ func (r *ServiceWithHealthchecksReconciler) Reconcile(ctx context.Context, req c
 			// External controllers (MetalLB, cloud providers) read the load balancer
 			// settings from the Service, so the parent metadata has to reach it.
 			desiredAnnotations := propagatedAnnotations(serviceWithHC.Annotations)
-			desiredLabels := serviceWithHC.Labels
+			desiredLabels := propagatedLabels(serviceWithHC.Labels)
 
 			annotations := mergePropagated(childService.Annotations, desiredAnnotations, childService.Annotations[propagatedAnnotationsKey])
 			childService.Labels = mergePropagated(childService.Labels, desiredLabels, childService.Annotations[propagatedLabelsKey])
 
 			annotations = setPropagatedKeys(annotations, propagatedAnnotationsKey, desiredAnnotations)
 			childService.Annotations = setPropagatedKeys(annotations, propagatedLabelsKey, desiredLabels)
+
+			// Labels the module owns are set last, so they are present regardless of the parent and
+			// take precedence over a parent label of the same key.
+			childService.Labels = setManagedLabels(childService.Labels)
 
 			// The address can only be requested while the Service is being created: it is
 			// immutable afterwards, and an existing Service always carries one already.
@@ -421,7 +426,7 @@ func portKey(port corev1.ServicePort) string {
 // IsMetadataForServiceEqual reports whether the child Service already carries the metadata of the parent.
 func IsMetadataForServiceEqual(service corev1.Service, shc *networkv1alpha1.ServiceWithHealthchecks) bool {
 	desiredAnnotations := propagatedAnnotations(shc.Annotations)
-	desiredLabels := shc.Labels
+	desiredLabels := propagatedLabels(shc.Labels)
 
 	// A key dropped from the parent changes the stored list, so removals are caught too.
 	if service.Annotations[propagatedAnnotationsKey] != joinKeys(desiredAnnotations) {

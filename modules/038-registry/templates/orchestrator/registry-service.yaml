@@ -1,5 +1,17 @@
+{{- /*
+  The Service named `registry` is created by BOTH implementations, and the name is the one
+  every image reference in the cluster is built from. So the gate here is not only "does
+  the legacy state want a Service" but also "is the legacy implementation the one in
+  charge" — otherwise the two definitions would collide on the same object and which
+  selector survived would depend on template ordering.
+
+  The legacy state machine does set this to disabled on its way to Unmanaged, and the
+  switch to the new implementation is gated on reaching Unmanaged, so in practice the two
+  never coincide. That is a property of a state machine, though, and this object is too
+  central to rest on it. See _ownership.tpl.
+*/ -}}
 {{ $orchestrator := .Values.registry.internal.orchestrator }}
-{{- if $orchestrator -}}
+{{- if and $orchestrator (eq (include "registry_legacy_owns_the_cluster" .) "true") -}}
 {{- $mode := ($orchestrator.state).registry_service -}}
 {{- if $mode -}}
 

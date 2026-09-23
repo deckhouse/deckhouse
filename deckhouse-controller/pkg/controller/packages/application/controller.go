@@ -279,7 +279,7 @@ func (r *reconciler) handleCreateOrUpdate(ctx context.Context, app *v1alpha1.App
 		ctrlutils.OwnerReference(v1alpha1.ApplicationPackageVersionGVK, apv.Name, apv.UID),
 		ctrlutils.OwnerReference(v1alpha1.ApplicationPackageGVK, pkg.Name, pkg.UID),
 	)
-	delete(app.Annotations, v1alpha1.ApplicationAnnotationRegistrySpecChanged)
+	delete(app.Annotations, v1alpha1.PackageAnnotationRegistrySpecChanged)
 
 	if err := r.client.Patch(ctx, app, client.MergeFrom(original)); err != nil {
 		logger.Error("failed to patch application", log.Err(err))

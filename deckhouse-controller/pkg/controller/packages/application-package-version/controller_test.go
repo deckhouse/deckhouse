@@ -201,7 +201,7 @@ func (suite *ControllerTestSuite) TestReconcile() {
 		require.NoError(suite.T(), err)
 
 		apv = suite.getApplicationPackageVersion("deckhouse-test-v1.0.0")
-		require.Equal(suite.T(), "false", apv.Labels[v1alpha1.ApplicationPackageVersionLabelExistInRegistry])
+		require.Equal(suite.T(), "false", apv.Labels[v1alpha1.PackageLabelExistInRegistry])
 	})
 }
 

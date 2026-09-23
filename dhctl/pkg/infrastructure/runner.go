@@ -400,7 +400,8 @@ func (r *Runner) runBeforeActionAndWaitReady(ctx context.Context) error {
 		resErr = multierror.Append(resErr, err)
 
 		if runPostAction {
-			err := hook.AfterAction(ctx, r)
+			// No infrastructure action ran: this is the readiness gate before one.
+			err := hook.AfterAction(ctx, r, nil)
 			if err != nil {
 				resErr = multierror.Append(resErr, err)
 			}
@@ -501,12 +502,16 @@ func (r *Runner) Apply(ctx context.Context) error {
 			return 0, err
 		})
 
-		var errRes *multierror.Error
-		errRes = multierror.Append(errRes, err)
+		actionErr := err
 
-		// yes, do not check err from exec infra utility
-		// always run post action if need
-		err = r.getHook().AfterAction(ctx, r)
+		var errRes *multierror.Error
+		errRes = multierror.Append(errRes, actionErr)
+
+		// The post action runs even when the utility failed - a partial apply can still have
+		// recreated the VM, and the bookkeeping that follows it has to happen either way - but
+		// it is told what happened, so that the parts of it that wait on the action's result
+		// can stand down. See InfraActionHook.AfterAction.
+		err = r.getHook().AfterAction(ctx, r, actionErr)
 		errRes = multierror.Append(errRes, err)
 
 		return errRes.ErrorOrNil()
@@ -756,12 +761,16 @@ func (r *Runner) Destroy(ctx context.Context) error {
 			return 0, err
 		})
 
-		var errRes *multierror.Error
-		errRes = multierror.Append(errRes, err)
+		actionErr := err
 
-		// yes, do not check err from exec infra utility
-		// always run post action if need
-		err = r.getHook().AfterAction(ctx, r)
+		var errRes *multierror.Error
+		errRes = multierror.Append(errRes, actionErr)
+
+		// The post action runs even when the utility failed - a partial apply can still have
+		// recreated the VM, and the bookkeeping that follows it has to happen either way - but
+		// it is told what happened, so that the parts of it that wait on the action's result
+		// can stand down. See InfraActionHook.AfterAction.
+		err = r.getHook().AfterAction(ctx, r, actionErr)
 		errRes = multierror.Append(errRes, err)
 
 		return errRes.ErrorOrNil()

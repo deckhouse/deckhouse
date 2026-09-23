@@ -355,36 +355,61 @@ func WaitForReadiness(ctx context.Context, kubeCl *client.KubernetesClient, time
 	return WaitForReadinessNotOnNode(ctx, kubeCl, "", timeout)
 }
 
+// deckhouseReadinessPollInterval is how long WaitForReadinessNotOnNode waits before reaching for
+// the Deckhouse pod again after an attempt that could not observe it.
+const deckhouseReadinessPollInterval = time.Second
+
+// errPodNotReady stands in for an attempt that finished without an error and without a ready pod.
+// LogPrinter.Print does not currently return that combination; the loop states it explicitly rather
+// than treating it as success.
+var errPodNotReady = errors.New("Deckhouse pod is not Ready yet.")
+
 func WaitForReadinessNotOnNode(ctx context.Context, kubeCl *client.KubernetesClient, excludeNode string, timeout time.Duration) error {
-	return dhlog.RunProcess(ctx, dhlog.FromContext(ctx), "Waiting for Deckhouse to become Ready", func(ctx context.Context) error {
+	const name = "Waiting for Deckhouse to become Ready"
+
+	return dhlog.RunProcess(ctx, dhlog.FromContext(ctx), name, func(ctx context.Context) error {
 		ctx, cancel := context.WithTimeout(ctx, timeout)
 		defer cancel()
 
-		for {
-			select {
-			case <-ctx.Done():
-				return ErrTimedOut
-			default:
-				ok, err := NewLogPrinter(kubeCl).
-					WithLeaderElectionAwarenessMode(types.NamespacedName{Namespace: "d8-system", Name: "deckhouse-leader-election"}).
-					WaitPodBecomeReady().
-					WithExcludeNode(excludeNode).
-					Print(ctx)
-				if err != nil {
-					if errors.Is(err, ErrTimedOut) {
-						return err
-					}
-					dhlog.FromContext(ctx).InfoContext(ctx, err.Error())
-				}
+		// Print streams the pod's log until it reports Ready, so on a healthy install it is entered
+		// once and returns. Every further attempt is recovery from a pod that is not there yet -
+		// Pending, restarting, rescheduled - and what it returns is the current status rather than a
+		// failure. Hand-rolling that loop meant printing the same status line to the terminal once a
+		// second for as long as the pod stayed Pending; the retry loop keeps per-attempt detail in
+		// the debug file, waits on ctx instead of sleeping through a cancellation, and reports the
+		// last status seen if the wait runs out. It is silent because the enclosing process block
+		// already frames and names this wait.
+		attempts := max(1, int(timeout/deckhouseReadinessPollInterval))
 
-				if ok {
-					dhlog.FromContext(ctx).InfoContext(ctx, "Deckhouse pod is Ready!\n")
-					return nil
-				}
+		loop := retry.NewSilentLoopWithParams(retry.NewEmptyParams(
+			retry.WithName(name),
+			retry.WithAttempts(attempts),
+			retry.WithWait(deckhouseReadinessPollInterval),
+		)).BreakIf(func(err error) bool {
+			// The wait itself ran out inside Print; another attempt cannot help.
+			return errors.Is(err, ErrTimedOut)
+		})
 
-				time.Sleep(1 * time.Second)
+		err := loop.RunContext(ctx, func() error {
+			ready, err := NewLogPrinter(kubeCl).
+				WithLeaderElectionAwarenessMode(types.NamespacedName{Namespace: "d8-system", Name: "deckhouse-leader-election"}).
+				WaitPodBecomeReady().
+				WithExcludeNode(excludeNode).
+				Print(ctx)
+			if err != nil {
+				return err
 			}
+			if !ready {
+				return errPodNotReady
+			}
+			return nil
+		})
+		if err != nil {
+			return err
 		}
+
+		dhlog.FromContext(ctx).InfoContext(ctx, "Deckhouse pod is Ready!")
+		return nil
 	})
 }
 

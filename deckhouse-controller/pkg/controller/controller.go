@@ -57,6 +57,7 @@ import (
 	utils "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/addonutils"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha2"
+	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1beta1"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/validation"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/confighandler"
 	deckhouserelease "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/deckhouse-release"
@@ -74,6 +75,7 @@ import (
 	packagerepository "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/packages/package-repository"
 	packagerepositoryoperation "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/packages/package-repository-operation"
 	d8edition "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/edition"
+	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/envconfig"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/helpers"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 	"github.com/deckhouse/deckhouse/go_lib/configtools"
@@ -98,8 +100,7 @@ type DeckhouseController struct {
 	runtimeManager     manager.Manager
 	preflightCountDown *sync.WaitGroup
 
-	moduleLoader   *moduleloader.Loader
-	packageRuntime *packageruntime.Runtime
+	moduleLoader *moduleloader.Loader
 
 	dc dependency.Container
 
@@ -125,6 +126,7 @@ func NewDeckhouseController(
 		coordv1.AddToScheme,
 		v1alpha1.AddToScheme,
 		v1alpha2.AddToScheme,
+		v1beta1.AddToScheme,
 		appsv1.AddToScheme,
 		discoveryv1.AddToScheme,
 	}
@@ -229,7 +231,7 @@ func NewDeckhouseController(
 
 	// Module v2 controller (feature flag)
 	if app.ModulePackagesEnabled() {
-		opts.Cache.ByObject[&v1alpha2.Module{}] = cache.ByObject{}
+		opts.Cache.ByObject[&v1beta1.Module{}] = cache.ByObject{}
 	}
 
 	admission, serveWebhooks := app.TakeOverAdmissionServer()
@@ -265,7 +267,7 @@ func NewDeckhouseController(
 	moduleEventCh := make(chan events.ModuleEvent, 350)
 	operator.ModuleManager.SetModuleEventsChannel(moduleEventCh)
 	// set chrooted environment for modules
-	if len(os.Getenv(app.EnvShellChrootDir)) > 0 {
+	if len(os.Getenv(envconfig.EnvShellChrootDir)) > 0 {
 		setModulesEnvironment(operator)
 	}
 
@@ -348,7 +350,7 @@ func NewDeckhouseController(
 		return nil, fmt.Errorf("create deckhouse release controller: %w", err)
 	}
 
-	err = moduleconfig.RegisterController(runtimeManager, operator.ModuleManager, pkgRuntime, conversionsStore, edition, configHandler, operator.MetricStorage, exts, logger.Named("module-config-controller"))
+	err = moduleconfig.RegisterController(runtimeManager, operator.ModuleManager, conversionsStore, edition, configHandler, operator.MetricStorage, exts, logger.Named("module-config-controller"))
 	if err != nil {
 		return nil, fmt.Errorf("register module config controller: %w", err)
 	}
@@ -458,7 +460,6 @@ func NewDeckhouseController(
 	return &DeckhouseController{
 		runtimeManager:     runtimeManager,
 		moduleLoader:       loader,
-		packageRuntime:     pkgRuntime,
 		preflightCountDown: preflightCountDown,
 
 		dc: dc,
@@ -507,11 +508,6 @@ func (c *DeckhouseController) Start(ctx context.Context) error {
 		return fmt.Errorf("wait for cache sync")
 	}
 
-	// load initial configuration from cluster state
-	if err := c.loadInitialConfiguration(ctx); err != nil {
-		return fmt.Errorf("load initial configuration: %w", err)
-	}
-
 	// sync fs with cluster state, restore or delete modules
 	if err := c.moduleLoader.Sync(ctx); err != nil {
 		return fmt.Errorf("init module loader: %w", err)
@@ -524,29 +520,6 @@ func (c *DeckhouseController) Start(ctx context.Context) error {
 
 	// update embedded policy and deckhouse settings by the deckhouse moduleConfig
 	go c.syncDeckhouseSettings()
-
-	return nil
-}
-
-// loadInitialConfiguration seeds the runtime with the ModuleConfig state already
-// present in the cluster, before the module loader starts syncing packages. At
-// this point no package is tracked yet, so UpdateModulesSettings records only the
-// enabled/disabled intent (it lives in the global module and is read by the
-// scheduler's config rule the moment a package registers); the per-package
-// settings are dropped here and supplied later by the loader via UpdateModule.
-func (c *DeckhouseController) loadInitialConfiguration(ctx context.Context) error {
-	configs := new(v1alpha1.ModuleConfigList)
-	if err := c.runtimeManager.GetClient().List(ctx, configs); err != nil {
-		return fmt.Errorf("list module configs: %w", err)
-	}
-
-	for _, conf := range configs.Items {
-		if conf.DeletionTimestamp != nil {
-			continue
-		}
-
-		c.packageRuntime.UpdateModulesSettings(conf.Name, conf.Spec.Version, conf.Spec.Settings.GetMap(), conf.Spec.Maintenance, conf.Spec.Enabled)
-	}
 
 	return nil
 }

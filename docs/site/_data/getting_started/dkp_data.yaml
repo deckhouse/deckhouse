@@ -79,8 +79,8 @@ installTypes:
       code: standard
       name: Standard
     pages_title:
-      en: "Deckhouse Platform on top of virtualization in Deckhouse Platform"
-      ru: "Deckhouse Platform поверх виртуализации в Deckhouse Platform"
+      en: "Deckhouse Platform on built-in virtualization in Deckhouse Platform"
+      ru: "Deckhouse Platform на встроенной виртуализации в Deckhouse Platform"
     type: cloud
     installer_support: true
     name:

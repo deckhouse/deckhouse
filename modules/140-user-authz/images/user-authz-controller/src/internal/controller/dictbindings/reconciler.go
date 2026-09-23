@@ -17,8 +17,9 @@ limitations under the License.
 // Package dictbindings grants the d8:dict ClusterRole to every subject that holds a namespace role.
 //
 // Subjects are collected from RoleBindings of the granular role model (roleRef d8:namespace:*, not
-// created by Deckhouse) and from the RoleBindings the module itself creates for the basic model's
-// namespaced rules (roleRef user-authz:user|privileged-user|editor|admin). Each distinct subject
+// created by Deckhouse), from the RoleBindings multitenancy-manager fans out of ProjectRoleBinding
+// and ClusterProjectRoleBinding objects (roleRef d8:project:*), and from the RoleBindings the module
+// itself creates for the basic model's namespaced rules (roleRef user-authz:user|privileged-user|editor|admin). Each distinct subject
 // gets one ClusterRoleBinding d8:dict:*; bindings whose subject no longer holds any namespace role,
 // duplicates, bindings to the former dict role name d8:use:dict, and bindings that lost their
 // roleRef or subject are removed (roleRef is immutable, so a renamed role means a recreated
@@ -79,6 +80,12 @@ const (
 	// deprecated aliases (templates/rbacv2-compat); their holders keep the dictionary too. Remove
 	// together with the aliases.
 	legacyUseRolePrefix = "d8:use:role:"
+	// projectRolePrefix names the project roles (d8:project:*). Their holders reach them through
+	// ProjectRoleBinding / ClusterProjectRoleBinding, which multitenancy-manager fans out into
+	// RoleBindings labelled heritage=multitenancy-manager; a project admin reads the dictionaries
+	// (StorageClasses, ClusterIssuers) exactly as a namespace admin does, and the README promises
+	// them the same catalogue.
+	projectRolePrefix = "d8:project:"
 )
 
 // DictLabels mark the ClusterRoleBindings this reconciler owns.
@@ -287,7 +294,7 @@ func contributesSubjects(rb *rbacv1.RoleBinding) bool {
 
 	deckhouse := rb.Labels[labelHeritage] == "deckhouse"
 
-	if !deckhouse && (strings.HasPrefix(rb.RoleRef.Name, useRolePrefix) || strings.HasPrefix(rb.RoleRef.Name, legacyUseRolePrefix)) {
+	if !deckhouse && (strings.HasPrefix(rb.RoleRef.Name, useRolePrefix) || strings.HasPrefix(rb.RoleRef.Name, legacyUseRolePrefix) || strings.HasPrefix(rb.RoleRef.Name, projectRolePrefix)) {
 		return true
 	}
 

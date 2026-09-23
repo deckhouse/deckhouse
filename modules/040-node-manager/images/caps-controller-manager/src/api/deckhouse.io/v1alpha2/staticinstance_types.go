@@ -24,6 +24,17 @@ import (
 	"sigs.k8s.io/cluster-api/util/conditions"
 )
 
+// Connectivity condition types set on a StaticInstance while its StaticMachine bootstraps.
+//
+// They are declared here, next to the ToPending that has to clear them, and re-exported by
+// api/infrastructure/v1alpha1 for the controllers that set them. The dependency runs this way
+// because api/infrastructure/v1alpha1 is reachable from this package through the v1alpha1
+// conversion, so importing it back would close a cycle in the test build.
+const (
+	StaticInstanceCheckTCPConnectionCondition = "CheckTcpConnection"
+	StaticInstanceCheckSSHConnectionCondition = "CheckSshCondition"
+)
+
 // EDIT THIS FILE!  THIS IS SCAFFOLDING FOR YOU TO OWN!
 // NOTE: json tags are required.  Any new fields you add must have json tags for the fields to be serialized.
 
@@ -144,9 +155,16 @@ func (r *StaticInstance) GetPhase() StaticInstanceStatusCurrentStatusPhase {
 }
 
 // SetPhase sets the current phase of the static instance.
+//
+// LastUpdateTime is refreshed only on a real phase transition: rewriting it on every
+// call makes the patch helper see a diff on every reconcile, which turns into a write
+// to etcd, a watch event and an immediate re-reconcile. It also keeps the phase
+// timeouts (bootstrap, cleanup) from ever being reached.
 func (r *StaticInstance) SetPhase(phase StaticInstanceStatusCurrentStatusPhase) {
 	if r.Status.CurrentStatus == nil {
 		r.Status.CurrentStatus = &StaticInstanceStatusCurrentStatus{}
+	} else if r.Status.CurrentStatus.Phase == phase {
+		return
 	}
 
 	r.Status.CurrentStatus.Phase = phase
@@ -156,7 +174,14 @@ func (r *StaticInstance) SetPhase(phase StaticInstanceStatusCurrentStatusPhase) 
 func (r *StaticInstance) ToPending() {
 	r.Status.MachineRef = nil
 	r.Status.NodeRef = nil
-	r.Status.CurrentStatus = nil
+
+	// The connectivity checks belong to the StaticMachine being detached, and nothing else
+	// clears them: metadata.generation cannot be used to tell a stale one from a fresh one,
+	// because the status subresource keeps it pinned for the whole life of the object. A
+	// leftover CheckTcpConnection=True would make the next StaticMachine skip the TCP check
+	// and go straight to ssh against a host that may well be gone.
+	conditions.Delete(r, StaticInstanceCheckTCPConnectionCondition)
+	conditions.Delete(r, StaticInstanceCheckSSHConnectionCondition)
 
 	conditions.Set(r, metav1.Condition{
 		Type:               "BootstrapSucceeded",

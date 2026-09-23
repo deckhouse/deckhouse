@@ -42,7 +42,10 @@ import (
 // the AuthorizationRule RoleBindings into project namespaces from
 // system:serviceaccounts:d8-user-authz) deadlocks. Unlike protect.go's broader systemBypassGroups,
 // system:masters is absent here: the handler itself still polices a cluster-admin (unit tests call
-// the handler directly). In-cluster, matchConditions skip system:masters before this code runs.
+// the handler directly). In-cluster, the matchConditions of the grant webhooks skip system:masters
+// before this code runs; they live in hooks/configure_grant_validation_webhook.go
+// (systemWriterMatchConditions). The Project/ProjectTemplate/PRB/PN/CPRB webhooks in
+// templates/admission/validation.yaml do NOT skip system:masters -- only these grant webhooks do.
 var automatedSystemWriterGroups = map[string]struct{}{
 	"system:nodes":                         {},
 	"system:serviceaccounts:kube-system":   {},
@@ -120,8 +123,8 @@ func (v *IsGrantedValidator) decide(ctx context.Context, req *admissionv1.Admiss
 	// kube-system controllers / the kubelet must not be blocked during teardown either. The grant
 	// allow-list exists to police USERS, who instead get a fast, terminal admission denial.
 	// NOTE: system:masters is not in automatedSystemWriterGroups, so a direct handler call still
-	// polices a cluster-admin. In-cluster, matchConditions already skip system:masters — those
-	// requests never reach this handler.
+	// polices a cluster-admin. In-cluster, the grant webhooks' matchConditions already skip
+	// system:masters — those requests never reach this handler.
 	if isAutomatedSystemWriter(req) {
 		return allowedResponse(req.UID), nil
 	}
@@ -151,7 +154,7 @@ func (v *IsGrantedValidator) decide(ctx context.Context, req *admissionv1.Admiss
 	}
 	project := resolve.ProjectName(ns)
 
-	grants, err := resolve.GrantsForLabels(ctx, v.cl, ns.Labels)
+	grants, err := resolve.GrantsForNamespace(ctx, v.cl, ns)
 	if err != nil {
 		return nil, fmt.Errorf("applicable grants: %w", err)
 	}

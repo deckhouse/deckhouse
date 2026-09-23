@@ -1,0 +1,15 @@
+module: ee/se-plus/modules/030-cloud-provider-zvirt
+registration:
+  capiClusterAPIVersion: infrastructure.cluster.x-k8s.io/v1
+  capiClusterKind: ZvirtCluster
+  capiClusterName: zvirt
+renderData:
+  cluster:
+    name: zvirt
+    namespace: d8-cloud-instance-manager
+  controlPlane:
+  - host: 192.0.2.10
+    port: 6443
+  prefix: ""
+  provider:
+    clusterID: cluster-id

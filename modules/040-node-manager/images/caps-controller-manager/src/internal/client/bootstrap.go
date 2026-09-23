@@ -46,6 +46,12 @@ import (
 
 const (
 	RequeueForStaticInstanceBootstrapping = 1 * time.Minute
+	// RequeueForCheckInProgress is how often a still running TCP/SSH check is polled.
+	RequeueForCheckInProgress = 5 * time.Second
+	// TCPCheckDialTimeout bounds a single TCP connectivity probe. It must not be derived
+	// from the rate limiter delay: the first attempt would then get the base backoff
+	// (a fraction of a second) as its dial timeout and fail on any real network.
+	TCPCheckDialTimeout = 5 * time.Second
 )
 
 // requestedNodeNameCommand is the fragment of the bootstrap command that hands the
@@ -155,7 +161,7 @@ func (c *Client) bootstrapStaticInstance(ctx context.Context,
 			return fmt.Errorf("failed to create ssh client: %w", tErr)
 		}
 		tLogger.Info("bootstrapping node")
-		tRes, tErr := sshCl.ExecSSHCommandToString(
+		tRes, tErr := sshCl.ExecSSHCommandToString(tCtx,
 			fmt.Sprintf("mkdir -p /var/lib/bashible && echo '%s' > /var/lib/bashible/node-spec-provider-id && echo '%s' > /var/lib/bashible/machine-name%s && echo '%s' | base64 -d | bash",
 				t.providerID, t.machineName, requestedNodeNameCommand(t.nodeName), base64.StdEncoding.EncodeToString(t.bootstrapScript)))
 		if tErr != nil {
@@ -176,9 +182,9 @@ func (c *Client) bootstrapStaticInstance(ctx context.Context,
 		return nil
 	}
 
-	logger = logger.WithValues("taskID", string(staticMachine.Spec.ProviderID))
+	logger = logger.WithValues("taskID", string(staticMachine.UID))
 	logger.Info("Running bootstrap task")
-	err, finished := c.taskManager.Spawn(c.taskManagerCtx, string(staticMachine.Spec.ProviderID), "bootstrap", taskData, taskFunc)
+	err, finished := c.taskManager.Spawn(c.taskManagerCtx, string(staticMachine.UID), "bootstrap", taskData, taskFunc)
 	if err != nil {
 		return ctrl.Result{}, fmt.Errorf("failed to bootstrap StaticInstance: %w", err)
 	}
@@ -203,34 +209,41 @@ func (c *Client) setStaticInstancePhaseToBootstrapping(ctx context.Context,
 	staticInstance *deckhousev1.StaticInstance,
 	staticMachine *infrav1.StaticMachine,
 	credentials deckhousev1.SSHCredentialsSpec,
-	sshLegacyMode bool) (res ctrl.Result, resErr error) {
+	sshLegacyMode bool) (ctrl.Result, error) {
 	logger := ctrl.LoggerFrom(ctx).WithValues("staticMachineUID", staticMachine.UID, "staticInstanceAddress", staticInstance.Spec.Address)
 
+	// The reservation is deliberately kept for the whole bootstrap window: a failed check is
+	// retried with the address backoff rather than released, so that a Pending write and the
+	// watch event it produces cannot re-enqueue this StaticMachine.
+	//
+	// How the instance gets back to the pool depends on whether the host was ever touched,
+	// which is exactly what an empty ProviderID tells: it is assigned at the end of this
+	// function, after both checks pass, and the bootstrap script only runs for a non-empty one.
+	//
+	// Empty ProviderID - nothing ran on the host, so the bootstrap timeout in
+	// reconcileStaticInstancePhase releases the instance itself, and the delete flow skips the
+	// remote cleanup instead of rebooting a host caps never touched.
+	//
+	// Non-empty ProviderID - the host may be half-bootstrapped and must not be handed to
+	// another StaticMachine as is. The reservation is held, the timeout only marks the
+	// StaticMachine with CreateError, and the instance comes back through the
+	// MachineHealthCheck the node-controller creates for static clusters
+	// (nodeStartupTimeoutSeconds: 1200): remediation deletes the Machine, cleanup runs, and the
+	// cleanup timeout moves the instance to Pending.
 	if err := c.reserveStaticInstance(staticInstance, staticMachine); err != nil {
 		return ctrl.Result{}, fmt.Errorf("failed to reserve StaticInstance: %w", err)
 	}
 
-	defer func() {
-		if resErr != nil {
-			logger.Info("Releasing StaticInstance reservation due to error", "error", resErr.Error())
-			c.releaseStaticInstance(staticInstance, staticMachine)
-		}
-	}()
-
 	address := net.JoinHostPort(staticInstance.Spec.Address, strconv.Itoa(credentials.SSHPort))
-	delay := c.tcpCheckRateLimiter.When(address)
-	defer c.tcpCheckRateLimiter.Forget(address)
 
 	tcpCondition := conditions.Get(staticInstance, infrav1.StaticInstanceCheckTCPConnection)
 	if tcpCondition == nil || tcpCondition.Status != metav1.ConditionTrue {
 		type taskDataStr struct {
 			address string
-			delay   time.Duration
 		}
 
 		taskData := taskDataStr{
 			address: address,
-			delay:   delay,
 		}
 
 		taskFunc := func(tCtx context.Context, data any) error {
@@ -242,8 +255,8 @@ func (c *Client) setStaticInstancePhaseToBootstrapping(ctx context.Context,
 				return errors.New("invalid task data")
 			}
 
-			tLogger.Info("Checking TCP connection", "address", t.address, "timeout", t.delay.String())
-			conn, tErr := net.DialTimeout("tcp", t.address, t.delay)
+			tLogger.Info("Checking TCP connection", "address", t.address, "timeout", TCPCheckDialTimeout.String())
+			conn, tErr := net.DialTimeout("tcp", t.address, TCPCheckDialTimeout)
 			if tErr != nil {
 				tLogger.Error(tErr, "Failed to connect to instance by TCP", "address", t.address)
 				return fmt.Errorf("Failed to check the StaticInstance address by establishing a tcp connection: %w", tErr)
@@ -269,13 +282,20 @@ func (c *Client) setStaticInstancePhaseToBootstrapping(ctx context.Context,
 				LastTransitionTime: metav1.Now(),
 			})
 
-			return ctrl.Result{RequeueAfter: delay}, nil
+			// When counts a failure, so it belongs here and not at the top of the branch:
+			// called on every poll of a still running check it would reach the ceiling after
+			// a handful of reconciles regardless of how many attempts actually failed.
+			return ctrl.Result{RequeueAfter: c.tcpCheckRateLimiter.When(address)}, nil
 		}
 
 		if !finished {
-			logger.Info("TCP check still running, requeueing", "requeueAfter", delay)
-			return ctrl.Result{RequeueAfter: delay}, nil
+			logger.Info("TCP check still running, requeueing", "requeueAfter", RequeueForCheckInProgress)
+			return ctrl.Result{RequeueAfter: RequeueForCheckInProgress}, nil
 		}
+
+		// Only a successful check resets the backoff. Forgetting unconditionally pins the
+		// delay to the base value forever, so the rate limiter never limits anything.
+		c.tcpCheckRateLimiter.Forget(address)
 
 		logger.Info("TCP connection check passed")
 		conditions.Set(staticInstance, metav1.Condition{
@@ -287,8 +307,8 @@ func (c *Client) setStaticInstancePhaseToBootstrapping(ctx context.Context,
 		})
 	}
 
-	if sshCondition := conditions.Get(staticInstance, infrav1.StaticInstanceCheckSSHCondition); sshCondition == nil ||
-		sshCondition.Status != metav1.ConditionTrue {
+	sshCondition := conditions.Get(staticInstance, infrav1.StaticInstanceCheckSSHCondition)
+	if sshCondition == nil || sshCondition.Status != metav1.ConditionTrue {
 		type taskDataStr struct {
 			host          string
 			address       string
@@ -325,7 +345,7 @@ func (c *Client) setStaticInstancePhaseToBootstrapping(ctx context.Context,
 				tLogger.Error(tErr, "Failed to connect via ssh")
 				return fmt.Errorf("failed to connect via ssh with address %s: %w", t.address, tErr)
 			}
-			tRes, tErr := sshCl.ExecSSHCommandToString("echo check_ssh")
+			tRes, tErr := sshCl.ExecSSHCommandToString(tCtx, "echo check_ssh")
 			if tErr != nil {
 				scanner := bufio.NewScanner(strings.NewReader(tRes))
 				for scanner.Scan() {
@@ -357,13 +377,27 @@ func (c *Client) setStaticInstancePhaseToBootstrapping(ctx context.Context,
 				LastTransitionTime: metav1.Now(),
 			})
 
-			return ctrl.Result{}, err
+			// A host that does not answer over ssh is a transient condition, not a reason to
+			// give the StaticInstance back to the pool: the release would write the Pending
+			// phase to etcd and the resulting watch event would re-enqueue this very
+			// StaticMachine immediately, which is the throttling loop itself. Keep the
+			// reservation and retry with the address backoff instead; the bootstrap timeout
+			// breaks the cycle if the host never comes back.
+			//
+			// When counts a failure, so it belongs here and not at the top of the branch:
+			// called on every poll of a still running check it would reach the ceiling after
+			// a handful of reconciles regardless of how many attempts actually failed.
+			return ctrl.Result{RequeueAfter: c.sshCheckRateLimiter.When(address)}, nil
 		}
 
 		if !finished {
-			logger.Info("SSH check still running, requeueing", "requeueAfter", delay)
-			return ctrl.Result{RequeueAfter: delay}, nil
+			logger.Info("SSH check still running, requeueing", "requeueAfter", RequeueForCheckInProgress)
+			return ctrl.Result{RequeueAfter: RequeueForCheckInProgress}, nil
 		}
+
+		// Only a successful check resets the backoff. Forgetting unconditionally pins the
+		// delay to the base value forever, so the rate limiter never limits anything.
+		c.sshCheckRateLimiter.Forget(address)
 
 		logger.Info("SSH connectivity check passed")
 		conditions.Set(staticInstance, metav1.Condition{
@@ -404,14 +438,6 @@ func (c *Client) reserveStaticInstance(staticInstance *deckhousev1.StaticInstanc
 
 	staticInstance.SetPhase(deckhousev1.StaticInstanceStatusCurrentStatusPhaseBootstrapping)
 	return nil
-}
-
-func (c *Client) releaseStaticInstance(staticInstance *deckhousev1.StaticInstance, staticMachine *infrav1.StaticMachine) {
-	if staticInstance.Status.MachineRef == nil || staticInstance.Status.MachineRef.UID != staticMachine.UID {
-		return
-	}
-
-	staticInstance.ToPending()
 }
 
 // setStaticInstancePhaseToRunning finishes the bootstrap process by waiting for bootstrapping Node to appear and patching StaticMachine and StaticInstance.

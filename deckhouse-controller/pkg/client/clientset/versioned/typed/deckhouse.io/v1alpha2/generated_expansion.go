@@ -15,8 +15,6 @@
 
 package v1alpha2
 
-type ModuleExpansion interface{}
-
 type ModulePullOverrideExpansion interface{}
 
 type ModuleUpdatePolicyExpansion interface{}

@@ -1,13 +1,3 @@
-# The schema of the NEXT release's settings, present here on purpose.
-#
-# Nothing in this release acts on `mode`, `primary` or `storage` — the implementation that reads them
-# ships in the release after this one. What the schema buys is the ability to WRITE them before the
-# upgrade, which for a `Direct` cluster is the only order that works: its nodes pull through the
-# in-cluster address, the upgrade removes the objects serving it, and the new implementation takes
-# that address over from the configuration below.
-#
-# Kept byte-identical to the next release's schema, validation rules included, so that anything
-# accepted here is accepted there.
 type: object
 x-deckhouse-validations:
   # These expressions are evaluated against the raw config values, BEFORE schema

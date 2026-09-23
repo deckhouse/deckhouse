@@ -16,6 +16,7 @@ package config
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -117,7 +118,7 @@ func ValidateResources(configData string, opts ...ValidateOption) error {
 
 // ValidateInitConfiguration parses and validates cluster InitConfiguration.
 // It requires one doc with InitConfiguration kind.
-func ValidateInitConfiguration(configData string, schemaStore *SchemaStore, opts ...ValidateOption) error {
+func ValidateInitConfiguration(ctx context.Context, configData string, schemaStore *SchemaStore, opts ...ValidateOption) error {
 	options := applyOptions(opts...)
 	if !options.commanderMode {
 		panic("ValidateInitConfiguration operation is currently supported only in commander mode")
@@ -152,7 +153,7 @@ func ValidateInitConfiguration(configData string, schemaStore *SchemaStore, opts
 
 		var errMessages []string
 
-		err = schemaStore.ValidateWithIndex(&index, &docData, opts...)
+		err = schemaStore.ValidateWithIndex(ctx, &index, &docData, opts...)
 		if err != nil {
 			errMessages = append(errMessages, err.Error())
 		}
@@ -193,6 +194,7 @@ func ValidateInitConfiguration(configData string, schemaStore *SchemaStore, opts
 // Returns ClusterConfig that needs to validate ProviderSpecificClusterConfiguration.
 // ClusterConfig may not be empty even is error is returned.
 func ValidateClusterConfiguration(
+	ctx context.Context,
 	clusterConfigData string,
 	schemaStore *SchemaStore,
 	opts ...ValidateOption,
@@ -232,7 +234,7 @@ func ValidateClusterConfiguration(
 
 		var errMessages []string
 
-		err = schemaStore.ValidateWithIndex(&index, &docData, opts...)
+		err = schemaStore.ValidateWithIndex(ctx, &index, &docData, opts...)
 		if err != nil {
 			errMessages = append(errMessages, err.Error())
 		}
@@ -291,6 +293,7 @@ func ValidateClusterConfiguration(
 // "DVPClusterConfiguration",
 // ]
 func ValidateProviderSpecificClusterConfiguration(
+	ctx context.Context,
 	providerSpecificClusterConfiguration string,
 	clusterConfig ClusterConfig,
 	schemaStore *SchemaStore,
@@ -344,7 +347,7 @@ func ValidateProviderSpecificClusterConfiguration(
 
 		var errMessages []string
 
-		err = schemaStore.ValidateWithIndex(&index, &docData, opts...)
+		err = schemaStore.ValidateWithIndex(ctx, &index, &docData, opts...)
 		if err != nil {
 			errMessages = append(errMessages, err.Error())
 		}
@@ -382,6 +385,7 @@ func ValidateProviderSpecificClusterConfiguration(
 // ValidateStaticClusterConfiguration parses and validates cluster StaticClusterConfiguration.
 // It requires one or zero doc with StaticClusterConfiguration kind.
 func ValidateStaticClusterConfiguration(
+	ctx context.Context,
 	staticClusterConfiguration string,
 	schemaStore *SchemaStore,
 	opts ...ValidateOption,
@@ -419,7 +423,7 @@ func ValidateStaticClusterConfiguration(
 
 		var errMessages []string
 
-		err = schemaStore.ValidateWithIndex(&index, &docData, opts...)
+		err = schemaStore.ValidateWithIndex(ctx, &index, &docData, opts...)
 		if err != nil {
 			errMessages = append(errMessages, err.Error())
 		}

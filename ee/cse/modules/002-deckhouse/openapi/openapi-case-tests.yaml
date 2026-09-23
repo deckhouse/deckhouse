@@ -1,0 +1,6 @@
+# Test stub. The directory does not contain config-values.yaml, but the tests require a check for all openapi directories.
+positive:
+  configValues:
+  - {}
+  values:
+  - { internal: {} }

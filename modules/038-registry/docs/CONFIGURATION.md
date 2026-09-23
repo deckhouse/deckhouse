@@ -1,11 +1,6 @@
 ---
 title: "Module registry: configuration"
+description: "How to configure where a Deckhouse Platform cluster pulls its images from."
 ---
-
-{% alert level="warning" %}
-To configure connection parameters to the container registry and manage the container registry operating mode, use the [`registry`](/modules/deckhouse/configuration.html#parameters-registry) section of the `deckhouse` module configuration.
-
-The parameters of the `registry` module itself are specified in ModuleConfig `registry`.
-{% endalert %}
 
 <!-- SCHEMA -->

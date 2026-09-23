@@ -1,0 +1,31 @@
+---
+# Prometheus reaches the controller's metrics through the kube-rbac-proxy sidecar, which turns every
+# scrape into a SubjectAccessReview for this subresource.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: access-to-multitenancy-manager-metrics
+  namespace: d8-{{ .Chart.Name }}
+  {{- include "helm_lib_module_labels" (list . (dict "app" "multitenancy-manager")) | nindent 2 }}
+rules:
+  - apiGroups: ["apps"]
+    resources: ["deployments/prometheus-metrics"]
+    resourceNames: ["multitenancy-manager"]
+    verbs: ["get"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: access-to-multitenancy-manager-metrics
+  namespace: d8-{{ .Chart.Name }}
+  {{- include "helm_lib_module_labels" (list . (dict "app" "multitenancy-manager")) | nindent 2 }}
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: access-to-multitenancy-manager-metrics
+subjects:
+  - kind: User
+    name: d8-monitoring:scraper
+  - kind: ServiceAccount
+    name: prometheus
+    namespace: d8-monitoring

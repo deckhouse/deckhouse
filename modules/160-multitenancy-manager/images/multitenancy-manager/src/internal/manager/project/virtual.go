@@ -79,7 +79,7 @@ func (m *Manager) realProjectNames(ctx context.Context) (map[string]struct{}, er
 }
 
 func isVirtualInventory(p *v1alpha3.Project) bool {
-	if p.Labels[v1alpha3.ProjectLabelVirtualProject] == "true" {
+	if p.IsVirtual() {
 		return true
 	}
 	return p.Name == DeckhouseProjectName || p.Name == DefaultProjectName

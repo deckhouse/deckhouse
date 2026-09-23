@@ -48,7 +48,7 @@ import (
 	packagestatus "github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/status"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/registry"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
-	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha2"
+	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1beta1"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/packages/module"
 	"github.com/deckhouse/deckhouse/go_lib/project"
 	"github.com/deckhouse/deckhouse/pkg/log"
@@ -90,12 +90,12 @@ type ControllerTestSuite struct {
 func (suite *ControllerTestSuite) SetupSuite() {
 	suite.Init(reconcilertest.Config{
 		StatusSubresources: []client.Object{
-			&v1alpha2.Module{},
+			&v1beta1.Module{},
 			&v1alpha1.ModulePackage{},
 			&v1alpha1.ModulePackageVersion{},
 		},
 		SnapshotKinds: []schema.GroupVersionKind{
-			v1alpha2.SchemeGroupVersion.WithKind("Module"),
+			v1beta1.SchemeGroupVersion.WithKind("Module"),
 			v1alpha1.SchemeGroupVersion.WithKind("ModulePackage"),
 			v1alpha1.SchemeGroupVersion.WithKind("ModulePackageVersion"),
 			v1alpha1.SchemeGroupVersion.WithKind("PackageRepository"),
@@ -204,7 +204,7 @@ func (suite *ControllerTestSuite) TestReconcile() {
 		assert.True(suite.T(), suite.getVersion(versionName).Status.Used)
 
 		mod := suite.getModule(moduleName)
-		assert.Contains(suite.T(), mod.Finalizers, v1alpha2.ModuleFinalizerStatisticRegistered)
+		assert.Contains(suite.T(), mod.Finalizers, v1beta1.ModuleFinalizerStatisticRegistered)
 		assert.Equal(suite.T(), versionName, ownerRefName(mod, v1alpha1.ModulePackageVersionKind))
 		assert.Equal(suite.T(), moduleName, ownerRefName(mod, v1alpha1.ModulePackageKind))
 	})
@@ -220,7 +220,7 @@ func (suite *ControllerTestSuite) TestReconcile() {
 		// The finalizer is claimed before the package lookup, so deletion is guarded
 		// even for a module that never resolved.
 		assert.Contains(suite.T(), suite.getModule(moduleName).Finalizers,
-			v1alpha2.ModuleFinalizerStatisticRegistered)
+			v1beta1.ModuleFinalizerStatisticRegistered)
 	})
 
 	suite.Run("missing version requeues", func() {
@@ -302,7 +302,7 @@ func (suite *ControllerTestSuite) TestReconcile() {
 		require.NoError(suite.T(), err)
 
 		annotations := suite.getModule(moduleName).Annotations
-		assert.NotContains(suite.T(), annotations, v1alpha2.ModuleAnnotationRegistrySpecChanged)
+		assert.NotContains(suite.T(), annotations, v1alpha1.PackageAnnotationRegistrySpecChanged)
 		assert.Contains(suite.T(), annotations, "packages.deckhouse.io/keep-me")
 	})
 
@@ -313,18 +313,19 @@ func (suite *ControllerTestSuite) TestReconcile() {
 		require.NoError(suite.T(), err)
 		assert.True(suite.T(), result.IsZero())
 
-		// The released path would resolve this fixture too, so reaching the runtime as an
-		// embedded module — with no Definition, which is what the image already ships — is
+		// The released path would resolve this fixture too, so reaching the runtime with neither
+		// a repository nor a Definition — which is what routes it to the embedded pipeline — is
 		// what tells the two apart.
-		assert.Empty(suite.T(), suite.manager.updated,
-			"the image ships an embedded module, so nothing is pulled for it")
-		assert.Equal(suite.T(), []packageruntime.Module{{
+		require.Len(suite.T(), suite.manager.updated, 1)
+		assert.False(suite.T(), suite.manager.updated[0].forced)
+		assert.Equal(suite.T(), packageruntime.Module{
 			Name:            moduleName,
 			Settings:        addonutils.Values{"replicas": float64(2)},
 			SettingsVersion: 1,
 			Maintenance:     "NoResourceReconciliation",
 			Enabled:         ptr.To(true),
-		}}, suite.manager.embedded)
+		}, suite.manager.updated[0].module,
+			"the image ships an embedded module, so nothing is pulled for it")
 
 		// A module the image started shipping after it had already been released still
 		// points at the downloaded version, which the relink has to drop.
@@ -340,7 +341,9 @@ func (suite *ControllerTestSuite) TestReconcile() {
 		require.NoError(suite.T(), err)
 		assert.True(suite.T(), result.IsZero(), "an embedded module follows no mutable tag to re-resolve")
 
-		assert.Len(suite.T(), suite.manager.embedded, 1)
+		require.Len(suite.T(), suite.manager.updated, 1)
+		assert.Empty(suite.T(), suite.manager.updated[0].module.Repository.Name,
+			"an embedded module reaches the runtime without a repository")
 		assert.Empty(suite.T(), suite.manager.digestCalls,
 			"the embedded annotation is read first, the way the bootstrap and the runtime do")
 	})
@@ -370,9 +373,9 @@ func (suite *ControllerTestSuite) TestReconcile() {
 			"the tag is what decides which image the digest is resolved from")
 
 		annotations := suite.getModule(moduleName).Annotations
-		assert.Equal(suite.T(), devDigest, annotations[v1alpha2.ModuleAnnotationHash],
+		assert.Equal(suite.T(), devDigest, annotations[v1beta1.ModuleAnnotationHash],
 			"the digest is recorded only after the handover, so a failure re-forces rather than skips")
-		assert.NotContains(suite.T(), annotations, v1alpha2.ModuleAnnotationRegistrySpecChanged)
+		assert.NotContains(suite.T(), annotations, v1alpha1.PackageAnnotationRegistrySpecChanged)
 	})
 
 	suite.Run("dev module on an untouched digest is not forced", func() {
@@ -423,7 +426,7 @@ func (suite *ControllerTestSuite) TestReconcile() {
 		assert.Equal(suite.T(), []removedModule{{name: moduleName}}, suite.manager.removed)
 		assert.False(suite.T(), suite.getVersion(versionName).Status.Used)
 
-		err = suite.Client().Get(ctx, client.ObjectKey{Name: moduleName}, new(v1alpha2.Module))
+		err = suite.Client().Get(ctx, client.ObjectKey{Name: moduleName}, new(v1beta1.Module))
 		assert.Truef(suite.T(), apierrors.IsNotFound(err), "the finalizer must be released, got %v", err)
 	})
 
@@ -460,13 +463,13 @@ func (suite *ControllerTestSuite) TestReconcile() {
 		_, err := suite.ctr.Reconcile(ctx, request(moduleName))
 		require.NoError(suite.T(), err, "a version that is gone needs no cleanup")
 
-		err = suite.Client().Get(ctx, client.ObjectKey{Name: moduleName}, new(v1alpha2.Module))
+		err = suite.Client().Get(ctx, client.ObjectKey{Name: moduleName}, new(v1beta1.Module))
 		assert.Truef(suite.T(), apierrors.IsNotFound(err), "the finalizer must be released, got %v", err)
 	})
 }
 
-func (suite *ControllerTestSuite) getModule(name string) *v1alpha2.Module {
-	mod := new(v1alpha2.Module)
+func (suite *ControllerTestSuite) getModule(name string) *v1beta1.Module {
+	mod := new(v1beta1.Module)
 	require.NoError(suite.T(), suite.Client().Get(context.TODO(), client.ObjectKey{Name: name}, mod))
 
 	return mod
@@ -503,7 +506,8 @@ func TestReconcileRequeuesOnGetError(t *testing.T) {
 func TestRelinkFailureKeepsTheModuleOutOfTheRuntime(t *testing.T) {
 	cl := seedFakeClient(t, "successful-reconcile.yaml", interceptor.Funcs{
 		SubResourcePatch: func(context.Context, client.Client, string, client.Object, client.Patch,
-			...client.SubResourcePatchOption) error {
+			...client.SubResourcePatchOption,
+		) error {
 			return errors.New("status patch rejected")
 		},
 	})
@@ -555,7 +559,7 @@ func TestCommitFailureLeavesTheRuntimeAheadOfTheAPI(t *testing.T) {
 	assert.False(t, versionUsed(t, cl, versionName))
 	assert.True(t, versionUsed(t, cl, nextVersionName))
 
-	mod := new(v1alpha2.Module)
+	mod := new(v1beta1.Module)
 	require.NoError(t, cl.Get(context.Background(), client.ObjectKey{Name: moduleName}, mod))
 	assert.Equal(t, versionName, ownerRefName(mod, v1alpha1.ModulePackageVersionKind))
 }
@@ -575,9 +579,9 @@ func TestDevHashIsNotRecordedWhenThePatchFails(t *testing.T) {
 
 	// The digest is written in the same patch that was rejected, so the next pass still
 	// sees the old one and forces again instead of skipping the repush.
-	mod := new(v1alpha2.Module)
+	mod := new(v1beta1.Module)
 	require.NoError(t, cl.Get(context.Background(), client.ObjectKey{Name: moduleName}, mod))
-	assert.NotContains(t, mod.Annotations, v1alpha2.ModuleAnnotationHash)
+	assert.NotContains(t, mod.Annotations, v1beta1.ModuleAnnotationHash)
 }
 
 func TestReconcileWaitsForInit(t *testing.T) {
@@ -619,7 +623,8 @@ func TestReconcileWaitsForInit(t *testing.T) {
 func TestFinalizerFailureKeepsTheModuleOutOfTheRuntime(t *testing.T) {
 	cl := seedFakeClient(t, "successful-reconcile.yaml", interceptor.Funcs{
 		Patch: func(context.Context, client.WithWatch, client.Object, client.Patch,
-			...client.PatchOption) error {
+			...client.PatchOption,
+		) error {
 			return errors.New("patch rejected")
 		},
 	})
@@ -643,7 +648,7 @@ func TestFinalizerFailureKeepsTheModuleOutOfTheRuntime(t *testing.T) {
 func TestDeleteIsFinishedWhileAForeignFinalizerHolds(t *testing.T) {
 	cl := seedFakeClient(t, "delete-foreign-finalizer.yaml", interceptor.Funcs{})
 
-	mod := new(v1alpha2.Module)
+	mod := new(v1beta1.Module)
 	require.NoError(t, cl.Get(context.Background(), client.ObjectKey{Name: moduleName}, mod))
 	require.NoError(t, cl.Delete(context.Background(), mod))
 
@@ -668,7 +673,7 @@ func TestDeleteIsFinishedWhileAForeignFinalizerHolds(t *testing.T) {
 func TestDeleteWaitsForRuntimeTeardown(t *testing.T) {
 	cl := seedFakeClient(t, "delete.yaml", interceptor.Funcs{})
 
-	mod := new(v1alpha2.Module)
+	mod := new(v1beta1.Module)
 	require.NoError(t, cl.Get(context.Background(), client.ObjectKey{Name: moduleName}, mod))
 	require.NoError(t, cl.Delete(context.Background(), mod))
 
@@ -688,13 +693,13 @@ func TestDeleteWaitsForRuntimeTeardown(t *testing.T) {
 	assert.True(t, mpv.Status.Used)
 
 	require.NoError(t, cl.Get(context.Background(), client.ObjectKey{Name: moduleName}, mod))
-	assert.Contains(t, mod.Finalizers, v1alpha2.ModuleFinalizerStatisticRegistered)
+	assert.Contains(t, mod.Finalizers, v1beta1.ModuleFinalizerStatisticRegistered)
 }
 
 func TestDeleteFailureKeepsTheFinalizerUntilTheRetry(t *testing.T) {
 	cl := seedFakeClient(t, "delete.yaml", interceptor.Funcs{Patch: failFirstModulePatch()})
 
-	mod := new(v1alpha2.Module)
+	mod := new(v1beta1.Module)
 	require.NoError(t, cl.Get(context.Background(), client.ObjectKey{Name: moduleName}, mod))
 	require.NoError(t, cl.Delete(context.Background(), mod))
 
@@ -707,7 +712,7 @@ func TestDeleteFailureKeepsTheFinalizerUntilTheRetry(t *testing.T) {
 	// The teardown and the detach are already done; dropping the finalizer is all that is
 	// left, so the module has to stay in Terminating until that write lands.
 	require.NoError(t, cl.Get(context.Background(), client.ObjectKey{Name: moduleName}, mod))
-	assert.Contains(t, mod.Finalizers, v1alpha2.ModuleFinalizerStatisticRegistered)
+	assert.Contains(t, mod.Finalizers, v1beta1.ModuleFinalizerStatisticRegistered)
 	assert.False(t, versionUsed(t, cl, versionName))
 
 	_, err = ctr.Reconcile(context.Background(), request(moduleName))
@@ -722,7 +727,8 @@ func TestDeleteFailsOnUnreadableVersion(t *testing.T) {
 
 	cl := seedFakeClient(t, "delete.yaml", interceptor.Funcs{
 		Get: func(ctx context.Context, cl client.WithWatch, key client.ObjectKey, obj client.Object,
-			opts ...client.GetOption) error {
+			opts ...client.GetOption,
+		) error {
 			if _, ok := obj.(*v1alpha1.ModulePackageVersion); ok {
 				return getErr
 			}
@@ -731,7 +737,7 @@ func TestDeleteFailsOnUnreadableVersion(t *testing.T) {
 		},
 	})
 
-	mod := new(v1alpha2.Module)
+	mod := new(v1beta1.Module)
 	require.NoError(t, cl.Get(context.Background(), client.ObjectKey{Name: moduleName}, mod))
 	require.NoError(t, cl.Delete(context.Background(), mod))
 
@@ -745,7 +751,7 @@ func TestDeleteFailsOnUnreadableVersion(t *testing.T) {
 	assert.Equal(t, []removedModule{{name: moduleName}}, manager.removed)
 
 	require.NoError(t, cl.Get(context.Background(), client.ObjectKey{Name: moduleName}, mod))
-	assert.Contains(t, mod.Finalizers, v1alpha2.ModuleFinalizerStatisticRegistered)
+	assert.Contains(t, mod.Finalizers, v1beta1.ModuleFinalizerStatisticRegistered)
 }
 
 func TestDevModuleIsNotHandedOverOnAnUnresolvedDigest(t *testing.T) {
@@ -763,9 +769,9 @@ func TestDevModuleIsNotHandedOverOnAnUnresolvedDigest(t *testing.T) {
 
 	// The digest is the dev module's only change signal, so recording one that was never
 	// handed over would skip the next repush instead of forcing it.
-	mod := new(v1alpha2.Module)
+	mod := new(v1beta1.Module)
 	require.NoError(t, cl.Get(context.Background(), client.ObjectKey{Name: moduleName}, mod))
-	assert.Equal(t, staleDigest, mod.Annotations[v1alpha2.ModuleAnnotationHash])
+	assert.Equal(t, staleDigest, mod.Annotations[v1beta1.ModuleAnnotationHash])
 }
 
 // seedFakeClient builds a client from a fixture and wraps it with funcs, for the paths that
@@ -784,7 +790,7 @@ func seedFakeClient(t *testing.T, fixture string, funcs interceptor.Funcs) clien
 
 	cl := fake.NewClientBuilder().
 		WithScheme(scheme).
-		WithStatusSubresource(&v1alpha2.Module{}, &v1alpha1.ModulePackage{},
+		WithStatusSubresource(&v1beta1.Module{}, &v1alpha1.ModulePackage{},
 			&v1alpha1.ModulePackageVersion{}).
 		WithInterceptorFuncs(funcs).
 		Build()
@@ -804,7 +810,7 @@ func failFirstModulePatch() func(context.Context, client.WithWatch, client.Objec
 
 	return func(ctx context.Context, cl client.WithWatch, obj client.Object, patch client.Patch,
 		opts ...client.PatchOption) error {
-		if _, ok := obj.(*v1alpha2.Module); ok && !failed {
+		if _, ok := obj.(*v1beta1.Module); ok && !failed {
 			failed = true
 
 			return errors.New("patch rejected")
@@ -819,7 +825,8 @@ func failFirstModulePatch() func(context.Context, client.WithWatch, client.Objec
 func failStatusPatchOf(name string) func(context.Context, client.Client, string, client.Object,
 	client.Patch, ...client.SubResourcePatchOption) error {
 	return func(ctx context.Context, cl client.Client, _ string, obj client.Object,
-		patch client.Patch, opts ...client.SubResourcePatchOption) error {
+		patch client.Patch, opts ...client.SubResourcePatchOption,
+	) error {
 		if obj.GetName() == name {
 			return errors.New("status patch rejected")
 		}
@@ -852,7 +859,7 @@ func testScheme(t *testing.T) *runtime.Scheme {
 
 // ownerRefName is the read-only counterpart of ctrlutils.OwnerRefName, kept local so the
 // assertions do not depend on the helper under test.
-func ownerRefName(mod *v1alpha2.Module, kind string) string {
+func ownerRefName(mod *v1beta1.Module, kind string) string {
 	for _, ref := range mod.GetOwnerReferences() {
 		if ref.Kind == kind {
 			return ref.Name
@@ -867,7 +874,6 @@ func ownerRefName(mod *v1alpha2.Module, kind string) string {
 // compile-time check that this stub still matches the real runtime.
 type packageManagerStub struct {
 	updated     []updatedModule
-	embedded    []packageruntime.Module
 	removed     []removedModule
 	digestCalls []digestCall
 
@@ -911,13 +917,8 @@ func (s *packageManagerStub) UpdateModule(mod packageruntime.Module, force bool)
 	s.updated = append(s.updated, updatedModule{module: mod, forced: force})
 }
 
-func (s *packageManagerStub) UpdateEmbeddedModule(mod packageruntime.Module) {
-	s.embedded = append(s.embedded, mod)
+func (s *packageManagerStub) UpdateGlobalModule(settings addonutils.Values, version int) {
 }
-
-func (s *packageManagerStub) UpdateModulesSettings(string, int, addonutils.Values, string, *bool) {}
-
-func (s *packageManagerStub) UpdateGlobalSettings(int, addonutils.Values) {}
 
 func (s *packageManagerStub) GetModuleDigest(_ context.Context, repo registry.Remote, name, tag string) (string, error) {
 	s.digestCalls = append(s.digestCalls, digestCall{repo: repo, name: name, tag: tag})

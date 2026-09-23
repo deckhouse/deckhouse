@@ -35,6 +35,7 @@ import (
 	sigsyaml "sigs.k8s.io/yaml"
 
 	"github.com/deckhouse/node-controller/internal/capacity"
+	"github.com/deckhouse/node-controller/internal/cloudprovider"
 	nodecommon "github.com/deckhouse/node-controller/internal/common"
 	ngcommon "github.com/deckhouse/node-controller/internal/controller/nodegroup/common"
 )
@@ -44,8 +45,9 @@ const (
 	cloudProviderSecretNamespace = nodecommon.CloudProviderSecretNamespace
 	clusterConfigSecretName      = "d8-cluster-configuration"
 	clusterConfigSecretNamespace = "kube-system"
-	clusterUUIDConfigMapName     = "d8-cluster-uuid"
-	clusterUUIDConfigMapNS       = "kube-system"
+	clusterUUIDConfigMapName     = nodecommon.ClusterUUIDConfigMapName
+	clusterUUIDConfigMapKey      = nodecommon.ClusterUUIDConfigMapKey
+	clusterUUIDConfigMapNS       = nodecommon.KubeSystemNamespace
 
 	clusterKubernetesConfigMapName = "d8-cluster-kubernetes"
 	clusterKubernetesConfigMapNS   = "kube-system"
@@ -74,6 +76,10 @@ func isAbsent(err error) bool {
 // no cloud provider and yields an empty registration; any other read failure is returned, because
 // an empty one reads as "no cloud" and would publish a NodeGroup without instanceClass — a
 // checksum shift that re-runs bashible on every node.
+//
+// The registration is decoded but not validated here. This snapshot feeds every NodeGroup in the
+// cluster, so rejecting an incomplete registration would take the whole cluster context down over
+// one provider field. Validation belongs to the paths that render provider resources.
 func (s *Service) readCloudProviderData(ctx context.Context) (CloudProviderRegistration, error) {
 	secret := &corev1.Secret{}
 	err := s.Client.Get(ctx, types.NamespacedName{Namespace: cloudProviderSecretNamespace, Name: cloudProviderSecretName}, secret)
@@ -83,7 +89,11 @@ func (s *Service) readCloudProviderData(ctx context.Context) (CloudProviderRegis
 	if err != nil {
 		return CloudProviderRegistration{}, fmt.Errorf("read cloud provider secret: %w", err)
 	}
-	return DecodeRegistration(secret.Data), nil
+	registration, err := cloudprovider.DecodeRegistration(secret.Data)
+	if err != nil {
+		return CloudProviderRegistration{}, err
+	}
+	return registration, nil
 }
 
 // readClusterUUID returns the cluster UUID, which seeds the update-epoch drift. An absent
@@ -98,7 +108,7 @@ func (s *Service) readClusterUUID(ctx context.Context) (string, error) {
 	if err != nil {
 		return "", fmt.Errorf("read cluster uuid configmap: %w", err)
 	}
-	return cm.Data["cluster-uuid"], nil
+	return cm.Data[clusterUUIDConfigMapKey], nil
 }
 
 type clusterConfiguration struct {
@@ -206,7 +216,7 @@ func (s *Service) readControlPlaneMinVersion(ctx context.Context) (*semver.Versi
 	pods := &corev1.PodList{}
 	if err := s.Client.List(ctx, pods,
 		client.InNamespace(apiserverPodNamespace),
-		client.MatchingLabels{"component": "kube-apiserver", "tier": "control-plane"},
+		client.MatchingLabels(nodecommon.APIServerPodLabels),
 	); err != nil {
 		return nil, fmt.Errorf("list kube-apiserver pods: %w", err)
 	}

@@ -57,13 +57,28 @@ func (v *validator) Handle(ctx context.Context, req admission.Request) admission
 
 	// Only the controller/Deckhouse may perform privileged operations: auto-wrapping an existing
 	// namespace into a managed-by-namespace project (Create) and editing a managed-by-namespace
-	// project (Update).
+	// project (Update). Cluster administrators are not privileged here: system:masters goes through
+	// this handler like any user (the webhook's matchConditions skip only platform components and
+	// system:sudouser, see templates/admission/validation.yaml).
 	privileged := req.UserInfo.Username == rolebindingwebhook.ControllerServiceAccount ||
 		req.UserInfo.Username == rolebindingwebhook.DeckhouseServiceAccount
 
+	// The platform's virtual projects -- default and deckhouse, on the "virtual" template -- have no
+	// namespace of their own and are created by the controller alone. Both their names and their
+	// template are reserved for it: a user project on that template is handled as virtual by the
+	// project controller (no namespace, Deployed) but looks like an ordinary project to everything
+	// keyed on the virtual-project label, so the PRB/CPRB fan-out kept failing on a namespace that
+	// never exists and no ClusterProjectRoleBinding in the cluster could reach Ready; and a user
+	// project under one of the two names would take the place the controller expects to fill.
+	virtualName := project.Name == projectmanager.DefaultProjectName || project.Name == projectmanager.DeckhouseProjectName
+	if !privileged && (virtualName || project.Spec.ProjectTemplateName == projectmanager.VirtualTemplate) {
+		return admission.Denied(fmt.Sprintf("the %q and %q project names and the %q project template are reserved for the platform's virtual projects",
+			projectmanager.DefaultProjectName, projectmanager.DeckhouseProjectName, projectmanager.VirtualTemplate))
+	}
+
 	if req.Operation == admissionv1.Create {
-		// pass virtual projects
-		if project.Name == projectmanager.DefaultProjectName || project.Name == projectmanager.DeckhouseProjectName {
+		// pass the platform's virtual projects: the controller creates them without a namespace
+		if virtualName {
 			return admission.Allowed("")
 		}
 

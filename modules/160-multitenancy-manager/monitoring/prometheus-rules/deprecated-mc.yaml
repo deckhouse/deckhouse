@@ -1,0 +1,30 @@
+- name: d8.multitenancy-manager.deprecations
+  rules:
+  - alert: MultitenancyManagerDeprecatedConfigParameter
+    expr: |
+      max by (parameter) (d8_mc_deprecated_parameter{module="multitenancy-manager"}) > 0
+    labels:
+      severity_level: "9"
+      tier: cluster
+      d8_module: multitenancy-manager
+    annotations:
+      plk_protocol_version: "1"
+      plk_markup_format: "markdown"
+      summary: The `multitenancy-manager` ModuleConfig sets the deprecated parameter `{{ $labels.parameter }}`.
+      description: |-
+        The `{{ $labels.parameter }}` parameter of the `multitenancy-manager` ModuleConfig is deprecated and ignored:
+        every user namespace outside a project is now adopted into a project of its own, whatever the parameter says.
+
+        The parameter is kept in the schema for one release only. In the next minor release it is removed, and a
+        ModuleConfig that still sets it will fail validation and stop applying.
+
+        Steps to troubleshoot:
+
+        1. Remove `{{ $labels.parameter }}` from the ModuleConfig, including in the CI or GitOps process that applies it:
+
+           ```bash
+           d8 k edit mc multitenancy-manager
+           ```
+
+        1. Make sure nothing relies on plain namespaces existing beside projects: with the module enabled there are none,
+           and an environment is removed by deleting its Project rather than its Namespace.

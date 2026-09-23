@@ -34,6 +34,7 @@ import (
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/registry"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha2"
+	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1beta1"
 	"github.com/deckhouse/deckhouse/pkg/log"
 )
 
@@ -254,7 +255,7 @@ func (c *Controller) supersedeRelease(ctx context.Context, release *v1alpha1.Mod
 
 // syncModules brings every module in line with its placement and its config, and returns the
 // survivors carrying what was written — see package-flow.md for the placement rules.
-func (c *Controller) syncModules(ctx context.Context, placements map[string]placement) ([]v1alpha2.Module, error) {
+func (c *Controller) syncModules(ctx context.Context, placements map[string]placement) ([]v1beta1.Module, error) {
 	configs, err := c.resolveModuleConfigs(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("resolve module configs: %w", err)
@@ -262,12 +263,12 @@ func (c *Controller) syncModules(ctx context.Context, placements map[string]plac
 
 	// The manager's cached client serves a write from this same pass only once its watch event lands,
 	// so this one snapshot, which every decision below is taken against, comes from the API server.
-	existing := new(v1alpha2.ModuleList)
+	existing := new(v1beta1.ModuleList)
 	if err := c.ctrl.GetAPIReader().List(ctx, existing); err != nil {
 		return nil, fmt.Errorf("list modules: %w", err)
 	}
 
-	surviving := make([]v1alpha2.Module, 0, len(existing.Items)+len(placements))
+	surviving := make([]v1beta1.Module, 0, len(existing.Items)+len(placements))
 	tracked := make(map[string]struct{}, len(existing.Items))
 
 	for i := range existing.Items {
@@ -334,14 +335,14 @@ func (c *Controller) resolveModuleConfigs(ctx context.Context) (map[string]*v1al
 
 // disposable reports whether nothing backs an unplaced module: it carries no package version, or it
 // is an embedded module the image stopped shipping and no real repository has taken it over.
-func disposable(module *v1alpha2.Module) bool {
+func disposable(module *v1beta1.Module) bool {
 	return module.Spec.PackageVersion == "" ||
 		(module.IsEmbedded() && module.Spec.PackageRepositoryName == embeddedRepositoryName)
 }
 
 // createModule places a module the cluster does not carry yet.
-func (c *Controller) createModule(ctx context.Context, name string, place placement, conf *v1alpha1.ModuleConfig) (*v1alpha2.Module, error) {
-	module := &v1alpha2.Module{ObjectMeta: metav1.ObjectMeta{Name: name}}
+func (c *Controller) createModule(ctx context.Context, name string, place placement, conf *v1alpha1.ModuleConfig) (*v1beta1.Module, error) {
+	module := &v1beta1.Module{ObjectMeta: metav1.ObjectMeta{Name: name}}
 	applyDesired(module, place, conf)
 
 	if err := c.ctrl.GetClient().Create(ctx, module); err != nil {
@@ -351,7 +352,7 @@ func (c *Controller) createModule(ctx context.Context, name string, place placem
 
 		// something created the module between the list and this call, so converge it here: the
 		// bootstrap runs once, and an object left as the racing writer made it stays that way
-		module = new(v1alpha2.Module)
+		module = new(v1beta1.Module)
 		if err := c.ctrl.GetAPIReader().Get(ctx, client.ObjectKey{Name: name}, module); err != nil {
 			return nil, fmt.Errorf("get module '%s': %w", name, err)
 		}
@@ -365,7 +366,7 @@ func (c *Controller) createModule(ctx context.Context, name string, place placem
 }
 
 // patchModule writes placement, annotations and settings in one patch, and nothing when none drifted.
-func (c *Controller) patchModule(ctx context.Context, module *v1alpha2.Module, place placement, conf *v1alpha1.ModuleConfig) error {
+func (c *Controller) patchModule(ctx context.Context, module *v1beta1.Module, place placement, conf *v1alpha1.ModuleConfig) error {
 	patch := client.MergeFrom(module.DeepCopy())
 
 	applyDesired(module, place, conf)
@@ -389,7 +390,7 @@ func (c *Controller) patchModule(ctx context.Context, module *v1alpha2.Module, p
 }
 
 // applyDesired writes the placement, its annotations and the config's settings onto the module.
-func applyDesired(module *v1alpha2.Module, place placement, conf *v1alpha1.ModuleConfig) {
+func applyDesired(module *v1beta1.Module, place placement, conf *v1alpha1.ModuleConfig) {
 	// an unplaced module keeps the spec another writer gave it — only disposable decides its fate
 	if place.placed() {
 		module.Spec.PackageRepositoryName = place.repository
@@ -398,14 +399,14 @@ func applyDesired(module *v1alpha2.Module, place placement, conf *v1alpha1.Modul
 
 	// the annotation, not the spec, routes a module to the filesystem, so it is reconciled both ways
 	if place.embedded {
-		setAnnotation(module, v1alpha2.ModuleAnnotationEmbedded)
+		setAnnotation(module, v1beta1.ModuleAnnotationEmbedded)
 	} else {
-		delete(module.Annotations, v1alpha2.ModuleAnnotationEmbedded)
+		delete(module.Annotations, v1beta1.ModuleAnnotationEmbedded)
 	}
 
 	// the dev annotation is only ever set, as it always has been
 	if place.dev {
-		setAnnotation(module, v1alpha2.ModuleAnnotationDev)
+		setAnnotation(module, v1beta1.ModuleAnnotationDev)
 	}
 
 	if conf == nil {
@@ -419,7 +420,7 @@ func applyDesired(module *v1alpha2.Module, place placement, conf *v1alpha1.Modul
 }
 
 // setAnnotation marks the key true, allocating the map when the module carries no annotations.
-func setAnnotation(module *v1alpha2.Module, key string) {
+func setAnnotation(module *v1beta1.Module, key string) {
 	if module.Annotations == nil {
 		module.Annotations = make(map[string]string)
 	}
@@ -428,7 +429,7 @@ func setAnnotation(module *v1alpha2.Module, key string) {
 }
 
 // loadModules hands every placed module to the package runtime, which starts its pipeline.
-func (c *Controller) loadModules(ctx context.Context, modules []v1alpha2.Module) error {
+func (c *Controller) loadModules(ctx context.Context, modules []v1beta1.Module) error {
 	// one repository backs many modules, so each is resolved once
 	remotes := make(map[string]registry.Remote)
 
@@ -444,7 +445,7 @@ func (c *Controller) loadModules(ctx context.Context, modules []v1alpha2.Module)
 		// The runtime built the global module itself out of the global hooks dir before the
 		// bootstrap ran, so nothing is loaded for it; only its settings cross over.
 		if module.Name == globalModuleName {
-			c.manager.UpdateGlobalSettings(module.Spec.SettingsVersion, module.Spec.Settings.GetMap())
+			c.manager.UpdateGlobalModule(module.Spec.Settings.GetMap(), module.Spec.SettingsVersion)
 
 			continue
 		}
@@ -487,7 +488,7 @@ func (c *Controller) loadModules(ctx context.Context, modules []v1alpha2.Module)
 // A terminating instance is left out, as in loadModules: the runtime forgets its teardown across a
 // restart and never loads a terminating object, so the remover answers "nothing left to tear down"
 // and this pass is the last owner of its release.
-func (c *Controller) cleanupPackages(ctx context.Context, modules []v1alpha2.Module) error {
+func (c *Controller) cleanupPackages(ctx context.Context, modules []v1beta1.Module) error {
 	// this list decides what is deleted, so a lagging watch would read as an application gone
 	applications := new(v1alpha1.ApplicationList)
 	if err := c.ctrl.GetAPIReader().List(ctx, applications); err != nil {
@@ -531,7 +532,7 @@ func (c *Controller) cleanupPackages(ctx context.Context, modules []v1alpha2.Mod
 }
 
 // runtimeModule is what the runtime needs of a module: its identity, settings and enabled intent.
-func runtimeModule(module *v1alpha2.Module, remote registry.Remote) pkgruntime.Module {
+func runtimeModule(module *v1beta1.Module, remote registry.Remote) pkgruntime.Module {
 	return pkgruntime.Module{
 		Name:            module.Name,
 		Settings:        module.Spec.Settings.GetMap(),

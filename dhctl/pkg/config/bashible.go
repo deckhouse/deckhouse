@@ -15,13 +15,14 @@
 package config
 
 import (
+	"context"
 	"fmt"
 	"os"
 
 	"sigs.k8s.io/yaml"
 )
 
-func ParseBashibleConfig(paths []string, specPath string) (map[string]any, error) {
+func ParseBashibleConfig(ctx context.Context, paths []string, specPath string) (map[string]any, error) {
 	fileContent := ""
 	for _, path := range paths {
 		content, err := os.ReadFile(path)
@@ -39,7 +40,7 @@ func ParseBashibleConfig(paths []string, specPath string) (map[string]any, error
 		return nil, fmt.Errorf("loading bashible schema: %v", err)
 	}
 
-	_, err = schemaStore.Validate(&fileContentBytes)
+	_, err = schemaStore.Validate(ctx, &fileContentBytes)
 	if err != nil {
 		return nil, fmt.Errorf("config validation: %v", err)
 	}

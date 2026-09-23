@@ -301,6 +301,7 @@ users:
   - system:serviceaccount:d8-cloud-provider-yandex:cloud-controller-manager
   - system:serviceaccount:d8-cloud-provider-yandex:cloud-data-discoverer
   - system:serviceaccount:d8-cloud-provider-yandex:cloud-metrics-exporter
+  - system:serviceaccount:d8-cloud-provider-yandex:validation-webhook
   - system:serviceaccount:d8-cloud-provider-zvirt:capz-controller-manager
   - system:serviceaccount:d8-cloud-provider-zvirt:cloud-controller-manager
   - system:serviceaccount:d8-cloud-provider-zvirt:cloud-data-discoverer
@@ -337,7 +338,9 @@ users:
   - system:serviceaccount:d8-system:deckhouse
   - system:serviceaccount:d8-system:documentation
   - system:serviceaccount:d8-system:network-policy-engine
+  - system:serviceaccount:d8-system:registry-controller
   - system:serviceaccount:d8-system:registry-nodeservices
+  - system:serviceaccount:d8-system:registry-storage
   - system:serviceaccount:d8-system:terraform-auto-converger
   - system:serviceaccount:d8-system:terraform-state-exporter
   - system:serviceaccount:d8-system:webhook-handler
@@ -780,6 +783,7 @@ rules:
       - system:serviceaccount:d8-cloud-provider-yandex:cloud-controller-manager
       - system:serviceaccount:d8-cloud-provider-yandex:cloud-data-discoverer
       - system:serviceaccount:d8-cloud-provider-yandex:cloud-metrics-exporter
+      - system:serviceaccount:d8-cloud-provider-yandex:validation-webhook
       - system:serviceaccount:d8-cloud-provider-zvirt:capz-controller-manager
       - system:serviceaccount:d8-cloud-provider-zvirt:cloud-controller-manager
       - system:serviceaccount:d8-cloud-provider-zvirt:cloud-data-discoverer
@@ -816,7 +820,9 @@ rules:
       - system:serviceaccount:d8-system:deckhouse
       - system:serviceaccount:d8-system:documentation
       - system:serviceaccount:d8-system:network-policy-engine
+      - system:serviceaccount:d8-system:registry-controller
       - system:serviceaccount:d8-system:registry-nodeservices
+      - system:serviceaccount:d8-system:registry-storage
       - system:serviceaccount:d8-system:terraform-auto-converger
       - system:serviceaccount:d8-system:terraform-state-exporter
       - system:serviceaccount:d8-system:webhook-handler
