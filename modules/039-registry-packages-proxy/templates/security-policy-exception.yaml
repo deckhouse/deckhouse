@@ -22,4 +22,24 @@ spec:
         protocol: TCP
         metadata:
           description: HTTP endpoint of the package registry proxy server is required to download the rpp-get client during node bootstrap
+  volumes:
+    types:
+      allowedValues:
+        - hostPath
+      metadata:
+        description: |
+          The agent's CA is written on the node, outside of any pod, so it cannot be replaced
+          with pod-local storage.
+    hostPath:
+      {{- /*
+        `readOnly: true` matches the mount: the exception applies only when its value equals
+        the one on the volume mount, so `false` would leave this path unexcepted.
+      */}}
+      allowedValues:
+        - path: /etc/kubernetes/registry-agent/pki
+          readOnly: true
+          metadata:
+            description: |
+              CA of the node-local registry agent, which this proxy fetches packages through
+              and has to verify.
 {{- end }}
