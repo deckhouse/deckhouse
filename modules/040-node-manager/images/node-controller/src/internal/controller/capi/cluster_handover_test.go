@@ -31,6 +31,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/event"
 
 	"github.com/deckhouse/node-controller/internal/cloudprovider"
+	providermock "github.com/deckhouse/node-controller/internal/cloudprovider/mock"
 	"github.com/deckhouse/node-controller/internal/common"
 )
 
@@ -252,16 +253,16 @@ func TestRemoveStaleProviderCredentials(t *testing.T) {
 	reconciler := &ClusterReconciler{BaseWithReader: base.BaseWithReader}
 	reconciler.APIReader = reconciler.Client
 
-	require.NoError(t, reconciler.removeStaleProviderCredentials(t.Context(), current.Name))
+	require.NoError(t, reconciler.removeStaleProviderCredentials(t.Context(), map[string]bool{current.Name: true}))
 	require.NoError(t, reconciler.Client.Get(t.Context(), client.ObjectKeyFromObject(current), &corev1.Secret{}))
 	require.NoError(t, reconciler.Client.Get(t.Context(), client.ObjectKeyFromObject(unrelated), &corev1.Secret{}))
 	err := reconciler.Client.Get(t.Context(), client.ObjectKeyFromObject(stale), &corev1.Secret{})
 	require.True(t, apierrors.IsNotFound(err))
 
-	// An empty desired name means the provider stopped shipping credentials.yaml, so the Secret
+	// An empty desired set means the provider stopped shipping credentials.yaml, so the Secret
 	// rendered from it is stale too: nothing recreates it, and leaving it behind keeps a live
 	// cloud account in the cluster. Secrets without the label stay, they are not this sweep's.
-	require.NoError(t, reconciler.removeStaleProviderCredentials(t.Context(), ""))
+	require.NoError(t, reconciler.removeStaleProviderCredentials(t.Context(), nil))
 	require.True(t, apierrors.IsNotFound(
 		reconciler.Client.Get(t.Context(), client.ObjectKeyFromObject(current), &corev1.Secret{})))
 	require.NoError(t, reconciler.Client.Get(t.Context(), client.ObjectKeyFromObject(unrelated), &corev1.Secret{}))
@@ -270,24 +271,19 @@ func TestRemoveStaleProviderCredentials(t *testing.T) {
 // exampleProviderFixture is a minimal but complete provider registration: the cluster and
 // credentials templates, the cluster configuration and the UUID every render reads.
 func exampleProviderFixture() (*corev1.Secret, *corev1.Secret, *corev1.ConfigMap, *corev1.Secret) {
-	registration := &corev1.Secret{
-		ObjectMeta: metav1.ObjectMeta{
-			Name: cloudprovider.RegistrationSecretBaseName, Namespace: cloudprovider.RegistrationSecretNamespace,
-		},
-		Data: map[string][]byte{
-			"type":                                   []byte("example"),
-			"region":                                 []byte("test-region"),
-			"zones":                                  []byte(`["test-zone"]`),
-			cloudprovider.InstanceClassKindKey:       []byte("ExampleInstanceClass"),
-			"capiClusterName":                        []byte("example"),
-			"capiClusterKind":                        []byte("ExampleCluster"),
-			"capiClusterAPIVersion":                  []byte("infrastructure.cluster.x-k8s.io/v1alpha1"),
-			"capiMachineTemplateKind":                []byte("ExampleMachineTemplate"),
-			"capiMachineTemplateAPIVersion":          []byte("infrastructure.cluster.x-k8s.io/v1alpha1"),
-			cloudprovider.InstanceClassAPIVersionKey: []byte("v1alpha1"),
-			"example":                                []byte(`{"region":"test"}`),
-		},
-	}
+	registration := providermock.DefaultRegistration(map[string][]byte{
+		"type":                                   []byte("example"),
+		"region":                                 []byte("test-region"),
+		"zones":                                  []byte(`["test-zone"]`),
+		cloudprovider.InstanceClassKindKey:       []byte("ExampleInstanceClass"),
+		"capiClusterName":                        []byte("example"),
+		"capiClusterKind":                        []byte("ExampleCluster"),
+		"capiClusterAPIVersion":                  []byte("infrastructure.cluster.x-k8s.io/v1alpha1"),
+		"capiMachineTemplateKind":                []byte("ExampleMachineTemplate"),
+		"capiMachineTemplateAPIVersion":          []byte("infrastructure.cluster.x-k8s.io/v1alpha1"),
+		cloudprovider.InstanceClassAPIVersionKey: []byte("v1alpha1"),
+		"example":                                []byte(`{"region":"test"}`),
+	})
 	clusterConfiguration := &corev1.Secret{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: common.ClusterConfigSecretName, Namespace: common.ClusterConfigSecretNamespace,
@@ -343,7 +339,7 @@ func TestEnsureCloudClusterUsesSharedProviderContract(t *testing.T) {
 
 	configuration, err := common.ReadClusterConfiguration(t.Context(), reconciler.Client)
 	require.NoError(t, err)
-	require.NoError(t, reconciler.ensureCloudCluster(t.Context(), configuration))
+	require.NoError(t, reconciler.ensureCloudClusters(t.Context(), configuration))
 
 	credentials := &corev1.Secret{}
 	require.NoError(t, reconciler.Client.Get(t.Context(), types.NamespacedName{
@@ -365,7 +361,7 @@ func TestEnsureCloudClusterUsesSharedProviderContract(t *testing.T) {
 		require.NoError(t, reconciler.Client.Delete(t.Context(), object))
 	}
 	require.NoError(t, reconciler.Client.Delete(t.Context(), credentials))
-	require.NoError(t, reconciler.ensureCloudCluster(t.Context(), configuration))
+	require.NoError(t, reconciler.ensureCloudClusters(t.Context(), configuration))
 	require.NoError(t, reconciler.Client.Get(t.Context(), types.NamespacedName{
 		Name: cloudprovider.CAPIClusterCredentialsSecretName, Namespace: capiNamespace,
 	}, credentials))
@@ -395,7 +391,7 @@ template: |
 	for _, object := range managedObjects[1:] {
 		require.NoError(t, reconciler.Client.Delete(t.Context(), object))
 	}
-	require.ErrorContains(t, reconciler.ensureCloudCluster(t.Context(), configuration), "registration declares")
+	require.ErrorContains(t, reconciler.ensureCloudClusters(t.Context(), configuration), "registration declares")
 	for _, object := range managedObjects[1:] {
 		require.NoError(t, reconciler.Client.Get(t.Context(), client.ObjectKeyFromObject(object), object),
 			"a broken provider template must not block common CAPI resources")
@@ -417,7 +413,7 @@ func TestEnsureCloudClusterRemovesCredentialsTheProviderStoppedShipping(t *testi
 
 	configuration, err := common.ReadClusterConfiguration(t.Context(), reconciler.Client)
 	require.NoError(t, err)
-	require.NoError(t, reconciler.ensureCloudCluster(t.Context(), configuration))
+	require.NoError(t, reconciler.ensureCloudClusters(t.Context(), configuration))
 
 	credentialsKey := types.NamespacedName{
 		Name: cloudprovider.CAPIClusterCredentialsSecretName, Namespace: capiNamespace,
@@ -429,7 +425,7 @@ func TestEnsureCloudClusterRemovesCredentialsTheProviderStoppedShipping(t *testi
 	delete(currentTemplates.Data, cloudprovider.CAPICredentialsTemplateKey)
 	require.NoError(t, reconciler.Client.Update(t.Context(), currentTemplates))
 
-	require.NoError(t, reconciler.ensureCloudCluster(t.Context(), configuration))
+	require.NoError(t, reconciler.ensureCloudClusters(t.Context(), configuration))
 	require.True(t, apierrors.IsNotFound(reconciler.Client.Get(t.Context(), credentialsKey, &corev1.Secret{})),
 		"the Secret rendered from a credentials.yaml that is gone must go with it")
 

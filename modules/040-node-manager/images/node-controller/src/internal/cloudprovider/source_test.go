@@ -18,7 +18,6 @@ package cloudprovider
 
 import (
 	"context"
-	"errors"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -91,11 +90,20 @@ func providerSourceTestObjects(clusterTemplate string) []client.Object {
 	}
 }
 
+// sourceRegistration resolves the registration the way a reconcile does: through the catalog,
+// never through the Source.
+func sourceRegistration(t *testing.T, reader client.Reader) Registration {
+	t.Helper()
+	registration, err := defaultRegistration(t.Context(), reader)
+	require.NoError(t, err)
+	return registration
+}
+
 func TestSourceLoadsMachineAndClusterIndependently(t *testing.T) {
 	t.Run("invalid cluster template does not block machines", func(t *testing.T) {
 		objects := providerSourceTestObjects("version: v9\ntemplate: invalid\n")
 		source := Source{Reader: providerSourceTestClient(t, objects...)}
-		provider, err := source.Load(t.Context())
+		provider, err := source.Load(t.Context(), sourceRegistration(t, source.Reader))
 		require.NoError(t, err)
 		assert.Equal(t, "openstack", provider.Registration.Type)
 		assert.Equal(t, "uuid", provider.Cluster.UUID)
@@ -113,7 +121,7 @@ func TestSourceLoadsMachineAndClusterIndependently(t *testing.T) {
 		objects := providerSourceTestObjects("version: v1\ntemplate: |\n  apiVersion: infrastructure.cluster.x-k8s.io/v1beta1\n  kind: OpenStackCluster\n  metadata: {name: openstack}\n")
 		objects[3].(*corev1.Secret).Data[CAPIMachineTemplateKey] = []byte("version: v9\ntemplate: invalid\n")
 		source := Source{Reader: providerSourceTestClient(t, objects...)}
-		provider, err := source.Load(t.Context())
+		provider, err := source.Load(t.Context(), sourceRegistration(t, source.Reader))
 		require.NoError(t, err)
 
 		cluster, err := source.LoadCAPIClusterInputs(t.Context(), provider)
@@ -125,12 +133,6 @@ func TestSourceLoadsMachineAndClusterIndependently(t *testing.T) {
 	})
 }
 
-func TestSourceReturnsErrNoCloudProvider(t *testing.T) {
-	source := Source{Reader: providerSourceTestClient(t)}
-	_, err := source.Load(t.Context())
-	require.True(t, errors.Is(err, ErrNoCloudProvider))
-}
-
 func TestSourceReadsClusterConfigurationOnce(t *testing.T) {
 	reader := &countingProviderReader{Reader: providerSourceTestClient(t, providerSourceTestObjects(`version: v1
 template: |
@@ -139,7 +141,7 @@ template: |
   metadata: {name: openstack}
 `)...)}
 
-	_, err := (Source{Reader: reader}).Load(t.Context())
+	_, err := (Source{Reader: reader}).Load(t.Context(), sourceRegistration(t, reader))
 
 	require.NoError(t, err)
 	assert.Equal(t, 1, reader.clusterConfigurationReads)
@@ -155,7 +157,7 @@ template: |
 	configuration := common.ClusterConfiguration{PodSubnetCIDR: "10.111.0.0/16"}
 	configuration.Cloud.Prefix = "provided"
 
-	provider, err := (Source{Reader: reader}).LoadWithClusterConfiguration(t.Context(), configuration)
+	provider, err := (Source{Reader: reader}).LoadWithClusterConfiguration(t.Context(), sourceRegistration(t, reader), configuration)
 
 	require.NoError(t, err)
 	assert.Equal(t, 0, reader.clusterConfigurationReads)
@@ -176,7 +178,8 @@ template: |
   metadata: {name: openstack}
 `), moduleConfig)
 
-	provider, err := (Source{Reader: providerSourceTestClient(t, objects...)}).Load(t.Context())
+	reader := providerSourceTestClient(t, objects...)
+	provider, err := (Source{Reader: reader}).Load(t.Context(), sourceRegistration(t, reader))
 
 	require.NoError(t, err)
 	assert.Equal(t, "from-module-config", provider.Prefix)
@@ -264,7 +267,8 @@ func TestSourceValidatesCommonInputs(t *testing.T) {
 	for _, testCase := range tests {
 		t.Run(testCase.name, func(t *testing.T) {
 			objects := testCase.mutate(providerSourceTestObjects("version: v1\ntemplate: |\n  apiVersion: infrastructure.cluster.x-k8s.io/v1beta1\n  kind: OpenStackCluster\n  metadata: {name: openstack}\n"))
-			_, err := (Source{Reader: providerSourceTestClient(t, objects...)}).Load(t.Context())
+			reader := providerSourceTestClient(t, objects...)
+			_, err := (Source{Reader: reader}).Load(t.Context(), sourceRegistration(t, reader))
 			require.ErrorContains(t, err, testCase.error)
 		})
 	}
@@ -277,7 +281,8 @@ func TestLoadAcceptsEmptyZones(t *testing.T) {
 	objects := providerSourceTestObjects("version: v1\ntemplate: |\n  apiVersion: infrastructure.cluster.x-k8s.io/v1beta1\n  kind: OpenStackCluster\n  metadata: {name: openstack}\n")
 	objects[0].(*corev1.Secret).Data["zones"] = []byte(`[]`)
 
-	provider, err := (Source{Reader: providerSourceTestClient(t, objects...)}).Load(t.Context())
+	reader := providerSourceTestClient(t, objects...)
+	provider, err := (Source{Reader: reader}).Load(t.Context(), sourceRegistration(t, reader))
 
 	require.NoError(t, err)
 	require.Empty(t, provider.Registration.Zones)
@@ -286,14 +291,14 @@ func TestLoadAcceptsEmptyZones(t *testing.T) {
 // Cleanup runs after the provider module may already be half-gone. It needs machineClassKind and
 // the machine template GVK, so an otherwise incomplete registration must not stop it: a deleted
 // NodeGroup would keep its finalizer forever.
-func TestLoadRegistrationSkipsValidation(t *testing.T) {
+func TestDefaultRegistrationSkipsValidation(t *testing.T) {
 	objects := providerSourceTestObjects("version: v1\ntemplate: |\n  apiVersion: infrastructure.cluster.x-k8s.io/v1beta1\n  kind: OpenStackCluster\n  metadata: {name: openstack}\n")
 	secret := objects[0].(*corev1.Secret)
 	secret.Data["region"] = nil
 	secret.Data["zones"] = []byte(`[]`)
 	delete(secret.Data, "openstack")
 
-	registration, err := (Source{Reader: providerSourceTestClient(t, objects...)}).LoadRegistration(t.Context())
+	registration, err := defaultRegistration(t.Context(), providerSourceTestClient(t, objects...))
 
 	require.NoError(t, err)
 	require.Equal(t, "OpenStackMachineClass", registration.MachineClassKind)
@@ -302,7 +307,7 @@ func TestLoadRegistrationSkipsValidation(t *testing.T) {
 func TestScopedTemplateInputsValidateOnlyTheirOwnContract(t *testing.T) {
 	objects := providerSourceTestObjects("version: v1\ntemplate: |\n  apiVersion: infrastructure.cluster.x-k8s.io/v1beta1\n  kind: OpenStackCluster\n  metadata: {name: openstack}\n")
 	source := Source{Reader: providerSourceTestClient(t, objects...)}
-	provider, err := source.Load(t.Context())
+	provider, err := source.Load(t.Context(), sourceRegistration(t, source.Reader))
 	require.NoError(t, err)
 
 	withoutMachineGVK := provider

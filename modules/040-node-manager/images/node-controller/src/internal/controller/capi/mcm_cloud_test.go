@@ -90,7 +90,7 @@ func TestApplyMachineClassSecret(t *testing.T) {
 
 	// The two calls reconcileCloudMCMs makes: the cloud-init once for the group, the
 	// Secret once per zone.
-	userData, err := r.machineClassUserData(t.Context(), resolved)
+	userData, err := r.machineClassUserData(t.Context(), resolved, cloudprovider.Registration{Type: "yandex"})
 	require.NoError(t, err)
 	require.NoError(t, r.applyMachineClassSecret(t.Context(),
 		resolved.Name, helmZoneSecretName, userData, yandexRenderContext(), config))

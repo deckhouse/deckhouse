@@ -163,13 +163,13 @@ func nodeGroupRequests(ctx context.Context, r client.Reader, carried ...Registra
 		return nil
 	}
 
-	clusterProvider, err := Default(ctx, r)
+	clusterProvider, err := defaultRegistration(ctx, r)
 	if err != nil {
 		logger.Error(err, "read the cluster provider for a cloud provider registration event")
 		return nil
 	}
 
-	defaultProvider, _ := byType(carried, clusterProvider.Type)
+	defaultProvider, _ := registrationByType(carried, clusterProvider.Type)
 	changed := NewCatalog(carried, defaultProvider)
 	ret := make([]reconcile.Request, 0, len(ngList.Items))
 
@@ -260,13 +260,15 @@ func LazyInstanceClassSource(informers cache.Cache, eventHandler handler.EventHa
 	})
 }
 
-// IsInputSecret reports whether a Secret can change provider template rendering.
+// IsInputSecret reports whether a Secret can change provider template rendering. Every
+// registration counts, not just the one under the bare prefix: a provider registers under a name
+// of its own, and its NodeGroups render from it.
 func IsInputSecret(object client.Object) bool {
 	if object.GetNamespace() != common.KubeSystemNamespace {
 		return false
 	}
 	name := object.GetName()
-	return name == RegistrationSecretBaseName ||
+	return strings.HasPrefix(name, RegistrationSecretBaseName) ||
 		name == common.ClusterConfigSecretName ||
 		(strings.HasPrefix(name, "d8-cloud-provider-") &&
 			(strings.HasSuffix(name, "-capi") || strings.HasSuffix(name, "-mcm")))

@@ -258,6 +258,7 @@ func TestIsInputSecret(t *testing.T) {
 		want      bool
 	}{
 		{namespace: "kube-system", name: "d8-node-manager-cloud-provider", want: true},
+		{namespace: "kube-system", name: "d8-node-manager-cloud-provider-yandex", want: true},
 		{namespace: "kube-system", name: "d8-cluster-configuration", want: true},
 		{namespace: "kube-system", name: "d8-cloud-provider-openstack-capi", want: true},
 		{namespace: "kube-system", name: "d8-cloud-provider-aws-mcm", want: true},

@@ -22,7 +22,6 @@ import (
 	"fmt"
 
 	corev1 "k8s.io/api/core/v1"
-	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
@@ -50,8 +49,6 @@ const (
 	clusterUUIDConfigMapName = common.ClusterUUIDConfigMapName
 	clusterUUIDConfigMapKey  = common.ClusterUUIDConfigMapKey
 )
-
-var ErrNoCloudProvider = errors.New("no cloud provider registered")
 
 // Source is the common reader used by both CAPI controllers. Template-specific methods only
 // parse the files needed by their caller, so an invalid cluster template cannot stop the machine
@@ -93,40 +90,26 @@ type MCMInputs struct {
 	Config       []byte
 }
 
-// Load reads inputs shared by both controllers. It deliberately does not parse a particular
-// template: callers load the machine or cluster section separately.
-func (s Source) Load(ctx context.Context) (Provider, error) {
-	registration, legacyValues, err := s.loadRegistration(ctx)
-	if err != nil {
-		return Provider{}, err
-	}
-
+// Load reads the cluster facts a provider template renders against. The registration is resolved
+// by the caller — every NodeGroup picks its own through the catalog — so this never reads one.
+func (s Source) Load(ctx context.Context, registration Registration) (Provider, error) {
 	configuration, err := common.ReadClusterConfiguration(ctx, s.Reader)
 	if err != nil {
 		return Provider{}, err
 	}
-	return s.loadWithClusterConfiguration(ctx, registration, legacyValues, configuration)
+	return s.LoadWithClusterConfiguration(ctx, registration, configuration)
 }
 
 // LoadWithClusterConfiguration is Load for a caller that already read the cluster configuration
-// for its own resources. It avoids a second read while keeping registration validation here.
+// for its own resources.
 func (s Source) LoadWithClusterConfiguration(
 	ctx context.Context,
+	registration Registration,
 	configuration common.ClusterConfiguration,
 ) (Provider, error) {
-	registration, legacyValues, err := s.loadRegistration(ctx)
-	if err != nil {
+	if err := registration.ValidateCore(); err != nil {
 		return Provider{}, err
 	}
-	return s.loadWithClusterConfiguration(ctx, registration, legacyValues, configuration)
-}
-
-func (s Source) loadWithClusterConfiguration(
-	ctx context.Context,
-	registration Registration,
-	legacyValues map[string]any,
-	configuration common.ClusterConfiguration,
-) (Provider, error) {
 	if configuration.PodSubnetCIDR == "" {
 		return Provider{}, errors.New("cluster configuration has no podSubnetCIDR")
 	}
@@ -149,55 +132,8 @@ func (s Source) loadWithClusterConfiguration(
 			PodSubnet: configuration.PodSubnetCIDR,
 		},
 		Prefix:       prefix,
-		LegacyValues: legacyValues,
+		LegacyValues: registration.Data,
 	}, nil
-}
-
-// LoadRegistration reads the registration without cluster facts and without validating it, so a
-// missing cluster UUID or an incomplete registration cannot leave a deleted NodeGroup stuck behind
-// its finalizer: removing resources needs machineClassKind and the machine template GVK, nothing else.
-func (s Source) LoadRegistration(ctx context.Context) (Registration, error) {
-	registration, _, err := s.readRegistration(ctx)
-	return registration, err
-}
-
-// LoadValidatedRegistration is the validated registration alone, for callers rendering the common
-// CAPI scaffolding (Cluster, MachineHealthCheck), which read no cluster facts: an unstamped cluster
-// UUID or an unresolvable prefix stops the provider resources, not these.
-func (s Source) LoadValidatedRegistration(ctx context.Context) (Registration, error) {
-	registration, _, err := s.loadRegistration(ctx)
-	return registration, err
-}
-
-// loadRegistration is readRegistration for the rendering paths, where an incomplete registration
-// must stop the reconcile instead of producing half-rendered provider resources.
-func (s Source) loadRegistration(ctx context.Context) (Registration, map[string]any, error) {
-	registration, legacyValues, err := s.readRegistration(ctx)
-	if err != nil {
-		return Registration{}, nil, err
-	}
-	if err := registration.ValidateCore(); err != nil {
-		return Registration{}, nil, err
-	}
-	return registration, legacyValues, nil
-}
-
-func (s Source) readRegistration(ctx context.Context) (Registration, map[string]any, error) {
-	secret := &corev1.Secret{}
-	if err := s.Reader.Get(ctx, types.NamespacedName{
-		Name: RegistrationSecretBaseName, Namespace: RegistrationSecretNamespace,
-	}, secret); err != nil {
-		if apierrors.IsNotFound(err) {
-			return Registration{}, nil, ErrNoCloudProvider
-		}
-		return Registration{}, nil, fmt.Errorf("get cloud-provider registration secret: %w", err)
-	}
-
-	registration, err := DecodeRegistration(secret.Data)
-	if err != nil {
-		return Registration{}, nil, err
-	}
-	return registration, decodeSecretData(secret.Data), nil
 }
 
 func (s Source) LoadCAPIMachineInputs(ctx context.Context, provider Provider) (CAPIMachineInputs, error) {

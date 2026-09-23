@@ -37,7 +37,7 @@ import (
 // testProvider resolves the provider a NodeGroup runs on the way a reconcile does.
 func testProvider(t *testing.T, s *Service, ng *v1.NodeGroup) cloudprovider.Registration {
 	t.Helper()
-	provider, err := cloudprovider.ForNodeGroup(context.Background(), s.Client, ng)
+	provider, err := cloudprovider.RegistrationForNodeGroup(context.Background(), s.Client, ng)
 	require.NoError(t, err)
 	return provider
 }

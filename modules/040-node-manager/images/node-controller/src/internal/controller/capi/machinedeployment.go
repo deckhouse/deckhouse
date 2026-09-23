@@ -19,7 +19,6 @@ package capi
 import (
 	"context"
 	"crypto/sha256"
-	"errors"
 	"fmt"
 	"sort"
 	"strings"
@@ -198,7 +197,7 @@ func (r *MachineDeploymentReconciler) Reconcile(ctx context.Context, req ctrl.Re
 	}
 
 	if !ng.DeletionTimestamp.IsZero() {
-		done, err := r.cleanupMachineDeployments(ctx, ng.Name)
+		done, err := r.cleanupMachineDeployments(ctx, ng.Name, registration)
 		if err != nil {
 			return ctrl.Result{}, err
 		}
@@ -220,19 +219,18 @@ func (r *MachineDeploymentReconciler) Reconcile(ctx context.Context, req ctrl.Re
 
 	switch ng.Spec.NodeType {
 	case deckhousev1.NodeTypeCloudEphemeral:
+		if registration.IsStatic() {
+			logger.V(1).Info("skipping: cloud provider is not registered yet")
+			return ctrl.Result{RequeueAfter: resyncInterval}, nil
+		}
+		provider, err := (cloudprovider.Source{Reader: r.Client}).Load(ctx, registration)
+		if err != nil {
+			return ctrl.Result{}, err
+		}
 		// Derive the engine instead of waiting for the status controller to publish
 		// status.engine: with the derived value the MachineDeployment is rendered in the
 		// first reconcile right after the NodeGroup is created. status.engine, once set,
 		// stays the pin (ResolveNodeGroup prefers it).
-		source := cloudprovider.Source{Reader: r.Client}
-		provider, err := source.Load(ctx)
-		if errors.Is(err, cloudprovider.ErrNoCloudProvider) {
-			logger.V(1).Info("skipping: cloud provider is not registered yet")
-			return ctrl.Result{RequeueAfter: resyncInterval}, nil
-		}
-		if err != nil {
-			return ctrl.Result{}, err
-		}
 		// Resolved once here and handed down: the engine branch and the rendered element must
 		// agree within one pass, and the snapshot behind ResolveNodeGroup already carries it.
 		ds := &derived_status.Service{Client: r.Client}
@@ -294,7 +292,11 @@ func (r *MachineDeploymentReconciler) removeFinalizer(ctx context.Context, ng *d
 // node drain runs asynchronously under capi/caps-controller-manager finalizers. An MCM one does:
 // its MachineClass holds the cloud credentials the deletion itself needs, so the class outlives
 // the deployment and the NodeGroup stays finalized until both are gone (see pruneStaleMCMs).
-func (r *MachineDeploymentReconciler) cleanupMachineDeployments(ctx context.Context, ngName string) (bool, error) {
+func (r *MachineDeploymentReconciler) cleanupMachineDeployments(
+	ctx context.Context,
+	ngName string,
+	registration cloudprovider.Registration,
+) (bool, error) {
 	logger := log.FromContext(ctx)
 
 	capiMDs := &unstructured.UnstructuredList{}
@@ -318,20 +320,11 @@ func (r *MachineDeploymentReconciler) cleanupMachineDeployments(ctx context.Cont
 		logger.V(1).Info("deleted MachineDeployment for removed NodeGroup", "name", md.GetName(), "ng", ngName)
 	}
 
-	registration, err := (cloudprovider.Source{Reader: r.Client}).LoadRegistration(ctx)
-	if errors.Is(err, cloudprovider.ErrNoCloudProvider) {
-		registration = cloudprovider.Registration{}
-		err = nil
-	}
-	if err != nil {
-		return false, err
-	}
 	if err := r.deleteInfraMachineTemplates(ctx, ngName, registration); err != nil {
 		return false, err
 	}
 
-	machineClassKind := registration.MachineClassKind
-	staleMCMs, err := r.pruneStaleMCMs(ctx, r.APIReader, ngName, machineClassKind, nil, nil)
+	staleMCMs, err := r.pruneStaleMCMs(ctx, r.APIReader, ngName, registration.MachineClassKind, nil, nil)
 	if err != nil {
 		return false, err
 	}

@@ -31,29 +31,24 @@ import (
 	v1 "github.com/deckhouse/node-controller/api/deckhouse.io/v1"
 )
 
+type Catalog struct {
+	all             []Registration
+	defaultProvider Registration
+}
+
 // GetCatalog reads every provider registered in the cluster.
 func GetCatalog(ctx context.Context, r client.Reader) (Catalog, error) {
-	all, err := getProviders(ctx, r)
+	all, err := allRegistrations(ctx, r)
 	if err != nil {
 		return Catalog{}, err
 	}
 
-	defaultProvider, err := Default(ctx, r)
+	defaultProvider, err := defaultRegistration(ctx, r)
 	if err != nil {
 		return Catalog{}, err
 	}
 
 	return NewCatalog(all, defaultProvider), nil
-}
-
-// ForNodeGroup resolves the provider one NodeGroup runs on, for callers that handle a single group
-// and hold no catalog.
-func ForNodeGroup(ctx context.Context, r client.Reader, ng *v1.NodeGroup) (Registration, error) {
-	catalog, err := GetCatalog(ctx, r)
-	if err != nil {
-		return Registration{}, err
-	}
-	return catalog.ByNodeGroup(ng), nil
 }
 
 // NewCatalog builds a Catalog from providers already in hand. The default is the registration
@@ -64,11 +59,6 @@ func NewCatalog(all []Registration, defaultProvider Registration) Catalog {
 		all:             all,
 		defaultProvider: defaultProvider,
 	}
-}
-
-type Catalog struct {
-	all             []Registration
-	defaultProvider Registration
 }
 
 // All returns every provider, ordered by type.
@@ -126,19 +116,29 @@ func (c Catalog) InstanceClassGVKs() []schema.GroupVersionKind {
 	return ret
 }
 
+// RegistrationForNodeGroup resolves the provider one NodeGroup runs on, for callers that handle a single group
+// and hold no catalog.
+func RegistrationForNodeGroup(ctx context.Context, r client.Reader, ng *v1.NodeGroup) (Registration, error) {
+	catalog, err := GetCatalog(ctx, r)
+	if err != nil {
+		return Registration{}, err
+	}
+	return catalog.ByNodeGroup(ng), nil
+}
+
 // RegisteredInstanceClassGVKs is InstanceClassGVKs over the registrations alone: it answers which
 // kinds exist without needing the cluster configuration to be readable.
 func RegisteredInstanceClassGVKs(ctx context.Context, r client.Reader) ([]schema.GroupVersionKind, error) {
-	providers, err := getProviders(ctx, r)
+	providers, err := allRegistrations(ctx, r)
 	if err != nil {
 		return nil, err
 	}
 	return NewCatalog(providers, Registration{}).InstanceClassGVKs(), nil
 }
 
-// getProviders is the Secret half of GetCatalog, separate so the lazy InstanceClass watch does not
+// allRegistrations is the Secret half of GetCatalog, separate so the lazy InstanceClass watch does not
 // depend on the cluster configuration being readable.
-func getProviders(ctx context.Context, r client.Reader) ([]Registration, error) {
+func allRegistrations(ctx context.Context, r client.Reader) ([]Registration, error) {
 	secrets := &corev1.SecretList{}
 
 	if err := r.List(ctx, secrets,
@@ -171,11 +171,11 @@ func getProviders(ctx context.Context, r client.Reader) ([]Registration, error) 
 	return ret, nil
 }
 
-// Default returns the provider every non-Static NodeGroup runs on: the registration a
+// defaultRegistration returns the provider every non-Static NodeGroup runs on: the registration a
 // provider module publishes under the fixed name, next to its per-provider copy. No such Secret
 // means no cloud — the cluster configuration is not consulted, so a provider that has not
 // registered yet is indistinguishable from a static cluster.
-func Default(ctx context.Context, r client.Reader) (Registration, error) {
+func defaultRegistration(ctx context.Context, r client.Reader) (Registration, error) {
 	secret := &corev1.Secret{}
 	err := r.Get(
 		ctx,
@@ -195,7 +195,7 @@ func Default(ctx context.Context, r client.Reader) (Registration, error) {
 	return DecodeRegistration(secret.Data)
 }
 
-func byType(all []Registration, pType string) (Registration, bool) {
+func registrationByType(all []Registration, pType string) (Registration, bool) {
 	if pType == "" {
 		return Registration{}, false
 	}

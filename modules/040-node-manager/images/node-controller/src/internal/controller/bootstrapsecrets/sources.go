@@ -51,7 +51,7 @@ const imagesDigestsKey = "images_digests.json"
 // token for the Secrets this controller writes, the <<BOOTSTRAP_TOKEN>> literal
 // for the MCM machine-class Secret, where machine-controller-manager substitutes
 // a token of its own per machine.
-func BuildInput(ctx context.Context, svc *bashiblecontext.Service, resolved derived_status.ResolvedNodeGroup, token string) (bootstrap.Input, error) {
+func BuildInput(ctx context.Context, svc *bashiblecontext.Service, resolved derived_status.ResolvedNodeGroup, provider cloudprovider.Registration, token string) (bootstrap.Input, error) {
 	// Helm held this gate as `clusterUUID | required`: with an empty UUID rpp-get
 	// asks the packages proxy for a prefix-less path, gets a 404, and the node
 	// hangs for the whole bootstrap timeout instead of failing loudly.
@@ -83,11 +83,6 @@ func BuildInput(ctx context.Context, svc *bashiblecontext.Service, resolved deri
 		return bootstrap.Input{}, err
 	}
 
-	registration, err := cloudprovider.Default(ctx, svc.Client)
-	if err != nil {
-		return bootstrap.Input{}, err
-	}
-
 	return bootstrap.Input{
 		NodeGroup:              resolved.ToMap(),
 		APIServerEndpoints:     endpoints.APIServerEndpoints,
@@ -98,10 +93,10 @@ func BuildInput(ctx context.Context, svc *bashiblecontext.Service, resolved deri
 		// minget is 4KiB (crane export of the image candi/alt_base_images.yml
 		// pins), so inlining its base64 into the script costs ~5KiB per copy.
 		MingetB64:      base64.StdEncoding.EncodeToString(files.Binary("minget")),
-		Provider:       registration.Type,
+		Provider:       provider.Type,
 		KubernetesCA:   kubernetesCA,
 		BootstrapToken: token,
-		SSHPublicKey:   registration.SSHPublicKey,
+		SSHPublicKey:   provider.SSHPublicKey,
 		Files:          files,
 	}, nil
 }

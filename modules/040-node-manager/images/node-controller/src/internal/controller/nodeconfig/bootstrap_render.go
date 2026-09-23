@@ -76,7 +76,7 @@ func resolveKubernetesVersion(ctx context.Context, derived *derived_status.Servi
 func deriveKubernetesVersion(ctx context.Context, derived *derived_status.Service, ng *v1.NodeGroup) (string, error) {
 	// The derived status reports the version even when a later cloud check fails,
 	// so the check outcome is ignored here — the error is not.
-	provider, err := cloudprovider.ForNodeGroup(ctx, derived.Client, ng)
+	provider, err := cloudprovider.RegistrationForNodeGroup(ctx, derived.Client, ng)
 	if err != nil {
 		return "", fmt.Errorf("resolve the cloud provider of %s: %w", ng.Name, err)
 	}

@@ -33,6 +33,7 @@ import (
 	deckhousev1 "github.com/deckhouse/node-controller/api/deckhouse.io/v1"
 	"github.com/deckhouse/node-controller/internal/bootstrap"
 	"github.com/deckhouse/node-controller/internal/cloudprovider"
+	providermock "github.com/deckhouse/node-controller/internal/cloudprovider/mock"
 	nodecommon "github.com/deckhouse/node-controller/internal/common"
 	"github.com/deckhouse/node-controller/internal/controller/nodegroup/bashiblecontext"
 	ngcommon "github.com/deckhouse/node-controller/internal/controller/nodegroup/common"
@@ -89,7 +90,7 @@ var _ = Describe("Bootstrap secrets controller", func() {
 		}
 		r.Client = k8sClient
 
-		provider, err := cloudprovider.ForNodeGroup(suiteCtx, k8sClient, ng)
+		provider, err := cloudprovider.RegistrationForNodeGroup(suiteCtx, k8sClient, ng)
 		Expect(err).NotTo(HaveOccurred())
 		resolved, validationErr, err := r.derivedStatus.ResolveNodeGroup(suiteCtx, ng, provider)
 		Expect(err).NotTo(HaveOccurred())
@@ -98,7 +99,7 @@ var _ = Describe("Bootstrap secrets controller", func() {
 		token, err := EnsureToken(suiteCtx, k8sClient, ng.Name)
 		Expect(err).NotTo(HaveOccurred())
 
-		in, err := BuildInput(suiteCtx, r.context, resolved, token)
+		in, err := BuildInput(suiteCtx, r.context, resolved, provider, token)
 		Expect(err).NotTo(HaveOccurred())
 
 		Expect(in.PackagesProxy).To(HaveKeyWithValue("token", testPackagesProxyToken))
@@ -359,13 +360,7 @@ func warningEventMessages(ngName, reason string) []string {
 // the suite keeps running in a cluster with no cloud provider.
 func createCloudProviderRegistration(data map[string][]byte) {
 	GinkgoHelper()
-	secret := &corev1.Secret{
-		ObjectMeta: metav1.ObjectMeta{
-			Namespace: cloudprovider.RegistrationSecretNamespace,
-			Name:      cloudprovider.RegistrationSecretBaseName,
-		},
-		Data: data,
-	}
+	secret := providermock.DefaultRegistration(data)
 	Expect(k8sClient.Create(suiteCtx, secret)).To(Succeed())
 	DeferCleanup(func() {
 		Expect(client.IgnoreNotFound(k8sClient.Delete(suiteCtx, secret))).To(Succeed())
