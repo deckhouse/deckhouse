@@ -725,7 +725,7 @@ func requireSplitResources(bctx *bootstrapContext) error {
 		return nil
 	}
 
-	if len(bctx.resourcesToCreateBefore)+len(bctx.resourcesToCreateProvider)+len(bctx.resourcesToCreateAfter) == 0 {
+	if len(bctx.resourcesToCreateBefore)+len(bctx.resourcesToCreateModules)+len(bctx.resourcesToCreateProvider)+len(bctx.resourcesToCreateAfter) == 0 {
 		return fmt.Errorf("resources are configured but none are queued for creation: phase %q produces the queues", phases.ParseResourcesPhase)
 	}
 
@@ -1728,10 +1728,9 @@ func nodesComeFromResources(metaConfig *config.MetaConfig) bool {
 	return metaConfig.ClusterType == config.CloudClusterType && !metaConfig.HasLegacyProviderConfig()
 }
 
-// The module queue is returned separately from the node queue because the two are applied at
-// different moments: the modules while the Deckhouse controller is still starting, the nodes only
-// once it is Ready. Handing them back joined is what left the provider module behind the readiness
-// wait that its own cloud-controller-manager has to clear.
+// The module queue is separate from the node queue because the two are applied at different
+// moments: the modules while the controller is still starting, the nodes once it is Ready. Joined,
+// the provider module stayed behind the readiness wait its own cloud-controller-manager clears.
 func splitResourcesOnPreAndPostDeckhouseInstall(ctx context.Context, resourcesToCreate template.Resources, nodesFromResources bool, providerName string) (template.Resources, template.Resources, template.Resources, template.Resources) {
 	before := make(template.Resources, 0, len(resourcesToCreate))
 	modules := make(template.Resources, 0)
@@ -1739,18 +1738,6 @@ func splitResourcesOnPreAndPostDeckhouseInstall(ctx context.Context, resourcesTo
 	after := make(template.Resources, 0, len(resourcesToCreate))
 
 	providerModule := config.CloudProviderModuleName(providerName)
-
-	// An external provider module ships the *InstanceClass CRDs the rest of the provider queue is
-	// written against, so it has to reach the cluster ahead of that queue - otherwise dhctl waits
-	// out ResourcesTimeout on a CRD no module was told to install.
-	//
-	// Deliberately not gated on nodesFromResources: the cloud-controller-manager that clears
-	// node.cloudprovider.kubernetes.io/uninitialized ships inside that same module, and a cluster
-	// described the legacy way - with a provider *ClusterConfiguration - stalls on that taint just
-	// as hard. The module's own documents are the evidence, not how the nodes are written.
-	divertModules := slices.ContainsFunc(resourcesToCreate, func(resource *template.Resource) bool {
-		return declaresExternalProviderModule(resource, providerModule)
-	})
 
 	for _, resource := range resourcesToCreate {
 		annotations := resource.Object.GetAnnotations()
@@ -1762,8 +1749,8 @@ func splitResourcesOnPreAndPostDeckhouseInstall(ctx context.Context, resourcesTo
 			continue
 		}
 
-		if divertModules && isProviderModuleDocument(resource, providerModule) {
-			dhlog.FromContext(ctx).DebugContext(ctx, fmt.Sprintf("Add resource %s - %s to provider queue (module)", resource.String(), resource.Object.GetName()))
+		if isModuleQueueDocument(resource, providerModule) {
+			dhlog.FromContext(ctx).DebugContext(ctx, fmt.Sprintf("Add resource %s - %s to module queue", resource.String(), resource.Object.GetName()))
 			modules = append(modules, resource)
 
 			continue
@@ -1788,39 +1775,29 @@ func splitResourcesOnPreAndPostDeckhouseInstall(ctx context.Context, resourcesTo
 	return before, modules, provider, after
 }
 
-// A ModuleConfig proves it on its own here: this function only sees the resource documents, and a
-// ModuleConfig naming a module the image carries is parsed into MetaConfig.ModuleConfigs instead.
-// One that reaches ResourcesYAML names a module the image does not ship.
-func declaresExternalProviderModule(resource *template.Resource, providerModule string) bool {
-	if resource.GVK.Group != config.ModuleConfigGroup || resource.Object.GetName() != providerModule {
+// A ModuleSource is an address and a ModulePullOverride pins a tag; neither enables a module, so
+// both travel early unconditionally, which also puts them ahead of any ModuleConfig naming them.
+// Enabling is what has to wait, and only this cluster's provider module cannot: it ships the
+// cloud-controller-manager that clears node.cloudprovider.kubernetes.io/uninitialized, and a
+// ModuleConfig reaching these documents at all means the image does not carry that module.
+func isModuleQueueDocument(resource *template.Resource, providerModule string) bool {
+	if resource.GVK.Group != config.ModuleConfigGroup {
 		return false
 	}
 
 	switch resource.GVK.Kind {
-	case config.ModuleConfigKind:
+	case config.ModuleSourceKind, config.ModulePullOverrideKind:
 		return true
-	case config.ModulePullOverrideKind:
-		tag, _, _ := unstructured.NestedString(resource.Object.Object, "spec", "imageTag")
-		return tag != ""
+	case config.ModuleConfigKind:
+		return resource.Object.GetName() == providerModule
 	}
 
 	return false
 }
 
-// Every ModuleSource counts: each is there to serve a module this bootstrap needs, and applying
-// one early costs nothing.
-func isProviderModuleDocument(resource *template.Resource, providerModule string) bool {
-	if resource.GVK.Group == config.ModuleConfigGroup && resource.GVK.Kind == config.ModuleSourceKind {
-		return true
-	}
-
-	return declaresExternalProviderModule(resource, providerModule)
-}
-
-// The order the controllers consume these in. Scanning the source creates the Module the override
-// controller looks up, and the release controller skips a module that already has an override - so
-// an override applied last gets the channel build deployed first and then replaced. Applying it
-// early only costs a requeue.
+// The order the controllers consume these in: scanning the source creates the Module the override
+// controller looks up, and the release controller skips a module that already has an override, so
+// an override applied last gets the channel build deployed first and then replaced.
 func moduleApplyOrder(resource *template.Resource) int {
 	switch resource.GVK.Kind {
 	case config.ModuleSourceKind:

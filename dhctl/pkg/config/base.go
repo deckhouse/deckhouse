@@ -694,13 +694,9 @@ func ProviderBundledInCandi(provider string, globalOptions *options.GlobalOption
 	return err == nil
 }
 
-// The modules directory is filled by one werf import (.werf/defines/installer.tmpl for the
-// installer, candi.tmpl for the downloaded tree), both copying modules/*/openapi/config-values.yaml
-// out of the edition built. Every cloud-provider module carries that file, so no directory here
-// means the build does not produce it.
-//
-// An unreadable directory answers "shipped": read the other way, a filesystem carrying nothing
-// would turn every provider with a bare ModuleConfig external at once.
+// The modules directory is filled by werf from the edition built, and every cloud-provider module
+// carries openapi/config-values.yaml, so no directory here means the build does not ship it. An
+// unreadable directory answers "shipped": otherwise an empty filesystem externalises every module.
 func moduleShippedInImage(moduleName string, globalOptions *options.GlobalOptions) bool {
 	modulesDir := options.DefaultModulesDir
 	if globalOptions != nil && globalOptions.ModulesDir != "" {
@@ -919,9 +915,12 @@ var (
 	// travels along because providerIsExternal reads the modules directory, whose path is not
 	// fixed: ResolveAndApplyPaths roots it at the working directory, or under DownloadDir.
 	resolveProviderBundleRef = func(ctx context.Context, provider string, lookup providerModuleLookup, globalOptions *options.GlobalOptions) (providerBundleRef, error) {
-		ref, found, err := resolveModuleProviderBundle(ctx, provider, lookup, globalOptions)
-		if found || err != nil {
-			return ref, err
+		ref, err := resolveModuleProviderBundle(ctx, provider, lookup, globalOptions)
+		if err != nil {
+			return providerBundleRef{}, err
+		}
+		if ref.Digest != "" {
+			return ref, nil
 		}
 
 		digest, err := digests.GetImage(sectionForProvider(provider), terraformManagerImageName)
@@ -953,10 +952,9 @@ func EnsureProviderBundle(ctx context.Context, provider string, docs []string, g
 		return nil
 	}
 
-	// Read before the early return below: for inTreeValidatorProviders providerCandiPresent
-	// answers true on the candi schemas alone, so an opt-in would never reach the resolver while
-	// declaresExternalProviderModule still hoists it into the provider queue. dhctl would then
-	// install the pinned build and validate against another build's schemas.
+	// Read before the early return below: for inTreeValidatorProviders providerCandiPresent answers
+	// true on the candi schemas alone, so an opt-in would never reach the resolver and dhctl would
+	// install the pinned build while validating against another build's schemas.
 	md, err := ParseModuleDocs(docs)
 	if err != nil {
 		return err
@@ -987,19 +985,14 @@ func EnsureProviderBundle(ctx context.Context, provider string, docs []string, g
 	return ensureProviderBundle(ctx, provider, ref, registryConf, globalOptions)
 }
 
-// KubeClientGetter lazily provides a kube client for the target cluster.
-// EnsureExternalProviderBundle asks for it to resolve which module build the provider runs, and
-// to read the registry a missing bundle is pulled from. Only providerCandiPresent returns before
-// the first, so past it every operation dials. Do not optimise that away with a local check:
-// which module a cluster runs is a property of that cluster.
+// KubeClientGetter lazily provides a kube client for the target cluster. Only providerCandiPresent
+// returns before the first use, so past it every operation dials. Do not optimise that away with a
+// local check: which module build a cluster runs is a property of that cluster.
 type KubeClientGetter func(ctx context.Context) (*client.KubernetesClient, error)
 
-// EnsureExternalProviderBundle downloads and unpacks the external provider's OCI
-// bundle using the registry read from the target cluster (the registry-config /
-// deckhouse-registry secret). Commander operations receive no registry_config,
-// so the bundle registry is unknown from the request and the cluster is the only
-// source of truth. providerCandiPresent answers on the bundle already being on disk, which for
-// every provider but yandex and vcd means the validator binary, and only the DVP bundle ships one.
+// EnsureExternalProviderBundle downloads and unpacks the external provider's OCI bundle using the
+// registry read from the target cluster. Commander operations receive no registry_config, so the
+// bundle registry is unknown from the request and the cluster is the only source of truth.
 func EnsureExternalProviderBundle(ctx context.Context, kubeClient KubeClientGetter, clusterConfigData string, globalOptions *options.GlobalOptions) error {
 	globalOptions = withDownloadDir(globalOptions)
 
@@ -1102,19 +1095,11 @@ func unpackProviderBundle(ctx context.Context, provider string, ref providerBund
 		if err := downloadProviderBundle(ctx, imgName, partialDir, globalOptions.DownloadCacheDir, *conf, globalOptions.ShowProgress); err != nil {
 			_ = os.RemoveAll(partialDir)
 			// Runs before every preflight check, so this message is all the operator gets.
-			// The escape hatches differ: the module chain never reads the embedded digests,
-			// so DHCTL_IMAGES_DIGESTS_FILE would send the operator after a file nothing reads.
-			hatch := "  - point DHCTL_IMAGES_DIGESTS_FILE at an images_digests.json whose " + sectionForProvider(provider) + ".terraformManager digest exists in your registry;\n"
-			if ref.Image != "" {
-				hatch = "  - or correct the ModuleSource/ModulePullOverride so the module resolves to a bundle you can reach;\n"
-			}
-			return fmt.Errorf("download provider bundle for %q from %s failed: %w\n"+
-				"The bundle carries the provider schemas and the validator, so the configuration cannot be checked without it.\n"+
-				"Either make %s reachable with the registry credentials from the configuration, or deliver the bundle another way:\n"+
-				"%s"+
-				"  - or unpack the bundle yourself into %s (its openapi/ and validator must be there before dhctl starts).",
-				provider, imgName, err,
-				imgName, hatch, providerdir.ProviderDir(globalOptions.DownloadDir, provider))
+			return fmt.Errorf("download provider bundle for %q from %s: %w\n"+
+				"It carries the provider schemas and the validator, so the configuration cannot be checked without it. "+
+				"Make that reference reachable with the registry credentials from the configuration, "+
+				"or unpack the bundle into %s yourself before dhctl starts.",
+				provider, imgName, err, providerdir.ProviderDir(globalOptions.DownloadDir, provider))
 		}
 		// The image puller leaves the downloaded tarball next to the unpacked
 		// tree. The digest-pinned directory itself is the cache (its presence
@@ -1203,7 +1188,7 @@ func IsCSEdition(ed string) bool {
 	return strings.ToLower(ed) == "cse"
 }
 
-// sectionForProvider is the images_digests.json section a provider's images live under.
+// The images_digests.json section a provider's images live under.
 func sectionForProvider(provider string) string {
 	return "cloudProvider" + strings.ToUpper(provider[:1]) + provider[1:]
 }

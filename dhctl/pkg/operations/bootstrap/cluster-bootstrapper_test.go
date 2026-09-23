@@ -18,6 +18,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"slices"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -61,7 +62,7 @@ func TestParseResourcesKeepsNodeConfigDocumentsOutOfTheQueues(t *testing.T) {
 
 	require.NoError(t, (&ClusterBootstrapper{}).bootstrapParseResources(t.Context(), bctx))
 
-	queued := append(append(bctx.resourcesToCreateBefore, bctx.resourcesToCreateProvider...), bctx.resourcesToCreateAfter...)
+	queued := slices.Concat(bctx.resourcesToCreateBefore, bctx.resourcesToCreateModules, bctx.resourcesToCreateProvider, bctx.resourcesToCreateAfter)
 	kinds := make([]string, 0, len(queued))
 	for _, resource := range queued {
 		kinds = append(kinds, resource.Object.GetKind())
@@ -583,42 +584,48 @@ spec:
 	require.Empty(t, after)
 }
 
-// Everything that must leave the split exactly as it always was. The divert is for one case only:
-// this cluster's provider module is not in the installer image, which is the only way its
-// ModuleConfig can reach these documents.
-func TestSplitResources_ModuleDocumentsThatDoNotDivert(t *testing.T) {
+// The whole split, for the configurations where the early queue must NOT carry an enabling
+// document. A ModuleSource and a ModulePullOverride travel early always: neither turns a module
+// on. A ModuleConfig does, so it moves only when it names this cluster's own provider.
+func TestSplitResources_OnlyTheProviderModuleConfigMovesEarly(t *testing.T) {
 	tests := []struct {
 		name               string
 		docs               string
 		nodesFromResources bool
 		providerName       string
+		wantModules        []string
 		wantProvider       []string
 		wantAfter          []string
 	}{
 		{
 			// An in-tree provider's ModuleConfig never reaches these documents, so a ModuleSource
-			// for some other module is all there is - and it must not drag anything forward.
+			// for some other module is all there is. It may travel; the module it serves is turned
+			// on by a ModuleConfig that stays behind.
 			name:               "in-tree provider, ModuleSource for another module",
 			docs:               providerModuleSourceDoc + providerNodeDocs + userModuleConfigDoc,
 			nodesFromResources: true,
 			providerName:       "dvp",
+			wantModules:        []string{"ModuleSource/deckhouse"},
 			wantProvider:       []string{"DVPInstanceClass/master-dvp", "NodeGroup/master"},
-			wantAfter:          []string{"ModuleSource/deckhouse", "ModuleConfig/user-authn"},
+			wantAfter:          []string{"ModuleConfig/user-authn"},
 		},
 		{
-			// The cloud-provider ModuleConfig migration leaves the previous provider's entry
-			// behind, and that module ships no CRD this cluster's nodes are written against.
+			// The guard that matters. The cloud-provider ModuleConfig migration leaves the previous
+			// provider's entry behind, and installing that provider ahead of the readiness wait
+			// would pull a cloud-controller-manager and a CSI this cluster never asked for.
 			name:               "ModuleConfig of a provider this cluster does not run",
 			docs:               providerModuleSourceDoc + providerModuleConfigDoc + providerNodeDocs,
 			nodesFromResources: true,
 			providerName:       "openstack",
+			wantModules:        []string{"ModuleSource/deckhouse"},
 			wantProvider:       []string{"DVPInstanceClass/master-dvp", "NodeGroup/master"},
-			wantAfter:          []string{"ModuleSource/deckhouse", "ModuleConfig/cloud-provider-dvp"},
+			wantAfter:          []string{"ModuleConfig/cloud-provider-dvp"},
 		},
 		{
-			// An override with no spec.imageTag names no image to pull, and the bundle resolver
-			// ignores it for exactly that reason (ModuleDocs.ImageTags). The two must agree.
-			name: "ModulePullOverride without an image tag",
+			// An override enables nothing on its own - the override controller answers "module is
+			// disabled" - so it travels without dragging its module along. spec.imageTag is left
+			// out to pin that the split never reads it.
+			name: "ModulePullOverride with no ModuleConfig to enable the module",
 			docs: providerModuleSourceDoc + providerNodeDocs + `
 ---
 apiVersion: deckhouse.io/v1alpha2
@@ -630,18 +637,19 @@ spec:
 `,
 			nodesFromResources: true,
 			providerName:       "dvp",
+			wantModules:        []string{"ModuleSource/deckhouse", "ModulePullOverride/cloud-provider-dvp"},
 			wantProvider:       []string{"DVPInstanceClass/master-dvp", "NodeGroup/master"},
-			wantAfter:          []string{"ModuleSource/deckhouse", "ModulePullOverride/cloud-provider-dvp"},
+			wantAfter:          []string{},
 		},
 		{
-			// A static cluster applies the provider queue nowhere, so diverting into it would
-			// drop the module documents entirely.
+			// A static cluster has no provider at all, so no ModuleConfig can name one.
 			name:               "static cluster",
 			docs:               providerModuleSourceDoc + providerModuleConfigDoc,
 			nodesFromResources: false,
 			providerName:       "",
+			wantModules:        []string{"ModuleSource/deckhouse"},
 			wantProvider:       []string{},
-			wantAfter:          []string{"ModuleSource/deckhouse", "ModuleConfig/cloud-provider-dvp"},
+			wantAfter:          []string{"ModuleConfig/cloud-provider-dvp"},
 		},
 	}
 
@@ -649,10 +657,11 @@ spec:
 		t.Run(tt.name, func(t *testing.T) {
 			resources := parseResourceDocs(t, tt.docs)
 
-			before, _, provider, after := splitResourcesOnPreAndPostDeckhouseInstall(
+			before, modules, provider, after := splitResourcesOnPreAndPostDeckhouseInstall(
 				context.TODO(), resources, tt.nodesFromResources, tt.providerName)
 
 			require.Empty(t, before)
+			require.Equal(t, tt.wantModules, resourceNames(modules))
 			require.Equal(t, tt.wantProvider, resourceNames(provider))
 			require.Equal(t, tt.wantAfter, resourceNames(after))
 		})

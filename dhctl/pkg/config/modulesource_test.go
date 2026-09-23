@@ -140,10 +140,10 @@ func TestParseModuleDocsNothingFound(t *testing.T) {
 
 func TestResolveModuleProviderBundleNotAModule(t *testing.T) {
 	// No ModuleConfig for the provider - the in-tree path, which must not be reported as
-	// found and must not touch a registry.
-	_, found, err := resolveModuleProviderBundle(context.Background(), "yandex", configModuleDocs([]string{ensureClusterConfigDoc("Yandex")}), testModuleOptions(t, "yandex"))
+	// external and must not touch a registry.
+	ref, err := resolveModuleProviderBundle(context.Background(), "yandex", configModuleDocs([]string{ensureClusterConfigDoc("Yandex")}), testModuleOptions(t, "yandex"))
 	require.NoError(t, err)
-	require.False(t, found)
+	require.Empty(t, ref.Digest)
 }
 
 // A bare cloud-provider ModuleConfig - no spec.source, no ModulePullOverride - is enough for a
@@ -171,9 +171,8 @@ spec:
 `
 
 	t.Run("no source named", func(t *testing.T) {
-		_, found, err := resolveModuleProviderBundle(context.Background(), "openstack",
+		_, err := resolveModuleProviderBundle(context.Background(), "openstack",
 			configModuleDocs([]string{ensureRegistryMCDoc, bareModuleConfig}), testModuleOptions(t))
-		require.True(t, found)
 		require.ErrorIs(t, err, registry.ErrImageNotFound)
 		require.ErrorContains(t, err, "this Deckhouse edition does not include that provider")
 		require.ErrorContains(t, err, "ModuleSource publishing it is missing")
@@ -181,12 +180,11 @@ spec:
 
 	// The operator wrote the address that failed, so repeating the guess back at them is noise.
 	t.Run("source named", func(t *testing.T) {
-		_, found, err := resolveModuleProviderBundle(context.Background(), "openstack", configModuleDocs([]string{
+		_, err := resolveModuleProviderBundle(context.Background(), "openstack", configModuleDocs([]string{
 			ensureRegistryMCDoc,
 			testModuleSourceDoc(t, "registry.example.io/modules"),
 			bareModuleConfig + "  source: dev\n",
 		}), testModuleOptions(t))
-		require.True(t, found)
 		require.ErrorIs(t, err, registry.ErrImageNotFound)
 		require.NotContains(t, err.Error(), "does not include that provider")
 	})
@@ -202,7 +200,7 @@ func TestResolveModuleProviderBundleBareModuleConfigModuleNotInImage(t *testing.
 		addImage(t, moduleRepo, "v1.0.0", map[string]string{"images_digests.json": `{"terraformManager": "` + testBundleDigest + `"}`})
 	stubModuleCatalog(t, reg)
 
-	ref, found, err := resolveModuleProviderBundle(context.Background(), "dvp", configModuleDocs([]string{
+	ref, err := resolveModuleProviderBundle(context.Background(), "dvp", configModuleDocs([]string{
 		ensureRegistryMCDoc,
 		ensureClusterConfigDoc("DVP"), `
 apiVersion: deckhouse.io/v1alpha1
@@ -216,7 +214,6 @@ spec:
     layout: Standard
 `}), testModuleOptions(t))
 	require.NoError(t, err)
-	require.True(t, found)
 	require.Equal(t, moduleRepo+"@"+testBundleDigest, ref.Image)
 	require.NotEqual(t, "sha256:embedded", ref.Digest, "the leftover digests section must not win over the ModuleConfig")
 }
@@ -232,7 +229,7 @@ func TestResolveModuleProviderBundleBareModuleConfigModuleInImageStaysInternal(t
 	reg := newModuleStand("r.example.com/test/modules").failing(fmt.Errorf("the registry must not be touched at all"))
 	stubModuleCatalog(t, reg)
 
-	_, found, err := resolveModuleProviderBundle(context.Background(), "openstack", configModuleDocs([]string{
+	ref, err := resolveModuleProviderBundle(context.Background(), "openstack", configModuleDocs([]string{
 		ensureRegistryMCDoc,
 		ensureClusterConfigDoc("OpenStack"), `
 apiVersion: deckhouse.io/v1alpha1
@@ -244,7 +241,7 @@ spec:
   version: 1
 `}), testModuleOptions(t, "openstack"))
 	require.NoError(t, err)
-	require.False(t, found)
+	require.Empty(t, ref.Digest)
 	require.Empty(t, reg.tags)
 }
 
@@ -336,10 +333,9 @@ spec:
 				addImage(t, moduleRepo, tc.tag, map[string]string{"images_digests.json": `{"terraformManager": "` + testBundleDigest + `"}`})
 			stubModuleCatalog(t, reg)
 
-			ref, found, err := resolveModuleProviderBundle(context.Background(), "openstack",
+			ref, err := resolveModuleProviderBundle(context.Background(), "openstack",
 				configModuleDocs([]string{ensureRegistryMCDoc, tc.doc}), testModuleOptions(t, "openstack"))
 			require.NoError(t, err)
-			require.True(t, found)
 			require.Equal(t, tc.tag, reg.tags[moduleRepo])
 			require.Equal(t, moduleRepo+"@"+testBundleDigest, ref.Image)
 		})
@@ -350,7 +346,10 @@ func TestResolveModuleProviderBundleUnknownSource(t *testing.T) {
 	// A ModuleConfig naming a ModuleSource that is not in the configuration is a hard error:
 	// falling back to the main registry would pull a different module than was asked for. The
 	// one exception, "deckhouse", is covered by TestResolveModuleProviderBundleDefaultSource.
-	_, found, err := resolveModuleProviderBundle(context.Background(), "dvp", configModuleDocs([]string{`
+	// Stocked so that a fallback would succeed and the test would pass by accident.
+	stubEmbeddedDigests(t, `{"cloudProviderDvp": {"terraformManager": "sha256:embedded"}}`)
+
+	_, err := resolveProviderBundleRef(context.Background(), "dvp", configModuleDocs([]string{`
 apiVersion: deckhouse.io/v1alpha1
 kind: ModuleConfig
 metadata:
@@ -360,7 +359,6 @@ spec:
   version: 1
   source: missing
 `}), testModuleOptions(t))
-	require.True(t, found, "a present ModuleConfig must not fall through to the embedded digests")
 	require.ErrorContains(t, err, "missing")
 }
 
@@ -452,8 +450,7 @@ func TestModuleCatalogRequestHasItsOwnDeadline(t *testing.T) {
 	conf, err := image.NewRegistryConfig("HTTP", repo, "", "", "")
 	require.NoError(t, err)
 
-	catalog, err := moduleCatalog(conf, repo)
-	require.NoError(t, err)
+	catalog := moduleCatalog(conf, repo)
 
 	done := make(chan error, 1)
 	go func() {
@@ -570,7 +567,7 @@ func stubModuleCatalog(t *testing.T, stand *moduleStand) {
 	t.Helper()
 
 	orig := moduleCatalog
-	moduleCatalog = func(conf *image.RegistryConfig, repo string) (*module.Catalog, error) {
+	moduleCatalog = func(conf *image.RegistryConfig, repo string) *module.Catalog {
 		stand.confs[repo] = conf
 
 		_, rest := splitHostPath(repo)
@@ -582,7 +579,7 @@ func stubModuleCatalog(t *testing.T, stand *moduleStand) {
 
 		rec := registry.Client(&recordingClient{Client: cli, path: repo, tags: stand.tags, err: stand.err})
 
-		return module.NewCatalog(service.NewBasicService(module.CatalogServiceName, rec, log.Default())), nil
+		return module.NewCatalog(service.NewBasicService(module.CatalogServiceName, rec, log.Default()))
 	}
 
 	t.Cleanup(func() { moduleCatalog = orig })
@@ -746,7 +743,7 @@ spec:
 				addImage(t, moduleRepo, "v1.2.3", map[string]string{"images_digests.json": `{"terraformManager": "` + testBundleDigest + `"}`})
 			stubModuleCatalog(t, reg)
 
-			ref, _, err := resolveModuleProviderBundle(context.Background(), "dvp", configModuleDocs(tc.docs), testModuleOptions(t))
+			ref, err := resolveModuleProviderBundle(context.Background(), "dvp", configModuleDocs(tc.docs), testModuleOptions(t))
 			require.NoError(t, err)
 			require.Equal(t, tc.tag, reg.tags[moduleRepo+"/release"])
 			// A semver version is tagged the same way, just with the "v" the build adds.
@@ -780,10 +777,10 @@ func TestResolveModuleProviderBundleNoModuleConfig(t *testing.T) {
 	reg := newModuleStand("r.example.com/test/modules").failing(fmt.Errorf("the registry must not be touched at all"))
 	stubModuleCatalog(t, reg)
 
-	_, found, err := resolveModuleProviderBundle(context.Background(), "dvp",
+	ref, err := resolveModuleProviderBundle(context.Background(), "dvp",
 		configModuleDocs([]string{ensureRegistryMCDoc, ensureClusterConfigDoc("DVP")}), testModuleOptions(t))
 	require.NoError(t, err)
-	require.False(t, found)
+	require.Empty(t, ref.Digest)
 	require.Empty(t, reg.tags)
 }
 
@@ -810,7 +807,7 @@ func TestResolveModuleProviderBundleNoBundleDigest(t *testing.T) {
 		addImage(t, moduleRepo+"/release", "stable", map[string]string{"version.json": `{"version": "1.0.0"}`}).
 		addImage(t, moduleRepo, "v1.0.0", map[string]string{"images_digests.json": `{"validator": "sha256:aaa"}`}))
 
-	_, found, err := resolveModuleProviderBundle(context.Background(), "dvp", configModuleDocs([]string{ensureRegistryMCDoc, `
+	_, err := resolveModuleProviderBundle(context.Background(), "dvp", configModuleDocs([]string{ensureRegistryMCDoc, `
 apiVersion: deckhouse.io/v1alpha1
 kind: ModuleConfig
 metadata:
@@ -819,7 +816,6 @@ spec:
   version: 1
   source: deckhouse
 `}), testModuleOptions(t))
-	require.True(t, found)
 	require.ErrorContains(t, err, "terraformManager")
 }
 
@@ -836,7 +832,7 @@ func TestResolveModuleProviderBundlePullOverrideSkipsReleaseImage(t *testing.T) 
 		})
 	stubModuleCatalog(t, reg)
 
-	ref, found, err := resolveModuleProviderBundle(context.Background(), "dvp", configModuleDocs([]string{ensureRegistryMCDoc, `
+	ref, err := resolveModuleProviderBundle(context.Background(), "dvp", configModuleDocs([]string{ensureRegistryMCDoc, `
 apiVersion: deckhouse.io/v1alpha2
 kind: ModulePullOverride
 metadata:
@@ -845,10 +841,9 @@ spec:
   imageTag: mr1
 `}), testModuleOptions(t))
 	require.NoError(t, err)
-	require.True(t, found, "an override is enough on its own to mark the module external")
 	require.Equal(t, "mr1", reg.tags[moduleRepo])
 	require.NotContains(t, reg.tags, moduleRepo+"/release", "the release image must not be requested")
-	require.Equal(t, moduleRepo+"@"+testBundleDigest, ref.Image)
+	require.Equal(t, moduleRepo+"@"+testBundleDigest, ref.Image, "an override is enough on its own to mark the module external")
 }
 
 // "deckhouse" is the ModuleSource helm creates inside the cluster; it cannot be in config.yml,
@@ -862,7 +857,7 @@ func TestResolveModuleProviderBundleDefaultSource(t *testing.T) {
 		addImage(t, moduleRepo, "v1.0.0", map[string]string{"images_digests.json": `{"terraformManager": "` + testBundleDigest + `"}`})
 	stubModuleCatalog(t, reg)
 
-	ref, found, err := resolveModuleProviderBundle(context.Background(), "dvp", configModuleDocs([]string{ensureRegistryMCDoc, `
+	ref, err := resolveModuleProviderBundle(context.Background(), "dvp", configModuleDocs([]string{ensureRegistryMCDoc, `
 apiVersion: deckhouse.io/v1alpha1
 kind: ModuleConfig
 metadata:
@@ -872,7 +867,6 @@ spec:
   source: deckhouse
 `}), testModuleOptions(t))
 	require.NoError(t, err)
-	require.True(t, found)
 	require.Equal(t, moduleRepo+"@"+testBundleDigest, ref.Image)
 	require.Equal(t, "test-user", ref.Registry.GetUsername())
 }
@@ -1029,9 +1023,9 @@ func TestResolveModuleProviderBundleFromClusterNotAModule(t *testing.T) {
 			reg := newModuleStand("r.example.com/test/modules").failing(fmt.Errorf("the registry must not be touched at all"))
 			stubModuleCatalog(t, reg)
 
-			_, found, err := resolveModuleProviderBundle(t.Context(), "dvp", testClusterModuleLookup(t, tc.objs...), testModuleOptions(t))
+			ref, err := resolveModuleProviderBundle(t.Context(), "dvp", testClusterModuleLookup(t, tc.objs...), testModuleOptions(t))
 			require.NoError(t, err)
-			require.False(t, found)
+			require.Empty(t, ref.Digest)
 			require.Empty(t, reg.tags)
 		})
 	}
@@ -1053,12 +1047,11 @@ func TestResolveModuleProviderBundleFromClusterVersion(t *testing.T) {
 		})
 	stubModuleCatalog(t, reg)
 
-	ref, found, err := resolveModuleProviderBundle(t.Context(), "dvp", testClusterModuleLookup(t,
+	ref, err := resolveModuleProviderBundle(t.Context(), "dvp", testClusterModuleLookup(t,
 		testModuleObject("dev", "1.2.3"),
 		testModuleSourceObject(t, testClusterModuleRepo),
 	), testModuleOptions(t))
 	require.NoError(t, err)
-	require.True(t, found)
 
 	require.Equal(t, "v1.2.3", reg.tags[moduleRepo])
 	require.NotContains(t, reg.tags, moduleRepo+"/release", "the installed version pins the image, so the release image must not be requested")
@@ -1085,13 +1078,12 @@ func TestResolveModuleProviderBundleFromClusterPullOverride(t *testing.T) {
 		})
 	stubModuleCatalog(t, reg)
 
-	ref, found, err := resolveModuleProviderBundle(t.Context(), "dvp", testClusterModuleLookup(t,
+	ref, err := resolveModuleProviderBundle(t.Context(), "dvp", testClusterModuleLookup(t,
 		testModuleObject("dev", "1.2.3"),
 		testModuleSourceObject(t, testClusterModuleRepo),
 		testPullOverrideObject("mr1"),
 	), testModuleOptions(t))
 	require.NoError(t, err)
-	require.True(t, found)
 	require.Equal(t, "mr1", reg.tags[moduleRepo])
 	require.Equal(t, moduleRepo+"@"+testBundleDigest, ref.Image)
 }
@@ -1139,10 +1131,10 @@ func TestResolveModuleProviderBundleFromClusterDenied(t *testing.T) {
 			return true, nil, apierrors.NewForbidden(schema.GroupResource{Group: "deckhouse.io", Resource: "modules"}, "cloud-provider-dvp", fmt.Errorf("no"))
 		})
 
-	_, found, err := resolveModuleProviderBundle(t.Context(), "dvp",
+	ref, err := resolveModuleProviderBundle(t.Context(), "dvp",
 		clusterModuleDocs(func(context.Context) (*client.KubernetesClient, error) { return kubeCl, nil }, "dvp", true), testModuleOptions(t))
 	require.NoError(t, err)
-	require.False(t, found)
+	require.Empty(t, ref.Digest)
 	require.Empty(t, reg.tags)
 }
 
@@ -1168,13 +1160,13 @@ func TestResolveModuleProviderBundleFromClusterUnreadyPullOverride(t *testing.T)
 		})
 	stubModuleCatalog(t, reg)
 
-	_, found, err := resolveModuleProviderBundle(t.Context(), "dvp", testClusterModuleLookup(t,
+	ref, err := resolveModuleProviderBundle(t.Context(), "dvp", testClusterModuleLookup(t,
 		testModuleObject("dev", "1.2.3"),
 		testModuleSourceObject(t, testClusterModuleRepo),
 		testPullOverrideObjectWithStatus("typo", "Failed to pull module"),
 	), testModuleOptions(t))
 	require.NoError(t, err)
-	require.True(t, found)
+	require.NotEmpty(t, ref.Digest)
 	require.Equal(t, "v1.2.3", reg.tags[moduleRepo], "an override the cluster is not running must not pin the bundle")
 }
 
@@ -1184,7 +1176,7 @@ func TestResolveModuleProviderBundleFromClusterNoVersion(t *testing.T) {
 	reg := newModuleStand("r.example.com/test/modules").failing(fmt.Errorf("the registry must not be touched at all"))
 	stubModuleCatalog(t, reg)
 
-	_, _, err := resolveModuleProviderBundle(t.Context(), "dvp", testClusterModuleLookup(t,
+	_, err := resolveModuleProviderBundle(t.Context(), "dvp", testClusterModuleLookup(t,
 		testModuleObject("dev", ""),
 		testModuleSourceObject(t, testClusterModuleRepo),
 	), testModuleOptions(t))
