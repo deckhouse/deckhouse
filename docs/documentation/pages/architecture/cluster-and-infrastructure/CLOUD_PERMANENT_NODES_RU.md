@@ -19,7 +19,7 @@ description: Архитектура модуля node-manager для CloudPerman
 
 Архитектура модуля [`node-manager`](/modules/node-manager/) на уровне 2 модели C4 и его взаимодействия с другими компонентами Deckhouse Platform (DP) изображены на следующей диаграмме:
 
-![Архитектура модуля node-manager для CloudPermanent-узлов](../../../images/architecture/cluster-and-infrastructure/c4-l2-cloud-permanent-nodes.ru.png)
+![Архитектура модуля node-manager для CloudPermanent-узлов](../../../images/architecture/cluster-and-infrastructure/c4-l2-cloud-permanent-nodes.ru.svg)
 
 ## Компоненты модуля
 

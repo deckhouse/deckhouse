@@ -28,11 +28,11 @@ description: Архитектура модуля metallb в Deckhouse Platform.
 
 MetalLB в режиме Layer 2:
 
-![Архитектура модуля metallb в режиме Layer 2](../../images/architecture/network/c4-l2-metallb-l2.ru.png)
+![Архитектура модуля metallb в режиме Layer 2](../../images/architecture/network/c4-l2-metallb-l2.ru.svg)
 
 MetalLB в режиме BGP:
 
-![Архитектура модуля metallb в режиме BGP](../../images/architecture/network/c4-l2-metallb-bgp.ru.png)
+![Архитектура модуля metallb в режиме BGP](../../images/architecture/network/c4-l2-metallb-bgp.ru.svg)
 
 ## Компоненты модуля
 

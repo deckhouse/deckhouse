@@ -20,7 +20,7 @@ The following simplifications are made in the diagram:
 
 The Level 2 C4 architecture of the [`cloud-provider-aws`](/modules/cloud-provider-aws/) module and its interactions with other components of Deckhouse Platform (DP) are shown in the following diagram:
 
-![Cloud-provider-aws architecture](../../../images/architecture/cluster-and-infrastructure/c4-l2-cloud-provider-aws.png)
+![Cloud-provider-aws architecture](../../../images/architecture/cluster-and-infrastructure/c4-l2-cloud-provider-aws.svg)
 
 ## Module components
 

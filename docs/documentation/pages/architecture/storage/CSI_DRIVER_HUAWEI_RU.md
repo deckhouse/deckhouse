@@ -19,7 +19,7 @@ CSI-драйвер `csi-huawei` — это реализация стандарт
 
 Архитектура CSI-драйвера `csi-huawei` на уровне 2 модели C4 и его взаимодействия с другими компонентами DP изображены на следующей диаграмме:
 
-![Архитектура CSI-драйвера `csi-huawei`](../../../images/architecture/storage/c4-l2-csi-driver-huawei.ru.png)
+![Архитектура CSI-драйвера `csi-huawei`](../../../images/architecture/storage/c4-l2-csi-driver-huawei.ru.svg)
 
 ## Компоненты драйвера
 

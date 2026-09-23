@@ -26,7 +26,7 @@ The following simplifications are made in the diagram:
 
 The Level 2 C4 architecture of the [`log-shipper`](/modules/log-shipper/) module and its interactions with other components of DP are shown in the following diagram:
 
-![Log-shipper module architecture](../../images/architecture/observability/c4-l2-log-shipper.png)
+![Log-shipper module architecture](../../images/architecture/observability/c4-l2-log-shipper.svg)
 
 ### Module components
 
@@ -86,7 +86,7 @@ For more details about module configuration and usage examples, refer to the [co
 
 The Level 2 C4 architecture of the [`loki`](/modules/loki/) module and its interactions with other components of DP are shown in the following diagram:
 
-![Loki module architecture](../../images/architecture/observability/c4-l2-loki.png)
+![Loki module architecture](../../images/architecture/observability/c4-l2-loki.svg)
 
 ### Module components
 

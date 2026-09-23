@@ -27,7 +27,7 @@ Deckhouse Platform (DP) обеспечивает интеграцию с сис�
 
 Архитектура модуля [`log-shipper`](/modules/log-shipper/) на уровне 2 модели C4 и его взаимодействия с другими компонентами DP изображены на следующей диаграмме:
 
-![Архитектура модуля log-shipper](../../images/architecture/observability/c4-l2-log-shipper.ru.png)
+![Архитектура модуля log-shipper](../../images/architecture/observability/c4-l2-log-shipper.ru.svg)
 
 ### Компоненты модуля
 
@@ -87,7 +87,7 @@ Deckhouse Platform (DP) обеспечивает интеграцию с сис�
 
 Архитектура модуля [`loki`](/modules/loki/) на уровне 2 модели C4 и его взаимодействия с другими компонентами DP изображены на следующей диаграмме:
 
-![Архитектура модуля loki](../../images/architecture/observability/c4-l2-loki.ru.png)
+![Архитектура модуля loki](../../images/architecture/observability/c4-l2-loki.ru.svg)
 
 ### Компоненты модуля
 

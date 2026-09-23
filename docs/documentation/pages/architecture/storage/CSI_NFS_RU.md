@@ -21,7 +21,7 @@ description: Архитектура модуля csi-nfs в Deckhouse Platform.
 
 Архитектура модуля [`csi-nfs`](/modules/csi-nfs/) на уровне 2 модели C4 и его взаимодействия с другими компонентами Deckhouse Platform (DP) изображены на следующей диаграмме:
 
-![Архитектура модуля csi-nfs](../../../images/architecture/storage/c4-l2-csi-nfs.ru.png)
+![Архитектура модуля csi-nfs](../../../images/architecture/storage/c4-l2-csi-nfs.ru.svg)
 
 ## Компоненты модуля
 

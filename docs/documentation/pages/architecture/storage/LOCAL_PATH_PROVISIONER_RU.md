@@ -21,7 +21,7 @@ description: Архитектура модуля local-path-provisioner в Deckh
 
 Архитектура модуля [`local-path-provisioner`](/modules/local-path-provisioner/) на уровне 2 модели C4 и его взаимодействия с другими компонентами Deckhouse Platform (DP) изображены на следующей диаграмме:
 
-![Архитектура модуля local-path-provisioner](../../images/architecture/storage/c4-l2-local-path-provisioner.ru.png)
+![Архитектура модуля local-path-provisioner](../../images/architecture/storage/c4-l2-local-path-provisioner.ru.svg)
 
 ## Компоненты модуля
 

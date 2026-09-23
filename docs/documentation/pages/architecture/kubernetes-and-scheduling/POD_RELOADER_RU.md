@@ -21,7 +21,7 @@ description: Архитектура модуля pod-reloader в Deckhouse Platf
 
 Архитектура модуля [`pod-reloader`](/modules/pod-reloader/) на уровне 2 модели C4 и его взаимодействие с другими компонентами DP показаны на следующей диаграмме:
 
-![Архитектура модуля pod-reloader](../../images/architecture/kubernetes-and-scheduling/c4-l2-pod-reloader.ru.png)
+![Архитектура модуля pod-reloader](../../images/architecture/kubernetes-and-scheduling/c4-l2-pod-reloader.ru.svg)
 
 ## Компоненты модуля
 

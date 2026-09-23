@@ -42,7 +42,7 @@ The following simplifications are made in the diagram:
 
 Interactions of [`virtualization`](/modules/virtualization/) module components while importing and uploading VM images and disks are shown in the following diagram:
 
-![Interactions of virtualization module components while importing and uploading VM images and disks](../../images/architecture/virtualization/c4-l2-virtualization-import.png)
+![Interactions of virtualization module components while importing and uploading VM images and disks](../../images/architecture/virtualization/c4-l2-virtualization-import.svg)
 
 During the processes of importing and uploading VM images and disks [`virtualization`](/modules/virtualization/) module components interact with the following external components:
 

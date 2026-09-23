@@ -55,7 +55,7 @@ description: Как устроена мультитенантность в Deckh
 
 Архитектура модуля [`multitenancy-manager`](/modules/multitenancy-manager/) на уровне 2 модели C4 и его взаимодействия с другими компонентами DP изображены на следующей диаграмме.
 
-![Архитектура модуля multitenancy-manager](../../images/architecture/iam/c4-l2-multitenancy-manager.ru.png)
+![Архитектура модуля multitenancy-manager](../../images/architecture/iam/c4-l2-multitenancy-manager.ru.svg)
 
 ## Компоненты модуля
 

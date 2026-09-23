@@ -18,7 +18,7 @@ The following simplifications are made in the diagram:
 
 The Level 2 C4 architecture of the [`cert-manager`](/modules/cert-manager/) module and its interactions with other DP components are shown in the following diagram:
 
-![Cert-manager module architecture](../../images/architecture/security/c4-l2-cert-manager.png)
+![Cert-manager module architecture](../../images/architecture/security/c4-l2-cert-manager.svg)
 
 ## Module components
 

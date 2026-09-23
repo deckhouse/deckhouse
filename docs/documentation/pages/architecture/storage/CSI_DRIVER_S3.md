@@ -18,7 +18,7 @@ The following simplifications are made in the diagram:
 
 The Level 2 C4 architecture of the `csi-s3` CSI driver and its interactions with other components of DP are shown in the following diagram:
 
-![CSI driver architecture (csi-s3)](../../../images/architecture/storage/c4-l2-csi-driver-s3.png)
+![CSI driver architecture (csi-s3)](../../../images/architecture/storage/c4-l2-csi-driver-s3.svg)
 
 ## Driver components
 

@@ -21,7 +21,7 @@ description: Архитектура модуля snapshot-controller в Deckhous
 
 Архитектура модуля [`snapshot-controller`](/modules/snapshot-controller/) на уровне 2 модели C4 и его взаимодействия с другими компонентами DP изображены на следующей диаграмме:
 
-![Архитектура модуля snapshot-controller](../../images/architecture/storage/c4-l2-snapshot-controller.ru.png)
+![Архитектура модуля snapshot-controller](../../images/architecture/storage/c4-l2-snapshot-controller.ru.svg)
 
 ## Компоненты модуля
 
