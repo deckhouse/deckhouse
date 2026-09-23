@@ -15,8 +15,8 @@
       annotations:
         plk_markup_format: markdown
         plk_protocol_version: "1"
-        plk_create_group_if_not_exists__d8_kubelet_unpinned_containers: "D8KubeletCheckpointStateUnpinnedContainers,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
-        plk_grouped_by__d8_kubelet_unpinned_containers: "D8KubeletCheckpointStateUnpinnedContainers,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
+        plk_create_group_if_not_exists__d8_kubelet_checkpoint_state_reset: "D8KubeletCheckpointStateResetAlerts,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
+        plk_grouped_by__d8_kubelet_checkpoint_state_reset: "D8KubeletCheckpointStateResetAlerts,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
         summary: Pod {{ $labels.namespace }}/{{ $labels.pod }} may run in a NUMA zone other than the one kubelet recorded for it.
         description: |
           Kubelet on Node `{{ $labels.node }}` reset the memory manager checkpoint and recorded new NUMA zones for the containers of Pod `{{ $labels.namespace }}/{{ $labels.pod }}`. Kubelet sets the zone only when it creates a container, so the containers keep running in the zones they had before the reset, which may be different ones.
