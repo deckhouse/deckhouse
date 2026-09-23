@@ -147,9 +147,9 @@ cp /tmp/ironic-config/httpd.conf.j2 /etc/httpd/conf/
 cp /tmp/ironic-config/httpd-modules.conf /etc/httpd/conf.modules.d/
 cp /tmp/ironic-config/apache2-vmedia.conf.j2 /templates/httpd-vmedia.conf.j2
 cp /tmp/ironic-config/apache2-ipxe.conf.j2 /templates/httpd-ipxe.conf.j2
-# The upstream template hard-codes http://IRONIC_IP:HTTP_PORT for the second
-# stage of iPXE. Honor IRONIC_HTTP_URL so TLS provisioning can use port 8084.
-sed -i 's#http://{{ env\.IRONIC_IP }}:{{ env\.HTTP_PORT }}/boot\.ipxe#{{ env.IRONIC_HTTP_URL }}/boot.ipxe#' /templates/dnsmasq.conf.j2
+# Upstream templates use either IRONIC_IP or IRONIC_URL_HOST for the second
+# iPXE stage. Honor IRONIC_HTTP_URL so TLS provisioning can use port 8084.
+sed -i -e 's#http://{{ env\.IRONIC_IP }}:{{ env\.HTTP_PORT }}/boot\.ipxe#{{ env.IRONIC_HTTP_URL }}/boot.ipxe#' -e 's#http://{{ env\.IRONIC_URL_HOST }}:{{ env\.HTTP_PORT }}/boot\.ipxe#{{ env.IRONIC_HTTP_URL }}/boot.ipxe#' /templates/dnsmasq.conf.j2
 mkdir -p /opt/metal3/ipa-images
 mv /tmp/ironic-python-agent.kernel /opt/metal3/ipa-images/ironic-python-agent.kernel
 mv /tmp/ironic-python-agent.initramfs /opt/metal3/ipa-images/ironic-python-agent.initramfs
