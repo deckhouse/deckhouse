@@ -9,7 +9,7 @@ lang: ru
 
 Чтобы настроить доступ, выполните следующие шаги:
 
-1. Включите публикацию Kubernetes API. Для этого установите параметр [`apiserver.publishAPI.ingress.enabled: true`](/modules/control-plane-manager/configuration.html#parameters-apiserver-publishapi-ingress-enabled) в настройках модуля `control-plane-manager` или с помощью веб-интерфейса администратора Deckhouse.
+1. Включите публикацию Kubernetes API. Для этого установите параметр [`apiserver.publishAPI.ingress.enabled: true`](/modules/control-plane-manager/configuration.html#parameters-apiserver-publishapi-ingress-enabled) в настройках модуля `control-plane-manager` или с помощью веб-интерфейса Deckhouse Platform.
 
    Пример конфигурации модуля:
 
