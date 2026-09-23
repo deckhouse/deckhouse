@@ -2386,18 +2386,18 @@ alerts:
       module: node-manager
       edition: ce
       description: |
-        Kubelet on Node `{{ $labels.node }}` reset the memory manager checkpoint and recorded new NUMA zones for Pod `{{ $labels.namespace }}/{{ $labels.pod }}`. Zones are applied only when a container is created, so the running containers stay in their old zones, which may differ from the recorded ones.
+        Kubelet on Node `{{ $labels.node }}` reset the memory manager checkpoint and recorded new NUMA zones for Pod `{{ $labels.namespace }}/{{ $labels.pod }}`. Zones are applied only when a container is created, so the running containers stay in their previous zones, which may differ from the recorded ones.
 
-        As a result, the zone the Pod really uses may be given to another Guaranteed Pod, and both Pods share its memory. The Pod's CPUs and memory may also end up in different NUMA zones, which slows down its memory access.
+        As a result, the zone the Pod really uses may also be assigned to another Guaranteed Pod, causing both Pods to share its memory resources. The Pod's CPUs and memory may also be assigned to different NUMA zones, which slows down its memory access.
 
-        The Pod is not restarted automatically: when to do it is up to the workload. To restore isolation:
+        The Pod is not restarted automatically. The restart time depends on the workload. To restore resource isolation, do the following:
 
-        - Delete the Pod or drain the Node, so its containers are recreated in the current zones.
-        - For a virtual machine, you can live migrate it to another Node instead, without stopping it.
+        - To recreate the Pod's containers in the currently assigned NUMA zones, delete the Pod or drain the node.
+        - For a virtual machine, perform a live migration to another node instead, without stopping it.
 
         The alert resolves within a few minutes after the Pod is recreated. No kubelet restart is needed.
       summary: |
-        Pod {{ $labels.namespace }}/{{ $labels.pod }} may run in a NUMA zone other than the one kubelet recorded for it.
+        Pod {{ $labels.namespace }}/{{ $labels.pod }} may run in a NUMA zone other than the one recorded by kubelet.
       severity: "4"
       markupFormat: markdown
     - name: D8KubernetesStaleTokensDetected
