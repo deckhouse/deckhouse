@@ -20,7 +20,7 @@ The following simplifications are made in the diagram:
 
 The Level 2 C4 architecture of the [`sds-local-volume`](/modules/sds-local-volume/) module and its interactions with other components of Deckhouse Platform (DP) are shown in the following diagrams:
 
-![sds-local-volume module architecture](../../images/architecture/storage/c4-l2-sds-local-volume.png)
+![sds-local-volume module architecture](../../images/architecture/storage/c4-l2-sds-local-volume.svg)
 
 ## Module components
 

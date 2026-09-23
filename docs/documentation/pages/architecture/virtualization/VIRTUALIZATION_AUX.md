@@ -27,7 +27,7 @@ The following simplifications are made in the diagram:
 
 The Level 2 C4 architecture of the [`virtualization`](/modules/virtualization/) module auxiliary components for security events audit and their interactions with other components of DP is shown in the following diagram:
 
-![Architecture of the virtualization-audit component of the virtualization module](../../images/architecture/virtualization/c4-l2-virtualization-audit.png)
+![Architecture of the virtualization-audit component of the virtualization module](../../images/architecture/virtualization/c4-l2-virtualization-audit.svg)
 
 ### Components
 
@@ -55,7 +55,7 @@ The following external components interact with virtualization-audit:
 
 The Level 2 C4 architecture of other [`virtualization`](/modules/virtualization/) module auxiliary components and their interactions with other components of DP is shown in the following diagram:
 
-![Architecture of other virtualization module auxiliary components](../../images/architecture/virtualization/c4-l2-virtualization-misc.png)
+![Architecture of other virtualization module auxiliary components](../../images/architecture/virtualization/c4-l2-virtualization-misc.svg)
 
 ### Components
 

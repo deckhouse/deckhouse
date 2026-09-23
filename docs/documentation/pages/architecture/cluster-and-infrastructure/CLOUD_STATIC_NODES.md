@@ -18,7 +18,7 @@ The following simplifications are made in the diagram:
 
 The Level 2 C4 architecture of the [`node-manager`](/modules/node-manager/) module and its interactions with other Deckhouse Platform (DP) components are shown in the following diagram:
 
-![Node-manager architecture for CloudStatic nodes](../../../images/architecture/cluster-and-infrastructure/c4-l2-cloud-static-nodes.png)
+![Node-manager architecture for CloudStatic nodes](../../../images/architecture/cluster-and-infrastructure/c4-l2-cloud-static-nodes.svg)
 
 ## Module components
 

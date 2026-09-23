@@ -28,7 +28,7 @@ description: Архитектура вспомогательных компон�
 
 Архитектура компонентов, реализующих аудит событий безопасности модуля [`virtualization`](/modules/virtualization/) на уровне 2 модели C4 и их взаимодействия с другими компонентами DP изображены на следующей диаграмме:
 
-![Архитектура компонента virtualization-audit модуля virtualization](../../images/architecture/virtualization/c4-l2-virtualization-audit.ru.png)
+![Архитектура компонента virtualization-audit модуля virtualization](../../images/architecture/virtualization/c4-l2-virtualization-audit.ru.svg)
 
 ### Компоненты
 
@@ -56,7 +56,7 @@ Virtualization-audit взаимодействует со следующими к
 
 Архитектура прочих вспомогательных компонентов модуля [`virtualization`](/modules/virtualization/) на уровне 2 модели C4 и их взаимодействия с другими компонентами DP изображены на следующей диаграмме:
 
-![Архитектура прочих вспомогательных компонентов модуля virtualization](../../images/architecture/virtualization/c4-l2-virtualization-misc.ru.png)
+![Архитектура прочих вспомогательных компонентов модуля virtualization](../../images/architecture/virtualization/c4-l2-virtualization-misc.ru.svg)
 
 ### Компоненты
 

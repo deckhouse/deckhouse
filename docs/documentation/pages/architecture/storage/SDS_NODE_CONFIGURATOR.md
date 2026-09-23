@@ -25,7 +25,7 @@ The following simplifications are made in the diagram:
 
 The Level 2 C4 architecture of the [`sds-node-configurator`](/modules/sds-node-configurator/) module and its interactions with other components of DP are shown in the following diagrams:
 
-![sds-node-configurator module architecture](../../images/architecture/storage/c4-l2-sds-node-configurator.png)
+![sds-node-configurator module architecture](../../images/architecture/storage/c4-l2-sds-node-configurator.svg)
 
 ## Module components
 

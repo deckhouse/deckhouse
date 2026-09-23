@@ -18,7 +18,7 @@ The following simplifications are made in the diagram:
 
 The Level 2 C4 architecture of the `csi-huawei` CSI driver and its interactions with other components of DP are shown in the following diagram:
 
-![CSI driver architecture (csi-huawei)](../../../images/architecture/storage/c4-l2-csi-driver-huawei.png)
+![CSI driver architecture (csi-huawei)](../../../images/architecture/storage/c4-l2-csi-driver-huawei.svg)
 
 ## Driver components
 

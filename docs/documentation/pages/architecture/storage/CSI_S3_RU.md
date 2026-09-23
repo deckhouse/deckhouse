@@ -21,7 +21,7 @@ description: Архитектура модуля csi-s3 в Deckhouse Platform.
 
 Архитектура модуля [`csi-s3`](/modules/csi-s3/) на уровне 2 модели C4 и его взаимодействия с другими компонентами Deckhouse Platform (DP) изображены на следующей диаграмме:
 
-![Архитектура модуля csi-s3](../../../images/architecture/storage/c4-l2-csi-s3.ru.png)
+![Архитектура модуля csi-s3](../../../images/architecture/storage/c4-l2-csi-s3.ru.svg)
 
 ## Компоненты модуля
 

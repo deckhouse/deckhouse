@@ -33,11 +33,11 @@ relatedLinks:
 
 Для элементов диаграмм используется следующие графические символы:
 
-![Условные обозначения на диаграммах DP](../../images/architecture/c4-legend.ru.png)
+![Условные обозначения на диаграммах DP](../../images/architecture/c4-legend.ru.svg)
 
 ## Диаграмма контекста
 
-![Диаграмма контекста DP](../../images/architecture/c4-l1-context.ru.png)
+![Диаграмма контекста DP](../../images/architecture/c4-l1-context.ru.svg)
 
 С DP взаимодействуют:
 
@@ -56,7 +56,7 @@ relatedLinks:
 Связи между подсистемами показаны в обобщённом виде и без детализации.
 {% endalert %}
 
-![Диаграмма подсистем DP](../../images/architecture/c4-subsystems.ru.png)
+![Диаграмма подсистем DP](../../images/architecture/c4-subsystems.ru.svg)
 
 ## Диаграмма модулей
 
@@ -66,4 +66,4 @@ relatedLinks:
 Связи между модулями показаны в обобщённом виде и без детализации.
 {% endalert %}
 
-![Диаграмма модулей DP](../../images/architecture/c4-modules.ru.png)
+![Диаграмма модулей DP](../../images/architecture/c4-modules.ru.svg)

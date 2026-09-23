@@ -20,7 +20,7 @@ The following simplifications are made in the diagram:
 
 The Level 2 C4 architecture of the [`cni-cilium`](/modules/cni-cilium/) module and its interactions with other components of Deckhouse Platform (DP) are shown in the following diagram:
 
-![Cni-cilium module architecture](../../images/architecture/network/c4-l2-cni-cilium.png)
+![Cni-cilium module architecture](../../images/architecture/network/c4-l2-cni-cilium.svg)
 
 ## Module components
 

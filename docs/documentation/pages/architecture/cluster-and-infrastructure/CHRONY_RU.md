@@ -21,7 +21,7 @@ description: Архитектура модуля chrony в Deckhouse Platform.
 
 Архитектура модуля [`chrony`](/modules/chrony/) на уровне 2 модели C4 и его взаимодействия с другими компонентами DP изображены на следующей диаграмме:
 
-![Архитектура модуля chrony](../../../images/architecture/cluster-and-infrastructure/c4-l2-chrony.ru.png)
+![Архитектура модуля chrony](../../../images/architecture/cluster-and-infrastructure/c4-l2-chrony.ru.svg)
 
 ## Компоненты модуля
 

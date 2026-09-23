@@ -21,7 +21,7 @@ description: Архитектура модуля cloud-provider-gcp в Deckhouse
 
 Архитектура модуля [`cloud-provider-gcp`](/modules/cloud-provider-gcp/) на уровне 2 модели C4 и его взаимодействия с другими компонентами Deckhouse Platform (DP) изображены на следующей диаграмме:
 
-![Архитектура модуля cloud-provider-gcp](../../../images/architecture/cluster-and-infrastructure/c4-l2-cloud-provider-gcp.ru.png)
+![Архитектура модуля cloud-provider-gcp](../../../images/architecture/cluster-and-infrastructure/c4-l2-cloud-provider-gcp.ru.svg)
 
 ## Компоненты модуля
 
