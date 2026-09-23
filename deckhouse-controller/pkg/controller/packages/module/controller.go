@@ -311,7 +311,10 @@ func (r *reconciler) resolvePackage(ctx context.Context, module *v1beta1.Module)
 		return nil, nil, fmt.Errorf("get module package '%s': %w", module.Name, err)
 	}
 
-	versionName := v1alpha1.MakeModulePackageVersionName(module.Spec.PackageRepositoryName, module.Name, module.Spec.PackageVersion)
+	versionName := fmt.Sprintf("%s-%s", module.Spec.PackageRepositoryName, module.Name)
+	if !module.IsEmbedded() {
+		versionName = fmt.Sprintf("%s-%s", versionName, module.Spec.PackageVersion)
+	}
 
 	mpv := new(v1alpha1.ModulePackageVersion)
 	if err := r.client.Get(ctx, client.ObjectKey{Name: versionName}, mpv); err != nil {

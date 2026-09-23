@@ -39,17 +39,64 @@ func getModulePackage(t *testing.T, cl client.Client, name string) *v1alpha1.Mod
 func TestSyncModulePackages(t *testing.T) {
 	ctx := context.Background()
 
-	t.Run("creates an empty package for an embedded module", func(t *testing.T) {
+	sourceWithAvailableModules := func(sourceName string, moduleNames ...string) *v1alpha1.ModuleSource {
+		moduleSource := testModuleSource(sourceName, "registry.example.com/modules")
+		for _, moduleName := range moduleNames {
+			moduleSource.Status.AvailableModules = append(moduleSource.Status.AvailableModules,
+				v1alpha1.AvailableModule{Name: moduleName})
+		}
+
+		return moduleSource
+	}
+
+	echoOnDisk := func(t *testing.T) string {
+		t.Helper()
+
 		dir := t.TempDir()
 		writeModuleYAML(t, filepath.Join(dir, "900-echo"), "name: echo\n")
 
-		s, cl := newTestSyncer(t, "v1.80.0", dir)
+		return dir
+	}
+
+	t.Run("creates an empty package for an embedded module no source lists", func(t *testing.T) {
+		s, cl := newTestSyncer(t, "v1.80.0", echoOnDisk(t))
 		require.NoError(t, s.sync(ctx))
 
 		pkg := getModulePackage(t, cl, "echo")
 		assert.Equal(t, map[string]string{"heritage": "deckhouse"}, pkg.Labels)
-		assert.Empty(t, pkg.OwnerReferences, "no owner: no repository offers an embedded package")
-		assert.Empty(t, pkg.Status.AvailableRepositories, "the entry stays empty until a scan fills it")
+		assert.Empty(t, pkg.OwnerReferences, "no owner: an embedded package is available in no repository")
+		assert.Empty(t, pkg.Status.AvailableRepositories)
+	})
+
+	t.Run("seeds the repositories of the sources listing the module", func(t *testing.T) {
+		s, cl := newTestSyncer(t, "v1.80.0", echoOnDisk(t),
+			sourceWithAvailableModules("example", "echo"),
+			sourceWithAvailableModules("other", "parca"))
+		require.NoError(t, s.sync(ctx))
+
+		assert.Equal(t, []string{"example"}, getModulePackage(t, cl, "echo").Status.AvailableRepositories)
+	})
+
+	t.Run("several sources listing the module seed one entry each", func(t *testing.T) {
+		s, cl := newTestSyncer(t, "v1.80.0", echoOnDisk(t),
+			sourceWithAvailableModules("example", "echo"),
+			sourceWithAvailableModules("deckhouse", "echo"))
+		require.NoError(t, s.sync(ctx))
+
+		assert.ElementsMatch(t, []string{"example", "deckhouse-modules"},
+			getModulePackage(t, cl, "echo").Status.AvailableRepositories,
+			"the deckhouse source serves the deckhouse-modules repository the platform ships itself")
+	})
+
+	t.Run("the global module is seeded like any other", func(t *testing.T) {
+		globalDir := t.TempDir()
+		writeLegacyOpenAPI(t, globalDir, "type: object\n", "type: object\n")
+
+		s, cl := newTestSyncerWithGlobal(t, "v1.80.0", t.TempDir(), globalDir, sourceWithAvailableModules("example", "global"))
+		require.NoError(t, s.sync(ctx))
+
+		assert.Equal(t, []string{"example"}, getModulePackage(t, cl, "global").Status.AvailableRepositories,
+			"the reserved name is seeded like any other when a source does name it")
 	})
 
 	t.Run("leaves an existing package untouched", func(t *testing.T) {
@@ -63,15 +110,13 @@ func TestSyncModulePackages(t *testing.T) {
 			},
 		}
 
-		dir := t.TempDir()
-		writeModuleYAML(t, filepath.Join(dir, "900-echo"), "name: echo\n")
-
-		s, cl := newTestSyncer(t, "v1.80.0", dir, existing)
+		s, cl := newTestSyncer(t, "v1.80.0", echoOnDisk(t), existing, sourceWithAvailableModules("example", "echo"))
 		require.NoError(t, s.sync(ctx))
 
 		pkg := getModulePackage(t, cl, "echo")
 		assert.Equal(t, map[string]string{"user": "label"}, pkg.Labels)
-		assert.Equal(t, []string{"deckhouse-modules"}, pkg.Status.AvailableRepositories)
+		assert.Equal(t, []string{"deckhouse-modules"}, pkg.Status.AvailableRepositories,
+			"an entry the scan already owns is never reseeded")
 	})
 
 	t.Run("a release stub creates no package", func(t *testing.T) {

@@ -330,7 +330,7 @@ func (suite *ControllerTestSuite) TestReconcile() {
 		// A module the image started shipping after it had already been released still
 		// points at the downloaded version, which the relink has to drop.
 		assert.False(suite.T(), suite.getVersion("deckhouse-test-module-v0.9.0").Status.Used)
-		assert.Equal(suite.T(), "embedded-test-module-v1.0.1",
+		assert.Equal(suite.T(), "embedded-test-module",
 			ownerRefName(suite.getModule(moduleName), v1alpha1.ModulePackageVersionKind))
 	})
 
@@ -439,7 +439,7 @@ func (suite *ControllerTestSuite) TestReconcile() {
 		require.NoError(suite.T(), err)
 
 		assert.Equal(suite.T(), []removedModule{{name: moduleName, embedded: true}}, suite.manager.removed)
-		assert.False(suite.T(), suite.getVersion("embedded-test-module-v1.0.1").Status.Used)
+		assert.False(suite.T(), suite.getVersion("embedded-test-module").Status.Used)
 	})
 
 	suite.Run("deleted module is detached from the version it was attached to", func() {

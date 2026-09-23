@@ -87,8 +87,10 @@ type ModulePackageVersion struct {
 	Status ModulePackageVersionStatus `json:"status,omitempty"`
 }
 
-// ModulePackageVersionSpec identifies the version. Every field is immutable because the
-// object name is derived from the three of them.
+// ModulePackageVersionSpec identifies the version. The package and the repository are immutable;
+// so is the version, except on the embedded repository, whose object name carries no version and
+// whose single object therefore serves every build.
+// +kubebuilder:validation:XValidation:rule="oldSelf.packageRepositoryName == 'embedded' || self.packageVersion == oldSelf.packageVersion",message="packageVersion is immutable outside the embedded repository"
 type ModulePackageVersionSpec struct {
 	// Name of the module package.
 	// +kubebuilder:validation:MinLength=1
@@ -104,7 +106,6 @@ type ModulePackageVersionSpec struct {
 
 	// Version of the module package.
 	// +kubebuilder:validation:MinLength=1
-	// +kubebuilder:validation:XValidation:rule="self == oldSelf",message="packageVersion is immutable"
 	// +crd-enricher:deckhouse:documentation:examples=v1.0.0
 	PackageVersion string `json:"packageVersion"`
 }

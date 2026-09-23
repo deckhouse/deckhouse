@@ -19,13 +19,12 @@ import (
 	"encoding/json"
 	"fmt"
 	"log/slog"
-	"maps"
 	"os"
 	"path/filepath"
 	"slices"
 
-	"github.com/Masterminds/semver/v3"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	metautils "k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
@@ -37,321 +36,57 @@ import (
 	"github.com/deckhouse/deckhouse/pkg/log"
 )
 
-// syncModules writes a Module for every module whose files the cluster carries.
-// A module the sync finds nowhere keeps the object another writer gave it.
-//
-// The sources are read in the order the files win each other:
-//   - the embedded copy, it is what the binary carries on disk right now
-//   - a ready pull override, the loader put its dev copy on disk over the release
-//   - the newest deployed release
+// legacyModuleConditions are the conditions the addon-operator stack wrote. The package runtime
+// owns the status now and never touches a condition type of its own, so they linger until dropped.
+var legacyModuleConditions = []string{
+	v1alpha1.ModuleConditionEnabledByModuleManager,
+	v1alpha1.ModuleConditionEnabledByModuleConfig,
+	v1alpha1.ModuleConditionIsReady,
+	v1alpha1.ModuleConditionLastReleaseDeployed,
+	v1alpha1.ModuleConditionIsOverridden,
+}
+
+// syncModules writes a Module for every module the cluster runs. The last pass to write a name
+// wins, so the order below is the precedence: embedded over an override over a deployed release.
 func (s *syncer) syncModules(ctx context.Context) error {
-	moduleConfigs, err := s.moduleConfigsByName(ctx)
+	configs, err := s.getModuleConfigs(ctx)
 	if err != nil {
-		return err
+		return fmt.Errorf("get module configs: %w", err)
 	}
 
-	embeddedModuleNames, err := s.embeddedModuleNames()
+	releaseChannels, err := s.getReleaseChannelsByUpdatePolicy(ctx)
 	if err != nil {
-		return err
+		return fmt.Errorf("get release channels: %w", err)
 	}
 
-	// every module of one build carries the same version, the one
-	// app.EmbeddedPackageVersion reduces the Deckhouse version to
-	embeddedPackageVersion := app.EmbeddedPackageVersion(s.deckhouseVersion)
+	deckhouseReleaseChannel := s.getDeckhouseReleaseChannel(configs)
 
-	// an embedded module follows the release channel of Deckhouse itself
-	deckhouseReleaseChannel := s.deckhouseReleaseChannel(moduleConfigs)
-
-	syncedModules := make(map[string]struct{}, len(embeddedModuleNames))
-
-	for _, moduleName := range embeddedModuleNames {
-		if err := s.ensureEmbeddedModule(ctx, moduleName, embeddedPackageVersion, deckhouseReleaseChannel, moduleConfigs[moduleName]); err != nil {
-			return err
-		}
-
-		syncedModules[moduleName] = struct{}{}
+	if err := s.syncDeployedModules(ctx, deckhouseReleaseChannel, releaseChannels, configs); err != nil {
+		return fmt.Errorf("sync deployed modules: %w", err)
 	}
 
-	pullOverrides, err := s.readyModulePullOverridesByModule(ctx)
-	if err != nil {
-		return err
+	if err := s.syncOverrideModules(ctx, deckhouseReleaseChannel, releaseChannels, configs); err != nil {
+		return fmt.Errorf("sync override modules: %w", err)
 	}
 
-	// the modules are independent: the order only keeps the log readable
-	for _, moduleName := range slices.Sorted(maps.Keys(pullOverrides)) {
-		if _, ok := syncedModules[moduleName]; ok {
-			continue
-		}
-
-		repositoryName, ok := s.repositoryForOverriddenModule(ctx, moduleName, moduleConfigs[moduleName])
-		if !ok {
-			continue
-		}
-
-		if err := s.ensureOverriddenModule(ctx, moduleName, repositoryName, pullOverrides[moduleName].Spec.ImageTag, moduleConfigs[moduleName]); err != nil {
-			return err
-		}
-
-		syncedModules[moduleName] = struct{}{}
+	if err := s.syncEmbeddedModules(ctx, deckhouseReleaseChannel, configs); err != nil {
+		return fmt.Errorf("sync embedded modules: %w", err)
 	}
 
-	deployedReleases, err := s.deployedModuleReleasesByModule(ctx)
-	if err != nil {
-		return err
+	if err := s.syncGlobalModule(ctx, configs); err != nil {
+		return fmt.Errorf("sync global module: %w", err)
 	}
 
-	releaseChannels, err := s.releaseChannelsByUpdatePolicy(ctx)
-	if err != nil {
-		return err
-	}
-
-	for _, moduleName := range slices.Sorted(maps.Keys(deployedReleases)) {
-		if _, ok := syncedModules[moduleName]; ok {
-			continue
-		}
-
-		moduleRelease := deployedReleases[moduleName]
-		repositoryName := PackageRepositoryNameForModuleSource(moduleRelease.GetModuleSource())
-
-		// a module from a repository follows the channel of the policy its release was fetched by
-		releaseChannel := deckhouseReleaseChannel
-
-		if updatePolicyName := moduleRelease.Labels[v1alpha1.ModuleReleaseLabelUpdatePolicy]; updatePolicyName != "" {
-			if channel, ok := releaseChannels[updatePolicyName]; ok {
-				releaseChannel = channel
-			}
-		}
-
-		// the version parses: deployedModuleReleasesByModule dropped the releases it does not
-		if err := s.ensureReleasedModule(ctx, moduleName, repositoryName, moduleRelease.GetModuleVersion(), releaseChannel, moduleConfigs[moduleName]); err != nil {
-			return err
-		}
-
-		syncedModules[moduleName] = struct{}{}
+	if err := s.dropLegacyConditions(ctx); err != nil {
+		return fmt.Errorf("drop legacy conditions: %w", err)
 	}
 
 	return nil
 }
 
-// embeddedModuleNames reads the names of the modules from the embedded modules dir.
-// A dir with no readable definition is skipped with a warning, the same way the
-// ModulePackageVersion pass skips it.
-func (s *syncer) embeddedModuleNames() ([]string, error) {
-	dirEntries, err := os.ReadDir(s.embeddedModulesDir)
-	if err != nil {
-		return nil, fmt.Errorf("read embedded modules dir: %w", err)
-	}
-
-	moduleNames := make([]string, 0, len(dirEntries))
-
-	for _, dirEntry := range dirEntries {
-		if !dirEntry.IsDir() || slices.Contains(app.DummyModules, dirEntry.Name()) {
-			continue
-		}
-
-		moduleDir := filepath.Join(s.embeddedModulesDir, dirEntry.Name())
-
-		moduleDefinition, err := loader.LoadEmbeddedDefinition(moduleDir)
-		if err != nil {
-			s.logger.Warn("module dir holds no readable definition, skip its module",
-				slog.String("dir", moduleDir), log.Err(err))
-
-			continue
-		}
-
-		moduleNames = append(moduleNames, moduleDefinition.Name)
-	}
-
-	return moduleNames, nil
-}
-
-// deployedModuleReleasesByModule reads the release each module runs:
-//   - only a deployed release counts, a pending one is not on disk yet
-//   - the newest wins, a restart mid upgrade leaves two of them deployed
-//   - a release with no module source or an unparsable version is skipped with a
-//     warning, its version getters panic on such a value
-func (s *syncer) deployedModuleReleasesByModule(ctx context.Context) (map[string]*v1alpha1.ModuleRelease, error) {
-	moduleReleaseList := new(v1alpha1.ModuleReleaseList)
-	if err := s.reader.List(ctx, moduleReleaseList); err != nil {
-		return nil, fmt.Errorf("list module releases: %w", err)
-	}
-
-	deployedReleases := make(map[string]*v1alpha1.ModuleRelease, len(moduleReleaseList.Items))
-	deployedVersions := make(map[string]*semver.Version, len(moduleReleaseList.Items))
-
-	for index := range moduleReleaseList.Items {
-		moduleRelease := &moduleReleaseList.Items[index]
-
-		if moduleRelease.Status.Phase != v1alpha1.ModuleReleasePhaseDeployed || !moduleRelease.DeletionTimestamp.IsZero() {
-			continue
-		}
-
-		if moduleRelease.GetModuleSource() == "" {
-			s.logger.Warn("release has no module source, skip its module",
-				slog.String("release", moduleRelease.Name))
-
-			continue
-		}
-
-		releaseVersion, err := semver.NewVersion(moduleRelease.Spec.Version)
-		if err != nil {
-			s.logger.Warn("release version is not a semver, skip its module",
-				slog.String("release", moduleRelease.Name),
-				slog.String("version", moduleRelease.Spec.Version), log.Err(err))
-
-			continue
-		}
-
-		moduleName := moduleRelease.GetModuleName()
-
-		if deployedVersion, ok := deployedVersions[moduleName]; ok && !releaseVersion.GreaterThan(deployedVersion) {
-			continue
-		}
-
-		deployedVersions[moduleName] = releaseVersion
-		deployedReleases[moduleName] = moduleRelease
-	}
-
-	return deployedReleases, nil
-}
-
-// readyModulePullOverridesByModule reads the pull override each module runs a dev copy by.
-// Only a ready override counts: the loader has put its copy on disk.
-func (s *syncer) readyModulePullOverridesByModule(ctx context.Context) (map[string]*v1alpha2.ModulePullOverride, error) {
-	pullOverrideList := new(v1alpha2.ModulePullOverrideList)
-	if err := s.reader.List(ctx, pullOverrideList); err != nil {
-		return nil, fmt.Errorf("list module pull overrides: %w", err)
-	}
-
-	pullOverrides := make(map[string]*v1alpha2.ModulePullOverride, len(pullOverrideList.Items))
-
-	for index := range pullOverrideList.Items {
-		pullOverride := &pullOverrideList.Items[index]
-
-		if pullOverride.Status.Message != v1alpha2.ModulePullOverrideMessageReady || !pullOverride.DeletionTimestamp.IsZero() {
-			continue
-		}
-
-		pullOverrides[pullOverride.GetModuleName()] = pullOverride
-	}
-
-	return pullOverrides, nil
-}
-
-// repositoryForOverriddenModule answers which repository a dev module belongs to.
-// The pull override names none, so the answer comes from what the cluster already
-// knows, in this order:
-//   - the repository the module object carries, written by a release or an earlier start
-//   - the source the module config names
-//   - the only module source offering the module, or "deckhouse" when several do
-//
-// Nothing left to ask means the module is not placed: the reason goes to the log,
-// and the override controller reports it on the pull override itself.
-func (s *syncer) repositoryForOverriddenModule(ctx context.Context, moduleName string, moduleConfig *v1alpha1.ModuleConfig) (string, bool) {
-	module := new(v1beta1.Module)
-	if err := s.reader.Get(ctx, client.ObjectKey{Name: moduleName}, module); err == nil {
-		if name := module.Spec.PackageRepositoryName; name != "" && name != repositoryNameEmbedded {
-			return name, true
-		}
-	}
-
-	if moduleConfig != nil && moduleConfig.Spec.Source != "" {
-		return PackageRepositoryNameForModuleSource(moduleConfig.Spec.Source), true
-	}
-
-	moduleSourceNames, err := s.moduleSourceNamesOffering(ctx, moduleName)
-	if err != nil {
-		s.logger.Warn("cannot read the module sources, skip the overridden module",
-			slog.String("name", moduleName), log.Err(err))
-
-		return "", false
-	}
-
-	switch {
-	case len(moduleSourceNames) == 1:
-		return PackageRepositoryNameForModuleSource(moduleSourceNames[0]), true
-
-	case slices.Contains(moduleSourceNames, moduleSourceNameDeckhouse):
-		return repositoryNameDeckhouseModules, true
-	}
-
-	s.logger.Warn("no single module source offers the overridden module, skip it",
-		slog.String("name", moduleName), slog.Any("sources", moduleSourceNames))
-
-	return "", false
-}
-
-// moduleSourceNamesOffering reads the module sources that offer the module.
-func (s *syncer) moduleSourceNamesOffering(ctx context.Context, moduleName string) ([]string, error) {
-	moduleSourceList := new(v1alpha1.ModuleSourceList)
-	if err := s.reader.List(ctx, moduleSourceList); err != nil {
-		return nil, fmt.Errorf("list module sources: %w", err)
-	}
-
-	moduleSourceNames := make([]string, 0, len(moduleSourceList.Items))
-
-	for _, moduleSource := range moduleSourceList.Items {
-		for _, availableModule := range moduleSource.Status.AvailableModules {
-			if availableModule.Name == moduleName {
-				moduleSourceNames = append(moduleSourceNames, moduleSource.Name)
-
-				break
-			}
-		}
-	}
-
-	return moduleSourceNames, nil
-}
-
-// deckhouseReleaseChannel reads the channel Deckhouse itself follows, the one its
-// embedded modules come on. The channel lives in the settings of the deckhouse
-// module config; with none set the build default applies, the same fallback
-// syncDeckhouseSettings makes later in the start.
-func (s *syncer) deckhouseReleaseChannel(moduleConfigs map[string]*v1alpha1.ModuleConfig) string {
-	moduleConfig, ok := moduleConfigs[moduleNameDeckhouse]
-	if !ok || moduleConfig.Spec.Settings == nil {
-		return s.defaultReleaseChannel
-	}
-
-	settings := struct {
-		ReleaseChannel string `json:"releaseChannel"`
-	}{}
-
-	if err := json.Unmarshal(moduleConfig.Spec.Settings.Raw, &settings); err != nil {
-		s.logger.Warn("the deckhouse module config settings do not parse, fall back to the build release channel",
-			log.Err(err))
-
-		return s.defaultReleaseChannel
-	}
-
-	if settings.ReleaseChannel == "" {
-		return s.defaultReleaseChannel
-	}
-
-	return settings.ReleaseChannel
-}
-
-// releaseChannelsByUpdatePolicy reads the channel every module update policy follows.
-// A module that names no policy, or names one the cluster has lost, falls back to
-// the channel of Deckhouse itself, the same way GetUpdatePolicyByModule does.
-func (s *syncer) releaseChannelsByUpdatePolicy(ctx context.Context) (map[string]string, error) {
-	updatePolicyList := new(v1alpha2.ModuleUpdatePolicyList)
-	if err := s.reader.List(ctx, updatePolicyList); err != nil {
-		return nil, fmt.Errorf("list module update policies: %w", err)
-	}
-
-	releaseChannels := make(map[string]string, len(updatePolicyList.Items))
-
-	for _, updatePolicy := range updatePolicyList.Items {
-		releaseChannels[updatePolicy.Name] = updatePolicy.Spec.ReleaseChannel
-	}
-
-	return releaseChannels, nil
-}
-
-// moduleConfigsByName reads the module configs the cluster carries.
+// getModuleConfigs reads the module configs the cluster carries.
 // A config under deletion counts as gone: its settings are on their way out.
-func (s *syncer) moduleConfigsByName(ctx context.Context) (map[string]*v1alpha1.ModuleConfig, error) {
+func (s *syncer) getModuleConfigs(ctx context.Context) (map[string]*v1alpha1.ModuleConfig, error) {
 	moduleConfigList := new(v1alpha1.ModuleConfigList)
 	if err := s.reader.List(ctx, moduleConfigList); err != nil {
 		return nil, fmt.Errorf("list module configs: %w", err)
@@ -371,27 +106,261 @@ func (s *syncer) moduleConfigsByName(ctx context.Context) (map[string]*v1alpha1.
 	return moduleConfigs, nil
 }
 
-// ensureEmbeddedModule writes a module the Deckhouse image ships.
-func (s *syncer) ensureEmbeddedModule(ctx context.Context, moduleName, packageVersion, releaseChannel string, moduleConfig *v1alpha1.ModuleConfig) error {
-	return s.ensureModule(ctx, moduleName, repositoryNameEmbedded, packageVersion, releaseChannel, false, moduleConfig)
+// syncGlobalModule writes the Module of the global module, which the image ships at a reserved
+// name and a dir of its own, so nothing is read from disk to name it.
+func (s *syncer) syncGlobalModule(ctx context.Context, configs map[string]*v1alpha1.ModuleConfig) error {
+	// every module of one build carries the same version, the one
+	// embeddedPackageVersion reduces the Deckhouse version to
+	embeddedPackageVersion := app.EmbeddedPackageVersion()
+
+	if err := s.ensureModule(ctx, packageNameGlobal, repositoryNameEmbedded, embeddedPackageVersion, "", false, configs["global"]); err != nil {
+		return fmt.Errorf("ensure global module: %w", err)
+	}
+
+	return nil
 }
 
-// ensureOverriddenModule writes a module running the dev copy a pull override put on disk.
-// The version is the image tag the override names, not a package version.
-func (s *syncer) ensureOverriddenModule(ctx context.Context, moduleName, repositoryName, imageTag string, moduleConfig *v1alpha1.ModuleConfig) error {
-	// a dev copy comes off no channel
-	return s.ensureModule(ctx, moduleName, repositoryName, imageTag, "", true, moduleConfig)
+// syncEmbeddedModules writes a Module for every module the running image ships, on the reserved
+// embedded repository. A dir holding no readable definition is skipped with a warning.
+func (s *syncer) syncEmbeddedModules(ctx context.Context, deckhouseReleaseChannel string, configs map[string]*v1alpha1.ModuleConfig) error {
+	dirEntries, err := os.ReadDir(s.embeddedModulesDir)
+	if err != nil {
+		return fmt.Errorf("read embedded modules dir: %w", err)
+	}
+
+	// every module of one build carries the same version, the one
+	// embeddedPackageVersion reduces the Deckhouse version to
+	embeddedPackageVersion := app.EmbeddedPackageVersion()
+
+	releaseChannel := deckhouseReleaseChannel
+
+	modules := make([]string, 0, len(dirEntries))
+	for _, dirEntry := range dirEntries {
+		if !dirEntry.IsDir() || slices.Contains(app.DummyModules, dirEntry.Name()) {
+			continue
+		}
+
+		moduleDir := filepath.Join(s.embeddedModulesDir, dirEntry.Name())
+
+		def, err := loader.LoadEmbeddedDefinition(moduleDir)
+		if err != nil {
+			s.logger.Warn("module dir holds no readable definition, skip its module", slog.String("dir", moduleDir), log.Err(err))
+
+			continue
+		}
+
+		modules = append(modules, def.Name)
+	}
+
+	for _, module := range modules {
+		if err := s.ensureModule(ctx, module, repositoryNameEmbedded, embeddedPackageVersion, releaseChannel, false, configs[module]); err != nil {
+			return fmt.Errorf("ensure embedded module %s: %w", module, err)
+		}
+	}
+
+	return nil
 }
 
-// ensureReleasedModule writes a module running the package of its deployed release.
-func (s *syncer) ensureReleasedModule(ctx context.Context, moduleName, repositoryName, packageVersion, releaseChannel string, moduleConfig *v1alpha1.ModuleConfig) error {
-	return s.ensureModule(ctx, moduleName, repositoryName, packageVersion, releaseChannel, false, moduleConfig)
+// syncDeployedModules writes a Module for every module running a deployed release. The channel
+// comes from the update policy the module names, falling back to the one Deckhouse follows.
+func (s *syncer) syncDeployedModules(ctx context.Context, deckhouseReleaseChannel string, releaseChannels map[string]string, configs map[string]*v1alpha1.ModuleConfig) error {
+	deployed, err := s.getDeployedModuleReleases(ctx)
+	if err != nil {
+		return fmt.Errorf("get deployed module releases: %w", err)
+	}
+
+	for _, release := range deployed {
+		config := configs[release.GetModuleName()]
+		moduleName := release.GetModuleName()
+		moduleVersion := release.GetModuleVersion()
+		repositoryName := PackageRepositoryNameForModuleSource(release.GetModuleSource())
+
+		releaseChannel := deckhouseReleaseChannel
+		if config != nil {
+			if channel, ok := releaseChannels[config.Spec.UpdatePolicy]; ok {
+				releaseChannel = channel
+			}
+		}
+
+		if err := s.ensureModule(ctx, moduleName, repositoryName, moduleVersion, releaseChannel, false, config); err != nil {
+			return fmt.Errorf("ensure module %s: %w", moduleName, err)
+		}
+	}
+
+	return nil
 }
 
-// ensureModule brings the module in line with the files it runs and its config:
-// - the object is created when the cluster carries none
-// - only the fields below are written, the module has other writers
-// - a patch with no drift is not sent
+// getDeployedModuleReleases reads the deployed release of every module no pull override covers.
+// A release naming no module source is skipped with a warning: it resolves to no repository.
+func (s *syncer) getDeployedModuleReleases(ctx context.Context) ([]*v1alpha1.ModuleRelease, error) {
+	releases := new(v1alpha1.ModuleReleaseList)
+	if err := s.reader.List(ctx, releases); err != nil {
+		return nil, fmt.Errorf("list module releases: %w", err)
+	}
+
+	deployed := make([]*v1alpha1.ModuleRelease, 0, len(releases.Items))
+	for _, release := range releases.Items {
+		override := new(v1alpha2.ModulePullOverride)
+		if err := s.reader.Get(ctx, client.ObjectKey{Name: release.GetModuleName()}, override); err == nil {
+			continue
+		}
+
+		if release.Status.Phase != v1alpha1.ModuleReleasePhaseDeployed || !release.DeletionTimestamp.IsZero() {
+			continue
+		}
+
+		if release.GetModuleSource() == "" {
+			s.logger.Warn("release has no module source, skip its module", slog.String("release", release.Name))
+
+			continue
+		}
+
+		deployed = append(deployed, &release)
+	}
+
+	return deployed, nil
+}
+
+// syncOverrideModules writes a Module for every module running the dev copy a pull override put on
+// disk. Its version is the image tag the override names, not a package version.
+func (s *syncer) syncOverrideModules(ctx context.Context, deckhouseReleaseChannel string, releaseChannels map[string]string, configs map[string]*v1alpha1.ModuleConfig) error {
+	overrides, err := s.getOverrides(ctx)
+	if err != nil {
+		return fmt.Errorf("get overrides: %w", err)
+	}
+
+	for _, override := range overrides {
+		config := configs[override.Name]
+		moduleName := override.Name
+		imageTag := override.Spec.ImageTag
+
+		repositories, err := s.availableRepositories(ctx, moduleName)
+		if err != nil {
+			return fmt.Errorf("get the available repositories of the '%s' module: %w", moduleName, err)
+		}
+
+		repositoryName, ok := getOverrideRepository(config, repositories)
+		if !ok {
+			s.logger.Warn("no config source and no single available repository for the dev module, skip it",
+				slog.String("name", moduleName), slog.Any("repositories", repositories))
+
+			continue
+		}
+
+		releaseChannel := deckhouseReleaseChannel
+		if config != nil {
+			if channel, ok := releaseChannels[config.Spec.UpdatePolicy]; ok {
+				releaseChannel = channel
+			}
+		}
+
+		if err := s.ensureModule(ctx, moduleName, repositoryName, imageTag, releaseChannel, true, config); err != nil {
+			return fmt.Errorf("ensure module %s: %w", moduleName, err)
+		}
+	}
+
+	return nil
+}
+
+// getOverrideRepository answers which repository a dev module belongs to. The pull override names no
+// source, so it comes from the module config, or from the only repository the catalog lists for the
+// package - "deckhouse-modules" when it lists several. Nothing left to ask leaves the module unplaced.
+func getOverrideRepository(config *v1alpha1.ModuleConfig, repositories []string) (string, bool) {
+	if config != nil && config.Spec.Source != "" {
+		return PackageRepositoryNameForModuleSource(config.Spec.Source), true
+	}
+
+	switch {
+	case len(repositories) == 1:
+		return repositories[0], true
+
+	case slices.Contains(repositories, repositoryNameDeckhouseModules):
+		return repositoryNameDeckhouseModules, true
+	}
+
+	return "", false
+}
+
+// availableRepositories reads the repositories the catalog entry of the module lists.
+// A module the catalog does not name yet lists none.
+func (s *syncer) availableRepositories(ctx context.Context, moduleName string) ([]string, error) {
+	modulePackage := new(v1alpha1.ModulePackage)
+	if err := s.reader.Get(ctx, client.ObjectKey{Name: moduleName}, modulePackage); err != nil {
+		if apierrors.IsNotFound(err) {
+			return nil, nil
+		}
+
+		return nil, fmt.Errorf("get the '%s' module package: %w", moduleName, err)
+	}
+
+	return modulePackage.Status.AvailableRepositories, nil
+}
+
+// getOverrides reads the pull override each module runs a dev copy by.
+// Only a ready override counts: the loader has put its copy on disk.
+func (s *syncer) getOverrides(ctx context.Context) ([]*v1alpha2.ModulePullOverride, error) {
+	overrides := new(v1alpha2.ModulePullOverrideList)
+	if err := s.reader.List(ctx, overrides); err != nil {
+		return nil, fmt.Errorf("list module pull overrides: %w", err)
+	}
+
+	result := make([]*v1alpha2.ModulePullOverride, 0, len(overrides.Items))
+	for _, override := range overrides.Items {
+		if override.Status.Message != v1alpha2.ModulePullOverrideMessageReady || !override.DeletionTimestamp.IsZero() {
+			continue
+		}
+
+		result = append(result, &override)
+	}
+
+	return result, nil
+}
+
+// getDeckhouseReleaseChannel reads the channel Deckhouse itself follows, the one its embedded
+// modules come on. It lives in the deckhouse module config; with none set the build default applies.
+func (s *syncer) getDeckhouseReleaseChannel(configs map[string]*v1alpha1.ModuleConfig) string {
+	deckhouseConfig, ok := configs[packageNameDeckhouse]
+	if !ok || deckhouseConfig.Spec.Settings == nil {
+		return app.DefaultReleaseChannel
+	}
+
+	settings := struct {
+		ReleaseChannel string `json:"releaseChannel"`
+	}{}
+
+	if err := json.Unmarshal(deckhouseConfig.Spec.Settings.Raw, &settings); err != nil {
+		s.logger.Warn("the deckhouse module config settings do not parse, fall back to the build release channel",
+			log.Err(err))
+
+		return app.DefaultReleaseChannel
+	}
+
+	if settings.ReleaseChannel == "" {
+		return app.DefaultReleaseChannel
+	}
+
+	return settings.ReleaseChannel
+}
+
+// getReleaseChannelsByUpdatePolicy reads the channel every module update policy follows.
+// A module naming no policy, or one the cluster has lost, falls back to the channel of Deckhouse.
+func (s *syncer) getReleaseChannelsByUpdatePolicy(ctx context.Context) (map[string]string, error) {
+	updatePolicyList := new(v1alpha2.ModuleUpdatePolicyList)
+	if err := s.reader.List(ctx, updatePolicyList); err != nil {
+		return nil, fmt.Errorf("list module update policies: %w", err)
+	}
+
+	releaseChannels := make(map[string]string, len(updatePolicyList.Items))
+
+	for _, updatePolicy := range updatePolicyList.Items {
+		releaseChannels[updatePolicy.Name] = updatePolicy.Spec.ReleaseChannel
+	}
+
+	return releaseChannels, nil
+}
+
+// ensureModule brings the module in line with the files it runs and its config, creating it when
+// the cluster carries none. The module has other writers, so a patch with no drift is not sent.
 func (s *syncer) ensureModule(ctx context.Context, moduleName, repositoryName, packageVersion, releaseChannel string, dev bool, moduleConfig *v1alpha1.ModuleConfig) error {
 	module := new(v1beta1.Module)
 
@@ -427,7 +396,6 @@ func (s *syncer) ensureModule(ctx context.Context, moduleName, repositoryName, p
 }
 
 // createModule writes a module the cluster does not carry yet.
-// Rare: the old module stack creates an object for every module it knows.
 func (s *syncer) createModule(ctx context.Context, moduleName, repositoryName, packageVersion, releaseChannel string, dev bool, moduleConfig *v1alpha1.ModuleConfig) error {
 	module := &v1beta1.Module{ObjectMeta: metav1.ObjectMeta{Name: moduleName}}
 
@@ -443,12 +411,8 @@ func (s *syncer) createModule(ctx context.Context, moduleName, repositoryName, p
 	return nil
 }
 
-// applyModuleVersion writes spec.packageRepositoryName, spec.packageVersion and
-// spec.releaseChannel, and marks where the files came from.
-//
-// The embedded mark is written and cleared on every pass: an upgrade drops the
-// embedded copy and the module moves to a repository. The dev mark is only ever
-// written: the override controller takes it off when the pull override goes away.
+// applyModuleVersion writes the package coordinates and marks where the files came from. The
+// embedded mark is reconciled both ways; the dev mark is only set, the override controller clears it.
 func applyModuleVersion(module *v1beta1.Module, repositoryName, packageVersion, releaseChannel string, dev bool) {
 	module.Spec.PackageRepositoryName = repositoryName
 	module.Spec.PackageVersion = packageVersion
@@ -476,9 +440,8 @@ func setModuleAnnotation(module *v1beta1.Module, key string) {
 	module.Annotations[key] = "true"
 }
 
-// applyModuleConfig mirrors the module config into the module spec.
-// The four fields belong to the config alone: with no config they are cleared,
-// so a module keeps no settings the user has deleted.
+// applyModuleConfig mirrors the module config into the module spec. The four fields belong to the
+// config alone, so with no config they are cleared and no deleted setting survives.
 func applyModuleConfig(module *v1beta1.Module, moduleConfig *v1alpha1.ModuleConfig) {
 	if moduleConfig == nil {
 		module.Spec.Enabled = nil
@@ -493,4 +456,47 @@ func applyModuleConfig(module *v1beta1.Module, moduleConfig *v1alpha1.ModuleConf
 	module.Spec.Settings = moduleConfig.Spec.Settings
 	module.Spec.SettingsVersion = moduleConfig.Spec.Version
 	module.Spec.Maintenance = moduleConfig.Spec.Maintenance
+}
+
+// dropLegacyConditions removes the conditions of the old module stack from all modules.
+func (s *syncer) dropLegacyConditions(ctx context.Context) error {
+	modules := new(v1beta1.ModuleList)
+	if err := s.reader.List(ctx, modules); err != nil {
+		return fmt.Errorf("list modules: %w", err)
+	}
+
+	for _, module := range modules.Items {
+		if err := s.dropModuleLegacyConditions(ctx, &module); err != nil {
+			return fmt.Errorf("drop legacy conditions for the '%s' module: %w", module.Name, err)
+		}
+	}
+
+	return nil
+}
+
+// dropModuleLegacyConditions removes the conditions of the old module stack from a module the package
+// runtime now owns. A module carrying none is not patched.
+func (s *syncer) dropModuleLegacyConditions(ctx context.Context, module *v1beta1.Module) error {
+	patch := client.MergeFrom(module.DeepCopy())
+
+	for _, conditionType := range legacyModuleConditions {
+		metautils.RemoveStatusCondition(&module.Status.Conditions, conditionType)
+	}
+
+	patchData, err := patch.Data(module)
+	if err != nil {
+		return fmt.Errorf("build the status patch for the '%s' module: %w", module.Name, err)
+	}
+
+	if string(patchData) == "{}" {
+		return nil
+	}
+
+	if err = s.writer.Status().Patch(ctx, module, client.RawPatch(patch.Type(), patchData)); err != nil {
+		return fmt.Errorf("patch the status of the '%s' module: %w", module.Name, err)
+	}
+
+	s.logger.Debug("legacy module conditions dropped", slog.String("name", module.Name))
+
+	return nil
 }
