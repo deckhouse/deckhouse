@@ -15,6 +15,8 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 
+	"github.com/deckhouse/lib-dhctl/pkg/yaml/validation"
+
 	deckhousev1alpha1 "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider"
@@ -27,6 +29,12 @@ import (
 // PCCSecretFilterResult carries both payloads of kube-system/d8-provider-cluster-configuration.
 type PCCSecretFilterResult struct {
 	ProviderClusterConfig *zpccv1.ZvirtProviderClusterConfiguration    `json:"providerClusterConfig,omitempty"`
+	ProviderDiscoveryData *clouddatav1.ZvirtCloudProviderDiscoveryData `json:"providerDiscoveryData,omitempty"`
+}
+
+// CandiDiscoveryDataFilterResult is the discovery data dhctl recorded in the candi Secret. It is
+// nil while the Secret carries no payload.
+type CandiDiscoveryDataFilterResult struct {
 	ProviderDiscoveryData *clouddatav1.ZvirtCloudProviderDiscoveryData `json:"providerDiscoveryData,omitempty"`
 }
 
@@ -78,7 +86,7 @@ func FilterPCCSecret(obj *unstructured.Unstructured) (go_hook.FilterResult, erro
 	result := &PCCSecretFilterResult{}
 
 	if discoveryDataJSON, ok := secret.Data[PCCDiscoveryDataFilename]; ok && len(discoveryDataJSON) > 0 {
-		if _, err := config.ValidateDiscoveryData(&discoveryDataJSON, nil, nil); err != nil {
+		if err := validation.ValidateData(DiscoveryDataSchemaPaths, &discoveryDataJSON); err != nil {
 			return nil, fmt.Errorf("validate %s: %v", PCCDiscoveryDataFilename, err)
 		}
 
@@ -111,6 +119,36 @@ func FilterPCCSecret(obj *unstructured.Unstructured) (go_hook.FilterResult, erro
 	}
 
 	return result, nil
+}
+
+// FilterCandiDiscoverySecret decodes d8-candi-cloud-provider-discovery-data, which dhctl writes
+// from the infrastructure outputs when the cluster is configured through the ModuleConfig.
+func FilterCandiDiscoverySecret(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
+	// The fake k8s dynamic client ignores field selectors, so we guard by name here.
+	if obj.GetName() != CandiDiscoverySecretName {
+		return nil, nil
+	}
+
+	secret := &corev1.Secret{}
+	if err := sdk.FromUnstructured(obj, secret); err != nil {
+		return nil, fmt.Errorf("cannot convert candi discovery secret from unstructured: %v", err)
+	}
+
+	discoveryDataJSON, ok := secret.Data[PCCDiscoveryDataFilename]
+	if !ok || len(discoveryDataJSON) == 0 {
+		return CandiDiscoveryDataFilterResult{}, nil
+	}
+
+	if err := validation.ValidateData(DiscoveryDataSchemaPaths, &discoveryDataJSON); err != nil {
+		return nil, fmt.Errorf("validate candi %s: %v", PCCDiscoveryDataFilename, err)
+	}
+
+	var discoveryData clouddatav1.ZvirtCloudProviderDiscoveryData
+	if err := json.Unmarshal(discoveryDataJSON, &discoveryData); err != nil {
+		return nil, fmt.Errorf("unmarshal candi %s: %v", PCCDiscoveryDataFilename, err)
+	}
+
+	return CandiDiscoveryDataFilterResult{ProviderDiscoveryData: &discoveryData}, nil
 }
 
 func FilterModuleConfig(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {

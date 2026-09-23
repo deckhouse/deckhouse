@@ -14,6 +14,8 @@ const (
 	PCCDiscoveryDataFilename = "cloud-provider-discovery-data.json"
 	PCCClusterConfigFilename = "cloud-provider-cluster-configuration.yaml"
 
+	CandiDiscoverySecretName = "d8-candi-cloud-provider-discovery-data"
+
 	MigrationResourcesFilename = "resources.yaml"
 
 	// DefaultLayout is the only layout zVirt supports; a PCC always carries it, but the
@@ -26,3 +28,16 @@ const (
 	PlaceholderServer       = "PLACEHOLDER_REPLACE_ME"
 	PlaceholderClusterID    = "00000000-0000-0000-0000-000000000000"
 )
+
+// DiscoveryDataSchemaPaths are the directories the ZvirtCloudProviderDiscoveryData schema is
+// looked up in. zVirt is an external cloud provider, so tools/build.go no longer bakes its candi
+// into /deckhouse/candi/cloud-providers/zvirt — that tree ships in the OCI bundle dhctl unpacks at
+// runtime, which this controller never sees. The schema reaches the image inside the module
+// itself; under test /deckhouse is the repository, where the module is still at its ee/se-plus
+// path. A directory that does not exist is skipped silently, and an empty set of schemas is what
+// raises SchemaNotFound.
+var DiscoveryDataSchemaPaths = []string{
+	"/deckhouse/candi/cloud-providers/zvirt/openapi",
+	"/deckhouse/ee/se-plus/modules/030-cloud-provider-zvirt/candi/openapi",
+	"/deckhouse/modules/030-cloud-provider-zvirt/candi/openapi",
+}

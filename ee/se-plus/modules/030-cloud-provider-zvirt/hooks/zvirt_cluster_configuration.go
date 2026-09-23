@@ -82,6 +82,20 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 			FilterFunc: internal.FilterNodeGroup,
 		},
 		{
+			Name:       "candi_discovery_data",
+			ApiVersion: "v1",
+			Kind:       "Secret",
+			NamespaceSelector: &types.NamespaceSelector{
+				NameSelector: &types.NameSelector{
+					MatchNames: []string{internal.Namespace},
+				},
+			},
+			NameSelector: &types.NameSelector{
+				MatchNames: []string{internal.CandiDiscoverySecretName},
+			},
+			FilterFunc: internal.FilterCandiDiscoverySecret,
+		},
+		{
 			Name:       "zvirt_instance_classes",
 			ApiVersion: zicv1.GroupVersionKind.GroupVersion().String(),
 			Kind:       zicv1.ZvirtInstanceClassKind,
@@ -96,9 +110,17 @@ func handleZvirtClusterConfiguration(_ context.Context, input *go_hook.HookInput
 		return fmt.Errorf("unmarshal provider_cluster_configuration snapshots: %w", err)
 	}
 
-	if pccPresent && pccResult.ProviderDiscoveryData != nil {
-		input.Values.Set("cloudProviderZvirt.internal.providerDiscoveryData", pccResult.ProviderDiscoveryData)
+	// The candi Secret first, then the legacy PCC payload, defaults on top — published in every
+	// state, see internal.ResolveDiscoveryData.
+	var pccForDiscovery *internal.PCCSecretFilterResult
+	if pccPresent {
+		pccForDiscovery = &pccResult
 	}
+	discoveryData, err := internal.ResolveDiscoveryData(input, pccForDiscovery)
+	if err != nil {
+		return err
+	}
+	input.Values.Set("cloudProviderZvirt.internal.providerDiscoveryData", discoveryData)
 
 	if !pccPresent || pccResult.ProviderClusterConfig == nil {
 		// The legacy configuration is gone. Once the credentials and the ModuleConfig v2 live in
