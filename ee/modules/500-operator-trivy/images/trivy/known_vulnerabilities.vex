@@ -2,7 +2,7 @@
   "@context": "https://openvex.dev/ns/v0.2.0",
   "@id": "https://openvex.dev/docs/public/vex-fc1d5deddaa81550dea7f4a50b3975a7c18832da2d65abd5642934472389651d",
   "author": "Deckhouse \u003ccontact@deckhouse.io\u003e",
-  "version": 2,
+  "version": 3,
   "statements": [
     {
       "vulnerability": {
@@ -333,10 +333,74 @@
       "justification": "vulnerable_code_cannot_be_controlled_by_adversary",
       "impact_statement": "CVE-2026-56852 is in golang.org/x/text/unicode/norm. In the operator-trivy trivy binary, norm is only reached indirectly (for example via IDNA host normalization) on trusted registry/API hostnames, not on adversary-controlled arbitrary UTF-8 payloads. The vulnerable path is not adversary-controlled.",
       "timestamp": "2026-09-03T12:00:00Z"
+    },
+
+    {
+      "vulnerability": {
+        "@id": "https://nvd.nist.gov/vuln/detail/CVE-2026-56855",
+        "description": "golang.org/x/crypto/ssh: denial of service via channel request flooding.",
+        "name": "CVE-2026-56855"
+      },
+      "products": [
+        { "@id": "pkg:golang/golang.org/x/crypto" },
+        { "@id": "pkg:golang/golang.org/x/crypto@v0.55.0" }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "The defect lets a malicious SSH peer deadlock a connection by flooding a channel with requests before that channel becomes usable. It can only be triggered on an SSH connection that the affected process has itself established, as a client or as a server. Trivy establishes an SSH connection only when it scans a source repository over ssh://. In this module Trivy is run only to scan container images and file systems, with the arguments composed by the operator rather than taken from user input, so it never connects to a repository and the affected connection code never runs.",
+      "timestamp": "2026-09-23T12:00:00Z"
+    },
+
+    {
+      "vulnerability": {
+        "@id": "https://nvd.nist.gov/vuln/detail/CVE-2026-78662",
+        "description": "golang.org/x/crypto/ssh: denial of service via crafted channel messages.",
+        "name": "CVE-2026-78662"
+      },
+      "products": [
+        { "@id": "pkg:golang/golang.org/x/crypto" },
+        { "@id": "pkg:golang/golang.org/x/crypto@v0.55.0" }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "The defect lets a malicious SSH peer deadlock a connection by sending crafted messages on a channel that is already open. It can only be triggered on an SSH connection that the affected process has itself established, as a client or as a server. Trivy establishes an SSH connection only when it scans a source repository over ssh://. In this module Trivy is run only to scan container images and file systems, with the arguments composed by the operator rather than taken from user input, so it never connects to a repository and the affected connection code never runs.",
+      "timestamp": "2026-09-23T12:00:00Z"
+    },
+
+    {
+      "vulnerability": {
+        "@id": "https://nvd.nist.gov/vuln/detail/CVE-2026-61711",
+        "description": "BuildKit: denial of service via unbounded /etc/passwd and /etc/group parsing.",
+        "name": "CVE-2026-61711"
+      },
+      "products": [
+        { "@id": "pkg:golang/github.com/moby/buildkit@v0.16.0" },
+        { "@id": "pkg:golang/github.com/moby/buildkit@v0.15.1" }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_present",
+      "impact_statement": "The defect lets a malicious build image exhaust the memory of a BuildKit build worker through oversized user and group files. It can only be triggered while BuildKit executes a build. Deckhouse Kubernetes Platform runs no BuildKit build worker and executes no builds. The operator-trivy images include only the part of BuildKit that reads Dockerfile syntax, which Trivy needs for misconfiguration scanning; the build execution code that contains the defect is not part of them.",
+      "timestamp": "2026-09-23T12:00:00Z"
+    },
+
+    {
+      "vulnerability": {
+        "@id": "https://nvd.nist.gov/vuln/detail/CVE-2026-61712",
+        "description": "BuildKit: security bypass allows disabling container protections.",
+        "name": "CVE-2026-61712"
+      },
+      "products": [
+        { "@id": "pkg:golang/github.com/moby/buildkit@v0.16.0" },
+        { "@id": "pkg:golang/github.com/moby/buildkit@v0.15.1" }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_present",
+      "impact_statement": "The defect lets a crafted build request turn off the Seccomp and AppArmor protections of a build container without the entitlement that should be required for it. It can only be triggered by a BuildKit build worker that accepts such a request. Deckhouse Kubernetes Platform runs no BuildKit build worker and executes no builds. The operator-trivy images include only the part of BuildKit that reads Dockerfile syntax, which Trivy needs for misconfiguration scanning; the build execution code that contains the defect is not part of them.",
+      "timestamp": "2026-09-23T12:00:00Z"
     }
 
   ],
   "timestamp": "2026-05-16T12:31:20Z",
-  "last_updated": "2026-09-03T12:00:00Z"
+  "last_updated": "2026-09-23T12:00:00Z"
 }
 
