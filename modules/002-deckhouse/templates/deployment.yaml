@@ -205,7 +205,7 @@ spec:
             # resources, and installs the release from the rendered manifests instead
             # of the chart itself.
             - name: DECKHOUSE_ENABLE_RESOURCE_REQUESTS
-              value: "false"
+              value: "true"
             - name: USE_NELM
               value: "true"
             - name: KUBECACHEDIR
