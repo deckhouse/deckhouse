@@ -29,6 +29,7 @@ import (
 
 	v1 "github.com/deckhouse/node-controller/api/deckhouse.io/v1"
 	"github.com/deckhouse/node-controller/internal/cloudprovider"
+	providermock "github.com/deckhouse/node-controller/internal/cloudprovider/mock"
 	"github.com/deckhouse/node-controller/internal/testenv"
 )
 
@@ -42,7 +43,7 @@ func createTestInstanceClass(name string) *unstructured.Unstructured {
 }
 
 func createClassRegistration(kind string) {
-	secret := registrationSecret(testenv.UniqueName("cloud-provider-"+strings.ToLower(kind)), map[string][]byte{
+	secret := providermock.Registration(testenv.UniqueName("cloud-provider-"+strings.ToLower(kind)), map[string][]byte{
 		cloudprovider.InstanceClassKindKey:       []byte(kind),
 		cloudprovider.InstanceClassAPIVersionKey: []byte("v1"),
 	})

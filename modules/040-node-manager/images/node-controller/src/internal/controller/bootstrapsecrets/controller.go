@@ -128,7 +128,9 @@ func (r *Reconciler) SetupWatches(w register.Watcher) {
 	// dataSecretName points at a Secret nobody has written, and the zone's nodes cannot
 	// bootstrap for a whole resyncInterval. The nodegroup status controller watches the same
 	// object for its own reasons (nodegroup/controller.go:95).
-	w.Watches(&corev1.Secret{}, handler.EnqueueRequestsFromMapFunc(r.allNodeGroups),
+	// NodeGroupHandler resolves the groups the changed registration runs, so a Static one is left
+	// alone: it has no provider, and no registration can change its bootstrap script.
+	w.Watches(&corev1.Secret{}, cloudprovider.NodeGroupHandler(r.Client),
 		builder.WithPredicates(cloudprovider.RegistrationSecretPredicate()))
 }
 

@@ -22,7 +22,6 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
@@ -252,20 +251,65 @@ func TestNodeGroupHandler_EveryDataEditPasses(t *testing.T) {
 }
 
 func TestIsInputSecret(t *testing.T) {
+	plain := func(namespace, name string) *corev1.Secret {
+		return &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Namespace: namespace, Name: name}}
+	}
+	elsewhere := registrationSecret(RegistrationSecretBaseName, nil)
+	elsewhere.Namespace = "d8-system"
+
 	for _, testCase := range []struct {
-		namespace string
-		name      string
-		want      bool
+		name   string
+		object *corev1.Secret
+		want   bool
+		// A registration belongs to one provider, so the broad watch leaves it to the per-provider
+		// handler and takes only what no single provider owns.
+		wantTemplate bool
 	}{
-		{namespace: "kube-system", name: "d8-node-manager-cloud-provider", want: true},
-		{namespace: "kube-system", name: "d8-node-manager-cloud-provider-yandex", want: true},
-		{namespace: "kube-system", name: "d8-cluster-configuration", want: true},
-		{namespace: "kube-system", name: "d8-cloud-provider-openstack-capi", want: true},
-		{namespace: "kube-system", name: "d8-cloud-provider-aws-mcm", want: true},
-		{namespace: "d8-system", name: "d8-node-manager-cloud-provider", want: false},
-		{namespace: "kube-system", name: "other", want: false},
+		{
+			name:   "the registration under the bare prefix",
+			object: registrationSecret(RegistrationSecretBaseName, nil),
+			want:   true,
+		},
+		{
+			name:   "a per-provider registration",
+			object: registrationSecret(RegistrationSecretBaseName+"-yandex", nil),
+			want:   true,
+		},
+		{
+			name:         "the cluster configuration",
+			object:       plain("kube-system", "d8-cluster-configuration"),
+			want:         true,
+			wantTemplate: true,
+		},
+		{
+			name:         "a CAPI template",
+			object:       plain("kube-system", "d8-cloud-provider-openstack-capi"),
+			want:         true,
+			wantTemplate: true,
+		},
+		{
+			name:         "an MCM template",
+			object:       plain("kube-system", "d8-cloud-provider-aws-mcm"),
+			want:         true,
+			wantTemplate: true,
+		},
+		{
+			name:   "a registration outside the namespace it is published in",
+			object: elsewhere,
+		},
+		{
+			// The label is what makes a Secret a registration, so the name alone is not enough.
+			name:   "an unlabelled Secret under the registration name",
+			object: plain(RegistrationSecretNamespace, RegistrationSecretBaseName),
+		},
+		{
+			name:   "an unrelated Secret",
+			object: plain("kube-system", "other"),
+		},
 	} {
-		secret := &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Namespace: testCase.namespace, Name: testCase.name}}
-		require.Equal(t, testCase.want, IsInputSecret(secret))
+		t.Run(testCase.name, func(t *testing.T) {
+			assert.Equal(t, testCase.want, IsInputSecret(testCase.object))
+			assert.Equal(t, testCase.wantTemplate, IsTemplateSecret(testCase.object))
+		})
 	}
 }

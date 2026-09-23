@@ -40,6 +40,7 @@ import (
 
 	v1 "github.com/deckhouse/node-controller/api/deckhouse.io/v1"
 	"github.com/deckhouse/node-controller/internal/cloudprovider"
+	providermock "github.com/deckhouse/node-controller/internal/cloudprovider/mock"
 	"github.com/deckhouse/node-controller/internal/register"
 )
 
@@ -91,19 +92,8 @@ func instanceClass(kind, name string, consumers []string) *unstructured.Unstruct
 	return u
 }
 
-func registrationSecret(name string, data map[string][]byte) *corev1.Secret {
-	return &corev1.Secret{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      name,
-			Namespace: cloudprovider.RegistrationSecretNamespace,
-			Labels:    map[string]string{cloudprovider.RegistrationSecretLabel: ""},
-		},
-		Data: data,
-	}
-}
-
 func testClassRegistration() *corev1.Secret {
-	return registrationSecret("d8-node-manager-cloud-provider", map[string][]byte{
+	return providermock.Registration("d8-node-manager-cloud-provider", map[string][]byte{
 		cloudprovider.InstanceClassKindKey:       []byte(testClassKind),
 		cloudprovider.InstanceClassAPIVersionKey: []byte("v1"),
 	})
@@ -202,7 +192,7 @@ func TestSyncInstanceClassConsumers(t *testing.T) {
 
 	t.Run("registration without an api version writes nothing", func(t *testing.T) {
 		c := fake.NewClientBuilder().WithScheme(classUsageScheme(t)).WithObjects(
-			registrationSecret("d8-node-manager-cloud-provider", map[string][]byte{
+			providermock.Registration("d8-node-manager-cloud-provider", map[string][]byte{
 				cloudprovider.InstanceClassKindKey: []byte(testClassKind),
 			}),
 			instanceClass(testClassKind, "used", nil),
@@ -379,7 +369,7 @@ func TestSyncInstanceClassConsumers(t *testing.T) {
 
 	t.Run("a kind whose crd is missing is skipped and the rest still run", func(t *testing.T) {
 		c := fake.NewClientBuilder().WithScheme(classUsageScheme(t)).WithObjects(
-			registrationSecret("cloud-provider-absent", map[string][]byte{
+			providermock.Registration("cloud-provider-absent", map[string][]byte{
 				cloudprovider.InstanceClassKindKey:       []byte(absentClassKind),
 				cloudprovider.InstanceClassAPIVersionKey: []byte("v1"),
 			}),

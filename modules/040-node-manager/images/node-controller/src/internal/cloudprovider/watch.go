@@ -68,6 +68,25 @@ func IsRegistrationSecretKey(key types.NamespacedName) bool {
 	return strings.HasPrefix(key.Name, RegistrationSecretBaseName)
 }
 
+// IsTemplateSecret is IsInputSecret without the registrations: the inputs no single provider
+// owns, so an event on one has to be answered for the whole cluster.
+func IsTemplateSecret(object client.Object) bool {
+	if object.GetNamespace() != common.KubeSystemNamespace {
+		return false
+	}
+	name := object.GetName()
+	return name == common.ClusterConfigSecretName ||
+		(strings.HasPrefix(name, "d8-cloud-provider-") &&
+			(strings.HasSuffix(name, "-capi") || strings.HasSuffix(name, "-mcm")))
+}
+
+// IsInputSecret reports whether a Secret can change provider template rendering, registrations
+// included. Every registration counts, not just the one under the bare prefix: a provider
+// registers under a name of its own, and its NodeGroups render from it.
+func IsInputSecret(object client.Object) bool {
+	return IsRegistrationSecret(object) || IsTemplateSecret(object)
+}
+
 // RegistrationSecretPredicate filters a watch down to the registration Secrets.
 func RegistrationSecretPredicate() predicate.Predicate {
 	return predicate.NewPredicateFuncs(IsRegistrationSecret)
@@ -169,7 +188,15 @@ func nodeGroupRequests(ctx context.Context, r client.Reader, carried ...Registra
 		return nil
 	}
 
-	defaultProvider, _ := registrationByType(carried, clusterProvider.Type)
+	if clusterProvider.IsStatic() {
+		return nil
+	}
+
+	defaultProvider, ok := registrationByType(carried, clusterProvider.Type)
+	if !ok {
+		return nil
+	}
+
 	changed := NewCatalog(carried, defaultProvider)
 	ret := make([]reconcile.Request, 0, len(ngList.Items))
 
@@ -179,7 +206,6 @@ func nodeGroupRequests(ctx context.Context, r client.Reader, carried ...Registra
 			ret = append(ret, reconcile.Request{NamespacedName: types.NamespacedName{Name: ng.Name}})
 		}
 	}
-
 	return ret
 }
 
@@ -258,20 +284,6 @@ func LazyInstanceClassSource(informers cache.Cache, eventHandler handler.EventHa
 		}()
 		return nil
 	})
-}
-
-// IsInputSecret reports whether a Secret can change provider template rendering. Every
-// registration counts, not just the one under the bare prefix: a provider registers under a name
-// of its own, and its NodeGroups render from it.
-func IsInputSecret(object client.Object) bool {
-	if object.GetNamespace() != common.KubeSystemNamespace {
-		return false
-	}
-	name := object.GetName()
-	return strings.HasPrefix(name, RegistrationSecretBaseName) ||
-		name == common.ClusterConfigSecretName ||
-		(strings.HasPrefix(name, "d8-cloud-provider-") &&
-			(strings.HasSuffix(name, "-capi") || strings.HasSuffix(name, "-mcm")))
 }
 
 // WatchInputs subscribes a controller to the mutable inputs read by Source.

@@ -30,6 +30,7 @@ import (
 
 	v1 "github.com/deckhouse/node-controller/api/deckhouse.io/v1"
 	"github.com/deckhouse/node-controller/internal/cloudprovider"
+	providermock "github.com/deckhouse/node-controller/internal/cloudprovider/mock"
 )
 
 // The snapshot is the package's whole input. Building it in one place is what makes the derive and
@@ -58,7 +59,7 @@ func TestBuildSnapshot_StaticNodeGroupReadsStaticConfigOnly(t *testing.T) {
 func TestBuildSnapshot_CloudEphemeralReportsMissingPublishedVersion(t *testing.T) {
 	registration := validMCMRegistrationData("aws", "AWSInstanceClass", "v1")
 	delete(registration, "instanceClassAPIVersion")
-	s := newTestService(t, testSecret(cloudprovider.RegistrationSecretNamespace, cloudprovider.RegistrationSecretBaseName, registration))
+	s := newTestService(t, providermock.DefaultRegistration(registration))
 	ng := &v1.NodeGroup{}
 	ng.Name = "worker"
 	ng.Spec.NodeType = v1.NodeTypeCloudEphemeral
@@ -78,7 +79,7 @@ func TestBuildSnapshot_CloudEphemeralReportsMissingPublishedVersion(t *testing.T
 func TestBuildSnapshot_IncompleteRegistrationStillDescribesTheNodeGroup(t *testing.T) {
 	registration := validMCMRegistrationData("aws", "AWSInstanceClass", "v1")
 	delete(registration, "region")
-	s := newTestService(t, testSecret(cloudprovider.RegistrationSecretNamespace, cloudprovider.RegistrationSecretBaseName, registration))
+	s := newTestService(t, providermock.DefaultRegistration(registration))
 	ng := &v1.NodeGroup{}
 	ng.Name = "worker"
 	ng.Spec.NodeType = v1.NodeTypeCloudEphemeral
@@ -122,11 +123,7 @@ func TestBuildSnapshot_ClassDeletedMidPassIsRecorded(t *testing.T) {
 
 	c := fake.NewClientBuilder().
 		WithScheme(scheme).
-		WithObjects(existing, testSecret(
-			cloudprovider.RegistrationSecretNamespace,
-			cloudprovider.RegistrationSecretBaseName,
-			validMCMRegistrationData("aws", kind, "v1"),
-		)).
+		WithObjects(existing, providermock.DefaultRegistration(validMCMRegistrationData("aws", kind, "v1"))).
 		WithInterceptorFuncs(interceptor.Funcs{
 			// The List still returns it; the Get no longer does.
 			Get: func(ctx context.Context, cl client.WithWatch, key client.ObjectKey, obj client.Object, opts ...client.GetOption) error {
@@ -245,11 +242,7 @@ func newDVPTestService(t *testing.T, className string, cores int64, memory strin
 
 	c := fake.NewClientBuilder().
 		WithScheme(scheme).
-		WithObjects(ic, testSecret(
-			cloudprovider.RegistrationSecretNamespace,
-			cloudprovider.RegistrationSecretBaseName,
-			validCAPIRegistrationData("dvp", kind, "v1"),
-		)).
+		WithObjects(ic, providermock.DefaultRegistration(validCAPIRegistrationData("dvp", kind, "v1"))).
 		Build()
 
 	return &Service{Client: c}

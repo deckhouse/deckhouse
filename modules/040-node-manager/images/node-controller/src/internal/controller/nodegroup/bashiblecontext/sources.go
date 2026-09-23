@@ -41,8 +41,6 @@ const (
 	controlPlaneArgsSecretName = "d8-control-plane-manager-control-plane-arguments"
 
 	apiProxyCertSecretName = "kubernetes-api-proxy-discovery-cert"
-
-	bootstrapTokenNGLabel = "node-manager.deckhouse.io/node-group"
 )
 
 // RootCAFiles are the candidate locations of the projected service-account CA, canonical path

@@ -31,6 +31,7 @@ import (
 
 	v1 "github.com/deckhouse/node-controller/api/deckhouse.io/v1"
 	"github.com/deckhouse/node-controller/internal/cloudprovider"
+	providermock "github.com/deckhouse/node-controller/internal/cloudprovider/mock"
 	ngcommon "github.com/deckhouse/node-controller/internal/controller/nodegroup/common"
 )
 
@@ -194,11 +195,7 @@ func TestResolveNodeGroup_StaticWiresNameRolloutAndStatic(t *testing.T) {
 }
 
 func TestResolveNodeGroup_CloudKindMismatchErrors(t *testing.T) {
-	s := newTestService(t, testSecret(
-		cloudprovider.RegistrationSecretNamespace,
-		cloudprovider.RegistrationSecretBaseName,
-		validCAPIRegistrationData("yandex", "YandexInstanceClass", "v1alpha1"),
-	))
+	s := newTestService(t, providermock.DefaultRegistration(validCAPIRegistrationData("yandex", "YandexInstanceClass", "v1alpha1")))
 	ng := &v1.NodeGroup{
 		ObjectMeta: metav1.ObjectMeta{Name: "worker"},
 		Spec: v1.NodeGroupSpec{
