@@ -16,6 +16,7 @@
 
 /* The key field and the "Check key" button always stay on one line. */
 [data-stronghold-download] .license-form-enter .form--inline {
+    position: relative;
     flex-wrap: nowrap;
     align-items: flex-end;
 }
@@ -25,8 +26,10 @@
     min-width: 0;
 }
 
-/* The status message is positioned relative to the button and taken out of
-   the flow, so its text can never move the button. */
+/* The status message is taken out of the flow (absolutely positioned), so its
+   text can never move the button or the field. On wide screens it sits to the
+   right of the button; on narrower screens it goes under the row into space
+   reserved by the form padding. */
 .stronghold-download__check {
     position: relative;
     flex-shrink: 0;
@@ -38,7 +41,7 @@
     top: 50%;
     transform: translateY(-50%);
     width: max-content;
-    max-width: 260px;
+    max-width: 220px;
     height: auto !important;
     margin: 0 !important;
     line-height: 1.3;
@@ -49,14 +52,25 @@
     display: none;
 }
 
-@media screen and (max-width: 727px) {
+@media screen and (max-width: 1199px) {
+    [data-stronghold-download] .license-form-enter .form--inline {
+        padding-bottom: 44px;
+    }
+
+    .stronghold-download__check {
+        position: static;
+    }
+
     .stronghold-download__status {
         left: 0;
-        top: calc(100% + 6px);
+        right: 0;
+        top: auto;
+        bottom: 0;
         transform: none;
-        max-width: none;
         width: auto;
-        white-space: nowrap;
+        max-width: none;
+        min-height: 0 !important;
+        white-space: normal;
     }
 }
 
