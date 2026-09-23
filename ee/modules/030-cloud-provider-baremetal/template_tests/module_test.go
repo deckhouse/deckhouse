@@ -216,6 +216,27 @@ dhcp:
 			instanceManagerArgs := instanceManager.Field("spec.template.spec.containers.0.args").String()
 			Expect(instanceManagerArgs).To(ContainSubstring("--bmc-probe-timeout=30s"))
 		})
+
+		It("downloads custom UEFI iPXE firmware using the filename expected by httpd", func() {
+			f.ValuesSet("cloudProviderBaremetal.nodes.parameters.ironic.provisioningTLS.certificateRef.name", "test-tls")
+			f.ValuesSet("cloudProviderBaremetal.internal.resolvedIPXEFirmware", map[string]interface{}{
+				"bios": map[string]interface{}{
+					"url":    "https://images.example.test/undionly.kpxe",
+					"sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+				},
+				"uefiX86_64": map[string]interface{}{
+					"url":    "https://images.example.test/snponly.efi",
+					"sha256": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+				},
+			})
+			f.HelmRender()
+			Expect(f.RenderError).ShouldNot(HaveOccurred())
+
+			ironic := f.KubernetesResource("Ironic", "d8-cloud-provider-baremetal", "ironic")
+			downloaderArgs := ironic.Field("spec.overrides.initContainers.0.args.0").String()
+			Expect(downloaderArgs).To(ContainSubstring("/shared/custom_ipxe_firmware/snponly.efi"))
+			Expect(downloaderArgs).NotTo(ContainSubstring("snponly-x86_64.efi"))
+		})
 	})
 
 	Context("with external DHCP configured", func() {
