@@ -5356,7 +5356,7 @@ alerts:
           )
           ```
 
-        - Alternatively, check the admission-policy-engine reports in Deckhouse Console.
+        - Alternatively, check the admission-policy-engine reports in the web interface Deckhouse Platform.
       summary: |
         At least one object violates the configured cluster operation policies.
       severity: "3"
@@ -5384,7 +5384,7 @@ alerts:
           )
           ```
 
-        - Alternatively, check the admission-policy-engine reports in Deckhouse Console.
+        - Alternatively, check the admission-policy-engine reports in the web interface Deckhouse Platform.
       summary: |
         At least one pod violates the configured cluster pod security standards.
       severity: "3"
@@ -5410,7 +5410,7 @@ alerts:
           )
           ```
 
-        - Alternatively, check the admission-policy-engine reports in Deckhouse Console.
+        - Alternatively, check the admission-policy-engine reports in the web interface Deckhouse Platform.
       summary: |
         At least one object violates the configured cluster security policies.
       severity: "3"

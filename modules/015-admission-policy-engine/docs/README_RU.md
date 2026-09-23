@@ -186,7 +186,7 @@ alert:
         )
         ```
 
-      - Alternatively, check the admission-policy-engine reports in Deckhouse Console.
+      - Alternatively, check the admission-policy-engine reports in the web interface Deckhouse Platform.
     plk_markup_format: markdown
     plk_protocol_version: "1"
     summary: At least one pod violates the configured cluster pod security standards.
@@ -244,7 +244,7 @@ alert:
         )
         ```
 
-      - Alternatively, check the admission-policy-engine reports in Deckhouse Console.
+      - Alternatively, check the admission-policy-engine reports in the web interface Deckhouse Platform.
     plk_markup_format: markdown
     plk_protocol_version: "1"
     summary: At least one object violates the configured cluster operation policies.
@@ -302,7 +302,7 @@ alert:
         )
         ```
 
-      - Alternatively, check the admission-policy-engine reports in Deckhouse Console.
+      - Alternatively, check the admission-policy-engine reports in the web interface Deckhouse Platform.
     plk_markup_format: markdown
     plk_protocol_version: "1"
     summary: At least one object violates the configured cluster security policies.
@@ -343,7 +343,7 @@ status:
 
 {% alert level="info" %}
 В неймспейсах с именами `d8-*` и `kube-*` стандарт `restricted` применяется независимо от политики по умолчанию.
-Нарушение стандарта фиксируется в отчётах безопасности и отображается в веб-интерфейсе Deckhouse, нагрузка при этом запускается, если владеющий неймспейсом модуль не включил принудительное применение.
+Нарушение стандарта фиксируется в отчётах безопасности и отображается в веб-интерфейсе Deckhouse Platform, нагрузка при этом запускается, если владеющий неймспейсом модуль не включил принудительное применение.
 {% endalert %}
 
 {% alert level="info" %}

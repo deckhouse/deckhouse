@@ -73,7 +73,7 @@ The platform also labels the namespaces it creates with `heritage: deckhouse`. A
 
 Every namespace named `d8-*` or `kube-*` is checked against the `restricted` standard.
 The `security.deckhouse.io/pod-policy` label and the [`settings.podSecurityStandards.defaultPolicy`](/modules/admission-policy-engine/configuration.html#parameters-podsecuritystandards-defaultpolicy) parameter do not apply there.
-A violation is recorded in the audit and shown in Deckhouse Console, and the workload still starts.
+A violation is recorded in the audit and shown in the web interface Deckhouse Platform, and the workload still starts.
 The exception is a namespace whose module has hardened it: there the standards are enforced and a violating workload is denied.
 
 These checks cannot be tuned from outside the platform.

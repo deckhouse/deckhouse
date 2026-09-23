@@ -95,7 +95,7 @@ alert:
         )
         ```
 
-      - Alternatively, check the admission-policy-engine reports in Deckhouse Console.
+      - Alternatively, check the admission-policy-engine reports in the web interface Deckhouse Platform.
     plk_markup_format: markdown
     plk_protocol_version: "1"
     summary: At least one pod violates the configured cluster pod security standards.
@@ -153,7 +153,7 @@ alert:
         )
         ```
 
-      - Alternatively, check the admission-policy-engine reports in Deckhouse Console.
+      - Alternatively, check the admission-policy-engine reports in the web interface Deckhouse Platform.
     plk_markup_format: markdown
     plk_protocol_version: "1"
     summary: At least one object violates the configured cluster operation policies.
@@ -211,7 +211,7 @@ alert:
         )
         ```
 
-      - Alternatively, check the admission-policy-engine reports in Deckhouse Console.
+      - Alternatively, check the admission-policy-engine reports in the web interface Deckhouse Platform.
     plk_markup_format: markdown
     plk_protocol_version: "1"
     summary: At least one object violates the configured cluster security policies.
@@ -298,7 +298,7 @@ status:
 
 Каждый неймспейс с именем `d8-*` или `kube-*` проверяется по стандарту `restricted`.
 Лейбл `security.deckhouse.io/pod-policy` и [параметр `settings.podSecurityStandards.defaultPolicy`](/modules/admission-policy-engine/configuration.html#parameters-podsecuritystandards-defaultpolicy) в них не действуют.
-Нарушение стандарта фиксируется в отчётах безопасности и отображается в веб-интерфейсе Deckhouse, нагрузка при этом запускается.
+Нарушение стандарта фиксируется в отчётах безопасности и отображается в веб-интерфейсе Deckhouse Platform, нагрузка при этом запускается.
 Исключение — неймспейс, в котором владеющий им модуль включил принудительное применение: там стандарты применяются, и нарушающая их нагрузка блокируется.
 
 Настроить эти проверки извне платформы нельзя.
@@ -309,7 +309,7 @@ status:
 Политика с `enforcementAction: Deny` блокирует запуск нагрузки в прикладных неймспейсах, а в системном неймспейсе только сообщает о нарушении.
 Лейблы неймспейса на это не влияют: модуль, ужесточающий проверки в собственном неймспейсе, поднимает там Pod Security Standards, а к политике, написанной для прикладной нагрузки, это не относится.
 
-Поэтому политика с `enforcementAction: Deny`, которая доходит до системных неймспейсов, разворачивается в два ограничения Gatekeeper, видимых в отчётах безопасности и в веб-интерфейсе Deckhouse:
+Поэтому политика с `enforcementAction: Deny`, которая доходит до системных неймспейсов, разворачивается в два ограничения Gatekeeper, видимых в отчётах безопасности и в веб-интерфейсе Deckhouse Platform:
 
 - собственное имя политики — для прикладных неймспейсов, с тем действием, которое задано в политике;
 - `d8-system-default-<политика>` — для системных неймспейсов, в режиме `warn`.

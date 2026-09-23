@@ -94,7 +94,7 @@ alert:
         )
         ```
 
-      - Alternatively, check the admission-policy-engine reports in Deckhouse Console.
+      - Alternatively, check the admission-policy-engine reports in the web interface Deckhouse Platform.
     plk_markup_format: markdown
     plk_protocol_version: "1"
     summary: At least one pod violates the configured cluster pod security standards.
@@ -152,7 +152,7 @@ alert:
         )
         ```
 
-      - Alternatively, check the admission-policy-engine reports in Deckhouse Console.
+      - Alternatively, check the admission-policy-engine reports in the web interface Deckhouse Platform.
     plk_markup_format: markdown
     plk_protocol_version: "1"
     summary: At least one object violates the configured cluster operation policies.
@@ -210,7 +210,7 @@ alert:
         )
         ```
 
-      - Alternatively, check the admission-policy-engine reports in Deckhouse Console.
+      - Alternatively, check the admission-policy-engine reports in the web interface Deckhouse Platform.
     plk_markup_format: markdown
     plk_protocol_version: "1"
     summary: At least one object violates the configured cluster security policies.
@@ -271,7 +271,7 @@ Allowed policy enforcement modes:
 
 - `deny`: Blocks actions from being executed.
 - `dryrun`: Does not affect execution and used for debugging.
-  Event information can be viewed in Deckhouse Console or with `d8 k`.
+  Event information can be viewed in the web interface or with `d8 k`.
 - `warn`: Works like `dryrun` but also displays a warning with the reason the action would have been denied in `deny` mode.
 
 By default, Pod Security Standards policies in DP are enforced in `deny` mode.
@@ -296,7 +296,7 @@ The platform also labels the namespaces it creates with `heritage: deckhouse`. A
 
 Every namespace named `d8-*` or `kube-*` is checked against the `restricted` standard.
 The `security.deckhouse.io/pod-policy` label and the [`settings.podSecurityStandards.defaultPolicy`](/modules/admission-policy-engine/configuration.html#parameters-podsecuritystandards-defaultpolicy) parameter do not apply there.
-A violation is recorded in the audit and shown in Deckhouse Console, and the workload still starts.
+A violation is recorded in the audit and shown in the web interface Deckhouse Platform, and the workload still starts.
 The exception is a namespace whose module has hardened it: there the standards are enforced and a violating workload is denied.
 
 These checks cannot be tuned from outside the platform.
@@ -307,7 +307,7 @@ OperationPolicy and SecurityPolicy resources also apply to system namespaces in 
 A policy with `enforcementAction: Deny` blocks workloads in application namespaces and only reports violations in a system namespace.
 No label of the namespace changes that: a module that hardens its own namespace raises the Pod Security Standards there, which has no effect on a policy written for application workloads.
 
-A denying policy that reaches system namespaces is therefore rendered as two Gatekeeper constraints, both visible in the audit and in Deckhouse Console:
+A denying policy that reaches system namespaces is therefore rendered as two Gatekeeper constraints, both visible in the audit and in the web interface:
 
 - The policy's own name: For application namespaces, with the action the policy asks for.
 - `d8-system-default-<policy>`: For system namespaces, in `warn` mode.
