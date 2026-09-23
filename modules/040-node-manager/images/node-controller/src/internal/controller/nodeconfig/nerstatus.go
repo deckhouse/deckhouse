@@ -30,6 +30,7 @@ import (
 
 	v1 "github.com/deckhouse/node-controller/api/deckhouse.io/v1"
 	deckhousev1alpha1 "github.com/deckhouse/node-controller/api/deckhouse.io/v1alpha1"
+	nodecommon "github.com/deckhouse/node-controller/internal/common"
 )
 
 // readyConditionType answers whether a request's sysext resolved to an image the
@@ -104,7 +105,7 @@ func (r *Reconciler) updateNERStatus(ctx context.Context, ner *deckhousev1alpha1
 	desired := ner.Status.DeepCopy()
 	desired.ObservedGeneration = ner.Generation
 	desired.MatchedNodeGroups = matchedNodeGroups(ner.Spec.NodeGroupSelector.MatchNames, immutableGroups)
-	desired.MatchedNodes = matchedNodeCount(nodes, desired.MatchedNodeGroups)
+	desired.MatchedNodes = nerMatchedNodeCount(ner, nodes, desired.MatchedNodeGroups)
 	desired.AppliedNodes = outcome.applied
 	desired.FailedNodes = outcome.failed
 	desired.FailureMessage = outcome.message
@@ -151,6 +152,22 @@ func (r *Reconciler) updateNERStatus(ctx context.Context, ner *deckhousev1alpha1
 		return fmt.Errorf("patch status: %w", err)
 	}
 	return nil
+}
+
+// nerMatchedNodeCount counts the nodes of the selected groups the render gives
+// the sysext to, node labels included (nerMatchesNode).
+func nerMatchedNodeCount(ner *deckhousev1alpha1.NodeExtensionRequest, nodes []corev1.Node, groups []string) int32 {
+	var count int32
+	for i := range nodes {
+		group := nodes[i].Labels[nodecommon.NodeGroupLabel]
+		if !slices.Contains(groups, group) {
+			continue
+		}
+		if nerMatchesNode(ner, &nodes[i], group) {
+			count++
+		}
+	}
+	return count
 }
 
 // matchedNodeGroups returns the NodeGroups a selector picks out of groups: the
