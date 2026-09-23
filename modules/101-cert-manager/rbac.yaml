@@ -2,7 +2,6 @@ apiVersion: rbac.deckhouse.io/v1alpha1
 resources:
   - group: acme.cert-manager.io
     resource: challenges
-    scope: Namespaced
     namespace:
       manager:
         - delete
@@ -21,7 +20,6 @@ resources:
         - watch
   - group: acme.cert-manager.io
     resource: orders
-    scope: Namespaced
     namespace:
       manager:
         - delete
@@ -40,7 +38,6 @@ resources:
         - watch
   - group: cert-manager.io
     resource: certificaterequests
-    scope: Namespaced
     namespace:
       manager:
         - delete
@@ -59,7 +56,6 @@ resources:
         - watch
   - group: cert-manager.io
     resource: certificates
-    scope: Namespaced
     namespace:
       manager:
         - create
@@ -84,7 +80,6 @@ resources:
         - watch
   - group: cert-manager.io
     resource: clusterissuers
-    scope: Cluster
     system:
       manager:
         - create
@@ -109,7 +104,6 @@ resources:
         - watch
   - group: cert-manager.io
     resource: issuers
-    scope: Namespaced
     namespace:
       admin:
         - create
@@ -634,6 +628,7 @@ serviceAccounts:
 prometheusAccess:
   deployments:
     - cert-manager
+  when: .Values.global.enabledModules | has "prometheus"
 access:
   - name: admin-kubeconfig
     subjects:
