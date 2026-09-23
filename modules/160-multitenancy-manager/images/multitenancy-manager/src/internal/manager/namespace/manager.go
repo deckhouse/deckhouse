@@ -169,7 +169,7 @@ func (m *Manager) Migrate(ctx context.Context) error {
 // auto-created around its namespace, or it has no template at all. Virtual projects are excluded —
 // they are platform-owned and carry the virtual template.
 func needsTemplate(project *v1alpha3.Project) bool {
-	if project.Labels[v1alpha3.ProjectLabelVirtualProject] == "true" {
+	if project.IsVirtual() {
 		return false
 	}
 	if project.Labels[v1alpha3.ProjectLabelManagedByNamespace] == v1alpha3.ManagedByNamespace {

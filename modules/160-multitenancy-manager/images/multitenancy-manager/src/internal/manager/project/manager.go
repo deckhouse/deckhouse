@@ -21,6 +21,7 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"strings"
 	"sync"
 	"time"
 
@@ -57,13 +58,46 @@ const (
 	DeckhouseProjectName = "deckhouse"
 	DefaultProjectName   = "default"
 
-	VirtualTemplate = "virtual"
+	VirtualTemplate = v1alpha3.VirtualProjectTemplateName
 
 	// MinimalTemplate renders the project namespace and nothing else. It is what a project gets
 	// when it names no template: the CRD schema defaults the field, and the controller falls back
 	// to the same value for the explicit empty string the schema cannot default.
 	MinimalTemplate = "simple"
 )
+
+// namespaceDeletionPollMax caps the interval at which a deleting project checks whether its
+// namespace is gone. The interval starts at namespaceDeletionPoll and grows with the time the
+// namespace has spent terminating, so a namespace that is stuck -- a foreign finalizer, a dangling
+// APIService -- costs one reconcile a minute instead of twenty.
+const namespaceDeletionPollMax = time.Minute
+
+// namespaceDeletionPollFor returns the next check interval for a namespace that has been
+// terminating for the given time: a quarter of it, within [namespaceDeletionPoll, namespaceDeletionPollMax].
+func namespaceDeletionPollFor(terminatingFor time.Duration) time.Duration {
+	return min(max(terminatingFor/4, namespaceDeletionPoll), namespaceDeletionPollMax)
+}
+
+// namespaceTerminationSummary renders what the namespace controller reports as still holding the
+// namespace up, for the Project condition and the log.
+func namespaceTerminationSummary(namespace *corev1.Namespace) string {
+	var parts []string
+	for _, cond := range namespace.Status.Conditions {
+		if cond.Status != corev1.ConditionTrue {
+			continue
+		}
+		parts = append(parts, fmt.Sprintf("%s: %s", cond.Type, cond.Message))
+	}
+	if len(parts) == 0 {
+		return "the namespace reports nothing remaining"
+	}
+	return strings.Join(parts, "; ")
+}
+
+// namespaceDeletionPoll is how often a deleting project checks whether its namespace is gone. The
+// namespace controller drives the deletion; this loop only observes it, so a few seconds is enough
+// to keep "kubectl delete project" responsive without hammering the API server.
+const namespaceDeletionPoll = 3 * time.Second
 
 type Manager struct {
 	client     client.Client
@@ -377,6 +411,46 @@ func (m *Manager) Delete(ctx context.Context, project *v1alpha3.Project) (ctrl.R
 		return ctrl.Result{}, err
 	}
 
+	// The uninstall above only issues the deletes; it does not wait for them. The namespace is part
+	// of the release, and its own removal is what takes the time: every object inside has to go
+	// first. Dropping the finalizer here would make the Project vanish while the namespace is still
+	// Terminating -- so "kubectl delete project" returns at once, where "kubectl delete ns" used to
+	// block until the environment was gone, and a script that relied on that ordering breaks. The
+	// finalizer therefore stays until the namespace is really gone; the Project sits in Terminating
+	// exactly as long as its namespace does, which is what the old contract promised.
+	namespace := new(corev1.Namespace)
+	switch err := m.client.Get(ctx, client.ObjectKey{Name: project.Name}, namespace); {
+	case err == nil:
+		if namespace.DeletionTimestamp.IsZero() {
+			// Not even terminating: the uninstall did not reach it (a foreign release owns it, or the
+			// delete was dropped). Retrying the uninstall is what the next reconcile does.
+			m.logger.Info("the project namespace is not terminating yet, waiting", "project", project.Name)
+			return ctrl.Result{RequeueAfter: namespaceDeletionPoll}, nil
+		}
+		// Terminating: Kubernetes is purging the contents, or something in there holds a finalizer
+		// and the namespace never finishes. Say so where "kubectl describe project" shows it, and
+		// check less and less often the longer it takes. The message names the moment the
+		// namespace started terminating rather than the time elapsed, so an unchanged situation
+		// produces an identical condition and no status write: a namespace stuck for good must not
+		// cost an etcd revision per poll.
+		terminatingFor := time.Since(namespace.DeletionTimestamp.Time)
+		message := fmt.Sprintf("waiting for the '%s' namespace to be deleted (terminating since %s); %s",
+			project.Name, namespace.DeletionTimestamp.UTC().Format(time.RFC3339), namespaceTerminationSummary(namespace))
+		if !project.IsConditionFalseWithMessage(v1alpha3.ProjectConditionNamespaceDeleted, message) {
+			project.SetConditionFalse(v1alpha3.ProjectConditionNamespaceDeleted, message)
+			if err := m.updateProjectStatus(ctx, project); err != nil {
+				// The status is a courtesy; the deletion itself does not depend on it.
+				m.logger.Error(err, "failed to record the namespace deletion status", "project", project.Name)
+			}
+		}
+		poll := namespaceDeletionPollFor(terminatingFor)
+		m.logger.Info("the project namespace is still terminating, waiting",
+			"project", project.Name, "terminatingFor", terminatingFor.Round(time.Second), "nextCheck", poll)
+		return ctrl.Result{RequeueAfter: poll}, nil
+	case !apierrors.IsNotFound(err):
+		return ctrl.Result{}, fmt.Errorf("get the '%s' namespace: %w", project.Name, err)
+	}
+
 	// remove finalizer
 	if err := m.removeFinalizer(ctx, project); err != nil {
 		m.logger.Error(err, "failed to remove finalizer from the project", "project", project.Name)
@@ -398,7 +472,7 @@ func (m *Manager) Delete(ctx context.Context, project *v1alpha3.Project) (ctrl.R
 // pin the wrong template after a failed migrate.
 func (m *Manager) ensureTemplateName(ctx context.Context, project *v1alpha3.Project) error {
 	if project.Spec.ProjectTemplateName != "" ||
-		project.Labels[v1alpha3.ProjectLabelVirtualProject] == "true" ||
+		project.IsVirtual() ||
 		namespacemanager.IsLeftoverWrap(project) {
 		return nil
 	}

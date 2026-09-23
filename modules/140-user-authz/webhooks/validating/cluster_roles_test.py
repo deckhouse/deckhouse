@@ -195,12 +195,14 @@ class TestClusterRolesValidation(unittest.TestCase):
             'together with the "namespace" lineage: mixing system and namespace/project scopes is forbidden.',
         )
 
-    def test_custom_capability_lineage_mixing_is_forbidden(self):
+    def test_custom_capability_may_not_aggregate_at_all(self):
+        # This used to check lineage mixing on a capability. A capability now may not carry an
+        # aggregationRule in the first place -- it is the leaf of the model -- so that refusal comes
+        # first and covers mixing as well; lineage mixing on a role is checked by the test above.
         out = self.run_hook(
             binding_context(
                 "d8:custom:namespace-capability:foo",
                 labels={"rbac.deckhouse.io/kind": "custom-capability"},
-                rules=SOME_RULES,
                 selector_labels=[
                     {"rbac.deckhouse.io/aggregate-to-project-as": "admin"},
                     {"rbac.deckhouse.io/aggregate-to-networking-as": "manager"},
@@ -210,8 +212,9 @@ class TestClusterRolesValidation(unittest.TestCase):
         tests.assert_validation_deny(
             self,
             out,
-            'ClusterRole "d8:custom:namespace-capability:foo" must not aggregate the "networking" lineage '
-            'together with the "project" lineage: mixing system and namespace/project scopes is forbidden.',
+            'ClusterRole "d8:custom:namespace-capability:foo" with "rbac.deckhouse.io/kind: '
+            'custom-capability" must not define aggregationRule: a capability carries rules and is '
+            "aggregated by roles, it does not aggregate other capabilities.",
         )
 
     def test_valid_custom_role_is_allowed(self):
@@ -817,6 +820,142 @@ class TestCustomNameWithoutTheKindLabel(unittest.TestCase):
             'ClusterRole "d8:custom:project:role-a" with "rbac.deckhouse.io/scope: system" must be named '
             '"d8:custom:system:<name>": the name and the scope must not disagree.',
         )
+
+
+class TestPlatformLineageLabelOnObject(unittest.TestCase):
+    """
+    The aggregation label on the object itself is what the platform roles select. An object that
+    carries it without declaring itself a custom capability would be poured into the platform role
+    by the aggregation controller, whatever its name -- so it is refused.
+    """
+
+    def run_hook(self, ctx):
+        return hook.testrun(cluster_roles.main, [ctx])
+
+    def test_plain_role_with_namespace_lineage_label_is_denied(self):
+        out = self.run_hook(
+            binding_context(
+                "my-role",
+                labels={"rbac.deckhouse.io/aggregate-to-namespace-as": "admin"},
+                rules=SOME_RULES,
+            )
+        )
+        tests.assert_validation_deny(
+            self,
+            out,
+            'ClusterRole "my-role" carries the aggregation label of the "namespace" lineage but is not '
+            'labeled "rbac.deckhouse.io/kind: custom-capability": only a custom capability may aggregate '
+            "into a platform role.",
+        )
+
+    def test_plain_role_with_subsystem_lineage_label_is_denied(self):
+        out = self.run_hook(
+            binding_context(
+                "my-role",
+                labels={"rbac.deckhouse.io/aggregate-to-networking-as": "manager"},
+                rules=SOME_RULES,
+            )
+        )
+        tests.assert_validation_deny(
+            self,
+            out,
+            'ClusterRole "my-role" carries the aggregation label of the "networking" lineage but is not '
+            'labeled "rbac.deckhouse.io/kind: custom-capability": only a custom capability may aggregate '
+            "into a platform role.",
+        )
+
+    def test_custom_role_with_lineage_label_on_itself_is_denied(self):
+        # A custom role aggregates capabilities through selectors; carrying the lineage label on
+        # itself would make the platform role aggregate the custom role instead.
+        out = self.run_hook(
+            binding_context(
+                "d8:custom:namespace:developer",
+                labels={
+                    "rbac.deckhouse.io/kind": "custom-role",
+                    "rbac.deckhouse.io/aggregate-to-namespace-as": "admin",
+                },
+                selector_labels=[{"rbac.deckhouse.io/capability": "custom.namespace-capability.x"}],
+            )
+        )
+        tests.assert_validation_deny(
+            self,
+            out,
+            'ClusterRole "d8:custom:namespace:developer" carries the aggregation label of the "namespace" '
+            'lineage but is not labeled "rbac.deckhouse.io/kind: custom-capability": only a custom '
+            "capability may aggregate into a platform role.",
+        )
+
+    def test_custom_capability_with_lineage_label_is_allowed(self):
+        out = self.run_hook(
+            binding_context(
+                "d8:custom:namespace-capability:developer-base",
+                labels={
+                    "rbac.deckhouse.io/kind": "custom-capability",
+                    "rbac.deckhouse.io/scope": "namespace",
+                    "rbac.deckhouse.io/aggregate-to-namespace-as": "manager",
+                },
+                rules=SOME_RULES,
+            )
+        )
+        tests.assert_validation_allowed(self, out, None)
+
+    def test_foreign_aggregation_label_is_not_ours(self):
+        # cluster.x-k8s.io/aggregate-to-manager and the like belong to other controllers.
+        out = self.run_hook(
+            binding_context(
+                "capi-aggregated",
+                labels={"cluster.x-k8s.io/aggregate-to-manager": "true"},
+                rules=SOME_RULES,
+            )
+        )
+        tests.assert_validation_allowed(self, out, None)
+
+    def test_unknown_lineage_label_is_not_platform(self):
+        out = self.run_hook(
+            binding_context(
+                "my-role",
+                labels={"rbac.deckhouse.io/aggregate-to-mycustom-as": "manager"},
+                rules=SOME_RULES,
+            )
+        )
+        tests.assert_validation_allowed(self, out, None)
+
+
+class TestCustomCapabilityDoesNotAggregate(unittest.TestCase):
+    def run_hook(self, ctx):
+        return hook.testrun(cluster_roles.main, [ctx])
+
+    def test_custom_capability_with_aggregation_rule_is_denied(self):
+        out = self.run_hook(
+            binding_context(
+                "d8:custom:namespace-capability:composite",
+                labels={
+                    "rbac.deckhouse.io/kind": "custom-capability",
+                    "rbac.deckhouse.io/scope": "namespace",
+                },
+                selector_labels=[{"rbac.deckhouse.io/capability": "custom.namespace-capability.a"}],
+            )
+        )
+        tests.assert_validation_deny(
+            self,
+            out,
+            'ClusterRole "d8:custom:namespace-capability:composite" with "rbac.deckhouse.io/kind: '
+            'custom-capability" must not define aggregationRule: a capability carries rules and is '
+            "aggregated by roles, it does not aggregate other capabilities.",
+        )
+
+    def test_custom_capability_with_rules_only_is_allowed(self):
+        out = self.run_hook(
+            binding_context(
+                "d8:custom:namespace-capability:leaf",
+                labels={
+                    "rbac.deckhouse.io/kind": "custom-capability",
+                    "rbac.deckhouse.io/scope": "namespace",
+                },
+                rules=SOME_RULES,
+            )
+        )
+        tests.assert_validation_allowed(self, out, None)
 
 
 if __name__ == "__main__":

@@ -226,11 +226,11 @@ func NamespaceSet(project *v1alpha3.Project) map[string]struct{} {
 }
 
 // ProjectFanoutChanged reports whether a Project update is relevant to the PRB/CPRB fan-out: only a
-// change to the project's namespace set, its virtual-project label, or its deletion state can add or
+// change to the project's namespace set, whether it is virtual, or its deletion state can add or
 // remove a service RoleBinding. Frequent status writes (conditions, usage, observedGeneration) are
 // ignored so they no longer re-enqueue every binding on every project status write.
 func ProjectFanoutChanged(oldProject, newProject *v1alpha3.Project) bool {
-	if oldProject.Labels[v1alpha3.ProjectLabelVirtualProject] != newProject.Labels[v1alpha3.ProjectLabelVirtualProject] {
+	if oldProject.IsVirtual() != newProject.IsVirtual() {
 		return true
 	}
 	if oldProject.DeletionTimestamp.IsZero() != newProject.DeletionTimestamp.IsZero() {

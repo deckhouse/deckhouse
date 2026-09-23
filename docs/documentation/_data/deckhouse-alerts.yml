@@ -4429,10 +4429,34 @@ alerts:
         # recreate it with roleRef.name set to the new role (d8:system:*, d8:subsystem:*, or d8:namespace:*)
         ```
 
+        A ClusterRoleBinding to a deprecated `d8:manage:*` name keeps its cluster-scoped rights, but no longer receives the RoleBindings that used to project it into the module namespaces (`d8-cloud-provider-*`, `d8-monitoring` and the rest): the ones created by the previous release are removed. Reading logs, describing pods and `exec` inside those namespaces come back when the binding is recreated on the new role name.
+
         Note: the new `d8:namespace:admin` no longer grants `serviceaccounts/token` creation or impersonation — these disaster-grade actions now require a `superadmin` role by design.
       summary: |
         A binding still references a deprecated RBACv2 role.
       severity: "7"
+      markupFormat: markdown
+    - name: D8UserAuthzForeignAggregationLabel
+      sourceFile: modules/140-user-authz/monitoring/prometheus-rules/foreign-aggregation-label.yaml
+      moduleUrl: 140-user-authz
+      module: user-authz
+      edition: ce
+      description: |-
+        The ClusterRole `{{ $labels.name }}` carries the `rbac.deckhouse.io/aggregate-to-{{ $labels.lineage }}-as` label but is not labelled `rbac.deckhouse.io/kind: custom-capability`{{ if $labels.kind }} (its kind label is `{{ $labels.kind }}`){{ end }}. The aggregation controller reads nothing but that label, so the rules of this role are merged into the platform `d8:{{ $labels.lineage }}:*` roles for every holder in the cluster, outside the role model's contract.
+
+        The `rbacv2-cluster-roles.deckhouse.io` webhook now refuses such an object: every `UPDATE` of this role, including a GitOps re-apply, is denied until it is fixed. Choose one:
+
+        * If the role is meant to extend the platform roles, make it a custom capability: name it `d8:custom:<scope>-capability:<name>`, label it `rbac.deckhouse.io/kind: custom-capability` and `rbac.deckhouse.io/scope: <scope>`, and drop its `aggregationRule` if it has one. See the user-authz documentation on custom capabilities.
+        * Otherwise remove the `rbac.deckhouse.io/aggregate-to-*-as` labels from it.
+
+        List every such role:
+
+        ```bash
+        d8 k get clusterroles -o json | jq -r '.items[] | select((.metadata.labels // {}) | to_entries | any(.key | startswith("rbac.deckhouse.io/aggregate-to-"))) | select((.metadata.labels.heritage // "") != "deckhouse") | select((.metadata.labels["rbac.deckhouse.io/kind"] // "") != "custom-capability") | .metadata.name'
+        ```
+      summary: |
+        ClusterRole {{ $labels.name }} aggregates into the platform {{ $labels.lineage }} roles without being a custom capability.
+      severity: "6"
       markupFormat: markdown
     - name: D8UserAuthzLegacyRBACv2CustomRoleFound
       sourceFile: modules/140-user-authz/monitoring/prometheus-rules/legacy-rbacv2-custom-roles.yaml
@@ -5558,6 +5582,32 @@ alerts:
       summary: |
         A new release for module {{ $labels.module }} is awaiting manual approval.
       severity: "6"
+      markupFormat: markdown
+    - name: MultitenancyManagerDeprecatedConfigParameter
+      sourceFile: modules/160-multitenancy-manager/monitoring/prometheus-rules/deprecated-mc.yaml
+      moduleUrl: 160-multitenancy-manager
+      module: multitenancy-manager
+      edition: ce
+      description: |-
+        The `{{ $labels.parameter }}` parameter of the `multitenancy-manager` ModuleConfig is deprecated and ignored:
+        every user namespace outside a project is now adopted into a project of its own, whatever the parameter says.
+
+        The parameter is kept in the schema for one release only. In the next minor release it is removed, and a
+        ModuleConfig that still sets it will fail validation and stop applying.
+
+        Steps to troubleshoot:
+
+        1. Remove `{{ $labels.parameter }}` from the ModuleConfig, including in the CI or GitOps process that applies it:
+
+           ```bash
+           d8 k edit mc multitenancy-manager
+           ```
+
+        1. Make sure nothing relies on plain namespaces existing beside projects: with the module enabled there are none,
+           and an environment is removed by deleting its Project rather than its Namespace.
+      summary: |
+        The multitenancy-manager ModuleConfig sets the deprecated parameter {{ $labels.parameter }}.
+      severity: "9"
       markupFormat: markdown
     - name: NATInstanceWithDeprecatedAvailabilityZone
       sourceFile: modules/030-cloud-provider-yandex/monitoring/prometheus-rules/deprecated_availability_zone.yaml

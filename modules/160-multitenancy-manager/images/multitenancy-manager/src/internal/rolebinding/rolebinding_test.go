@@ -197,6 +197,10 @@ func TestProjectFanoutChanged(t *testing.T) {
 	virtual.Labels = map[string]string{v1alpha3.ProjectLabelVirtualProject: "true"}
 	assert.True(t, ProjectFanoutChanged(base, virtual), "a virtual-label change must re-enqueue bindings")
 
+	byTemplate := base.DeepCopy()
+	byTemplate.Spec.ProjectTemplateName = v1alpha3.VirtualProjectTemplateName
+	assert.True(t, ProjectFanoutChanged(base, byTemplate), "moving a project onto the virtual template must re-enqueue bindings")
+
 	deleting := base.DeepCopy()
 	now := metav1.Now()
 	deleting.DeletionTimestamp = &now

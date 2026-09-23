@@ -80,7 +80,7 @@ func (v *validator) Handle(ctx context.Context, req admission.Request) admission
 			}
 			return admission.Errored(http.StatusInternalServerError, err)
 		}
-		if project.Labels[v1alpha3.ProjectLabelVirtualProject] == "true" {
+		if project.IsVirtual() {
 			return admission.Denied("ProjectRoleBinding cannot be created in a virtual project namespace")
 		}
 	}
