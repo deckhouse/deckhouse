@@ -78,11 +78,11 @@ func TestAllocate(t *testing.T) {
 			unlicensed: []string{"d"},
 		},
 		{
-			name:       "S5 a node vCPU cannot pay for falls through to cores",
+			name:       "S5 a node cores cannot pay for falls through to vCPU",
 			limits:     key(0, 60, 20),
 			nodes:      []Node{nd("a", 32), nd("b", 32), nd("c", 32), nd("d", 8)},
-			vcpu:       []string{"a", "d"},
-			cores:      []string{"b"},
+			vcpu:       []string{"b"},
+			cores:      []string{"a", "d"},
 			unlicensed: []string{"c"},
 		},
 		{
@@ -90,8 +90,8 @@ func TestAllocate(t *testing.T) {
 			limits:     key(1, 8, 4),
 			nodes:      []Node{nd("a", 32), nd("b", 8), nd("c", 8), nd("d", 4)},
 			servers:    []string{"a"},
-			vcpu:       []string{"b"},
-			cores:      []string{"c"},
+			vcpu:       []string{"c"},
+			cores:      []string{"b"},
 			unlicensed: []string{"d"},
 		},
 		{
@@ -126,7 +126,7 @@ func TestAllocate(t *testing.T) {
 		},
 		{
 			name:   "S10 a key omitting vCPU grants it without a limit",
-			limits: partial(map[string]*int64{MetricServers: i64(0)}),
+			limits: partial(map[string]*int64{MetricServers: i64(0), MetricCores: i64(0)}),
 			nodes:  []Node{nd("a", 32), nd("b", 1000)},
 			vcpu:   []string{"b", "a"},
 		},
@@ -216,6 +216,18 @@ func TestAllocationPublishesTheGrantedLimits(t *testing.T) {
 	}
 }
 
+// A reissue that adds vCPU must not move a node covered by cores onto vCPU:
+// cores come before vCPU, so the node stays where it was.
+func TestAllocateKeepsCoresWhenVCPUGrows(t *testing.T) {
+	nodes := []Node{nd("big", 8), nd("small", 4)}
+	for _, limits := range []Limits{key(1, 0, 2), key(1, 4, 5)} {
+		got := Allocate(nodes, limits, nil)
+		assertGroup(t, "Servers", got.Servers.Nodes, []string{"big"})
+		assertGroup(t, "Cores", got.Cores.Nodes, []string{"small"})
+		assertGroup(t, "VCPU", got.VCPU.Nodes, nil)
+	}
+}
+
 // S14: three hundred nodes lay out without special casing.
 func TestAllocateManyNodes(t *testing.T) {
 	nodes := make([]Node, 0, 300)
@@ -223,8 +235,8 @@ func TestAllocateManyNodes(t *testing.T) {
 		nodes = append(nodes, nd(fmt.Sprintf("worker-%03d", i), 8))
 	}
 
-	// 12 whole-node licences, then 200 vCPU cover 25 nodes of 8, then 40 cores
-	// cover 10 more at ceil(8/2) each.
+	// 12 whole-node licences, then 40 cores cover 10 nodes at ceil(8/2) each,
+	// then 200 vCPU cover 25 more.
 	got := Allocate(nodes, key(12, 200, 40), nil)
 	if len(got.Servers.Nodes) != 12 || len(got.VCPU.Nodes) != 25 ||
 		len(got.Cores.Nodes) != 10 || len(got.Unlicensed) != 253 {

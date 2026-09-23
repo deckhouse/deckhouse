@@ -118,9 +118,13 @@ func (a Allocation) WithinLimits() bool { return len(a.Unlicensed) == 0 }
 //
 // The capacity is still the single pool vCPU + 2*cores; what the walk adds is
 // attribution: every covered node names the metric that pays for it, because
-// the Console has to say which licence covers which node. A node is never
-// split between two metrics, so it takes vCPU while vCPU has room and falls
-// through to cores only when it does not.
+// the Console has to say which licence covers which node. The order is fixed:
+// servers go to the largest nodes, then cores, and vCPU comes last because it is
+// the finest-grained metric and fills whatever is left. A node is never split
+// between two metrics, so a node that does not fit into cores takes vCPU.
+//
+// Cores before vCPU also keeps a node where it is when a reissue raises the vCPU
+// quota: a node covered by cores stays on cores.
 //
 // wasServer is the previous allocation, read off status.nodes[]; it only breaks
 // ties between equally sized nodes.
@@ -139,10 +143,10 @@ func Allocate(nodes []Node, limits Limits, wasServer map[string]bool) Allocation
 		switch {
 		case out.Servers.fits(1):
 			out.Servers.take(node.Name, 1)
-		case out.VCPU.fits(node.VCPU):
-			out.VCPU.take(node.Name, node.VCPU)
 		case out.Cores.fits(coresOf(node.VCPU)):
 			out.Cores.take(node.Name, coresOf(node.VCPU))
+		case out.VCPU.fits(node.VCPU):
+			out.VCPU.take(node.Name, node.VCPU)
 		default:
 			out.Unlicensed = append(out.Unlicensed, node.Name)
 			out.UnlicensedVCPU += node.VCPU

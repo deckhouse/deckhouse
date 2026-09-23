@@ -63,9 +63,10 @@ spec:
 
                   Capacity is still one pool, `vCPU + 2 * cores`; what the allocation adds is
                   attribution. Every licensable node is attributed to exactly one metric, so the
-                  Console can name the licence that covers a given node. A node is never split
-                  between two metrics: it takes `vCPU` while `vCPU` has room and falls through to
-                  `cores` only when it does not.
+                  Console can name the licence that covers a given node. The order is fixed:
+                  `servers` go to the largest nodes, then `cores`, and `vCPU` comes last as the
+                  finest-grained metric. A node is never split between two metrics: a node that
+                  does not fit into `cores` takes `vCPU`.
                 properties:
                   cores:
                     description: |
@@ -89,7 +90,7 @@ spec:
                   servers:
                     description: |
                       Whole-node licences. They are applied to the largest nodes first; everything
-                      that does not fit falls through to `vCPU` and then to `cores`, so this metric
+                      that does not fit falls through to `cores` and then to `vCPU`, so this metric
                       cannot be exceeded on its own.
                     properties:
                       limit:
