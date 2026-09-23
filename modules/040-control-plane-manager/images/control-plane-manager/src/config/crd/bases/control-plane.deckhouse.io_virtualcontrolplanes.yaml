@@ -236,6 +236,9 @@ spec:
                     && !cidr(self.serviceSubnetCIDR).containsCIDR(self.podSubnetCIDR)'
               nodeSelector:
                 additionalProperties:
+                  description: LabelValue is a Kubernetes label value.
+                  maxLength: 63
+                  pattern: ^([A-Za-z0-9]([-A-Za-z0-9_.]*[A-Za-z0-9])?)?$
                   type: string
                 description: |-
                   NodeSelector for the VirtualControlPlane pods in the management cluster: the control plane
@@ -244,7 +247,13 @@ spec:
                   Tenant-side pods are not affected.
 
                   > **Warning.** Changing it recreates the component StatefulSets, restarting the tenant control plane.
+                maxProperties: 64
                 type: object
+                x-kubernetes-validations:
+                - message: 'nodeSelector keys must be valid label keys: an optional
+                    DNS subdomain prefix followed by ''/'', then up to 63 alphanumerics,
+                    ''-'', ''_'' or ''.'''
+                  rule: self.all(k, k.matches('^([a-z0-9]([-a-z0-9]*[a-z0-9])?([.][a-z0-9]([-a-z0-9]*[a-z0-9])?)*/)?[A-Za-z0-9]([-A-Za-z0-9_.]*[A-Za-z0-9])?$'))
               tolerations:
                 description: |-
                   Tolerations for the same pods as NodeSelector. A dedicated node pool is usually tainted as well
@@ -253,41 +262,57 @@ spec:
                   > **Warning.** Changing it restarts the tenant control plane, same as NodeSelector.
                 items:
                   description: |-
-                    The pod this Toleration is attached to tolerates any taint that matches
-                    the triple <key,value,effect> using the matching operator <operator>.
+                    VirtualControlPlaneToleration is a toleration for the VirtualControlPlane pods in the management
+                    cluster, matching a taint on the nodes they are scheduled to.
                   properties:
                     effect:
-                      description: |-
-                        Effect indicates the taint effect to match. Empty means match all taint effects.
-                        When specified, allowed values are NoSchedule, PreferNoSchedule and NoExecute.
+                      description: Effect is the taint effect to match. Leave it out
+                        to match every effect.
+                      enum:
+                      - NoSchedule
+                      - PreferNoSchedule
+                      - NoExecute
                       type: string
                     key:
                       description: |-
-                        Key is the taint key that the toleration applies to. Empty means match all taint keys.
-                        If the key is empty, operator must be Exists; this combination means to match all values and all keys.
+                        Key is the taint key the toleration applies to. Leave it out to match every key, which
+                        requires `operator: Exists`.
+                      maxLength: 316
+                      pattern: ^([a-z0-9]([-a-z0-9]*[a-z0-9])?([.][a-z0-9]([-a-z0-9]*[a-z0-9])?)*/)?[A-Za-z0-9]([-A-Za-z0-9_.]*[A-Za-z0-9])?$
                       type: string
                     operator:
                       description: |-
-                        Operator represents a key's relationship to the value.
-                        Valid operators are Exists, Equal, Lt, and Gt. Defaults to Equal.
-                        Exists is equivalent to wildcard for value, so that a pod can
-                        tolerate all taints of a particular category.
-                        Lt and Gt perform numeric comparisons (requires feature gate TaintTolerationComparisonOperators).
+                        Operator relates the key to its value: `Equal` compares them, `Exists` matches any value and
+                        requires `value` to be empty. Defaults to `Equal`.
+                      enum:
+                      - Exists
+                      - Equal
                       type: string
                     tolerationSeconds:
                       description: |-
-                        TolerationSeconds represents the period of time the toleration (which must be
-                        of effect NoExecute, otherwise this field is ignored) tolerates the taint. By default,
-                        it is not set, which means tolerate the taint forever (do not evict). Zero and
-                        negative values will be treated as 0 (evict immediately) by the system.
+                        TolerationSeconds is how long the pod tolerates the taint once it no longer matches. Only
+                        applies to `effect: NoExecute`. Unset means forever, zero or negative means evict at once.
                       format: int64
                       type: integer
                     value:
-                      description: |-
-                        Value is the taint value the toleration matches to.
-                        If the operator is Exists, the value should be empty, otherwise just a regular string.
+                      description: Value is the taint value the toleration matches.
+                        Must be empty when the operator is `Exists`.
+                      maxLength: 63
+                      pattern: ^([A-Za-z0-9]([-A-Za-z0-9_.]*[A-Za-z0-9])?)?$
                       type: string
                   type: object
+                  x-kubernetes-validations:
+                  - message: an empty key matches every taint and requires operator
+                      Exists
+                    rule: (has(self.key) && size(self.key) > 0) || (has(self.operator)
+                      && self.operator == 'Exists')
+                  - message: value must be empty when operator is Exists
+                    rule: '!(has(self.operator) && self.operator == ''Exists'') ||
+                      !has(self.value) || size(self.value) == 0'
+                  - message: tolerationSeconds only applies to effect NoExecute
+                    rule: '!has(self.tolerationSeconds) || (has(self.effect) && self.effect
+                      == ''NoExecute'')'
+                maxItems: 64
                 type: array
             required:
             - kubernetesVersion

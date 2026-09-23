@@ -19,8 +19,6 @@ package virtualcontrolplaneconfiguration
 import (
 	"encoding/json"
 	"fmt"
-	"maps"
-	"slices"
 
 	controlplanev1alpha1 "control-plane-manager/api/v1alpha1"
 
@@ -55,6 +53,36 @@ func renderTolerations(vcp *controlplanev1alpha1.VirtualControlPlane) (string, e
 // applyVCPPlacement is the Go-side path for Deployments built from embedded YAML rather than from
 // the config Secret templates.
 func applyVCPPlacement(spec *corev1.PodSpec, vcp *controlplanev1alpha1.VirtualControlPlane) {
-	spec.NodeSelector = maps.Clone(vcp.Spec.NodeSelector)
-	spec.Tolerations = slices.Clone(vcp.Spec.Tolerations)
+	spec.NodeSelector = coreNodeSelector(vcp.Spec.NodeSelector)
+	spec.Tolerations = coreTolerations(vcp.Spec.Tolerations)
+}
+
+// The CRD spells out its own placement types to carry validation (see api/v1alpha1); they are
+// field-for-field identical to the corev1 ones a PodSpec takes, so converting loses nothing.
+func coreNodeSelector(in map[string]controlplanev1alpha1.LabelValue) map[string]string {
+	if in == nil {
+		return nil
+	}
+	out := make(map[string]string, len(in))
+	for k, v := range in {
+		out[k] = string(v)
+	}
+	return out
+}
+
+func coreTolerations(in []controlplanev1alpha1.VirtualControlPlaneToleration) []corev1.Toleration {
+	if in == nil {
+		return nil
+	}
+	out := make([]corev1.Toleration, 0, len(in))
+	for _, t := range in {
+		out = append(out, corev1.Toleration{
+			Key:               t.Key,
+			Operator:          t.Operator,
+			Value:             t.Value,
+			Effect:            t.Effect,
+			TolerationSeconds: t.TolerationSeconds,
+		})
+	}
+	return out
 }

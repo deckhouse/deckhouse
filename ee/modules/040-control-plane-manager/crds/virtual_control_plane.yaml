@@ -216,6 +216,8 @@ spec:
                   rule: '!cidr(self.podSubnetCIDR).containsCIDR(self.serviceSubnetCIDR) && !cidr(self.serviceSubnetCIDR).containsCIDR(self.podSubnetCIDR)'
               nodeSelector:
                 additionalProperties:
+                  maxLength: 63
+                  pattern: ^([A-Za-z0-9]([-A-Za-z0-9_.]*[A-Za-z0-9])?)?$
                   type: string
                 description: |-
                   Node labels for the virtual control plane pods in the management cluster: the control
@@ -226,33 +228,82 @@ spec:
                   A dedicated node pool is usually tainted as well as labelled, so a `nodeSelector`
                   without matching `tolerations` leaves every pod in `Pending` state.
 
+                  Keys must be valid label keys and values valid label values. At most 64 entries.
+
                   > **Warning.** Changing this parameter recreates the component StatefulSets, restarting
                   the tenant control plane.
+                maxProperties: 64
                 type: object
+                x-kubernetes-validations:
+                - message: |-
+                    nodeSelector keys must be valid label keys: an optional DNS subdomain prefix followed by '/', then up to 63 alphanumerics, '-', '_' or '.'
+                  rule: |-
+                    self.all(k, k.matches('^([a-z0-9]([-a-z0-9]*[a-z0-9])?([.][a-z0-9]([-a-z0-9]*[a-z0-9])?)*/)?[A-Za-z0-9]([-A-Za-z0-9_.]*[A-Za-z0-9])?$'))
               tolerations:
                 description: |-
                   Tolerations for the same pods as `nodeSelector`.
+
+                  At most 64 entries.
 
                   > **Warning.** Changing this parameter restarts the tenant control plane.
                 items:
                   properties:
                     effect:
-                      description: Taint effect to match. Empty matches all effects.
+                      description: |-
+                        Taint effect to match. Empty matches all effects.
+
+                        Allowed values: `NoSchedule`, `PreferNoSchedule`, `NoExecute`.
+                      enum:
+                      - NoSchedule
+                      - PreferNoSchedule
+                      - NoExecute
                       type: string
                     key:
-                      description: Taint key the toleration applies to. Empty matches all keys.
+                      description: |-
+                        Taint key the toleration applies to. Empty matches all keys and then requires
+                        `operator: Exists`.
+
+                        Must be a valid label key.
+                      maxLength: 316
+                      pattern: ^([a-z0-9]([-a-z0-9]*[a-z0-9])?([.][a-z0-9]([-a-z0-9]*[a-z0-9])?)*/)?[A-Za-z0-9]([-A-Za-z0-9_.]*[A-Za-z0-9])?$
                       type: string
                     operator:
-                      description: Key's relationship to the value. `Exists` or `Equal` (default).
+                      description: |-
+                        Key's relationship to the value. `Exists` or `Equal` (default).
+
+                        `Exists` matches any value and requires `value` to be empty.
+                      enum:
+                      - Exists
+                      - Equal
                       type: string
                     tolerationSeconds:
-                      description: How long the pod tolerates a `NoExecute` taint. Unset means forever.
+                      description: |-
+                        How long the pod tolerates a `NoExecute` taint. Unset means forever, zero or
+                        negative means evict at once.
+
+                        Only allowed together with `effect: NoExecute`.
                       format: int64
                       type: integer
                     value:
-                      description: Taint value the toleration matches. Empty when the operator is `Exists`.
+                      description: |-
+                        Taint value the toleration matches. Empty when the operator is `Exists`.
+
+                        Must be a valid label value.
+                      maxLength: 63
+                      pattern: ^([A-Za-z0-9]([-A-Za-z0-9_.]*[A-Za-z0-9])?)?$
                       type: string
                   type: object
+                  x-kubernetes-validations:
+                  - message: an empty key matches every taint and requires operator Exists
+                    rule: |-
+                      (has(self.key) && size(self.key) > 0) || (has(self.operator) && self.operator == 'Exists')
+                  - message: value must be empty when operator is Exists
+                    rule: |-
+                      !(has(self.operator) && self.operator == 'Exists') || !has(self.value) || size(self.value) == 0
+                  - message: tolerationSeconds only applies to effect NoExecute
+                    rule: |-
+                      !has(self.tolerationSeconds) || (has(self.effect) && self.effect == 'NoExecute')
+                maxItems: 64
                 type: array
             required:
             - kubernetesVersion
