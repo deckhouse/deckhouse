@@ -22,6 +22,7 @@ import (
 	"fmt"
 
 	kwhvalidating "github.com/slok/kubewebhook/v2/pkg/webhook/validating"
+	v1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/yaml"
@@ -32,7 +33,8 @@ import (
 )
 
 // Rejects a first write that disagrees with ClusterConfiguration, and any clearing that would move
-// the domain. Changing an already set domain stays allowed. Fail-open on an unreadable Secret.
+// the domain. Changing an already set domain stays allowed. An unreadable Secret is a rejection:
+// nothing may be concluded from it.
 func (v *moduleConfigValidator) validateControlPlaneManagerClusterDomain(
 	ctx context.Context, newSettings, oldSettings map[string]interface{},
 ) (*kwhvalidating.ValidatorResult, error) {
@@ -44,8 +46,8 @@ func (v *moduleConfigValidator) validateControlPlaneManagerClusterDomain(
 	}
 
 	if newDomain == "" {
-		if next, moves := v.clusterDomainAfterRemoval(ctx, oldDomain); moves {
-			return rejectResult(clusterDomainRemovalMessage("clearing network.clusterDomain", oldDomain, next))
+		if msg := v.clusterDomainRemovalRejection(ctx, "clearing network.clusterDomain", oldDomain); msg != "" {
+			return rejectResult(msg)
 		}
 		return nil, nil
 	}
@@ -54,8 +56,14 @@ func (v *moduleConfigValidator) validateControlPlaneManagerClusterDomain(
 		return nil, nil
 	}
 
-	ccDomain, ok := v.readRawClusterConfigurationDomain(ctx)
-	if !ok || ccDomain == "" || ccDomain == newDomain {
+	ccDomain, err := v.clusterConfigurationDomain(ctx)
+	switch {
+	case apierrors.IsNotFound(err):
+		return nil, nil
+	case err != nil:
+		return rejectResult(clusterDomainUnverifiableMessage("setting network.clusterDomain"))
+	}
+	if ccDomain == "" || ccDomain == newDomain {
 		return nil, nil
 	}
 
@@ -71,26 +79,40 @@ func (v *moduleConfigValidator) validateControlPlaneManagerClusterDomainDelete(
 	ctx context.Context, oldSettings map[string]interface{},
 ) (*kwhvalidating.ValidatorResult, error) {
 	domain := settingsClusterDomain(oldSettings)
-	if next, moves := v.clusterDomainAfterRemoval(ctx, domain); moves {
-		return rejectResult(clusterDomainRemovalMessage("deleting this ModuleConfig", domain, next))
+	if msg := v.clusterDomainRemovalRejection(ctx, "deleting this ModuleConfig", domain); msg != "" {
+		return rejectResult(msg)
 	}
 	return nil, nil
 }
 
-// Where the domain would move if dropped here, and whether that is a move at all. Fail-open on an
-// unreadable Secret.
-func (v *moduleConfigValidator) clusterDomainAfterRemoval(ctx context.Context, domain string) (string, bool) {
+// Rejection message for dropping the domain here, empty when that is safe. Three states matter:
+// no Secret at all means the cluster never resolves from this ModuleConfig, while a Secret that
+// cannot be read leaves the outcome unknown and must not be waved through.
+func (v *moduleConfigValidator) clusterDomainRemovalRejection(ctx context.Context, action, domain string) string {
 	if domain == "" {
-		return "", false
+		return ""
 	}
 
-	ccDomain, ok := v.readRawClusterConfigurationDomain(ctx)
-	if !ok {
-		return "", false
+	ccDomain, err := v.clusterConfigurationDomain(ctx)
+	switch {
+	case apierrors.IsNotFound(err):
+		return ""
+	case err != nil:
+		return clusterDomainUnverifiableMessage(action)
 	}
 
 	ccDomain = cmp.Or(ccDomain, hooks.DefaultClusterDomain)
-	return ccDomain, ccDomain != domain
+	if ccDomain == domain {
+		return ""
+	}
+
+	return clusterDomainRemovalMessage(action, domain, ccDomain)
+}
+
+func clusterDomainUnverifiableMessage(action string) string {
+	return fmt.Sprintf(
+		"%s cannot be verified: the d8-cluster-configuration Secret is unreadable, so it is unknown "+
+			"whether this changes the cluster domain; retry once the Secret can be read", action)
 }
 
 func clusterDomainRemovalMessage(action, from, to string) string {
@@ -120,17 +142,24 @@ func settingsClusterDomain(settings map[string]interface{}) string {
 	return domain
 }
 
-// ok=false is fail-open, so an unreadable Secret does not turn a first write into a mismatch.
-func (v *moduleConfigValidator) readRawClusterConfigurationDomain(ctx context.Context) (string, bool) {
-	secret, ok := v.readClusterConfigurationSecret(ctx)
-	if !ok {
-		return "", false
+// The deprecated domain. A NotFound error means the document does not exist at all, which is not
+// the same as an unreadable one: callers must tell those apart.
+func (v *moduleConfigValidator) clusterConfigurationDomain(ctx context.Context) (string, error) {
+	secret := new(v1.Secret)
+	if err := v.client.Get(ctx, client.ObjectKey{
+		Name:      clusterConfigurationSecretName,
+		Namespace: kubeSystemNamespace,
+	}, secret); err != nil {
+		if !apierrors.IsNotFound(err) {
+			log.Warn("cannot read the d8-cluster-configuration secret", log.Err(err))
+		}
+		return "", err
 	}
 
 	cc := new(clusterConfig)
 	if err := yaml.Unmarshal(secret.Data["cluster-configuration.yaml"], cc); err != nil {
-		return "", false
+		return "", fmt.Errorf("parse cluster-configuration.yaml: %w", err)
 	}
 
-	return cc.ClusterDomain, true
+	return cc.ClusterDomain, nil
 }

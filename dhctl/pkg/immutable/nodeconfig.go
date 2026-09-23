@@ -107,6 +107,12 @@ func buildNodeConfig(ctx context.Context, in nodeConfigInput) (*nodeConfig, erro
 	if in.MetaConfig == nil {
 		return nil, errors.New("build node config: meta config is nil")
 	}
+	// A defaulted domain here would reach this node's kubelet and split it from the rest of the
+	// cluster, so refuse to render rather than guess. BuildJoinPayload skips the control-plane
+	// render, where the same check also lives.
+	if !in.MetaConfig.ClusterDomainKnown() {
+		return nil, errors.New("build node config: cannot determine clusterDomain, the control-plane-manager ModuleConfig is unreadable and ClusterConfiguration carries no value")
+	}
 
 	kubernetesVersion, err := kubernetesVersion(in.MetaConfig)
 	if err != nil {
