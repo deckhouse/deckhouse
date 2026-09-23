@@ -124,6 +124,16 @@ spec:
                   additionalProperties:
                     type: string
                   x-kubernetes-preserve-unknown-fields: true
+                preemptible:
+                  description: |
+                    Marks instances of this class as preemptible.
+
+                    When `true`, the raw Nova tag `preemptible` is attached to the instance. This is a Selectel-specific mechanism for creating interruptible instances.
+
+                    Works only on Selectel-hosted clusters (the CAPI provider template emits the tag only when `connection.authURL` matches `selcloud.ru` / `selectel`) and only for CloudEphemeral NodeGroups running on the CAPI engine. On other OpenStack providers or on the MCM engine the field is silently ignored — nodes are still created but as regular non-preemptible VMs, and the **OpenStackPreemptibleUnsupported** Prometheus alert fires with the exact remediation commands.
+                  type: boolean
+                  default: false
+                  x-doc-examples: [true]
             status:
               type: object
               properties:

@@ -1,0 +1,99 @@
+- name: d8.cloud-provider-openstack.preemptible
+  rules:
+    # The metric is published per NodeGroup by node-controller (see
+    # It is set to 1 only when the operator has requested spec.preemptible: true on an
+    # OpenStackInstanceClass but the request cannot reach Nova as a working preemption tag:
+    # either the NodeGroup runs on the MCM engine (no MCM analogue for a raw Nova tag) or the
+    # cluster is not hosted on Selectel (other OpenStack providers accept the tag but ignore
+    # it). Node creation succeeds either way — the alert exists so the operator sees the silent
+    # drop rather than discovering it weeks later from an unchanged billing line.
+    - alert: OpenStackPreemptibleUnsupported
+      expr: |
+        max by (node_group, reason) (d8_openstack_preemptible_unsupported) > 0
+      for: 5m
+      labels:
+        tier: cluster
+        severity_level: "8"
+        d8_module: cloud-provider-openstack
+        d8_component: node-manager
+      annotations:
+        plk_markup_format: markdown
+        plk_protocol_version: "1"
+        plk_create_group_if_not_exists__cloud_provider_openstack_preemptible_unsupported: "OpenStackPreemptibleUnsupported,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
+        plk_grouped_by__cloud_provider_openstack_preemptible_unsupported: "OpenStackPreemptibleUnsupported,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
+        plk_labels_as_annotations: "node_group,reason"
+        summary: >-
+          NodeGroup `{{ $labels.node_group }}` requests preemptible instances,
+          but this cluster cannot deliver them (reason: `{{ $labels.reason }}`).
+        description: |
+          The OpenStackInstanceClass referenced by NodeGroup `{{ $labels.node_group }}` has `spec.preemptible: true`,
+          but the raw Nova `preemptible` tag will not reach the virtual machines:
+          nodes are created as regular (non-preemptible) VMs, and Selectel-side preemption never kicks in.
+
+          {{ if eq $labels.reason "mcm" }}
+          **Reason:** the NodeGroup runs on the **MCM engine**, which has no way to emit raw Nova tags —
+          `machine-controller-manager`'s OpenStackMachineClass CRD does not expose the field. Only the
+          CAPI engine (`capi-controller-manager` + `capo-controller-manager`) renders raw Nova tags via
+          `OpenStackMachineTemplate.spec.template.spec.tags`.
+
+          **How to fix:**
+
+          1. Confirm the current engine and offending InstanceClass:
+
+             ```shell
+             d8 k get ng {{ $labels.node_group }} -o jsonpath='{.status.engine}{"\n"}'
+             d8 k get ng {{ $labels.node_group }} -o jsonpath='{.spec.cloudInstances.classReference}{"\n"}'
+             ```
+
+          2. Choose one of the following actions:
+
+             - **Recommended.** Remove the `node.deckhouse.io/use-mcm` annotation from the NodeGroup so it
+               migrates to CAPI. Nodes will be recreated on the CAPI engine, this time carrying the
+               `preemptible` tag:
+
+               ```shell
+               d8 k annotate ng {{ $labels.node_group }} node.deckhouse.io/use-mcm-
+               ```
+
+             - Alternatively, if this NodeGroup must stay on MCM, set `spec.preemptible: false` on the
+               OpenStackInstanceClass (nodes stay regular, the alert clears):
+
+               ```shell
+               d8 k patch openstackinstanceclass <CLASS_NAME> --type=merge -p '{"spec":{"preemptible":false}}'
+               ```
+
+               Note: a single OpenStackInstanceClass shared between a CAPI NodeGroup (where the field
+               works) and an MCM one (where it doesn't) will keep firing this alert on the MCM side.
+               Use separate InstanceClasses per engine when the classes differ in `preemptible`.
+
+          {{ else if eq $labels.reason "non-selectel" }}
+          **Reason:** the cluster's `connection.authURL` does not point at Selectel (`selcloud.ru` /
+          `selectel`). The raw Nova `preemptible` tag is a **Selectel-specific mechanism**;
+          on other OpenStack providers Nova accepts the tag but ignores it, so instances are billed
+          and behave as regular non-preemptible VMs.
+
+          **How to fix:**
+
+          1. Confirm the offending InstanceClass and the cluster's authURL:
+
+             ```shell
+             d8 k get ng {{ $labels.node_group }} -o jsonpath='{.spec.cloudInstances.classReference}{"\n"}'
+             d8 k -n kube-system get secret d8-node-manager-cloud-provider -o jsonpath='{.data.openstack}' | base64 -d | jq -r '.connection.authURL'
+             ```
+
+          2. Set `spec.preemptible: false` on the OpenStackInstanceClass — the field only makes sense
+             on Selectel-hosted clusters:
+
+             ```shell
+             d8 k patch openstackinstanceclass <CLASS_NAME> --type=merge -p '{"spec":{"preemptible":false}}'
+             ```
+
+             The alert clears on the next scrape after the change; existing nodes stay running (they
+             are already regular VMs — the tag was never emitted).
+
+          {{ else }}
+          **Reason:** unknown (`{{ $labels.reason }}`). This alert should surface only two well-known
+          cases (`mcm`, `non-selectel`). A new reason implies node-controller has been extended without
+          this runbook — check the release notes for
+          `cloud-provider-openstack` before deciding what to do.
+          {{ end }}
