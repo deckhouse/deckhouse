@@ -271,7 +271,7 @@ Allowed policy enforcement modes:
 
 - `deny`: Blocks actions from being executed.
 - `dryrun`: Does not affect execution and used for debugging.
-  Event information can be viewed in the web interface or with `d8 k`.
+  Event information can be viewed in the web interface Dechouse Platform or with `d8 k`.
 - `warn`: Works like `dryrun` but also displays a warning with the reason the action would have been denied in `deny` mode.
 
 By default, Pod Security Standards policies in DP are enforced in `deny` mode.
