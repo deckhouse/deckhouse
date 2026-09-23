@@ -30,7 +30,7 @@ var _ = Describe("Modules :: common :: hooks :: storage_classes ::", func() {
 	assertStorageClassesInValues := func(f *HookExecutionConfig, mustInValues ...string) {
 		raw := f.ValuesGet("cloudProviderFake.internal.storageClasses").String()
 
-		var scInValues []SC
+		var scInValues []StorageClass
 		err := json.Unmarshal([]byte(raw), &scInValues)
 		Expect(err).ToNot(HaveOccurred())
 
@@ -38,10 +38,10 @@ var _ = Describe("Modules :: common :: hooks :: storage_classes ::", func() {
 		for _, sc := range scInValues {
 			Expect(expectedSCSet.Has(sc.Name)).To(BeTrue())
 
-			var expectSc *SC
-			for _, supportedSc := range storageClassesConfig {
-				if supportedSc.GetName() == sc.Name {
-					expectSc = supportedSc.(*SC)
+			var expectSc *StorageClass
+			for index, supportedSc := range storageClassesConfig {
+				if supportedSc.Name == sc.Name {
+					expectSc = &storageClassesConfig[index]
 					break
 				}
 			}

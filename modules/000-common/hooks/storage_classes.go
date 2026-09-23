@@ -20,38 +20,41 @@ import (
 	"github.com/deckhouse/deckhouse/go_lib/hooks/storage_class"
 )
 
-type SC struct {
-	storage_class.SimpleStorageClass
+type StorageClass struct {
+	Name            string `json:"name"`
+	Type            string `json:"type"`
 	AdditionalField string `json:"additional_field"`
 }
 
-var storageClassesConfig = []storage_class.StorageClass{
-	&SC{
-		SimpleStorageClass: storage_class.SimpleStorageClass{
-			Name: "first-hdd",
-			Type: "first-hdd",
-		},
+func (sc StorageClass) GetName() string {
+	return sc.Name
+}
 
+var storageClassesConfig = []StorageClass{
+	{
+		Name:            "first-hdd",
+		Type:            "first-hdd",
 		AdditionalField: "first-field",
 	},
-
-	&SC{
-		SimpleStorageClass: storage_class.SimpleStorageClass{
-			Name: "second-hdd",
-			Type: "second-hdd",
-		},
-
+	{
+		Name:            "second-hdd",
+		Type:            "second-hdd",
 		AdditionalField: "second-field",
 	},
-
-	&SC{
-		SimpleStorageClass: storage_class.SimpleStorageClass{
-			Name: "third-ssd",
-			Type: "third-ssd",
-		},
-
+	{
+		Name:            "third-ssd",
+		Type:            "third-ssd",
 		AdditionalField: "third-field",
 	},
 }
 
-var _ = storage_class.RegisterHook("cloudProviderFake", storageClassesConfig)
+var _ = storage_class.RegisterHook(
+	storage_class.Config{
+		Order:      20,
+		ModuleName: "common",
+	},
+	storage_class.Append(storage_class.Static(storageClassesConfig...)),
+	storage_class.Exclude[StorageClass]("cloudProviderFake.storageClass.exclude"),
+	storage_class.SortByName[StorageClass](),
+	storage_class.Publish[StorageClass]("cloudProviderFake.internal.storageClasses"),
+)
