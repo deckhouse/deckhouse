@@ -19,6 +19,19 @@
     return window.strongholdDownload || { prefix: '/products/stronghold/get', i18n: {} };
   }
 
+  // Fallback text when the page config is missing, so errors are never silent.
+  const FALLBACK_I18N = {
+    empty_input: 'Enter license key',
+    reject: 'Invalid key or license has expired',
+    resolve: 'Key accepted',
+    network: 'Failed to fetch the version list. Please try again later.',
+    no_versions: 'No versions available.'
+  };
+
+  function text(cfg, key) {
+    return (cfg.i18n && cfg.i18n[key]) || FALLBACK_I18N[key] || '';
+  }
+
   function readCookie() {
     if (window.$ && $.cookie) {
       return $.cookie(LICENSE_COOKIE) || $.cookie('demotoken') || '';
@@ -99,7 +112,7 @@
     async function fetchVersions() {
       const token = input.value.trim();
       if (token === '') {
-        setMessage(message, cfg.i18n.empty_input, true);
+        setMessage(message, text(cfg, 'empty_input'), true);
         setInputState(input, 'error');
         hideVersions();
         return;
@@ -113,7 +126,7 @@
         });
 
         if (response.status === 401) {
-          setMessage(message, cfg.i18n.reject, true);
+          setMessage(message, text(cfg, 'reject'), true);
           setInputState(input, 'error');
           hideVersions();
           return;
@@ -129,15 +142,15 @@
         setInputState(input, 'success');
 
         if (versions.length === 0) {
-          setMessage(message, cfg.i18n.no_versions, true);
+          setMessage(message, text(cfg, 'no_versions'), true);
           hideVersions();
           return;
         }
 
-        setMessage(message, cfg.i18n.resolve, false);
+        setMessage(message, text(cfg, 'resolve'), false);
         showVersions(versions);
       } catch (e) {
-        setMessage(message, cfg.i18n.network, true);
+        setMessage(message, text(cfg, 'network'), true);
         setInputState(input, 'error');
         hideVersions();
       } finally {
