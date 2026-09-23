@@ -187,7 +187,7 @@ properties:
 
       Задается в виде строки с указанием часов, минут и секунд: `30m`, `20s`, `2h30m10s`, `5h`.
 
-      Должно быть строго меньше 6 часов (ключи подписи Dex ротируются каждые 6 часов).
+      Должно быть меньше 6 часов (ключи подписи Dex ротируются каждые 6 часов). Значение 6 часов и больше вызывает алерт `D8UserAuthnIDTokenTTLTooLong` и блокирует обновление на следующий минорный релиз Deckhouse Kubernetes Platform, который такое значение не принимает.
 
       Задаёт минимально возможное время жизни пользовательской сессии ([параметр `keepUsersLoggedInFor`](cr.html#dexauthenticator-v1-spec-keepusersloggedinfor) ресурса DexAuthenticator
       и параметры вида `auth.sessionTTL`, например, [в модуле `console`](/modules/console/configuration.html#parameters-auth-sessionttl)).
