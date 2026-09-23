@@ -8,7 +8,7 @@ DP allows using authentication when accessing the Kubernetes API. In this case, 
 
 To configure access, follow these steps:
 
-1. Enable Kubernetes API publishing. To do this, set the parameter [`apiserver.publishAPI.ingress.enabled: true`](/modules/control-plane-manager/configuration.html#parameters-apiserver-publishapi-ingress-enabled) in the `control-plane-manager` module settings or via the Deckhouse admin web interface.
+1. Enable Kubernetes API publishing. To do this, set the parameter [`apiserver.publishAPI.ingress.enabled: true`](/modules/control-plane-manager/configuration.html#parameters-apiserver-publishapi-ingress-enabled) in the `control-plane-manager` module settings or via the Deckhouse Platform web interface.
 
    Example module configuration:
 
