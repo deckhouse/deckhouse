@@ -41,7 +41,7 @@ const (
 	ConditionManifestsApplied ConditionType = "ManifestsApplied"
 	// ConditionScaled checks the cluster resources are ready
 	ConditionScaled ConditionType = "Scaled"
-	// ConditionConfigured checks the settings passed openAPI validation
+	// ConditionConfigured indicates the current settings passed validation and the Run task applied them
 	ConditionConfigured ConditionType = "Configured"
 	// ConditionPending indicates that the package wait converge
 	ConditionPending ConditionType = "Pending"
@@ -56,6 +56,8 @@ const (
 	// ConditionReasonDeleting indicates that the package is being torn down. The
 	// mappers keep their own copy (condmap.ReasonDeleting): same word by intent, not by reference.
 	ConditionReasonDeleting ConditionReason = "Deleting"
+	// ConditionReasonSettingsChanged marks changed settings that the Run task has not applied yet
+	ConditionReasonSettingsChanged ConditionReason = "SettingsChanged"
 
 	// appQueueName labels the application notification workqueue for metrics.
 	appQueueName = "application-status"
@@ -434,19 +436,38 @@ func (s *Service) UpdateURLs(name string, urls []URL) {
 	}
 }
 
-// UpdateSettings stores the effective settings of a package.
-// Does not notify — the caller pairs this with SetConditionTrue which notifies.
+// UpdateSettings stores the effective settings of a package. Changed settings over
+// already applied ones reset ConditionConfigured to False/SettingsChanged until the
+// Run task applies them; the first settings leave it alone.
 func (s *Service) UpdateSettings(name string, settings addonutils.Values) {
 	s.mu.Lock()
-	defer s.mu.Unlock()
-
 	status, ok := s.mutableStatus(name)
 	if !ok {
+		s.mu.Unlock()
 		return
 	}
 
-	status.Settings = settings
-	status.setCondition(Condition{Type: ConditionConfigured, Status: metav1.ConditionTrue})
+	notify := status.setSettings(settings)
+	s.mu.Unlock()
+
+	if notify {
+		s.queueFor(name).Add(name)
+	}
+}
+
+// setSettings stores settings and reports whether it reset ConditionConfigured.
+func (s *Status) setSettings(settings addonutils.Values) bool {
+	changed := s.Settings != nil && s.Settings.Checksum() != settings.Checksum()
+	s.Settings = settings
+	if !changed {
+		return false
+	}
+
+	return s.setCondition(Condition{
+		Type:   ConditionConfigured,
+		Status: metav1.ConditionFalse,
+		Reason: ConditionReasonSettingsChanged,
+	})
 }
 
 // UpdateHealth applies a workload-health transition to ConditionScaled.
