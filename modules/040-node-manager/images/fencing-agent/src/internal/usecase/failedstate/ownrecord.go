@@ -28,11 +28,14 @@ func StartOfLife(now time.Time) time.Time {
 
 func OwnFailedRecord(states []v1alpha1.FencingFailedNodeState, node string, startedAt time.Time) *v1alpha1.FencingFailedNodeState {
 	for i := range states {
-		state := &states[i]
-		if state.Name == node && state.Status.Failed != nil && !state.CreationTimestamp.Time.Before(startedAt) {
-			return state
+		if IsOwnFailedRecord(&states[i], node, startedAt) {
+			return &states[i]
 		}
 	}
 
 	return nil
+}
+
+func IsOwnFailedRecord(state *v1alpha1.FencingFailedNodeState, node string, startedAt time.Time) bool {
+	return state.Name == node && state.Status.Failed != nil && !state.CreationTimestamp.Time.Before(startedAt)
 }

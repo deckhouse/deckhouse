@@ -17,6 +17,7 @@ limitations under the License.
 package join
 
 import (
+	"cmp"
 	"context"
 	"errors"
 	"fmt"
@@ -37,6 +38,8 @@ import (
 	"fencing-agent/internal/domain"
 )
 
+// maxSeeds caps a join. memberlist exchanges full state with each seed, so a few
+// reachable ones are enough; gossip does the rest.
 const maxSeeds = 3
 
 const (
@@ -141,7 +144,7 @@ func (j *Joiner) Joined() bool {
 func (j *Joiner) Bootstrap(ctx context.Context) {
 	j.StartEpisode()
 
-	ep := episode{start: time.Now(), lastClass: classNone}
+	ep := episode{start: time.Now()}
 	backoff := j.params.RetryInterval
 
 	for {
@@ -163,7 +166,6 @@ func (j *Joiner) Bootstrap(ctx context.Context) {
 		}
 
 		class := classOf(err)
-		ep.lastErr, ep.lastClass = err, class
 		delay := j.delay(backoff)
 
 		level := slog.LevelDebug
@@ -191,14 +193,14 @@ func (j *Joiner) Bootstrap(ctx context.Context) {
 			"next_in", delay.String(),
 		)
 
+		ep.lastDelay = delay
+
 		if !sleep(ctx, delay) {
-			ep.lastDelay = delay
-			j.logger.Info("memberlist bootstrap join aborted", slices.Concat([]any{"error", ep.lastErr}, ep.summary())...)
+			j.logger.Info("memberlist bootstrap join aborted", slices.Concat([]any{"error", err}, ep.summary())...)
 
 			return
 		}
 
-		ep.lastDelay = delay
 		backoff = min(backoff*2, j.params.MaxRetryInterval)
 	}
 }
@@ -207,8 +209,6 @@ type episode struct {
 	start     time.Time
 	attempts  int
 	lastDelay time.Duration
-	lastClass string
-	lastErr   error
 	streak    streak
 }
 
@@ -219,7 +219,7 @@ type streak struct {
 }
 
 func (e *episode) summary() []any {
-	return runSummary(e.attempts, time.Since(e.start), e.lastDelay, e.lastClass)
+	return runSummary(e.attempts, time.Since(e.start), e.lastDelay, cmp.Or(e.streak.class, classNone))
 }
 
 func (e *episode) streakSummary(end time.Time) []any {
@@ -253,6 +253,7 @@ func (j *Joiner) Attempt(ctx context.Context) error {
 		return err
 	}
 
+	// First agent of the group: listeners are up, later peers seed from us.
 	if len(notAlive)+len(alive) == len(clones) {
 		for _, name := range clones {
 			j.logOnce(slog.LevelWarn, "clone/"+name, "node shares the local InternalIP, not counted as a peer", "member", name)
@@ -270,6 +271,8 @@ func (j *Joiner) Attempt(ctx context.Context) error {
 		return ctx.Err()
 	}
 
+	// Peers exist but none of the picked ones gave a usable address; declaring
+	// "alone" would split the group into islands.
 	if len(seeds) == 0 {
 		return fmt.Errorf("none of the %d join candidates has a usable address: %s", len(picked), strings.Join(picked, ", "))
 	}
@@ -296,6 +299,7 @@ func (j *Joiner) Attempt(ctx context.Context) error {
 }
 
 // join wraps the uncancellable Cluster.Join so a SIGTERM does not sit through its
+// per-seed dial timeouts. The abandoned goroutine ends with the transport.
 func (j *Joiner) join(ctx context.Context, seeds []string) (int, error) {
 	type result struct {
 		joined int
@@ -350,13 +354,7 @@ func (j *Joiner) checkSelf(ctx context.Context) error {
 
 func (j *Joiner) candidates() ([]string, []string, []string, error) {
 	expected, _ := j.expected.Expected()
-
-	members := j.cluster.Members()
-
-	inGossip := make(map[string]struct{}, len(members))
-	for _, name := range members {
-		inGossip[name] = struct{}{}
-	}
+	view := domain.NewView(expected, j.cluster.Members())
 
 	notAlive := make([]string, 0, len(expected))
 	alive := make([]string, 0, len(expected))
@@ -370,12 +368,13 @@ func (j *Joiner) candidates() ([]string, []string, []string, error) {
 			continue
 		}
 
-		if _, ok := inGossip[peer.Name]; ok {
+		if view.IsAlive(peer.Name) {
 			alive = append(alive, peer.Name)
 		} else {
 			notAlive = append(notAlive, peer.Name)
 		}
 
+		// Stale Node object of this machine under an old name, not a peer.
 		if peer.IP != "" && peer.IP == j.params.NodeIP {
 			clones = append(clones, peer.Name)
 		}

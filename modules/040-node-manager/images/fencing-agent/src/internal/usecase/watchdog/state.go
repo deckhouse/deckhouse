@@ -73,7 +73,7 @@ func (s *SelfState) Observe(signals domain.NodeSignals) {
 	s.state.Maintenance = signals.Maintenance
 	s.state.MaintenanceReasons = slices.Clone(signals.MaintenanceReasons)
 	s.state.NodeGroup = signals.NodeGroup
-	s.state.LeftNodeGroup = signals.NodeGroup != s.expectedNodeGroup
+	s.state.LeftNodeGroup = !domain.InNodeGroup(signals.NodeGroup, s.expectedNodeGroup)
 
 	if signals.UID != "" && signals.UID != s.expectedUID {
 		s.state.UIDMismatch = true

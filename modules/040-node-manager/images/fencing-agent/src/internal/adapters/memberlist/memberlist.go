@@ -79,7 +79,7 @@ func leaveTimeout(tuning v1alpha1.FencingSLAProfileMemberlist) time.Duration {
 	if gi > maxLeaveTimeout/time.Duration(2*rm) {
 		return maxLeaveTimeout
 	}
-	return min(max(time.Duration(2*rm)*gi, minLeaveTimeout), maxLeaveTimeout)
+	return max(time.Duration(2*rm)*gi, minLeaveTimeout)
 }
 
 type Cluster struct {
@@ -88,7 +88,6 @@ type Cluster struct {
 	stop         chan struct{}
 	events       *eventDelegate
 	leaveTimeout time.Duration
-	joinSeed     func(seed string) (int, error)
 }
 
 func New(cfg Config, logger *log.Logger) (*Cluster, error) {
@@ -114,7 +113,6 @@ func New(cfg Config, logger *log.Logger) (*Cluster, error) {
 		stop:         stop,
 		events:       events,
 		leaveTimeout: DeriveTimings(cfg.Tuning, cfg.APITimeout).LeaveTimeout,
-		joinSeed:     func(seed string) (int, error) { return list.Join([]string{seed}) },
 	}, nil
 }
 
@@ -148,12 +146,16 @@ func buildConfig(cfg Config, logger *log.Logger, events hcml.EventDelegate) *hcm
 }
 
 func (c *Cluster) Join(seeds []string) (int, error) {
+	return joinEach(seeds, func(seed string) (int, error) { return c.list.Join([]string{seed}) })
+}
+
+func joinEach(seeds []string, join func(seed string) (int, error)) (int, error) {
 	joined := make([]int, len(seeds))
 	errs := make([]error, len(seeds))
 
 	var wg sync.WaitGroup
 	for i, seed := range seeds {
-		wg.Go(func() { joined[i], errs[i] = c.joinSeed(seed) })
+		wg.Go(func() { joined[i], errs[i] = join(seed) })
 	}
 	wg.Wait()
 

@@ -144,7 +144,7 @@ func closed(barrier <-chan struct{}) func() bool {
 }
 
 func ownFailedRecord(
-	list func(ctx context.Context) ([]v1alpha1.FencingFailedNodeState, error),
+	get func(ctx context.Context, name string) (*v1alpha1.FencingFailedNodeState, error),
 	synced func() bool,
 	node string,
 	startedAt time.Time,
@@ -154,12 +154,12 @@ func ownFailedRecord(
 			return false
 		}
 
-		states, err := list(ctx)
-		if err != nil {
+		state, err := get(ctx, node)
+		if err != nil || state == nil {
 			return false
 		}
 
-		return failedstate.OwnFailedRecord(states, node, startedAt) != nil
+		return failedstate.IsOwnFailedRecord(state, node, startedAt)
 	}
 }
 
@@ -207,6 +207,8 @@ func (a *Agent) Run(ctx context.Context) error {
 	recorder := events.New(a.deps.K8sClient, a.identity, a.logger)
 	defer recorder.Shutdown()
 
+	// Every Node labeled into the NodeGroup, from the informer cache. The join
+	// candidates and the quorum size read the same view, so they cannot diverge.
 	members := membership.New(a.logger)
 
 	watcher, err := kubeclient.NewNodeWatcher(a.deps.K8sClient, a.cfg.NodeGroup, members, a.logger)
@@ -268,7 +270,7 @@ func (a *Agent) Run(ctx context.Context) error {
 
 			return domain.NewView(expected, cluster.Members()).HasQuorum()
 		},
-		OwnFailedRecord: ownFailedRecord(states.List, closed(synced), a.identity.Name, startedAt),
+		OwnFailedRecord: ownFailedRecord(states.Get, closed(synced), a.identity.Name, startedAt),
 		Changed:         cluster.Changed(),
 	}, a.logger)
 

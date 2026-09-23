@@ -18,6 +18,7 @@ package rejoin
 
 import (
 	"context"
+	"log/slog"
 	"math/rand/v2"
 	"time"
 
@@ -97,7 +98,7 @@ func (l *Loop) Run(ctx context.Context) error {
 	ticker := time.NewTicker(idleTick)
 	defer ticker.Stop()
 
-	defer l.stop()
+	defer l.closeEpisode("rejoin stopped by shutdown")
 
 	idle := func() {
 		select {
@@ -224,23 +225,15 @@ func (l *Loop) report(err error, started time.Time, delay time.Duration, quorum,
 		msg = "this node is not a member of its NodeGroup, rejoin does not join until that changes"
 	}
 
-	attemptElapsed := time.Since(started).String()
-
+	level := slog.LevelDebug
 	if l.ep.streak.attempts == 1 {
-		l.logger.Warn(msg,
-			"error", err,
-			"attempt", l.ep.attempts,
-			"attempt_elapsed", attemptElapsed,
-			"next_in", delay.String(),
-		)
-
-		return
+		level = slog.LevelWarn
 	}
 
-	l.logger.Debug(msg,
+	l.logger.Log(context.Background(), level, msg,
 		"error", err,
 		"attempt", l.ep.attempts,
-		"attempt_elapsed", attemptElapsed,
+		"attempt_elapsed", time.Since(started).String(),
 		"next_in", delay.String(),
 	)
 }
@@ -255,20 +248,15 @@ func (l *Loop) endStreak(end time.Time) {
 }
 
 func (l *Loop) finish() {
-	if !l.ep.open {
-		return
-	}
-
-	l.summarize("rejoin finished, gossip quorum holds and no peer records this node as failed", l.ep.attempts, time.Since(l.ep.start), l.ep.lastClass)
-	l.ep = episode{}
+	l.closeEpisode("rejoin finished, gossip quorum holds and no peer records this node as failed")
 }
 
-func (l *Loop) stop() {
+func (l *Loop) closeEpisode(msg string) {
 	if !l.ep.open {
 		return
 	}
 
-	l.summarize("rejoin stopped by shutdown", l.ep.attempts, time.Since(l.ep.start), l.ep.lastClass)
+	l.summarize(msg, l.ep.attempts, time.Since(l.ep.start), l.ep.lastClass)
 	l.ep = episode{}
 }
 

@@ -199,6 +199,7 @@ func (m *Manager) Run(ctx context.Context) error {
 // Close disarms on a graceful shutdown. A DaemonSet rollout stops every agent of
 // the NodeGroup at once and the nodes run with kernel.panic=0, so a missed disarm
 // would panic the whole group. A crash does not disarm on purpose: the kernel
+// keeps counting and fences the Node, which is the point.
 func (m *Manager) Close() {
 	m.mu.Lock()
 	defer m.mu.Unlock()

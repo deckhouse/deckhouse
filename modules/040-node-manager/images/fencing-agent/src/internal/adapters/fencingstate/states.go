@@ -83,6 +83,27 @@ func (s *States) List(ctx context.Context) ([]v1alpha1.FencingFailedNodeState, e
 	return list.Items, nil
 }
 
+func (s *States) Get(ctx context.Context, name string) (*v1alpha1.FencingFailedNodeState, error) {
+	var state v1alpha1.FencingFailedNodeState
+
+	ctx, cancel := s.bounded(ctx)
+	defer cancel()
+
+	if err := s.reader.Get(ctx, client.ObjectKey{Name: name}, &state); err != nil {
+		if apierrors.IsNotFound(err) {
+			return nil, nil
+		}
+
+		return nil, fmt.Errorf("get fencingfailednodestate %q: %w", name, err)
+	}
+
+	if state.Labels[domain.NodeGroupLabel] != s.nodeGroup {
+		return nil, nil
+	}
+
+	return &state, nil
+}
+
 // Create records the object itself: the Node name as its own name, one owner
 // reference to that Node for garbage collection and identity, and the immutable
 // spec. The status is a separate request, because the API server drops .status
