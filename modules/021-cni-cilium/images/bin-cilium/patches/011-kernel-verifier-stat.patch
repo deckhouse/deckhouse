@@ -1,0 +1,159 @@
+From 99b044930f688535a8d583e81265e6e0bd44bfd2 Mon Sep 17 00:00:00 2001
+From: Dmitriy Andreychenko <dmitriy.andreychenko@flant.com>
+Date: Mon, 14 Sep 2026 16:41:46 +0300
+Subject: [PATCH] metrics: export the worst BPF program's verifier complexity
+
+Ask the verifier for its stats on load and expose the highest verified
+instruction count as cilium_bpf_progs_complexity_max_verified_insts, so a
+program creeping towards the 1M limit is visible before it stops loading.
+
+Co-Authored-By: Claude Opus 5 (1M context) <noreply@anthropic.com>
+---
+ pkg/bpf/collection.go | 17 +++++++++++++
+ pkg/metrics/bpf.go    | 57 +++++++++++++++++++++++++++++++++++++++++++
+ 2 files changed, 74 insertions(+)
+
+diff --git a/pkg/bpf/collection.go b/pkg/bpf/collection.go
+index 2826fd49e0..7ccd0ce456 100644
+--- a/pkg/bpf/collection.go
++++ b/pkg/bpf/collection.go
+@@ -15,6 +15,7 @@ import (
+ 
+ 	"golang.org/x/sys/cpu"
+ 
++	"github.com/cilium/coverbee/pkg/verifierlog"
+ 	"github.com/cilium/ebpf"
+ 	"github.com/cilium/ebpf/asm"
+ 	"github.com/cilium/ebpf/btf"
+@@ -272,9 +273,25 @@ func LoadCollection(logger *slog.Logger, spec *ebpf.CollectionSpec, opts *Collec
+ 		return nil, nil, fmt.Errorf("applying program patches: %w", err)
+ 	}
+ 
++	// Ask the verifier for its statistics unless the caller wants no log at all.
++	// They come back in the program's verifier log and are the only source for
++	// how close a program is to the complexity limit.
++	if !opts.CollectionOptions.Programs.LogDisabled && opts.CollectionOptions.Programs.LogLevel == 0 {
++		opts.CollectionOptions.Programs.LogLevel = ebpf.LogLevelStats
++	}
++
+ 	// Attempt to load the Collection.
+ 	coll, err := ebpf.NewCollectionWithOptions(spec, opts.CollectionOptions)
+ 
++	if err == nil {
++		for _, prog := range coll.Programs {
++			logger.Debug("BPF program details", logfields.Prog, prog.String())
++			for _, line := range verifierlog.ParseVerifierLog(prog.VerifierLog) {
++				logger.Debug("Kernel verifier stat", "stat", line)
++			}
++		}
++	}
++
+ 	// Collect key names of maps that are not compatible with their pinned
+ 	// counterparts and remove their pinning flags.
+ 	if errors.Is(err, ebpf.ErrMapIncompatible) {
+diff --git a/pkg/metrics/bpf.go b/pkg/metrics/bpf.go
+index 17e3dd42ca..efed719f96 100644
+--- a/pkg/metrics/bpf.go
++++ b/pkg/metrics/bpf.go
+@@ -16,6 +16,8 @@ import (
+ 	"golang.org/x/sync/singleflight"
+ 
+ 	"github.com/cilium/cilium/pkg/logging/logfields"
++	"github.com/cilium/cilium/pkg/version"
++	"github.com/cilium/cilium/pkg/versioncheck"
+ )
+ 
+ // This file contains a Prometheus collector that collects the memory usage of
+@@ -39,6 +41,10 @@ type bpfUsage struct {
+ 	programBytes uint64
+ 	maps         uint64
+ 	mapBytes     uint64
++
++	// complexityMax is the highest verified instruction count seen across the
++	// visited programs: how close the worst one is to the verifier's limit.
++	complexityMax uint64
+ }
+ 
+ func newBPFVisitor(progPrefixes []string) *bpfVisitor {
+@@ -120,6 +126,10 @@ func (v *bpfVisitor) visitProgram(id ebpf.ProgramID, prefixes []string) error {
+ 		return fmt.Errorf("program %s has zero memlock", info.Name)
+ 	}
+ 
++	if insts, ok := info.VerifiedInstructions(); ok && uint64(insts) > v.complexityMax {
++		v.complexityMax = uint64(insts)
++	}
++
+ 	v.programs++
+ 	v.programBytes += mem
+ 
+@@ -172,9 +182,45 @@ type bpfCollector struct {
+ 	bpfMapsMemory     *prometheus.Desc
+ 	bpfProgramsCount  *prometheus.Desc
+ 	bpfProgramsMemory *prometheus.Desc
++
++	bpfProgramsComplexityMax *prometheus.Desc
++}
++
++// isVerifierComplexitySupported reports why the verifier complexity metric may
++// read zero on this host. The kernel only reports the number of instructions it
++// walked from 5.16 onwards (torvalds/linux@7df5072cc05f), so on anything older
++// the gauge stays at 0 and the reason is appended to the metric's help text
++// rather than logged once and forgotten.
++func isVerifierComplexitySupported() string {
++	minVersion := "5.16"
++
++	v, err := versioncheck.Version(minVersion)
++	if err != nil {
++		return "Cannot parse minimum kernel version \u2014 this metric may not be supported"
++	}
++
++	kv, err := version.GetKernelVersion()
++	if err != nil {
++		return "Cannot determine current kernel version \u2014 this metric may not be supported"
++	}
++
++	if kv.LT(v) {
++		return fmt.Sprintf(
++			"Kernel verifier complexity metric is not available: running kernel %v < required %v",
++			kv, minVersion,
++		)
++	}
++
++	return ""
+ }
+ 
+ func newbpfCollector(logger *slog.Logger) *bpfCollector {
++	metricInfo := "Maximum number of verified instructions among loaded BPF programs."
++	metricDescription := isVerifierComplexitySupported()
++	if len(metricDescription) > 0 {
++		metricInfo = metricInfo + " " + metricDescription
++	}
++
+ 	return &bpfCollector{
+ 		logger: logger,
+ 		bpfMapsCount: prometheus.NewDesc(
+@@ -197,6 +243,11 @@ func newbpfCollector(logger *slog.Logger) *bpfCollector {
+ 			"BPF programs kernel max memory usage size in bytes.",
+ 			nil, nil,
+ 		),
++		bpfProgramsComplexityMax: prometheus.NewDesc(
++			prometheus.BuildFQName(Namespace, "", "bpf_progs_complexity_max_verified_insts"),
++			metricInfo,
++			nil, nil,
++		),
+ 	}
+ }
+ 
+@@ -234,6 +285,12 @@ func (s *bpfCollector) Collect(ch chan<- prometheus.Metric) {
+ 		float64(results.(*bpfUsage).programs),
+ 	)
+ 
++	ch <- prometheus.MustNewConstMetric(
++		s.bpfProgramsComplexityMax,
++		prometheus.GaugeValue,
++		float64(results.(*bpfUsage).complexityMax),
++	)
++
+ 	ch <- prometheus.MustNewConstMetric(
+ 		s.bpfProgramsMemory,
+ 		prometheus.GaugeValue,

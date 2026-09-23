@@ -1,0 +1,680 @@
+From cdd93f373ef1cfa27f0f40a1e296fe42ac6bf7d1 Mon Sep 17 00:00:00 2001
+From: Dmitriy Andreychenko <dmitriy.andreychenko@flant.com>
+Date: Mon, 7 Sep 2026 17:48:12 +0300
+Subject: [PATCH] ipam: pin a pod's address with an annotation
+
+Deckhouse Virtualization needs a pod to be able to request a specific address.
+Two annotations carry the request:
+
+    network.deckhouse.io/networks-spec: [{"type":"Main","ipAddress":"10.10.10.10"}]
+    cni.cilium.io/ipAddress: 10.10.10.10
+
+networks-spec describes every network attached to the pod, and the entry of type
+"Main" is the one this CNI honours. It wins over cni.cilium.io/ipAddress, which
+is the older single-valued form and remains the fallback -- including when
+networks-spec is present but names no primary network. A networks-spec that
+cannot be parsed fails the allocation rather than falling through to the other
+annotation, for the same reason a malformed address does: the request was made
+and cannot be read.
+
+The driving case is VM live migration. DVP migrates a virtual machine by running
+a second pod for it on the target node while the first is still running on the
+source node, and both pods carry the VM's address. Two consequences shape this
+patch:
+
+  - the pinned address is not necessarily part of the local node's allocation
+    CIDR. With ipam=kubernetes each node allocates from its own podCIDR, so on
+    the migration target the VM's address belongs to the *source* node's CIDR.
+    A VM's address may also come from a subnet unrelated to the pod subnet
+    altogether. There is therefore no CIDR to validate a request against.
+  - two pods on different nodes legitimately hold the same address for the
+    duration of the migration. Which of them owns it cluster-wide is decided
+    separately, by the pod-common-ip-priority label.
+
+So allocatePinnedIP() first tries the ordinary specific-IP path, and treats
+ipallocator's ErrNotInRange as an expected outcome rather than a failure: an
+address this node's allocator cannot represent is accepted, but left out of the
+local bitmap, which has no slot for it. Every other error propagates --
+ErrAllocated in particular, so a second pod on the *same* node asking for an
+address already in use is still refused. For a foreign address, where the bitmap
+cannot detect the duplicate, the IP owner map does; releaseIPOwner() already
+clears it, and ipallocator.Range.Release() ignores out-of-range addresses, so
+the release path needed no change.
+
+The pre-1.20 version of this patch achieved the same acceptance by deleting the
+range check from ipallocator.Range.Allocate outright. Since Range.contains
+reports offset 0 for anything out of range, that aliased every foreign address
+onto the first address of the node's own CIDR -- consuming a real address, and
+making the second such pod on a node collide with the first, which is why it had
+to delete the ErrAllocated check as well and thereby lost duplicate detection
+for ordinary addresses too. Leaving the bitmap alone for foreign addresses gets
+the same behaviour without either loss.
+
+The pod is read from the local-pods StateDB table, the same source
+pkg/ipam/metadata uses for pool annotations. It cannot go through the metadata
+manager itself: newIPAMMetadataManager() degrades to a stub for every IPAM mode
+other than multi-pool, and Deckhouse runs ipam=kubernetes. Nor does it go
+through k8sWatcher.GetCachedPod(), which performs the very same table lookup but
+wraps it in WaitForCacheSync: that waits for the initial sync of all pods and not
+for this pod, so it does not close the race below, while it does add a blocking
+wait and a watcher dependency to a package that needs one for nothing else.
+
+That table is fed by a watch-backed reflector committing in batches every
+k8s.DefaultBufferWaitTime, so a CNI ADD can arrive before the pod appears in it:
+kubelet learns of the pod from its own watch, and nothing orders the two.
+resolveRequestedIP() waits on the table's watch channel for that specific pod,
+bounded by podTableWaitTimeout, and on timeout allocates as upstream would while
+logging a warning. Failing the ADD instead was considered and rejected: this code
+sits on the path every pod on the node takes, and a stale or broken cache must
+not be able to refuse address allocation node-wide. The residual cost is that a
+pinned pod caught past the timeout comes up with an ordinary address, which is
+why the warning is loud -- nothing else in the system reports that it happened.
+
+The lookup runs outside allocatorMutex. That mutex is the agent's single global
+IPAM lock, taken by every allocate and every release, so the region it covers
+must hold in-memory allocator work only: no k8s reads, no channel waits, no I/O.
+The exported AllocateNextFamily() and AllocateNextFamilyWithoutSyncUpstream()
+therefore resolve the annotation before locking and pass the result down into
+allocateNextFamily() as an argument.
+
+Restored endpoints take a different path. endpointRestorer.allocateIPsLocked()
+re-allocates the address recorded in the endpoint's state file, which for a
+pinned pod may be foreign to this node and would fail with ErrNotInRange after an
+agent restart, deleting a healthy endpoint. pinnedAddr() reads the pod's
+annotation and pinnedOutOfRange() tolerates ErrNotInRange for exactly that
+address, leaving every other restore failure untouched.
+
+allocateIP() is split so allocatePinnedIP(), which runs with allocatorMutex held,
+can reuse the body without re-locking.
+
+Non-pod owners ("router", "health", "ingress") and a pod carrying no annotation
+are "no request" and allocate normally, as is an annotation for the other address
+family. A malformed address fails the CNI ADD rather than quietly handing out a
+different one: that is the only outcome that fails an allocation, because it is
+the only one where a request was made and cannot be honoured.
+
+Upstream: https://github.com/cilium/cilium/pull/24098
+Test: ~/src/kind/d8-1.20-tests/request-ip/run.sh
+---
+ daemon/cmd/endpoint_restore.go |  50 +++++++-
+ pkg/annotation/k8s.go          |  11 ++
+ pkg/ipam/allocator.go          |  97 +++++++++++++-
+ pkg/ipam/cell/cell.go          |   3 +
+ pkg/ipam/ipam.go               |   3 +
+ pkg/ipam/requested_ip.go       | 228 +++++++++++++++++++++++++++++++++
+ pkg/ipam/types.go              |   5 +
+ 7 files changed, 393 insertions(+), 4 deletions(-)
+ create mode 100644 pkg/ipam/requested_ip.go
+
+diff --git a/daemon/cmd/endpoint_restore.go b/daemon/cmd/endpoint_restore.go
+index fadac4d0c5..ffb2ccc616 100644
+--- a/daemon/cmd/endpoint_restore.go
++++ b/daemon/cmd/endpoint_restore.go
+@@ -20,6 +20,7 @@ import (
+ 	k8serrors "k8s.io/apimachinery/pkg/api/errors"
+ 
+ 	"github.com/cilium/cilium/daemon/cmd/legacy"
++	"github.com/cilium/cilium/pkg/annotation"
+ 	"github.com/cilium/cilium/pkg/datapath/connector"
+ 	ipsec "github.com/cilium/cilium/pkg/datapath/linux/ipsec/types"
+ 	"github.com/cilium/cilium/pkg/datapath/linux/safenetlink"
+@@ -31,6 +32,7 @@ import (
+ 	"github.com/cilium/cilium/pkg/endpointmanager"
+ 	"github.com/cilium/cilium/pkg/endpointstate"
+ 	"github.com/cilium/cilium/pkg/ipam"
++	"github.com/cilium/cilium/pkg/ipam/service/ipallocator"
+ 	"github.com/cilium/cilium/pkg/ipcache"
+ 	k8sClient "github.com/cilium/cilium/pkg/k8s/client"
+ 	slim_corev1 "github.com/cilium/cilium/pkg/k8s/slim/k8s/api/core/v1"
+@@ -685,11 +687,54 @@ func (r *endpointRestorer) handleRestoredEndpointsRegeneration(endpoints []*endp
+ 	close(r.endpointRegenerateComplete)
+ }
+ 
++// pinnedAddr returns the address the endpoint's pod requested with
++// annotation.PodAnnotationIPAddress, or an invalid Addr if it requested none.
++//
++// Safe to call here: validateEndpoint() has already run getPodForEndpoint(),
++// so GetCachedPod's WaitForCacheSync has been satisfied and this is a plain
++// StateDB lookup.
++func (r *endpointRestorer) pinnedAddr(ep *endpoint.Endpoint) netip.Addr {
++	if ep.K8sPodName == "" || ep.K8sNamespace == "" || !r.clientset.IsEnabled() {
++		return netip.Addr{}
++	}
++	pod, err := r.k8sWatcher.GetCachedPod(ep.K8sNamespace, ep.K8sPodName)
++	if err != nil || pod == nil {
++		return netip.Addr{}
++	}
++	addr, err := netip.ParseAddr(pod.Annotations[annotation.PodAnnotationIPAddress])
++	if err != nil {
++		return netip.Addr{}
++	}
++	return addr.Unmap()
++}
++
++// pinnedOutOfRange reports whether err is ipallocator's "not in this node's
++// range" for exactly the address the pod requested.
++//
++// Such an address is deliberately absent from the local bitmap: IPAM accepts a
++// requested address it cannot represent without reserving a slot for it, so that
++// a live-migrating VM keeps its address on the target node (see
++// IPAM.allocatePinnedIP). Re-reserving it on restore therefore cannot succeed,
++// and must not cost the endpoint its restore. Any other endpoint with an
++// out-of-range address still fails, as upstream intends.
++func pinnedOutOfRange(err error, addr, pinned netip.Addr) bool {
++	if !pinned.IsValid() || pinned != addr {
++		return false
++	}
++	var notInRange *ipallocator.ErrNotInRange
++	return errors.As(err, &notInRange)
++}
++
+ func (r *endpointRestorer) allocateIPsLocked(ep *endpoint.Endpoint) (err error) {
++	pinned := r.pinnedAddr(ep)
++
+ 	if option.Config.EnableIPv6 && ep.IPv6.IsValid() {
+ 		ipv6Pool := ipam.PoolOrDefault(ep.IPv6IPAMPool)
+ 		_, err = r.ipamManager.AllocateIPWithoutSyncUpstream(ep.IPv6, ep.HumanString()+" [restored]", ipv6Pool)
+-		if err != nil {
++		if pinnedOutOfRange(err, ep.IPv6, pinned) {
++			// Clear the named return: the deferred release below fires on it.
++			err = nil
++		} else if err != nil {
+ 			return fmt.Errorf("unable to reallocate %s IPv6 address: %w", ep.IPv6, err)
+ 		}
+ 
+@@ -724,6 +769,9 @@ func (r *endpointRestorer) allocateIPsLocked(ep *endpoint.Endpoint) (err error)
+ 				logfields.EndpointID, ep.ID,
+ 				logfields.CEPName, ep.GetK8sNamespaceAndCEPName(),
+ 			)
++		case pinnedOutOfRange(err, ep.IPv4, pinned):
++			// Clear the named return: the deferred IPv6 release fires on it.
++			err = nil
+ 		case err != nil:
+ 			return fmt.Errorf("unable to reallocate %s IPv4 address: %w", ep.IPv4, err)
+ 		}
+diff --git a/pkg/annotation/k8s.go b/pkg/annotation/k8s.go
+index d34d2338a0..0fb936d451 100644
+--- a/pkg/annotation/k8s.go
++++ b/pkg/annotation/k8s.go
+@@ -44,6 +44,17 @@ const (
+ 	// PodAnnotationMAC is used to store the MAC address of the Pod.
+ 	PodAnnotationMAC = CNIPrefix + "/mac-address"
+ 
++	// PodAnnotationIPAddress pins the Pod's address: IPAM hands out exactly
++	// this address instead of the next free one. Used for workloads whose
++	// address is part of their identity, e.g. virtual machines.
++	PodAnnotationIPAddress = CNIPrefix + "/ipAddress"
++
++	// PodAnnotationNetworksSpec pins the Pod's address too, as one entry of a
++	// JSON list describing every network attached to the Pod. It takes
++	// precedence over PodAnnotationIPAddress, which is the older single-valued
++	// form of the same request.
++	PodAnnotationNetworksSpec = "network.deckhouse.io/networks-spec"
++
+ 	// PolicyName / PolicyNameAlias is an optional annotation to the NetworkPolicy
+ 	// resource which specifies the name of the policy node to which all
+ 	// rules should be applied to.
+diff --git a/pkg/ipam/allocator.go b/pkg/ipam/allocator.go
+index 87dfb86d4a..543e4e4c27 100644
+--- a/pkg/ipam/allocator.go
++++ b/pkg/ipam/allocator.go
+@@ -12,6 +12,7 @@ import (
+ 	"github.com/google/uuid"
+ 
+ 	ipamOption "github.com/cilium/cilium/pkg/ipam/option"
++	"github.com/cilium/cilium/pkg/ipam/service/ipallocator"
+ 	"github.com/cilium/cilium/pkg/logging/logfields"
+ 	"github.com/cilium/cilium/pkg/metrics"
+ 	"github.com/cilium/cilium/pkg/time"
+@@ -66,6 +67,12 @@ func (ipam *IPAM) allocateIP(ip netip.Addr, owner string, pool Pool, needSyncUps
+ 	ipam.allocatorMutex.Lock()
+ 	defer ipam.allocatorMutex.Unlock()
+ 
++	return ipam.allocateIPLocked(ip, owner, pool, needSyncUpstream)
++}
++
++// allocateIPLocked is allocateIP without taking allocatorMutex, for callers
++// that already hold it.
++func (ipam *IPAM) allocateIPLocked(ip netip.Addr, owner string, pool Pool, needSyncUpstream bool) (result *AllocationResult, err error) {
+ 	if pool == "" {
+ 		return nil, fmt.Errorf("unable to restore IP %s for %q: pool name must be provided", ip, owner)
+ 	}
+@@ -141,7 +148,70 @@ func (ipam *IPAM) allocateIP(ip netip.Addr, owner string, pool Pool, needSyncUps
+ 	return
+ }
+ 
+-func (ipam *IPAM) allocateNextFamily(family Family, owner string, pool Pool, needSyncUpstream bool) (result *AllocationResult, err error) {
++// allocatePinnedIP allocates the address a pod pinned with
++// annotation.PodAnnotationIPAddress. Must be called with allocatorMutex held.
++//
++// The address is not necessarily one this node's allocator can represent. DVP
++// live-migrates a virtual machine by running a second pod for it on the target
++// node while the first is still running, and both pods carry the VM's address:
++// on the target node that address belongs to the source node's allocation CIDR,
++// and a VM's address may come from a subnet unrelated to the pod subnet
++// altogether. So ErrNotInRange is an expected outcome here, not a failure --
++// such an address is accepted but left out of the local bitmap, which has no
++// slot to represent it.
++//
++// Reserving a slot anyway is what the pre-1.20 version of this patch did, by
++// deleting the range check from ipallocator.Range.Allocate. Because
++// Range.contains reports offset 0 for anything out of range, every foreign
++// address aliased onto the first address of the node's own CIDR: it consumed a
++// real address, and the second such pod on a node then collided with the first
++// -- which is why that version had to delete the ErrAllocated check as well,
++// losing duplicate detection for ordinary addresses too.
++//
++// Duplicates are still refused per node: ErrAllocated for an address in the
++// local CIDR, and the IP owner map for one outside it. Two pods on *different*
++// nodes may hold the same address, which is the migration window itself; which
++// of them owns it cluster-wide is decided by the pod-common-ip-priority label.
++func (ipam *IPAM) allocatePinnedIP(addr netip.Addr, owner string, pool Pool, needSyncUpstream bool) (result *AllocationResult, err error) {
++	ipam.logger.Debug(
++		"Allocating pinned IP",
++		logfields.IPAddr, addr,
++		logfields.Owner, owner,
++		logfields.PoolName, pool,
++	)
++
++	result, err = ipam.allocateIPLocked(addr, owner, pool, needSyncUpstream)
++	if err == nil {
++		return result, nil
++	}
++
++	// Anything other than "this node's allocator cannot represent that address"
++	// is a real failure -- ErrAllocated in particular, which is how a second pod
++	// on this node asking for an address already in use gets refused.
++	var notInRange *ipallocator.ErrNotInRange
++	if !errors.As(err, &notInRange) {
++		return nil, err
++	}
++
++	// Excluded addresses need no check here: allocateIPLocked tests exclusion
++	// before it reaches the allocator and fails with a plain error, so an
++	// excluded address never gets this far.
++	if prev := ipam.getIPOwner(addr.String(), pool); prev != "" && prev != owner {
++		return nil, fmt.Errorf("pinned IP %s is already in use on this node by %s", addr, prev)
++	}
++
++	ipam.logger.Debug(
++		"Allocated pinned IP from outside the local allocation CIDR",
++		logfields.IPAddr, addr,
++		logfields.Owner, owner,
++	)
++	ipam.registerIPOwner(addr, owner, pool)
++	metrics.IPAMEvent.WithLabelValues(metricAllocate, string(DeriveFamily(addr))).Inc()
++
++	return &AllocationResult{IP: addr, IPPoolName: pool}, nil
++}
++
++func (ipam *IPAM) allocateNextFamily(family Family, owner string, pool Pool, needSyncUpstream bool, pinned netip.Addr) (result *AllocationResult, err error) {
+ 	var allocator Allocator
+ 	switch family {
+ 	case IPv6:
+@@ -176,6 +246,13 @@ func (ipam *IPAM) allocateNextFamily(family Family, owner string, pool Pool, nee
+ 		}
+ 	}
+ 
++	// The pod pinned its address with annotation.PodAnnotationIPAddress. It was
++	// resolved by the caller, before allocatorMutex was taken -- see the
++	// commentary in requested_ip.go for why the lookup cannot happen here.
++	if pinned.IsValid() {
++		return ipam.allocatePinnedIP(pinned, owner, pool, needSyncUpstream)
++	}
++
+ 	for {
+ 		if needSyncUpstream {
+ 			result, err = allocator.AllocateNext(owner, pool)
+@@ -214,23 +291,37 @@ func (ipam *IPAM) allocateNextFamily(family Family, owner string, pool Pool, nee
+ 
+ // AllocateNextFamily allocates the next IP of the requested address family
+ func (ipam *IPAM) AllocateNextFamily(family Family, owner string, pool Pool) (result *AllocationResult, err error) {
++	// Resolved before the lock is taken: the lookup reads a StateDB table and
++	// may wait for the pod to appear in it, and allocatorMutex is the agent's
++	// single global IPAM lock.
++	pinned, err := ipam.resolveRequestedIP(owner, family)
++	if err != nil {
++		return nil, err
++	}
++
+ 	ipam.allocatorMutex.Lock()
+ 	defer ipam.allocatorMutex.Unlock()
+ 
+ 	needSyncUpstream := true
+ 
+-	return ipam.allocateNextFamily(family, owner, pool, needSyncUpstream)
++	return ipam.allocateNextFamily(family, owner, pool, needSyncUpstream, pinned)
+ }
+ 
+ // AllocateNextFamilyWithoutSyncUpstream allocates the next IP of the requested address family
+ // without syncing upstream
+ func (ipam *IPAM) AllocateNextFamilyWithoutSyncUpstream(family Family, owner string, pool Pool) (result *AllocationResult, err error) {
++	// See AllocateNextFamily: resolved outside allocatorMutex.
++	pinned, err := ipam.resolveRequestedIP(owner, family)
++	if err != nil {
++		return nil, err
++	}
++
+ 	ipam.allocatorMutex.Lock()
+ 	defer ipam.allocatorMutex.Unlock()
+ 
+ 	needSyncUpstream := false
+ 
+-	return ipam.allocateNextFamily(family, owner, pool, needSyncUpstream)
++	return ipam.allocateNextFamily(family, owner, pool, needSyncUpstream, pinned)
+ }
+ 
+ // AllocateNext allocates the next available IPv4 and IPv6 address out of the
+diff --git a/pkg/ipam/cell/cell.go b/pkg/ipam/cell/cell.go
+index c0748f92d9..407e96ffe8 100644
+--- a/pkg/ipam/cell/cell.go
++++ b/pkg/ipam/cell/cell.go
+@@ -24,6 +24,7 @@ import (
+ 	"github.com/cilium/cilium/pkg/ipmasq"
+ 	k8sResources "github.com/cilium/cilium/pkg/k8s"
+ 	k8sClient "github.com/cilium/cilium/pkg/k8s/client"
++	k8sTables "github.com/cilium/cilium/pkg/k8s/tables"
+ 	"github.com/cilium/cilium/pkg/k8s/watchers"
+ 	"github.com/cilium/cilium/pkg/mtu"
+ 	"github.com/cilium/cilium/pkg/node"
+@@ -88,6 +89,7 @@ type ipamParams struct {
+ 	JobGroup   job.Group
+ 	DB         *statedb.DB
+ 	PodIPPools statedb.Table[podippool.LocalPodIPPool]
++	Pods       statedb.Table[k8sTables.LocalPod]
+ }
+ 
+ func newIPAddressManager(params ipamParams, c ipamConfig) (*ipam.IPAM, error) {
+@@ -110,6 +112,7 @@ func newIPAddressManager(params ipamParams, c ipamConfig) (*ipam.IPAM, error) {
+ 		DB:                        params.DB,
+ 		JobGroup:                  params.JobGroup,
+ 		PodIPPools:                params.PodIPPools,
++		Pods:                      params.Pods,
+ 		OnlyMasqueradeDefaultPool: c.OnlyMasqueradeDefaultPool,
+ 	})
+ 
+diff --git a/pkg/ipam/ipam.go b/pkg/ipam/ipam.go
+index 42444f7060..a70f3f5e7d 100644
+--- a/pkg/ipam/ipam.go
++++ b/pkg/ipam/ipam.go
+@@ -18,6 +18,7 @@ import (
+ 	"github.com/cilium/cilium/pkg/ipam/podippool"
+ 	"github.com/cilium/cilium/pkg/ipmasq"
+ 	"github.com/cilium/cilium/pkg/k8s/client"
++	k8sTables "github.com/cilium/cilium/pkg/k8s/tables"
+ 	"github.com/cilium/cilium/pkg/logging"
+ 	"github.com/cilium/cilium/pkg/logging/logfields"
+ 	"github.com/cilium/cilium/pkg/node"
+@@ -89,6 +90,7 @@ type NewIPAMParams struct {
+ 
+ 	DB                        *statedb.DB
+ 	PodIPPools                statedb.Table[podippool.LocalPodIPPool]
++	Pods                      statedb.Table[k8sTables.LocalPod]
+ 	OnlyMasqueradeDefaultPool bool
+ }
+ 
+@@ -113,6 +115,7 @@ func NewIPAM(params NewIPAMParams) *IPAM {
+ 		jg:                        params.JobGroup,
+ 		db:                        params.DB,
+ 		podIPPools:                params.PodIPPools,
++		pods:                      params.Pods,
+ 		onlyMasqueradeDefaultPool: params.OnlyMasqueradeDefaultPool,
+ 	}
+ }
+diff --git a/pkg/ipam/requested_ip.go b/pkg/ipam/requested_ip.go
+new file mode 100644
+index 0000000000..ba1c8c5002
+--- /dev/null
++++ b/pkg/ipam/requested_ip.go
+@@ -0,0 +1,228 @@
++// SPDX-License-Identifier: Apache-2.0
++// Copyright Authors of Cilium
++
++package ipam
++
++import (
++	"encoding/json"
++	"fmt"
++	"net/netip"
++	"strings"
++
++	"github.com/cilium/cilium/pkg/annotation"
++	k8sTables "github.com/cilium/cilium/pkg/k8s/tables"
++	"github.com/cilium/cilium/pkg/logging/logfields"
++	"github.com/cilium/cilium/pkg/time"
++)
++
++// Pinning a pod's address with an annotation.
++//
++// Deckhouse needs a pod to come up with an address chosen by the caller instead
++// of the next free one. The consumer is DVP: a virtual machine's address
++// belongs to the VM rather than to the pod that happens to run it, and it has
++// to survive that pod being replaced -- including a live migration, during
++// which two pods for the same VM run on two different nodes and both carry the
++// same IPv4 address.
++//
++// Behaviour, by case. Only the last three rows differ from upstream:
++//
++//	owner is not "<namespace>/<name>"       -> allocate normally (router, health,
++//	                                           ingress, restored endpoints)
++//	pod table not wired up                  -> allocate normally
++//	pod carries no annotation               -> allocate normally
++//	networks-spec has no primary entry      -> fall back to cni.cilium.io/ipAddress
++//	networks-spec is not a JSON list        -> fail the allocation
++//	annotation is for the other family      -> allocate normally for this family
++//	pod not in the table within the wait    -> allocate normally, warn
++//	annotation is not an IP address         -> fail the allocation
++//	address in this node's CIDR, free       -> allocate exactly that address
++//	address in this node's CIDR, taken      -> fail the allocation (ErrAllocated)
++//	address outside this node's CIDR        -> accept it and record the owner,
++//	                                           but reserve nothing in the bitmap
++//	address outside the CIDR, owned here    -> fail the allocation
++//
++// Nuances to keep in mind before changing any of this:
++//
++//   - A requested address cannot be validated against a CIDR. With
++//     ipam: kubernetes every node allocates out of its own Node.spec.podCIDR, so
++//     during a migration the VM's address belongs to the *source* node's CIDR as
++//     far as the target node is concerned; and a VM's address may come from a
++//     subnet unrelated to the pod subnet altogether. There is no bound to check
++//     a request against. The only enforcement is "not already in use on this
++//     node" -- cross-node duplicates are the migration window itself, and which
++//     of the two pods owns the address cluster-wide is arbitrated separately by
++//     the network.deckhouse.io/pod-common-ip-priority label.
++//
++//   - This runs on the allocation hot path, which every pod on the node goes
++//     through, so a fault here is a node-wide outage. Hence the asymmetry above:
++//     the only outcome that fails an allocation is an annotation that is present
++//     and malformed -- a request that was made and cannot be honoured. Absence
++//     of information (no table, no pod, no annotation) always falls back to
++//     upstream behaviour.
++//
++//   - The pod is read from the local-pods StateDB table and not through
++//     k8sWatcher.GetCachedPod. GetCachedPod does the very same table lookup, but
++//     wraps it in <-controllersStarted and WaitForCacheSync, which wait for the
++//     *initial* sync of all pods and not for this pod: it does not close the race
++//     below, while it does add a blocking wait and a dependency on the watcher to
++//     a package that needs one for nothing else.
++//
++//   - Table reads are lock-free snapshot reads, but they still must not happen
++//     under allocatorMutex. That is the agent's single global IPAM lock, taken by
++//     every allocate and every release, so the region it covers must hold
++//     in-memory allocator work only: no k8s reads, no channel waits, no I/O.
++//     resolveRequestedIP is therefore called by the exported AllocateNextFamily*
++//     wrappers *before* they take the lock, and its result is passed down into
++//     allocateNextFamily as an argument.
++//
++//   - There is deliberately no DNS1123 validation of the namespace and pod name
++//     parsed out of the owner string. The table lookup is the authority on
++//     whether a pod exists; a name check can only turn a valid pod into a missed
++//     request, which is exactly the silent failure this code is built to avoid.
++
++// podTableWaitTimeout bounds the wait for a pod that has not appeared in the
++// local pod table yet.
++//
++// The table is fed by a watch-backed reflector that commits in batches every
++// k8s.DefaultBufferWaitTime (50ms), so a CNI ADD can legitimately arrive before
++// the pod it is for shows up there: kubelet learns of the pod from its own
++// watch, and nothing orders the two. Waiting for a few buffer flushes closes
++// that window in practice without letting a stale or broken cache turn into an
++// allocation outage -- on timeout the allocation proceeds as upstream would.
++const podTableWaitTimeout = 500 * time.Millisecond
++
++// resolveRequestedIP returns the address the pod behind owner pinned with the
++// annotation.PodAnnotationIPAddress annotation, or the zero Addr if it pinned
++// none. The commentary above has the full behaviour table.
++//
++// Must be called *without* allocatorMutex held: it reads a StateDB table and may
++// block for up to podTableWaitTimeout.
++func (ipam *IPAM) resolveRequestedIP(owner string, family Family) (netip.Addr, error) {
++	if ipam.pods == nil || ipam.db == nil {
++		return netip.Addr{}, nil
++	}
++
++	namespace, name, isPod := strings.Cut(owner, "/")
++	if !isPod {
++		// Not a pod owner: "router", "health", "ingress", ...
++		return netip.Addr{}, nil
++	}
++
++	pod, found := ipam.podForAllocation(namespace, name)
++	if !found {
++		// Warn loudly: a pinned pod caught in this window comes up with an
++		// ordinary address for the rest of its life, and nothing else in the
++		// system reports that it happened.
++		ipam.logger.Warn(
++			"Pod not found in the local pod table, allocating without checking for a requested address",
++			logfields.Owner, owner,
++			logfields.Timeout, podTableWaitTimeout,
++		)
++		return netip.Addr{}, nil
++	}
++
++	value, source, err := requestedAddressOf(pod)
++	if err != nil {
++		return netip.Addr{}, fmt.Errorf("pod %s: %w", owner, err)
++	}
++	if value == "" {
++		return netip.Addr{}, nil
++	}
++
++	addr, err := netip.ParseAddr(value)
++	if err != nil {
++		return netip.Addr{}, fmt.Errorf("pod %s: annotation %s: %q is not an IP address",
++			owner, source, value)
++	}
++	addr = addr.Unmap()
++
++	if DeriveFamily(addr) != family {
++		// A pod pins one address, but a dual-stack allocation asks for both
++		// families in turn. Report "no request" for the family the annotation is
++		// not for, so that family still gets an ordinary address instead of the
++		// whole allocation failing.
++		return netip.Addr{}, nil
++	}
++
++	return addr, nil
++}
++
++// podForAllocation looks a pod up in the local pod table, waiting up to
++// podTableWaitTimeout for it to appear.
++//
++// The wait is on the table's watch channel for this exact query, so it costs
++// nothing in the common case where the pod is already there, and it returns as
++// soon as the pod lands rather than after a fixed sleep.
++func (ipam *IPAM) podForAllocation(namespace, name string) (k8sTables.LocalPod, bool) {
++	query := k8sTables.PodByName(namespace, name)
++
++	pod, _, watch, found := ipam.pods.GetWatch(ipam.db.ReadTxn(), query)
++	if found {
++		return pod, true
++	}
++
++	timer := time.NewTimer(podTableWaitTimeout)
++	defer timer.Stop()
++
++	for {
++		select {
++		case <-watch:
++			pod, _, watch, found = ipam.pods.GetWatch(ipam.db.ReadTxn(), query)
++			if found {
++				return pod, true
++			}
++		case <-timer.C:
++			return k8sTables.LocalPod{}, false
++		}
++	}
++}
++
++// networkSpec is one entry of the annotation.PodAnnotationNetworksSpec list.
++// Only the fields that decide an address are decoded; an entry describes a
++// whole network attachment and carries more than this.
++type networkSpec struct {
++	Type      string `json:"type"`
++	IPAddress string `json:"ipAddress"`
++}
++
++// clusterNetworkPrimaryCNIType marks the entry in the networks-spec list that
++// describes the address this CNI is expected to hand out. Entries of any other
++// type belong to additional networks that something else attaches, and are not
++// this allocator's business.
++const clusterNetworkPrimaryCNIType = "Main"
++
++// requestedAddressOf returns the address a pod pins, and the annotation it came
++// from so that an error can name it.
++//
++// Two annotations can carry the request. networks-spec is the richer one, a
++// list describing every network attached to the pod, and it wins: a pod that
++// has one is managed by something that knows about all of its networks.
++// cni.cilium.io/ipAddress is the older single-valued form and remains the
++// fallback -- including when networks-spec is present but says nothing about
++// the primary network, which is a pod whose other networks are specified and
++// whose primary address is not.
++//
++// A networks-spec that cannot be parsed is an error rather than a fallback. It
++// is a request that was made and cannot be read, and the one thing this code
++// must never do is silently hand out a different address than the one asked
++// for.
++func requestedAddressOf(pod k8sTables.LocalPod) (value, source string, err error) {
++	if spec := pod.Annotations[annotation.PodAnnotationNetworksSpec]; spec != "" {
++		var networks []networkSpec
++		if err := json.Unmarshal([]byte(spec), &networks); err != nil {
++			return "", "", fmt.Errorf("annotation %s: %q is not a list of network specs: %w",
++				annotation.PodAnnotationNetworksSpec, spec, err)
++		}
++		for _, n := range networks {
++			if n.Type == clusterNetworkPrimaryCNIType && n.IPAddress != "" {
++				return n.IPAddress, annotation.PodAnnotationNetworksSpec, nil
++			}
++		}
++	}
++
++	if v := pod.Annotations[annotation.PodAnnotationIPAddress]; v != "" {
++		return v, annotation.PodAnnotationIPAddress, nil
++	}
++
++	return "", "", nil
++}
+diff --git a/pkg/ipam/types.go b/pkg/ipam/types.go
+index bbd74fd9f2..ce247b26a4 100644
+--- a/pkg/ipam/types.go
++++ b/pkg/ipam/types.go
+@@ -18,6 +18,7 @@ import (
+ 	"github.com/cilium/cilium/pkg/ipam/podippool"
+ 	"github.com/cilium/cilium/pkg/ipmasq"
+ 	"github.com/cilium/cilium/pkg/k8s/client"
++	k8sTables "github.com/cilium/cilium/pkg/k8s/tables"
+ 	"github.com/cilium/cilium/pkg/lock"
+ 	"github.com/cilium/cilium/pkg/logging/logfields"
+ 	"github.com/cilium/cilium/pkg/node"
+@@ -136,6 +137,10 @@ type IPAM struct {
+ 	db         *statedb.DB
+ 	podIPPools statedb.Table[podippool.LocalPodIPPool]
+ 
++	// pods is the local-pods table, used to resolve the
++	// annotation.PodAnnotationIPAddress of the pod an allocation is for.
++	pods statedb.Table[k8sTables.LocalPod]
++
+ 	onlyMasqueradeDefaultPool bool
+ }
+ 

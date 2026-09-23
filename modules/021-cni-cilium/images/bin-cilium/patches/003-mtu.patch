@@ -1,0 +1,78 @@
+From 2ce530c885ebc6f6a491ff8b2a245874e4484550 Mon Sep 17 00:00:00 2001
+From: Dmitriy Andreychenko <dmitriy.andreychenko@flant.com>
+Date: Wed, 9 Sep 2026 18:15:55 +0300
+Subject: [PATCH] mtu: give endpoint devices RouteMTU instead of DeviceMTU
+
+A virtual machine inside a pod takes its MTU from the link, not from the pod's
+default route, so a device left at DeviceMTU makes the guest emit frames the
+overlay cannot carry. Covers creation time (CNI plugin and health endpoint) and
+the endpoint MTU updater, which would otherwise reset the devices.
+
+Upstream: https://github.com/cilium/cilium/issues/23711
+---
+ pkg/health/health_connectivity_endpoint.go |  4 +++-
+ pkg/mtu/endpoint_updater.go                | 10 ++++++++--
+ plugins/cilium-cni/cmd/cmd.go              |  7 ++++++-
+ 3 files changed, 17 insertions(+), 4 deletions(-)
+
+diff --git a/pkg/health/health_connectivity_endpoint.go b/pkg/health/health_connectivity_endpoint.go
+index 76322715e5..9128392ded 100644
+--- a/pkg/health/health_connectivity_endpoint.go
++++ b/pkg/health/health_connectivity_endpoint.go
+@@ -295,7 +295,9 @@ func (h *ciliumHealthManager) launchAsEndpoint(baseCtx context.Context, endpoint
+ 		GSOIPv6MaxSize: bigTCPConfig.GetGSOIPv6MaxSize(),
+ 		GROIPv4MaxSize: bigTCPConfig.GetGROIPv4MaxSize(),
+ 		GSOIPv4MaxSize: bigTCPConfig.GetGSOIPv4MaxSize(),
+-		DeviceMTU:      mtuConfig.GetDeviceMTU(),
++		// RouteMTU, to match the pod devices -- see the note in
++		// plugins/cilium-cni/cmd/cmd.go.
++		DeviceMTU: mtuConfig.GetRouteMTU(),
+ 	}
+ 
+ 	linkPair, err := h.connectorConfig.NewLinkPair(linkConfig, sysctl)
+diff --git a/pkg/mtu/endpoint_updater.go b/pkg/mtu/endpoint_updater.go
+index 81072cb894..93fe9753b1 100644
+--- a/pkg/mtu/endpoint_updater.go
++++ b/pkg/mtu/endpoint_updater.go
+@@ -197,7 +197,10 @@ func (emu *endpointUpdater) updateHostNSDevices(rx statedb.ReadTxn, routeMtus []
+ 			continue
+ 		}
+ 
+-		if err := netlink.LinkSetMTU(link, defaultRouteMTU.DeviceMTU); err != nil {
++		// RouteMTU -- see the note in plugins/cilium-cni/cmd/cmd.go. Without this
++		// the host side devices are reset to DeviceMTU on every MTU update, undoing
++		// what the CNI plugin set at creation time.
++		if err := netlink.LinkSetMTU(link, defaultRouteMTU.RouteMTU); err != nil {
+ 			// Ignore any errors. It is possible that the device has been removed between the time
+ 			// we got the link and now.
+ 			continue
+@@ -302,7 +305,10 @@ func defaultRouteHook(routeMTUs []RouteMTU) error {
+ 			continue
+ 		}
+ 
+-		netlink.LinkSetMTU(link, defaultRouteMTU.DeviceMTU)
++		// RouteMTU -- see the note in plugins/cilium-cni/cmd/cmd.go. This hook runs
++		// inside every endpoint netns and the health netns, so it is what keeps the
++		// pod side device from drifting back to DeviceMTU.
++		netlink.LinkSetMTU(link, defaultRouteMTU.RouteMTU)
+ 
+ 		routes, err := safenetlink.RouteList(link, netlink.FAMILY_ALL)
+ 		if err != nil {
+diff --git a/plugins/cilium-cni/cmd/cmd.go b/plugins/cilium-cni/cmd/cmd.go
+index 15fce3a7c8..5336d7eebe 100644
+--- a/plugins/cilium-cni/cmd/cmd.go
++++ b/plugins/cilium-cni/cmd/cmd.go
+@@ -726,7 +726,12 @@ func (cmd *Cmd) Add(args *skel.CmdArgs) (err error) {
+ 		GSOIPv6MaxSize: int(conf.GSOMaxSize),
+ 		GROIPv4MaxSize: int(conf.GROIPv4MaxSize),
+ 		GSOIPv4MaxSize: int(conf.GSOIPv4MaxSize),
+-		DeviceMTU:      int(conf.DeviceMTU),
++		// RouteMTU, not DeviceMTU. A virtual machine running inside the pod takes
++		// its MTU from the link, not from the pod's default route, so a device left
++		// at DeviceMTU makes the guest emit frames the overlay cannot carry.
++		// configureLinkPair applies this to both ends of the pair, for veth and
++		// netkit alike.
++		DeviceMTU:      int(conf.RouteMTU),
+ 		DeviceHeadroom: uint16(conf.DeviceHeadroom),
+ 		DeviceTailroom: uint16(conf.DeviceTailroom),
+ 	}

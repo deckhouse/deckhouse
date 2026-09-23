@@ -1,0 +1,443 @@
+From 135f826b74e5111ff5b29a0530838ae88ea7a186 Mon Sep 17 00:00:00 2001
+From: Dmitriy Andreychenko <dmitriy.andreychenko@flant.com>
+Date: Mon, 14 Sep 2026 18:01:49 +0300
+Subject: [PATCH] lb: answer ICMP echo for LoadBalancer service IPs
+
+A VIP has no interface anywhere, so nothing replies to a ping of it and
+monitoring reads that as the service being down. Behind
+enable-loadbalancer-icmp-reply the datapath answers on the VIP's behalf,
+rate limited per ingress interface.
+
+Co-Authored-By: Claude Opus 5 (1M context) <noreply@anthropic.com>
+---
+ bpf/lib/lb.h                                  |  10 ++
+ bpf/lib/nodeport.h                            | 112 +++++++++++++++
+ bpf/lib/ratelimit.h                           |   1 +
+ pkg/datapath/linux/config/config.go           |   3 +
+ pkg/loadbalancer/config.go                    |  10 ++
+ pkg/loadbalancer/reconciler/bpf_reconciler.go | 136 +++++++++++++++++-
+ 6 files changed, 271 insertions(+), 1 deletion(-)
+
+diff --git a/bpf/lib/lb.h b/bpf/lib/lb.h
+index 0238b96261..63a128389d 100644
+--- a/bpf/lib/lb.h
++++ b/bpf/lib/lb.h
+@@ -1726,7 +1726,17 @@ lb4_extract_tuple(const struct __ctx_buff *ctx, const struct iphdr *ip4, fraginf
+ 		return ipv4_load_l4_ports(ctx, ip4, fraginfo, l4_off,
+ 					  CT_EGRESS, &tuple->dport);
+ 	case IPPROTO_ICMP:
++#ifdef ENABLE_LOADBALANCER_ICMP_REPLY
++		/* Return 0 so the caller goes on to look the service up. The tuple
++		 * keeps nexthdr = IPPROTO_ICMP and dport = 0, which is exactly the
++		 * key the control plane writes for a LoadBalancer VIP, so only a
++		 * VIP can match and every other ICMP packet falls through to
++		 * skip_service_lookup as before.
++		 */
++		return 0;
++#else
+ 		return DROP_UNSUPP_SERVICE_PROTO;
++#endif
+ 	default:
+ 		return DROP_UNKNOWN_L4;
+ 	}
+diff --git a/bpf/lib/nodeport.h b/bpf/lib/nodeport.h
+index 7bad021ea3..33878087ab 100644
+--- a/bpf/lib/nodeport.h
++++ b/bpf/lib/nodeport.h
+@@ -2687,6 +2687,94 @@ drop_err:
+ 					  METRIC_EGRESS);
+ }
+ 
++#ifdef ENABLE_LOADBALANCER_ICMP_REPLY
++/* Answer an ICMP echo request addressed to a LoadBalancer VIP.
++ *
++ * A VIP has no interface anywhere, so nothing in the stack would ever reply to
++ * a ping of it. Operators and monitoring treat an unanswered ping as the
++ * service being down, so the datapath answers on the VIP's behalf: the request
++ * is turned into a reply in place and sent back out the interface it arrived
++ * on.
++ *
++ * Rate limited per ingress interface, because the reply is generated before any
++ * conntrack or policy work and an unbounded echo flood would otherwise cost one
++ * redirect per request.
++ */
++static __always_inline
++int make_icmp_response_lb4(struct __ctx_buff *ctx,
++					struct iphdr *ip4)
++{
++	void *data, *data_end;
++	struct ethhdr *ethhdr;
++	struct icmphdr *icmphdr;
++	union macaddr smac = {};
++	union macaddr dmac = {};
++	__be32 tmp_addr;
++	__u32 ccsum = 0;
++	struct ratelimit_key rkey = {
++		.usage = RATELIMIT_USAGE_ICMP_LB4,
++	};
++	struct ratelimit_settings settings = {
++		.bucket_size = 1000,
++		.tokens_per_topup = 100,
++		.topup_interval_ns = NSEC_PER_SEC,
++	};
++
++	/* Deliberately the icmpv6 member: it is the same single __u32 netdev_idx,
++	 * and the two buckets stay separate because .usage differs, not because
++	 * of the union member. Adding a member of our own would change
++	 * pkg/datapath/maps/mapkv.btf -- a generated binary file -- which would
++	 * make this patch fail to apply on the next upstream tag that regenerates
++	 * it, and the Deckhouse build has no clang to regenerate it with.
++	 */
++	rkey.key.icmpv6.netdev_idx = ctx_get_ifindex(ctx);
++	if (!ratelimit_check_and_take(&rkey, &settings))
++		return DROP_RATE_LIMITED;
++
++	data = ctx_data(ctx);
++	data_end = ctx_data_end(ctx);
++
++	if (data + sizeof(struct ethhdr) + sizeof(struct iphdr) +
++		sizeof(struct icmphdr) > data_end)
++		return DROP_INVALID;
++
++	if (eth_load_saddr(ctx, smac.addr, 0) < 0)
++		return DROP_INVALID;
++
++	if (eth_load_daddr(ctx, dmac.addr, 0) < 0)
++		return DROP_INVALID;
++
++	icmphdr = data + sizeof(struct ethhdr) + sizeof(struct iphdr);
++
++	if (icmphdr->type != ICMP_ECHO)
++		return CTX_ACT_OK;
++
++	/* Write reversed eth header, ready for egress */
++	ethhdr = data;
++	memcpy(ethhdr->h_dest, smac.addr, sizeof(smac.addr));
++	memcpy(ethhdr->h_source, dmac.addr, sizeof(dmac.addr));
++
++	/* Write reversed ip header, ready for egress */
++	tmp_addr = ip4->daddr;
++	ip4->daddr = ip4->saddr;
++	ip4->saddr = tmp_addr;
++
++	/* Write reversed icmp header */
++	icmphdr->type = ICMP_ECHOREPLY;
++
++	/* ICMP_ECHO is 8 and ICMP_ECHOREPLY is 0, so the type byte drops by 8.
++	 * The type is the high byte of the first checksum word, hence 0x0800
++	 * added back to the one's complement sum rather than a full recompute.
++	 */
++	ccsum = bpf_ntohs(icmphdr->checksum);
++	ccsum += 0x0800;
++	ccsum = (ccsum & 0xFFFF) + (ccsum >> 16);
++	icmphdr->checksum = bpf_htons((__u16)ccsum);
++
++	return redirect_self(ctx);
++}
++#endif /* ENABLE_LOADBALANCER_ICMP_REPLY */
++
+ static __always_inline int nodeport_svc_lb4(struct __ctx_buff *ctx,
+ 					    struct ipv4_ct_tuple *tuple,
+ 					    const struct lb4_service *svc,
+@@ -2955,6 +3043,30 @@ static __always_inline int nodeport_lb4(struct __ctx_buff *ctx,
+ 
+ 	lb4_fill_key(&key, &tuple);
+ 
++#ifdef ENABLE_LOADBALANCER_ICMP_REPLY
++	if (unlikely(ip4->protocol == IPPROTO_ICMP)) {
++		/* east_west = true stops lb4_lookup_service() before its wildcard
++		 * fallback, so this can only match the port 0 / proto ICMP entry
++		 * the control plane writes per LoadBalancer VIP. It can never match
++		 * the wildcard entry (port 0, proto ANY) that upstream programs for
++		 * LoadBalancer and ClusterIP frontends, whose meaning is "no service
++		 * on this port, drop" rather than "answer".
++		 *
++		 * The entry carries no backends, so the reply is generated here and
++		 * the packet never reaches backend selection. Every other case --
++		 * not a VIP we answer for, rate limited, malformed, or not an echo
++		 * request -- leaves by the same path an unpatched build takes.
++		 */
++		svc = lb4_lookup_service(&key, true);
++		if (svc) {
++			ret = make_icmp_response_lb4(ctx, ip4);
++			if (ret == CTX_ACT_REDIRECT)
++				return ret;
++		}
++		goto skip_service_lookup;
++	}
++#endif /* ENABLE_LOADBALANCER_ICMP_REPLY */
++
+ 	svc = lb4_lookup_service(&key, false);
+ 	if (svc)
+ 		return nodeport_svc_lb4(ctx, &tuple, svc, &key, ip4, l3_off,
+diff --git a/bpf/lib/ratelimit.h b/bpf/lib/ratelimit.h
+index afa9aac441..28c759d8e3 100644
+--- a/bpf/lib/ratelimit.h
++++ b/bpf/lib/ratelimit.h
+@@ -9,6 +9,7 @@
+ #define RATELIMIT_USAGE_ICMPV6 1
+ #define RATELIMIT_USAGE_EVENTS_MAP 2
+ #define RATELIMIT_USAGE_SOCKET_EVENTS_MAP 3
++#define RATELIMIT_USAGE_ICMP_LB4 4
+ 
+ struct ratelimit_key {
+ 	__u32 usage;
+diff --git a/pkg/datapath/linux/config/config.go b/pkg/datapath/linux/config/config.go
+index 46b3a9ae43..33305bb7f4 100644
+--- a/pkg/datapath/linux/config/config.go
++++ b/pkg/datapath/linux/config/config.go
+@@ -343,6 +343,9 @@ func (h *HeaderfileWriter) WriteNodeConfig(w io.Writer, cfg *config.Config) erro
+ 		}
+ 		cDefinesMap["ENABLE_NODEPORT"] = "1"
+ 
++		if cfg.LBConfig.EnableLoadBalancerICMPReply {
++			cDefinesMap["ENABLE_LOADBALANCER_ICMP_REPLY"] = "1"
++		}
+ 		if option.Config.EnableNat46X64Gateway {
+ 			cDefinesMap["ENABLE_NAT_46X64_GATEWAY"] = "1"
+ 		}
+diff --git a/pkg/loadbalancer/config.go b/pkg/loadbalancer/config.go
+index 5f38fab85f..9dffa55596 100644
+--- a/pkg/loadbalancer/config.go
++++ b/pkg/loadbalancer/config.go
+@@ -95,6 +95,9 @@ const (
+ 	// EnableWildcardEntries controls whether the load balancer datapath should
+ 	// program wildcard service entries into the BPF datapath.
+ 	EnableWildcardEntries = "bpf-lb-enable-wildcard-entries"
++
++	// EnableLoadBalancerICMPReply enables ICMP reply generation for LoadBalancer services
++	EnableLoadBalancerICMPReply = "enable-loadbalancer-icmp-reply"
+ )
+ 
+ // Configuration option defaults
+@@ -244,6 +247,9 @@ type UserConfig struct {
+ 	// EnableWildcardEntries controls whether the load balancer datapath should
+ 	// program wildcard service entries into the BPF datapath.
+ 	EnableWildcardEntries bool `mapstructure:"bpf-lb-enable-wildcard-entries"`
++
++	// EnableLoadBalancerICMPReply enables ICMP reply generation for LoadBalancer services
++	EnableLoadBalancerICMPReply bool `mapstructure:"enable-loadbalancer-icmp-reply"`
+ }
+ 
+ // ConfigCell provides the [Config] and [ExternalConfig] configurations.
+@@ -356,6 +362,8 @@ func (def UserConfig) Flags(flags *pflag.FlagSet) {
+ 
+ 	flags.Bool(EnableWildcardEntries, def.EnableWildcardEntries, "Enable service load balancer wildcard entries.")
+ 	flags.MarkHidden(EnableWildcardEntries)
++
++	flags.Bool(EnableLoadBalancerICMPReply, def.EnableLoadBalancerICMPReply, "Enable ICMP reply generation for LoadBalancer services")
+ }
+ 
+ // NewConfig takes the user-provided configuration, validates and processes it to produce the final
+@@ -516,6 +524,8 @@ var DefaultUserConfig = UserConfig{
+ 
+ 	// Enable service wildcard entries by default.
+ 	EnableWildcardEntries: true,
++
++	EnableLoadBalancerICMPReply: false,
+ }
+ 
+ var DefaultConfig = Config{
+diff --git a/pkg/loadbalancer/reconciler/bpf_reconciler.go b/pkg/loadbalancer/reconciler/bpf_reconciler.go
+index a1320aa915..4c7b3334a0 100644
+--- a/pkg/loadbalancer/reconciler/bpf_reconciler.go
++++ b/pkg/loadbalancer/reconciler/bpf_reconciler.go
+@@ -42,6 +42,14 @@ const (
+ 	// WildcardProtoNumber is basically IPPROTO_ANY
+ 	WildcardProtoNumber u8proto.U8proto = u8proto.ANY
+ 
++	// ICMPReplyProtoNumber is the protocol an ICMP-reply service entry is keyed
++	// on. Unlike the wildcard entry below it matches ICMP and nothing else, so
++	// marking a VIP pingable cannot change what happens to its other traffic.
++	ICMPReplyProtoNumber u8proto.U8proto = u8proto.ICMP
++
++	// ICMPReplyPortNumber is a zero destination port number, as ICMP has no port.
++	ICMPReplyPortNumber uint16 = 0
++
+ 	// WildcardPortNumber is a zero destination port number
+ 	WildcardPortNumber uint16 = 0
+ )
+@@ -153,6 +161,12 @@ type BPFOps struct {
+ 	// entries and wildcard entries when reconciling the data path.
+ 	wildcardReferences map[netip.Addr][]loadbalancer.ServiceID
+ 
++	// icmpReferences maps a Netip.Addr to the parent LoadBalancer Service IDs that
++	// keep its ICMP-reply entry alive, the same way wildcardReferences does for
++	// wildcard entries. One VIP is usually shared by several service ports, and
++	// the entry must outlive all but the last of them.
++	icmpReferences map[netip.Addr][]loadbalancer.ServiceID
++
+ 	// nodePortAddrByPort are the last used NodePort addresses for a given NodePort
+ 	// (or HostPort) service (by port).
+ 	nodePortAddrByPort map[nodePortAddrKey][]netip.Addr
+@@ -237,6 +251,7 @@ func (ops *BPFOps) ResetAndRestore() (err error) {
+ 	ops.backendStates = map[loadbalancer.L3n4Addr]backendState{}
+ 	ops.backendReferences = map[loadbalancer.L3n4Addr]sets.Set[loadbalancer.L3n4Addr]{}
+ 	ops.wildcardReferences = map[netip.Addr][]loadbalancer.ServiceID{}
++	ops.icmpReferences = map[netip.Addr][]loadbalancer.ServiceID{}
+ 	ops.nodePortAddrByPort = map[nodePortAddrKey][]netip.Addr{}
+ 	ops.prevSourceRanges = map[loadbalancer.L3n4Addr]sets.Set[netip.Prefix]{}
+ 
+@@ -516,6 +531,14 @@ func (ops *BPFOps) deleteFrontend(fe *loadbalancer.Frontend) error {
+ 		}
+ 	}
+ 
++	// Cleanup any ICMP-reply entry this fe might be associated with.
++	if ops.useICMPReply() && fe.Type == loadbalancer.SVCTypeLoadBalancer &&
++		fe.Address.Scope() == loadbalancer.ScopeExternal {
++		if err := ops.deleteICMPReply(fe, feID); err != nil {
++			return fmt.Errorf("delete icmp reply: %w", err)
++		}
++	}
++
+ 	// Decrease the backend reference counts and drop state associated with the frontend.
+ 	ops.updateBackendRefCounts(fe.Address, nil)
+ 	delete(ops.backendReferences, fe.Address)
+@@ -550,6 +573,17 @@ func (ops *BPFOps) pruneServiceMaps() error {
+ 			return
+ 		}
+ 
++		// Same for an ICMP-reply entry: it has no backends of its own, so the
++		// slot arithmetic below would always call it an orphan.
++		if port == ICMPReplyPortNumber && proto == uint8(ICMPReplyProtoNumber) {
++			if icmpRefs := ops.icmpReferences[rawAddr]; len(icmpRefs) == 0 {
++				ops.log.Debug("pruneServiceMaps: deleting icmp reply", logfields.Address, rawAddr)
++				toDelete = append(toDelete, svcKey.ToNetwork())
++			}
++
++			return
++		}
++
+ 		// Proceed to look if we can prune this non-wildcard entry
+ 		protoType := loadbalancer.NewL4TypeFromNumber(proto)
+ 		addr := loadbalancer.NewL3n4Addr(
+@@ -1135,6 +1169,17 @@ func (ops *BPFOps) updateFrontend(fe *loadbalancer.Frontend, isLocalAddr func(ne
+ 		}
+ 	}
+ 
++	// Mark a LoadBalancer VIP as answering ICMP echo. Deliberately not gated on
++	// isWildcardClass: unlike a wildcard entry this one matches ICMP only, so it
++	// is safe for a VIP that some other controller allocated, which is the usual
++	// case when Cilium is not the LB IPAM.
++	if ops.useICMPReply() && fe.Type == loadbalancer.SVCTypeLoadBalancer &&
++		fe.Address.Scope() == loadbalancer.ScopeExternal {
++		if err := ops.upsertICMPReply(fe, feID); err != nil {
++			return fmt.Errorf("upsert icmp reply: %w", err)
++		}
++	}
++
+ 	// Calculate the number of existing backend references, so we can cleanup if there there
+ 	// has been a change.
+ 	numPreviousBackends := len(ops.backendReferences[fe.Address])
+@@ -1199,6 +1244,93 @@ func (ops *BPFOps) useMaglev(fe *loadbalancer.Frontend) bool {
+ 	}
+ }
+ 
++func (ops *BPFOps) useICMPReply() bool {
++	return ops.cfg.EnableLoadBalancerICMPReply
++}
++
++// icmpReplyKey is the service key a LoadBalancer VIP is pingable through: the
++// VIP, port 0, protocol ICMP. lb4_extract_tuple leaves an echo request with
++// exactly this key, so the datapath finds the entry on the ordinary service
++// lookup and nothing else can match it.
++func icmpReplyKey(addr netip.Addr, scope uint8) maps.ServiceKey {
++	if addr.Is6() {
++		return maps.NewService6Key(addr.AsSlice(), ICMPReplyPortNumber,
++			ICMPReplyProtoNumber, scope, 0)
++	}
++	return maps.NewService4Key(addr.AsSlice(), ICMPReplyPortNumber,
++		ICMPReplyProtoNumber, scope, 0)
++}
++
++// upsertICMPReply writes the ICMP-reply entry for a LoadBalancer VIP on behalf
++// of the first frontend that needs it, and records this frontend as a parent.
++func (ops *BPFOps) upsertICMPReply(fe *loadbalancer.Frontend, feID loadbalancer.ServiceID) error {
++	addr := fe.Address.Addr()
++	icmpRefs := ops.icmpReferences[addr]
++	if slices.Contains(icmpRefs, feID) {
++		return nil
++	}
++
++	if len(icmpRefs) == 0 {
++		var icmpVal maps.ServiceValue
++		if addr.Is6() {
++			icmpVal = &maps.Service6Value{}
++		} else {
++			icmpVal = &maps.Service4Value{}
++		}
++
++		// No backends, no RevNAT: the datapath answers the echo itself and
++		// never reaches backend selection for this entry. The flag only makes
++		// the entry legible in `cilium-dbg bpf lb list`.
++		icmpFlags := loadbalancer.NewSvcFlag(&loadbalancer.SvcFlagParam{
++			SvcType: fe.Type,
++		})
++		icmpVal.SetFlags(icmpFlags.UInt16())
++
++		ops.log.Debug("Upsert ICMP reply service entry for first parent service",
++			logfields.ID, feID,
++			logfields.Address, addr)
++		if err := ops.upsertService(icmpReplyKey(addr, fe.Address.Scope()), icmpVal); err != nil {
++			return err
++		}
++	}
++
++	ops.icmpReferences[addr] = append(icmpRefs, feID)
++
++	return nil
++}
++
++// deleteICMPReply drops one parent reference and removes the entry with the last
++// of them.
++func (ops *BPFOps) deleteICMPReply(fe *loadbalancer.Frontend, feID loadbalancer.ServiceID) error {
++	addr := fe.Address.Addr()
++	icmpRefs := ops.icmpReferences[addr]
++	numParents := len(icmpRefs)
++
++	for i, parentID := range icmpRefs {
++		if parentID != feID {
++			continue
++		}
++
++		if numParents > 1 {
++			icmpRefs = append(icmpRefs[:i], icmpRefs[i+1:]...)
++			ops.icmpReferences[addr] = icmpRefs
++			return nil
++		}
++
++		ops.log.Debug("Delete ICMP reply service entry for last parent service",
++			logfields.ID, feID,
++			logfields.Address, addr)
++		if err := ops.deleteService(icmpReplyKey(addr, fe.Address.Scope())); err != nil {
++			return err
++		}
++
++		delete(ops.icmpReferences, addr)
++		return nil
++	}
++
++	return nil
++}
++
+ func (ops *BPFOps) useWildcards() bool {
+ 	return ops.cfg.EnableWildcardEntries
+ }
+@@ -1634,7 +1766,8 @@ func (ops *BPFOps) StateIsEmpty() bool {
+ 		len(ops.nodePortAddrByPort) == 0 &&
+ 		len(ops.serviceIDAlloc.addrToId) == 0 &&
+ 		len(ops.backendIDAlloc.addrToId) == 0 &&
+-		len(ops.wildcardReferences) == 0
++		len(ops.wildcardReferences) == 0 &&
++		len(ops.icmpReferences) == 0
+ }
+ 
+ // StateSummary returns a multi-line summary of the internal state.
+@@ -1652,6 +1785,7 @@ func (ops *BPFOps) StateSummary() string {
+ 	fmt.Fprintf(&b, "prevSourceRanges: %d\n", len(ops.prevSourceRanges))
+ 	fmt.Fprintf(&b, "restoredQuarantines: %d\n", len(ops.restoredQuarantinedBackends))
+ 	fmt.Fprintf(&b, "wildcardReferences: %d\n", len(ops.wildcardReferences))
++	fmt.Fprintf(&b, "icmpReferences: %d\n", len(ops.icmpReferences))
+ 
+ 	return b.String()
+ }

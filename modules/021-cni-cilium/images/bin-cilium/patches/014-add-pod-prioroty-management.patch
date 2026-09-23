@@ -1,0 +1,1117 @@
+From e2b242cb83bb0fb0766d5c903f739f6917b5f21d Mon Sep 17 00:00:00 2001
+From: Dmitriy Andreychenko <dmitriy.andreychenko@flant.com>
+Date: Mon, 21 Sep 2026 14:07:11 +0300
+Subject: [PATCH] ces: give a shared pod address a single owner
+
+DVP live-migrates a VM as two pods on two nodes holding one IPv4. The
+network.deckhouse.io/pod-common-ip-priority label picks the owner: the operator
+publishes the address on that CiliumEndpoint only, and the other node withholds
+its cilium_lxc entry until the address returns.
+
+Folds in 007: a departing CiliumEndpoint no longer updates ipcache for an
+address it does not own, and a dead local endpoint is not restored from a stale
+CiliumEndpointSlice.
+
+Co-Authored-By: Claude Opus 5 (1M context) <noreply@anthropic.com>
+---
+ .../pkg/ciliumendpointslice/controller.go     |   4 +
+ .../pkg/ciliumendpointslice/endpointslice.go  |  55 ++-
+ operator/pkg/ciliumendpointslice/priority.go  | 338 ++++++++++++++++++
+ operator/watchers/cilium_endpoint.go          |   4 +
+ pkg/k8s/watchers/cilium_endpoint.go           |  53 +++
+ .../cilium_endpoint_slice_subscriber.go       |  60 +++-
+ .../cilium_endpoint_slice_subscriber_test.go  |  11 +
+ pkg/k8s/watchers/watcher.go                   |   2 +
+ pkg/labels/labels.go                          |   6 +
+ pkg/maps/cells.go                             |   5 +
+ pkg/maps/lxcmap/lxcmap.go                     |  31 ++
+ pkg/maps/lxcmap/shared_address.go             | 119 ++++++
+ pkg/sharedip/cell.go                          | 129 +++++++
+ 13 files changed, 811 insertions(+), 6 deletions(-)
+ create mode 100644 operator/pkg/ciliumendpointslice/priority.go
+ create mode 100644 pkg/maps/lxcmap/shared_address.go
+ create mode 100644 pkg/sharedip/cell.go
+
+diff --git a/operator/pkg/ciliumendpointslice/controller.go b/operator/pkg/ciliumendpointslice/controller.go
+index f8db953041..bdc4f778a9 100644
+--- a/operator/pkg/ciliumendpointslice/controller.go
++++ b/operator/pkg/ciliumendpointslice/controller.go
+@@ -112,6 +112,10 @@ type DefaultController struct {
+ 
+ 	ciliumEndpoint resource.Resource[*v2.CiliumEndpoint]
+ 
++	// priorityFilter decides which endpoint owns a shared address; see
++	// priority.go.
++	priorityFilter priorityFilter
++
+ 	wp *workerpool.WorkerPool
+ }
+ 
+diff --git a/operator/pkg/ciliumendpointslice/endpointslice.go b/operator/pkg/ciliumendpointslice/endpointslice.go
+index dfd03bf452..a1a78d46b2 100644
+--- a/operator/pkg/ciliumendpointslice/endpointslice.go
++++ b/operator/pkg/ciliumendpointslice/endpointslice.go
+@@ -96,15 +96,47 @@ func (c *DefaultController) onEndpointUpdate(cep *cilium_api_v2.CiliumEndpoint)
+ 	if !isValidEndpoint(cep) {
+ 		return
+ 	}
++
++	// Record the endpoint's claim on its address first: the CES this update
++	// touches must be reconciled with the ownership decision already made, and
++	// a change of owner means the previous one has to be republished without
++	// the address.
++	before, after, priority := c.priorityFilter.upsert(cep)
++	delay, forceFast := c.syncDelay, false
++	if priority == High && before != after {
++		delay, forceFast = ForceCESSyncTime, true
++	}
++	if before != after && before != (cepKey{}) {
++		c.enqueueOwnerCES(before, delay, forceFast)
++	}
++
+ 	touchedCESs := c.manager.UpdateCEPMapping(k8s.ConvertCEPToCoreCEP(cep), cep.Namespace)
+-	c.enqueueCESReconciliation(touchedCESs)
++	c.enqueueCESReconciliationWithDelay(touchedCESs, delay, forceFast)
+ }
+ 
+ func (c *DefaultController) onEndpointDelete(cep *cilium_api_v2.CiliumEndpoint) {
++	// The address may pass to another endpoint, which then has to be
++	// republished carrying it.
++	before, after := c.priorityFilter.remove(cep)
++	if before != after && after != (cepKey{}) {
++		c.enqueueOwnerCES(after, c.syncDelay, false)
++	}
++
+ 	touchedCES := c.manager.RemoveCEPMapping(k8s.ConvertCEPToCoreCEP(cep), cep.Namespace)
+ 	c.enqueueCESReconciliation([]CESKey{touchedCES})
+ }
+ 
++// enqueueOwnerCES reconciles the CES holding the given endpoint, so a change of
++// address owner is published for the endpoint that lost it as well as the one
++// that gained it.
++func (c *DefaultController) enqueueOwnerCES(key cepKey, delay time.Duration, forceFast bool) {
++	cesName, exists := c.manager.mapping.getCESName(NewCEPName(key.name, key.namespace))
++	if !exists {
++		return
++	}
++	c.enqueueCESReconciliationWithDelay([]CESKey{NewCESKey(cesName.string(), key.namespace)}, delay, forceFast)
++}
++
+ func (c *Controller) onSliceUpdate(ces *capi_v2a1.CiliumEndpointSlice) {
+ 	c.enqueueCESReconciliation([]CESKey{NewCESKey(ces.Name, ces.Namespace)})
+ }
+@@ -114,13 +146,17 @@ func (c *Controller) onSliceDelete(ces *capi_v2a1.CiliumEndpointSlice) {
+ }
+ 
+ func (c *Controller) addToQueue(ces CESKey) {
++	c.addToQueueWithDelay(ces, c.syncDelay, false)
++}
++
++func (c *Controller) addToQueueWithDelay(ces CESKey, delay time.Duration, forceFast bool) {
+ 	c.priorityNamespacesLock.RLock()
+ 	_, exists := c.priorityNamespaces[ces.Namespace]
+ 	c.priorityNamespacesLock.RUnlock()
+-	time.AfterFunc(c.syncDelay, func() {
++	time.AfterFunc(delay, func() {
+ 		c.cond.L.Lock()
+ 		defer c.cond.L.Unlock()
+-		if exists {
++		if exists || forceFast {
+ 			c.fastQueue.Add(ces)
+ 		} else {
+ 			c.standardQueue.Add(ces)
+@@ -132,6 +168,10 @@ func (c *Controller) addToQueue(ces CESKey) {
+ }
+ 
+ func (c *Controller) enqueueCESReconciliation(cess []CESKey) {
++	c.enqueueCESReconciliationWithDelay(cess, c.syncDelay, false)
++}
++
++func (c *Controller) enqueueCESReconciliationWithDelay(cess []CESKey, delay time.Duration, forceFast bool) {
+ 	for _, ces := range cess {
+ 		c.logger.Debug("Enqueueing CES (if not empty name)", logfields.CESName, ces.string())
+ 		if ces.Name != "" {
+@@ -140,7 +180,7 @@ func (c *Controller) enqueueCESReconciliation(cess []CESKey) {
+ 				c.enqueuedAt[ces] = time.Now()
+ 			}
+ 			c.enqueuedAtLock.Unlock()
+-			c.addToQueue(ces)
++			c.addToQueueWithDelay(ces, delay, forceFast)
+ 		}
+ 	}
+ }
+@@ -182,6 +222,13 @@ func (c *DefaultController) Start(ctx cell.HookContext) error {
+ 	c.manager = newDefaultManager(c.maxCEPsInCES, c.logger)
+ 
+ 	c.reconciler = newDefaultReconciler(c.context, c.clientset.CiliumV2alpha1(), c.manager, c.logger, c.ciliumEndpoint, c.ciliumEndpointSlice, c.metrics)
++	// Apply the ownership decision where the published object is built. The
++	// reconciler rebuilds every CoreCiliumEndpoint from the informer store, so
++	// a decision made anywhere else is discarded; see priority.go.
++	c.reconciler.reconciler.endpointGetter = &priorityEndpointGetter{
++		inner:  c.reconciler,
++		filter: &c.priorityFilter,
++	}
+ 	c.doReconciler = c.reconciler
+ 
+ 	c.initializeQueue()
+diff --git a/operator/pkg/ciliumendpointslice/priority.go b/operator/pkg/ciliumendpointslice/priority.go
+new file mode 100644
+index 0000000000..88fa46a989
+--- /dev/null
++++ b/operator/pkg/ciliumendpointslice/priority.go
+@@ -0,0 +1,338 @@
++// SPDX-License-Identifier: Apache-2.0
++// Copyright Authors of Cilium
++
++package ciliumendpointslice
++
++import (
++	"math"
++	"strconv"
++	"strings"
++	"time"
++
++	cilium_api_v2 "github.com/cilium/cilium/pkg/k8s/apis/cilium.io/v2"
++	cilium_v2a1 "github.com/cilium/cilium/pkg/k8s/apis/cilium.io/v2alpha1"
++	"github.com/cilium/cilium/pkg/labels"
++	"github.com/cilium/cilium/pkg/lock"
++)
++
++// ForceCESSyncTime short-circuits the normal sync delay for a high-priority
++// endpoint. During a live migration the freshly started VM pod must publish its
++// claim on the address as quickly as possible, because the old pod is already
++// gone: until the CES carries the new owner, nothing in the cluster is
++// advertising the address at all.
++const ForceCESSyncTime = 5 * time.Millisecond
++
++// cepPriority orders endpoints contending for one address. Lower wins.
++type cepPriority uint32
++
++const (
++	High    cepPriority = 0
++	Default cepPriority = math.MaxUint32
++)
++
++func (p cepPriority) isHigherThan(o cepPriority) bool { return p < o }
++
++// cepKey identifies an endpoint independently of its address.
++type cepKey struct {
++	namespace string
++	name      string
++}
++
++// cepEntry is one endpoint sharing an address.
++type cepEntry struct {
++	key      cepKey
++	priority cepPriority
++}
++
++// priorityFilter decides which CiliumEndpoint owns a shared IPv4 address.
++//
++// DVP live-migrates a VM as two pods, on two nodes, holding the same address at
++// once. Both have a CiliumEndpoint, but only one may advertise the address in a
++// CiliumEndpointSlice -- otherwise other nodes have two places to send the same
++// traffic. The winner is chosen by
++//
++//	network.deckhouse.io/pod-common-ip-priority: <number>   // lower number wins
++//
++// and the loser's Networking.Addressing is stripped from the CES.
++//
++// # Ownership rule
++//
++// The owner is the entry with the highest priority; on equal priority it is the
++// one visited most recently. Entries are moved to the end of their list when
++// their endpoint is updated, so the rule reads directly off the list: the owner
++// is the last entry holding the highest priority.
++//
++// Ownership therefore moves on any CEP update, not only on a priority change.
++// That is deliberate. An identity change is exactly a reason to re-take the
++// address: the endpoint that just changed is the one whose state is freshest.
++// Do not "stabilise" this by ordering on pod creation time or similar -- it
++// would freeze ownership at pod age and ignore every later identity change,
++// which removes the mechanism rather than protecting it.
++//
++// # Why no CoreCiliumEndpoint is stored here
++//
++// The filter holds only an endpoint's identity and priority. It is tempting to
++// keep the CoreCiliumEndpoint and strip its address in place, and the original
++// version did, but the object never survives to the API server: the CES manager
++// reduces whatever it is handed to a name, and the reconciler rebuilds a fresh
++// CoreCiliumEndpoint from the informer store on every pass via a deep copy that
++// knows nothing about priority. A decision applied to the controller's copy is
++// silently discarded, and the stripped address comes straight back.
++//
++// The decision is therefore applied at the only point the published object
++// exists -- see priorityEndpointGetter, which decorates the reconciler's
++// endpointGetter. Keeping no object here also means there is nothing shared for
++// a reader and a writer to race on.
++//
++// # Why cepToIP exists
++//
++// A record must stay findable when its address changes. Indexed by address
++// alone, an endpoint whose IP changed would be stranded under the old address
++// forever, still winning comparisons for an address it no longer has.
++//
++// # Scope
++//
++// IPv4 only, and only the "default" CES controller mode. In "slim" mode
++// (upstream a9c9c74861, hidden and new in 1.20) CiliumEndpoints are not created
++// at all, so this filter has no input; patches 006, 007 and 008 all assume CEPs
++// exist and would need re-evaluating before that mode could be used.
++type priorityFilter struct {
++	mutex lock.RWMutex
++
++	// ipToCepList is every endpoint sharing one IPv4, in visit order.
++	ipToCepList map[string][]cepEntry
++
++	// cepToIP finds an endpoint when its address changes.
++	cepToIP map[cepKey]string
++}
++
++// The zero value is ready to use: a DefaultController assembled by hand, as the
++// upstream tests do, has a working filter without a constructor call.
++func (f *priorityFilter) initLocked() {
++	if f.ipToCepList == nil {
++		f.ipToCepList = make(map[string][]cepEntry)
++		f.cepToIP = make(map[cepKey]string)
++	}
++}
++
++// ownerOf returns the entry that owns the address: the last one holding the
++// highest priority.
++func ownerOf(list []cepEntry) (cepKey, bool) {
++	if len(list) == 0 {
++		return cepKey{}, false
++	}
++	best := list[0]
++	for _, e := range list[1:] {
++		// Not "higher than" but "not lower than", so a tie keeps the later entry.
++		if !best.priority.isHigherThan(e.priority) {
++			best = e
++		}
++	}
++	return best.key, true
++}
++
++// ownsAddress reports whether this endpoint may advertise the given address.
++//
++// The address is the one the endpoint is about to publish, not the one the
++// filter has on record for its name, and that distinction is the whole point.
++// Asking "is this name registered, and does it own its address?" answers yes for
++// an endpoint the filter has never seen -- and it does not see every endpoint:
++// a CiliumEndpoint that arrives without an address is skipped by upsert, and if
++// nothing updates it again the endpoint stays unregistered while its object in
++// the store carries the address perfectly well. Such an endpoint published a
++// contended address alongside its rightful owner, which is the split brain this
++// filter exists to prevent. Keying on the address instead means registration is
++// never a precondition for being silenced.
++//
++// An address no one is claiming stays publishable: ordinary pods must be
++// unaffected by any of this.
++func (f *priorityFilter) ownsAddress(namespace, name, ipv4 string) bool {
++	if ipv4 == "" {
++		return true
++	}
++
++	f.mutex.RLock()
++	defer f.mutex.RUnlock()
++
++	list, contended := f.ipToCepList[ipv4]
++	if !contended {
++		return true
++	}
++	owner, ok := ownerOf(list)
++	if !ok {
++		// A claimed address with no claimants left is a bookkeeping slip, not a
++		// free address: stay quiet rather than risk two nodes answering.
++		return false
++	}
++	return owner == cepKey{namespace: namespace, name: name}
++}
++
++// upsert records an endpoint and returns the address owner before and after, so
++// the caller can enqueue whichever CES changed.
++func (f *priorityFilter) upsert(cep *cilium_api_v2.CiliumEndpoint) (before, after cepKey, priority cepPriority) {
++	key := cepKey{namespace: cep.Namespace, name: cep.Name}
++	priority = cepPriorityOf(cep)
++	ip := sharedAddressOf(cep)
++
++	f.mutex.Lock()
++	defer f.mutex.Unlock()
++	f.initLocked()
++
++	// An update that carries no address is not an endpoint giving up its claim,
++	// and must leave the record alone. Dropping it here would leave the address
++	// with one claimant fewer: the other endpoint then owns it whatever their
++	// priorities, and if both are dropped the address is not contended at all
++	// and every endpoint publishes it. Only a genuine address change strands the
++	// old record; only a delete removes it.
++	if ip == "" {
++		return cepKey{}, cepKey{}, priority
++	}
++
++	if old, known := f.cepToIP[key]; known && old != ip {
++		f.removeLocked(key, old)
++	}
++
++	before, _ = ownerOf(f.ipToCepList[ip])
++
++	// Remove then append, so the list stays in visit order and the most
++	// recently updated endpoint wins an equal priority.
++	list := f.ipToCepList[ip]
++	out := list[:0]
++	for _, e := range list {
++		if e.key != key {
++			out = append(out, e)
++		}
++	}
++	f.ipToCepList[ip] = append(out, cepEntry{key: key, priority: priority})
++	f.cepToIP[key] = ip
++
++	after, _ = ownerOf(f.ipToCepList[ip])
++	return before, after, priority
++}
++
++// remove drops an endpoint and returns the address owner before and after.
++func (f *priorityFilter) remove(cep *cilium_api_v2.CiliumEndpoint) (before, after cepKey) {
++	key := cepKey{namespace: cep.Namespace, name: cep.Name}
++
++	f.mutex.Lock()
++	defer f.mutex.Unlock()
++	f.initLocked()
++
++	ip, known := f.cepToIP[key]
++	if !known {
++		return cepKey{}, cepKey{}
++	}
++
++	before, _ = ownerOf(f.ipToCepList[ip])
++	f.removeLocked(key, ip)
++	after, _ = ownerOf(f.ipToCepList[ip])
++	return before, after
++}
++
++func (f *priorityFilter) removeLocked(key cepKey, ip string) {
++	list := f.ipToCepList[ip]
++	out := list[:0]
++	for _, e := range list {
++		if e.key != key {
++			out = append(out, e)
++		}
++	}
++	if len(out) == 0 {
++		delete(f.ipToCepList, ip)
++	} else {
++		f.ipToCepList[ip] = out
++	}
++	delete(f.cepToIP, key)
++}
++
++// sharedAddressOf returns the endpoint's IPv4 address, which is the only one a
++// shared address can be.
++func sharedAddressOf(cep *cilium_api_v2.CiliumEndpoint) string {
++	if cep.Status.Networking == nil {
++		return ""
++	}
++	for _, pair := range cep.Status.Networking.Addressing {
++		if pair.IPV4 != "" {
++			return pair.IPV4
++		}
++	}
++	return ""
++}
++
++// cepPriorityOf reads the priority label, preferring the object's own labels
++// over the identity's copy of them.
++func cepPriorityOf(cep *cilium_api_v2.CiliumEndpoint) cepPriority {
++	priority := Default
++
++	if cep.Status.Identity != nil {
++		for _, lbl := range cep.Status.Identity.Labels {
++			// Identity labels are "source:key=value"; match the key exactly so
++			// that a longer key, or a value mentioning it, does not count.
++			kv := strings.SplitN(lbl, "=", 2)
++			if len(kv) != 2 {
++				continue
++			}
++			key := kv[0]
++			if i := strings.IndexByte(key, ':'); i >= 0 {
++				key = key[i+1:]
++			}
++			if key == labels.IDNamePriority {
++				priority = parsePriority(kv[1])
++				break
++			}
++		}
++	}
++
++	if lbl, ok := cep.Labels[labels.IDNamePriority]; ok {
++		priority = parsePriority(lbl)
++	}
++
++	return priority
++}
++
++func parsePriority(s string) cepPriority {
++	if num, err := strconv.ParseUint(s, 10, 32); err == nil {
++		return cepPriority(num)
++	}
++	return Default
++}
++
++// priorityEndpointGetter applies the ownership decision to the object that is
++// actually published. The reconciler rebuilds every CoreCiliumEndpoint from the
++// informer store, so this is the only place a stripped address survives to the
++// API server.
++type priorityEndpointGetter struct {
++	inner  endpointGetter
++	filter *priorityFilter
++}
++
++func (g *priorityEndpointGetter) getCoreEndpointFromStore(cepName CEPName) *cilium_v2a1.CoreCiliumEndpoint {
++	ccep := g.inner.getCoreEndpointFromStore(cepName)
++	if ccep == nil || ccep.Networking == nil {
++		return ccep
++	}
++	if !g.filter.ownsAddress(cepName.Namespace, ccep.Name, ipv4Of(ccep)) {
++		// The entry stays in the slice with an empty address list rather than
++		// being dropped from it, for two reasons. The CRD marks
++		// networking.addressing as required, so a nil slice serialises as
++		// absent and the API server rejects the whole CiliumEndpointSlice --
++		// taking the owner's entry down with it. And the reconciler counts
++		// every endpoint assigned to a CES as inserted, decrementing only for
++		// those it finds in the stored object, so an endpoint left out is
++		// forever "pending insert": the slice never compares equal and the
++		// operator rewrites it on every reconcile.
++		ccep.Networking.Addressing = cilium_api_v2.AddressPairList{}
++	}
++	return ccep
++}
++
++// ipv4Of returns the address this endpoint would publish, which is what decides
++// whether it is contending with another endpoint.
++func ipv4Of(ccep *cilium_v2a1.CoreCiliumEndpoint) string {
++	for _, pair := range ccep.Networking.Addressing {
++		if pair.IPV4 != "" {
++			return pair.IPV4
++		}
++	}
++	return ""
++}
+diff --git a/operator/watchers/cilium_endpoint.go b/operator/watchers/cilium_endpoint.go
+index e13eb2aebe..bcf9b178d7 100644
+--- a/operator/watchers/cilium_endpoint.go
++++ b/operator/watchers/cilium_endpoint.go
+@@ -93,6 +93,10 @@ func transformToCiliumEndpoint(obj any) (any, error) {
+ 				ResourceVersion: concreteObj.ResourceVersion,
+ 				OwnerReferences: concreteObj.OwnerReferences,
+ 				UID:             concreteObj.UID,
++				// Kept because the shared-address priority is read from the
++				// object's own labels; without this the operator only ever
++				// sees the identity's copy.
++				Labels: concreteObj.Labels,
+ 			},
+ 			Status: cilium_api_v2.EndpointStatus{
+ 				Identity:   concreteObj.Status.Identity,
+diff --git a/pkg/k8s/watchers/cilium_endpoint.go b/pkg/k8s/watchers/cilium_endpoint.go
+index dba0f26495..6d3669f47a 100644
+--- a/pkg/k8s/watchers/cilium_endpoint.go
++++ b/pkg/k8s/watchers/cilium_endpoint.go
+@@ -7,6 +7,7 @@ import (
+ 	"context"
+ 	"log/slog"
+ 	"net"
++	"net/netip"
+ 	"sync/atomic"
+ 
+ 	"github.com/cilium/hive/cell"
+@@ -141,6 +142,58 @@ func (k *K8sCiliumEndpointsWatcher) ciliumEndpointsInit(ctx context.Context) {
+ 	}()
+ }
+ 
++// isLocalNodeIP reports whether the given address is this node's own.
++func (k *K8sCiliumEndpointsWatcher) isLocalNodeIP(ip net.IP) bool {
++	if ip == nil {
++		return false
++	}
++	ln, err := k.localNodeStore.Get(context.TODO())
++	if err != nil {
++		return false
++	}
++	return ln.GetNodeIP(false).Equal(ip)
++}
++
++// mayUpdateIPcacheFor reports whether it is safe to run endpointUpdated for a
++// departing CiliumEndpoint.
++//
++// Several CiliumEndpoints can share one address while a VM is migrating, and
++// endpointUpdated upserts the address under the surviving endpoint's identity
++// while deleting the departing one's. Run for an endpoint whose address is in
++// fact held by another pod, it would take that pod's entry away and send its
++// traffic to a pod that is going away. Upstream already guards the delete path
++// this way through DeleteOnMetadataMatch; this is the same test for the update
++// path.
++//
++// It is a veto, not an assertion of ownership: the answer is "no objection"
++// unless something indicates the entry belongs to someone else. So an endpoint
++// claiming no address passes -- there is nothing shared to protect, and upstream
++// behaviour must not change for it -- while a single address that ipcache
++// attributes to another pod blocks the whole update. An address ipcache has no
++// record of, or one that cannot be parsed, blocks it too: ownership cannot be
++// established, so the safe answer is to leave ipcache alone.
++func (k *K8sCiliumEndpointsWatcher) mayUpdateIPcacheFor(c *types.CiliumEndpoint) bool {
++	if c.Networking == nil {
++		return true
++	}
++
++	for _, pair := range c.Networking.Addressing {
++		if pair.IPV4 == "" {
++			continue
++		}
++		addr, err := netip.ParseAddr(pair.IPV4)
++		if err != nil {
++			return false
++		}
++		meta := k.ipcache.GetK8sMetadata(addr)
++		if meta == nil || meta.Namespace != c.Namespace || meta.PodName != c.Name {
++			return false
++		}
++	}
++
++	return true
++}
++
+ func (k *K8sCiliumEndpointsWatcher) endpointUpdated(oldEndpoint, endpoint *types.CiliumEndpoint) {
+ 	var namedPortsChanged bool
+ 	defer func() {
+diff --git a/pkg/k8s/watchers/cilium_endpoint_slice_subscriber.go b/pkg/k8s/watchers/cilium_endpoint_slice_subscriber.go
+index 9c4314157d..b9e8f9d704 100644
+--- a/pkg/k8s/watchers/cilium_endpoint_slice_subscriber.go
++++ b/pkg/k8s/watchers/cilium_endpoint_slice_subscriber.go
+@@ -5,6 +5,7 @@ package watchers
+ 
+ import (
+ 	"log/slog"
++	"net"
+ 
+ 	"github.com/cilium/cilium/pkg/endpoint"
+ 	"github.com/cilium/cilium/pkg/k8s"
+@@ -20,6 +21,8 @@ import (
+ type endpointWatcher interface {
+ 	endpointUpdated(oldC, newC *types.CiliumEndpoint)
+ 	endpointDeleted(c *types.CiliumEndpoint)
++	mayUpdateIPcacheFor(c *types.CiliumEndpoint) bool
++	isLocalNodeIP(ip net.IP) bool
+ }
+ 
+ type localEndpointCache interface {
+@@ -143,6 +146,30 @@ func (cs *cesSubscriber) onDelete(ces *cilium_v2a1.CiliumEndpointSlice, cep *typ
+ 	cs.deleteCEPfromCES(CEPName, ces.GetName(), cep)
+ }
+ 
++// isDeadLocalEndpoint reports whether this CiliumEndpoint describes an endpoint
++// on this node that the agent no longer has.
++//
++// Such a CEP is a leftover: the pod is gone, but another CiliumEndpointSlice
++// still lists it. Restoring it would resurrect an endpoint that does not exist.
++//
++// The window is short and internal to the CiliumEndpointSlice controller, which
++// makes it awkward to stage deliberately -- CiliumEndpoints are garbage
++// collected with their pod, so the leftover cannot be manufactured from outside
++// the cluster. It is not hypothetical: this was observed in production on
++// cilium 1.17, which is why the check exists.
++func (cs *cesSubscriber) isDeadLocalEndpoint(c *types.CiliumEndpoint) bool {
++	if c == nil || c.Networking == nil {
++		return false
++	}
++
++	cepNode := net.ParseIP(c.Networking.NodeIP)
++	if cepNode == nil || !cs.epWatcher.isLocalNodeIP(cepNode) {
++		return false
++	}
++
++	return cs.epCache.LookupCEPName(k8sUtils.GetObjNamespaceName(c)) == nil
++}
++
+ // deleteCEP deletes the CEP and CES from the map.
+ // If this was last CES for the CEP it triggers endpointDeleted.
+ // If this was used CES for the CEP it picks other CES and triggers endpointUpdated.
+@@ -154,7 +181,27 @@ func (cs *cesSubscriber) deleteCEPfromCES(CEPName, CESName string, c *types.Cili
+ 	if !needUpdate {
+ 		return
+ 	}
+-	cep, exists := cs.cepMap.getCEPLocked(CEPName)
++	// Drain any leftover CiliumEndpointSlices still listing a local endpoint the
++	// agent no longer has: each would otherwise be restored below as if the pod
++	// were alive. Deleting one can expose another, hence the loop.
++	var cep *types.CiliumEndpoint
++	exists := false
++	for {
++		cep, exists = cs.cepMap.getCEPLocked(CEPName)
++		if !exists || !cs.isDeadLocalEndpoint(cep) {
++			break
++		}
++
++		currentCES := cs.cepMap.currentCES[CEPName]
++		cs.logger.Debug(
++			"Found dead local CEP, calling endpointDeleted",
++			logfields.CESName, currentCES,
++			logfields.CEPName, CEPName,
++		)
++		cs.cepMap.deleteCEPLocked(CEPName, currentCES)
++		cs.epWatcher.endpointDeleted(cep)
++	}
++
+ 	if !exists {
+ 		cs.logger.Debug(
+ 			"CEP deleted, calling endpointDeleted",
+@@ -162,13 +209,22 @@ func (cs *cesSubscriber) deleteCEPfromCES(CEPName, CESName string, c *types.Cili
+ 			logfields.CEPName, CEPName,
+ 		)
+ 		cs.epWatcher.endpointDeleted(c)
+-	} else {
++	} else if cs.epWatcher.mayUpdateIPcacheFor(c) {
+ 		cs.logger.Debug(
+ 			"CEP deleted, other CEP exists, calling endpointUpdated",
+ 			logfields.CESName, CESName,
+ 			logfields.CEPName, CEPName,
+ 		)
+ 		cs.epWatcher.endpointUpdated(c, cep)
++	} else {
++		// Several CiliumEndpoints share this address and the departing one does
++		// not own it. Updating ipcache from it would overwrite the entry of the
++		// pod that does, sending its traffic to a pod that is going away.
++		cs.logger.Debug(
++			"CEP deleted but does not own its address, leaving ipcache alone",
++			logfields.CESName, CESName,
++			logfields.CEPName, CEPName,
++		)
+ 	}
+ }
+ 
+diff --git a/pkg/k8s/watchers/cilium_endpoint_slice_subscriber_test.go b/pkg/k8s/watchers/cilium_endpoint_slice_subscriber_test.go
+index d107894b11..49ed3ad94f 100644
+--- a/pkg/k8s/watchers/cilium_endpoint_slice_subscriber_test.go
++++ b/pkg/k8s/watchers/cilium_endpoint_slice_subscriber_test.go
+@@ -4,6 +4,7 @@ package watchers
+ 
+ import (
+ 	"fmt"
++	"net"
+ 	"testing"
+ 
+ 	"github.com/cilium/hive/hivetest"
+@@ -90,6 +91,16 @@ func (w *fakeEPWatcher) endpointDeleted(c *types.CiliumEndpoint) {
+ 	w.deleted = append(w.deleted, c)
+ }
+ 
++// The stub owns every address and considers no address local, so the existing
++// tests keep exercising the paths they were written for.
++func (w *fakeEPWatcher) mayUpdateIPcacheFor(c *types.CiliumEndpoint) bool {
++	return true
++}
++
++func (w *fakeEPWatcher) isLocalNodeIP(ip net.IP) bool {
++	return false
++}
++
+ func (w *fakeEPWatcher) assertUpdate(u endpointUpdate) (string, bool) {
+ 	var latest endpointUpdate
+ 	if len(w.updates) > 0 {
+diff --git a/pkg/k8s/watchers/watcher.go b/pkg/k8s/watchers/watcher.go
+index a25847378a..66657e933e 100644
+--- a/pkg/k8s/watchers/watcher.go
++++ b/pkg/k8s/watchers/watcher.go
+@@ -8,6 +8,7 @@ import (
+ 	"fmt"
+ 	"log/slog"
+ 	"net"
++	"net/netip"
+ 
+ 	"k8s.io/apimachinery/pkg/util/runtime"
+ 
+@@ -85,6 +86,7 @@ type ipcacheManager interface {
+ 	UpsertMetadata(prefix cmtypes.PrefixCluster, src source.Source, resource ipcacheTypes.ResourceID, aux ...ipcache.IPMetadata)
+ 	RemoveLabelsExcluded(lbls labels.Labels, toExclude map[cmtypes.PrefixCluster]struct{}, resource ipcacheTypes.ResourceID)
+ 	DeleteOnMetadataMatch(IP string, source source.Source, namespace, name string) (namedPortsChanged bool)
++	GetK8sMetadata(ip netip.Addr) *ipcache.K8sMetadata
+ }
+ 
+ type hostNetworkManager interface {
+diff --git a/pkg/labels/labels.go b/pkg/labels/labels.go
+index 1033c01a7f..b0c43b8068 100644
+--- a/pkg/labels/labels.go
++++ b/pkg/labels/labels.go
+@@ -78,6 +78,12 @@ const (
+ 	// unknown identity.
+ 	IDNameUnknown = "unknown"
+ 
++	// IDNamePriority is the label deciding which pod owns a shared IPv4
++	// address. Lower numbers win. DVP live-migrates a VM as two pods holding
++	// one address, and this is how the cluster is told which of them to send
++	// traffic to.
++	IDNamePriority = "network.deckhouse.io/pod-common-ip-priority"
++
+ 	// The aggregate identities are used for policy map aggregation but never
+ 	// applied to traffic directly.
+ 	// see pkg/policy/aggregate.go for details
+diff --git a/pkg/maps/cells.go b/pkg/maps/cells.go
+index 019ae1242c..94b0e9a57b 100644
+--- a/pkg/maps/cells.go
++++ b/pkg/maps/cells.go
+@@ -33,6 +33,7 @@ import (
+ 	"github.com/cilium/cilium/pkg/maps/srv6map"
+ 	"github.com/cilium/cilium/pkg/maps/subnet"
+ 	"github.com/cilium/cilium/pkg/maps/vtep"
++	"github.com/cilium/cilium/pkg/sharedip"
+ )
+ 
+ // Cell contains all cells which are providing BPF Maps.
+@@ -110,6 +111,10 @@ var Cell = cell.Module(
+ 	// Provides access to the lxc / endpoints map.
+ 	lxcmap.Cell,
+ 
++	// Keeps the endpoints map in step with which node owns a shared pod
++	// address; see pkg/sharedip.
++	sharedip.Cell,
++
+ 	// Provides access to the vtep map.
+ 	vtep.Cell,
+ 
+diff --git a/pkg/maps/lxcmap/lxcmap.go b/pkg/maps/lxcmap/lxcmap.go
+index dd8ee466e3..babfe7073c 100644
+--- a/pkg/maps/lxcmap/lxcmap.go
++++ b/pkg/maps/lxcmap/lxcmap.go
+@@ -4,6 +4,7 @@
+ package lxcmap
+ 
+ import (
++	"errors"
+ 	"fmt"
+ 	"log/slog"
+ 	"net/netip"
+@@ -39,6 +40,10 @@ type Map interface {
+ 	// DeleteEntry deletes a single map entry
+ 	DeleteEntry(addr netip.Addr) error
+ 
++	// AddressMoved withholds or restores the entry for an address depending on
++	// whether another node currently owns it. See shared_address.go.
++	AddressMoved(addr netip.Addr, remote bool) error
++
+ 	// DeleteElement deletes the endpoint using all keys which represent the
+ 	// endpoint. It returns the number of errors encountered during deletion.
+ 	DeleteElement(logger *slog.Logger, f EndpointFrontend) []error
+@@ -53,6 +58,10 @@ type Map interface {
+ 
+ type lxcMap struct {
+ 	bpfMap *bpf.Map
++
++	// shared withholds entries for addresses another node currently owns; see
++	// shared_address.go.
++	shared *sharedAddresses
+ }
+ 
+ func newMap(registry *metrics.Registry) *lxcMap {
+@@ -66,6 +75,7 @@ func newMap(registry *metrics.Registry) *lxcMap {
+ 		).
+ 			WithCache().WithPressureMetric(registry).
+ 			WithEvents(option.Config.GetEventBufferConfig(mapName)),
++		shared: newSharedAddresses(),
+ 	}
+ }
+ 
+@@ -254,6 +264,24 @@ func (m *lxcMap) WriteEndpoint(f EndpointFrontend) error {
+ 	var writtenKeys []*EndpointKey
+ 
+ 	for _, key := range keys {
++		// Only the IPv4 entry is ever withheld. DVP gives the two pods of a
++		// migrating VM one shared IPv4 but distinct IPv6 addresses, so the IPv6
++		// entry is never in conflict and is written as usual.
++		//
++		// While another node owns the address the entry is remembered rather
++		// than written, so that it can be restored as soon as the address comes
++		// back without waiting for the endpoint to regenerate.
++		if key.Family == bpf.EndpointKeyIPv4 && !m.shared.record(f.IPv4Address(), key, info) {
++			// Delete rather than merely skip: the map is pinned and outlives
++			// the agent, so an entry written before a restart -- or before the
++			// address moved -- is still there and would keep this node
++			// answering for an address it no longer owns.
++			if err := m.bpfMap.Delete(key); err != nil && !errors.Is(err, ebpf.ErrKeyNotExist) {
++				return fmt.Errorf("failed to withhold key %v in LXC map: %w", key, err)
++			}
++			continue
++		}
++
+ 		if err := m.bpfMap.Update(key, info); err != nil {
+ 			for _, k := range writtenKeys {
+ 				_ = m.bpfMap.Delete(k)
+@@ -291,6 +319,9 @@ func (m *lxcMap) DeleteEntry(addr netip.Addr) error {
+ 
+ func (m *lxcMap) DeleteElement(logger *slog.Logger, f EndpointFrontend) []error {
+ 	var errors []error
++	if addr := f.IPv4Address(); addr.IsValid() {
++		m.shared.forget(addr)
++	}
+ 	for _, k := range m.getBPFKeys(f) {
+ 		if err := m.bpfMap.Delete(k); err != nil {
+ 			errors = append(errors, fmt.Errorf("unable to delete key %v from %s: %w", k, bpf.MapPath(logger, mapName), err))
+diff --git a/pkg/maps/lxcmap/shared_address.go b/pkg/maps/lxcmap/shared_address.go
+new file mode 100644
+index 0000000000..f0a903edf4
+--- /dev/null
++++ b/pkg/maps/lxcmap/shared_address.go
+@@ -0,0 +1,119 @@
++// SPDX-License-Identifier: Apache-2.0
++// Copyright Authors of Cilium
++
++package lxcmap
++
++import (
++	"net/netip"
++
++	"github.com/cilium/cilium/pkg/lock"
++)
++
++// Shared-address ownership for the endpoints map.
++//
++// DVP live-migrates a VM as two pods, on two nodes, holding the same IPv4 at
++// once. Both nodes have a local endpoint for that address, but only the node
++// that currently owns it may have an entry in cilium_lxc -- otherwise both
++// nodes answer for the address and traffic is delivered twice.
++//
++// Ownership is not decided here. The agent's ipcache knows which node hosts an
++// address, and a listener feeds that verdict in through SetAddressRemote; this
++// file only withholds and restores map entries accordingly. An entry withheld
++// while the address lives elsewhere is remembered, so it can be put back the
++// moment the address returns without waiting for the endpoint to regenerate.
++//
++// Keeping this inside package lxcmap is deliberate. The ownership check has to
++// happen where the entry is written, and the map is reached through the Map
++// interface provided by this package's cell -- so the dependency runs one way,
++// from the listener into here, and the two packages stay independent.
++
++// endpointEntry is what this node knows about an endpoint whose address may be
++// shared: the map entry it would write, and whether that entry is present.
++//
++// Every endpoint is recorded, not only the withheld ones. An address usually
++// becomes remote *after* its entry was written -- the pod starts here, and only
++// later does ipcache learn the address moved -- so the entry to delete has to be
++// known even though nothing was withheld at the time.
++type endpointEntry struct {
++	key    *EndpointKey
++	info   *EndpointInfo
++	active bool // present in the map right now
++}
++
++// sharedAddresses tracks which addresses are hosted on another node and the
++// endpoint entries affected by that.
++type sharedAddresses struct {
++	mutex lock.Mutex
++
++	// remote are the addresses currently hosted on another node.
++	remote map[netip.Addr]struct{}
++
++	// entries is every endpoint this node has written or withheld, by address.
++	entries map[netip.Addr]endpointEntry
++}
++
++func newSharedAddresses() *sharedAddresses {
++	return &sharedAddresses{
++		remote:  make(map[netip.Addr]struct{}),
++		entries: make(map[netip.Addr]endpointEntry),
++	}
++}
++
++// record notes the entry for an address and reports whether it may be written:
++// it may not while another node owns the address.
++func (s *sharedAddresses) record(addr netip.Addr, key *EndpointKey, info *EndpointInfo) bool {
++	s.mutex.Lock()
++	defer s.mutex.Unlock()
++
++	_, remote := s.remote[addr]
++	s.entries[addr] = endpointEntry{key: key, info: info, active: !remote}
++	return !remote
++}
++
++// forget drops the entry for an address, for when the endpoint goes away.
++//
++// Which node owns the address is deliberately kept. Ownership is a property of
++// the address, not of any endpoint this node happens to have: the usual case is
++// a pod being created here for an address another node already owns, and the
++// verdict for it arrived long before the pod did. Dropping it with the previous
++// endpoint would leave the next one on that address writing its entry, and
++// ipcache -- which has not changed its mind -- would never say so again. The
++// verdict is dropped when ipcache drops the address itself.
++func (s *sharedAddresses) forget(addr netip.Addr) {
++	s.mutex.Lock()
++	defer s.mutex.Unlock()
++	delete(s.entries, addr)
++}
++
++// AddressMoved withholds or restores the entry for an address as ownership of it
++// moves between nodes.
++//
++// Called from the ipcache listener. The map write happens outside the lock,
++// because the lock only guards this bookkeeping.
++func (m *lxcMap) AddressMoved(addr netip.Addr, remote bool) error {
++	s := m.shared
++
++	s.mutex.Lock()
++	if remote {
++		s.remote[addr] = struct{}{}
++	} else {
++		delete(s.remote, addr)
++	}
++
++	entry, known := s.entries[addr]
++	if !known || entry.active == !remote {
++		// Nothing written here, or already in the right state.
++		s.mutex.Unlock()
++		return nil
++	}
++	entry.active = !remote
++	s.entries[addr] = entry
++	s.mutex.Unlock()
++
++	if remote {
++		// Another node owns the address now: this node must stop answering for
++		// it, but the entry is kept so it can be restored if it comes back.
++		return m.bpfMap.Delete(entry.key)
++	}
++	return m.bpfMap.Update(entry.key, entry.info)
++}
+diff --git a/pkg/sharedip/cell.go b/pkg/sharedip/cell.go
+new file mode 100644
+index 0000000000..5c1cbfe952
+--- /dev/null
++++ b/pkg/sharedip/cell.go
+@@ -0,0 +1,129 @@
++// SPDX-License-Identifier: Apache-2.0
++// Copyright Authors of Cilium
++
++// Package sharedip keeps the endpoints map in step with which node currently
++// owns a shared pod address.
++//
++// DVP live-migrates a VM as two pods, on two nodes, holding the same IPv4 at
++// once. Both nodes have a local endpoint for it, but only the owning node may
++// have an entry in cilium_lxc, or both answer for the address.
++//
++// The two facts live in different subsystems: ipcache knows which node hosts an
++// address, and lxcmap holds the entry. This package is the only place that
++// knows about both. It listens to ipcache and tells lxcmap; nothing calls back
++// the other way, so neither package depends on the other and both stay as
++// upstream ships them.
++package sharedip
++
++import (
++	"context"
++	"log/slog"
++	"net"
++	"net/netip"
++
++	"github.com/cilium/hive/cell"
++
++	cmtypes "github.com/cilium/cilium/pkg/clustermesh/types"
++	"github.com/cilium/cilium/pkg/ipcache"
++	"github.com/cilium/cilium/pkg/logging/logfields"
++	"github.com/cilium/cilium/pkg/maps/lxcmap"
++	"github.com/cilium/cilium/pkg/node"
++)
++
++// Cell registers the ipcache listener that withholds and restores endpoints map
++// entries as a shared address moves between nodes.
++var Cell = cell.Module(
++	"shared-ip-owner",
++	"Tracks which node owns a shared pod address",
++
++	cell.Provide(newListener),
++	cell.Invoke(func(l *listener, ipc *ipcache.IPCache) { ipc.AddListener(l) }),
++)
++
++type listener struct {
++	logger    *slog.Logger
++	lxcMap    lxcmap.Map
++	localNode *node.LocalNodeStore
++}
++
++func newListener(logger *slog.Logger, lxcMap lxcmap.Map, localNode *node.LocalNodeStore) *listener {
++	return &listener{logger: logger, lxcMap: lxcMap, localNode: localNode}
++}
++
++// localIPv4 is read per event rather than cached. Caching it behind an observer
++// looked cheaper, but the first ipcache events arrive before the observer has
++// delivered anything, and for an address that never changes again those events
++// are the only ones there will be -- so the ownership verdict was dropped and
++// never revisited.
++//
++// Get blocks until the node store is initialised. That cannot stall an event:
++// the listener is registered while the hive is populated, when ipcache is still
++// empty, and the store is initialised before the watchers that fill it start.
++func (l *listener) localIPv4() (netip.Addr, bool) {
++	ln, err := l.localNode.Get(context.Background())
++	if err != nil {
++		return netip.Addr{}, false
++	}
++	return netip.AddrFromSlice(ln.GetNodeIP(false).To4())
++}
++
++// OnIPIdentityCacheChange is called whenever ipcache learns something about an
++// address. The only thing of interest here is the host holding it: when that
++// stops being this node the local entry must go, and when it becomes this node
++// again the entry must come back.
++func (l *listener) OnIPIdentityCacheChange(modType ipcache.CacheModification,
++	cidrCluster cmtypes.PrefixCluster, oldHostIP, newHostIP net.IP,
++	_ *ipcache.Identity, _ ipcache.Identity, _ uint8,
++	_ *ipcache.K8sMetadata, _ uint8) {
++
++	// Single addresses only: a shared pod address is a /32, and a wider prefix
++	// is a CIDR identity that owns no endpoint entry.
++	prefix := cidrCluster.AsPrefix()
++	if !prefix.IsSingleIP() || !prefix.Addr().Is4() {
++		return
++	}
++
++	// An address ipcache no longer attributes to any node counts as this node's.
++	// That is what the agent does for an address it has never heard of, and it
++	// is also what clears the verdict again: the entry is remembered for as long
++	// as ipcache says the address lives elsewhere, and no longer.
++	if modType == ipcache.Delete || newHostIP == nil {
++		l.apply(prefix.Addr(), false)
++		return
++	}
++	if modType != ipcache.Upsert {
++		return
++	}
++	if oldHostIP.Equal(newHostIP) {
++		// Nothing moved; most upserts land here.
++		return
++	}
++
++	hostIPv4, ok := netip.AddrFromSlice(newHostIP.To4())
++	if !ok {
++		return
++	}
++	local, ok := l.localIPv4()
++	if !ok {
++		return
++	}
++	l.apply(prefix.Addr(), local != hostIPv4)
++}
++
++// apply hands the verdict to lxcmap, which withholds or restores the entry.
++func (l *listener) apply(addr netip.Addr, remote bool) {
++	if err := l.lxcMap.AddressMoved(addr, remote); err != nil {
++		l.logger.Warn("Failed to apply shared address ownership change",
++			logfields.Error, err,
++			logfields.IPAddr, addr,
++		)
++		return
++	}
++
++	l.logger.Debug("Shared address ownership changed",
++		logfields.IPAddr, addr,
++		"remote", remote,
++	)
++}
++
++var _ ipcache.IPIdentityMappingListener = (*listener)(nil)

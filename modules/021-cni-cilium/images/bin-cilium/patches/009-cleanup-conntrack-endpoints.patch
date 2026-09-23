@@ -1,0 +1,221 @@
+From 7f487ec05062a479d1d1457e81ad06e98fe28e5e Mon Sep 17 00:00:00 2001
+From: Dmitriy Andreychenko <dmitriy.andreychenko@flant.com>
+Date: Fri, 11 Sep 2026 12:35:02 +0300
+Subject: [PATCH] ctmap: keep local clients' conntrack when an address migrates
+ away
+
+Tearing down an endpoint scrubs every conntrack entry mentioning its address.
+For a VM that has live migrated to another node that resets the connections
+migration is meant to preserve: clients still on this node hold flows towards
+the address, now forwarded over the tunnel.
+
+GCFilter.MigrationSafeCleanup deletes only the flows the departing address
+owned, keeping outbound entries where it is the destination. The endpoint reads
+the datapath's own ipcache map to spot the case: a tunnel endpoint is set only
+for an address owned by another node. Computed once per teardown, since the
+filter itself runs for every conntrack entry.
+---
+ pkg/endpoint/bpf.go                           | 39 +++++++++++
+ pkg/maps/ctmap/ctmap.go                       | 37 ++++++++++-
+ pkg/maps/ctmap/migration_safe_cleanup_test.go | 66 +++++++++++++++++++
+ 3 files changed, 141 insertions(+), 1 deletion(-)
+ create mode 100644 pkg/maps/ctmap/migration_safe_cleanup_test.go
+
+diff --git a/pkg/endpoint/bpf.go b/pkg/endpoint/bpf.go
+index 30816e552a..252c6a0441 100644
+--- a/pkg/endpoint/bpf.go
++++ b/pkg/endpoint/bpf.go
+@@ -9,6 +9,7 @@ import (
+ 	"errors"
+ 	"fmt"
+ 	"io"
++	"net/netip"
+ 	"os"
+ 	"path/filepath"
+ 	"strings"
+@@ -30,6 +31,7 @@ import (
+ 	"github.com/cilium/cilium/pkg/loadinfo"
+ 	"github.com/cilium/cilium/pkg/logging/logfields"
+ 	"github.com/cilium/cilium/pkg/maps/ctmap"
++	ipcachemap "github.com/cilium/cilium/pkg/maps/ipcache"
+ 	"github.com/cilium/cilium/pkg/maps/policymap"
+ 	"github.com/cilium/cilium/pkg/metrics"
+ 	"github.com/cilium/cilium/pkg/option"
+@@ -902,6 +904,41 @@ func (e *Endpoint) deleteMaps() []error {
+ 	return errors
+ }
+ 
++// movedToAnotherNode reports whether this endpoint's address is already owned by
++// a different node, which is what a VM live migration looks like from the node
++// the VM is leaving: both pods exist briefly, and the datapath's ipcache entry
++// for the shared address now carries a tunnel endpoint.
++//
++// The BPF map is the datapath's own view and encodes exactly this: the tunnel
++// endpoint is unset for an address local to this node. IPCacheMap() returns the
++// instance the datapath cells already created, and Lookup() opens the map
++// itself, so there is nothing to wire up here.
++//
++// Computed once per teardown rather than inside the GC filter: the filter runs
++// for every conntrack entry, and a BPF lookup per entry would be far too costly.
++//
++// IPv4 only, matching the workloads this exists for.
++func (e *Endpoint) movedToAnotherNode() bool {
++	if !e.IPv4.IsValid() {
++		return false
++	}
++
++	key := ipcachemap.NewKey(netip.PrefixFrom(e.IPv4, e.IPv4.BitLen()), uint16(option.Config.ClusterID))
++	value, err := ipcachemap.IPCacheMap(nil).Lookup(&key)
++	if err != nil || value == nil {
++		// Unknown address, or the map is unavailable: fall back to the ordinary
++		// full scrub rather than guessing.
++		return false
++	}
++
++	info, ok := value.(*ipcachemap.RemoteEndpointInfo)
++	if !ok {
++		return false
++	}
++
++	return info.Flags&ipcachemap.FlagHasTunnelEndpoint != 0
++}
++
+ // scrubIPsInConntrackTableLocked will run the CTMap garbagecollector with the endpoint IPs.
+ func (e *Endpoint) scrubIPsInConntrackTableLocked() {
+ 	e.ctMapGC.Run(ctmap.GCFilter{
+@@ -909,6 +946,8 @@ func (e *Endpoint) scrubIPsInConntrackTableLocked() {
+ 			{Addr: e.IPv4}: {},
+ 			{Addr: e.IPv6}: {},
+ 		},
++		// Keep local clients' connections to an address that has migrated away.
++		MigrationSafeCleanup: e.movedToAnotherNode(),
+ 	})
+ }
+ 
+diff --git a/pkg/maps/ctmap/ctmap.go b/pkg/maps/ctmap/ctmap.go
+index 40310303df..23f386c0d9 100644
+--- a/pkg/maps/ctmap/ctmap.go
++++ b/pkg/maps/ctmap/ctmap.go
+@@ -178,6 +178,25 @@ type GCFilter struct {
+ 	// passes. It has no impact on CT GC, but can be used to iterate over valid
+ 	// CT entries.
+ 	EmitCTEntryCB EmitCTEntryCBFunc
++
++	// MigrationSafeCleanup restricts MatchIPs deletion to the flows the address
++	// itself owned, instead of everything mentioning it.
++	//
++	// Deleting an endpoint normally scrubs every entry whose source or
++	// destination is its address. That is wrong for an address that has moved to
++	// another node: connections which clients still on this node hold open
++	// towards it are now forwarded over the tunnel and must survive, or a live
++	// migration resets exactly the connections it is meant to preserve.
++	//
++	// With this set, only the departing side is removed:
++	//   TUPLE_F_OUT / TUPLE_F_RELATED  when the source matches
++	//   TUPLE_F_IN                     when the destination matches
++	//   TUPLE_F_SERVICE                when the destination matches, as service
++	//                                  entries are stored with the addresses
++	//                                  reversed
++	// Everything else is kept, notably outbound entries where the address is the
++	// destination: those are the local clients.
++	MigrationSafeCleanup bool
+ }
+ 
+ // EmitCTEntryCBFunc is the type used for the EmitCTEntryCB callback in GCFilter
+@@ -555,7 +574,23 @@ func (f GCFilter) doFiltering(srcIP, dstIP NetAddr, srcPort, dstPort uint16, nex
+ 	if f.MatchIPs != nil {
+ 		_, srcIPExists := f.MatchIPs[srcIP]
+ 		_, dstIPExists := f.MatchIPs[dstIP]
+-		if srcIPExists || dstIPExists {
++
++		if f.MigrationSafeCleanup {
++			switch {
++			case flags == TUPLE_F_OUT || flags == TUPLE_F_RELATED:
++				if srcIPExists {
++					return deleteEntry
++				}
++			case flags&TUPLE_F_SERVICE != 0:
++				if dstIPExists {
++					return deleteEntry
++				}
++			case flags&TUPLE_F_IN != 0:
++				if dstIPExists {
++					return deleteEntry
++				}
++			}
++		} else if srcIPExists || dstIPExists {
+ 			return deleteEntry
+ 		}
+ 	}
+diff --git a/pkg/maps/ctmap/migration_safe_cleanup_test.go b/pkg/maps/ctmap/migration_safe_cleanup_test.go
+new file mode 100644
+index 0000000000..aa811ecc89
+--- /dev/null
++++ b/pkg/maps/ctmap/migration_safe_cleanup_test.go
+@@ -0,0 +1,66 @@
++// SPDX-License-Identifier: Apache-2.0
++// Copyright Authors of Cilium
++
++package ctmap
++
++import (
++	"net/netip"
++	"testing"
++
++	"github.com/stretchr/testify/require"
++)
++
++// The address of a VM that has just migrated off this node, and some other pod
++// still running here.
++var (
++	vmAddr    = NetAddr{Addr: netip.MustParseAddr("10.0.0.5")}
++	otherAddr = NetAddr{Addr: netip.MustParseAddr("10.0.0.9")}
++)
++
++// TestMigrationSafeCleanup pins down which conntrack entries survive when the
++// endpoint being torn down has moved to another node. The entry that must
++// survive is an outbound flow from a local client towards the migrated address:
++// deleting it resets a connection that the migration is supposed to preserve.
++func TestMigrationSafeCleanup(t *testing.T) {
++	for _, tc := range []struct {
++		name    string
++		flags   uint8
++		src     NetAddr
++		dst     NetAddr
++		migSafe bool
++		want    action
++	}{
++		// The flows the departing VM itself owned: these go.
++		{"out from the VM", TUPLE_F_OUT, vmAddr, otherAddr, true, deleteEntry},
++		{"related from the VM", TUPLE_F_RELATED, vmAddr, otherAddr, true, deleteEntry},
++		{"in towards the VM", TUPLE_F_IN, otherAddr, vmAddr, true, deleteEntry},
++		// Service entries are stored with the addresses reversed, so the VM
++		// being the destination is the equivalent of it being the source.
++		{"service to the VM", TUPLE_F_SERVICE, otherAddr, vmAddr, true, deleteEntry},
++
++		// The whole point: a local client's connection towards the address must
++		// survive, because it is now forwarded over the tunnel to the new node.
++		{"local client out to the VM", TUPLE_F_OUT, otherAddr, vmAddr, true, noAction},
++		{"in from the VM", TUPLE_F_IN, vmAddr, otherAddr, true, noAction},
++		{"service from the VM", TUPLE_F_SERVICE, vmAddr, otherAddr, true, noAction},
++		{"related to the VM", TUPLE_F_RELATED, otherAddr, vmAddr, true, noAction},
++
++		// Without the flag, the legacy behaviour: anything mentioning the
++		// address is removed, including the local client's connection.
++		{"legacy: local client out to the VM", TUPLE_F_OUT, otherAddr, vmAddr, false, deleteEntry},
++		{"legacy: out from the VM", TUPLE_F_OUT, vmAddr, otherAddr, false, deleteEntry},
++
++		// An address that is not being cleaned up is never touched.
++		{"unrelated flow", TUPLE_F_OUT, otherAddr, otherAddr, true, noAction},
++		{"legacy: unrelated flow", TUPLE_F_OUT, otherAddr, otherAddr, false, noAction},
++	} {
++		t.Run(tc.name, func(t *testing.T) {
++			f := GCFilter{
++				MatchIPs:             map[NetAddr]struct{}{vmAddr: {}},
++				MigrationSafeCleanup: tc.migSafe,
++			}
++			got := f.doFiltering(tc.src, tc.dst, 0, 0, 0, tc.flags, &CtEntry{})
++			require.Equal(t, tc.want, got)
++		})
++	}
++}

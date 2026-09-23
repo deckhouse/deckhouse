@@ -1,0 +1,90 @@
+From c88ae5c989184a2ff6570c329077e4eb466c6143 Mon Sep 17 00:00:00 2001
+From: Dmitriy Andreychenko <dmitriy.andreychenko@flant.com>
+Date: Thu, 10 Sep 2026 15:35:51 +0300
+Subject: [PATCH] egressgateway: tolerate an egress IP that is not assigned on
+ this node
+
+Deckhouse manages egress addresses outside Cilium, so a policy may name one that
+no interface holds yet. Upstream fails the derive and logs an error on every
+reconcile. Accept that case, leave the interface name empty, and skip such
+entries in relaxRPFilter() so it does not build "net.ipv4.conf..rp_filter".
+
+This changes forwarding, not just log volume: the policy is then programmed with
+the configured egress IP, where unpatched it stays 0.0.0.0. The datapath SNATs to
+that address as soon as it is attached.
+---
+ pkg/egressgateway/manager.go |  7 +++++++
+ pkg/egressgateway/policy.go  | 26 ++++++++++++++++++++++++--
+ 2 files changed, 31 insertions(+), 2 deletions(-)
+
+diff --git a/pkg/egressgateway/manager.go b/pkg/egressgateway/manager.go
+index ca8dcab7d1..28d06952d0 100644
+--- a/pkg/egressgateway/manager.go
++++ b/pkg/egressgateway/manager.go
+@@ -614,6 +614,13 @@ func (manager *Manager) relaxRPFilter() error {
+ 			}
+ 
+ 			ifaceName := gatewayConfig.ifaceName
++			// An egress IP that is not assigned on this node leaves the
++			// interface name empty (see deriveFromPolicyGatewayConfig). There
++			// is no device to relax rp_filter on, and the sysctl path would
++			// build "net.ipv4.conf..rp_filter" and fail.
++			if ifaceName == "" {
++				continue
++			}
+ 			if _, ok := ifSet[ifaceName]; !ok {
+ 				ifSet[ifaceName] = struct{}{}
+ 				sysSettings = append(sysSettings, tables.Sysctl{
+diff --git a/pkg/egressgateway/policy.go b/pkg/egressgateway/policy.go
+index 968351dafd..c1e2d03fe9 100644
+--- a/pkg/egressgateway/policy.go
++++ b/pkg/egressgateway/policy.go
+@@ -8,6 +8,7 @@ import (
+ 	"hash/fnv"
+ 	"net/netip"
+ 	"slices"
++	"strings"
+ 
+ 	"go4.org/netipx"
+ 	"k8s.io/apimachinery/pkg/types"
+@@ -192,6 +193,15 @@ func deviceGetPrimaryAddresses(manager *Manager, iface string) (netip.Addr, neti
+ 	return primaryIP4, primaryIP6
+ }
+ 
++// egressIPNotAssigned reports whether err is netdevice's "this address is not
++// on any local interface" result for addr, rather than a real lookup failure.
++// netdevice returns a plain fmt.Errorf with no sentinel to match on, so build
++// the same string instead of duplicating its wording here.
++func egressIPNotAssigned(err error, addr netip.Addr) bool {
++	return err != nil &&
++		strings.Contains(err.Error(), fmt.Sprintf("no interface with %s IPv4 assigned to", addr))
++}
++
+ func getDeviceWithAddress(manager *Manager, addr netip.Addr) *tables.Device {
+ 	for dev := range manager.deviceTable.All(manager.db.ReadTxn()) {
+ 		if dev.HasIP(addr) {
+@@ -284,10 +294,22 @@ func (gwc *gatewayConfig) deriveFromPolicyGatewayConfig(manager *Manager, gc *po
+ 
+ 				gwc.ifaceName, err = netdevice.GetIfaceWithIPv4Address(gc.egressIP)
+ 				if err != nil {
+-					return fmt.Errorf("failed to retrieve interface with egress IP: %w", err)
++					// A policy may name an egress IP that is not assigned to
++					// any interface on this node -- Deckhouse manages such
++					// addresses outside Cilium, and they may be attached later
++					// or not at all. Upstream logs this once per reconcile,
++					// which is pure noise on those clusters. Carry on with an
++					// empty ifaceName; relaxRPFilter() in manager.go skips it.
++					if !egressIPNotAssigned(err, gc.egressIP) {
++						return fmt.Errorf("failed to retrieve interface with egress IP: %w", err)
++					}
+ 				}
+ 
+-				if v6Needed {
++				// Only meaningful once an interface was actually found; with an
++				// unassigned egress IP there is nothing to read an IPv6 address
++				// from. Deckhouse runs IPv4 only, so this stays a guard rather
++				// than a second tolerance path.
++				if v6Needed && gwc.ifaceName != "" {
+ 					egressIP6, err = netdevice.GetIfaceFirstIPv6Address(gwc.ifaceName)
+ 					if err != nil {
+ 						return fmt.Errorf("failed to retrieve IPv6 address for egress interface: %w", err)

@@ -1,0 +1,1217 @@
+From 6c19c7374a4c246552afc9c783fb1b52d096739b Mon Sep 17 00:00:00 2001
+From: Dmitriy Andreychenko <dmitriy.andreychenko@flant.com>
+Date: Wed, 16 Sep 2026 16:34:33 +0300
+Subject: [PATCH] lb: least-conn backend selection algorithm
+
+Select the backend with the fewest open connections, opted into per service
+with service.cilium.io/lb-algorithm: least-conn. Plugs into upstream's
+lb4_select_backend_id_custom() hook; a BPF timer does the scan off the packet
+path and the conntrack GC rebuilds the counters after an agent restart.
+
+The scan runs at once when it has been idle and is otherwise rate limited to
+LEAST_CONN_TIMEOUT, which the measurements in bpf/lib/least_conn.h put at 3ms.
+
+Co-Authored-By: Claude Opus 5 (1M context) <noreply@anthropic.com>
+---
+ bpf/include/bpf/helpers.h                     |   5 +
+ bpf/lib/lb.h                                  |  13 +
+ bpf/lib/least_conn.h                          | 346 ++++++++++++++++++
+ pkg/datapath/linux/config/config.go           |   5 +
+ pkg/datapath/maps/mapkv.btf                   | Bin 8401 -> 8647 bytes
+ pkg/datapath/maps/maps_generated.go           |  32 ++
+ pkg/datapath/types/types_generated.go         |  26 ++
+ pkg/loadbalancer/config.go                    |   5 +
+ pkg/loadbalancer/loadbalancer.go              |   4 +
+ pkg/loadbalancer/reconciler/bpf_reconciler.go |  12 +
+ pkg/maps/cells.go                             |   4 +
+ pkg/maps/ctmap/ctmap.go                       |  16 +
+ pkg/maps/ctmap/gc/gc.go                       |   9 +
+ pkg/maps/ctmap/types.go                       |   6 +
+ pkg/maps/leastconn/cell.go                    |  36 ++
+ pkg/maps/leastconn/leastconn.go               | 296 +++++++++++++++
+ 16 files changed, 815 insertions(+)
+ create mode 100644 bpf/lib/least_conn.h
+ create mode 100644 pkg/maps/leastconn/cell.go
+ create mode 100644 pkg/maps/leastconn/leastconn.go
+
+diff --git a/bpf/include/bpf/helpers.h b/bpf/include/bpf/helpers.h
+index 9bd993d5c5..4f10fef95f 100644
+--- a/bpf/include/bpf/helpers.h
++++ b/bpf/include/bpf/helpers.h
+@@ -29,6 +29,11 @@
+ # include "helpers_xdp.h"
+ #endif
+ 
++/* timer API */
++static long BPF_FUNC(timer_init, struct bpf_timer *timer, void *map, __u64 flags);
++static long BPF_FUNC(timer_set_callback, struct bpf_timer *timer, void *callback_fn);
++static long BPF_FUNC(timer_start, struct bpf_timer *timer, __u64 nsecs, __u64 flags);
++
+ /* Map access/manipulation */
+ static void *BPF_FUNC(map_lookup_elem, const void *map, const void *key);
+ static int BPF_FUNC(map_update_elem, const void *map, const void *key,
+diff --git a/bpf/lib/lb.h b/bpf/lib/lb.h
+index 63a128389d..6dbf1bfd76 100644
+--- a/bpf/lib/lb.h
++++ b/bpf/lib/lb.h
+@@ -2012,6 +2012,12 @@ static __always_inline __u32 lb4_algorithm(const struct lb4_service *svc)
+ 	return lb_default_algorithm();
+ }
+ 
++/* Included here rather than at the top of the file: it defines
++ * lb4_select_backend_id_custom() below, and its implementation needs the
++ * service and backend lookups declared above.
++ */
++#include "least_conn.h"
++
+ #ifndef lb4_select_backend_id_custom
+ #define lb4_select_backend_id_custom(...) 0
+ #endif
+@@ -2299,6 +2305,7 @@ static __always_inline int lb4_local(const void *map, struct __ctx_buff *ctx,
+ #ifdef ENABLE_ACTIVE_CONNECTION_TRACKING
+ 		_lb_act_conn_open(state->rev_nat_index, backend->zone);
+ #endif
++		_lb_lct_conn_open(backend_id);
+ 
+ 		break;
+ 	case CT_REPLY:
+@@ -2317,6 +2324,12 @@ static __always_inline int lb4_local(const void *map, struct __ctx_buff *ctx,
+ 				_lb_act_conn_closed(svc->rev_nat_index, backend->zone);
+ 		}
+ #endif
++		if (backend) {
++			if (state->syn) /* Reopened connections */
++				_lb_lct_conn_open(backend_id);
++			else if (state->closing)
++				_lb_lct_conn_closed(backend_id);
++		}
+ 		if (unlikely(!backend || backend->flags != BE_STATE_ACTIVE)) {
+ 			/* Drain existing connections, but redirect new ones to only
+ 			 * active backends.
+diff --git a/bpf/lib/least_conn.h b/bpf/lib/least_conn.h
+new file mode 100644
+index 0000000000..571073e533
+--- /dev/null
++++ b/bpf/lib/least_conn.h
+@@ -0,0 +1,346 @@
++/* SPDX-License-Identifier: (GPL-2.0-only OR BSD-2-Clause) */
++/* Copyright Authors of Cilium */
++
++/*
++ * least-conn: pick the backend with the fewest open connections.
++ *
++ * Plugs into upstream's out-of-tree algorithm hook, so a service opts in with
++ *
++ *     service.cilium.io/lb-algorithm: least-conn
++ *
++ * and nothing else is affected. It is reached only through that annotation:
++ * bpf-lb-algorithm only accepts "random" and "maglev", so lb_default_algorithm()
++ * can never return a custom value.
++ *
++ * Two maps carry the state:
++ *
++ *   cilium_lb4_leastconn_backend   backend id  -> open connection count
++ *   cilium_lb4_leastconn_service   service key -> the backend to hand out next
++ *
++ * Selection on the packet path is a single lookup of the service map: whichever
++ * backend the last scan decided on. Scanning every backend for the minimum is
++ * far too expensive per packet, so it happens asynchronously in a BPF timer
++ * armed from the packet path, at most every LEAST_CONN_TIMEOUT. The datapath is
++ * therefore always acting on a slightly stale decision, which is the usual
++ * trade-off for least-connection balancing and is why the counts do not need to
++ * be exact.
++ *
++ * The counts are maintained here on connect and close, and are corrected by the
++ * agent: every conntrack GC pass recounts the live service entries per backend
++ * and writes the authoritative values back. See pkg/maps/lbmap/leastconn.go.
++ */
++
++#pragma once
++
++#include "bpf/compiler.h"
++#include "common.h"
++
++/* Declared unconditionally, like upstream's cilium_lb_act: tools/dpgen builds
++ * the map registry from objects compiled with the standard define set, so a map
++ * behind a feature #ifdef would never reach it. BPF_F_NO_PREALLOC keeps an
++ * unused map close to free.
++ */
++
++#define LEAST_CONN_MAX_ENTRIES 65536
++
++struct lb4_lct_key {
++	__u32 backend_id;
++};
++
++struct lb4_lct_backend {
++	__u32 count;
++};
++
++struct lb4_lct_service {
++	__u32 is_tmr_active;
++	__u32 backend_id;
++	__u16 last_slot;
++	__u16 rest_count;
++	/* Low 32 bits of ktime_get_ns() when the scan last ran, in the space the
++	 * padding used to occupy so the map layout is unchanged.
++	 */
++	__u32 last_run;
++	struct bpf_timer tmr;
++};
++
++struct {
++	__uint(type, BPF_MAP_TYPE_HASH);
++	__type(key, struct lb4_lct_key);
++	__type(value, struct lb4_lct_backend);
++	__uint(pinning, LIBBPF_PIN_BY_NAME);
++	__uint(max_entries, LEAST_CONN_MAX_ENTRIES);
++	__uint(map_flags, BPF_F_NO_PREALLOC);
++} cilium_lb4_leastconn_backend __section_maps_btf;
++
++struct {
++	__uint(type, BPF_MAP_TYPE_HASH);
++	__type(key, struct lb4_key);
++	__type(value, struct lb4_lct_service);
++	__uint(pinning, LIBBPF_PIN_BY_NAME);
++	__uint(max_entries, LEAST_CONN_MAX_ENTRIES);
++	__uint(map_flags, BPF_F_NO_PREALLOC);
++} cilium_lb4_leastconn_service __section_maps_btf;
++
++#ifdef ENABLE_LEAST_CONN
++
++/* How long a selection is reused before the timer re-scans.
++ *
++ * Measured across three 200-connection bursts over three backends, as max:min
++ * skew of the connections each backend received:
++ *
++ *   10ms  2.15x 1.72x 2.15x      3ms  1.20x 1.05x 1.03x
++ *    5ms  1.57x 1.05x 1.11x      2ms  1.09x 1.05x 1.02x
++ *                                1ms  1.02x 1.02x 1.03x
++ *
++ * Most of the gain is in place by 3ms and the rest is marginal, so 3ms is the
++ * point that buys an even spread without multiplying the scan rate further: the
++ * callback walks up to LEAST_CONN_FOREACH_MAX_ENTRIES slots, and that cost rises
++ * as this falls.
++ */
++#ifndef LEAST_CONN_TIMEOUT
++#define LEAST_CONN_TIMEOUT 3000000ULL
++#endif
++
++/* Delay before resuming a scan that hit the per-run instruction budget. */
++#define LEAST_CONN_NEXT_ITER_TIMEOUT 1000000ULL
++
++#define UINT32_MAX 0xffffffff
++#define CLOCK_MONOTONIC 1
++
++/* the limit was selected due to verifier restriction on executing instructions */
++#define LEAST_CONN_FOREACH_MAX_ENTRIES 100
++/* stop scanning once a backend this idle is found -- it is good enough */
++#define LEAST_CONN_THRESHOLD 5
++
++static __always_inline int
++is_backend_active(__u32 backend_id)
++{
++	const struct lb4_backend *bck = __lb4_lookup_backend(backend_id);
++
++	return bck != NULL && bck->flags == BE_STATE_ACTIVE;
++}
++
++static __always_inline __u16
++lb4_least_conn_get_slot(struct lb4_lct_service *svc, __u16 count)
++{
++	return (svc->last_slot >= 1 && svc->last_slot <= count) ? svc->last_slot : 1;
++}
++
++/* Timer callback: walk the service's backend slots and remember the least busy
++ * one. Resumes where it left off, so a service with more backends than fit in
++ * one run is covered across several.
++ */
++static int
++lb4_select_least_conn_backend_cb(void *map __maybe_unused, struct lb4_key *k,
++				 struct lb4_lct_service *svc)
++{
++	__u16 slot, max, i;
++	const struct lb4_service *lb4_svc;
++	struct lb4_lct_backend *bck;
++
++	struct lb4_key key = *k;
++	__u32 max_count = UINT32_MAX;
++
++	svc->last_run = (__u32)ktime_get_ns();
++	struct lb4_lct_key bck_key = {
++		.backend_id = svc->backend_id,
++	};
++
++	lb4_svc = map_lookup_elem(&cilium_lb4_services_v2, k);
++	if (lb4_svc == NULL) {
++		svc->is_tmr_active = 0;
++		return 0;
++	}
++
++	bck = map_lookup_elem(&cilium_lb4_leastconn_backend, &bck_key);
++	if (bck != NULL && is_backend_active(svc->backend_id))
++		max_count = bck->count;
++
++	/* always start searching from next slot */
++	svc->last_slot++;
++	slot = lb4_least_conn_get_slot(svc, lb4_svc->count);
++	max = svc->rest_count <= LEAST_CONN_FOREACH_MAX_ENTRIES ?
++		svc->rest_count : LEAST_CONN_FOREACH_MAX_ENTRIES;
++	for (i = 0; i < max; i++) {
++		const struct lb4_service *lb4_bck;
++		__u32 conn_count = 0;
++
++		svc->rest_count--;
++		slot = ((slot + i - 1) % lb4_svc->count) + 1;
++		key.backend_slot = slot;
++		lb4_bck = __lb4_lookup_backend_slot(&key);
++		if (lb4_bck == NULL || !is_backend_active(lb4_bck->backend_id))
++			continue;
++
++		bck_key.backend_id = lb4_bck->backend_id;
++		bck = map_lookup_elem(&cilium_lb4_leastconn_backend, &bck_key);
++		if (bck != NULL)
++			conn_count = bck->count;
++
++		if (conn_count <= max_count) {
++			max_count = conn_count;
++			svc->backend_id = lb4_bck->backend_id;
++			if (max_count <= LEAST_CONN_THRESHOLD) {
++				svc->rest_count = 0;
++				break;
++			}
++		}
++	}
++	if (svc->rest_count == 0) {
++		svc->is_tmr_active = 0;
++	} else {
++		/* too big backend list - continue searching backend in next iteration */
++		if (timer_start(&svc->tmr, LEAST_CONN_NEXT_ITER_TIMEOUT, 0)) {
++			svc->rest_count = 0;
++			svc->is_tmr_active = 0;
++		}
++	}
++	svc->last_slot = slot;
++	return 0;
++}
++
++static __always_inline void
++start_timer(struct lb4_lct_service *svc, __u64 timeout, __u16 svc_count)
++{
++	__u32 since;
++
++	if (svc->is_tmr_active)
++		return;
++
++	/* Run the scan at once when it has been idle rather than making the
++	 * selection sit stale for a fixed delay: the counts the scan reads are
++	 * already up to date by the time this is reached, so the wait bought
++	 * nothing. The interval is still enforced, because the callback walks up
++	 * to LEAST_CONN_FOREACH_MAX_ENTRIES slots and a busy service must not get
++	 * one scan per packet.
++	 *
++	 * 32 bits of ktime is deliberate: it fits the space the padding already
++	 * occupied, so the map value layout does not change. Unsigned arithmetic
++	 * wraps correctly for any interval well under 4.2s; a service idle for
++	 * longer than that simply waits out the full delay once.
++	 */
++	since = (__u32)ktime_get_ns() - svc->last_run;
++	timeout = since < timeout ? timeout - since : 0;
++
++	/* after cilium bpf prog update we must always replace callback on new version */
++	/* otherwise old bpf prog will not deleted from system memory and its callback will be executed */
++	if (timer_set_callback(&svc->tmr, lb4_select_least_conn_backend_cb))
++		return;
++
++	if (timer_start(&svc->tmr, timeout, 0))
++		return;
++
++	svc->rest_count = svc_count;
++	svc->is_tmr_active = 1;
++}
++
++static __always_inline __u32
++lb4_least_conn_select_backend_id_random(const struct __ctx_buff *ctx,
++					struct lb4_key *key,
++					const struct lb4_service *svc,
++					__u16 *last_slot)
++{
++	/* Backend slot 0 is always reserved for the service frontend. */
++	__u16 slot = (get_prandom_u32() % svc->count) + 1;
++	const struct lb4_service *be = lb4_lookup_backend_slot(ctx, key, slot);
++
++	if (be == NULL)
++		return 0;
++
++	*last_slot = slot;
++	return be->backend_id;
++}
++
++static __always_inline __u32
++lb4_select_backend_id_least_conn(const struct __ctx_buff *ctx __maybe_unused,
++				 struct lb4_key *key __maybe_unused,
++				 const struct ipv4_ct_tuple *tuple __maybe_unused,
++				 const struct lb4_service *svc __maybe_unused)
++{
++	struct lb4_lct_service *val = map_lookup_elem(&cilium_lb4_leastconn_service, key);
++
++	if (val == NULL) {
++		struct lb4_lct_service new_val = {
++			.is_tmr_active = 0,
++			.last_slot = 1,
++			.rest_count = 0,
++		};
++
++		new_val.backend_id = lb4_least_conn_select_backend_id_random(ctx, key, svc,
++									     &new_val.last_slot);
++		key->backend_slot = 0;
++
++		/* On any failure below, fall back to the backend already picked at
++		 * random: the service simply gets no scan until the next packet.
++		 */
++		if (map_update_elem(&cilium_lb4_leastconn_service, key, &new_val, BPF_ANY))
++			return new_val.backend_id;
++
++		val = map_lookup_elem(&cilium_lb4_leastconn_service, key);
++		if (val == NULL)
++			return new_val.backend_id;
++
++		if (timer_init(&val->tmr, &cilium_lb4_leastconn_service, CLOCK_MONOTONIC))
++			return new_val.backend_id;
++
++		if (timer_set_callback(&val->tmr, lb4_select_least_conn_backend_cb))
++			return new_val.backend_id;
++
++		start_timer(val, is_backend_active(new_val.backend_id) ? LEAST_CONN_TIMEOUT : 1000,
++			    svc->count);
++		return new_val.backend_id;
++	}
++
++	if (!is_backend_active(val->backend_id))
++		val->backend_id = lb4_select_backend_id_random(ctx, key, tuple, svc);
++
++	start_timer(val, LEAST_CONN_TIMEOUT, svc->count);
++	return val->backend_id;
++}
++
++static __always_inline void
++_lb_lct_conn_closed(__u32 backend_id)
++{
++	struct lb4_lct_backend *val;
++	struct lb4_lct_key key = {
++		.backend_id = backend_id,
++	};
++
++	val = map_lookup_elem(&cilium_lb4_leastconn_backend, &key);
++	if (val == NULL || val->count == 0)
++		return;
++
++	__sync_fetch_and_sub(&val->count, 1);
++}
++
++static __always_inline void
++_lb_lct_conn_open(__u32 backend_id)
++{
++	struct lb4_lct_backend *val;
++	struct lb4_lct_key key = {
++		.backend_id = backend_id,
++	};
++
++	val = map_lookup_elem(&cilium_lb4_leastconn_backend, &key);
++	if (val == NULL) {
++		struct lb4_lct_backend new_val = {
++			.count = 1,
++		};
++
++		map_update_elem(&cilium_lb4_leastconn_backend, &key, &new_val, BPF_ANY);
++		return;
++	}
++
++	__sync_fetch_and_add(&val->count, 1);
++}
++
++/* Upstream's hook for out-of-tree algorithms, see lb4_select_backend_id(). */
++#define lb4_select_backend_id_custom(alg, ctx, key, tuple, svc) \
++	lb4_select_backend_id_least_conn(ctx, key, tuple, svc)
++
++#else /* ENABLE_LEAST_CONN */
++
++static __always_inline void _lb_lct_conn_closed(__u32 backend_id __maybe_unused) {}
++static __always_inline void _lb_lct_conn_open(__u32 backend_id __maybe_unused) {}
++
++#endif /* ENABLE_LEAST_CONN */
+diff --git a/pkg/datapath/linux/config/config.go b/pkg/datapath/linux/config/config.go
+index 33305bb7f4..d0f8bf34f2 100644
+--- a/pkg/datapath/linux/config/config.go
++++ b/pkg/datapath/linux/config/config.go
+@@ -346,6 +346,11 @@ func (h *HeaderfileWriter) WriteNodeConfig(w io.Writer, cfg *config.Config) erro
+ 		if cfg.LBConfig.EnableLoadBalancerICMPReply {
+ 			cDefinesMap["ENABLE_LOADBALANCER_ICMP_REPLY"] = "1"
+ 		}
++		// least-conn is reachable only through the per-service annotation, so
++		// the datapath only needs it when annotations are enabled.
++		if cfg.LBConfig.AlgorithmAnnotation {
++			cDefinesMap["ENABLE_LEAST_CONN"] = "1"
++		}
+ 		if option.Config.EnableNat46X64Gateway {
+ 			cDefinesMap["ENABLE_NAT_46X64_GATEWAY"] = "1"
+ 		}
+diff --git a/pkg/datapath/maps/mapkv.btf b/pkg/datapath/maps/mapkv.btf
+index 4a0cb1e8d8d5ffd9fea375b2e5b7d7cfe0425589..764efada0acf59b86242cbf38f933812bb91b5ce 100644
+GIT binary patch
+literal 8647
+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
+C&1fG0
+
+literal 8401
+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
+EAGaPsM*si-
+
+diff --git a/pkg/datapath/maps/maps_generated.go b/pkg/datapath/maps/maps_generated.go
+index cef8470d1b..bc31422712 100644
+--- a/pkg/datapath/maps/maps_generated.go
++++ b/pkg/datapath/maps/maps_generated.go
+@@ -66,6 +66,8 @@ const (
+ 	CiliumLB4Affinity                   = "cilium_lb4_affinity"
+ 	CiliumLB4BackendsV3                 = "cilium_lb4_backends_v3"
+ 	CiliumLB4Health                     = "cilium_lb4_health"
++	CiliumLB4LeastconnBackend           = "cilium_lb4_leastconn_backend"
++	CiliumLB4LeastconnService           = "cilium_lb4_leastconn_service"
+ 	CiliumLB4Maglev                     = "cilium_lb4_maglev"
+ 	CiliumLB4MaglevInner                = "cilium_lb4_maglev_inner"
+ 	CiliumLB4ReverseNAT                 = "cilium_lb4_reverse_nat"
+@@ -513,6 +515,34 @@ func newCiliumLB4HealthSpec(btf *btf.Spec) *ebpf.MapSpec {
+ 	}
+ }
+ 
++func newCiliumLB4LeastconnBackendSpec(btf *btf.Spec) *ebpf.MapSpec {
++	return &ebpf.MapSpec{
++		Name:       CiliumLB4LeastconnBackend,
++		Type:       ebpf.Hash,
++		KeySize:    4,
++		Key:        anyTypeByName(btf, "lb4_lct_key"),
++		ValueSize:  4,
++		Value:      anyTypeByName(btf, "lb4_lct_backend"),
++		MaxEntries: 65536,
++		Flags:      unix.BPF_F_NO_PREALLOC,
++		Pinning:    ebpf.PinByName,
++	}
++}
++
++func newCiliumLB4LeastconnServiceSpec(btf *btf.Spec) *ebpf.MapSpec {
++	return &ebpf.MapSpec{
++		Name:       CiliumLB4LeastconnService,
++		Type:       ebpf.Hash,
++		KeySize:    12,
++		Key:        anyTypeByName(btf, "lb4_key"),
++		ValueSize:  32,
++		Value:      anyTypeByName(btf, "lb4_lct_service"),
++		MaxEntries: 65536,
++		Flags:      unix.BPF_F_NO_PREALLOC,
++		Pinning:    ebpf.PinByName,
++	}
++}
++
+ func newCiliumLB4MaglevSpec(btf *btf.Spec) *ebpf.MapSpec {
+ 	return &ebpf.MapSpec{
+ 		Name:       CiliumLB4Maglev,
+@@ -1339,6 +1369,8 @@ var _outer []newMapFn = []newMapFn{
+ 	newCiliumLB4AffinitySpec,
+ 	newCiliumLB4BackendsV3Spec,
+ 	newCiliumLB4HealthSpec,
++	newCiliumLB4LeastconnBackendSpec,
++	newCiliumLB4LeastconnServiceSpec,
+ 	newCiliumLB4MaglevSpec,
+ 	newCiliumLB4ReverseNATSpec,
+ 	newCiliumLB4ReverseSkSpec,
+diff --git a/pkg/datapath/types/types_generated.go b/pkg/datapath/types/types_generated.go
+index e95a2fcd22..eaebe05982 100644
+--- a/pkg/datapath/types/types_generated.go
++++ b/pkg/datapath/types/types_generated.go
+@@ -505,6 +505,32 @@ type LB4Key struct {
+ 	Pad         [2]uint8
+ }
+ 
++// LB4LctBackend is generated from the BPF C type lb4_lct_backend.
++type LB4LctBackend struct {
++	_     structs.HostLayout
++	Count uint32
++}
++
++// LB4LctKey is generated from the BPF C type lb4_lct_key.
++type LB4LctKey struct {
++	_         structs.HostLayout
++	BackendID uint32
++}
++
++// LB4LctService is generated from the BPF C type lb4_lct_service.
++type LB4LctService struct {
++	_           structs.HostLayout
++	IsTmrActive uint32
++	BackendID   uint32
++	LastSlot    uint16
++	RestCount   uint16
++	LastRun     uint32
++	Tmr         struct {
++		_ structs.HostLayout
++		_ [16]byte
++	}
++}
++
+ // LB4ReverseNAT is generated from the BPF C type lb4_reverse_nat.
+ type LB4ReverseNAT struct {
+ 	_       structs.HostLayout
+diff --git a/pkg/loadbalancer/config.go b/pkg/loadbalancer/config.go
+index 9dffa55596..c3d98ec135 100644
+--- a/pkg/loadbalancer/config.go
++++ b/pkg/loadbalancer/config.go
+@@ -119,6 +119,11 @@ const (
+ 	// LBAlgorithmMaglev is for using maglev consistent hashing for backend selection
+ 	LBAlgorithmMaglev = "maglev"
+ 
++	// LBAlgorithmLeastConn selects the backend with the fewest open connections.
++	// Only selectable per service through the annotation: bpf-lb-algorithm is
++	// validated against random/maglev, so it cannot be a node-wide default.
++	LBAlgorithmLeastConn = "least-conn"
++
+ 	// LBModeSNAT is for SNATing requests to remote nodes
+ 	LBModeSNAT = "snat"
+ 
+diff --git a/pkg/loadbalancer/loadbalancer.go b/pkg/loadbalancer/loadbalancer.go
+index 89a74a19fa..95c61320cf 100644
+--- a/pkg/loadbalancer/loadbalancer.go
++++ b/pkg/loadbalancer/loadbalancer.go
+@@ -122,6 +122,10 @@ func init() {
+ 		Value:     SVCLoadBalancingAlgorithmMaglev,
+ 		UseMaglev: true,
+ 	})
++	RegisterSVCLoadBalancingAlgorithm(SVCLoadBalancingAlgorithmSpec{
++		Name:  LBAlgorithmLeastConn,
++		Value: SVCLoadBalancingAlgorithmCustom,
++	})
+ }
+ 
+ func RegisterSVCLoadBalancingAlgorithm(spec SVCLoadBalancingAlgorithmSpec) {
+diff --git a/pkg/loadbalancer/reconciler/bpf_reconciler.go b/pkg/loadbalancer/reconciler/bpf_reconciler.go
+index 4c7b3334a0..302e89b868 100644
+--- a/pkg/loadbalancer/reconciler/bpf_reconciler.go
++++ b/pkg/loadbalancer/reconciler/bpf_reconciler.go
+@@ -33,6 +33,7 @@ import (
+ 	"github.com/cilium/cilium/pkg/lock"
+ 	"github.com/cilium/cilium/pkg/logging/logfields"
+ 	"github.com/cilium/cilium/pkg/maglev"
++	"github.com/cilium/cilium/pkg/maps/leastconn"
+ 	"github.com/cilium/cilium/pkg/promise"
+ 	"github.com/cilium/cilium/pkg/time"
+ 	"github.com/cilium/cilium/pkg/u8proto"
+@@ -531,6 +532,14 @@ func (ops *BPFOps) deleteFrontend(fe *loadbalancer.Frontend) error {
+ 		}
+ 	}
+ 
++	// Drop the least-conn entry for this frontend, releasing the BPF timer it
++	// holds. Keyed on the frontend address, so it is per service port.
++	if !fe.Address.IsIPv6() {
++		leastconn.DeleteService(maps.NewService4Key(
++			fe.Address.AddrCluster().AsNetIP(), fe.Address.Port(), proto,
++			fe.Address.Scope(), 0))
++	}
++
+ 	// Cleanup any ICMP-reply entry this fe might be associated with.
+ 	if ops.useICMPReply() && fe.Type == loadbalancer.SVCTypeLoadBalancer &&
+ 		fe.Address.Scope() == loadbalancer.ScopeExternal {
+@@ -1461,6 +1470,9 @@ func (ops *BPFOps) deleteBackend(ipv6 bool, id loadbalancer.BackendID) error {
+ 	if err != nil {
+ 		return fmt.Errorf("delete backend %d: %w", id, err)
+ 	}
++	// Drop its least-conn counter too, or the id would carry a stale count into
++	// whatever backend is allocated that id next.
++	leastconn.DeleteBackendByID(id)
+ 	return nil
+ }
+ 
+diff --git a/pkg/maps/cells.go b/pkg/maps/cells.go
+index 689dbac478..019ae1242c 100644
+--- a/pkg/maps/cells.go
++++ b/pkg/maps/cells.go
+@@ -20,6 +20,7 @@ import (
+ 	"github.com/cilium/cilium/pkg/maps/fragmap"
+ 	"github.com/cilium/cilium/pkg/maps/l2respondermap"
+ 	"github.com/cilium/cilium/pkg/maps/l2v6respondermap"
++	"github.com/cilium/cilium/pkg/maps/leastconn"
+ 	"github.com/cilium/cilium/pkg/maps/lxcmap"
+ 	"github.com/cilium/cilium/pkg/maps/multicast"
+ 	"github.com/cilium/cilium/pkg/maps/nat"
+@@ -94,6 +95,9 @@ var Cell = cell.Module(
+ 	// Provides access to ActiveConnectionTracking map.
+ 	act.Cell,
+ 
++	// Per-backend connection counters for the least-conn LB algorithm.
++	leastconn.Cell,
++
+ 	// Provides access to NAT maps.
+ 	nat.Cell,
+ 
+diff --git a/pkg/maps/ctmap/ctmap.go b/pkg/maps/ctmap/ctmap.go
+index 9e74e04d71..c329565dce 100644
+--- a/pkg/maps/ctmap/ctmap.go
++++ b/pkg/maps/ctmap/ctmap.go
+@@ -16,8 +16,10 @@ import (
+ 
+ 	"github.com/cilium/cilium/api/v1/models"
+ 	"github.com/cilium/cilium/pkg/bpf"
++	loadbalancer "github.com/cilium/cilium/pkg/loadbalancer"
+ 	"github.com/cilium/cilium/pkg/lock"
+ 	"github.com/cilium/cilium/pkg/logging/logfields"
++	"github.com/cilium/cilium/pkg/maps/leastconn"
+ 	"github.com/cilium/cilium/pkg/maps/nat"
+ 	"github.com/cilium/cilium/pkg/maps/timestamp"
+ 	"github.com/cilium/cilium/pkg/metrics"
+@@ -541,8 +543,19 @@ func (m *Map) cleanup(filter GCFilter, natMap *nat.Map, stats *gcStats, next fun
+ 			tupleKey.GetDestPort(), tupleKey.GetSourcePort(),
+ 			uint8(tupleKey.GetNextHeader()), tupleKey.GetFlags(), entry)
+ 
++		// Keep the least-conn per-backend counters honest. The datapath counts
++		// a close only when it sees one, so an entry that merely expires would
++		// leak a count; and a full pass recounts what is actually alive, which
++		// is what corrects any drift. Both are no-ops unless least-conn is on.
++		isSVC := tupleKey.GetFlags()&TUPLE_F_SERVICE != 0
++
+ 		switch action {
+ 		case deleteEntry:
++			if isSVC && (tupleKey.GetNextHeader() != u8proto.TCP || !entry.IsClosed()) {
++				// TCP sessions the datapath saw closing are already accounted
++				// for; everything else reaches here without having been.
++				leastconn.DecrementCounterByID(loadbalancer.BackendID(entry.Union0[1]))
++			}
+ 			err := m.purgeCtEntry(ctKey, entry, natMap, next, countFailedFn)
+ 			if err != nil {
+ 				if errors.Is(err, ebpf.ErrKeyNotExist) {
+@@ -562,6 +575,9 @@ func (m *Map) cleanup(filter GCFilter, natMap *nat.Map, stats *gcStats, next fun
+ 			}
+ 		default:
+ 			stats.aliveEntries++
++			if isSVC {
++				leastconn.IncrementCachedCounterByID(loadbalancer.BackendID(entry.Union0[1]))
++			}
+ 		}
+ 	}
+ }
+diff --git a/pkg/maps/ctmap/gc/gc.go b/pkg/maps/ctmap/gc/gc.go
+index 2e934f555b..1705f01439 100644
+--- a/pkg/maps/ctmap/gc/gc.go
++++ b/pkg/maps/ctmap/gc/gc.go
+@@ -29,6 +29,7 @@ import (
+ 	"github.com/cilium/cilium/pkg/endpointstate"
+ 	"github.com/cilium/cilium/pkg/logging/logfields"
+ 	"github.com/cilium/cilium/pkg/maps/ctmap"
++	"github.com/cilium/cilium/pkg/maps/leastconn"
+ 	"github.com/cilium/cilium/pkg/metrics"
+ 	"github.com/cilium/cilium/pkg/node"
+ 	"github.com/cilium/cilium/pkg/option"
+@@ -297,7 +298,15 @@ func (gc *GC) enableWithConfig(
+ 
+ 			if len(eps) > 0 || initialScan {
+ 				gc.logger.Info("Starting GC of connection tracking", logfields.First, initialScan)
++				if initialScan {
++					// Only the first pass rebuilds the least-conn counters. The
++					// pinned counter map outlives an agent restart while the
++					// agent's view of it does not, and the conntrack table is
++					// the only authority on what is actually still open.
++					leastconn.InitCached()
++				}
+ 				maxDeleteRatio, success = runGC(ipv4, ipv6, triggeredBySignal, gcFilter)
++				leastconn.FlushCached()
+ 			}
+ 
+ 			interval := getIntervalWithConfig(gc.logger, gcInterval, cachedGCInterval, maxDeleteRatio,
+diff --git a/pkg/maps/ctmap/types.go b/pkg/maps/ctmap/types.go
+index 2e81b2e6ab..393547969c 100644
+--- a/pkg/maps/ctmap/types.go
++++ b/pkg/maps/ctmap/types.go
+@@ -346,6 +346,12 @@ func (c *CtEntry) isDsrInternalEntry() bool {
+ 	return c.Flags&DSRInternal != 0
+ }
+ 
++// IsClosed reports whether either direction of a TCP session has been seen
++// closing, which is how the datapath already accounted for it.
++func (c *CtEntry) IsClosed() bool {
++	return (c.Flags&RxClosing) != 0 || (c.Flags&TxClosing) != 0
++}
++
+ func (c *CtEntry) flagsString() string {
+ 	var sb strings.Builder
+ 
+diff --git a/pkg/maps/leastconn/cell.go b/pkg/maps/leastconn/cell.go
+new file mode 100644
+index 0000000000..02cf87f2b7
+--- /dev/null
++++ b/pkg/maps/leastconn/cell.go
+@@ -0,0 +1,36 @@
++// SPDX-License-Identifier: Apache-2.0
++// Copyright Authors of Cilium
++
++package leastconn
++
++import (
++	"log/slog"
++
++	"github.com/cilium/hive/cell"
++
++	"github.com/cilium/cilium/pkg/loadbalancer"
++	"github.com/cilium/cilium/pkg/maps/registry"
++)
++
++// Cell opens the least-conn maps when the algorithm can be selected.
++//
++// least-conn is only reachable through the service.cilium.io/lb-algorithm
++// annotation -- bpf-lb-algorithm is validated against random and maglev, so it
++// cannot be a node-wide default -- which is why this keys off the annotation
++// setting alone. With it off, the maps stay closed and every counter helper is
++// a no-op.
++var Cell = cell.Module(
++	"least-conn-maps",
++	"Per-backend connection counters for the least-conn load balancing algorithm",
++
++	cell.Invoke(func(lc cell.Lifecycle, log *slog.Logger, lbCfg loadbalancer.Config, reg *registry.MapRegistry) {
++		if !lbCfg.AlgorithmAnnotation {
++			return
++		}
++		lc.Append(cell.Hook{
++			OnStart: func(cell.HookContext) error {
++				return Init(log, reg)
++			},
++		})
++	}),
++)
+diff --git a/pkg/maps/leastconn/leastconn.go b/pkg/maps/leastconn/leastconn.go
+new file mode 100644
+index 0000000000..42bbe5bbdf
+--- /dev/null
++++ b/pkg/maps/leastconn/leastconn.go
+@@ -0,0 +1,296 @@
++// SPDX-License-Identifier: Apache-2.0
++// Copyright Authors of Cilium
++
++// Package leastconn maintains the per-backend open connection counts that the
++// least-conn load balancing algorithm selects on.
++//
++// The datapath increments and decrements these counters as connections open and
++// close (see bpf/lib/least_conn.h), but it only sees the events it happens to
++// handle: a connection whose conntrack entry simply times out is never observed
++// closing, and a count that drifts upwards would permanently steer traffic away
++// from a healthy backend. So the counts are treated as an approximation and the
++// conntrack garbage collector corrects them: on every pass it recounts the live
++// service entries per backend and writes the result back. See the Cached*
++// functions below, driven from pkg/maps/ctmap.
++package leastconn
++
++import (
++	"fmt"
++	"log/slog"
++
++	"github.com/cilium/cilium/pkg/bpf"
++	datapathmaps "github.com/cilium/cilium/pkg/datapath/maps"
++	lb "github.com/cilium/cilium/pkg/loadbalancer"
++	lbmaps "github.com/cilium/cilium/pkg/loadbalancer/maps"
++	"github.com/cilium/cilium/pkg/logging/logfields"
++	"github.com/cilium/cilium/pkg/maps/registry"
++)
++
++const (
++	ServiceMapName = datapathmaps.CiliumLB4LeastconnService
++	BackendMapName = datapathmaps.CiliumLB4LeastconnBackend
++)
++
++// BackendKey is the key of the backend counter map, matching struct lb4_lct_key.
++type BackendKey struct {
++	BackendID uint32
++}
++
++func (k *BackendKey) New() bpf.MapKey { return &BackendKey{} }
++func (k *BackendKey) String() string  { return fmt.Sprintf("backend=%d", k.BackendID) }
++
++// BackendValue is the value of the backend counter map, matching
++// struct lb4_lct_backend.
++type BackendValue struct {
++	Count uint32
++}
++
++func (v *BackendValue) New() bpf.MapValue { return &BackendValue{} }
++func (v *BackendValue) String() string    { return fmt.Sprintf("count=%d", v.Count) }
++
++// ServiceValue mirrors struct lb4_lct_service. The agent only ever deletes
++// these entries, so the fields are carried for size and never interpreted here;
++// the datapath owns them, including the embedded bpf_timer.
++type ServiceValue struct {
++	IsTmrActive uint32
++	BackendID   uint32
++	LastSlot    uint16
++	RestCount   uint16
++	Pad         [4]uint8
++	Timer       [2]uint64
++}
++
++func (v *ServiceValue) New() bpf.MapValue { return &ServiceValue{} }
++func (v *ServiceValue) String() string    { return fmt.Sprintf("backend=%d", v.BackendID) }
++
++var (
++	logger *slog.Logger
++
++	backendMap *bpf.Map
++	serviceMap *bpf.Map
++
++	// backendCached is the count being rebuilt by the conntrack GC pass that is
++	// currently running, and nil when no pass is in flight.
++	backendCached map[BackendKey]BackendValue
++)
++
++// Init opens the backend counter map. Called once the agent knows the algorithm
++// can be selected; without it every function here is a no-op, so an agent
++// running without least-conn pays nothing.
++func Init(log *slog.Logger, reg *registry.MapRegistry) error {
++	m, err := bpf.NewMapFromRegistry(reg, BackendMapName, &BackendKey{}, &BackendValue{})
++	if err != nil {
++		return err
++	}
++	if err := m.OpenOrCreate(); err != nil {
++		return err
++	}
++
++	sm, err := bpf.NewMapFromRegistry(reg, ServiceMapName, &lbmaps.Service4Key{}, &ServiceValue{})
++	if err != nil {
++		return err
++	}
++	if err := sm.OpenOrCreate(); err != nil {
++		return err
++	}
++
++	logger = log
++	backendMap = m
++	serviceMap = sm
++
++	// Drop whatever the previous agent left behind before the datapath can read
++	// it. Failing the sweep must not fail the agent: a stale entry is a leak,
++	// not an outage.
++	if err := syncWithLiveState(reg); err != nil {
++		logger.Warn("Unable to drop stale least-conn entries at startup", logfields.Error, err)
++	}
++	return nil
++}
++
++// syncWithLiveState drops every entry whose service or backend no longer exists.
++//
++// Both maps are pinned under /sys/fs/bpf, so they outlive the service, the agent
++// and even a cilium reinstall, while entries are otherwise removed only as the
++// reconciler observes a deletion. Anything that goes away while no agent runs is
++// never cleaned up, and these are fixed-size hashes: the leak is permanent and
++// eventually fills them. A full sweep at start is what closes that gap; keeping
++// them in step while the agent runs is the reconciler's job.
++//
++// Live state is read from the load balancer's own pinned maps rather than from
++// Kubernetes, so the sweep needs nothing to have synced yet and can run before
++// the datapath serves a packet. Dropping an entry is safe either way: the
++// datapath reads a missing backend counter as an idle backend, and the first
++// conntrack GC pass rebuilds the counts from the connections that are really
++// open.
++func syncWithLiveState(reg *registry.MapRegistry) error {
++	svcMap, err := bpf.NewMapFromRegistry(reg, lbmaps.Service4MapV2Name,
++		&lbmaps.Service4Key{}, &lbmaps.Service4Value{})
++	if err != nil {
++		return fmt.Errorf("resolving %s: %w", lbmaps.Service4MapV2Name, err)
++	}
++	if err := svcMap.Open(); err != nil {
++		// No load balancer map means no live state to compare against. Sweeping
++		// on that basis would delete everything, so leave the maps alone.
++		return fmt.Errorf("opening %s: %w", lbmaps.Service4MapV2Name, err)
++	}
++	defer svcMap.Close()
++
++	bckMap, err := bpf.NewMapFromRegistry(reg, lbmaps.Backend4MapV3Name,
++		&lbmaps.Backend4KeyV3{}, &lbmaps.Backend4ValueV3{})
++	if err != nil {
++		return fmt.Errorf("resolving %s: %w", lbmaps.Backend4MapV3Name, err)
++	}
++	if err := bckMap.Open(); err != nil {
++		return fmt.Errorf("opening %s: %w", lbmaps.Backend4MapV3Name, err)
++	}
++	defer bckMap.Close()
++
++	// Collect first, delete afterwards: deleting while iterating a hash map can
++	// make the dump skip entries.
++	var staleSvc []lbmaps.Service4Key
++	if err := serviceMap.DumpWithCallback(func(k bpf.MapKey, _ bpf.MapValue) {
++		key, ok := k.(*lbmaps.Service4Key)
++		if !ok {
++			return
++		}
++		if _, err := svcMap.Lookup(key); err != nil {
++			staleSvc = append(staleSvc, *key)
++		}
++	}); err != nil {
++		return fmt.Errorf("dumping %s: %w", ServiceMapName, err)
++	}
++
++	var staleBck []BackendKey
++	if err := backendMap.DumpWithCallback(func(k bpf.MapKey, _ bpf.MapValue) {
++		key, ok := k.(*BackendKey)
++		if !ok {
++			return
++		}
++		if _, err := bckMap.Lookup(lbmaps.NewBackend4KeyV3(lb.BackendID(key.BackendID))); err != nil {
++			staleBck = append(staleBck, *key)
++		}
++	}); err != nil {
++		return fmt.Errorf("dumping %s: %w", BackendMapName, err)
++	}
++
++	for i := range staleSvc {
++		if err := serviceMap.Delete(&staleSvc[i]); err != nil {
++			logger.Warn("Unable to drop a stale least-conn service entry",
++				logfields.Error, err, logfields.ServiceKey, staleSvc[i].String())
++		}
++	}
++	for i := range staleBck {
++		if err := backendMap.Delete(&staleBck[i]); err != nil {
++			logger.Warn("Unable to drop a stale least-conn backend entry",
++				logfields.Error, err, logfields.BackendID, staleBck[i].BackendID)
++		}
++	}
++
++	if len(staleSvc) > 0 || len(staleBck) > 0 {
++		logger.Info("Dropped stale least-conn entries at startup",
++			"services", len(staleSvc), "backends", len(staleBck))
++	}
++	return nil
++}
++
++// DeleteService drops a frontend's entry, which also releases the BPF timer it
++// holds. Called when the service goes away; without it the timer would keep
++// firing against a frontend that no longer exists.
++func DeleteService(key *lbmaps.Service4Key) {
++	if serviceMap == nil {
++		return
++	}
++
++	k := key.ToNetwork().(*lbmaps.Service4Key)
++	k.BackendSlot = 0
++	if err := serviceMap.Delete(k); err != nil {
++		logger.Debug("Unable to delete least-conn service entry",
++			logfields.Error, err, logfields.ServiceKey, key)
++	}
++}
++
++// DeleteBackendByID drops a backend's counter, for when the backend itself goes
++// away.
++func DeleteBackendByID(id lb.BackendID) {
++	if backendMap == nil {
++		return
++	}
++
++	key := BackendKey{BackendID: uint32(id)}
++	if err := backendMap.Delete(&key); err != nil {
++		logger.Debug("Unable to delete least-conn backend entry",
++			logfields.Error, err, logfields.BackendID, id)
++		return
++	}
++}
++
++// DecrementCounterByID accounts for a connection the datapath did not see close,
++// which is every service conntrack entry the GC removes other than a TCP session
++// already marked closing.
++func DecrementCounterByID(id lb.BackendID) {
++	if backendMap == nil {
++		return
++	}
++
++	key := BackendKey{BackendID: uint32(id)}
++	v, err := backendMap.Lookup(&key)
++	if err != nil {
++		logger.Debug("Unable to look up least-conn backend entry",
++			logfields.Error, err, logfields.BackendID, id)
++		return
++	}
++
++	val, ok := v.(*BackendValue)
++	if !ok || val.Count == 0 {
++		return
++	}
++	// The datapath may be updating this counter at the same time. Losing an
++	// update here is acceptable: the recount below is what makes it converge.
++	val.Count--
++	if err := backendMap.Update(&key, val); err != nil {
++		logger.Warn("Unable to update least-conn backend entry",
++			logfields.Error, err, logfields.BackendID, id)
++	}
++}
++
++// InitCached starts a recount. Called at the beginning of a full conntrack GC
++// pass, which is the only pass that sees every entry.
++func InitCached() {
++	if backendMap == nil {
++		return
++	}
++	backendCached = make(map[BackendKey]BackendValue)
++}
++
++// IncrementCachedCounterByID counts one live service conntrack entry against its
++// backend.
++func IncrementCachedCounterByID(id lb.BackendID) {
++	if backendCached == nil {
++		return
++	}
++
++	key := BackendKey{BackendID: uint32(id)}
++	val := backendCached[key]
++	val.Count++
++	backendCached[key] = val
++}
++
++// FlushCached writes the recounted values over whatever the datapath has
++// accumulated, and ends the pass.
++func FlushCached() {
++	if backendCached == nil {
++		return
++	}
++	defer func() { backendCached = nil }()
++
++	if backendMap == nil {
++		return
++	}
++
++	for key, val := range backendCached {
++		if err := backendMap.Update(&key, &val); err != nil {
++			logger.Error("Unable to flush least-conn backend entry",
++				logfields.Error, err, logfields.BackendID, key.BackendID)
++		}
++	}
++}
