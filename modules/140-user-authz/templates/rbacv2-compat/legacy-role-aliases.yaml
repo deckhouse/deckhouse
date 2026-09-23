@@ -10,13 +10,19 @@
   These aliases keep the OLD names alive for exactly one release. Each alias is an empty ClusterRole
   whose aggregationRule reuses the NEW role's selector, so it aggregates the same capabilities as
   its new-model counterpart (roleRef is immutable, so we cannot rewrite their bindings for them).
-  That is not identical to pre-upgrade rights — see the NOTE below. Aliases are also not
-  `delegatable`, so new project RoleBindings to the old names are rejected. Aliases carry
+  That is not identical to pre-upgrade rights — see the NOTE below. The d8:use:role:* aliases are
+  `delegatable` (see below), so a plain RoleBinding to them inside a project namespace keeps working;
+  what is refused is a new ProjectRoleBinding/ClusterProjectRoleBinding to an old name, through the
+  rbac.deckhouse.io/disabled-for-direct-use-in-projects annotation. Aliases carry
   rbac.deckhouse.io/deprecated so the deprecation hook/alert and the console can flag them.
 
   NOTE (intentional, not a bug): the role model moved serviceaccounts/token:create and impersonate from admin
   to superadmin. The d8:use:role:admin -> d8:namespace:admin alias therefore no longer grants those two
   disaster-grade primitives. This is called out in the migration alert/docs.
+
+  An alias carries no `rules` key, not even an empty one: rules belong to the aggregation
+  controller, and shipping `rules: []` makes server-side apply fight it, emptying the role for a
+  moment on every reconcile.
 
   They live under templates/rbacv2-compat/ (NOT templates/rbacv2/) so the RBACv2 template-contract CI
   invariant — which requires the new naming — does not scan them. Remove this whole directory (and the
@@ -48,9 +54,15 @@
   and subsystem roles, which are bound with a ClusterRoleBinding and never go through the
   project-scoped registry.
 */ -}}
+{{- /*
+  The use-role aliases also carry rbac.deckhouse.io/disabled-for-direct-use-in-projects (ADR-1): a
+  NEW ProjectRoleBinding or ClusterProjectRoleBinding may not point at an old name -- the project
+  webhooks refuse it and name the new role -- while an existing plain RoleBinding keeps working, which
+  is the whole point of the alias. The annotation is read by the project role binding webhooks only.
+*/ -}}
 {{- range $level := list "viewer" "user" "manager" "admin" -}}
-  {{- $aliases = append $aliases (dict "name" (printf "d8:use:role:%s" $level) "selector" "aggregate-to-namespace-as" "level" $level "target" (printf "d8:namespace:%s" $level) "delegatable" true) -}}
-  {{- $aliases = append $aliases (dict "name" (printf "d8:use:role:%s:kubernetes" $level) "selector" "aggregate-to-namespace-as" "level" $level "target" (printf "d8:namespace:%s" $level) "delegatable" true) -}}
+  {{- $aliases = append $aliases (dict "name" (printf "d8:use:role:%s" $level) "selector" "aggregate-to-namespace-as" "level" $level "target" (printf "d8:namespace:%s" $level) "delegatable" true "disabledForProjects" true) -}}
+  {{- $aliases = append $aliases (dict "name" (printf "d8:use:role:%s:kubernetes" $level) "selector" "aggregate-to-namespace-as" "level" $level "target" (printf "d8:namespace:%s" $level) "delegatable" true "disabledForProjects" true) -}}
 {{- end -}}
 
 {{- /*
@@ -76,6 +88,9 @@ metadata:
     en.meta.deckhouse.io/description: "Deprecated RBACv2 role kept for one release for backward compatibility. Migrate bindings to {{ $alias.target }}."
     ru.meta.deckhouse.io/description: "Устаревшая роль RBACv2, оставленная на один релиз для обратной совместимости. Переведите привязки на {{ $alias.target }}."
     rbac.deckhouse.io/deprecated-replaced-by: {{ $alias.target | quote }}
+    {{- if $alias.disabledForProjects }}
+    rbac.deckhouse.io/disabled-for-direct-use-in-projects: "true"
+    {{- end }}
   labels:
     heritage: deckhouse
     module: user-authz
@@ -90,5 +105,4 @@ aggregationRule:
   clusterRoleSelectors:
     - matchLabels:
         rbac.deckhouse.io/{{ $alias.selector }}: {{ $alias.level | quote }}
-rules: []
 {{- end }}

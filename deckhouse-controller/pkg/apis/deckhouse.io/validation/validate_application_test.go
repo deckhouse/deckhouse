@@ -78,7 +78,7 @@ func newAPV(name string, draft bool, reqs *v1alpha1.PackageRequirements) *v1alph
 	}
 
 	if draft {
-		apv.Labels = map[string]string{v1alpha1.ApplicationPackageVersionLabelDraft: "true"}
+		apv.Labels = map[string]string{v1alpha1.PackageLabelDraft: "true"}
 	}
 
 	if reqs != nil {

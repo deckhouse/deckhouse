@@ -45,3 +45,11 @@ func GetStatus(_ context.Context, input *go_hook.HookInput) Status {
 	status := accessor.Get()
 	return status
 }
+
+// Initialized answers whether the checker has ever reported.
+//
+// Without it a zero Status is indistinguishable from a registry the checker found
+// unreachable, and a caller deciding anything on reachability has to tell those apart.
+func Initialized(input *go_hook.HookInput) bool {
+	return input.Values.Get(valuesInitializedPath).Bool()
+}

@@ -29,13 +29,6 @@ const (
 	ModulePackageVersionResource = "modulepackageversions"
 	ModulePackageVersionKind     = "ModulePackageVersion"
 
-	// Labels carrying the version's origin and lifecycle state.
-	ModulePackageVersionLabelLegacy          = "packages.deckhouse.io/legacy"
-	ModulePackageVersionLabelDraft           = "packages.deckhouse.io/draft"
-	ModulePackageVersionLabelPackage         = "packages.deckhouse.io/package"
-	ModulePackageVersionLabelRepository      = "packages.deckhouse.io/repository"
-	ModulePackageVersionLabelExistInRegistry = "packages.deckhouse.io/exist-in-registry"
-
 	// Condition type and the reasons reported when metadata loading fails.
 	ModulePackageVersionConditionTypeMetadataLoaded         = "MetadataLoaded"
 	ModulePackageVersionConditionReasonFetchErr             = "FetchingReleaseError"
@@ -94,8 +87,10 @@ type ModulePackageVersion struct {
 	Status ModulePackageVersionStatus `json:"status,omitempty"`
 }
 
-// ModulePackageVersionSpec identifies the version. Every field is immutable because the
-// object name is derived from the three of them.
+// ModulePackageVersionSpec identifies the version. The package and the repository are immutable;
+// so is the version, except on the embedded repository, whose object name carries no version and
+// whose single object therefore serves every build.
+// +kubebuilder:validation:XValidation:rule="oldSelf.packageRepositoryName == 'embedded' || self.packageVersion == oldSelf.packageVersion",message="packageVersion is immutable outside the embedded repository"
 type ModulePackageVersionSpec struct {
 	// Name of the module package.
 	// +kubebuilder:validation:MinLength=1
@@ -111,7 +106,6 @@ type ModulePackageVersionSpec struct {
 
 	// Version of the module package.
 	// +kubebuilder:validation:MinLength=1
-	// +kubebuilder:validation:XValidation:rule="self == oldSelf",message="packageVersion is immutable"
 	// +crd-enricher:deckhouse:documentation:examples=v1.0.0
 	PackageVersion string `json:"packageVersion"`
 }
@@ -198,13 +192,13 @@ type ModulePackageVersionStatusMetadata struct {
 
 // IsDraft reports whether this package version is marked as a draft.
 func (m *ModulePackageVersion) IsDraft() bool {
-	return m.hasTrueLabel(ModulePackageVersionLabelDraft)
+	return m.hasTrueLabel(PackageLabelDraft)
 }
 
 // IsLegacy reports whether this package version was produced from a legacy ModuleRelease
 // rather than discovered as a package in a repository.
 func (m *ModulePackageVersion) IsLegacy() bool {
-	return m.hasTrueLabel(ModulePackageVersionLabelLegacy)
+	return m.hasTrueLabel(PackageLabelLegacy)
 }
 
 // GetExclusiveGroup returns the exclusive group of this package version.

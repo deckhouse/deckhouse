@@ -1,0 +1,17 @@
+{%- comment -%}
+  Decorative artwork for the Russian 404 page, the markup deckhouse.ru uses for
+  .error404__media. Everything it draws - the blue stripe, the lime card, the proportions
+  of the box - comes from _sass/components/_error-ru.scss, which scopes it all under
+  html[lang="ru"] so the English 404 page keeps /images/404.svg.
+
+  KEEP IN SYNC with site/_includes/error404-media_ru.html. This is a copy of that file and
+  not a symlink to it: pages under documentation/pages/ are rendered by the documentation
+  and website-docs images, both built out of documentation/, and only the first of the two
+  copies site/ into itself - a symlink here fails the website-docs build. The markup is
+  kept to four elements so the copy stays cheap.
+{%- endcomment -%}
+<div class="error404__media" aria-hidden="true">
+  <span class="error404__stripe"></span>
+  <span class="error404__card"></span>
+  <span class="error404__number">404</span>
+</div>

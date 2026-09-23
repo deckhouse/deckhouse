@@ -1,4 +1,4 @@
-2869
+2889
 1GB
 2GB
 5XX
@@ -122,7 +122,9 @@ Changelog
 CheckFunc
 Chrony
 CiliumClusterwideNetworkPolicies
+CiliumClusterwideNetworkPolicy
 CiliumEgressGatewayPolicy
+CiliumNodeConfig
 Cirros
 Citrix
 ClassReference
@@ -644,6 +646,7 @@ PodLogginConfig
 PodLoggingConfig
 PodMonitor
 PodMonitors
+PodNetwork
 PodsWithLabelAreRunningOnNode
 Poly
 PostgreSQL
@@ -701,6 +704,11 @@ RefreshToken
 RegExp
 Regex
 RegionOne
+RegistryConfig
+RegistryNode
+RegistryNodes
+RegistryStorage
+RegistryUpstream
 Rego
 RemoveDuplicates
 RemovePodsHavingTooManyRestarts
@@ -1611,6 +1619,7 @@ regionTagCategory
 registryDockerCfg
 registryImagesRepo
 registrysecret
+reindex
 releaseChannel
 repo
 repos
@@ -1733,6 +1742,7 @@ txt
 uid
 un
 unboundedly
+unconfigured
 uncordoned
 unicode
 uninstall
@@ -2222,6 +2232,7 @@ zoneTagCategory
 консистентный
 консистентными
 консистентных
+контейнера
 контеинер
 контеинеризации
 контеинеризация

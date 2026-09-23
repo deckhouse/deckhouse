@@ -37,6 +37,7 @@ import (
 	"go.opentelemetry.io/otel/trace"
 	"sigs.k8s.io/yaml"
 
+	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/envconfig"
 	"github.com/deckhouse/deckhouse/pkg/log"
 )
 
@@ -155,8 +156,8 @@ func New(logger *log.Logger, opts ...Option) *Client {
 	return &Client{
 		opts: defaultOpts,
 
-		driver:      os.Getenv("HELM_DRIVER"),
-		kubeContext: os.Getenv("KUBE_CONTEXT"),
+		driver:      os.Getenv(envconfig.EnvHelmDriver),
+		kubeContext: os.Getenv(envconfig.EnvKubeContext),
 
 		logger: logger.Named(nelmTracer),
 	}

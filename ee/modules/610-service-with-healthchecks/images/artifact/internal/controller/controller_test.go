@@ -134,6 +134,8 @@ func ownedChildService(clusterIP string) *corev1.Service {
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      testName,
 			Namespace: testNamespace,
+			// A settled Service already carries the controller-owned labels.
+			Labels: map[string]string{heritageLabelKey: heritageLabelValue},
 			OwnerReferences: []metav1.OwnerReference{{
 				APIVersion: networkv1alpha1.GroupVersion.String(),
 				Kind:       "ServiceWithHealthchecks",
@@ -178,7 +180,7 @@ func TestReconcilePropagatesAnnotationsAndLabelsOnCreate(t *testing.T) {
 			sharedIPKey:                        "code-e2e-stand",
 			corev1.LastAppliedConfigAnnotation: "{}",
 		},
-		map[string]string{"heritage": "deckhouse"},
+		map[string]string{"team": "backend"},
 	)
 
 	service := getChildService(t, reconcileWith(t, swh))
@@ -192,16 +194,21 @@ func TestReconcilePropagatesAnnotationsAndLabelsOnCreate(t *testing.T) {
 	if _, found := service.Annotations[corev1.LastAppliedConfigAnnotation]; found {
 		t.Errorf("annotation %s must not be propagated", corev1.LastAppliedConfigAnnotation)
 	}
-	if got := service.Labels["heritage"]; got != "deckhouse" {
-		t.Errorf("label heritage = %q, want %q", got, "deckhouse")
+	if got := service.Labels["team"]; got != "backend" {
+		t.Errorf("label team = %q, want %q", got, "backend")
+	}
+	// The heritage label is owned by the controller: it is set even though the parent does not carry
+	// it, and it is not recorded among the propagated keys.
+	if got := service.Labels[heritageLabelKey]; got != heritageLabelValue {
+		t.Errorf("label %s = %q, want %q", heritageLabelKey, got, heritageLabelValue)
 	}
 
 	wantTracked := lbIPsKey + "," + sharedIPKey
 	if got := service.Annotations[propagatedAnnotationsKey]; got != wantTracked {
 		t.Errorf("tracking annotation = %q, want %q", got, wantTracked)
 	}
-	if got := service.Annotations[propagatedLabelsKey]; got != "heritage" {
-		t.Errorf("tracking label annotation = %q, want %q", got, "heritage")
+	if got := service.Annotations[propagatedLabelsKey]; got != "team" {
+		t.Errorf("tracking label annotation = %q, want %q", got, "team")
 	}
 }
 
@@ -316,10 +323,18 @@ func TestIsMetadataForServiceEqual(t *testing.T) {
 		{
 			name: "label is missing on the child",
 			service: corev1.Service{ObjectMeta: metav1.ObjectMeta{
-				Annotations: map[string]string{propagatedLabelsKey: "heritage"},
+				Annotations: map[string]string{propagatedLabelsKey: "team"},
 			}},
-			swh:  newTestSWH(nil, map[string]string{"heritage": "deckhouse"}),
+			swh:  newTestSWH(nil, map[string]string{"team": "backend"}),
 			want: false,
+		},
+		{
+			// heritage is controller-owned, not propagated, so a value on the parent does not make
+			// the metadata look out of sync.
+			name:    "controller-owned label on the parent is ignored",
+			service: corev1.Service{},
+			swh:     newTestSWH(nil, map[string]string{heritageLabelKey: "something-else"}),
+			want:    true,
 		},
 	}
 
@@ -719,6 +734,19 @@ func TestReconcileLeavesSettledServiceUntouched(t *testing.T) {
 	if service.ResourceVersion != settled.ResourceVersion {
 		t.Errorf("the Service was rewritten although it already matched: %q -> %q, spec %+v",
 			settled.ResourceVersion, service.ResourceVersion, service.Spec)
+	}
+}
+
+// A Service from before the heritage label existed must be relabelled rather than left alone,
+// even though everything else about it already matches.
+func TestReconcileAddsManagedLabelsToExistingService(t *testing.T) {
+	stale := ownedChildService("10.96.0.7")
+	delete(stale.Labels, heritageLabelKey)
+
+	service := getChildService(t, reconcileWith(t, newTestSWH(nil, nil), stale))
+
+	if got := service.Labels[heritageLabelKey]; got != heritageLabelValue {
+		t.Errorf("label %s = %q, want %q", heritageLabelKey, got, heritageLabelValue)
 	}
 }
 

@@ -40,6 +40,7 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config/registry"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/global"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/minget"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/util/input"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/maputil"
 )
 
@@ -87,6 +88,11 @@ type MetaConfig struct {
 	// embedded in the installer image. Required by LoadInstallerVersion and
 	// DeckhouseInstaller.GetImageTag.
 	VersionFilePath string `json:"-"`
+
+	// Recovered from ResourcesYAML. Kept apart from ModuleConfigs on purpose: those are created
+	// in the cluster before deckhouse is installed, while this one has to land after its
+	// ModuleSource.
+	externalProviderModuleConfig *ModuleConfig `json:"-"`
 }
 
 type imagesDigests map[string]map[string]any
@@ -170,6 +176,10 @@ func (m *MetaConfig) Prepare(ctx context.Context, validatorProvider MetaConfigVa
 			return nil, fmt.Errorf("parse cloud provider resources: %w", err)
 		}
 		m.CloudProviderVars = cv
+	}
+
+	if err := m.recoverExternalProviderModuleConfig(); err != nil {
+		return nil, err
 	}
 
 	if err := m.applyCloudProviderModuleSettings(); err != nil {
@@ -402,6 +412,9 @@ func (m *MetaConfig) applyCloudProviderModuleSettings() error {
 			picked = mc
 		}
 	}
+	if picked == nil && m.externalProviderModuleConfig != nil && len(m.externalProviderModuleConfig.Spec.Settings) > 0 {
+		picked = m.externalProviderModuleConfig
+	}
 	if picked == nil {
 		return nil
 	}
@@ -512,16 +525,44 @@ func (m *MetaConfig) prepareRegistry() error {
 		}
 	}
 
-	// Default CRI
-	if rawCRI, exists := m.ClusterConfig["defaultCRI"]; exists {
-		if err := json.Unmarshal(rawCRI, &defaultCRI); err != nil {
-			return fmt.Errorf("get defaultCRI from cluster config: %w", err)
+	// Registry mc. An installation whose images come from a bundle is recognised from the registry
+	// module's own configuration — a cache to hold them and no upstream to fetch them from — and
+	// resolves to Local, exactly as RegistryConfigProvider does over the raw documents.
+	//
+	// It has to be decided here too, and not only there, because this is the result the cluster is
+	// built from: it becomes m.Registry, which the bashible context reads, which decides whether the
+	// steps that stand up the registry on the node run at all. Deciding it only where the installer
+	// downloads its own images leaves those steps switched off — the store then stays empty and
+	// Deckhouse never pulls, which is what happened the first time.
+	var bundleFacts registry.BundleBootstrapInputs
+	if mc := m.FindModuleConfig("registry"); mc != nil {
+		rawJSON, err := json.Marshal(mc)
+		if err != nil {
+			return err
 		}
+		bundleFacts, err = registry.BundleFactsFromModuleConfig(rawJSON)
+		if err != nil {
+			return err
+		}
+	}
+	// Before Resolve — see the same call in RegistryConfigProvider for why the order matters.
+	initConfig, deckhouseSettings, err := registry.FoldLegacyDirectIntoInit(initConfig, deckhouseSettings)
+	if err != nil {
+		return err
+	}
+
+	deckhouseSettings, providerOpts := bundleFacts.Resolve(deckhouseSettings)
+
+	// Default CRI. The node-manager ModuleConfig setting takes precedence over the
+	// deprecated ClusterConfiguration.defaultCRI field (see effectiveDefaultCRI).
+	if cri := m.effectiveDefaultCRI(); cri != "" {
+		defaultCRI = registry_const.CRIType(cri)
 	}
 
 	registry, err := registry.NewConfigProvider(
 		initConfig,
 		deckhouseSettings,
+		providerOpts...,
 	).Config(
 		defaultCRI,
 		m.IsStatic(),
@@ -597,7 +638,10 @@ func (m *MetaConfig) findProviderModuleConfig() *ModuleConfig {
 	if m == nil || m.ProviderName == "" {
 		return nil
 	}
-	return m.FindModuleConfig(CloudProviderModuleName(m.ProviderName))
+	if mc := m.FindModuleConfig(CloudProviderModuleName(m.ProviderName)); mc != nil {
+		return mc
+	}
+	return m.externalProviderModuleConfig
 }
 
 // HasProviderModuleConfig reports whether the cluster carries a
@@ -970,6 +1014,9 @@ func (m *MetaConfig) DeepCopy() *MetaConfig {
 	out.StaticClusterConfig = cloneMap(m.StaticClusterConfig)
 	out.CloudProviderVars = cloneCloudProviderVars(m.CloudProviderVars)
 	out.ModuleConfigs = cloneModuleConfigs(m.ModuleConfigs)
+	if m.externalProviderModuleConfig != nil {
+		out.externalProviderModuleConfig = cloneModuleConfigs([]*ModuleConfig{m.externalProviderModuleConfig})[0]
+	}
 	out.VersionMap = cloneMap(m.VersionMap)
 	out.Images = cloneNestedMap(m.Images)
 	if m.TerraNodeGroupSpecs != nil {
@@ -1351,4 +1398,58 @@ func GetIndexFromNodeName(name string) (int, error) {
 		return 0, err
 	}
 	return index, nil
+}
+
+// effectiveDefaultCRI resolves the container runtime that should be used for the
+// bootstrapped node. The node-manager ModuleConfig setting (spec.settings.defaultCRI)
+// is the new home for this option and takes precedence over the deprecated
+// ClusterConfiguration.defaultCRI field when it is set to a non-default value.
+//
+// When neither source specifies a value it falls back to the built-in default
+// (Containerd), but only if a ClusterConfiguration is present. This mirrors the
+// former ClusterConfiguration schema default, which applied only within a
+// ClusterConfiguration document: with no ClusterConfiguration there is no cluster
+// to bootstrap, and the registry config relies on an empty CRI to stay disabled.
+func (m *MetaConfig) effectiveDefaultCRI() string {
+	if mc := m.FindModuleConfig("node-manager"); mc != nil {
+		if raw, ok := mc.Spec.Settings["defaultCRI"]; ok {
+			if cri, ok := raw.(string); ok && cri != "" && cri != string(registry_const.CRIContainerdV1) {
+				return cri
+			}
+		}
+	}
+
+	if raw, ok := m.ClusterConfig["defaultCRI"]; ok {
+		var cri string
+		if err := json.Unmarshal(raw, &cri); err == nil && cri != "" {
+			return cri
+		}
+	}
+
+	if len(m.ClusterConfig) > 0 {
+		return string(registry_const.CRIContainerdV1)
+	}
+
+	return ""
+}
+
+// The document lands in ResourcesYAML whenever its module is absent from the installer's modules
+// dir, and unpacking the bundle does not move it back: LoadProviderDir accepts only the names in
+// schemaFileNames. An already-parsed ModuleConfig wins, it went through validation.
+func (m *MetaConfig) recoverExternalProviderModuleConfig() error {
+	if m.ProviderName == "" || m.ResourcesYAML == "" {
+		return nil
+	}
+	if m.FindModuleConfig(CloudProviderModuleName(m.ProviderName)) != nil {
+		return nil
+	}
+
+	md, err := ParseModuleDocs(input.YAMLSplitRegexp.Split(strings.TrimSpace(m.ResourcesYAML), -1))
+	if err != nil {
+		return fmt.Errorf("recover cloud provider module config: %w", err)
+	}
+	if mc := md.ProviderConfigs[CloudProviderModuleName(m.ProviderName)]; mc != nil {
+		m.externalProviderModuleConfig = mc
+	}
+	return nil
 }

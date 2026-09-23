@@ -45,7 +45,7 @@ type AvailableClusterResourceStatus struct {
 	// +listType=map
 	// +listMapKey=name
 	// +optional
-	Available []AvailableObject `json:"available,omitempty"`
+	Available []AvailableObject `json:"available"`
 
 	// Default is the per-project default name used when the referencing field is left empty (or
 	// carries a value not available to the project).
@@ -62,7 +62,7 @@ type AvailableClusterResourceStatus struct {
 	// can be long (e.g. dozens of cluster roles) and would break the table; get the names from
 	// Available (status.available[*].name).
 	// +optional
-	AvailableCount int `json:"availableCount,omitempty"`
+	AvailableCount int `json:"availableCount"`
 
 	// ObservedGeneration is the controller generation that produced this status.
 	// +optional

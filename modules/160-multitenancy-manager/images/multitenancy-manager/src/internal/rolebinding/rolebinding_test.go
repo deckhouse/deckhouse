@@ -114,7 +114,7 @@ func TestCopySubjects(t *testing.T) {
 
 func TestUpsertServiceRoleBinding_Create(t *testing.T) {
 	c := newClient(t)
-	require.NoError(t, UpsertServiceRoleBinding(context.Background(), c, upsertParams("viewers", "proj", "d8:project:viewer"), nil))
+	require.NoError(t, upsertForTest(context.Background(), c, upsertParams("viewers", "proj", "d8:project:viewer"), nil))
 
 	rb := &rbacv1.RoleBinding{}
 	require.NoError(t, c.Get(context.Background(), client.ObjectKey{Namespace: "proj", Name: PRBServiceName("viewers")}, rb))
@@ -135,7 +135,7 @@ func TestUpsertServiceRoleBinding_RecreatesOnRoleRefChange(t *testing.T) {
 	}
 	c := newClient(t, existing)
 
-	require.NoError(t, UpsertServiceRoleBinding(context.Background(), c, upsertParams("viewers", "proj", "d8:project:admin"), nil))
+	require.NoError(t, upsertForTest(context.Background(), c, upsertParams("viewers", "proj", "d8:project:admin"), nil))
 
 	rb := &rbacv1.RoleBinding{}
 	require.NoError(t, c.Get(context.Background(), client.ObjectKey{Namespace: "proj", Name: PRBServiceName("viewers")}, rb))
@@ -144,11 +144,11 @@ func TestUpsertServiceRoleBinding_RecreatesOnRoleRefChange(t *testing.T) {
 
 func TestUpsertServiceRoleBinding_UpdatesSubjectsInPlace(t *testing.T) {
 	c := newClient(t)
-	require.NoError(t, UpsertServiceRoleBinding(context.Background(), c, upsertParams("viewers", "proj", "d8:project:viewer"), nil))
+	require.NoError(t, upsertForTest(context.Background(), c, upsertParams("viewers", "proj", "d8:project:viewer"), nil))
 
 	p := upsertParams("viewers", "proj", "d8:project:viewer")
 	p.Subjects = []rbacv1.Subject{{APIGroup: rbacv1.GroupName, Kind: "User", Name: "bob"}}
-	require.NoError(t, UpsertServiceRoleBinding(context.Background(), c, p, nil))
+	require.NoError(t, upsertForTest(context.Background(), c, p, nil))
 
 	rb := &rbacv1.RoleBinding{}
 	require.NoError(t, c.Get(context.Background(), client.ObjectKey{Namespace: "proj", Name: PRBServiceName("viewers")}, rb))
@@ -197,8 +197,19 @@ func TestProjectFanoutChanged(t *testing.T) {
 	virtual.Labels = map[string]string{v1alpha3.ProjectLabelVirtualProject: "true"}
 	assert.True(t, ProjectFanoutChanged(base, virtual), "a virtual-label change must re-enqueue bindings")
 
+	byTemplate := base.DeepCopy()
+	byTemplate.Spec.ProjectTemplateName = v1alpha3.VirtualProjectTemplateName
+	assert.True(t, ProjectFanoutChanged(base, byTemplate), "moving a project onto the virtual template must re-enqueue bindings")
+
 	deleting := base.DeepCopy()
 	now := metav1.Now()
 	deleting.DeletionTimestamp = &now
 	assert.True(t, ProjectFanoutChanged(base, deleting), "a deletion-state change must re-enqueue bindings")
+}
+
+// upsertForTest drops the "did it write" flag the fan-out limiter uses; these tests assert on the
+// resulting object.
+func upsertForTest(ctx context.Context, c client.Client, params UpsertParams, setOwner func(*rbacv1.RoleBinding) error) error {
+	_, err := UpsertServiceRoleBinding(ctx, c, params, setOwner)
+	return err
 }

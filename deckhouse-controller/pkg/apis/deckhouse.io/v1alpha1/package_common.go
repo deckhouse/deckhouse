@@ -24,7 +24,73 @@ import (
 
 // This file holds the package vocabulary shared by applications and modules. A type belongs
 // here only if both flavours use it — ApplicationPackage and ModulePackage, or their version
-// counterparts; anything specific to one kind stays in that kind's file.
+// counterparts; anything specific to one kind stays in that kind's file. The metadata keys
+// below are the exception: the whole packages.deckhouse.io label and annotation vocabulary is
+// declared here whichever kind writes it, so that one key never grows two names.
+
+// Labels of the packages.deckhouse.io vocabulary. The same key means the same thing wherever
+// it is set — on a package version, on a PackageRepositoryOperation, or on a resource a
+// package chart rendered — so each key has exactly one constant.
+const (
+	// PackageLabelPackage names the package: the package a version belongs to, or the
+	// package whose chart rendered the resource.
+	PackageLabelPackage = "packages.deckhouse.io/package"
+
+	// PackageLabelRepository names the PackageRepository the object came from.
+	PackageLabelRepository = "packages.deckhouse.io/repository"
+
+	// PackageLabelInstance names the application instance that owns the resource;
+	// modules render no instance, so only application charts carry it.
+	PackageLabelInstance = "packages.deckhouse.io/instance"
+
+	// PackageLabelDraft marks a package version whose metadata has not been loaded yet;
+	// the version controller drops the label once loading succeeds.
+	PackageLabelDraft = "packages.deckhouse.io/draft"
+
+	// PackageLabelExistInRegistry records whether the version's bundle image is still
+	// present in the registry.
+	PackageLabelExistInRegistry = "packages.deckhouse.io/exist-in-registry"
+
+	// PackageLabelLegacy marks a module package version restored from a legacy module
+	// release rather than scanned out of a repository.
+	PackageLabelLegacy = "packages.deckhouse.io/legacy"
+
+	// PackageLabelOperationType mirrors a PackageRepositoryOperation's spec.type as a
+	// selectable label; its values are the PackageRepositoryOperationType constants.
+	PackageLabelOperationType = "packages.deckhouse.io/operation-type"
+
+	// PackageLabelOperationTrigger records what started a PackageRepositoryOperation:
+	// PackageOperationTriggerAuto for the repository's own scan interval,
+	// PackageOperationTriggerManual for an operation a user created.
+	PackageLabelOperationTrigger = "packages.deckhouse.io/operation-trigger"
+
+	PackageOperationTriggerManual = "manual"
+	PackageOperationTriggerAuto   = "auto"
+)
+
+// Annotations of the packages.deckhouse.io vocabulary.
+const (
+	// PackageAnnotationManagedBy marks a Helm release as owned by the package release
+	// layer; PackageAnnotationManagedByValue is the only value it carries. Releases are
+	// looked up by this pair on cleanup.
+	PackageAnnotationManagedBy      = "packages.deckhouse.io/managed-by"
+	PackageAnnotationManagedByValue = "deckhouse"
+
+	// PackageAnnotationRegistrySpecChanged is stamped on every Application and Module of
+	// a repository whose registry spec changed, to make their controllers re-read the
+	// registry; each controller removes it once it has.
+	PackageAnnotationRegistrySpecChanged = "packages.deckhouse.io/registry-spec-changed"
+
+	// PackageAnnotationRegistrySpecChecksum holds the checksum of the registry spec a
+	// PackageRepository was last reconciled with; a mismatch is what fans
+	// PackageAnnotationRegistrySpecChanged out.
+	PackageAnnotationRegistrySpecChecksum = "packages.deckhouse.io/registry-spec-checksum"
+
+	// PackageAnnotationEndpointDescription marks an Ingress in the application chart as
+	// an application endpoint and holds its description; the hosts and paths of that
+	// Ingress are reflected in status.urls.
+	PackageAnnotationEndpointDescription = "packages.deckhouse.io/application-endpoint-description"
+)
 
 // PackageReleaseChannels maps repository name -> release channel name -> version.
 type PackageReleaseChannels map[string]map[string]string

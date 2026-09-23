@@ -48,7 +48,7 @@ func TestSyncRegistrySettingsChecksum(t *testing.T) {
 			ObjectMeta: metav1.ObjectMeta{
 				Name: repoName,
 				// a stale checksum, so the fan-out is due
-				Annotations: map[string]string{v1alpha1.PackageRepositoryAnnotationRegistryChecksum: "stale"},
+				Annotations: map[string]string{v1alpha1.PackageAnnotationRegistrySpecChecksum: "stale"},
 			},
 			Spec: v1alpha1.PackageRepositorySpec{
 				Registry: v1alpha1.PackageRepositorySpecRegistry{Repo: "registry.example.com/packages", Scheme: "HTTPS"},
@@ -69,7 +69,7 @@ func TestSyncRegistrySettingsChecksum(t *testing.T) {
 		repo := new(v1alpha1.PackageRepository)
 		require.NoError(t, cl.Get(context.Background(), client.ObjectKey{Name: repoName}, repo))
 
-		return repo.GetAnnotations()[v1alpha1.PackageRepositoryAnnotationRegistryChecksum]
+		return repo.GetAnnotations()[v1alpha1.PackageAnnotationRegistrySpecChecksum]
 	}
 
 	// failAll refuses to annotate any application, leaving the change with nowhere to land.

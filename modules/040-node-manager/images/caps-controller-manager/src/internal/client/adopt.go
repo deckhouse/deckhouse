@@ -98,7 +98,7 @@ func (c *Client) AdoptStaticInstance(ctx context.Context,
 			return fmt.Errorf("failed to create ssh client: %w", err)
 		}
 
-		data, err := sshCl.ExecSSHCommandToString(
+		data, err := sshCl.ExecSSHCommandToString(tCtx,
 			fmt.Sprintf("mkdir -p /var/lib/bashible && echo '%s' > /var/lib/bashible/node-spec-provider-id && echo '%s' > /var/lib/bashible/machine-name",
 				t.providerID, t.machineName))
 		if err != nil {
@@ -124,9 +124,9 @@ func (c *Client) AdoptStaticInstance(ctx context.Context,
 		machineName:   machine.Name,
 	}
 
-	logger = logger.WithValues("taskID", string(staticMachine.Spec.ProviderID))
+	logger = logger.WithValues("taskID", string(staticMachine.UID))
 	logger.Info("Running adopt task")
-	err, finished := c.taskManager.Spawn(c.taskManagerCtx, string(staticMachine.Spec.ProviderID), "adopt", taskData, taskFunc)
+	err, finished := c.taskManager.Spawn(c.taskManagerCtx, string(staticMachine.UID), "adopt", taskData, taskFunc)
 	if err != nil {
 		return ctrl.Result{}, fmt.Errorf("failed to adopt StaticInstance: %w", err)
 	}

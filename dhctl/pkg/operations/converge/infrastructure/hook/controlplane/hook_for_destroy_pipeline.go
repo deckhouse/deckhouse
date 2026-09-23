@@ -99,7 +99,10 @@ func (h *HookForDestroyPipeline) BeforeAction(ctx context.Context, runner infras
 	return false, nil
 }
 
-func (h *HookForDestroyPipeline) AfterAction(ctx context.Context, runner infrastructure.RunnerInterface) error {
+// AfterAction forgets the destroyed node's address. It waits for nothing, so it runs the same
+// whether the destroy succeeded or failed: a node that is half gone is not one to keep a session
+// pinned to either.
+func (h *HookForDestroyPipeline) AfterAction(ctx context.Context, _ infrastructure.RunnerInterface, _ error) error {
 	// Nothing to forget for an immutable node: no SSH session was ever pinned to it,
 	// and with no provider at all the call below dereferences nil.
 	if h.commanderMode || h.immutableNode || govalue.IsNil(h.sshProvider) {

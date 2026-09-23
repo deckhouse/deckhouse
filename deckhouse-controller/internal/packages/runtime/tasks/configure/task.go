@@ -84,7 +84,7 @@ func (t *task) String() string {
 }
 
 // Execute validates settings and applies them to the package.
-// Sets ConditionSettingsValid on success or delegates error handling to status service.
+// Reports failures on ConditionConfigured; the Run task sets it True once the settings are applied.
 func (t *task) Execute(ctx context.Context) error {
 	if err := t.applySettings(ctx); err != nil {
 		t.status.HandleError(t.pkg.GetName(), status.ConditionConfigured, err)

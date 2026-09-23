@@ -1,3 +1,7 @@
+# WARNING!
+# if you change this file please evaluate to change files
+# /modules/002-deckhouse/openapi/doc-ru-config-values.yaml
+# /ee/cse/modules/002-deckhouse/openapi/doc-ru-config-values.yaml
 properties:
   logLevel:
     description: |
@@ -20,7 +24,7 @@ properties:
     description: |
       Желаемый канал обновлений Deckhouse ([переключение](/products/kubernetes-platform/documentation/v1/architecture/updating.html) на него произойдет при появлении такой возможности).
 
-      Порядок возрастания стабильности канала обновлений (от **наименее** стабильного к **наиболее** стабильному): `Alpha`, `Beta`, `EarlyAccess`, `Stable`, `RockSolid`, `LTS`.
+      Порядок возрастания стабильности канала обновлений (от **наименее** стабильного к **наиболее** стабильному): `Alpha`, `Beta`, `EarlyAccess`, `Stable`, `RockSolid`.
 
   update:
     description: Настройки режима и окон обновления Deckhouse.

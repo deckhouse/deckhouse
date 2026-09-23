@@ -24,6 +24,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/yaml"
 
+	constant "github.com/deckhouse/deckhouse/go_lib/registry/const"
 	dhlog "github.com/deckhouse/lib-dhctl/pkg/logger"
 	"github.com/deckhouse/lib-dhctl/pkg/retry"
 
@@ -61,20 +62,55 @@ func WaitForRegistryReady(ctx context.Context, kubeClient client.KubeClient, con
 		})
 }
 
-// isRegistryReady checks whether the registry is ready, unless legacy mode is enabled.
-// Parameters:
-//   - ctx: context for cancellation and timeouts
-//   - kubeClient: Kubernetes client for API operations
-//   - config: configuration with registry settings
+// isRegistryReady checks whether the registry the cluster was configured with has become usable.
 //
-// Returns:
-//   - err: error from the operation
+// There are exactly two things this can wait on, and which applies is decided from the configuration
+// rather than from what happens to be present in the cluster: a store the module runs, answered by
+// its own RegistryStorage status, or the previous implementation's state machine, answered by its
+// `registry-state` secret.
+//
+// The second is reachable only on a cluster that implementation still owns, which a cluster being
+// installed now never is — the current implementation takes over from the start and clears the values
+// that secret is written from, so waiting there waits for something nobody will write.
+//
+// Everything else is not waited on, and that is a statement rather than a gap: a cluster pulling
+// straight from a registry has nothing in it that reports on that registry, and the moment Deckhouse
+// is running is the moment its pull path is known to work.
 func isRegistryReady(ctx context.Context, kubeClient client.KubeClient, config Config) error {
-	if config.LegacyMode {
+	logger := dhlog.FromContext(ctx)
+
+	if config.StoreExpected {
+		// The store is waited for only where it is the ONLY source of images, which is an
+		// installation from a bundle. With an upstream the agent falls back to it for whatever the
+		// cache has not copied yet, so the filling is an optimisation that finishes after the
+		// installation rather than a precondition for it.
+		//
+		// Waiting anyway is not merely slow, it fails installations: `Ready` is reported only once
+		// the LEADER IS FULL, so the wait becomes a wait for the whole first sync — the entire image
+		// set over the operator's link — which the bootstrap watchdog cuts short.
+		//
+		// Without an upstream nothing here may be relaxed: the cache is where every image comes
+		// from, and a store that is merely running answers "no such host" for what it has not
+		// copied.
+		if !config.BundleBootstrap {
+			logger.InfoContext(ctx,
+				"The cluster pulls through its upstream, so the cache may finish filling after the "+
+					"installation and is not waited for")
+			return nil
+		}
+
+		if err := isStoreReady(ctx, kubeClient, true); err != nil {
+			logger.DebugContext(ctx, fmt.Sprintf("Error while checking the cluster store: %v", err))
+			return err
+		}
 		return nil
 	}
 
-	logger := dhlog.FromContext(ctx)
+	if !isLegacyImplementation(config) {
+		logger.DebugContext(ctx,
+			"No in-cluster registry is expected for this configuration, so there is nothing to wait for")
+		return nil
+	}
 
 	conditions, err := getConditions(ctx, kubeClient)
 	if err != nil {
@@ -93,6 +129,26 @@ func isRegistryReady(ctx context.Context, kubeClient client.KubeClient, config C
 	}
 
 	return ErrIsNotReady
+}
+
+// isLegacyImplementation reports that the configuration asks for something only the previous
+// implementation provides, and so that its state machine is what reports readiness.
+//
+// Proxy and Local are the two modes whose whole content is a registry the previous implementation
+// runs in the cluster — its pull-through proxy, or its local store. Direct and Unmanaged are not:
+// they configure the container runtime to reach a registry that already exists, which is exactly
+// what the current implementation's fallback does, and there is nothing in the cluster to wait for.
+//
+// That distinction is why this is not simply `!LegacyMode`. Direct is the default for a cluster with
+// a supported container runtime, so reading it as "the previous implementation reports on this" is
+// what made every ordinary installation wait for a secret that is no longer written.
+func isLegacyImplementation(config Config) bool {
+	switch config.Settings.Mode {
+	case constant.ModeProxy, constant.ModeLocal:
+		return true
+	default:
+		return false
+	}
 }
 
 // formatNotReadyMessage builds a human-readable message listing all non-True

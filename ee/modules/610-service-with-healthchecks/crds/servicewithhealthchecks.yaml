@@ -181,7 +181,7 @@ spec:
                                 The secret can contain the following authentication fields:
                                 `tlsMode`, `clientCert`, `clientKey`, `caCert`, `password`, `user`.
 
-                                > **Warining.** The type of the secret must be `network.deckhouse.io/postgresql-credentials`.
+                                > **Warning.** The type of the secret must be `network.deckhouse.io/postgresql-credentials`.
                             dbName:
                               type: string
                               description: Optional Database Name.
@@ -194,7 +194,7 @@ spec:
                                 Must return one of the values `TRUE`: `t`, `true`, `y`, `yes`,`1`.
                                 to be considered successful.
 
-                                > **Warining.** The privileges for the user under whom the requests are executed should be minimal.
+                                > **Warning.** The privileges for the user under whom the requests are executed should be minimal.
                             targetPort:
                               type: integer
                               description: |-
@@ -573,8 +573,6 @@ spec:
                   [More info.](https://kubernetes.io/docs/concepts/services-networking/service/#publishing-services-service-types)
                 default: ClusterIP
                 type: string
-            required:
-            - healthcheck
             type: object
           status:
             description: Defines the observed state of ServiceWithHealthchecks
@@ -825,3 +823,6 @@ spec:
     - jsonPath: .spec.ports[].port
       name: Ports
       type: string
+    - jsonPath: .metadata.creationTimestamp
+      name: AGE
+      type: date

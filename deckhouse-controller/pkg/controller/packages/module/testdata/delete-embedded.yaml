@@ -1,4 +1,4 @@
-apiVersion: deckhouse.io/v1alpha2
+apiVersion: deckhouse.io/v1beta1
 kind: Module
 metadata:
   name: test-module
@@ -9,7 +9,7 @@ metadata:
   ownerReferences:
     - apiVersion: deckhouse.io/v1alpha1
       kind: ModulePackageVersion
-      name: embedded-test-module-v1.0.1
+      name: embedded-test-module
       uid: embedded-version-uid
       controller: false
       blockOwnerDeletion: true
@@ -20,7 +20,7 @@ spec:
 apiVersion: deckhouse.io/v1alpha1
 kind: ModulePackageVersion
 metadata:
-  name: embedded-test-module-v1.0.1
+  name: embedded-test-module
   uid: embedded-version-uid
 spec:
   packageName: test-module

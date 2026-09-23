@@ -94,7 +94,7 @@ spec:
                             properties:
                               authSecretName:
                                 description: |-
-                                  Имя секрета (Secret), расположенного в том же пространстве имен, что и этот ресурс. Секрет может содержать следующие поля аутентификации: `tlsMode`, `clientCert`, `clientKey`, `aCert`, `password`, `user`.
+                                  Имя секрета (Secret), расположенного в том же пространстве имен, что и этот ресурс. Секрет может содержать следующие поля аутентификации: `tlsMode`, `clientCert`, `clientKey`, `caCert`, `password`, `user`.
 
                                   > **Внимание.** Тип секрета должен быть `network.deckhouse.io/postgresql-credentials`.
                               dbName:

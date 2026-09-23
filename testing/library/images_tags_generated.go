@@ -147,6 +147,8 @@ var DefaultImagesDigests = map[string]interface{}{
 		"cloudMetricsExporter":   "imageHash-cloudProviderYandex-cloudMetricsExporter",
 		"cloudMigrator":          "imageHash-cloudProviderYandex-cloudMigrator",
 		"terraformManager":       "imageHash-cloudProviderYandex-terraformManager",
+		"validationWebhook":      "imageHash-cloudProviderYandex-validationWebhook",
+		"validator":              "imageHash-cloudProviderYandex-validator",
 		"yandexCsiPlugin":        "imageHash-cloudProviderYandex-yandexCsiPlugin",
 	},
 	"cloudProviderZvirt": map[string]interface{}{
@@ -358,7 +360,10 @@ var DefaultImagesDigests = map[string]interface{}{
 		"dockerDistribution":  "imageHash-registry-dockerDistribution",
 		"mirrorer":            "imageHash-registry-mirrorer",
 		"nodeservicesManager": "imageHash-registry-nodeservicesManager",
+		"registryAgent":       "imageHash-registry-registryAgent",
+		"registryController":  "imageHash-registry-registryController",
 		"registryProxy":       "imageHash-registry-registryProxy",
+		"registrySyncer":      "imageHash-registry-registrySyncer",
 		"syncer":              "imageHash-registry-syncer",
 	},
 	"registryPackagesProxy": map[string]interface{}{
@@ -415,6 +420,7 @@ var DefaultImagesDigests = map[string]interface{}{
 		"nodeletSysext":                   "imageHash-registrypackages-nodeletSysext",
 		"nvmeCli211":                      "imageHash-registrypackages-nvmeCli211",
 		"pause":                           "imageHash-registrypackages-pause",
+		"registryAgent":                   "imageHash-registrypackages-registryAgent",
 		"registryProxy":                   "imageHash-registrypackages-registryProxy",
 		"rppGet":                          "imageHash-registrypackages-rppGet",
 		"socat1734":                       "imageHash-registrypackages-socat1734",

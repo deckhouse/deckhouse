@@ -28,6 +28,8 @@
         # recreate it with roleRef.name set to the new role (d8:system:*, d8:subsystem:*, or d8:namespace:*)
         ```
 
+        A ClusterRoleBinding to a deprecated `d8:manage:*` name keeps its cluster-scoped rights, but no longer receives the RoleBindings that used to project it into the module namespaces (`d8-cloud-provider-*`, `d8-monitoring` and the rest): the ones created by the previous release are removed. Reading logs, describing pods and `exec` inside those namespaces come back when the binding is recreated on the new role name.
+
         Note: the new `d8:namespace:admin` no longer grants `serviceaccounts/token` creation or impersonation — these disaster-grade actions now require a `superadmin` role by design.
 
   # Bindings to a deprecated CAPABILITY name — capabilities are aggregation building blocks, were never

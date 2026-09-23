@@ -49,7 +49,7 @@ const (
 	clusterUUIDConfigMapName = "d8-cluster-uuid"
 	clusterUUIDKey           = "cluster-uuid"
 
-	yandexInstanceClassCRDPath = "030-cloud-provider-yandex/candi/openapi/instance_class.yaml"
+	yandexInstanceClassCRDPath = "030-cloud-provider-yandex/crds/instance_class.yaml"
 	yandexInstanceClassKind    = "YandexInstanceClass"
 	yandexInstanceClassVersion = "v1"
 )

@@ -11,13 +11,13 @@
 **/000-common/images/csi-**                                                 @AleksZimin @duckhawk @szhem
 **/000-common/images/debug-container                                        @apolovov
 **/000-common/images/iptables-wrapper                                       @apolovov
-**/000-common/images/kube-rbac-proxy                                        @AlwxSin
+**/000-common/images/kube-rbac-proxy                                        @AlwxSin @Suselz
 **/000-common/images/kubernetes                                             @sprait
 **/000-common/images/pause                                                  @sprait
 **/000-common/images/shell-operator                                         @ldmonster
 **/000-common/images/vxlan-offloading-fixer                                 @apolovov
 002-deckhouse/                                                              @ldmonster
-002-deckhouse/templates/validation.yaml                                     @AlwxSin
+002-deckhouse/templates/validation.yaml                                     @AlwxSin @Suselz
 007-registrypackages/                                                       @RomanenkoDenys
 **/007-registrypackages/images/containerd                                   @sprait
 **/007-registrypackages/images/crictl                                       @sprait
@@ -42,7 +42,7 @@
 **/007-registrypackages/images/which                                        @borg-z @090809
 **/007-registrypackages/images/yq                                           @borg-z @090809
 **/007-registrypackages/images/docker-registry                              @borg-z @090809
-015-admission-policy-engine/                                                @nabokihms @AlwxSin
+015-admission-policy-engine/                                                @nabokihms @AlwxSin @Suselz
 021-cni-cilium/                                                             @AndreyPavlovFlant @apolovov
 025-static-routing-manager/                                                 @AndreyPavlovFlant @apolovov
 030-cloud-provider-*/                                                       @aleksey-su @pabateman
@@ -50,12 +50,12 @@
 035-cni-flannel/                                                            @AndreyPavlovFlant @apolovov
 035-cni-simple-bridge/                                                      @AndreyPavlovFlant @apolovov
 036-kube-proxy/                                                             @AndreyPavlovFlant @apolovov
-038-registry/                                                               @nabokihms @vadimartynov
+038-registry/                                                               @borg-z @090809
 039-registry-packages-proxy/                                                @borg-z @090809
 040-control-plane-manager/                                                  @sprait
-**/040-control-plane-manager/hooks/audit_policy*                            @nabokihms @AlwxSin
-**/040-control-plane-manager/templates/_authentication_configuration.tpl    @nabokihms @AlwxSin
-**/040-control-plane-manager/templates/_authorization_config.tpl            @nabokihms @AlwxSin
+**/040-control-plane-manager/hooks/audit_policy*                            @nabokihms @AlwxSin @Suselz
+**/040-control-plane-manager/templates/_authentication_configuration.tpl    @nabokihms @AlwxSin @Suselz
+**/040-control-plane-manager/templates/_authorization_config.tpl            @nabokihms @AlwxSin @Suselz
 040-node-manager/                                                           @borg-z @090809
 **/040-node-manager/images/builder-cuda                                     @serg-su
 **/040-node-manager/images/nvidia-container-toolkit                         @serg-su
@@ -89,9 +89,9 @@
 050-network-policy-engine/                                                  @AndreyPavlovFlant @apolovov
 101-cert-manager/                                                           @Suselz @AlwxSin
 110-istio/                                                                  @skurbatov @apolovov
-140-user-authz/                                                             @nabokihms @AlwxSin
-150-user-authn/                                                             @nabokihms @AlwxSin
-160-multitenancy-manager/                                                   @nabokihms @AlwxSin
+140-user-authz/                                                             @nabokihms @AlwxSin @Suselz
+150-user-authn/                                                             @nabokihms @AlwxSin @Suselz
+160-multitenancy-manager/                                                   @nabokihms @AlwxSin @Suselz
 300-prometheus/                                                             @vladimirGuryanov @lazovskiy @maksimmadzhuga
 302-vertical-pod-autoscaler/                                                @yalosev @ergoz
 303-prometheus-*/                                                           @vladimirGuryanov @lazovskiy
@@ -105,13 +105,13 @@
 450-network-gateway/                                                        @AndreyPavlovFlant @apolovov
 470-chrony/                                                                 @borg-z @090809
 491-containerized-data-importer                                             @fl64
-500-basic-auth/                                                             @nabokihms @AlwxSin
+500-basic-auth/                                                             @nabokihms @AlwxSin @Suselz
 500-openvpn/                                                                @AndreyPavlovFlant @apolovov
 500-cilium-hubble/                                                          @AndreyPavlovFlant @apolovov
 500-dashboard/                                                              @shvgn
 500-okmeter/                                                                @vladimirGuryanov @lazovskiy @maksimmadzhuga
-600-secret-copier/                                                          @nabokihms @AlwxSin
-600-namespace-configurator/                                                 @nabokihms @AlwxSin
+600-secret-copier/                                                          @nabokihms @AlwxSin @Suselz
+600-namespace-configurator/                                                 @nabokihms @AlwxSin @Suselz
 610-service-with-healthchecks                                               @AndreyPavlovFlant @apolovov
 800-deckhouse-tools/                                                        @RomanenkoDenys @borg-z @090809
 810-documentation/                                                          @z9r5
@@ -145,5 +145,5 @@ go_lib/cloud-data/                                                          @ale
 go_lib/cloud-provider                                                       @aleksey-su @pabateman
 go_lib/registry/                                                            @nabokihms @vadimartynov
 go_lib/controlplane/                                                        @sprait @AmazinMax
-go_lib/user-authz/                                                          @nabokihms @AlwxSin
+go_lib/user-authz/                                                          @nabokihms @AlwxSin @Suselz
 /Makefile				                                                    @Nikolay1224 @himax1991

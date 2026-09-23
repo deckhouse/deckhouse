@@ -32,6 +32,7 @@ import (
 	installermock "github.com/deckhouse/deckhouse/deckhouse-controller/internal/module/installer/mock"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha2"
+	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1beta1"
 	moduletypes "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/moduleloader/types"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/helpers"
 	"github.com/deckhouse/deckhouse/go_lib/dependency"
@@ -450,13 +451,13 @@ func TestEnsureModuleAnnotations(t *testing.T) {
 	}
 
 	t.Run("an annotation of another writer survives", func(t *testing.T) {
-		l := newEnsureLoader(t, annotated(map[string]string{v1alpha2.ModuleAnnotationEmbedded: "true"}))
+		l := newEnsureLoader(t, annotated(map[string]string{v1beta1.ModuleAnnotationEmbedded: "true"}))
 
 		require.NoError(t, l.ensureModule(context.Background(), def("ru description", "en description"), true))
 
 		module := getModule(t, l, "ingress-nginx")
 		assert.Equal(t, map[string]string{
-			v1alpha2.ModuleAnnotationEmbedded:      "true",
+			v1beta1.ModuleAnnotationEmbedded:       "true",
 			v1alpha1.ModuleAnnotationDescriptionRu: "ru description",
 			v1alpha1.ModuleAnnotationDescriptionEn: "en description",
 		}, module.GetAnnotations())
@@ -464,14 +465,14 @@ func TestEnsureModuleAnnotations(t *testing.T) {
 
 	t.Run("a description the module files dropped is cleared", func(t *testing.T) {
 		l := newEnsureLoader(t, annotated(map[string]string{
-			v1alpha2.ModuleAnnotationEmbedded:      "true",
+			v1beta1.ModuleAnnotationEmbedded:       "true",
 			v1alpha1.ModuleAnnotationDescriptionEn: "gone",
 		}))
 
 		require.NoError(t, l.ensureModule(context.Background(), def("", ""), true))
 
 		module := getModule(t, l, "ingress-nginx")
-		assert.Equal(t, map[string]string{v1alpha2.ModuleAnnotationEmbedded: "true"}, module.GetAnnotations())
+		assert.Equal(t, map[string]string{v1beta1.ModuleAnnotationEmbedded: "true"}, module.GetAnnotations())
 	})
 }
 

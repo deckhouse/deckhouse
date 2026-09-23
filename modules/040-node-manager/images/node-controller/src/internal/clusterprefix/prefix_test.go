@@ -27,6 +27,8 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
+
+	"github.com/deckhouse/node-controller/internal/common"
 )
 
 func scheme(t *testing.T) *runtime.Scheme {
@@ -57,14 +59,14 @@ func ccSecret(cloudPrefix string) *corev1.Secret {
 		y += "cloud:\n  provider: Yandex\n  prefix: " + cloudPrefix + "\n"
 	}
 	return &corev1.Secret{
-		ObjectMeta: metav1.ObjectMeta{Name: clusterConfigSecretName, Namespace: clusterConfigSecretNamespace},
-		Data:       map[string][]byte{clusterConfigSecretKey: []byte(y)},
+		ObjectMeta: metav1.ObjectMeta{Name: common.ClusterConfigSecretName, Namespace: common.ClusterConfigSecretNamespace},
+		Data:       map[string][]byte{"cluster-configuration.yaml": []byte(y)},
 	}
 }
 
 func keylessSecret() *corev1.Secret {
 	return &corev1.Secret{
-		ObjectMeta: metav1.ObjectMeta{Name: clusterConfigSecretName, Namespace: clusterConfigSecretNamespace},
+		ObjectMeta: metav1.ObjectMeta{Name: common.ClusterConfigSecretName, Namespace: common.ClusterConfigSecretNamespace},
 		Data:       map[string][]byte{"other.yaml": []byte("{}")},
 	}
 }
@@ -104,5 +106,28 @@ func TestResolve(t *testing.T) {
 				t.Fatalf("Resolve = %q, want %q", got, tt.want)
 			}
 		})
+	}
+}
+
+func TestResolveWithClusterConfiguration(t *testing.T) {
+	configuration := common.ClusterConfiguration{}
+	configuration.Cloud.Prefix = "from-cluster-configuration"
+
+	withoutModuleConfig := fake.NewClientBuilder().WithScheme(scheme(t)).Build()
+	got, err := ResolveWithClusterConfiguration(t.Context(), withoutModuleConfig, configuration)
+	if err != nil {
+		t.Fatalf("ResolveWithClusterConfiguration: %v", err)
+	}
+	if got != "from-cluster-configuration" {
+		t.Fatalf("ResolveWithClusterConfiguration = %q, want %q", got, "from-cluster-configuration")
+	}
+
+	withModuleConfig := fake.NewClientBuilder().WithScheme(scheme(t)).WithObjects(globalMC("from-module-config")).Build()
+	got, err = ResolveWithClusterConfiguration(t.Context(), withModuleConfig, configuration)
+	if err != nil {
+		t.Fatalf("ResolveWithClusterConfiguration: %v", err)
+	}
+	if got != "from-module-config" {
+		t.Fatalf("ResolveWithClusterConfiguration = %q, want %q", got, "from-module-config")
 	}
 }

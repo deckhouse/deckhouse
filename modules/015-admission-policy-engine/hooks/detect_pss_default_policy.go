@@ -91,9 +91,10 @@ func getDefaultPolicy(_ context.Context, input *go_hook.HookInput) string {
 		return "Baseline"
 	}
 
-	// no map found - an old cluster
+	// no map found - an old cluster, bootstrapped before install-data was introduced in v1.55
 	if len(installDataSlice) == 0 {
-		return "Baseline"
+		input.Logger.Info("install-data configmap isn't found, PSS default policy is set to privileged")
+		return "Privileged"
 	}
 
 	deckhouseVersion := installDataSlice[0]
