@@ -20,6 +20,7 @@ import (
 	"context"
 	"fmt"
 	"slices"
+	"strings"
 
 	"github.com/go-logr/logr"
 	corev1 "k8s.io/api/core/v1"
@@ -70,8 +71,9 @@ func (r *Reconciler) reconcileNSPRStatuses(ctx context.Context, logger logr.Logg
 
 	// Iterated in contest order so a reader of the log sees the winner before the
 	// objects that lost to it.
+	capped := cappedNSPRs(ordered, rejected, groups)
 	for _, nspr := range ordered {
-		if err := r.updateNSPRStatus(ctx, nspr, rejected, groups, nodes.Items, outcomes[nspr.Name]); err != nil {
+		if err := r.updateNSPRStatus(ctx, nspr, rejected, capped[nspr.Name], groups, nodes.Items, outcomes[nspr.Name]); err != nil {
 			logger.Error(err, "cannot update NodeStaticPodRequest status", "staticPodRequest", nspr.Name)
 		}
 	}
@@ -80,7 +82,7 @@ func (r *Reconciler) reconcileNSPRStatuses(ctx context.Context, logger logr.Logg
 
 // updateNSPRStatus computes and patches one object's status, skipping the write
 // when nothing changed.
-func (r *Reconciler) updateNSPRStatus(ctx context.Context, nspr *deckhousev1alpha1.NodeStaticPodRequest, rejected map[string]nsprRefusal, nodeGroups []string, nodes []corev1.Node, outcome nsprOutcome) error {
+func (r *Reconciler) updateNSPRStatus(ctx context.Context, nspr *deckhousev1alpha1.NodeStaticPodRequest, rejected map[string]nsprRefusal, cappedIn []string, nodeGroups []string, nodes []corev1.Node, outcome nsprOutcome) error {
 	desired := nspr.Status.DeepCopy()
 	desired.ObservedGeneration = nspr.Generation
 	desired.MatchedNodeGroups = matchedNodeGroups(nspr.Spec.NodeGroupSelector.MatchNames, nodeGroups)
@@ -96,6 +98,11 @@ func (r *Reconciler) updateNSPRStatus(ctx context.Context, nspr *deckhousev1alph
 	reason, message := "", ""
 	if refusal, refused := rejected[nspr.Name]; refused {
 		reason, message = refusal.reason, refusal.message
+	}
+	if reason == "" && len(cappedIn) > 0 {
+		reason = reasonLimitExceeded
+		message = fmt.Sprintf("more than %d static pods select node group(s) %s; this one is among the youngest and is left out of their node configs",
+			maxStaticPods, strings.Join(cappedIn, ", "))
 	}
 	// A refusal here reached no node, so nobody is late with an answer. Only a
 	// refusal by the nodes keeps the arithmetic: there they did get it.

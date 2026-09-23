@@ -47,6 +47,10 @@ const reasonInvalidManifest = "InvalidManifest"
 // name is a DNS subdomain — and spec.staticPods[].name does not.
 const reasonInvalidName = "InvalidName"
 
+// reasonLimitExceeded is an accepted object the per-group cap (maxStaticPods)
+// left out of a node config: nothing is wrong with it, it simply never arrives.
+const reasonLimitExceeded = "LimitExceeded"
+
 // nsprRefusal records why a static pod was refused: the reason its Ready
 // condition carries, and the message that says what is wrong with it.
 type nsprRefusal struct {
@@ -156,4 +160,26 @@ func nodeStaticPods(ordered []*deckhousev1alpha1.NodeStaticPodRequest, rejected 
 func nsprMatchesNodeGroup(nspr *deckhousev1alpha1.NodeStaticPodRequest, ngName string) bool {
 	names := nspr.Spec.NodeGroupSelector.MatchNames
 	return len(names) == 0 || slices.Contains(names, ngName)
+}
+
+// cappedNSPRs maps every object the cap left out of a group's node configs to
+// those groups, by asking the render what it kept (nodeStaticPods).
+func cappedNSPRs(ordered []*deckhousev1alpha1.NodeStaticPodRequest, rejected map[string]nsprRefusal, groups []string) map[string][]string {
+	capped := map[string][]string{}
+	for _, group := range groups {
+		kept := nodeStaticPods(ordered, rejected, group)
+		for _, nspr := range ordered {
+			if !nsprMatchesNodeGroup(nspr, group) {
+				continue
+			}
+			if _, refused := rejected[nspr.Name]; refused {
+				continue
+			}
+			if slices.ContainsFunc(kept, func(pod internalv1alpha1.StaticPod) bool { return pod.Name == nspr.Name }) {
+				continue
+			}
+			capped[nspr.Name] = append(capped[nspr.Name], group)
+		}
+	}
+	return capped
 }
