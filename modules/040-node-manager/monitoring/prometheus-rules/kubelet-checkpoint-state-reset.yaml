@@ -19,15 +19,13 @@
         plk_grouped_by__d8_kubelet_checkpoint_state_reset: "D8KubeletCheckpointStateResetAlerts,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
         summary: Pod {{ $labels.namespace }}/{{ $labels.pod }} may run in a NUMA zone other than the one kubelet recorded for it.
         description: |
-          Kubelet on Node `{{ $labels.node }}` reset the memory manager checkpoint and recorded new NUMA zones for the containers of Pod `{{ $labels.namespace }}/{{ $labels.pod }}`. Kubelet sets the zone only when it creates a container, so the containers keep running in the zones they had before the reset, which may be different ones.
+          Kubelet on Node `{{ $labels.node }}` reset the memory manager checkpoint and recorded new NUMA zones for Pod `{{ $labels.namespace }}/{{ $labels.pod }}`. Zones are applied only when a container is created, so the running containers stay in their old zones, which may differ from the recorded ones.
 
-          Kubelet may then give the zone the Pod really uses to another Guaranteed Pod, and both Pods share its memory. With the Topology Manager enabled, the Pod's CPUs may also be moved to the recorded zone while its memory stays in the old one.
+          As a result, the zone the Pod really uses may be given to another Guaranteed Pod, and both Pods share its memory. The Pod's CPUs and memory may also end up in different NUMA zones, which slows down its memory access.
 
-          Kubelet does not stop such a Pod by itself. Restoring the isolation means recreating it, and whether this Pod may be restarted, and when, is a decision about the workload rather than about the Node.
+          The Pod is not restarted automatically: when to do it is up to the workload. To restore isolation:
 
-          What to do, whichever suits the workload:
+          - Delete the Pod or drain the Node, so its containers are recreated in the current zones.
+          - For a virtual machine, you can live migrate it to another Node instead, without stopping it.
 
-          - Delete the Pod, or drain the Node, so its containers are recreated in zones from the current state.
-          - If the Pod is a virtual machine, you can also live migrate it to another Node. The machine keeps running and gets its resources assigned again on arrival.
-
-          The alert resolves by itself within a few minutes of the Pod being recreated. No kubelet restart is needed.
+          The alert resolves within a few minutes after the Pod is recreated. No kubelet restart is needed.
