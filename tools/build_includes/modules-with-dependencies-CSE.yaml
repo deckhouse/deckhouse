@@ -167,6 +167,14 @@
   stageDependencies:
     install:
         - '**/*'
+- add: /modules/150-user-authn/requirements
+  to: /deckhouse/modules/150-user-authn/requirements
+  excludePaths:
+    - '**/*_test.go'
+    - '**/*.sh'
+  stageDependencies:
+    install:
+        - '**/*'
 - add: /modules/160-multitenancy-manager/hooks
   to: /deckhouse/modules/160-multitenancy-manager/hooks
   excludePaths:
