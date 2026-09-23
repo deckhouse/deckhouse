@@ -1,4 +1,4 @@
-2889
+2964
 1GB
 2GB
 5XX
@@ -106,6 +106,7 @@ CRs
 CSE
 CSI
 CSR
+CSRs
 CUDA
 CVE
 CVEs
@@ -117,6 +118,11 @@ CentOS7
 Centos
 Ceph
 CephFS
+CertificateApproval
+CertificateSigning
+CertificateSigningRequest
+CertificateSigningRequests
+CertificateSubjectRestriction
 ChaCha
 Changelog
 CheckFunc
@@ -156,6 +162,7 @@ ClusterPodLoggingConfig
 ClusterRole
 ClusterRoleBinding
 ClusterRoles
+ClusterTrustBundleAttest
 ClusterVirtualImage
 CoC
 Colocating
@@ -235,6 +242,9 @@ Deckhouse
 DeckhouseRelease
 DeckhouseReleases
 DefaultContainerResourcePolicy
+DefaultIngressClass
+DefaultStorageClass
+DefaultTolerationSeconds
 Defragment
 Descheduler
 DestinationRule
@@ -284,6 +294,8 @@ EndpointSlice
 Entra
 EnvoyFilter
 EuropeClouds
+EventRateLimit
+ExtendedResourceToleration
 ExternalIP
 ExternalIPs
 ExternalSecret
@@ -291,6 +303,7 @@ ExtraConfig
 FC
 FCD
 FCGI
+FPGA
 FQDN
 FSID
 Failover
@@ -394,6 +407,7 @@ IQNs
 ISP
 IST
 IaC
+IdP
 IgnoreAndContinueDeployProcess
 ImageBuilding
 ImageLocality
@@ -470,6 +484,8 @@ LVMthin
 LVS
 Laravel
 LetsEncrypt
+LimitRange
+LimitRanger
 Linstor
 ListenerSet
 LmRlY
@@ -522,6 +538,8 @@ Multicluster
 Multiline
 Multitenancy
 MustRunAs
+MutatingAdmissionPolicy
+MutatingAdmissionWebhook
 MutatingWebhookConfiguration
 MutatingWebhooks
 MySQL
@@ -539,6 +557,8 @@ NSG
 NSX
 NTP
 NUMA
+NameID
+NamespaceLifecycle
 Namespaced
 Namespase
 Nehalem
@@ -559,6 +579,7 @@ NodeGroups
 NodeManager
 NodePort
 NodePorts
+NodeRestriction
 NodeUser
 NogeGroup
 NotIn
@@ -634,6 +655,7 @@ Passthrough
 PeerAuthentication
 PersistentVolume
 PersistentVolumeClaim
+PersistentVolumeClaimResize
 PersistentVolumeClaims
 PersistentVolumes
 Platrofm
@@ -647,6 +669,10 @@ PodLoggingConfig
 PodMonitor
 PodMonitors
 PodNetwork
+PodNodeSelector
+PodSecurity
+PodTolerationRestriction
+PodTopologyLabels
 PodsWithLabelAreRunningOnNode
 Poly
 PostgreSQL
@@ -725,6 +751,7 @@ Repointing
 ReportAllocs
 RequestAuthentication
 RequirementCheck
+ResetPassword
 ResourceList
 ResourceName
 ResourceQuota
@@ -734,6 +761,7 @@ RoleBinding
 RollingUpdate
 RootConf
 RuleGroup
+RuntimeClass
 S3
 SAML
 SANs
@@ -822,6 +850,7 @@ StaticInstances
 StaticMachine
 StorageClass
 StorageClasses
+StorageObjectInUseProtection
 StoragePolicy
 StorageProfile
 Streebog
@@ -847,6 +876,7 @@ TLSv
 TMPDIR
 TODO
 TOTP
+TaintNodesByCondition
 TaintToleration
 TargetGroup
 Taskfile
@@ -858,6 +888,7 @@ ThinLVM
 Thymeleaf
 TiB
 TimeSlicing
+TokenRequest
 TolerationSeconds
 Tooltip
 Tproger
@@ -912,6 +943,7 @@ VXLAN
 ValidatingAdmissionPolicies
 ValidatingAdmissionPolicy
 ValidatingAdmissionPolicyBinding
+ValidatingAdmissionWebhook
 ValidationWebhook
 Venafi
 VersionItems
@@ -1008,6 +1040,7 @@ allowVolumeExpansion
 allowedBundles
 allowedTopologies
 allowedUnsafeSysctls
+allowedUserGroups
 allowlist
 amd
 ami
@@ -1128,6 +1161,7 @@ cni
 codec
 comparations
 compatibilityFlag
+complexityLevel
 conf
 config
 configMap
@@ -1136,6 +1170,7 @@ configVersion
 configmaps
 configs
 configurator
+connectorID
 conntrack
 containerd
 contraire
@@ -1181,6 +1216,7 @@ de
 deckhouse
 defaultCRI
 defaultClusterStorageClass
+defragmentation
 delegatable
 descheduled
 descheduler
@@ -1188,6 +1224,8 @@ descheduling
 dev
 devBranch
 dex
+dexauthenticator
+dexclient
 dhcpOptions
 dhctl
 didn
@@ -1221,7 +1259,9 @@ ee
 eg
 egressgateway
 elasticsearch
+emailAddress
 emptyDir
+enableBasicAuth
 enableMultiTenancy
 enablement
 endofftopic
@@ -1279,6 +1319,7 @@ ghcr
 gibibytes
 giterminism
 gitignore
+gitlab
 globalVersion
 goroutines
 govc
@@ -1304,9 +1345,11 @@ hostpath
 hotspots
 hsts
 html
+htpasswd
 http
 httpPort
 httpProxy
+httpd
 https
 httpsPort
 httpsProxy
@@ -1316,6 +1359,7 @@ hypervisor
 hypervisors
 iSCSI
 iTerm2
+iam
 idempotence
 ignoreVolumeMicroversion
 imageAvailabilityExporter
@@ -1383,8 +1427,10 @@ k3d
 kb
 keepalived
 keepalivedEE
+kerberos
 keyField
 keytab
+krb
 kruise
 kube
 kubeDns
@@ -1421,6 +1467,7 @@ loadbalancing
 localhost
 localpath
 localpref
+lockDuration
 logLevel
 loghouse
 loki
@@ -1444,6 +1491,7 @@ masterNodeGroup
 masternodegroup
 matchExpressions
 matchLabels
+maxAttempts
 maxConcurrent
 maxConcurrentDownloads
 maxPerZone
@@ -1464,6 +1512,7 @@ metallbEE
 microservices
 milli
 millicore
+minLength
 minPerZone
 minReplicas
 minikube
@@ -1500,6 +1549,7 @@ namespaceSelector
 namespaced
 namespaces
 neighbour
+newPasswordHash
 nexthop
 nexthops
 nf
@@ -1555,6 +1605,8 @@ parametersSchema
 paravirtualization
 passphrase
 passwordHash
+passwordHistoryLimit
+passwordPolicy
 passwordless
 pathPrefix
 pcs
@@ -1589,6 +1641,7 @@ prioritization
 priorityClassName
 projectTypeName
 prometheus
+promptType
 promtail
 protobuf
 providerID
@@ -1612,6 +1665,7 @@ rebase
 recordscontaining
 redis
 redos
+refreshTokens
 regex
 regexes
 regexp
@@ -1621,6 +1675,7 @@ registryImagesRepo
 registrysecret
 reindex
 releaseChannel
+repeatedChars
 repo
 repos
 reprovisioning
@@ -1634,6 +1689,7 @@ roleRef
 rolebinding
 rollout
 rollouts
+rootCAData
 rootDir
 rootDiskSize
 rtt
@@ -1672,6 +1728,7 @@ shouldn
 smokeMini
 snaphost
 sourceRanges
+specialCharacters
 spellchecker
 sqs
 src
@@ -1736,6 +1793,7 @@ tls
 toolchain
 trdl
 trivy
+ttl
 tuf
 tunnelMode
 txt
@@ -1757,6 +1815,7 @@ uptick
 urls
 username
 usernames
+utils
 uwsgi
 v1
 vApp
@@ -1820,6 +1879,7 @@ zabbix
 zipkin
 zoneTagCategory
 µs
+Автогенерация
 Автообновление
 Агрегирующий
 Актуализируйте
@@ -1829,6 +1889,7 @@ zoneTagCategory
 Б
 БД
 ВМ
+Валидирующий
 Визуализировать
 Гб
 Гбит
@@ -1876,6 +1937,7 @@ zoneTagCategory
 Пробросьте
 Р
 Ревью
+РедОС
 Реквесты
 Сloud
 Сontainer
@@ -1905,6 +1967,7 @@ zoneTagCategory
 ЦОДов
 ЦП
 ЦС
+автозапуск
 автомасштабирование
 автомасштабированием
 автомасштабировании
@@ -1912,12 +1975,14 @@ zoneTagCategory
 автообновлений
 автообновления
 автоподменой
+авторизаторами
 авторизовывать
 авторизовываться
 авторизующий
 автоскейлерам
 автоскейлинг
 автосогласования
+автосозданием
 агрегатор
 агрегатора
 агрегаторам
@@ -1927,6 +1992,7 @@ zoneTagCategory
 агрегируются
 агрегирующей
 агрегирующую
+адимнистраторами
 админки
 ает
 алерт
@@ -1960,9 +2026,11 @@ zoneTagCategory
 аутентифицировались
 аутентифицированному
 аутентифицированные
+аутентифицированный
 аутентифицированных
 аутентифицировать
 аутентифицироваться
+аутентифицируемых
 аутентифицирует
 аутентифицируетесь
 аутентифицируйтесь
@@ -2023,6 +2091,7 @@ zoneTagCategory
 валидирует
 валидируется
 валидируются
+валидирующие
 валидирующим
 валидная
 валидной
@@ -2286,6 +2355,7 @@ zoneTagCategory
 майнеров
 майнинг
 маппинг
+маппинга
 маршрутизировать
 маршрутизируемой
 масштабироваться
@@ -2350,6 +2420,7 @@ zoneTagCategory
 неавторизованного
 неавторизованный
 неаутентифицированные
+невалидный
 невалидным
 недеструктивные
 недеструктивных
@@ -2427,6 +2498,7 @@ zoneTagCategory
 п
 пайплайна
 пайплайнами
+пайплайне
 пайплайнов
 пайплайны
 паравиртуализации
@@ -2586,6 +2658,7 @@ zoneTagCategory
 разблокировка
 разблокируется
 раннера
+раннером
 рантайма
 рантайме
 раскомментировать
@@ -2665,6 +2738,7 @@ zoneTagCategory
 сайдкаров
 сайдкаром
 сайдкары
+самоподписанного
 самоподписанном
 самоподписанному
 самоподписанные
@@ -2813,6 +2887,7 @@ zoneTagCategory
 финалайзером
 финалайзеру
 финалайзеры
+финализаторы
 фич
 фичах
 фичи

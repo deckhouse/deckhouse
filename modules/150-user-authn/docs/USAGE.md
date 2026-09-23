@@ -21,8 +21,6 @@ spec:
     - id: direct
       masterURI: https://159.89.5.247:6443
       description: "Direct access to kubernetes API"
-    publishAPI:
-      enabled: true
 ```
 
 {% endraw %}
@@ -337,14 +335,16 @@ spec:
 
 To enable Basic Authentication for the Kubernetes API using LDAP credentials:
 
-1. Ensure that the [`publishAPI`](configuration.html#parameters-publishapi) parameter is enabled in the `user-authn` module configuration.
+1. Ensure that the [`apiserver.publishAPI`](/modules/control-plane-manager/configuration.html#parameters-apiserver-publishapi) parameter is enabled in the `control-plane-manager` module configuration.
 1. Set [`enableBasicAuth: true`](/modules/user-authn/cr.html#dexprovider-v1-spec-oidc-enablebasicauth) in your LDAP DexProvider resource.
 
-> **Warning**. Only one provider in the cluster can have [`enableBasicAuth`](/modules/user-authn/cr.html#dexprovider-v1-spec-oidc-enablebasicauth) enabled.
+{% alert level="info" %}
+Only one provider in the cluster can have [`enableBasicAuth`](/modules/user-authn/cr.html#dexprovider-v1-spec-oidc-enablebasicauth) enabled.
+{% endalert %}
 
 After configuration, users can access the Kubernetes API via `kubectl`, using their LDAP username and password.
 
-Example `kubeconfig` for the user:
+Example kubeconfig for the user:
 
 ```yaml
 apiVersion: v1
