@@ -32,6 +32,7 @@ import (
 
 	deckhousev1 "github.com/deckhouse/node-controller/api/deckhouse.io/v1"
 	"github.com/deckhouse/node-controller/internal/bootstrap"
+	"github.com/deckhouse/node-controller/internal/cloudprovider"
 	nodecommon "github.com/deckhouse/node-controller/internal/common"
 	"github.com/deckhouse/node-controller/internal/controller/nodegroup/bashiblecontext"
 	ngcommon "github.com/deckhouse/node-controller/internal/controller/nodegroup/common"
@@ -88,7 +89,9 @@ var _ = Describe("Bootstrap secrets controller", func() {
 		}
 		r.Client = k8sClient
 
-		resolved, validationErr, err := r.derivedStatus.ResolveNodeGroup(suiteCtx, ng)
+		provider, err := cloudprovider.ForNodeGroup(suiteCtx, k8sClient, ng)
+		Expect(err).NotTo(HaveOccurred())
+		resolved, validationErr, err := r.derivedStatus.ResolveNodeGroup(suiteCtx, ng, provider)
 		Expect(err).NotTo(HaveOccurred())
 		Expect(validationErr).To(BeEmpty())
 

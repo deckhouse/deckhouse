@@ -27,6 +27,7 @@ import (
 
 	v1 "github.com/deckhouse/node-controller/api/deckhouse.io/v1"
 	internalv1alpha1 "github.com/deckhouse/node-controller/api/internal.deckhouse.io/v1alpha1"
+	"github.com/deckhouse/node-controller/internal/cloudprovider"
 	"github.com/deckhouse/node-controller/internal/controller/nodegroup/derived_status"
 )
 
@@ -75,7 +76,11 @@ func resolveKubernetesVersion(ctx context.Context, derived *derived_status.Servi
 func deriveKubernetesVersion(ctx context.Context, derived *derived_status.Service, ng *v1.NodeGroup) (string, error) {
 	// The derived status reports the version even when a later cloud check fails,
 	// so the check outcome is ignored here — the error is not.
-	computed, _, err := derived.ComputeWithCloudChecks(ctx, ng)
+	provider, err := cloudprovider.ForNodeGroup(ctx, derived.Client, ng)
+	if err != nil {
+		return "", fmt.Errorf("resolve the cloud provider of %s: %w", ng.Name, err)
+	}
+	computed, _, err := derived.ComputeWithCloudChecks(ctx, ng, provider)
 	if err != nil {
 		return "", fmt.Errorf("derive the Kubernetes version of %s: %w", ng.Name, err)
 	}

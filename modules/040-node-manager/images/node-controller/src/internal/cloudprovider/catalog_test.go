@@ -203,10 +203,10 @@ func TestGetCatalog_Errors(t *testing.T) {
 // A provider that names a kind but no version contributes no GVK: guessing a version renames the
 // immutable MachineTemplate the instance-class checksum points at.
 func TestInstanceClassGVKs(t *testing.T) {
-	pCatalog := NewCatalog([]Provider{
+	pCatalog := NewCatalog([]Registration{
 		{Type: "aws", InstanceClassKind: "AWSInstanceClass", InstanceClassAPIVersion: "v1"},
 		{Type: "yandex", InstanceClassKind: "YandexInstanceClass"},
-	}, Provider{})
+	}, Registration{})
 
 	gvks := pCatalog.InstanceClassGVKs()
 

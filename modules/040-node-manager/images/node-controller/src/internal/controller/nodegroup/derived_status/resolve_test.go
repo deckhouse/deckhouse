@@ -31,9 +31,17 @@ import (
 
 	v1 "github.com/deckhouse/node-controller/api/deckhouse.io/v1"
 	"github.com/deckhouse/node-controller/internal/cloudprovider"
-	providermock "github.com/deckhouse/node-controller/internal/cloudprovider/mock"
+	nodecommon "github.com/deckhouse/node-controller/internal/common"
 	ngcommon "github.com/deckhouse/node-controller/internal/controller/nodegroup/common"
 )
+
+// testProvider resolves the provider a NodeGroup runs on the way a reconcile does.
+func testProvider(t *testing.T, s *Service, ng *v1.NodeGroup) CloudProviderRegistration {
+	t.Helper()
+	provider, err := cloudprovider.ForNodeGroup(context.Background(), s.Client, ng)
+	require.NoError(t, err)
+	return provider
+}
 
 func newTestScheme(t *testing.T) *runtime.Scheme {
 	t.Helper()
@@ -148,7 +156,7 @@ func TestRunCloudChecks_UnpublishedAPIVersionIsAValidationError(t *testing.T) {
 	}
 
 	check := Validate(ng, Snapshot{
-		Provider: cloudprovider.Provider{InstanceClassKind: "YandexInstanceClass"},
+		Provider: CloudProviderRegistration{InstanceClassKind: "YandexInstanceClass"},
 	})
 
 	assert.Contains(t, check.Error, "has not published instanceClassAPIVersion")
@@ -190,7 +198,7 @@ func TestReadDefaultZonesIncludesExistingMCMMachineDeploymentZones(t *testing.T)
 	md.SetAnnotations(map[string]string{"zone": "zone-a"})
 
 	s := newTestService(t, md)
-	got, err := s.readDefaultZones(context.Background(), cloudprovider.Provider{Zones: []string{"zone-b", "zone-a"}})
+	got, err := s.readDefaultZones(context.Background(), CloudProviderRegistration{Zones: []string{"zone-b", "zone-a"}})
 	require.NoError(t, err)
 
 	assert.Equal(t, []string{"zone-a", "zone-b"}, got)

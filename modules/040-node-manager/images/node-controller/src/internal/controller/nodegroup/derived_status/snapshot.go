@@ -26,7 +26,6 @@ import (
 
 	v1 "github.com/deckhouse/node-controller/api/deckhouse.io/v1"
 	"github.com/deckhouse/node-controller/internal/capacity"
-	"github.com/deckhouse/node-controller/internal/cloudprovider"
 )
 
 // Snapshot is everything this package reads. It is built once per pass, so the derive and the
@@ -75,7 +74,7 @@ type Snapshot struct {
 // An absent source yields an empty field; an unreadable one is returned as an error, because an
 // empty value here is indistinguishable from "no cloud provider" and would publish a NodeGroup
 // without instanceClass — a checksum shift on every node.
-func (s *Service) BuildSnapshot(ctx context.Context, ng *v1.NodeGroup, provider cloudprovider.Provider) (Snapshot, error) {
+func (s *Service) BuildSnapshot(ctx context.Context, ng *v1.NodeGroup, provider CloudProviderRegistration) (Snapshot, error) {
 	logger := log.FromContext(ctx)
 
 	clusterUUID, err := s.readClusterUUID(ctx)

@@ -41,7 +41,7 @@ type Result struct {
 	LatestError string
 }
 
-func (s *Service) Compute(ctx context.Context, ng *v1.NodeGroup, provider cloudprovider.Provider) (Result, error) {
+func (s *Service) Compute(ctx context.Context, ng *v1.NodeGroup, provider cloudprovider.Registration) (Result, error) {
 	result := Result{}
 	if ng.Spec.NodeType != v1.NodeTypeCloudEphemeral {
 		return result, nil

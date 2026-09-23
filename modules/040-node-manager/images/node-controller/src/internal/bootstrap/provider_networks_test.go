@@ -58,9 +58,8 @@ func TestRenderLiveProviderNetworkScripts(t *testing.T) {
 			}}
 
 			in := baseInput(files)
-			in.NodeGroup = map[string]any{"name": "worker", "nodeType": "CloudEphemeral"}
+			in.NodeGroup = map[string]any{"name": "worker", "nodeType": "CloudEphemeral", "cloudProviderType": provider}
 			in.BootstrapToken = "myworker"
-			in.Provider = provider
 
 			rendered, err := RenderScript(in)
 			require.NoError(t, err)
@@ -68,7 +67,7 @@ func TestRenderLiveProviderNetworkScripts(t *testing.T) {
 			// Without this the spec would pass on a script that was never found: the
 			// prerequisites template skips the block on an empty .Files.Get and renders
 			// happily (01-bootstrap-prerequisites.sh.tpl:41).
-			in.Provider = ""
+			in.NodeGroup = map[string]any{"name": "worker", "nodeType": "CloudEphemeral"}
 			withoutProvider, err := RenderScript(in)
 			require.NoError(t, err)
 			assert.NotEqual(t, string(withoutProvider), string(rendered),

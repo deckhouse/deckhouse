@@ -27,7 +27,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	nodecommon "github.com/deckhouse/node-controller/internal/common"
-	ngcommon "github.com/deckhouse/node-controller/internal/controller/nodegroup/common"
 )
 
 const (
@@ -43,8 +42,8 @@ const (
 
 	apiProxyCertSecretName = "kubernetes-api-proxy-discovery-cert"
 
-	bootstrapTokenNGLabel = "node-manager.deckhouse.io/node-group"
-	cloudProviderSecretName = ngcommon.CloudProviderSecretName
+	bootstrapTokenNGLabel   = "node-manager.deckhouse.io/node-group"
+	cloudProviderSecretName = nodecommon.CloudProviderSecretName
 )
 
 // RootCAFiles are the candidate locations of the projected service-account CA, canonical path

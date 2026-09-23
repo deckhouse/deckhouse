@@ -43,6 +43,8 @@ import (
 const (
 	clusterConfigSecretName      = "d8-cluster-configuration"
 	clusterConfigSecretNamespace = "kube-system"
+	cloudProviderSecretName      = nodecommon.CloudProviderSecretName
+	cloudProviderSecretNamespace = nodecommon.CloudProviderSecretNamespace
 	clusterUUIDConfigMapName     = nodecommon.ClusterUUIDConfigMapName
 	clusterUUIDConfigMapKey      = nodecommon.ClusterUUIDConfigMapKey
 	clusterUUIDConfigMapNS       = nodecommon.KubeSystemNamespace
@@ -239,7 +241,7 @@ func (s *Service) readControlPlaneMinVersion(ctx context.Context) (*semver.Versi
 // readDefaultZones returns the zones a NodeGroup spreads over when its spec names none. A failed
 // List is returned rather than swallowed: fewer zones is a different published element, and the
 // element is hashed into every node's configuration checksum.
-func (s *Service) readDefaultZones(ctx context.Context, provider cloudprovider.Provider) ([]string, error) {
+func (s *Service) readDefaultZones(ctx context.Context, provider CloudProviderRegistration) ([]string, error) {
 	seen := make(map[string]struct{})
 	zones := make([]string, 0)
 	add := func(z string) {

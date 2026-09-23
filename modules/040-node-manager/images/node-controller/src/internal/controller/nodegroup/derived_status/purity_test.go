@@ -23,7 +23,6 @@ import (
 	"github.com/stretchr/testify/require"
 
 	v1 "github.com/deckhouse/node-controller/api/deckhouse.io/v1"
-	"github.com/deckhouse/node-controller/internal/cloudprovider"
 )
 
 // The core must stay free of I/O. A client in derive.go or validate.go means a read crept back into
@@ -58,7 +57,7 @@ func TestDerive_IsDeterministic(t *testing.T) {
 	ng.Name = "worker"
 	ng.Spec.NodeType = v1.NodeTypeCloudEphemeral
 	snap := Snapshot{
-		Provider:    cloudprovider.Provider{Type: "aws", MachineClassKind: "AWSMachineClass"},
+		Provider:    CloudProviderRegistration{Type: "aws", MachineClassKind: "AWSMachineClass"},
 		ClusterUUID: "uuid-1",
 		Engine:      engineMCM,
 	}
@@ -82,7 +81,7 @@ func TestValidate_IsDeterministic(t *testing.T) {
 		ClassReference: v1.ClassReference{Kind: "AWSInstanceClass", Name: "worker"},
 	}
 	snap := Snapshot{
-		Provider: cloudprovider.Provider{
+		Provider: CloudProviderRegistration{
 			InstanceClassKind:       "AWSInstanceClass",
 			InstanceClassAPIVersion: "v1",
 		},

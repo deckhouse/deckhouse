@@ -47,6 +47,15 @@ type Registration struct {
 
 	// CloudVariables is the provider-owned subtree exposed to templates as .provider.
 	CloudVariables map[string]any
+
+	// Data is the whole Secret decoded, which the bashible context publishes verbatim.
+	Data map[string]any
+}
+
+// IsStatic reports that the nodes resolved to this registration run in no cloud: an empty type is
+// how both a Static NodeGroup and a cluster without a cloud provider come back.
+func (r Registration) IsStatic() bool {
+	return r.Type == ""
 }
 
 // HasCAPI reports whether the provider registered a CAPI infrastructure cluster.
@@ -172,6 +181,7 @@ func DecodeRegistration(data map[string][]byte) (Registration, error) {
 		CAPIMachineTemplateKind:        decodeString(data["capiMachineTemplateKind"]),
 		CAPIMachineTemplateAPIVersion:  decodeString(data["capiMachineTemplateAPIVersion"]),
 		CAPIMachineDeploymentSpecPatch: decodeString(data["capiMachineDeploymentSpecPatch"]),
+		Data:                           decodeSecretData(data),
 	}
 
 	if registration.Type != "" {

@@ -31,7 +31,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	v1 "github.com/deckhouse/node-controller/api/deckhouse.io/v1"
-	"github.com/deckhouse/node-controller/internal/cloudprovider"
 )
 
 func boolPtr(b bool) *bool { return &b }
@@ -46,40 +45,40 @@ func mustSemver(t *testing.T, s string) *semver.Version {
 func TestDefaultCloudEphemeralEngine(t *testing.T) {
 	cases := []struct {
 		name     string
-		provider cloudprovider.Provider
+		provider CloudProviderRegistration
 		useMCM   bool
 		want     string
 	}{
 		{
 			name:     "neither MCM nor CAPI",
-			provider: cloudprovider.Provider{},
+			provider: CloudProviderRegistration{},
 			want:     engineNone,
 		},
 		{
 			name:     "MCM only",
-			provider: cloudprovider.Provider{MachineClassKind: "AWSInstanceClass"},
+			provider: CloudProviderRegistration{MachineClassKind: "AWSInstanceClass"},
 			want:     engineMCM,
 		},
 		{
 			name:     "CAPI only",
-			provider: cloudprovider.Provider{CAPI: cloudprovider.CAPIConfig{ClusterKind: "DVPCluster"}},
+			provider: CloudProviderRegistration{CAPIClusterKind: "DVPCluster"},
 			want:     engineCAPI,
 		},
 		{
 			name:     "both, useMCM=false defaults to CAPI",
-			provider: cloudprovider.Provider{MachineClassKind: "AWSInstanceClass", CAPI: cloudprovider.CAPIConfig{ClusterKind: "DVPCluster"}},
+			provider: CloudProviderRegistration{MachineClassKind: "AWSInstanceClass", CAPIClusterKind: "DVPCluster"},
 			useMCM:   false,
 			want:     engineCAPI,
 		},
 		{
 			name:     "both, useMCM=true forces MCM",
-			provider: cloudprovider.Provider{MachineClassKind: "AWSInstanceClass", CAPI: cloudprovider.CAPIConfig{ClusterKind: "DVPCluster"}},
+			provider: CloudProviderRegistration{MachineClassKind: "AWSInstanceClass", CAPIClusterKind: "DVPCluster"},
 			useMCM:   true,
 			want:     engineMCM,
 		},
 		{
 			name:     "empty-string kinds are treated as absent",
-			provider: cloudprovider.Provider{},
+			provider: CloudProviderRegistration{},
 			want:     engineNone,
 		},
 	}
@@ -97,7 +96,7 @@ func TestEngine_PinAndDefaults(t *testing.T) {
 	cases := []struct {
 		name     string
 		ng       *v1.NodeGroup
-		provider cloudprovider.Provider
+		provider CloudProviderRegistration
 		want     string
 	}{
 		{
@@ -121,7 +120,7 @@ func TestEngine_PinAndDefaults(t *testing.T) {
 				ObjectMeta: metav1.ObjectMeta{Annotations: map[string]string{useMCMAnnotation: "true"}},
 				Spec:       v1.NodeGroupSpec{NodeType: v1.NodeTypeCloudEphemeral},
 			},
-			provider: cloudprovider.Provider{MachineClassKind: "AWSInstanceClass", CAPI: cloudprovider.CAPIConfig{ClusterKind: "DVPCluster"}},
+			provider: CloudProviderRegistration{MachineClassKind: "AWSInstanceClass", CAPIClusterKind: "DVPCluster"},
 			want:     engineMCM,
 		},
 		{
@@ -145,7 +144,7 @@ func TestEngine_PinAndDefaults(t *testing.T) {
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
-			assert.Equal(t, tc.want, engineFrom(tc.ng, tc.reg, machineDeployments{}))
+			assert.Equal(t, tc.want, engineFrom(tc.ng, tc.provider, machineDeployments{}))
 		})
 	}
 }

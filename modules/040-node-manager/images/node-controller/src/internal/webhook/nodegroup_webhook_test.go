@@ -39,7 +39,6 @@ import (
 
 	v1 "github.com/deckhouse/node-controller/api/deckhouse.io/v1"
 	providermock "github.com/deckhouse/node-controller/internal/cloudprovider/mock"
-	"github.com/deckhouse/node-controller/internal/common"
 	"github.com/deckhouse/node-controller/internal/network"
 )
 

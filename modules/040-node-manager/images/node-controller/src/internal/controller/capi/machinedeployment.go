@@ -191,14 +191,14 @@ func (r *MachineDeploymentReconciler) Reconcile(ctx context.Context, req ctrl.Re
 	if err != nil {
 		return ctrl.Result{}, err
 	}
-	provider := pCatalog.ByNodeGroup(ng)
-	if err := cloudprovider.ValidateNodeGroupPType(ng, provider); err != nil {
+	registration := pCatalog.ByNodeGroup(ng)
+	if err := cloudprovider.ValidateNodeGroupPType(ng, registration); err != nil {
 		logger.Error(err, "failed to resolve the cloud provider of the NodeGroup", "nodeGroup", ng.Name)
 		return ctrl.Result{}, err
 	}
 
 	if !ng.DeletionTimestamp.IsZero() {
-		done, err := r.cleanupMachineDeployments(ctx, ng.Name, provider)
+		done, err := r.cleanupMachineDeployments(ctx, ng.Name)
 		if err != nil {
 			return ctrl.Result{}, err
 		}
@@ -236,7 +236,7 @@ func (r *MachineDeploymentReconciler) Reconcile(ctx context.Context, req ctrl.Re
 		// Resolved once here and handed down: the engine branch and the rendered element must
 		// agree within one pass, and the snapshot behind ResolveNodeGroup already carries it.
 		ds := &derived_status.Service{Client: r.Client}
-		resolved, validationErr, err := ds.ResolveNodeGroup(ctx, ng)
+		resolved, validationErr, err := ds.ResolveNodeGroup(ctx, ng, registration)
 		if err != nil {
 			return ctrl.Result{}, fmt.Errorf("resolve NodeGroup %s: %w", ng.Name, err)
 		}
@@ -294,7 +294,7 @@ func (r *MachineDeploymentReconciler) removeFinalizer(ctx context.Context, ng *d
 // node drain runs asynchronously under capi/caps-controller-manager finalizers. An MCM one does:
 // its MachineClass holds the cloud credentials the deletion itself needs, so the class outlives
 // the deployment and the NodeGroup stays finalized until both are gone (see pruneStaleMCMs).
-func (r *MachineDeploymentReconciler) cleanupMachineDeployments(ctx context.Context, ngName string, provider cloudprovider.Provider) (bool, error) {
+func (r *MachineDeploymentReconciler) cleanupMachineDeployments(ctx context.Context, ngName string) (bool, error) {
 	logger := log.FromContext(ctx)
 
 	capiMDs := &unstructured.UnstructuredList{}

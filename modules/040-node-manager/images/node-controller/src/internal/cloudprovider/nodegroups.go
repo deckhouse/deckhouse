@@ -52,7 +52,7 @@ func init() {
 // TrackNodeGroupMetrics publishes what is wrong with a NodeGroup's spec.providerType. The
 // two states are exclusive: a field that names the wrong provider is reported as invalid, and only
 // a field that names nothing at all is reported as unset.
-func TrackNodeGroupMetrics(ng *v1.NodeGroup, provider Provider) {
+func TrackNodeGroupMetrics(ng *v1.NodeGroup, provider Registration) {
 	ClearNodeGroupMetrics(ng.Name)
 	nodeType := string(ng.Spec.NodeType)
 
@@ -78,7 +78,7 @@ func ClearNodeGroupMetrics(name string) {
 //
 // An empty field is never a defect: the field declares an answer, it does not pick one. Whether a
 // group that declares nothing still has a provider left to name is ValidateNodeGroupPTypeUnset.
-func ValidateNodeGroupPType(ng *v1.NodeGroup, provider Provider) error {
+func ValidateNodeGroupPType(ng *v1.NodeGroup, provider Registration) error {
 	declared := ng.Spec.ProviderType
 	if declared == "" {
 		return nil
@@ -123,7 +123,7 @@ func ValidateNodeGroupPType(ng *v1.NodeGroup, provider Provider) error {
 // ValidateNodeGroupPTypeUnset reports a NodeGroup that has a cloud provider to name and names none.
 // It is not a defect: the field is being rolled out, and the gauge behind this asks the owner to
 // fill it in before it starts to matter.
-func ValidateNodeGroupPTypeUnset(ng *v1.NodeGroup, provider Provider) bool {
+func ValidateNodeGroupPTypeUnset(ng *v1.NodeGroup, provider Registration) bool {
 	// A group that names something is not unset, whatever it names: whether the name holds is
 	// ValidateNodeGroupPType.
 	if ng.Spec.ProviderType != "" {

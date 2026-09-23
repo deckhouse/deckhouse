@@ -29,7 +29,6 @@ import (
 	sigsyaml "sigs.k8s.io/yaml"
 
 	v1 "github.com/deckhouse/node-controller/api/deckhouse.io/v1"
-	"github.com/deckhouse/node-controller/internal/cloudprovider"
 )
 
 const (
@@ -44,7 +43,7 @@ const (
 // plus the validation error the checks produced. The two travel separately on purpose: the error
 // is a statement about the NodeGroup, not about this pass, so a caller retries on the returned
 // error but not on a non-empty validation string.
-func (s *Service) ResolveNodeGroup(ctx context.Context, ng *v1.NodeGroup, provider cloudprovider.Provider) (ResolvedNodeGroup, string, error) {
+func (s *Service) ResolveNodeGroup(ctx context.Context, ng *v1.NodeGroup, provider CloudProviderRegistration) (ResolvedNodeGroup, string, error) {
 	snap, err := s.BuildSnapshot(ctx, ng, provider)
 	if err != nil {
 		return ResolvedNodeGroup{}, "", err

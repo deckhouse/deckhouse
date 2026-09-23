@@ -166,15 +166,7 @@ func getCRDsHandler(_ context.Context, input *go_hook.HookInput) error {
 		return fmt.Errorf("failed to unmarshal 'cloud_provider_secret' snapshot: %w", err)
 	}
 
-	// cloudProviderType is the provider of the cluster under the name node-controller publishes
-	// into the bashible context. The bootstrap script reads it off the NodeGroup, so both paths
-	// pick the provider's step directory through the same field.
-	cloudProviderType := ""
 	if len(cloudProviderSecrets) > 0 {
-		if v, ok := cloudProviderSecrets[0]["type"].(string); ok {
-			cloudProviderType = v
-		}
-
 		switch v := cloudProviderSecrets[0]["zones"].(type) {
 		case []string:
 			defaultZones.Add(v...)

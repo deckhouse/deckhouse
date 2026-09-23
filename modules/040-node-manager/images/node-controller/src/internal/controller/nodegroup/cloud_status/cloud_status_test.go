@@ -119,7 +119,7 @@ func TestCompute_NonCloudEphemeralReturnsEmpty(t *testing.T) {
 		Spec:       v1.NodeGroupSpec{NodeType: v1.NodeTypeStatic},
 	}
 	s := &Service{Client: newClient(t)}
-	res, err := s.Compute(context.Background(), ng, cloudprovider.Provider{})
+	res, err := s.Compute(context.Background(), ng, cloudprovider.Registration{})
 	if err != nil {
 		t.Fatalf("Compute() error: %v", err)
 	}
@@ -137,7 +137,7 @@ func TestCompute_MinMaxFromZonesAndReplicas(t *testing.T) {
 		mcmMachine("m2", "worker"),
 	)}
 
-	res, err := s.Compute(context.Background(), ng, cloudprovider.Provider{})
+	res, err := s.Compute(context.Background(), ng, cloudprovider.Registration{})
 	if err != nil {
 		t.Fatalf("Compute() error: %v", err)
 	}
@@ -162,7 +162,7 @@ func TestCompute_DesiredBumpedToMin(t *testing.T) {
 		mcmMachineDeployment("worker-md", "worker", 1),
 	)}
 
-	res, err := s.Compute(context.Background(), ng, cloudprovider.Provider{})
+	res, err := s.Compute(context.Background(), ng, cloudprovider.Registration{})
 	if err != nil {
 		t.Fatalf("Compute() error: %v", err)
 	}
@@ -185,7 +185,7 @@ func TestCompute_CombinesMCMAndCAPIReplicasAndMachines(t *testing.T) {
 		capiMachine("cm2", "worker"),
 	)}
 
-	res, err := s.Compute(context.Background(), ng, cloudprovider.Provider{})
+	res, err := s.Compute(context.Background(), ng, cloudprovider.Registration{})
 	if err != nil {
 		t.Fatalf("Compute() error: %v", err)
 	}
@@ -225,7 +225,7 @@ func TestCompute_FrozenAndFailuresSortedLatestError(t *testing.T) {
 	}, "status", "failedMachines")
 
 	s := &Service{Client: newClient(t, md)}
-	res, err := s.Compute(context.Background(), ng, cloudprovider.Provider{})
+	res, err := s.Compute(context.Background(), ng, cloudprovider.Registration{})
 	if err != nil {
 		t.Fatalf("Compute() error: %v", err)
 	}
@@ -255,19 +255,19 @@ func TestZonesCount(t *testing.T) {
 	tests := []struct {
 		name     string
 		ng       *v1.NodeGroup
-		provider cloudprovider.Provider
+		provider cloudprovider.Registration
 		want     int32
 	}{
 		{
 			name:     "zones from spec win over the provider",
 			ng:       cloudEphemeralNG("worker", []string{"a", "b", "c"}, 0, 1),
-			provider: cloudprovider.Provider{Type: "yandex", Zones: []string{"z1", "z2"}},
+			provider: cloudprovider.Registration{Type: "yandex", Zones: []string{"z1", "z2"}},
 			want:     3,
 		},
 		{
 			name:     "no spec zones, fall back to the provider",
 			ng:       zonelessNodeGroup(),
-			provider: cloudprovider.Provider{Type: "yandex", Zones: []string{"z1", "z2"}},
+			provider: cloudprovider.Registration{Type: "yandex", Zones: []string{"z1", "z2"}},
 			want:     2,
 		},
 		{

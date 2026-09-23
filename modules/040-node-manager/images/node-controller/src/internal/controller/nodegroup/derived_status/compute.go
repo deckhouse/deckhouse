@@ -29,7 +29,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	v1 "github.com/deckhouse/node-controller/api/deckhouse.io/v1"
-	"github.com/deckhouse/node-controller/internal/cloudprovider"
 	nodecommon "github.com/deckhouse/node-controller/internal/common"
 	ngcommon "github.com/deckhouse/node-controller/internal/controller/nodegroup/common"
 )
@@ -77,9 +76,9 @@ func defaultEngine(ng *v1.NodeGroup, reg CloudProviderRegistration) string {
 	}
 }
 
-func defaultCloudEphemeralEngine(provider cloudprovider.Provider, useMCM bool) string {
+func defaultCloudEphemeralEngine(provider CloudProviderRegistration, useMCM bool) string {
 	hasMCM := provider.MachineClassKind != ""
-	hasCAPI := provider.CAPI.ClusterKind != ""
+	hasCAPI := provider.CAPIClusterKind != ""
 
 	switch {
 	case hasMCM && hasCAPI:
@@ -262,7 +261,7 @@ func resolveZones(ng *v1.NodeGroup, defaultZones []string) []string {
 	return defaultZones
 }
 
-func applyCloudSpecificDefaults(provider cloudprovider.Provider, instanceClassSpec interface{}) (interface{}, error) {
+func applyCloudSpecificDefaults(provider CloudProviderRegistration, instanceClassSpec interface{}) (interface{}, error) {
 	specMap, ok := instanceClassSpec.(map[string]interface{})
 	if !ok {
 		return instanceClassSpec, nil

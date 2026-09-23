@@ -38,6 +38,7 @@ import (
 
 	deckhousev1 "github.com/deckhouse/node-controller/api/deckhouse.io/v1"
 	"github.com/deckhouse/node-controller/internal/bootstrap"
+	"github.com/deckhouse/node-controller/internal/cloudprovider"
 	nodecommon "github.com/deckhouse/node-controller/internal/common"
 	"github.com/deckhouse/node-controller/internal/controller/nodegroup/bashiblecontext"
 	ngcommon "github.com/deckhouse/node-controller/internal/controller/nodegroup/common"
@@ -173,7 +174,11 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 		return ctrl.Result{}, nil
 	}
 
-	resolved, validationErr, err := r.derivedStatus.ResolveNodeGroup(ctx, ng)
+	provider, err := cloudprovider.ForNodeGroup(ctx, r.Client, ng)
+	if err != nil {
+		return ctrl.Result{}, fmt.Errorf("resolve the cloud provider of %s: %w", ng.Name, err)
+	}
+	resolved, validationErr, err := r.derivedStatus.ResolveNodeGroup(ctx, ng, provider)
 	if err != nil {
 		return ctrl.Result{}, fmt.Errorf("resolve NodeGroup %s: %w", ng.Name, err)
 	}

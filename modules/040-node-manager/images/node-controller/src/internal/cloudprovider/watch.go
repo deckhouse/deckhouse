@@ -100,7 +100,7 @@ func RegistrationSecretsRequests(ctx context.Context, r client.Reader) []reconci
 // NodeGroupHandler enqueues the NodeGroups that run on the registration the event carries. Pair it
 // with RegistrationSecretPredicate.
 func NodeGroupHandler(r client.Reader) handler.EventHandler {
-	enqueue := func(ctx context.Context, q workqueue.TypedRateLimitingInterface[reconcile.Request], carried ...Provider) {
+	enqueue := func(ctx context.Context, q workqueue.TypedRateLimitingInterface[reconcile.Request], carried ...Registration) {
 		for _, req := range nodeGroupRequests(ctx, r, carried...) {
 			q.Add(req)
 		}
@@ -112,7 +112,12 @@ func NodeGroupHandler(r client.Reader) handler.EventHandler {
 			return
 		}
 
-		enqueue(ctx, q, FromSecretData(secret.Data))
+		registration, err := DecodeRegistration(secret.Data)
+		if err != nil {
+			log.FromContext(ctx).Error(err, "decode a cloud provider registration secret", "name", secret.Name)
+			return
+		}
+		enqueue(ctx, q, registration)
 	}
 
 	return handler.Funcs{
@@ -134,13 +139,22 @@ func NodeGroupHandler(r client.Reader) handler.EventHandler {
 			if maps.EqualFunc(before.Data, after.Data, bytes.Equal) {
 				return
 			}
-			enqueue(ctx, q, FromSecretData(before.Data), FromSecretData(after.Data))
+			carried := make([]Registration, 0, 2)
+			for _, data := range []map[string][]byte{before.Data, after.Data} {
+				registration, err := DecodeRegistration(data)
+				if err != nil {
+					log.FromContext(ctx).Error(err, "decode a cloud provider registration secret", "name", after.Name)
+					return
+				}
+				carried = append(carried, registration)
+			}
+			enqueue(ctx, q, carried...)
 		},
 	}
 }
 
 // nodeGroupRequests returns one request per NodeGroup the carried providers run.
-func nodeGroupRequests(ctx context.Context, r client.Reader, carried ...Provider) []reconcile.Request {
+func nodeGroupRequests(ctx context.Context, r client.Reader, carried ...Registration) []reconcile.Request {
 	logger := log.FromContext(ctx)
 
 	ngList := &v1.NodeGroupList{}

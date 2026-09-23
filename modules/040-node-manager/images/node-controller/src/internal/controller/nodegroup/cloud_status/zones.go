@@ -28,7 +28,7 @@ import (
 // an unreadable registration, which is why the provider is resolved by the caller and any read
 // failure has already aborted the reconcile: zero zones makes Min and Max zero, and a Min of zero
 // reports the NodeGroup Ready no matter how many nodes are actually up.
-func zonesCount(ng *v1.NodeGroup, provider cloudprovider.Provider) int32 {
+func zonesCount(ng *v1.NodeGroup, provider cloudprovider.Registration) int32 {
 	if ng.Spec.CloudInstances != nil && len(ng.Spec.CloudInstances.Zones) > 0 {
 		return int32(len(ng.Spec.CloudInstances.Zones))
 	}

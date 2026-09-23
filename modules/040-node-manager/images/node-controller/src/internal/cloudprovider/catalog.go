@@ -46,10 +46,20 @@ func GetCatalog(ctx context.Context, r client.Reader) (Catalog, error) {
 	return NewCatalog(all, defaultProvider), nil
 }
 
+// ForNodeGroup resolves the provider one NodeGroup runs on, for callers that handle a single group
+// and hold no catalog.
+func ForNodeGroup(ctx context.Context, r client.Reader, ng *v1.NodeGroup) (Registration, error) {
+	catalog, err := GetCatalog(ctx, r)
+	if err != nil {
+		return Registration{}, err
+	}
+	return catalog.ByNodeGroup(ng), nil
+}
+
 // NewCatalog builds a Catalog from providers already in hand. The default is the registration
 // itself, not its name: resolving a name is GetCatalog's job, and it happens once.
-func NewCatalog(all []Provider, defaultProvider Provider) Catalog {
-	slices.SortFunc(all, func(a, b Provider) int { return strings.Compare(a.Type, b.Type) })
+func NewCatalog(all []Registration, defaultProvider Registration) Catalog {
+	slices.SortFunc(all, func(a, b Registration) int { return strings.Compare(a.Type, b.Type) })
 	return Catalog{
 		all:             all,
 		defaultProvider: defaultProvider,
@@ -57,25 +67,25 @@ func NewCatalog(all []Provider, defaultProvider Provider) Catalog {
 }
 
 type Catalog struct {
-	all             []Provider
-	defaultProvider Provider
+	all             []Registration
+	defaultProvider Registration
 }
 
 // All returns every provider, ordered by type.
-func (c Catalog) All() []Provider {
+func (c Catalog) All() []Registration {
 	return c.all
 }
 
 // Default returns the provider of the cluster itself, the one every non-Static NodeGroup runs on.
-func (c Catalog) Default() Provider {
+func (c Catalog) Default() Registration {
 	return c.defaultProvider
 }
 
 // ByNodeGroup returns the provider a NodeGroup runs on. The verdict on its spec.providerType
 // is ValidateNodeGroup.
-func (c Catalog) ByNodeGroup(ng *v1.NodeGroup) Provider {
+func (c Catalog) ByNodeGroup(ng *v1.NodeGroup) Registration {
 	if ng.Spec.NodeType == v1.NodeTypeStatic {
-		return Provider{}
+		return Registration{}
 	}
 	return c.defaultProvider
 }
@@ -123,12 +133,12 @@ func RegisteredInstanceClassGVKs(ctx context.Context, r client.Reader) ([]schema
 	if err != nil {
 		return nil, err
 	}
-	return NewCatalog(providers, Provider{}).InstanceClassGVKs(), nil
+	return NewCatalog(providers, Registration{}).InstanceClassGVKs(), nil
 }
 
 // getProviders is the Secret half of GetCatalog, separate so the lazy InstanceClass watch does not
 // depend on the cluster configuration being readable.
-func getProviders(ctx context.Context, r client.Reader) ([]Provider, error) {
+func getProviders(ctx context.Context, r client.Reader) ([]Registration, error) {
 	secrets := &corev1.SecretList{}
 
 	if err := r.List(ctx, secrets,
@@ -138,11 +148,14 @@ func getProviders(ctx context.Context, r client.Reader) ([]Provider, error) {
 		return nil, fmt.Errorf("list cloud provider registration secrets: %w", err)
 	}
 
-	ret := make([]Provider, 0, len(secrets.Items))
+	ret := make([]Registration, 0, len(secrets.Items))
 	seen := make(map[string]bool, len(secrets.Items))
 
 	for i := range secrets.Items {
-		provider := FromSecretData(secrets.Items[i].Data)
+		provider, err := DecodeRegistration(secrets.Items[i].Data)
+		if err != nil {
+			return nil, fmt.Errorf("decode registration secret %q: %w", secrets.Items[i].Name, err)
+		}
 		// The two copies of one registration dedup by type. One that publishes no type is kept: it
 		// still carries an InstanceClass kind the watches need.
 		if provider.Type != "" {
@@ -162,7 +175,7 @@ func getProviders(ctx context.Context, r client.Reader) ([]Provider, error) {
 // provider module publishes under the fixed name, next to its per-provider copy. No such Secret
 // means no cloud — the cluster configuration is not consulted, so a provider that has not
 // registered yet is indistinguishable from a static cluster.
-func getDefaultProvider(ctx context.Context, r client.Reader) (Provider, error) {
+func getDefaultProvider(ctx context.Context, r client.Reader) (Registration, error) {
 	secret := &corev1.Secret{}
 	err := r.Get(
 		ctx,
@@ -173,18 +186,18 @@ func getDefaultProvider(ctx context.Context, r client.Reader) (Provider, error) 
 		secret,
 	)
 	if apierrors.IsNotFound(err) {
-		return Provider{}, nil
+		return Registration{}, nil
 	}
 	if err != nil {
-		return Provider{}, fmt.Errorf("get secret %q: %w", RegistrationSecretBaseName, err)
+		return Registration{}, fmt.Errorf("get secret %q: %w", RegistrationSecretBaseName, err)
 	}
 
-	return FromSecretData(secret.Data), nil
+	return DecodeRegistration(secret.Data)
 }
 
-func byType(all []Provider, pType string) (Provider, bool) {
+func byType(all []Registration, pType string) (Registration, bool) {
 	if pType == "" {
-		return Provider{}, false
+		return Registration{}, false
 	}
 	pType = strings.ToLower(pType)
 
@@ -193,5 +206,5 @@ func byType(all []Provider, pType string) (Provider, bool) {
 			return all[i], true
 		}
 	}
-	return Provider{}, false
+	return Registration{}, false
 }

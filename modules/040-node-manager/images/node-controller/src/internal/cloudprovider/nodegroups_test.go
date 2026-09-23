@@ -32,13 +32,13 @@ func nodeGroupSeries(gauge *prometheus.GaugeVec, name string) int {
 }
 
 func TestTrackNodeGroupMetrics(t *testing.T) {
-	yandex := Provider{Type: "yandex"}
+	yandex := Registration{Type: "yandex"}
 
 	for _, tc := range []struct {
 		name        string
 		nodeType    v1.NodeType
 		declared    string
-		provider    Provider
+		provider    Registration
 		wantUnset   int
 		wantInvalid int
 	}{
@@ -98,13 +98,13 @@ func TestTrackNodeGroupMetrics(t *testing.T) {
 // kind the group references. spec.providerType picks nothing — it declares that answer, and a
 // declaration that disagrees is the error this returns.
 func TestValidateNodeGroupProvider(t *testing.T) {
-	yandex := Provider{Type: "yandex", InstanceClassKind: "YandexInstanceClass"}
-	aws := Provider{Type: "aws", InstanceClassKind: "AWSInstanceClass"}
+	yandex := Registration{Type: "yandex", InstanceClassKind: "YandexInstanceClass"}
+	aws := Registration{Type: "aws", InstanceClassKind: "AWSInstanceClass"}
 	// Kept on load for the InstanceClass kind it carries; it is nobody's default.
-	nameless := Provider{InstanceClassKind: "VsphereInstanceClass"}
+	nameless := Registration{InstanceClassKind: "VsphereInstanceClass"}
 
-	inYandexCloud := NewCatalog([]Provider{aws, yandex, nameless}, yandex)
-	staticCluster := NewCatalog([]Provider{nameless}, Provider{})
+	inYandexCloud := NewCatalog([]Registration{aws, yandex, nameless}, yandex)
+	staticCluster := NewCatalog([]Registration{nameless}, Registration{})
 
 	tests := []struct {
 		name     string

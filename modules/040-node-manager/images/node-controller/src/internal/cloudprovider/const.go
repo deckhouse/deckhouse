@@ -19,26 +19,21 @@ package cloudprovider
 import (
 	"slices"
 	"strings"
+
+	"github.com/deckhouse/node-controller/internal/common"
 )
 
 // The registration Secret a provider module publishes.
 const (
-	RegistrationSecretNamespace = "kube-system"
-	RegistrationSecretLabel     = "cloud-provider.deckhouse.io/registration"
-	RegistrationSecretBaseName  = "d8-node-manager-cloud-provider"
+	RegistrationSecretNamespace = common.CloudProviderSecretNamespace
+	RegistrationSecretLabel     = common.CloudProviderRegistrationLabel
+	RegistrationSecretBaseName  = common.CloudProviderSecretName
 )
 
 // Keys of the registration Secret that callers outside this package name.
 const (
-	InstanceClassKindKey = "instanceClassKind"
-	// The storage version of the provider's CRD; empty means it has not registered yet, and callers
-	// must wait rather than pick one. Never resolve it from discovery: a non-pinned read returns a
-	// different value once the conversion webhook is wired or once another RESTMapper wins the
-	// cache, and that changes the instance-class checksum — which renames an immutable
-	// MachineTemplate and recreates every node in the NodeGroup.
-	InstanceClassAPIVersionKey = "instanceClassAPIVersion"
-	// What the CAPI keys fall back to when a provider publishes none.
-	defaultInfraAPIVersion = "infrastructure.cluster.x-k8s.io/v1alpha1"
+	InstanceClassKindKey       = common.InstanceClassKindKey
+	InstanceClassAPIVersionKey = common.InstanceClassAPIVersionKey
 )
 
 func isStatic(pType string) bool {

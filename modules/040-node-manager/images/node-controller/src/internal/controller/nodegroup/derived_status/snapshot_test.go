@@ -29,8 +29,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client/interceptor"
 
 	v1 "github.com/deckhouse/node-controller/api/deckhouse.io/v1"
-	"github.com/deckhouse/node-controller/internal/cloudprovider"
-	providermock "github.com/deckhouse/node-controller/internal/cloudprovider/mock"
 )
 
 // The snapshot is the package's whole input. Building it in one place is what makes the derive and
@@ -84,7 +82,7 @@ func TestBuildSnapshot_IncompleteRegistrationStillDescribesTheNodeGroup(t *testi
 	ng.Name = "worker"
 	ng.Spec.NodeType = v1.NodeTypeCloudEphemeral
 
-	snap, err := s.BuildSnapshot(t.Context(), ng)
+	snap, err := s.BuildSnapshot(t.Context(), ng, testProvider(t, s, ng))
 
 	require.NoError(t, err)
 	require.Equal(t, "AWSInstanceClass", snap.Provider.InstanceClassKind)
@@ -189,7 +187,7 @@ func TestBuildSnapshot_TemplateCapacityIsResolvedAboveZeroMinButNotPublished(t *
 				MaxPerZone:     3,
 			}
 
-			snap, err := s.BuildSnapshot(t.Context(), ng)
+			snap, err := s.BuildSnapshot(t.Context(), ng, testProvider(t, s, ng))
 			require.NoError(t, err)
 			require.NoError(t, snap.CapacityErr)
 
@@ -266,7 +264,7 @@ func TestBuildSnapshot_UnreadableSourceAborts(t *testing.T) {
 	ng.Name = "worker"
 	ng.Spec.NodeType = v1.NodeTypeCloudEphemeral
 
-	_, err := s.BuildSnapshot(t.Context(), ng, cloudprovider.Provider{})
+	_, err := s.BuildSnapshot(t.Context(), ng, CloudProviderRegistration{})
 
 	require.ErrorContains(t, err, "read cluster uuid configmap")
 }
