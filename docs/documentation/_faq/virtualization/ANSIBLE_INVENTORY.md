@@ -5,13 +5,9 @@ subsystems:
 lang: en
 ---
 
-{% alert level="info" %}
-The `d8 v ansible-inventory` command requires `d8` v0.27.0 or higher.
-
-The command works only for virtual machines that have the main cluster network (Main) connected.
-{% endalert %}
-
 Instead of manually creating an inventory file, you can use the `d8 v ansible-inventory` command, which automatically generates an Ansible inventory from virtual machines in the specified namespace. The command is compatible with the [ansible inventory script](https://docs.ansible.com/ansible/latest/user_guide/intro_inventory.html#inventory-scripts) interface.
+
+The `d8 v ansible-inventory` command requires `d8` v0.27.0 or higher. The command works only for virtual machines that have the main cluster network (Main) connected.
 
 Only machines in the `Running` phase that have an assigned IP address get into the inventory. Host names are formatted as `<VM_NAME>.<NAMESPACE>` (for example, `frontend.demo-app`).
 
