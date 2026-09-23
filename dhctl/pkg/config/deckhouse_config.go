@@ -235,7 +235,7 @@ func PrepareDeckhouseInstallConfig(ctx context.Context, metaConfig *MetaConfig, 
 		if !metaConfig.Registry.LegacyMode {
 			settings["registry"] = registry
 		}
-		deckhouseCm, err = buildModuleConfig(schemasStore, "deckhouse", true, settings)
+		deckhouseCm, err = buildModuleConfig(ctx, schemasStore, "deckhouse", true, settings)
 		if err != nil {
 			return nil, fmt.Errorf("Cannot create ModuleConfig deckhouse: %s", err)
 		}

@@ -402,8 +402,10 @@ func (i *actionIniter) initLogger(c *kingpin.ParseContext, tmpDir string) (onShu
 		Verbose:     verbose,
 	})))
 
-	// cmd-level notice now goes through the slog root (terminal + file).
-	i.slogRoot.Info("Debug log file: " + logPath)
+	// cmd-level notice now goes through the slog root (terminal + file). Tagged for the compact
+	// view: this is the pointer a user needs exactly when something went wrong, and untagged Info
+	// is filtered out of the curated terminal output.
+	i.slogRoot.LogAttrs(context.Background(), slog.LevelInfo, "Debug log file: "+logPath, logger.ShowInCompacted())
 
 	i.logFileMutex.Lock()
 	defer i.logFileMutex.Unlock()

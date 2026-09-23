@@ -27,12 +27,12 @@ import (
 
 //nolint:musttag
 func (s *Service) ValidateClusterConfig(
-	_ context.Context,
+	ctx context.Context,
 	request *pb.ValidateClusterConfigRequest,
 ) (*pb.ValidateClusterConfigResponse, error) {
 	var errResponse string
 
-	clusterConfig, err := config.ValidateClusterConfiguration(request.Config, s.schemaStore, optionsFromRequest(request.Opts)...)
+	clusterConfig, err := config.ValidateClusterConfiguration(ctx, request.Config, s.schemaStore, optionsFromRequest(request.Opts)...)
 	if err != nil {
 		if errResponse, err = errorToResponse(err); err != nil {
 			return nil, status.Errorf(codes.Internal, "%s", err)
@@ -73,7 +73,7 @@ func (s *Service) ValidateProviderSpecificClusterConfig(
 	}
 
 	validationErr := config.ValidateProviderSpecificClusterConfiguration(
-		request.Config, clusterConfig, s.schemaStore,
+		ctx, request.Config, clusterConfig, s.schemaStore,
 		optionsFromRequest(request.Opts)...,
 	)
 
@@ -85,10 +85,10 @@ func (s *Service) ValidateProviderSpecificClusterConfig(
 }
 
 func (s *Service) ValidateStaticClusterConfig(
-	_ context.Context,
+	ctx context.Context,
 	request *pb.ValidateStaticClusterConfigRequest,
 ) (*pb.ValidateStaticClusterConfigResponse, error) {
-	err := config.ValidateStaticClusterConfiguration(request.Config, s.schemaStore, optionsFromRequest(request.Opts)...)
+	err := config.ValidateStaticClusterConfiguration(ctx, request.Config, s.schemaStore, optionsFromRequest(request.Opts)...)
 	errResponse, err := errorToResponse(err)
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "%s", err)

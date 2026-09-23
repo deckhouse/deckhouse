@@ -179,6 +179,11 @@ func ParseConfigFromCluster(
 	var metaConfig *MetaConfig
 	var err error
 
+	// Scope the whole retry loop: a retried attempt re-validates the same documents, and the
+	// deferred flush lands after the process block below closes.
+	ctx, flushDeprecations := withDeprecationCollector(ctx)
+	defer flushDeprecations(ctx)
+
 	loopParams := retry.NewEmptyParams(
 		retry.WithName("Get cluster configuration from Kubernetes cluster"),
 		retry.WithAttempts(50),
@@ -206,6 +211,10 @@ func ParseConfigInCluster(
 		metaConfig *MetaConfig
 		err        error
 	)
+
+	// Scope the whole retry loop: a retried attempt re-validates the same documents.
+	ctx, flushDeprecations := withDeprecationCollector(ctx)
+	defer flushDeprecations(ctx)
 
 	loopParams := retry.NewEmptyParams(
 		retry.WithName("Get cluster configuration from inside Kubernetes cluster"),
@@ -279,7 +288,7 @@ func parseConfigFromCluster(ctx context.Context, kubeCl *client.KubernetesClient
 
 	schemaStore := NewSchemaStore(globalOptions)
 
-	_, err = schemaStore.Validate(&clusterConfig.Raw)
+	_, err = schemaStore.Validate(ctx, &clusterConfig.Raw)
 	if err != nil {
 		return nil, err
 	}
@@ -343,7 +352,7 @@ func parseDocument(ctx context.Context, doc string, metaConfig *MetaConfig, sche
 		dhlog.FromContext(ctx).DebugContext(ctx, fmt.Sprintf("Found ModuleConfig in config file %s", moduleConfig.Name))
 
 		if !options.skipSchemaValidation {
-			_, err = schemaStore.Validate(&docData, opts...)
+			_, err = schemaStore.Validate(ctx, &docData, opts...)
 			if err != nil {
 				if errors.Is(err, ErrSchemaNotFound) {
 					dhlog.FromContext(ctx).DebugContext(ctx, fmt.Sprintf("Schema not found for module %s", moduleConfig.Name))
@@ -358,7 +367,7 @@ func parseDocument(ctx context.Context, doc string, metaConfig *MetaConfig, sche
 	}
 
 	if !options.skipSchemaValidation {
-		_, err = schemaStore.Validate(&docData, opts...)
+		_, err = schemaStore.Validate(ctx, &docData, opts...)
 		if err != nil {
 			if errors.Is(err, ErrSchemaNotFound) {
 				return false, nil
@@ -460,6 +469,12 @@ func ParseConfigFromData(
 	globalOptions *options.GlobalOptions,
 	opts ...ValidateOption,
 ) (*MetaConfig, error) {
+	// Report every deprecated option found across the documents as one block instead of a
+	// banner per field. The flush is deferred so it also covers metaConfig.Prepare below, and
+	// runs outside any process block this parse is nested in.
+	ctx, flushDeprecations := withDeprecationCollector(ctx)
+	defer flushDeprecations(ctx)
+
 	options := applyOptions(opts...)
 	schemaStore := NewSchemaStore(globalOptions)
 

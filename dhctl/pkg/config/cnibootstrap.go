@@ -180,7 +180,7 @@ func analyzeCNIBootstrap(ctx context.Context, m *MetaConfig, globalOptions *opti
 		return nil, fmt.Errorf("cni-bootstrap file %s references unknown ModuleConfig %q (schema missing from installer)", path, moduleName)
 	}
 
-	recommended, err := buildModuleConfig(store, moduleName, true, settings)
+	recommended, err := buildModuleConfig(ctx, store, moduleName, true, settings)
 	if err != nil {
 		return nil, fmt.Errorf("build ModuleConfig %s: %w", moduleName, err)
 	}

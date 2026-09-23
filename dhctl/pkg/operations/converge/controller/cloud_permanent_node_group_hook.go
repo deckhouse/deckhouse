@@ -58,6 +58,6 @@ func (h *HookForDestroyPipeline) IsReady() error {
 	return nil
 }
 
-func (h *HookForDestroyPipeline) AfterAction(ctx context.Context, runner infrastructure.RunnerInterface) error {
+func (h *HookForDestroyPipeline) AfterAction(context.Context, infrastructure.RunnerInterface, error) error {
 	return nil
 }

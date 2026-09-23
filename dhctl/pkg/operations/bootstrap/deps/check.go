@@ -132,7 +132,7 @@ func (c *DependenciesChecker) checkShell(ctx context.Context) error {
 			return err
 		}
 
-		logger.InfoContext(ctx, "OK!")
+		logger.InfoContext(ctx, "User's shell is bash")
 		return nil
 	})
 }

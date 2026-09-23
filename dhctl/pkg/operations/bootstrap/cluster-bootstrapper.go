@@ -299,6 +299,8 @@ func (b *ClusterBootstrapper) Bootstrap(ctx context.Context) error {
 		// A failed bootstrap needs the credentials most: the master runs no
 		// sshd, and the success-path print at the end is never reached.
 		b.printCollectedKubeconfig(ctx, bctx)
+		// The other thing a failed bootstrap needs: how to remove what it created.
+		b.printHowToCleanUp(ctx, bctx)
 	}
 
 	if m := bctx.metaConfig; m != nil {

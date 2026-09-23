@@ -113,7 +113,7 @@ key: |
 
 	for name, tt := range tests {
 		t.Run(name, func(t *testing.T) {
-			_, err := newStore.Validate(new([]byte(tt.content)), ValidateOptionValidateExtensions(true))
+			_, err := newStore.Validate(t.Context(), new([]byte(tt.content)), ValidateOptionValidateExtensions(true))
 			if tt.errContains == "" {
 				require.NoError(t, err)
 			} else {
@@ -166,7 +166,7 @@ apiVersions:
 		t.Run(name, func(t *testing.T) {
 			content := fmt.Sprintf("kind: TestKind\napiVersion: test\nsshPublicKey: %q\n", tt.key)
 
-			_, err := newStore.Validate(new([]byte(content)), ValidateOptionValidateExtensions(true))
+			_, err := newStore.Validate(t.Context(), new([]byte(content)), ValidateOptionValidateExtensions(true))
 			if tt.errContains == "" {
 				require.NoError(t, err)
 			} else {

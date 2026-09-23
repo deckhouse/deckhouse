@@ -42,7 +42,8 @@ func EnsureModuleConfigCRD(ctx context.Context, kubeCl *client.KubernetesClient,
 	}
 
 	if _, err := os.Stat(crdPath); err != nil {
-		dhlog.FromContext(ctx).WarnContext(ctx, "ModuleConfig CRD file %q is not available: %v. The CRD will be installed by deckhouse-controller.\n", crdPath, err)
+		dhlog.FromContext(ctx).WarnContext(ctx, fmt.Sprintf(
+			"ModuleConfig CRD file %q is not available: %v. The CRD will be installed by deckhouse-controller.", crdPath, err))
 		return nil
 	}
 
