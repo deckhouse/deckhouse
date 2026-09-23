@@ -584,9 +584,6 @@ spec:
 	require.Empty(t, after)
 }
 
-// Everything that must leave the split exactly as it always was. The divert is for one case only:
-// this cluster's provider module is not in the installer image, which is the only way its
-// ModuleConfig can reach these documents.
 // An override of the provider's own module rides with it whatever spec.imageTag says. The tag
 // decides whether the module is pinned at all, which is the gate's question; once the gate is open
 // the document belongs to a module that is already moving, and leaving it for the final queue
@@ -615,6 +612,9 @@ spec:
 	require.Empty(t, after)
 }
 
+// Everything that must leave the split exactly as it always was. The divert is for one case only:
+// this cluster's provider module is not in the installer image, which is the only way its
+// ModuleConfig can reach these documents.
 func TestSplitResources_ModuleDocumentsThatDoNotDivert(t *testing.T) {
 	tests := []struct {
 		name               string
