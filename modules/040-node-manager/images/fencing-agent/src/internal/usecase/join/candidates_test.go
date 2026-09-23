@@ -32,6 +32,7 @@ import (
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 
 	"fencing-agent/internal/domain"
+	"fencing-agent/internal/logtest"
 )
 
 func TestSeedListExcludesLocalNodeAndNodesWithoutIP(t *testing.T) {
@@ -62,7 +63,7 @@ func TestSeedListExcludesStaleNodeWithLocalIP(t *testing.T) {
 
 	var logs bytes.Buffer
 
-	New(nodes, expected, cluster, joinerParams(), newJSONLogger(&logs)).Bootstrap(t.Context())
+	New(nodes, expected, cluster, joinerParams(), logtest.NewJSONLogger(&logs)).Bootstrap(t.Context())
 
 	assertJoinedOnce(t, cluster, "10.0.0.2:8500")
 
@@ -70,8 +71,8 @@ func TestSeedListExcludesStaleNodeWithLocalIP(t *testing.T) {
 		t.Errorf("candidate reads are %v, want worker-1-old and worker-2 once each", got)
 	}
 
-	records := drainLogs(t, &logs)
-	assertSnakeCaseKeys(t, records)
+	records := logtest.Drain(t, &logs)
+	logtest.AssertSnakeCaseKeys(t, records)
 	assertLocalIPDrop(t, records, "worker-1-old")
 }
 
@@ -89,7 +90,7 @@ func TestStaleCloneOnlyGroupStartsAlone(t *testing.T) {
 
 		var logs bytes.Buffer
 
-		joiner := New(nodes, expected, cluster, joinerParams(), newJSONLogger(&logs))
+		joiner := New(nodes, expected, cluster, joinerParams(), logtest.NewJSONLogger(&logs))
 		joiner.Bootstrap(ctx)
 
 		if joins := cluster.joins(); len(joins) != 0 {
@@ -104,15 +105,15 @@ func TestStaleCloneOnlyGroupStartsAlone(t *testing.T) {
 			t.Errorf("reads are %v, want exactly the one read of the own Node", got)
 		}
 
-		records := drainLogs(t, &logs)
-		assertSnakeCaseKeys(t, records)
+		records := logtest.Drain(t, &logs)
+		logtest.AssertSnakeCaseKeys(t, records)
 
-		clones := withMsg(records, cloneMsg)
-		if len(clones) != 1 || clones[0].level() != "warn" || clones[0].str("member") != "worker-1-old" {
+		clones := logtest.WithMsg(records, cloneMsg)
+		if len(clones) != 1 || clones[0].Level() != "warn" || clones[0].Str("member") != "worker-1-old" {
 			t.Errorf("clone records are %v, want one warning with member worker-1-old", clones)
 		}
 
-		if alone := withMsg(records, aloneMsg); len(alone) != 1 || alone[0].level() != "info" {
+		if alone := logtest.WithMsg(records, aloneMsg); len(alone) != 1 || alone[0].Level() != "info" {
 			t.Errorf("alone records are %v, want one info record", alone)
 		}
 
@@ -120,7 +121,7 @@ func TestStaleCloneOnlyGroupStartsAlone(t *testing.T) {
 			t.Errorf("the clone record comes after the alone record in %v, want it before", records)
 		}
 
-		if dropped := withMsg(records, "join candidate dropped"); len(dropped) != 0 {
+		if dropped := logtest.WithMsg(records, droppedMsg); len(dropped) != 0 {
 			t.Errorf("drop records are %v, want none: the clone is not a candidate", dropped)
 		}
 	})
@@ -177,16 +178,16 @@ func TestAGroupWithoutPeersStartsAlone(t *testing.T) {
 	}
 }
 
+func groupWithoutThisNode() (*fakeNodes, *fakeExpected) {
+	nodes, expected := mirroredGroup(domain.Peer{Name: "worker-2", IP: "10.0.0.2", UID: "uid-2"})
+	nodes.setAnswer(testNodeName, nodeAnswer{record: selfRecord()})
+
+	return nodes, expected
+}
+
 func TestCacheWithoutThisNodeIsAFailedAttempt(t *testing.T) {
-	newGroup := func() (*fakeNodes, *fakeExpected) {
-		nodes, expected := mirroredGroup(domain.Peer{Name: "worker-2", IP: "10.0.0.2", UID: "uid-2"})
-		nodes.setAnswer(testNodeName, nodeAnswer{record: selfRecord()})
-
-		return nodes, expected
-	}
-
 	t.Run("attempt", func(t *testing.T) {
-		nodes, expected := newGroup()
+		nodes, expected := groupWithoutThisNode()
 		cluster := &fakeCluster{}
 
 		err := newJoiner(t, nodes, expected, cluster).Attempt(t.Context())
@@ -203,53 +204,31 @@ func TestCacheWithoutThisNodeIsAFailedAttempt(t *testing.T) {
 			t.Errorf("join was called with %v, want none", joins)
 		}
 	})
+}
 
-	t.Run("bootstrap", func(t *testing.T) {
-		synctest.Test(t, func(t *testing.T) {
-			ctx, cancel := context.WithCancel(t.Context())
-			defer cancel()
+func groupWithEveryCandidateDropped() (*fakeNodes, *fakeExpected) {
+	nodes, expected := mirroredGroup(
+		selfPeer(),
+		domain.Peer{Name: "worker-2", IP: "10.0.0.2"},
+		domain.Peer{Name: "worker-3", IP: "10.0.0.3"},
+		domain.Peer{Name: "worker-4", IP: "10.0.0.4"},
+		domain.Peer{Name: "worker-5", IP: "10.0.0.5"},
+		domain.Peer{Name: "worker-6", IP: "10.0.0.6"},
+		domain.Peer{Name: "worker-7", IP: "10.0.0.7"},
+	)
+	nodes.setAnswer("worker-2", nodeAnswer{err: notFound("worker-2")})
+	nodes.setAnswer("worker-3", nodeAnswer{err: notFound("worker-3")})
+	nodes.setAnswer("worker-4", nodeAnswer{record: withGroup(peerRecord("worker-4", "10.0.0.4"), "worker-2")})
+	nodes.setAnswer("worker-5", nodeAnswer{record: withGroup(peerRecord("worker-5", "10.0.0.5"), "worker-2")})
+	nodes.setAnswer("worker-6", nodeAnswer{record: peerRecord("worker-6", "")})
+	nodes.setAnswer("worker-7", nodeAnswer{record: peerRecord("worker-7", "")})
 
-			nodes, expected := newGroup()
-			cancelOnOwnRead(nodes, 3, cancel)
-			cluster := &fakeCluster{}
-
-			joiner := newJoiner(t, nodes, expected, cluster)
-			joiner.Bootstrap(ctx)
-
-			if joiner.Joined() {
-				t.Error("joined state must stay unset while the cache does not list this node")
-			}
-
-			if joins := cluster.joins(); len(joins) != 0 {
-				t.Errorf("join was called with %v, want none", joins)
-			}
-		})
-	})
+	return nodes, expected
 }
 
 func TestDroppedCandidatesAreNotReplaced(t *testing.T) {
-	newGroup := func() (*fakeNodes, *fakeExpected) {
-		nodes, expected := mirroredGroup(
-			selfPeer(),
-			domain.Peer{Name: "worker-2", IP: "10.0.0.2"},
-			domain.Peer{Name: "worker-3", IP: "10.0.0.3"},
-			domain.Peer{Name: "worker-4", IP: "10.0.0.4"},
-			domain.Peer{Name: "worker-5", IP: "10.0.0.5"},
-			domain.Peer{Name: "worker-6", IP: "10.0.0.6"},
-			domain.Peer{Name: "worker-7", IP: "10.0.0.7"},
-		)
-		nodes.setAnswer("worker-2", nodeAnswer{err: notFound("worker-2")})
-		nodes.setAnswer("worker-3", nodeAnswer{err: notFound("worker-3")})
-		nodes.setAnswer("worker-4", nodeAnswer{record: withGroup(peerRecord("worker-4", "10.0.0.4"), "worker-2")})
-		nodes.setAnswer("worker-5", nodeAnswer{record: withGroup(peerRecord("worker-5", "10.0.0.5"), "worker-2")})
-		nodes.setAnswer("worker-6", nodeAnswer{record: peerRecord("worker-6", "")})
-		nodes.setAnswer("worker-7", nodeAnswer{record: peerRecord("worker-7", "")})
-
-		return nodes, expected
-	}
-
 	t.Run("attempt", func(t *testing.T) {
-		nodes, expected := newGroup()
+		nodes, expected := groupWithEveryCandidateDropped()
 		cluster := &fakeCluster{}
 
 		err := newJoiner(t, nodes, expected, cluster).Attempt(t.Context())
@@ -274,32 +253,6 @@ func TestDroppedCandidatesAreNotReplaced(t *testing.T) {
 		if joins := cluster.joins(); len(joins) != 0 {
 			t.Errorf("join was called with %v, want none without a usable seed", joins)
 		}
-	})
-
-	t.Run("bootstrap", func(t *testing.T) {
-		synctest.Test(t, func(t *testing.T) {
-			ctx, cancel := context.WithCancel(t.Context())
-			defer cancel()
-
-			nodes, expected := newGroup()
-			cancelOnOwnRead(nodes, 2, cancel)
-			cluster := &fakeCluster{}
-
-			joiner := newJoiner(t, nodes, expected, cluster)
-			joiner.Bootstrap(ctx)
-
-			if joiner.Joined() {
-				t.Error("joined state must stay unset when every candidate is dropped")
-			}
-
-			if joins := cluster.joins(); len(joins) != 0 {
-				t.Errorf("join was called with %v, want none without a usable seed", joins)
-			}
-
-			if got := nodes.getsOf(testNodeName); got < 2 {
-				t.Errorf("the own Node was read %d times, want a retry after the failed attempt", got)
-			}
-		})
 	})
 }
 
@@ -367,7 +320,7 @@ func TestCandidateDropRules(t *testing.T) {
 
 			var logs bytes.Buffer
 
-			joiner := New(nodes, expected, cluster, joinerParams(), newJSONLogger(&logs))
+			joiner := New(nodes, expected, cluster, joinerParams(), logtest.NewJSONLogger(&logs))
 
 			if err := joiner.Attempt(t.Context()); err != nil {
 				t.Fatalf("attempt returned %v, want the valid candidate to be joined", err)
@@ -375,16 +328,16 @@ func TestCandidateDropRules(t *testing.T) {
 
 			assertJoinedOnce(t, cluster, "10.0.0.2:8500")
 
-			records := drainLogs(t, &logs)
-			assertSnakeCaseKeys(t, records)
+			records := logtest.Drain(t, &logs)
+			logtest.AssertSnakeCaseKeys(t, records)
 
-			dropped := withMsg(records, "join candidate dropped")
+			dropped := logtest.WithMsg(records, droppedMsg)
 			if len(dropped) != 1 {
 				t.Fatalf("drop records are %v, want exactly one for worker-3", dropped)
 			}
 
 			record := dropped[0]
-			if record.str("member") != "worker-3" || record.str("reason") != tc.reason || record.level() != tc.level {
+			if record.Str("member") != "worker-3" || record.Str("reason") != tc.reason || record.Level() != tc.level {
 				t.Errorf("drop record is %v, want member worker-3, reason %q at level %q", record, tc.reason, tc.level)
 			}
 
@@ -706,7 +659,7 @@ func TestStaleClonePrefilterAppliesOnlyToTheAloneRule(t *testing.T) {
 
 			var logs bytes.Buffer
 
-			joiner := New(nodes, expected, cluster, joinerParams(), newJSONLogger(&logs))
+			joiner := New(nodes, expected, cluster, joinerParams(), logtest.NewJSONLogger(&logs))
 
 			if err := joiner.Attempt(t.Context()); err != nil {
 				t.Fatalf("attempt returned %v, want worker-2 to be joined", err)
@@ -718,15 +671,15 @@ func TestStaleClonePrefilterAppliesOnlyToTheAloneRule(t *testing.T) {
 
 			assertJoinedOnce(t, cluster, "10.0.0.2:8500")
 
-			records := drainLogs(t, &logs)
-			assertSnakeCaseKeys(t, records)
+			records := logtest.Drain(t, &logs)
+			logtest.AssertSnakeCaseKeys(t, records)
 			assertLocalIPDrop(t, records, "worker-1-old")
 
-			if got := withMsg(records, cloneMsg); len(got) != 0 {
+			if got := logtest.WithMsg(records, cloneMsg); len(got) != 0 {
 				t.Errorf("clone records are %v, want none outside the alone rule", got)
 			}
 
-			if got := withMsg(records, aloneMsg); len(got) != 0 {
+			if got := logtest.WithMsg(records, aloneMsg); len(got) != 0 {
 				t.Errorf("alone records are %v, want none next to a real peer", got)
 			}
 		})
@@ -801,10 +754,10 @@ func assertSlots(t *testing.T, picked, notAlive, alive []string, wantNotAlive, w
 	}
 }
 
-func assertLocalIPDrop(t *testing.T, records []logRecord, member string) {
+func assertLocalIPDrop(t *testing.T, records []logtest.Record, member string) {
 	t.Helper()
 
-	dropped := withMsg(records, "join candidate dropped")
+	dropped := logtest.WithMsg(records, droppedMsg)
 	if len(dropped) != 1 {
 		t.Errorf("drop records are %v, want exactly one for %s", dropped, member)
 
@@ -812,11 +765,11 @@ func assertLocalIPDrop(t *testing.T, records []logRecord, member string) {
 	}
 
 	record := dropped[0]
-	if record.str("member") != member || record.str("reason") != "local_internal_ip" || record.level() != "warn" {
+	if record.Str("member") != member || record.Str("reason") != "local_internal_ip" || record.Level() != "warn" {
 		t.Errorf("drop record is %v, want member %s, reason local_internal_ip at level warn", record, member)
 	}
 }
 
-func indexOfMsg(records []logRecord, msg string) int {
-	return slices.IndexFunc(records, func(record logRecord) bool { return record.msg() == msg })
+func indexOfMsg(records []logtest.Record, msg string) int {
+	return slices.IndexFunc(records, func(record logtest.Record) bool { return record.Msg() == msg })
 }
