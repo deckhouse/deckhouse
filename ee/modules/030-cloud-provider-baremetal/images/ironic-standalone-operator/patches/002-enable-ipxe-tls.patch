@@ -3,18 +3,14 @@ From: Flant JSC <support@flant.com>
 Date: Wed, 23 Sep 2026 12:30:00 +0300
 Subject: [PATCH] Enable TLS iPXE firmware provisioning
 
-The Ironic image enables its iPXE TLS vhost when the serving certificate is
-available at /certs/ipxe. Mount the Ironic TLS Secret there and expose the
-corresponding host-network port. Project only ca.crt into a separate volume
-for custom firmware download init containers.
-
-IRSO did not copy Container.Args while reconciling an existing Deployment.
-As a result, custom init containers were created without their commands.
-Preserve Args and cover it with a regression test.
+Mount the Ironic TLS Secret at /certs/ipxe, expose the iPXE TLS port, and
+make dnsmasq chain iPXE to HTTPS instead of the default HTTP image-server URL.
+Project ca.crt into a separate volume for custom firmware download init
+containers. Preserve custom init-container args while merging pod overrides.
 
 ---
 diff --git a/pkg/ironic/containers.go b/pkg/ironic/containers.go
-index 4549070..ade0001 100644
+index 45490702a0..d50ef01950 100644
 --- a/pkg/ironic/containers.go
 +++ b/pkg/ironic/containers.go
 @@ -33,9 +33,10 @@ const (
@@ -31,7 +27,17 @@ index 4549070..ade0001 100644
  
  	metricsPort            = 9608
  	defaultMetricsBindAddr = "0.0.0.0"
-@@ -554,6 +555,16 @@ func buildIronicVolumesAndMounts(resources Resources) (volumes []corev1.Volume,
+@@ -121,6 +122,9 @@ func buildCommonEnvVars(ironic *metal3api.Ironic) []corev1.EnvVar {
+ 			},
+ 		}...)
+ 
++		// dnsmasq uses this URL when chaining from iPXE. Its image default is HTTP :6180.
++		result = appendStringEnv(result, "IRONIC_HTTP_URL", "https://$(PROVISIONING_IP):"+strconv.Itoa(ipxeTLSPort))
++
+ 		if !ironic.Spec.TLS.DisableVirtualMediaTLS {
+ 			result = append(result,
+ 				corev1.EnvVar{
+@@ -554,6 +558,16 @@ func buildIronicVolumesAndMounts(resources Resources) (volumes []corev1.Volume,
  					},
  				},
  			},
@@ -48,7 +54,7 @@ index 4549070..ade0001 100644
  		)
  		mounts = append(mounts,
  			corev1.VolumeMount{
-@@ -571,6 +582,11 @@ func buildIronicVolumesAndMounts(resources Resources) (volumes []corev1.Volume,
+@@ -571,6 +585,11 @@ func buildIronicVolumesAndMounts(resources Resources) (volumes []corev1.Volume,
  				},
  			)
  		}
@@ -60,7 +66,7 @@ index 4549070..ade0001 100644
  	}
  
  	if maybeVolume := volumeForSecretOrConfigMap(bmcCAVolumeName, resources.BMCCASecret, resources.BMCCAConfigMap); maybeVolume != nil {
-@@ -633,6 +649,12 @@ func buildIronicHttpdPorts(ironic *metal3api.Ironic) (ironicPorts []corev1.Conta
+@@ -633,6 +652,12 @@ func buildIronicHttpdPorts(ironic *metal3api.Ironic) (ironicPorts []corev1.Conta
  				HostPort:      ironic.Spec.Networking.ImageServerTLSPort,
  			})
  		}
@@ -73,9 +79,8 @@ index 4549070..ade0001 100644
  	}
  
  	return ironicPorts, httpdPorts
-}
 diff --git a/pkg/ironic/utils.go b/pkg/ironic/utils.go
-index 728bb65..5d98b55 100644
+index 728bb6536e..5d98b5560b 100644
 --- a/pkg/ironic/utils.go
 +++ b/pkg/ironic/utils.go
 @@ -75,6 +75,7 @@ func mergeContainers(target, source []corev1.Container) []corev1.Container {
@@ -87,10 +92,10 @@ index 728bb65..5d98b55 100644
  		dest.Env = src.Env
  		dest.EnvFrom = src.EnvFrom
 diff --git a/pkg/ironic/utils_test.go b/pkg/ironic/utils_test.go
-index 27653c4..de8e448 100644
+index 27653c472b..1f828a1948 100644
 --- a/pkg/ironic/utils_test.go
 +++ b/pkg/ironic/utils_test.go
-@@ -416,3 +416,21 @@ func TestApplyOverridesToPod(t *testing.T) {
+@@ -416,3 +416,37 @@ func TestApplyOverridesToPod(t *testing.T) {
  		})
  	}
  }
@@ -111,4 +116,20 @@ index 27653c4..de8e448 100644
 +	mergePodTemplates(&target, source)
 +
 +	assert.Equal(t, []string{"download firmware"}, target.Spec.InitContainers[0].Args)
++}
++
++func TestTLSUsesHTTPSForIPXEBootScript(t *testing.T) {
++	ironic := &metal3api.Ironic{
++		Spec: metal3api.IronicSpec{
++			TLS: metal3api.TLS{CertificateName: "test-tls"},
++			Networking: metal3api.Networking{IPAddress: "192.0.2.10"},
++		},
++	}
++
++	env := map[string]string{}
++	for _, envVar := range buildCommonEnvVars(ironic) {
++		env[envVar.Name] = envVar.Value
++	}
++
++	assert.Equal(t, "https://$(PROVISIONING_IP):8084", env["IRONIC_HTTP_URL"])
 +}
