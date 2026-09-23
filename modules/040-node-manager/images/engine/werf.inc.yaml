@@ -1,4 +1,4 @@
-{{- $version := "v0.1.11" }}
+{{- $version := "v0.1.12-pre4" }}
 {{- if ne $.Env "CSE" }}
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-artifact
