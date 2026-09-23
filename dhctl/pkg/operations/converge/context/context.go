@@ -17,13 +17,16 @@ package context
 import (
 	"context"
 	"fmt"
+	"strings"
 	"sync"
 	"time"
 
 	libcon "github.com/deckhouse/lib-connection/pkg"
+	dhlog "github.com/deckhouse/lib-dhctl/pkg/logger"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app/options"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/global"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructure"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes"
@@ -62,6 +65,10 @@ type Context struct {
 	stateStore            stateStore
 	stateChecker          infrastructure.StateChecker
 	clientSwitcher        MultiMasterClientSwitcher
+
+	// convergeUserForgotten keeps the warning about an expired node list to one per run:
+	// every switch, every credentials pick and the cleanup read that list.
+	convergeUserForgotten sync.Once
 
 	providerGetter infrastructure.CloudProviderGetter
 
@@ -274,10 +281,43 @@ func (c *Context) SetConvergeState(state *State) error {
 	return c.stateStore.SetState(c, state)
 }
 
+// ConvergeState is what this converge recorded about itself. A node list older than the
+// accounts it names comes back empty: past their expiry the names would only send a switch,
+// a hook or the cleanup to a user that is gone, failing the cleanup that would drop them.
 func (c *Context) ConvergeState() (*State, error) {
-	return c.stateStore.GetState(c)
+	state, err := c.stateStore.GetState(c)
+	if err != nil {
+		return nil, err
+	}
+
+	if len(state.ConvergeUserNodes) == 0 || time.Now().Before(state.ConvergeUserExpiry) {
+		return state, nil
+	}
+
+	c.convergeUserForgotten.Do(func() {
+		dhlog.FromContext(c.ctx).WarnContext(c.ctx, fmt.Sprintf(
+			"%s was never removed from %s, and the accounts there are past the expiry they were created with. "+
+				"Forgetting them: nothing can log in as them any more",
+			global.ConvergeUserName, strings.Join(state.ConvergeUserNodes, ", ")))
+	})
+
+	state.ConvergeUserNodes = nil
+
+	return state, nil
 }
 
-func (c *Context) deleteConvergeState() error {
+// DeleteConvergeStateIfUserGone drops the state a finished converge kept in the cluster: the
+// phase it may have had to resume and the masters it built with the converge user. A master
+// still listed keeps the state alive — it is the only record of an account nobody removed.
+func (c *Context) DeleteConvergeStateIfUserGone() error {
+	state, err := c.ConvergeState()
+	if err != nil {
+		return fmt.Errorf("read the converge state before deleting it: %w", err)
+	}
+
+	if len(state.ConvergeUserNodes) > 0 {
+		return nil
+	}
+
 	return c.stateStore.Delete(c)
 }

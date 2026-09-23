@@ -1,0 +1,8 @@
+schemaVersion: 1
+# dhctl assembles the users list of every node's cloud-config, and this file is where the
+# provider says what belongs in it. The image carries no distro user, so cloud-init's
+# "default" marker would reach nobody and the cluster ssh key would land nowhere: this
+# account is created instead, and dhctl renders it as the first entry of the list.
+defaultUser:
+  name: user
+  groups: [users, wheel]

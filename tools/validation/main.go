@@ -66,6 +66,8 @@ func main() {
 		exitCode = RunGrafanaDashboardValidation(diffInfo)
 	case "release-requirements":
 		exitCode = RunReleaseRequirementsValidation(diffInfo)
+	case "provider-cloud-config":
+		exitCode = RunProviderCloudConfigValidation(diffInfo)
 	case "dump":
 		fmt.Printf("%s\n", diffInfo.Dump())
 	default:

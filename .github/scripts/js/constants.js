@@ -26,6 +26,7 @@ const labels = {
   'skip/markdown-validation': { type: 'skip-validation', validation_name: 'markdown' },
   'skip/actionlint': { type: 'skip-validation', validation_name: 'actionlint' },
   'skip/release-requirements': { type: 'skip-validation', validation_name: 'release_requirements' },
+  'skip/provider-cloud-config': { type: 'skip-validation', validation_name: 'provider_cloud_config' },
 
   // E2E
   'e2e/run/aws': { type: 'e2e-run', provider: 'aws' },

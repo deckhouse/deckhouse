@@ -92,6 +92,8 @@ jobs:
       label_grafana_dashboard: ${{ steps.check_labels.outputs.label_grafana_dashboard }}
       run_release_requirements: ${{ steps.check_labels.outputs.run_release_requirements }}
       label_release_requirements: ${{ steps.check_labels.outputs.label_release_requirements }}
+      run_provider_cloud_config: ${{ steps.check_labels.outputs.run_provider_cloud_config }}
+      label_provider_cloud_config: ${{ steps.check_labels.outputs.label_provider_cloud_config }}
     steps:
 {!{ tmpl.Exec "checkout_step" $ctx | strings.Indent 6 }!}
       - id: check_labels
@@ -159,6 +161,10 @@ jobs:
   release_requirements_validation:
     name: Release Requirements Validation
 {!{ tmpl.Exec "validation_template" (slice $ctx "release_requirements") | strings.Indent 4 }!}
+
+  provider_cloud_config_validation:
+    name: Provider Cloud-Config Validation
+{!{ tmpl.Exec "validation_template" (slice $ctx "provider_cloud_config") | strings.Indent 4 }!}
 
   pull_request_changes_validation:
     name: Pull Request Changes validation

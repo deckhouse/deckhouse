@@ -328,6 +328,8 @@ jobs:
       label_grafana_dashboard: ${{ steps.check_labels.outputs.label_grafana_dashboard }}
       run_release_requirements: ${{ steps.check_labels.outputs.run_release_requirements }}
       label_release_requirements: ${{ steps.check_labels.outputs.label_release_requirements }}
+      run_provider_cloud_config: ${{ steps.check_labels.outputs.run_provider_cloud_config }}
+      label_provider_cloud_config: ${{ steps.check_labels.outputs.label_provider_cloud_config }}
     steps:
 
       # <template: checkout_step>
@@ -707,6 +709,35 @@ jobs:
           SKIP_LABEL_NAME: ${{ needs.discover.outputs.label_release_requirements }}
         run: |
           ./.github/scripts/validation_run.sh ./testing/validate_release_requirements.sh
+
+  provider_cloud_config_validation:
+    name: Provider Cloud-Config Validation
+
+    needs:
+      - discover
+      - pull_request_info
+    if: needs.discover.outputs.run_provider_cloud_config == 'true'
+    runs-on: self-slim
+    steps:
+
+      # <template: checkout_step>
+      - name: Checkout sources
+        uses: actions/checkout@v3.5.2
+        with:
+          ref: ${{ needs.pull_request_info.outputs.ref }}
+      # </template: checkout_step>
+
+      - name: Restore diff artifact
+        uses: actions/download-artifact@v4.1.8
+        with:
+          name: pr_diff
+
+      - name: Run check
+        env:
+          DIFF_PATH: ./pr.diff
+          SKIP_LABEL_NAME: ${{ needs.discover.outputs.label_provider_cloud_config }}
+        run: |
+          ./.github/scripts/validation_run.sh ./testing/validate_provider_cloud_config.sh
 
   pull_request_changes_validation:
     name: Pull Request Changes validation

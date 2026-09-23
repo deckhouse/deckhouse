@@ -46,11 +46,17 @@ locals {
   custom_network_gateway = try(var.providerClusterConfiguration.masterNodeGroup.instanceClass.customNetworkConfig.networkInterfaceGateway, "")
   custom_network_dns     = try(var.providerClusterConfiguration.masterNodeGroup.instanceClass.customNetworkConfig.dnsServers, "")
 
-  master_cloud_init_script = yamlencode(merge({
-    "hostname": local.master_node_name,
-    "create_hostname_file": true,
-    "ssh_deletekeys": true,
-    "ssh_genkeytypes": ["rsa", "ecdsa", "ed25519"],
-    "ssh_authorized_keys" : [local.ssh_pubkey]
-  }, length(var.cloudConfig) > 0 ? yamldecode(base64decode(var.cloudConfig)) : tomap({})))
+  # The cloud-config of a node is assembled by dhctl. The payload is appended to, never
+  # decoded: passing it through yamldecode and yamlencode rewrites every scalar in it by
+  # HCL's rules, and a key repeated here would override the same key in the payload.
+  master_cloud_init_script = join("\n", [
+    length(var.cloudConfig) > 0 ? base64decode(var.cloudConfig) : "#cloud-config",
+    yamlencode({
+      "hostname": local.master_node_name,
+      "create_hostname_file": true,
+      "ssh_deletekeys": true,
+      "ssh_genkeytypes": ["rsa", "ecdsa", "ed25519"],
+      "ssh_authorized_keys" : [local.ssh_pubkey]
+    })
+  ])
 }
