@@ -1,9 +1,9 @@
 diff --git a/pkg/kubelet/nodeshutdown/nodelet_inhibiter_linux.go b/pkg/kubelet/nodeshutdown/nodelet_inhibiter_linux.go
 new file mode 100644
-index 0000000..6816caa
+index 0000000..afbad75
 --- /dev/null
 +++ b/pkg/kubelet/nodeshutdown/nodelet_inhibiter_linux.go
-@@ -0,0 +1,216 @@
+@@ -0,0 +1,223 @@
 +/*
 +Copyright 2026 Flant JSC.
 +
@@ -55,7 +55,6 @@ index 0000000..6816caa
 +	"fmt"
 +	"io/fs"
 +	"net"
-+	"os"
 +	"time"
 +
 +	"k8s.io/klog/v2"
@@ -73,6 +72,13 @@ index 0000000..6816caa
 +	nodeletPrepareForShutdown = "prepare-for-shutdown"
 +)
 +
++// nodeletInhibitToken stands in for logind's lock descriptor. kubelet only
++// stores what InhibitShutdown returns and hands it back to ReleaseInhibitLock,
++// so the value carries no meaning beyond telling the two apart — and handing
++// out the real descriptor is exactly what broke the release path once, see
++// ReleaseInhibitLock.
++const nodeletInhibitToken systemd.InhibitLock = 1
++
 +// nodeletGreeting is the answer to taking a lock.
 +type nodeletGreeting struct {
 +	OK              bool `json:"ok"`
@@ -87,9 +93,13 @@ index 0000000..6816caa
 +
 +// nodeletInhibiter implements dbusInhibiter against the node agent.
 +type nodeletInhibiter struct {
-+	lock     *os.File
++	// conn is the lock itself: the agent holds the node until this connection
++	// closes. It stays a net.Conn and is never turned into an *os.File — see
++	// ReleaseInhibitLock for what that costs.
++	conn     net.Conn
 +	reader   *bufio.Reader
 +	maxDelay time.Duration
++	released bool
 +}
 +
 +// newNodeletInhibiter takes a shutdown lock from the node agent.
@@ -98,33 +108,20 @@ index 0000000..6816caa
 +	if err != nil {
 +		return nil, err
 +	}
-+	unixConn, ok := conn.(*net.UnixConn)
-+	if !ok {
-+		conn.Close()
-+		return nil, fmt.Errorf("%s is not a unix socket", path)
-+	}
-+	// The duplicate is the lock from here on: it is what is handed out as the
-+	// InhibitLock and what the release path closes. The original is closed so
-+	// that only one descriptor keeps the connection open.
-+	lock, err := unixConn.File()
-+	conn.Close()
-+	if err != nil {
-+		return nil, fmt.Errorf("take a shutdown lock on %s: %v", path, err)
-+	}
 +
-+	inhibiter := &nodeletInhibiter{lock: lock, reader: bufio.NewReader(lock)}
++	inhibiter := &nodeletInhibiter{conn: conn, reader: bufio.NewReader(conn)}
 +	line, err := inhibiter.reader.ReadBytes('\n')
 +	if err != nil {
-+		lock.Close()
++		conn.Close()
 +		return nil, fmt.Errorf("read the answer from %s: %v", path, err)
 +	}
 +	var greeting nodeletGreeting
 +	if err := json.Unmarshal(line, &greeting); err != nil {
-+		lock.Close()
++		conn.Close()
 +		return nil, fmt.Errorf("parse the answer from %s: %v", path, err)
 +	}
 +	if !greeting.OK {
-+		lock.Close()
++		conn.Close()
 +		return nil, fmt.Errorf("%s refused the shutdown lock", path)
 +	}
 +	inhibiter.maxDelay = time.Duration(greeting.MaxDelaySeconds) * time.Second
@@ -136,24 +133,34 @@ index 0000000..6816caa
 +	return n.maxDelay, nil
 +}
 +
-+// InhibitShutdown returns the lock taken when this was built. The descriptor is
-+// the lock, exactly as it is with logind.
++// InhibitShutdown reports that the lock taken when this was built is still
++// held. Unlike logind's, the value is a token and not a descriptor.
 +func (n *nodeletInhibiter) InhibitShutdown() (systemd.InhibitLock, error) {
-+	if n.lock == nil {
++	if n.released {
 +		return 0, fmt.Errorf("the shutdown lock has already been released")
 +	}
-+	return systemd.InhibitLock(n.lock.Fd()), nil
++	return nodeletInhibitToken, nil
 +}
 +
 +// ReleaseInhibitLock closes the connection, which is how the agent learns that
 +// kubelet has finished with the pods and the node may go down.
++//
++// The connection has to stay a net.Conn for that to happen at all. An *os.File
++// — from UnixConn.File(), or from any call to Fd() — is in blocking mode and
++// outside the runtime poller, so the read in monitor() sits in read(2) holding
++// a reference to the descriptor. Close() then marks the file closed and returns
++// nil, but the real close(2) is deferred until that read returns, and it never
++// will: the agent sends nothing more. From the agent's side the connection
++// stays open, and it holds the node for its whole timeout even though kubelet
++// finished with the pods long before. A net.Conn is pollable, so Close()
++// unblocks the reader, the descriptor is closed for real, and the agent sees
++// EOF at once.
 +func (n *nodeletInhibiter) ReleaseInhibitLock(lock systemd.InhibitLock) error {
-+	if n.lock == nil || uintptr(lock) != n.lock.Fd() {
++	if n.released || lock != nodeletInhibitToken {
 +		return nil
 +	}
-+	err := n.lock.Close()
-+	n.lock = nil
-+	return err
++	n.released = true
++	return n.conn.Close()
 +}
 +
 +// OverrideInhibitDelay does nothing: the delay is the agent's to decide, and it
