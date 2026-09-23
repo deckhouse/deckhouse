@@ -419,7 +419,7 @@ func mapReady(state condmap.State) metav1.Condition {
 //     Scaled=Unknown row with empty reason in -owide before any other
 //     condition appeared, and confused users into thinking the controller
 //     had given up. We now suppress the condition entirely until intScaled
-//     actually goes True.
+//     actually goes True and the install is complete (see isInstallComplete).
 //   - update: a hook or manifests failure during update is a workload-level
 //     failure as well. We surface that on Scaled (Unknown for hook failures
 //     because the workload state is no longer observable, False for
@@ -435,14 +435,11 @@ func mapScaled(state condmap.State) metav1.Condition {
 
 	switch phaseOf(state) {
 	case phaseInstall:
-		if _, ok := pipelineBlocker(state, installPipeline); ok {
+		// The health monitor runs independently of the pipeline, so wait for the same gate as Installed.
+		if _, ok := pipelineBlocker(state, installPipeline); ok || !isInstallComplete(state) {
 			return metav1.Condition{}
 		}
-		status, ok := state.GetIntStatus(intScaled)
-		if !ok || status != metav1.ConditionTrue {
-			return metav1.Condition{}
-		}
-		return emit(state, ConditionScaled, status, intScaled)
+		return emit(state, ConditionScaled, metav1.ConditionTrue, intScaled)
 	case phaseUpdate:
 		if cond, ok := firstFalse(state, lateStage); ok {
 			if cond == intManifestsApplied {
