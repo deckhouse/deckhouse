@@ -22,7 +22,6 @@ import (
 	klient "github.com/flant/kube-client/client"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/apimachinery/pkg/watch"
 	"k8s.io/client-go/util/retry"
@@ -60,7 +59,7 @@ func lockUntilClusterBootstraped(ctx context.Context, logger *log.Logger) error 
 
 		logger.Info("bootstrap lock config map exists, wait for bootstrap")
 
-		opts := v1.ListOptions{
+		opts := metav1.ListOptions{
 			FieldSelector: "metadata.name=" + configMapLockName,
 			Watch:         true,
 		}
