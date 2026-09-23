@@ -35,7 +35,7 @@ spec:
                     Поколение spec, которому соответствует текущий status.
                 phase:
                   description: |
-                    `Ready` — под разрешился и узлы его приняли; `Degraded` — нет, причина указана в condition `Ready`: `InvalidName`, `ReservedName`, `InvalidManifest`, `Conflict` или `RefusedByNodes`. `InvalidName` означает, что имя самого объекта не является DNS-меткой длиной не больше 63 символов, а именно такое имя принимает поле в конфигурации узла.
+                    `Ready` — под разрешился и узлы его приняли; `Degraded` — нет, причина указана в condition `Ready`: `InvalidName`, `ReservedName`, `InvalidManifest`, `Conflict` или `RefusedByNodes`. `InvalidName` означает, что имя самого объекта не является DNS-меткой длиной не больше 63 символов, а именно такое имя принимает поле в конфигурации узла. `ReservedName` означает, что имя объекта или под из его манифеста (пространство имён и имя) уже принадлежит манифесту, который пишет агент узла или шаг bashible.
                 matchedNodeGroups:
                   description: |
                     NodeGroup, которым сейчас соответствует селектор.

@@ -22,6 +22,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"maps"
 	"slices"
 	"strings"
 
@@ -134,22 +135,31 @@ type NodeStaticPodRequestList struct {
 	Items           []NodeStaticPodRequest `json:"items"`
 }
 
-// reservedStaticPodNames already have a writer of /etc/kubernetes/manifests: the
-// control-plane four (nodelet; bashible cluster-bootstrap 050, 072) and what the
-// bashible steps 051, 052 and 020/070 write on every mutable node.
-var reservedStaticPodNames = []string{
-	"etcd",
-	"kube-apiserver",
-	"kube-controller-manager",
-	"kube-scheduler",
-	"kubernetes-api-proxy",
-	"registry-proxy",
-	"registry-nodeservices",
+// reservedStaticPods maps each manifest that already has a writer of
+// /etc/kubernetes/manifests to the pod it runs: the control-plane four (nodelet;
+// bashible cluster-bootstrap 050, 072) and what the bashible steps 051, 052 and
+// 020/070 write on every mutable node. Mirrors reservedPods in nodelet
+// internal/controllers/staticpods/controller.go.
+var reservedStaticPods = map[string]string{
+	"etcd":                    "kube-system/etcd",
+	"kube-apiserver":          "kube-system/kube-apiserver",
+	"kube-controller-manager": "kube-system/kube-controller-manager",
+	"kube-scheduler":          "kube-system/kube-scheduler",
+	"kubernetes-api-proxy":    "kube-system/kubernetes-api-proxy",
+	"registry-proxy":          "kube-system/registry-proxy",
+	"registry-nodeservices":   "d8-system/registry-nodeservices",
 }
 
 // IsReservedStaticPodName reports whether a static pod name already has a writer.
 func IsReservedStaticPodName(name string) bool {
-	return slices.Contains(reservedStaticPodNames, name)
+	_, reserved := reservedStaticPods[name]
+	return reserved
+}
+
+// IsReservedStaticPod reports whether a pod ("namespace/name") already has a
+// manifest: kubelet collides on the pod, whatever the file is called.
+func IsReservedStaticPod(pod string) bool {
+	return slices.Contains(slices.Collect(maps.Values(reservedStaticPods)), pod)
 }
 
 // ValidateStaticPodName refuses a name spec.staticPods[].name would not take: a
