@@ -100,7 +100,7 @@ func Test_skip_localized_role_metadata(t *testing.T) {
 		"modules/101-cert-manager/templates/rbacv2/use/view.yaml":               true,
 		"ee/modules/110-istio/templates/rbacv2-compat/legacy-role-aliases.yaml": true,
 		"modules/101-cert-manager/rbac.yaml":                                    true,
-		"ee/modules/110-istio/rbac.yaml":                                        true,
+		"ee/modules/030-cloud-provider-openstack/rbac.yaml":                     true,
 		"ee/se-plus/modules/015-admission-policy-engine/rbac.yaml":              false,
 		"modules/101-cert-manager/templates/rbac-to-us.yaml":                    false,
 		"modules/101-cert-manager/openapi/rbac.yaml":                            false,

@@ -30,10 +30,11 @@ var skipSelfRe = regexp.MustCompile(`no_cyrillic(_test)?.go$`)
 // capability and role carries ru.meta.deckhouse.io/{title,description} annotations,
 // which the platform and the UI show to Russian-speaking users.
 // The module RBAC declaration carries the same localized texts for the capabilities it declares;
-// the RBACv2 templates are generated from it. It lives in the module's base directory only
-// (modules/<module>/ or ee/modules/<module>/): an rbac.yaml in an edition overlay
-// (ee/<edition>/modules/) would overwrite the base one when CI merges the overlays, so it is not
-// exempted and gets checked like any other file.
+// the RBACv2 templates are generated from it. It lives in the module's base directory only:
+// modules/<module>/, or ee/modules/<module>/ for an EE-only module. The pattern is looser than
+// that -- it cannot tell an EE-only module from one that also exists in modules/ (110-istio), where
+// ee/modules/<module> is an overlay -- and the dmt rbac linter, which checks the tree, reports an
+// rbac.yaml in an overlay. An rbac.yaml under ee/<edition>/modules/ is never exempted here.
 var skipRBACv2Re = regexp.MustCompile(`/templates/rbacv2[^/]*/|^(ee/)?modules/[^/]+/rbac\.yaml$`)
 
 var skipFiles = map[string]struct{}{
