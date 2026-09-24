@@ -75,9 +75,9 @@ func readClusterConfigFromCluster(ctx context.Context, kubeCl *client.Kubernetes
 }
 
 // ClusterUsesProviderModuleConfig reports whether the running cluster is
-// configured through the cloud-provider-<name> ModuleConfig (mc-flow) rather
-// than the legacy d8-provider-cluster-configuration Secret. A non-cloud cluster
-// reports false.
+// configured through the enabled cloud-provider-<name> ModuleConfig (mc-flow)
+// rather than the legacy d8-provider-cluster-configuration Secret. A non-cloud
+// cluster reports false.
 func ClusterUsesProviderModuleConfig(ctx context.Context, kubeCl *client.KubernetesClient) (bool, error) {
 	cfg, err := readClusterConfigFromCluster(ctx, kubeCl)
 	if err != nil || cfg.Provider == "" {
@@ -85,17 +85,35 @@ func ClusterUsesProviderModuleConfig(ctx context.Context, kubeCl *client.Kuberne
 	}
 
 	// Ask the API directly instead of going through loadCloudProviderModuleConfig:
-	// only the ModuleConfig's presence matters here, while parsing it would need a
-	// SchemaStore — and building one is what freezes the process-wide store, so a
-	// store built for this check would then be handed to the edit itself.
-	name := CloudProviderModuleName(cfg.Provider)
-	if _, err := kubeCl.Dynamic().Resource(ModuleConfigGVR).Get(ctx, name, metav1.GetOptions{}); err != nil {
-		if k8serrors.IsNotFound(err) {
-			return false, nil
-		}
-		return false, fmt.Errorf("get ModuleConfig %q: %w", name, err)
+	// parsing the ModuleConfig would need a SchemaStore — and building one is what
+	// freezes the process-wide store, so a store built for this check would then be
+	// handed to the edit itself.
+	obj, err := getEnabledModuleConfig(ctx, kubeCl, CloudProviderModuleName(cfg.Provider))
+	if err != nil {
+		return false, err
 	}
-	return true, nil
+	return obj != nil, nil
+}
+
+// getEnabledModuleConfig returns the named ModuleConfig from the cluster, or nil
+// when it is absent or has no spec.enabled: true.
+func getEnabledModuleConfig(ctx context.Context, kubeCl *client.KubernetesClient, name string) (*unstructured.Unstructured, error) {
+	obj, err := kubeCl.Dynamic().Resource(ModuleConfigGVR).Get(ctx, name, metav1.GetOptions{})
+	if k8serrors.IsNotFound(err) {
+		return nil, nil
+	}
+	if err != nil {
+		return nil, fmt.Errorf("get ModuleConfig %q: %w", name, err)
+	}
+
+	enabled, _, err := unstructured.NestedBool(obj.Object, "spec", "enabled")
+	if err != nil {
+		return nil, fmt.Errorf("read spec.enabled of ModuleConfig %q: %w", name, err)
+	}
+	if !enabled {
+		return nil, nil
+	}
+	return obj, nil
 }
 
 // nilType instantiates ByClusterType[T] for fillers that produce no value,
@@ -115,8 +133,8 @@ func newFromClusterMetaConfigFiller(kubeCl *client.KubernetesClient, schemaStore
 }
 
 // Cloud loads cloud-provider configuration from the running cluster. Two
-// markers exist — the cloud-provider-<name> ModuleConfig (mc-flow) and the
-// legacy d8-provider-cluster-configuration Secret — and both are loaded when
+// markers exist — the enabled cloud-provider-<name> ModuleConfig (mc-flow) and
+// the legacy d8-provider-cluster-configuration Secret — and both are loaded when
 // present: a cluster mid-migration carries both, with PCC staying the source
 // of truth for the typed fields. Neither present is an error.
 func (f *fromClusterMetaConfigFiller) Cloud(ctx context.Context, metaConfig *MetaConfig) (nilType, error) {
@@ -142,7 +160,7 @@ func (f *fromClusterMetaConfigFiller) Cloud(ctx context.Context, metaConfig *Met
 
 	if mc == nil && pcc == nil {
 		return nil, fmt.Errorf(
-			"cluster has neither ModuleConfig %q nor Secret %q in namespace %q",
+			"cluster has neither enabled ModuleConfig %q nor Secret %q in namespace %q",
 			CloudProviderModuleName(metaConfig.ProviderName),
 			LegacyProviderClusterConfigSecret,
 			global.ConfigsNS,
@@ -153,13 +171,9 @@ func (f *fromClusterMetaConfigFiller) Cloud(ctx context.Context, metaConfig *Met
 }
 
 func loadCloudProviderModuleConfig(ctx context.Context, kubeCl *client.KubernetesClient, providerName string, schemaStore *SchemaStore) (*ModuleConfig, error) {
-	name := CloudProviderModuleName(providerName)
-	obj, err := kubeCl.Dynamic().Resource(ModuleConfigGVR).Get(ctx, name, metav1.GetOptions{})
-	if k8serrors.IsNotFound(err) {
-		return nil, nil
-	}
-	if err != nil {
-		return nil, fmt.Errorf("get ModuleConfig %q: %w", name, err)
+	obj, err := getEnabledModuleConfig(ctx, kubeCl, CloudProviderModuleName(providerName))
+	if err != nil || obj == nil {
+		return nil, err
 	}
 	return moduleConfigFromUnstructured(obj, schemaStore)
 }

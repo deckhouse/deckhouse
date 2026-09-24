@@ -74,7 +74,7 @@ type DeckhouseInstaller struct {
 	CommanderUUID uuid.UUID
 }
 
-// HasProviderModuleConfig reports whether the installer carries a
+// HasProviderModuleConfig reports whether the installer carries an enabled
 // cloud-provider-<name> ModuleConfig (the mc-flow provider format). Mirrors
 // MetaConfig.HasProviderModuleConfig.
 func (c *DeckhouseInstaller) HasProviderModuleConfig() bool {
@@ -83,7 +83,7 @@ func (c *DeckhouseInstaller) HasProviderModuleConfig() bool {
 	}
 	target := CloudProviderModuleName(c.ProviderName)
 	for _, mc := range c.ModuleConfigs {
-		if mc.Name == target {
+		if mc.Name == target && moduleConfigEnabled(mc) {
 			return true
 		}
 	}

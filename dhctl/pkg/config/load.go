@@ -399,11 +399,6 @@ func (s *SchemaStore) ValidateWithIndex(index *SchemaIndex, doc *[]byte, opts ..
 		}
 		mcName := mc.GetName()
 		dhlog.FromContext(ctx).DebugContext(ctx, fmt.Sprintf("Found module config to validate %s", mcName))
-		if mc.Spec.Enabled == nil && mcName != "global" {
-			// we need return error because on top level we want filter module configs from modulesources and move into resources
-			// global is special mc without module
-			return fmt.Errorf("Enabled field for module config %s should be set to true or false", mcName)
-		}
 
 		s.mu.RLock()
 		_, moduleKnown := s.modulesCache[mcName]
