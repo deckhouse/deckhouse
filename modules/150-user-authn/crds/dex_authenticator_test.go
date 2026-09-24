@@ -19,12 +19,14 @@ package crds_test
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"os"
 	"os/exec"
 	"path/filepath"
 	"strings"
 	"testing"
 
+	"github.com/itchyny/gojq"
 	"github.com/stretchr/testify/require"
 	apiextensions "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions"
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
@@ -37,6 +39,83 @@ import (
 	celconfig "k8s.io/apiserver/pkg/apis/cel"
 	"sigs.k8s.io/yaml"
 )
+
+// The validating hook is Bash, not one jq program, so its tests run it the way shell-operator
+// does. The unit test image carries bash but no jq, so a jq built from gojq stands in when the
+// real one is absent; a present jq is preferred, to keep local runs on what production uses.
+func TestMain(m *testing.M) {
+	os.Exit(runAuthenticatorTests(m))
+}
+
+// hookIPCheck is what is_ip_address runs under python3. The stand-in under testdata emulates
+// exactly this, so it is only put on PATH while the hook still asks for it.
+const hookIPCheck = "ipaddress.ip_address(sys.argv[1])"
+
+// The tools the hooks need. Each has a stand-in under testdata, built only when the image carries
+// no real one; a present tool is preferred, to keep local runs on what production uses.
+var authenticatorTools = []string{"jq", "python3"}
+
+func runAuthenticatorTests(m *testing.M) int {
+	if _, err := exec.LookPath("bash"); err != nil {
+		fmt.Fprintln(os.Stderr, "bash is required: these tests run the webhooks under ../webhooks")
+
+		return 1
+	}
+
+	dir, err := os.MkdirTemp("", "hookshims")
+	if err != nil {
+		fmt.Fprintln(os.Stderr, err)
+
+		return 1
+	}
+	defer os.RemoveAll(dir)
+
+	for _, tool := range authenticatorTools {
+		if _, err := exec.LookPath(tool); err == nil {
+			continue
+		}
+		if tool == "python3" {
+			if err := checkIPCheckUnchanged(); err != nil {
+				fmt.Fprintln(os.Stderr, err)
+
+				return 1
+			}
+		}
+
+		source := filepath.Join("testdata", tool)
+		build := exec.Command("go", "build", "-o", filepath.Join(dir, tool), "./"+source)
+		if out, err := build.CombinedOutput(); err != nil {
+			fmt.Fprintf(os.Stderr, "building the %s stand-in: %v\n%s", tool, err, out)
+
+			return 1
+		}
+		fmt.Fprintf(os.Stderr, "no %s found, standing in with %s\n", tool, source)
+	}
+
+	if err := os.Setenv("PATH", dir+string(os.PathListSeparator)+os.Getenv("PATH")); err != nil {
+		fmt.Fprintln(os.Stderr, err)
+
+		return 1
+	}
+
+	return m.Run()
+}
+
+// checkIPCheckUnchanged refuses to emulate Python the hook no longer runs. The hook reads only the
+// exit status of python3 and discards its output, so the stand-in itself cannot report this.
+func checkIPCheckUnchanged() error {
+	hook, err := os.ReadFile(filepath.Join("..", "webhooks", "validating", "dex_authenticator"))
+	if err != nil {
+		return fmt.Errorf("reading the validating hook: %w", err)
+	}
+
+	if !strings.Contains(string(hook), hookIPCheck) {
+		return fmt.Errorf("is_ip_address no longer runs %s, which testdata/python3 emulates: "+
+			"revisit testdata/python3, or install python3 to run the hook as it is", hookIPCheck)
+	}
+
+	return nil
+}
 
 func authenticatorSchemas(t *testing.T) map[string]*apiextensions.JSONSchemaProps {
 	t.Helper()
@@ -175,12 +254,49 @@ function hook::run() { :; }`, 1)
 	return result
 }
 
+// A conversion function is one jq program wrapped in shell plumbing, so the program runs here
+// directly. That keeps the conversion tests free of an external jq, and mirrors how the projects
+// hook of multitenancy-manager is tested.
 func convertAuthenticator(t *testing.T, object map[string]any, from, to string) map[string]any {
 	t.Helper()
-	result := runAuthenticatorHook(t, "conversion/dex-authenticator", "__on_conversion::"+from+"_to_"+to,
-		map[string]any{"review": map[string]any{"request": map[string]any{"objects": []any{object}}}})
-	require.Contains(t, result, "convertedObjects")
-	return result["convertedObjects"].([]any)[0].(map[string]any)
+	query, err := gojq.Parse(conversionProgram(t, "__on_conversion::"+from+"_to_"+to))
+	require.NoError(t, err)
+
+	review := map[string]any{"review": map[string]any{"request": map[string]any{"objects": []any{object}}}}
+	result, ok := query.Run(review).Next()
+	require.True(t, ok, "%s to %s produced nothing", from, to)
+	if failure, isErr := result.(error); isErr {
+		t.Fatalf("converting %s to %s: %v", from, to, failure)
+	}
+
+	converted, ok := result.([]any)
+	require.True(t, ok, "%s to %s produced %v", from, to, result)
+	require.Len(t, converted, 1)
+
+	return converted[0].(map[string]any)
+}
+
+// conversionProgram lifts the jq source of one conversion function out of the shell hook. The
+// programs are single-quoted bash strings, which cannot contain a single quote, so the quotes
+// delimit them unambiguously.
+func conversionProgram(t *testing.T, function string) string {
+	t.Helper()
+	hook, err := os.ReadFile(filepath.Join("..", "webhooks", "conversion", "dex-authenticator"))
+	require.NoError(t, err)
+
+	body := string(hook)
+	start := strings.Index(body, "function "+function+"()")
+	require.GreaterOrEqual(t, start, 0, "the hook has no %s", function)
+
+	body = body[start:]
+	open := strings.Index(body, "'")
+	require.GreaterOrEqual(t, open, 0, "%s runs no jq program", function)
+
+	body = body[open+1:]
+	end := strings.Index(body, "'")
+	require.GreaterOrEqual(t, end, 0, "the jq program of %s is not closed", function)
+
+	return body[:end]
 }
 
 func TestDexAuthenticatorConversionPreservesRouting(t *testing.T) {
