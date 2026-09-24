@@ -3777,10 +3777,14 @@ alerts:
         one direction that hurts. What it will not do is keep it quietly, which is what this
         alert is.
 
-        Nothing is wrong and nothing needs doing urgently. To reclaim the space:
+        Nothing is wrong and nothing needs doing urgently. To reclaim the space, remove the
+        directory the store keeps its blobs in. Which one that is depends on the node:
+        `/var/lib/deckhouse/registry` where the root filesystem is read-only, and
+        `/opt/deckhouse/registry` everywhere else. The cluster reports the one in use:
 
         ```
-        ssh {{ $labels.node }} 'du -sh /opt/deckhouse/registry && sudo rm -rf /opt/deckhouse/registry'
+        store=$(kubectl get registrystorage registry -o jsonpath='{.spec.store.path}')
+        ssh {{ $labels.node }} "du -sh ${store} && sudo rm -rf ${store}"
         ```
 
         Twenty-four hours, so that turning the cache off and on again in one working session

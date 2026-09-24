@@ -248,6 +248,27 @@ func TestNodeConfigRefusesTheInstallersOwnBundleRegistry(t *testing.T) {
 	require.ErrorContains(t, err, string(constant.ModeUnmanaged), "what to bootstrap with instead")
 }
 
+// A cluster whose registry ModuleConfig asks the module to own the pull path is
+// installed with the node agent already on the first master, placed by a bashible
+// step. An immutable master runs none, so the agent never arrives, and the
+// container runtime it was going to own is left pointed at nothing the moment the
+// module takes over. Refused while being built, for the same reason Local is.
+func TestNodeConfigRefusesAnAgentOwnedRuntime(t *testing.T) {
+	metaConfig := testMetaConfig(t)
+	metaConfig.Registry.Settings.Mode = constant.ModeDirect
+	metaConfig.Registry.AgentOwnsRuntime = true
+
+	_, err := buildNodeConfig(t.Context(), nodeConfigInput{
+		NodeName:   "example-master-0",
+		MetaConfig: metaConfig,
+	})
+
+	require.ErrorContains(t, err, "registry module", "which module the operator has to reconfigure")
+	require.ErrorContains(t, err, string(constant.ModeUnmanaged), "what to install with instead")
+}
+
+// The refusal above is about the agent, not about the mode it comes with: Direct
+// on its own is how every immutable master is installed.
 // Direct carries the same upstream as Unmanaged, and a config parsed from a
 // cluster resolves to it: refusing Local must not take Direct with it.
 func TestNodeConfigTakesTheUpstreamOfADirectRegistry(t *testing.T) {

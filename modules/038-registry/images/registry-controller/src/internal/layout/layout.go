@@ -66,6 +66,12 @@ type Inputs struct {
 	// Config is the resolved configuration, already validated.
 	Config registryv1alpha1.RegistryConfigSpec
 
+	// StorePath is where the store keeps its blobs on a node, as the module mounts it.
+	// Reported in the storage spec so that an operator reclaiming the disk is told the
+	// directory that actually holds it; empty falls back to the bashible node's path,
+	// which is where every cluster predating the second one keeps them.
+	StorePath string
+
 	// AppliedUpstream is the upstream currently in effect, as recorded in
 	// RegistryConfig.status.effectiveUpstream.
 	//
@@ -120,6 +126,19 @@ type Inputs struct {
 	// declared those hours safe for disruption, and collecting is a small disruption of
 	// exactly that kind.
 	MaintenanceWindows []MaintenanceWindow
+}
+
+// storePathOf is where this cluster's store keeps its blobs, with the bashible node's
+// path as the fallback.
+//
+// A fallback rather than a requirement, because this is reported rather than acted on: a
+// controller that refused to compile a layout over a missing informational field would
+// take the cluster's pull path down over a directory name.
+func storePathOf(in Inputs) string {
+	if in.StorePath == "" {
+		return constant.StorePath
+	}
+	return in.StorePath
 }
 
 // Desired is the layout to converge on.
@@ -231,7 +250,7 @@ func compute(in Inputs) Desired {
 		Upstream: heldUpstream,
 		Source:   in.Config.Storage.Source,
 		Store: registryv1alpha1.StorageStore{
-			Path: constant.StorePath,
+			Path: storePathOf(in),
 			Size: in.Config.Storage.Size,
 		},
 		// The authenticated write endpoint is published on every managed cluster.

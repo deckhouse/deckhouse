@@ -1,0 +1,162 @@
+{{- /*
+  The node agent on an Engine node.
+
+  Everywhere else a bashible step installs it (candi/bashible/common-steps/all/053). An
+  Engine node runs no bashible steps, so the agent arrives as a static pod the platform
+  writes into the node's config — which is what this object asks for. node-controller
+  compiles it into the NodeConfig of every Immutable node group and ignores it for the
+  rest, so one object with no selector is the whole of "wherever bashible cannot reach".
+
+  Two things about it are load-bearing and easy to undo by accident.
+
+  The name. node-controller recognises the agent by it (registryAgentStaticPodName) and
+  hands containerd's registry.d over only to a node whose config actually carries this
+  manifest — a node that released the directory without the agent could not pull the
+  agent that would write it, and there would be no way back.
+
+  The image. `deckhouse.local/images:registry-agent` is local: the containerd system
+  extension ships it as an OCI archive and imports it on every boot
+  (modules/007-registrypackages/images/containerd). It cannot be a reference the runtime
+  would pull, because on this node the runtime has no registry configured until this very
+  pod writes one — registry.d is under /run and starts every boot empty.
+
+  Two mounts the bashible node has are deliberately absent. The staged certificate
+  authorities (/opt/deckhouse/share/ca-certificates): on an Engine node /opt is read-only
+  and nothing stages anything there, and the agent reads an absent directory as "no extra
+  authorities", which is the truth. And /etc/kubernetes/pki: the cluster authority comes
+  out of the node config instead, because on a master that directory also holds the
+  authority's private key.
+*/}}
+{{- /*
+  Guarded on the kind existing, because this module is 038 and the kind belongs to 040:
+  on the convergence of a release that introduces it, this one renders first. Rendering
+  it anyway would fail the whole release for the registry module — every object of it,
+  not just this one — where skipping costs one pass: node-manager installs the CRD, the
+  next convergence publishes the request, and until then no node has released registry.d
+  to an agent that never arrived.
+*/}}
+{{- $kindExists := or (.Values.global.discovery.apiVersions | has "deckhouse.io/v1alpha1/NodeStaticPodRequest") (.Capabilities.APIVersions.Has "deckhouse.io/v1alpha1/NodeStaticPodRequest") }}
+{{- if and (eq (include "registry_v2_manages" .) "true") $kindExists }}
+  {{- /*
+    Paths on an Engine node, where /etc/kubernetes and /etc/containerd are symlinks into a
+    tmpfs. The drop-in directory is spelled with /run rather than through the symlink
+    because it is also what nodelet renders into containerd's config_path
+    (registryHostsDir, nodelet internal/controllers/containerd/registryhosts.go).
+  */}}
+  {{- $dropInRoot := "/run/etc/containerd/registry.d" }}
+  {{- $agentPath := "/etc/kubernetes/registry-agent" }}
+  {{- $cachePath := "/var/lib/deckhouse/registry-agent" }}
+  {{- $nodeConfigPath := "/config/nodeconfig.yaml" }}
+  {{- $kubeletPKI := "/var/lib/kubelet/pki" }}
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: NodeStaticPodRequest
+metadata:
+  name: registry-agent
+  {{- include "helm_lib_module_labels" (list . (dict "app" "registry")) | nindent 2 }}
+spec:
+  {{- /*
+    No selector: every group. A group bashible configures has no node config at all, so
+    naming the Immutable ones here would only repeat a decision node-controller already
+    makes — and would have to be kept in step with it.
+  */}}
+  manifest: |
+    apiVersion: v1
+    kind: Pod
+    metadata:
+      labels:
+        component: registry-agent
+        tier: control-plane
+      name: registry-agent
+      namespace: kube-system
+    spec:
+      # Host networking because the runtime is configured to reach the agent on this
+      # node's loopback, and it resolves that address in the host's network namespace.
+      # The address is 127.0.0.1:5001 throughout; source of truth: ProxyHost in
+      # go_lib/registry/const/registry.go, pinned by a template test.
+      hostNetwork: true
+      # The node's own resolver, never the cluster's. The names this has to resolve are
+      # upstream registries outside the cluster, and cluster DNS cannot start until its
+      # image is pulled — which is what this pod exists to make possible.
+      dnsPolicy: Default
+      priorityClassName: system-node-critical
+      priority: 2000001000
+      containers:
+      - name: registry-agent
+        image: deckhouse.local/images:registry-agent
+        imagePullPolicy: IfNotPresent
+        args:
+        - --listen-address=127.0.0.1:5001
+        - --containerd-registry-dir={{ $dropInRoot }}
+        - --pki-dir={{ $agentPath }}/pki
+        - --layout-cache={{ $cachePath }}/layout.json
+        - --bootstrap-node-config={{ $nodeConfigPath }}
+        # Measured, not written: the agent reports how much of the node's disk the store
+        # is taking. The same path the store itself mounts, which on this kind of node is
+        # not the one under /opt.
+        - --store-path={{ ((.Values.registry.internal).v2).storePath | default "/var/lib/deckhouse/registry" }}
+        env:
+        - name: NODE_NAME
+          valueFrom:
+            fieldRef:
+              fieldPath: spec.nodeName
+        securityContext:
+          allowPrivilegeEscalation: false
+          capabilities:
+            drop:
+            - ALL
+          readOnlyRootFilesystem: true
+          runAsGroup: 0
+          runAsNonRoot: false
+          runAsUser: 0
+          seccompProfile:
+            type: RuntimeDefault
+        volumeMounts:
+        # Written by the agent, and by nothing else.
+        - mountPath: {{ $dropInRoot }}
+          name: containerd-registry-d
+        # Not read-only, unlike the bashible node's: there the material is generated by
+        # the step before the pod starts, and here the agent generates it itself.
+        - mountPath: {{ $agentPath }}
+          name: agent-material
+        - mountPath: {{ $cachePath }}
+          name: layout-cache
+        # The node's own document: the registry it was installed from, which is the layout
+        # the agent routes by until the API server first answers, and the cluster authority
+        # and API address it reaches that API server with.
+        - mountPath: {{ $nodeConfigPath }}
+          name: node-config
+          readOnly: true
+        # The kubelet's rotating client certificate, which is the identity the agent reads
+        # this node's layout with. Nothing is distributed to the node for it.
+        - mountPath: {{ $kubeletPKI }}
+          name: kubelet-pki
+          readOnly: true
+      volumes:
+      - hostPath:
+          path: {{ $dropInRoot }}
+          type: DirectoryOrCreate
+        name: containerd-registry-d
+      # DirectoryOrCreate, unlike the bashible node's Directory: nothing has created this
+      # before the pod starts, and on this node nothing ever will — /etc/kubernetes is a
+      # tmpfs and the agent is the only writer under here.
+      - hostPath:
+          path: {{ $agentPath }}
+          type: DirectoryOrCreate
+        name: agent-material
+      - hostPath:
+          path: {{ $cachePath }}
+          type: DirectoryOrCreate
+        name: layout-cache
+      # File, not FileOrCreate: an empty file here would read as a node that named no
+      # registry and no API server, and the agent would route from nothing while
+      # reporting success. This document is what the node booted from, so it is there.
+      - hostPath:
+          path: {{ $nodeConfigPath }}
+          type: File
+        name: node-config
+      - hostPath:
+          path: {{ $kubeletPKI }}
+          type: DirectoryOrCreate
+        name: kubelet-pki
+{{- end }}

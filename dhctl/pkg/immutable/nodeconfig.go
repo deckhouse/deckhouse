@@ -331,6 +331,23 @@ func nodeRegistry(metaConfig *config.MetaConfig) (*registrySpec, error) {
 			constant.ModeLocal, constant.BundleAddressWithPort, constant.ModeDirect, constant.ModeUnmanaged)
 	}
 
+	// The registry module owning the pull path from the moment of installation, which needs its
+	// node agent on the first master before anything else can be pulled. What puts it there is a
+	// bashible step fed from the installer's own packages proxy — see registry.WithAgent — and an
+	// immutable master runs no bashible steps at all. Refused here, beside the check above and for
+	// the same reason: the alternative is a machine that boots, pulls nothing and says nothing.
+	//
+	// The refusal is about the installation, not about the cluster. Such a cluster can be brought
+	// up with the module managing nothing and handed the registry afterwards; what has no path yet
+	// is starting out that way.
+	if metaConfig.Registry.AgentOwnsRuntime {
+		return nil, errors.New(
+			"an immutable master cannot be installed with the registry module managing the pull path: " +
+				"the node agent that would serve it is placed by a bashible step, which such a node never runs. " +
+				"Install with the registry ModuleConfig absent or at its default `mode: Unmanaged`, " +
+				"and configure the module once the cluster is up")
+	}
+
 	// Direct and Unmanaged describe the same upstream in RemoteData, and the upstream is
 	// what a booting node needs: the in-cluster proxy Direct mode adds serves nodes that
 	// are already in the cluster. Beyond the refusal above the mode is not read — a config

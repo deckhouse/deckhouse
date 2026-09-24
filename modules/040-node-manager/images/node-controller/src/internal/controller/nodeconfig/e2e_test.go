@@ -275,8 +275,11 @@ var _ = Describe("NodeConfig controller", func() {
 		}, testenv.EventuallyTimeout, testenv.EventuallyPoll).Should(Succeed())
 
 		By("publishing a static pod for the group")
+		// Named what the registry module names its agent, because the second half of
+		// this story is who owns registry.d and the platform recognises the agent by
+		// this name. Deleted with the spec, so the fixed name collides with nothing.
 		request := &v1alpha1.NodeStaticPodRequest{
-			ObjectMeta: metav1.ObjectMeta{Name: testenv.UniqueName("agent")},
+			ObjectMeta: metav1.ObjectMeta{Name: registryAgentStaticPodName},
 			Spec: v1alpha1.NodeStaticPodRequestSpec{
 				NodeGroupSelector: v1alpha1.NodeGroupSelector{MatchNames: []string{ngName}},
 			},
@@ -302,9 +305,12 @@ var _ = Describe("NodeConfig controller", func() {
 		}, testenv.EventuallyTimeout, testenv.EventuallyPoll).Should(Succeed())
 
 		By("handing containerd's registry.d to the registry module's agent")
-		// The one signal: the `agent` key of the configuration that module writes
-		// for bashible. Nothing on the object says it — who owns that directory
-		// follows from which modules are enabled, not from a static pod.
+		// It takes both halves. The `agent` key of the configuration that module
+		// writes for bashible is the intent, and nothing on the object says it: who
+		// owns that directory follows from which modules are enabled. But a node
+		// config is rendered for Immutable groups only, where the agent arrives as a
+		// static pod or not at all — so the node releases registry.d when it has the
+		// agent the intent is about, and not before.
 		bashibleConfig := &corev1.Secret{
 			ObjectMeta: metav1.ObjectMeta{Namespace: "d8-system", Name: "registry-bashible-config"},
 			Data: map[string][]byte{
@@ -327,8 +333,18 @@ var _ = Describe("NodeConfig controller", func() {
 		Eventually(func(g Gomega) {
 			nc := getNodeConfig(ctx, g, nodeName)
 			g.Expect(nc.Spec.StaticPods).To(BeEmpty())
-			g.Expect(nc.Spec.ContainerRuntime.RegistryOwner).To(Equal(registryOwnerAgent),
-				"registry.d never belonged to the object")
+			g.Expect(nc.Spec.ContainerRuntime.RegistryOwner).To(Equal(registryOwnerNodelet),
+				"a node with no agent on it keeps writing its own registry.d")
+		}, testenv.EventuallyTimeout, testenv.EventuallyPoll).Should(Succeed())
+
+		By("giving the group its agent back")
+		patch = client.MergeFrom(request.DeepCopy())
+		request.Spec.NodeGroupSelector.MatchNames = []string{ngName}
+		Expect(k8sClient.Patch(ctx, request, patch)).To(Succeed())
+
+		Eventually(func(g Gomega) {
+			nc := getNodeConfig(ctx, g, nodeName)
+			g.Expect(nc.Spec.ContainerRuntime.RegistryOwner).To(Equal(registryOwnerAgent))
 		}, testenv.EventuallyTimeout, testenv.EventuallyPoll).Should(Succeed())
 
 		By("taking registry.d back when the agent mode is switched off")

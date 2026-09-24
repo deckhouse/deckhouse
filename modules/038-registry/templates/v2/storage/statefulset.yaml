@@ -31,7 +31,12 @@ touched in the process, which is exactly what keeps such a change working while 
 Deckhouse operator is down.
 */ -}}
 {{- if eq (include "registry_v2_caches" .) "true" }}
-{{- $storePath := ((.Values.registry.internal.v2).registryConfig).storage | default dict }}
+{{- /*
+  Where the blobs live on the node. Decided by the hook, because the answer differs by
+  node kind: a master whose root filesystem is read-only has nowhere to put them under
+  /opt. The default is only for a values tree written before that hook ran.
+*/ -}}
+{{- $storePath := ((.Values.registry.internal).v2).storePath | default "/opt/deckhouse/registry" }}
 ---
 apiVersion: v1
 kind: Service
@@ -374,6 +379,6 @@ spec:
       # provisioner does, since the provisioner's own images come from here.
       - name: data
         hostPath:
-          path: {{ $storePath.path | default "/opt/deckhouse/registry" }}/local_data
+          path: {{ $storePath }}/local_data
           type: DirectoryOrCreate
 {{- end }}

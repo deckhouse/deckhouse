@@ -46,16 +46,24 @@ func seedSpec() *registryv1alpha1.RegistryNodeSpec {
 func writeSeed(t *testing.T, spec *registryv1alpha1.RegistryNodeSpec) *Bootstrap {
 	t.Helper()
 
-	path := filepath.Join(t.TempDir(), "bootstrap-layout.json")
+	dir := t.TempDir()
+	path := filepath.Join(dir, "bootstrap-layout.json")
 	content, err := json.Marshal(spec)
 	require.NoError(t, err)
 	require.NoError(t, os.WriteFile(path, content, 0o600))
 
-	return &Bootstrap{Path: path}
+	// Pointed at a file that is not there rather than left empty: empty means the real
+	// /config/nodeconfig.yaml, and a test whose result depends on whether the machine
+	// running it happens to be an Engine node is no test at all.
+	return &Bootstrap{Path: path, NodeConfigPath: filepath.Join(dir, "no-node-config.yaml")}
 }
 
 func TestBootstrapLoadAbsentIsNotAnError(t *testing.T) {
-	seed := &Bootstrap{Path: filepath.Join(t.TempDir(), "absent.json")}
+	dir := t.TempDir()
+	seed := &Bootstrap{
+		Path:           filepath.Join(dir, "absent.json"),
+		NodeConfigPath: filepath.Join(dir, "no-node-config.yaml"),
+	}
 
 	spec, err := seed.Load()
 	require.NoError(t, err)

@@ -65,6 +65,16 @@ const (
 	// instead of refilling it.
 	StorePath = "/opt/deckhouse/registry"
 
+	// StorePathImmutable is where it keeps them on a node whose root filesystem is
+	// read-only, which is every node of an Engine cluster.
+	//
+	// A second constant rather than a change to the first, because the first is a
+	// contract with data already on disk: on a bashible node the previous implementation
+	// filled StorePath/local_data and the store adopts it rather than refetching every
+	// image. There is no such data here — bashible has never run on such a node — so this
+	// one is free to be a path that exists, and /var is the writable data partition.
+	StorePathImmutable = "/var/lib/deckhouse/registry"
+
 	// AgentPKIPath is where the node agent's certificate material lives on a node.
 	//
 	// A shared constant because it is a contract between three sides: the bashible step

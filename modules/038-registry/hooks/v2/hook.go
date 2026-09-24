@@ -35,6 +35,7 @@ import (
 	"sigs.k8s.io/yaml"
 
 	registryv1alpha1 "github.com/deckhouse/deckhouse/go_lib/registry/apis/deckhouse.io/v1alpha1"
+	registry_const "github.com/deckhouse/deckhouse/go_lib/registry/const"
 	"github.com/deckhouse/deckhouse/modules/038-registry/hooks/helpers"
 	"github.com/deckhouse/deckhouse/modules/038-registry/hooks/v2/pki"
 )
@@ -64,9 +65,15 @@ const (
 	// registry context.
 	BashibleConfigSecretName = "registry-bashible-config"
 
-	pkiSnapName            = "storage-pki"
-	nodesSnapName          = "master-nodes"
-	bashibleConfigSnapName = "bashible-config"
+	pkiSnapName             = "storage-pki"
+	nodesSnapName           = "master-nodes"
+	bashibleConfigSnapName  = "bashible-config"
+	masterNodeGroupSnapName = "master-node-group"
+
+	// MasterNodeGroupName is the group whose nodes run the store. The cluster decides
+	// the same way: node-manager stamps the control-plane role onto a node because its
+	// group is named this.
+	MasterNodeGroupName = "master"
 )
 
 var _ = sdk.RegisterFunc(
@@ -96,6 +103,19 @@ var _ = sdk.RegisterFunc(
 					MatchLabels: map[string]string{"node-role.kubernetes.io/control-plane": ""},
 				},
 				FilterFunc: filterNodeAddress,
+			},
+			{
+				// The master group, for one question: does the store run on nodes whose
+				// root filesystem is read-only. Its own subscription rather than the
+				// switch hook's, because snapshots belong to the hook that asked for
+				// them — sharing a name would read as empty here.
+				Name:       masterNodeGroupSnapName,
+				ApiVersion: "deckhouse.io/v1",
+				Kind:       "NodeGroup",
+				NameSelector: &types.NameSelector{
+					MatchNames: []string{MasterNodeGroupName},
+				},
+				FilterFunc: filterNodeGroupSystemType,
 			},
 			{
 				// Watched only so that withdrawing it can be conditional. Issuing the
@@ -221,6 +241,7 @@ func handle(_ context.Context, input *go_hook.HookInput) error {
 
 	current.PKI = state
 	current.StorageAddresses = addresses
+	current.StorePath = storePath(input)
 
 	// Everything below is what helm and the nodes read, and it is built only when the
 	// switch has actually happened. Building it regardless would be harmless in itself,
@@ -287,6 +308,36 @@ func handle(_ context.Context, input *go_hook.HookInput) error {
 
 	values.Set(current)
 	return nil
+}
+
+// storePath is where the store keeps its blobs on the nodes it runs on.
+//
+// Decided here rather than left a constant because the answer differs by node, and the
+// one place that knows which kind of node the store lands on is the module: the store is
+// a StatefulSet on the master group, and that group is either wholly Immutable or wholly
+// not — systemType cannot be changed once set, and a group has one of them.
+//
+// An unreadable or absent group reads as the bashible path, which is the answer that
+// keeps every existing cluster where it is. The cost of being wrong that way on an Engine
+// cluster is a store that cannot start, said out loud by the pod; the cost of being wrong
+// the other way is a bashible cluster that silently stops finding the images it already
+// has and refetches the lot.
+func storePath(input *go_hook.HookInput) string {
+	systemType, err := helpers.SnapshotToSingle[string](input, masterNodeGroupSnapName)
+	if err != nil {
+		input.Logger.Warn("cannot read the master node group; the store keeps its default path",
+			"error", err.Error(), "path", registry_const.StorePath)
+		return registry_const.StorePath
+	}
+	return storePathFor(systemType)
+}
+
+// storePathFor is the same decision as a function of the one thing it depends on.
+func storePathFor(systemType string) string {
+	if systemType == systemTypeImmutable {
+		return registry_const.StorePathImmutable
+	}
+	return registry_const.StorePath
 }
 
 // withdrawNodeConfiguration removes the node configuration secret.

@@ -987,7 +987,7 @@ func TestKeepBootstrapOnlyFieldsKeepsAnOperatorWrittenDiskSelector(t *testing.T)
 // zero, not vanish behind omitempty and come back as the CRD default.
 func TestAnExplicitZeroDownloadsReachesTheAPI(t *testing.T) {
 	ng := &v1.NodeGroup{Spec: v1.NodeGroupSpec{CRI: &v1.CRISpec{Containerd: &v1.ContainerdSpec{MaxConcurrentDownloads: ptr.To(0)}}}}
-	data, err := json.Marshal(renderContainerRuntime(ng, clusterInputs{}))
+	data, err := json.Marshal(renderContainerRuntime(ng, clusterInputs{}, nil))
 	require.NoError(t, err)
 	require.Contains(t, string(data), `"maxConcurrentDownloads":0`)
 }
@@ -1063,7 +1063,11 @@ func TestRenderContainerRuntimeLeavesImagesToTheExtension(t *testing.T) {
 		{name: "agent mode", agentMode: true, owner: registryOwnerAgent},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
-			spec := renderSpec(ng, node, clusterInputs{RegistryAgentMode: tt.agentMode})
+			in := clusterInputs{RegistryAgentMode: tt.agentMode}
+			if tt.agentMode {
+				in.NodeStaticPodRequests = withAgentStaticPod()
+			}
+			spec := renderSpec(ng, node, in)
 
 			raw, err := k8sruntime.DefaultUnstructuredConverter.ToUnstructured(&spec)
 			require.NoError(t, err)
@@ -1172,9 +1176,24 @@ func TestRenderSpecBoundsStaticPods(t *testing.T) {
 	require.Contains(t, names, fmt.Sprintf("pod-%02d", maxStaticPods-1), "and no older object is dropped in its stead")
 }
 
+// withAgentStaticPod is the registry module having published its agent, in the
+// shape renderSpec reads it.
+func withAgentStaticPod() []*deckhousev1alpha1.NodeStaticPodRequest {
+	return orderedNSPRs([]deckhousev1alpha1.NodeStaticPodRequest{
+		nspr(registryAgentStaticPodName, deckhousev1alpha1.NodeStaticPodRequestSpec{}),
+	})
+}
+
 // Who writes containerd's registry.d is a field, not a detection: a node that
 // worked it out from "somebody wrote _default" would behave differently
 // depending on which of two writers ran first.
+//
+// It takes both halves. The registry module saying it owns the pull path is an
+// intent about the cluster; whether this node can act on it is a fact about the
+// node, and on an Immutable group — the only kind that has a node config — the
+// agent arrives as a static pod or not at all. Acting on the intent alone strands
+// the node: registry.d released, no agent to write one, and no way to pull the
+// agent that would.
 func TestRenderRegistryOwner(t *testing.T) {
 	ng := &v1.NodeGroup{ObjectMeta: metav1.ObjectMeta{Name: "worker"}, Spec: v1.NodeGroupSpec{NodeType: v1.NodeTypeCloudEphemeral}}
 	node := &corev1.Node{ObjectMeta: metav1.ObjectMeta{Name: "worker-0"}}
@@ -1183,7 +1202,22 @@ func TestRenderRegistryOwner(t *testing.T) {
 	require.Equal(t, registryOwnerNodelet, bare.ContainerRuntime.RegistryOwner,
 		"a cluster that never heard of an agent goes on as it did before")
 
-	claimed := renderSpec(ng, node, clusterInputs{RegistryAgentMode: true})
+	// The intent on its own. Reachable whenever the object has not arrived yet, and
+	// an end state when it never does — a manifest the contest refused, or one the
+	// per-group cap left out.
+	intentOnly := renderSpec(ng, node, clusterInputs{RegistryAgentMode: true})
+	require.Equal(t, registryOwnerNodelet, intentOnly.ContainerRuntime.RegistryOwner,
+		"nodelet keeps writing registry.d until the node actually has the agent")
+
+	// The pod on its own. Some other module may name a static pod whatever it likes;
+	// who owns registry.d still follows from the registry module.
+	podOnly := renderSpec(ng, node, clusterInputs{NodeStaticPodRequests: withAgentStaticPod()})
+	require.Equal(t, registryOwnerNodelet, podOnly.ContainerRuntime.RegistryOwner)
+
+	claimed := renderSpec(ng, node, clusterInputs{
+		RegistryAgentMode:     true,
+		NodeStaticPodRequests: withAgentStaticPod(),
+	})
 	require.Equal(t, registryOwnerAgent, claimed.ContainerRuntime.RegistryOwner)
 
 	// And it is taken back the moment the registry module stops saying so: the

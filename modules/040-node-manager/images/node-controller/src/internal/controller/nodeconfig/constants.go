@@ -76,6 +76,16 @@ const (
 	registryBashibleConfigKey    = "config"
 	registryBashibleAgentKey     = "agent"
 
+	// registryAgentStaticPodName is the NodeStaticPodRequest the registry module
+	// publishes to put its node agent on an Immutable node, and so the name of the
+	// manifest in a node's spec.staticPods.
+	//
+	// The platform has to know it, because on such a node that object is the only way
+	// the agent can arrive: bashible, which installs it everywhere else, never runs
+	// here. So it is what says whether the node actually HAS the agent it is being
+	// asked to hand containerd's registry.d to. See renderContainerRuntime.
+	registryAgentStaticPodName = "registry-agent"
+
 	clusterConfigSecretName = "d8-cluster-configuration"
 	clusterConfigKey        = "cluster-configuration.yaml"
 
