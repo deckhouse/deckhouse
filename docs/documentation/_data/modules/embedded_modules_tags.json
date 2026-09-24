@@ -223,11 +223,6 @@
     "core",
     "ssdlc"
   ],
-  "service-with-healthchecks": [
-    "network",
-    "balancing",
-    "ssdlc"
-  ],
   "terraform-manager": [
     "core",
     "cloud",

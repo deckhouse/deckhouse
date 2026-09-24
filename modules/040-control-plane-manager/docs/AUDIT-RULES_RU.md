@@ -333,8 +333,6 @@ users:
   - system:serviceaccount:d8-metallb:speaker
   - system:serviceaccount:d8-multitenancy-manager:multitenancy-manager
   - system:serviceaccount:d8-openvpn:openvpn
-  - system:serviceaccount:d8-service-with-healthchecks:agent
-  - system:serviceaccount:d8-service-with-healthchecks:controller
   - system:serviceaccount:d8-system:deckhouse
   - system:serviceaccount:d8-system:documentation
   - system:serviceaccount:d8-system:network-policy-engine
@@ -428,7 +426,6 @@ namespaces:
   - d8-network-gateway
   - d8-okmeter
   - d8-openvpn
-  - d8-service-with-healthchecks
   - d8-system
   - d8-user-authn
   - d8-user-authz
@@ -815,8 +812,6 @@ rules:
       - system:serviceaccount:d8-metallb:speaker
       - system:serviceaccount:d8-multitenancy-manager:multitenancy-manager
       - system:serviceaccount:d8-openvpn:openvpn
-      - system:serviceaccount:d8-service-with-healthchecks:agent
-      - system:serviceaccount:d8-service-with-healthchecks:controller
       - system:serviceaccount:d8-system:deckhouse
       - system:serviceaccount:d8-system:documentation
       - system:serviceaccount:d8-system:network-policy-engine
@@ -902,7 +897,6 @@ rules:
       - d8-network-gateway
       - d8-okmeter
       - d8-openvpn
-      - d8-service-with-healthchecks
       - d8-system
       - d8-user-authn
       - d8-user-authz

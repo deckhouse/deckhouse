@@ -1577,27 +1577,6 @@
   stageDependencies:
     setup:
         - '**/*'
-- add: /ee/modules/610-service-with-healthchecks
-  to: /deckhouse/modules/610-service-with-healthchecks
-  excludePaths:
-    - docs
-    - README.md
-    - '*-threat-model.md'
-    - images
-    - hooks/**/*.go
-    - hooks/*.go
-    - hooks/**/testdata
-    - apis
-    - requirements
-    - hack
-    - template_tests
-    - .namespace
-    - values_matrix_test.yaml
-    - .build.yaml
-    - e2e
-  stageDependencies:
-    setup:
-        - '**/*'
 - add: /ee/fe/modules/002-deckhouse/templates/flant-module-source.yaml
   to: /deckhouse/modules/002-deckhouse/templates/flant-module-source.yaml
   stageDependencies:
