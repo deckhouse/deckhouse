@@ -63,7 +63,7 @@
   # d8 wraps the Vault CLI (`stronghold` subcommand) — hashicorp's own vault
   # binary/releases are blocked for Russian IPs, see seguro-policy README.
   install_d8: |
-    D8_VERSION="v0.29.24"
+    D8_VERSION="v0.33.22"
     D8_PATH="${HOME}/.bin"
     mkdir -p "${D8_PATH}"
     export PATH="${D8_PATH}:${PATH}"
