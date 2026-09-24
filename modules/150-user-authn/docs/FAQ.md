@@ -82,6 +82,8 @@ annotations:
   nginx.ingress.kubernetes.io/auth-response-headers: X-Auth-Request-User,X-Auth-Request-Email
 ```
 
+An application that specifies only `applicationIngressClassName` gets no HTTPRoute. If Ingress publication is turned off with [`global.modules.ingress.enabled`](/products/kubernetes-platform/documentation/v1/reference/api/global.html#parameters-modules-ingress-enabled), such an application gets no Ingress either and stays unpublished; the remaining applications are rendered as usual.
+
 {% endtab %}
 {% tab "Through ALBInstance or ClusterALBInstance" %}
 
@@ -108,9 +110,9 @@ spec:
     applicationHTTPRouteListenerSetName: my-listenerset
 ```
 
-The DexAuthenticator HTTPRoute references its ListenerSet explicitly, so it does not require a default Gateway. Dex itself must still be published through Ingress or through its own ListenerSet and HTTPRoute attached to a configured or discovered Gateway, otherwise browser redirects to Dex cannot work.
+The HTTPRoute created for the DexAuthenticator attaches to that same ListenerSet, so the ListenerSet must accept routes from the namespace of the DexAuthenticator.
 
-An application that specifies only `gatewayAPI` gets no Ingress. If Gateway API is disabled in the module or global settings, or the `gateway.networking.k8s.io/v1/HTTPRoute` API is unavailable in the cluster, such an application gets no HTTPRoute either and stays unpublished; the remaining applications are rendered as usual.
+An application that specifies only `gatewayAPI` gets no Ingress. If Gateway API is turned off with [`global.modules.gatewayAPI.enabled`](/products/kubernetes-platform/documentation/v1/reference/api/global.html#parameters-modules-gatewayapi-enabled), or the `gateway.networking.k8s.io/v1/HTTPRoute` API is unavailable in the cluster, such an application gets no HTTPRoute either and stays unpublished; the remaining applications are rendered as usual.
 
 {% endtab %}
 {% endtabs %}

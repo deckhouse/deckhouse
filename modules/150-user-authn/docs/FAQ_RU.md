@@ -82,6 +82,8 @@ annotations:
   nginx.ingress.kubernetes.io/auth-response-headers: X-Auth-Request-User,X-Auth-Request-Email
 ```
 
+Для приложения, в котором указан только `applicationIngressClassName`, HTTPRoute не создаётся. Если публикация через Ingress отключена параметром [`global.modules.ingress.enabled`](/products/kubernetes-platform/documentation/v1/reference/api/global.html#parameters-modules-ingress-enabled), для такого приложения не создаётся и Ingress — оно остаётся неопубликованным; остальные приложения рендерятся как обычно.
+
 {% endtab %}
 {% tab "Через ALBInstance или ClusterALBInstance" %}
 
@@ -108,9 +110,9 @@ spec:
     applicationHTTPRouteListenerSetName: my-listenerset
 ```
 
-HTTPRoute аутентификатора ссылается на ListenerSet явно, поэтому Gateway по умолчанию для него не требуется. Сам Dex при этом всё равно должен быть опубликован через Ingress либо через собственные ListenerSet и HTTPRoute, связанные с настроенным или обнаруженным Gateway, иначе редиректы браузера на Dex работать не будут.
+Создаваемый для DexAuthenticator HTTPRoute подключается к этому же ListenerSet, поэтому ListenerSet должен принимать маршруты из пространства имён, в котором находится DexAuthenticator.
 
-Для приложения, в котором указан только `gatewayAPI`, Ingress не создаётся. Если Gateway API выключен в настройках модуля или в глобальных настройках, либо в кластере недоступно API `gateway.networking.k8s.io/v1/HTTPRoute`, для такого приложения не создаётся и HTTPRoute — оно остаётся неопубликованным; остальные приложения рендерятся как обычно.
+Для приложения, в котором указан только `gatewayAPI`, Ingress не создаётся. Если Gateway API отключён параметром [`global.modules.gatewayAPI.enabled`](/products/kubernetes-platform/documentation/v1/reference/api/global.html#parameters-modules-gatewayapi-enabled) либо в кластере недоступно API `gateway.networking.k8s.io/v1/HTTPRoute`, для такого приложения не создаётся и HTTPRoute — оно остаётся неопубликованным; остальные приложения рендерятся как обычно.
 
 {% endtab %}
 {% endtabs %}
