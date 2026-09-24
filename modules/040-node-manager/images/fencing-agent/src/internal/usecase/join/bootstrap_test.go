@@ -36,10 +36,9 @@ func cancelOnOwnRead(nodes *fakeNodes, n int, cancel context.CancelFunc) {
 
 func TestBootstrapRetriesAFailedAttemptWithoutJoining(t *testing.T) {
 	cases := []struct {
-		name             string
-		group            func() (*fakeNodes, *fakeExpected)
-		ownReads         int
-		noCandidateReads bool
+		name     string
+		group    func() (*fakeNodes, *fakeExpected)
+		ownReads int
 	}{
 		{
 			name: "peers have no addresses",
@@ -63,8 +62,7 @@ func TestBootstrapRetriesAFailedAttemptWithoutJoining(t *testing.T) {
 
 				return nodes, expected
 			},
-			ownReads:         3,
-			noCandidateReads: true,
+			ownReads: 3,
 		},
 		{
 			name: "the own Node cannot be read",
@@ -77,8 +75,7 @@ func TestBootstrapRetriesAFailedAttemptWithoutJoining(t *testing.T) {
 
 				return nodes, expected
 			},
-			ownReads:         2,
-			noCandidateReads: true,
+			ownReads: 2,
 		},
 		{
 			name:     "the cache does not list this node",
@@ -86,8 +83,8 @@ func TestBootstrapRetriesAFailedAttemptWithoutJoining(t *testing.T) {
 			ownReads: 3,
 		},
 		{
-			name:     "every candidate is dropped",
-			group:    groupWithEveryCandidateDropped,
+			name:     "no candidate has an address",
+			group:    groupWithoutAnyCandidateAddress,
 			ownReads: 2,
 		},
 	}
@@ -117,9 +114,7 @@ func TestBootstrapRetriesAFailedAttemptWithoutJoining(t *testing.T) {
 					t.Errorf("the own Node was read %d times, want at least %d: a failed attempt is retried", got, tc.ownReads)
 				}
 
-				if got := nodes.candidateGets(); tc.noCandidateReads && len(got) != 0 {
-					t.Errorf("candidates %v were read while %s, want none", got, tc.name)
-				}
+				assertOnlyTheOwnNodeWasRead(t, nodes)
 			})
 		})
 	}
@@ -140,12 +135,8 @@ func TestBootstrapRetriesUntilJoinSucceeds(t *testing.T) {
 			t.Errorf("expected 3 join attempts, got %d", len(joins))
 		}
 
-		if got := nodes.getsOf(testNodeName); got != 3 {
-			t.Errorf("the own Node was read %d times, want 3", got)
-		}
-
-		if got := nodes.gets(); len(got) != 6 || nodes.getsOf("worker-2") != 3 {
-			t.Errorf("reads are %v, want 6: the own Node and worker-2 once per attempt", got)
+		if got := nodes.gets(); len(got) != 3 || nodes.getsOf(testNodeName) != 3 {
+			t.Errorf("reads are %v, want 3: the own Node once per attempt and nothing else", got)
 		}
 
 		if !joiner.Joined() {
@@ -182,58 +173,48 @@ func TestBootstrapStopsOnContextCancel(t *testing.T) {
 		}
 	})
 
-	cases := []struct {
-		name    string
-		blocked string
-	}{
-		{name: "during the own read", blocked: testNodeName},
-		{name: "during a candidate read", blocked: "worker-2"},
-	}
+	t.Run("during the own read", func(t *testing.T) {
+		synctest.Test(t, func(t *testing.T) {
+			ctx, cancel := context.WithCancel(t.Context())
+			defer cancel()
 
-	for _, tc := range cases {
-		t.Run(tc.name, func(t *testing.T) {
-			synctest.Test(t, func(t *testing.T) {
-				ctx, cancel := context.WithCancel(t.Context())
-				defer cancel()
+			nodes, expected := mirroredGroup(selfPeer(), domain.Peer{Name: "worker-2", IP: "10.0.0.2"})
+			nodes.setAnswer(testNodeName, nodeAnswer{blockUntilCtx: true})
+			cluster := &fakeCluster{}
 
-				nodes, expected := mirroredGroup(selfPeer(), domain.Peer{Name: "worker-2", IP: "10.0.0.2"})
-				nodes.setAnswer(tc.blocked, nodeAnswer{blockUntilCtx: true})
-				cluster := &fakeCluster{}
+			joiner := newJoiner(t, nodes, expected, cluster)
 
-				joiner := newJoiner(t, nodes, expected, cluster)
+			start := time.Now()
+			done := make(chan struct{})
 
-				start := time.Now()
-				done := make(chan struct{})
+			go func() {
+				defer close(done)
 
-				go func() {
-					defer close(done)
+				joiner.Bootstrap(ctx)
+			}()
 
-					joiner.Bootstrap(ctx)
-				}()
+			cancelAfter := joinerParams().APITimeout / 2
+			time.Sleep(cancelAfter)
+			cancel()
+			<-done
 
-				cancelAfter := joinerParams().APITimeout / 2
-				time.Sleep(cancelAfter)
-				cancel()
-				<-done
+			if elapsed := time.Since(start); elapsed != cancelAfter {
+				t.Errorf("bootstrap returned %s after the start, want right at the cancel after %s, without a backoff sleep", elapsed, cancelAfter)
+			}
 
-				if elapsed := time.Since(start); elapsed != cancelAfter {
-					t.Errorf("bootstrap returned %s after the start, want right at the cancel after %s, without a backoff sleep", elapsed, cancelAfter)
-				}
+			if got := nodes.getsOf(testNodeName); got != 1 {
+				t.Errorf("the own Node was read %d times, want a single attempt", got)
+			}
 
-				if got := nodes.getsOf(testNodeName); got != 1 {
-					t.Errorf("the own Node was read %d times, want a single attempt", got)
-				}
+			if joins := cluster.joins(); len(joins) != 0 {
+				t.Errorf("join was called with %v, want none after the cancel", joins)
+			}
 
-				if joins := cluster.joins(); len(joins) != 0 {
-					t.Errorf("join was called with %v, want none after the cancel", joins)
-				}
-
-				if joiner.Joined() {
-					t.Error("a cancelled bootstrap must not be reported as joined")
-				}
-			})
+			if joiner.Joined() {
+				t.Error("a cancelled bootstrap must not be reported as joined")
+			}
 		})
-	}
+	})
 }
 
 func TestBootstrapCancelledDuringBackoffStopsWithoutJoining(t *testing.T) {

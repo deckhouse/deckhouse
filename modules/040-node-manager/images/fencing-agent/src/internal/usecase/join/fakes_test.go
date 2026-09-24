@@ -58,20 +58,12 @@ type nodeAnswer struct {
 	release       <-chan struct{}
 }
 
-type nodeRead struct {
-	name   string
-	ctxErr error
-}
-
 type fakeNodes struct {
-	mu          sync.Mutex
-	answers     map[string]nodeAnswer
-	queued      map[string][]nodeAnswer
-	calls       []string
-	answered    []nodeRead
-	inFlight    int
-	maxInFlight int
-	onCall      func(call int, name string)
+	mu      sync.Mutex
+	answers map[string]nodeAnswer
+	queued  map[string][]nodeAnswer
+	calls   []string
+	onCall  func(call int, name string)
 }
 
 func newFakeNodes() *fakeNodes {
@@ -90,16 +82,7 @@ func (f *fakeNodes) GetNode(ctx context.Context, name string) (domain.NodeRecord
 	}
 
 	hook := f.onCall
-	f.inFlight++
-	f.maxInFlight = max(f.maxInFlight, f.inFlight)
 	f.mu.Unlock()
-
-	defer func() {
-		f.mu.Lock()
-		f.inFlight--
-		f.answered = append(f.answered, nodeRead{name: name, ctxErr: ctx.Err()})
-		f.mu.Unlock()
-	}()
 
 	if hook != nil {
 		hook(call, name)
@@ -202,22 +185,6 @@ func (f *fakeNodes) resetJournal() {
 	defer f.mu.Unlock()
 
 	f.calls = nil
-	f.answered = nil
-	f.maxInFlight = 0
-}
-
-func (f *fakeNodes) answeredReads() []nodeRead {
-	f.mu.Lock()
-	defer f.mu.Unlock()
-
-	return slices.Clone(f.answered)
-}
-
-func (f *fakeNodes) peakInFlight() int {
-	f.mu.Lock()
-	defer f.mu.Unlock()
-
-	return f.maxInFlight
 }
 
 type fakeExpected struct {
@@ -287,6 +254,24 @@ func (f *fakeCluster) setMembers(members ...string) {
 	defer f.mu.Unlock()
 
 	f.members = members
+}
+
+func (f *fakeCluster) resetJournal() {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+
+	f.seeds = nil
+}
+
+func (f *fakeCluster) lastSeeds() []string {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+
+	if len(f.seeds) == 0 {
+		return nil
+	}
+
+	return slices.Clone(f.seeds[len(f.seeds)-1])
 }
 
 func (f *fakeCluster) joins() [][]string {

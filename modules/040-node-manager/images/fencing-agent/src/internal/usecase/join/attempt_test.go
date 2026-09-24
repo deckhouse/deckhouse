@@ -22,9 +22,7 @@ import (
 	"net"
 	"os"
 	"slices"
-	"strconv"
 	"sync"
-	"syscall"
 	"testing"
 	"testing/synctest"
 	"time"
@@ -175,7 +173,7 @@ func threePeerGroup() (*fakeNodes, *fakeExpected) {
 	)
 }
 
-func TestAttemptReadsTheOwnNodeBeforeAnyCandidate(t *testing.T) {
+func TestAttemptReadsOnlyTheOwnNode(t *testing.T) {
 	synctest.Test(t, func(t *testing.T) {
 		nodes, expected := threePeerGroup()
 		release := make(chan struct{})
@@ -191,8 +189,8 @@ func TestAttemptReadsTheOwnNodeBeforeAnyCandidate(t *testing.T) {
 
 		synctest.Wait()
 
-		if got := nodes.gets(); !slices.Equal(got, []string{testNodeName}) {
-			t.Errorf("reads while the own Node read is pending are %v, want only the own Node", got)
+		if joins := cluster.joins(); len(joins) != 0 {
+			t.Errorf("join was called with %v while the own Node read is pending, want none", joins)
 		}
 
 		close(release)
@@ -201,89 +199,11 @@ func TestAttemptReadsTheOwnNodeBeforeAnyCandidate(t *testing.T) {
 			t.Fatalf("attempt returned %v, want success once the own Node read answers", err)
 		}
 
-		if got := nodes.candidateGets(); len(got) != 3 {
-			t.Errorf("candidates read after the own Node answered are %v, want all 3 peers", got)
-		}
-	})
-}
-
-func TestCandidateReadsRunInParallel(t *testing.T) {
-	synctest.Test(t, func(t *testing.T) {
-		nodes, expected := threePeerGroup()
-		for i, name := range []string{"worker-2", "worker-3", "worker-4"} {
-			nodes.setAnswer(name, nodeAnswer{record: peerRecord(name, "10.0.0."+strconv.Itoa(i+2)), delay: time.Second})
-		}
-
-		cluster := &fakeCluster{}
-		joiner := newJoiner(t, nodes, expected, cluster)
-
-		start := time.Now()
-		err := joiner.Attempt(t.Context())
-		elapsed := time.Since(start)
-
-		if err != nil {
-			t.Fatalf("attempt returned %v, want success", err)
-		}
-
-		if elapsed != time.Second {
-			t.Errorf("three candidate reads of 1s each took %s, want 1s: they must run in parallel", elapsed)
-		}
-
-		if got := nodes.peakInFlight(); got != 3 {
-			t.Errorf("at most %d reads were in flight, want all 3 candidates at once", got)
+		if got := nodes.gets(); !slices.Equal(got, []string{testNodeName}) {
+			t.Errorf("reads of the whole attempt are %v, want only the own Node: the candidates come from the cache", got)
 		}
 
 		assertJoinedOnce(t, cluster, "10.0.0.2:8500", "10.0.0.3:8500", "10.0.0.4:8500")
-	})
-}
-
-func TestCandidateErrorDoesNotCancelItsSiblings(t *testing.T) {
-	synctest.Test(t, func(t *testing.T) {
-		nodes, expected := threePeerGroup()
-		nodes.setAnswer("worker-2", nodeAnswer{err: &net.OpError{Op: "read", Net: "tcp", Err: syscall.ECONNRESET}})
-		nodes.setAnswer("worker-3", nodeAnswer{record: peerRecord("worker-3", "10.0.0.3"), delay: 100 * time.Millisecond})
-		nodes.setAnswer("worker-4", nodeAnswer{record: peerRecord("worker-4", "10.0.0.4"), delay: 100 * time.Millisecond})
-		cluster := &fakeCluster{}
-
-		if err := newJoiner(t, nodes, expected, cluster).Attempt(t.Context()); err != nil {
-			t.Fatalf("attempt returned %v, want success from the two candidates that answered", err)
-		}
-
-		assertJoinedOnce(t, cluster, "10.0.0.3:8500", "10.0.0.4:8500")
-
-		for _, read := range nodes.answeredReads() {
-			if (read.name == "worker-3" || read.name == "worker-4") && read.ctxErr != nil {
-				t.Errorf("the read of %s answered with its ctx already ended (%v), want the failed read of worker-2 to leave it alone", read.name, read.ctxErr)
-			}
-		}
-	})
-}
-
-func TestSlowCandidateIsDroppedAfterTheAPITimeout(t *testing.T) {
-	synctest.Test(t, func(t *testing.T) {
-		nodes, expected := threePeerGroup()
-		nodes.setAnswer("worker-4", nodeAnswer{blockUntilCtx: true})
-		cluster := &fakeCluster{}
-
-		joiner := newJoiner(t, nodes, expected, cluster)
-
-		start := time.Now()
-		err := joiner.Attempt(t.Context())
-		elapsed := time.Since(start)
-
-		if err != nil {
-			t.Fatalf("attempt returned %v, want success from the candidates that answered", err)
-		}
-
-		if want := joinerParams().APITimeout; elapsed != want {
-			t.Errorf("attempt took %s, want the candidate reads to end at the API timeout %s", elapsed, want)
-		}
-
-		assertJoinedOnce(t, cluster, "10.0.0.2:8500", "10.0.0.3:8500")
-
-		if got := nodes.getsOf("worker-4"); got != 1 {
-			t.Errorf("the slow candidate was read %d times, want once: a timed-out read is dropped, not retried", got)
-		}
 	})
 }
 
@@ -362,66 +282,45 @@ func TestAttemptReturnsOnCancelWhileTheJoinHangs(t *testing.T) {
 	})
 }
 
-func TestAttemptCancelledDuringCandidateReadsIsAQuietShutdown(t *testing.T) {
-	cases := []struct {
-		name     string
-		answered string
-	}{
-		{name: "every read in flight"},
-		{name: "one candidate already answered", answered: "worker-2"},
-	}
+func TestAttemptCancelledDuringTheOwnReadIsAQuietShutdown(t *testing.T) {
+	synctest.Test(t, func(t *testing.T) {
+		ctx, cancel := context.WithCancel(t.Context())
+		defer cancel()
 
-	for _, tc := range cases {
-		t.Run(tc.name, func(t *testing.T) {
-			synctest.Test(t, func(t *testing.T) {
-				ctx, cancel := context.WithCancel(t.Context())
-				defer cancel()
+		nodes, expected := threePeerGroup()
+		nodes.setAnswer(testNodeName, nodeAnswer{blockUntilCtx: true})
+		cluster := &fakeCluster{}
 
-				nodes, expected := threePeerGroup()
-				for _, name := range []string{"worker-2", "worker-3", "worker-4"} {
-					if name != tc.answered {
-						nodes.setAnswer(name, nodeAnswer{blockUntilCtx: true})
-					}
-				}
+		joiner := newJoiner(t, nodes, expected, cluster)
 
-				cluster := &fakeCluster{}
+		result := make(chan error, 1)
 
-				joiner := newJoiner(t, nodes, expected, cluster)
+		go func() {
+			result <- joiner.Attempt(ctx)
+		}()
 
-				result := make(chan error, 1)
+		synctest.Wait()
 
-				go func() {
-					result <- joiner.Attempt(ctx)
-				}()
+		start := time.Now()
 
-				synctest.Wait()
+		cancel()
 
-				if got := nodes.candidateGets(); len(got) != 3 {
-					t.Fatalf("candidates read before the cancel are %v, want all 3 peers", got)
-				}
+		err := <-result
 
-				start := time.Now()
+		if elapsed := time.Since(start); elapsed != 0 {
+			t.Errorf("attempt returned %s after the cancel, want at once", elapsed)
+		}
 
-				cancel()
+		if !errors.Is(err, context.Canceled) {
+			t.Errorf("attempt returned %v, want ctx.Err(), context.Canceled", err)
+		}
 
-				err := <-result
+		synctest.Wait()
 
-				if elapsed := time.Since(start); elapsed != 0 {
-					t.Errorf("attempt returned %s after the cancel, want at once", elapsed)
-				}
-
-				if !errors.Is(err, context.Canceled) {
-					t.Errorf("attempt returned %v, want ctx.Err(), context.Canceled", err)
-				}
-
-				synctest.Wait()
-
-				if joins := cluster.joins(); len(joins) != 0 {
-					t.Errorf("join was called with %v, want none after the cancel", joins)
-				}
-			})
-		})
-	}
+		if joins := cluster.joins(); len(joins) != 0 {
+			t.Errorf("join was called with %v, want none after the cancel", joins)
+		}
+	})
 }
 
 func withGroup(record domain.NodeRecord, nodeGroup string) domain.NodeRecord {

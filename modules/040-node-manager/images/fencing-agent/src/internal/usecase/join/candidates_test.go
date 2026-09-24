@@ -28,8 +28,6 @@ import (
 	"testing"
 	"testing/synctest"
 
-	apierrors "k8s.io/apimachinery/pkg/api/errors"
-
 	"fencing-agent/internal/domain"
 )
 
@@ -45,10 +43,7 @@ func TestSeedListExcludesLocalNodeAndNodesWithoutIP(t *testing.T) {
 	newJoiner(t, nodes, expected, cluster).Bootstrap(t.Context())
 
 	assertJoinedOnce(t, cluster, "10.0.0.2:8500", "10.0.0.4:8500")
-
-	if got := slices.Sorted(slices.Values(nodes.candidateGets())); !slices.Equal(got, []string{"worker-2", "worker-3", "worker-4"}) {
-		t.Errorf("candidate reads are %v, want worker-2, worker-3 and worker-4 once each", got)
-	}
+	assertOnlyTheOwnNodeWasRead(t, nodes)
 }
 
 func TestSeedListExcludesStaleNodeWithLocalIP(t *testing.T) {
@@ -62,15 +57,12 @@ func TestSeedListExcludesStaleNodeWithLocalIP(t *testing.T) {
 	newJoiner(t, nodes, expected, cluster).Bootstrap(t.Context())
 
 	assertJoinedOnce(t, cluster, "10.0.0.2:8500")
-
-	if got := slices.Sorted(slices.Values(nodes.candidateGets())); !slices.Equal(got, []string{"worker-2"}) {
-		t.Errorf("candidate reads are %v, want worker-2 once: a clone is not a candidate", got)
-	}
+	assertOnlyTheOwnNodeWasRead(t, nodes)
 }
 
 // A clone stayed in the alive/notAlive classes and could be sampled into the
-// seeds, where only the fresh read dropped it. pick splits its slots between the
-// classes, so a clone alone in one class also shrank the other class's sample.
+// seeds, where only a fresh read of it dropped it. pick splits its slots between
+// the classes, so a clone alone in one class also shrank the other class's sample.
 func TestStaleCloneDoesNotTakeSeedSlots(t *testing.T) {
 	nodes, expected := mirroredGroup(
 		selfPeer(),
@@ -144,9 +136,9 @@ func TestSlotsSampleWithinEachClass(t *testing.T) {
 	seenNotAlive, seenAlive := map[string]bool{}, map[string]bool{}
 
 	for range 50 {
-		picked := attemptPicks(t, joiner, nodes)
+		picked := attemptPicks(t, joiner, cluster, expected)
 		if len(picked) > 3 {
-			t.Fatalf("candidate reads are %v, want at most 3 per attempt", picked)
+			t.Fatalf("candidates are %v, want at most 3 per attempt", picked)
 		}
 
 		for _, name := range picked {
@@ -215,140 +207,60 @@ func TestCacheWithoutThisNodeIsAFailedAttempt(t *testing.T) {
 	})
 }
 
-func groupWithEveryCandidateDropped() (*fakeNodes, *fakeExpected) {
+func groupWithoutAnyCandidateAddress() (*fakeNodes, *fakeExpected) {
+	return mirroredGroup(
+		selfPeer(),
+		domain.Peer{Name: "worker-2", IP: ""},
+		domain.Peer{Name: "worker-3", IP: ""},
+		domain.Peer{Name: "worker-4", IP: ""},
+		domain.Peer{Name: "worker-5", IP: ""},
+		domain.Peer{Name: "worker-6", IP: ""},
+		domain.Peer{Name: "worker-7", IP: ""},
+	)
+}
+
+func TestAGroupWithoutAnyCandidateAddressIsAFailedAttempt(t *testing.T) {
+	nodes, expected := groupWithoutAnyCandidateAddress()
+	cluster := &fakeCluster{}
+
+	err := newJoiner(t, nodes, expected, cluster).Attempt(t.Context())
+
+	if err == nil {
+		t.Fatal("attempt succeeded, want a failure while no candidate has an address")
+	}
+
+	if errors.Is(err, ErrNotMember) {
+		t.Errorf("attempt returned %v, want a transient failure: peers without an address are not a verdict on this node", err)
+	}
+
+	if joins := cluster.joins(); len(joins) != 0 {
+		t.Errorf("join was called with %v, want none without a usable seed", joins)
+	}
+
+	assertOnlyTheOwnNodeWasRead(t, nodes)
+}
+
+// A peer whose cached Node carries no InternalIP can never be a seed, and the
+// cache says so before the slots are handed out.
+func TestAPeerWithoutAnAddressDoesNotTakeSeedSlots(t *testing.T) {
 	nodes, expected := mirroredGroup(
 		selfPeer(),
-		domain.Peer{Name: "worker-2", IP: "10.0.0.2"},
+		domain.Peer{Name: "worker-2", IP: ""},
 		domain.Peer{Name: "worker-3", IP: "10.0.0.3"},
 		domain.Peer{Name: "worker-4", IP: "10.0.0.4"},
 		domain.Peer{Name: "worker-5", IP: "10.0.0.5"},
-		domain.Peer{Name: "worker-6", IP: "10.0.0.6"},
-		domain.Peer{Name: "worker-7", IP: "10.0.0.7"},
 	)
-	nodes.setAnswer("worker-2", nodeAnswer{err: notFound("worker-2")})
-	nodes.setAnswer("worker-3", nodeAnswer{err: notFound("worker-3")})
-	nodes.setAnswer("worker-4", nodeAnswer{record: withGroup(peerRecord("worker-4", "10.0.0.4"), "worker-2")})
-	nodes.setAnswer("worker-5", nodeAnswer{record: withGroup(peerRecord("worker-5", "10.0.0.5"), "worker-2")})
-	nodes.setAnswer("worker-6", nodeAnswer{record: peerRecord("worker-6", "")})
-	nodes.setAnswer("worker-7", nodeAnswer{record: peerRecord("worker-7", "")})
-
-	return nodes, expected
-}
-
-func TestDroppedCandidatesAreNotReplaced(t *testing.T) {
-	t.Run("attempt", func(t *testing.T) {
-		nodes, expected := groupWithEveryCandidateDropped()
-		cluster := &fakeCluster{}
-
-		err := newJoiner(t, nodes, expected, cluster).Attempt(t.Context())
-
-		if err == nil {
-			t.Fatal("attempt succeeded, want a failure when every candidate is dropped")
-		}
-
-		if errors.Is(err, ErrNotMember) {
-			t.Errorf("attempt returned %v, want a transient failure: dropped candidates are not a verdict on this node", err)
-		}
-
-		gets := nodes.candidateGets()
-		if len(gets) != maxSeeds {
-			t.Errorf("candidate reads are %v, want exactly %d: a dropped candidate is not replaced", gets, maxSeeds)
-		}
-
-		if distinct := slices.Compact(slices.Sorted(slices.Values(gets))); len(distinct) != len(gets) {
-			t.Errorf("candidate reads are %v, want each candidate read once", gets)
-		}
-
-		if joins := cluster.joins(); len(joins) != 0 {
-			t.Errorf("join was called with %v, want none without a usable seed", joins)
-		}
-	})
-}
-
-func TestCandidateDropRules(t *testing.T) {
-	cases := []struct {
-		name    string
-		cacheIP string
-		answer  nodeAnswer
-	}{
-		{
-			name:    "not found",
-			cacheIP: "10.0.0.3",
-			answer:  nodeAnswer{err: notFound("worker-3")},
-		},
-		{
-			name:    "label with an empty value",
-			cacheIP: "10.0.0.3",
-			answer:  nodeAnswer{record: withGroup(peerRecord("worker-3", "10.0.0.3"), "")},
-		},
-		{
-			name:    "relabeled into another group",
-			cacheIP: "10.0.0.3",
-			answer:  nodeAnswer{record: withGroup(peerRecord("worker-3", "10.0.0.3"), "worker-2")},
-		},
-		{
-			name:    "no InternalIP",
-			cacheIP: "10.0.0.3",
-			answer:  nodeAnswer{record: peerRecord("worker-3", "")},
-		},
-		{
-			name:    "fresh InternalIP is the local one",
-			cacheIP: "",
-			answer:  nodeAnswer{record: peerRecord("worker-3", testNodeIP)},
-		},
-		{
-			name:    "read failure",
-			cacheIP: "10.0.0.3",
-			answer:  nodeAnswer{err: apierrors.NewServiceUnavailable("etcd is unavailable")},
-		},
-	}
-
-	for _, tc := range cases {
-		t.Run(tc.name, func(t *testing.T) {
-			nodes, expected := mirroredGroup(
-				selfPeer(),
-				domain.Peer{Name: "worker-2", IP: "10.0.0.2", UID: "uid-2"},
-				domain.Peer{Name: "worker-3", IP: tc.cacheIP, UID: "uid-3"},
-			)
-			nodes.setAnswer("worker-3", tc.answer)
-			cluster := &fakeCluster{}
-
-			joiner := newJoiner(t, nodes, expected, cluster)
-
-			if err := joiner.Attempt(t.Context()); err != nil {
-				t.Fatalf("attempt returned %v, want the valid candidate to be joined", err)
-			}
-
-			assertJoinedOnce(t, cluster, "10.0.0.2:8500")
-
-			if got := slices.Sorted(slices.Values(nodes.candidateGets())); !slices.Equal(got, []string{"worker-2", "worker-3"}) {
-				t.Errorf("candidate reads are %v, want both peers read once: the drop happens on the fresh answer", got)
-			}
-		})
-	}
-}
-
-func TestCandidateUIDIsNotCompared(t *testing.T) {
-	nodes, expected := mirroredGroup(
-		selfPeer(),
-		domain.Peer{Name: "worker-2", IP: "10.0.0.2", UID: "uid-2"},
-	)
-	nodes.setAnswer("worker-2", nodeAnswer{record: domain.NodeRecord{
-		Name:      "worker-2",
-		UID:       "uid-2-new",
-		IP:        "10.0.0.2",
-		NodeGroup: testNodeGroup,
-	}})
 	cluster := &fakeCluster{}
+	cluster.setMembers(testNodeName, "worker-3", "worker-4", "worker-5")
 
 	if err := newJoiner(t, nodes, expected, cluster).Attempt(t.Context()); err != nil {
-		t.Fatalf("attempt returned %v, want a candidate with a new UID to be joined", err)
+		t.Fatalf("attempt returned %v, want the three peers with an address to be seeded", err)
 	}
 
-	assertJoinedOnce(t, cluster, "10.0.0.2:8500")
+	assertJoinedOnce(t, cluster, "10.0.0.3:8500", "10.0.0.4:8500", "10.0.0.5:8500")
 }
 
-func TestSeedAddressesComeFromTheFreshAnswer(t *testing.T) {
+func TestSeedAddressesComeFromTheInformerCache(t *testing.T) {
 	nodes, expected := mirroredGroup(
 		selfPeer(),
 		domain.Peer{Name: "worker-2", IP: "10.0.0.9", UID: "uid-2"},
@@ -360,16 +272,11 @@ func TestSeedAddressesComeFromTheFreshAnswer(t *testing.T) {
 		t.Fatalf("attempt returned %v, want success", err)
 	}
 
-	assertJoinedOnce(t, cluster, "10.0.0.2:8500")
-
-	for _, seeds := range cluster.joins() {
-		if slices.Contains(seeds, "10.0.0.9:8500") {
-			t.Errorf("join seeds are %v, want the fresh address, never the cached 10.0.0.9", seeds)
-		}
-	}
+	assertJoinedOnce(t, cluster, "10.0.0.9:8500")
+	assertOnlyTheOwnNodeWasRead(t, nodes)
 }
 
-func TestCandidateNamesComeFromTheInformerCache(t *testing.T) {
+func TestCandidatesComeFromTheInformerCache(t *testing.T) {
 	nodes, expected := mirroredGroup(
 		selfPeer(),
 		domain.Peer{Name: "worker-2", IP: "10.0.0.2", UID: "uid-2"},
@@ -382,16 +289,18 @@ func TestCandidateNamesComeFromTheInformerCache(t *testing.T) {
 	joiner := newJoiner(t, nodes, expected, cluster)
 
 	for range 20 {
-		picked := attemptPicks(t, joiner, nodes)
+		picked := attemptPicks(t, joiner, cluster, expected)
 
 		if slices.Contains(picked, "worker-7") || slices.Contains(picked, "worker-9") {
-			t.Fatalf("candidate reads are %v, want neither worker-7, known to the API only, nor worker-9, listed by gossip only", picked)
+			t.Fatalf("candidates are %v, want neither worker-7, known to the API only, nor worker-9, listed by gossip only", picked)
 		}
 
 		if !slices.Equal(picked, []string{"worker-2", "worker-3"}) {
-			t.Fatalf("candidate reads are %v, want worker-2 and worker-3: the cached Nodes but this one", picked)
+			t.Fatalf("candidates are %v, want worker-2 and worker-3: the cached Nodes but this one", picked)
 		}
 	}
+
+	assertOnlyTheOwnNodeWasRead(t, nodes)
 
 	for _, seeds := range cluster.joins() {
 		if got := slices.Sorted(slices.Values(seeds)); !slices.Equal(got, []string{"10.0.0.2:8500", "10.0.0.3:8500"}) {
@@ -405,8 +314,8 @@ func TestCandidateNamesComeFromTheInformerCache(t *testing.T) {
 		{Name: "worker-7", IP: "10.0.0.7", UID: "uid-7"},
 	})
 
-	if picked := attemptPicks(t, joiner, nodes); !slices.Equal(picked, []string{"worker-2", "worker-7"}) {
-		t.Errorf("candidate reads after the cache changed are %v, want worker-2 and worker-7", picked)
+	if picked := attemptPicks(t, joiner, cluster, expected); !slices.Equal(picked, []string{"worker-2", "worker-7"}) {
+		t.Errorf("candidates after the cache changed are %v, want worker-2 and worker-7", picked)
 	}
 }
 
@@ -416,7 +325,7 @@ func TestCandidatesAreTwoNotAliveAndOneAlivePeer(t *testing.T) {
 	joiner := newJoiner(t, nodes, expected, cluster)
 
 	for range 200 {
-		assertSlots(t, attemptPicks(t, joiner, nodes), notAlive, alive, 2, 1)
+		assertSlots(t, attemptPicks(t, joiner, cluster, expected), notAlive, alive, 2, 1)
 	}
 }
 
@@ -426,7 +335,7 @@ func TestNotAlivePeersFillEverySlotWhenNoPeerIsAlive(t *testing.T) {
 	joiner := newJoiner(t, nodes, expected, cluster)
 
 	for range 100 {
-		assertSlots(t, attemptPicks(t, joiner, nodes), notAlive, nil, 3, 0)
+		assertSlots(t, attemptPicks(t, joiner, cluster, expected), notAlive, nil, 3, 0)
 	}
 }
 
@@ -436,7 +345,7 @@ func TestAlivePeersFillEverySlotWhenNoPeerIsMissing(t *testing.T) {
 	joiner := newJoiner(t, nodes, expected, cluster)
 
 	for range 100 {
-		assertSlots(t, attemptPicks(t, joiner, nodes), nil, alive, 0, 3)
+		assertSlots(t, attemptPicks(t, joiner, cluster, expected), nil, alive, 0, 3)
 	}
 }
 
@@ -461,7 +370,7 @@ func TestAShortClassDoesNotLendItsSlots(t *testing.T) {
 			joiner := newJoiner(t, nodes, expected, cluster)
 
 			for range 50 {
-				assertSlots(t, attemptPicks(t, joiner, nodes), tc.notAlive, tc.alive, tc.wantNotAlive, tc.wantAlive)
+				assertSlots(t, attemptPicks(t, joiner, cluster, expected), tc.notAlive, tc.alive, tc.wantNotAlive, tc.wantAlive)
 			}
 		})
 	}
@@ -473,24 +382,25 @@ func TestGossipMembersOutsideTheGroupAreIgnored(t *testing.T) {
 	cluster.setMembers(testNodeName, "ghost", "a1")
 	joiner := newJoiner(t, nodes, expected, cluster)
 
-	notAlive, alive, clones, err := joiner.candidates()
+	c, err := joiner.candidates()
 	if err != nil {
 		t.Fatalf("candidates returned %v, want the cache split", err)
 	}
 
-	if !slices.Equal(notAlive, []string{"d1", "d2"}) || !slices.Equal(alive, []string{"a1"}) || len(clones) != 0 {
-		t.Errorf("candidates are not alive %v, alive %v, clones %v; want [d1 d2], [a1] and none", notAlive, alive, clones)
+	if !slices.Equal(peerNamesOf(c.notAlive), []string{"d1", "d2"}) ||
+		!slices.Equal(peerNamesOf(c.alive), []string{"a1"}) ||
+		len(c.clones) != 0 || len(c.noAddress) != 0 {
+		t.Errorf("candidates are not alive %v, alive %v, clones %v, without an address %v; want [d1 d2], [a1] and none",
+			peerNamesOf(c.notAlive), peerNamesOf(c.alive), c.clones, c.noAddress)
 	}
 
 	for range 50 {
-		if picked := attemptPicks(t, joiner, nodes); !slices.Equal(picked, []string{"a1", "d1", "d2"}) {
-			t.Fatalf("candidate reads are %v, want a1, d1 and d2", picked)
+		if picked := attemptPicks(t, joiner, cluster, expected); !slices.Equal(picked, []string{"a1", "d1", "d2"}) {
+			t.Fatalf("candidates are %v, want a1, d1 and d2", picked)
 		}
 	}
 
-	if got := nodes.getsOf("ghost"); got != 0 {
-		t.Errorf("ghost was read %d times, want never: only the cache names candidates", got)
-	}
+	assertOnlyTheOwnNodeWasRead(t, nodes)
 }
 
 func TestTheOwnNodeIsNeverACandidate(t *testing.T) {
@@ -509,20 +419,22 @@ func TestTheOwnNodeIsNeverACandidate(t *testing.T) {
 			nodes, expected, cluster := slotGroup(tc.notAlive, tc.alive)
 			joiner := newJoiner(t, nodes, expected, cluster)
 
-			notAlive, alive, _, err := joiner.candidates()
+			c, err := joiner.candidates()
 			if err != nil {
 				t.Fatalf("candidates returned %v, want the cache split", err)
 			}
 
-			if slices.Contains(notAlive, testNodeName) || slices.Contains(alive, testNodeName) {
-				t.Errorf("candidates are not alive %v and alive %v, want neither to hold the own Node", notAlive, alive)
+			if slices.Contains(peerNamesOf(c.notAlive), testNodeName) || slices.Contains(peerNamesOf(c.alive), testNodeName) {
+				t.Errorf("candidates are not alive %v and alive %v, want neither to hold the own Node",
+					peerNamesOf(c.notAlive), peerNamesOf(c.alive))
 			}
 
 			for range 20 {
-				attemptPicks(t, joiner, nodes)
+				nodes.resetJournal()
+				attemptPicks(t, joiner, cluster, expected)
 
-				if got := nodes.getsOf(testNodeName); got != 1 {
-					t.Fatalf("the own Node was read %d times in one attempt, want once", got)
+				if got := nodes.gets(); !slices.Equal(got, []string{testNodeName}) {
+					t.Fatalf("reads of one attempt are %v, want the own Node once", got)
 				}
 			}
 
@@ -643,13 +555,27 @@ func TestStaleClonePrefilterIgnoresGossipLiveness(t *testing.T) {
 				t.Fatalf("attempt returned %v, want worker-2 to be joined", err)
 			}
 
-			if got := slices.Sorted(slices.Values(nodes.candidateGets())); !slices.Equal(got, []string{"worker-2"}) {
-				t.Errorf("candidate reads are %v, want worker-2 once: a clone is not a candidate", got)
-			}
-
 			assertJoinedOnce(t, cluster, "10.0.0.2:8500")
+			assertOnlyTheOwnNodeWasRead(t, nodes)
 		})
 	}
+}
+
+func assertOnlyTheOwnNodeWasRead(t *testing.T, nodes *fakeNodes) {
+	t.Helper()
+
+	if got := nodes.candidateGets(); len(got) != 0 {
+		t.Errorf("candidates %v were read from the API, want the cache to be the only source of their addresses", got)
+	}
+}
+
+func peerNamesOf(peers []domain.Peer) []string {
+	names := make([]string, 0, len(peers))
+	for _, peer := range peers {
+		names = append(names, peer.Name)
+	}
+
+	return names
 }
 
 func peerNames(prefix string, n int) []string {
@@ -677,16 +603,37 @@ func slotGroup(notAlive, alive []string) (*fakeNodes, *fakeExpected, *fakeCluste
 	return nodes, expected, cluster
 }
 
-func attemptPicks(t *testing.T, joiner *Joiner, nodes *fakeNodes) []string {
+// attemptPicks reads the picked candidates off the join seeds: the cache is the
+// only source of both the names and the addresses, so nothing reaches the API to
+// observe any more.
+func attemptPicks(t *testing.T, joiner *Joiner, cluster *fakeCluster, expected *fakeExpected) []string {
 	t.Helper()
 
-	nodes.resetJournal()
+	cluster.resetJournal()
 
 	if err := joiner.Attempt(t.Context()); err != nil {
 		t.Fatalf("attempt returned %v, want success", err)
 	}
 
-	return slices.Sorted(slices.Values(nodes.candidateGets()))
+	peers, _ := expected.Expected()
+	byAddress := make(map[string]string, len(peers))
+
+	for _, peer := range peers {
+		byAddress[net.JoinHostPort(peer.IP, strconv.Itoa(testPort))] = peer.Name
+	}
+
+	picked := make([]string, 0, maxSeeds)
+
+	for _, seed := range cluster.lastSeeds() {
+		name, ok := byAddress[seed]
+		if !ok {
+			t.Fatalf("join seed %q belongs to no expected peer", seed)
+		}
+
+		picked = append(picked, name)
+	}
+
+	return slices.Sorted(slices.Values(picked))
 }
 
 func assertSlots(t *testing.T, picked, notAlive, alive []string, wantNotAlive, wantAlive int) {
