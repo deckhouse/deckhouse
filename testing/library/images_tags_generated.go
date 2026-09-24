@@ -424,6 +424,7 @@ var DefaultImagesDigests = map[string]interface{}{
 		"nodeletSysext":                   "imageHash-registrypackages-nodeletSysext",
 		"nvmeCli211":                      "imageHash-registrypackages-nvmeCli211",
 		"pause":                           "imageHash-registrypackages-pause",
+		"qemuGuestAgentSysext":            "imageHash-registrypackages-qemuGuestAgentSysext",
 		"registryAgent":                   "imageHash-registrypackages-registryAgent",
 		"registryProxy":                   "imageHash-registrypackages-registryProxy",
 		"rppGet":                          "imageHash-registrypackages-rppGet",
