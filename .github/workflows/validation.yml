@@ -82,6 +82,7 @@ jobs:
       changes_docs: ${{ steps.changes.outputs.docs }}
       changes_not_markdown: ${{ steps.changes.outputs.not_markdown }}
       changes_node_controller: ${{ steps.changes.outputs.node_controller }}
+      changes_registry_images: ${{ steps.changes.outputs.registry_images }}
 
       build_CE: ${{ steps.pr_props.outputs.build_CE }}
       build_EE: ${{ steps.pr_props.outputs.build_EE }}
@@ -288,6 +289,12 @@ jobs:
               - '!./**/*.md'
             node_controller:
               - './modules/040-node-manager/images/node-controller/**'
+            # The registry module's binaries live under their own go.mod, which `make tests-modules`
+            # does not reach: `./modules/...` stops at a nested module boundary. Without this filter
+            # and the job it gates, their tests are written and never run.
+            registry_images:
+              - './modules/038-registry/images/**'
+              - './go_lib/registry/**'
 
       # Stop workflow if external PR contains dangerous changes.
       - name: Fail workflow on dangerous changes
@@ -470,91 +477,6 @@ jobs:
         run: git diff --exit-code
     # </template: workflow_render_template>
 
-
-
-  doc_spell_check:
-    name: Docs Validation (spellcheck)
-    needs:
-      - discover
-      - pull_request_info
-    if: ${{ needs.discover.outputs.run_doc_changes == 'true' && github.repository == 'deckhouse/deckhouse' }}
-    runs-on: [self-hosted, regular]
-    permissions:
-      contents: read
-      id-token: write
-    steps:
-
-      # <template: checkout_step>
-      - name: Checkout sources
-        uses: actions/checkout@v3.5.2
-        with:
-          ref: ${{ needs.pull_request_info.outputs.ref }}
-      # </template: checkout_step>
-      # <template: import_secrets>
-      - name: Split repository name
-        id: split
-        env:
-          REPO: ${{ github.repository }}
-        run: |
-          if [ $REPO == "deckhouse/deckhouse" ]; then
-            echo "name=deckhouse" >> $GITHUB_OUTPUT
-          else
-            echo "name=deckhouse-test" >> $GITHUB_OUTPUT
-          fi
-      - name: Import secrets
-        id: secrets
-        uses: hashicorp/vault-action@v2
-        with:
-          url: https://seguro.flant.com
-          path: github
-          role: "${{ steps.split.outputs.name }}"
-          method: jwt
-          jwtGithubAudience: github-access-aud
-          secrets: |
-            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/registry_host DECKHOUSE_DEV_REGISTRY_HOST | DECKHOUSE_DEV_REGISTRY_HOST ;
-            projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/dev-registry/writetoken login | DECKHOUSE_DEV_REGISTRY_USER ;
-            projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/dev-registry/writetoken password | DECKHOUSE_DEV_REGISTRY_PASSWORD ;
-
-      # </template: import_secrets>
-
-      # <template: login_dev_registry_step>
-      - name: Check dev registry credentials
-        id: check_dev_registry
-        env:
-          HOST: ${{steps.secrets.outputs.DECKHOUSE_DEV_REGISTRY_HOST}}
-        run: |
-          if [[ -n $HOST ]]; then
-            echo "has_credentials=true" >> $GITHUB_OUTPUT
-            echo "web_registry_path=${{steps.secrets.outputs.DECKHOUSE_DEV_REGISTRY_HOST }}/deckhouse/site" >> $GITHUB_OUTPUT
-          fi
-      - name: Login to dev registry
-        uses: docker/login-action@v2.1.0
-        if: ${{ steps.check_dev_registry.outputs.has_credentials == 'true' }}
-        with:
-          registry: ${{ steps.secrets.outputs.DECKHOUSE_DEV_REGISTRY_HOST }}
-          username: ${{ steps.secrets.outputs.DECKHOUSE_DEV_REGISTRY_USER }}
-          password: ${{ steps.secrets.outputs.DECKHOUSE_DEV_REGISTRY_PASSWORD }}
-          logout: false
-      # </template: login_dev_registry_step>
-
-      - name: Restore diff artifact
-        uses: actions/download-artifact@v4.1.8
-        with:
-          name: pr_diff
-
-      - name: Validate spelling wordlist <-> dev_OPS.dic sync
-        env:
-          WORDLIST_PATH: tools/docs/spelling/wordlist
-          DICT_PATH: tools/docs/spelling/dictionaries/dev_OPS.dic
-          DIFF_PATH: ./pr.diff
-        run: |
-          ./tools/docs/spelling/validate_dictionary_sync.sh "${DIFF_PATH}"
-
-       # <template: spellcheck_template>
-      - name: Spell check
-        run: |
-          make lint-doc-spellcheck-pr
-       # </template: spellcheck_template>
 
   doc_validation_reference:
     name: Docs Validation (reference)

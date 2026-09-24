@@ -445,6 +445,28 @@ alerts:
         The cloud-provider-dvp module is waiting for migration resources to be applied.
       severity: "6"
       markupFormat: markdown
+    - name: D8CloudProviderYandexCloudMigrationPending
+      sourceFile: modules/030-cloud-provider-yandex/monitoring/prometheus-rules/migration.yaml
+      moduleUrl: 030-cloud-provider-yandex
+      module: cloud-provider-yandex
+      edition: ce
+      description: |-
+        The `cloud-provider-yandex` module has detected the legacy `YandexProviderClusterConfiguration` secret in the cluster
+        and is waiting for the new migration resources (ModuleConfig v2, CredentialSecret, NodeGroups, InstanceClasses)
+        to be applied before completing the migration.
+
+        To complete the migration, apply the resources from the `d8-migration-resources` Secret:
+
+        ```bash
+        d8 k -n d8-cloud-provider-yandex get secret d8-migration-resources -o jsonpath='{.data.resources\.yaml}' | base64 -d | d8 k apply -f -
+        ```
+
+        After applying the resources, the alert will disappear automatically once the module
+        detects that all required resources are in place.
+      summary: |
+        The cloud-provider-yandex module is waiting for migration resources to be applied.
+      severity: "6"
+      markupFormat: markdown
     - name: D8ClusterAutoscalerManagerPodIsNotReady
       sourceFile: modules/040-node-manager/monitoring/prometheus-rules/cluster-autoscaler.tpl
       moduleUrl: 040-node-manager
@@ -564,9 +586,29 @@ alerts:
       edition: ce
       description: |
         Deckhouse has detected that multiple CNIs are enabled in the cluster.
-        For the cluster to work correctly, only one CNI must be enabled.
+        For the cluster to work correctly, exactly one CNI must be enabled.
 
-        To resolve this issue, disable any unnecessary CNI.
+        To resolve this issue, follow these steps:
+
+        1. List the CNI modules and their enabled state:
+
+           ```bash
+           d8 k get moduleconfig -o custom-columns='NAME:.metadata.name,ENABLED:.spec.enabled' | grep -E 'NAME|cni-'
+           ```
+
+        1. Decide which CNI the cluster must keep. Check which one actually serves the nodes before disabling anything:
+
+           ```bash
+           d8 k -n d8-cni-cilium get pods 2>/dev/null; d8 k -n d8-cni-flannel get pods 2>/dev/null; d8 k -n d8-cni-simple-bridge get pods 2>/dev/null
+           ```
+
+        1. Disable every other CNI module, one at a time:
+
+           ```bash
+           d8 k patch moduleconfig <CNI_MODULE_NAME> --type=merge -p '{"spec":{"enabled":false}}'
+           ```
+
+        Changing the CNI of a running cluster disrupts pod networking. If you are unsure which CNI to keep, contact support before disabling anything.
       summary: |
         More than one CNI is enabled in the cluster.
       severity: "2"
@@ -733,29 +775,37 @@ alerts:
       module: deckhouse
       edition: ce
       description: |
-        Deckhouse configuration contains errors.
+        Deckhouse has detected errors in the cluster configuration. The usual causes are `spec.settings` that do not match the module's settings schema, and a failed conversion of `spec.settings` to the latest schema version.
 
-        Steps to troubleshoot:
+        This alert does not name the module, because the underlying metric has no labels. Deckhouse puts the exact error into the `status.message` field of the ModuleConfig that caused it, prefixed with `Error:`.
 
-        1. Check Deckhouse logs by running the following command:
+        To resolve this issue, follow these steps:
+
+        1. Find the affected configuration. The `MESSAGE` column holds the error and the `VERSION` column holds the settings schema version currently in use:
+
+           ```bash
+           d8 k get moduleconfig
+           ```
+
+        1. Read the full error for the ModuleConfig that reports one (`global` is a valid value for `<MODULE_NAME>`):
+
+           ```bash
+           d8 k get moduleconfig <MODULE_NAME> -o jsonpath='{.status.message}{"\n"}'
+           ```
+
+        1. Fix `spec.settings`, or `spec.version` if the error mentions a settings version or a conversion:
+
+           ```bash
+           d8 k edit moduleconfig <MODULE_NAME>
+           ```
+
+        1. If no ModuleConfig reports an error, check the Deckhouse logs:
 
            ```bash
            d8 k -n d8-system logs -f -l app=deckhouse
            ```
-
-        1. Edit the Deckhouse global configuration:
-
-           ```bash
-           d8 k edit mc global
-           ```
-
-           Or edit configuration of a specific module:
-
-           ```bash
-           d8 k edit mc <MODULE_NAME>
-           ```
       summary: |
-        Deckhouse configuration is invalid.
+        Deckhouse rejected the cluster configuration: one of the ModuleConfig resources is invalid.
       severity: "5"
       markupFormat: markdown
     - name: D8DeckhouseCouldNotDeleteModule
@@ -838,7 +888,28 @@ alerts:
       moduleUrl: 002-deckhouse
       module: deckhouse
       edition: ce
-      description: ""
+      description: |
+        Prometheus cannot reach the endpoint that serves metrics exported by Deckhouse hooks. Deckhouse core metrics may still be scraped, so this usually points at the hook metrics endpoint rather than at Deckhouse being down.
+
+        To investigate the issue, follow these steps:
+
+        1. Check that the pod is up:
+
+           ```bash
+           d8 k -n d8-system get pods -l app=deckhouse -o wide
+           ```
+
+        1. Look for hook failures in the logs, since a hook that never completes exports no metrics:
+
+           ```bash
+           d8 k -n d8-system logs -l app=deckhouse --tail=100 | grep -i error
+           ```
+
+        1. Check that the scrape configuration for hook metrics is still present:
+
+           ```bash
+           d8 k -n d8-monitoring get podmonitor deckhouse -o jsonpath='{range .spec.podMetricsEndpoints[*]}{.path}{"\n"}{end}'
+           ```
       summary: |
         Prometheus is unable to scrape custom metrics generated by Deckhouse hooks.
       severity: "4"
@@ -882,6 +953,28 @@ alerts:
         Deckhouse can't connect to the registry (typically `registry.deckhouse.io`) to check for a new Docker image. These checks are performed every 15 seconds. Without access to the registry, automatic updates are unavailable.
 
         This alert often indicates that the Deckhouse Pod is experiencing connectivity issues with the Internet.
+
+        To investigate the issue, follow these steps:
+
+        1. Read the registry error in the logs. It distinguishes a name-resolution failure, a timeout, and an authorization error:
+
+           ```bash
+           d8 k -n d8-system logs -l app=deckhouse --tail=200 | grep -i registry
+           ```
+
+        1. Check which registry address the cluster is configured to use:
+
+           ```bash
+           d8 k -n d8-system get secret deckhouse-registry -o jsonpath='{.data.address}' | base64 -d
+           ```
+
+        1. If the address is correct, the credentials are the next suspect. Check when the secret was last updated:
+
+           ```bash
+           d8 k -n d8-system get secret deckhouse-registry
+           ```
+
+        1. Check that the node running Deckhouse can reach the registry at all, for example through a proxy or a firewall rule that changed.
       summary: |
         Deckhouse is unable to connect to the registry.
       severity: "7"
@@ -894,6 +987,32 @@ alerts:
       description: |
         Deckhouse is probably down, since the `deckhouse_live_ticks` metric in Prometheus has stopped increasing.
         This metric is expected to increment every 10 seconds.
+
+        To investigate the issue, follow these steps:
+
+        1. Check the pod state and its restart count:
+
+           ```bash
+           d8 k -n d8-system get pods -l app=deckhouse -o wide
+           ```
+
+        1. Read the logs. A deadlock or a hook that never returns stops the ticks while the pod still looks healthy:
+
+           ```bash
+           d8 k -n d8-system logs -l app=deckhouse --tail=200
+           ```
+
+        1. Check whether a queue stopped moving at the same time:
+
+           ```bash
+           d8 system queue list
+           ```
+
+        1. If the pod is alive but stuck, restart it:
+
+           ```bash
+           d8 k -n d8-system rollout restart deploy/deckhouse
+           ```
       summary: |
         Deckhouse is down.
       severity: "4"
@@ -998,7 +1117,34 @@ alerts:
       moduleUrl: 002-deckhouse
       module: deckhouse
       edition: ce
-      description: ""
+      description: |
+        The Deckhouse pod is running but has not become Ready. While this lasts, Deckhouse is not converging the cluster: module updates and configuration changes are not applied.
+
+        To investigate the issue, follow these steps:
+
+        1. Check the pod state and its restart count:
+
+           ```bash
+           d8 k -n d8-system get pods -l app=deckhouse -o wide
+           ```
+
+        1. Read the events and probe failures at the bottom of the pod description:
+
+           ```bash
+           d8 k -n d8-system describe pod -l app=deckhouse
+           ```
+
+        1. Check the logs. A readiness probe that never succeeds is most often a startup hook that fails or hangs:
+
+           ```bash
+           d8 k -n d8-system logs -l app=deckhouse --tail=200
+           ```
+
+        1. Check whether a queue is stuck, which keeps Deckhouse from reporting Ready:
+
+           ```bash
+           d8 system queue list
+           ```
       summary: |
         The Deckhouse Pod is NOT Ready.
       severity: "4"
@@ -1008,7 +1154,34 @@ alerts:
       moduleUrl: 002-deckhouse
       module: deckhouse
       edition: ce
-      description: ""
+      description: |
+        There is no running Deckhouse pod in the `d8-system` namespace. Nothing is reconciling the cluster: no module updates, no configuration changes, and no Deckhouse releases are applied.
+
+        To investigate the issue, follow these steps:
+
+        1. Check the pod state. `Pending` points at scheduling, `ImagePullBackOff` at the registry, and `CrashLoopBackOff` at Deckhouse failing to start:
+
+           ```bash
+           d8 k -n d8-system get pods -l app=deckhouse -o wide
+           ```
+
+        1. Read the events to find out why the pod is not running:
+
+           ```bash
+           d8 k -n d8-system describe pod -l app=deckhouse
+           ```
+
+        1. If the pod is restarting, read the logs of the previous run:
+
+           ```bash
+           d8 k -n d8-system logs -l app=deckhouse --previous --tail=200
+           ```
+
+        1. Check that the Deployment itself is present and has the replicas it expects:
+
+           ```bash
+           d8 k -n d8-system get deploy deckhouse
+           ```
       summary: |
         The Deckhouse Pod is NOT Running.
       severity: "4"
@@ -1105,7 +1278,34 @@ alerts:
       moduleUrl: 002-deckhouse
       module: deckhouse
       edition: ce
-      description: ""
+      description: |
+        Prometheus has no `deckhouse` target at all. Unlike a target that is down, this means the target was never discovered, so the problem is usually with the Service, its endpoints, or the monitoring configuration rather than with Deckhouse itself.
+
+        To investigate the issue, follow these steps:
+
+        1. Check that the Deckhouse pod exists and is running:
+
+           ```bash
+           d8 k -n d8-system get pods -l app=deckhouse -o wide
+           ```
+
+        1. Check that the Service has endpoints. An empty `ENDPOINTS` column means nothing matches the selector:
+
+           ```bash
+           d8 k -n d8-system get endpoints deckhouse
+           ```
+
+        1. Check that the scrape configuration for Deckhouse exists:
+
+           ```bash
+           d8 k -n d8-system get servicemonitor,podmonitor -l app=deckhouse
+           ```
+
+        1. Check that the monitoring stack itself is healthy:
+
+           ```bash
+           d8 k -n d8-monitoring get pods
+           ```
       summary: |
         There is no Deckhouse target in Prometheus.
       severity: "4"
@@ -1115,7 +1315,28 @@ alerts:
       moduleUrl: 002-deckhouse
       module: deckhouse
       edition: ce
-      description: ""
+      description: |
+        Prometheus cannot reach the `deckhouse` metrics endpoint. Deckhouse itself may still be working, but its own metrics are missing, so most other Deckhouse alerts are blind while this lasts.
+
+        To investigate the issue, follow these steps:
+
+        1. Check that the pod is up and how long it has been running:
+
+           ```bash
+           d8 k -n d8-system get pods -l app=deckhouse -o wide
+           ```
+
+        1. Look for scrape errors, such as a connection refused or a TLS failure:
+
+           ```bash
+           d8 k -n d8-system logs -l app=deckhouse --tail=100
+           ```
+
+        1. Check that the pod still exposes the `self` metrics port:
+
+           ```bash
+           d8 k -n d8-system get pod -l app=deckhouse -o jsonpath='{range .items[*].spec.containers[*].ports[*]}{.name}{"="}{.containerPort}{"\n"}{end}'
+           ```
       summary: |
         Prometheus is unable to scrape Deckhouse metrics.
       severity: "4"
@@ -1156,6 +1377,26 @@ alerts:
       summary: |
         Prometheus is unable to scrape Dex metrics.
       severity: "6"
+      markupFormat: markdown
+    - name: D8DexAuthenticatorNamespaceUnusable
+      sourceFile: modules/150-user-authn/monitoring/prometheus-rules/dex-authenticator.yaml
+      moduleUrl: 150-user-authn
+      module: user-authn
+      edition: ce
+      description: |
+        The `{{ $labels.namespace }}` namespace is terminating, so the API server refuses every create in it. The `user-authn` module leaves the DexAuthenticator `{{ $labels.name }}` out of its release: with it, the release would fail on the objects it cannot create and the Deckhouse main queue would stop behind the retrying module.
+
+        A namespace does not finish terminating while something in it holds a finalizer, and the authenticator is usually that something. Check what keeps the namespace:
+
+        ```bash
+        kubectl get namespace {{ $labels.namespace }} -o jsonpath='{.status.conditions}'
+        kubectl -n {{ $labels.namespace }} get dexauthenticator {{ $labels.name }} -o jsonpath='{.metadata.finalizers}'
+        ```
+
+        Let the deletion finish: remove the finalizer that holds the authenticator, or delete the object that owns it. The authenticator is deleted with its namespace; to keep it, recreate it in a live namespace. The alert resolves once the authenticator is gone.
+      summary: |
+        DexAuthenticator {{ $labels.namespace }}/{{ $labels.name }} is left out of the release because its namespace accepts no objects.
+      severity: "7"
       markupFormat: markdown
     - name: D8DexAuthRequestsQuotaExhausted
       sourceFile: modules/150-user-authn/monitoring/prometheus-rules/dex.yaml
@@ -2139,6 +2380,32 @@ alerts:
         etcd database size is approaching the limit.
       severity: "3"
       markupFormat: markdown
+    - name: D8KubeletCheckpointStateUnpinnedContainers
+      sourceFile: modules/040-node-manager/monitoring/prometheus-rules/kubelet-checkpoint-state-reset.yaml
+      moduleUrl: 040-node-manager
+      module: node-manager
+      edition: ce
+      description: |
+        Kubelet on Node `{{ $labels.node }}` reset the memory manager checkpoint and recorded new NUMA zones for Pod `{{ $labels.namespace }}/{{ $labels.pod }}`. Zones are applied only when a container is created, so the running containers stay in their previous zones, which may differ from the recorded ones.
+
+        As a result, the zone the Pod really uses may also be assigned to another Guaranteed Pod, causing both Pods to share its memory resources. The Pod's CPUs and memory may also be assigned to different NUMA zones, which slows down its memory access.
+
+        The Pod is not restarted automatically. The restart time depends on the workload. To restore resource isolation, do the following:
+
+        - To recreate the Pod's containers in newly assigned NUMA zones, delete the Pod:
+
+          ```bash
+          d8 k -n {{ $labels.namespace }} delete pod {{ $labels.pod }}
+          ```
+
+        - For a virtual machine, perform a live migration to another node instead, without stopping it.
+        - If the node runs many such Pods, you can drain it instead of deleting them one by one.
+
+        The alert resolves within a few minutes after the Pod is recreated. No kubelet restart is needed.
+      summary: |
+        Pod {{ $labels.namespace }}/{{ $labels.pod }} may run in a NUMA zone other than the one recorded by kubelet.
+      severity: "4"
+      markupFormat: markdown
     - name: D8KubernetesStaleTokensDetected
       sourceFile: modules/040-control-plane-manager/monitoring/prometheus-rules/control-plane-manager.yaml
       moduleUrl: 040-control-plane-manager
@@ -3031,6 +3298,49 @@ alerts:
         The obsolete kubernetesVersion field is still present in ClusterConfiguration.
       severity: "6"
       markupFormat: markdown
+    - name: D8ObsoleteNetworkFieldsInClusterConfiguration
+      sourceFile: modules/040-control-plane-manager/monitoring/prometheus-rules/mc-migration.yaml
+      moduleUrl: 040-control-plane-manager
+      module: control-plane-manager
+      edition: ce
+      description: |-
+        `ClusterConfiguration` still carries one or more of the obsolete `podSubnetCIDR`, `serviceSubnetCIDR`, `podSubnetNodeCIDRPrefix` fields. The place to manage the cluster's network is the `network` section of ModuleConfig `control-plane-manager`.
+
+        This fires simply because a field is present, even if ModuleConfig `control-plane-manager` already overrides it - the goal is to remove the deprecated field, not just override it.
+
+        **To resolve this alert:**
+
+        1. If ModuleConfig `control-plane-manager` does not exist, create it:
+
+           ```bash
+           d8 s module enable control-plane-manager
+           ```
+
+        2. Migrate the values straight from the Secret into ModuleConfig using the following command:
+
+           ```bash
+           d8 k patch moduleconfig control-plane-manager --type merge -p "$(
+             d8 k -n kube-system get secret d8-cluster-configuration -o jsonpath='{.data.cluster-configuration\.yaml}' | base64 -d \
+               | yq -o=json '{"podSubnetCIDR": .podSubnetCIDR, "serviceSubnetCIDR": .serviceSubnetCIDR, "podSubnetNodeCIDRPrefix": .podSubnetNodeCIDRPrefix}' \
+               | jq -c '{spec: {version: 3, settings: {network: with_entries(select(.value != null))}}}'
+           )"
+           ```
+
+           Once a field is set in ModuleConfig this way, it cannot be migrated again: the network group is immutable once set.
+
+        3. Remove all three fields from ClusterConfiguration:
+
+           ```bash
+           d8 system edit cluster-configuration
+           ```
+
+           Delete `podSubnetCIDR`, `serviceSubnetCIDR` and `podSubnetNodeCIDRPrefix`, then save.
+
+        Once all three fields are removed from `ClusterConfiguration`, this alert is resolved.
+      summary: |
+        Obsolete network fields are still present in ClusterConfiguration.
+      severity: "6"
+      markupFormat: markdown
     - name: D8ObsoletePublishAPIinUserAuthn
       sourceFile: modules/040-control-plane-manager/monitoring/prometheus-rules/mc-migration.yaml
       moduleUrl: 040-control-plane-manager
@@ -3130,6 +3440,500 @@ alerts:
       summary: |
         Node {{ $labels.node }} cannot begin the update.
       severity: "8"
+      markupFormat: markdown
+    - name: D8RegistryAirGapTransitionHeld
+      sourceFile: modules/038-registry/monitoring/prometheus-rules/registry.yaml
+      moduleUrl: 038-registry
+      module: registry
+      edition: ce
+      description: |-
+        The configuration has no upstream, so the cluster is meant to be air-gapped, and the
+        module is still holding the previous upstream because the cache is not complete
+        enough to stand alone.
+
+        This is the safe outcome and the cluster is pulling images normally. It is also the
+        one transition in this module that could cut every node off from images, which is
+        why it waits rather than proceeds — and why a wait this long is worth looking at:
+        nothing about it resolves on its own if the cache has stopped filling.
+
+        ```
+        kubectl get registrystorage registry -o jsonpath='{.status}' | jq '{phase,fill,safeToDropUpstream,leader}'
+        kubectl get registryconfig registry -o jsonpath='{.status.effectiveUpstream}' | jq
+        ```
+      summary: |
+        The registry upstream cannot be removed yet.
+      severity: "5"
+      markupFormat: markdown
+    - name: D8RegistryConfigInvalid
+      sourceFile: modules/038-registry/monitoring/prometheus-rules/registry.yaml
+      moduleUrl: 038-registry
+      module: registry
+      edition: ce
+      description: |-
+        The `registry` module cannot use its configuration, so the cluster keeps whatever
+        arrangement it already had. Nothing has broken yet; nothing new will take effect
+        either.
+
+        What was wrong is in the resource:
+
+        ```
+        kubectl get registryconfig registry -o jsonpath='{.status.conditions}' | jq
+        ```
+      summary: |
+        The registry configuration was rejected.
+      severity: "4"
+      markupFormat: markdown
+    - name: D8RegistryDrainStuck
+      sourceFile: modules/038-registry/monitoring/prometheus-rules/drain.yaml
+      moduleUrl: 038-registry
+      module: registry
+      edition: ce
+      description: |-
+        The `registry` ModuleConfig asks for `Unmanaged`, and the module is still running its
+        components and still serving `registry.d8-system.svc:5001`. That is deliberate: workloads
+        in the cluster still name that address, and taking it away before they move would leave
+        them unable to pull. It has been waiting for half an hour, which is longer than it
+        should take.
+
+        Nothing is degraded while this alert is firing. The cluster pulls, the module serves, and
+        the only thing not happening is the withdrawal.
+
+        What to look at:
+
+        1. What still names the address. The module logs the first few on every pass, and the
+           count is a metric:
+
+           ```
+           kubectl -n d8-system logs deploy/deckhouse -c deckhouse | grep "still serving the in-cluster registry"
+           ```
+
+        2. Then the workloads themselves, which is where the answer usually is:
+
+           ```
+           kubectl get pods,deployments,daemonsets,statefulsets -A -o json \
+             | jq -r '.items[] | select([.spec.template.spec.containers[]?.image, .spec.containers[]?.image] | any(startswith("registry.d8-system.svc:5001"))) | "\(.kind) \(.metadata.namespace)/\(.metadata.name)"'
+           ```
+
+        A third cause is a cluster with nowhere to go, and it is the one to check first on a cluster
+        that was air-gapped or installed with no upstream. Leaving the pull path means pointing the
+        cluster back at the registry the module was fetching from, and a module serving purely from
+        its own store has no such registry to name. It says so in the log:
+
+        ```
+        kubectl -n d8-system logs deploy/deckhouse -c deckhouse | grep "no upstream to point the cluster back at"
+        ```
+
+        Give the cluster a registry to pull from, or ask for `Managed` again. Nothing is degraded
+        while it waits, and the withdrawal will not complete until one of the two happens.
+
+        Otherwise two causes account for it. Either a release is not being re-rendered — check that the
+        operator queue is not stuck, since the references move only as each module's release is
+        rendered again:
+
+        ```
+        kubectl -n d8-system exec deploy/deckhouse -c deckhouse -- deckhouse-controller queue main
+        ```
+
+        Or something outside the platform's own renders names the address: a workload of yours
+        that hardcoded it, or a manually edited manifest. Those will never move on their own, and
+        until they are changed to pull from the registry the cluster was installed with, the
+        module will keep serving them — which is the intended behaviour, not a failure.
+
+        One shape of this is worth naming, because it was hit the first time this ran on a live
+        cluster: a rolling update stuck for reasons of its own. The new pod is already on the
+        upstream registry and never becomes ready, so the superseded ReplicaSet keeps its old pod,
+        and that pod names the in-cluster address. A pod that has already pulled is not waited on,
+        so this alone does not hold the withdrawal — but a pod stuck BEFORE its containers start
+        does, and rightly, since it is exactly what would fail. Fix the rollout, or delete the
+        pod that cannot start:
+
+        ```
+        kubectl get pods -A --field-selector status.phase=Pending
+        ```
+
+        A drain can also be abandoned by asking for `Managed` again: the module then keeps the
+        pull path it never finished giving up, and this alert goes away.
+      summary: |
+        The registry module cannot finish leaving the pull path.
+      severity: "6"
+      markupFormat: markdown
+    - name: D8RegistryMigrationPending
+      sourceFile: modules/038-registry/monitoring/prometheus-rules/migration.yaml
+      moduleUrl: 038-registry
+      module: registry
+      edition: ce
+      description: |-
+        This cluster still pulls images the way the previous implementation of the
+        `registry` module arranged it, and the handover to the current one has not
+        happened.
+
+        Reason: `{{ $labels.reason }}`
+
+        Read the reason first, because it separates two very different situations:
+
+        - The reason says the previous implementation has **not recorded a mode yet**,
+          or that it is **transitioning**. Nothing is wrong: the handover is waiting for
+          a state to settle and will happen on its own.
+
+        - The reason names a mode **other than `Unmanaged`** — `Direct`, `Proxy` or
+          `Local`. Then this cluster's pull path is already degraded, and this alert is
+          how it shows: this release renders none of the previous implementation's
+          objects, so the in-cluster proxy, the `registry` Service and the per-node
+          secrets it served are gone, while the nodes still point at them. Images
+          already on a node keep working; anything that has to be pulled will not.
+          Do not wait for this to resolve itself — it will not. Go to
+          `D8RegistryMigrationPreflightBlocked`, which says what to do per case, and
+          for `Local` note that the documented procedure does not apply at all.
+
+        The handover waits because both implementations configure the same thing on
+        every node: which registry the container runtime asks, and with which
+        credentials. Running both would not merge those two answers, it would race
+        them. So the current implementation takes over only once the previous one has
+        let go of the pull path, which is its `Unmanaged` state.
+
+        What to do:
+
+        1. Bring the registry configuration in the `deckhouse` ModuleConfig to
+           `Unmanaged` and wait for that transition to finish:
+
+           ```
+           kubectl get mc deckhouse -o jsonpath='{.spec.settings.registry.mode}'
+           kubectl -n d8-system get secret registry-state -o jsonpath='{.data.state}' | base64 -d | head
+           ```
+
+        2. Once the state reports `mode: Unmanaged` with no pending target mode, the
+           handover happens on the module's next reconciliation and this alert clears.
+           The cluster keeps pulling from the same registry throughout.
+
+        3. To have the module manage the pull path afterwards, set `mode: Managed` in
+           the `registry` ModuleConfig together with the registry to pull from. The
+           module publishes a ready-made configuration for this cluster in the
+           `registry-suggested-config` secret in `d8-system`.
+      summary: |
+        The registry module is still running its previous implementation.
+      severity: "8"
+      markupFormat: markdown
+    - name: D8RegistryMigrationPreflightBlocked
+      sourceFile: modules/038-registry/monitoring/prometheus-rules/migration.yaml
+      moduleUrl: 038-registry
+      module: registry
+      edition: ce
+      description: |-
+        A precondition of the `registry` module's migration is not met, and the migration
+        must not be started until it is: `{{ $labels.check }}` — {{ $labels.detail }}.
+
+        Whether anything is broken right now depends on which check it is, and the list
+        below says so per case: `upstream_reachable` and `node_containerd_registry_config`
+        are work to do before starting, while `mode` and `not_local` mean the cluster is
+        already past the point where the documented procedure could be started cleanly.
+
+        What each blocking check means:
+
+        - `mode` — the cluster arrived on this release without having been brought to
+          `Unmanaged` first, or the previous implementation is mid-transition. This release
+          renders none of the previous implementation's objects, so whatever they served —
+          the in-cluster proxy in `Proxy`, the `registry` Service — is already gone, and
+          the nodes still point at it. The discriminator has NOT flipped while this is
+          failing, so the way back is the image: return the previous release, bring the
+          cluster to `Unmanaged` by the documented procedure, then upgrade again.
+
+        - `not_local` — the cluster's registry *is* the cluster (`Local`). The ordinary
+          procedure brings the cluster through `Unmanaged`, where every node pulls straight
+          from an upstream, and this cluster has no upstream to pull from: the previous
+          implementation does not even write node configuration in `Unmanaged` without one.
+          This cluster has a procedure of its own instead — an OCI registry stood up in a
+          namespace of your own, loaded with the image set and declared as the upstream for
+          the length of the migration, then removed once the in-cluster storage holds the
+          set itself. The blobs already on the control-plane nodes are adopted rather than
+          downloaded again; what it costs is a second copy of the set on disk while the
+          temporary registry exists. See "How do I migrate an air-gapped Local cluster?" in
+          the module's FAQ, and do not start the ordinary procedure here.
+
+        - `node_containerd_registry_config` — one or more nodes carry a containerd
+          `conf.d` file that sets registry fields of its own. Under the current
+          implementation that file is not merged: the node's registry configuration comes
+          from `/etc/containerd/registry.d`, and the bashible step refuses to merge a
+          file that would contradict it — by failing, which stops that node's whole
+          convergence, including kubelet configuration and version upgrades. The detail
+          names the nodes. Move those settings into `/etc/containerd/registry.d` before
+          the handover.
+
+        - `upstream_reachable` — the registry this cluster pulls from does not answer. The
+          procedure points every node straight at it, so starting now turns a documented
+          step into an outage. Fix the reachability first:
+
+          ```
+          kubectl -n d8-system get secret registry-state -o jsonpath='{.data.state}' | base64 -d | head
+          kubectl -n d8-system logs deploy/deckhouse -c deckhouse | grep -i 'registry checker'
+          ```
+
+        The non-blocking checks are reported by the same metric with `blocking="false"`:
+
+        ```
+        d8_registry_migration_preflight
+        ```
+      summary: |
+        The registry migration must not be started on this cluster yet.
+      severity: "6"
+      markupFormat: markdown
+    - name: D8RegistryNodeForeignRegistryConfig
+      sourceFile: modules/038-registry/monitoring/prometheus-rules/migration.yaml
+      moduleUrl: 038-registry
+      module: registry
+      edition: ce
+      description: |-
+        Node `{{ $labels.node }}` has a file under `/etc/containerd/conf.d/` (containerd v1) or
+        `/etc/containerd/conf2.d/` (containerd v2) that configures a registry, and the `registry`
+        module manages this cluster's registry configuration. Two writers of that configuration is
+        not a state the platform supports, so bashible refuses to merge such a file.
+
+        **Right now nothing is broken, and that is the danger.** The refusal happens inside the
+        bashible step that builds the container runtime configuration, and that step only runs when
+        something makes it run. Until then the file has no effect at all: bashible compares the
+        node's configuration checksum, finds it unchanged and reports "Configuration is in sync,
+        nothing to do".
+
+        The step does run on its own, though: a node re-applies its whole configuration
+        periodically (roughly every four hours), and also on any registry change, platform upgrade
+        or reboot. At that point the step fails with
+
+        ```
+        Failed to merge /etc/containerd/conf.d/<file>: it contains custom registry fields,
+        configure them in /etc/containerd/registry.d instead
+        ```
+
+        and retries, so the node stops applying configuration entirely — hours after the change
+        that caused it, and with nothing else to connect the two.
+
+        What to do, before that happens:
+
+        1. Find the file on the node:
+
+           ```
+           ls /etc/containerd/conf.d/ /etc/containerd/conf2.d/ 2>/dev/null
+           grep -l registry /etc/containerd/conf.d/*.toml /etc/containerd/conf2.d/*.toml 2>/dev/null
+           ```
+
+        2. Move the registry part of it to a host directory, which is where this platform
+           configures registries and where the module's node agent leaves other people's entries
+           alone:
+
+           ```
+           /etc/containerd/registry.d/<registry host>/hosts.toml
+           ```
+
+        3. Remove the registry section from the `conf.d` file (anything non-registry in it can
+           stay), and remove the `NodeGroupConfiguration` that writes it if that is where it comes
+           from.
+
+        Doing it across a fleet with a `NodeGroupConfiguration` has one catch worth knowing in
+        advance: give it a **weight below 32**. The step that refuses the file is
+        `032_configure_containerd`, and a node stops at the step that fails — so a repair placed at
+        a later weight never runs on the nodes that need it most. Measured: a cleanup
+        configuration at weight 10 reached both nodes and cleared the label in 90 seconds.
+
+        A node already stuck in the retry loop recovers on its own once the file is gone: measured,
+        the configuration checksum returned in 75 seconds.
+      summary: |
+        Node {{ $labels.node }} carries container runtime registry configuration the registry module did not write.
+      severity: "5"
+      markupFormat: markdown
+    - name: D8RegistryNodeNotConverged
+      sourceFile: modules/038-registry/monitoring/prometheus-rules/registry.yaml
+      moduleUrl: 038-registry
+      module: registry
+      edition: ce
+      description: |-
+        The agent on one or more nodes has not applied the layout it was given. Those nodes
+        keep pulling images the way they were configured before, so this is not an outage —
+        but a change made to the registry configuration has not reached them, and the next
+        one will not either.
+
+        Which nodes, and what their agents say:
+
+        ```
+        kubectl get registrynodes -o custom-columns=\
+        NODE:.metadata.name,GEN:.metadata.generation,APPLIED:.status.observedGeneration,OK:.status.reconciled
+        kubectl -n kube-system logs -l component=registry-agent --tail=50
+        ```
+
+        Twenty minutes, because the agent re-reads its layout on a timer and a node that is
+        merely slow or briefly unreachable resolves this on its own.
+      summary: |
+        Some nodes have not applied their registry configuration.
+      severity: "5"
+      markupFormat: markdown
+    - name: D8RegistryNodeRunningFromDisk
+      sourceFile: modules/038-registry/monitoring/prometheus-rules/registry.yaml
+      moduleUrl: 038-registry
+      module: registry
+      edition: ce
+      description: |-
+        The agent on one or more nodes cannot reach the API server and is routing pulls from
+        the copy it keeps on disk. That is the copy working as designed — those nodes pull
+        images normally, which is exactly why this is worth saying out loud: from every
+        other angle it looks like success, and their configuration can drift arbitrarily far
+        behind the cluster's.
+
+        An hour, because a node that briefly loses the API server is not news; a node that
+        has not seen it since is.
+
+        ```
+        kubectl get registrynodes -o json | jq -r '
+          .items[] | select(.status.conditions[]? | select(.type=="Reconciled" and .reason=="AppliedFromCache"))
+          | .metadata.name'
+        ```
+      summary: |
+        Some nodes are routing pulls from their on-disk copy of the configuration.
+      severity: "6"
+      markupFormat: markdown
+    - name: D8RegistryStaleCacheData
+      sourceFile: modules/038-registry/monitoring/prometheus-rules/registry.yaml
+      moduleUrl: 038-registry
+      module: registry
+      edition: ce
+      description: |-
+        Node `{{ $labels.node }}` holds data of the in-cluster registry cache while no cache
+        is configured. Nothing reads it, and nothing will unless the cache is turned back
+        on.
+
+        It is kept on purpose. Turning the cache back on refills from what is already there
+        rather than from scratch, and over a slow link that difference is hours — so the
+        module does not delete it, because that would make the decision irreversible in the
+        one direction that hurts. What it will not do is keep it quietly, which is what this
+        alert is.
+
+        Nothing is wrong and nothing needs doing urgently. To reclaim the space:
+
+        ```
+        ssh {{ $labels.node }} 'du -sh /opt/deckhouse/registry && sudo rm -rf /opt/deckhouse/registry'
+        ```
+
+        Twenty-four hours, so that turning the cache off and on again in one working session
+        never raises it.
+      summary: |
+        A node still holds registry cache data that nothing uses.
+      severity: "8"
+      markupFormat: markdown
+    - name: D8RegistryStorageIncomplete
+      sourceFile: modules/038-registry/monitoring/prometheus-rules/registry.yaml
+      moduleUrl: 038-registry
+      module: registry
+      edition: ce
+      description: |-
+        One or more replicas of the in-cluster cache are still filling, or have stopped
+        short. While an upstream is configured this costs nothing at pull time — a node
+        falls back to it — but it does mean the cluster could not survive losing that
+        upstream, and it is what holds an air-gap transition back.
+
+        Two hours, because filling a cache over a slow link legitimately takes that long.
+
+        ```
+        kubectl get registrystorage registry -o jsonpath='{.status.replicas}' | jq
+        ```
+      summary: |
+        Some registry cache replicas do not hold the whole image set.
+      severity: "6"
+      markupFormat: markdown
+    - name: D8RegistryStorageNotReclaimed
+      sourceFile: modules/038-registry/monitoring/prometheus-rules/registry.yaml
+      moduleUrl: 038-registry
+      module: registry
+      edition: ce
+      description: |-
+        No replica of the in-cluster cache has finished a garbage collection in the last week.
+        Nothing is broken yet: the cache serves images normally, and it will keep doing so until
+        the disk fills.
+
+        It is worth attention because the collection is the only thing that ever removes
+        anything. Every release adds a slice of the repository, so a store nobody reclaims grows
+        in one direction — and a full store cannot be written to, which in an air-gapped cluster
+        means it cannot be updated.
+
+        Where to look:
+
+        ```
+        kubectl get registrystorage registry -o jsonpath='{.status.replicas}' | jq \
+          'map({node, collectedAt, collectionError})'
+        kubectl get registrystorage registry -o jsonpath='{.spec.garbageCollection}' | jq
+        ```
+
+        The likely reasons, in the order they are worth checking:
+
+        - the collection is turned off in the `registry` ModuleConfig under
+          `storage.garbageCollection.enabled`;
+        - the schedule has not come round yet, or names an hour that never arrives — a
+          collection only runs on the schedule, and an unreadable expression is refused rather
+          than guessed at;
+        - no release is deployed, which is the one input that justifies deleting anything: every
+          deletion is "older than what the cluster runs", and without that there is nothing to
+          compare against;
+        - `collectionError` on a replica, which says what its own last attempt hit.
+
+        One reading tells the first two apart from the rest. Each replica logs the time of its next
+        collection, so its absence means none was ever scheduled — a different problem from one
+        that is scheduled and failing:
+
+        ```
+        kubectl -n d8-system logs registry-storage-0 -c syncer | grep -i "garbage collection"
+        ```
+
+        Collecting puts one replica read-only while it runs. That is not an outage — it keeps
+        serving every image it holds — but it does mean the schedule belongs at a quiet hour,
+        which is where it defaults to.
+      summary: |
+        The registry cache has not reclaimed its disk for a week.
+      severity: "6"
+      markupFormat: markdown
+    - name: D8RegistryUpstreamProbeFailing
+      sourceFile: modules/038-registry/monitoring/prometheus-rules/registry.yaml
+      moduleUrl: 038-registry
+      module: registry
+      edition: ce
+      description: |-
+        A change to the primary upstream was refused, and the cluster is still using the
+        last one that worked. Nothing is degraded — that is what holding the previous
+        upstream is for — but the change has not taken effect and will not until the check
+        passes.
+
+        The `outcome` label says which of three things is wrong, and they are not the same
+        problem:
+
+        - `unreachable` — the registry did not answer at all: network, firewall, or the
+          registry itself.
+        - `auth` — it answered and rejected the credentials. Usually an expired or wrong
+          license key.
+        - `sentinel` — it answered and accepted the credentials, but does not hold the
+          Deckhouse images. Usually the wrong repository path.
+
+        Current outcome: `{{ $labels.outcome }}`
+
+        ```
+        kubectl get registryconfig registry -o jsonpath='{.status.conditions}' | jq
+        ```
+      summary: |
+        The configured registry upstream does not pass its preflight check.
+      severity: "4"
+      markupFormat: markdown
+    - name: D8RegistryUpstreamRejected
+      sourceFile: modules/038-registry/monitoring/prometheus-rules/registry.yaml
+      moduleUrl: 038-registry
+      module: registry
+      edition: ce
+      description: |-
+        A `RegistryUpstream` resource was not accepted, so pulls for the registry it names
+        are not intercepted on any node. Whatever asked for it — a module, or an operator —
+        is not getting it.
+
+        Reason: `{{ $labels.reason }}`
+
+        ```
+        kubectl get registryupstreams -o custom-columns=\
+        NAME:.metadata.name,MATCH:.spec.match,ACCEPTED:.status.conditions[0].status,REASON:.status.conditions[0].reason
+        ```
+      summary: |
+        An additional registry was refused.
+      severity: "6"
       markupFormat: markdown
     - name: D8SecretCopierDeprecatedLabels
       sourceFile: modules/600-secret-copier/monitoring/prometheus-rules/deprecated-label.yaml
@@ -3617,6 +4421,69 @@ alerts:
         The aggregated ClusterRole of the {{ $labels.level }} access level has no rules although custom roles for it exist.
       severity: "6"
       markupFormat: markdown
+    - name: D8UserAuthzDeprecatedRBACv2CapabilityInUse
+      sourceFile: modules/140-user-authz/monitoring/prometheus-rules/deprecated-rbacv2-roles.yaml
+      moduleUrl: 140-user-authz
+      module: user-authz
+      edition: ce
+      description: |-
+        The `{{ $labels.binding_kind }}` `{{ $labels.binding_name }}`{{ if $labels.namespace }} in namespace `{{ $labels.namespace }}`{{ end }} binds the deprecated RBACv2 capability `{{ $labels.role_name }}` directly.
+
+        Capabilities (`d8:manage:permission:*`, `d8:use:capability:*`) are aggregation building blocks — they are meant to be composed into the `d8:{system,subsystem,namespace,project}:*` roles, not bound directly. They were renamed and have NO compatibility alias, so this binding **already grants nothing** after the upgrade.
+
+        Recreate the binding against the appropriate new role (or a custom role aggregating the new capability). Because `roleRef` is immutable, delete and recreate the binding:
+        ```bash
+        d8 k get {{ $labels.binding_kind | lower }} {{ $labels.binding_name }}{{ if $labels.namespace }} -n {{ $labels.namespace }}{{ end }} -o yaml
+        ```
+      summary: |
+        A binding references a deprecated RBACv2 capability that no longer grants access.
+      severity: "5"
+      markupFormat: markdown
+    - name: D8UserAuthzDeprecatedRBACv2RoleInUse
+      sourceFile: modules/140-user-authz/monitoring/prometheus-rules/deprecated-rbacv2-roles.yaml
+      moduleUrl: 140-user-authz
+      module: user-authz
+      edition: ce
+      description: |-
+        The `{{ $labels.binding_kind }}` `{{ $labels.binding_name }}`{{ if $labels.namespace }} in namespace `{{ $labels.namespace }}`{{ end }} references the deprecated RBACv2 ClusterRole `{{ $labels.role_name }}`.
+
+        The RBACv2 role model was renamed: `d8:manage:<subsystem|all>:<level>` became `d8:system:*` / `d8:subsystem:*:*`, and `d8:use:role:<level>` became `d8:namespace:<level>`. This name still works via a compatibility alias kept for ONE release and will be removed in the next one — after that this binding will grant nothing.
+
+        Migrate the binding to the new role name. Because `roleRef` is immutable, delete and recreate the binding pointing at the new role:
+        ```bash
+        d8 k get {{ $labels.binding_kind | lower }} {{ $labels.binding_name }}{{ if $labels.namespace }} -n {{ $labels.namespace }}{{ end }} -o yaml
+        # recreate it with roleRef.name set to the new role (d8:system:*, d8:subsystem:*, or d8:namespace:*)
+        ```
+
+        A ClusterRoleBinding to a deprecated `d8:manage:*` name keeps its cluster-scoped rights, but no longer receives the RoleBindings that used to project it into the module namespaces (`d8-cloud-provider-*`, `d8-monitoring` and the rest): the ones created by the previous release are removed. Reading logs, describing pods and `exec` inside those namespaces come back when the binding is recreated on the new role name.
+
+        Note: the new `d8:namespace:admin` no longer grants `serviceaccounts/token` creation or impersonation — these disaster-grade actions now require a `superadmin` role by design.
+      summary: |
+        A binding still references a deprecated RBACv2 role.
+      severity: "7"
+      markupFormat: markdown
+    - name: D8UserAuthzForeignAggregationLabel
+      sourceFile: modules/140-user-authz/monitoring/prometheus-rules/foreign-aggregation-label.yaml
+      moduleUrl: 140-user-authz
+      module: user-authz
+      edition: ce
+      description: |-
+        The ClusterRole `{{ $labels.name }}` carries the `rbac.deckhouse.io/aggregate-to-{{ $labels.lineage }}-as` label but is not labelled `rbac.deckhouse.io/kind: custom-capability`{{ if $labels.kind }} (its kind label is `{{ $labels.kind }}`){{ end }}. The aggregation controller reads nothing but that label, so the rules of this role are merged into the platform `d8:{{ $labels.lineage }}:*` roles for every holder in the cluster, outside the role model's contract.
+
+        The `rbacv2-cluster-roles.deckhouse.io` webhook now refuses such an object: every `UPDATE` of this role, including a GitOps re-apply, is denied until it is fixed. Choose one:
+
+        * If the role is meant to extend the platform roles, make it a custom capability: name it `d8:custom:<scope>-capability:<name>`, label it `rbac.deckhouse.io/kind: custom-capability` and `rbac.deckhouse.io/scope: <scope>`, and drop its `aggregationRule` if it has one. See the user-authz documentation on custom capabilities.
+        * Otherwise remove the `rbac.deckhouse.io/aggregate-to-*-as` labels from it.
+
+        List every such role:
+
+        ```bash
+        d8 k get clusterroles -o json | jq -r '.items[] | select((.metadata.labels // {}) | to_entries | any(.key | startswith("rbac.deckhouse.io/aggregate-to-"))) | select((.metadata.labels.heritage // "") != "deckhouse") | select((.metadata.labels["rbac.deckhouse.io/kind"] // "") != "custom-capability") | .metadata.name'
+        ```
+      summary: |
+        ClusterRole {{ $labels.name }} aggregates into the platform {{ $labels.lineage }} roles without being a custom capability.
+      severity: "6"
+      markupFormat: markdown
     - name: D8UserAuthzLegacyRBACv2CustomRoleFound
       sourceFile: modules/140-user-authz/monitoring/prometheus-rules/legacy-rbacv2-custom-roles.yaml
       moduleUrl: 140-user-authz
@@ -3887,7 +4754,7 @@ alerts:
       module: deckhouse
       edition: ce
       description: |
-        Specify a Deckhouse Kubernetes Platform edition in `{{ $labels.module }}` ModuleConfig.
+        Specify a Deckhouse Platform edition in `{{ $labels.module }}` ModuleConfig.
 
         ```bash
         d8 k patch moduleconfig {{ $labels.module }} --type merge --patch '{"spec": {"settings": {"license": {"edition": "DKP_EDITION"}}}}'
@@ -3895,7 +4762,7 @@ alerts:
 
         Where `DKP_EDITION` is the edition you want to use: `CE`, `BE`, `EE`, `SE`, or `SE-plus`.
       summary: |
-        Incorrect Deckhouse Kubernetes Platform edition.
+        Incorrect Deckhouse Platform edition.
       severity: "6"
       markupFormat: markdown
     - name: DeckhouseHighMemoryUsage
@@ -4009,12 +4876,34 @@ alerts:
         Current version: {{ $labels.actualVersion }}.
         Desired version: {{ $labels.version }}.
 
-        Attempt to download interim releases failed.
+        Attempt to download interim releases failed. Deckhouse updates modules one minor version at a time, so every intermediate version must exist in the registry.
 
         Possible reasons:
-         - The necessary versions of the module image is not available in the registry.
 
-        To resolve this issue, ensure that all minor versions of the '{{ $labels.module }}' module image between {{ $labels.actualVersion }} and {{ $labels.version }} is available in the registry '{{ $labels.registry }}'.
+        - Some of the necessary versions of the module image are not available in the registry.
+        - The registry is unreachable.
+
+        To resolve this issue, follow these steps:
+
+        1. Check which module releases exist and where the sequence stopped:
+
+           ```bash
+           d8 k get modulereleases -l module={{ $labels.module }}
+           ```
+
+        1. Read the reason recorded on the release that is not deployed:
+
+           ```bash
+           d8 k get modulereleases -l module={{ $labels.module }} -o custom-columns='NAME:.metadata.name,VERSION:.spec.version,PHASE:.status.phase,MESSAGE:.status.message'
+           ```
+
+        1. Find the module source that serves this repo. The `registry` label above is a repo URL, not a source name:
+
+           ```bash
+           d8 k get modulesource -o custom-columns='NAME:.metadata.name,REPO:.spec.registry.repo'
+           ```
+
+        1. Ensure that every minor version of the '{{ $labels.module }}' module image between {{ $labels.actualVersion }} and {{ $labels.version }} is available in the registry '{{ $labels.registry }}'. If the cluster uses a mirror, the missing versions have to be pulled into it first.
       summary: |
         Module update has failed. Updating sequence is broken.
       severity: "4"
@@ -4176,16 +5065,35 @@ alerts:
       module: deckhouse
       edition: ce
       description: |
-        The Deckhouse update has failed.
+        The Deckhouse update to version {{ $labels.version }} has failed.
 
         Possible reasons:
 
         - The next minor or patch version of the Deckhouse image is not available in the registry.
         - The Deckhouse image is corrupted.
+        - Deckhouse cannot reach the registry.
 
-        Current version: {{ $labels.version }}.
+        To resolve this issue, follow these steps:
 
-        To resolve this issue, ensure that the next version of the Deckhouse image is available in the registry.
+        1. Check the state of the releases. The one stuck in `Pending` is the one that failed:
+
+           ```bash
+           d8 k get deckhousereleases
+           ```
+
+        1. Read the reason recorded on that release:
+
+           ```bash
+           d8 k get deckhousereleases -o custom-columns='NAME:.metadata.name,PHASE:.status.phase,MESSAGE:.status.message'
+           ```
+
+        1. Read the corresponding error in the logs:
+
+           ```bash
+           d8 k -n d8-system logs -l app=deckhouse --tail=200 | grep -i release
+           ```
+
+        1. Ensure that version {{ $labels.version }} of the Deckhouse image is present in the registry. If the cluster uses a mirror, the missing version has to be pulled into it first.
       summary: |
         Deckhouse update has failed.
       severity: "4"
@@ -4434,9 +5342,33 @@ alerts:
       module: deckhouse
       edition: ce
       description: |
-        Deckhouse has detected conflicting sources for the {{ $labels.module }} module.
+        Deckhouse has detected conflicting sources for the {{ $labels.module }} module: it is available from more than one ModuleSource and no source is selected, so the module is not deployed.
 
-        To resolve this issue, specify the correct source in the module configuration.
+        To resolve this issue, follow these steps:
+
+        1. List the sources that provide the module:
+
+           ```bash
+           d8 k get module {{ $labels.module }} -o jsonpath='{.properties.availableSources}{"\n"}'
+           ```
+
+        1. Compare what each source offers, so you pick the one you actually want:
+
+           ```bash
+           d8 k get modulerelease -l module={{ $labels.module }}
+           ```
+
+        1. Select the source in the module configuration:
+
+           ```bash
+           d8 k patch moduleconfig {{ $labels.module }} --type=merge -p '{"spec":{"source":"<SOURCE_NAME>"}}'
+           ```
+
+        1. Verify that the module has left the `Conflict` phase. The `SOURCE` and `PHASE` columns show the result:
+
+           ```bash
+           d8 k get module {{ $labels.module }}
+           ```
       summary: |
         Conflict detected for module {{ $labels.module }}.
       severity: "4"
@@ -4467,11 +5399,31 @@ alerts:
       module: deckhouse
       edition: ce
       description: |
-        Deckhouse has detected that ModuleConfig `{{ $labels.name }}` is outdated.
+        Deckhouse has detected that ModuleConfig `{{ $labels.name }}` has `spec.version: {{ $labels.version }}`, while the latest settings schema version of the `{{ $labels.name }}` module is {{ $labels.latest }}.
 
-        To resolve this issue, update ModuleConfig `{{ $labels.name }}` to the latest version.
+        Deckhouse converts `spec.settings` from version {{ $labels.version }} to version {{ $labels.latest }} on the fly, so the module keeps working, but the stored configuration remains outdated. Support for version {{ $labels.version }} may be dropped in a future release.
+
+        To resolve this issue, follow these steps:
+
+        1. Review the migration notes for the `{{ $labels.name }}` module settings, one line per conversion step:
+
+           ```bash
+           d8 k get modulesettingsdefinition {{ $labels.name }} -o jsonpath='{range .spec.versions[*].conversions[*]}{.descriptions.en}{"\n"}{end}'
+           ```
+
+        1. Migrate `spec.settings` accordingly and set `spec.version` to {{ $labels.latest }}:
+
+           ```bash
+           d8 k edit moduleconfig {{ $labels.name }}
+           ```
+
+        1. Verify that the version has been updated and no warnings are left:
+
+           ```bash
+           d8 k get moduleconfig {{ $labels.name }} -o jsonpath='{.spec.version}{"\t"}{.status.message}{"\n"}'
+           ```
       summary: |
-        ModuleConfig {{ $labels.name }} is outdated.
+        ModuleConfig {{ $labels.name }} uses obsolete settings version {{ $labels.version }}, the latest one is {{ $labels.latest }}.
       severity: "4"
       markupFormat: markdown
     - name: ModuleDocumentationRenderError
@@ -4527,7 +5479,27 @@ alerts:
       module: deckhouse
       edition: ce
       description: |
-        The module `{{ $labels.module }}` is deprecated and will not receive new updates. The module may be removed in the future, so please disable it in a controlled manner.
+        The module `{{ $labels.module }}` is deprecated and will not receive new updates. The module may be removed in a future release, so disable it in a controlled manner rather than waiting for it to disappear.
+
+        To resolve this issue, follow these steps:
+
+        1. Check the module state before changing anything. The `STAGE` column reads `Deprecated`, and the conditions show whether anything still runs:
+
+           ```bash
+           d8 k get module {{ $labels.module }}
+           ```
+
+        1. Find out whether other modules declare a dependency on it:
+
+           ```bash
+           d8 k get modules -o json | jq -r '.items[] | select(.properties.requirements.modules | has("{{ $labels.module }}")) | .metadata.name'
+           ```
+
+        1. Once nothing depends on it and its workloads are no longer needed, disable the module:
+
+           ```bash
+           d8 k patch moduleconfig {{ $labels.module }} --type=merge -p '{"spec":{"enabled":false}}'
+           ```
       summary: |
         Module {{ $labels.module }} is deprecated.
       severity: "9"
@@ -4636,6 +5608,32 @@ alerts:
       summary: |
         A new release for module {{ $labels.module }} is awaiting manual approval.
       severity: "6"
+      markupFormat: markdown
+    - name: MultitenancyManagerDeprecatedConfigParameter
+      sourceFile: modules/160-multitenancy-manager/monitoring/prometheus-rules/deprecated-mc.yaml
+      moduleUrl: 160-multitenancy-manager
+      module: multitenancy-manager
+      edition: ce
+      description: |-
+        The `{{ $labels.parameter }}` parameter of the `multitenancy-manager` ModuleConfig is deprecated and ignored:
+        every user namespace outside a project is now adopted into a project of its own, whatever the parameter says.
+
+        The parameter is kept in the schema for one release only. In the next minor release it is removed, and a
+        ModuleConfig that still sets it will fail validation and stop applying.
+
+        Steps to troubleshoot:
+
+        1. Remove `{{ $labels.parameter }}` from the ModuleConfig, including in the CI or GitOps process that applies it:
+
+           ```bash
+           d8 k edit mc multitenancy-manager
+           ```
+
+        1. Make sure nothing relies on plain namespaces existing beside projects: with the module enabled there are none,
+           and an environment is removed by deleting its Project rather than its Namespace.
+      summary: |
+        The multitenancy-manager ModuleConfig sets the deprecated parameter {{ $labels.parameter }}.
+      severity: "9"
       markupFormat: markdown
     - name: NATInstanceWithDeprecatedAvailabilityZone
       sourceFile: modules/030-cloud-provider-yandex/monitoring/prometheus-rules/deprecated_availability_zone.yaml
@@ -5068,6 +6066,87 @@ alerts:
         NTP daemon on the node {{$labels.node}} haven't synchronized time for too long.
       severity: "5"
       markupFormat: markdown
+    - name: OpenStackPreemptibleUnsupported
+      sourceFile: ee/modules/030-cloud-provider-openstack/monitoring/prometheus-rules/preemptible.yaml
+      moduleUrl: 030-cloud-provider-openstack
+      module: cloud-provider-openstack
+      edition: ee
+      description: |
+        The OpenStackInstanceClass referenced by NodeGroup `{{ $labels.node_group }}` has `spec.preemptible: true`,
+        but the raw Nova `preemptible` tag will not reach the virtual machines:
+        nodes are created as regular (non-preemptible) VMs, and Selectel-side preemption never kicks in.
+
+        {{ if eq $labels.reason "mcm" }}
+        **Reason:** the NodeGroup runs on the **MCM engine**, which has no way to emit raw Nova tags —
+        `machine-controller-manager`'s OpenStackMachineClass CRD does not expose the field. Only the
+        CAPI engine (`capi-controller-manager` + `capo-controller-manager`) renders raw Nova tags via
+        `OpenStackMachineTemplate.spec.template.spec.tags`.
+
+        **How to fix:**
+
+        1. Confirm the current engine and offending InstanceClass:
+
+           ```shell
+           d8 k get ng {{ $labels.node_group }} -o jsonpath='{.status.engine}{"\n"}'
+           d8 k get ng {{ $labels.node_group }} -o jsonpath='{.spec.cloudInstances.classReference}{"\n"}'
+           ```
+
+        2. Choose one of the following actions:
+
+           - **Recommended.** Remove the `node.deckhouse.io/use-mcm` annotation from the NodeGroup so it
+             migrates to CAPI. Nodes will be recreated on the CAPI engine, this time carrying the
+             `preemptible` tag:
+
+             ```shell
+             d8 k annotate ng {{ $labels.node_group }} node.deckhouse.io/use-mcm-
+             ```
+
+           - Alternatively, if this NodeGroup must stay on MCM, set `spec.preemptible: false` on the
+             OpenStackInstanceClass (nodes stay regular, the alert clears):
+
+             ```shell
+             d8 k patch openstackinstanceclass <CLASS_NAME> --type=merge -p '{"spec":{"preemptible":false}}'
+             ```
+
+             Note: a single OpenStackInstanceClass shared between a CAPI NodeGroup (where the field
+             works) and an MCM one (where it doesn't) will keep firing this alert on the MCM side.
+             Use separate InstanceClasses per engine when the classes differ in `preemptible`.
+
+        {{ else if eq $labels.reason "non-selectel" }}
+        **Reason:** the cluster's `connection.authURL` does not point at Selectel (`selcloud.ru` /
+        `selectel`). The raw Nova `preemptible` tag is a **Selectel-specific mechanism**;
+        on other OpenStack providers Nova accepts the tag but ignores it, so instances are billed
+        and behave as regular non-preemptible VMs.
+
+        **How to fix:**
+
+        1. Confirm the offending InstanceClass and the cluster's authURL:
+
+           ```shell
+           d8 k get ng {{ $labels.node_group }} -o jsonpath='{.spec.cloudInstances.classReference}{"\n"}'
+           d8 k -n kube-system get secret d8-node-manager-cloud-provider -o jsonpath='{.data.openstack}' | base64 -d | jq -r '.connection.authURL'
+           ```
+
+        2. Set `spec.preemptible: false` on the OpenStackInstanceClass — the field only makes sense
+           on Selectel-hosted clusters:
+
+           ```shell
+           d8 k patch openstackinstanceclass <CLASS_NAME> --type=merge -p '{"spec":{"preemptible":false}}'
+           ```
+
+           The alert clears on the next scrape after the change; existing nodes stay running (they
+           are already regular VMs — the tag was never emitted).
+
+        {{ else }}
+        **Reason:** unknown (`{{ $labels.reason }}`). This alert should surface only two well-known
+        cases (`mcm`, `non-selectel`). A new reason implies node-controller has been extended without
+        this runbook — check the release notes for
+        `cloud-provider-openstack` before deciding what to do.
+        {{ end }}
+      summary: |
+        NodeGroup {{ $labels.node_group }} requests preemptible instances, but this cluster cannot deliver them (reason: {{ $labels.reason }}).
+      severity: "8"
+      markupFormat: markdown
     - name: OpenVPNClientCertificateExpired
       sourceFile: modules/500-openvpn/monitoring/prometheus-rules/ovpn-admin.yaml
       moduleUrl: 500-openvpn
@@ -5274,7 +6353,7 @@ alerts:
           )
           ```
 
-        - Alternatively, check the admission-policy-engine Grafana dashboard.
+        - Alternatively, check the admission-policy-engine reports in the web interface Deckhouse Platform.
       summary: |
         At least one object violates the configured cluster operation policies.
       severity: "3"
@@ -5302,7 +6381,7 @@ alerts:
           )
           ```
 
-        - Alternatively, check the admission-policy-engine Grafana dashboard.
+        - Alternatively, check the admission-policy-engine reports in the web interface Deckhouse Platform.
       summary: |
         At least one pod violates the configured cluster pod security standards.
       severity: "3"
@@ -5328,7 +6407,7 @@ alerts:
           )
           ```
 
-        - Alternatively, check the admission-policy-engine Grafana dashboard.
+        - Alternatively, check the admission-policy-engine reports in the web interface Deckhouse Platform.
       summary: |
         At least one object violates the configured cluster security policies.
       severity: "3"
@@ -5401,6 +6480,7 @@ modules-having-alerts:
     - cloud-provider-aws
     - cloud-provider-dvp
     - cloud-provider-huaweicloud
+    - cloud-provider-openstack
     - cloud-provider-yandex
     - cni-cilium
     - control-plane-manager
@@ -5415,6 +6495,7 @@ modules-having-alerts:
     - node-manager
     - okmeter
     - openvpn
+    - registry
     - secret-copier
     - terraform-manager
     - user-authn

@@ -70,6 +70,8 @@ dhctl_tests:
     - .test_base
     - .needs_build_tests
     - .rules:on_validate
+  before_script:
+    - !reference [.scripts, check_skip_label]
   script:
     - 'echo "Tests image tag: ${TESTS_IMAGE_TAG}"'
     - cd "${CI_PROJECT_DIR}/dhctl"
@@ -115,7 +117,7 @@ validators:
 .security_scan_base:
   stage: test
   tags:
-    - vm-intteam-cloud-d8-ssdlc-runner
+    - deckhouse
   timeout: 2h
   variables:
     GIT_DEPTH: "0"

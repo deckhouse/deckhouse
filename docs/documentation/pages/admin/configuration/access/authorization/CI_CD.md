@@ -22,7 +22,7 @@ When multiple pipelines share a single ServiceAccount, audit logs will not conta
 To configure token-based authentication for ServiceAccount, the following requirements must be met:
 
 - Cluster access with permissions to create ServiceAccounts and Secrets.
-- For external access: [publishAPI](/modules/user-authn/configuration.html#parameters-publishapi) or direct API access via VPN.
+- For external access: [apiserver.publishAPI](/modules/control-plane-manager/configuration.html#parameters-apiserver-publishapi) of the `control-plane-manager` module, or direct API access via VPN.
 
 ### Create ServiceAccount and a long-lived token
 
@@ -102,19 +102,37 @@ EOF
 
 When using publishAPI:
 
+{% tabs api_publish_type %}
+{% tab "When the API server is published via Ingress" %}
+
+When the API server is published via Ingress, use the following commands:
+
 ```shell
-API_HOST=$(d8 k -n d8-user-authn get ingress kubernetes-api -o jsonpath='{.spec.rules[0].host}')
+API_HOST=$(d8 k -n kube-system get ingress kubernetes-api -o jsonpath='{.spec.rules[0].host}')
 echo "API endpoint: https://${API_HOST}"
 ```
+
+{% endtab %}
+{% tab "When the API server is published via Gateway API (`alb`)" %}
+
+When the API server is published via Gateway API (the [`alb`](/modules/alb/) module), use the following commands:
+
+```shell
+API_HOST=$(d8 k -n kube-system get httproute kubernetes-api -o jsonpath='{.spec.hostnames[0]}')
+echo "API endpoint: https://${API_HOST}"
+```
+
+{% endtab %}
+{% endtabs %}
 
 {% alert level="info" %}
 If the API certificate is signed by a public CA (Let's Encrypt), the `--certificate-authority` parameter is not required.
 {% endalert %}
 
-For private CA:
+For a private CA (self-signed, the default mode — shared between both publication methods):
 
 ```shell
-d8 k -n d8-user-authn get secret kubernetes-api-ca-key-pair -o jsonpath='{.data.ca\.crt}' | base64 -d > /tmp/ca.crt
+d8 k -n kube-system get secret kubernetes-api-ca-key-pair -o jsonpath='{.data.tls\.crt}' | base64 -d > /tmp/ca.crt
 ```
 
 ### Create kubeconfig
@@ -182,7 +200,7 @@ d8 k --server=$KUBE_SERVER --token=$KUBE_TOKEN get ns
 Authentication via username and password through IdP (LDAP, OIDC).
 
 {% alert level="warning" %}
-The password is sent to DKP and validated through basic-auth-proxy/Dex.
+The password is sent to DP and validated through basic-auth-proxy/Dex.
 {% endalert %}
 
 {% alert level="warning" %}
@@ -193,7 +211,7 @@ Only one DexProvider in the cluster can have `enableBasicAuth: true`.
 
 The following requirements must be met to configure Basic Auth:
 
-- [publishAPI](/modules/user-authn/configuration.html#parameters-publishapi) enabled.
+- [apiserver.publishAPI](/modules/control-plane-manager/configuration.html#parameters-apiserver-publishapi) of the `control-plane-manager` module enabled.
 - [DexProvider](/modules/user-authn/cr.html#dexprovider) configured for IdP.
 
 ### Enable
@@ -276,13 +294,13 @@ The pipeline obtains a token from the IdP, exchanges it at Dex for a token with 
 Recommended for GitLab CI and GitHub Actions.
 {% endalert %}
 
-DKP/Dex does not receive the user password. How `IDP_TOKEN` is obtained depends on the IdP: OIDC job token (GitLab/GitHub) or IdP token endpoint (client_credentials).
+DP/Dex does not receive the user password. How `IDP_TOKEN` is obtained depends on the IdP: OIDC job token (GitLab/GitHub) or IdP token endpoint (client_credentials).
 
 ### Prerequisites
 
 The following requirements must be met to configure Token Exchange:
 
-- [publishAPI](/modules/user-authn/configuration.html#parameters-publishapi) enabled.
+- [apiserver.publishAPI](/modules/control-plane-manager/configuration.html#parameters-apiserver-publishapi) of the `control-plane-manager` module enabled.
 - [DexProvider](/modules/user-authn/cr.html#dexprovider) configured as **OIDC type**.
 
 {% alert level="warning" %}
@@ -311,7 +329,7 @@ The annotation `dexclient.deckhouse.io/allow-access-to-kubernetes` allows the cl
 {% alert level="warning" %}
 This grants cluster-wide access to the Kubernetes API. For this reason, adding the annotation or changing it to `"true"` requires access to modify the `user-authn` module configuration — such as the `d8:manage:permission:module:user-authn:edit` role. A namespace-level role that permits creating a DexClient is not enough: the admission-controller rejects the request with a message naming the annotation.
 
-The addition of the annotation is restricted regardless of the specified value, including `"false"`. This is required to ensure compatibility with previous DKP versions where access has been granted when the annotation was present, regardless of its value.
+The addition of the annotation is restricted regardless of the specified value, including `"false"`. This is required to ensure compatibility with previous DP versions where access has been granted when the annotation was present, regardless of its value.
 
 This restriction is not applicable to an object, which already has the annotation assigned. Deletion and recreation of DexClient is treated as another addition of the annotation, so a GitOps controller that recreates the object instead of patching it requires the `update` permission on the `moduleconfigs` resource named `user-authn`.
 {% endalert %}
@@ -335,7 +353,7 @@ API_HOST=$(d8 k -n d8-user-authn get ingress kubernetes-api -o jsonpath='{.spec.
 
 ### Grant RBAC
 
-DKP configures kube-apiserver to validate Dex tokens. The `email` and `groups` claims from the token are used for RBAC.
+DP configures kube-apiserver to validate Dex tokens. The `email` and `groups` claims from the token are used for RBAC.
 
 The set of claims required by kube-apiserver for authentication depends on configuration. If kube-apiserver requires the `name` claim, add the `profile` scope.
 

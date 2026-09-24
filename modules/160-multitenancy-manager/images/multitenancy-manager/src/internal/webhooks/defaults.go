@@ -63,7 +63,7 @@ func (m *DefaultsMutator) InstallInto(srv webhook.Server) { srv.Register("/defau
 
 func (m *DefaultsMutator) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	review := &admissionv1.AdmissionReview{}
-	if err := decodeReview(r, review); err != nil {
+	if err := decodeReview(w, r, review); err != nil {
 		http.Error(w, "invalid AdmissionReview: "+err.Error(), http.StatusBadRequest)
 		return
 	}
@@ -91,7 +91,8 @@ func (m *DefaultsMutator) decide(ctx context.Context, req *admissionv1.Admission
 	// applied into project namespaces by the deckhouse-controller's Helm release, and with
 	// failurePolicy: Fail a slow/erroring defaulting call fails that apply and deadlocks the module's
 	// queue. The apiserver-level matchConditions already skip this webhook for those writers; this is
-	// the handler-level backstop. Mirrors is_granted.go / protect.go.
+	// the handler-level backstop. Same isSystemRequest set as protect.go; /is-granted uses the
+	// narrower isAutomatedSystemWriter instead.
 	if isSystemRequest(req) {
 		return allowedResponse(req.UID), nil
 	}
@@ -119,7 +120,7 @@ func (m *DefaultsMutator) decide(ctx context.Context, req *admissionv1.Admission
 		}
 		return nil, fmt.Errorf("get namespace: %w", err)
 	}
-	grants, err := resolve.GrantsForLabels(ctx, m.cl, ns.Labels)
+	grants, err := resolve.GrantsForNamespace(ctx, m.cl, ns)
 	if err != nil {
 		return nil, fmt.Errorf("grants: %w", err)
 	}
@@ -133,20 +134,25 @@ func (m *DefaultsMutator) decide(ctx context.Context, req *admissionv1.Admission
 	availByDef := map[string]map[string]bool{}
 
 	var patches []jsonPatchOperation
+	var warnings []string
 	for _, mr := range refs {
-		fp, ok := engine.SelectFieldPath(mr.Reference.Spec.FieldPaths, group, version)
+		fp, ok := engine.SelectFieldPath(mr.Reference.Spec.FieldPaths, group, version, resourcePlural)
 		if !ok {
 			continue
 		}
 		// Defaulting is per path: None never fills in (opt-in toggle annotations stay absent).
-		if fp.Defaulting == "" || fp.Defaulting == v1alpha1.DefaultingNone {
+		if !engine.DefaultingActive(fp) {
 			continue
 		}
 		guard, err := engine.EvalMatch(m.factory, fp.Match, obj)
 		if err != nil || !guard {
 			continue
 		}
-		segs, ok := parsePathSegments(fp.Path)
+		// A path this parser cannot handle is not defaultable. The GrantableClusterResourceReference
+		// validating webhook refuses such an entry at apply time, but it is not a guarantee: the object
+		// may be older than the webhook, or have been written while the webhook was unavailable
+		// (failurePolicy: Ignore). Skipping keeps validation working while defaulting stays off.
+		segs, ok := engine.ParsePathSegments(m.factory, fp.Path)
 		if !ok {
 			continue
 		}
@@ -182,6 +188,13 @@ func (m *DefaultsMutator) decide(ctx context.Context, req *admissionv1.Admission
 			(fp.Defaulting == v1alpha1.DefaultingCoerce && !availByDef[def.Name][value])
 		if shouldDefault {
 			patches = append(patches, jsonPatchOperation{Op: "add", Path: jsonPointer(segs), Value: defName})
+			if value != "" {
+				// The author asked for something and got something else; say so on the response the
+				// author reads (kubectl prints admission warnings), the way USAGE describes Coerce.
+				warnings = append(warnings, fmt.Sprintf(
+					"[multitenancy] %s %q: %s %q is not available to project %q and was replaced with the project default %q",
+					req.Kind.Kind, req.Name, fp.Path, value, resolve.ProjectName(ns), defName))
+			}
 		}
 	}
 
@@ -195,57 +208,8 @@ func (m *DefaultsMutator) decide(ctx context.Context, req *admissionv1.Admission
 	resp := allowedResponse(req.UID)
 	resp.Patch = patchBytes
 	resp.PatchType = ptr.To(admissionv1.PatchTypeJSONPatch)
+	resp.Warnings = warnings
 	return resp, nil
-}
-
-// parsePathSegments parses a simple member JSONPath ($.a.b['c']) into its segments. It returns
-// ok=false for anything with wildcards, indexes or filters (not safely defaultable).
-func parsePathSegments(expr string) ([]string, bool) {
-	if !strings.HasPrefix(expr, "$") {
-		return nil, false
-	}
-	s := expr[1:]
-	var segs []string
-	for len(s) > 0 {
-		switch s[0] {
-		case '.':
-			s = s[1:]
-			j := 0
-			for j < len(s) && s[j] != '.' && s[j] != '[' {
-				j++
-			}
-			if j == 0 {
-				return nil, false
-			}
-			seg := s[:j]
-			if strings.ContainsAny(seg, "*?[]") {
-				return nil, false
-			}
-			segs = append(segs, seg)
-			s = s[j:]
-		case '[':
-			if len(s) < 2 || (s[1] != '\'' && s[1] != '"') {
-				return nil, false
-			}
-			q := s[1]
-			end := strings.IndexByte(s[2:], q)
-			if end < 0 {
-				return nil, false
-			}
-			segs = append(segs, s[2:2+end])
-			rest := s[2+end+1:]
-			if len(rest) == 0 || rest[0] != ']' {
-				return nil, false
-			}
-			s = rest[1:]
-		default:
-			return nil, false
-		}
-	}
-	if len(segs) == 0 {
-		return nil, false
-	}
-	return segs, true
 }
 
 // fieldState reports whether all parent objects of the field exist (so a JSON Patch "add" is safe,

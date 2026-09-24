@@ -2,7 +2,7 @@
 title: Cluster control plane management
 permalink: en/architecture/kubernetes-and-scheduling/control-plane-management.html
 search: control-plane-manager, control plane management
-description: Architecture and functions of the control-plane-manager module in Deckhouse Kubernetes Platform.
+description: Architecture and functions of the control-plane-manager module in Deckhouse Platform.
 ---
 
 ## Control-plane-manager module
@@ -47,7 +47,7 @@ The following simplifications are made in the diagram:
 
 The Level 2 C4 architecture of the [`control-plane-manager`](/modules/control-plane-manager/) module and its interactions with other platform components are shown in the following diagram:
 
-![control-plane-manager module architecture](../../images/architecture/kubernetes-and-scheduling/c4-l2-control-plane-manager.png)
+![control-plane-manager module architecture](../../images/architecture/kubernetes-and-scheduling/c4-l2-control-plane-manager.svg)
 
 ### Module components
 

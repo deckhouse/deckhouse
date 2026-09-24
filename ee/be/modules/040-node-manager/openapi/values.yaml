@@ -247,9 +247,10 @@ properties:
           instanceClassAPIVersion:
             type: string
             description: |
-              Storage version of the InstanceClass CRD, published by the cloud provider module.
+              Served version of the InstanceClass CRD, published by the cloud provider module.
               node-controller reads the InstanceClass through it and never resolves a version itself:
               the value decides the instance-class checksum, which names an immutable MachineTemplate.
+              Change it only after the new version and its conversions are in place.
           machineClassKind:
             type: string
         x-examples:

@@ -1030,6 +1030,9 @@ function wait_alerts_resolve() {
   "D8CloudProviderDVPMigrationPending" # Ignore migration DVP
   "D8IstioConfigAnalysisWarning" # This is normal for e2e tests
   "D8ObsoleteKubernetesVersionFieldInClusterConfiguration" # migration from ClusterConfiguration to ModuleConfig
+  "D8ObsoleteNetworkFieldsInClusterConfiguration" # migration from ClusterConfiguration to ModuleConfig
+  "D8MonitoringApplicationsLegacyBearerTokenEnabled" # ignore S9 alert for e2e 1.77+
+  "D8MonitoringCustomLegacyBearerTokenEnabled" # ignore S9 alert for e2e 1.77+
   )
 
   # Alerts

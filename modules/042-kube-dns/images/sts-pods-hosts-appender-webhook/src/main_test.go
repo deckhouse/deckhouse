@@ -76,3 +76,39 @@ func TestAddInitContainerToPodPreservesNativeSidecarRestartPolicy(t *testing.T) 
 		t.Fatalf("expected native sidecar restartPolicy %q, got %q", corev1.ContainerRestartPolicyAlways, *nativeSidecar.RestartPolicy)
 	}
 }
+
+func TestAddInitContainerToPodSetsResources(t *testing.T) {
+	t.Parallel()
+
+	pod := &corev1.Pod{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "test-pod",
+			Namespace: "default",
+		},
+		Spec: corev1.PodSpec{
+			Subdomain:  "test-subdomain",
+			Containers: []corev1.Container{{Name: "app", Image: "busybox:latest"}},
+		},
+	}
+
+	result, err := addInitContainerToPod(context.Background(), nil, pod)
+	if err != nil {
+		t.Fatalf("add init container to pod: %v", err)
+	}
+
+	mutatedPod, ok := result.MutatedObject.(*corev1.Pod)
+	if !ok {
+		t.Fatalf("expected mutated object to be *corev1.Pod, got %T", result.MutatedObject)
+	}
+
+	resources := mutatedPod.Spec.InitContainers[0].Resources
+	for _, name := range []corev1.ResourceName{corev1.ResourceCPU, corev1.ResourceMemory} {
+		want := initContainerResources[name]
+		if got, ok := resources.Requests[name]; !ok || got.Cmp(want) != 0 {
+			t.Fatalf("expected request %s=%s, got %s", name, want.String(), got.String())
+		}
+		if got, ok := resources.Limits[name]; !ok || got.Cmp(want) != 0 {
+			t.Fatalf("expected limit %s=%s, got %s", name, want.String(), got.String())
+		}
+	}
+}

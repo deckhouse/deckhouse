@@ -56,6 +56,10 @@ func loadConfigForRender(ctx context.Context, command string, opts *options.Opti
 		return nil, fmt.Errorf("%s requires ClusterConfiguration: everything it renders is built out of the cluster domain, Kubernetes version and cluster type it carries", command)
 	}
 
+	if err := metaConfig.RequireNetwork(); err != nil {
+		return nil, err
+	}
+
 	return metaConfig, nil
 }
 
@@ -260,7 +264,7 @@ func DefineCommandParseCloudDiscoveryData(cmd *kingpin.CmdClause, opts *options.
 	app.DefineInputOutputRenderFlags(cmd, &opts.Render)
 
 	return cmd.Action(func(c *kingpin.ParseContext) error {
-		_ = kpcontext.ExtractContext(c)
+		ctx := kpcontext.ExtractContext(c)
 
 		var err error
 		var data []byte
@@ -278,7 +282,7 @@ func DefineCommandParseCloudDiscoveryData(cmd *kingpin.CmdClause, opts *options.
 		}
 
 		schemaStore := config.NewSchemaStore(&opts.Global)
-		_, err = schemaStore.Validate(&data)
+		_, err = schemaStore.Validate(ctx, &data)
 		if err != nil {
 			return fmt.Errorf("validate cloud_discovery_data: %v", err)
 		}

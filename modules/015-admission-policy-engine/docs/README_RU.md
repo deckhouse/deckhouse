@@ -7,7 +7,7 @@ description: Модуль admission-policy-engine Deckhouse позволяет �
 
 Admission-политики — это правила, которые применяются к объектам (например Pod и Service) в момент их создания и изменения в кластере (но не в процессе их работы), на основе информации, представленной в их манифесте. Эти политики направлены на формализацию параметров которые разрешены или запрещены в манифестах объектов.
 
-В DKP политики разделены на три категории:
+В DP политики разделены на три категории:
 
 - [Pod Security Standards](#pod-security-standards) — политики, реализующие требования соответствующих [Pod Security Standards](https://kubernetes.io/docs/concepts/security/pod-security-standards/).
 - [Операционные политики](#операционные-политики) — политики для создания дополнительных требований к объектам, с помощью валидации значений параметров **не связанных напрямую** с безопасностью (например, список допустимых префиксов для образов контейнеров, политика скачивания образов, список необходимых проб для контейнеров и т.д.).
@@ -186,7 +186,7 @@ alert:
         )
         ```
 
-      - Alternatively, check the admission-policy-engine Grafana dashboard.
+      - Alternatively, check the admission-policy-engine reports in the web interface Deckhouse Platform.
     plk_markup_format: markdown
     plk_protocol_version: "1"
     summary: At least one pod violates the configured cluster pod security standards.
@@ -244,7 +244,7 @@ alert:
         )
         ```
 
-      - Alternatively, check the admission-policy-engine Grafana dashboard.
+      - Alternatively, check the admission-policy-engine reports in the web interface Deckhouse Platform.
     plk_markup_format: markdown
     plk_protocol_version: "1"
     summary: At least one object violates the configured cluster operation policies.
@@ -302,7 +302,7 @@ alert:
         )
         ```
 
-      - Alternatively, check the admission-policy-engine Grafana dashboard.
+      - Alternatively, check the admission-policy-engine reports in the web interface Deckhouse Platform.
     plk_markup_format: markdown
     plk_protocol_version: "1"
     summary: At least one object violates the configured cluster security policies.
@@ -333,7 +333,7 @@ status:
 - `Restricted` — политика со значительными ограничениями. Предъявляет самые жёсткие требования к подам.
 
 {% alert level="info" %}
-В Deckhouse Kubernetes Platform эти политики реализуются средствами Gatekeeper и контролируются admission-контроллерами модуля `admission-policy-engine`, а не контролером [Pod Security Admission](https://kubernetes.io/docs/concepts/security/pod-security-admission/) от Kubernetes. Из Kubernetes взяты только описания политик.
+В Deckhouse Platform эти политики реализуются средствами Gatekeeper и контролируются admission-контроллерами модуля `admission-policy-engine`, а не контролером [Pod Security Admission](https://kubernetes.io/docs/concepts/security/pod-security-admission/) от Kubernetes. Из Kubernetes взяты только описания политик.
 {% endalert %}
 
 Подробнее про каждый набор политик и их ограничения можно прочитать в [документации Kubernetes](https://kubernetes.io/docs/concepts/security/pod-security-standards/#profile-details).
@@ -342,7 +342,8 @@ status:
 Политику по умолчанию можно переопределить глобально ([в настройках модуля](configuration.html#parameters-podsecuritystandards-defaultpolicy)).
 
 {% alert level="info" %}
-Модуль не применяет политики к системным неймспейсам.
+В неймспейсах с именами `d8-*` и `kube-*` стандарт `restricted` применяется независимо от политики по умолчанию.
+Нарушение стандарта фиксируется в отчётах безопасности и отображается в веб-интерфейсе Deckhouse Platform, нагрузка при этом запускается, если владеющий неймспейсом модуль не включил принудительное применение.
 {% endalert %}
 
 {% alert level="info" %}
@@ -575,7 +576,7 @@ spec:
 Для примера рассмотрим под, которому требуется:
 
 - разрешение на использование настройки [`hostNetwork`](/products/kubernetes-platform/documentation/v1/user/security/pod-settings.html#hostnetwork) всему поду;
-- разрешение на использование настройки [`privileged`](/products/kubernetes-platform/documentation/v1/user/security/pod-settings.html#privileged) только для контейнера `sample-init`.
+- разрешение на использование настройки [`privileged`](/products/kubernetes-platform/documentation/v1/user/security/pod-settings.html#privileged) только для контейнера `sample-init`.
 
 Без использования ресурса SecurityPolicyException для разрешения этих параметров потребовалось бы создать пользовательскую политику безопасности, допускающую их использование для всех подов в кластере.
 

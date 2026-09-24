@@ -139,7 +139,7 @@ DexAuthenticator does not have a built-in system for managing authentication bas
 
 ## How to pass the user's login and groups to an application?
 
-By default DexAuthenticator passes only two headers to the application: `X-Auth-Request-User` (based on the opaque `sub` claim) and `X-Auth-Request-Email`. The user's groups are not passed as a header. It grows unboundedly with the number of groups, so it is disabled in DKP, and it cannot be enabled.
+By default DexAuthenticator passes only two headers to the application: `X-Auth-Request-User` (based on the opaque `sub` claim) and `X-Auth-Request-Email`. The user's groups are not passed as a header. It grows unboundedly with the number of groups, so it is disabled in DP, and it cannot be enabled.
 
 To give the application full information about the user, including groups, enable [`sendAuthorizationHeader`](cr.html#dexauthenticator-v1-spec-sendauthorizationheader):
 
@@ -274,28 +274,11 @@ Make sure your application Ingress has TLS configured before integrating with De
 
 ## How to generate a kubeconfig and access Kubernetes API?
 
-`kubeconfig` for remote access to the cluster via `kubectl` can be generated in the [`kubeconfigurator` web interface](/products/kubernetes-platform/documentation/v1/user/web/kubeconfig.html).
-
-Configure the [`publishAPI`](/modules/user-authn/configuration.html#parameters-publishapi) parameter:
-
-- Open the `user-authn` module settings (create the ModuleConfig `user-authn` resource if there is none):
-
-  ```shell
-  d8 k edit mc user-authn
-  ```
-
-- Add the following section to the `settings` block and save:
-
-  ```yaml
-  publishAPI:
-    enabled: true
-  ```
-
-The name `kubeconfig` is reserved for the kubeconfig generation web interface. The URL depends on the [`publicDomainTemplate`](/products/kubernetes-platform/documentation/v1/reference/api/global.html#parameters-modules-publicdomaintemplate) parameter (for example, for the template that looks like `%s.kube.my`, the kubeconfig generation web interface will be available at `kubeconfig.kube.my`, and for `%s-kube.company.my` — at `kubeconfig-kube.company.my`).
+To generate a kubeconfig, refer to the [«How to generate a kubeconfig to access the Kubernetes API?»](/modules/control-plane-manager/faq.html#how-to-generate-a-kubeconfig-to-access-the-kubernetes-api) section of the `control-plane-manager` module documentation.
 
 ### Configuring kube-apiserver
 
-Using the [`control-plane-manager`](/modules/control-plane-manager/) module, DKP automatically configures `kube-apiserver` with the following flags so that the `dashboard` and `kubeconfig-generator` modules can work in the cluster.
+Using the [`control-plane-manager`](/modules/control-plane-manager/) module, DP automatically configures `kube-apiserver` with the following flags so that OIDC authentication works in the cluster.
 
 {% offtopic title="kube-apiserver arguments that will be configured" %}
 
@@ -335,7 +318,7 @@ To rotate the secret, do the following:
    d8 k -n d8-user-authn patch secret kubernetes-dex-client-app-secret --type merge -p '{"data":{"secret":""}}'
    ```
 
-1. Restart DKP so that the hook picks the empty field up and generates a new value:
+1. Restart DP so that the hook picks the empty field up and generates a new value:
 
    ```shell
    d8 k -n d8-system rollout restart deployment/deckhouse
@@ -347,7 +330,7 @@ To rotate the secret, do the following:
    d8 k -n d8-user-authn get secret kubernetes-dex-client-app-secret -o jsonpath='{.data.secret}'
    ```
 
-   If it did not, repeat the steps 2 and 3. The module may have restored the previous before DKP was restarted.
+   If it did not, repeat the steps 2 and 3. The module may have restored the previous before DP was restarted.
 
 One the secret has been rotated, the configuration of components that use it will be updated automatically and the corresponding pods will be restarted.
 
@@ -370,10 +353,12 @@ Dex will mount the `keytab` automatically and start accepting SPNEGO. A server�
 
 ## How to configure Basic Authentication for accessing Kubernetes API via LDAP?
 
-1. Enable the [`publishAPI`](/modules/user-authn/configuration.html#parameters-publishapi) parameter in the `user-authn` module configuration.
+Use the `control-plane-manager` module settings:
+
+1. Enable the [`apiserver.publishAPI`](/modules/control-plane-manager/configuration.html#parameters-apiserver-publishapi) parameter in the `control-plane-manager` module configuration.
 1. Create a [DexProvider](/modules/user-authn/cr.html#dexprovider) resource of type `LDAP` and set [`enableBasicAuth: true`](/modules/user-authn/cr.html#dexprovider-v1-spec-oidc-enablebasicauth).
 1. Configure [RBAC](/modules/user-authz/cr.html#clusterauthorizationrule) for groups obtained from LDAP.
-1. Provide users with a `kubeconfig` configured for Basic Authentication (LDAP username and password).
+1. Provide users with a kubeconfig configured for Basic Authentication (LDAP username and password).
 
 {% alert level="warning" %}
 Only one authentication provider in the cluster can have [`enableBasicAuth`](/modules/user-authn/cr.html#dexprovider-v1-spec-oidc-enablebasicauth) enabled.

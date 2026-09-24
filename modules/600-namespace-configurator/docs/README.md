@@ -1,6 +1,6 @@
 ---
 title: "The namespace-configurator module"
-description: "Automatic management of annotations and labels on namespaces in the Deckhouse Kubernetes Platform."
+description: "Automatic management of annotations and labels on namespaces in the Deckhouse Platform."
 ---
 
 The `namespace-configurator` module allows to assign annotations and labels to namespaces automatically.

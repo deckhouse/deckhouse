@@ -40,6 +40,12 @@ func CloudProviderModuleName(providerName string) string {
 	return cloudProviderModuleNamePrefix + strings.ToLower(providerName)
 }
 
+// Answers without knowing which provider the cluster runs on: at bootstrap the MetaConfig may
+// not be parsed yet when the question is asked.
+func IsCloudProviderModuleName(name string) bool {
+	return strings.HasPrefix(name, cloudProviderModuleNamePrefix)
+}
+
 // CloudProviderNamespace returns the canonical d8-cloud-provider-<name>
 // namespace that hosts the provider module's workloads.
 func CloudProviderNamespace(providerName string) string {

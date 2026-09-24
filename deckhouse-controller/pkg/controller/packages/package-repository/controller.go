@@ -157,7 +157,7 @@ func (r *reconciler) handleCreateOrUpdate(ctx context.Context, repo *v1alpha1.Pa
 	// Check if there are any existing PackageRepositoryOperations for this repository
 	operations := new(v1alpha1.PackageRepositoryOperationList)
 	err := r.client.List(ctx, operations, client.MatchingLabels{
-		v1alpha1.PackagesRepositoryOperationLabelRepository: repo.Name,
+		v1alpha1.PackageLabelRepository: repo.Name,
 	})
 	if err != nil {
 		return ctrl.Result{}, fmt.Errorf("list operations: %w", err)
@@ -190,9 +190,9 @@ func (r *reconciler) handleCreateOrUpdate(ctx context.Context, repo *v1alpha1.Pa
 		ObjectMeta: metav1.ObjectMeta{
 			Name: operationName,
 			Labels: map[string]string{
-				v1alpha1.PackagesRepositoryOperationLabelRepository:       repo.Name,
-				v1alpha1.PackagesRepositoryOperationLabelOperationTrigger: v1alpha1.PackagesRepositoryTriggerAuto,
-				v1alpha1.PackagesRepositoryOperationLabelOperationType:    string(v1alpha1.PackageRepositoryOperationTypeUpdate),
+				v1alpha1.PackageLabelRepository:       repo.Name,
+				v1alpha1.PackageLabelOperationTrigger: v1alpha1.PackageOperationTriggerAuto,
+				v1alpha1.PackageLabelOperationType:    string(v1alpha1.PackageRepositoryOperationTypeUpdate),
 			},
 			OwnerReferences: []metav1.OwnerReference{
 				{
@@ -373,7 +373,7 @@ func (r *reconciler) cleanupModulePackage(ctx context.Context, pkg *v1alpha1.Mod
 }
 
 // syncRegistrySettings checks if package repository registry settings were updated
-// (comparing PackageRepositoryAnnotationRegistryChecksum annotation and the current registry spec)
+// (comparing PackageAnnotationRegistrySpecChecksum annotation and the current registry spec)
 // and triggers reconciliation of related Applications if it is the case
 func (r *reconciler) syncRegistrySettings(ctx context.Context, repo *v1alpha1.PackageRepository) error {
 	marshaled, err := json.Marshal(repo.Spec.Registry)
@@ -386,7 +386,7 @@ func (r *reconciler) syncRegistrySettings(ctx context.Context, repo *v1alpha1.Pa
 	if len(repo.ObjectMeta.Annotations) == 0 {
 		original := repo.DeepCopy()
 		repo.ObjectMeta.Annotations = map[string]string{
-			v1alpha1.PackageRepositoryAnnotationRegistryChecksum: currentChecksum,
+			v1alpha1.PackageAnnotationRegistrySpecChecksum: currentChecksum,
 		}
 		if err := r.client.Patch(ctx, repo, client.MergeFrom(original)); err != nil {
 			return fmt.Errorf("set initial checksum annotation: %w", err)
@@ -394,7 +394,7 @@ func (r *reconciler) syncRegistrySettings(ctx context.Context, repo *v1alpha1.Pa
 		return nil
 	}
 
-	if repo.ObjectMeta.Annotations[v1alpha1.PackageRepositoryAnnotationRegistryChecksum] == currentChecksum {
+	if repo.ObjectMeta.Annotations[v1alpha1.PackageAnnotationRegistrySpecChecksum] == currentChecksum {
 		return nil
 	}
 
@@ -420,7 +420,7 @@ func (r *reconciler) syncRegistrySettings(ctx context.Context, repo *v1alpha1.Pa
 			app.ObjectMeta.Annotations = make(map[string]string)
 		}
 
-		app.ObjectMeta.Annotations[v1alpha1.ApplicationAnnotationRegistrySpecChanged] = now
+		app.ObjectMeta.Annotations[v1alpha1.PackageAnnotationRegistrySpecChanged] = now
 		if err := r.client.Patch(ctx, &app, client.MergeFrom(original)); err != nil {
 			updateErrors = append(updateErrors, fmt.Errorf("application %s/%s: %w", app.Namespace, app.Name, err))
 			r.logger.Warn("failed to set registry-spec-changed annotation on application",
@@ -436,19 +436,25 @@ func (r *reconciler) syncRegistrySettings(ctx context.Context, repo *v1alpha1.Pa
 			slog.String("namespace", app.Namespace))
 	}
 
-	original := repo.DeepCopy()
-	repo.ObjectMeta.Annotations[v1alpha1.PackageRepositoryAnnotationRegistryChecksum] = currentChecksum
-	if err := r.client.Patch(ctx, repo, client.MergeFrom(original)); err != nil {
-		return fmt.Errorf("update checksum annotation: %w", err)
-	}
-
 	if len(updateErrors) > 0 {
 		r.logger.Warn("failed to update some applications",
 			slog.Int("failed", len(updateErrors)),
 			slog.Int("succeeded", updatedCount))
+
+		// Give up before the checksum is committed when not a single application could be annotated.
+		// The checksum makes the next reconcile return early, so committing it here would retire the
+		// fan-out for good and leave every application on the old registry settings, returned error or
+		// not. A partial failure still commits: replaying the fan-out would re-annotate the
+		// applications that did succeed, and each of those costs a reconcile of its own.
 		if updatedCount == 0 {
 			return fmt.Errorf("failed to update all %d application(s): %w", len(updateErrors), updateErrors[0])
 		}
+	}
+
+	original := repo.DeepCopy()
+	repo.ObjectMeta.Annotations[v1alpha1.PackageAnnotationRegistrySpecChecksum] = currentChecksum
+	if err := r.client.Patch(ctx, repo, client.MergeFrom(original)); err != nil {
+		return fmt.Errorf("update checksum annotation: %w", err)
 	}
 
 	return nil

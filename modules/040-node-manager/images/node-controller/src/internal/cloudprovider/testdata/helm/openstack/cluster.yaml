@@ -1,0 +1,25 @@
+apiVersion: infrastructure.cluster.x-k8s.io/v1beta1
+kind: OpenStackCluster
+metadata:
+  name: openstack
+  namespace: d8-cloud-instance-manager
+  labels:
+    app: capo-controller-manager
+    heritage: deckhouse
+    module: node-manager
+spec:
+  apiServerLoadBalancer:
+    enabled: false
+  disableAPIServerFloatingIP: true
+  controlPlaneEndpoint:
+    host: 192.0.2.10
+    port: 6443
+  network:
+    filter:
+      name: internal
+  externalNetwork:
+    filter:
+      name: public
+  identityRef:
+    cloudName: openstack
+    name: capi-user-credentials

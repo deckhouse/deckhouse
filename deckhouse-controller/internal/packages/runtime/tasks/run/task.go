@@ -21,7 +21,6 @@ import (
 	"log/slog"
 
 	addontypes "github.com/flant/addon-operator/pkg/hook/types"
-	addonutils "github.com/flant/addon-operator/pkg/utils"
 	shtypes "github.com/flant/shell-operator/pkg/hook/types"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
@@ -30,6 +29,7 @@ import (
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/nelm"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/status"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/queue"
+	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/addonutils"
 	"github.com/deckhouse/deckhouse/pkg/log"
 )
 
@@ -63,7 +63,7 @@ type nelmI interface {
 }
 
 // task executes the main package lifecycle: hooks and Helm release management.
-// On success, sets HelmApplied, HooksProcessed, ReadyInRuntime, and ReadyInCluster.
+// On success, sets ManifestsApplied, HooksProcessed and Configured.
 type task struct {
 	pkg       packageI
 	namespace string
@@ -100,6 +100,7 @@ func (t *task) Execute(ctx context.Context) error {
 
 	t.status.SetConditionTrue(t.pkg.GetName(), status.ConditionManifestsApplied)
 	t.status.SetConditionTrue(t.pkg.GetName(), status.ConditionHooksProcessed)
+	t.status.SetConditionTrue(t.pkg.GetName(), status.ConditionConfigured)
 
 	return nil
 }

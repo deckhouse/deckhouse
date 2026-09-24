@@ -1,0 +1,34 @@
+- name: d8.user-authz.rbacv2.foreign-aggregation-label
+  rules:
+  # A ClusterRole outside the platform that carries rbac.deckhouse.io/aggregate-to-<lineage>-as
+  # without being a custom capability. The aggregation controller reads nothing but the label, so
+  # its rules are merged into the platform role for every holder; the cluster_roles webhook refuses
+  # such an object on CREATE/UPDATE, but a role that predates the check stays until it is fixed.
+  - alert: D8UserAuthzForeignAggregationLabel
+    expr: |
+      max by (name, lineage, kind) (d8_user_authz_foreign_aggregation_label) > 0
+    for: 15m
+    labels:
+      severity_level: "6"
+      tier: cluster
+      d8_module: user-authz
+      d8_component: rbacv2
+    annotations:
+      plk_protocol_version: "1"
+      plk_markup_format: "markdown"
+      plk_create_group_if_not_exists__d8_user_authz_foreign_aggregation_labels: "D8UserAuthzForeignAggregationLabels,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
+      plk_grouped_by__d8_user_authz_foreign_aggregation_labels: "D8UserAuthzForeignAggregationLabels,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
+      summary: ClusterRole `{{ $labels.name }}` aggregates into the platform `{{ $labels.lineage }}` roles without being a custom capability.
+      description: |-
+        The ClusterRole `{{ $labels.name }}` carries the `rbac.deckhouse.io/aggregate-to-{{ $labels.lineage }}-as` label but is not labelled `rbac.deckhouse.io/kind: custom-capability`{{ if $labels.kind }} (its kind label is `{{ $labels.kind }}`){{ end }}. The aggregation controller reads nothing but that label, so the rules of this role are merged into the platform `d8:{{ $labels.lineage }}:*` roles for every holder in the cluster, outside the role model's contract.
+
+        The `rbacv2-cluster-roles.deckhouse.io` webhook now refuses such an object: every `UPDATE` of this role, including a GitOps re-apply, is denied until it is fixed. Choose one:
+
+        * If the role is meant to extend the platform roles, make it a custom capability: name it `d8:custom:<scope>-capability:<name>`, label it `rbac.deckhouse.io/kind: custom-capability` and `rbac.deckhouse.io/scope: <scope>`, and drop its `aggregationRule` if it has one. See the user-authz documentation on custom capabilities.
+        * Otherwise remove the `rbac.deckhouse.io/aggregate-to-*-as` labels from it.
+
+        List every such role:
+
+        ```bash
+        d8 k get clusterroles -o json | jq -r '.items[] | select((.metadata.labels // {}) | to_entries | any(.key | startswith("rbac.deckhouse.io/aggregate-to-"))) | select((.metadata.labels.heritage // "") != "deckhouse") | select((.metadata.labels["rbac.deckhouse.io/kind"] // "") != "custom-capability") | .metadata.name'
+        ```

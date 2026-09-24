@@ -316,11 +316,11 @@ docs: bin/werf ## Run containers with the documentation.
 	@echo -n "werf: "; bin/werf version
 	@$(MAKE) -C docs/site free-port-80
 	@cd docs/site/; ../../bin/werf compose up --docker-compose-command-options='-d' --env local --repo ":local" --skip-image-spec-stage=true
-	echo "Open http://localhost/products/kubernetes-platform/documentation/v1/ to access DKP documentation..."
+	echo "Open http://localhost/products/kubernetes-platform/documentation/v1/ to access documentation..."
 
 .PHONY: docs-generate-pdf
 docs-generate-pdf: ## Generate PDF documentation.
-  ##~ Options: DOC_VERSION=X.XX - DKP version (used just in PDF headers and footers). If not set, the version is determined from the git branch name.
+  ##~ Options: DOC_VERSION=X.XX - DP version (used just in PDF headers and footers). If not set, the version is determined from the git branch name.
   ##~ Options: BUILD_LANG=ru|en - build a single language only. If not set, both languages are built.
   ##~ Outputs: pdf/deckhouse-admin-guide_{ru,en}.pdf and pdf/deckhouse-user-guide_{ru,en}.pdf
 	DOC_VERSION="$(strip $(DOC_VERSION))" \
@@ -335,7 +335,7 @@ docs-external-module: yq bin/werf ## Build an external module docs and run the l
 	@echo -n "werf: "; bin/werf version
 	@$(MAKE) -C docs/site free-port-80
 	@cd docs/site/; ../../bin/werf compose up --docker-compose-command-options='-d' --env local --repo ":local" --skip-image-spec-stage=true
-	echo "Open http://localhost/products/kubernetes-platform/documentation/v1/ to access DKP documentation..."
+	echo "Open http://localhost/products/kubernetes-platform/documentation/v1/ to access documentation..."
 
 .PHONY: docs-external-module-clean
 docs-external-module-clean: ## Remove generated external module documentation output.
@@ -348,7 +348,7 @@ docs-dev: bin/werf ## Run containers with the documentation in the dev mode (all
 	@echo -n "werf: "; bin/werf version;
 	@$(MAKE) -C docs/site free-port-80
 	@cd docs/site/; ../../bin/werf compose up --docker-compose-command-options='-d' --dev --env development --repo ":local" --skip-image-spec-stage=true
-	echo "Open http://localhost/products/kubernetes-platform/documentation/v1/ to access DKP documentation..."
+	echo "Open http://localhost/products/kubernetes-platform/documentation/v1/ to access documentation..."
 
 .PHONY: docs-down
 docs-down: ## Stop all the documentation containers (e.g. site_site_1 - for Linux, and site-site-1 for MacOs)
@@ -641,9 +641,9 @@ LIB_HELM_DIR ?= $(CURDIR)/helm_lib
 ## TODO: remap in yaml file (version.yaml or smthng)
 ## Tool Versions
 GOLANGCI_LINT_VERSION = v2.13.1
-DECKHOUSE_CLI_VERSION ?= v0.33.17
+DECKHOUSE_CLI_VERSION ?= v0.33.19
 CRD_ENRICHER_VERSION ?= v0.0.2
-DMT_VERSION ?= 0.2.4
+DMT_VERSION ?= 0.2.5
 CONTROLLER_TOOLS_VERSION ?= v0.19.0
 CODE_GENERATOR_VERSION ?= v0.34.8
 YQ_VERSION ?= v4.47.2
@@ -673,9 +673,21 @@ dmt-gen: ## Update DMT_VERSION in tools/dmt-lint.sh.
 ## Generate tools documentation
 .PHONY: generate-docs
 generate-docs: yq deckhouse-cli ## Generate documentation for deckhouse-cli.
+  ##~ The werf-derived commands wrap their help text to min(width of the stderr terminal, 100),
+  ##~ and ignore both COLUMNS and WERF_LOG_TERMINAL_WIDTH. Running this in a terminal narrower
+  ##~ than 100 columns therefore rewraps every longDescription in d8-cli.json and makes the
+  ##~ go_generate CI job fail on a diff that carries no content change. Pointing stderr at a
+  ##~ regular file detaches it from the terminal, so the width is always the 100-column default
+  ##~ that CI produces. stderr is still printed, and the exit code is still the CLI's own.
 	@$(DECKHOUSE_CLI) --version
 	@$(YQ) eval '.d8.d8CliVersion = "$(DECKHOUSE_CLI_VERSION)"' -i ./candi/version_map.yml
-	@DECKHOUSE_PLUGINS_ENABLED=false HELM_PLUGINS="" $(DECKHOUSE_CLI)  help-json --username-replace=$(WHOAMI) > ./docs/documentation/_data/reference/d8-cli.json && echo "d8 help-json content is updated"
+	@err=$$(mktemp); \
+	DECKHOUSE_PLUGINS_ENABLED=false HELM_PLUGINS="" $(DECKHOUSE_CLI) help-json --username-replace=$(WHOAMI) \
+		> ./docs/documentation/_data/reference/d8-cli.json 2>$$err; \
+	rc=$$?; \
+	cat $$err >&2; rm -f $$err; \
+	if [ $$rc -ne 0 ]; then exit $$rc; fi; \
+	echo "d8 help-json content is updated"
 
 ## Generate codebase for deckhouse-controllers kubernetes entities
 .PHONY: generate-kubernetes
@@ -759,7 +771,7 @@ client-gen-generate: client-gen
 	$(CLIENT_GEN) \
 		--clientset-name "versioned" \
 		--input-base "" \
-		--input "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1,github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha2" \
+		--input "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1,github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha2,github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1beta1" \
 		--output-pkg "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/client/clientset" \
 		--output-dir "./deckhouse-controller/pkg/client/clientset" \
 		--go-header-file "./deckhouse-controller/hack/boilerplate.go.txt"
@@ -772,7 +784,8 @@ lister-gen-generate: lister-gen
 		--output-dir "./deckhouse-controller/pkg/client/listers" \
 		--go-header-file "./deckhouse-controller/hack/boilerplate.go.txt" \
 		github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1 \
-		github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha2
+		github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha2 \
+		github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1beta1
 
 ## Generate informers
 .PHONY: informer-gen-generate
@@ -784,7 +797,8 @@ informer-gen-generate: informer-gen lister-gen-generate client-gen-generate
 		--output-dir "./deckhouse-controller/pkg/client/informers" \
 		--go-header-file "./deckhouse-controller/hack/boilerplate.go.txt" \
 		github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1 \
-		github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha2
+		github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha2 \
+		github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1beta1
 
 ## Tool installations
 

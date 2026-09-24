@@ -31,15 +31,35 @@ presets:
         - Ваши приложения должны работать на worker-узле.
 
 installTypes:
+  linux:
+    iconPath: images/icons/platforms/bare_metal.png
+    type: linux
+    name:
+      en: Linux OS
+      ru: ОС Linux
+    pages_title:
+      en: "Deckhouse Stronghold on Linux OS"
+      ru: "Deckhouse Stronghold в ОС Linux"
+    steps:
+      step2:
+        name:
+          en: Installation
+          ru: Установка
+        template: getting_started/stronghold/<INSTALL_CODE>/STEP_INSTALL.md
+      step3:
+        name:
+          en: What can I do next?
+          ru: Куда двигаться дальше?
+        template: getting_started/stronghold/linux/STEP_FINISH.md
   existing-dkp:
     iconPath: images/icons/platforms/corp_cloud_vmware.png
     type: existing-dkp
     name:
-      en: Existing DKP cluster
-      ru: Существующий кластер DKP
+      en: Existing DP cluster
+      ru: Существующий кластер DP
     pages_title:
-      en: "Deckhouse Stronghold in an existing Deckhouse Kubernetes Platform cluster"
-      ru: "Deckhouse Stronghold в существующем кластере Deckhouse Kubernetes Platform"
+      en: "Deckhouse Stronghold in an existing Deckhouse Platform cluster"
+      ru: "Deckhouse Stronghold в существующем кластере Deckhouse Platform"
     #layout:
     #  code: standard
     #  name: Standard

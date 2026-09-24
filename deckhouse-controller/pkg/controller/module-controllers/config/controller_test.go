@@ -22,7 +22,6 @@ import (
 	"github.com/flant/addon-operator/pkg/kube_config_manager/config"
 	"github.com/flant/addon-operator/pkg/module_manager/models/modules"
 	"github.com/flant/addon-operator/pkg/module_manager/models/modules/events"
-	addonutils "github.com/flant/addon-operator/pkg/utils"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
@@ -30,6 +29,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
+	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/addonutils"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/confighandler"
 	d8edition "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/edition"
@@ -106,7 +106,6 @@ func (suite *ControllerTestSuite) buildReconciler() {
 		handler:          newMockHandler(),
 		conversionsStore: conversionsStore,
 		moduleManager:    newMockModuleManager(),
-		packageManager:   &stubPackageManager{},
 		edition:          &d8edition.Edition{Name: "fe", Bundle: "Default"},
 		metricStorage:    metricstorage.NewMetricStorage(metricstorage.WithNewRegistry(), metricstorage.WithLogger(log.NewNop())),
 		configValidator:  nil, // Disable validation in tests to avoid schema issues
@@ -263,10 +262,4 @@ func newMockHandler() *confighandler.Handler {
 	handler.StartInformer(context.Background(), configEventCh)
 
 	return handler
-}
-
-type stubPackageManager struct{}
-
-func (s *stubPackageManager) UpdateModulesSettings(_ string, _ int, _ addonutils.Values, _ string, _ *bool) {
-	// no-op
 }

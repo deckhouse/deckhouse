@@ -26,7 +26,6 @@ import (
 	"sync"
 
 	addontypes "github.com/flant/addon-operator/pkg/hook/types"
-	addonutils "github.com/flant/addon-operator/pkg/utils"
 	"github.com/flant/kube-client/manifest"
 	shtypes "github.com/flant/shell-operator/pkg/hook/types"
 	"go.opentelemetry.io/otel"
@@ -38,6 +37,7 @@ import (
 	taskensurewebhooks "github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/runtime/tasks/ensurewebhooks"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/status"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/queue"
+	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/addonutils"
 	"github.com/deckhouse/deckhouse/pkg/log"
 )
 
@@ -166,6 +166,8 @@ func (t *task) String() string {
 // convert. A module whose chart cannot be rendered retries forever and holds the
 // barrier, exactly as a broken CRD does; gating on the chart scan keeps modules
 // that ship no webhooks out of that path entirely.
+//
+// On success it sets ManifestsApplied, HooksProcessed and Configured, as the module Run does.
 func (t *task) Execute(ctx context.Context) error {
 	ctx, span := otel.Tracer(taskTracer).Start(ctx, "Run")
 	defer span.End()
@@ -218,6 +220,10 @@ func (t *task) Execute(ctx context.Context) error {
 	}
 
 	wg.Wait()
+
+	t.status.SetConditionTrue(t.global.GetName(), status.ConditionManifestsApplied)
+	t.status.SetConditionTrue(t.global.GetName(), status.ConditionHooksProcessed)
+	t.status.SetConditionTrue(t.global.GetName(), status.ConditionConfigured)
 
 	return nil
 }

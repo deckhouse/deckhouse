@@ -23,7 +23,7 @@ import (
 
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/condmap"
 	intstatus "github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/status"
-	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha2"
+	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1beta1"
 )
 
 // summaryFor builds the pre-mapping state from the given options and runs
@@ -254,7 +254,7 @@ func TestModuleSummaryScenarios(t *testing.T) {
 // wiring: the cases above set condmap.State.Deleting directly and never reach it.
 func TestComputeAndApplyConditionsOnDeletion(t *testing.T) {
 	deleted := metav1.NewTime(time.Unix(0, 0))
-	module := &v1alpha2.Module{
+	module := &v1beta1.Module{
 		ObjectMeta: metav1.ObjectMeta{Name: "mod", DeletionTimestamp: &deleted},
 	}
 

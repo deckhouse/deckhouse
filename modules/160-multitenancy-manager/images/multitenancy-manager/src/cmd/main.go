@@ -17,14 +17,14 @@ limitations under the License.
 package main
 
 import (
-	"flag"
-	"fmt"
 	"os"
 	"time"
 
 	"github.com/go-logr/logr"
 	"go.uber.org/zap/zapcore"
+	authorizationv1 "k8s.io/api/authorization/v1"
 	corev1 "k8s.io/api/core/v1"
+	rbacv1 "k8s.io/api/rbac/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/utils/ptr"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -36,100 +36,127 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/webhook"
 
 	grantsv1alpha1 "controller/api/v1alpha1"
-	"controller/apis/deckhouse.io/v1alpha1"
-	"controller/apis/deckhouse.io/v1alpha2"
+	deckhousev1alpha2 "controller/apis/deckhouse.io/v1alpha2"
+	"controller/apis/deckhouse.io/v1alpha3"
 	namespacecontroller "controller/internal/controller/namespace"
 	projectcontroller "controller/internal/controller/project"
 	templatecontroller "controller/internal/controller/template"
 	grantcontrollers "controller/internal/controllers"
+	clusterprojectrolebindingcontroller "controller/internal/controllers/clusterprojectrolebinding"
+	projectnamespacecontroller "controller/internal/controllers/projectnamespace"
+	projectrolebindingcontroller "controller/internal/controllers/projectrolebinding"
+	templategrantscontroller "controller/internal/controllers/templategrants"
 	"controller/internal/helm"
 	"controller/internal/jsonpath"
-	namespacewebhook "controller/internal/webhook/namespace"
+	"controller/internal/rolebinding"
+	"controller/internal/startup"
+	clusterprojectrolebindingwebhook "controller/internal/webhook/clusterprojectrolebinding"
+	grantableclusterresourcereferencewebhook "controller/internal/webhook/grantableclusterresourcereference"
 	projectwebhook "controller/internal/webhook/project"
+	projectnamespacewebhook "controller/internal/webhook/projectnamespace"
+	projectrolebindingwebhook "controller/internal/webhook/projectrolebinding"
 	templatewebhook "controller/internal/webhook/template"
 	grantwebhooks "controller/internal/webhooks"
 )
 
 var (
 	// path to helm templates
-	helmTemplatesPath = "helmlib"
 	// path to default project templates
 	templatesPath = "templates"
-	// helm release namespace
-	helmNamespace = "d8-multitenancy-manager"
-	// controller service account
-	serviceAccount = "system:serviceaccount:d8-multitenancy-manager:multitenancy-manager"
-	// list of service accounts allowed to create namespaces when allowNamespacesWithoutProjects is set to false
-	allowedServiceAccounts = []string{serviceAccount, "system:serviceaccount:d8-system:deckhouse", "system:serviceaccount:d8-upmeter:upmeter-agent"}
+	// helm release namespace (same value Helm later writes on adopted objects)
+	helmNamespace = helm.ReleaseStorageNamespace
+	// controller service account (centralized in internal/rolebinding so the value cannot drift)
+	serviceAccount = rolebinding.ControllerServiceAccount
 )
 
 const (
-	haModeEnv      = "HA_MODE"
 	controllerName = "multitenancy-manager"
+
+	// Leader election is always on: even a single-replica Deployment has two pods during a rolling
+	// update, and two writers of the same Helm releases would each upgrade them (the 2026-09-14
+	// rollout left every project on the changed template with an extra, identical revision). The
+	// webhooks keep serving on every replica; only the controllers wait for the lease.
+	//
+	// The lease is renewed against the API server, and controller-runtime exits the process when a
+	// renewal misses RenewDeadline. With the defaults (15 s lease, 10 s renew) every short API-server
+	// absence would restart the pod and throw away a warm cache; these give it a minute to come back,
+	// the same budget user-authz-controller runs with.
+	leaseDuration = 60 * time.Second
+	renewDeadline = 40 * time.Second
+	retryPeriod   = 8 * time.Second
 )
 
 func main() {
-	var allowOrphanNamespaces bool
-	flag.BoolVar(&allowOrphanNamespaces, "allow-orphan-namespaces", true, "allow to create a namespace which is not a part of a Project")
-	flag.Parse()
-
 	// setup logger
 	logger := ctrl.Log.WithName(controllerName)
 	ctrllog.SetLogger(zap.New(zap.Level(zapcore.Level(-4)), zap.StacktraceLevel(zapcore.PanicLevel)))
 
-	logger.Info(fmt.Sprintf("start multitenancy-manager with %v allow orphan namespaces option", allowOrphanNamespaces))
+	logger.Info("start multitenancy-manager")
 
 	// initialize runtime manager
 	runtimeManager, err := setupRuntimeManager(logger)
 	if err != nil {
-		panic(err)
+		fatal(logger, err, "set up runtime manager")
 	}
 
 	// initialize helm client
-	helmClient, err := helm.New(helmNamespace, helmTemplatesPath, logger)
+	helmClient, err := helm.New(helmNamespace, logger)
 	if err != nil {
-		panic(err)
+		fatal(logger, err, "initialize helm client")
 	}
 
+	migration := startup.NewMigration()
+
 	// register project controller
-	if err = projectcontroller.Register(runtimeManager, helmClient, logger); err != nil {
-		panic(err)
+	if err = projectcontroller.Register(runtimeManager, helmClient, logger, migration); err != nil {
+		fatal(logger, err, "register project controller")
 	}
 
 	// register template controller
 	if err = templatecontroller.Register(runtimeManager, templatesPath, logger); err != nil {
-		panic(err)
+		fatal(logger, err, "register template controller")
+	}
+
+	// register the schema-based template grant materializer: turns a v1alpha2 template's
+	// resources/grantPolicies into managed ClusterResourceGrantPolicy objects.
+	if err = (&templategrantscontroller.Reconciler{
+		Client: runtimeManager.GetClient(),
+		Scheme: runtimeManager.GetScheme(),
+	}).SetupWithManager(runtimeManager); err != nil {
+		fatal(logger, err, "register template grants reconciler")
 	}
 
 	// register namespace controller
-	if err = namespacecontroller.Register(runtimeManager, logger); err != nil {
-		panic(err)
+	if err = namespacecontroller.Register(runtimeManager, logger, migration); err != nil {
+		fatal(logger, err, "register namespace controller")
 	}
 
 	// register project webhook
-	projectwebhook.Register(runtimeManager, helmClient)
+	projectwebhook.Register(runtimeManager)
 
 	// register template webhook
 	templatewebhook.Register(runtimeManager, serviceAccount)
-
-	if !allowOrphanNamespaces {
-		// register namespace webhook
-		namespacewebhook.Register(runtimeManager, allowedServiceAccounts)
-	}
 
 	// register cluster resource grants: catalog reconciler, binding-status reconcilers and webhooks.
 	jsonpathFactory := jsonpath.NewWithCache()
 	if err = (&grantcontrollers.ProjectReconciler{
 		Client: runtimeManager.GetClient(),
 		Mapper: runtimeManager.GetRESTMapper(),
+		// Usage objects are of whatever kinds the references name; the uncached reader keeps the
+		// two-minute recount from starting an informer per kind.
+		Usage:   runtimeManager.GetAPIReader(),
+		Factory: jsonpathFactory,
 	}).SetupWithManager(runtimeManager); err != nil {
-		panic(err)
+		fatal(logger, err, "set up grant project reconciler")
 	}
-	if err = (&grantcontrollers.ReferenceReconciler{Client: runtimeManager.GetClient()}).SetupWithManager(runtimeManager); err != nil {
-		panic(err)
+	if err = (&grantcontrollers.ReferenceReconciler{Client: runtimeManager.GetClient(), Factory: jsonpathFactory}).SetupWithManager(runtimeManager); err != nil {
+		fatal(logger, err, "set up grant reference reconciler")
 	}
 	if err = (&grantcontrollers.DefinitionReconciler{Client: runtimeManager.GetClient()}).SetupWithManager(runtimeManager); err != nil {
-		panic(err)
+		fatal(logger, err, "set up grant definition reconciler")
+	}
+	if err = (&grantcontrollers.PolicyReconciler{Client: runtimeManager.GetClient(), Mapper: runtimeManager.GetRESTMapper()}).SetupWithManager(runtimeManager); err != nil {
+		fatal(logger, err, "set up grant policy reconciler")
 	}
 	// Use the direct (uncached) API reader for the admission webhooks: a cache-backed read lazily
 	// starts an informer and blocks on its sync inside the request, which can exceed the webhook
@@ -137,19 +164,51 @@ func main() {
 	grantwebhooks.NewIsGrantedValidator(logger, runtimeManager.GetAPIReader(), runtimeManager.GetRESTMapper(), jsonpathFactory).InstallInto(runtimeManager.GetWebhookServer())
 	grantwebhooks.NewDefaultsMutator(logger, runtimeManager.GetAPIReader(), runtimeManager.GetRESTMapper(), jsonpathFactory).InstallInto(runtimeManager.GetWebhookServer())
 	grantwebhooks.NewProtectValidator(logger, serviceAccount).InstallInto(runtimeManager.GetWebhookServer())
+	// Reject a GrantableClusterResourceReference whose paths /is-granted cannot compile, whose
+	// defaulting path the /defaults mutator cannot write to, or whose fieldPaths scopes stray outside
+	// or leave holes in spec.rule. Same factory as those two webhooks and the reference reconciler, so
+	// all of them read a path the same way.
+	grantableclusterresourcereferencewebhook.Register(runtimeManager, jsonpathFactory)
+
+	// register the project role binding reconcilers
+	if err = (&projectrolebindingcontroller.Reconciler{Client: runtimeManager.GetClient()}).SetupWithManager(runtimeManager); err != nil {
+		fatal(logger, err, "set up project role binding reconciler")
+	}
+	if err = (&clusterprojectrolebindingcontroller.Reconciler{Client: runtimeManager.GetClient()}).SetupWithManager(runtimeManager); err != nil {
+		fatal(logger, err, "set up cluster project role binding reconciler")
+	}
+
+	// register the project namespace reconciler
+	if err = (&projectnamespacecontroller.Reconciler{Client: runtimeManager.GetClient()}).SetupWithManager(runtimeManager); err != nil {
+		fatal(logger, err, "set up project namespace reconciler")
+	}
+
+	// register the project role binding webhooks
+	projectrolebindingwebhook.Register(runtimeManager)
+	clusterprojectrolebindingwebhook.Register(runtimeManager)
+	projectnamespacewebhook.Register(runtimeManager)
 
 	// start runtime manager
 	if err = runtimeManager.Start(ctrl.SetupSignalHandler()); err != nil {
-		panic(err)
+		fatal(logger, err, "start runtime manager")
 	}
+}
+
+// fatal logs the error with context and terminates the process; used for unrecoverable startup
+// failures instead of panicking.
+func fatal(logger logr.Logger, err error, msg string) {
+	logger.Error(err, msg)
+	os.Exit(1)
 }
 
 func setupRuntimeManager(logger logr.Logger) (ctrl.Manager, error) {
 	addToScheme := []func(s *runtime.Scheme) error{
-		v1alpha1.AddToScheme,
-		v1alpha2.AddToScheme,
+		deckhousev1alpha2.AddToScheme,
+		v1alpha3.AddToScheme,
 		grantsv1alpha1.AddToScheme,
 		corev1.AddToScheme,
+		rbacv1.AddToScheme,
+		authorizationv1.AddToScheme,
 	}
 
 	scheme := runtime.NewScheme()
@@ -161,20 +220,24 @@ func setupRuntimeManager(logger logr.Logger) (ctrl.Manager, error) {
 	}
 
 	opts := manager.Options{
-		LeaderElection:          false,
-		Scheme:                  scheme,
-		GracefulShutdownTimeout: ptr.To(10 * time.Second),
-		HealthProbeBindAddress:  ":9090",
-		WebhookServer:           webhook.NewServer(webhook.Options{CertDir: "/certs"}),
+		LeaderElection:                true,
+		LeaderElectionID:              controllerName,
+		LeaderElectionNamespace:       helmNamespace,
+		LeaderElectionReleaseOnCancel: true,
+		LeaseDuration:                 ptr.To(leaseDuration),
+		RenewDeadline:                 ptr.To(renewDeadline),
+		RetryPeriod:                   ptr.To(retryPeriod),
+		Scheme:                        scheme,
+		GracefulShutdownTimeout:       ptr.To(10 * time.Second),
+		HealthProbeBindAddress:        ":9090",
+		WebhookServer:                 webhook.NewServer(webhook.Options{CertDir: "/certs"}),
+		// The grant-violation series (d8_cluster_objects_grant_violated) is served from here; the
+		// PodMonitor of the module scrapes this port.
 		Metrics: metrics.Options{
-			BindAddress: "0",
+			// Loopback only: the series name projects and the objects inside them, so the endpoint is
+			// published through the kube-rbac-proxy sidecar, which authorizes every scrape.
+			BindAddress: "127.0.0.1:9191",
 		},
-	}
-
-	if os.Getenv(haModeEnv) == "true" {
-		opts.LeaderElection = true
-		opts.LeaderElectionID = controllerName
-		opts.LeaderElectionNamespace = helmNamespace
 	}
 
 	runtimeManager, err := ctrl.NewManager(ctrl.GetConfigOrDie(), opts)

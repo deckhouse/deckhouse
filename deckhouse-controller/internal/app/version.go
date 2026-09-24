@@ -27,14 +27,14 @@ const devPackageVersion = "v2.0.0"
 // carries: major.minor.patch, so a single version name spans every build of a release. A "dev"
 // binary counts as v2.0.0; a version that is not semver is passed through unchanged, which keeps
 // every caller naming the same version even when the result is no legal object name.
-func EmbeddedPackageVersion(deckhouseVersion string) string {
-	if deckhouseVersion == "dev" {
+func EmbeddedPackageVersion() string {
+	if Version == "dev" {
 		return devPackageVersion
 	}
 
-	parsed, err := semver.NewVersion(deckhouseVersion)
+	parsed, err := semver.NewVersion(Version)
 	if err != nil {
-		return deckhouseVersion
+		return Version
 	}
 
 	return fmt.Sprintf("v%d.%d.%d", parsed.Major(), parsed.Minor(), parsed.Patch())

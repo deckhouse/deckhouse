@@ -4,7 +4,7 @@ title: "The user-authn module: usage"
 
 ## An example of the module configuration
 
-The example shows the configuration of the `user-authn` module in the Deckhouse Kubernetes Platform.
+The example shows the configuration of the `user-authn` module in the Deckhouse Platform.
 
 {% raw %}
 
@@ -21,8 +21,6 @@ spec:
     - id: direct
       masterURI: https://159.89.5.247:6443
       description: "Direct access to kubernetes API"
-    publishAPI:
-      enabled: true
 ```
 
 {% endraw %}
@@ -205,7 +203,7 @@ If email verification is not enabled in Keycloak, to properly use it as an ident
     * "Claim value": `true`
     * "Claim JSON Type": `boolean`
 
-  After that, in the client registered for the DKP cluster in "Clients", change `Client scopes` from `email` to `email_dkp`.
+  After that, in the client registered for the DP cluster in "Clients", change `Client scopes` from `email` to `email_dkp`.
 
   In the DexProvider resource, specify `insecureSkipEmailVerified: true` and in the `.spec.oidc.scopes` field, change the Client Scope name to `email_dkp` following the example:
   
@@ -337,14 +335,16 @@ spec:
 
 To enable Basic Authentication for the Kubernetes API using LDAP credentials:
 
-1. Ensure that the [`publishAPI`](configuration.html#parameters-publishapi) parameter is enabled in the `user-authn` module configuration.
+1. Ensure that the [`apiserver.publishAPI`](/modules/control-plane-manager/configuration.html#parameters-apiserver-publishapi) parameter is enabled in the `control-plane-manager` module configuration.
 1. Set [`enableBasicAuth: true`](/modules/user-authn/cr.html#dexprovider-v1-spec-oidc-enablebasicauth) in your LDAP DexProvider resource.
 
-> **Warning**. Only one provider in the cluster can have [`enableBasicAuth`](/modules/user-authn/cr.html#dexprovider-v1-spec-oidc-enablebasicauth) enabled.
+{% alert level="info" %}
+Only one provider in the cluster can have [`enableBasicAuth`](/modules/user-authn/cr.html#dexprovider-v1-spec-oidc-enablebasicauth) enabled.
+{% endalert %}
 
 After configuration, users can access the Kubernetes API via `kubectl`, using their LDAP username and password.
 
-Example `kubeconfig` for the user:
+Example kubeconfig for the user:
 
 ```yaml
 apiVersion: v1
@@ -532,9 +532,9 @@ spec:
 The annotation registers the client as a trusted peer of the privileged `kubernetes` OAuth2 client, allowing it to request ID tokens intended for the API server. In such a token, the username is determined by the `email` claim and groups by the `groups` claim. As a result, the application accesses the API server on behalf of the authenticated user and with the permissions granted to that user.
 
 {% alert level="warning" %}
-Access granted this way applies at the cluster level, even though DexClient and DexAuthenticator are namespaced resources. Therefore, only a subject with permissions to modify the `user-authn` module configuration can add the annotation or change its value to `"true"`. For example, this permission is granted by the `d8:manage:permission:module:user-authn:edit` role. Permissions to create DexClient or DexAuthenticator resources in an individual namespace are not sufficient.
+Access granted this way applies at the cluster level, even though DexClient and DexAuthenticator are namespaced resources. Therefore, only a subject with permissions to modify the `user-authn` module configuration can add the annotation or change its value to `"true"`. For example, this permission is granted by the `d8:system-capability:user-authn:edit` role. Permissions to create DexClient or DexAuthenticator resources in an individual namespace are not sufficient.
 
-Adding the annotation is restricted regardless of its value, including `"false"`. This is required for compatibility with DKP versions earlier than 1.78, where access is granted based on the presence of the annotation regardless of its value. If access to the Kubernetes API server is not required, do not add the annotation.
+Adding the annotation is restricted regardless of its value, including `"false"`. This is required for compatibility with DP versions earlier than 1.78, where access is granted based on the presence of the annotation regardless of its value. If access to the Kubernetes API server is not required, do not add the annotation.
 
 The restriction does not apply to resources that already have the annotation. A user with permissions to modify such a resource can continue to modify it, including removing the annotation or changing its value to disable access.
 {% endalert %}
@@ -668,7 +668,34 @@ Password reset, 2FA reset, and lock/unlock operations are performed via the [Use
 
 Use the `d8 iam user` commands for administrative actions on local users. They create a UserOperation resource with `initiatorType: admin`, wait for the operation to complete, and print the result.
 
-You can delete or recreate a local user whose email already carries a grant only if you can assign those roles (covering permissions or an explicit can-assign range).
+You can delete, recreate, or run a UserOperation (`ResetPassword`, `Reset2FA`, `Lock`, `Unlock`) against a local user whose email or group membership already carries a grant only if you can assign those roles (covering permissions or an explicit can-assign range). `initiatorType: self` does not bypass that check.
+
+Connecting a DexProvider is the same assignment. A provider asserts an email and a set of groups, and the Kubernetes username is that email, so the provider reaches every grant that already hangs on the identities it can assert. What it can assert is bounded on two axes by `spec.allowedIdentities`: `emails` and `emailDomains` bound the email, `groups` bounds the groups claim. The provider-specific group filters count as well (`oidc.allowedGroups`, `gitlab.groups`, `crowd.groups`, `bitbucketCloud.teams` without `includeTeamGroups`, `github.orgs[].teams` on every organization, `saml.allowedGroups` together with `filterGroups: true`). An axis without a limit is open and reaches every grant on subjects of that kind.
+
+SuperAdmin is granted to a User in every cluster, so a provider without an email limit can assert that email and only a SuperAdmin may create or reconnect it. With limits on both axes only the roles already granted to the listed identities count: a ClusterAdmin or a `security` subsystem manager connects a provider for `@contractor.example` and the `contractors` group without a SuperAdmin, as long as none of those identities already holds a role the requester cannot assign. Group names are matched exactly; membership of a Group object in other Group objects does not extend the list, because a token from an external provider carries only the groups the provider asserted.
+
+```yaml
+apiVersion: deckhouse.io/v1
+kind: DexProvider
+metadata:
+  name: contractors
+spec:
+  type: OIDC
+  displayName: Contractors
+  oidc:
+    issuer: https://idp.contractor.example
+    clientID: dex
+    clientSecret: secret
+  allowedIdentities:
+    emailDomains: [contractor.example]
+    groups: [contractors]
+```
+
+Dex enforces the same limits at sign-in: a user whose email is outside `emails` and `emailDomains` is refused, the `groups` claim is reduced to the intersection with `groups`, and an empty intersection is a refusal. Both take effect for every provider type, on top of the provider-specific filters.
+
+Rotating `clientSecret` or `bindPW`, changing `displayName`, disabling the provider, narrowing the limits and re-applying the same manifest are admitted without a check. Any other change is measured as a new connection against the provider in its new form: the address of the identity provider, claim or attribute mapping, signature and email verification switches, widening the limits, and enabling a disabled provider (disabling is how a suspect provider is contained, so undoing it is not free). Deleting a provider is not checked.
+
+A refused write names the roles the provider could reach and the requester's can-assign range, for example `dexproviders.deckhouse.io "corp": the provider can assert identities that already carry roles [user-authz:super-admin]; the requester's can-assign range is basic<=ClusterAdmin and does not cover them. Narrow spec.allowedIdentities (emails, emailDomains, groups) or ask a SuperAdmin`.
 
 The `ResetPassword`, `Reset2FA`, and `Lock` operations delete the user's Dex OfflineSessions and RefreshToken objects. This terminates the user's active offline sessions and requires re-authentication.
 
@@ -718,7 +745,7 @@ By default, commands wait for the operation to complete. To only create a UserOp
 
 #### Self-service password reset
 
-A local user can reset their own password in the DKP authentication interface. This creates a UserOperation resource with `type: ResetPassword` and `initiatorType: self`.
+A local user can reset their own password in the DP authentication interface. This creates a UserOperation resource with `type: ResetPassword` and `initiatorType: self`.
 
 Self-service password reset is available only for local accounts (the built-in `Local` connector). Users who sign in through external authentication providers must contact the administrator of the corresponding system.
 
@@ -915,7 +942,7 @@ spec:
 
 {% endraw %}
 
-Where `members` is a list of users belonging to the group.
+Where `members` is a list of members: `kind: User` with `name` = `User.metadata.name`, or a nested `kind: Group` with `name` = `Group.spec.name` (the name in the token, not `metadata.name`).
 
 The group name is stored in the issued token without modification. It is indistinguishable from a group name received from an external authentication provider. Therefore, a Group resource cannot be created if its `spec.name` value matches a `Group` subject in an existing [AuthorizationRule](/modules/user-authz/cr.html#authorizationrule) or [ClusterAuthorizationRule](/modules/user-authz/cr.html#clusterauthorizationrule) resource. This prevents permissions from being unintentionally granted to members of a new group.
 

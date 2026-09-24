@@ -4,7 +4,7 @@ permalink: ru/admin/integrations/public/gcp/connection-and-authorization.html
 lang: ru
 ---
 
-Для управления ресурсами в Google Cloud с помощью Deckhouse Kubernetes Platform необходимо создать Service Account.
+Для управления ресурсами в Google Cloud с помощью Deckhouse Platform необходимо создать Service Account.
 
 {% alert level="warning" %}
 Провайдер поддерживает работу только с одним диском в шаблоне виртуальной машины. Убедитесь, что шаблон содержит только один диск.

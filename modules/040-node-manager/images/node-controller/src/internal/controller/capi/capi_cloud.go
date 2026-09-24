@@ -32,11 +32,11 @@ import (
 	sigsyaml "sigs.k8s.io/yaml"
 
 	deckhousev1 "github.com/deckhouse/node-controller/api/deckhouse.io/v1"
+	"github.com/deckhouse/node-controller/internal/cloudprovider"
 	"github.com/deckhouse/node-controller/internal/common"
 	ngcommon "github.com/deckhouse/node-controller/internal/controller/nodegroup/common"
 	"github.com/deckhouse/node-controller/internal/controller/nodegroup/derived_status"
 	"github.com/deckhouse/node-controller/internal/controller/nodegroup/machineclass"
-	"github.com/deckhouse/node-controller/internal/machinetemplate"
 )
 
 type capiMDInput struct {
@@ -237,7 +237,11 @@ func resolveBootstrapSecretName(existing *existingCAPIMachineDeployment, rendere
 }
 
 func (r *MachineDeploymentReconciler) reconcileCloudMDsRendered(
-	ctx context.Context, ng *deckhousev1.NodeGroup, resolved derived_status.ResolvedNodeGroup, validationErr string,
+	ctx context.Context,
+	ng *deckhousev1.NodeGroup,
+	provider cloudprovider.Provider,
+	resolved derived_status.ResolvedNodeGroup,
+	validationErr string,
 ) error {
 	logger := log.FromContext(ctx)
 
@@ -246,21 +250,19 @@ func (r *MachineDeploymentReconciler) reconcileCloudMDsRendered(
 		return nil
 	}
 
-	cloudConfig, err := r.readCloudProviderConfig(ctx)
-	if err != nil {
-		return err
-	}
-	if cloudConfig.capiClusterName == "" {
-		logger.V(1).Info("skipping CAPI: capiClusterName is empty")
+	registration := provider.Registration
+	// The mirror of the MCM branch: a group pinned to CAPI on a provider that registers no
+	// CAPI cluster has nothing to render, and retrying cannot change that.
+	if !registration.HasCAPI() {
+		logger.Info("skipping CAPI: provider registers no CAPI contract", "nodeGroup", ng.Name)
 		return nil
 	}
-
-	cloudProvider, err := r.readCloudProviderTree(ctx)
+	// The selected engine must have a complete provider contract even when this particular
+	// NodeGroup is invalid or currently has no zones.
+	inputs, err := (cloudprovider.Source{Reader: r.Client}).LoadCAPIMachineInputs(ctx, provider)
 	if err != nil {
 		return err
 	}
-	cloudType, _ := cloudProvider["type"].(string)
-
 	if validationErr != "" {
 		logger.Info("skipping CAPI: NodeGroup failed validation", "nodeGroup", ng.Name, "error", validationErr)
 		return nil
@@ -274,33 +276,25 @@ func (r *MachineDeploymentReconciler) reconcileCloudMDsRendered(
 	// A provider that ships capi/template.yaml is on the v2 contract; one that does not still
 	// ships the v1 trio and is served by the legacy engine below. Both live here until the last
 	// provider has migrated.
-	contract, err := r.readMachineTemplateContract(ctx, cloudType)
-	if err != nil {
-		return err
-	}
+	template := inputs.Template
 
 	var (
 		// v2 inputs.
 		instanceClassSpec map[string]interface{}
-		providerTree      map[string]interface{}
 		// v1 inputs.
 		machineTemplateTpl []byte
 		nodeGroupValues    map[string]interface{}
 		checksum           string
 	)
-	if contract != nil {
+	if template != nil {
 		instanceClassSpec = resolved.InstanceClass
 		if instanceClassSpec == nil {
 			logger.Info("skipping CAPI: InstanceClass is not resolved yet", "nodeGroup", ng.Name)
 			return nil
 		}
-		// A provider that needs no configuration of its own (dvp) publishes no subtree at all, so
+		// A provider that needs no configuration of its own (dvp) can publish an empty subtree, so
 		// an empty map is a legitimate context: a template reaching into it fails on the specific
 		// key it wanted, which is the same error it would get for a typo.
-		providerTree, _ = cloudProvider[cloudType].(map[string]interface{})
-		if providerTree == nil {
-			providerTree = map[string]interface{}{}
-		}
 	} else {
 		// LEGACY (v1): node-controller renders the infrastructure MachineTemplate and its
 		// instance-class checksum from the cloud-provider CAPI template secret (published at the
@@ -310,32 +304,16 @@ func (r *MachineDeploymentReconciler) reconcileCloudMDsRendered(
 		// The templates read .nodeGroup.<field>: text/template resolves a lowercase name on a map
 		// only, so the resolved NodeGroup is serialized here and nowhere else.
 		nodeGroupValues = resolved.ToMap()
-		machineTemplateTpl, err = r.readProviderTemplate(ctx, cloudType, engineCAPITemplates, "machine-template.yaml")
-		if err != nil {
-			return err
-		}
-		checksumTpl, err := r.readProviderTemplate(ctx, cloudType, engineCAPITemplates, "instance-class.checksum")
-		if err != nil {
-			return err
-		}
-		checksum, err = machineclass.RenderChecksum(checksumTpl, nodeGroupValues, cloudProvider)
+		machineTemplateTpl = inputs.LegacyMachineTemplate
+		checksum, err = machineclass.RenderChecksum(inputs.LegacyChecksum, nodeGroupValues, provider.LegacyValues)
 		if err != nil {
 			return fmt.Errorf("render CAPI instance-class checksum for NodeGroup %s: %w", ng.Name, err)
 		}
 	}
 
-	clusterUUID, err := r.readClusterUUID(ctx)
-	if err != nil {
-		return err
-	}
-	podSubnet, err := r.readPodSubnet(ctx)
-	if err != nil {
-		return err
-	}
-	instancePrefix, err := r.readInstancePrefix(ctx)
-	if err != nil {
-		return err
-	}
+	clusterUUID := provider.Cluster.UUID
+	podSubnet := provider.Cluster.PodSubnet
+	instancePrefix := provider.Prefix
 
 	minReplicas := ng.Spec.CloudInstances.MinPerZone
 	maxReplicas := ng.Spec.CloudInstances.MaxPerZone
@@ -349,12 +327,12 @@ func (r *MachineDeploymentReconciler) reconcileCloudMDsRendered(
 		drainTimeout = *ng.Spec.NodeDrainTimeoutSecond
 	}
 
-	infraGV, err := schema.ParseGroupVersion(cloudConfig.capiMachineTemplateAPIVersion)
+	infraGV, err := schema.ParseGroupVersion(registration.CAPIMachineTemplateAPIVersion)
 	if err != nil {
-		return fmt.Errorf("parse capiMachineTemplateAPIVersion %q: %w", cloudConfig.capiMachineTemplateAPIVersion, err)
+		return fmt.Errorf("parse capiMachineTemplateAPIVersion %q: %w", registration.CAPIMachineTemplateAPIVersion, err)
 	}
 	infraAPIGroup := infraGV.Group
-	infraGVK := infraGV.WithKind(cloudConfig.capiMachineTemplateKind)
+	infraGVK := infraGV.WithKind(registration.CAPIMachineTemplateKind)
 
 	// An immutable group's MachineDeployments reference a NodeBootstrapConfig
 	// template through bootstrap.configRef, so it has to exist before them or
@@ -386,25 +364,21 @@ func (r *MachineDeploymentReconciler) reconcileCloudMDsRendered(
 		}
 		bootstrapSecretName := resolveBootstrapSecretName(existingMD, mdSuffix)
 
-		renderCtx := machinetemplate.RenderContext{
-			InstanceClass: instanceClassSpec,
-			Provider:      providerTree,
-			Zone:          zone,
-			NodeGroupName: ng.Name,
-			ClusterUUID:   clusterUUID,
-			PodSubnet:     podSubnet,
-		}
+		renderData := provider.RenderData()
+		renderData.InstanceClass = instanceClassSpec
+		renderData.Zone = zone
+		renderData.NodeGroupName = ng.Name
 
 		var templateName string
-		if contract != nil {
+		if template != nil {
 			currentTemplateName := ""
 			if existingMD != nil {
 				currentTemplateName = existingMD.infraTemplateName
 			}
 			templateName, err = r.ensureMachineTemplateGeneration(ctx, machineTemplateGeneration{
 				ng:          ng,
-				contract:    contract,
-				render:      renderCtx,
+				template:    template,
+				data:        renderData,
 				rolloutID:   resolved.ManualRolloutID,
 				currentName: currentTemplateName,
 				// The zone suffix is the one the MachineDeployment already carries, so the two
@@ -417,7 +391,7 @@ func (r *MachineDeploymentReconciler) reconcileCloudMDsRendered(
 			}
 		} else {
 			templateName = fmt.Sprintf("%s-%s", ng.Name, sha256Hash(clusterUUID+zone+checksum))
-			if err := r.applyCAPIMachineTemplate(ctx, machineTemplateTpl, cloudProvider, nodeGroupValues, clusterUUID, podSubnet, zone, templateName, checksum); err != nil {
+			if err := r.applyCAPIMachineTemplate(ctx, machineTemplateTpl, provider.LegacyValues, nodeGroupValues, clusterUUID, podSubnet, zone, templateName, checksum); err != nil {
 				return err
 			}
 		}
@@ -431,9 +405,9 @@ func (r *MachineDeploymentReconciler) reconcileCloudMDsRendered(
 			mdName:              mdName,
 			templateName:        templateName,
 			bootstrapSecretName: bootstrapSecretName,
-			clusterName:         cloudConfig.capiClusterName,
+			clusterName:         registration.CAPIClusterName,
 			infraAPIGroup:       infraAPIGroup,
-			infraKind:           cloudConfig.capiMachineTemplateKind,
+			infraKind:           registration.CAPIMachineTemplateKind,
 			desired:             desired,
 			minReplicas:         minReplicas,
 			maxReplicas:         maxReplicas,
@@ -443,8 +417,8 @@ func (r *MachineDeploymentReconciler) reconcileCloudMDsRendered(
 		})
 
 		mdSpec := md.Object["spec"].(map[string]interface{})
-		if contract != nil {
-			if err := machinetemplate.ApplyMachineDeploymentFields(mdSpec, contract, renderCtx); err != nil {
+		if template != nil {
+			if err := template.ApplyMachineDeploymentFields(mdSpec, renderData); err != nil {
 				return fmt.Errorf("apply provider MachineDeployment fields for %s: %w", mdName, err)
 			}
 		}
@@ -454,10 +428,10 @@ func (r *MachineDeploymentReconciler) reconcileCloudMDsRendered(
 		// template without touching its registration secret in the same release.
 		if err := applyMachineDeploymentSpecPatch(
 			mdSpec,
-			cloudConfig.capiMachineDeploymentSpecPatch,
+			registration.CAPIMachineDeploymentSpecPatch,
 			map[string]string{
 				"bootstrapSecretName": bootstrapSecretName,
-				"clusterName":         cloudConfig.capiClusterName,
+				"clusterName":         registration.CAPIClusterName,
 				"mdName":              mdName,
 				"nodeGroupName":       ng.Name,
 				"templateName":        templateName,
@@ -473,7 +447,7 @@ func (r *MachineDeploymentReconciler) reconcileCloudMDsRendered(
 		logger.Info("applied CAPI MachineTemplate + MachineDeployment", "name", mdName, "zone", zone)
 	}
 
-	if err := r.pruneStaleCAPI(ctx, ng.Name, cloudConfig, desiredMDNames, desiredTemplateNames); err != nil {
+	if err := r.pruneStaleCAPI(ctx, ng.Name, infraGVK, desiredMDNames, desiredTemplateNames); err != nil {
 		return err
 	}
 

@@ -33,13 +33,6 @@ Fixes a bug where pods with hostNetwork ignored host aliases (k8s < 1.32):
 
 Add resource quota ignore mechanism for k8s pvc and pod based on labels
 
-### kubelet-graceful-shutdown-cleanup-memory-manager-state
-
-This patch ensures that the Memory Manager state file is removed during a graceful node shutdown.
-
-The Memory Manager stores the node memory state in a file. After a reboot, the amount of used memory may slightly differ from the previous state, which can make the stored state invalid and prevent the kubelet from starting. Removing the state file before shutdown ensures that the Memory Manager starts with a clean state after the reboot.
-See issue: https://github.com/kubernetes/kubernetes/issues/131253
-
 ### kubelet-disable-k-panic-check
 
 Kubelet strictly checks that the `kernel.panic` parameter equals 10, now, regardless of kubelet settings, only a warning is used. The `kernel.panic` parameter itself is strictly controlled by the DKP platform
@@ -179,3 +172,29 @@ Only the source change is carried, the upstream test case is dropped.
 carried on 1.34 (`014`), 1.35 (`014`) and 1.36 (`013`) only.
 
 > Upstream PR https://github.com/kubernetes/kubernetes/pull/141100
+
+### order-sandbox-by-attempt-or-create-time.patch (1.32-1.34)
+
+Makes `podSandboxByCreated.Less` order sandboxes by `Metadata.Attempt` instead of
+`CreatedAt`, falling back to `CreatedAt` when either sandbox has no metadata
+(`pkg/kubelet/kuberuntime/helpers.go`).
+
+A system clock rollback (common at boot, when NTP starts around the static pods)
+can make an older sandbox look newer than the current one. Kubelet then picks the
+stale sandbox as the latest one, and the runtime refuses to create a new sandbox
+because the pod name is still reserved by the previous attempt. The attempt
+counter is monotonic and immune to clock jumps, so it is the correct ordering key.
+
+Only the source change is carried, the upstream test case is dropped. k8s 1.35+
+already ship this code, so the patch is carried on 1.32 (`015`), 1.33 (`014`) and
+1.34 (`015`) only.
+
+> Upstream PR https://github.com/kubernetes/kubernetes/pull/130551
+
+### kubelet-checkpoint-state-self-heal.patch (1.33+)
+
+When the CPU or memory manager checkpoint is unusable, the kubelet resets that manager's state and starts instead of exiting. Running containers are not stopped.
+
+The CPU manager moves running containers onto their new CPUs by itself. The memory manager cannot change a running container's NUMA zone, so such containers are reported until they are recreated: gauge `kubelet_checkpoint_state_unpinned_containers`, event `NUMACheckpointReset` and alert `D8KubeletCheckpointStateUnpinnedContainers`.
+
+See issue: https://github.com/kubernetes/kubernetes/issues/131253

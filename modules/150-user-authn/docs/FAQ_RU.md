@@ -139,7 +139,7 @@ Ingress приложения должен иметь настроенный TLS.
 
 ## Как передать приложению логин и группы пользователя?
 
-По умолчанию DexAuthenticator передаёт приложению только два заголовка: `X-Auth-Request-User` (значение основано на непрозрачном claim'е `sub`) и `X-Auth-Request-Email`. Заголовок с группами пользователя не передаётся. Он неограниченно растёт при большом количестве групп, поэтому в DKP отключён, и включить его нельзя.
+По умолчанию DexAuthenticator передаёт приложению только два заголовка: `X-Auth-Request-User` (значение основано на непрозрачном claim'е `sub`) и `X-Auth-Request-Email`. Заголовок с группами пользователя не передаётся. Он неограниченно растёт при большом количестве групп, поэтому в DP отключён, и включить его нельзя.
 
 Чтобы приложение получило полную информацию о пользователе, включая группы, включите параметр [`sendAuthorizationHeader`](cr.html#dexauthenticator-v1-spec-sendauthorizationheader):
 
@@ -260,28 +260,11 @@ DexAuthenticator работает только по HTTPS. Ingress-ресурс�
 
 ## Как сгенерировать kubeconfig для доступа к Kubernetes API?
 
-`kubeconfig` для удалённого доступа к кластеру через `kubectl` можно сгенерировать в [веб-интерфейсе `kubeconfigurator`](/products/kubernetes-platform/documentation/v1/user/web/kubeconfig.html).
-
-Настройте параметр [`publishAPI`](/modules/user-authn/configuration.html#parameters-publishapi):
-
-- Откройте настройки модуля `user-authn` (создайте ресурс ModuleConfig `user-authn`, если его нет):
-
-  ```shell
-  d8 k edit mc user-authn
-  ```
-
-- Добавьте следующую секцию в блок `settings` и сохраните изменения:
-
-  ```yaml
-  publishAPI:
-    enabled: true
-  ```
-
-Имя `kubeconfig` зарезервировано для веб-интерфейса генерации kubeconfig. URL зависит от параметра [`publicDomainTemplate`](/products/kubernetes-platform/documentation/v1/reference/api/global.html#parameters-modules-publicdomaintemplate) (например, при шаблоне вида `%s.kube.my` веб-интерфейс генерации kubeconfig будет доступен по адресу `kubeconfig.kube.my`, при `%s-kube.company.my` — по адресу `kubeconfig-kube.company.my`).  
+Для генерации kubeconfig воспользуйтесь разделом [«Как сгенерировать kubeconfig для доступа к Kubernetes API?»](/modules/control-plane-manager/faq.html#как-сгенерировать-kubeconfig-для-доступа-к-kubernetes-api) документации модуля `control-plane-manager`.
 
 ### Настройка kube-apiserver
 
-С помощью функций модуля [`control-plane-manager`](/modules/control-plane-manager/) DKP автоматически настраивает `kube-apiserver`, выставляя следующие флаги так, чтобы модули `dashboard` и `kubeconfig-generator` могли работать в кластере.
+С помощью функций модуля [`control-plane-manager`](/modules/control-plane-manager/) DP автоматически настраивает `kube-apiserver`, выставляя следующие флаги так, чтобы в кластере работала аутентификация через OIDC.
 
 {% offtopic title="Аргументы kube-apiserver, которые будут настроены" %}
 
@@ -321,7 +304,7 @@ DexAuthenticator работает только по HTTPS. Ingress-ресурс�
    d8 k -n d8-user-authn patch secret kubernetes-dex-client-app-secret --type merge -p '{"data":{"secret":""}}'
    ```
 
-1. Перезапустите DKP, чтобы хук зарегистрировал пустое поле и сгенерировал новый секрет:
+1. Перезапустите DP, чтобы хук зарегистрировал пустое поле и сгенерировал новый секрет:
 
    ```shell
    d8 k -n d8-system rollout restart deployment/deckhouse
@@ -333,7 +316,7 @@ DexAuthenticator работает только по HTTPS. Ingress-ресурс�
    d8 k -n d8-user-authn get secret kubernetes-dex-client-app-secret -o jsonpath='{.data.secret}'
    ```
 
-   Если значение не изменилось, повторите шаги 2 и 3. Модуль мог восстановить прежнее значение до перезапуска DKP.
+   Если значение не изменилось, повторите шаги 2 и 3. Модуль мог восстановить прежнее значение до перезапуска DP.
 
 После смены секрета конфигурация использующих его компонентов в кластере обновится автоматически, а их поды будут перезапущены.
 
@@ -356,10 +339,12 @@ Dex автоматически смонтирует `keytab` и начнёт п�
 
 ## Как настроить базовую аутентификацию для доступа к Kubernetes API через LDAP?
 
-1. Включите параметр [`publishAPI`](/modules/user-authn/configuration.html#parameters-publishapi) в конфигурации модуля `user-authn`.
+Используйте настройки модуля `control-plane-manager`:
+
+1. Включите параметр [`apiserver.publishAPI`](/modules/control-plane-manager/configuration.html#parameters-apiserver-publishapi) в конфигурации модуля `control-plane-manager`.
 1. Создайте ресурс [DexProvider](/modules/user-authn/cr.html#dexprovider) типа `LDAP` и установите параметр [`enableBasicAuth: true`](/modules/user-authn/cr.html#dexprovider-v1-spec-oidc-enablebasicauth).
 1. Настройте [RBAC](/modules/user-authz/cr.html#clusterauthorizationrule) для групп, получаемых из LDAP.
-1. Передайте пользователям `kubeconfig` с настроенными параметрами базовой аутентификации (логин и пароль LDAP).
+1. Передайте пользователям kubeconfig с настроенными параметрами базовой аутентификации (логин и пароль LDAP).
 
 {% alert level="warning" %}
 В кластере может быть только один провайдер аутентификации со включенным параметром [`enableBasicAuth`](/modules/user-authn/cr.html#dexprovider-v1-spec-oidc-enablebasicauth).

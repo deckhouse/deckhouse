@@ -21,6 +21,7 @@ import (
 	"sync"
 	"time"
 
+	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/client-go/util/workqueue"
@@ -32,6 +33,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/apps"
+	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/resourcerequests"
 	packageruntime "github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/runtime"
 	packagestatus "github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/status"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/registry"
@@ -268,9 +270,10 @@ func (r *reconciler) handleCreateOrUpdate(ctx context.Context, app *v1alpha1.App
 			Name:    app.Spec.PackageName,
 			Version: app.Spec.PackageVersion,
 		},
-		Settings:    app.Spec.Settings.GetMap(),
-		Maintenance: app.Spec.Maintenance,
-		Repository:  registry.BuildRemote(repo),
+		Settings:         app.Spec.Settings.GetMap(),
+		Maintenance:      app.Spec.Maintenance,
+		Repository:       registry.BuildRemote(repo),
+		ResourceRequests: toResourceRequests(app.Spec.ResourceRequests),
 	})
 
 	// Both references are non-controller and block owner deletion, so neither the package
@@ -279,7 +282,7 @@ func (r *reconciler) handleCreateOrUpdate(ctx context.Context, app *v1alpha1.App
 		ctrlutils.OwnerReference(v1alpha1.ApplicationPackageVersionGVK, apv.Name, apv.UID),
 		ctrlutils.OwnerReference(v1alpha1.ApplicationPackageGVK, pkg.Name, pkg.UID),
 	)
-	delete(app.Annotations, v1alpha1.ApplicationAnnotationRegistrySpecChanged)
+	delete(app.Annotations, v1alpha1.PackageAnnotationRegistrySpecChanged)
 
 	if err := r.client.Patch(ctx, app, client.MergeFrom(original)); err != nil {
 		logger.Error("failed to patch application", log.Err(err))
@@ -452,4 +455,64 @@ func (r *reconciler) detachPackage(ctx context.Context, app *v1alpha1.Applicatio
 	}
 
 	return nil
+}
+
+// toResourceRequests projects the CR's per-workload overrides onto the runtime
+// shape. Quantities are carried as canonical strings: the CR schema has already
+// validated them, and the overlay writes them straight into rendered manifests.
+//
+// Everything is copied rather than aliased, because the result outlives this
+// reconcile in the runtime store, where it is compared against the next one.
+func toResourceRequests(requests []v1alpha1.ApplicationResourceRequest) []resourcerequests.Request {
+	if len(requests) == 0 {
+		return nil
+	}
+
+	out := make([]resourcerequests.Request, 0, len(requests))
+
+	for _, request := range requests {
+		var containers []resourcerequests.Container
+
+		if len(request.Containers) > 0 {
+			containers = make([]resourcerequests.Container, 0, len(request.Containers))
+			for _, container := range request.Containers {
+				containers = append(containers, resourcerequests.Container{
+					Name:     container.Name,
+					Requests: toQuantities(container.Resources.Requests),
+					Limits:   toQuantities(container.Resources.Limits),
+				})
+			}
+		}
+
+		var replicas *int32
+		if request.Replicas != nil {
+			value := *request.Replicas
+			replicas = &value
+		}
+
+		out = append(out, resourcerequests.Request{
+			Kind:       request.Kind,
+			Name:       request.Name,
+			Replicas:   replicas,
+			Containers: containers,
+		})
+	}
+
+	return out
+}
+
+// toQuantities flattens a ResourceList into resource name to canonical quantity
+// string, returning nil for an empty list so the comparison in the runtime store
+// does not see an empty map and a missing one as different.
+func toQuantities(list corev1.ResourceList) map[string]string {
+	if len(list) == 0 {
+		return nil
+	}
+
+	out := make(map[string]string, len(list))
+	for name, quantity := range list {
+		out[string(name)] = quantity.String()
+	}
+
+	return out
 }

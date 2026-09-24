@@ -3,10 +3,10 @@ title: Модуль registry
 permalink: ru/architecture/deckhouse/registry.html
 lang: ru
 search: registry, container registry, хранилище образов, direct mode, proxy mode, local mode, unmanaged mode, режим direct, режим proxy, режим local, режим unmanaged
-description: Архитектура модуля registry в Deckhouse Kubernetes Platform.
+description: Архитектура модуля registry в Deckhouse Platform.
 ---
 
-Модуль `registry` отвечает за управление настройками хранилища образов компонентов Deckhouse Kubernetes Platform (DKP).
+Модуль `registry` отвечает за управление настройками хранилища образов компонентов Deckhouse Platform (DP).
 
 Модуль работает в следующих режимах:
 
@@ -29,19 +29,19 @@ description: Архитектура модуля registry в Deckhouse Kubernete
 * Поды могут быть запущены в нескольких репликах, однако на схеме все поды изображены в одной реплике.
 {% endalert %}
 
-Архитектура модуля [`registry`](/modules/registry/) на уровне 2 модели C4 и его взаимодействия с другими компонентами Deckhouse Kubernetes Platform (DKP) изображены на следующих диаграммах:
+Архитектура модуля [`registry`](/modules/registry/) на уровне 2 модели C4 и его взаимодействия с другими компонентами Deckhouse Platform (DP) изображены на следующих диаграммах:
 
 Модуль [`registry`](/modules/registry/) в режиме `Direct`:
 
-![Архитектура модуля registry в режиме Direct](../../images/architecture/deckhouse/c4-l2-deckhouse-registry-direct.ru.png)
+![Архитектура модуля registry в режиме Direct](../../images/architecture/deckhouse/c4-l2-deckhouse-registry-direct.ru.svg)
 
 Модуль [`registry`](/modules/registry/) в режиме `Proxy`:
 
-![Архитектура модуля registry в режиме Proxy](../../images/architecture/deckhouse/c4-l2-deckhouse-registry-proxy.ru.png)
+![Архитектура модуля registry в режиме Proxy](../../images/architecture/deckhouse/c4-l2-deckhouse-registry-proxy.ru.svg)
 
 Модуль [`registry`](/modules/registry/) в режиме `Local`:
 
-![Архитектура модуля registry в режиме Local](../../images/architecture/deckhouse/c4-l2-deckhouse-registry-local.ru.png)
+![Архитектура модуля registry в режиме Local](../../images/architecture/deckhouse/c4-l2-deckhouse-registry-local.ru.svg)
 
 ## Компоненты модуля
 

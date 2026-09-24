@@ -36,6 +36,32 @@ import (
 	"controller/internal/resolve"
 )
 
+// automatedSystemWriterGroups are the AUTOMATED system writers whose requests must never be denied by
+// the grant guardrail, otherwise a module's Helm release (applied by the deckhouse-controller from
+// system:serviceaccounts:d8-system) or the reconcile loop of user-authz-controller (which writes
+// the AuthorizationRule RoleBindings into project namespaces from
+// system:serviceaccounts:d8-user-authz) deadlocks. Unlike protect.go's broader systemBypassGroups,
+// system:masters is absent here: the handler itself still polices a cluster-admin (unit tests call
+// the handler directly). In-cluster, the matchConditions of the grant webhooks skip system:masters
+// before this code runs; they live in hooks/configure_grant_validation_webhook.go
+// (systemWriterMatchConditions). The Project/ProjectTemplate/PRB/PN/CPRB webhooks in
+// templates/admission/validation.yaml do NOT skip system:masters -- only these grant webhooks do.
+var automatedSystemWriterGroups = map[string]struct{}{
+	"system:nodes":                         {},
+	"system:serviceaccounts:kube-system":   {},
+	"system:serviceaccounts:d8-system":     {},
+	"system:serviceaccounts:d8-user-authz": {},
+}
+
+func isAutomatedSystemWriter(req *admissionv1.AdmissionRequest) bool {
+	for _, g := range req.UserInfo.Groups {
+		if _, ok := automatedSystemWriterGroups[g]; ok {
+			return true
+		}
+	}
+	return false
+}
+
 var _ http.Handler = &IsGrantedValidator{}
 
 // IsGrantedValidator is the /is-granted validating webhook: it allows or denies the use of a granted
@@ -62,7 +88,7 @@ func (v *IsGrantedValidator) InstallInto(srv webhook.Server) { srv.Register("/is
 
 func (v *IsGrantedValidator) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	review := &admissionv1.AdmissionReview{}
-	if err := decodeReview(r, review); err != nil {
+	if err := decodeReview(w, r, review); err != nil {
 		http.Error(w, "invalid AdmissionReview: "+err.Error(), http.StatusBadRequest)
 		return
 	}
@@ -90,13 +116,16 @@ func (v *IsGrantedValidator) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 // decide returns the admission response. Availability is enforced for every matched reference; on
 // UPDATE values already present in the old object are grandfathered so existing objects are not broken.
 func (v *IsGrantedValidator) decide(ctx context.Context, req *admissionv1.AdmissionRequest, log logr.Logger) (*admissionv1.AdmissionResponse, error) {
-	// Never police a system / cluster-component / module writer. Every module's resources land in
-	// project namespaces via that module's Helm release applied by the deckhouse-controller (group
-	// system:serviceaccounts:d8-system); denying or even stalling such a request fails the install,
-	// which addon-operator retries forever, deadlocking the module's queue. The grant allow-list is for
-	// PROJECT USERS only. This mirrors (and backstops) the apiserver-level matchConditions on the
-	// webhook configuration in case the request still reaches the handler. See protect.go.
-	if isSystemRequest(req) {
+	// NEVER deny an AUTOMATED system writer. The deckhouse-controller SA (group
+	// system:serviceaccounts:d8-system) applies EVERY module's Helm release server-side; a denial here
+	// fails that install, which addon-operator then retries forever — deadlocking the module's queue
+	// (this is exactly how an AuthorizationRule/CAR-derived RoleBinding locked the user-authz module).
+	// kube-system controllers / the kubelet must not be blocked during teardown either. The grant
+	// allow-list exists to police USERS, who instead get a fast, terminal admission denial.
+	// NOTE: system:masters is not in automatedSystemWriterGroups, so a direct handler call still
+	// polices a cluster-admin. In-cluster, the grant webhooks' matchConditions already skip
+	// system:masters — those requests never reach this handler.
+	if isAutomatedSystemWriter(req) {
 		return allowedResponse(req.UID), nil
 	}
 	if namespaces.IsSystem(req.Namespace) || req.SubResource != "" || req.Namespace == "" {
@@ -125,7 +154,7 @@ func (v *IsGrantedValidator) decide(ctx context.Context, req *admissionv1.Admiss
 	}
 	project := resolve.ProjectName(ns)
 
-	grants, err := resolve.GrantsForLabels(ctx, v.cl, ns.Labels)
+	grants, err := resolve.GrantsForNamespace(ctx, v.cl, ns)
 	if err != nil {
 		return nil, fmt.Errorf("applicable grants: %w", err)
 	}
@@ -146,20 +175,33 @@ func (v *IsGrantedValidator) decide(ctx context.Context, req *admissionv1.Admiss
 	resolvedByDef := map[string]*resolve.Resolved{}
 
 	for _, mr := range refs {
-		fp, ok := engine.SelectFieldPath(mr.Reference.Spec.FieldPaths, group, version)
-		if !ok {
+		idx := engine.SelectFieldPathIndex(mr.Reference.Spec.FieldPaths, group, version, resourcePlural)
+		if idx < 0 {
 			continue
 		}
+		fp := mr.Reference.Spec.FieldPaths[idx]
+		// A path of one reference that cannot be evaluated skips that reference only, deliberately
+		// failing open. The GrantableClusterResourceReference webhook rejects such a path, but it runs
+		// with failurePolicy: Ignore, so a broken reference can still be stored (the webhook was down,
+		// or the object predates it). Failing the request here instead would, under this webhook's
+		// failurePolicy: Fail, block every CREATE/UPDATE of the reference's rule in every project
+		// because of one bad object; skipping costs only the checks that reference could not make
+		// anyway. The other references are still enforced, and the breakage stays visible in this log
+		// and in the reference's FieldPathsValid=False condition.
 		guardOK, err := engine.EvalMatch(v.factory, fp.Match, obj)
 		if err != nil {
-			return nil, fmt.Errorf("eval match: %w", err)
+			log.Error(err, "skipping reference: match.fieldPath cannot be evaluated",
+				"reference", mr.Reference.Name, "fieldPathIndex", idx, "path", fp.Match.FieldPath)
+			continue
 		}
 		if !guardOK {
 			continue
 		}
 		names, err := engine.StringValuesAt(v.factory, obj, fp.Path)
 		if err != nil {
-			return nil, fmt.Errorf("read field %q: %w", fp.Path, err)
+			log.Error(err, "skipping reference: path cannot be evaluated",
+				"reference", mr.Reference.Name, "fieldPathIndex", idx, "path", fp.Path)
+			continue
 		}
 		if len(names) == 0 {
 			continue

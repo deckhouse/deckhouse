@@ -1255,3 +1255,56 @@ func TestServeHTTPLogsDecisionsByMode(t *testing.T) {
 		})
 	}
 }
+
+// retiredVersionCache answers only for the version the cluster still serves, the way discovery does
+// once a CRD version is switched to served: false.
+type retiredVersionCache struct {
+	served    string
+	preferred string
+	err       error
+}
+
+func (c *retiredVersionCache) Get(apiGroup, resource string) (bool, error) {
+	if apiGroup != c.served {
+		return false, fmt.Errorf("resource %s/%s is not found in cluster", apiGroup, resource)
+	}
+
+	return true, nil
+}
+
+func (c *retiredVersionCache) GetPreferredVersion(_, _ string) (string, error) {
+	return c.preferred, c.err
+}
+
+func (c *retiredVersionCache) Check(context.Context) error { return nil }
+
+// A client that still names a retired API version -- a stale discovery snapshot, or a generated
+// client built against the previous version of a CRD -- must not be told it has no access. Whether
+// a resource is namespaced is the only thing being asked here, and no two versions of a resource
+// disagree about that, so the scope is resolved through the version the cluster serves.
+func TestResourceScope_RetiredVersionIsResolvedThroughThePreferredOne(t *testing.T) {
+	handler := &Handler{
+		logger: log.New(io.Discard, "", 0),
+		cache:  &retiredVersionCache{served: "deckhouse.io/v1alpha2", preferred: "v1alpha2"},
+	}
+
+	for _, version := range []string{"v1alpha1", "v1alpha2"} {
+		scope, err := handler.resourceScope(version)("deckhouse.io", "projecttemplates")
+		if err != nil {
+			t.Fatalf("version %s: %v", version, err)
+		}
+		if !scope.Known || scope.Absent || !scope.Namespaced {
+			t.Fatalf("version %s: scope %+v, want a known namespaced resource", version, scope)
+		}
+	}
+
+	// A resource the cluster has never heard of is a different matter: nothing can resolve it, and
+	// the webhook has no basis to answer -- the error keeps the decision failing closed.
+	unknown := &Handler{
+		logger: log.New(io.Discard, "", 0),
+		cache:  &retiredVersionCache{served: "deckhouse.io/v1alpha2", err: fmt.Errorf("not found")},
+	}
+	if _, err := unknown.resourceScope("v1alpha1")("deckhouse.io", "ghosts"); err == nil {
+		t.Fatal("an unknown resource was resolved")
+	}
+}

@@ -26,6 +26,7 @@ spec:
         maxAllowed:
           cpu: 1000m
           memory: 2000Mi
+      {{- include "helm_lib_vpa_kube_rbac_proxy_resources" . | nindent 6 }}
 {{- end }}
 ---
 apiVersion: apps/v1
@@ -66,15 +67,6 @@ spec:
           image: {{ include "helm_lib_module_image" (list . "multitenancyManager") }}
           {{- include "helm_lib_module_container_security_context_pss_restricted_flexible" dict | nindent 10 }}
           imagePullPolicy: 'IfNotPresent'
-          args:
-            - --allow-orphan-namespaces={{ .Values.multitenancyManager.allowNamespacesWithoutProjects }}
-          env:
-            - name: HA_MODE
-{{- if (include "helm_lib_ha_enabled" .) }}
-              value: "true"
-{{- else }}
-              value: "false"
-{{- end }}
           ports:
             - containerPort: 9090
               name: healthz
@@ -98,6 +90,56 @@ spec:
             requests:
               {{- include "helm_lib_module_ephemeral_storage_logs_with_extra" 10 | nindent 14 }}
               {{- include "controller_resources" . | nindent 14 }}
+        # The violation series name the project, the object and the field that was refused -- a
+        # per-tenant inventory. The controller keeps its metrics endpoint on loopback and this proxy
+        # publishes it, authorizing every scrape against the deployments/prometheus-metrics
+        # subresource, so reaching the pod's address is not enough to read them.
+        - name: kube-rbac-proxy
+          {{- include "helm_lib_module_container_security_context_pss_restricted_flexible" dict | nindent 10 }}
+          image: {{ include "helm_lib_module_common_image" (list . "kubeRbacProxy") }}
+          imagePullPolicy: 'IfNotPresent'
+          args:
+            - "--secure-listen-address=$(KUBE_RBAC_PROXY_LISTEN_ADDRESS):9091"
+            - "--v=2"
+            - "--logtostderr=true"
+            - "--stale-cache-interval=1h30m"
+            - "--livez-path=/livez"
+          livenessProbe:
+            httpGet:
+              path: /livez
+              port: 9091
+              scheme: HTTPS
+          readinessProbe:
+            httpGet:
+              path: /livez
+              port: 9091
+              scheme: HTTPS
+          env:
+            - name: KUBE_RBAC_PROXY_LISTEN_ADDRESS
+              valueFrom:
+                fieldRef:
+                  fieldPath: status.podIP
+            - name: KUBE_RBAC_PROXY_CONFIG
+              value: |
+                upstreams:
+                - upstream: http://127.0.0.1:9191/metrics
+                  path: /metrics
+                  authorization:
+                    resourceAttributes:
+                      namespace: d8-multitenancy-manager
+                      apiGroup: apps
+                      apiVersion: v1
+                      resource: deployments
+                      subresource: prometheus-metrics
+                      name: multitenancy-manager
+          ports:
+            - containerPort: 9091
+              name: https-metrics
+              protocol: TCP
+          resources:
+            requests:
+              {{- include "helm_lib_module_ephemeral_storage_logs_with_extra" 10 | nindent 14 }}
+              {{- include "helm_lib_container_kube_rbac_proxy_resources" . | nindent 14 }}
 ---
 apiVersion: policy/v1
 kind: PodDisruptionBudget

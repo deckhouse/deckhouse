@@ -12,17 +12,17 @@ toc: false
 
 <p>В данном руководстве рассмотрен пошаговый процесс установки Deckhouse Stronghold.</p>
 
-<p>Установка Deckhouse Stronghold отличается в случае установки в существующий кластер Deckhouse Kubernetes Platform, и в случае чистой установки, вместе с Deckhouse Kubernetes Platform.</p>
+<p>Установка Deckhouse Stronghold отличается в случае установки в существующий кластер Deckhouse Platform, в случае чистой установки вместе с Deckhouse Platform, а также в случае локального запуска в ОС Linux.</p>
 
 <h2>Выберите вариант установки Deckhouse Stronghold</h2>
 
 <div class="block" style="margin: 0;">
   <div class="block__columns block__columns_top">
     <div>
-      <h3>Установка Deckhouse Kubernetes Platform со Stronghold</h3>
+      <h3>Установка Deckhouse Platform со Stronghold</h3>
       <div class="button-group">
         {%- for provider in site.data.getting_started.stronghold.installTypes %}
-        {%- if provider[1].type == 'existing-dkp' %}{% continue %}{% endif %}
+        {%- if provider[1].type != 'cloud' and provider[1].type != 'baremetal' %}{% continue %}{% endif %}
         {%- if provider[1].languages %}
           {%- unless provider[1].languages contains "ru" %}{% continue %}{% endunless %}
         {%- endif %}
@@ -67,6 +67,26 @@ toc: false
             {% endfor %}
           </div>
           {% endif %}
+        </a>
+        {%- endif %}
+        {% endfor %}
+      </div>
+    </div>
+    <div>
+      <h3>Установка в ОС Linux</h3>
+      <div class="button-group">
+        {%- for provider in site.data.getting_started.stronghold.installTypes %}
+        {%- if provider[1].type != 'linux' %}{% continue %}{% endif %}
+        {%- if provider[1].languages %}
+          {%- unless provider[1].languages contains "ru" %}{% continue %}{% endunless %}
+        {%- endif %}
+        {%- if provider[1].wip == true %}
+        <a
+          class="button button_default button_card button_disabled">{{ provider[1].name[page.lang] }} ({{ site.data.i18n.soon[page.lang] }})</a>
+        {%- else %}
+        <a class="button button_default button_card" href="/products/stronghold/gs/{{ provider[0] }}/step2.html">
+          {% if provider[1].iconPath %}<div class="icon"><img src="/{{provider[1].iconPath}}" alt="{{ provider[1].name[page.lang] }} icon"/></div>{% endif %}
+          <span class="name">{{ provider[1].name[page.lang] }}</span>
         </a>
         {%- endif %}
         {% endfor %}

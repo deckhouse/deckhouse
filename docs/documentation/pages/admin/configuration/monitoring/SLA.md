@@ -1,10 +1,10 @@
 ---
 title: Cluster SLA monitoring
 permalink: en/admin/configuration/monitoring/sla.html
-description: "Configure SLA monitoring in Deckhouse Kubernetes Platform. Cluster availability tracking, SLA compliance monitoring, and uptime statistics collection for platform components."
+description: "Configure SLA monitoring in Deckhouse Platform. Cluster availability tracking, SLA compliance monitoring, and uptime statistics collection for platform components."
 ---
 
-DKP can collect statistics about the availability of cluster components and DKP components themselves. This data allows evaluating SLA compliance and provides availability information in the web interface.
+DP can collect statistics about the availability of cluster components and DP components themselves. This data allows evaluating SLA compliance and provides availability information in the web interface.
 
 Additionally, using the [UpmeterRemoteWrite](/modules/upmeter/cr.html#upmeterremotewrite) custom resource, you can export availability metrics via the Prometheus Remote Write protocol.
 
@@ -33,7 +33,7 @@ A complete list of all settings is available in the [module documentation](/modu
 
 ## Interface
 
-DKP provides two web interfaces for availability assessment:
+DP provides two web interfaces for availability assessment:
 - Status page.
 
   You can get the page address in the web interface on the main page in the "Tools" section (Status page block), or by running the command:

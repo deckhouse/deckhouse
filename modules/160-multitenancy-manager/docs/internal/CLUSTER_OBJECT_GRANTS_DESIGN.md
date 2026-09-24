@@ -136,14 +136,21 @@ spec:
       - v1
     resources:
       - persistentvolumeclaims
-  fieldPaths:                                     # where the granted NAME is, per version
-    - path: $.spec.storageClassName               # entry without scope = default (all versions)
+  fieldPaths:                                     # where the granted NAME is, per resource/version
+    - path: $.spec.storageClassName               # entry without scope = default (all resources/versions)
       defaulting: Coerce                          # None | FillEmpty | Coerce
-    # version-scoped entry example (IngressClass moved between versions):
+    # The two examples below belong to OTHER references: a scope must stay within spec.rule, and
+    # this reference's rule is core/v1 persistentvolumeclaims only.
+    # version-scoped entry, from a reference whose rule covers networking.k8s.io v1 and v1beta1 ingresses:
     # - apiVersions:
     #     - v1beta1
     #   path: $.metadata.annotations['kubernetes.io/ingress.class']
     #   defaulting: None
+    # resource-scoped entry, from a reference whose rule covers batch/v1 jobs and cronjobs:
+    # - apiGroups: [batch]
+    #   apiVersions: [v1]
+    #   resources: [cronjobs]
+    #   path: $.spec.jobTemplate.spec.template.spec.priorityClassName
 status:
   observedGeneration: 1
   bound: true                                     # grantableClusterResourceName resolves to a definition
@@ -151,33 +158,70 @@ status:
     - type: Bound
       status: "True"
       reason: Resolved                            # Resolved | UnknownResource (name missed)
+    - type: FieldPathsValid
+      status: "True"
+      reason: Valid                               # Valid | InvalidFieldPaths (message lists the problems)
 ```
 
 | field | meaning |
 |-------|---------|
 | `grantableClusterResourceName` | the `GrantableClusterResourceDefinition` this path validates against |
 | `rule.apiGroups/apiVersions/resources` | which usage objects this reference applies to; `*` = any |
-| `fieldPaths[]` | version-scoped name locations: `{apiGroups?, apiVersions?, path, match?, defaulting?}` |
+| `fieldPaths[]` | scoped name locations: `{apiGroups?, apiVersions?, resources?, path, match?, defaulting?}` |
 | `fieldPaths[].path` | JSONPath to the granted name (may target an annotation) |
 | `fieldPaths[].match` | `{fieldPath, equals\|in}` guard: the entry applies only when the predicate holds |
 | `fieldPaths[].defaulting` | `None` (validate only), `FillEmpty` (inject project default into an empty field), `Coerce` (also rewrite a disallowed value — for fields a built-in admission pre-fills) |
 | `status.bound` | true if the named definition exists |
 | `status.conditions[Bound].reason` | `Resolved` or `UnknownResource` |
+| `status.conditions[FieldPathsValid].reason` | `Valid` or `InvalidFieldPaths`; the message carries the webhook's refusal text |
 
-**Path selection.** For a request of group/version `g/v`, pick the `fieldPaths` entry whose
-`apiGroups`/`apiVersions` match `g/v`; a more specific (scoped) entry beats an unscoped one; the
-unscoped entry is the fallback. At least one entry is required; a fallback (unscoped) entry is
-recommended.
+**Path selection.** For a request of resource `r` in group/version `g/v`, keep the `fieldPaths`
+entries whose `resources`/`apiGroups`/`apiVersions` match (an empty dimension matches anything) and
+pick the most specific one: `resources` scores 4, `apiGroups` 2, `apiVersions` 1, and the scores add
+up, so `resources` alone outranks `apiGroups` + `apiVersions` together. Equal scores go to the
+earliest entry in the list. The unscoped entry scores 0 and is the fallback. A dimension scores only
+when it actually narrows the entry: a list containing `*` matches anything and scores 0, like an
+omitted one, so `apiGroups: ["*"]` ties with the unscoped entry and never outranks an explicit scope.
+The same holds for `fieldPaths[].resources`: `resources: ["*"]` is accepted and behaves exactly like
+an omitted field. At least one entry is required.
+
+**Scopes must fit the rule.** Two rules tie `fieldPaths[]` to `rule`, because a request no entry
+applies to is skipped by `/is-granted`, `/defaults` and the violation scan without any check — a
+silent fail-open:
+
+- *Subset.* Every value in an entry's `resources`/`apiGroups`/`apiVersions` must be in the matching
+  dimension of `rule`. `*` in `rule` admits any value; `*` in the entry restricts nothing and is fine.
+  An entry scoped to `pod` under `rule.resources: [pods]` is a typo that would select nothing.
+- *Coverage.* Every (group, version, resource) `rule` matches must be selected by some entry. The check
+  enumerates `rule`'s lists (`rule.apiGroups` never holds `*`, the CRD rejects it); a `*` in
+  `rule.apiVersions` or `rule.resources` is replaced by a placeholder no explicit list contains, so
+  only an entry unrestricted in that dimension covers it. The unscoped fallback is one way to cover
+  everything; scoped entries that together cover every combination are another
+  (`rule.resources: [jobs, cronjobs]` with one entry per resource).
+
+The resource scope exists because one path is not enough per group/version: in core/v1 a Pod carries
+`$.spec.priorityClassName` while a ReplicationController carries
+`$.spec.template.spec.priorityClassName`, and in batch/v1 a Job carries
+`$.spec.template.spec.priorityClassName` while a CronJob carries
+`$.spec.jobTemplate.spec.template.spec.priorityClassName`.
 
 ### ClusterResourceGrantPolicy (unchanged)
 
-Per-project allow-list and default; selects projects by namespace labels via `projectSelector`, and
+Per-project allow-list and default; `projectSelector` is evaluated per namespace against the union of
+the Project labels and the namespace labels (the namespace wins a shared key), so a label on the Project
+selects all its namespaces (`internal/resolve.GrantsForNamespace`, shared by the webhooks and the
+catalog reconciler), and
 per resource (`resourceName`) sets `allowed` / `allowedSelector` / `denied` / `deniedSelector` /
-`default` / `availabilityDefault`. An allow-list infers a `None` baseline.
+`default` / `availabilityDefault`. A non-empty allow-list or an `allowedSelector` infers a `None` baseline; empty `allowed: []` does not.
 
-### AvailableClusterResource (unchanged)
+### AvailableClusterResource
 
 Per-project catalog (available names + default) the controller renders into each project namespace.
+It lives exactly as long as its `GrantableClusterResourceDefinition`: when the registration is
+deleted, the controller deletes the catalog from every project namespace on the next reconcile. A
+registration held by a finalizer counts as deleted from the moment its `deletionTimestamp` is set.
+The sweep runs on every reconcile, even when another registration fails to resolve; the catalog of
+the failing registration itself is kept in its last good state.
 
 ## Coverage: which CRD closes which story
 
@@ -206,9 +250,21 @@ Per path (`fieldPaths[].defaulting`):
   annotation like `cert-manager.io/cluster-issuer`).
 - `FillEmpty` — on CREATE, inject the project default into an empty field.
 - `Coerce` — `FillEmpty` plus: rewrite a non-empty value that is not available to the project default.
-  For fields a built-in admission controller pre-fills (e.g. `DefaultStorageClass` on PVCs).
+  For fields a built-in admission controller pre-fills (e.g. `DefaultStorageClass` on PVCs). The rewrite
+  is reported to the author as an admission warning naming the original and the substituted value.
 
-The default *value* comes from the policy's `default`, falling back to the definition's `defaultFrom`.
+`FillEmpty` and `Coerce` constrain the path. Validation reads the value with the full RFC 9535
+evaluator, but defaulting writes a JSON Patch and so needs one unambiguous location: `path` must be a
+simple member path (`$.spec.storageClassName`, `$.metadata.annotations['cert-manager.io/cluster-issuer']`),
+never a wildcard, index or filter. A reference that breaks this is rejected at apply time by the
+`GrantableClusterResourceReference` validating webhook (`/validate/v1alpha1/grantableclusterresourcereferences`),
+rather than binding and silently never defaulting. With `None` any valid RFC 9535 path is fine. The
+simple-member-path check reads the segments off the same RFC 9535 parse tree the evaluator uses, so
+escapes decode identically on both sides, and it also refuses an empty member name (`$['']`).
+
+The default *value* comes from the policy's `default`, falling back to the definition's `defaultFrom`;
+`defaultFrom` accepts an object only when the annotation value is `true` (case-insensitive), so a class
+marked `is-default-class: "false"` is not a default.
 
 ## Webhooks
 
@@ -217,18 +273,57 @@ GVKs — so registering a reference automatically extends interception to that m
 
 - **`/is-granted`** (validating) — for the request's GVK, find matching references → their definitions
   → deny if the referenced name is not available to the project. On UPDATE, values already present are
-  grandfathered so existing objects are not broken.
+  grandfathered so existing objects are not broken. A reference whose selected `path` or
+  `match.fieldPath` cannot be evaluated is logged (reference name, entry index, path) and skipped; the
+  other references are still enforced. This is a deliberate fail-open for the broken reference only:
+  the reference webhook runs with `failurePolicy: Ignore`, so such an object can still be stored, and
+  answering with an error instead would, under this webhook's `failurePolicy: Fail`, block every
+  CREATE/UPDATE of the reference's `rule` in every project because of one bad object. Visibility comes
+  from the log and the reference's `FieldPathsValid=False`. Errors not tied to one reference (listing
+  references, reading the namespace or grants, decoding, resolving) still fail the request.
+  `/defaults` and the violation scan already skipped such a reference and are unchanged.
 - **`/defaults`** (mutating, CREATE) — apply `fieldPaths[].defaulting`.
+
+Registered statically, not derived from the references:
+
+- **`/validate/v1alpha1/grantableclusterresourcereferences`** (validating, CREATE/UPDATE) — reject a
+  `fieldPaths[]` entry whose `path` or `match.fieldPath` does not compile with the RFC 9535 parser
+  `/is-granted` uses (whatever the `defaulting` mode: `/is-granted` skips a stored uncompilable path, so the
+  reference would silently check nothing), or whose `defaulting` is not `None` while its `path` is not a simple member path, and a
+  spec that breaks the subset or coverage rule (see *Scopes must fit the rule*). All problems are
+  reported in one refusal. On UPDATE only entries that are new or changed relative to `oldObject`
+  have their paths checked (compared by content, not index); an entry's scope is re-checked when the
+  entry or `rule` changed (dropping a resource from `rule` must not leave a stored entry scoped to it);
+  coverage, a property of the whole spec, is re-checked when `rule` or `fieldPaths` changed. An object
+  with a `deletionTimestamp` is not checked at all. So a reference stored before the webhook — or
+  while it was unavailable — stays editable (metadata, finalizers) instead of being refused on every
+  write; fixing a broken entry is a change, so it is checked and passes. The rules live in one place,
+  `engine.ReferenceProblems`, shared with the binding reconciler.
+  `failurePolicy: Ignore` and no system-writer exclusion: the authors of these objects are module
+  developers (`system:masters` on a stand) and the deckhouse-controller applying a module's release,
+  so excluding them would leave nothing to police; `Ignore` keeps an unavailable backend from
+  blocking a release.
 - **`/protect`** (validating) — keep the controller-owned `AvailableClusterResource` read-only (with
   system-group exemptions). No quota status to protect anymore.
 
 ## Controller
 
 - **Catalog reconciler** (keyed by namespace) — renders `AvailableClusterResource` per project per
-  definition from resolved availability.
+  definition from resolved availability, and deletes the module-owned catalogs of the namespace whose
+  definition is gone (the catalog is read-only to everyone but the controller, so nothing else could).
 - **Binding reconciler** (keyed by `GrantableClusterResourceReference` and
   `GrantableClusterResourceDefinition`) — sets `reference.status.bound`/`Bound` condition and the
-  definition's `status.references`/`referenceCount` reverse index.
+  definition's `status.references`/`referenceCount` reverse index. It also sets `FieldPathsValid`
+  on the reference: the webhook's checks applied to the whole stored object, without ratcheting, so a
+  reference stored past the webhook shows up (`False`/`InvalidFieldPaths`, message = the refusal text).
+- **Policy reconciler** (keyed by `ClusterResourceGrantPolicy`) — reports `SelectorsValid` (a selector
+  the schema accepts but the selector library refuses would otherwise silently match nothing) and
+  `AllowedEffective` (an allowed name the definition's `excluded` filter refuses anyway grants nothing;
+  for ClusterRole the message names the `rbac.deckhouse.io/delegatable` label).
+- **Violation scan** (inside the catalog reconciler) — after each catalog render, walks the intercepted
+  objects of the namespace and exposes `d8_cluster_objects_grant_violated{project,grant,violating_resource,
+  violating_object_name,violating_field}` on the controller's `:9091` metrics endpoint for objects whose
+  referenced name is no longer available (grandfathered on UPDATE, so this is the only place they show).
 
 ## Worked examples
 
@@ -360,7 +455,8 @@ spec:
   excluded:
     - matchExpressions:
         - key: rbac.deckhouse.io/delegatable
-          operator: DoesNotExist
+          operator: NotIn
+          values: ["true"]
 ---
 apiVersion: multitenancy.deckhouse.io/v1alpha1
 kind: GrantableClusterResourceReference

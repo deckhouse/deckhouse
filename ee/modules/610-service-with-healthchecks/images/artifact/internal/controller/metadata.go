@@ -19,6 +19,12 @@ const (
 	// because a label value can not contain a comma.
 	propagatedAnnotationsKey = "network.deckhouse.io/propagated-annotations"
 	propagatedLabelsKey      = "network.deckhouse.io/propagated-labels"
+
+	// heritageLabelKey marks the child Service as belonging to Deckhouse, the same way the rest of
+	// the platform labels its own resources. Its value is fixed by the module, so it is owned by
+	// the controller rather than copied from the parent; see setManagedLabels.
+	heritageLabelKey   = "heritage"
+	heritageLabelValue = "deckhouse"
 )
 
 // Annotations describing the parent object itself, never copied to the child Service.
@@ -30,6 +36,14 @@ var nonPropagatedAnnotations = map[string]struct{}{
 	propagatedLabelsKey:                {},
 }
 
+// Labels the controller owns on the child Service and never copies from the parent: their value is
+// fixed by the module, so a parent label of the same key is neither propagated nor able to override
+// them. Keeping them out of propagation also keeps them out of propagatedLabelsKey, so they are not
+// removed when the parent lacks them.
+var nonPropagatedLabels = map[string]struct{}{
+	heritageLabelKey: {},
+}
+
 func propagatedAnnotations(annotations map[string]string) map[string]string {
 	result := make(map[string]string, len(annotations))
 	for key, value := range annotations {
@@ -39,6 +53,34 @@ func propagatedAnnotations(annotations map[string]string) map[string]string {
 		result[key] = value
 	}
 	return result
+}
+
+func propagatedLabels(labels map[string]string) map[string]string {
+	result := make(map[string]string, len(labels))
+	for key, value := range labels {
+		if _, skip := nonPropagatedLabels[key]; skip {
+			continue
+		}
+		result[key] = value
+	}
+	return result
+}
+
+// setManagedLabels sets the labels the controller always puts on the child Service, regardless of
+// the parent. Applied after propagation, so they win over any parent label of the same key; excluded
+// from propagatedLabels, so they are not tracked as copied-from-parent keys.
+func setManagedLabels(labels map[string]string) map[string]string {
+	if labels == nil {
+		labels = make(map[string]string, 1)
+	}
+	labels[heritageLabelKey] = heritageLabelValue
+	return labels
+}
+
+// hasManagedLabels reports whether the child Service already carries the controller-owned labels, so
+// a Service created before they were introduced is not mistaken for one that is already in sync.
+func hasManagedLabels(labels map[string]string) bool {
+	return labels[heritageLabelKey] == heritageLabelValue
 }
 
 // mergePropagated adds the desired keys to the current ones and removes the keys

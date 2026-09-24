@@ -82,23 +82,23 @@ func csrFilterFunc(obj *unstructured.Unstructured) (go_hook.FilterResult, error)
 		}
 	}
 
+	if csr.Spec.SignerName != cv1.KubeletServingSignerName {
+		return nil, nil
+	}
+
 	ret := &CsrInfo{
 		Name: csr.GetName(),
 	}
 
-	// Parse CSR
 	x509cr, err := parseCSR(csr)
 	if err != nil {
 		ret.ErrMsg = err.Error()
 		return ret, nil
 	}
 
-	if csr.Spec.SignerName == "kubernetes.io/kubelet-serving" {
-		err = nodeServingCert(csr, x509cr)
-		if err != nil {
-			ret.ErrMsg = err.Error()
-			return ret, nil
-		}
+	if err := nodeServingCert(csr, x509cr); err != nil {
+		ret.ErrMsg = err.Error()
+		return ret, nil
 	}
 
 	ret.Valid = true

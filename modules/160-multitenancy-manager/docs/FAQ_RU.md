@@ -52,7 +52,7 @@ d8 k get available -n <PROJECT_NAME>
 
 Такие объекты продолжают работать. Чтобы устранить расхождение, предоставьте проекту доступ к используемому cluster-wide-ресурсу или измените объект так, чтобы он использовал доступный ресурс.
 
-Подробную информацию о нарушениях можно посмотреть на дашборде Grafana в разделе «Security» → «Cluster Resource Grant Violations». Для мониторинга используется метрика `d8_cluster_objects_grant_violated`.
+Подробную информацию о нарушениях можно посмотреть на дашборде Grafana в разделе «Security» → «Cluster Resource Grant Violations». Для мониторинга используется метрика `d8_cluster_objects_grant_violated`; её отдаёт контроллер модуля по тем же правилам доступности, что и admission webhook.
 
 ### Как разрешить все StorageClasses, кроме отдельных?
 
@@ -64,7 +64,7 @@ d8 k get available -n <PROJECT_NAME>
 
 Если для ресурса не задана ни одна политика ClusterResourceGrantPolicy, его доступность определяется регистрацией: ресурс доступен всем проектам, если в GrantableClusterResourceDefinition задано [`defaultAvailability: All`](cr.html#grantableclusterresourcedefinition-v1alpha1-spec-defaultavailability) (значение по умолчанию) и ресурс не попадает под фильтры [`excluded`](cr.html#grantableclusterresourcedefinition-v1alpha1-spec-excluded).
 
-Например, определение `clusterroles`, поставляемое DKP, исключает все ClusterRole без лейбла `rbac.deckhouse.io/delegatable`, поэтому такие роли недоступны в RoleBinding даже при отсутствии политик.
+Например, определение `clusterroles`, поставляемое DP, исключает все ClusterRole без лейбла `rbac.deckhouse.io/delegatable`, поэтому такие роли недоступны в RoleBinding даже при отсутствии политик.
 
 Чтобы ограничить доступ, создайте [ClusterResourceGrantPolicy](cr.html#clusterresourcegrantpolicy) и укажите проекты и доступные им cluster-wide-ресурсы.
 
@@ -100,7 +100,7 @@ d8 k get available -n <PROJECT_NAME>
 
 После отключения модуля проверка доступности cluster-wide-ресурсов и автоматическая подстановка значений по умолчанию не выполняются. Существующие объекты при этом не изменяются.
 
-Проверка полей с расширением `x-deckhouse-grantable-resource` в настройках приложений DKP также не выполняется.
+Проверка полей с расширением `x-deckhouse-grantable-resource` в настройках приложений DP также не выполняется.
 
 Роль `d8:use:dict` в модуле `user-authz` продолжает работать.
 

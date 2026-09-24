@@ -1,6 +1,6 @@
 ---
 title: "The keepalived module"
-description: "Management of keepalived clusters on Deckhouse Kubernetes Platform nodes."
+description: "Management of keepalived clusters on Deckhouse Platform nodes."
 ---
 
 {% alert level="warning" %}

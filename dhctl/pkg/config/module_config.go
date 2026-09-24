@@ -17,6 +17,8 @@ limitations under the License.
 package config
 
 import (
+	"context"
+
 	"github.com/iancoleman/strcase"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
@@ -52,9 +54,15 @@ type ModuleConfigSpec struct {
 	Version  int            `json:"version,omitempty"`
 	Settings SettingsValues `json:"settings,omitempty"`
 	Enabled  *bool          `json:"enabled,omitempty"`
+
+	// Picks which ModuleSource publishes the module; empty means "deckhouse". omitempty is
+	// load-bearing: dhctl creates ModuleConfigs in the cluster from this struct, and the
+	// synthesised "deckhouse" and "global" ones would otherwise carry source: "".
+	Source string `json:"source,omitempty"`
 }
 
 func buildModuleConfig(
+	ctx context.Context,
 	schemasStore *SchemaStore,
 	moduleName string,
 	isEnabled bool,
@@ -84,7 +92,7 @@ func buildModuleConfig(
 		return nil, err
 	}
 
-	_, err = schemasStore.Validate(&doc)
+	_, err = schemasStore.Validate(ctx, &doc)
 	if err != nil {
 		return nil, err
 	}

@@ -123,14 +123,14 @@ type CCM struct {
 	Disabled bool `json:"disabled,omitempty"`
 }
 
-// Contains settings to connect to the Deckhouse Kubernetes Platform API.
-// +deckhouse:ru:description:value="Содержит настройки для подключения к API Deckhouse Kubernetes Platform."
+// Contains settings to connect to the Deckhouse Platform API.
+// +deckhouse:ru:description:value="Содержит настройки для подключения к API Deckhouse Platform."
 // +deckhouse:DisableAdditionalProperties=true
 type ProviderParameters struct {
-	// Namespace in which DKP cluster resources will be created.
+	// Namespace in which DP cluster resources will be created.
 	//
 	// > If not explicitly specified, the default namespace for kubeconfig will be used.
-	// +deckhouse:ru:description:value="Неймспейс, в котором будут созданы ресурсы кластера DKP."
+	// +deckhouse:ru:description:value="Неймспейс, в котором будут созданы ресурсы кластера DP."
 	// +deckhouse:ru:description:value=
 	// +deckhouse:ru:description:value="> Если не указано явно, будет использоваться неймспейс по умолчанию для kubeconfig."
 	Namespace string `json:"namespace"`

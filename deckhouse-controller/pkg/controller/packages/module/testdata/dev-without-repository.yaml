@@ -1,0 +1,8 @@
+apiVersion: deckhouse.io/v1beta1
+kind: Module
+metadata:
+  name: test-module
+  annotations:
+    modules.deckhouse.io/dev: "true"
+spec:
+  packageVersion: main

@@ -29,6 +29,8 @@ import (
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+
+	"github.com/deckhouse/node-controller/internal/common"
 )
 
 const (
@@ -53,13 +55,13 @@ func (s *Service) ReadEndpoints(ctx context.Context) (Endpoints, error) {
 	pods := &corev1.PodList{}
 	if err := s.Client.List(ctx, pods,
 		client.InNamespace(kubeSystemNS),
-		client.MatchingLabels{"component": "kube-apiserver", "tier": "control-plane"},
+		client.MatchingLabels(common.APIServerPodLabels),
 	); err != nil {
 		discoveryErrs = append(discoveryErrs, fmt.Errorf("list kube-apiserver pods: %w", err))
 	} else {
 		for i := range pods.Items {
 			pod := &pods.Items[i]
-			if !podReady(pod) {
+			if !common.PodReady(pod) {
 				continue
 			}
 			set[net.JoinHostPort(pod.Status.PodIP, strconv.Itoa(apiserverPort))] = struct{}{}
@@ -123,13 +125,4 @@ func (s *Service) ReadEndpoints(ctx context.Context) (Endpoints, error) {
 		return Endpoints{}, err
 	}
 	return res, nil
-}
-
-func podReady(pod *corev1.Pod) bool {
-	for _, cond := range pod.Status.Conditions {
-		if cond.Type == corev1.PodReady && cond.Status == corev1.ConditionTrue {
-			return true
-		}
-	}
-	return false
 }

@@ -113,8 +113,7 @@ func purgeOrphanResources(_ context.Context, input *go_hook.HookInput, dc depend
 			}
 			input.Logger.Info("Finalizers from IstioFederation removed", slog.String("name", fed.GetName()))
 
-			_, fedDeletionTimestampExists := fed.GetAnnotations()["deletionTimestamp"]
-			if !fedDeletionTimestampExists {
+			if fed.GetDeletionTimestamp() == nil {
 				err := k8sClient.Dynamic().Resource(istioFederationGVR).Delete(context.TODO(), fed.GetName(), metav1.DeleteOptions{})
 				if err != nil {
 					input.Logger.Warn("Failed to delete IstioFederation", slog.String("name", fed.GetName()), log.Err(err))
@@ -138,8 +137,7 @@ func purgeOrphanResources(_ context.Context, input *go_hook.HookInput, dc depend
 			}
 			input.Logger.Info("Finalizers from IstioMulticluster removed", slog.String("name", mc.GetName()))
 
-			_, mcDeletionTimestampExists := mc.GetAnnotations()["deletionTimestamp"]
-			if !mcDeletionTimestampExists {
+			if mc.GetDeletionTimestamp() == nil {
 				err := k8sClient.Dynamic().Resource(istioMulticlusterGVR).Delete(context.TODO(), mc.GetName(), metav1.DeleteOptions{})
 				if err != nil {
 					input.Logger.Warn("Failed to delete IstioMulticluster", slog.String("name", mc.GetName()), log.Err(err))
@@ -174,8 +172,7 @@ func purgeOrphanResources(_ context.Context, input *go_hook.HookInput, dc depend
 					slog.String("name", iop.GetName()),
 					slog.String("namespace", istioSystemNs))
 
-				_, iopDeletionTimestampExists := iop.GetAnnotations()["deletionTimestamp"]
-				if !iopDeletionTimestampExists {
+				if iop.GetDeletionTimestamp() == nil {
 					err := k8sClient.Dynamic().Resource(iopGVR).Namespace(istioSystemNs).Delete(context.TODO(), iop.GetName(), metav1.DeleteOptions{})
 					if err != nil {
 						input.Logger.Warn("Failed to delete IstioOperator",
@@ -213,8 +210,7 @@ func purgeOrphanResources(_ context.Context, input *go_hook.HookInput, dc depend
 					slog.String("name", istio.GetName()),
 					slog.String("namespace", istioSystemNs))
 
-				_, istioDeletionTimestampExists := istio.GetAnnotations()["deletionTimestamp"]
-				if !istioDeletionTimestampExists {
+				if istio.GetDeletionTimestamp() == nil {
 					err := k8sClient.Dynamic().Resource(istioGVR).Namespace(istioSystemNs).Delete(context.TODO(), istio.GetName(), metav1.DeleteOptions{})
 					if err != nil {
 						input.Logger.Warn("Failed to delete Istio",
@@ -255,8 +251,7 @@ func purgeOrphanResources(_ context.Context, input *go_hook.HookInput, dc depend
 		}
 
 		// delete NS
-		_, nsDeletionTimestampExists := ns.GetAnnotations()["deletionTimestamp"]
-		if !nsDeletionTimestampExists {
+		if ns.GetDeletionTimestamp() == nil {
 			err := k8sClient.CoreV1().Namespaces().Delete(context.TODO(), ns.GetName(), metav1.DeleteOptions{})
 			if err != nil && !k8serrors.IsNotFound(err) {
 				input.Logger.Warn("Failed to delete namespace",

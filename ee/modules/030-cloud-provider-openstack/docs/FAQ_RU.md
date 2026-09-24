@@ -18,7 +18,7 @@ title: "Cloud provider — OpenStack: FAQ"
 * `loadbalancer.openstack.deckhouse.io/load-balancer-id` — указывает OpenStack CCM использовать заранее созданный Octavia-балансировщик.
 * `loadbalancer.openstack.deckhouse.io/load-balancer-address` — указывает OpenStack CCM привязать заранее выделенный floating IP к создаваемому им балансировщику.
 
-DKP автоматически добавит указанные аннотации в сгенерированный объект Service типа LoadBalancer.
+DP автоматически добавит указанные аннотации в сгенерированный объект Service типа LoadBalancer.
 
 Если используется аннотация`loadbalancer.openstack.deckhouse.io/load-balancer-id`, балансировщик должен соответствовать следующим требованиям:
 
@@ -34,7 +34,7 @@ DKP автоматически добавит указанные аннотац�
 
 Если указанный floating IP недоступен, OpenStack CCM не сможет назначить внешний IP-адрес объекту Service.
 
-Не добавляйте аннотации `loadbalancer.openstack.deckhouse.io/load-balancer-id` и `loadbalancer.openstack.deckhouse.io/load-balancer-address` к прикладным ресурсам Ingress. Указывайте их только в конфигурации IngressNginxController: DKP добавит их в созданный объект Service, который обрабатывает `openstack-cloud-controller-manager`.
+Не добавляйте аннотации `loadbalancer.openstack.deckhouse.io/load-balancer-id` и `loadbalancer.openstack.deckhouse.io/load-balancer-address` к прикладным ресурсам Ingress. Указывайте их только в конфигурации IngressNginxController: DP добавит их в созданный объект Service, который обрабатывает `openstack-cloud-controller-manager`.
 
 ### IngressNginxController с заранее созданным балансировщиком
 
@@ -143,7 +143,7 @@ spec:
 Гибридный кластер представляет собой кластер, в котором могут быть как узлы bare metal, так и узлы OpenStack. Для создания такого кластера необходимо наличие L2-сети между всеми узлами кластера.
 
 {% alert level="info" %}
-В Deckhouse Kubernetes Platform есть возможность задавать префикс для имени CloudEphemeral-узлов, добавляемых в гибридный кластер c master-узлами типа Static.
+В Deckhouse Platform есть возможность задавать префикс для имени CloudEphemeral-узлов, добавляемых в гибридный кластер c master-узлами типа Static.
 Для этого используйте параметр [`instancePrefix`](../node-manager/configuration.html#parameters-instanceprefix) модуля `node-manager`. Префикс, указанный в параметре, будет добавляться к имени всех добавляемых в кластер узлов типа CloudEphemeral. Задать префикс для определенной NodeGroup нельзя.
 {% endalert %}
 
@@ -369,6 +369,51 @@ Expected HTTP response code [202] when accessing
 [POST https://public.infra.myfavourite-cloud-provider.ru:8776/v3/555555555555/volumes/bb5a275b-3f30-4916-9480-9efe4b6dfba5/action], but got 406 instead
 {"computeFault": {"message": "Version 3.42 is not supported by the API. Minimum is 3.0 and maximum is 3.27.", "code": 406}}
 ```
+
+## Как создать прерываемые узлы в Selectel?
+
+Для инстансов, помеченных Nova-тегом `preemptible`, Selectel включает preemption. Установите параметр [`preemptible`](/modules/cloud-provider-openstack/latest/cr.html#openstackinstanceclass-v1-spec-preemptible) ресурса OpenStackInstanceClass в `true` — тег будет автоматически прикреплён к инстансу.
+
+Пример:
+
+```yaml
+apiVersion: deckhouse.io/v1
+kind: OpenStackInstanceClass
+metadata:
+  name: worker-preempt
+spec:
+  flavorName: SL1.4-8192
+  imageName: Ubuntu 24.04 LTS 64-bit
+  rootDiskSize: 30
+  preemptible: true
+---
+apiVersion: deckhouse.io/v1
+kind: NodeGroup
+metadata:
+  name: worker-preempt
+spec:
+  nodeType: CloudEphemeral
+  cloudInstances:
+    classReference:
+      kind: OpenStackInstanceClass
+      name: worker-preempt
+    minPerZone: 2
+    maxPerZone: 4
+    zones: [ru-3a]
+```
+
+Ограничения:
+
+* Тег `preemptible` — Selectel-специфичный механизм. CAPI-шаблон эмитит тег только когда `connection.authURL` кластера указывает на Selectel (`selcloud.ru` / `selectel`). В других OpenStack-облаках тег молча дропается: узел всё равно создаётся, но как обычная (не прерываемая) VM.
+* Параметр поддерживается только для NodeGroup типа CloudEphemeral, работающих на движке CAPI. Если OpenStackInstanceClass с `preemptible: true` используется в NodeGroup на движке MCM, параметр молча игнорируется — в MCM MachineClass нет поля для raw Nova-тегов. Узлы создаются как обычные VM.
+* В обоих случаях выше срабатывает Prometheus-алерт **OpenStackPreemptibleUnsupported** (с `reason=mcm` или `reason=non-selectel`), чтобы оператор узнал о молчаливом дропе, а не обнаружил его через недели по неизменившемуся счёту за облако. В описании алерта — точные команды для исправления каждого случая.
+* Движок управления выбирается отдельно для каждой NodeGroup. Если один OpenStackInstanceClass с `preemptible: true` используется одновременно в NodeGroup на движках CAPI и MCM, на стороне MCM алерт будет висеть постоянно — используйте отдельные OpenStackInstanceClass ресурсы для NodeGroup, работающих на разных движках, когда контракт по прерываемости различается.
+
+{% alert level="warning" %}
+Изменение параметра [`preemptible`](/modules/cloud-provider-openstack/latest/cr.html#openstackinstanceclass-v1-spec-preemptible) в существующем OpenStackInstanceClass приводит к изменению OpenStackMachineTemplate и пересозданию всех узлов соответствующей NodeGroup.
+{% endalert %}
+
+Если прерываемый инстанс завершается без `graceful shutdown`, соответствующий узел переходит в состояние `NotReady`. После обнаружения отсутствующего инстанса CAPO и MachineHealthCheck инициируют создание нового Machine и виртуальной машины. До завершения восстановления поды на потерянном узле могут отображаться в Kubernetes API в состоянии `Running`, хотя фактически они уже недоступны.
 
 ## Что делать, если переключение на заказ узлов в менее приоритетных группах занимает много времени?
 

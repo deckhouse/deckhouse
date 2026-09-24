@@ -213,6 +213,36 @@ spec:
       template: ../rendered/constraint-template.yaml
       constraint: constraints/pss_restricted.yaml
       cases:
+        - name: allowed-by-exception-escalation-true-container-does-not-escalate
+          violations: "no"
+          assertionMessage: ""
+          fields:
+            - path: spec.securityContext.allowPrivilegeEscalation.allowedValue
+              scenario: speUnused
+          exception: ""
+          exceptionRef: ""
+          inventory:
+            - base: securityPolicyException
+              merge:
+                metadata:
+                  name: allow-escalation-true-unused
+                spec:
+                  securityContext:
+                    allowPrivilegeEscalation:
+                      allowedValue: true
+          object:
+            base: admissionPod
+            merge:
+              metadata:
+                labels:
+                  security.deckhouse.io/security-policy-exception: allow-escalation-true-unused
+                name: allowed-by-exception-escalation-true-container-does-not-escalate
+              spec:
+                containers:
+                  - image: nginx
+                    name: nginx
+                    securityContext:
+                      allowPrivilegeEscalation: false
         - name: 012-021-allowed-by-exception-allowprivilegeescalation-true
           violations: "no"
           assertionMessage: ""

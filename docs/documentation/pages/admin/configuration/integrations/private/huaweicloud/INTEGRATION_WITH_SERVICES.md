@@ -3,7 +3,7 @@ title: Integration with Huawei Cloud services
 permalink: en/admin/integrations/private/huaweicloud/services.html
 ---
 
-Deckhouse Kubernetes Platform leverages Huawei Cloud's capabilities to operate Kubernetes clusters.
+Deckhouse Platform leverages Huawei Cloud's capabilities to operate Kubernetes clusters.
 The following features are supported:
 
 - Resource management in Huawei Cloud via `cloud-controller-manager`.

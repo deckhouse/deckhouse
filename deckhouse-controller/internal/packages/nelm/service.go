@@ -28,7 +28,6 @@ import (
 	"strings"
 	"time"
 
-	addonutils "github.com/flant/addon-operator/pkg/utils"
 	klient "github.com/flant/kube-client/client"
 	"github.com/flant/kube-client/manifest"
 	"github.com/google/uuid"
@@ -37,11 +36,17 @@ import (
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/codes"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 
+	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/app"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/nelm"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/health"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/nelm/drift"
+	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/resourcerequests"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/status"
+	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/addonutils"
+	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
+	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/envconfig"
 	"github.com/deckhouse/deckhouse/pkg/log"
 )
 
@@ -55,23 +60,9 @@ const (
 	// conversionWebhookKind is the token a chart must mention to render a
 	// ConversionWebhook; charts that never mention it are skipped without a render.
 	conversionWebhookKind = "ConversionWebhook"
-
-	// managedByAnnotation marks a release as owned by this service.
-	managedByAnnotation      = "packages.deckhouse.io/managed-by"
-	managedByAnnotationValue = "deckhouse"
-
-	packageLabel  = "packages.deckhouse.io/package"
-	instanceLabel = "packages.deckhouse.io/instance"
 )
 
 const (
-	// envPackageNelmTimeout is the env var (set on the Deckhouse deployment) that
-	// bounds each nelm release operation on the packages path. Its value is a Go
-	// duration, e.g. "30m".
-	envPackageNelmTimeout = "PACKAGE_NELM_TIMEOUT"
-	// defaultPackageNelmTimeout applies when envPackageNelmTimeout is unset or malformed.
-	defaultPackageNelmTimeout = 30 * time.Minute
-
 	// timeoutGrace keeps nelm's own deadline behind ours: both bound the same
 	// apply, but only ours cancels with a cause naming what it waited for.
 	timeoutGrace = time.Minute
@@ -125,6 +116,13 @@ type application interface {
 	GetPackage() string
 }
 
+// resourceSizer is implemented by packages that carry per-workload resource
+// overrides from their CR. Optional, like application above: modules do not
+// implement it.
+type resourceSizer interface {
+	GetResourceRequests() []resourcerequests.Request
+}
+
 // Service manages Helm release lifecycle via nelm client.
 // It provides upgrade, deletion, and rendering operations.
 type Service struct {
@@ -142,14 +140,14 @@ type Service struct {
 
 // NewService creates a new nelm service for managing Helm releases.
 func NewService(kubeClient *klient.Client, callback drift.AbsentCallback, status *status.Service, logger *log.Logger) *Service {
-	timeout := resolveTimeout()
+	timeout := envconfig.PackageNelmTimeout()
 
 	nelmClient := nelm.New(logger,
 		nelm.WithResourcesLabels(map[string]string{
 			"heritage": "deckhouse",
 		}),
 		nelm.WithReleaseAnnotations(map[string]string{
-			managedByAnnotation: managedByAnnotationValue,
+			v1alpha1.PackageAnnotationManagedBy: v1alpha1.PackageAnnotationManagedByValue,
 		}),
 		// nelm's deadline is a backstop behind ours: a non-zero Timeout is what makes
 		// ReleaseInstall return context.Cause rather than its own unwind error.
@@ -234,14 +232,113 @@ func (s *Service) Render(ctx context.Context, namespace string, pkg Package) (st
 	}
 	defer os.Remove(valuesPath)
 
-	return s.client.Render(ctx, namespace, pkg.GetName(), nelm.InstallOptions{
+	opts := nelm.InstallOptions{
 		Path:        pkg.GetPath(),
 		ValuesPaths: []string{valuesPath},
 		RootValues:  pkg.GetRuntimeValues(),
 		ResourcesLabels: map[string]string{
 			health.LabelKey: pkg.GetName(),
 		},
-	})
+	}
+
+	requests := resourceRequests(pkg)
+	if len(requests) == 0 {
+		return s.client.Render(ctx, namespace, pkg.GetName(), opts)
+	}
+
+	// Render what the package actually gets: the runtime dump reads this, and it
+	// would be misleading if it showed the chart's own sizing rather than the
+	// overlay the install applies.
+	rendered, err := s.renderResized(ctx, namespace, pkg.GetName(), opts, requests)
+	if err != nil {
+		span.SetStatus(codes.Error, err.Error())
+		return "", err
+	}
+
+	return nelm.JoinManifests(rendered)
+}
+
+// resourceRequests returns the package's per-workload resource overrides, or nil
+// when the feature gate is off or the package carries none.
+//
+// The gate is read here, at the single point the overlay enters the release path,
+// so turning it off leaves both the rendered manifests and the chart the release
+// installs from exactly as they were.
+func resourceRequests(pkg Package) []resourcerequests.Request {
+	if !app.ResourceRequestsEnabled() {
+		return nil
+	}
+
+	sizer, ok := pkg.(resourceSizer)
+	if !ok {
+		return nil
+	}
+
+	return sizer.GetResourceRequests()
+}
+
+// renderResized renders the chart and overlays the package's resource requests on
+// the result, returning the resources with the classification nelm gave them.
+func (s *Service) renderResized(ctx context.Context, namespace, name string, opts nelm.InstallOptions, requests []resourcerequests.Request) ([]nelm.RenderedResource, error) {
+	rendered, err := s.client.RenderResources(ctx, namespace, name, opts)
+	if err != nil {
+		return nil, fmt.Errorf("render resources: %w", err)
+	}
+
+	resources := make([]*unstructured.Unstructured, 0, len(rendered))
+	for _, resource := range rendered {
+		resources = append(resources, resource.Unstruct)
+	}
+
+	unmatched, err := resourcerequests.Apply(resources, requests)
+	if err != nil {
+		return nil, fmt.Errorf("apply resource requests: %w", err)
+	}
+
+	// A chart may render a workload conditionally, so a dormant request is not an
+	// error — but a typo in kind or name looks exactly the same from here, and
+	// silently sizing nothing is the worse failure of the two.
+	for _, request := range unmatched {
+		s.logger.Warn("resource request matches no rendered workload",
+			slog.String("name", name),
+			slog.String("kind", request.Kind),
+			slog.String("workload", request.Name))
+	}
+
+	return rendered, nil
+}
+
+// writeResizedChart materialises the overlaid resources as a chart to install
+// from, and returns its path along with the cleanup the caller must defer.
+//
+// Standalone crds/ CRDs are left out: Install passes NoInstallStandaloneCRDs, so
+// carrying them into the overlay's templates/ would start applying CRDs this
+// release has never applied. Hooks are carried over, and nelm reclassifies them
+// from their own annotations when it renders the overlay.
+func (s *Service) writeResizedChart(name, srcChart string, rendered []nelm.RenderedResource) (string, func(), error) {
+	resources := make([]*unstructured.Unstructured, 0, len(rendered))
+	for _, resource := range rendered {
+		if !resource.Regular && !resource.Hook {
+			continue
+		}
+
+		resources = append(resources, resource.Unstruct)
+	}
+
+	dir := filepath.Join(s.tmpDir, fmt.Sprintf("%s.package-chart-%s", name, uuid.New().String()))
+	cleanup := func() {
+		if err := os.RemoveAll(dir); err != nil {
+			s.logger.Warn("failed to remove overlay chart", slog.String("path", dir), log.Err(err))
+		}
+	}
+
+	if err := resourcerequests.WriteChart(dir, srcChart, resources); err != nil {
+		cleanup()
+
+		return "", func() {}, fmt.Errorf("write overlay chart: %w", err)
+	}
+
+	return dir, cleanup, nil
 }
 
 // Delete uninstalls a Helm release by name.
@@ -334,8 +431,8 @@ func (s *Service) Upgrade(ctx context.Context, namespace string, pkg Package) er
 	// The maintenance marker lives on the resources, so toggling it changes the
 	// rendered-manifest checksum and forces exactly one upgrade on enter/leave.
 	resourcesLabels := map[string]string{
-		health.LabelKey: pkg.GetName(),
-		packageLabel:    pkg.GetName(),
+		health.LabelKey:              pkg.GetName(),
+		v1alpha1.PackageLabelPackage: pkg.GetName(),
 	}
 	if state == NoResourceReconciliation {
 		resourcesLabels[nelm.ReleaseLabelMaintenance] = ""
@@ -346,9 +443,9 @@ func (s *Service) Upgrade(ctx context.Context, namespace string, pkg Package) er
 	}
 
 	if app, ok := pkg.(application); ok {
-		resourcesLabels[instanceLabel] = app.GetInstance()
+		resourcesLabels[v1alpha1.PackageLabelInstance] = app.GetInstance()
 		// application has separate package name
-		resourcesLabels[packageLabel] = app.GetPackage()
+		resourcesLabels[v1alpha1.PackageLabelPackage] = app.GetPackage()
 	} else {
 		// options needed for modules
 		trackingOptions.NoFinalTracking = true
@@ -360,14 +457,35 @@ func (s *Service) Upgrade(ctx context.Context, namespace string, pkg Package) er
 		slog.String("name", pkg.GetName()),
 		slog.String("namespace", namespace))
 
-	// Render chart to get manifests for checksum calculation
-	renderedManifests, err := s.client.Render(ctx, namespace, pkg.GetName(), nelm.InstallOptions{
+	renderOptions := nelm.InstallOptions{
 		Path:            pkg.GetPath(),
 		ValuesPaths:     []string{valuesPath},
 		RootValues:      pkg.GetRuntimeValues(),
 		ResourcesLabels: resourcesLabels,
-	})
-	if err != nil {
+	}
+
+	// Render chart to get manifests for checksum calculation
+	var (
+		renderedManifests string
+
+		// resized holds the overlaid resources, kept around to build the chart the
+		// release is installed from. Only the resource-requests path fills it.
+		resized []nelm.RenderedResource
+	)
+
+	if requests := resourceRequests(pkg); len(requests) > 0 {
+		if resized, err = s.renderResized(ctx, namespace, pkg.GetName(), renderOptions, requests); err != nil {
+			span.SetStatus(codes.Error, err.Error())
+			return status.NewError(conditionReasonRenderFailed, err)
+		}
+
+		// The checksum, the absent-resources monitor and the install all have to
+		// see the same manifests, so the overlay is folded in before any of them.
+		if renderedManifests, err = nelm.JoinManifests(resized); err != nil {
+			span.SetStatus(codes.Error, err.Error())
+			return status.NewError(conditionReasonRenderFailed, err)
+		}
+	} else if renderedManifests, err = s.client.Render(ctx, namespace, pkg.GetName(), renderOptions); err != nil {
 		span.SetStatus(codes.Error, err.Error())
 		return status.NewError(conditionReasonRenderFailed, err)
 	}
@@ -394,6 +512,24 @@ func (s *Service) Upgrade(ctx context.Context, namespace string, pkg Package) er
 		return nil
 	}
 
+	// chartPath is what the release is installed from: the package's own chart, or
+	// an overlay chart holding the resized manifests, since nelm renders the chart
+	// it is handed rather than taking manifests. Built here and not next to the
+	// render because most calls stop at the check above, and the overlay is a
+	// directory written to disk.
+	chartPath := pkg.GetPath()
+
+	if len(resized) > 0 {
+		dir, cleanup, err := s.writeResizedChart(pkg.GetName(), pkg.GetPath(), resized)
+		if err != nil {
+			span.SetStatus(codes.Error, err.Error())
+			return status.NewError(conditionReasonRenderFailed, err)
+		}
+		defer cleanup()
+
+		chartPath = dir
+	}
+
 	// Tracking still holds the previous apply's report, which a deadline reached
 	// before this one reports anything would name as ours.
 	s.status.ResetTracking(pkg.GetName())
@@ -407,7 +543,7 @@ func (s *Service) Upgrade(ctx context.Context, namespace string, pkg Package) er
 	err = s.client.Install(ctx, namespace, pkg.GetName(), nelm.InstallOptions{
 		OnTrackingEvent: s.status.UpdateTracking,
 		TrackingOptions: trackingOptions,
-		Path:            pkg.GetPath(),
+		Path:            chartPath,
 		ValuesPaths:     []string{valuesPath},
 		RootValues:      pkg.GetRuntimeValues(),
 		ReleaseLabels: map[string]string{
@@ -552,7 +688,7 @@ func (s *Service) GetConversionWebhooks(ctx context.Context, namespace string, p
 // One release failing to uninstall does not stop the others; every failure is returned.
 func (s *Service) Cleanup(ctx context.Context, keep map[string]struct{}, ignoreNamespaces ...string) error {
 	releases, err := s.client.ListReleases(ctx, nelm.ListOptions{
-		Selector: map[string]string{managedByAnnotation: managedByAnnotationValue},
+		Selector: map[string]string{v1alpha1.PackageAnnotationManagedBy: v1alpha1.PackageAnnotationManagedByValue},
 	})
 	if err != nil {
 		return fmt.Errorf("list releases: %w", err)
@@ -692,17 +828,6 @@ func (s *Service) isHelmChart(path string) (bool, error) {
 	return false, nil
 }
 
-// resolveTimeout returns the nelm release-operation timeout: the PACKAGE_NELM_TIMEOUT
-// value (a Go duration such as "30m") when it is set and positive, otherwise
-// defaultPackageNelmTimeout.
-func resolveTimeout() time.Duration {
-	if d, err := time.ParseDuration(os.Getenv(envPackageNelmTimeout)); err == nil && d > 0 {
-		return d
-	}
-
-	return defaultPackageNelmTimeout
-}
-
 // withApplyDeadline bounds ctx by the service timeout, cancelling it with a cause
 // that names the resources the apply never finished. The returned function ends
 // the deadline and must be called.
@@ -717,8 +842,8 @@ func (s *Service) withApplyDeadline(ctx context.Context, name string) (context.C
 }
 
 // applyTimeoutCause is the cancellation cause for an apply that outlived the
-// timeout. Tracking holds the stage nelm was executing, collected by the status
-// service from the progress reports the apply was sending.
+// timeout. Tracking holds the operations nelm was executing, collected by the
+// status service from the progress reports the apply was sending.
 func (s *Service) applyTimeoutCause(name string, timeout time.Duration) error {
 	waiting := waitingFor(s.status.GetStatus(name).Tracking.Report.Operations)
 	if len(waiting) == 0 {
@@ -743,12 +868,16 @@ func waitingFor(ops []progrep.Operation) []string {
 
 // resourcesByStatus renders the distinct resources of ops in one of statuses. A
 // resource with several operations — an apply and a readiness track, say — is
-// named once.
+// named once. Operations without a resource are skipped: they have no name to show.
 func resourcesByStatus(ops []progrep.Operation, statuses ...progrep.OperationStatus) []string {
 	resources := make([]string, 0, len(ops))
 	seen := make(map[string]struct{}, len(ops))
 
 	for _, op := range ops {
+		if !status.IsResourceOperation(op) {
+			continue
+		}
+
 		if !slices.Contains(statuses, op.Status) {
 			continue
 		}

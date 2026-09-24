@@ -347,6 +347,7 @@ var _ = Describe("Module :: cloud-provider-vcd :: helm template ::", func() {
 			Expect(providerSpecificCAPISecretData).To(Not(BeEmpty()))
 			Expect(len(providerSpecificCAPISecretData) >= 1).To(BeTrue())
 			Expect(len(providerSpecificCAPISecretData["cluster.yaml"].String()) > 0).To(BeTrue())
+			Expect(len(providerSpecificCAPISecretData["credentials.yaml"].String()) > 0).To(BeTrue())
 
 			userAuthzUser := f.KubernetesGlobalResource("ClusterRole", "d8:user-authz:cloud-provider-vcd:user")
 			Expect(userAuthzUser.Exists()).To(BeTrue())
@@ -565,6 +566,7 @@ spec:
 			csiNodeDaemonSet := f.KubernetesResource("DaemonSet", "d8-cloud-provider-vcd", "csi-node")
 			Expect(csiNodeDaemonSet.Exists()).To(BeTrue())
 			Expect(csiNodeDaemonSet.Field("spec.template.spec.dnsPolicy").String()).To(Equal("ClusterFirstWithHostNet"))
+			Expect(csiNodeDaemonSet.Field("spec.template.spec.serviceAccountName").String()).To(Equal("csi"))
 
 			cddDeployment := f.KubernetesResource("Deployment", "d8-cloud-provider-vcd", "cloud-data-discoverer")
 			Expect(cddDeployment.Exists()).To(BeTrue())

@@ -18,7 +18,7 @@ The `annotations` field of the corresponding inlet configuration in the [Ingress
 - `loadbalancer.openstack.deckhouse.io/load-balancer-id`: Instructs OpenStack CCM to use a pre-created Octavia load balancer.
 - `loadbalancer.openstack.deckhouse.io/load-balancer-address`: Instructs OpenStack CCM to associate a pre-allocated floating IP with the load balancer it creates.
 
-DKP automatically adds the specified annotations to the generated Service object of type LoadBalancer.
+DP automatically adds the specified annotations to the generated Service object of type LoadBalancer.
 
 When using the `loadbalancer.openstack.deckhouse.io/load-balancer-id` annotation, the load balancer must meet the following requirements:
 
@@ -34,7 +34,7 @@ When using only `loadbalancer.openstack.deckhouse.io/load-balancer-address`, the
 
 If the specified floating IP is unavailable, OpenStack CCM will not be able to assign an external IP address to the Service object.
 
-Do not add the `loadbalancer.openstack.deckhouse.io/load-balancer-id` or `loadbalancer.openstack.deckhouse.io/load-balancer-address` annotations to application Ingress resources. Specify them only in the IngressNginxController configuration. DKP will add them to the generated Service object, which is processed by `openstack-cloud-controller-manager`.
+Do not add the `loadbalancer.openstack.deckhouse.io/load-balancer-id` or `loadbalancer.openstack.deckhouse.io/load-balancer-address` annotations to application Ingress resources. Specify them only in the IngressNginxController configuration. DP will add them to the generated Service object, which is processed by `openstack-cloud-controller-manager`.
 
 ### IngressNginxController with a pre-created load balancer
 
@@ -143,7 +143,7 @@ spec:
 A hybrid cluster combines bare metal and OpenStack nodes. To create such a cluster, you need an L2 network between all nodes of the cluster.
 
 {% alert level="info" %}
-The Deckhouse Kubernetes Platform allows to set a prefix for the names of CloudEphemeral nodes added to a hybrid cluster with Static master nodes.
+The Deckhouse Platform allows to set a prefix for the names of CloudEphemeral nodes added to a hybrid cluster with Static master nodes.
 To do this, use the [`instancePrefix`](../node-manager/configuration.html#parameters-instanceprefix) parameter of the `node-manager` module. The prefix specified in the parameter will be added to the name of all CloudEphemeral nodes added to the cluster. It is not possible to set a prefix for a specific NodeGroup.
 {% endalert %}
 
@@ -366,6 +366,51 @@ Expected HTTP response code [202] when accessing
 [POST https://public.infra.myfavourite-cloud-provider.ru:8776/v3/555555555555/volumes/bb5a275b-3f30-4916-9480-9efe4b6dfba5/action], but got 406 instead
 {"computeFault": {"message": "Version 3.42 is not supported by the API. Minimum is 3.0 and maximum is 3.27.", "code": 406}}
 ```
+
+## How to create preemptible nodes in Selectel?
+
+Selectel triggers preemption on the presence of the raw Nova tag `preemptible`. Set the [`preemptible`](/modules/cloud-provider-openstack/latest/cr.html#openstackinstanceclass-v1-spec-preemptible) parameter of the OpenStackInstanceClass to `true` — the tag is then attached to the instance automatically.
+
+Example:
+
+```yaml
+apiVersion: deckhouse.io/v1
+kind: OpenStackInstanceClass
+metadata:
+  name: worker-preempt
+spec:
+  flavorName: SL1.4-8192
+  imageName: Ubuntu 24.04 LTS 64-bit
+  rootDiskSize: 30
+  preemptible: true
+---
+apiVersion: deckhouse.io/v1
+kind: NodeGroup
+metadata:
+  name: worker-preempt
+spec:
+  nodeType: CloudEphemeral
+  cloudInstances:
+    classReference:
+      kind: OpenStackInstanceClass
+      name: worker-preempt
+    minPerZone: 2
+    maxPerZone: 4
+    zones: [ru-3a]
+```
+
+Limitations:
+
+- The `preemptible` tag is a Selectel-specific mechanism, and the CAPI provider template emits it only when the cluster's `connection.authURL` points at Selectel (`selcloud.ru` / `selectel`). On other OpenStack providers the tag is silently dropped: the node is still created, but as a regular (non-preemptible) VM.
+- Supported only for CloudEphemeral NodeGroups running on the CAPI engine. If an OpenStackInstanceClass with `preemptible: true` is used by a NodeGroup running on the MCM engine, the field is silently ignored — no MCM MachineClass field maps to a raw Nova tag. Nodes are created as regular VMs.
+- Both situations above raise the **OpenStackPreemptibleUnsupported** Prometheus alert (with `reason=mcm` or `reason=non-selectel`) so the operator learns about the silent drop instead of discovering it weeks later from an unchanged billing line. The alert description carries the exact commands to fix each case.
+- The management engine is selected per NodeGroup. If the same OpenStackInstanceClass with `preemptible: true` is used simultaneously by NodeGroups running on CAPI and MCM, the MCM NodeGroup keeps firing the alert — use separate OpenStackInstanceClass resources for different engines when the preemptibility contract differs.
+
+{% alert level="warning" %}
+Changing the [`preemptible`](/modules/cloud-provider-openstack/latest/cr.html#openstackinstanceclass-v1-spec-preemptible) parameter in an existing OpenStackInstanceClass changes the OpenStackMachineTemplate and causes all nodes in the corresponding NodeGroup to be recreated.
+{% endalert %}
+
+If a preemptible instance is terminated without a `graceful shutdown`, the corresponding node transitions to the `NotReady` state. After the missing instance is detected, CAPO and MachineHealthCheck initiate the creation of a new Machine and virtual machine. Until recovery is complete, pods on the lost node may still appear in the Kubernetes API with the `Running` status even though they are no longer actually available.
 
 ## What to do if switching to nodes in lower-priority groups takes a long time?
 

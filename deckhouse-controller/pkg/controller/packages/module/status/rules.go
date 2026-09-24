@@ -71,7 +71,7 @@ const (
 	// Possible reasons: Pending, the scheduler's decision reason, DownloadFailed,
 	// LoadFromFilesystemFailed, SettingsInvalid, HookInitializationFailed,
 	// HookFailed, ManifestsApplyFailed, ApplyingManifests (mid-apply over a
-	// non-working previous version), Ready (when True).
+	// non-working previous version), SettingsChanged, Ready (when True).
 	ConditionReady = "Ready"
 
 	// ConditionScaled reflects the runtime scaling state of the module.
@@ -93,7 +93,7 @@ const (
 	// Possible reasons: the scheduler's decision reason, DownloadFailed,
 	// HookInitializationFailed, HookFailed, ManifestsApplyFailed,
 	// ApplyingManifests (mid-apply over a non-managed previous version),
-	// Managed (when True).
+	// SettingsChanged, Managed (when True).
 	ConditionManaged = "Managed"
 
 	// ConditionConfigurationApplied reflects whether the desired configuration —
@@ -106,7 +106,7 @@ const (
 	// Possible reasons: the scheduler's decision reason, DownloadFailed,
 	// SettingsInvalid, HookInitializationFailed, HookFailed, ManifestsApplyFailed,
 	// ApplyingManifests (the new version's manifests are still being applied),
-	// ConfigurationApplied (when True).
+	// SettingsChanged, ConfigurationApplied (when True).
 	ConditionConfigurationApplied = "ConfigurationApplied"
 )
 
@@ -136,6 +136,8 @@ const (
 //     them would erase why the module is off.
 //   - HooksProcessed: the internal reason distinguishes HookInitializationFailed
 //     (sync/init phase) from HookFailed (runtime hooks).
+//   - Configured: SettingsChanged is a non-failure mid-step indicator and passes
+//     through; every other internal reason becomes SettingsInvalid.
 //   - ManifestsApplied: ApplyingManifests is a non-failure mid-step indicator
 //     and passes through; every other internal reason becomes ManifestsApplyFailed.
 func canonicalReason(internalCond, internalReason string) string {
@@ -149,6 +151,9 @@ func canonicalReason(internalCond, internalReason string) string {
 	case intLoaded:
 		return "LoadFromFilesystemFailed"
 	case intConfigured:
+		if internalReason == string(intstatus.ConditionReasonSettingsChanged) {
+			return internalReason
+		}
 		return "SettingsInvalid"
 	case intHooksProcessed:
 		switch internalReason {
@@ -240,10 +245,11 @@ var (
 )
 
 // firstFalse returns the first internal condition in chain whose status is False.
-// ManifestsApplied=False/ApplyingManifests is progress, not a terminal failure.
+// ManifestsApplied=False/ApplyingManifests and Configured=False/SettingsChanged
+// are progress, not terminal failures.
 func firstFalse(state condmap.State, chain []string) (string, bool) {
 	for _, cond := range chain {
-		if state.IntEqual(cond, metav1.ConditionFalse) && !isApplyingManifests(state, cond) {
+		if state.IntEqual(cond, metav1.ConditionFalse) && !isApplyingManifests(state, cond) && !isSettingsChanged(state, cond) {
 			return cond, true
 		}
 	}
@@ -267,6 +273,29 @@ func isApplyingManifests(state condmap.State, cond string) bool {
 
 	reason, _ := state.GetIntReason(cond)
 	return reason == string(intstatus.ConditionReasonApplyingManifests)
+}
+
+// isSettingsChanged recognises new settings that the Run task has not applied
+// yet (Configured=False/SettingsChanged). Skipped by firstFalse so it never
+// masks a real failure of the run that applies them.
+func isSettingsChanged(state condmap.State, cond string) bool {
+	if cond != intConfigured {
+		return false
+	}
+
+	reason, _ := state.GetIntReason(cond)
+	return reason == string(intstatus.ConditionReasonSettingsChanged)
+}
+
+// settingsChanged emits False/SettingsChanged for ext while new settings are
+// being applied to an installed package. Checked after the failure chains; first
+// install is excluded — Installed carries its progress.
+func settingsChanged(state condmap.State, ph phase, ext string) (metav1.Condition, bool) {
+	if ph == phaseInstall || !isSettingsChanged(state, intConfigured) {
+		return metav1.Condition{}, false
+	}
+
+	return emit(state, ext, metav1.ConditionFalse, intConfigured), true
 }
 
 // applyingProgress refreshes a mapped condition during an update's manifest-apply
@@ -437,6 +466,9 @@ func mapReady(state condmap.State) metav1.Condition {
 	if ok {
 		return emit(state, ConditionReady, metav1.ConditionFalse, blocker)
 	}
+	if cond, ok := settingsChanged(state, ph, ConditionReady); ok {
+		return cond
+	}
 	// On first install readiness tracks Installed, so it waits for the same gate.
 	if ph == phaseInstall && !isInstallComplete(state) {
 		return metav1.Condition{}
@@ -463,7 +495,7 @@ func mapReady(state condmap.State) metav1.Condition {
 //     Scaled=Unknown row with empty reason in -owide before any other
 //     condition appeared, and confused users into thinking the controller
 //     had given up. We now suppress the condition entirely until intScaled
-//     actually goes True.
+//     actually goes True and the install is complete (see isInstallComplete).
 //   - update: a hook or manifests failure during update is a workload-level
 //     failure as well. We surface that on Scaled (Unknown for hook failures
 //     because the workload state is no longer observable, False for
@@ -479,14 +511,11 @@ func mapScaled(state condmap.State) metav1.Condition {
 
 	switch phaseOf(state) {
 	case phaseInstall:
-		if _, ok := pipelineBlocker(state, installPipeline); ok {
+		// The health monitor runs independently of the pipeline, so wait for the same gate as Installed.
+		if _, ok := pipelineBlocker(state, installPipeline); ok || !isInstallComplete(state) {
 			return metav1.Condition{}
 		}
-		status, ok := state.GetIntStatus(intScaled)
-		if !ok || status != metav1.ConditionTrue {
-			return metav1.Condition{}
-		}
-		return emit(state, ConditionScaled, status, intScaled)
+		return emit(state, ConditionScaled, metav1.ConditionTrue, intScaled)
 	case phaseUpdate:
 		if cond, ok := firstFalse(state, lateStage); ok {
 			if cond == intManifestsApplied {
@@ -542,6 +571,9 @@ func mapManaged(state condmap.State) metav1.Condition {
 	if cond, ok := firstFalse(state, chain); ok {
 		return emit(state, ConditionManaged, metav1.ConditionFalse, cond)
 	}
+	if cond, ok := settingsChanged(state, ph, ConditionManaged); ok {
+		return cond
+	}
 	if state.AllIntEqual(metav1.ConditionTrue, intLoaded, intScaled, intHooksProcessed, intManifestsApplied) {
 		return emit(state, ConditionManaged, metav1.ConditionTrue, intLoaded)
 	}
@@ -585,6 +617,9 @@ func mapConfigurationApplied(state condmap.State) metav1.Condition {
 		}
 	}
 
+	if cond, ok := settingsChanged(state, ph, ConditionConfigurationApplied); ok {
+		return cond
+	}
 	if state.AllIntEqual(metav1.ConditionTrue, intConfigured, intHooksProcessed, intManifestsApplied) {
 		return emit(state, ConditionConfigurationApplied, metav1.ConditionTrue, intConfigured)
 	}

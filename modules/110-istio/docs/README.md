@@ -7,16 +7,16 @@ webIfaces:
 
 ## Compatibility table for supported versions
 
-The table below shows Istio versions and their support status in Deckhouse Kubernetes Platform (DKP).
+The table below shows Istio versions and their support status in Deckhouse Platform (DP).
 
-| Istio version | [Kubernetes versions supported by Istio](https://istio.io/latest/docs/releases/supported-releases/#support-status-of-istio-releases) |          Status in DKP          |
+| Istio version | [Kubernetes versions supported by Istio](https://istio.io/latest/docs/releases/supported-releases/#support-status-of-istio-releases) |          Status in DP          |
 |:-------------:|:-----------------------------------------------------------------------------------------------------------------------------:|:------------------------------:|
 |     1.29      |                                                1.29, 1.30, 1.31, 1.32, 1.33, 1.34, 1.35, 1.36                                                | Supported |
 |     1.27      |                                                1.29, 1.30, 1.31, 1.32, 1.33, 1.34, 1.35, 1.36                                                | Supported |
 |     1.25      |                                                1.29, 1.30, 1.31, 1.32, 1.33, 1.34, 1.35, 1.36                                                | Deprecated and will be deleted |
 
 {% alert level="warning" %}
-Istio 1.21 is no longer supported. Before upgrading to this DKP release, migrate every global and additional Istio 1.21 revision to a supported version using a previous DKP release that supports both versions. The DKP upgrade is blocked while Istio 1.21 remains configured.
+Istio 1.21 is no longer supported. Before upgrading to this DP release, migrate every global and additional Istio 1.21 revision to a supported version using a previous DP release that supports both versions. The DP upgrade is blocked while Istio 1.21 remains configured.
 {% endalert %}
 
 ## Problems Istio helps to solve
@@ -109,7 +109,7 @@ Kiali is a tool for visualizing your application's service tree. It allows you t
 
 Metrics for Grafana workloads graphs and quantitative in Kiali on Prometheus scraping metrics `istio_*` series from `istio-proxy`. For the supported Istio versions, Istio exposes those using Telemetry API mesh defaults instead of legacy `telemetry.v2` filters alone.
 
-DKP configures [`telemetryAPI.enabled`](configuration.html#parameters-telemetryapi-enabled): when `false` you keep the legacy stack; when `true` you switch to `meshConfig.defaultProviders`, bundled `Telemetry` resources, and the [`dataPlane.accessLog`](configuration.html#parameters-dataplane-accesslog) template wired into access logs. Step-by-step examples, readiness checks, optional extra `Telemetry` policies, and tracing (`spec.tracing`) are in [Telemetry API for mesh metrics, tracing, and access logs](examples.html#telemetry-api-mesh-observability).
+DP configures [`telemetryAPI.enabled`](configuration.html#parameters-telemetryapi-enabled): when `false` you keep the legacy stack; when `true` you switch to `meshConfig.defaultProviders`, bundled `Telemetry` resources, and the [`dataPlane.accessLog`](configuration.html#parameters-dataplane-accesslog) template wired into access logs. Step-by-step examples, readiness checks, optional extra `Telemetry` policies, and tracing (`spec.tracing`) are in [Telemetry API for mesh metrics, tracing, and access logs](examples.html#telemetry-api-mesh-observability).
 
 ## Architecture of the cluster with Istio enabled
 
@@ -195,7 +195,9 @@ The sidecar-injector is a recommended way to add sidecars. Istio can inject side
   - `istio.io/rev=default` — use the global version of Istio (`spec.settings.globalVersion` in `ModuleConfig`).
 - The `sidecar.istio.io/inject` (`"true"` or `"false"`) pod annotation lets you redefine the `sidecarInjectorPolicy` policy locally. These annotations work only in namespaces to which the above labels are attached.
 
-It is also possible to add the sidecar to an individual pod in namespace without the `istio-injection=enabled` or `istio.io/rev=vXxYZ` labels by setting the `sidecar.istio.io/inject=true` Pod label.
+It is also possible to add the sidecar to an individual pod in a namespace without the `istio-injection` and `istio.io/rev` labels by setting the `sidecar.istio.io/inject=true` Pod label. The same applies to the `istio.io/rev=vXxYZ` Pod label — it selects the Istio version for an individual pod, but only in a namespace that carries neither the `istio-injection` nor the `istio.io/rev` label.
+
+The `istio-injection` and `istio.io/rev` namespace labels are mutually exclusive. A namespace carrying both of them, or carrying `istio-injection` with a value other than `enabled`, gets no sidecars injected at all — neither namespace-wide nor per-pod.
 
 Istio-proxy, running as a sidecar container, consumes resources and adds the following overhead:
 
@@ -216,10 +218,10 @@ It is also important to get the Ingress controller and the application's Ingress
 ## Federation and multicluster
 
 {% alert level="warning" %}
-Available in Enterprise Edition and Certified Security Edition Pro only.
+Available in Enterprise Edition and DP Ultimate only.
 {% endalert %}
 
-DKP supports two schemes of inter-cluster interaction:
+DP supports two schemes of inter-cluster interaction:
 
 - [federation](#federation)
 - [multicluster](#multicluster)
@@ -371,14 +373,14 @@ Only sidecar-mode workloads can take part in a multicluster. For details, refer 
 <!--- Source: https://docs.google.com/presentation/d/1fmVDf-6yDSCEHhg_2vSvZcRkLSkQtUYrE6MISjZdb8Q/ --->
 
 - Multicluster requires mutual trust between clusters. Thereby, to use multiclustering, you have to make sure that both clusters (say, A and B) trust each other. From a technical point of view, this is achieved by a mutual exchange of root certificates.
-- Istio connects directly to the API server of the neighboring cluster to gather information about its services. This DKP module takes care of the corresponding communication channel.
+- Istio connects directly to the API server of the neighboring cluster to gather information about its services. This DP module takes care of the corresponding communication channel.
 
 #### Enabling the multicluster
 
 Enabling the multicluster (via the `istio.multicluster.enabled = true` module parameter) results in the following activities:
 
 - A proxy is added to the cluster to publish access to the API server via the standard Ingress resource:
-  - Access through this public address is secured by  authorization based on Bearer tokens signed with trusted keys. DKP automatically exchanges trusted public keys during the mutual configuration of the multicluster.
+  - Access through this public address is secured by  authorization based on Bearer tokens signed with trusted keys. DP automatically exchanges trusted public keys during the mutual configuration of the multicluster.
   - The proxy itself has read-only access to a limited set of resources.
 - A service gets added to the cluster that exports the following cluster metadata to the outside:
   - Istio root certificate (accessible without authentication).
@@ -397,7 +399,7 @@ In case of issues when working with a multi-cluster, it is necessary to check in
 
 1. The status of the `IstioMultiCluster` resources. To do this, run the command `d8 k describe istiomulticluster cluster-name`. It is important that the resource status shows `Root CA` and that the `Public Last Fetch Timestamp` field has a recent timestamp.
 1. The `Ingress Gateways` field of the `IstioMultiCluster` resource should contain the IP address of the second cluster's `IngressGateway`.
-1. Using the `istioctl` utility from the DKP debug container, ensure that remote clusters have the `synced` status and a specified `istiod` instance (for details, refer to [Debugging Istio with istioctl from the debug container](examples.html#debugging-istio-with-istioctl-from-the-debug-container)):
+1. Using the `istioctl` utility from the DP debug container, ensure that remote clusters have the `synced` status and a specified `istiod` instance (for details, refer to [Debugging Istio with istioctl from the debug container](examples.html#debugging-istio-with-istioctl-from-the-debug-container)):
 
    ```shell
    istioctl remote-clusters -i d8-istio
@@ -431,7 +433,7 @@ Compared to the sidecar mode, ambient mode reduces per-pod overhead (no sidecar 
 The following components are used in the ambient mode:
 
 - `ztunnel`: A DaemonSet that runs one pod per node and transparently tunnels traffic of the ambient workloads on that node over [HTTP-Based Overlay Network Encapsulation (HBONE)](https://istio.io/latest/docs/ambient/architecture/) with mutual TLS. It provides L4 features without a sidecar.
-- **Waypoint proxy**: An optional L7 proxy deployed per namespace (or for a subset of its workloads and services). In DKP, it is provisioned through the [WaypointInstance](cr.html#waypointinstance) custom resource, which is a DKP abstraction on top of the native Istio waypoint provisioning. It adds declarative management of replicas (`Static`/`HPA`), resources (`Static`/`VPA`), node placement, and disruption budgets (PDB) per waypoint instance.
+- **Waypoint proxy**: An optional L7 proxy deployed per namespace (or for a subset of its workloads and services). In DP, it is provisioned through the [WaypointInstance](cr.html#waypointinstance) custom resource, which is a DP abstraction on top of the native Istio waypoint provisioning. It adds declarative management of replicas (`Static`/`HPA`), resources (`Static`/`VPA`), node placement, and disruption budgets (PDB) per waypoint instance.
 
 ### Prerequisites
 

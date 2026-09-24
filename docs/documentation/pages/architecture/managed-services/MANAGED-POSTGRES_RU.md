@@ -3,10 +3,10 @@ title: Модуль managed-postgres
 permalink: ru/architecture/managed-services/managed-postgres.html
 lang: ru
 search: managed-postgres, postgresql
-description: Архитектура модуля managed-postgres в Deckhouse Kubernetes Platform.
+description: Архитектура модуля managed-postgres в Deckhouse Platform.
 ---
 
-Модуль [`managed-postgres`](/modules/managed-postgres/) управляет кластерами PostgreSQL в Deckhouse Kubernetes Platform (DKP). Он позволяет пользователям конфигурировать и масштабировать PostgreSQL-кластеры в соответствии с их потребностями, обеспечивая оптимальную производительность и безопасность. Основные возможности модуля:
+Модуль [`managed-postgres`](/modules/managed-postgres/) управляет кластерами PostgreSQL в Deckhouse Platform (DP). Он позволяет пользователям конфигурировать и масштабировать PostgreSQL-кластеры в соответствии с их потребностями, обеспечивая оптимальную производительность и безопасность. Основные возможности модуля:
 
 * **Автоматическое развертывание** — разворачивает инстанс PostgreSQL при помощи простой YAML-конфигурации;
 * **Высокая доступность** — поддерживает установку отказоустойчивого кластера PostgreSQL или одиночного инстанса на выбор;
@@ -24,7 +24,7 @@ description: Архитектура модуля managed-postgres в Deckhouse K
 * На схеме показано, что контейнеры разных подов взаимодействуют друг с другом напрямую. Фактически они взаимодействуют через соответствующие сервисы Kubernetes (внутренние балансировщики). Названия сервисов не указываются, если они очевидны из контекста. В остальных случаях название сервиса указано над стрелкой.
 {% endalert %}
 
-Архитектура модуля [`managed-postgres`](/modules/managed-postgres/) на уровне 2 модели C4 и его взаимодействие с другими компонентами DKP изображена на следующей диаграмме:
+Архитектура модуля [`managed-postgres`](/modules/managed-postgres/) на уровне 2 модели C4 и его взаимодействие с другими компонентами DP изображена на следующей диаграмме:
 
 ![Архитектура модуля managed-postgres](../../images/architecture/managed-services/c4-l2-managed-postgres.ru.png)
 

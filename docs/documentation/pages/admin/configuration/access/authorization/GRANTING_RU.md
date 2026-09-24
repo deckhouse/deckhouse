@@ -1,11 +1,11 @@
 ---
 title: "Выдача прав пользователям и сервисным аккаунтам"
 permalink: ru/admin/configuration/access/authorization/granting.html
-description: "Настройка RBAC для пользователей и сервисных аккаунтов в Deckhouse Kubernetes Platform. Настройка привязки ролей и кластерных ролей для безопасного контроля доступа."
+description: "Настройка RBAC для пользователей и сервисных аккаунтов в Deckhouse Platform. Настройка привязки ролей и кластерных ролей для безопасного контроля доступа."
 lang: ru
 ---
 
-Для выдачи прав в Deckhouse Kubernetes Platform в пользовательских ресурсах указывается [блок `subjects`](/modules/user-authz/cr.html#authorizationrule-v1alpha1-spec-subjects).
+Для выдачи прав в Deckhouse Platform в пользовательских ресурсах указывается [блок `subjects`](/modules/user-authz/cr.html#authorizationrule-v1alpha1-spec-subjects).
 
 Для пользователя он указывается в формате:
 
@@ -38,7 +38,7 @@ subjects:
 
 ## Предоставление прав с помощью AuthorizationRule и ClusterAuthorizationRule (текущая ролевая модель)
 
-При использовании текущей ролевой модели в Deckhouse Kubernetes Platform для предоставления прав пользователям можно использовать ресурсы [AuthorizationRule](/modules/user-authz/cr.html#authorizationrule) и [ClusterAuthorizationRule](/modules/user-authz/cr.html#clusterauthorizationrule).
+При использовании текущей ролевой модели в Deckhouse Platform для предоставления прав пользователям можно использовать ресурсы [AuthorizationRule](/modules/user-authz/cr.html#authorizationrule) и [ClusterAuthorizationRule](/modules/user-authz/cr.html#clusterauthorizationrule).
 
 ### Предоставление прав пользователю в рамках одного пространства имен
 
@@ -86,7 +86,7 @@ spec:
 
 ## Предоставление прав с помощью ClusterRoleBinding и RoleBinding (экспериментальная ролевая модель)
 
-При использовании экспериментальной ролевой модели в Deckhouse Kubernetes Platform для предоставления прав пользователям можно использовать ресурсы [ClusterRoleBinding](https://kubernetes.io/docs/reference/kubernetes-api/authorization-resources/cluster-role-binding-v1/) и [RoleBinding](https://kubernetes.io/docs/reference/kubernetes-api/authorization-resources/role-binding-v1/).
+При использовании экспериментальной ролевой модели в Deckhouse Platform для предоставления прав пользователям можно использовать ресурсы [ClusterRoleBinding](https://kubernetes.io/docs/reference/kubernetes-api/authorization-resources/cluster-role-binding-v1/) и [RoleBinding](https://kubernetes.io/docs/reference/kubernetes-api/authorization-resources/role-binding-v1/).
 
 ### Назначение прав администратору кластера (экспериментальная ролевая модель)
 
@@ -114,7 +114,7 @@ roleRef:
 
 Пользователю будут доступны следующие права:
 
-- Просмотр, изменение, удаление и создание ресурсов Kubernetes и модулей DKP.
+- Просмотр, изменение, удаление и создание ресурсов Kubernetes и модулей DP.
 - Изменение конфигурации модулей (просмотр, изменение, удаление и создание ресурсов ModuleConfig).
 - Выполнение следующих команд к подам и сервисам:
   - `kubectl attach`;
@@ -145,7 +145,7 @@ roleRef:
 ```
 
 {% offtopic title="Список прав, которые получит пользователь" %}
-Права, которые получит пользователь, будут ограничены следующим списком пространств имён модулей DKP из подсистемы `networking` (фактический список зависит от списка включённых в кластере модулей):
+Права, которые получит пользователь, будут ограничены следующим списком пространств имён модулей DP из подсистемы `networking` (фактический список зависит от списка включённых в кластере модулей):
 
 - `d8-cni-cilium`;
 - `d8-cni-flannel`;
@@ -238,7 +238,7 @@ roleRef:
 
 Чтобы назначить/ограничить права пользователя конкретными пространствами имён, используйте в [RoleBinding](https://kubernetes.io/docs/reference/kubernetes-api/authorization-resources/role-binding-v1/) [use-роль](../authorization/rbac-experimental.html#use-роли) с соответствующим уровнем доступа.
 
-Например, для назначения прав на управление ресурсами приложений в рамках пространства имён, но без возможности настройки модулей DKP, используйте роль `d8:use:role:admin` в [RoleBinding](https://kubernetes.io/docs/reference/kubernetes-api/authorization-resources/role-binding-v1/) в соответствующем пространстве имён.
+Например, для назначения прав на управление ресурсами приложений в рамках пространства имён, но без возможности настройки модулей DP, используйте роль `d8:use:role:admin` в [RoleBinding](https://kubernetes.io/docs/reference/kubernetes-api/authorization-resources/role-binding-v1/) в соответствующем пространстве имён.
 
 Пример назначения прав разработчику приложений (User `app-developer`) в пространстве имён `myapp`:
 
@@ -291,7 +291,7 @@ roleRef:
   - StatefulSet;
   - VerticalPodAutoscaler;
   - VolumeSnapshot.
-- Просмотр, изменение, удаление и создание следующих ресурсов модулей DKP:
+- Просмотр, изменение, удаление и создание следующих ресурсов модулей DP:
   - DexAuthenticator;
   - DexClient;
   - PodLoggingConfig.

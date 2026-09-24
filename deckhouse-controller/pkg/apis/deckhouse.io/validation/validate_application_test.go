@@ -22,7 +22,6 @@ import (
 	"errors"
 	"testing"
 
-	addonutils "github.com/flant/addon-operator/pkg/utils"
 	kwhmodel "github.com/slok/kubewebhook/v2/pkg/model"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -33,6 +32,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/schedule"
+	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/addonutils"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/openapi"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
 	"github.com/deckhouse/module-sdk/pkg/settingscheck"
@@ -78,7 +78,7 @@ func newAPV(name string, draft bool, reqs *v1alpha1.PackageRequirements) *v1alph
 	}
 
 	if draft {
-		apv.Labels = map[string]string{v1alpha1.ApplicationPackageVersionLabelDraft: "true"}
+		apv.Labels = map[string]string{v1alpha1.PackageLabelDraft: "true"}
 	}
 
 	if reqs != nil {

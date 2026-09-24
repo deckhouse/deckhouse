@@ -2,7 +2,7 @@
 title: Importing and uploading VM images and disks
 permalink: en/architecture/virtualization/import.html
 search: image import, image upload, import image, upload image, disk import, disk upload, import disk, upload disk
-description: Description of importing and uploading VM images and disks in virtualization module in Deckhouse Kubernetes Platform.
+description: Description of importing and uploading VM images and disks in virtualization module in Deckhouse Platform.
 ---
 
 Virtualization-controller of the [Virtualization-API](api.html) component of the [`virtualization`](/modules/virtualization/) module allows you to import VM images and disks from different sources into PVC volumes used as VM disks managed by KubeVirt.
@@ -42,7 +42,7 @@ The following simplifications are made in the diagram:
 
 Interactions of [`virtualization`](/modules/virtualization/) module components while importing and uploading VM images and disks are shown in the following diagram:
 
-![Interactions of virtualization module components while importing and uploading VM images and disks](../../images/architecture/virtualization/c4-l2-virtualization-import.png)
+![Interactions of virtualization module components while importing and uploading VM images and disks](../../images/architecture/virtualization/c4-l2-virtualization-import.svg)
 
 During the processes of importing and uploading VM images and disks [`virtualization`](/modules/virtualization/) module components interact with the following external components:
 

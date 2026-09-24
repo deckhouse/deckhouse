@@ -15,10 +15,10 @@
   Перед обновлением проверьте назначенные пользователям привязки RoleBinding и ClusterRoleBinding
   и скорректируйте или удалите те из них, которые не должны предоставлять доступ.
 
-- Если в кластере DKP используются кастомные роли устаревшей схемы RBACv2,
+- Если в кластере DP используются кастомные роли устаревшей схемы RBACv2,
   после обновления сработает [алерт `D8UserAuthzLegacyRBACv2CustomRoleFound`](https://deckhouse.ru/products/kubernetes-platform/documentation/v1.77/reference/alerts.html#user-authz-d8userauthzlegacyrbacv2customrolefound).
-  Такие роли необходимо перевести на новую схему до обновления на DKP 1.78, иначе оно будет заблокировано.
-  Порядок миграции описан [в FAQ модуля `user-authz`](https://deckhouse.ru/modules/user-authz/v1.77/faq.html#как-перевести-кастомные-роли-на-новую-схему-в-dkp-178).
+  Такие роли необходимо перевести на новую схему до обновления на DP 1.78, иначе оно будет заблокировано.
+  Порядок миграции описан [в FAQ модуля `user-authz`](https://deckhouse.ru/modules/user-authz/v1.77/faq.html#как-перевести-кастомные-роли-на-новую-схему-в-dp-178).
 
 - Если конфигурация [модуля `metallb`](https://deckhouse.ru/modules/metallb/v1.77/) управляется через GitOps,
   перед обновлением временно отключите синхронизацию из вашего репозитория,
@@ -69,7 +69,7 @@
 
 - [В модуль `deckhouse`](https://deckhouse.ru/modules/deckhouse/v1.77/) добавлена политика,
   запрещающая несистемным пользователям устанавливать и изменять лейбл `heritage`.
-  Это предотвращает случайное создание ресурсов, которые DKP может принять за собственные.
+  Это предотвращает случайное создание ресурсов, которые DP может принять за собственные.
 
 - Повышена надёжность обновления кластеров, использующих внешние модули (ModuleSource).
   Обновление начинается только после предварительной загрузки модулей,
@@ -155,10 +155,10 @@
 
 - Изменения [в модуле `user-authz`](https://deckhouse.ru/modules/user-authz/v1.77/):
 
-  - В DKP 1.78 меняется схема лейблов агрегации ролевой модели RBACv2.
+  - В DP 1.78 меняется схема лейблов агрегации ролевой модели RBACv2.
     Добавлен [алерт `D8UserAuthzLegacyRBACv2CustomRoleFound`](https://deckhouse.ru/products/kubernetes-platform/documentation/v1.77/reference/alerts.html#user-authz-d8userauthzlegacyrbacv2customrolefound), который обнаруживает кастомные роли устаревшей схемы.
-    Такие роли необходимо перевести на новую схему до обновления на DKP 1.78, иначе они перестанут работать,
-    а обновление будет заблокировано. Порядок миграции описан [в FAQ модуля](https://deckhouse.ru/modules/user-authz/v1.77/faq.html#как-перевести-кастомные-роли-на-новую-схему-в-dkp-178).
+    Такие роли необходимо перевести на новую схему до обновления на DP 1.78, иначе они перестанут работать,
+    а обновление будет заблокировано. Порядок миграции описан [в FAQ модуля](https://deckhouse.ru/modules/user-authz/v1.77/faq.html#как-перевести-кастомные-роли-на-новую-схему-в-dp-178).
 
   - При включённой [настройке `enableMultiTenancy`](https://deckhouse.ru/modules/user-authz/v1.77/configuration.html#parameters-enablemultitenancy) права доступа пользователя
     теперь определяются объединением ClusterAuthorizationRule, AuthorizationRule и стандартных RBAC-правил (RoleBinding/ClusterRoleBinding).
@@ -185,9 +185,9 @@
     Это предотвращает некорректное удаление объектов и появление orphan-ресурсов.
 
 - В модуле `multitenancy-manager` добавлен [механизм предоставления cluster-wide-ресурсов проектам](https://deckhouse.ru/modules/multitenancy-manager/v1.77/usage.html#выдача-кластерных-ресурсов-проектам).
-  Администратор DKP теперь может определять, какие кластерные ресурсы доступны каждому проекту,
+  Администратор DP теперь может определять, какие кластерные ресурсы доступны каждому проекту,
   а также задавать для них значения по умолчанию.
-  Механизм может использоваться любыми модулями DKP для публикации собственных кластерных ресурсов.
+  Механизм может использоваться любыми модулями DP для публикации собственных кластерных ресурсов.
 
 - Добавлена возможность получать список ресурсов сразу из всех доступных неймспейсов без cluster-wide прав.
   Команда `d8 k get <resource> -A --scope=<accessible|projects|system|project:NAME>` возвращает только те объекты,
@@ -247,8 +247,8 @@
   - Конфигурация модуля перешла на единый контракт ModuleConfig.
     Permanent- и Ephemeral-узлы настраиваются одинаково через InstanceClass и NodeGroup, без отдельного ProviderClusterConfiguration.
     Это упрощает настройку кластера, позволяет версионировать и конвертировать схемы без нарушения совместимости
-    и готовит облачные провайдеры к независимому релизному циклу вне ядра DKP.
-    Подробнее — [в подразделе «Кластер и инфраструктура»](https://deckhouse.ru/products/kubernetes-platform/documentation/v1.77/faq.html#subsystem-cluster-infrastructure) FAQ DKP.
+    и готовит облачные провайдеры к независимому релизному циклу вне ядра DP.
+    Подробнее — [в подразделе «Кластер и инфраструктура»](https://deckhouse.ru/products/kubernetes-platform/documentation/v1.77/faq.html#subsystem-cluster-infrastructure) FAQ DP.
 
   - Исправлена проблема, из-за которой сервисы типа LoadBalancer могли оставаться в состоянии `Pending`,
     а родительский балансировщик не создавался.
@@ -346,7 +346,7 @@
 
 ### Подсистема Deckhouse
 
-- Добавлена возможность развертывания кластера DKP с использованием [режима `Proxy`](https://deckhouse.ru/modules/deckhouse/v1.76/configuration.html#parameters-registry-proxy) для доступа к хранилищу образов.
+- Добавлена возможность развертывания кластера DP с использованием [режима `Proxy`](https://deckhouse.ru/modules/deckhouse/v1.76/configuration.html#parameters-registry-proxy) для доступа к хранилищу образов.
 
 - `Kubectl` на узлах кластера заменен на алиас `d8 k` ([утилита Deckhouse CLI](https://deckhouse.ru/products/kubernetes-platform/documentation/v1.76/cli/d8/)).
 
@@ -418,7 +418,7 @@
     Интеграции, использующие Authorization Code Flow, не затрагиваются.
 
   - Добавлена поддержка стандарта аутентификации SAML 2.0 [через ресурс DexProvider](https://deckhouse.ru/modules/user-authn/v1.76/cr.html#dexprovider-v1-spec-saml).
-    Кластер DKP теперь можно подключать к таким провайдерам, как AD FS, Okta, Keycloak, OneLogin и Shibboleth.
+    Кластер DP теперь можно подключать к таким провайдерам, как AD FS, Okta, Keycloak, OneLogin и Shibboleth.
 
   - Для SAML-провайдера реализована поддержка refresh-токенов на стороне Dex.
     Это позволяет DexAuthenticator и kubeconfig-generator обновлять токены без повторного входа пользователя вручную.
@@ -487,7 +487,7 @@
 
 - Изменения [в модуле `cloud-provider-aws`](https://deckhouse.ru/modules/cloud-provider-aws/v1.76/):
 
-  - Логика освобождения узла от нагрузок при завершении Spot Instance перенесена в DKP.
+  - Логика освобождения узла от нагрузок при завершении Spot Instance перенесена в DP.
     Это делает обработку spot-узлов более единообразной.
   - Исправлена обработка регионов, где ещё не поддерживается API DescribeInstanceTopology.
     Это снижает число ложных ошибок IAM.
@@ -528,7 +528,7 @@
 
   - Добавлена поддержка ответов на ICMP-запросы (`ping`) по ExternalIP для сервисов с `type: LoadBalancer` при использовании MetalLB.
 
-- Реализован [механизм переключения между поддерживаемыми CNI-плагинами](https://deckhouse.ru/products/kubernetes-platform/guides/cni-migration.html) в кластере DKP.
+- Реализован [механизм переключения между поддерживаемыми CNI-плагинами](https://deckhouse.ru/products/kubernetes-platform/guides/cni-migration.html) в кластере DP.
 
 - В модуле `node-local-dns` добавлена возможность отключения резолвинга DNS-запросов по IPv6 с помощью [параметра `disableIPv6`](https://deckhouse.ru/modules/node-local-dns/v1.76/configuration.html#parameters-disableipv6).
 

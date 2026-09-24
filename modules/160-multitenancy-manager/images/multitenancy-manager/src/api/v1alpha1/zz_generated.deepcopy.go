@@ -254,6 +254,11 @@ func (in *FieldPath) DeepCopyInto(out *FieldPath) {
 		*out = make([]string, len(*in))
 		copy(*out, *in)
 	}
+	if in.Resources != nil {
+		in, out := &in.Resources, &out.Resources
+		*out = make([]string, len(*in))
+		copy(*out, *in)
+	}
 	if in.Match != nil {
 		in, out := &in.Match, &out.Match
 		*out = new(MatchPredicate)

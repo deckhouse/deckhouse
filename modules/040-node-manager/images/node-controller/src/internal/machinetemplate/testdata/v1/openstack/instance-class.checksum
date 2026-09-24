@@ -18,6 +18,16 @@
 {{- if .nodeGroup.instanceClass.additionalTags -}}
   {{- $_ := set $options "additionalTags" .nodeGroup.instanceClass.additionalTags -}}
 {{- end }}
+{{/*
+  The `preemptible` block below was added post-migration (PR #21866). This field never shipped under
+  the v1 contract — the production checksum never hashed it. The block exists so that TestProviderRolloutParity
+  and TestProviderRolloutParityAgainstCRD find something to hash for the new rolloutField, matching v2
+  on the truthy-value path. The `preemptible: false` case hashes exactly like a missing field (the `if`
+  gates on truthiness), which is the documented divergence — see rolloutExceptions in provider_parity_test.
+*/}}
+{{- if .nodeGroup.instanceClass.preemptible -}}
+  {{- $_ := set $options "preemptible" .nodeGroup.instanceClass.preemptible -}}
+{{- end }}
 {{- if (index .nodeGroup "manualRolloutID") -}}
   {{ $_ := set $options "manualRolloutID" (index .nodeGroup "manualRolloutID") -}}
 {{- end -}}

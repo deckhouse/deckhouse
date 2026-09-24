@@ -3,7 +3,7 @@ title: Управление компонентами control plane класте�
 permalink: ru/architecture/kubernetes-and-scheduling/control-plane-management.html
 lang: ru
 search: control-plane-manager, управление control plane
-description: Архитектура и функции модуля control-plane-manager в Deckhouse Kubernetes Platform.
+description: Архитектура и функции модуля control-plane-manager в Deckhouse Platform.
 ---
 
 ## Модуль control-plane-manager
@@ -48,7 +48,7 @@ description: Архитектура и функции модуля control-plane
 
 Архитектура модуля [`control-plane-manager`](/modules/control-plane-manager/) на уровне 2 модели C4 и его взаимодействия с другими компонентами изображены на следующей диаграмме:
 
-![Архитектура модуля control-plane-manager](../../images/architecture/kubernetes-and-scheduling/c4-l2-control-plane-manager.ru.png)
+![Архитектура модуля control-plane-manager](../../images/architecture/kubernetes-and-scheduling/c4-l2-control-plane-manager.ru.svg)
 
 ### Компоненты модуля
 

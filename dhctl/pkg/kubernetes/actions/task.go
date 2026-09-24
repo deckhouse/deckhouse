@@ -19,7 +19,6 @@ import (
 	"encoding/json"
 	stderrors "errors"
 	"fmt"
-	"strings"
 
 	"k8s.io/apimachinery/pkg/api/errors"
 
@@ -76,13 +75,12 @@ func (task *ManifestTask) CreateOrUpdate(ctx context.Context) error {
 		if !errors.IsAlreadyExists(err) {
 			return wrapManifestErr(ctx, "create resource", err)
 		}
-		dhlog.FromContext(ctx).InfoContext(ctx, strings.TrimRight(fmt.Sprintf("%s already exists. Trying to update ... ", task.Name), "\n"))
+		dhlog.FromContext(ctx).InfoContext(ctx, fmt.Sprintf("%s already exists, updating", task.Name))
 		err = task.UpdateFunc(ctx, manifest)
 		if err != nil {
-			dhlog.FromContext(ctx).ErrorContext(ctx, "ERROR!")
 			return wrapManifestErr(ctx, "update resource", err)
 		}
-		dhlog.FromContext(ctx).InfoContext(ctx, "OK!")
+		dhlog.FromContext(ctx).InfoContext(ctx, fmt.Sprintf("%s updated", task.Name))
 	}
 	return nil
 }
@@ -96,13 +94,12 @@ func (task *ManifestTask) CreateOrUpdateSilent(ctx context.Context) error {
 		if !errors.IsAlreadyExists(err) {
 			return wrapManifestErr(ctx, "create resource", err)
 		}
-		dhlog.FromContext(ctx).DebugContext(ctx, strings.TrimRight(fmt.Sprintf("%s already exists. Trying to update ... ", task.Name), "\n"))
+		dhlog.FromContext(ctx).DebugContext(ctx, fmt.Sprintf("%s already exists, updating", task.Name))
 		err = task.UpdateFunc(ctx, manifest)
 		if err != nil {
-			dhlog.FromContext(ctx).ErrorContext(ctx, "ERROR!")
 			return wrapManifestErr(ctx, "update resource", err)
 		}
-		dhlog.FromContext(ctx).DebugContext(ctx, "OK!")
+		dhlog.FromContext(ctx).DebugContext(ctx, fmt.Sprintf("%s updated", task.Name))
 	}
 	return nil
 }

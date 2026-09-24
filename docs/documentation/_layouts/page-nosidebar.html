@@ -2,6 +2,7 @@
 layout: sidebar-nosidebar
 ---
 <div class="docs {{ page.custom_class | default: '' }}">
+    {% alert level="info" %}{{ site.data.i18n.common.alert_renaming[page.lang] }}{% endalert %}
 
     <h1 class="docs__title">{{ page.title }}</h1>
 

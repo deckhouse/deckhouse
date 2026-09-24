@@ -40,6 +40,7 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config/registry"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/global"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/minget"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/util/input"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/maputil"
 )
 
@@ -87,6 +88,11 @@ type MetaConfig struct {
 	// embedded in the installer image. Required by LoadInstallerVersion and
 	// DeckhouseInstaller.GetImageTag.
 	VersionFilePath string `json:"-"`
+
+	// Recovered from ResourcesYAML. Kept apart from ModuleConfigs on purpose: those are created
+	// in the cluster before deckhouse is installed, while this one has to land after its
+	// ModuleSource.
+	externalProviderModuleConfig *ModuleConfig `json:"-"`
 }
 
 type imagesDigests map[string]map[string]any
@@ -128,11 +134,8 @@ func (m *MetaConfig) Prepare(ctx context.Context, validatorProvider MetaConfigVa
 			return nil, fmt.Errorf("unable to parse cluster type from cluster configuration: %v", err)
 		}
 
-		var serviceSubnet string
-		if err := json.Unmarshal(m.ClusterConfig["serviceSubnetCIDR"], &serviceSubnet); err != nil {
-			return nil, fmt.Errorf("unable to unmarshal service subnet CIDR from cluster configuration: %v", err)
-		}
-		m.ClusterDNSAddress = getDNSAddress(ctx, serviceSubnet)
+		// ServiceSubnetCIDR is set via Network() from network.go, value could be in mc control-plane-manager as well as in deprecated cluster-configuration.
+		m.ClusterDNSAddress = getDNSAddress(ctx, m.Network().ServiceSubnetCIDR)
 
 		if err := json.Unmarshal(m.ClusterConfig["clusterDomain"], &m.ClusterDomain); err != nil {
 			return nil, fmt.Errorf("unable to unmarshal cluster domain from cluster configuration: %w", err)
@@ -173,6 +176,10 @@ func (m *MetaConfig) Prepare(ctx context.Context, validatorProvider MetaConfigVa
 			return nil, fmt.Errorf("parse cloud provider resources: %w", err)
 		}
 		m.CloudProviderVars = cv
+	}
+
+	if err := m.recoverExternalProviderModuleConfig(); err != nil {
+		return nil, err
 	}
 
 	if err := m.applyCloudProviderModuleSettings(); err != nil {
@@ -405,6 +412,9 @@ func (m *MetaConfig) applyCloudProviderModuleSettings() error {
 			picked = mc
 		}
 	}
+	if picked == nil && m.externalProviderModuleConfig != nil && len(m.externalProviderModuleConfig.Spec.Settings) > 0 {
+		picked = m.externalProviderModuleConfig
+	}
 	if picked == nil {
 		return nil
 	}
@@ -515,16 +525,44 @@ func (m *MetaConfig) prepareRegistry() error {
 		}
 	}
 
-	// Default CRI
-	if rawCRI, exists := m.ClusterConfig["defaultCRI"]; exists {
-		if err := json.Unmarshal(rawCRI, &defaultCRI); err != nil {
-			return fmt.Errorf("get defaultCRI from cluster config: %w", err)
+	// Registry mc. An installation whose images come from a bundle is recognised from the registry
+	// module's own configuration — a cache to hold them and no upstream to fetch them from — and
+	// resolves to Local, exactly as RegistryConfigProvider does over the raw documents.
+	//
+	// It has to be decided here too, and not only there, because this is the result the cluster is
+	// built from: it becomes m.Registry, which the bashible context reads, which decides whether the
+	// steps that stand up the registry on the node run at all. Deciding it only where the installer
+	// downloads its own images leaves those steps switched off — the store then stays empty and
+	// Deckhouse never pulls, which is what happened the first time.
+	var bundleFacts registry.BundleBootstrapInputs
+	if mc := m.FindModuleConfig("registry"); mc != nil {
+		rawJSON, err := json.Marshal(mc)
+		if err != nil {
+			return err
 		}
+		bundleFacts, err = registry.BundleFactsFromModuleConfig(rawJSON)
+		if err != nil {
+			return err
+		}
+	}
+	// Before Resolve — see the same call in RegistryConfigProvider for why the order matters.
+	initConfig, deckhouseSettings, err := registry.FoldLegacyDirectIntoInit(initConfig, deckhouseSettings)
+	if err != nil {
+		return err
+	}
+
+	deckhouseSettings, providerOpts := bundleFacts.Resolve(deckhouseSettings)
+
+	// Default CRI. The node-manager ModuleConfig setting takes precedence over the
+	// deprecated ClusterConfiguration.defaultCRI field (see effectiveDefaultCRI).
+	if cri := m.effectiveDefaultCRI(); cri != "" {
+		defaultCRI = registry_const.CRIType(cri)
 	}
 
 	registry, err := registry.NewConfigProvider(
 		initConfig,
 		deckhouseSettings,
+		providerOpts...,
 	).Config(
 		defaultCRI,
 		m.IsStatic(),
@@ -600,7 +638,10 @@ func (m *MetaConfig) findProviderModuleConfig() *ModuleConfig {
 	if m == nil || m.ProviderName == "" {
 		return nil
 	}
-	return m.FindModuleConfig(CloudProviderModuleName(m.ProviderName))
+	if mc := m.FindModuleConfig(CloudProviderModuleName(m.ProviderName)); mc != nil {
+		return mc
+	}
+	return m.externalProviderModuleConfig
 }
 
 // HasProviderModuleConfig reports whether the cluster carries a
@@ -802,7 +843,28 @@ func (m *MetaConfig) ClusterConfigMap() (map[string]interface{}, error) {
 	// control-plane templates and bashible see one resolved value even when the field is
 	// absent from CC.
 	out["kubernetesVersion"] = resolveKubernetesVersion(m.kubernetesVersionRaw())
+	// Same reason for the network parameters: control-plane templates read
+	// clusterConfiguration.podSubnetNodeCIDRPrefix for --node-cidr-mask-size and the two CIDRs for
+	// --cluster-cidr / --service-cluster-ip-range, and the fields may live in ModuleConfig now.
+	// Mirrors the substitution the in-cluster global hook does into global.clusterConfiguration.
+	m.setNetworkInto(out)
 	return out, nil
+}
+
+// setNetworkInto substitutes the resolved network parameters into a rendered ClusterConfiguration
+// map, so templates keep reading clusterConfiguration.* unedited. Absent values are left out rather
+// than written as "": a template rendering a missing key is a visible failure, while an empty string
+// silently becomes an invalid apiserver flag.
+func (m *MetaConfig) setNetworkInto(out map[string]interface{}) {
+	network := m.Network()
+
+	if network.PodSubnetCIDR != "" {
+		out["podSubnetCIDR"] = network.PodSubnetCIDR
+	}
+	if network.ServiceSubnetCIDR != "" {
+		out["serviceSubnetCIDR"] = network.ServiceSubnetCIDR
+	}
+	out["podSubnetNodeCIDRPrefix"] = network.PodSubnetNodeCIDRPrefix
 }
 
 func (m *MetaConfig) ConfigForBashibleBundleTemplate(ctx context.Context, nodeIP string) (map[string]interface{}, error) {
@@ -952,6 +1014,9 @@ func (m *MetaConfig) DeepCopy() *MetaConfig {
 	out.StaticClusterConfig = cloneMap(m.StaticClusterConfig)
 	out.CloudProviderVars = cloneCloudProviderVars(m.CloudProviderVars)
 	out.ModuleConfigs = cloneModuleConfigs(m.ModuleConfigs)
+	if m.externalProviderModuleConfig != nil {
+		out.externalProviderModuleConfig = cloneModuleConfigs([]*ModuleConfig{m.externalProviderModuleConfig})[0]
+	}
 	out.VersionMap = cloneMap(m.VersionMap)
 	out.Images = cloneNestedMap(m.Images)
 	if m.TerraNodeGroupSpecs != nil {
@@ -1122,25 +1187,16 @@ func (m *MetaConfig) EnrichProxyData() (map[string]any, error) {
 		return nil, fmt.Errorf("cannot unmarshal proxy cfg: %v", err)
 	}
 
-	var (
-		clusterDomain     string
-		podSubnetCIDR     string
-		serviceSubnetCIDR string
-	)
+	var clusterDomain string
 	err = json.Unmarshal(m.ClusterConfig["clusterDomain"], &clusterDomain)
 	if err != nil {
 		return nil, err
 	}
-	err = json.Unmarshal(m.ClusterConfig["podSubnetCIDR"], &podSubnetCIDR)
-	if err != nil {
-		return nil, err
-	}
-	err = json.Unmarshal(m.ClusterConfig["serviceSubnetCIDR"], &serviceSubnetCIDR)
-	if err != nil {
-		return nil, err
-	}
 
-	p.NoProxy = append(p.NoProxy, "127.0.0.1", "169.254.169.254", clusterDomain, podSubnetCIDR, serviceSubnetCIDR)
+	// Network CIDRs are set via Network() from network.go, values could be in mc control-plane-manager as well as in deprecated cluster-configuration.
+	network := m.Network()
+
+	p.NoProxy = append(p.NoProxy, "127.0.0.1", "169.254.169.254", clusterDomain, network.PodSubnetCIDR, network.ServiceSubnetCIDR)
 
 	ret := make(map[string]any)
 	if p.HTTPProxy != "" {
@@ -1182,50 +1238,62 @@ func (m *MetaConfig) effectiveClusterPrefix(cloudPrefix string) string {
 }
 
 // clusterConfigForInfrastructure returns the ClusterConfiguration to feed to the
-// infrastructure utility (Terraform/OpenTofu), with cloud.prefix materialized
-// from the resolved cluster prefix. The Terraform layouts read
-// var.clusterConfiguration.cloud.prefix directly and cannot read the global
-// ModuleConfig, so when the prefix is set only via the global ModuleConfig
-// (and omitted from ClusterConfiguration.cloud) dhctl fills it in for them.
+// infrastructure utility (Terraform/OpenTofu): cloud.prefix materialized from
+// the resolved cluster prefix, and the three network parameters resolved the
+// same way as everywhere else (ModuleConfig control-plane-manager, else the
+// deprecated ClusterConfiguration field). The Terraform layouts read
+// var.clusterConfiguration.* directly and cannot read ModuleConfig:
+//   - cloud.prefix: when set only via the global ModuleConfig (and omitted
+//     from ClusterConfiguration.cloud), dhctl fills it in for them.
+//   - podSubnetCIDR/serviceSubnetCIDR/podSubnetNodeCIDRPrefix: several
+//     providers (OpenStack, HuaweiCloud; GCP with its own fallback default)
+//     read these directly, so once a cluster migrates and the field is
+//     removed from ClusterConfiguration, Terraform would otherwise be handed
+//     an object with no such attribute at all — a hard apply-time error, on
+//     every apply from then on, not just once.
 //
 // It never mutates m.ClusterConfig: that object is persisted verbatim into the
-// d8-cluster-configuration secret, so a prefix set only in the global
-// ModuleConfig must not leak back into the ClusterConfiguration there. The
-// original map is returned unchanged when nothing needs to be added.
+// d8-cluster-configuration secret, so a value that lives only in ModuleConfig
+// must not leak back into the ClusterConfiguration there.
 func (m *MetaConfig) clusterConfigForInfrastructure() map[string]json.RawMessage {
-	if m.ClusterType != CloudClusterType || m.ClusterPrefix == "" {
-		return m.ClusterConfig
-	}
-	// Start from the existing cloud section, or an empty one when it has already
-	// been dropped from ClusterConfiguration — the prefix must still reach the
-	// Terraform layouts either way, never silently empty.
-	cloud := map[string]json.RawMessage{}
-	if rawCloud, ok := m.ClusterConfig["cloud"]; ok {
-		if err := json.Unmarshal(rawCloud, &cloud); err != nil {
-			return m.ClusterConfig
-		}
-		if existing, ok := cloud["prefix"]; ok {
-			var p string
-			if json.Unmarshal(existing, &p) == nil && p == m.ClusterPrefix {
-				return m.ClusterConfig // already materialized, no copy needed
-			}
-		}
-	}
-	prefixJSON, err := json.Marshal(m.ClusterPrefix)
-	if err != nil {
-		return m.ClusterConfig
-	}
-	cloud["prefix"] = prefixJSON
-	newCloud, err := json.Marshal(cloud)
-	if err != nil {
-		return m.ClusterConfig
-	}
-	// Shallow-copy the top-level map so m.ClusterConfig (→ the secret) is untouched.
-	out := make(map[string]json.RawMessage, len(m.ClusterConfig))
+	out := make(map[string]json.RawMessage, len(m.ClusterConfig)+3)
 	for k, v := range m.ClusterConfig {
 		out[k] = v
 	}
-	out["cloud"] = newCloud
+
+	if m.ClusterType == CloudClusterType && m.ClusterPrefix != "" {
+		// Start from the existing cloud section, or an empty one when it has
+		// already been dropped from ClusterConfiguration — the prefix must still
+		// reach the Terraform layouts either way, never silently empty. A
+		// malformed existing section is left untouched rather than guessed at.
+		cloud := map[string]json.RawMessage{}
+		malformed := false
+		if rawCloud, ok := out["cloud"]; ok {
+			malformed = json.Unmarshal(rawCloud, &cloud) != nil
+		}
+		if prefixJSON, err := json.Marshal(m.ClusterPrefix); !malformed && err == nil {
+			cloud["prefix"] = prefixJSON
+			if newCloud, err := json.Marshal(cloud); err == nil {
+				out["cloud"] = newCloud
+			}
+		}
+	}
+
+	network := m.Network()
+	if network.PodSubnetCIDR != "" {
+		if encoded, err := json.Marshal(network.PodSubnetCIDR); err == nil {
+			out["podSubnetCIDR"] = encoded
+		}
+	}
+	if network.ServiceSubnetCIDR != "" {
+		if encoded, err := json.Marshal(network.ServiceSubnetCIDR); err == nil {
+			out["serviceSubnetCIDR"] = encoded
+		}
+	}
+	if encoded, err := json.Marshal(network.PodSubnetNodeCIDRPrefix); err == nil {
+		out["podSubnetNodeCIDRPrefix"] = encoded
+	}
+
 	return out
 }
 
@@ -1330,4 +1398,58 @@ func GetIndexFromNodeName(name string) (int, error) {
 		return 0, err
 	}
 	return index, nil
+}
+
+// effectiveDefaultCRI resolves the container runtime that should be used for the
+// bootstrapped node. The node-manager ModuleConfig setting (spec.settings.defaultCRI)
+// is the new home for this option and takes precedence over the deprecated
+// ClusterConfiguration.defaultCRI field when it is set to a non-default value.
+//
+// When neither source specifies a value it falls back to the built-in default
+// (Containerd), but only if a ClusterConfiguration is present. This mirrors the
+// former ClusterConfiguration schema default, which applied only within a
+// ClusterConfiguration document: with no ClusterConfiguration there is no cluster
+// to bootstrap, and the registry config relies on an empty CRI to stay disabled.
+func (m *MetaConfig) effectiveDefaultCRI() string {
+	if mc := m.FindModuleConfig("node-manager"); mc != nil {
+		if raw, ok := mc.Spec.Settings["defaultCRI"]; ok {
+			if cri, ok := raw.(string); ok && cri != "" && cri != string(registry_const.CRIContainerdV1) {
+				return cri
+			}
+		}
+	}
+
+	if raw, ok := m.ClusterConfig["defaultCRI"]; ok {
+		var cri string
+		if err := json.Unmarshal(raw, &cri); err == nil && cri != "" {
+			return cri
+		}
+	}
+
+	if len(m.ClusterConfig) > 0 {
+		return string(registry_const.CRIContainerdV1)
+	}
+
+	return ""
+}
+
+// The document lands in ResourcesYAML whenever its module is absent from the installer's modules
+// dir, and unpacking the bundle does not move it back: LoadProviderDir accepts only the names in
+// schemaFileNames. An already-parsed ModuleConfig wins, it went through validation.
+func (m *MetaConfig) recoverExternalProviderModuleConfig() error {
+	if m.ProviderName == "" || m.ResourcesYAML == "" {
+		return nil
+	}
+	if m.FindModuleConfig(CloudProviderModuleName(m.ProviderName)) != nil {
+		return nil
+	}
+
+	md, err := ParseModuleDocs(input.YAMLSplitRegexp.Split(strings.TrimSpace(m.ResourcesYAML), -1))
+	if err != nil {
+		return fmt.Errorf("recover cloud provider module config: %w", err)
+	}
+	if mc := md.ProviderConfigs[CloudProviderModuleName(m.ProviderName)]; mc != nil {
+		m.externalProviderModuleConfig = mc
+	}
+	return nil
 }

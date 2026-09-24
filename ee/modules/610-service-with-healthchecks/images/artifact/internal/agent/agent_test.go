@@ -13,9 +13,11 @@ import (
 
 	corev1 "k8s.io/api/core/v1"
 	discoveryv1 "k8s.io/api/discovery/v1"
+	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/apimachinery/pkg/util/intstr"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
@@ -23,6 +25,7 @@ import (
 	"github.com/deckhouse/deckhouse/pkg/log"
 
 	networkv1alpha1 "service-with-healthchecks/api/v1alpha1"
+	"service-with-healthchecks/internal/kubernetes"
 )
 
 const (
@@ -30,6 +33,7 @@ const (
 	testSWHName   = "afb6b6179f7a240379b969366a6f6a75"
 	testNodeName  = "hv-06"
 	testPodIP     = "10.12.5.86"
+	testSWHUID    = types.UID("1a1cbd7c-4f2a-4a0d-9d0e-2b0f4b1f5f0a")
 )
 
 func newTestReconciler() *ServiceWithHealthchecksReconciler {
@@ -42,7 +46,17 @@ func newTestReconciler() *ServiceWithHealthchecksReconciler {
 
 func newTestSWH() networkv1alpha1.ServiceWithHealthchecks {
 	return networkv1alpha1.ServiceWithHealthchecks{
-		ObjectMeta: metav1.ObjectMeta{Name: testSWHName, Namespace: testNamespace},
+		ObjectMeta: metav1.ObjectMeta{Name: testSWHName, Namespace: testNamespace, UID: testSWHUID},
+		// A TCP probe so the resource is probe-gated: these tests exercise probe-based publishing,
+		// and a resource carrying probe results has probes configured. The no-probe (readiness-only)
+		// path is covered separately.
+		Spec: networkv1alpha1.ServiceWithHealthchecksSpec{
+			Healthcheck: networkv1alpha1.Healthcheck{
+				Probes: []networkv1alpha1.Probe{
+					{Mode: "TCP", TCPHandler: &networkv1alpha1.TCPHandler{TargetPort: intstr.FromInt32(32412)}},
+				},
+			},
+		},
 	}
 }
 
@@ -313,6 +327,41 @@ func TestSyncResetsProbeResultsOnPodRecreation(t *testing.T) {
 	}
 }
 
+func TestPodEndpointStateChanged(t *testing.T) {
+	base := func() *corev1.Pod {
+		pod := newPod("worker", corev1.PodRunning, true, testPodIP)
+		pod.Labels = map[string]string{"app": "demo"}
+		return &pod
+	}
+
+	cases := []struct {
+		name   string
+		mutate func(*corev1.Pod)
+		want   bool
+	}{
+		{"irrelevant churn", func(p *corev1.Pod) {
+			p.ResourceVersion = "9999"
+			p.Annotations = map[string]string{"kubectl.kubernetes.io/restartedAt": "now"}
+		}, false},
+		{"readiness flip", func(p *corev1.Pod) { p.Status.Conditions[0].Status = corev1.ConditionFalse }, true},
+		{"phase change", func(p *corev1.Pod) { p.Status.Phase = corev1.PodFailed }, true},
+		{"ip change", func(p *corev1.Pod) { p.Status.PodIP = "10.0.0.9" }, true},
+		{"terminating", func(p *corev1.Pod) { now := metav1.Now(); p.DeletionTimestamp = &now }, true},
+		{"label change", func(p *corev1.Pod) { p.Labels = map[string]string{"app": "other"} }, true},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			oldPod := base()
+			newPod := base()
+			tc.mutate(newPod)
+			if got := podEndpointStateChanged(oldPod, newPod); got != tc.want {
+				t.Errorf("podEndpointStateChanged(%s) = %v, want %v", tc.name, got, tc.want)
+			}
+		})
+	}
+}
+
 func TestBuildEndpointsPublishesReadyPod(t *testing.T) {
 	r := newTestReconciler()
 	swh := newTestSWH()
@@ -336,6 +385,64 @@ func TestBuildEndpointsPublishesReadyPod(t *testing.T) {
 	}
 	if !endpointIsReady(endpoints[0]) {
 		t.Error("expected the endpoint to be ready")
+	}
+}
+
+// Without a healthcheck the resource behaves like a plain Service: ready pods are published (with no
+// probe results at all), not-ready ones are not.
+func TestBuildEndpointsWithoutProbesFollowsReadiness(t *testing.T) {
+	r := newTestReconciler()
+	swh := newTestSWH()
+	swh.Spec.Healthcheck = networkv1alpha1.Healthcheck{} // no probes
+	swhKey := types.NamespacedName{Namespace: testNamespace, Name: testSWHName}
+
+	r.healthchecksResultsByServiceWithHealthchecks[swhKey] = []HealthcheckTarget{
+		{targetHost: "10.0.0.1", podName: "ready", podNamespace: testNamespace, podUID: "uid-ready", podReady: true},
+		{targetHost: "10.0.0.2", podName: "not-ready", podNamespace: testNamespace, podUID: "uid-not-ready", podReady: false},
+	}
+
+	endpoints := r.buildEndpoints(swh)
+	if len(endpoints) != 1 {
+		t.Fatalf("expected only the ready pod to be published, got %d endpoints", len(endpoints))
+	}
+	if endpoints[0].Addresses[0] != "10.0.0.1" || !endpointIsReady(endpoints[0]) || !endpointIsServing(endpoints[0]) {
+		t.Errorf("expected the ready pod published as ready and serving, got %#v", endpoints[0])
+	}
+}
+
+// A probe aimed at a UDP port is not blackbox-probeable: it must be skipped, and a resource whose only
+// probe targets UDP falls back to readiness-based publishing.
+func TestUDPProbeIsExcludedFromProbing(t *testing.T) {
+	spec := networkv1alpha1.ServiceWithHealthchecksSpec{}
+	spec.Ports = []corev1.ServicePort{
+		{Name: "syslog", Port: 514, Protocol: corev1.ProtocolUDP, TargetPort: intstr.FromInt32(1514)},
+		{Name: "admin", Port: 80, Protocol: corev1.ProtocolTCP, TargetPort: intstr.FromInt32(8080)},
+	}
+	spec.Healthcheck.Probes = []networkv1alpha1.Probe{
+		{Mode: "TCP", TCPHandler: &networkv1alpha1.TCPHandler{TargetPort: intstr.FromInt32(1514)}}, // UDP target -> skipped
+		{Mode: "HTTP", HTTPHandler: &networkv1alpha1.HTTPHandler{TargetPort: intstr.FromInt32(8080)}},
+	}
+
+	r := newTestReconciler()
+	probes := r.getProbesFromServiceWithHealthchecks(spec, testPodIP, testNamespace)
+	if len(probes) != 1 {
+		t.Fatalf("expected the UDP-targeting probe to be skipped, got %d probes", len(probes))
+	}
+	if got := probes[0].GetPort(); got != 8080 {
+		t.Errorf("expected the surviving probe to target the TCP port 8080, got %d", got)
+	}
+	if !hasEffectiveProbes(spec) {
+		t.Error("a TCP probe remains, so the resource still has effective probes")
+	}
+
+	// A resource whose only probe targets a UDP port has no effective probes.
+	udpOnly := networkv1alpha1.ServiceWithHealthchecksSpec{}
+	udpOnly.Ports = []corev1.ServicePort{{Port: 514, Protocol: corev1.ProtocolUDP, TargetPort: intstr.FromInt32(1514)}}
+	udpOnly.Healthcheck.Probes = []networkv1alpha1.Probe{
+		{Mode: "TCP", TCPHandler: &networkv1alpha1.TCPHandler{TargetPort: intstr.FromInt32(1514)}},
+	}
+	if hasEffectiveProbes(udpOnly) {
+		t.Error("a resource whose only probe targets a UDP port must have no effective probes")
 	}
 }
 
@@ -674,5 +781,346 @@ func TestReconcileKeepsRequeueingItself(t *testing.T) {
 		if result.RequeueAfter != resyncPeriod {
 			t.Errorf("%s reconcile: RequeueAfter = %v, want %v", pass, result.RequeueAfter, resyncPeriod)
 		}
+	}
+}
+
+func newTestScheme(t *testing.T) *runtime.Scheme {
+	t.Helper()
+	scheme := runtime.NewScheme()
+	if err := corev1.AddToScheme(scheme); err != nil {
+		t.Fatalf("failed to add corev1 to scheme: %v", err)
+	}
+	if err := discoveryv1.AddToScheme(scheme); err != nil {
+		t.Fatalf("failed to add discoveryv1 to scheme: %v", err)
+	}
+	if err := networkv1alpha1.AddToScheme(scheme); err != nil {
+		t.Fatalf("failed to add networkv1alpha1 to scheme: %v", err)
+	}
+	return scheme
+}
+
+// The slice has to be owned by its ServiceWithHealthchecks, otherwise nothing collects the
+// slices of the other nodes once the resource is deleted.
+func TestBuildEndpointSliceIsOwnedBySWH(t *testing.T) {
+	r := newTestReconciler()
+	swh := newTestSWH()
+
+	eps := r.BuildEndpointSlice(testSWHName+"-"+testNodeName, swh)
+
+	if len(eps.OwnerReferences) != 1 {
+		t.Fatalf("expected exactly one owner reference, got %+v", eps.OwnerReferences)
+	}
+	ref := eps.OwnerReferences[0]
+	if ref.APIVersion != networkv1alpha1.GroupVersion.String() || ref.Kind != kubernetes.ServiceWithHealthchecksKind {
+		t.Errorf("expected the owner to be a ServiceWithHealthchecks, got %s %s", ref.APIVersion, ref.Kind)
+	}
+	if ref.Name != testSWHName || ref.UID != testSWHUID {
+		t.Errorf("expected the owner to be %s/%s, got %s/%s", testSWHName, testSWHUID, ref.Name, ref.UID)
+	}
+	if ref.Controller == nil || !*ref.Controller {
+		t.Error("expected the owner reference to be a controller reference")
+	}
+	// OwnerReferencesPermissionEnforcement would refuse the Create otherwise
+	if ref.BlockOwnerDeletion != nil {
+		t.Errorf("expected blockOwnerDeletion to stay unset, got %v", *ref.BlockOwnerDeletion)
+	}
+}
+
+func TestBuildEndpointSliceHasHeritageLabel(t *testing.T) {
+	r := newTestReconciler()
+	eps := r.BuildEndpointSlice(testSWHName+"-"+testNodeName, newTestSWH())
+	if got := eps.Labels[heritageLabelKey]; got != heritageLabelValue {
+		t.Errorf("label %s = %q, want %q", heritageLabelKey, got, heritageLabelValue)
+	}
+}
+
+// A slice created before the heritage label existed gets it added on the next update, rather than
+// being left unlabelled.
+func TestUpdateEPSAddsHeritageLabelToExistingSlice(t *testing.T) {
+	r := newTestReconciler()
+	swh := newTestSWH()
+	epsName := testSWHName + "-" + testNodeName
+
+	stale := r.BuildEndpointSlice(epsName, swh)
+	delete(stale.Labels, heritageLabelKey)
+	stale.Endpoints = []discoveryv1.Endpoint{{Addresses: []string{testPodIP}}}
+
+	r.Client = fake.NewClientBuilder().WithScheme(newTestScheme(t)).WithObjects(&stale).Build()
+	r.healthchecksResultsByServiceWithHealthchecks[types.NamespacedName{Namespace: testNamespace, Name: testSWHName}] = []HealthcheckTarget{
+		{
+			targetHost:         testPodIP,
+			podName:            "worker",
+			podNamespace:       testNamespace,
+			podUID:             types.UID("uid-worker"),
+			podReady:           true,
+			probeResultDetails: successfulProbeDetails(),
+		},
+	}
+
+	if err := r.updateEPSForServiceWithHealthchecks(context.Background(), swh); err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	var updated discoveryv1.EndpointSlice
+	if err := r.Get(context.Background(), client.ObjectKey{Namespace: testNamespace, Name: epsName}, &updated); err != nil {
+		t.Fatalf("failed to read back the EndpointSlice: %v", err)
+	}
+	if got := updated.Labels[heritageLabelKey]; got != heritageLabelValue {
+		t.Errorf("label %s = %q, want %q", heritageLabelKey, got, heritageLabelValue)
+	}
+}
+
+// Slices created by an older version of the agent carry no owner reference; they are adopted
+// in place instead of being recreated.
+func TestUpdateEPSAdoptsSliceWithoutOwnerReference(t *testing.T) {
+	r := newTestReconciler()
+	swh := newTestSWH()
+	epsName := testSWHName + "-" + testNodeName
+
+	orphan := r.BuildEndpointSlice(epsName, swh)
+	orphan.OwnerReferences = nil
+	orphan.Endpoints = []discoveryv1.Endpoint{{Addresses: []string{testPodIP}}}
+
+	r.Client = fake.NewClientBuilder().WithScheme(newTestScheme(t)).WithObjects(&orphan).Build()
+	r.healthchecksResultsByServiceWithHealthchecks[types.NamespacedName{Namespace: testNamespace, Name: testSWHName}] = []HealthcheckTarget{
+		{
+			targetHost:         testPodIP,
+			podName:            "worker",
+			podNamespace:       testNamespace,
+			podUID:             types.UID("uid-worker"),
+			podReady:           true,
+			probeResultDetails: successfulProbeDetails(),
+		},
+	}
+
+	if err := r.updateEPSForServiceWithHealthchecks(context.Background(), swh); err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	var updated discoveryv1.EndpointSlice
+	if err := r.Get(context.Background(), client.ObjectKey{Namespace: testNamespace, Name: epsName}, &updated); err != nil {
+		t.Fatalf("failed to read back the EndpointSlice: %v", err)
+	}
+	if len(updated.OwnerReferences) != 1 || updated.OwnerReferences[0].UID != testSWHUID {
+		t.Errorf("expected the existing slice to be adopted, got %+v", updated.OwnerReferences)
+	}
+}
+
+// A slice left over from a resource with the same name but a different UID would be collected
+// right after being written, so the stale reference has to be replaced.
+func TestUpdateEPSReplacesStaleOwnerReference(t *testing.T) {
+	r := newTestReconciler()
+	swh := newTestSWH()
+	epsName := testSWHName + "-" + testNodeName
+
+	stale := r.BuildEndpointSlice(epsName, swh)
+	stale.OwnerReferences[0].UID = types.UID("00000000-0000-0000-0000-000000000000")
+	stale.Endpoints = []discoveryv1.Endpoint{{Addresses: []string{testPodIP}}}
+
+	r.Client = fake.NewClientBuilder().WithScheme(newTestScheme(t)).WithObjects(&stale).Build()
+	r.healthchecksResultsByServiceWithHealthchecks[types.NamespacedName{Namespace: testNamespace, Name: testSWHName}] = []HealthcheckTarget{
+		{
+			targetHost:         testPodIP,
+			podName:            "worker",
+			podNamespace:       testNamespace,
+			podUID:             types.UID("uid-worker"),
+			podReady:           true,
+			probeResultDetails: successfulProbeDetails(),
+		},
+	}
+
+	if err := r.updateEPSForServiceWithHealthchecks(context.Background(), swh); err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	var updated discoveryv1.EndpointSlice
+	if err := r.Get(context.Background(), client.ObjectKey{Namespace: testNamespace, Name: epsName}, &updated); err != nil {
+		t.Fatalf("failed to read back the EndpointSlice: %v", err)
+	}
+	if len(updated.OwnerReferences) != 1 || updated.OwnerReferences[0].UID != testSWHUID {
+		t.Errorf("expected the stale owner reference to be replaced, got %+v", updated.OwnerReferences)
+	}
+}
+
+// ownedService builds the child Service as the controller maintains it.
+func ownedService() *corev1.Service {
+	isController := true
+	return &corev1.Service{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      testSWHName,
+			Namespace: testNamespace,
+			OwnerReferences: []metav1.OwnerReference{{
+				APIVersion: networkv1alpha1.GroupVersion.String(),
+				Kind:       kubernetes.ServiceWithHealthchecksKind,
+				Name:       testSWHName,
+				UID:        testSWHUID,
+				Controller: &isController,
+			}},
+		},
+	}
+}
+
+// A Service the module does not control keeps its own endpoints, and kube-proxy balances over the
+// union of every slice carrying the service name.
+func TestMayPublishEPS(t *testing.T) {
+	foreign := ownedService()
+	foreign.OwnerReferences[0].APIVersion = "apps/v1"
+	foreign.OwnerReferences[0].Kind = "Deployment"
+	foreign.OwnerReferences[0].Name = "backend"
+
+	plainReference := ownedService()
+	plainReference.OwnerReferences[0].Controller = nil
+
+	recreatedParent := ownedService()
+	recreatedParent.OwnerReferences[0].UID = types.UID("00000000-0000-0000-0000-000000000000")
+
+	tests := []struct {
+		name    string
+		service *corev1.Service
+		want    bool
+	}{
+		{"no Service yet", nil, true},
+		{"owned by the parent", ownedService(), true},
+		{"owned by the parent recreated under the same name", recreatedParent, true},
+		{"controlled by another resource", foreign, false},
+		{"merely referenced by the parent, not controlled", plainReference, false},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			r := newTestReconciler()
+			builder := fake.NewClientBuilder().WithScheme(newTestScheme(t))
+			if test.service != nil {
+				builder = builder.WithObjects(test.service)
+			}
+			r.Client = builder.Build()
+
+			got, err := r.mayPublishEPS(context.Background(), newTestSWH())
+			if err != nil {
+				t.Fatalf("unexpected error: %v", err)
+			}
+			if got != test.want {
+				t.Errorf("mayPublishEPS = %v, want %v", got, test.want)
+			}
+		})
+	}
+}
+
+// The slice published before the clash appeared has to be withdrawn, otherwise it keeps attracting
+// traffic for as long as the conflict lasts.
+func TestDeleteEPSForNodeWithdrawsTheSlice(t *testing.T) {
+	r := newTestReconciler()
+	swh := newTestSWH()
+	published := r.BuildEndpointSlice(endpointSliceNameForNode(testSWHName, testNodeName), swh)
+	published.Endpoints = []discoveryv1.Endpoint{{Addresses: []string{testPodIP}}}
+
+	r.Client = fake.NewClientBuilder().WithScheme(newTestScheme(t)).WithObjects(&published).Build()
+
+	if err := r.deleteEPSForNode(context.Background(), swh); err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	var remaining discoveryv1.EndpointSlice
+	err := r.Get(context.Background(), client.ObjectKey{Namespace: testNamespace, Name: published.Name}, &remaining)
+	if !errors.IsNotFound(err) {
+		t.Errorf("expected the slice to be gone, got %v", err)
+	}
+
+	// deleting a slice that is not there is how the steady state looks
+	if err := r.deleteEPSForNode(context.Background(), swh); err != nil {
+		t.Errorf("expected a missing slice to be fine, got %v", err)
+	}
+}
+
+// A name clash means somebody else's objects are around, and a slice that is not ours is not ours
+// to delete.
+func TestDeleteEPSForNodeLeavesForeignSliceAlone(t *testing.T) {
+	r := newTestReconciler()
+	swh := newTestSWH()
+
+	foreign := r.BuildEndpointSlice(endpointSliceNameForNode(testSWHName, testNodeName), swh)
+	foreign.Labels[endpointControllerLabelKey] = "endpointslice-controller"
+	foreign.OwnerReferences = nil
+	foreign.Endpoints = []discoveryv1.Endpoint{{Addresses: []string{testPodIP}}}
+
+	r.Client = fake.NewClientBuilder().WithScheme(newTestScheme(t)).WithObjects(&foreign).Build()
+
+	if err := r.deleteEPSForNode(context.Background(), swh); err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	var remaining discoveryv1.EndpointSlice
+	if err := r.Get(context.Background(), client.ObjectKey{Namespace: testNamespace, Name: foreign.Name}, &remaining); err != nil {
+		t.Errorf("expected the slice of another controller to be kept, got %v", err)
+	}
+}
+
+func swhWithSelector(namespace, name string, selector map[string]string) *networkv1alpha1.ServiceWithHealthchecks {
+	return &networkv1alpha1.ServiceWithHealthchecks{
+		ObjectMeta: metav1.ObjectMeta{Namespace: namespace, Name: name},
+		Spec:       specWithSelector(selector),
+	}
+}
+
+// TestPrefillServiceCache checks that the prefill populates the in-memory map from the API
+// with exactly the value type the mapper and the task scheduler assert on, and that it mirrors
+// Reconcile by leaving out a resource that is being deleted.
+func TestPrefillServiceCache(t *testing.T) {
+	r := newTestReconciler()
+
+	live := swhWithSelector(testNamespace, "lb-a", map[string]string{lbSelectorKey: "loadbalancer"})
+	otherNamespace := swhWithSelector("team-other", "lb-b", map[string]string{"app": "x"})
+
+	// A resource mid-deletion: the fake client requires a finalizer to keep a deletion
+	// timestamp on a stored object.
+	deleting := swhWithSelector(testNamespace, "lb-deleting", map[string]string{lbSelectorKey: "loadbalancer"})
+	deleting.DeletionTimestamp = &metav1.Time{Time: time.Now()}
+	deleting.Finalizers = []string{"network.deckhouse.io/test"}
+
+	r.Client = fake.NewClientBuilder().
+		WithScheme(newTestScheme(t)).
+		WithObjects(live, otherNamespace, deleting).
+		Build()
+
+	if err := r.PrefillServiceCache(context.Background()); err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	stored := map[types.NamespacedName]bool{}
+	r.servicesWithHealthchecks.Range(func(key, value any) bool {
+		name, ok := key.(types.NamespacedName)
+		if !ok {
+			t.Fatalf("stored key is %T, want types.NamespacedName", key)
+		}
+		// The mapper and the scheduler assert the value is a ServiceWithHealthchecksSpec, one of
+		// them without the comma-ok guard, so a wrong type here would panic them at runtime.
+		if _, ok := value.(networkv1alpha1.ServiceWithHealthchecksSpec); !ok {
+			t.Fatalf("stored value for %s is %T, want networkv1alpha1.ServiceWithHealthchecksSpec", name, value)
+		}
+		stored[name] = true
+		return true
+	})
+
+	wantLive := types.NamespacedName{Namespace: testNamespace, Name: "lb-a"}
+	wantOther := types.NamespacedName{Namespace: "team-other", Name: "lb-b"}
+	notWanted := types.NamespacedName{Namespace: testNamespace, Name: "lb-deleting"}
+
+	if !stored[wantLive] || !stored[wantOther] {
+		t.Fatalf("prefilled map %v, want it to contain %s and %s", stored, wantLive, wantOther)
+	}
+	if stored[notWanted] {
+		t.Fatalf("prefilled map %v, want it to skip the resource being deleted %s", stored, notWanted)
+	}
+	if len(stored) != 2 {
+		t.Fatalf("prefilled map holds %d entries, want 2", len(stored))
+	}
+
+	// The prefilled entry must be usable by the mapper: a node-local pod matching its selector
+	// resolves to a reconcile request, proving the stored spec flows through the mapper's type
+	// assertion.
+	pod := newTargetPod("virt-launcher-worker-rvtjp-dz8lg")
+	requests := r.getExposedServiceWithHCForPod(context.Background(), &pod)
+	if len(requests) != 1 || requests[0].NamespacedName != wantLive {
+		t.Fatalf("mapper on prefilled cache got %v, want exactly one request for %s", requests, wantLive)
 	}
 }

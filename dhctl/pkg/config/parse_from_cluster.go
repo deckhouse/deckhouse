@@ -142,6 +142,16 @@ func (f *fromClusterMetaConfigFiller) Cloud(ctx context.Context, metaConfig *Met
 		metaConfig.ModuleConfigs = append(metaConfig.ModuleConfigs, gmc)
 	}
 
+	// Load the control-plane-manager ModuleConfig so MetaConfig.Network() (podSubnetCIDR,
+	// serviceSubnetCIDR, podSubnetNodeCIDRPrefix) can see it during converge/destroy. Without
+	// this, clusterConfigForInfrastructure's network resolution always falls through to
+	// ClusterConfiguration on this path — m.ModuleConfigs never has an entry to find — so once a
+	// field is migrated and removed from ClusterConfiguration, the Terraform variable ends up
+	// with no such attribute at all instead of the value the cluster actually runs with.
+	if cpm := loadControlPlaneManagerModuleConfig(ctx, f.kubeCl); cpm != nil {
+		metaConfig.ModuleConfigs = append(metaConfig.ModuleConfigs, cpm)
+	}
+
 	pcc, err := loadLegacyProviderClusterConfig(ctx, f.kubeCl, f.schemaStore)
 	if err != nil {
 		return nil, err
@@ -188,6 +198,33 @@ func loadGlobalModuleConfig(ctx context.Context, kubeCl *client.KubernetesClient
 	return mc
 }
 
+// loadControlPlaneManagerModuleConfig fetches the control-plane-manager ModuleConfig from the
+// cluster. It deserialises without full schema validation because it is only consulted for
+// spec.settings.network (network parameter resolution, MetaConfig.Network()); a not-found
+// control-plane-manager ModuleConfig is not an error. This must not be able to block
+// converge/destroy.
+func loadControlPlaneManagerModuleConfig(ctx context.Context, kubeCl *client.KubernetesClient) *ModuleConfig {
+	obj, err := kubeCl.Dynamic().Resource(ModuleConfigGVR).Get(ctx, "control-plane-manager", metav1.GetOptions{})
+	if err != nil {
+		if !k8serrors.IsNotFound(err) {
+			dhlog.FromContext(ctx).WarnContext(ctx, fmt.Sprintf(
+				"failed to read control-plane-manager ModuleConfig, falling back to the deprecated ClusterConfiguration network fields: %v", err))
+		}
+		return nil
+	}
+	raw, err := json.Marshal(obj.Object)
+	if err != nil {
+		dhlog.FromContext(ctx).WarnContext(ctx, fmt.Sprintf("failed to marshal control-plane-manager ModuleConfig: %v", err))
+		return nil
+	}
+	mc := &ModuleConfig{}
+	if err := json.Unmarshal(raw, mc); err != nil {
+		dhlog.FromContext(ctx).WarnContext(ctx, fmt.Sprintf("failed to parse control-plane-manager ModuleConfig: %v", err))
+		return nil
+	}
+	return mc
+}
+
 func loadCloudProviderModuleConfig(ctx context.Context, kubeCl *client.KubernetesClient, providerName string, schemaStore *SchemaStore) (*ModuleConfig, error) {
 	name := CloudProviderModuleName(providerName)
 	obj, err := kubeCl.Dynamic().Resource(ModuleConfigGVR).Get(ctx, name, metav1.GetOptions{})
@@ -197,14 +234,14 @@ func loadCloudProviderModuleConfig(ctx context.Context, kubeCl *client.Kubernete
 	if err != nil {
 		return nil, fmt.Errorf("get ModuleConfig %q: %w", name, err)
 	}
-	return moduleConfigFromUnstructured(obj, schemaStore)
+	return moduleConfigFromUnstructured(ctx, obj, schemaStore)
 }
 
 // moduleConfigFromUnstructured deserialises a ModuleConfig fetched from the
 // cluster and validates it against its registered schema, so a kubectl-patched
 // invalid ModuleConfig fails fast here instead of as a confusing downstream
 // validation error. A module without a registered schema is accepted.
-func moduleConfigFromUnstructured(obj *unstructured.Unstructured, schemaStore *SchemaStore) (*ModuleConfig, error) {
+func moduleConfigFromUnstructured(ctx context.Context, obj *unstructured.Unstructured, schemaStore *SchemaStore) (*ModuleConfig, error) {
 	raw, err := json.Marshal(obj.Object)
 	if err != nil {
 		return nil, fmt.Errorf("marshal ModuleConfig: %w", err)
@@ -214,7 +251,7 @@ func moduleConfigFromUnstructured(obj *unstructured.Unstructured, schemaStore *S
 	if err != nil {
 		return nil, fmt.Errorf("convert ModuleConfig to YAML: %w", err)
 	}
-	if _, err := schemaStore.Validate(&yamlDoc); err != nil && !errors.Is(err, ErrSchemaNotFound) {
+	if _, err := schemaStore.Validate(ctx, &yamlDoc); err != nil && !errors.Is(err, ErrSchemaNotFound) {
 		return nil, fmt.Errorf("validate ModuleConfig %q: %w", obj.GetName(), err)
 	}
 
@@ -233,15 +270,15 @@ func loadLegacyProviderClusterConfig(ctx context.Context, kubeCl *client.Kuberne
 	if err != nil {
 		return nil, fmt.Errorf("get Secret %q: %w", LegacyProviderClusterConfigSecret, err)
 	}
-	return parseLegacyProviderClusterConfig(secret, schemaStore)
+	return parseLegacyProviderClusterConfig(ctx, secret, schemaStore)
 }
 
-func parseLegacyProviderClusterConfig(secret *corev1.Secret, schemaStore *SchemaStore) (map[string]json.RawMessage, error) {
+func parseLegacyProviderClusterConfig(ctx context.Context, secret *corev1.Secret, schemaStore *SchemaStore) (map[string]json.RawMessage, error) {
 	data, ok := secret.Data["cloud-provider-cluster-configuration.yaml"]
 	if !ok || len(data) == 0 {
 		return nil, fmt.Errorf("cloud-provider-cluster-configuration.yaml not found in Secret or empty")
 	}
-	if _, err := schemaStore.Validate(&data); err != nil {
+	if _, err := schemaStore.Validate(ctx, &data); err != nil {
 		return nil, fmt.Errorf("validate provider cluster configuration: %w", err)
 	}
 	var parsed map[string]json.RawMessage
@@ -266,7 +303,7 @@ func (f *fromClusterMetaConfigFiller) Static(ctx context.Context, metaConfig *Me
 		return nil, nil
 	}
 
-	if _, err := f.schemaStore.Validate(&staticClusterConfigData); err != nil {
+	if _, err := f.schemaStore.Validate(ctx, &staticClusterConfigData); err != nil {
 		return nil, fmt.Errorf("validate static cluster configuration: %w", err)
 	}
 

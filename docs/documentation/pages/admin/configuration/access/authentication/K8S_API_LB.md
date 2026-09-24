@@ -1,38 +1,37 @@
 ---
 title: "Accessing the Kubernetes API via load balancer"
 permalink: en/admin/configuration/access/authentication/k8s-api-lb.html
-description: "Configure authenticated access to Kubernetes API through load balancer in Deckhouse Kubernetes Platform. Secure kubectl access via Ingress controller with authentication."
+description: "Configure authenticated access to Kubernetes API through load balancer in Deckhouse Platform. Secure kubectl access via Ingress controller with authentication."
 ---
 
-DKP allows using authentication when accessing the Kubernetes API. In this case, a user can generate a `kubectl` configuration via the DKP kubeconfig web interface to securely access the Kubernetes API through a traffic balancer (Ingress controller).
+DP allows using authentication when accessing the Kubernetes API. In this case, a user can generate a `kubectl` configuration via the DP web UI to securely access the Kubernetes API through a traffic balancer (Ingress controller).
 
 To configure access, follow these steps:
 
-1. Enable Kubernetes API publishing. To do this, set the parameter [`publishAPI.enabled: true`](/modules/user-authn/configuration.html#parameters-publishapi-enabled) in the `user-authn` module settings or via the Deckhouse admin web interface.
+1. Enable Kubernetes API publishing. To do this, set the parameter [`apiserver.publishAPI.ingress.enabled: true`](/modules/control-plane-manager/configuration.html#parameters-apiserver-publishapi-ingress-enabled) in the `control-plane-manager` module settings or via the Deckhouse Platform web interface.
 
    Example module configuration:
 
    ```yaml
+   apiVersion: deckhouse.io/v1alpha1
+   kind: ModuleConfig
+   metadata:
+     name: control-plane-manager
    spec:
      enabled: true
-     version: 2
+     version: 3
      settings:
-       publishAPI:
-         enabled: true
+       apiserver:
+         publishAPI:
+           ingress:
+             enabled: true
    ```
 
-1. Open the [kubeconfig](../../../../user/web/kubeconfig.html) web interface.  
-   The kubeconfig generation interface in DKP is automatically activated after enabling the `publishAPI` parameter in the `user-authn` module.  
-   This web interface is available at the following URL:
-
-   ```console
-   https://kubeconfig.<publicDomainTemplate>
-   ```
-
-   For example, if `publicDomainTemplate` is `%s.kube.my`, the URL will be `https://kubeconfig.kube.my`.
+1. Open the [DP web UI](../../../../user/web/ui.html).  
+   The published API becomes available for kubeconfig generation automatically after enabling API publishing (the `apiserver.publishAPI.ingress.enabled` parameter) in the `control-plane-manager` module.  
 
 1. Generate the `kubectl` configuration.  
-   After logging into the kubeconfig interface, the user will receive a set of commands to configure `kubectl`.  
+   The web UI provides a set of commands to configure `kubectl`.  
    These commands can be copied and pasted into the terminal.  
    Authentication will be performed using an OIDC token issued by Dex.  
    If the provider supports session renewal, the configuration will include a `refresh token`, allowing access to be extended without re-authentication.
@@ -51,22 +50,20 @@ To configure access, follow these steps:
 
 ## How API access protection works in Kubernetes
 
-In Deckhouse Kubernetes Platform, you can safely expose the Kubernetes API externally using an Ingress controller while maintaining access control.
-API exposure and authentication configuration are handled via the [`user-authn`](/modules/user-authn/) module. You can configure:
+In Deckhouse Platform, you can safely expose the Kubernetes API externally using an Ingress controller or Gateway API while maintaining access control (for more information on how to expose the Kubernetes API, see [the `control-plane-manager` module documentation](/modules/control-plane-manager/#exposing-the-kubernetes-api)).
+API exposure is configured via the [`control-plane-manager`](/modules/control-plane-manager/) module, while authentication is handled via the [`user-authn`](/modules/user-authn/) module. You can configure:
 
 - A list of trusted IP addresses or networks allowed to access the API.
-- A list of user groups permitted to authenticate.
 - The Ingress controller through which access will be provided.
 
 To configure:
 
 1. Enable API publishing as shown in the example above.
-1. Configure access restrictions. In the [module configuration](/modules/user-authn/configuration.html), you can specify:
-   - A list of IP addresses or networks allowed to access (`allowedSourceRanges`).
-   - A list of user groups allowed to connect to the Kubernetes API (`allowedUserGroups`).
-   - The Ingress controller to be used for publishing (`ingressClass`).
-1. Use the kubeconfig web interface.  
-   Users will be able to securely access the API using the kubeconfig generated via the web interface (`https://kubeconfig.<publicDomainTemplate>`).  
+1. Configure access restrictions. In the [`control-plane-manager` module configuration](/modules/control-plane-manager/configuration.html#parameters-apiserver-publishapi-ingress), you can specify:
+   - A list of IP addresses or networks allowed to access ([`apiserver.publishAPI.ingress.whitelistSourceRanges`](/modules/control-plane-manager/configuration.html#parameters-apiserver-publishapi-ingress-whitelistsourceranges)).
+   - The Ingress controller to be used for publishing ([`apiserver.publishAPI.ingress.ingressClass`](/modules/control-plane-manager/configuration.html#parameters-apiserver-publishapi-ingress-ingressclass)).
+1. Use the [DP web UI](../../../../user/web/ui.html).  
+   Users will be able to securely access the API using the kubeconfig generated there.  
    This kubeconfig will include the OIDC token and the Ingress connection settings.
 
 The following will be automatically configured when API publishing is enabled:
@@ -81,7 +78,7 @@ In addition to OIDC, you can configure direct access to the API using Basic Auth
 
 To configure:
 
-1. Enable API publishing ([`publishAPI`](/modules/user-authn/configuration.html#parameters-publishapi) parameter).
+1. Enable API publishing (the [`apiserver.publishAPI`](/modules/control-plane-manager/configuration.html#parameters-apiserver-publishapi) parameter of the `control-plane-manager` module).
 1. Configure an LDAP provider in the `user-authn` module and enable the [`enableBasicAuth: true`](/modules/user-authn/cr.html#dexprovider-v1-spec-oidc-enablebasicauth) option.
 
 {% alert level="warning" %}

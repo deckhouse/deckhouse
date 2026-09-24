@@ -548,6 +548,69 @@ spec:
                     name: nginx
                     ports:
                       - containerPort: 80
+        - name: allowed-by-exception-hostnetwork-true-pod-without-hostnetwork
+          violations: "no"
+          assertionMessage: ""
+          fields:
+            - path: spec.network.hostNetwork.allowedValue
+              scenario: speUnused
+          exception: ""
+          exceptionRef: ""
+          inventory:
+            - base: securityPolicyException
+              merge:
+                metadata:
+                  name: allow-hostnetwork-true-unused
+                spec:
+                  network:
+                    hostNetwork:
+                      allowedValue: true
+                    hostPorts: []
+          object:
+            base: admissionPod
+            merge:
+              metadata:
+                labels:
+                  security.deckhouse.io/security-policy-exception: allow-hostnetwork-true-unused
+                name: allowed-by-exception-hostnetwork-true-pod-without-hostnetwork
+              spec:
+                containers:
+                  - image: nginx
+                    name: nginx
+                    ports:
+                      - containerPort: 80
+        - name: allowed-by-exception-hostnetwork-true-pod-opts-out
+          violations: "no"
+          assertionMessage: ""
+          fields:
+            - path: spec.network.hostNetwork.allowedValue
+              scenario: speMatch
+          exception: ""
+          exceptionRef: ""
+          inventory:
+            - base: securityPolicyException
+              merge:
+                metadata:
+                  name: allow-hostnetwork-true-explicit-false
+                spec:
+                  network:
+                    hostNetwork:
+                      allowedValue: true
+                    hostPorts: []
+          object:
+            base: admissionPod
+            merge:
+              metadata:
+                labels:
+                  security.deckhouse.io/security-policy-exception: allow-hostnetwork-true-explicit-false
+                name: allowed-by-exception-hostnetwork-true-pod-opts-out
+              spec:
+                hostNetwork: false
+                containers:
+                  - image: nginx
+                    name: nginx
+                    ports:
+                      - containerPort: 80
         - name: disallowed-by-exception-hostnetwork-true-container-port
           violations: "yes"
           assertionMessage: ""
@@ -1582,3 +1645,62 @@ spec:
                             hostPort: 25000
                             protocol: TCP
                     hostNetwork: true
+    - name: security-policy-no-ranges-functional
+      gatorBlock: security-policy-no-ranges-functional
+      defaultObjectBase: ""
+      template: ../rendered/constraint-template.yaml
+      constraint: constraints/policy_2.yaml
+      cases:
+        - name: denied-hostnetwork-true-without-ranges
+          violations: "yes"
+          assertionMessage: ""
+          fields:
+            - path: spec.hostNetwork
+              scenario: positive
+          exception: ""
+          exceptionRef: ""
+          object:
+            base: admissionPod
+            merge:
+              metadata:
+                name: denied-hostnetwork-true-without-ranges
+              spec:
+                hostNetwork: true
+        - name: allowed-no-hostnetwork-without-ranges
+          violations: "no"
+          assertionMessage: ""
+          fields:
+            - path: spec.hostNetwork
+              scenario: negative
+          exception: ""
+          exceptionRef: ""
+          object:
+            base: admissionPod
+            merge:
+              metadata:
+                name: allowed-no-hostnetwork-without-ranges
+              spec:
+                hostNetwork: false
+        - name: allowed-hostport-without-ranges
+          violations: "no"
+          assertionMessage: ""
+          fields:
+            - path: spec.hostNetwork
+              scenario: absent
+            - path: spec.containers[].ports[].hostPort
+              scenario: positive
+          exception: ""
+          exceptionRef: ""
+          object:
+            base: admissionPod
+            merge:
+              metadata:
+                name: allowed-hostport-without-ranges
+              spec:
+                containers:
+                  - image: nginx
+                    name: nginx
+                    ports:
+                      - containerPort: 25000
+                        hostPort: 25000
+                        protocol: TCP

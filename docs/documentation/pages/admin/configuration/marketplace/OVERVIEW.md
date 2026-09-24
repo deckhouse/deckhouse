@@ -1,16 +1,16 @@
 ---
 title: Marketplace
 permalink: en/admin/configuration/marketplace/
-description: "Configure and manage Marketplace in Deckhouse Kubernetes Platform. Connect package repositories, monitor scanning operations, and make application packages available for users."
+description: "Configure and manage Marketplace in Deckhouse Platform. Connect package repositories, monitor scanning operations, and make application packages available for users."
 relatedLinks:
   - title: "Using Marketplace"
     url: ../../../user/marketplace/
 ---
 
-Marketplace is a system for managing Deckhouse Kubernetes Platform (DKP) delivery units (Packages). It lets administrators connect package registries, discover available packages, and make them available to project users for installation.
+Marketplace is a system for managing Deckhouse Platform (DP) delivery units (Packages). It lets administrators connect package registries, discover available packages, and make them available to project users for installation.
 
 {% alert level="info" %}
-Marketplace is available starting from DKP version 1.76.
+Marketplace is available starting from DP version 1.76.
 {% endalert %}
 
 ## Administrator tasks

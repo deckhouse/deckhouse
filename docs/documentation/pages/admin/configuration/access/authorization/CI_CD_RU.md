@@ -23,7 +23,7 @@ description: "Настройка доступа CI/CD к API Kubernetes в Deckh
 Для настройки аутентификации через токен для ServiceAccount должны быть соблюдены следующие требования:
 
 - Доступ к кластеру с правами на создание ServiceAccount и секретов.
-- Для внешнего доступа: опубликованный через Ingress API-сервер Kubernetes (для публикации используется параметр [publishAPI](/modules/user-authn/configuration.html#parameters-publishapi)) или прямой доступ к API через VPN.
+- Для внешнего доступа: опубликованный через Ingress API-сервер Kubernetes (для публикации используется параметр [apiserver.publishAPI](/modules/control-plane-manager/configuration.html#parameters-apiserver-publishapi) модуля `control-plane-manager`) или прямой доступ к API через VPN.
 
 ### Создание ServiceAccount и долгоживущего токена
 
@@ -103,19 +103,37 @@ EOF
 
 При использовании publishAPI:
 
+{% tabs api_publish_type %}
+{% tab "При публикации API-сервера через Ingress" %}
+
+При публикации API-сервера через Ingress используйте команды:
+
 ```shell
-API_HOST=$(d8 k -n d8-user-authn get ingress kubernetes-api -o jsonpath='{.spec.rules[0].host}')
+API_HOST=$(d8 k -n kube-system get ingress kubernetes-api -o jsonpath='{.spec.rules[0].host}')
 echo "API endpoint: https://${API_HOST}"
 ```
+
+{% endtab %}
+{% tab "При публикации API-сервера через Gateway API (`alb`)" %}
+
+При публикации API-сервера через Gateway API (модуль [`alb`](/modules/alb/)) используйте команды:
+
+```shell
+API_HOST=$(d8 k -n kube-system get httproute kubernetes-api -o jsonpath='{.spec.hostnames[0]}')
+echo "API endpoint: https://${API_HOST}"
+```
+
+{% endtab %}
+{% endtabs %}
 
 {% alert level="info" %}
 Если сертификат API подписан публичным CA (Let's Encrypt), параметр `--certificate-authority` не требуется.
 {% endalert %}
 
-Для приватного CA:
+Для приватного CA (self-signed, режим по умолчанию — общий для обоих способов публикации):
 
 ```shell
-d8 k -n d8-user-authn get secret kubernetes-api-ca-key-pair -o jsonpath='{.data.ca\.crt}' | base64 -d > /tmp/ca.crt
+d8 k -n kube-system get secret kubernetes-api-ca-key-pair -o jsonpath='{.data.tls\.crt}' | base64 -d > /tmp/ca.crt
 ```
 
 ### Создание kubeconfig
@@ -183,7 +201,7 @@ d8 k --server=$KUBE_SERVER --token=$KUBE_TOKEN get ns
 Аутентификация по логину и паролю через IdP (LDAP, OIDC).
 
 {% alert level="warning" %}
-Пароль передаётся в DKP и проверяется через basic-auth-proxy/Dex.
+Пароль передаётся в DP и проверяется через basic-auth-proxy/Dex.
 {% endalert %}
 
 {% alert level="warning" %}
@@ -194,7 +212,7 @@ d8 k --server=$KUBE_SERVER --token=$KUBE_TOKEN get ns
 
 Для настройки Basic Auth должны быть соблюдены следующие требования:
 
-- [publishAPI](/modules/user-authn/configuration.html#parameters-publishapi) включён.
+- [apiserver.publishAPI](/modules/control-plane-manager/configuration.html#parameters-apiserver-publishapi) модуля `control-plane-manager` включён.
 - [DexProvider](/modules/user-authn/cr.html#dexprovider) настроен для IdP.
 
 ### Включение
@@ -277,13 +295,13 @@ deploy:
 Рекомендуется для GitLab CI и GitHub Actions.
 {% endalert %}
 
-DKP/Dex не получает пароль пользователя. Способ получения `IDP_TOKEN` зависит от IdP: OIDC job token (GitLab/GitHub) или эндпоинт токена IdP (client_credentials).
+DP/Dex не получает пароль пользователя. Способ получения `IDP_TOKEN` зависит от IdP: OIDC job token (GitLab/GitHub) или эндпоинт токена IdP (client_credentials).
 
 ### Предварительные требования
 
 Для настройки Token Exchange должны быть соблюдены следующие требования:
 
-- [publishAPI](/modules/user-authn/configuration.html#parameters-publishapi) включён.
+- [apiserver.publishAPI](/modules/control-plane-manager/configuration.html#parameters-apiserver-publishapi) модуля `control-plane-manager` включён.
 - [DexProvider](/modules/user-authn/cr.html#dexprovider) настроен как **тип OIDC**.
 
 {% alert level="warning" %}
@@ -312,7 +330,7 @@ EOF
 {% alert level="warning" %}
 Предоставляемый таким образом доступ к Kubernetes API действует на уровне всего кластера. По этой причине для добавления аннотации или изменения её значения на `"true"` необходимы права на изменение конфигурации модуля `user-authn` — например, роль `d8:manage:permission:module:user-authn:edit`. Прав на создание DexClient в отдельном неймспейсе недостаточно: admission-контроллер отклонит запрос с сообщением, содержащим имя аннотации.
 
-Добавление аннотации ограничено независимо от указанного значения, включая `"false"`. Это необходимо для совместимости с предыдущими версиями DKP, в которых доступ предоставляется при наличии аннотации независимо от её значения.
+Добавление аннотации ограничено независимо от указанного значения, включая `"false"`. Это необходимо для совместимости с предыдущими версиями DP, в которых доступ предоставляется при наличии аннотации независимо от её значения.
 
 Ограничение не распространяется на объект, у которого аннотация уже установлена. Удаление и повторное создание DexClient считается повторным добавлением аннотации. Поэтому GitOps-контроллеру, который пересоздаёт объект вместо его обновления, требуется право `update` на ресурс `moduleconfigs` с именем `user-authn`.
 {% endalert %}
@@ -336,7 +354,7 @@ API_HOST=$(d8 k -n d8-user-authn get ingress kubernetes-api -o jsonpath='{.spec.
 
 ### Выдача RBAC
 
-DKP настраивает kube-apiserver на проверку токенов Dex. Claims `email` и `groups` из токена используются для RBAC.
+DP настраивает kube-apiserver на проверку токенов Dex. Claims `email` и `groups` из токена используются для RBAC.
 
 Набор claims, которые требуются kube-apiserver для аутентификации, зависит от конфигурации. Если kube-apiserver требует `name`, добавьте scope `profile`.
 

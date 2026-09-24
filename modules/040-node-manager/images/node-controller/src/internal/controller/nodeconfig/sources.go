@@ -40,6 +40,8 @@ import (
 
 	deckhousev1alpha1 "github.com/deckhouse/node-controller/api/deckhouse.io/v1alpha1"
 	internalv1alpha1 "github.com/deckhouse/node-controller/api/internal.deckhouse.io/v1alpha1"
+	"github.com/deckhouse/node-controller/internal/common"
+	"github.com/deckhouse/node-controller/internal/network"
 )
 
 // clusterInputs is everything outside the NodeGroup that a rendered NodeConfig
@@ -403,7 +405,7 @@ func (s *sourceReader) readAPIServerEndpoints(ctx context.Context) ([]string, er
 	pods := &corev1.PodList{}
 	if err := s.Reader.List(ctx, pods,
 		client.InNamespace(kubeSystemNS),
-		client.MatchingLabels{"component": "kube-apiserver", "tier": "control-plane"},
+		client.MatchingLabels(common.APIServerPodLabels),
 	); err != nil {
 		return nil, fmt.Errorf("list kube-apiserver pods: %w", err)
 	}
@@ -503,6 +505,19 @@ func (s *sourceReader) readClusterConfiguration(ctx context.Context) (clusterCon
 	if err := sigsyaml.Unmarshal(raw, &config); err != nil {
 		return clusterConfiguration{}, fmt.Errorf("parse %s/%s: %w", kubeSystemNS, clusterConfigSecretName, err)
 	}
+
+	// TODO: Remove when cluster-configuration is removed and use only ModuleConfig
+	// ModuleConfig wins when set (see package network). Read fail-closed like the rest of this
+	// function: a silently unresolved override would render a wrong DefaultMaxPods for every
+	// immutable node.
+	mcNetwork, err := network.FromModuleConfig(ctx, s.Reader)
+	if err != nil {
+		return clusterConfiguration{}, fmt.Errorf("resolve network settings: %w", err)
+	}
+	if mcNetwork.PodSubnetNodeCIDRPrefix != "" {
+		config.PodSubnetNodeCIDRPrefix = intstr.FromString(mcNetwork.PodSubnetNodeCIDRPrefix)
+	}
+
 	return config, nil
 }
 

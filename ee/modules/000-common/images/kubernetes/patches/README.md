@@ -33,10 +33,3 @@ against that socket, and makes the systemDbus factory prefer it when
 GracefulShutdownPostpone wait added by the patch above, which is what actually
 decides when the pods may be killed. A node with no such socket goes to logind
 as before, so nothing changes for DKP nodes.
-
-### kubelet-graceful-shutdown-cleanup-memory-manager-state
-
-This patch ensures that the Memory Manager state file is removed during a graceful node shutdown.
-
-The Memory Manager stores the node memory state in a file. After a reboot, the amount of used memory may slightly differ from the previous state, which can make the stored state invalid and prevent the kubelet from starting. Removing the state file before shutdown ensures that the Memory Manager starts with a clean state after the reboot.
-See issue: https://github.com/kubernetes/kubernetes/issues/131253
