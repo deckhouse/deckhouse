@@ -332,13 +332,11 @@ func (c *Client) Install(ctx context.Context, namespace, releaseName string, opt
 	// reportCh receives progress reports from nelm during resource tracking; a
 	// background goroutine forwards each one to the caller's callback.
 	//
-	// We must not close reportCh — ReleaseInstall closes it whenever it runs the
-	// install to completion, and the ok check is what makes the forwarder leave
-	// on that close instead of reading an endless stream of empty reports. done
-	// covers the paths that leave the channel open: a Timeout returns on
-	// ctx.Done() while the installing goroutine still runs, and an early failure
-	// never installs a reporter. The wait keeps a report from arriving after
-	// Install returned and the caller published the apply result.
+	// We must not close reportCh: ReleaseInstall closes it when it returns. The ok
+	// check makes the forwarder leave on that close instead of reading an endless
+	// stream of empty reports. done stops the forwarder even if the channel stays
+	// open. The wait keeps a report from arriving after Install returned and the
+	// caller published the apply result.
 	reportCh := make(chan progrep.ProgressReport, 1)
 	done := make(chan struct{})
 
@@ -368,7 +366,7 @@ func (c *Client) Install(ctx context.Context, namespace, releaseName string, opt
 		}
 	}()
 
-	if err := action.ReleaseInstall(ctx, releaseName, namespace, action.ReleaseInstallOptions{
+	if _, err := action.ReleaseInstall(ctx, releaseName, namespace, action.ReleaseInstallOptions{
 		LegacyProgressReportCh: reportCh,
 		KubeConnectionOptions: common.KubeConnectionOptions{
 			KubeContextCurrent: c.kubeContext,

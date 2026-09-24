@@ -214,8 +214,8 @@ github.com/fatih/structtag v1.2.0 h1:/OdNE99OxoI/PqaW/SuSK9uxxT3f/tcSZgon/ssNSx4
 github.com/fatih/structtag v1.2.0/go.mod h1:mBJUNpUnHmRKrKlQQlmCrh5PuhftFbNv8Ys4/aAZl94=
 github.com/felixge/httpsnoop v1.0.4 h1:NFTV2Zj1bL4mc9sqWACXbQFVBBg2W3GPvqp8/ESS2Wg=
 github.com/felixge/httpsnoop v1.0.4/go.mod h1:m8KPJKqk1gH5J9DgRY2ASl2lWCfGKXixSwevea8zH2U=
-github.com/flant/addon-operator v1.24.19 h1:9XZJiZFB8zfAHgylSOB2UOXV/EGnufemRTbe77VMtD0=
-github.com/flant/addon-operator v1.24.19/go.mod h1:Tn6cF3Rmu2NNPlDJHvo6SpQvugchk0aM6xU2rEmGYZ8=
+github.com/flant/addon-operator v1.24.21 h1:zsD5ZIa6FR7jWrBWwuZgubbdamxaL9cixbSDZ/HGuBw=
+github.com/flant/addon-operator v1.24.21/go.mod h1:asj3RrxRT52/+OMcBohHI4cv80r5goxcztzJw+cLCf4=
 github.com/flant/kube-client v1.9.2 h1:LA/RC4fvdyRcoJeXwmRZSDo/L0yoQ024BuaVqbDb5nA=
 github.com/flant/kube-client v1.9.2/go.mod h1:Q3rdJPkSlTZUaWGHX16g3/Fk3vDbl0Pr4EXf+j+UmgY=
 github.com/flant/shell-operator v1.20.5 h1:k/9b3Nm2YmCWv1hnPHVxLLfz6o+q3w1eIiJd5n0HX04=

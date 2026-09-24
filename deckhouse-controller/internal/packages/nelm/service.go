@@ -694,8 +694,8 @@ func (s *Service) withApplyDeadline(ctx context.Context, name string) (context.C
 }
 
 // applyTimeoutCause is the cancellation cause for an apply that outlived the
-// timeout. Tracking holds the stage nelm was executing, collected by the status
-// service from the progress reports the apply was sending.
+// timeout. Tracking holds the operations nelm was executing, collected by the
+// status service from the progress reports the apply was sending.
 func (s *Service) applyTimeoutCause(name string, timeout time.Duration) error {
 	waiting := waitingFor(s.status.GetStatus(name).Tracking.Report.Operations)
 	if len(waiting) == 0 {
@@ -720,12 +720,16 @@ func waitingFor(ops []progrep.Operation) []string {
 
 // resourcesByStatus renders the distinct resources of ops in one of statuses. A
 // resource with several operations — an apply and a readiness track, say — is
-// named once.
+// named once. Operations without a resource are skipped: they have no name to show.
 func resourcesByStatus(ops []progrep.Operation, statuses ...progrep.OperationStatus) []string {
 	resources := make([]string, 0, len(ops))
 	seen := make(map[string]struct{}, len(ops))
 
 	for _, op := range ops {
+		if !status.IsResourceOperation(op) {
+			continue
+		}
+
 		if !slices.Contains(statuses, op.Status) {
 			continue
 		}
