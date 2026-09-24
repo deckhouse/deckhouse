@@ -22,6 +22,7 @@ import (
 	"fmt"
 	"io/fs"
 	"os"
+	"strings"
 
 	"k8s.io/client-go/rest"
 )
@@ -126,9 +127,24 @@ func (i Identity) RestConfig(document *Document) (*rest.Config, error) {
 	// outage the agent is built to keep working through: it routes from its cache when
 	// the API server cannot be reached, which is the right answer either way.
 	return &rest.Config{
-		Host:            "https://" + document.Spec.APIServerEndpoints[0],
+		Host:            apiServerURL(document.Spec.APIServerEndpoints[0]),
 		TLSClientConfig: tlsConfig,
 	}, nil
+}
+
+// apiServerURL is the endpoint as a URL, whichever of the two spellings the field
+// carries.
+//
+// A config written by node-controller carries the full "https://host:port"; nodelet's own
+// ParseEndpoint accepts a bare "host:port" too and prefixes the scheme itself, so both
+// have to work here. Prefixing unconditionally produced "https://https/10.12.2.104:6443",
+// which resolves the literal host "https" — the agent then reported the API server as
+// unreachable and went on routing from its seed, looking healthy the whole time.
+func apiServerURL(endpoint string) string {
+	if strings.Contains(endpoint, "://") {
+		return endpoint
+	}
+	return "https://" + endpoint
 }
 
 func readable(path string) error {

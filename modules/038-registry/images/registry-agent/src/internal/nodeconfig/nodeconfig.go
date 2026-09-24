@@ -55,7 +55,9 @@ type Document struct {
 
 // Spec is NodeConfig's spec, trimmed to what the agent asks of it.
 type Spec struct {
-	// APIServerEndpoints are "host:port", as the kubelet is pointed at them.
+	// APIServerEndpoints are where the API server answers. Either spelling: a config
+	// written by node-controller carries the full "https://host:port", and nodelet's own
+	// ParseEndpoint also accepts a bare "host:port". See apiServerURL.
 	APIServerEndpoints []string `json:"apiServerEndpoints"`
 
 	// Registry is direct registry access: how the node pulls its system extensions and

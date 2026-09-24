@@ -46,8 +46,8 @@ metadata:
 spec:
   nodeName: master-0
   apiServerEndpoints:
-  - 192.168.1.10:6443
-  - 192.168.1.11:6443
+  - https://192.168.1.10:6443
+  - https://192.168.1.11:6443
   containerRuntime:
     registryOwner: agent
     maxConcurrentDownloads: 8
@@ -79,7 +79,8 @@ func TestLoadTakesTheTwoFieldsTheAgentNeeds(t *testing.T) {
 	require.NoError(t, err)
 	require.NotNil(t, document)
 
-	assert.Equal(t, []string{"192.168.1.10:6443", "192.168.1.11:6443"}, document.Spec.APIServerEndpoints)
+	assert.Equal(t, []string{"https://192.168.1.10:6443", "https://192.168.1.11:6443"},
+		document.Spec.APIServerEndpoints)
 
 	require.NotNil(t, document.Spec.Registry)
 	assert.Equal(t, "registry.deckhouse.io", document.Spec.Registry.Address)
@@ -174,6 +175,32 @@ func TestRestConfigRejectsAnUnusableAuthority(t *testing.T) {
 	require.Error(t, err)
 	assert.False(t, errors.Is(err, ErrNoIdentityYet), "this one an operator has to look at")
 	assert.Contains(t, err.Error(), "base64")
+}
+
+// Both spellings of the endpoint, because the field carries both and getting it wrong is
+// invisible: prefixing a URL that already has a scheme yields "https://https/10.0.0.1:6443",
+// whose host is the literal "https". The agent then reports the API server unreachable,
+// falls back to its seed, and looks healthy while never applying anything the cluster says.
+func TestRestConfigAcceptsBothSpellingsOfTheEndpoint(t *testing.T) {
+	dir := t.TempDir()
+	cert := filepath.Join(dir, "kubelet-client-current.pem")
+	require.NoError(t, os.WriteFile(cert, []byte("-----BEGIN CERTIFICATE-----\n"), 0o600))
+
+	for _, tc := range []struct{ name, endpoint, want string }{
+		{"the full URL node-controller writes", "https://10.0.0.1:6443", "https://10.0.0.1:6443"},
+		{"a bare host:port, which nodelet also accepts", "10.0.0.1:6443", "https://10.0.0.1:6443"},
+		{"plain http, spelled out", "http://10.0.0.1:6443", "http://10.0.0.1:6443"},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			document, err := Load(write(t, "spec:\n  apiServerEndpoints:\n  - "+tc.endpoint+"\n  kubelet:\n    caCert: "+
+				base64.StdEncoding.EncodeToString([]byte("-----BEGIN CERTIFICATE-----\n"))+"\n"))
+			require.NoError(t, err)
+
+			config, err := Identity{ClientCertificatePath: cert}.RestConfig(document)
+			require.NoError(t, err)
+			assert.Equal(t, tc.want, config.Host)
+		})
+	}
 }
 
 // A node in the minutes before its TLS bootstrap has no certificate yet. That is "not
