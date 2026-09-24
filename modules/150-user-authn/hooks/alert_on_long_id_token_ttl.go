@@ -28,13 +28,24 @@ import (
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 
 	sdkobjectpatch "github.com/deckhouse/module-sdk/pkg/object-patch"
+
+	"github.com/deckhouse/deckhouse/go_lib/dependency/requirements"
 )
+
+// IDTokenTTLValueKey is where the hook stores the idTokenTTL of the user-authn ModuleConfig ("" when
+// unset) for the userAuthnIDTokenTTLBelow release requirement.
+const IDTokenTTLValueKey = "userAuthn:idTokenTTL"
 
 // Dex expiry.signingKeys is hardcoded to 6h. idTokenTTL values >= 6h force Dex to
 // retain every previous signing key until tokens expire, so the key set grows
-// without bound. ModuleConfig OpenAPI now rejects such values; this hook emits
-// a metric for clusters that still have a long TTL (validation ratcheting does
-// not re-check existing ModuleConfigs).
+// without bound. This hook emits a metric for a cluster that has such a TTL
+// (the D8UserAuthnIDTokenTTLTooLong alert) and publishes the value for the
+// userAuthnIDTokenTTLBelow release requirement (requirements/check.go), which
+// keeps a release that refuses the value from being deployed. An existing
+// ModuleConfig is not grandfathered by its OpenAPI schema: addon-operator
+// validates the stored ModuleConfigs at startup and does not start on a
+// violation, so the schema must not reject the value in the release a cluster
+// upgrades into before the requirement has blocked that upgrade.
 
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 	Queue: "/modules/user-authn",
@@ -75,6 +86,9 @@ func filterUserAuthnIDTokenTTL(obj *unstructured.Unstructured) (go_hook.FilterRe
 func auditLongIDTokenTTL(_ context.Context, input *go_hook.HookInput) error {
 	input.MetricsCollector.Expire(longIDTokenTTLMetricGroup)
 
+	// No ModuleConfig, or one without the field: nothing for the requirement to refuse.
+	requirements.SaveValue(IDTokenTTLValueKey, "")
+
 	snaps := input.Snapshots.Get("module_config_id_token_ttl")
 	for snap, err := range sdkobjectpatch.SnapshotIter[userAuthnIDTokenTTL](snaps) {
 		if err != nil {
@@ -83,6 +97,7 @@ func auditLongIDTokenTTL(_ context.Context, input *go_hook.HookInput) error {
 		if !snap.Present {
 			continue
 		}
+		requirements.SaveValue(IDTokenTTLValueKey, snap.TTL)
 		if snap.TTL == "" {
 			input.Logger.Warn("user-authn idTokenTTL is set to an empty string; treating as unset")
 			continue

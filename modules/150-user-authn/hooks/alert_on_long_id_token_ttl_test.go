@@ -21,6 +21,7 @@ import (
 	. "github.com/onsi/gomega"
 	"k8s.io/utils/ptr"
 
+	"github.com/deckhouse/deckhouse/go_lib/dependency/requirements"
 	"github.com/deckhouse/deckhouse/pkg/metrics-storage/operation"
 	. "github.com/deckhouse/deckhouse/testing/hooks"
 )
@@ -41,6 +42,12 @@ var _ = Describe("User Authn hooks :: alert on long idTokenTTL ::", func() {
 			Action: operation.ActionGaugeSet,
 			Group:  longIDTokenTTLMetricGroup,
 		}
+	}
+
+	storedTTL := func() any {
+		value, exists := requirements.GetValue(IDTokenTTLValueKey)
+		Expect(exists).To(BeTrue(), "the hook always publishes the value for the release requirement")
+		return value
 	}
 
 	Context("ModuleConfig without idTokenTTL", func() {
@@ -105,6 +112,7 @@ spec:
 		It("emits the metric", func() {
 			Expect(f).To(ExecuteSuccessfully())
 			Expect(f.MetricsCollector.CollectedMetrics()).To(ConsistOf(expireOp, setOp("6h")))
+			Expect(storedTTL()).To(Equal("6h"))
 		})
 	})
 
@@ -127,11 +135,13 @@ spec:
 		It("emits the metric", func() {
 			Expect(f).To(ExecuteSuccessfully())
 			Expect(f.MetricsCollector.CollectedMetrics()).To(ConsistOf(expireOp, setOp("24h")))
+			Expect(storedTTL()).To(Equal("24h"))
 		})
 	})
 
 	Context("No ModuleConfig", func() {
 		BeforeEach(func() {
+			requirements.SaveValue(IDTokenTTLValueKey, "168h")
 			f.BindingContexts.Set(f.KubeStateSet(""))
 			f.RunHook()
 		})
@@ -139,6 +149,7 @@ spec:
 		It("Expires metric, sets nothing", func() {
 			Expect(f).To(ExecuteSuccessfully())
 			Expect(f.MetricsCollector.CollectedMetrics()).To(ConsistOf(expireOp))
+			Expect(storedTTL()).To(Equal(""), "a value left from an earlier run must not keep blocking the release")
 		})
 	})
 
@@ -220,6 +231,7 @@ spec:
 			Expect(f).To(ExecuteSuccessfully())
 			m := f.MetricsCollector.CollectedMetrics()
 			Expect(m[len(m)-1]).To(BeEquivalentTo(expireOp))
+			Expect(storedTTL()).To(Equal("1h"), "lowering the value lifts the release requirement")
 		})
 	})
 })
