@@ -192,7 +192,7 @@ properties:
 
       Задается в виде строки с указанием часов, минут и секунд: `30m`, `20s`, `2h30m10s`, `5h`.
 
-      Должно быть строго меньше 6 часов (ключи подписи Dex ротируются каждые 6 часов).
+      Должно быть строго меньше 6 часов (ключи подписи Dex ротируются каждые 6 часов). ModuleConfig предыдущей версии настроек (`spec.version` 1 или 2) со значением 6 часов и больше по-прежнему принимается: значение заменяется на `5h59m`.
 
       Задаёт минимально возможное время жизни пользовательской сессии ([параметр `keepUsersLoggedInFor`](cr.html#dexauthenticator-v1-spec-keepusersloggedinfor) ресурса DexAuthenticator
       и параметры вида `auth.sessionTTL`, например, [в модуле `console`](/modules/console/configuration.html#parameters-auth-sessionttl)).

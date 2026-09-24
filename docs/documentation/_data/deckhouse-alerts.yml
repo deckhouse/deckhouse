@@ -4280,12 +4280,12 @@ alerts:
         metadata:
           name: user-authn
         spec:
-          version: 2
+          version: 3
           settings:
             idTokenTTL: 1h
         ```
 
-        New ModuleConfig values with `idTokenTTL >= 6h` are rejected by OpenAPI validation; this alert covers clusters that still have a long TTL from before the restriction was added.
+        Settings version 3 rejects `idTokenTTL >= 6h`. A ModuleConfig of an earlier settings version with such a value is still accepted and its value is converted to `5h59m`, so Dex already runs with `5h59m`; this alert keeps firing until the ModuleConfig itself is updated.
       summary: |
         user-authn idTokenTTL is {{ $labels.id_token_ttl }}, which is too long.
       severity: "6"
