@@ -492,3 +492,67 @@ index 18cc3dd4..38463d71 100644
  	if redirectURI == deviceCallbackURI && client.Public {
  		redirectURI = s.issuerURL.Path + deviceCallbackURI
 
+diff --git a/server/deviceflowhandlers_test.go b/server/deviceflowhandlers_test.go
+index 3f3ea81..3f42061 100644
+--- a/server/deviceflowhandlers_test.go
++++ b/server/deviceflowhandlers_test.go
+@@ -192,10 +192,12 @@ func TestDeviceCallback(t *testing.T) {
+ 		testName               string
+ 		expectedResponseCode   int
+ 		expectedServerResponse string
+-		values                 formValues
+-		testAuthCode           storage.AuthCode
+-		testDeviceRequest      storage.DeviceRequest
+-		testDeviceToken        storage.DeviceToken
++		// forbiddenServerResponse must not appear in the response body.
++		forbiddenServerResponse string
++		values                  formValues
++		testAuthCode            storage.AuthCode
++		testDeviceRequest       storage.DeviceRequest
++		testDeviceToken         storage.DeviceToken
+ 	}{
+ 		{
+ 			testName: "Missing State",
+@@ -222,8 +224,9 @@ func TestDeviceCallback(t *testing.T) {
+ 				code:  "somecode",
+ 				error: "Error Condition",
+ 			},
+-			expectedResponseCode:   http.StatusBadRequest,
+-			expectedServerResponse: "Error Condition: \n",
++			expectedResponseCode:    http.StatusBadRequest,
++			expectedServerResponse:  "Authorization failed. Please try again.",
++			forbiddenServerResponse: "Error Condition",
+ 		},
+ 		{
+ 			testName: "Expired Auth Code",
+@@ -352,8 +355,9 @@ func TestDeviceCallback(t *testing.T) {
+ 				code:  "somecode",
+ 				error: "<script>console.log(window);</script>",
+ 			},
+-			expectedResponseCode:   http.StatusBadRequest,
+-			expectedServerResponse: "&lt;script&gt;console.log(window);&lt;/script&gt;: \n",
++			expectedResponseCode:    http.StatusBadRequest,
++			expectedServerResponse:  "Authorization failed. Please try again.",
++			forbiddenServerResponse: "console.log(window)",
+ 		},
+ 	}
+ 	for _, tc := range tests {
+@@ -407,11 +411,13 @@ func TestDeviceCallback(t *testing.T) {
+ 				t.Errorf("%s: Unexpected Response Type.  Expected %v got %v", tc.testName, tc.expectedResponseCode, rr.Code)
+ 			}
+ 
+-			if len(tc.expectedServerResponse) > 0 {
+-				result, _ := io.ReadAll(rr.Body)
+-				if string(result) != tc.expectedServerResponse {
+-					t.Errorf("%s: Unexpected Response.  Expected %q got %q", tc.testName, tc.expectedServerResponse, result)
+-				}
++			// The error page is rendered from a template, so only the part that matters is checked.
++			result, _ := io.ReadAll(rr.Body)
++			if len(tc.expectedServerResponse) > 0 && !strings.Contains(string(result), tc.expectedServerResponse) {
++				t.Errorf("%s: Unexpected Response.  Expected %q in %q", tc.testName, tc.expectedServerResponse, result)
++			}
++			if len(tc.forbiddenServerResponse) > 0 && strings.Contains(string(result), tc.forbiddenServerResponse) {
++				t.Errorf("%s: Response exposes %q: %q", tc.testName, tc.forbiddenServerResponse, result)
+ 			}
+ 		})
+ 	}
