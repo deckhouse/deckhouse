@@ -471,7 +471,8 @@ func TestMetaConfig_DeepCopy_CloudProviderVarsIsDeep(t *testing.T) {
 
 func TestApplyModuleConfigSettings_TakesFullModuleConfig(t *testing.T) {
 	settings := SettingsValues{"masterPool": map[string]interface{}{"replicas": 3}}
-	mc := &ModuleConfig{Spec: ModuleConfigSpec{Version: 2, Settings: settings}}
+	enabled := true
+	mc := &ModuleConfig{Spec: ModuleConfigSpec{Version: 2, Settings: settings, Enabled: &enabled}}
 	mc.SetName("cloud-provider-dvp")
 
 	m := &MetaConfig{
@@ -490,6 +491,21 @@ func TestApplyModuleConfigSettings_TakesFullModuleConfig(t *testing.T) {
 	masterPool, ok := specSettings["masterPool"].(map[string]interface{})
 	require.True(t, ok)
 	require.Equal(t, float64(3), masterPool["replicas"])
+}
+
+func TestApplyModuleConfigSettings_SkipsModuleConfigWithoutEnabled(t *testing.T) {
+	settings := SettingsValues{"storageClass": map[string]interface{}{"default": "network-ssd"}}
+	mc := &ModuleConfig{Spec: ModuleConfigSpec{Version: 1, Settings: settings}}
+	mc.SetName("cloud-provider-yandex")
+
+	m := &MetaConfig{
+		ProviderName:  "yandex",
+		ModuleConfigs: []*ModuleConfig{mc},
+	}
+
+	require.False(t, m.HasProviderModuleConfig())
+	require.NoError(t, m.applyCloudProviderModuleSettings())
+	require.Nil(t, m.CloudProviderVars)
 }
 
 // mcFlowResources mirrors a DVP bootstrap config: the CloudPermanent node
