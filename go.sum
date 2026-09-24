@@ -161,8 +161,8 @@ github.com/deckhouse/lib-dhctl v0.23.0 h1:moLYVsvBjdOxBhPIgz5rOuWiJ7IBB+ecYyE2Kj
 github.com/deckhouse/lib-dhctl v0.23.0/go.mod h1:hICPf+k3u8V73ndNRNVWUdye/mzo6adLZkXM6vfcmVc=
 github.com/deckhouse/lib-gossh v0.3.0 h1:FUAlF8+fLnBCII9hXSNx+arZ4PH3H/6fzp5LBlnmlps=
 github.com/deckhouse/lib-gossh v0.3.0/go.mod h1:6bT8jf2fkBPEhYBU35+vMBr5YscliTiS+Vr8v06C+70=
-github.com/deckhouse/module-sdk v0.12.6-0.20260924080337-9351a07e6485 h1:/QznZBzitSuxUanxykY6tH++BfLZ5btXb0zTBHzMoO8=
-github.com/deckhouse/module-sdk v0.12.6-0.20260924080337-9351a07e6485/go.mod h1:X+o+eFGsfApWJ3n6SqaAw/9Oifrhy2djeG4Inq8umaw=
+github.com/deckhouse/module-sdk v0.12.6-0.20260924100445-ee543e2fb828 h1:daw0ORKs8SFkGfReM3WNTozWyPAw33tGBPtF8dq31BM=
+github.com/deckhouse/module-sdk v0.12.6-0.20260924100445-ee543e2fb828/go.mod h1:X+o+eFGsfApWJ3n6SqaAw/9Oifrhy2djeG4Inq8umaw=
 github.com/dgryski/go-rendezvous v0.0.0-20200823014737-9f7001d12a5f h1:lO4WD4F/rVNCu3HqELle0jiPLLBs70cWOduZpkS1E78=
 github.com/dgryski/go-rendezvous v0.0.0-20200823014737-9f7001d12a5f/go.mod h1:cuUVRXasLTGF7a8hSLbxyZXjz+1KgoB3wDUb6vlszIc=
 github.com/disintegration/imaging v1.6.2 h1:w1LecBlG2Lnp8B3jk5zSuNqd7b4DXhcjwek1ei82L+c=
