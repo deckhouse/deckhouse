@@ -52,6 +52,9 @@ const (
 	LicenseNodeVCPU LicenseNodeBilling = "VCPU"
 	// LicenseNodeCores - paid for out of the cores metric.
 	LicenseNodeCores LicenseNodeBilling = "Cores"
+	// LicenseNodeCoresVCPU - paid for partly out of the cores metric, whatever
+	// was left of it, and the rest out of the vCPU metric.
+	LicenseNodeCoresVCPU LicenseNodeBilling = "CoresVCPU"
 	// LicenseNodeUnlicensed - not covered by the license at all.
 	LicenseNodeUnlicensed LicenseNodeBilling = "Unlicensed"
 )
@@ -211,7 +214,8 @@ type LicenseConsumption struct {
 }
 
 // LicenseAllocation is the node allocation by metric: every licensable node is
-// attributed to exactly one of servers, vCPU and cores, or to unlicensed.
+// attributed to exactly one of servers, vCPU and cores, to cores and vCPU
+// together (at most one node, counted in the used of both), or to unlicensed.
 type LicenseAllocation struct {
 	// +optional
 	Servers LicenseMetricAllocation `json:"servers,omitempty"`
@@ -259,7 +263,7 @@ type LicenseNodeStatus struct {
 	VCPU int64 `json:"vCPU"`
 
 	// Billing is the group the node was allocated to.
-	// One of Free, Server, VCPU, Cores, Unlicensed.
+	// One of Free, Server, VCPU, Cores, CoresVCPU, Unlicensed.
 	// +optional
 	Billing LicenseNodeBilling `json:"billing,omitempty"`
 

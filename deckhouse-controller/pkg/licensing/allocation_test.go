@@ -47,6 +47,7 @@ func TestAllocate(t *testing.T) {
 		servers    []string
 		vcpu       []string
 		cores      []string
+		coresVCPU  []string
 		unlicensed []string
 	}{
 		{
@@ -78,12 +79,62 @@ func TestAllocate(t *testing.T) {
 			unlicensed: []string{"d"},
 		},
 		{
-			name:       "S5 a node cores cannot pay for falls through to vCPU",
+			// 40 vCPU of cores pay for a and 8 of b, 24 vCPU of the vCPU pool the
+			// rest of b; c takes 32 of the remaining 36 and d does not fit into 4.
+			name:       "S5 the node that empties the cores pool takes the rest from vCPU",
 			limits:     key(0, 60, 20),
 			nodes:      []Node{nd("a", 32), nd("b", 32), nd("c", 32), nd("d", 8)},
-			vcpu:       []string{"b"},
-			cores:      []string{"a", "d"},
-			unlicensed: []string{"c"},
+			cores:      []string{"a"},
+			coresVCPU:  []string{"b"},
+			vcpu:       []string{"c"},
+			unlicensed: []string{"d"},
+		},
+		{
+			name:      "one core and 2 vCPU pay for a node of 4 together",
+			limits:    key(0, 2, 1),
+			nodes:     []Node{nd("a", 4)},
+			coresVCPU: []string{"a"},
+		},
+		{
+			name:      "the cores pool is drained before vCPU is touched",
+			limits:    key(0, 2, 3),
+			nodes:     []Node{nd("a", 4), nd("b", 4)},
+			cores:     []string{"a"},
+			coresVCPU: []string{"b"},
+		},
+		{
+			name:       "a node both pools together cannot pay for is unlicensed",
+			limits:     key(0, 1, 1),
+			nodes:      []Node{nd("a", 4)},
+			unlicensed: []string{"a"},
+		},
+		{
+			name:       "an unlicensed node takes nothing, a smaller one after it still fits",
+			limits:     key(0, 1, 1),
+			nodes:      []Node{nd("a", 4), nd("b", 3)},
+			coresVCPU:  []string{"b"},
+			unlicensed: []string{"a"},
+		},
+		{
+			name:   "unlimited cores pay for everything, vCPU is never touched",
+			limits: partial(map[string]*int64{MetricServers: i64(0), MetricVCPU: i64(4), MetricCores: nil}),
+			nodes:  []Node{nd("a", 1<<20), nd("b", 8)},
+			cores:  []string{"a", "b"},
+		},
+		{
+			name:      "unlimited vCPU pays for whatever the cores pool leaves",
+			limits:    partial(map[string]*int64{MetricServers: i64(0), MetricVCPU: nil, MetricCores: i64(3)}),
+			nodes:     []Node{nd("a", 4), nd("b", 4), nd("c", 4)},
+			cores:     []string{"a"},
+			coresVCPU: []string{"b"},
+			vcpu:      []string{"c"},
+		},
+		{
+			name:      "servers are never split",
+			limits:    key(1, 2, 1),
+			nodes:     []Node{nd("a", 8), nd("b", 4)},
+			servers:   []string{"a"},
+			coresVCPU: []string{"b"},
 		},
 		{
 			name:       "S16 every metric is attributed in turn",
@@ -176,7 +227,11 @@ func TestAllocate(t *testing.T) {
 			assertGroup(t, "Server", got.Servers.Nodes, tc.servers)
 			assertGroup(t, "VCPU", got.VCPU.Nodes, tc.vcpu)
 			assertGroup(t, "Cores", got.Cores.Nodes, tc.cores)
+			assertGroup(t, "CoresVCPU", got.CoresVCPU, tc.coresVCPU)
 			assertGroup(t, "Unlicensed", got.Unlicensed, tc.unlicensed)
+			if len(got.CoresVCPU) > 1 {
+				t.Fatalf("coresVCPU = %v, at most one node straddles", got.CoresVCPU)
+			}
 			if got.WithinLimits() != (len(tc.unlicensed) == 0) {
 				t.Fatalf("withinLimits = %v with %d unlicensed nodes", got.WithinLimits(), len(got.Unlicensed))
 			}
@@ -260,9 +315,60 @@ func TestAllocateCoresArePooled(t *testing.T) {
 		})
 	}
 
-	// One core short of the sum leaves the last node out: nodes are not split.
+	// One core short of the sum leaves the last node out: without vCPU there is
+	// nothing to pay the rest of it with.
 	got := Allocate(odd(3, 3), key(0, 0, 4), nil)
 	assertGroup(t, "Unlicensed", got.Unlicensed, []string{"n-02"})
+}
+
+// What the pools report as used when a node straddles them, and that a node
+// left unlicensed draws on neither.
+func TestAllocateUsedAcrossBothPools(t *testing.T) {
+	for _, tc := range []struct {
+		name        string
+		limits      Limits
+		nodes       []Node
+		cores, vcpu int64
+	}{
+		{"one core and 2 vCPU for a node of 4", key(0, 2, 1), []Node{nd("a", 4)}, 1, 2},
+		{"C=3, P=2 for two nodes of 4", key(0, 2, 3), []Node{nd("a", 4), nd("b", 4)}, 3, 2},
+		{"an odd draw on cores rounds up", key(0, 10, 3), []Node{nd("a", 5)}, 3, 0},
+		{"nothing is drawn for an unlicensed node", key(0, 1, 1), []Node{nd("a", 4)}, 0, 0},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			got := Allocate(tc.nodes, tc.limits, nil)
+			if got.Cores.Used != tc.cores || got.VCPU.Used != tc.vcpu {
+				t.Fatalf("used cores/vCPU = %d/%d, want %d/%d", got.Cores.Used, got.VCPU.Used, tc.cores, tc.vcpu)
+			}
+		})
+	}
+}
+
+// Every non-server node is covered exactly when they sum to no more than
+// 2*cores + vCPU: splitting one node across the pools wastes no capacity.
+func TestAllocateCoversUpToTheWholePool(t *testing.T) {
+	sizes := [][]int64{{4}, {4, 4}, {3, 3, 1}, {8, 5, 2}, {6, 6, 6, 1}}
+	for _, set := range sizes {
+		var nodes []Node
+		var sum int64
+		for i, v := range set {
+			nodes = append(nodes, nd(fmt.Sprintf("n-%d", i), v))
+			sum += v
+		}
+		for cores := int64(0); cores <= 10; cores++ {
+			for vcpu := int64(0); vcpu <= 20; vcpu++ {
+				got := Allocate(nodes, key(0, vcpu, cores), nil)
+				if want := sum <= 2*cores+vcpu; got.WithinLimits() != want {
+					t.Fatalf("nodes %v, cores %d, vCPU %d: withinLimits = %v, want %v (unlicensed %v)",
+						set, cores, vcpu, got.WithinLimits(), want, got.Unlicensed)
+				}
+				if got.Cores.Used > cores || got.VCPU.Used > vcpu || len(got.CoresVCPU) > 1 {
+					t.Fatalf("nodes %v, cores %d, vCPU %d: used %d/%d, coresVCPU %v",
+						set, cores, vcpu, got.Cores.Used, got.VCPU.Used, got.CoresVCPU)
+				}
+			}
+		}
+	}
 }
 
 // S14: three hundred nodes lay out without special casing.
@@ -291,12 +397,22 @@ func TestAllocateManyNodes(t *testing.T) {
 // The allocation is a pure function: the same input gives the same answer, and
 // the input order of the nodes does not leak into it.
 func TestAllocateIsStableUnderInputOrder(t *testing.T) {
-	limits := key(2, 16, 0)
-	forward := []Node{nd("a", 32), nd("b", 32), nd("c", 16), nd("d", 8)}
-	backward := []Node{nd("d", 8), nd("c", 16), nd("b", 32), nd("a", 32)}
+	forward := []Node{nd("a", 32), nd("b", 32), nd("c", 16), nd("d", 8), nd("e", 8)}
+	backward := []Node{nd("e", 8), nd("d", 8), nd("c", 16), nd("b", 32), nd("a", 32)}
 
-	if !reflect.DeepEqual(Allocate(forward, limits, nil), Allocate(backward, limits, nil)) {
-		t.Fatalf("allocation depends on the order the nodes arrived in")
+	// The second set of limits makes one of the two equal 8 vCPU nodes straddle
+	// the pools: the name decides which, whatever the input order.
+	for _, limits := range []Limits{key(2, 16, 0), key(2, 6, 9)} {
+		got := Allocate(forward, limits, nil)
+		if !reflect.DeepEqual(got, Allocate(backward, limits, nil)) {
+			t.Fatalf("allocation depends on the order the nodes arrived in")
+		}
+		if limits.Values[MetricCores] != nil && *limits.Values[MetricCores] == 9 {
+			assertGroup(t, "Cores", got.Cores.Nodes, []string{"c"})
+			assertGroup(t, "CoresVCPU", got.CoresVCPU, []string{"d"})
+			assertGroup(t, "VCPU", got.VCPU.Nodes, nil)
+			assertGroup(t, "Unlicensed", got.Unlicensed, []string{"e"})
+		}
 	}
 }
 

@@ -27,14 +27,16 @@ const (
 	MetricCores   = "cores"
 )
 
-// Billing groups a node can land in: one per metric of the key, plus the two
-// groups no metric pays for. Every licensable node is attributed to exactly one
-// of them, so the Console can name the licence that covers a given node.
+// Billing groups a node can land in: one per metric of the key, the node paid
+// for by cores and vCPU together, plus the two groups no metric pays for. Every
+// licensable node is attributed to exactly one of them, so the Console can name
+// the licence that covers a given node.
 const (
 	BillingFree       = "Free"
 	BillingServer     = "Server"
 	BillingVCPU       = "VCPU"
 	BillingCores      = "Cores"
+	BillingCoresVCPU  = "CoresVCPU"
 	BillingUnlicensed = "Unlicensed"
 )
 
@@ -81,8 +83,9 @@ type MetricAllocation struct {
 	Nodes []string
 	// Limit is the granted quota; nil means the metric is unlimited.
 	Limit *int64
-	// Used is what those nodes cost the metric: one per node for servers, the
-	// node vCPU for vCPU, ceil(their vCPU sum / 2) for cores.
+	// Used is what the nodes cost the metric: one per node for servers, the vCPU
+	// drawn from the pool for vCPU, ceil(the vCPU drawn from the pool / 2) for
+	// cores. The node billed CoresVCPU counts towards both.
 	Used int64
 }
 
@@ -103,6 +106,11 @@ type Allocation struct {
 	VCPU    MetricAllocation
 	Cores   MetricAllocation
 
+	// CoresVCPU names the node that took what was left of the cores pool and
+	// the rest of its vCPU from the vCPU pool. There is at most one: the walk
+	// drains the cores pool first, so only the node that empties it straddles.
+	CoresVCPU []string
+
 	// Unlicensed are the node names that fit into no metric, in allocation order.
 	Unlicensed []string
 	// UnlicensedVCPU is the vCPU of those nodes.
@@ -116,20 +124,21 @@ func (a Allocation) WithinLimits() bool { return len(a.Unlicensed) == 0 }
 // (specification 7.3). It is a pure function of the node set, the effective
 // limits and the previous allocation.
 //
-// The capacity is still the single pool vCPU + 2*cores; what the walk adds is
-// attribution: every covered node names the metric that pays for it, because
-// the Console has to say which licence covers which node. The order is fixed:
-// servers go to the largest nodes, then cores, and vCPU comes last because it is
-// the finest-grained metric and fills whatever is left. A node is never split
-// between two metrics, so a node that does not fit into cores takes vCPU.
+// The capacity is the single pool vCPU + 2*cores; what the walk adds is
+// attribution: every covered node names what pays for it, because the Console
+// has to say which licence covers which node. Servers go to the largest nodes
+// and are never split. The remaining nodes, in the same order, draw their vCPU
+// from the cores pool first (2*cores vCPU, no per-node rounding) and, once it
+// runs out, the rest from the vCPU pool. A node paid wholly out of one pool is
+// billed Cores or VCPU; the node that empties the cores pool straddles both and
+// is billed CoresVCPU. A node that what is left of both pools cannot pay for is
+// Unlicensed and takes nothing, so a smaller node after it may still fit. Every
+// node is therefore covered exactly when the non-server nodes sum to no more
+// than 2*cores + vCPU.
 //
-// Cores are a pool of 2*cores vCPU: a node takes cores while its vCPU fits into
-// what is left of the pool, with no per-node rounding. That keeps the cores
-// metric, ceil(vCPU/2) on the sum, exactly enough on its own: 24 nodes of 3 vCPU
-// need 36 cores, not 48.
-//
-// Cores before vCPU also keeps a node where it is when a reissue raises the vCPU
-// quota: a node covered by cores stays on cores.
+// No per-node rounding keeps the cores metric, ceil(vCPU/2) on the sum, exactly
+// enough on its own: 24 nodes of 3 vCPU need 36 cores, not 48. Cores before vCPU
+// also keeps a node where it is when a reissue raises the vCPU quota.
 //
 // wasServer is the previous allocation, read off status.nodes[]; it only breaks
 // ties between equally sized nodes.
@@ -144,24 +153,65 @@ func Allocate(nodes []Node, limits Limits, wasServer map[string]bool) Allocation
 		Cores:   MetricAllocation{Limit: grantedLimit(limits, MetricCores)},
 	}
 
-	var coresVCPU int64 // vCPU taken from the cores pool so far
+	cores := poolOf(out.Cores.Limit, 2)
+	vcpu := poolOf(out.VCPU.Limit, 1)
+	var coresVCPU int64 // vCPU drawn from the cores pool so far
 	for _, node := range ordered {
-		switch {
-		case out.Servers.fits(1):
+		if out.Servers.fits(1) {
 			out.Servers.take(node.Name, 1)
-		case out.Cores.Limit == nil || coresVCPU+node.VCPU <= 2*(*out.Cores.Limit):
-			coresVCPU += node.VCPU
-			out.Cores.Nodes = append(out.Cores.Nodes, node.Name)
-			out.Cores.Used = (coresVCPU + 1) / 2
-		case out.VCPU.fits(node.VCPU):
-			out.VCPU.take(node.Name, node.VCPU)
-		default:
+			continue
+		}
+		fromCores := cores.upTo(node.VCPU)
+		fromVCPU := vcpu.upTo(node.VCPU - fromCores)
+		if fromCores+fromVCPU < node.VCPU {
 			out.Unlicensed = append(out.Unlicensed, node.Name)
 			out.UnlicensedVCPU += node.VCPU
+			continue
+		}
+		cores.draw(fromCores)
+		vcpu.draw(fromVCPU)
+		coresVCPU += fromCores
+		out.Cores.Used = (coresVCPU + 1) / 2
+		out.VCPU.Used += fromVCPU
+		switch {
+		case fromVCPU == 0:
+			out.Cores.Nodes = append(out.Cores.Nodes, node.Name)
+		case fromCores == 0:
+			out.VCPU.Nodes = append(out.VCPU.Nodes, node.Name)
+		default:
+			out.CoresVCPU = append(out.CoresVCPU, node.Name)
 		}
 	}
 
 	return out
+}
+
+// pool is what is left of a quota, in vCPU. An unlimited pool never runs out.
+type pool struct {
+	left      int64
+	unlimited bool
+}
+
+// poolOf turns a published quota into vCPU: perUnit vCPU per unit of the metric.
+func poolOf(limit *int64, perUnit int64) pool {
+	if limit == nil {
+		return pool{unlimited: true}
+	}
+	return pool{left: *limit * perUnit}
+}
+
+// upTo is how much of want the pool can pay.
+func (p pool) upTo(want int64) int64 {
+	if p.unlimited || p.left >= want {
+		return want
+	}
+	return max(p.left, 0)
+}
+
+func (p *pool) draw(v int64) {
+	if !p.unlimited {
+		p.left -= v
+	}
 }
 
 // grantedLimit resolves one metric into a published quota: nil for unlimited.

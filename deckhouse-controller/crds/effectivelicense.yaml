@@ -61,19 +61,21 @@ spec:
                 description: |
                   Totals of the node allocation, the numbers shown next to each group in the Console.
 
-                  Capacity is still one pool, `vCPU + 2 * cores`; what the allocation adds is
-                  attribution. Every licensable node is attributed to exactly one metric, so the
-                  Console can name the licence that covers a given node. The order is fixed:
-                  `servers` go to the largest nodes, then `cores`, and `vCPU` comes last as the
-                  finest-grained metric. A node is never split between two metrics: a node that
-                  does not fit into `cores` takes `vCPU`.
+                  Capacity is one pool, `vCPU + 2 * cores`; what the allocation adds is attribution.
+                  Every licensable node is attributed to exactly one billing group, so the Console can
+                  name the licence that covers a given node. `servers` go to the largest nodes and are
+                  never split. The remaining nodes, in the same order, draw their vCPU from `cores`
+                  first and, once it runs out, the rest from `vCPU`. The one node that empties `cores`
+                  is paid for by both (`CoresVCPU`); a node that what is left of both cannot pay for
+                  is unlicensed and takes nothing. Every node is covered exactly when the nodes
+                  without a server licence sum to no more than `2 * cores + vCPU`.
                 properties:
                   cores:
                     description: |
                       The `cores` metric, which pays for the nodes that got no server licence.
                       Under the temporary "2 vCPU = 1 core" rule it is a pool of `2 * cores` vCPU: a
-                      node takes it while its vCPU fits into what is left, with no per-node rounding.
-                      `used` is `ceil(vCPU / 2)` of the nodes it covers.
+                      node draws on it while anything is left, with no per-node rounding. `used` is
+                      `ceil(vCPU / 2)` of the vCPU drawn from it, the `CoresVCPU` node included.
                     properties:
                       limit:
                         description: |
@@ -92,7 +94,7 @@ spec:
                   servers:
                     description: |
                       Whole-node licences. They are applied to the largest nodes first; everything
-                      that does not fit falls through to `cores` and then to `vCPU`, so this metric
+                      that does not fit draws on `cores` and then on `vCPU`, so this metric
                       cannot be exceeded on its own.
                     properties:
                       limit:
@@ -126,8 +128,9 @@ spec:
                     type: object
                   vCPU:
                     description: |
-                      The `vCPU` metric, which pays for the nodes left over by `servers`. A node
-                      costs it its whole vCPU.
+                      The `vCPU` metric, which pays for what the nodes left over by `servers` could
+                      not draw from `cores`: the whole vCPU of a node billed `VCPU`, the rest of the
+                      `CoresVCPU` node.
                     properties:
                       limit:
                         description: |
@@ -139,7 +142,7 @@ spec:
                           Whether the key grants the metric without a limit. `limit` is then absent.
                         type: boolean
                       used:
-                        description: vCPU consumed by the nodes attributed to this metric.
+                        description: vCPU drawn from this metric, the `CoresVCPU` node included.
                         format: int64
                         type: integer
                     type: object
@@ -286,12 +289,15 @@ spec:
                         * `Server` — covered by a whole-node licence.
                         * `VCPU` — paid for out of the `vCPU` metric.
                         * `Cores` — paid for out of the `cores` metric.
+                        * `CoresVCPU` — paid for by what was left of the `cores` metric and the rest
+                          out of the `vCPU` metric. At most one node is billed this way.
                         * `Unlicensed` — not covered at all.
                       enum:
                       - Free
                       - Server
                       - VCPU
                       - Cores
+                      - CoresVCPU
                       - Unlicensed
                       type: string
                     name:

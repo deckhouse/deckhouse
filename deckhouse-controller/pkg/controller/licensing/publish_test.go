@@ -119,6 +119,7 @@ func TestPublishMetricsExportsTheOverLimitClock(t *testing.T) {
 	res.OverLimitSince = &since
 	res.Allocation.VCPU.Nodes = []string{"mid"}
 	res.Allocation.Cores.Nodes = []string{"other", "another"}
+	res.Allocation.CoresVCPU = []string{"split"}
 	res.Allocation.Unlicensed = []string{"small"}
 	res.Allocation.UnlicensedVCPU = 8
 
@@ -141,6 +142,7 @@ func TestPublishMetricsExportsTheOverLimitClock(t *testing.T) {
 		licensing.BillingServer:     1,
 		licensing.BillingVCPU:       1,
 		licensing.BillingCores:      2,
+		licensing.BillingCoresVCPU:  1,
 		licensing.BillingUnlicensed: 1,
 	}
 	if !reflect.DeepEqual(nodes, want) {

@@ -312,6 +312,7 @@ func nodeStatuses(res licensing.Result, observed []nodeObservation) []v1alpha1.L
 		{res.Allocation.Servers.Nodes, v1alpha1.LicenseNodeServer},
 		{res.Allocation.VCPU.Nodes, v1alpha1.LicenseNodeVCPU},
 		{res.Allocation.Cores.Nodes, v1alpha1.LicenseNodeCores},
+		{res.Allocation.CoresVCPU, v1alpha1.LicenseNodeCoresVCPU},
 		{res.Allocation.Unlicensed, v1alpha1.LicenseNodeUnlicensed},
 	}
 	for _, group := range groups {

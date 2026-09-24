@@ -332,6 +332,36 @@ func TestAllocationIsStableAcrossReconciles(t *testing.T) {
 	}
 }
 
+// A node may be paid for by cores and vCPU together: 3 cores pay for one node of
+// 4 vCPU and 2 of the next, 2 vCPU for the rest of it.
+func TestNodePaidByCoresAndVCPUTogether(t *testing.T) {
+	token, vendorKey := issueTestPackage(t, fullLimits(0, 2, 3))
+	license := &v1alpha1.ClusterLicense{
+		ObjectMeta: metav1.ObjectMeta{Name: "primary"},
+		Spec:       v1alpha1.ClusterLicenseSpec{LicenseKey: token},
+	}
+	first := node("worker-a", "4", true)
+	second := node("worker-b", "4", true)
+
+	env := newTestEnv(t, vendorKey, license, &first, &second, discoverySecret())
+	if _, err := env.r.Reconcile(context.Background(), ctrl.Request{}); err != nil {
+		t.Fatalf("reconcile: %v", err)
+	}
+	status := effectiveStatusOf(t, env)
+
+	if !status.Licensed || status.Compliance.State != v1alpha1.LicenseComplianceValid {
+		t.Fatalf("licensed/state = %v/%q", status.Licensed, status.Compliance.State)
+	}
+	if status.Allocation.Cores.Used != 3 || status.Allocation.VCPU.Used != 2 ||
+		status.Allocation.Unlicensed.Nodes != 0 {
+		t.Fatalf("allocation = %+v", status.Allocation)
+	}
+	assertNodes(t, status.Nodes, map[string]v1alpha1.LicenseNodeBilling{
+		"worker-a": v1alpha1.LicenseNodeCores,
+		"worker-b": v1alpha1.LicenseNodeCoresVCPU,
+	})
+}
+
 // A7: unlicensed nodes warn and stamp the moment they appeared.
 func TestUnlicensedNodesWarnAndStampTheStatus(t *testing.T) {
 	token, vendorKey := issueTestPackage(t, fullLimits(1, 0, 0))

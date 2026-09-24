@@ -8,12 +8,14 @@
 #                                         customers who bought the most.
 #   * d8_license_nodes{billing}         - the node allocation, one series per
 #                                         billing group: Server, VCPU, Cores,
+#                                         CoresVCPU (the one node paid for by
+#                                         cores and vCPU together),
 #                                         Unlicensed. The unlicensed group is
 #                                         the only way the license can be
 #                                         exceeded: nodes that do not fit the
-#                                         server licences fall through to vCPU
-#                                         and then to cores, so no single
-#                                         metric is ever "over" on its own.
+#                                         server licences draw on cores and
+#                                         then on vCPU, so no single metric is
+#                                         ever "over" on its own.
 #   * d8_license_over_limit_seconds     - how long unlicensed nodes have been
 #                                         there, 0 while every node is covered.
 #   * d8_license_key_expires_in_seconds - absent for a key that never expires.
