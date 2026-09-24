@@ -130,29 +130,29 @@ func GenerateNodeUser(params NodeUserParams) (*NodeUser, *NodeUserCredentials, e
 	}
 
 	return &NodeUser{
-			TypeMeta: metav1.TypeMeta{
-				APIVersion: "deckhouse.io/v1",
-				Kind:       "NodeUser",
+		TypeMeta: metav1.TypeMeta{
+			APIVersion: "deckhouse.io/v1",
+			Kind:       "NodeUser",
+		},
+		ObjectMeta: metav1.ObjectMeta{
+			Name: params.Name,
+		},
+		Spec: NodeUserSpec{
+			UID: params.UUID,
+			SSHPublicKeys: []string{
+				string(ssh.MarshalAuthorizedKey(publicKey)),
 			},
-			ObjectMeta: metav1.ObjectMeta{
-				Name: params.Name,
-			},
-			Spec: NodeUserSpec{
-				UID: params.UUID,
-				SSHPublicKeys: []string{
-					string(ssh.MarshalAuthorizedKey(publicKey)),
-				},
-				PasswordHash: passwordHash,
-				IsSudoer:     true,
-				NodeGroups:   nodeGroups,
-			},
-		}, &NodeUserCredentials{
-			Name:       params.Name,
-			PrivateKey: string(pem.EncodeToMemory(privateKeyPem)),
-			Password:   string(password),
-			PublicKey:  string(ssh.MarshalAuthorizedKey(publicKey)),
-			NodeGroups: params.NodeGroups,
-		}, nil
+			PasswordHash: passwordHash,
+			IsSudoer:     true,
+			NodeGroups:   nodeGroups,
+		},
+	}, &NodeUserCredentials{
+		Name:       params.Name,
+		PrivateKey: string(pem.EncodeToMemory(privateKeyPem)),
+		Password:   string(password),
+		PublicKey:  string(ssh.MarshalAuthorizedKey(publicKey)),
+		NodeGroups: params.NodeGroups,
+	}, nil
 }
 
 func generatePasswordHash(password []byte) (string, error) {
