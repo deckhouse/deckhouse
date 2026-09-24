@@ -38,7 +38,7 @@
        namespace: default
    roleRef:
      kind: ClusterRole
-     name: d8:use:role:manager
+     name: d8:namespace:manager
      apiGroup: rbac.authorization.k8s.io
    EOF
    ```
