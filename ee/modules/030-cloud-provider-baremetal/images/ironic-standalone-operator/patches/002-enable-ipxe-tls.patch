@@ -6,7 +6,8 @@ Subject: [PATCH] Enable TLS iPXE firmware provisioning
 Mount the Ironic TLS Secret at /certs/ipxe, expose the iPXE TLS port, and
 make dnsmasq chain iPXE to HTTPS instead of the default HTTP image-server URL.
 Project ca.crt into a separate volume for custom firmware download init
-containers. Preserve custom init-container args while merging pod overrides.
+containers, and mount the shared firmware volume in dnsmasq. Preserve custom
+init-container args while merging pod overrides.
 
 ---
 diff --git a/pkg/ironic/containers.go b/pkg/ironic/containers.go
@@ -81,6 +82,46 @@ index 45490702a0..d50ef01950 100644
  	}
  
  	return ironicPorts, httpdPorts
+@@ -689,7 +716,7 @@ func newURLProbeHandler(https bool, port int, path string, requiresOk bool) core
+ 	}
+ }
+ 
+-func newDnsmasqContainer(versionInfo VersionInfo, ironic *metal3api.Ironic) corev1.Container {
++func newDnsmasqContainer(versionInfo VersionInfo, ironic *metal3api.Ironic, sharedVolumeMount corev1.VolumeMount) corev1.Container {
+ 	dhcp := ironic.Spec.Networking.DHCP
+ 
+ 	envVars := buildCommonEnvVars(ironic)
+@@ -724,6 +751,9 @@ func newDnsmasqContainer(versionInfo VersionInfo, ironic *metal3api.Ironic) core
+ 		Image:   versionInfo.IronicImage,
+ 		Command: []string{"/bin/rundnsmasq"},
+ 		Env:     envVars,
++		VolumeMounts: []corev1.VolumeMount{
++			sharedVolumeMount,
++		},
+ 		SecurityContext: &corev1.SecurityContext{
+ 			RunAsUser:                ptr.To(ironicUser),
+ 			RunAsGroup:               ptr.To(ironicGroup),
+@@ -1012,7 +1042,7 @@ func newIronicPodTemplate(cctx ControllerContext, resources Resources) (corev1.P
+ 		if err != nil {
+ 			return corev1.PodTemplateSpec{}, err
+ 		}
+-		dnsmasqContainer := newDnsmasqContainer(cctx.VersionInfo, resources.Ironic)
++		dnsmasqContainer := newDnsmasqContainer(cctx.VersionInfo, resources.Ironic, sharedVolumeMount)
+ 		containers = append(containers, dnsmasqContainer)
+ 	}
+ 
+diff --git a/pkg/ironic/containers_test.go b/pkg/ironic/containers_test.go
+index 15b0f4c..a935276 100644
+--- a/pkg/ironic/containers_test.go
++++ b/pkg/ironic/containers_test.go
+@@ -1071,6 +1071,7 @@ func TestDnsmasqProbeConfiguration(t *testing.T) {
+ 				}
+ 			}
+ 			require.NotNil(t, dnsmasq, "dnsmasq container should exist")
++			assert.Contains(t, dnsmasq.VolumeMounts, corev1.VolumeMount{Name: "ironic-shared", MountPath: sharedDir})
+ 			require.NotNil(t, dnsmasq.LivenessProbe, "liveness probe should not be nil")
+ 			require.NotNil(t, dnsmasq.LivenessProbe.Exec, "liveness probe should be exec-based")
+ 			require.NotNil(t, dnsmasq.ReadinessProbe, "readiness probe should not be nil")
 diff --git a/pkg/ironic/utils.go b/pkg/ironic/utils.go
 index 728bb6536e..5d98b5560b 100644
 --- a/pkg/ironic/utils.go
