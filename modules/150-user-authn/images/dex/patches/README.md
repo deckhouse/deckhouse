@@ -266,6 +266,12 @@ say so; backports to 1.77 and 1.76 are appropriate but stricter.
 - CVE-2026-42506
 - CVE-2026-46600
 - CVE-2026-56852
+- CVE-2026-56854
+- CVE-2026-56864
+- CVE-2026-56865
+- CVE-2026-84303
+- CVE-2026-84304
+- CVE-2026-84445
 
 #### GHSA
 
