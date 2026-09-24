@@ -59,7 +59,7 @@ For details on granting permissions, see [Granting permissions to users and serv
 
 Assign the necessary permissions to the ServiceAccount.
 
-For the current role model, use [ClusterAuthorizationRule](/modules/user-authz/cr.html#clusterauthorizationrule):
+For the basic role model, use [ClusterAuthorizationRule](/modules/user-authz/cr.html#clusterauthorizationrule):
 
 ```shell
 cat <<EOF | d8 k apply -f -
@@ -79,7 +79,7 @@ EOF
 
 Available levels: `User`, `PrivilegedUser`, `Editor`, `Admin`, `ClusterEditor`, `ClusterAdmin`, `SuperAdmin`.
 
-For the experimental role model, use [ClusterRoleBinding](https://kubernetes.io/docs/reference/kubernetes-api/authorization-resources/cluster-role-binding-v1/):
+For the granular role model, use [ClusterRoleBinding](https://kubernetes.io/docs/reference/kubernetes-api/authorization-resources/cluster-role-binding-v1/):
 
 ```shell
 cat <<EOF | d8 k apply -f -
@@ -93,7 +93,7 @@ subjects:
   namespace: ci-deploy
 roleRef:
   kind: ClusterRole
-  name: d8:manage:all:manager
+  name: d8:system:manager
   apiGroup: rbac.authorization.k8s.io
 EOF
 ```
@@ -309,7 +309,7 @@ EOF
 The annotation `dexclient.deckhouse.io/allow-access-to-kubernetes` allows the client to request tokens with `aud=kubernetes`.
 
 {% alert level="warning" %}
-This grants cluster-wide access to the Kubernetes API. For this reason, adding the annotation or changing it to `"true"` requires access to modify the `user-authn` module configuration — such as the `d8:manage:permission:module:user-authn:edit` role. A namespace-level role that permits creating a DexClient is not enough: the admission-controller rejects the request with a message naming the annotation.
+This grants cluster-wide access to the Kubernetes API. For this reason, adding the annotation or changing it to `"true"` requires access to modify the `user-authn` module configuration — such as the `d8:system-capability:user-authn:edit` role. A namespace-level role that permits creating a DexClient is not enough: the admission-controller rejects the request with a message naming the annotation.
 
 The addition of the annotation is restricted regardless of the specified value, including `"false"`. This is required to ensure compatibility with previous DP versions where access has been granted when the annotation was present, regardless of its value.
 
@@ -341,7 +341,7 @@ The set of claims required by kube-apiserver for authentication depends on confi
 
 For details on granting permissions, see [Granting permissions to users and service accounts](granting.html).
 
-For the current role model, use [ClusterAuthorizationRule](/modules/user-authz/cr.html#clusterauthorizationrule):
+For the basic role model, use [ClusterAuthorizationRule](/modules/user-authz/cr.html#clusterauthorizationrule):
 
 ```shell
 cat <<EOF | d8 k apply -f -
@@ -357,7 +357,7 @@ spec:
 EOF
 ```
 
-For the experimental role model, use [ClusterRoleBinding](https://kubernetes.io/docs/reference/kubernetes-api/authorization-resources/cluster-role-binding-v1/):
+For the granular role model, use [ClusterRoleBinding](https://kubernetes.io/docs/reference/kubernetes-api/authorization-resources/cluster-role-binding-v1/):
 
 ```shell
 cat <<EOF | d8 k apply -f -
@@ -371,7 +371,7 @@ subjects:
   apiGroup: rbac.authorization.k8s.io
 roleRef:
   kind: ClusterRole
-  name: d8:manage:all:manager
+  name: d8:system:manager
   apiGroup: rbac.authorization.k8s.io
 EOF
 ```

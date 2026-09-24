@@ -4,7 +4,10 @@ permalink: en/admin/configuration/access/authorization/granting.html
 description: "Grant RBAC permissions to users and service accounts in Deckhouse Platform. Role and ClusterRole binding configuration for secure access control."
 ---
 
-To grant permissions in Deckhouse Platform (DP), you need to define a [`subjects`](/modules/user-authz/cr.html#authorizationrule-v1alpha1-spec-subjects) block in custom resources.
+To grant permissions in Deckhouse Platform (DP), you need to define a `subjects` block. Its format depends on the resource type:
+
+- In [AuthorizationRule and ClusterAuthorizationRule](#granting-permissions-using-authorizationrule-and-clusterauthorizationrule-basic-role-model) resources (basic role model), as well as [ProjectRoleBinding and ClusterProjectRoleBinding](#granting-permissions-using-clusterrolebinding-and-rolebinding-granular-role-model) of the `multitenancy-manager` module (granular role model, project scope) — use the [`subjects`](/modules/user-authz/cr.html#authorizationrule-v1alpha1-spec-subjects) block shown below.
+- In standard Kubernetes [RoleBinding and ClusterRoleBinding](https://kubernetes.io/docs/reference/kubernetes-api/authorization-resources/role-binding-v1/) resources (granular role model, namespace/subsystem/whole-platform scope), the format differs: `kind: User` and `kind: Group` additionally require the `apiGroup: rbac.authorization.k8s.io` field (not needed for `kind: ServiceAccount`). For details, see the examples in [Granting permissions using ClusterRoleBinding and RoleBinding](#granting-permissions-using-clusterrolebinding-and-rolebinding-granular-role-model) below.
 
 For users, it should be specified in the following format:
 
@@ -36,10 +39,14 @@ subjects:
   namespace: <namespace where the service account is created>
 ```
 
-## Granting permissions using AuthorizationRule and ClusterAuthorizationRule (current role model)
+## Granting permissions using AuthorizationRule and ClusterAuthorizationRule (basic role model)
 
-When using the current role model in DP,
+When using the basic role model in DP,
 you can grant permissions to users via the [AuthorizationRule](/modules/user-authz/cr.html#authorizationrule) and [ClusterAuthorizationRule](/modules/user-authz/cr.html#clusterauthorizationrule) resources.
+
+{% alert level="warning" %}
+Support for the basic role model will be discontinued in future releases. For new roles, use the [granular role model](#granting-permissions-using-clusterrolebinding-and-rolebinding-granular-role-model) below — it can be used at the same time as the basic model, since the permissions they grant are summed up.
+{% endalert %}
 
 ### Granting permissions to a user within a single namespace
 
@@ -93,14 +100,16 @@ spec:
   portForwarding: true
 ```
 
-## Granting permissions using ClusterRoleBinding and RoleBinding (experimental role model)
+## Granting permissions using ClusterRoleBinding and RoleBinding (granular role model)
 
-When using the experimental role model in DP,
-you can grant permissions to users via the [ClusterRoleBinding](https://kubernetes.io/docs/reference/kubernetes-api/authorization-resources/cluster-role-binding-v1/) and [RoleBinding](https://kubernetes.io/docs/reference/kubernetes-api/authorization-resources/role-binding-v1/) resources.
+When using the granular role model in DP,
+you can grant permissions to users via the [ClusterRoleBinding](https://kubernetes.io/docs/reference/kubernetes-api/authorization-resources/cluster-role-binding-v1/) and [RoleBinding](https://kubernetes.io/docs/reference/kubernetes-api/authorization-resources/role-binding-v1/) resources — or, to grant access across all namespaces of a project at once, the [ProjectRoleBinding](/modules/multitenancy-manager/cr.html#projectrolebinding) and [ClusterProjectRoleBinding](/modules/multitenancy-manager/cr.html#clusterprojectrolebinding) resources of the `multitenancy-manager` module.
 
-### Assigning cluster administrator permissions (experimental role model)
+Roles of the granular model operate in one of four scopes — namespace, project, subsystem, or the whole platform — each with its own role name format and access levels. For details, see [Role scopes](rbac-experimental.html#role-scopes) in the granular role model documentation.
 
-To assign cluster administrator permissions, use the [manage role](rbac-experimental.html#manage-roles) `d8:manage:all:manager` in a [ClusterRoleBinding](https://kubernetes.io/docs/reference/kubernetes-api/authorization-resources/cluster-role-binding-v1/) resource.
+### Assigning cluster administrator permissions (granular role model)
+
+To assign cluster administrator permissions, use the [system role](rbac-experimental.html#system-and-subsystem-roles) `d8:system:manager` in a [ClusterRoleBinding](https://kubernetes.io/docs/reference/kubernetes-api/authorization-resources/cluster-role-binding-v1/) resource.
 
 Example of assigning cluster administrator permissions to the user `jane`:
 
@@ -115,7 +124,7 @@ subjects:
   apiGroup: rbac.authorization.k8s.io
 roleRef:
   kind: ClusterRole
-  name: d8:manage:all:manager
+  name: d8:system:manager
   apiGroup: rbac.authorization.k8s.io
 ```
 
@@ -134,10 +143,10 @@ The user will have the following permissions:
 
 {% endofftopic %}
 
-### Assigning networking administrator permissions (experimental role model)
+### Assigning networking administrator permissions (granular role model)
 
 To assign networking administrator permissions for managing the cluster’s networking subsystem,
-use the [manage role](rbac-experimental.html#manage-roles) `d8:manage:networking:manager` in a [ClusterRoleBinding](https://kubernetes.io/docs/reference/kubernetes-api/authorization-resources/cluster-role-binding-v1/) resource.
+use the [subsystem role](rbac-experimental.html#system-and-subsystem-roles) `d8:subsystem:networking:manager` in a [ClusterRoleBinding](https://kubernetes.io/docs/reference/kubernetes-api/authorization-resources/cluster-role-binding-v1/) resource.
 
 Example of assigning networking administrator permissions to the user `jane`:
 
@@ -152,7 +161,7 @@ subjects:
   apiGroup: rbac.authorization.k8s.io
 roleRef:
   kind: ClusterRole
-  name: d8:manage:networking:manager
+  name: d8:subsystem:networking:manager
   apiGroup: rbac.authorization.k8s.io
 ```
 
@@ -252,12 +261,12 @@ The user will have the following permissions:
 
 {% endofftopic %}
 
-### Granting administrator permissions to a user within a namespace (experimental role model)
+### Granting administrator permissions to a user within a namespace (granular role model)
 
 To assign or restrict user permissions to specific namespaces,
-apply a [use role](rbac-experimental.html#use-roles) with the corresponding access level in a [RoleBinding](https://kubernetes.io/docs/reference/kubernetes-api/authorization-resources/role-binding-v1/) resource.
+apply a [namespace role](rbac-experimental.html#namespace-roles) with the corresponding access level in a [RoleBinding](https://kubernetes.io/docs/reference/kubernetes-api/authorization-resources/role-binding-v1/) resource.
 
-For example, to allow a user to manage application resources in a namespace (without giving them access to DP module configurations), use the `d8:use:role:admin` role in a [RoleBinding](https://kubernetes.io/docs/reference/kubernetes-api/authorization-resources/role-binding-v1/) resource for the corresponding namespace.
+For example, to allow a user to manage application resources in a namespace (without giving them access to DP module configurations), use the `d8:namespace:admin` role in a [RoleBinding](https://kubernetes.io/docs/reference/kubernetes-api/authorization-resources/role-binding-v1/) resource for the corresponding namespace. To grant the same access across all namespaces of a project at once, use a [ProjectRoleBinding](/modules/multitenancy-manager/cr.html#projectrolebinding) with the equivalent `d8:project:admin` role instead.
 
 Example of granting application developer `app-developer` permissions within the `myapp` namespace:
 
@@ -273,7 +282,7 @@ subjects:
   apiGroup: rbac.authorization.k8s.io
 roleRef:
   kind: ClusterRole
-  name: d8:use:role:admin
+  name: d8:namespace:admin
   apiGroup: rbac.authorization.k8s.io
 ```
 
