@@ -100,33 +100,33 @@ type InstanceClassVirtualMachine struct {
 	Bootloader string `json:"bootloader,omitempty"`
 	// List of GPU devices to attach to the virtual machine.
 	//
-	// Each entry references a GPUClass by name; list order is not significant. To attach several devices of the same class, repeat the entry.
+	// Each entry references a `GPUClass` by name; list order is not significant. To attach several devices of the same class, repeat the entry. A single virtual machine takes no more than 16 devices.
 	//
-	// Requires the GPU feature gate enabled in the `virtualization` module of the cluster hosting the virtual machines. A virtual machine with an attached GPU cannot be live migrated.
+	// In the cluster where the virtual machines are created, enable the `GPU` feature gate in the [`featureGates`](/modules/virtualization/configuration.html#parameters-featuregates) parameter of the [`virtualization`](/modules/virtualization/) module, enable the [`gpu`](/modules/gpu/) module in DRA mode, and create the requested `GPUClass`. The full list of requirements is given in [GPU devices in virtual machines](/products/kubernetes-platform/documentation/admin/configuration/virtualization/gpu-devices.html). A virtual machine with an attached GPU is not live migrated.
 	//
 	// Changing the parameter of an existing class affects nodes differently, depending on the type of the NodeGroup that references the class:
 	//
 	// * `CloudEphemeral`: the nodes are recreated.
-	// * `CloudPermanent` and master nodes: the change is applied during converge to the existing virtual machines. Such a virtual machine is updated in place rather than recreated, and since `disruptions.restartApprovalMode: Automatic` is set for it, the change is applied by restarting the virtual machine without additional confirmation. Perform the converge one node at a time, keeping the control plane quorum in mind.
+	// * `CloudPermanent` and master nodes: the `dhctl converge` command applies the change to the existing virtual machines. A virtual machine is updated in place rather than recreated, and since [`disruptions.restartApprovalMode`](/modules/virtualization/cr.html#virtualmachine-v1alpha2-spec-disruptions-restartapprovalmode) is set to `Automatic` for it, the change is applied by restarting the virtual machine without additional confirmation. The command updates master nodes one at a time and waits for each of them to become ready.
 	//
-	// > Attaching a device only passes the card through to the virtual machine. It does not turn the node into a GPU node on its own: the NVIDIA driver must be installed on the node and the NodeGroup must define the [`spec.gpu`](/modules/node-manager/cr.html#nodegroup-v1-spec-gpu) section. Without them the node never exposes the `nvidia.com/gpu` resource and no workload can request the GPU.
+	// > Passing a device through makes it available inside the virtual machine but does not expose the `nvidia.com/gpu` resource on the node. For the node to provide this resource, install the NVIDIA driver with the [`gpu`](/modules/gpu/) module and define the [`spec.gpu`](/modules/node-manager/cr.html#nodegroup-v1-spec-gpu) section in the NodeGroup.
 	//
-	// > The cluster autoscaler builds the template node of an empty NodeGroup from CPU and memory only, GPU resources are not part of it. A NodeGroup with GPUs and `cloudInstances.minPerZone: 0` is therefore never scaled up by pods that request a GPU. Set `minPerZone` to 1 or higher for such NodeGroups.
+	// > The Cluster Autoscaler builds the template node of an empty NodeGroup from CPU and memory only, GPU resources are not part of it. A NodeGroup with GPUs and [`cloudInstances.minPerZone`](/modules/node-manager/cr.html#nodegroup-v1-spec-cloudinstances-minperzone) set to `0` is therefore never scaled up by workloads that request a GPU. Set [`minPerZone`](/modules/node-manager/cr.html#nodegroup-v1-spec-cloudinstances-minperzone) to 1 or higher for such NodeGroups.
 	//
 	// +deckhouse:ru:description:value="Список GPU-устройств, подключаемых к виртуальной машине."
 	// +deckhouse:ru:description:value=
-	// +deckhouse:ru:description:value="Каждый элемент ссылается на GPUClass по имени, порядок элементов не важен. Чтобы подключить несколько устройств одного класса, повторите элемент."
+	// +deckhouse:ru:description:value="Каждый элемент ссылается на `GPUClass` по имени, порядок элементов не важен. Чтобы подключить несколько устройств одного класса, повторите элемент. К одной виртуальной машине подключается не более 16 устройств."
 	// +deckhouse:ru:description:value=
-	// +deckhouse:ru:description:value="Требует включённого feature gate GPU в модуле `virtualization` кластера, в котором создаются виртуальные машины. Виртуальная машина с подключённым GPU не поддерживает живую миграцию."
+	// +deckhouse:ru:description:value="В кластере, где создаются виртуальные машины, включите feature gate `GPU` в параметре [`featureGates`](/modules/virtualization/configuration.html#parameters-featuregates) модуля [`virtualization`](/modules/virtualization/), включите модуль [`gpu`](/modules/gpu/) в режиме DRA и создайте нужный `GPUClass`. Полный список требований приведён в разделе [«GPU-устройства в виртуальных машинах»](/products/kubernetes-platform/documentation/admin/configuration/virtualization/gpu-devices.html). Виртуальная машина с подключённым GPU не переносится живой миграцией."
 	// +deckhouse:ru:description:value=
 	// +deckhouse:ru:description:value="Изменение параметра у существующего класса по-разному влияет на узлы в зависимости от типа NodeGroup, которая на него ссылается:"
 	// +deckhouse:ru:description:value=
 	// +deckhouse:ru:description:value="* `CloudEphemeral` — узлы пересоздаются;"
-	// +deckhouse:ru:description:value="* `CloudPermanent` и master-узлы — изменение применяется при converge к существующим виртуальным машинам. Такая виртуальная машина обновляется на месте, а не пересоздаётся, и, поскольку для неё задан `disruptions.restartApprovalMode: Automatic`, изменение применяется перезагрузкой виртуальной машины без дополнительного подтверждения. Выполняйте converge по одному узлу, учитывая кворум control plane."
+	// +deckhouse:ru:description:value="* `CloudPermanent` и master-узлы — команда `dhctl converge` применяет изменение к существующим виртуальным машинам. Виртуальная машина обновляется на месте, а не пересоздаётся, и, поскольку для неё задан [`disruptions.restartApprovalMode`](/modules/virtualization/cr.html#virtualmachine-v1alpha2-spec-disruptions-restartapprovalmode) со значением `Automatic`, изменение применяется перезагрузкой виртуальной машины без дополнительного подтверждения. Master-узлы команда обновляет по одному и дожидается готовности каждого."
 	// +deckhouse:ru:description:value=
-	// +deckhouse:ru:description:value="> Подключение устройства лишь пробрасывает карту в виртуальную машину. Само по себе оно не делает узел GPU-узлом: на узле должен быть установлен драйвер NVIDIA, а в NodeGroup — задана секция [`spec.gpu`](/modules/node-manager/cr.html#nodegroup-v1-spec-gpu). Без этого узел не публикует ресурс `nvidia.com/gpu`, и запросить GPU из нагрузки нельзя."
+	// +deckhouse:ru:description:value="> Проброс делает устройство доступным внутри виртуальной машины, но не публикует на узле ресурс `nvidia.com/gpu`. Чтобы узел предоставлял этот ресурс, установите драйвер NVIDIA модулем [`gpu`](/modules/gpu/) и задайте в NodeGroup секцию [`spec.gpu`](/modules/node-manager/cr.html#nodegroup-v1-spec-gpu)."
 	// +deckhouse:ru:description:value=
-	// +deckhouse:ru:description:value="> Cluster autoscaler строит шаблонный узел пустой NodeGroup только из CPU и памяти, GPU в него не попадает. Поэтому NodeGroup с GPU и `cloudInstances.minPerZone: 0` не масштабируется с нуля под поды, запрашивающие GPU. Для таких NodeGroup задавайте `minPerZone` не меньше 1."
+	// +deckhouse:ru:description:value="> Cluster Autoscaler строит шаблонный узел пустой NodeGroup только из CPU и памяти, GPU в него не попадает. Поэтому NodeGroup с GPU и [`cloudInstances.minPerZone`](/modules/node-manager/cr.html#nodegroup-v1-spec-cloudinstances-minperzone) со значением `0` не масштабируется с нуля под рабочие нагрузки, запрашивающие GPU. Для таких NodeGroup задавайте [`minPerZone`](/modules/node-manager/cr.html#nodegroup-v1-spec-cloudinstances-minperzone) не меньше 1."
 	// +kubebuilder:validation:MaxItems=16
 	GPUs []InstanceClassVirtualMachineGPU `json:"gpus,omitempty"`
 	// Virtual machine run policy.
@@ -223,15 +223,15 @@ type InstanceClassVirtualMachineCPU struct {
 }
 
 // +deckhouse:ru:description:value="GPU-устройство, подключаемое к виртуальной машине."
-// A GPU device attached to the virtual machine.
+// GPU device attached to the virtual machine.
 type InstanceClassVirtualMachineGPU struct {
-	// Name of the GPUClass that selects the GPU to attach, for example nvidia-h100.
+	// Name of the `GPUClass` that selects the GPU to attach, for example `nvidia-h100`.
 	//
-	// The GPUClass must already exist in the cluster hosting the virtual machines.
+	// The `GPUClass` must already exist in the cluster where the virtual machines are created.
 	//
-	// +deckhouse:ru:description:value="Имя GPUClass, который выбирает подключаемый GPU, например `nvidia-h100`."
+	// +deckhouse:ru:description:value="Имя `GPUClass`, который выбирает подключаемый GPU, например `nvidia-h100`."
 	// +deckhouse:ru:description:value=
-	// +deckhouse:ru:description:value="GPUClass должен существовать в кластере, в котором создаются виртуальные машины."
+	// +deckhouse:ru:description:value="`GPUClass` должен существовать в кластере, где создаются виртуальные машины."
 	// +kubebuilder:validation:MinLength=1
 	// +kubebuilder:validation:MaxLength=253
 	// +kubebuilder:validation:Pattern=`^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$`

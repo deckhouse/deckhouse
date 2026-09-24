@@ -222,11 +222,11 @@ apiVersions:
 
                         Each entry references a `GPUClass` by name; list order is not significant. To attach several devices of the same class, repeat the entry. A single virtual machine takes no more than 16 devices.
 
-                        Requires the `GPU` feature gate to be enabled in the `virtualization` module of the cluster hosting the virtual machines. A virtual machine with an attached GPU cannot be live migrated.
+                        In the cluster where the virtual machines are created, enable the `GPU` feature gate in the [`featureGates`](/modules/virtualization/configuration.html#parameters-featuregates) parameter of the [`virtualization`](/modules/virtualization/) module, enable the [`gpu`](/modules/gpu/) module in DRA mode, and create the requested `GPUClass`. The full list of requirements is given in [GPU devices in virtual machines](/products/kubernetes-platform/documentation/admin/configuration/virtualization/gpu-devices.html). A virtual machine with an attached GPU is not live migrated.
 
-                        > Attaching a device only passes the card through to the virtual machine. It does not turn the node into a GPU node on its own: the NVIDIA driver must be installed on the node and the NodeGroup must define the [`spec.gpu`](/modules/node-manager/cr.html#nodegroup-v1-spec-gpu) section. Without them the node never exposes the `nvidia.com/gpu` resource and no workload can request the GPU.
+                        For already created nodes, the `dhctl converge` command applies the change to the existing virtual machines. A virtual machine is updated in place rather than recreated, and since [`disruptions.restartApprovalMode`](/modules/virtualization/cr.html#virtualmachine-v1alpha2-spec-disruptions-restartapprovalmode) is set to `Automatic` for it, the change is applied by restarting the virtual machine without additional confirmation. The command updates master nodes one at a time and waits for each of them to become ready.
 
-                        > Changing this parameter for already created nodes is applied during converge to the existing virtual machines. Such a virtual machine is updated in place and not recreated, and since `disruptions.restartApprovalMode: Automatic` is set for it, the change is applied by restarting the virtual machine without additional confirmation. Perform the converge one node at a time, keeping the control plane quorum in mind.
+                        > Passing a device through makes it available inside the virtual machine but does not expose the `nvidia.com/gpu` resource on the node. For the node to provide this resource, install the NVIDIA driver with the [`gpu`](/modules/gpu/) module and define the [`spec.gpu`](/modules/node-manager/cr.html#nodegroup-v1-spec-gpu) section in the NodeGroup.
                       items:
                         type: object
                         additionalProperties: false
@@ -240,7 +240,7 @@ apiVersions:
                             description: |
                               Name of the `GPUClass` that selects the GPU to attach, for example `nvidia-h100`.
 
-                              The `GPUClass` must already exist in the cluster hosting the virtual machines.
+                              The `GPUClass` must already exist in the cluster where the virtual machines are created.
                             example: nvidia-h100
                     runPolicy:
                       type: string
