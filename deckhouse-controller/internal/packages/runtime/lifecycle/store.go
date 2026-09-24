@@ -15,6 +15,7 @@
 package lifecycle
 
 import (
+	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/resourcerequests"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/addonutils"
 )
 
@@ -42,6 +43,18 @@ func NewStore() *Store {
 // and schedule are automatically picked up.
 func (s *Store) GetPendingSettings(name string) (addonutils.Values, int) {
 	return s.packages[name].settings, s.packages[name].settingsVersion
+}
+
+// GetPendingResourceRequests returns the latest per-workload resource overrides
+// stored for a package. Nil for a package that is not tracked, or whose CR has no
+// such field.
+func (s *Store) GetPendingResourceRequests(name string) []resourcerequests.Request {
+	pkg, ok := s.packages[name]
+	if !ok {
+		return nil
+	}
+
+	return pkg.resourceRequests
 }
 
 // GetPendingMaintenance returns the latest maintenance mode stored for a package.
