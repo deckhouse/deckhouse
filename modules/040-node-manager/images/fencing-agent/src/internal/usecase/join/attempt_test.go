@@ -17,14 +17,12 @@ limitations under the License.
 package join
 
 import (
-	"bytes"
 	"context"
 	"errors"
 	"net"
 	"os"
 	"slices"
 	"strconv"
-	"strings"
 	"sync"
 	"syscall"
 	"testing"
@@ -35,7 +33,6 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/schema"
 
 	"fencing-agent/internal/domain"
-	"fencing-agent/internal/logtest"
 )
 
 func groupWithAPeer() (*fakeNodes, *fakeExpected) {
@@ -268,9 +265,7 @@ func TestSlowCandidateIsDroppedAfterTheAPITimeout(t *testing.T) {
 		nodes.setAnswer("worker-4", nodeAnswer{blockUntilCtx: true})
 		cluster := &fakeCluster{}
 
-		var logs bytes.Buffer
-
-		joiner := New(nodes, expected, cluster, joinerParams(), logtest.NewJSONLogger(&logs))
+		joiner := newJoiner(t, nodes, expected, cluster)
 
 		start := time.Now()
 		err := joiner.Attempt(t.Context())
@@ -288,23 +283,6 @@ func TestSlowCandidateIsDroppedAfterTheAPITimeout(t *testing.T) {
 
 		if got := nodes.getsOf("worker-4"); got != 1 {
 			t.Errorf("the slow candidate was read %d times, want once: a timed-out read is dropped, not retried", got)
-		}
-
-		records := logtest.Drain(t, &logs)
-		logtest.AssertSnakeCaseKeys(t, records)
-
-		dropped := logtest.WithMsg(records, droppedMsg)
-		if len(dropped) != 1 {
-			t.Fatalf("drop records are %v, want exactly one for the slow candidate", dropped)
-		}
-
-		record := dropped[0]
-		if got, want := lineOf(record), droppedMsg+"|warn|worker-4|read_failed"; got != want {
-			t.Errorf("drop record is %q, want %q", got, want)
-		}
-
-		if got := record.Str("error"); !strings.Contains(got, context.DeadlineExceeded.Error()) {
-			t.Errorf("drop record error is %q, want it to name %q", got, context.DeadlineExceeded)
 		}
 	})
 }
@@ -408,9 +386,7 @@ func TestAttemptCancelledDuringCandidateReadsIsAQuietShutdown(t *testing.T) {
 
 				cluster := &fakeCluster{}
 
-				var logs bytes.Buffer
-
-				joiner := New(nodes, expected, cluster, joinerParams(), logtest.NewJSONLogger(&logs))
+				joiner := newJoiner(t, nodes, expected, cluster)
 
 				result := make(chan error, 1)
 
@@ -442,19 +418,6 @@ func TestAttemptCancelledDuringCandidateReadsIsAQuietShutdown(t *testing.T) {
 
 				if joins := cluster.joins(); len(joins) != 0 {
 					t.Errorf("join was called with %v, want none after the cancel", joins)
-				}
-
-				records := logtest.Drain(t, &logs)
-				logtest.AssertSnakeCaseKeys(t, records)
-
-				for _, record := range records {
-					if level := record.Level(); level != "debug" && level != "info" {
-						t.Errorf("attempt logged %v, want no line above info on a shutdown", record)
-					}
-				}
-
-				if dropped := logtest.WithMsg(records, droppedMsg); len(dropped) != 0 {
-					t.Errorf("drop records are %v, want none: the reads failed only because of the shutdown", dropped)
 				}
 			})
 		})

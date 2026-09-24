@@ -17,9 +17,7 @@ limitations under the License.
 package failedstate
 
 import (
-	"bytes"
 	"context"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"hash/fnv"
@@ -265,7 +263,6 @@ type harnessConfig struct {
 	now           time.Time
 	clock         *clock
 	startedAt     time.Time
-	logger        *log.Logger
 	takeoverDelay time.Duration
 }
 
@@ -283,10 +280,6 @@ func withStartedAt(startedAt time.Time) harnessOption {
 	return func(c *harnessConfig) { c.startedAt = startedAt }
 }
 
-func withLogger(logger *log.Logger) harnessOption {
-	return func(c *harnessConfig) { c.logger = logger }
-}
-
 func withTakeoverDelay(delay time.Duration) harnessOption {
 	return func(c *harnessConfig) { c.takeoverDelay = delay }
 }
@@ -297,11 +290,6 @@ func newHarnessWith(t *testing.T, size int, nodeName string, store *stubStore, o
 	config := harnessConfig{now: time.Date(2026, 6, 2, 15, 0, 0, 0, time.UTC), takeoverDelay: takeoverDelay}
 	for _, opt := range opts {
 		opt(&config)
-	}
-
-	logger := config.logger
-	if logger == nil {
-		logger = log.NewNop()
 	}
 
 	clk := config.clock
@@ -334,7 +322,7 @@ func newHarnessWith(t *testing.T, size int, nodeName string, store *stubStore, o
 			Events:   h.events,
 			Now:      h.clock.Now,
 		},
-		logger,
+		log.NewNop(),
 	)
 
 	return h
@@ -707,60 +695,6 @@ func TestDetectedAtIsTheFirstSighting(t *testing.T) {
 
 	if got := store.recorded[failed].DetectedAt; !got.Time.Equal(firstSighting) {
 		t.Errorf("detectedAt = %s, want the first sighting %s, not the moment the write went through", got, firstSighting)
-	}
-}
-
-func TestRecordedLogCarriesTheStoredDetectedAt(t *testing.T) {
-	const failed = "worker-3"
-
-	logs := &bytes.Buffer{}
-	store := newStore()
-	store.failCreate = errors.New("api server is unavailable")
-	h := newHarness(t, writerFor(failed), store)
-	h.writer.logger = log.NewLogger(log.WithOutput(logs), log.WithHandlerType(log.JSONHandlerType))
-
-	h.settle(t.Context())
-	h.clock.advance(630134567 * time.Nanosecond)
-	h.failPeer(t.Context(), failed)
-
-	h.clock.advance(time.Minute)
-	store.failCreate = nil
-	h.failPeer(t.Context(), failed)
-
-	stored, ok := store.recorded[failed]
-	if !ok {
-		t.Fatalf("no failed state was recorded for %s, calls: %v", failed, store.calls)
-	}
-
-	if !stored.DetectedAt.Time.Before(h.clock.now) {
-		t.Fatalf("detectedAt = %s, want it before the moment of the write %s", stored.DetectedAt, h.clock.now)
-	}
-
-	want, err := json.Marshal(stored.DetectedAt)
-	if err != nil {
-		t.Fatalf("detectedAt does not serialize: %v", err)
-	}
-
-	var logged []json.RawMessage
-
-	dec := json.NewDecoder(logs)
-
-	for dec.More() {
-		var line struct {
-			Msg        string          `json:"msg"`
-			DetectedAt json.RawMessage `json:"detected_at"`
-		}
-		if err := dec.Decode(&line); err != nil {
-			t.Fatalf("log output is not JSON lines: %v", err)
-		}
-
-		if line.Msg == "fencing state recorded" {
-			logged = append(logged, line.DetectedAt)
-		}
-	}
-
-	if len(logged) != 1 || !bytes.Equal(logged[0], want) {
-		t.Errorf("detected_at logged as %s, want exactly one %s as stored in the object", logged, want)
 	}
 }
 

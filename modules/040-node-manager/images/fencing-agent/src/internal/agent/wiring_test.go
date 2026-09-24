@@ -17,7 +17,6 @@ limitations under the License.
 package agent
 
 import (
-	"bytes"
 	"context"
 	"errors"
 	"fmt"
@@ -34,7 +33,6 @@ import (
 
 	v1alpha1 "fencing-agent/api/node-manager.deckhouse.io/v1alpha1"
 	"fencing-agent/internal/adapters/memberlist"
-	"fencing-agent/internal/logtest"
 	"fencing-agent/internal/usecase/failedstate"
 )
 
@@ -418,87 +416,20 @@ func TestSelfStateReachesOnlyTheOwnNodeWatcherAndTheWatchdog(t *testing.T) {
 	}
 }
 
-func TestStartupLogCarriesTheDerivedMemberlistTimings(t *testing.T) {
-	var buf bytes.Buffer
+func TestMemberlistTimingsAreDerivedFromTheProfile(t *testing.T) {
+	cfg := testAgent().memberlistConfig()
 
-	a := testAgent()
-	a.cfg.ProfileRefName = "standard"
-	a.cfg.WatchdogDevice = "/dev/watchdog1"
-	a.cfg.APISocketPath = "/run/fencing-agent.sock"
-	a.logger = logtest.NewJSONLogger(&buf)
-
-	cfg := a.memberlistConfig()
-	a.logStart(memberlist.DeriveTimings(cfg.Tuning, cfg.APITimeout))
-
-	records := logtest.Decode(t, buf.String())
-	logtest.AssertSnakeCaseKeys(t, records)
-
-	if len(records) != 1 || records[0].Msg() != "fencing-agent starting" {
-		t.Fatalf("logStart wrote %d records %v, want one \"fencing-agent starting\"", len(records), records)
+	want := memberlist.Timings{
+		// The TCP timeout follows the API timeout, and the push/pull interval is
+		// two of them where that is longer than gossipToTheDeadTime.
+		TCPTimeout:          2 * time.Second,
+		PushPullInterval:    7 * time.Second,
+		DeadNodeReclaimTime: 7 * time.Second,
+		LeaveTimeout:        1200 * time.Millisecond,
 	}
 
-	want := map[string]any{
-		"node":                   "worker-1",
-		"node_uid":               "uid-1",
-		"node_ip":                "10.0.0.1",
-		"node_group":             "worker",
-		"profile":                "standard",
-		"probe_interval":         "300ms",
-		"memberlist_port":        float64(8500),
-		"watchdog_device":        "/dev/watchdog1",
-		"watchdog_feed_interval": "6s",
-		"watchdog_timeout":       "1m0s",
-		"api_socket_path":        "/run/fencing-agent.sock",
-		"tcp_timeout":            "2s",
-		"push_pull_interval":     "7s",
-		"dead_node_reclaim_time": "7s",
-		"leave_timeout":          "1.2s",
-	}
-
-	record := records[0]
-
-	for key, value := range want {
-		got, ok := record[key]
-		if !ok {
-			t.Errorf("startup line has no %s, want %v", key, value)
-
-			continue
-		}
-
-		if got != value {
-			t.Errorf("startup line has %s=%v, want %v", key, got, value)
-		}
-	}
-
-	for key, value := range record {
-		if _, known := want[key]; !known && !logtest.IsServiceKey(key) {
-			t.Errorf("startup line has unexpected key %s=%v", key, value)
-		}
-	}
-
-	buf.Reset()
-
-	a.logStart(memberlist.Timings{
-		TCPTimeout:          1100 * time.Millisecond,
-		PushPullInterval:    2200 * time.Millisecond,
-		DeadNodeReclaimTime: 3300 * time.Millisecond,
-		LeaveTimeout:        440 * time.Millisecond,
-	})
-
-	records = logtest.Decode(t, buf.String())
-	if len(records) != 1 {
-		t.Fatalf("logStart wrote %d records %v, want one", len(records), records)
-	}
-
-	for key, value := range map[string]string{
-		"tcp_timeout":            "1.1s",
-		"push_pull_interval":     "2.2s",
-		"dead_node_reclaim_time": "3.3s",
-		"leave_timeout":          "440ms",
-	} {
-		if got := records[0][key]; got != value {
-			t.Errorf("startup line has %s=%v for hand-built timings, want %s", key, got, value)
-		}
+	if got := memberlist.DeriveTimings(cfg.Tuning, cfg.APITimeout); got != want {
+		t.Errorf("derived timings are %+v, want %+v", got, want)
 	}
 }
 

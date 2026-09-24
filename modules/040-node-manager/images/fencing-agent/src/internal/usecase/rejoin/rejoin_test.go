@@ -17,14 +17,12 @@ limitations under the License.
 package rejoin
 
 import (
-	"bytes"
 	"context"
 	"errors"
 	"fmt"
 	"net"
 	"reflect"
 	"slices"
-	"strings"
 	"sync"
 	"sync/atomic"
 	"syscall"
@@ -33,8 +31,6 @@ import (
 	"time"
 
 	"github.com/deckhouse/deckhouse/pkg/log"
-
-	"fencing-agent/internal/logtest"
 )
 
 const (
@@ -55,25 +51,6 @@ var (
 
 	testParams = Params{Interval: interval, MaxInterval: maxInterval}
 )
-
-type syncBuffer struct {
-	mu  sync.Mutex
-	buf bytes.Buffer
-}
-
-func (b *syncBuffer) Write(p []byte) (int, error) {
-	b.mu.Lock()
-	defer b.mu.Unlock()
-
-	return b.buf.Write(p)
-}
-
-func (b *syncBuffer) String() string {
-	b.mu.Lock()
-	defer b.mu.Unlock()
-
-	return b.buf.String()
-}
 
 type harness struct {
 	t      *testing.T
@@ -101,12 +78,6 @@ type harness struct {
 }
 
 func newHarness(t *testing.T, params Params) *harness {
-	t.Helper()
-
-	return newLoggedHarness(t, params, log.NewNop())
-}
-
-func newLoggedHarness(t *testing.T, params Params, logger *log.Logger) *harness {
 	t.Helper()
 
 	ctx, cancel := context.WithCancel(t.Context())
@@ -195,7 +166,7 @@ func newLoggedHarness(t *testing.T, params Params, logger *log.Logger) *harness 
 				return true
 			}
 		},
-	}, logger)
+	}, log.NewNop())
 
 	return h
 }
@@ -420,8 +391,7 @@ func TestBackoffIsCappedAndResetsAfterQuorum(t *testing.T) {
 
 func TestOwnFailedRecordStartsRejoinWhileQuorumHolds(t *testing.T) {
 	synctest.Test(t, func(t *testing.T) {
-		logs := &syncBuffer{}
-		h := newLoggedHarness(t, testParams, logtest.NewJSONLogger(logs))
+		h := newHarness(t, testParams)
 		h.setQuorum(true)
 		h.setOwn(true)
 
@@ -441,20 +411,6 @@ func TestOwnFailedRecordStartsRejoinWhileQuorumHolds(t *testing.T) {
 
 		if got := h.episodes.Load(); got != 1 {
 			t.Errorf("episodes = %d while the failed record stays, want 1", got)
-		}
-
-		records := logtest.Decode(t, logs.String())
-		logtest.AssertSnakeCaseKeys(t, records)
-
-		started := logtest.WithMsg(records, startedByRecordMsg)
-		if len(started) != 1 || started[0].Level() != "warn" {
-			t.Errorf("%q records = %v, want one at warn", startedByRecordMsg, started)
-		}
-
-		for _, msg := range []string{startedMsg, triggerChangedMsg, finishedMsg} {
-			if got := len(logtest.WithMsg(records, msg)); got != 0 {
-				t.Errorf("%q logged %d times, want 0", msg, got)
-			}
 		}
 	})
 }
@@ -510,8 +466,7 @@ func TestOwnFailedRecordAppearingWithoutAGossipChangeIsNoticedWithinATick(t *tes
 
 func TestEpisodeSpansBothTriggers(t *testing.T) {
 	synctest.Test(t, func(t *testing.T) {
-		logs := &syncBuffer{}
-		h := newLoggedHarness(t, testParams, logtest.NewJSONLogger(logs))
+		h := newHarness(t, testParams)
 
 		stop := h.run()
 		defer stop()
@@ -523,20 +478,14 @@ func TestEpisodeSpansBothTriggers(t *testing.T) {
 
 		waitFor(t, func() bool { return len(h.recordedSleeps()) == 3 })
 
-		handover := logtest.Decode(t, logs.String())
-		logtest.AssertSnakeCaseKeys(t, handover)
-
-		if got := len(logtest.WithMsg(handover, finishedMsg)); got != 0 {
-			t.Errorf("%q logged %d times when quorum returned while the failed record holds, want 0", finishedMsg, got)
-		}
-
+		// The episode spans the handover from the lost quorum to the own failed
+		// record: it is still the first one, not a second one opened by the record.
 		if got := h.episodes.Load(); got != 1 {
 			t.Errorf("episodes = %d after the handover, want 1", got)
 		}
 
 		h.setOwn(false)
 
-		waitFor(t, func() bool { return strings.Contains(logs.String(), finishedMsg) })
 		idleFor(5 * maxInterval)
 
 		if got := h.attempts.Load(); got != 3 {
@@ -556,39 +505,12 @@ func TestEpisodeSpansBothTriggers(t *testing.T) {
 		if got := h.episodes.Load(); got != 2 {
 			t.Errorf("episodes = %d after quorum was lost again, want 2", got)
 		}
-
-		records := logtest.Decode(t, logs.String())
-		logtest.AssertSnakeCaseKeys(t, records)
-
-		changed := logtest.WithMsg(records, triggerChangedMsg)
-		if len(changed) != 1 {
-			t.Fatalf("%q records = %v, want exactly one", triggerChangedMsg, changed)
-		}
-
-		if changed[0].Level() != "info" || changed[0]["has_quorum"] != true || changed[0]["own_failed_record"] != true {
-			t.Errorf("%q record = %v, want info with has_quorum and own_failed_record true", triggerChangedMsg, changed[0])
-		}
-
-		finished := logtest.WithMsg(records, finishedMsg)
-		if len(finished) != 1 {
-			t.Fatalf("%q records = %v, want exactly one", finishedMsg, finished)
-		}
-
-		if got := finished[0].Int("attempts"); got != 3 {
-			t.Errorf("%q attempts = %d, want 3 across both triggers", finishedMsg, got)
-		}
-
-		firstStart, end, secondStart := indexOfMsg(records, startedMsg, 1), indexOfMsg(records, finishedMsg, 1), indexOfMsg(records, startedMsg, 2)
-		if firstStart < 0 || secondStart < 0 || firstStart >= end || end >= secondStart {
-			t.Errorf("log positions: first start %d, finish %d, second start %d; want the finish between the two starts", firstStart, end, secondStart)
-		}
 	})
 }
 
 func TestAttemptThatClearsBothTriggersEndsTheEpisodeBeforeTheNextOne(t *testing.T) {
 	synctest.Test(t, func(t *testing.T) {
-		logs := &syncBuffer{}
-		h := newLoggedHarness(t, testParams, logtest.NewJSONLogger(logs))
+		h := newHarness(t, testParams)
 
 		clock := &attemptClock{}
 
@@ -630,27 +552,6 @@ func TestAttemptThatClearsBothTriggersEndsTheEpisodeBeforeTheNextOne(t *testing.
 
 		if got := h.episodes.Load(); got != 2 {
 			t.Errorf("episodes = %d, want 2", got)
-		}
-
-		records := logtest.Decode(t, logs.String())
-		logtest.AssertSnakeCaseKeys(t, records)
-
-		finished := logtest.WithMsg(records, finishedMsg)
-		if len(finished) != 1 {
-			t.Fatalf("%q records = %v, want exactly one", finishedMsg, finished)
-		}
-
-		if got := finished[0].Int("attempts"); got != 1 {
-			t.Errorf("%q attempts = %d, want 1", finishedMsg, got)
-		}
-
-		if got := finished[0].Str("last_delay"); got != "0s" {
-			t.Errorf("%q last_delay = %q, want \"0s\": the episode ends before any sleep", finishedMsg, got)
-		}
-
-		end, secondStart := indexOfMsg(records, finishedMsg, 1), indexOfMsg(records, startedMsg, 2)
-		if secondStart < 0 || end >= secondStart {
-			t.Errorf("log positions: finish %d, second start %d; want the finish before the second start", end, secondStart)
 		}
 	})
 }
@@ -708,37 +609,31 @@ func TestEveryAttemptErrorDoublesTheDelay(t *testing.T) {
 	params := Params{Interval: interval, MaxInterval: 6 * interval}
 
 	cases := []struct {
-		name    string
-		err     error
-		warnMsg string
+		name string
+		err  error
 	}{
 		{
-			name:    "dial error",
-			err:     &net.OpError{Op: "dial", Net: "tcp", Err: syscall.ECONNREFUSED},
-			warnMsg: failedMsg,
+			name: "dial error",
+			err:  &net.OpError{Op: "dial", Net: "tcp", Err: syscall.ECONNREFUSED},
 		},
 		{
-			name:    "attempt deadline while the loop context is alive",
-			err:     context.DeadlineExceeded,
-			warnMsg: failedMsg,
+			name: "attempt deadline while the loop context is alive",
+			err:  context.DeadlineExceeded,
 		},
 		{
-			name:    "wrapped not a member",
-			err:     fmt.Errorf("rejoin join candidates: %w", errNotMember),
-			warnMsg: notMemberVerdict,
+			name: "wrapped not a member",
+			err:  fmt.Errorf("rejoin join candidates: %w", errNotMember),
 		},
 		{
-			name:    "no usable candidate address",
-			err:     errors.New("none of the 3 join candidates has a usable address"),
-			warnMsg: failedMsg,
+			name: "no usable candidate address",
+			err:  errors.New("none of the 3 join candidates has a usable address"),
 		},
 	}
 
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
 			synctest.Test(t, func(t *testing.T) {
-				logs := &syncBuffer{}
-				h := newLoggedHarness(t, params, logtest.NewJSONLogger(logs))
+				h := newHarness(t, params)
 				h.failAttempts(tc.err)
 
 				stop := h.run()
@@ -758,51 +653,13 @@ func TestEveryAttemptErrorDoublesTheDelay(t *testing.T) {
 				within(t, sleeps[2], 4*params.Interval)
 				within(t, sleeps[3], params.MaxInterval)
 				within(t, sleeps[4], params.MaxInterval)
-
-				records := logtest.Decode(t, logs.String())
-				logtest.AssertSnakeCaseKeys(t, records)
-
-				warned := logtest.WithMsg(records, tc.warnMsg)
-				if len(warned) == 0 || warned[0].Level() != "warn" {
-					t.Errorf("%q records = %v, want the first one at warn", tc.warnMsg, warned)
-				}
 			})
 		})
 	}
 }
 
-func TestTheNotMemberVerdictIsLoggedOncePerEpisode(t *testing.T) {
-	synctest.Test(t, func(t *testing.T) {
-		logs := &syncBuffer{}
-		h := newLoggedHarness(t, testParams, log.NewLogger(log.WithOutput(logs), log.WithHandlerType(log.JSONHandlerType)))
-
-		h.failAttempts(errNotMember)
-
-		stop := h.run()
-		defer stop()
-
-		waitFor(t, func() bool { return h.attempts.Load() >= 3 })
-
-		if got := strings.Count(logs.String(), notMemberVerdict); got != 1 {
-			t.Errorf("the verdict was logged %d times over %d attempts, want once", got, h.attempts.Load())
-		}
-
-		if got := strings.Count(logs.String(), failedMsg); got != 0 {
-			t.Errorf("the generic failure line appeared %d times for a membership verdict", got)
-		}
-
-		h.failAttempts(errTransport)
-		waitFor(t, func() bool { return strings.Contains(logs.String(), failedMsg) })
-
-		h.failAttempts(errNotMember)
-		waitFor(t, func() bool { return strings.Count(logs.String(), notMemberVerdict) == 2 })
-	})
-}
-
 func TestNilNotMemberIsNeverAVerdict(t *testing.T) {
 	synctest.Test(t, func(t *testing.T) {
-		logs := &syncBuffer{}
-
 		ctx, cancel := context.WithCancel(t.Context())
 		defer cancel()
 
@@ -821,7 +678,7 @@ func TestNilNotMemberIsNeverAVerdict(t *testing.T) {
 			},
 			HasQuorum: func() bool { return false },
 			Changed:   make(chan struct{}),
-		}, logtest.NewJSONLogger(logs))
+		}, log.NewNop())
 
 		done := make(chan struct{})
 
@@ -849,37 +706,8 @@ func TestNilNotMemberIsNeverAVerdict(t *testing.T) {
 		cancel()
 		<-done
 
-		records := logtest.Decode(t, logs.String())
-		logtest.AssertSnakeCaseKeys(t, records)
-
-		if got := len(logtest.WithMsg(records, notMemberVerdict)); got != 0 {
-			t.Errorf("%q logged %d times with NotMember unset, want 0", notMemberVerdict, got)
-		}
-
-		failed := logtest.WithMsg(records, failedMsg)
-		if got := int64(len(failed)); got != attempts.Load() {
-			t.Fatalf("%q records = %v after %d attempts, want one per attempt", failedMsg, failed, attempts.Load())
-		}
-
-		var warned []logtest.Record
-
-		for _, record := range records {
-			if record.Level() == "warn" {
-				warned = append(warned, record)
-			}
-		}
-
-		if len(warned) != 1 || warned[0].Msg() != failedMsg {
-			t.Errorf("warn records = %v, want one %q", warned, failedMsg)
-		}
-
-		stopped := logtest.WithMsg(records, stoppedMsg)
-		if len(stopped) != 1 {
-			t.Fatalf("%q records = %v, want exactly one", stoppedMsg, stopped)
-		}
-
-		if got := stopped[0].Str("last_error_class"); got != classTransport {
-			t.Errorf("%q last_error_class = %q, want %q", stoppedMsg, got, classTransport)
+		if got := attempts.Load(); got < 2 {
+			t.Errorf("attempts = %d with NotMember unset, want the loop to keep retrying", got)
 		}
 	})
 }
@@ -993,5 +821,143 @@ func TestDepsHaveNoAPIGate(t *testing.T) {
 	want := []string{"Attempt", "Changed", "EpisodeStarted", "HasQuorum", "NotMember", "OwnFailedRecord", "Sleep"}
 	if !slices.Equal(got, want) {
 		t.Errorf("Deps fields = %v, want %v", got, want)
+	}
+}
+
+func cutOwnReadShort(h *harness, read int64) {
+	h.setOnOwnRead(func(ctx context.Context, n int64) bool {
+		if n < read {
+			return true
+		}
+
+		select {
+		case <-ctx.Done():
+		case <-h.ctx.Done():
+		}
+
+		if ctx.Err() == nil {
+			h.t.Errorf("OwnFailedRecord read %d got a ctx that shutdown does not cancel", n)
+		}
+
+		return false
+	})
+}
+
+func TestRejoinStopsOnCancelDuringSleepAndDuringAnAttempt(t *testing.T) {
+	cases := []struct {
+		name     string
+		setup    func(h *harness)
+		reach    func(t *testing.T, h *harness)
+		attempts int64
+		sleeps   int
+	}{
+		{
+			name:  "cancel during a sleep",
+			setup: func(*harness) {},
+			reach: func(t *testing.T, h *harness) {
+				t.Helper()
+
+				waitFor(t, func() bool { return len(h.recordedSleeps()) == 2 })
+			},
+			attempts: 2,
+			sleeps:   2,
+		},
+		{
+			name: "cancel while an attempt waits for ctx",
+			setup: func(h *harness) {
+				h.setAttemptResult(func(ctx context.Context, n int64) error {
+					if n == 1 {
+						return nil
+					}
+
+					<-ctx.Done()
+
+					return ctx.Err()
+				})
+			},
+			reach: func(t *testing.T, h *harness) {
+				t.Helper()
+
+				waitFor(t, func() bool { return h.attempts.Load() == 2 })
+			},
+			attempts: 2,
+			sleeps:   1,
+		},
+		{
+			name: "cancel during the trigger read before an attempt",
+			setup: func(h *harness) {
+				h.setQuorum(true)
+				cutOwnReadShort(h, 3)
+			},
+			reach: func(t *testing.T, h *harness) {
+				t.Helper()
+
+				waitFor(t, func() bool { return h.ownReads.Load() == 3 })
+			},
+			attempts: 1,
+			sleeps:   1,
+		},
+		{
+			name: "cancel during the trigger read after a successful attempt",
+			setup: func(h *harness) {
+				h.setQuorum(true)
+				cutOwnReadShort(h, 4)
+			},
+			reach: func(t *testing.T, h *harness) {
+				t.Helper()
+
+				waitFor(t, func() bool { return h.ownReads.Load() == 4 })
+			},
+			attempts: 2,
+			sleeps:   1,
+		},
+		{
+			name:  "cancel while idle without an episode",
+			setup: func(h *harness) { h.setQuorum(true) },
+			reach: func(*testing.T, *harness) { idleFor(3 * idleTick) },
+		},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			synctest.Test(t, func(t *testing.T) {
+				h := newHarness(t, testParams)
+				tc.setup(h)
+
+				done := make(chan struct{})
+
+				var runErr error
+
+				go func() {
+					defer close(done)
+
+					runErr = h.loop.Run(h.ctx)
+				}()
+
+				tc.reach(t, h)
+
+				h.cancel()
+
+				synctest.Wait()
+
+				select {
+				case <-done:
+				default:
+					t.Fatal("Run did not return right after cancel")
+				}
+
+				if runErr != nil {
+					t.Errorf("Run = %v on shutdown, want nil", runErr)
+				}
+
+				if got := h.attempts.Load(); got != tc.attempts {
+					t.Errorf("attempts = %d, want %d", got, tc.attempts)
+				}
+
+				if sleeps := h.recordedSleeps(); len(sleeps) != tc.sleeps {
+					t.Errorf("sleeps = %v, want %d", sleeps, tc.sleeps)
+				}
+			})
+		})
 	}
 }

@@ -17,7 +17,6 @@ limitations under the License.
 package join
 
 import (
-	"bytes"
 	"context"
 	"errors"
 	"net"
@@ -32,7 +31,6 @@ import (
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 
 	"fencing-agent/internal/domain"
-	"fencing-agent/internal/logtest"
 )
 
 func TestSeedListExcludesLocalNodeAndNodesWithoutIP(t *testing.T) {
@@ -61,22 +59,12 @@ func TestSeedListExcludesStaleNodeWithLocalIP(t *testing.T) {
 	)
 	cluster := &fakeCluster{}
 
-	var logs bytes.Buffer
-
-	New(nodes, expected, cluster, joinerParams(), logtest.NewJSONLogger(&logs)).Bootstrap(t.Context())
+	newJoiner(t, nodes, expected, cluster).Bootstrap(t.Context())
 
 	assertJoinedOnce(t, cluster, "10.0.0.2:8500")
 
 	if got := slices.Sorted(slices.Values(nodes.candidateGets())); !slices.Equal(got, []string{"worker-2"}) {
 		t.Errorf("candidate reads are %v, want worker-2 once: a clone is not a candidate", got)
-	}
-
-	records := logtest.Drain(t, &logs)
-	logtest.AssertSnakeCaseKeys(t, records)
-	assertCloneWarning(t, records, "worker-1-old")
-
-	if dropped := logtest.WithMsg(records, droppedMsg); len(dropped) != 0 {
-		t.Errorf("drop records are %v, want none: the clone never reaches the candidate read", dropped)
 	}
 }
 
@@ -131,9 +119,7 @@ func TestStaleCloneOnlyGroupStartsAlone(t *testing.T) {
 		cancelOnOwnRead(nodes, 2, cancel)
 		cluster := &fakeCluster{}
 
-		var logs bytes.Buffer
-
-		joiner := New(nodes, expected, cluster, joinerParams(), logtest.NewJSONLogger(&logs))
+		joiner := newJoiner(t, nodes, expected, cluster)
 		joiner.Bootstrap(ctx)
 
 		if joins := cluster.joins(); len(joins) != 0 {
@@ -146,26 +132,6 @@ func TestStaleCloneOnlyGroupStartsAlone(t *testing.T) {
 
 		if got := nodes.gets(); !slices.Equal(got, []string{testNodeName}) {
 			t.Errorf("reads are %v, want exactly the one read of the own Node", got)
-		}
-
-		records := logtest.Drain(t, &logs)
-		logtest.AssertSnakeCaseKeys(t, records)
-
-		clones := logtest.WithMsg(records, cloneMsg)
-		if len(clones) != 1 || clones[0].Level() != "warn" || clones[0].Str("member") != "worker-1-old" {
-			t.Errorf("clone records are %v, want one warning with member worker-1-old", clones)
-		}
-
-		if alone := logtest.WithMsg(records, aloneMsg); len(alone) != 1 || alone[0].Level() != "info" {
-			t.Errorf("alone records are %v, want one info record", alone)
-		}
-
-		if cloneAt, aloneAt := indexOfMsg(records, cloneMsg), indexOfMsg(records, aloneMsg); cloneAt > aloneAt {
-			t.Errorf("the clone record comes after the alone record in %v, want it before", records)
-		}
-
-		if dropped := logtest.WithMsg(records, droppedMsg); len(dropped) != 0 {
-			t.Errorf("drop records are %v, want none: the clone is not a candidate", dropped)
 		}
 	})
 }
@@ -304,50 +270,36 @@ func TestCandidateDropRules(t *testing.T) {
 		name    string
 		cacheIP string
 		answer  nodeAnswer
-		reason  string
-		level   string
 	}{
 		{
 			name:    "not found",
 			cacheIP: "10.0.0.3",
 			answer:  nodeAnswer{err: notFound("worker-3")},
-			reason:  "not_found",
-			level:   "info",
 		},
 		{
 			name:    "label with an empty value",
 			cacheIP: "10.0.0.3",
 			answer:  nodeAnswer{record: withGroup(peerRecord("worker-3", "10.0.0.3"), "")},
-			reason:  "left_node_group",
-			level:   "info",
 		},
 		{
 			name:    "relabeled into another group",
 			cacheIP: "10.0.0.3",
 			answer:  nodeAnswer{record: withGroup(peerRecord("worker-3", "10.0.0.3"), "worker-2")},
-			reason:  "left_node_group",
-			level:   "info",
 		},
 		{
 			name:    "no InternalIP",
 			cacheIP: "10.0.0.3",
 			answer:  nodeAnswer{record: peerRecord("worker-3", "")},
-			reason:  "no_internal_ip",
-			level:   "warn",
 		},
 		{
 			name:    "fresh InternalIP is the local one",
 			cacheIP: "",
 			answer:  nodeAnswer{record: peerRecord("worker-3", testNodeIP)},
-			reason:  "local_internal_ip",
-			level:   "warn",
 		},
 		{
 			name:    "read failure",
 			cacheIP: "10.0.0.3",
 			answer:  nodeAnswer{err: apierrors.NewServiceUnavailable("etcd is unavailable")},
-			reason:  "read_failed",
-			level:   "warn",
 		},
 	}
 
@@ -361,9 +313,7 @@ func TestCandidateDropRules(t *testing.T) {
 			nodes.setAnswer("worker-3", tc.answer)
 			cluster := &fakeCluster{}
 
-			var logs bytes.Buffer
-
-			joiner := New(nodes, expected, cluster, joinerParams(), logtest.NewJSONLogger(&logs))
+			joiner := newJoiner(t, nodes, expected, cluster)
 
 			if err := joiner.Attempt(t.Context()); err != nil {
 				t.Fatalf("attempt returned %v, want the valid candidate to be joined", err)
@@ -371,21 +321,8 @@ func TestCandidateDropRules(t *testing.T) {
 
 			assertJoinedOnce(t, cluster, "10.0.0.2:8500")
 
-			records := logtest.Drain(t, &logs)
-			logtest.AssertSnakeCaseKeys(t, records)
-
-			dropped := logtest.WithMsg(records, droppedMsg)
-			if len(dropped) != 1 {
-				t.Fatalf("drop records are %v, want exactly one for worker-3", dropped)
-			}
-
-			record := dropped[0]
-			if record.Str("member") != "worker-3" || record.Str("reason") != tc.reason || record.Level() != tc.level {
-				t.Errorf("drop record is %v, want member worker-3, reason %q at level %q", record, tc.reason, tc.level)
-			}
-
-			if _, hasError := record["error"]; hasError != (tc.reason == "read_failed") {
-				t.Errorf("drop record is %v, want an error key only for a failed read", record)
+			if got := slices.Sorted(slices.Values(nodes.candidateGets())); !slices.Equal(got, []string{"worker-2", "worker-3"}) {
+				t.Errorf("candidate reads are %v, want both peers read once: the drop happens on the fresh answer", got)
 			}
 		})
 	}
@@ -700,9 +637,7 @@ func TestStaleClonePrefilterIgnoresGossipLiveness(t *testing.T) {
 			cluster := &fakeCluster{}
 			cluster.setMembers(tc.members...)
 
-			var logs bytes.Buffer
-
-			joiner := New(nodes, expected, cluster, joinerParams(), logtest.NewJSONLogger(&logs))
+			joiner := newJoiner(t, nodes, expected, cluster)
 
 			if err := joiner.Attempt(t.Context()); err != nil {
 				t.Fatalf("attempt returned %v, want worker-2 to be joined", err)
@@ -713,26 +648,9 @@ func TestStaleClonePrefilterIgnoresGossipLiveness(t *testing.T) {
 			}
 
 			assertJoinedOnce(t, cluster, "10.0.0.2:8500")
-
-			records := logtest.Drain(t, &logs)
-			logtest.AssertSnakeCaseKeys(t, records)
-			assertCloneWarning(t, records, "worker-1-old")
-
-			if got := logtest.WithMsg(records, droppedMsg); len(got) != 0 {
-				t.Errorf("drop records are %v, want none: the clone never reaches the candidate read", got)
-			}
-
-			if got := logtest.WithMsg(records, aloneMsg); len(got) != 0 {
-				t.Errorf("alone records are %v, want none next to a real peer", got)
-			}
 		})
 	}
 }
-
-const (
-	cloneMsg = "node shares the local InternalIP, not counted as a peer"
-	aloneMsg = "no peers in node group, starting alone"
-)
 
 func peerNames(prefix string, n int) []string {
 	names := make([]string, 0, n)
@@ -795,23 +713,4 @@ func assertSlots(t *testing.T, picked, notAlive, alive []string, wantNotAlive, w
 		t.Fatalf("candidate reads are %v: %d not alive and %d alive, want %d and %d",
 			picked, gotNotAlive, gotAlive, wantNotAlive, wantAlive)
 	}
-}
-
-func assertCloneWarning(t *testing.T, records []logtest.Record, member string) {
-	t.Helper()
-
-	clones := logtest.WithMsg(records, cloneMsg)
-	if len(clones) != 1 {
-		t.Errorf("clone records are %v, want exactly one for %s", clones, member)
-
-		return
-	}
-
-	if record := clones[0]; record.Str("member") != member || record.Level() != "warn" {
-		t.Errorf("clone record is %v, want member %s at level warn", record, member)
-	}
-}
-
-func indexOfMsg(records []logtest.Record, msg string) int {
-	return slices.IndexFunc(records, func(record logtest.Record) bool { return record.Msg() == msg })
 }

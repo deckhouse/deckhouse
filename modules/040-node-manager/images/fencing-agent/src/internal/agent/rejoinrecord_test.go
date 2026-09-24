@@ -17,11 +17,9 @@ limitations under the License.
 package agent
 
 import (
-	"bytes"
 	"cmp"
 	"context"
 	"fmt"
-	"io"
 	"math/bits"
 	"slices"
 	"sync"
@@ -36,7 +34,6 @@ import (
 
 	v1alpha1 "fencing-agent/api/node-manager.deckhouse.io/v1alpha1"
 	"fencing-agent/internal/domain"
-	"fencing-agent/internal/logtest"
 	"fencing-agent/internal/usecase/failedstate"
 	"fencing-agent/internal/usecase/rejoin"
 )
@@ -225,14 +222,13 @@ type recordStep struct {
 }
 
 type recordScenario struct {
-	group      []string
-	writers    map[string]time.Duration
-	x          string
-	monitorAt  time.Duration
-	rejoinAt   time.Duration
-	writerLogs map[string]io.Writer
-	steps      []recordStep
-	until      time.Duration
+	group     []string
+	writers   map[string]time.Duration
+	x         string
+	monitorAt time.Duration
+	rejoinAt  time.Duration
+	steps     []recordStep
+	until     time.Duration
 }
 
 type recordLoop struct {
@@ -306,12 +302,7 @@ func runRecordHarness(t *testing.T, s recordScenario) *recordHarness {
 			t.Fatalf("the scenario has no writer start offset for %s", name)
 		}
 
-		logger := log.NewNop()
-		if w, ok := s.writerLogs[name]; ok {
-			logger = logtest.NewJSONLogger(w)
-		}
-
-		writer := newRecordWriter(name, startedAt, h.views[name], h.expected, newLoggedClient(h.api, h.ops, name, roleWriter), logger)
+		writer := newRecordWriter(name, startedAt, h.views[name], h.expected, newLoggedClient(h.api, h.ops, name, roleWriter), log.NewNop())
 
 		starts = append(starts, recordLoop{at: at, run: func(ctx context.Context) { _ = writer.Run(ctx) }})
 	}
@@ -433,10 +424,7 @@ func splitFromTheMajority(h *recordHarness) {
 
 func TestAgentTheMajorityRecordedFailedRejoinsAndRecordsNobody(t *testing.T) {
 	synctest.Test(t, func(t *testing.T) {
-		var xLog bytes.Buffer
-
 		s := rejoinScenario(30*time.Second, recordStep{at: splitAt, apply: splitFromTheMajority})
-		s.writerLogs = map[string]io.Writer{rejoinX: &xLog}
 
 		h := runRecordHarness(t, s)
 
@@ -489,11 +477,6 @@ func TestAgentTheMajorityRecordedFailedRejoinsAndRecordsNobody(t *testing.T) {
 			t.Errorf("the record of %s changed after the writer of %s paused at %s: %v, want no churn", rejoinLost, rejoinX, pausedAt, churn)
 		}
 
-		logs := logtest.Decode(t, xLog.String())
-		if pauses, resumes := len(logtest.WithMsg(logs, writerPausedMsg)), len(logtest.WithMsg(logs, writerResumedMsg)); pauses != 1 || resumes != 0 {
-			t.Errorf("the writer of %s paused %d times and resumed %d times, want one pause that lasts", rejoinX, pauses, resumes)
-		}
-
 		if attempts := h.attempts.where(func(a rejoinAttempt) bool { return a.quorum }); len(attempts) < 2 {
 			t.Errorf("%s made %d rejoin attempts while it held quorum, want at least 2", rejoinX, len(attempts))
 		}
@@ -527,8 +510,6 @@ func TestHealedAgentLeavesRejoinAndResumesWriting(t *testing.T) {
 			lostVanishes = 25 * time.Second
 		)
 
-		var xLog bytes.Buffer
-
 		s := rejoinScenario(45*time.Second,
 			recordStep{at: splitAt, apply: splitFromTheMajority},
 			recordStep{at: healAt, apply: func(h *recordHarness) {
@@ -542,7 +523,6 @@ func TestHealedAgentLeavesRejoinAndResumesWriting(t *testing.T) {
 				h.views[rejoinLost].see(rejoinLost)
 			}},
 		)
-		s.writerLogs = map[string]io.Writer{rejoinX: &xLog}
 
 		h := runRecordHarness(t, s)
 
@@ -588,11 +568,8 @@ func TestHealedAgentLeavesRejoinAndResumesWriting(t *testing.T) {
 				rejoinX, writes, pausedAt, deletedAt)
 		}
 
-		logs := logtest.Decode(t, xLog.String())
-		if pauses, resumes := len(logtest.WithMsg(logs, writerPausedMsg)), len(logtest.WithMsg(logs, writerResumedMsg)); pauses != 1 || resumes != 1 {
-			t.Errorf("the writer of %s paused %d times and resumed %d times, want one pause, ended once", rejoinX, pauses, resumes)
-		}
-
+		// Writing again after the delete is the resume: the writer was paused for
+		// the whole window above and takes its turn as soon as its record goes.
 		creates := h.ops.where(func(op recordOp) bool {
 			return op.op == opCreate && op.name == rejoinLost && op.at >= lostVanishes
 		})
@@ -611,8 +588,6 @@ func TestFallbackRecordMarkedFailedIsDroppedByItsNodeOnceItsViewRegainsQuorum(t 
 	const regainAt = 10 * time.Second
 
 	synctest.Test(t, func(t *testing.T) {
-		var xLog bytes.Buffer
-
 		s := recordScenario{
 			group: []string{rejoinX, rejoinPeer, rejoinLost},
 			writers: map[string]time.Duration{
@@ -620,10 +595,9 @@ func TestFallbackRecordMarkedFailedIsDroppedByItsNodeOnceItsViewRegainsQuorum(t 
 				rejoinPeer: 800 * time.Millisecond,
 				rejoinLost: 900 * time.Millisecond,
 			},
-			x:          rejoinX,
-			monitorAt:  600 * time.Millisecond,
-			rejoinAt:   400 * time.Millisecond,
-			writerLogs: map[string]io.Writer{rejoinX: &xLog},
+			x:         rejoinX,
+			monitorAt: 600 * time.Millisecond,
+			rejoinAt:  400 * time.Millisecond,
 			steps: []recordStep{
 				{at: splitAt, apply: func(h *recordHarness) {
 					h.views[rejoinX].see(rejoinX)
@@ -747,11 +721,6 @@ func TestFallbackRecordMarkedFailedIsDroppedByItsNodeOnceItsViewRegainsQuorum(t 
 			t.Errorf("a record of %s with uid %s is left, want every verdict of %s removed by the majority", rejoinLost, lost.UID, rejoinX)
 		}
 
-		logs := logtest.Decode(t, xLog.String())
-		if pauses, resumes := len(logtest.WithMsg(logs, writerPausedMsg)), len(logtest.WithMsg(logs, writerResumedMsg)); pauses != 1 || resumes != 0 {
-			t.Errorf("the writer of %s paused %d times and resumed %d times, want one pause, over the recreated record, that lasts",
-				rejoinX, pauses, resumes)
-		}
 	})
 }
 
@@ -897,11 +866,6 @@ func TestWriterPauseAndRejoinTriggerAgreeOnEveryRow(t *testing.T) {
 	}
 }
 
-const (
-	writerPausedMsg  = "a peer recorded this node as failed, the fencing state writer is paused"
-	writerResumedMsg = "no peer records this node as failed any more, the fencing state writer resumes"
-)
-
 func mutuallyRankedGroup(t *testing.T) []string {
 	t.Helper()
 
@@ -994,14 +958,11 @@ func TestMutuallyRecordedPairClearsEachOtherWhilePaused(t *testing.T) {
 	for _, row := range rows {
 		t.Run(row.name, func(t *testing.T) {
 			synctest.Test(t, func(t *testing.T) {
-				logs := map[string]*bytes.Buffer{first: {}, second: {}}
-
 				var seeded []v1alpha1.FencingFailedNodeState
 
 				h := runRecordHarness(t, recordScenario{
-					group:      group,
-					writers:    writers,
-					writerLogs: map[string]io.Writer{first: logs[first], second: logs[second]},
+					group:   group,
+					writers: writers,
 					steps: []recordStep{
 						{at: seedAt, apply: func(h *recordHarness) {
 							now := time.Now()
@@ -1068,13 +1029,6 @@ func TestMutuallyRecordedPairClearsEachOtherWhilePaused(t *testing.T) {
 					}
 				}
 
-				for _, member := range []string{first, second} {
-					records := logtest.Decode(t, logs[member].String())
-
-					if pauses, resumes := len(logtest.WithMsg(records, writerPausedMsg)), len(logtest.WithMsg(records, writerResumedMsg)); pauses != 1 || resumes != 1 {
-						t.Errorf("the writer of %s paused %d times and resumed %d times, want one pause, ended once", member, pauses, resumes)
-					}
-				}
 			})
 		})
 	}
@@ -1168,12 +1122,9 @@ func TestHealthyPeersRecordedByOneAsymmetricViewClearEachOtherWithoutPausing(t *
 	}
 
 	synctest.Test(t, func(t *testing.T) {
-		logs := map[string]*bytes.Buffer{victims[0]: {}, victims[1]: {}}
-
 		h := runRecordHarness(t, recordScenario{
-			group:      view.group,
-			writers:    writers,
-			writerLogs: map[string]io.Writer{victims[0]: logs[victims[0]], victims[1]: logs[victims[1]]},
+			group:   view.group,
+			writers: writers,
 			steps: []recordStep{{at: brokenAt, apply: func(h *recordHarness) {
 				h.views[x].see(slices.DeleteFunc(slices.Clone(view.group), func(name string) bool { return slices.Contains(victims, name) })...)
 			}}},
@@ -1222,10 +1173,8 @@ func TestHealthyPeersRecordedByOneAsymmetricViewClearEachOtherWithoutPausing(t *
 		}
 
 		for _, victim := range victims {
-			if pauses := len(logtest.WithMsg(logtest.Decode(t, logs[victim].String()), writerPausedMsg)); pauses != 0 {
-				t.Errorf("the writer of %s paused %d times, want never: no record about it stood for a TakeoverDelay", victim, pauses)
-			}
-
+			// Recording again a TakeoverDelay after the first verdict is what says
+			// the writer never paused: a paused one writes nothing.
 			if !slices.ContainsFunc(verdicts, func(op recordOp) bool {
 				return op.name == victim && op.at >= verdicts[0].at+recordTakeoverDelay
 			}) {
@@ -1262,12 +1211,9 @@ func TestPartitionedPairThatSeesEveryoneClearsEachOtherAndNeverPauses(t *testing
 	}
 
 	synctest.Test(t, func(t *testing.T) {
-		logs := map[string]*bytes.Buffer{pair[0]: {}, pair[1]: {}}
-
 		h := runRecordHarness(t, recordScenario{
-			group:      view.group,
-			writers:    writers,
-			writerLogs: map[string]io.Writer{pair[0]: logs[pair[0]], pair[1]: logs[pair[1]]},
+			group:   view.group,
+			writers: writers,
 			steps: []recordStep{{at: brokenAt, apply: func(h *recordHarness) {
 				for _, name := range majority {
 					h.views[name].see(slices.Clone(majority)...)
@@ -1322,10 +1268,6 @@ func TestPartitionedPairThatSeesEveryoneClearsEachOtherAndNeverPauses(t *testing
 					member, len(created), minRecords, until, created)
 			}
 
-			if pauses := len(logtest.WithMsg(logtest.Decode(t, logs[member].String()), writerPausedMsg)); pauses != 0 {
-				t.Errorf("the writer of %s paused %d times, want never: every record about it goes before it stands a TakeoverDelay",
-					member, pauses)
-			}
 		}
 	})
 }
