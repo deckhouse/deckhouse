@@ -676,7 +676,7 @@ URL="https://api.github.com/repos/deckhouse/deckhouse-cli/releases/latest"
 #   exit 1
 # fi
 # download
-DOWNLOAD_URL=https://github.com/deckhouse/deckhouse-cli/releases/download/v0.15.0/d8-v0.15.0-linux-amd64.tar.gz
+DOWNLOAD_URL=https://github.com/deckhouse/deckhouse-cli/releases/download/v0.33.22/d8-v0.33.22-linux-amd64.tar.gz
 wget -qL "\${DOWNLOAD_URL}" -O /tmp/d8.tar.gz
 file /tmp/d8.tar.gz
 mkdir d8cli
