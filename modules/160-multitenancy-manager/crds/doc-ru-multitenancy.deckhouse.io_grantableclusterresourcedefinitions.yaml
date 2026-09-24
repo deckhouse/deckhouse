@@ -19,6 +19,32 @@ spec:
             spec:
               description: Параметры GrantableClusterResourceDefinition.
               properties:
+                catalogFields:
+                  description: |-
+                    Поля cluster-wide-ресурсов, которые показываются проектам в AvailableClusterResource.
+
+                    Для каждого доступного ресурса контроллер считывает из него значение каждого указанного поля и записывает его в [`status.available[].fields`](cr.html#availableclusterresource-v1alpha1-status-available-fields) AvailableClusterResource под заданным именем.
+
+                    Правила:
+
+                    - Применяется только для определений с `grantedResource`. Для значений, которые не представлены объектами Kubernetes, параметр игнорируется.
+                    - Можно указать не более 10 полей.
+                    - Поле, значения которого в ресурсе нет, не выводится.
+                    - Значение длиннее 512 байт в JSON-сериализации не выводится.
+
+                    > **Внимание.** Значения видны всем пользователям каждого проекта, которому доступен ресурс. Указывайте только несекретные данные.
+                  items:
+                    description: Поле cluster-wide-ресурса, которое показывается проектам.
+                    properties:
+                      name:
+                        description: Имя поля в [`status.available[].fields`](cr.html#availableclusterresource-v1alpha1-status-available-fields) AvailableClusterResource в формате lowerCamelCase (например, `reclaimPolicy`).
+                      path:
+                        description: |-
+                          Путь к значению в cluster-wide-ресурсе, например `$.provisioner`.
+
+                          Должен быть singular query JSONPath по RFC 9535, выбирающий ровно одно значение: только имена полей и индексы массивов, без wildcard (`*`), рекурсивного спуска (`..`), срезов и фильтров.
+
+                          Пути, которые читают `metadata.managedFields`, аннотацию `kubectl.kubernetes.io/last-applied-configuration` или содержащее их родительское поле (например, `$.metadata`), не выводятся: в этих полях хранится копия всего ресурса.
                 defaultAvailability:
                   description: |-
                     Базовая доступность cluster-wide-ресурсов для проектов.

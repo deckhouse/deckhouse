@@ -22,6 +22,7 @@ package resolve
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"slices"
 	"strings"
@@ -38,6 +39,7 @@ import (
 	"controller/api/v1alpha1"
 	"controller/apis/deckhouse.io/v1alpha3"
 	"controller/internal/engine"
+	"controller/internal/jsonpath"
 	"controller/internal/naming"
 )
 
@@ -188,9 +190,11 @@ type Resolved struct {
 	denied    map[string]struct{}
 	excluded  map[string]struct{}
 	liveNames []string
-	anyAll    bool
-	anyNone   bool
-	def       string
+	// liveObjects are the listed granted objects by name, kept for the catalog field projection.
+	liveObjects map[string]map[string]any
+	anyAll      bool
+	anyNone     bool
+	def         string
 
 	// availableSet/availableObjs memoize the available catalog, which is recomputed several times
 	// per webhook/reconcile request otherwise. They are filled lazily and never change after Resolve
@@ -270,6 +274,24 @@ func (r *Resolved) Available() []v1alpha1.AvailableObject {
 	return out
 }
 
+// AvailableWithFields is Available with the definition's catalogFields projected from the live
+// objects into each entry. It returns a fresh slice, so the memoized Available is never mutated. A
+// name with no live object (a value-backed resource, an allowed name that does not exist) and a nil
+// factory get no fields.
+func (r *Resolved) AvailableWithFields(factory jsonpath.Factory) []v1alpha1.AvailableObject {
+	available := r.Available()
+	if factory == nil || len(r.Reg.Spec.CatalogFields) == 0 || len(r.liveObjects) == 0 {
+		return available
+	}
+	out := slices.Clone(available)
+	for i := range out {
+		if obj, ok := r.liveObjects[out[i].Name]; ok {
+			out[i].Fields = engine.ProjectCatalogFields(factory, r.Reg.Spec.CatalogFields, obj)
+		}
+	}
+	return out
+}
+
 // Resolve builds the resolved availability for a registration given the applicable grant entries. For
 // object-backed resources it lists the live granted objects to expand allowed/denied/excluded selectors.
 func Resolve(
@@ -329,6 +351,15 @@ func Resolve(
 		list := &unstructured.UnstructuredList{}
 		list.SetGroupVersionKind(schema.GroupVersionKind{Group: gvk.Group, Version: gvk.Version, Kind: gvk.Kind + "List"})
 		if err := cl.List(ctx, list); err != nil {
+			if k8serrors.IsNotFound(err) {
+				// A list has no name to be absent, so a 404 means the kind is no longer served (its
+				// CRD was deleted) while the mapper still maps it. Drop the stale mapping, so the next
+				// resolve sees the kind as unknown, or with its new scope if it was re-created.
+				if rm, ok := mapper.(meta.ResettableRESTMapper); ok {
+					rm.Reset()
+				}
+				return nil, fmt.Errorf("list granted resource %s: %w: %w", reg.Spec.GrantedResource.Kind, ErrGrantedResourceNotServed, err)
+			}
 			return nil, fmt.Errorf("list granted resource %s: %w", reg.Spec.GrantedResource.Kind, err)
 		}
 
@@ -351,10 +382,12 @@ func Resolve(
 			deniedSels[j] = compiledSelector(entries[j].DeniedSelector)
 		}
 		r.liveNames = slices.Grow(r.liveNames, len(list.Items))
+		r.liveObjects = make(map[string]map[string]any, len(list.Items))
 		for i := range list.Items {
 			name := list.Items[i].GetName()
 			objLabels := labels.Set(list.Items[i].GetLabels())
 			r.liveNames = append(r.liveNames, name)
+			r.liveObjects[name] = list.Items[i].Object
 			for _, sel := range excludedSels {
 				if sel.Matches(objLabels) {
 					r.excluded[name] = struct{}{}
@@ -421,11 +454,37 @@ func compiledSelector(ls *metav1.LabelSelector) labels.Selector {
 	return sel
 }
 
-// grantedGVK resolves the granted resource's group+kind to a served GVK via the REST mapper.
+// ErrNamespacedGrantedResource is wrapped by the resolve error of a definition whose grantedResource is
+// a namespaced kind. Unlike an unknown kind, which may appear once its CRD is installed, this refusal is
+// permanent, so the catalog reconciler removes the catalog of such a definition instead of keeping it.
+var ErrNamespacedGrantedResource = errors.New("only cluster-scoped resources can be granted")
+
+// ErrGrantedResourceNotServed is wrapped by the resolve error of a definition whose grantedResource the
+// REST mapper still maps but the apiserver answers with 404 for: the kind was served and is no longer.
+var ErrGrantedResourceNotServed = errors.New("granted resource is not served")
+
+// IsConfigurationError reports whether a Resolve error comes from the definition itself rather than
+// from the API: its grantedResource is namespaced (ErrNamespacedGrantedResource) or is a kind the
+// apiserver does not serve (a REST mapper no-match, or ErrGrantedResourceNotServed for a kind removed
+// after it was mapped). Retrying does not fix either, so the webhooks skip such a definition and the
+// catalog reconciler logs it instead of failing the pass. This is the single definition of the rule,
+// so the webhooks and the reconciler cannot drift apart.
+func IsConfigurationError(err error) bool {
+	return errors.Is(err, ErrNamespacedGrantedResource) || errors.Is(err, ErrGrantedResourceNotServed) || meta.IsNoMatchError(err)
+}
+
+// grantedGVK resolves the granted resource's group+kind to a served GVK via the REST mapper. It is the
+// only way to the granted objects, so it also refuses a namespaced kind: listing one would read the
+// objects of every namespace in the cluster (Secrets, with catalogFields their values too) into the
+// catalog of every project, and objects of the same name in different namespaces would collide.
 func grantedGVK(mapper meta.RESTMapper, reg *v1alpha1.GrantableClusterResourceDefinition) (schema.GroupVersionKind, error) {
-	mapping, err := mapper.RESTMapping(schema.GroupKind{Group: reg.Spec.GrantedResource.APIGroup, Kind: reg.Spec.GrantedResource.Kind})
+	gr := reg.Spec.GrantedResource
+	mapping, err := mapper.RESTMapping(schema.GroupKind{Group: gr.APIGroup, Kind: gr.Kind})
 	if err != nil {
-		return schema.GroupVersionKind{}, fmt.Errorf("map grantedResource %s/%s: %w", reg.Spec.GrantedResource.APIGroup, reg.Spec.GrantedResource.Kind, err)
+		return schema.GroupVersionKind{}, fmt.Errorf("map grantedResource %s/%s: %w", gr.APIGroup, gr.Kind, err)
+	}
+	if mapping.Scope.Name() != meta.RESTScopeNameRoot {
+		return schema.GroupVersionKind{}, fmt.Errorf("grantedResource %s/%s is namespaced: %w", gr.APIGroup, gr.Kind, ErrNamespacedGrantedResource)
 	}
 	return mapping.GroupVersionKind, nil
 }

@@ -79,6 +79,23 @@ type DefaultFrom struct {
 	AnnotationKey string `json:"annotationKey,omitempty"`
 }
 
+// CatalogField declares one field of a granted object that the controller copies into the
+// per-project catalog (AvailableClusterResource status.available[].fields).
+type CatalogField struct {
+	// Name is the key of the field in the catalog.
+	// +required
+	// +kubebuilder:validation:Pattern=`^[a-z][a-zA-Z0-9]*$`
+	// +kubebuilder:validation:MaxLength=63
+	Name string `json:"name"`
+
+	// Path is an RFC 9535 singular query (one value: member names and indexes only, no wildcards,
+	// descendant segments or filters) evaluated against the granted object.
+	// +required
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:MaxLength=256
+	Path string `json:"path"`
+}
+
 // GrantableClusterResourceDefinitionSpec is the desired state of a GrantableClusterResourceDefinition.
 // It declares governance and baseline availability only; where the resource is referenced (and how it
 // is validated/defaulted) lives in GrantableClusterResourceReference objects.
@@ -107,6 +124,14 @@ type GrantableClusterResourceDefinitionSpec struct {
 	// DefaultFrom marks the cluster-wide default object by annotation (fallback default).
 	// +optional
 	DefaultFrom *DefaultFrom `json:"defaultFrom,omitempty"`
+
+	// CatalogFields declares the fields of the granted objects shown to tenants in the catalog. Only
+	// object-backed definitions (with grantedResource) use it; it is ignored for value-backed ones.
+	// +optional
+	// +listType=map
+	// +listMapKey=name
+	// +kubebuilder:validation:MaxItems=10
+	CatalogFields []CatalogField `json:"catalogFields,omitempty"`
 }
 
 // ResourceReferenceBinding is one GrantableClusterResourceReference bound to this definition.

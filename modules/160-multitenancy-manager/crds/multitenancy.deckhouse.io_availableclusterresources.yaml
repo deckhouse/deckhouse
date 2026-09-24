@@ -79,6 +79,15 @@ spec:
                     default:
                       description: Indicates that the cluster-wide resource is used by default in the project.
                       type: boolean
+                    fields:
+                      additionalProperties:
+                        x-kubernetes-preserve-unknown-fields: true
+                      description: |-
+                        Values of the cluster-wide resource fields listed in [`spec.catalogFields`](cr.html#grantableclusterresourcedefinition-v1alpha1-spec-catalogfields) of the corresponding GrantableClusterResourceDefinition, keyed by field name.
+
+                        A value keeps its JSON type: string, number, boolean, object or array. A field whose value is missing in the resource or is longer than 512 bytes is not shown.
+                      type: object
+                      x-kubernetes-map-type: atomic
                     name:
                       description: Name of the cluster-wide resource available to the project.
                       type: string

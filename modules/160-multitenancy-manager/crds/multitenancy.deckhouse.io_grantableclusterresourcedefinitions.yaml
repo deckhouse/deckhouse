@@ -74,6 +74,47 @@ spec:
           spec:
             description: GrantableClusterResourceDefinition parameters.
             properties:
+              catalogFields:
+                description: |-
+                  Fields of the cluster-wide resources shown to projects in AvailableClusterResource.
+
+                  For each available resource, the controller reads the value of every listed field from the resource and puts it into [`status.available[].fields`](cr.html#availableclusterresource-v1alpha1-status-available-fields) of AvailableClusterResource under the specified name.
+
+                  Rules:
+
+                  - Applies only to definitions with `grantedResource`. For values that are not represented by Kubernetes objects, the parameter is ignored.
+                  - At most 10 fields can be listed.
+                  - A field whose value is missing in the resource is not shown.
+                  - A value longer than 512 bytes in JSON serialization is not shown.
+
+                  > **Warning.** The values are visible to all users of every project the resource is available to. List only non-secret data.
+                items:
+                  description: Field of the cluster-wide resource shown to projects.
+                  properties:
+                    name:
+                      description: Name of the field in [`status.available[].fields`](cr.html#availableclusterresource-v1alpha1-status-available-fields) of AvailableClusterResource, in lowerCamelCase (for example, `reclaimPolicy`).
+                      maxLength: 63
+                      pattern: ^[a-z][a-zA-Z0-9]*$
+                      type: string
+                    path:
+                      description: |-
+                        Path to the value in the cluster-wide resource, for example `$.provisioner`.
+
+                        Must be an RFC 9535 JSONPath singular query that selects exactly one value: member names and array indexes only, without wildcards (`*`), descendant segments (`..`), slices or filters.
+
+                        Paths that read `metadata.managedFields` or the `kubectl.kubernetes.io/last-applied-configuration` annotation, or a parent that contains them (for example, `$.metadata`), are not shown: these fields hold a copy of the whole resource.
+                      maxLength: 256
+                      minLength: 1
+                      type: string
+                  required:
+                  - name
+                  - path
+                  type: object
+                maxItems: 10
+                type: array
+                x-kubernetes-list-map-keys:
+                - name
+                x-kubernetes-list-type: map
               defaultAvailability:
                 default: All
                 description: |-
