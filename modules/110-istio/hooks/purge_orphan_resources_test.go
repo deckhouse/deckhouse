@@ -348,8 +348,7 @@ apiVersion: v1
 kind: Namespace
 metadata:
   name: d8-istio
-  annotations:
-    deletionTimestamp: "true"
+  deletionTimestamp: "2020-10-22T21:30:34Z"
 ---
 apiVersion: v1
 kind: Namespace

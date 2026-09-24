@@ -1152,7 +1152,7 @@ UID `1337` зарезервирован Istio для сайдкар-контей
 
 * DP позволяет установить несколько версий control plane одновременно:
   * Одна глобальная, обслуживает неймспейсы или поды без явного указания версии (лейбл у неймспейсов `istio-injection: enabled`). Настраивается параметром [`globalVersion`](configuration.html#parameters-globalversion).
-  * Остальные — дополнительные, обслуживают неймспейсы или поды с явным указанием версии (лейбл у неймспейса или пода `istio.io/rev: v1x27`). Настраиваются параметром [`additionalVersions`](configuration.html#parameters-additionalversions).
+  * Остальные — дополнительные, обслуживают неймспейсы или поды с явным указанием версии (лейбл у неймспейса или пода `istio.io/rev: v1x27`). Настраиваются параметром [`additionalVersions`](configuration.html#parameters-additionalversions). Лейбл `istio.io/rev` на поде учитывается, только если на его неймспейсе нет ни лейбла `istio-injection`, ни лейбла `istio.io/rev`.
 * Istio заявляет обратную совместимость между data plane и control plane в диапазоне двух минорных версий:
 ![Istio data-plane and control-plane compatibility](images/istio-extended-support.png)
 * Алгоритм обновления (для примера, с версии `1.25` на версию `1.27`):
@@ -1184,7 +1184,7 @@ d8 k get pods -A -o json | jq --arg revision "v1x25" \
 Автоматическое обновление срабатывает, когда у пода с istio-сайдкаром текущая версия data plane отличается от желаемой. Добавление версии в параметр [`additionalVersions`](configuration.html#parameters-additionalversions) само по себе не перезапускает прикладные поды. Обычно расхождение появляется в следующих случаях:
 
 * изменился параметр [`globalVersion`](configuration.html#parameters-globalversion) для неймспейса, где используется глобальная версия Istio (`istio-injection=enabled` или `istio.io/rev=default`);
-* изменился лейбл `istio.io/rev` на неймспейсе или на поде;
+* изменился лейбл `istio.io/rev` на неймспейсе или на поде в неймспейсе без лейблов `istio-injection` и `istio.io/rev`;
 * обновилась патч-версия установленного control plane.
 
 Перед перезапуском рабочей нагрузки модуль проверяет, что соответствующий control plane установлен и готов к работе. Затем модуль добавляет или обновляет аннотацию `istio.deckhouse.io/full-version` в `spec.template.metadata.annotations`, а Kubernetes выполняет штатный rollout. В одном неймспейсе модуль не начинает обновлять следующую рабочую нагрузку, пока предыдущая обновляемая рабочая нагрузка не готова.

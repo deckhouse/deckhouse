@@ -28,22 +28,28 @@ const (
 )
 
 type nsParams struct {
-	GlobalRevision   bool
-	AutoUpgrade      bool
-	DefiniteRevision string
-	Name             string
+	Name        string
+	AutoUpgrade bool
+	Injection   string  // istio-injection label value, no label if empty
+	Revision    *string // istio.io/rev label value, no label if nil
 }
 
 const nsTemplate = `apiVersion: v1
 kind: Namespace
 metadata:
   name: {{ .Name }}
-  {{- if or .GlobalRevision .DefiniteRevision }}
+  {{- if or .AutoUpgrade .Injection .Revision }}
   labels:
-    {{ if .AutoUpgrade }}istio.deckhouse.io/auto-upgrade: "true"{{ end }}
-    {{ if .GlobalRevision }}istio-injection: enabled{{ end }}
-    {{ if .DefiniteRevision }}istio.io/rev: "{{ .DefiniteRevision }}"{{ end }}
- {{ end }}
+    {{- if .AutoUpgrade }}
+    istio.deckhouse.io/auto-upgrade: "true"
+    {{- end }}
+    {{- with .Injection }}
+    istio-injection: "{{ . }}"
+    {{- end }}
+    {{- with .Revision }}
+    istio.io/rev: "{{ . }}"
+    {{- end }}
+  {{- end }}
 `
 
 func generateIstioNsYAML(ns nsParams) string {
@@ -230,10 +236,9 @@ func generateIstioReplicaSetYAML(rs rsParams) string {
 }
 
 type podParams struct {
-	InjectionLabel             bool
-	InjectionLabelValue        bool
+	InjectLabel                string  // sidecar.istio.io/inject label value, no label if empty
+	Revision                   *string // istio.io/rev label value, no label if nil
 	DisableInjectionAnnotation bool
-	DefiniteRevision           string
 	CurrentRevision            string
 	FullVersion                string
 	Name                       string
@@ -251,11 +256,11 @@ metadata:
     app: test
     pod-template-hash: rs
     service.istio.io/canonical-name: {{ .Name }}
-    {{- if .InjectionLabel }}
-    sidecar.istio.io/inject: "{{ .InjectionLabelValue }}"
+    {{- with .InjectLabel }}
+    sidecar.istio.io/inject: "{{ . }}"
     {{- end }}
-    {{- if .DefiniteRevision }}
-    istio.io/rev: {{ .DefiniteRevision }}
+    {{- with .Revision }}
+    istio.io/rev: "{{ . }}"
     {{- end }}
   annotations:
     some-annotation: some-value
@@ -291,21 +296,6 @@ type wantedMetric struct {
 	DesiredVersion     string
 	FullVersion        string
 	DesiredFullVersion string
-}
-
-type telemetryIstioDrivenPods struct {
-	versions               map[string]float64
-	drivenByIstio          float64
-	notHaveDataPlaneMetric bool
-}
-
-func singleVersionLabelTelemetry(ver string) telemetryIstioDrivenPods {
-	return telemetryIstioDrivenPods{
-		drivenByIstio: 1,
-		versions: map[string]float64{
-			ver: 1,
-		},
-	}
 }
 
 var hookInitValues = `
@@ -359,12 +349,19 @@ var _ = Describe("Istio hooks :: dataplane_handler :: metrics ::", func() {
 		}))
 
 		// there are no istio pods or ignored pods in the cluster, hense no metrics
-		if yamlState == "" || want == nil {
+		if want == nil {
 			Expect(m).To(HaveLen(2))
+			Expect(m[1].Name).To(Equal("d8_telemetry_istio_driven_pods_total"))
+			Expect(*m[1].Value).To(Equal(0.0))
 			return
 		}
 
-		Expect(len(m) >= 3).To(BeTrue())
+		Expect(m).To(HaveLen(4))
+		Expect(m[2].Name).To(Equal("d8_telemetry_istio_driven_pods_total"))
+		Expect(*m[2].Value).To(Equal(1.0))
+		Expect(m[3].Name).To(Equal("d8_telemetry_istio_driven_pods_group_by_full_version_total"))
+		Expect(m[3].Labels).To(Equal(map[string]string{"full_version": want.FullVersion}))
+		Expect(*m[3].Value).To(Equal(1.0))
 		Expect(m[1]).To(BeEquivalentTo(operation.MetricOperation{
 			Name:   istioPodMetadataMetricName,
 			Group:  metadataExporterMetricsGroup,
@@ -388,23 +385,21 @@ var _ = Describe("Istio hooks :: dataplane_handler :: metrics ::", func() {
 		Entry("NS with global revision, Pod to ignore with inject=false label",
 			[]string{
 				generateIstioNsYAML(nsParams{
-					GlobalRevision: true,
+					Injection: "enabled",
 				}),
 				generateIstioPodYAML(podParams{
-					InjectionLabel:      true,
-					InjectionLabelValue: false,
+					InjectLabel: "false",
 				}),
 			}, nil),
 		Entry("NS with definite revision, but revision is absent in revisionFullVersionMap",
 			[]string{
 				generateIstioNsYAML(nsParams{
-					DefiniteRevision: "v1x00",
+					Revision: ptr.To("v1x00"),
 				}),
 				generateIstioPodYAML(podParams{
-					InjectionLabel:      true,
-					InjectionLabelValue: true,
-					CurrentRevision:     "v1x00",
-					FullVersion:         "", // annotation is absent
+					InjectLabel:     "true",
+					CurrentRevision: "v1x00",
+					FullVersion:     "", // annotation is absent
 				}),
 			}, &wantedMetric{
 				Revision:           "v1x00",
@@ -416,14 +411,11 @@ var _ = Describe("Istio hooks :: dataplane_handler :: metrics ::", func() {
 			}),
 		Entry("NS without any revisions, pod with inject=true label",
 			[]string{
-				generateIstioNsYAML(nsParams{
-					GlobalRevision: false,
-				}),
+				generateIstioNsYAML(nsParams{}),
 				generateIstioPodYAML(podParams{
-					InjectionLabel:      true,
-					InjectionLabelValue: true,
-					CurrentRevision:     "v1x42",
-					FullVersion:         "1.42.42",
+					InjectLabel:     "true",
+					CurrentRevision: "v1x42",
+					FullVersion:     "1.42.42",
 				}),
 			}, &wantedMetric{
 				Revision:           "v1x42",
@@ -436,13 +428,12 @@ var _ = Describe("Istio hooks :: dataplane_handler :: metrics ::", func() {
 		Entry("NS with global revision, pod with inject=true label",
 			[]string{
 				generateIstioNsYAML(nsParams{
-					GlobalRevision: true,
+					Injection: "enabled",
 				}),
 				generateIstioPodYAML(podParams{
-					InjectionLabel:      true,
-					InjectionLabelValue: true,
-					CurrentRevision:     "v1x42",
-					FullVersion:         "1.42.42",
+					InjectLabel:     "true",
+					CurrentRevision: "v1x42",
+					FullVersion:     "1.42.42",
 				}),
 			}, &wantedMetric{
 				Revision:           "v1x42",
@@ -455,13 +446,12 @@ var _ = Describe("Istio hooks :: dataplane_handler :: metrics ::", func() {
 		Entry("NS with definite revision, pod with inject=true label",
 			[]string{
 				generateIstioNsYAML(nsParams{
-					DefiniteRevision: "v1x15",
+					Revision: ptr.To("v1x15"),
 				}),
 				generateIstioPodYAML(podParams{
-					InjectionLabel:      true,
-					InjectionLabelValue: true,
-					CurrentRevision:     "v1x15",
-					FullVersion:         "1.15.15",
+					InjectLabel:     "true",
+					CurrentRevision: "v1x15",
+					FullVersion:     "1.15.15",
 				}),
 			}, &wantedMetric{
 				Revision:           "v1x15",
@@ -474,31 +464,12 @@ var _ = Describe("Istio hooks :: dataplane_handler :: metrics ::", func() {
 		Entry("NS with istio.io/rev=default (normalized to global), pod gets globalRevision as desired",
 			[]string{
 				generateIstioNsYAML(nsParams{
-					DefiniteRevision: "default",
+					Revision: ptr.To("default"),
 				}),
 				generateIstioPodYAML(podParams{
-					InjectionLabel:      true,
-					InjectionLabelValue: true,
-					CurrentRevision:     "v1x42",
-					FullVersion:         "1.42.42",
-				}),
-			}, &wantedMetric{
-				Revision:           "v1x42",
-				DesiredRevision:    "v1x42",
-				Version:            "1.42",
-				DesiredVersion:     "1.42",
-				FullVersion:        "1.42.42",
-				DesiredFullVersion: "1.42.42",
-			}),
-		Entry("Pod with istio.io/rev=default (normalized to global string), metric has desired_revision=<global one>",
-			[]string{
-				generateIstioNsYAML(nsParams{
-					GlobalRevision: true,
-				}),
-				generateIstioPodYAML(podParams{
-					DefiniteRevision: "default",
-					CurrentRevision:  "v1x42",
-					FullVersion:      "1.42.42",
+					InjectLabel:     "true",
+					CurrentRevision: "v1x42",
+					FullVersion:     "1.42.42",
 				}),
 			}, &wantedMetric{
 				Revision:           "v1x42",
@@ -512,9 +483,9 @@ var _ = Describe("Istio hooks :: dataplane_handler :: metrics ::", func() {
 			[]string{
 				generateIstioNsYAML(nsParams{}),
 				generateIstioPodYAML(podParams{
-					DefiniteRevision: "default",
-					CurrentRevision:  "v1x42",
-					FullVersion:      "1.42.42",
+					Revision:        ptr.To("default"),
+					CurrentRevision: "v1x42",
+					FullVersion:     "1.42.42",
 				}),
 			}, &wantedMetric{
 				Revision:           "v1x42",
@@ -526,13 +497,11 @@ var _ = Describe("Istio hooks :: dataplane_handler :: metrics ::", func() {
 			}),
 		Entry("NS without any revisions, pod with istio.io/rev label",
 			[]string{
-				generateIstioNsYAML(nsParams{
-					GlobalRevision: false,
-				}),
+				generateIstioNsYAML(nsParams{}),
 				generateIstioPodYAML(podParams{
-					DefiniteRevision: "v1x15",
-					CurrentRevision:  "v1x15",
-					FullVersion:      "1.15.15",
+					Revision:        ptr.To("v1x15"),
+					CurrentRevision: "v1x15",
+					FullVersion:     "1.15.15",
 				}),
 			}, &wantedMetric{
 				Revision:           "v1x15",
@@ -542,46 +511,108 @@ var _ = Describe("Istio hooks :: dataplane_handler :: metrics ::", func() {
 				FullVersion:        "1.15.15",
 				DesiredFullVersion: "1.15.15",
 			}),
-		Entry("NS with global revision, pod with istio.io/rev label",
+		Entry("NS with global revision, pod's istio.io/rev label is ignored",
 			[]string{
 				generateIstioNsYAML(nsParams{
-					GlobalRevision: true,
+					Injection: "enabled",
 				}),
 				generateIstioPodYAML(podParams{
-					DefiniteRevision: "v1x15",
-					CurrentRevision:  "v1x15",
-					FullVersion:      "1.15.15",
+					Revision:        ptr.To("v1x15"),
+					CurrentRevision: "v1x42",
+					FullVersion:     "1.42.42",
+				}),
+			}, &wantedMetric{
+				Revision:           "v1x42",
+				DesiredRevision:    "v1x42",
+				Version:            "1.42",
+				DesiredVersion:     "1.42",
+				FullVersion:        "1.42.42",
+				DesiredFullVersion: "1.42.42",
+			}),
+		Entry("NS with both istio-injection and istio.io/rev labels -> no injection at all",
+			[]string{
+				generateIstioNsYAML(nsParams{
+					Injection: "enabled",
+					Revision:  ptr.To("v1x15"),
+				}),
+				generateIstioPodYAML(podParams{
+					Revision:        ptr.To("v1x15"),
+					CurrentRevision: "v1x15",
+					FullVersion:     "1.15.15",
 				}),
 			}, &wantedMetric{
 				Revision:           "v1x15",
-				DesiredRevision:    "v1x15",
+				DesiredRevision:    "absent",
 				Version:            "1.15",
-				DesiredVersion:     "1.15",
+				DesiredVersion:     "unknown",
 				FullVersion:        "1.15.15",
-				DesiredFullVersion: "1.15.15",
+				DesiredFullVersion: "unknown",
 			}),
-		Entry("NS with definite revision, pod with inject=true label",
+		Entry("NS with istio-injection!=enabled -> no injection, pod's istio.io/rev label is ignored",
 			[]string{
 				generateIstioNsYAML(nsParams{
-					DefiniteRevision: "v1x15",
+					Injection: "disabled",
 				}),
 				generateIstioPodYAML(podParams{
-					DefiniteRevision: "v1x155",
-					CurrentRevision:  "v1x155",
-					FullVersion:      "1.155.155",
+					Revision:        ptr.To("v1x15"),
+					CurrentRevision: "v1x15",
+					FullVersion:     "1.15.15",
 				}),
 			}, &wantedMetric{
-				Revision:           "v1x155",
-				DesiredRevision:    "v1x155",
-				Version:            "1.155",
-				DesiredVersion:     "1.155",
-				FullVersion:        "1.155.155",
-				DesiredFullVersion: "1.155.155",
+				Revision:           "v1x15",
+				DesiredRevision:    "absent",
+				Version:            "1.15",
+				DesiredVersion:     "unknown",
+				FullVersion:        "1.15.15",
+				DesiredFullVersion: "unknown",
+			}),
+		Entry("NS with istio-injection!=enabled -> no injection, pod's inject=true label is ignored",
+			[]string{
+				generateIstioNsYAML(nsParams{
+					Injection: "disabled",
+				}),
+				generateIstioPodYAML(podParams{
+					InjectLabel: "true",
+				}),
+			}, nil),
+		Entry("NS with empty istio.io/rev label -> no injection",
+			[]string{
+				generateIstioNsYAML(nsParams{
+					Revision: ptr.To(""),
+				}),
+				generateIstioPodYAML(podParams{
+					CurrentRevision: "v1x15",
+					FullVersion:     "1.15.15",
+				}),
+			}, &wantedMetric{
+				Revision:           "v1x15",
+				DesiredRevision:    "absent",
+				Version:            "1.15",
+				DesiredVersion:     "unknown",
+				FullVersion:        "1.15.15",
+				DesiredFullVersion: "unknown",
+			}),
+		Entry("NS without labels, pod with empty istio.io/rev and inject=true labels -> no injection",
+			[]string{
+				generateIstioNsYAML(nsParams{}),
+				generateIstioPodYAML(podParams{
+					Revision:        ptr.To(""),
+					InjectLabel:     "true",
+					CurrentRevision: "v1x15",
+					FullVersion:     "1.15.15",
+				}),
+			}, &wantedMetric{
+				Revision:           "v1x15",
+				DesiredRevision:    "absent",
+				Version:            "1.15",
+				DesiredVersion:     "unknown",
+				FullVersion:        "1.15.15",
+				DesiredFullVersion: "unknown",
 			}),
 		Entry("NS with global revision, Pod to ignore with inject=false annotation",
 			[]string{
 				generateIstioNsYAML(nsParams{
-					GlobalRevision: true,
+					Injection: "enabled",
 				}),
 				generateIstioPodYAML(podParams{
 					DisableInjectionAnnotation: true,
@@ -590,7 +621,7 @@ var _ = Describe("Istio hooks :: dataplane_handler :: metrics ::", func() {
 		Entry("NS with definite revision, Pod to ignore with inject=false annotation",
 			[]string{
 				generateIstioNsYAML(nsParams{
-					DefiniteRevision: "v1x15",
+					Revision: ptr.To("v1x15"),
 				}),
 				generateIstioPodYAML(podParams{
 					DisableInjectionAnnotation: true,
@@ -599,7 +630,7 @@ var _ = Describe("Istio hooks :: dataplane_handler :: metrics ::", func() {
 		Entry("NS with global revision, Pod revision is actual",
 			[]string{
 				generateIstioNsYAML(nsParams{
-					GlobalRevision: true,
+					Injection: "enabled",
 				}),
 				generateIstioPodYAML(podParams{
 					CurrentRevision: "v1x42",
@@ -616,7 +647,7 @@ var _ = Describe("Istio hooks :: dataplane_handler :: metrics ::", func() {
 		Entry("Namespace with definite revision, pod revision is actual",
 			[]string{
 				generateIstioNsYAML(nsParams{
-					DefiniteRevision: "v1x15",
+					Revision: ptr.To("v1x15"),
 				}),
 				generateIstioPodYAML(podParams{
 					CurrentRevision: "v1x15",
@@ -635,7 +666,7 @@ var _ = Describe("Istio hooks :: dataplane_handler :: metrics ::", func() {
 		Entry("NS global revision, pod revision is not actual",
 			[]string{
 				generateIstioNsYAML(nsParams{
-					GlobalRevision: true,
+					Injection: "enabled",
 				}),
 				generateIstioPodYAML(podParams{
 					CurrentRevision: "v1x77",
@@ -652,7 +683,7 @@ var _ = Describe("Istio hooks :: dataplane_handler :: metrics ::", func() {
 		Entry("NS global revision, pod revision is absent (no sidecar)",
 			[]string{
 				generateIstioNsYAML(nsParams{
-					GlobalRevision: true,
+					Injection: "enabled",
 				}),
 				generateIstioPodYAML(podParams{}),
 			}, &wantedMetric{
@@ -666,7 +697,7 @@ var _ = Describe("Istio hooks :: dataplane_handler :: metrics ::", func() {
 		Entry("Namespace with definite revision, pod revision is not actual",
 			[]string{
 				generateIstioNsYAML(nsParams{
-					DefiniteRevision: "v1x15",
+					Revision: ptr.To("v1x15"),
 				}),
 				generateIstioPodYAML(podParams{
 					CurrentRevision: "v1x77",
@@ -683,7 +714,7 @@ var _ = Describe("Istio hooks :: dataplane_handler :: metrics ::", func() {
 		Entry("Namespace with definite revision, pod revision is absent (no sidecar)",
 			[]string{
 				generateIstioNsYAML(nsParams{
-					DefiniteRevision: "v1x15",
+					Revision: ptr.To("v1x15"),
 				}),
 				generateIstioPodYAML(podParams{}),
 			}, &wantedMetric{
@@ -694,49 +725,49 @@ var _ = Describe("Istio hooks :: dataplane_handler :: metrics ::", func() {
 				FullVersion:        "absent",
 				DesiredFullVersion: "1.15.15",
 			}),
-		Entry("Namespace with definite revision and pod with definite revision is actual",
+		Entry("Namespace with definite revision, pod's definite revision is ignored, pod revision is actual",
 			[]string{
 				generateIstioNsYAML(nsParams{
-					DefiniteRevision: "v1x15",
+					Revision: ptr.To("v1x15"),
 				}),
 				generateIstioPodYAML(podParams{
-					DefiniteRevision: "v1x77",
-					CurrentRevision:  "v1x77",
-					FullVersion:      "1.77.77",
+					Revision:        ptr.To("v1x77"),
+					CurrentRevision: "v1x15",
+					FullVersion:     "1.15.15",
 				}),
 			}, &wantedMetric{
-				Revision:           "v1x77",
-				DesiredRevision:    "v1x77",
-				Version:            "1.77",
-				DesiredVersion:     "1.77",
-				FullVersion:        "1.77.77",
-				DesiredFullVersion: "1.77.77",
+				Revision:           "v1x15",
+				DesiredRevision:    "v1x15",
+				Version:            "1.15",
+				DesiredVersion:     "1.15",
+				FullVersion:        "1.15.15",
+				DesiredFullVersion: "1.15.15",
 			}),
-		Entry("Namespace with definite revision and pod with definite revision is not actual",
+		Entry("Namespace with definite revision, pod's definite revision is ignored, pod revision is not actual",
 			[]string{
 				generateIstioNsYAML(nsParams{
-					DefiniteRevision: "v1x15",
+					Revision: ptr.To("v1x15"),
 				}),
 				generateIstioPodYAML(podParams{
-					DefiniteRevision: "v1x77",
-					CurrentRevision:  "v1x71",
-					FullVersion:      "1.71.71",
+					Revision:        ptr.To("v1x77"),
+					CurrentRevision: "v1x71",
+					FullVersion:     "1.71.71",
 				}),
 			}, &wantedMetric{
 				Revision:           "v1x71",
-				DesiredRevision:    "v1x77",
+				DesiredRevision:    "v1x15",
 				Version:            "1.71",
-				DesiredVersion:     "1.77",
+				DesiredVersion:     "1.15",
 				FullVersion:        "1.71.71",
-				DesiredFullVersion: "1.77.77",
+				DesiredFullVersion: "1.15.15",
 			}),
 		Entry("Namespace without labels and pod with definite revision",
 			[]string{
 				generateIstioNsYAML(nsParams{}),
 				generateIstioPodYAML(podParams{
-					DefiniteRevision: "v1x77",
-					CurrentRevision:  "v1x77",
-					FullVersion:      "1.77.77",
+					Revision:        ptr.To("v1x77"),
+					CurrentRevision: "v1x77",
+					FullVersion:     "1.77.77",
 				}),
 			}, &wantedMetric{
 				Revision:           "v1x77",
@@ -750,7 +781,7 @@ var _ = Describe("Istio hooks :: dataplane_handler :: metrics ::", func() {
 			[]string{
 				generateIstioNsYAML(nsParams{}),
 				generateIstioPodYAML(podParams{
-					DefiniteRevision: "v1x77",
+					Revision: ptr.To("v1x77"),
 				}),
 			}, &wantedMetric{
 				Revision:           "absent",
@@ -782,289 +813,6 @@ var _ = Describe("Istio hooks :: dataplane_handler :: metrics ::", func() {
 			}, nil),
 	)
 
-	DescribeTable("There are different desired and actual revisions for telemetry",
-		func(objectsYAMLs []string, stats telemetryIstioDrivenPods) {
-			f.ValuesSet("istio.internal.globalVersion", "1.42")
-			yamlState := strings.Join(objectsYAMLs, "\n---\n")
-			f.BindingContexts.Set(f.KubeStateSet(yamlState))
-
-			f.RunHook()
-			Expect(f).To(ExecuteSuccessfully())
-			Expect(string(f.LoggerOutput.Contents())).To(HaveLen(0))
-			m := f.MetricsCollector.CollectedMetrics()
-
-			assertTelemetryStat := func(startIndex int) {
-				Expect(m[startIndex].Name).To(Equal("d8_telemetry_istio_driven_pods_total"))
-				Expect(*m[startIndex].Value).To(Equal(stats.drivenByIstio))
-
-				foundVersioned := 0
-				foundAll := 0
-				for _, d := range m {
-					if d.Name == "d8_telemetry_istio_driven_pods_group_by_full_version_total" {
-						foundAll++
-						desiredVer := d.Labels["full_version"]
-
-						for ver, count := range stats.versions {
-							if desiredVer == ver {
-								Expect(*d.Value).To(Equal(count))
-								foundVersioned++
-							}
-						}
-					}
-				}
-
-				Expect(foundVersioned).To(Equal(len(stats.versions)))
-				Expect(foundAll).To(Equal(len(stats.versions)))
-			}
-
-			// there are no istio pods or ignored pods in the cluster, hense no metrics
-			if yamlState == "" {
-				Expect(m).To(HaveLen(2))
-				assertTelemetryStat(1)
-				return
-			}
-
-			notVersionedMetrics := 3
-			if stats.notHaveDataPlaneMetric {
-				notVersionedMetrics = 2
-			}
-			Expect(m).To(HaveLen(notVersionedMetrics + len(stats.versions)))
-			assertTelemetryStat(notVersionedMetrics - 1)
-		},
-
-		// Checks for normal behavior, everything with revision is ok!
-		Entry("Empty cluster", []string{}, telemetryIstioDrivenPods{}),
-		Entry("NS with global revision, Pod to ignore with inject=false label",
-			[]string{
-				generateIstioNsYAML(nsParams{
-					GlobalRevision: true,
-				}),
-				generateIstioPodYAML(podParams{
-					InjectionLabel:      true,
-					InjectionLabelValue: false,
-				}),
-			}, telemetryIstioDrivenPods{notHaveDataPlaneMetric: true}),
-		Entry("NS with definite revision, but revision is absent in revisionFullVersionMap",
-			[]string{
-				generateIstioNsYAML(nsParams{
-					DefiniteRevision: "v1x00",
-				}),
-				generateIstioPodYAML(podParams{
-					InjectionLabel:      true,
-					InjectionLabelValue: true,
-					CurrentRevision:     "v1x00",
-					FullVersion:         "", // annotation is absent
-				}),
-			}, singleVersionLabelTelemetry("unknown")),
-		Entry("NS without any revisions, pod with inject=true label",
-			[]string{
-				generateIstioNsYAML(nsParams{
-					GlobalRevision: false,
-				}),
-				generateIstioPodYAML(podParams{
-					InjectionLabel:      true,
-					InjectionLabelValue: true,
-					CurrentRevision:     "v1x42",
-					FullVersion:         "1.42.42",
-				}),
-			}, telemetryIstioDrivenPods{
-				drivenByIstio: 1,
-				versions: map[string]float64{
-					"1.42.42": 1,
-				},
-			}),
-		Entry("NS with global revision, pod with inject=true label",
-			[]string{
-				generateIstioNsYAML(nsParams{
-					GlobalRevision: true,
-				}),
-				generateIstioPodYAML(podParams{
-					InjectionLabel:      true,
-					InjectionLabelValue: true,
-					CurrentRevision:     "v1x42",
-					FullVersion:         "1.42.42",
-				}),
-			}, singleVersionLabelTelemetry("1.42.42")),
-		Entry("NS with definite revision, pod with inject=true label",
-			[]string{
-				generateIstioNsYAML(nsParams{
-					DefiniteRevision: "v1x15",
-				}),
-				generateIstioPodYAML(podParams{
-					InjectionLabel:      true,
-					InjectionLabelValue: true,
-					CurrentRevision:     "v1x15",
-					FullVersion:         "1.15.15",
-				}),
-			}, singleVersionLabelTelemetry("1.15.15")),
-		Entry("NS without any revisions, pod with istio.io/rev label",
-			[]string{
-				generateIstioNsYAML(nsParams{
-					GlobalRevision: false,
-				}),
-				generateIstioPodYAML(podParams{
-					DefiniteRevision: "v1x15",
-					CurrentRevision:  "v1x15",
-					FullVersion:      "1.15.15",
-				}),
-			}, singleVersionLabelTelemetry("1.15.15")),
-		Entry("NS with global revision, pod with istio.io/rev label",
-			[]string{
-				generateIstioNsYAML(nsParams{
-					GlobalRevision: true,
-				}),
-				generateIstioPodYAML(podParams{
-					DefiniteRevision: "v1x15",
-					CurrentRevision:  "v1x15",
-					FullVersion:      "1.15.15",
-				}),
-			}, singleVersionLabelTelemetry("1.15.15")),
-		Entry("NS with definite revision, pod with inject=true label",
-			[]string{
-				generateIstioNsYAML(nsParams{
-					DefiniteRevision: "v1x15",
-				}),
-				generateIstioPodYAML(podParams{
-					DefiniteRevision: "v1x155",
-					CurrentRevision:  "v1x155",
-					FullVersion:      "1.155.155",
-				}),
-			}, singleVersionLabelTelemetry("1.155.155")),
-		Entry("NS with global revision, Pod to ignore with inject=false annotation",
-			[]string{
-				generateIstioNsYAML(nsParams{
-					GlobalRevision: true,
-				}),
-				generateIstioPodYAML(podParams{
-					DisableInjectionAnnotation: true,
-				}),
-			}, telemetryIstioDrivenPods{
-				drivenByIstio:          0,
-				notHaveDataPlaneMetric: true,
-			}),
-		Entry("NS with definite revision, Pod to ignore with inject=false annotation",
-			[]string{
-				generateIstioNsYAML(nsParams{
-					DefiniteRevision: "v1x15",
-				}),
-				generateIstioPodYAML(podParams{
-					DisableInjectionAnnotation: true,
-				}),
-			}, telemetryIstioDrivenPods{
-				drivenByIstio:          0,
-				notHaveDataPlaneMetric: true,
-			}),
-		Entry("NS with global revision, Pod revision is actual",
-			[]string{
-				generateIstioNsYAML(nsParams{
-					GlobalRevision: true,
-				}),
-				generateIstioPodYAML(podParams{
-					CurrentRevision: "v1x42",
-					FullVersion:     "1.42.42",
-				}),
-			}, singleVersionLabelTelemetry("1.42.42")),
-		Entry("Namespace with definite revision, pod revision is actual",
-			[]string{
-				generateIstioNsYAML(nsParams{
-					DefiniteRevision: "v1x15",
-				}),
-				generateIstioPodYAML(podParams{
-					CurrentRevision: "v1x15",
-					FullVersion:     "1.15.15",
-				}),
-			}, singleVersionLabelTelemetry("1.15.15")),
-
-		// Checks for revision inconsistencies
-		Entry("NS global revision, pod revision is not actual",
-			[]string{
-				generateIstioNsYAML(nsParams{
-					GlobalRevision: true,
-				}),
-				generateIstioPodYAML(podParams{
-					CurrentRevision: "v1x77",
-					FullVersion:     "1.77.77",
-				}),
-			}, singleVersionLabelTelemetry("1.77.77")),
-		Entry("NS global revision, pod revision is absent (no sidecar)",
-			[]string{
-				generateIstioNsYAML(nsParams{
-					GlobalRevision: true,
-				}),
-				generateIstioPodYAML(podParams{}),
-			}, singleVersionLabelTelemetry("absent")),
-		Entry("Namespace with definite revision, pod revision is not actual",
-			[]string{
-				generateIstioNsYAML(nsParams{
-					DefiniteRevision: "v1x15",
-				}),
-				generateIstioPodYAML(podParams{
-					CurrentRevision: "v1x77",
-					FullVersion:     "1.77.77",
-				}),
-			}, singleVersionLabelTelemetry("1.77.77")),
-		Entry("Namespace with definite revision, pod revision is absent (no sidecar)",
-			[]string{
-				generateIstioNsYAML(nsParams{
-					DefiniteRevision: "v1x15",
-				}),
-				generateIstioPodYAML(podParams{}),
-			}, singleVersionLabelTelemetry("absent")),
-		Entry("Namespace with definite revision and pod with definite revision is actual",
-			[]string{
-				generateIstioNsYAML(nsParams{
-					DefiniteRevision: "v1x15",
-				}),
-				generateIstioPodYAML(podParams{
-					DefiniteRevision: "v1x77",
-					CurrentRevision:  "v1x77",
-					FullVersion:      "1.77.77",
-				}),
-			}, singleVersionLabelTelemetry("1.77.77")),
-		Entry("Namespace with definite revision and pod with definite revision is not actual",
-			[]string{
-				generateIstioNsYAML(nsParams{
-					DefiniteRevision: "v1x15",
-				}),
-				generateIstioPodYAML(podParams{
-					DefiniteRevision: "v1x77",
-					CurrentRevision:  "v1x71",
-					FullVersion:      "1.71.71",
-				}),
-			}, singleVersionLabelTelemetry("1.71.71")),
-		Entry("Namespace without labels and pod with definite revision",
-			[]string{
-				generateIstioNsYAML(nsParams{}),
-				generateIstioPodYAML(podParams{
-					DefiniteRevision: "v1x77",
-					CurrentRevision:  "v1x77",
-					FullVersion:      "1.77.77",
-				}),
-			}, singleVersionLabelTelemetry("1.77.77")),
-		Entry("Namespace without labels and pod with definite revision but sidecar absent",
-			[]string{
-				generateIstioNsYAML(nsParams{}),
-				generateIstioPodYAML(podParams{
-					DefiniteRevision: "v1x77",
-				}),
-			}, singleVersionLabelTelemetry("absent")),
-		Entry("Pod orphan",
-			[]string{
-				generateIstioNsYAML(nsParams{}),
-				generateIstioPodYAML(podParams{
-					CurrentRevision: "v1x77",
-					FullVersion:     "1.77.77",
-				}),
-			}, singleVersionLabelTelemetry("1.77.77")),
-		Entry("Pod without current and desired revisions",
-			[]string{
-				generateIstioNsYAML(nsParams{}),
-				generateIstioPodYAML(podParams{}),
-			}, telemetryIstioDrivenPods{
-				drivenByIstio:          0,
-				notHaveDataPlaneMetric: true,
-			}),
-	)
 })
 
 var _ = Describe("Istio hooks :: dataplane_handler :: dataplane_upgrade ::", func() {
@@ -1072,12 +820,12 @@ var _ = Describe("Istio hooks :: dataplane_handler :: dataplane_upgrade ::", fun
 	f := HookExecutionConfigInit(hookInitValues, "")
 
 	istioNsYAML := generateIstioNsYAML(nsParams{
-		GlobalRevision: true,
+		Injection: "enabled",
 	})
 
 	istioNsWithAutoupgradeYAML := generateIstioNsYAML(nsParams{
-		AutoUpgrade:    true,
-		GlobalRevision: true,
+		AutoUpgrade: true,
+		Injection:   "enabled",
 	})
 
 	Context("Test Deployment", func() {
