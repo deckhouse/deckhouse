@@ -7,6 +7,7 @@ Deckhouse Platform (DP) provides built-in tools for integration with private clo
 These tools let you automatically provision virtual machines and connect them to a cluster,
 deploy clusters within private cloud environments, and scale resources as needed.
 
+- [Basis Dynamix](./dynamix/authorization.html)
 - Deckhouse Virtualization Platform (DVP)
 - [Huawei Cloud](./huaweicloud/authorization.html)
 - [OpenStack](./openstack/connection-and-authorization.html)

@@ -82,6 +82,9 @@ func TestProviderRolloutParityAgainstCRD(t *testing.T) {
 						if reason, documented := fixture.rolloutExceptions[field.path+"/"+mutation.name]; documented {
 							t.Skip(reason)
 						}
+						if reason, excluded := fixture.postV1Reason(instanceClassNamespace, field.path); excluded {
+							t.Skip(reason)
+						}
 
 						mutated := deepCopySpec(t, fixture.instanceClass)
 						mutation.apply(mutated, field)
@@ -290,6 +293,9 @@ func TestProviderRenderParityOnEdgeSpecs(t *testing.T) {
 				t.Run(name, func(t *testing.T) {
 					v1Object, v1Err := renderLegacySpec(t, fixture, spec)
 					v2Object, v2Err := renderV2Spec(fixture, contract, spec)
+					if v2Err == nil {
+						v2Object = fixture.withoutPostV1Fields(t, v2Object)
+					}
 
 					if v1Err != nil {
 						require.Error(t, v2Err,

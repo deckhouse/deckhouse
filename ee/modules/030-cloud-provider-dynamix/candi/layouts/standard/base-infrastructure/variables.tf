@@ -11,8 +11,9 @@ variable "providerClusterConfiguration" {
 
 locals {
   resource_name_prefix = var.clusterConfiguration.cloud.prefix
-  account = lookup(var.providerClusterConfiguration.provider, "account", null)
+  account = lookup(var.providerClusterConfiguration, "account", null)
   location = lookup(var.providerClusterConfiguration, "location", null)
+  storage_policy = lookup(var.providerClusterConfiguration, "storagePolicy", null)
   resource_group_name = join("-", [local.resource_name_prefix, "rg"])
 }
 

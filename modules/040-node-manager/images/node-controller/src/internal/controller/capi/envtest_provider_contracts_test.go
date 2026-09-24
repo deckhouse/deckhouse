@@ -139,9 +139,12 @@ func providerContracts() []providerContract {
 			instanceClassKind:  "DynamixInstanceClass",
 			templateKind:       "DynamixMachineTemplate",
 			templateAPIVersion: "infrastructure.cluster.x-k8s.io/v1alpha1",
-			providerConfig:     map[string]any{},
-			instanceClass:      map[string]any{"imageName": "ubuntu", "numCPUs": int64(4), "memory": int64(8192)},
-			rollingEdit:        func(spec map[string]any) { spec["numCPUs"] = int64(8) },
+			// The cluster-wide storage policy the module publishes into the registration secret:
+			// Dynamix 4.6 has no VM without a storage policy, and the template falls back to this
+			// value for an InstanceClass that does not override it.
+			providerConfig: map[string]any{"storagePolicy": "storage_policy01"},
+			instanceClass:  map[string]any{"imageName": "ubuntu", "numCPUs": int64(4), "memory": int64(8192)},
+			rollingEdit:    func(spec map[string]any) { spec["numCPUs"] = int64(8) },
 		},
 		{
 			name:               "vcd",

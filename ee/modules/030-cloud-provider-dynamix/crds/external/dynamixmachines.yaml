@@ -46,7 +46,7 @@ spec:
               properties:
                 cpu:
                   default: 1
-                  description: Cores is the number of cores per socket.
+                  description: CPU defines the VM CPU.
                   format: int32
                   type: integer
                 id:
@@ -62,20 +62,25 @@ spec:
                     proto.
                   type: string
                 rootDiskSizeGb:
-                  default: 20
+                  default: 30
                   description: RootDiskSize size of the bootable disk in GiB.
                   format: int64
                   type: integer
                 imageName:
                   description: The VM image this instance will be created from.
                   type: string
+                storagePolicy:
+                  description: |-
+                    StoragePolicy holds the name of the Dynamix storage policy the VM disks are placed in.
+                    Dynamix 4.6 rejects VM creation without a storage policy, so the field is mandatory.
+                  type: string
                 externalNetwork:
                   description: ExternalNetwork holds Dynamix external network name.
                   type: string
               required:
-                - cpu
                 - rootDiskSizeGb
                 - imageName
+                - storagePolicy
               type: object
             status:
               description: DynamixMachineStatus defines the observed state of DynamixMachine
