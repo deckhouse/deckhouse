@@ -109,7 +109,7 @@ Cilium полностью заменяет собой функционал мо�
 
 {% alert level="warning" %}Доступно в следующих редакциях Deckhouse Platform: SE+, EE, Ultimate, CSE Lite (1.73), CSE Pro (1.73), Certified Pro, DP Certified Core.{% endalert %}
 
-Egress Gateway в Deckhouse Platform может быть использован в одном из двух режимов: [Базовый](#базовый-режим) и [Режим с Virtual IP](#режим-с-virtual-ip). Для выбора режима используйте ресурс [EgressGateway](cr.html#egressgateway) (параметр `spec.sourceIP.node`).
+Egress Gateway в Deckhouse Platform может быть использован в одном из двух режимов: [Базовый](#базовый-режим) и [Режим с Virtual IP](#режим-с-virtual-ip). Для выбора режима используйте ресурс [EgressGateway](cr.html#egressgateway) (параметр `spec.sourceIP.mode`).
 
 ### Базовый режим
 
