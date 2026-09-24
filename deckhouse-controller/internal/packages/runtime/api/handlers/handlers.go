@@ -21,11 +21,13 @@ import (
 	"net/http"
 	"strings"
 
-	metricsstorage "github.com/deckhouse/deckhouse/pkg/metrics-storage"
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
+
+	metricsstorage "github.com/deckhouse/deckhouse/pkg/metrics-storage"
 )
 
+// Deps holds the dependencies for root handler.
 type Deps struct {
 	MetricStorage     metricsstorage.Storage
 	HookMetricStorage metricsstorage.Storage

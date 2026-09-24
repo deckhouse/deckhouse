@@ -103,7 +103,7 @@ type Service struct {
 	// name drains the entry, so a startup-race event is not lost.
 	pendingHealth map[string]health.Event
 
-	// deckhouseSettingsCh receives updates to the deckhouse settings.
+	// deckhouseSettingsCh holds the latest deckhouse settings; a newer update replaces an unread one.
 	deckhouseSettingsCh chan addonutils.Values
 
 	// appQueue carries names of packages whose status changed. It coalesces
@@ -168,10 +168,11 @@ func NewService() *Service {
 			workqueue.DefaultTypedControllerRateLimiter[string](),
 			workqueue.TypedRateLimitingQueueConfig[string]{Name: moduleQueueName},
 		),
-		statuses:      make(map[string]*Status),
-		pendingHealth: make(map[string]health.Event),
-		resyncStop:    make(chan struct{}),
-		resyncDone:    make(chan struct{}),
+		statuses:            make(map[string]*Status),
+		pendingHealth:       make(map[string]health.Event),
+		resyncStop:          make(chan struct{}),
+		resyncDone:          make(chan struct{}),
+		deckhouseSettingsCh: make(chan addonutils.Values, 1),
 	}
 }
 
@@ -481,9 +482,24 @@ func (s *Service) UpdateSettings(name string, settings addonutils.Values) {
 		s.queueFor(name).Add(name)
 	}
 
-	// send deckhouse settings update
 	if name == "deckhouse" {
-		s.deckhouseSettingsCh <- settings
+		s.publishDeckhouseSettings(settings)
+	}
+}
+
+// publishDeckhouseSettings never blocks: with no reader the unread value is dropped for the latest one.
+func (s *Service) publishDeckhouseSettings(settings addonutils.Values) {
+	for {
+		select {
+		case s.deckhouseSettingsCh <- settings:
+			return
+		default:
+		}
+
+		select {
+		case <-s.deckhouseSettingsCh:
+		default:
+		}
 	}
 }
 

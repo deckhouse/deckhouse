@@ -124,7 +124,7 @@ type Runtime struct {
 	status       *status.Service     // Tracks per-package condition chain
 	scheduler    *schedule.Scheduler // Evaluates enable/disable based on version constraints
 	socketServer *socket.Server      // Full API surface over the Unix socket
-	tcpServer    *tcp.Server         // Subset safe for the pod network, over loopback TCP
+	tcpServer    *tcp.Server         // Public subset over the pod address; started only with Module v2
 	apiServers   errgroup.Group      // Serve loops of both API servers
 
 	crdService        *crd.Service                        // Installs CRDs from package paths

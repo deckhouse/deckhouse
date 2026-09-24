@@ -54,27 +54,29 @@ func (r *Runtime) buildAPIServers() {
 	}
 
 	r.socketServer = socket.NewServer(apiSocketPath, handlers.NewRootHandler(v1.NewPrivateHandler(deps), rootDeps), r.logger)
-	// when module v2 is enabled, the TCP server is bound to the public tree
-	if app.ModuleV2Enabled() {
-		r.tcpServer = tcp.NewServer(envconfig.ListenAddress(), envconfig.ListenPort(), handlers.NewRootHandler(v1.NewPublicHandler(deps), rootDeps), r.logger)
-	}
+	r.tcpServer = tcp.NewServer(envconfig.ListenAddress(), envconfig.ListenPort(), handlers.NewRootHandler(v1.NewPublicHandler(deps), rootDeps), r.logger)
 }
 
-// startAPIServers binds the socket and the loopback TCP listener, then watches
-// both serve loops. A bind failure is returned to the caller; a listener that
-// dies later reaches the runtime through the group, because deciding what a dead
-// listener means belongs here and not inside the transport.
+// startAPIServers binds the socket and, with Module v2, the TCP listener on the
+// pod address, then watches the serve loops. A bind failure is returned to the
+// caller; a listener that dies later reaches the runtime through the group,
+// because deciding what a dead listener means belongs here and not inside the
+// transport.
 func (r *Runtime) startAPIServers() error {
 	if err := r.socketServer.Start(); err != nil {
 		return fmt.Errorf("start socket server: %w", err)
 	}
 
-	if err := r.tcpServer.Start(); err != nil {
-		return fmt.Errorf("start tcp server: %w", err)
-	}
-
 	r.apiServers.Go(r.socketServer.Wait)
-	r.apiServers.Go(r.tcpServer.Wait)
+
+	// the TCP listener takes over the addon-operator endpoint, so it runs only without addon-operator
+	if app.ModuleV2Enabled() {
+		if err := r.tcpServer.Start(); err != nil {
+			return fmt.Errorf("start tcp server: %w", err)
+		}
+
+		r.apiServers.Go(r.tcpServer.Wait)
+	}
 
 	go r.watchAPIServers()
 

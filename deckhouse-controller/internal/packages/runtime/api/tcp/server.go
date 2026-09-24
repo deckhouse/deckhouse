@@ -45,8 +45,8 @@ type Server struct {
 }
 
 // NewServer creates a server for the given address and port. An empty address
-// binds every interface, which publishes the routes cluster-wide — keep it on
-// loopback. Nothing is bound until Start.
+// binds every interface, which publishes the routes cluster-wide. Nothing is
+// bound until Start.
 func NewServer(address, port string, handler http.Handler, logger *log.Logger) *Server {
 	return &Server{
 		address: address,
