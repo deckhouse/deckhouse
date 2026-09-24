@@ -57,6 +57,11 @@ var (
 		Version:  "v1",
 		Resource: "istios",
 	}
+	istioRevisionGVR = schema.GroupVersionResource{
+		Group:    "sailoperator.io",
+		Version:  "v1",
+		Resource: "istiorevisions",
+	}
 	istioFederationGVR = schema.GroupVersionResource{
 		Group:    "deckhouse.io",
 		Version:  "v1alpha1",
@@ -188,44 +193,6 @@ func purgeOrphanResources(_ context.Context, input *go_hook.HookInput, dc depend
 			}
 		}
 
-		// remove finalizers and delete istios in ns d8-istio
-		istios, err := k8sClient.Dynamic().Resource(istioGVR).Namespace(istioSystemNs).List(context.TODO(), metav1.ListOptions{})
-		if err != nil {
-			input.Logger.Warn("Failed to list Istio resources", log.Err(err))
-		} else {
-			for _, istio := range istios.Items {
-				revision, _, _ := unstructured.NestedString(istio.Object, "spec", "revision")
-				if !isOperatorSupportedRevision(versionMap, revision) {
-					continue
-				}
-				_, err = k8sClient.Dynamic().Resource(istioGVR).Namespace(istioSystemNs).Patch(context.TODO(), istio.GetName(), types.MergePatchType, patch, metav1.PatchOptions{})
-				if err != nil {
-					input.Logger.Warn("Failed to remove finalizers from Istio",
-						slog.String("name", istio.GetName()),
-						slog.String("namespace", istioSystemNs),
-						log.Err(err))
-					continue
-				}
-				input.Logger.Info("Finalizers from Istio removed",
-					slog.String("name", istio.GetName()),
-					slog.String("namespace", istioSystemNs))
-
-				if istio.GetDeletionTimestamp() == nil {
-					err := k8sClient.Dynamic().Resource(istioGVR).Namespace(istioSystemNs).Delete(context.TODO(), istio.GetName(), metav1.DeleteOptions{})
-					if err != nil {
-						input.Logger.Warn("Failed to delete Istio",
-							slog.String("name", istio.GetName()),
-							slog.String("namespace", istioSystemNs),
-							log.Err(err))
-						continue
-					}
-					input.Logger.Info("Istio deleted",
-						slog.String("name", istio.GetName()),
-						slog.String("namespace", istioSystemNs))
-				}
-			}
-		}
-
 		// Delete the istio-ca-root-cert ConfigMap in namespaces
 		namespaces, err := k8sClient.CoreV1().Namespaces().List(context.TODO(), metav1.ListOptions{})
 		if err != nil {
@@ -260,6 +227,87 @@ func purgeOrphanResources(_ context.Context, input *go_hook.HookInput, dc depend
 			} else if err == nil {
 				input.Logger.Info("Namespace deleted", slog.String("name", ns.GetName()))
 			}
+		}
+	}
+
+	// Clean up cluster-wide Istio resources of d8-istio, even if the namespace is already gone.
+	// Istio CRs have no finalizers, deleting them is enough.
+	istios, err := k8sClient.Dynamic().Resource(istioGVR).List(context.TODO(), metav1.ListOptions{})
+	if err != nil {
+		input.Logger.Warn("Failed to list Istio resources", log.Err(err))
+	} else {
+		for _, istio := range istios.Items {
+			istioInfo, err := parseIstio(&istio)
+			if err != nil {
+				input.Logger.Warn("Failed to parse Istio", slog.String("name", istio.GetName()), log.Err(err))
+				continue
+			}
+			if istioInfo.Namespace != istioSystemNs {
+				continue
+			}
+			if !isOperatorSupportedRevision(versionMap, istioInfo.Revision) {
+				continue
+			}
+			if istio.GetDeletionTimestamp() != nil {
+				continue
+			}
+
+			err = k8sClient.Dynamic().Resource(istioGVR).Delete(context.TODO(), istio.GetName(), metav1.DeleteOptions{})
+			if err != nil {
+				if k8serrors.IsNotFound(err) {
+					continue
+				}
+				input.Logger.Warn("Failed to delete Istio", slog.String("name", istio.GetName()), log.Err(err))
+				continue
+			}
+			input.Logger.Info("Istio deleted", slog.String("name", istio.GetName()))
+		}
+	}
+
+	// Clean up cluster-wide IstioRevision resources. The operator is gone with the module,
+	// so nobody else would remove their finalizers. The istiod resources they own are removed by the GC.
+	// The operator may still be running, so:
+	// - handle them after the Istio CRs, or the operator recreates them;
+	// - delete them before removing finalizers, as finalizers can't be re-added once deletion started.
+	istioRevisions, err := k8sClient.Dynamic().Resource(istioRevisionGVR).List(context.TODO(), metav1.ListOptions{})
+	if err != nil {
+		input.Logger.Warn("Failed to list IstioRevision resources", log.Err(err))
+	} else {
+		for _, istioRevision := range istioRevisions.Items {
+			istioRevisionInfo, err := parseIstioRevision(&istioRevision)
+			if err != nil {
+				input.Logger.Warn("Failed to parse IstioRevision", slog.String("name", istioRevision.GetName()), log.Err(err))
+				continue
+			}
+			// IstioRevisions are cluster-scoped, only touch the ones deploying the control-plane into d8-istio.
+			if istioRevisionInfo.Namespace != istioSystemNs {
+				continue
+			}
+			if !isOperatorSupportedRevision(versionMap, istioRevisionInfo.Revision) {
+				continue
+			}
+
+			if istioRevision.GetDeletionTimestamp() == nil {
+				err := k8sClient.Dynamic().Resource(istioRevisionGVR).Delete(context.TODO(), istioRevision.GetName(), metav1.DeleteOptions{})
+				if err != nil {
+					if k8serrors.IsNotFound(err) {
+						continue
+					}
+					input.Logger.Warn("Failed to delete IstioRevision", slog.String("name", istioRevision.GetName()), log.Err(err))
+					continue
+				}
+				input.Logger.Info("IstioRevision deleted", slog.String("name", istioRevision.GetName()))
+			}
+
+			_, err = k8sClient.Dynamic().Resource(istioRevisionGVR).Patch(context.TODO(), istioRevision.GetName(), types.MergePatchType, patch, metav1.PatchOptions{})
+			if err != nil {
+				if k8serrors.IsNotFound(err) {
+					continue
+				}
+				input.Logger.Warn("Failed to remove finalizers from IstioRevision", slog.String("name", istioRevision.GetName()), log.Err(err))
+				continue
+			}
+			input.Logger.Info("Finalizers from IstioRevision removed", slog.String("name", istioRevision.GetName()))
 		}
 	}
 
