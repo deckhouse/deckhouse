@@ -16,6 +16,13 @@
 
 source /shell_lib.sh
 
+# `heritage: deckhouse` marks a ClusterRole as installed by the platform, and that marker is
+# load-bearing beyond bookkeeping: identity_assign.py reads a level out of a role's name and
+# annotations only for roles carrying it (is_platform_owned), because a platform role name such as
+# `d8:manage:<subsystem>:admin` is otherwise just a string anyone with `create` on clusterroles can
+# pick. So the marker has to stay out of reach of everyone but the platform.
+DECKHOUSE_SA="system:serviceaccount:d8-system:deckhouse"
+
 function __config__(){
   cat <<EOF
 configVersion: v1
@@ -25,12 +32,39 @@ kubernetesValidating:
   labelSelector:
     matchLabels:
       heritage: deckhouse
+  # Now that UPDATE is covered, the identities that legitimately rewrite a marked role would reach
+  # the handler on every change -- clusterrole-aggregation-controller rewrites .rules on every
+  # aggregated platform role. Filtering them at the API server keeps that traffic off the handler
+  # and keeps them working while it is unavailable, which matters under failurePolicy: Fail. The
+  # in-hook check below stays as the authority; these are only a pre-filter.
+  # One condition per identity, in the form the admission documentation guarantees: a CEL
+  # expression that fails to compile invalidates the whole ValidatingWebhookConfiguration.
+  matchConditions:
+  - expression: ("system:apiserver" != request.userInfo.username)
+    name: exclude-kube-apiserver
+  - expression: ("system:serviceaccount:d8-system:deckhouse" != request.userInfo.username)
+    name: exclude-deckhouse
+  - expression: ("system:serviceaccount:kube-system:clusterrole-aggregation-controller" != request.userInfo.username)
+    name: exclude-aggregation-controller
   rules:
   - apiGroups:   ["rbac.authorization.k8s.io"]
     apiVersions: ["*"]
-    operations:  ["CREATE"]
+    operations:  ["CREATE", "UPDATE"]
     resources:   ["clusterroles"]
     scope:       "Cluster"
+EOF
+}
+
+function allow_request() {
+  cat <<EOF > "$VALIDATING_RESPONSE_PATH"
+{"allowed":true}
+EOF
+}
+
+function deny_request() {
+  local clusterRoleName="$1"
+  cat <<EOF > "$VALIDATING_RESPONSE_PATH"
+{"allowed":false, "message":"ClusterRole \"$clusterRoleName\" has forbidden label \"heritage:deckhouse\"" }
 EOF
 }
 
@@ -38,18 +72,35 @@ function __main__() {
   operation=$(context::jq -r '.review.request.operation')
   user=$(context::jq -r '.review.request.userInfo.username')
 
-if [ "$operation" = "CREATE" ]; then
-  clusterRoleName=$(context::jq -r '.review.request.object.metadata.name')
-  if [ "$user" != "system:serviceaccount:d8-system:deckhouse" ]; then
-    cat <<EOF > "$VALIDATING_RESPONSE_PATH"
-{"allowed":false, "message":"ClusterRole \"$clusterRoleName\" has forbidden label \"heritage:deckhouse\"" }
-EOF
+  if [ "$user" = "$DECKHOUSE_SA" ]; then
+    allow_request
     return 0
   fi
-fi
-  cat <<EOF > "$VALIDATING_RESPONSE_PATH"
-{"allowed":true}
-EOF
+
+  case "$operation" in
+  CREATE)
+    ;;
+  UPDATE)
+    # objectSelector matches when either the old or the new object carries the label, so updates of
+    # a role that is already marked arrive here too -- including every rewrite of .rules that
+    # clusterrole-aggregation-controller performs on the aggregated platform roles, and the removal
+    # of the label. Only the transition into the label turns a self-made role into one that claims
+    # to be platform-installed, so that is the only update worth refusing. Reading the label off
+    # oldObject also fails closed: an unreadable previous value is not "deckhouse".
+    heritageWasSet=$(context::jq -r '.review.request.oldObject.metadata.labels.heritage // ""')
+    if [ "$heritageWasSet" = "deckhouse" ]; then
+      allow_request
+      return 0
+    fi
+    ;;
+  *)
+    allow_request
+    return 0
+    ;;
+  esac
+
+  clusterRoleName=$(context::jq -r '.review.request.object.metadata.name')
+  deny_request "$clusterRoleName"
 }
 
 hook::run "$@"
