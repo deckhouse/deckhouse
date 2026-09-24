@@ -22,7 +22,7 @@
 
           The Pod is not restarted automatically. The restart time depends on the workload. To restore resource isolation, do the following:
 
-          - To recreate the Pod's containers in the currently assigned NUMA zones, delete the Pod:
+          - To recreate the Pod's containers in newly assigned NUMA zones, delete the Pod:
 
             ```bash
             d8 k -n {{ $labels.namespace }} delete pod {{ $labels.pod }}
