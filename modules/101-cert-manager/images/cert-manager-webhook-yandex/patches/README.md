@@ -14,3 +14,15 @@ Deckhouse hardening of the upstream ACME DNS-01 webhook:
 - reject unsafe characters in zone names used in the Yandex filter expression
 - unit tests for `normalizeZone` / `getDNSZone`
 - keep `go.mod` / `go.sum` in sync so the image build can use `go mod download` without `go mod tidy`
+
+### 999-FixCVE.patch
+
+Fix CVEs:
+- CVE-2026-56854
+- CVE-2026-81870
+- CVE-2026-84303
+- CVE-2026-84304
+- CVE-2026-84445
+
+GHSA:
+- GHSA-hrxh-6v49-42gf
