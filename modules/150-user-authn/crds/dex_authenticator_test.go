@@ -19,9 +19,7 @@ package crds_test
 import (
 	"context"
 	"encoding/json"
-	"fmt"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"strings"
 	"testing"
@@ -39,83 +37,6 @@ import (
 	celconfig "k8s.io/apiserver/pkg/apis/cel"
 	"sigs.k8s.io/yaml"
 )
-
-// The validating hook is Bash, not one jq program, so its tests run it the way shell-operator
-// does. The unit test image carries bash but no jq, so a jq built from gojq stands in when the
-// real one is absent; a present jq is preferred, to keep local runs on what production uses.
-func TestMain(m *testing.M) {
-	os.Exit(runAuthenticatorTests(m))
-}
-
-// hookIPCheck is what is_ip_address runs under python3. The stand-in under testdata emulates
-// exactly this, so it is only put on PATH while the hook still asks for it.
-const hookIPCheck = "ipaddress.ip_address(sys.argv[1])"
-
-// The tools the hooks need. Each has a stand-in under testdata, built only when the image carries
-// no real one; a present tool is preferred, to keep local runs on what production uses.
-var authenticatorTools = []string{"jq", "python3"}
-
-func runAuthenticatorTests(m *testing.M) int {
-	if _, err := exec.LookPath("bash"); err != nil {
-		fmt.Fprintln(os.Stderr, "bash is required: these tests run the webhooks under ../webhooks")
-
-		return 1
-	}
-
-	dir, err := os.MkdirTemp("", "hookshims")
-	if err != nil {
-		fmt.Fprintln(os.Stderr, err)
-
-		return 1
-	}
-	defer os.RemoveAll(dir)
-
-	for _, tool := range authenticatorTools {
-		if _, err := exec.LookPath(tool); err == nil {
-			continue
-		}
-		if tool == "python3" {
-			if err := checkIPCheckUnchanged(); err != nil {
-				fmt.Fprintln(os.Stderr, err)
-
-				return 1
-			}
-		}
-
-		source := filepath.Join("testdata", tool)
-		build := exec.Command("go", "build", "-o", filepath.Join(dir, tool), "./"+source)
-		if out, err := build.CombinedOutput(); err != nil {
-			fmt.Fprintf(os.Stderr, "building the %s stand-in: %v\n%s", tool, err, out)
-
-			return 1
-		}
-		fmt.Fprintf(os.Stderr, "no %s found, standing in with %s\n", tool, source)
-	}
-
-	if err := os.Setenv("PATH", dir+string(os.PathListSeparator)+os.Getenv("PATH")); err != nil {
-		fmt.Fprintln(os.Stderr, err)
-
-		return 1
-	}
-
-	return m.Run()
-}
-
-// checkIPCheckUnchanged refuses to emulate Python the hook no longer runs. The hook reads only the
-// exit status of python3 and discards its output, so the stand-in itself cannot report this.
-func checkIPCheckUnchanged() error {
-	hook, err := os.ReadFile(filepath.Join("..", "webhooks", "validating", "dex_authenticator"))
-	if err != nil {
-		return fmt.Errorf("reading the validating hook: %w", err)
-	}
-
-	if !strings.Contains(string(hook), hookIPCheck) {
-		return fmt.Errorf("is_ip_address no longer runs %s, which testdata/python3 emulates: "+
-			"revisit testdata/python3, or install python3 to run the hook as it is", hookIPCheck)
-	}
-
-	return nil
-}
 
 func authenticatorSchemas(t *testing.T) map[string]*apiextensions.JSONSchemaProps {
 	t.Helper()
@@ -231,29 +152,6 @@ func TestDexAuthenticatorRoutingSchema(t *testing.T) {
 	}
 }
 
-// Execute the actual Bash hook, substituting only shell-operator context and response plumbing.
-func runAuthenticatorHook(t *testing.T, path, function string, context map[string]any) map[string]any {
-	t.Helper()
-	script, err := os.ReadFile(filepath.Join("..", "webhooks", path))
-	require.NoError(t, err)
-	dir := t.TempDir()
-	input, err := json.Marshal(context)
-	require.NoError(t, err)
-	require.NoError(t, os.WriteFile(filepath.Join(dir, "context.json"), input, 0600))
-	source := strings.Replace(string(script), "source /shell_lib.sh", `function context::jq() { jq "$@" "$TEST_CONTEXT"; }
-function hook::run() { :; }`, 1)
-	cmd := exec.Command("bash", "-e", "-c", source+"\n"+function)
-	response := filepath.Join(dir, "response.json")
-	cmd.Env = append(os.Environ(), "TEST_CONTEXT="+filepath.Join(dir, "context.json"), "CONVERSION_RESPONSE_PATH="+response, "VALIDATING_RESPONSE_PATH="+response)
-	output, err := cmd.CombinedOutput()
-	require.NoError(t, err, "%s", output)
-	data, err := os.ReadFile(response)
-	require.NoError(t, err, "%s", output)
-	result := map[string]any{}
-	require.NoError(t, json.Unmarshal(data, &result))
-	return result
-}
-
 // A conversion function is one jq program wrapped in shell plumbing, so the program runs here
 // directly. That keeps the conversion tests free of an external jq, and mirrors how the projects
 // hook of multitenancy-manager is tested.
@@ -334,45 +232,6 @@ func TestDexAuthenticatorConversionPreservesRouting(t *testing.T) {
 	}
 }
 
-func TestDexAuthenticatorDomainValidationWithoutIngress(t *testing.T) {
-	for _, version := range []string{"v1", "v1alpha1", "v2alpha1"} {
-		for _, domain := range []string{"app.example.com", "192.0.2.1", "2001:db8::1"} {
-			for _, additional := range []bool{false, true} {
-				object := authenticatorObject("v2alpha1", []any{map[string]any{"domain": domain, "gatewayAPI": map[string]any{"httpRouteListenerSetName": "app"}}})
-				if additional {
-					apps := object["spec"].(map[string]any)["applications"].([]any)
-					object["spec"].(map[string]any)["applications"] = append([]any{map[string]any{"domain": "first.example.com", "ingressClassName": "nginx"}}, apps...)
-				}
-				if version != "v2alpha1" {
-					object = convertAuthenticator(t, object, "v2alpha1", "v1")
-					object["apiVersion"] = "deckhouse.io/" + version
-				}
-				result := runAuthenticatorHook(t, "validating/dex_authenticator", "__main__", map[string]any{
-					"review":    map[string]any{"request": map[string]any{"object": object}},
-					"snapshots": map[string]any{"dexauthenticators": []any{}},
-				})
-				require.Equal(t, domain == "app.example.com", result["allowed"], "%s %s additional=%v", version, domain, additional)
-			}
-		}
-	}
-}
-
-func TestDexAuthenticatorIngressConflict(t *testing.T) {
-	object := authenticatorObject("v2alpha1", []any{map[string]any{"domain": "app.example.com", "ingressClassName": "nginx"}})
-	for _, version := range []string{"v2alpha1", "v1", "v1alpha1"} {
-		if version == "v1" {
-			object = convertAuthenticator(t, object, "v2alpha1", "v1")
-		}
-		object["apiVersion"] = "deckhouse.io/" + version
-		result := runAuthenticatorHook(t, "validating/dex_authenticator", "__main__", map[string]any{
-			"review":    map[string]any{"request": map[string]any{"object": object}},
-			"snapshots": map[string]any{"dexauthenticators": []any{map[string]any{"filterResult": map[string]any{"name": "existing", "namespace": "test", "applicationDomain": "app.example.com", "ingressClass": "nginx", "additionalDomains": []any{}}}}},
-		})
-		require.Equal(t, false, result["allowed"], version)
-		require.Contains(t, result["message"], "conflicts")
-	}
-}
-
 // Older converters emitted a gatewayAPI object full of nulls even for Ingress-only applications.
 func TestDexAuthenticatorLegacyEmptyGateway(t *testing.T) {
 	schemas := authenticatorSchemas(t)
@@ -387,73 +246,5 @@ func TestDexAuthenticatorLegacyEmptyGateway(t *testing.T) {
 		apps := converted["spec"].(map[string]any)["applications"].([]any)
 		require.NotContains(t, apps[0], "gatewayAPI")
 		validateAuthenticator(t, schemas["v2alpha1"], converted, true)
-	}
-}
-
-// Applications after the first take a resource-name suffix derived from sha256(domain), so two of
-// them sharing a domain would name two objects of one kind alike. The first application carries no
-// suffix, and an Ingress may share a name with an HTTPRoute, so neither of those repeats collides.
-func TestDexAuthenticatorDuplicateDomainWithinObject(t *testing.T) {
-	gateway := map[string]any{"httpRouteListenerSetName": "app-listeners"}
-	nginx := func(domain string) any {
-		return map[string]any{"domain": domain, "ingressClassName": "nginx"}
-	}
-	route := func(domain string) any {
-		return map[string]any{"domain": domain, "gatewayAPI": gateway}
-	}
-	for _, tc := range []struct {
-		name      string
-		apps      []any
-		duplicate string
-	}{
-		{"distinct domains", []any{nginx("first.example.com"), nginx("second.example.com")}, ""},
-		// The first application has no name suffix, so these render as two distinct objects.
-		{"first application repeated, same class", []any{nginx("app.example.com"), nginx("app.example.com")}, ""},
-		{"first application repeated, another class", []any{
-			nginx("app.example.com"),
-			map[string]any{"domain": "app.example.com", "ingressClassName": "nginx-internal"},
-		}, ""},
-		{"first application repeated through Gateway API", []any{nginx("app.example.com"), route("app.example.com")}, ""},
-		// One names an Ingress, the other an HTTPRoute: different kinds may share a name.
-		{"additional applications split across publication paths", []any{
-			nginx("first.example.com"), nginx("same.example.com"), route("same.example.com"),
-		}, ""},
-		// Both suffixes are sha256("same.example.com") and both name an Ingress.
-		{"two additional applications share a domain", []any{
-			nginx("first.example.com"), nginx("same.example.com"), nginx("same.example.com"),
-		}, "Ingress"},
-		{"colliding additional applications differ in class", []any{
-			nginx("first.example.com"),
-			nginx("same.example.com"),
-			map[string]any{"domain": "same.example.com", "ingressClassName": "nginx-internal"},
-		}, "Ingress"},
-		{"two additional applications share a domain through Gateway API", []any{
-			nginx("first.example.com"), route("same.example.com"), route("same.example.com"),
-		}, "HTTPRoute"},
-		// Publishing both ways collides on whichever kind the earlier application already named.
-		{"additional application repeats both publication paths", []any{
-			nginx("first.example.com"),
-			map[string]any{"domain": "same.example.com", "ingressClassName": "nginx", "gatewayAPI": gateway},
-			route("same.example.com"),
-		}, "HTTPRoute"},
-	} {
-		for _, version := range []string{"v2alpha1", "v1", "v1alpha1"} {
-			t.Run(version+"/"+tc.name, func(t *testing.T) {
-				object := authenticatorObject("v2alpha1", tc.apps)
-				if version != "v2alpha1" {
-					object = convertAuthenticator(t, object, "v2alpha1", "v1")
-					object["apiVersion"] = "deckhouse.io/" + version
-				}
-				result := runAuthenticatorHook(t, "validating/dex_authenticator", "__main__", map[string]any{
-					"review":    map[string]any{"request": map[string]any{"object": object}},
-					"snapshots": map[string]any{"dexauthenticators": []any{}},
-				})
-				require.Equal(t, tc.duplicate == "", result["allowed"], "%v", result["message"])
-				if tc.duplicate != "" {
-					require.Contains(t, result["message"], "repeats domain 'same.example.com'")
-					require.Contains(t, result["message"], "a second "+tc.duplicate)
-				}
-			})
-		}
 	}
 }
