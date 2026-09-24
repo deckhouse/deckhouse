@@ -167,3 +167,131 @@ index 70bb58a0..9ccd847d 100644
  		t.options.Expire,
  		*s.CreatedAt,
  	)
+diff --git a/pkg/sessions/persistence/ticket_test.go b/pkg/sessions/persistence/ticket_test.go
+index 6b868b9..d75b3f6 100644
+--- a/pkg/sessions/persistence/ticket_test.go
++++ b/pkg/sessions/persistence/ticket_test.go
+@@ -2,6 +2,7 @@ package persistence
+ 
+ import (
+ 	"encoding/base64"
++	"encoding/json"
+ 	"errors"
+ 	"fmt"
+ 	"time"
+@@ -27,11 +28,12 @@ var _ = Describe("Session Ticket Tests", func() {
+ 					enc := in.ticket.encodeTicket()
+ 					Expect(enc).To(Equal(in.encodedTicket))
+ 
+-					dec, err := decodeTicket(enc, in.ticket.options)
++					dec, refreshToken, err := decodeTicket(cookieValue(enc, "RefreshToken"), in.ticket.options)
+ 					Expect(err).ToNot(HaveOccurred())
+ 					Expect(dec).To(Equal(in.ticket))
++					Expect(refreshToken).To(Equal("RefreshToken"))
+ 				} else {
+-					_, err := decodeTicket(in.encodedTicket, nil)
++					_, _, err := decodeTicket(cookieValue(in.encodedTicket, ""), nil)
+ 					Expect(err).To(MatchError(in.expectedError))
+ 				}
+ 			},
+@@ -59,6 +61,11 @@ var _ = Describe("Session Ticket Tests", func() {
+ 				expectedError: fmt.Errorf("failed to decode encryption secret: illegal base64 data at input byte 0"),
+ 			}),
+ 		)
++
++		It("errors when the cookie value is not JSON", func() {
++			_, _, err := decodeTicket("dummy-0123456789abcdef", nil)
++			Expect(err).To(MatchError(ContainSubstring("failed to unmarshal cookie")))
++		})
+ 	})
+ 
+ 	Context("saveSession", func() {
+@@ -130,7 +137,7 @@ var _ = Describe("Session Ticket Tests", func() {
+ 					return &sessions.NoOpLock{}
+ 				})
+ 			Expect(data).To(BeNil())
+-			Expect(err).To(MatchError(errors.New("failed to load the session state with the ticket: load error")))
++			Expect(err).To(MatchError("failed to load the session state with the ticket: load error"))
+ 		})
+ 	})
+ 
+@@ -159,3 +166,11 @@ var _ = Describe("Session Ticket Tests", func() {
+ 		})
+ 	})
+ })
++
++// cookieValue builds the value of a ticket cookie the way setCookie does:
++// the encoded ticket and the refresh token of the session wrapped into JSON.
++func cookieValue(encodedTicket, refreshToken string) string {
++	data, err := json.Marshal(cookieRefreshToken{Ticket: encodedTicket, RefreshToken: refreshToken})
++	Expect(err).ToNot(HaveOccurred())
++	return string(data)
++}
+diff --git a/pkg/sessions/tests/session_store_tests.go b/pkg/sessions/tests/session_store_tests.go
+index 0416b24..e79f153 100644
+--- a/pkg/sessions/tests/session_store_tests.go
++++ b/pkg/sessions/tests/session_store_tests.go
+@@ -200,8 +200,21 @@ func CheckCookieOptions(in *testInput) {
+ 	})
+ }
+ 
++// expectRefreshTokenOnlySession checks the session a persistent store returns for a ticket it holds
++// no data for. The ticket cookie carries the refresh token of the session, so the store returns a
++// session that holds only that refresh token and is older than the refresh period. The proxy then
++// refreshes it instead of trusting it, which restores access after the store lost its data.
++func expectRefreshTokenOnlySession(s *sessionsapi.SessionState, refreshToken string, refreshPeriod time.Duration) {
++	Expect(s).ToNot(BeNil())
++	Expect(s.RefreshToken).To(Equal(refreshToken))
++	Expect(s.AccessToken).To(BeEmpty())
++	Expect(s.IDToken).To(BeEmpty())
++	Expect(s.Email).To(BeEmpty())
++	Expect(s.Age()).To(BeNumerically(">", refreshPeriod))
++}
++
+ func PersistentSessionStoreInterfaceTests(in *testInput) {
+-	// Check that a stale cookie can't load an already cleared session
++	// Check that a stale cookie can't load the data of an already cleared session
+ 	Context("when Clear is called on a persistent store", func() {
+ 		var resultCookies []*http.Cookie
+ 
+@@ -232,12 +245,14 @@ func PersistentSessionStoreInterfaceTests(in *testInput) {
+ 				loadedAfterClear, loadErr = in.ss().Load(loadReq)
+ 			})
+ 
+-			It("returns an empty session", func() {
+-				Expect(loadedAfterClear).To(BeNil())
++			// The ticket cookie carries the refresh token, so a stale cookie gets a session
++			// that holds nothing but that refresh token, instead of an error.
++			It("returns a session holding only the refresh token of the cookie", func() {
++				expectRefreshTokenOnlySession(loadedAfterClear, in.session.RefreshToken, in.cookieOpts.Refresh)
+ 			})
+ 
+-			It("returns an error", func() {
+-				Expect(loadErr).To(HaveOccurred())
++			It("does not return an error", func() {
++				Expect(loadErr).ToNot(HaveOccurred())
+ 			})
+ 		})
+ 
+@@ -274,15 +289,16 @@ func PersistentSessionStoreInterfaceTests(in *testInput) {
+ 				Expect(in.persistentFastForward(in.cookieOpts.Expire + time.Minute)).To(Succeed())
+ 
+ 				loadedSession, err = in.ss().Load(in.request)
+-				Expect(err).To(HaveOccurred())
+ 			})
+ 
+-			It("returns an error loading the session", func() {
+-				Expect(err).To(HaveOccurred())
++			// Only the store is fast-forwarded here, so the ticket cookie is still valid and the
++			// refresh token it carries outlives the session data that expired in the store.
++			It("does not return an error loading the session", func() {
++				Expect(err).ToNot(HaveOccurred())
+ 			})
+ 
+-			It("returns an empty session", func() {
+-				Expect(loadedSession).To(BeNil())
++			It("returns a session holding only the refresh token of the cookie", func() {
++				expectRefreshTokenOnlySession(loadedSession, in.session.RefreshToken, in.cookieOpts.Refresh)
+ 			})
+ 		})
+ 	})

@@ -11,6 +11,10 @@ Storing refresh token in cookie adds the possibility to restore access- and id- 
 
 Upstream PR - https://github.com/oauth2-proxy/oauth2-proxy/pull/313
 
+A persistent store that holds no data for a ticket returns a session with only the refresh token
+from the cookie instead of an error. The proxy then refreshes that session.
+The session store tests expect this behaviour.
+
 ### 003-remove-groups.patch
 
 Prevents sending groups auth request header (may cause uncontrollable headers grows).
@@ -32,6 +36,15 @@ This patch fixes:
 - CVE-2024-28180
 - CVE-2026-34986
 - CVE-2026-33186
+
+The login.gov provider embeds `jwt.RegisteredClaims` in its ID token claims, as `golang-jwt/jwt/v5`
+requires. An embedded `jwt.Claims` interface stays nil and makes token validation panic.
+
+The patch also adapts upstream tests to the newer toolchain and dependencies:
+
+- the JSON decoding error message of Go 1.24 and later;
+- an unreachable upstream address that still parses under the strict URL parsing of Go 1.26;
+- valid JSON in a mocked Google Directory API response.
 
 ### 006-return-200-on-success-and-header-on-fail.patch
 

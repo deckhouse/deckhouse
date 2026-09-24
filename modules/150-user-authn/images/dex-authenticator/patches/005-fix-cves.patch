@@ -562,24 +562,6 @@ index c82de7af..98b8b5d9 100755
  	if err != nil {
  		return nil, fmt.Errorf("oidc: malformed jwt: %v", err)
  	}
-diff --git a/pkg/sessions/persistence/ticket_test.go b/pkg/sessions/persistence/ticket_test.go
-index 6b868b90..4f2f724b 100644
---- a/pkg/sessions/persistence/ticket_test.go
-+++ b/pkg/sessions/persistence/ticket_test.go
-@@ -27,11 +27,11 @@ var _ = Describe("Session Ticket Tests", func() {
- 					enc := in.ticket.encodeTicket()
- 					Expect(enc).To(Equal(in.encodedTicket))
- 
--					dec, err := decodeTicket(enc, in.ticket.options)
-+					dec, _, err := decodeTicket(enc, in.ticket.options)
- 					Expect(err).ToNot(HaveOccurred())
- 					Expect(dec).To(Equal(in.ticket))
- 				} else {
--					_, err := decodeTicket(in.encodedTicket, nil)
-+					_, _, err := decodeTicket(in.encodedTicket, nil)
- 					Expect(err).To(MatchError(in.expectedError))
- 				}
- 			},
 diff --git a/providers/adfs_test.go b/providers/adfs_test.go
 index 355fd939..067d8872 100755
 --- a/providers/adfs_test.go
@@ -667,7 +649,7 @@ index 2660b015..3c9c1073 100644
  	AtHash        string `json:"at_hash"`
  	CHash         string `json:"c_hash"`
 -	jwt.StandardClaims
-+	jwt.Claims
++	jwt.RegisteredClaims
  }
  
  // checkNonce checks the nonce in the id_token
@@ -908,3 +890,55 @@ index 838c061b..1ebe1ce9 100644
  
  	testCases := map[string]struct {
  		IDToken       *idTokenClaims
+diff --git a/pkg/apis/options/load_test.go b/pkg/apis/options/load_test.go
+index 5939b85..8beab6c 100644
+--- a/pkg/apis/options/load_test.go
++++ b/pkg/apis/options/load_test.go
+@@ -464,7 +464,7 @@ sub:
+ 				configFile:     []byte(`stringSliceOption: "a"`),
+ 				input:          &TestOptions{},
+ 				expectedOutput: &TestOptions{},
+-				expectedErr:    errors.New("error unmarshalling config: error unmarshaling JSON: while decoding JSON: json: cannot unmarshal string into Go struct field TestOptions.StringSliceOption of type []string"),
++				expectedErr:    errors.New("error unmarshalling config: error unmarshaling JSON: while decoding JSON: json: cannot unmarshal string into Go struct field TestOptions.TestOptionSubStruct.StringSliceOption of type []string"),
+ 			}),
+ 		)
+ 	})
+diff --git a/pkg/upstream/proxy_test.go b/pkg/upstream/proxy_test.go
+index 87c27e4..e189146 100644
+--- a/pkg/upstream/proxy_test.go
++++ b/pkg/upstream/proxy_test.go
+@@ -73,7 +73,7 @@ var _ = Describe("Proxy Suite", func() {
+ 						{
+ 							ID:   "bad-http-backend",
+ 							Path: "/bad-http/",
+-							URI:  "http://::1",
++							URI:  invalidServer,
+ 						},
+ 						{
+ 							ID:         "single-path-backend",
+diff --git a/pkg/upstream/upstream_suite_test.go b/pkg/upstream/upstream_suite_test.go
+index 95eb681..96a29be 100644
+--- a/pkg/upstream/upstream_suite_test.go
++++ b/pkg/upstream/upstream_suite_test.go
+@@ -21,7 +21,7 @@ var (
+ 	filesDir      string
+ 	server        *httptest.Server
+ 	serverAddr    string
+-	invalidServer = "http://::1"
++	invalidServer = "http://127.0.0.1:1"
+ )
+ 
+ func TestUpstreamSuite(t *testing.T) {
+diff --git a/providers/google_test.go b/providers/google_test.go
+index aede9b4..9f3a32a 100644
+--- a/providers/google_test.go
++++ b/providers/google_test.go
+@@ -262,7 +262,7 @@ func TestGoogleProvider_userInGroup(t *testing.T) {
+ 			)
+ 		} else if r.URL.Path == "/admin/directory/v1/groups/group@example.com/members/member-out-of-domain@otherexample.com" {
+ 			fmt.Fprintln(w,
+-				`{"kind": "admin#directory#member","etag":"12345","id":"1234567890","email": "member-out-of-domain@otherexample.com","role": "MEMBER","type": "USER","status": "ACTIVE","delivery_settings": "ALL_MAIL"}}`,
++				`{"kind": "admin#directory#member","etag":"12345","id":"1234567890","email": "member-out-of-domain@otherexample.com","role": "MEMBER","type": "USER","status": "ACTIVE","delivery_settings": "ALL_MAIL"}`,
+ 			)
+ 		}
+ 	}))
