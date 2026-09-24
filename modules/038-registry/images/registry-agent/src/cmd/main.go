@@ -50,6 +50,7 @@ import (
 	"github.com/deckhouse/registry-agent/internal/containerd"
 	"github.com/deckhouse/registry-agent/internal/layout"
 	agentmetrics "github.com/deckhouse/registry-agent/internal/metrics"
+	"github.com/deckhouse/registry-agent/internal/nodeconfig"
 	"github.com/deckhouse/registry-agent/internal/pki"
 	"github.com/deckhouse/registry-agent/internal/proxy"
 	"github.com/deckhouse/registry-agent/internal/status"
@@ -81,7 +82,7 @@ func buildSource(log *slog.Logger, kubeClient client.Client, opts options) *layo
 		Client:    kubeClient,
 		Node:      opts.nodeName,
 		Cache:     &layout.Cache{Path: opts.cachePath},
-		Bootstrap: &layout.Bootstrap{Path: opts.bootstrap},
+		Bootstrap: &layout.Bootstrap{Path: opts.bootstrap, NodeConfigPath: opts.nodeConfig},
 		// The layouts name their credentials rather than carrying them, so reading one means
 		// reading a Secret. Without this the agent can never apply what the cluster gives it.
 		Resolver: &layout.Resolver{Namespace: moduleNamespace},
@@ -90,6 +91,48 @@ func buildSource(log *slog.Logger, kubeClient client.Client, opts options) *layo
 
 // moduleNamespace is where the Secret holding the resolved credentials lives.
 const moduleNamespace = "d8-system"
+
+// restConfig is how the agent reaches the API server, from whichever of three things this
+// node has.
+//
+// A written kubeconfig first, because where one exists it was written for this agent by
+// whoever installed it. Then the node's own identity: an Engine node gets no kubeconfig —
+// the object that starts the agent carries a pod manifest and nothing else — so the agent
+// builds the equivalent from the kubelet's rotating certificate and the API address in the
+// node's config, which is the identity the written kubeconfig names anyway. A service
+// account last, which no static pod has and every test environment does.
+//
+// Every failure here is retried by the loop and none of them stops the agent: a node that
+// has not finished its TLS bootstrap has no identity yet, and the agent has to be serving
+// the container runtime before it does.
+func restConfig(kubeconfig, nodeConfigPath string) (*rest.Config, error) {
+	if _, err := os.Stat(kubeconfig); err == nil {
+		config, err := clientcmd.BuildConfigFromFlags("", kubeconfig)
+		if err != nil {
+			return nil, fmt.Errorf("reading %s: %w", kubeconfig, err)
+		}
+		return config, nil
+	}
+
+	document, err := nodeconfig.Load(nodeConfigPath)
+	if err != nil {
+		return nil, err
+	}
+	config, nodeErr := nodeconfig.Identity{}.RestConfig(document)
+	if nodeErr == nil {
+		return config, nil
+	}
+
+	inCluster, clusterErr := rest.InClusterConfig()
+	if clusterErr == nil {
+		return inCluster, nil
+	}
+
+	// Both reasons, because which one matters depends on the node and an operator
+	// reading one of them alone would look in the wrong place.
+	return nil, fmt.Errorf("no usable credentials: %s is absent, %w, and there is no service account: %w",
+		kubeconfig, nodeErr, clusterErr)
+}
 
 // buildScheme registers every kind this agent reads or writes, core types included: a layout names
 // its credentials rather than carrying them, so resolving one means reading a Secret. Left out, that
@@ -121,6 +164,7 @@ func main() {
 		storePath     string
 		trustDir      string
 		bootstrap     string
+		nodeConfig    string
 		interval      time.Duration
 		forwardLimit  time.Duration
 		metricsListen string
@@ -148,6 +192,9 @@ func main() {
 			"Every registry reaches the runtime through the agent, so these are the agent's to verify.")
 	flag.StringVar(&bootstrap, "bootstrap-layout", layout.DefaultBootstrapPath,
 		"Where the layout the node was installed with was written. Used only until the API server answers once.")
+	flag.StringVar(&nodeConfig, "bootstrap-node-config", nodeconfig.DefaultPath,
+		"The node's own configuration, read for a seed when no bootstrap layout was written for the agent. "+
+			"This is how an Engine node, which gets no such file, learns where it was installed from.")
 	flag.DurationVar(&interval, "interval", 30*time.Second, "How often the layout is re-read.")
 	flag.DurationVar(&forwardLimit, "forward-timeout", 5*time.Minute,
 		"How long one attempt at one registry may take.")
@@ -178,6 +225,7 @@ func main() {
 		storePath:     storePath,
 		trustDir:      trustDir,
 		bootstrap:     bootstrap,
+		nodeConfig:    nodeConfig,
 		interval:      interval,
 		forwardLimit:  forwardLimit,
 		metricsListen: metricsListen,
@@ -198,6 +246,7 @@ type options struct {
 	storePath     string
 	trustDir      string
 	bootstrap     string
+	nodeConfig    string
 	interval      time.Duration
 	forwardLimit  time.Duration
 	metricsListen string
@@ -205,6 +254,12 @@ type options struct {
 
 func run(ctx context.Context, log *slog.Logger, opts options) error {
 	material := &pki.OnDisk{Dir: opts.pkiDir}
+	// Generated here when nothing else has: an Engine node has no bashible step to write
+	// it, and /etc/kubernetes there is a tmpfs that starts every boot empty. A no-op
+	// wherever the material is already present, which is every bashible node.
+	if err := material.Ensure(); err != nil {
+		return fmt.Errorf("the agent certificate material could not be prepared: %w", err)
+	}
 	if err := material.Ready(); err != nil {
 		// Refused up front rather than at the first handshake: without this material the
 		// runtime cannot verify the agent, and every pull on the node would fail for a
@@ -223,7 +278,7 @@ func run(ctx context.Context, log *slog.Logger, opts options) error {
 	// bootstrap, and the agent has to be answering the container runtime before that: the
 	// images it serves include the ones the node needs to join at all. So this is
 	// attempted, retried by the loop, and never a reason to refuse to start.
-	connect := func() (client.Client, error) { return newClient(opts.kubeconfig) }
+	connect := func() (client.Client, error) { return newClient(opts.kubeconfig, opts.nodeConfig) }
 
 	kubeClient, err := connect()
 	if err != nil {
@@ -299,25 +354,15 @@ func run(ctx context.Context, log *slog.Logger, opts options) error {
 //
 // The fallback exists for the service account path: the kubelet's credentials are the
 // default, but a node may be running the agent before the kubelet has any.
-func newClient(kubeconfig string) (client.Client, error) {
+func newClient(kubeconfig, nodeConfigPath string) (client.Client, error) {
 	scheme, err := buildScheme()
 	if err != nil {
 		return nil, err
 	}
 
-	var config *rest.Config
-
-	if _, statErr := os.Stat(kubeconfig); statErr == nil {
-		config, err = clientcmd.BuildConfigFromFlags("", kubeconfig)
-		if err != nil {
-			return nil, fmt.Errorf("reading %s: %w", kubeconfig, err)
-		}
-	} else {
-		config, err = rest.InClusterConfig()
-		if err != nil {
-			return nil, fmt.Errorf("no usable credentials: %s is absent and there is no service account: %w",
-				kubeconfig, err)
-		}
+	config, err := restConfig(kubeconfig, nodeConfigPath)
+	if err != nil {
+		return nil, err
 	}
 
 	// No caching client: the agent reads one object, and an informer would make its

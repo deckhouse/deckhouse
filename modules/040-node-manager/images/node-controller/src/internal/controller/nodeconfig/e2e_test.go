@@ -72,6 +72,7 @@ const (
 	testKubeletDigest           = testenv.TestKubeletDigest
 	testNodeletDigest           = testenv.TestNodeletDigest
 	testOSImageDigest           = testenv.TestOSImageDigest
+	testRootHash                = "4b0f2bd2a5f06f3f7b8b9cd0f2d8d9e2a1c3e5f7a9b1d3f5e7c9a1b3d5f7e9c1"
 	testClusterCA               = testenv.TestClusterCA
 	// The extension one spec asks for through a NodeExtensionRequest, and the
 	// digest it is rebuilt under.
@@ -254,6 +255,218 @@ var _ = Describe("NodeConfig controller", func() {
 		Eventually(func(g Gomega) {
 			g.Expect(extensionDigests(getNodeConfig(ctx, g, nodeName))).
 				To(HaveKeyWithValue(testRequestedSysextName, testRequestedSysextRebuiltDigest))
+		}, testenv.EventuallyTimeout, testenv.EventuallyPoll).Should(Succeed())
+	})
+	// User story: As a platform module, I want the static pod I publish to reach
+	// the nodes of the groups I name and to be told what those nodes made of it,
+	// so that a pod running before the API server answers is still something the
+	// cluster can see.
+	It("delivers a NodeStaticPodRequest to the nodes of a group and reports it back", func(ctx context.Context) {
+		ngName := testenv.UniqueName("workers-imm")
+		testenv.CreateImmutableNodeGroup(ctx, k8sClient, ngName)
+		nodeName := testenv.UniqueName("node")
+		createNode(ctx, nodeName, ngName)
+
+		// nodelet owns registry.d until a registry module says otherwise.
+		Eventually(func(g Gomega) {
+			nc := getNodeConfig(ctx, g, nodeName)
+			g.Expect(nc.Spec.StaticPods).To(BeEmpty())
+			g.Expect(nc.Spec.ContainerRuntime.RegistryOwner).To(Equal(registryOwnerNodelet))
+		}, testenv.EventuallyTimeout, testenv.EventuallyPoll).Should(Succeed())
+
+		By("publishing a static pod for the group")
+		// Named what the registry module names its agent, because the second half of
+		// this story is who owns registry.d and the platform recognises the agent by
+		// this name. Deleted with the spec, so the fixed name collides with nothing.
+		request := &v1alpha1.NodeStaticPodRequest{
+			ObjectMeta: metav1.ObjectMeta{Name: registryAgentStaticPodName},
+			Spec: v1alpha1.NodeStaticPodRequestSpec{
+				NodeGroupSelector: v1alpha1.NodeGroupSelector{MatchNames: []string{ngName}},
+			},
+		}
+		request.Spec.Manifest = "apiVersion: v1\nkind: Pod\nmetadata:\n  name: " + request.Name +
+			"\n  namespace: d8-system\nspec:\n  hostNetwork: true\n  containers:\n  - name: agent\n" +
+			"    image: deckhouse.local/images:registry-agent\n"
+		Expect(k8sClient.Create(ctx, request)).To(Succeed())
+		DeferCleanup(func(ctx context.Context) { _ = k8sClient.Delete(ctx, request) })
+
+		Eventually(func(g Gomega) {
+			nc := getNodeConfig(ctx, g, nodeName)
+			g.Expect(nc.Spec.StaticPods).To(HaveLen(1))
+			g.Expect(nc.Spec.StaticPods[0].Name).To(Equal(request.Name))
+			g.Expect(nc.Spec.StaticPods[0].Manifest).To(Equal(request.Spec.Manifest),
+				"the manifest reaches the node byte for byte")
+
+			// The same pass reports the outcome back on the object.
+			fresh := &v1alpha1.NodeStaticPodRequest{}
+			g.Expect(k8sClient.Get(ctx, types.NamespacedName{Name: request.Name}, fresh)).To(Succeed())
+			g.Expect(fresh.Status.MatchedNodeGroups).To(ConsistOf(ngName))
+			g.Expect(meta.IsStatusConditionTrue(fresh.Status.Conditions, readyConditionType)).To(BeTrue())
+		}, testenv.EventuallyTimeout, testenv.EventuallyPoll).Should(Succeed())
+
+		By("handing containerd's registry.d to the registry module's agent")
+		// It takes both halves. The `agent` key of the configuration that module
+		// writes for bashible is the intent, and nothing on the object says it: who
+		// owns that directory follows from which modules are enabled. But a node
+		// config is rendered for Immutable groups only, where the agent arrives as a
+		// static pod or not at all — so the node releases registry.d when it has the
+		// agent the intent is about, and not before.
+		bashibleConfig := &corev1.Secret{
+			ObjectMeta: metav1.ObjectMeta{Namespace: "d8-system", Name: "registry-bashible-config"},
+			Data: map[string][]byte{
+				"config": []byte("agent:\n  endpoint: 127.0.0.1:5001\nmode: Managed\n"),
+			},
+		}
+		Expect(k8sClient.Create(ctx, bashibleConfig)).To(Succeed())
+		DeferCleanup(func(ctx context.Context) { _ = k8sClient.Delete(ctx, bashibleConfig) })
+
+		Eventually(func(g Gomega) {
+			nc := getNodeConfig(ctx, g, nodeName)
+			g.Expect(nc.Spec.ContainerRuntime.RegistryOwner).To(Equal(registryOwnerAgent))
+		}, testenv.EventuallyTimeout, testenv.EventuallyPoll).Should(Succeed())
+
+		By("narrowing the static pod to another group")
+		patch := client.MergeFrom(request.DeepCopy())
+		request.Spec.NodeGroupSelector.MatchNames = []string{"somebody-else"}
+		Expect(k8sClient.Patch(ctx, request, patch)).To(Succeed())
+
+		Eventually(func(g Gomega) {
+			nc := getNodeConfig(ctx, g, nodeName)
+			g.Expect(nc.Spec.StaticPods).To(BeEmpty())
+			g.Expect(nc.Spec.ContainerRuntime.RegistryOwner).To(Equal(registryOwnerNodelet),
+				"a node with no agent on it keeps writing its own registry.d")
+		}, testenv.EventuallyTimeout, testenv.EventuallyPoll).Should(Succeed())
+
+		By("giving the group its agent back")
+		patch = client.MergeFrom(request.DeepCopy())
+		request.Spec.NodeGroupSelector.MatchNames = []string{ngName}
+		Expect(k8sClient.Patch(ctx, request, patch)).To(Succeed())
+
+		Eventually(func(g Gomega) {
+			nc := getNodeConfig(ctx, g, nodeName)
+			g.Expect(nc.Spec.ContainerRuntime.RegistryOwner).To(Equal(registryOwnerAgent))
+		}, testenv.EventuallyTimeout, testenv.EventuallyPoll).Should(Succeed())
+
+		By("taking registry.d back when the agent mode is switched off")
+		Expect(k8sClient.Delete(ctx, bashibleConfig)).To(Succeed())
+
+		Eventually(func(g Gomega) {
+			nc := getNodeConfig(ctx, g, nodeName)
+			g.Expect(nc.Spec.ContainerRuntime.RegistryOwner).To(Equal(registryOwnerNodelet))
+		}, testenv.EventuallyTimeout, testenv.EventuallyPoll).Should(Succeed())
+	})
+
+	// User story: As a platform module, I want two objects that ask for the same
+	// pod to be settled for me, so that a second module publishing the same
+	// manifest costs one refused object instead of every static pod on the node.
+	//
+	// Both entries would carry one namespace/metadata.name into one NodeConfig,
+	// and the node keeps whichever entry comes first — so which pod runs would
+	// follow the order of the entries, not the age of the objects.
+	It("refuses the younger of two NodeStaticPodRequests asking for one pod", func(ctx context.Context) {
+		ngName := testenv.UniqueName("workers-imm")
+		testenv.CreateImmutableNodeGroup(ctx, k8sClient, ngName)
+		nodeName := testenv.UniqueName("node")
+		createNode(ctx, nodeName, ngName)
+
+		// One pod, asked for twice. The names are chosen so the winner is the same
+		// whichever way the contest is decided: envtest stamps creationTimestamp
+		// to the second, so two objects created back to back may well share one,
+		// and the tie is then broken by name — "aaa" is both the older and the
+		// lesser, so there is nothing for this spec to race on.
+		manifest := "apiVersion: v1\nkind: Pod\nmetadata:\n  name: shared-agent\n  namespace: d8-system\n" +
+			"spec:\n  hostNetwork: true\n  containers:\n  - name: agent\n    image: deckhouse.local/images:registry-agent\n"
+
+		publish := func(base string) *v1alpha1.NodeStaticPodRequest {
+			object := &v1alpha1.NodeStaticPodRequest{
+				ObjectMeta: metav1.ObjectMeta{Name: testenv.UniqueName(base)},
+				Spec: v1alpha1.NodeStaticPodRequestSpec{
+					NodeGroupSelector: v1alpha1.NodeGroupSelector{MatchNames: []string{ngName}},
+					Manifest:          manifest,
+				},
+			}
+			Expect(k8sClient.Create(ctx, object)).To(Succeed())
+			DeferCleanup(func(ctx context.Context) { _ = k8sClient.Delete(ctx, object) })
+			return object
+		}
+
+		winner := publish("aaa-first")
+		loser := publish("bbb-second")
+
+		Eventually(func(g Gomega) {
+			// Exactly one entry reaches the node, and it is the older object's.
+			nc := getNodeConfig(ctx, g, nodeName)
+			g.Expect(nc.Spec.StaticPods).To(HaveLen(1))
+			g.Expect(nc.Spec.StaticPods[0].Name).To(Equal(winner.Name))
+
+			// The loser is told why, on the only channel it has.
+			fresh := &v1alpha1.NodeStaticPodRequest{}
+			g.Expect(k8sClient.Get(ctx, types.NamespacedName{Name: loser.Name}, fresh)).To(Succeed())
+			g.Expect(fresh.Status.Phase).To(Equal(phaseDegraded))
+			condition := meta.FindStatusCondition(fresh.Status.Conditions, readyConditionType)
+			g.Expect(condition).NotTo(BeNil())
+			g.Expect(condition.Reason).To(Equal(reasonConflict))
+			g.Expect(condition.Message).To(ContainSubstring("d8-system/shared-agent"))
+			g.Expect(condition.Message).To(ContainSubstring(winner.Name))
+
+			// And the winner is unbothered by the contest it won.
+			g.Expect(k8sClient.Get(ctx, types.NamespacedName{Name: winner.Name}, fresh)).To(Succeed())
+			g.Expect(meta.IsStatusConditionTrue(fresh.Status.Conditions, readyConditionType)).To(BeTrue())
+		}, testenv.EventuallyTimeout, testenv.EventuallyPoll).Should(Succeed())
+
+		By("withdrawing the older object")
+		Expect(k8sClient.Delete(ctx, winner)).To(Succeed())
+
+		// The pod is free again, so the object that lost it takes it over. Nothing
+		// has to be re-published: losing a contest is not a terminal state.
+		Eventually(func(g Gomega) {
+			nc := getNodeConfig(ctx, g, nodeName)
+			g.Expect(nc.Spec.StaticPods).To(HaveLen(1))
+			g.Expect(nc.Spec.StaticPods[0].Name).To(Equal(loser.Name))
+
+			fresh := &v1alpha1.NodeStaticPodRequest{}
+			g.Expect(k8sClient.Get(ctx, types.NamespacedName{Name: loser.Name}, fresh)).To(Succeed())
+			g.Expect(meta.IsStatusConditionTrue(fresh.Status.Conditions, readyConditionType)).To(BeTrue())
+		}, testenv.EventuallyTimeout, testenv.EventuallyPoll).Should(Succeed())
+	})
+
+	// User story: As a cluster operator, I want an object whose name my nodes
+	// cannot take to be refused on the object, so that one typo costs one static
+	// pod rather than every node's whole configuration.
+	//
+	// A CR name is a DNS subdomain, spec.staticPods[].name is a DNS label: the API
+	// server admits "foo.bar" and every node it reached would refuse the NodeConfig
+	// whole, so one typo would cost every node of the group its whole configuration.
+	It("refuses a NodeStaticPodRequest whose name the node config would not take", func(ctx context.Context) {
+		ngName := testenv.UniqueName("workers-imm")
+		testenv.CreateImmutableNodeGroup(ctx, k8sClient, ngName)
+		nodeName := testenv.UniqueName("node")
+		createNode(ctx, nodeName, ngName)
+
+		By("publishing an object named like a DNS subdomain")
+		request := &v1alpha1.NodeStaticPodRequest{
+			ObjectMeta: metav1.ObjectMeta{Name: testenv.UniqueName("foo") + ".bar"},
+			Spec: v1alpha1.NodeStaticPodRequestSpec{
+				NodeGroupSelector: v1alpha1.NodeGroupSelector{MatchNames: []string{ngName}},
+				Manifest: "apiVersion: v1\nkind: Pod\nmetadata:\n  name: subdomain-agent\n  namespace: d8-system\n" +
+					"spec:\n  hostNetwork: true\n  containers:\n  - name: agent\n    image: deckhouse.local/images:registry-agent\n",
+			},
+		}
+		Expect(k8sClient.Create(ctx, request)).To(Succeed())
+		DeferCleanup(func(ctx context.Context) { _ = k8sClient.Delete(ctx, request) })
+
+		Eventually(func(g Gomega) {
+			// The node still gets a config, and it carries no static pod.
+			nc := getNodeConfig(ctx, g, nodeName)
+			g.Expect(nc.Spec.StaticPods).To(BeEmpty())
+
+			fresh := &v1alpha1.NodeStaticPodRequest{}
+			g.Expect(k8sClient.Get(ctx, types.NamespacedName{Name: request.Name}, fresh)).To(Succeed())
+			g.Expect(fresh.Status.Phase).To(Equal(phaseDegraded))
+			condition := meta.FindStatusCondition(fresh.Status.Conditions, readyConditionType)
+			g.Expect(condition).NotTo(BeNil())
+			g.Expect(condition.Reason).To(Equal(reasonInvalidName))
+			g.Expect(condition.Message).To(ContainSubstring(request.Name))
 		}, testenv.EventuallyTimeout, testenv.EventuallyPoll).Should(Succeed())
 	})
 
@@ -547,6 +760,7 @@ var _ = Describe("NodeConfig controller", func() {
 			nc.Status.OSImage = &internalv1alpha1.OSImageStatus{
 				Digest:       testOSImageDigest,
 				Slot:         "a",
+				RootHash:     testRootHash,
 				TrialDigest:  testContainerdRebuiltDigest,
 				AttemptsLeft: 3,
 				FailedDigest: testPauseDigest,
@@ -560,6 +774,7 @@ var _ = Describe("NodeConfig controller", func() {
 			g.Expect(*nc.Status.OSImage).To(Equal(internalv1alpha1.OSImageStatus{
 				Digest:       testOSImageDigest,
 				Slot:         "a",
+				RootHash:     testRootHash,
 				TrialDigest:  testContainerdRebuiltDigest,
 				AttemptsLeft: 3,
 				FailedDigest: testPauseDigest,
@@ -1412,9 +1627,9 @@ var _ = Describe("NodeConfig controller", func() {
 			// carrying no IP — no exec, no logs, no metrics.
 			g.Expect(nc.Spec.Kubelet.ServerTLSBootstrap).To(BeNil())
 
-			// The pause image comes from the cluster's own registry; the
-			// upstream one is unreachable in a closed network.
-			g.Expect(nc.Spec.ContainerRuntime.SandboxImage).To(Equal(testRegistryAddress + testRegistryPath + "@" + testPauseDigest))
+			// Left empty: nodelet names the pause the containerd extension imports.
+			// The CRD must not default it either, or the node would never see it empty.
+			g.Expect(nc.Spec.ContainerRuntime.SandboxImage).To(BeEmpty())
 		}, testenv.EventuallyTimeout, testenv.EventuallyPoll).Should(Succeed())
 	})
 })
@@ -1522,10 +1737,11 @@ func heartbeat(ctx context.Context, nodeName string) {
 func setContainerdDigest(ctx context.Context, digest string) {
 	GinkgoHelper()
 
-	original := fmt.Sprintf(`{"registrypackages":{"containerdSysext224":%q,"kubernetesCniSysext162":%q,"kubeletSysext1356":%q,"nodeletSysext":%q},"nodeManager":{"engine":%q},"common":{"pause":%q}}`,
-		testContainerdDigest, testCNIDigest, testKubeletDigest, testNodeletDigest, testOSImageDigest, testPauseDigest)
-	updated := fmt.Sprintf(`{"registrypackages":{"containerdSysext224":%q,"kubernetesCniSysext162":%q,"kubeletSysext1356":%q,"nodeletSysext":%q},"nodeManager":{"engine":%q},"common":{"pause":%q}}`,
-		digest, testCNIDigest, testKubeletDigest, testNodeletDigest, testOSImageDigest, testPauseDigest)
+	layout := `{"registrypackages":{"containerdSysext224":%q,"kubernetesCniSysext162":%q,"kubeletSysext1356":%q,"nodeletSysext":%q},"nodeManager":{"engine":%q},"common":{"pause":%q}}`
+	original := fmt.Sprintf(layout, testContainerdDigest, testCNIDigest, testKubeletDigest, testNodeletDigest,
+		testOSImageDigest, testPauseDigest)
+	updated := fmt.Sprintf(layout, digest, testCNIDigest, testKubeletDigest, testNodeletDigest,
+		testOSImageDigest, testPauseDigest)
 
 	writeDigests := func(ctx context.Context, data string) {
 		cm := &corev1.ConfigMap{}

@@ -103,9 +103,18 @@ func init() {
 	register.RegisterController(ControllerName, &registryv1alpha1.RegistryConfig{}, &Reconciler{})
 }
 
+// InjectStorePath satisfies register.NeedsStorePath.
+func (r *Reconciler) InjectStorePath(path string) { r.StorePath = path }
+
 // Reconciler compiles the configuration into the per-node and storage layout.
 type Reconciler struct {
 	register.Base
+
+	// StorePath is where the store keeps its blobs on a node, as the module mounts it.
+	// Injected, because a node with a read-only root filesystem has nowhere to put them
+	// under /opt and only the module knows which kind of node this cluster's store runs
+	// on. See register.NeedsStorePath.
+	StorePath string
 
 	// Prober verifies a changed primary upstream before the cluster is switched
 	// over to it. Injectable so the reconciliation is testable without a registry;
@@ -478,7 +487,8 @@ func (r *Reconciler) collectInputs(
 	ctx context.Context, cfg *registryv1alpha1.RegistryConfig,
 ) (layout.Inputs, error) {
 	inputs := layout.Inputs{
-		Config: cfg.Spec,
+		Config:    cfg.Spec,
+		StorePath: r.StorePath,
 		// The controller's own record of what is in effect. Taken from the status
 		// rather than from RegistryStorage.spec so that the hold works identically
 		// with the cache off, where no storage object exists to remember anything.

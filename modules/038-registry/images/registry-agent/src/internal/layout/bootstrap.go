@@ -42,11 +42,22 @@ const DefaultBootstrapPath = "/etc/kubernetes/registry-agent/bootstrap-layout.js
 // directly — and it is known at install time, so bashible writes it down.
 //
 // Only ever a fallback. The moment the API server answers, what it says wins and is
-// stored in the cache, and the cache outranks this file from then on: this is what the
+// stored in the cache, and the cache outranks this seed from then on: this is what the
 // node was installed with, not what the cluster currently wants.
+//
+// Two places it can come from, tried in that order, because two kinds of node put it
+// there differently. A bashible node gets a file written by the step that installs the
+// agent. An Engine node gets none — /etc/kubernetes there is a tmpfs this agent writes,
+// and the object that starts it carries a pod manifest and nothing else — so the seed is
+// taken from the node's own NodeConfig, which already holds the same credentials in a
+// file only root reads. See nodeConfigSeed.
 type Bootstrap struct {
 	// Path of the file. Empty means DefaultBootstrapPath.
 	Path string
+
+	// NodeConfigPath is the node's own configuration, read when there is no file at
+	// Path. Empty means nodeconfig.DefaultPath.
+	NodeConfigPath string
 }
 
 func (b *Bootstrap) path() string {
@@ -56,15 +67,30 @@ func (b *Bootstrap) path() string {
 	return b.Path
 }
 
-// Load reads the layout, returning nothing when there is no such file.
+// Load reads the layout the node was installed with, returning nothing when this node
+// has none.
 //
-// An absent file is normal: a node installed into an existing cluster has an API server
-// to ask from the start and never needs one.
+// Nothing is normal, in both shapes: a node installed into an existing cluster has an API
+// server to ask from the start, and one whose config names no registry of its own is told
+// where to pull from by the cluster alone.
 func (b *Bootstrap) Load() (*registryv1alpha1.RegistryNodeSpec, error) {
 	if b == nil {
 		return nil, nil
 	}
 
+	spec, err := b.fromFile()
+	if err != nil || spec != nil {
+		return spec, err
+	}
+
+	// The file wins when both exist. On a node that has one it is the more specific
+	// answer: it was written for this agent by whoever installed it, whereas the node
+	// config describes how the node itself reaches a registry.
+	return nodeConfigSeed{Path: b.NodeConfigPath}.load()
+}
+
+// fromFile reads the seed a bashible step wrote, or nothing when there is no such file.
+func (b *Bootstrap) fromFile() (*registryv1alpha1.RegistryNodeSpec, error) {
 	content, err := os.ReadFile(b.path())
 	switch {
 	case errors.Is(err, fs.ErrNotExist):

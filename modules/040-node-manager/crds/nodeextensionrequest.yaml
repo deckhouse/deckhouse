@@ -25,6 +25,15 @@ spec:
         - name: Phase
           jsonPath: .status.phase
           type: string
+        - name: Matched
+          jsonPath: .status.matchedNodes
+          type: integer
+        - name: Applied
+          jsonPath: .status.appliedNodes
+          type: integer
+        - name: Failed
+          jsonPath: .status.failedNodes
+          type: integer
         - name: Age
           jsonPath: .metadata.creationTimestamp
           type: date
@@ -152,6 +161,18 @@ spec:
                   minimum: 0
                   description: |
                     How many of the selected nodes report the sysext refused.
+                matchedNodes:
+                  type: integer
+                  format: int32
+                  minimum: 0
+                  description: |
+                    How many nodes the selected groups hold. The denominator of `appliedNodes` and `failedNodes`.
+                pendingNodes:
+                  type: integer
+                  format: int32
+                  minimum: 0
+                  description: |
+                    How many of those nodes have reported neither the sysext applied nor a refusal yet.
                 failureMessage:
                   type: string
                   description: |

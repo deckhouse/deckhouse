@@ -342,7 +342,7 @@ spec:
 
                     The blobs are left behind deliberately when the cache is turned off: turning it back on then refills from what is already there rather than from scratch, and over a slow link that difference is hours. What would not be acceptable is keeping them silently, since nothing else in the module would ever mention the disk they occupy — so the agent measures them and an alert says so.
 
-                    To reclaim the space, remove `/opt/deckhouse/registry` on the node. Absent while a cache is configured, and on a node that never held one.
+                    To reclaim the space, remove the directory `RegistryStorage.spec.store.path` names on the node — `/opt/deckhouse/registry`, or `/var/lib/deckhouse/registry` where the node's root filesystem is read-only. Absent while a cache is configured, and on a node that never held one.
                 conditions:
                   type: array
                   description: |

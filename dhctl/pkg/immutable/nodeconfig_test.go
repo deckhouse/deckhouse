@@ -162,38 +162,33 @@ func TestSysextDigestsIgnoresNonVersionSuffixes(t *testing.T) {
 	})
 }
 
-// The sandbox image reference is built from the configured registry, not from
-// the raw imagesRepo: the trailing-slash row shows why, as ".../ce/@sha256:…"
-// is not a reference containerd can pull. The OS image needs no such assembly —
-// it travels as a bare digest.
+// The registry is split from the configured imagesRepo, not taken raw: the
+// trailing-slash row shows why. No sandbox image is rendered — the containerd
+// extension ships pause, as on every node node-controller renders.
 func TestNodeConfigImageReferencesFollowTheConfiguredRegistry(t *testing.T) {
 	tests := []struct {
 		name        string
 		imagesRepo  string
 		wantAddress string
 		wantPath    string
-		wantSandbox string
 	}{
 		{
 			name:        "address, port and path",
 			imagesRepo:  "registry.internal.example.com:5000/mirror/deckhouse",
 			wantAddress: "registry.internal.example.com:5000",
 			wantPath:    "/mirror/deckhouse",
-			wantSandbox: "registry.internal.example.com:5000/mirror/deckhouse@" + immutabletest.PauseDigest,
 		},
 		{
 			name:        "a trailing slash the schema lets through",
 			imagesRepo:  "registry.example.com/deckhouse/ce/",
 			wantAddress: "registry.example.com",
 			wantPath:    "/deckhouse/ce",
-			wantSandbox: "registry.example.com/deckhouse/ce@" + immutabletest.PauseDigest,
 		},
 		{
 			name:        "no path at all",
 			imagesRepo:  "registry.example.com",
 			wantAddress: "registry.example.com",
 			wantPath:    "",
-			wantSandbox: "registry.example.com@" + immutabletest.PauseDigest,
 		},
 	}
 
@@ -210,7 +205,7 @@ func TestNodeConfigImageReferencesFollowTheConfiguredRegistry(t *testing.T) {
 
 			require.Equal(t, tt.wantAddress, nodeConfig.Spec.Registry.Address)
 			require.Equal(t, tt.wantPath, nodeConfig.Spec.Registry.Path)
-			require.Equal(t, tt.wantSandbox, nodeConfig.Spec.ContainerRuntime.SandboxImage)
+			require.Empty(t, nodeConfig.Spec.ContainerRuntime.SandboxImage)
 		})
 	}
 }
@@ -253,6 +248,27 @@ func TestNodeConfigRefusesTheInstallersOwnBundleRegistry(t *testing.T) {
 	require.ErrorContains(t, err, string(constant.ModeUnmanaged), "what to bootstrap with instead")
 }
 
+// A cluster whose registry ModuleConfig asks the module to own the pull path is
+// installed with the node agent already on the first master, placed by a bashible
+// step. An immutable master runs none, so the agent never arrives, and the
+// container runtime it was going to own is left pointed at nothing the moment the
+// module takes over. Refused while being built, for the same reason Local is.
+func TestNodeConfigRefusesAnAgentOwnedRuntime(t *testing.T) {
+	metaConfig := testMetaConfig(t)
+	metaConfig.Registry.Settings.Mode = constant.ModeDirect
+	metaConfig.Registry.AgentOwnsRuntime = true
+
+	_, err := buildNodeConfig(t.Context(), nodeConfigInput{
+		NodeName:   "example-master-0",
+		MetaConfig: metaConfig,
+	})
+
+	require.ErrorContains(t, err, "registry module", "which module the operator has to reconfigure")
+	require.ErrorContains(t, err, string(constant.ModeUnmanaged), "what to install with instead")
+}
+
+// The refusal above is about the agent, not about the mode it comes with: Direct
+// on its own is how every immutable master is installed.
 // Direct carries the same upstream as Unmanaged, and a config parsed from a
 // cluster resolves to it: refusing Local must not take Direct with it.
 func TestNodeConfigTakesTheUpstreamOfADirectRegistry(t *testing.T) {

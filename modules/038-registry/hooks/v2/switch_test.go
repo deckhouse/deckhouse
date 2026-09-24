@@ -132,6 +132,44 @@ func TestGateDecide(t *testing.T) {
 		name:    "after the handover, with no previous state left",
 		gate:    gate{AlreadySwitched: true},
 		enabled: true,
+	}, {
+		// An Engine cluster carrying a state the legacy implementation recorded for itself.
+		// Refusing over it is not caution here: the way out of `Direct` is a bashible
+		// transition, and this cluster has no bashible, so the refusal would be permanent.
+		name: "an Engine cluster the previous implementation recorded a mode on",
+		gate: gate{
+			Legacy:     &legacyState{Mode: modeDirect},
+			EngineOnly: true,
+		},
+		enabled: true,
+	}, {
+		// The same, for the mode whose way out is not widened for anyone else.
+		name: "an Engine cluster recorded in Proxy",
+		gate: gate{
+			Legacy:     &legacyState{Mode: "Proxy"},
+			EngineOnly: true,
+		},
+		enabled: true,
+	}, {
+		// An unreadable state is the one case the gate otherwise refuses over, and it is
+		// refused because guessing would put a second writer on every node. There are no
+		// bashible writers here to be second to.
+		name: "an Engine cluster whose previous state cannot be read",
+		gate: gate{
+			LegacyUnreadable: errors.New("decoding the legacy registry state: unexpected EOF"),
+			EngineOnly:       true,
+		},
+		enabled: true,
+	}, {
+		// The line this is drawn at. One bashible group means nodes the legacy
+		// implementation can still write to, so the handover is asked in full.
+		name: "a cluster still holding one bashible group",
+		gate: gate{
+			Legacy:     &legacyState{Mode: modeDirect},
+			EngineOnly: false,
+		},
+		enabled: false,
+		blocked: `the cluster is in the "Direct" mode`,
 	}}
 
 	for _, test := range cases {
@@ -187,6 +225,44 @@ func TestRecordImplementation(t *testing.T) {
 			require.True(t, recorded,
 				"nothing was recorded, so the release check has no information and lets every release through")
 			assert.Equal(t, test.want, got)
+		})
+	}
+}
+
+// TestEngineOnly: which clusters have no bashible writer left, phrased as the question the
+// gate asks of the NodeGroups.
+//
+// The empty case is the one that matters. It is not "a cluster with no node groups" — every
+// cluster has at least the master group — it is "the groups have not been read yet", which
+// happens on every module start before the informer syncs. Answering it `true` would open the
+// handover on a bashible cluster for the first seconds of every restart.
+func TestEngineOnly(t *testing.T) {
+	cases := []struct {
+		name        string
+		systemTypes []string
+		want        bool
+	}{{
+		name:        "no groups read yet",
+		systemTypes: nil,
+		want:        false,
+	}, {
+		name:        "every group is Immutable",
+		systemTypes: []string{systemTypeImmutable, systemTypeImmutable},
+		want:        true,
+	}, {
+		// A group predating the field carries no systemType, and that absence means bashible.
+		name:        "one group predating the field",
+		systemTypes: []string{systemTypeImmutable, ""},
+		want:        false,
+	}, {
+		name:        "a mixed cluster mid-migration",
+		systemTypes: []string{systemTypeImmutable, "Mutable"},
+		want:        false,
+	}}
+
+	for _, test := range cases {
+		t.Run(test.name, func(t *testing.T) {
+			assert.Equal(t, test.want, engineOnly(test.systemTypes))
 		})
 	}
 }

@@ -57,14 +57,34 @@ const (
 	registryPathKey         = "path"
 	registrySchemeKey       = "scheme"
 	registryCAKey           = "ca"
-	registryImagesKey       = "imagesRegistry"
 	registryDockerConfigKey = ".dockerconfigjson"
 
-	// pauseDigestGroup and pauseDigestName locate the pause image in the digest
-	// map. The group is a key in that map, not a path segment: every Deckhouse
-	// image lives in one repository and is addressed by digest alone.
-	pauseDigestGroup = "common"
-	pauseDigestName  = "pause"
+	// registryOwnerNodelet and registryOwnerAgent are the two answers
+	// containerRuntime.registryOwner has, mirroring the CRD enum
+	// (crds/nodeconfig.yaml). Written explicitly because the bootstrap file path
+	// never reaches an API server and sees no CRD default.
+	registryOwnerNodelet = "nodelet"
+	registryOwnerAgent   = "agent"
+
+	// registryBashibleConfigSecret is what the registry module writes for
+	// bashible; the presence of its "agent" key is the one signal that
+	// containerd's registry.d belongs to that module's node agent rather than to
+	// nodelet (go_lib/registry/models/bashible/config.go on rewrite-registry).
+	// Absent on a cluster whose registry module never said so, which is not an
+	// error but the ordinary answer.
+	registryBashibleConfigSecret = "registry-bashible-config"
+	registryBashibleConfigKey    = "config"
+	registryBashibleAgentKey     = "agent"
+
+	// registryAgentStaticPodName is the NodeStaticPodRequest the registry module
+	// publishes to put its node agent on an Immutable node, and so the name of the
+	// manifest in a node's spec.staticPods.
+	//
+	// The platform has to know it, because on such a node that object is the only way
+	// the agent can arrive: bashible, which installs it everywhere else, never runs
+	// here. So it is what says whether the node actually HAS the agent it is being
+	// asked to hand containerd's registry.d to. See renderContainerRuntime.
+	registryAgentStaticPodName = "registry-agent"
 
 	clusterConfigSecretName = "d8-cluster-configuration"
 	clusterConfigKey        = "cluster-configuration.yaml"
@@ -133,6 +153,12 @@ const (
 	// node is still working and counts as neither outcome.
 	extensionStateReady  = "Ready"
 	extensionStateFailed = "Failed"
+
+	// staticPodStateWritten and staticPodStateFailed are the whole enum of
+	// StaticPodStatus.State in api/internal.deckhouse.io/v1alpha1/nodeconfig_types.go
+	// (Enum=Written;Failed): the node holds the file the spec asked for, or it does not.
+	staticPodStateWritten = "Written"
+	staticPodStateFailed  = "Failed"
 
 	// cgroupLabel tells the cluster which cgroup layout the node runs;
 	// cgroupV2Value is the only answer a Deckhouse Engine node has. Read by

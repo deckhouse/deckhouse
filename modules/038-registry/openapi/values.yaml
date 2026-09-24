@@ -41,6 +41,18 @@ properties:
               status.
 
               Empty once the handover has happened.
+          storePath:
+            type: string
+            description: |
+              Where the store keeps its blobs on the nodes it runs on.
+
+              Not a setting: a value rather than a constant only because the answer
+              differs by node kind — a node whose root filesystem is read-only has
+              nowhere to put them under `/opt`. Decided once by a hook from the
+              `systemType` of the master node group, because three things have to
+              agree on it: the store's own hostPath, the path the controller reports
+              in RegistryStorage so an operator knows which directory to reclaim, and
+              the one the node agent measures.
           registryConfig:
             type: object
             default: {}

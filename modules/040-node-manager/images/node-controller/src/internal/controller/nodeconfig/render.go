@@ -57,6 +57,7 @@ func nodeRenderInputsChanged(before, after client.Object) bool {
 // fields (caCert, serverTLSBootstrap, proxy token); every other field must agree.
 func renderSpec(ng *v1.NodeGroup, node *corev1.Node, in clusterInputs) internalv1alpha1.NodeSpec {
 	extraExtensions, extraModules := nodeExtensions(in.NodeExtensions, in.NodeExtensionConflicts, node, ng.Name)
+	staticPods := nodeStaticPods(in.NodeStaticPodRequests, in.NodeStaticPodRequestsRejected, ng.Name)
 
 	kernel := renderKernel()
 	kernel.Modules = extraModules
@@ -67,6 +68,7 @@ func renderSpec(ng *v1.NodeGroup, node *corev1.Node, in clusterInputs) internalv
 		APIServerEndpoints:   in.APIServerEndpoints,
 		InternalNetworkCIDRs: in.InternalNetworkCIDRs,
 		Extensions:           mergeExtensions(renderExtensions(in.SysextDigests), extraExtensions),
+		StaticPods:           staticPods,
 		// A NodeGroup has no disk field; without a selector the boot path refuses
 		// outright ("neither device nor diskSelector set"). Any selector the
 		// operator wrote survives this one through keepBootstrapOnlyFields.
@@ -74,7 +76,7 @@ func renderSpec(ng *v1.NodeGroup, node *corev1.Node, in clusterInputs) internalv
 		Kernel:           kernel,
 		Network:          renderNetwork(node),
 		Kubelet:          renderKubelet(ng, node, in),
-		ContainerRuntime: renderContainerRuntime(ng, in),
+		ContainerRuntime: renderContainerRuntime(ng, in, staticPods),
 		// Every node, not only control-plane: containerd pulls the pause image
 		// itself with no imagePullSecret, and in a closed network that image
 		// lives in a private registry.
@@ -397,12 +399,31 @@ func isCloudNodeType(t v1.NodeType) bool {
 }
 
 // renderContainerRuntime carries over the only containerd knob a NodeGroup
-// exposes; the runtime itself is a platform-chosen system extension. Defaults
-// mirror the CRD defaults so the bootstrap file path gets the same values.
-func renderContainerRuntime(ng *v1.NodeGroup, in clusterInputs) internalv1alpha1.ContainerRuntime {
+// exposes; the runtime itself is a platform-chosen system extension, and so is
+// pause, which is why sandboxImage stays empty. Defaults mirror the CRD defaults
+// so the bootstrap file path gets the same values.
+func renderContainerRuntime(
+	ng *v1.NodeGroup, in clusterInputs, staticPods []internalv1alpha1.StaticPod,
+) internalv1alpha1.ContainerRuntime {
 	runtime := internalv1alpha1.ContainerRuntime{
-		SandboxImage:           in.SandboxImage,
 		MaxConcurrentDownloads: ptr.To(defaultMaxConcurrentDownloads),
+		RegistryOwner:          registryOwnerNodelet,
+	}
+	// The agent owns the whole directory or none of it: nodelet writing
+	// spec.registry there would put an explicit host directory over the agent's
+	// _default and route the platform registry past the agent.
+	//
+	// Two things have to be true, and the second is about this node rather than about
+	// the cluster. The registry module saying it owns the pull path is an intent, and
+	// on a bashible node the step that acts on it installs the agent in the same pass.
+	// A node config is rendered for Immutable groups only, where there is no such step:
+	// the agent arrives as a static pod or not at all. Releasing registry.d for an agent
+	// that is not in this node's own spec leaves the node with no registry configuration
+	// and no way to pull the agent that would write one — an end state, not a race, since
+	// the object may have been refused (a reserved name, a conflict, the per-group cap)
+	// and never arrive.
+	if in.RegistryAgentMode && hasStaticPod(staticPods, registryAgentStaticPodName) {
+		runtime.RegistryOwner = registryOwnerAgent
 	}
 	if ng.Spec.CRI == nil {
 		return runtime
@@ -414,6 +435,13 @@ func renderContainerRuntime(ng *v1.NodeGroup, in clusterInputs) internalv1alpha1
 		runtime.MaxConcurrentDownloads = ptr.To(*ng.Spec.CRI.Containerd.MaxConcurrentDownloads)
 	}
 	return runtime
+}
+
+// hasStaticPod reports whether a rendered spec carries the named manifest.
+func hasStaticPod(pods []internalv1alpha1.StaticPod, name string) bool {
+	return slices.ContainsFunc(pods, func(pod internalv1alpha1.StaticPod) bool {
+		return pod.Name == name
+	})
 }
 
 // renderUpdatePolicy maps the group's disruption settings onto the window the
