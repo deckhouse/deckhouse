@@ -73,6 +73,9 @@ const (
 	// eventKeySuperseded is emitted on EffectiveLicense when the controller
 	// deletes a key a reissue extinguished.
 	eventKeySuperseded = "KeySuperseded"
+	// eventKeyExpired is emitted on EffectiveLicense when the controller deletes
+	// a key whose every record ran out past its grace period.
+	eventKeyExpired = "KeyExpired"
 )
 
 // objectLabels mark the objects the controller owns, the way every other
@@ -246,9 +249,9 @@ func (r *reconciler) Reconcile(ctx context.Context, _ ctrl.Request) (ctrl.Result
 		return ctrl.Result{}, err
 	}
 
-	// Deletion comes last: the key has to have carried its Superseded verdict
-	// into the status of the record set before it goes away.
-	if err := r.deleteSupersededKeys(ctx, effective, items, res); err != nil {
+	// Deletion comes last: the key has to have carried its verdict into the
+	// status of the record set before it goes away.
+	if err := r.deleteRetiredKeys(ctx, effective, items, res); err != nil {
 		return ctrl.Result{}, err
 	}
 
@@ -289,12 +292,14 @@ func (r *reconciler) registrationRequest(
 	return request, nil
 }
 
-// deleteSupersededKeys removes the keys a reissue extinguished (specification
-// 8.4). It is the one place the controller deletes an object the customer wrote,
-// and it is deliberately narrow: only a key whose every record was taken over by
-// an accepted successor already in force qualifies. A key that expired without a
-// successor, a rejected key and a key carrying an unknown record type all stay.
-func (r *reconciler) deleteSupersededKeys(
+// deleteRetiredKeys removes the keys that contribute nothing now and nothing
+// later. It is the one place the controller deletes an object the customer
+// wrote, and it is deliberately narrow. Two kinds of key qualify: a key whose
+// every record was taken over by an accepted successor already in force
+// (specification 8.4), and a key whose every record ran out past its grace
+// period, except the one the compliance state still reads. A rejected key and a
+// key still in grace stay.
+func (r *reconciler) deleteRetiredKeys(
 	ctx context.Context,
 	effective *v1alpha1.EffectiveLicense,
 	items []v1alpha1.ClusterLicense,
@@ -302,11 +307,21 @@ func (r *reconciler) deleteSupersededKeys(
 ) error {
 	for i := range items {
 		item := &items[i]
-		if !res.Superseded[item.Name] {
+		expiredAt, expired := res.Expired[item.Name]
+		if !res.Superseded[item.Name] && !expired {
 			continue
 		}
 		if err := r.Delete(ctx, item); err != nil && !apierrors.IsNotFound(err) {
-			return fmt.Errorf("delete superseded cluster license %s: %w", item.Name, err)
+			return fmt.Errorf("delete retired cluster license %s: %w", item.Name, err)
+		}
+		if expired {
+			until := expiredAt.UTC().Format(time.RFC3339)
+			r.logger.Info("expired license key deleted",
+				slog.String("license", item.Name), slog.String("expired_at", until))
+			r.recorder.Eventf(effective, corev1.EventTypeNormal, eventKeyExpired,
+				"License key %s (jti %s) expired at %s, its grace period is over, and it has been deleted",
+				item.Name, item.Status.PackageJti, until)
+			continue
 		}
 		r.logger.Info("superseded license key deleted",
 			slog.String("license", item.Name), slog.String("superseded_by", res.SupersededBy[item.Name]))

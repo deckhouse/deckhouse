@@ -151,6 +151,13 @@ type Result struct {
 	SupersededBy map[string]string
 	// SupersedeCycle lists the record ids caught in an extinction cycle.
 	SupersedeCycle []string
+	// Expired names the keys the controller deletes because every record ran
+	// out past its grace (see Expired), with the latest expire_at of the key,
+	// for the KeyExpired event. A superseded key is never listed here, and
+	// neither is the key whose record the compliance state reads while nothing
+	// is active: deleting it would turn an expired licence into a cluster that
+	// was never registered.
+	Expired map[string]time.Time
 
 	// Expiring is true when the key expires within Thresholds.ExpiringSoon.
 	Expiring bool
@@ -181,8 +188,7 @@ var extinguishedReasons = map[string]bool{
 // is deleted by the controller: after a reissue it contributes nothing now and
 // nothing later, and its presence would make "one key" a lie.
 //
-// Nothing else qualifies. A key that expired without a successor is the only
-// record that the licence existed and when it ran out; a rejected key has to
+// A key that merely ran out is the business of Expired. A rejected key has to
 // stay so that the customer can read the reason; a key carrying a record of an
 // unknown type starts counting after a Deckhouse upgrade.
 //
@@ -197,6 +203,47 @@ func Superseded(records []RecordStatus) bool {
 		}
 	}
 	return true
+}
+
+// lapsedReasons are the verdicts of a record that can run out: it passed
+// verification and expired or was taken over, or its type is unknown to this
+// build, which has nothing to do with its term.
+var lapsedReasons = map[string]bool{
+	ReasonExpired:         true,
+	ReasonRenewed:         true,
+	ReasonSuperseded:      true,
+	ReasonUnsupportedType: true,
+}
+
+// Expired reports whether every record of a key, of any type, ran out past its
+// own grace period: expire_at plus grace_days, or plus the default grace when
+// the record carries none, strictly before now. It also returns the latest
+// expire_at of the key. The license server adds a new key on every reissue, so
+// without this the keys accumulate for ever.
+//
+// A perpetual record never runs out, and a record still in grace keeps the key:
+// that is what the Grace state reads. A record rejected for a reason the
+// customer has to act on (revoked, cluster mismatch, duplicate, malformed)
+// keeps the key too, so that the customer can read why.
+//
+// The records must be the final per-record statuses Compute produced.
+func Expired(records []RecordStatus, now time.Time, th Thresholds) (time.Time, bool) {
+	var latest time.Time
+	if len(records) == 0 {
+		return latest, false
+	}
+	for _, r := range records {
+		if r.Accepted || !lapsedReasons[r.Reason] || r.ExpireAt == nil {
+			return time.Time{}, false
+		}
+		if !now.After(r.ExpireAt.Add(graceOf(r, th))) {
+			return time.Time{}, false
+		}
+		if r.ExpireAt.After(latest) {
+			latest = *r.ExpireAt
+		}
+	}
+	return latest, true
 }
 
 // Compute turns the verified records of every key and the current node set into
@@ -264,14 +311,22 @@ func Compute(in Input) Result {
 	res.State, res.Reason = state(base, final, res, in)
 	res.Licensed = res.State == StateValid || res.State == StateWarning
 
-	res.AcceptedRecords, res.ActiveKeys = accepted(ordered, ext)
 	res.Rejected = rejected(final, in.RejectedKeys)
+
+	// While nothing is active the compliance state reads the record that
+	// expired last. Its key stays even past grace: without it an expired
+	// licence would read as a cluster that was never registered.
+	var evidence *RecordStatus
+	if len(activeAt(base, now)) == 0 {
+		evidence = lastExpired(base, now)
+	}
 
 	// final is ordered records flattened, so each key owns the next len(Records)
 	// of it. Slicing beats matching by id: the same id may legitimately appear
 	// in two keys, one of them marked Duplicate.
 	res.Superseded = make(map[string]bool, len(ordered))
 	res.SupersededBy = make(map[string]string, len(ordered))
+	res.Expired = make(map[string]time.Time)
 	byID := make(map[string]string, len(ordered))
 	for _, k := range ordered {
 		byID[k.Key] = k.JTI
@@ -282,16 +337,26 @@ func Compute(in Input) Result {
 		for _, r := range k.Records {
 			owner[r.ID] = k.Key
 		}
+		from := at
 		mine := final[at : at+len(k.Records)]
 		at += len(k.Records)
-		if !Superseded(mine) {
+		if Superseded(mine) {
+			res.Superseded[k.Key] = true
 			continue
 		}
-		res.Superseded[k.Key] = true
+		latest, expired := Expired(mine, now, in.Thresholds)
+		if !expired || holds(base[from:at], evidence) {
+			continue
+		}
+		res.Expired[k.Key] = latest
 	}
 	for key := range res.Superseded {
 		res.SupersededBy[key] = supersededBy(final, owner, byID, key)
 	}
+
+	// A key about to be deleted leaves the registration request in the same
+	// pass, the way a superseded one does, so that the deletion changes nothing.
+	res.AcceptedRecords, res.ActiveKeys = accepted(ordered, ext, res.Expired)
 
 	res.Counts.Keys = len(in.Keys)
 	res.Counts.Records = len(final)
@@ -334,10 +399,23 @@ func contributing(r RecordStatus, ext map[string]extinction) bool {
 	return !gone
 }
 
-func accepted(keys []KeyRecords, ext map[string]extinction) ([]string, []string) {
+// holds reports whether r points into records.
+func holds(records []RecordStatus, r *RecordStatus) bool {
+	for i := range records {
+		if &records[i] == r {
+			return true
+		}
+	}
+	return false
+}
+
+func accepted(keys []KeyRecords, ext map[string]extinction, expired map[string]time.Time) ([]string, []string) {
 	var records, activeKeys []string
 	seen := make(map[string]bool)
 	for _, k := range keys {
+		if _, gone := expired[k.Key]; gone {
+			continue
+		}
 		carries := false
 		for _, r := range k.Records {
 			if !r.Accepted || seen[r.ID] {

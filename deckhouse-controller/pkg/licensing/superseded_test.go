@@ -105,6 +105,11 @@ func TestSupersededRSeries(t *testing.T) {
 			if res.Counts.Superseded != want {
 				t.Fatalf("counts.superseded = %d, want %d", res.Counts.Superseded, want)
 			}
+			// None of these keys ran out past grace except R6, which is the
+			// last evidence of the licence and stays.
+			if len(res.Expired) != 0 {
+				t.Fatalf("expired = %v, want none", res.Expired)
+			}
 		})
 	}
 }
@@ -238,4 +243,176 @@ func TestAcceptedRecordsAndActiveKeys(t *testing.T) {
 			t.Fatalf("records = %v, want both", res.AcceptedRecords)
 		}
 	})
+}
+
+// lapsed builds a record that no longer contributes: reason Expired, Renewed,
+// Superseded, UnsupportedType or a real rejection. grace < 0 means the record
+// carries no grace_days.
+func lapsed(id, expire, reason string, grace int) RecordStatus {
+	r := wl(id, "2026-01-01T00:00:00Z", expire, map[string]*int64{MetricVCPU: i64(100)})
+	r.Accepted = false
+	r.Reason = reason
+	if grace >= 0 {
+		r.GraceDays = &grace
+	}
+	return r
+}
+
+// Which keys ran out for good: every record, of any type, past its own
+// expire_at plus grace. The default grace is 14 days and now is 2026-05-01.
+func TestExpired(t *testing.T) {
+	now := ts("2026-05-01T00:00:00Z")
+	const noGrace = -1
+
+	cases := []struct {
+		name    string
+		records []RecordStatus
+		want    string // latest expire_at, empty when the key stays
+	}{
+		{"every record past the default grace", []RecordStatus{
+			lapsed(recordA, "2026-02-01T00:00:00Z", ReasonExpired, noGrace),
+			lapsed(recordB, "2026-03-01T00:00:00Z", ReasonExpired, noGrace),
+		}, "2026-03-01T00:00:00Z"},
+		{"one record still in the default grace", []RecordStatus{
+			lapsed(recordA, "2026-02-01T00:00:00Z", ReasonExpired, noGrace),
+			lapsed(recordB, "2026-04-25T00:00:00Z", ReasonExpired, noGrace),
+		}, ""},
+		{"a record's own longer grace keeps the key", []RecordStatus{
+			lapsed(recordA, "2026-03-01T00:00:00Z", ReasonExpired, 90),
+		}, ""},
+		{"a record's own shorter grace lets it go", []RecordStatus{
+			lapsed(recordA, "2026-04-25T00:00:00Z", ReasonExpired, 1),
+		}, "2026-04-25T00:00:00Z"},
+		{"grace ending exactly now is not past", []RecordStatus{
+			lapsed(recordA, "2026-04-17T00:00:00Z", ReasonExpired, noGrace),
+		}, ""},
+		{"a perpetual record never runs out", []RecordStatus{
+			lapsed(recordA, "2026-02-01T00:00:00Z", ReasonExpired, noGrace),
+			lapsed(recordB, "", ReasonUnsupportedType, noGrace),
+		}, ""},
+		{"a record in force keeps the key", []RecordStatus{
+			lapsed(recordA, "2026-02-01T00:00:00Z", ReasonExpired, noGrace),
+			wl(recordB, "2026-01-01T00:00:00Z", "2027-01-01T00:00:00Z", map[string]*int64{MetricVCPU: i64(100)}),
+		}, ""},
+		{"a record of an unknown type counts like any other", []RecordStatus{
+			lapsed(recordA, "2026-02-01T00:00:00Z", ReasonExpired, noGrace),
+			lapsed(recordB, "2026-03-01T00:00:00Z", ReasonUnsupportedType, noGrace),
+		}, "2026-03-01T00:00:00Z"},
+		{"a running record of an unknown type keeps the key", []RecordStatus{
+			lapsed(recordA, "2026-02-01T00:00:00Z", ReasonExpired, noGrace),
+			lapsed(recordB, "2027-01-01T00:00:00Z", ReasonUnsupportedType, noGrace),
+		}, ""},
+		{"superseded and expired records past grace", []RecordStatus{
+			lapsed(recordA, "2026-02-01T00:00:00Z", ReasonSuperseded, noGrace),
+			lapsed(recordB, "2026-03-01T00:00:00Z", ReasonExpired, noGrace),
+		}, "2026-03-01T00:00:00Z"},
+		{"a rejected record keeps the key", []RecordStatus{
+			lapsed(recordA, "2026-02-01T00:00:00Z", ReasonClusterMismatch, noGrace),
+		}, ""},
+		{"a revoked record keeps the key", []RecordStatus{
+			lapsed(recordA, "2026-02-01T00:00:00Z", ReasonRevoked, noGrace),
+		}, ""},
+		{"a duplicate record keeps the key", []RecordStatus{
+			lapsed(recordA, "2026-02-01T00:00:00Z", ReasonDuplicate, noGrace),
+		}, ""},
+		{"no records at all", nil, ""},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			latest, got := Expired(tc.records, now, DefaultThresholds())
+			if got != (tc.want != "") {
+				t.Fatalf("expired = %v, want %v", got, tc.want != "")
+			}
+			if got && !latest.Equal(ts(tc.want)) {
+				t.Fatalf("latest = %s, want %s", latest, tc.want)
+			}
+		})
+	}
+}
+
+// A key that ran out past grace next to a key in force is listed for deletion,
+// leaves the registration request in the same pass, and deleting it changes
+// neither the policy nor the request.
+func TestExpiredKeyNextToAKeyInForce(t *testing.T) {
+	now := ts("2026-05-01T00:00:00Z")
+	limits := map[string]*int64{MetricServers: i64(12), MetricVCPU: i64(200), MetricCores: i64(0)}
+
+	both := []KeyRecords{
+		{Key: "license-old", JTI: keyOldJTI, Records: []RecordStatus{
+			wl(recordA, "2026-01-01T00:00:00Z", "2026-03-01T00:00:00Z", limits),
+		}},
+		{Key: "license-new", JTI: keyNewJTI, Records: []RecordStatus{
+			wl(recordB, "2026-03-01T00:00:00Z", "2027-01-01T00:00:00Z", limits),
+		}},
+	}
+	nodes := []Node{nd("a", 32), nd("b", 16)}
+
+	before := Compute(input(now, both, nodes...))
+	if got, ok := before.Expired["license-old"]; !ok || !got.Equal(ts("2026-03-01T00:00:00Z")) {
+		t.Fatalf("expired = %v, want license-old at 2026-03-01", before.Expired)
+	}
+	if len(before.Expired) != 1 || len(before.Superseded) != 0 {
+		t.Fatalf("expired = %v, superseded = %v", before.Expired, before.Superseded)
+	}
+	if !reflect.DeepEqual(before.AcceptedRecords, []string{recordB}) ||
+		!reflect.DeepEqual(before.ActiveKeys, []string{keyNewJTI}) {
+		t.Fatalf("records = %v, activeKeys = %v, want only the new key", before.AcceptedRecords, before.ActiveKeys)
+	}
+
+	after := Compute(input(now, both[1:], nodes...))
+	if !reflect.DeepEqual(before.Limits, after.Limits) || !reflect.DeepEqual(before.Allocation, after.Allocation) {
+		t.Fatalf("policy changed: %+v -> %+v", before.Limits, after.Limits)
+	}
+	if before.State != after.State || before.Reason != after.Reason || !reflect.DeepEqual(before.Key, after.Key) {
+		t.Fatalf("state changed: %q/%q -> %q/%q", before.State, before.Reason, after.State, after.Reason)
+	}
+	if !reflect.DeepEqual(before.AcceptedRecords, after.AcceptedRecords) ||
+		!reflect.DeepEqual(before.ActiveKeys, after.ActiveKeys) {
+		t.Fatal("deleting the expired key changed the registration request")
+	}
+}
+
+// While nothing is active, the key whose record the compliance state reads
+// stays even past grace, so that the cluster keeps reading Violation/Expired
+// rather than Unregistered. Older keys that ran out go.
+func TestLastExpiredKeyIsKept(t *testing.T) {
+	now := ts("2026-05-01T00:00:00Z")
+	limits := map[string]*int64{MetricVCPU: i64(100)}
+
+	res := Compute(input(now, []KeyRecords{
+		{Key: "license-1", JTI: keyOldJTI, Records: []RecordStatus{
+			wl(recordA, "2026-01-01T00:00:00Z", "2026-02-01T00:00:00Z", limits),
+		}},
+		{Key: "license-2", JTI: keyNewJTI, Records: []RecordStatus{
+			wl(recordB, "2026-02-01T00:00:00Z", "2026-03-01T00:00:00Z", limits),
+		}},
+	}))
+	if _, ok := res.Expired["license-1"]; !ok || len(res.Expired) != 1 {
+		t.Fatalf("expired = %v, want only license-1", res.Expired)
+	}
+	if res.State != StateViolation || res.Reason != ReasonExpired {
+		t.Fatalf("state = %q/%q", res.State, res.Reason)
+	}
+	if !reflect.DeepEqual(res.ActiveKeys, []string{keyNewJTI}) {
+		t.Fatalf("activeKeys = %v, want the kept key", res.ActiveKeys)
+	}
+}
+
+// A key whose every record is superseded is deleted as superseded even when
+// its records also ran out past grace: the existing verdict wins.
+func TestSupersededWinsOverExpired(t *testing.T) {
+	limits := map[string]*int64{MetricVCPU: i64(100)}
+	successor := wl(recordC, "2026-02-01T00:00:00Z", "2027-01-01T00:00:00Z", limits)
+	successor.Supersedes = []string{recordA}
+
+	res := Compute(input(ts("2026-05-01T00:00:00Z"), []KeyRecords{
+		{Key: "license-1", JTI: keyOldJTI, Records: []RecordStatus{
+			wl(recordA, "2026-01-01T00:00:00Z", "2026-03-01T00:00:00Z", limits),
+		}},
+		{Key: "license-2", JTI: keyNewJTI, Records: []RecordStatus{successor}},
+	}))
+	if !res.Superseded["license-1"] || len(res.Expired) != 0 {
+		t.Fatalf("superseded = %v, expired = %v", res.Superseded, res.Expired)
+	}
 }

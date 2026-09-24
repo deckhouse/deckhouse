@@ -156,8 +156,9 @@ func TestRejectedSuccessorDeletesNothing(t *testing.T) {
 	}
 }
 
-// R6: a key that expired without a successor is the only record that the licence
-// existed and when it ran out, so it is never deleted.
+// R6: the last key that expired, even past its grace, is the only record that
+// the licence existed and when it ran out, so it is not deleted: the cluster has
+// to keep reading Violation/Expired, not Unregistered.
 func TestExpiredKeyWithoutSuccessorSurvives(t *testing.T) {
 	pub, priv, err := ed25519.GenerateKey(nil)
 	if err != nil {
@@ -216,6 +217,109 @@ func TestReinstalledSupersededKeyIsDeletedAgain(t *testing.T) {
 	after := effectiveStatusOf(t, env)
 	if before.RegistrationRequest != after.RegistrationRequest {
 		t.Fatal("reinstalling a superseded key changed the cluster data file")
+	}
+}
+
+// expiredPair builds a key that ran out on 2026-03-01, past the default grace at
+// testNow, next to an unrelated key in force: the license server adds a key on
+// every reissue instead of superseding the old one.
+func expiredPair(t *testing.T, oldExpire string) (*v1alpha1.ClusterLicense, *v1alpha1.ClusterLicense, ed25519.PublicKey) {
+	t.Helper()
+
+	pub, priv, err := ed25519.GenerateKey(nil)
+	if err != nil {
+		t.Fatalf("generate vendor key: %v", err)
+	}
+	old := platformRecord(testRecordID, "2026-01-01T00:00:00Z", oldExpire, fullLimits(10, 100, 0))
+	fresh := platformRecord(newRecordID, "2026-01-01T00:00:00Z", "2027-01-01T00:00:00Z", fullLimits(12, 200, 0))
+
+	return &v1alpha1.ClusterLicense{
+			ObjectMeta: metav1.ObjectMeta{Name: "key-old"},
+			Spec:       v1alpha1.ClusterLicenseSpec{LicenseKey: signPackage(t, priv, testPackageID, old)},
+		}, &v1alpha1.ClusterLicense{
+			ObjectMeta: metav1.ObjectMeta{Name: "key-new"},
+			Spec:       v1alpha1.ClusterLicenseSpec{LicenseKey: signPackage(t, priv, newPackageID, fresh)},
+		}, pub
+}
+
+// A key whose every record ran out past its grace is deleted, the controller
+// says so, and the cluster data file names only the key that is left.
+func TestExpiredKeyIsDeleted(t *testing.T) {
+	old, fresh, vendorKey := expiredPair(t, "2026-03-01T00:00:00Z")
+	worker := node("worker", "4", true)
+
+	env := newTestEnv(t, vendorKey, old, fresh, &worker, discoverySecret())
+	if _, err := env.r.Reconcile(context.Background(), ctrl.Request{}); err != nil {
+		t.Fatalf("reconcile: %v", err)
+	}
+
+	if exists(t, env, "key-old") {
+		t.Fatal("the expired key was not deleted")
+	}
+	if !exists(t, env, "key-new") {
+		t.Fatal("the key in force was deleted")
+	}
+
+	event := nextEvent(t, env)
+	if !strings.Contains(event, eventKeyExpired) ||
+		!strings.Contains(event, testPackageID) || !strings.Contains(event, "2026-03-01T00:00:00Z") {
+		t.Fatalf("event = %q, want a %s naming the key and its expiry", event, eventKeyExpired)
+	}
+
+	claims := requestClaims(t, publishedRequest(t, env))
+	keys := claims["active_keys"].([]any)
+	if len(keys) != 1 || keys[0] != newPackageID {
+		t.Fatalf("active_keys = %v, want only the new key", keys)
+	}
+	records := claims["records"].([]any)
+	if len(records) != 1 || records[0] != newRecordID {
+		t.Fatalf("records = %v, want only the record of the new key", records)
+	}
+}
+
+// A key in its grace period still counts, so it is not deleted.
+func TestExpiredKeyInGraceIsKept(t *testing.T) {
+	old, fresh, vendorKey := expiredPair(t, "2026-04-25T00:00:00Z")
+	worker := node("worker", "4", true)
+
+	env := newTestEnv(t, vendorKey, old, fresh, &worker, discoverySecret())
+	if _, err := env.r.Reconcile(context.Background(), ctrl.Request{}); err != nil {
+		t.Fatalf("reconcile: %v", err)
+	}
+
+	if !exists(t, env, "key-old") || !exists(t, env, "key-new") {
+		t.Fatal("a key in its grace period was deleted")
+	}
+}
+
+// Reapplying an expired key by hand gets it deleted again, without the cluster
+// data file moving.
+func TestReinstalledExpiredKeyIsDeletedAgain(t *testing.T) {
+	old, fresh, vendorKey := expiredPair(t, "2026-03-01T00:00:00Z")
+	worker := node("worker", "4", true)
+
+	env := newTestEnv(t, vendorKey, fresh, &worker, discoverySecret())
+	ctx := context.Background()
+	if _, err := env.r.Reconcile(ctx, ctrl.Request{}); err != nil {
+		t.Fatalf("first reconcile: %v", err)
+	}
+	before := effectiveStatusOf(t, env)
+
+	old.ResourceVersion = ""
+	if err := env.cl.Create(ctx, old); err != nil {
+		t.Fatalf("reinstall the expired key: %v", err)
+	}
+	env.at(testNow.Add(time.Minute))
+	if _, err := env.r.Reconcile(ctx, ctrl.Request{}); err != nil {
+		t.Fatalf("second reconcile: %v", err)
+	}
+
+	if exists(t, env, "key-old") {
+		t.Fatal("the reinstalled expired key was not deleted again")
+	}
+	after := effectiveStatusOf(t, env)
+	if before.RegistrationRequest != after.RegistrationRequest {
+		t.Fatal("reinstalling an expired key changed the cluster data file")
 	}
 }
 

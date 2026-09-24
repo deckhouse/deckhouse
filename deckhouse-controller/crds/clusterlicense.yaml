@@ -39,7 +39,12 @@ spec:
 
           This is an internal object: it is not shown in the Console, and `d8 system licenses` only lists it
           with `--keys`. In normal operation a cluster holds exactly one key; a second one appears only for
-          the moment a reissue is being installed, and the controller deletes the key it superseded.
+          the moment a reissue is being installed. The controller deletes a key it superseded, and a key
+          whose every record, of any type, is past `expireAt` plus its grace period (the record's
+          `graceDays`, or the controller default when the record has none). Such a deletion is reported
+          with a `KeyExpired` event on the `EffectiveLicense`. A key in its grace period, a key with a
+          perpetual record, a rejected key and the last expired key while no licence is in force (it keeps
+          the cluster reporting the expiry) all stay. A deleted key reapplied by hand is deleted again.
 
           The aggregated policy computed from all keys is published in the `EffectiveLicense` resource named
           `deckhouse-platform`.
@@ -232,9 +237,9 @@ spec:
                   whose start has already passed.
 
                   A superseded key contributes nothing now and nothing later, and the controller deletes it,
-                  emitting a `KeySuperseded` event on the `EffectiveLicense`. Nothing else is deleted: a key
-                  that expired without a successor, a rejected key and a key carrying a record type this
-                  release does not support all stay in place.
+                  emitting a `KeySuperseded` event on the `EffectiveLicense`. A key whose records merely ran
+                  out past their grace period is deleted with a `KeyExpired` event instead; a rejected key and
+                  a key carrying a running record of a type this release does not support stay in place.
                 type: boolean
             type: object
         required:
