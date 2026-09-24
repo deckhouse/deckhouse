@@ -107,13 +107,6 @@
   license: Apache License 2.0
   id: cni-flannel
   version: "1.6.0-flannel1"
-- name: QEMU (guest agent)
-  link: https://gitlab.com/qemu-project/qemu
-  description: Guest agent for Deckhouse Engine nodes running as virtual machines.
-  logo: /images/logos/linux.svg
-  license: GPL-2.0 license
-  id: qemu-guest-agent
-  version: "9.2.4"
 - name: util-linux (lsblk)
   link: https://github.com/util-linux/util-linux
   description: System utilities used by lsblk.

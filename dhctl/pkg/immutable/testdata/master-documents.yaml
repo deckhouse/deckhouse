@@ -23,9 +23,6 @@ spec:
   - digest: sha256:9999999999999999999999999999999999999999999999999999999999999999
     name: nodelet
     requestedBy: node-manager
-  - digest: sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
-    name: qemu-guest-agent
-    requestedBy: node-manager
   kernel:
     sysctl:
       kernel.panic: "10"

@@ -145,7 +145,7 @@ func TestNodeConfigListsEveryExtensionNodeControllerRenders(t *testing.T) {
 		names = append(names, e.Name)
 	}
 	require.ElementsMatch(t,
-		[]string{containerdExtension, kubeletExtension, cniExtension, nodeletExtension, guestAgentExtension}, names)
+		[]string{containerdExtension, kubeletExtension, cniExtension, nodeletExtension}, names)
 }
 
 // The one containerd and the one CNI extension the installer ships are found by

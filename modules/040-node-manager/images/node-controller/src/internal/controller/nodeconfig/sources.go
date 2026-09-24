@@ -557,9 +557,8 @@ func (s *sourceReader) readImagesDigests(ctx context.Context) (map[string]map[st
 }
 
 // sysextDigests picks the system extension digests for this release: one
-// containerd, one CNI, the agent and the guest agent, and the kubelet matching
-// the group's Kubernetes version. The digests live in the same ConfigMap
-// bashible-apiserver reads.
+// containerd, one CNI, and the kubelet matching the group's Kubernetes version.
+// The digests live in the same ConfigMap bashible-apiserver reads.
 func sysextDigests(all map[string]map[string]string, kubernetesVersion string) (map[string]string, error) {
 	packages := all[registryPackagesDigestsKey]
 	if len(packages) == 0 {
@@ -573,7 +572,7 @@ func sysextDigests(all map[string]map[string]string, kubernetesVersion string) (
 		containerdExtension: "containerdSysext",
 		cniExtension:        "kubernetesCniSysext",
 	}
-	digests := make(map[string]string, len(imagePrefixes)+3)
+	digests := make(map[string]string, len(imagePrefixes)+2)
 	for _, name := range slices.Sorted(maps.Keys(imagePrefixes)) {
 		digest, err := soleDigest(packages, imagePrefixes[name])
 		if err != nil {
@@ -585,18 +584,13 @@ func sysextDigests(all map[string]map[string]string, kubernetesVersion string) (
 		digests[name] = digest
 	}
 
-	// Read by exact key: these two images have no version in their names, so the
+	// Read by exact key: the agent image has no version in its name, so the
 	// numeric tail soleDigest looks for is absent by construction.
-	for name, image := range map[string]string{
-		nodeletExtension:    nodeletSysextImage,
-		guestAgentExtension: guestAgentSysextImage,
-	} {
-		digest := packages[image]
-		if digest == "" {
-			return nil, fmt.Errorf("no %s system extension digest in %s", name, imagesDigestsKey)
-		}
-		digests[name] = digest
+	nodelet := packages[nodeletSysextImage]
+	if nodelet == "" {
+		return nil, fmt.Errorf("no %s system extension digest in %s", nodeletExtension, imagesDigestsKey)
 	}
+	digests[nodeletExtension] = nodelet
 
 	kubelet := pickKubeletDigest(packages, kubernetesVersion)
 	if kubelet == "" {

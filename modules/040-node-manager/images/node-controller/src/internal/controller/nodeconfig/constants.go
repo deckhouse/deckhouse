@@ -103,18 +103,10 @@ const (
 	kubeletExtension    = "kubelet"
 	cniExtension        = "kubernetes-cni"
 	nodeletExtension    = "nodelet"
-	// guestAgentExtension goes on every Engine node, hardware included: the node
-	// decides at boot whether to start the agent, because a unit that systemd
-	// skips over an unmet condition is what stops a rollout dead. See the engine
-	// repository, docs/qemu-guest-agent.md.
-	guestAgentExtension = "qemu-guest-agent"
 
 	// nodeletSysextImage is the agent's image in images_digests.json. Unlike the
 	// other three it carries no version, so it is read by exact key.
 	nodeletSysextImage = "nodeletSysext"
-	// guestAgentSysextImage is the QEMU guest agent's image there, versionless
-	// for the same reason and read the same way.
-	guestAgentSysextImage = "qemuGuestAgentSysext"
 
 	// platformExtensionRequestedBy names the module, not the writing component:
 	// dhctl and this controller write the same three extensions, so the field
