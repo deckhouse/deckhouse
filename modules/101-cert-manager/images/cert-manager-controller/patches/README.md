@@ -10,8 +10,14 @@ https://github.com/cert-manager/cert-manager/pull/5158
 Fix CVEs:
 - CVE-2026-46600
 - CVE-2026-56852
+- CVE-2026-56854
+- CVE-2026-81870
+- CVE-2026-84303
+- CVE-2026-84304
+- CVE-2026-84445
 
 GHSA:
 - GHSA-gcjh-h69q-9w9g
 - GHSA-hrxh-6v49-42gf
+- GHSA-mpwr-8vm7-h73f
 
