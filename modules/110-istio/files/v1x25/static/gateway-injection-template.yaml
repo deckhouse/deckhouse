@@ -55,19 +55,15 @@ spec:
     securityContext:
       runAsUser: {{ .ProxyUID | default "1337" }}
       runAsGroup: {{ .ProxyGID | default "1337" }}
-    {{- /* [Deckhouse] see the seccompProfile note in sidecar-injection-template.yaml: Pod
-           Security Standards "restricted" demands an explicit profile on every container and
-           upstream sets none on templated gateways. Upstream's own knob for this is
-           `gateways.seccompProfile` (see kube-gateway.yaml), but the module writes the injector
-           ConfigMap itself and feeds it only `global.proxy.seccompProfile` (set in
-           templates/sidecar-injection-values.yaml), so that single value drives every injected
-           container in this revision. The legacy operator-backed 1.25 revision can use neither
-           field — the sailoperator Istio CRD exposes neither — and hardcodes the profile
-           instead; see files/v1x25/static/. */}}
-    {{- if .Values.global.proxy.seccompProfile }}
+    {{- /* [Deckhouse] Pod Security Standards "restricted" demands an explicit seccomp profile
+           on every container and upstream sets none on templated gateways. Hardcoded rather
+           than value-driven: the chart does plumb `gateways.seccompProfile` into the injector
+           values, but the sailoperator.io Istio CR has no `gateways` key at all (nor a
+           `global.proxy.seccompProfile`), so it is stuck at the chart default `{}` and no
+           `if`-guarded form could ever render. See also
+           static/d8-seccomp-injection-template.yaml, which hardcodes it for the same reason. */}}
       seccompProfile:
-    {{- toYaml .Values.global.proxy.seccompProfile | nindent 8 }}
-    {{- end }}
+        type: RuntimeDefault
     env:
     - name: PILOT_CERT_PROVIDER
       value: {{ .Values.global.pilotCertProvider }}
@@ -151,10 +147,6 @@ spec:
     - name: ISTIO_META_OWNER
       value: kubernetes://apis/{{ .TypeMeta.APIVersion }}/namespaces/{{ valueOrDefault .DeploymentMeta.Namespace `default` }}/{{ toLower .TypeMeta.Kind}}s/{{ .DeploymentMeta.Name }}
     {{- end}}
-    {{- if (isset .ObjectMeta.Annotations `sidecar.istio.io/bootstrapOverride`) }}
-    - name: ISTIO_BOOTSTRAP_OVERRIDE
-      value: "/etc/istio/custom-bootstrap/custom_bootstrap.json"
-    {{- end }}
     {{- if .Values.global.meshID }}
     - name: ISTIO_META_MESH_ID
       value: "{{ .Values.global.meshID }}"
@@ -209,10 +201,6 @@ spec:
     {{- end }}
     - mountPath: /var/lib/istio/data
       name: istio-data
-    {{ if (isset .ObjectMeta.Annotations `sidecar.istio.io/bootstrapOverride`) }}
-    - mountPath: /etc/istio/custom-bootstrap
-      name: custom-bootstrap-volume
-    {{- end }}
     # SDS channel between istioagent and Envoy
     - mountPath: /etc/istio/proxy
       name: istio-envoy
@@ -227,7 +215,7 @@ spec:
     - name: istio-podinfo
       mountPath: /etc/istio/pod
   volumes:
-  - emptyDir:
+  - emptyDir: {}
     name: workload-socket
   - emptyDir: {}
     name: credential-socket
@@ -238,11 +226,6 @@ spec:
   {{- else}}
   - emptyDir: {}
     name: workload-certs
-  {{- end }}
-  {{- if (isset .ObjectMeta.Annotations `sidecar.istio.io/bootstrapOverride`) }}
-  - name: custom-bootstrap-volume
-    configMap:
-      name: {{ annotation .ObjectMeta `sidecar.istio.io/bootstrapOverride` "" }}
   {{- end }}
   # SDS channel between istioagent and Envoy
   - emptyDir:
@@ -268,16 +251,8 @@ spec:
           audience: {{ .Values.global.sds.token.aud }}
   {{- if eq .Values.global.pilotCertProvider "istiod" }}
   - name: istiod-ca-cert
-  {{- if eq (.Values.pilot.env).ENABLE_CLUSTER_TRUST_BUNDLE_API true }}
-    projected:
-      sources:
-      - clusterTrustBundle:
-          name: istio.io:istiod-ca:{{ .Values.global.trustBundleName | default "root-cert" }}
-          path: root-cert.pem
-  {{- else }}
     configMap:
-      name: {{ .Values.global.trustBundleName | default "istio-ca-root-cert" }}
-  {{- end }}
+      name: istio-ca-root-cert
   {{- end }}
   {{- if .Values.global.mountMtlsCerts }}
   # Use the key and cert mounted to /etc/certs/ for the in-cluster mTLS communications.
