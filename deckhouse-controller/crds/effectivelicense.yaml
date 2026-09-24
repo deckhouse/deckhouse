@@ -70,8 +70,10 @@ spec:
                 properties:
                   cores:
                     description: |
-                      The `cores` metric, which pays for the nodes that no longer fit into `vCPU`.
-                      A node costs it `ceil(vCPU / 2)` under the temporary "2 vCPU = 1 core" rule.
+                      The `cores` metric, which pays for the nodes that got no server licence.
+                      Under the temporary "2 vCPU = 1 core" rule it is a pool of `2 * cores` vCPU: a
+                      node takes it while its vCPU fits into what is left, with no per-node rounding.
+                      `used` is `ceil(vCPU / 2)` of the nodes it covers.
                     properties:
                       limit:
                         description: |

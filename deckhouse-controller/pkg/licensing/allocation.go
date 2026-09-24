@@ -82,7 +82,7 @@ type MetricAllocation struct {
 	// Limit is the granted quota; nil means the metric is unlimited.
 	Limit *int64
 	// Used is what those nodes cost the metric: one per node for servers, the
-	// node vCPU for vCPU, ceil(vCPU/2) for cores.
+	// node vCPU for vCPU, ceil(their vCPU sum / 2) for cores.
 	Used int64
 }
 
@@ -123,6 +123,11 @@ func (a Allocation) WithinLimits() bool { return len(a.Unlicensed) == 0 }
 // the finest-grained metric and fills whatever is left. A node is never split
 // between two metrics, so a node that does not fit into cores takes vCPU.
 //
+// Cores are a pool of 2*cores vCPU: a node takes cores while its vCPU fits into
+// what is left of the pool, with no per-node rounding. That keeps the cores
+// metric, ceil(vCPU/2) on the sum, exactly enough on its own: 24 nodes of 3 vCPU
+// need 36 cores, not 48.
+//
 // Cores before vCPU also keeps a node where it is when a reissue raises the vCPU
 // quota: a node covered by cores stays on cores.
 //
@@ -139,12 +144,15 @@ func Allocate(nodes []Node, limits Limits, wasServer map[string]bool) Allocation
 		Cores:   MetricAllocation{Limit: grantedLimit(limits, MetricCores)},
 	}
 
+	var coresVCPU int64 // vCPU taken from the cores pool so far
 	for _, node := range ordered {
 		switch {
 		case out.Servers.fits(1):
 			out.Servers.take(node.Name, 1)
-		case out.Cores.fits(coresOf(node.VCPU)):
-			out.Cores.take(node.Name, coresOf(node.VCPU))
+		case out.Cores.Limit == nil || coresVCPU+node.VCPU <= 2*(*out.Cores.Limit):
+			coresVCPU += node.VCPU
+			out.Cores.Nodes = append(out.Cores.Nodes, node.Name)
+			out.Cores.Used = (coresVCPU + 1) / 2
 		case out.VCPU.fits(node.VCPU):
 			out.VCPU.take(node.Name, node.VCPU)
 		default:
@@ -155,11 +163,6 @@ func Allocate(nodes []Node, limits Limits, wasServer map[string]bool) Allocation
 
 	return out
 }
-
-// coresOf is what one node costs the cores metric under the temporary
-// "2 vCPU = 1 core" rule of specification 7.2. It rounds up per node because a
-// node is never split between two metrics.
-func coresOf(vcpu int64) int64 { return (vcpu + 1) / 2 }
 
 // grantedLimit resolves one metric into a published quota: nil for unlimited.
 func grantedLimit(limits Limits, metric string) *int64 {

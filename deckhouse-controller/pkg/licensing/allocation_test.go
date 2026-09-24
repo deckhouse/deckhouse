@@ -228,6 +228,43 @@ func TestAllocateKeepsCoresWhenVCPUGrows(t *testing.T) {
 	}
 }
 
+// Cores are a pool of 2*cores vCPU with no per-node rounding, so the cores
+// metric (ceil(vCPU/2) on the sum) is exactly enough on its own.
+func TestAllocateCoresArePooled(t *testing.T) {
+	odd := func(n int, vcpu int64) []Node {
+		out := make([]Node, 0, n)
+		for i := range n {
+			out = append(out, nd(fmt.Sprintf("n-%02d", i), vcpu))
+		}
+		return out
+	}
+	for _, tc := range []struct {
+		name  string
+		nodes []Node
+		cores int64
+		used  int64
+	}{
+		{"three nodes of 3 vCPU fit into 5 cores", odd(3, 3), 5, 5},
+		{"24 nodes of 3 vCPU fit into 36 cores", odd(24, 3), 36, 36},
+		{"four nodes of 1 vCPU fit into 2 cores", odd(4, 1), 2, 2},
+		{"7 vCPU on the sum cost 4 cores", []Node{nd("a", 3), nd("b", 3), nd("c", 1)}, 4, 4},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			got := Allocate(tc.nodes, key(0, 0, tc.cores), nil)
+			if len(got.Unlicensed) != 0 || len(got.Cores.Nodes) != len(tc.nodes) {
+				t.Fatalf("cores %v, unlicensed %v", got.Cores.Nodes, got.Unlicensed)
+			}
+			if got.Cores.Used != tc.used {
+				t.Fatalf("cores used = %d, want %d", got.Cores.Used, tc.used)
+			}
+		})
+	}
+
+	// One core short of the sum leaves the last node out: nodes are not split.
+	got := Allocate(odd(3, 3), key(0, 0, 4), nil)
+	assertGroup(t, "Unlicensed", got.Unlicensed, []string{"n-02"})
+}
+
 // S14: three hundred nodes lay out without special casing.
 func TestAllocateManyNodes(t *testing.T) {
 	nodes := make([]Node, 0, 300)
