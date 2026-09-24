@@ -137,10 +137,21 @@ func TestDestroyerFailsWhenSSHExits255(t *testing.T) {
 	require.Equal(t, 255, exitErr.ExitCode())
 
 	destroyer, _ := abortDestroyerWithCommands(t, nil, map[string]*testssh.Command{
-		connectedHost: testssh.NewCommand(nil).WithErr(sshFailure),
+		// what ssh prints when a master behind the first one as bastion refuses the connection
+		connectedHost: testssh.NewCommand(nil).
+			WithStdErr([]byte(strings.Join([]string{
+				"channel 0: open failed: connect failed: Connection refused",
+				"stdio forwarding failed",
+				"kex_exchange_identification: Connection closed by remote host",
+				"Connection closed by UNKNOWN port 65535",
+				"debug1: Exit status 255",
+			}, "\n"))).
+			WithErr(sshFailure),
 	})
 
-	require.ErrorContains(t, destroyer.destroyCluster(t.Context(), true), "exit status 255")
+	err := destroyer.destroyCluster(t.Context(), true)
+	require.ErrorContains(t, err, "exit status 255, last output: channel 0: open failed: connect failed: Connection refused | stdio forwarding failed")
+	require.NotContains(t, err.Error(), "debug1")
 }
 
 // lib-connection stops a command that outlives its timeout and reports the stop as a clean exit, so
