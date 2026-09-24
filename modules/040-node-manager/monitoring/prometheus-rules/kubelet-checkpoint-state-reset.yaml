@@ -22,7 +22,19 @@
 
           The Pod is not restarted automatically. The restart time depends on the workload. To restore resource isolation, do the following:
 
-          - To recreate the Pod's containers in the currently assigned NUMA zones, delete the Pod or drain the node.
+          - To recreate the Pod's containers in the currently assigned NUMA zones, delete the Pod:
+
+            ```bash
+            d8 k -n {{ $labels.namespace }} delete pod {{ $labels.pod }}
+            ```
+
+            Or drain the node, and return it to service afterwards:
+
+            ```bash
+            d8 k drain {{ $labels.node }} --ignore-daemonsets --delete-emptydir-data
+            d8 k uncordon {{ $labels.node }}
+            ```
+
           - For a virtual machine, perform a live migration to another node instead, without stopping it.
 
           The alert resolves within a few minutes after the Pod is recreated. No kubelet restart is needed.
