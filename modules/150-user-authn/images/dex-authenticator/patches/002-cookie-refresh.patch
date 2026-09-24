@@ -1,16 +1,19 @@
-diff --git i/pkg/sessions/persistence/manager.go w/pkg/sessions/persistence/manager.go
-index 9652f015..5da80170 100644
---- i/pkg/sessions/persistence/manager.go
-+++ w/pkg/sessions/persistence/manager.go
-@@ -4,6 +4,7 @@ import (
+diff --git a/pkg/sessions/persistence/manager.go b/pkg/sessions/persistence/manager.go
+index 9652f015..12b67a1f 100644
+--- a/pkg/sessions/persistence/manager.go
++++ b/pkg/sessions/persistence/manager.go
+@@ -2,8 +2,10 @@ package persistence
+ 
+ import (
  	"context"
++	"errors"
  	"fmt"
  	"net/http"
 +	"strings"
  	"time"
  
  	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/options"
-@@ -34,7 +35,7 @@ func (m *Manager) Save(rw http.ResponseWriter, req *http.Request, s *sessions.Se
+@@ -34,7 +36,7 @@ func (m *Manager) Save(rw http.ResponseWriter, req *http.Request, s *sessions.Se
  		s.CreatedAtNow()
  	}
  
@@ -19,7 +22,7 @@ index 9652f015..5da80170 100644
  	if err != nil {
  		tckt, err = newTicket(m.Options)
  		if err != nil {
-@@ -55,23 +56,36 @@ func (m *Manager) Save(rw http.ResponseWriter, req *http.Request, s *sessions.Se
+@@ -55,23 +57,53 @@ func (m *Manager) Save(rw http.ResponseWriter, req *http.Request, s *sessions.Se
  // Load reads sessions.SessionState information from a session store. It will
  // use the session ticket from the http.Request's cookie.
  func (m *Manager) Load(req *http.Request) (*sessions.SessionState, error) {
@@ -37,12 +40,29 @@ index 9652f015..5da80170 100644
  		m.Store.Lock,
  	)
 +
++	if state == nil && refreshToken == "" {
++		// Without a refresh token in the cookie there is nothing to restore the session from,
++		// so return the error instead of a stub that could pass as an authenticated session.
++		if err == nil {
++			err = errors.New("no session state for the ticket and no refresh token in the cookie")
++		}
++		return nil, err
++	}
++
 +	if err != nil && strings.HasPrefix(err.Error(), "failed to load the session state with the ticket") {
-+		// Suppress redis loadig errors, because in this case we have a refresh token in cookie
++		// The store holds no data for the ticket, but the cookie carries a refresh token,
++		// so suppress the error and return a stub session below.
 +		err = nil
 +	}
 +
 +	if state == nil {
++		// The stub holds the refresh token of the cookie, the placeholder user
++		// "Does not found in Redis" and a creation time far in the past.
++		// With --cookie-refresh > 0 the stub is always older than the refresh period,
++		// so the proxy refreshes it through the refresh token instead of trusting it.
++		// Sign-out clears the session data in the store, but it does not invalidate
++		// a previously issued cookie: while its refresh token is still valid in dex,
++		// the cookie restores the session through this stub.
 +		createdAt, _ := time.Parse(time.RFC3339, "1992-09-30T00:00:00Z")
 +		state = &sessions.SessionState{CreatedAt: &createdAt, User: "Does not found in Redis"}
 +	}
@@ -59,10 +79,10 @@ index 9652f015..5da80170 100644
  	if err != nil {
  		// Always clear the cookie, even when we can't load a cookie from
  		// the request
-diff --git i/pkg/sessions/persistence/ticket.go w/pkg/sessions/persistence/ticket.go
+diff --git a/pkg/sessions/persistence/ticket.go b/pkg/sessions/persistence/ticket.go
 index 70bb58a0..9ccd847d 100644
---- i/pkg/sessions/persistence/ticket.go
-+++ w/pkg/sessions/persistence/ticket.go
+--- a/pkg/sessions/persistence/ticket.go
++++ b/pkg/sessions/persistence/ticket.go
 @@ -5,6 +5,7 @@ import (
  	"crypto/rand"
  	"encoding/base64"
@@ -168,7 +188,7 @@ index 70bb58a0..9ccd847d 100644
  		*s.CreatedAt,
  	)
 diff --git a/pkg/sessions/persistence/ticket_test.go b/pkg/sessions/persistence/ticket_test.go
-index 6b868b9..d75b3f6 100644
+index 6b868b90..d75b3f63 100644
 --- a/pkg/sessions/persistence/ticket_test.go
 +++ b/pkg/sessions/persistence/ticket_test.go
 @@ -2,6 +2,7 @@ package persistence
@@ -228,17 +248,18 @@ index 6b868b9..d75b3f6 100644
 +	return string(data)
 +}
 diff --git a/pkg/sessions/tests/session_store_tests.go b/pkg/sessions/tests/session_store_tests.go
-index 0416b24..e79f153 100644
+index 0416b24f..709815f1 100644
 --- a/pkg/sessions/tests/session_store_tests.go
 +++ b/pkg/sessions/tests/session_store_tests.go
-@@ -200,8 +200,21 @@ func CheckCookieOptions(in *testInput) {
+@@ -200,8 +200,22 @@ func CheckCookieOptions(in *testInput) {
  	})
  }
  
 +// expectRefreshTokenOnlySession checks the session a persistent store returns for a ticket it holds
 +// no data for. The ticket cookie carries the refresh token of the session, so the store returns a
-+// session that holds only that refresh token and is older than the refresh period. The proxy then
-+// refreshes it instead of trusting it, which restores access after the store lost its data.
++// stub session that holds that refresh token, a placeholder user and no tokens or email, and is
++// older than the refresh period. With a refresh period above zero the proxy refreshes the stub
++// instead of trusting it, which restores access after the store lost its data.
 +func expectRefreshTokenOnlySession(s *sessionsapi.SessionState, refreshToken string, refreshPeriod time.Duration) {
 +	Expect(s).ToNot(BeNil())
 +	Expect(s.RefreshToken).To(Equal(refreshToken))
@@ -254,7 +275,7 @@ index 0416b24..e79f153 100644
  	Context("when Clear is called on a persistent store", func() {
  		var resultCookies []*http.Cookie
  
-@@ -232,12 +245,14 @@ func PersistentSessionStoreInterfaceTests(in *testInput) {
+@@ -232,18 +246,58 @@ func PersistentSessionStoreInterfaceTests(in *testInput) {
  				loadedAfterClear, loadErr = in.ss().Load(loadReq)
  			})
  
@@ -273,7 +294,51 @@ index 0416b24..e79f153 100644
  			})
  		})
  
-@@ -274,15 +289,16 @@ func PersistentSessionStoreInterfaceTests(in *testInput) {
+ 		CheckCookieOptions(in)
+ 	})
+ 
++	// Without a refresh token in the ticket cookie nothing can restore the session, so a store that
++	// holds no data for the ticket returns an error instead of a stub session.
++	Context("when a persistent store holds no data for a ticket without a refresh token", func() {
++		var loadedSession *sessionsapi.SessionState
++		var loadErr error
++
++		BeforeEach(func() {
++			expires := time.Now().Add(1 * time.Hour)
++			session := &sessionsapi.SessionState{
++				AccessToken: "AccessToken",
++				IDToken:     "IDToken",
++				ExpiresOn:   &expires,
++				Email:       "john.doe@example.com",
++				User:        "john.doe",
++			}
++
++			saveReq := httptest.NewRequest("GET", "http://example.com/", nil)
++			saveResp := httptest.NewRecorder()
++			Expect(in.ss().Save(saveResp, saveReq, session)).To(Succeed())
++
++			loadReq := httptest.NewRequest("GET", "http://example.com/", nil)
++			for _, c := range saveResp.Result().Cookies() {
++				loadReq.AddCookie(c)
++			}
++			Expect(in.ss().Clear(httptest.NewRecorder(), loadReq)).To(Succeed())
++
++			loadedSession, loadErr = in.ss().Load(loadReq)
++		})
++
++		It("returns an error", func() {
++			Expect(loadErr).To(HaveOccurred())
++		})
++
++		It("does not return a session", func() {
++			Expect(loadedSession).To(BeNil())
++		})
++	})
++
+ 	// Test TTLs and cleanup of persistent session storage
+ 	// For non-persistent we rely on the browser cookie lifecycle
+ 	Context("when Load is called on a persistent store", func() {
+@@ -274,15 +328,16 @@ func PersistentSessionStoreInterfaceTests(in *testInput) {
  				Expect(in.persistentFastForward(in.cookieOpts.Expire + time.Minute)).To(Succeed())
  
  				loadedSession, err = in.ss().Load(in.request)

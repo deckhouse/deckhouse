@@ -11,9 +11,15 @@ Storing refresh token in cookie adds the possibility to restore access- and id- 
 
 Upstream PR - https://github.com/oauth2-proxy/oauth2-proxy/pull/313
 
-A persistent store that holds no data for a ticket returns a session with only the refresh token
-from the cookie instead of an error. The proxy then refreshes that session.
+A persistent store that holds no data for a ticket returns a stub session instead of an error.
+The stub holds the refresh token from the cookie and the placeholder user `Does not found in Redis`.
+With `--cookie-refresh` above zero, the proxy refreshes the stub instead of trusting it.
+If the cookie carries no refresh token, the store returns an error, so a stub never passes
+as an authenticated session.
 The session store tests expect this behaviour.
+
+Sign-out does not invalidate a previously issued cookie.
+While the refresh token in that cookie is still valid in dex, the cookie restores the session.
 
 ### 003-remove-groups.patch
 
