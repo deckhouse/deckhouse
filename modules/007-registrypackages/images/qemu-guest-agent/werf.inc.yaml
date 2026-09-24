@@ -67,7 +67,7 @@ shell:
   # oss.yaml, and a floating package would make that entry quietly wrong. The
   # two move together. Nothing else here is named in oss.yaml, so nothing else
   # is pinned.
-  - pm install qemu@9.2.4 util-linux glib2 libffi pcre2 ldd
+  - pm install qemu@9.2.4 util-linux glib2 libffi pcre2 numactl liburing ldd
   - mkdir -p /out
   install:
   - mkdir -p /sysext/usr/bin /sysext/usr/lib /sysext/usr/lib/deckhouse-engine
@@ -82,12 +82,22 @@ shell:
       exit 1
     fi
     cp -f "${hwclock}" /sysext/usr/bin/hwclock
-  # glib and its two dependencies: the agent's whole library chain beyond what
-  # the root already has. Copied by soname so the closure check below can see
-  # them; the check is what catches this list going stale.
+  # The agent's whole library chain beyond what the root already has: glib with
+  # its dependencies, plus numa and io_uring.
+  #
+  # Neither of those last two is the guest agent's business — they serve the
+  # system emulator's memory backends and block layer. They are here because
+  # base-images configures the qemu package with --enable-numa and
+  # --enable-linux-io-uring, which are global build options, so they end up in
+  # qemu-ga's DT_NEEDED and the loader demands them whether or not a single
+  # function is ever called through them. Dropping them would mean building our
+  # own qemu, which this image deliberately does not do.
+  #
+  # Copied by soname so the closure check below can see them; the check is what
+  # catches this list going stale, and it is how these three were found.
   - |
     set -eu
-    for soname in libglib-2.0.so.0 libffi.so.8 libpcre2-8.so.0; do
+    for soname in libglib-2.0.so.0 libgmodule-2.0.so.0 libffi.so.8 libpcre2-8.so.0 libnuma.so.1 liburing.so.2; do
       found=""
       for dir in /usr/lib64 /usr/lib /lib64 /lib; do
         for candidate in "${dir}/${soname}"*; do
