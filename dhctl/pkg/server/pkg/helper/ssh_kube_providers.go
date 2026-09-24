@@ -19,6 +19,8 @@ import (
 	"errors"
 	"fmt"
 
+	"k8s.io/client-go/rest"
+
 	libcon "github.com/deckhouse/lib-connection/pkg"
 	"github.com/deckhouse/lib-connection/pkg/settings"
 	sshconfig "github.com/deckhouse/lib-connection/pkg/ssh/config"
@@ -30,10 +32,44 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/providerinitializer"
 )
 
+// APIServerConnection is the direct Kubernetes API endpoint an operation talks
+// to instead of reaching the API over SSH. Deckhouse Commander sends it with
+// every check and converge request: the URL is its AMPG tunnel to the managed
+// cluster's kube-apiserver and the token belongs to the agent's service account.
+type APIServerConnection struct {
+	URL                      string
+	Token                    string
+	InsecureSkipTLSVerify    bool
+	CertificateAuthorityData []byte
+}
+
+// Defined reports whether the endpoint can be used to reach the API server.
+func (c *APIServerConnection) Defined() bool {
+	return c != nil && c.URL != ""
+}
+
+// RestConfig renders the endpoint as a client-go config, the way dhctl built it
+// up to v1.76 in helper/kube_client.go.
+func (c *APIServerConnection) RestConfig() *rest.Config {
+	if !c.Defined() {
+		return nil
+	}
+
+	return &rest.Config{
+		Host:        c.URL,
+		BearerToken: c.Token,
+		TLSClientConfig: rest.TLSClientConfig{
+			CAData:   c.CertificateAuthorityData,
+			Insecure: c.InsecureSkipTLSVerify,
+		},
+	}
+}
+
 type CreateProvidersOptions struct {
 	allowMissingHostsFromCache   bool
 	allowMissingConnectionConfig bool
 	kubeConfig                   string
+	apiServer                    *APIServerConnection
 }
 
 type CreateProvidersOption func(*CreateProvidersOptions)
@@ -47,6 +83,16 @@ func AllowMissingHostsFromCache() CreateProvidersOption {
 func WithKubeConfig(kubeConfig string) CreateProvidersOption {
 	return func(o *CreateProvidersOptions) {
 		o.kubeConfig = kubeConfig
+	}
+}
+
+// WithAPIServer drives the Kubernetes connection over the given API endpoint.
+// The kube provider then runs against it directly, so no SSH session is opened
+// and no kubectl proxy is started on a master. A nil or empty endpoint, or a
+// request that also carries a kubeconfig, leaves the endpoint unused.
+func WithAPIServer(apiServer *APIServerConnection) CreateProvidersOption {
+	return func(o *CreateProvidersOptions) {
+		o.apiServer = apiServer
 	}
 }
 
@@ -124,6 +170,16 @@ func CreateProviders(ctx context.Context, config string, isDebug bool, tmpDir st
 
 func providerOptions(config string, options *CreateProvidersOptions, cleanuper *callback.Callback) ([]providerinitializer.ProviderOptions, error) {
 	if options.kubeConfig == "" {
+		// The API server endpoint is the older of the two direct routes, so a
+		// kubeconfig wins wherever a request carries both.
+		if options.apiServer.Defined() {
+			return []providerinitializer.ProviderOptions{
+				providerinitializer.WithConnectionConfig(config),
+				providerinitializer.WithConnectionConfigOnly(),
+				providerinitializer.WithKubeRestConfig(options.apiServer.RestConfig()),
+			}, nil
+		}
+
 		return []providerinitializer.ProviderOptions{providerinitializer.WithConnectionConfig(config)}, nil
 	}
 
