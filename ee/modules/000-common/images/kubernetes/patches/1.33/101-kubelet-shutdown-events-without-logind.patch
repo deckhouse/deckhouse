@@ -1,9 +1,9 @@
 diff --git a/pkg/kubelet/nodeshutdown/nodelet_inhibiter_linux.go b/pkg/kubelet/nodeshutdown/nodelet_inhibiter_linux.go
 new file mode 100644
-index 0000000..358ec10
+index 0000000..20c1b9f
 --- /dev/null
 +++ b/pkg/kubelet/nodeshutdown/nodelet_inhibiter_linux.go
-@@ -0,0 +1,223 @@
+@@ -0,0 +1,250 @@
 +/*
 +Copyright 2026 Flant JSC.
 +
@@ -55,6 +55,7 @@ index 0000000..358ec10
 +	"fmt"
 +	"io/fs"
 +	"net"
++	"sync/atomic"
 +	"time"
 +
 +	"k8s.io/klog/v2"
@@ -72,12 +73,35 @@ index 0000000..358ec10
 +	nodeletPrepareForShutdown = "prepare-for-shutdown"
 +)
 +
-+// nodeletInhibitToken stands in for logind's lock descriptor. kubelet only
-+// stores what InhibitShutdown returns and hands it back to ReleaseInhibitLock,
-+// so the value carries no meaning beyond telling the two apart — and handing
-+// out the real descriptor is exactly what broke the release path once, see
-+// ReleaseInhibitLock.
-+const nodeletInhibitToken systemd.InhibitLock = 1
++// nodeletInhibitTokens hands out what stands in for logind's lock descriptor.
++// kubelet only stores the value and hands it back to ReleaseInhibitLock, so it
++// means nothing on the wire — but it has to differ between connections, and
++// that is not obvious.
++//
++// kubelet keeps the token in managerImpl.inhibitLock, and that struct outlives
++// the connection: when the agent goes away, the watch ends, Start() runs
++// m.start() again and builds a new inhibiter, while the field still holds the
++// previous token. acquireInhibitLock then does
++//
++//	lock, err := m.dbusCon.InhibitShutdown()
++//	if m.inhibitLock != 0 {
++//		m.dbusCon.ReleaseInhibitLock(m.inhibitLock)
++//	}
++//	m.inhibitLock = lock
++//
++// where m.dbusCon already points at the NEW inhibiter. With logind the two
++// numbers are different descriptors, so this closes the stale one. One constant
++// for every connection would make the new inhibiter recognise the old token as
++// its own and close the connection it had just opened — and then do it again a
++// second later, for ever, leaving kubelet without a lock and the node without
++// the grace period this patch exists to give it.
++var nodeletInhibitTokens atomic.Uint32
++
++// nextInhibitToken returns a token no other connection in this process has
++// held. Never zero: kubelet reads zero as "no lock taken yet".
++func nextInhibitToken() systemd.InhibitLock {
++	return systemd.InhibitLock(nodeletInhibitTokens.Add(1))
++}
 +
 +// nodeletGreeting is the answer to taking a lock.
 +type nodeletGreeting struct {
@@ -99,6 +123,9 @@ index 0000000..358ec10
 +	conn     net.Conn
 +	reader   *bufio.Reader
 +	maxDelay time.Duration
++	// token is this connection's stand-in for a lock descriptor, unique in the
++	// process — see nodeletInhibitTokens.
++	token    systemd.InhibitLock
 +	released bool
 +}
 +
@@ -109,7 +136,7 @@ index 0000000..358ec10
 +		return nil, err
 +	}
 +
-+	inhibiter := &nodeletInhibiter{conn: conn, reader: bufio.NewReader(conn)}
++	inhibiter := &nodeletInhibiter{conn: conn, reader: bufio.NewReader(conn), token: nextInhibitToken()}
 +	line, err := inhibiter.reader.ReadBytes('\n')
 +	if err != nil {
 +		conn.Close()
@@ -139,7 +166,7 @@ index 0000000..358ec10
 +	if n.released {
 +		return 0, fmt.Errorf("the shutdown lock has already been released")
 +	}
-+	return nodeletInhibitToken, nil
++	return n.token, nil
 +}
 +
 +// ReleaseInhibitLock closes the connection, which is how the agent learns that
@@ -156,7 +183,7 @@ index 0000000..358ec10
 +// unblocks the reader, the descriptor is closed for real, and the agent sees
 +// EOF at once.
 +func (n *nodeletInhibiter) ReleaseInhibitLock(lock systemd.InhibitLock) error {
-+	if n.released || lock != nodeletInhibitToken {
++	if n.released || lock != n.token {
 +		return nil
 +	}
 +	n.released = true
