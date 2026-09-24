@@ -92,6 +92,8 @@ spec:
                         Deny Pods that have tolerations from the ones in the specified list.
 
                         See more in [the Kubernetes documentation](https://kubernetes.io/docs/concepts/scheduling-eviction/taint-and-toleration/).
+
+                        Each item in the list is a toleration pattern matched against the `key`, `operator`, `value`, and `effect` fields. A partial match on these fields is enough to consider it a match.
                       items:
                         type: object
                         properties:
@@ -129,7 +131,7 @@ spec:
                         watchKinds:
                           type: array
                           description: |
-                            The list of kubernetes objects in the format `$apiGroup/$kind` to watch the labels on.
+                            The list of Kubernetes objects in the format `$apiGroup/$kind` to watch the labels on.
                           minItems: 1
                           items:
                             type: string
@@ -159,7 +161,7 @@ spec:
                         watchKinds:
                           type: array
                           description: |
-                            The list of kubernetes objects in the format `$apiGroup/$kind` to watch the annotations on.
+                            The list of Kubernetes objects in the format `$apiGroup/$kind` to watch the annotations on.
                           minItems: 1
                           items:
                             type: string
@@ -209,7 +211,7 @@ spec:
                       description: "Check container names and env variables for duplicates."
                     replicaLimits:
                       type: object
-                      description: "A range of allowed replicas.  Values are inclusive."
+                      description: "A range of allowed replicas. Values are inclusive."
                       properties:
                         minReplicas:
                           description: "The minimum number of replicas allowed, inclusive."
@@ -277,7 +279,7 @@ spec:
                         - required: [excludeNames]
                         - required: [labelSelector]
                       type: object
-                      description: Specifies the Namespace selector to filter objects with.
+                      description: Specifies the namespace selector to filter objects with.
                       properties:
                         matchNames:
                           type: array

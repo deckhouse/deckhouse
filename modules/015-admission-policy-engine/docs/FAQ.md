@@ -5,7 +5,7 @@ description: "Answers to frequently asked questions about the admission-policy-e
 
 ## How do I configure alternative security policy management solutions?
 
-For DP to work correctly, extended privileges are required to run and operate system component payloads. If you are using some alternative security policy management solution (e. g., Kyverno) instead of the admission-policy-engine module, you have to configure exceptions for the following namespaces:
+For DP to work correctly, extended privileges are required to run and operate system component payloads. If you are using some alternative security policy management solution (e.g., Kyverno) instead of the admission-policy-engine module, you have to configure exceptions for the following namespaces:
 
 - `kube-system`;
 - all namespaces with the `d8-*` prefix (e.g., `d8-system`).
