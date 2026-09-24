@@ -100,9 +100,7 @@ func main() {
 		CurrentContext: "default",
 	}
 
-	featureGates := map[string]bool{
-		"TopologyAwareHints": true,
-	}
+	featureGates := map[string]bool{}
 
 	kubernetesVersion, err := semver.NewVersion(os.Getenv("KUBERNETES_VERSION"))
 	if err != nil {
@@ -113,6 +111,12 @@ func main() {
 	k8s130, _ := semver.NewVersion("1.30")
 	if kubernetesVersion.LessThan(k8s130) {
 		featureGates["ProxyTerminatingEndpoints"] = true
+	}
+
+	// The TopologyAwareHints feature gate has been removed in Kubernetes v1.36.
+	k8s136, _ := semver.NewVersion("1.36")
+	if kubernetesVersion.LessThan(k8s136) {
+		featureGates["TopologyAwareHints"] = true
 	}
 
 	kubeProxyConfig := &v1alpha1.KubeProxyConfiguration{
