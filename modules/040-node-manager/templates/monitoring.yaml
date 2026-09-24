@@ -8,6 +8,7 @@
   "monitoring/prometheus-rules/node-update.yaml"
   "monitoring/prometheus-rules/standby-deployment-unavailable.yaml"
   "monitoring/prometheus-rules/node-controller.yaml"
+  "monitoring/prometheus-rules/kubelet-checkpoint-state-reset.yaml"
 }}
 
 {{- if include "cluster_autoscaler_enabled" . }}

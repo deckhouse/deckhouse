@@ -181,7 +181,7 @@ alert:
         )
         ```
 
-      - Alternatively, check the admission-policy-engine Grafana dashboard.
+      - Alternatively, check the admission-policy-engine reports in the web interface Deckhouse Platform.
     plk_markup_format: markdown
     plk_protocol_version: "1"
     summary: At least one pod violates the configured cluster pod security standards.
@@ -239,7 +239,7 @@ alert:
         )
         ```
 
-      - Alternatively, check the admission-policy-engine Grafana dashboard.
+      - Alternatively, check the admission-policy-engine reports in the web interface Deckhouse Platform.
     plk_markup_format: markdown
     plk_protocol_version: "1"
     summary: At least one object violates the configured cluster operation policies.
@@ -297,7 +297,7 @@ alert:
         )
         ```
 
-      - Alternatively, check the admission-policy-engine Grafana dashboard.
+      - Alternatively, check the admission-policy-engine reports in the web interface Deckhouse Platform.
     plk_markup_format: markdown
     plk_protocol_version: "1"
     summary: At least one object violates the configured cluster security policies.
@@ -337,7 +337,8 @@ Configuring PSS policies for namespaces is done by setting a special label `secu
 The default policy can be overridden globally ([in the module settings](configuration.html#parameters-podsecuritystandards-defaultpolicy)).
 
 {% alert level="info" %}
-The module does not apply policies to system namespaces.
+In namespaces named `d8-*` and `kube-*`, the `restricted` standard applies regardless of the default policy.
+A violation is recorded in the audit and shown in the web interface Deckhouse Platform, and the workload still starts, unless the module that owns the namespace has hardened it.
 {% endalert %}
 
 {% alert level="info" %}

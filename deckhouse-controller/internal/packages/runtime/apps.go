@@ -26,6 +26,7 @@ import (
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/apps"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/loader"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/nelm"
+	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/resourcerequests"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/runtime/lifecycle"
 	taskdeploy "github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/runtime/tasks/deploy"
 	taskdisable "github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/runtime/tasks/disable"
@@ -43,8 +44,8 @@ const (
 )
 
 // App represents an application instance as received from the Application controller.
-// It carries the user-specified package identity, version constraints, settings, and
-// maintenance mode.
+// It carries the user-specified package identity, version constraints, settings,
+// maintenance mode, and per-workload resource overrides.
 type App struct {
 	Name            string
 	Namespace       string
@@ -53,6 +54,11 @@ type App struct {
 	SettingsVersion int // schema version from Application.Spec.Version (reserved for future use)
 	Maintenance     string
 	Repository      registry.Remote
+
+	// ResourceRequests are the per-workload replicas and container resources from
+	// Application.spec.resourceRequests. Honoured only behind the resource-requests
+	// feature gate, which the nelm layer reads.
+	ResourceRequests []resourcerequests.Request
 }
 
 // UpdateApp handles application creation and version changes from the Application controller.
@@ -84,6 +90,7 @@ func (r *Runtime) UpdateApp(app App) {
 		Settings:        app.Settings,
 		SettingsVersion: app.SettingsVersion,
 		Maintenance:     app.Maintenance,
+		Resources:       app.ResourceRequests,
 	})
 
 	switch decision.Kind {

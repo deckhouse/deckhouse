@@ -11,12 +11,12 @@ and unit tests that check how `CertificateOwnerRef` overrides the `--enable-cert
 ### 002-solver_test_ipv6_host.patch
 
 Encloses the IPv6 host in square brackets in the request URL of the `TestSolver` HTTP-01 solver test.
-Starting with the `go 1.26` directive that `999-fix-cve.patch` sets, `net/url` rejects an IPv6 host without brackets.
+Starting with the `go 1.26` directive that `999-FixCVE.patch` sets, `net/url` rejects an IPv6 host without brackets.
 The change is a backport of upstream commit
 [127488f](https://github.com/cert-manager/cert-manager/commit/127488f59fb627c0653f0cb1f94b213021629ea2)
 and affects the test only.
 
-### 999-fix-cve.patch
+### 999-FixCVE.patch
 
 Fix CVEs:
 - CVE-2026-46600

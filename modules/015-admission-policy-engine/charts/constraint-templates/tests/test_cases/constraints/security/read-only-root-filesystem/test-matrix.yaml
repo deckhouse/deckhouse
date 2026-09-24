@@ -244,6 +244,36 @@ spec:
                   name: nginx
                   securityContext:
                     readOnlyRootFilesystem: true
+    - name: allowed-by-exception-writable-root-container-keeps-it-read-only
+      violations: 'no'
+      assertionMessage: ''
+      fields:
+      - path: spec.securityContext.readOnlyRootFilesystem.allowedValue
+        scenario: speUnused
+      exception: ''
+      exceptionRef: ''
+      inventory:
+      - base: securityPolicyException
+        merge:
+          metadata:
+            name: allow-writable-root-unused
+          spec:
+            securityContext:
+              readOnlyRootFilesystem:
+                allowedValue: false
+      object:
+        base: admissionPod
+        merge:
+          metadata:
+            labels:
+              security.deckhouse.io/security-policy-exception: allow-writable-root-unused
+            name: allowed-by-exception-writable-root-container-keeps-it-read-only
+          spec:
+            containers:
+            - image: nginx
+              name: nginx
+              securityContext:
+                readOnlyRootFilesystem: true
     - name: 017-allowed-by-exception-writable-global
       violations: 'no'
       assertionMessage: ''

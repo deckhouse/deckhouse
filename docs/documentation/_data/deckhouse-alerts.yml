@@ -2380,6 +2380,32 @@ alerts:
         etcd database size is approaching the limit.
       severity: "3"
       markupFormat: markdown
+    - name: D8KubeletCheckpointStateUnpinnedContainers
+      sourceFile: modules/040-node-manager/monitoring/prometheus-rules/kubelet-checkpoint-state-reset.yaml
+      moduleUrl: 040-node-manager
+      module: node-manager
+      edition: ce
+      description: |
+        Kubelet on Node `{{ $labels.node }}` reset the memory manager checkpoint and recorded new NUMA zones for Pod `{{ $labels.namespace }}/{{ $labels.pod }}`. Zones are applied only when a container is created, so the running containers stay in their previous zones, which may differ from the recorded ones.
+
+        As a result, the zone the Pod really uses may also be assigned to another Guaranteed Pod, causing both Pods to share its memory resources. The Pod's CPUs and memory may also be assigned to different NUMA zones, which slows down its memory access.
+
+        The Pod is not restarted automatically. The restart time depends on the workload. To restore resource isolation, do the following:
+
+        - To recreate the Pod's containers in newly assigned NUMA zones, delete the Pod:
+
+          ```bash
+          d8 k -n {{ $labels.namespace }} delete pod {{ $labels.pod }}
+          ```
+
+        - For a virtual machine, perform a live migration to another node instead, without stopping it.
+        - If the node runs many such Pods, you can drain it instead of deleting them one by one.
+
+        The alert resolves within a few minutes after the Pod is recreated. No kubelet restart is needed.
+      summary: |
+        Pod {{ $labels.namespace }}/{{ $labels.pod }} may run in a NUMA zone other than the one recorded by kubelet.
+      severity: "4"
+      markupFormat: markdown
     - name: D8KubernetesStaleTokensDetected
       sourceFile: modules/040-control-plane-manager/monitoring/prometheus-rules/control-plane-manager.yaml
       moduleUrl: 040-control-plane-manager
@@ -6327,7 +6353,7 @@ alerts:
           )
           ```
 
-        - Alternatively, check the admission-policy-engine Grafana dashboard.
+        - Alternatively, check the admission-policy-engine reports in the web interface Deckhouse Platform.
       summary: |
         At least one object violates the configured cluster operation policies.
       severity: "3"
@@ -6355,7 +6381,7 @@ alerts:
           )
           ```
 
-        - Alternatively, check the admission-policy-engine Grafana dashboard.
+        - Alternatively, check the admission-policy-engine reports in the web interface Deckhouse Platform.
       summary: |
         At least one pod violates the configured cluster pod security standards.
       severity: "3"
@@ -6381,7 +6407,7 @@ alerts:
           )
           ```
 
-        - Alternatively, check the admission-policy-engine Grafana dashboard.
+        - Alternatively, check the admission-policy-engine reports in the web interface Deckhouse Platform.
       summary: |
         At least one object violates the configured cluster security policies.
       severity: "3"

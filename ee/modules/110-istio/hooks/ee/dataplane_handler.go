@@ -28,7 +28,8 @@ import (
 )
 
 const (
-	istioRevsionAbsent           = "absent"
+	istioRevisionAbsent          = "absent"
+	istioRevisionGlobal          = "global"
 	istioVersionAbsent           = "absent"
 	istioVersionUnknown          = "unknown"
 	istioPodMetadataMetricName   = "d8_istio_dataplane_metadata"
@@ -41,12 +42,17 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 	Queue: lib.Queue("dataplane-handler"),
 	Kubernetes: []go_hook.KubernetesConfig{
 		{
-			Name:       "namespaces_global_revision",
+			Name:       "namespaces_injection_label",
 			ApiVersion: "v1",
 			Kind:       "Namespace",
 			FilterFunc: applyIstioDrivenNamespaceFilter,
 			LabelSelector: &metav1.LabelSelector{
-				MatchLabels: map[string]string{"istio-injection": "enabled"},
+				MatchExpressions: []metav1.LabelSelectorRequirement{
+					{
+						Key:      "istio-injection",
+						Operator: metav1.LabelSelectorOpExists,
+					},
+				},
 			},
 		},
 		{
@@ -171,10 +177,10 @@ func (p *IstioDrivenPod) getIstioCurrentRevision() string {
 		if istioPodStatus.Revision != "" {
 			revision = istioPodStatus.Revision
 		} else {
-			revision = istioRevsionAbsent
+			revision = istioRevisionAbsent
 		}
 	} else {
-		revision = istioRevsionAbsent
+		revision = istioRevisionAbsent
 	}
 	return revision
 }
@@ -199,10 +205,14 @@ func (p *IstioDrivenPod) injectLabel() bool {
 	return NeedInject
 }
 
+// returns "" if there is no istio.io/rev label
 func (p *IstioDrivenPod) getIstioSpecificRevision() string {
 	if specificPodRevision, ok := p.Labels["istio.io/rev"]; ok {
-		if specificPodRevision == "default" {
-			specificPodRevision = "global"
+		switch specificPodRevision {
+		case "":
+			return istioRevisionAbsent
+		case "default":
+			return istioRevisionGlobal
 		}
 		return specificPodRevision
 	}
@@ -242,40 +252,46 @@ type IstioDrivenPodFilterResult struct {
 	Namespace        string
 	FullVersion      string // istio dataplane version (i.e. "1.15.6")
 	Revision         string // istio dataplane revision (i.e. "v1x15")
-	SpecificRevision string // istio.io/rev: vXxYZ label if it is
+	SpecificRevision string // istio.io/rev: vXxYZ label if it is, `global` or `absent`
 	InjectAnnotation bool   // sidecar.istio.io/inject annotation if it is
 	InjectLabel      bool   // sidecar.istio.io/inject label if it is
 	Owner            Owner
 }
 
 type IstioDrivenNamespaceFilterResult struct {
-	Name                    string
-	DeletionTimestampExists bool
-	RevisionRaw             string
-	Revision                string
-	AutoUpgradeLabelExists  bool
+	Name                   string
+	RevisionRaw            string // `global`, a definite revision, or `absent`
+	Revision               string
+	AutoUpgradeLabelExists bool
 }
 
 func applyIstioDrivenNamespaceFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
-	_, deletionTimestampExists := obj.GetAnnotations()["deletionTimestamp"]
+	labels := obj.GetLabels()
 
 	var namespaceInfo = IstioDrivenNamespaceFilterResult{
-		Name:                    obj.GetName(),
-		DeletionTimestampExists: deletionTimestampExists,
+		Name: obj.GetName(),
 	}
 
-	if revision, ok := obj.GetLabels()[autoUpgradeLabelName]; ok {
-		namespaceInfo.AutoUpgradeLabelExists = revision == "true"
+	if autoUpgrade, ok := labels[autoUpgradeLabelName]; ok {
+		namespaceInfo.AutoUpgradeLabelExists = autoUpgrade == "true"
 	}
 
-	if revision, ok := obj.GetLabels()["istio.io/rev"]; ok {
-		if revision == "default" {
-			namespaceInfo.RevisionRaw = "global"
-		} else {
-			namespaceInfo.RevisionRaw = revision
-		}
-	} else {
-		namespaceInfo.RevisionRaw = "global"
+	revision, revisionLabelExists := labels["istio.io/rev"]
+	injection, injectionLabelExists := labels["istio-injection"]
+
+	switch {
+	case revisionLabelExists && injectionLabelExists:
+		namespaceInfo.RevisionRaw = istioRevisionAbsent
+	case revisionLabelExists && revision == "":
+		namespaceInfo.RevisionRaw = istioRevisionAbsent
+	case revisionLabelExists && revision == "default":
+		namespaceInfo.RevisionRaw = istioRevisionGlobal
+	case revisionLabelExists:
+		namespaceInfo.RevisionRaw = revision
+	case injection == "enabled":
+		namespaceInfo.RevisionRaw = istioRevisionGlobal
+	default:
+		namespaceInfo.RevisionRaw = istioRevisionAbsent
 	}
 
 	return namespaceInfo, nil
@@ -431,12 +447,13 @@ func dataplaneHandler(_ context.Context, input *go_hook.HookInput) error {
 
 	// create istio namespace map to find out needed revisions and versions
 	istioNamespaceMap := make(map[string]IstioDrivenNamespaceFilterResult)
-	for nsInfo, err := range sdkobjectpatch.SnapshotIter[IstioDrivenNamespaceFilterResult](append(input.Snapshots.Get("namespaces_definite_revision"), input.Snapshots.Get("namespaces_global_revision")...)) {
+	for nsInfo, err := range sdkobjectpatch.SnapshotIter[IstioDrivenNamespaceFilterResult](append(input.Snapshots.Get("namespaces_definite_revision"), input.Snapshots.Get("namespaces_injection_label")...)) {
 		if err != nil {
 			return fmt.Errorf("cannot iterate over namespaces: %w", err)
 		}
 
-		if nsInfo.RevisionRaw == "global" {
+		// `absent` falls through the else branch and stays `absent`
+		if nsInfo.RevisionRaw == istioRevisionGlobal {
 			nsInfo.Revision = globalRevision
 		} else {
 			nsInfo.Revision = nsInfo.RevisionRaw
@@ -529,27 +546,26 @@ func dataplaneHandler(_ context.Context, input *go_hook.HookInput) error {
 			continue
 		}
 
-		desiredRevision := istioRevsionAbsent
+		desiredRevision := istioRevisionAbsent
 
-		// if label sidecar.istio.io/inject=true -> use global revision
-		if istioPod.InjectLabel {
-			desiredRevision = globalRevision
-		}
-		// override if injection labels on namespace
-		if desiredRevisionNS, ok := istioNamespaceMap[istioPod.Namespace]; ok {
-			desiredRevision = desiredRevisionNS.Revision
-		}
-		// override if label istio.io/rev with specific revision exists
-		if istioPod.SpecificRevision != "" {
-			if istioPod.SpecificRevision == "global" {
+		switch nsInfo, nsIsLabeled := istioNamespaceMap[istioPod.Namespace]; {
+		// injection labels on the namespace
+		case nsIsLabeled:
+			desiredRevision = nsInfo.Revision
+		// label istio.io/rev with a specific revision on the pod
+		case istioPod.SpecificRevision != "":
+			if istioPod.SpecificRevision == istioRevisionGlobal {
 				desiredRevision = globalRevision
 			} else {
 				desiredRevision = istioPod.SpecificRevision
 			}
+		// label sidecar.istio.io/inject=true on the pod -> use global revision
+		case istioPod.InjectLabel:
+			desiredRevision = globalRevision
 		}
 
 		// we don't need metrics for pod without desired revision and without istio sidecar
-		if desiredRevision == istioRevsionAbsent && istioPod.Revision == istioRevsionAbsent {
+		if desiredRevision == istioRevisionAbsent && istioPod.Revision == istioRevisionAbsent {
 			continue
 		}
 

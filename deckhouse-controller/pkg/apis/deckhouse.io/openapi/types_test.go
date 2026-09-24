@@ -200,6 +200,17 @@ func TestMarshalRoundtrip_xDeckhouseExtensions(t *testing.T) {
 		XValidations: []ValidationRule{
 			{Expression: "self.storageClass != ''", Message: "storageClass must be set"},
 		},
+		OneOf: []OpenAPIV3Schema{
+			{
+				XEnumSwitchSettings: []EnumSwitchSetting{
+					{
+						To:       []string{"External"},
+						Impact:   "destructive",
+						Messages: map[string]string{"en": "Data is removed", "ru": "Данные удаляются"},
+					},
+				},
+			},
+		},
 	}
 
 	raw, err := json.Marshal(original)
@@ -256,6 +267,20 @@ func TestMarshalRoundtrip_xDeckhouseExtensions(t *testing.T) {
 	if sec.XUIResourceName.LabelSelector == nil || sec.XUIResourceName.LabelSelector.MatchLabels["app"] != "echo" {
 		t.Errorf("x-deckhouse-ui-resource-name labelSelector lost: got %+v", sec.XUIResourceName.LabelSelector)
 	}
+
+	if len(restored.OneOf) != 1 || len(restored.OneOf[0].XEnumSwitchSettings) != 1 {
+		t.Fatal("x-deckhouse-enum-switch-settings lost")
+	}
+	setting := restored.OneOf[0].XEnumSwitchSettings[0]
+	if len(setting.To) != 1 || setting.To[0] != "External" {
+		t.Errorf("x-deckhouse-enum-switch-settings to: got %+v", setting.To)
+	}
+	if setting.Impact != "destructive" {
+		t.Errorf("x-deckhouse-enum-switch-settings impact: got %q", setting.Impact)
+	}
+	if setting.Messages["ru"] != "Данные удаляются" {
+		t.Errorf("x-deckhouse-enum-switch-settings messages: got %+v", setting.Messages)
+	}
 }
 
 // TestUIResourceName_invalidTypeRejected verifies a non-object x-deckhouse-ui-resource-name fails to unmarshal.
@@ -286,6 +311,36 @@ func TestUIResourceNameSelector_deepCopy(t *testing.T) {
 	copied.XUIResourceName.LabelSelector.MatchLabels["app"] = "mutated"
 	if original.XUIResourceName.LabelSelector.MatchLabels["app"] != "echo" {
 		t.Errorf("DeepCopy shares the labelSelector map with original")
+	}
+}
+
+// TestEnumSwitchSettings_invalidTypeRejected verifies a non-array x-deckhouse-enum-switch-settings fails to unmarshal.
+func TestEnumSwitchSettings_invalidTypeRejected(t *testing.T) {
+	var restored OpenAPIV3Schema
+	err := json.Unmarshal([]byte(`{"type":"object","x-deckhouse-enum-switch-settings":"destructive"}`), &restored)
+	if err == nil {
+		t.Fatal("expected error unmarshaling string into x-deckhouse-enum-switch-settings, got nil")
+	}
+}
+
+// TestEnumSwitchSetting_deepCopy verifies DeepCopy produces independent to and messages.
+func TestEnumSwitchSetting_deepCopy(t *testing.T) {
+	original := &OpenAPIV3Schema{
+		Type: StringOrArray{"object"},
+		XEnumSwitchSettings: []EnumSwitchSetting{
+			{To: []string{"External"}, Impact: "warning", Messages: map[string]string{"en": "original"}},
+		},
+	}
+
+	copied := original.DeepCopy()
+	copied.XEnumSwitchSettings[0].To[0] = "mutated"
+	copied.XEnumSwitchSettings[0].Messages["en"] = "mutated"
+
+	if original.XEnumSwitchSettings[0].To[0] != "External" {
+		t.Errorf("DeepCopy shares the to slice with original")
+	}
+	if original.XEnumSwitchSettings[0].Messages["en"] != "original" {
+		t.Errorf("DeepCopy shares the messages map with original")
 	}
 }
 
