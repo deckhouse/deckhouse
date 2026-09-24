@@ -891,15 +891,56 @@ index 838c061b..1ebe1ce9 100644
  	testCases := map[string]struct {
  		IDToken       *idTokenClaims
 diff --git a/pkg/apis/options/load_test.go b/pkg/apis/options/load_test.go
-index 5939b85..8beab6c 100644
+index 5939b858..cb847982 100644
 --- a/pkg/apis/options/load_test.go
 +++ b/pkg/apis/options/load_test.go
-@@ -464,7 +464,7 @@ sub:
+@@ -378,10 +378,12 @@ sub:
+ `)
+ 
+ 		type loadYAMLTableInput struct {
+-			configFile     []byte
+-			input          interface{}
+-			expectedErr    error
+-			expectedOutput interface{}
++			configFile  []byte
++			input       interface{}
++			expectedErr error
++			// expectedErrRegexp matches an error whose wording depends on the Go version.
++			expectedErrRegexp string
++			expectedOutput    interface{}
+ 		}
+ 
+ 		DescribeTable("LoadYAML",
+@@ -408,9 +410,12 @@ sub:
+ 					input = &TestOptions{}
+ 				}
+ 				err := LoadYAML(configFileName, input)
+-				if in.expectedErr != nil {
++				switch {
++				case in.expectedErr != nil:
+ 					Expect(err).To(MatchError(in.expectedErr.Error()))
+-				} else {
++				case in.expectedErrRegexp != "":
++					Expect(err).To(MatchError(MatchRegexp(in.expectedErrRegexp)))
++				default:
+ 					Expect(err).ToNot(HaveOccurred())
+ 				}
+ 				Expect(input).To(Equal(in.expectedOutput))
+@@ -458,13 +463,15 @@ sub:
+ 				configFile:     []byte(`stringOption: ["a", "b"]`),
+ 				input:          &TestOptions{},
+ 				expectedOutput: &TestOptions{},
+-				expectedErr:    errors.New("error unmarshalling config: error unmarshaling JSON: while decoding JSON: json: cannot unmarshal array into Go struct field TestOptions.StringOption of type string"),
++				// Go 1.27 names the field by its JSON path, earlier versions by its Go path.
++				expectedErrRegexp: `^error unmarshalling config: error unmarshaling JSON: while decoding JSON: json: cannot unmarshal array into Go struct field \S*\b(?i:stringOption) of type string$`,
+ 			}),
+ 			Entry("with an incorrect type for an array field", loadYAMLTableInput{
  				configFile:     []byte(`stringSliceOption: "a"`),
  				input:          &TestOptions{},
  				expectedOutput: &TestOptions{},
 -				expectedErr:    errors.New("error unmarshalling config: error unmarshaling JSON: while decoding JSON: json: cannot unmarshal string into Go struct field TestOptions.StringSliceOption of type []string"),
-+				expectedErr:    errors.New("error unmarshalling config: error unmarshaling JSON: while decoding JSON: json: cannot unmarshal string into Go struct field TestOptions.TestOptionSubStruct.StringSliceOption of type []string"),
++				// Go 1.27 names the field by its JSON path, earlier versions by its Go path.
++				expectedErrRegexp: `^error unmarshalling config: error unmarshaling JSON: while decoding JSON: json: cannot unmarshal string into Go struct field \S*\b(?i:stringSliceOption) of type \[\]string$`,
  			}),
  		)
  	})

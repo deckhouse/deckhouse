@@ -48,7 +48,7 @@ requires. An embedded `jwt.Claims` interface stays nil and makes token validatio
 
 The patch also adapts upstream tests to the newer toolchain and dependencies:
 
-- the JSON decoding error message of Go 1.24 and later;
+- the JSON decoding error messages of Go 1.24 and later, including the field names of Go 1.27;
 - an unreachable upstream address that still parses under the strict URL parsing of Go 1.26;
 - valid JSON in a mocked Google Directory API response.
 
