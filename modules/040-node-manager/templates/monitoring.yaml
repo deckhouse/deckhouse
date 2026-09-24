@@ -18,6 +18,10 @@
   {{- $prometheusRules = append $prometheusRules "monitoring/prometheus-rules/machine-controller-manager.tpl" }}
 {{- end }}
 
+{{- if include "fencing_enabled" . }}
+  {{- $prometheusRules = append $prometheusRules "monitoring/prometheus-rules/fencing.yaml" }}
+{{- end }}
+
 {{- include "helm_lib_prometheus_rules" (list . "d8-cloud-instance-manager" $prometheusRules) }}
 
 {{ include "helm_lib_grafana_dashboard_definitions" . }}

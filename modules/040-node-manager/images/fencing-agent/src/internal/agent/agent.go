@@ -1,0 +1,418 @@
+/*
+Copyright 2026 Flant JSC
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+*/
+
+package agent
+
+import (
+	"context"
+	"errors"
+	"fmt"
+	"time"
+
+	"golang.org/x/sync/errgroup"
+	"sigs.k8s.io/controller-runtime/pkg/cache"
+
+	"github.com/deckhouse/deckhouse/pkg/log"
+
+	v1alpha1 "fencing-agent/api/node-manager.deckhouse.io/v1alpha1"
+	"fencing-agent/internal/adapters/events"
+	"fencing-agent/internal/adapters/fencingstate"
+	"fencing-agent/internal/adapters/kubeclient"
+	"fencing-agent/internal/adapters/memberlist"
+	watchdogdevice "fencing-agent/internal/adapters/watchdog"
+	"fencing-agent/internal/config"
+	"fencing-agent/internal/controllers/health"
+	"fencing-agent/internal/domain"
+	"fencing-agent/internal/usecase/failedstate"
+	"fencing-agent/internal/usecase/fallback"
+	"fencing-agent/internal/usecase/join"
+	"fencing-agent/internal/usecase/membership"
+	"fencing-agent/internal/usecase/rejoin"
+	"fencing-agent/internal/usecase/watchdog"
+)
+
+const fencingCacheSyncGrace = 30 * time.Second
+
+const cacheSyncWarning = "FencingStateCacheNotSynced"
+
+type Agent struct {
+	cfg      *config.Config
+	deps     Deps
+	identity domain.NodeIdentity
+	sla      v1alpha1.FencingSLAProfileSpec
+	logger   *log.Logger
+}
+
+func New(cfg *config.Config, deps Deps, identity domain.NodeIdentity, sla v1alpha1.FencingSLAProfileSpec, logger *log.Logger) *Agent {
+	return &Agent{
+		cfg:      cfg,
+		deps:     deps,
+		identity: identity,
+		sla:      sla,
+		logger:   logger,
+	}
+}
+
+func (a *Agent) memberlistConfig() memberlist.Config {
+	return memberlist.Config{
+		NodeName:      a.identity.Name,
+		NodeGroup:     a.cfg.NodeGroup,
+		AdvertiseAddr: a.identity.IP,
+		Port:          a.cfg.MemberlistPort,
+		Tuning:        a.sla.Memberlist,
+	}
+}
+
+func (a *Agent) watchdogParams() watchdog.Params {
+	return watchdog.Params{
+		FeedInterval: a.sla.Watchdog.FeedInterval.Duration,
+		Timeout:      a.sla.Watchdog.Timeout.Duration,
+	}
+}
+
+func (a *Agent) failedStateParams() failedstate.Params {
+	return failedstate.Params{
+		NodeName: a.identity.Name,
+		// The rejoin timings pace both loops against the same thing: a component
+		// that is not answering yet.
+		RetryInterval:    a.sla.Rejoin.Interval.Duration,
+		MaxRetryInterval: a.sla.Rejoin.MaxInterval.Duration,
+		// The profile's slowest rejoin step doubles as the handover step: a group
+		// that tolerates a slow reaction tolerates a slow handover.
+		TakeoverDelay: a.sla.Rejoin.MaxInterval.Duration,
+		FallbackTTL:   a.sla.Fallback.TTL.Duration,
+	}
+}
+
+func (a *Agent) joinParams() join.Params {
+	return join.Params{
+		NodeName:         a.identity.Name,
+		NodeUID:          a.identity.UID,
+		NodeIP:           a.identity.IP,
+		NodeGroup:        a.cfg.NodeGroup,
+		MemberlistPort:   a.cfg.MemberlistPort,
+		APITimeout:       a.sla.Fallback.KubernetesAPITimeout.Duration,
+		RetryInterval:    a.sla.Rejoin.Interval.Duration,
+		MaxRetryInterval: a.sla.Rejoin.MaxInterval.Duration,
+	}
+}
+
+func (a *Agent) fallbackParams() fallback.Params {
+	return fallback.Params{
+		Node:            a.identity,
+		Heartbeat:       a.sla.Fallback.Heartbeat.Duration,
+		APITimeout:      a.sla.Fallback.KubernetesAPITimeout.Duration,
+		WatchdogTimeout: a.sla.Watchdog.Timeout.Duration,
+	}
+}
+
+func (a *Agent) rejoinParams() rejoin.Params {
+	return rejoin.Params{
+		Interval:    a.sla.Rejoin.Interval.Duration,
+		MaxInterval: a.sla.Rejoin.MaxInterval.Duration,
+	}
+}
+
+func readiness(joined, watchdogReady, cacheSynced func() bool) func() bool {
+	return func() bool { return joined() && watchdogReady() && cacheSynced() }
+}
+
+func closed(barrier <-chan struct{}) func() bool {
+	return func() bool {
+		select {
+		case <-barrier:
+			return true
+		default:
+			return false
+		}
+	}
+}
+
+func (a *Agent) Run(ctx context.Context) error {
+	if a.deps.K8sClient == nil || a.deps.FencingClient == nil || a.deps.FencingCache == nil {
+		return errors.New("agent dependencies are not wired: K8sClient, FencingClient and FencingCache are required")
+	}
+
+	a.logger.Info("fencing-agent starting",
+		"node", a.identity.Name,
+		"node_uid", a.identity.UID,
+		"node_ip", a.identity.IP,
+		"node_group", a.cfg.NodeGroup,
+		"profile", a.cfg.ProfileRefName,
+		"probe_interval", a.sla.Memberlist.ProbeInterval.Duration.String(),
+		"memberlist_port", a.cfg.MemberlistPort,
+		"watchdog_device", a.cfg.WatchdogDevice,
+		"watchdog_feed_interval", a.sla.Watchdog.FeedInterval.Duration.String(),
+		"watchdog_timeout", a.sla.Watchdog.Timeout.Duration.String(),
+		"api_socket_path", a.cfg.APISocketPath,
+	)
+
+	cluster, err := memberlist.New(a.memberlistConfig(), a.logger)
+	if err != nil {
+		return fmt.Errorf("create gossip network: %w", err)
+	}
+
+	defer func() {
+		if shutdownErr := cluster.Shutdown(); shutdownErr != nil {
+			a.logger.Error("shutdown gossip network", "error", shutdownErr)
+		}
+	}()
+
+	recorder := events.New(a.deps.K8sClient, a.identity, a.logger)
+	defer recorder.Shutdown()
+
+	// Every Node labeled into the NodeGroup, from the informer cache. The seed list
+	// and the quorum size read the same view, so they cannot diverge.
+	members := membership.New(a.logger)
+
+	watcher, err := kubeclient.NewNodeWatcher(a.deps.K8sClient, a.cfg.NodeGroup, members, a.logger)
+	if err != nil {
+		return fmt.Errorf("create node watcher: %w", err)
+	}
+
+	selfState := watchdog.NewSelfState(a.identity.UID, a.cfg.NodeGroup, a.logger)
+
+	selfWatcher, err := kubeclient.NewSelfWatcher(a.deps.K8sClient, a.identity.Name, selfState, a.logger)
+	if err != nil {
+		return fmt.Errorf("create own node watcher: %w", err)
+	}
+
+	states := fencingstate.NewStates(
+		a.deps.FencingClient,
+		a.deps.FencingCache,
+		a.cfg.NodeGroup,
+		v1alpha1.ProfileName(a.cfg.ProfileRefName),
+		a.sla.Fallback.KubernetesAPITimeout.Duration,
+	)
+
+	joined := make(chan struct{})
+
+	synced := make(chan struct{})
+
+	monitor := fallback.New(a.fallbackParams(), fallback.Deps{
+		Alive:       cluster,
+		Expected:    members,
+		States:      states,
+		Events:      recorder,
+		Now:         time.Now,
+		CacheSynced: closed(synced),
+		InNodeGroup: func() bool { return !selfState.Snapshot().LeftNodeGroup },
+	}, a.logger)
+
+	watchdogManager := watchdog.New(a.watchdogParams(), watchdog.Deps{
+		Open: func() (watchdog.Device, error) {
+			return watchdogdevice.Open(a.cfg.WatchdogDevice, a.logger)
+		},
+		Nowayout: func() (bool, error) {
+			return watchdogdevice.Nowayout(a.cfg.WatchdogDevice)
+		},
+		State:      selfState,
+		Events:     recorder,
+		ShouldFeed: monitor.ShouldFeed,
+	}, a.logger)
+
+	defer watchdogManager.Close()
+
+	joiner := join.New(members, cluster, a.joinParams(), a.logger)
+
+	rejoiner := rejoin.New(a.rejoinParams(), rejoin.Deps{
+		Attempt:   joiner.Attempt,
+		NotMember: func(err error) bool { return errors.Is(err, join.ErrNotMember) },
+		HasQuorum: func() bool {
+			expected, _, _ := members.Snapshot()
+
+			return domain.NewView(expected, cluster.Members()).HasQuorum()
+		},
+		APIReachable: func() bool {
+			s := monitor.Snapshot()
+
+			return !s.Observed || s.APIReachable
+		},
+		Changed: cluster.Changed(),
+	}, a.logger)
+
+	writer := failedstate.New(a.failedStateParams(), failedstate.Deps{
+		Alive:    cluster,
+		Expected: members,
+		States:   states,
+		Events:   recorder,
+		Now:      time.Now,
+	}, a.logger)
+
+	g, gctx := errgroup.WithContext(ctx)
+
+	g.Go(func() error {
+		return watchdog.NewIdentityGuard(selfState, recorder, a.sla.Watchdog.FeedInterval.Duration, a.logger).Run(gctx)
+	})
+
+	g.Go(func() error {
+		ready := readiness(joiner.Joined, watchdogManager.Ready, closed(synced))
+
+		return health.NewServer(a.cfg.HealthProbeBindAddress, a.logger, ready, watchdogManager.Alive).Run(gctx)
+	})
+
+	g.Go(func() error {
+		select {
+		case <-gctx.Done():
+			return nil
+		case <-joined:
+		}
+
+		a.reportCacheSyncDelay(gctx, synced, fencingCacheSyncGrace, recorder.Warning)
+
+		return nil
+	})
+
+	g.Go(func() error {
+		watcher.Run(gctx)
+
+		return nil
+	})
+
+	g.Go(func() error {
+		selfWatcher.Run(gctx)
+
+		return nil
+	})
+
+	g.Go(func() error {
+		return a.deps.FencingCache.Start(gctx)
+	})
+
+	g.Go(func() error {
+		select {
+		case <-gctx.Done():
+			return nil
+		case <-joined:
+		}
+
+		if _, err := a.deps.FencingCache.GetInformer(gctx, &v1alpha1.FencingFailedNodeState{}, cache.BlockUntilSynced(false)); err != nil {
+			return fmt.Errorf("register the fencing state informer: %w", err)
+		}
+
+		if !a.deps.FencingCache.WaitForCacheSync(gctx) {
+			a.logger.Info("fencing state cache sync aborted by shutdown")
+
+			return nil
+		}
+
+		close(synced)
+
+		a.logger.Info("starting the fencing state writer")
+
+		return writer.Run(gctx)
+	})
+
+	g.Go(func() error {
+		select {
+		case <-gctx.Done():
+			return nil
+		case <-joined:
+		}
+
+		a.logger.Info("starting the fallback monitor",
+			"heartbeat", a.sla.Fallback.Heartbeat.Duration.String(),
+			"api_timeout", a.sla.Fallback.KubernetesAPITimeout.Duration.String(),
+		)
+
+		return monitor.Run(gctx)
+	})
+
+	g.Go(func() error {
+		select {
+		case <-gctx.Done():
+			return nil
+		case <-joined:
+		}
+
+		a.logger.Info("starting the rejoin loop",
+			"interval", a.sla.Rejoin.Interval.Duration.String(),
+			"max_interval", a.sla.Rejoin.MaxInterval.Duration.String(),
+		)
+
+		return rejoiner.Run(gctx)
+	})
+
+	g.Go(func() error {
+		// WaitForCacheSync blocks while the API is unreachable, leaving the pod
+		// NotReady until it recovers. It returns false only on shutdown, never as a
+		// verdict on the cluster.
+		a.logger.Info("waiting for node cache sync")
+
+		if !watcher.WaitForSync(gctx) {
+			a.logger.Info("node cache sync aborted by shutdown")
+
+			return nil
+		}
+
+		members.MarkSynced()
+
+		if !selfWatcher.WaitForSync(gctx) {
+			a.logger.Info("own node cache sync aborted by shutdown")
+
+			return nil
+		}
+
+		joiner.Bootstrap(gctx)
+
+		if gctx.Err() != nil {
+			return nil
+		}
+
+		close(joined)
+
+		// Arming happens only here: an armed device promises this agent can see its
+		// NodeGroup.
+		a.logger.Info("gossip network joined, starting the watchdog")
+
+		return watchdogManager.Run(gctx)
+	})
+
+	if err := g.Wait(); err != nil {
+		return err
+	}
+
+	a.logger.Info("fencing-agent stopped")
+
+	return nil
+}
+
+func (a *Agent) reportCacheSyncDelay(ctx context.Context, synced <-chan struct{}, grace time.Duration, warn func(reason, message string)) {
+	timer := time.NewTimer(grace)
+	defer timer.Stop()
+
+	select {
+	case <-ctx.Done():
+		return
+	case <-synced:
+		return
+	case <-timer.C:
+	}
+
+	a.logger.Error("the fencing state cache has not synced, this agent cannot record a failed peer of its NodeGroup",
+		"waited", grace.String(),
+	)
+	warn(cacheSyncWarning, fmt.Sprintf(
+		"The FencingFailedNodeState cache has not synced in %s: this agent cannot record a failed peer of its NodeGroup",
+		grace,
+	))
+
+	select {
+	case <-ctx.Done():
+	case <-synced:
+		a.logger.Info("the fencing state cache synced")
+	}
+}

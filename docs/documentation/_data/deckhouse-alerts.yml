@@ -1543,6 +1543,74 @@ alerts:
         Etcd request latency (p99) has exceeded 800 ms multiple times in the past hour.
       severity: "5"
       markupFormat: markdown
+    - name: D8FencingNodeReferenceIsInvalid
+      sourceFile: modules/040-node-manager/monitoring/prometheus-rules/fencing.yaml
+      moduleUrl: 040-node-manager
+      module: node-manager
+      edition: ce
+      description: |
+        The node `{{ $labels.node }}` has an active fencing incident, but its `FencingFailedNodeState` does not identify the live node it names, so the pods of that node are never evacuated. The broken invariant is `{{ $labels.reason }}`.
+
+        This blocker is not retried: the controller records it and stops. It ends only when the object is repaired or removed.
+
+        Reason `NodeNotFound` or `UIDMismatch` means the node is gone or was recreated. The object is owned by that node, so the garbage collector normally removes it within seconds. Firing for ten minutes means the object outlived its owner, which usually points at a stuck garbage collector or a removed owner reference.
+
+        Reason `MissingOwnerReference` or `NameMismatch` means the object itself is malformed. The node is alive, so nothing collects the object, and no agent will replace it: an agent that tries to create one finds the name taken and treats that as success. Fencing of this node stays blocked until someone repairs `metadata.ownerReferences` or deletes the object.
+
+        To read the blocker:
+
+        ```bash
+        kubectl get fencingfailednodestate {{ $labels.node }} -o jsonpath='{.status.conditions}' | jq
+        ```
+
+        To inspect the owner reference against the node:
+
+        ```bash
+        kubectl get fencingfailednodestate {{ $labels.node }} -o jsonpath='{.metadata.ownerReferences}' | jq
+        kubectl get node {{ $labels.node }} -o jsonpath='{.metadata.uid}{"\n"}'
+        ```
+
+        An object whose node is genuinely gone is safe to delete; the agents recreate one if the incident is still real:
+
+        ```bash
+        kubectl delete fencingfailednodestate {{ $labels.node }}
+        ```
+      summary: |
+        Fencing of node {{ $labels.node }} is blocked, the incident does not identify a live node.
+      severity: "4"
+      markupFormat: markdown
+    - name: D8FencingProfileIsUnavailable
+      sourceFile: modules/040-node-manager/monitoring/prometheus-rules/fencing.yaml
+      moduleUrl: 040-node-manager
+      module: node-manager
+      edition: ce
+      description: |
+        The node `{{ $labels.node }}` has an active fencing incident, but the SLA profile `{{ $labels.profile }}` it refers to cannot be resolved, so the pods of that node are not evacuated. The controller does not start the fast eviction path on an incomplete configuration: without `evacuation.delay` and `fallback.ttl` it does not know how long it has to wait.
+
+        The controller keeps retrying with backoff, so this alert means the profile has been unusable for several minutes rather than for a moment.
+
+        The built-in profiles are shipped by the module, so a missing one usually means the object was deleted or edited by hand:
+
+        ```bash
+        kubectl get fencingslaprofile {{ $labels.profile }} -o yaml
+        ```
+
+        To read the blocker and the events of the incident:
+
+        ```bash
+        kubectl get fencingfailednodestate {{ $labels.node }} -o jsonpath='{.status.conditions}' | jq
+        kubectl describe fencingfailednodestate {{ $labels.node }}
+        ```
+
+        To inspect the controller logs:
+
+        ```bash
+        kubectl -n d8-cloud-instance-manager logs deploy/fencing-controller -c fencing-controller --all-pods=true
+        ```
+      summary: |
+        Fencing of node {{ $labels.node }} is blocked, its SLA profile cannot be resolved.
+      severity: "5"
+      markupFormat: markdown
     - name: D8HasModuleConfigAllowedToDisable
       sourceFile: modules/002-deckhouse/monitoring/prometheus-rules/alerting.yaml
       moduleUrl: 002-deckhouse

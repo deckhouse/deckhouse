@@ -1,0 +1,102 @@
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  name: fencingslaprofiles.node-manager.deckhouse.io
+spec:
+  versions:
+    - name: v1alpha1
+      schema:
+        openAPIV3Schema:
+          description: |
+            SLA-профиль fencing. Профиль — это именованный переиспользуемый набор timing-параметров, которые определяют, как быстро обнаруживается отказавший узел, как долго свежий fallback heartbeat защищает узел от ложной эвакуации, сколько контроллер ждёт перед удалением подов и как ведёт себя watchdog.
+
+            Профили являются cluster-scoped конфигурационными объектами. Они не содержат runtime-состояния, поэтому у ресурса нет `status` и нет status-субресурса.
+
+            Встроенные профили `critical`, `medium`, `moderate` и `slow` поставляются модулем `node-manager`. Допускается использовать только встроенные профили.
+            В API имена профилей указываются с заглавной буквы (`Critical`, `Medium`, `Moderate`, `Slow`), а сами объекты называются в нижнем регистре, так как имя объекта Kubernetes не может содержать заглавные буквы. Ссылка резолвится приведением к нижнему регистру.
+          properties:
+            spec:
+              description: |
+                Timing-параметры профиля.
+              properties:
+                reactionGoal:
+                  description: |
+                    Целевое полное время реакции в человекочитаемом виде, например `2-3s` или `30s`. Используется только для документации и printer columns и не парсится как duration.
+                detectionWindowTarget:
+                  description: |
+                    Целевое окно memberlist detection в человекочитаемом виде, например `0.8-1.2s`. Используется для документации и проверки расчётов и не парсится как duration.
+                memberlist:
+                  description: |
+                    Параметры memberlist и Lifeguard, управляющие probe-опросом peer-узлов, suspicion и gossip.
+                  properties:
+                    probeInterval:
+                      description: |
+                        Как часто активно опрашиваются peer-узлы. Меньше интервал — быстрее detection, но линейно выше probe-трафик.
+                    probeTimeout:
+                      description: |
+                        Сколько ждать ответа на probe. Должен быть выше p99 RTT сети и меньше половины `probeInterval`: nack от узла, выполняющего indirect-проверку, приходит примерно через два `probeTimeout` после начала probe, а nack, опоздавший к дедлайну probe, ухудшает Lifeguard health проверяющего узла.
+                    suspicionMult:
+                      description: |
+                        Множитель окна suspicion Lifeguard/memberlist перед тем, как peer будет помечен как dead.
+                    suspicionMaxTimeoutMult:
+                      description: |
+                        Верхняя граница таймера suspicion при недостатке подтверждений.
+                    indirectChecks:
+                      description: |
+                        Количество indirect-проверок при сомнениях в прямой связности с peer.
+                    awarenessMaxMultiplier:
+                      description: |
+                        Максимальное замедление probe interval для локально деградировавшего агента (Lifeguard awareness).
+                    gossipInterval:
+                      description: |
+                        Интервал распространения gossip-событий.
+                    retransmitMult:
+                      description: |
+                        Множитель retransmit для gossip broadcast: `retransmitMult * ceil(log10(N + 1))`.
+                    gossipToTheDeadTime:
+                      description: |
+                        Сколько времени dead-узел ещё получает gossip, что даёт ему шанс refute после восстановления.
+                fallback:
+                  description: |
+                    Параметры fallback heartbeat узла, который потерял gossip quorum, но всё ещё видит API Kubernetes.
+                  properties:
+                    heartbeat:
+                      description: |
+                        Как часто изолированный узел, который всё ещё видит API Kubernetes, записывает fallback heartbeat. Должен быть заметно меньше `ttl` и не меньше `1ms`.
+                    ttl:
+                      description: |
+                        Окно свежести fallback heartbeat. Пока последний heartbeat не старше этого TTL, эвакуация запрещена.
+
+                        Должно быть не меньше max(`heartbeat`, `kubernetesAPITimeout`) + `kubernetesAPITimeout` + `watchdog.timeout` + 500ms. Узел, потерявший доступ к API Kubernetes, перестаёт кормить watchdog после первой неудачной записи heartbeat и должен перезагрузиться раньше, чем его последний heartbeat устареет. 500ms — запас на расхождение часов узла и fencing-controller.
+                    kubernetesAPITimeout:
+                      description: |
+                        Timeout проверки API Kubernetes в fallback-пути. Должен быть меньше `ttl`, чтобы проверка API не блокировала решение.
+                rejoin:
+                  description: |
+                    Параметры rejoin loop, который повторяет `memberlist.Join(seedList)` после потери кворума или долгой сетевой изоляции.
+                  properties:
+                    interval:
+                      description: |
+                        Начальный интервал между попытками rejoin. После успешного rejoin backoff сбрасывается к этому значению.
+                    maxInterval:
+                      description: |
+                        Верхняя граница exponential backoff между попытками rejoin. Должна быть больше или равна `interval`.
+                evacuation:
+                  description: |
+                    Параметры эвакуации, которые использует fencing-controller.
+                  properties:
+                    delay:
+                      description: |
+                        Задержка перед удалением подов после fast-path отказа, отсчитывается от `status.failed.detectedAt`.
+
+                        Должна быть не меньше `fallback.kubernetesAPITimeout` + `watchdog.timeout` + 500ms. Узел, отрезанный и от gossip-сети, и от API Kubernetes, перестаёт кормить watchdog после первой неудачной записи heartbeat и должен перезагрузиться раньше, чем начнётся удаление его подов. 500ms — запас на расхождение часов узлов и fencing-controller. Время, за которое изолированный узел сам замечает потерю кворума, в правило не входит: оно растёт с размером NodeGroup.
+                watchdog:
+                  description: |
+                    Параметры watchdog, используемые как safety-net на узле.
+                  properties:
+                    feedInterval:
+                      description: |
+                        Как часто кормится watchdog и перепроверяется quorum/fallback. Должен быть не больше половины `timeout`, обычно 1/4–1/10 от него.
+                    timeout:
+                      description: |
+                        Время до срабатывания watchdog panic после прекращения кормления. Целое число секунд, не меньше 2s: устройство watchdog принимает только целые секунды, и агент округлил бы дробное значение вверх. `evacuation.delay` и `fallback.ttl` должны оставлять для него запас.

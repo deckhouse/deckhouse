@@ -54,6 +54,15 @@
   {{- end }}
 {{- end }}
 
+{{- define "fencing_enabled" }}
+  {{- range $ng := .Values.nodeManager.internal.nodeGroups }}
+    {{- $mode := dig "fencing" "mode" "" $ng }}
+    {{- if or (eq $mode "Watchdog") (eq $mode "Notify") }}
+      not empty string
+    {{- end }}
+  {{- end }}
+{{- end }}
+
 {{- define "nvidia_gpu_enabled" }}
   {{- range $ng := .Values.nodeManager.internal.nodeGroups }}
     {{- if ($ng).gpu }}
