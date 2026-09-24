@@ -67,6 +67,7 @@ Add json logging.
 Additional dependency bumps on top of `005-fix-cves.patch`.
 
 Fix CVEs:
+- CVE-2025-29923
 - CVE-2026-25680
 - CVE-2026-25681
 - CVE-2026-27136
