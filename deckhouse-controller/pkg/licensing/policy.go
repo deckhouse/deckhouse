@@ -236,7 +236,7 @@ func Expired(records []RecordStatus, now time.Time, th Thresholds) (time.Time, b
 		if r.Accepted || !lapsedReasons[r.Reason] || r.ExpireAt == nil {
 			return time.Time{}, false
 		}
-		if !now.After(r.ExpireAt.Add(graceOf(r, th))) {
+		if !now.After(r.ExpireAt.Add(GraceOf(r, th))) {
 			return time.Time{}, false
 		}
 		if r.ExpireAt.After(latest) {
@@ -582,7 +582,7 @@ func state(base, final []RecordStatus, res Result, in Input) (string, string) {
 		if last == nil {
 			return StateViolation, ReasonUnregistered
 		}
-		if in.Now.Before(last.ExpireAt.Add(graceOf(*last, in.Thresholds))) {
+		if in.Now.Before(last.ExpireAt.Add(GraceOf(*last, in.Thresholds))) {
 			return StateGrace, ReasonExpired
 		}
 		return StateViolation, ReasonExpired

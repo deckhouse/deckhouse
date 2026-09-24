@@ -218,7 +218,7 @@ func (r *reconciler) saveSeq(ctx context.Context, seq uint64) error {
 }
 
 // requeueAfter is the soonest moment the policy can change on its own: the next
-// record boundary, the end of the over-limit window, or the resync that bounds
+// record boundary or end of grace, the end of the over-limit window, or the resync that bounds
 // how stale anything can get while nothing happens (specification 10.6).
 func requeueAfter(res licensing.Result, th licensing.Thresholds, issuedAt, now time.Time) time.Duration {
 	next := resyncPeriod
@@ -232,6 +232,9 @@ func requeueAfter(res licensing.Result, th licensing.Thresholds, issuedAt, now t
 		consider(rec.StartAt)
 		if rec.ExpireAt != nil {
 			consider(*rec.ExpireAt)
+			// The end of grace flips Grace to Violation and makes the key
+			// eligible for deletion; neither is an event of its own.
+			consider(rec.ExpireAt.Add(licensing.GraceOf(rec, th)))
 		}
 	}
 	if res.OverLimitSince != nil {

@@ -408,6 +408,17 @@ func TestRequeueAfter(t *testing.T) {
 		t.Fatalf("requeueAfter = %s, want the one minute floor", got)
 	}
 
+	// A record that has already expired still wakes the controller at the end of
+	// its grace: that is when Grace turns into Violation and the key may go.
+	grace := 1
+	expired := testNow.Add(-24*time.Hour + 30*time.Minute)
+	inGrace := licensing.Result{Records: []licensing.RecordStatus{{
+		Record: licensing.Record{StartAt: testNow.Add(-48 * time.Hour), ExpireAt: &expired, GraceDays: &grace},
+	}}}
+	if got := requeueAfter(inGrace, th, noRequest, testNow); got != 30*time.Minute {
+		t.Fatalf("requeueAfter = %s, want the end of grace in 30m", got)
+	}
+
 	issued := testNow.Add(-requestMaxAge + 30*time.Minute)
 	if got := requeueAfter(licensing.Result{}, th, issued, testNow); got != 30*time.Minute {
 		t.Fatalf("requeueAfter = %s, want the request refresh in 30m", got)

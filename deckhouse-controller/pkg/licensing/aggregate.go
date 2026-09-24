@@ -198,7 +198,9 @@ func limits(active []RecordStatus) (Limits, map[string][]string) {
 	return Limits{Values: values, Speaking: len(speaking) > 0}, granted
 }
 
-func graceOf(r RecordStatus, th Thresholds) time.Duration {
+// GraceOf is the grace window of one record: its own grace_days, or the
+// controller default when the record carries none.
+func GraceOf(r RecordStatus, th Thresholds) time.Duration {
 	if r.GraceDays != nil {
 		return time.Duration(*r.GraceDays) * 24 * time.Hour
 	}
