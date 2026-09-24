@@ -1,9 +1,12 @@
 diff --git a/go.mod b/go.mod
-index 892517f..3f2442b 100644
+index 892517f..5ae373c 100644
 --- a/go.mod
 +++ b/go.mod
-@@ -3,12 +3,12 @@ module github.com/open-policy-agent/gatekeeper/v3
- go 1.25.0
+@@ -1,14 +1,14 @@
+ module github.com/open-policy-agent/gatekeeper/v3
+ 
+-go 1.25.0
++go 1.26.0
  
  require (
 -	cloud.google.com/go/trace v1.10.11
@@ -116,7 +119,7 @@ index 892517f..3f2442b 100644
  	go.uber.org/atomic v1.11.0 // indirect
  	go.uber.org/multierr v1.11.0 // indirect
 -	golang.org/x/crypto v0.49.0 // indirect
-+	golang.org/x/crypto v0.55.0 // indirect
++	golang.org/x/crypto v0.56.0 // indirect
  	golang.org/x/exp v0.0.0-20241108190413-2d47ceb2692f // indirect
 -	golang.org/x/net v0.52.0 // indirect
 -	golang.org/x/sys v0.42.0 // indirect
@@ -139,7 +142,7 @@ index 892517f..3f2442b 100644
  	gopkg.in/inf.v0 v0.9.1 // indirect
  	gopkg.in/ini.v1 v1.67.1 // indirect
 diff --git a/go.sum b/go.sum
-index 43e8d7a..6b0dc1d 100644
+index 43e8d7a..408d59f 100644
 --- a/go.sum
 +++ b/go.sum
 @@ -1,24 +1,22 @@
@@ -410,8 +413,8 @@ index 43e8d7a..6b0dc1d 100644
 -golang.org/x/crypto v0.49.0 h1:+Ng2ULVvLHnJ/ZFEq4KdcDd/cfjrrjjNSXNzxg0Y4U4=
 -golang.org/x/crypto v0.49.0/go.mod h1:ErX4dUh2UM+CFYiXZRTcMpEcN8b/1gxEuv3nODoYtCA=
 -golang.org/x/exp v0.0.0-20190121172915-509febef88a4/go.mod h1:CJ0aWSM057203Lf6IL+f9T1iT9GByDxfZKAQTCR3kQA=
-+golang.org/x/crypto v0.55.0 h1:+KWHjbgOaAQ66dh/YlkZKHlz9ZUlq61AFirAR9ntP8M=
-+golang.org/x/crypto v0.55.0/go.mod h1:uq0V9dE/fzQuJtbnL+2EhWOE63vo164FY8xqEnV9xis=
++golang.org/x/crypto v0.56.0 h1:GUh5Ii4J5jtcseSMiRqr1jXCNHoxjeV9Fmekc2oLy6Y=
++golang.org/x/crypto v0.56.0/go.mod h1:OMW5y6CY9l38uPLmxU6l6pwcXp1obtLo3e6gT7gQR2I=
  golang.org/x/exp v0.0.0-20241108190413-2d47ceb2692f h1:XdNn9LlyWAhLVp6P/i8QYBW+hlyhrhei9uErw2B5GJo=
  golang.org/x/exp v0.0.0-20241108190413-2d47ceb2692f/go.mod h1:D5SMRVC3C2/4+F/DB1wZsLRnSNimn2Sp/NPsCrsv8ak=
 -golang.org/x/lint v0.0.0-20181026193005-c67002cb31c3/go.mod h1:UVdnD1Gm6xHRNCYTkRU2/jEulfH38KcIWyp/GAMgvoE=
