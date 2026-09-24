@@ -23,8 +23,6 @@ import (
 	"strings"
 
 	"k8s.io/apimachinery/pkg/runtime/schema"
-
-	"github.com/deckhouse/node-controller/internal/common"
 )
 
 // Registration is the typed view of kube-system/d8-node-manager-cloud-provider.
@@ -47,6 +45,15 @@ type Registration struct {
 
 	// CloudVariables is the provider-owned subtree exposed to templates as .provider.
 	CloudVariables map[string]any
+
+	// Data is the whole Secret decoded, which the bashible context publishes verbatim.
+	Data map[string]any
+}
+
+// IsStatic reports that the nodes resolved to this registration run in no cloud: an empty type is
+// how both a Static NodeGroup and a cluster without a cloud provider come back.
+func (r Registration) IsStatic() bool {
+	return r.Type == ""
 }
 
 // HasCAPI reports whether the provider registered a CAPI infrastructure cluster.
@@ -72,7 +79,7 @@ func (r Registration) ValidateCore() error {
 		missing = append(missing, "instanceClassKind")
 	}
 	if strings.TrimSpace(r.InstanceClassAPIVersion) == "" {
-		missing = append(missing, common.InstanceClassAPIVersionKey)
+		missing = append(missing, InstanceClassAPIVersionKey)
 	}
 	if strings.TrimSpace(r.Type) != "" && r.CloudVariables == nil {
 		missing = append(missing, "provider subtree "+strings.ToLower(r.Type))
@@ -162,8 +169,8 @@ func DecodeRegistration(data map[string][]byte) (Registration, error) {
 		Type:                           decodeString(data["type"]),
 		Region:                         decodeString(data["region"]),
 		Zones:                          zones,
-		InstanceClassKind:              decodeString(data[common.InstanceClassKindKey]),
-		InstanceClassAPIVersion:        decodeString(data[common.InstanceClassAPIVersionKey]),
+		InstanceClassKind:              decodeString(data[InstanceClassKindKey]),
+		InstanceClassAPIVersion:        decodeString(data[InstanceClassAPIVersionKey]),
 		MachineClassKind:               decodeString(data["machineClassKind"]),
 		SSHPublicKey:                   decodeString(data["sshPublicKey"]),
 		CAPIClusterName:                decodeString(data["capiClusterName"]),
@@ -172,6 +179,7 @@ func DecodeRegistration(data map[string][]byte) (Registration, error) {
 		CAPIMachineTemplateKind:        decodeString(data["capiMachineTemplateKind"]),
 		CAPIMachineTemplateAPIVersion:  decodeString(data["capiMachineTemplateAPIVersion"]),
 		CAPIMachineDeploymentSpecPatch: decodeString(data["capiMachineDeploymentSpecPatch"]),
+		Data:                           decodeSecretData(data),
 	}
 
 	if registration.Type != "" {

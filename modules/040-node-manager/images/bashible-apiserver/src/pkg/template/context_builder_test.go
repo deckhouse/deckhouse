@@ -17,8 +17,13 @@ limitations under the License.
 package template
 
 import (
+	"context"
 	"crypto/sha256"
 	"fmt"
+	"os"
+	"path/filepath"
+	"reflect"
+	"sort"
 	"testing"
 
 	"sigs.k8s.io/yaml"
@@ -244,4 +249,148 @@ updateEpoch: "1680009541"
 			t.Fatalf("expected checksum to change when seccompDefault changes")
 		}
 	})
+}
+
+func TestGetCloudProvider(t *testing.T) {
+	aws := cloudProvider{"type": "aws", "region": "eu-central-1"}
+	yandex := cloudProvider{"type": "yandex"}
+
+	versioned := inputData{Version: 1, CloudProvider: aws, CloudProviders: []cloudProvider{aws, yandex}}
+	unversioned := inputData{CloudProvider: aws}
+
+	tests := []struct {
+		name  string
+		input inputData
+		pType string
+		want  cloudProvider
+	}{
+		// A document written before the per-NodeGroup contract carries no per-group type, so the
+		// single cluster provider answers for every group.
+		{name: "unversioned, no type named", input: unversioned, want: aws},
+		{name: "unversioned, type named", input: unversioned, pType: "aws", want: aws},
+
+		{name: "versioned, its own provider", input: versioned, pType: "aws", want: aws},
+		{name: "versioned, the other provider", input: versioned, pType: "yandex", want: yandex},
+		// Static names no provider; the deprecated field must not answer for it.
+		{name: "versioned, no type named", input: versioned, pType: ""},
+		// A type outside the list comes from a stale entry: another provider must not answer.
+		{name: "versioned, unknown type", input: versioned, pType: "gcp"},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			if got := tc.input.getCloudProvider(tc.pType); !reflect.DeepEqual(got, tc.want) {
+				t.Fatalf("getCloudProvider(%q) = %v, want %v", tc.pType, got, tc.want)
+			}
+		})
+	}
+}
+
+// The provider reaches the bundle context of the group that names it and nobody else, and it is
+// what selects the step directory rendered for that group.
+func TestBuild_CloudProviderIsPerNodeGroup(t *testing.T) {
+	aws := cloudProvider{"type": "aws", "region": "eu-central-1"}
+	yandex := cloudProvider{"type": "yandex"}
+
+	root := t.TempDir()
+	writeStepTemplate(t, root, "bashible/common-steps/all/000_common.sh.tpl", "echo common")
+	writeStepTemplate(t, root, "cloud-providers/aws/bashible/common-steps/all/010_aws.sh.tpl", "echo aws")
+	writeStepTemplate(t, root, "cloud-providers/yandex/bashible/common-steps/all/010_yandex.sh.tpl", "echo yandex")
+
+	assertGroup := func(t *testing.T, built BashibleContextData, steps map[string]map[string]string, ng string, wantProvider cloudProvider, wantSteps []string) {
+		t.Helper()
+		if got := bundleContextOf(t, built, ng).CloudProvider; !reflect.DeepEqual(got, wantProvider) {
+			t.Fatalf("%s bundle cloudProvider = %v, want %v", ng, got, wantProvider)
+		}
+		if got := keysOf(steps[ng]); !reflect.DeepEqual(got, wantSteps) {
+			t.Fatalf("%s steps = %v, want %v", ng, got, wantSteps)
+		}
+	}
+
+	t.Run("every group renders the steps of the provider it names", func(t *testing.T) {
+		built, steps := buildContexts(t, root, inputData{
+			Version:        1,
+			CloudProviders: []cloudProvider{aws, yandex},
+			NodeGroups: []nodeGroup{
+				{"name": "worker-aws", "nodeType": "CloudEphemeral", "cloudProviderType": "aws"},
+				{"name": "worker-yandex", "nodeType": "CloudEphemeral", "cloudProviderType": "yandex"},
+				{"name": "static-ng", "nodeType": "Static"},
+			},
+		})
+
+		assertGroup(t, built, steps, "worker-aws", aws, []string{"000_common.sh", "010_aws.sh"})
+		assertGroup(t, built, steps, "worker-yandex", yandex, []string{"000_common.sh", "010_yandex.sh"})
+		assertGroup(t, built, steps, "static-ng", nil, []string{"000_common.sh"})
+	})
+
+	t.Run("a writer from before this contract keeps every group on the cluster provider", func(t *testing.T) {
+		built, steps := buildContexts(t, root, inputData{
+			CloudProvider: aws,
+			NodeGroups: []nodeGroup{
+				{"name": "worker-aws", "nodeType": "CloudEphemeral"},
+				{"name": "static-ng", "nodeType": "Static"},
+			},
+		})
+
+		assertGroup(t, built, steps, "worker-aws", aws, []string{"000_common.sh", "010_aws.sh"})
+		assertGroup(t, built, steps, "static-ng", aws, []string{"000_common.sh", "010_aws.sh"})
+	})
+}
+
+// buildContexts builds over rootDir and collects the steps rendered per NodeGroup.
+func buildContexts(t *testing.T, rootDir string, input inputData) (BashibleContextData, map[string]map[string]string) {
+	t.Helper()
+
+	steps := make(map[string]map[string]string)
+
+	cb := NewContextBuilder(context.Background(), NewStepsStorage(context.Background(), rootDir, nil))
+	cb.emitStepsOutput = func(ng string, rendered map[string]string) {
+		if steps[ng] == nil {
+			steps[ng] = make(map[string]string)
+		}
+		for name, content := range rendered {
+			steps[ng][name] = content
+		}
+	}
+	cb.SetInputData(input)
+
+	data, _, errs := cb.Build()
+	if len(errs) > 0 {
+		t.Fatalf("build errors: %v", errs)
+	}
+
+	return data, steps
+}
+
+func bundleContextOf(t *testing.T, data BashibleContextData, ng string) bundleNGContext {
+	t.Helper()
+
+	bc, ok := data.bashibleContexts[fmt.Sprintf("bundle-%s", ng)].(bundleNGContext)
+	if !ok {
+		t.Fatalf("no bundle context for NodeGroup %q", ng)
+	}
+
+	return bc
+}
+
+func writeStepTemplate(t *testing.T, rootDir, path, content string) {
+	t.Helper()
+
+	full := filepath.Join(rootDir, path)
+	if err := os.MkdirAll(filepath.Dir(full), 0o755); err != nil {
+		t.Fatalf("mkdir for %s: %v", path, err)
+	}
+	if err := os.WriteFile(full, []byte(content), 0o600); err != nil {
+		t.Fatalf("write %s: %v", path, err)
+	}
+}
+
+func keysOf(m map[string]string) []string {
+	names := make([]string, 0, len(m))
+	for name := range m {
+		names = append(names, name)
+	}
+	sort.Strings(names)
+
+	return names
 }

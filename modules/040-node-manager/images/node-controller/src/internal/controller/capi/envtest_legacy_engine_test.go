@@ -23,6 +23,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	deckhousev1 "github.com/deckhouse/node-controller/api/deckhouse.io/v1"
+	"github.com/deckhouse/node-controller/internal/cloudprovider"
 	"github.com/deckhouse/node-controller/internal/common"
 	ngcommon "github.com/deckhouse/node-controller/internal/controller/nodegroup/common"
 	"github.com/deckhouse/node-controller/internal/controller/nodegroup/derived_status"
@@ -89,7 +90,7 @@ var _ = Describe("Live MCM MachineDeployments of a NodeGroup", func() {
 			ObjectMeta: metav1.ObjectMeta{Name: ngName},
 			Spec:       deckhousev1.NodeGroupSpec{NodeType: deckhousev1.NodeTypeCloudEphemeral},
 		}
-		registration := derived_status.CloudProviderRegistration{
+		registration := cloudprovider.Registration{
 			MachineClassKind: "YandexMachineClass",
 			CAPIClusterKind:  "YandexCluster",
 		}
@@ -104,7 +105,7 @@ var _ = Describe("Live MCM MachineDeployments of a NodeGroup", func() {
 			ObjectMeta: metav1.ObjectMeta{Name: testenv.UniqueName("fresh")},
 			Spec:       deckhousev1.NodeGroupSpec{NodeType: deckhousev1.NodeTypeCloudEphemeral},
 		}
-		registration := derived_status.CloudProviderRegistration{
+		registration := cloudprovider.Registration{
 			MachineClassKind: "YandexMachineClass",
 			CAPIClusterKind:  "YandexCluster",
 		}
@@ -123,7 +124,7 @@ var _ = Describe("Live MCM MachineDeployments of a NodeGroup", func() {
 			Spec:       deckhousev1.NodeGroupSpec{NodeType: deckhousev1.NodeTypeCloudEphemeral},
 			Status:     deckhousev1.NodeGroupStatus{Engine: engineCAPI},
 		}
-		registration := derived_status.CloudProviderRegistration{
+		registration := cloudprovider.Registration{
 			MachineClassKind: "YandexMachineClass",
 			CAPIClusterKind:  "YandexCluster",
 		}

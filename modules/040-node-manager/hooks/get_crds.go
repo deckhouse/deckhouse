@@ -165,6 +165,7 @@ func getCRDsHandler(_ context.Context, input *go_hook.HookInput) error {
 	if err != nil {
 		return fmt.Errorf("failed to unmarshal 'cloud_provider_secret' snapshot: %w", err)
 	}
+
 	if len(cloudProviderSecrets) > 0 {
 		switch v := cloudProviderSecrets[0]["zones"].(type) {
 		case []string:

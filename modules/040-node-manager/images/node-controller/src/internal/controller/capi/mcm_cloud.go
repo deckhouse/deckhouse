@@ -101,7 +101,7 @@ func (r *MachineDeploymentReconciler) reconcileCloudMCMs(
 	// Rendered once for the whole group: bootstrap.Input carries no zone, so every zone
 	// would get the same bytes. Before the loop, so a cluster read that fails cannot leave
 	// part of the zones applied.
-	userData, err := r.machineClassUserData(ctx, resolved)
+	userData, err := r.machineClassUserData(ctx, resolved, registration)
 	if err != nil {
 		return err
 	}
@@ -198,11 +198,15 @@ const mcmConfigTemplateKey = "config-for-machine-controller-manager.yaml"
 
 // machineClassUserData renders the cloud-init every machine of the NodeGroup boots from —
 // the userData of its machine-class Secret.
-func (r *MachineDeploymentReconciler) machineClassUserData(ctx context.Context, resolved derived_status.ResolvedNodeGroup) ([]byte, error) {
+func (r *MachineDeploymentReconciler) machineClassUserData(
+	ctx context.Context,
+	resolved derived_status.ResolvedNodeGroup,
+	registration cloudprovider.Registration,
+) ([]byte, error) {
 	// machine-controller-manager replaces this literal with a token it orders per machine
 	// (pkg/util/provider/machinecontroller/userdata.go:29), so no token is minted here.
 	in, err := bootstrapsecrets.BuildInput(ctx,
-		&bashiblecontext.Service{Client: r.Client, Reader: r.APIReader}, resolved, "<<BOOTSTRAP_TOKEN>>")
+		&bashiblecontext.Service{Client: r.Client, Reader: r.APIReader}, resolved, registration, "<<BOOTSTRAP_TOKEN>>")
 	if err != nil {
 		return nil, err
 	}

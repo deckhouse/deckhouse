@@ -26,6 +26,8 @@ import (
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/yaml"
+
+	providermock "github.com/deckhouse/node-controller/internal/cloudprovider/mock"
 )
 
 var mandatoryInputKeys = []string{
@@ -37,7 +39,7 @@ var mandatoryInputKeys = []string{
 func TestBuild_MandatoryFieldsAlwaysPresent(t *testing.T) {
 	// Empty cluster: only the mandatory (unconditional) keys must appear.
 	s := newService(t, endpointSlice([]string{"10.0.0.1"}, "https", 6443))
-	input, err := s.Build(context.Background(), Globals{}, nil)
+	input, err := s.Build(context.Background(), Globals{}, nil, testRegistry(t, s))
 	require.NoError(t, err)
 
 	for _, k := range mandatoryInputKeys {
@@ -45,7 +47,7 @@ func TestBuild_MandatoryFieldsAlwaysPresent(t *testing.T) {
 	}
 
 	// Optional blocks gated off when their source is absent.
-	assert.NotContains(t, input, "cloudProvider")
+	assert.NotContains(t, input, "cloudProviders")
 	assert.NotContains(t, input, "proxy")
 	assert.NotContains(t, input, "apiserverProxyCerts")
 	assert.NotContains(t, input, "kubernetesCA")
@@ -61,7 +63,7 @@ func TestBuild_MandatoryFieldsAlwaysPresent(t *testing.T) {
 
 func TestBuild_OptionalBlocksPopulated(t *testing.T) {
 	s := newService(t,
-		secret(kubeSystemNS, cloudProviderSecretName, map[string][]byte{"type": []byte(`"yandex"`)}),
+		providermock.DefaultRegistration(map[string][]byte{"type": []byte(`"yandex"`)}),
 		secret(kubeSystemNS, apiProxyCertSecretName, map[string][]byte{"crt": []byte("C"), "key": []byte("K")}),
 		secret(kubeSystemNS, controlPlaneArgsSecretName, map[string][]byte{
 			"arguments.json":    []byte(`{"nodeMonitorGracePeriod":40}`),
@@ -78,10 +80,10 @@ func TestBuild_OptionalBlocksPopulated(t *testing.T) {
 		Proxy:            map[string]interface{}{"httpProxy": "http://p"},
 	}
 	nodeGroups := []map[string]interface{}{{"name": "worker", "nodeType": "CloudEphemeral"}}
-	input, err := s.Build(context.Background(), globals, nodeGroups)
+	input, err := s.Build(context.Background(), globals, nodeGroups, testRegistry(t, s))
 	require.NoError(t, err)
 
-	assert.Equal(t, map[string]interface{}{"type": "yandex"}, input["cloudProvider"])
+	assert.Equal(t, []map[string]interface{}{{"type": "yandex"}}, input["cloudProviders"])
 	assert.Equal(t, map[string]interface{}{"httpProxy": "http://p"}, input["proxy"])
 	assert.Equal(t, map[string]interface{}{"crt": "C", "key": "K"}, input["apiserverProxyCerts"])
 	assert.Equal(t, float64(10), input["nodeStatusUpdateFrequency"])
@@ -97,7 +99,7 @@ func TestBuild_OptionalBlocksPopulated(t *testing.T) {
 
 func TestMarshal_RoundTrips(t *testing.T) {
 	s := newService(t, endpointSlice([]string{"10.0.0.1"}, "https", 6443))
-	input, err := s.Build(context.Background(), Globals{ClusterUUID: "u"}, nil)
+	input, err := s.Build(context.Background(), Globals{ClusterUUID: "u"}, nil, testRegistry(t, s))
 	require.NoError(t, err)
 
 	raw, err := Marshal(input)
@@ -114,7 +116,7 @@ func TestWriteSecret_RefusesWithoutClusterDNS(t *testing.T) {
 		endpointSlice([]string{"10.0.0.1"}, "https", 6443),
 	)
 
-	err := s.WriteSecret(t.Context(), []map[string]interface{}{{"name": "worker"}})
+	err := s.WriteSecret(t.Context(), []map[string]interface{}{{"name": "worker"}}, testRegistry(t, s))
 	require.ErrorContains(t, err, "cluster DNS address not discovered")
 
 	got := &corev1.Secret{}
@@ -133,7 +135,7 @@ func TestWriteSecret_UpsertsInputYAML(t *testing.T) {
 	)
 	nodeGroups := []map[string]interface{}{{"name": "worker", "nodeType": "CloudEphemeral"}}
 
-	require.NoError(t, s.WriteSecret(context.Background(), nodeGroups))
+	require.NoError(t, s.WriteSecret(context.Background(), nodeGroups, testRegistry(t, s)))
 
 	got := &corev1.Secret{}
 	require.NoError(t, s.Client.Get(context.Background(),
@@ -157,7 +159,7 @@ func TestWriteSecret_UpsertsInputYAML(t *testing.T) {
 		types.NamespacedName{Namespace: kubeSystemNS, Name: clusterUUIDConfigMapName}, cm))
 	cm.Data[clusterUUIDKey] = "uuid-2"
 	require.NoError(t, s.Client.Update(context.Background(), cm))
-	require.NoError(t, s.WriteSecret(context.Background(), nil))
+	require.NoError(t, s.WriteSecret(context.Background(), nil, testRegistry(t, s)))
 	require.NoError(t, s.Client.Get(context.Background(),
 		types.NamespacedName{Namespace: secretNamespace, Name: secretName}, got))
 	require.NoError(t, yaml.Unmarshal(got.Data[secretInputKey], &parsed))

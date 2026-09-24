@@ -38,6 +38,7 @@ import (
 
 	deckhousev1 "github.com/deckhouse/node-controller/api/deckhouse.io/v1"
 	"github.com/deckhouse/node-controller/internal/bootstrap"
+	"github.com/deckhouse/node-controller/internal/cloudprovider"
 	nodecommon "github.com/deckhouse/node-controller/internal/common"
 	"github.com/deckhouse/node-controller/internal/controller/nodegroup/bashiblecontext"
 	ngcommon "github.com/deckhouse/node-controller/internal/controller/nodegroup/common"
@@ -127,8 +128,10 @@ func (r *Reconciler) SetupWatches(w register.Watcher) {
 	// dataSecretName points at a Secret nobody has written, and the zone's nodes cannot
 	// bootstrap for a whole resyncInterval. The nodegroup status controller watches the same
 	// object for its own reasons (nodegroup/controller.go:95).
-	w.Watches(&corev1.Secret{}, handler.EnqueueRequestsFromMapFunc(r.allNodeGroups),
-		builder.WithPredicates(named(nodecommon.CloudProviderSecretNamespace, nodecommon.CloudProviderSecretName)))
+	// NodeGroupHandler resolves the groups the changed registration runs, so a Static one is left
+	// alone: it has no provider, and no registration can change its bootstrap script.
+	w.Watches(&corev1.Secret{}, cloudprovider.NodeGroupHandler(r.Client),
+		builder.WithPredicates(cloudprovider.RegistrationSecretPredicate()))
 }
 
 // named selects one object by namespace and name. Both watched namespaces are covered by the
@@ -173,7 +176,11 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 		return ctrl.Result{}, nil
 	}
 
-	resolved, validationErr, err := r.derivedStatus.ResolveNodeGroup(ctx, ng)
+	provider, err := cloudprovider.RegistrationForNodeGroup(ctx, r.Client, ng)
+	if err != nil {
+		return ctrl.Result{}, fmt.Errorf("resolve the cloud provider of %s: %w", ng.Name, err)
+	}
+	resolved, validationErr, err := r.derivedStatus.ResolveNodeGroup(ctx, ng, provider)
 	if err != nil {
 		return ctrl.Result{}, fmt.Errorf("resolve NodeGroup %s: %w", ng.Name, err)
 	}
@@ -202,7 +209,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 		return ctrl.Result{RequeueAfter: invalidRequeueInterval}, nil
 	}
 
-	if err := r.writeSecrets(ctx, ng, resolved, token); err != nil {
+	if err := r.writeSecrets(ctx, ng, resolved, provider, token); err != nil {
 		// Without this the reason lives only in the controller log: the NodeGroup
 		// itself shows no sign of why its nodes cannot bootstrap.
 		r.Recorder.Event(ng, corev1.EventTypeWarning, eventReasonFailed, err.Error())
@@ -211,18 +218,18 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 	return ctrl.Result{RequeueAfter: resyncInterval}, nil
 }
 
-func (r *Reconciler) writeSecrets(ctx context.Context, ng *deckhousev1.NodeGroup, resolved derived_status.ResolvedNodeGroup, token string) error {
+func (r *Reconciler) writeSecrets(ctx context.Context, ng *deckhousev1.NodeGroup, resolved derived_status.ResolvedNodeGroup, provider cloudprovider.Registration, token string) error {
 	if ng.Spec.NodeType == deckhousev1.NodeTypeCloudEphemeral {
-		return r.writeCAPISecrets(ctx, ng, resolved, token)
+		return r.writeCAPISecrets(ctx, ng, resolved, provider, token)
 	}
-	return r.writeManualSecret(ctx, ng, resolved, token)
+	return r.writeManualSecret(ctx, ng, resolved, provider, token)
 }
 
 // writeManualSecret writes manual-bootstrap-for-<ng>: the Secret an operator
 // bootstraps a static node from, and the one the static MachineDeployment points
 // its StaticMachines at (capi/machinedeployment.go:387).
-func (r *Reconciler) writeManualSecret(ctx context.Context, ng *deckhousev1.NodeGroup, resolved derived_status.ResolvedNodeGroup, token string) error {
-	in, err := BuildInput(ctx, r.context, resolved, token)
+func (r *Reconciler) writeManualSecret(ctx context.Context, ng *deckhousev1.NodeGroup, resolved derived_status.ResolvedNodeGroup, provider cloudprovider.Registration, token string) error {
+	in, err := BuildInput(ctx, r.context, resolved, provider, token)
 	if err != nil {
 		return err
 	}
@@ -252,7 +259,7 @@ func (r *Reconciler) writeManualSecret(ctx context.Context, ng *deckhousev1.Node
 
 // writeCAPISecrets writes the cloud-init a CAPI Machine boots from, under every
 // name the group's MachineDeployments reference.
-func (r *Reconciler) writeCAPISecrets(ctx context.Context, ng *deckhousev1.NodeGroup, resolved derived_status.ResolvedNodeGroup, token string) error {
+func (r *Reconciler) writeCAPISecrets(ctx context.Context, ng *deckhousev1.NodeGroup, resolved derived_status.ResolvedNodeGroup, provider cloudprovider.Registration, token string) error {
 	// An immutable node boots from a per-machine NodeBootstrapConfig referenced
 	// through bootstrap.configRef, so it has no cloud-init Secret at all. The MCM
 	// machine-class Secret is the capi controller's to write, not this one's.
@@ -260,7 +267,7 @@ func (r *Reconciler) writeCAPISecrets(ctx context.Context, ng *deckhousev1.NodeG
 		return nil
 	}
 
-	in, err := BuildInput(ctx, r.context, resolved, token)
+	in, err := BuildInput(ctx, r.context, resolved, provider, token)
 	if err != nil {
 		return err
 	}

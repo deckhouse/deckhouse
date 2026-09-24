@@ -39,7 +39,8 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client/interceptor"
 
 	v1 "github.com/deckhouse/node-controller/api/deckhouse.io/v1"
-	nodecommon "github.com/deckhouse/node-controller/internal/common"
+	"github.com/deckhouse/node-controller/internal/cloudprovider"
+	providermock "github.com/deckhouse/node-controller/internal/cloudprovider/mock"
 	"github.com/deckhouse/node-controller/internal/register"
 )
 
@@ -91,21 +92,10 @@ func instanceClass(kind, name string, consumers []string) *unstructured.Unstruct
 	return u
 }
 
-func registrationSecret(name string, data map[string][]byte) *corev1.Secret {
-	return &corev1.Secret{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      name,
-			Namespace: nodecommon.CloudProviderSecretNamespace,
-			Labels:    map[string]string{nodecommon.CloudProviderRegistrationLabel: ""},
-		},
-		Data: data,
-	}
-}
-
 func testClassRegistration() *corev1.Secret {
-	return registrationSecret("d8-node-manager-cloud-provider", map[string][]byte{
-		nodecommon.InstanceClassKindKey:       []byte(testClassKind),
-		nodecommon.InstanceClassAPIVersionKey: []byte("v1"),
+	return providermock.Registration("d8-node-manager-cloud-provider", map[string][]byte{
+		cloudprovider.InstanceClassKindKey:       []byte(testClassKind),
+		cloudprovider.InstanceClassAPIVersionKey: []byte("v1"),
 	})
 }
 
@@ -202,8 +192,8 @@ func TestSyncInstanceClassConsumers(t *testing.T) {
 
 	t.Run("registration without an api version writes nothing", func(t *testing.T) {
 		c := fake.NewClientBuilder().WithScheme(classUsageScheme(t)).WithObjects(
-			registrationSecret("d8-node-manager-cloud-provider", map[string][]byte{
-				nodecommon.InstanceClassKindKey: []byte(testClassKind),
+			providermock.Registration("d8-node-manager-cloud-provider", map[string][]byte{
+				cloudprovider.InstanceClassKindKey: []byte(testClassKind),
 			}),
 			instanceClass(testClassKind, "used", nil),
 			classUsageNodeGroup("alpha", testClassKind, "used", v1.NodeTypeCloudEphemeral),
@@ -379,9 +369,9 @@ func TestSyncInstanceClassConsumers(t *testing.T) {
 
 	t.Run("a kind whose crd is missing is skipped and the rest still run", func(t *testing.T) {
 		c := fake.NewClientBuilder().WithScheme(classUsageScheme(t)).WithObjects(
-			registrationSecret("cloud-provider-absent", map[string][]byte{
-				nodecommon.InstanceClassKindKey:       []byte(absentClassKind),
-				nodecommon.InstanceClassAPIVersionKey: []byte("v1"),
+			providermock.Registration("cloud-provider-absent", map[string][]byte{
+				cloudprovider.InstanceClassKindKey:       []byte(absentClassKind),
+				cloudprovider.InstanceClassAPIVersionKey: []byte("v1"),
 			}),
 			testClassRegistration(),
 			instanceClass(testClassKind, "used", nil),

@@ -26,6 +26,7 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
+	"github.com/deckhouse/node-controller/internal/cloudprovider"
 	"github.com/deckhouse/node-controller/internal/common"
 	ngcommon "github.com/deckhouse/node-controller/internal/controller/nodegroup/common"
 	"github.com/deckhouse/node-controller/internal/testenv"
@@ -45,6 +46,16 @@ var _ = Describe("MCM MachineDeployment and MachineClass teardown", func() {
 	// vanish instantly and the terminating window these specs are about would not exist.
 	const mcmFinalizer = "machine.sapcloud.io/machine-controller-manager"
 	const machineClassKind = "YandexMachineClass"
+
+	// The cleanup takes the registration its NodeGroup resolved to: Reconcile reads the catalog
+	// once, before the deletion branch, so a group being deleted still knows which infrastructure
+	// templates are its own.
+	suiteRegistration := func() cloudprovider.Registration {
+		catalog, err := cloudprovider.GetCatalog(suiteCtx, k8sClient)
+		Expect(err).NotTo(HaveOccurred())
+		Expect(catalog.All()).NotTo(BeEmpty(), "the suite publishes one provider")
+		return catalog.All()[0]
+	}
 
 	newReconciler := func() *MachineDeploymentReconciler {
 		r := &MachineDeploymentReconciler{}
@@ -126,7 +137,7 @@ var _ = Describe("MCM MachineDeployment and MachineClass teardown", func() {
 
 		r := newReconciler()
 
-		done, err := r.cleanupMachineDeployments(suiteCtx, ngName)
+		done, err := r.cleanupMachineDeployments(suiteCtx, ngName, suiteRegistration())
 		Expect(err).NotTo(HaveOccurred())
 		Expect(done).To(BeFalse(), "the NodeGroup must stay finalized while the MachineDeployment terminates")
 
@@ -144,7 +155,7 @@ var _ = Describe("MCM MachineDeployment and MachineClass teardown", func() {
 
 		finishTermination(md)
 
-		done, err = r.cleanupMachineDeployments(suiteCtx, ngName)
+		done, err = r.cleanupMachineDeployments(suiteCtx, ngName, suiteRegistration())
 		Expect(err).NotTo(HaveOccurred())
 		Expect(done).To(BeTrue(), "cleanup is finished once no MachineDeployment is left")
 	})
