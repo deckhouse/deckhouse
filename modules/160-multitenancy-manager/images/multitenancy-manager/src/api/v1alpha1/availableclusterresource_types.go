@@ -35,7 +35,8 @@ type AvailableObject struct {
 	Default bool `json:"default,omitempty"`
 
 	// Fields holds the values of the catalogFields the GrantableClusterResourceDefinition declares, read
-	// from the granted object, keyed by field name. A field whose value is absent is left out.
+	// from the granted object, keyed by field name. A field whose value is absent is left out, and no
+	// entry has any when the JSON of the whole available list with them would exceed 512 KiB.
 	// +optional
 	// +mapType=atomic
 	Fields map[string]apiextensionsv1.JSON `json:"fields,omitempty"`

@@ -1150,9 +1150,53 @@ spec:
 
    В этом примере зарегистрированные ресурсы по умолчанию доступны проектам. Ресурсы с меткой `my.example.com/internal` исключаются из доступных.
 
-   Описание параметров ресурса GrantableClusterResourceDefinition и доступных режимов управления приведено [в описании ресурса](cr.html#grantableclusterresourcedefinition).
+   В `grantedResource` можно указать только cluster-scoped-ресурс. Определение namespaced-ресурса (например, Secret) отклоняется при создании и изменении. Если такое определение всё же сохранено, оно не обрабатывается: ни один проект не получает его AvailableClusterResource, а условие `GrantedResourceValid` равно `False` (подробнее, в разделе [«Проверка состояния регистрации ресурса»](#проверка-состояния-регистрации-ресурса)). Ресурс, CRD которого ещё не установлена, принимается: его область видимости проверяется, когда ресурс начинает обслуживаться.
+
+   Описание параметров GrantableClusterResourceDefinition и доступных режимов управления приведено [в описании ресурса](cr.html#grantableclusterresourcedefinition).
 
 1. После регистрации cluster-wide-ресурса настройте ссылки на него с помощью GrantableClusterResourceReference, как описано [в подразделе «Настройка проверки ссылки на cluster-wide-ресурс»](#настройка-проверки-ссылки-на-cluster-wide-ресурс).
+
+#### Вывод полей ресурса для проектов
+
+Пользователи проекта видят доступные cluster-wide-ресурсы в AvailableClusterResource (подробнее, в разделе [«Просмотр доступных cluster-wide-ресурсов»](#просмотр-доступных-cluster-wide-ресурсов)), но обычно не могут читать сами ресурсы. Чтобы им было проще выбрать, перечислите выводимые поля в [`spec.catalogFields`](cr.html#grantableclusterresourcedefinition-v1alpha1-spec-catalogfields) GrantableClusterResourceDefinition. Контроллер копирует значения этих полей из каждого доступного ресурса в `status.available[].fields` AvailableClusterResource.
+
+Пример:
+
+{% raw %}
+
+```yaml
+apiVersion: multitenancy.deckhouse.io/v1alpha1
+kind: GrantableClusterResourceDefinition
+metadata:
+  name: myclusterresources
+spec:
+  grantedResource:
+    apiGroup: my.example.com
+    kind: MyClusterResource
+  catalogFields:
+    - name: tier
+      path: $.spec.tier
+    - name: region
+      path: $.metadata.labels['my.example.com/region']
+```
+
+{% endraw %}
+
+Правила:
+
+- `name` — ключ в `fields` в формате lowerCamelCase; `path` — singular query JSONPath по RFC 9535, выбирающий одно значение: только имена полей и индексы массивов, без wildcard (`*`), рекурсивного спуска (`..`), срезов и фильтров.
+- Пути, которые читают `metadata.managedFields`, аннотацию `kubectl.kubernetes.io/last-applied-configuration` или содержащее их родительское поле (например, `$.metadata`), указывать нельзя: в этих полях хранится копия всего ресурса.
+- Можно указать не более 10 полей.
+- Значение длиннее 512 байт в JSON-сериализации не выводится; поле, значения которого в ресурсе нет, тоже не выводится.
+- Если список `status.available` одного AvailableClusterResource с полями всех ресурсов занимал бы в JSON-сериализации больше 512 КиБ, полей в нём не будет, но имена и значение по умолчанию останутся.
+- `catalogFields` работает только для определений с `grantedResource`, и этот ресурс должен быть cluster-scoped.
+- Значения видны всем пользователям каждого проекта, которому доступен ресурс. Указывайте только несекретные данные.
+
+Некорректные пути и `catalogFields` без `grantedResource` отклоняются при создании и изменении GrantableClusterResourceDefinition и отражаются в его условии `CatalogFieldsValid`. Значения, пропущенные из-за размера, зависят от ресурсов и проекта, поэтому о них сообщают предупреждающие события `CatalogFieldsSkipped` на GrantableClusterResourceDefinition:
+
+```shell
+d8 k describe grantableclusterresourcedefinition myclusterresources
+```
 
 #### Использование x-deckhouse-grantable-resource в настройках приложений DP
 
@@ -1166,4 +1210,13 @@ spec:
 
 - [`GrantableClusterResourceDefinition.status.references`](cr.html#grantableclusterresourcedefinition-v1alpha1-status-references) — содержит список связанных ресурсов `GrantableClusterResourceReference` и информацию о ресурсах, к которым они применяются;
 - [`GrantableClusterResourceReference.status.bound`](cr.html#grantableclusterresourcereference-v1alpha1-status-bound) — указывает, найден ли соответствующий GrantableClusterResourceDefinition;
-- `GrantableClusterResourceReference.status.conditions[Bound]` — содержит состояние привязки: `Resolved`, если определение найдено, или `UnknownResource`, если оно отсутствует. Состояние `UnknownResource` может указывать на ошибку в имени GrantableClusterResourceDefinition или на отсутствие необходимой регистрации.
+- `GrantableClusterResourceReference.status.conditions[Bound]` — содержит состояние привязки: `Resolved`, если определение найдено, или `UnknownResource`, если оно отсутствует. Состояние `UnknownResource` может указывать на ошибку в имени GrantableClusterResourceDefinition или на отсутствие необходимой регистрации;
+- `GrantableClusterResourceReference.status.conditions[FieldPathsValid]` — проходят ли `spec.fieldPaths` проверки, выполняемые при создании и изменении объекта (причины `Valid`, `InvalidFieldPaths`; в сообщении перечислены все проблемы). `False` означает, что объект сохранён в обход этих проверок; некорректные пути при проверке доступности пропускаются;
+- `GrantableClusterResourceDefinition.status.conditions[GrantedResourceValid]` — может ли быть обработан `spec.grantedResource`. `True` с причиной `ClusterScoped` для cluster-scoped-ресурса или `ValueBacked` для определения без `grantedResource`; `False` с причиной `Namespaced` для namespaced-ресурса, который не обрабатывается; `Unknown` с причиной `KindNotServed`, пока ресурс не обслуживается (например, его CRD ещё не установлена), или `MappingFailed`, если определить его область видимости не удалось;
+- `GrantableClusterResourceDefinition.status.conditions[CatalogFieldsValid]` — проходят ли `spec.catalogFields` проверки, выполняемые при создании и изменении объекта (причины `Valid`, `InvalidCatalogFields`; в сообщении перечислены все проблемы). У определения без `catalogFields` условие равно `True`. О значениях, пропущенных из-за размера, сообщают события `CatalogFieldsSkipped` (подробнее, в разделе [«Вывод полей ресурса для проектов»](#вывод-полей-ресурса-для-проектов)).
+
+Пример:
+
+```shell
+d8 k get grantableclusterresourcedefinition myclusterresources -o jsonpath='{range .status.conditions[*]}{.type}={.status} ({.reason}): {.message}{"\n"}{end}'
+```

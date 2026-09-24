@@ -23,7 +23,10 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"hash/fnv"
 	"reflect"
+	"strings"
+	"sync"
 	"time"
 
 	corev1 "k8s.io/api/core/v1"
@@ -31,15 +34,18 @@ import (
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/client-go/tools/record"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/builder"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
+	ctrllog "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
 	"controller/api/v1alpha1"
 	"controller/apis/deckhouse.io/v1alpha3"
+	"controller/internal/engine"
 	"controller/internal/jsonpath"
 	"controller/internal/namespaces"
 	"controller/internal/naming"
@@ -86,7 +92,24 @@ type ProjectReconciler struct {
 	// Factory compiles the field paths of the references and the catalogFields paths of the
 	// definitions; shared with the webhooks. When nil, the catalog carries no fields.
 	Factory jsonpath.Factory
+	// Recorder receives the CatalogFieldsSkipped warnings on the definition. When nil, the skips are
+	// only logged.
+	Recorder record.EventRecorder
+
+	// loggedSkips holds, per namespace and definition, the fingerprint of the skip set last logged, so
+	// the log is written when the set changes rather than on every pass of every project. Lazily
+	// initialized.
+	skipsMu     sync.Mutex
+	loggedSkips map[string]map[string]uint64
 }
+
+// ReasonCatalogFieldsSkipped is the reason of the Warning event on a GrantableClusterResourceDefinition
+// whose catalog fields were left out of a project's catalog.
+const ReasonCatalogFieldsSkipped = "CatalogFieldsSkipped"
+
+// maxSkippedSample bounds the "<object>/<field>" names an event and the Info log line list; the V(1)
+// log line carries all of them.
+const maxSkippedSample = 5
 
 // Reconcile reconciles a single (project) namespace.
 func (r *ProjectReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
@@ -97,6 +120,7 @@ func (r *ProjectReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ct
 	if err := r.Get(ctx, types.NamespacedName{Name: req.Name}, ns); err != nil {
 		if k8serrors.IsNotFound(err) {
 			clearViolations(req.Name)
+			r.forgetSkips(req.Name, nil)
 			return ctrl.Result{}, nil
 		}
 		return ctrl.Result{}, fmt.Errorf("get namespace: %w", err)
@@ -105,6 +129,7 @@ func (r *ProjectReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ct
 	// "unable to create new content in namespace ... because it is being terminated" and a retry.
 	if ns.DeletionTimestamp != nil {
 		clearViolations(ns.Name)
+		r.forgetSkips(ns.Name, nil)
 		return ctrl.Result{}, nil
 	}
 	// Only project namespaces (carrying the project label) get a catalog. Any other namespace —
@@ -112,6 +137,7 @@ func (r *ProjectReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ct
 	// when a registration's defaultAvailability is All. Clean up any catalog that lingers there.
 	if _, isProjectNS := ns.Labels[naming.ProjectLabel]; !isProjectNS {
 		clearViolations(ns.Name)
+		r.forgetSkips(ns.Name, nil)
 		return ctrl.Result{}, r.cleanupCatalog(ctx, ns.Name)
 	}
 
@@ -243,6 +269,7 @@ func (r *ProjectReconciler) reconcileCatalog(ctx context.Context, ns *corev1.Nam
 		}
 		errs = append(errs, fmt.Errorf("registration %s: %w", reg.Name, err))
 	}
+	r.forgetSkips(ns.Name, registered)
 	if err := r.deleteOrphanCatalogs(ctx, ns.Name, registered); err != nil {
 		errs = append(errs, err)
 	}
@@ -255,7 +282,8 @@ func (r *ProjectReconciler) reconcileRegistration(ctx context.Context, ns, proje
 	if err != nil {
 		return err
 	}
-	available := resolved.AvailableWithFields(r.Factory)
+	available, skips := resolved.AvailableWithFields(r.Factory)
+	r.reportSkips(ctx, ns, reg, skips)
 	if available == nil {
 		// An empty catalog is kept as an object with an empty list: a reader (the Console
 		// among them) can then tell "nothing is available here" from "not reconciled yet",
@@ -267,6 +295,107 @@ func (r *ProjectReconciler) reconcileRegistration(ctx context.Context, ns, proje
 		kind = reg.Spec.GrantedResource.Kind
 	}
 	return r.upsertAvailable(ctx, ns, project, reg.Name, kind, available, resolved.Default())
+}
+
+// reportSkips makes the fields left out of the namespace's catalog visible to the owner of the
+// definition: a Warning event on the definition, next to its CatalogFieldsValid condition, and a log
+// line.
+//
+// The event is emitted on every pass that skips, not only on a change: an event expires after an hour
+// and must not vanish while the skip lasts. The recorder's spam filter bounds the events per
+// definition (a burst, then one per five minutes), whatever the number of projects, so each message
+// names its namespace and stands on its own.
+//
+// The log has no such filter, so it is written only when the skip set of the catalog changes (the
+// oversized "<object>/<field>" names, and whether the catalog is over the budget; not its size, which
+// moves with any value): an Info line with the event's text, and a V(1) line with the full list.
+// Keyed per catalog rather than per definition, since the set differs between projects. A pass
+// without skips forgets the catalog, and so does a pass after its definition is deleted, so a skip
+// that comes back is logged again.
+func (r *ProjectReconciler) reportSkips(ctx context.Context, ns string, reg *v1alpha1.GrantableClusterResourceDefinition, skips engine.CatalogSkips) {
+	if skips.Empty() {
+		r.skipsMu.Lock()
+		delete(r.loggedSkips[ns], reg.Name)
+		r.skipsMu.Unlock()
+		return
+	}
+	var parts []string
+	if n := len(skips.Oversized); n > 0 {
+		parts = append(parts, fmt.Sprintf("values longer than %d bytes are left out, %d in total: %s",
+			engine.MaxCatalogFieldValueBytes, n, sampleOf(skips.Oversized)))
+	}
+	if skips.OverBudgetBytes > 0 {
+		parts = append(parts, fmt.Sprintf("all fields are left out: the catalog with them takes at least %d bytes, over the budget of %d bytes per catalog",
+			skips.OverBudgetBytes, engine.MaxCatalogFieldsBytes))
+	}
+	msg := fmt.Sprintf("Catalog fields of AvailableClusterResource %s/%s: %s.", ns, reg.Name, strings.Join(parts, "; "))
+	if r.Recorder != nil {
+		r.Recorder.Event(reg, corev1.EventTypeWarning, ReasonCatalogFieldsSkipped, msg)
+	}
+
+	fingerprint := skipsFingerprint(string(reg.UID), skips)
+	r.skipsMu.Lock()
+	logged, ok := r.loggedSkips[ns][reg.Name]
+	changed := !ok || logged != fingerprint
+	if changed {
+		if r.loggedSkips == nil {
+			r.loggedSkips = map[string]map[string]uint64{}
+		}
+		if r.loggedSkips[ns] == nil {
+			r.loggedSkips[ns] = map[string]uint64{}
+		}
+		r.loggedSkips[ns][reg.Name] = fingerprint
+	}
+	r.skipsMu.Unlock()
+	if !changed {
+		return
+	}
+	log := ctrllog.FromContext(ctx).WithValues("namespace", ns, "definition", reg.Name)
+	log.Info("catalog fields skipped", "message", msg)
+	log.V(1).Info("catalog fields skipped, full list", "oversized", skips.Oversized, "overBudgetBytes", skips.OverBudgetBytes)
+}
+
+// sampleOf lists the first maxSkippedSample names and says how many more there are.
+func sampleOf(names []string) string {
+	sample := names[:min(len(names), maxSkippedSample)]
+	out := strings.Join(sample, ", ")
+	if n := len(names) - len(sample); n > 0 {
+		out += fmt.Sprintf(" and %d more", n)
+	}
+	return out
+}
+
+// skipsFingerprint hashes what the log tracks of a skip set: the oversized names, in catalog order,
+// and whether the catalog is over the budget. The UID of the definition goes in too, so a definition
+// deleted and re-created before a pass of the namespace noticed the gap is logged again all the same.
+func skipsFingerprint(uid string, skips engine.CatalogSkips) uint64 {
+	h := fnv.New64a()
+	h.Write([]byte(uid))
+	h.Write([]byte{0})
+	for _, name := range skips.Oversized {
+		h.Write([]byte(name))
+		h.Write([]byte{0})
+	}
+	if skips.OverBudgetBytes > 0 {
+		h.Write([]byte{1})
+	}
+	return h.Sum64()
+}
+
+// forgetSkips drops the logged skip sets of the namespace's catalogs whose definition is not in keep:
+// all of them (keep nil) for a namespace that no longer gets a catalog, those of a deleted definition
+// otherwise, so a definition re-created with the same skips is logged again.
+func (r *ProjectReconciler) forgetSkips(ns string, keep map[string]struct{}) {
+	r.skipsMu.Lock()
+	defer r.skipsMu.Unlock()
+	for name := range r.loggedSkips[ns] {
+		if _, ok := keep[name]; !ok {
+			delete(r.loggedSkips[ns], name)
+		}
+	}
+	if len(r.loggedSkips[ns]) == 0 {
+		delete(r.loggedSkips, ns)
+	}
 }
 
 func (r *ProjectReconciler) upsertAvailable(ctx context.Context, ns, project, name, kind string, available []v1alpha1.AvailableObject, def string) error {

@@ -10,8 +10,9 @@
     still validated.
   - ProjectRoleBinding, ProjectNamespace and ClusterProjectRoleBinding: failurePolicy: Fail and no
     exclusion, because nothing in the platform renders those objects (see below).
-  - GrantableClusterResourceReference: no exclusion and failurePolicy: Ignore, so only a deliberate
-    refusal can fail an apply (see the comment at that webhook).
+  - GrantableClusterResourceReference and GrantableClusterResourceDefinition: no exclusion and
+    failurePolicy: Ignore, so only a deliberate refusal can fail an apply (see the comment at the
+    GrantableClusterResourceReference webhook).
 
   The cluster-objects grant webhooks (hooks/configure_grant_validation_webhook.go) keep a similar list
   but also exclude system:masters: they intercept every grantable cluster-resource write into project
@@ -225,3 +226,38 @@ webhooks:
         namespace: d8-multitenancy-manager
         port: 9443
         path: /validate/v1alpha1/grantableclusterresourcereferences
+  - name: grantableclusterresourcedefinitions.multitenancy-webhook.deckhouse.io
+    rules:
+      - apiGroups:
+          - multitenancy.deckhouse.io
+        apiVersions:
+          - v1alpha1
+        resources:
+          # The bare resource only, for the same reason as above: the definition reconciler writes
+          # .../status of a stored invalid definition.
+          - grantableclusterresourcedefinitions
+        operations:
+          - CREATE
+          - UPDATE
+        scope: Cluster
+    admissionReviewVersions:
+      - v1
+    matchPolicy: Equivalent
+    # No system-writer exclusion and failurePolicy: Ignore, exactly as for the
+    # GrantableClusterResourceReference webhook above and for the same reasons: the definitions are
+    # shipped by modules through the deckhouse-controller and written by developers in system:masters,
+    # and those are the authors this webhook exists to tell that the grantedResource is namespaced or
+    # that a catalogFields path would never show anything. A definition stored past it is reported by
+    # the GrantedResourceValid=False and CatalogFieldsValid=False conditions; on UPDATE the scope is
+    # checked only when grantedResource changed and only new or changed catalogFields entries are
+    # checked, and an object with a deletionTimestamp is not checked at all.
+    failurePolicy: Ignore
+    timeoutSeconds: 5
+    sideEffects: None
+    clientConfig:
+      caBundle: {{ .Values.multitenancyManager.internal.admissionWebhookCert.ca | b64enc }}
+      service:
+        name: multitenancy-manager
+        namespace: d8-multitenancy-manager
+        port: 9443
+        path: /validate/v1alpha1/grantableclusterresourcedefinitions

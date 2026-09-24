@@ -82,10 +82,13 @@ spec:
 
                   Rules:
 
-                  - Applies only to definitions with `grantedResource`. For values that are not represented by Kubernetes objects, the parameter is ignored.
+                  - Applies only to definitions with `grantedResource`, which must be cluster-scoped. For values that are not represented by Kubernetes objects, the parameter is not allowed.
                   - At most 10 fields can be listed.
                   - A field whose value is missing in the resource is not shown.
                   - A value longer than 512 bytes in JSON serialization is not shown.
+                  - If `status.available` of one AvailableClusterResource with the fields of all resources would take more than 512 KiB in JSON serialization, no fields are shown in it.
+
+                  The paths are checked when the object is created or updated, and an invalid entry is refused. The result for the stored object is shown in the `CatalogFieldsValid` condition. Values left out for their size are reported by `CatalogFieldsSkipped` warning events on the GrantableClusterResourceDefinition.
 
                   > **Warning.** The values are visible to all users of every project the resource is available to. List only non-secret data.
                 items:
@@ -102,7 +105,7 @@ spec:
 
                         Must be an RFC 9535 JSONPath singular query that selects exactly one value: member names and array indexes only, without wildcards (`*`), descendant segments (`..`), slices or filters.
 
-                        Paths that read `metadata.managedFields` or the `kubectl.kubernetes.io/last-applied-configuration` annotation, or a parent that contains them (for example, `$.metadata`), are not shown: these fields hold a copy of the whole resource.
+                        Paths that read `metadata.managedFields` or the `kubectl.kubernetes.io/last-applied-configuration` annotation, or a parent that contains them (for example, `$.metadata`), are not allowed: these fields hold a copy of the whole resource.
                       maxLength: 256
                       minLength: 1
                       type: string
@@ -210,6 +213,8 @@ spec:
                 description: |-
                   Kubernetes cluster-wide resource for which access is configured.
 
+                  Must be a cluster-scoped resource: a namespaced one (for example, Secret) is refused when the object is created or updated, and a definition stored with one is not processed, which the `GrantedResourceValid` condition shows. A resource that is not served yet (its CRD is not installed) is accepted and checked once it is served.
+
                   If the parameter is not specified, access management applies to values that are not represented by separate Kubernetes objects.
                 properties:
                   apiGroup:
@@ -227,7 +232,11 @@ spec:
             description: GrantableClusterResourceDefinition status.
             properties:
               conditions:
-                description: Current state of the GrantableClusterResourceDefinition.
+                description: |-
+                  Current state of the GrantableClusterResourceDefinition.
+
+                  - `GrantedResourceValid`: whether `spec.grantedResource` can be processed. `True` with the reason `ClusterScoped` for a cluster-scoped resource or `ValueBacked` for a definition without `grantedResource`. `False` with the reason `Namespaced` for a namespaced resource: the definition is not processed, no project gets its AvailableClusterResource, and the grant webhooks skip the references to it: their values are not checked. `Unknown` with the reason `KindNotServed` while the resource is not served (for example, its CRD is not installed yet), or `MappingFailed` if its scope could not be determined.
+                  - `CatalogFieldsValid`: whether `spec.catalogFields` pass the checks applied when the object is created or updated: the paths are valid singular queries that do not read `metadata.managedFields` or the `kubectl.kubernetes.io/last-applied-configuration` annotation, and the definition has `grantedResource` (reasons `Valid`, `InvalidCatalogFields`; the message lists all problems). A definition without `catalogFields` has the condition `True`. `False` means the object was stored bypassing these checks; the invalid entries are not shown in AvailableClusterResource.
                 items:
                   description: Information about one aspect of the current resource state.
                   properties:

@@ -278,18 +278,35 @@ func (r *Resolved) Available() []v1alpha1.AvailableObject {
 // objects into each entry. It returns a fresh slice, so the memoized Available is never mutated. A
 // name with no live object (a value-backed resource, an allowed name that does not exist) and a nil
 // factory get no fields.
-func (r *Resolved) AvailableWithFields(factory jsonpath.Factory) []v1alpha1.AvailableObject {
+//
+// The second result says what was left out. When the catalog with its fields exceeds
+// engine.MaxCatalogFieldsBytes (see engine.CatalogSize), no entry carries any: all or nothing, so the
+// result depends only on the catalog and not on the order the objects are visited in.
+func (r *Resolved) AvailableWithFields(factory jsonpath.Factory) ([]v1alpha1.AvailableObject, engine.CatalogSkips) {
+	var skips engine.CatalogSkips
 	available := r.Available()
 	if factory == nil || len(r.Reg.Spec.CatalogFields) == 0 || len(r.liveObjects) == 0 {
-		return available
+		return available, skips
 	}
 	out := slices.Clone(available)
 	for i := range out {
-		if obj, ok := r.liveObjects[out[i].Name]; ok {
-			out[i].Fields = engine.ProjectCatalogFields(factory, r.Reg.Spec.CatalogFields, obj)
+		obj, ok := r.liveObjects[out[i].Name]
+		if !ok {
+			continue
+		}
+		fields, oversized := engine.ProjectCatalogFields(factory, r.Reg.Spec.CatalogFields, obj)
+		out[i].Fields = fields
+		for _, name := range oversized {
+			skips.Oversized = append(skips.Oversized, out[i].Name+"/"+name)
 		}
 	}
-	return out
+	if size, fits := engine.CatalogSize(out); !fits {
+		skips.OverBudgetBytes = size
+		for i := range out {
+			out[i].Fields = nil
+		}
+	}
+	return out, skips
 }
 
 // Resolve builds the resolved availability for a registration given the applicable grant entries. For
@@ -487,6 +504,23 @@ func grantedGVK(mapper meta.RESTMapper, reg *v1alpha1.GrantableClusterResourceDe
 		return schema.GroupVersionKind{}, fmt.Errorf("grantedResource %s/%s is namespaced: %w", gr.APIGroup, gr.Kind, ErrNamespacedGrantedResource)
 	}
 	return mapping.GroupVersionKind, nil
+}
+
+// GrantedResourceProblem reports a definition whose grantedResource is a namespaced kind, in the words
+// of the GrantableClusterResourceDefinition webhook; empty for a cluster-scoped kind and for a
+// value-backed definition. It asks grantedGVK, so it refuses exactly what Resolve refuses. err is set
+// when the scope cannot be told: a meta.IsNoMatchError for a kind the mapper does not know (its CRD is
+// not installed yet), anything else for a failed discovery.
+func GrantedResourceProblem(mapper meta.RESTMapper, reg *v1alpha1.GrantableClusterResourceDefinition) (string, error) {
+	if reg.IsValueBacked() {
+		return "", nil
+	}
+	_, err := grantedGVK(mapper, reg)
+	if errors.Is(err, ErrNamespacedGrantedResource) {
+		gk := schema.GroupKind{Group: reg.Spec.GrantedResource.APIGroup, Kind: reg.Spec.GrantedResource.Kind}
+		return fmt.Sprintf("'spec.grantedResource' %s is namespaced: %v", gk, ErrNamespacedGrantedResource), nil
+	}
+	return "", err
 }
 
 // defaultFromAnnotation finds the single granted object annotated as the cluster-wide default.

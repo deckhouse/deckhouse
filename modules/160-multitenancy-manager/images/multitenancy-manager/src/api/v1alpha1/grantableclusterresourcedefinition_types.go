@@ -100,7 +100,8 @@ type CatalogField struct {
 // It declares governance and baseline availability only; where the resource is referenced (and how it
 // is validated/defaulted) lives in GrantableClusterResourceReference objects.
 type GrantableClusterResourceDefinitionSpec struct {
-	// GrantedResource is the cluster-scoped resource being governed (absent ⇒ value-backed).
+	// GrantedResource is the cluster-scoped resource being governed (absent ⇒ value-backed). A
+	// namespaced kind is refused by the webhook and not resolved; GrantedResourceValid reports it.
 	// +optional
 	GrantedResource *GrantedResource `json:"grantedResource,omitempty"`
 
@@ -126,7 +127,9 @@ type GrantableClusterResourceDefinitionSpec struct {
 	DefaultFrom *DefaultFrom `json:"defaultFrom,omitempty"`
 
 	// CatalogFields declares the fields of the granted objects shown to tenants in the catalog. Only
-	// object-backed definitions (with grantedResource) use it; it is ignored for value-backed ones.
+	// object-backed definitions (with grantedResource) use it; the webhook refuses it on value-backed
+	// ones, and the projection ignores it there. The paths are checked by the webhook and reported in
+	// the CatalogFieldsValid condition.
 	// +optional
 	// +listType=map
 	// +listMapKey=name
@@ -160,7 +163,9 @@ type GrantableClusterResourceDefinitionStatus struct {
 	// +optional
 	ReferenceCount int `json:"referenceCount,omitempty"`
 
-	// Conditions represent the current state of the resource.
+	// Conditions represent the current state of the resource: GrantedResourceValid
+	// (ClusterScoped/ValueBacked/Namespaced/KindNotServed/MappingFailed) and CatalogFieldsValid
+	// (Valid/InvalidCatalogFields).
 	// +listType=map
 	// +listMapKey=type
 	// +optional

@@ -1143,9 +1143,53 @@ To add access management for a new cluster-wide resource:
 
    In this example, the registered resources are available to projects by default. Resources with the `my.example.com/internal` label are excluded from the available resources.
 
+   Only a cluster-scoped resource can be specified in `grantedResource`. A definition of a namespaced resource (for example, Secret) is refused when it is created or updated. If such a definition is stored anyway, it is not processed: no project gets its AvailableClusterResource, and the `GrantedResourceValid` condition is `False` (read more in section ["Checking resource registration status"](#checking-resource-registration-status)). A resource whose CRD is not installed yet is accepted: its scope is checked once the resource is served.
+
    For descriptions of GrantableClusterResourceDefinition parameters and available access management modes, refer to the [resource description](cr.html#grantableclusterresourcedefinition).
 
 1. After registering the cluster-wide resource, configure references to it using GrantableClusterResourceReference as described in ["Configuring validation of a cluster-wide resource reference"](#configuring-validation-of-a-cluster-wide-resource-reference).
+
+#### Showing resource fields to projects
+
+Project users see the available cluster-wide resources in AvailableClusterResource (read more in section ["Viewing available cluster-wide resources"](#viewing-available-cluster-wide-resources)), but usually cannot read the resources themselves. To help them choose, list the fields to show in [`spec.catalogFields`](cr.html#grantableclusterresourcedefinition-v1alpha1-spec-catalogfields) of the GrantableClusterResourceDefinition. The controller copies the values of these fields from every available resource into `status.available[].fields` of AvailableClusterResource.
+
+For example:
+
+{% raw %}
+
+```yaml
+apiVersion: multitenancy.deckhouse.io/v1alpha1
+kind: GrantableClusterResourceDefinition
+metadata:
+  name: myclusterresources
+spec:
+  grantedResource:
+    apiGroup: my.example.com
+    kind: MyClusterResource
+  catalogFields:
+    - name: tier
+      path: $.spec.tier
+    - name: region
+      path: $.metadata.labels['my.example.com/region']
+```
+
+{% endraw %}
+
+Rules:
+
+- `name` is the key in `fields`, in lowerCamelCase; `path` is an RFC 9535 JSONPath singular query that selects one value: member names and array indexes only, without wildcards (`*`), descendant segments (`..`), slices or filters.
+- Paths that read `metadata.managedFields` or the `kubectl.kubernetes.io/last-applied-configuration` annotation, or a parent that contains them (for example, `$.metadata`), are not allowed: these fields hold a copy of the whole resource.
+- At most 10 fields can be listed.
+- A value longer than 512 bytes in JSON serialization is not shown; a field whose value is missing in the resource is not shown either.
+- If the `status.available` list of an AvailableClusterResource with the fields of all resources would take more than 512 KiB in JSON serialization, no fields are shown in it; the names and the default stay.
+- `catalogFields` works only for definitions with `grantedResource`, which must be cluster-scoped.
+- The values are visible to all users of every project the resource is available to. List only non-secret data.
+
+Invalid paths and `catalogFields` without `grantedResource` are refused when the GrantableClusterResourceDefinition is created or updated, and are reported in its `CatalogFieldsValid` condition. Values left out for their size depend on the resources and the project, so they are reported by `CatalogFieldsSkipped` warning events on the GrantableClusterResourceDefinition:
+
+```shell
+d8 k describe grantableclusterresourcedefinition myclusterresources
+```
 
 #### Using x-deckhouse-grantable-resource in DP application settings
 
@@ -1160,3 +1204,12 @@ You can check the status of GrantableClusterResourceDefinition and its associate
 - [`GrantableClusterResourceDefinition.status.references`](cr.html#grantableclusterresourcedefinition-v1alpha1-status-references): Contains a list of associated GrantableClusterResourceReference resources and information about the resources to which they apply.
 - [`GrantableClusterResourceReference.status.bound`](cr.html#grantableclusterresourcereference-v1alpha1-status-bound): Indicates whether the corresponding GrantableClusterResourceDefinition was found.
 - `GrantableClusterResourceReference.status.conditions[Bound]`: Contains the binding status: `Resolved` if the definition was found, or `UnknownResource` if it is missing. The `UnknownResource` status can indicate an incorrect GrantableClusterResourceDefinition name or a missing registration.
+- `GrantableClusterResourceReference.status.conditions[FieldPathsValid]`: Whether `spec.fieldPaths` pass the checks applied when the object is created or updated (reasons `Valid`, `InvalidFieldPaths`; the message lists all problems). `False` means the object was stored bypassing these checks; the invalid paths are skipped during availability checks.
+- `GrantableClusterResourceDefinition.status.conditions[GrantedResourceValid]`: Whether `spec.grantedResource` can be processed. `True` with the reason `ClusterScoped` for a cluster-scoped resource or `ValueBacked` for a definition without `grantedResource`; `False` with the reason `Namespaced` for a namespaced resource, which is not processed; `Unknown` with the reason `KindNotServed` while the resource is not served (for example, its CRD is not installed yet) or `MappingFailed` if its scope could not be determined.
+- `GrantableClusterResourceDefinition.status.conditions[CatalogFieldsValid]`: Whether `spec.catalogFields` pass the checks applied when the object is created or updated (reasons `Valid`, `InvalidCatalogFields`; the message lists all problems). A definition without `catalogFields` has the condition `True`. Values left out for their size are reported by `CatalogFieldsSkipped` events (read more in section ["Showing resource fields to projects"](#showing-resource-fields-to-projects)).
+
+For example:
+
+```shell
+d8 k get grantableclusterresourcedefinition myclusterresources -o jsonpath='{range .status.conditions[*]}{.type}={.status} ({.reason}): {.message}{"\n"}{end}'
+```

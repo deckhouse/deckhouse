@@ -27,10 +27,13 @@ spec:
 
                     Правила:
 
-                    - Применяется только для определений с `grantedResource`. Для значений, которые не представлены объектами Kubernetes, параметр игнорируется.
+                    - Применяется только для определений с `grantedResource`, и этот ресурс должен быть cluster-scoped. Для значений, которые не представлены объектами Kubernetes, параметр указывать нельзя.
                     - Можно указать не более 10 полей.
                     - Поле, значения которого в ресурсе нет, не выводится.
                     - Значение длиннее 512 байт в JSON-сериализации не выводится.
+                    - Если `status.available` одного AvailableClusterResource с полями всех ресурсов занимал бы в JSON-сериализации больше 512 КиБ, поля в нём не выводятся вовсе.
+
+                    Пути проверяются при создании и изменении объекта, некорректный элемент отклоняется. Результат проверки сохранённого объекта показывает условие `CatalogFieldsValid`. О значениях, пропущенных из-за размера, сообщают предупреждающие события `CatalogFieldsSkipped` на GrantableClusterResourceDefinition.
 
                     > **Внимание.** Значения видны всем пользователям каждого проекта, которому доступен ресурс. Указывайте только несекретные данные.
                   items:
@@ -44,7 +47,7 @@ spec:
 
                           Должен быть singular query JSONPath по RFC 9535, выбирающий ровно одно значение: только имена полей и индексы массивов, без wildcard (`*`), рекурсивного спуска (`..`), срезов и фильтров.
 
-                          Пути, которые читают `metadata.managedFields`, аннотацию `kubectl.kubernetes.io/last-applied-configuration` или содержащее их родительское поле (например, `$.metadata`), не выводятся: в этих полях хранится копия всего ресурса.
+                          Пути, которые читают `metadata.managedFields`, аннотацию `kubectl.kubernetes.io/last-applied-configuration` или содержащее их родительское поле (например, `$.metadata`), указывать нельзя: в этих полях хранится копия всего ресурса.
                 defaultAvailability:
                   description: |-
                     Базовая доступность cluster-wide-ресурсов для проектов.
@@ -109,6 +112,8 @@ spec:
                   description: |-
                     Cluster-wide-ресурс Kubernetes, для которого настраивается доступ.
 
+                    Должен быть cluster-scoped-ресурсом: namespaced-ресурс (например, Secret) отклоняется при создании и изменении объекта, а определение, сохранённое с ним, не обрабатывается, что показывает условие `GrantedResourceValid`. Ресурс, который ещё не обслуживается (его CRD не установлена), принимается и проверяется, когда начинает обслуживаться.
+
                     Если параметр не задан, управление доступом применяется к значениям, которые не представлены отдельными объектами Kubernetes.
                   properties:
                     apiGroup:
@@ -122,7 +127,11 @@ spec:
               description: Состояние GrantableClusterResourceDefinition.
               properties:
                 conditions:
-                  description: Текущее состояние GrantableClusterResourceDefinition.
+                  description: |-
+                    Текущее состояние GrantableClusterResourceDefinition.
+
+                    - `GrantedResourceValid` — может ли быть обработан `spec.grantedResource`. `True` с причиной `ClusterScoped` для cluster-scoped-ресурса или `ValueBacked` для определения без `grantedResource`. `False` с причиной `Namespaced` для namespaced-ресурса: определение не обрабатывается, ни один проект не получает его AvailableClusterResource, а вебхуки грантов пропускают ссылки на него: их значения не проверяются. `Unknown` с причиной `KindNotServed`, пока ресурс не обслуживается (например, его CRD ещё не установлена), или `MappingFailed`, если определить его область видимости не удалось.
+                    - `CatalogFieldsValid` — проходят ли `spec.catalogFields` проверки, выполняемые при создании и изменении объекта: пути — корректные singular query, не читающие `metadata.managedFields` и аннотацию `kubectl.kubernetes.io/last-applied-configuration`, а у определения указан `grantedResource` (причины `Valid`, `InvalidCatalogFields`; в сообщении перечислены все проблемы). У определения без `catalogFields` условие равно `True`. `False` означает, что объект сохранён в обход этих проверок; некорректные элементы в AvailableClusterResource не выводятся.
                   items:
                     description: Информация об одном из аспектов текущего состояния ресурса.
                     properties:

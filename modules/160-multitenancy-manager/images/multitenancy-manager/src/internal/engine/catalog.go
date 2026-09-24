@@ -40,6 +40,55 @@ const (
 	MaxCatalogFieldValueBytes = 512
 )
 
+// The schema has no way to bound the catalog as a whole; this limit exists in code only.
+const (
+	// MaxCatalogFieldsBytes is the budget of one catalog (one AvailableClusterResource) that carries
+	// fields: the JSON serialization of its whole status.available list, entries with their names,
+	// default flags and fields, as CatalogSize counts it. A catalog over it carries no fields at all,
+	// names and default stay. Hundreds of objects times MaxCatalogFields values of
+	// MaxCatalogFieldValueBytes would otherwise push the object past the ~1.5 MiB etcd limit, the
+	// status write would fail and the catalog would freeze.
+	MaxCatalogFieldsBytes = 512 << 10
+)
+
+// CatalogSkips is what the projection of one catalog left out. The zero value means nothing.
+type CatalogSkips struct {
+	// Oversized lists the values longer than MaxCatalogFieldValueBytes as "<object>/<field>", in
+	// catalog order (objects by name, fields in declaration order).
+	Oversized []string
+	// OverBudgetBytes is the size of the catalog with its fields, as far as CatalogSize counted it
+	// (a lower bound), when it exceeded MaxCatalogFieldsBytes and the fields were all left out; 0 when
+	// the catalog is within the budget.
+	OverBudgetBytes int
+}
+
+// Empty reports whether nothing was left out.
+func (s CatalogSkips) Empty() bool { return len(s.Oversized) == 0 && s.OverBudgetBytes == 0 }
+
+// CatalogSize returns the size of the JSON serialization of a catalog's available list, the number
+// MaxCatalogFieldsBytes bounds (exact for status.available; the rest of the object is not counted),
+// and whether it fits the budget. The entries are marshalled one at a time, with the brackets and
+// commas json.Marshal puts between them, and the count stops at the first entry past the budget: the
+// size is the whole serialization for a catalog that fits and a lower bound for one that does not.
+func CatalogSize(available []v1alpha1.AvailableObject) (int, bool) {
+	size := len("[]")
+	for i := range available {
+		raw, err := json.Marshal(&available[i])
+		if err != nil {
+			// Unreachable: the fields are raw JSON produced by json.Marshal. Failing closed drops them.
+			return 0, false
+		}
+		if i > 0 {
+			size++ // the comma
+		}
+		size += len(raw)
+		if size > MaxCatalogFieldsBytes {
+			return size, false
+		}
+	}
+	return size, true
+}
+
 // forbiddenCatalogPaths lists the member-name paths a catalog field may not read: managedFields and
 // the last-applied annotation hold a copy of the whole object, whatever else it may contain. A path
 // is refused when it overlaps one of them in either direction -- it reads under it ($.metadata.
@@ -87,12 +136,15 @@ func namesOf(path []string) spec.NormalizedPath {
 }
 
 // ProjectCatalogFields returns the values of the declared fields in obj, keyed by field name, or nil
-// when none is present. It never fails: an entry beyond MaxCatalogFields, an entry whose path
-// CompileCatalogPath refuses, an absent or null value and a value longer than
-// MaxCatalogFieldValueBytes are left out. A name belongs to its first entry: a later entry of the same
-// name is ignored even when the first one yields nothing.
-func ProjectCatalogFields(factory jsonpathfactory.Factory, fields []v1alpha1.CatalogField, obj map[string]any) map[string]apiextensionsv1.JSON {
+// when none is present, and the names of the fields left out for being longer than
+// MaxCatalogFieldValueBytes, in declaration order: the one skip that depends on the object rather than
+// on the declaration, and so the one the declaration's author cannot see coming. It never fails: an
+// entry beyond MaxCatalogFields, an entry whose path CompileCatalogPath refuses, an absent or null
+// value and an oversized value are left out. A name belongs to its first entry: a later entry of the
+// same name is ignored even when the first one yields nothing.
+func ProjectCatalogFields(factory jsonpathfactory.Factory, fields []v1alpha1.CatalogField, obj map[string]any) (map[string]apiextensionsv1.JSON, []string) {
 	var out map[string]apiextensionsv1.JSON
+	var oversized []string
 	seen := make([]string, 0, min(len(fields), MaxCatalogFields))
 	for _, f := range fields[:min(len(fields), MaxCatalogFields)] {
 		if slices.Contains(seen, f.Name) {
@@ -108,7 +160,11 @@ func ProjectCatalogFields(factory jsonpathfactory.Factory, fields []v1alpha1.Cat
 			continue
 		}
 		raw, err := json.Marshal(nodes[0])
-		if err != nil || len(raw) > MaxCatalogFieldValueBytes {
+		if err != nil {
+			continue
+		}
+		if len(raw) > MaxCatalogFieldValueBytes {
+			oversized = append(oversized, f.Name)
 			continue
 		}
 		if out == nil {
@@ -116,5 +172,5 @@ func ProjectCatalogFields(factory jsonpathfactory.Factory, fields []v1alpha1.Cat
 		}
 		out[f.Name] = apiextensionsv1.JSON{Raw: raw}
 	}
-	return out
+	return out, oversized
 }

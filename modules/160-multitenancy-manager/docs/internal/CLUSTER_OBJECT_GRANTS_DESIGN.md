@@ -109,7 +109,15 @@ status:
       resources:
         - postgresqls
   referenceCount: 2
-  conditions: []                   # standard Ready condition, set by the controller
+  conditions:                      # set by the binding reconciler, see below
+    - type: GrantedResourceValid
+      status: "True"
+      reason: ClusterScoped        # ValueBacked | Namespaced (False) | KindNotServed, MappingFailed (Unknown)
+      message: grantedResource StorageClass.storage.k8s.io is cluster-scoped.
+    - type: CatalogFieldsValid
+      status: "True"
+      reason: Valid                # InvalidCatalogFields (False)
+      message: All catalogFields are valid.
 ```
 
 | field | meaning |
@@ -122,6 +130,8 @@ status:
 | `catalogFields[]` | fields of the granted objects shown in the catalog (`name` + singular JSONPath `path`), see [Catalog fields](#catalog-fields) |
 | `status.references[]` | reference objects bound to this definition (name + matched resources) |
 | `status.referenceCount` | `len(references)` (printer column) |
+| `status.conditions[GrantedResourceValid]` | whether `grantedResource` resolves: `True` (`ClusterScoped`, `ValueBacked`), `False` (`Namespaced`), `Unknown` (`KindNotServed`, `MappingFailed`), see below |
+| `status.conditions[CatalogFieldsValid]` | whether `catalogFields` passes the webhook's checks, see [Catalog fields](#catalog-fields) |
 
 **Cluster-scoped `grantedResource` only.** A definition of a namespaced kind is not resolved:
 `internal/resolve.grantedGVK`, the only way to the granted objects (the live list and `defaultFrom`),
@@ -138,16 +148,27 @@ REST mapper still maps it, and its list answers 404, which for a list, naming no
 mean the kind is gone (`resolve.ErrGrantedResourceNotServed`). `/is-granted` and `/defaults` skip the references to such a
 definition with a log line naming the definition, the reference and the reason, and keep enforcing
 the other references of the request, the same way they skip a reference whose path cannot be
-evaluated. Both webhooks run with `failurePolicy: Fail`, so answering with an error instead would
-block every write of the reference's rule in every project because of one bad registration. The
-catalog reconciler logs these errors at `V(1)` instead of returning them, so the pass still requeues
-after `ResyncInterval` rather than falling into the error back-off, and the violation scan skips the
+evaluated. The problem is visible in the definition's `GrantedResourceValid` condition (see below).
+Both webhooks run with `failurePolicy: Fail`, so answering with an error instead would block every
+write of the reference's rule in every project because of one bad registration. The catalog
+reconciler logs these errors at `V(1)` instead of returning them, so the pass still requeues after
+`ResyncInterval` rather than falling into the error back-off, and the violation scan skips the
 definition and goes on with the others. Every other `Resolve` error (a failed list, an API error)
 still fails the webhook request and the reconcile pass. Inert means unchecked: while the granted
 kind's CRD is not served, a tenant can write any value (say a `cert-manager.io/cluster-issuer`
 annotation), and once the CRD appears, an UPDATE keeps it, since values already in the old object
-are not re-checked. The violation metric reports it later. The reasons for refusing a namespaced
-kind:
+are not re-checked. The violation metric reports it later.
+
+The `grantableclusterresourcedefinitions` webhook refuses such a definition at apply time (see
+[Webhooks](#webhooks)), and the binding reconciler reports a stored one as
+`GrantedResourceValid=False`/`Namespaced`. Both ask `resolve.GrantedResourceProblem`, which goes
+through `grantedGVK`, so they refuse exactly what the catalog reconciler refuses. A kind the mapper
+does not know has no scope to judge: the webhook lets it through, and the condition is
+`Unknown`/`KindNotServed`. The reconciler requeues every definition after `ResyncInterval`, whatever
+the answer, since nothing else triggers it when the CRD of the kind gets installed or removed. A
+separate condition rather than a part of `CatalogFieldsValid`: a namespaced kind breaks the whole
+definition, catalog and checks, not only its `catalogFields`, and `kubectl describe` then says so
+under its own name. The reasons for refusing a namespaced kind:
 
 - "cluster-wide resource" is cluster-scoped by definition; a namespaced kind is not what the
   mechanism grants;
@@ -309,16 +330,52 @@ Rules (the projection lives in `internal/engine/catalog.go`):
 - At most 10 fields (`maxItems` in the schema, and the projection takes the first 10 of an object that
   bypassed it; a duplicate name keeps its first entry).
 - A value longer than 512 bytes in its JSON serialization, an absent value and `null` are left out.
+- One catalog (one `AvailableClusterResource`) with its fields has a budget of 512 KiB
+  (`engine.MaxCatalogFieldsBytes`, checked by `engine.CatalogSize`: the length of the JSON
+  serialization of the whole `status.available` list, entries with their names, `default` flags and
+  fields; exact for `status.available`, the rest of the object is not counted. The entries are
+  counted one at a time and the count stops at the first one past the budget). A catalog over it
+  carries no `fields` in any entry; names and default stay. All or nothing, so the result depends
+  only on the catalog, never on the order the objects are read in. Without the budget, hundreds of
+  objects × 10 fields × 512 bytes would push the object past the ~1.5 MiB etcd limit: the status
+  write would fail and the catalog would freeze with every name in it.
+- Near the budget a catalog can flap: a value that changes length moves the catalog across the
+  threshold, and it switches between "with fields" and "without" on consecutive passes, each switch a
+  status write in every project namespace the catalog is rendered in. There is no hysteresis; a
+  catalog that close to the limit is a sign to show fewer or shorter fields.
 - Values keep their JSON type (`map[string]apiextensionsv1.JSON`; in the schema `additionalProperties`
   with `x-kubernetes-preserve-unknown-fields`).
-- Only object-backed definitions: a value-backed one has no objects, so the list is ignored there.
+- Only object-backed definitions: a value-backed one has no objects, so the webhook refuses the list
+  there (a stored one is ignored by the projection).
 - Show non-secret data only: every user of every project the object is available to reads it. The
   shipped `storageclasses` definition leaves out `parameters`, which is driver-specific, can be large
   and may name secrets.
 
-An invalid entry is skipped during projection and breaks nothing else. The values are refreshed on
-each catalog reconcile; the granted objects themselves are not watched, so a changed value shows up
-within `ResyncInterval` (2 minutes).
+The values are refreshed on each catalog reconcile; the granted objects themselves are not watched,
+so a changed value shows up within `ResyncInterval` (2 minutes).
+
+What is checked where:
+
+- **The declaration** (paths, value-backed) is refused at apply time by the
+  `grantableclusterresourcedefinitions` webhook (see [Webhooks](#webhooks)) and reported on the stored
+  object by `CatalogFieldsValid`: `True`/`Valid`, or `False`/`InvalidCatalogFields` with the refusal
+  text as the message. A definition without `catalogFields` is `True` too (message
+  `No catalogFields are declared.`), so every definition carries the condition and a missing one only
+  means "not reconciled yet". Both use `engine.DefinitionProblems`. An invalid entry that got stored
+  anyway is still skipped during projection and breaks nothing else.
+- **The values** depend on the objects and on the project, so a condition on the cluster-wide
+  definition cannot carry them. A value over 512 bytes and a catalog over the budget are reported by a
+  `Warning` event `CatalogFieldsSkipped` on the definition, naming the namespace, the catalog and the
+  skipped `<object>/<field>` pairs (the first five, then "and N more"). The event is emitted on every
+  pass that skips, so it does not expire while the skip lasts; the recorder's spam filter bounds it to
+  a burst and then one event per five minutes per definition, whatever the number of projects. The log
+  has no such filter, so it is written only when the skip set of a catalog (namespace + definition)
+  changes: the oversized pairs, and whether the catalog is over the budget, not its size, which moves
+  with any value (a hash of them is kept). An Info line carries the event's text, a `V(1)` line the
+  full list; a pass without skips forgets the catalog, and so does a pass after the definition is
+  deleted, so a skip that returns is logged again. Per catalog rather than once per
+  definition, because the set differs between projects and a pass is per namespace anyway. Events rather than a metric: the owner of the definition looks at `kubectl describe`
+  next to `CatalogFieldsValid`, and the module has no alerting on catalog content to feed.
 
 **Why an allow-list in the definition and not a marker in the CRD schema.** A marker on the fields of
 the granted resource's schema (an `x-...` extension saying "show to tenants") looks more natural, but:
@@ -414,6 +471,25 @@ Registered statically, not derived from the references:
   developers (`system:masters` on a stand) and the deckhouse-controller applying a module's release,
   so excluding them would leave nothing to police; `Ignore` keeps an unavailable backend from
   blocking a release.
+- **`/validate/v1alpha1/grantableclusterresourcedefinitions`** (validating, CREATE/UPDATE) — reject a
+  namespaced `grantedResource` (see [Cluster-scoped `grantedResource` only](#grantableclusterresourcedefinition)),
+  a `catalogFields[]` entry whose `path` `engine.CompileCatalogPath` refuses (does not compile, is not a
+  singular query, overlaps a forbidden path) and `catalogFields` on a value-backed definition. All
+  problems in one refusal, the scope first, then the entries with their index. The scope comes from the
+  grants REST mapper (see [The grants REST mapper](#grantableclusterresourcedefinition)), the one the
+  catalog and definition reconcilers resolve with, so the webhook refuses exactly what they refuse: a
+  kind it does not know (no matches for kind) is let through, and any other mapping error is logged and
+  let through too, since a discovery hiccup must not refuse a module's release. The kind comes from the
+  request body, but that mapper rediscovers the API only once after each reset, so a made-up group
+  costs no discovery of its own; a kind whose CRD was installed after the last reset is let through
+  until the next one (at most `ResyncInterval`), and the reconciler reports it. On UPDATE the scope is checked only when
+  `grantedResource` changed, only entries that are new or changed relative to `oldObject` are checked
+  (by content, not index), and the value-backed rule only when `catalogFields` or `grantedResource`
+  changed; an object with a `deletionTimestamp` is not checked.
+  `failurePolicy: Ignore` and no system-writer exclusion, for the same reasons as the reference
+  webhook: definitions are shipped by modules through the deckhouse-controller. Names, their
+  uniqueness and the limit of 10 are left to the schema. The rules live in `engine.DefinitionProblems`,
+  shared with the binding reconciler.
 - **`/protect`** (validating) — keep the controller-owned `AvailableClusterResource` read-only (with
   system-group exemptions). No quota status to protect anymore.
 
@@ -422,11 +498,15 @@ Registered statically, not derived from the references:
 - **Catalog reconciler** (keyed by namespace) — renders `AvailableClusterResource` per project per
   definition from resolved availability, and deletes the module-owned catalogs of the namespace whose
   definition is gone (the catalog is read-only to everyone but the controller, so nothing else could).
+  Catalog fields it leaves out for size are reported as `CatalogFieldsSkipped` events on the
+  definition (see [Catalog fields](#catalog-fields)).
 - **Binding reconciler** (keyed by `GrantableClusterResourceReference` and
   `GrantableClusterResourceDefinition`) — sets `reference.status.bound`/`Bound` condition and the
   definition's `status.references`/`referenceCount` reverse index. It also sets `FieldPathsValid`
   on the reference: the webhook's checks applied to the whole stored object, without ratcheting, so a
   reference stored past the webhook shows up (`False`/`InvalidFieldPaths`, message = the refusal text).
+  The definition gets `CatalogFieldsValid` the same way (`False`/`InvalidCatalogFields`), and
+  `GrantedResourceValid` for the scope of its `grantedResource`.
 - **Policy reconciler** (keyed by `ClusterResourceGrantPolicy`) — reports `SelectorsValid` (a selector
   the schema accepts but the selector library refuses would otherwise silently match nothing) and
   `AllowedEffective` (an allowed name the definition's `excluded` filter refuses anyway grants nothing;

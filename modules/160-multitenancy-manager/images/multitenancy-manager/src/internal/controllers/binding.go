@@ -18,6 +18,7 @@ package controllers
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"sort"
 	"strings"
@@ -25,6 +26,7 @@ import (
 	k8serrors "k8s.io/apimachinery/pkg/api/errors"
 	apimeta "k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -34,6 +36,7 @@ import (
 	"controller/api/v1alpha1"
 	"controller/internal/engine"
 	"controller/internal/jsonpath"
+	"controller/internal/resolve"
 )
 
 // ReferenceReconciler keeps GrantableClusterResourceReference.status.bound in sync with whether the
@@ -119,12 +122,22 @@ func (r *ReferenceReconciler) SetupWithManager(mgr ctrl.Manager) error {
 }
 
 // DefinitionReconciler maintains GrantableClusterResourceDefinition.status.references — the reverse
-// index of references bound to it.
+// index of references bound to it — and reports whether the stored spec passes the rules the
+// GrantableClusterResourceDefinition webhook enforces: GrantedResourceValid for the scope of
+// spec.grantedResource, CatalogFieldsValid for spec.catalogFields. That webhook runs with
+// failurePolicy: Ignore and ratchets on UPDATE, so an invalid definition can be stored; these
+// conditions are where it shows.
 type DefinitionReconciler struct {
 	client.Client
+	// Factory must be the one the catalog projection uses, so a path is judged as it is read. Required.
+	Factory jsonpath.Factory
+	// Mapper must be the one the catalog reconciler resolves with, so a kind is judged as it is
+	// resolved. Required.
+	Mapper apimeta.RESTMapper
 }
 
-// Reconcile rebuilds the definition's reference list.
+// Reconcile rebuilds the definition's reference list and sets its GrantedResourceValid and
+// CatalogFieldsValid conditions.
 func (r *DefinitionReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 	def := &v1alpha1.GrantableClusterResourceDefinition{}
 	if err := r.Get(ctx, req.NamespacedName, def); err != nil {
@@ -148,17 +161,76 @@ func (r *DefinitionReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 	}
 	sort.Slice(bindings, func(i, j int) bool { return bindings[i].Name < bindings[j].Name })
 
+	// The whole object, without ratcheting: the webhook forgives what it saw before, this does not.
+	// A definition without catalogFields is valid too, and says so: every definition then carries the
+	// condition, and a missing one can only mean "not reconciled yet".
+	valid := metav1.Condition{Type: "CatalogFieldsValid", ObservedGeneration: def.Generation}
+	if problems := engine.DefinitionProblems(r.Factory, def); len(problems) > 0 {
+		valid.Status = metav1.ConditionFalse
+		valid.Reason = "InvalidCatalogFields"
+		valid.Message = strings.Join(problems, "; ")
+	} else {
+		valid.Status = metav1.ConditionTrue
+		valid.Reason = "Valid"
+		valid.Message = "All catalogFields are valid."
+		if len(def.Spec.CatalogFields) == 0 {
+			valid.Message = "No catalogFields are declared."
+		}
+	}
+
+	granted, result := r.grantedResourceCondition(def)
+
 	def.Status.References = bindings
 	def.Status.ReferenceCount = len(bindings)
 	def.Status.ObservedGeneration = def.Generation
+	apimeta.SetStatusCondition(&def.Status.Conditions, granted)
+	apimeta.SetStatusCondition(&def.Status.Conditions, valid)
 	if err := r.Status().Update(ctx, def); err != nil {
 		return ctrl.Result{}, fmt.Errorf("update definition status: %w", err)
 	}
-	return ctrl.Result{}, nil
+	return result, nil
+}
+
+// grantedResourceCondition says whether spec.grantedResource can be resolved. A condition of its own,
+// not a part of CatalogFieldsValid: a namespaced kind breaks the whole definition (no catalog, no
+// check), not only its catalogFields, and a definition without catalogFields has it too. When the
+// scope cannot be told (the kind is not served yet, discovery failed) the condition is Unknown. The
+// definition is requeued after ResyncInterval whatever the answer: nothing else triggers it when the
+// CRD of the kind gets installed or removed. No error is returned for an Unknown scope, so the rest
+// of the status is still written.
+func (r *DefinitionReconciler) grantedResourceCondition(def *v1alpha1.GrantableClusterResourceDefinition) (metav1.Condition, ctrl.Result) {
+	cond := metav1.Condition{Type: "GrantedResourceValid", ObservedGeneration: def.Generation}
+	problem, err := resolve.GrantedResourceProblem(r.Mapper, def)
+	switch {
+	case problem != "":
+		cond.Status = metav1.ConditionFalse
+		cond.Reason = "Namespaced"
+		cond.Message = problem + ". The definition is not resolved: no project gets its catalog, and the grant webhooks skip the references to it."
+	case err != nil:
+		cond.Status = metav1.ConditionUnknown
+		cond.Reason = "MappingFailed"
+		if apimeta.IsNoMatchError(err) {
+			cond.Reason = "KindNotServed"
+		}
+		cond.Message = err.Error()
+	case def.IsValueBacked():
+		cond.Status = metav1.ConditionTrue
+		cond.Reason = "ValueBacked"
+		cond.Message = "No grantedResource is set: the definition is value-backed."
+	default:
+		cond.Status = metav1.ConditionTrue
+		cond.Reason = "ClusterScoped"
+		gk := schema.GroupKind{Group: def.Spec.GrantedResource.APIGroup, Kind: def.Spec.GrantedResource.Kind}
+		cond.Message = fmt.Sprintf("grantedResource %s is cluster-scoped.", gk)
+	}
+	return cond, ctrl.Result{RequeueAfter: ResyncInterval}
 }
 
 // SetupWithManager wires the definition reconciler; a reference change re-evaluates the definition it names.
 func (r *DefinitionReconciler) SetupWithManager(mgr ctrl.Manager) error {
+	if r.Factory == nil || r.Mapper == nil {
+		return errors.New("definition reconciler: Factory and Mapper are required")
+	}
 	enqueueNamedDef := handler.EnqueueRequestsFromMapFunc(
 		func(ctx context.Context, obj client.Object) []reconcile.Request {
 			ref, ok := obj.(*v1alpha1.GrantableClusterResourceReference)
