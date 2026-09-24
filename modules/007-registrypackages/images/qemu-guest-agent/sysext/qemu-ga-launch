@@ -1,0 +1,44 @@
+#!/bin/sh
+# The unit starts on every node - nodelet starts it without looking. The
+# decision "do I run at all" is made here, and NOT running is a success: the
+# unit stays active, the nodelet pass converges, and appliedGeneration moves on.
+set -eu
+
+CHANNEL=/dev/virtio-ports/org.qemu.guest_agent.0
+
+# Rule hardware out cheaply: without the hypervisor bit in CPUID the channel is
+# never going to appear, and waiting for it would delay every bare-metal boot.
+if ! grep -qE '^flags[[:space:]]*:.*\<hypervisor\>' /proc/cpuinfo; then
+    echo "not a guest, the QEMU guest agent is not started on this node"
+    exit 0
+fi
+
+# A guest: the channel is created by a udev rule, and hot-plugging the port can
+# lose the race with this start. Wait, but not for long.
+i=0
+while [ ! -e "$CHANNEL" ] && [ "$i" -lt 10 ]; do
+    sleep 1
+    i=$((i + 1))
+done
+
+if [ ! -e "$CHANNEL" ]; then
+    echo "a guest, but the hypervisor exposes no guest agent channel at $CHANNEL"
+    exit 0
+fi
+
+# The default state directory is under /var/run, which this image does not have:
+# the root creates /var as an empty mount point and nothing puts /var/run in it.
+mkdir -p /run/qemu-ga
+
+# --daemonize: the agent forks itself and the parent exits 0, which for a
+# oneshot unit means success. The daemon stays in the unit's cgroup, so
+# systemctl stop still takes it down.
+#
+# guest-exec is unauthenticated root at the hypervisor's request, on a node
+# whose root is verified by dm-verity; none of the four functions this agent is
+# here for needs it, and the file commands are closed for the same reason.
+exec /usr/bin/qemu-ga \
+    --daemonize \
+    --statedir=/run/qemu-ga \
+    --path="$CHANNEL" \
+    --block-rpcs=guest-exec,guest-exec-status,guest-file-open,guest-file-read,guest-file-write,guest-file-seek,guest-file-flush
