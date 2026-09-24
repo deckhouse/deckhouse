@@ -193,7 +193,13 @@ spec:
                       type: string
                       pattern: '^([0-9]+(\.[0-9]+)?(ms|s|m|h))+$'
                       description: |
-                        Timeout of each request the agent makes for `FencingFailedNodeState` objects.
+                        Upper bound of a single Kubernetes API call by the agent. It bounds:
+
+                        - every request for `FencingFailedNodeState` objects, including the fallback heartbeat write;
+                        - each of the two Node read phases of a join or rejoin attempt;
+                        - every memberlist TCP exchange, through `TCPTimeout` = max(`kubernetesAPITimeout`, `1s`).
+
+                        Must be less than `ttl`, and enters the lower bounds of `ttl` and `evacuation.delay`: an isolated node spends the whole budget on the heartbeat attempt that fails first, and only then stops feeding the watchdog.
                 rejoin:
                   type: object
                   description: |
