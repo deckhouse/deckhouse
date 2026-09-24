@@ -27,9 +27,6 @@ import (
 )
 
 func TestIDTokenTTLRequirement(t *testing.T) {
-	// The hook stores the value under this key; the check reads it under its own copy.
-	require.Equal(t, hooks.IDTokenTTLValueKey, idTokenTTLValueKey)
-
 	cases := []struct {
 		name   string
 		stored any // nil: nothing stored
@@ -44,7 +41,7 @@ func TestIDTokenTTLRequirement(t *testing.T) {
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
-			requirements.SaveValue(idTokenTTLValueKey, tc.stored)
+			requirements.SaveValue(hooks.IDTokenTTLValueKey, tc.stored)
 			ok, err := requirements.CheckRequirement(idTokenTTLRequirementKey, "6h")
 			assert.Equal(t, tc.want, ok)
 			if tc.want {
@@ -56,7 +53,7 @@ func TestIDTokenTTLRequirement(t *testing.T) {
 	}
 
 	t.Run("invalid requirement value", func(t *testing.T) {
-		requirements.SaveValue(idTokenTTLValueKey, "1h")
+		requirements.SaveValue(hooks.IDTokenTTLValueKey, "1h")
 		ok, err := requirements.CheckRequirement(idTokenTTLRequirementKey, "six hours")
 		assert.False(t, ok)
 		require.Error(t, err)

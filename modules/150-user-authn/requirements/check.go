@@ -21,6 +21,7 @@ import (
 	"time"
 
 	"github.com/deckhouse/deckhouse/go_lib/dependency/requirements"
+	"github.com/deckhouse/deckhouse/modules/150-user-authn/hooks"
 )
 
 const (
@@ -33,11 +34,6 @@ const (
 	// cluster that would fail to start with it: addon-operator validates stored ModuleConfigs at
 	// startup and does not start on a violation.
 	idTokenTTLRequirementKey = "userAuthnIDTokenTTLBelow"
-
-	// idTokenTTLValueKey mirrors hooks.IDTokenTTLValueKey (the packages must not import each
-	// other's internals; the contract is locked by tests). The hook stores the idTokenTTL string of
-	// the user-authn ModuleConfig, "" when the field is unset.
-	idTokenTTLValueKey = "userAuthn:idTokenTTL"
 )
 
 func init() {
@@ -50,7 +46,8 @@ func checkIDTokenTTL(requirementValue string, getter requirements.ValueGetter) (
 		return false, fmt.Errorf("parse requirement value %q: %w", requirementValue, err)
 	}
 
-	raw, exists := getter.Get(idTokenTTLValueKey)
+	// The hook stores the idTokenTTL string of the user-authn ModuleConfig, "" when unset.
+	raw, exists := getter.Get(hooks.IDTokenTTLValueKey)
 	if !exists {
 		// The hook has not published a value (the module is disabled or has not synced yet).
 		return true, nil
