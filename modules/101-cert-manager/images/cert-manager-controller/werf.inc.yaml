@@ -93,8 +93,9 @@ shell:
   - cd /src
   - export RELEASE_VERSION="v{{ $version }}-flant"
   - export VERSION="$(cat VERSION)" IS_PRERELEASE="$(cat IS_PRERELEASE)" GITCOMMIT="$(cat GITCOMMIT)" GITEPOCH="$(cat GITEPOCH)" CTR=jq
+  # The distroless builder has no curl and git. The server targets need neither, so skip the Makefile's required-tools check.
   - |
-    {{- include "image-build.build" (set $ "BuildCommand" `make _bin/server/controller-linux-amd64 _bin/server/acmesolver-linux-amd64 _bin/server/webhook-linux-amd64 _bin/server/cainjector-linux-amd64`) | indent 4 }}
+    {{- include "image-build.build" (set $ "BuildCommand" `make missing= _bin/server/controller-linux-amd64 _bin/server/acmesolver-linux-amd64 _bin/server/webhook-linux-amd64 _bin/server/cainjector-linux-amd64`) | indent 4 }}
   - cp _bin/server/controller-linux-amd64 _bin/server/acmesolver-linux-amd64 _bin/server/webhook-linux-amd64 _bin/server/cainjector-linux-amd64 /
   - chown 64535:64535 /controller-linux-amd64 /acmesolver-linux-amd64 /webhook-linux-amd64 /cainjector-linux-amd64
   - chmod 700 /controller-linux-amd64 /acmesolver-linux-amd64 /webhook-linux-amd64 /cainjector-linux-amd64
