@@ -892,6 +892,83 @@ func TestResumeRestartsTheTakeoverClockOfEveryOpenIncident(t *testing.T) {
 	}
 }
 
+func TestResumeLeavesAPendingWriteCooldownToRunOut(t *testing.T) {
+
+	const failed = "worker-3"
+
+	self := writerFor(failed)
+	store := newStore()
+	h := newHarness(t, self, store)
+
+	h.settle(t.Context())
+
+	store.failCreate = errors.New("api server is unavailable")
+
+	for attempt := range maxAttempts {
+		// Past the backoff of the previous attempt, but not past the cooldown
+		// the last one sets.
+		if attempt > 0 {
+			h.clock.advance(time.Minute)
+		}
+
+		h.failPeer(t.Context(), failed)
+	}
+
+	over := h.clock.now.Add(cooldown)
+
+	inc := h.writer.incidents[failed]
+	if inc == nil || !inc.retryAfter.Equal(over) {
+		t.Fatalf("calls = %v, want the burst of %d failures to end in the %s cooldown", store.calls, maxAttempts, cooldown)
+	}
+
+	// The API is healthy again from here on: only the cooldown holds the writer.
+	store.failCreate = nil
+	store.calls = nil
+
+	h.pauseByOwnRecord(t, self, otherThan(failed), failed)
+
+	removeRecord(store, self)
+	resumed := h.clock.now
+	h.failPeer(t.Context(), failed)
+
+	if h.writer.paused {
+		t.Fatalf("the writer is still paused, want it resumed once the own failed record is gone")
+	}
+
+	left := over.Sub(resumed)
+	if left <= 0 {
+		t.Fatalf("the pause outlived the %s cooldown, want a test whose pause is shorter than it", cooldown)
+	}
+
+	if inc.retryAfter.IsZero() {
+		t.Fatalf("the resume cleared the cooldown of the incident, want the %s left of it kept: "+
+			"the pause is not evidence that the API takes writes again", left)
+	}
+
+	if len(store.calls) != 0 {
+		t.Fatalf("calls = %v, want none in the pass that resumes: %s of the cooldown is left", store.calls, left)
+	}
+
+	h.clock.advance(left - time.Millisecond)
+	h.failPeer(t.Context(), failed)
+
+	if len(store.calls) != 0 {
+		t.Fatalf("calls = %v, want none before the cooldown armed ahead of the pause runs out", store.calls)
+	}
+
+	h.clock.advance(time.Millisecond)
+	h.failPeer(t.Context(), failed)
+
+	if want := []string{"create:" + failed, "mark:" + failed}; !slices.Equal(store.calls, want) {
+		t.Fatalf("calls = %v, want %v once the cooldown is over", store.calls, want)
+	}
+
+	if got, want := markStamps(store), []time.Time{resumed}; !sameInstants(got, want) {
+		t.Errorf("detectedAt of the marks = %v, want %v: the cooldown outlives the pause, the detection of the incident does not",
+			got, want)
+	}
+}
+
 func TestRecordThatVanishedDuringThePauseIsStampedWhenItIsRecreated(t *testing.T) {
 	const failed = "worker-3"
 
