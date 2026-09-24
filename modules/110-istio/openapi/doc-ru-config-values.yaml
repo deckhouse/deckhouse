@@ -82,7 +82,9 @@ properties:
         properties:
           advertise:
             description: |
-              Фактические адреса, которые будут объявлены удалённым кластерам как ambient east-west-шлюз этого кластера. Если не указано, адреса будут выявлены автоматически из сервиса самого шлюза.
+              Фактические адреса, которые будут объявлены удалённым кластерам как ambient east-west-шлюз этого кластера.
+
+              Если не указано, адреса будут выявлены автоматически из сервиса самого шлюза.
 
               Независим от [`ingressGateway.advertise`](#parameters-alliance-ingressgateway-advertise), который описывает sidecar east-west-шлюз. Если оба шлюза стоят за одним балансировщиком, укажите его адрес в обоих списках и задайте каждому свой `port`.
             items:
@@ -95,7 +97,11 @@ properties:
                   description: Порт, по которому соседние кластеры обращаются по этому адресу к ambient east-west-шлюзу.
           inlet:
             description: |
-              Способ публикации ambient east-west-шлюза. В любом случае весь межкластерный ambient-трафик идёт через ровно один адрес.
+              Способ публикации ambient east-west-шлюза.
+
+              В любом случае весь межкластерный ambient-трафик идёт через ровно один адрес.
+
+              Возможные значения:
 
               - `LoadBalancer` — рекомендуемый способ.
               - `NodePort` — для площадок без LB.
@@ -105,7 +111,9 @@ properties:
               port:
                 type: integer
                 description: |
-                  Статичный порт для сервиса с типом NodePort. Должен быть из диапазона, заданного аргументом `kube-apiserver --service-node-port-range` (по умолчанию 30000-32767).
+                  Статичный порт для сервиса с типом NodePort.
+
+                  Должен быть из диапазона, заданного аргументом `kube-apiserver --service-node-port-range` (по умолчанию 30000-32767).
 
                   Node port'ы выделяются на весь кластер, поэтому значение должно отличаться от [`ingressGateway.nodePort.port`](#parameters-alliance-ingressgateway-nodeport-port).
           serviceAnnotations:

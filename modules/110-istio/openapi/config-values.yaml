@@ -215,7 +215,9 @@ properties:
           advertise:
             type: array
             description: |
-              The actual addresses that will be announced to remote clusters as this cluster's ambient east-west gateway. If not specified, the addresses will be discovered automatically from the gateway's own Service.
+              The actual addresses that will be announced to remote clusters as this cluster's ambient east-west gateway.
+
+              If not specified, the addresses will be discovered automatically from the gateway's own Service.
 
               Independent from [`ingressGateway.advertise`](#parameters-alliance-ingressgateway-advertise), which describes the sidecar east-west gateway. Where a single load balancer fronts both gateways, name its address in both lists and give each its own `port`.
             x-doc-d8Editions:
@@ -258,7 +260,11 @@ properties:
               - cse-pro
             x-experimental: true
             description: |
-              The method for exposing the ambient east-west gateway. Exactly one address carries all cross-cluster ambient traffic either way.
+              The method for exposing the ambient east-west gateway.
+
+              Exactly one address carries all cross-cluster ambient traffic either way.
+
+              Possible values:
 
               - `LoadBalancer` — the recommended method.
               - `NodePort` — for installations that do not have the LB.
@@ -276,7 +282,9 @@ properties:
               port:
                 type: integer
                 description: |
-                  Static port number for NodePort-type Service. Must be in range, set by kube-apiserver --service-node-port-range argument (default is 30000-32767).
+                  Static port number for NodePort-type Service.
+
+                  Must be in range, set by kube-apiserver --service-node-port-range argument (default is 30000-32767).
 
                   Node ports are allocated cluster-wide, so this must differ from [`ingressGateway.nodePort.port`](#parameters-alliance-ingressgateway-nodeport-port).
                 minimum: 1024
@@ -286,7 +294,9 @@ properties:
             additionalProperties:
               type: string
             description: |
-              Additional service annotations. They can be used, e.g., for configuring a local LB in the Yandex Cloud (using the `yandex.cpi.flant.com/listener-subnet-id` annotation).
+              Additional service annotations.
+
+              They can be used, e.g., for configuring a local LB in the Yandex Cloud (using the `yandex.cpi.flant.com/listener-subnet-id` annotation).
 
               Set independently from [`ingressGateway.serviceAnnotations`](#parameters-alliance-ingressgateway-serviceannotations): an annotation that pins one external resource — a static IP, an address pool, an existing load balancer — cannot be honoured by two Services at once.
             x-doc-d8Editions:
