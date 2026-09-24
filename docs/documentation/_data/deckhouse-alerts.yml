@@ -4288,7 +4288,7 @@ alerts:
         Settings version 3 rejects `idTokenTTL >= 6h`. A ModuleConfig of an earlier settings version with such a value is still accepted and its value is converted to `5h59m`, so Dex already runs with `5h59m`; this alert keeps firing until the ModuleConfig itself is updated.
       summary: |
         user-authn idTokenTTL is {{ $labels.id_token_ttl }}, which is too long.
-      severity: "6"
+      severity: "4"
       markupFormat: markdown
     - name: D8UserAuthzAuthorizationRuleInvalid
       sourceFile: modules/140-user-authz/monitoring/prometheus-rules/user-authz-controller.yaml

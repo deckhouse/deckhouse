@@ -39,7 +39,7 @@
     expr: d8_user_authn_id_token_ttl_too_long == 1
     for: 5m
     labels:
-      severity_level: "6"
+      severity_level: "4"
       tier: cluster
       d8_module: user-authn
       d8_component: dex
