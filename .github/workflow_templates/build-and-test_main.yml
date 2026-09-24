@@ -59,6 +59,21 @@ jobs:
       - git_info
 {!{ tmpl.Exec "build_fuzz_template" (slice $ctx "main") | strings.Indent 4 }!}
 
+  replay_fuzz:
+    name: Replay fuzz corpus (${{ matrix.image }})
+    needs:
+      - git_info
+      - build_fuzz
+{!{ tmpl.Exec "replay_fuzz_template" (slice $ctx "main") | strings.Indent 4 }!}
+
+  publish_fuzz_report:
+    name: Publish fuzz build report
+    needs:
+      - git_info
+      - build_fuzz
+      - replay_fuzz
+{!{ tmpl.Exec "publish_fuzz_report_template" $ctx | strings.Indent 4 }!}
+
   go_generate:
     name: Go Generate
     needs:

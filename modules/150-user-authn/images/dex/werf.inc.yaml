@@ -76,10 +76,41 @@ shell:
       {{- include "image-build.build" (set $ "BuildCommand" `go build -ldflags "${LDFLAGS}" -tags netgo -o dex ./cmd/dex`) | indent 6 }}
     - chown 64535:64535 dex
     - chmod 0700 dex
+{{- if eq (env "FUZZ_BUILD_ENABLED" "false") "true" }}
 ---
-{{- $_ := set . "FuzzEngine" "go" }}
-{{- $_ := set . "FuzzSrcImage" (printf "%s/%s-dex-artifact" .ModuleName .ImageName) }}
-{{- $_ := set . "FuzzPackages" "./server" }}
-{{- include "fuzz image" . }}
+image: {{ $.ModuleName }}/{{ $.ImageName }}-fuzz
+from: registry.flant.com/deckhouse/ssdlc/ci-images/fuzz-go:34fdc16d905326c2fd7097363059baa398c9a1c0
+fromLatest: true
+final: false
+import:
+  - image: {{ $.ModuleName }}/{{ $.ImageName }}-dex-src-artifact
+    add: /src
+    to: /src
+    before: install
+git:
+  - add: /{{ $.ModulePath }}modules/{{ $.ModulePriority }}-{{ $.ModuleName }}/Taskfile.fuzz.yml
+    to: /src/Taskfile.yml
+    stageDependencies:
+      install:
+        - Taskfile.fuzz.yml
+secrets:
+  - id: GOPROXY
+    value: {{ $.GOPROXY }}
+shell:
+  install:
+    - cd /src
+    - GOPROXY=$(cat /run/secrets/GOPROXY) go mod download
+    - rm -rf test/e2e tests/e2e tests/ginkgo
+    - chmod -R a+rwX /src /fuzz/gomod
+imageSpec:
+  config:
+    workingDir: /src
+    labels:
+      io.deckhouse.fuzz.engine: go
+    env:
+      FUZZ_WORKDIR: /src
+      FUZZ_PACKAGES: "./server"
+      CGO_ENABLED: "0"
+{{- end }}
 ---
 {{- include "vex mitigation" (list $ (printf "%s/%s" $.ModuleName $.ImageName)) }}
