@@ -50,7 +50,7 @@ The module interacts with the following components:
 
 1. **Hive Metastore instance**: Processes data in the metadata store.
 
-1. **S3 (object storage)**: Processes data in the object storage.
+1. **Object storage**: Processes data in the object storage.
 
 1. **Kube-apiserver**:
 
