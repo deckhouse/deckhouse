@@ -1,7 +1,7 @@
 {{- $context := . }}
 {{- $gatewayAPIAvailable := and
       (eq (include "user_authn_gateway_api_enabled" $context) "true")
-      (include "helm_lib_api_version_exists" (list $context "gateway.networking.k8s.io/v1/HTTPRoute")) }}
+      (include "helm_lib_kind_exists" (list $context "HTTPRoute")) }}
 {{- $dexAuthenticatorNames := .Values.userAuthn.internal.dexAuthenticatorNames | default dict -}}
 {{- range $crd := .Values.userAuthn.internal.dexAuthenticatorCRDs }}
   {{- if not .spec.applications }}
