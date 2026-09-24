@@ -2,7 +2,14 @@ diff --git a/pkg/ccm/vminfocache.go b/pkg/ccm/vminfocache.go
 index 74baf61..d4cc2c9 100644
 --- a/pkg/ccm/vminfocache.go
 +++ b/pkg/ccm/vminfocache.go
-@@ -13,6 +13,7 @@ import (
+@@ -7,11 +7,14 @@ import (
+ import (
+ 	"fmt"
+ 	"github.com/vmware/cloud-provider-for-cloud-director/pkg/vcdsdk"
+ 	"k8s.io/klog/v2"
++	"regexp"
++	"strings"
+ 	"sync"
  	"time"
  
  	"github.com/vmware/go-vcloud-director/v2/govcd"
@@ -10,7 +17,7 @@ index 74baf61..d4cc2c9 100644
  	v1 "k8s.io/api/core/v1"
  	v1helper "k8s.io/cloud-provider/node/helpers"
  )
-@@ -90,6 +91,55 @@ func (vmic *VmInfoCache) vmToVMInfo(vm *govcd.VM, captureTime time.Time) (*VmInf
+@@ -90,6 +93,72 @@ func (vmic *VmInfoCache) vmToVMInfo(vm *govcd.VM, captureTime time.Time) (*VmInf
  	return vmInfo, nil
  }
  
@@ -42,7 +49,13 @@ index 74baf61..d4cc2c9 100644
 +			return fmt.Errorf("unable to convert vm struct [%v] to vmInfo: [%v]", vm, err)
 +		}
 +		nameMap[vmInfo.Name] = vmInfo
-+		uuidMap[vmInfo.UUID] = vmInfo
++		vmUUID := normalizeUUID(vmInfo.UUID)
++		if vmUUID == "" {
++			vmUUID = normalizeUUID(vm.HREF)
++		}
++		if vmUUID != "" {
++			uuidMap[vmUUID] = vmInfo
++		}
 +	}
 +
 +	vmic.nameMap = nameMap
@@ -63,10 +76,21 @@ index 74baf61..d4cc2c9 100644
 +	return vmic.vmToVMInfo(vm, captureTime)
 +}
 +
++var uuidPattern = regexp.MustCompile(`([a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12})`)
++
++// normalizeUUID extracts the bare UUID used as a cache key from any VCD ID form.
++func normalizeUUID(id string) string {
++	match := uuidPattern.FindStringSubmatch(strings.ToLower(id))
++	if len(match) > 1 {
++		return match[1]
++	}
++	return ""
++}
++
  func (vmic *VmInfoCache) GetByName(vmName string) (*VmInfo, error) {
  	vmic.rwLock.Lock()
  	defer vmic.rwLock.Unlock()
-@@ -105,36 +155,13 @@ func (vmic *VmInfoCache) GetByName(vmName string) (*VmInfo, error) {
+@@ -105,37 +172,15 @@ func (vmic *VmInfoCache) GetByName(vmName string) (*VmInfo, error) {
  		delete(vmic.nameMap, vmName)
  	}
  
@@ -108,7 +132,9 @@ index 74baf61..d4cc2c9 100644
  }
  
  func (vmic *VmInfoCache) GetByUUID(vmUUID string) (*VmInfo, error) {
-@@ -149,37 +176,14 @@ func (vmic *VmInfoCache) GetByUUID(vmUUID string) (*VmInfo, error) {
++	vmUUID = normalizeUUID(vmUUID)
+ 	vmic.rwLock.Lock()
+@@ -149,37 +193,14 @@ func (vmic *VmInfoCache) GetByUUID(vmUUID string) (*VmInfo, error) {
  		}
  
  		// don't use old values
