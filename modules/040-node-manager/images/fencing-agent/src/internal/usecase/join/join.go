@@ -31,8 +31,6 @@ import (
 	"sync/atomic"
 	"time"
 
-	"golang.org/x/sync/errgroup"
-
 	"github.com/deckhouse/deckhouse/pkg/log"
 
 	"fencing-agent/internal/domain"
@@ -45,14 +43,6 @@ const maxSeeds = 3
 const (
 	notAliveSlots = 2
 	aliveSlots    = 1
-)
-
-const (
-	reasonNotFound        = "not_found"
-	reasonReadFailed      = "read_failed"
-	reasonLeftNodeGroup   = "left_node_group"
-	reasonNoInternalIP    = "no_internal_ip"
-	reasonLocalInternalIP = "local_internal_ip"
 )
 
 const (
@@ -248,34 +238,35 @@ func (j *Joiner) Attempt(ctx context.Context) error {
 		return err
 	}
 
-	notAlive, alive, clones, err := j.candidates()
+	c, err := j.candidates()
 	if err != nil {
 		return err
 	}
 
-	for _, name := range clones {
+	for _, name := range c.clones {
 		j.logOnce(slog.LevelWarn, "clone/"+name, "node shares the local InternalIP, not counted as a peer", "member", name)
 	}
 
+	if len(c.noAddress) > 0 {
+		j.logOnce(slog.LevelWarn, "no_address", "join candidates dropped, the node cache holds no InternalIP for them",
+			"members", strings.Join(c.noAddress, ", "))
+	}
+
+	// Peers exist but none of them has a usable address; declaring "alone" would
+	// split the group into islands.
+	if len(c.notAlive)+len(c.alive) == 0 && len(c.noAddress) > 0 {
+		return fmt.Errorf("none of the %d join candidates has a usable address: %s",
+			len(c.noAddress), strings.Join(c.noAddress, ", "))
+	}
+
 	// First agent of the group: listeners are up, later peers seed from us.
-	if len(notAlive)+len(alive) == 0 {
+	if len(c.notAlive)+len(c.alive) == 0 {
 		j.logOnce(slog.LevelInfo, "alone", "no peers in node group, starting alone", "node_group", j.params.NodeGroup)
 
 		return nil
 	}
 
-	picked := pick(notAlive, alive)
-	seeds := j.readCandidates(ctx, picked)
-
-	if ctx.Err() != nil {
-		return ctx.Err()
-	}
-
-	// Peers exist but none of the picked ones gave a usable address; declaring
-	// "alone" would split the group into islands.
-	if len(seeds) == 0 {
-		return fmt.Errorf("none of the %d join candidates has a usable address: %s", len(picked), strings.Join(picked, ", "))
-	}
+	seeds := j.seeds(pick(c.notAlive, c.alive))
 
 	joined, err := j.join(ctx, seeds)
 	if err != nil {
@@ -330,12 +321,14 @@ func (j *Joiner) join(ctx context.Context, seeds []string) (int, error) {
 	}
 }
 
-// checkSelf performs a consistent GET and deliberately does not use the
-// informer cache
-
-// Only an unambiguous answer becomes ErrNotMember, because a node that has
-// been deleted, recreated or moved out of its group must not re-add itself
-// to gossip on its own;
+// checkSelf performs a consistent GET and deliberately does not use the informer
+// cache: it is the fail-closed gate of the attempt and its only proof that the
+// API answers. The candidates are the opposite trade, their addresses come from
+// the cache, so one attempt costs one request instead of four.
+//
+// Only an unambiguous answer becomes ErrNotMember, because a node that has been
+// deleted, recreated or moved out of its group must not re-add itself to gossip
+// on its own; a transport error is transient and never a verdict.
 func (j *Joiner) checkSelf(ctx context.Context) error {
 	readCtx, cancel := context.WithTimeout(ctx, j.params.APITimeout)
 	defer cancel()
@@ -358,13 +351,24 @@ func (j *Joiner) checkSelf(ctx context.Context) error {
 	return nil
 }
 
-func (j *Joiner) candidates() ([]string, []string, []string, error) {
+// classes splits the cached membership into what can be seeded and what cannot.
+// A peer without an address is kept apart from the seedable ones, but it is still
+// a peer: a group made of them alone is not a group of one.
+type classes struct {
+	notAlive  []domain.Peer
+	alive     []domain.Peer
+	clones    []string
+	noAddress []string
+}
+
+func (j *Joiner) candidates() (classes, error) {
 	expected, _ := j.expected.Expected()
 	view := domain.NewView(expected, j.cluster.Members())
 
-	notAlive := make([]string, 0, len(expected))
-	alive := make([]string, 0, len(expected))
-	var clones []string
+	c := classes{
+		notAlive: make([]domain.Peer, 0, len(expected)),
+		alive:    make([]domain.Peer, 0, len(expected)),
+	}
 	self := false
 
 	for _, peer := range expected {
@@ -377,26 +381,32 @@ func (j *Joiner) candidates() ([]string, []string, []string, error) {
 		// Stale Node object of this machine under an old name, not a peer: it must
 		// not take a seed slot away from a reachable one.
 		if peer.IP != "" && peer.IP == j.params.NodeIP {
-			clones = append(clones, peer.Name)
+			c.clones = append(c.clones, peer.Name)
+
+			continue
+		}
+
+		if peer.IP == "" {
+			c.noAddress = append(c.noAddress, peer.Name)
 
 			continue
 		}
 
 		if view.IsAlive(peer.Name) {
-			alive = append(alive, peer.Name)
+			c.alive = append(c.alive, peer)
 		} else {
-			notAlive = append(notAlive, peer.Name)
+			c.notAlive = append(c.notAlive, peer)
 		}
 	}
 
 	if !self {
-		return nil, nil, nil, errors.New("the node cache does not list this node yet")
+		return classes{}, errors.New("the node cache does not list this node yet")
 	}
 
-	return notAlive, alive, clones, nil
+	return c, nil
 }
 
-func pick(notAlive, alive []string) []string {
+func pick(notAlive, alive []domain.Peer) []domain.Peer {
 	notAlive, alive = shuffled(notAlive), shuffled(alive)
 
 	notAliveN, aliveN := min(maxSeeds, len(notAlive)), min(maxSeeds, len(alive))
@@ -404,92 +414,27 @@ func pick(notAlive, alive []string) []string {
 		notAliveN, aliveN = min(notAliveSlots, len(notAlive)), min(aliveSlots, len(alive))
 	}
 
-	picked := make([]string, 0, notAliveN+aliveN)
+	picked := make([]domain.Peer, 0, notAliveN+aliveN)
 	picked = append(picked, notAlive[:notAliveN]...)
 
 	return append(picked, alive[:aliveN]...)
 }
 
-func shuffled(names []string) []string {
-	names = slices.Clone(names)
-	rand.Shuffle(len(names), func(a, b int) { names[a], names[b] = names[b], names[a] })
+func shuffled(peers []domain.Peer) []domain.Peer {
+	peers = slices.Clone(peers)
+	rand.Shuffle(len(peers), func(a, b int) { peers[a], peers[b] = peers[b], peers[a] })
 
-	return names
+	return peers
 }
 
-type candidate struct {
-	seed   string
-	reason string
-	err    error
-}
+func (j *Joiner) seeds(picked []domain.Peer) []string {
+	seeds := make([]string, 0, len(picked))
 
-func (j *Joiner) readCandidates(ctx context.Context, names []string) []string {
-	readCtx, cancel := context.WithTimeout(ctx, j.params.APITimeout)
-	defer cancel()
-
-	results := make([]candidate, len(names))
-
-	var g errgroup.Group
-
-	for i, name := range names {
-		g.Go(func() error {
-			results[i] = j.readCandidate(readCtx, name)
-
-			return results[i].err
-		})
-	}
-
-	_ = g.Wait()
-
-	if ctx.Err() != nil {
-		return nil
-	}
-
-	seeds := make([]string, 0, len(names))
-
-	for i, res := range results {
-		if res.reason != "" {
-			j.logDropped(names[i], res)
-
-			continue
-		}
-
-		seeds = append(seeds, res.seed)
+	for _, peer := range picked {
+		seeds = append(seeds, net.JoinHostPort(peer.IP, strconv.Itoa(j.params.MemberlistPort)))
 	}
 
 	return seeds
-}
-
-func (j *Joiner) readCandidate(ctx context.Context, name string) candidate {
-	rec, err := j.nodes.GetNode(ctx, name)
-
-	switch {
-	case errors.Is(err, domain.ErrNodeNotFound):
-		return candidate{reason: reasonNotFound}
-	case err != nil:
-		return candidate{reason: reasonReadFailed, err: err}
-	case !domain.InNodeGroup(rec.NodeGroup, j.params.NodeGroup):
-		return candidate{reason: reasonLeftNodeGroup}
-	case rec.IP == "":
-		return candidate{reason: reasonNoInternalIP}
-	case rec.IP == j.params.NodeIP:
-		return candidate{reason: reasonLocalInternalIP}
-	}
-
-	return candidate{seed: net.JoinHostPort(rec.IP, strconv.Itoa(j.params.MemberlistPort))}
-}
-
-func (j *Joiner) logDropped(name string, res candidate) {
-	key := "dropped/" + name + "/" + res.reason
-
-	switch res.reason {
-	case reasonNotFound, reasonLeftNodeGroup:
-		j.logOnce(slog.LevelInfo, key, "join candidate dropped", "member", name, "reason", res.reason)
-	case reasonReadFailed:
-		j.logOnce(slog.LevelWarn, key, "join candidate dropped", "member", name, "reason", res.reason, "error", res.err)
-	default:
-		j.logOnce(slog.LevelWarn, key, "join candidate dropped", "member", name, "reason", res.reason)
-	}
 }
 
 // delay is full jitter in [RetryInterval, backoff]. Narrow jitter would keep the
