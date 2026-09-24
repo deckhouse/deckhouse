@@ -2,7 +2,7 @@
   "@context": "https://openvex.dev/ns/v0.2.0",
   "@id": "https://openvex.dev/docs/public/vex-cert-manager-webhook-go-2026-5932",
   "author": "Deckhouse <contact@deckhouse.io>",
-  "version": 1,
+  "version": 2,
   "statements": [
     {
       "vulnerability": {
@@ -22,8 +22,46 @@
       "justification": "vulnerable_code_not_in_execute_path",
       "impact_statement": "GO-2026-5932 affects unmaintained golang.org/x/crypto/openpgp with no fixed version. This binary only uses other x/crypto subpackages; openpgp is not imported or executed.",
       "timestamp": "2026-08-21T08:00:00Z"
+    },
+    {
+      "vulnerability": {
+        "@id": "https://nvd.nist.gov/vuln/detail/CVE-2026-56855",
+        "description": "golang.org/x/crypto/ssh: Denial of Service via crafted messages after a channel is established.",
+        "name": "CVE-2026-56855"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/golang.org/x/crypto"
+        },
+        {
+          "@id": "pkg:golang/golang.org/x/crypto@v0.55.0"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_present",
+      "impact_statement": "golang.org/x/crypto/ssh is not imported by this binary, so the vulnerable SSH connection handling is not compiled in.",
+      "timestamp": "2026-09-24T10:00:00Z"
+    },
+    {
+      "vulnerability": {
+        "@id": "https://nvd.nist.gov/vuln/detail/CVE-2026-78662",
+        "description": "golang.org/x/crypto/ssh: Denial of Service via channel request flooding.",
+        "name": "CVE-2026-78662"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/golang.org/x/crypto"
+        },
+        {
+          "@id": "pkg:golang/golang.org/x/crypto@v0.55.0"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_present",
+      "impact_statement": "golang.org/x/crypto/ssh is not imported by this binary, so the vulnerable SSH connection handling is not compiled in.",
+      "timestamp": "2026-09-24T10:00:00Z"
     }
   ],
   "timestamp": "2026-08-21T08:00:00Z",
-  "last_updated": "2026-08-21T08:00:00Z"
+  "last_updated": "2026-09-24T10:00:00Z"
 }
