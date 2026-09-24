@@ -27,12 +27,14 @@ index 45490702a0..d50ef01950 100644
  
  	metricsPort            = 9608
  	defaultMetricsBindAddr = "0.0.0.0"
-@@ -121,6 +122,9 @@ func buildCommonEnvVars(ironic *metal3api.Ironic) []corev1.EnvVar {
+@@ -121,6 +122,11 @@ func buildCommonEnvVars(ironic *metal3api.Ironic) []corev1.EnvVar {
  			},
  		}...)
  
 +		// dnsmasq uses this URL when chaining from iPXE. Its image default is HTTP :6180.
 +		result = appendStringEnv(result, "IRONIC_HTTP_URL", "https://$(PROVISIONING_IP):"+strconv.Itoa(ipxeTLSPort))
++		// dnsmasq copies the CA-enabled firmware from this shared directory into TFTP.
++		result = appendStringEnv(result, "IPXE_CUSTOM_FIRMWARE_DIR", sharedDir+"/custom_ipxe_firmware")
 +
  		if !ironic.Spec.TLS.DisableVirtualMediaTLS {
  			result = append(result,
@@ -95,7 +97,7 @@ diff --git a/pkg/ironic/utils_test.go b/pkg/ironic/utils_test.go
 index 27653c472b..1f828a1948 100644
 --- a/pkg/ironic/utils_test.go
 +++ b/pkg/ironic/utils_test.go
-@@ -416,3 +416,37 @@ func TestApplyOverridesToPod(t *testing.T) {
+@@ -416,3 +416,38 @@ func TestApplyOverridesToPod(t *testing.T) {
  		})
  	}
  }
@@ -132,4 +134,5 @@ index 27653c472b..1f828a1948 100644
 +	}
 +
 +	assert.Equal(t, "https://$(PROVISIONING_IP):8084", env["IRONIC_HTTP_URL"])
++	assert.Equal(t, "/shared/custom_ipxe_firmware", env["IPXE_CUSTOM_FIRMWARE_DIR"])
 +}
