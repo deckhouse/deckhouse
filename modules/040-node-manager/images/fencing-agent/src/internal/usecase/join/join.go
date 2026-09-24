@@ -253,12 +253,12 @@ func (j *Joiner) Attempt(ctx context.Context) error {
 		return err
 	}
 
-	// First agent of the group: listeners are up, later peers seed from us.
-	if len(notAlive)+len(alive) == len(clones) {
-		for _, name := range clones {
-			j.logOnce(slog.LevelWarn, "clone/"+name, "node shares the local InternalIP, not counted as a peer", "member", name)
-		}
+	for _, name := range clones {
+		j.logOnce(slog.LevelWarn, "clone/"+name, "node shares the local InternalIP, not counted as a peer", "member", name)
+	}
 
+	// First agent of the group: listeners are up, later peers seed from us.
+	if len(notAlive)+len(alive) == 0 {
 		j.logOnce(slog.LevelInfo, "alone", "no peers in node group, starting alone", "node_group", j.params.NodeGroup)
 
 		return nil
@@ -374,15 +374,18 @@ func (j *Joiner) candidates() ([]string, []string, []string, error) {
 			continue
 		}
 
+		// Stale Node object of this machine under an old name, not a peer: it must
+		// not take a seed slot away from a reachable one.
+		if peer.IP != "" && peer.IP == j.params.NodeIP {
+			clones = append(clones, peer.Name)
+
+			continue
+		}
+
 		if view.IsAlive(peer.Name) {
 			alive = append(alive, peer.Name)
 		} else {
 			notAlive = append(notAlive, peer.Name)
-		}
-
-		// Stale Node object of this machine under an old name, not a peer.
-		if peer.IP != "" && peer.IP == j.params.NodeIP {
-			clones = append(clones, peer.Name)
 		}
 	}
 
