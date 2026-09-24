@@ -40,6 +40,11 @@ requirements:
   # The check is evaluated by the version already INSTALLED — it ships in 1.77, in
   # modules/038-registry/requirements/check.go — and this line is what finally asks it.
   "registryImplementation": "V2" # modules/038-registry/requirements/check.go
+  # This release rejects user-authn idTokenTTL of 6h or more in the ModuleConfig schema, and
+  # addon-operator does not start on a stored ModuleConfig that violates its schema. The check ships
+  # in 1.77 (modules/150-user-authn/requirements/check.go) and keeps a cluster with such a value on
+  # 1.77, where the value is accepted and raises D8UserAuthnIDTokenTTLTooLong, until it is lowered.
+  "userAuthnIDTokenTTLBelow": "6h" # modules/150-user-authn/requirements/check.go
   # "checkContainerdV1NodesPresent": "false" # modules/040-node-manager/requirements/check.go; injected with 'true' only for CSE via .werf/werf-release-channel.yaml (CSE drops containerd v1)
 
 # map of disruptions, associated with a specific release. You have to register check functions before specified release
