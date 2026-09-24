@@ -74,7 +74,11 @@ func (r *Reconciler) MaxConcurrentReconciles() int {
 func (r *Reconciler) Setup(_ context.Context, mgr ctrl.Manager) error {
 	r.sources = &sourceReader{Reader: mgr.GetAPIReader()}
 	r.derived = &derived_status.Service{Client: r.Client}
-	return nil
+	// The OS image root hash is resolved here rather than while rendering: the
+	// cluster publishes one digest at a time, so it is work per release, and doing
+	// it in the render would put a registry round trip — and a registry outage —
+	// in front of every node's configuration.
+	return mgr.Add(&rootHashWatcher{sources: r.sources, resolver: r.sources.rootHashes()})
 }
 
 // ForPredicates drops Node updates that cannot change the render: it reads only

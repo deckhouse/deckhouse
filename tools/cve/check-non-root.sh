@@ -44,6 +44,9 @@ declare -A skip_components_images=(
   ["candi"]="skip"
   ["debugContainer"]="skip"
   ["engine"]="skip"
+  ["engineNocloudQcow2"]="skip"
+  ["engineMetalIso"]="skip"
+  ["kernelV6.12.85Lvc19SignedDevel"]="skip"
 )
 
 # Optional allow-list of "<module>.<image>" keys to scan. Passed via the
