@@ -32,6 +32,12 @@ ExecStart=/opt/deckhouse/bin/containerd --config /run/etc/containerd/config.toml
 # kubelet after containerd, so no sandbox asks for pause before it is there.
 ExecStartPost=-/opt/deckhouse/bin/ctr -n k8s.io images import /opt/deckhouse/images/pause.tar
 ExecStartPost=-/opt/deckhouse/bin/ctr -n k8s.io images label deckhouse.local/images:pause io.cri-containerd.pinned=pinned
+# And the registry agent, which has no bashible counterpart: on this kind of node it is
+# a static pod, and the runtime it configures cannot pull the image it would come from.
+# Pinned for the same reason — image GC reclaiming it would leave the node unable to
+# fetch it back.
+ExecStartPost=-/opt/deckhouse/bin/ctr -n k8s.io images import /opt/deckhouse/images/registry-agent.tar
+ExecStartPost=-/opt/deckhouse/bin/ctr -n k8s.io images label deckhouse.local/images:registry-agent io.cri-containerd.pinned=pinned
 
 Type=notify
 Delegate=yes
