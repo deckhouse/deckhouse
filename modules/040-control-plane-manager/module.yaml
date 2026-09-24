@@ -5,6 +5,12 @@ subsystems:
   - kubernetes
 namespace: kube-system
 stage: General Availability
+disable:
+  confirmation: true
+  message: "Disabling this module will leave the cluster's control plane unmanaged and may break the cluster."
+  messages:
+    en: "Disabling this module will leave the cluster's control plane unmanaged and may break the cluster."
+    ru: "Отключение модуля оставит control plane кластера без управления и может привести к неработоспособности кластера."
 descriptions:
   en: Manages the cluster's control plane components including certificates, configurations, and versions.
   ru: Управляет компонентами control plane кластера, включая сертификаты, конфигурации и версии.
