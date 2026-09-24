@@ -30,7 +30,7 @@ func (m *MetaConfig) clusterDomainParam() networkParam {
 	return networkParam{
 		name: "clusterDomain",
 		mc:   m.moduleConfigNetwork().ClusterDomain,
-		cc:   m.clusterConfigString("clusterDomain"),
+		cc:   m.clusterConfigNetwork().ClusterDomain,
 	}
 }
 
@@ -55,15 +55,4 @@ func (m *MetaConfig) RequireClusterDomain() error {
 		"clusterDomain is not set: add spec.settings.network.clusterDomain to ModuleConfig " +
 			"control-plane-manager (the deprecated ClusterConfiguration.clusterDomain is still " +
 			"accepted, but raises a migration alert)")
-}
-
-// Set in both documents at once is unresolvable at bootstrap, even though ClusterDomainResolved
-// would silently pick the ModuleConfig one.
-func (m *MetaConfig) RequireClusterDomainSingleSource() error {
-	if p := m.clusterDomainParam(); p.mc != "" && p.cc != "" {
-		return fmt.Errorf(
-			"clusterDomain must be set in only one of ModuleConfig control-plane-manager " +
-				"(spec.settings.network.clusterDomain) or ClusterConfiguration (deprecated), not both")
-	}
-	return nil
 }

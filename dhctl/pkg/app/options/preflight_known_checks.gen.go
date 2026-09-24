@@ -10,7 +10,6 @@ var generatedPreflightChecks = []string{
 	"cloud-master-system-requirements",
 	"cloud-node-network-cidr-intersection",
 	"cloud-ssh-key-matches-public-key",
-	"cluster-domain-single-source",
 	"deckhouse-image-available",
 	"deckhouse-user",
 	"dhctl-edition",

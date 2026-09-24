@@ -137,33 +137,9 @@ func (r *Reconciler) SetupWatches(w register.Watcher) {
 			return e.Object.GetName() == network.ModuleConfigName
 		},
 		UpdateFunc: func(e event.UpdateEvent) bool {
-			return e.ObjectNew.GetName() == network.ModuleConfigName && moduleConfigNetworkGroupChanged(e.ObjectOld, e.ObjectNew)
+			return e.ObjectNew.GetName() == network.ModuleConfigName && network.NetworkGroupChanged(e.ObjectOld, e.ObjectNew)
 		},
 	}))
-}
-
-// Reports whether spec.settings.network differs between the two revisions. A "cannot tell" answers
-// true rather than silently dropping the event.
-func moduleConfigNetworkGroupChanged(oldObj, newObj client.Object) bool {
-	oldU, ok := oldObj.(*unstructured.Unstructured)
-	if !ok {
-		return true
-	}
-	newU, ok := newObj.(*unstructured.Unstructured)
-	if !ok {
-		return true
-	}
-
-	path := []string{"spec", "settings", "network"}
-	oldValue, _, err := unstructured.NestedFieldNoCopy(oldU.UnstructuredContent(), path...)
-	if err != nil {
-		return true
-	}
-	newValue, _, err := unstructured.NestedFieldNoCopy(newU.UnstructuredContent(), path...)
-	if err != nil {
-		return true
-	}
-	return !apiequality.Semantic.DeepEqual(oldValue, newValue)
 }
 
 func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {

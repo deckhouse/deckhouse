@@ -24,6 +24,7 @@ import (
 	"context"
 	"fmt"
 
+	apiequality "k8s.io/apimachinery/pkg/api/equality"
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/meta"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
@@ -79,4 +80,28 @@ func FromModuleConfig(ctx context.Context, reader client.Reader) (Settings, erro
 	out.PodSubnetNodeCIDRPrefix, _ = group["podSubnetNodeCIDRPrefix"].(string)
 	out.ClusterDomain, _ = group["clusterDomain"].(string)
 	return out, nil
+}
+
+// NetworkGroupChanged reports whether spec.settings.network differs between two ModuleConfig
+// revisions. A "cannot tell" answers true rather than silently dropping the event.
+func NetworkGroupChanged(oldObj, newObj client.Object) bool {
+	oldU, ok := oldObj.(*unstructured.Unstructured)
+	if !ok {
+		return true
+	}
+	newU, ok := newObj.(*unstructured.Unstructured)
+	if !ok {
+		return true
+	}
+
+	path := []string{"spec", "settings", "network"}
+	oldValue, _, err := unstructured.NestedFieldNoCopy(oldU.UnstructuredContent(), path...)
+	if err != nil {
+		return true
+	}
+	newValue, _, err := unstructured.NestedFieldNoCopy(newU.UnstructuredContent(), path...)
+	if err != nil {
+		return true
+	}
+	return !apiequality.Semantic.DeepEqual(oldValue, newValue)
 }

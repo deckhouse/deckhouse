@@ -60,6 +60,7 @@ func (m *MetaConfig) networkParams() []networkParam {
 		{"podSubnetCIDR", mc.PodSubnetCIDR, cc.PodSubnetCIDR},
 		{"serviceSubnetCIDR", mc.ServiceSubnetCIDR, cc.ServiceSubnetCIDR},
 		{"podSubnetNodeCIDRPrefix", mc.PodSubnetNodeCIDRPrefix, cc.PodSubnetNodeCIDRPrefix},
+		{"clusterDomain", mc.ClusterDomain, cc.ClusterDomain},
 	}
 }
 
@@ -107,6 +108,7 @@ func (m *MetaConfig) clusterConfigNetwork() NetworkSettings {
 		PodSubnetCIDR:           m.clusterConfigString("podSubnetCIDR"),
 		ServiceSubnetCIDR:       m.clusterConfigString("serviceSubnetCIDR"),
 		PodSubnetNodeCIDRPrefix: m.clusterConfigString("podSubnetNodeCIDRPrefix"),
+		ClusterDomain:           m.clusterConfigString("clusterDomain"),
 	}
 }
 
