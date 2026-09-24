@@ -76,6 +76,9 @@ const (
 	// eventKeyExpired is emitted on EffectiveLicense when the controller deletes
 	// a key whose every record ran out past its grace period.
 	eventKeyExpired = "KeyExpired"
+	// eventKeyCovered is emitted on EffectiveLicense when the controller deletes
+	// a key whose every record another installed key carries verbatim.
+	eventKeyCovered = "KeyCovered"
 )
 
 // objectLabels mark the objects the controller owns, the way every other
@@ -294,25 +297,39 @@ func (r *reconciler) registrationRequest(
 
 // deleteRetiredKeys removes the keys that contribute nothing now and nothing
 // later. It is the one place the controller deletes an object the customer
-// wrote, and it is deliberately narrow. Two kinds of key qualify: a key whose
+// wrote, and it is deliberately narrow. Three kinds of key qualify: a key whose
 // every record was taken over by an accepted successor already in force
-// (specification 8.4), and a key whose every record ran out past its grace
-// period, except the one the compliance state still reads. A rejected key and a
-// key still in grace stay.
+// (specification 8.4), a key whose every record ran out past its grace period,
+// except the one the compliance state still reads, and a key whose every record
+// another installed key carries verbatim. A rejected key and a key still in
+// grace stay.
 func (r *reconciler) deleteRetiredKeys(
 	ctx context.Context,
 	effective *v1alpha1.EffectiveLicense,
 	items []v1alpha1.ClusterLicense,
 	res licensing.Result,
 ) error {
+	jtis := make(map[string]string, len(items))
+	for i := range items {
+		jtis[items[i].Name] = items[i].Status.PackageJti
+	}
 	for i := range items {
 		item := &items[i]
 		expiredAt, expired := res.Expired[item.Name]
-		if !res.Superseded[item.Name] && !expired {
+		coveredBy, covered := res.Covered[item.Name]
+		if !res.Superseded[item.Name] && !expired && !covered {
 			continue
 		}
 		if err := r.Delete(ctx, item); err != nil && !apierrors.IsNotFound(err) {
 			return fmt.Errorf("delete retired cluster license %s: %w", item.Name, err)
+		}
+		if covered {
+			r.logger.Info("covered license key deleted",
+				slog.String("license", item.Name), slog.String("covered_by", coveredBy))
+			r.recorder.Eventf(effective, corev1.EventTypeNormal, eventKeyCovered,
+				"License key %s (jti %s) is covered by key %s (jti %s), which carries every one of its records, and has been deleted",
+				item.Name, item.Status.PackageJti, coveredBy, jtis[coveredBy])
+			continue
 		}
 		if expired {
 			until := expiredAt.UTC().Format(time.RFC3339)
@@ -371,8 +388,11 @@ func (r *reconciler) verifyKeys(ctx context.Context, vc licensing.VerifyContext)
 			failures[i] = err
 			continue
 		}
+		// An iat that does not parse only loses the tie between two keys that
+		// carry the same records; the jti breaks it instead.
+		issuedAt, _ := time.Parse(time.RFC3339, pkg.IAT)
 		keys = append(keys, licensing.KeyRecords{
-			Key: item.Name, JTI: pkg.JTI, CustomerName: pkg.CustomerName, Records: records,
+			Key: item.Name, JTI: pkg.JTI, CustomerName: pkg.CustomerName, IssuedAt: issuedAt, Records: records,
 		})
 	}
 

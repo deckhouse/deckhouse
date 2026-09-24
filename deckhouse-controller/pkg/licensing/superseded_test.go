@@ -19,6 +19,7 @@ package licensing
 import (
 	"reflect"
 	"testing"
+	"time"
 )
 
 const (
@@ -414,5 +415,212 @@ func TestSupersededWinsOverExpired(t *testing.T) {
 	}))
 	if !res.Superseded["license-1"] || len(res.Expired) != 0 {
 		t.Fatalf("superseded = %v, expired = %v", res.Superseded, res.Expired)
+	}
+}
+
+// Which keys another key carries verbatim. The license server copies every
+// record of the previous keys that is still in force or yet to come into the
+// new key, so the old key becomes redundant.
+func TestCovered(t *testing.T) {
+	limits := map[string]*int64{MetricVCPU: i64(100)}
+	a := wl(recordA, "2026-01-01T00:00:00Z", "2026-07-01T00:00:00Z", limits)
+	b := wl(recordB, "2026-01-01T00:00:00Z", "2027-01-01T00:00:00Z", limits)
+	c := wl(recordC, "2026-07-01T00:00:00Z", "2027-07-01T00:00:00Z", limits)
+
+	longer := a
+	longer.ExpireAt = tsp("2026-08-01T00:00:00Z")
+	bigger := a
+	bigger.Platform = &Platform{Edition: "Core", ResourceLimits: map[string]*int64{MetricVCPU: i64(200)}}
+	// The same instants written in another zone are the same record.
+	shifted := a
+	shifted.StartAt = a.StartAt.In(time.FixedZone("MSK", 3*3600))
+	malformed := rejectedRec(recordA, ReasonSchemaViolation)
+
+	key := func(name, jti, iat string, records ...RecordStatus) KeyRecords {
+		k := KeyRecords{Key: name, JTI: jti, Records: records}
+		if iat != "" {
+			k.IssuedAt = ts(iat)
+		}
+		return k
+	}
+	const (
+		older = "2026-01-01T00:00:00Z"
+		newer = "2026-02-01T00:00:00Z"
+	)
+
+	cases := []struct {
+		name string
+		keys []KeyRecords
+		want map[string]string
+	}{
+		{"the new key carries the old records and one more", []KeyRecords{
+			key("license-a", keyOldJTI, older, a),
+			key("license-b", keyNewJTI, newer, a, b),
+		}, map[string]string{"license-a": "license-b"}},
+		{"a strict superset wins whatever the iat", []KeyRecords{
+			key("license-a", keyOldJTI, newer, a),
+			key("license-b", keyNewJTI, older, a, b),
+		}, map[string]string{"license-a": "license-b"}},
+		{"identical record sets: the later iat stays", []KeyRecords{
+			key("license-a", keyNewJTI, newer, a, b),
+			key("license-b", keyOldJTI, older, b, a),
+		}, map[string]string{"license-b": "license-a"}},
+		{"identical record sets and iat: the larger jti stays", []KeyRecords{
+			key("license-a", keyNewJTI, older, a),
+			key("license-b", keyOldJTI, older, a),
+		}, map[string]string{"license-b": "license-a"}},
+		{"a chain is covered by its top", []KeyRecords{
+			key("license-a", keyOldJTI, older, a),
+			key("license-b", keyNewJTI, newer, a, b),
+			key("license-c", testPackageJTI, "2026-03-01T00:00:00Z", a, b, c),
+		}, map[string]string{"license-a": "license-c", "license-b": "license-c"}},
+		{"the same instant in another zone is the same record", []KeyRecords{
+			key("license-a", keyOldJTI, older, a),
+			key("license-b", keyNewJTI, newer, shifted, b),
+		}, map[string]string{"license-a": "license-b"}},
+		{"same id with another expire_at is not a copy", []KeyRecords{
+			key("license-a", keyOldJTI, older, a),
+			key("license-b", keyNewJTI, newer, longer, b),
+		}, map[string]string{}},
+		{"same id with other limits is not a copy", []KeyRecords{
+			key("license-a", keyOldJTI, older, a),
+			key("license-b", keyNewJTI, newer, bigger, b),
+		}, map[string]string{}},
+		{"partial overlap covers nothing", []KeyRecords{
+			key("license-a", keyOldJTI, older, a, b),
+			key("license-b", keyNewJTI, newer, a, c),
+		}, map[string]string{}},
+		{"a malformed record is never covered", []KeyRecords{
+			key("license-a", keyOldJTI, older, malformed),
+			key("license-b", keyNewJTI, newer, malformed, b),
+		}, map[string]string{}},
+		{"unrelated keys", []KeyRecords{
+			key("license-a", keyOldJTI, older, a),
+			key("license-b", keyNewJTI, newer, b),
+		}, map[string]string{}},
+		{"a single key", []KeyRecords{key("license-a", keyOldJTI, older, a)}, map[string]string{}},
+		{"a key without records", []KeyRecords{
+			key("license-a", keyOldJTI, older),
+			key("license-b", keyNewJTI, newer, a),
+		}, map[string]string{}},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			if got := Covered(tc.keys); !reflect.DeepEqual(got, tc.want) {
+				t.Fatalf("covered = %v, want %v", got, tc.want)
+			}
+		})
+	}
+}
+
+// coveredPair is a reissue under the new issuing rule: the new key carries the
+// record of the old one verbatim plus a record of its own. The old key sorts
+// first, so without coverage its copy would be the accepted one and the new
+// key's copy the duplicate.
+func coveredPair(oldExpire string) []KeyRecords {
+	limits := map[string]*int64{MetricServers: i64(12), MetricVCPU: i64(200), MetricCores: i64(0)}
+	carried := wl(recordA, "2026-01-01T00:00:00Z", oldExpire, limits)
+	return []KeyRecords{
+		{Key: "license-a", JTI: keyOldJTI, IssuedAt: ts("2026-01-01T00:00:00Z"), Records: []RecordStatus{carried}},
+		{Key: "license-b", JTI: keyNewJTI, IssuedAt: ts("2026-03-01T00:00:00Z"), Records: []RecordStatus{
+			carried,
+			wl(recordB, "2026-03-01T00:00:00Z", "2026-04-01T00:00:00Z", limits),
+		}},
+	}
+}
+
+// A covered key is listed for deletion, holds only duplicates, leaves the
+// registration request in the same pass, and deleting it changes nothing.
+func TestDeletingACoveredKeyChangesNothing(t *testing.T) {
+	now := ts("2026-03-15T00:00:00Z")
+	both := coveredPair("2026-07-01T00:00:00Z")
+	nodes := []Node{nd("a", 32), nd("b", 16)}
+
+	before := Compute(input(now, both, nodes...))
+	if !reflect.DeepEqual(before.Covered, map[string]string{"license-a": "license-b"}) {
+		t.Fatalf("covered = %v", before.Covered)
+	}
+	if len(before.Superseded) != 0 || len(before.Expired) != 0 {
+		t.Fatalf("superseded = %v, expired = %v", before.Superseded, before.Expired)
+	}
+	// Records come in key order: license-a's copy first, then license-b's two.
+	if r := before.Records[0]; r.Accepted || r.Reason != ReasonDuplicate {
+		t.Fatalf("covered copy = %+v, want a duplicate", r)
+	}
+	if r := before.Records[1]; !r.Accepted {
+		t.Fatalf("covering copy = %+v, want accepted", r)
+	}
+	if !reflect.DeepEqual(before.ActiveKeys, []string{keyNewJTI}) {
+		t.Fatalf("activeKeys = %v, want only the covering key", before.ActiveKeys)
+	}
+
+	after := Compute(input(now, both[1:], nodes...))
+	if !reflect.DeepEqual(before.Limits, after.Limits) || !reflect.DeepEqual(before.Allocation, after.Allocation) {
+		t.Fatalf("policy changed: %+v -> %+v", before.Limits, after.Limits)
+	}
+	if before.State != after.State || before.Reason != after.Reason || !reflect.DeepEqual(before.Key, after.Key) {
+		t.Fatalf("state changed: %q/%q/%+v -> %q/%q/%+v",
+			before.State, before.Reason, before.Key, after.State, after.Reason, after.Key)
+	}
+	if !reflect.DeepEqual(before.AcceptedRecords, after.AcceptedRecords) ||
+		!reflect.DeepEqual(before.ActiveKeys, after.ActiveKeys) {
+		t.Fatal("deleting the covered key changed the registration request")
+	}
+	if !reflect.DeepEqual(before.Records[1:], after.Records) {
+		t.Fatalf("records of the covering key changed:\n%+v\n%+v", before.Records[1:], after.Records)
+	}
+}
+
+// Same id, different content: nothing is covered, both keys stay and the second
+// copy is a Duplicate, as before.
+func TestSameIDOtherContentIsNotCovered(t *testing.T) {
+	both := coveredPair("2026-07-01T00:00:00Z")
+	changed := both[1].Records[0]
+	changed.ExpireAt = tsp("2026-08-01T00:00:00Z")
+	both[1].Records = []RecordStatus{changed, both[1].Records[1]}
+
+	res := Compute(input(ts("2026-03-15T00:00:00Z"), both))
+	if len(res.Covered) != 0 {
+		t.Fatalf("covered = %v, want none", res.Covered)
+	}
+	if r := res.Records[1]; r.ID != recordA || r.Reason != ReasonDuplicate {
+		t.Fatalf("second copy = %+v, want a duplicate", r)
+	}
+	if !reflect.DeepEqual(res.ActiveKeys, []string{keyOldJTI, keyNewJTI}) {
+		t.Fatalf("activeKeys = %v, want both", res.ActiveKeys)
+	}
+}
+
+// Coverage does not get in the way of expiry. The covered key goes, and once
+// everything ran out the covering key is an ordinary expired key: kept while it
+// is the last evidence of the licence, deleted next to a key in force.
+func TestCoveredKeyThenExpiry(t *testing.T) {
+	now := ts("2026-06-01T00:00:00Z")
+	both := coveredPair("2026-03-10T00:00:00Z")
+
+	res := Compute(input(now, both))
+	if !reflect.DeepEqual(res.Covered, map[string]string{"license-a": "license-b"}) {
+		t.Fatalf("covered = %v", res.Covered)
+	}
+	if len(res.Expired) != 0 || res.State != StateViolation || res.Reason != ReasonExpired {
+		t.Fatalf("expired = %v, state = %q/%q: the last evidence must stay", res.Expired, res.State, res.Reason)
+	}
+	if alone := Compute(input(now, both[1:])); len(alone.Expired) != 0 {
+		t.Fatalf("expired = %v, the last key must stay", alone.Expired)
+	}
+
+	fresh := KeyRecords{Key: "license-c", JTI: testPackageJTI, Records: []RecordStatus{
+		wl(recordC, "2026-05-01T00:00:00Z", "2027-01-01T00:00:00Z", map[string]*int64{MetricVCPU: i64(100)}),
+	}}
+	res = Compute(input(now, append(both, fresh)))
+	if !reflect.DeepEqual(res.Covered, map[string]string{"license-a": "license-b"}) {
+		t.Fatalf("covered = %v", res.Covered)
+	}
+	if got, ok := res.Expired["license-b"]; !ok || len(res.Expired) != 1 || !got.Equal(ts("2026-04-01T00:00:00Z")) {
+		t.Fatalf("expired = %v, want license-b at 2026-04-01", res.Expired)
+	}
+	if !reflect.DeepEqual(res.ActiveKeys, []string{testPackageJTI}) {
+		t.Fatalf("activeKeys = %v, want only the key in force", res.ActiveKeys)
 	}
 }

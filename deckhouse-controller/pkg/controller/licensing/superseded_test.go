@@ -21,6 +21,7 @@ import (
 	"testing"
 	"time"
 
+	equality "k8s.io/apimachinery/pkg/api/equality"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
@@ -320,6 +321,89 @@ func TestReinstalledExpiredKeyIsDeletedAgain(t *testing.T) {
 	after := effectiveStatusOf(t, env)
 	if before.RegistrationRequest != after.RegistrationRequest {
 		t.Fatal("reinstalling an expired key changed the cluster data file")
+	}
+}
+
+// A reissue under the new issuing rule: the new key carries the record of the
+// old one verbatim plus a record starting later. The old key sorts first, so
+// only coverage keeps its copy from being the accepted one. It is deleted with a
+// KeyCovered event, the cluster data file names only the new key, and the policy
+// is the one the old key alone granted.
+func TestCoveredKeyIsDeleted(t *testing.T) {
+	pub, priv, err := ed25519.GenerateKey(nil)
+	if err != nil {
+		t.Fatalf("generate vendor key: %v", err)
+	}
+	carried := platformRecord(testRecordID, "2026-01-01T00:00:00Z", "2027-01-01T00:00:00Z", fullLimits(10, 100, 0))
+	later := platformRecord(newRecordID, "2027-01-01T00:00:00Z", "2028-01-01T00:00:00Z", fullLimits(12, 200, 0))
+	old := &v1alpha1.ClusterLicense{
+		ObjectMeta: metav1.ObjectMeta{Name: "key-1"},
+		Spec:       v1alpha1.ClusterLicenseSpec{LicenseKey: signPackage(t, priv, testPackageID, carried)},
+	}
+	fresh := &v1alpha1.ClusterLicense{
+		ObjectMeta: metav1.ObjectMeta{Name: "key-2"},
+		Spec:       v1alpha1.ClusterLicenseSpec{LicenseKey: signPackage(t, priv, newPackageID, carried, later)},
+	}
+	worker := node("worker", "4", true)
+	ctx := context.Background()
+
+	env := newTestEnv(t, pub, old, &worker, discoverySecret())
+	if _, err := env.r.Reconcile(ctx, ctrl.Request{}); err != nil {
+		t.Fatalf("first reconcile: %v", err)
+	}
+	alone := effectiveStatusOf(t, env)
+
+	if err := env.cl.Create(ctx, fresh); err != nil {
+		t.Fatalf("install the new key: %v", err)
+	}
+	if _, err := env.r.Reconcile(ctx, ctrl.Request{}); err != nil {
+		t.Fatalf("second reconcile: %v", err)
+	}
+
+	if exists(t, env, "key-1") {
+		t.Fatal("the covered key was not deleted")
+	}
+	if !exists(t, env, "key-2") {
+		t.Fatal("the covering key was deleted")
+	}
+
+	event := nextEvent(t, env)
+	if !strings.Contains(event, eventKeyCovered) || !strings.Contains(event, "key-2") ||
+		!strings.Contains(event, testPackageID) || !strings.Contains(event, newPackageID) {
+		t.Fatalf("event = %q, want a %s naming both keys", event, eventKeyCovered)
+	}
+
+	var covering v1alpha1.ClusterLicense
+	if err := env.cl.Get(ctx, types.NamespacedName{Name: "key-2"}, &covering); err != nil {
+		t.Fatalf("get covering key: %v", err)
+	}
+	if len(covering.Status.Records) != 2 || covering.Status.Records[0].ID != testRecordID || !covering.Status.Records[0].Accepted {
+		t.Fatalf("covering key records = %+v, want the carried record accepted", covering.Status.Records)
+	}
+
+	claims := requestClaims(t, publishedRequest(t, env))
+	keys := claims["active_keys"].([]any)
+	if len(keys) != 1 || keys[0] != newPackageID {
+		t.Fatalf("active_keys = %v, want only the covering key", keys)
+	}
+
+	both := effectiveStatusOf(t, env)
+	if !equality.Semantic.DeepEqual(alone.Limits, both.Limits) || !equality.Semantic.DeepEqual(alone.Compliance, both.Compliance) {
+		t.Fatalf("policy changed: %+v/%+v -> %+v/%+v", alone.Limits, alone.Compliance, both.Limits, both.Compliance)
+	}
+	if both.Key == nil || both.Key.Jti != newPackageID {
+		t.Fatalf("key = %+v, want the covering one", both.Key)
+	}
+
+	// With the covered key gone the next pass changes nothing, so the deletion
+	// did not flap the cluster data file.
+	if _, err := env.r.Reconcile(ctx, ctrl.Request{}); err != nil {
+		t.Fatalf("third reconcile: %v", err)
+	}
+	after := effectiveStatusOf(t, env)
+	if both.RegistrationRequest != after.RegistrationRequest ||
+		!equality.Semantic.DeepEqual(both.Limits, after.Limits) || !equality.Semantic.DeepEqual(both.Key, after.Key) {
+		t.Fatal("deleting the covered key changed the effective licence")
 	}
 }
 

@@ -24,23 +24,36 @@ import (
 
 // dedup flattens the keys and marks every repeated id after the first as a
 // Duplicate. Pasting the same string twice must not double the quota.
-func dedup(keys []KeyRecords) []RecordStatus {
-	out := make([]RecordStatus, 0)
+// dedup marks every later occurrence of a record id Duplicate. The records of
+// a covered key are visited last, so the copy the covering key carries is the
+// one that counts and deleting the covered key changes nothing. The output keeps
+// the order of keys: each key owns the next len(Records) of it.
+func dedup(keys []KeyRecords, covered map[string]string) []RecordStatus {
 	seen := make(map[string]bool)
-	for _, k := range keys {
-		for _, r := range k.Records {
-			cur := r
-			if cur.Accepted {
-				if seen[cur.ID] {
-					cur.Accepted = false
-					cur.Reason = ReasonDuplicate
-					cur.Message = "a record with the same id is already part of the policy"
-				} else {
-					seen[cur.ID] = true
-				}
+	perKey := make([][]RecordStatus, len(keys))
+	for _, last := range []bool{false, true} {
+		for i, k := range keys {
+			if _, c := covered[k.Key]; c != last {
+				continue
 			}
-			out = append(out, cur)
+			for _, r := range k.Records {
+				cur := r
+				if cur.Accepted {
+					if seen[cur.ID] {
+						cur.Accepted = false
+						cur.Reason = ReasonDuplicate
+						cur.Message = "a record with the same id is already part of the policy"
+					} else {
+						seen[cur.ID] = true
+					}
+				}
+				perKey[i] = append(perKey[i], cur)
+			}
 		}
+	}
+	out := make([]RecordStatus, 0)
+	for _, records := range perKey {
+		out = append(out, records...)
 	}
 	return out
 }

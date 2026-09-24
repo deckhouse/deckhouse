@@ -178,12 +178,14 @@ func TestGrantedByListsEveryGrant(t *testing.T) {
 	}
 }
 
-// A9: the duplicate keeps its own status with the Duplicate reason.
+// A9: the duplicate keeps its own status with the Duplicate reason. The copies
+// differ in content: a verbatim copy covers the other key instead (see Covered).
 func TestDuplicateStatus(t *testing.T) {
 	first := wl(recordA, "2026-01-01T00:00:00Z", "2026-11-01T00:00:00Z", map[string]*int64{MetricVCPU: i64(50)})
+	second := wl(recordA, "2026-01-01T00:00:00Z", "2026-11-01T00:00:00Z", map[string]*int64{MetricVCPU: i64(60)})
 	res := Compute(input(ts("2026-05-01T00:00:00Z"), []KeyRecords{
 		{Key: "a", JTI: keyOldJTI, Records: []RecordStatus{first}},
-		{Key: "b", JTI: keyNewJTI, Records: []RecordStatus{first}},
+		{Key: "b", JTI: keyNewJTI, Records: []RecordStatus{second}},
 	}))
 
 	if res.Counts.Records != 2 || res.Counts.Accepted != 1 || res.Counts.Rejected != 1 {

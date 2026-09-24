@@ -42,9 +42,14 @@ spec:
           the moment a reissue is being installed. The controller deletes a key it superseded, and a key
           whose every record, of any type, is past `expireAt` plus its grace period (the record's
           `graceDays`, or the controller default when the record has none). Such a deletion is reported
-          with a `KeyExpired` event on the `EffectiveLicense`. A key in its grace period, a key with a
-          perpetual record, a rejected key and the last expired key while no licence is in force (it keeps
-          the cluster reporting the expiry) all stay. A deleted key reapplied by hand is deleted again.
+          with a `KeyExpired` event on the `EffectiveLicense`. The controller also deletes a key whose every
+          record another installed key carries verbatim (the same id and the same content), as a reissued
+          key does with the records of the previous keys that are still in force or yet to come; this is
+          reported with a `KeyCovered` event naming the covering key. Of two keys with the same records, the
+          one issued last (`iat`, then `jti`) stays; a record that shares an id but differs in content covers
+          nothing. A key in its grace period, a key with a perpetual record, a rejected key and the last
+          expired key while no licence is in force (it keeps the cluster reporting the expiry) all stay.
+          A deleted key reapplied by hand is deleted again.
 
           The aggregated policy computed from all keys is published in the `EffectiveLicense` resource named
           `deckhouse-platform`.
@@ -238,8 +243,10 @@ spec:
 
                   A superseded key contributes nothing now and nothing later, and the controller deletes it,
                   emitting a `KeySuperseded` event on the `EffectiveLicense`. A key whose records merely ran
-                  out past their grace period is deleted with a `KeyExpired` event instead; a rejected key and
-                  a key carrying a running record of a type this release does not support stay in place.
+                  out past their grace period is deleted with a `KeyExpired` event instead, and a key whose
+                  every record another installed key carries verbatim with a `KeyCovered` event; a rejected
+                  key and a key carrying a running record of a type this release does not support stay in
+                  place.
                 type: boolean
             type: object
         required:

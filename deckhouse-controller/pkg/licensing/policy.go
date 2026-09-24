@@ -47,7 +47,10 @@ type KeyRecords struct {
 	// JTI and CustomerName come from the package envelope, not from a record.
 	JTI          string
 	CustomerName string
-	Records      []RecordStatus
+	// IssuedAt is the package iat. It only decides which of two keys carrying
+	// the same records stays (see Covered); zero when it does not parse.
+	IssuedAt time.Time
+	Records  []RecordStatus
 }
 
 // Thresholds are the commercial knobs of the compliance state machine. They are
@@ -158,6 +161,11 @@ type Result struct {
 	// is active: deleting it would turn an expired licence into a cluster that
 	// was never registered.
 	Expired map[string]time.Time
+	// Covered names the keys the controller deletes because another key carries
+	// every one of their records verbatim (see Covered), with the name of that
+	// key, for the KeyCovered event. A covered key is never listed as
+	// superseded or expired: its records are the duplicates.
+	Covered map[string]string
 
 	// Expiring is true when the key expires within Thresholds.ExpiringSoon.
 	Expiring bool
@@ -257,7 +265,18 @@ func Compute(in Input) Result {
 	copy(ordered, in.Keys)
 	sort.SliceStable(ordered, func(i, j int) bool { return ordered[i].Key < ordered[j].Key })
 
-	base := dedup(ordered)
+	// Coverage is decided before dedup, which visits covered keys last: the
+	// copy the covering key carries is the accepted one, the covered key only
+	// holds duplicates, and deleting it changes nothing.
+	covered := Covered(ordered)
+	live := make([]KeyRecords, 0, len(ordered))
+	for _, k := range ordered {
+		if _, gone := covered[k.Key]; !gone {
+			live = append(live, k)
+		}
+	}
+
+	base := dedup(ordered, covered)
 	now := in.Now
 
 	final := make([]RecordStatus, len(base))
@@ -302,7 +321,7 @@ func Compute(in Input) Result {
 	sort.Strings(res.Unlimited)
 
 	res.OverLimitSince = overLimitSince(res.Allocation, in.OverLimitSince, now)
-	res.Key = keyInForce(ordered, final, ext)
+	res.Key = keyInForce(live, final, ext)
 	if res.Key != nil && res.Key.ValidUntil != nil {
 		left := res.Key.ValidUntil.Sub(now)
 		res.Expiring = left > 0 && left < in.Thresholds.ExpiringSoon
@@ -327,6 +346,7 @@ func Compute(in Input) Result {
 	res.Superseded = make(map[string]bool, len(ordered))
 	res.SupersededBy = make(map[string]string, len(ordered))
 	res.Expired = make(map[string]time.Time)
+	res.Covered = covered
 	byID := make(map[string]string, len(ordered))
 	for _, k := range ordered {
 		byID[k.Key] = k.JTI
@@ -334,12 +354,15 @@ func Compute(in Input) Result {
 	owner := make(map[string]string, len(base))
 	at := 0
 	for _, k := range ordered {
-		for _, r := range k.Records {
-			owner[r.ID] = k.Key
-		}
 		from := at
 		mine := final[at : at+len(k.Records)]
 		at += len(k.Records)
+		if _, gone := covered[k.Key]; gone {
+			continue
+		}
+		for _, r := range k.Records {
+			owner[r.ID] = k.Key
+		}
 		if Superseded(mine) {
 			res.Superseded[k.Key] = true
 			continue
@@ -356,7 +379,7 @@ func Compute(in Input) Result {
 
 	// A key about to be deleted leaves the registration request in the same
 	// pass, the way a superseded one does, so that the deletion changes nothing.
-	res.AcceptedRecords, res.ActiveKeys = accepted(ordered, ext, res.Expired)
+	res.AcceptedRecords, res.ActiveKeys = accepted(live, ext, res.Expired)
 
 	res.Counts.Keys = len(in.Keys)
 	res.Counts.Records = len(final)
