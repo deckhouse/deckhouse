@@ -11,6 +11,8 @@ spec:
     kind: BareMetalInstance
     listKind: BareMetalInstanceList
     plural: baremetalinstances
+    shortNames:
+    - bmi
     singular: baremetalinstance
   scope: Namespaced
   versions:
