@@ -1,15 +1,13 @@
 module user-api
 
-go 1.25.0
-
-toolchain go1.25.7
+go 1.26.0
 
 require (
 	github.com/coreos/go-oidc/v3 v3.17.0
 	github.com/go-jose/go-jose/v4 v4.1.4
 	github.com/prometheus/client_golang v1.23.2
 	github.com/spf13/cobra v1.10.2
-	golang.org/x/crypto v0.55.0
+	golang.org/x/crypto v0.56.0
 	golang.org/x/time v0.15.0
 	k8s.io/apimachinery v0.35.3
 	k8s.io/client-go v0.35.3

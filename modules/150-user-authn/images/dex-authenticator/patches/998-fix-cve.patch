@@ -1,5 +1,5 @@
 diff --git a/go.mod b/go.mod
-index 207ef1f..3feb3c3 100644
+index 207ef1f..0c050d4 100644
 --- a/go.mod
 +++ b/go.mod
 @@ -1,8 +1,6 @@
@@ -8,7 +8,7 @@ index 207ef1f..3feb3c3 100644
 -go 1.24.0
 -
 -toolchain go1.24.2
-+go 1.25.0
++go 1.26.0
  
  require (
  	github.com/Bose/minisentinel v0.0.0-20200130220412-917c5a9223bb
@@ -20,7 +20,7 @@ index 207ef1f..3feb3c3 100644
 +	github.com/stretchr/testify v1.11.1
  	github.com/vmihailenco/msgpack/v5 v5.3.5
 -	golang.org/x/crypto v0.46.0
-+	golang.org/x/crypto v0.55.0
++	golang.org/x/crypto v0.56.0
  	golang.org/x/exp v0.0.0-20230425010034-47ecfdc1ba53
 -	golang.org/x/net v0.48.0
 -	golang.org/x/oauth2 v0.34.0
@@ -85,7 +85,7 @@ index 207ef1f..3feb3c3 100644
  	gopkg.in/tomb.v1 v1.0.0-20141024135613-dd632973f1e7 // indirect
  	gopkg.in/yaml.v2 v2.4.0 // indirect
 diff --git a/go.sum b/go.sum
-index a3777cd..70381dd 100644
+index a3777cd..6dd5f01 100644
 --- a/go.sum
 +++ b/go.sum
 @@ -1,5 +1,8 @@
@@ -309,8 +309,8 @@ index a3777cd..70381dd 100644
 -golang.org/x/crypto v0.46.0 h1:cKRW/pmt1pKAfetfu+RCEvjvZkA9RimPbh7bhFjGVBU=
 -golang.org/x/crypto v0.46.0/go.mod h1:Evb/oLKmMraqjZ2iQTwDwvCtJkczlDuTmdJXoZVzqU0=
 -golang.org/x/exp v0.0.0-20190121172915-509febef88a4/go.mod h1:CJ0aWSM057203Lf6IL+f9T1iT9GByDxfZKAQTCR3kQA=
-+golang.org/x/crypto v0.55.0 h1:+KWHjbgOaAQ66dh/YlkZKHlz9ZUlq61AFirAR9ntP8M=
-+golang.org/x/crypto v0.55.0/go.mod h1:uq0V9dE/fzQuJtbnL+2EhWOE63vo164FY8xqEnV9xis=
++golang.org/x/crypto v0.56.0 h1:GUh5Ii4J5jtcseSMiRqr1jXCNHoxjeV9Fmekc2oLy6Y=
++golang.org/x/crypto v0.56.0/go.mod h1:OMW5y6CY9l38uPLmxU6l6pwcXp1obtLo3e6gT7gQR2I=
  golang.org/x/exp v0.0.0-20230425010034-47ecfdc1ba53 h1:5llv2sWeaMSnA3w2kS57ouQQ4pudlXrR0dCgw51QK9o=
  golang.org/x/exp v0.0.0-20230425010034-47ecfdc1ba53/go.mod h1:V1LtkGg67GoY2N1AnLN78QLrzxkLyJw7RJb1gzOOz9w=
  golang.org/x/lint v0.0.0-20181026193005-c67002cb31c3/go.mod h1:UVdnD1Gm6xHRNCYTkRU2/jEulfH38KcIWyp/GAMgvoE=

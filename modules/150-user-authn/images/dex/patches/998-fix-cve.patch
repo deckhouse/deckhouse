@@ -1,9 +1,12 @@
 diff --git a/go.mod b/go.mod
-index 6ca7dc1..641c4a2 100644
+index 6ca7dc1..296ef99 100644
 --- a/go.mod
 +++ b/go.mod
-@@ -3,7 +3,7 @@ module github.com/dexidp/dex
- go 1.25.0
+@@ -1,9 +1,9 @@
+ module github.com/dexidp/dex
+ 
+-go 1.25.0
++go 1.26.0
  
  require (
 -	cloud.google.com/go/compute/metadata v0.8.0
@@ -31,7 +34,7 @@ index 6ca7dc1..641c4a2 100644
  	go.etcd.io/etcd/client/pkg/v3 v3.6.4
  	go.etcd.io/etcd/client/v3 v3.6.4
 -	golang.org/x/crypto v0.41.0
-+	golang.org/x/crypto v0.55.0
++	golang.org/x/crypto v0.56.0
  	golang.org/x/exp v0.0.0-20221004215720-b9f4876ce741
 -	golang.org/x/net v0.43.0
 -	golang.org/x/oauth2 v0.30.0
@@ -103,7 +106,7 @@ index 6ca7dc1..641c4a2 100644
  	gopkg.in/yaml.v3 v3.0.1 // indirect
  )
 diff --git a/go.sum b/go.sum
-index efa0565..5bf99cc 100644
+index efa0565..843c2ef 100644
 --- a/go.sum
 +++ b/go.sum
 @@ -1,21 +1,21 @@
@@ -218,8 +221,8 @@ index efa0565..5bf99cc 100644
  golang.org/x/crypto v0.6.0/go.mod h1:OFC/31mSvZgRz0V1QTNCzfAI1aIRzbiufJtkMIlEp58=
 -golang.org/x/crypto v0.41.0 h1:WKYxWedPGCTVVl5+WHSSrOBT0O8lx32+zxmHxijgXp4=
 -golang.org/x/crypto v0.41.0/go.mod h1:pO5AFd7FA68rFak7rOAGVuygIISepHftHnr8dr6+sUc=
-+golang.org/x/crypto v0.55.0 h1:+KWHjbgOaAQ66dh/YlkZKHlz9ZUlq61AFirAR9ntP8M=
-+golang.org/x/crypto v0.55.0/go.mod h1:uq0V9dE/fzQuJtbnL+2EhWOE63vo164FY8xqEnV9xis=
++golang.org/x/crypto v0.56.0 h1:GUh5Ii4J5jtcseSMiRqr1jXCNHoxjeV9Fmekc2oLy6Y=
++golang.org/x/crypto v0.56.0/go.mod h1:OMW5y6CY9l38uPLmxU6l6pwcXp1obtLo3e6gT7gQR2I=
  golang.org/x/exp v0.0.0-20221004215720-b9f4876ce741 h1:fGZugkZk2UgYBxtpKmvub51Yno1LJDeEsRp2xGD+0gY=
  golang.org/x/exp v0.0.0-20221004215720-b9f4876ce741/go.mod h1:cyybsKvd6eL0RnXn6p/Grxp8F5bW7iYuBgsNCOHpMYE=
  golang.org/x/mod v0.2.0/go.mod h1:s0Qsj1ACt9ePp/hMypM3fl4fZqREWJwdYDEqhRiZZUA=
