@@ -41,3 +41,10 @@ re-reading data source depends on resource change.
 Also, this changes have direct link to provider. We do not come up with generic solution.
 Generic solution can add some meta-attributes in opentofu data source resource, but it complex
 for implementation.
+
+## 004-otel-semconv.patch
+
+The semconv import in `internal/tracing/traceattrs/semconv.go` must match the semconv version
+imported by `go.opentelemetry.io/otel/sdk/resource`, otherwise `tofu` fails to start with
+`OTEL_TRACES_EXPORTER=otlp` (`conflicting Schema URL`). The grpc bump in 001 pulls otel sdk v1.44.0,
+which uses semconv v1.41.0. Update this patch together with otel sdk in 001.
