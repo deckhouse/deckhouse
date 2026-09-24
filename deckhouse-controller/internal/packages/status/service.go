@@ -103,6 +103,9 @@ type Service struct {
 	// name drains the entry, so a startup-race event is not lost.
 	pendingHealth map[string]health.Event
 
+	// deckhouseSettingsCh receives updates to the deckhouse settings.
+	deckhouseSettingsCh chan addonutils.Values
+
 	// appQueue carries names of packages whose status changed. It coalesces
 	// repeated notifications for the same package into a single item, so a
 	// flood of updates (e.g. nelm progress) cannot outgrow the number of
@@ -183,6 +186,11 @@ func (s *Service) AppQueue() workqueue.TypedRateLimitingInterface[string] {
 // module names via Get/Done and requeue transient failures via AddRateLimited.
 func (s *Service) ModuleQueue() workqueue.TypedRateLimitingInterface[string] {
 	return s.moduleQueue
+}
+
+// DeckhouseSettingsCh returns the channel for receiving deckhouse settings updates.
+func (s *Service) DeckhouseSettingsCh() <-chan addonutils.Values {
+	return s.deckhouseSettingsCh
 }
 
 // queueFor returns the notification queue that owns the given package name.
@@ -471,6 +479,11 @@ func (s *Service) UpdateSettings(name string, settings addonutils.Values) {
 
 	if notify {
 		s.queueFor(name).Add(name)
+	}
+
+	// send deckhouse settings update
+	if name == "deckhouse" {
+		s.deckhouseSettingsCh <- settings
 	}
 }
 

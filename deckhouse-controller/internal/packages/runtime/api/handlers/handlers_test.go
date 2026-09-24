@@ -25,6 +25,7 @@ import (
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/nelm"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/runtime/api/handlers"
 	v1 "github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/runtime/api/handlers/v1"
+	metricsstorage "github.com/deckhouse/deckhouse/pkg/metrics-storage"
 )
 
 // fakeProvider serves canned state to every domain of the tree under test.
@@ -63,6 +64,14 @@ func newDeps(provider fakeProvider) v1.Deps {
 	}
 }
 
+// rootDeps backs the metrics routes with empty storages.
+func rootDeps() handlers.Deps {
+	return handlers.Deps{
+		MetricStorage:     metricsstorage.NewMetricStorage(),
+		HookMetricStorage: metricsstorage.NewMetricStorage(),
+	}
+}
+
 func get(t *testing.T, router http.Handler, url string) *httptest.ResponseRecorder {
 	t.Helper()
 
@@ -89,9 +98,11 @@ func TestPublicRouterHidesPackages(t *testing.T) {
 		{give: "/api/v1/requirements/dump", want: http.StatusOK},
 		{give: "/healthz", want: http.StatusOK},
 		{give: "/endpoints", want: http.StatusOK},
+		{give: "/metrics", want: http.StatusOK},
+		{give: "/metrics/hooks", want: http.StatusOK},
 	}
 
-	router := handlers.NewRootHandler(v1.NewPublicHandler(newDeps(fakeProvider{})))
+	router := handlers.NewRootHandler(v1.NewPublicHandler(newDeps(fakeProvider{})), rootDeps())
 
 	for _, tt := range tests {
 		t.Run(tt.give, func(t *testing.T) {
@@ -117,7 +128,7 @@ func TestPrivateRouterServesPackages(t *testing.T) {
 		{give: "/api/v1/packages/snapshots/missing", want: http.StatusNotFound, wantType: "text/plain; charset=utf-8", wantPayload: "package not found\n"},
 	}
 
-	router := handlers.NewRootHandler(v1.NewPrivateHandler(newDeps(fakeProvider{})))
+	router := handlers.NewRootHandler(v1.NewPrivateHandler(newDeps(fakeProvider{})), rootDeps())
 
 	for _, tt := range tests {
 		t.Run(tt.give, func(t *testing.T) {
@@ -144,7 +155,7 @@ func TestOutputFormat(t *testing.T) {
 		{give: "/api/v1/requirements/dump?output=xml", want: http.StatusBadRequest, wantType: "text/plain; charset=utf-8"},
 	}
 
-	router := handlers.NewRootHandler(v1.NewPublicHandler(newDeps(fakeProvider{})))
+	router := handlers.NewRootHandler(v1.NewPublicHandler(newDeps(fakeProvider{})), rootDeps())
 
 	for _, tt := range tests {
 		t.Run(tt.give, func(t *testing.T) {
@@ -171,7 +182,7 @@ func TestRenderErrors(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.give, func(t *testing.T) {
-			router := handlers.NewRootHandler(v1.NewPrivateHandler(newDeps(fakeProvider{renderErr: tt.giveErr})))
+			router := handlers.NewRootHandler(v1.NewPrivateHandler(newDeps(fakeProvider{renderErr: tt.giveErr})), rootDeps())
 
 			recorder := get(t, router, "/api/v1/packages/render/known")
 

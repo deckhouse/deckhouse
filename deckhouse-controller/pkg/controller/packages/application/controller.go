@@ -32,6 +32,7 @@ import (
 	ctrlmanager "sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 
+	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/app"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/apps"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/resourcerequests"
 	packageruntime "github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/runtime"
@@ -62,28 +63,34 @@ const (
 
 // RegisterController registers the Application controller with the manager.
 func RegisterController(
+	synced *sync.WaitGroup,
 	runtime ctrlmanager.Manager,
 	manager packageManager,
 	moduleManager moduleManager,
 	logger *log.Logger,
 ) error {
 	r := &reconciler{
-		init:          new(sync.WaitGroup),
+		preflightInit: synced,
 		client:        runtime.GetClient(),
 		manager:       manager,
 		moduleManager: moduleManager,
+		status:        status.NewService(runtime.GetClient(), manager.GetStatus, logger),
 		logger:        logger.Named(controllerName),
 	}
 
-	r.init.Add(1)
-
-	// add preflight to set the cluster UUID
-	if err := runtime.Add(ctrlmanager.RunnableFunc(r.preflight)); err != nil {
-		return fmt.Errorf("add preflight: %w", err)
+	if !app.ModuleV2Enabled() {
+		r.preflightInit.Add(1)
+		if err := runtime.Add(ctrlmanager.RunnableFunc(r.preflight)); err != nil {
+			return fmt.Errorf("add preflight: %w", err)
+		}
 	}
 
-	r.status = status.NewService(r.client, r.manager.GetStatus, r.logger)
-	r.status.Start(context.Background(), r.manager.GetAppStatusQueue())
+	if err := runtime.Add(ctrlmanager.RunnableFunc(func(ctx context.Context) error {
+		r.status.Start(ctx, r.manager.GetAppStatusQueue())
+		return nil
+	})); err != nil {
+		return fmt.Errorf("add preflight: %w", err)
+	}
 
 	return ctrl.NewControllerManagedBy(runtime).
 		Named(controllerName).
@@ -95,7 +102,7 @@ func RegisterController(
 
 // reconciler reconciles Application objects.
 type reconciler struct {
-	init          *sync.WaitGroup
+	preflightInit *sync.WaitGroup
 	client        client.Client
 	manager       packageManager
 	status        *status.Service
@@ -120,7 +127,7 @@ type packageManager interface {
 
 // preflight waits for the module manager and drops runtime state no Application claims.
 func (r *reconciler) preflight(ctx context.Context) error {
-	defer r.init.Done()
+	defer r.preflightInit.Done()
 
 	// wait until module manager init
 	r.logger.Debug("wait until module manager is inited")
@@ -165,7 +172,7 @@ func (r *reconciler) preflight(ctx context.Context) error {
 // Reconcile dispatches the application to the delete or the create/update handler.
 func (r *reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 	// wait for init
-	r.init.Wait()
+	r.preflightInit.Wait()
 
 	logger := r.logger.With(slog.String("namespace", req.Namespace), slog.String("name", req.Name))
 

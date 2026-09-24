@@ -26,6 +26,7 @@ import (
 	"github.com/Masterminds/semver/v3"
 	"github.com/flant/addon-operator/pkg"
 	addontypes "github.com/flant/addon-operator/pkg/hook/types"
+	"github.com/flant/addon-operator/pkg/metrics"
 	"github.com/flant/addon-operator/pkg/module_manager/models/hooks/kind"
 	bctx "github.com/flant/shell-operator/pkg/hook/binding_context"
 	hookcontroller "github.com/flant/shell-operator/pkg/hook/controller"
@@ -48,6 +49,7 @@ import (
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/addonutils"
 	"github.com/deckhouse/deckhouse/go_lib/configtools/conversion"
 	"github.com/deckhouse/deckhouse/pkg/log"
+	metricsstorage "github.com/deckhouse/deckhouse/pkg/metrics-storage"
 )
 
 // Module represents a running instance of a package.
@@ -91,6 +93,9 @@ type Module struct {
 	scheduleManager   schedulemanager.ScheduleManager
 	kubeEventsManager kubeeventsmanager.KubeEventsManager
 
+	metricStorage     metricsstorage.Storage
+	hookMetricStorage metricsstorage.Storage
+
 	globalValuesGetter GlobalValuesGetter
 
 	logger *log.Logger
@@ -119,6 +124,9 @@ type Config struct {
 	ScheduleManager   schedulemanager.ScheduleManager
 	KubeEventsManager kubeeventsmanager.KubeEventsManager
 
+	MetricStorage     metricsstorage.Storage
+	HookMetricStorage metricsstorage.Storage
+
 	GlobalValuesGetter GlobalValuesGetter
 }
 
@@ -142,6 +150,8 @@ func NewModuleByConfig(name string, cfg *Config, logger *log.Logger) (*Module, e
 	m.settingsCheck = cfg.SettingsCheck
 	m.converter = cfg.Conversions
 	m.patcher = cfg.Patcher
+	m.metricStorage = cfg.MetricStorage
+	m.hookMetricStorage = cfg.HookMetricStorage
 	m.scheduleManager = cfg.ScheduleManager
 	m.kubeEventsManager = cfg.KubeEventsManager
 	m.globalValuesGetter = cfg.GlobalValuesGetter
@@ -568,7 +578,26 @@ func (m *Module) runHook(ctx context.Context, h hooks.Hook, bctx []bctx.BindingC
 	hookValues := m.GetValues()
 	hookVersion := h.GetConfigVersion()
 
+	metricLabels := map[string]string{
+		pkg.MetricKeyHook: h.GetName(),
+		pkg.LogKeyModule:  m.GetName(),
+	}
+
 	hookResult, err := h.Execute(ctx, hookVersion, bctx, m.GetName(), hookConfigValues, hookValues, make(map[string]string))
+
+	if hookResult != nil && hookResult.Usage != nil {
+		m.metricStorage.HistogramObserve(metrics.ModuleHookRunSysCPUSeconds, hookResult.Usage.Sys.Seconds(), metricLabels, nil)
+		m.metricStorage.HistogramObserve(metrics.ModuleHookRunUserCPUSeconds, hookResult.Usage.User.Seconds(), metricLabels, nil)
+		m.metricStorage.GaugeSet(metrics.ModuleHookRunMaxRSSBytes, float64(hookResult.Usage.MaxRss)*1024, metricLabels)
+	}
+
+	if hookResult != nil && len(hookResult.Metrics) > 0 {
+		metricsErr := m.hookMetricStorage.ApplyBatchOperations(hookResult.Metrics, metricLabels)
+		if metricsErr != nil {
+			return metricsErr
+		}
+	}
+
 	if err != nil {
 		// we have to check if there are some status patches to apply
 		if hookResult != nil && len(hookResult.ObjectPatcherOperations) > 0 {

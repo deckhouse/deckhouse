@@ -19,12 +19,19 @@ import (
 	"errors"
 	"fmt"
 
+	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/app"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/runtime/api/handlers"
 	v1 "github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/runtime/api/handlers/v1"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/runtime/api/socket"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/runtime/api/tcp"
+	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/envconfig"
 	d8requirements "github.com/deckhouse/deckhouse/go_lib/dependency/requirements"
 	"github.com/deckhouse/deckhouse/pkg/log"
+)
+
+const (
+	// apiSocketPath is the Unix socket the package runtime API listens on.
+	apiSocketPath = "/tmp/deckhouse-debug.socket"
 )
 
 // buildAPIServers creates both API servers with the route tree each
@@ -41,8 +48,16 @@ func (r *Runtime) buildAPIServers() {
 		Requirements: d8requirements.DumpValues,
 	}
 
-	r.socketServer = socket.NewServer(apiSocketPath, handlers.NewRootHandler(v1.NewPrivateHandler(deps)), r.logger)
-	r.tcpServer = tcp.NewServer(apiTCPAddress, apiTCPPort, handlers.NewRootHandler(v1.NewPublicHandler(deps)), r.logger)
+	rootDeps := handlers.Deps{
+		MetricStorage:     r.metricStorage,
+		HookMetricStorage: r.hookMetricStorage,
+	}
+
+	r.socketServer = socket.NewServer(apiSocketPath, handlers.NewRootHandler(v1.NewPrivateHandler(deps), rootDeps), r.logger)
+	// when module v2 is enabled, the TCP server is bound to the public tree
+	if app.ModuleV2Enabled() {
+		r.tcpServer = tcp.NewServer(envconfig.ListenAddress(), envconfig.ListenPort(), handlers.NewRootHandler(v1.NewPublicHandler(deps), rootDeps), r.logger)
+	}
 }
 
 // startAPIServers binds the socket and the loopback TCP listener, then watches

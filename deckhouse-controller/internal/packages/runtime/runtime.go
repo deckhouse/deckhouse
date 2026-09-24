@@ -25,6 +25,7 @@ import (
 	"time"
 
 	"github.com/Masterminds/semver/v3"
+	"github.com/flant/addon-operator/pkg/metrics"
 	addonmodules "github.com/flant/addon-operator/pkg/module_manager/models/modules"
 	klient "github.com/flant/kube-client/client"
 	objectpatch "github.com/flant/shell-operator/pkg/kube/object_patch"
@@ -86,13 +87,6 @@ const (
 	// runtimeTracer identifies tracing spans emitted by the package runtime.
 	runtimeTracer = "package-runtime"
 
-	// apiSocketPath is the Unix socket the package runtime API listens on.
-	apiSocketPath = "/tmp/deckhouse-debug.socket"
-	// apiTCPAddress and apiTCPPort are the loopback TCP endpoint serving the
-	// subset of the API that is safe for the pod network.
-	// 9652 is taken by the shell-operator debug server.
-	apiTCPAddress = "127.0.0.1"
-	apiTCPPort    = "9653"
 	// nelmMonitorRequestTimeout bounds discovery and metadata requests made by the NELM monitor client.
 	nelmMonitorRequestTimeout = 30 * time.Second
 	// apiShutdownTimeout bounds how long shutdown waits for in-flight API requests.
@@ -150,7 +144,8 @@ type Runtime struct {
 
 	addonModuleManager moduleManagerI
 
-	metricStorage metricsstorage.Storage // Publishes the application maintenance gauge
+	metricStorage     metricsstorage.Storage // Publishes the application maintenance gauge
+	hookMetricStorage metricsstorage.Storage // Publishes the hooks metrics
 
 	logger *log.Logger
 }
@@ -181,10 +176,19 @@ func Build(cli kclient.Client, moduleManager moduleManagerI, dc dependency.Conta
 	r.addonModuleManager = moduleManager
 	r.grantResolver = grants.NewResolver(cli)
 	r.metricStorage = metricStorage
+	r.hookMetricStorage = metricsstorage.NewMetricStorage(
+		metricsstorage.WithNewRegistry(),
+		metricsstorage.WithLogger(logger.Named("hook-metric-storage")),
+	)
 	r.logger = logger.Named("package-runtime")
 	r.scheduleManager = cron.NewManager(r.logger)
 	r.queueService = queue.NewService(logger)
 	r.status = status.NewService()
+
+	// Register addon-operator specific metrics
+	if err := metrics.RegisterHookMetrics(r.hookMetricStorage); err != nil {
+		return nil, fmt.Errorf("register hook metrics: %w", err)
+	}
 
 	edit, err := edition.Parse(app.Version)
 	if err != nil {
@@ -926,6 +930,11 @@ func (r *Runtime) GetAppStatusQueue() workqueue.TypedRateLimitingInterface[strin
 // GetModuleStatusQueue returns the module status queue for external access
 func (r *Runtime) GetModuleStatusQueue() workqueue.TypedRateLimitingInterface[string] {
 	return r.status.ModuleQueue()
+}
+
+// GetDeckhouseSettingsCh returns the channel for receiving deckhouse settings updates.
+func (r *Runtime) GetDeckhouseSettingsCh() <-chan addonutils.Values {
+	return r.status.DeckhouseSettingsCh()
 }
 
 // PauseScheduler suspends the scheduler so it stops firing enable/disable callbacks.

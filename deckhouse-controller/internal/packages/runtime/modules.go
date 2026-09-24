@@ -295,6 +295,8 @@ func (r *Runtime) registerModule(ctx context.Context, conf *modules.Config) (*mo
 	conf.ScheduleManager = r.scheduleManager
 	conf.KubeEventsManager = r.kubeEventsManager
 	conf.GlobalValuesGetter = r.global.GetValues
+	conf.MetricStorage = r.metricStorage
+	conf.HookMetricStorage = r.hookMetricStorage
 
 	module, err := modules.NewModuleByConfig(conf.Definition.Name, conf, r.logger)
 	if err != nil {

@@ -21,16 +21,22 @@ import (
 	"net/http"
 	"strings"
 
+	metricsstorage "github.com/deckhouse/deckhouse/pkg/metrics-storage"
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
 )
+
+type Deps struct {
+	MetricStorage     metricsstorage.Storage
+	HookMetricStorage metricsstorage.Storage
+}
 
 // apiPrefix is where the versioned tree is mounted.
 const apiPrefix = "/api/v1"
 
 // NewRootHandler mounts the versioned tree next to the routes every transport
 // serves. Discovery is registered last so that it walks the complete tree.
-func NewRootHandler(api http.Handler) http.Handler {
+func NewRootHandler(api http.Handler, deps Deps) http.Handler {
 	router := chi.NewRouter()
 	router.Use(middleware.Recoverer)
 
@@ -45,6 +51,8 @@ func NewRootHandler(api http.Handler) http.Handler {
 	router.Get("/readyz", alive)
 
 	router.Get("/endpoints", listRoutes(router))
+	router.Get("/metrics", deps.MetricStorage.Handler().ServeHTTP)
+	router.Get("/metrics/hooks", deps.HookMetricStorage.Handler().ServeHTTP)
 
 	return router
 }
