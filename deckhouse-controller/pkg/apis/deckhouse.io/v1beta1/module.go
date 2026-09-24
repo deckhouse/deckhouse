@@ -60,6 +60,7 @@ var _ runtime.Object = (*Module)(nil)
 // +kubebuilder:object:root=true
 // +kubebuilder:subresource:status
 // +kubebuilder:resource:scope=Cluster
+// +kubebuilder:unservedversion
 // +kubebuilder:printcolumn:name=Version,type=string,JSONPath=.spec.packageVersion
 // +kubebuilder:printcolumn:name=Repository,type=string,JSONPath=.spec.packageRepositoryName,priority=1
 // +kubebuilder:printcolumn:name=State,type=string,JSONPath=.status.summary.state
