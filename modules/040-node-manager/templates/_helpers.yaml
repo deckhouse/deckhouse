@@ -125,16 +125,10 @@ nodeSelector:
   {{- end }}
 {{- end }}
 
-{{- /* Unreachable is tolerated for 60s only: forever pins the replica to a powered-off master, */ -}}
-{{- /* and NoSchedule is not tolerated so a replacement never lands on it. */ -}}
+{{- /* helm_lib "with-uninitialized" tolerates node.kubernetes.io/unreachable forever, pinning the replica to a powered-off master. */ -}}
+{{- /* Here unreachable is tolerated for NoExecute and 60s only, so a replacement never lands on the dead master. */ -}}
 {{- define "node_manager_master_controller_tolerations" }}
-tolerations:
-- key: node-role.kubernetes.io/master
-- key: node-role.kubernetes.io/control-plane
-- key: dedicated.deckhouse.io
-  operator: Exists
-- key: dedicated
-  operator: Exists
+{{- include "helm_lib_tolerations" (tuple . "any-node") }}
 - key: node.deckhouse.io/bashible-uninitialized
   operator: Exists
   effect: NoSchedule

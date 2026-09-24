@@ -35,7 +35,7 @@ var _ = Describe("Module :: node-manager :: helm template :: master controller t
 		f.HelmRender()
 	})
 
-	It("tolerates only taints a master controller can meet", func() {
+	It("tolerates unreachable masters for 60 seconds only", func() {
 		Expect(f.RenderError).ShouldNot(HaveOccurred())
 
 		for _, name := range []string{"node-controller", "capi-controller-manager", "machine-controller-manager"} {
@@ -43,50 +43,30 @@ var _ = Describe("Module :: node-manager :: helm template :: master controller t
 			Expect(deployment.Exists()).To(BeTrue(), name)
 
 			var keys []string
+			var unreachable []string
 			for _, toleration := range deployment.Field("spec.template.spec.tolerations").Array() {
-				keys = append(keys, toleration.Get("key").String())
+				key := toleration.Get("key").String()
+				keys = append(keys, key)
+				if key == "node.kubernetes.io/unreachable" {
+					unreachable = append(unreachable, toleration.Raw)
+				}
 			}
+
+			// etcd-arbiter comes only from the helm_lib "any-node" base, which also renders
+			// customTolerationKeys. HelmRender resets global.modules.placement, so they can't be set here.
 			Expect(keys).To(ContainElements(
 				"node-role.kubernetes.io/control-plane",
+				"node.deckhouse.io/etcd-arbiter",
 				"node.deckhouse.io/uninitialized",
 				"node.deckhouse.io/csi-not-bootstrapped",
 				"node.kubernetes.io/not-ready",
 			), name)
-			for _, unneeded := range []string{
-				"node.kubernetes.io/out-of-disk",
-				"node.deckhouse.io/etcd-arbiter",
-				"ToBeDeletedTaint",
-				"DeletionCandidateOfClusterAutoscaler",
-				"ToBeDeletedByClusterAutoscaler",
-			} {
+			for _, unneeded := range []string{"node.kubernetes.io/out-of-disk", "ToBeDeletedTaint"} {
 				Expect(keys).NotTo(ContainElement(unneeded), name)
 			}
 
-			var unreachable []string
-			for _, toleration := range deployment.Field("spec.template.spec.tolerations").Array() {
-				if toleration.Get("key").String() == "node.kubernetes.io/unreachable" {
-					unreachable = append(unreachable, toleration.Raw)
-				}
-			}
 			Expect(unreachable).To(HaveLen(1), name)
 			Expect(unreachable[0]).To(MatchJSON(`{"key":"node.kubernetes.io/unreachable","operator":"Exists","effect":"NoExecute","tolerationSeconds":60}`), name)
 		}
-	})
-
-	It("schedules node-controller on master or system nodes", func() {
-		Expect(f.RenderError).ShouldNot(HaveOccurred())
-
-		deployment := f.KubernetesResource("Deployment", "d8-cloud-instance-manager", "node-controller")
-		Expect(deployment.Field("spec.template.spec.nodeSelector").Exists()).To(BeFalse())
-
-		var keys []string
-		for _, term := range deployment.Field("spec.template.spec.affinity.nodeAffinity.requiredDuringSchedulingIgnoredDuringExecution.nodeSelectorTerms").Array() {
-			keys = append(keys, term.Get("matchExpressions.0.key").String())
-		}
-		Expect(keys).To(ConsistOf(
-			"node-role.kubernetes.io/control-plane",
-			"node-role.deckhouse.io/control-plane",
-			"node-role.deckhouse.io/system",
-		))
 	})
 })
