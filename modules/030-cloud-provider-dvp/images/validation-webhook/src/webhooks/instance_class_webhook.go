@@ -36,8 +36,8 @@ type DVPInstanceClassValidator struct {
 }
 
 var (
-	_ admission.CustomValidator = (*DVPInstanceClassValidator)(nil)
-	_ cpwebhook.Registrar       = (*DVPInstanceClassValidator)(nil)
+	_ admission.Validator[runtime.Object] = (*DVPInstanceClassValidator)(nil)
+	_ cpwebhook.Registrar                 = (*DVPInstanceClassValidator)(nil)
 
 	instanceClassLog = logf.Log.WithName("instance-class")
 )
@@ -50,9 +50,9 @@ func NewDVPInstanceClassValidator(factory *dvpval.AdmissionStateBuilderFactory, 
 }
 
 func (v *DVPInstanceClassValidator) Register(manager ctrl.Manager) error {
-	return ctrl.NewWebhookManagedBy(manager).
-		For(v.object).
-		WithValidator(v).
+	// Typed WithValidator cannot create a decode target for T = runtime.Object; WithCustomValidator copies v.object.
+	return ctrl.NewWebhookManagedBy(manager, v.object).
+		WithCustomValidator(v). //nolint:staticcheck
 		Complete()
 }
 

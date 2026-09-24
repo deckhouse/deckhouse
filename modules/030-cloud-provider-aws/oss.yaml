@@ -19,7 +19,7 @@
       version: v1.36.0
     - condition:
         k8s: "1.37"
-      version: v1.36.0
+      version: v1.37.0
 
 - name: Amazon Web Services CSI driver
   link: https://github.com/kubernetes-sigs/aws-ebs-csi-driver
@@ -42,7 +42,7 @@
       version: v1.54.0
     - condition:
         k8s: "1.37"
-      version: v1.54.0
+      version: v1.66.0
 
 - name: Amazon Web Services Terraform provider
   link: https://github.com/hashicorp/terraform-provider-aws

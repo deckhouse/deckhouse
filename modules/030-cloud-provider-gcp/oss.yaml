@@ -42,7 +42,7 @@
       version: v1.15.4
     - condition:
         k8s: "1.37"
-      version: v1.15.4
+      version: v1.27.0
 
 - name: Google Cloud Platform Terraform provider
   link: https://github.com/hashicorp/terraform-provider-google

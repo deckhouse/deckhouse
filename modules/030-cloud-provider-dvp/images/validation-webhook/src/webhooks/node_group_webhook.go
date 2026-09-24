@@ -37,8 +37,8 @@ type NodeGroupValidator struct {
 }
 
 var (
-	_ admission.CustomValidator = (*NodeGroupValidator)(nil)
-	_ cpwebhook.Registrar       = (*NodeGroupValidator)(nil)
+	_ admission.Validator[runtime.Object] = (*NodeGroupValidator)(nil)
+	_ cpwebhook.Registrar                 = (*NodeGroupValidator)(nil)
 
 	nodeGroupLog = logf.Log.WithName("node-group")
 )
@@ -51,9 +51,9 @@ func NewNodeGroupValidator(factory *dvpval.AdmissionStateBuilderFactory, object 
 }
 
 func (v *NodeGroupValidator) Register(manager ctrl.Manager) error {
-	return ctrl.NewWebhookManagedBy(manager).
-		For(v.object).
-		WithValidator(v).
+	// Typed WithValidator cannot create a decode target for T = runtime.Object; WithCustomValidator copies v.object.
+	return ctrl.NewWebhookManagedBy(manager, v.object).
+		WithCustomValidator(v). //nolint:staticcheck
 		Complete()
 }
 

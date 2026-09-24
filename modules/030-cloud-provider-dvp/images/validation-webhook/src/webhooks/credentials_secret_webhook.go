@@ -41,8 +41,8 @@ type CredentialSecretValidator struct {
 }
 
 var (
-	_ admission.CustomValidator = (*CredentialSecretValidator)(nil)
-	_ cpwebhook.Registrar       = (*CredentialSecretValidator)(nil)
+	_ admission.Validator[runtime.Object] = (*CredentialSecretValidator)(nil)
+	_ cpwebhook.Registrar                 = (*CredentialSecretValidator)(nil)
 
 	credentialSecretLog = logf.Log.WithName("credential-secret")
 )
@@ -55,9 +55,9 @@ func NewCredentialSecretValidator(factory *dvpval.AdmissionStateBuilderFactory, 
 }
 
 func (v *CredentialSecretValidator) Register(manager ctrl.Manager) error {
-	return ctrl.NewWebhookManagedBy(manager).
-		For(v.object).
-		WithValidator(v).
+	// Typed WithValidator cannot create a decode target for T = runtime.Object; WithCustomValidator copies v.object.
+	return ctrl.NewWebhookManagedBy(manager, v.object).
+		WithCustomValidator(v). //nolint:staticcheck
 		Complete()
 }
 
