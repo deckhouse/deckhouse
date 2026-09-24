@@ -45,6 +45,7 @@ import (
 	"k8s.io/client-go/tools/leaderelection/resourcelock"
 
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/app"
+	d8apis "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller"
 	debugserver "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/debug-server"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/envconfig"
@@ -269,8 +270,12 @@ func run(ctx context.Context, operator *addonoperator.AddonOperator, logger *log
 	operatorStarted := false
 	go signalHandler(ctx, exitCh, operator, &operatorStarted, logger)
 
+	if err := d8apis.EnsureCRDs(ctx, operator.KubeClient(), app.PathDeckhouseCRDs); err != nil {
+		return fmt.Errorf("ensure crds: %w", err)
+	}
+
 	// we have to lock the controller run if dhctl lock configmap exists
-	if err := lockUntilClusterBootstraped(ctx, logger); err != nil {
+	if err := lockUntilClusterBootstraped(ctx, operator.KubeClient(), logger); err != nil {
 		return fmt.Errorf("lock until cluster bootstraped: %w", err)
 	}
 

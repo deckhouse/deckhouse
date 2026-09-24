@@ -48,7 +48,6 @@ import (
 	pkgruntime "github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/runtime"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/registry"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/addonutils"
-	d8apis "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha2"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1beta1"
@@ -83,7 +82,6 @@ type Controller struct {
 	sync *sync.WaitGroup
 
 	manager *pkgruntime.Runtime
-	kube    *klient.Client
 
 	embeddedPolicy *helpers.ModuleUpdatePolicySpecContainer
 
@@ -205,7 +203,6 @@ func Build(ctx context.Context, ms metricsstorage.Storage, logger *log.Logger) (
 		sync: synced,
 
 		manager: manager,
-		kube:    client,
 
 		embeddedPolicy: embeddedPolicy,
 
@@ -322,10 +319,6 @@ func buildCacheByObject() map[client.Object]cache.ByObject {
 // Start runs the manager, rebuilds the module tree from the cluster and hands it to the runtime.
 // The scheduler is resumed only once that tree is whole, so no module is scheduled half-restored.
 func (c *Controller) Start(ctx context.Context) error {
-	if err := d8apis.EnsureCRDs(ctx, c.kube, app.PathDeckhouseCRDs); err != nil {
-		return fmt.Errorf("ensure crds: %w", err)
-	}
-
 	c.sync.Add(1)
 	defer c.sync.Done()
 

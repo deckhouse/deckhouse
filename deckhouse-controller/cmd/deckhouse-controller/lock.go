@@ -32,7 +32,7 @@ import (
 
 const configMapLockName = "deckhouse-bootstrap-lock"
 
-func lockUntilClusterBootstraped(ctx context.Context, logger *log.Logger) error {
+func lockUntilClusterBootstraped(ctx context.Context, client *klient.Client, logger *log.Logger) error {
 	backoff := wait.Backoff{
 		Duration: 1 * time.Second,
 		Factor:   1.2,
@@ -46,8 +46,6 @@ func lockUntilClusterBootstraped(ctx context.Context, logger *log.Logger) error 
 		// retry on any error
 		return true
 	}
-
-	client := klient.New()
 
 	return retry.OnError(backoff, retriable, func() error {
 		if _, err := client.CoreV1().ConfigMaps(app.NamespaceDeckhouse).Get(ctx, configMapLockName, metav1.GetOptions{}); err != nil {
