@@ -9,7 +9,7 @@ metadata:
   name: ambientgateway-remote-{{ $multicluster.name }}-{{ $index }}
   namespace: d8-{{ $.Chart.Name }}
   annotations:
-    gateway.istio.io/service-account: ambientgateway
+    gateway.istio.io/service-account: alliance-ambientgateway
   {{- include "helm_lib_module_labels" (list $ (dict
       "app" "ambientgateway"
       "istio.io/rev" (include "istioGlobalRevision" $)

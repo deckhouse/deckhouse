@@ -1359,7 +1359,7 @@ network-neigh-0-cluster-id:
 			// not enough, ambient and ambient.multicluster must be on too.
 			Expect(f.KubernetesResource("DaemonSet", "d8-istio", "ambientgateway").Exists()).To(BeFalse())
 			Expect(f.KubernetesResource("Service", "d8-istio", "ambientgateway").Exists()).To(BeFalse())
-			Expect(f.KubernetesResource("ServiceAccount", "d8-istio", "ambientgateway").Exists()).To(BeFalse())
+			Expect(f.KubernetesResource("ServiceAccount", "d8-istio", "alliance-ambientgateway").Exists()).To(BeFalse())
 			Expect(f.KubernetesResource("VerticalPodAutoscaler", "d8-istio", "ambientgateway").Exists()).To(BeFalse())
 			Expect(f.KubernetesResource("PodMonitor", "d8-monitoring", "istio-ambientgateway").Exists()).To(BeFalse())
 			Expect(f.KubernetesResource("Gateway", "d8-istio", "ambientgateway-remote-neigh-0-cluster-id").Exists()).To(BeFalse())

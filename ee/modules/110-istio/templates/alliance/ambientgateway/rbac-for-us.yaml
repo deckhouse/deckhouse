@@ -3,7 +3,7 @@
 apiVersion: v1
 kind: ServiceAccount
 metadata:
-  name: ambientgateway
+  name: alliance-ambientgateway
   namespace: d8-{{ $.Chart.Name }}
   {{- include "helm_lib_module_labels" (list . (dict
     "app" "ambientgateway"

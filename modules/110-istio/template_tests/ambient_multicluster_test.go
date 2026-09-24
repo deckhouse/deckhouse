@@ -204,7 +204,7 @@ var _ = Describe("Module :: istio :: helm template :: ambient multicluster", fun
 
 			ds := f.KubernetesResource("DaemonSet", "d8-istio", "ambientgateway")
 			Expect(ds.Exists()).To(BeTrue())
-			Expect(f.KubernetesResource("ServiceAccount", "d8-istio", "ambientgateway").Exists()).To(BeTrue())
+			Expect(f.KubernetesResource("ServiceAccount", "d8-istio", "alliance-ambientgateway").Exists()).To(BeTrue())
 			Expect(f.KubernetesResource("PodMonitor", "d8-monitoring", "istio-ambientgateway").Exists()).To(BeTrue())
 
 			vpa := f.KubernetesResource("VerticalPodAutoscaler", "d8-istio", "ambientgateway")
@@ -313,7 +313,7 @@ var _ = Describe("Module :: istio :: helm template :: ambient multicluster", fun
 
 			// Otherwise kube.GatewaySA derives the identity from this object's own name.
 			Expect(gw.Field(`metadata.annotations.gateway\.istio\.io/service-account`).String()).
-				To(Equal("ambientgateway"))
+				To(Equal("alliance-ambientgateway"))
 
 			addresses := gw.Field("spec.addresses").Array()
 			Expect(addresses).To(HaveLen(1))
@@ -357,7 +357,7 @@ var _ = Describe("Module :: istio :: helm template :: ambient multicluster", fun
 			// that Workload takes its identity from this annotation either way.
 			Expect(gw.Field("spec.gatewayClassName").String()).To(Equal("istio-remote"))
 			Expect(gw.Field(`metadata.annotations.gateway\.istio\.io/service-account`).String()).
-				To(Equal("ambientgateway"))
+				To(Equal("alliance-ambientgateway"))
 			Expect(gw.Field(`metadata.labels.topology\.istio\.io/network`).String()).
 				To(Equal("network-neigh-hostname"))
 			Expect(gw.Field("spec.listeners.0.protocol").String()).To(Equal("HBONE"))
@@ -867,7 +867,7 @@ yandex.cpi.flant.com/listener-subnet-id: ambient-123
 			Expect(f.RenderError).ShouldNot(HaveOccurred())
 			Expect(f.KubernetesResource("DaemonSet", "d8-istio", "ambientgateway").Exists()).To(BeFalse())
 			Expect(f.KubernetesResource("Service", "d8-istio", "ambientgateway").Exists()).To(BeFalse())
-			Expect(f.KubernetesResource("ServiceAccount", "d8-istio", "ambientgateway").Exists()).To(BeFalse())
+			Expect(f.KubernetesResource("ServiceAccount", "d8-istio", "alliance-ambientgateway").Exists()).To(BeFalse())
 			Expect(f.KubernetesResource("VerticalPodAutoscaler", "d8-istio", "ambientgateway").Exists()).To(BeFalse())
 			Expect(f.KubernetesResource("PodMonitor", "d8-monitoring", "istio-ambientgateway").Exists()).To(BeFalse())
 
