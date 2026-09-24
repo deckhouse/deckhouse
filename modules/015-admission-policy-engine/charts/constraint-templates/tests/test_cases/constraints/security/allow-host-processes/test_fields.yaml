@@ -19,11 +19,11 @@ spec:
     - path: spec.network.hostPID.allowedValue
       level: pod
       description: SPE override for allowing host PID namespace usage.
-      requiredScenarios: [speMatch, speMismatch, speAbsent]
+      requiredScenarios: [speMatch, speMismatch, speAbsent, speUnused]
     - path: spec.network.hostIPC.allowedValue
       level: pod
       description: SPE override for allowing host IPC namespace usage.
-      requiredScenarios: [speMatch, speMismatch, speAbsent]
+      requiredScenarios: [speMatch, speMismatch, speAbsent, speUnused]
   applicableTracks:
     functional: true
     spePod: true

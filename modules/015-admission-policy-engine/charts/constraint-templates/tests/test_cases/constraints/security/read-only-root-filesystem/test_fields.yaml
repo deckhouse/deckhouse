@@ -13,7 +13,7 @@ spec:
     - path: spec.securityContext.readOnlyRootFilesystem.allowedValue
       level: container
       description: SPE override for readOnlyRootFilesystem per container
-      requiredScenarios: [speMatch, speMismatch, speAbsent, speContainerSpecific]
+      requiredScenarios: [speMatch, speMismatch, speAbsent, speContainerSpecific, speUnused]
   applicableTracks:
     functional: true
     spePod: true
