@@ -45,6 +45,8 @@ This patch fixes:
 
 The login.gov provider embeds `jwt.RegisteredClaims` in its ID token claims, as `golang-jwt/jwt/v5`
 requires. An embedded `jwt.Claims` interface stays nil and makes token validation panic.
+The provider parses the ID token with `jwt.WithIssuedAt()`, so a token with an `iat` claim in the
+future is rejected, as with `StandardClaims` of `jwt/v3`.
 
 The patch also adapts upstream tests to the newer toolchain and dependencies:
 
