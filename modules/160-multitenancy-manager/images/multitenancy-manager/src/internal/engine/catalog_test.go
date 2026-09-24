@@ -35,6 +35,7 @@ import (
 	"sigs.k8s.io/yaml"
 
 	"controller/api/v1alpha1"
+	"controller/internal/jsonpath"
 	"controller/internal/testutil"
 )
 
@@ -318,6 +319,44 @@ func TestCatalogLimitsMatchTheCRDs(t *testing.T) {
 		}
 		if kib := strconv.Itoa(budgetKiB) + " \u041a\u0438\u0411"; !strings.Contains(text, kib) {
 			t.Errorf("%s: the description of %s does not mention %d KiB", c.file, c.field, budgetKiB)
+		}
+	}
+}
+
+// TestPathLimitsMatchTheCRDs: every JSONPath field in the CRDs has a maxLength that the parsed-path
+// cache covers, so a stored ASCII path is always cached and no stored path (256 characters, at most
+// 1024 bytes) hits jsonpath.MaxPathLen.
+func TestPathLimitsMatchTheCRDs(t *testing.T) {
+	load := func(name string) apiextensionsv1.JSONSchemaProps {
+		t.Helper()
+		raw, err := os.ReadFile(filepath.Join(crdsDir, name))
+		if err != nil {
+			t.Fatal(err)
+		}
+		crd := &apiextensionsv1.CustomResourceDefinition{}
+		if err := yaml.Unmarshal(raw, crd); err != nil {
+			t.Fatal(err)
+		}
+		if len(crd.Spec.Versions) != 1 {
+			t.Fatalf("%s: %d versions, the test reads only one", name, len(crd.Spec.Versions))
+		}
+		return crd.Spec.Versions[0].Schema.OpenAPIV3Schema.Properties["spec"]
+	}
+	items := func(p apiextensionsv1.JSONSchemaProps) apiextensionsv1.JSONSchemaProps {
+		if p.Items == nil || p.Items.Schema == nil {
+			return apiextensionsv1.JSONSchemaProps{}
+		}
+		return *p.Items.Schema
+	}
+	ref := items(load("multitenancy.deckhouse.io_grantableclusterresourcereferences.yaml").Properties["fieldPaths"])
+	def := items(load("multitenancy.deckhouse.io_grantableclusterresourcedefinitions.yaml").Properties["catalogFields"])
+	for name, field := range map[string]apiextensionsv1.JSONSchemaProps{
+		"GrantableClusterResourceReference spec.fieldPaths[].path":            ref.Properties["path"],
+		"GrantableClusterResourceReference spec.fieldPaths[].match.fieldPath": ref.Properties["match"].Properties["fieldPath"],
+		"GrantableClusterResourceDefinition spec.catalogFields[].path":        def.Properties["path"],
+	} {
+		if field.MaxLength == nil || *field.MaxLength > jsonpath.MaxCachedPathLen || jsonpath.MaxCachedPathLen > jsonpath.MaxPathLen {
+			t.Errorf("%s: maxLength = %v, want at most MaxCachedPathLen (%d) <= MaxPathLen (%d)", name, field.MaxLength, jsonpath.MaxCachedPathLen, jsonpath.MaxPathLen)
 		}
 	}
 }

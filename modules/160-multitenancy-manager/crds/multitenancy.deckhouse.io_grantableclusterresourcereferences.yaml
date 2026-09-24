@@ -125,7 +125,8 @@ spec:
                           description: |-
                             JSONPath to the field whose value is checked by the condition.
 
-                            Must be a valid RFC 9535 JSONPath; an object with a path that does not parse is rejected.
+                            Must be a valid RFC 9535 JSONPath of at most 256 characters; an object with a path that does not parse is rejected.
+                          maxLength: 256
                           type: string
                         in:
                           description: List of allowed values for the field specified in `fieldPath`.
@@ -141,9 +142,10 @@ spec:
 
                         The path can also point to an annotation, for example, `$.metadata.annotations['cert-manager.io/cluster-issuer']`.
 
-                        Must be a valid RFC 9535 JSONPath; an object with a path that does not parse is rejected, whatever `defaulting` is set to. A field name that is not a plain identifier (contains `-`, `.` or `/`, or starts with a digit) must be written in brackets, for example `$.spec['foo-bar']`.
+                        Must be a valid RFC 9535 JSONPath of at most 256 characters; an object with a path that does not parse is rejected, whatever `defaulting` is set to. A field name that is not a plain identifier (contains `-`, `.` or `/`, or starts with a digit) must be written in brackets, for example `$.spec['foo-bar']`.
 
                         An availability check evaluates the full JSONPath, including wildcards, array indexes and filters. Default value assignment does not: with `defaulting: FillEmpty` or `defaulting: Coerce`, only a simple member path is accepted.
+                      maxLength: 256
                       type: string
                     resources:
                       description: |-
