@@ -21,7 +21,6 @@ import (
 	"log/slog"
 	"math/rand"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"slices"
 	"strings"
@@ -357,22 +356,29 @@ func hostsToString(hosts []session.Host) string {
 func (d *Destroyer) processStaticHost(ctx context.Context, sshClient libcon.SSHClient, host session.Host, stdOutErrHandler func(l string), cmd string) error {
 	d.logger().DebugContext(ctx, fmt.Sprintf("Starting cleanup process for host %s", host))
 
-	err := retry.NewLoopWithParams(d.destroyMasterLoopParams(host)).RunContext(ctx, func() error {
+	// A cleanup that ran out of time was killed partway through the script, so a retry would start
+	// it again on a half-cleaned host and could wait another cleanupAttemptTimeout for nothing.
+	loop := retry.NewLoopWithParams(d.destroyMasterLoopParams(host)).BreakIf(func(err error) bool {
+		return errors.Is(err, context.DeadlineExceeded)
+	})
+
+	err := loop.RunContext(ctx, func() error {
+		attemptCtx, cancel := context.WithTimeout(ctx, cleanupAttemptTimeout)
+		defer cancel()
+
 		c := sshClient.Command(cmd)
-		c.Sudo(ctx)
-		c.WithTimeout(30 * time.Second)
+		c.Sudo(attemptCtx)
+		// The executor timeout is the hard stop for both ssh backends, but lib-connection reports the
+		// stop as a clean exit, so the deadline is checked on attemptCtx below.
+		c.WithTimeout(cleanupAttemptTimeout)
 		c.WithStdoutHandler(stdOutErrHandler)
 		c.WithStderrHandler(stdOutErrHandler)
-		err := c.Run(ctx)
-		if err != nil {
-			if ee, ok := errors.AsType[*exec.ExitError](err); ok {
-				// script reboot node
-				if ee.ExitCode() == 255 {
-					return nil
-				}
-			}
-
-			return err
+		// Exit code 255 is not a reboot: the script schedules the reboot with shutdown -r and exits 0.
+		// 255 comes from ssh itself (no connection, failed auth, dropped session), so the host is not
+		// cleaned up and taking it for success reports a live master as cleared.
+		err := c.Run(attemptCtx)
+		if ctxErr := attemptCtx.Err(); ctxErr != nil {
+			return fmt.Errorf("cleanup was interrupted, the host may be left partially cleaned up: %w", ctxErr)
 		}
 
 		return err
@@ -637,6 +643,11 @@ func (d *Destroyer) logger() *slog.Logger {
 }
 
 var getDestroyMastersDefaultOpts = retry.AttemptsWithWaitOpts(75, 1*time.Second)
+
+// cleanupAttemptTimeout bounds one run of cleanup_static_node.sh. The script stops services, waits
+// for processes and wipes containerd and etcd data, which can take longer than 30s on a loaded
+// master; the value matches the static instance cleanup timeout in caps-controller-manager.
+var cleanupAttemptTimeout = 10 * time.Minute
 
 func (d *Destroyer) destroyMasterLoopParams(host session.Host) retry.Params {
 	return retry.SafeCloneOrNewParams(d.params.Loops.DestroyMaster, getDestroyMastersDefaultOpts...).
