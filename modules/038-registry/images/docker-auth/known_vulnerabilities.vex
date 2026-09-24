@@ -2,7 +2,7 @@
   "@context": "https://openvex.dev/ns/v0.2.0",
   "@id": "https://openvex.dev/docs/public/vex-f310ec14e6bc8e4e0c82d328a252d86f51efe3a134d87998fdff120924852513",
   "author": "Deckhouse <contact@deckhouse.io>",
-  "version": 1,
+  "version": 2,
   "statements": [
     {
       "vulnerability": {
@@ -185,7 +185,22 @@
       "justification": "vulnerable_code_not_in_execute_path",
       "impact_statement": "Уязвимость CVE-2026-39821: пакет golang.org/x/net/idna неверно разбирал метку Punycode, и имя хоста превращалось в другое. Пакет idna попадает в бинарь из golang.org/x/net/http2, а тот из k8s.io/client-go/rest. Этот клиент создаётся только при проверке прав через Kubernetes, а она включается секцией kubernetes_auth в конфиге (server/server.go:84). Модуль 038-registry рендерит конфиг с секцией users и списком acl, секции kubernetes_auth там нет (templates/inclusterproxy/secret.yaml). Свой порт auth_server слушает через net/http, вызовов x/net/http2 в коде нет.",
       "timestamp": "2026-09-16T09:37:52Z"
+    },
+    {
+      "vulnerability": {
+        "name": "GO-2026-5932"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/golang.org/x/crypto"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_present",
+      "impact_statement": "Пакет golang.org/x/crypto/openpgp признан неподдерживаемым, исправленной версии не существует. В бинарь auth_server он не входит: go list -deps по главному пакету сборки не содержит ни одного пакета golang.org/x/crypto/openpgp. Компонент проверяет токены доступа к registry и операций OpenPGP не выполняет.",
+      "timestamp": "2026-09-24T23:13:24Z"
     }
   ],
-  "timestamp": "2026-09-16T09:37:52Z"
+  "timestamp": "2026-09-16T09:37:52Z",
+  "last_updated": "2026-09-24T23:13:24Z"
 }

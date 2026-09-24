@@ -2,7 +2,7 @@
   "@context": "https://openvex.dev/ns/v0.2.0",
   "@id": "merged-vex-819396348420854c54b988d825529cab830b81f6a05730951c9bec690dc551f1",
   "author": "Deckhouse <contact@deckhouse.io>",
-  "version": 1,
+  "version": 2,
   "statements": [
     {
       "vulnerability": {
@@ -296,7 +296,22 @@
       "justification": "vulnerable_code_not_present",
       "impact_statement": "Уязвимость CVE-2026-46600: разбор DNS-сообщений в пакете golang.org/x/net/dns/dnsmessage можно довести до отказа в обслуживании. yq из модуля golang.org/x/net использует один пакет, html/charset, а dns/dnsmessage в сборку не попадает. Путь vendor/golang.org/x/net/dns/dnsmessage в бинаре /usr/bin/yq принадлежит копии, которую стандартная библиотека Go держит у себя: она меняется с версией Go, а не с модулем из go.mod.",
       "timestamp": "2026-09-14T08:36:18Z"
+    },
+    {
+      "vulnerability": {
+        "name": "GO-2026-5932"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/golang.org/x/crypto"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_present",
+      "impact_statement": "Пакет golang.org/x/crypto/openpgp признан неподдерживаемым, исправленной версии не существует. Ни в один бинарь образа он не входит: go list -deps по главным пакетам dhctl не содержит golang.org/x/crypto/openpgp, а opentofu использует форк github.com/ProtonMail/go-crypto/openpgp — пакет golang.org/x/crypto/openpgp в его сборку не попадает.",
+      "timestamp": "2026-09-24T23:13:24Z"
     }
   ],
-  "timestamp": "2025-10-10T07:23:24Z"
+  "timestamp": "2025-10-10T07:23:24Z",
+  "last_updated": "2026-09-24T23:13:24Z"
 }
