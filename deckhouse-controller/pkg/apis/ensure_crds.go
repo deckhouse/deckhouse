@@ -67,7 +67,7 @@ func EnsureCRDs(ctx context.Context, client kubeClient, crdsGlob string) error {
 			for _, v := range versions {
 				m := v.(map[string]any)
 				m["storage"] = m["name"] == "v1beta1"
-				m["served"] = m["name"] == "v1beta1"
+				m["served"] = true
 			}
 
 			return unstructured.SetNestedSlice(crd.Object, versions, "spec", "versions")
