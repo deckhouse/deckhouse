@@ -77,3 +77,34 @@ Files:
 Changes:
 
 - Fixes TCP health monitors removal during an update of the pool
+
+### 007-support-load-balancer-ip-annotation.patch
+
+Files:
+
+- pkg/ccm/loadbalancer.go
+
+Changes:
+
+- Add support for the `vcd.cpi.flant.com/load-balancer-ip` annotation
+
+### 008-fix-ccm-command-signature.patch
+
+Files:
+
+- cmd/ccm/main.go
+
+Changes:
+
+- Keep legacy `v1.5.0` call signature of `NewCloudControllerManagerCommand` without adding an extra feature-gates map argument.
+
+### 009-batch-vapp-vm-cache.patch
+
+Files:
+
+- pkg/ccm/vminfocache.go
+
+Changes:
+
+- On a cache miss, request the cluster vApp once and index every VM returned by that response.
+- This removes repeated full-vApp downloads during a burst of Node initialization, while keeping the lock around the shared mutable VCD client.
