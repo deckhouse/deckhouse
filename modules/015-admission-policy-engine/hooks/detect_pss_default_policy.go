@@ -34,7 +34,11 @@ import (
 	"github.com/deckhouse/deckhouse/pkg/log"
 )
 
-const milestone = "v1.55"
+const (
+	milestone = "v1.55"
+
+	defaultPolicyMetricGroup = "d8_admission_policy_engine_pss_default_policy"
+)
 
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 	OnBeforeHelm: &go_hook.OrderedConfig{Order: 10},
@@ -72,29 +76,34 @@ func policyCode(name string) float64 {
 }
 
 func setDefaultPolicy(ctx context.Context, input *go_hook.HookInput) error {
-	policy := getDefaultPolicy(ctx, input)
+	policy, mustBeSetExplicitly := getDefaultPolicy(ctx, input)
 	input.Values.Set("admissionPolicyEngine.podSecurityStandards.defaultPolicy", policy)
-	input.MetricsCollector.Expire("d8_admission_policy_engine_pss_default_policy")
-	input.MetricsCollector.Set("d8_admission_policy_engine_pss_default_policy", policyCode(policy), map[string]string{}, metrics.WithGroup("d8_admission_policy_engine_pss_default_policy"))
+	input.MetricsCollector.Expire(defaultPolicyMetricGroup)
+	input.MetricsCollector.Set("d8_admission_policy_engine_pss_default_policy", policyCode(policy), map[string]string{}, metrics.WithGroup(defaultPolicyMetricGroup))
+	// the bootstrap version is unknown, so the administrator has to choose the default policy in the ModuleConfig
+	if mustBeSetExplicitly {
+		input.MetricsCollector.Set("d8_admission_policy_engine_pss_default_policy_not_set", 1, map[string]string{}, metrics.WithGroup(defaultPolicyMetricGroup))
+	}
 	return nil
 }
 
-func getDefaultPolicy(_ context.Context, input *go_hook.HookInput) string {
+// getDefaultPolicy returns the default policy and whether it must be set explicitly in the ModuleConfig.
+func getDefaultPolicy(_ context.Context, input *go_hook.HookInput) (string, bool) {
 	// default policy is set explicitly - nothing to do here
 	if policy := input.ConfigValues.Get("admissionPolicyEngine.podSecurityStandards.defaultPolicy").String(); policy != "" {
-		return policy
+		return policy, false
 	}
 
 	installDataSlice, err := sdkobjectpatch.UnmarshalToStruct[string](input.Snapshots, "install_data")
 	if err != nil {
 		input.Logger.Error("failed to unmarshal install_data snapshot", log.Err(err))
-		return "Baseline"
+		return "Baseline", false
 	}
 
 	// no map found - an old cluster, bootstrapped before install-data was introduced in v1.55
 	if len(installDataSlice) == 0 {
-		input.Logger.Info("install-data configmap isn't found, PSS default policy is set to privileged")
-		return "Privileged"
+		input.Logger.Warn("install-data configmap isn't found, PSS default policy is set to privileged, set podSecurityStandards.defaultPolicy in the ModuleConfig explicitly")
+		return "Privileged", true
 	}
 
 	deckhouseVersion := installDataSlice[0]
@@ -102,16 +111,16 @@ func getDefaultPolicy(_ context.Context, input *go_hook.HookInput) string {
 	// no version field found or invalid semver - something went wrong
 	if len(deckhouseVersion) == 0 || !semver.IsValid(deckhouseVersion) {
 		input.Logger.Warn("deckhouseVersion isn't found or invalid", slog.String("version", deckhouseVersion))
-		return "Baseline"
+		return "Baseline", false
 	}
 
 	// if deckhouse bootstrap release < v1.55
 	if semver.Compare(semver.MajorMinor(deckhouseVersion), milestone) < 0 {
 		input.Logger.Info("PSS default policy is set to privileged", slog.String("version", deckhouseVersion))
-		return "Privileged"
+		return "Privileged", false
 	}
 
-	return "Baseline"
+	return "Baseline", false
 }
 
 func getVersion(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
