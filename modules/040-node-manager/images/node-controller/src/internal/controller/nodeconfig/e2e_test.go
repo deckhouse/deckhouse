@@ -71,6 +71,7 @@ const (
 	testCNIDigest               = testenv.TestCNIDigest
 	testKubeletDigest           = testenv.TestKubeletDigest
 	testNodeletDigest           = testenv.TestNodeletDigest
+	testGuestAgentDigest        = testenv.TestGuestAgentDigest
 	testOSImageDigest           = testenv.TestOSImageDigest
 	testClusterCA               = testenv.TestClusterCA
 	// The extension one spec asks for through a NodeExtensionRequest, and the
@@ -1522,10 +1523,10 @@ func heartbeat(ctx context.Context, nodeName string) {
 func setContainerdDigest(ctx context.Context, digest string) {
 	GinkgoHelper()
 
-	original := fmt.Sprintf(`{"registrypackages":{"containerdSysext224":%q,"kubernetesCniSysext162":%q,"kubeletSysext1356":%q,"nodeletSysext":%q},"nodeManager":{"engine":%q},"common":{"pause":%q}}`,
-		testContainerdDigest, testCNIDigest, testKubeletDigest, testNodeletDigest, testOSImageDigest, testPauseDigest)
-	updated := fmt.Sprintf(`{"registrypackages":{"containerdSysext224":%q,"kubernetesCniSysext162":%q,"kubeletSysext1356":%q,"nodeletSysext":%q},"nodeManager":{"engine":%q},"common":{"pause":%q}}`,
-		digest, testCNIDigest, testKubeletDigest, testNodeletDigest, testOSImageDigest, testPauseDigest)
+	original := fmt.Sprintf(`{"registrypackages":{"containerdSysext224":%q,"kubernetesCniSysext162":%q,"kubeletSysext1356":%q,"nodeletSysext":%q,"qemuGuestAgentSysext":%q},"nodeManager":{"engine":%q},"common":{"pause":%q}}`,
+		testContainerdDigest, testCNIDigest, testKubeletDigest, testNodeletDigest, testGuestAgentDigest, testOSImageDigest, testPauseDigest)
+	updated := fmt.Sprintf(`{"registrypackages":{"containerdSysext224":%q,"kubernetesCniSysext162":%q,"kubeletSysext1356":%q,"nodeletSysext":%q,"qemuGuestAgentSysext":%q},"nodeManager":{"engine":%q},"common":{"pause":%q}}`,
+		digest, testCNIDigest, testKubeletDigest, testNodeletDigest, testGuestAgentDigest, testOSImageDigest, testPauseDigest)
 
 	writeDigests := func(ctx context.Context, data string) {
 		cm := &corev1.ConfigMap{}

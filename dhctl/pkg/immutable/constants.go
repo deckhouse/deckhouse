@@ -98,10 +98,13 @@ const (
 	cniExtension        = "kubernetes-cni"
 	kubeletExtension    = "kubelet"
 	nodeletExtension    = "nodelet"
+	guestAgentExtension = "qemu-guest-agent"
 
 	// nodeletSysextImage is unversioned, so it is read by its exact key rather
 	// than through soleDigest, which looks for a numeric suffix.
 	nodeletSysextImage = "nodeletSysext"
+	// guestAgentSysextImage is unversioned for the same reason.
+	guestAgentSysextImage = "qemuGuestAgentSysext"
 
 	// platformExtensionRequestedBy names the module that wants the extension, not
 	// the process that wrote the file, so it stays "node-manager" when
