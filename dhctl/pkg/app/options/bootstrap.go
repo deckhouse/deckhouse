@@ -38,6 +38,14 @@ type BootstrapOptions struct {
 	// of immutable nodes: those machines run no sshd and no cloud reports them.
 	MasterHostsRaw []string
 
+	// NodeName is what the first master registers under. Empty means the name is
+	// taken from the machine's hostname, as it always was. Setting it lets the
+	// node be called something else without renaming the host, which matters when
+	// the hostnames of a fleet are assigned by something other than the operator.
+	// Only meaningful where dhctl bootstraps the master over SSH, so a static or
+	// hybrid cluster.
+	NodeName string
+
 	ForceAbortFromCache             bool
 	DontUsePublicControlPlaneImages bool
 
@@ -58,6 +66,7 @@ func NewBootstrapOptions() BootstrapOptions {
 
 func (o *BootstrapOptions) ToSpanAttributes() []otattribute.KeyValue {
 	return []otattribute.KeyValue{
+		otattribute.String("bootstrap.nodeName", o.NodeName),
 		otattribute.String("bootstrap.resourcesPath", o.ResourcesPath),
 		otattribute.String("bootstrap.resourcesTimeout", o.ResourcesTimeout.String()),
 		otattribute.String("bootstrap.deckhouseTimeout", o.DeckhouseTimeout.String()),

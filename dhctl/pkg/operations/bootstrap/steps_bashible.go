@@ -57,6 +57,11 @@ type BashiblePipelineParams struct {
 	IsDebug       bool
 	GlobalOpts    *options.GlobalOptions
 
+	// NodeName is what the master should register under. Empty leaves the node
+	// named after its hostname, which is what every cluster bootstrapped before
+	// this option got.
+	NodeName string
+
 	// CompleteSubPhase completes a child of the InstallKubernetes node. The pipeline gets the
 	// node's completer and not the phase context itself: it runs inside one node of the tree and
 	// has no business announcing, switching or completing phases - the walker does that.
@@ -181,6 +186,12 @@ func RunBashiblePipeline(ctx context.Context, params *BashiblePipelineParams) er
 		}
 	})
 
+	// Has to land before the prerequisites script runs: that script is what pins
+	// the node's name, and it only reads the file while the name is not pinned yet.
+	if err := requestNodeName(ctx, nodeInterface, cfg, params.NodeName); err != nil {
+		return err
+	}
+
 	if err := prepareMasterNode(ctx, nodeInterface, templateController); err != nil {
 		return err
 	}
@@ -303,6 +314,90 @@ func prepareMasterNode(ctx context.Context, nodeInterface libcon.Interface, cont
 			if err != nil {
 				return err
 			}
+		}
+		return nil
+	})
+}
+
+// nodeNameDir is where bb-discover-node-name looks for a name asked for before
+// the node was bootstrapped.
+const nodeNameDir = "/var/lib/bashible"
+
+// nodeNameRemoteCommand writes the name into dir/node-name on the node and prints
+// back what landed there.
+//
+// echo rather than printf '%s\n': the command reaches the node through a shell of
+// its own, and a backslash does not survive that. The name it writes would still be
+// a valid one, so nothing downstream could object to it - hence the caller reads the
+// file back rather than take the write on trust.
+//
+// The name has already been through app.ValidateNodeName, so it holds nothing a
+// shell would look at. The quoting is here so that stays true of a caller that has
+// not.
+func nodeNameRemoteCommand(dir, nodeName string) string {
+	quoted := strings.ReplaceAll(nodeName, "'", `'\''`)
+
+	return fmt.Sprintf("mkdir -p %s && echo '%s' > %s/node-name && cat %s/node-name",
+		dir, quoted, dir, dir)
+}
+
+// lastLine is the last line of output that holds anything, or "" if none does.
+func lastLine(out string) string {
+	lines := strings.Split(out, "\n")
+	for i := len(lines) - 1; i >= 0; i-- {
+		if line := strings.TrimSpace(lines[i]); line != "" {
+			return line
+		}
+	}
+
+	return ""
+}
+
+// requestNodeName asks the machine to register under a name of its own instead of
+// its hostname, by leaving the name where bb-discover-node-name looks for it. The
+// hostname of the machine is not touched: from here on the two are separate, and
+// nothing re-derives the node name from the hostname again.
+//
+// Only a static or hybrid cluster may do this. In a cloud cluster the master is a
+// CloudPermanent node the infrastructure built, and its name is how everything
+// afterwards finds the machine behind it: converge keeps that machine's state in a
+// Secret named d8-node-terraform-state-<node name>. A master registering under a
+// name of its own would read as a master that vanished and a node that appeared
+// from nowhere, and the next converge would build a replacement for it.
+func requestNodeName(ctx context.Context, nodeInterface libcon.Interface, cfg *config.MetaConfig, nodeName string) error {
+	if nodeName == "" {
+		return nil
+	}
+
+	if !cfg.IsStatic() {
+		return fmt.Errorf("--node-name is only supported for a static or hybrid cluster: "+
+			"in a %s cluster the master node is named by the infrastructure, and converge finds its machine by that name",
+			cfg.ClusterType)
+	}
+
+	ctx, span := telemetry.StartSpan(ctx, "requestNodeName")
+	defer span.End()
+
+	remote := nodeNameRemoteCommand(nodeNameDir, nodeName)
+
+	p := retry.NewEmptyParams(
+		retry.WithName("Set the node name to %s", nodeName),
+		retry.WithAttempts(30),
+		retry.WithWait(1*time.Second),
+		retry.WithLogger(dhlog.FromContext(ctx)),
+	)
+
+	return retry.NewLoopWithParams(p).RunContext(ctx, func() error {
+		cmd := nodeInterface.Command("bash", "-c", remote)
+		cmd.Sudo(ctx)
+		stdout, stderr, err := cmd.Output(ctx)
+		if err != nil {
+			return fmt.Errorf("write /var/lib/bashible/node-name: %w (stderr: %s)", err, string(stderr))
+		}
+		// The last line only: sudo announces itself on the same stream, so what
+		// the node read back is the line under that.
+		if got := lastLine(string(stdout)); got != nodeName {
+			return fmt.Errorf("asked the node to register as %q, but /var/lib/bashible/node-name read back %q", nodeName, got)
 		}
 		return nil
 	})

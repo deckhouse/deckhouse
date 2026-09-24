@@ -72,6 +72,9 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 	ng, err := nodecommon.GetNodeGroup(ctx, r.Client, req.Name)
 	if err != nil {
 		if errors.IsNotFound(err) {
+			// The group is gone and so are its nodes; its gauges would otherwise
+			// keep reporting the last status of nodes that no longer exist.
+			uametrics.PruneNodeStatusMetrics(req.Name, nil)
 			return ctrl.Result{}, nil
 		}
 		return ctrl.Result{}, fmt.Errorf("failed to get nodegroup %s: %w", req.Name, err)
@@ -105,9 +108,15 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 		nodeInfos = append(nodeInfos, ua.BuildNodeInfo(&node))
 	}
 
+	live := make(map[string]struct{}, len(nodeInfos))
 	for _, node := range nodeInfos {
 		uametrics.SetNodeMetrics(node, ng, ngChecksum)
+		live[node.Name] = struct{}{}
 	}
+	// After publishing, not before: a node that left the group (scaled down,
+	// deleted, or renamed into a node of another name) keeps its last reported
+	// status forever otherwise.
+	uametrics.PruneNodeStatusMetrics(ng.Name, live)
 
 	finished, err := engineSvc.ProcessUpdatedNodes(ctx, ng, nodeInfos, ngChecksum)
 	if err != nil {

@@ -32,7 +32,14 @@ import (
 	"github.com/deckhouse/node-controller/internal/testenv"
 )
 
-var k8sClient client.Client
+var (
+	k8sClient client.Client
+
+	// cachedClient is the controller's own view of the cluster. Specs that make
+	// the controller's decision depend on a write have to wait on this before
+	// provoking the reconcile that reads it.
+	cachedClient client.Client
+)
 
 // TestNodeBootstrapControllerEnvtest runs the envtest-backed integration
 // suite: the real controller against a real kube-apiserver. Skipped when
@@ -67,4 +74,5 @@ var _ = BeforeSuite(func() {
 	DeferCleanup(stop)
 
 	k8sClient = suite.Client
+	cachedClient = suite.CachedClient
 })

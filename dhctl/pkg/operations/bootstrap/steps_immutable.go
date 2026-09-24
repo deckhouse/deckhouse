@@ -114,6 +114,16 @@ func (b *ClusterBootstrapper) detectImmutableMaster(ctx context.Context, bctx *b
 		return nil
 	}
 
+	// An immutable master is never handed to bashible, so nothing on this path
+	// reads the requested node name: it would be dropped without a word and the
+	// master would come up under the name the infrastructure gave it.
+	if b.Options.Bootstrap.NodeName != "" {
+		return errors.New(
+			"--node-name is not supported for a master NodeGroup with systemType: Immutable: " +
+				"such a master is named by the image it boots from, not by bashible. Drop the flag, " +
+				"or drop systemType: Immutable from the master NodeGroup")
+	}
+
 	// The documents describe machines the installer talks to, not objects to
 	// create, so they leave the resources before anything else reads them.
 	documents, rest := splitNodeCustomizations(bctx.metaConfig.ResourcesYAML)

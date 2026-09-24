@@ -239,23 +239,116 @@ bb-d8-node-ip() {
 {{- end }}
 
 {{- define "bb-discover-node-name" -}}
+{{- /*
+  The Kubernetes name of a node is pinned once, at its first bootstrap, into
+  /var/lib/bashible/discovered-node-name. From then on it is the node's identity:
+  kubelet registers under it (--hostname-override), every bashible step addresses
+  the Node object by it, and on a control-plane node it is the etcd member name and
+  a SAN of the control-plane certificates. The OS hostname is only one of the
+  sources the name can be taken from, and it is never consulted again once the name
+  is pinned - so changing the hostname of a running node does not rename it.
+*/ -}}
+# Bring a candidate node name to the form kubelet will actually register under.
+# kubelet's nodeutil.GetHostname trims and lowercases whatever it is handed, so a
+# name that differs from it only in case or in surrounding space would leave every
+# bashible step addressing a Node that does not exist.
+bb-d8-node-name-normalize() {
+  local name="${1,,}"
+  name="${name#"${name%%[![:space:]]*}"}"
+  name="${name%"${name##*[![:space:]]}"}"
+  # A trailing dot makes an FQDN absolute; it is not part of a Kubernetes name.
+  while [[ "$name" == *. ]]; do
+    name="${name%.}"
+  done
+  printf '%s' "$name"
+}
+
+# A node name that is not an RFC 1123 DNS subdomain is rejected by the API server,
+# so kubelet never registers and the node hangs in bootstrap with nothing to point
+# at. Fail here instead, where the name is still attributable to its source.
+bb-d8-node-name-validate() {
+  local name="$1" source="$2"
+  if [[ -z "$name" ]]; then
+    >&2 echo "ERROR: the node name taken from ${source} is empty"
+    return 1
+  fi
+  if (( ${#name} > 253 )); then
+    >&2 echo "ERROR: the node name '${name}' taken from ${source} is longer than the 253 characters a Kubernetes object name allows"
+    return 1
+  fi
+  if [[ ! "$name" =~ ^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$ ]]; then
+    >&2 echo "ERROR: the node name '${name}' taken from ${source} is not a valid RFC 1123 DNS subdomain (lowercase letters, digits, '-' and '.'), so kubelet cannot register a Node under it"
+    return 1
+  fi
+}
+
 bb-discover-node-name() {
   local node_name="/var/lib/bashible/discovered-node-name"
+  local requested_name="${NODE_NAME_FILE:-/var/lib/bashible/node-name}"
   local kubelet_crt="/var/lib/kubelet/pki/kubelet-server-current.pem"
-  if [ ! -s "$node_name" ]; then
-    if [[ -s "$kubelet_crt" ]]; then
-      openssl x509 -in "$kubelet_crt" \
-        -noout -subject -nameopt multiline |
-      awk '/^ *commonName/{print $NF}' | cut -d':' -f3- > "$node_name"
-    else
-    {{- if and (ne .nodeGroup.nodeType "Static") (ne .nodeGroup.nodeType "CloudStatic") }}
-      if [[ "$(hostname)" != "$(hostname -s)" ]]; then
-        hostnamectl set-hostname "$(hostname -s)"
-      fi
-    {{- end }}
-      hostname > "$node_name"
-    fi
+  local name source
+
+  # Already pinned: this is every run after the first one, and the only reason the
+  # hostname of a bootstrapped node is free to change.
+  if [ -s "$node_name" ]; then
+    return 0
   fi
+
+  if [[ -s "$kubelet_crt" ]]; then
+    # The node has registered before and we are recovering the name it used. The
+    # serving certificate is authoritative over anything an operator asked for
+    # since: the Node object out there already carries this name.
+    source="the kubelet serving certificate"
+    name="$(openssl x509 -in "$kubelet_crt" \
+      -noout -subject -nameopt multiline |
+      awk '/^ *commonName/{print $NF}' | cut -d':' -f3-)"
+  elif [[ -s "$requested_name" ]]; then
+    # An operator (or the Cluster API Provider Static) asked for this name before
+    # the node was bootstrapped. This is what lets a node's name differ from its
+    # hostname.
+    source="${requested_name}"
+    name="$(<"$requested_name")"
+  elif [[ -n "${D8_NODE_NAME:-}" ]]; then
+    source="the D8_NODE_NAME environment variable"
+    name="${D8_NODE_NAME}"
+  else
+    source="the hostname of the machine"
+    {{- if and (ne .nodeGroup.nodeType "Static") (ne .nodeGroup.nodeType "CloudStatic") }}
+    # A cloud image usually boots with the FQDN as its hostname, while the cloud
+    # named the machine after the short form - and for a node the cloud created,
+    # the machine's name is the node's name: machine-controller-manager finds the
+    # Machine behind a Node by it. Shortening the hostname is what keeps the two
+    # the same. It happens only on this branch, so a node that was given a name of
+    # its own keeps the hostname it booted with.
+    if [[ "$(hostname)" != "$(hostname -s)" ]]; then
+      hostnamectl set-hostname "$(hostname -s)"
+    fi
+    {{- end }}
+    name="$(hostname)"
+  fi
+
+{{- if eq .nodeGroup.nodeType "CloudStatic" }}
+  # A CloudStatic node is the one kind of node that is left to the cloud
+  # controller manager to initialize, and the CCM has only the node's name to
+  # find the machine by: unlike a CAPS node it is given no providerID, and
+  # unlike a Static node it is given no static:// either. Named anything but
+  # its machine, it is never matched: it keeps the
+  # node.cloudprovider.kubernetes.io/uninitialized taint for good, is never
+  # given its addresses or its zone labels, and never goes Ready.
+  case "$source" in
+    "${requested_name}"|"the D8_NODE_NAME environment variable")
+      >&2 echo "ERROR: a CloudStatic node cannot be given a name of its own (asked for '${name}' through ${source})."
+      >&2 echo "The cloud finds the machine behind such a node by the node's name, so the name has to stay the name of the machine."
+      >&2 echo "A node whose name is its own business is a Static one: put it in a NodeGroup with nodeType: Static."
+      return 1
+      ;;
+  esac
+{{- end }}
+
+  name="$(bb-d8-node-name-normalize "$name")"
+  bb-d8-node-name-validate "$name" "$source" || return 1
+
+  echo "$name" > "$node_name"
 }
 {{- end }}
 {{- define "bb-minget" -}}

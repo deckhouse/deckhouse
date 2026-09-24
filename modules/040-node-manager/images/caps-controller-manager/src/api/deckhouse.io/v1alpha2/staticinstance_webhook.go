@@ -108,12 +108,30 @@ func (r *StaticInstanceCustomValidator) ValidateUpdate(_ context.Context, new, o
 		return nil, field.Forbidden(field.NewPath("spec", "address"), "StaticInstance address is immutable")
 	}
 
+	// The node name is baked into the host at bootstrap: kubelet registers under it
+	// and the Node object carries it from then on. Editing the field afterwards
+	// would only make the StaticInstance disagree with the node it points at, so it
+	// is only open while the instance has yet to be bootstrapped.
+	if oldStaticInstance.Spec.NodeName != staticInstance.Spec.NodeName &&
+		!nodeNameStillOpen(oldStaticInstance.GetPhase()) {
+		return nil, field.Forbidden(field.NewPath("spec", "nodeName"),
+			"StaticInstance nodeName can only be changed while the instance is in the Pending phase")
+	}
+
 	_, ok = staticInstance.Annotations[SkipBootstrapPhaseAnnotation]
 	if ok && staticInstance.Status.CurrentStatus.Phase != StaticInstanceStatusCurrentStatusPhasePending {
 		return nil, field.Forbidden(field.NewPath("metadata", "annotations"), fmt.Sprintf("Annotation '%s' can be set only when StaticInstance is in Pending phase", SkipBootstrapPhaseAnnotation))
 	}
 
 	return nil, nil
+}
+
+// nodeNameStillOpen reports whether spec.nodeName can still be changed. An empty
+// phase is an instance the controller has not reached yet, so it is as untouched
+// as a Pending one - refusing there would block an operator from correcting a name
+// in the seconds between creating the object and its first reconcile.
+func nodeNameStillOpen(phase StaticInstanceStatusCurrentStatusPhase) bool {
+	return phase == "" || phase == StaticInstanceStatusCurrentStatusPhasePending
 }
 
 // ValidateDelete implements webhook.Validator so a webhook will be registered for the type

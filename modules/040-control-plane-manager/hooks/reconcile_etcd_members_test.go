@@ -123,6 +123,65 @@ status:
 			})
 		})
 
+		Context("A master node was renamed", func() {
+			// Renaming a node re-registers it: the Node object appears under the new
+			// name while its etcd member goes on announcing the name it booted with
+			// until control-plane-manager restarts etcd under the new one. The member
+			// is voting the whole time, so removing it would cost the cluster a
+			// member for the sake of a label that is about to catch up on its own.
+			BeforeEach(func() {
+				setEtcdMembers()
+				f.BindingContexts.Set(f.KubeStateSet(testETCDSecret + `
+---
+apiVersion: v1
+kind: Node
+metadata:
+  name: main-master-0-renamed
+  labels:
+    node-role.kubernetes.io/control-plane: ""
+status:
+  addresses:
+    - address: 192.168.1.1
+      type: InternalIP
+---
+apiVersion: v1
+kind: Node
+metadata:
+  name: main-master-1
+  labels:
+    node-role.kubernetes.io/control-plane: ""
+status:
+  addresses:
+    - address: 192.168.1.2
+      type: InternalIP
+---
+apiVersion: v1
+kind: Node
+metadata:
+  name: main-master-2
+  labels:
+    node-role.kubernetes.io/control-plane: ""
+status:
+  addresses:
+    - address: 192.168.1.3
+      type: InternalIP
+`))
+				f.RunHook()
+			})
+
+			It("Keeps the member whose node answers for its peer address", func() {
+				Expect(f).Should(ExecuteSuccessfully())
+				resp, _ := dependency.TestDC.EtcdClient.MemberList(context.TODO())
+				Expect(resp.Members).To(HaveLen(3))
+			})
+
+			It("Keeps the renamed master among the etcd servers", func() {
+				Expect(f).Should(ExecuteSuccessfully())
+				Expect(f.ValuesGet("controlPlaneManager.internal.etcdServers").AsStringSlice()).
+					To(ConsistOf("https://192.168.1.1:2379", "https://192.168.1.2:2379", "https://192.168.1.3:2379"))
+			})
+		})
+
 		Context("All old masters were removed", func() {
 			BeforeEach(func() {
 				setEtcdMembers()
@@ -148,6 +207,28 @@ status:
 			})
 		})
 	})
+	Context("A member is added but has not started yet", func() {
+		// etcd knows a member by its peer URL from the moment it is added; the name
+		// arrives only once the member starts and publishes its attributes. This is
+		// a top-level Context on purpose: a nested one re-setting the same cluster
+		// state produces no binding context, so the hook would never run.
+		BeforeEach(func() {
+			testHelperSetETCDMembers([]*etcdserverpb.Member{
+				{ID: 111, PeerURLs: []string{"https://192.168.1.1:2379"}, Name: "main-master-0"},
+				{ID: 222, PeerURLs: []string{"https://192.168.1.2:2379"}, Name: "main-master-1"},
+				{ID: 333, PeerURLs: []string{"https://192.168.1.3:2379"}, Name: ""},
+			})
+			f.BindingContexts.Set(f.KubeStateSet(testETCDSecret + reconcileStartState))
+			f.RunHook()
+		})
+
+		It("Leaves the nameless member alone", func() {
+			Expect(f).Should(ExecuteSuccessfully())
+			resp, _ := dependency.TestDC.EtcdClient.MemberList(context.TODO())
+			Expect(resp.Members).To(HaveLen(3))
+		})
+	})
+
 	Context("Etcd-arbiter node support", func() {
 		BeforeEach(func() {
 			reconcileEtcdMembersWithEtcdArbiter := []*etcdserverpb.Member{

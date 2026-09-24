@@ -33,7 +33,7 @@ while true; do
     url="https://$server/api/v1/nodes/$(bb-d8-node-name)"
     if out="$(d8-curl --connect-timeout 10 -sS -f -x "" -X GET "$url" --header "Authorization: Bearer $token" --cacert "$BOOTSTRAP_DIR/ca.crt" 2>&1)"; then
       # got node info from API, node exists, should fail
-      bb-log-error "A node with the hostname $(bb-d8-node-name) already exists in the cluster\nPlease change the hostname, it should be unique in the cluster.\nThen clean up the server by running the script /var/lib/bashible/cleanup_static_node.sh and try again."
+      bb-log-error "A node named $(bb-d8-node-name) already exists in the cluster\nA node name has to be unique in the cluster. Clean this server up first:\n  bash /var/lib/bashible/cleanup_static_node.sh\nand then bootstrap it again under a name of its own: put D8_NODE_NAME=<name> in front of the bootstrap command, or set spec.nodeName on its StaticInstance. Changing the hostname works too, but only before the node is bootstrapped and only if you clean up first: once a node has a name it keeps it, pinned in /var/lib/bashible/discovered-node-name, and the hostname is not consulted again."
       exit 1
     fi
     if grep -q "The requested URL returned error: 404" <<< "$out"; then

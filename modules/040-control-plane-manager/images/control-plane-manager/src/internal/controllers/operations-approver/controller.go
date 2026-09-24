@@ -25,12 +25,14 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/selection"
+	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/util/workqueue"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/builder"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
 	"sigs.k8s.io/controller-runtime/pkg/event"
+	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
@@ -73,7 +75,74 @@ func Register(mgr manager.Manager) error {
 			&controlplanev1alpha1.ControlPlaneOperation{},
 			builder.WithPredicates(getPredicates()),
 		).
+		// Operations alone are not enough to hear about. An operation is created
+		// as soon as its node's spec differs from its status, which on a cluster
+		// being bootstrapped is well before the node is Ready - and the approver
+		// approves nothing while no node counts as ready. Nothing would wake it
+		// again: the operation does not change, so its own watch stays silent and
+		// the operations sit Pending for the life of the cluster.
+		Watches(
+			&corev1.Node{},
+			handler.EnqueueRequestsFromMapFunc(enqueueForNode),
+			builder.WithPredicates(getNodePredicates()),
+		).
 		Complete(r)
+}
+
+// enqueueForNode asks for a reconcile keyed by the node that woke it. The
+// reconcile reads every operation in the namespace regardless of the key, so the
+// key is only there to let the queue collapse repeats.
+func enqueueForNode(_ context.Context, obj client.Object) []reconcile.Request {
+	return []reconcile.Request{{
+		NamespacedName: types.NamespacedName{
+			Namespace: constants.KubeSystemNamespace,
+			Name:      obj.GetName(),
+		},
+	}}
+}
+
+// getNodePredicates passes the moment a node the approver counts becomes usable,
+// and nothing else: a Ready node's every heartbeat would otherwise wake the
+// approver for no reason.
+func getNodePredicates() predicate.Predicate {
+	return predicate.Funcs{
+		CreateFunc: func(e event.CreateEvent) bool {
+			node, ok := e.Object.(*corev1.Node)
+
+			return ok && isCountedNode(node) && isNodeReady(*node)
+		},
+		UpdateFunc: func(e event.UpdateEvent) bool {
+			oldNode, okOld := e.ObjectOld.(*corev1.Node)
+			newNode, okNew := e.ObjectNew.(*corev1.Node)
+			if !okOld || !okNew {
+				return false
+			}
+			if !isCountedNode(newNode) || !isNodeReady(*newNode) {
+				return false
+			}
+
+			// Either of the two ways a node starts counting: it went Ready, or it
+			// became a control-plane node while already Ready.
+			return !isNodeReady(*oldNode) || !isCountedNode(oldNode)
+		},
+		DeleteFunc: func(event.DeleteEvent) bool {
+			return false
+		},
+		GenericFunc: func(event.GenericEvent) bool {
+			return false
+		},
+	}
+}
+
+// isCountedNode reports whether getNodeCounts would count this node.
+func isCountedNode(node *corev1.Node) bool {
+	labels := node.GetLabels()
+	if _, ok := labels[constants.ControlPlaneNodeLabelKey]; ok {
+		return true
+	}
+	_, ok := labels[constants.EtcdArbiterNodeLabelKey]
+
+	return ok
 }
 
 func getPredicates() predicate.Predicate {

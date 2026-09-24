@@ -1327,6 +1327,7 @@ func (b *ClusterBootstrapper) bootstrapKubernetes(ctx context.Context, bctx *boo
 		MetaConfig:       bctx.metaConfig,
 		CommanderMode:    b.CommanderMode,
 		GlobalOpts:       &b.Options.Global,
+		NodeName:         b.Options.Bootstrap.NodeName,
 		CompleteSubPhase: pec.CompleteSubPhase,
 	})
 

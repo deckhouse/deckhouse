@@ -303,6 +303,181 @@ d8 k label node <node_name> node-role.kubernetes.io/<old_node_group_name>-
 
 Applying the changes will take some time.
 
+## How do I give a node a name of its own?
+
+By default a node joins the cluster under the hostname of its machine. Where the
+hostnames are not yours to choose — assigned by an imaging pipeline, by DHCP, or
+simply not unique across the fleet — a `Static` node can be given a name of its
+own instead. The hostname of the machine is left alone: only the Node object is
+named this way.
+
+A `Static` node is the only kind this applies to. A `CloudStatic` node is left to
+the cloud controller manager (CCM) to initialize, and the CCM has nothing but the
+node's name to find the machine by — a `CloudStatic` node carries no `providerID` at all.
+Named anything else, it keeps the `node.cloudprovider.kubernetes.io/uninitialized`
+taint for good, is never given its addresses or its zone labels and never goes
+Ready; bootstrap refuses such a name rather than leave a node in that state.
+
+The name has to be an RFC 1123 DNS subdomain (lowercase letters, digits, `-` and
+`.`) and unique across the cluster. It is fixed the first time the node is
+bootstrapped and does not change afterwards, which is also why the hostname of a
+node already in the cluster can be changed without disturbing it.
+
+For a [manually added](#how-do-i-add-a-static-node-to-a-cluster) static node, set
+`D8_NODE_NAME` when running the bootstrap script:
+
+```shell
+echo <Base64-CODE> | base64 -d | D8_NODE_NAME=worker-rack3-07 bash
+```
+
+For a node added through [CAPS](./#cluster-api-provider-static), set
+[`spec.nodeName`](cr.html#staticinstance-v1alpha2-spec-nodename) on its StaticInstance:
+
+```yaml
+apiVersion: deckhouse.io/v1alpha2
+kind: StaticInstance
+metadata:
+  name: static-worker-1
+spec:
+  address: "192.168.1.100"
+  nodeName: worker-rack3-07
+  credentialsRef:
+    kind: SSHCredentials
+    apiVersion: deckhouse.io/v1alpha2
+    name: credentials
+```
+
+The field can only be changed while the StaticInstance is still `Pending`: after
+that the name is already on the node.
+
+For the first master node of a static or hybrid cluster, pass `--node-name` to
+`dhctl bootstrap`. A cloud cluster refuses the option: there the master is a node
+the infrastructure created, and `dhctl converge` finds its machine again by the
+node's name.
+
+{% alert level="warning" %}
+In a cluster that routes the pod network through the cloud, the name of a node has
+to stay the name of its machine.
+{% endalert %}
+
+Such a cluster runs `cni-simple-bridge` together with the route controller of a
+cloud provider, and that controller finds the machine behind a node by the node's
+name. A node named anything else never gets a route to its pod subnet, and nothing
+running on it is reachable from the rest of the cluster.
+
+Such a cluster is recognizable by the reason its nodes give for the
+`NetworkUnavailable` condition — `RouteCreated`, where an overlay CNI puts its own
+(`FlannelIsUp`, for instance):
+
+```shell
+d8 k get node <NODE_NAME> \
+  -o jsonpath='{.status.conditions[?(@.type=="NetworkUnavailable")].reason}'
+```
+
+## How do I rename a node that is already in the cluster?
+
+A Node object cannot be renamed, so a node is renamed by re-registering it: the
+Node object of the old name is removed, and the machine registers again under the
+new one. The machine itself stays where it is — its disks, its container runtime
+and its hostname are untouched. This works for `Static` nodes, master nodes of a
+static or hybrid cluster included.
+
+{% alert level="warning" %}
+The machine is rebooted, and the workload on it does not survive the rename.
+{% endalert %}
+
+The reboot is not optional: a rename invalidates on-node state that nothing else
+resets — the CNI bridge still carries the subnet of the node's previous lease, and
+anything that read the node name at start-up still has the old one. Rebooting
+settles all of it at once.
+
+The order is not optional either. The Node object of the old name is removed
+before the machine comes back. While both Node objects exist they are one address
+wearing two names, and a CNI that keys its peers by address tears down the entry
+for one when the other goes away, leaving the renamed node reachable by nobody.
+
+Everything still scheduled on the node goes with the old Node object, so drain the
+node first. Rename master nodes one at a time, and wait for etcd to report all
+members healthy before starting the next.
+
+Every other kind of node — `CloudEphemeral`, `CloudPermanent` and `CloudStatic` —
+cannot be renamed, and `rename_node.sh` is not installed on them. Their name is how the rest
+of the cluster finds the machine behind them: `machine-controller-manager` matches
+a Machine to its Node by name, and the infrastructure state `dhctl converge` works
+from is kept in a `d8-node-terraform-state-<node-name>` Secret; and a `CloudStatic`
+node, carrying no `providerID`, is how the cloud controller manager finds the
+machine it has to initialize. A renamed node would read as a machine that vanished
+and a node that appeared from nowhere.
+
+A node of a cluster that routes the pod network through the cloud cannot be
+renamed either, and for the same reason: its route is created for the name it has
+now, and no route is ever created for the new one. `rename_node.sh` recognizes such
+a cluster and refuses to run on it.
+
+Local PersistentVolumes pin their node in `nodeAffinity` by the
+`kubernetes.io/hostname` label, which holds the node's name. A rename leaves such
+volumes bound to a node that no longer exists; move or recreate them.
+
+1. Drain the node:
+
+   ```shell
+   d8 k drain <OLD_NAME> --ignore-daemonsets --delete-emptydir-data
+   ```
+
+   Two things regularly stop a drain here. A pod that no controller would recreate
+   is refused outright and needs `--force`. And a pod whose PodDisruptionBudget has
+   no disruption left — `deckhouse` itself, whenever it is the only replica — is
+   retried forever: evicting it is what the budget forbids. Delete that pod instead
+   of evicting it, and it is recreated on another node:
+
+   ```shell
+   d8 k -n d8-system delete pod -l app=deckhouse --field-selector spec.nodeName=<OLD_NAME>
+   ```
+
+1. Get a bootstrap token of the node's NodeGroup — kubelet authenticates with it to
+   register under the new name:
+
+   ```shell
+   NODE_GROUP=worker
+   d8 k -n kube-system get secret -l node-manager.deckhouse.io/node-group=${NODE_GROUP} \
+     -o jsonpath='{.items[0].data.token-id}{"."}{.items[0].data.token-secret}' | base64 -d
+   ```
+
+1. On the node itself, run:
+
+   ```shell
+   sudo /var/lib/bashible/rename_node.sh --new-name <NEW_NAME> --bootstrap-token <TOKEN>
+   ```
+
+   It checks that the new name is free, stops kubelet, and then waits: it refuses to
+   run on a node that has not been cordoned (pass `--skip-drain` to override that).
+
+   The Node object of the old name is removed for it: the node asks by annotating
+   itself with `node.deckhouse.io/rename-to`, and `node-manager` removes the object
+   once the node has gone quiet. A node may write its own Node object and no
+   other, which is what makes the request trustworthy; `node-manager` removes
+   nothing it was not asked for by the node itself, and nothing that is still
+   reporting. A request it will not carry out shows up as a `NodeRenameRejected`
+   event on the node.
+
+1. The script reboots the machine. It comes back, registers under the new name and
+   brings its CNI up on the subnet the new Node is given. Watch for it with
+   `d8 k get nodes -w`.
+
+   A master node rejoins etcd as a member of its own: the member of the old name is
+   removed and the node is added again, first as a learner and then promoted. For a
+   minute or two `etcd-<NEW_NAME>` restarts, `etcdctl member list` shows the member
+   as `unstarted` and `endpoint health` calls it unhealthy. It settles by itself;
+   the remaining members keep the quorum throughout.
+
+A node managed by [CAPS](./#cluster-api-provider-static) cannot be renamed this
+way, and `rename_node.sh` refuses to run on one. Such a node is named by its
+StaticInstance, and CAPS is watching: the moment the Node object goes away it
+re-bootstraps the machine under the name
+[`spec.nodeName`](cr.html#staticinstance-v1alpha2-spec-nodename) carries, so the
+rename is undone within the minute, having cost a reboot. To give such a machine
+another name, remove its StaticInstance and add it again with the name you want.
+
 ## How to clean up a node for adding to the cluster?
 
 This is only needed if you have to move a static node from one cluster to another. Be aware these operations remove local storage data. If you just need to change a NodeGroup, follow [this instruction](#how-do-i-change-the-nodegroup-of-a-static-node).

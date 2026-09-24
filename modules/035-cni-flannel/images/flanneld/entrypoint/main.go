@@ -18,6 +18,7 @@ package main
 
 import (
 	"context"
+	"fmt"
 	"log"
 	"os"
 	"strings"
@@ -33,7 +34,7 @@ import (
 )
 
 func main() {
-	hostname, err := os.Hostname()
+	nodeName, err := discoverNodeName()
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -55,7 +56,7 @@ func main() {
 		}
 	}
 
-	internalIPs, externalIPs, err := getInternalAndExternalIPs(hostname)
+	internalIPs, externalIPs, err := getInternalAndExternalIPs(nodeName)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -63,7 +64,7 @@ func main() {
 	allIPs = append(allIPs, internalIPs...)
 	allIPs = append(allIPs, externalIPs...)
 	if len(allIPs) == 0 {
-		log.Fatalf("Both InternalIPs and ExternalIPs are empty for Node %q", hostname)
+		log.Fatalf("Both InternalIPs and ExternalIPs are empty for Node %q", nodeName)
 	}
 
 	cniConfBytes, err := os.ReadFile("/etc/kube-flannel/cni-conf.json")
@@ -157,4 +158,26 @@ func deleteLinksByPrefix(linkPrefix string) error {
 	}
 
 	return nil
+}
+
+// discoverNodeName is the name of the Node this pod runs on. It comes from the
+// pod's own spec.nodeName through the downward API, because a node's name in the
+// cluster is not necessarily the hostname of the machine: kubelet registers under
+// --hostname-override, which Deckhouse lets an operator choose. flanneld itself
+// reads the same variable, and falls back to the hostname just as this does.
+//
+// The fallback keeps a pod whose manifest predates the NODE_NAME env working the
+// way it always did, on a cluster where the two happen to be the same.
+func discoverNodeName() (string, error) {
+	if name := strings.TrimSpace(os.Getenv("NODE_NAME")); name != "" {
+		return name, nil
+	}
+
+	hostname, err := os.Hostname()
+	if err != nil {
+		return "", fmt.Errorf("NODE_NAME is not set and the hostname is unreadable: %w", err)
+	}
+	log.Printf("NODE_NAME is not set, falling back to the hostname %q", hostname)
+
+	return hostname, nil
 }

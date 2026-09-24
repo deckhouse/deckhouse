@@ -238,6 +238,17 @@ Follow the steps below to add a new static node (e.g., VM or bare metal server) 
    echo <Base64-CODE> | base64 -d | bash
    ```
 
+   The node joins the cluster under the hostname of the machine. To have it join under a
+   name of its own instead, leaving the hostname untouched, set `D8_NODE_NAME` (only for a
+   NodeGroup with `nodeType: Static`; a `CloudStatic` node is found by the cloud through
+   its name and has to keep the name of its machine):
+
+   ```shell
+   echo <Base64-CODE> | base64 -d | D8_NODE_NAME=worker-rack3-07 bash
+   ```
+
+   More on [giving a node a name](faq.html#how-do-i-give-a-node-a-name-of-its-own).
+
 ### Using the Cluster API Provider Static
 
 {% alert level="warning" %}

@@ -24,6 +24,12 @@ const (
 	CordonAnnotationKey   = "node.deckhouse.io/cordoned-by"
 	KubeConfigPath        = "/etc/kubernetes/kubelet.conf"
 	CordonAnnotationValue = "shutdown-inhibitor"
+
+	// NodeNamePath is where bashible pins the name this machine registered under.
+	// It is the same file kubelet's --hostname-override is taken from, and the
+	// only place on the machine that knows the name when it differs from the
+	// hostname.
+	NodeNamePath = "/var/lib/bashible/discovered-node-name"
 )
 
 type Node struct {

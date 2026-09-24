@@ -33,6 +33,7 @@ import (
 	_ "github.com/deckhouse/node-controller/internal/controller/nodegroup"
 	_ "github.com/deckhouse/node-controller/internal/controller/nodegroup/bashiblecontext"
 	_ "github.com/deckhouse/node-controller/internal/controller/nodeoperation"
+	_ "github.com/deckhouse/node-controller/internal/controller/noderename"
 	_ "github.com/deckhouse/node-controller/internal/controller/nodetemplate"
 	_ "github.com/deckhouse/node-controller/internal/controller/nodeuser"
 	_ "github.com/deckhouse/node-controller/internal/controller/staticproviderid"

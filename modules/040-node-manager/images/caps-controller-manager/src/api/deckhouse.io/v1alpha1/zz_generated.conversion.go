@@ -376,6 +376,7 @@ func Convert_v1alpha2_StaticInstanceList_To_v1alpha1_StaticInstanceList(in *v1al
 func autoConvert_v1alpha1_StaticInstanceSpec_To_v1alpha2_StaticInstanceSpec(in *StaticInstanceSpec, out *v1alpha2.StaticInstanceSpec, s conversion.Scope) error {
 	out.Address = in.Address
 	out.CredentialsRef = (*v1.ObjectReference)(unsafe.Pointer(in.CredentialsRef))
+	out.NodeName = in.NodeName
 	return nil
 }
 
@@ -387,6 +388,7 @@ func Convert_v1alpha1_StaticInstanceSpec_To_v1alpha2_StaticInstanceSpec(in *Stat
 func autoConvert_v1alpha2_StaticInstanceSpec_To_v1alpha1_StaticInstanceSpec(in *v1alpha2.StaticInstanceSpec, out *StaticInstanceSpec, s conversion.Scope) error {
 	out.Address = in.Address
 	out.CredentialsRef = (*v1.ObjectReference)(unsafe.Pointer(in.CredentialsRef))
+	out.NodeName = in.NodeName
 	return nil
 }
 
