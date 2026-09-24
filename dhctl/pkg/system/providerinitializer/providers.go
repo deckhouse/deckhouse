@@ -21,6 +21,7 @@ import (
 	"strings"
 
 	flag "github.com/spf13/pflag"
+	"k8s.io/client-go/rest"
 
 	libcon "github.com/deckhouse/lib-connection/pkg"
 	"github.com/deckhouse/lib-connection/pkg/kube"
@@ -33,10 +34,11 @@ import (
 )
 
 type providerOptions struct {
-	connectionConfig    string
-	kubeFlagsDefined    bool
-	requireKubeProvider bool
-	kubeConfig          *kube.Config
+	connectionConfig     string
+	connectionConfigOnly bool
+	kubeFlagsDefined     bool
+	requireKubeProvider  bool
+	kubeConfig           *kube.Config
 }
 
 type ProviderOptions func(o *providerOptions)
@@ -44,6 +46,16 @@ type ProviderOptions func(o *providerOptions)
 func WithConnectionConfig(s string) ProviderOptions {
 	return func(o *providerOptions) {
 		o.connectionConfig = s
+	}
+}
+
+// WithConnectionConfigOnly forbids falling back to CLI/env flags when no
+// connection config was supplied. The server drives connections from a config
+// blob; without this guard an empty blob makes the initializer parse the
+// dhctl-server's own os.Args, which has nothing to do with the cluster.
+func WithConnectionConfigOnly() ProviderOptions {
+	return func(o *providerOptions) {
+		o.connectionConfigOnly = true
 	}
 }
 
@@ -71,6 +83,15 @@ func WithKubeConfig(kubeConfig, kubeConfigContext string, inCluster bool) Provid
 			KubeConfigContext:   kubeConfigContext,
 			KubeConfigInCluster: inCluster,
 		}
+	}
+}
+
+// WithKubeRestConfig points the kube provider straight at the API server.
+// The resulting kube.Config is a "rest" mode config, so lib-connection serves
+// it with a no-action runner: no SSH session and no kubectl proxy on a master.
+func WithKubeRestConfig(restConfig *rest.Config) ProviderOptions {
+	return func(o *providerOptions) {
+		o.kubeConfig = &kube.Config{RestConfig: restConfig}
 	}
 }
 
@@ -136,6 +157,9 @@ func resolveKubeConfig(baseProviderSettings *settings.BaseProviders, options *pr
 
 func getProviderInitializer(ctx context.Context, baseProviderSettings *settings.BaseProviders, opts ...ProviderOptions) (*SSHProviderInitializer, error) {
 	options := newProviderOptions(opts...)
+	if options.connectionConfigOnly && options.connectionConfig == "" {
+		return nil, nil
+	}
 
 	var config *libcon_config.ConnectionConfig
 	var err error
