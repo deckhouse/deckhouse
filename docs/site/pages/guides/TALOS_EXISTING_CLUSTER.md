@@ -35,11 +35,11 @@ The `bundle` value is selected during installation and cannot be changed afterwa
 The following tools and access are required on the computer from which the installation will be performed:
 
 - Docker
-- `d8`
+- [Deckhouse CLI](/products/kubernetes-platform/documentation/v1/cli/d8/)
 - `yq` for validating YAML
 - An administrative kubeconfig for the Talos cluster
 - Access to the Kubernetes API
-- HTTPS access to `registry.deckhouse.ru` from both the computer and the cluster nodes
+- HTTPS access to `registry.deckhouse.io` from both the computer and the cluster nodes
 - `talosctl` and talosconfig if an administrative kubeconfig has not yet been obtained
 
 SSH access to Talos nodes is not required: the installer communicates with the cluster through the Kubernetes API.
@@ -110,11 +110,7 @@ CONTROL_PLANE_ADDRESS=<CONTROL_PLANE_IP_OR_DNS>
 Obtain an administrative kubeconfig:
 
 ```bash
-talosctl kubeconfig "$ADMIN_KUBECONFIG" \
-  --talosconfig="$TALOSCONFIG" \
-  --nodes="$CONTROL_PLANE_ADDRESS" \
-  --merge=false
-
+talosctl kubeconfig "$ADMIN_KUBECONFIG" --talosconfig="$TALOSCONFIG" --nodes="$CONTROL_PLANE_ADDRESS" --merge=false
 chmod 600 "$ADMIN_KUBECONFIG"
 ```
 
@@ -139,14 +135,9 @@ Installation requires stable administrative access. A Talos administrative kubec
 Verify the required permissions:
 
 ```bash
-d8 k --kubeconfig="$ADMIN_KUBECONFIG" \
-  auth can-i '*' '*' --all-namespaces
-
-d8 k --kubeconfig="$ADMIN_KUBECONFIG" \
-  auth can-i create customresourcedefinitions.apiextensions.k8s.io
-
-d8 k --kubeconfig="$ADMIN_KUBECONFIG" \
-  auth can-i create clusterroles.rbac.authorization.k8s.io
+d8 k --kubeconfig="$ADMIN_KUBECONFIG" auth can-i '*' '*' --all-namespaces
+d8 k --kubeconfig="$ADMIN_KUBECONFIG" auth can-i create customresourcedefinitions.apiextensions.k8s.io
+d8 k --kubeconfig="$ADMIN_KUBECONFIG" auth can-i create clusterroles.rbac.authorization.k8s.io
 ```
 
 All three commands must return `yes`.
@@ -172,8 +163,7 @@ The response must end with `readyz check passed`.
 Check the system Pods:
 
 ```bash
-d8 k --kubeconfig="$ADMIN_KUBECONFIG" \
-  -n kube-system get pods -o wide
+d8 k --kubeconfig="$ADMIN_KUBECONFIG" -n kube-system get pods -o wide
 ```
 
 Before installing DP, the following components must already be running:
@@ -236,13 +226,7 @@ The installer runs inside Docker. It requires a portable kubeconfig that does no
 Create a portable copy:
 
 ```bash
-d8 k --kubeconfig="$ADMIN_KUBECONFIG" \
-  config view \
-  --raw \
-  --flatten \
-  --minify \
-  > "$INSTALLER_KUBECONFIG"
-
+d8 k --kubeconfig="$ADMIN_KUBECONFIG" config view --raw --flatten --minify > "$INSTALLER_KUBECONFIG"
 chmod 600 "$INSTALLER_KUBECONFIG"
 ```
 
@@ -252,9 +236,7 @@ Verify the copy:
 
 ```bash
 d8 k --kubeconfig="$INSTALLER_KUBECONFIG" auth whoami
-
-d8 k --kubeconfig="$INSTALLER_KUBECONFIG" \
-  auth can-i '*' '*' --all-namespaces
+d8 k --kubeconfig="$INSTALLER_KUBECONFIG" auth can-i '*' '*' --all-namespaces
 ```
 
 The second command must return `yes`.
@@ -262,9 +244,7 @@ The second command must return `yes`.
 Check the Kubernetes API address:
 
 ```bash
-d8 k --kubeconfig="$INSTALLER_KUBECONFIG" \
-  config view --minify \
-  -o jsonpath='{.clusters[0].cluster.server}{"\n"}'
+d8 k --kubeconfig="$INSTALLER_KUBECONFIG" config view --minify -o jsonpath='{.clusters[0].cluster.server}{"\n"}'
 ```
 
 This address must be reachable from the Docker container. A reachable Kubernetes API address, a VPN address, or a load balancer address is preferred.
@@ -325,11 +305,7 @@ ls -l "$CONFIG_FILE" "$INSTALLER_KUBECONFIG"
 Run the installer:
 
 ```bash
-docker run --pull=always -it \
-  -v "$CONFIG_FILE:/config.yml:ro" \
-  -v "$INSTALLER_KUBECONFIG:/kubeconfig:ro" \
-  registry.deckhouse.ru/deckhouse/ce/install:early-access \
-  bash
+docker run --pull=always -it -v "$CONFIG_FILE:/config.yml:ro" -v "$INSTALLER_KUBECONFIG:/kubeconfig:ro" registry.deckhouse.io/deckhouse/ce/install:early-access bash
 ```
 
 The installer image path still uses the `ce` designation for Deckhouse Platform Open.
@@ -337,9 +313,7 @@ The installer image path still uses the `ce` designation for Deckhouse Platform 
 Inside the installer container, run:
 
 ```bash
-dhctl bootstrap-phase install-deckhouse \
-  --kubeconfig=/kubeconfig \
-  --config=/config.yml
+dhctl bootstrap-phase install-deckhouse --kubeconfig=/kubeconfig --config=/config.yml
 ```
 
 Do not close the terminal until the bootstrap process completes. Installation can take anywhere from 5 to 30 minutes.
@@ -349,16 +323,13 @@ Do not close the terminal until the bootstrap process completes. Installation ca
 In a separate terminal, change to the same working directory and define the variables from the "Setting the working paths" section again. Run the command:
 
 ```bash
-d8 k --kubeconfig="$ADMIN_KUBECONFIG" \
-  -n d8-system get deployment,replicaset,pods -w
+d8 k --kubeconfig="$ADMIN_KUBECONFIG" -n d8-system get deployment,replicaset,pods -w
 ```
 
 If the `deckhouse` Pod is not created, check the events:
 
 ```bash
-d8 k --kubeconfig="$ADMIN_KUBECONFIG" \
-  -n d8-system get events \
-  --sort-by=.metadata.creationTimestamp
+d8 k --kubeconfig="$ADMIN_KUBECONFIG" -n d8-system get events --sort-by=.metadata.creationTimestamp
 ```
 
 Errors such as `ImagePullBackOff`, `ErrImagePull`, `401 Unauthorized`, or `403 Forbidden` usually indicate a problem with the registry address, registry access, DNS, or routing.
@@ -366,8 +337,7 @@ Errors such as `ImagePullBackOff`, `ErrImagePull`, `401 Unauthorized`, or `403 F
 To diagnose a specific Pod, run:
 
 ```bash
-d8 k --kubeconfig="$ADMIN_KUBECONFIG" \
-  -n <NAMESPACE> describe pod <POD_NAME>
+d8 k --kubeconfig="$ADMIN_KUBECONFIG" -n <NAMESPACE> describe pod <POD_NAME>
 ```
 
 ## Verifying the installation
@@ -375,12 +345,8 @@ d8 k --kubeconfig="$ADMIN_KUBECONFIG" \
 Wait for the main Deployment to become ready:
 
 ```bash
-d8 k --kubeconfig="$ADMIN_KUBECONFIG" \
-  -n d8-system rollout status deployment/deckhouse \
-  --timeout=10m
-
-d8 k --kubeconfig="$ADMIN_KUBECONFIG" \
-  -n d8-system get deployment,pods -o wide
+d8 k --kubeconfig="$ADMIN_KUBECONFIG" -n d8-system rollout status deployment/deckhouse --timeout=10m
+d8 k --kubeconfig="$ADMIN_KUBECONFIG" -n d8-system get deployment,pods -o wide
 ```
 
 Check the modules:
@@ -394,8 +360,7 @@ Enabled modules are expected to have `PHASE: Ready`, `ENABLED: True`, and `READY
 The Module status alone is not sufficient: a module may be `Ready` even if one of its workloads was not created or is restarting. Check the actual resources:
 
 ```bash
-d8 k --kubeconfig="$ADMIN_KUBECONFIG" \
-  get deployment,statefulset,daemonset -A
+d8 k --kubeconfig="$ADMIN_KUBECONFIG" get deployment,statefulset,daemonset -A
 ```
 
 For each DaemonSet, the `DESIRED`, `CURRENT`, and `READY` values must match. For Deployments and StatefulSets, the expected number of replicas must be ready.
@@ -403,18 +368,13 @@ For each DaemonSet, the `DESIRED`, `CURRENT`, and `READY` values must match. For
 Find Pods that are not in the `Running` or `Succeeded` phase:
 
 ```bash
-d8 k --kubeconfig="$ADMIN_KUBECONFIG" \
-  get pods -A \
-  --field-selector='status.phase!=Running,status.phase!=Succeeded'
+d8 k --kubeconfig="$ADMIN_KUBECONFIG" get pods -A --field-selector='status.phase!=Running,status.phase!=Succeeded'
 ```
 
 Check recent warnings:
 
 ```bash
-d8 k --kubeconfig="$ADMIN_KUBECONFIG" \
-  get events -A \
-  --field-selector=type=Warning \
-  --sort-by=.metadata.creationTimestamp
+d8 k --kubeconfig="$ADMIN_KUBECONFIG" get events -A --field-selector=type=Warning --sort-by=.metadata.creationTimestamp
 ```
 
 An old warning does not necessarily indicate a current problem. Consider the event timestamp, repetition count, and the current state of the related resource.
@@ -424,15 +384,7 @@ An old warning does not necessarily indicate a current problem. Consider the eve
 Verify that DP modules that can manage Talos components remain disabled.
 
 ```bash
-d8 k --kubeconfig="$ADMIN_KUBECONFIG" get modules \
-  control-plane-manager \
-  node-manager \
-  terraform-manager \
-  cni-cilium \
-  kube-dns \
-  kube-proxy \
-  registry-packages-proxy \
-  -o wide
+d8 k --kubeconfig="$ADMIN_KUBECONFIG" get modules control-plane-manager node-manager terraform-manager cni-cilium kube-dns kube-proxy registry-packages-proxy -o wide
 ```
 
 All listed modules must have `ENABLED: False`.
@@ -440,8 +392,7 @@ All listed modules must have `ENABLED: False`.
 Check the cloud provider modules:
 
 ```bash
-d8 k --kubeconfig="$ADMIN_KUBECONFIG" get modules -o wide \
-  | grep -E '(^NAME|^cloud-provider-)'
+d8 k --kubeconfig="$ADMIN_KUBECONFIG" get modules -o wide | grep -E '(^NAME|^cloud-provider-)'
 ```
 
 All `cloud-provider-*` modules found by the command must have `ENABLED: False`.
@@ -449,11 +400,8 @@ All `cloud-provider-*` modules found by the command must have `ENABLED: False`.
 Check the original cluster components again:
 
 ```bash
-d8 k --kubeconfig="$ADMIN_KUBECONFIG" \
-  -n kube-system get pods -o wide
-
-d8 k --kubeconfig="$ADMIN_KUBECONFIG" \
-  get nodes -o wide
+d8 k --kubeconfig="$ADMIN_KUBECONFIG" -n kube-system get pods -o wide
+d8 k --kubeconfig="$ADMIN_KUBECONFIG" get nodes -o wide
 ```
 
 All Talos nodes must remain `Ready`. The original CNI, CoreDNS, and control-plane components must continue to run; kube-proxy must also continue to run if it was used before the DP installation.

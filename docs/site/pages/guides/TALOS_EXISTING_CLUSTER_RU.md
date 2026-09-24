@@ -35,7 +35,7 @@ Deckhouse Platform (DP) устанавливается поверх готово
 На компьютере, с которого запускается установка, нужны:
 
 - Docker;
-- `d8`;
+- [Deckhouse CLI](/products/kubernetes-platform/documentation/v1/cli/d8/);
 - `yq` для проверки YAML;
 - административный kubeconfig Talos-кластера;
 - доступ к Kubernetes API;
@@ -110,11 +110,7 @@ CONTROL_PLANE_ADDRESS=<CONTROL_PLANE_IP_OR_DNS>
 Получите административный kubeconfig:
 
 ```bash
-talosctl kubeconfig "$ADMIN_KUBECONFIG" \
-  --talosconfig="$TALOSCONFIG" \
-  --nodes="$CONTROL_PLANE_ADDRESS" \
-  --merge=false
-
+talosctl kubeconfig "$ADMIN_KUBECONFIG" --talosconfig="$TALOSCONFIG" --nodes="$CONTROL_PLANE_ADDRESS" --merge=false
 chmod 600 "$ADMIN_KUBECONFIG"
 ```
 
@@ -139,14 +135,9 @@ d8 k --kubeconfig="$ADMIN_KUBECONFIG" auth whoami
 Проверьте основные разрешения:
 
 ```bash
-d8 k --kubeconfig="$ADMIN_KUBECONFIG" \
-  auth can-i '*' '*' --all-namespaces
-
-d8 k --kubeconfig="$ADMIN_KUBECONFIG" \
-  auth can-i create customresourcedefinitions.apiextensions.k8s.io
-
-d8 k --kubeconfig="$ADMIN_KUBECONFIG" \
-  auth can-i create clusterroles.rbac.authorization.k8s.io
+d8 k --kubeconfig="$ADMIN_KUBECONFIG" auth can-i '*' '*' --all-namespaces
+d8 k --kubeconfig="$ADMIN_KUBECONFIG" auth can-i create customresourcedefinitions.apiextensions.k8s.io
+d8 k --kubeconfig="$ADMIN_KUBECONFIG" auth can-i create clusterroles.rbac.authorization.k8s.io
 ```
 
 Все три команды должны вывести `yes`.
@@ -172,8 +163,7 @@ d8 k --kubeconfig="$ADMIN_KUBECONFIG" get --raw='/readyz?verbose'
 Проверьте системные поды:
 
 ```bash
-d8 k --kubeconfig="$ADMIN_KUBECONFIG" \
-  -n kube-system get pods -o wide
+d8 k --kubeconfig="$ADMIN_KUBECONFIG" -n kube-system get pods -o wide
 ```
 
 До установки DP уже должны работать:
@@ -236,13 +226,7 @@ d8 k --kubeconfig="$ADMIN_KUBECONFIG" get crd
 Создайте такую копию:
 
 ```bash
-d8 k --kubeconfig="$ADMIN_KUBECONFIG" \
-  config view \
-  --raw \
-  --flatten \
-  --minify \
-  > "$INSTALLER_KUBECONFIG"
-
+d8 k --kubeconfig="$ADMIN_KUBECONFIG" config view --raw --flatten --minify > "$INSTALLER_KUBECONFIG"
 chmod 600 "$INSTALLER_KUBECONFIG"
 ```
 
@@ -252,9 +236,7 @@ chmod 600 "$INSTALLER_KUBECONFIG"
 
 ```bash
 d8 k --kubeconfig="$INSTALLER_KUBECONFIG" auth whoami
-
-d8 k --kubeconfig="$INSTALLER_KUBECONFIG" \
-  auth can-i '*' '*' --all-namespaces
+d8 k --kubeconfig="$INSTALLER_KUBECONFIG" auth can-i '*' '*' --all-namespaces
 ```
 
 Вторая команда должна вывести `yes`.
@@ -262,9 +244,7 @@ d8 k --kubeconfig="$INSTALLER_KUBECONFIG" \
 Посмотрите адрес Kubernetes API:
 
 ```bash
-d8 k --kubeconfig="$INSTALLER_KUBECONFIG" \
-  config view --minify \
-  -o jsonpath='{.clusters[0].cluster.server}{"\n"}'
+d8 k --kubeconfig="$INSTALLER_KUBECONFIG" config view --minify -o jsonpath='{.clusters[0].cluster.server}{"\n"}'
 ```
 
 Этот адрес должен быть доступен из Docker-контейнера. Предпочтительный вариант — доступный по сети адрес Kubernetes API, VPN или адрес балансировщика.
@@ -325,11 +305,7 @@ ls -l "$CONFIG_FILE" "$INSTALLER_KUBECONFIG"
 Запустите установщик:
 
 ```bash
-docker run --pull=always -it \
-  -v "$CONFIG_FILE:/config.yml:ro" \
-  -v "$INSTALLER_KUBECONFIG:/kubeconfig:ro" \
-  registry.deckhouse.ru/deckhouse/ce/install:early-access \
-  bash
+docker run --pull=always -it -v "$CONFIG_FILE:/config.yml:ro" -v "$INSTALLER_KUBECONFIG:/kubeconfig:ro" registry.deckhouse.ru/deckhouse/ce/install:early-access bash
 ```
 
 Путь образа установщика пока использует обозначение `ce` для Deckhouse Platform Open.
@@ -337,9 +313,7 @@ docker run --pull=always -it \
 Внутри открывшегося контейнера запустите:
 
 ```bash
-dhctl bootstrap-phase install-deckhouse \
-  --kubeconfig=/kubeconfig \
-  --config=/config.yml
+dhctl bootstrap-phase install-deckhouse --kubeconfig=/kubeconfig --config=/config.yml
 ```
 
 Не закрывайте терминал до завершения бутстрапа. Установка может занимать от 5 до 30 минут.
@@ -349,16 +323,13 @@ dhctl bootstrap-phase install-deckhouse \
 В отдельном терминале перейдите в тот же рабочий каталог и снова задайте переменные из раздела «Настройка рабочих путей». Выполните команду:
 
 ```bash
-d8 k --kubeconfig="$ADMIN_KUBECONFIG" \
-  -n d8-system get deployment,replicaset,pods -w
+d8 k --kubeconfig="$ADMIN_KUBECONFIG" -n d8-system get deployment,replicaset,pods -w
 ```
 
 Если под `deckhouse` не создаётся, посмотрите события:
 
 ```bash
-d8 k --kubeconfig="$ADMIN_KUBECONFIG" \
-  -n d8-system get events \
-  --sort-by=.metadata.creationTimestamp
+d8 k --kubeconfig="$ADMIN_KUBECONFIG" -n d8-system get events --sort-by=.metadata.creationTimestamp
 ```
 
 Ошибки `ImagePullBackOff`, `ErrImagePull`, `401 Unauthorized` или `403 Forbidden` обычно означают проблему с адресом хранилища образов контейнеров, доступом к нему, DNS или маршрутизацией.
@@ -366,8 +337,7 @@ d8 k --kubeconfig="$ADMIN_KUBECONFIG" \
 Для диагностики конкретного пода используйте:
 
 ```bash
-d8 k --kubeconfig="$ADMIN_KUBECONFIG" \
-  -n <NAMESPACE> describe pod <POD_NAME>
+d8 k --kubeconfig="$ADMIN_KUBECONFIG" -n <NAMESPACE> describe pod <POD_NAME>
 ```
 
 ## Проверка результата установки
@@ -375,12 +345,8 @@ d8 k --kubeconfig="$ADMIN_KUBECONFIG" \
 Дождитесь готовности основного Deployment:
 
 ```bash
-d8 k --kubeconfig="$ADMIN_KUBECONFIG" \
-  -n d8-system rollout status deployment/deckhouse \
-  --timeout=10m
-
-d8 k --kubeconfig="$ADMIN_KUBECONFIG" \
-  -n d8-system get deployment,pods -o wide
+d8 k --kubeconfig="$ADMIN_KUBECONFIG" -n d8-system rollout status deployment/deckhouse --timeout=10m
+d8 k --kubeconfig="$ADMIN_KUBECONFIG" -n d8-system get deployment,pods -o wide
 ```
 
 Проверьте модули:
@@ -394,8 +360,7 @@ d8 k --kubeconfig="$ADMIN_KUBECONFIG" get modules -o wide
 Статуса Module недостаточно: он может быть `Ready`, даже если отдельный workload модуля не был создан или перезапускается. Проверьте реальные ресурсы:
 
 ```bash
-d8 k --kubeconfig="$ADMIN_KUBECONFIG" \
-  get deployment,statefulset,daemonset -A
+d8 k --kubeconfig="$ADMIN_KUBECONFIG" get deployment,statefulset,daemonset -A
 ```
 
 У DaemonSet значения `DESIRED`, `CURRENT` и `READY` должны совпадать. У Deployment и StatefulSet ожидаемое количество реплик должно быть готово.
@@ -403,18 +368,13 @@ d8 k --kubeconfig="$ADMIN_KUBECONFIG" \
 Найдите поды, которые не находятся в фазе `Running` или `Succeeded`:
 
 ```bash
-d8 k --kubeconfig="$ADMIN_KUBECONFIG" \
-  get pods -A \
-  --field-selector='status.phase!=Running,status.phase!=Succeeded'
+d8 k --kubeconfig="$ADMIN_KUBECONFIG" get pods -A --field-selector='status.phase!=Running,status.phase!=Succeeded'
 ```
 
 Проверьте актуальные предупреждения:
 
 ```bash
-d8 k --kubeconfig="$ADMIN_KUBECONFIG" \
-  get events -A \
-  --field-selector=type=Warning \
-  --sort-by=.metadata.creationTimestamp
+d8 k --kubeconfig="$ADMIN_KUBECONFIG" get events -A --field-selector=type=Warning --sort-by=.metadata.creationTimestamp
 ```
 
 Старое предупреждение само по себе не означает текущую неисправность. Учитывайте время события, число повторов и состояние связанного ресурса.
@@ -424,15 +384,7 @@ d8 k --kubeconfig="$ADMIN_KUBECONFIG" \
 Проверьте, что модули DP, которые могут управлять компонентами Talos, остаются выключенными.
 
 ```bash
-d8 k --kubeconfig="$ADMIN_KUBECONFIG" get modules \
-  control-plane-manager \
-  node-manager \
-  terraform-manager \
-  cni-cilium \
-  kube-dns \
-  kube-proxy \
-  registry-packages-proxy \
-  -o wide
+d8 k --kubeconfig="$ADMIN_KUBECONFIG" get modules control-plane-manager node-manager terraform-manager cni-cilium kube-dns kube-proxy registry-packages-proxy -o wide
 ```
 
 Все перечисленные модули должны иметь `ENABLED: False`.
@@ -440,8 +392,7 @@ d8 k --kubeconfig="$ADMIN_KUBECONFIG" get modules \
 Проверьте модули облачных провайдеров:
 
 ```bash
-d8 k --kubeconfig="$ADMIN_KUBECONFIG" get modules -o wide \
-  | grep -E '(^NAME|^cloud-provider-)'
+d8 k --kubeconfig="$ADMIN_KUBECONFIG" get modules -o wide | grep -E '(^NAME|^cloud-provider-)'
 ```
 
 Все найденные модули `cloud-provider-*` должны иметь `ENABLED: False`.
@@ -449,11 +400,9 @@ d8 k --kubeconfig="$ADMIN_KUBECONFIG" get modules -o wide \
 Повторно проверьте исходные компоненты:
 
 ```bash
-d8 k --kubeconfig="$ADMIN_KUBECONFIG" \
-  -n kube-system get pods -o wide
+d8 k --kubeconfig="$ADMIN_KUBECONFIG" -n kube-system get pods -o wide
 
-d8 k --kubeconfig="$ADMIN_KUBECONFIG" \
-  get nodes -o wide
+d8 k --kubeconfig="$ADMIN_KUBECONFIG" get nodes -o wide
 ```
 
 Все Talos-узлы должны оставаться `Ready`, а исходные CNI, CoreDNS и компоненты control plane — продолжать работать. Если kube-proxy использовался до установки DP, он также должен продолжать работать.
