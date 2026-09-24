@@ -58,7 +58,12 @@ shell:
   # The agent and the one command it needs that the root does not carry, plus
   # ldd for the closure check below. These are build-time only: what ships is
   # picked file by file in install.
-  - pm install qemu util-linux glib2 libffi pcre2 ldd
+  #
+  # qemu is pinned because its version is also written down in the module's
+  # oss.yaml, and a floating package would make that entry quietly wrong. The
+  # two move together. Nothing else here is named in oss.yaml, so nothing else
+  # is pinned.
+  - pm install qemu@9.2.4 util-linux glib2 libffi pcre2 ldd
   - mkdir -p /out
   install:
   - mkdir -p /sysext/usr/bin /sysext/usr/lib /sysext/usr/lib/deckhouse-engine
