@@ -330,6 +330,12 @@ func (j *Joiner) join(ctx context.Context, seeds []string) (int, error) {
 	}
 }
 
+// checkSelf performs a consistent GET and deliberately does not use the
+// informer cache
+
+// Only an unambiguous answer becomes ErrNotMember, because a node that has
+// been deleted, recreated or moved out of its group must not re-add itself
+// to gossip on its own;
 func (j *Joiner) checkSelf(ctx context.Context) error {
 	readCtx, cancel := context.WithTimeout(ctx, j.params.APITimeout)
 	defer cancel()

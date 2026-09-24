@@ -24,9 +24,7 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/go-logr/logr"
 	"k8s.io/client-go/kubernetes"
-	ctrllog "sigs.k8s.io/controller-runtime/pkg/log"
 
 	"github.com/deckhouse/deckhouse/pkg/log"
 
@@ -58,8 +56,6 @@ func main() {
 
 func run(logger *log.Logger) error {
 	startedAt := time.Now()
-
-	ctrllog.SetLogger(logr.FromSlogHandler(logger.Handler()))
 
 	cfg := &config.Config{}
 
