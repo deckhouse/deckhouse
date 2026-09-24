@@ -19,6 +19,7 @@ The Network subsystem includes the following modules:
 * [`ingress-nginx`](/modules/ingress-nginx/): Installs and manages the [Ingress NGINX Controller](https://kubernetes.github.io/ingress-nginx/) using custom resources. The module architecture is described on the [corresponding page](ingress-nginx.html) of this subsection.
 * [`metallb`](/modules/metallb/): Implements the LoadBalancer mechanism for Services in bare-metal clusters.
 * [`istio`](/modules/istio/): Implements a Service Mesh based on Istio for centralized management of network traffic in the cluster. The module architecture is described on the [corresponding page](istio.html) of this subsection.
+* [`alb`](/modules/alb/): Implements an Application Load Balancer (ALB) based on the [Kubernetes Gateway API](https://gateway-api.sigs.k8s.io/). The module architecture is described on the [corresponding page](alb.html) of this subsection.
 
 The subsection also describes:
 
