@@ -83,17 +83,24 @@ resource "decort_kvmvm" "master_vm" {
   extra_disks       = [decort_disk.kubernetes_data_disk.id]
   cloud_init        = local.master_cloud_init_script
 
+  # The weights put the external network on the first NIC and the ViNS on the second.
+  # Both networks hand out a default route, and the guest prefers the one of the first NIC.
+  # SSH comes in on the external address, so a reply routed through the ViNS gateway leaves
+  # SNATed to another address and the connection never establishes. Without weights the
+  # order of the NICs follows the hash of the network set rather than this configuration.
+  network {
+    net_type = local.net_type_extnet
+    net_id   = local.extnet_id
+    weight   = 1
+  }
+
   dynamic "network" {
     for_each = length(data.decort_vins_list.vins.items) > 0 ? [data.decort_vins_list.vins.items[0].vins_id] : []
     content {
       net_type = local.net_type_vins
       net_id   = network.value
+      weight   = 2
     }
-  }
-
-  network {
-    net_type = local.net_type_extnet
-    net_id   = local.extnet_id
   }
 
   lifecycle {
