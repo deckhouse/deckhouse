@@ -340,6 +340,19 @@ func (r *runner) convergeMigration(ctx *convergecontext.Context, checkHasTerrafo
 	}
 
 	if checkHasTerraformStateBeforeMigration {
+		// Decide from the stored states first: planning an already migrated cluster
+		// can fail on its own and must not block the migrator.
+		if !ctx.CommanderMode() {
+			hasTerraformState, err := infrastructurestate.HasTerraformStateInCluster(ctx.Ctx(), kubeCl)
+			if err != nil {
+				return err
+			}
+			if !hasTerraformState {
+				dhlog.FromContext(ctx.Ctx()).InfoContext(ctx.Ctx(), "Cluster does not have terraform state. Skipping migration")
+				return nil
+			}
+		}
+
 		stats, hasTerraFormState, err := check.CheckState(ctx.Ctx(), kubeCl, metaConfig, ctx.InfrastructureContext(metaConfig), check.CheckStateOptions{
 			CommanderMode: ctx.CommanderMode(),
 			StateCache:    ctx.StateCache(),
