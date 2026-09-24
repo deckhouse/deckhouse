@@ -19,6 +19,8 @@ Deckhouse hardening of the upstream ACME DNS-01 webhook:
 
 Fix CVEs:
 - CVE-2026-56854
+- CVE-2026-56855
+- CVE-2026-78662
 - CVE-2026-81870
 - CVE-2026-84303
 - CVE-2026-84304
