@@ -162,9 +162,10 @@ type Result struct {
 	// was never registered.
 	Expired map[string]time.Time
 	// Covered names the keys the controller deletes because another key carries
-	// every one of their records verbatim (see Covered), with the name of that
-	// key, for the KeyCovered event. A covered key is never listed as
-	// superseded or expired: its records are the duplicates.
+	// every one of their records verbatim, bar the ones past grace (see
+	// Covered), with the name of that key, for the KeyCovered event. A covered
+	// key is never listed as superseded or expired: its records are duplicates
+	// or ran out.
 	Covered map[string]string
 
 	// Expiring is true when the key expires within Thresholds.ExpiringSoon.
@@ -265,10 +266,12 @@ func Compute(in Input) Result {
 	copy(ordered, in.Keys)
 	sort.SliceStable(ordered, func(i, j int) bool { return ordered[i].Key < ordered[j].Key })
 
+	now := in.Now
+
 	// Coverage is decided before dedup, which visits covered keys last: the
 	// copy the covering key carries is the accepted one, the covered key only
-	// holds duplicates, and deleting it changes nothing.
-	covered := Covered(ordered)
+	// holds duplicates and records that ran out, and deleting it changes nothing.
+	covered := Covered(ordered, now, in.Thresholds)
 	live := make([]KeyRecords, 0, len(ordered))
 	for _, k := range ordered {
 		if _, gone := covered[k.Key]; !gone {
@@ -277,7 +280,6 @@ func Compute(in Input) Result {
 	}
 
 	base := dedup(ordered, covered)
-	now := in.Now
 
 	final := make([]RecordStatus, len(base))
 	copy(final, base)
@@ -299,7 +301,7 @@ func Compute(in Input) Result {
 		case final[i].ExpireAt != nil && !now.Before(*final[i].ExpireAt):
 			final[i].Accepted = false
 			final[i].Reason = ReasonExpired
-			final[i].Message = fmt.Sprintf("expired at %s", final[i].ExpireAt.UTC().Format(time.RFC3339))
+			final[i].Message = expiredMessage(final[i])
 		}
 	}
 
@@ -393,6 +395,13 @@ func Compute(in Input) Result {
 	res.Counts.Superseded = len(res.Superseded)
 
 	return res
+}
+
+func expiredMessage(r RecordStatus) string {
+	if r.ExpireAt == nil {
+		return "expired"
+	}
+	return fmt.Sprintf("expired at %s", r.ExpireAt.UTC().Format(time.RFC3339))
 }
 
 // overLimitSince keeps the single piece of state the compliance machine needs

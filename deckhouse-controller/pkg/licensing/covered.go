@@ -22,85 +22,107 @@ import (
 )
 
 // Covered names the keys the controller deletes because another installed key
-// carries every one of their records verbatim: the same id and the same content.
-// The license server issues every new key with copies of all the records of the
-// previous keys that are still in force or yet to come, so after a reissue the
-// old key is redundant. The result maps each covered key to the key that covers
-// it, which is never covered itself.
+// makes them redundant. The license server issues every new key with verbatim
+// copies (the same id and the same content) of the records of the previous keys
+// that are still in force or yet to come, and drops the ones that already ran
+// out. So a record of an old key is covered when another key carries a copy of
+// it, or when it ran out past its own grace period: expire_at plus grace_days, or
+// the default grace, strictly before now. A record still in grace is not covered,
+// since the Grace state reads it. A key is covered when every record of it is
+// covered and at least one is a copy: a key of nothing but records that ran out
+// is the business of Expired and its last-key guard. The result maps each
+// covered key to the key that covers it, which is never covered itself.
 //
-// Two keys with the same record set cover each other; the one issued last (by
-// iat, then by the larger jti, then by the smaller name) stays. A record that
-// shares an id with another but differs in content covers nothing: both keys
-// stay and the second copy is a Duplicate. A key rejected as a whole is not in
-// keys, so it is never covered and never covers.
+// Two keys that cover each other (the same live records) are decided by issue:
+// the one issued last (by iat, then by the larger jti, then by the smaller name)
+// stays. A record that shares an id with another but differs in content is not a
+// copy: both keys stay and the second copy is a Duplicate. A key rejected as a
+// whole is not in keys, so it is never covered and never covers.
 //
 // The keys are the record sets ParsePackage produced, before deduplication.
-func Covered(keys []KeyRecords) map[string]string {
+func Covered(keys []KeyRecords, now time.Time, th Thresholds) map[string]string {
 	above := func(a, b KeyRecords) bool {
-		if !carriesAll(a, b) {
+		if !covers(a, b, now, th) {
 			return false
 		}
-		return !carriesAll(b, a) || issuedLater(a, b)
+		return !covers(b, a, now, th) || issuedLater(a, b)
 	}
 
-	out := make(map[string]string)
+	covered := make(map[string]bool)
 	for i := range keys {
 		for j := range keys {
 			if i != j && above(keys[j], keys[i]) {
-				out[keys[i].Key] = ""
+				covered[keys[i].Key] = true
 				break
 			}
 		}
 	}
 
-	// "Above" is a strict partial order, so every covered key has a maximal key
-	// above it, and a maximal key is not covered. The latest of them is named.
+	// A covered key is named after the latest key above it that is not covered
+	// itself. Records that ran out make "above" non-transitive, so such a key may
+	// not exist; the key then stays, which is always safe, and the next pass
+	// decides again on what is left.
+	out := make(map[string]string, len(covered))
 	for i := range keys {
-		if _, covered := out[keys[i].Key]; !covered {
+		if !covered[keys[i].Key] {
 			continue
 		}
 		var by *KeyRecords
 		for j := range keys {
 			c := &keys[j]
-			if _, taken := out[c.Key]; taken || !above(*c, keys[i]) {
+			if covered[c.Key] || !above(*c, keys[i]) {
 				continue
 			}
 			if by == nil || issuedLater(*c, *by) {
 				by = c
 			}
 		}
-		if by == nil { // unreachable while "above" stays a strict order
-			delete(out, keys[i].Key)
-			continue
+		if by != nil {
+			out[keys[i].Key] = by.Key
 		}
-		out[keys[i].Key] = by.Key
 	}
 	return out
 }
 
-// carriesAll reports whether a carries a verbatim copy of every record of b.
-// A record whose content could not be decoded is compared on nothing but its id,
-// so it neither covers nor is covered.
-func carriesAll(a, b KeyRecords) bool {
-	if len(b.Records) == 0 {
+// covers reports whether every record of b is either copied in a or ran out past
+// its grace, with at least one copy.
+func covers(a, b KeyRecords, now time.Time, th Thresholds) bool {
+	copied := false
+	for _, r := range b.Records {
+		switch {
+		case copiedIn(a, r):
+			copied = true
+		case !lapsedPastGrace(r, now, th):
+			return false
+		}
+	}
+	return copied
+}
+
+// copiedIn reports whether a carries a verbatim copy of r. A record whose
+// content could not be decoded is compared on nothing but its id, so it is
+// never a copy.
+func copiedIn(a KeyRecords, r RecordStatus) bool {
+	if r.Reason == ReasonSchemaViolation {
 		return false
 	}
-	for _, r := range b.Records {
-		if r.Reason == ReasonSchemaViolation {
-			return false
-		}
-		found := false
-		for _, c := range a.Records {
-			if c.Reason != ReasonSchemaViolation && c.ID == r.ID && sameRecord(c.Record, r.Record) {
-				found = true
-				break
-			}
-		}
-		if !found {
-			return false
+	for _, c := range a.Records {
+		if c.Reason != ReasonSchemaViolation && c.ID == r.ID && sameRecord(c.Record, r.Record) {
+			return true
 		}
 	}
-	return true
+	return false
+}
+
+// lapsedPastGrace reports whether a record that passed verification, or one of
+// a type this build does not know, ran out past its own grace period. A record
+// rejected for a reason the customer has to act on never lapses here, the way it
+// never does for Expired.
+func lapsedPastGrace(r RecordStatus, now time.Time, th Thresholds) bool {
+	if !r.Accepted && r.Reason != ReasonUnsupportedType {
+		return false
+	}
+	return r.ExpireAt != nil && now.After(r.ExpireAt.Add(GraceOf(r, th)))
 }
 
 // sameRecord compares two parsed records field by field, instants by value.

@@ -407,6 +407,73 @@ func TestCoveredKeyIsDeleted(t *testing.T) {
 	}
 }
 
+// The license server drops a record that already ran out when it reissues, so
+// the old key holds a record the new key does not carry. While that record is
+// in grace the old key stays, and the end of the grace is a wake-up point; once
+// it is over the old key is covered and deleted. The old key sorts last, so its
+// copy of the carried record is the Duplicate.
+func TestCoveredOnceTheDroppedRecordLeavesGrace(t *testing.T) {
+	const droppedRecordID = "3c9f55d2-1111-4222-8333-444455556666"
+
+	pub, priv, err := ed25519.GenerateKey(nil)
+	if err != nil {
+		t.Fatalf("generate vendor key: %v", err)
+	}
+	// The default grace of the dropped record ends half an hour after testNow.
+	dropped := platformRecord(droppedRecordID, "2026-01-01T00:00:00Z", "2026-04-17T12:30:00Z", fullLimits(10, 100, 0))
+	carried := platformRecord(testRecordID, "2026-01-01T00:00:00Z", "2027-01-01T00:00:00Z", fullLimits(10, 100, 0))
+	later := platformRecord(newRecordID, "2027-01-01T00:00:00Z", "2028-01-01T00:00:00Z", fullLimits(12, 200, 0))
+	old := &v1alpha1.ClusterLicense{
+		ObjectMeta: metav1.ObjectMeta{Name: "key-b"},
+		Spec:       v1alpha1.ClusterLicenseSpec{LicenseKey: signPackage(t, priv, testPackageID, dropped, carried)},
+	}
+	fresh := &v1alpha1.ClusterLicense{
+		ObjectMeta: metav1.ObjectMeta{Name: "key-a"},
+		Spec:       v1alpha1.ClusterLicenseSpec{LicenseKey: signPackage(t, priv, newPackageID, carried, later)},
+	}
+	worker := node("worker", "4", true)
+	ctx := context.Background()
+
+	env := newTestEnv(t, pub, old, fresh, &worker, discoverySecret())
+	result, err := env.r.Reconcile(ctx, ctrl.Request{})
+	if err != nil {
+		t.Fatalf("first reconcile: %v", err)
+	}
+	if !exists(t, env, "key-b") || !exists(t, env, "key-a") {
+		t.Fatal("a key was deleted while the dropped record is in grace")
+	}
+	if result.RequeueAfter != 30*time.Minute {
+		t.Fatalf("requeueAfter = %s, want the end of the grace in 30m", result.RequeueAfter)
+	}
+	before := effectiveStatusOf(t, env)
+
+	env.at(testNow.Add(result.RequeueAfter + time.Second))
+	if _, err := env.r.Reconcile(ctx, ctrl.Request{}); err != nil {
+		t.Fatalf("second reconcile: %v", err)
+	}
+	if exists(t, env, "key-b") {
+		t.Fatal("the covered key was not deleted after the grace")
+	}
+	if !exists(t, env, "key-a") {
+		t.Fatal("the covering key was deleted")
+	}
+	event := nextEvent(t, env)
+	if !strings.Contains(event, eventKeyCovered) || !strings.Contains(event, "key-a") ||
+		!strings.Contains(event, testPackageID) || !strings.Contains(event, newPackageID) {
+		t.Fatalf("event = %q, want a %s naming both keys", event, eventKeyCovered)
+	}
+
+	claims := requestClaims(t, publishedRequest(t, env))
+	keys := claims["active_keys"].([]any)
+	if len(keys) != 1 || keys[0] != newPackageID {
+		t.Fatalf("active_keys = %v, want only the covering key", keys)
+	}
+	after := effectiveStatusOf(t, env)
+	if !equality.Semantic.DeepEqual(before.Limits, after.Limits) || after.Compliance.State != before.Compliance.State {
+		t.Fatalf("policy changed: %+v/%s -> %+v/%s", before.Limits, before.Compliance.State, after.Limits, after.Compliance.State)
+	}
+}
+
 // corrupt flips one byte of the payload so the signature no longer verifies.
 func corrupt(token string) string {
 	parts := strings.SplitN(token, ".", 3)

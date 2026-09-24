@@ -22,12 +22,13 @@ import (
 	"time"
 )
 
-// dedup flattens the keys and marks every repeated id after the first as a
-// Duplicate. Pasting the same string twice must not double the quota.
-// dedup marks every later occurrence of a record id Duplicate. The records of
-// a covered key are visited last, so the copy the covering key carries is the
-// one that counts and deleting the covered key changes nothing. The output keeps
-// the order of keys: each key owns the next len(Records) of it.
+// dedup marks every later occurrence of a record id Duplicate: pasting the same
+// string twice must not double the quota. The records of a covered key are
+// visited last, so the copy the covering key carries is the one that counts. A
+// record of a covered key that nobody else carries ran out past its grace (see
+// Covered) and is marked Expired, so that a covered key contributes nothing and
+// deleting it changes nothing. The output keeps the order of keys: each key owns
+// the next len(Records) of it.
 func dedup(keys []KeyRecords, covered map[string]string) []RecordStatus {
 	seen := make(map[string]bool)
 	perKey := make([][]RecordStatus, len(keys))
@@ -38,14 +39,18 @@ func dedup(keys []KeyRecords, covered map[string]string) []RecordStatus {
 			}
 			for _, r := range k.Records {
 				cur := r
-				if cur.Accepted {
-					if seen[cur.ID] {
-						cur.Accepted = false
-						cur.Reason = ReasonDuplicate
-						cur.Message = "a record with the same id is already part of the policy"
-					} else {
-						seen[cur.ID] = true
-					}
+				switch {
+				case !cur.Accepted:
+				case seen[cur.ID]:
+					cur.Accepted = false
+					cur.Reason = ReasonDuplicate
+					cur.Message = "a record with the same id is already part of the policy"
+				case last:
+					cur.Accepted = false
+					cur.Reason = ReasonExpired
+					cur.Message = expiredMessage(cur)
+				default:
+					seen[cur.ID] = true
 				}
 				perKey[i] = append(perKey[i], cur)
 			}

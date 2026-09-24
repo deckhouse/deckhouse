@@ -17,6 +17,7 @@ limitations under the License.
 package licensing
 
 import (
+	"fmt"
 	"reflect"
 	"testing"
 	"time"
@@ -418,10 +419,12 @@ func TestSupersededWinsOverExpired(t *testing.T) {
 	}
 }
 
-// Which keys another key carries verbatim. The license server copies every
+// Which keys another key makes redundant. The license server copies every
 // record of the previous keys that is still in force or yet to come into the
-// new key, so the old key becomes redundant.
+// new key and drops the ones that ran out. Now is 2026-05-01 and the default
+// grace is 14 days.
 func TestCovered(t *testing.T) {
+	now := ts("2026-05-01T00:00:00Z")
 	limits := map[string]*int64{MetricVCPU: i64(100)}
 	a := wl(recordA, "2026-01-01T00:00:00Z", "2026-07-01T00:00:00Z", limits)
 	b := wl(recordB, "2026-01-01T00:00:00Z", "2027-01-01T00:00:00Z", limits)
@@ -435,6 +438,19 @@ func TestCovered(t *testing.T) {
 	shifted := a
 	shifted.StartAt = a.StartAt.In(time.FixedZone("MSK", 3*3600))
 	malformed := rejectedRec(recordA, ReasonSchemaViolation)
+
+	// Records of the old key the server did not copy: gone past grace on
+	// 2026-03-15, in the default grace until 2026-05-09, in their own 90 days of
+	// grace until 2026-05-30.
+	gone := wl(recordD, "2026-01-01T00:00:00Z", "2026-03-01T00:00:00Z", limits)
+	inGrace := wl(recordD, "2026-01-01T00:00:00Z", "2026-04-25T00:00:00Z", limits)
+	longGrace := gone
+	longGrace.GraceDays = new(int)
+	*longGrace.GraceDays = 90
+	goneMismatch := gone
+	goneMismatch.Accepted, goneMismatch.Reason = false, ReasonClusterMismatch
+	goneUnknown := gone
+	goneUnknown.Accepted, goneUnknown.Reason = false, ReasonUnsupportedType
 
 	key := func(name, jti, iat string, records ...RecordStatus) KeyRecords {
 		k := KeyRecords{Key: name, JTI: jti, Records: records}
@@ -503,11 +519,47 @@ func TestCovered(t *testing.T) {
 			key("license-a", keyOldJTI, older),
 			key("license-b", keyNewJTI, newer, a),
 		}, map[string]string{}},
+		{"a record past grace needs no copy", []KeyRecords{
+			key("license-a", keyOldJTI, older, gone, b),
+			key("license-b", keyNewJTI, newer, b, c),
+		}, map[string]string{"license-a": "license-b"}},
+		{"a record past grace of an unknown type needs no copy", []KeyRecords{
+			key("license-a", keyOldJTI, older, goneUnknown, b),
+			key("license-b", keyNewJTI, newer, b, c),
+		}, map[string]string{"license-a": "license-b"}},
+		{"a record in the default grace keeps the key", []KeyRecords{
+			key("license-a", keyOldJTI, older, inGrace, b),
+			key("license-b", keyNewJTI, newer, b, c),
+		}, map[string]string{}},
+		{"a record in its own grace keeps the key", []KeyRecords{
+			key("license-a", keyOldJTI, older, longGrace, b),
+			key("license-b", keyNewJTI, newer, b, c),
+		}, map[string]string{}},
+		{"a rejected record past grace keeps the key", []KeyRecords{
+			key("license-a", keyOldJTI, older, goneMismatch, b),
+			key("license-b", keyNewJTI, newer, b, c),
+		}, map[string]string{}},
+		{"nothing but records past grace is the business of Expired", []KeyRecords{
+			key("license-a", keyOldJTI, older, gone),
+			key("license-b", keyNewJTI, newer, b),
+		}, map[string]string{}},
+		{"the same live records: the later iat stays", []KeyRecords{
+			key("license-a", keyOldJTI, newer, gone, b),
+			key("license-b", keyNewJTI, older, b),
+		}, map[string]string{"license-b": "license-a"}},
+		{"no uncovered key above: the key stays", []KeyRecords{
+			// license-b is covered by license-a (its record past grace is not
+			// copied) and covers license-c, but license-a does not cover
+			// license-c: license-c stays and Expired decides once license-b is gone.
+			key("license-a", keyNewJTI, newer, b),
+			key("license-b", keyOldJTI, older, gone, b),
+			key("license-c", testPackageJTI, older, gone),
+		}, map[string]string{"license-b": "license-a"}},
 	}
 
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
-			if got := Covered(tc.keys); !reflect.DeepEqual(got, tc.want) {
+			if got := Covered(tc.keys, now, DefaultThresholds()); !reflect.DeepEqual(got, tc.want) {
 				t.Fatalf("covered = %v, want %v", got, tc.want)
 			}
 		})
@@ -622,5 +674,163 @@ func TestCoveredKeyThenExpiry(t *testing.T) {
 	}
 	if !reflect.DeepEqual(res.ActiveKeys, []string{testPackageJTI}) {
 		t.Fatalf("activeKeys = %v, want only the key in force", res.ActiveKeys)
+	}
+}
+
+// reissueDropping is a reissue in which the license server dropped a record of
+// the old key that already ran out: the old key holds Ra (expired on 2026-03-01,
+// with graceDays of grace, or the default 14 days when negative) and Rb, the new
+// key a verbatim copy of Rb and a record Rc of its own. oldName and newName pick
+// which of the two sorts first.
+func reissueDropping(oldName, newName string, graceDays int) []KeyRecords {
+	limits := map[string]*int64{MetricServers: i64(12), MetricVCPU: i64(200), MetricCores: i64(0)}
+	ra := wl(recordA, "2026-01-01T00:00:00Z", "2026-03-01T00:00:00Z", limits)
+	if graceDays >= 0 {
+		ra.GraceDays = &graceDays
+	}
+	rb := wl(recordB, "2026-01-01T00:00:00Z", "2026-07-01T00:00:00Z", limits)
+	rc := wl(recordC, "2026-07-01T00:00:00Z", "2026-09-01T00:00:00Z", limits)
+	return []KeyRecords{
+		{Key: oldName, JTI: keyOldJTI, IssuedAt: ts("2026-01-01T00:00:00Z"), Records: []RecordStatus{ra, rb}},
+		{Key: newName, JTI: keyNewJTI, IssuedAt: ts("2026-03-10T00:00:00Z"), Records: []RecordStatus{rb, rc}},
+	}
+}
+
+// The old key holds a record past grace the new key does not carry, and a
+// record the new key carries verbatim: it is covered, and deleting it changes
+// neither the policy nor the registration request.
+func TestCoveredWithARecordPastGrace(t *testing.T) {
+	now := ts("2026-04-01T00:00:00Z")
+	nodes := []Node{nd("a", 32), nd("b", 16)}
+
+	for _, names := range [][2]string{{"license-a", "license-b"}, {"license-b", "license-a"}} {
+		t.Run(names[0]+" is the old key", func(t *testing.T) {
+			both := reissueDropping(names[0], names[1], -1)
+			before := Compute(input(now, both, nodes...))
+			if !reflect.DeepEqual(before.Covered, map[string]string{names[0]: names[1]}) {
+				t.Fatalf("covered = %v", before.Covered)
+			}
+			if len(before.Expired) != 0 || len(before.Superseded) != 0 {
+				t.Fatalf("expired = %v, superseded = %v", before.Expired, before.Superseded)
+			}
+			var old []RecordStatus
+			if names[0] < names[1] {
+				old = before.Records[:2]
+			} else {
+				old = before.Records[2:]
+			}
+			if old[0].Reason != ReasonExpired || old[1].Reason != ReasonDuplicate {
+				t.Fatalf("old key records = %+v, want Expired and Duplicate", old)
+			}
+
+			after := Compute(input(now, both[1:], nodes...))
+			if !reflect.DeepEqual(before.Limits, after.Limits) || !reflect.DeepEqual(before.Allocation, after.Allocation) ||
+				before.State != after.State || before.Reason != after.Reason || !reflect.DeepEqual(before.Key, after.Key) {
+				t.Fatalf("policy changed: %+v %q -> %+v %q", before.Limits, before.State, after.Limits, after.State)
+			}
+			if !reflect.DeepEqual(before.AcceptedRecords, after.AcceptedRecords) ||
+				!reflect.DeepEqual(before.ActiveKeys, []string{keyNewJTI}) ||
+				!reflect.DeepEqual(before.ActiveKeys, after.ActiveKeys) {
+				t.Fatalf("registration request changed: %v %v -> %v %v",
+					before.AcceptedRecords, before.ActiveKeys, after.AcceptedRecords, after.ActiveKeys)
+			}
+		})
+	}
+}
+
+// A record still in grace is read by the Grace state, so the old key stays
+// until that grace ends, and is covered from then on.
+func TestCoveredOnceTheGraceEnds(t *testing.T) {
+	both := reissueDropping("license-a", "license-b", 60) // Ra's grace ends 2026-04-30
+
+	if res := Compute(input(ts("2026-04-29T00:00:00Z"), both)); len(res.Covered) != 0 {
+		t.Fatalf("covered = %v while Ra is in grace", res.Covered)
+	}
+	res := Compute(input(ts("2026-05-01T00:00:00Z"), both))
+	if !reflect.DeepEqual(res.Covered, map[string]string{"license-a": "license-b"}) {
+		t.Fatalf("covered = %v after Ra's grace", res.Covered)
+	}
+}
+
+// A key of nothing but records past grace next to an unrelated key is not
+// covered: the expiry rule deletes it.
+func TestOnlyRecordsPastGraceAreForExpired(t *testing.T) {
+	limits := map[string]*int64{MetricVCPU: i64(100)}
+	res := Compute(input(ts("2026-05-01T00:00:00Z"), []KeyRecords{
+		{Key: "license-a", JTI: keyOldJTI, Records: []RecordStatus{
+			wl(recordA, "2026-01-01T00:00:00Z", "2026-03-01T00:00:00Z", limits),
+		}},
+		{Key: "license-b", JTI: keyNewJTI, Records: []RecordStatus{
+			wl(recordB, "2026-03-01T00:00:00Z", "2027-01-01T00:00:00Z", limits),
+		}},
+	}))
+	if len(res.Covered) != 0 {
+		t.Fatalf("covered = %v, want none", res.Covered)
+	}
+	if _, ok := res.Expired["license-a"]; !ok || len(res.Expired) != 1 {
+		t.Fatalf("expired = %v, want license-a", res.Expired)
+	}
+}
+
+// settle runs the controller loop at one point in time: compute, delete what
+// the result retires, repeat until nothing more goes.
+func settle(t *testing.T, keys []KeyRecords, now time.Time) []KeyRecords {
+	t.Helper()
+	for range len(keys) + 1 {
+		res := Compute(input(now, keys))
+		kept := make([]KeyRecords, 0, len(keys))
+		for _, k := range keys {
+			_, expired := res.Expired[k.Key]
+			_, covered := res.Covered[k.Key]
+			if !expired && !covered && !res.Superseded[k.Key] {
+				kept = append(kept, k)
+			}
+		}
+		if len(kept) == len(keys) {
+			return keys
+		}
+		keys = kept
+	}
+	t.Fatalf("keys at %s never settled", now)
+	return nil
+}
+
+// Full lifecycle of a reissue: whatever the grace of the dropped record and
+// whichever key sorts first, and whether the controller watched every step or
+// only woke up at the end, no Duplicate copy keeps a key for ever. Once
+// everything ran out past grace exactly one key is left, the new one, kept as
+// the last evidence of the licence.
+func TestNoKeyOutlivesItsRecordsOnADuplicate(t *testing.T) {
+	steps := []string{
+		"2026-03-20T00:00:00Z", // Ra past the default grace, in a 90 day one
+		"2026-06-01T00:00:00Z", // Ra past any grace, Rb still in force
+		"2026-07-10T00:00:00Z", // Rb expired and in grace, Rc in force
+		"2026-08-01T00:00:00Z", // Rb past grace
+		"2026-09-10T00:00:00Z", // Rc expired and in grace
+		"2027-01-01T00:00:00Z", // everything past grace
+	}
+	for _, grace := range []int{-1, 90} {
+		for _, names := range [][2]string{{"license-a", "license-b"}, {"license-b", "license-a"}} {
+			for _, watched := range []bool{true, false} {
+				name := fmt.Sprintf("grace %d, old key %s, watched %v", grace, names[0], watched)
+				t.Run(name, func(t *testing.T) {
+					keys := reissueDropping(names[0], names[1], grace)
+					at := steps
+					if !watched {
+						at = steps[len(steps)-1:]
+					}
+					for _, step := range at {
+						keys = settle(t, keys, ts(step))
+					}
+					if len(keys) != 1 || keys[0].JTI != keyNewJTI {
+						t.Fatalf("keys left = %+v, want only the new key", keys)
+					}
+					res := Compute(input(ts(steps[len(steps)-1]), keys))
+					if res.State != StateViolation || res.Reason != ReasonExpired {
+						t.Fatalf("state = %q/%q, want Violation/Expired", res.State, res.Reason)
+					}
+				})
+			}
+		}
 	}
 }

@@ -77,7 +77,8 @@ const (
 	// a key whose every record ran out past its grace period.
 	eventKeyExpired = "KeyExpired"
 	// eventKeyCovered is emitted on EffectiveLicense when the controller deletes
-	// a key whose every record another installed key carries verbatim.
+	// a key whose every record another installed key carries verbatim, bar the
+	// ones past their grace period.
 	eventKeyCovered = "KeyCovered"
 )
 
@@ -301,8 +302,8 @@ func (r *reconciler) registrationRequest(
 // every record was taken over by an accepted successor already in force
 // (specification 8.4), a key whose every record ran out past its grace period,
 // except the one the compliance state still reads, and a key whose every record
-// another installed key carries verbatim. A rejected key and a key still in
-// grace stay.
+// another installed key carries verbatim, bar the ones past their grace period
+// (see licensing.Covered). A rejected key and a key still in grace stay.
 func (r *reconciler) deleteRetiredKeys(
 	ctx context.Context,
 	effective *v1alpha1.EffectiveLicense,
