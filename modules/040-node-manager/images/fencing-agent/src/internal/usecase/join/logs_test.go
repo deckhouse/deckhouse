@@ -122,7 +122,7 @@ func TestJoinPathLinesAreDedupedAcrossAttempts(t *testing.T) {
 
 				return nodes, expected, &fakeCluster{}
 			},
-			want: []string{droppedMsg + "|warn|worker-1-old|local_internal_ip", completedMsg + "|info||"},
+			want: []string{cloneMsg + "|warn|worker-1-old|", completedMsg + "|info||"},
 		},
 		{
 			name: "alone with a stale clone",

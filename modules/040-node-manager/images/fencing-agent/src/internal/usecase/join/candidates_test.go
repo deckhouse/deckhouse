@@ -67,13 +67,56 @@ func TestSeedListExcludesStaleNodeWithLocalIP(t *testing.T) {
 
 	assertJoinedOnce(t, cluster, "10.0.0.2:8500")
 
-	if got := slices.Sorted(slices.Values(nodes.candidateGets())); !slices.Equal(got, []string{"worker-1-old", "worker-2"}) {
-		t.Errorf("candidate reads are %v, want worker-1-old and worker-2 once each", got)
+	if got := slices.Sorted(slices.Values(nodes.candidateGets())); !slices.Equal(got, []string{"worker-2"}) {
+		t.Errorf("candidate reads are %v, want worker-2 once: a clone is not a candidate", got)
 	}
 
 	records := logtest.Drain(t, &logs)
 	logtest.AssertSnakeCaseKeys(t, records)
-	assertLocalIPDrop(t, records, "worker-1-old")
+	assertCloneWarning(t, records, "worker-1-old")
+
+	if dropped := logtest.WithMsg(records, droppedMsg); len(dropped) != 0 {
+		t.Errorf("drop records are %v, want none: the clone never reaches the candidate read", dropped)
+	}
+}
+
+// A clone stayed in the alive/notAlive classes and could be sampled into the
+// seeds, where only the fresh read dropped it. pick splits its slots between the
+// classes, so a clone alone in one class also shrank the other class's sample.
+func TestStaleCloneDoesNotTakeSeedSlots(t *testing.T) {
+	nodes, expected := mirroredGroup(
+		selfPeer(),
+		domain.Peer{Name: "worker-1-old", IP: testNodeIP},
+		domain.Peer{Name: "worker-2", IP: "10.0.0.2"},
+		domain.Peer{Name: "worker-3", IP: "10.0.0.3"},
+	)
+	cluster := &fakeCluster{}
+	cluster.setMembers(testNodeName, "worker-2", "worker-3")
+
+	if err := newJoiner(t, nodes, expected, cluster).Attempt(t.Context()); err != nil {
+		t.Fatalf("attempt returned %v, want both peers to be seeded", err)
+	}
+
+	assertJoinedOnce(t, cluster, "10.0.0.2:8500", "10.0.0.3:8500")
+}
+
+// Clones taking every sampled slot left the attempt without a usable address, so
+// a reachable peer waited for the next backoff.
+func TestStaleClonesNeverStarveTheSeedList(t *testing.T) {
+	nodes, expected := mirroredGroup(
+		selfPeer(),
+		domain.Peer{Name: "worker-1-old", IP: testNodeIP},
+		domain.Peer{Name: "worker-1-older", IP: testNodeIP},
+		domain.Peer{Name: "worker-1-oldest", IP: testNodeIP},
+		domain.Peer{Name: "worker-2", IP: "10.0.0.2"},
+	)
+	cluster := &fakeCluster{}
+
+	if err := newJoiner(t, nodes, expected, cluster).Attempt(t.Context()); err != nil {
+		t.Fatalf("attempt returned %v, want the one real peer to be seeded", err)
+	}
+
+	assertJoinedOnce(t, cluster, "10.0.0.2:8500")
 }
 
 func TestStaleCloneOnlyGroupStartsAlone(t *testing.T) {
@@ -636,7 +679,7 @@ func TestCandidateSelectionDoesNotMutateTheSharedExpectedSlice(t *testing.T) {
 	}
 }
 
-func TestStaleClonePrefilterAppliesOnlyToTheAloneRule(t *testing.T) {
+func TestStaleClonePrefilterIgnoresGossipLiveness(t *testing.T) {
 	cases := []struct {
 		name    string
 		members []string
@@ -665,18 +708,18 @@ func TestStaleClonePrefilterAppliesOnlyToTheAloneRule(t *testing.T) {
 				t.Fatalf("attempt returned %v, want worker-2 to be joined", err)
 			}
 
-			if got := slices.Sorted(slices.Values(nodes.candidateGets())); !slices.Equal(got, []string{"worker-1-old", "worker-2"}) {
-				t.Errorf("candidate reads are %v, want worker-1-old and worker-2 once each", got)
+			if got := slices.Sorted(slices.Values(nodes.candidateGets())); !slices.Equal(got, []string{"worker-2"}) {
+				t.Errorf("candidate reads are %v, want worker-2 once: a clone is not a candidate", got)
 			}
 
 			assertJoinedOnce(t, cluster, "10.0.0.2:8500")
 
 			records := logtest.Drain(t, &logs)
 			logtest.AssertSnakeCaseKeys(t, records)
-			assertLocalIPDrop(t, records, "worker-1-old")
+			assertCloneWarning(t, records, "worker-1-old")
 
-			if got := logtest.WithMsg(records, cloneMsg); len(got) != 0 {
-				t.Errorf("clone records are %v, want none outside the alone rule", got)
+			if got := logtest.WithMsg(records, droppedMsg); len(got) != 0 {
+				t.Errorf("drop records are %v, want none: the clone never reaches the candidate read", got)
 			}
 
 			if got := logtest.WithMsg(records, aloneMsg); len(got) != 0 {
@@ -754,19 +797,18 @@ func assertSlots(t *testing.T, picked, notAlive, alive []string, wantNotAlive, w
 	}
 }
 
-func assertLocalIPDrop(t *testing.T, records []logtest.Record, member string) {
+func assertCloneWarning(t *testing.T, records []logtest.Record, member string) {
 	t.Helper()
 
-	dropped := logtest.WithMsg(records, droppedMsg)
-	if len(dropped) != 1 {
-		t.Errorf("drop records are %v, want exactly one for %s", dropped, member)
+	clones := logtest.WithMsg(records, cloneMsg)
+	if len(clones) != 1 {
+		t.Errorf("clone records are %v, want exactly one for %s", clones, member)
 
 		return
 	}
 
-	record := dropped[0]
-	if record.Str("member") != member || record.Str("reason") != "local_internal_ip" || record.Level() != "warn" {
-		t.Errorf("drop record is %v, want member %s, reason local_internal_ip at level warn", record, member)
+	if record := clones[0]; record.Str("member") != member || record.Level() != "warn" {
+		t.Errorf("clone record is %v, want member %s at level warn", record, member)
 	}
 }
 
