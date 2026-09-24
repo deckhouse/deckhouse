@@ -17,7 +17,21 @@
       "justification": "vulnerable_code_not_in_execute_path",
       "impact_statement": "GO-2026-5932 относится к пакету golang.org/x/crypto/openpgp, который помечен как unmaintained. В образе два Go-бинарника, содержащих golang.org/x/crypto: dhctl (v0.53.0, entrypoint /dhctl) и opentofu (v0.55.0, /bin/opentofu, opentofu v1.12.5, сборка ./cmd/tofu) — оба приходят из базового слоя terraform-manager/base-terraform-manager-opentofu. Ни один из них не импортирует golang.org/x/crypto/openpgp: grep по исходникам не находит таких импортов, в go list -deps пакет также отсутствует. Проверка подписей провайдеров в opentofu использует github.com/ProtonMail/go-crypto/openpgp (internal/getproviders/package_authentication.go) — это отдельный модуль, под данную advisory он не подпадает. В обоих проектах golang.org/x/crypto указан прямой зависимостью ради ssh, ssh/agent, ssh/knownhosts, bcrypt, pkcs12 и nacl/secretbox — без исполняемого пути openpgp. Исправленной версии пакета нет; уязвимый код в данном компоненте не выполняется.",
       "timestamp": "2026-08-27T13:02:27.000000000Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-84304"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/google.golang.org/grpc@v1.82.2"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_cannot_be_controlled_by_adversary",
+      "impact_statement": "CVE-2026-84304: получатель в gRPC-соединении тратит память на каждый DATA-кадр HTTP/2, и поток из множества мелких кадров приводит к OOM. Запись относится к grpc v1.82.2 в /bin/opentofu (opentofu v1.12.5, ./cmd/tofu). /dhctl в этом образе собран с grpc v1.83.2, где уязвимость исправлена. opentofu не поднимает gRPC-сервер. Клиентом он подключается только к провайдерам из каталога плагинов образа (-plugin-dir) через локальный unix-сокет. Провайдер kubernetes dhctl запускает отдельным процессом и передаёт opentofu его адрес через TF_REATTACH_PROVIDERS, это тоже локальный unix-сокет. OTLP-экспорт телеметрии включается только при OTEL_TRACES_EXPORTER=otlp, Deckhouse эту переменную не задаёт. Backend и шифрование state в конфигурации Deckhouse не настраиваются. Прислать opentofu такой поток может только провайдер. Чтобы подменить провайдер или его сокет, нужно уже выполнять код в контейнере. Исправление есть только в grpc 1.83.1 и выше. grpc 1.83 требует otel 1.44, а с ним opentofu 1.12.5 без правки кода не запускается при включённой телеметрии.",
+      "timestamp": "2026-09-24T12:09:15.000000000Z"
     }
   ],
-  "timestamp": "2026-08-27T13:02:27.000000000Z"
+  "timestamp": "2026-09-24T12:09:15.000000000Z"
 }

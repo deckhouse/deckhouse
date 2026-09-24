@@ -1,5 +1,5 @@
 diff --git a/go.mod b/go.mod
-index ce1393e..f0e3d29 100644
+index ce1393e..fcbc89d 100644
 --- a/go.mod
 +++ b/go.mod
 @@ -31,11 +31,11 @@ require (
@@ -44,7 +44,7 @@ index ce1393e..f0e3d29 100644
 +	golang.org/x/text v0.41.0
  	google.golang.org/api v0.271.0
 -	google.golang.org/grpc v1.79.3
-+	google.golang.org/grpc v1.82.1
++	google.golang.org/grpc v1.82.2
  	google.golang.org/protobuf v1.36.11
  	k8s.io/api v0.35.2
  	k8s.io/apimachinery v0.35.2
@@ -171,7 +171,7 @@ index ce1393e..f0e3d29 100644
  	gopkg.in/evanphx/json-patch.v4 v4.13.0 // indirect
  	gopkg.in/inf.v0 v0.9.1 // indirect
 diff --git a/go.sum b/go.sum
-index 3fc5eb2..551933c 100644
+index 3fc5eb2..9023e77 100644
 --- a/go.sum
 +++ b/go.sum
 @@ -52,8 +52,8 @@ github.com/Azure/azure-sdk-for-go/sdk/security/keyvault/internal v1.2.0/go.mod h
@@ -518,8 +518,8 @@ index 3fc5eb2..551933c 100644
  google.golang.org/grpc v1.38.0/go.mod h1:NREThFqKR1f3iQ6oBuvc5LadQuXVGo9rkm5ZGrQdJfM=
 -google.golang.org/grpc v1.79.3 h1:sybAEdRIEtvcD68Gx7dmnwjZKlyfuc61Dyo9pGXXkKE=
 -google.golang.org/grpc v1.79.3/go.mod h1:KmT0Kjez+0dde/v2j9vzwoAScgEPx/Bw1CYChhHLrHQ=
-+google.golang.org/grpc v1.82.1 h1:NnAxzGRA0677vCa4BUkOAnO5+FfQqVl9iUXeD0IqcGE=
-+google.golang.org/grpc v1.82.1/go.mod h1:yzTZ1TB1Z3SG+LIYaI+WiE8D5+PZ3ArnrSp8zF3+/ZA=
++google.golang.org/grpc v1.82.2 h1:2+rCCTC8esfgjDFhN+rIok0FVsBLw/y5vHzNX2FjRLw=
++google.golang.org/grpc v1.82.2/go.mod h1:yzTZ1TB1Z3SG+LIYaI+WiE8D5+PZ3ArnrSp8zF3+/ZA=
  google.golang.org/grpc/cmd/protoc-gen-go-grpc v1.3.0 h1:rNBFJjBCOgVr9pWD7rs/knKL4FRTKgpZmsRfV214zcA=
  google.golang.org/grpc/cmd/protoc-gen-go-grpc v1.3.0/go.mod h1:Dk1tviKTvMCz5tvh7t+fh94dhmQVHuCt2OzJB3CTW9Y=
  google.golang.org/protobuf v0.0.0-20200109180630-ec00e32a8dfd/go.mod h1:DFci5gLYBciE7Vtevhsrf46CRTquxDuWsQurQQe4oz8=
