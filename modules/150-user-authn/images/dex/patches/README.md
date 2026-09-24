@@ -270,6 +270,7 @@ say so; backports to 1.77 and 1.76 are appropriate but stricter.
 - CVE-2026-56855
 - CVE-2026-56864
 - CVE-2026-56865
+- CVE-2026-73500
 - CVE-2026-78662
 - CVE-2026-84303
 - CVE-2026-84304
