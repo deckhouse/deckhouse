@@ -37,7 +37,7 @@ func (r *Reconciler) writeStatus(
 	ctx context.Context,
 	incident *v1alpha1.FencingFailedNodeState,
 	state fsm.State,
-	condition metav1.Condition,
+	conditions ...metav1.Condition,
 ) error {
 	updated := incident.DeepCopy()
 
@@ -48,7 +48,10 @@ func (r *Reconciler) writeStatus(
 	}
 
 	updated.Status.ObservedGeneration = incident.Generation
-	meta.SetStatusCondition(&updated.Status.Conditions, condition)
+
+	for _, condition := range conditions {
+		meta.SetStatusCondition(&updated.Status.Conditions, condition)
+	}
 
 	if equality.Semantic.DeepEqual(incident.Status, updated.Status) {
 		return nil

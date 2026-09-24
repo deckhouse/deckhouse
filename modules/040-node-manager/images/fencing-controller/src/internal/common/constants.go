@@ -51,12 +51,40 @@ const (
 	EnvLogLevel     = "LOG_LEVEL"
 )
 
+// Conditions report the blockers of an incident. A blocker sits on top of a
+// phase instead of replacing it, so the state machine keeps the phase it
+// reached and carries on from there once the blocker is gone.
+
 // ConditionTypeConfigurationError reports that the incident cannot be processed
-// because its SLA profile is unusable. Conditions sit on top of a phase instead
-// of replacing it, so the state machine keeps the phase it reached.
+// because its SLA profile is unusable.
 const ConditionTypeConfigurationError = "ConfigurationError"
 
 const (
 	ReasonProfileUnavailable = "ProfileUnavailable"
 	ReasonProfileResolved    = "ProfileResolved"
+	// ReasonProfileNotEvaluated: the profile was not read at all, because the
+	// object does not identify a live Node and decides nothing on its own.
+	ReasonProfileNotEvaluated = "ProfileNotEvaluated"
+)
+
+// ConditionTypeInvalidNodeReference reports that the incident does not identify
+// a live Node, so the pods of that Node are never deleted on its behalf.
+const ConditionTypeInvalidNodeReference = "InvalidNodeReference"
+
+// The reasons of ConditionTypeInvalidNodeReference are the machine-readable
+// causes the ADR names, one per rule of the pre-reconcile validation.
+const (
+	// ReasonMissingOwnerReference: metadata.ownerReferences does not hold
+	// exactly one reference to a v1 Node.
+	ReasonMissingOwnerReference = "MissingOwnerReference"
+	// ReasonNameMismatch: the owner reference names a Node other than the one
+	// metadata.name names.
+	ReasonNameMismatch = "NameMismatch"
+	// ReasonUIDMismatch: the Node was recreated, so the object refers to an
+	// identity that no longer exists.
+	ReasonUIDMismatch = "UIDMismatch"
+	// ReasonNodeNotFound: the Node the object names is gone.
+	ReasonNodeNotFound = "NodeNotFound"
+	// ReasonNodeReferenceValid: the object identifies the live Node it names.
+	ReasonNodeReferenceValid = "NodeReferenceValid"
 )

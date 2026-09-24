@@ -43,7 +43,6 @@ var adrEvents = []Event{
 	EventEvictionCompleted,
 	EventReconcileFailed,
 	EventRetryAfterBackoff,
-	EventInvalidNodeReference,
 	EventStateDeleted,
 }
 
@@ -79,10 +78,6 @@ func TestTransitionsAreExactlyTheOnesTheADRDescribes(t *testing.T) {
 
 	for _, state := range adrStates {
 		described[state] = make(map[Event]State)
-
-		// The terminal skip on an invalid or stale Node reference is described
-		// for every state, so it is not listed per state above.
-		described[state][EventInvalidNodeReference] = StateError
 	}
 
 	for _, a := range adrArrows {

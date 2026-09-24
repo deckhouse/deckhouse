@@ -34,6 +34,7 @@ import (
 	v1alpha1 "fencing-controller/api/node-manager.deckhouse.io/v1alpha1"
 	"fencing-controller/internal/common"
 	"fencing-controller/internal/domain/fsm"
+	"fencing-controller/internal/usecase/noderef"
 	"fencing-controller/internal/usecase/profile"
 )
 
@@ -46,23 +47,31 @@ type Profiles interface {
 	Forget(node string)
 }
 
+// NodeReference answers whether an incident identifies the live Node it names.
+type NodeReference interface {
+	// Validate returns the broken invariant of the reference, or nil when the
+	// object identifies its Node. An error means the question could not be
+	// answered and is worth a retry.
+	Validate(ctx context.Context, incident *v1alpha1.FencingFailedNodeState) (*noderef.Problem, error)
+}
+
 // Reconciler drives the fencing state machine of every FencingFailedNodeState.
 //
 // Of the object it writes phase and conditions only; the blockers it reports
 // there are also published as events and as a metric. The machine holds every
 // transition the ADR describes, but this reconciler drives the timing ones and
-// stops at ReadyToEvict: deleting the pods of a fenced Node and validating the
-// reference from the object to its Node are not implemented yet, so the states
-// past ReadyToEvict are unreachable until they land.
+// stops at ReadyToEvict: deleting the pods of a fenced Node is not implemented
+// yet, so the states past ReadyToEvict are unreachable until it lands.
 type Reconciler struct {
 	client   client.Client
+	nodes    NodeReference
 	profiles Profiles
 	recorder record.EventRecorder
 	now      func() time.Time
 }
 
-func New(c client.Client, profiles Profiles, recorder record.EventRecorder) *Reconciler {
-	return &Reconciler{client: c, profiles: profiles, recorder: recorder, now: time.Now}
+func New(c client.Client, nodes NodeReference, profiles Profiles, recorder record.EventRecorder) *Reconciler {
+	return &Reconciler{client: c, nodes: nodes, profiles: profiles, recorder: recorder, now: time.Now}
 }
 
 func (r *Reconciler) SetupWithManager(mgr ctrl.Manager) error {
@@ -83,8 +92,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 		if apierrors.IsNotFound(err) {
 			// A missing CR means the Node has no active fencing signal: either a
 			// recovered Node deleted it, or it was collected with its Node.
-			r.profiles.Forget(req.Name)
-			clearConfigurationError(req.Name)
+			r.dropTraceOf(req.Name)
 
 			logger.Info("fencingfailednodestate is gone, node has no active fencing signal", "node", req.Name)
 
@@ -96,6 +104,17 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 
 	logger.Info("observed fencingfailednodestate", observedFields(&incident)...)
 
+	// An object on its way out is the same signal as one that is already gone,
+	// so it is treated the same: nothing is written to it, and no timer is armed
+	// for an incident that will not be there when it fires.
+	if incident.DeletionTimestamp != nil {
+		r.dropTraceOf(incident.Name)
+
+		logger.Info("fencingfailednodestate is being deleted, node has no active fencing signal", "node", incident.Name)
+
+		return ctrl.Result{}, nil
+	}
+
 	machine, err := fsm.NewFSMFromCR(&incident)
 	if err != nil {
 		return ctrl.Result{}, fmt.Errorf("restore fencing state machine of %q: %w", incident.Name, err)
@@ -105,6 +124,23 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 	// for the requeue could put the deadline on the other side of it, and the
 	// incident would then be left in a waiting state with no timer to leave it.
 	now := r.now()
+
+	// Identity comes before everything else, the profile of the incident
+	// included. An object whose Node is gone is at the end of its life, and
+	// resolving its profile first would turn that terminal answer into an
+	// endlessly retried configuration error whenever both are broken at once.
+	problem, err := r.nodes.Validate(ctx, &incident)
+	if err != nil {
+		return ctrl.Result{}, fmt.Errorf("validate node reference of %q: %w", incident.Name, err)
+	}
+
+	if problem != nil {
+		return r.refuseInvalidNodeReference(ctx, &incident, machine, problem, now)
+	}
+
+	// The reference identifies its Node, so the blocker reported for it is over
+	// no matter what the rest of this reconcile decides.
+	clearInvalidNodeReference(incident.Name)
 
 	params, err := r.profiles.Resolve(ctx, &incident)
 	if err != nil {
@@ -121,7 +157,12 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 		)
 	}
 
-	if err := r.writeStatus(ctx, &incident, machine.State(), profileResolved(&incident, now)); err != nil {
+	conditions := []metav1.Condition{
+		nodeReferenceValid(&incident, now),
+		profileResolved(&incident, now),
+	}
+
+	if err := r.writeStatus(ctx, &incident, machine.State(), conditions...); err != nil {
 		return ctrl.Result{}, err
 	}
 
@@ -129,6 +170,68 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 	clearConfigurationError(incident.Name)
 
 	return ctrl.Result{RequeueAfter: machine.RequeueAfter(&incident, params, now)}, nil
+}
+
+// refuseInvalidNodeReference blocks the incident: the object does not identify a
+// live Node, so nothing may be deleted on its behalf. The blocker is reported as
+// a condition whose reason names the broken invariant, and the phase is left
+// where the machine reached it, the same way a configuration error is reported.
+//
+// Nothing is requeued, because time alone changes nothing here. A reference that
+// does get repaired arrives as an update of the object and the incident carries
+// on from the phase it kept; an object that is not repaired is collected
+// together with the Node it belongs to, when it has one to be collected by.
+func (r *Reconciler) refuseInvalidNodeReference(
+	ctx context.Context,
+	incident *v1alpha1.FencingFailedNodeState,
+	machine *fsm.FSM,
+	problem *noderef.Problem,
+	now time.Time,
+) (ctrl.Result, error) {
+	// Whether the blocker is new is read from the object as observed, before the
+	// write below records it there.
+	isNew := !blockedOnNodeReference(incident)
+
+	// The reference is reported next to a reset of the configuration blocker:
+	// the profile of a refused incident is not evaluated, so a ConfigurationError
+	// left over from an earlier pass would outlive the metric dropped below.
+	if err := r.writeStatus(ctx, incident, machine.State(),
+		invalidNodeReference(incident, problem, now),
+		profileNotEvaluated(incident, now),
+	); err != nil {
+		return ctrl.Result{}, err
+	}
+
+	logf.FromContext(ctx).Info("fencing of node is refused, object does not identify a live node",
+		"node", incident.Name,
+		"reason", problem.Reason,
+		"message", problem.Message,
+		"phase", string(machine.State()),
+	)
+
+	if isNew {
+		r.recorder.Event(incident, corev1.EventTypeWarning, problem.Reason, problem.Message)
+	}
+
+	// What the controller keeps outside the object goes with the refusal: the
+	// profile of an incident that is not evacuated is never read again, and the
+	// configuration error series would keep alerting about a blocker that no
+	// longer decides anything.
+	r.dropTraceOf(incident.Name)
+
+	// The refusal is what the controller reports about this node instead, and it
+	// is published after the traces are dropped, because dropping them clears
+	// this series too.
+	reportInvalidNodeReference(incident.Name, problem.Reason)
+
+	return ctrl.Result{}, nil
+}
+
+// dropTraceOf clears what the controller keeps about a Node outside its object.
+func (r *Reconciler) dropTraceOf(node string) {
+	r.profiles.Forget(node)
+	clearConfigurationError(node)
+	clearInvalidNodeReference(node)
 }
 
 // reportUnusableProfile records a configuration error without touching the phase
@@ -152,7 +255,14 @@ func (r *Reconciler) reportUnusableProfile(
 	// write below records it there.
 	isNew := !blockedOnProfile(incident)
 
-	if err := r.writeStatus(ctx, incident, machine.State(), configurationError(incident, cause, now)); err != nil {
+	// The reference was validated to get here, so it is recorded as such: the
+	// incident is blocked on its configuration only.
+	conditions := []metav1.Condition{
+		nodeReferenceValid(incident, now),
+		configurationError(incident, cause, now),
+	}
+
+	if err := r.writeStatus(ctx, incident, machine.State(), conditions...); err != nil {
 		return ctrl.Result{}, err
 	}
 
@@ -185,23 +295,56 @@ func blockedOnProfile(incident *v1alpha1.FencingFailedNodeState) bool {
 	return meta.IsStatusConditionTrue(incident.Status.Conditions, common.ConditionTypeConfigurationError)
 }
 
+func blockedOnNodeReference(incident *v1alpha1.FencingFailedNodeState) bool {
+	return meta.IsStatusConditionTrue(incident.Status.Conditions, common.ConditionTypeInvalidNodeReference)
+}
+
 func configurationError(incident *v1alpha1.FencingFailedNodeState, cause error, now time.Time) metav1.Condition {
-	return condition(incident, metav1.ConditionTrue, common.ReasonProfileUnavailable, cause.Error(), now)
+	return condition(incident, common.ConditionTypeConfigurationError, metav1.ConditionTrue,
+		common.ReasonProfileUnavailable, cause.Error(), now)
 }
 
 func profileResolved(incident *v1alpha1.FencingFailedNodeState, now time.Time) metav1.Condition {
-	return condition(incident, metav1.ConditionFalse, common.ReasonProfileResolved,
+	return condition(incident, common.ConditionTypeConfigurationError, metav1.ConditionFalse,
+		common.ReasonProfileResolved,
 		fmt.Sprintf("SLA profile %q is in force for this incident.", incident.Spec.ProfileRef.Name), now)
+}
+
+// profileNotEvaluated retracts the configuration blocker of an incident whose
+// profile decides nothing any more. The status is Unknown rather than False,
+// because this path returns before the profile is read: False is reserved for
+// what a pass actually checked, and claiming a healthy configuration nobody
+// looked at would mislead the operator whose metric was just dropped.
+func profileNotEvaluated(incident *v1alpha1.FencingFailedNodeState, now time.Time) metav1.Condition {
+	return condition(incident, common.ConditionTypeConfigurationError, metav1.ConditionUnknown,
+		common.ReasonProfileNotEvaluated,
+		"The object does not identify a live node, so its SLA profile was not read and decides nothing for this incident.", now)
+}
+
+func invalidNodeReference(
+	incident *v1alpha1.FencingFailedNodeState,
+	problem *noderef.Problem,
+	now time.Time,
+) metav1.Condition {
+	return condition(incident, common.ConditionTypeInvalidNodeReference, metav1.ConditionTrue,
+		problem.Reason, problem.Message, now)
+}
+
+func nodeReferenceValid(incident *v1alpha1.FencingFailedNodeState, now time.Time) metav1.Condition {
+	return condition(incident, common.ConditionTypeInvalidNodeReference, metav1.ConditionFalse,
+		common.ReasonNodeReferenceValid,
+		fmt.Sprintf("Object identifies the live node %q it is named after.", incident.Name), now)
 }
 
 func condition(
 	incident *v1alpha1.FencingFailedNodeState,
+	conditionType string,
 	status metav1.ConditionStatus,
 	reason, message string,
 	now time.Time,
 ) metav1.Condition {
 	return metav1.Condition{
-		Type:               common.ConditionTypeConfigurationError,
+		Type:               conditionType,
 		Status:             status,
 		ObservedGeneration: incident.Generation,
 		LastTransitionTime: metav1.NewTime(now),
