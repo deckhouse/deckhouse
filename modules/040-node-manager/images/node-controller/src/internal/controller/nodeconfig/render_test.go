@@ -1076,6 +1076,35 @@ func TestRenderContainerRuntimeLeavesImagesToTheExtension(t *testing.T) {
 	}
 }
 
+// The render leaves the sandbox to the node, and the node names the pause the
+// Engine containerd unit imports on start. That import has to be the one the
+// bashible unit does, line for line, from a tar the sysext puts at that path.
+func TestTheEngineContainerdUnitImportsPauseLikeBashible(t *testing.T) {
+	read := func(path string) string {
+		t.Helper()
+		paths := testenv.ModuleCRDPaths(path)
+		require.Len(t, paths, 1)
+		raw, err := os.ReadFile(paths[0])
+		require.NoError(t, err)
+		return string(raw)
+	}
+	pauseLines := func(unit string) []string {
+		var lines []string
+		for _, line := range strings.Split(unit, "\n") {
+			if strings.HasPrefix(line, "ExecStartPost=") && strings.Contains(line, "pause") {
+				lines = append(lines, line)
+			}
+		}
+		return lines
+	}
+
+	const dir = "007-registrypackages/images/containerd/"
+	bashible := pauseLines(read(dir + "scripts/containerd.service"))
+	require.NotEmpty(t, bashible, "the bashible unit no longer imports pause")
+	require.Equal(t, bashible, pauseLines(read(dir+"sysext/sysext-containerd.service")))
+	require.Contains(t, read(dir+"werf.inc.yaml"), "to: /sysext/opt/deckhouse/images\n")
+}
+
 // With a CRD default the API server would fill sandboxImage in on every object
 // the render leaves it out of, and the node would never see it empty.
 func TestShippedCRDLeavesSandboxImageEmpty(t *testing.T) {

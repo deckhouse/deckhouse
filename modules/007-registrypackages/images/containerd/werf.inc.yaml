@@ -269,11 +269,11 @@ import:
   - ctr
   - runc
   before: install
-# pause is the first pull of every pod, so it ships here and is imported by
-# containerd-images.service rather than pulled.
+# pause is the first pull of every pod, so it ships here and containerd.service
+# imports it on start, at the path the bashible unit uses.
 - image: {{ $.ModuleName }}/pause-artifact
   add: /
-  to: /sysext/usr/lib/deckhouse/images
+  to: /sysext/opt/deckhouse/images
   includePaths:
   - pause.tar
   before: install
@@ -284,12 +284,10 @@ git:
   includePaths:
   - extension-release.containerd
   - sysext-containerd.service
-  - containerd-images.service
   stageDependencies:
     install:
     - extension-release.containerd
     - sysext-containerd.service
-    - containerd-images.service
 {{- include "engine sysext sign secrets" . }}
 shell:
   beforeInstall:
@@ -298,7 +296,6 @@ shell:
   install:
   - mkdir -p /sysext/usr/lib/extension-release.d /sysext/usr/lib/systemd/system
   - cp -f /scripts/sysext-containerd.service /sysext/usr/lib/systemd/system/containerd.service
-  - cp -f /scripts/containerd-images.service /sysext/usr/lib/systemd/system/containerd-images.service
   - cp -f /scripts/extension-release.containerd /sysext/usr/lib/extension-release.d/
   - mkfs.erofs -L _sysext -U 00000000-0000-0000-0000-000000000000 -z lzma,9 /out/containerd.raw sysext/
   # Sidecar files, named the way systemd derives them — see engine-sysext.tmpl.
