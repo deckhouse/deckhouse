@@ -34,6 +34,19 @@ security.deckhouse.io/security-policy-exception: capo-controller-manager
     defaultMode: 420
 {{- end -}}
 
+{{- define "capo_controller_manager_envs" -}}
+# KUBERNETES_SERVICE_HOST and KUBERNETES_SERVICE_PORT are needed on the bootstrap phase to make CAPI work without kube-proxy
+{{- if not .Values.global.clusterIsBootstrapped }}
+- name: KUBERNETES_SERVICE_HOST
+  valueFrom:
+    fieldRef:
+      apiVersion: v1
+      fieldPath: status.hostIP
+- name: KUBERNETES_SERVICE_PORT
+  value: "6443"
+{{- end }}
+{{- end -}}
+
 {{- define "capo_controller_manager_liveness_probe" -}}
 httpGet:
   path: "/healthz"
@@ -56,7 +69,7 @@ periodSeconds: 10
 {{- $_ := set $capiConfig "image" (include "helm_lib_module_image" (list . "capoControllerManager")) -}}
 {{- $_ := set $capiConfig "capiProviderName" "infrastructure-openstack" -}}
 {{- $_ := set $capiConfig "hostNetwork" true -}}
-{{- $_ := set $capiConfig "dnsPolicy" "ClusterFirstWithHostNet" -}}
+{{- $_ := set $capiConfig "dnsPolicy" (include "helm_lib_dns_policy_bootstraping_state" (list . "Default" "ClusterFirstWithHostNet")) -}}
 {{- $_ := set $capiConfig "nodeSelectorStrategy" "master" -}}
 {{- $_ := set $capiConfig "tolerationsStrategies" (list "any-node" "with-uninitialized") -}}
 {{- $_ := set $capiConfig "additionalArgs" (include "capo_controller_manager_args" . | fromYamlArray) -}}
@@ -65,6 +78,7 @@ periodSeconds: 10
 {{- $_ := set $capiConfig "additionalVolumes" (include "capo_controller_manager_volumes" . | fromYamlArray) -}}
 {{- $_ := set $capiConfig "additionalPodAnnotations" (include "capo_controller_manager_pod_annotations" . | fromYaml) -}}
 {{- $_ := set $capiConfig "additionalPodLabels" (include "capo_controller_manager_pod_labels" . | fromYaml) -}}
+{{- $_ := set $capiConfig "additionalEnv" (include "capo_controller_manager_envs" . | fromYamlArray) -}}
 {{- $_ := set $capiConfig "livenessProbe" (include "capo_controller_manager_liveness_probe" . | fromYaml) -}}
 {{- $_ := set $capiConfig "readinessProbe" (include "capo_controller_manager_readiness_probe" . | fromYaml) -}}
 {{- $_ := set $capiConfig "vpaEnabled" true -}}
