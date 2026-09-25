@@ -16,6 +16,8 @@ Hubble UI:
 Updated go dependencies to fix vulnerabilities, e.g.:
 
 - `github.com/cilium/ebpf` -> `v0.22.0` (CVE-2026-10722)
+- `github.com/cilium/cilium` -> `v1.19.5` (CVE-2026-56743)
+- `google.golang.org/grpc` -> `v1.83.2` (CVE-2026-84303, CVE-2026-84304, CVE-2026-84445)
 
 ## 003--auth.backend.patch
 
