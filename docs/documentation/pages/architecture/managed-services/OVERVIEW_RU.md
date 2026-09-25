@@ -10,13 +10,13 @@ description: Архитектура подсистемы Managed Services в Dec
 
 В подсистему Managed Services входят следующие модули:
 
-* [`managed-cassandra`](/modules/managed-cassandra/) — управляет кластерами Cassandra;
+* [`managed-cassandra`](/modules/managed-cassandra/) — управляет инстансами Cassandra;
 * [`managed-clickhouse`](/modules/managed-clickhouse/) — управляет инстансами ClickHouse;
-* [`managed-hive-metastore`](/modules/managed-hive-metastore/) — управляет кластерами Hive Metastore;
+* [`managed-hive-metastore`](/modules/managed-hive-metastore/) — управляет инстансами Hive Metastore;
 * [`managed-kafka`](/modules/managed-kafka/) — управляет инстансами Kafka;
 * [`managed-memcached`](/modules/managed-memcached/) — управляет инстансами Memcached;
 * [`managed-opensearch`](/modules/managed-opensearch/) — управляет инстансами OpenSearch;
 * [`managed-postgres`](/modules/managed-postgres/) — управляет кластерами PostgreSQL;
-* [`managed-starrocks`](/modules/managed-starrocks/) — управляет кластерами StarRocks;
-* [`managed-trino`](/modules/managed-trino/) — управляет кластерами Trino;
-* [`managed-valkey`](/modules/managed-valkey/) — управляет кластерами Valkey.
+* [`managed-starrocks`](/modules/managed-starrocks/) — управляет инстансами StarRocks;
+* [`managed-trino`](/modules/managed-trino/) — управляет инстансами Trino;
+* [`managed-valkey`](/modules/managed-valkey/) — управляет инстансами Valkey.
