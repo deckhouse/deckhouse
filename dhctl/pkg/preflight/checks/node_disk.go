@@ -126,15 +126,14 @@ func (c NodeDiskSpaceCheck) Run(ctx context.Context) (string, error) {
 	// filesystem 2.3% smaller than it is.
 	totalGB := totalKB * 1024 / 1_000_000_000
 
-	floor, separateEtcd := c.floor()
-	if totalGB < floor {
-		// A disk does not grow between two attempts of the same check.
-		return "", preflight.Permanent(&preflight.Failure{
-			Checked:  fmt.Sprintf("the filesystem holding %s on %s", nodeStatePath, host),
-			Observed: fmt.Sprintf("the filesystem is %d GB", totalGB),
-			Expected: c.expectation(floor, separateEtcd),
-			Fix:      "give the node a larger disk, or mount a larger filesystem at " + nodeStatePath,
-		})
+	// A warning, not a failure. This is about how the machine was sized, not about whether this
+	// bootstrap can finish: every platform we run e2e on gives a master less than the documented
+	// 50 GB, and those clusters come up and work. Refusing them refused the product, and on the
+	// Commander path there is no command line to put a skip flag on. What can actually stop a
+	// bootstrap — no room left on the filesystem — is static-free-disk-space, and it still fails.
+	if floor, separateEtcd := c.floor(); totalGB < floor {
+		return "", preflight.Warning("%s has %d GB at %s, and %s",
+			host, totalGB, nodeStatePath, c.expectation(floor, separateEtcd))
 	}
 
 	return fmt.Sprintf("%s has %d GB at %s", host, totalGB, nodeStatePath), nil
@@ -260,13 +259,13 @@ func (c NodeDiskSpaceCheck) floor() (int, bool) {
 	return nodeFilesystemWithSeparateEtcdFloorGB, true
 }
 
-// expectation says what would have passed, and why the number is what it is — without which a
-// reader who knows the documentation asks for 50 GB has no way to make sense of a 15 GB floor.
+// expectation says what was expected and why the number is what it is — without which a reader
+// who knows the documentation asks for 50 GB has no way to make sense of a 15 GB one.
 func (c NodeDiskSpaceCheck) expectation(floor int, separateEtcd bool) string {
 	if separateEtcd {
-		return fmt.Sprintf("at least %d GB of filesystem at %s; the cluster state goes on the separate disk "+
-			"for Kubernetes data, so it is not counted here", floor, nodeStatePath)
+		return fmt.Sprintf("%d GB is the least this check expects; the cluster state goes on the separate "+
+			"disk for Kubernetes data, so it is not counted here", floor)
 	}
-	return fmt.Sprintf("at least %d GB of filesystem at %s; the documentation asks for a %d GB disk",
-		floor, nodeStatePath, minimumRequiredRootDiskSizeGB)
+	return fmt.Sprintf("%d GB is the least this check expects, and the documentation asks for a %d GB disk",
+		floor, minimumRequiredRootDiskSizeGB)
 }
