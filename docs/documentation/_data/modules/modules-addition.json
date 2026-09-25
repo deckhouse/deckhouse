@@ -230,6 +230,13 @@
     "external": "true",
     "path": "/modules/managed-postgres/"
   },
+  "managed-rabbit": {
+    "editions": [
+      "ee"
+    ],
+    "external": "true",
+    "path": "/modules/managed-rabbit/"
+  },
   "managed-starrocks": {
     "editions": [
       "ee",
@@ -388,6 +395,13 @@
     },
     "external": "true",
     "path": "/modules/csi-netapp/"
+  },
+  "csi-mind-ustor": {
+    "editions": [
+      "ee"
+    ],
+    "external": "true",
+    "path": "/modules/csi-mind-ustor/"
   },
   "csi-hpe": {
     "editions": [
