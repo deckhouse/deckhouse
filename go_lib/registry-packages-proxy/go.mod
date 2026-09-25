@@ -4,7 +4,7 @@ go 1.25.8
 
 require (
 	github.com/Masterminds/semver/v3 v3.4.0
-	github.com/deckhouse/delivery-kit-sdk v1.1.0
+	github.com/deckhouse/delivery-kit-sdk v1.4.2
 	github.com/deckhouse/rootca v0.0.0-20250721220328-2b84d72a5db3
 	github.com/google/go-containerregistry v0.20.7
 	github.com/pkg/errors v0.9.1
