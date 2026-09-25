@@ -93,7 +93,7 @@ const (
 	// Possible reasons: the scheduler's decision reason, DownloadFailed,
 	// HookInitializationFailed, HookFailed, ManifestsApplyFailed,
 	// ApplyingManifests (mid-apply over a non-managed previous version),
-	// SettingsChanged, Managed (when True).
+	// SettingsChanged, NoResourceReconciliation (maintenance applied), Managed (when True).
 	ConditionManaged = "Managed"
 
 	// ConditionConfigurationApplied reflects whether the desired configuration —
@@ -121,6 +121,7 @@ const (
 	intHooksProcessed    = string(intstatus.ConditionHooksProcessed)
 	intManifestsApplied  = string(intstatus.ConditionManifestsApplied)
 	intScaled            = string(intstatus.ConditionScaled)
+	intMaintenanceMode   = string(intstatus.ConditionMaintenanceMode)
 )
 
 // canonicalReason returns the user-facing reason for an external condition
@@ -140,6 +141,7 @@ const (
 //     through; every other internal reason becomes SettingsInvalid.
 //   - ManifestsApplied: ApplyingManifests is a non-failure mid-step indicator
 //     and passes through; every other internal reason becomes ManifestsApplyFailed.
+//   - MaintenanceMode: always NoResourceReconciliation, the only maintenance mode.
 func canonicalReason(internalCond, internalReason string) string {
 	switch internalCond {
 	case intPending:
@@ -166,6 +168,8 @@ func canonicalReason(internalCond, internalReason string) string {
 			return internalReason
 		}
 		return "ManifestsApplyFailed"
+	case intMaintenanceMode:
+		return string(intstatus.ConditionReasonNoResourceReconciliation)
 	case intScaled:
 		// The health monitor is the only non-True writer of intScaled, and it
 		// produces canonical external reasons directly ("Reconciling",
@@ -570,6 +574,10 @@ func mapManaged(state condmap.State) metav1.Condition {
 
 	if cond, ok := firstFalse(state, chain); ok {
 		return emit(state, ConditionManaged, metav1.ConditionFalse, cond)
+	}
+	// Maintenance is deliberate, so it outranks progress but never masks a failure.
+	if state.IntEqual(intMaintenanceMode, metav1.ConditionTrue) {
+		return emit(state, ConditionManaged, metav1.ConditionFalse, intMaintenanceMode)
 	}
 	if cond, ok := settingsChanged(state, ph, ConditionManaged); ok {
 		return cond

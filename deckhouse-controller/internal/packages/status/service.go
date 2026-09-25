@@ -50,6 +50,9 @@ const (
 	// ConditionWebhooksEnsured indicates that the package's conversion webhooks are
 	// applied ahead of its Helm release. Internal only: no external condition maps it.
 	ConditionWebhooksEnsured ConditionType = "WebhooksEnsured"
+	// ConditionMaintenanceMode reports whether the last successful Run applied maintenance.
+	// Inverted polarity: True means resources are no longer reconciled, so it joins no failure chain.
+	ConditionMaintenanceMode ConditionType = "MaintenanceMode"
 
 	// ConditionReasonApplyingManifests indicates that nelm is applying manifests to the cluster
 	ConditionReasonApplyingManifests ConditionReason = "ApplyingManifests"
@@ -58,6 +61,8 @@ const (
 	ConditionReasonDeleting ConditionReason = "Deleting"
 	// ConditionReasonSettingsChanged marks changed settings that the Run task has not applied yet
 	ConditionReasonSettingsChanged ConditionReason = "SettingsChanged"
+	// ConditionReasonNoResourceReconciliation marks a package whose resources are left to the user
+	ConditionReasonNoResourceReconciliation ConditionReason = "NoResourceReconciliation"
 
 	// appQueueName labels the application notification workqueue for metrics.
 	appQueueName = "application-status"
@@ -307,6 +312,33 @@ func (s *Service) SetConditionFalse(name string, condition ConditionType, reason
 		Reason:  ConditionReason(reason),
 		Message: message,
 	})
+	s.mu.Unlock()
+
+	if notify {
+		s.queueFor(name).Add(name)
+	}
+}
+
+// SetMaintenanceMode records whether the applied release is under maintenance and notifies listeners if changed
+func (s *Service) SetMaintenanceMode(name string, enabled bool) {
+	s.mu.Lock()
+	status, ok := s.mutableStatus(name)
+	if !ok {
+		s.mu.Unlock()
+		return
+	}
+
+	condition := Condition{Type: ConditionMaintenanceMode, Status: metav1.ConditionFalse}
+	if enabled {
+		condition = Condition{
+			Type:    ConditionMaintenanceMode,
+			Status:  metav1.ConditionTrue,
+			Reason:  ConditionReasonNoResourceReconciliation,
+			Message: "resources are not reconciled while maintenance mode is on",
+		}
+	}
+
+	notify := status.setCondition(condition)
 	s.mu.Unlock()
 
 	if notify {
@@ -640,6 +672,7 @@ func (s *Service) NewStatus(name string) {
 			{Type: ConditionPending, Status: metav1.ConditionUnknown},
 			{Type: ConditionCustomResourcesApplied, Status: metav1.ConditionUnknown},
 			{Type: ConditionWebhooksEnsured, Status: metav1.ConditionUnknown},
+			{Type: ConditionMaintenanceMode, Status: metav1.ConditionUnknown},
 		},
 	}
 

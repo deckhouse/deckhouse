@@ -19,6 +19,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/werf/nelm/pkg/legacy/progrep"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 func TestCountProgress(t *testing.T) {
@@ -78,4 +79,85 @@ func TestCountProgress(t *testing.T) {
 			assert.Equal(t, tt.remaining, remaining)
 		})
 	}
+}
+
+func TestSetMaintenanceMode(t *testing.T) {
+	const name = "ns.app"
+
+	maintenanceMode := func(s *Service) Condition {
+		for _, cond := range s.GetStatus(name).Conditions {
+			if cond.Type == ConditionMaintenanceMode {
+				return cond
+			}
+		}
+
+		return Condition{}
+	}
+
+	drain := func(s *Service) {
+		for s.AppQueue().Len() > 0 {
+			item, _ := s.AppQueue().Get()
+			s.AppQueue().Done(item)
+		}
+	}
+
+	newService := func(t *testing.T) *Service {
+		s := NewService()
+		s.NewStatus(name)
+		t.Cleanup(func() {
+			s.AppQueue().ShutDown()
+			s.ModuleQueue().ShutDown()
+		})
+
+		return s
+	}
+
+	t.Run("new status seeds unknown", func(t *testing.T) {
+		s := newService(t)
+
+		assert.Equal(t, metav1.ConditionUnknown, maintenanceMode(s).Status)
+	})
+
+	t.Run("enabled marks no resource reconciliation", func(t *testing.T) {
+		s := newService(t)
+
+		s.SetMaintenanceMode(name, true)
+
+		cond := maintenanceMode(s)
+		assert.Equal(t, metav1.ConditionTrue, cond.Status)
+		assert.Equal(t, ConditionReasonNoResourceReconciliation, cond.Reason)
+		assert.NotEmpty(t, cond.Message)
+	})
+
+	t.Run("disabled clears reason and message", func(t *testing.T) {
+		s := newService(t)
+
+		s.SetMaintenanceMode(name, true)
+		s.SetMaintenanceMode(name, false)
+
+		cond := maintenanceMode(s)
+		assert.Equal(t, metav1.ConditionFalse, cond.Status)
+		assert.Empty(t, cond.Reason)
+		assert.Empty(t, cond.Message)
+	})
+
+	t.Run("notifies only on change", func(t *testing.T) {
+		s := newService(t)
+
+		s.SetMaintenanceMode(name, true)
+		assert.Equal(t, 1, s.AppQueue().Len())
+
+		drain(s)
+		s.SetMaintenanceMode(name, true)
+		assert.Zero(t, s.AppQueue().Len())
+	})
+
+	t.Run("ignores untracked package", func(t *testing.T) {
+		s := newService(t)
+
+		s.SetMaintenanceMode("ns.other", true)
+
+		assert.Empty(t, s.GetStatus("ns.other").Conditions)
+		assert.Zero(t, s.AppQueue().Len())
+	})
 }
