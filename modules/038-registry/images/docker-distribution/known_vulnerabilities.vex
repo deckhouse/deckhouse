@@ -2,7 +2,7 @@
   "@context": "https://openvex.dev/ns/v0.2.0",
   "@id": "https://openvex.dev/docs/public/vex-f5c0c87349bb91907e2d7736e7f67c40e423addb7354a569056472f56d116c49",
   "author": "Deckhouse <contact@deckhouse.io>",
-  "version": 1,
+  "version": 2,
   "statements": [
     {
       "vulnerability": {
@@ -129,7 +129,22 @@
       "justification": "vulnerable_code_not_present",
       "impact_statement": "Уязвимость CVE-2026-46597: специально составленные пакеты AES-GCM заставляли расшифровку в пакете golang.org/x/crypto/ssh надолго занимать процессор. Бинарь registry использует из модуля golang.org/x/crypto только bcrypt и blowfish: ими проверяется пароль в registry/auth/htpasswd. Пакетов ssh, ssh/agent и ssh/knownhosts в сборке нет, go mod why на них отвечает «main module does not need package».",
       "timestamp": "2026-09-16T09:37:52Z"
+    },
+    {
+      "vulnerability": {
+        "name": "GO-2026-5932"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/golang.org/x/crypto"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_present",
+      "impact_statement": "Пакет golang.org/x/crypto/openpgp признан неподдерживаемым, исправленной версии не существует. В бинарь registry он не входит: сборка идёт из vendor-дерева, где каталог golang.org/x/crypto/openpgp отсутствует, а импортов openpgp в коде нет. Компонент не выполняет операций OpenPGP.",
+      "timestamp": "2026-09-24T23:13:24Z"
     }
   ],
-  "timestamp": "2026-09-16T09:37:52Z"
+  "timestamp": "2026-09-16T09:37:52Z",
+  "last_updated": "2026-09-24T23:13:24Z"
 }

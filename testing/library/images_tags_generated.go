@@ -26,8 +26,9 @@ var DefaultImagesDigests = map[string]interface{}{
 		"certManagerWebhookVexArtifact":    "imageHash-certManager-certManagerWebhookVexArtifact",
 	},
 	"chrony": map[string]interface{}{
-		"chrony":         "imageHash-chrony-chrony",
-		"chronyExporter": "imageHash-chrony-chronyExporter",
+		"chrony":                    "imageHash-chrony-chrony",
+		"chronyExporter":            "imageHash-chrony-chronyExporter",
+		"chronyExporterVexArtifact": "imageHash-chrony-chronyExporterVexArtifact",
 	},
 	"ciliumHubble": map[string]interface{}{
 		"relay":      "imageHash-ciliumHubble-relay",
@@ -573,6 +574,7 @@ var DefaultImagesDigests = map[string]interface{}{
 		"d8Curl891":                       "imageHash-registrypackages-d8Curl891",
 		"d8VexArtifact":                   "imageHash-registrypackages-d8VexArtifact",
 		"dockerRegistry283":               "imageHash-registrypackages-dockerRegistry283",
+		"dockerRegistry283VexArtifact":    "imageHash-registrypackages-dockerRegistry283VexArtifact",
 		"e2fsprogs1472":                   "imageHash-registrypackages-e2fsprogs1472",
 		"ec2DescribeTagsV001Flant3":       "imageHash-registrypackages-ec2DescribeTagsV001Flant3",
 		"ecrCredentialProvider129":        "imageHash-registrypackages-ecrCredentialProvider129",

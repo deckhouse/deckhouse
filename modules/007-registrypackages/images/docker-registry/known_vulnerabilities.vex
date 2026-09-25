@@ -1,0 +1,24 @@
+{
+  "@context": "https://openvex.dev/ns/v0.2.0",
+  "@id": "https://openvex.dev/docs/public/vex-7570cfdcbd5b973badb49030a8f70f003f2f54e7f3ec49ed3fd578f629fd153c",
+  "author": "Deckhouse <contact@deckhouse.io>",
+  "version": 1,
+  "statements": [
+    {
+      "vulnerability": {
+        "name": "GO-2026-5932"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/golang.org/x/crypto"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_present",
+      "impact_statement": "Пакет golang.org/x/crypto/openpgp признан неподдерживаемым, исправленной версии не существует. В бинарь auth_server он не входит: go list -deps по главному пакету сборки не содержит ни одного пакета golang.org/x/crypto/openpgp. Компонент проверяет токены доступа к registry и операций OpenPGP не выполняет.",
+      "timestamp": "2026-09-24T23:13:24Z"
+    }
+  ],
+  "timestamp": "2026-09-24T22:25:05Z",
+  "last_updated": "2026-09-24T23:13:24Z"
+}
