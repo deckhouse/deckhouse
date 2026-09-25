@@ -68,8 +68,9 @@ func (p *checkParams) loggerOptions(ctx context.Context) logger.Options {
 }
 
 func (s *Service) Check(server pb.DHCTL_CheckServer) error {
-	ctx, cancel := operationCtx(server)
-	defer cancel()
+	op := newOperation(server)
+	defer op.close()
+	ctx := op.ctx
 
 	logger.L(ctx).Info("started")
 
@@ -87,7 +88,7 @@ func (s *Service) Check(server pb.DHCTL_CheckServer) error {
 	}
 
 	startReceiver[*pb.CheckRequest, *pb.CheckResponse](server, receiveCh, doneCh, internalErrCh)
-	startSender[*pb.CheckRequest, *pb.CheckResponse](server, sendCh, internalErrCh)
+	startOperationSender[*pb.CheckRequest, *pb.CheckResponse](op, server, sendCh, internalErrCh)
 
 connectionProcessor:
 	for {
@@ -113,17 +114,17 @@ connectionProcessor:
 						logger.Err(err), slog.String("message", fmt.Sprintf("%T", message)))
 					continue connectionProcessor
 				}
-				go func() {
+				op.Go(func() {
 					result := s.checkSafe(ctx, &checkParams{
 						request:      message.Start,
 						sendProgress: pt.sendProgress(ctx),
 						sendCh:       sendCh,
 					})
 					_ = sendResponse(server.Context(), sendCh, &pb.CheckResponse{Message: &pb.CheckResponse_Result{Result: result}})
-				}()
+				})
 
 			case *pb.CheckRequest_Cancel:
-				cancel()
+				op.cancel()
 
 			default:
 				logger.L(ctx).Error("got unprocessable message",

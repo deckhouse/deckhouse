@@ -64,8 +64,9 @@ func (p *bootstrapParams) loggerOptions(ctx context.Context) logger.Options {
 }
 
 func (s *Service) Bootstrap(server pb.DHCTL_BootstrapServer) error {
-	ctx, cancel := operationCtx(server)
-	defer cancel()
+	op := newOperation(server)
+	defer op.close()
+	ctx := op.ctx
 
 	logger.L(ctx).Info("started")
 
@@ -86,7 +87,7 @@ func (s *Service) Bootstrap(server pb.DHCTL_BootstrapServer) error {
 	}
 
 	startReceiver[*pb.BootstrapRequest, *pb.BootstrapResponse](server, receiveCh, doneCh, internalErrCh)
-	startSender[*pb.BootstrapRequest, *pb.BootstrapResponse](server, sendCh, internalErrCh)
+	startOperationSender[*pb.BootstrapRequest, *pb.BootstrapResponse](op, server, sendCh, internalErrCh)
 
 connectionProcessor:
 	for {
@@ -112,7 +113,7 @@ connectionProcessor:
 						logger.Err(err), slog.String("message", fmt.Sprintf("%T", message)))
 					continue connectionProcessor
 				}
-				go func() {
+				op.Go(func() {
 					result := s.bootstrapSafe(ctx, &bootstrapParams{
 						request:      message.Start,
 						switchPhase:  phaseSwitcher.switchPhase(ctx),
@@ -120,7 +121,7 @@ connectionProcessor:
 						sendCh:       sendCh,
 					})
 					_ = sendResponse(server.Context(), sendCh, &pb.BootstrapResponse{Message: &pb.BootstrapResponse_Result{Result: result}})
-				}()
+				})
 
 			case *pb.BootstrapRequest_Continue:
 				err := f.Event("toNextPhase")
@@ -141,7 +142,7 @@ connectionProcessor:
 				}
 
 			case *pb.BootstrapRequest_Cancel:
-				cancel()
+				op.cancel()
 
 			default:
 				logger.L(ctx).Error("got unprocessable message",
