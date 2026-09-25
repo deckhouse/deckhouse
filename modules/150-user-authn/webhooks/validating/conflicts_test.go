@@ -52,7 +52,9 @@ func TestGatewayConflicts(t *testing.T) {
 		{"incoming all sections", shared, listenerSetReference("shared", "d8-alb", ""), "team-a", "team-b", "app.example.com", false},
 		{"both all sections", listenerSetReference("shared", "d8-alb", ""), listenerSetReference("shared", "d8-alb", ""), "team-a", "team-b", "app.example.com", false},
 		{"existing default namespace", listenerSetReference("shared", "", "https"), listenerSetReference("shared", "team-a", "https"), "team-a", "team-b", "app.example.com", false},
-		{"incoming default namespace", listenerSetReference("shared", "team-b", "https"), listenerSetReference("shared", "", "https"), "team-a", "team-b", "app.example.com", false},
+		// The existing claim is on a ListenerSet of the incoming namespace, made from outside it, so
+		// it cannot be honoured and does not stand in the way. See TestClaimOnAForeignListenerSet.
+		{"incoming default namespace", listenerSetReference("shared", "team-b", "https"), listenerSetReference("shared", "", "https"), "team-a", "team-b", "app.example.com", true},
 		{"same default namespace", listenerSetReference("shared", "", "https"), listenerSetReference("shared", "", "https"), "team-a", "team-a", "app.example.com", false},
 		{"different default namespaces", listenerSetReference("shared", "", "https"), listenerSetReference("shared", "", "https"), "team-a", "team-b", "app.example.com", true},
 	} {
@@ -217,4 +219,33 @@ func TestConflictIsNotRecheckedOnUpdate(t *testing.T) {
 			require.Equal(t, false, result["allowed"])
 		})
 	}
+}
+
+// A ListenerSet takes routes from its own namespace unless its owner opened it, so naming one from
+// elsewhere claims nothing. Such a claim must not keep the namespace that owns the ListenerSet from
+// publishing on it.
+func TestClaimOnAForeignListenerSet(t *testing.T) {
+	ownListenerSet := listenerSetReference("app", "", "")
+	foreignClaim := snapshot(t, withApplication("v1", "team-b", "squat",
+		map[string]any{"domain": "app.example.com", "gatewayAPI": listenerSetReference("app", "team-a", "")}, false))
+
+	t.Run("the owner publishes on it", func(t *testing.T) {
+		owner := withApplication("v1", "team-a", "legit",
+			map[string]any{"domain": "app.example.com", "gatewayAPI": ownListenerSet}, false)
+
+		result := runHook(t, review(owner, foreignClaim))
+		require.Equal(t, true, result["allowed"], "%v", result["message"])
+	})
+
+	// The claim of the namespace that owns the ListenerSet is the one that counts, so a second
+	// attempt from outside is still refused.
+	t.Run("another namespace claims it as well", func(t *testing.T) {
+		owned := snapshot(t, withApplication("v1", "team-a", "legit",
+			map[string]any{"domain": "app.example.com", "gatewayAPI": ownListenerSet}, false))
+		outsider := withApplication("v1", "team-c", "squat",
+			map[string]any{"domain": "app.example.com", "gatewayAPI": listenerSetReference("app", "team-a", "")}, false)
+
+		result := runHook(t, review(outsider, owned))
+		require.Equal(t, false, result["allowed"])
+	})
 }

@@ -232,6 +232,11 @@ function __main__() {
       ($claimed - $kept)[] as $claim |
       $context.snapshots.dexauthenticators[].filterResult |
       select(.namespace != $object.metadata.namespace or .name != $object.metadata.name) |
+      # A listener takes routes from its own namespace unless its owner opened it, so a claim on a
+      # ListenerSet of this namespace made from elsewhere cannot be honoured and must not stand in
+      # the way of the namespace that owns it.
+      select($claim.listenerSetNamespace != $object.metadata.namespace
+             or .namespace == $object.metadata.namespace) |
       select(any(.gatewayDomains[]?;
         .domain == $claim.domain and
         .listenerSetName == $claim.listenerSetName and
