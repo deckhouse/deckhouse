@@ -29,6 +29,10 @@ mkdir /tests
 
 find /src -wholename '*/webhooks/*.py' -exec sh -c 'module="$(echo "$1" | grep -Po "\d{3}\-[a-z\-]+")"; mkdir -p "/tests/${module}"; cp "$1" "/tests/${module}"' sh {}  \;
 
+# A hook described by a ValidationWebhook has no file to copy: its code lives in the manifest and
+# validation_webhook.load assembles it in-process, reading the manifest straight from /src.
+cp /src/testing/webhooks/validation_webhook.py /tests/
+
 cd /tests
 
-find . -wholename '*_test.py' -print0 | xargs -n 1 -t --null python3
+find . -wholename '*_test.py' -print0 | PYTHONPATH=/tests xargs -n 1 -t --null python3

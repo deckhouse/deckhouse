@@ -16,9 +16,13 @@
 
 import unittest
 
-import role_binding
+import validation_webhook
 from deckhouse import hook, tests
 from dotmap import DotMap
+
+# The hook lives in a ValidationWebhook manifest; the harness assembles it the way webhook-operator does.
+MANIFEST = "modules/140-user-authz/templates/role-binding-validation-webhook.yaml"
+role_binding = validation_webhook.load(MANIFEST)
 
 
 def binding_context(role_name, role_kind="ClusterRole", username="alice@example.com", operation="CREATE"):
@@ -45,6 +49,13 @@ def binding_context(role_name, role_kind="ClusterRole", username="alice@example.
             },
         }
     )
+
+
+class TestHarness(unittest.TestCase):
+    def test_wrapper_matches_operator_template(self):
+        # Guards the copy of the template's wrapper in the harness: without this, a change to
+        # validationwebhook.tpl would leave the tests below green while the cluster runs other code.
+        validation_webhook.assert_operator_template_unchanged(self)
 
 
 class TestRoleBindingValidation(unittest.TestCase):
