@@ -99,3 +99,11 @@ metadata:
   annotations:
     kubernetes.io/service-account.name: argocd-application-controller-sa
 type: kubernetes.io/service-account-token
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleConfig
+metadata:
+  name: console
+spec:
+  enabled: true
+  source: deckhouse-upstream-ee
