@@ -21,8 +21,10 @@ import (
 	"errors"
 	"maps"
 	"strings"
+	"sync/atomic"
 	"testing"
 	"time"
+	"unicode/utf8"
 
 	"github.com/prometheus/client_golang/prometheus"
 	dto "github.com/prometheus/client_model/go"
@@ -332,26 +334,23 @@ func TestReconcile_NoLiveRequest(t *testing.T) {
 	}
 }
 
-// TestReconcile_EvictionEndsBadly covers the two ways a drain fails, which
-// are handled differently: a failure is retried, a deadline is not.
+// TestReconcile_EvictionEndsBadly covers ordinary failures and deadlines. Both
+// leave the request in place, write the error to the drain-failed annotation,
+// and raise the gauge NodeStuckInDraining reads.
 func TestReconcile_EvictionEndsBadly(t *testing.T) {
 	for _, tc := range []struct {
-		name         string
-		drainTimeout *int
-		wantErr      bool
-		want         map[string]string
+		name            string
+		drainTimeout    *int
+		wantErrContains string
 	}{
 		{
-			name:    "a failure keeps the request, so the requeue retries it",
-			wantErr: true,
-			want:    map[string]string{nodecommon.DrainingAnnotation: bashibleSource},
+			name:            "a failure keeps the request and records the error",
+			wantErrContains: errBoom.Error(),
 		},
 		{
-			// Retrying would get no further and the node's update must not
-			// wedge, so the request is consumed and the result recorded.
-			name:         "a deadline is recorded as drained anyway",
-			drainTimeout: ptr.To(0),
-			want:         map[string]string{nodecommon.DrainedAnnotation: bashibleSource},
+			name:            "a deadline keeps the request and records the error",
+			drainTimeout:    ptr.To(0),
+			wantErrContains: "drain deadline exceeded",
 		},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
@@ -364,16 +363,27 @@ func TestReconcile_EvictionEndsBadly(t *testing.T) {
 			t.Cleanup(func() { clearDrainMetric(nodeName) })
 
 			err := h.drain(t)
-			if (err != nil) != tc.wantErr {
-				t.Fatalf("drain err = %v, want error: %v", err, tc.wantErr)
+			if err == nil || !strings.Contains(err.Error(), tc.wantErrContains) {
+				t.Fatalf("drain err = %v, want an error containing %q", err, tc.wantErrContains)
 			}
 
 			updated := h.node(t)
-			assertAnnotations(t, updated, tc.want)
+			if got := updated.Annotations[nodecommon.DrainingAnnotation]; got != bashibleSource {
+				t.Fatalf("draining annotation = %q, want %q", got, bashibleSource)
+			}
+			if got, drained := updated.Annotations[nodecommon.DrainedAnnotation]; drained {
+				t.Fatalf("drained annotation = %q, want no drained annotation at all", got)
+			}
+			if got := updated.Annotations[nodecommon.DrainFailedAnnotation]; !strings.Contains(got, tc.wantErrContains) {
+				t.Fatalf("drain-failed annotation = %q, want it to contain %q", got, tc.wantErrContains)
+			}
 			if !updated.Spec.Unschedulable {
 				t.Fatal("a node whose eviction failed must stay cordoned")
 			}
-			// Both outcomes have to reach NodeStuckInDraining.
+			// Both outcomes have to reach NodeStuckInDraining. This gauge is the
+			// only term of that alert's expression a drain moves: the other two
+			// are node_group_node_status, whose max over the statuses is 1 for
+			// every node updateapproval tracks, and kube_node_status_condition.
 			if got := metricValue(t, nodeName); got != 1 {
 				t.Fatalf("failure gauge = %v, want 1", got)
 			}
@@ -381,9 +391,51 @@ func TestReconcile_EvictionEndsBadly(t *testing.T) {
 	}
 }
 
+// A failed drain leaves a marker and a raised gauge on the node. The retry has to
+// clear both on its own, or a transient API error would need an operator to delete
+// an annotation by hand before the node could finish updating.
+func TestReconcile_FailedDrainRecoversOnNextAttempt(t *testing.T) {
+	cs := fake.NewSimpleClientset()
+	var listCalls atomic.Int32
+	cs.PrependReactor("list", "pods", func(k8stesting.Action) (bool, runtime.Object, error) {
+		if listCalls.Add(1) == 1 {
+			return true, nil, errBoom
+		}
+
+		return false, nil, nil
+	})
+	h := newHarness(t, cs, node(map[string]string{
+		nodecommon.DrainingAnnotation: bashibleSource,
+	}, false))
+	t.Cleanup(func() { clearDrainMetric(nodeName) })
+
+	if err := h.drain(t); err == nil || !strings.Contains(err.Error(), errBoom.Error()) {
+		t.Fatalf("first drain err = %v, want an error containing %q", err, errBoom)
+	}
+	failed := h.node(t)
+	if got, drained := failed.Annotations[nodecommon.DrainedAnnotation]; drained {
+		t.Fatalf("drained annotation after the failed attempt = %q, want none", got)
+	}
+	if got := failed.Annotations[nodecommon.DrainFailedAnnotation]; !strings.Contains(got, errBoom.Error()) {
+		t.Fatalf("drain-failed annotation = %q, want it to contain %q", got, errBoom)
+	}
+	if got := metricValue(t, nodeName); got != 1 {
+		t.Fatalf("failure gauge after the failed attempt = %v, want 1", got)
+	}
+
+	// The API failure was transient. A normal retry now succeeds without an
+	// operator changing annotations by hand.
+	h.mustDrain(t)
+
+	assertAnnotations(t, h.node(t), map[string]string{nodecommon.DrainedAnnotation: bashibleSource})
+	if got := metricValue(t, nodeName); got != 0 {
+		t.Fatalf("failure gauge = %v, want it cleared", got)
+	}
+}
+
 // The stale marker is stripped on a pass of its own, before the cordon: left
 // there it would read as the new drain's own result, and a second hand drain
-// would never overwrite it.
+// would write the same drained=user over it, so nothing would tell the two apart.
 func TestReconcile_StaleUserResultIsClearedBeforeTheDrain(t *testing.T) {
 	h := newHarness(t, fake.NewSimpleClientset(), nodeGroup(nil), node(map[string]string{
 		nodecommon.DrainingAnnotation: userSource,
@@ -421,11 +473,14 @@ func TestReconcile_CordonIsWrittenBeforeTheEvictionStarts(t *testing.T) {
 	}
 }
 
-// Withdrawing the request stops the drain instead of letting it run to
-// completion and record a result nobody asked for.
+// Withdrawing the request stops the drain instead of letting it run to completion
+// and record a result nobody asked for. The last attempt's failure goes with it,
+// marker and gauge: nothing is being attempted any more.
 func TestReconcile_WithdrawnRequestCancelsEviction(t *testing.T) {
-	h := newHarness(t, fake.NewSimpleClientset(), node(nil, true))
-	nodeDrainingGauge.WithLabelValues(nodeName, "boom").Set(1)
+	h := newHarness(t, fake.NewSimpleClientset(), node(map[string]string{
+		nodecommon.DrainFailedAnnotation: "boom",
+	}, true))
+	nodeDrainingGauge.WithLabelValues(nodeName).Set(1)
 	t.Cleanup(func() { clearDrainMetric(nodeName) })
 
 	h.blockUntilCancelled(t)
@@ -437,6 +492,27 @@ func TestReconcile_WithdrawnRequestCancelsEviction(t *testing.T) {
 		t.Fatalf("failure gauge = %v, want it cleared", got)
 	}
 	h.awaitEvent(t, "DrainCancelled")
+}
+
+// The gauge lives in this process's memory and the marker on the Node, so after a
+// restart the marker is all there is to rebuild the gauge from. The eviction is
+// still blocked, so the cancel check proves no fresh failure raised it.
+func TestReconcile_RestoresFailureMetricFromAnnotation(t *testing.T) {
+	h := newHarness(t, fake.NewSimpleClientset(), node(map[string]string{
+		nodecommon.DrainingAnnotation:    bashibleSource,
+		nodecommon.DrainFailedAnnotation: "persisted failure",
+	}, true))
+	t.Cleanup(func() { clearDrainMetric(nodeName) })
+
+	h.blockUntilCancelled(t)
+	h.reconcile(t)
+
+	if got := metricValue(t, nodeName); got != 1 {
+		t.Fatalf("restored failure gauge = %v, want 1", got)
+	}
+	if running, err := h.drains.cancel(t.Context(), nodeName); err != nil || !running {
+		t.Fatalf("cancel = (%v, %v): the running eviction should still be there", running, err)
+	}
 }
 
 // A reconcile arriving while the drain runs must not disturb it.
@@ -475,7 +551,7 @@ func TestReconcile_FailedEvictionIsRetriedWithAFreshTask(t *testing.T) {
 // behalf of an object nobody can see.
 func TestReconcile_DeletedNodeCancelsItsEviction(t *testing.T) {
 	h := newHarness(t, fake.NewSimpleClientset())
-	nodeDrainingGauge.WithLabelValues(nodeName, "boom").Set(1)
+	nodeDrainingGauge.WithLabelValues(nodeName).Set(1)
 	t.Cleanup(func() { clearDrainMetric(nodeName) })
 
 	h.blockUntilCancelled(t)
@@ -635,8 +711,8 @@ func TestWakeNode_SkipsOnlyCancelledEvictions(t *testing.T) {
 	}
 }
 
-// metricValue reads the current d8_node_draining gauge value for a node, summing
-// across whatever message label is attached. Returns 0 when no series exists.
+// metricValue reads the current d8_node_draining gauge value for a node.
+// Returns 0 when no series exists.
 func metricValue(t *testing.T, name string) float64 {
 	t.Helper()
 	ch := make(chan prometheus.Metric, 16)
@@ -671,4 +747,42 @@ func (w *captureWatcher) WatchesRawSource(src source.Source) {
 }
 func (w *captureWatcher) WithEventFilter(p predicate.Predicate) {
 	w.predicate = p
+}
+
+// syncDrainMetric only ever sets the gauge. The pass that starts a retry can read
+// the Node from a cache written before the failure was recorded, and clearing the
+// gauge there would drop NodeStuckInDraining for that attempt.
+func TestSyncDrainMetric_OnlyEverRaisesTheGauge(t *testing.T) {
+	t.Cleanup(func() { clearDrainMetric(nodeName) })
+
+	syncDrainMetric(nodeName, map[string]string{nodecommon.DrainFailedAnnotation: "boom"})
+	syncDrainMetric(nodeName, nil)
+
+	if got := metricValue(t, nodeName); got != 1 {
+		t.Fatalf("failure gauge = %v, want it left at 1", got)
+	}
+}
+
+// The eviction error arrives as one line per pod. The alert tells an operator to
+// print this annotation, so the value has to be a single line, and it has to be
+// valid UTF-8 after the cut.
+func TestTruncateForAnnotation(t *testing.T) {
+	const wantFlat = "a b"
+	if got := truncateForAnnotation("  a\n\n  b  "); got != wantFlat {
+		t.Fatalf("flattened = %q, want %q", got, wantFlat)
+	}
+
+	// 1500 bytes of three-byte runes, so the cut at 1024 lands mid-rune.
+	got := truncateForAnnotation(strings.Repeat("€", 500))
+	if !utf8.ValidString(got) {
+		t.Fatalf("truncated value is not valid UTF-8: %q", got)
+	}
+	const suffix = "\u2026 (truncated)"
+	if !strings.HasSuffix(got, suffix) {
+		t.Fatalf("truncated value = %q, want it to end with %q", got, suffix)
+	}
+	// The cut drops at most one partial rune, so the body lands just under the limit.
+	if body := len(got) - len(suffix); body > 1024 || body <= 1024-utf8.UTFMax {
+		t.Fatalf("truncated body = %d bytes, want the 1024-byte limit less at most one partial rune", body)
+	}
 }

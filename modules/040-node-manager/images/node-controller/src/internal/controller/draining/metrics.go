@@ -19,14 +19,21 @@ package draining
 import (
 	"github.com/prometheus/client_golang/prometheus"
 	ctrlmetrics "sigs.k8s.io/controller-runtime/pkg/metrics"
+
+	nodecommon "github.com/deckhouse/node-controller/internal/common"
 )
 
+// nodeDrainingGauge carries no error message. As a label the error text, pod
+// names and a timeout, would become part of the series identity, and every retry
+// with a different wording would leave another series behind for the same node.
+// The message is durable on the Node instead, in the drain-failed annotation,
+// which NodeStuckInDraining prints.
 var nodeDrainingGauge = prometheus.NewGaugeVec(
 	prometheus.GaugeOpts{
 		Name: "d8_node_draining",
-		Help: "Set to 1 when node drain fails, with error message",
+		Help: "Set to 1 while the node carries a failed drain, see the drain-failed annotation for the error",
 	},
-	[]string{"node", "message"},
+	[]string{"node"},
 )
 
 func init() {
@@ -34,5 +41,20 @@ func init() {
 }
 
 func clearDrainMetric(nodeName string) {
-	nodeDrainingGauge.DeletePartialMatch(prometheus.Labels{"node": nodeName})
+	nodeDrainingGauge.DeleteLabelValues(nodeName)
+}
+
+// syncDrainMetric raises the gauge for a node carrying the drain-failed marker.
+// A restart empties the registry, and the marker is then the only record that the
+// node's last drain failed, so the gauge is rebuilt from it.
+//
+// It only ever sets. Clearing belongs to the three passes that resolve a failure:
+// the node is gone, the request is withdrawn, the drain succeeds. The pass that
+// starts a retry may read the node from a cache older than the marker, and
+// clearing there would drop the gauge for the whole of the next attempt. Setting
+// a series that already exists is idempotent, so no scrape sees a gap.
+func syncDrainMetric(nodeName string, annotations map[string]string) {
+	if _, failed := annotations[nodecommon.DrainFailedAnnotation]; failed {
+		nodeDrainingGauge.WithLabelValues(nodeName).Set(1)
+	}
 }

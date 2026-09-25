@@ -20,6 +20,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"strings"
 
 	"github.com/go-logr/logr"
 	corev1 "k8s.io/api/core/v1"
@@ -128,6 +129,11 @@ func (r *Reconciler) reconcileNode(ctx context.Context, node *corev1.Node) (_ ct
 	}
 
 	defer func() {
+		// Reads the annotations this pass is about to write, so the gauge goes up
+		// for a failure recorded here and for one an earlier run of this controller
+		// left on the node.
+		syncDrainMetric(node.Name, node.Annotations)
+
 		if err := patchHelper.Patch(ctx, node); err != nil {
 			resErr = errors.Join(resErr, fmt.Errorf("failed to patch Node %s: %w", node.Name, err))
 		}
@@ -139,6 +145,10 @@ func (r *Reconciler) reconcileNode(ctx context.Context, node *corev1.Node) (_ ct
 		if err := r.cancelDrainIfExist(ctx, logger, node); err != nil {
 			return ctrl.Result{}, err
 		}
+		// The request is gone, so the last attempt's failure no longer describes
+		// anything that is still being attempted.
+		clearDrainMetric(node.Name)
+		delete(node.Annotations, nodecommon.DrainFailedAnnotation)
 		if state.recordedFor == userSource && !state.unschedulable {
 			logger.Info("removing a stale drained=user annotation")
 			delete(node.Annotations, nodecommon.DrainedAnnotation)
@@ -152,9 +162,10 @@ func (r *Reconciler) reconcileNode(ctx context.Context, node *corev1.Node) (_ ct
 		return ctrl.Result{}, nil
 	}
 
-	// A hand drain's marker is cleared before a new drain starts. Left there it
-	// would read as the new drain's own result, and a second hand drain would
-	// never overwrite it — finishDrain records nothing for the user source.
+	// A hand drain's marker is cleared before a new drain starts. Left there, it
+	// would be read as the new drain's result: finishDrain writes the same
+	// drained=user value, so an unchanged annotation would not show the new drain
+	// finishing.
 	if state.recordedFor == userSource {
 		logger.Info("removing an existing drained=user annotation before a new drain")
 		delete(node.Annotations, nodecommon.DrainedAnnotation)
@@ -208,8 +219,6 @@ func (r *Reconciler) cleanupDeletedNode(ctx context.Context, nodeName string) er
 // cancelDrainIfExist stops the drain when its request disappears, so a drain
 // nobody asked for any more does not run to completion and record a result.
 func (r *Reconciler) cancelDrainIfExist(ctx context.Context, logger logr.Logger, node *corev1.Node) error {
-	clearDrainMetric(node.Name)
-
 	cancelled, err := r.drains.cancel(ctx, node.Name)
 	if err != nil {
 		return err
@@ -224,36 +233,47 @@ func (r *Reconciler) cancelDrainIfExist(ctx context.Context, logger logr.Logger,
 	return nil
 }
 
-// finishDrain writes down how the drain ended. The request is consumed
-// either way; only a source that polls for a result gets one.
+// finishDrain writes the drain's outcome onto the node. A success replaces the
+// draining request with drained=<source>. A failure records the error in
+// drain-failed and keeps the request, so the next reconcile retries the drain.
 func (r *Reconciler) finishDrain(_ context.Context, logger logr.Logger, node *corev1.Node, source string, drainErr error) error {
 	logger = logger.WithValues("source", source)
 
-	switch {
-	case drainErr == nil:
-		clearDrainMetric(node.Name)
-
-	case errors.Is(drainErr, errDrainDeadline):
-		// Recorded as drained anyway: the cause is durable, a retry gets no
-		// further, and the node's update must not wedge. The gauge stays at 1
-		// for NodeStuckInDraining.
-		logger.Info("drain timed out, recording it as done anyway", "error", drainErr.Error())
-		r.Recorder.Eventf(node, corev1.EventTypeWarning, "DrainFailed", "drain failed: %v", drainErr)
-		nodeDrainingGauge.WithLabelValues(node.Name, drainErr.Error()).Set(1)
-
-	default:
+	if drainErr != nil {
 		logger.Error(drainErr, "drain failed")
 		r.Recorder.Eventf(node, corev1.EventTypeWarning, "DrainFailed", "drain failed: %v", drainErr)
-		nodeDrainingGauge.WithLabelValues(node.Name, drainErr.Error()).Set(1)
+		node.Annotations[nodecommon.DrainFailedAnnotation] = truncateForAnnotation(drainErr.Error())
 		// The request stays, so the requeue starts a fresh drain.
 		return drainErr
 	}
 
+	clearDrainMetric(node.Name)
+	delete(node.Annotations, nodecommon.DrainFailedAnnotation)
 	delete(node.Annotations, nodecommon.DrainingAnnotation)
 	node.Annotations[nodecommon.DrainedAnnotation] = source
 	logger.Info("drain finished")
 	r.Recorder.Eventf(node, corev1.EventTypeNormal, "DrainSucceeded", "node %q drained successfully", node.Name)
 	return nil
+}
+
+// truncateForAnnotation bounds what an eviction error may write to the Node. An
+// error that names every unevictable pod runs to kilobytes, and all annotations
+// of an object share a 256 KB budget. Only the head of such an error is read in
+// practice, and the full text stays in the log and in the DrainFailed event.
+//
+// errors.Join gives one line per pod, and NodeStuckInDraining tells the operator
+// to print this annotation, so the newlines are collapsed to spaces before the
+// cut.
+func truncateForAnnotation(msg string) string {
+	const limit = 1024
+
+	msg = strings.Join(strings.Fields(msg), " ")
+	if len(msg) <= limit {
+		return msg
+	}
+	// The cut can land mid-rune, and an annotation value must be valid UTF-8 to
+	// serialize as JSON.
+	return strings.ToValidUTF8(msg[:limit], "") + "… (truncated)"
 }
 
 // startDrain cordons the node, then starts the drain on the pass that sees
