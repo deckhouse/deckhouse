@@ -26,6 +26,9 @@ type nodeCheckDeps struct {
 	InstallConfig *config.DeckhouseInstaller
 	GlobalOpts    *options.GlobalOptions
 	NodeInterface checks.NodeInterfaceFunc
+	// KubeDataDevicePath is the provider's separate disk for Kubernetes data, where there is one.
+	// nil on a static cluster.
+	KubeDataDevicePath func() string
 }
 
 // nodeChecks are the questions asked of a machine that exists: can a command be run on it, does
@@ -57,7 +60,7 @@ func nodeChecks(deps nodeCheckDeps) []preflight.Check {
 		checks.NodeCRIRequirements(deps.MetaConfig, deps.NodeInterface),
 		checks.NodeKernelModules(deps.MetaConfig, deps.NodeInterface),
 		checks.NodeSELinuxTools(deps.NodeInterface),
-		checks.NodeDiskSpace(deps.NodeInterface),
+		checks.NodeDiskSpace(deps.NodeInterface, deps.KubeDataDevicePath),
 		checks.NodeInternalNetwork(deps.MetaConfig, deps.NodeInterface),
 		checks.NodeOSSupported(deps.NodeInterface),
 		checks.NodeXFSFtype(deps.NodeInterface),

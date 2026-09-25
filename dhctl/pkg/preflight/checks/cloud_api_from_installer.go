@@ -73,6 +73,8 @@ func (c CloudAPIFromInstallerCheck) Run(ctx context.Context) (string, error) {
 		})
 	}
 
+	client.CheckRedirect = utils.StopAtFirstAnswer
+
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, endpoint.URL.String(), nil)
 	if err != nil {
 		return "", fmt.Errorf("building the request to %s: %w", endpoint.URL, err)

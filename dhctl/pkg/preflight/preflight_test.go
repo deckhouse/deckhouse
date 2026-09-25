@@ -760,3 +760,33 @@ func TestAFindingCanStopThePhase(t *testing.T) {
 		t.Errorf("the checks after an unusable connection must not be asked at all, ran %d times", got)
 	}
 }
+
+// A warning is said and the run goes on. It is for the findings about how a cluster was sized
+// rather than about whether this bootstrap can finish: node-disk-space is the one, and refusing
+// on it refused masters that every platform we run e2e on hands out — on the Commander path,
+// where there is no command line to put a skip flag on.
+func TestWarningIsSaidAndTheRunGoesOn(t *testing.T) {
+	ctx, buf := testContext(t)
+	r := newRecorder()
+
+	warned := r.check("node-disk-space", PhasePreInfra, func() (string, error) {
+		return "", Warning("the node has 31 GB at /var/lib, and 40 GB is the least this check expects")
+	})
+	after := r.check("node-leftovers", PhasePreInfra, func() (string, error) { return "", nil })
+
+	p := New(NewSuite(warned, after))
+	if err := p.Run(ctx, PhasePreInfra); err != nil {
+		t.Fatalf("a warning must not fail the phase, got %v", err)
+	}
+
+	if got := r.count("node-leftovers"); got != 1 {
+		t.Errorf("the checks after a warning must still run, ran %d times", got)
+	}
+	out := buf.String()
+	if !strings.Contains(out, "⚠ node-disk-space warning: the node has 31 GB") {
+		t.Errorf("the record must carry the warning and its reason, got:\n%s", out)
+	}
+	if !strings.Contains(out, "1 warned") {
+		t.Errorf("the tally must count it apart from the passes, got:\n%s", out)
+	}
+}

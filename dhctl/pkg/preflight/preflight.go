@@ -249,6 +249,11 @@ func (p *Preflight) evaluate(ctx context.Context, check Check, broken map[CheckN
 		result.Status = StatusPassed
 		result.Detail = detail
 		p.store(ctx, check)
+	case errors.Is(err, ErrWarning):
+		// Said, not enforced: the phase carries on and nothing that depends on this check is
+		// blocked by it.
+		result.Status = StatusWarned
+		result.Detail = warningReason(err)
 	case errors.Is(err, ErrNotApplicable):
 		// Not a pass and not a failure: the check found nothing to look at, so it is neither
 		// remembered nor counted among the assertions that hold.
@@ -408,7 +413,7 @@ func summarize(results []Result, notRun int) string {
 	if cached > 0 {
 		parts[0] = fmt.Sprintf("%d passed (%d cached)", counts[StatusPassed], cached)
 	}
-	for _, s := range []Status{StatusFailed, StatusBlocked, StatusSkipped, StatusNotApplicable} {
+	for _, s := range []Status{StatusFailed, StatusWarned, StatusBlocked, StatusSkipped, StatusNotApplicable} {
 		if counts[s] > 0 {
 			parts = append(parts, fmt.Sprintf("%d %s", counts[s], s))
 		}
