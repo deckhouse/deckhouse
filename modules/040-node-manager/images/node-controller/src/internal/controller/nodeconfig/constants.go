@@ -57,6 +57,7 @@ const (
 	registryPathKey         = "path"
 	registrySchemeKey       = "scheme"
 	registryCAKey           = "ca"
+	registryImagesKey       = "imagesRegistry"
 	registryDockerConfigKey = ".dockerconfigjson"
 
 	// registryOwnerNodelet and registryOwnerAgent are the two answers

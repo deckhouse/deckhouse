@@ -261,7 +261,8 @@ func (s *sourceReader) readReleaseImages(ctx context.Context, in *clusterInputs)
 		return err
 	}
 
-	in.Registry, err = s.readRegistry(ctx)
+	// imagesRepo is the root hash resolver's; the render takes the registry only.
+	in.Registry, _, err = s.readRegistry(ctx)
 	if err != nil {
 		return err
 	}
@@ -311,30 +312,36 @@ func (s *sourceReader) rootHashes() *rootHashResolver {
 }
 
 // readRegistry describes the cluster's registry: the spec a node needs to reach
-// it.
-func (s *sourceReader) readRegistry(ctx context.Context) (*internalv1alpha1.Registry, error) {
+// it, and the repository every image of the release lives in.
+func (s *sourceReader) readRegistry(ctx context.Context) (*internalv1alpha1.Registry, string, error) {
 	secret := &corev1.Secret{}
 	if err := s.Reader.Get(ctx, types.NamespacedName{Namespace: d8SystemNS, Name: deckhouseRegistrySecret}, secret); err != nil {
-		return nil, fmt.Errorf("read the registry configuration from %s/%s: %w", d8SystemNS, deckhouseRegistrySecret, err)
+		return nil, "", fmt.Errorf("read the registry configuration from %s/%s: %w", d8SystemNS, deckhouseRegistrySecret, err)
 	}
 
 	address := string(secret.Data[registryAddressKey])
 	if address == "" {
-		return nil, fmt.Errorf("secret %s/%s carries no %q", d8SystemNS, deckhouseRegistrySecret, registryAddressKey)
+		return nil, "", fmt.Errorf("secret %s/%s carries no %q", d8SystemNS, deckhouseRegistrySecret, registryAddressKey)
 	}
 
 	auth, err := registryAuth(secret.Data[registryDockerConfigKey], address)
 	if err != nil {
-		return nil, fmt.Errorf("read the registry credentials from %s/%s: %w", d8SystemNS, deckhouseRegistrySecret, err)
+		return nil, "", fmt.Errorf("read the registry credentials from %s/%s: %w", d8SystemNS, deckhouseRegistrySecret, err)
 	}
 
-	return &internalv1alpha1.Registry{
+	registry := &internalv1alpha1.Registry{
 		Address: address,
 		Path:    string(secret.Data[registryPathKey]),
 		Scheme:  strings.ToUpper(string(secret.Data[registrySchemeKey])),
 		CA:      string(secret.Data[registryCAKey]),
 		Auth:    auth,
-	}, nil
+	}
+
+	imagesRepo := string(secret.Data[registryImagesKey])
+	if imagesRepo == "" {
+		imagesRepo = address + registry.Path
+	}
+	return registry, imagesRepo, nil
 }
 
 // registryAuth pulls one registry's credentials out of a docker config. No

@@ -72,7 +72,6 @@ const (
 	testKubeletDigest           = testenv.TestKubeletDigest
 	testNodeletDigest           = testenv.TestNodeletDigest
 	testOSImageDigest           = testenv.TestOSImageDigest
-	testRootHash                = "4b0f2bd2a5f06f3f7b8b9cd0f2d8d9e2a1c3e5f7a9b1d3f5e7c9a1b3d5f7e9c1"
 	testClusterCA               = testenv.TestClusterCA
 	// The extension one spec asks for through a NodeExtensionRequest, and the
 	// digest it is rebuilt under.
