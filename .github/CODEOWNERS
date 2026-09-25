@@ -76,7 +76,12 @@
 **/040-node-manager/templates/caps-controller-manager                       @aleksey-su @pabateman
 **/040-node-manager/monitoring/grafana-dashboards/nvidia-gpu                @serg-su
 **/040-node-manager/templates/nvidia-gpu                                    @serg-su
-**/040-node-manager/hooks/fencing**                                         @yalosev @ergoz
+**/040-node-manager/hooks/scheduling                                        @yalosev @ergoz
+**/040-node-manager/hooks/cloud                                             @aleksey-su @pabateman
+**/040-node-manager/hooks/caps                                              @aleksey-su @pabateman
+**/040-node-manager/hooks/kubernetes                                        @sprait
+**/040-node-manager/hooks/gpu                                               @serg-su
+**/040-node-manager/hooks/upmeter                                           @vladimirGuryanov @lazovskiy @maksimmadzhuga
 **/040-node-manager/hooks/enable_integrity_controller**                     @sprait
 **/040-node-manager/e2e/fencing**                                           @yalosev @ergoz
 **/040-node-manager/e2e/cluster-autoscaler                                  @yalosev @ergoz
