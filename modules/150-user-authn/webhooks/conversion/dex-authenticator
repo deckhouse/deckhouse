@@ -66,6 +66,12 @@ function __on_conversion::v2alpha1_to_v1() {
           end
         )
       } |
+      (if .spec.applicationIngressClassName == null then del(.spec.applicationIngressClassName) else . end) |
+      (if .spec.applications[0].gatewayAPI == null then
+        del(.spec.gatewayAPI)
+      else
+        .spec.gatewayAPI |= with_entries(select(.value != null))
+      end) |
       del(.spec.applications) |
       (if .spec.additionalApplications == null then del(.spec.additionalApplications) else . end)
     else
@@ -132,6 +138,14 @@ function __on_conversion::v1_to_v2alpha1() {
       (if .spec.signOutURL then {signOutURL: .spec.signOutURL} else {} end) +
       (if .spec.whitelistSourceRanges then {whitelistSourceRanges: .spec.whitelistSourceRanges} else {} end)] +
       (.spec.additionalApplications // []) |
+      .spec.applications[0] |= (
+        (if .ingressClassName == null then del(.ingressClassName) else . end) |
+        if .gatewayAPI.httpRouteListenerSetName == null then
+          del(.gatewayAPI)
+        else
+          .gatewayAPI |= with_entries(select(.value != null))
+        end
+      ) |
       del(.spec.applicationDomain, .spec.applicationIngressClassName, .spec.gatewayAPI, .spec.applicationIngressCertificateSecretName, .spec.additionalApplications, .spec.signOutURL, .spec.whitelistSourceRanges)
     else
       .

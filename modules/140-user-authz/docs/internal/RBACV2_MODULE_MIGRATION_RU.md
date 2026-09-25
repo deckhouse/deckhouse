@@ -351,6 +351,42 @@ d8 k get clusterrole d8:namespace:viewer -o json | jq '[.rules[] | select(.apiGr
 d8 k get clusterrole d8:subsystem:networking:manager -o json | jq '[.rules[] | select(.resourceNames[]? == "mymodule")]'
 ```
 
+## Чего алиасы совместимости не несут
+
+Старые имена ролей живут один релиз как агрегирующие алиасы, поэтому привязка к `d8:manage:*` или
+`d8:use:role:*` продолжает выдавать то, что агрегирует новая роль. Две вещи не возвращаются:
+
+- **Проекция в неймспейсы.** ClusterRoleBinding на алиас `d8:manage:*` больше не порождает RoleBinding,
+  которые разносили его по неймспейсам модулей, а созданные прошлым релизом удаляются. Кластерные права
+  остаются; логи, `describe` и `exec` внутри неймспейсов `d8-*` — нет. Пересоздание привязки на новое имя
+  возвращает их.
+- **`serviceaccounts/token` и `impersonate`**, которые переехали с admin на superadmin намеренно.
+
+Проверьте и собственную документацию: примеры с `d8:manage:*` или `d8:use:role:*` работают только этот релиз.
+Алиасы `d8:use:role:*` делегируемы, поэтому обычный RoleBinding на такой алиас внутри неймспейса проекта продолжает работать; отклоняется новый ProjectRoleBinding или ClusterProjectRoleBinding на старое имя — алиас несёт аннотацию `rbac.deckhouse.io/disabled-for-direct-use-in-projects`.
+
+## Перед обновлением: роли с платформенным лейблом агрегации
+
+ClusterRole с лейблом `rbac.deckhouse.io/aggregate-to-<lineage>-as` вливается в платформенную роль этой
+линии, и контроллер агрегации не читает ничего, кроме лейбла. Вебхук `rbacv2-cluster-roles.deckhouse.io`
+теперь допускает такой лейбл только на `custom-capability`. Вебхук видит записи: роль, которая уже несёт
+лейбл, не будучи custom capability, после обновления продолжает агрегироваться, а её следующий `UPDATE` —
+в том числе повторный apply из GitOps — будет отклонён. Такие роли экспортируются как
+`d8_user_authz_foreign_aggregation_label{name, lineage, kind}` и поднимают алерт
+`D8UserAuthzForeignAggregationLabel`; перечислите их до обновления:
+
+```bash
+d8 k get clusterroles -o json | jq -r '.items[]
+  | select((.metadata.labels // {}) | to_entries | any(.key | startswith("rbac.deckhouse.io/aggregate-to-")))
+  | select((.metadata.labels.heritage // "") != "deckhouse")
+  | select((.metadata.labels["rbac.deckhouse.io/kind"] // "") != "custom-capability")
+  | .metadata.name'
+```
+
+Каждую такую роль либо оформите как настоящую custom capability (`d8:custom:<scope>-capability:<имя>`,
+`rbac.deckhouse.io/kind: custom-capability`, `rbac.deckhouse.io/scope: <scope>`, без `aggregationRule`),
+либо снимите с неё лейблы `aggregate-to-*-as`.
+
 ## Что будет, если модуль не мигрировать
 
 Старые объекты никто не отвергнет и ничего не залогирует — они останутся валидными Kubernetes-объектами.

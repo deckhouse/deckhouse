@@ -1,0 +1,574 @@
+/*
+Copyright 2026 Flant JSC
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+*/
+
+package core
+
+import (
+	"testing"
+	"time"
+
+	"github.com/deckhouse/deckhouse/pkg/log"
+	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
+
+	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/gomega"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/runtime/schema"
+	dynamicfake "k8s.io/client-go/dynamic/fake"
+	k8stesting "k8s.io/client-go/testing"
+
+	. "github.com/deckhouse/deckhouse/testing/hooks"
+)
+
+func testCRD(name string, storedVersions []string) *unstructured.Unstructured {
+	stored := make([]interface{}, 0, len(storedVersions))
+	for _, version := range storedVersions {
+		stored = append(stored, version)
+	}
+	return &unstructured.Unstructured{Object: map[string]interface{}{
+		"apiVersion": "apiextensions.k8s.io/v1",
+		"kind":       "CustomResourceDefinition",
+		"metadata": map[string]interface{}{
+			"name": name,
+		},
+		"status": map[string]interface{}{
+			"storedVersions": stored,
+		},
+	}}
+}
+
+func testProviderClusterCRD() *unstructured.Unstructured {
+	return &unstructured.Unstructured{Object: map[string]interface{}{
+		"apiVersion": "apiextensions.k8s.io/v1",
+		"kind":       "CustomResourceDefinition",
+		"metadata": map[string]interface{}{
+			"name": "openstackclusters.infrastructure.cluster.x-k8s.io",
+		},
+		"spec": map[string]interface{}{
+			"group": "infrastructure.cluster.x-k8s.io",
+			"names": map[string]interface{}{
+				"kind":   "OpenStackCluster",
+				"plural": "openstackclusters",
+			},
+		},
+		"status": map[string]interface{}{
+			"storedVersions": []interface{}{"v1beta1"},
+		},
+	}}
+}
+
+func TestPickStoredVersion(t *testing.T) {
+	dyn := dynamicfake.NewSimpleDynamicClient(runtime.NewScheme(),
+		testCRD("machinedeployments.machine.sapcloud.io", []string{"v1alpha1"}),
+		testCRD("machinedeployments.cluster.x-k8s.io", []string{"v1beta1", "v1beta2"}),
+		testCRD("staticmachinetemplates.infrastructure.cluster.x-k8s.io", []string{"v1alpha1"}),
+	)
+
+	version, ok, err := pickStoredVersion(t.Context(), dyn, "machine.sapcloud.io", "machinedeployments", mcmStoredVersions)
+	if err != nil {
+		t.Fatalf("pick MCM version: %v", err)
+	}
+	if !ok || version != "v1alpha1" {
+		t.Fatalf("MCM version=%q ok=%v, want v1alpha1/true", version, ok)
+	}
+
+	version, ok, err = pickStoredVersion(t.Context(), dyn, "cluster.x-k8s.io", "machinedeployments", storedVersionPreference)
+	if err != nil {
+		t.Fatalf("pick CAPI version: %v", err)
+	}
+	if !ok || version != "v1beta1" {
+		t.Fatalf("CAPI version=%q ok=%v, want v1beta1/true", version, ok)
+	}
+
+	version, ok, err = pickStoredVersion(t.Context(), dyn, "cluster.x-k8s.io", "missing", storedVersionPreference)
+	if err != nil {
+		t.Fatalf("missing CRD returned error: %v", err)
+	}
+	if ok || version != "" {
+		t.Fatalf("missing CRD version=%q ok=%v, want empty/false", version, ok)
+	}
+
+	version, ok, err = pickStoredVersion(t.Context(), dyn, "infrastructure.cluster.x-k8s.io", "staticmachinetemplates", []string{"v1alpha1"})
+	if err != nil {
+		t.Fatalf("pick StaticMachineTemplate version: %v", err)
+	}
+	if !ok || version != "v1alpha1" {
+		t.Fatalf("StaticMachineTemplate version=%q ok=%v, want v1alpha1/true", version, ok)
+	}
+}
+
+func testLogger() go_hook.Logger {
+	return log.NewNop()
+}
+
+func withFastConversionRetries(t *testing.T) func() {
+	t.Helper()
+	attempts, delay := conversionRetryAttempts, conversionRetryDelay
+	conversionRetryAttempts, conversionRetryDelay = 3, time.Millisecond
+	return func() { conversionRetryAttempts, conversionRetryDelay = attempts, delay }
+}
+
+func testServedCRD(name, group, plural string, storedVersions, served []string) *unstructured.Unstructured {
+	crd := testCRD(name, storedVersions)
+	versions := make([]interface{}, 0, len(served))
+	for _, version := range served {
+		versions = append(versions, map[string]interface{}{"name": version, "served": true})
+	}
+	crd.Object["spec"] = map[string]interface{}{
+		"group":    group,
+		"names":    map[string]interface{}{"plural": plural},
+		"versions": versions,
+	}
+	return crd
+}
+
+func openStackClusterGVR(version string) schema.GroupVersionResource {
+	return schema.GroupVersionResource{Group: "infrastructure.cluster.x-k8s.io", Version: version, Resource: "openstackclusters"}
+}
+
+func openStackClusterResource() keepResource {
+	return keepResource{Group: "infrastructure.cluster.x-k8s.io", Resource: "openstackclusters"}
+}
+
+func newClusterDynamicClient(objects ...runtime.Object) *dynamicfake.FakeDynamicClient {
+	listKinds := map[schema.GroupVersionResource]string{
+		openStackClusterGVR("v1beta1"): "OpenStackClusterList",
+		openStackClusterGVR("v1beta2"): "OpenStackClusterList",
+	}
+	return dynamicfake.NewSimpleDynamicClientWithCustomListKinds(runtime.NewScheme(), listKinds, objects...)
+}
+
+func TestListHelmManagedFallsBackWhenConversionUnavailable(t *testing.T) {
+	dyn := newClusterDynamicClient()
+	dyn.PrependReactor("list", "openstackclusters", func(action k8stesting.Action) (bool, runtime.Object, error) {
+		if action.GetResource().Version == "v1beta2" {
+			return true, nil, apierrors.NewServiceUnavailable("conversion webhook for infrastructure.cluster.x-k8s.io/v1beta2 is (re)initializing")
+		}
+		return false, nil, nil
+	})
+
+	version, list, err := listHelmManaged(t.Context(), dyn, testLogger(), openStackClusterResource(), []string{"v1beta2", "v1beta1"})
+
+	if err != nil {
+		t.Fatalf("list: %v", err)
+	}
+	if version != "v1beta1" || list == nil {
+		t.Fatalf("version=%q list=%v, want v1beta1 and a list", version, list)
+	}
+}
+
+func TestListHelmManagedReturnsRealErrors(t *testing.T) {
+	dyn := newClusterDynamicClient()
+	dyn.PrependReactor("list", "openstackclusters", func(k8stesting.Action) (bool, runtime.Object, error) {
+		return true, nil, apierrors.NewForbidden(schema.GroupResource{Resource: "openstackclusters"}, "", nil)
+	})
+
+	_, _, err := listHelmManaged(t.Context(), dyn, testLogger(), openStackClusterResource(), []string{"v1beta1"})
+
+	if err == nil {
+		t.Fatal("a forbidden read must fail the hook")
+	}
+}
+
+func TestListHelmManagedFailsWhenEveryVersionStaysUnavailable(t *testing.T) {
+	dyn := newClusterDynamicClient()
+	attempts := 0
+	dyn.PrependReactor("list", "openstackclusters", func(k8stesting.Action) (bool, runtime.Object, error) {
+		attempts++
+		return true, nil, apierrors.NewServiceUnavailable("conversion webhook is (re)initializing")
+	})
+	defer withFastConversionRetries(t)()
+
+	_, _, err := listHelmManaged(t.Context(), dyn, testLogger(), openStackClusterResource(), []string{"v1beta2", "v1beta1"})
+
+	if err == nil {
+		t.Fatal("an unreadable resource must fail the hook, not be skipped")
+	}
+	if attempts < 4 {
+		t.Fatalf("attempts=%d, want the read retried across versions and rounds", attempts)
+	}
+}
+
+func TestListHelmManagedRetriesUntilTheWebhookIsBack(t *testing.T) {
+	dyn := newClusterDynamicClient()
+	rounds := 0
+	dyn.PrependReactor("list", "openstackclusters", func(k8stesting.Action) (bool, runtime.Object, error) {
+		rounds++
+		if rounds <= 2 {
+			return true, nil, apierrors.NewServiceUnavailable("conversion webhook is (re)initializing")
+		}
+		return false, nil, nil
+	})
+	defer withFastConversionRetries(t)()
+
+	_, list, err := listHelmManaged(t.Context(), dyn, testLogger(), openStackClusterResource(), []string{"v1beta2", "v1beta1"})
+
+	if err != nil || list == nil {
+		t.Fatalf("list=%v err=%v, want the retry to succeed", list, err)
+	}
+}
+
+func TestServiceUnavailableOnCoreResourceIsNotAConversionFailure(t *testing.T) {
+	core := keepResource{Group: "", Resource: "secrets"}
+	if isConversionUnavailable(core, apierrors.NewServiceUnavailable("apiserver is shutting down")) {
+		t.Fatal("a 503 on a core resource must not be forgiven as a conversion failure")
+	}
+	if !isConversionUnavailable(openStackClusterResource(), apierrors.NewServiceUnavailable("conversion webhook is (re)initializing")) {
+		t.Fatal("a conversion failure on a custom resource must be recognised")
+	}
+}
+
+func TestKeepResourceVersionsFallsBackToServedVersions(t *testing.T) {
+	dyn := dynamicfake.NewSimpleDynamicClient(runtime.NewScheme(), testServedCRD(
+		"openstackclusters.infrastructure.cluster.x-k8s.io",
+		"infrastructure.cluster.x-k8s.io", "openstackclusters", nil, []string{"v1beta1"},
+	))
+
+	versions, err := keepResourceVersions(t.Context(), dyn, openStackClusterResource())
+
+	if err != nil {
+		t.Fatalf("resolve versions: %v", err)
+	}
+	if len(versions) != 1 || versions[0] != "v1beta1" {
+		t.Fatalf("versions=%v, want [v1beta1]", versions)
+	}
+}
+
+func TestKeepResourceVersionsReportsMissingCRD(t *testing.T) {
+	dyn := dynamicfake.NewSimpleDynamicClient(runtime.NewScheme())
+
+	versions, err := keepResourceVersions(t.Context(), dyn, openStackClusterResource())
+
+	if err != nil || len(versions) != 0 {
+		t.Fatalf("versions=%v err=%v, want no versions", versions, err)
+	}
+}
+
+func TestCapiResourcesIncludeStaticMachineTemplates(t *testing.T) {
+	for _, res := range capiResources {
+		if res.Group == "infrastructure.cluster.x-k8s.io" && res.Resource == "staticmachinetemplates" {
+			if len(res.versionPreference) != 1 || res.versionPreference[0] != "v1alpha1" {
+				t.Fatalf("StaticMachineTemplate preference=%v, want [v1alpha1]", res.versionPreference)
+			}
+			return
+		}
+	}
+	t.Fatal("StaticMachineTemplate must be kept from Helm prune during migration")
+}
+
+func TestResolveKeepResourceForProviderGVK(t *testing.T) {
+	dyn := dynamicfake.NewSimpleDynamicClient(runtime.NewScheme(), testProviderClusterCRD())
+
+	resource, found, err := resolveKeepResourceForGVK(
+		t.Context(),
+		dyn,
+		"infrastructure.cluster.x-k8s.io/v1beta1",
+		"OpenStackCluster",
+		"openstack",
+	)
+	if err != nil {
+		t.Fatalf("resolve provider resource: %v", err)
+	}
+	if !found {
+		t.Fatal("provider resource not found")
+	}
+	if resource.Group != "infrastructure.cluster.x-k8s.io" || resource.Resource != "openstackclusters" {
+		t.Fatalf("unexpected resource: %#v", resource)
+	}
+	if len(resource.versionPreference) != 1 || resource.versionPreference[0] != "v1beta1" {
+		t.Fatalf("unexpected version preference: %v", resource.versionPreference)
+	}
+	if resource.keepName == nil || !resource.keepName("openstack") || resource.keepName("other") {
+		t.Fatal("provider resource must select only the registered cluster name")
+	}
+}
+
+func TestResolveKeepResourceFallsBackToStoredProviderVersion(t *testing.T) {
+	dyn := dynamicfake.NewSimpleDynamicClient(runtime.NewScheme(), testProviderClusterCRD())
+
+	resource, found, err := resolveKeepResourceForGVK(
+		t.Context(), dyn, "infrastructure.cluster.x-k8s.io/v1beta2", "OpenStackCluster", "openstack",
+	)
+	if err != nil {
+		t.Fatalf("resolve provider resource: %v", err)
+	}
+	if !found {
+		t.Fatal("provider resource not found")
+	}
+	version, ok, err := keepResourceVersion(t.Context(), dyn, resource)
+	if err != nil {
+		t.Fatalf("resolve provider version: %v", err)
+	}
+	if !ok || version != "v1beta1" {
+		t.Fatalf("version=%q ok=%v, want stored v1beta1/true", version, ok)
+	}
+}
+
+// helmBootstrapSecretsState is what helm leaves in d8-cloud-instance-manager: the
+// three Secrets this migration takes over, the ones it does not, and one an operator
+// made by hand. Everything helm owns carries app.kubernetes.io/managed-by, which helm
+// stamps on every object of a release, on top of the helm_lib_module_labels pair.
+const helmBootstrapSecretsState = `
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: manual-bootstrap-for-worker
+  namespace: d8-cloud-instance-manager
+  labels:
+    heritage: deckhouse
+    module: node-manager
+    app.kubernetes.io/managed-by: Helm
+type: Opaque
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: capi-worker-1a2b3c4d
+  namespace: d8-cloud-instance-manager
+  labels:
+    heritage: deckhouse
+    module: node-manager
+    app.kubernetes.io/managed-by: Helm
+  annotations:
+    # The legacy CAPI bootstrap template already stamped this annotation, so the
+    # hook's patch of this Secret is a no-op.
+    helm.sh/resource-policy: keep
+type: Opaque
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: mcm-worker-deadbeef
+  namespace: d8-cloud-instance-manager
+  labels:
+    heritage: deckhouse
+    module: node-manager
+    app.kubernetes.io/managed-by: Helm
+type: Opaque
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: deckhouse-registry
+  namespace: d8-cloud-instance-manager
+  labels:
+    heritage: deckhouse
+    module: node-manager
+    app.kubernetes.io/managed-by: Helm
+type: Opaque
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: bashible-bashbooster
+  namespace: d8-cloud-instance-manager
+  labels:
+    heritage: deckhouse
+    module: node-manager
+    app.kubernetes.io/managed-by: Helm
+type: Opaque
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: bashible-api-server-tls
+  namespace: d8-cloud-instance-manager
+  labels:
+    heritage: deckhouse
+    module: node-manager
+    app.kubernetes.io/managed-by: Helm
+type: Opaque
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: registry-packages-proxy-token
+  namespace: d8-cloud-instance-manager
+  labels:
+    heritage: deckhouse
+    module: registry-packages-proxy
+    app: registry-packages-proxy
+    app.kubernetes.io/managed-by: Helm
+type: Opaque
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: manual-bootstrap-for-handmade
+  namespace: d8-cloud-instance-manager
+  labels:
+    heritage: deckhouse
+    module: node-manager
+type: Opaque
+`
+
+var _ = Describe("node-manager :: hooks :: set_keep_policy_on_capi_resources ::", func() {
+	f := HookExecutionConfigInit(`{}`, `{}`)
+
+	keepPolicy := func(name string) string {
+		secret := f.KubernetesResource("Secret", "d8-cloud-instance-manager", name)
+		return secret.Field(`metadata.annotations.helm\.sh/resource-policy`).String()
+	}
+
+	Context("with the bootstrap secrets helm used to render", func() {
+		BeforeEach(func() {
+			f.KubeStateSet(helmBootstrapSecretsState)
+			f.BindingContexts.Set(f.GenerateBeforeHelmContext())
+			f.RunHook()
+		})
+
+		// Every Secret this migration takes over. The hook runs before helm, so missing
+		// one means the release that stops rendering it prunes it and a node loses its
+		// bootstrap data.
+		It("stamps keep policy on every bootstrap secret helm used to render", func() {
+			Expect(f).To(ExecuteSuccessfully())
+
+			for _, name := range []string{
+				"manual-bootstrap-for-worker", // manual bootstrap secret of a static group
+				"capi-worker-1a2b3c4d",        // CAPI bootstrap secret, zone-hashed name
+				"mcm-worker-deadbeef",         // MCM machine-class secret, zone-hashed name
+			} {
+				Expect(keepPolicy(name)).To(Equal("keep"), "secret %s must survive the handover", name)
+			}
+		})
+
+		// d8-cloud-instance-manager is shared. Everything else in it keeps its own
+		// lifecycle, the registry-packages-proxy token most of all: that is another
+		// module's release, and the annotation outlives this hook.
+		It("leaves the secrets this migration does not take over alone", func() {
+			Expect(f).To(ExecuteSuccessfully())
+
+			for _, name := range []string{
+				"deckhouse-registry",
+				"bashible-bashbooster",
+				"bashible-api-server-tls",
+				"registry-packages-proxy-token",
+			} {
+				Expect(keepPolicy(name)).To(BeEmpty(), "secret %s is not this migration's to keep", name)
+			}
+		})
+
+		// The name matches a shape this hook takes over; only the managed-by label
+		// tells the two apart, and helm cannot prune what it never owned.
+		It("leaves a secret helm does not manage alone", func() {
+			Expect(f).To(ExecuteSuccessfully())
+
+			Expect(keepPolicy("manual-bootstrap-for-handmade")).To(BeEmpty())
+		})
+	})
+
+	Context("with provider credentials previously rendered by helm", func() {
+		BeforeEach(func() {
+			f.ValuesSet("nodeManager.internal.cloudProvider.capiClusterKind", "OpenStackCluster")
+			f.ValuesSet("nodeManager.internal.cloudProvider.capiClusterAPIVersion", "infrastructure.cluster.x-k8s.io/v1beta1")
+			f.ValuesSet("nodeManager.internal.cloudProvider.capiClusterName", "openstack")
+			f.KubeStateSet(`
+apiVersion: v1
+kind: Secret
+metadata:
+  name: capi-user-credentials
+  namespace: d8-cloud-instance-manager
+  labels:
+    app.kubernetes.io/managed-by: Helm
+type: Opaque
+`)
+			f.BindingContexts.Set(f.GenerateBeforeHelmContext())
+			f.RunHook()
+		})
+
+		It("protects the Secret before the old manifest is removed", func() {
+			Expect(f).To(ExecuteSuccessfully())
+			Expect(keepPolicy(capiCredentialsSecretName)).To(Equal("keep"))
+		})
+	})
+
+	Context("with provider cluster resources previously rendered by helm", func() {
+		BeforeEach(func() {
+			f.RegisterCRD("infrastructure.cluster.x-k8s.io", "v1beta1", "OpenStackCluster", true)
+			f.RegisterCRD("infrastructure.cluster.x-k8s.io", "v1alpha1", "DeckhouseControlPlane", true)
+			f.ValuesSet("nodeManager.internal.cloudProvider.capiClusterKind", "OpenStackCluster")
+			f.ValuesSet("nodeManager.internal.cloudProvider.capiClusterAPIVersion", "infrastructure.cluster.x-k8s.io/v1beta2")
+			f.ValuesSet("nodeManager.internal.cloudProvider.capiClusterName", "openstack")
+			f.KubeStateSet(`
+---
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  name: openstackclusters.infrastructure.cluster.x-k8s.io
+spec:
+  group: infrastructure.cluster.x-k8s.io
+  names:
+    kind: OpenStackCluster
+    plural: openstackclusters
+  scope: Namespaced
+  versions:
+  - name: v1beta1
+    served: true
+    storage: true
+status:
+  storedVersions: [v1beta1]
+---
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  name: deckhousecontrolplanes.infrastructure.cluster.x-k8s.io
+spec:
+  group: infrastructure.cluster.x-k8s.io
+  names:
+    kind: DeckhouseControlPlane
+    plural: deckhousecontrolplanes
+  scope: Namespaced
+  versions:
+  - name: v1alpha1
+    served: true
+    storage: true
+status:
+  storedVersions: [v1alpha1]
+---
+apiVersion: infrastructure.cluster.x-k8s.io/v1beta1
+kind: OpenStackCluster
+metadata:
+  name: openstack
+  namespace: d8-cloud-instance-manager
+  labels:
+    app.kubernetes.io/managed-by: Helm
+---
+apiVersion: infrastructure.cluster.x-k8s.io/v1alpha1
+kind: DeckhouseControlPlane
+metadata:
+  name: openstack-control-plane
+  namespace: d8-cloud-instance-manager
+  labels:
+    app.kubernetes.io/managed-by: Helm
+`)
+			f.BindingContexts.Set(f.GenerateBeforeHelmContext())
+			f.RunHook()
+		})
+
+		It("protects resources through the CRD versions that are actually stored", func() {
+			Expect(f).To(ExecuteSuccessfully())
+			Expect(f.KubernetesResource(
+				"OpenStackCluster", capiNamespace, "openstack",
+			).Field(`metadata.annotations.helm\.sh/resource-policy`).String()).To(Equal("keep"))
+			Expect(f.KubernetesResource(
+				"DeckhouseControlPlane", capiNamespace, "openstack-control-plane",
+			).Field(`metadata.annotations.helm\.sh/resource-policy`).String()).To(Equal("keep"))
+		})
+	})
+})

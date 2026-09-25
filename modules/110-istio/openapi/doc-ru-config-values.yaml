@@ -72,6 +72,77 @@ properties:
               tolerations для DaemonSet'а ingressgateway.
 
               Структура, аналогичная `spec.tolerations` пода Kubernetes.
+      ambientGateway:
+        description: |
+          Параметры ambient east-west-шлюза.
+
+          Отдельный компонент со своим сервисом-инлетом, независимый от [`ingressGateway`](#parameters-alliance-ingressgateway): соседние кластеры обращаются к нему по double HBONE, а не по mTLS/SNI, и один сервис не может нести оба протокола. Размещение, инлет и объявляемые адреса настраиваются здесь независимо, поэтому шлюзы могут стоять за разными балансировщиками — или за одним, если указать его адрес в обоих списках `advertise` с портом каждого шлюза.
+
+          Используется только при включённом параметре [`ambient.multicluster.enabled`](#parameters-ambient-multicluster-enabled), в остальных случаях не влияет ни на что.
+        properties:
+          advertise:
+            description: |
+              Фактические адреса, которые будут объявлены удалённым кластерам как ambient east-west-шлюз этого кластера.
+
+              Если не указано, адреса будут выявлены автоматически из сервиса самого шлюза.
+
+              Независим от [`ingressGateway.advertise`](#parameters-alliance-ingressgateway-advertise), который описывает sidecar east-west-шлюз. Если оба шлюза стоят за одним балансировщиком, укажите его адрес в обоих списках и задайте каждому свой `port`.
+            items:
+              properties:
+                address:
+                  description: |
+                    IP-адрес (IPv4 или IPv6) либо DNS-имя, по которому соседние кластеры обращаются к ambient east-west-шлюзу.
+                port:
+                  type: integer
+                  description: Порт, по которому соседние кластеры обращаются по этому адресу к ambient east-west-шлюзу.
+          inlet:
+            description: |
+              Способ публикации ambient east-west-шлюза.
+
+              В любом случае весь межкластерный ambient-трафик идёт через ровно один адрес.
+
+              Возможные значения:
+
+              - `LoadBalancer` — рекомендуемый способ.
+              - `NodePort` — для площадок без LB.
+          nodePort:
+            description: Специальные настройки для ambient east-west-шлюза с инлетом `NodePort`.
+            properties:
+              port:
+                type: integer
+                description: |
+                  Статичный порт для сервиса с типом NodePort.
+
+                  Должен быть из диапазона, заданного аргументом `kube-apiserver --service-node-port-range` (по умолчанию 30000-32767).
+
+                  Node port'ы выделяются на весь кластер, поэтому значение должно отличаться от [`ingressGateway.nodePort.port`](#parameters-alliance-ingressgateway-nodeport-port).
+          serviceAnnotations:
+            description: |
+              Дополнительные аннотации для сервиса ambient east-west-шлюза.
+
+              Полезно, например, для настройки локального LB в Yandex Cloud (аннотация `yandex.cpi.flant.com/listener-subnet-id`).
+
+              Задаются независимо от [`ingressGateway.serviceAnnotations`](#parameters-alliance-ingressgateway-serviceannotations): аннотация, которая закрепляет один внешний ресурс — статический IP, пул адресов, существующий балансировщик, — не может относиться к двум сервисам одновременно.
+          loadBalancerClass:
+            description: |
+              Класс балансировщика входящих сетевых запросов (пробрасывается в параметр `spec.loadBalancerClass` заказанного сервиса с типом `LoadBalancer`).
+
+              Применяется только при `inlet`, равном `LoadBalancer`.
+          gatewayPodAnnotations:
+            description: |
+              Дополнительные аннотации для подов DaemonSet'а ambient east-west-шлюза.
+
+              Аннотации, которые задаёт сам модуль, имеют приоритет.
+          nodeSelector:
+            description: |
+              Селектор для DaemonSet'а ambient east-west-шлюза.
+
+              Структура, аналогичная `spec.nodeSelector` пода Kubernetes.
+          tolerations:
+            description: |
+              tolerations для DaemonSet'а ambient east-west-шлюза.
+
+              Структура, аналогичная `spec.tolerations` пода Kubernetes.
   tracing:
     description: |
       Параметры трассировки.
@@ -572,6 +643,18 @@ properties:
           Включить ambient mesh.
 
           Рабочие нагрузки в режиме ambient не могут участвовать в [федерации](./#федерация) и [мультикластере](./#мультикластер). Федерация и мультикластер при этом продолжают работать для рабочих нагрузок в режиме сайдкаров. Подробнее — в разделе [Ограничения ambient mesh](./#ограничения-ambient-mesh).
+      multicluster:
+        description: |
+          Нативный ambient-мультикластер: позволяет нагрузкам в режиме ambient обращаться
+          к сервисам соседних кластеров через ambient east-west-шлюз (double HBONE).
+
+          Требует включённых [`ambient.enabled`](#parameters-ambient-enabled) и
+          [`multicluster.enabled`](#parameters-multicluster-enabled). Сам шлюз настраивается
+          в [`alliance.ambientGateway`](#parameters-alliance-ambientgateway).
+        properties:
+          enabled:
+            description: |
+              Включить нативный ambient-мультикластер.
       waypointController:
         description: |
           Настройки для компонента waypoint-controller.

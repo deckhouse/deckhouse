@@ -145,7 +145,7 @@ func TestNodeConfigListsEveryExtensionNodeControllerRenders(t *testing.T) {
 		names = append(names, e.Name)
 	}
 	require.ElementsMatch(t,
-		[]string{containerdExtension, kubeletExtension, cniExtension, nodeletExtension}, names)
+		[]string{containerdExtension, kubeletExtension, cniExtension, nodeletExtension, guestAgentExtension}, names)
 }
 
 // The one containerd and the one CNI extension the installer ships are found by
@@ -162,38 +162,33 @@ func TestSysextDigestsIgnoresNonVersionSuffixes(t *testing.T) {
 	})
 }
 
-// The sandbox image reference is built from the configured registry, not from
-// the raw imagesRepo: the trailing-slash row shows why, as ".../ce/@sha256:…"
-// is not a reference containerd can pull. The OS image needs no such assembly —
-// it travels as a bare digest.
+// The registry is split from the configured imagesRepo, not taken raw: the
+// trailing-slash row shows why. No sandbox image is rendered — the containerd
+// extension ships pause, as on every node node-controller renders.
 func TestNodeConfigImageReferencesFollowTheConfiguredRegistry(t *testing.T) {
 	tests := []struct {
 		name        string
 		imagesRepo  string
 		wantAddress string
 		wantPath    string
-		wantSandbox string
 	}{
 		{
 			name:        "address, port and path",
 			imagesRepo:  "registry.internal.example.com:5000/mirror/deckhouse",
 			wantAddress: "registry.internal.example.com:5000",
 			wantPath:    "/mirror/deckhouse",
-			wantSandbox: "registry.internal.example.com:5000/mirror/deckhouse@" + immutabletest.PauseDigest,
 		},
 		{
 			name:        "a trailing slash the schema lets through",
 			imagesRepo:  "registry.example.com/deckhouse/ce/",
 			wantAddress: "registry.example.com",
 			wantPath:    "/deckhouse/ce",
-			wantSandbox: "registry.example.com/deckhouse/ce@" + immutabletest.PauseDigest,
 		},
 		{
 			name:        "no path at all",
 			imagesRepo:  "registry.example.com",
 			wantAddress: "registry.example.com",
 			wantPath:    "",
-			wantSandbox: "registry.example.com@" + immutabletest.PauseDigest,
 		},
 	}
 
@@ -210,7 +205,7 @@ func TestNodeConfigImageReferencesFollowTheConfiguredRegistry(t *testing.T) {
 
 			require.Equal(t, tt.wantAddress, nodeConfig.Spec.Registry.Address)
 			require.Equal(t, tt.wantPath, nodeConfig.Spec.Registry.Path)
-			require.Equal(t, tt.wantSandbox, nodeConfig.Spec.ContainerRuntime.SandboxImage)
+			require.Empty(t, nodeConfig.Spec.ContainerRuntime.SandboxImage)
 		})
 	}
 }

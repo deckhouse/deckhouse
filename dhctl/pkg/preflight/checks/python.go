@@ -27,13 +27,15 @@ import (
 )
 
 type PythonCheck struct {
-	NodeInterface libcon.Interface
+	// NodeInterface is resolved when the check runs, not when its suite is built: see
+	// NodeInterfaceFunc.
+	NodeInterface NodeInterfaceFunc
 }
 
 const PythonCheckName preflight.CheckName = "python-modules"
 
 func (PythonCheck) Description() string {
-	return "python and required modules are installed"
+	return "the node has Python with the modules Deckhouse needs"
 }
 
 func (PythonCheck) Phase() preflight.Phase {
@@ -41,13 +43,25 @@ func (PythonCheck) Phase() preflight.Phase {
 }
 
 func (PythonCheck) RetryPolicy() preflight.RetryPolicy {
-	return preflight.DefaultRetryPolicy
+	return preflight.NoRetry
 }
 
-func (c PythonCheck) Run(ctx context.Context) error {
-	pythonBinary, err := detectPythonBinary(ctx, c.NodeInterface)
+func (c PythonCheck) Run(ctx context.Context) (string, error) {
+	nodeInterface, err := c.NodeInterface(ctx)
 	if err != nil {
-		return fmt.Errorf("detecting Python binary name: %w", err)
+		return "", err
+	}
+	host := hostPhrase(nodeInterface)
+
+	pythonBinary, err := detectPythonBinary(ctx, nodeInterface)
+	if err != nil {
+		return "", preflight.Permanent(&preflight.Failure{
+			Checked:  fmt.Sprintf("python3, python2 and python on %s", host),
+			Observed: "the node has none of them on PATH",
+			Expected: "a Python interpreter on PATH",
+			Fix:      "install python3 on the node",
+			Err:      err,
+		})
 	}
 
 	requiredPythonModules := [][]string{
@@ -58,25 +72,39 @@ func (c PythonCheck) Run(ctx context.Context) error {
 		{"http.server", "SocketServer"},
 	}
 
+	// Every missing module, not the first: they are installed together, and reporting them one
+	// per run costs a bootstrap attempt each.
+	var missing []string
+
 	for _, moduleSet := range requiredPythonModules {
 		found := false
 		for _, moduleName := range moduleSet {
-			cmd := c.NodeInterface.Command(pythonBinary, "-c", "import "+moduleName)
+			cmd := nodeInterface.Command(pythonBinary, "-c", "import "+moduleName)
 			if err := cmd.Run(ctx); err != nil {
-				if ee, ok := errors.AsType[*exec.ExitError](err); ok && ee.ExitCode() != 255 {
+				// A non-zero status is the module being absent; 255 is the transport failing.
+				if status, ok := exitStatus(err); ok && status != 255 {
 					continue
 				}
-				return fmt.Errorf("Unexpected error during python modules validation: %w", err)
+				return "", scriptFailure("check the Python modules", nodeInterface, nil, err)
 			}
 			found = true
 			break
 		}
 		if !found {
-			return fmt.Errorf("Please install at least one of the following python modules on the node to continue: %s", strings.Join(moduleSet, ", "))
+			missing = append(missing, strings.Join(moduleSet, " or "))
 		}
 	}
 
-	return nil
+	if len(missing) > 0 {
+		return "", preflight.Permanent(&preflight.Failure{
+			Checked:  fmt.Sprintf("%s on %s", pythonBinary, host),
+			Observed: "- " + strings.Join(missing, "\n- "),
+			Expected: "the standard library modules the bootstrap scripts import",
+			Fix:      fmt.Sprintf("install the missing modules on the node (on most distributions they come with the %s package)", pythonBinary),
+		})
+	}
+
+	return fmt.Sprintf("%s on %s has the required modules", pythonBinary, host), nil
 }
 
 func detectPythonBinary(ctx context.Context, nodeInterface libcon.Interface) (string, error) {
@@ -90,22 +118,23 @@ func detectPythonBinary(ctx context.Context, nodeInterface libcon.Interface) (st
 		if exitErr, ok := errors.AsType[*exec.ExitError](err); ok && exitErr.ExitCode() != 255 {
 			continue
 		}
-		return "", fmt.Errorf("Unexpected error during python binary lookup: %w", err)
+		return "", fmt.Errorf("look for a Python interpreter on the node: %w", err)
 	}
 
 	return "", fmt.Errorf(
-		"Python was not found under any of the expected names (%s), please install Python 2 or 3 on the node",
+		"no %s on PATH",
 		strings.Join(possibleBinaries, ", "),
 	)
 }
 
-func Python(nodeInterface libcon.Interface) preflight.Check {
+func Python(nodeInterface NodeInterfaceFunc) preflight.Check {
 	check := PythonCheck{NodeInterface: nodeInterface}
 	return preflight.Check{
 		Name:        PythonCheckName,
 		Description: check.Description(),
 		Phase:       check.Phase(),
-
-		Run: check.Run,
+		Retry:       check.RetryPolicy(),
+		Timeout:     preflight.NodeCheckTimeout,
+		Run:         check.Run,
 	}
 }

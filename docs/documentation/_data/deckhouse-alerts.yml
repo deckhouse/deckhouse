@@ -1705,6 +1705,21 @@ alerts:
         Additional control plane isn't working.
       severity: "4"
       markupFormat: markdown
+    - name: D8IstioAllianceAmbientGatewayAddressUnusable
+      sourceFile: ee/modules/110-istio/monitoring/prometheus-rules/alliance.yaml
+      moduleUrl: 110-istio
+      module: istio
+      edition: ee
+      description: |
+        The ambient east-west gateway is deployed in this cluster, but publishes no address peer clusters can dial: either it has no external address at all, or every address it has is neither an IP address nor a usable DNS name. The `metadata-exporter` pod logs in `d8-istio` say which.
+
+        Ambient-mode workloads in peer clusters therefore cannot reach services here. Sidecar-mode multicluster is unaffected.
+
+        To fix, set `alliance.ambientGateway.advertise` to the IP address or DNS name peers should dial. Or make the load balancer assign an address (`alliance.ambientGateway.loadBalancerClass`, `.serviceAnnotations`). Or switch `alliance.ambientGateway.inlet` to `NodePort` and check that gateway pods are scheduled (`.nodeSelector`, `.tolerations`). Or turn `ambient.multicluster.enabled` off if ambient multicluster is not needed here.
+      summary: |
+        The ambient east-west gateway has no address peers can dial.
+      severity: "6"
+      markupFormat: markdown
     - name: D8IstioAllianceDataPlaneNotConnected
       sourceFile: ee/modules/110-istio/monitoring/prometheus-rules/alliance-dataplane-health.yaml
       moduleUrl: 110-istio
@@ -4280,15 +4295,15 @@ alerts:
         metadata:
           name: user-authn
         spec:
-          version: 2
+          version: 3
           settings:
             idTokenTTL: 1h
         ```
 
-        New ModuleConfig values with `idTokenTTL >= 6h` are rejected by OpenAPI validation; this alert covers clusters that still have a long TTL from before the restriction was added.
+        Settings version 3 rejects `idTokenTTL >= 6h`. A ModuleConfig of an earlier settings version with such a value is still accepted and its value is converted to `5h59m`, so Dex already runs with `5h59m`; this alert keeps firing until the ModuleConfig itself is updated.
       summary: |
         user-authn idTokenTTL is {{ $labels.id_token_ttl }}, which is too long.
-      severity: "6"
+      severity: "4"
       markupFormat: markdown
     - name: D8UserAuthzAuthorizationRuleInvalid
       sourceFile: modules/140-user-authz/monitoring/prometheus-rules/user-authz-controller.yaml
@@ -4447,7 +4462,7 @@ alerts:
       description: |-
         The `{{ $labels.binding_kind }}` `{{ $labels.binding_name }}`{{ if $labels.namespace }} in namespace `{{ $labels.namespace }}`{{ end }} references the deprecated RBACv2 ClusterRole `{{ $labels.role_name }}`.
 
-        The RBACv2 role model was renamed: `d8:manage:<subsystem|all>:<level>` became `d8:system:*` / `d8:subsystem:*:*`, and `d8:use:role:<level>` became `d8:namespace:<level>`. This name still works via a compatibility alias kept for ONE release and will be removed in the next one — after that this binding will grant nothing.
+        The RBACv2 role model was renamed: `d8:manage:<subsystem|all>:<level>` became `d8:system:*` / `d8:subsystem:*:*`, and `d8:use:role:<level>` became `d8:namespace:<level>`. This name still works via a compatibility alias kept for ONE release and will be removed in the next one — after that this binding will grant nothing. The release that removes the aliases is held back by the `deprecatedRBACv2BindingsCount` release requirement until this binding is recreated on the new name.
 
         Migrate the binding to the new role name. Because `roleRef` is immutable, delete and recreate the binding pointing at the new role:
         ```bash
@@ -4494,7 +4509,7 @@ alerts:
 
         In DKP 1.78, the role model changes the labels that drive aggregation. Legacy custom roles get **no compatibility aliases** and will stop aggregating permissions entirely after the upgrade.
 
-        Until every such role is migrated, the upgrade to DKP 1.78 is blocked by the `legacyRBACv2CustomRolesCount` release requirement.
+        The upgrade to DKP 1.78 is not blocked. Until every such role is migrated, the upgrade to the release after 1.78 is held back by the `legacyRBACv2CustomRolesCount` release requirement.
 
         Migrate the role to the new scheme:
 

@@ -22,6 +22,7 @@ import (
 	"slices"
 
 	"github.com/go-logr/logr"
+	corev1 "k8s.io/api/core/v1"
 	apiequality "k8s.io/apimachinery/pkg/api/equality"
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -29,6 +30,7 @@ import (
 
 	v1 "github.com/deckhouse/node-controller/api/deckhouse.io/v1"
 	deckhousev1alpha1 "github.com/deckhouse/node-controller/api/deckhouse.io/v1alpha1"
+	nodecommon "github.com/deckhouse/node-controller/internal/common"
 )
 
 // readyConditionType answers whether a request's sysext resolved to an image the
@@ -66,8 +68,14 @@ func (r *Reconciler) reconcileNERStatuses(ctx context.Context, logger logr.Logge
 		return fmt.Errorf("read what the nodes report about NodeExtensionRequests: %w", err)
 	}
 
+	// The denominator: read once for every request, since it is the same listing.
+	nodes := &corev1.NodeList{}
+	if err := r.Client.List(ctx, nodes); err != nil {
+		return fmt.Errorf("list Nodes for the NodeExtensionRequest counts: %w", err)
+	}
+
 	for i := range ners.Items {
-		if err := r.updateNERStatus(ctx, &ners.Items[i], conflicts, groups, outcomes[ners.Items[i].Name]); err != nil {
+		if err := r.updateNERStatus(ctx, &ners.Items[i], conflicts, groups, nodes.Items, outcomes[ners.Items[i].Name]); err != nil {
 			logger.Error(err, "cannot update NodeExtensionRequest status", "request", ners.Items[i].Name)
 		}
 	}
@@ -93,10 +101,11 @@ func (r *Reconciler) immutableNodeGroupNames(ctx context.Context) ([]string, err
 
 // updateNERStatus computes and patches one request's status, skipping the write
 // when nothing changed.
-func (r *Reconciler) updateNERStatus(ctx context.Context, ner *deckhousev1alpha1.NodeExtensionRequest, conflicts map[string]nerConflict, immutableGroups []string, outcome nerOutcome) error {
+func (r *Reconciler) updateNERStatus(ctx context.Context, ner *deckhousev1alpha1.NodeExtensionRequest, conflicts map[string]nerConflict, immutableGroups []string, nodes []corev1.Node, outcome nerOutcome) error {
 	desired := ner.Status.DeepCopy()
 	desired.ObservedGeneration = ner.Generation
-	desired.MatchedNodeGroups = matchedNodeGroups(ner, immutableGroups)
+	desired.MatchedNodeGroups = matchedNodeGroups(ner.Spec.NodeGroupSelector.MatchNames, immutableGroups)
+	desired.MatchedNodes = nerMatchedNodeCount(ner, nodes, desired.MatchedNodeGroups)
 	desired.AppliedNodes = outcome.applied
 	desired.FailedNodes = outcome.failed
 	desired.FailureMessage = outcome.message
@@ -106,6 +115,12 @@ func (r *Reconciler) updateNERStatus(ctx context.Context, ner *deckhousev1alpha1
 	desired.Phase = phaseDegraded
 	status := metav1.ConditionFalse
 	reason, message := nerStatusReason(ner, conflicts)
+	// A refusal here reached no node, so nobody is late with an answer. Only a
+	// refusal by the nodes keeps the arithmetic: there they did get it.
+	desired.PendingNodes = pendingNodeCount(desired.MatchedNodes, outcome.applied, outcome.failed)
+	if reason != "" {
+		desired.PendingNodes = 0
+	}
 	switch {
 	case reason == "" && outcome.failed > 0:
 		// It resolved here and the nodes refused it. Reporting Ready on the
@@ -118,7 +133,7 @@ func (r *Reconciler) updateNERStatus(ctx context.Context, ner *deckhousev1alpha1
 		desired.Phase = phaseReady
 		status = metav1.ConditionTrue
 		reason = reasonResolved
-		message = fmt.Sprintf("the sysext resolved; %d node(s) report it applied", outcome.applied)
+		message = fmt.Sprintf("the sysext resolved; %d of %d node(s) report it applied", outcome.applied, desired.MatchedNodes)
 	}
 	meta.SetStatusCondition(&desired.Conditions, metav1.Condition{
 		Type:               readyConditionType,
@@ -139,13 +154,28 @@ func (r *Reconciler) updateNERStatus(ctx context.Context, ner *deckhousev1alpha1
 	return nil
 }
 
-// matchedNodeGroups returns the immutable NodeGroups the request selects: the
+// nerMatchedNodeCount counts the nodes of the selected groups the render gives
+// the sysext to, node labels included (nerMatchesNode).
+func nerMatchedNodeCount(ner *deckhousev1alpha1.NodeExtensionRequest, nodes []corev1.Node, groups []string) int32 {
+	var count int32
+	for i := range nodes {
+		group := nodes[i].Labels[nodecommon.NodeGroupLabel]
+		if !slices.Contains(groups, group) {
+			continue
+		}
+		if nerMatchesNode(ner, &nodes[i], group) {
+			count++
+		}
+	}
+	return count
+}
+
+// matchedNodeGroups returns the NodeGroups a selector picks out of groups: the
 // listed names it intersects, or all of them when it names none.
-func matchedNodeGroups(ner *deckhousev1alpha1.NodeExtensionRequest, immutableGroups []string) []string {
-	names := ner.Spec.NodeGroupSelector.MatchNames
+func matchedNodeGroups(matchNames, groups []string) []string {
 	var matched []string
-	for _, name := range immutableGroups {
-		if len(names) == 0 || slices.Contains(names, name) {
+	for _, name := range groups {
+		if len(matchNames) == 0 || slices.Contains(matchNames, name) {
 			matched = append(matched, name)
 		}
 	}

@@ -316,6 +316,7 @@ users:
   - system:serviceaccount:d8-cni-simple-bridge:cni-simple-bridge
   - system:serviceaccount:d8-csi-vsphere:cloud-data-discoverer
   - system:serviceaccount:d8-descheduler:descheduler
+  - system:serviceaccount:d8-istio:alliance-ambientgateway
   - system:serviceaccount:d8-istio:alliance-healthcheck
   - system:serviceaccount:d8-istio:alliance-ingressgateway
   - system:serviceaccount:d8-istio:alliance-metadata-exporter
@@ -799,6 +800,7 @@ rules:
       - system:serviceaccount:d8-cni-simple-bridge:cni-simple-bridge
       - system:serviceaccount:d8-csi-vsphere:cloud-data-discoverer
       - system:serviceaccount:d8-descheduler:descheduler
+      - system:serviceaccount:d8-istio:alliance-ambientgateway
       - system:serviceaccount:d8-istio:alliance-healthcheck
       - system:serviceaccount:d8-istio:alliance-ingressgateway
       - system:serviceaccount:d8-istio:alliance-metadata-exporter

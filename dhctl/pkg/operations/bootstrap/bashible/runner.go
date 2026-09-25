@@ -20,12 +20,14 @@ import (
 	"fmt"
 	"log/slog"
 	"os/exec"
+	"strconv"
 	"strings"
 	"time"
 
 	"go.opentelemetry.io/otel/trace"
 
 	libcon "github.com/deckhouse/lib-connection/pkg"
+	libconutils "github.com/deckhouse/lib-connection/pkg/ssh/utils"
 	dhlog "github.com/deckhouse/lib-dhctl/pkg/logger"
 	"github.com/deckhouse/lib-dhctl/pkg/retry"
 
@@ -40,11 +42,32 @@ const (
 )
 
 var (
-	alreadyRunDefaultOpts      = retry.AttemptsWithWaitOpts(300, 1*time.Second)
-	prepareDefaultOpts         = retry.AttemptsWithWaitOpts(300, 1*time.Second)
-	executeBundleDefaultOpts   = retry.AttemptsWithWaitOpts(100, 1*time.Second)
+	alreadyRunDefaultOpts = retry.AttemptsWithWaitOpts(300, 1*time.Second)
+	prepareDefaultOpts    = retry.AttemptsWithWaitOpts(300, 1*time.Second)
+	// executeBundleDefaultOpts is how many times the whole bundle is started again. It was 100.
+	//
+	// A step that keeps failing is already bounded twice over — bashible stops it at
+	// bashibleStepRetries, and lib-connection kills the bundle at its own limit of 10 repeats —
+	// and BreakIf below stops the bundle being restarted for that reason at all. What is left
+	// for this budget is a bundle that died for a reason a retry can fix: the SSH connection
+	// dropping, the node rebooting, an upload failing. Ten attempts at those is generous, and
+	// each one is a whole bundle run rather than a quick probe.
+	executeBundleDefaultOpts   = retry.AttemptsWithWaitOpts(10, 1*time.Second)
 	readFileForInfoDefaultOpts = retry.AttemptsWithWaitOpts(30, 1*time.Second)
 )
+
+// bashibleStepRetries is passed to bashible.sh as --max-retries, so a step that cannot succeed
+// stops itself and says so:
+//
+//	ERROR: Failed to execute step 005_check_hostname, retry limit reached
+//
+// Without it MAX_RETRIES is unset and bashible's `until` loop around each step runs forever; the
+// step ends only when lib-connection notices the step header repeating and kills the whole
+// bundle, which surfaces as "Timeout step running" and names no step.
+//
+// It is below lib-connection's own limit of 10 on purpose: bashible has to reach its limit first,
+// or the process is killed before it can report which step gave up.
+const bashibleStepRetries = 8
 
 type LoopsParams struct {
 	AlreadyRun      retry.Params
@@ -215,6 +238,16 @@ func (r *Runner) ExecuteBundle(ctx context.Context, params ExecuteBundleParams) 
 	}
 
 	return retry.NewLoopWithParams(loopParams).
+		// lib-connection kills the bundle once one step has repeated more than its own limit, and
+		// says so with ErrBundleTimeout. Restarting the bundle then runs the same step into the
+		// same wall again: with the hundred bundle attempts this loop used to allow, that is a
+		// thousand runs of the same failing step, and where the hundreds of identical
+		// "FAIL Hostname '…'" lines come from (issue #15623). The error is worth reporting once,
+		// and retrying not at all.
+		//
+		// The predicate is written out rather than built with retry.IsErr, which compares the
+		// other way round and does not see through the wrapping attemptExecuteBundle adds.
+		BreakIf(func(err error) bool { return errors.Is(err, libconutils.ErrBundleTimeout) }).
 		RunContext(ctx, func() error {
 			// we do not need to restart tunnel because we have HealthMonitor
 			logger := r.logger
@@ -242,7 +275,8 @@ func (r *Runner) attemptExecuteBundle(
 	// we need this, due to not create relay in every attempt, but we need to correct hook data from bashible
 	spanUpdater(span)
 
-	bundleCmd := r.nodeInterface.UploadScript("bashible.sh", "--local")
+	bundleCmd := r.nodeInterface.UploadScript("bashible.sh", "--local",
+		"--max-retries", strconv.Itoa(bashibleStepRetries))
 	bundleCmd.WithCleanupAfterExec(false)
 	bundleCmd.Sudo()
 	parentDir := params.BundleDir + "/var/lib"

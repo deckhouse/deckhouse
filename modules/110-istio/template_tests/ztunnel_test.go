@@ -26,12 +26,12 @@ import (
 var _ = Describe("Module :: istio :: helm template :: ztunnel", func() {
 	f := SetupHelmConfig(``)
 
-	Context("Ambient mode enabled with global version 1.25.2 (supports ambient)", func() {
+	Context("Ambient mode enabled with global version 1.25 (supports ambient)", func() {
 		BeforeEach(func() {
 			f.ValuesSetFromYaml("global", globalValues)
 			f.ValuesSet("global.modulesImages", GetModulesImages())
 			f.ValuesSetFromYamlWithOpenAPIDefaults("istio", istioValues)
-			f.ValuesSet("istio.internal.globalVersion", "1.25.2")
+			f.ValuesSet("istio.internal.globalVersion", "1.25")
 			f.ValuesSet("istio.ambient.enabled", true)
 			f.HelmRender()
 		})
@@ -58,13 +58,13 @@ var _ = Describe("Module :: istio :: helm template :: ztunnel", func() {
 		})
 	})
 
-	Context("Ambient mode enabled with global version 1.23.0 (does not support ambient)", func() {
+	Context("Ambient mode enabled with global version 1.23 (does not support ambient)", func() {
 		BeforeEach(func() {
 			f.ValuesSetFromYaml("global", globalValues)
 			f.ValuesSet("global.modulesImages", GetModulesImages())
 			f.ValuesSetFromYamlWithOpenAPIDefaults("istio", istioValues)
-			f.ValuesSetFromYaml(`istio.internal.versionMap.1\.23\.0`, `{"supportsAmbient":false,"fullVersion":"1.23.0","imageSuffix":"V1x25x2"}`)
-			f.ValuesSet("istio.internal.globalVersion", "1.23.0")
+			f.ValuesSetFromYaml(`istio.internal.versionMap.1\.23`, `{"revision":"v1x23","supportsAmbient":false,"fullVersion":"1.23.0","imageSuffix":"V1x25x2"}`)
+			f.ValuesSet("istio.internal.globalVersion", "1.23")
 			f.ValuesSet("istio.ambient.enabled", true)
 			f.HelmRender()
 		})
@@ -79,12 +79,12 @@ var _ = Describe("Module :: istio :: helm template :: ztunnel", func() {
 		})
 	})
 
-	Context("Ambient mode disabled with global version 1.25.2", func() {
+	Context("Ambient mode disabled with global version 1.25", func() {
 		BeforeEach(func() {
 			f.ValuesSetFromYaml("global", globalValues)
 			f.ValuesSet("global.modulesImages", GetModulesImages())
 			f.ValuesSetFromYamlWithOpenAPIDefaults("istio", istioValues)
-			f.ValuesSet("istio.internal.globalVersion", "1.25.2")
+			f.ValuesSet("istio.internal.globalVersion", "1.25")
 			f.ValuesSet("istio.ambient.enabled", false)
 			f.HelmRender()
 		})

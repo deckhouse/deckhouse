@@ -128,8 +128,14 @@ func (o BuildInfo) ToSpanAttributes() []otattribute.KeyValue {
 	}
 }
 
-// AppVersion and AppEdition are populated by the linker via "-X" build flags
-// (see dhctl/Makefile). They must not be assigned at runtime.
+// AppVersion and AppEdition are populated by the linker via "-X" build flags.
+//
+// Only the werf build sets them; the Makefile does not, so a locally built dhctl reports "local"
+// for both. That is deliberate: a binary with a real version is a binary werf produced. The one
+// check that reads the edition, dhctl-edition, reports itself not applicable rather than passing
+// silently, so a local build is visibly not checking it.
+//
+// They must not be assigned at runtime.
 //
 //nolint:gochecknoglobals // linker-injected build metadata
 var (

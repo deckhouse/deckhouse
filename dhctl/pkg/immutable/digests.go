@@ -64,6 +64,7 @@ func sysextExtensions(images map[string]any, kubernetesVersion string) ([]extens
 		{Name: kubeletExtension, Digest: newestPatchDigest(packages, "kubeletSysext"+minor), RequestedBy: platformExtensionRequestedBy},
 		{Name: cniExtension, Digest: cni, RequestedBy: platformExtensionRequestedBy},
 		{Name: nodeletExtension, Digest: packages[nodeletSysextImage], RequestedBy: platformExtensionRequestedBy},
+		{Name: guestAgentExtension, Digest: packages[guestAgentSysextImage], RequestedBy: platformExtensionRequestedBy},
 	}
 	for _, e := range extensions {
 		if e.Digest == "" {
@@ -128,26 +129,6 @@ func newestPatchDigest(packages map[string]string, prefix string) string {
 		}
 	}
 	return best
-}
-
-// sandboxImage pins the pause image to the cluster's own registry: the CRD's
-// registry.k8s.io default is unreachable from the node. Mirrors
-// modules/040-node-manager/images/node-controller/src/internal/controller/nodeconfig/sources.go:233.
-func sandboxImage(registry *registrySpec, images map[string]any) (string, error) {
-	common, err := digestGroup(images, commonDigestsKey)
-	if err != nil {
-		return "", err
-	}
-
-	digest := common[pauseImageName]
-	if digest == "" {
-		return "", fmt.Errorf("the installer image carries no %q.%q digest", commonDigestsKey, pauseImageName)
-	}
-
-	// One repository for every Deckhouse image: the group a digest is filed under
-	// is a map key, not a path segment, and appending it yields a 404 that
-	// surfaces as a pod sandbox nobody can create.
-	return registry.Address + registry.Path + "@" + digest, nil
 }
 
 func digestGroup(images map[string]any, key string) (map[string]string, error) {

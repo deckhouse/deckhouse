@@ -76,7 +76,12 @@
 **/040-node-manager/templates/caps-controller-manager                       @aleksey-su @pabateman
 **/040-node-manager/monitoring/grafana-dashboards/nvidia-gpu                @serg-su
 **/040-node-manager/templates/nvidia-gpu                                    @serg-su
-**/040-node-manager/hooks/fencing**                                         @yalosev @ergoz
+**/040-node-manager/hooks/scheduling                                        @yalosev @ergoz
+**/040-node-manager/hooks/cloud                                             @aleksey-su @pabateman
+**/040-node-manager/hooks/caps                                              @aleksey-su @pabateman
+**/040-node-manager/hooks/kubernetes                                        @sprait
+**/040-node-manager/hooks/gpu                                               @serg-su
+**/040-node-manager/hooks/upmeter                                           @vladimirGuryanov @lazovskiy @maksimmadzhuga
 **/040-node-manager/hooks/enable_integrity_controller**                     @sprait
 **/040-node-manager/e2e/fencing**                                           @yalosev @ergoz
 **/040-node-manager/e2e/cluster-autoscaler                                  @yalosev @ergoz
@@ -138,7 +143,7 @@ tools/docs/                                                                 @z9r
 tools/integrity_check_namespaces                                            @alexey-gavrilov-flant @himax1991
 tools/build_includes/integrity-check-**                                     @alexey-gavrilov-flant @himax1991
 /pkg/                                                                       @ldmonster
-testing/cloud_layouts/                                                      @Nikolay1224 @KraMorK @Taior @himax1991
+testing/cloud_layouts/                                                      @Nikolay1224 @KraMorK @himax1991
 /monitoring/prometheus-rules/                                               @sudoroot-null
 /release.yaml                                                               @yalosev @ldmonster
 go_lib/cloud-data/                                                          @aleksey-su @pabateman

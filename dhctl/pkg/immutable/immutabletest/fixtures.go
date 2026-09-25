@@ -44,6 +44,7 @@ const (
 	PauseDigest             = "sha256:4444444444444444444444444444444444444444444444444444444444444444"
 	OSImageDigest           = "sha256:7777777777777777777777777777777777777777777777777777777777777777"
 	NodeletDigest           = "sha256:9999999999999999999999999999999999999999999999999999999999999999"
+	GuestAgentDigest        = "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
 	EtcdDigest              = "sha256:5555555555555555555555555555555555555555555555555555555555555555"
 	APIServerDigest         = "sha256:6666666666666666666666666666666666666666666666666666666666666666"
 	ControllerManagerDigest = "sha256:7777777777777777777777777777777777777777777777777777777777777777"
@@ -97,6 +98,7 @@ func MetaConfig(t *testing.T) *config.MetaConfig {
 				"kubeletSysext1349":      KubeletDigest,
 				"kubeletSysext1336":      "sha256:0000000000000000000000000000000000000000000000000000000000000000",
 				"nodeletSysext":          NodeletDigest,
+				"qemuGuestAgentSysext":   GuestAgentDigest,
 			},
 			"nodeManager": {
 				"engine": OSImageDigest,

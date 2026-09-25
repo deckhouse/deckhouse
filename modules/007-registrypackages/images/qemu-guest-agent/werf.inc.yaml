@@ -1,0 +1,150 @@
+# qemu-guest-agent, delivered to Deckhouse Engine nodes as a signed system
+# extension so the hypervisor can talk to the guest: ask it to shut down, read
+# its addresses, freeze its filesystems for a snapshot, set its clock after a
+# restore.
+#
+# The extension goes on EVERY Engine node, hardware included, and the node
+# decides at boot whether to start the agent. The reasoning, and what each of
+# the agent's commands does on such a node, is in the engine repository:
+# docs/qemu-guest-agent.md.
+#
+# Nothing is built from source here. The agent comes out of the qemu package,
+# which base-images already builds with --enable-guest-agent, and hwclock out of
+# util-linux; the rest is glib and its two dependencies.
+{{- if ne $.Env "CSE" }}
+---
+
+# qemu-guest-agent sysext
+
+---
+image: {{ $.ModuleName }}/{{ $.ImageName }}-sysext
+from: {{ index $.Images "builder/scratch" }}
+import:
+- image: {{ $.ModuleName }}/{{ $.ImageName }}-sysext-artifact
+  add: /out
+  to: /
+  includePaths:
+  - '**/*'
+  before: setup
+imageSpec:
+  config:
+    labels: { "distro": "deckhouse-engine", "sysext_level": "1.0", "version": "all" }
+    clearUser: true
+    clearWorkingDir: true
+    clearCmd: true
+    clearEntrypoint: true
+    removeEnv: ["/.*/"]
+---
+image: {{ $.ModuleName }}/{{ $.ImageName }}-sysext-artifact
+final: false
+from: {{ index $.Images "builder/distroless" }}
+# Nothing is imported from another image here, but the list has to be open
+# anyway: the signing define appends its own entries to it, and a bare sequence
+# item after a mapping is what makes werf-modules.yaml fail to parse the chunk.
+import:
+{{- include "engine sysext sign imports" $ }}
+git:
+- add: /{{ $.ModulePath }}modules/007-{{ $.ModuleName }}/images/{{ $.ImageName }}/sysext
+  to: /scripts
+  includePaths:
+  - extension-release.qemu-guest-agent
+  - qemu-guest-agent.service
+  - qemu-ga-launch
+  stageDependencies:
+    install:
+    - extension-release.qemu-guest-agent
+    - qemu-guest-agent.service
+    - qemu-ga-launch
+{{- include "engine sysext sign secrets" . }}
+shell:
+  beforeInstall:
+  - pm install erofs-utils coreutils cryptsetup systemd@260.4
+  # The agent and the one command it needs that the root does not carry, plus
+  # ldd for the closure check below. These are build-time only: what ships is
+  # picked file by file in install.
+  #
+  # qemu is pinned because its version is also written down in the module's
+  # oss.yaml, and a floating package would make that entry quietly wrong. The
+  # two move together. Nothing else here is named in oss.yaml, so nothing else
+  # is pinned.
+  - pm install qemu@9.2.4 util-linux glib2 libffi pcre2 numactl liburing ldd
+  - mkdir -p /out
+  install:
+  - mkdir -p /sysext/usr/bin /sysext/usr/lib /sysext/usr/lib/deckhouse-engine
+  - mkdir -p /sysext/usr/lib/extension-release.d /sysext/usr/lib/systemd/system
+  - cp -f /usr/bin/qemu-ga /sysext/usr/bin/qemu-ga
+  # guest-set-time writes the clock back to the RTC by running /sbin/hwclock -w,
+  # and the root carries only mount, umount, blkid and lsblk out of util-linux.
+  - |
+    hwclock="$(command -v hwclock || true)"
+    if [ -z "${hwclock}" ]; then
+      echo "FATAL - util-linux did not put hwclock anywhere on PATH; guest-set-time would fail on the node" >&2
+      exit 1
+    fi
+    cp -f "${hwclock}" /sysext/usr/bin/hwclock
+  # The agent's whole library chain beyond what the root already has: glib with
+  # its dependencies, plus numa and io_uring.
+  #
+  # Neither of those last two is the guest agent's business — they serve the
+  # system emulator's memory backends and block layer. They are here because
+  # base-images configures the qemu package with --enable-numa and
+  # --enable-linux-io-uring, which are global build options, so they end up in
+  # qemu-ga's DT_NEEDED and the loader demands them whether or not a single
+  # function is ever called through them. Dropping them would mean building our
+  # own qemu, which this image deliberately does not do.
+  #
+  # Copied by soname so the closure check below can see them; the check is what
+  # catches this list going stale, and it is how these three were found.
+  - |
+    set -eu
+    for soname in libglib-2.0.so.0 libgmodule-2.0.so.0 libffi.so.8 libpcre2-8.so.0 libnuma.so.1 liburing.so.2; do
+      found=""
+      for dir in /usr/lib64 /usr/lib /lib64 /lib; do
+        for candidate in "${dir}/${soname}"*; do
+          [ -e "${candidate}" ] || continue
+          found="${candidate}"
+          break
+        done
+        [ -n "${found}" ] && break
+      done
+      if [ -z "${found}" ]; then
+        echo "FATAL - ${soname} is not in the build image; the package list above no longer provides it" >&2
+        exit 1
+      fi
+      cp -fL "${found}" "/sysext/usr/lib/${soname}"
+    done
+  - cp -f /scripts/qemu-ga-launch /sysext/usr/lib/deckhouse-engine/qemu-ga-launch
+  - chmod 0755 /sysext/usr/lib/deckhouse-engine/qemu-ga-launch
+  - cp -f /scripts/qemu-guest-agent.service /sysext/usr/lib/systemd/system/qemu-guest-agent.service
+  - cp -f /scripts/extension-release.qemu-guest-agent /sysext/usr/lib/extension-release.d/
+  # Every library the agent needs has to be either in this extension or already
+  # in the root, and a node is the wrong place to find out which. The root's
+  # side of this list is the rsync lines in the engine repository's
+  # images/rootfs/package.yml; keep the two together.
+  - |
+    set -eu
+    ROOT_PROVIDES="ld-linux-x86-64.so.2 libc.so.6 libm.so.6 libdl.so.2 libpthread.so.0 librt.so.1 libresolv.so.2 libz.so.1 libzstd.so.1 liblzma.so.5 liblz4.so.1 libmount.so.1 libblkid.so.1 libuuid.so.1 libsmartcols.so.1 libfdisk.so.1 libext2fs.so.2 libcom_err.so.2 libe2p.so.2 libss.so.2 libcrypto.so.3 libssl.so.3 libsystemd.so.0 libudev.so.1 libdevmapper.so.1.02"
+    missing=""
+    for binary in /sysext/usr/bin/qemu-ga /sysext/usr/bin/hwclock; do
+      for entry in $(ldd "${binary}" | awk '{print $1}'); do
+        soname="${entry##*/}"
+        case "${soname}" in *.so|*.so.*) ;; *) continue ;; esac
+        [ "${soname}" = "linux-vdso.so.1" ] && continue
+        [ -e "/sysext/usr/lib/${soname}" ] && continue
+        case " ${ROOT_PROVIDES} " in *" ${soname} "*) continue ;; esac
+        missing="${missing} ${binary##*/}:${soname}"
+      done
+    done
+    if [ -n "${missing}" ]; then
+      echo "FATAL - these libraries are neither in the extension nor in the Engine root:${missing}" >&2
+      echo "Ship them with the extension, or add them to ROOT_PROVIDES if the root really carries them." >&2
+      exit 1
+    fi
+    echo "library closure checked - the extension is self-contained against the Engine root"
+  - mkfs.erofs -L _sysext -U 00000000-0000-0000-0000-000000000000 -z lzma,9 /out/qemu-guest-agent.raw sysext/
+  # Sidecar files, named the way systemd derives them — see engine-sysext.tmpl.
+  - veritysetup format /out/qemu-guest-agent.raw /out/qemu-guest-agent.verity --root-hash-file=roothash.txt
+  - tr -d ' \n' < roothash.txt > /out/qemu-guest-agent.roothash
+  - veritysetup verify /out/qemu-guest-agent.raw /out/qemu-guest-agent.verity "$(cat /out/qemu-guest-agent.roothash)"
+{{- include "engine sysext sign" "qemu-guest-agent" }}
+{{- end }}

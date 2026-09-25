@@ -17,16 +17,10 @@
     
 EXPECTED_ID="64535"
 
+# What was found, and nothing else. The way out is dhctl's to print: it owns the report the
+# operator reads, so advice from here arrived as a paragraph glued onto the end of one line of it.
 fail() {
-    echo "ERROR: $1"
-    echo ""
-    echo "To resolve this issue:"
-    echo "  - If the node was previously part of a Deckhouse cluster, run the cleanup script:"
-    echo "      chmod +x /var/lib/bashible/cleanup_static_node.sh"
-    echo "      sudo bash /var/lib/bashible/cleanup_static_node.sh --yes-i-am-sane-and-i-understand-what-i-am-doing"
-    echo "  - Otherwise, remove the conflicting account manually:"
-    echo "      sudo userdel deckhouse"
-    echo "      sudo groupdel deckhouse"
+    echo "$1"
     exit 1
 }
 

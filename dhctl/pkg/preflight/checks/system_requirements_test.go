@@ -21,6 +21,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
+	preflight "github.com/deckhouse/deckhouse/dhctl/pkg/preflight"
 )
 
 func TestSystemRequirementsForConfig(t *testing.T) {
@@ -112,7 +113,8 @@ masterNodeGroup:
 		InstallConfig: installConfig,
 	}
 
-	require.NoError(t, check.Run(context.Background()))
+	_, err := check.Run(context.Background())
+	require.NoError(t, err)
 }
 
 func TestCloudSystemRequirementsDefaultBundlePassesAtMinimumResources(
@@ -136,7 +138,8 @@ masterNodeGroup:
 		InstallConfig: installConfig,
 	}
 
-	require.NoError(t, check.Run(context.Background()))
+	_, err := check.Run(context.Background())
+	require.NoError(t, err)
 }
 
 func TestCloudSystemRequirementsDefaultBundleRejectsMinimalMemory(
@@ -160,15 +163,11 @@ masterNodeGroup:
 		InstallConfig: installConfig,
 	}
 
-	err := check.Run(context.Background())
+	_, err := check.Run(context.Background())
 
 	require.Error(t, err)
-	require.Contains(t, err.Error(), "RAM amount")
-	require.Contains(
-		t,
-		err.Error(),
-		"expected at least 7680, but 3584 is configured",
-	)
+	require.Contains(t, err.Error(), "memory: 3584 MB configured")
+	require.Contains(t, err.Error(), "at least 7680 MB required")
 }
 
 func TestCloudSystemRequirementsDefaultBundleRejectsInsufficientCPU(
@@ -192,15 +191,10 @@ masterNodeGroup:
 		InstallConfig: installConfig,
 	}
 
-	err := check.Run(context.Background())
+	_, err := check.Run(context.Background())
 
 	require.Error(t, err)
-	require.Contains(t, err.Error(), "CPU cores count")
-	require.Contains(
-		t,
-		err.Error(),
-		"expected at least 4, but 3 is configured",
-	)
+	require.Contains(t, err.Error(), "masterNodeGroup.instanceClass.cores: 3 configured, at least 4 required")
 }
 
 func TestCloudSystemRequirementsMinimalBundleRejectsInsufficientCPU(
@@ -224,15 +218,10 @@ masterNodeGroup:
 		InstallConfig: installConfig,
 	}
 
-	err := check.Run(context.Background())
+	_, err := check.Run(context.Background())
 
 	require.Error(t, err)
-	require.Contains(t, err.Error(), "CPU cores count")
-	require.Contains(
-		t,
-		err.Error(),
-		"expected at least 2, but 1 is configured",
-	)
+	require.Contains(t, err.Error(), "masterNodeGroup.instanceClass.cores: 1 configured, at least 2 required")
 }
 
 func TestCloudSystemRequirementsMinimalBundleRejectsInsufficientMemory(
@@ -256,15 +245,10 @@ masterNodeGroup:
 		InstallConfig: installConfig,
 	}
 
-	err := check.Run(context.Background())
+	_, err := check.Run(context.Background())
 
 	require.Error(t, err)
-	require.Contains(t, err.Error(), "RAM amount")
-	require.Contains(
-		t,
-		err.Error(),
-		"expected at least 3584, but 3583 is configured",
-	)
+	require.Contains(t, err.Error(), "masterNodeGroup.instanceClass.memory: 3583 MB configured, at least 3584 MB required")
 }
 
 func TestCloudSystemRequirementsMinimalBundleRejectsSmallExplicitRootDisk(
@@ -289,15 +273,10 @@ masterNodeGroup:
 		InstallConfig: installConfig,
 	}
 
-	err := check.Run(context.Background())
+	_, err := check.Run(context.Background())
 
 	require.Error(t, err)
-	require.Contains(t, err.Error(), "Root disk capacity")
-	require.Contains(
-		t,
-		err.Error(),
-		"expected at least 50, but 49 is configured",
-	)
+	require.Contains(t, err.Error(), "masterNodeGroup.instanceClass.diskSizeGB: 49 GB configured, at least 50 GB required")
 }
 
 func TestCloudSystemRequirementsNilConfig(t *testing.T) {
@@ -305,7 +284,8 @@ func TestCloudSystemRequirementsNilConfig(t *testing.T) {
 		InstallConfig: nil,
 	}
 
-	require.NoError(t, check.Run(context.Background()))
+	_, err := check.Run(context.Background())
+	require.ErrorIs(t, err, preflight.ErrNotApplicable)
 }
 
 func TestCloudSystemRequirementsWithoutProviderClusterConfig(
@@ -317,5 +297,6 @@ func TestCloudSystemRequirementsWithoutProviderClusterConfig(
 		},
 	}
 
-	require.NoError(t, check.Run(context.Background()))
+	_, err := check.Run(context.Background())
+	require.ErrorIs(t, err, preflight.ErrNotApplicable)
 }

@@ -66,3 +66,35 @@ func TestKubeSystemConfigMapsAreCachedUnfiltered(t *testing.T) {
 		"d8-cluster-uuid is created by dhctl without the heritage label, so a label selector "+
 			"would silently drop it")
 }
+
+// secretByObject finds the Secret entry. The map is keyed by client.Object
+// values, so a freshly constructed &corev1.Secret{} is a different key than the
+// one stored in the map and a plain index expression would always miss.
+func secretByObject(t *testing.T, opts cache.Options) cache.ByObject {
+	t.Helper()
+
+	for obj, byObject := range opts.ByObject {
+		if _, ok := obj.(*corev1.Secret); ok {
+			return byObject
+		}
+	}
+	t.Fatal("no ByObject entry for Secret")
+	return cache.ByObject{}
+}
+
+// The nodeconfig controller watches d8-system/registry-bashible-config: its
+// "agent" key decides who writes containerd's registry.d on every node. A watch
+// takes its informer from this scope, so a namespace missing here is not an
+// error anywhere — it is an event that never arrives, and a fleet that keeps the
+// old owner until some unrelated input moves.
+func TestRegistryBashibleConfigIsCached(t *testing.T) {
+	opts, _ := CacheOptions()
+
+	d8System, ok := secretByObject(t, opts).Namespaces["d8-system"]
+	require.True(t, ok, "d8-system must be in the Secret cache scope: registry-bashible-config lives there")
+
+	require.NotNil(t, d8System.FieldSelector,
+		"exactly one Secret is read from this namespace through the cache, and the rest of "+
+			"d8-system is not this controller's business")
+	assert.Equal(t, "metadata.name=registry-bashible-config", d8System.FieldSelector.String())
+}

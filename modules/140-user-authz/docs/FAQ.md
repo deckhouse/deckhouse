@@ -720,7 +720,7 @@ The created role is assigned exactly like a built-in one: via a RoleBinding in a
 ## How do I migrate custom roles to the new scheme in DP 1.78?
 
 {% alert level="warning" %}
-Custom roles and capabilities get no compatibility aliases, unlike the [built-in roles](./#deprecated-role-names). Until every one of them is migrated, the upgrade is held back by the `legacyRBACv2CustomRolesCount` release requirement, and the `D8UserAuthzLegacyRBACv2CustomRoleFound` alert fires.
+Custom roles and capabilities get no compatibility aliases, unlike the [built-in roles](./#deprecated-role-names): in DP 1.78 they stop aggregating permissions, and the `D8UserAuthzLegacyRBACv2CustomRoleFound` alert names them. The upgrade to DP 1.78 is not blocked; the upgrade to the release after it is held back by the `legacyRBACv2CustomRolesCount` release requirement until every such role is migrated.
 {% endalert %}
 
 Along with the role renaming ([name mapping](./#deprecated-role-names)), the label scheme that drives aggregation has changed.

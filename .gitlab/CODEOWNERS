@@ -139,7 +139,7 @@ tools/docs/ @artem.kladov
 tools/integrity_check_namespaces @alexey.gavrilov @maksim.khimchenko
 tools/build_includes/integrity-check-** @alexey.gavrilov @maksim.khimchenko
 /pkg/ @pavel.okhlopkov
-testing/cloud_layouts/ @nikolay.mordvintsev @kirill.kramorov @vladimir.portnov @maksim.khimchenko
+testing/cloud_layouts/ @nikolay.mordvintsev @kirill.kramorov @maksim.khimchenko
 /monitoring/prometheus-rules/ @sergey.sizov
 /release.yaml @yuriy.losev @pavel.okhlopkov
 go_lib/cloud-data/ @alexey.sulimenko @alexey.voronov

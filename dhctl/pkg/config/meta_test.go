@@ -54,17 +54,35 @@ func TestEffectiveClusterPrefix(t *testing.T) {
 		moduleCfgs  []*ModuleConfig
 		cloudPrefix string
 		expected    string
+		wantErr     string
 	}{
-		{name: "global MC prefix takes precedence", moduleCfgs: globalMC("mcprefix"), cloudPrefix: "cloudprefix", expected: "mcprefix"},
+		{name: "the two agree", moduleCfgs: globalMC("sameprefix"), cloudPrefix: "sameprefix", expected: "sameprefix"},
 		{name: "global MC prefix unset falls back to cloud.prefix", moduleCfgs: globalMC(""), cloudPrefix: "cloudprefix", expected: "cloudprefix"},
 		{name: "no global MC falls back to cloud.prefix", moduleCfgs: nil, cloudPrefix: "cloudprefix", expected: "cloudprefix"},
+		{name: "only the global MC sets one", moduleCfgs: globalMC("mcprefix"), cloudPrefix: "", expected: "mcprefix"},
 		{name: "neither set", moduleCfgs: globalMC(""), cloudPrefix: "", expected: ""},
+		{
+			// Resolved silently in favour of the ModuleConfig before, which left the cloud
+			// objects named by one prefix and the modules reading the other.
+			name:        "a mismatch is refused instead of resolved",
+			moduleCfgs:  globalMC("mcprefix"),
+			cloudPrefix: "cloudprefix",
+			wantErr:     `ClusterConfiguration.cloud.prefix is "cloudprefix" and spec.settings.prefix in the "global" ModuleConfig is "mcprefix"`,
+		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			m := &MetaConfig{ModuleConfigs: tt.moduleCfgs}
-			require.Equal(t, tt.expected, m.effectiveClusterPrefix(tt.cloudPrefix))
+			prefix, err := m.effectiveClusterPrefix(tt.cloudPrefix)
+
+			if tt.wantErr != "" {
+				require.Error(t, err)
+				require.Contains(t, err.Error(), tt.wantErr)
+				return
+			}
+			require.NoError(t, err)
+			require.Equal(t, tt.expected, prefix)
 		})
 	}
 }

@@ -29,7 +29,6 @@ import (
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app/options"
 	preflight "github.com/deckhouse/deckhouse/dhctl/pkg/preflight"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/system/helper"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/providerinitializer"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/template"
 )
@@ -49,7 +48,7 @@ const (
 const SSHTunnelCheckName preflight.CheckName = "static-ssh-tunnel"
 
 func (SSHTunnelCheck) Description() string {
-	return "ssh tunnel between installer and node is possible"
+	return "the node can open a reverse tunnel back to the installer"
 }
 
 func (SSHTunnelCheck) Phase() preflight.Phase {
@@ -57,34 +56,42 @@ func (SSHTunnelCheck) Phase() preflight.Phase {
 }
 
 func (SSHTunnelCheck) RetryPolicy() preflight.RetryPolicy {
-	return preflight.DefaultRetryPolicy
+	return preflight.NetworkRetry
 }
 
-func (c SSHTunnelCheck) Run(ctx context.Context) error {
-	nodeInterface, err := helper.GetNodeInterface(ctx, c.SSHProviderInitializer, c.SSHProviderInitializer.GetSettings())
+func (c SSHTunnelCheck) Run(ctx context.Context) (string, error) {
+	nodeInterface, err := ResolveNodeInterface(ctx, c.SSHProviderInitializer)
 	if err != nil {
-		return err
+		return "", err
 	}
 	wrapper, ok := nodeInterface.(*ssh.NodeInterfaceWrapper)
 	if !ok {
-		return nil
+		return "", preflight.NotApplicable("dhctl was given no SSH host to open a tunnel from")
 	}
+	sshCl := wrapper.Client()
+	host := hostLabelOfClient(sshCl)
+
 	checkScript, err := template.RenderAndSavePreflightReverseTunnelOpenScript(ctx, healthURL(defaultTunnelRemotePort), c.globalOptions)
 	if err != nil {
-		return fmt.Errorf("render reverse tunnel script: %w", err)
+		return "", fmt.Errorf("render reverse tunnel script: %w", err)
 	}
 	killScript, err := template.RenderAndSaveKillReverseTunnelScript(ctx, localhost, strconv.Itoa(defaultTunnelRemotePort), c.globalOptions)
 	if err != nil {
-		return fmt.Errorf("render kill tunnel script: %w", err)
+		return "", fmt.Errorf("render kill tunnel script: %w", err)
 	}
 
 	shutdown, err := startHTTPServer(ctx, defaultTunnelLocalPort)
 	if err != nil {
-		return err
+		// This one is about this host, not the node: something local already holds the port.
+		return "", preflight.Permanent(&preflight.Failure{
+			Checked:  fmt.Sprintf("port %d on the installer host", defaultTunnelLocalPort),
+			Observed: classifyNetworkError(err),
+			Expected: fmt.Sprintf("port %d free for the node to connect back to", defaultTunnelLocalPort),
+			Fix:      fmt.Sprintf("stop whatever holds %d on this host (ss -lntp | grep %d)", defaultTunnelLocalPort, defaultTunnelLocalPort),
+			Err:      err,
+		})
 	}
 	defer shutdown()
-
-	sshCl := wrapper.Client()
 
 	addr := strings.Join([]string{
 		net.JoinHostPort(localhost, strconv.Itoa(defaultTunnelLocalPort)),
@@ -93,23 +100,39 @@ func (c SSHTunnelCheck) Run(ctx context.Context) error {
 
 	tun := sshCl.ReverseTunnel(addr)
 	if err := tun.Up(); err != nil {
-		return fmt.Errorf("ssh tunnel setup failed: %w", err)
+		return "", &preflight.Failure{
+			Checked:  fmt.Sprintf("reverse SSH tunnel from port %d on %s to port %d on this host", defaultTunnelRemotePort, host, defaultTunnelLocalPort),
+			Observed: "the node refused to open the reverse forward",
+			Expected: "a remote port forward allowed by sshd on the node",
+			Fix:      "set AllowTcpForwarding yes and DisableForwarding no in sshd_config on the node",
+			Err:      err,
+		}
 	}
 	defer tun.Stop()
 
+	// The forward is up; what is left is whether the node can actually use it. Deckhouse
+	// bootstraps through this tunnel, so a forward that opens but carries nothing is the same
+	// failure, later and harder to read.
 	if _, err := utils.NewRunScriptReverseTunnelChecker(sshCl, checkScript).
 		SetUploadDirAndCleanup("/tmp").
 		CheckTunnel(ctx); err != nil {
-		return fmt.Errorf("ssh tunnel health check failed: %w", err)
+		return "", &preflight.Failure{
+			Checked:  fmt.Sprintf("GET %s from %s through the reverse tunnel", healthURL(defaultTunnelRemotePort), host),
+			Observed: "the node opened the tunnel but could not reach back through it",
+			Expected: "a connection from the node to the installer on the forwarded port",
+			Fix: fmt.Sprintf("check that nothing on the node blocks 127.0.0.1:%d (a local firewall, SELinux), "+
+				"and that sshd has AllowTcpForwarding yes", defaultTunnelRemotePort),
+			Err: err,
+		}
 	}
 
 	if _, err := utils.NewRunScriptReverseTunnelKiller(sshCl, killScript).
 		SetUploadDirAndCleanup("/tmp").
 		KillTunnel(ctx); err != nil {
-		return fmt.Errorf("error killing ssh tunnel on remote port %d: %v", defaultTunnelRemotePort, err)
+		return "", fmt.Errorf("cannot close the test tunnel on port %d on %s: %w", defaultTunnelRemotePort, host, err)
 	}
 
-	return nil
+	return fmt.Sprintf("%s reached the installer back through a reverse tunnel on port %d", host, defaultTunnelRemotePort), nil
 }
 
 func healthURL(port int) string {
@@ -125,7 +148,7 @@ func startHTTPServer(ctx context.Context, port int) (shutdownServerFunc, error) 
 	address := fmt.Sprintf(":%d", port)
 	listener, err := net.Listen("tcp", address)
 	if err != nil {
-		return nil, fmt.Errorf("cannot start HTTP server for tunnel preflight check on %s: %w", address, err)
+		return nil, fmt.Errorf("the installer host cannot listen on %s: %w", address, err)
 	}
 
 	server := &http.Server{
@@ -150,6 +173,7 @@ func SSHTunnel(sshProviderInitializer *providerinitializer.SSHProviderInitialize
 		Description: check.Description(),
 		Phase:       check.Phase(),
 		Retry:       check.RetryPolicy(),
+		Timeout:     preflight.NodeCheckTimeout,
 		Run:         check.Run,
 	}
 }

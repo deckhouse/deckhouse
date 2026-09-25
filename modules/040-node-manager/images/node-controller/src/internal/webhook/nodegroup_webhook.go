@@ -100,6 +100,10 @@ func SetupWithManager(mgr ctrl.Manager) error {
 	hookServer.Register("/validate-deckhouse-io-v1alpha1-nodeextensionrequest", &webhook.Admission{
 		Handler: &NodeExtensionRequestValidator{decoder: decoder},
 	})
+	// Validating webhook refusing a static pod no node could run.
+	hookServer.Register("/validate-deckhouse-io-v1alpha1-nodestaticpodrequest", &webhook.Admission{
+		Handler: &NodeStaticPodRequestValidator{decoder: decoder},
+	})
 	hookServer.Register("/validate-internal-deckhouse-io-v1alpha1-nodeconfig", &webhook.Admission{
 		Handler: &NodeConfigValidator{decoder: decoder},
 	})
