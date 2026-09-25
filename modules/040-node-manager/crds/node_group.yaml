@@ -1732,10 +1732,21 @@ spec:
                       rule: "!has(oldSelf.labelSelector) || self.labelSelector == oldSelf.labelSelector"
                   properties:
                     labelSelector:
-                      description: A label selector is a label query over a set
+                      description: |
+                        A label selector is a label query over a set
                         of `staticInstances` resources. The result of matchLabels and matchExpressions
                         are ANDed. An empty label selector matches all objects.
                         A null label selector matches no objects.
+
+                        > **Warning.** `labelSelector` can be added but cannot be modified once set. To change it, create a new NodeGroup and move the static nodes to it by relabeling them.
+
+                        > **Adding `labelSelector` to a running NodeGroup is disruptive.** Every `StaticInstance` currently bound to the NodeGroup that does not match the new selector will be detached: CAPS deletes the corresponding `Machine`, the host runs its cleanup script (including `rm -rf /var/lib/bashible` and a reboot), and the Node is removed from the cluster. If no `StaticInstance` in the `Pending` phase matches the new selector, no replacement bootstraps — the NodeGroup silently loses capacity.
+                        >
+                        > Safe migration order:
+                        >
+                        > 1. Label every `StaticInstance` currently in the NodeGroup with the labels you plan to use in the selector (`kubectl label staticinstance ...`).
+                        > 2. Verify that each `StaticInstance` in the group matches the planned `labelSelector`.
+                        > 3. Only then add `labelSelector` to `spec.staticInstances` of the NodeGroup.
                       properties:
                         matchExpressions:
                           type: array

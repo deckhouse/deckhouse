@@ -46,7 +46,38 @@ func newScheme() *runtime.Scheme {
 	s := runtime.NewScheme()
 	_ = corev1.AddToScheme(s)
 	_ = v1.AddToScheme(s)
+	// StaticMachine and StaticInstance are consumed as Unstructured by the
+	// labelSelector-immutability check when it inspects bound StaticInstances.
+	s.AddKnownTypeWithName(schema.GroupVersionKind{Group: "infrastructure.cluster.x-k8s.io", Version: "v1alpha1", Kind: "StaticMachine"}, &unstructured.Unstructured{})
+	s.AddKnownTypeWithName(schema.GroupVersionKind{Group: "infrastructure.cluster.x-k8s.io", Version: "v1alpha1", Kind: "StaticMachineList"}, &unstructured.UnstructuredList{})
+	s.AddKnownTypeWithName(schema.GroupVersionKind{Group: "deckhouse.io", Version: "v1alpha1", Kind: "StaticInstance"}, &unstructured.Unstructured{})
+	s.AddKnownTypeWithName(schema.GroupVersionKind{Group: "deckhouse.io", Version: "v1alpha1", Kind: "StaticInstanceList"}, &unstructured.UnstructuredList{})
 	return s
+}
+
+func staticMachineForNG(name, ngName string) *unstructured.Unstructured {
+	u := &unstructured.Unstructured{}
+	u.SetGroupVersionKind(schema.GroupVersionKind{Group: "infrastructure.cluster.x-k8s.io", Version: "v1alpha1", Kind: "StaticMachine"})
+	u.SetName(name)
+	u.SetNamespace("d8-cloud-instance-manager")
+	u.SetLabels(map[string]string{"node-group": ngName})
+	return u
+}
+
+func staticInstanceBoundTo(name, staticMachineName string, lbls map[string]string) *unstructured.Unstructured {
+	u := &unstructured.Unstructured{}
+	u.SetGroupVersionKind(schema.GroupVersionKind{Group: "deckhouse.io", Version: "v1alpha1", Kind: "StaticInstance"})
+	u.SetName(name)
+	if lbls != nil {
+		u.SetLabels(lbls)
+	}
+	u.Object["status"] = map[string]any{
+		"machineRef": map[string]any{
+			"name":      staticMachineName,
+			"namespace": "d8-cloud-instance-manager",
+		},
+	}
+	return u
 }
 
 func makeAdmissionRequest(t *testing.T, op admissionv1.Operation, ng *v1.NodeGroup, oldNG *v1.NodeGroup) admission.Request {
@@ -845,6 +876,8 @@ func TestValidation_LabelSelectorImmutability(t *testing.T) {
 
 func TestValidation_LabelSelectorCanBeAdded(t *testing.T) {
 	s := newScheme()
+	// No StaticMachines / StaticInstances for this NG — the "adding selector"
+	// safety check has nothing to inspect and must allow the change.
 	c := fake.NewClientBuilder().WithScheme(s).Build()
 	w := &NodeGroupValidator{Client: c, decoder: admission.NewDecoder(s)}
 
@@ -860,6 +893,82 @@ func TestValidation_LabelSelectorCanBeAdded(t *testing.T) {
 	resp := w.Handle(context.Background(), makeAdmissionRequest(t, "UPDATE", newNG, oldNG))
 	if !resp.Allowed {
 		t.Fatalf("expected allowed: adding labelSelector to existing NG, got: %s", resp.Result.Message)
+	}
+}
+
+func TestValidation_LabelSelectorAddDeniedForUnmatchedBoundSI(t *testing.T) {
+	s := newScheme()
+	// One StaticInstance bound to the NG via StaticMachine; its labels do
+	// NOT match the selector being introduced. CAPS would clean it up, so
+	// the webhook must refuse and name the offending StaticInstance.
+	sm := staticMachineForNG("worker-abcd", "worker")
+	si := staticInstanceBoundTo("host-1", "worker-abcd", map[string]string{"role": "infra"})
+	c := fake.NewClientBuilder().WithScheme(s).WithObjects(sm, si).Build()
+	w := &NodeGroupValidator{Client: c, decoder: admission.NewDecoder(s)}
+
+	oldNG := baseNodeGroup("worker", v1.NodeTypeStatic)
+
+	newNG := baseNodeGroup("worker", v1.NodeTypeStatic)
+	newNG.Spec.StaticInstances = &v1.StaticInstancesSpec{
+		LabelSelector: &metav1.LabelSelector{
+			MatchLabels: map[string]string{"role": "worker"},
+		},
+	}
+
+	resp := w.Handle(context.Background(), makeAdmissionRequest(t, "UPDATE", newNG, oldNG))
+	if resp.Allowed {
+		t.Fatal("expected denied: adding labelSelector while a bound StaticInstance would fall outside it")
+	}
+	if resp.Result == nil || !strings.Contains(resp.Result.Message, "host-1") {
+		t.Fatalf("expected denial to name the offending StaticInstance, got: %v", resp.Result)
+	}
+}
+
+func TestValidation_LabelSelectorAddAllowedWhenBoundSIsMatch(t *testing.T) {
+	s := newScheme()
+	// The bound StaticInstance already carries labels matching the future
+	// selector — this is the safe migration path.
+	sm := staticMachineForNG("worker-abcd", "worker")
+	si := staticInstanceBoundTo("host-1", "worker-abcd", map[string]string{"role": "worker"})
+	c := fake.NewClientBuilder().WithScheme(s).WithObjects(sm, si).Build()
+	w := &NodeGroupValidator{Client: c, decoder: admission.NewDecoder(s)}
+
+	oldNG := baseNodeGroup("worker", v1.NodeTypeStatic)
+
+	newNG := baseNodeGroup("worker", v1.NodeTypeStatic)
+	newNG.Spec.StaticInstances = &v1.StaticInstancesSpec{
+		LabelSelector: &metav1.LabelSelector{
+			MatchLabels: map[string]string{"role": "worker"},
+		},
+	}
+
+	resp := w.Handle(context.Background(), makeAdmissionRequest(t, "UPDATE", newNG, oldNG))
+	if !resp.Allowed {
+		t.Fatalf("expected allowed: bound StaticInstance already matches the new selector, got: %s", resp.Result.Message)
+	}
+}
+
+func TestValidation_LabelSelectorAddIgnoresOtherNodeGroups(t *testing.T) {
+	s := newScheme()
+	// A StaticInstance bound to a DIFFERENT NodeGroup's StaticMachine must
+	// not influence this NG's admission.
+	sm := staticMachineForNG("other-abcd", "other-ng")
+	si := staticInstanceBoundTo("host-1", "other-abcd", map[string]string{"role": "infra"})
+	c := fake.NewClientBuilder().WithScheme(s).WithObjects(sm, si).Build()
+	w := &NodeGroupValidator{Client: c, decoder: admission.NewDecoder(s)}
+
+	oldNG := baseNodeGroup("worker", v1.NodeTypeStatic)
+
+	newNG := baseNodeGroup("worker", v1.NodeTypeStatic)
+	newNG.Spec.StaticInstances = &v1.StaticInstancesSpec{
+		LabelSelector: &metav1.LabelSelector{
+			MatchLabels: map[string]string{"role": "worker"},
+		},
+	}
+
+	resp := w.Handle(context.Background(), makeAdmissionRequest(t, "UPDATE", newNG, oldNG))
+	if !resp.Allowed {
+		t.Fatalf("expected allowed: other NG's bound StaticInstance must be ignored, got: %s", resp.Result.Message)
 	}
 }
 
