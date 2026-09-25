@@ -27,6 +27,11 @@ ConditionPathExists=/run/etc/containerd/config.toml
 Environment=PATH=/opt/deckhouse/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
 
 ExecStart=/opt/deckhouse/bin/containerd --config /run/etc/containerd/config.toml
+# The same import as scripts/containerd.service on bashible nodes. With
+# Type=notify "systemctl start" returns only after it, and nodelet starts
+# kubelet after containerd, so no sandbox asks for pause before it is there.
+ExecStartPost=-/opt/deckhouse/bin/ctr -n k8s.io images import /opt/deckhouse/images/pause.tar
+ExecStartPost=-/opt/deckhouse/bin/ctr -n k8s.io images label deckhouse.local/images:pause io.cri-containerd.pinned=pinned
 
 Type=notify
 Delegate=yes

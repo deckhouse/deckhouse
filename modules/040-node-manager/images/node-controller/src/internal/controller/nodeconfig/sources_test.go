@@ -17,6 +17,7 @@ limitations under the License.
 package nodeconfig
 
 import (
+	"context"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -601,5 +602,66 @@ func TestSysextDigestsAgent(t *testing.T) {
 
 		_, err := sysextDigests(map[string]map[string]string{registryPackagesDigestsKey: without}, "1.35")
 		require.ErrorContains(t, err, nodeletExtension)
+	})
+}
+
+// Who owns containerd's registry.d is the registry module's answer, read from
+// the one secret it already writes for bashible. A cluster where that module
+// never said anything must go on exactly as it did before.
+func TestReadRegistryAgentMode(t *testing.T) {
+	scheme := runtime.NewScheme()
+	require.NoError(t, corev1.AddToScheme(scheme))
+
+	secret := func(data map[string][]byte) client.Client {
+		return fake.NewClientBuilder().WithScheme(scheme).WithObjects(&corev1.Secret{
+			ObjectMeta: metav1.ObjectMeta{Namespace: "d8-system", Name: "registry-bashible-config"},
+			Data:       data,
+		}).Build()
+	}
+
+	tests := []struct {
+		name   string
+		client client.Client
+		want   bool
+	}{
+		{
+			// origin/main: the legacy orchestrator writes this secret and its
+			// config type has no agent field at all.
+			name:   "a config with no agent key",
+			client: secret(map[string][]byte{"config": []byte("mode: Direct\nversion: abc\nimagesBase: registry.example.com\n")}),
+		},
+		{
+			name: "the agent marker",
+			client: secret(map[string][]byte{"config": []byte(
+				"agent:\n  endpoint: 127.0.0.1:5001\n  dropInFile: /etc/containerd/registry.d/_default/hosts.toml\nmode: Managed\n")}),
+			want: true,
+		},
+		{
+			name:   "the secret carries no config key",
+			client: secret(map[string][]byte{"other": []byte("{}")}),
+		},
+		{
+			// A cluster whose registry module never wrote it, or is not enabled.
+			name:   "no secret at all",
+			client: fake.NewClientBuilder().WithScheme(scheme).Build(),
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			s := &sourceReader{Reader: tt.client}
+			agent, err := s.readRegistryAgentMode(context.Background())
+			require.NoError(t, err)
+			require.Equal(t, tt.want, agent)
+		})
+	}
+
+	// A document nobody can parse is not "no agent": it is a read that did not
+	// happen, and guessing "nodelet owns the directory" would take registry.d
+	// away from an agent that is running on every node.
+	t.Run("a config that does not parse stops the pass", func(t *testing.T) {
+		s := &sourceReader{Reader: secret(map[string][]byte{"config": []byte("\tnot: yaml")})}
+		_, err := s.readRegistryAgentMode(context.Background())
+		require.Error(t, err)
 	})
 }
