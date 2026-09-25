@@ -22,12 +22,14 @@ import (
 
 	corev1 "k8s.io/api/core/v1"
 	discoveryv1 "k8s.io/api/discovery/v1"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/kubernetes"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/builder"
 	"sigs.k8s.io/controller-runtime/pkg/cache"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/event"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
@@ -36,6 +38,7 @@ import (
 	v1 "github.com/deckhouse/node-controller/api/deckhouse.io/v1"
 	"github.com/deckhouse/node-controller/internal/cloudprovider"
 	"github.com/deckhouse/node-controller/internal/controller/nodegroup/derived_status"
+	"github.com/deckhouse/node-controller/internal/network"
 	"github.com/deckhouse/node-controller/internal/register"
 )
 
@@ -108,6 +111,21 @@ func (c *Controller) SetupWatches(w register.Watcher) {
 	// The source is deferred: the kind and version come from the provider registration Secret,
 	// which may appear only after this pod started.
 	w.WatchesRawSource(cloudprovider.LazyInstanceClassSource(c.cache, enqueue, predicate.GenerationChangedPredicate{}))
+	// The network group reaches the published context, and editing it touches none of the objects
+	// watched above.
+	watchedModuleConfig := &unstructured.Unstructured{}
+	watchedModuleConfig.SetGroupVersionKind(network.ModuleConfigGVK())
+	w.Watches(watchedModuleConfig, enqueue, builder.WithPredicates(predicate.Funcs{
+		CreateFunc: func(e event.CreateEvent) bool {
+			return e.Object.GetName() == network.ModuleConfigName
+		},
+		DeleteFunc: func(e event.DeleteEvent) bool {
+			return e.Object.GetName() == network.ModuleConfigName
+		},
+		UpdateFunc: func(e event.UpdateEvent) bool {
+			return e.ObjectNew.GetName() == network.ModuleConfigName && network.NetworkGroupChanged(e.ObjectOld, e.ObjectNew)
+		},
+	}))
 }
 
 func inNamespaces(namespaces ...string) predicate.Predicate {

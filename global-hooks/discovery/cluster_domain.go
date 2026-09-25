@@ -30,6 +30,7 @@ import (
 	sdkobjectpatch "github.com/deckhouse/module-sdk/pkg/object-patch"
 
 	"github.com/deckhouse/deckhouse/go_lib/filter"
+	"github.com/deckhouse/deckhouse/modules/040-control-plane-manager/hooks"
 )
 
 const (
@@ -137,7 +138,7 @@ func discoveryClusterDomain(_ context.Context, input *go_hook.HookInput) error {
 		return nil
 	}
 
-	clusterDomain := "cluster.local"
+	clusterDomain := hooks.DefaultClusterDomain
 
 	coreCM, err := sdkobjectpatch.UnmarshalToStruct[string](input.Snapshots, clusterDomainCoreCMSnapName)
 	if err != nil {

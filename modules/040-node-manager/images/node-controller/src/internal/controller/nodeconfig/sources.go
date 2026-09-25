@@ -139,7 +139,7 @@ func (s *sourceReader) readClusterState(ctx context.Context, in *clusterInputs) 
 	if err != nil {
 		return err
 	}
-	in.ClusterDomain = cmp.Or(config.ClusterDomain, defaultClusterDomain)
+	in.ClusterDomain = cmp.Or(config.ClusterDomain, network.DefaultClusterDomain)
 	in.DefaultMaxPods = defaultMaxPodsFor(config.PodSubnetNodeCIDRPrefix)
 
 	dns, err := s.readClusterDNS(ctx)
@@ -548,6 +548,7 @@ func (s *sourceReader) readClusterConfiguration(ctx context.Context) (clusterCon
 	if mcNetwork.PodSubnetNodeCIDRPrefix != "" {
 		config.PodSubnetNodeCIDRPrefix = intstr.FromString(mcNetwork.PodSubnetNodeCIDRPrefix)
 	}
+	config.ClusterDomain = cmp.Or(mcNetwork.ClusterDomain, config.ClusterDomain)
 
 	return config, nil
 }

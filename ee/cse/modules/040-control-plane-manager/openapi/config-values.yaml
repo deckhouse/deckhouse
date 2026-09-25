@@ -427,9 +427,22 @@ properties:
 
       Each parameter is resolved in the following order: this section, then the deprecated same-named field in `ClusterConfiguration`. A parameter set here wins; while it is unset, the deprecated field still decides.
 
-      > **Warning.** These parameters describe the network of a running cluster. Changing any of them after the cluster is bootstrapped is **extremely dangerous** and can lead to complete cluster failure, so it is blocked by admission. It is **strongly recommended to recreate the cluster** instead. See [documentation](/products/kubernetes-platform/documentation/v1/admin/configuration/#modifying-protected-parameters) for details.
+      > **Warning.** `podSubnetCIDR`, `serviceSubnetCIDR` and `podSubnetNodeCIDRPrefix` describe the network of a running cluster. Changing any of them after the cluster is bootstrapped is **extremely dangerous** and can lead to complete cluster failure, so it is blocked by admission. It is **strongly recommended to recreate the cluster** instead. See [documentation](/products/kubernetes-platform/documentation/v1/admin/configuration/#modifying-protected-parameters) for details. `clusterDomain` is not subject to this warning: changing it is a normal, documented procedure.
     additionalProperties: false
     properties:
+      clusterDomain:
+        type: string
+        pattern: '^[0-9a-zA-Z._-]+$'
+        description: |
+          Cluster domain (used for local routing).
+
+          Set the cluster domain here. The same field in `ClusterConfiguration` is deprecated and will be removed in a future release.
+
+          **Please note:** the domain must not match the domain used in the DNS name template in the [publicDomainTemplate](/products/kubernetes-platform/documentation/v1/reference/api/global.html#parameters-modules-publicdomaintemplate) parameter. For example, you cannot set `clusterDomain: cluster.local` and `publicDomainTemplate: %s.cluster.local` at the same time.
+
+          When moving the value from `ClusterConfiguration`, keep it exactly as it is now: a different value is rejected. To change the domain later, follow the [documented procedure](/modules/kube-dns/faq.html#how-to-change-cluster-domain-with-minimal-downtime).
+        x-examples:
+          - "cluster.local"
       podSubnetCIDR:
         type: string
         pattern: '^[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}/[0-9]{1,2}$'

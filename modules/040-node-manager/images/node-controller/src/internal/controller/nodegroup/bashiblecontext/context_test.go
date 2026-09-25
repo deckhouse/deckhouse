@@ -132,6 +132,7 @@ func TestWriteSecret_UpsertsInputYAML(t *testing.T) {
 		}),
 		endpointSlice([]string{"10.0.0.1"}, "https", 6443),
 		kubeDNSService("10.222.0.10"),
+		clusterConfigurationSecret("cluster.local"),
 	)
 	nodeGroups := []map[string]interface{}{{"name": "worker", "nodeType": "CloudEphemeral"}}
 

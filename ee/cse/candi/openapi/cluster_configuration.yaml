@@ -19,7 +19,7 @@ apiVersions:
       d8 system edit cluster-configuration
       ```
     additionalProperties: false
-    required: [apiVersion, kind, clusterType, clusterDomain]
+    required: [apiVersion, kind, clusterType]
     x-examples:
     - apiVersion: deckhouse.io/v1
       kind: ClusterConfiguration
@@ -127,13 +127,17 @@ apiVersions:
           > **Warning!** Changing this parameter in a running cluster is **extremely dangerous** and can lead to complete cluster failure. The change is blocked by default. To bypass this protection, use `dhctl config edit cluster-configuration --yes-i-am-sane-and-i-understand-what-i-am-doing` command. However, it is **strongly recommended to recreate the cluster** instead of changing this parameter. See [documentation](/products/kubernetes-platform/documentation/v1/admin/configuration/#modifying-protected-parameters) for details.
       clusterDomain:
         type: string
+        x-doc-deprecated: true
         description: |
+          **Deprecated.** Use [`clusterDomain`](/modules/control-plane-manager/configuration.html#parameters-network-clusterdomain) in the `network` section of the `control-plane-manager` ModuleConfig instead.
+
           Cluster domain (used for local routing).
 
-          **Please note:** the domain must not match the domain used in the DNS name template in the [publicDomainTemplate](/products/kubernetes-platform/documentation/v1/reference/api/global.html#parameters-modules-publicdomaintemplate) parameter. For example, you cannot set `cluster Domain: cluster.local` and `publicDomainTemplate: %s.cluster.local` at the same time.
+          **Please note:** the domain must not match the domain used in the DNS name template in the [publicDomainTemplate](/products/kubernetes-platform/documentation/v1/reference/api/global.html#parameters-modules-publicdomaintemplate) parameter. For example, you cannot set `clusterDomain: cluster.local` and `publicDomainTemplate: %s.cluster.local` at the same time.
 
-          > If you need to change a parameter in a running cluster, it is recommended to use [instructions](/modules/kube-dns/faq.html#how-do-i-replace-the-cluster-domain-with-minimal-downtime)
-        default: "cluster.local"
+          > If you need to change a parameter in a running cluster, it is recommended to use [instructions](/modules/kube-dns/faq.html#how-to-change-cluster-domain-with-minimal-downtime)
+
+          The field still works, but it will be removed in a future release. Until the value is moved to the ModuleConfig, the cluster reports the `D8ObsoleteClusterDomainInClusterConfiguration` alert. Remove it here only after the ModuleConfig carries the domain.
       defaultCRI:
         type: string
         description: |
