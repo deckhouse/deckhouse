@@ -721,3 +721,36 @@ init-контейнеров и ephemeral-контейнеров пода. Рес
 Устройства, запрошенные через механизм [Dynamic Resource Allocation](https://kubernetes.io/docs/concepts/scheduling-eviction/dynamic-resource-allocation/)
 в поле `spec.resourceClaims`, не являются extended-ресурсами, и политика их не проверяет.
 {% endalert %}
+
+## Что делать, если валидирующий вебхук недоступен?
+
+Пока у деплоймента `gatekeeper-controller-manager` нет доступных реплик, API-сервер отклоняет все запросы, которые перехватывает его вебхук, и кластер не может создавать и удалять нагрузку. Об этом состоянии сообщает алерт `D8AdmissionPolicyEngineWebhookUnavailable`. Перечень того, что перестаёт работать, приведён в разделе [о критичности компонента](./#почему-валидирующий-вебхук-критичен-для-кластера).
+
+Убедитесь, что причина в этом деплойменте, и соберите диагностику:
+
+```bash
+d8 k -n d8-admission-policy-engine get deploy gatekeeper-controller-manager
+d8 k -n d8-admission-policy-engine get pods -l app=gatekeeper,control-plane=controller-manager -o wide
+d8 k -n d8-admission-policy-engine describe pods -l app=gatekeeper,control-plane=controller-manager
+d8 k -n d8-admission-policy-engine logs deploy/gatekeeper-controller-manager -c manager --all-pods=true --tail=200
+```
+
+Поды этого деплоймента исключены из проверки по лейблу `gatekeeper.sh/operation: webhook`, поэтому ReplicaSet создаёт замещающий под даже при неработающем вебхуке. Чтобы получить новый под, удалите текущий:
+
+```bash
+d8 k -n d8-admission-policy-engine delete pod -l app=gatekeeper,control-plane=controller-manager
+```
+
+Перезапуск деплоймента командой `kubectl rollout restart` здесь не работает. Тот же лейбл защищён политикой `deny-gatekeeper-webhook-operation-label-controllers` типа ValidatingAdmissionPolicy, которая отклоняет изменение шаблона пода с этим лейблом, если запрос пришёл не от сервисного аккаунта неймспейса `d8-*` или `kube-*` и не от `system:sudouser`.
+
+В первую очередь ищите причину. Отключение модуля разблокирует кластер, но вместе с тем снимает все политики, на которые кластер опирается, поэтому рассматривайте его как крайнюю меру, а не как первый шаг:
+
+```bash
+d8 platform module disable admission-policy-engine
+```
+
+Пока модуль выключен, Deckhouse удерживает его объекты удалёнными, поэтому кластер останется разблокированным на всё это время. Верните модуль сразу после устранения причины, поскольку при отключённом модуле политики не применяются:
+
+```bash
+d8 platform module enable admission-policy-engine
+```
