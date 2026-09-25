@@ -42,7 +42,7 @@ const labelPrefix = "rbac.deckhouse.io/"
 
 var (
 	validLevels = set("viewer", "user", "manager", "admin", "superadmin")
-	subsystems  = set("deckhouse", "infrastructure", "kubernetes", "networking", "observability", "security", "storage")
+	subsystems  = set("deckhouse", "delivery", "infrastructure", "kubernetes", "networking", "observability", "security", "storage")
 	validScopes = set("system", "subsystem", "namespace", "project")
 
 	// Lineages a capability or role may aggregate into: the system lineage, the

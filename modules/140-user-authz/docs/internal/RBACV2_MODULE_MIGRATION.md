@@ -38,7 +38,7 @@ the moment between the two writes.
 | Lineage | Levels | Granted with | What a module puts there |
 |---------|--------|--------------|--------------------------|
 | `namespace` | `viewer`, `user`, `manager`, `admin`, `superadmin` | `RoleBinding` in a namespace | The module's namespaced resources — what a tenant works with |
-| `<subsystem>`: `deckhouse`, `infrastructure`, `kubernetes`, `networking`, `observability`, `security`, `storage` | `viewer`, `manager`, `superadmin` | `ClusterRoleBinding` | The module's cluster-scoped resources and its `ModuleConfig` |
+| `<subsystem>`: `deckhouse`, `delivery`, `infrastructure`, `kubernetes`, `networking`, `observability`, `security`, `storage` | `viewer`, `manager`, `superadmin` | `ClusterRoleBinding` | The module's cluster-scoped resources and its `ModuleConfig` |
 | `system` | `viewer`, `manager`, `superadmin` | `ClusterRoleBinding` | Nothing directly: the system roles aggregate the subsystem ones |
 | `project` | `viewer`, `user`, `manager`, `admin`, `superadmin` | `ProjectRoleBinding` | Project-structure resources (multitenancy-manager only) |
 
