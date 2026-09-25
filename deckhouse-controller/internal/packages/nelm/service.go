@@ -19,6 +19,7 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
+	"maps"
 	"os"
 	"path/filepath"
 	"slices"
@@ -29,6 +30,7 @@ import (
 	addonutils "github.com/flant/addon-operator/pkg/utils"
 	klient "github.com/flant/kube-client/client"
 	"github.com/google/uuid"
+	"github.com/werf/nelm/pkg/common"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/codes"
@@ -222,6 +224,12 @@ func (s *Service) Delete(ctx context.Context, namespace, name string) error {
 	return s.client.Delete(ctx, namespace, name)
 }
 
+// UpgradeOptions holds options for upgrading a Helm release.
+type UpgradeOptions struct {
+	TrackingOptions common.TrackingOptions
+	ExtraLabels     map[string]string
+}
+
 // Upgrade installs or upgrades a Helm release for a package.
 //
 // Smart upgrade logic:
@@ -246,7 +254,7 @@ func (s *Service) Delete(ctx context.Context, namespace, name string) error {
 // policy stops guarding them against manual edits.
 //
 // Returns ErrPackageNotHelm if the package doesn't contain a valid Helm chart.
-func (s *Service) Upgrade(ctx context.Context, namespace string, pkg Package) error {
+func (s *Service) Upgrade(ctx context.Context, namespace string, pkg Package, opts UpgradeOptions) error {
 	ctx, span := otel.Tracer(nelmServiceTracer).Start(ctx, "Upgrade")
 	defer span.End()
 
@@ -302,6 +310,8 @@ func (s *Service) Upgrade(ctx context.Context, namespace string, pkg Package) er
 		resourcesLabels[nelm.ReleaseLabelMaintenance] = ""
 	}
 
+	maps.Copy(resourcesLabels, opts.ExtraLabels)
+
 	s.logger.Debug("render nelm chart",
 		slog.String("path", pkg.GetPath()),
 		slog.String("name", pkg.GetName()),
@@ -344,6 +354,7 @@ func (s *Service) Upgrade(ctx context.Context, namespace string, pkg Package) er
 	// Install or upgrade the release
 	err = s.client.Install(ctx, namespace, pkg.GetName(), nelm.InstallOptions{
 		OnTrackingEvent: s.status.UpdateTracking,
+		TrackingOptions: opts.TrackingOptions,
 		Path:            pkg.GetPath(),
 		ValuesPaths:     []string{valuesPath},
 		RootValues:      pkg.GetRuntimeValues(),

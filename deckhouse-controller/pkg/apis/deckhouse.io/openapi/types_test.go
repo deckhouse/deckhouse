@@ -175,6 +175,7 @@ func TestMarshalRoundtrip_xDeckhouseExtensions(t *testing.T) {
 			"storageClass": {
 				Type:                 "string",
 				XGrant:               "storageclasses",
+				XImmutable:           true,
 				XUIOrder:             int64Ptr(0),
 				XUIValidationMessage: "must reference an existing StorageClass",
 			},
@@ -182,6 +183,7 @@ func TestMarshalRoundtrip_xDeckhouseExtensions(t *testing.T) {
 				Type:        "integer",
 				Default:     jsonPtr("1"),
 				XUIAdvanced: true,
+				XUIGroup:    "toggles",
 				XUIOrder:    int64Ptr(2),
 			},
 			"secretName": {
@@ -196,7 +198,18 @@ func TestMarshalRoundtrip_xDeckhouseExtensions(t *testing.T) {
 			},
 		},
 		XValidations: []ValidationRule{
-			{Rule: "self.storageClass != ''", Message: "storageClass must be set"},
+			{Expression: "self.storageClass != ''", Message: "storageClass must be set"},
+		},
+		OneOf: []OpenAPIV3Schema{
+			{
+				XEnumSwitchSettings: []EnumSwitchSetting{
+					{
+						To:       []string{"External"},
+						Impact:   "destructive",
+						Messages: map[string]string{"en": "Data is removed", "ru": "Данные удаляются"},
+					},
+				},
+			},
 		},
 	}
 
@@ -223,6 +236,9 @@ func TestMarshalRoundtrip_xDeckhouseExtensions(t *testing.T) {
 	if sc.XUIValidationMessage != "must reference an existing StorageClass" {
 		t.Errorf("x-deckhouse-ui-validation-message: got %q", sc.XUIValidationMessage)
 	}
+	if !sc.XImmutable {
+		t.Errorf("x-deckhouse-immutable: got false, want true")
+	}
 
 	rep, ok := restored.Properties["replicas"]
 	if !ok {
@@ -234,7 +250,10 @@ func TestMarshalRoundtrip_xDeckhouseExtensions(t *testing.T) {
 	if rep.XUIOrder == nil || *rep.XUIOrder != 2 {
 		t.Errorf("x-deckhouse-ui-order mismatch")
 	}
-	if len(restored.XValidations) != 1 || restored.XValidations[0].Rule != "self.storageClass != ''" {
+	if rep.XUIGroup != "toggles" {
+		t.Errorf("x-deckhouse-ui-group: got %q, want toggles", rep.XUIGroup)
+	}
+	if len(restored.XValidations) != 1 || restored.XValidations[0].Expression != "self.storageClass != ''" {
 		t.Errorf("x-deckhouse-validations: got %+v", restored.XValidations)
 	}
 
@@ -247,6 +266,20 @@ func TestMarshalRoundtrip_xDeckhouseExtensions(t *testing.T) {
 	}
 	if sec.XUIResourceName.LabelSelector == nil || sec.XUIResourceName.LabelSelector.MatchLabels["app"] != "echo" {
 		t.Errorf("x-deckhouse-ui-resource-name labelSelector lost: got %+v", sec.XUIResourceName.LabelSelector)
+	}
+
+	if len(restored.OneOf) != 1 || len(restored.OneOf[0].XEnumSwitchSettings) != 1 {
+		t.Fatal("x-deckhouse-enum-switch-settings lost")
+	}
+	setting := restored.OneOf[0].XEnumSwitchSettings[0]
+	if len(setting.To) != 1 || setting.To[0] != "External" {
+		t.Errorf("x-deckhouse-enum-switch-settings to: got %+v", setting.To)
+	}
+	if setting.Impact != "destructive" {
+		t.Errorf("x-deckhouse-enum-switch-settings impact: got %q", setting.Impact)
+	}
+	if setting.Messages["ru"] != "Данные удаляются" {
+		t.Errorf("x-deckhouse-enum-switch-settings messages: got %+v", setting.Messages)
 	}
 }
 
@@ -278,6 +311,36 @@ func TestUIResourceNameSelector_deepCopy(t *testing.T) {
 	copied.XUIResourceName.LabelSelector.MatchLabels["app"] = "mutated"
 	if original.XUIResourceName.LabelSelector.MatchLabels["app"] != "echo" {
 		t.Errorf("DeepCopy shares the labelSelector map with original")
+	}
+}
+
+// TestEnumSwitchSettings_invalidTypeRejected verifies a non-array x-deckhouse-enum-switch-settings fails to unmarshal.
+func TestEnumSwitchSettings_invalidTypeRejected(t *testing.T) {
+	var restored OpenAPIV3Schema
+	err := json.Unmarshal([]byte(`{"type":"object","x-deckhouse-enum-switch-settings":"destructive"}`), &restored)
+	if err == nil {
+		t.Fatal("expected error unmarshaling string into x-deckhouse-enum-switch-settings, got nil")
+	}
+}
+
+// TestEnumSwitchSetting_deepCopy verifies DeepCopy produces independent to and messages.
+func TestEnumSwitchSetting_deepCopy(t *testing.T) {
+	original := &OpenAPIV3Schema{
+		Type: "object",
+		XEnumSwitchSettings: []EnumSwitchSetting{
+			{To: []string{"External"}, Impact: "warning", Messages: map[string]string{"en": "original"}},
+		},
+	}
+
+	copied := original.DeepCopy()
+	copied.XEnumSwitchSettings[0].To[0] = "mutated"
+	copied.XEnumSwitchSettings[0].Messages["en"] = "mutated"
+
+	if original.XEnumSwitchSettings[0].To[0] != "External" {
+		t.Errorf("DeepCopy shares the to slice with original")
+	}
+	if original.XEnumSwitchSettings[0].Messages["en"] != "original" {
+		t.Errorf("DeepCopy shares the messages map with original")
 	}
 }
 
@@ -475,10 +538,10 @@ func realModuleSchema() *OpenAPIV3Schema {
 				XUIOrder:    int64Ptr(2),
 				XValidations: []ValidationRule{
 					{
-						Rule:      "self >= 1 && self <= 10",
-						Message:   "replicas must be between 1 and 10",
-						Reason:    stringPtr("FieldValueInvalid"),
-						FieldPath: ".replicas",
+						Expression: "self >= 1 && self <= 10",
+						Message:    "replicas must be between 1 and 10",
+						Reason:     stringPtr("FieldValueInvalid"),
+						FieldPath:  ".replicas",
 					},
 				},
 			},
@@ -554,8 +617,8 @@ func realModuleSchema() *OpenAPIV3Schema {
 		},
 		XValidations: []ValidationRule{
 			{
-				Rule:    "has(self.storageClass) && self.storageClass != ''",
-				Message: "storageClass is required",
+				Expression: "has(self.storageClass) && self.storageClass != ''",
+				Message:    "storageClass is required",
 			},
 		},
 	}
