@@ -27,4 +27,4 @@ cleanup:
   - references:
       branch: main
     imagesPerReference:
-      last: 1
+      last: 2
