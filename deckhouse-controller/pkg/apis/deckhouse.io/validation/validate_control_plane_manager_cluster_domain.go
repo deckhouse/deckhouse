@@ -57,10 +57,10 @@ func (v *moduleConfigValidator) validateControlPlaneManagerClusterDomain(
 	}
 
 	ccDomain, err := v.clusterConfigurationDomain(ctx)
-	switch {
-	case apierrors.IsNotFound(err):
-		return nil, nil
-	case err != nil:
+	if err != nil {
+		if apierrors.IsNotFound(err) {
+			return nil, nil
+		}
 		return rejectResult(clusterDomainUnverifiableMessage("setting network.clusterDomain"))
 	}
 	if ccDomain == "" || ccDomain == newDomain {
@@ -94,10 +94,10 @@ func (v *moduleConfigValidator) clusterDomainRemovalRejection(ctx context.Contex
 	}
 
 	ccDomain, err := v.clusterConfigurationDomain(ctx)
-	switch {
-	case apierrors.IsNotFound(err):
-		return ""
-	case err != nil:
+	if err != nil {
+		if apierrors.IsNotFound(err) {
+			return ""
+		}
 		return clusterDomainUnverifiableMessage(action)
 	}
 

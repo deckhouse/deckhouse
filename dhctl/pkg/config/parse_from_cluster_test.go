@@ -151,8 +151,8 @@ func TestLoadControlPlaneManagerModuleConfig_Present(t *testing.T) {
 	kubeCl := client.NewFakeKubernetesClient()
 	mustSeedControlPlaneManagerMC(t, kubeCl, map[string]interface{}{"podSubnetCIDR": "10.11.0.0/16"})
 
-	cpm, read := loadControlPlaneManagerModuleConfig(context.Background(), kubeCl)
-	require.True(t, read)
+	cpm, err := loadControlPlaneManagerModuleConfig(context.Background(), kubeCl)
+	require.NoError(t, err)
 	require.NotNil(t, cpm)
 	network, _ := cpm.Spec.Settings["network"].(map[string]interface{})
 	require.Equal(t, "10.11.0.0/16", network["podSubnetCIDR"])
@@ -164,9 +164,9 @@ func TestLoadControlPlaneManagerModuleConfig_Absent(t *testing.T) {
 	// Missing control-plane-manager ModuleConfig must be a soft miss (nil), never an error:
 	// converge/destroy fall back to the deprecated ClusterConfiguration network fields. The read
 	// still counts as successful - the object is genuinely absent, its value is not unknown.
-	cpm, read := loadControlPlaneManagerModuleConfig(context.Background(), kubeCl)
+	cpm, err := loadControlPlaneManagerModuleConfig(context.Background(), kubeCl)
 	require.Nil(t, cpm)
-	require.True(t, read)
+	require.NoError(t, err)
 }
 
 // This is the regression the bug report was: on a cluster whose control-plane-manager
