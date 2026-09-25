@@ -50,6 +50,8 @@ spec:
         }
         download {{ $resolvedIPXE.bios.url | quote }} {{ $resolvedIPXE.bios.sha256 | quote }} /shared/custom_ipxe_firmware/undionly.kpxe
         download {{ $resolvedIPXE.uefiX86_64.url | quote }} {{ $resolvedIPXE.uefiX86_64.sha256 | quote }} /shared/custom_ipxe_firmware/snponly.efi
+        # httpd uses snponly.efi, while rundnsmasq expects this architecture-specific name.
+        cp /shared/custom_ipxe_firmware/snponly.efi /shared/custom_ipxe_firmware/snponly-x86_64.efi
         {{- if $resolvedIPXE.uefiArm64 }}
         download {{ $resolvedIPXE.uefiArm64.url | quote }} {{ $resolvedIPXE.uefiArm64.sha256 | quote }} /shared/custom_ipxe_firmware/snponly-arm64.efi
         {{- end }}

@@ -235,7 +235,7 @@ dhcp:
 			ironic := f.KubernetesResource("Ironic", "d8-cloud-provider-baremetal", "ironic")
 			downloaderArgs := ironic.Field("spec.overrides.initContainers.0.args.0").String()
 			Expect(downloaderArgs).To(ContainSubstring("/shared/custom_ipxe_firmware/snponly.efi"))
-			Expect(downloaderArgs).NotTo(ContainSubstring("snponly-x86_64.efi"))
+			Expect(downloaderArgs).To(ContainSubstring("cp /shared/custom_ipxe_firmware/snponly.efi /shared/custom_ipxe_firmware/snponly-x86_64.efi"))
 		})
 	})
 
