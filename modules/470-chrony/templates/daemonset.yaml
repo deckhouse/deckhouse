@@ -233,6 +233,10 @@ spec:
             excludePaths:
             - /healthz
             upstreams:
+            # chrony_exporter v0.14.0 does not provide a /healthz endpoint.
+            # Route the unauthenticated health probe to the exporter root endpoint.
+            - upstream: http://127.0.0.1:4245/
+              path: /healthz
             - upstream: http://127.0.0.1:4245/
               path: /
               authorization:
@@ -432,6 +436,10 @@ spec:
             excludePaths:
             - /healthz
             upstreams:
+            # chrony_exporter v0.14.0 does not provide a /healthz endpoint.
+            # Route the unauthenticated health probe to the exporter root endpoint.
+            - upstream: http://127.0.0.1:4245/
+              path: /healthz
             - upstream: http://127.0.0.1:4245/
               path: /
               authorization:
