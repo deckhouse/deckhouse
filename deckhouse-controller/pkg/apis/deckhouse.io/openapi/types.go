@@ -86,16 +86,21 @@ type OpenAPIV3Schema struct {
 
 	// x-deckhouse-validations describes a list of validation rules written in the CEL expression language.
 	// +optional
-	// +patchMergeKey=rule
+	// +patchMergeKey=expression
 	// +patchStrategy=merge
 	// +listType=map
-	// +listMapKey=rule
+	// +listMapKey=expression
 	XValidations []ValidationRule `json:"x-deckhouse-validations,omitempty"`
 
 	// x-deckhouse-ui-advanced marks a settings field as "advanced", hiding it behind
 	// a toggle in the web console UI.
 	// +optional
 	XUIAdvanced bool `json:"x-deckhouse-ui-advanced,omitempty"`
+
+	// x-deckhouse-immutable marks a settings field as editable only when the
+	// application is created: the web console renders it read-only when editing.
+	// +optional
+	XImmutable bool `json:"x-deckhouse-immutable,omitempty"`
 
 	// x-deckhouse-ui-order sets the display order of a settings field in the
 	// web console UI: fields with lower values are shown first.
@@ -111,6 +116,18 @@ type OpenAPIV3Schema struct {
 	// matching resource names from the application's namespace.
 	// +optional
 	XUIResourceName *UIResourceNameSelector `json:"x-deckhouse-ui-resource-name,omitempty"`
+
+	// x-deckhouse-ui-group renders a settings field inside the named root-level group
+	// of the web console form; the field's path in settings stays unchanged.
+	// +optional
+	XUIGroup string `json:"x-deckhouse-ui-group,omitempty"`
+
+	// x-deckhouse-enum-switch-settings, declared on a oneOf branch, lists the confirmation
+	// dialogs the web console shows before switching the branch discriminator from a value
+	// of that branch to one of the listed target values.
+	// +optional
+	// +listType=atomic
+	XEnumSwitchSettings []EnumSwitchSetting `json:"x-deckhouse-enum-switch-settings,omitempty"`
 }
 
 // OpenAPIV3SchemaOrArray represents a value that can either be an OpenAPIV3Schema
@@ -146,10 +163,12 @@ type ExternalDocumentation struct {
 }
 
 // ValidationRule describes a validation rule written in the CEL expression language.
+// The expression key matches the shape module and application schema files use
+// and the values CEL validator reads.
 type ValidationRule struct {
-	// Rule represents the expression which will be evaluated by CEL.
-	// The `self` variable in the CEL expression is bound to the scoped value.
-	Rule string `json:"rule"`
+	// Expression is the CEL expression evaluated against the scoped value.
+	// The `self` variable in the expression is bound to that value.
+	Expression string `json:"expression"`
 
 	// Message represents the message displayed when validation fails.
 	Message string `json:"message,omitempty"`
@@ -176,4 +195,25 @@ type UIResourceNameSelector struct {
 
 	// +optional
 	LabelSelector *metav1.LabelSelector `json:"labelSelector,omitempty"`
+}
+
+// EnumSwitchSetting describes one confirmation the web console shows before the oneOf branch
+// discriminator switches to one of the target values. Target values are matched against the
+// discriminator value converted to a string, so boolean discriminators are addressed as
+// "true"/"false".
+type EnumSwitchSetting struct {
+	// To lists the target discriminator values the confirmation applies to.
+	// +listType=atomic
+	To []string `json:"to"`
+
+	// Impact is the severity of the switch: info (default), warning or destructive.
+	// A destructive switch is applied only after an explicit acknowledgement, and the web
+	// console records it with the applications.deckhouse.io/allow-destructive-settings-switch
+	// annotation on the Application.
+	// +optional
+	Impact string `json:"impact,omitempty"`
+
+	// Messages holds the dialog markdown text keyed by language code (en, ru).
+	// +optional
+	Messages map[string]string `json:"messages,omitempty"`
 }

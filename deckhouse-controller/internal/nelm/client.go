@@ -291,6 +291,8 @@ type InstallOptions struct {
 
 	ResourcesLabels map[string]string // Labels to apply to all resources
 
+	TrackingOptions common.TrackingOptions
+
 	// OnTrackingEvent is an optional callback invoked with progress updates
 	// as Kubernetes resources are being tracked for readiness during install.
 	OnTrackingEvent func(name string, report progrep.ProgressReport)
@@ -369,9 +371,7 @@ func (c *Client) Install(ctx context.Context, namespace, releaseName string, opt
 			ValuesFiles: opts.ValuesPaths,
 			RootSetJSON: valuesSet,
 		},
-		TrackingOptions: common.TrackingOptions{
-			NoPodLogs: true,
-		},
+		TrackingOptions:        opts.TrackingOptions,
 		Chart:                  opts.Path,
 		DefaultChartName:       releaseName,
 		DefaultChartVersion:    "0.2.0",

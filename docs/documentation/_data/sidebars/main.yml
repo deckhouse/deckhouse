@@ -1552,6 +1552,14 @@ entries:
                 ru: Разработка приложений
               url: /architecture/marketplace/application-development.html
             - title:
+                en: Application settings
+                ru: Настройки приложения
+              url: /architecture/marketplace/settings.html
+            - title:
+                en: Templates
+                ru: Шаблоны
+              url: /architecture/marketplace/templates.html
+            - title:
                 en: Nelm annotations
                 ru: Аннотации Nelm
               url: /architecture/marketplace/nelm-annotations.html
@@ -1559,6 +1567,10 @@ entries:
                 en: Hooks
                 ru: Хуки
               url: /architecture/marketplace/hooks.html
+            - title:
+                en: Lifecycle and debugging
+                ru: Жизненный цикл и отладка
+              url: /architecture/marketplace/lifecycle.html
         - title:
             en: Disaster resilience
             ru: Катастрофоустойчивость

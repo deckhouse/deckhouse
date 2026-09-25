@@ -52,7 +52,7 @@ Dry-run SSA означает, что diff вычисляет API server — defa
 apiVersion: batch/v1
 kind: Job
 metadata:
-  name: {{.Application.Instance.Name}}-db-migrate
+  name: d8a-{{ .Application.Instance.Name }}-db-migrate
   annotations:
     werf.io/delete-policy: before-creation
 spec: ...
@@ -60,9 +60,9 @@ spec: ...
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: {{.Application.Instance.Name}}-app
+  name: d8a-{{ .Application.Instance.Name }}-app
   annotations:
-    werf.io/deploy-dependency-migrate: state=ready,kind=Job,name=db-migrate
+    werf.io/deploy-dependency-migrate: state=ready,kind=Job,name=d8a-{{ .Application.Instance.Name }}-db-migrate
 spec: ...
 ```
 
@@ -76,7 +76,7 @@ spec: ...
 apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:
-  name: {{.Application.Instance.Name}}-postgres-data
+  name: d8a-{{ .Application.Instance.Name }}-postgres-data
   annotations:
     helm.sh/resource-policy: keep
 spec:
@@ -97,7 +97,7 @@ TLS-секрет, используемый несколькими чартами
 apiVersion: v1
 kind: Secret
 metadata:
-  name: {{.Application.Instance.Name}}-shared-tls
+  name: d8a-{{ .Application.Instance.Name }}-shared-tls
   annotations:
     werf.io/ownership: anyone
 type: kubernetes.io/tls
@@ -114,9 +114,9 @@ data: ...
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: {{.Application.Instance.Name}}-app
+  name: d8a-{{ .Application.Instance.Name }}-app
   annotations:
-    cert.external-dependency.werf.io/resource: certificates.v1.cert-manager.io/myapp-tls
+    cert.external-dependency.werf.io/resource: certificates.v1.cert-manager.io/d8a-{{ .Application.Instance.Name }}-tls
 spec: ...
 ```
 
@@ -130,7 +130,7 @@ DaemonSet с метриками, чья недоступность не долж
 apiVersion: apps/v1
 kind: DaemonSet
 metadata:
-  name: {{.Application.Instance.Name}}-metrics-agent
+  name: d8a-{{ .Application.Instance.Name }}-metrics-agent
   annotations:
     werf.io/fail-mode: IgnoreAndContinueDeployProcess
     werf.io/track-termination-mode: NonBlocking
@@ -147,7 +147,7 @@ Init Job, нужная только при `install`, не при `upgrade`:
 apiVersion: batch/v1
 kind: Job
 metadata:
-  name: {{.Application.Instance.Name}}-init-data
+  name: d8a-{{ .Application.Instance.Name }}-init-data
   annotations:
     werf.io/deploy-on: install
     werf.io/ownership: anyone   # КРИТИЧНО
@@ -164,7 +164,7 @@ StatefulSet с большим Docker-образом (ML-модели, Elasticsea
 apiVersion: apps/v1
 kind: StatefulSet
 metadata:
-  name: elasticsearch
+  name: d8a-{{ .Application.Instance.Name }}-elasticsearch
   annotations:
     werf.io/no-activity-timeout: 20m
     werf.io/failures-allowed-per-replica: "3"
@@ -197,8 +197,8 @@ metadata:
 ```yaml
 metadata:
   annotations:
-    werf.io/deploy-dependency-db: state=ready,kind=StatefulSet,name=postgres
-    werf.io/deploy-dependency-migrations: state=present,kind=Job,name=db-migrate
+    werf.io/deploy-dependency-db: state=ready,kind=StatefulSet,name=d8a-{{ .Application.Instance.Name }}-postgres
+    werf.io/deploy-dependency-migrations: state=present,kind=Job,name=d8a-{{ .Application.Instance.Name }}-db-migrate
 ```
 
 Состояния зависимости:
@@ -225,8 +225,8 @@ werf.io/deploy-dependency-<id>: state=ready|present[,name=<name>][,namespace=<na
 ```yaml
 metadata:
   annotations:
-    cert.external-dependency.werf.io/resource: certificates.v1.cert-manager.io/myapp-tls
-    cert.external-dependency.werf.io/name: myapp-production   # Неймспейс внешнего ресурса
+    cert.external-dependency.werf.io/resource: certificates.v1.cert-manager.io/d8a-{{ .Application.Instance.Name }}-tls
+    cert.external-dependency.werf.io/namespace: myapp-production   # Неймспейс внешнего ресурса
 ```
 
 Полный формат:
@@ -242,7 +242,7 @@ metadata:
 ```yaml
 metadata:
   annotations:
-    werf.io/delete-dependency-app: state=absent,kind=Deployment,name=app
+    werf.io/delete-dependency-app: state=absent,kind=Deployment,name=d8a-{{ .Application.Instance.Name }}-app
 ```
 
 ---
@@ -314,6 +314,12 @@ werf.io/deploy-on: pre-install,upgrade,post-install
 ---
 
 ## Аннотации логов
+
+{% endraw %}
+{% alert level="info" %}
+DP не собирает логи подов при деплое приложений, поэтому эти аннотации не влияют на деплой.
+{% endalert %}
+{% raw %}
 
 | Аннотация | По умолчанию | Описание |
 |---|---|---|
