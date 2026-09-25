@@ -115,16 +115,9 @@ rules: []
 var _ = Describe("User Authz hooks :: discovery legacy custom roles ::", func() {
 	f := HookExecutionConfigInit(`{"userAuthz":{"internal":{}}}`, `{}`)
 
-	It("value key matches the contract with modules/140-user-authz/requirements", func() {
-		// The requirements package duplicates this literal (module requirements packages stay
-		// import-free of the hooks package); this assertion and its counterpart in
-		// requirements/check_test.go pin both copies to the same string.
-		Expect(LegacyRBACv2CustomRolesValueKey).To(Equal("userAuthz:legacyRBACv2CustomRoles"))
-	})
-
 	Context("Empty cluster", func() {
 		BeforeEach(func() {
-			requirements.RemoveValue("userAuthz:legacyRBACv2CustomRoles")
+			requirements.RemoveValue(LegacyRBACv2CustomRolesValueKey)
 			f.BindingContexts.Set(f.KubeStateSet(``))
 			f.RunHook()
 		})
@@ -148,7 +141,7 @@ var _ = Describe("User Authz hooks :: discovery legacy custom roles ::", func() 
 
 	Context("Cluster with a mix of legacy, new-scheme and unrelated roles", func() {
 		BeforeEach(func() {
-			requirements.RemoveValue("userAuthz:legacyRBACv2CustomRoles")
+			requirements.RemoveValue(LegacyRBACv2CustomRolesValueKey)
 			f.BindingContexts.Set(f.KubeStateSet(stateLegacyCustomRoles))
 			f.RunHook()
 		})

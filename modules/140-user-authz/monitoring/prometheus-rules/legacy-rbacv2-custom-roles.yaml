@@ -2,9 +2,9 @@
   rules:
   # A custom role/capability of the legacy experimental RBACv2 scheme ("custom:*" name with the
   # rbac.deckhouse.io/kind: manage|use markers). The DKP 1.78 role model renames the aggregation
-  # labels, and custom roles get NO compatibility aliases — such roles stop aggregating permissions,
-  # and the DKP 1.78 release is blocked by the legacyRBACv2CustomRolesCount requirement until they
-  # are migrated.
+  # labels, and custom roles get NO compatibility aliases — such roles stop aggregating permissions
+  # in 1.78. The upgrade to 1.78 is allowed; the release after it carries the
+  # legacyRBACv2CustomRolesCount requirement and is blocked until they are migrated.
   - alert: D8UserAuthzLegacyRBACv2CustomRoleFound
     expr: |
       max by (name) (d8_rbacv2_legacy_custom_role) > 0
@@ -25,7 +25,7 @@
 
         In DKP 1.78, the role model changes the labels that drive aggregation. Legacy custom roles get **no compatibility aliases** and will stop aggregating permissions entirely after the upgrade.
 
-        Until every such role is migrated, the upgrade to DKP 1.78 is blocked by the `legacyRBACv2CustomRolesCount` release requirement.
+        The upgrade to DKP 1.78 is not blocked. Until every such role is migrated, the upgrade to the release after 1.78 is held back by the `legacyRBACv2CustomRolesCount` release requirement.
 
         Migrate the role to the new scheme:
 
