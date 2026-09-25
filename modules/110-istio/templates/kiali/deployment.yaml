@@ -111,6 +111,8 @@ spec:
         args:
         - "--secure-listen-address=$(KUBE_RBAC_PROXY_LISTEN_ADDRESS):8443"
         - "--client-ca-file=/etc/kube-rbac-proxy/ca.crt"
+        - "--tls-cert-file=/etc/kube-rbac-proxy-tls/tls.crt"
+        - "--tls-private-key-file=/etc/kube-rbac-proxy-tls/tls.key"
         - "--v=2"
         - "--logtostderr=true"
         - "--stale-cache-interval=1h30m"
@@ -157,6 +159,8 @@ spec:
         volumeMounts:
           - name: kube-rbac-proxy-ca
             mountPath: /etc/kube-rbac-proxy
+          - name: kube-rbac-proxy-tls
+            mountPath: /etc/kube-rbac-proxy-tls
       volumes:
       - name: kiali-configuration
         configMap:
@@ -172,3 +176,7 @@ spec:
         configMap:
           defaultMode: 420
           name: kube-rbac-proxy-ca.crt
+      - name: kube-rbac-proxy-tls
+        secret:
+          defaultMode: 420
+          secretName: kiali-kube-rbac-proxy-tls

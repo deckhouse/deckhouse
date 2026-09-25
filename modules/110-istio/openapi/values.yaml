@@ -45,6 +45,23 @@ properties:
         type: string
         x-examples:
         - "FD9Q24PwNZkg4pV9cxTOV1Se5R0RD1sT"
+      kialiRBACProxyTLS:
+        type: object
+        default: {}
+        description: |
+          Serving certificate of the kube-rbac-proxy sidecar in front of Kiali,
+          issued from the cluster-wide kube-rbac-proxy CA so that in-cluster
+          clients can verify it.
+        properties:
+          ca:
+            type: string
+            x-examples: ["---CA PEM---"]
+          crt:
+            type: string
+            x-examples: ["---CERT PEM---"]
+          key:
+            type: string
+            x-examples: ["---KEY PEM---"]
       istioToK8sCompatibilityMap:
         type: object
         default:
