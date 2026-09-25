@@ -72,6 +72,14 @@ func TestNodeDiskSpace(t *testing.T) {
 			wantDetail: "has 46 GB at /var/lib",
 		},
 		{
+			// The smallest a master is given on our own platforms: a DVP root disk of 40 GiB,
+			// which measures about 42 GB. The floor used to be 45 and refused it, and the
+			// Commander path it bootstraps through has no command line to skip the check on.
+			name:       "the root disk a DVP master is created with",
+			node:       newFakeNode().on("df -Pk /var/lib").prints(dfOutput(42, 30)),
+			wantDetail: "has 42 GB at /var/lib",
+		},
+		{
 			name:    "a disk below the floor",
 			node:    newFakeNode().on("df -Pk /var/lib").prints(dfOutput(30, 25)),
 			wantErr: "the filesystem is 30 GB",

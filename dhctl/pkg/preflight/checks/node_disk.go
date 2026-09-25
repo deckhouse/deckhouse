@@ -37,9 +37,13 @@ const nodeStatePath = "/var/lib"
 // size against the unformatted requirement failed a node that had exactly the disk the
 // documentation asks for.
 //
-// 45 leaves room for both and still refuses a node given 40 GB, which is the mistake worth
-// catching.
-const nodeFilesystemFloorGB = 45
+// The floor is deliberately below the documented disk rather than level with it. It started at 45
+// — 50 minus formatting — and that refused masters our own platforms hand out: a DVP master gets a
+// 40 GiB root disk, which measures about 42 GB. Those clusters work, and on the Commander path
+// there is no dhctl command line to put a skip flag on, so a floor that refuses them refuses the
+// product. 40 still catches the mistake this check exists for, a node given 30 GB or less, and the
+// failure names the 50 GB disk the documentation asks for.
+const nodeFilesystemFloorGB = 40
 
 // minimumFreeDiskGiB is how much of the filesystem has to be free for the bootstrap to finish:
 // unpacking packages, pulling images and writing the first etcd state all happen before anything
@@ -103,8 +107,8 @@ func (c NodeDiskSpaceCheck) Run(ctx context.Context) (string, error) {
 		return "", preflight.Permanent(&preflight.Failure{
 			Checked:  fmt.Sprintf("the filesystem holding %s on %s", nodeStatePath, host),
 			Observed: fmt.Sprintf("the filesystem is %d GB", totalGB),
-			Expected: fmt.Sprintf("at least %d GB of filesystem at %s (what a %d GB disk holds after "+
-				"partitioning and formatting)", nodeFilesystemFloorGB, nodeStatePath, minimumRequiredRootDiskSizeGB),
+			Expected: fmt.Sprintf("at least %d GB of filesystem at %s; the documentation asks for a %d GB disk",
+				nodeFilesystemFloorGB, nodeStatePath, minimumRequiredRootDiskSizeGB),
 			Fix: "give the node a larger disk, or mount a larger filesystem at " + nodeStatePath,
 		})
 	}

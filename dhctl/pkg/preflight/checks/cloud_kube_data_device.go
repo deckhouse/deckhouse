@@ -71,12 +71,7 @@ func (c CloudKubeDataDeviceCheck) Run(ctx context.Context) (string, error) {
 	}
 	host := hostPhrase(nodeInterface)
 
-	path, known := resolveDataDevice(ctx, nodeInterface, reported)
-	if !known {
-		return "", preflight.NotApplicable(
-			"the provider reported %q for the Kubernetes data disk, which is neither a path, an Azure LUN "+
-				"nor a disk serial, so dhctl cannot tell which device it means", reported)
-	}
+	path := resolveDataDevice(ctx, nodeInterface, reported)
 	if path == "" {
 		// The disk is attached by the provider; it does not appear between two attempts.
 		return "", preflight.Permanent(&preflight.Failure{
@@ -126,16 +121,18 @@ func CloudKubeDataDevice(devicePath func() string, nodeInterface NodeInterfaceFu
 // GCP 000_ step beside it), so the check and the mount agree about which device is meant. Like
 // those steps, it branches on the shape of the value rather than on the provider name.
 //
-// Returns the resolved path, and whether the shape was one it knows at all.
-func resolveDataDevice(ctx context.Context, nodeInterface libcon.Interface, reported string) (path string, known bool) {
+// It returns the path it resolved to, or "" when nothing on the node matches. There is no
+// "unrecognised shape" answer: a serial is any string, so the last branch accepts whatever the
+// first two did not — which is also what the GCP step does with it.
+func resolveDataDevice(ctx context.Context, nodeInterface libcon.Interface, reported string) string {
 	switch {
 	case strings.HasPrefix(reported, "/dev/"):
 		// A direct path, which is what most providers report. -b follows symlinks: they hand out
 		// /dev/disk/by-id/… and the kernel resolves that to /dev/sdc.
 		if nodeInterface.Command("test", "-b", reported).Run(ctx) == nil {
-			return reported, true
+			return reported
 		}
-		return "", true
+		return ""
 
 	case azureLUN.MatchString(reported):
 		lun := azureLUN.FindStringSubmatch(reported)[1]
@@ -146,7 +143,7 @@ func resolveDataDevice(ctx context.Context, nodeInterface libcon.Interface, repo
 				"ls -1 /dev/disk/azure/data-lun%[1]s /dev/disk/azure/scsi*/lun%[1]s 2>/dev/null | head -n1; "+
 				"for o in 2 1 0; do ls -1 /dev/disk/by-path/*nvme-$((%[1]s+o)) 2>/dev/null | head -n1; done",
 			lun)
-		return firstBlockDevice(ctx, nodeInterface, script), true
+		return firstBlockDevice(ctx, nodeInterface, script)
 
 	default:
 		// A disk serial, which is how GCP's device_name reaches the node. Matched the way the GCP
@@ -154,13 +151,13 @@ func resolveDataDevice(ctx context.Context, nodeInterface libcon.Interface, repo
 		script := fmt.Sprintf("lsblk -lo name,serial | grep -F -- %s | head -n1 | cut -d' ' -f1", shellQuote(reported))
 		name := commandOutput(ctx, nodeInterface, "sh", "-c", script)
 		if name == "" {
-			return "", true
+			return ""
 		}
 		device := "/dev/" + name
 		if nodeInterface.Command("test", "-b", device).Run(ctx) != nil {
-			return "", true
+			return ""
 		}
-		return device, true
+		return device
 	}
 }
 
