@@ -7,15 +7,15 @@ description: Architecture of the Managed Services subsystem in Deckhouse Platfor
 
 This subsection describes the architecture of the Managed Services subsystem of Deckhouse Platform (DP). Managed Services subsystem automates the deployment, scaling, backup, and updating of managed services in DP.
 
-The Managed Services subsystem includes the following modules
+The Managed Services subsystem includes the following modules:
 
-* [`managed-cassandra`](/modules/managed-cassandra/): Manages Cassandra clusters.
+* [`managed-cassandra`](/modules/managed-cassandra/): Manages Cassandra instances.
 * [`managed-clickhouse`](/modules/managed-clickhouse/): Manages ClickHouse instances.
-* [`managed-hive-metastore`](/modules/managed-hive-metastore/): Manages Hive Metastore clusters.
+* [`managed-hive-metastore`](/modules/managed-hive-metastore/): Manages Hive Metastore instances.
 * [`managed-kafka`](/modules/managed-kafka/): Manages Kafka instances.
 * [`managed-memcached`](/modules/managed-memcached/): Manages Memcached instances.
-* [`managed-opensearch`](/modules/managed-opensearch): Manages OpenSearch instances.
+* [`managed-opensearch`](/modules/managed-opensearch/): Manages OpenSearch instances.
 * [`managed-postgres`](/modules/managed-postgres/): Manages PostgreSQL clusters.
-* [`managed-starrocks`](/modules/managed-starrocks/): Manages StarRocks clusters.
-* [`managed-trino`](/modules/managed-trino/): Manages Trino clusters.
-* [`managed-valkey`](/modules/managed-valkey/): Manages Valkey clusters.
+* [`managed-starrocks`](/modules/managed-starrocks/): Manages StarRocks instances.
+* [`managed-trino`](/modules/managed-trino/): Manages Trino instances.
+* [`managed-valkey`](/modules/managed-valkey/): Manages Valkey instances.
