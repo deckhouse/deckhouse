@@ -124,3 +124,27 @@ nodeSelector:
   node.deckhouse.io/gpu: ""
   {{- end }}
 {{- end }}
+
+{{- /* helm_lib "with-uninitialized" tolerates node.kubernetes.io/unreachable forever, pinning the replica to a powered-off master. */ -}}
+{{- /* Here unreachable is tolerated for NoExecute and 60s only, so a replacement never lands on the dead master. */ -}}
+{{- define "node_manager_master_controller_tolerations" }}
+{{- include "helm_lib_tolerations" (tuple . "any-node") }}
+- key: node.deckhouse.io/bashible-uninitialized
+  operator: Exists
+  effect: NoSchedule
+- key: node.deckhouse.io/uninitialized
+  operator: Exists
+  effect: NoSchedule
+- key: node.deckhouse.io/csi-not-bootstrapped
+  operator: Exists
+  effect: NoSchedule
+- key: node.kubernetes.io/not-ready
+- key: node.kubernetes.io/memory-pressure
+- key: node.kubernetes.io/disk-pressure
+- key: node.kubernetes.io/pid-pressure
+- key: node.kubernetes.io/network-unavailable
+- key: node.kubernetes.io/unreachable
+  operator: Exists
+  effect: NoExecute
+  tolerationSeconds: 60
+{{- end }}
