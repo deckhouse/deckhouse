@@ -41,17 +41,24 @@ type HealthcheckTarget struct {
 	probeResultDetails []ProbeResultDetail
 }
 
-type ProbeCounts struct {
+// ProbeState is what one probe carries over from its previous run: the consecutive counters, and
+// the state those counters have so far produced. The state has to be carried because the thresholds
+// are defined against it — a probe only flips after enough consecutive results in the new
+// direction, and keeps its previous state in between — so it cannot be recomputed from the counters
+// alone.
+type ProbeState struct {
 	failureCount int32
 	successCount int32
+	successful   bool
 }
 
-func (ht HealthcheckTarget) GetProbeResultDetailsMap() map[string]ProbeCounts {
-	result := make(map[string]ProbeCounts)
+func (ht HealthcheckTarget) GetProbeResultDetailsMap() map[string]ProbeState {
+	result := make(map[string]ProbeState)
 	for _, probeResultDetail := range ht.probeResultDetails {
-		result[probeResultDetail.id] = ProbeCounts{
+		result[probeResultDetail.id] = ProbeState{
 			successCount: probeResultDetail.successCount,
 			failureCount: probeResultDetail.failureCount,
+			successful:   probeResultDetail.successful,
 		}
 	}
 	return result
@@ -61,8 +68,8 @@ func (ht HealthcheckTarget) GetRenewedProbes(probes []Prober) []Prober {
 	newProbes := make([]Prober, 0, len(probes))
 	probesResultDetailsMap := ht.GetProbeResultDetailsMap()
 	for _, prob := range probes {
-		counts := probesResultDetailsMap[prob.GetID()]
-		newProbes = append(newProbes, prob.SetSuccessCount(counts.successCount).SetFailureCount(counts.failureCount))
+		state := probesResultDetailsMap[prob.GetID()]
+		newProbes = append(newProbes, prob.SetSuccessCount(state.successCount).SetFailureCount(state.failureCount))
 	}
 	return newProbes
 }
@@ -86,12 +93,18 @@ func (ht HealthcheckTarget) EqualTo(target HealthcheckTarget) bool {
 	return true
 }
 
+// FailedProbes names the probes that are currently in the failed state, which is exactly the set
+// that keeps probesSuccessful false. Deriving it from the state rather than re-deriving it from the
+// counters is what keeps the two fields from contradicting each other: the counters alone cannot
+// say whether a probe has crossed its threshold yet, so a single failed check used to be reported
+// here while failureThreshold was still unmet.
 func (ht HealthcheckTarget) FailedProbes() []string {
 	var failedProbes []string
 	for _, probe := range ht.probeResultDetails {
-		if probe.successCount < probe.successThreshold || probe.failureCount >= probe.failureThreshold {
-			failedProbes = append(failedProbes, fmt.Sprintf("%s:%s:%d", probe.mode, ht.targetHost, probe.targetPort))
+		if probe.successful {
+			continue
 		}
+		failedProbes = append(failedProbes, fmt.Sprintf("%s:%s:%d", probe.mode, ht.targetHost, probe.targetPort))
 	}
 	return failedProbes
 }
@@ -118,6 +131,10 @@ type ProbeTask struct {
 	host    string
 	swhName types.NamespacedName
 	probes  []Prober
+	// previous holds the state each probe ended the last run in, keyed by probe ID, so the worker
+	// can apply the thresholds against it. A probe missing from the map has never run and starts
+	// out unsuccessful, which is what makes successThreshold gate the first publication.
+	previous map[string]ProbeState
 }
 
 type TaskQueue struct {
