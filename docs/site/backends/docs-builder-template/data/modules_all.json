@@ -40,6 +40,13 @@
   "ai-inference": {
     "extensions": [
       "ai_inference"
+    ],
+    "editions": [
+      "ee"
+    ],
+    "tags": [
+      "ml/ai",
+      "ssdlc"
     ]
   },
   "ai-models": {
