@@ -38,3 +38,11 @@ rules:
   - get
   - list
   - watch
+- apiGroups:
+  - apps
+  resourceNames:
+  - kiali
+  resources:
+  - deployments/http
+  verbs:
+  - get
