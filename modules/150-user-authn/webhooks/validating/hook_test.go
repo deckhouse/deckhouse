@@ -108,6 +108,16 @@ func checkIPCheckUnchanged() error {
 	return nil
 }
 
+// stubShellLib replaces the shell-operator library the hook sources with the plumbing the tests
+// provide, and with the shell options that library sets. Running the hook under anything laxer
+// than production would let an unbound variable or a failed pipe pass here and fail in a cluster.
+func stubShellLib(script string) string {
+	return strings.Replace(script, "source /shell_lib.sh", `set -Eeuo pipefail
+shopt -s failglob inherit_errexit
+function context::jq() { jq "$@" "$TEST_CONTEXT"; }
+function hook::run() { :; }`, 1)
+}
+
 // runHook executes the hook, substituting only shell-operator context and response plumbing.
 func runHook(t *testing.T, context map[string]any) map[string]any {
 	t.Helper()
@@ -119,9 +129,7 @@ func runHook(t *testing.T, context map[string]any) map[string]any {
 	require.NoError(t, err)
 	require.NoError(t, os.WriteFile(filepath.Join(dir, "context.json"), input, 0600))
 
-	source := strings.Replace(string(script), "source /shell_lib.sh", `function context::jq() { jq "$@" "$TEST_CONTEXT"; }
-function hook::run() { :; }`, 1)
-	cmd := exec.Command("bash", "-e", "-c", source+"\n__main__")
+	cmd := exec.Command("bash", "-c", stubShellLib(string(script))+"\n__main__")
 	response := filepath.Join(dir, "response.json")
 	cmd.Env = append(os.Environ(), "TEST_CONTEXT="+filepath.Join(dir, "context.json"), "VALIDATING_RESPONSE_PATH="+response)
 
@@ -151,8 +159,7 @@ func snapshot(t *testing.T, object map[string]any) map[string]any {
 	script, err := os.ReadFile(validatingHook)
 	require.NoError(t, err)
 
-	source := strings.Replace(string(script), "source /shell_lib.sh", "function hook::run() { :; }", 1)
-	configYAML, err := exec.Command("bash", "-e", "-c", source+"\n__config__").CombinedOutput()
+	configYAML, err := exec.Command("bash", "-c", stubShellLib(string(script))+"\n__config__").CombinedOutput()
 	require.NoError(t, err, "%s", configYAML)
 
 	var config struct {
