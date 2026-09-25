@@ -8,7 +8,7 @@ description: "Настройка доступа CI/CD к API Kubernetes в Deckh
 Для аутентификации CI/CD-пайплайнов в API Kubernetes доступны следующие методы:
 - [ServiceAccount](#serviceaccount) — токен Kubernetes ServiceAccount.
 - [Basic Auth](#basic-auth) — логин и пароль через IdP.
-- [Token Exchange](#token-exchange) — обмен токена IdP на токен Dex.
+- [Token Exchange](#обмен-токена-token-exchange) — обмен токена IdP на токен Dex.
 
 ---
 
@@ -60,7 +60,7 @@ EOF
 
 Назначьте необходимые для ServiceAccount права.
 
-Для текущей ролевой модели используйте [ClusterAuthorizationRule](/modules/user-authz/cr.html#clusterauthorizationrule):
+Для упрощённой ролевой модели используйте [ClusterAuthorizationRule](/modules/user-authz/cr.html#clusterauthorizationrule):
 
 ```shell
 cat <<EOF | d8 k apply -f -
@@ -80,7 +80,7 @@ EOF
 
 Доступные уровни: `User`, `PrivilegedUser`, `Editor`, `Admin`, `ClusterEditor`, `ClusterAdmin`, `SuperAdmin`.
 
-Для экспериментальной ролевой модели используйте [ClusterRoleBinding](https://kubernetes.io/docs/reference/kubernetes-api/authorization-resources/cluster-role-binding-v1/):
+Для гранулярной ролевой модели используйте [ClusterRoleBinding](https://kubernetes.io/docs/reference/kubernetes-api/authorization-resources/cluster-role-binding-v1/):
 
 ```shell
 cat <<EOF | d8 k apply -f -
@@ -94,7 +94,7 @@ subjects:
   namespace: ci-deploy
 roleRef:
   kind: ClusterRole
-  name: d8:manage:all:manager
+  name: d8:system:manager
   apiGroup: rbac.authorization.k8s.io
 EOF
 ```
@@ -328,7 +328,7 @@ EOF
 Аннотация `dexclient.deckhouse.io/allow-access-to-kubernetes` позволяет клиенту запрашивать токены с `aud=kubernetes`.
 
 {% alert level="warning" %}
-Предоставляемый таким образом доступ к Kubernetes API действует на уровне всего кластера. По этой причине для добавления аннотации или изменения её значения на `"true"` необходимы права на изменение конфигурации модуля `user-authn` — например, роль `d8:manage:permission:module:user-authn:edit`. Прав на создание DexClient в отдельном неймспейсе недостаточно: admission-контроллер отклонит запрос с сообщением, содержащим имя аннотации.
+Предоставляемый таким образом доступ к Kubernetes API действует на уровне всего кластера. По этой причине для добавления аннотации или изменения её значения на `"true"` необходимы права на изменение конфигурации модуля `user-authn` — например, роль `d8:system-capability:user-authn:edit`. Прав на создание DexClient в отдельном неймспейсе недостаточно: admission-контроллер отклонит запрос с сообщением, содержащим имя аннотации.
 
 Добавление аннотации ограничено независимо от указанного значения, включая `"false"`. Это необходимо для совместимости с предыдущими версиями DP, в которых доступ предоставляется при наличии аннотации независимо от её значения.
 
@@ -360,7 +360,7 @@ DP настраивает kube-apiserver на проверку токенов De
 
 Подробнее о выдаче прав — в разделе [«Выдача прав пользователям и сервисным аккаунтам»](granting.html).
 
-Для текущей ролевой модели используйте [ClusterAuthorizationRule](/modules/user-authz/cr.html#clusterauthorizationrule):
+Для упрощённой ролевой модели используйте [ClusterAuthorizationRule](/modules/user-authz/cr.html#clusterauthorizationrule):
 
 ```shell
 cat <<EOF | d8 k apply -f -
@@ -376,7 +376,7 @@ spec:
 EOF
 ```
 
-Для экспериментальной ролевой модели используйте [ClusterRoleBinding](https://kubernetes.io/docs/reference/kubernetes-api/authorization-resources/cluster-role-binding-v1/):
+Для гранулярной ролевой модели используйте [ClusterRoleBinding](https://kubernetes.io/docs/reference/kubernetes-api/authorization-resources/cluster-role-binding-v1/):
 
 ```shell
 cat <<EOF | d8 k apply -f -
@@ -390,7 +390,7 @@ subjects:
   apiGroup: rbac.authorization.k8s.io
 roleRef:
   kind: ClusterRole
-  name: d8:manage:all:manager
+  name: d8:system:manager
   apiGroup: rbac.authorization.k8s.io
 EOF
 ```

@@ -22,8 +22,8 @@ DP предоставляет встроенное средство для ав�
 
 Доступ к результатам сканирования, в том числе возможность просматривать ресурсы с результатами предоставляется пользователям, обладающим следующими [ролями доступа](../../admin/configuration/access/authorization/rbac-experimental.html):
 
-- `d8:manage:networking:viewer` или выше;
-- `d8:manage:permission:module:operator-trivy:view`.
+- `d8:subsystem:security:viewer` или выше;
+- `d8:system-capability:operator-trivy:view`.
 
 ## Просмотр отчёта сканирования своего приложения
 

@@ -11,13 +11,28 @@ ensuring security and operational control in the cluster.
 
 DP supports two role models:
 
-- [Current](../authorization/rbac-current.html): The end-to-end authorization subsystem extends the standard RBAC mechanism
-  using custom resources — [ClusterAuthorizationRule](/modules/user-authz/cr.html#clusterauthorizationrule) and [AuthorizationRule](/modules/user-authz/cr.html#authorizationrule).
-- [Experimental](../authorization/rbac-experimental.html): This model also relies on the standard RBAC mechanism.
-  Access is configured by creating [RoleBinding](https://kubernetes.io/docs/reference/kubernetes-api/authorization-resources/role-binding-v1/) or [ClusterRoleBinding](https://kubernetes.io/docs/reference/kubernetes-api/authorization-resources/cluster-role-binding-v1/) resources.
+- [Granular](../authorization/rbac-experimental.html) (recommended): a scope-based model built on the standard RBAC mechanism.
+  Access is configured by creating [RoleBinding](https://kubernetes.io/docs/reference/kubernetes-api/authorization-resources/role-binding-v1/) or [ClusterRoleBinding](https://kubernetes.io/docs/reference/kubernetes-api/authorization-resources/cluster-role-binding-v1/) resources — or, for project-wide access, the [ProjectRoleBinding](/modules/multitenancy-manager/cr.html#projectrolebinding) and [ClusterProjectRoleBinding](/modules/multitenancy-manager/cr.html#clusterprojectrolebinding) resources of the `multitenancy-manager` module.
+- [Basic](../authorization/rbac-current.html): the original authorization subsystem, which extends the standard RBAC mechanism
+  using custom resources — [ClusterAuthorizationRule](/modules/user-authz/cr.html#clusterauthorizationrule) and [AuthorizationRule](/modules/user-authz/cr.html#authorizationrule). Support for this model will be discontinued in future releases.
 
-Both models are supported by the [`user-authz`](/modules/user-authz/) module.
+Both models are supported by the [`user-authz`](/modules/user-authz/) module and can be used at the same time — the permissions they grant are summed up (for details, see the [`user-authz` module FAQ](/modules/user-authz/faq.html#can-the-basic-and-the-granular-role-based-models-be-used-at-the-same-time)).
 The choice of model depends on security requirements and usage scenarios.
+
+## Combined use of ClusterAuthorizationRule, AuthorizationRule, and RBAC
+
+If multitenancy mode is enabled in the cluster ([`enableMultiTenancy: true`](/modules/user-authz/configuration.html#parameters-enablemultitenancy)), a user's effective permissions are the union of the permissions from all of the following sources:
+
+- **permissions from ClusterAuthorizationRule** — apply only within the namespaces allowed by the `limitNamespaces` or `namespaceSelector` parameters;
+- **permissions from AuthorizationRule** — apply within the namespace where the AuthorizationRule resource is created;
+- **permissions from plain RoleBinding resources** — apply within the namespace where the RoleBinding resource is created;
+- **permissions from plain ClusterRoleBinding resources** not created by the `user-authz` module — apply cluster-wide.
+
+The namespace restrictions set in a ClusterAuthorizationRule apply only to the permissions granted by that ClusterAuthorizationRule. They do not override permissions granted via a RoleBinding, ClusterRoleBinding, or AuthorizationRule in other namespaces. At the same time, the permissions granted by the ClusterAuthorizationRule do not extend to those other namespaces.
+
+For example, if a user has a ClusterAuthorizationRule with `accessLevel: Editor` restricted to the `ns-a` namespace, as well as a RoleBinding with the `view` role in the `ns-b` namespace, they get `Editor`-level permissions in `ns-a` and read-only permissions in `ns-b`. The permissions granted via the RoleBinding are not restricted by the ClusterAuthorizationRule, and the `Editor` access level set by the ClusterAuthorizationRule does not extend to the `ns-b` namespace.
+
+Starting with DP 1.76.5, RoleBinding and ClusterAuthorizationRule can be used together for the same user. In earlier versions of DP, the `user-authz` module's webhook rejected all requests to namespaces not listed in the user's ClusterAuthorizationRule, even if matching RoleBinding resources existed.
 
 ## Who gets access and when
 

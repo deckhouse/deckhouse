@@ -13,7 +13,7 @@ Deckhouse Platform (DP) поддерживает размещение неско
 
 | Файл | Идентификация | Назначение |
 | --- | --- | --- |
-| `/etc/kubernetes/admin.conf` | `kubernetes-admin` (группа `kubeadm:cluster-admins`) | Машинный kubeconfig для внутренних операций kubeadm (join, обновление). При включённом модуле [`user-authz`](/modules/user-authz/) RBAC использует `user-authz:cluster-admin` и дополнительную ClusterRole. При выключенном `user-authz` группа привязана к встроенной роли `cluster-admin` |
+| `/etc/kubernetes/admin.conf` | `kubernetes-admin` (группа `kubeadm:cluster-admins`) | Машинный kubeconfig для внутренних операций kubeadm (join, обновление). При включённом модуле [`user-authz`](/modules/user-authz/) RBAC использует `user-authz:super-admin` и дополнительную ClusterRole. При выключенном `user-authz` группа привязана к встроенной роли `cluster-admin` |
 | `/etc/kubernetes/super-admin.conf` | `kubernetes-super-admin` (группа `system:masters`) | Аварийный доступ (break-glass). Обходит RBAC полностью. Ограничьте доступ к файлу сценариями восстановления |
 | `/etc/kubernetes/controller-manager.conf` | `system:kube-controller-manager` | Используется kube-controller-manager |
 | `/etc/kubernetes/scheduler.conf` | `system:kube-scheduler` | Используется kube-scheduler |
@@ -24,11 +24,11 @@ Deckhouse Platform (DP) поддерживает размещение неско
 
 Если модуль [`user-authz`](/modules/user-authz/) **выключен**, DP привязывает группу `kubeadm:cluster-admins` к встроенной роли `cluster-admin` с wildcard-правами (как в обычном кластере kubeadm без дополнительной настройки RBAC).
 
-Если модуль `user-authz` **включён**, группа привязывается к `user-authz:cluster-admin`, а вторая ClusterRoleBinding добавляет роль `d8:control-plane-manager:admin-kubeconfig-supplement` (правила сверх высокоуровневой роли, например, для сертификатов и компонентов control plane). Вместе они заменяют одну wildcard-роль `cluster-admin` для этой идентичности. Для полного неограниченного доступа используйте `super-admin.conf`.
+Если модуль `user-authz` **включён**, группа привязывается к `user-authz:super-admin`, а вторая ClusterRoleBinding добавляет роль `d8:control-plane-manager:admin-kubeconfig-supplement` (правила сверх высокоуровневой роли, например, для сертификатов и компонентов control plane). Вместе они заменяют одну wildcard-роль `cluster-admin` для этой идентичности. Для полного неограниченного доступа используйте `super-admin.conf`.
 
 ## Рекомендуемый административный доступ
 
-Если модуль [`user-authn`](/modules/user-authn/) включён, используйте персонализированный kubeconfig на основе OIDC, получаемый через веб-интерфейс DKP. Это обеспечивает индивидуальную ответственность и журнал аудита.
+Если модуль [`user-authn`](/modules/user-authn/) включён, используйте персонализированный kubeconfig на основе OIDC, получаемый через [веб-интерфейс DP](../../../../user/web/ui.html). Это обеспечивает индивидуальную ответственность и журнал аудита.
 
 Если `user-authn` отключён, вы можете явно использовать административный kubeconfig на master-узле:
 

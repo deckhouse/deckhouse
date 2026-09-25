@@ -37,45 +37,43 @@ If sensitive data is present in a user’s private environment,
 it could lead to a data leak and a security model breach.
 {% endalert %}
 
-## Limitations
+## Additional namespaces
 
-Projects has several limitations:
-
-- Creating more than one namespace within a project is not supported. If you need multiple namespaces, create a separate project for each of them.
-- Template resources are applied only to a single namespace whose name matches the project name.
+A project is not limited to a single namespace: if an application needs several namespaces (for example, a separate one for a cache or a queue), a cluster or project administrator can add them to the project as additional namespaces. Access grants and namespaced template policies (network isolation, log shipping) automatically apply to every namespace of the project, not just the main one. For details, refer to the [Administration section](../../admin/multitenancy/project-management.html#additional-project-namespaces).
 
 ## Creating a project
 
 1. To create a project, create a [Project](/modules/multitenancy-manager/cr.html#project) custom resource
-   and specify the project template name in the [`.spec.projectTemplateName`](/modules/multitenancy-manager/cr.html#project-v1alpha2-spec-projecttemplatename) field.
-1. In the [`.spec.parameters`](/modules/multitenancy-manager/cr.html#project-v1alpha2-spec-parameters) field,
-   specify parameter values for the [`.spec.parametersSchema.openAPIV3Schema`](/modules/multitenancy-manager/cr.html#projecttemplate-v1alpha1-spec-parametersschema-openapiv3schema) section of the `ProjectTemplate` custom resource.
+   and specify the project template name in the [`.spec.projectTemplateName`](/modules/multitenancy-manager/cr.html#project-v1alpha3-spec-projecttemplatename) field.
+1. Set the standard fields — [`.spec.administrators`](/modules/multitenancy-manager/cr.html#project-v1alpha3-spec-administrators) and [`.spec.quota`](/modules/multitenancy-manager/cr.html#project-v1alpha3-spec-quota) — which are managed directly by the Project resource regardless of the template.
+1. In the [`.spec.parameters`](/modules/multitenancy-manager/cr.html#project-v1alpha3-spec-parameters) field,
+   specify parameter values for the [`.spec.parametersSchema.openAPIV3Schema`](/modules/multitenancy-manager/cr.html#projecttemplate-v1alpha2-spec-parametersschema-openapiv3schema) section of the `ProjectTemplate` custom resource.
 
    Example of creating a project using [Project](/modules/multitenancy-manager/cr.html#project) from the `default` [ProjectTemplate](/modules/multitenancy-manager/cr.html#projecttemplate):
 
    ```yaml
-   apiVersion: deckhouse.io/v1alpha2
+   apiVersion: deckhouse.io/v1alpha3
    kind: Project
    metadata:
      name: my-project
    spec:
      description: This is an example from the Deckhouse documentation.
      projectTemplateName: default
+     # Standard fields, managed by the Project resource itself, independently of the template.
+     administrators:
+       - kind: Group
+         name: k8s-admins
+     quota:
+       requests.cpu: "5"
+       requests.memory: 5Gi
+       requests.storage: 1Gi
+       limits.cpu: "5"
+       limits.memory: 5Gi
+     # Template-specific parameters.
      parameters:
-       resourceQuota:
-         requests:
-           cpu: 5
-           memory: 5Gi
-           storage: 1Gi
-         limits:
-           cpu: 5
-           memory: 5Gi
        networkPolicy: Isolated
        podSecurityProfile: Restricted
        extendedMonitoringEnabled: true
-       administrators:
-       - subject: Group
-         name: k8s-admins
    ```
 
 1. To check the project status, run the following command:
@@ -94,19 +92,13 @@ Projects has several limitations:
 
 ### Automatically creating a project from a namespace
 
-You can create a new project from a namespace by adding the `projects.deckhouse.io/adopt` annotation to it.
+A namespace created directly (for example, `d8 k create ns test`) automatically becomes a project with the same name — no annotation is required. The project parameters are filled in from the current state of the namespace, so nothing inside it changes; from then on the project is the source of truth for it.
 For example:
 
 1. Create a new namespace:
 
    ```shell
    d8 k create ns test
-   ```
-
-1. Annotate it:
-
-   ```shell
-   d8 k annotate ns test projects.deckhouse.io/adopt=""
    ```
 
 1. Check that the project was created:
@@ -122,7 +114,7 @@ For example:
    NAME        STATE      PROJECT TEMPLATE   DESCRIPTION                                            AGE
    deckhouse   Deployed   virtual            This is a virtual project                              181d
    default     Deployed   virtual            This is a virtual project                              181d
-   test        Deployed   empty                                                                     1m
+   test        Deployed   simple                                                                    1m
    ```
    {: .nowrap-default }
    <!-- markdownlint-enable MD031 -->

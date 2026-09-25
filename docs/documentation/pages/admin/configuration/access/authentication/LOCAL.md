@@ -106,6 +106,10 @@ Password reset, 2FA reset, and user lock/unlock operations are performed via the
 
 Use the [`d8 iam user`](/products/kubernetes-platform/documentation/v1/cli/d8/reference/#d8-iam) commands for administrative actions on local users. They create a UserOperation resource with `initiatorType: admin`, wait for the operation to complete, and print the result.
 
+{% alert level="info" %}
+Deleting, recreating, or running a `ResetPassword`, `Reset2FA`, `Lock`, or `Unlock` operation on a user is admitted only if you already have permissions covering the roles carried by that user's email or group membership, or you are explicitly allowed to assign those roles. `initiatorType: self` (a user resetting their own password) does not bypass this check. For details, see the [`user-authn` module documentation](/modules/user-authn/usage.html#administrative-operations).
+{% endalert %}
+
 The `ResetPassword`, `Reset2FA`, and `Lock` operations delete the user's Dex OfflineSessions and RefreshToken objects. This terminates the user's active offline sessions and requires re-authentication.
 
 Examples of using the [`d8 iam user`](/products/kubernetes-platform/documentation/v1/cli/d8/reference/#d8-iam) commands:

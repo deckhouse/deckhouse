@@ -5,7 +5,7 @@ title: "The multitenancy-manager module: usage examples"
 
 ## Default project templates
 
-The following project templates are included in the Deckhouse Kubernetes Platform. They are cumulative: each one includes the capabilities of the previous one and adds its own. Parameter values are set in the `.spec.parameters` field of a Project:
+The following project templates are included in the Deckhouse Platform. They are cumulative: each one includes the capabilities of the previous one and adds its own. Parameter values are set in the `.spec.parameters` field of a Project:
 
 - `simple` — a minimal template that creates only the project namespace. Use it when you only need an isolated namespace managed as a project and configure access and limits through the [standard fields](#standard-project-fields) and [project role bindings](#granting-access-within-a-project).
 
@@ -323,9 +323,13 @@ spec:
     limits.memory: 10Gi
 ```
 
+{% endraw %}
+
 {% alert level="warning" %}
 ResourceQuota and AuthorizationRule objects defined inside project templates are no longer rendered: such resources are now managed exclusively through `.spec.quota` and `.spec.administrators`. Existing templates that still declare them keep working, but those objects are filtered out during rendering.
 {% endalert %}
+
+{% raw %}
 
 ## Granting access within a project
 
