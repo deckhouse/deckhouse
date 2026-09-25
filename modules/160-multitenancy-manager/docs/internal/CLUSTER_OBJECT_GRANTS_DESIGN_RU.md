@@ -465,6 +465,17 @@ Per-путь (`fieldPaths[].defaulting`):
 - **`/protect`** (validating) — держим `AvailableClusterResource` read-only (с исключениями для
   системных групп). Статуса квоты больше нет.
 
+`/is-granted`, `/defaults`, вебхуки references и definitions и reconciler'ы project, reference и
+definition делят одну фабрику JSONPath
+(`jsonpath.NewWithCache` в `cmd/main.go`), поэтому путь везде компилируется одинаково. Её кеш
+распарсенных путей — ограниченный LRU (`MaxCachedPaths`, 1024 записи; выражения длиннее
+`MaxCachedPathLen`, 256 байт, парсятся, но не кешируются; ошибки парсинга не кешируются никогда).
+Граница нужна, потому что в кеш попадают и пути из отвергнутых и dry-run объектов, которые не
+сохраняются, а webhook-сервер принимает запросы от любого пода без клиентского сертификата:
+неограниченный кеш можно раздуть до OOM контроллера, а вместе с ним упадёт и `/is-granted` с
+`failurePolicy: Fail`. Легитимных путей — из сохранённых references, definitions и их match-guard'ов —
+десятки или сотни, они помещаются с большим запасом.
+
 ## Контроллер
 
 - **Catalog reconciler** (по namespace) — рендерит `AvailableClusterResource` per-проект per-definition

@@ -59,6 +59,7 @@ type MatchPredicate struct {
 	// FieldPath is the JSONPath to the value tested by the predicate. It must be a valid RFC 9535
 	// JSONPath; the GrantableClusterResourceReference validating webhook rejects one that does not parse.
 	// +required
+	// +kubebuilder:validation:MaxLength=256
 	FieldPath string `json:"fieldPath"`
 
 	// Equals matches when the value equals this string.
@@ -96,6 +97,7 @@ type FieldPath struct {
 	// that does not parse. Validation evaluates the full JSONPath, but defaulting writes a single field,
 	// so with Defaulting FillEmpty or Coerce the path must be a simple member path (see Defaulting).
 	// +required
+	// +kubebuilder:validation:MaxLength=256
 	Path string `json:"path"`
 
 	// Match guards this entry; it applies only when the predicate holds on the object.

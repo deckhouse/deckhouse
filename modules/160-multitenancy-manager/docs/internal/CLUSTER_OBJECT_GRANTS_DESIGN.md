@@ -493,6 +493,17 @@ Registered statically, not derived from the references:
 - **`/protect`** (validating) — keep the controller-owned `AvailableClusterResource` read-only (with
   system-group exemptions). No quota status to protect anymore.
 
+`/is-granted`, `/defaults`, the reference and definition webhooks and the project, reference and
+definition reconcilers share one JSONPath factory
+(`jsonpath.NewWithCache` in `cmd/main.go`), so a path compiles the same way everywhere. Its cache of
+parsed paths is a bounded LRU (`MaxCachedPaths`, 1024 entries; expressions over `MaxCachedPathLen`,
+256 bytes, are parsed but not cached; parse errors are never cached). The bound matters because the
+cache also sees paths from objects that are rejected or dry-run and never stored, and the webhook
+server accepts requests from any pod without a client certificate: an unbounded cache could be inflated
+until the controller is OOM-killed, and with it `/is-granted`, which runs with `failurePolicy: Fail`.
+Legitimate paths — those of stored references, definitions and their match guards — number in the tens
+to hundreds and fit with a wide margin.
+
 ## Controller
 
 - **Catalog reconciler** (keyed by namespace) — renders `AvailableClusterResource` per project per
