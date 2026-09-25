@@ -61,6 +61,12 @@ func nodeConfigRolloutInputsChanged(before, after client.Object) bool {
 	if !slices.EqualFunc(oldConfig.Status.Extensions, newConfig.Status.Extensions, extensionStatusEqual) {
 		return true
 	}
+	// readNodeConfigOutcomes counts the static pod states off this list, and it is
+	// the only source of those counts: a retry that wrote the manifest moves
+	// nothing else on the object.
+	if !slices.EqualFunc(oldConfig.Status.StaticPods, newConfig.Status.StaticPods, staticPodStatusEqual) {
+		return true
+	}
 	return !conditionEqual(oldConfig.Status.Conditions, newConfig.Status.Conditions, configurationAppliedCondition) ||
 		!conditionEqual(oldConfig.Status.Conditions, newConfig.Status.Conditions, disruptionRequiredCondition)
 }
@@ -73,6 +79,15 @@ func extensionStatusEqual(a, b internalv1alpha1.ExtensionStatus) bool {
 		return false
 	}
 	return a.State == b.State && a.Message == b.Message
+}
+
+// staticPodStatusEqual compares the fields a pass reads: the state the counts
+// are made of, and the reason and message the status republishes.
+func staticPodStatusEqual(a, b internalv1alpha1.StaticPodStatus) bool {
+	if a.Name != b.Name {
+		return false
+	}
+	return a.State == b.State && a.Reason == b.Reason && a.Message == b.Message
 }
 
 func ownerRefEqual(a, b metav1.OwnerReference) bool {

@@ -80,6 +80,15 @@ type NodeConfigStatus struct {
 	// +listType=map
 	// +listMapKey=name
 	Units []UnitStatus `json:"units,omitempty"`
+	// StaticPods is one entry per spec.staticPods item the node wrote or failed
+	// to, republished every pass and empty when the pass checked nothing — like
+	// Extensions and Units. Declared without omitempty on purpose: an empty pass
+	// has to say so explicitly, and the node turns the nil slice into [] before
+	// it applies the status.
+	// +optional
+	// +listType=map
+	// +listMapKey=name
+	StaticPods []StaticPodStatus `json:"staticPods"`
 	// Network is what the node resolved for itself: the interface it took its
 	// cluster address from, and that address. Written by the node alone.
 	// +optional
@@ -176,6 +185,22 @@ type UnitStatus struct {
 	Message string `json:"message,omitempty"`
 }
 
+// StaticPodStatus is the outcome of one static pod on the node.
+type StaticPodStatus struct {
+	Name string `json:"name"`
+	// Written: the file equals the manifest in the spec. Failed: it does not,
+	// and Reason says why — the three causes call for three different actions.
+	// +kubebuilder:validation:Enum=Written;Failed
+	State string `json:"state"`
+	// ManifestRejected: fix the object. WriteFailed: look at the node.
+	// RemoveFailed: the name left the spec but the pod is still running.
+	// +optional
+	// +kubebuilder:validation:Enum=ManifestRejected;WriteFailed;RemoveFailed
+	Reason string `json:"reason,omitempty"`
+	// +optional
+	Message string `json:"message,omitempty"`
+}
+
 // NodeConfigList is a list of NodeConfig objects.
 //
 // +kubebuilder:object:root=true
@@ -205,6 +230,14 @@ type NodeSpec struct {
 	// +listType=map
 	// +listMapKey=name
 	Extensions []Extension `json:"extensions,omitempty"`
+	// StaticPods are the manifests kubelet runs outside the scheduler. Bounded
+	// with Manifest so the worst case (16 x 32 KiB = 512 KiB) stays well under
+	// etcd's 1.5 MiB object limit with the rest of the spec beside it.
+	// +optional
+	// +listType=map
+	// +listMapKey=name
+	// +kubebuilder:validation:MaxItems=16
+	StaticPods []StaticPod `json:"staticPods,omitempty"`
 	// Kernel holds sysctl settings and kernel modules to load.
 	// +optional
 	Kernel Kernel `json:"kernel,omitempty"`
@@ -481,6 +514,25 @@ type Extension struct {
 	RequestedBy string `json:"requestedBy,omitempty"`
 }
 
+// StaticPod is one manifest for /etc/kubernetes/manifests. The node prepares two
+// things for such a pod and nothing else: the image in containerd and this file
+// on disk. Whatever the pod needs beyond that, it brings itself.
+type StaticPod struct {
+	// Name is the manifest file name without extension and the list key. It
+	// is unrelated to the pod's metadata.name: kubelet names the mirror pod
+	// by the manifest, never by the file.
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:MaxLength=63
+	// +kubebuilder:validation:Pattern=`^[a-z0-9]([-a-z0-9]*[a-z0-9])?$`
+	Name string `json:"name"`
+	// Manifest is the whole Pod document. $MY_IP is replaced with the node
+	// address on the way to disk, as in the control-plane manifests. 32 KiB is
+	// nine times the registry agent's manifest.
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:MaxLength=32768
+	Manifest string `json:"manifest"`
+}
+
 // SysctlValue bounds a single sysctl value for predictable CRD CEL cost.
 // +kubebuilder:validation:MaxLength=4096
 type SysctlValue string
@@ -682,9 +734,10 @@ type Taint struct {
 // ContainerRuntime configuration for the containerd runtime. nodelet renders
 // these into /run/etc/containerd/config.toml before starting containerd.
 type ContainerRuntime struct {
-	// SandboxImage is the pause image used for pod sandboxes.
+	// SandboxImage overrides the pause image used for pod sandboxes. Empty means
+	// the pause image the containerd extension imports itself. No default here:
+	// a defaulted value would never let the node see it empty.
 	// +optional
-	// +kubebuilder:default="registry.k8s.io/pause:3.10"
 	// +kubebuilder:validation:Pattern=`^[^[:space:]]+$`
 	SandboxImage string `json:"sandboxImage,omitempty"`
 	// MaxConcurrentDownloads limits parallel image layer downloads. Zero is
@@ -695,6 +748,14 @@ type ContainerRuntime struct {
 	// +kubebuilder:validation:Minimum=0
 	// +kubebuilder:default=8
 	MaxConcurrentDownloads *int `json:"maxConcurrentDownloads,omitempty"`
+	// RegistryOwner says who writes containerd's registry.d. "nodelet" (the
+	// default) renders spec.registry and sweeps the rest; "agent" means a
+	// static pod owns the directory and nodelet neither writes nor removes
+	// anything there. Set by node-controller from the registry module's mode.
+	// +optional
+	// +kubebuilder:validation:Enum=nodelet;agent
+	// +kubebuilder:default=nodelet
+	RegistryOwner string `json:"registryOwner,omitempty"`
 }
 
 // UpdatePolicy controls how/when the node is updated.
