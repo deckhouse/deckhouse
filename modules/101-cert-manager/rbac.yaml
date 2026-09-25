@@ -208,14 +208,6 @@ serviceAccounts:
           - create
           - update
           - patch
-      - apiGroups:
-          - auditregistration.k8s.io
-        resources:
-          - auditsinks
-        verbs:
-          - get
-          - list
-          - watch
           - update
   - name: cert-manager
     path: cert-manager
@@ -381,14 +373,6 @@ serviceAccounts:
               - challenges/finalizers
             verbs:
               - update
-          - apiGroups:
-              - ""
-            resources:
-              - secrets
-            verbs:
-              - get
-              - list
-              - watch
       - name: clusterissuers
         rules:
           - apiGroups:
