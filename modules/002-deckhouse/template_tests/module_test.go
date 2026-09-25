@@ -501,6 +501,47 @@ var _ = Describe("Module :: deckhouse :: helm template ::", func() {
 			}
 		})
 
+		// The exception matches a hostPath only when its `readOnly` equals the one on the mount
+		// (`input_hostpath_allowed_exact` in lib.check_path), so an entry copied from a
+		// neighbouring one with the wrong value reads as no entry at all — and the policy only
+		// warns here, so nothing fails to tell us.
+		It("Every hostPath volume must be listed in the exception, with the same readOnly", func() {
+			Expect(f.RenderError).ShouldNot(HaveOccurred())
+
+			dp := f.KubernetesResource("Deployment", nsName, chartName)
+
+			mountReadOnly := map[string]bool{}
+			for _, path := range []string{"spec.template.spec.containers", "spec.template.spec.initContainers"} {
+				for _, container := range dp.Field(path).Array() {
+					for _, mount := range container.Get("volumeMounts").Array() {
+						name := mount.Get("name").String()
+						// A volume mounted writable anywhere is writable as far as the policy is
+						// concerned, so the writable mount is the one that has to be excepted.
+						if ro := mount.Get("readOnly").Bool(); !ro || !mountReadOnly[name] {
+							mountReadOnly[name] = ro
+						}
+					}
+				}
+			}
+
+			spe := f.KubernetesResource("SecurityPolicyException", nsName, chartName)
+			allowed := map[string]bool{}
+			for _, entry := range spe.Field("spec.volumes.hostPath.allowedValues").Array() {
+				allowed[entry.Get("path").String()] = entry.Get("readOnly").Bool()
+			}
+
+			for _, volume := range dp.Field("spec.template.spec.volumes").Array() {
+				hostPath := volume.Get("hostPath.path")
+				if !hostPath.Exists() {
+					continue
+				}
+				name := volume.Get("name").String()
+				Expect(allowed).To(HaveKeyWithValue(hostPath.String(), mountReadOnly[name]),
+					"hostPath %s (volume %s) is mounted with readOnly=%v and the exception must say the same",
+					hostPath.String(), name, mountReadOnly[name])
+			}
+		})
+
 		It("Every container port must be listed in the exception, the pod runs in the host network", func() {
 			Expect(f.RenderError).ShouldNot(HaveOccurred())
 
