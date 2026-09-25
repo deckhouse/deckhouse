@@ -892,8 +892,7 @@ func TestResumeRestartsTheTakeoverClockOfEveryOpenIncident(t *testing.T) {
 	}
 }
 
-func TestResumeLeavesAPendingWriteCooldownToRunOut(t *testing.T) {
-
+func TestResumeDropsAPendingWriteCooldown(t *testing.T) {
 	const failed = "worker-3"
 
 	self := writerFor(failed)
@@ -921,7 +920,7 @@ func TestResumeLeavesAPendingWriteCooldownToRunOut(t *testing.T) {
 		t.Fatalf("calls = %v, want the burst of %d failures to end in the %s cooldown", store.calls, maxAttempts, cooldown)
 	}
 
-	// The API is healthy again from here on: only the cooldown holds the writer.
+	// The API is healthy again from here on: only the cooldown could hold the writer.
 	store.failCreate = nil
 	store.calls = nil
 
@@ -929,43 +928,71 @@ func TestResumeLeavesAPendingWriteCooldownToRunOut(t *testing.T) {
 
 	removeRecord(store, self)
 	resumed := h.clock.now
-	h.failPeer(t.Context(), failed)
-
-	if h.writer.paused {
-		t.Fatalf("the writer is still paused, want it resumed once the own failed record is gone")
-	}
 
 	left := over.Sub(resumed)
 	if left <= 0 {
 		t.Fatalf("the pause outlived the %s cooldown, want a test whose pause is shorter than it", cooldown)
 	}
 
-	if inc.retryAfter.IsZero() {
-		t.Fatalf("the resume cleared the cooldown of the incident, want the %s left of it kept: "+
-			"the pause is not evidence that the API takes writes again", left)
-	}
-
-	if len(store.calls) != 0 {
-		t.Fatalf("calls = %v, want none in the pass that resumes: %s of the cooldown is left", store.calls, left)
-	}
-
-	h.clock.advance(left - time.Millisecond)
 	h.failPeer(t.Context(), failed)
 
-	if len(store.calls) != 0 {
-		t.Fatalf("calls = %v, want none before the cooldown armed ahead of the pause runs out", store.calls)
+	if h.writer.paused {
+		t.Fatalf("the writer is still paused, want it resumed once the own failed record is gone")
 	}
-
-	h.clock.advance(time.Millisecond)
-	h.failPeer(t.Context(), failed)
 
 	if want := []string{"create:" + failed, "mark:" + failed}; !slices.Equal(store.calls, want) {
-		t.Fatalf("calls = %v, want %v once the cooldown is over", store.calls, want)
+		t.Fatalf("calls = %v, want %v in the pass that resumes, with %s of the cooldown armed before the pause still left",
+			store.calls, want, left)
 	}
 
 	if got, want := markStamps(store), []time.Time{resumed}; !sameInstants(got, want) {
-		t.Errorf("detectedAt of the marks = %v, want %v: the cooldown outlives the pause, the detection of the incident does not",
-			got, want)
+		t.Errorf("detectedAt of the marks = %v, want %v: the moment the writer resumed", got, want)
+	}
+}
+
+func TestResumeStartsANewBurstOfWriteAttempts(t *testing.T) {
+	const failed = "worker-3"
+
+	self := writerFor(failed)
+	store := newStore()
+	h := newHarness(t, self, store)
+
+	h.settle(t.Context())
+
+	store.failCreate = errors.New("api server is unavailable")
+
+	for attempt := range maxAttempts - 1 {
+		if attempt > 0 {
+			h.clock.advance(time.Minute)
+		}
+
+		h.failPeer(t.Context(), failed)
+	}
+
+	inc := h.writer.incidents[failed]
+	if inc == nil || inc.attempts != maxAttempts-1 {
+		t.Fatalf("calls = %v, want %d failed attempts before the pause", store.calls, maxAttempts-1)
+	}
+
+	h.pauseByOwnRecord(t, self, otherThan(failed), failed)
+
+	// Past the backoff of the last failure: only the count of failures is left
+	// from before the pause.
+	h.clock.advance(time.Minute)
+	removeRecord(store, self)
+	h.failPeer(t.Context(), failed)
+
+	if h.writer.paused {
+		t.Fatalf("the writer is still paused, want it resumed once the own failed record is gone")
+	}
+
+	if inc.attempts != 1 {
+		t.Errorf("attempts = %d, want 1: the failure after the resume starts a new burst, it does not end the one the pause cut off",
+			inc.attempts)
+	}
+
+	if slices.Contains(h.events.warnings, reasonStateWriteFailed) {
+		t.Errorf("warnings = %v, want no %s event after the first failure of the new burst", h.events.warnings, reasonStateWriteFailed)
 	}
 }
 

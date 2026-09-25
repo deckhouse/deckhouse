@@ -278,6 +278,8 @@ func (w *Writer) resume(now time.Time) {
 	for _, inc := range w.incidents {
 		inc.detectedAt = now
 		inc.clockFrom = now
+		inc.attempts = 0
+		inc.retryAfter = time.Time{}
 	}
 
 	w.logger.Info("no peer records this node as failed any more, the fencing state writer resumes",
