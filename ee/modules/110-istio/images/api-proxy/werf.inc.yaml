@@ -51,4 +51,5 @@ git:
 shell:
   install:
   - cd /src
+---
 {{- include "vex mitigation" (list $ (printf "%s/%s" $.ModuleName $.ImageName)) }}
