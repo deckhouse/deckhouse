@@ -32,6 +32,16 @@ func Test(t *testing.T) {
 	RunSpecs(t, "")
 }
 
+// envValue pulls one environment variable out of the first container of a workload.
+func envValue(resource object_store.KubeObject, name string) (string, bool) {
+	for _, env := range resource.Field("spec.template.spec.containers.0.env").Array() {
+		if env.Get("name").String() == name {
+			return env.Get("value").String(), true
+		}
+	}
+	return "", false
+}
+
 const providerID = "openstack"
 const nameLabelKey = "cloud-provider\\.deckhouse\\.io/name"
 const registrationLabelKey = "cloud-provider\\.deckhouse\\.io/registration"
@@ -409,6 +419,9 @@ rescan-on-resize = true`
 		Expect(capoWebhookConfig.Field("webhooks.1.clientConfig.service.namespace").String()).To(Equal(moduleNamespace))
 		Expect(capoDeployment.Field("spec.template.metadata.annotations").Map()["checksum/config"].String()).ToNot(BeEmpty())
 		Expect(capoDeployment.Field("spec.template.spec.tolerations").String()).To(MatchYAML(tolerationsAnyNodeWithUninitialized))
+		Expect(capoDeployment.Field("spec.template.spec.dnsPolicy").String()).To(Equal("ClusterFirstWithHostNet"))
+		_, capoHostFound := envValue(capoDeployment, "KUBERNETES_SERVICE_HOST")
+		Expect(capoHostFound).To(BeFalse())
 
 		Expect(scFast.Exists()).To(BeTrue())
 		Expect(scFast.Field("metadata.annotations").String()).To(MatchYAML(`
@@ -986,6 +999,14 @@ ca
 			csiNodeDaemonSet := f.KubernetesResource("DaemonSet", moduleNamespace, "csi-node")
 			Expect(csiNodeDaemonSet.Exists()).To(BeTrue())
 			Expect(csiNodeDaemonSet.Field("spec.template.spec.dnsPolicy").String()).To(Equal("Default"))
+
+			capoDeployment := f.KubernetesResource("Deployment", moduleNamespace, "capo-controller-manager")
+			Expect(capoDeployment.Exists()).To(BeTrue())
+			Expect(capoDeployment.Field("spec.template.spec.dnsPolicy").String()).To(Equal("Default"))
+			Expect(capoDeployment.Field("spec.template.spec.containers.0.env.0.name").String()).To(Equal("KUBERNETES_SERVICE_HOST"))
+			Expect(capoDeployment.Field("spec.template.spec.containers.0.env.0.valueFrom.fieldRef.fieldPath").String()).To(Equal("status.hostIP"))
+			Expect(capoDeployment.Field("spec.template.spec.containers.0.env.1.name").String()).To(Equal("KUBERNETES_SERVICE_PORT"))
+			Expect(capoDeployment.Field("spec.template.spec.containers.0.env.1.value").String()).To(Equal("6443"))
 		})
 	})
 })

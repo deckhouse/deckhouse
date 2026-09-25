@@ -9,15 +9,27 @@ import (
 	"fmt"
 	"testing"
 
-	. "github.com/deckhouse/deckhouse/testing/helm"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	"github.com/tidwall/gjson"
+
+	. "github.com/deckhouse/deckhouse/testing/helm"
+	"github.com/deckhouse/deckhouse/testing/library/object_store"
 )
 
 func Test(t *testing.T) {
 	RegisterFailHandler(Fail)
 	RunSpecs(t, "")
+}
+
+// envValue pulls one environment variable out of the first container of a workload.
+func envValue(resource object_store.KubeObject, name string) (string, bool) {
+	for _, env := range resource.Field("spec.template.spec.containers.0.env").Array() {
+		if env.Get("name").String() == name {
+			return env.Get("value").String(), true
+		}
+	}
+	return "", false
 }
 
 const providerID = "vcd"
@@ -512,6 +524,8 @@ spec:
 			Expect(capcdDeployment.Field("spec.template.metadata.labels.security\\.deckhouse\\.io/security-policy-exception").Exists()).To(BeFalse())
 			Expect(capcdDeployment.Field("spec.template.spec.hostNetwork").Bool()).To(BeTrue())
 			Expect(capcdDeployment.Field("spec.template.spec.dnsPolicy").String()).To(Equal("ClusterFirstWithHostNet"))
+			_, capcdHostFound := envValue(capcdDeployment, "KUBERNETES_SERVICE_HOST")
+			Expect(capcdHostFound).To(BeFalse())
 			Expect(capcdDeployment.Field("spec.template.spec.serviceAccountName").String()).To(Equal("capcd-controller-manager"))
 			Expect(capcdDeployment.Field("spec.template.spec.containers.0.name").String()).To(Equal("capcd-controller-manager"))
 			Expect(capcdDeployment.Field("spec.template.spec.containers.0.args").String()).To(MatchYAML(`
@@ -1048,7 +1062,12 @@ node-role.deckhouse.io/control-plane: ""`))
 
 			capcdDeployment := f.KubernetesResource("Deployment", "d8-cloud-provider-vcd", "capcd-controller-manager")
 			Expect(capcdDeployment.Exists()).To(BeTrue())
-			Expect(capcdDeployment.Field("spec.template.spec.dnsPolicy").String()).To(Equal("ClusterFirstWithHostNet"))
+			Expect(capcdDeployment.Field("spec.template.spec.dnsPolicy").String()).To(Equal("Default"))
+			_, capcdHostFound := envValue(capcdDeployment, "KUBERNETES_SERVICE_HOST")
+			Expect(capcdHostFound).To(BeTrue())
+			capcdPort, capcdPortFound := envValue(capcdDeployment, "KUBERNETES_SERVICE_PORT")
+			Expect(capcdPortFound).To(BeTrue())
+			Expect(capcdPort).To(Equal("6443"))
 
 			cddDeployment := f.KubernetesResource("Deployment", "d8-cloud-provider-vcd", "cloud-data-discoverer")
 			Expect(cddDeployment.Exists()).To(BeTrue())
