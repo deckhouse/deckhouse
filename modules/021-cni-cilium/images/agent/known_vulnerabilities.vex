@@ -2,7 +2,7 @@
   "@context": "https://openvex.dev/ns/v0.2.0",
   "@id": "https://openvex.dev/docs/public/vex-7bb761a58a11caa496221e01e7c02e2c7b45e3ba1a30404eb9d12aac0440c6eb",
   "author": "Deckhouse \u003ccontact@deckhouse.io\u003e",
-  "version": 5,
+  "version": 4,
   "statements": [
     {
       "vulnerability": {
@@ -51,29 +51,15 @@
       },
       "products": [
         {
-          "@id": "pkg:golang/golang.org/x/crypto@v0.53.0"
+          "@id": "pkg:golang/golang.org/x/crypto"
         }
       ],
       "status": "not_affected",
       "justification": "vulnerable_code_not_in_execute_path",
       "impact_statement": "GO-2026-5932 относится к пакету golang.org/x/crypto/openpgp, который является unmaintained и не имеет исправленной версии. В образе присутствует только модуль golang.org/x/crypto (используемый для SSH и других криптографических примитивов), тогда как сам пакет openpgp транзитивно не импортируется. Проверка govulncheck и go list -deps подтверждает, что openpgp отсутствует в графе импортов бинарного файла cilium-operator и уязвимый код не входит ни в один путь исполнения образа, поэтому уязвимость недостижима.",
       "timestamp": "2026-07-23T17:30:41.979235508Z"
-    },
-    {
-      "vulnerability": {
-        "name": "GO-2026-5932"
-      },
-      "products": [
-        {
-          "@id": "pkg:golang/golang.org/x/crypto"
-        }
-      ],
-      "status": "not_affected",
-      "justification": "vulnerable_code_not_in_execute_path",
-      "impact_statement": "GO-2026-5932 относится к пакету golang.org/x/crypto/openpgp, который является unmaintained и не имеет исправленной версии. В образе присутствует только модуль golang.org/x/crypto v0.56.0, тогда как сам пакет openpgp транзитивно не импортируется. Проверка go list -deps (linux/amd64) и govulncheck на исходниках с golang.org/x/crypto v0.56.0 подтверждает, что openpgp отсутствует в графе импортов бинарного файла cilium-agent, а govulncheck находит GO-2026-5932 только на уровне модуля, без затронутых пакетов и символов, поэтому уязвимость недостижима.",
-      "timestamp": "2026-09-25T09:23:46.837581Z"
     }
   ],
   "timestamp": "2025-10-14T07:34:04Z",
-  "last_updated": "2026-09-25T09:23:46Z"
+  "last_updated": "2026-07-23T17:30:41Z"
 }
