@@ -680,10 +680,10 @@ index 2660b015..2081be21 100644
  	token := jwt.NewWithClaims(jwt.GetSigningMethod("RS256"), claims)
  	ss, err := token.SignedString(p.JWTKey)
 diff --git a/providers/logingov_test.go b/providers/logingov_test.go
-index 00fe8dcc..c80ea3c9 100644
+index 00fe8dc..c68d5c8 100644
 --- a/providers/logingov_test.go
 +++ b/providers/logingov_test.go
-@@ -15,11 +15,11 @@ import (
+@@ -15,11 +15,12 @@ import (
  	"testing"
  	"time"
  
@@ -694,10 +694,11 @@ index 00fe8dcc..c80ea3c9 100644
  	. "github.com/onsi/gomega"
  	"github.com/stretchr/testify/assert"
 -	"gopkg.in/square/go-jose.v2"
++	"github.com/stretchr/testify/require"
  )
  
  type MyKeyData struct {
-@@ -174,7 +174,7 @@ func TestLoginGovProviderSessionData(t *testing.T) {
+@@ -174,7 +175,7 @@ func TestLoginGovProviderSessionData(t *testing.T) {
  		Birthdate     string `json:"birthdate"`
  		AtHash        string `json:"at_hash"`
  		CHash         string `json:"c_hash"`
@@ -706,7 +707,7 @@ index 00fe8dcc..c80ea3c9 100644
  	}
  	claims := MyCustomClaims{
  		"http://idmanagement.gov/ns/assurance/loa/1",
-@@ -186,13 +186,13 @@ func TestLoginGovProviderSessionData(t *testing.T) {
+@@ -186,13 +187,13 @@ func TestLoginGovProviderSessionData(t *testing.T) {
  		"",
  		"",
  		"",
@@ -726,7 +727,7 @@ index 00fe8dcc..c80ea3c9 100644
  			Subject:   "b2d2d115-1d7e-4579-b9d6-f8e84f4f56ca",
  		},
  	}
-@@ -268,7 +268,7 @@ func TestLoginGovProviderBadNonce(t *testing.T) {
+@@ -268,7 +269,7 @@ func TestLoginGovProviderBadNonce(t *testing.T) {
  		Birthdate     string `json:"birthdate"`
  		AtHash        string `json:"at_hash"`
  		CHash         string `json:"c_hash"`
@@ -735,7 +736,7 @@ index 00fe8dcc..c80ea3c9 100644
  	}
  	claims := MyCustomClaims{
  		"http://idmanagement.gov/ns/assurance/loa/1",
-@@ -280,13 +280,13 @@ func TestLoginGovProviderBadNonce(t *testing.T) {
+@@ -280,13 +281,13 @@ func TestLoginGovProviderBadNonce(t *testing.T) {
  		"",
  		"",
  		"",
@@ -755,7 +756,7 @@ index 00fe8dcc..c80ea3c9 100644
  			Subject:   "b2d2d115-1d7e-4579-b9d6-f8e84f4f56ca",
  		},
  	}
-@@ -335,6 +335,54 @@ func TestLoginGovProviderBadNonce(t *testing.T) {
+@@ -335,6 +336,54 @@ func TestLoginGovProviderBadNonce(t *testing.T) {
  	assert.Error(t, err)
  }
  
@@ -777,12 +778,12 @@ index 00fe8dcc..c80ea3c9 100644
 +	for name, tc := range testCases {
 +		t.Run(name, func(t *testing.T) {
 +			p, serverkey, err := newLoginGovProvider()
-+			assert.NoError(t, err)
++			require.NoError(t, err)
 +
 +			var pubkeys jose.JSONWebKeySet
 +			pubkeys.Keys = append(pubkeys.Keys, serverkey.PubJWK)
 +			pubjwkbody, err := json.Marshal(pubkeys)
-+			assert.NoError(t, err)
++			require.NoError(t, err)
 +			var pubjwkserver *httptest.Server
 +			p.PubJWKURL, pubjwkserver = newLoginGovServer(pubjwkbody)
 +			defer pubjwkserver.Close()
@@ -795,7 +796,7 @@ index 00fe8dcc..c80ea3c9 100644
 +				},
 +			}
 +			signedidtoken, err := jwt.NewWithClaims(jwt.SigningMethodRS256, claims).SignedString(serverkey.PrivKey)
-+			assert.NoError(t, err)
++			require.NoError(t, err)
 +
 +			err = checkNonce(signedidtoken, p)
 +			if tc.expectErr {
