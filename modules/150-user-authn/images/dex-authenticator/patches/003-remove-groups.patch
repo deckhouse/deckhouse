@@ -19,3 +19,42 @@ index 7dfe64e6..4e55a305 100644
  	}
  
  	return headers
+diff --git a/pkg/apis/options/legacy_options_test.go b/pkg/apis/options/legacy_options_test.go
+index 4ad7d9f..f1dc4ef 100644
+--- a/pkg/apis/options/legacy_options_test.go
++++ b/pkg/apis/options/legacy_options_test.go
+@@ -430,18 +430,6 @@ var _ = Describe("Legacy Options", func() {
+ 			},
+ 		}
+ 
+-		xAuthRequestGroups := Header{
+-			Name:                 "X-Auth-Request-Groups",
+-			PreserveRequestValue: false,
+-			Values: []HeaderValue{
+-				{
+-					ClaimSource: &ClaimSource{
+-						Claim: "groups",
+-					},
+-				},
+-			},
+-		}
+-
+ 		xAuthRequestPreferredUsername := Header{
+ 			Name:                 "X-Auth-Request-Preferred-Username",
+ 			PreserveRequestValue: false,
+@@ -671,7 +659,6 @@ var _ = Describe("Legacy Options", func() {
+ 				expectedResponseHeaders: []Header{
+ 					xAuthRequestUser,
+ 					xAuthRequestEmail,
+-					xAuthRequestGroups,
+ 					xAuthRequestPreferredUsername,
+ 				},
+ 			}),
+@@ -716,7 +703,6 @@ var _ = Describe("Legacy Options", func() {
+ 				expectedResponseHeaders: []Header{
+ 					xAuthRequestUser,
+ 					xAuthRequestEmail,
+-					xAuthRequestGroups,
+ 					xAuthRequestPreferredUsername,
+ 					xAuthRequestAccessToken,
+ 				},

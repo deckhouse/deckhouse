@@ -111,3 +111,29 @@ index 574b0a5a..dac3115c 100644
  }
  
  // Claims represents the ID Token claims supported by the server.
+diff --git a/server/handlers_test.go b/server/handlers_test.go
+index 114712b..8cca782 100644
+--- a/server/handlers_test.go
++++ b/server/handlers_test.go
+@@ -526,6 +526,10 @@ func TestHandlePasswordLoginWithSkipApproval(t *testing.T) {
+ 			if _, err := s.OpenConnector(sc); err != nil {
+ 				t.Fatalf("open connector: %v", err)
+ 			}
++			// finalizeLogin looks up the client of the auth request to apply its
++			// allowedEmails and allowedGroups filters, so the client has to exist.
++			tc.authReq.ClientID = "test"
++			require.NoError(t, s.storage.CreateClient(ctx, storage.Client{ID: "test"}))
+ 			if err := s.storage.CreateAuthRequest(ctx, tc.authReq); err != nil {
+ 				t.Fatalf("failed to create AuthRequest: %v", err)
+ 			}
+@@ -666,6 +670,10 @@ func TestHandleConnectorCallbackWithSkipApproval(t *testing.T) {
+ 			})
+ 			defer httpServer.Close()
+ 
++			// finalizeLogin looks up the client of the auth request to apply its
++			// allowedEmails and allowedGroups filters, so the client has to exist.
++			tc.authReq.ClientID = "test"
++			require.NoError(t, s.storage.CreateClient(ctx, storage.Client{ID: "test"}))
+ 			if err := s.storage.CreateAuthRequest(ctx, tc.authReq); err != nil {
+ 				t.Fatalf("failed to create AuthRequest: %v", err)
+ 			}
