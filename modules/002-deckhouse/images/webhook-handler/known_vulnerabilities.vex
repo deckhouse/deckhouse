@@ -2,7 +2,7 @@
   "@context": "https://openvex.dev/ns/v0.2.0",
   "@id": "https://openvex.dev/docs/public/vex-5a4509a04e8128126aee080324a6b663a7748bf44b58a9a4b9c74d4801844f53",
   "author": "Deckhouse \u003ccontact@deckhouse.io\u003e",
-  "version": 23,
+  "version": 24,
   "statements": [
     {
       "vulnerability": {
@@ -439,12 +439,15 @@
       "products": [
         {
           "@id": "pkg:golang/golang.org/x/net@v0.52.0"
+        },
+        {
+          "@id": "pkg:golang/golang.org/x/net@v0.55.0"
         }
       ],
       "status": "not_affected",
       "justification": "vulnerable_code_not_present",
-      "impact_statement": "Уязвимость находится в golang.org/x/net/dns/dnsmessage. Модуль поступает с бинарём shell-operator v1.15.3 из базового образа common/shell-operator. Пакет dnsmessage не импортируется и в бинарь не попадает.",
-      "timestamp": "2026-08-27T12:00:00Z"
+      "impact_statement": "Уязвимость находится в golang.org/x/net/dns/dnsmessage. Модуль поступает с бинарём shell-operator из базового образа common/shell-operator: v0.52.0 приезжал с shell-operator v1.15.3, v0.55.0 приходит с текущим v1.19.2. Пакет dnsmessage в бинарь не линкуется — go list -deps по ./cmd/shell-operator даёт из модуля только idna, http2, html, httpguts и trace. Разрешение имён выполняет штатный резолвер Go, у которого своя копия dnsmessage в составе toolchain.",
+      "timestamp": "2026-09-25T09:40:00Z"
     },
     {
       "vulnerability": {
@@ -467,12 +470,15 @@
       "products": [
         {
           "@id": "pkg:golang/golang.org/x/text@v0.35.0"
+        },
+        {
+          "@id": "pkg:golang/golang.org/x/text@v0.37.0"
         }
       ],
       "status": "not_affected",
       "justification": "vulnerable_code_cannot_be_controlled_by_adversary",
-      "impact_statement": "Уязвимость находится в golang.org/x/text/unicode/norm. Модуль поступает с бинарём shell-operator v1.15.3 из базового образа common/shell-operator. Единственный путь до неё — отладочный клиент pkg/debug: его http.Client в DialContext всегда подключается к unix-сокету и игнорирует адрес из URL, а сами URL собираются с константной authority (http://unix/queue/list, http://unix/hook/..., http://unix/config/list). В нормализацию попадает неизменяемая строка unix, на которую злоумышленник повлиять не может.",
-      "timestamp": "2026-08-27T12:00:00Z"
+      "impact_statement": "Уязвимость находится в golang.org/x/text/unicode/norm. Модуль поступает с бинарём shell-operator из базового образа common/shell-operator: v0.35.0 приезжал с shell-operator v1.15.3, v0.37.0 приходит с текущим v1.19.2. Ни один пакет shell-operator не импортирует unicode/norm напрямую: в графе сборки он достижим единственным путём — через golang.org/x/net/idna, которым net/http нормализует хосты исходящих запросов. Хосты берутся из in-cluster адреса Kubernetes API и из URL, заданных администратором в конфигурации модулей и хуках, то есть это доверенный ввод, а не произвольный невалидный UTF-8 от злоумышленника.",
+      "timestamp": "2026-09-25T09:40:00Z"
     },
     {
       "vulnerability": {
@@ -602,5 +608,5 @@
     }
   ],
   "timestamp": "2026-03-04T12:00:00Z",
-  "last_updated": "2026-09-01T12:00:00Z"
+  "last_updated": "2026-09-25T09:40:00Z"
 }
