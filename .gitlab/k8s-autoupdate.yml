@@ -8,7 +8,7 @@ k8s-autoupdate:
   stage: test
   extends:
     - .rules:on_schedule_k8s_autoupdate
-    - .notify-k8s-update
+    - .notify-k8s-update-system
   image:
     name: ${CI_REGISTRY}/deckhouse/ssdlc/ci-images/tools/golang-tools:${CI_IMAGES_TAG}
   variables:

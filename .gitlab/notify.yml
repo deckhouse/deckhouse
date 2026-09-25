@@ -112,7 +112,8 @@
         set -a
         source mr.env
         set +a
-        message=""✅Kubernetes has been automatically updated✅\n[URL]($MR_WEB_URL)""
+        message="✅Kubernetes has been automatically updated✅\n[URL]($MR_WEB_URL)"
+        send_msg
       else export CI_JOB_STATUS='failed'
       fi
 
