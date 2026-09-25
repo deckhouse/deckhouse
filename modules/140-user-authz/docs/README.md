@@ -186,6 +186,7 @@ The role grants `get`, `list`, `watch` on the following resources:
 - `runtimeclasses` (node.k8s.io)
 - `virtualmachineclasses`, `clustervirtualimages` (virtualization.deckhouse.io)
 - `clusterlogdestinations` (deckhouse.io)
+- `helmclusterapplicationcharts` (helm.deckhouse.io)
 - `customresourcedefinitions` (apiextensions.k8s.io) — `get`, `list` only
 
 #### Automatic binding
