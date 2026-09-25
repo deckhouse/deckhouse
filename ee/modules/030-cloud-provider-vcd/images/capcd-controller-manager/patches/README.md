@@ -193,3 +193,9 @@ Changes:
 - During cluster deletion, skip vApp removal when VMs remain in the vApp (e.g. terraform-managed master) instead of failing with "VMs detected in the vApp".
 - Release the VCDCluster finalizer and let dhctl terraform destroy clean up the remaining infrastructure without killing the control plane API mid-destroy.
 
+
+### 004-go-mod.patch
+
+Bump go.mod dependencies to fix known CVEs.
+Layered on top of 003-go-mod.patch, which carries the cluster-api v1.12.3 bump that
+005-capi-v1.12.3-update-imports.patch and 006-capi-v1.12.3-api-compatibility.patch depend on.
