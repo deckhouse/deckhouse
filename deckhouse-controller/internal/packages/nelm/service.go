@@ -354,7 +354,7 @@ func (s *Service) Delete(ctx context.Context, namespace, name string) error {
 
 	s.logger.Debug("delete nelm release", slog.String("name", name), slog.String("namespace", namespace))
 
-	return s.client.Delete(ctx, namespace, name)
+	return s.client.Delete(ctx, namespace, name, s.status.UpdateUninstallTracking)
 }
 
 // Upgrade installs or upgrades a Helm release for a package.
@@ -704,7 +704,8 @@ func (s *Service) Cleanup(ctx context.Context, keep map[string]struct{}, ignoreN
 			continue
 		}
 
-		if err = s.client.Delete(ctx, r.Namespace, r.Name); err != nil {
+		// Orphan releases have no package status to report progress to.
+		if err = s.client.Delete(ctx, r.Namespace, r.Name, nil); err != nil {
 			errs = errors.Join(errs, fmt.Errorf("delete orphan release '%s/%s': %w", r.Namespace, r.Name, err))
 		}
 	}
