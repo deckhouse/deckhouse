@@ -1,5 +1,5 @@
 diff --git a/pkg/kubelet/nodeshutdown/nodeshutdown_manager_linux.go b/pkg/kubelet/nodeshutdown/nodeshutdown_manager_linux.go
-index 7d1e2a57b2c..43b14002f77 100644
+index 539cd591f75..134adb424ad 100644
 --- a/pkg/kubelet/nodeshutdown/nodeshutdown_manager_linux.go
 +++ b/pkg/kubelet/nodeshutdown/nodeshutdown_manager_linux.go
 @@ -21,6 +21,7 @@ package nodeshutdown
@@ -8,9 +8,9 @@ index 7d1e2a57b2c..43b14002f77 100644
  	"context"
 +	"errors"
  	"fmt"
- 	"os"
  	"path/filepath"
-@@ -31,6 +32,7 @@ import (
+ 	"sync"
+@@ -30,6 +31,7 @@ import (
  	"k8s.io/apimachinery/pkg/util/wait"
  	utilfeature "k8s.io/apiserver/pkg/util/feature"
  	"k8s.io/client-go/tools/record"
@@ -18,7 +18,7 @@ index 7d1e2a57b2c..43b14002f77 100644
  	"k8s.io/klog/v2"
  	"k8s.io/kubernetes/pkg/features"
  	kubeletevents "k8s.io/kubernetes/pkg/kubelet/events"
-@@ -350,7 +352,7 @@ func (m *managerImpl) ShutdownStatus() error {
+@@ -345,7 +347,7 @@ func (m *managerImpl) ShutdownStatus() error {
  	defer m.nodeShuttingDownMutex.Unlock()
  
  	if m.nodeShuttingDownNow {

@@ -23,10 +23,10 @@ index bdfd6708dc1..56998d6db0e 100644
  	ShutdownGracePeriodRequested     time.Duration
  	ShutdownGracePeriodCriticalPods  time.Duration
 diff --git a/pkg/kubelet/nodeshutdown/nodeshutdown_manager_linux.go b/pkg/kubelet/nodeshutdown/nodeshutdown_manager_linux.go
-index 43b14002f77..8a9918239c5 100644
+index 134adb424ad..68907660103 100644
 --- a/pkg/kubelet/nodeshutdown/nodeshutdown_manager_linux.go
 +++ b/pkg/kubelet/nodeshutdown/nodeshutdown_manager_linux.go
-@@ -40,6 +40,7 @@ import (
+@@ -39,6 +39,7 @@ import (
  	"k8s.io/kubernetes/pkg/kubelet/lifecycle"
  	"k8s.io/kubernetes/pkg/kubelet/metrics"
  	"k8s.io/kubernetes/pkg/kubelet/nodeshutdown/systemd"
@@ -34,7 +34,7 @@ index 43b14002f77..8a9918239c5 100644
  )
  
  const (
-@@ -73,6 +74,8 @@ type managerImpl struct {
+@@ -72,6 +73,8 @@ type managerImpl struct {
  	dbusCon     dbusInhibiter
  	inhibitLock systemd.InhibitLock
  
@@ -43,7 +43,7 @@ index 43b14002f77..8a9918239c5 100644
  	nodeShuttingDownMutex sync.Mutex
  	nodeShuttingDownNow   bool
  	podManager            *podManager
-@@ -109,6 +112,10 @@ func NewManager(conf *Config) Manager {
+@@ -108,6 +111,10 @@ func NewManager(conf *Config) Manager {
  			Path: filepath.Join(conf.StateDirectory, localStorageStateFile),
  		},
  	}
@@ -54,7 +54,7 @@ index 43b14002f77..8a9918239c5 100644
  	manager.logger.Info("Creating node shutdown manager",
  		"shutdownGracePeriodRequested", conf.ShutdownGracePeriodRequested,
  		"shutdownGracePeriodCriticalPods", conf.ShutdownGracePeriodCriticalPods,
-@@ -267,7 +274,7 @@ func (m *managerImpl) start(ctx context.Context) (chan struct{}, error) {
+@@ -266,7 +273,7 @@ func (m *managerImpl) start(ctx context.Context) (chan struct{}, error) {
  		return nil, err
  	}
  
@@ -63,7 +63,7 @@ index 43b14002f77..8a9918239c5 100644
  	if err != nil {
  		releaseErr := m.dbusCon.ReleaseInhibitLock(m.inhibitLock)
  		if releaseErr != nil {
-@@ -277,6 +284,31 @@ func (m *managerImpl) start(ctx context.Context) (chan struct{}, error) {
+@@ -276,6 +283,31 @@ func (m *managerImpl) start(ctx context.Context) (chan struct{}, error) {
  	}
  
  	startSucceeded = true
@@ -95,7 +95,7 @@ index 43b14002f77..8a9918239c5 100644
  	stop := make(chan struct{})
  	go func() {
  		// Monitor for shutdown events. This follows the logind Inhibit Delay pattern described on https://www.freedesktop.org/wiki/Software/systemd/inhibit/
-@@ -284,13 +316,16 @@ func (m *managerImpl) start(ctx context.Context) (chan struct{}, error) {
+@@ -283,13 +315,16 @@ func (m *managerImpl) start(ctx context.Context) (chan struct{}, error) {
  		// 2. When shutdown(true) event is received, process the shutdown and release the inhibit lock.
  		// 3. When shutdown(false) event is received, this indicates a previous shutdown was cancelled. In this case, acquire the inhibit lock again.
  		for {
@@ -113,11 +113,10 @@ index 43b14002f77..8a9918239c5 100644
  					close(stop)
  					return
  				}
-@@ -308,6 +343,34 @@ func (m *managerImpl) start(ctx context.Context) (chan struct{}, error) {
- 				} else {
+@@ -308,6 +343,33 @@ func (m *managerImpl) start(ctx context.Context) (chan struct{}, error) {
  					m.recorder.Event(m.nodeRef, v1.EventTypeNormal, kubeletevents.NodeShutdown, "Shutdown manager detected shutdown cancellation")
  				}
-+
+ 
 +				// Check if shutdown is postponed by the condition and prevent setting m.nodeShuttingDownNow=true to keep Ready status for the Node.
 +				if isShuttingDown {
 +					postponeStatus, err := m.conditionChecker.PostponeStatus(ctx)
@@ -145,10 +144,10 @@ index 43b14002f77..8a9918239c5 100644
 +					m.conditionChecker.PauseMonitor()
 +				}
 +
- 				// Clean up memory manager state before shutdown
- 				if isShuttingDown {
- 					m.cleanupMemoryManagerState()
-@@ -334,6 +397,127 @@ func (m *managerImpl) start(ctx context.Context) (chan struct{}, error) {
+ 				m.nodeShuttingDownMutex.Lock()
+ 				m.nodeShuttingDownNow = isShuttingDown
+ 				m.nodeShuttingDownMutex.Unlock()
+@@ -329,6 +391,127 @@ func (m *managerImpl) start(ctx context.Context) (chan struct{}, error) {
  	return stop, nil
  }
  
