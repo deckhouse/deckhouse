@@ -55,6 +55,7 @@ var cloudProviderNameRegexp = regexp.MustCompile(`cloud-provider-([a-zA-Z0-9]+)`
 var externalCloudProviders = map[string]struct{}{
 	"dvp":    {},
 	"yandex": {},
+	"zvirt":  {},
 }
 
 var workDir = cwd()

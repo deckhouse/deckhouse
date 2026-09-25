@@ -25,16 +25,16 @@ import (
 	"github.com/flant/addon-operator/sdk"
 	"github.com/flant/shell-operator/pkg/kube_events_manager/types"
 	corev1 "k8s.io/api/core/v1"
-	meta "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
-	"k8s.io/utils/ptr"
 
 	"github.com/deckhouse/lib-dhctl/pkg/yaml/validation"
 
 	cloudDataV1 "github.com/deckhouse/deckhouse/go_lib/cloud-data/apis/v1"
-	"github.com/deckhouse/deckhouse/modules/030-cloud-provider-dvp/hooks/internal"
 )
 
+// This hook does one thing: it moves the discovery data the cloud-data-discoverer wrote into
+// module values, validating it on the way. What the module makes of that data — StorageClasses,
+// for one — belongs to the hooks that consume the values.
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 	OnBeforeHelm: &go_hook.OrderedConfig{Order: 30},
 	Kubernetes: []go_hook.KubernetesConfig{
@@ -51,19 +51,6 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 				MatchNames: []string{"d8-cloud-provider-discovery-data"},
 			},
 			FilterFunc: applyCloudProviderDiscoveryDataSecretFilter,
-		},
-		{
-			Name:       internal.StorageClassesSnapshotName,
-			ApiVersion: "storage.k8s.io/v1",
-			Kind:       "StorageClass",
-			FilterFunc: internal.ApplyStorageClassFilter,
-			LabelSelector: &meta.LabelSelector{
-				MatchLabels: map[string]string{
-					"heritage": "deckhouse",
-					"module":   dvpModuleName,
-				},
-			},
-			ExecuteHookOnSynchronization: ptr.To(false),
 		},
 	},
 }, handleCloudProviderDiscoveryDataSecret)
@@ -84,6 +71,7 @@ func handleCloudProviderDiscoveryDataSecret(_ context.Context, input *go_hook.Ho
 	// where dvp_cluster_configuration.go (Order 20) has already populated required fields.
 	if _, ok := input.Values.GetOk("cloudProviderDvp.provider"); !ok {
 		input.Logger.Warn("cloudProviderDvp.provider not set, skipping discovery (will run on OnBeforeHelm)")
+
 		return nil
 	}
 
@@ -91,38 +79,29 @@ func handleCloudProviderDiscoveryDataSecret(_ context.Context, input *go_hook.Ho
 	if len(secrets) == 0 {
 		input.Logger.Warn("failed to find secret 'd8-cloud-provider-discovery-data' in namespace 'kube-system'")
 
-		if len(input.Snapshots.Get(internal.StorageClassesSnapshotName)) == 0 {
-			input.Logger.Warn("failed to find storage classes for dvp provisioner")
-
-			return nil
-		}
-
-		return internal.HandleStorageClassesFromSnapshots(input)
+		return nil
 	}
 
 	secret := new(corev1.Secret)
-	err := secrets[0].UnmarshalTo(secret)
-	if err != nil {
+	if err := secrets[0].UnmarshalTo(secret); err != nil {
 		return fmt.Errorf("failed to unmarshal 'cloud_provider_discovery_data' snapshot: %w", err)
 	}
 
 	discoveryDataJSON := secret.Data["discovery-data.json"]
 
-	if err := validation.ValidateData([]string{"/deckhouse/candi/cloud-providers/dvp/openapi", "/deckhouse/modules/030-cloud-provider-dvp/candi/openapi"}, &discoveryDataJSON); err != nil {
+	if err := validation.ValidateData([]string{
+		"/deckhouse/candi/cloud-providers/dvp/openapi",
+		"/deckhouse/modules/030-cloud-provider-dvp/candi/openapi",
+	}, &discoveryDataJSON); err != nil {
 		return fmt.Errorf("failed to validate 'discovery-data.json' from 'd8-cloud-provider-discovery-data' secret: %v", err)
 	}
 
 	var discoveryData cloudDataV1.DVPCloudProviderDiscoveryData
-	err = json.Unmarshal(discoveryDataJSON, &discoveryData)
-	if err != nil {
+	if err := json.Unmarshal(discoveryDataJSON, &discoveryData); err != nil {
 		return fmt.Errorf("failed to unmarshal 'discovery-data.json' from 'd8-cloud-provider-discovery-data' secret: %v", err)
 	}
 
 	input.Values.Set("cloudProviderDvp.internal.providerDiscoveryData", discoveryData)
-
-	if err = internal.HandleStorageClassesFromDiscoveryData(input, discoveryData.StorageClassList); err != nil {
-		return fmt.Errorf("failed to handle discovery data storage classes: %v", err)
-	}
 
 	return nil
 }

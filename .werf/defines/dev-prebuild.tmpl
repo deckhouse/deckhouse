@@ -146,9 +146,11 @@ shell:
     {{- end }}
   {{- end }}
 {{- end }}
-{{- /* cloud-provider-yandex is external: it carries no terraform_versions.yml
+{{- /* external cloud providers: it carries no terraform_versions.yml
        entry, but it ships the cloud-instance-manager templates linked below. */}}
+{{- $providers = append $providers "dvp" }}
 {{- $providers = append $providers "yandex" }}
+{{- $providers = append $providers "zvirt" }}
 rm /deckhouse/modules/040-node-manager/cloud-providers/*
 for item in {{ join " " $providers }}; do
   if [ -d /deckhouse/modules/030-cloud-provider-${item}/cloud-instance-manager ]; then

@@ -33,7 +33,8 @@ const (
 // because that type is a 598-line kubebuilder type with CRI/chaos/conversion/
 // deepcopy fields and lives in a deeply nested image go.mod. This wrapper
 // exposes only the fields relevant to cloud-provider validation
-// (NodeType, CloudInstances.ClassReference).
+// (NodeType, CloudInstances.ClassReference) plus NodeTemplate, which the PCC-to-ModuleConfig
+// migrations project from the legacy provider cluster configuration.
 type NodeGroup struct {
 	TypeMeta   `json:",inline"`
 	ObjectMeta `json:"metadata,omitempty"`
@@ -45,6 +46,23 @@ type NodeGroup struct {
 type NodeGroupSpec struct {
 	NodeType       NodeType        `json:"nodeType,omitempty"`
 	CloudInstances *CloudInstances `json:"cloudInstances,omitempty"`
+	NodeTemplate   *NodeTemplate   `json:"nodeTemplate,omitempty"`
+}
+
+// NodeTemplate holds the Node object parameters a NodeGroup applies once a node registers.
+type NodeTemplate struct {
+	Labels      map[string]string `json:"labels,omitempty"`
+	Annotations map[string]string `json:"annotations,omitempty"`
+	Taints      []Taint           `json:"taints,omitempty"`
+}
+
+// Taint is a typed view of the Node taint, carrying the three fields a provider cluster
+// configuration is allowed to declare. Like the rest of this package it deliberately avoids the
+// canonical corev1 type, whose remaining fields (TimeAdded) have no meaning here.
+type Taint struct {
+	Effect string `json:"effect,omitempty"`
+	Key    string `json:"key,omitempty"`
+	Value  string `json:"value,omitempty"`
 }
 
 // CloudInstances describes cloud instance provisioning settings for a NodeGroup.

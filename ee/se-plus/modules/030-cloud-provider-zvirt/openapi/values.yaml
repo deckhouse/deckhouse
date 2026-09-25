@@ -6,10 +6,46 @@ properties:
     type: object
     default: {}
     properties:
+      validationWebhookCert:
+        type: object
+        default: {}
+        x-required-for-helm:
+          - crt
+          - key
+          - ca
+        properties:
+          crt:
+            type: string
+            x-examples: [ "YjY0ZW5jX3N0cmluZwo=" ]
+          key:
+            type: string
+            x-examples: [ "YjY0ZW5jX3N0cmluZwo=" ]
+          ca:
+            type: string
+            x-examples: [ "YjY0ZW5jX3N0cmluZwo=" ]
       cniSecretData:
         type: string
         x-examples:
         - "Y25pOiBZMmxzYVhWdApjaWxpdW06IGV5SnRiMlJsSWpvZ0lrUnBjbVZqZEZkcGRHaE9iMlJsVW05MWRHVnpJbjA9Cg=="
+      credentialSecrets:
+        type: object
+        default: {}
+        x-examples:
+        - d8-credentials:
+            authScheme: userPassword
+            identity: user
+            secret: password
+        additionalProperties:
+          type: object
+          additionalProperties: false
+          required: [authScheme, secret]
+          properties:
+            authScheme:
+              type: string
+            identity:
+              type: string
+            secret:
+              type: string
       providerClusterConfiguration:
         type: object
         additionalProperties: false
@@ -133,7 +169,7 @@ properties:
                     additionalProperties: false
                     description: |
                       Enables a custom static network configuration for nodes in this NodeGroup.
-                      
+
                       If specified, you must set `networkInterfaceName`, `networkInterfaceAddress`, `networkInterfaceGateway` and `networkInterfaceNetmask`.
                     properties:
                       networkInterfaceName:

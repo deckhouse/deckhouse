@@ -123,6 +123,7 @@ func (d *Discoverer) DiscoveryData(
 			return nil, fmt.Errorf("failed to unmarshal cloud provider discovery data: %v", err)
 		}
 	}
+	discoveryData.SetDefaults()
 
 	zvirtClient, err := d.config.client(d.logger)
 	if err != nil {

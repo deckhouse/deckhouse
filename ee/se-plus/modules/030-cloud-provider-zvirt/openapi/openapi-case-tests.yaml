@@ -1,10 +1,76 @@
 positive:
   configValues:
-  - {}
+  - provider:
+      parameters:
+        server: https://zvirt.example.com/ovirt-engine/api
+        clusterID: b46372e7-0d52-40c7-9bbf-fda31e187088
+    nodes:
+      parameters:
+        sshPublicKey: ssh-rsa AAAAB3NzaC1yc2E
+        layout: Standard
+  - provider:
+      parameters:
+        server: https://zvirt.example.com/ovirt-engine/api
+        clusterID: b46372e7-0d52-40c7-9bbf-fda31e187088
+        caBundle: dGVzdA==
+        insecure: true
+    nodes:
+      disabled: false
+      parameters:
+        sshPublicKey: ssh-rsa AAAAB3NzaC1yc2E
+        layout: Standard
+    storage:
+      disabled: false
+      parameters:
+        excludedStorageClasses:
+        - slow-.*
+    ccm:
+      disabled: true
+      parameters: {}
   values:
-  - { internal: {} }
+  - internal: {}
+    provider:
+      parameters:
+        server: https://zvirt.example.com/ovirt-engine/api
+        clusterID: b46372e7-0d52-40c7-9bbf-fda31e187088
+    nodes:
+      parameters:
+        sshPublicKey: ssh-rsa AAAAB3NzaC1yc2E
+        layout: Standard
 negative:
   configValues:
+  # Both required sections are missing.
+  - {}
+  # Unknown field at the root.
   - { somethingInConfig: yes }
+  # clusterID does not match the UUID pattern.
+  - provider:
+      parameters:
+        server: https://zvirt.example.com/ovirt-engine/api
+        clusterID: not-a-uuid
+    nodes:
+      parameters:
+        sshPublicKey: ssh-rsa AAAAB3NzaC1yc2E
+        layout: Standard
+  # Unsupported layout.
+  - provider:
+      parameters:
+        server: https://zvirt.example.com/ovirt-engine/api
+        clusterID: b46372e7-0d52-40c7-9bbf-fda31e187088
+    nodes:
+      parameters:
+        sshPublicKey: ssh-rsa AAAAB3NzaC1yc2E
+        layout: WithoutNAT
+  # The ccm section is set without the required parameters field.
+  - provider:
+      parameters:
+        server: https://zvirt.example.com/ovirt-engine/api
+        clusterID: b46372e7-0d52-40c7-9bbf-fda31e187088
+    nodes:
+      parameters:
+        sshPublicKey: ssh-rsa AAAAB3NzaC1yc2E
+        layout: Standard
+    ccm:
+      disabled: true
   values:
   - { somethingInConfig: yes }

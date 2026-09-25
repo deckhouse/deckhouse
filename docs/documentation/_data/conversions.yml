@@ -81,6 +81,35 @@ cloud-provider-yandex:
         - if .additionalExternalNetworkIDs != null then .ccm.parameters.additionalExternalNetworkIDs = .additionalExternalNetworkIDs end
         - del(.additionalExternalNetworkIDs)
         - if .ccm.disabled == null then .ccm.disabled = false end
+cloud-provider-zvirt:
+    - version: 2
+      description:
+        en: |
+            Migration to the new ModuleConfig schema for cloud-provider-zvirt.
+            Sections `provider`, `nodes`, `storage` and `ccm` with required fields are added.
+            Fields `provider.parameters.server`, `provider.parameters.clusterID` and `nodes.parameters.sshPublicKey` get placeholder values — update them manually.
+            The zVirt login ID and password are not stored in the ModuleConfig: they belong to a Secret of the `cloud-provider.deckhouse.io/credentials` type.
+        ru: |
+            Переход на новую схему ModuleConfig для cloud-provider-zvirt.
+            Добавлены секции `provider`, `nodes`, `storage` и `ccm` с обязательными полями.
+            Поля `provider.parameters.server`, `provider.parameters.clusterID` и `nodes.parameters.sshPublicKey` получают placeholder-значения — замените их реальными значениями вручную.
+            Логин и пароль для подключения к zVirt в ModuleConfig не хранятся: их место — секрет типа `cloud-provider.deckhouse.io/credentials`.
+      conversions:
+        - if .provider == null then .provider = {} end
+        - if .provider.parameters == null then .provider.parameters = {} end
+        - if .provider.parameters.server == null then .provider.parameters.server = "PLACEHOLDER_REPLACE_ME" end
+        - if .provider.parameters.clusterID == null then .provider.parameters.clusterID = "00000000-0000-0000-0000-000000000000" end
+        - if .nodes == null then .nodes = {} end
+        - if .nodes.parameters == null then .nodes.parameters = {} end
+        - if .nodes.parameters.layout == null then .nodes.parameters.layout = "Standard" end
+        - if .nodes.parameters.sshPublicKey == null then .nodes.parameters.sshPublicKey = "ssh-rsa PLACEHOLDER_REPLACE_ME" end
+        - if .nodes.disabled == null then .nodes.disabled = false end
+        - if .storage == null then .storage = {} end
+        - if .storage.parameters == null then .storage.parameters = {} end
+        - if .storage.disabled == null then .storage.disabled = false end
+        - if .ccm == null then .ccm = {} end
+        - if .ccm.parameters == null then .ccm.parameters = {} end
+        - if .ccm.disabled == null then .ccm.disabled = false end
 control-plane-manager:
     - version: 2
       description:

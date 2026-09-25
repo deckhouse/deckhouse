@@ -467,6 +467,28 @@ alerts:
         The cloud-provider-yandex module is waiting for migration resources to be applied.
       severity: "6"
       markupFormat: markdown
+    - name: D8CloudProviderZvirtMigrationPending
+      sourceFile: ee/se-plus/modules/030-cloud-provider-zvirt/monitoring/prometheus-rules/migration.yaml
+      moduleUrl: 030-cloud-provider-zvirt
+      module: cloud-provider-zvirt
+      edition: se-plus
+      description: |-
+        The `cloud-provider-zvirt` module has detected the legacy `ZvirtClusterConfiguration` secret in the cluster
+        and is waiting for the new migration resources (ModuleConfig v2, CredentialSecret, NodeGroups, InstanceClasses)
+        to be applied before completing the migration.
+
+        To complete the migration, apply the resources from the `d8-migration-resources` Secret:
+
+        ```bash
+        d8 k -n d8-cloud-provider-zvirt get secret d8-migration-resources -o jsonpath='{.data.resources\.yaml}' | base64 -d | d8 k apply -f -
+        ```
+
+        After applying the resources, the alert will disappear automatically once the module
+        detects that all required resources are in place.
+      summary: |
+        The cloud-provider-zvirt module is waiting for migration resources to be applied.
+      severity: "6"
+      markupFormat: markdown
     - name: D8ClusterAutoscalerManagerPodIsNotReady
       sourceFile: modules/040-node-manager/monitoring/prometheus-rules/cluster-autoscaler.tpl
       moduleUrl: 040-node-manager
@@ -6511,6 +6533,7 @@ modules-having-alerts:
     - cloud-provider-huaweicloud
     - cloud-provider-openstack
     - cloud-provider-yandex
+    - cloud-provider-zvirt
     - cni-cilium
     - control-plane-manager
     - deckhouse

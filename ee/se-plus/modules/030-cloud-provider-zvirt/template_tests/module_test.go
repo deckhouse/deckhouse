@@ -57,7 +57,26 @@ const globalValues = `
 `
 
 const moduleValuesA = `
+provider:
+  parameters:
+    server: https://zvirt.example.com/api
+    clusterID: 6f0ce074-3a26-11f0-ab77-00163e2d8193
+    caBundle: ""
+    insecure: true
+nodes:
+  parameters:
+    sshPublicKey: ssh-rsa deadbeef
+    layout: Standard
 internal:
+  validationWebhookCert:
+    crt: dGVzdC1jcnQ=
+    key: dGVzdC1rZXk=
+    ca: dGVzdC1jYQ==
+  credentialSecrets:
+    d8-credentials:
+      authScheme: userPassword
+      identity: user
+      secret: imsostrong
   providerClusterConfiguration:
     apiVersion: deckhouse.io/v1
     clusterID: 6f0ce074-3a26-11f0-ab77-00163e2d8193
@@ -76,6 +95,55 @@ internal:
     provider:
       caBundle: ""
       insecure: true
+      password: imsostrong
+      server: https://zvirt.example.com/api
+      username: user
+    sshPublicKey: ssh-rsa deadbeef
+  providerDiscoveryData:
+    apiVersion: deckhouse.io/v1
+    kind: ZvirtCloudProviderDiscoveryData
+    storageDomains: []
+    zones:
+      - default`
+
+// The provider cluster configuration reaches the values as a typed structure, whose omitempty tags
+// drop zero values: a cluster that trusts the zVirt certificate carries neither `insecure` nor
+// `caBundle` in its values at all.
+const moduleValuesWithoutOptionalProviderFields = `
+provider:
+  parameters:
+    server: https://zvirt.example.com/api
+    clusterID: 6f0ce074-3a26-11f0-ab77-00163e2d8193
+nodes:
+  parameters:
+    sshPublicKey: ssh-rsa deadbeef
+    layout: Standard
+internal:
+  validationWebhookCert:
+    crt: dGVzdC1jcnQ=
+    key: dGVzdC1rZXk=
+    ca: dGVzdC1jYQ==
+  credentialSecrets:
+    d8-credentials:
+      authScheme: userPassword
+      identity: user
+      secret: imsostrong
+  providerClusterConfiguration:
+    apiVersion: deckhouse.io/v1
+    clusterID: 6f0ce074-3a26-11f0-ab77-00163e2d8193
+    kind: ZvirtClusterConfiguration
+    layout: Standard
+    masterNodeGroup:
+      instanceClass:
+        etcdDiskSizeGb: 10
+        memory: 8192
+        numCPUs: 4
+        rootDiskSizeGb: 50
+        storageDomainID: fdc40068-1975-46a3-a1db-7b3731316d87
+        template: awesome-template
+        vnicProfileID: ad0bfe09-f7a3-4f88-b6af-b71680a82ca4
+      replicas: 1
+    provider:
       password: imsostrong
       server: https://zvirt.example.com/api
       username: user
@@ -142,18 +210,102 @@ var _ = Describe("Module :: cloud-provider-zvirt :: helm template ::", func() {
 - --controllers=cloud-node,cloud-node-lifecycle
 - --v=4`))
 
+			// The login and the password come from the managed credential Secret, not from the
+			// legacy provider cluster configuration.
+			for _, secretName := range []string{"ccm-zvirt-credentials", "cdd-zvirt-credentials", "capi-zvirt-credentials"} {
+				credentialsSecret := f.KubernetesResource("Secret", "d8-cloud-provider-zvirt", secretName)
+				Expect(credentialsSecret.Exists()).To(BeTrue(), secretName)
+				Expect(credentialsSecret.Field("data.username").String()).To(Equal(base64.StdEncoding.EncodeToString([]byte("user"))), secretName)
+				Expect(credentialsSecret.Field("data.password").String()).To(Equal(base64.StdEncoding.EncodeToString([]byte("imsostrong"))), secretName)
+				Expect(credentialsSecret.Field("data.server").String()).To(Equal(base64.StdEncoding.EncodeToString([]byte("https://zvirt.example.com/api"))), secretName)
+			}
+
+			// The credentials reach the CSI driver only through the cloud-config of
+			// csi-controller-manager. No copy of them is mounted anywhere else, least of all into
+			// the DaemonSet that runs on every node of the cluster.
+			Expect(f.KubernetesResource("Secret", "d8-cloud-provider-zvirt", "zvirt-credentials").Exists()).To(BeFalse())
+
 			csiControllerDeployment := f.KubernetesResource("Deployment", "d8-cloud-provider-zvirt", "csi-controller")
 			Expect(csiControllerDeployment.Exists()).To(BeTrue())
 			Expect(csiControllerDeployment.Field("spec.template.spec.dnsPolicy").String()).To(Equal("ClusterFirstWithHostNet"))
+			Expect(csiControllerDeployment.Field("spec.template.spec.volumes").String()).NotTo(ContainSubstring("zvirt-credentials"))
+			// A credential rotation has to roll the driver: it reads the cloud-config once, at start.
+			Expect(csiControllerDeployment.Field("spec.template.metadata.annotations.checksum/config").String()).NotTo(BeEmpty())
 
 			csiNodeDaemonSet := f.KubernetesResource("DaemonSet", "d8-cloud-provider-zvirt", "csi-node")
 			Expect(csiNodeDaemonSet.Exists()).To(BeTrue())
 			Expect(csiNodeDaemonSet.Field("spec.template.spec.dnsPolicy").String()).To(Equal("ClusterFirstWithHostNet"))
+			Expect(csiNodeDaemonSet.Field("spec.template.spec.volumes").String()).NotTo(ContainSubstring("zvirt-credentials"))
+			Expect(csiNodeDaemonSet.Field("spec.template.metadata.annotations.checksum/config").String()).NotTo(BeEmpty())
 
 			cddDeployment := f.KubernetesResource("Deployment", "d8-cloud-provider-zvirt", "cloud-data-discoverer")
 			Expect(cddDeployment.Exists()).To(BeTrue())
 			Expect(cddDeployment.Field("spec.template.spec.dnsPolicy").String()).To(Equal("ClusterFirstWithHostNet"))
 			Expect(cddDeployment.Field("spec.template.spec.tolerations").String()).To(MatchYAML(tolerationsAnyNodeWithUninitialized))
+
+			validationWebhookDeployment := f.KubernetesResource("Deployment", "d8-cloud-provider-zvirt", "validation-webhook")
+			Expect(validationWebhookDeployment.Exists()).To(BeTrue())
+			Expect(validationWebhookDeployment.Field("spec.template.spec.containers.0.args").String()).To(MatchYAML(`
+- --webhook-port=4330
+- --webhook-cert-dir=/tmp/k8s-webhook-server/serving-certs
+- --metrics-bind-address=0
+- --health-probe-bind-address=0.0.0.0:4332`))
+
+			validationWebhookTLS := f.KubernetesResource("Secret", "d8-cloud-provider-zvirt", "validation-webhook-tls")
+			Expect(validationWebhookTLS.Exists()).To(BeTrue())
+
+			// The webhook must review exactly three resources, and reach the InstanceClass through
+			// v1 — v1alpha1 is frozen and carries none of the fields the rules look at.
+			validatingWebhookConfiguration := f.KubernetesGlobalResource("ValidatingWebhookConfiguration", "d8-cloud-provider-zvirt-validation-webhook")
+			Expect(validatingWebhookConfiguration.Exists()).To(BeTrue())
+			Expect(validatingWebhookConfiguration.Field("webhooks.#").Int()).To(BeEquivalentTo(4))
+			Expect(validatingWebhookConfiguration.Field("webhooks.0.clientConfig.service.path").String()).To(Equal("/validate--v1-secret"))
+			Expect(validatingWebhookConfiguration.Field("webhooks.1.clientConfig.service.path").String()).To(Equal("/validate-deckhouse-io-v1alpha1-moduleconfig"))
+			Expect(validatingWebhookConfiguration.Field("webhooks.2.clientConfig.service.path").String()).To(Equal("/validate-deckhouse-io-v1-nodegroup"))
+			Expect(validatingWebhookConfiguration.Field("webhooks.3.clientConfig.service.path").String()).To(Equal("/validate-deckhouse-io-v1-zvirtinstanceclass"))
+			Expect(validatingWebhookConfiguration.Field("webhooks.3.rules.0.apiVersions").String()).To(MatchYAML(`["v1"]`))
+
+			// Deletion of the ModuleConfig is deliberately not reviewed: disabling the module is
+			// the operator's call.
+			Expect(validatingWebhookConfiguration.Field("webhooks.1.rules.0.operations").String()).To(MatchYAML(`["CREATE", "UPDATE"]`))
+
+			// Read-only: the webhook reviews writes, it never makes any.
+			validationWebhookRole := f.KubernetesGlobalResource("ClusterRole", "d8:cloud-provider-zvirt:validation-webhook")
+			Expect(validationWebhookRole.Exists()).To(BeTrue())
+			Expect(validationWebhookRole.Field("rules").String()).To(MatchYAML(`
+- apiGroups:
+  - deckhouse.io
+  resources:
+  - nodegroups
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - deckhouse.io
+  resources:
+  - zvirtinstanceclasses
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - deckhouse.io
+  resources:
+  - moduleconfigs
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - ""
+  resources:
+  - secrets
+  - configmaps
+  verbs:
+  - get
+  - list
+  - watch`))
 
 			userAuthzUser := f.KubernetesGlobalResource("ClusterRole", "d8:user-authz:cloud-provider-zvirt:user")
 			Expect(userAuthzUser.Exists()).To(BeTrue())
@@ -232,6 +384,90 @@ var _ = Describe("Module :: cloud-provider-zvirt :: helm template ::", func() {
 
 			providerSpecificBashibleBootstrapSecret := f.KubernetesResource("Secret", "kube-system", fmt.Sprintf("d8-cloud-provider-%s-bashible-bootstrap", providerID))
 			Expect(providerSpecificBashibleBootstrapSecret.Exists()).To(BeFalse())
+		})
+	})
+
+	// Every subsystem switched off through its `disabled` flag.
+	const moduleValuesAllSubsystemsDisabled = `
+provider:
+  parameters:
+    server: https://zvirt.example.com/api
+    clusterID: 6f0ce074-3a26-11f0-ab77-00163e2d8193
+nodes:
+  disabled: true
+  parameters:
+    sshPublicKey: ssh-rsa deadbeef
+    layout: Standard
+storage:
+  disabled: true
+  parameters: {}
+ccm:
+  disabled: true
+  parameters: {}
+internal:
+  validationWebhookCert:
+    crt: dGVzdC1jcnQ=
+    key: dGVzdC1rZXk=
+    ca: dGVzdC1jYQ==
+  credentialSecrets:
+    d8-credentials:
+      authScheme: userPassword
+      identity: user
+      secret: imsostrong
+  providerDiscoveryData:
+    apiVersion: deckhouse.io/v1
+    kind: ZvirtCloudProviderDiscoveryData
+    storageDomains: []
+    zones:
+      - default`
+
+	// The provider cluster configuration reaches the values as a typed structure, whose omitempty
+	// tags drop zero values: a cluster that trusts the zVirt certificate has neither `insecure`
+	// nor `caBundle` in its values at all. The templates have to read those as false and "".
+	Context("zVirt Suite B: provider without caBundle and insecure", func() {
+		BeforeEach(func() {
+			f.ValuesSetFromYaml("global", globalValues)
+			f.ValuesSet("global.modulesImages", GetModulesImages())
+			f.ValuesSetFromYaml("cloudProviderZvirt", moduleValuesWithoutOptionalProviderFields)
+			f.HelmRender()
+		})
+
+		It("Everything must render properly", func() {
+			Expect(f.RenderError).ShouldNot(HaveOccurred())
+
+			// An absent `insecure` must render as "false", not as the "<nil>" a missing key
+			// would otherwise produce.
+			ccmSecret := f.KubernetesResource("Secret", "d8-cloud-provider-zvirt", "ccm-zvirt-credentials")
+			Expect(ccmSecret.Exists()).To(BeTrue())
+			Expect(ccmSecret.Field("data.insecure").String()).To(Equal(base64.StdEncoding.EncodeToString([]byte("false"))))
+
+			// An absent `caBundle` must not mount a CA that does not exist.
+			caSecret := f.KubernetesResource("Secret", "d8-cloud-provider-zvirt", "csi-controller-manager-ca")
+			Expect(caSecret.Exists()).To(BeFalse())
+
+			registrationSecret := f.KubernetesResource("Secret", "kube-system", "d8-node-manager-cloud-provider")
+			Expect(registrationSecret.Exists()).To(BeTrue())
+		})
+	})
+
+	Context("zVirt Suite C: every subsystem disabled", func() {
+		BeforeEach(func() {
+			f.ValuesSetFromYaml("global", globalValues)
+			f.ValuesSet("global.modulesImages", GetModulesImages())
+			f.ValuesSetFromYaml("cloudProviderZvirt", moduleValuesAllSubsystemsDisabled)
+			f.HelmRender()
+		})
+
+		It("Renders no workload of a disabled subsystem", func() {
+			Expect(f.RenderError).ShouldNot(HaveOccurred())
+
+			Expect(f.KubernetesResource("Deployment", "d8-cloud-provider-zvirt", "cloud-controller-manager").Exists()).To(BeFalse())
+			Expect(f.KubernetesResource("Deployment", "d8-cloud-provider-zvirt", "csi-controller").Exists()).To(BeFalse())
+			Expect(f.KubernetesResource("DaemonSet", "d8-cloud-provider-zvirt", "csi-node").Exists()).To(BeFalse())
+			Expect(f.KubernetesResource("Deployment", "d8-cloud-provider-zvirt", "capz-controller-manager").Exists()).To(BeFalse())
+
+			// The registration Secret keeps node-manager working and is not tied to a subsystem.
+			Expect(f.KubernetesResource("Secret", "kube-system", "d8-node-manager-cloud-provider").Exists()).To(BeTrue())
 		})
 	})
 })
