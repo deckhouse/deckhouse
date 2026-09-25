@@ -4,7 +4,13 @@ include:
 
 .scripts:
   e2e_cmd: |
+    set +e
     python3 /usr/bin/main.py --${E2E_MODE}
+    status=$?
+    set -e
+
+    echo "e2e command exit code: ${status}"
+
 
 .e2e-variables:
   variables:

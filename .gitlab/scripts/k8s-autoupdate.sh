@@ -429,7 +429,7 @@ MR_WEB_URL="$(printf '%s' "${MR_RESULT}" | jq -r '.web_url // empty')"
 if [[ -z "${MR_WEB_URL}" ]]; then
   fail "Merge request was not created/updated successfully: ${MR_RESULT}"
   else
-    bash ./.github/scripts/send-report.sh --webhook "k8s_update" "✅Kubernetes has been automatically updated✅\n[URL]($MR_WEB_URL)"
+    echo MR_WEB_URL="${MR_WEB_URL}" >> mr.env
 fi
 
 log "INFO" "Merge request is ready: ${MR_WEB_URL}"
