@@ -104,6 +104,19 @@
         send_msg
       fi
 
+  notify_k8s_update:
+    - *send_msg
+    - |
+      # Check MR_WEB_URL
+      if [ -f mr.env ]; then
+        set -a
+        source mr.env
+        set +a
+        message="✅Kubernetes has been automatically updated✅\n[URL]($MR_WEB_URL)"
+        send_msg
+      else export CI_JOB_STATUS='failed'
+      fi
+
 .notify-base:
   variables:
     VAULT_AUTH_PATH: fox
@@ -127,7 +140,7 @@
     LOOP_CHANNEL_ID:
       token: $VAULT_ID_TOKEN
       file: false
-      vault: 6db2f1ee-9b6f-4f4f-8381-2fb43060478a/team-ssdlc/loop/channel_id@projects
+      vault: 6db2f1ee-9b6f-4f4f-8381-2fb43060478a/team-ssdlc/loop/ssdlc_report_channel_id@projects
 
 # override channel to system-notifications
 .notify-system:
@@ -147,6 +160,23 @@
 
 
 # info complicated notification job
+
+.notify-k8s-update-system:
+  extends:
+    - .notify-base
+    - .notify-system
+  after_script:
+    - !reference [.notify_after_scripts, notify_k8s_update]
+    - !reference [.notify_after_scripts, notify_failure]
+
+.notify-k8s-update-test:
+  extends:
+    - .notify-base
+    - .notify-test
+  after_script:
+    - !reference [.notify_after_scripts, notify_k8s_update]
+    - !reference [.notify_after_scripts, notify_failure]
+
 .notify-reproducibility:
   extends:
     - .notify-base

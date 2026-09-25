@@ -97,6 +97,13 @@
       fi
     done < <(env)
 
+  login_ci_registry: |
+    if [[ -n "${CI_REGISTRY:-}" && -n "${CI_REGISTRY_USER:-}" && -n "${CI_JOB_TOKEN:-}" ]]; then
+      echo "${CI_JOB_TOKEN}" | docker login "${CI_REGISTRY}" \
+        --username "${CI_REGISTRY_USER}" --password-stdin
+      echo "${CI_JOB_TOKEN}" | regctl registry login "${CI_REGISTRY}" \
+        --user "${CI_REGISTRY_USER}" --pass-stdin
+    fi
   login_dev_registry: |
     if [[ -n "${DECKHOUSE_DEV_REGISTRY_HOST:-}" && -n "${DECKHOUSE_DEV_REGISTRY_USER:-}" ]]; then
       echo "${DECKHOUSE_DEV_REGISTRY_PASSWORD}" | docker login "${DECKHOUSE_DEV_REGISTRY_HOST}" \
