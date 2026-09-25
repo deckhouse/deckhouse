@@ -144,12 +144,13 @@ var _ = Describe("User-authz hooks :: alert_deprecated_rbacv2_bindings ::", func
 			f.RunHook()
 		})
 
-		It("Saves the offenders, sorted, as the requirement value", func() {
+		It("Saves the bindings to aliased names, sorted, as the requirement value", func() {
 			Expect(f).To(ExecuteSuccessfully())
 			value, exists := requirements.GetValue(DeprecatedRBACv2BindingsValueKey)
 			Expect(exists).To(BeTrue())
+			// The capability binding raises its alert but does not hold the release: it has no alias
+			// whose removal would change anything for it.
 			Expect(value).To(Equal([]string{
-				"ClusterRoleBinding legacy-modcap -> d8:manage:permission:module:prometheus:view",
 				"ClusterRoleBinding legacy-observability -> d8:manage:observability:manager",
 				"RoleBinding team-a/legacy-viewer -> d8:use:role:viewer",
 			}))
@@ -268,6 +269,13 @@ var _ = Describe("User-authz hooks :: alert_deprecated_rbacv2_bindings ::", func
 					"aliased":      "false",
 				},
 			}))
+		})
+
+		It("Does not hold the release: the requirement value stays empty", func() {
+			Expect(f).To(ExecuteSuccessfully())
+			value, exists := requirements.GetValue(DeprecatedRBACv2BindingsValueKey)
+			Expect(exists).To(BeTrue())
+			Expect(value).To(BeEmpty())
 		})
 	})
 

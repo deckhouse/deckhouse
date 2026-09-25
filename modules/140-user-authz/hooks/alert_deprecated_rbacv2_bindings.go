@@ -20,10 +20,12 @@ limitations under the License.
 // D8UserAuthzDeprecatedRBACv2RoleInUse alert that nudges operators to migrate their bindings to the
 // new names (d8:{system,subsystem,namespace,project}:*) before the aliases are removed next release.
 //
-// The same list is published as a release requirement value: the release that removes the aliases
-// carries the deprecatedRBACv2BindingsCount requirement (modules/140-user-authz/requirements) and
-// stays Pending while a binding to a deprecated name is still in the cluster, so nobody loses access
-// by upgrading with such a binding in place.
+// The bindings to an aliased name are published as a release requirement value: the release that
+// removes the aliases carries the deprecatedRBACv2BindingsCount requirement
+// (modules/140-user-authz/requirements) and stays Pending while such a binding is still in the
+// cluster, so nobody loses access by upgrading with it in place. A binding to a capability name has no
+// alias to lose -- removing the aliases changes nothing for it -- so it raises its alert but does not
+// hold the release.
 
 package hooks
 
@@ -197,7 +199,11 @@ func handleDeprecatedRBACv2Bindings(_ context.Context, input *go_hook.HookInput)
 			if err != nil {
 				return fmt.Errorf("failed to iterate over '%s' snapshot: %w", snapshotName, err)
 			}
-			described = append(described, binding.describe())
+			// Only a binding to an aliased name loses access when the aliases go.
+			if binding.Aliased == "true" {
+				described = append(described, binding.describe())
+			}
+
 			input.MetricsCollector.Set(
 				deprecatedRBACv2Metric, 1,
 				map[string]string{

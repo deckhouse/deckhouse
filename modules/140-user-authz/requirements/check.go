@@ -92,7 +92,7 @@ func init() {
 			return true, nil
 		}
 		return false, fmt.Errorf(
-			"the cluster has %d binding(s) to deprecated RBACv2 role names (d8:manage:*, d8:use:role:*, d8:use:capability:*): %s; "+
+			"the cluster has %d binding(s) to deprecated RBACv2 role names (d8:manage:*, d8:use:role:*): %s; "+
 				"this release removes the compatibility aliases and such bindings would grant nothing — recreate them on the new role names, %s",
 			len(bindings), strings.Join(bindings, "; "), deprecatedNamesReference)
 	}
