@@ -17,6 +17,7 @@ limitations under the License.
 package engine
 
 import (
+	"encoding/json"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -26,9 +27,6 @@ import (
 	"strings"
 	"testing"
 
-	"helm.sh/helm/v3/pkg/chart"
-	"helm.sh/helm/v3/pkg/chartutil"
-	helmengine "helm.sh/helm/v3/pkg/engine"
 	corev1 "k8s.io/api/core/v1"
 	storagev1 "k8s.io/api/storage/v1"
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
@@ -37,11 +35,12 @@ import (
 	"sigs.k8s.io/yaml"
 
 	"controller/api/v1alpha1"
+	"controller/internal/testutil"
 )
 
 // projected runs ProjectCatalogFields and renders the result as name -> raw JSON for comparison.
 func projected(fields []v1alpha1.CatalogField, obj map[string]any) map[string]string {
-	got := ProjectCatalogFields(factory(), fields, obj)
+	got, _ := ProjectCatalogFields(factory(), fields, obj)
 	if got == nil {
 		return nil
 	}
@@ -99,7 +98,7 @@ func TestProjectCatalogFields_Values(t *testing.T) {
 }
 
 func TestProjectCatalogFields_NothingProjectedIsNil(t *testing.T) {
-	if got := ProjectCatalogFields(factory(), []v1alpha1.CatalogField{field("a", "$.a")}, map[string]any{}); got != nil {
+	if got, _ := ProjectCatalogFields(factory(), []v1alpha1.CatalogField{field("a", "$.a")}, map[string]any{}); got != nil {
 		t.Fatalf("want nil, got %v", got)
 	}
 }
@@ -179,45 +178,13 @@ func TestProjectCatalogFields_DuplicateNameKeepsTheFirstEntry(t *testing.T) {
 	assertProjected(t, projected([]v1alpha1.CatalogField{field("x", "$.missing"), field("x", "$.b")}, obj), nil)
 }
 
-// shippedDefinitionsTemplate is the module's own Helm chart, rendered as the source of truth.
-var shippedDefinitionsTemplate = filepath.Join("..", "..", "..", "..", "..", "templates", "cluster-objects-controller", "grantable-resources.yaml")
-
-// shippedDefinition renders the template with the real Helm engine and returns the named
-// GrantableClusterResourceDefinition, decoded strictly so a misspelt field fails here.
+// shippedDefinition returns the named GrantableClusterResourceDefinition of the module's own Helm chart.
 func shippedDefinition(t *testing.T, name string) *v1alpha1.GrantableClusterResourceDefinition {
 	t.Helper()
-	tpl, err := os.ReadFile(shippedDefinitionsTemplate)
-	if err != nil {
-		t.Fatal(err)
-	}
-	ch := &chart.Chart{
-		Metadata: &chart.Metadata{Name: "multitenancy-manager", Version: "0.0.0", APIVersion: chart.APIVersionV2},
-		Templates: []*chart.File{
-			{Name: "templates/_helm_lib_stub.tpl", Data: []byte(`{{- define "helm_lib_module_labels" }}labels: {module: multitenancy-manager}{{- end }}`)},
-			{Name: "templates/grantable-resources.yaml", Data: tpl},
-		},
-	}
-	values := chartutil.Values{"Values": map[string]any{"global": map[string]any{"enabledModules": []any{"cert-manager"}}}}
-	rendered, err := helmengine.Render(ch, values)
-	if err != nil {
-		t.Fatal(err)
-	}
-	for _, doc := range strings.Split(rendered["multitenancy-manager/templates/grantable-resources.yaml"], "\n---") {
-		var meta struct {
-			metav1.TypeMeta   `json:",inline"`
-			metav1.ObjectMeta `json:"metadata"`
+	for _, def := range testutil.RenderShipped[v1alpha1.GrantableClusterResourceDefinition](t, "GrantableClusterResourceDefinition") {
+		if def.Name == name {
+			return def
 		}
-		if err := yaml.Unmarshal([]byte(doc), &meta); err != nil {
-			t.Fatalf("document %s: %v", doc, err)
-		}
-		if meta.Kind != "GrantableClusterResourceDefinition" || meta.Name != name {
-			continue
-		}
-		def := &v1alpha1.GrantableClusterResourceDefinition{}
-		if err := yaml.UnmarshalStrict([]byte(doc), def); err != nil {
-			t.Fatalf("document %s: %v", doc, err)
-		}
-		return def
 	}
 	t.Fatalf("definition %s is not in the rendered template", name)
 	return nil
@@ -251,7 +218,7 @@ func TestShippedStorageClassCatalogFields(t *testing.T) {
 	})
 }
 
-// crdsDir holds the module's CRDs, read the same way as shippedDefinitionsTemplate.
+// crdsDir holds the module's CRDs, relative to this package.
 var crdsDir = filepath.Join("..", "..", "..", "..", "..", "crds")
 
 // TestCatalogLimitsMatchTheCRDs: MaxCatalogFields and MaxCatalogFieldValueBytes repeat the maxItems of
@@ -276,11 +243,18 @@ func TestCatalogLimitsMatchTheCRDs(t *testing.T) {
 			t.Fatalf("%s: spec.catalogFields.maxItems = %v, want %d", v.Name, catalogFields.MaxItems, MaxCatalogFields)
 		}
 	}
+	if MaxCatalogFieldsBytes%1024 != 0 {
+		t.Fatalf("MaxCatalogFieldsBytes = %d is not a whole number of KiB, as the CRDs state it", MaxCatalogFieldsBytes)
+	}
+	budgetKiB := MaxCatalogFieldsBytes / 1024
 	for name, want := range map[string][]string{
 		"multitenancy.deckhouse.io_grantableclusterresourcedefinitions.yaml": {
 			fmt.Sprintf("At most %d fields", MaxCatalogFields), fmt.Sprintf("longer than %d bytes", MaxCatalogFieldValueBytes),
+			fmt.Sprintf("more than %d KiB", budgetKiB),
 		},
-		"multitenancy.deckhouse.io_availableclusterresources.yaml": {fmt.Sprintf("longer than %d bytes", MaxCatalogFieldValueBytes)},
+		"multitenancy.deckhouse.io_availableclusterresources.yaml": {
+			fmt.Sprintf("longer than %d bytes", MaxCatalogFieldValueBytes), fmt.Sprintf("more than %d KiB", budgetKiB),
+		},
 	} {
 		text := read(name)
 		for _, w := range want {
@@ -315,7 +289,7 @@ func TestCatalogLimitsMatchTheCRDs(t *testing.T) {
 			desc: func(root apiextensionsv1.JSONSchemaProps) apiextensionsv1.JSONSchemaProps {
 				return root.Properties["spec"].Properties["catalogFields"]
 			},
-			want: []int{MaxCatalogFields, MaxCatalogFieldValueBytes},
+			want: []int{MaxCatalogFields},
 		},
 		{
 			file:  "doc-ru-multitenancy.deckhouse.io_availableclusterresources.yaml",
@@ -327,7 +301,7 @@ func TestCatalogLimitsMatchTheCRDs(t *testing.T) {
 				}
 				return available.Items.Schema.Properties["fields"]
 			},
-			want: []int{MaxCatalogFieldValueBytes},
+			want: nil,
 		},
 	} {
 		text := ruDescription(c.file, c.desc)
@@ -336,5 +310,69 @@ func TestCatalogLimitsMatchTheCRDs(t *testing.T) {
 				t.Errorf("%s: the description of %s does not mention %d", c.file, c.field, n)
 			}
 		}
+		// Both fields state the value limit and the budget. Their numbers are equal (512), so each is
+		// looked up with its unit, bytes and KiB in Russian, spelled with escapes to keep this file free
+		// of Cyrillic.
+		if b := strconv.Itoa(MaxCatalogFieldValueBytes) + " \u0431\u0430\u0439\u0442"; !strings.Contains(text, b) {
+			t.Errorf("%s: the description of %s does not mention %d bytes", c.file, c.field, MaxCatalogFieldValueBytes)
+		}
+		if kib := strconv.Itoa(budgetKiB) + " \u041a\u0438\u0411"; !strings.Contains(text, kib) {
+			t.Errorf("%s: the description of %s does not mention %d KiB", c.file, c.field, budgetKiB)
+		}
+	}
+}
+
+// TestCatalogSize_Boundary: CatalogSize counts the whole serialized list and accepts exactly
+// MaxCatalogFieldsBytes.
+func TestCatalogSize_Boundary(t *testing.T) {
+	entry := func(pad int) []v1alpha1.AvailableObject {
+		return []v1alpha1.AvailableObject{{Name: "a", Fields: map[string]apiextensionsv1.JSON{"f": {Raw: []byte(`"` + strings.Repeat("v", pad) + `"`)}}}}
+	}
+	overhead := len(`[{"name":"a","fields":{"f":""}}]`)
+	for _, c := range []struct {
+		size int
+		fits bool
+	}{{MaxCatalogFieldsBytes, true}, {MaxCatalogFieldsBytes + 1, false}} {
+		got, fits := CatalogSize(entry(c.size - overhead))
+		if got != c.size || fits != c.fits {
+			t.Fatalf("CatalogSize = %d, %v; want %d, %v", got, fits, c.size, c.fits)
+		}
+	}
+}
+
+// TestCatalogSize_MatchesMarshal: counted entry by entry, the size of a catalog that fits is the length
+// of json.Marshal of the whole list, and one over the budget stops counting early but is still refused.
+func TestCatalogSize_MatchesMarshal(t *testing.T) {
+	value := func(s string) apiextensionsv1.JSON { return apiextensionsv1.JSON{Raw: []byte(s)} }
+	for _, list := range [][]v1alpha1.AvailableObject{
+		{},
+		{{Name: "a"}},
+		{{Name: "a", Default: true}, {Name: "b<&>"}},
+		{
+			{Name: "a", Fields: map[string]apiextensionsv1.JSON{"n": value("1"), "s": value(`"x"`)}},
+			{Name: "b", Default: true, Fields: map[string]apiextensionsv1.JSON{"o": value(`{"k":[1,true,null]}`)}},
+			{Name: "c"},
+		},
+	} {
+		raw, err := json.Marshal(list)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if got, fits := CatalogSize(list); got != len(raw) || !fits {
+			t.Fatalf("CatalogSize(%s) = %d, %v; want %d, true", raw, got, fits, len(raw))
+		}
+	}
+
+	big := value(`"` + strings.Repeat("v", MaxCatalogFieldValueBytes-2) + `"`)
+	var over []v1alpha1.AvailableObject
+	for i := range 2 * MaxCatalogFieldsBytes / MaxCatalogFieldValueBytes {
+		over = append(over, v1alpha1.AvailableObject{Name: fmt.Sprintf("o%d", i), Fields: map[string]apiextensionsv1.JSON{"f": big}})
+	}
+	raw, err := json.Marshal(over)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got, fits := CatalogSize(over); fits || got <= MaxCatalogFieldsBytes || got >= len(raw) {
+		t.Fatalf("CatalogSize = %d, %v; want a count past %d that stops before %d", got, fits, MaxCatalogFieldsBytes, len(raw))
 	}
 }

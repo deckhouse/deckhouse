@@ -169,7 +169,7 @@ func TestBindingStatus(t *testing.T) {
 	ctx := context.Background()
 
 	refRec := &ReferenceReconciler{Client: cl, Factory: jsonpath.NewWithCache()}
-	defRec := &DefinitionReconciler{Client: cl}
+	defRec := &DefinitionReconciler{Client: cl, Factory: jsonpath.NewWithCache(), Mapper: testMapper()}
 
 	// Reference binding status.
 	for _, n := range []string{"sc-pvc", "ghost"} {

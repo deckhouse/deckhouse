@@ -232,8 +232,9 @@ func (v *IsGrantedValidator) decide(ctx context.Context, req *admissionv1.Admiss
 				// deliberately, by the same rule as a broken path above. Retrying cannot fix it, and
 				// failing the request under failurePolicy: Fail would block every CREATE/UPDATE of the
 				// reference's rule in every project because of one bad registration. The other
-				// references are still enforced, and the breakage stays visible in this log. Any other
-				// Resolve error still fails the request below.
+				// references are still enforced, and the breakage stays visible in this log and in the
+				// definition's GrantedResourceValid condition. Any other Resolve error still fails the
+				// request below.
 				log.Error(err, "skipping reference: definition cannot be resolved",
 					"definition", def.Name, "reference", mr.Reference.Name)
 				unresolvable[def.Name] = struct{}{}

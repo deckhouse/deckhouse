@@ -54,6 +54,7 @@ import (
 	"controller/internal/rolebinding"
 	"controller/internal/startup"
 	clusterprojectrolebindingwebhook "controller/internal/webhook/clusterprojectrolebinding"
+	grantableclusterresourcedefinitionwebhook "controller/internal/webhook/grantableclusterresourcedefinition"
 	grantableclusterresourcereferencewebhook "controller/internal/webhook/grantableclusterresourcereference"
 	projectwebhook "controller/internal/webhook/project"
 	projectnamespacewebhook "controller/internal/webhook/projectnamespace"
@@ -157,15 +158,16 @@ func main() {
 		Mapper: grantsMapper,
 		// Usage objects are of whatever kinds the references name; the uncached reader keeps the
 		// two-minute recount from starting an informer per kind.
-		Usage:   runtimeManager.GetAPIReader(),
-		Factory: jsonpathFactory,
+		Usage:    runtimeManager.GetAPIReader(),
+		Factory:  jsonpathFactory,
+		Recorder: runtimeManager.GetEventRecorderFor(controllerName),
 	}).SetupWithManager(runtimeManager); err != nil {
 		fatal(logger, err, "set up grant project reconciler")
 	}
 	if err = (&grantcontrollers.ReferenceReconciler{Client: runtimeManager.GetClient(), Factory: jsonpathFactory}).SetupWithManager(runtimeManager); err != nil {
 		fatal(logger, err, "set up grant reference reconciler")
 	}
-	if err = (&grantcontrollers.DefinitionReconciler{Client: runtimeManager.GetClient()}).SetupWithManager(runtimeManager); err != nil {
+	if err = (&grantcontrollers.DefinitionReconciler{Client: runtimeManager.GetClient(), Factory: jsonpathFactory, Mapper: grantsMapper}).SetupWithManager(runtimeManager); err != nil {
 		fatal(logger, err, "set up grant definition reconciler")
 	}
 	if err = (&grantcontrollers.PolicyReconciler{Client: runtimeManager.GetClient(), Mapper: grantsMapper}).SetupWithManager(runtimeManager); err != nil {
@@ -182,6 +184,10 @@ func main() {
 	// or leave holes in spec.rule. Same factory as those two webhooks and the reference reconciler, so
 	// all of them read a path the same way.
 	grantableclusterresourcereferencewebhook.Register(runtimeManager, jsonpathFactory)
+	// Reject a GrantableClusterResourceDefinition of a namespaced grantedResource, or whose catalogFields
+	// the catalog projection would skip. Same factory and mapper as the projection and the definition
+	// reconciler.
+	grantableclusterresourcedefinitionwebhook.Register(runtimeManager, jsonpathFactory, grantsMapper)
 
 	// register the project role binding reconcilers
 	if err = (&projectrolebindingcontroller.Reconciler{Client: runtimeManager.GetClient()}).SetupWithManager(runtimeManager); err != nil {

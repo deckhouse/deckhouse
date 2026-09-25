@@ -19,24 +19,18 @@ package grantableclusterresourcereference
 import (
 	"context"
 	"encoding/json"
-	"os"
-	"path/filepath"
-	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"helm.sh/helm/v3/pkg/chart"
-	"helm.sh/helm/v3/pkg/chartutil"
-	helmengine "helm.sh/helm/v3/pkg/engine"
 	admissionv1 "k8s.io/api/admission/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
-	"sigs.k8s.io/yaml"
 
 	grantsv1alpha1 "controller/api/v1alpha1"
 	"controller/internal/jsonpath"
+	"controller/internal/testutil"
 )
 
 func newValidator() *validator { return &validator{factory: jsonpath.NewWithCache()} }
@@ -410,50 +404,11 @@ func TestHandle_CoverageRatcheting(t *testing.T) {
 	})
 }
 
-// shippedReferencesTemplate is the module's own Helm chart, read as the source of truth instead of a
-// transcript of it, so an edit that introduces an invalid path fails here.
-var shippedReferencesTemplate = filepath.Join("..", "..", "..", "..", "..", "..", "templates", "cluster-objects-controller", "grantable-resources.yaml")
-
-// renderShippedReferences renders the template with the real Helm engine: a stub for the lib-helm
-// labels helper and cert-manager enabled, so the conditional references render too.
-func renderShippedReferences(t *testing.T) []*grantsv1alpha1.GrantableClusterResourceReference {
-	t.Helper()
-	tpl, err := os.ReadFile(shippedReferencesTemplate)
-	require.NoError(t, err)
-
-	ch := &chart.Chart{
-		Metadata: &chart.Metadata{Name: "multitenancy-manager", Version: "0.0.0", APIVersion: chart.APIVersionV2},
-		Templates: []*chart.File{
-			{Name: "templates/_helm_lib_stub.tpl", Data: []byte(`{{- define "helm_lib_module_labels" }}labels: {module: multitenancy-manager}{{- end }}`)},
-			{Name: "templates/grantable-resources.yaml", Data: tpl},
-		},
-	}
-	values := chartutil.Values{"Values": map[string]any{"global": map[string]any{"enabledModules": []any{"cert-manager"}}}}
-	rendered, err := helmengine.Render(ch, values)
-	require.NoError(t, err)
-	out, ok := rendered["multitenancy-manager/templates/grantable-resources.yaml"]
-	require.True(t, ok, "rendered files: %v", rendered)
-
-	var refs []*grantsv1alpha1.GrantableClusterResourceReference
-	for _, doc := range strings.Split(out, "\n---") {
-		var meta metav1.TypeMeta
-		require.NoError(t, yaml.Unmarshal([]byte(doc), &meta), "document: %s", doc)
-		if meta.Kind != "GrantableClusterResourceReference" {
-			continue
-		}
-		// Strict, so a misspelt field (defualting: ...) fails here instead of decoding to its zero value.
-		obj := new(grantsv1alpha1.GrantableClusterResourceReference)
-		require.NoError(t, yaml.UnmarshalStrict([]byte(doc), obj), "document: %s", doc)
-		refs = append(refs, obj)
-	}
-	return refs
-}
-
 // TestHandle_ShippedReferences runs every GrantableClusterResourceReference the module ships in
 // templates/cluster-objects-controller/grantable-resources.yaml through this webhook: the module must
 // not be able to block its own Helm release.
 func TestHandle_ShippedReferences(t *testing.T) {
-	refs := renderShippedReferences(t)
+	refs := testutil.RenderShipped[grantsv1alpha1.GrantableClusterResourceReference](t, "GrantableClusterResourceReference")
 
 	names := make([]string, 0, len(refs))
 	for _, ref := range refs {
