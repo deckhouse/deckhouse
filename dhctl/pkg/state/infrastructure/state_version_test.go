@@ -18,6 +18,11 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+
+	"github.com/deckhouse/deckhouse/dhctl/pkg/global"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/actions/manifests"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/client"
 )
 
 func TestCheckTerraformVersion(t *testing.T) {
@@ -65,4 +70,59 @@ func TestCheckTerraformVersion(t *testing.T) {
 
 	err = CheckCanIConvergeTerraformStateWhenWeUseTofu([]byte(fakeStateYAML))
 	require.Error(t, err)
+}
+
+func TestHasTerraformStateInCluster(t *testing.T) {
+	const (
+		tofuState      = `{"version":4,"terraform_version":"1.9.4"}`
+		terraformState = `{"version":4,"terraform_version":"0.14.8"}`
+	)
+
+	tests := []struct {
+		name         string
+		clusterState string
+		masterStates map[string]string
+		want         bool
+	}{
+		{
+			name:         "all states are opentofu",
+			clusterState: tofuState,
+			masterStates: map[string]string{"master-0": tofuState, "master-1": tofuState},
+			want:         false,
+		},
+		{
+			name:         "one master state is terraform",
+			clusterState: tofuState,
+			masterStates: map[string]string{"master-0": tofuState, "master-1": terraformState},
+			want:         true,
+		},
+		{
+			name:         "cluster state is terraform",
+			clusterState: terraformState,
+			want:         true,
+		},
+		{
+			name: "no states",
+			want: false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			kubeCl := client.NewFakeKubernetesClient()
+			secrets := kubeCl.CoreV1().Secrets(global.D8SystemNamespace)
+			if tt.clusterState != "" {
+				_, err := secrets.Create(t.Context(), manifests.SecretWithInfrastructureState([]byte(tt.clusterState)), metav1.CreateOptions{})
+				require.NoError(t, err)
+			}
+			for node, st := range tt.masterStates {
+				_, err := secrets.Create(t.Context(), manifests.SecretWithNodeInfrastructureState(node, "master", []byte(st), nil), metav1.CreateOptions{})
+				require.NoError(t, err)
+			}
+
+			got, err := HasTerraformStateInCluster(t.Context(), kubeCl)
+			require.NoError(t, err)
+			require.Equal(t, tt.want, got)
+		})
+	}
 }

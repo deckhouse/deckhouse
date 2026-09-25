@@ -167,6 +167,19 @@ spec:
       cache: true
 `
 
+	const withoutEnabled = `
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleConfig
+metadata:
+  name: registry
+spec:
+  version: 1
+  settings:
+    mode: Managed
+    storage:
+      cache: true
+`
+
 	// An upstream block with no host in it: a configuration on its way to being edited, and not a
 	// source of anything.
 	const emptyUpstream = `
@@ -195,6 +208,7 @@ spec:
 		{name: "managed with a cache and no upstream", doc: managedNoUpstream, cache: true},
 		{name: "unmanaged manages nothing, so no cache", doc: unmanaged},
 		{name: "a disabled module has no cache", doc: disabled},
+		{name: "a module without enabled counts as disabled", doc: withoutEnabled},
 		{name: "an upstream block without a host is not an upstream", doc: emptyUpstream, cache: true},
 	}
 

@@ -451,6 +451,7 @@ spec:
 // the d8-candi-cloud-provider-discovery-data Secret, which is the only source of discovery data
 // the module has when there is no d8-provider-cluster-configuration.
 func TestPrepareDeckhouseInstallConfigProviderModuleConfig(t *testing.T) {
+	enabled := true
 	const externalProviderResources = `
 apiVersion: deckhouse.io/v1alpha1
 kind: ModuleConfig
@@ -458,6 +459,7 @@ metadata:
   name: cloud-provider-dvp
 spec:
   version: 1
+  enabled: true
   source: deckhouse
   settings:
     nodes:
@@ -492,7 +494,7 @@ spec:
 				ProviderName: "dvp",
 				ModuleConfigs: []*ModuleConfig{
 					deckhouseModuleConfig(),
-					{ObjectMeta: metav1.ObjectMeta{Name: CloudProviderModuleName("dvp")}},
+					{ObjectMeta: metav1.ObjectMeta{Name: CloudProviderModuleName("dvp")}, Spec: ModuleConfigSpec{Enabled: &enabled}},
 				},
 			},
 			expect: true,

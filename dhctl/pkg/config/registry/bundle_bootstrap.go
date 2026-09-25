@@ -152,7 +152,9 @@ func BundleFactsFromModuleConfig(doc []byte) (BundleBootstrapInputs, error) {
 		return in, fmt.Errorf("parse the registry ModuleConfig: %w", err)
 	}
 
-	if enabled, found, err := unstructured.NestedBool(obj.Object, "spec", "enabled"); err == nil && found && !enabled {
+	// A ModuleConfig without spec.enabled counts as switched off, as in moduleConfigEnabled in
+	// dhctl/pkg/config/module_config.go.
+	if enabled, _, err := unstructured.NestedBool(obj.Object, "spec", "enabled"); err == nil && !enabled {
 		return in, nil
 	}
 

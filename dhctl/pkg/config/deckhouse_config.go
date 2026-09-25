@@ -82,7 +82,7 @@ type DeckhouseInstaller struct {
 	CommanderUUID uuid.UUID
 }
 
-// HasProviderModuleConfig reports whether the installer carries a
+// HasProviderModuleConfig reports whether the installer carries an enabled
 // cloud-provider-<name> ModuleConfig. It gates the provider namespace and the discovery-data
 // Secret, so it has to answer the same question as MetaConfig.HasProviderModuleConfig.
 func (c *DeckhouseInstaller) HasProviderModuleConfig() bool {

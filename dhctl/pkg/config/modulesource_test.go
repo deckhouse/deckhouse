@@ -909,6 +909,7 @@ metadata:
   name: cloud-provider-dvp
 spec:
   version: 1
+  enabled: true
   source: deckhouse
   settings:
     nodes:
