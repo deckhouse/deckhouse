@@ -67,7 +67,39 @@ var _ = Describe("Modules :: admission-policy-engine :: hooks :: detect pss defa
 			f.BindingContexts.Set(f.GenerateBeforeHelmContext())
 			f.RunHook()
 		})
-		It("should have the default policy set to Privileged", func() {
+		It("should have the default policy set to Privileged and report that it must be set explicitly", func() {
+			Expect(f).To(ExecuteSuccessfully())
+			Expect(f.ValuesGet("admissionPolicyEngine.podSecurityStandards.defaultPolicy").String()).To(Equal(pssPrivilegedPolicy))
+			m := f.MetricsCollector.CollectedMetrics()
+			Expect(m).To(HaveLen(3))
+			Expect(m[0]).To(BeEquivalentTo(operation.MetricOperation{
+				Group:  "d8_admission_policy_engine_pss_default_policy",
+				Action: operation.ActionExpireMetrics,
+			}))
+			Expect(m[1]).To(BeEquivalentTo(operation.MetricOperation{
+				Name:   "d8_admission_policy_engine_pss_default_policy",
+				Group:  "d8_admission_policy_engine_pss_default_policy",
+				Action: operation.ActionGaugeSet,
+				Value:  ptr.To(policyCode("Privileged")),
+				Labels: map[string]string{},
+			}))
+			Expect(m[2]).To(BeEquivalentTo(operation.MetricOperation{
+				Name:   "d8_admission_policy_engine_pss_default_policy_not_set",
+				Group:  "d8_admission_policy_engine_pss_default_policy",
+				Action: operation.ActionGaugeSet,
+				Value:  ptr.To(1.0),
+				Labels: map[string]string{},
+			}))
+		})
+	})
+
+	Context("Cluster without install-data configmap with podSecurityStandards.defaultPolicy preset", func() {
+		BeforeEach(func() {
+			f.BindingContexts.Set(f.GenerateBeforeHelmContext())
+			f.ConfigValuesSet("admissionPolicyEngine.podSecurityStandards.defaultPolicy", pssPrivilegedPolicy)
+			f.RunHook()
+		})
+		It("should not report that the default policy must be set explicitly", func() {
 			Expect(f).To(ExecuteSuccessfully())
 			Expect(f.ValuesGet("admissionPolicyEngine.podSecurityStandards.defaultPolicy").String()).To(Equal(pssPrivilegedPolicy))
 			m := f.MetricsCollector.CollectedMetrics()

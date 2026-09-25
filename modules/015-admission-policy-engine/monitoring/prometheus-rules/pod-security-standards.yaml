@@ -1,0 +1,47 @@
+- name: admission-policy-engine.pod-security-standards
+  rules:
+    - alert: PodSecurityStandardsDefaultPolicyNotSet
+      expr: max(max_over_time(d8_admission_policy_engine_pss_default_policy_not_set[15m])) > 0
+      for: 10m
+      labels:
+        severity_level: "4"
+        d8_module: admission-policy-engine
+        d8_component: gatekeeper
+      annotations:
+        plk_protocol_version: "1"
+        plk_markup_format: markdown
+        summary: The default Pod Security Standards policy must be set explicitly.
+        description: |-
+          The `d8-system/install-data` ConfigMap is missing, so Deckhouse can't determine the version the cluster was bootstrapped with.
+          dhctl creates this ConfigMap starting from v1.55, so the cluster is most likely bootstrapped with an earlier version.
+
+          The `Privileged` default policy is currently applied to non-system namespaces.
+          Set the default policy explicitly so that it does not depend on how Deckhouse detects the bootstrap version.
+
+          To set the default policy, add the `settings.podSecurityStandards.defaultPolicy` parameter to the `admission-policy-engine` ModuleConfig.
+
+          If the ModuleConfig already exists, patch it so that its other settings are preserved:
+
+          ```shell
+          d8 k patch mc admission-policy-engine --type=merge -p '{"spec":{"settings":{"podSecurityStandards":{"defaultPolicy":"Privileged"}}}}'
+          ```
+
+          If the ModuleConfig doesn't exist, create it:
+
+          ```yaml
+          apiVersion: deckhouse.io/v1alpha1
+          kind: ModuleConfig
+          metadata:
+            name: admission-policy-engine
+          spec:
+            version: 1
+            settings:
+              podSecurityStandards:
+                defaultPolicy: Privileged
+          ```
+
+          Choose the value that suits your cluster: `Privileged`, `Baseline`, or `Restricted`.
+          Before switching to `Baseline` or `Restricted`, make sure that the workloads in non-system namespaces comply with the chosen policy.
+          Otherwise, their pods are denied when recreated if the `enforcementAction` parameter is set to `Deny`.
+
+          The alert is resolved within 15 minutes after the parameter is set.
