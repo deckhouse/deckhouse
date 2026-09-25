@@ -37,18 +37,18 @@ flowchart TD
 | [`PackageRepository`](../../reference/api/cr.html#packagerepository) | — | Cluster | Registry connection and scan schedule |
 | [`PackageRepositoryOperation`](../../reference/api/cr.html#packagerepositoryoperation) | `pro` | Cluster | Scan job that discovers versions |
 | [`ApplicationPackageVersion`](../../reference/api/cr.html#applicationpackageversion) | `apv` | Cluster | One per discovered package version; carries metadata, OpenAPI schemas, and requirements |
-| [`ApplicationPackage`](../../reference/api/cr.html#applicationpackage) | — | Cluster | Informational aggregate: which repos have the package, how many instances use it |
-| [`Application`](../../reference/api/cr.html#application) | `app` | Namespace | Installed instance; drives Nelm deployment |
+| [`ApplicationPackage`](../../reference/api/cr.html#applicationpackage) | `ap` | Cluster | Informational aggregate: which repos have the package, which versions the release channels point to, how many instances use it |
+| [`Application`](../../reference/api/cr.html#application) | — | Namespace | Installed instance; drives Nelm deployment |
 
 ### ApplicationPackageVersion content
 
 Each [ApplicationPackageVersion](../../reference/api/cr.html#applicationpackageversion) object carries:
 
 - `status.packageMetadata.description` — localized (`en`/`ru`) package description
-- `status.packageMetadata.category` — catalog category
 - `status.packageMetadata.stage` — maturity stage (`Preview`, `General Availability`, etc.)
 - `status.packageMetadata.requirements` — DP and Kubernetes version constraints; module dependencies (`mandatory`, `conditional`, `anyOf`, `noneOf`)
-- `status.packageMetadata.versionCompatibilityRules` — upgrade and downgrade rules
+- `status.packageMetadata.disableOptions` — confirmation before the application is deleted (see [Deletion confirmation](application-development.html#deletion-confirmation))
+- `status.packageMetadata.changelog` — changes in the version from `changelog.yaml`
 - `status.packageSchemas.settingsSchema` — OpenAPI v3 schema used to validate `Application.spec.settings`
 - `status.packageSchemas.valuesSchema` — OpenAPI v3 schema for effective values passed to hooks and templates
 
@@ -76,15 +76,9 @@ All constraints exist to enforce namespace isolation and prevent Applications fr
 
 ### Naming constraints
 
-Kubernetes limits Pod names to 63 characters. An Application pod name is composed of:
+The objects of an Application are named `d8a-<INSTANCE_NAME>-<SUFFIX>` (see [Templates](templates.html#object-names)), so the instance name is a part of every object name. To keep the object names within the Kubernetes limits:
 
-- instance name — ≤24 chars
-- resource name — ≤24 chars
-- deployment suffix — 15 chars
+- **Application instance name** (`metadata.name`): at most **24 characters**. The validating webhook rejects an Application with a longer name.
+- **Resource name suffix inside the Application**: at most **23 characters** for StatefulSets, Jobs, and CronJobs, whose names must fit 52 characters (4 + 24 + 1 + 23 = 52), and at most **34 characters** for other objects, whose names must fit 63 characters.
 
-Therefore:
-
-- **Application instance name** (`metadata.name`): at most **24 characters**
-- **Resource name inside the Application** (e.g., Deployment name suffix): at most **24 characters**
-
-Example: instance `redis-cache` (11 chars) + resource `master-deployment` (17 chars) + suffix (15 chars) = 43 chars total — fits within the 63-character limit.
+Example: the `master` StatefulSet of the `redis-cache` instance (11 characters) is named `d8a-redis-cache-master` (22 characters).

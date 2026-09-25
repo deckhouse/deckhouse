@@ -1103,7 +1103,7 @@ spec:
 
 Для управления доступом к cluster-wide-ресурсам в настройках приложений DP используйте OpenAPI-расширение `x-deckhouse-grantable-resource`. В этом случае deckhouse-контроллер автоматически проверяет доступность указанного ресурса и при необходимости подставляет значение по умолчанию. Создавать GrantableClusterResourceReference вручную не требуется.
 
-Описание расширения и примеры использования приведены [в разделе «Разработка приложений»](/products/kubernetes-platform/documentation/v1/architecture/marketplace/application-development.html#подстановка-значения-из-грантов-на-ресурсы-кластера-x-deckhouse-grantable-resource).
+Описание расширения и примеры использования приведены [в разделе «Настройки приложения»](/products/kubernetes-platform/documentation/v1/architecture/marketplace/settings.html#подстановка-значения-ресурса-кластера-доступного-по-гранту-x-deckhouse-grantable-resource).
 
 #### Проверка состояния регистрации ресурса
 

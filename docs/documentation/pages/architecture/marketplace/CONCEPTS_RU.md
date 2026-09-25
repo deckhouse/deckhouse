@@ -39,18 +39,18 @@ flowchart TD
 | [`PackageRepository`](../../reference/api/cr.html#packagerepository) | — | Cluster | Подключение реестра и расписание сканирования |
 | [`PackageRepositoryOperation`](../../reference/api/cr.html#packagerepositoryoperation) | `pro` | Cluster | Задача сканирования, обнаруживающая версии |
 | [`ApplicationPackageVersion`](../../reference/api/cr.html#applicationpackageversion) | `apv` | Cluster | Одна на каждую обнаруженную версию пакета; содержит метаданные, OpenAPI-схемы и требования |
-| [`ApplicationPackage`](../../reference/api/cr.html#applicationpackage) | — | Cluster | Информационный агрегат: какие репозитории содержат пакет, сколько экземпляров используют его |
-| [`Application`](../../reference/api/cr.html#application) | `app` | Namespace | Установленный экземпляр; управляет деплоем через Nelm |
+| [`ApplicationPackage`](../../reference/api/cr.html#applicationpackage) | `ap` | Cluster | Информационный агрегат: какие репозитории содержат пакет, на какие версии указывают каналы обновлений, сколько экземпляров используют его |
+| [`Application`](../../reference/api/cr.html#application) | — | Namespace | Установленный экземпляр; управляет деплоем через Nelm |
 
 ### Содержимое ApplicationPackageVersion
 
 Каждый объект [ApplicationPackageVersion](../../reference/api/cr.html#applicationpackageversion) содержит:
 
 - `status.packageMetadata.description` — локализованное описание пакета (`en`/`ru`)
-- `status.packageMetadata.category` — категория в каталоге
 - `status.packageMetadata.stage` — стадия зрелости (`Preview`, `General Availability` и т. д.)
 - `status.packageMetadata.requirements` — ограничения на версии DP и Kubernetes; зависимости от модулей (`mandatory`, `conditional`, `anyOf`, `noneOf`)
-- `status.packageMetadata.versionCompatibilityRules` — правила совместимости для обновлений и даунгрейдов
+- `status.packageMetadata.disableOptions` — подтверждение перед удалением приложения (см. [«Подтверждение удаления»](application-development.html#подтверждение-удаления))
+- `status.packageMetadata.changelog` — изменения в версии из `changelog.yaml`
 - `status.packageSchemas.settingsSchema` — OpenAPI v3 схема для валидации `Application.spec.settings`
 - `status.packageSchemas.valuesSchema` — OpenAPI v3 схема для effective values, передаваемых в хуки и шаблоны
 
@@ -78,15 +78,9 @@ flowchart TD
 
 ### Ограничения на имена
 
-Kubernetes ограничивает длину имён Pod до 63 символов. Имя пода Application состоит из:
+Объекты Application называются `d8a-<INSTANCE_NAME>-<SUFFIX>` (см. [«Шаблоны»](templates.html#имена-объектов)), поэтому имя экземпляра входит в имя каждого объекта. Чтобы имена объектов укладывались в ограничения Kubernetes:
 
-- имени экземпляра — ≤24 символа
-- имени ресурса — ≤24 символа
-- суффикса Deployment — 15 символов
+- **Имя экземпляра Application** (`metadata.name`): не более **24 символов**. Validating-вебхук отклоняет Application с более длинным именем.
+- **Суффикс имени ресурса внутри Application**: не более **23 символов** для StatefulSet, Job и CronJob, имена которых должны укладываться в 52 символа (4 + 24 + 1 + 23 = 52), и не более **34 символов** для остальных объектов, имена которых должны укладываться в 63 символа.
 
-Поэтому:
-
-- **Имя экземпляра Application** (`metadata.name`): не более **24 символов**
-- **Имя ресурса внутри Application** (например, суффикс имени Deployment): не более **24 символов**
-
-Пример: экземпляр `redis-cache` (11 символов) + ресурс `master-deployment` (17 символов) + суффикс (15 символов) = 43 символа — укладывается в ограничение 63 символа.
+Пример: StatefulSet `master` экземпляра `redis-cache` (11 символов) называется `d8a-redis-cache-master` (22 символа).
