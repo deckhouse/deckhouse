@@ -35,6 +35,24 @@ import (
 	"github.com/deckhouse/registry-agent/internal/metrics"
 )
 
+const (
+	// DefaultResponseTimeout is how long a target has to produce response headers.
+	//
+	// Short, because everything it covers is small: a connection, a challenge, a token,
+	// and a set of headers. A registry that cannot manage those in a minute is one the
+	// next target should be tried instead of.
+	DefaultResponseTimeout = time.Minute
+
+	// DefaultIdleTimeout is how long a transfer may produce nothing before it is
+	// abandoned.
+	//
+	// Below containerd's `image_pull_progress_timeout`, which Deckhouse sets to five
+	// minutes, so that a stalled transfer is the agent's to fail over rather than
+	// containerd's to give up on. Generous all the same: it is not measuring how long
+	// an image takes, only how long nothing at all has happened.
+	DefaultIdleTimeout = 2 * time.Minute
+)
+
 // Layout provides the current node layout. An interface so the server does not care
 // whether it came from the API server or from the copy on disk.
 type Layout interface {
@@ -60,10 +78,29 @@ type Server struct {
 	// nothing about serving a pull may depend on whether anyone is watching.
 	Metrics *metrics.Metrics
 
-	// ForwardTimeout bounds one attempt at one target. Without it a hung registry
+	// ResponseTimeout bounds getting an answer out of a target: the connection, the
+	// authentication it demands, and the response headers. Without it a hung registry
 	// would hold the pull for as long as it likes, and a fallback that never gets
 	// tried is not a fallback.
-	ForwardTimeout time.Duration
+	//
+	// It deliberately does NOT bound the transfer that follows. A single deadline over
+	// the whole attempt cannot tell a hung registry from a large image on a slow link:
+	// a container disk of a virtual machine is tens of gigabytes, and any deadline
+	// generous enough to carry it is far too generous to detect a registry that stopped
+	// answering. What separates the two is not how long the transfer takes but whether
+	// bytes are still arriving, which is what IdleTimeout measures.
+	ResponseTimeout time.Duration
+
+	// IdleTimeout is how long a transfer already under way may produce nothing before
+	// it is abandoned.
+	//
+	// Reset by every byte that arrives, so a transfer that is merely slow runs for as
+	// long as it needs, while one that has stalled is cut promptly. This is the same
+	// shape as containerd's own `image_pull_progress_timeout`, and it has to stay below
+	// it: whichever side gives up first decides what happens next, and the agent giving
+	// up means the next target is tried, while containerd giving up means the pull
+	// fails.
+	IdleTimeout time.Duration
 
 	// TrustDir is where Deckhouse stages the certificate authorities this cluster
 	// accepts, one file per registry — see DefaultTrustDir. Empty leaves the agent with
@@ -293,11 +330,11 @@ func (s *Server) attempt(
 		return nil, err
 	}
 
-	timeout := s.ForwardTimeout
-	if timeout <= 0 {
-		timeout = 5 * time.Minute
-	}
-	ctx, cancel := context.WithTimeout(ctx, timeout)
+	// Cancellable but without a deadline of its own. The phase that has to be bounded
+	// in wall-clock time is answered by the transport's ResponseHeaderTimeout, and the
+	// one that must not be is the body, so the only thing this context carries is the
+	// ability to abandon the transfer — on a stalled read, or when the body is closed.
+	ctx, cancel := context.WithCancel(ctx)
 
 	request, err := http.NewRequestWithContext(ctx, original.Method, target.URL(), nil)
 	if err != nil {
@@ -328,13 +365,22 @@ func (s *Server) attempt(
 		for _, value := range original.Header.Values("Authorization") {
 			request.Header.Add("Authorization", value)
 		}
-	} else if err := s.auth.authorize(ctx, client, request, target); err != nil {
+	} else {
 		// A target the cluster holds credentials for is reached with those. The client's
 		// own are deliberately NOT passed on here: they belong to whoever wrote the
 		// imagePullSecret, and sending them to the Deckhouse upstream would hand them to a
 		// party they were never meant for.
-		cancel()
-		return nil, err
+		//
+		// Bounded on its own, and by wall-clock time rather than by progress: a challenge
+		// and a token are small exchanges that belong to answering, not to transferring,
+		// so they are held to the same deadline as the response headers they precede.
+		authCtx, authCancel := context.WithTimeout(ctx, s.responseTimeout())
+		err := s.auth.authorize(authCtx, client, request, target)
+		authCancel()
+		if err != nil {
+			cancel()
+			return nil, err
+		}
 	}
 
 	response, err := client.Do(request)
@@ -344,9 +390,27 @@ func (s *Server) attempt(
 	}
 
 	// The body is streamed to the client, so the request outlives this function and
-	// the cancel has to travel with the body rather than fire here.
-	response.Body = &cancelOnClose{ReadCloser: response.Body, cancel: cancel}
+	// the cancel has to travel with the body rather than fire here. Until it is closed,
+	// what keeps a stalled transfer from lasting forever is the idle timeout, since the
+	// context deliberately carries no deadline of its own.
+	response.Body = newIdleBody(response.Body, s.idleTimeout(), cancel)
 	return response, nil
+}
+
+// responseTimeout is how long a target has to answer, defaulted.
+func (s *Server) responseTimeout() time.Duration {
+	if s.ResponseTimeout > 0 {
+		return s.ResponseTimeout
+	}
+	return DefaultResponseTimeout
+}
+
+// idleTimeout is how long a transfer may produce nothing, defaulted.
+func (s *Server) idleTimeout() time.Duration {
+	if s.IdleTimeout > 0 {
+		return s.IdleTimeout
+	}
+	return DefaultIdleTimeout
 }
 
 // relay streams the response through, without buffering.
@@ -369,9 +433,21 @@ func (s *Server) relay(
 	writer.WriteHeader(response.StatusCode)
 
 	if _, err := io.Copy(writer, response.Body); err != nil {
-		// The status line is already sent, so there is nothing to report to the client.
-		// The runtime sees a truncated body and retries, which is the correct outcome.
+		// The status line is already sent, so there is nothing to report to the client
+		// except the shape of the answer itself: the runtime has to see a body that ends
+		// where it should not, and retry from the offset it reached.
 		s.Log.Warn("the transfer was interrupted", "error", err.Error())
+
+		// Aborting the connection rather than returning, because returning would finish
+		// the response cleanly. Where the upstream declared a Content-Length that is
+		// merely untidy — the client counts the bytes and sees they are short — but a
+		// chunked response has no count, so a truncated body would be terminated with a
+		// correct final chunk and read as complete. The client would then verify a digest
+		// over half an image and start again from nothing, with no indication of why.
+		//
+		// ErrAbortHandler is the standard library's way to say this: the server closes
+		// the connection without logging a panic of its own.
+		panic(http.ErrAbortHandler)
 	}
 }
 
@@ -440,6 +516,11 @@ func (s *Server) client(certificateAuthority string) (*http.Client, error) {
 	}
 
 	transport := http.DefaultTransport.(*http.Transport).Clone()
+	// The one deadline that belongs on the transport rather than on a context: it stops
+	// at the response headers and leaves the body alone, which is exactly the split this
+	// proxy needs. A context deadline cannot express that — it would carry on into the
+	// transfer and cut a large image that is arriving perfectly well.
+	transport.ResponseHeaderTimeout = s.responseTimeout()
 	if certificateAuthority != "" || (staged != nil && len(staged.pem) > 0) {
 		pool, err := x509.SystemCertPool()
 		if err != nil || pool == nil {
@@ -475,15 +556,62 @@ func (s *Server) client(certificateAuthority string) (*http.Client, error) {
 	return actual.(*http.Client), nil
 }
 
-// cancelOnClose ties a request's cancellation to the lifetime of its body, so a
-// streamed response is not cut off by the function that started it returning.
-type cancelOnClose struct {
+// idleBody ties a request's cancellation to the lifetime of its body, so a streamed
+// response is not cut off by the function that started it returning, and abandons the
+// transfer when it stops producing anything.
+//
+// Idleness rather than duration is what makes this safe to put on the path of an image
+// of any size. A deadline would have to be set for the largest image on the slowest link
+// the cluster will ever have, and at that length it no longer detects anything; a timer
+// that every arriving byte pushes back stays short whatever the image weighs, because
+// what it measures is silence.
+type idleBody struct {
 	io.ReadCloser
+
+	idle   time.Duration
 	cancel context.CancelFunc
+
+	// mu guards the pair below. Without it the timer could fire between a read
+	// returning bytes and that read rearming it, and the transfer would be abandoned
+	// at the moment it demonstrated it was alive.
+	mu      sync.Mutex
+	timer   *time.Timer
+	expired bool
 }
 
-func (c *cancelOnClose) Close() error {
-	err := c.ReadCloser.Close()
-	c.cancel()
+func newIdleBody(body io.ReadCloser, idle time.Duration, cancel context.CancelFunc) io.ReadCloser {
+	wrapped := &idleBody{ReadCloser: body, idle: idle, cancel: cancel}
+	wrapped.timer = time.AfterFunc(idle, wrapped.expire)
+	return wrapped
+}
+
+// expire abandons the request, which surfaces as a read error on the body.
+func (b *idleBody) expire() {
+	b.mu.Lock()
+	b.expired = true
+	b.mu.Unlock()
+	b.cancel()
+}
+
+func (b *idleBody) Read(p []byte) (int, error) {
+	n, err := b.ReadCloser.Read(p)
+	if n > 0 {
+		b.mu.Lock()
+		if !b.expired {
+			b.timer.Reset(b.idle)
+		}
+		b.mu.Unlock()
+	}
+	return n, err
+}
+
+func (b *idleBody) Close() error {
+	b.mu.Lock()
+	b.expired = true
+	b.timer.Stop()
+	b.mu.Unlock()
+
+	err := b.ReadCloser.Close()
+	b.cancel()
 	return err
 }
