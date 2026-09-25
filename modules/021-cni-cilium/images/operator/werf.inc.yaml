@@ -1,12 +1,23 @@
-# #####################################################################
-# Based on https://github.com/cilium/cilium/blob/v1.17.4/images/operator/Dockerfile
-# #####################################################################
+{{/*
+Description: cilium-operator, the generic variant
+Target: final image
+Sources:
+- cilium/cilium: images/operator/Dockerfile (OPERATOR_VARIANT=operator-generic)
+- cilium/cilium: operator/Makefile (build tags per variant)
+- cilium/cilium: .github/workflows/build-images-releases.yaml (the list of OPERATOR_VARIANT values)
+Notes:
+- Sources come from bin-cilium-src, so the operator is built from exactly the same patched tree as the agent
+- Only the generic variant is built. Upstream parameterises the image by OPERATOR_VARIANT and its own helm chart picks generic unless a cloud IPAM is enabled, which we never enable: ipam is kubernetes
+- OPERATOR_VARIANT is one of operator (every provider in one binary), operator-generic (ipam_provider_operator, cluster-pool and multi-pool), operator-aws, operator-azure, operator-alibabacloud. The operator- prefix is part of the value, the Dockerfile expands it into build-container-${OPERATOR_VARIANT} and cilium-${OPERATOR_VARIANT}
+- tools/cloud-dep-check keeps the generic variant free of any cloud SDK (allowed: nil there), which is why it is preferable to the combined variant even where both would work
+- Debug symbol extraction is skipped: upstream forces NOSTRIP=1 only to feed its debug image, we leave NOSTRIP unset so make links with -s -w and the objcopy block is not needed
+*/}}
 ---
-image: {{ .ModuleName }}/{{ .ImageName }}-build-artifact
+image: {{ .ModuleName }}/{{ .ImageName }}-build
 from: {{ index $.Images "builder/golang" }}
 final: false
 import:
-- image: {{ .ModuleName }}/bin-cilium-src-artifact
+- image: {{ .ModuleName }}/bin-cilium-src
   add: /src
   to: /src
   before: install
@@ -17,36 +28,33 @@ secrets:
   value: {{ .GOPROXY }}
 shell:
   beforeInstall:
-  - pm install make git bash
+  - pm install make bash
   install:
-  - export GO_VERSION=${GOLANG_VERSION}
-  - export GOPROXY=$(cat /run/secrets/GOPROXY)
-  - export GOOS=linux GOARCH=amd64
-  - cd /src/cilium
+  - export GO_VERSION=${GOLANG_VERSION} GOPROXY=$(cat /run/secrets/GOPROXY)
+  - export GOOS=linux GOARCH=amd64 CGO_ENABLED=0
+  - cd /src
+  # The repository ships a vendor/ tree and Makefile.defs builds with -mod=vendor.
+  # Our patches bump go.mod, which leaves that tree inconsistent, so rebuild it
   - go mod vendor && go mod verify
-  # Remove compile-time interface assertion in checkmate to fix newer Go versions compatibility (testing.TB interface changed).
-  # This is safe because checkmate is a transitive test dependency, its *C type is not used in Cilium production code as testing.TB,
-  # and this change just stops the compiler from failing on unused code interface checks.
-  - '[ -f vendor/github.com/cilium/checkmate/check.go ] && sed -i "/var _ testing.TB =/d" vendor/github.com/cilium/checkmate/check.go || true'
   - |
     {{- $buildContext := deepCopy $ -}}
     {{- $_ := set $buildContext "SvaceBuildOptions" "--enable-ptrace-all" -}}
-    {{- $_ := set $buildContext "BuildCommand" `make DESTDIR=/out/linux/amd64 build-container-operator install-container-binary-operator` -}}
+    {{- $_ := set $buildContext "BuildCommand" `make DESTDIR=/out build-container-operator-generic install-container-binary-operator-generic` -}}
     {{- include "image-build.build" $buildContext | indent 4 }}
-  - chown 64535:64535 /out/linux/amd64/usr/bin/cilium-operator
-  - chmod 0700 /out/linux/amd64/usr/bin/cilium-operator
-  - rm -rf /src/cilium/vendor
+  - chown 64535:64535 /out/usr/bin/cilium-operator-generic
+  - chmod 0700 /out/usr/bin/cilium-operator-generic
+  - rm -rf /src/vendor
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}
-fromImage: common/distroless
+from: {{ index $.Images "base/distroless-fin" }}
 import:
-- image: {{ .ModuleName }}/{{ .ImageName }}-build-artifact
-  add: /out/linux/amd64/usr/bin/cilium-operator
-  to: /usr/bin/cilium-operator
+- image: {{ .ModuleName }}/{{ .ImageName }}-build
+  add: /out/usr/bin/cilium-operator-generic
+  to: /usr/bin/cilium-operator-generic
   before: install
 {{- include "image mount points" . }}
 imageSpec:
   config:
-    entrypoint: ["/usr/bin/cilium-operator"]
+    entrypoint: ["/usr/bin/cilium-operator-generic"]
 ---
 {{- include "vex mitigation" (list $ (printf "%s/%s" $.ModuleName $.ImageName)) }}

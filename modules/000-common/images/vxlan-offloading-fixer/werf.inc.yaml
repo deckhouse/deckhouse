@@ -83,10 +83,17 @@ import:
   add: /tmp/vxlan-offloading-fixer
   to: /vxlan-offloading-fixer
   before: setup
-- image: common/pause
-  add: /pause
-  to: /pause
-  before: install
+- image: {{ .ModuleName }}/{{ .ImageName }}-coreutils-artifact
+  add: /coreutils/usr/bin/true
+  to: /bin/true
+  before: setup
 imageSpec:
   config:
     entrypoint: ["/vxlan-offloading-fixer"]
+---
+image: {{ .ModuleName }}/{{ .ImageName }}-coreutils-artifact
+from: {{ index $.Images "builder/distroless" }}
+final: false
+shell:
+  beforeInstall:
+  - pm install coreutils -d /coreutils
