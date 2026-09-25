@@ -6,7 +6,7 @@ require (
 	github.com/BurntSushi/toml v1.6.0
 	github.com/Masterminds/semver/v3 v3.4.0
 	github.com/Masterminds/sprig/v3 v3.3.0
-	github.com/deckhouse/deckhouse/go_lib/dependency/k8s/drain v0.0.0-00010101000000-000000000000
+	github.com/deckhouse/deckhouse/go_lib/dependency/k8s/drain v0.0.0-20260925140759-1a599fdfe185
 	github.com/deckhouse/deckhouse/pkg/registry v0.0.0-00010101000000-000000000000
 	github.com/go-logr/logr v1.4.3
 	github.com/google/go-containerregistry v0.20.6
