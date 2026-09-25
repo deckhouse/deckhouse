@@ -1,6 +1,6 @@
 module user-authn-controller
 
-go 1.25.0
+go 1.26.0
 
 require (
 	github.com/go-ldap/ldap/v3 v3.4.13
@@ -8,7 +8,7 @@ require (
 	github.com/prometheus/client_golang v1.23.2
 	github.com/prometheus/client_model v0.6.2
 	go.uber.org/zap v1.27.0
-	golang.org/x/crypto v0.55.0
+	golang.org/x/crypto v0.56.0
 	k8s.io/apimachinery v0.35.1
 	k8s.io/client-go v0.35.1
 	sigs.k8s.io/controller-runtime v0.23.3

@@ -562,24 +562,6 @@ index c82de7af..98b8b5d9 100755
  	if err != nil {
  		return nil, fmt.Errorf("oidc: malformed jwt: %v", err)
  	}
-diff --git a/pkg/sessions/persistence/ticket_test.go b/pkg/sessions/persistence/ticket_test.go
-index 6b868b90..4f2f724b 100644
---- a/pkg/sessions/persistence/ticket_test.go
-+++ b/pkg/sessions/persistence/ticket_test.go
-@@ -27,11 +27,11 @@ var _ = Describe("Session Ticket Tests", func() {
- 					enc := in.ticket.encodeTicket()
- 					Expect(enc).To(Equal(in.encodedTicket))
- 
--					dec, err := decodeTicket(enc, in.ticket.options)
-+					dec, _, err := decodeTicket(enc, in.ticket.options)
- 					Expect(err).ToNot(HaveOccurred())
- 					Expect(dec).To(Equal(in.ticket))
- 				} else {
--					_, err := decodeTicket(in.encodedTicket, nil)
-+					_, _, err := decodeTicket(in.encodedTicket, nil)
- 					Expect(err).To(MatchError(in.expectedError))
- 				}
- 			},
 diff --git a/providers/adfs_test.go b/providers/adfs_test.go
 index 355fd939..067d8872 100755
 --- a/providers/adfs_test.go
@@ -644,7 +626,7 @@ index 27d70b88..46742042 100644
  		},
  	}
 diff --git a/providers/logingov.go b/providers/logingov.go
-index 2660b015..3c9c1073 100644
+index 2660b015..2081be21 100644
 --- a/providers/logingov.go
 +++ b/providers/logingov.go
 @@ -12,11 +12,12 @@ import (
@@ -667,10 +649,19 @@ index 2660b015..3c9c1073 100644
  	AtHash        string `json:"at_hash"`
  	CHash         string `json:"c_hash"`
 -	jwt.StandardClaims
-+	jwt.Claims
++	jwt.RegisteredClaims
  }
  
  // checkNonce checks the nonce in the id_token
+@@ -158,7 +159,7 @@ func checkNonce(idToken string, p *LoginGovProvider) (err error) {
+ 			return nil, rerr
+ 		}
+ 		return pubkeys.Keys[0].Key, nil
+-	})
++	}, jwt.WithIssuedAt()) // reject an iat in the future, as jwt/v3 StandardClaims did
+ 	if err != nil {
+ 		return
+ 	}
 @@ -207,12 +208,12 @@ func (p *LoginGovProvider) Redeem(ctx context.Context, _, code, codeVerifier str
  		return nil, ErrMissingCode
  	}
@@ -689,10 +680,10 @@ index 2660b015..3c9c1073 100644
  	token := jwt.NewWithClaims(jwt.GetSigningMethod("RS256"), claims)
  	ss, err := token.SignedString(p.JWTKey)
 diff --git a/providers/logingov_test.go b/providers/logingov_test.go
-index 00fe8dcc..78bee724 100644
+index 00fe8dc..c68d5c8 100644
 --- a/providers/logingov_test.go
 +++ b/providers/logingov_test.go
-@@ -15,11 +15,11 @@ import (
+@@ -15,11 +15,12 @@ import (
  	"testing"
  	"time"
  
@@ -703,10 +694,11 @@ index 00fe8dcc..78bee724 100644
  	. "github.com/onsi/gomega"
  	"github.com/stretchr/testify/assert"
 -	"gopkg.in/square/go-jose.v2"
++	"github.com/stretchr/testify/require"
  )
  
  type MyKeyData struct {
-@@ -174,7 +174,7 @@ func TestLoginGovProviderSessionData(t *testing.T) {
+@@ -174,7 +175,7 @@ func TestLoginGovProviderSessionData(t *testing.T) {
  		Birthdate     string `json:"birthdate"`
  		AtHash        string `json:"at_hash"`
  		CHash         string `json:"c_hash"`
@@ -715,7 +707,7 @@ index 00fe8dcc..78bee724 100644
  	}
  	claims := MyCustomClaims{
  		"http://idmanagement.gov/ns/assurance/loa/1",
-@@ -186,13 +186,13 @@ func TestLoginGovProviderSessionData(t *testing.T) {
+@@ -186,13 +187,13 @@ func TestLoginGovProviderSessionData(t *testing.T) {
  		"",
  		"",
  		"",
@@ -735,7 +727,7 @@ index 00fe8dcc..78bee724 100644
  			Subject:   "b2d2d115-1d7e-4579-b9d6-f8e84f4f56ca",
  		},
  	}
-@@ -268,7 +268,7 @@ func TestLoginGovProviderBadNonce(t *testing.T) {
+@@ -268,7 +269,7 @@ func TestLoginGovProviderBadNonce(t *testing.T) {
  		Birthdate     string `json:"birthdate"`
  		AtHash        string `json:"at_hash"`
  		CHash         string `json:"c_hash"`
@@ -744,7 +736,7 @@ index 00fe8dcc..78bee724 100644
  	}
  	claims := MyCustomClaims{
  		"http://idmanagement.gov/ns/assurance/loa/1",
-@@ -280,13 +280,13 @@ func TestLoginGovProviderBadNonce(t *testing.T) {
+@@ -280,13 +281,13 @@ func TestLoginGovProviderBadNonce(t *testing.T) {
  		"",
  		"",
  		"",
@@ -764,6 +756,61 @@ index 00fe8dcc..78bee724 100644
  			Subject:   "b2d2d115-1d7e-4579-b9d6-f8e84f4f56ca",
  		},
  	}
+@@ -335,6 +336,54 @@ func TestLoginGovProviderBadNonce(t *testing.T) {
+ 	assert.Error(t, err)
+ }
+ 
++func TestLoginGovCheckNonceIssuedAt(t *testing.T) {
++	testCases := map[string]struct {
++		issuedAt  time.Time
++		expectErr bool
++	}{
++		"issued in the past": {
++			issuedAt:  time.Now().Add(-1 * time.Minute),
++			expectErr: false,
++		},
++		"issued in the future": {
++			issuedAt:  time.Now().Add(1 * time.Hour),
++			expectErr: true,
++		},
++	}
++
++	for name, tc := range testCases {
++		t.Run(name, func(t *testing.T) {
++			p, serverkey, err := newLoginGovProvider()
++			require.NoError(t, err)
++
++			var pubkeys jose.JSONWebKeySet
++			pubkeys.Keys = append(pubkeys.Keys, serverkey.PubJWK)
++			pubjwkbody, err := json.Marshal(pubkeys)
++			require.NoError(t, err)
++			var pubjwkserver *httptest.Server
++			p.PubJWKURL, pubjwkserver = newLoginGovServer(pubjwkbody)
++			defer pubjwkserver.Close()
++
++			claims := loginGovCustomClaims{
++				Nonce: p.Nonce,
++				RegisteredClaims: jwt.RegisteredClaims{
++					ExpiresAt: jwt.NewNumericDate(time.Now().Add(2 * time.Hour)),
++					IssuedAt:  jwt.NewNumericDate(tc.issuedAt),
++				},
++			}
++			signedidtoken, err := jwt.NewWithClaims(jwt.SigningMethodRS256, claims).SignedString(serverkey.PrivKey)
++			require.NoError(t, err)
++
++			err = checkNonce(signedidtoken, p)
++			if tc.expectErr {
++				assert.ErrorIs(t, err, jwt.ErrTokenUsedBeforeIssued)
++			} else {
++				assert.NoError(t, err)
++			}
++		})
++	}
++}
++
+ func TestLoginGovProviderGetLoginURL(t *testing.T) {
+ 	p, _, _ := newLoginGovProvider()
+ 	result := p.GetLoginURL("http://redirect/", "", "", url.Values{})
 diff --git a/providers/provider_data_test.go b/providers/provider_data_test.go
 index 838c061b..1ebe1ce9 100644
 --- a/providers/provider_data_test.go
@@ -908,3 +955,96 @@ index 838c061b..1ebe1ce9 100644
  
  	testCases := map[string]struct {
  		IDToken       *idTokenClaims
+diff --git a/pkg/apis/options/load_test.go b/pkg/apis/options/load_test.go
+index 5939b858..cb847982 100644
+--- a/pkg/apis/options/load_test.go
++++ b/pkg/apis/options/load_test.go
+@@ -378,10 +378,12 @@ sub:
+ `)
+ 
+ 		type loadYAMLTableInput struct {
+-			configFile     []byte
+-			input          interface{}
+-			expectedErr    error
+-			expectedOutput interface{}
++			configFile  []byte
++			input       interface{}
++			expectedErr error
++			// expectedErrRegexp matches an error whose wording depends on the Go version.
++			expectedErrRegexp string
++			expectedOutput    interface{}
+ 		}
+ 
+ 		DescribeTable("LoadYAML",
+@@ -408,9 +410,12 @@ sub:
+ 					input = &TestOptions{}
+ 				}
+ 				err := LoadYAML(configFileName, input)
+-				if in.expectedErr != nil {
++				switch {
++				case in.expectedErr != nil:
+ 					Expect(err).To(MatchError(in.expectedErr.Error()))
+-				} else {
++				case in.expectedErrRegexp != "":
++					Expect(err).To(MatchError(MatchRegexp(in.expectedErrRegexp)))
++				default:
+ 					Expect(err).ToNot(HaveOccurred())
+ 				}
+ 				Expect(input).To(Equal(in.expectedOutput))
+@@ -458,13 +463,15 @@ sub:
+ 				configFile:     []byte(`stringOption: ["a", "b"]`),
+ 				input:          &TestOptions{},
+ 				expectedOutput: &TestOptions{},
+-				expectedErr:    errors.New("error unmarshalling config: error unmarshaling JSON: while decoding JSON: json: cannot unmarshal array into Go struct field TestOptions.StringOption of type string"),
++				// Go 1.27 names the field by its JSON path, earlier versions by its Go path.
++				expectedErrRegexp: `^error unmarshalling config: error unmarshaling JSON: while decoding JSON: json: cannot unmarshal array into Go struct field \S*\b(?i:stringOption) of type string$`,
+ 			}),
+ 			Entry("with an incorrect type for an array field", loadYAMLTableInput{
+ 				configFile:     []byte(`stringSliceOption: "a"`),
+ 				input:          &TestOptions{},
+ 				expectedOutput: &TestOptions{},
+-				expectedErr:    errors.New("error unmarshalling config: error unmarshaling JSON: while decoding JSON: json: cannot unmarshal string into Go struct field TestOptions.StringSliceOption of type []string"),
++				// Go 1.27 names the field by its JSON path, earlier versions by its Go path.
++				expectedErrRegexp: `^error unmarshalling config: error unmarshaling JSON: while decoding JSON: json: cannot unmarshal string into Go struct field \S*\b(?i:stringSliceOption) of type \[\]string$`,
+ 			}),
+ 		)
+ 	})
+diff --git a/pkg/upstream/proxy_test.go b/pkg/upstream/proxy_test.go
+index 87c27e4..e189146 100644
+--- a/pkg/upstream/proxy_test.go
++++ b/pkg/upstream/proxy_test.go
+@@ -73,7 +73,7 @@ var _ = Describe("Proxy Suite", func() {
+ 						{
+ 							ID:   "bad-http-backend",
+ 							Path: "/bad-http/",
+-							URI:  "http://::1",
++							URI:  invalidServer,
+ 						},
+ 						{
+ 							ID:         "single-path-backend",
+diff --git a/pkg/upstream/upstream_suite_test.go b/pkg/upstream/upstream_suite_test.go
+index 95eb681..96a29be 100644
+--- a/pkg/upstream/upstream_suite_test.go
++++ b/pkg/upstream/upstream_suite_test.go
+@@ -21,7 +21,7 @@ var (
+ 	filesDir      string
+ 	server        *httptest.Server
+ 	serverAddr    string
+-	invalidServer = "http://::1"
++	invalidServer = "http://127.0.0.1:1"
+ )
+ 
+ func TestUpstreamSuite(t *testing.T) {
+diff --git a/providers/google_test.go b/providers/google_test.go
+index aede9b4..9f3a32a 100644
+--- a/providers/google_test.go
++++ b/providers/google_test.go
+@@ -262,7 +262,7 @@ func TestGoogleProvider_userInGroup(t *testing.T) {
+ 			)
+ 		} else if r.URL.Path == "/admin/directory/v1/groups/group@example.com/members/member-out-of-domain@otherexample.com" {
+ 			fmt.Fprintln(w,
+-				`{"kind": "admin#directory#member","etag":"12345","id":"1234567890","email": "member-out-of-domain@otherexample.com","role": "MEMBER","type": "USER","status": "ACTIVE","delivery_settings": "ALL_MAIL"}}`,
++				`{"kind": "admin#directory#member","etag":"12345","id":"1234567890","email": "member-out-of-domain@otherexample.com","role": "MEMBER","type": "USER","status": "ACTIVE","delivery_settings": "ALL_MAIL"}`,
+ 			)
+ 		}
+ 	}))
