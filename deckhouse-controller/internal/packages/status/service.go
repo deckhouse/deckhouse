@@ -391,6 +391,30 @@ func (s *Service) UpdateTracking(name string, report progrep.ProgressReport) {
 	s.queueFor(name).Add(name)
 }
 
+// UpdateUninstallTracking stores the nelm progress report of a release uninstall
+// and notifies listeners. Unlike UpdateTracking it writes through the deletion
+// freeze and leaves the conditions alone: the report is the only live part of
+// a status on its way out.
+// If the package is not tracked by the service, the update is silently ignored.
+func (s *Service) UpdateUninstallTracking(name string, report progrep.ProgressReport) {
+	if len(report.Operations) == 0 {
+		return
+	}
+
+	s.mu.Lock()
+	status, ok := s.statuses[name]
+	if !ok {
+		s.mu.Unlock()
+		return
+	}
+
+	completed, remaining := countProgress(report.Operations)
+	status.Tracking = Tracking{Completed: completed, Remaining: remaining, Report: report}
+	s.mu.Unlock()
+
+	s.queueFor(name).Add(name)
+}
+
 // IsResourceOperation reports whether op acts on a Kubernetes resource.
 // Stage boundaries and release record updates carry no resource.
 func IsResourceOperation(op progrep.Operation) bool {
