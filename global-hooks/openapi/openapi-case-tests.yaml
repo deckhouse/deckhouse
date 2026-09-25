@@ -64,6 +64,7 @@ positive:
       discovery:
         clusterControlPlaneIsHighlyAvailable: true
         clusterMasterCount: 3
+        clusterSchedulableMasterCount: 3
         podSubnet: "10.10.10.10/24"
         serviceSubnet: "10.20.10.10/24"
         defaultStorageClass: "some-storage-class"
@@ -178,6 +179,9 @@ negative:
   # cluster prefix with an uppercase letter (violates the DNS-label pattern)
   - prefix: "Common-test"
   values:
+    # schedulable master count cannot be negative
+    - discovery:
+        clusterSchedulableMasterCount: -1
     # cluster configuration: not support k8s version
     - clusterConfiguration:
         apiVersion: deckhouse.io/v1
