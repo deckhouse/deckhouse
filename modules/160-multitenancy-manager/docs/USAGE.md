@@ -981,6 +981,32 @@ To view detailed information about resources of a specific type, such as Storage
 d8 k get available storageclasses -n <PROJECT_NAME> -o yaml
 ```
 
+Example output (abridged):
+
+```yaml
+status:
+  grantedResourceKind: StorageClass
+  default: fast-ssd
+  availableCount: 2
+  available:
+    - name: fast-ssd
+      default: true
+      fields:
+        provisioner: rbd.csi.ceph.com
+        reclaimPolicy: Delete
+        volumeBindingMode: WaitForFirstConsumer
+        allowVolumeExpansion: true
+    - name: hdd
+      fields:
+        provisioner: local.csi.storage.deckhouse.io
+        reclaimPolicy: Retain
+        volumeBindingMode: WaitForFirstConsumer
+```
+
+The `status.available[].fields` field contains the values of some fields of each available resource, so that you can choose a resource without access to the resource itself. The fields to show are selected by the module that registers the resource, in the [`spec.catalogFields`](cr.html#grantableclusterresourcedefinition-v1alpha1-spec-catalogfields) parameter of its GrantableClusterResourceDefinition. For StorageClass, these are `provisioner`, `reclaimPolicy`, `volumeBindingMode` and `allowVolumeExpansion`. A value keeps its JSON type (for example, `allowVolumeExpansion` is a boolean). A field whose value is missing in the resource is not shown: in the example above, `hdd` has no `allowVolumeExpansion`. Field values are refreshed about every 2 minutes, so a change in a cluster-wide resource usually appears in AvailableClusterResource within 2 minutes.
+
+An AvailableClusterResource exists as long as the corresponding GrantableClusterResourceDefinition: when the GrantableClusterResourceDefinition is deleted, its AvailableClusterResource is deleted from the namespaces of all projects.
+
 #### Rejection due to an unavailable cluster-wide resource
 
 If the specified cluster-wide resource is unavailable to the project when an object is created or modified, the operation is rejected with the following message:
@@ -1050,6 +1076,35 @@ spec:
 {% endraw %}
 
 In this example, `storageclasses` is the name of an existing GrantableClusterResourceDefinition, while `Coerce` allows the default StorageClass available to the project to be assigned when a PostgresDatabase is created if the value is missing or unavailable to the project.
+
+If the resources listed in `rule` store the reference at different paths, limit `fieldPaths` items to specific resources using the `resources` parameter. For example, a Job and a CronJob store the PriorityClass name at different paths. In this case, when PriorityClass is registered as `priorityclasses`, use the following example:
+
+{% raw %}
+
+```yaml
+apiVersion: multitenancy.deckhouse.io/v1alpha1
+kind: GrantableClusterResourceReference
+metadata:
+  name: jobs-priorityclasses
+  labels:
+    heritage: deckhouse
+    module: my-module
+spec:
+  grantableClusterResourceName: priorityclasses
+  rule:
+    apiGroups: ["batch"]
+    apiVersions: ["v1"]
+    resources: ["jobs", "cronjobs"]
+  fieldPaths:
+    - resources: ["jobs"]
+      path: $.spec.template.spec.priorityClassName
+    - resources: ["cronjobs"]
+      path: $.spec.jobTemplate.spec.template.spec.priorityClassName
+```
+
+{% endraw %}
+
+For each object, the most specific of the matching `fieldPaths` items is used: an item limited by `resources` takes precedence over items limited only by `apiGroups` or `apiVersions` and over an item without limits, which applies to all other resources from `rule`. `*` in `resources` does not limit the item: it has the same effect as omitting the parameter.
 
 For descriptions of GrantableClusterResourceReference parameters, default assignment modes, `match` conditions, and configuration for resources with multiple API versions, refer to the [resource description](cr.html#grantableclusterresourcereference).
 

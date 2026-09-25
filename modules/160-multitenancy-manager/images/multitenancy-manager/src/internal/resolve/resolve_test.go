@@ -18,17 +18,22 @@ package resolve
 
 import (
 	"context"
+	"errors"
+	"fmt"
+	"strings"
 	"testing"
 
 	corev1 "k8s.io/api/core/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
 	storagev1 "k8s.io/api/storage/v1"
+	k8serrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
+	"sigs.k8s.io/controller-runtime/pkg/client/interceptor"
 
 	"controller/api/v1alpha1"
 	"controller/apis/deckhouse.io/v1alpha3"
@@ -38,9 +43,11 @@ func testMapper() meta.RESTMapper {
 	m := meta.NewDefaultRESTMapper([]schema.GroupVersion{
 		{Group: "storage.k8s.io", Version: "v1"},
 		{Group: "rbac.authorization.k8s.io", Version: "v1"},
+		{Group: "", Version: "v1"},
 	})
 	m.Add(schema.GroupVersionKind{Group: "storage.k8s.io", Version: "v1", Kind: "StorageClass"}, meta.RESTScopeRoot)
 	m.Add(schema.GroupVersionKind{Group: "rbac.authorization.k8s.io", Version: "v1", Kind: "ClusterRole"}, meta.RESTScopeRoot)
+	m.Add(schema.GroupVersionKind{Group: "", Version: "v1", Kind: "Secret"}, meta.RESTScopeNamespace)
 	return m
 }
 
@@ -239,5 +246,98 @@ func TestDecideAllowedSelector(t *testing.T) {
 	}
 	if decide(t, reg, g, "hdd", shared, private) {
 		t.Fatal("allowedSelector must not allow the non-labelled object under None baseline")
+	}
+}
+
+// TestResolveRefusesANamespacedGrantedResource: a namespaced kind is not resolved, even with a
+// defaultFrom annotation that would read the objects on its own path; a cluster-scoped one still is.
+func TestResolveRefusesANamespacedGrantedResource(t *testing.T) {
+	reg := &v1alpha1.GrantableClusterResourceDefinition{
+		ObjectMeta: metav1.ObjectMeta{Name: "secrets"},
+		Spec: v1alpha1.GrantableClusterResourceDefinitionSpec{
+			GrantedResource:     &v1alpha1.GrantedResource{APIGroup: "", Kind: "Secret"},
+			DefaultAvailability: v1alpha1.AvailabilityAll,
+			DefaultFrom:         &v1alpha1.DefaultFrom{AnnotationKey: "example.com/default"},
+		},
+	}
+	secret := &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "admin", Namespace: "kube-system", Annotations: map[string]string{"example.com/default": "true"}}}
+	cl := newClient(t, secret)
+	if _, err := Resolve(context.Background(), cl, testMapper(), reg, nil); err == nil || !strings.Contains(err.Error(), "namespaced") {
+		t.Fatalf("a namespaced grantedResource must not resolve, err=%v", err)
+	}
+	if _, err := defaultFromAnnotation(context.Background(), cl, testMapper(), reg); err == nil || !strings.Contains(err.Error(), "namespaced") {
+		t.Fatalf("defaultFrom must not read a namespaced grantedResource, err=%v", err)
+	}
+	reg.Spec.GrantedResource = &v1alpha1.GrantedResource{APIGroup: "storage.k8s.io", Kind: "StorageClass"}
+	if _, err := Resolve(context.Background(), cl, testMapper(), reg, nil); err != nil {
+		t.Fatalf("a cluster-scoped grantedResource must resolve: %v", err)
+	}
+}
+
+// TestIsConfigurationError: the Resolve errors of a namespaced and of an unserved grantedResource are
+// configuration errors; an API error and any other error are not.
+func TestIsConfigurationError(t *testing.T) {
+	resolveErr := func(apiGroup, kind string) error {
+		reg := &v1alpha1.GrantableClusterResourceDefinition{
+			ObjectMeta: metav1.ObjectMeta{Name: "d"},
+			Spec:       v1alpha1.GrantableClusterResourceDefinitionSpec{GrantedResource: &v1alpha1.GrantedResource{APIGroup: apiGroup, Kind: kind}},
+		}
+		_, err := Resolve(context.Background(), newClient(t), testMapper(), reg, nil)
+		if err == nil {
+			t.Fatalf("%s/%s must not resolve", apiGroup, kind)
+		}
+		return err
+	}
+	for name, tc := range map[string]struct {
+		err  error
+		want bool
+	}{
+		"namespaced":   {resolveErr("", "Secret"), true},
+		"unknown kind": {resolveErr("example.com", "Unknown"), true},
+		"not served":   {fmt.Errorf("list granted resource: %w", ErrGrantedResourceNotServed), true},
+		"not found":    {fmt.Errorf("get: %w", k8serrors.NewNotFound(schema.GroupResource{Resource: "storageclasses"}, "x")), false},
+		"api error":    {fmt.Errorf("list granted resource: %w", k8serrors.NewServiceUnavailable("down")), false},
+		"other":        {errors.New("boom"), false},
+		"nil":          {nil, false},
+	} {
+		if got := IsConfigurationError(tc.err); got != tc.want {
+			t.Errorf("%s: IsConfigurationError(%v) = %v, want %v", name, tc.err, got, tc.want)
+		}
+	}
+}
+
+// resettableMapper counts the resets of a mapper.
+type resettableMapper struct {
+	meta.RESTMapper
+	resets int
+}
+
+func (m *resettableMapper) Reset() { m.resets++ }
+
+// TestResolveTreatsAListNotFoundAsNotServed: a mapped kind whose list answers 404 (its CRD deleted
+// while the mapper still maps it) is a configuration error, and the stale mapping is dropped.
+func TestResolveTreatsAListNotFoundAsNotServed(t *testing.T) {
+	reg := &v1alpha1.GrantableClusterResourceDefinition{
+		ObjectMeta: metav1.ObjectMeta{Name: "storageclasses"},
+		Spec: v1alpha1.GrantableClusterResourceDefinitionSpec{
+			GrantedResource: &v1alpha1.GrantedResource{APIGroup: "storage.k8s.io", Kind: "StorageClass"},
+		},
+	}
+	scheme := runtime.NewScheme()
+	if err := storagev1.AddToScheme(scheme); err != nil {
+		t.Fatal(err)
+	}
+	cl := fake.NewClientBuilder().WithScheme(scheme).WithInterceptorFuncs(interceptor.Funcs{
+		List: func(context.Context, client.WithWatch, client.ObjectList, ...client.ListOption) error {
+			return k8serrors.NewNotFound(schema.GroupResource{Group: "storage.k8s.io", Resource: "storageclasses"}, "")
+		},
+	}).Build()
+	mapper := &resettableMapper{RESTMapper: testMapper()}
+	_, err := Resolve(context.Background(), cl, mapper, reg, nil)
+	if !errors.Is(err, ErrGrantedResourceNotServed) || !IsConfigurationError(err) {
+		t.Fatalf("a list 404 must be a configuration error, err=%v", err)
+	}
+	if mapper.resets != 1 {
+		t.Fatalf("the mapper must be reset once, got %d", mapper.resets)
 	}
 }

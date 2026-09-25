@@ -17,6 +17,7 @@ limitations under the License.
 package v1alpha1
 
 import (
+	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
@@ -32,6 +33,12 @@ type AvailableObject struct {
 	// usable default, which is a normal state -- see the Default field of the status.
 	// +optional
 	Default bool `json:"default,omitempty"`
+
+	// Fields holds the values of the catalogFields the GrantableClusterResourceDefinition declares, read
+	// from the granted object, keyed by field name. A field whose value is absent is left out.
+	// +optional
+	// +mapType=atomic
+	Fields map[string]apiextensionsv1.JSON `json:"fields,omitempty"`
 }
 
 // AvailableClusterResourceStatus is the per-project catalog for one GrantableClusterResourceDefinition: the

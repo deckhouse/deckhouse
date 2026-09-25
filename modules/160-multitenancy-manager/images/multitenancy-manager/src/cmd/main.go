@@ -26,6 +26,9 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/client-go/discovery"
+	"k8s.io/client-go/discovery/cached/memory"
+	"k8s.io/client-go/restmapper"
 	"k8s.io/utils/ptr"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/healthz"
@@ -138,10 +141,20 @@ func main() {
 	templatewebhook.Register(runtimeManager, serviceAccount)
 
 	// register cluster resource grants: catalog reconciler, binding-status reconcilers and webhooks.
+	// They get their own REST mapper, reset every ResyncInterval and on a list 404 of a granted
+	// kind, so a removed or re-scoped CRD is noticed; the manager's mapper never forgets a mapping.
+	discoveryClient, err := discovery.NewDiscoveryClientForConfigAndClient(runtimeManager.GetConfig(), runtimeManager.GetHTTPClient())
+	if err != nil {
+		fatal(logger, err, "create discovery client")
+	}
+	grantsMapper := restmapper.NewDeferredDiscoveryRESTMapper(memory.NewMemCacheClient(discoveryClient))
+	if err = runtimeManager.Add(&grantcontrollers.MapperReset{Mapper: grantsMapper, Interval: grantcontrollers.ResyncInterval}); err != nil {
+		fatal(logger, err, "add grants REST mapper reset")
+	}
 	jsonpathFactory := jsonpath.NewWithCache()
 	if err = (&grantcontrollers.ProjectReconciler{
 		Client: runtimeManager.GetClient(),
-		Mapper: runtimeManager.GetRESTMapper(),
+		Mapper: grantsMapper,
 		// Usage objects are of whatever kinds the references name; the uncached reader keeps the
 		// two-minute recount from starting an informer per kind.
 		Usage:   runtimeManager.GetAPIReader(),
@@ -155,14 +168,14 @@ func main() {
 	if err = (&grantcontrollers.DefinitionReconciler{Client: runtimeManager.GetClient()}).SetupWithManager(runtimeManager); err != nil {
 		fatal(logger, err, "set up grant definition reconciler")
 	}
-	if err = (&grantcontrollers.PolicyReconciler{Client: runtimeManager.GetClient(), Mapper: runtimeManager.GetRESTMapper()}).SetupWithManager(runtimeManager); err != nil {
+	if err = (&grantcontrollers.PolicyReconciler{Client: runtimeManager.GetClient(), Mapper: grantsMapper}).SetupWithManager(runtimeManager); err != nil {
 		fatal(logger, err, "set up grant policy reconciler")
 	}
 	// Use the direct (uncached) API reader for the admission webhooks: a cache-backed read lazily
 	// starts an informer and blocks on its sync inside the request, which can exceed the webhook
 	// deadline and pile up into a queue lock. A direct reader keeps reads bounded.
-	grantwebhooks.NewIsGrantedValidator(logger, runtimeManager.GetAPIReader(), runtimeManager.GetRESTMapper(), jsonpathFactory).InstallInto(runtimeManager.GetWebhookServer())
-	grantwebhooks.NewDefaultsMutator(logger, runtimeManager.GetAPIReader(), runtimeManager.GetRESTMapper(), jsonpathFactory).InstallInto(runtimeManager.GetWebhookServer())
+	grantwebhooks.NewIsGrantedValidator(logger, runtimeManager.GetAPIReader(), grantsMapper, jsonpathFactory).InstallInto(runtimeManager.GetWebhookServer())
+	grantwebhooks.NewDefaultsMutator(logger, runtimeManager.GetAPIReader(), grantsMapper, jsonpathFactory).InstallInto(runtimeManager.GetWebhookServer())
 	grantwebhooks.NewProtectValidator(logger, serviceAccount).InstallInto(runtimeManager.GetWebhookServer())
 	// Reject a GrantableClusterResourceReference whose paths /is-granted cannot compile, whose
 	// defaulting path the /defaults mutator cannot write to, or whose fieldPaths scopes stray outside

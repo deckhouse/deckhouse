@@ -225,3 +225,51 @@ func TestViolations_WildcardGroupIsSkipped(t *testing.T) {
 		t.Fatalf("a wildcard group must be skipped, got %d series", got)
 	}
 }
+
+// TestViolations_UnresolvableDefinitionIsSkipped: a definition that cannot be resolved for a
+// configuration reason is skipped by the scan, and the definitions after it are still scanned: the
+// metric of the namespace keeps being recounted instead of freezing, and the pass does not fail.
+func TestViolations_UnresolvableDefinitionIsSkipped(t *testing.T) {
+	for name, gk := range map[string][2]string{
+		"namespaced":   {"", "PersistentVolumeClaim"},
+		"unknown kind": {"example.com", "Unknown"},
+	} {
+		t.Run(name, func(t *testing.T) {
+			grantViolations.Reset()
+			r, cl := violationsFixture(t)
+			// Named to sort before storageclasses, so an early return would skip its scan.
+			bad := &v1alpha1.GrantableClusterResourceDefinition{
+				ObjectMeta: metav1.ObjectMeta{Name: "aaa-unresolvable"},
+				Spec: v1alpha1.GrantableClusterResourceDefinitionSpec{
+					GrantedResource:     &v1alpha1.GrantedResource{APIGroup: gk[0], Kind: gk[1]},
+					DefaultAvailability: v1alpha1.AvailabilityNone,
+				},
+			}
+			ref := &v1alpha1.GrantableClusterResourceReference{
+				ObjectMeta: metav1.ObjectMeta{Name: "aaa-unresolvable-pvc"},
+				Spec: v1alpha1.GrantableClusterResourceReferenceSpec{
+					GrantableClusterResourceName: "aaa-unresolvable",
+					Rule:                         v1alpha1.UsageRule{APIGroups: []string{""}, APIVersions: []string{"v1"}, Resources: []string{"persistentvolumeclaims"}},
+					FieldPaths:                   []v1alpha1.FieldPath{{Path: "$.spec.storageClassName"}},
+				},
+			}
+			// A policy entry for the definition, so the scan does not skip it before resolving it.
+			grant := &v1alpha1.ClusterResourceGrantPolicy{
+				ObjectMeta: metav1.ObjectMeta{Name: "grant-unresolvable"},
+				Spec: v1alpha1.ClusterResourceGrantPolicySpec{
+					ProjectSelector: &metav1.LabelSelector{MatchLabels: map[string]string{"env": "prod"}},
+					Resources:       []v1alpha1.GrantResource{{ResourceName: "aaa-unresolvable", Allowed: []string{"x"}}},
+				},
+			}
+			for _, obj := range []client.Object{bad, ref, grant} {
+				if err := cl.Create(context.Background(), obj); err != nil {
+					t.Fatal(err)
+				}
+			}
+			reconcileNamespace(t, r, "team-a")
+			if got := violationSeries("team-a", "uses-other"); got != 1 {
+				t.Fatalf("the definitions after the unresolvable one must still be scanned, got %v", got)
+			}
+		})
+	}
+}

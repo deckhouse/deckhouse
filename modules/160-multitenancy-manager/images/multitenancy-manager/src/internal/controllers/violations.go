@@ -110,11 +110,19 @@ func scanViolations(
 	}
 
 	resolvedByDef := map[string]*resolve.Resolved{}
+	// unresolvable holds the definitions skipped for a configuration error (see
+	// resolve.IsConfigurationError): the catalog reconciler logs them, and the scan goes on with the
+	// other definitions so the metric of the namespace does not freeze because of one of them.
+	unresolvable := map[string]struct{}{}
 	var out []violation
+refs:
 	for i := range refList.Items {
 		ref := &refList.Items[i]
 		def := defByName[ref.Spec.GrantableClusterResourceName]
 		if def == nil || def.Spec.Enforcement == v1alpha1.EnforcementExternal {
+			continue
+		}
+		if _, skip := unresolvable[def.Name]; skip {
 			continue
 		}
 		entries := resolve.EntriesFor(grants, def.Name)
@@ -147,6 +155,10 @@ func scanViolations(
 			resolved := resolvedByDef[def.Name]
 			if resolved == nil {
 				resolved, err = resolve.Resolve(ctx, cl, mapper, def, entries)
+				if resolve.IsConfigurationError(err) {
+					unresolvable[def.Name] = struct{}{}
+					continue refs
+				}
 				if err != nil {
 					return nil, fmt.Errorf("resolve %s: %w", def.Name, err)
 				}

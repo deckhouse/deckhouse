@@ -171,8 +171,10 @@ func (v *IsGrantedValidator) decide(ctx context.Context, req *admissionv1.Admiss
 		}
 	}
 
-	// Resolve availability once per definition (several references may share one).
+	// Resolve availability once per definition (several references may share one). unresolvable holds
+	// the definitions skipped for a configuration error, so each is logged once per request.
 	resolvedByDef := map[string]*resolve.Resolved{}
+	unresolvable := map[string]struct{}{}
 
 	for _, mr := range refs {
 		idx := engine.SelectFieldPathIndex(mr.Reference.Spec.FieldPaths, group, version, resourcePlural)
@@ -218,9 +220,25 @@ func (v *IsGrantedValidator) decide(ctx context.Context, req *admissionv1.Admiss
 		}
 
 		def := mr.Definition
+		if _, skip := unresolvable[def.Name]; skip {
+			continue
+		}
 		resolved := resolvedByDef[def.Name]
 		if resolved == nil {
 			resolved, err = resolve.Resolve(ctx, v.cl, v.mapper, def, resolve.EntriesFor(grants, def.Name))
+			if resolve.IsConfigurationError(err) {
+				// A definition that cannot be resolved for a configuration reason (a namespaced
+				// grantedResource, or a kind the apiserver does not serve) makes its references inert,
+				// deliberately, by the same rule as a broken path above. Retrying cannot fix it, and
+				// failing the request under failurePolicy: Fail would block every CREATE/UPDATE of the
+				// reference's rule in every project because of one bad registration. The other
+				// references are still enforced, and the breakage stays visible in this log. Any other
+				// Resolve error still fails the request below.
+				log.Error(err, "skipping reference: definition cannot be resolved",
+					"definition", def.Name, "reference", mr.Reference.Name)
+				unresolvable[def.Name] = struct{}{}
+				continue
+			}
 			if err != nil {
 				return nil, fmt.Errorf("resolve %s: %w", def.Name, err)
 			}

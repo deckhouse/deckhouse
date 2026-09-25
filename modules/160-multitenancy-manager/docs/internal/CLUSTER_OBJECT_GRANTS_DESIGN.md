@@ -94,6 +94,11 @@ spec:
         storageclass.deckhouse.io/system: "true"
   defaultFrom:                     # how to discover the resource's cluster-wide default value
     annotationKey: storageclass.kubernetes.io/is-default-class
+  catalogFields:                   # fields of the granted objects copied into the tenant catalog
+    - name: provisioner
+      path: $.provisioner
+    - name: reclaimPolicy
+      path: $.reclaimPolicy
 status:
   observedGeneration: 1
   references:                      # reverse index: which paths point at this resource
@@ -114,8 +119,51 @@ status:
 | `defaultAvailability` | baseline when no policy decides: `All` (default) or `None` |
 | `excluded` | objects never available, regardless of policy (hard deny) |
 | `defaultFrom.annotationKey` | annotation marking the resource's cluster default (fallback default) |
+| `catalogFields[]` | fields of the granted objects shown in the catalog (`name` + singular JSONPath `path`), see [Catalog fields](#catalog-fields) |
 | `status.references[]` | reference objects bound to this definition (name + matched resources) |
 | `status.referenceCount` | `len(references)` (printer column) |
+
+**Cluster-scoped `grantedResource` only.** A definition of a namespaced kind is not resolved:
+`internal/resolve.grantedGVK`, the only way to the granted objects (the live list and `defaultFrom`),
+checks the REST mapping scope and fails the registration with `resolve.ErrNamespacedGrantedResource`.
+The catalog of such a definition is not rendered, and one rendered earlier is swept. That differs
+from an unknown kind, whose catalog stays in its last good state because the kind may be served once
+its CRD is installed: the refusal is permanent, and the old catalog would keep showing the names the
+refusal exists to hide.
+
+**A definition that does not resolve is inert.** A namespaced `grantedResource` and a kind the
+apiserver does not serve are configuration errors (`resolve.IsConfigurationError`, the one rule the
+webhooks and the reconciler share). A kind removed after it was served counts as not served: the
+REST mapper still maps it, and its list answers 404, which for a list, naming no object, can only
+mean the kind is gone (`resolve.ErrGrantedResourceNotServed`). `/is-granted` and `/defaults` skip the references to such a
+definition with a log line naming the definition, the reference and the reason, and keep enforcing
+the other references of the request, the same way they skip a reference whose path cannot be
+evaluated. Both webhooks run with `failurePolicy: Fail`, so answering with an error instead would
+block every write of the reference's rule in every project because of one bad registration. The
+catalog reconciler logs these errors at `V(1)` instead of returning them, so the pass still requeues
+after `ResyncInterval` rather than falling into the error back-off, and the violation scan skips the
+definition and goes on with the others. Every other `Resolve` error (a failed list, an API error)
+still fails the webhook request and the reconcile pass. Inert means unchecked: while the granted
+kind's CRD is not served, a tenant can write any value (say a `cert-manager.io/cluster-issuer`
+annotation), and once the CRD appears, an UPDATE keeps it, since values already in the old object
+are not re-checked. The violation metric reports it later. The reasons for refusing a namespaced
+kind:
+
+- "cluster-wide resource" is cluster-scoped by definition; a namespaced kind is not what the
+  mechanism grants;
+- the controller runs as `cluster-admin` and lists the granted kind across the whole cluster. For
+  `Secret` it would put the names of every Secret in the cluster, and with `catalogFields` their
+  values (`$.data.token`), into the catalog of every project;
+- the catalog is keyed by name only, so objects of the same name in different namespaces would
+  collide.
+
+**The grants REST mapper.** The resolver, the catalog and policy reconcilers and both webhooks share
+their own discovery-backed REST mapper, separate from the manager's. A REST mapper never forgets a
+kind it has mapped, so the grants mapper is reset every `ResyncInterval` and on a list 404 of a
+granted kind: a removed CRD, or one re-created with another scope, is noticed within
+`ResyncInterval` instead of at the next pod restart. The other direction lags the same way: the
+grants mapper answers a CRD installed after its last fill with a no-match, so `/is-granted` and
+`/defaults` skip references to that kind for up to `ResyncInterval`.
 
 No `usageReferences`, no `measure`, no `coerceToDefault` — measurement is gone; defaulting behaviour
 moved to the reference.
@@ -216,12 +264,75 @@ per resource (`resourceName`) sets `allowed` / `allowedSelector` / `denied` / `d
 
 ### AvailableClusterResource
 
-Per-project catalog (available names + default) the controller renders into each project namespace.
-It lives exactly as long as its `GrantableClusterResourceDefinition`: when the registration is
-deleted, the controller deletes the catalog from every project namespace on the next reconcile. A
-registration held by a finalizer counts as deleted from the moment its `deletionTimestamp` is set.
+Per-project catalog (available names, their [catalog fields](#catalog-fields) and the default) the
+controller renders into each project namespace. It lives exactly as long as its
+`GrantableClusterResourceDefinition`: when the registration is deleted, the controller deletes the
+catalog from every project namespace on the next reconcile. A registration held by a finalizer
+counts as deleted from the moment its `deletionTimestamp` is set.
 The sweep runs on every reconcile, even when another registration fails to resolve; the catalog of
-the failing registration itself is kept in its last good state.
+the failing registration itself is kept in its last good state, except for a namespaced
+`grantedResource`, whose catalog is swept. A configuration error (namespaced or unserved kind) is
+logged, not returned, so it does not slow down the resync of the other registrations.
+
+```yaml
+status:
+  grantedResourceKind: StorageClass
+  default: fast
+  availableCount: 1
+  available:
+    - name: fast
+      default: true
+      fields:                      # from the definition's catalogFields; values keep their JSON type
+        provisioner: rbd.csi.ceph.com
+        reclaimPolicy: Retain
+        allowVolumeExpansion: true
+```
+
+#### Catalog fields
+
+A tenant choosing a StorageClass needs more than its name: the provisioner, the reclaim policy,
+whether volumes can grow. The definition owner lists those fields in `spec.catalogFields`, and the
+catalog reconciler copies their values from the granted objects into `status.available[].fields`.
+The platform provides the mechanism only; which fields are shown is decided by the team that owns the
+definition.
+
+Rules (the projection lives in `internal/engine/catalog.go`):
+
+- `name` is a lowerCamelCase key (`^[a-z][a-zA-Z0-9]*$`, at most 63 characters), unique in the list
+  (`listType: map`).
+- `path` is an RFC 9535 **singular query**: member names and indexes only, one value at most. No
+  wildcards, descendant segments, slices or filters.
+- Paths overlapping `metadata.managedFields` or the `kubectl.kubernetes.io/last-applied-configuration`
+  annotation are refused. Both hold a copy of the whole object, so a parent of them (`$`,
+  `$.metadata`, `$.metadata.annotations`) is refused as well. The comparison is done on the parsed
+  segments, so `$["metadata"]["managedFields"]` is caught too.
+- At most 10 fields (`maxItems` in the schema, and the projection takes the first 10 of an object that
+  bypassed it; a duplicate name keeps its first entry).
+- A value longer than 512 bytes in its JSON serialization, an absent value and `null` are left out.
+- Values keep their JSON type (`map[string]apiextensionsv1.JSON`; in the schema `additionalProperties`
+  with `x-kubernetes-preserve-unknown-fields`).
+- Only object-backed definitions: a value-backed one has no objects, so the list is ignored there.
+- Show non-secret data only: every user of every project the object is available to reads it. The
+  shipped `storageclasses` definition leaves out `parameters`, which is driver-specific, can be large
+  and may name secrets.
+
+An invalid entry is skipped during projection and breaks nothing else. The values are refreshed on
+each catalog reconcile; the granted objects themselves are not watched, so a changed value shows up
+within `ResyncInterval` (2 minutes).
+
+**Why an allow-list in the definition and not a marker in the CRD schema.** A marker on the fields of
+the granted resource's schema (an `x-...` extension saying "show to tenants") looks more natural, but:
+
+- a CRD schema accepts only the fixed set of `x-kubernetes-*` extensions the apiserver defines, and
+  a CRD carrying any other key is refused as a whole — a made-up `x-kubernetes-...` one included
+  (`field not declared in schema` on server-side apply, `strict decoding error: unknown field` on
+  create). That prefix is also reserved for Kubernetes itself. There is nowhere to put the marker;
+- the main registered resources (StorageClass, ClusterRole) are built-in types with no
+  CRD schema to mark at all;
+- an opt-out marker shows every unmarked field, and every field added to the schema later, to every
+  tenant without a decision. An opt-in marker avoids that but still runs into the two points above.
+  The explicit list in the definition is opt-in, and it is shipped by the module that owns the
+  resource, so the decision stays with the owner either way.
 
 ## Coverage: which CRD closes which story
 

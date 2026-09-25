@@ -132,6 +132,7 @@ func (m *DefaultsMutator) decide(ctx context.Context, req *admissionv1.Admission
 
 	resolvedByDef := map[string]*resolve.Resolved{}
 	availByDef := map[string]map[string]bool{}
+	unresolvable := map[string]struct{}{}
 
 	var patches []jsonPatchOperation
 	var warnings []string
@@ -163,9 +164,22 @@ func (m *DefaultsMutator) decide(ctx context.Context, req *admissionv1.Admission
 		}
 
 		def := mr.Definition
+		if _, skip := unresolvable[def.Name]; skip {
+			continue
+		}
 		resolved := resolvedByDef[def.Name]
 		if resolved == nil {
 			resolved, err = resolve.Resolve(ctx, m.cl, m.mapper, def, resolve.EntriesFor(grants, def.Name))
+			if resolve.IsConfigurationError(err) {
+				// Inert, as in /is-granted: a definition that cannot be resolved for a configuration
+				// reason defaults nothing instead of failing every CREATE of the reference's rule in every
+				// project under failurePolicy: Fail. Any other Resolve error still fails the request.
+				m.log.Error(err, "skipping reference: definition cannot be resolved",
+					"namespace", req.Namespace, "name", req.Name,
+					"definition", def.Name, "reference", mr.Reference.Name)
+				unresolvable[def.Name] = struct{}{}
+				continue
+			}
 			if err != nil {
 				return nil, fmt.Errorf("resolve %s: %w", def.Name, err)
 			}

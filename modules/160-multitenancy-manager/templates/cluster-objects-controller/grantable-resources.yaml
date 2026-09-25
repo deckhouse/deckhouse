@@ -22,6 +22,17 @@ spec:
   # omit spec.storageClassName before our webhook runs; defaultFrom marks that cluster default.
   defaultFrom:
     annotationKey: storageclass.kubernetes.io/is-default-class
+  # Shown to tenants in the catalog. parameters is left out on purpose: it is driver-specific, can be
+  # large and may name secrets (csi.storage.k8s.io/*-secret-name).
+  catalogFields:
+  - name: provisioner
+    path: $.provisioner
+  - name: reclaimPolicy
+    path: $.reclaimPolicy
+  - name: volumeBindingMode
+    path: $.volumeBindingMode
+  - name: allowVolumeExpansion
+    path: $.allowVolumeExpansion
 ---
 apiVersion: multitenancy.deckhouse.io/v1alpha1
 kind: GrantableClusterResourceReference

@@ -26,6 +26,11 @@ spec:
                     properties:
                       default:
                         description: Означает, что cluster-wide-ресурс используется в проекте по умолчанию.
+                      fields:
+                        description: |-
+                          Значения полей cluster-wide-ресурса, перечисленных в [`spec.catalogFields`](cr.html#grantableclusterresourcedefinition-v1alpha1-spec-catalogfields) соответствующего GrantableClusterResourceDefinition, по именам полей.
+
+                          Значение сохраняет свой тип JSON: строка, число, логическое значение, объект или массив. Поле, значения которого в ресурсе нет или которое длиннее 512 байт, не выводится.
                       name:
                         description: Имя доступного проекту cluster-wide-ресурса.
                 availableCount:

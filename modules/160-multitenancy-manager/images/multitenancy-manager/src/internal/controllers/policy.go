@@ -158,7 +158,8 @@ func (r *PolicyReconciler) ineffectiveAllowed(ctx context.Context, policy *v1alp
 		}
 		resolved, err := resolve.Resolve(ctx, r.Client, r.Mapper, def, []v1alpha1.GrantResource{entry})
 		if err != nil {
-			// The granted kind is not served (its CRD is absent): nothing can be said about the names.
+			// The granted kind is not served (its CRD is absent) or is namespaced, which is refused:
+			// nothing can be said about the names.
 			continue
 		}
 		for _, name := range entry.Allowed {

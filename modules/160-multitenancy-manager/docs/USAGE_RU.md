@@ -988,6 +988,32 @@ clusterissuers      ClusterIssuer letsencrypt 2           5m
 d8 k get available storageclasses -n <PROJECT_NAME> -o yaml
 ```
 
+Пример вывода (сокращённо):
+
+```yaml
+status:
+  grantedResourceKind: StorageClass
+  default: fast-ssd
+  availableCount: 2
+  available:
+    - name: fast-ssd
+      default: true
+      fields:
+        provisioner: rbd.csi.ceph.com
+        reclaimPolicy: Delete
+        volumeBindingMode: WaitForFirstConsumer
+        allowVolumeExpansion: true
+    - name: hdd
+      fields:
+        provisioner: local.csi.storage.deckhouse.io
+        reclaimPolicy: Retain
+        volumeBindingMode: WaitForFirstConsumer
+```
+
+Поле `status.available[].fields` содержит значения некоторых полей каждого доступного ресурса, чтобы ресурс можно было выбрать без доступа к нему самому. Какие поля выводить, выбирает модуль, который регистрирует ресурс, — в параметре [`spec.catalogFields`](cr.html#grantableclusterresourcedefinition-v1alpha1-spec-catalogfields) своего GrantableClusterResourceDefinition. Для StorageClass это `provisioner`, `reclaimPolicy`, `volumeBindingMode` и `allowVolumeExpansion`. Значение сохраняет свой тип JSON (например, `allowVolumeExpansion` — логическое значение). Поле, значения которого в ресурсе нет, не выводится: в примере выше у `hdd` нет `allowVolumeExpansion`. Значения полей обновляются примерно раз в 2 минуты, поэтому изменение cluster-wide-ресурса обычно появляется в AvailableClusterResource в течение 2 минут.
+
+AvailableClusterResource существует, пока существует соответствующий GrantableClusterResourceDefinition: при удалении GrantableClusterResourceDefinition его AvailableClusterResource удаляется из неймспейсов всех проектов.
+
 #### Отказ в использовании cluster-wide-ресурса
 
 Если при создании или изменении объекта указанный cluster-wide-ресурс недоступен проекту, операция отклоняется с сообщением:
@@ -1057,6 +1083,35 @@ spec:
 {% endraw %}
 
 В этом примере `storageclasses` — имя существующего GrantableClusterResourceDefinition, а `Coerce` позволяет при создании PostgresDatabase подставить доступный проекту StorageClass по умолчанию, если значение отсутствует или недоступно проекту.
+
+Если ресурсы из `rule` хранят ссылку по разным путям, ограничьте элементы `fieldPaths` конкретными ресурсами с помощью параметра `resources`. Например, Job и CronJob хранят имя PriorityClass по разным путям. В этом случае, когда PriorityClass зарегистрирован как `priorityclasses`, воспользуйтесь следующим примером:
+
+{% raw %}
+
+```yaml
+apiVersion: multitenancy.deckhouse.io/v1alpha1
+kind: GrantableClusterResourceReference
+metadata:
+  name: jobs-priorityclasses
+  labels:
+    heritage: deckhouse
+    module: my-module
+spec:
+  grantableClusterResourceName: priorityclasses
+  rule:
+    apiGroups: ["batch"]
+    apiVersions: ["v1"]
+    resources: ["jobs", "cronjobs"]
+  fieldPaths:
+    - resources: ["jobs"]
+      path: $.spec.template.spec.priorityClassName
+    - resources: ["cronjobs"]
+      path: $.spec.jobTemplate.spec.template.spec.priorityClassName
+```
+
+{% endraw %}
+
+Для каждого объекта используется самый специфичный из подходящих элементов `fieldPaths`: элемент, ограниченный `resources`, приоритетнее элементов, ограниченных только `apiGroups` или `apiVersions`, и элемента без ограничений, который применяется ко всем остальным ресурсам из `rule`. `*` в `resources` не ограничивает элемент: это то же самое, что не указывать параметр.
 
 Описание параметров GrantableClusterResourceReference, режимов подстановки значений по умолчанию, условий `match` и настройки ресурсов с несколькими API-версиями приведено [в описании ресурса](cr.html#grantableclusterresourcereference).
 

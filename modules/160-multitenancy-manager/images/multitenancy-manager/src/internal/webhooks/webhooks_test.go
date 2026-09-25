@@ -294,6 +294,73 @@ func TestIsGranted_BrokenReferenceIsSkipped(t *testing.T) {
 			if !strings.Contains(resp.Result.Message, `references "forbidden"`) {
 				t.Fatalf("denial must come from the working reference: %s", resp.Result.Message)
 			}
+
+			// On UPDATE, with the value unchanged or changed, the unresolvable reference stays inert: the
+			// grandfathering of old values must not bring back the 500.
+			for _, oldClass := range []string{"forbidden", "legacy"} {
+				upd := review(admissionv1.Update, svcGVR, svcGVK, "proj", "s", lbService("forbidden", "LoadBalancer"), lbService(oldClass, "LoadBalancer"))
+				if resp := serve(t, alone, "/is-granted", upd); !resp.Allowed {
+					t.Fatalf("UPDATE from %q: a reference to an unresolvable definition must be skipped, not deny: %v", oldClass, resp.Result)
+				}
+			}
+			// Next to a working reference, an unchanged value is grandfathered and a changed one denied.
+			if resp := serve(t, both, "/is-granted", review(admissionv1.Update, svcGVR, svcGVK, "proj", "s", lbService("forbidden", "LoadBalancer"), lbService("forbidden", "LoadBalancer"))); !resp.Allowed {
+				t.Fatalf("an unchanged value must be grandfathered on update: %v", resp.Result)
+			}
+			resp = serve(t, both, "/is-granted", review(admissionv1.Update, svcGVR, svcGVK, "proj", "s", lbService("forbidden", "LoadBalancer"), lbService("legacy", "LoadBalancer")))
+			if resp.Allowed || !strings.Contains(resp.Result.Message, `references "forbidden"`) {
+				t.Fatalf("the working reference must still deny a changed value on update: %v", resp.Result)
+			}
+		})
+	}
+}
+
+// unresolvableDef is an object-backed definition that cannot be resolved for a configuration reason:
+// its grantedResource is the given namespaced or unserved kind.
+func unresolvableDef(apiGroup, kind string) *v1alpha1.GrantableClusterResourceDefinition {
+	return &v1alpha1.GrantableClusterResourceDefinition{
+		ObjectMeta: metav1.ObjectMeta{Name: "a-unresolvable"},
+		Spec: v1alpha1.GrantableClusterResourceDefinitionSpec{
+			GrantedResource:     &v1alpha1.GrantedResource{APIGroup: apiGroup, Kind: kind},
+			DefaultAvailability: v1alpha1.AvailabilityNone,
+		},
+	}
+}
+
+// unresolvableRef is lbRef bound to unresolvableDef. Its name sorts before lbRef's, so it is evaluated
+// first, and its path and guard reach Resolve for a LoadBalancer Service with a class.
+func unresolvableRef(defaulting v1alpha1.DefaultingMode) *v1alpha1.GrantableClusterResourceReference {
+	ref := lbRef(defaulting)
+	ref.Name = "a-unresolvable-service"
+	ref.Spec.GrantableClusterResourceName = "a-unresolvable"
+	return ref
+}
+
+var unresolvableKinds = map[string][2]string{
+	"namespaced":   {"", "PersistentVolumeClaim"},
+	"unknown kind": {"example.com", "Unknown"},
+}
+
+func TestIsGranted_UnresolvableDefinitionIsInert(t *testing.T) {
+	for name, gk := range unresolvableKinds {
+		t.Run(name, func(t *testing.T) {
+			// Alone, the reference to the unresolvable definition checks nothing: the request passes
+			// instead of a 500 (serve fails the test on any non-200 status).
+			alone := isGranted(t, projectNS("proj", map[string]string{"env": "prod"}), unresolvableDef(gk[0], gk[1]), unresolvableRef(v1alpha1.DefaultingNone), lbGrant())
+			if resp := serve(t, alone, "/is-granted", review(admissionv1.Create, svcGVR, svcGVK, "proj", "s", lbService("forbidden", "LoadBalancer"), nil)); !resp.Allowed {
+				t.Fatalf("a reference to an unresolvable definition must be skipped, not deny: %v", resp.Result)
+			}
+
+			// Next to a working reference, that one still denies.
+			both := isGranted(t, projectNS("proj", map[string]string{"env": "prod"}), unresolvableDef(gk[0], gk[1]), unresolvableRef(v1alpha1.DefaultingNone),
+				lbDef(v1alpha1.AvailabilityNone), lbRef(v1alpha1.DefaultingNone), lbGrant())
+			resp := serve(t, both, "/is-granted", review(admissionv1.Create, svcGVR, svcGVK, "proj", "s", lbService("forbidden", "LoadBalancer"), nil))
+			if resp.Allowed {
+				t.Fatal("the working reference must still deny the unavailable value")
+			}
+			if !strings.Contains(resp.Result.Message, `references "forbidden"`) {
+				t.Fatalf("denial must come from the working reference: %s", resp.Result.Message)
+			}
 		})
 	}
 }
@@ -382,6 +449,50 @@ func TestDefaults_FillEmpty(t *testing.T) {
 	// Filling an empty field is what the author expects; no warning.
 	if len(resp.Warnings) != 0 {
 		t.Fatalf("FillEmpty must not warn, got %v", resp.Warnings)
+	}
+}
+
+func TestDefaults_UnresolvableDefinitionIsInert(t *testing.T) {
+	svc := raw(t, map[string]any{
+		"apiVersion": "v1", "kind": "Service",
+		"metadata": map[string]any{"name": "s", "namespace": "proj"},
+		"spec":     map[string]any{"type": "LoadBalancer"},
+	})
+	for name, gk := range unresolvableKinds {
+		t.Run(name, func(t *testing.T) {
+			// Alone, the reference defaults nothing and the request passes instead of a 500.
+			alone := defaults(t, projectNS("proj", map[string]string{"env": "prod"}), unresolvableDef(gk[0], gk[1]), unresolvableRef(v1alpha1.DefaultingFillEmpty), lbGrant())
+			if resp := serve(t, alone, "/defaults", review(admissionv1.Create, svcGVR, svcGVK, "proj", "s", svc, nil)); !resp.Allowed || len(resp.Patch) != 0 {
+				t.Fatalf("an unresolvable definition must default nothing, got allowed=%v patch=%s", resp.Allowed, resp.Patch)
+			}
+
+			// Next to a working reference, that one still defaults.
+			both := defaults(t, projectNS("proj", map[string]string{"env": "prod"}), unresolvableDef(gk[0], gk[1]), unresolvableRef(v1alpha1.DefaultingFillEmpty),
+				lbDef(v1alpha1.AvailabilityAll), lbRef(v1alpha1.DefaultingFillEmpty), lbGrant())
+			resp := serve(t, both, "/defaults", review(admissionv1.Create, svcGVR, svcGVK, "proj", "s", svc, nil))
+			var patches []map[string]any
+			if err := json.Unmarshal(resp.Patch, &patches); err != nil {
+				t.Fatal(err)
+			}
+			if len(patches) != 1 || patches[0]["value"] != "internal" {
+				t.Fatalf("the working reference must still default, got %v", patches)
+			}
+
+			// On UPDATE, with the class unchanged (absent) or changed (cleared), nothing is defaulted and
+			// the request passes: defaulting stops before Resolve.
+			for _, oldClass := range []string{"", "external"} {
+				oldSvc := raw(t, map[string]any{
+					"apiVersion": "v1", "kind": "Service",
+					"metadata": map[string]any{"name": "s", "namespace": "proj"},
+					"spec":     map[string]any{"type": "LoadBalancer", "loadBalancerClass": oldClass},
+				})
+				for _, m := range []*DefaultsMutator{alone, both} {
+					if resp := serve(t, m, "/defaults", review(admissionv1.Update, svcGVR, svcGVK, "proj", "s", svc, oldSvc)); !resp.Allowed || len(resp.Patch) != 0 {
+						t.Fatalf("UPDATE from %q must default nothing, got allowed=%v patch=%s", oldClass, resp.Allowed, resp.Patch)
+					}
+				}
+			}
+		})
 	}
 }
 

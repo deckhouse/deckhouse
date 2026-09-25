@@ -18,12 +18,16 @@ package controllers
 
 import (
 	"context"
+	"reflect"
 	"strings"
+	"sync/atomic"
 	"testing"
+	"time"
 
 	corev1 "k8s.io/api/core/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
 	storagev1 "k8s.io/api/storage/v1"
+	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	k8serrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -41,8 +45,9 @@ import (
 )
 
 func testMapper() meta.RESTMapper {
-	m := meta.NewDefaultRESTMapper([]schema.GroupVersion{{Group: "storage.k8s.io", Version: "v1"}})
+	m := meta.NewDefaultRESTMapper([]schema.GroupVersion{{Group: "storage.k8s.io", Version: "v1"}, {Group: "", Version: "v1"}})
 	m.Add(schema.GroupVersionKind{Group: "storage.k8s.io", Version: "v1", Kind: "StorageClass"}, meta.RESTScopeRoot)
+	m.Add(schema.GroupVersionKind{Group: "", Version: "v1", Kind: "Secret"}, meta.RESTScopeNamespace)
 	return m
 }
 
@@ -376,8 +381,8 @@ func TestReconcile_NoRegistrationsRemovesAllModuleCatalogs(t *testing.T) {
 }
 
 // TestReconcile_BrokenRegistrationDoesNotBlockTheOthers: a registration whose kind the mapper does not
-// know fails, but the other registrations are still upserted, the orphan is still swept, the failed
-// registration keeps its catalog, and the error is reported.
+// know is not resolved, but the other registrations are still upserted, the orphan is still swept and
+// the failed registration keeps its catalog. It is a configuration error, so the pass does not fail.
 func TestReconcile_BrokenRegistrationDoesNotBlockTheOthers(t *testing.T) {
 	// Named to sort before storageclasses, so an early return would skip its upsert.
 	broken := &v1alpha1.GrantableClusterResourceDefinition{
@@ -391,12 +396,46 @@ func TestReconcile_BrokenRegistrationDoesNotBlockTheOthers(t *testing.T) {
 		catalogOf("aaa-broken", naming.ManagedLabels("team-a")),
 		catalogOf("ingressclasses", naming.ManagedLabels("team-a")),
 	)
-	if err == nil {
-		t.Fatal("reconcile must report the broken registration")
+	if err != nil {
+		t.Fatalf("an unserved kind is a configuration error and must not fail the pass: %v", err)
 	}
 	assertCatalog(t, r, "ingressclasses", false)
 	assertCatalog(t, r, "storageclasses", true)
 	assertCatalog(t, r, "aaa-broken", true)
+}
+
+// storageClassListFails fails every list of StorageClasses with an API error.
+type storageClassListFails struct{ client.Client }
+
+func (c storageClassListFails) List(ctx context.Context, list client.ObjectList, opts ...client.ListOption) error {
+	if list.GetObjectKind().GroupVersionKind().Kind == "StorageClassList" {
+		return k8serrors.NewServiceUnavailable("storage classes are unavailable")
+	}
+	return c.Client.List(ctx, list, opts...)
+}
+
+// TestReconcile_APIErrorOfARegistrationIsReported: an API error while resolving a registration is not a
+// configuration error, so it is still returned, while the other registrations are upserted, the
+// orphan is swept and the failed registration keeps its catalog.
+func TestReconcile_APIErrorOfARegistrationIsReported(t *testing.T) {
+	ns := &corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: "team-a", Labels: map[string]string{naming.ProjectLabel: "team-a"}}}
+	lb := &v1alpha1.GrantableClusterResourceDefinition{
+		ObjectMeta: metav1.ObjectMeta{Name: "loadbalancerclasses"},
+		Spec:       v1alpha1.GrantableClusterResourceDefinitionSpec{DefaultAvailability: v1alpha1.AvailabilityAll},
+	}
+	r := &ProjectReconciler{
+		Client: storageClassListFails{buildClient(t, ns, lb, storageClassDefinition(v1alpha1.AvailabilityAll),
+			catalogOf("storageclasses", naming.ManagedLabels("team-a")),
+			catalogOf("ingressclasses", naming.ManagedLabels("team-a")))},
+		Mapper: testMapper(),
+	}
+	_, err := r.Reconcile(context.Background(), ctrl.Request{NamespacedName: types.NamespacedName{Name: "team-a"}})
+	if !k8serrors.IsServiceUnavailable(err) {
+		t.Fatalf("an API error must fail the pass, err=%v", err)
+	}
+	assertCatalog(t, r, "loadbalancerclasses", true)
+	assertCatalog(t, r, "storageclasses", true)
+	assertCatalog(t, r, "ingressclasses", false)
 }
 
 // TestReconcile_CatalogOfADeletingRegistrationIsRemoved: a registration held by a finalizer is gone as
@@ -411,4 +450,204 @@ func TestReconcile_CatalogOfADeletingRegistrationIsRemoved(t *testing.T) {
 		t.Fatal(err)
 	}
 	assertCatalog(t, r, "storageclasses", false)
+}
+
+// TestReconcile_CatalogFields: the catalog of an object-backed definition carries the declared fields
+// with their JSON types, a pass with nothing changed writes nothing, and a changed value in the granted
+// object reaches the catalog on the next pass.
+func TestReconcile_CatalogFields(t *testing.T) {
+	ns := &corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: "team-a", Labels: map[string]string{naming.ProjectLabel: "team-a"}}}
+	def := storageClassDefinition(v1alpha1.AvailabilityAll)
+	def.Spec.CatalogFields = []v1alpha1.CatalogField{
+		{Name: "provisioner", Path: "$.provisioner"},
+		{Name: "allowVolumeExpansion", Path: "$.allowVolumeExpansion"},
+		{Name: "reclaimPolicy", Path: "$.reclaimPolicy"},
+	}
+	expand := true
+	sc := &storagev1.StorageClass{ObjectMeta: metav1.ObjectMeta{Name: "standard"}, Provisioner: "x", AllowVolumeExpansion: &expand}
+	r := &ProjectReconciler{Client: buildClient(t, ns, def, sc), Mapper: testMapper(), Factory: jsonpath.NewWithCache()}
+	ctx := context.Background()
+	reconcile := func() *v1alpha1.AvailableClusterResource {
+		t.Helper()
+		if _, err := r.Reconcile(ctx, ctrl.Request{NamespacedName: types.NamespacedName{Name: "team-a"}}); err != nil {
+			t.Fatal(err)
+		}
+		ar := &v1alpha1.AvailableClusterResource{}
+		if err := r.Get(ctx, types.NamespacedName{Namespace: "team-a", Name: "storageclasses"}, ar); err != nil {
+			t.Fatal(err)
+		}
+		if len(ar.Status.Available) != 1 {
+			t.Fatalf("unexpected catalog: %+v", ar.Status.Available)
+		}
+		return ar
+	}
+	fields := func(ar *v1alpha1.AvailableClusterResource) map[string]string {
+		out := map[string]string{}
+		for k, v := range ar.Status.Available[0].Fields {
+			out[k] = string(v.Raw)
+		}
+		return out
+	}
+
+	first := reconcile()
+	// reclaimPolicy is not set on the object, so it is left out.
+	if got, want := fields(first), map[string]string{"provisioner": `"x"`, "allowVolumeExpansion": `true`}; !reflect.DeepEqual(got, want) {
+		t.Fatalf("fields = %v, want %v", got, want)
+	}
+	if again := reconcile(); again.ResourceVersion != first.ResourceVersion {
+		t.Fatalf("a pass with nothing changed rewrote the status: resourceVersion %s -> %s", first.ResourceVersion, again.ResourceVersion)
+	}
+
+	expand = false
+	reclaim := corev1.PersistentVolumeReclaimRetain
+	sc.ReclaimPolicy = &reclaim
+	if err := r.Update(ctx, sc); err != nil {
+		t.Fatal(err)
+	}
+	want := map[string]string{"provisioner": `"x"`, "allowVolumeExpansion": `false`, "reclaimPolicy": `"Retain"`}
+	changed := reconcile()
+	if got := fields(changed); !reflect.DeepEqual(got, want) {
+		t.Fatalf("fields after the change = %v, want %v", got, want)
+	}
+	// A real status write bumps resourceVersion, so the no-op check above is meaningful.
+	if changed.ResourceVersion == first.ResourceVersion {
+		t.Fatalf("the changed catalog kept resourceVersion %s", first.ResourceVersion)
+	}
+}
+
+// TestReconcile_CatalogFieldsOfAValueBackedDefinitionAreIgnored: a value-backed definition has no
+// objects to read, so catalogFields yields nothing and breaks nothing.
+func TestReconcile_CatalogFieldsOfAValueBackedDefinitionAreIgnored(t *testing.T) {
+	ns := &corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: "team-a", Labels: map[string]string{naming.ProjectLabel: "team-a"}}}
+	def := &v1alpha1.GrantableClusterResourceDefinition{
+		ObjectMeta: metav1.ObjectMeta{Name: "loadbalancerclasses"},
+		Spec: v1alpha1.GrantableClusterResourceDefinitionSpec{
+			DefaultAvailability: v1alpha1.AvailabilityAll,
+			CatalogFields:       []v1alpha1.CatalogField{{Name: "name", Path: "$.metadata.name"}},
+		},
+	}
+	grant := &v1alpha1.ClusterResourceGrantPolicy{
+		ObjectMeta: metav1.ObjectMeta{Name: "g"},
+		Spec: v1alpha1.ClusterResourceGrantPolicySpec{
+			ProjectSelector: &metav1.LabelSelector{MatchLabels: map[string]string{naming.ProjectLabel: "team-a"}},
+			Resources:       []v1alpha1.GrantResource{{ResourceName: "loadbalancerclasses", Allowed: []string{"lb"}}},
+		},
+	}
+	r := &ProjectReconciler{Client: buildClient(t, ns, def, grant), Mapper: testMapper(), Factory: jsonpath.NewWithCache()}
+	if _, err := r.Reconcile(context.Background(), ctrl.Request{NamespacedName: types.NamespacedName{Name: "team-a"}}); err != nil {
+		t.Fatal(err)
+	}
+	ar := &v1alpha1.AvailableClusterResource{}
+	if err := r.Get(context.Background(), types.NamespacedName{Namespace: "team-a", Name: "loadbalancerclasses"}, ar); err != nil {
+		t.Fatal(err)
+	}
+	if len(ar.Status.Available) != 1 || ar.Status.Available[0].Name != "lb" || ar.Status.Available[0].Fields != nil {
+		t.Fatalf("unexpected catalog: %+v", ar.Status.Available)
+	}
+}
+
+// TestReconcile_NamespacedGrantedResourceIsRefused: a definition of a namespaced kind is not resolved,
+// so neither the names nor the fields of its objects reach a catalog, and a catalog rendered for it
+// earlier is swept; the other definitions are reconciled as usual. A kind the mapper does not know keeps
+// its catalog: it may be served once its CRD is installed. Both are configuration errors, so the pass
+// neither fails nor falls back to the error back-off: it requeues after ResyncInterval.
+func TestReconcile_NamespacedGrantedResourceIsRefused(t *testing.T) {
+	ns := &corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: "team-a", Labels: map[string]string{naming.ProjectLabel: "team-a"}}}
+	secrets := &v1alpha1.GrantableClusterResourceDefinition{
+		ObjectMeta: metav1.ObjectMeta{Name: "aaa-secrets"},
+		Spec: v1alpha1.GrantableClusterResourceDefinitionSpec{
+			GrantedResource:     &v1alpha1.GrantedResource{APIGroup: "", Kind: "Secret"},
+			DefaultAvailability: v1alpha1.AvailabilityAll,
+			CatalogFields:       []v1alpha1.CatalogField{{Name: "token", Path: "$.data.token"}},
+		},
+	}
+	unknown := &v1alpha1.GrantableClusterResourceDefinition{
+		ObjectMeta: metav1.ObjectMeta{Name: "aaa-unknown"},
+		Spec: v1alpha1.GrantableClusterResourceDefinitionSpec{
+			GrantedResource:     &v1alpha1.GrantedResource{APIGroup: "example.com", Kind: "Unknown"},
+			DefaultAvailability: v1alpha1.AvailabilityAll,
+		},
+	}
+	// A catalog of the Secret definition rendered before the refusal existed.
+	stale := catalogOf("aaa-secrets", naming.ManagedLabels("team-a"))
+	stale.Status = v1alpha1.AvailableClusterResourceStatus{GrantedResourceKind: "Secret", Available: []v1alpha1.AvailableObject{{Name: "admin"}}, AvailableCount: 1}
+	secret := &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "admin", Namespace: "kube-system"}, Data: map[string][]byte{"token": []byte("s3cr3t")}}
+	sc := &storagev1.StorageClass{ObjectMeta: metav1.ObjectMeta{Name: "standard"}, Provisioner: "x"}
+	r := &ProjectReconciler{
+		Client: buildClient(t, ns, secrets, stale, secret, unknown, catalogOf("aaa-unknown", naming.ManagedLabels("team-a")),
+			storageClassDefinition(v1alpha1.AvailabilityAll), sc),
+		Mapper:  testMapper(),
+		Factory: jsonpath.NewWithCache(),
+	}
+	res, err := r.Reconcile(context.Background(), ctrl.Request{NamespacedName: types.NamespacedName{Name: "team-a"}})
+	if err != nil {
+		t.Fatalf("configuration errors must not fail the pass: %v", err)
+	}
+	if res.RequeueAfter != ResyncInterval {
+		t.Fatalf("RequeueAfter = %v, want %v", res.RequeueAfter, ResyncInterval)
+	}
+	assertCatalog(t, r, "aaa-secrets", false)
+	assertCatalog(t, r, "aaa-unknown", true)
+	ar := &v1alpha1.AvailableClusterResource{}
+	if err := r.Get(context.Background(), types.NamespacedName{Namespace: "team-a", Name: "storageclasses"}, ar); err != nil {
+		t.Fatal(err)
+	}
+	if len(ar.Status.Available) != 1 || ar.Status.Available[0].Name != "standard" {
+		t.Fatalf("unexpected storageclasses catalog: %+v", ar.Status.Available)
+	}
+}
+
+// TestReconcile_AllowedNameWithoutAnObjectHasNoFields: an allowed name of an object-backed definition
+// that matches no live object is listed without fields, next to an object that has them.
+func TestReconcile_AllowedNameWithoutAnObjectHasNoFields(t *testing.T) {
+	ns := &corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: "team-a", Labels: map[string]string{naming.ProjectLabel: "team-a"}}}
+	def := storageClassDefinition(v1alpha1.AvailabilityAll)
+	def.Spec.CatalogFields = []v1alpha1.CatalogField{{Name: "provisioner", Path: "$.provisioner"}}
+	grant := &v1alpha1.ClusterResourceGrantPolicy{
+		ObjectMeta: metav1.ObjectMeta{Name: "g"},
+		Spec: v1alpha1.ClusterResourceGrantPolicySpec{
+			ProjectSelector: &metav1.LabelSelector{MatchLabels: map[string]string{naming.ProjectLabel: "team-a"}},
+			Resources:       []v1alpha1.GrantResource{{ResourceName: "storageclasses", Allowed: []string{"ghost", "standard"}}},
+		},
+	}
+	sc := &storagev1.StorageClass{ObjectMeta: metav1.ObjectMeta{Name: "standard"}, Provisioner: "x"}
+	r := &ProjectReconciler{Client: buildClient(t, ns, def, grant, sc), Mapper: testMapper(), Factory: jsonpath.NewWithCache()}
+	if _, err := r.Reconcile(context.Background(), ctrl.Request{NamespacedName: types.NamespacedName{Name: "team-a"}}); err != nil {
+		t.Fatal(err)
+	}
+	ar := &v1alpha1.AvailableClusterResource{}
+	if err := r.Get(context.Background(), types.NamespacedName{Namespace: "team-a", Name: "storageclasses"}, ar); err != nil {
+		t.Fatal(err)
+	}
+	want := []v1alpha1.AvailableObject{
+		{Name: "ghost"},
+		{Name: "standard", Fields: map[string]apiextensionsv1.JSON{"provisioner": {Raw: []byte(`"x"`)}}},
+	}
+	if !reflect.DeepEqual(ar.Status.Available, want) {
+		t.Fatalf("catalog = %+v, want %+v", ar.Status.Available, want)
+	}
+}
+
+// countingMapper counts the resets of a mapper.
+type countingMapper struct {
+	meta.RESTMapper
+	resets atomic.Int32
+}
+
+func (m *countingMapper) Reset() { m.resets.Add(1) }
+
+// TestMapperResetResetsUntilCancelled: the mapper is reset every interval, and Start returns once
+// the context is done.
+func TestMapperResetResetsUntilCancelled(t *testing.T) {
+	mapper := &countingMapper{RESTMapper: testMapper()}
+	ctx, cancel := context.WithCancel(context.Background())
+	done := make(chan error)
+	go func() { done <- (&MapperReset{Mapper: mapper, Interval: time.Millisecond}).Start(ctx) }()
+	for mapper.resets.Load() < 2 {
+		time.Sleep(time.Millisecond)
+	}
+	cancel()
+	if err := <-done; err != nil {
+		t.Fatal(err)
+	}
 }

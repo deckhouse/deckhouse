@@ -50,6 +50,31 @@ import (
 // (recomputed from live granted objects, not all watched) does not drift unbounded.
 const ResyncInterval = 2 * time.Minute
 
+// MapperReset drops the mappings of the grants REST mapper every Interval. A mapper never forgets a
+// kind it has mapped, so without it a CRD re-created with another scope would keep its old scope
+// until the pod restarts. It runs on every replica, since the webhooks serve on all of them.
+type MapperReset struct {
+	Mapper   meta.ResettableRESTMapper
+	Interval time.Duration
+}
+
+// Start resets the mapper every Interval until ctx is done.
+func (m *MapperReset) Start(ctx context.Context) error {
+	ticker := time.NewTicker(m.Interval)
+	defer ticker.Stop()
+	for {
+		select {
+		case <-ctx.Done():
+			return nil
+		case <-ticker.C:
+			m.Mapper.Reset()
+		}
+	}
+}
+
+// NeedLeaderElection is false: the webhooks of a replica that is not the leader use the mapper too.
+func (m *MapperReset) NeedLeaderElection() bool { return false }
+
 // ProjectReconciler materializes AvailableClusterResource catalogs for project namespaces and
 // recounts the grant-violation metric of each namespace it reconciles.
 type ProjectReconciler struct {
@@ -58,7 +83,8 @@ type ProjectReconciler struct {
 	// Usage reads the objects a GrantableClusterResourceReference governs. It is the uncached API
 	// reader in the controller; when nil (tests of the catalog alone) violations are not scanned.
 	Usage client.Reader
-	// Factory compiles the field paths of the references; shared with the webhooks.
+	// Factory compiles the field paths of the references and the catalogFields paths of the
+	// definitions; shared with the webhooks. When nil, the catalog carries no fields.
 	Factory jsonpath.Factory
 }
 
@@ -151,10 +177,16 @@ func (r *ProjectReconciler) deleteCatalog(ctx context.Context, ar *v1alpha1.Avai
 // reconcileCatalog upserts an AvailableClusterResource per registration for the namespace and removes
 // the ones whose registration is gone or being deleted.
 //
-// A failure of one registration (a grantedResource kind the mapper does not know, a failed list or
-// write) does not stop the others: errors are collected and returned together at the end, after the
-// orphan sweep has run. Otherwise a single broken registration would, in every project namespace and
-// on every pass, skip the sweep and whatever registrations the cache happened to list after it.
+// A failure of one registration (a failed list or write) does not stop the others: errors are
+// collected and returned together at the end, after the orphan sweep has run. Otherwise a single
+// broken registration would, in every project namespace and on every pass, skip the sweep and
+// whatever registrations the cache happened to list after it.
+//
+// A registration that cannot be resolved for a configuration reason (resolve.IsConfigurationError: a
+// namespaced grantedResource, or a kind the apiserver does not serve) is logged and not returned.
+// Retrying cannot fix it, and a returned error would put every project namespace into the
+// controller's back-off instead of the ResyncInterval requeue, slowing down the catalogs of all the
+// other registrations there for as long as the broken one exists.
 func (r *ProjectReconciler) reconcileCatalog(ctx context.Context, ns *corev1.Namespace, project string) error {
 	grants, err := resolve.GrantsForNamespace(ctx, r.Client, ns)
 	if err != nil {
@@ -166,9 +198,9 @@ func (r *ProjectReconciler) reconcileCatalog(ctx context.Context, ns *corev1.Nam
 	}
 	var errs []error
 	if r.Usage != nil && r.Factory != nil {
-		// The violation metric is secondary to the catalog: a scan failure (a registration the
-		// catalog loop below fails on as well, or a failed list of the governed objects) keeps the
-		// previous metric values but must not hold the catalog back.
+		// The violation metric is secondary to the catalog: a scan failure (a failed resolve or list
+		// of the governed objects) keeps the previous metric values but must not hold the catalog
+		// back. A registration with a configuration error is skipped by the scan itself.
 		violations, err := scanViolations(ctx, r.Client, r.Usage, r.Mapper, r.Factory, ns.Name, grants, regList.Items)
 		if err != nil {
 			errs = append(errs, fmt.Errorf("scan grant violations: %w", err))
@@ -178,7 +210,8 @@ func (r *ProjectReconciler) reconcileCatalog(ctx context.Context, ns *corev1.Nam
 	}
 	// The set of registrations whose catalog stays is fixed before the first upsert, from the list
 	// alone: a registration whose resolve or upsert fails below still exists, and its catalog (last
-	// good state) must not be swept as an orphan. That is what makes the sweep safe to run
+	// good state) must not be swept as an orphan. The one exception is a namespaced grantedResource,
+	// dropped from the set in the loop below. That is what makes the sweep safe to run
 	// unconditionally. A registration with a deletionTimestamp (held by a finalizer) is left out of
 	// both the set and the upserts: its catalog goes when the deletion is requested, not when the
 	// object finally disappears.
@@ -193,9 +226,22 @@ func (r *ProjectReconciler) reconcileCatalog(ctx context.Context, ns *corev1.Nam
 		if reg.DeletionTimestamp != nil {
 			continue
 		}
-		if err := r.reconcileRegistration(ctx, ns.Name, project, grants, reg); err != nil {
-			errs = append(errs, fmt.Errorf("registration %s: %w", reg.Name, err))
+		err := r.reconcileRegistration(ctx, ns.Name, project, grants, reg)
+		if err == nil {
+			continue
 		}
+		// A namespaced grantedResource is refused for good, unlike a kind that is not served yet:
+		// its catalog is swept, since keeping the last state would keep showing the names the
+		// refusal exists to hide.
+		if errors.Is(err, resolve.ErrNamespacedGrantedResource) {
+			delete(registered, reg.Name)
+		}
+		if resolve.IsConfigurationError(err) {
+			ctrl.LoggerFrom(ctx).V(1).Info("skipping registration: definition cannot be resolved",
+				"namespace", ns.Name, "definition", reg.Name, "reason", err.Error())
+			continue
+		}
+		errs = append(errs, fmt.Errorf("registration %s: %w", reg.Name, err))
 	}
 	if err := r.deleteOrphanCatalogs(ctx, ns.Name, registered); err != nil {
 		errs = append(errs, err)
@@ -209,7 +255,7 @@ func (r *ProjectReconciler) reconcileRegistration(ctx context.Context, ns, proje
 	if err != nil {
 		return err
 	}
-	available := resolved.Available()
+	available := resolved.AvailableWithFields(r.Factory)
 	if available == nil {
 		// An empty catalog is kept as an object with an empty list: a reader (the Console
 		// among them) can then tell "nothing is available here" from "not reconciled yet",
@@ -239,6 +285,7 @@ func (r *ProjectReconciler) upsertAvailable(ctx context.Context, ns, project, na
 	}
 	// Reassigning the whole Available slice (not mutating it) means a value snapshot is enough to
 	// detect a real change and skip the status write on the frequent no-op resync/grant-change passes.
+	// The comparison is deep, so a changed catalog field value (AvailableObject.Fields) counts too.
 	before := ar.Status
 	ar.Status.GrantedResourceKind = kind
 	ar.Status.Available = available
