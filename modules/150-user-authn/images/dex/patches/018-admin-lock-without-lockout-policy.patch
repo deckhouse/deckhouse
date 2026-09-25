@@ -1168,3 +1168,48 @@ index a263d8e..ce9fbbb 100644
  	newToken, ident, rerr := s.refreshTokenWithRetry(r.Context(), rCtx)
  	if rerr != nil {
  		s.refreshTokenErrHelper(w, rerr)
+diff --git a/server/refresh_upstream_rotation_test.go b/server/refresh_upstream_rotation_test.go
+index 747dca0..053934d 100644
+--- a/server/refresh_upstream_rotation_test.go
++++ b/server/refresh_upstream_rotation_test.go
+@@ -512,8 +512,8 @@ func TestUpstreamRotationRetiresRefusedSharedCredential(t *testing.T) {
+ 	rr := refreshTokenRequest(t, s, clientID, "secret", refreshID, "token-"+refreshID)
+ 	require.Equal(t, http.StatusInternalServerError, rr.Code, "a revoked credential cannot be recovered from")
+ 	require.Equal(t, 1, upstream.calls, "a credential nobody rotated must be offered once")
+-	require.Equal(t, 3, reads.reads,
+-		"a hopeless refresh must cost one read to pick the credential and two to conclude that nothing rotated it")
++	require.Equal(t, lockCheckReads+3, reads.reads,
++		"beyond the lock check, a hopeless refresh must cost one read to pick the credential and two to conclude that nothing rotated it")
+ 
+ 	session, err := s.storage.GetOfflineSessions(ctx, "1", connID)
+ 	require.NoError(t, err)
+@@ -523,7 +523,7 @@ func TestUpstreamRotationRetiresRefusedSharedCredential(t *testing.T) {
+ 	reads.reads = 0
+ 	rr = refreshTokenRequest(t, s, clientID, "secret", refreshID, "token-"+refreshID)
+ 	require.Equal(t, http.StatusInternalServerError, rr.Code)
+-	require.Equal(t, 1, reads.reads, "with no shared credential left there is nothing to wait for")
++	require.Equal(t, lockCheckReads+1, reads.reads, "with no shared credential left there is nothing to wait for")
+ }
+ 
+ // TestUpstreamRotationKeepsCredentialWhenProviderUnreachable asserts that a provider which fails to
+@@ -564,7 +564,7 @@ func TestUpstreamRotationKeepsCredentialWhenProviderUnreachable(t *testing.T) {
+ 	rr := refreshTokenRequest(t, s, clientID, "secret", refreshID, "token-"+refreshID)
+ 	require.Equal(t, http.StatusInternalServerError, rr.Code, "an unreachable provider fails the request")
+ 	require.Equal(t, 1, upstream.calls)
+-	require.Equal(t, 1, reads.reads, "an unreachable provider must not cost a single extra read of the offline session")
++	require.Equal(t, lockCheckReads+1, reads.reads, "an unreachable provider must not cost a single extra read of the offline session")
+ 
+ 	session, err := s.storage.GetOfflineSessions(ctx, "1", connID)
+ 	require.NoError(t, err)
+@@ -973,6 +973,11 @@ func rotatingPolicy(clk *testClock) func(c *Config) {
+ 	}
+ }
+ 
++// lockCheckReads is the number of reads of the offline session that the administrator lock check
++// adds to every refresh of a user of a non-local connector. The check runs after the credential is
++// picked, so the first read of a refresh is still the one that picks it.
++const lockCheckReads = 1
++
+ // sessionReadStorage counts reads of the offline session and, when stale is set, serves the first of
+ // them from a credential taken before another client rotated the shared one. That is what losing a
+ // race looks like to a request which has already read the session by the time the winner publishes
