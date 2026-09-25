@@ -1,6 +1,6 @@
 ## Patches
 
-### 000-go-mod.patch
+### 000-gomod.patch
 
 Bump go.mod dependencies.
 
