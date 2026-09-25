@@ -24,6 +24,7 @@ import (
 	"sync"
 	"time"
 
+	klient "github.com/flant/kube-client/client"
 	"github.com/go-logr/logr"
 	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
 	appsv1 "k8s.io/api/apps/v1"
@@ -32,7 +33,6 @@ import (
 	discoveryv1 "k8s.io/api/discovery/v1"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/client-go/rest"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/cache"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -94,7 +94,7 @@ type Controller struct {
 }
 
 // Build assembles the manager, the package runtime and the shared containers; it starts nothing.
-func Build(ctx context.Context, rest *rest.Config, ms metricsstorage.Storage, logger *log.Logger) (*Controller, error) {
+func Build(ctx context.Context, ms metricsstorage.Storage, logger *log.Logger) (*Controller, error) {
 	scheme, err := buildSchema()
 	if err != nil {
 		return nil, fmt.Errorf("build schema: %w", err)
@@ -105,6 +105,9 @@ func Build(ctx context.Context, rest *rest.Config, ms metricsstorage.Storage, lo
 	// logger is *very* verbose even at info level. This is not really needed,
 	// but otherwise we get a warning from the controller-runtime.
 	ctrl.SetLogger(logr.New(ctrllog.NullLogSink{}))
+
+	client := klient.New(klient.WithLogger(logger.Named("controller-client")))
+	rest := client.RestConfig()
 
 	// inject otel tripper; the manager reads the transport when it builds its clients, so wrap first
 	rest.Wrap(func(t http.RoundTripper) http.RoundTripper {

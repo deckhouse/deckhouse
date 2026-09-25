@@ -19,25 +19,14 @@ import "os"
 // Feature-gate environment variables. Each turns on a block of controllers in
 // pkg/controller when set to the literal "true".
 const (
-	EnvEnablePackageSystem     = "DECKHOUSE_ENABLE_PACKAGE_SYSTEM"
-	EnvEnableModulePackageSync = "DECKHOUSE_ENABLE_MODULE_PACKAGE_SYNC"
-	EnvEnableModulePackages    = "DECKHOUSE_ENABLE_MODULE_PACKAGES"
-	EnvEnableResourceRequests  = "DECKHOUSE_ENABLE_RESOURCE_REQUESTS"
+	EnvEnablePackageSystem    = "DECKHOUSE_ENABLE_PACKAGE_SYSTEM"
+	EnvEnableResourceRequests = "DECKHOUSE_ENABLE_RESOURCE_REQUESTS"
+	EnvEnableModuleV2         = "DECKHOUSE_ENABLE_MODULE_V2"
 )
 
 // PackageSystemEnabled reports whether the package-system controllers
 // (PackageRepository, Application, ApplicationPackageVersion) are enabled.
 func PackageSystemEnabled() bool { return os.Getenv(EnvEnablePackageSystem) == "true" }
-
-// ModulePackageSyncEnabled reports whether the module packages of the old
-// module stack are synced into the package system: the startup sync records
-// them as PackageRepository and ModulePackageVersion objects, and the
-// ModulePackageVersion controller completes the drafts it leaves.
-func ModulePackageSyncEnabled() bool { return os.Getenv(EnvEnableModulePackageSync) == "true" }
-
-// ModulePackagesEnabled reports whether the Module v2 controller is enabled.
-// It runs the module packages the sync above records.
-func ModulePackagesEnabled() bool { return os.Getenv(EnvEnableModulePackages) == "true" }
 
 // ResourceRequestsEnabled reports whether spec.resourceRequests is honoured.
 // When on, the nelm service renders the package chart, overlays the per-workload
@@ -48,3 +37,6 @@ func ModulePackagesEnabled() bool { return os.Getenv(EnvEnableModulePackages) ==
 // fully-rendered synthetic one: charts whose behaviour depends on anything
 // beyond the manifests they produce are affected.
 func ResourceRequestsEnabled() bool { return os.Getenv(EnvEnableResourceRequests) == "true" }
+
+// ModuleV2Enabled reports whether the Module v2 controller is enabled.
+func ModuleV2Enabled() bool { return os.Getenv(EnvEnableModuleV2) == "true" }

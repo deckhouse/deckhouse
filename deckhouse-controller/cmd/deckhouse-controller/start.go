@@ -30,7 +30,6 @@ import (
 
 	addonoperator "github.com/flant/addon-operator/pkg/addon-operator"
 	admetrics "github.com/flant/addon-operator/pkg/metrics"
-	"github.com/flant/kube-client/client"
 	"github.com/flant/shell-operator/pkg/executor"
 	shmetrics "github.com/flant/shell-operator/pkg/metrics"
 	"github.com/shirou/gopsutil/v3/process"
@@ -41,16 +40,12 @@ import (
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 	semconv "go.opentelemetry.io/otel/semconv/v1.30.0"
 	"google.golang.org/grpc/credentials"
-	apierrors "k8s.io/apimachinery/pkg/api/errors"
-	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/util/wait"
-	"k8s.io/apimachinery/pkg/watch"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/tools/leaderelection"
 	"k8s.io/client-go/tools/leaderelection/resourcelock"
-	"k8s.io/client-go/util/retry"
 
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/app"
-	d8Apis "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis"
+	d8apis "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller"
 	debugserver "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/debug-server"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/envconfig"
@@ -127,7 +122,7 @@ func start(logger *log.Logger, cfg *app.Config) func(cmd *cobra.Command, args []
 		version := "unknown"
 		content, err := os.ReadFile(versionFile)
 		if err != nil {
-			logger.Warn("cannot get deckhouse version", log.Err(err))
+			logger.Warn("failed to get deckhouse version", log.Err(err))
 		} else {
 			version = strings.TrimSuffix(string(content), "\n")
 		}
@@ -139,15 +134,13 @@ func start(logger *log.Logger, cfg *app.Config) func(cmd *cobra.Command, args []
 			}
 		}
 
-		logger.Info("Deckhouse starts in HA mode")
-		runWithLeaderElection(ctx, operator, logger)
-
-		return nil
+		logger.Info("deckhouse starts in HA mode")
+		return runWithLeaderElection(ctx, operator, logger)
 	}
 }
 
 func entrypoint(logger *log.Logger) error {
-	var possibleBundles = []string{"Default", "Minimal", "Managed"}
+	possibleBundles := []string{"Default", "Minimal", "Managed"}
 	bundleEnvValue, found := os.LookupEnv(envconfig.EnvBundle)
 	if !found || len(bundleEnvValue) == 0 {
 		bundleEnvValue = "Default"
@@ -160,7 +153,7 @@ func entrypoint(logger *log.Logger) error {
 	chrootDirEnvValue, found := os.LookupEnv(envconfig.EnvShellChrootDir)
 	if found && len(chrootDirEnvValue) > 0 {
 		chrootedTmpDirPath := filepath.Join(chrootDirEnvValue, app.DefaultTempDir)
-		if err := os.MkdirAll(chrootedTmpDirPath, 0750); err != nil {
+		if err := os.MkdirAll(chrootedTmpDirPath, 0o750); err != nil {
 			return fmt.Errorf("create chroot dir: %w", err)
 		}
 
@@ -187,7 +180,7 @@ func entrypoint(logger *log.Logger) error {
 		return fmt.Errorf("read bundle values file: %w", err)
 	}
 
-	if err := os.WriteFile("/tmp/values.yaml", bytes, 0644); err != nil {
+	if err := os.WriteFile("/tmp/values.yaml", bytes, 0o644); err != nil {
 		return fmt.Errorf("write values file: %w", err)
 	}
 
@@ -196,16 +189,16 @@ func entrypoint(logger *log.Logger) error {
 	return nil
 }
 
-func runWithLeaderElection(ctx context.Context, operator *addonoperator.AddonOperator, logger *log.Logger) {
+func runWithLeaderElection(ctx context.Context, operator *addonoperator.AddonOperator, logger *log.Logger) error {
 	var identity string
 	podName := envconfig.PodName()
 	if len(podName) == 0 {
-		logger.Fatal("DECKHOUSE_POD env not set or empty")
+		return fmt.Errorf("DECKHOUSE_POD env not set or empty")
 	}
 
 	podIP := envconfig.PodIP()
 	if len(podIP) == 0 {
-		logger.Fatal("ADDON_OPERATOR_LISTEN_ADDRESS env not set or empty")
+		return fmt.Errorf("ADDON_OPERATOR_LISTEN_ADDRESS env not set or empty")
 	}
 
 	podNs := envconfig.PodNamespace()
@@ -224,7 +217,7 @@ func runWithLeaderElection(ctx context.Context, operator *addonoperator.AddonOpe
 	elector, err := leaderelection.NewLeaderElector(leaderelection.LeaderElectionConfig{
 		// Create a leaderElectionConfig for leader election
 		Lock: &resourcelock.LeaseLock{
-			LeaseMeta: v1.ObjectMeta{
+			LeaseMeta: metav1.ObjectMeta{
 				Name:      leaseName,
 				Namespace: podNs,
 			},
@@ -238,14 +231,13 @@ func runWithLeaderElection(ctx context.Context, operator *addonoperator.AddonOpe
 		RetryPeriod:   time.Duration(retryPeriod) * time.Second,
 		Callbacks: leaderelection.LeaderCallbacks{
 			OnStartedLeading: func(ctx context.Context) {
-				err := run(ctx, operator, logger)
-				if err != nil {
+				if err := run(ctx, operator, logger); err != nil {
 					operator.Logger.Info("run", log.Err(err))
 					os.Exit(1)
 				}
 			},
 			OnStoppedLeading: func() {
-				operator.Logger.Info("Restarting because the leadership was handed over")
+				operator.Logger.Info("restart because the leadership was handed over")
 				operator.Stop()
 				os.Exit(0)
 			},
@@ -253,7 +245,7 @@ func runWithLeaderElection(ctx context.Context, operator *addonoperator.AddonOpe
 		ReleaseOnCancel: true,
 	})
 	if err != nil {
-		logger.Fatal("create leader elector", log.Err(err))
+		return fmt.Errorf("create leader elector: %w", err)
 	}
 
 	// addon-operator does not run the election, it only reads the leader state in its
@@ -263,13 +255,14 @@ func runWithLeaderElection(ctx context.Context, operator *addonoperator.AddonOpe
 
 	go func() {
 		<-ctx.Done()
-		logger.Info("Context canceled received")
+		logger.Info("context canceled received")
 		if err := syscall.Kill(1, syscall.SIGUSR2); err != nil {
-			logger.Fatal("Couldn't shutdown deckhouse", log.Err(err))
+			logger.Fatal("failed to shutdown deckhouse", log.Err(err))
 		}
 	}()
 
 	elector.Run(ctx)
+	return nil
 }
 
 func run(ctx context.Context, operator *addonoperator.AddonOperator, logger *log.Logger) error {
@@ -277,13 +270,13 @@ func run(ctx context.Context, operator *addonoperator.AddonOperator, logger *log
 	operatorStarted := false
 	go signalHandler(ctx, exitCh, operator, &operatorStarted, logger)
 
-	if err := d8Apis.EnsureCRDs(ctx, operator.KubeClient(), app.PathDeckhouseCRDs); err != nil {
+	if err := d8apis.EnsureCRDs(ctx, operator.KubeClient(), app.PathDeckhouseCRDs); err != nil {
 		return fmt.Errorf("ensure crds: %w", err)
 	}
 
 	// we have to lock the controller run if dhctl lock configmap exists
-	if err := lockOnBootstrap(ctx, operator.KubeClient(), logger); err != nil {
-		return fmt.Errorf("lock on bootstrap: %w", err)
+	if err := lockUntilClusterBootstraped(ctx, operator.KubeClient(), logger); err != nil {
+		return fmt.Errorf("lock until cluster bootstraped: %w", err)
 	}
 
 	if DefaultReleaseChannel == "" {
@@ -323,7 +316,7 @@ func signalHandler(ctx context.Context, exitCh chan struct{}, operator *addonope
 	for {
 		select {
 		case <-ctx.Done():
-			logger.Info("Context canceled - exiting")
+			logger.Info("context canceled - exiting")
 
 			exitCh <- struct{}{}
 			return
@@ -336,7 +329,7 @@ func signalHandler(ctx context.Context, exitCh chan struct{}, operator *addonope
 				if !slices.Contains(environ, skipEntrypointKeyValue) {
 					environ = append(environ, skipEntrypointKeyValue)
 				}
-				logger.Info(fmt.Sprintf("A %q signal was received, Deckhouse is restarting", sig.String()))
+				logger.Info(fmt.Sprintf("%q signal was received, deckhouse is restarting", sig.String()))
 				if err := telemetryShutdown(ctx); err != nil {
 					logger.Error("telemetry shutdown", log.Err(err))
 				}
@@ -355,7 +348,7 @@ func signalHandler(ctx context.Context, exitCh chan struct{}, operator *addonope
 					deckhouseBinaryToRun = deckhouseControllerWithCapsBinaryPath
 				}
 				if err := syscall.Exec(deckhouseBinaryToRun, []string{deckhouseBinaryToRun, "start"}, environ); err != nil {
-					log.Error("Couldn't restart Deckhouse", log.Err(err))
+					log.Error("Couldn't restart deckhouse", log.Err(err))
 					os.Exit(1)
 				}
 
@@ -425,57 +418,6 @@ func signalHandler(ctx context.Context, exitCh chan struct{}, operator *addonope
 			}
 		}
 	}
-}
-
-const cmLockName = "deckhouse-bootstrap-lock"
-
-func lockOnBootstrap(ctx context.Context, client *client.Client, logger *log.Logger) error {
-	bk := wait.Backoff{
-		Duration: 1 * time.Second,
-		Factor:   1.2,
-		Jitter:   1,
-		Steps:    10,
-		Cap:      5 * time.Minute,
-	}
-
-	err := retry.OnError(bk, func(err error) bool {
-		logger.Error("An error occurred during the bootstrap lock. Retrying", log.Err(err))
-		// retry on any error
-		return true
-	}, func() error {
-		if _, err := client.CoreV1().ConfigMaps(app.NamespaceDeckhouse).Get(ctx, cmLockName, v1.GetOptions{}); err != nil {
-			if apierrors.IsNotFound(err) {
-				return nil
-			}
-			return fmt.Errorf("get the '%s' configmap: %w", cmLockName, err)
-		}
-
-		logger.Info("Bootstrap lock ConfigMap exists. Waiting for bootstrap process to be done")
-
-		listOpts := v1.ListOptions{
-			FieldSelector: "metadata.name=" + cmLockName,
-			Watch:         true,
-		}
-		wch, err := client.CoreV1().ConfigMaps(app.NamespaceDeckhouse).Watch(ctx, listOpts)
-		if err != nil {
-			return fmt.Errorf("watch configmaps: %w", err)
-		}
-
-		for event := range wch.ResultChan() {
-			if event.Type == watch.Deleted {
-				break
-			}
-		}
-		wch.Stop()
-
-		logger.Info("Bootstrap lock has been released")
-
-		return nil
-	})
-	if err != nil {
-		return fmt.Errorf("on error: %w", err)
-	}
-	return nil
 }
 
 func registerTelemetry(ctx context.Context, logger *log.Logger) func(ctx context.Context) error {

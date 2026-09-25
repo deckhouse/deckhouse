@@ -70,7 +70,6 @@ import (
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/objectkeeper"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/packages/application"
 	applicationpackageversion "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/packages/application-package-version"
-	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/packages/module"
 	modulepackageversion "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/packages/module-package-version"
 	packagerepository "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/packages/package-repository"
 	packagerepositoryoperation "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/packages/package-repository-operation"
@@ -221,17 +220,8 @@ func NewDeckhouseController(
 		opts.Cache.ByObject[&v1alpha1.ApplicationPackageVersion{}] = cache.ByObject{}
 		opts.Cache.ByObject[&v1alpha1.ApplicationPackage{}] = cache.ByObject{}
 		opts.Cache.ByObject[&v1alpha1.Application{}] = cache.ByObject{}
-	}
-
-	// Module package sync (feature flag)
-	if app.ModulePackageSyncEnabled() {
 		opts.Cache.ByObject[&v1alpha1.ModulePackage{}] = cache.ByObject{}
 		opts.Cache.ByObject[&v1alpha1.ModulePackageVersion{}] = cache.ByObject{}
-	}
-
-	// Module v2 controller (feature flag)
-	if app.ModulePackagesEnabled() {
-		opts.Cache.ByObject[&v1beta1.Module{}] = cache.ByObject{}
 	}
 
 	admission, serveWebhooks := app.TakeOverAdmissionServer()
@@ -422,16 +412,6 @@ func NewDeckhouseController(
 		err = modulepackageversion.RegisterController(preflightCountDown, runtimeManager, dc, logger)
 		if err != nil {
 			return nil, fmt.Errorf("register module package version controller: %w", err)
-		}
-	}
-
-	// Module v2 controller (feature flag)
-	if app.ModulePackagesEnabled() {
-		logger.Info("Module v2 controller is enabled")
-
-		err = module.RegisterController(preflightCountDown, runtimeManager, pkgRuntime, logger)
-		if err != nil {
-			return nil, fmt.Errorf("register module v2 controller: %w", err)
 		}
 	}
 
