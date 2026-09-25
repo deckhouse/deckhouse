@@ -44,6 +44,7 @@ type HookForDestroyPipeline struct {
 	oldMasterIPForSSH string
 	commanderMode     bool
 	immutableNode     bool
+	confirm           ConfirmFunc
 }
 
 func NewHookForDestroyPipeline(getter kubernetes.KubeClientProviderWithCtx, sshProvider libcon.SSHProvider, nodeToDestroy string, commanderMode, immutableNode bool) *HookForDestroyPipeline {
@@ -53,7 +54,13 @@ func NewHookForDestroyPipeline(getter kubernetes.KubeClientProviderWithCtx, sshP
 		nodeToDestroy: nodeToDestroy,
 		commanderMode: commanderMode,
 		immutableNode: immutableNode,
+		confirm:       DefaultConfirm,
 	}
+}
+
+func (h *HookForDestroyPipeline) WithConfirm(confirm ConfirmFunc) *HookForDestroyPipeline {
+	h.confirm = confirm
+	return h
 }
 
 func (h *HookForDestroyPipeline) BeforeAction(ctx context.Context, runner infrastructure.RunnerInterface) (bool, error) {
@@ -86,7 +93,7 @@ func (h *HookForDestroyPipeline) BeforeAction(ctx context.Context, runner infras
 		return false, fmt.Errorf("Could not get kube client: %w", err)
 	}
 
-	err = removeControlPlaneRoleFromNode(ctx, kubeClient, h.getter, h.nodeToDestroy, h.commanderMode, h.immutableNode)
+	err = removeControlPlaneRoleFromNode(ctx, kubeClient, h.getter, h.nodeToDestroy, h.confirm, h.commanderMode, h.immutableNode)
 	if err != nil {
 		return false, fmt.Errorf("failed to remove control plane role from node '%s': %v", h.nodeToDestroy, err)
 	}
@@ -126,7 +133,19 @@ func (h *HookForDestroyPipeline) IsReady() error {
 	return nil
 }
 
-func removeControlPlaneRoleFromNode(ctx context.Context, kubeCl *client.KubernetesClient, kubeGetter kubernetes.KubeClientProviderWithCtx, nodeName string, commanderMode, immutableNode bool) error {
+func removeControlPlaneRoleFromNode(ctx context.Context, kubeCl *client.KubernetesClient, kubeGetter kubernetes.KubeClientProviderWithCtx, nodeName string, confirm ConfirmFunc, commanderMode, immutableNode bool) error {
+	if err := checkControlPlaneWithoutNode(ctx, kubeGetter, nodeName, confirm); err != nil {
+		return err
+	}
+
+	if err := checkEtcdQuorumBeforeRemoval(ctx, kubeGetter, nodeName); err != nil {
+		return err
+	}
+
+	if err := checkEtcdClusterHealthy(ctx, kubeGetter, nodeName); err != nil {
+		return fmt.Errorf("etcd without '%s': %w", nodeName, err)
+	}
+
 	if immutableNode {
 		return retireImmutableControlPlaneNode(ctx, kubeCl, kubeGetter, nodeName, commanderMode)
 	}
@@ -143,6 +162,10 @@ func removeControlPlaneRoleFromNode(ctx context.Context, kubeCl *client.Kubernet
 	err = waitEtcdHasNoMember(ctx, kubeGetter, nodeName)
 	if err != nil {
 		return fmt.Errorf("failed to check that etcd has no member '%s': %v", nodeName, err)
+	}
+
+	if err := checkEtcdClusterHealthy(ctx, kubeGetter, nodeName); err != nil {
+		return fmt.Errorf("etcd after '%s' left: %w", nodeName, err)
 	}
 
 	err = infra_utils.TryToDrainNode(ctx, kubeCl, nodeName, infra_utils.GetDrainConfirmation(commanderMode), infra_utils.DrainOptions{Force: true})
@@ -171,6 +194,10 @@ func retireImmutableControlPlaneNode(ctx context.Context, kubeCl *client.Kuberne
 
 	if err := waitEtcdHasNoMember(ctx, kubeGetter, nodeName); err != nil {
 		return fmt.Errorf("failed to check that etcd has no member '%s': %v", nodeName, err)
+	}
+
+	if err := checkEtcdClusterHealthy(ctx, kubeGetter, nodeName); err != nil {
+		return fmt.Errorf("etcd after '%s' left: %w", nodeName, err)
 	}
 
 	return nil
@@ -221,4 +248,23 @@ func removeLabelsFromNode(ctx context.Context, kubeCl *client.KubernetesClient, 
 
 		return nil
 	})
+}
+
+// checkControlPlaneWithoutNode asks whether the masters that stay are ready, the same
+// question the update pipeline asks before it recreates one. The answer can be waived the
+// same way: an operator who already knows the state of the cluster says no and goes on.
+func checkControlPlaneWithoutNode(ctx context.Context, kubeClientProvider kubernetes.KubeClientProviderWithCtx, nodeName string, confirm ConfirmFunc) error {
+	if confirm == nil {
+		confirm = DefaultConfirm
+	}
+
+	if !confirm(fmt.Sprintf("Do you want to wait for all control-plane nodes except %s to become ready?", nodeName)) {
+		return nil
+	}
+
+	if err := NewManagerReadinessChecker(kubeClientProvider).IsReadyAllExcept(ctx, nodeName); err != nil {
+		return fmt.Errorf("control plane without '%s': %w", nodeName, err)
+	}
+
+	return nil
 }
