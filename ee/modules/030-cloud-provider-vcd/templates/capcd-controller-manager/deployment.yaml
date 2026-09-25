@@ -24,6 +24,16 @@ security.deckhouse.io/security-policy-exception: capcd-controller-manager
   value: "true"
 - name: USE_K8S_ENV_AS_CONTROL_PLANE_IP
   value: "true"
+# KUBERNETES_SERVICE_HOST and KUBERNETES_SERVICE_PORT are needed on the bootstrap phase to make CAPI work without kube-proxy
+{{- if not .Values.global.clusterIsBootstrapped }}
+- name: KUBERNETES_SERVICE_HOST
+  valueFrom:
+    fieldRef:
+      apiVersion: v1
+      fieldPath: status.hostIP
+- name: KUBERNETES_SERVICE_PORT
+  value: "6443"
+{{- end }}
 {{- end }}
 
 {{- define "capcd_controller_manager_ports" -}}
@@ -75,7 +85,7 @@ periodSeconds: 10
 {{- $_ := set $capiConfig "image" $capiImage -}}
 {{- $_ := set $capiConfig "capiProviderName" "infrastructure-static" -}}
 {{- $_ := set $capiConfig "hostNetwork" true -}}
-{{- $_ := set $capiConfig "dnsPolicy" "ClusterFirstWithHostNet" -}}
+{{- $_ := set $capiConfig "dnsPolicy" (include "helm_lib_dns_policy_bootstraping_state" (list . "Default" "ClusterFirstWithHostNet")) -}}
 {{- $_ := set $capiConfig "nodeSelectorStrategy" "master" -}}
 {{- $_ := set $capiConfig "tolerationsStrategies" (list "wildcard") -}}
 {{- $_ := set $capiConfig "additionalArgs" (include "capcd_controller_manager_args" . | fromYamlArray) -}}
