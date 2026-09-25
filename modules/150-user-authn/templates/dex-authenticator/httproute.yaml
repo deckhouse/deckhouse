@@ -27,9 +27,6 @@ kind: HTTPRoute
 metadata:
   annotations:
     alb.network.deckhouse.io/backend-tls-settings: '{"mode": "SIMPLE", "insecureSkipVerify": true}'
-  {{- if and (include "helm_lib_module_https_route_tls_enabled" $context) $app.gatewayAPI.httpRouteCertificateSecretName }}
-    alb.network.deckhouse.io/tls-secrets: "{{ $crd.namespace }}/{{ $app.gatewayAPI.httpRouteCertificateSecretName }}"
-  {{- end }}
   {{- if $app.whitelistSourceRanges }}
     alb.network.deckhouse.io/whitelist-source-range: {{ $app.whitelistSourceRanges | join "," }}
   {{- end }}
