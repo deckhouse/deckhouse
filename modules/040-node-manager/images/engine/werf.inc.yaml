@@ -1,4 +1,4 @@
-{{- $version := "v0.1.12-pre7" }}
+{{- $version := "v0.1.12" }}
 {{- $kernelVersion := "v6.12.109-lvc30-signed" }}
 {{- /*
   The engine release tags carry io.deckhouse.engine.rootfs.roothash. It survives
