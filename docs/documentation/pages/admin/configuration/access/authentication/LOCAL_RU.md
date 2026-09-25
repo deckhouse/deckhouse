@@ -107,6 +107,10 @@ d8 iam user delete anton --keep-memberships
 
 Для административных действий над локальными пользователями используйте команды [`d8 iam user`](/products/kubernetes-platform/documentation/v1/cli/d8/reference/#d8-iam). Они создают ресурс UserOperation с `initiatorType: admin`, дожидаются выполнения операции и выводят результат.
 
+{% alert level="info" %}
+Удалить, пересоздать или выполнить над пользователем операцию `ResetPassword`, `Reset2FA`, `Lock` или `Unlock` можно только если у вас уже есть права, покрывающие роли, которые несёт email или членство в группах этого пользователя, либо вам явно разрешено назначать эти роли. `initiatorType: self` (самостоятельный сброс пароля пользователем) эту проверку не обходит. Подробнее — в [документации модуля `user-authn`](/modules/user-authn/usage.html#административные-операции).
+{% endalert %}
+
 При выполнении операций `ResetPassword`, `Reset2FA` и `Lock` удаляются объекты Dex OfflineSessions и RefreshToken, принадлежащие пользователю. Это завершает активные offline-сессии пользователя и требует повторной аутентификации.
 
 Примеры использования команд [`d8 iam user`](/products/kubernetes-platform/documentation/v1/cli/d8/reference/#d8-iam):
