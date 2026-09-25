@@ -62,6 +62,40 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 			ExecuteHookOnSynchronization: ptr.To(false),
 			FilterFunc:                   filterModuleConfig,
 		},
+		// Bindings 2-4: new-model resources - read-only snapshots for the State C check
+		// (isNewResourcesComplete). Names and filters match dvp_cluster_configuration.go.
+		{
+			Name:       "credential_secret_d8",
+			ApiVersion: "v1",
+			Kind:       "Secret",
+			NamespaceSelector: &types.NamespaceSelector{
+				NameSelector: &types.NameSelector{
+					MatchNames: []string{dvpNamespace},
+				},
+			},
+			NameSelector: &types.NameSelector{
+				MatchNames: []string{dvpCredentialSecretName},
+			},
+			ExecuteHookOnEvents:          ptr.To(false),
+			ExecuteHookOnSynchronization: ptr.To(false),
+			FilterFunc:                   filterCredentialSecret,
+		},
+		{
+			Name:                         "node_groups",
+			ApiVersion:                   "deckhouse.io/v1",
+			Kind:                         "NodeGroup",
+			ExecuteHookOnEvents:          ptr.To(false),
+			ExecuteHookOnSynchronization: ptr.To(false),
+			FilterFunc:                   filterNamedResource,
+		},
+		{
+			Name:                         "dvp_instance_classes",
+			ApiVersion:                   moduleConfigAPIVersion,
+			Kind:                         dvpInstanceClassKind,
+			ExecuteHookOnEvents:          ptr.To(false),
+			ExecuteHookOnSynchronization: ptr.To(false),
+			FilterFunc:                   filterNamedResource,
+		},
 	},
 }, handleDVPMigrationResources)
 
@@ -84,11 +118,14 @@ func handleDVPMigrationResources(_ context.Context, input *go_hook.HookInput) er
 		}
 	}
 
+	// State C: the bundle has already been applied. dvp_cluster_configuration.go (OnBeforeHelm) deletes
+	// the artifacts in this case; regenerating them here would resurrect them in the same module run,
+	// leaving the migration marker ConfigMap (and the MigrationPending alert) in place forever.
+	if isNewResourcesComplete(input, &pcc) {
+		return nil
+	}
+
 	// State B: PCC present, migration in progress - create artifacts in namespace (which now exists after Helm).
-	// State C (migration complete) is detected and handled by dvp_cluster_configuration.go (OnBeforeHelm),
-	// which fires on NodeGroup/DVPInstanceClass/ModuleConfig/Secret events and calls deleteMigrationArtifacts.
-	// Running createProviderClusterConfigurationResources in State C is safe: CreateOrUpdate is idempotent
-	// and dvp_cluster_configuration.go will delete the secret on the next (or concurrent) cycle.
 	var moduleConfiguration v1.DvpModuleConfiguration
 	if err := json.Unmarshal([]byte(input.Values.Get("cloudProviderDvp").String()), &moduleConfiguration); err != nil {
 		return fmt.Errorf("parse module configuration: %w", err)

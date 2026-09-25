@@ -12,42 +12,46 @@ Install `deckhouse-cli` (`d8`):
 sh -c "$(curl -fsSL https://raw.githubusercontent.com/deckhouse/deckhouse-cli/main/tools/install.sh)"
 ```
 
-Log in to the package registry with your [license token](https://license.deckhouse.io/):
+Log in to the OCI registry with your [license token](https://license.deckhouse.io/):
 
 ```bash
-d8 dk cr login -u license-token dev-registry.deckhouse.io --password <YOUR_TOKEN>
+d8 dk cr login -u license-token dev-registry.deckhouse.io --password <LICENSE_TOKEN>
 ```
 
-## Bootstrapping a new Application
+## Bootstrapping an Application package
 
-`d8 package bootstrap application <name>` creates a `<name>/` directory in the current working directory with the package skeleton and initializes a git repository with the first commit.
+To create a `<APPLICATION_NAME>/` directory in the current working directory with the package skeleton and initialize a Git repository with the first commit, run the command `d8 package bootstrap application <APPLICATION_NAME>`.
+
+Example:
 
 ```bash
 d8 package bootstrap application myapp --hooks
 cd myapp
-git remote add origin <gitlab-repo.git>
+git remote add origin <GITLAB_REPO_URL>
 git push --set-upstream origin main
 ```
 
-**Flags:**
+Available options:
 
-| Flag | Description |
+| Option | Description |
 |---|---|
 | `--hooks` | Generate a Go hooks skeleton |
 | `--werf` | Use werf for image builds |
 | `--extended` | Add an extended set of files |
-| `-o, --output <path>` | Custom output path (default: `<cwd>/<name>`) |
+| `-o, --output <OUTPUT_PATH>` | Path where the package will be created (default: `<CURRENT_WORKING_DIRECTORY>/<APPLICATION_NAME>`) |
 
 ## Project structure
+
+In the generated project, the package manifest, schemas, templates, hooks, images, documentation, and continuous integration and continuous delivery (CI/CD) configuration are stored in separate directories and files.
 
 ```text
 myapp/
 ├── .gitignore
-├── .gitlab-ci.yml          # CI/CD pipeline
+├── .gitlab-ci.yml          # CI/CD pipeline.
 ├── changelog.yaml
 ├── docs/
-│   └── README.md           # Application documentation
-├── hooks/                  # Go hooks
+│   └── README.md           # Application documentation.
+├── hooks/                  # Go hooks.
 │   ├── hooks.yaml
 │   └── batch/
 │       ├── go.mod
@@ -55,15 +59,15 @@ myapp/
 │       ├── main.go
 │       └── triggers/
 │           └── hook.go
-├── images/                 # Image sources or pull instructions
+├── images/                 # Image sources or pull instructions.
 │   └── myapp/
 │       └── werf.inc.yaml
 ├── openapi/
-│   ├── config-values.yaml  # OpenAPI schema for Application.spec.settings
-│   └── values.yaml         # OpenAPI schema for Helm values
+│   ├── config-values.yaml  # OpenAPI schema for Application.spec.settings.
+│   └── values.yaml         # OpenAPI schema for Helm values.
 ├── oss.yaml
-├── package.yaml            # Package manifest
-└── templates/              # Helm templates
+├── package.yaml            # Package manifest.
+└── templates/              # Helm templates.
     ├── deployment.yaml
     ├── registry-secret.yaml
     └── service.yaml
@@ -71,28 +75,30 @@ myapp/
 
 ## package.yaml
 
-The central manifest for an Application package. Defines metadata, type, requirements, and compatibility.
+The `package.yaml` file is the main manifest for an Application package and defines metadata, type, requirements, and compatibility.
+
+Example `package.yaml` file:
 
 ```yaml
 apiVersion: v1
 type: "Application"
 name: redis
 descriptions:
-  ru: "Redis - in-memory база данных"
-  en: "Redis - in-memory database"
+  ru: "<RU_DESCRIPTION>"
+  en: "Redis — in-memory database"
 # Injected automatically at build time.
 version: "v1.0.1"
 stage: "Preview"
 category: "Databases"
-# Environmental Requirements.
+# Environment requirements.
 requirements:
-  deckhouse: 
+  deckhouse:
     constraint: ">= 1.70"
-  kubernetes: 
+  kubernetes:
     constraint: ">= 1.31"
   modules:
     mandatory:
-      - name: cert-manager 
+      - name: cert-manager
         constraint: ">= 1.0.0"
 ```
 
@@ -101,14 +107,14 @@ requirements:
 | Field | Required | Description |
 |---|---|---|
 | `name` | Yes | Unique package name |
-| `descriptions` | Yes | Localized description for catalog and UI (`ru`, `en`) |
-| `version` | Yes | Semver version; injected at build time |
+| `descriptions` | Yes | Localized description for the catalog and user interface (UI) (`ru`, `en`) |
+| `version` | Yes | Version in Semantic Versioning (SemVer) format; added automatically at build time |
 | `type` | Yes | `Application` or `Module` |
 | `stage` | Yes | Maturity stage (`Preview`, `General Availability`, etc.) |
 | `category` | Yes | Category for catalog classification |
-| `requirements.deckhouse` | No | Minimum DP version constraint |
+| `requirements.deckhouse` | No | Minimum Deckhouse Platform (DP) version constraint |
 | `requirements.kubernetes` | No | Minimum Kubernetes version constraint |
-| `requirements.modules` | No | Module dependencies (semver constraints) |
+| `requirements.modules` | No | Module dependencies (SemVer constraints) |
 
 ## OpenAPI schemas
 
@@ -117,20 +123,22 @@ The `openapi/` directory defines two schemas:
 - `config-values.yaml` (or `settings.yaml`) — the schema for `Application.spec.settings` (user-facing configuration).
 - `values.yaml` — the schema for the full set of Helm values.
 
-### Defaulting from cluster resource grants (`x-deckhouse-grantable-resource`)
+### Defaulting a grantable cluster-wide resource value (x-deckhouse-grantable-resource)
 
-A `settings` field of `type: string` can be bound to a grantable cluster resource managed by the
-[multitenancy-manager](/modules/multitenancy-manager/) (for example a `StorageClass`). When the field is bound:
+A `settings` field of type `string` can be bound to a grantable cluster-wide resource managed by the
+[`multitenancy-manager`](/modules/multitenancy-manager/) (for example, a StorageClass).
 
-- if the user leaves it empty, the project's **default** granted name is injected into the values;
-- if the user provides a value, it is checked against the names **available** to the project, and rejected otherwise.
+When the field is bound and the user leaves it empty, the resource name configured as the project default is injected into `values`. When the user provides a value, it is checked against the resources available to the project. A value that is not in this list is rejected.
 
-Add the `x-deckhouse-grantable-resource` extension to the field and reference the grantable resource by name (the
-`AvailableClusterResource` / `GrantableClusterResourceDefinition` name, e.g. `storageclasses`). The
-underlying resource's GVK is owned by the grant definition and must **not** be specified here.
+To bind the field to a cluster-wide resource, add the `x-deckhouse-grantable-resource` extension and specify the name of the resource available to the project through a grant (`AvailableClusterResource` or `GrantableClusterResourceDefinition`), for example, `storageclasses`.
+
+{% alert level="info" %}
+The resource group, version, and kind (GVK) are defined by the grant. You do not need to specify them in `openapi/settings.yaml`.
+{% endalert %}
+
+Example `openapi/settings.yaml` with `x-deckhouse-grantable-resource`:
 
 ```yaml
-# openapi/settings.yaml
 type: object
 properties:
   storageClass:
@@ -146,16 +154,17 @@ properties:
 
 Behavior:
 
-- The default is resolved per project from the `AvailableClusterResource` in the Application's namespace, so different projects can receive different defaults.
-- An explicit user value always wins over the injected default.
-- If the multitenancy feature is inactive for the resource (the CRD is absent, no catalog exists for the project, or the catalog has no default), the field is left untouched — no defaulting and no validation.
+- The default is resolved per project from the AvailableClusterResource in the Application's namespace, so different projects can receive different defaults.
+- An explicitly specified user value has higher priority than the project default.
+- If the custom resource definition (CRD) is absent, no catalog exists for the project, or the catalog has no default value, the field remains unchanged. No value is injected or validated.
 
-### Fields that cannot be changed after installation (`x-deckhouse-immutable`)
+### Immutable fields (x-deckhouse-immutable)
 
-Some settings only make sense at install time: changing a `storageClass` once the volumes are provisioned either has no effect or breaks the application. Mark such a field with `x-deckhouse-immutable: true` and it can be chosen when the application is created and never again.
+Some settings should not be changed after the application configuration is applied. For example, changing a `storageClass` after volumes have been created either has no effect or can cause application failures. To prevent changes to the value of such a field after the application configuration has been successfully applied, add the `x-deckhouse-immutable: true` extension to it.
+
+Example `openapi/settings.yaml` with `x-deckhouse-immutable`:
 
 ```yaml
-# openapi/settings.yaml
 type: object
 properties:
   storageClass:
@@ -174,22 +183,27 @@ properties:
 
 Behavior:
 
-- Only the literal `true` marks a field. Any other value is ignored.
-- The mark on an object freezes the whole block as one value: any change below it is rejected and reported as the block, including fields that would otherwise be editable. Mark an object only when the block makes sense as a single choice; to freeze one field, mark that field, the way `postgres.storageClass` does above while `postgres.volumeSize` stays editable.
-- An update that changes a marked field is rejected by the validating webhook, naming the field.
-- The web console renders a marked field read-only in the edit form of an installed application, and editable in the install form.
-- Comparison happens after schema defaults are applied, so leaving a marked key out of the manifest is allowed only when the key has a `default` that restores the value the application already runs with. Removing a key without a default is rejected, and so is removing a block that contains marked fields: defaults never reach inside a block the manifest no longer has, so the frozen values would be lost.
+- The extension is effective only when set to `true`. Any other value is ignored.
+- When `x-deckhouse-immutable` is added to an object, the entire object becomes immutable. After the application configuration has been successfully applied for the first time, changing any nested field is rejected, even if `x-deckhouse-immutable` is not set on that field. Set the extension on an object only when the entire object must be immutable. To make only one field immutable, add `x-deckhouse-immutable` directly to it, as with `postgres.storageClass` in the example above. In this case, the restriction does not apply to `postgres.volumeSize`, and its value can be changed.
+- If an update changes an immutable value, the validating webhook rejects it and reports the field name.
+- In the web interface, the value of a field with the extension can be set when installing the application. In the edit form of an installed application, the field is read-only.
+- Comparison uses the configuration that was actually applied, after schema defaults are applied. Therefore, a field with the extension can be omitted from the manifest only if its `default` matches the value that has already been applied. If there is no default value or it differs from the applied value, the change is rejected.
+
+{% alert level="info" %}
+If an entire object is removed from the manifest, default values are not applied to its nested fields. Therefore, removing an object that contains fields using `x-deckhouse-immutable` can cause frozen values to be lost and is rejected.
+{% endalert %}
+
 - The mark is not inherited into array elements or map entries that the update adds — a new element has no previous value to be frozen against.
 
 ## Local build
 
-Build and push the package to a registry:
+To build and publish the package to an OCI registry, run:
 
 ```bash
 d8 package build -v v0.0.1 -r dev-registry.deckhouse.io/deckhouse/packages
 ```
 
-For local development, use the [payload-registry](https://deckhouse.ru/modules/payload-registry/) module as a personal registry.
+For local development, use the [`payload-registry`](/modules/payload-registry/) module as your own container image registry.
 
 ## Linting
 
@@ -199,64 +213,61 @@ Validate the package structure and configuration:
 d8 package verify
 ```
 
-Reports errors and warnings based on `.pkglint.yaml` and built-in rules.
+The command reports errors and warnings based on `.pkglint.yaml` and built-in rules.
 
 ## CI/CD setup
 
+The CI/CD pipeline publishes package releases to the OCI registry. To publish a release, configure the OCI registry credentials, then create a Git tag in SemVer format and push it to the repository.
+
 ### Environment variables
+
+The pipeline uses the following variables to authenticate to the OCI registry:
 
 | Variable | Description |
 |---|---|
-| `PACKAGES_REGISTRY_LOGIN` | Registry login for publishing |
-| `PACKAGES_REGISTRY_PASSWORD` | Registry password or token |
+| `PACKAGES_REGISTRY_LOGIN` | OCI registry username for publishing |
+| `PACKAGES_REGISTRY_PASSWORD` | OCI registry password or token |
 
 ### Triggering a release
 
-The pipeline is triggered by a semver git tag:
+The pipeline is triggered by a Git tag in SemVer format:
 
 ```bash
 git tag v0.1.0
 git push origin v0.1.0
 ```
 
-The pipeline builds the package and pushes it to the registry. Once the pipeline completes, the package version is available for scanning via PackageRepository.
+The pipeline builds the package and pushes it to the OCI registry. Once the pipeline completes, the package version is available for scanning via PackageRepository.
 
 ## OCI artifact layout in the registry
 
-```text
-registry.deckhouse.io/deckhouse/<edition>/packages:<name>
-    Package name tag — for listing support
+The package and related data are published to an OCI-compatible registry. The package bundle, additional images, and version metadata are stored at separate paths.
 
-registry.deckhouse.io/deckhouse/<edition>/packages/<name>:<version>
-    Bundle — contains templates, openapi/, hooks/
-
-registry.deckhouse.io/deckhouse/<edition>/packages/<name>/extra/<image>:<version>
-    Additional images (application containers)
-
-registry.deckhouse.io/deckhouse/<edition>/packages/<name>/version:<version>
-    Version metadata — contains package.yaml, version.json, changelog.yaml
-
-registry.deckhouse.io/deckhouse/<edition>/packages/<name>/version:<release-channel>
-    Recommended version for a release channel
-```
+| Path | Description |
+|---|---|
+| `registry.deckhouse.io/deckhouse/<EDITION>/packages:<PACKAGE_NAME>` | Package name tag — used to list packages |
+| `registry.deckhouse.io/deckhouse/<EDITION>/packages/<PACKAGE_NAME>:<PACKAGE_VERSION>` | Bundle — contains templates, `openapi/`, `hooks/` |
+| `registry.deckhouse.io/deckhouse/<EDITION>/packages/<PACKAGE_NAME>/extra/<IMAGE_NAME>:<PACKAGE_VERSION>` | Additional images (application containers) |
+| `registry.deckhouse.io/deckhouse/<EDITION>/packages/<PACKAGE_NAME>/version:<PACKAGE_VERSION>` | Version metadata — contains `package.yaml`, `version.json`, `changelog.yaml` |
+| `registry.deckhouse.io/deckhouse/<EDITION>/packages/<PACKAGE_NAME>/version:<RELEASE_CHANNEL>` | Recommended version for a release channel |
 
 ### Bundle contents
 
-The main bundle image (`<name>:<version>`) contains:
+The main bundle image (`<PACKAGE_NAME>:<PACKAGE_VERSION>`) contains:
 
 ```text
-├── package.yaml       # Package manifest
-├── openapi/           # Settings and values schemas
-├── templates/         # Helm templates
-└── hooks/             # Lifecycle hooks
+├── package.yaml       # Package manifest.
+├── openapi/           # Settings and values schemas.
+├── templates/         # Helm templates.
+└── hooks/             # Lifecycle hooks.
 ```
 
 ### Version metadata image contents
 
-The metadata image (`<name>/version:<version>`) contains:
+The metadata image (`<PACKAGE_NAME>/version:<PACKAGE_VERSION>`) contains:
 
 ```text
-├── package.yaml       # Package manifest
-├── version.json       # Semver version
-└── changelog.yaml     # Release notes
+├── package.yaml       # Package manifest.
+├── version.json       # SemVer version.
+└── changelog.yaml     # Release notes.
 ```

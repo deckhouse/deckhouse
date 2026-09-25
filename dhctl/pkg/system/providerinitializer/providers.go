@@ -21,6 +21,7 @@ import (
 	"strings"
 
 	flag "github.com/spf13/pflag"
+	"k8s.io/client-go/rest"
 
 	libcon "github.com/deckhouse/lib-connection/pkg"
 	"github.com/deckhouse/lib-connection/pkg/kube"
@@ -78,6 +79,17 @@ func WithKubeConfig(kubeConfig, kubeConfigContext string, inCluster bool) Provid
 			KubeConfigContext:   kubeConfigContext,
 			KubeConfigInCluster: inCluster,
 		}
+	}
+}
+
+// WithKubeRestConfig points the kube provider straight at the API server.
+// The resulting kube.Config is a "rest" mode config, so lib-connection serves it
+// with a no-action runner: no SSH session and no kubectl proxy on a master.
+// Unlike a kubeconfig it is not impersonated - the caller's credentials are the
+// identity dhctl acts under, as they were up to v1.76.
+func WithKubeRestConfig(restConfig *rest.Config) ProviderOptions {
+	return func(o *providerOptions) {
+		o.kubeConfig = &kube.Config{RestConfig: restConfig}
 	}
 }
 

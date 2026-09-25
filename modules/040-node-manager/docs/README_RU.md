@@ -323,6 +323,7 @@ nodeUsers:
 {% offtopic title="Пример данных..." %}
 ```yaml
 nodeGroup:
+  cloudProviderType: openstack
   cri:
     type: Containerd
   disruptions:

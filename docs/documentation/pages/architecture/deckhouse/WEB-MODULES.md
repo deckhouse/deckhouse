@@ -20,7 +20,7 @@ The following simplifications are made in the diagram:
 
 The Level 2 C4 architecture of the [`console`](/modules/console/) module and its interaction with other DP components are shown in the following diagram:
 
-![Console module architecture](../../images/architecture/deckhouse/c4-l2-deckhouse-console.png)
+![Console module architecture](../../images/architecture/deckhouse/c4-l2-deckhouse-console.svg)
 
 {% alert level="info" %}
 The numbers in the diagram indicate the order in which the user's request passes through the `frontend`, `backend`, and `nginx` components.
@@ -83,7 +83,7 @@ The following simplifications are made in the diagram:
 
 The Level 2 C4 architecture of the [`documentation`](/modules/documentation/) module and its interaction with other DP components are shown in the following diagram:
 
-![Documentation module architecture](../../images/architecture/deckhouse/c4-l2-deckhouse-documentation.png)
+![Documentation module architecture](../../images/architecture/deckhouse/c4-l2-deckhouse-documentation.svg)
 
 {% alert level="info" %}
 The numbers in the diagram indicate the order in which the user's request passes through the `web` component:
@@ -139,7 +139,7 @@ The following simplifications are made in the diagram:
 
 The Level 2 C4 architecture of the [`deckhouse-tools`](/modules/deckhouse-tools/) module and its interaction with other DP components are shown in the following diagram:
 
-![Deckhouse-tools module architecture](../../images/architecture/deckhouse/c4-l2-deckhouse-deckhouse-tools.png)
+![Deckhouse-tools module architecture](../../images/architecture/deckhouse/c4-l2-deckhouse-deckhouse-tools.svg)
 
 {% alert level="info" %}
 The numbers in the diagram indicate the order in which the user's request passes through the `web` component.

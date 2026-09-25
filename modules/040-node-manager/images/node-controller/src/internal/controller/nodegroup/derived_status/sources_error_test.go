@@ -65,34 +65,6 @@ func newDeniedSecretService(t *testing.T, deniedNames ...string) *Service {
 	return &Service{Client: c}
 }
 
-func TestReadCloudProviderData_ForbiddenIsAnError(t *testing.T) {
-	s := newDeniedSecretService(t, cloudProviderSecretName)
-
-	_, err := s.readCloudProviderData(t.Context())
-
-	require.ErrorContains(t, err, "read cloud provider secret")
-}
-
-func TestReadCloudProviderData_NotFoundIsEmpty(t *testing.T) {
-	s := newTestService(t)
-
-	data, err := s.readCloudProviderData(t.Context())
-
-	require.NoError(t, err)
-	require.Empty(t, data)
-}
-
-func TestComputeWithCloudChecks_UnreadableSecretAbortsInsteadOfPublishing(t *testing.T) {
-	s := newDeniedSecretService(t, cloudProviderSecretName)
-	ng := &v1.NodeGroup{}
-	ng.Name = "worker"
-	ng.Spec.NodeType = v1.NodeTypeCloudEphemeral
-
-	_, _, err := s.ComputeWithCloudChecks(t.Context(), ng)
-
-	require.Error(t, err)
-}
-
 func TestReadClusterConfiguration_ForbiddenIsAnError(t *testing.T) {
 	s := newDeniedSecretService(t, clusterConfigSecretName)
 
@@ -147,7 +119,7 @@ func TestComputeWithCloudChecks_AbsentSecretIsNotAnError(t *testing.T) {
 	ng.Name = "worker"
 	ng.Spec.NodeType = v1.NodeTypeCloudEphemeral
 
-	_, check, err := s.ComputeWithCloudChecks(t.Context(), ng)
+	_, check, err := s.ComputeWithCloudChecks(t.Context(), ng, testProvider(t, s, ng))
 
 	require.NoError(t, err)
 	require.False(t, check.Processed)

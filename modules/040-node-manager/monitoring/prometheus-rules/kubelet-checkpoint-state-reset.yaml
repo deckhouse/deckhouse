@@ -1,0 +1,34 @@
+- name: d8.kubelet-checkpoint-state-reset
+  rules:
+    - alert: D8KubeletCheckpointStateUnpinnedContainers
+      expr: |
+        max by (node, namespace, pod) (
+          kubelet_checkpoint_state_unpinned_containers{job="kubelet"}
+        ) > 0
+      for: 10m
+      labels:
+        tier: cluster
+        severity_level: "4"
+      annotations:
+        plk_markup_format: markdown
+        plk_protocol_version: "1"
+        plk_create_group_if_not_exists__d8_kubelet_checkpoint_state_reset: "D8KubeletCheckpointStateResetAlerts,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
+        plk_grouped_by__d8_kubelet_checkpoint_state_reset: "D8KubeletCheckpointStateResetAlerts,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
+        summary: Pod {{ $labels.namespace }}/{{ $labels.pod }} may run in a NUMA zone other than the one recorded by kubelet.
+        description: |
+          Kubelet on Node `{{ $labels.node }}` reset the memory manager checkpoint and recorded new NUMA zones for Pod `{{ $labels.namespace }}/{{ $labels.pod }}`. Zones are applied only when a container is created, so the running containers stay in their previous zones, which may differ from the recorded ones.
+
+          As a result, the zone the Pod really uses may also be assigned to another Guaranteed Pod, causing both Pods to share its memory resources. The Pod's CPUs and memory may also be assigned to different NUMA zones, which slows down its memory access.
+
+          The Pod is not restarted automatically. The restart time depends on the workload. To restore resource isolation, do the following:
+
+          - To recreate the Pod's containers in newly assigned NUMA zones, delete the Pod:
+
+            ```bash
+            d8 k -n {{ $labels.namespace }} delete pod {{ $labels.pod }}
+            ```
+
+          - For a virtual machine, perform a live migration to another node instead, without stopping it.
+          - If the node runs many such Pods, you can drain it instead of deleting them one by one.
+
+          The alert resolves within a few minutes after the Pod is recreated. No kubelet restart is needed.

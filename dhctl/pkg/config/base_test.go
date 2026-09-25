@@ -708,11 +708,11 @@ internalNetworkCIDRs:
 		// resolve+download vars instead of hitting the registry, copying the
 		// real schema from the provider's candi so these tests keep exercising
 		// actual YandexClusterConfiguration validation.
-		origDigest := resolveProviderBundleDigest
-		resolveProviderBundleDigest = func(_ string) (string, error) {
-			return "sha256:test-yandex-digest", nil
+		origDigest := resolveProviderBundleRef
+		resolveProviderBundleRef = func(_ context.Context, _ string, _ providerModuleLookup, _ *options.GlobalOptions) (providerBundleRef, error) {
+			return providerBundleRef{Digest: "sha256:test-yandex-digest"}, nil
 		}
-		t.Cleanup(func() { resolveProviderBundleDigest = origDigest })
+		t.Cleanup(func() { resolveProviderBundleRef = origDigest })
 
 		origDownload := downloadProviderBundle
 		downloadProviderBundle = func(_ context.Context, _, dest, _ string, _ image.RegistryConfig, _ bool) error {

@@ -178,3 +178,33 @@ func TestCreateProvidersAllowMissingConnectionConfig(t *testing.T) {
 	require.NotNil(t, kubeProvider)
 	require.NoError(t, cleanup())
 }
+
+// TestCreateProvidersAPIServerWithoutConnectionConfig covers the case Deckhouse
+// Commander hits for clusters it reaches only through its AMPG tunnel: an API
+// server endpoint and no SSH connection config. The kube provider must come up
+// anyway, and the SSH flags of the dhctl-server process must not be mistaken for
+// the cluster's.
+func TestCreateProvidersAPIServerWithoutConnectionConfig(t *testing.T) {
+	plantSSHKey(t)
+
+	sshProviderInitializer, kubeProvider, cleanup, err := CreateProviders(
+		t.Context(), "", false, t.TempDir(),
+		WithAPIServer(&APIServerConnection{
+			URL:   "https://ampg-api-server-0d9f.example:6443",
+			Token: "commander-agent-token",
+		}),
+	)
+	require.NoError(t, err)
+	require.Nil(t, sshProviderInitializer)
+	require.NotNil(t, kubeProvider)
+	require.NoError(t, cleanup())
+}
+
+func TestAPIServerConnectionDefined(t *testing.T) {
+	assert.False(t, (*APIServerConnection)(nil).Defined())
+	assert.False(t, (&APIServerConnection{Token: "token"}).Defined())
+	assert.True(t, (&APIServerConnection{URL: "https://api.example:6443"}).Defined())
+
+	assert.Nil(t, (*APIServerConnection)(nil).RestConfig())
+	assert.Nil(t, (&APIServerConnection{}).RestConfig())
+}

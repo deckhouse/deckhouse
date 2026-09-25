@@ -27,6 +27,17 @@ import (
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
 )
 
+// Names of the repositories the module packages come from during the migration
+// off the module sources.
+const (
+	// moduleSourceNameDeckhouse is the built-in module source shipped with the platform.
+	moduleSourceNameDeckhouse = "deckhouse"
+
+	// moduleSourceNameFlant is the module source present on the clusters
+	// managed by Flant.
+	moduleSourceNameFlant = "flant"
+)
+
 // excludedModuleSources lists the platform-owned sources. The platform ships
 // their repositories itself with live registry credentials, like the
 // "deckhouse" repository from the deckhouse module templates; a snapshot of
@@ -42,13 +53,12 @@ func (s *syncer) syncPackageRepositories(ctx context.Context) error {
 		return fmt.Errorf("list module sources: %w", err)
 	}
 
-	for idx := range sources.Items {
-		source := &sources.Items[idx]
+	for _, source := range sources.Items {
 		if slices.Contains(excludedModuleSources, source.Name) || !source.DeletionTimestamp.IsZero() {
 			continue
 		}
 
-		if err := s.ensurePackageRepository(ctx, source); err != nil {
+		if err := s.ensurePackageRepository(ctx, &source); err != nil {
 			return err
 		}
 	}
@@ -65,8 +75,14 @@ func (s *syncer) syncPackageRepositories(ctx context.Context) error {
 // does not carry (scan interval, login, password) are never touched, so user
 // edits to them survive a restart.
 func (s *syncer) ensurePackageRepository(ctx context.Context, source *v1alpha1.ModuleSource) error {
+	desired := v1alpha1.PackageRepositorySpecRegistry{
+		Scheme:    source.Spec.Registry.Scheme,
+		Repo:      source.Spec.Registry.Repo,
+		DockerCFG: source.Spec.Registry.DockerCFG,
+		CA:        source.Spec.Registry.CA,
+	}
+
 	name := PackageRepositoryNameForModuleSource(source.Name)
-	desired := packageRepositoryRegistryFromModuleSource(source)
 
 	repo := new(v1alpha1.PackageRepository)
 	err := s.reader.Get(ctx, client.ObjectKey{Name: name}, repo)
@@ -119,15 +135,4 @@ func (s *syncer) ensurePackageRepository(ctx context.Context, source *v1alpha1.M
 	s.logger.Debug("package repository registry refreshed from the module source", slog.String("name", name))
 
 	return nil
-}
-
-// packageRepositoryRegistryFromModuleSource maps the source registry block onto the repository shape.
-// Login and password have no source counterpart and stay zero.
-func packageRepositoryRegistryFromModuleSource(source *v1alpha1.ModuleSource) v1alpha1.PackageRepositorySpecRegistry {
-	return v1alpha1.PackageRepositorySpecRegistry{
-		Scheme:    source.Spec.Registry.Scheme,
-		Repo:      source.Spec.Registry.Repo,
-		DockerCFG: source.Spec.Registry.DockerCFG,
-		CA:        source.Spec.Registry.CA,
-	}
 }

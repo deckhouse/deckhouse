@@ -15,6 +15,8 @@
 package checks
 
 import (
+	"context"
+	"errors"
 	"path/filepath"
 	"testing"
 
@@ -23,6 +25,7 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app/options"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/immutable"
+	preflight "github.com/deckhouse/deckhouse/dhctl/pkg/preflight"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/cache"
 )
 
@@ -49,7 +52,7 @@ func TestImmutableKubeconfigOut(t *testing.T) {
 				tt.commanderMode,
 			)
 
-			err := check.Run(t.Context())
+			_, err := check.Run(t.Context())
 			if !tt.wantErr {
 				require.NoError(t, err)
 				return
@@ -91,7 +94,7 @@ func TestImmutableKubeconfigKept(t *testing.T) {
 				&options.GlobalOptions{TmpDir: tmpDir},
 			)
 
-			err := check.Run(t.Context())
+			_, err := check.Run(t.Context())
 			if tt.wantMessage == "" {
 				require.NoError(t, err)
 				return
@@ -128,7 +131,7 @@ func TestImmutableSupportedProvider(t *testing.T) {
 				ProviderName: tt.provider,
 			})
 
-			err := check.Run(t.Context())
+			_, err := check.Run(t.Context())
 			if tt.wantMessage == "" {
 				require.NoError(t, err)
 				return
@@ -139,4 +142,38 @@ func TestImmutableSupportedProvider(t *testing.T) {
 			require.Contains(t, err.Error(), config.StaticClusterType)
 		})
 	}
+}
+
+// A cloud bootstrap of immutable masters names no machines with --master-host: the provider
+// creates them. The check used to pass there, printing "the machines named with --master-host
+// answer and match the configuration written for them" about machines that did not exist —
+// a claim the operator has no way to tell apart from a real one. Seen live on
+// bootstrap_dh_engine_dvp.
+func TestImmutableMachinesAvailability(t *testing.T) {
+	t.Run("a cloud bootstrap, where no machine is named", func(t *testing.T) {
+		_, err := ImmutableMachinesAvailability(nil).Run(t.Context())
+
+		require.ErrorIs(t, err, preflight.ErrNotApplicable)
+		require.Contains(t, err.Error(), "--master-host")
+	})
+
+	t.Run("machines are named and answer", func(t *testing.T) {
+		called := false
+		_, err := ImmutableMachinesAvailability(func(context.Context) error {
+			called = true
+			return nil
+		}).Run(t.Context())
+
+		require.NoError(t, err)
+		require.True(t, called, "the bootstrapper's inventory read is what the check is for")
+	})
+
+	t.Run("a machine does not answer", func(t *testing.T) {
+		_, err := ImmutableMachinesAvailability(func(context.Context) error {
+			return errors.New("192.0.2.10: maintenance port is closed")
+		}).Run(t.Context())
+
+		require.ErrorContains(t, err, "maintenance port is closed")
+		require.NotErrorIs(t, err, preflight.ErrNotApplicable)
+	})
 }

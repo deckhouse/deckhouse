@@ -39,13 +39,14 @@ type config struct {
 }
 
 const (
-	initContainerCPURequest = "10m"
-	initContainerMemRequest = "16Mi"
+	initContainerCPU = "10m"
+	initContainerMem = "16Mi"
 )
 
-var initContainerResourceRequests = corev1.ResourceList{
-	corev1.ResourceCPU:    resource.MustParse(initContainerCPURequest),
-	corev1.ResourceMemory: resource.MustParse(initContainerMemRequest),
+// Limits equal requests: namespaces with ResourceQuota on limits.* reject pods without them.
+var initContainerResources = corev1.ResourceList{
+	corev1.ResourceCPU:    resource.MustParse(initContainerCPU),
+	corev1.ResourceMemory: resource.MustParse(initContainerMem),
 }
 
 //goland:noinspection SpellCheckingInspection
@@ -135,7 +136,8 @@ func addInitContainerToPod(_ context.Context, _ *kwhmodel.AdmissionReview, obj m
 			SeccompProfile:           &corev1.SeccompProfile{Type: seccompType},
 		},
 		Resources: corev1.ResourceRequirements{
-			Requests: initContainerResourceRequests.DeepCopy(),
+			Requests: initContainerResources.DeepCopy(),
+			Limits:   initContainerResources.DeepCopy(),
 		},
 	}
 

@@ -175,20 +175,33 @@ func (v *IsGrantedValidator) decide(ctx context.Context, req *admissionv1.Admiss
 	resolvedByDef := map[string]*resolve.Resolved{}
 
 	for _, mr := range refs {
-		fp, ok := engine.SelectFieldPath(mr.Reference.Spec.FieldPaths, group, version)
-		if !ok {
+		idx := engine.SelectFieldPathIndex(mr.Reference.Spec.FieldPaths, group, version, resourcePlural)
+		if idx < 0 {
 			continue
 		}
+		fp := mr.Reference.Spec.FieldPaths[idx]
+		// A path of one reference that cannot be evaluated skips that reference only, deliberately
+		// failing open. The GrantableClusterResourceReference webhook rejects such a path, but it runs
+		// with failurePolicy: Ignore, so a broken reference can still be stored (the webhook was down,
+		// or the object predates it). Failing the request here instead would, under this webhook's
+		// failurePolicy: Fail, block every CREATE/UPDATE of the reference's rule in every project
+		// because of one bad object; skipping costs only the checks that reference could not make
+		// anyway. The other references are still enforced, and the breakage stays visible in this log
+		// and in the reference's FieldPathsValid=False condition.
 		guardOK, err := engine.EvalMatch(v.factory, fp.Match, obj)
 		if err != nil {
-			return nil, fmt.Errorf("eval match: %w", err)
+			log.Error(err, "skipping reference: match.fieldPath cannot be evaluated",
+				"reference", mr.Reference.Name, "fieldPathIndex", idx, "path", fp.Match.FieldPath)
+			continue
 		}
 		if !guardOK {
 			continue
 		}
 		names, err := engine.StringValuesAt(v.factory, obj, fp.Path)
 		if err != nil {
-			return nil, fmt.Errorf("read field %q: %w", fp.Path, err)
+			log.Error(err, "skipping reference: path cannot be evaluated",
+				"reference", mr.Reference.Name, "fieldPathIndex", idx, "path", fp.Path)
+			continue
 		}
 		if len(names) == 0 {
 			continue

@@ -1112,6 +1112,37 @@ spec:
     template: ../rendered/constraint-template.yaml
     constraint: constraints/pss_restricted.yaml
     cases:
+    - name: allowed-by-exception-root-allowed-container-runs-non-root
+      violations: 'no'
+      assertionMessage: ''
+      fields:
+      - path: spec.securityContext.runAsNonRoot.allowedValue
+        scenario: speUnused
+      exception: ''
+      exceptionRef: ''
+      inventory:
+      - base: securityPolicyException
+        merge:
+          metadata:
+            name: allow-root-unused
+          spec:
+            securityContext:
+              runAsNonRoot:
+                allowedValue: false
+      object:
+        base: admissionPod
+        merge:
+          metadata:
+            labels:
+              security.deckhouse.io/security-policy-exception: allow-root-unused
+            name: allowed-by-exception-root-allowed-container-runs-non-root
+          spec:
+            containers:
+            - image: nginx
+              name: nginx
+              securityContext:
+                runAsNonRoot: true
+                runAsUser: 1000
     - name: 036-041-allowed-by-exception-root-user
       violations: 'no'
       assertionMessage: ''

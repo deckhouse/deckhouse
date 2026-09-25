@@ -488,6 +488,55 @@ spec:
       owner: default
 ```
 
+{% if page.cloud_type == 'selectel' %}
+
+### Как создать прерываемые узлы в Selectel
+
+Для инстансов, помеченных Nova-тегом `preemptible`, Selectel включает preemption. Установите параметр [`preemptible`](/modules/cloud-provider-openstack/latest/cr.html#openstackinstanceclass-v1-spec-preemptible) ресурса OpenStackInstanceClass в `true` — тег будет автоматически прикреплён к инстансу.
+
+Пример:
+
+```yaml
+apiVersion: deckhouse.io/v1
+kind: OpenStackInstanceClass
+metadata:
+  name: worker-preempt
+spec:
+  flavorName: SL1.4-8192
+  imageName: Ubuntu 24.04 LTS 64-bit
+  rootDiskSize: 30
+  preemptible: true
+---
+apiVersion: deckhouse.io/v1
+kind: NodeGroup
+metadata:
+  name: worker-preempt
+spec:
+  nodeType: CloudEphemeral
+  cloudInstances:
+    classReference:
+      kind: OpenStackInstanceClass
+      name: worker-preempt
+    minPerZone: 2
+    maxPerZone: 4
+    zones: [ru-3a]
+```
+
+Ограничения:
+
+- Тег `preemptible` — Selectel-специфичный механизм. CAPI-шаблон эмитит тег только когда `connection.authURL` кластера указывает на Selectel (`selcloud.ru` / `selectel`). В других OpenStack-облаках тег молча дропается: узел всё равно создаётся, но как обычная (не прерываемая) VM.
+- Параметр поддерживается только для NodeGroup типа CloudEphemeral, работающих на движке CAPI. Если OpenStackInstanceClass с `preemptible: true` используется в NodeGroup на движке MCM, параметр молча игнорируется — в MCM MachineClass нет поля для raw Nova-тегов. Узлы создаются как обычные VM.
+- В обоих случаях выше срабатывает Prometheus-алерт **OpenStackPreemptibleUnsupported** (с `reason=mcm` или `reason=non-selectel`), чтобы оператор узнал о молчаливом дропе, а не обнаружил его через недели по неизменившемуся счёту за облако. В описании алерта — точные команды для исправления каждого случая.
+- Движок управления выбирается отдельно для каждой NodeGroup. Если один OpenStackInstanceClass с `preemptible: true` используется одновременно в NodeGroup на движках CAPI и MCM, на стороне MCM алерт будет висеть постоянно — используйте отдельные OpenStackInstanceClass ресурсы для NodeGroup, работающих на разных движках, когда контракт по прерываемости различается.
+
+{% alert level="warning" %}
+Изменение параметра [`preemptible`](/modules/cloud-provider-openstack/latest/cr.html#openstackinstanceclass-v1-spec-preemptible) в существующем OpenStackInstanceClass приводит к изменению OpenStackMachineTemplate и пересозданию всех узлов соответствующей NodeGroup.
+{% endalert %}
+
+Если прерываемый инстанс завершается без `graceful shutdown`, соответствующий узел переходит в состояние `NotReady`. После обнаружения отсутствующего инстанса CAPO и MachineHealthCheck инициируют создание нового Machine и виртуальной машины. До завершения восстановления поды на потерянном узле могут отображаться в Kubernetes API в состоянии `Running`, хотя фактически они уже недоступны.
+
+{% endif %}
+
 ### Настройка LoadBalancer
 
 {% alert level="warning" %}

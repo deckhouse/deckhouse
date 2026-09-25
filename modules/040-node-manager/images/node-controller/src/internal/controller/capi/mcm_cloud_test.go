@@ -86,11 +86,11 @@ func TestApplyMachineClassSecret(t *testing.T) {
 	config, err := os.ReadFile(yandexMCMConfigPath)
 	require.NoError(t, err, "provider config-for-machine-controller-manager.yaml must exist")
 	r := machineClassSecretReconciler(t, config)
-	resolved := derived_status.ResolvedNodeGroup{Name: "worker", NodeType: deckhousev1.NodeTypeCloudEphemeral}
+	resolved := derived_status.ResolvedNodeGroup{Name: "worker", NodeType: deckhousev1.NodeTypeCloudEphemeral, CloudProviderType: "yandex"}
 
 	// The two calls reconcileCloudMCMs makes: the cloud-init once for the group, the
 	// Secret once per zone.
-	userData, err := r.machineClassUserData(t.Context(), resolved)
+	userData, err := r.machineClassUserData(t.Context(), resolved, cloudprovider.Registration{Type: "yandex"})
 	require.NoError(t, err)
 	require.NoError(t, r.applyMachineClassSecret(t.Context(),
 		resolved.Name, helmZoneSecretName, userData, yandexRenderContext(), config))

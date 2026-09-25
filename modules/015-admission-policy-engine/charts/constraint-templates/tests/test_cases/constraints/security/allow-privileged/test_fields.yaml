@@ -14,7 +14,7 @@ spec:
     - path: spec.securityContext.privileged.allowedValue
       level: container
       description: SPE override for privileged per container
-      requiredScenarios: [speMatch, speMismatch, speAbsent, speContainerSpecific]
+      requiredScenarios: [speMatch, speMismatch, speAbsent, speContainerSpecific, speUnused]
   applicableTracks:
     functional: true
     spePod: true

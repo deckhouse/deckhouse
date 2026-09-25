@@ -27,11 +27,11 @@ The Level 2 C4 architecture of the [`metallb`](/modules/metallb/) module and its
 
 MetalLB in Layer 2 mode:
 
-![Metallb module architecture in Layer 2 mode](../../images/architecture/network/c4-l2-metallb-l2.png)
+![Metallb module architecture in Layer 2 mode](../../images/architecture/network/c4-l2-metallb-l2.svg)
 
 MetalLB in BGP mode:
 
-![Metallb module architecture in BGP mode](../../images/architecture/network/c4-l2-metallb-bgp.png)
+![Metallb module architecture in BGP mode](../../images/architecture/network/c4-l2-metallb-bgp.svg)
 
 ## Module components
 

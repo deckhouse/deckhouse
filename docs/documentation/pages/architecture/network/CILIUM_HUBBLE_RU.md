@@ -21,7 +21,7 @@ description: Архитектура модуля cilium-hubble в Deckhouse Plat
 
 Архитектура модуля [`cilium-hubble`](/modules/cilium-hubble/) на уровне 2 модели C4 и его взаимодействия с другими компонентами Deckhouse Platform (DP) изображена на следующей диаграмме:
 
-![Архитектура модуля cilium-hubble](../../images/architecture/network/c4-l2-cilium-hubble.ru.png)
+![Архитектура модуля cilium-hubble](../../images/architecture/network/c4-l2-cilium-hubble.ru.svg)
 
 {% alert level="info" %}
 Номерами на схеме отмечен порядок прохождения запроса пользователя к компоненту hubble-ui:

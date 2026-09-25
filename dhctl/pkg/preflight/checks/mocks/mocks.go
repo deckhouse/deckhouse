@@ -21,7 +21,6 @@ import (
 	"github.com/stretchr/testify/mock"
 
 	libcon "github.com/deckhouse/lib-connection/pkg"
-	"github.com/deckhouse/lib-connection/pkg/ssh/session"
 )
 
 type MockNodeInterface struct {
@@ -152,112 +151,6 @@ func (m *MockCommand) WithStderrHandler(h func(line string)) {
 
 func (m *MockCommand) WithSSHArgs(args ...string) {
 	m.Called(args)
-}
-
-type MockSSHClient struct {
-	mock.Mock
-}
-
-func (m *MockSSHClient) OnlyPreparePrivateKeys() error {
-	args := m.Called()
-	return args.Error(0)
-}
-
-func (m *MockSSHClient) Start() error {
-	args := m.Called()
-	return args.Error(0)
-}
-
-func (m *MockSSHClient) Tunnel(address string) libcon.Tunnel {
-	args := m.Called(address)
-	return args.Get(0).(libcon.Tunnel)
-}
-
-func (m *MockSSHClient) ReverseTunnel(address string) libcon.ReverseTunnel {
-	args := m.Called(address)
-	return args.Get(0).(libcon.ReverseTunnel)
-}
-
-func (m *MockSSHClient) Command(name string, arg ...string) libcon.Command {
-	args := m.Called(name, arg)
-	return args.Get(0).(libcon.Command)
-}
-
-func (m *MockSSHClient) KubeProxy() libcon.KubeProxy {
-	args := m.Called()
-	return args.Get(0).(libcon.KubeProxy)
-}
-
-func (m *MockSSHClient) File() libcon.File {
-	args := m.Called()
-	return args.Get(0).(libcon.File)
-}
-
-func (m *MockSSHClient) UploadScript(scriptPath string, args ...string) libcon.Script {
-	mockArgs := m.Called(scriptPath, args)
-	return mockArgs.Get(0).(libcon.Script)
-}
-
-func (m *MockSSHClient) Check() libcon.Check {
-	args := m.Called()
-	return args.Get(0).(libcon.Check)
-}
-
-func (m *MockSSHClient) Stop() {
-	m.Called()
-}
-
-func (m *MockSSHClient) Loop(fn libcon.SSHLoopHandler) error {
-	args := m.Called(fn)
-	return args.Error(0)
-}
-
-func (m *MockSSHClient) Session() *session.Session {
-	args := m.Called()
-	return args.Get(0).(*session.Session)
-}
-
-func (m *MockSSHClient) PrivateKeys() []session.AgentPrivateKey {
-	args := m.Called()
-	return args.Get(0).([]session.AgentPrivateKey)
-}
-
-func (m *MockSSHClient) RefreshPrivateKeys() error {
-	args := m.Called()
-	return args.Error(0)
-}
-
-func (m *MockSSHClient) IsStopped() bool {
-	return false
-}
-
-type MockCheck struct {
-	mock.Mock
-}
-
-func (m *MockCheck) WithDelaySeconds(seconds int) libcon.Check {
-	args := m.Called(seconds)
-	return args.Get(0).(libcon.Check)
-}
-
-func (m *MockCheck) AwaitAvailability(ctx context.Context) error {
-	args := m.Called(ctx)
-	return args.Error(0)
-}
-
-func (m *MockCheck) CheckAvailability(ctx context.Context) error {
-	args := m.Called(ctx)
-	return args.Error(0)
-}
-
-func (m *MockCheck) ExpectAvailable(ctx context.Context) ([]byte, error) {
-	args := m.Called(ctx)
-	return args.Get(0).([]byte), args.Error(1)
-}
-
-func (m *MockCheck) String() string {
-	args := m.Called()
-	return args.String(0)
 }
 
 type MockSession struct {

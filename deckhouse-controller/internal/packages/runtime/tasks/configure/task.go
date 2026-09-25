@@ -25,6 +25,7 @@ import (
 	"github.com/deckhouse/module-sdk/pkg/settingscheck"
 
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/nelm"
+	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/resourcerequests"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/status"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/queue"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/addonutils"
@@ -52,30 +53,40 @@ type packageI interface {
 	SetMaintenance(state nelm.MaintenanceState)
 }
 
+// resourceSizer is implemented by packages whose CR carries per-workload resource
+// overrides. Optional: modules have no such field, so they do not implement it.
+type resourceSizer interface {
+	SetResourceRequests(requests []resourcerequests.Request)
+}
+
 // task validates and applies new settings to a package.
 // On success, sets ConditionSettingsValid to True.
 // On failure, wraps errors with appropriate status conditions.
 type task struct {
-	pkg             packageI
-	settings        addonutils.Values
-	settingsVersion int
-	maintenance     nelm.MaintenanceState
+	pkg              packageI
+	settings         addonutils.Values
+	settingsVersion  int
+	maintenance      nelm.MaintenanceState
+	resourceRequests []resourcerequests.Request
 
 	status *status.Service
 
 	logger *log.Logger
 }
 
-// NewTask creates a task that will validate and apply the given settings and maintenance mode.
+// NewTask creates a task that will validate and apply the given settings, maintenance
+// mode and per-workload resource overrides.
 // settingsVersion is the schema version from ModuleConfig.Spec.Version (0 if unset).
-func NewTask(pkg packageI, settings addonutils.Values, settingsVersion int, maintenance nelm.MaintenanceState, status *status.Service, logger *log.Logger) queue.Task {
+// resourceRequests is nil for packages that have no such field.
+func NewTask(pkg packageI, settings addonutils.Values, settingsVersion int, maintenance nelm.MaintenanceState, resourceRequests []resourcerequests.Request, status *status.Service, logger *log.Logger) queue.Task {
 	return &task{
-		pkg:             pkg,
-		settings:        settings,
-		settingsVersion: settingsVersion,
-		maintenance:     maintenance,
-		status:          status,
-		logger:          logger.Named(taskTracer).With(slog.String("name", pkg.GetName())),
+		pkg:              pkg,
+		settings:         settings,
+		settingsVersion:  settingsVersion,
+		maintenance:      maintenance,
+		resourceRequests: resourceRequests,
+		status:           status,
+		logger:           logger.Named(taskTracer).With(slog.String("name", pkg.GetName())),
 	}
 }
 
@@ -84,7 +95,7 @@ func (t *task) String() string {
 }
 
 // Execute validates settings and applies them to the package.
-// Sets ConditionSettingsValid on success or delegates error handling to status service.
+// Reports failures on ConditionConfigured; the Run task sets it True once the settings are applied.
 func (t *task) Execute(ctx context.Context) error {
 	if err := t.applySettings(ctx); err != nil {
 		t.status.HandleError(t.pkg.GetName(), status.ConditionConfigured, err)
@@ -93,6 +104,12 @@ func (t *task) Execute(ctx context.Context) error {
 
 	// The package owns its maintenance mode; the run task reads it back via GetMaintenance.
 	t.pkg.SetMaintenance(t.maintenance)
+
+	// Same path for the per-workload resource overrides, for the packages that
+	// have them: set here, read back by the nelm layer during the run.
+	if sizer, ok := t.pkg.(resourceSizer); ok {
+		sizer.SetResourceRequests(t.resourceRequests)
+	}
 
 	// Propagate the effective settings (user config + config-schema defaults)
 	// to the internal status service. The CR status handler will later commit

@@ -118,6 +118,16 @@ spec:
           - name: cert
             mountPath: /tmp/k8s-webhook-server/serving-certs
             readOnly: true
+    {{- if $bootstrapHostNetwork }}
+        env:
+          - name: KUBERNETES_SERVICE_HOST
+            valueFrom:
+              fieldRef:
+                apiVersion: v1
+                fieldPath: status.hostIP
+          - name: KUBERNETES_SERVICE_PORT
+            value: "6443"
+    {{- end }}
         resources:
           requests:
             {{- include "helm_lib_module_ephemeral_storage_only_logs" . | nindent 12 }}

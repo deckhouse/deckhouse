@@ -16,9 +16,8 @@ package checks
 
 import (
 	"context"
-	"errors"
 	"fmt"
-	"os/exec"
+	"strings"
 
 	libcon "github.com/deckhouse/lib-connection/pkg"
 
@@ -26,13 +25,77 @@ import (
 )
 
 type SudoAllowedCheck struct {
-	NodeInterface libcon.Interface
+	// NodeInterface is resolved when the check runs, not when its suite is built: see
+	// NodeInterfaceFunc.
+	NodeInterface NodeInterfaceFunc
 }
 
-const SudoAllowedCheckName preflight.CheckName = "sudo-allowed"
+// SudoInstalledCheck is the half of the old sudo check that asks whether the command exists at
+// all. It is a separate check because the two have different fixes — install a package, or edit
+// sudoers — and because the second is meaningless while the first fails.
+//
+// It applies to root as well. lib-connection wraps every privileged command in
+// `sudo -p SudoPassword -H -S -i bash -c …` unconditionally, on both backends and regardless of
+// the SSH user, so a root account on a node with no sudo binary fails at the first such command —
+// which is why this check does not exempt root, and why the old advice to "use root user for
+// bootstrap" was wrong.
+type SudoInstalledCheck struct {
+	NodeInterface NodeInterfaceFunc
+}
+
+const (
+	SudoInstalledCheckName preflight.CheckName = "sudo-installed"
+	SudoAllowedCheckName   preflight.CheckName = "sudo-allowed"
+)
+
+func (SudoInstalledCheck) Description() string {
+	return "sudo is installed on the node"
+}
+
+func (SudoInstalledCheck) Phase() preflight.Phase {
+	return preflight.PhasePostInfra
+}
+
+func (SudoInstalledCheck) RetryPolicy() preflight.RetryPolicy {
+	return preflight.NoRetry
+}
+
+func (c SudoInstalledCheck) Run(ctx context.Context) (string, error) {
+	nodeInterface, err := c.NodeInterface(ctx)
+	if err != nil {
+		return "", err
+	}
+	host := hostPhrase(nodeInterface)
+
+	if err := nodeInterface.Command("command", "-v", "sudo").Run(ctx); err != nil {
+		return "", preflight.Permanent(&preflight.Failure{
+			Checked:  fmt.Sprintf("`command -v sudo` on %s", host),
+			Observed: "sudo is not installed",
+			Expected: "sudo on PATH",
+			Fix: "install the sudo package on the node. dhctl runs privileged commands through sudo " +
+				"for every SSH user, including root.",
+			Err: err,
+		})
+	}
+	return fmt.Sprintf("sudo is installed on %s", host), nil
+}
+
+func SudoInstalled(nodeInterface NodeInterfaceFunc) preflight.Check {
+	check := SudoInstalledCheck{NodeInterface: nodeInterface}
+	return preflight.Check{
+		Name:        check.Name(),
+		Description: check.Description(),
+		Phase:       check.Phase(),
+		Retry:       check.RetryPolicy(),
+		Timeout:     preflight.NodeCheckTimeout,
+		Run:         check.Run,
+	}
+}
+
+func (SudoInstalledCheck) Name() preflight.CheckName { return SudoInstalledCheckName }
 
 func (SudoAllowedCheck) Description() string {
-	return "sudo is installed and allowed for user"
+	return "the SSH user may run commands through sudo"
 }
 
 func (SudoAllowedCheck) Phase() preflight.Phase {
@@ -40,42 +103,69 @@ func (SudoAllowedCheck) Phase() preflight.Phase {
 }
 
 func (SudoAllowedCheck) RetryPolicy() preflight.RetryPolicy {
-	return preflight.DefaultRetryPolicy
+	return preflight.NoRetry
 }
 
-// checkSudo checks that sudo is installed and that the SSH user
-// is allowed to execute commands through sudo.
+// checkSudo asks whether the SSH user may actually use sudo. Whether sudo exists at all is
+// sudo-installed's question, declared as a dependency of this one.
 func checkSudo(ctx context.Context, nodeInterface libcon.Interface) error {
-	checkInstalledCmd := nodeInterface.Command("command", "-v", "sudo")
-	if err := checkInstalledCmd.Run(ctx); err != nil {
-		return errors.New(`required command "sudo" is not installed; install sudo or use root user for bootstrap`)
-	}
+	host := hostPhrase(nodeInterface)
 
 	cmd := nodeInterface.Command("true")
 	cmd.Sudo(ctx)
 
-	if err := cmd.Run(ctx); err != nil {
-		if exitErr, ok := errors.AsType[*exec.ExitError](err); ok && exitErr.ExitCode() != 255 {
-			return errors.New(
-				"provided SSH user is not allowed to sudo; check that the password is correct and that the user is in the sudoers file",
-			)
+	if err := cmd.Run(ctx); err == nil {
+		return nil
+	} else {
+		// 255 is what the SSH transport itself exits with, so it says nothing about sudo; any
+		// other status came from the node and is sudo refusing. The status is read through
+		// exitStatus rather than *exec.ExitError, which the default backend never returns —
+		// this branch used to be unreachable and every refusal fell through to the wrapper.
+		if status, ok := exitStatus(err); ok && status != 255 {
+			return preflight.Permanent(&preflight.Failure{
+				Checked:  fmt.Sprintf("`sudo -n true` on %s", host),
+				Observed: firstNonEmpty(strings.TrimSpace(string(cmd.StderrBytes())), "sudo refused"),
+				Expected: "passwordless sudo for the SSH user, or a sudo password given to dhctl",
+				Fix: "add the SSH user to sudoers on the node, or pass the password with --ask-become-pass " +
+					"or becomePass in --connection-config. dhctl runs privileged commands through sudo " +
+					"for every SSH user, including root.",
+				Err: err,
+			})
 		}
 
-		return fmt.Errorf(
-			"unexpected error when checking sudo permissions for SSH user: %w\nstderr: %s",
-			err,
-			string(cmd.StderrBytes()),
-		)
+		// Status 255, or no status at all: the transport failed rather than sudo. The stderr is
+		// the node's if there is any, and the transport error is what to act on if there is not.
+		return &preflight.Failure{
+			Checked:  fmt.Sprintf("`sudo -n true` on %s", host),
+			Observed: firstNonEmpty(strings.TrimSpace(string(cmd.StderrBytes())), "the command did not complete"),
+			Expected: "an answer from sudo",
+			Fix:      "check that the node is reachable over SSH and that the SSH user can run commands on it",
+			Err:      err,
+		}
 	}
-
-	return nil
 }
 
-func (c SudoAllowedCheck) Run(ctx context.Context) error {
-	return checkSudo(ctx, c.NodeInterface)
+func firstNonEmpty(values ...string) string {
+	for _, value := range values {
+		if value != "" {
+			return value
+		}
+	}
+	return ""
 }
 
-func SudoAllowed(nodeInterface libcon.Interface) preflight.Check {
+func (c SudoAllowedCheck) Run(ctx context.Context) (string, error) {
+	nodeInterface, err := c.NodeInterface(ctx)
+	if err != nil {
+		return "", err
+	}
+	if err := checkSudo(ctx, nodeInterface); err != nil {
+		return "", err
+	}
+	return fmt.Sprintf("%s can sudo", hostPhrase(nodeInterface)), nil
+}
+
+func SudoAllowed(nodeInterface NodeInterfaceFunc) preflight.Check {
 	check := SudoAllowedCheck{
 		NodeInterface: nodeInterface,
 	}
@@ -85,6 +175,7 @@ func SudoAllowed(nodeInterface libcon.Interface) preflight.Check {
 		Description: check.Description(),
 		Phase:       check.Phase(),
 		Retry:       check.RetryPolicy(),
+		Timeout:     preflight.NodeCheckTimeout,
 		Run:         check.Run,
 	}
 }

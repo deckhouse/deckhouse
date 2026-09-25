@@ -60,20 +60,43 @@ The sample to copy from is **`files/v1x29/`**.
 
 **A. The module as a whole** — images, oss, CRDs, hooks, `_rules_v-1-30.tpl`, tests (as in the common steps above).
 
-**B. The `files/<revision>` directory** — usually 3 commands and that's it
+**B. The `files/<revision>` directory** — 3 commands and a re-apply step
+
+#### 1. Clone the required Istio tag
 
 ```bash
-# 1. Clone the required Istio tag
 git clone --depth 1 --branch 1.30.0 <ISTIO_REPO.git> /tmp/istio
 UP=/tmp/istio/manifests/charts/istio-control/istio-discovery
+```
 
-# 2. Copy the whole previous revision
+#### 2. Copy the whole previous revision
+
+```bash
 cp -r files/v1x29 files/v1x30
+```
 
-# 3. Replace only the upstream template bodies (no edits)
+#### 3. Replace the upstream template bodies
+
+```bash
 cp "$UP/files/injection-template.yaml"         files/v1x30/static/sidecar-injection-template.yaml
 cp "$UP/files/gateway-injection-template.yaml" files/v1x30/static/gateway-injection-template.yaml
 ```
+
+#### 4. Re-apply the Deckhouse deltas
+
+Step 3 overwrites them, so they have to go back in. **Both** static files carry deltas. Every
+one of them is marked with a `[Deckhouse]` comment — `grep -c '\[Deckhouse\]' files/v1x29/static/*.yaml`
+tells you how many to expect per file, and `diff` against the upstream bodies you just copied
+tells you whether anything else drifted.
+
+As of 1.29 the deltas are:
+
+| Delta | File | Where | Why |
+|-------|------|-------|-----|
+| `readOnlyRootFilesystem: true` | sidecar | init container, non-CNI branch | it needs no writable rootfs in practice |
+| `livenessProbe` | sidecar | `istio-proxy`, inside the status-port guard | admission-policy-engine's `requiredProbes` rejects a container without one |
+| `seccompProfile` | gateway | `istio-proxy` `securityContext` | Pod Security Standards `restricted` demands an explicit profile. Upstream sets none on templated gateways |
+| `livenessProbe` | gateway | `istio-proxy`, unconditional | same `requiredProbes` policy; the gateway template has no status-port switch |
 
 **For most minor bumps, this is enough.**
 `templates/sidecar-injection-values.yaml` and `sidecar-injection-config.yaml` are already present in the copy — **leave them alone** unless the static templates require new settings.
@@ -113,6 +136,8 @@ Istio tag → `manifests/charts/istio-control/istio-discovery/`:
 |-----------|---------------|
 | static sidecar | `files/injection-template.yaml` |
 | static gateway | `files/gateway-injection-template.yaml` |
+| operator-backed revisions only: `static/d8-seccomp-injection-template.yaml` | nothing — it is Deckhouse's own injection template, not an upstream file |
+| operator-backed revisions only: `static/gateway-injection-template.yaml` | `files/gateway-injection-template.yaml` — vendored here as well, because `istios.yaml` overrides the `gateway` key and that replaces the chart's own copy outright |
 | for reference: what Istio puts into the CM | `templates/istiod-injector-configmap.yaml` |
 
 [`istios.yaml`](../../templates/control-plane/iop/istios.yaml) — how it used to be with the operator; for the operator-free case, **do not copy it as a whole**, just take a look at the D8 logic.
@@ -120,7 +145,8 @@ Istio tag → `manifests/charts/istio-control/istio-discovery/`:
 ### `files/` checklist
 
 - [ ] `cp -r files/<prev> files/<revision>`
-- [ ] `static/` — 2 files from upstream as-is
+- [ ] `static/` — 2 files from upstream, then re-apply the `[Deckhouse]` deltas in **both** of them
+- [ ] `diff` each result against its upstream body — nothing unmarked may differ
 - [ ] if necessary — edits in `templates/` (see the table above)
 - [ ] `template_tests/module_test.go`
 

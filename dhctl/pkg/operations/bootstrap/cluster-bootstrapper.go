@@ -17,10 +17,10 @@ package bootstrap
 import (
 	"context"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"slices"
 	"sort"
+	"strconv"
 	"strings"
 	"time"
 
@@ -197,6 +197,7 @@ type bootstrapContext struct {
 	devicePath                string
 	resourcesTemplateData     map[string]any
 	resourcesToCreateBefore   template.Resources
+	resourcesToCreateModules  template.Resources
 	resourcesToCreateProvider template.Resources
 	resourcesToCreateAfter    template.Resources
 	installDeckhouseResult    *InstallDeckhouseResult
@@ -363,6 +364,18 @@ func (b *ClusterBootstrapper) bootstrapPhaseFuncs() map[phases.OperationPhase]bo
 // wholeTree is the only value of runPhases' last parameter that runs a full bootstrap; any phase
 // name restricts the walk to that single node, which is what the standalone phase commands are.
 const wholeTree phases.OperationPhase = ""
+
+// runsAlongside reports whether a phase runs even though the walk was restricted to another one.
+//
+// Only the preflights do. `bootstrap-phase base-infra` creates the cloud infrastructure of the
+// cluster, and it used to create it with nothing checked at all: the configuration checks are a
+// node of the tree, and restricting the walk to BaseInfra skipped them along with everything else.
+// A mistyped image name or a registry that cannot be reached then surfaced as a failed apply with
+// infrastructure already half created and its state in the cache — which is exactly what the
+// checks exist to come before.
+func runsAlongside(declared, only phases.OperationPhase) bool {
+	return declared == phases.PreInfraPreflightsPhase && only == phases.BaseInfraPhase
+}
 
 // refuseIfExcluded refuses a phase a standalone phase command asked to run by name, but that the
 // gates keep out of this particular run. Silence is the alternative worth avoiding: a command
@@ -553,7 +566,7 @@ func (b *ClusterBootstrapper) runPhases(ctx context.Context, bctx *bootstrapCont
 	// Preparation is already announced and open, so every remaining node closes its predecessor
 	// with SwitchPhase and none of them starts the pipeline again.
 	for _, declared := range tree[1:] {
-		if only != wholeTree && declared.Phase != only {
+		if only != wholeTree && declared.Phase != only && !runsAlongside(declared.Phase, only) {
 			continue
 		}
 
@@ -726,7 +739,7 @@ func requireSplitResources(bctx *bootstrapContext) error {
 		return nil
 	}
 
-	if len(bctx.resourcesToCreateBefore)+len(bctx.resourcesToCreateProvider)+len(bctx.resourcesToCreateAfter) == 0 {
+	if len(bctx.resourcesToCreateBefore)+len(bctx.resourcesToCreateModules)+len(bctx.resourcesToCreateProvider)+len(bctx.resourcesToCreateAfter) == 0 {
 		return fmt.Errorf("resources are configured but none are queued for creation: phase %q produces the queues", phases.ParseResourcesPhase)
 	}
 
@@ -911,19 +924,27 @@ func (b *ClusterBootstrapper) bootstrapPreflight(ctx context.Context, bctx *boot
 	ctx, preflightSpan := telemetry.StartSpan(ctx, "ClusterBootstrapper.Bootstrap.PreInfraPreflights")
 	defer preflightSpan.End()
 
-	checkSuites, err := b.preflightSuites(ctx, bctx)
-	if err != nil {
-		return err
-	}
+	checkSuites := b.preflightSuites(bctx)
 
 	// The single assignment of the runner: PostInfraPreflights runs it again for its own phase
 	// (validatePostInfraPreflightsInputs), so a selection branch that builds one and forgets to
 	// park it here nil-derefs a node later.
 	preflightRunner := preflight.New(checkSuites...)
 	preflightRunner.UseCache(bctx.bootstrapState)
-	preflightRunner.SetCacheSalt(bctx.configHash)
+	// The installer's own identity is part of the key, not just the configuration files: the
+	// same config run from an installer of a different version or edition is a different
+	// question, and dhctl-edition is exactly the check that would otherwise answer it from a
+	// cache written by the installer it is meant to catch.
+	preflightRunner.SetCacheSalt(fmt.Sprintf("%s-%s-%s",
+		bctx.configHash, b.Options.BuildInfo.AppVersion, b.Options.BuildInfo.AppEdition))
 	preflightRunner.DisableChecks(b.Options.Preflight.DisabledChecks()...)
-	b.applyImmutablePreflights(preflightRunner, bctx)
+	preflightRunner.SetFailFast(b.Options.Preflight.FailFast)
+	preflightRunner.SetSkippedAll(b.Options.Preflight.SkipAll)
+	if b.Options.Preflight.NoCache {
+		preflightRunner.DisableCache()
+	}
+	b.disableChecksImmutableMasterCannotAnswer(preflightRunner, bctx)
+	b.disableChecksWithoutSSHHost(ctx, preflightRunner, bctx)
 	bctx.preflightRunner = preflightRunner
 
 	return preflightRunner.Run(ctx, preflight.PhasePreInfra)
@@ -935,42 +956,52 @@ func (b *ClusterBootstrapper) bootstrapPreflight(ctx context.Context, bctx *boot
 // the global suite is all that applies. The static suite is not a safe default there - it is built
 // over the node interface helper.GetNodeInterface hands back when no SSH provider can be made,
 // which is the installer container itself, and its checks would create users and probe sudo in it.
-func (b *ClusterBootstrapper) preflightSuites(ctx context.Context, bctx *bootstrapContext) ([]preflight.Suite, error) {
+func (b *ClusterBootstrapper) preflightSuites(bctx *bootstrapContext) []preflight.Suite {
 	globalSuite := suites.NewGlobalSuite(suites.GlobalDeps{
 		MetaConfig:    bctx.metaConfig,
 		InstallConfig: bctx.deckhouseInstallConfig,
 		BuildInfo:     b.Options.BuildInfo,
 	})
 
+	// The immutable suite goes directly after the global one, ahead of anything that crosses a
+	// network: its checks read the configuration and the flags, answer in microseconds, and
+	// guard assumptions the rest of the bootstrap is written against. Running them last meant
+	// paying for two registry round trips before hearing that the registry mode rules the whole
+	// run out.
+	suiteList := []preflight.Suite{globalSuite}
+	if bctx.immutable != nil {
+		suiteList = append(suiteList, suites.NewImmutableSuite(suites.ImmutableDeps{
+			MetaConfig:    bctx.metaConfig,
+			BootstrapOpts: &b.Options.Bootstrap,
+			GlobalOpts:    &b.Options.Global,
+			CommanderMode: b.CommanderMode,
+			MachinesAvailability: func(ctx context.Context) error {
+				return b.checkMachinesAreAvailable(ctx, bctx)
+			},
+		}))
+	}
+
 	if !bctx.metaConfig.HasClusterConfiguration() {
-		return []preflight.Suite{globalSuite}, nil
+		return suiteList
 	}
 
 	// For the same reason, and not by subtracting names from the static suite: a machine named by
 	// --master-host answers no sshd, so this path guarantees the very SSH provider that suite is
 	// built over cannot be made.
 	if isStaticImmutableCluster(bctx) {
-		return []preflight.Suite{globalSuite, suites.NewImmutableStaticSuite(bctx.metaConfig)}, nil
+		return append(suiteList, suites.NewImmutableStaticSuite(bctx.metaConfig))
 	}
 
 	if bctx.metaConfig.ClusterType != config.CloudClusterType {
-		staticSuite, err := suites.NewStaticSuite(suites.StaticDeps{
+		staticSuite := suites.NewStaticSuite(suites.StaticDeps{
 			SSHProviderInitializer: b.SSHProviderInitializer,
 			MetaConfig:             bctx.metaConfig,
 			InstallConfig:          bctx.deckhouseInstallConfig,
 			LegacyMode:             b.SSHProviderInitializer.IsLegacyMode(),
 			GlobalOpts:             &b.Options.Global,
-		}, ctx)
-		if err != nil {
-			return nil, err
-		}
+		})
 
-		return []preflight.Suite{globalSuite, staticSuite}, nil
-	}
-
-	sshProvider, err := b.SSHProviderInitializer.GetSSHProvider(ctx)
-	if err != nil && !errors.Is(err, providerinitializer.ErrHostsFromCacheNotFound) {
-		return nil, err
+		return append(suiteList, staticSuite)
 	}
 
 	cloudSuite := suites.NewCloudSuite(suites.CloudDeps{
@@ -978,13 +1009,22 @@ func (b *ClusterBootstrapper) preflightSuites(ctx context.Context, bctx *bootstr
 		MetaConfig:             bctx.metaConfig,
 		SSHProviderInitializer: b.SSHProviderInitializer,
 	})
+	// No SSH provider is built here. The post-infra cloud checks run after the master has been
+	// created; a provider built now — before base infrastructure — carries no hosts, and
+	// lib-connection copies the host list at construction, so the one captured here would still
+	// have none when the check finally ran.
 	postCloudSuite := suites.NewPostCloudSuite(suites.PostCloudDeps{
-		MetaConfig:  bctx.metaConfig,
-		SSHProvider: sshProvider,
-		LegacyMode:  b.SSHProviderInitializer.IsLegacyMode(),
+		MetaConfig:             bctx.metaConfig,
+		InstallConfig:          bctx.deckhouseInstallConfig,
+		GlobalOpts:             &b.Options.Global,
+		SSHProviderInitializer: b.SSHProviderInitializer,
+		// Read when the check runs: the first master phase, which produces this, runs between
+		// this suite being built and the node checks being asked.
+		KubeDataDevicePath: func() string { return bctx.devicePath },
+		MasterAPIEndpoint:  b.masterAPIEndpoint(bctx),
 	})
 
-	return []preflight.Suite{globalSuite, cloudSuite, postCloudSuite}, nil
+	return append(suiteList, cloudSuite, postCloudSuite)
 }
 
 func (b *ClusterBootstrapper) bootstrapBaseInfra(ctx context.Context, bctx *bootstrapContext) error {
@@ -1126,21 +1166,40 @@ func (b *ClusterBootstrapper) bootstrapFirstMaster(ctx context.Context, bctx *bo
 	bctx.masterAddressesForSSH[masterNodeName] = masterOutputs.MasterIPForSSH
 	state.SaveMasterHostsToCache(ctx, bctx.stateCache, bctx.masterAddressesForSSH)
 
-	interactive := isTerminal() && !b.Options.Global.ShowProgress
-	if interactive {
-		sshProvider, err := b.SSHProviderInitializer.GetSSHProvider(ctx)
-		if err != nil {
-			return err
-		}
-		sshClient, err := sshProvider.Client(ctx)
-		if err != nil {
-			return err
-		}
-		sshString := sshClient.Session().String()
-		dhlog.FromContext(ctx).InfoContext(ctx, fmt.Sprintf("First master connection string: %s", sshString))
+	if isTerminal() && !b.Options.Global.ShowProgress {
+		dhlog.FromContext(ctx).InfoContext(ctx,
+			fmt.Sprintf("First master connection string: %s", masterConnectionString(connectionConfig, masterOutputs.MasterIPForSSH)))
 	}
 
 	return nil
+}
+
+// masterConnectionString is the ssh command line that reaches the master dhctl has just created.
+//
+// It is built from the configuration rather than from a live client. Asking the provider for one
+// here used to open the connection — Client() starts it — so a machine that had not finished
+// booting, or an --ssh-user the image does not have, failed this phase after fifty attempts two
+// seconds apart. The bootstrap then ended on "Failed: Get SSH client", two minutes before the
+// preflight that exists to explain exactly that had a chance to run.
+//
+// Nothing in the string needs a connection: it is the user, the host, the port and the bastion,
+// all of which are inputs. session.String renders them, so the wording stays in one place.
+func masterConnectionString(connectionConfig *sshconfig.ConnectionConfig, masterIP string) string {
+	input := session.Input{AvailableHosts: []session.Host{{Host: masterIP}}}
+	if connectionConfig != nil && connectionConfig.Config != nil {
+		cfg := connectionConfig.Config
+		input.User = cfg.User
+		input.BastionHost = cfg.BastionHost
+		input.BastionUser = cfg.BastionUser
+		if cfg.Port != nil {
+			input.Port = strconv.Itoa(*cfg.Port)
+		}
+		if cfg.BastionPort != nil {
+			input.BastionPort = strconv.Itoa(*cfg.BastionPort)
+		}
+	}
+
+	return session.NewSession(input).String()
 }
 
 // immutableCloudMasterAddress is the address everything after this phase reaches the first
@@ -1198,11 +1257,14 @@ func (b *ClusterBootstrapper) bootstrapParseResources(ctx context.Context, bctx 
 		return err
 	}
 
-	before, provider, after := splitResourcesOnPreAndPostDeckhouseInstall(ctx, parsedResources, nodesComeFromResources(bctx.metaConfig))
+	before, modules, provider, after := splitResourcesOnPreAndPostDeckhouseInstall(
+		ctx, parsedResources, nodesComeFromResources(bctx.metaConfig), bctx.metaConfig.ProviderName,
+	)
 
 	applyMasterNodeGroupDefaults(provider)
 
 	bctx.resourcesToCreateBefore = before
+	bctx.resourcesToCreateModules = modules
 	bctx.resourcesToCreateProvider = provider
 	bctx.resourcesToCreateAfter = after
 
@@ -1352,6 +1414,16 @@ func (b *ClusterBootstrapper) bootstrapDeckhouse(ctx context.Context, bctx *boot
 				ctx,
 				&client.KubernetesClient{KubeClient: kubeCl},
 				bctx.resourcesToCreateBefore,
+				nil,
+				true,
+				b.Options.Bootstrap.ResourcesTimeout,
+			)
+		},
+		AfterManifestsTask: func() error {
+			return createResources(
+				ctx,
+				&client.KubernetesClient{KubeClient: kubeCl},
+				bctx.resourcesToCreateModules,
 				nil,
 				true,
 				b.Options.Bootstrap.ResourcesTimeout,
@@ -1716,10 +1788,16 @@ func nodesComeFromResources(metaConfig *config.MetaConfig) bool {
 	return metaConfig.ClusterType == config.CloudClusterType && !metaConfig.HasLegacyProviderConfig()
 }
 
-func splitResourcesOnPreAndPostDeckhouseInstall(ctx context.Context, resourcesToCreate template.Resources, nodesFromResources bool) (template.Resources, template.Resources, template.Resources) {
+// The module queue is separate from the node queue because the two are applied at different
+// moments: the modules while the controller is still starting, the nodes once it is Ready. Joined,
+// the provider module stayed behind the readiness wait its own cloud-controller-manager clears.
+func splitResourcesOnPreAndPostDeckhouseInstall(ctx context.Context, resourcesToCreate template.Resources, nodesFromResources bool, providerName string) (template.Resources, template.Resources, template.Resources, template.Resources) {
 	before := make(template.Resources, 0, len(resourcesToCreate))
+	modules := make(template.Resources, 0)
 	provider := make(template.Resources, 0, len(resourcesToCreate))
 	after := make(template.Resources, 0, len(resourcesToCreate))
+
+	providerModule := config.CloudProviderModuleName(providerName)
 
 	for _, resource := range resourcesToCreate {
 		annotations := resource.Object.GetAnnotations()
@@ -1728,6 +1806,13 @@ func splitResourcesOnPreAndPostDeckhouseInstall(ctx context.Context, resourcesTo
 		if hasBeforeAnnotation || isCloudProviderCredentialSecret(resource) {
 			dhlog.FromContext(ctx).DebugContext(ctx, fmt.Sprintf("Add resource %s - %s to before queue", resource.String(), resource.Object.GetName()))
 			before = append(before, resource)
+			continue
+		}
+
+		if isModuleQueueDocument(resource, providerModule) {
+			dhlog.FromContext(ctx).DebugContext(ctx, fmt.Sprintf("Add resource %s - %s to module queue", resource.String(), resource.Object.GetName()))
+			modules = append(modules, resource)
+
 			continue
 		}
 
@@ -1743,7 +1828,45 @@ func splitResourcesOnPreAndPostDeckhouseInstall(ctx context.Context, resourcesTo
 
 	before = prependMissingNamespaces(before)
 
-	return before, provider, after
+	slices.SortStableFunc(modules, func(a, b *template.Resource) int {
+		return moduleApplyOrder(a) - moduleApplyOrder(b)
+	})
+
+	return before, modules, provider, after
+}
+
+// A ModuleSource is an address and a ModulePullOverride pins a tag; neither enables a module, so
+// both travel early unconditionally, which also puts them ahead of any ModuleConfig naming them.
+// Enabling is what has to wait, and only this cluster's provider module cannot: it ships the
+// cloud-controller-manager that clears node.cloudprovider.kubernetes.io/uninitialized, and a
+// ModuleConfig reaching these documents at all means the image does not carry that module.
+func isModuleQueueDocument(resource *template.Resource, providerModule string) bool {
+	if resource.GVK.Group != config.ModuleConfigGroup {
+		return false
+	}
+
+	switch resource.GVK.Kind {
+	case config.ModuleSourceKind, config.ModulePullOverrideKind:
+		return true
+	case config.ModuleConfigKind:
+		return resource.Object.GetName() == providerModule
+	}
+
+	return false
+}
+
+// The order the controllers consume these in: scanning the source creates the Module the override
+// controller looks up, and the release controller skips a module that already has an override, so
+// an override applied last gets the channel build deployed first and then replaced.
+func moduleApplyOrder(resource *template.Resource) int {
+	switch resource.GVK.Kind {
+	case config.ModuleSourceKind:
+		return 0
+	case config.ModulePullOverrideKind:
+		return 1
+	default:
+		return 2
+	}
 }
 
 // isProviderNodeResource reports the objects dhctl builds cloud nodes from. They

@@ -25,7 +25,7 @@ description: Архитектура модуля ingress-nginx в Deckhouse Plat
 
 Архитектура модуля [`ingress-nginx`](/modules/ingress-nginx/) на уровне 2 модели C4 и его взаимодействия с другими компонентами Deckhouse Platform (DP) изображены на следующей диаграмме:
 
-![Архитектура модуля ingress-nginx](../../images/architecture/network/c4-l2-ingress-nginx.ru.png)
+![Архитектура модуля ingress-nginx](../../images/architecture/network/c4-l2-ingress-nginx.ru.svg)
 
 ## Компоненты модуля
 
@@ -110,7 +110,7 @@ description: Архитектура модуля ingress-nginx в Deckhouse Plat
 На следующей схеме не показана архитектура основного Ingress-контроллера, а также взаимодействия модуля, поскольку они подробно описаны на схеме выше.
 {% endalert %}
 
-![Архитектура модуля ingress-nginx с инлетом HostWithFailover](../../images/architecture/network/c4-l2-ingress-nginx-failover.ru.png)
+![Архитектура модуля ingress-nginx с инлетом HostWithFailover](../../images/architecture/network/c4-l2-ingress-nginx-failover.ru.svg)
 
 ### Компоненты failover Ingress-контроллера
 

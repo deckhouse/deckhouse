@@ -3,7 +3,6 @@
 {{- $fullVersion := index . 3 -}}
 defaultTemplates:
 - sidecar
-- d8-seccomp
 policy: enabled
 alwaysInjectSelector: []
 neverInjectSelector:
@@ -15,31 +14,12 @@ injectedAnnotations:
 template: '{{`{{ Template_Version_And_Istio_Version_Mismatched_Check_Installation }}`}}'
 templates:
   sidecar: |
-{{ $.Files.Get (printf "files/%s/static/sidecar-injection-template.yaml" $revision) | trim | indent 4 }}
+{{ include "istioRequiredChartFile" (list $ (printf "files/%s/static/sidecar-injection-template.yaml" $revision)) | trim | indent 4 }}
   gateway: |
-{{ $.Files.Get (printf "files/%s/static/gateway-injection-template.yaml" $revision) | trim | indent 4 }}
+{{ include "istioRequiredChartFile" (list $ (printf "files/%s/static/gateway-injection-template.yaml" $revision)) | trim | indent 4 }}
+  # Deprecated no-op, remove in 1.79
   d8-seccomp: |
-    spec:
-      {{- if eq $.Values.istio.dataPlane.trafficRedirectionSetupMode "CNIPlugin" }}
-      initContainers:
-      - name: istio-validation
-        securityContext:
-          seccompProfile:
-            type: RuntimeDefault
-      {{- end }}
-      containers:
-      - name: istio-proxy
-        securityContext:
-          seccompProfile:
-            type: RuntimeDefault
-        livenessProbe:
-          httpGet:
-            path: /healthz/ready
-            port: 15021
-          initialDelaySeconds: 10
-          periodSeconds: 2
-          timeoutSeconds: 3
-          failureThreshold: 30
+    spec: {}
   d8-hold-istio-proxy-termination-until-application-stops: |
     spec:
       containers:

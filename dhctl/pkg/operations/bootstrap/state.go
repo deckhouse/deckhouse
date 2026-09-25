@@ -49,3 +49,7 @@ func (s *State) Save(ctx context.Context, key string, data []byte) error {
 func (s *State) InCache(ctx context.Context, key string) (bool, error) {
 	return s.cache.InCache(ctx, key)
 }
+
+func (s *State) Load(ctx context.Context, key string) ([]byte, error) {
+	return s.cache.Load(ctx, key)
+}

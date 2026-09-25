@@ -123,6 +123,13 @@ type OpenAPIV3Schema struct {
 	// of the web console form; the field's path in settings stays unchanged.
 	// +optional
 	XUIGroup string `json:"x-deckhouse-ui-group,omitempty"`
+
+	// x-deckhouse-enum-switch-settings, declared on a oneOf branch, lists the confirmation
+	// dialogs the web console shows before switching the branch discriminator from a value
+	// of that branch to one of the listed target values.
+	// +optional
+	// +listType=atomic
+	XEnumSwitchSettings []EnumSwitchSetting `json:"x-deckhouse-enum-switch-settings,omitempty"`
 }
 
 // OpenAPIV3SchemaOrArray represents a value that can either be an OpenAPIV3Schema
@@ -200,4 +207,25 @@ type UIResourceNameSelector struct {
 
 	// +optional
 	LabelSelector *metav1.LabelSelector `json:"labelSelector,omitempty"`
+}
+
+// EnumSwitchSetting describes one confirmation the web console shows before the oneOf branch
+// discriminator switches to one of the target values. Target values are matched against the
+// discriminator value converted to a string, so boolean discriminators are addressed as
+// "true"/"false".
+type EnumSwitchSetting struct {
+	// To lists the target discriminator values the confirmation applies to.
+	// +listType=atomic
+	To []string `json:"to"`
+
+	// Impact is the severity of the switch: info (default), warning or destructive.
+	// A destructive switch is applied only after an explicit acknowledgement, and the web
+	// console records it with the applications.deckhouse.io/allow-destructive-settings-switch
+	// annotation on the Application.
+	// +optional
+	Impact string `json:"impact,omitempty"`
+
+	// Messages holds the dialog markdown text keyed by language code (en, ru).
+	// +optional
+	Messages map[string]string `json:"messages,omitempty"`
 }

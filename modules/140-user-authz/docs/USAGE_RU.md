@@ -287,6 +287,8 @@ spec:
 
 Если совпадение сделано намеренно, например, если правило ClusterAuthorizationRule написано заранее, установите на User или Group аннотацию `user-authz.deckhouse.io/allow-authorization-rule-collision: "true"`. Аннотация только подтверждает совпадение имени. Она не позволяет назначить роли, которые запрашивающий не покрывает или которые вне его диапазона can-assign.
 
+Удаление ClusterAuthorizationRule проходит ту же проверку can-assign, что создание и обновление. Снять грант можно только если эти роли можно назначить. Обновление проверяется и по прежним, и по новым грантам: снизить `SuperAdmin` до `User` можно только если `SuperAdmin` можно назначить.
+
 Для субъектов типа `User` указывайте email в нижнем регистре. Он записывается в токен в нижнем регистре, поэтому, например, субъект `Admin@Example.com` не совпадёт с `admin@example.com`. Имена субъектов типа `Group` сравнивается точно, поскольку имена групп не приводятся к нижнему регистру.
 
 Ограничение действует при создании User или Group и при изменении их `spec.email` или `spec.name`. Удаление User или Group, чьё имя всё ещё получает права от правила, разрешено с предупреждением: имя остаётся в правиле, и повторное создание объекта возвращает права. Ограничение не запрещает добавлять существующих пользователей и группы в ClusterAuthorizationRule или AuthorizationRule. Если соответствующий User или Group уже существует, после добавления его в правило права будут предоставлены сразу.
@@ -494,7 +496,7 @@ d8 iam get rule <имя>
         ```
 
    * Если прямого доступа до API-сервера нет, используйте один следующих вариантов:
-      * включите доступ к API-серверу через Ingress-контроллер (параметр [publishAPI](../user-authn/configuration.html#parameters-publishapi)) и укажите адреса, с которых будут идти запросы (параметр [whitelistSourceRanges](../user-authn/configuration.html#parameters-publishapi-whitelistsourceranges));
+      * включите доступ к API-серверу через Ingress-контроллер (параметр [apiserver.publishAPI](/modules/control-plane-manager/configuration.html#parameters-apiserver-publishapi) модуля `control-plane-manager`) и укажите адреса, с которых будут идти запросы (параметр [whitelistSourceRanges](/modules/control-plane-manager/configuration.html#parameters-apiserver-publishapi-ingress-whitelistsourceranges));
       * укажите адреса, с которых будут идти запросы, в отдельном Ingress-контроллере (параметр [acceptRequestsFrom](../ingress-nginx/cr.html#ingressnginxcontroller-v1-spec-acceptrequestsfrom)).
 
    * Если используется непубличный CA:

@@ -122,6 +122,17 @@ admissionPolicyEngine:
             labelSelector:
               matchLabels:
                 operation-policy.deckhouse.io/enabled: "true"
+      - metadata:
+          name: denypolicy
+        spec:
+          enforcementAction: Deny
+          policies:
+            allowedRepos:
+              - foo
+          match:
+            labelSelector:
+              matchLabels:
+                operation-policy.deckhouse.io/enabled: "true"
     trackedConstraintResources:
       - apiGroups:
           - ""
@@ -176,6 +187,31 @@ admissionPolicyEngine:
 			Expect(f.KubernetesGlobalResource("D8ReplicaLimits", testPolicyName).Exists()).To(BeTrue())
 			Expect(f.KubernetesGlobalResource("D8DisallowedTolerations", testPolicyName).Exists()).To(BeTrue())
 			Expect(f.KubernetesGlobalResource("D8GpuResourceRestriction", testPolicyName).Exists()).To(BeTrue())
+		})
+
+		It("A denying operation policy is split by namespace scope, like a security policy", func() {
+			Expect(f.RenderError).ShouldNot(HaveOccurred())
+
+			// The split lives in a helper shared with SecurityPolicy, but only OperationPolicy
+			// renders through `operation-policy/constraint.yaml`; without this fixture the nested
+			// range there is never exercised with more than one variant.
+			userScoped := f.KubernetesGlobalResource("D8AllowedRepos", "denypolicy")
+			systemWarn := f.KubernetesGlobalResource("D8AllowedRepos", "d8-system-default-denypolicy")
+
+			Expect(userScoped.Exists()).To(BeTrue())
+			Expect(systemWarn.Exists()).To(BeTrue())
+
+			Expect(userScoped.Field("spec.enforcementAction").String()).To(Equal("deny"))
+			Expect(userScoped.Field("spec.match.excludedNamespaces").String()).To(MatchJSON(`["d8-*","kube-*"]`))
+
+			Expect(systemWarn.Field("spec.enforcementAction").String()).To(Equal("warn"))
+			Expect(systemWarn.Field("spec.match.namespaces").String()).To(MatchJSON(`["d8-*","kube-*"]`))
+
+			// Both carry the parameters of the policy they came from.
+			for _, c := range []struct{ name string }{{"denypolicy"}, {"d8-system-default-denypolicy"}} {
+				constraint := f.KubernetesGlobalResource("D8AllowedRepos", c.name)
+				Expect(constraint.Field("spec.parameters.repos").String()).To(MatchJSON(`["foo"]`), c.name)
+			}
 		})
 
 		It("Gatekeeper Config must sync the kinds the constraint templates read from data.inventory", func() {

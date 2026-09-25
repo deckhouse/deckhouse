@@ -1705,6 +1705,21 @@ alerts:
         Additional control plane isn't working.
       severity: "4"
       markupFormat: markdown
+    - name: D8IstioAllianceAmbientGatewayAddressUnusable
+      sourceFile: ee/modules/110-istio/monitoring/prometheus-rules/alliance.yaml
+      moduleUrl: 110-istio
+      module: istio
+      edition: ee
+      description: |
+        The ambient east-west gateway is deployed in this cluster, but publishes no address peer clusters can dial: either it has no external address at all, or every address it has is neither an IP address nor a usable DNS name. The `metadata-exporter` pod logs in `d8-istio` say which.
+
+        Ambient-mode workloads in peer clusters therefore cannot reach services here. Sidecar-mode multicluster is unaffected.
+
+        To fix, set `alliance.ambientGateway.advertise` to the IP address or DNS name peers should dial. Or make the load balancer assign an address (`alliance.ambientGateway.loadBalancerClass`, `.serviceAnnotations`). Or switch `alliance.ambientGateway.inlet` to `NodePort` and check that gateway pods are scheduled (`.nodeSelector`, `.tolerations`). Or turn `ambient.multicluster.enabled` off if ambient multicluster is not needed here.
+      summary: |
+        The ambient east-west gateway has no address peers can dial.
+      severity: "6"
+      markupFormat: markdown
     - name: D8IstioAllianceDataPlaneNotConnected
       sourceFile: ee/modules/110-istio/monitoring/prometheus-rules/alliance-dataplane-health.yaml
       moduleUrl: 110-istio
@@ -2379,6 +2394,32 @@ alerts:
       summary: |
         etcd database size is approaching the limit.
       severity: "3"
+      markupFormat: markdown
+    - name: D8KubeletCheckpointStateUnpinnedContainers
+      sourceFile: modules/040-node-manager/monitoring/prometheus-rules/kubelet-checkpoint-state-reset.yaml
+      moduleUrl: 040-node-manager
+      module: node-manager
+      edition: ce
+      description: |
+        Kubelet on Node `{{ $labels.node }}` reset the memory manager checkpoint and recorded new NUMA zones for Pod `{{ $labels.namespace }}/{{ $labels.pod }}`. Zones are applied only when a container is created, so the running containers stay in their previous zones, which may differ from the recorded ones.
+
+        As a result, the zone the Pod really uses may also be assigned to another Guaranteed Pod, causing both Pods to share its memory resources. The Pod's CPUs and memory may also be assigned to different NUMA zones, which slows down its memory access.
+
+        The Pod is not restarted automatically. The restart time depends on the workload. To restore resource isolation, do the following:
+
+        - To recreate the Pod's containers in newly assigned NUMA zones, delete the Pod:
+
+          ```bash
+          d8 k -n {{ $labels.namespace }} delete pod {{ $labels.pod }}
+          ```
+
+        - For a virtual machine, perform a live migration to another node instead, without stopping it.
+        - If the node runs many such Pods, you can drain it instead of deleting them one by one.
+
+        The alert resolves within a few minutes after the Pod is recreated. No kubelet restart is needed.
+      summary: |
+        Pod {{ $labels.namespace }}/{{ $labels.pod }} may run in a NUMA zone other than the one recorded by kubelet.
+      severity: "4"
       markupFormat: markdown
     - name: D8KubernetesStaleTokensDetected
       sourceFile: modules/040-control-plane-manager/monitoring/prometheus-rules/control-plane-manager.yaml
@@ -5752,6 +5793,35 @@ alerts:
         NodeGroup {{ $labels.node_group }} contains nodes in a deprecated availability zone.
       severity: "9"
       markupFormat: markdown
+    - name: NodeGroupProviderTypeIsInvalid
+      sourceFile: modules/040-node-manager/monitoring/prometheus-rules/node-group-provider-type.yaml
+      moduleUrl: 040-node-manager
+      module: node-manager
+      edition: ce
+      description: |
+        The `spec.providerType` field of NodeGroup `{{ $labels.name }}` is set to `{{ $labels.provider_type }}`,
+        which is not the cloud provider the nodes of the group run in.
+
+        To resolve this issue, set the field to a correct value:
+
+        - If the nodes of the group run in a cloud, set the field to the `type` of that cloud provider,
+          as published in its registration secret:
+
+          ```bash
+          kubectl -n kube-system get secrets -l cloud-provider.deckhouse.io/registration -o json \
+          | jq -r '.items[] | .data.type | @base64d'
+          ```
+
+        - If the cluster is static, or the NodeGroup has `nodeType: Static`, set the field to `None`
+          or leave it empty:
+
+          ```bash
+          kubectl patch nodegroup {{ $labels.name }} --type=merge -p '{"spec":{"providerType":"None"}}'
+          ```
+      summary: |
+        The spec.providerType field is set incorrectly in NodeGroup {{ $labels.name }}.
+      severity: "4"
+      markupFormat: markdown
     - name: NodeGroupReplicasUnavailable
       sourceFile: modules/040-node-manager/monitoring/prometheus-rules/node-group.tpl
       moduleUrl: 040-node-manager
@@ -6040,6 +6110,87 @@ alerts:
         NTP daemon on the node {{$labels.node}} haven't synchronized time for too long.
       severity: "5"
       markupFormat: markdown
+    - name: OpenStackPreemptibleUnsupported
+      sourceFile: ee/modules/030-cloud-provider-openstack/monitoring/prometheus-rules/preemptible.yaml
+      moduleUrl: 030-cloud-provider-openstack
+      module: cloud-provider-openstack
+      edition: ee
+      description: |
+        The OpenStackInstanceClass referenced by NodeGroup `{{ $labels.node_group }}` has `spec.preemptible: true`,
+        but the raw Nova `preemptible` tag will not reach the virtual machines:
+        nodes are created as regular (non-preemptible) VMs, and Selectel-side preemption never kicks in.
+
+        {{ if eq $labels.reason "mcm" }}
+        **Reason:** the NodeGroup runs on the **MCM engine**, which has no way to emit raw Nova tags —
+        `machine-controller-manager`'s OpenStackMachineClass CRD does not expose the field. Only the
+        CAPI engine (`capi-controller-manager` + `capo-controller-manager`) renders raw Nova tags via
+        `OpenStackMachineTemplate.spec.template.spec.tags`.
+
+        **How to fix:**
+
+        1. Confirm the current engine and offending InstanceClass:
+
+           ```shell
+           d8 k get ng {{ $labels.node_group }} -o jsonpath='{.status.engine}{"\n"}'
+           d8 k get ng {{ $labels.node_group }} -o jsonpath='{.spec.cloudInstances.classReference}{"\n"}'
+           ```
+
+        2. Choose one of the following actions:
+
+           - **Recommended.** Remove the `node.deckhouse.io/use-mcm` annotation from the NodeGroup so it
+             migrates to CAPI. Nodes will be recreated on the CAPI engine, this time carrying the
+             `preemptible` tag:
+
+             ```shell
+             d8 k annotate ng {{ $labels.node_group }} node.deckhouse.io/use-mcm-
+             ```
+
+           - Alternatively, if this NodeGroup must stay on MCM, set `spec.preemptible: false` on the
+             OpenStackInstanceClass (nodes stay regular, the alert clears):
+
+             ```shell
+             d8 k patch openstackinstanceclass <CLASS_NAME> --type=merge -p '{"spec":{"preemptible":false}}'
+             ```
+
+             Note: a single OpenStackInstanceClass shared between a CAPI NodeGroup (where the field
+             works) and an MCM one (where it doesn't) will keep firing this alert on the MCM side.
+             Use separate InstanceClasses per engine when the classes differ in `preemptible`.
+
+        {{ else if eq $labels.reason "non-selectel" }}
+        **Reason:** the cluster's `connection.authURL` does not point at Selectel (`selcloud.ru` /
+        `selectel`). The raw Nova `preemptible` tag is a **Selectel-specific mechanism**;
+        on other OpenStack providers Nova accepts the tag but ignores it, so instances are billed
+        and behave as regular non-preemptible VMs.
+
+        **How to fix:**
+
+        1. Confirm the offending InstanceClass and the cluster's authURL:
+
+           ```shell
+           d8 k get ng {{ $labels.node_group }} -o jsonpath='{.spec.cloudInstances.classReference}{"\n"}'
+           d8 k -n kube-system get secret d8-node-manager-cloud-provider -o jsonpath='{.data.openstack}' | base64 -d | jq -r '.connection.authURL'
+           ```
+
+        2. Set `spec.preemptible: false` on the OpenStackInstanceClass — the field only makes sense
+           on Selectel-hosted clusters:
+
+           ```shell
+           d8 k patch openstackinstanceclass <CLASS_NAME> --type=merge -p '{"spec":{"preemptible":false}}'
+           ```
+
+           The alert clears on the next scrape after the change; existing nodes stay running (they
+           are already regular VMs — the tag was never emitted).
+
+        {{ else }}
+        **Reason:** unknown (`{{ $labels.reason }}`). This alert should surface only two well-known
+        cases (`mcm`, `non-selectel`). A new reason implies node-controller has been extended without
+        this runbook — check the release notes for
+        `cloud-provider-openstack` before deciding what to do.
+        {{ end }}
+      summary: |
+        NodeGroup {{ $labels.node_group }} requests preemptible instances, but this cluster cannot deliver them (reason: {{ $labels.reason }}).
+      severity: "8"
+      markupFormat: markdown
     - name: OpenVPNClientCertificateExpired
       sourceFile: modules/500-openvpn/monitoring/prometheus-rules/ovpn-admin.yaml
       moduleUrl: 500-openvpn
@@ -6246,7 +6397,7 @@ alerts:
           )
           ```
 
-        - Alternatively, check the admission-policy-engine Grafana dashboard.
+        - Alternatively, check the admission-policy-engine reports in the web interface Deckhouse Platform.
       summary: |
         At least one object violates the configured cluster operation policies.
       severity: "3"
@@ -6274,7 +6425,7 @@ alerts:
           )
           ```
 
-        - Alternatively, check the admission-policy-engine Grafana dashboard.
+        - Alternatively, check the admission-policy-engine reports in the web interface Deckhouse Platform.
       summary: |
         At least one pod violates the configured cluster pod security standards.
       severity: "3"
@@ -6300,7 +6451,7 @@ alerts:
           )
           ```
 
-        - Alternatively, check the admission-policy-engine Grafana dashboard.
+        - Alternatively, check the admission-policy-engine reports in the web interface Deckhouse Platform.
       summary: |
         At least one object violates the configured cluster security policies.
       severity: "3"
@@ -6373,6 +6524,7 @@ modules-having-alerts:
     - cloud-provider-aws
     - cloud-provider-dvp
     - cloud-provider-huaweicloud
+    - cloud-provider-openstack
     - cloud-provider-yandex
     - cni-cilium
     - control-plane-manager

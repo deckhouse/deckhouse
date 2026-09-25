@@ -257,6 +257,47 @@ func TestIsGranted_SystemRequestBypass(t *testing.T) {
 	}
 }
 
+// brokenRef is a reference to the same definition as lbRef whose path (or match.fieldPath) does not
+// compile: stored past the GrantableClusterResourceReference webhook (failurePolicy: Ignore). Its
+// name sorts before lbRef's, so it is evaluated first.
+func brokenRef(brokenMatch bool) *v1alpha1.GrantableClusterResourceReference {
+	ref := lbRef(v1alpha1.DefaultingNone)
+	ref.Name = "a-broken"
+	if brokenMatch {
+		ref.Spec.FieldPaths[0].Match.FieldPath = "$.spec.type-x"
+	} else {
+		ref.Spec.FieldPaths[0].Path = "$.spec.foo-bar"
+	}
+	return ref
+}
+
+func TestIsGranted_BrokenReferenceIsSkipped(t *testing.T) {
+	for _, brokenMatch := range []bool{false, true} {
+		name := "path"
+		if brokenMatch {
+			name = "match.fieldPath"
+		}
+		t.Run(name, func(t *testing.T) {
+			// Alone, the broken reference checks nothing: the request passes instead of a 500 (serve
+			// fails the test on any non-200 status).
+			alone := isGranted(t, projectNS("proj", map[string]string{"env": "prod"}), lbDef(v1alpha1.AvailabilityNone), brokenRef(brokenMatch), lbGrant())
+			if resp := serve(t, alone, "/is-granted", review(admissionv1.Create, svcGVR, svcGVK, "proj", "s", lbService("forbidden", "LoadBalancer"), nil)); !resp.Allowed {
+				t.Fatalf("a broken reference must be skipped, not deny: %v", resp.Result)
+			}
+
+			// Next to a working reference, that one still denies.
+			both := isGranted(t, projectNS("proj", map[string]string{"env": "prod"}), lbDef(v1alpha1.AvailabilityNone), brokenRef(brokenMatch), lbRef(v1alpha1.DefaultingNone), lbGrant())
+			resp := serve(t, both, "/is-granted", review(admissionv1.Create, svcGVR, svcGVK, "proj", "s", lbService("forbidden", "LoadBalancer"), nil))
+			if resp.Allowed {
+				t.Fatal("the working reference must still deny the unavailable value")
+			}
+			if !strings.Contains(resp.Result.Message, `references "forbidden"`) {
+				t.Fatalf("denial must come from the working reference: %s", resp.Result.Message)
+			}
+		})
+	}
+}
+
 func TestIsGranted_AdoptedNamespaceIsPoliced(t *testing.T) {
 	// A namespace that used to be an orphan is a project namespace like any other now, so the grant
 	// allow-list applies to it. The marker label the retired model left behind buys no exemption.

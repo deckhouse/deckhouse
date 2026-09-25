@@ -24,6 +24,7 @@ import (
 	. "github.com/onsi/gomega"
 	"sigs.k8s.io/yaml"
 
+	cpapi "github.com/deckhouse/deckhouse/go_lib/cloud-provider/api"
 	. "github.com/deckhouse/deckhouse/testing/hooks"
 )
 
@@ -316,6 +317,72 @@ data:
 		})
 
 		It("should not create migration resources when PCC is absent", func() {
+			Expect(f).To(ExecuteSuccessfully())
+
+			migrationSecret := f.KubernetesResource("Secret", "d8-cloud-provider-dvp", "d8-migration-resources")
+			Expect(migrationSecret.Exists()).To(BeFalse())
+
+			migrationCM := f.KubernetesResource("ConfigMap", "d8-cloud-provider-dvp", "d8-module-is-migrating")
+			Expect(migrationCM.Exists()).To(BeFalse())
+		})
+	})
+
+	// ---- State C: PCC present, migration bundle already applied — OnAfterHelm must not recreate artifacts ----
+	Context("State C: PCC present and new resources applied — OnAfterHelm does not recreate migration resources", func() {
+		f := HookExecutionConfigInit(migrationValues, `{}`)
+		f.RegisterCRD("deckhouse.io", "v1alpha1", "ModuleConfig", false)
+		f.RegisterCRD("deckhouse.io", "v1alpha1", "DVPInstanceClass", false)
+		f.RegisterCRD("deckhouse.io", "v1", "NodeGroup", false)
+
+		appliedResources := fmt.Sprintf(`
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleConfig
+metadata:
+  name: cloud-provider-dvp
+spec:
+  enabled: true
+  version: 2
+  settings:
+    provider:
+      parameters:
+        namespace: cloud-provider01
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: d8-credentials
+  namespace: d8-cloud-provider-dvp
+type: cloud-provider.deckhouse.io/credentials
+data:
+  authScheme: %s
+  secret: %s
+---
+apiVersion: deckhouse.io/v1
+kind: NodeGroup
+metadata:
+  name: master
+spec:
+  nodeType: CloudPermanent
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: DVPInstanceClass
+metadata:
+  name: %s
+spec: {}
+`,
+			base64.StdEncoding.EncodeToString([]byte("kubeconfig")),
+			base64.StdEncoding.EncodeToString([]byte(kubeconfigDataBase64)),
+			cpapi.BuildInstanceClassName("master"),
+		)
+
+		BeforeEach(func() {
+			f.KubeStateSet(pccSecret + appliedResources)
+			f.BindingContexts.Set(f.GenerateAfterHelmContext())
+			f.RunHook()
+		})
+
+		It("should not create migration resources secret and configmap", func() {
 			Expect(f).To(ExecuteSuccessfully())
 
 			migrationSecret := f.KubernetesResource("Secret", "d8-cloud-provider-dvp", "d8-migration-resources")

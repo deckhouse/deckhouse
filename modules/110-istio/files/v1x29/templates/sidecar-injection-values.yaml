@@ -36,6 +36,7 @@
       "includeInboundPorts": "*",
       "statusPort": 15020,
       "privileged": false,
+      "seccompProfile": {"type": "RuntimeDefault"},
       "capNetBindService": false,
       "holdApplicationUntilProxyStarts": {{ $.Values.istio.dataPlane.proxyConfig.holdApplicationUntilProxyStarts | default false }},
       "readinessFailureThreshold": 4,
@@ -64,6 +65,15 @@
       }
     },
     "revision": {{ $revision | quote }},
+    "waypoint": {
+      "affinity": {},
+      "topologySpreadConstraints": [],
+      "nodeSelector": {},
+      "tolerations": [],
+      "resources": {
+        "requests": {"cpu": "100m", "memory": "128Mi"}
+      }
+    },
     "logging": {"level": "default:info"},
     "logAsJson": false,
     "imagePullPolicy": "IfNotPresent",
@@ -74,5 +84,8 @@
     "cni": {
       "enabled": {{ eq $.Values.istio.dataPlane.trafficRedirectionSetupMode "CNIPlugin" }}
     }
+  },
+  "gateways": {
+    "seccompProfile": {"type": "RuntimeDefault"}
   }
 }

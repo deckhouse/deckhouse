@@ -71,7 +71,7 @@ func TestStaticAbortSuiteIsNotRunForImmutableMachines(t *testing.T) {
 	var guarded bool
 	ast.Inspect(file, func(n ast.Node) bool {
 		branch, ok := n.(*ast.IfStmt)
-		if !ok || !namesIdent(branch.Body, "NewStaticAbortSuite") {
+		if !ok || !namesIdent(branch.Body, "NewNodeAccessSuite") {
 			return true
 		}
 		guarded = namesIdent(branch.Cond, "immutableMaster")

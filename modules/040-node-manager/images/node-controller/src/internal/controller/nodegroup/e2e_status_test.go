@@ -29,6 +29,7 @@ import (
 
 	v1 "github.com/deckhouse/node-controller/api/deckhouse.io/v1"
 	mcmv1alpha1 "github.com/deckhouse/node-controller/api/machine.sapcloud.io/v1alpha1"
+	providermock "github.com/deckhouse/node-controller/internal/cloudprovider/mock"
 	nodecommon "github.com/deckhouse/node-controller/internal/common"
 	"github.com/deckhouse/node-controller/internal/controller/nodegroup/common"
 	"github.com/deckhouse/node-controller/internal/testenv"
@@ -370,17 +371,11 @@ var _ = Describe("NodeGroup status controller", func() {
 		// what makes status.engine ambiguous. The Secret has a fixed cluster-wide name, so every
 		// spec using it must be Serial.
 		createBothCapableProviderSecret := func() {
-			providerSecret := &corev1.Secret{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      nodecommon.CloudProviderSecretName,
-					Namespace: nodecommon.CloudProviderSecretNamespace,
-				},
-				Data: map[string][]byte{
-					"type":             []byte("yandex"),
-					"machineClassKind": []byte("YandexMachineClass"),
-					"capiClusterKind":  []byte("YandexCluster"),
-				},
-			}
+			providerSecret := providermock.DefaultRegistration(map[string][]byte{
+				"type":             []byte("yandex"),
+				"machineClassKind": []byte("YandexMachineClass"),
+				"capiClusterKind":  []byte("YandexCluster"),
+			})
 			Expect(k8sClient.Create(suiteCtx, providerSecret)).To(Succeed())
 			DeferCleanup(func() {
 				Expect(client.IgnoreNotFound(k8sClient.Delete(suiteCtx, providerSecret))).To(Succeed())

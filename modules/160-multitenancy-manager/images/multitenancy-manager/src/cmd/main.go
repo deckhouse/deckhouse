@@ -51,6 +51,7 @@ import (
 	"controller/internal/rolebinding"
 	"controller/internal/startup"
 	clusterprojectrolebindingwebhook "controller/internal/webhook/clusterprojectrolebinding"
+	grantableclusterresourcereferencewebhook "controller/internal/webhook/grantableclusterresourcereference"
 	projectwebhook "controller/internal/webhook/project"
 	projectnamespacewebhook "controller/internal/webhook/projectnamespace"
 	projectrolebindingwebhook "controller/internal/webhook/projectrolebinding"
@@ -148,7 +149,7 @@ func main() {
 	}).SetupWithManager(runtimeManager); err != nil {
 		fatal(logger, err, "set up grant project reconciler")
 	}
-	if err = (&grantcontrollers.ReferenceReconciler{Client: runtimeManager.GetClient()}).SetupWithManager(runtimeManager); err != nil {
+	if err = (&grantcontrollers.ReferenceReconciler{Client: runtimeManager.GetClient(), Factory: jsonpathFactory}).SetupWithManager(runtimeManager); err != nil {
 		fatal(logger, err, "set up grant reference reconciler")
 	}
 	if err = (&grantcontrollers.DefinitionReconciler{Client: runtimeManager.GetClient()}).SetupWithManager(runtimeManager); err != nil {
@@ -163,6 +164,11 @@ func main() {
 	grantwebhooks.NewIsGrantedValidator(logger, runtimeManager.GetAPIReader(), runtimeManager.GetRESTMapper(), jsonpathFactory).InstallInto(runtimeManager.GetWebhookServer())
 	grantwebhooks.NewDefaultsMutator(logger, runtimeManager.GetAPIReader(), runtimeManager.GetRESTMapper(), jsonpathFactory).InstallInto(runtimeManager.GetWebhookServer())
 	grantwebhooks.NewProtectValidator(logger, serviceAccount).InstallInto(runtimeManager.GetWebhookServer())
+	// Reject a GrantableClusterResourceReference whose paths /is-granted cannot compile, whose
+	// defaulting path the /defaults mutator cannot write to, or whose fieldPaths scopes stray outside
+	// or leave holes in spec.rule. Same factory as those two webhooks and the reference reconciler, so
+	// all of them read a path the same way.
+	grantableclusterresourcereferencewebhook.Register(runtimeManager, jsonpathFactory)
 
 	// register the project role binding reconcilers
 	if err = (&projectrolebindingcontroller.Reconciler{Client: runtimeManager.GetClient()}).SetupWithManager(runtimeManager); err != nil {

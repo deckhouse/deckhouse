@@ -1148,7 +1148,7 @@ UID `1337` is reserved by Istio for the `istio-proxy` sidecar container. Do not 
 
 * DP allows you to install different control-plane versions simultaneously:
   * A single global version to handle namespaces or Pods with indifferent version (namespace label `istio-injection: enabled`). It is configured by the [globalVersion](configuration.html#parameters-globalversion) parameter.
-  * Additional versions handle namespaces or Pods with explicitly configured versions (`istio.io/rev: v1x25` label for namespace or Pod). They are configured by the [`additionalVersions`](configuration.html#parameters-additionalversions) parameter.
+  * Additional versions handle namespaces or Pods with explicitly configured versions (`istio.io/rev: v1x25` label for namespace or Pod). They are configured by the [`additionalVersions`](configuration.html#parameters-additionalversions) parameter. The `istio.io/rev` label on a Pod is taken into account only if its namespace has neither the `istio-injection` nor the `istio.io/rev` label.
 * Istio declares backward compatibility between data-plane and control-plane in the range of two minor versions:
 ![Istio data-plane and control-plane compatibility](images/istio-extended-support.png)
 * Upgrade algorithm (for example, from `1.25` to `1.27`):
@@ -1180,7 +1180,7 @@ To automate istio-sidecar upgrading, set a label `istio.deckhouse.io/auto-upgrad
 Automatic upgrading is triggered when the current data-plane version of a Pod with an istio-sidecar differs from the desired version. Adding a version to the [`additionalVersions`](configuration.html#parameters-additionalversions) parameter does not restart application Pods by itself. A mismatch usually appears in the following cases:
 
 * The [`globalVersion`](configuration.html#parameters-globalversion) parameter changed for a namespace that uses the global Istio version (`istio-injection=enabled` or `istio.io/rev=default`).
-* The `istio.io/rev` label changed on a Namespace or on a Pod.
+* The `istio.io/rev` label changed on a Namespace, or on a Pod in a namespace without the `istio-injection` and `istio.io/rev` labels.
 * The patch version of the installed control plane was updated.
 
 Before restarting a workload, the module checks that the corresponding control plane is installed and ready. Then the module adds or updates the `istio.deckhouse.io/full-version` annotation in `spec.template.metadata.annotations`, and Kubernetes performs a regular rollout. Within the same namespace, the module does not start upgrading the next workload until the previously upgraded workload is ready.

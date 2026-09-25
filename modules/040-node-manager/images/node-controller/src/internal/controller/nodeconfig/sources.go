@@ -77,13 +77,12 @@ type clusterInputs struct {
 	SysextDigests map[string]string
 	// RegistryPackagesProxyToken authenticates against the packages proxy.
 	RegistryPackagesProxyToken string
-	// SandboxImage is the pause image, resolved against the cluster's own
-	// registry: a cluster installed from a private registry has no route to the
-	// upstream one, and a node that cannot pull pause runs no pods at all.
-	SandboxImage string
+	// RegistryAgentMode says the registry module has handed containerd's
+	// registry.d to its own node agent: containerRuntime.registryOwner says "agent".
+	RegistryAgentMode bool
 	// Registry is how a node reaches the cluster's registry on its own. Every
-	// node gets it: containerd pulls pause with no imagePullSecret, so a worker
-	// without credentials fails every sandbox it tries to create.
+	// node gets it: the pulls containerd makes for itself — the control-plane
+	// static pods of a bootstrapping master among them — carry no imagePullSecret.
 	Registry *internalv1alpha1.Registry
 	// NodeExtensions are the operator's requests to merge extra system extensions
 	// onto the nodes they select, in the order their uniqueness contest ran; the
@@ -91,12 +90,23 @@ type clusterInputs struct {
 	// once per node. NodeExtensionConflicts says which requests lost it.
 	NodeExtensions         []*deckhousev1alpha1.NodeExtensionRequest
 	NodeExtensionConflicts map[string]nerConflict
+	// NodeStaticPodRequests are the pods the platform asks kubelet to run outside
+	// the scheduler, in the order their pod contest ran; like the extension
+	// requests that contest is cluster-wide, so it is settled here once per pass
+	// rather than once per node. NodeStaticPodRequestsRejected says which objects
+	// this controller refused and why.
+	NodeStaticPodRequests         []*deckhousev1alpha1.NodeStaticPodRequest
+	NodeStaticPodRequestsRejected map[string]nsprRefusal
 }
 
 // sourceReader reads cluster state straight from the API server: these
 // decisions are followed by writes and the manager's cache is a beat behind.
 type sourceReader struct {
 	Reader client.Reader
+	// rootHash resolves the OS image digest to the root hash of the root inside it,
+	// once per image. Nil until the first use, so the zero sourceReader the tests
+	// build keeps working.
+	rootHash *rootHashResolver
 }
 
 // readClusterInputs collects everything a NodeConfig is rendered from. Every
@@ -151,7 +161,7 @@ func (s *sourceReader) readClusterState(ctx context.Context, in *clusterInputs) 
 // on: the static configuration's list first, then the provider's single subnet.
 // A cluster carries one of the two secrets, so a missing one is an empty answer.
 func (s *sourceReader) readInternalNetworkCIDRs(ctx context.Context) ([]string, error) {
-	static, err := s.readConfigurationSecret(ctx, staticConfigSecretName, staticConfigKey)
+	static, err := s.readConfigurationSecret(ctx, kubeSystemNS, staticConfigSecretName, staticConfigKey)
 	if err != nil {
 		return nil, err
 	}
@@ -160,7 +170,7 @@ func (s *sourceReader) readInternalNetworkCIDRs(ctx context.Context) ([]string, 
 		return nil, fmt.Errorf("read the internal networks of %s/%s: %w", kubeSystemNS, staticConfigSecretName, err)
 	}
 
-	provider, err := s.readConfigurationSecret(ctx, providerConfigSecretName, providerConfigKey)
+	provider, err := s.readConfigurationSecret(ctx, kubeSystemNS, providerConfigSecretName, providerConfigKey)
 	if err != nil {
 		return nil, err
 	}
@@ -177,14 +187,14 @@ func (s *sourceReader) readInternalNetworkCIDRs(ctx context.Context) ([]string, 
 // readConfigurationSecret returns one of the cluster's configuration documents
 // as a plain map. An absent secret is the other kind of cluster and yields
 // nothing; a document that cannot be parsed stops the pass, as every read here does.
-func (s *sourceReader) readConfigurationSecret(ctx context.Context, name, key string) (map[string]any, error) {
+func (s *sourceReader) readConfigurationSecret(ctx context.Context, namespace, name, key string) (map[string]any, error) {
 	secret := &corev1.Secret{}
-	err := s.Reader.Get(ctx, types.NamespacedName{Namespace: kubeSystemNS, Name: name}, secret)
+	err := s.Reader.Get(ctx, types.NamespacedName{Namespace: namespace, Name: name}, secret)
 	if apierrors.IsNotFound(err) {
 		return nil, nil
 	}
 	if err != nil {
-		return nil, fmt.Errorf("read %s/%s: %w", kubeSystemNS, name, err)
+		return nil, fmt.Errorf("read %s/%s: %w", namespace, name, err)
 	}
 	raw, ok := secret.Data[key]
 	if !ok {
@@ -192,7 +202,7 @@ func (s *sourceReader) readConfigurationSecret(ctx context.Context, name, key st
 	}
 	var config map[string]any
 	if err := sigsyaml.Unmarshal(raw, &config); err != nil {
-		return nil, fmt.Errorf("parse %s of %s/%s: %w", key, kubeSystemNS, name, err)
+		return nil, fmt.Errorf("parse %s of %s/%s: %w", key, namespace, name, err)
 	}
 	return config, nil
 }
@@ -234,8 +244,8 @@ func providerInternalNetworkCIDR(config map[string]any) (string, error) {
 
 // readReleaseImages fills in what the release ships and how a node reaches it.
 func (s *sourceReader) readReleaseImages(ctx context.Context, in *clusterInputs) error {
-	// One read for the system extensions, the OS image and the pause image: they
-	// come out of the same ConfigMap, and reading it three times pays three times.
+	// One read for the system extensions and the OS image: they come out of the
+	// same ConfigMap, and reading it twice pays twice.
 	images, err := s.readImagesDigests(ctx)
 	if err != nil {
 		return err
@@ -251,19 +261,26 @@ func (s *sourceReader) readReleaseImages(ctx context.Context, in *clusterInputs)
 		return err
 	}
 
-	registry, imagesRepo, err := s.readRegistry(ctx)
+	// imagesRepo is the root hash resolver's; the render takes the registry only.
+	in.Registry, _, err = s.readRegistry(ctx)
 	if err != nil {
 		return err
 	}
-	in.Registry = registry
 
 	osImage, err := digestAt(images, nodeManagerDigestsKey, osImageName)
 	if err != nil {
 		return err
 	}
-	in.OSImage = internalv1alpha1.OSImage{Digest: osImage}
+	// The root hash is what a node compares by; the digest only says where to look.
+	// Read, not resolved: the watcher holds the answer for the digest in force, so
+	// nothing here reaches the registry. Empty is a digest it has not caught up with
+	// yet, which costs that node one download and no more.
+	in.OSImage = internalv1alpha1.OSImage{
+		Digest:   osImage,
+		RootHash: s.rootHashes().known(osImage),
+	}
 
-	in.SandboxImage, err = sandboxImage(images, imagesRepo)
+	in.RegistryAgentMode, err = s.readRegistryAgentMode(ctx)
 	if err != nil {
 		return err
 	}
@@ -275,7 +292,23 @@ func (s *sourceReader) readReleaseImages(ctx context.Context, in *clusterInputs)
 	in.NodeExtensions = orderedNERs(ners)
 	in.NodeExtensionConflicts = resolveNERConflicts(in.NodeExtensions)
 
+	nsprs, err := s.readNodeStaticPodRequests(ctx)
+	if err != nil {
+		return err
+	}
+	in.NodeStaticPodRequests = orderedNSPRs(nsprs)
+	in.NodeStaticPodRequestsRejected = rejectedNSPRs(in.NodeStaticPodRequests)
+
 	return nil
+}
+
+// rootHashes is the resolver, built on first use so that a sourceReader assembled
+// by hand — which is every test — needs no wiring to stay valid.
+func (s *sourceReader) rootHashes() *rootHashResolver {
+	if s.rootHash == nil {
+		s.rootHash = newRootHashResolver()
+	}
+	return s.rootHash
 }
 
 // readRegistry describes the cluster's registry: the spec a node needs to reach
@@ -329,14 +362,21 @@ func registryAuth(dockerConfig []byte, address string) (string, error) {
 	return config.Auths[address].Auth, nil
 }
 
-// sandboxImage resolves the pause image against the cluster's own registry.
-// Mirrors dhctl/pkg/immutable/digests.go:140.
-func sandboxImage(images map[string]map[string]string, imagesRepo string) (string, error) {
-	digest, err := digestAt(images, pauseDigestGroup, pauseDigestName)
+// readRegistryAgentMode reports whether the registry module has handed
+// containerd's registry.d to its node agent. The signal is the "agent" key of
+// the configuration that module already writes for bashible — the same key that
+// silences the bashible step which would otherwise write per-registry
+// directories there, so both kinds of node follow one decision.
+//
+// A cluster with no such secret, or one whose configuration has no agent key, is
+// simply a cluster where nodelet owns the directory: that is the answer, not a
+// failure. A document that does not parse is a failure, like every read here.
+func (s *sourceReader) readRegistryAgentMode(ctx context.Context) (bool, error) {
+	config, err := s.readConfigurationSecret(ctx, d8SystemNS, registryBashibleConfigSecret, registryBashibleConfigKey)
 	if err != nil {
-		return "", err
+		return false, err
 	}
-	return imagesRepo + "@" + digest, nil
+	return config[registryBashibleAgentKey] != nil, nil
 }
 
 // digestAt returns one image's digest out of the release's digest map. Absent
@@ -357,6 +397,17 @@ func (s *sourceReader) readNodeExtensionRequests(ctx context.Context) ([]deckhou
 	list := &deckhousev1alpha1.NodeExtensionRequestList{}
 	if err := s.Reader.List(ctx, list); err != nil {
 		return nil, fmt.Errorf("list node extension requests: %w", err)
+	}
+	return list.Items, nil
+}
+
+// readNodeStaticPodRequests lists the static pods the platform publishes; an
+// empty list is fine. Read live, while the status pass lists from the cache: the
+// two halves are eventually consistent, and a newer object costs one more pass.
+func (s *sourceReader) readNodeStaticPodRequests(ctx context.Context) ([]deckhousev1alpha1.NodeStaticPodRequest, error) {
+	list := &deckhousev1alpha1.NodeStaticPodRequestList{}
+	if err := s.Reader.List(ctx, list); err != nil {
+		return nil, fmt.Errorf("list node static pod requests: %w", err)
 	}
 	return list.Items, nil
 }

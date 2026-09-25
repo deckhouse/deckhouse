@@ -40,7 +40,8 @@ const (
 // UsageRule matches the usage object like a webhook/RBAC rule. A resource may live in several
 // groups and versions; "*" matches any group or version.
 type UsageRule struct {
-	// APIGroups are the API groups of the usage object (e.g. networking.k8s.io, extensions); "*" = any.
+	// APIGroups are the API groups of the usage object (e.g. networking.k8s.io, extensions). "*" is
+	// rejected: the webhook is registered for the listed groups only.
 	// +required
 	APIGroups []string `json:"apiGroups"`
 
@@ -55,7 +56,8 @@ type UsageRule struct {
 
 // MatchPredicate guards a field path: it applies only when the predicate holds on the object.
 type MatchPredicate struct {
-	// FieldPath is the JSONPath to the value tested by the predicate.
+	// FieldPath is the JSONPath to the value tested by the predicate. It must be a valid RFC 9535
+	// JSONPath; the GrantableClusterResourceReference validating webhook rejects one that does not parse.
 	// +required
 	FieldPath string `json:"fieldPath"`
 
@@ -68,9 +70,10 @@ type MatchPredicate struct {
 	In []string `json:"in,omitempty"`
 }
 
-// FieldPath is one version-scoped location of the granted name within the usage object, together with
-// its guard and defaulting behaviour. The entry whose APIGroups/APIVersions match the request's GVK
-// wins (a scoped entry beats an unscoped one); an entry with empty scope is the fallback.
+// FieldPath is one scoped location of the granted name within the usage object, together with its
+// guard and defaulting behaviour. Among the entries matching the request's resource/group/version the
+// most specific one wins (Resources beats APIGroups beats APIVersions); an entry with empty scope is
+// the fallback, and "*" in a scope dimension counts as unrestricted.
 type FieldPath struct {
 	// APIGroups restricts this entry to these groups (empty = any matched group).
 	// +optional
@@ -80,8 +83,18 @@ type FieldPath struct {
 	// +optional
 	APIVersions []string `json:"apiVersions,omitempty"`
 
+	// Resources restricts this entry to these plural resource names, e.g. pods, cronjobs
+	// (empty = any matched resource). "*" behaves like an omitted field: it matches any resource and
+	// adds no specificity.
+	// +optional
+	// +kubebuilder:validation:items:MinLength=1
+	Resources []string `json:"resources,omitempty"`
+
 	// Path is the JSONPath to the granted object's name (a string). May target an annotation, e.g.
-	// $.metadata.annotations['cert-manager.io/cluster-issuer'].
+	// $.metadata.annotations['cert-manager.io/cluster-issuer']. It must be a valid RFC 9535 JSONPath
+	// whatever the Defaulting mode; the GrantableClusterResourceReference validating webhook rejects one
+	// that does not parse. Validation evaluates the full JSONPath, but defaulting writes a single field,
+	// so with Defaulting FillEmpty or Coerce the path must be a simple member path (see Defaulting).
 	// +required
 	Path string `json:"path"`
 
@@ -90,6 +103,10 @@ type FieldPath struct {
 	Match *MatchPredicate `json:"match,omitempty"`
 
 	// Defaulting is the defaulting behaviour at this path: None (validate only), FillEmpty, or Coerce.
+	// FillEmpty and Coerce require Path to be a simple member path, e.g. $.spec.storageClassName or
+	// $.metadata.annotations['cert-manager.io/cluster-issuer']: wildcards, array indexes and filters
+	// select no single field to write to. The GrantableClusterResourceReference validating webhook
+	// rejects such a combination; with None any valid RFC 9535 JSONPath is allowed.
 	// +optional
 	// +kubebuilder:default=None
 	Defaulting DefaultingMode `json:"defaulting,omitempty"`
@@ -106,8 +123,10 @@ type GrantableClusterResourceReferenceSpec struct {
 	// +required
 	Rule UsageRule `json:"rule"`
 
-	// FieldPaths are the version-scoped locations of the granted name, with per-entry guard and
-	// defaulting. At least one entry is required; provide an unscoped entry as the fallback.
+	// FieldPaths are the scoped locations of the granted name, with per-entry guard and defaulting.
+	// At least one entry is required. Every entry's scope must be a subset of Rule, and every
+	// group/version/resource Rule matches must select an entry; an unscoped entry is the simplest
+	// fallback. The GrantableClusterResourceReference validating webhook rejects a violation.
 	// +required
 	// +kubebuilder:validation:MinItems=1
 	FieldPaths []FieldPath `json:"fieldPaths"`
@@ -123,7 +142,8 @@ type GrantableClusterResourceReferenceStatus struct {
 	// +optional
 	Bound bool `json:"bound,omitempty"`
 
-	// Conditions represent the current state of the reference (notably Bound: Resolved/UnknownResource).
+	// Conditions represent the current state of the reference: Bound (Resolved/UnknownResource) and
+	// FieldPathsValid (Valid/InvalidFieldPaths).
 	// +listType=map
 	// +listMapKey=type
 	// +optional

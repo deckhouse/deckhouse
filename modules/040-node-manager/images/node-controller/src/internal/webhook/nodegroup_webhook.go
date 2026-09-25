@@ -55,6 +55,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
 
 	v1 "github.com/deckhouse/node-controller/api/deckhouse.io/v1"
+	"github.com/deckhouse/node-controller/internal/cloudprovider"
 	"github.com/deckhouse/node-controller/internal/clusterprefix"
 	nodecommon "github.com/deckhouse/node-controller/internal/common"
 	"github.com/deckhouse/node-controller/internal/network"
@@ -98,6 +99,10 @@ func SetupWithManager(mgr ctrl.Manager) error {
 	// Validating webhook refusing a reserved NodeExtensionRequest sysext name.
 	hookServer.Register("/validate-deckhouse-io-v1alpha1-nodeextensionrequest", &webhook.Admission{
 		Handler: &NodeExtensionRequestValidator{decoder: decoder},
+	})
+	// Validating webhook refusing a static pod no node could run.
+	hookServer.Register("/validate-deckhouse-io-v1alpha1-nodestaticpodrequest", &webhook.Admission{
+		Handler: &NodeStaticPodRequestValidator{decoder: decoder},
 	})
 	hookServer.Register("/validate-internal-deckhouse-io-v1alpha1-nodeconfig", &webhook.Admission{
 		Handler: &NodeConfigValidator{decoder: decoder},
@@ -176,6 +181,13 @@ func (w *NodeGroupValidator) Handle(ctx context.Context, req admission.Request) 
 					"To change it, create a NodeGroup under a different name",
 				v1.SystemTypeImmutable, strings.Join(bashibleNodes, " ")))
 		}
+	}
+
+	if providerTypeMessage, err := w.validateProviderType(ctx, ng, oldNG); err != nil {
+		webhookLog.Error(err, "failed to validate providerType")
+		return admission.Errored(http.StatusInternalServerError, err)
+	} else if providerTypeMessage != "" {
+		return admission.Denied(providerTypeMessage)
 	}
 
 	if ng.Spec.CloudInstances != nil {
@@ -768,6 +780,32 @@ func (w *NodeGroupValidator) nodeNames(ctx context.Context, selector client.Matc
 	return names, nil
 }
 
+// validateProviderType checks spec.providerType against the provider the NodeGroup resolves to.
+// Denying here only catches the typo early — the verdict belongs to the reconcile, which sees a
+// provider that changed after this write.
+func (w *NodeGroupValidator) validateProviderType(
+	ctx context.Context,
+	ng, oldNG *v1.NodeGroup,
+) (string, error) {
+	if ng.Spec.ProviderType == "" {
+		return "", nil
+	}
+
+	if oldNG != nil && oldNG.Spec.ProviderType == ng.Spec.ProviderType {
+		return "", nil
+	}
+
+	pCatalog, err := cloudprovider.GetCatalog(ctx, w.Client)
+	if err != nil {
+		return "", fmt.Errorf("load cloud provider registrations: %w", err)
+	}
+
+	if err := cloudprovider.ValidateNodeGroupPType(ng, pCatalog.ByNodeGroup(ng)); err != nil {
+		return err.Error(), nil
+	}
+	return "", nil
+}
+
 func (w *NodeGroupValidator) validateInstanceClassKind(
 	ctx context.Context,
 	ng, oldNG *v1.NodeGroup,
@@ -784,7 +822,7 @@ func (w *NodeGroupValidator) validateInstanceClassKind(
 		return "", nil
 	}
 
-	gvks, err := nodecommon.RegisteredInstanceClassGVKs(ctx, w.Client)
+	gvks, err := cloudprovider.RegisteredInstanceClassGVKs(ctx, w.Client)
 	if err != nil {
 		return "", fmt.Errorf("get registered InstanceClass kinds: %w", err)
 	}

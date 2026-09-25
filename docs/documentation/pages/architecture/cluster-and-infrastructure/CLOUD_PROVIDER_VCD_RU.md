@@ -21,7 +21,7 @@ description: Архитектура модуля cloud-provider-vcd в Deckhouse
 
 Архитектура модуля [`cloud-provider-vcd`](/modules/cloud-provider-vcd/) на уровне 2 модели C4 и его взаимодействия с другими компонентами Deckhouse Platform (DP) изображены на следующей диаграмме:
 
-![Архитектура модуля cloud-provider-vcd](../../../images/architecture/cluster-and-infrastructure/c4-l2-cloud-provider-vcd.ru.png)
+![Архитектура модуля cloud-provider-vcd](../../../images/architecture/cluster-and-infrastructure/c4-l2-cloud-provider-vcd.ru.svg)
 
 ## Компоненты модуля
 

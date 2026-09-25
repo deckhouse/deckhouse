@@ -28,7 +28,7 @@ description: Архитектура модуля user-authn в Deckhouse Platfor
 
 Вариант с использованием dex-authenticator:
 
-![Архитектура модуля user-authn с аутентификацией через dex-authenticator](../../images/architecture/iam/c4-l2-user-authn.ru.png)
+![Архитектура модуля user-authn с аутентификацией через dex-authenticator](../../images/architecture/iam/c4-l2-user-authn.ru.svg)
 
 {% alert level="info" %}
 Для упрощения на следующих схемах показаны только компоненты и их взаимодействия, отличающие эти схемы от варианта с использованием dex-authenticator.
@@ -36,7 +36,7 @@ description: Архитектура модуля user-authn в Deckhouse Platfor
 
 Вариант с использованием клиента Dex:
 
-![Архитектура модуля user-authn с аутентификацией через Dex](../../images/architecture/iam/c4-l2-user-authn-dex-client.ru.png)
+![Архитектура модуля user-authn с аутентификацией через Dex](../../images/architecture/iam/c4-l2-user-authn-dex-client.ru.svg)
 
 При подключении к API Kubernetes с помощью утилиты `d8`, `kubectl` или других клиентов Kubernetes с использованием сгенерированного kubeconfig используются отдельные схемы аутентификации:
 
@@ -45,11 +45,11 @@ description: Архитектура модуля user-authn в Deckhouse Platfor
 
 Вариант подключения к API Kubernetes с аутентификацией по токенам:
 
-![Архитектура модуля user-authn при использовании сгенерированного kubeconfig и аутентификацией по токенам](../../images/architecture/iam/c4-l2-user-authn-kubeconfig.ru.png)
+![Архитектура модуля user-authn при использовании сгенерированного kubeconfig и аутентификацией по токенам](../../images/architecture/iam/c4-l2-user-authn-kubeconfig.ru.svg)
 
 Вариант подключения к API Kubernetes с базовой аутентификацией:
 
-![Архитектура модуля user-authn при использовании сгенерированного kubeconfig и базовой аутентификацией](../../images/architecture/iam/c4-l2-user-authn-kubeconfig-basic.ru.png)
+![Архитектура модуля user-authn при использовании сгенерированного kubeconfig и базовой аутентификацией](../../images/architecture/iam/c4-l2-user-authn-kubeconfig-basic.ru.svg)
 
 ## Компоненты модуля
 

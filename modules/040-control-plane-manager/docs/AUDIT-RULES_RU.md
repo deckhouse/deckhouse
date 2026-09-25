@@ -252,6 +252,7 @@ users:
   - system:serviceaccount:d8-cert-manager:cainjector
   - system:serviceaccount:d8-cert-manager:cert-manager
   - system:serviceaccount:d8-cert-manager:webhook
+  - system:serviceaccount:d8-cert-manager:yandex-dns-webhook
   - system:serviceaccount:d8-chrony:chrony-exporter
   - system:serviceaccount:d8-chrony:chrony-exporter-master
   - system:serviceaccount:d8-cloud-instance-manager:caps-controller-manager
@@ -315,6 +316,7 @@ users:
   - system:serviceaccount:d8-cni-simple-bridge:cni-simple-bridge
   - system:serviceaccount:d8-csi-vsphere:cloud-data-discoverer
   - system:serviceaccount:d8-descheduler:descheduler
+  - system:serviceaccount:d8-istio:alliance-ambientgateway
   - system:serviceaccount:d8-istio:alliance-healthcheck
   - system:serviceaccount:d8-istio:alliance-ingressgateway
   - system:serviceaccount:d8-istio:alliance-metadata-exporter
@@ -734,6 +736,7 @@ rules:
       - system:serviceaccount:d8-cert-manager:cainjector
       - system:serviceaccount:d8-cert-manager:cert-manager
       - system:serviceaccount:d8-cert-manager:webhook
+      - system:serviceaccount:d8-cert-manager:yandex-dns-webhook
       - system:serviceaccount:d8-chrony:chrony-exporter
       - system:serviceaccount:d8-chrony:chrony-exporter-master
       - system:serviceaccount:d8-cloud-instance-manager:caps-controller-manager
@@ -797,6 +800,7 @@ rules:
       - system:serviceaccount:d8-cni-simple-bridge:cni-simple-bridge
       - system:serviceaccount:d8-csi-vsphere:cloud-data-discoverer
       - system:serviceaccount:d8-descheduler:descheduler
+      - system:serviceaccount:d8-istio:alliance-ambientgateway
       - system:serviceaccount:d8-istio:alliance-healthcheck
       - system:serviceaccount:d8-istio:alliance-ingressgateway
       - system:serviceaccount:d8-istio:alliance-metadata-exporter

@@ -40,6 +40,7 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config/registry"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/global"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/minget"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/util/input"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/maputil"
 )
 
@@ -87,6 +88,11 @@ type MetaConfig struct {
 	// embedded in the installer image. Required by LoadInstallerVersion and
 	// DeckhouseInstaller.GetImageTag.
 	VersionFilePath string `json:"-"`
+
+	// Recovered from ResourcesYAML. Kept apart from ModuleConfigs on purpose: those are created
+	// in the cluster before deckhouse is installed, while this one has to land after its
+	// ModuleSource.
+	externalProviderModuleConfig *ModuleConfig `json:"-"`
 }
 
 type imagesDigests map[string]map[string]any
@@ -134,6 +140,21 @@ func (m *MetaConfig) Prepare(ctx context.Context, validatorProvider MetaConfigVa
 		if err := json.Unmarshal(m.ClusterConfig["clusterDomain"], &m.ClusterDomain); err != nil {
 			return nil, fmt.Errorf("unable to unmarshal cluster domain from cluster configuration: %w", err)
 		}
+
+		// Everything about the cluster's address space that the documents alone decide. It lives
+		// here rather than in preflight because preflight does not run for `dhctl config`, does
+		// not run for converge, and is turned off wholesale by --preflight-skip-all-checks — and
+		// none of these parameters can be changed after the cluster is created.
+		if err := validateClusterNetworking(ctx, m); err != nil {
+			return nil, err
+		}
+
+		warnAboutKubernetesVersion(ctx, m)
+	}
+
+	// The documents against each other, rather than each against its own schema.
+	if err := validateClusterDocuments(ctx, m); err != nil {
+		return nil, err
 	}
 
 	if len(m.InitClusterConfig) > 0 {
@@ -158,7 +179,10 @@ func (m *MetaConfig) Prepare(ctx context.Context, validatorProvider MetaConfigVa
 	if err != nil {
 		return nil, err
 	}
-	m.ClusterPrefix = m.effectiveClusterPrefix(cloudSpec.Prefix)
+	m.ClusterPrefix, err = m.effectiveClusterPrefix(cloudSpec.Prefix)
+	if err != nil {
+		return nil, err
+	}
 
 	if err := m.extractProviderClusterFields(); err != nil {
 		return nil, err
@@ -170,6 +194,10 @@ func (m *MetaConfig) Prepare(ctx context.Context, validatorProvider MetaConfigVa
 			return nil, fmt.Errorf("parse cloud provider resources: %w", err)
 		}
 		m.CloudProviderVars = cv
+	}
+
+	if err := m.recoverExternalProviderModuleConfig(); err != nil {
+		return nil, err
 	}
 
 	if err := m.applyCloudProviderModuleSettings(); err != nil {
@@ -402,6 +430,9 @@ func (m *MetaConfig) applyCloudProviderModuleSettings() error {
 			picked = mc
 		}
 	}
+	if picked == nil && m.externalProviderModuleConfig != nil && len(m.externalProviderModuleConfig.Spec.Settings) > 0 {
+		picked = m.externalProviderModuleConfig
+	}
 	if picked == nil {
 		return nil
 	}
@@ -625,7 +656,10 @@ func (m *MetaConfig) findProviderModuleConfig() *ModuleConfig {
 	if m == nil || m.ProviderName == "" {
 		return nil
 	}
-	return m.FindModuleConfig(CloudProviderModuleName(m.ProviderName))
+	if mc := m.FindModuleConfig(CloudProviderModuleName(m.ProviderName)); mc != nil {
+		return mc
+	}
+	return m.externalProviderModuleConfig
 }
 
 // HasProviderModuleConfig reports whether the cluster carries a
@@ -889,14 +923,14 @@ func (m *MetaConfig) ConfigForBashibleBundleTemplate(ctx context.Context, nodeIP
 		nodeGroup["static"] = m.ExtractMasterNodeGroupStaticSettings(ctx)
 	}
 
+	if m.ClusterType == CloudClusterType {
+		nodeGroup["cloudProviderType"] = m.ProviderName
+	}
+
 	configForBashibleBundleTemplate := make(map[string]any)
 	maps.Copy(configForBashibleBundleTemplate, m.VersionMap)
 
 	configForBashibleBundleTemplate["runType"] = "ClusterBootstrap"
-
-	if m.ClusterType == CloudClusterType {
-		configForBashibleBundleTemplate["provider"] = m.ProviderName
-	}
 
 	configForBashibleBundleTemplate["cri"] = data["defaultCRI"]
 	configForBashibleBundleTemplate["kubernetesVersion"] = data["kubernetesVersion"]
@@ -998,6 +1032,9 @@ func (m *MetaConfig) DeepCopy() *MetaConfig {
 	out.StaticClusterConfig = cloneMap(m.StaticClusterConfig)
 	out.CloudProviderVars = cloneCloudProviderVars(m.CloudProviderVars)
 	out.ModuleConfigs = cloneModuleConfigs(m.ModuleConfigs)
+	if m.externalProviderModuleConfig != nil {
+		out.externalProviderModuleConfig = cloneModuleConfigs([]*ModuleConfig{m.externalProviderModuleConfig})[0]
+	}
 	out.VersionMap = cloneMap(m.VersionMap)
 	out.Images = cloneNestedMap(m.Images)
 	if m.TerraNodeGroupSpecs != nil {
@@ -1207,15 +1244,38 @@ func (m *MetaConfig) LoadImagesDigests() error {
 // new home for this value and takes precedence over the deprecated
 // ClusterConfiguration.cloud.prefix, which is being removed together with the
 // whole cloud section. Falls back to cloudPrefix during the transition.
-func (m *MetaConfig) effectiveClusterPrefix(cloudPrefix string) string {
+// effectiveClusterPrefix picks the prefix the installer names cloud objects with. The two places
+// it can be written must agree: the ModuleConfig value is what in-cluster consumers read, the
+// ClusterConfiguration value is what the Terraform layouts read, and a cluster whose objects are
+// named by one while its modules expect the other is a cluster nobody can reason about.
+//
+// The mismatch used to be resolved silently in favour of the ModuleConfig. The operator learned
+// about it from the cloud rejecting a resource name, or from bashible ten minutes in with
+// "FAIL Hostname '<prefix>-master-0'".
+func (m *MetaConfig) effectiveClusterPrefix(cloudPrefix string) (string, error) {
+	modulePrefix := ""
 	if mc := m.FindModuleConfig("global"); mc != nil {
 		if raw, ok := mc.Spec.Settings["prefix"]; ok {
-			if p, ok := raw.(string); ok && p != "" {
-				return p
+			if p, ok := raw.(string); ok {
+				modulePrefix = p
 			}
 		}
 	}
-	return cloudPrefix
+
+	switch {
+	case modulePrefix == "":
+		return cloudPrefix, nil
+	case cloudPrefix == "":
+		return modulePrefix, nil
+	case modulePrefix != cloudPrefix:
+		return "", fmt.Errorf(
+			"ClusterConfiguration.cloud.prefix is %q and spec.settings.prefix in the \"global\" ModuleConfig is %q. "+
+				"They name the same cluster and must match: the installer names cloud objects from the first, "+
+				"and the modules in the cluster read the second",
+			cloudPrefix, modulePrefix)
+	default:
+		return modulePrefix, nil
+	}
 }
 
 // clusterConfigForInfrastructure returns the ClusterConfiguration to feed to the
@@ -1412,4 +1472,25 @@ func (m *MetaConfig) effectiveDefaultCRI() string {
 	}
 
 	return ""
+}
+
+// The document lands in ResourcesYAML whenever its module is absent from the installer's modules
+// dir, and unpacking the bundle does not move it back: LoadProviderDir accepts only the names in
+// schemaFileNames. An already-parsed ModuleConfig wins, it went through validation.
+func (m *MetaConfig) recoverExternalProviderModuleConfig() error {
+	if m.ProviderName == "" || m.ResourcesYAML == "" {
+		return nil
+	}
+	if m.FindModuleConfig(CloudProviderModuleName(m.ProviderName)) != nil {
+		return nil
+	}
+
+	md, err := ParseModuleDocs(input.YAMLSplitRegexp.Split(strings.TrimSpace(m.ResourcesYAML), -1))
+	if err != nil {
+		return fmt.Errorf("recover cloud provider module config: %w", err)
+	}
+	if mc := md.ProviderConfigs[CloudProviderModuleName(m.ProviderName)]; mc != nil {
+		m.externalProviderModuleConfig = mc
+	}
+	return nil
 }

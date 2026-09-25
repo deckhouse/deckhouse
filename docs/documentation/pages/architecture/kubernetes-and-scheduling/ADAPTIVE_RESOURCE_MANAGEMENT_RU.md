@@ -32,7 +32,7 @@ description: Архитектура модуля adaptive-resource-management в
 
 Архитектура модуля [`adaptive-resource-management`](/modules/adaptive-resource-management/) на уровне 2 модели C4 и его взаимодействие с другими компонентами DP показаны на следующей диаграмме:
 
-![Архитектура модуля adaptive-resource-management](../../images/architecture/kubernetes-and-scheduling/c4-l2-adaptive-resource-management.ru.png)
+![Архитектура модуля adaptive-resource-management](../../images/architecture/kubernetes-and-scheduling/c4-l2-adaptive-resource-management.ru.svg)
 
 ## Компоненты модуля
 

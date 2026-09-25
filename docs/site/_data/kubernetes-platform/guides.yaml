@@ -76,3 +76,14 @@
     - baremetal
     - cloud
     - production
+- name:
+    ru: "Установка DKP в существующий Talos-кластер"
+    en: "Installing DKP in an existing Talos cluster"
+  link: "talos-existing-cluster.html"
+  description:
+    ru: Руководство по установке Deckhouse Kubernetes Platform в существующий Talos-кластер
+    en: A guide to installing Deckhouse Kubernetes Platform in an existing Talos cluster
+  tags:
+    - baremetal
+    - cloud
+    - production

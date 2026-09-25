@@ -28,16 +28,26 @@ node-controller/src/
 │   ├── controller/
 │   │   ├── bashiblecleanup/           # Removes bashible init artifacts from nodes
 │   │   ├── capi/                      # CAPI v1beta2 resources (Cluster, MachineDeployment, MHC)
+│   │   ├── clusterprefixmigration/    # Moves cloud.prefix into the global ModuleConfig
 │   │   ├── crdmigration/              # Migrates CAPI CRDs to v1beta2 storage + conversion webhooks
 │   │   ├── draining/                  # Handles node drain lifecycle
-│   │   ├── fencing/                   # Fencing of unresponsive nodes
-│   │   ├── nodegroup/                 # NodeGroup status reconciliation
+│   │   ├── instance/                  # Instance objects for CAPI/MCM machines
+│   │   ├── nodegroup/                 # NodeGroup status + bashible context (see its README)
 │   │   ├── nodetemplate/              # Applies NodeGroup templates to nodes
 │   │   ├── staticproviderid/          # Sets providerID on static nodes
 │   │   └── updateapproval/            # Update/disruption approval workflow
+│   ├── cloudprovider/                 # Provider registration Secrets: load, resolve per NodeGroup, watch
+│   ├── machinetemplate/               # CAPI machine template contract, rendering and rollout decision
+│   ├── capacity/                      # Node capacity parsing
+│   ├── clusterprefix/                 # Single resolution of the instance prefix
+│   ├── common/                        # Shared constants, label helpers, event→NodeGroup mappers
+│   ├── metrics/cache/                 # Instrumented client and cache metrics
+│   ├── schema/                        # Drift guard between the shipped CRD and the Go type
+│   ├── testenv/                       # envtest harness shared by the controller suites
 │   └── webhook/
-│       ├── nodegroup_webhook.go       # Validation webhook (17 checks)
-│       └── nodegroup_conversion_handler.go  # Conversion webhook v1↔v1alpha*
+│       ├── nodegroup_webhook.go       # Validation webhook
+│       ├── ng_conversion_handler.go   # NodeGroup conversion v1↔v1alpha*
+│       └── instance_conversion_handler.go  # Instance conversion v1alpha1↔v1alpha2
 └── docs/
     ├── architecture.md                # This file
     ├── controller-capi.md             # CAPI controllers
@@ -128,21 +138,26 @@ Writes (`Patch`, `Update`, `Delete`, `Create`) go directly to the API server.
 │                                                  │
 │  NodeGroup  ──┬── nodegroup-status controller    │
 │               ├── nodegroup-update-approval      │
+│               ├── bashible-context               │
+│               ├── capi-machine-deployment        │
+│               ├── capi-cluster-resources         │
 │               └── node-template controller       │
 │                                                  │
 │  Node ────────┬── bashible-cleanup               │
 │               ├── node-draining                  │
-│               ├── node-fencing                   │
 │               ├── node-template                  │
 │               ├── static-provider-id             │
 │               ├── nodegroup-status               │
 │               └── nodegroup-update-approval      │
 │                                                  │
 │  Machine/MD ──┬── nodegroup-status               │
-│                                                  │
-│  Lease ───────┴── node-fencing                   │
+│               ├── capi-machine-deployment        │
+│               ├── capi-api-version               │
+│               └── capi-md-metrics                │
 │                                                  │
 │  Secret ──────┬── nodegroup-status               │
-│               └── nodegroup-update-approval      │
+│               ├── nodegroup-update-approval      │
+│               ├── bashible-context               │
+│               └── capi-cluster-resources         │
 └──────────────────────────────────────────────────┘
 ```

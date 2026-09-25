@@ -106,4 +106,15 @@ spec:
           readOnly: false
           metadata:
             description: Node-local storage for downloaded module sources.
+        {{- /*
+          `readOnly: true` rather than the `false` of the entries above, and that is not a
+          stylistic choice: the exception matches a volume only when its value equals the
+          mount's, so `false` here would leave this path unexcepted.
+        */}}
+        - path: /etc/kubernetes/registry-agent/pki
+          readOnly: true
+          metadata:
+            description: |
+              CA of the node-local registry agent. The controller fetches its release channel
+              and module sources through that agent and has to verify its certificate.
 {{- end }}

@@ -31,6 +31,7 @@ import (
 
 	deckhousev1 "github.com/deckhouse/node-controller/api/deckhouse.io/v1"
 	"github.com/deckhouse/node-controller/internal/bootstrap"
+	"github.com/deckhouse/node-controller/internal/cloudprovider"
 	nodecommon "github.com/deckhouse/node-controller/internal/common"
 	"github.com/deckhouse/node-controller/internal/controller/nodegroup/bashiblecontext"
 	ngcommon "github.com/deckhouse/node-controller/internal/controller/nodegroup/common"
@@ -50,7 +51,7 @@ const imagesDigestsKey = "images_digests.json"
 // token for the Secrets this controller writes, the <<BOOTSTRAP_TOKEN>> literal
 // for the MCM machine-class Secret, where machine-controller-manager substitutes
 // a token of its own per machine.
-func BuildInput(ctx context.Context, svc *bashiblecontext.Service, resolved derived_status.ResolvedNodeGroup, token string) (bootstrap.Input, error) {
+func BuildInput(ctx context.Context, svc *bashiblecontext.Service, resolved derived_status.ResolvedNodeGroup, provider cloudprovider.Registration, token string) (bootstrap.Input, error) {
 	// Helm held this gate as `clusterUUID | required`: with an empty UUID rpp-get
 	// asks the packages proxy for a prefix-less path, gets a 404, and the node
 	// hangs for the whole bootstrap timeout instead of failing loudly.
@@ -82,10 +83,6 @@ func BuildInput(ctx context.Context, svc *bashiblecontext.Service, resolved deri
 		return bootstrap.Input{}, err
 	}
 
-	cloudProvider := svc.ReadCloudProvider(ctx)
-	provider, _ := cloudProvider["type"].(string)
-	sshPublicKey, _ := cloudProvider["sshPublicKey"].(string)
-
 	return bootstrap.Input{
 		NodeGroup:              resolved.ToMap(),
 		APIServerEndpoints:     endpoints.APIServerEndpoints,
@@ -96,10 +93,10 @@ func BuildInput(ctx context.Context, svc *bashiblecontext.Service, resolved deri
 		// minget is 4KiB (crane export of the image candi/alt_base_images.yml
 		// pins), so inlining its base64 into the script costs ~5KiB per copy.
 		MingetB64:      base64.StdEncoding.EncodeToString(files.Binary("minget")),
-		Provider:       provider,
+		Provider:       provider.Type,
 		KubernetesCA:   kubernetesCA,
 		BootstrapToken: token,
-		SSHPublicKey:   sshPublicKey,
+		SSHPublicKey:   provider.SSHPublicKey,
 		Files:          files,
 	}, nil
 }

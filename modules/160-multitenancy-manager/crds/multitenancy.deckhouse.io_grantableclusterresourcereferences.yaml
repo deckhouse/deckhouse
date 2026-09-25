@@ -70,14 +70,14 @@ spec:
                 description: |-
                   List of Kubernetes resource fields that contain references to the cluster-wide resource.
 
-                  For each field, you can limit applicability to specific API groups and versions, define a matching condition, and configure default value assignment.
+                  For each field, you can limit applicability to specific resources, API groups and versions, define a matching condition, and configure default value assignment.
 
-                  At least one item is required. If settings for specific API groups or versions are used, also add an item without `apiGroups` and `apiVersions` to apply in all other cases.
+                  At least one item is required. The `resources`, `apiGroups` and `apiVersions` of an item must be a subset of the corresponding lists in `spec.rule` (`*` in `spec.rule` accepts any value). Every combination of API group, version and resource that `spec.rule` matches must be covered by at least one item, otherwise requests for it would not be checked at all. Either give items scoped to every such combination, or add an item without `resources`, `apiGroups` and `apiVersions` as the fallback for all other cases. An object that violates either rule is rejected.
                 items:
                   description: |-
                     Settings for a field that contains a reference to the cluster-wide resource.
 
-                    If the API group and version of a resource match multiple items, the item with explicitly specified `apiGroups` or `apiVersions` applies. An item without API group and version restrictions is used in all other cases.
+                    If a request matches multiple items, the most specific one applies: `resources` takes precedence over `apiGroups`, and `apiGroups` takes precedence over `apiVersions`. `*` in `resources`, `apiGroups`, or `apiVersions` does not restrict the item and does not make it more specific. If several items are equally specific, the first one in the list applies. An item without restrictions is used in all other cases.
                   properties:
                     apiGroups:
                       description: |-
@@ -105,6 +105,8 @@ spec:
                         - `None`: No value is assigned; only the availability of the specified cluster-wide resource is checked.
                         - `FillEmpty`: The default value is assigned when an object is created if the field is empty.
                         - `Coerce`: The default value is assigned when an object is created if the field is empty or the specified cluster-wide resource is unavailable to the project.
+
+                        `FillEmpty` and `Coerce` require `path` to point to a single field, so only a simple member path is accepted, for example `$.spec.storageClassName` or `$.metadata.annotations['cert-manager.io/cluster-issuer']`. A path with a wildcard, an array index or a filter is rejected with these modes and can only be used with `None`.
                       enum:
                       - None
                       - FillEmpty
@@ -120,7 +122,10 @@ spec:
                           description: Value that the field specified in `fieldPath` must match.
                           type: string
                         fieldPath:
-                          description: JSONPath to the field whose value is checked by the condition.
+                          description: |-
+                            JSONPath to the field whose value is checked by the condition.
+
+                            Must be a valid RFC 9535 JSONPath; an object with a path that does not parse is rejected.
                           type: string
                         in:
                           description: List of allowed values for the field specified in `fieldPath`.
@@ -135,7 +140,20 @@ spec:
                         JSONPath to the string field containing the name of the cluster-wide resource.
 
                         The path can also point to an annotation, for example, `$.metadata.annotations['cert-manager.io/cluster-issuer']`.
+
+                        Must be a valid RFC 9535 JSONPath; an object with a path that does not parse is rejected, whatever `defaulting` is set to. A field name that is not a plain identifier (contains `-`, `.` or `/`, or starts with a digit) must be written in brackets, for example `$.spec['foo-bar']`.
+
+                        An availability check evaluates the full JSONPath, including wildcards, array indexes and filters. Default value assignment does not: with `defaulting: FillEmpty` or `defaulting: Coerce`, only a simple member path is accepted.
                       type: string
+                    resources:
+                      description: |-
+                        Kubernetes resource names in plural, for example, `pods` or `cronjobs`, to which the field settings apply.
+
+                        If the parameter is not specified, the settings apply to all resources that match `spec.rule`. `*` has the same effect as omitting the parameter: it does not restrict the item and does not make it more specific.
+                      items:
+                        minLength: 1
+                        type: string
+                      type: array
                   required:
                   - path
                   type: object
@@ -188,7 +206,11 @@ spec:
                 description: Indicates that the GrantableClusterResourceDefinition specified in `spec.grantableClusterResourceName` exists.
                 type: boolean
               conditions:
-                description: Current state of GrantableClusterResourceReference, including the state of its association with GrantableClusterResourceDefinition.
+                description: |-
+                  Current state of GrantableClusterResourceReference.
+
+                  - `Bound`: whether the GrantableClusterResourceDefinition specified in `spec.grantableClusterResourceName` exists (reasons `Resolved`, `UnknownResource`).
+                  - `FieldPathsValid`: whether `spec.fieldPaths` pass the checks applied when the object is created or updated: the paths are valid, defaulting paths are simple member paths, item scopes are within `spec.rule`, and every combination `spec.rule` matches is covered (reasons `Valid`, `InvalidFieldPaths`; the message lists all problems). `False` means the object was stored bypassing these checks; the invalid paths are skipped during availability checks.
                 items:
                   description: Information about one aspect of the current resource state.
                   properties:

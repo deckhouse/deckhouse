@@ -60,20 +60,43 @@ Mesh (`istio-<revision>`) — в [`configmap-mesh.yaml`](../../templates/control
 
 **A. Модуль в целом** — images, oss, CRD, hooks, `_rules_v-1-30.tpl`, тесты (как в общих шагах выше).
 
-**B. Каталог `files/<revision>`** — обычно 3 команды и всё
+**B. Каталог `files/<revision>`** — 3 команды плюс возврат правок
+
+#### 1. Клон нужного тега Istio
 
 ```bash
-# 1. Клон нужного тега Istio
 git clone --depth 1 --branch 1.30.0 <ISTIO_REPO.git> /tmp/istio
 UP=/tmp/istio/manifests/charts/istio-control/istio-discovery
+```
 
-# 2. Скопировать предыдущую revision целиком
+#### 2. Скопировать предыдущую revision целиком
+
+```bash
 cp -r files/v1x29 files/v1x30
+```
 
-# 3. Заменить только upstream-тела шаблонов (без правок)
+#### 3. Заменить upstream-тела шаблонов
+
+```bash
 cp "$UP/files/injection-template.yaml"         files/v1x30/static/sidecar-injection-template.yaml
 cp "$UP/files/gateway-injection-template.yaml" files/v1x30/static/gateway-injection-template.yaml
 ```
+
+#### 4. Вернуть правки Deckhouse
+
+Шаг 3 их затирает, поэтому их нужно внести заново. Правки есть в **обоих** static-файлах.
+Каждая помечена комментарием `[Deckhouse]`: `grep -c '\[Deckhouse\]' files/v1x29/static/*.yaml`
+покажет, сколько их должно быть в каждом файле, а `diff` со скопированными upstream-телами —
+не разъехалось ли что-то ещё.
+
+По состоянию на 1.29 правки такие:
+
+| Правка | Файл | Где | Зачем |
+|--------|------|-----|-------|
+| `readOnlyRootFilesystem: true` | sidecar | init-контейнер, ветка без CNI | на практике писать в rootfs ему не нужно |
+| `livenessProbe` | sidecar | `istio-proxy`, внутри проверки status-порта | `requiredProbes` из admission-policy-engine отклоняет контейнер без неё |
+| `seccompProfile` | gateway | `securityContext` контейнера `istio-proxy` | Pod Security Standards `restricted` требует явный профиль, а upstream для templated gateway его не ставит |
+| `livenessProbe` | gateway | `istio-proxy`, безусловно | та же политика `requiredProbes`; в gateway-шаблоне нет переключателя status-порта |
 
 **На этом для большинства minor bump достаточно.**
 `templates/sidecar-injection-values.yaml` и `sidecar-injection-config.yaml` уже лежат в копии — **не трогаем**, если static не требует новых настроек.
@@ -113,6 +136,8 @@ Upstream в `istiod-injector-configmap.yaml` собирает **широкий**
 |-----------|---------------|
 | static sidecar | `files/injection-template.yaml` |
 | static gateway | `files/gateway-injection-template.yaml` |
+| только для revision с оператором: `static/d8-seccomp-injection-template.yaml` | ничего — это собственный injection-шаблон Deckhouse, а не upstream-файл |
+| только для revision с оператором: `static/gateway-injection-template.yaml` | `files/gateway-injection-template.yaml` — вендорим и его, потому что `istios.yaml` переопределяет ключ `gateway`, а это целиком заменяет копию из чарта |
 | справочно: что Istio кладёт в CM | `templates/istiod-injector-configmap.yaml` |
 
 [`istios.yaml`](../../templates/control-plane/iop/istios.yaml) — как было с оператором; для operator-free **не копировать целиком**, только подсмотреть D8-логику.
@@ -120,7 +145,8 @@ Upstream в `istiod-injector-configmap.yaml` собирает **широкий**
 ### Чеклист `files/`
 
 - [ ] `cp -r files/<prev> files/<revision>`
-- [ ] `static/` — 2 файла из upstream as-is
+- [ ] `static/` — 2 файла из upstream, затем вернуть правки `[Deckhouse]` в **оба**
+- [ ] `diff` каждого результата с его upstream-телом — ничего непомеченного отличаться не должно
 - [ ] при необходимости — правки `templates/` (см. таблицу выше)
 - [ ] `template_tests/module_test.go`
 

@@ -118,14 +118,21 @@ spec:
       - v1
     resources:
       - persistentvolumeclaims
-  fieldPaths:                                     # где ИМЯ, версионно
-    - path: $.spec.storageClassName               # запись без scope = дефолт (для всех версий)
+  fieldPaths:                                     # где ИМЯ, по ресурсам и версиям
+    - path: $.spec.storageClassName               # запись без scope = дефолт (для всех ресурсов и версий)
       defaulting: Coerce                          # None | FillEmpty | Coerce
-    # версионно-зависимый пример (класс IngressClass переезжал между версиями):
+    # Два примера ниже — из ДРУГИХ ссылок: скоуп записи обязан укладываться в spec.rule, а правило
+    # этой ссылки — только core/v1 persistentvolumeclaims.
+    # версионно-зависимая запись, из ссылки с правилом на networking.k8s.io v1 и v1beta1 ingresses:
     # - apiVersions:
     #     - v1beta1
     #   path: $.metadata.annotations['kubernetes.io/ingress.class']
     #   defaulting: None
+    # ресурсно-зависимая запись, из ссылки с правилом на batch/v1 jobs и cronjobs:
+    # - apiGroups: [batch]
+    #   apiVersions: [v1]
+    #   resources: [cronjobs]
+    #   path: $.spec.jobTemplate.spec.template.spec.priorityClassName
 status:
   observedGeneration: 1
   bound: true                                     # grantableClusterResourceName резолвится
@@ -133,13 +140,41 @@ status:
     - type: Bound
       status: "True"
       reason: Resolved                            # Resolved | UnknownResource (промахнулись именем)
+    - type: FieldPathsValid
+      status: "True"
+      reason: Valid                               # Valid | InvalidFieldPaths (в message — все проблемы)
 ```
 
-**Выбор пути.** Для запроса group/version `g/v` берётся запись `fieldPaths`, чьи
-`apiGroups`/`apiVersions` совпали; более специфичная (со scope) бьёт безскоупную; безскоупная —
-fallback. Минимум одна запись; fallback рекомендуется.
+**Выбор пути.** Для запроса ресурса `r` в group/version `g/v` берутся записи `fieldPaths`, чьи
+`resources`/`apiGroups`/`apiVersions` совпали (пустое измерение матчит всё), и из них выигрывает
+самая специфичная: `resources` весит 4, `apiGroups` — 2, `apiVersions` — 1, веса складываются, то
+есть один `resources` бьёт `apiGroups` + `apiVersions` вместе. При равных весах побеждает запись,
+которая идёт в списке раньше. Безскоупная запись весит 0 и служит fallback. Измерение добавляет вес,
+только если действительно сужает запись: список с `*` матчит всё и весит 0, как незаданный, поэтому
+`apiGroups: ["*"]` равен безскоупной записи и никогда не бьёт явный скоуп. То же для
+`fieldPaths[].resources`: `resources: ["*"]` допустим и ведёт себя ровно как незаданное поле. Минимум одна запись.
 
-Поля `fieldPaths[]`: `{apiGroups?, apiVersions?, path, match?, defaulting?}`. `match` =
+**Скоупы должны укладываться в rule.** Два правила связывают `fieldPaths[]` с `rule`, потому что
+запрос, к которому не применяется ни одна запись, `/is-granted`, `/defaults` и скан нарушений
+пропускают без проверки — молчаливый fail-open:
+
+- *Подмножество.* Каждое значение в `resources`/`apiGroups`/`apiVersions` записи должно входить в
+  соответствующее измерение `rule`. `*` в `rule` допускает любое значение; `*` в записи ничего не
+  ограничивает и тоже допустим. Запись со скоупом `pod` при `rule.resources: [pods]` — опечатка, которая
+  не выбрала бы ничего.
+- *Покрытие.* Каждую тройку (group, version, resource), которой соответствует `rule`, должна выбирать
+  какая-то запись. Проверка перебирает списки `rule` (в `rule.apiGroups` `*` не бывает, CRD его
+  отклоняет); `*` в `rule.apiVersions` или `rule.resources` заменяется заглушкой, которой нет ни в одном
+  явном списке, поэтому её покрывает только запись без ограничения по этому измерению. Безскоупный
+  fallback — один способ покрыть всё; scoped-записи, вместе покрывающие все сочетания, — другой
+  (`rule.resources: [jobs, cronjobs]` и по записи на ресурс).
+
+Скоуп по ресурсу нужен потому, что одного пути на group/version не хватает: в core/v1 у Pod это
+`$.spec.priorityClassName`, а у ReplicationController — `$.spec.template.spec.priorityClassName`; в
+batch/v1 у Job это `$.spec.template.spec.priorityClassName`, а у CronJob —
+`$.spec.jobTemplate.spec.template.spec.priorityClassName`.
+
+Поля `fieldPaths[]`: `{apiGroups?, apiVersions?, resources?, path, match?, defaulting?}`. `match` =
 `{fieldPath, equals|in}` (guard, применяется только когда предикат истинен). `defaulting`: `None`
 (только валидация), `FillEmpty` (дозаполнить пустое поле дефолтом проекта), `Coerce` (плюс переписать
 недопустимое значение — для полей, что предзаполняет встроенный admission).
@@ -153,9 +188,14 @@ reconciler), на
 ресурс (`resourceName`) задаёт `allowed`/`allowedSelector`/`denied`/`deniedSelector`/`default`/
 `availabilityDefault`. Непустой allow-лист или `allowedSelector` подразумевает базу `None`; пустой `allowed: []` — нет.
 
-### AvailableClusterResource (без изменений)
+### AvailableClusterResource
 
 Каталог доступного для проекта (имена + дефолт), который контроллер рендерит в неймспейсы проекта.
+Живёт ровно столько, сколько живёт его `GrantableClusterResourceDefinition`: при удалении регистрации
+контроллер на следующем реконсайле удаляет каталог из всех неймспейсов проектов. Регистрация,
+удерживаемая финализатором, считается удалённой с момента выставления `deletionTimestamp`. Очистка
+выполняется на каждом реконсайле, даже если другая регистрация не резолвится; каталог самой сбойной
+регистрации остаётся в последнем корректном состоянии.
 
 ## Покрытие: какой CRD какую историю закрывает
 
@@ -188,6 +228,16 @@ Per-путь (`fieldPaths[].defaulting`):
   встроенным admission, напр. `DefaultStorageClass` у PVC). О замене автору сообщается admission
   warning с исходным и подставленным значением.
 
+`FillEmpty` и `Coerce` ограничивают путь. Валидация читает значение полноценным RFC 9535-вычислителем,
+а дефолтинг пишет JSON Patch, и ему нужно ровно одно однозначное место: `path` должен быть простым
+путём по именам полей (`$.spec.storageClassName`, `$.metadata.annotations['cert-manager.io/cluster-issuer']`),
+без подстановочных знаков, индексов и фильтров. Reference, нарушающий это, отклоняется в момент
+применения валидирующим вебхуком `GrantableClusterResourceReference`
+(`/validate/v1alpha1/grantableclusterresourcereferences`), а не биндится, чтобы потом молча ничего не
+дефолтить. С `None` подходит любой корректный RFC 9535-путь. Проверка простого пути берёт сегменты из
+того же дерева разбора RFC 9535, что и вычислитель, поэтому экранирования декодируются одинаково с обеих
+сторон; пустое имя поля (`$['']`) она тоже отвергает.
+
 Значение дефолта берётся из `default` политики, fallback — `defaultFrom` definition; `defaultFrom`
 принимает объект, только если значение аннотации — `true` (без учёта регистра), так что класс с
 `is-default-class: "false"` дефолтом не является.
@@ -199,17 +249,50 @@ Per-путь (`fieldPaths[].defaulting`):
 
 - **`/is-granted`** (validating) — по GVK запроса находим подходящие references → их definition →
   деним, если имя недоступно проекту. На UPDATE уже присутствующие значения grandfather'ятся.
+  Reference, у которого выбранный `path` или `match.fieldPath` не вычисляется, логируется (имя
+  reference, индекс записи, путь) и пропускается; остальные references проверяются как обычно. Это
+  осознанный fail-open только для сломанной ссылки: вебхук references работает с
+  `failurePolicy: Ignore`, так что такой объект всё равно может оказаться в кластере, а ответ ошибкой
+  при `failurePolicy: Fail` этого вебхука заблокировал бы CREATE/UPDATE всех ресурсов её `rule` во
+  всех проектах из-за одного битого объекта. Видимость дают лог и `FieldPathsValid=False` у reference.
+  Ошибки, не относящиеся к одной ссылке (список references, чтение namespace или grants, декодирование,
+  резолв), по-прежнему валят запрос. `/defaults` и скан нарушений такие ссылки уже пропускали и не
+  менялись.
 - **`/defaults`** (mutating, CREATE) — применяем `fieldPaths[].defaulting`.
+
+Регистрируется статически, не выводится из references:
+
+- **`/validate/v1alpha1/grantableclusterresourcereferences`** (validating, CREATE/UPDATE) — отклоняет
+  элемент `fieldPaths[]`, у которого `path` или `match.fieldPath` не компилируется RFC 9535-парсером,
+  которым пользуется `/is-granted` (при любом `defaulting`: сохранённый некомпилируемый путь `/is-granted`
+  пропускает, и reference молча не проверял бы ничего),
+  либо у которого `defaulting` не `None`, а `path` не является простым путём по именам полей, а также
+  spec, нарушающий правило подмножества или покрытия (см. *Скоупы должны укладываться в rule*). Все
+  проблемы перечисляются в одном отказе. На UPDATE пути проверяются только у элементов, новых или
+  изменённых относительно `oldObject` (сравнение по содержимому, не по индексу); скоуп элемента
+  перепроверяется, если изменился элемент или `rule` (удаление ресурса из `rule` не должно оставить
+  сохранённый элемент со скоупом на него); покрытие — свойство всего spec — перепроверяется, если
+  изменились `rule` или `fieldPaths`. Объект с `deletionTimestamp` не проверяется вовсе. Так reference,
+  сохранённый до вебхука или пока тот был недоступен, остаётся редактируемым (метаданные,
+  финализаторы), а не отвергается на каждой записи; исправленный элемент — изменённый, он проверяется
+  и проходит. Правила живут в одном месте, `engine.ReferenceProblems`, общем с binding reconciler.
+  `failurePolicy: Ignore` и без исключения системных писателей: эти объекты пишут
+  разработчики модулей (на стенде — `system:masters`) и deckhouse-контроллер, применяющий релиз
+  модуля, так что исключение не оставило бы вебхуку никого; `Ignore` не даёт недоступному бэкенду
+  заблокировать релиз.
 - **`/protect`** (validating) — держим `AvailableClusterResource` read-only (с исключениями для
   системных групп). Статуса квоты больше нет.
 
 ## Контроллер
 
 - **Catalog reconciler** (по namespace) — рендерит `AvailableClusterResource` per-проект per-definition
-  из резолва доступности.
+  из резолва доступности и удаляет принадлежащие модулю каталоги неймспейса, у которых больше нет
+  definition (каталог read-only для всех, кроме контроллера, — удалить его больше некому).
 - **Binding reconciler** (по `GrantableClusterResourceReference` и
   `GrantableClusterResourceDefinition`) — проставляет `reference.status.bound`/condition `Bound` и
-  обратный индекс `definition.status.references`/`referenceCount`.
+  обратный индекс `definition.status.references`/`referenceCount`. Также ставит reference condition
+  `FieldPathsValid`: проверки вебхука, применённые ко всему сохранённому объекту без ratcheting, так что
+  reference, сохранённый в обход вебхука, виден (`False`/`InvalidFieldPaths`, message — текст отказа).
 - **Policy reconciler** (по `ClusterResourceGrantPolicy`) — выставляет `SelectorsValid` (селектор,
   который схема принимает, а библиотека селекторов отвергает, иначе молча не матчил бы ничего) и
   `AllowedEffective` (allowed-имя, которое фильтр `excluded` definition всё равно отвергает, ничего не

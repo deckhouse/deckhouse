@@ -251,3 +251,127 @@ func TestDisabledModule(t *testing.T) {
 
 	runTestCases(t, cases)
 }
+
+func TestScaledRule(t *testing.T) {
+	cases := []testCase{
+		{
+			name: "true when first install completes",
+			opts: withSuccessfulApply(),
+			expected: map[string]*expectedCondition{
+				ConditionInstalled: {status: metav1.ConditionTrue, reason: ConditionInstalled},
+				ConditionScaled:    {status: metav1.ConditionTrue, reason: ConditionScaled},
+			},
+		},
+		{
+			// The health monitor can report Scaled before the install pipeline finishes.
+			name: "absent when Scaled arrives before manifests are applied",
+			opts: []mappingOption{
+				withInternalCondition(string(intstatus.ConditionScaled), metav1.ConditionTrue, "Ready"),
+			},
+			expected: map[string]*expectedCondition{
+				ConditionInstalled: nil,
+				ConditionScaled:    nil,
+			},
+		},
+		{
+			name: "absent while first install manifests are being applied",
+			opts: append(withSuccessfulApply(),
+				withInternalCondition(string(intstatus.ConditionManifestsApplied), metav1.ConditionFalse, string(intstatus.ConditionReasonApplyingManifests)),
+			),
+			expected: map[string]*expectedCondition{
+				ConditionInstalled: nil,
+				ConditionScaled:    nil,
+			},
+		},
+	}
+
+	runTestCases(t, cases)
+}
+
+// withSettingsChanged marks new settings that the Run task has not applied yet.
+func withSettingsChanged() mappingOption {
+	return withInternalCondition(intConfigured, metav1.ConditionFalse, string(intstatus.ConditionReasonSettingsChanged))
+}
+
+// TestSettingsChanged covers the window between a settings change and the Run
+// task that applies it: Ready, Managed and ConfigurationApplied go False/SettingsChanged.
+func TestSettingsChanged(t *testing.T) {
+	reason := string(intstatus.ConditionReasonSettingsChanged)
+
+	cases := []testCase{
+		{
+			name: "reconcile resets Ready, Managed and ConfigurationApplied",
+			opts: running(withSettingsChanged()),
+			expected: map[string]*expectedCondition{
+				ConditionReady:                {status: metav1.ConditionFalse, reason: reason},
+				ConditionManaged:              {status: metav1.ConditionFalse, reason: reason},
+				ConditionConfigurationApplied: {status: metav1.ConditionFalse, reason: reason},
+				ConditionScaled:               {status: metav1.ConditionTrue, reason: ConditionScaled},
+				ConditionInstalled:            nil,
+			},
+		},
+		{
+			name: "reconcile keeps SettingsChanged while manifests apply",
+			opts: running(
+				withSettingsChanged(),
+				withInternalCondition(intManifestsApplied, metav1.ConditionFalse, string(intstatus.ConditionReasonApplyingManifests)),
+			),
+			expected: map[string]*expectedCondition{
+				ConditionReady:                {status: metav1.ConditionFalse, reason: reason},
+				ConditionManaged:              {status: metav1.ConditionFalse, reason: reason},
+				ConditionConfigurationApplied: {status: metav1.ConditionFalse, reason: reason},
+			},
+		},
+		{
+			name: "a failure of the applying run is not masked",
+			opts: running(
+				withSettingsChanged(),
+				withInternalCondition(intManifestsApplied, metav1.ConditionFalse, "HelmFailed"),
+			),
+			expected: map[string]*expectedCondition{
+				ConditionReady:                {status: metav1.ConditionFalse, reason: "ManifestsApplyFailed"},
+				ConditionManaged:              {status: metav1.ConditionFalse, reason: "ManifestsApplyFailed"},
+				ConditionConfigurationApplied: {status: metav1.ConditionFalse, reason: "ManifestsApplyFailed"},
+			},
+		},
+		{
+			name: "invalid settings replace the marker",
+			opts: running(withInternalCondition(intConfigured, metav1.ConditionFalse, "InvalidSettings")),
+			expected: map[string]*expectedCondition{
+				ConditionReady:                {status: metav1.ConditionTrue, reason: ConditionReady},
+				ConditionManaged:              {status: metav1.ConditionTrue, reason: ConditionManaged},
+				ConditionConfigurationApplied: {status: metav1.ConditionFalse, reason: "SettingsInvalid"},
+			},
+		},
+		{
+			name: "update resets Ready, Managed and ConfigurationApplied",
+			opts: running(withVersionChanged(), withSettingsChanged()),
+			expected: map[string]*expectedCondition{
+				ConditionReady:                {status: metav1.ConditionFalse, reason: reason},
+				ConditionManaged:              {status: metav1.ConditionFalse, reason: reason},
+				ConditionConfigurationApplied: {status: metav1.ConditionFalse, reason: reason},
+			},
+		},
+		{
+			name: "first install is left to Installed",
+			opts: []mappingOption{withSettingsChanged()},
+			expected: map[string]*expectedCondition{
+				ConditionInstalled:            nil,
+				ConditionReady:                nil,
+				ConditionManaged:              nil,
+				ConditionConfigurationApplied: nil,
+			},
+		},
+		{
+			name: "applied settings restore the conditions",
+			opts: running(),
+			expected: map[string]*expectedCondition{
+				ConditionReady:                {status: metav1.ConditionTrue, reason: ConditionReady},
+				ConditionManaged:              {status: metav1.ConditionTrue, reason: ConditionManaged},
+				ConditionConfigurationApplied: {status: metav1.ConditionTrue, reason: ConditionConfigurationApplied},
+			},
+		},
+	}
+
+	runTestCases(t, cases)
+}

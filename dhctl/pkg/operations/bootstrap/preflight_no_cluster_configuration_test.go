@@ -15,7 +15,6 @@
 package bootstrap
 
 import (
-	"slices"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -23,15 +22,19 @@ import (
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 	preflight "github.com/deckhouse/deckhouse/dhctl/pkg/preflight"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/preflight/checks"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/preflight/suites"
 )
 
 // dhctl is used on a cluster whose control plane it did not create (a managed one, EKS) to install
 // Deckhouse and create resources from a config that carries no ClusterConfiguration - see
-// testing/cloud_layouts/EKS/WithoutNAT/configuration.tpl.yaml. The global suite runs on every
-// bootstrap, before any gate could exclude it, so its ClusterConfiguration-reading checks must skip
-// instead of refusing. The case is duplicated here, away from the checks it exercises, because
+// testing/cloud_layouts/EKS/WithoutNAT/configuration.tpl.yaml.
+//
+// The validation that used to be asserted on here — cidr-intersection and public-domain-template
+// as preflight checks — is part of loading the configuration now, and tolerates the absence of a
+// ClusterConfiguration there (pkg/config/cluster_network_validation_test.go). What is left to
+// guard in this package is that the global suite, which runs on every bootstrap before any gate
+// could exclude it, assembles for such a cluster and asks nothing of the documents it does not
+// have. The case is duplicated here, away from the checks it exercises, because
 // hack/coverage.sh:20 keeps the whole /pkg/preflight tree out of CI.
 func TestGlobalPreflightSuiteWithoutClusterConfiguration(t *testing.T) {
 	metaConfig := &config.MetaConfig{
@@ -49,18 +52,12 @@ func TestGlobalPreflightSuiteWithoutClusterConfiguration(t *testing.T) {
 		},
 	}
 
-	want := []preflight.CheckName{checks.CidrIntersectionCheckName, checks.PublicDomainTemplateCheckName}
-	found := 0
+	built := suites.NewGlobalSuite(suites.GlobalDeps{MetaConfig: metaConfig}).Checks()
+	require.NotEmpty(t, built, "the global suite is what applies to a cluster with no ClusterConfiguration")
 
-	for _, check := range suites.NewGlobalSuite(suites.GlobalDeps{MetaConfig: metaConfig}).Checks() {
-		if !slices.Contains(want, check.Name) {
-			continue
-		}
-
-		require.NoError(t, check.Run(t.Context()), "check %q must pass without a ClusterConfiguration", check.Name)
-
-		found++
+	for _, check := range built {
+		require.Equal(t, preflight.PhasePreInfra, check.Phase,
+			"check %q is in the global suite and must run before any infrastructure exists", check.Name)
+		require.NotNil(t, check.Run, "check %q has no body", check.Name)
 	}
-
-	require.Equal(t, len(want), found, "a check left the global suite")
 }

@@ -3,8 +3,8 @@ image: {{ $.ModuleName }}/{{ $.ImageName }}
 from: common/distroless
 import:
 - image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
-  add: /dhctl-provider-dvp
-  to: /dhctl-provider-dvp
+  add: /validator
+  to: /validator
   before: setup
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
@@ -89,6 +89,6 @@ shell:
   - export GOPROXY={{ $.GOPROXY }}
   - cd /src/validator/src
   - go mod download
-  - CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -ldflags="-s -w" -o /dhctl-provider-dvp .
-  - chown 64535:64535 /dhctl-provider-dvp
-  - chmod 0755 /dhctl-provider-dvp
+  - CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -ldflags="-s -w" -o /validator .
+  - chown 64535:64535 /validator
+  - chmod 0755 /validator

@@ -8,7 +8,20 @@ build:
     config:
       keepEssentialWerfLabels: true
       removeLabels:
-        - /.*/
+        # Narrow on purpose. The rule exists so that a third-party distribution used
+        # as a base cannot leak its labels into our images: pkg.* comes in from
+        # container-factory, and the OCI labels come in with the ALT images. Naming
+        # those instead of taking everything with /.*/ lets io.deckhouse.* through by
+        # inheritance, which is how the engine root hash reaches the node controller
+        # without anyone pinning it by hand; see engine/docs/os-image-identity.md.
+        # werf's own labels are left to werf. A base built somewhere else means
+        # revisiting this list.
+        # The pattern is matched against the whole label name, which is why the
+        # previous /.*/ took everything: a prefix alone matches nothing, so the
+        # trailing .* is load-bearing. Measured on a build: /^pkg\./ left all nine
+        # pkg.* labels on node-manager/kernel-devel untouched.
+        - /^pkg\..*/
+        - /^org\.opencontainers\..*/
 ---
 {{- $_ := set . "DistroPackagesProxy" (env "DISTRO_PACKAGES_PROXY" "") }}
 {{- $_ := set . "CargoProxy" (env "CARGO_PROXY" "false") }}

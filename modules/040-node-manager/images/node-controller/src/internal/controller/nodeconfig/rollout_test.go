@@ -18,6 +18,7 @@ package nodeconfig
 
 import (
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/require"
 	"k8s.io/apimachinery/pkg/api/meta"
@@ -129,6 +130,10 @@ func TestNodeConfigRolloutInputsChanged(t *testing.T) {
 		nc.Status.Extensions = []internalv1alpha1.ExtensionStatus{
 			{Name: containerdExtension, Digest: "sha256:old", State: "Ready"},
 		}
+		nc.Status.StaticPods = []internalv1alpha1.StaticPodStatus{
+			{Name: "registry-agent", State: "Failed", Reason: "WriteFailed", Message: "read-only file system"},
+		}
+		nc.Status.LastReconcileTime = metav1.NewTime(time.Unix(1700000000, 0))
 		if mutate != nil {
 			mutate(nc)
 		}
@@ -160,6 +165,24 @@ func TestNodeConfigRolloutInputsChanged(t *testing.T) {
 				nc.Status.AppliedGeneration = 4
 			}),
 			expChanged: true,
+		},
+		{
+			// status.staticPods is the only source of a NodeStaticPodRequest's
+			// counts, and a retry that wrote the manifest moves nothing else.
+			name: "a static pod was written on a retry",
+			after: config(func(nc *internalv1alpha1.NodeConfig) {
+				nc.Status.StaticPods[0] = internalv1alpha1.StaticPodStatus{
+					Name: "registry-agent", State: "Written",
+				}
+			}),
+			expChanged: true,
+		},
+		{
+			name: "only the heartbeat moved",
+			after: config(func(nc *internalv1alpha1.NodeConfig) {
+				nc.Status.LastReconcileTime = metav1.NewTime(time.Unix(1700000600, 0))
+			}),
+			expChanged: false,
 		},
 	}
 

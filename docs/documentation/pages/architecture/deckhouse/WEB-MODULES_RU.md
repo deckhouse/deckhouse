@@ -21,7 +21,7 @@ description: Архитектура модулей Deckhouse Platform, обес�
 
 Архитектура модуля [`console`](/modules/console/) на уровне 2 модели C4 и его взаимодействие с другими компонентами DP изображены на следующей диаграмме:
 
-![Архитектура модуля console](../../images/architecture/deckhouse/c4-l2-deckhouse-console.ru.png)
+![Архитектура модуля console](../../images/architecture/deckhouse/c4-l2-deckhouse-console.ru.svg)
 
 {% alert level="info" %}
 Номерами на схеме отмечен порядок прохождения запроса пользователя к компонентам `frontend`, `backend` и `nginx`.
@@ -84,7 +84,7 @@ description: Архитектура модулей Deckhouse Platform, обес�
 
 Архитектура модуля [`documentation`](/modules/documentation/) на уровне 2 модели C4 и его взаимодействие с другими компонентами DP изображены на следующей диаграмме:
 
-![Архитектура модуля documentation](../../images/architecture/deckhouse/c4-l2-deckhouse-documentation.ru.png)
+![Архитектура модуля documentation](../../images/architecture/deckhouse/c4-l2-deckhouse-documentation.ru.svg)
 
 {% alert level="info" %}
 Номерами на схеме отмечен порядок прохождения запроса пользователя к компоненту `web`:
@@ -139,7 +139,7 @@ description: Архитектура модулей Deckhouse Platform, обес�
 
 Архитектура модуля [`deckhouse-tools`](/modules/deckhouse-tools/) на уровне 2 модели C4 и его взаимодействие с другими компонентами DP изображены на следующей диаграмме:
 
-![Архитектура модуля deckhouse-tools](../../images/architecture/deckhouse/c4-l2-deckhouse-deckhouse-tools.ru.png)
+![Архитектура модуля deckhouse-tools](../../images/architecture/deckhouse/c4-l2-deckhouse-deckhouse-tools.ru.svg)
 
 {% alert level="info" %}
 Номерами на схеме отмечен порядок прохождения запроса пользователя к компоненту `web`.

@@ -89,7 +89,7 @@ spec:
                 spe_applied := path_value_resolved(spe, check.spe_path)
                 expected := object.get(spe, check.spe_path, false)
                 spe_applied
-                actual != expected
+                not host_namespace_permitted(actual, expected)
                 detail := {
                   "field": check.field_name,
                   "actual": actual,
@@ -137,5 +137,20 @@ spec:
                 }
                 reason := sprintf("Sharing the %v namespace is not allowed", [check.field_name])
                 msg := violation_message(reason, obj.metadata.name, detail)
+              }
+
+              # Where an exception is in force it decides whether the namespace may be shared,
+              # including narrowing a constraint that allows it. What it cannot do is turn
+              # `allowedValue: true` into a requirement: comparing the pod against the exception
+              # alone denied a pod that did not share the namespace at all, because its `false`
+              # differed from the `true` the exception permitted. Not using a feature is never a
+              # violation of a rule that restricts it.
+              host_namespace_permitted(actual, _) if {
+                actual == false
+              }
+
+              host_namespace_permitted(actual, spe_allowed) if {
+                actual == true
+                spe_allowed == true
               }
 

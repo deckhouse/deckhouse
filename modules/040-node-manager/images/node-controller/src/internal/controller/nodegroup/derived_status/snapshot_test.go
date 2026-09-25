@@ -29,6 +29,8 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client/interceptor"
 
 	v1 "github.com/deckhouse/node-controller/api/deckhouse.io/v1"
+	"github.com/deckhouse/node-controller/internal/cloudprovider"
+	providermock "github.com/deckhouse/node-controller/internal/cloudprovider/mock"
 )
 
 // The snapshot is the package's whole input. Building it in one place is what makes the derive and
@@ -42,7 +44,7 @@ func TestBuildSnapshot_StaticNodeGroupReadsStaticConfigOnly(t *testing.T) {
 	ng.Name = "master"
 	ng.Spec.NodeType = v1.NodeTypeStatic
 
-	snap, err := s.BuildSnapshot(t.Context(), ng)
+	snap, err := s.BuildSnapshot(t.Context(), ng, testProvider(t, s, ng))
 
 	require.NoError(t, err)
 	require.NotNil(t, snap.StaticConfig)
@@ -57,7 +59,7 @@ func TestBuildSnapshot_StaticNodeGroupReadsStaticConfigOnly(t *testing.T) {
 func TestBuildSnapshot_CloudEphemeralReportsMissingPublishedVersion(t *testing.T) {
 	registration := validMCMRegistrationData("aws", "AWSInstanceClass", "v1")
 	delete(registration, "instanceClassAPIVersion")
-	s := newTestService(t, testSecret(cloudProviderSecretNamespace, cloudProviderSecretName, registration))
+	s := newTestService(t, providermock.DefaultRegistration(registration))
 	ng := &v1.NodeGroup{}
 	ng.Name = "worker"
 	ng.Spec.NodeType = v1.NodeTypeCloudEphemeral
@@ -65,7 +67,7 @@ func TestBuildSnapshot_CloudEphemeralReportsMissingPublishedVersion(t *testing.T
 		ClassReference: v1.ClassReference{Kind: "AWSInstanceClass", Name: "worker"},
 	}
 
-	snap, err := s.BuildSnapshot(t.Context(), ng)
+	snap, err := s.BuildSnapshot(t.Context(), ng, testProvider(t, s, ng))
 
 	require.NoError(t, err)
 	require.Nil(t, snap.InstanceClass, "no version to read the class at")
@@ -77,12 +79,12 @@ func TestBuildSnapshot_CloudEphemeralReportsMissingPublishedVersion(t *testing.T
 func TestBuildSnapshot_IncompleteRegistrationStillDescribesTheNodeGroup(t *testing.T) {
 	registration := validMCMRegistrationData("aws", "AWSInstanceClass", "v1")
 	delete(registration, "region")
-	s := newTestService(t, testSecret(cloudProviderSecretNamespace, cloudProviderSecretName, registration))
+	s := newTestService(t, providermock.DefaultRegistration(registration))
 	ng := &v1.NodeGroup{}
 	ng.Name = "worker"
 	ng.Spec.NodeType = v1.NodeTypeCloudEphemeral
 
-	snap, err := s.BuildSnapshot(t.Context(), ng)
+	snap, err := s.BuildSnapshot(t.Context(), ng, testProvider(t, s, ng))
 
 	require.NoError(t, err)
 	require.Equal(t, "AWSInstanceClass", snap.Provider.InstanceClassKind)
@@ -96,7 +98,7 @@ func TestBuildSnapshot_NoCloudProviderIsNotAnError(t *testing.T) {
 	ng.Name = "worker"
 	ng.Spec.NodeType = v1.NodeTypeCloudEphemeral
 
-	snap, err := s.BuildSnapshot(t.Context(), ng)
+	snap, err := s.BuildSnapshot(t.Context(), ng, testProvider(t, s, ng))
 
 	require.NoError(t, err)
 	require.Empty(t, snap.Provider.InstanceClassKind)
@@ -121,11 +123,7 @@ func TestBuildSnapshot_ClassDeletedMidPassIsRecorded(t *testing.T) {
 
 	c := fake.NewClientBuilder().
 		WithScheme(scheme).
-		WithObjects(existing, testSecret(
-			cloudProviderSecretNamespace,
-			cloudProviderSecretName,
-			validMCMRegistrationData("aws", kind, "v1"),
-		)).
+		WithObjects(existing, providermock.DefaultRegistration(validMCMRegistrationData("aws", kind, "v1"))).
 		WithInterceptorFuncs(interceptor.Funcs{
 			// The List still returns it; the Get no longer does.
 			Get: func(ctx context.Context, cl client.WithWatch, key client.ObjectKey, obj client.Object, opts ...client.GetOption) error {
@@ -147,7 +145,7 @@ func TestBuildSnapshot_ClassDeletedMidPassIsRecorded(t *testing.T) {
 		MaxPerZone:     3,
 	}
 
-	snap, err := s.BuildSnapshot(t.Context(), ng)
+	snap, err := s.BuildSnapshot(t.Context(), ng, testProvider(t, s, ng))
 	require.NoError(t, err)
 	require.Nil(t, snap.InstanceClass)
 	require.Error(t, snap.CapacityErr, "a class that vanished mid-pass must be recorded")
@@ -187,7 +185,7 @@ func TestBuildSnapshot_TemplateCapacityIsResolvedAboveZeroMinButNotPublished(t *
 				MaxPerZone:     3,
 			}
 
-			snap, err := s.BuildSnapshot(t.Context(), ng)
+			snap, err := s.BuildSnapshot(t.Context(), ng, testProvider(t, s, ng))
 			require.NoError(t, err)
 			require.NoError(t, snap.CapacityErr)
 
@@ -244,25 +242,23 @@ func newDVPTestService(t *testing.T, className string, cores int64, memory strin
 
 	c := fake.NewClientBuilder().
 		WithScheme(scheme).
-		WithObjects(ic, testSecret(
-			cloudProviderSecretNamespace,
-			cloudProviderSecretName,
-			validCAPIRegistrationData("dvp", kind, "v1"),
-		)).
+		WithObjects(ic, providermock.DefaultRegistration(validCAPIRegistrationData("dvp", kind, "v1"))).
 		Build()
 
 	return &Service{Client: c}
 }
 
 // An unreadable source must abort the pass: an empty provider reads as "no cloud", which drops
-// instanceClass from the published element and re-runs bashible on every node.
-func TestBuildSnapshot_UnreadableProviderAborts(t *testing.T) {
-	s := newDeniedSecretService(t, cloudProviderSecretName)
+// instanceClass from the published element and re-runs bashible on every node. The provider half
+// of that guard now sits at the load boundary — see cloudprovider.TestGetCatalog_Errors;
+// here the cluster UUID stands for the sources this package still reads itself.
+func TestBuildSnapshot_UnreadableSourceAborts(t *testing.T) {
+	s := newDeniedSecretService(t, clusterUUIDConfigMapName)
 	ng := &v1.NodeGroup{}
 	ng.Name = "worker"
 	ng.Spec.NodeType = v1.NodeTypeCloudEphemeral
 
-	_, err := s.BuildSnapshot(t.Context(), ng)
+	_, err := s.BuildSnapshot(t.Context(), ng, cloudprovider.Registration{})
 
-	require.ErrorContains(t, err, "read cloud provider secret")
+	require.ErrorContains(t, err, "read cluster uuid configmap")
 }

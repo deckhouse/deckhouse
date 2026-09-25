@@ -137,7 +137,14 @@ func RunBashiblePipeline(ctx context.Context, params *BashiblePipelineParams) er
 	}
 
 	if ready {
-		dhlog.Success(ctx, dhlog.FromContext(ctx), "Bashible has already run! Skipping Bashible installation")
+		// A warning, not a success. On a resumed bootstrap this is the expected path; on a node
+		// that already belongs to another cluster it is the moment dhctl decides not to
+		// configure it, and the run then fails much later with a UUID mismatch. Printing it as a
+		// green success gave the operator no reason to look at it.
+		dhlog.FromContext(ctx).WarnContext(ctx,
+			"Bashible has already run on this node: skipping the Deckhouse installation step. "+
+				"That is expected when a previous bootstrap is being resumed; if it is not, the node already "+
+				"belongs to a cluster and has to be cleaned before it can join another one.")
 		return nil
 	}
 
@@ -281,6 +288,13 @@ func prepareMasterNode(ctx context.Context, nodeInterface libcon.Interface, cont
 
 			return fmt.Errorf("run %s: %w", scriptPath, err)
 		}
+
+		// The diagnostics this script writes to stderr under `|| true` — bb_node_ip.sh printing
+		// "Current IPv4 addresses: …", which is what an operator needs when the node ends up with
+		// no address inside internalNetworkCIDRs — cannot be shown here: libcon.Script offers a
+		// stdout handler and no stderr one, and on a zero exit status there is no *exec.ExitError
+		// to read it from either. Surfacing it needs WithStderrHandler in lib-connection.
+		// static-node-internal-network asks the same question before any of this runs.
 
 		return nil
 	}

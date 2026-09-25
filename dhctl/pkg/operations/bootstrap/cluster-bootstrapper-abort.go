@@ -177,26 +177,21 @@ func (b *ClusterBootstrapper) doRunBootstrapAbort(ctx context.Context) error {
 	// machine offers no sshd: with no hosts GetNodeInterface hands back the installer container
 	// itself, so the suite would check sudo inside the container and call it the cluster.
 	if metaConfig.IsStatic() && !immutableMaster {
-		deckhouseInstallConfig, err := config.PrepareDeckhouseInstallConfig(ctx, metaConfig, &b.Options.Global)
-		if err != nil {
-			return err
-		}
-
-		if b.CommanderMode {
-			deckhouseInstallConfig.CommanderMode = b.CommanderMode
-			deckhouseInstallConfig.CommanderUUID = b.CommanderUUID
-		}
-
-		staticAbortSuite, err := suites.NewStaticAbortSuite(suites.StaticAbortDeps{SSHProviderInitializer: b.SSHProviderInitializer}, ctx)
-		if err != nil {
-			return err
-		}
-		preflightRunner := preflight.New(staticAbortSuite)
-		preflightRunner.UseCache(NewBootstrapState(stateCache))
-		preflightRunner.SetCacheSalt(state.ConfigHash(ctx, b.Options.Global.ConfigPaths))
-		preflightRunner.DisableChecks(b.Options.Preflight.DisabledChecks()...)
-		if err := preflightRunner.Run(ctx, preflight.PhasePostInfra); err != nil {
-			return err
+		if !b.SSHProviderInitializer.CheckHosts(ctx) {
+			dhlog.FromContext(ctx).InfoContext(ctx, "No SSH hosts known: skipping host preflights, abort will only remove local state")
+		} else {
+			staticAbortSuite := suites.NewNodeAccessSuite(suites.NodeAccessDeps{SSHProviderInitializer: b.SSHProviderInitializer})
+			preflightRunner := preflight.New(staticAbortSuite)
+			// No cache. The keys are the bootstrap's, so abort used to read both of its checks
+			// out of a run that may have been days ago, against machines it is about to try to
+			// clean now — and the question here is whether it can reach them now.
+			preflightRunner.SetTitle("Preflight checks: abort")
+			preflightRunner.DisableChecks(b.Options.Preflight.DisabledChecks()...)
+			preflightRunner.SetFailFast(b.Options.Preflight.FailFast)
+			preflightRunner.SetSkippedAll(b.Options.Preflight.SkipAll)
+			if err := preflightRunner.Run(ctx, preflight.PhasePostInfra); err != nil {
+				return err
+			}
 		}
 	}
 

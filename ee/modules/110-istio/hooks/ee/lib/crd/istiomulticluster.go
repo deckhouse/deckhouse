@@ -43,6 +43,7 @@ type IstioMulticlusterStatus struct {
 // Warning! This struct is duplicated in images/metadata-exporter
 type MulticlusterPrivateMetadata struct {
 	IngressGateways *[]MulticlusterIngressGateways `json:"ingressGateways"`
+	AmbientGateways *[]MulticlusterIngressGateways `json:"ambientGateways"`
 	APIHost         string                         `json:"apiHost,omitempty"`
 	ClusterID       string                         `json:"clusterID,omitempty"`
 	NetworkName     string                         `json:"networkName,omitempty"`

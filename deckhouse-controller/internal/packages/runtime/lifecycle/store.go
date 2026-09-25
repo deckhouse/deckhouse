@@ -15,15 +15,14 @@
 package lifecycle
 
 import (
-	"context"
-
+	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/resourcerequests"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/addonutils"
 )
 
-// Store manages lifecycle contexts and pending settings for all runtime packages.
+// Store manages the lifecycle state and the running operations of all runtime packages.
 // It is type-agnostic — it does not hold the loaded Application/Module instances,
-// only the version, settings, and context tree needed for change detection and
-// cancellation. The actual runtime instances live in plain maps on Runtime.
+// only the version, settings and contexts needed for change detection and cancellation.
+// The actual runtime instances live in plain maps on Runtime.
 //
 // Store is not thread-safe; callers must hold Runtime.mu before calling any method.
 type Store struct {
@@ -37,159 +36,6 @@ func NewStore() *Store {
 	}
 }
 
-// NeedUpdate reports whether the package needs processing: true if the package
-// is new or being removed, the version changed, the settings checksum differs,
-// the settings schema version changed, or the maintenance mode changed.
-// Used as a fast-path check before the more expensive Update call. It cannot see content
-// changes behind a mutable tag: those callers skip it and pass force to Update.
-func (s *Store) NeedUpdate(name, version, checksum string, settingsVersion int, maintenance string) bool {
-	pkg, ok := s.packages[name]
-	if !ok {
-		return true
-	}
-
-	if pkg.removing {
-		return true
-	}
-
-	if pkg.version != version {
-		return true
-	}
-
-	if pkg.settings.Checksum() != checksum {
-		return true
-	}
-
-	if pkg.settingsVersion != settingsVersion {
-		return true
-	}
-
-	if pkg.maintenance != maintenance {
-		return true
-	}
-
-	return false
-}
-
-// Update registers a new package or processes a version change.
-//
-// Returns a new root context (EventUpdate) when:
-//  1. Package not in store → creates entry, returns root context
-//  2. Version differs → cancels all in-flight tasks, returns new root context
-//  3. force is set → same as a version change, for callers that know the content behind
-//     an unchanged version is stale (a mutable tag re-pushed under the same version)
-//  4. Package is being removed → cancels teardown and starts the re-created generation
-//
-// Returns nil when only settings, settingsVersion or maintenance changed (no new
-// context needed — the new values are stored and will be picked up by the scheduler
-// via GetPendingSettings/GetPendingMaintenance on next Reschedule, or by the next
-// Configure task in the schedule pipeline).
-//
-// Callers should check for nil: a nil return with a settings- or maintenance-only
-// change means the caller should trigger Reschedule to re-apply them.
-func (s *Store) Update(name, version string, settingsVersion int, settings addonutils.Values, maintenance string, force bool) context.Context {
-	pkg, ok := s.packages[name]
-	if !ok {
-		s.packages[name] = &Package{
-			version:         version,
-			settingsVersion: settingsVersion,
-			settings:        settings,
-			maintenance:     maintenance,
-			cancels:         make(map[int]context.CancelCauseFunc),
-		}
-
-		ctx := s.packages[name].newContext(EventUpdate, errVersionChanged)
-		return ctx
-	}
-
-	if force || pkg.removing || pkg.version != version {
-		pkg.version = version
-		pkg.settingsVersion = settingsVersion
-		pkg.settings = settings
-		pkg.maintenance = maintenance
-		pkg.removing = false
-
-		ctx := pkg.newContext(EventUpdate, errVersionChanged)
-		return ctx
-	}
-
-	checksumChanged := pkg.settings.Checksum() != settings.Checksum()
-	versionChanged := pkg.settingsVersion != settingsVersion
-
-	if checksumChanged {
-		pkg.settings = settings
-	}
-	if checksumChanged || versionChanged {
-		pkg.settingsVersion = settingsVersion
-	}
-
-	pkg.maintenance = maintenance
-
-	return nil
-}
-
-// UpdateSettings stores new pending settings and their schema version for an
-// already-tracked package without touching its version or context tree.
-// Returns true if the settings checksum or settingsVersion changed and the
-// caller should Reschedule, false if nothing changed or the package is not
-// tracked yet.
-//
-// Unlike Update, this never creates or cancels a context: in-flight deploy and
-// load tasks are left running. It is the settings-only counterpart to Update,
-// used when settings change independently of a version change. The ModuleConfig
-// enabled intent is tracked separately by the global module, not here.
-func (s *Store) UpdateSettings(name string, settingsVersion int, settings addonutils.Values, maintenance string) bool {
-	pkg, ok := s.packages[name]
-	if !ok {
-		return false
-	}
-
-	checksumChanged := pkg.settings.Checksum() != settings.Checksum()
-	versionChanged := pkg.settingsVersion != settingsVersion
-
-	if !checksumChanged && !versionChanged {
-		return false
-	}
-
-	if checksumChanged {
-		pkg.settings = settings
-	}
-	pkg.settingsVersion = settingsVersion
-	pkg.maintenance = maintenance
-
-	return true
-}
-
-// HandleEvent renews the context for the given event type and returns it.
-//
-// For EventRemove: clears version and settings before renewing context, so a
-// subsequent Update sees the package as new (enabling re-create after remove).
-//
-// cause is reported by the tasks this cancels — see [Package.newContext].
-//
-// Returns nil if the package doesn't exist in the store, or if EventSchedule
-// arrives after removal has started and must not supersede teardown.
-func (s *Store) HandleEvent(event int, name string, cause error) context.Context {
-	pkg, ok := s.packages[name]
-	if !ok {
-		return nil
-	}
-
-	if event == EventSchedule && pkg.removing {
-		return nil
-	}
-
-	if event == EventRemove {
-		pkg.version = ""
-		pkg.settingsVersion = 0
-		pkg.settings = make(addonutils.Values)
-		pkg.maintenance = ""
-		pkg.removing = true
-	}
-
-	return pkg.newContext(event, cause)
-}
-
 // GetPendingSettings returns the latest settings and their schema version stored
 // for a package. Called by schedulePackage to pass current settings and version
 // into the Configure task so it can convert from the stored version to latest.
@@ -199,52 +45,21 @@ func (s *Store) GetPendingSettings(name string) (addonutils.Values, int) {
 	return s.packages[name].settings, s.packages[name].settingsVersion
 }
 
+// GetPendingResourceRequests returns the latest per-workload resource overrides
+// stored for a package. Nil for a package that is not tracked, or whose CR has no
+// such field.
+func (s *Store) GetPendingResourceRequests(name string) []resourcerequests.Request {
+	pkg, ok := s.packages[name]
+	if !ok {
+		return nil
+	}
+
+	return pkg.resourceRequests
+}
+
 // GetPendingMaintenance returns the latest maintenance mode stored for a package.
 // Called by schedulePackage to pass the current mode into the Run task. Empty
 // means the package is managed normally.
 func (s *Store) GetPendingMaintenance(name string) string {
 	return s.packages[name].maintenance
-}
-
-// RemovalState reports how far a package's teardown has got.
-type RemovalState int
-
-const (
-	// RemovalDone means nothing is tracked under the name, so nothing is left to tear down.
-	RemovalDone RemovalState = iota
-	// RemovalPending means the package is still tracked and no teardown has been issued yet.
-	RemovalPending
-	// RemovalInFlight means a teardown is already enqueued; re-issuing EventRemove would cancel it.
-	RemovalInFlight
-)
-
-// RemovalState reports the teardown state of a package. The explicit removal marker lets callers
-// wait instead of re-issuing EventRemove, independently of whether the package version is empty.
-func (s *Store) RemovalState(name string) RemovalState {
-	pkg, ok := s.packages[name]
-	if !ok {
-		return RemovalDone
-	}
-
-	if pkg.removing {
-		return RemovalInFlight
-	}
-
-	return RemovalPending
-}
-
-// Delete removes a package entry from the store if it still exists and is in
-// the removed state set by HandleEvent(EventRemove).
-// Returns true if the entry was deleted.
-//
-// Safe against re-creation races: Update clears the removal marker before
-// this cleanup, so Delete returns false and preserves the re-created entry.
-func (s *Store) Delete(name string) bool {
-	pkg, ok := s.packages[name]
-	if !ok || !pkg.removing {
-		return false
-	}
-
-	delete(s.packages, name)
-	return true
 }

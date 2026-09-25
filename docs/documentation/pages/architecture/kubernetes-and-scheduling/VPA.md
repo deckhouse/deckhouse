@@ -71,7 +71,7 @@ The following simplifications are made in the diagram:
 
 The Level 2 C4 architecture of the [`vertical-pod-autoscaler`](/modules/vertical-pod-autoscaler/) module and its interactions with other DP components are shown in the following diagram:
 
-![vertical-pod-autoscaler module architecture](../../images/architecture/kubernetes-and-scheduling/c4-l2-vertical-pod-autoscaler.png)
+![vertical-pod-autoscaler module architecture](../../images/architecture/kubernetes-and-scheduling/c4-l2-vertical-pod-autoscaler.svg)
 
 ## Module components
 

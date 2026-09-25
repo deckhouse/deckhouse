@@ -28,7 +28,8 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	v1 "github.com/deckhouse/node-controller/api/deckhouse.io/v1"
-	nodecommon "github.com/deckhouse/node-controller/internal/common"
+	"github.com/deckhouse/node-controller/internal/cloudprovider"
+	providermock "github.com/deckhouse/node-controller/internal/cloudprovider/mock"
 	"github.com/deckhouse/node-controller/internal/testenv"
 )
 
@@ -42,9 +43,9 @@ func createTestInstanceClass(name string) *unstructured.Unstructured {
 }
 
 func createClassRegistration(kind string) {
-	secret := registrationSecret(testenv.UniqueName("cloud-provider-"+strings.ToLower(kind)), map[string][]byte{
-		nodecommon.InstanceClassKindKey:       []byte(kind),
-		nodecommon.InstanceClassAPIVersionKey: []byte("v1"),
+	secret := providermock.Registration(testenv.UniqueName("cloud-provider-"+strings.ToLower(kind)), map[string][]byte{
+		cloudprovider.InstanceClassKindKey:       []byte(kind),
+		cloudprovider.InstanceClassAPIVersionKey: []byte("v1"),
 	})
 	Expect(k8sClient.Create(suiteCtx, secret)).To(Succeed())
 	DeferCleanup(func() {

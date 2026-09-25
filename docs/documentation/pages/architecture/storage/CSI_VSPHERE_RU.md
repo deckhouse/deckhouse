@@ -21,7 +21,7 @@ description: Архитектура модуля csi-vsphere в Deckhouse Platfo
 
 Архитектура модуля [`csi-vsphere`](/modules/csi-vsphere/) на уровне 2 модели C4 и его взаимодействия с другими компонентами Deckhouse Platform (DP) изображены на следующей диаграмме:
 
-![Архитектура модуля csi-vsphere](../../../images/architecture/storage/c4-l2-csi-vsphere.ru.png)
+![Архитектура модуля csi-vsphere](../../../images/architecture/storage/c4-l2-csi-vsphere.ru.svg)
 
 ## Компоненты модуля
 

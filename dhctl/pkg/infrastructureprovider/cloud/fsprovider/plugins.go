@@ -78,6 +78,8 @@ func (p *pluginsProvider) DownloadPlugin(ctx context.Context, params cloud.Infra
 		return fsutils.CreateLinkIfNotExists(ctx, source, checkIsExecFile, destination)
 	}
 
+	// Nothing on disk means in-tree by construction: an external provider's bundle is resolved
+	// and unpacked before any configuration is parsed, so the branch above would have found it.
 	if err = downloadImage(ctx, conf, "terraformManager", sectionName, conf.ShowProgress); err != nil {
 		return err
 	}

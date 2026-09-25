@@ -12,13 +12,13 @@
 **/000-common/images/csi-** @alexandr.zimin @vasily.oleynikov @sergey.zhemzhitsky
 **/000-common/images/debug-container @andrey.polovov
 **/000-common/images/iptables-wrapper @andrey.polovov
-**/000-common/images/kube-rbac-proxy @aleksandr.sinichkin
+**/000-common/images/kube-rbac-proxy @aleksandr.sinichkin @alexandr.dyakonov
 **/000-common/images/kubernetes @nikolay.gorbatov
 **/000-common/images/pause @nikolay.gorbatov
 **/000-common/images/shell-operator @pavel.okhlopkov
 **/000-common/images/vxlan-offloading-fixer @andrey.polovov
 002-deckhouse/ @pavel.okhlopkov
-002-deckhouse/templates/validation.yaml @aleksandr.sinichkin
+002-deckhouse/templates/validation.yaml @aleksandr.sinichkin @alexandr.dyakonov
 007-registrypackages/ @denis.romanenko
 **/007-registrypackages/images/containerd @nikolay.gorbatov
 **/007-registrypackages/images/crictl @nikolay.gorbatov
@@ -43,7 +43,7 @@
 **/007-registrypackages/images/which @nikolay.zykov @georgy.kargin
 **/007-registrypackages/images/yq @nikolay.zykov @georgy.kargin
 **/007-registrypackages/images/docker-registry @nikolay.zykov @georgy.kargin
-015-admission-policy-engine/ @maksim.nabokikh @aleksandr.sinichkin
+015-admission-policy-engine/ @maksim.nabokikh @aleksandr.sinichkin @alexandr.dyakonov
 021-cni-cilium/ @andrey.pavlov @andrey.polovov
 025-static-routing-manager/ @andrey.pavlov @andrey.polovov
 030-cloud-provider-*/ @alexey.sulimenko @alexey.voronov
@@ -54,9 +54,9 @@
 038-registry/ @borg-z @090809
 039-registry-packages-proxy/ @nikolay.zykov @georgy.kargin
 040-control-plane-manager/ @nikolay.gorbatov
-**/040-control-plane-manager/hooks/audit_policy* @maksim.nabokikh @aleksandr.sinichkin
-**/040-control-plane-manager/templates/_authentication_configuration.tpl @maksim.nabokikh @aleksandr.sinichkin
-**/040-control-plane-manager/templates/_authorization_config.tpl @maksim.nabokikh @aleksandr.sinichkin
+**/040-control-plane-manager/hooks/audit_policy* @maksim.nabokikh @aleksandr.sinichkin @alexandr.dyakonov
+**/040-control-plane-manager/templates/_authentication_configuration.tpl @maksim.nabokikh @aleksandr.sinichkin @alexandr.dyakonov
+**/040-control-plane-manager/templates/_authorization_config.tpl @maksim.nabokikh @aleksandr.sinichkin @alexandr.dyakonov
 040-node-manager/ @nikolay.zykov @georgy.kargin
 **/040-node-manager/images/builder-cuda @sergey.sudilovsky
 **/040-node-manager/images/nvidia-container-toolkit @sergey.sudilovsky
@@ -90,9 +90,9 @@
 050-network-policy-engine/ @andrey.pavlov @andrey.polovov
 101-cert-manager/ @alexandr.dyakonov @aleksandr.sinichkin
 110-istio/ @sergey.kurbatov @andrey.polovov
-140-user-authz/ @maksim.nabokikh @aleksandr.sinichkin
-150-user-authn/ @maksim.nabokikh @aleksandr.sinichkin
-160-multitenancy-manager/ @maksim.nabokikh @aleksandr.sinichkin
+140-user-authz/ @maksim.nabokikh @aleksandr.sinichkin @alexandr.dyakonov
+150-user-authn/ @maksim.nabokikh @aleksandr.sinichkin @alexandr.dyakonov
+160-multitenancy-manager/ @maksim.nabokikh @aleksandr.sinichkin @alexandr.dyakonov
 300-prometheus/ @vladimir.guryanov @vadim.lazovsky @maksim.madzhuga
 302-vertical-pod-autoscaler/ @yuriy.losev @sergey.morozov
 303-prometheus-*/ @vladimir.guryanov @vadim.lazovsky
@@ -106,13 +106,13 @@
 450-network-gateway/ @andrey.pavlov @andrey.polovov
 470-chrony/ @nikolay.zykov @georgy.kargin
 491-containerized-data-importer @pavel.tishkov
-500-basic-auth/ @maksim.nabokikh @aleksandr.sinichkin
+500-basic-auth/ @maksim.nabokikh @aleksandr.sinichkin @alexandr.dyakonov
 500-openvpn/ @andrey.pavlov @andrey.polovov
 500-cilium-hubble/ @andrey.pavlov @andrey.polovov
 500-dashboard/ @evgeny.shevchenko
 500-okmeter/ @vladimir.guryanov @vadim.lazovsky @maksim.madzhuga
-600-secret-copier/ @maksim.nabokikh @aleksandr.sinichkin
-600-namespace-configurator/ @maksim.nabokikh @aleksandr.sinichkin
+600-secret-copier/ @maksim.nabokikh @aleksandr.sinichkin @alexandr.dyakonov
+600-namespace-configurator/ @maksim.nabokikh @aleksandr.sinichkin @alexandr.dyakonov
 610-service-with-healthchecks @andrey.pavlov @andrey.polovov
 800-deckhouse-tools/ @denis.romanenko @nikolay.zykov @georgy.kargin
 810-documentation/ @artem.kladov
@@ -139,7 +139,7 @@ tools/docs/ @artem.kladov
 tools/integrity_check_namespaces @alexey.gavrilov @maksim.khimchenko
 tools/build_includes/integrity-check-** @alexey.gavrilov @maksim.khimchenko
 /pkg/ @pavel.okhlopkov
-testing/cloud_layouts/ @nikolay.mordvintsev @kirill.kramorov @vladimir.portnov @maksim.khimchenko
+testing/cloud_layouts/ @nikolay.mordvintsev @kirill.kramorov @maksim.khimchenko
 /monitoring/prometheus-rules/ @sergey.sizov
 /release.yaml @yuriy.losev @pavel.okhlopkov
 go_lib/cloud-data/ @alexey.sulimenko @alexey.voronov

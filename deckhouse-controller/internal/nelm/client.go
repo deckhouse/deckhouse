@@ -35,6 +35,7 @@ import (
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/codes"
 	"go.opentelemetry.io/otel/trace"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"sigs.k8s.io/yaml"
 
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/envconfig"
@@ -332,13 +333,11 @@ func (c *Client) Install(ctx context.Context, namespace, releaseName string, opt
 	// reportCh receives progress reports from nelm during resource tracking; a
 	// background goroutine forwards each one to the caller's callback.
 	//
-	// We must not close reportCh — ReleaseInstall closes it whenever it runs the
-	// install to completion, and the ok check is what makes the forwarder leave
-	// on that close instead of reading an endless stream of empty reports. done
-	// covers the paths that leave the channel open: a Timeout returns on
-	// ctx.Done() while the installing goroutine still runs, and an early failure
-	// never installs a reporter. The wait keeps a report from arriving after
-	// Install returned and the caller published the apply result.
+	// We must not close reportCh: ReleaseInstall closes it when it returns. The ok
+	// check makes the forwarder leave on that close instead of reading an endless
+	// stream of empty reports. done stops the forwarder even if the channel stays
+	// open. The wait keeps a report from arriving after Install returned and the
+	// caller published the apply result.
 	reportCh := make(chan progrep.ProgressReport, 1)
 	done := make(chan struct{})
 
@@ -368,7 +367,7 @@ func (c *Client) Install(ctx context.Context, namespace, releaseName string, opt
 		}
 	}()
 
-	if err := action.ReleaseInstall(ctx, releaseName, namespace, action.ReleaseInstallOptions{
+	if _, err := action.ReleaseInstall(ctx, releaseName, namespace, action.ReleaseInstallOptions{
 		LegacyProgressReportCh: reportCh,
 		KubeConnectionOptions: common.KubeConnectionOptions{
 			KubeContextCurrent: c.kubeContext,
@@ -403,11 +402,67 @@ func (c *Client) Install(ctx context.Context, namespace, releaseName string, opt
 	return nil
 }
 
+// RenderedResource is one resource a chart render produced, carrying the
+// classification nelm gave it.
+type RenderedResource struct {
+	Unstruct *unstructured.Unstructured
+
+	// Regular reports a regular release resource: one that lives in the cluster
+	// for as long as the release does.
+	Regular bool
+
+	// Hook reports a Helm hook: installed for the duration of the hook and
+	// legitimately absent from the cluster afterwards.
+	Hook bool
+}
+
 // Render renders a nelm chart to YAML manifests without installing it
 // Returns the rendered manifests as a YAML string
+func (c *Client) Render(ctx context.Context, namespace, releaseName string, opts InstallOptions) (string, error) {
+	resources, err := c.RenderResources(ctx, namespace, releaseName, opts)
+	if err != nil {
+		return "", err
+	}
+
+	return JoinManifests(resources)
+}
+
+// JoinManifests renders the regular release resources as a single multi-document
+// YAML string.
+//
+// Helm hooks live in the cluster just for the duration of a hook, and standalone
+// crds/ CRDs are never applied at all because Install passes
+// NoInstallStandaloneCRDs. Both are legitimately absent from the cluster, so they
+// must not reach the release checksum and the absent-resources monitor.
+func JoinManifests(resources []RenderedResource) (string, error) {
+	var result strings.Builder
+
+	for _, resource := range resources {
+		if !resource.Regular {
+			continue
+		}
+
+		marshalled, err := yaml.Marshal(resource.Unstruct)
+		if err != nil {
+			return "", fmt.Errorf("marshal resource: %w", err)
+		}
+
+		if result.Len() > 0 {
+			result.WriteString("---\n")
+		}
+
+		result.Write(marshalled)
+	}
+
+	return result.String(), nil
+}
+
+// RenderResources renders a nelm chart and returns its resources one by one,
+// classified, for callers that need to inspect or rewrite them before they are
+// installed. Render is the flattened form of it.
 //
 //nolint:nonamedreturns // named returns required for defer/recover to modify return values
-func (c *Client) Render(ctx context.Context, namespace, releaseName string, opts InstallOptions) (out string, err error) {
+func (c *Client) RenderResources(ctx context.Context, namespace, releaseName string, opts InstallOptions) (out []RenderedResource, err error) {
 	ctx, span := otel.Tracer(nelmTracer).Start(ctx, "Render")
 	defer span.End()
 	defer c.recoverPanic("Render", span, &err,
@@ -454,35 +509,19 @@ func (c *Client) Render(ctx context.Context, namespace, releaseName string, opts
 	})
 	if err != nil {
 		span.SetStatus(codes.Error, err.Error())
-		return "", fmt.Errorf("render nelm chart '%s': %w", opts.Path, err)
+		return nil, fmt.Errorf("render nelm chart '%s': %w", opts.Path, err)
 	}
 
-	// Combine all resources into a single YAML document with separators
-	var result strings.Builder
+	rendered := make([]RenderedResource, 0, len(res.Resources))
 	for _, resource := range res.Resources {
-		// Keep only regular release resources. Helm hooks live in the cluster just
-		// for the duration of a hook, and standalone crds/ CRDs are never applied at
-		// all because Install passes NoInstallStandaloneCRDs. Both are legitimately
-		// absent from the cluster, so they must not reach the release checksum and
-		// the absent-resources monitor.
-		if resource.StoreAs != common.StoreAsRegular {
-			continue
-		}
-
-		marshalled, err := yaml.Marshal(resource.Unstruct)
-		if err != nil {
-			span.SetStatus(codes.Error, err.Error())
-			return "", fmt.Errorf("marshal resource: %w", err)
-		}
-
-		if result.Len() > 0 {
-			result.WriteString("---\n")
-		}
-
-		result.Write(marshalled)
+		rendered = append(rendered, RenderedResource{
+			Unstruct: resource.Unstruct,
+			Regular:  resource.StoreAs == common.StoreAsRegular,
+			Hook:     resource.StoreAs == common.StoreAsHook,
+		})
 	}
 
-	return result.String(), nil
+	return rendered, nil
 }
 
 // Delete uninstalls a nelm release

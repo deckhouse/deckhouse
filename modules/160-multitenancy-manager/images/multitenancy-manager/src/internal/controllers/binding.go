@@ -20,6 +20,7 @@ import (
 	"context"
 	"fmt"
 	"sort"
+	"strings"
 
 	k8serrors "k8s.io/apimachinery/pkg/api/errors"
 	apimeta "k8s.io/apimachinery/pkg/api/meta"
@@ -31,15 +32,22 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
 	"controller/api/v1alpha1"
+	"controller/internal/engine"
+	"controller/internal/jsonpath"
 )
 
 // ReferenceReconciler keeps GrantableClusterResourceReference.status.bound in sync with whether the
-// named GrantableClusterResourceDefinition exists.
+// named GrantableClusterResourceDefinition exists, and reports in FieldPathsValid whether the stored
+// spec passes the rules the GrantableClusterResourceReference webhook enforces. That webhook runs
+// with failurePolicy: Ignore and ratchets on UPDATE, so an invalid reference can be stored; this
+// condition is where it shows.
 type ReferenceReconciler struct {
 	client.Client
+	// Factory must be the one /is-granted and /defaults use, so a path is judged as they read it.
+	Factory jsonpath.Factory
 }
 
-// Reconcile sets the reference's Bound status.
+// Reconcile sets the reference's Bound and FieldPathsValid status.
 func (r *ReferenceReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 	ref := &v1alpha1.GrantableClusterResourceReference{}
 	if err := r.Get(ctx, req.NamespacedName, ref); err != nil {
@@ -64,9 +72,22 @@ func (r *ReferenceReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 		cond.Message = fmt.Sprintf("GrantableClusterResourceDefinition %q not found.", ref.Spec.GrantableClusterResourceName)
 	}
 
+	// The whole object, without ratcheting: the webhook forgives what it saw before, this does not.
+	valid := metav1.Condition{Type: "FieldPathsValid", ObservedGeneration: ref.Generation}
+	if problems := engine.ReferenceProblems(r.Factory, ref.Spec); len(problems) > 0 {
+		valid.Status = metav1.ConditionFalse
+		valid.Reason = "InvalidFieldPaths"
+		valid.Message = strings.Join(problems, "; ")
+	} else {
+		valid.Status = metav1.ConditionTrue
+		valid.Reason = "Valid"
+		valid.Message = "All fieldPaths are valid and cover spec.rule."
+	}
+
 	ref.Status.Bound = bound
 	ref.Status.ObservedGeneration = ref.Generation
 	apimeta.SetStatusCondition(&ref.Status.Conditions, cond)
+	apimeta.SetStatusCondition(&ref.Status.Conditions, valid)
 	if err := r.Status().Update(ctx, ref); err != nil {
 		return ctrl.Result{}, fmt.Errorf("update reference status: %w", err)
 	}

@@ -24,7 +24,7 @@ spec:
     - path: spec.network.hostNetwork.allowedValue
       level: pod
       description: SPE override for hostNetwork
-      requiredScenarios: [speMatch, speMismatch, speAbsent]
+      requiredScenarios: [speMatch, speMismatch, speAbsent, speUnused]
     - path: spec.network.hostPorts[].port
       level: pod
       description: SPE allowed host port

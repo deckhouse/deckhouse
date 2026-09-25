@@ -186,6 +186,12 @@ func (c *Cloud) onEndpointSliceEvent(
 	if svc.Spec.Type != corev1.ServiceTypeLoadBalancer {
 		return
 	}
+	if svc.Spec.LoadBalancerClass != nil {
+		klog.V(3).InfoS("onEndpointSliceEvent: service has load balancer class, skip ensureLB",
+			"namespace", svc.Namespace, "service", svc.Name, "slice", es.Name,
+			"loadBalancerClass", *svc.Spec.LoadBalancerClass)
+		return
+	}
 	if svc.Spec.ExternalTrafficPolicy != corev1.ServiceExternalTrafficPolicyTypeLocal {
 		return
 	}

@@ -156,12 +156,15 @@ func (s *Service) commanderDetach(ctx context.Context, p *detachParams) *pb.Comm
 
 	ctx = initDhctlLoggerCtx(ctx, p)
 
-	opts := newRequestOptions(
+	opts, err := newRequestOptions(
 		s.params.CacheDir,
-		p.request.Options.CommonOptions.SkipPreflightChecks,
+		p.request.Options.CommonOptions,
 		p.request.Options.ResourcesTimeout.AsDuration(),
 		p.request.Options.DeckhouseTimeout.AsDuration(),
 	)
+	if err != nil {
+		return &pb.CommanderDetachResult{Err: err.Error()}
+	}
 
 	logBeforeExit := logInformationAboutInstance(ctx, s.params)
 	defer logBeforeExit()
@@ -219,9 +222,10 @@ func (s *Service) commanderDetach(ctx context.Context, p *detachParams) *pb.Comm
 
 	var sshProvider libcon.SSHProvider
 	var kubeProvider libcon.KubeProvider
+	// Kept beyond the closure: the embedded checker runs the node preflights through it.
+	var sshProviderInitializer *providerinitializer.SSHProviderInitializer
 	err = dhlog.RunProcess(ctx, dhlog.FromContext(ctx), "Preparing SSH client", func(ctx context.Context) error {
 		var cleanup func() error
-		var sshProviderInitializer *providerinitializer.SSHProviderInitializer
 		sshProviderInitializer, kubeProvider, cleanup, err = helper.CreateProviders(ctx, p.request.ConnectionConfig, s.params.IsDebug, s.params.TmpDir, helper.WithKubeConfig(p.request.Kubeconfig))
 		cleanuper.Add(cleanup)
 		if err != nil {
@@ -261,10 +265,11 @@ func (s *Service) commanderDetach(ctx context.Context, p *detachParams) *pb.Comm
 	})
 
 	checker := check.NewChecker(&check.Params{
-		KubeProvider:  kubeProvider,
-		StateCache:    stateCache,
-		CommanderMode: p.request.Options.CommanderMode,
-		CommanderUUID: commanderUUID,
+		KubeProvider:           kubeProvider,
+		SSHProviderInitializer: sshProviderInitializer,
+		StateCache:             stateCache,
+		CommanderMode:          p.request.Options.CommanderMode,
+		CommanderUUID:          commanderUUID,
 		CommanderModeParams: commander.NewCommanderModeParams(
 			[]byte(p.request.ClusterConfig),
 			[]byte(p.request.ProviderSpecificClusterConfig),

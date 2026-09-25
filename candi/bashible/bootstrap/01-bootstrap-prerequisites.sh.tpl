@@ -37,8 +37,8 @@ bb-rpp-get-install
 /opt/deckhouse/bin/rpp-get install "jq:{{ .jq171 }}" "curl:{{ .d8Curl891 }}" "tailLog:{{ .tailLog }}"
 export PATH="/opt/deckhouse/bin:/usr/local/bin:$PATH"
 {{- end }}
-{{- if and (ne .nodeGroup.nodeType "Static") (.provider )}}
-  {{- if $bootstrap_script_network := $.Files.Get (printf "deckhouse/candi/cloud-providers/%s/bashible/bootstrap-networks.sh.tpl" .provider) | default ($.Files.Get (printf "candi/cloud-providers/%s/bashible/bootstrap-networks.sh.tpl" .provider) ) }}
+{{- if and (ne .nodeGroup.nodeType "Static") ( .nodeGroup.cloudProviderType )}}
+  {{- if $bootstrap_script_network := $.Files.Get (printf "deckhouse/candi/cloud-providers/%s/bashible/bootstrap-networks.sh.tpl" .nodeGroup.cloudProviderType) | default ($.Files.Get (printf "candi/cloud-providers/%s/bashible/bootstrap-networks.sh.tpl" .nodeGroup.cloudProviderType) ) }}
     {{- $bootstrap_script_network = regexReplaceAll "^#!/bin/bash\n" $bootstrap_script_network "" }}
     {{- tpl ($bootstrap_script_network) $ | nindent 0 }}
   {{- end }}

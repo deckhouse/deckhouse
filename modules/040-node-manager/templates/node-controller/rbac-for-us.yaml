@@ -492,6 +492,33 @@ rules:
   - get
   - update
   - patch
+# NodeStaticPodRequests - the pods a platform module asks kubelet to run outside
+# the scheduler. node-controller compiles them into spec.staticPods of every
+# matching node's NodeConfig, checks each manifest in one cluster-wide pass, and
+# reports back what the nodes made of it. The object itself belongs to the module
+# that publishes it, so it is read-only here. Nodes are granted nothing: they
+# read NodeConfig and never this kind.
+#
+# No new Secret rule for d8-system/registry-bashible-config, whose "agent" key
+# decides who writes containerd's registry.d: the cluster-wide secrets read above
+# already covers it, and a second grant for rights that exist would be a second
+# place to keep in step.
+- apiGroups:
+  - deckhouse.io
+  resources:
+  - nodestaticpodrequests
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - deckhouse.io
+  resources:
+  - nodestaticpodrequests/status
+  verbs:
+  - get
+  - update
+  - patch
 - apiGroups:
   - internal.deckhouse.io
   resources:

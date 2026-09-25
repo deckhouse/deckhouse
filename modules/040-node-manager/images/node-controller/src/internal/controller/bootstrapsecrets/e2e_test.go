@@ -32,6 +32,8 @@ import (
 
 	deckhousev1 "github.com/deckhouse/node-controller/api/deckhouse.io/v1"
 	"github.com/deckhouse/node-controller/internal/bootstrap"
+	"github.com/deckhouse/node-controller/internal/cloudprovider"
+	providermock "github.com/deckhouse/node-controller/internal/cloudprovider/mock"
 	nodecommon "github.com/deckhouse/node-controller/internal/common"
 	"github.com/deckhouse/node-controller/internal/controller/nodegroup/bashiblecontext"
 	ngcommon "github.com/deckhouse/node-controller/internal/controller/nodegroup/common"
@@ -88,14 +90,16 @@ var _ = Describe("Bootstrap secrets controller", func() {
 		}
 		r.Client = k8sClient
 
-		resolved, validationErr, err := r.derivedStatus.ResolveNodeGroup(suiteCtx, ng)
+		provider, err := cloudprovider.RegistrationForNodeGroup(suiteCtx, k8sClient, ng)
+		Expect(err).NotTo(HaveOccurred())
+		resolved, validationErr, err := r.derivedStatus.ResolveNodeGroup(suiteCtx, ng, provider)
 		Expect(err).NotTo(HaveOccurred())
 		Expect(validationErr).To(BeEmpty())
 
 		token, err := EnsureToken(suiteCtx, k8sClient, ng.Name)
 		Expect(err).NotTo(HaveOccurred())
 
-		in, err := BuildInput(suiteCtx, r.context, resolved, token)
+		in, err := BuildInput(suiteCtx, r.context, resolved, provider, token)
 		Expect(err).NotTo(HaveOccurred())
 
 		Expect(in.PackagesProxy).To(HaveKeyWithValue("token", testPackagesProxyToken))
@@ -163,7 +167,7 @@ var _ = Describe("Bootstrap secrets controller", func() {
 
 		Eventually(func(g Gomega) {
 			g.Expect(warningEventMessages(name, eventReasonSkipped)).
-				To(ContainElement(ContainSubstring(nodecommon.InstanceClassAPIVersionKey)))
+				To(ContainElement(ContainSubstring(cloudprovider.InstanceClassAPIVersionKey)))
 		}, eventuallyTimeout, eventuallyPoll).Should(Succeed())
 	})
 
@@ -222,8 +226,8 @@ var _ = Describe("Bootstrap secrets controller", func() {
 		By("adding a zone to the provider registration and nothing else")
 		reg := &corev1.Secret{}
 		regKey := types.NamespacedName{
-			Namespace: nodecommon.CloudProviderSecretNamespace,
-			Name:      nodecommon.CloudProviderSecretName,
+			Namespace: cloudprovider.RegistrationSecretNamespace,
+			Name:      cloudprovider.RegistrationSecretBaseName,
 		}
 		Expect(k8sClient.Get(suiteCtx, regKey, reg)).To(Succeed())
 		reg.Data["zones"] = []byte(`["zone-a","zone-b"]`)
@@ -356,13 +360,7 @@ func warningEventMessages(ngName, reason string) []string {
 // the suite keeps running in a cluster with no cloud provider.
 func createCloudProviderRegistration(data map[string][]byte) {
 	GinkgoHelper()
-	secret := &corev1.Secret{
-		ObjectMeta: metav1.ObjectMeta{
-			Namespace: nodecommon.CloudProviderSecretNamespace,
-			Name:      nodecommon.CloudProviderSecretName,
-		},
-		Data: data,
-	}
+	secret := providermock.DefaultRegistration(data)
 	Expect(k8sClient.Create(suiteCtx, secret)).To(Succeed())
 	DeferCleanup(func() {
 		Expect(client.IgnoreNotFound(k8sClient.Delete(suiteCtx, secret))).To(Succeed())
@@ -373,8 +371,8 @@ func createCloudProviderRegistration(data map[string][]byte) {
 // published a kind but not the apiVersion to read it at (derived_status/validate.go:40).
 func rejectingRegistration() map[string][]byte {
 	return map[string][]byte{
-		"type":                          []byte(`"dvp"`),
-		nodecommon.InstanceClassKindKey: []byte("DVPInstanceClass"),
+		"type":                             []byte(`"dvp"`),
+		cloudprovider.InstanceClassKindKey: []byte("DVPInstanceClass"),
 	}
 }
 
@@ -382,11 +380,11 @@ func rejectingRegistration() map[string][]byte {
 // follows from the registration alone — and publishes the given JSON list of zones.
 func capiRegistration(zonesJSON string) map[string][]byte {
 	return map[string][]byte{
-		"type":                                []byte(`"yandex"`),
-		"capiClusterKind":                     []byte("YandexCluster"),
-		nodecommon.InstanceClassKindKey:       []byte(yandexInstanceClassKind),
-		nodecommon.InstanceClassAPIVersionKey: []byte(yandexInstanceClassVersion),
-		"zones":                               []byte(zonesJSON),
+		"type":                                   []byte(`"yandex"`),
+		"capiClusterKind":                        []byte("YandexCluster"),
+		cloudprovider.InstanceClassKindKey:       []byte(yandexInstanceClassKind),
+		cloudprovider.InstanceClassAPIVersionKey: []byte(yandexInstanceClassVersion),
+		"zones":                                  []byte(zonesJSON),
 	}
 }
 

@@ -40,7 +40,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/metrics"
-	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/addonutils"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/confighandler"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/module-controllers/utils"
@@ -67,7 +66,6 @@ const (
 func RegisterController(
 	runtimeManager manager.Manager,
 	mm moduleManager,
-	pm packageManager,
 	conversionsStore *conversion.ConversionsStore,
 	edition *d8edition.Edition,
 	handler *confighandler.Handler,
@@ -82,7 +80,6 @@ func RegisterController(
 		handler:          handler,
 		conversionsStore: conversionsStore,
 		moduleManager:    mm,
-		packageManager:   pm,
 		edition:          edition,
 		metricStorage:    ms,
 		configValidator:  configtools.NewValidator(mm, conversionsStore),
@@ -131,7 +128,6 @@ type reconciler struct {
 	edition          *d8edition.Edition
 	handler          *confighandler.Handler
 	moduleManager    moduleManager
-	packageManager   packageManager
 	metricStorage    metricsstorage.Storage
 	configValidator  *configtools.Validator
 	exts             extenders.IExtendersStack
@@ -146,10 +142,6 @@ type moduleManager interface {
 	GetGlobal() *modules.GlobalModule
 	GetUpdatedByExtender(name string) (string, error)
 	GetModuleEventsChannel() chan events.ModuleEvent
-}
-
-type packageManager interface {
-	UpdateModulesSettings(name string, settingsVersion int, settings addonutils.Values, maintenance string, enabled *bool)
 }
 
 func (r *reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
@@ -212,14 +204,6 @@ func (r *reconciler) handleModuleConfig(ctx context.Context, moduleConfig *v1alp
 		r.logger.Debug("send event to operator", slog.String("name", moduleConfig.Name), slog.Bool("enabled", moduleConfig.IsEnabled()))
 		r.handler.HandleEvent(moduleConfig, config.EventUpdate)
 	}
-
-	// update modules settings in the package manager
-	r.packageManager.UpdateModulesSettings(
-		moduleConfig.Name,
-		moduleConfig.Spec.Version,
-		moduleConfig.Spec.Settings.GetMap(),
-		moduleConfig.Spec.Maintenance,
-		moduleConfig.Spec.Enabled)
 
 	if err := r.refreshModuleConfig(ctx, moduleConfig.Name); err != nil {
 		return ctrl.Result{RequeueAfter: 1 * time.Second}, nil

@@ -21,24 +21,33 @@ linters-settings:
       controller-security-context:
         - kind: Deployment
           name: kiali
+        - kind: DaemonSet
+          name: ztunnel
       security-context:
         - kind: Deployment
           name: kiali
       readiness-probe:
         - kind: Deployment
-          name: operator-1x25
+          name: operator-v1x25
           container: operator
         - kind: Deployment
           name: metadata-exporter
           container: metadata-discovery
       liveness-probe:
         - kind: Deployment
-          name: operator-1x25
+          name: operator-v1x25
           container: operator
+        - kind: DaemonSet
+          name: ztunnel
+          container: istio-proxy
         - kind: Deployment
           name: metadata-exporter
           container: metadata-discovery
       no-new-privileges:
+        - kind: DaemonSet
+          name: istio-cni-node
+          container: install-cni
+      host-network-ports:
         - kind: DaemonSet
           name: istio-cni-node
           container: install-cni
@@ -64,7 +73,7 @@ linters-settings:
           port: https
       pdb:
         - kind: Deployment
-          name: operator-1x25
+          name: operator-v1x25
           container: operator
         - kind: DaemonSet
           name: istio-cni-node
@@ -79,4 +88,4 @@ linters-settings:
           name: d8:istio:multicluster:api-proxy
       placement:
         - kind: ServiceAccount
-          name: operator-1x25  
+          name: operator-v1x25

@@ -208,6 +208,62 @@ func TestEmptyValueDivergence(t *testing.T) {
 		"and the object is identical, which is what makes this rollout unnecessary but harmless")
 }
 
+// TestOpenstackPreemptibleRenderedInV2 pins that OpenStackInstanceClass.spec.preemptible flows into
+// the OpenStackMachineTemplate under the v2 contract as the raw Nova tag `preemptible` next to the
+// mandatory deckhouse-<uuid>=1 / role-* / use-cluster-api=1. If the raw form regresses (e.g. the
+// tag gets rendered as `preemptible=true` key=value), Selectel's preemption mechanism stops firing.
+//
+// The openstack parity fixture is a Selectel-hosted cluster (connection.authURL points at
+// selcloud.ru) — this is what makes the template emit the tag at all.
+func TestOpenstackPreemptibleRenderedInV2(t *testing.T) {
+	fixture := fixtureByName(t, "openstack")
+	contract := loadContract(t, fixture.contractPath)
+
+	spec := deepCopySpec(t, fixture.instanceClass)
+	spec["preemptible"] = true
+
+	obj, err := renderV2Spec(fixture, contract, spec)
+	require.NoError(t, err)
+
+	tags, ok := obj["spec"].(map[string]any)["template"].(map[string]any)["spec"].(map[string]any)["tags"].([]any)
+	require.True(t, ok, "spec.template.spec.tags must be a list")
+
+	assert.Contains(t, tags, "preemptible", "raw Nova tag must be present as a string (no key=value)")
+	assert.Contains(t, tags, "deckhouse-"+parityClusterUUID+"=1", "mandatory safety-controller tag")
+	assert.Contains(t, tags, "role-deckhouse-"+parityNodeGroup+"-"+parityZone+"=1")
+	assert.Contains(t, tags, "use-cluster-api=1")
+}
+
+// TestOpenstackPreemptibleNotEmittedOffSelectel pins the other half of the Selectel gate: on any
+// non-Selectel OpenStack the template must NOT emit the `preemptible` tag, even when the operator
+// set spec.preemptible: true. The tag has no meaning off Selectel and would only look like a
+// request Nova silently ignored — the OpenStackPreemptibleUnsupportedProvider alert takes over.
+func TestOpenstackPreemptibleNotEmittedOffSelectel(t *testing.T) {
+	fixture := fixtureByName(t, "openstack")
+	contract := loadContract(t, fixture.contractPath)
+
+	// Deep-copy provider config and swap authURL to something that clearly isn't Selectel.
+	fixture.providerConfig = deepCopySpec(t, fixture.providerConfig)
+	fixture.providerConfig["connection"] = map[string]any{
+		"authURL": "https://public.infra.mail.ru:5000/v3/",
+	}
+
+	spec := deepCopySpec(t, fixture.instanceClass)
+	spec["preemptible"] = true
+
+	obj, err := renderV2Spec(fixture, contract, spec)
+	require.NoError(t, err)
+
+	tags, ok := obj["spec"].(map[string]any)["template"].(map[string]any)["spec"].(map[string]any)["tags"].([]any)
+	require.True(t, ok)
+
+	assert.NotContains(t, tags, "preemptible",
+		"non-Selectel cluster must NOT receive the preemptible tag: Nova there would attach and ignore it")
+	// The mandatory safety-controller tags stay regardless of authURL.
+	assert.Contains(t, tags, "deckhouse-"+parityClusterUUID+"=1")
+	assert.Contains(t, tags, "use-cluster-api=1")
+}
+
 // TestProviderRenderParityOnEdgeSpecs runs both engines on the InstanceClass shapes a fixture
 // never has: only the CRD-required fields, and every optional field set to its zero value.
 //

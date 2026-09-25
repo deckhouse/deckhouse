@@ -20,7 +20,7 @@ The following simplifications are made in the diagram:
 
 The Level 2 C4 architecture of the [`chrony`](/modules/chrony/) module its interactions with other DP components are shown in the following diagram:
 
-![Chrony module architecture](../../../images/architecture/cluster-and-infrastructure/c4-l2-chrony.png)
+![Chrony module architecture](../../../images/architecture/cluster-and-infrastructure/c4-l2-chrony.svg)
 
 ## Module components
 

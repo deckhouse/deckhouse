@@ -1087,6 +1087,13 @@ func assertApplyWithCreatingWorkerFilesInRoot(t *testing.T, params assertApplyWi
 	applyStep := infrastructure.BaseInfraStep
 	applyLayout := "fake"
 
+	// The fake layout gets its own cloud-providers tree: the shared one is not
+	// writable for an unprivileged test user, and for external providers
+	// (yandex) its layouts link into the read-only module tree.
+	fsDIParams := *params.params.FSDIParams
+	fsDIParams.CloudProviderDir = t.TempDir()
+	params.params.FSDIParams = &fsDIParams
+
 	cfgApply := fakeApplyTestMetaConfig(t, fakeApplyTestMetaConfigParams{
 		layout:   applyLayout,
 		uuid:     "f04bd5fa-998a-11f0-98c9-83a48e5f683f",
@@ -1097,13 +1104,11 @@ func assertApplyWithCreatingWorkerFilesInRoot(t *testing.T, params assertApplyWi
 
 	applyProvider, err := getter(t.Context(), cfgApply)
 
-	_, cleanup := testPrepareFakeLayoutForApply(t, testPrepareFakeLayoutForApplyParams{
+	testPrepareFakeLayoutForApply(t, testPrepareFakeLayoutForApplyParams{
 		provider: applyProvider,
 		step:     applyStep,
 		layout:   applyLayout,
 	}, params.params)
-
-	defer cleanup(t)
 
 	assertCloudProvider(t, applyProvider, params.provider, params.useTofu)
 	require.NoError(t, err)
@@ -1139,7 +1144,7 @@ type testPrepareFakeLayoutForApplyParams struct {
 	step     infrastructure.Step
 }
 
-func testPrepareFakeLayoutForApply(t *testing.T, params testPrepareFakeLayoutForApplyParams, cloudParams CloudProviderGetterParams) (string, func(t *testing.T)) {
+func testPrepareFakeLayoutForApply(t *testing.T, params testPrepareFakeLayoutForApplyParams, cloudParams CloudProviderGetterParams) {
 	require.False(t, govalue.IsNil(params.provider))
 	require.NotEmpty(t, params.layout)
 	require.NotEmpty(t, params.step)
@@ -1148,7 +1153,7 @@ func testPrepareFakeLayoutForApply(t *testing.T, params testPrepareFakeLayoutFor
 	step := string(params.step)
 
 	fakeLayoutDir := filepath.Join(
-		cloudProvidersDir,
+		cloudParams.FSDIParams.CloudProviderDir,
 		params.provider.Name(),
 		layoutsRootDir,
 		params.layout,
@@ -1160,12 +1165,6 @@ func testPrepareFakeLayoutForApply(t *testing.T, params testPrepareFakeLayoutFor
 	require.NoError(t, err)
 
 	dhlog.Discard().Info(fmt.Sprintf("Fake layout dir %s created\n", fakeLayoutDir))
-
-	cleanup := func(tt *testing.T) {
-		err := os.RemoveAll(fakeLayoutDir)
-		require.NoError(tt, err)
-		dhlog.Discard().Info(fmt.Sprintf("Fake layout dir %s removed\n", fakeLayoutDir))
-	}
 
 	infraBin := filepath.Join(cloudParams.FSDIParams.BinariesDir, getProviderInfraUtilBinary(t, params.provider))
 
@@ -1180,12 +1179,7 @@ resource "terraform_data" "example" {
 	resourcesPath := filepath.Join(fakeStepDir, "main.tf")
 
 	err = os.WriteFile(resourcesPath, []byte(fakeResources), 0o777)
-	if err != nil {
-		cleanup(t)
-		require.NoError(t, err)
-	}
-
-	return fakeLayoutDir, cleanup
+	require.NoError(t, err)
 }
 
 func getCacheKeyForCluster(metaConfig *config.MetaConfig) string {
@@ -1398,7 +1392,7 @@ func assertFSDIDirsAndFilesExists(t *testing.T, params CloudProviderGetterParams
 
 	assertIsNotEmptyDir(t, params.FSDIParams.PluginsDir)
 	assertIsNotEmptyDir(t, params.FSDIParams.BinariesDir)
-	assertIsNotEmptyDir(t, cloudProvidersDir)
+	assertIsNotEmptyDir(t, params.FSDIParams.CloudProviderDir)
 	assertFileExistsAndHasAnyContent(t, params.FSDIParams.InfraVersionsFile)
 }
 
@@ -1727,7 +1721,7 @@ func assertDirsNotContainsFileInFSSources(t *testing.T, params CloudProviderGett
 	require.NotNil(t, params.FSDIParams)
 
 	assertFileOrDirDoesNotPresentsInDir(t, params.FSDIParams.BinariesDir, file)
-	assertFileOrDirDoesNotPresentsInDir(t, cloudProvidersDir, file)
+	assertFileOrDirDoesNotPresentsInDir(t, params.FSDIParams.CloudProviderDir, file)
 	assertFileOrDirDoesNotPresentsInDir(t, params.FSDIParams.PluginsDir, file)
 }
 
