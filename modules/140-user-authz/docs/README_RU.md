@@ -191,6 +191,7 @@ Namespace-роль определяет права на доступ к namespac
 - `runtimeclasses` (node.k8s.io);
 - `virtualmachineclasses`, `clustervirtualimages` (virtualization.deckhouse.io);
 - `clusterlogdestinations` (deckhouse.io);
+- `helmclusterapplicationcharts` (helm.deckhouse.io);
 - `customresourcedefinitions` (apiextensions.k8s.io) — только `get`, `list`.
 
 #### Автоматическая привязка

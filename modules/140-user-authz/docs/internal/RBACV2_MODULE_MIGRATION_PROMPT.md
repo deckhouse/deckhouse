@@ -112,7 +112,7 @@ object twice per reconcile, leaving the role empty in between.
 | Lineage | Levels | Granted with | What a module puts there |
 |---------|--------|--------------|--------------------------|
 | `namespace` | `viewer`, `user`, `manager`, `admin`, `superadmin` | `RoleBinding` | The module's namespaced resources — what a tenant works with |
-| a subsystem: `deckhouse`, `infrastructure`, `kubernetes`, `networking`, `observability`, `security`, `storage` | `viewer`, `manager`, `superadmin` | `ClusterRoleBinding` | The module's cluster-scoped resources and its `ModuleConfig` |
+| a subsystem: `deckhouse`, `delivery`, `infrastructure`, `kubernetes`, `networking`, `observability`, `security`, `storage` | `viewer`, `manager`, `superadmin` | `ClusterRoleBinding` | The module's cluster-scoped resources and its `ModuleConfig` |
 
 The legacy scheme had the same two tiers under different names: `use` for what happens inside a
 namespace, `manage` for the module's own configuration. What changes is that the namespace tier

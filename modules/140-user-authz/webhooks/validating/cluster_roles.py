@@ -60,6 +60,7 @@ TENANT_LINEAGES = {"namespace", "project"}
 SYSTEM_LINEAGES = {
     "system",
     "deckhouse",
+    "delivery",
     "infrastructure",
     "kubernetes",
     "networking",
