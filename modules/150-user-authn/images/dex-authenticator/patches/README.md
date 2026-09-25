@@ -19,7 +19,9 @@ as an authenticated session.
 The session store tests expect this behaviour.
 
 Sign-out does not invalidate a previously issued cookie.
-While the refresh token in that cookie is still valid in dex, the cookie restores the session.
+A copy of the cookie restores the session while both conditions hold:
+the refresh token in the cookie is still valid in dex,
+and the cookie itself has not expired (`--cookie-expire`, set from `keepUsersLoggedInFor`).
 
 ### 003-remove-groups.patch
 
