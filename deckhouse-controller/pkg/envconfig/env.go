@@ -46,6 +46,7 @@ const (
 	EnvPod           = "DECKHOUSE_POD"
 	EnvNamespace     = "ADDON_OPERATOR_NAMESPACE"
 	EnvListenAddress = "ADDON_OPERATOR_LISTEN_ADDRESS"
+	EnvListenPort    = "ADDON_OPERATOR_LISTEN_PORT"
 	EnvClusterDomain = "KUBERNETES_CLUSTER_DOMAIN"
 
 	// EnvNodeName is the node the pod runs on (downward API spec.nodeName).
@@ -154,6 +155,12 @@ func PodIP() string { return os.Getenv(EnvListenAddress) }
 
 // PodNamespace is the controller pod namespace.
 func PodNamespace() string { return os.Getenv(EnvNamespace) }
+
+// ListenAddress is the api server listen address.
+func ListenAddress() string { return os.Getenv(EnvListenAddress) }
+
+// ListenPort is the api server listen port.
+func ListenPort() string { return os.Getenv(EnvListenPort) }
 
 // ClusterDomain is the Kubernetes cluster domain.
 func ClusterDomain() string { return os.Getenv(EnvClusterDomain) }
