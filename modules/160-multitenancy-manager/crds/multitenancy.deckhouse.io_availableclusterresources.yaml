@@ -39,6 +39,7 @@ spec:
           Contains information about cluster-wide resources available to the project and the value used by default. 
 
           The resource is automatically created and updated by the `multitenancy-manager` controller in the project namespace for each registered GrantableClusterResourceDefinition.
+          It is deleted from the project namespaces when the corresponding GrantableClusterResourceDefinition is deleted.
           The AvailableClusterResource name matches the name of the corresponding GrantableClusterResourceDefinition. 
 
           Information about available cluster-wide resources and the default value is stored in the `status` field.

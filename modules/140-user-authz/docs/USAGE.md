@@ -287,6 +287,8 @@ A `User` or `Group` subject is matched by name against the user identity in the 
 
 If the match is intentional, for example, if the ClusterAuthorizationRule has been written in advance, set the `user-authz.deckhouse.io/allow-authorization-rule-collision: "true"` annotation on the User or Group. The annotation only acknowledges the name collision. It does not let a requester assign roles they cannot cover or that sit outside their can-assign range.
 
+Deleting a ClusterAuthorizationRule uses the same can-assign check as creating or updating it. You can remove a grant only if you could assign those roles. An update is checked against both the previous and the new grants, so lowering `SuperAdmin` to `User` still requires being able to assign `SuperAdmin`.
+
 Write an email for the `User` subject in lowercase. It's recorded to the token in lowercase so a subject spelled `Admin@Example.com` won't match `admin@example.com`. A `Group`-type subject names are matched exactly, since group names are not lowercased anywhere.
 
 This restriction is applied when a User or Group is created and when its `spec.email` or `spec.name` is changed. Deleting a User or Group whose name a rule still grants privileges to is allowed with a warning: the name stays granted, and recreating the object restores the privileges. The restriction doesn't prevent adding existing users or groups to a ClusterAuthorizationRule or AuthorizationRule. If a matching User or Group already exists, it receives the privileges immediately after it's added to the rule.
@@ -494,7 +496,7 @@ You may need to create a ServiceAccount with access to the Kubernetes API when, 
         ```
 
    * If there is no direct access to the API server, use one of the following options:
-      * enable access to the API-server over the Ingress controller (the [publishAPI](../user-authn/configuration.html#parameters-publishapi) parameter) and specify the addresses from which requests originate (the [whitelistSourceRanges](../user-authn/configuration.html#parameters-publishapi-whitelistsourceranges) parameter);
+      * enable access to the API-server over the Ingress controller (the [apiserver.publishAPI](/modules/control-plane-manager/configuration.html#parameters-apiserver-publishapi) parameter of the `control-plane-manager` module) and specify the addresses from which requests originate (the [whitelistSourceRanges](/modules/control-plane-manager/configuration.html#parameters-apiserver-publishapi-ingress-whitelistsourceranges) parameter);
       * specify addresses from which requests will originate in a separate Ingress controller (the [acceptRequestsFrom](../ingress-nginx/cr.html#ingressnginxcontroller-v1-spec-acceptrequestsfrom) parameter).
 
    * If a non-public CA is used:

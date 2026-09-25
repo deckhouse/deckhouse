@@ -1,20 +1,43 @@
 {{- /*
-  System/module writers are excluded at the apiserver level (CEL matchConditions, evaluated BEFORE any
-  network call to the webhook backend). All of these webhooks are backed by the multitenancy-manager
-  pod with the default failurePolicy: Fail; if that backend is denying, slow or unreachable, an
-  admission call for a resource a module's Helm release applies (e.g. the deckhouse-controller creating
-  a namespace) would fail and addon-operator would retry it forever, locking the module's queue.
-  Excluding system writers makes that impossible regardless of backend health, while ordinary users are
-  still validated. Mirrors the same exclusion on the cluster-objects grant webhooks.
+  All of these webhooks are backed by the multitenancy-manager pod. If an admission call for a resource
+  a module's Helm release applies (e.g. the deckhouse-controller creating a namespace) fails because
+  that backend is denying, slow or unreachable, addon-operator retries it forever and the module's
+  queue locks. Each webhook here is kept out of that situation in one of three ways:
+
+  - Project and ProjectTemplate: the default failurePolicy: Fail, with system/module writers excluded
+    at the apiserver level (CEL matchConditions, evaluated BEFORE any network call to the webhook
+    backend). A release cannot deadlock on them regardless of backend health, while ordinary users are
+    still validated.
+  - ProjectRoleBinding, ProjectNamespace and ClusterProjectRoleBinding: failurePolicy: Fail and no
+    exclusion, because nothing in the platform renders those objects (see below).
+  - GrantableClusterResourceReference: no exclusion and failurePolicy: Ignore, so only a deliberate
+    refusal can fail an apply (see the comment at that webhook).
+
+  The cluster-objects grant webhooks (hooks/configure_grant_validation_webhook.go) keep a similar list
+  but also exclude system:masters: they intercept every grantable cluster-resource write into project
+  namespaces, a far larger surface for a deadlock.
+
+  People are not system writers: system:masters goes through these webhooks like everyone else, so a
+  Project an administrator creates is validated the same way as one a user creates. The one human
+  identity that bypasses them is system:sudouser -- the same identity the heritage
+  ValidatingAdmissionPolicy exempts -- so an administrator who has to bypass a check does it on
+  purpose, by impersonating that user, and the bypass is visible in the audit log.
+
+  The exclusion applies to the Project and ProjectTemplate webhooks only. Nothing in the platform
+  renders a ProjectRoleBinding, a ProjectNamespace or a ClusterProjectRoleBinding, so no release can
+  deadlock on their webhooks, and the exclusion would only drop the managed-by and escalation checks
+  for platform service accounts and system:sudouser. Those three webhooks see every request; their
+  handler privileges the controller and Deckhouse service accounts and nobody else.
 */ -}}
 {{- $excludeSystemWriters := `matchConditions:
 - name: exclude-system-writers
   expression: >-
     request.userInfo.username != "system:apiserver"
+    && request.userInfo.username != "system:sudouser"
     && request.userInfo.username != "system:serviceaccount:d8-system:deckhouse"
     && request.userInfo.username != "system:serviceaccount:d8-multitenancy-manager:multitenancy-manager"
     && request.userInfo.username != "system:serviceaccount:d8-user-authz:controller"
-    && !request.userInfo.groups.exists(g, g == "system:serviceaccounts:d8-system" || g == "system:serviceaccounts:kube-system" || g == "system:serviceaccounts:d8-user-authz" || g == "system:masters" || g == "system:nodes")` }}
+    && !request.userInfo.groups.exists(g, g == "system:serviceaccounts:d8-system" || g == "system:serviceaccounts:kube-system" || g == "system:serviceaccounts:d8-user-authz" || g == "system:nodes")` }}
 ---
 apiVersion: admissionregistration.k8s.io/v1
 kind: ValidatingWebhookConfiguration
@@ -150,3 +173,55 @@ webhooks:
         namespace: d8-multitenancy-manager
         port: 9443
         path: /validate/v1alpha1/templates
+  - name: grantableclusterresourcereferences.multitenancy-webhook.deckhouse.io
+    rules:
+      - apiGroups:
+          - multitenancy.deckhouse.io
+        apiVersions:
+          - v1alpha1
+        resources:
+          # The bare resource only. Listing .../status would make the reference reconciler's status
+          # write on an already-stored invalid object fail, turning one refusal into a reconcile loop.
+          - grantableclusterresourcereferences
+        operations:
+          - CREATE
+          - UPDATE
+        scope: Cluster
+    admissionReviewVersions:
+      - v1
+    matchPolicy: Equivalent
+    # No system-writer exclusion here. The ProjectRoleBinding, ProjectNamespace and
+    # ClusterProjectRoleBinding webhooks above have none either, because nothing renders those
+    # objects; this one has none although modules do ship these objects in their releases. It exists
+    # to tell a MODULE AUTHOR that a path does not compile or that a defaulting path will never
+    # default anything, and the authors who write these objects are exactly the identities an
+    # exclusion covers: a developer on a dev stand is in system:masters, and in a release the object
+    # is applied by the deckhouse-controller. Excluding them would leave the webhook policing nobody.
+    # It also refuses an entry scoped to a resource, group or version spec.rule does not list, and
+    # entries that leave some request spec.rule matches without an applicable entry: such a request
+    # is silently not checked at all.
+    #
+    # The anti-deadlock guarantee the exclusion provides elsewhere is kept by failurePolicy: Ignore
+    # instead: a denying webhook can only ever be the deliberate refusal below, never an unreachable
+    # or slow backend, so a module's Helm release can never be blocked by this webhook being down.
+    # The refusal itself does fail the apply of a module that ships an invalid reference — which is
+    # the point: a loud, attributable failure naming the offending path beats a reference that binds
+    # and silently never defaults, or checks nothing. A reference stored past this webhook is reported
+    # by the FieldPathsValid=False condition, and /is-granted skips a path it cannot evaluate.
+    #
+    # The refusal cannot become a retry-forever on an object that is already stored: on UPDATE only
+    # fieldPaths entries that are new or changed relative to the old object have their paths checked,
+    # scopes are re-checked only when the entry or spec.rule changed, coverage only when spec.rule or
+    # spec.fieldPaths changed, and an object with a deletionTimestamp is not checked at all, so
+    # metadata edits and finalizer removal on a reference stored before this webhook (or while it was
+    # down) always go through.
+    failurePolicy: Ignore
+    timeoutSeconds: 5
+    sideEffects: None
+    clientConfig:
+      caBundle: {{ .Values.multitenancyManager.internal.admissionWebhookCert.ca | b64enc }}
+      service:
+        name: multitenancy-manager
+        namespace: d8-multitenancy-manager
+        port: 9443
+        path: /validate/v1alpha1/grantableclusterresourcereferences

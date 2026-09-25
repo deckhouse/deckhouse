@@ -80,6 +80,11 @@ type NodeGroupSpec struct {
 	// +kubebuilder:validation:Required
 	NodeType NodeType `json:"nodeType"`
 
+	// ProviderType is the cloud provider type of the node group. "None" or an empty value — for a
+	// static node group.
+	// +optional
+	ProviderType string `json:"providerType,omitempty"`
+
 	// SystemType selects how the node is managed. An Immutable node is
 	// reconciled from a NodeConfig object by the agent on the node instead of by
 	// bashible. Once the field names a value it cannot be changed.

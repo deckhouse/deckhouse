@@ -22,7 +22,6 @@ import (
 	apiv1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	dhlog "github.com/deckhouse/lib-dhctl/pkg/logger"
 	"github.com/deckhouse/lib-dhctl/pkg/retry"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes"
@@ -42,21 +41,22 @@ func IsNodeReady(ctx context.Context, checkers []NodeChecker, nodeName, sourceCo
 
 	err := retry.NewLoop(title, 300, 1*time.Second).RunContext(ctx, func() error {
 		for _, check := range checkers {
-			err := dhlog.RunProcess(ctx, dhlog.FromContext(ctx), check.Name(), func(ctx context.Context) error {
-				isReady, err := check.IsReady(ctx, nodeName)
-				if err != nil {
-					return err
-				}
-
-				if !isReady {
-					return ErrNotReady
-				}
-
-				return err
-			})
+			// No process block per checker. This body is one attempt of a retry loop, and a
+			// block opened here opens and fails on every attempt - which the live UI restates
+			// as a persistent FAILED milestone each time, so a node that simply took forty
+			// seconds to come up left forty identical "FAILED Control plane readiness" rows
+			// pinned on screen and forty more in the closing summary. The retry loop already
+			// frames itself as one block; the checker's identity belongs in the error, which
+			// the loop logs per attempt and carries into its exhaustion message.
+			isReady, err := check.IsReady(ctx, nodeName)
 			if err != nil {
-				lastErr = err
-				return err
+				lastErr = fmt.Errorf("%s: %w", check.Name(), err)
+				return lastErr
+			}
+
+			if !isReady {
+				lastErr = fmt.Errorf("%s: %w", check.Name(), ErrNotReady)
+				return lastErr
 			}
 		}
 

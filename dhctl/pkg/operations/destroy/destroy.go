@@ -136,11 +136,9 @@ func initStateLoader(ctx context.Context, params *stateLoaderParams, kubeProvide
 		//	panic("CommanderUUID required for destroy operation in commander mode!")
 		// }
 
-		// Commander sends no registry_config; the external provider bundle
-		// registry is read from the target cluster inside ParseMetaConfig. The
-		// kube client is fetched lazily, only when a bundle download is needed,
-		// so a destroy served entirely from the local state cache (in-tree
-		// provider) never dials the kube API.
+		// Commander sends no registry_config; the external provider bundle registry is read from
+		// the target cluster inside ParseMetaConfig. A cloud destroy does dial: which module build
+		// a cluster runs is a property of that cluster. See KubeClientGetter.
 		metaConfig, err := commander.ParseMetaConfig(ctx, params.stateCache, params.commanderParams, infrastructureprovider.DhctlOperationDestroy, kubeProvider.KubeClientCtx, params.globalOptions)
 		if err != nil {
 			return nil, nil, fmt.Errorf("Unable to parse meta configuration: %w", err)

@@ -319,6 +319,18 @@ func TestLifecycleScenarios(t *testing.T) {
 			tip:     "The previous configuration continues to work. Fix the invalid fields in the application settings. After saving, the controller will re-apply the settings.",
 		},
 		{
+			name: "reconcile: new settings are being applied",
+			opts: running(withSettingsChanged()),
+			wantConds: map[string]*expectedCondition{
+				ConditionReady:                {metav1.ConditionFalse, "SettingsChanged"},
+				ConditionManaged:              {metav1.ConditionFalse, "SettingsChanged"},
+				ConditionConfigurationApplied: {metav1.ConditionFalse, "SettingsChanged"},
+				ConditionScaled:               {metav1.ConditionTrue, ConditionScaled},
+			},
+			// Applying new settings is not a degradation.
+			state: stateReady,
+		},
+		{
 			name: "reconcile: startup/runtime hooks failed",
 			opts: running(intCond(intHooksProcessed, metav1.ConditionFalse, "HookExecutionFailed")),
 			wantConds: map[string]*expectedCondition{

@@ -1,3 +1,7 @@
+# WARNING!
+# if you change this file please evaluate to change files
+# /modules/002-deckhouse/openapi/config-values.yaml
+# /ee/cse/modules/002-deckhouse/openapi/config-values.yaml
 type: object
 properties:
 
@@ -29,12 +33,12 @@ properties:
 
   releaseChannel:
     type: string
-    enum: ["Alpha", "Beta", "EarlyAccess", "Stable", "RockSolid", "LTS"]
+    enum: ["Alpha", "Beta", "EarlyAccess", "Stable", "RockSolid"]
     x-examples: ["Stable"]
     description: |
       Target Deckhouse release channel (Deckhouse will [switch](/products/kubernetes-platform/documentation/v1/architecture/updating.html) to it when such an opportunity appears).
 
-      The order in which the stability of the release channel increases (from **less** stable to **more** stable): `Alpha`, `Beta`, `EarlyAccess`, `Stable`, `RockSolid`, `LTS`.
+      The order in which the stability of the release channel increases (from **less** stable to **more** stable): `Alpha`, `Beta`, `EarlyAccess`, `Stable`, `RockSolid`.
 
   update:
     type: object

@@ -27,7 +27,7 @@ The architecture of the [`user-authn`](/modules/user-authn/) module at Level 2 o
 
 Using dex-authenticator:
 
-![User-authn module architecture with dex-authenticator authentication](../../images/architecture/iam/c4-l2-user-authn.png)
+![User-authn module architecture with dex-authenticator authentication](../../images/architecture/iam/c4-l2-user-authn.svg)
 
 {% alert level="info" %}
 For simplicity, the following diagrams show only the components and their interactions that distinguish these diagrams from the variant using dex-authenticator.
@@ -35,7 +35,7 @@ For simplicity, the following diagrams show only the components and their intera
 
 Using the Dex client:
 
-![User-authn module architecture with Dex authentication](../../images/architecture/iam/c4-l2-user-authn-dex-client.png)
+![User-authn module architecture with Dex authentication](../../images/architecture/iam/c4-l2-user-authn-dex-client.svg)
 
 When connecting to the Kubernetes API using  `d8`, `kubectl` or other Kubernetes clients with a generated kubeconfig, a separate authentication schemes are used:
 
@@ -44,11 +44,11 @@ When connecting to the Kubernetes API using  `d8`, `kubectl` or other Kubernetes
 
 Using a generated kubeconfig and a token authentication:
 
-![User-authn module architecture when using a generated kubeconfig and a token authentication](../../images/architecture/iam/c4-l2-user-authn-kubeconfig.png)
+![User-authn module architecture when using a generated kubeconfig and a token authentication](../../images/architecture/iam/c4-l2-user-authn-kubeconfig.svg)
 
 Using a generated kubeconfig and a basic authentication:
 
-![User-authn module architecture when using a generated kubeconfig and a basic authentication](../../images/architecture/iam/c4-l2-user-authn-kubeconfig-basic.png)
+![User-authn module architecture when using a generated kubeconfig and a basic authentication](../../images/architecture/iam/c4-l2-user-authn-kubeconfig-basic.svg)
 
 ## Module components
 

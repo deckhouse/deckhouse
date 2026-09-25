@@ -20,6 +20,42 @@ getting_started_nav:
   manual_cli:
     en: Manually from the command line
     ru: Вручную из командной строки
+getting_started:
+  # Stronghold "Linux OS" guide: download block (getting_started/stronghold/linux/partials/download*.liquid)
+  stronghold_download:
+    select_edition:
+      en: Select the Deckhouse Stronghold edition
+      ru: Выберите редакцию Deckhouse Stronghold
+    enter_license_key:
+      en: Enter the Deckhouse Stronghold <EDITION> license key
+      ru: Введите лицензионный ключ Deckhouse Stronghold <EDITION>
+    license_key:
+      en: License key
+      ru: Лицензионный ключ
+    check_key:
+      en: Check key
+      ru: Проверить ключ
+    key_accepted:
+      en: Key accepted
+      ru: Ключ принят
+    network_error:
+      en: Failed to fetch the version list. Please try again later.
+      ru: Не удалось получить список версий. Повторите попытку позже.
+    no_versions:
+      en: No versions available.
+      ru: Доступных версий не найдено.
+    download_version:
+      en: Download
+      ru: Скачать
+    version:
+      en: Stronghold version
+      ru: Версия Stronghold
+    no_key:
+      en: Have no key?
+      ru: Нет ключа?
+    request_trial:
+      en: Request free trial
+      ru: Запросить бесплатный триал
 ce: Community Edition
 be: Basic Edition
 se: Standard Edition

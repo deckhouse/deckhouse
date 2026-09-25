@@ -136,19 +136,23 @@ func (m *DefaultsMutator) decide(ctx context.Context, req *admissionv1.Admission
 	var patches []jsonPatchOperation
 	var warnings []string
 	for _, mr := range refs {
-		fp, ok := engine.SelectFieldPath(mr.Reference.Spec.FieldPaths, group, version)
+		fp, ok := engine.SelectFieldPath(mr.Reference.Spec.FieldPaths, group, version, resourcePlural)
 		if !ok {
 			continue
 		}
 		// Defaulting is per path: None never fills in (opt-in toggle annotations stay absent).
-		if fp.Defaulting == "" || fp.Defaulting == v1alpha1.DefaultingNone {
+		if !engine.DefaultingActive(fp) {
 			continue
 		}
 		guard, err := engine.EvalMatch(m.factory, fp.Match, obj)
 		if err != nil || !guard {
 			continue
 		}
-		segs, ok := parsePathSegments(fp.Path)
+		// A path this parser cannot handle is not defaultable. The GrantableClusterResourceReference
+		// validating webhook refuses such an entry at apply time, but it is not a guarantee: the object
+		// may be older than the webhook, or have been written while the webhook was unavailable
+		// (failurePolicy: Ignore). Skipping keeps validation working while defaulting stays off.
+		segs, ok := engine.ParsePathSegments(m.factory, fp.Path)
 		if !ok {
 			continue
 		}
@@ -206,56 +210,6 @@ func (m *DefaultsMutator) decide(ctx context.Context, req *admissionv1.Admission
 	resp.PatchType = ptr.To(admissionv1.PatchTypeJSONPatch)
 	resp.Warnings = warnings
 	return resp, nil
-}
-
-// parsePathSegments parses a simple member JSONPath ($.a.b['c']) into its segments. It returns
-// ok=false for anything with wildcards, indexes or filters (not safely defaultable).
-func parsePathSegments(expr string) ([]string, bool) {
-	if !strings.HasPrefix(expr, "$") {
-		return nil, false
-	}
-	s := expr[1:]
-	var segs []string
-	for len(s) > 0 {
-		switch s[0] {
-		case '.':
-			s = s[1:]
-			j := 0
-			for j < len(s) && s[j] != '.' && s[j] != '[' {
-				j++
-			}
-			if j == 0 {
-				return nil, false
-			}
-			seg := s[:j]
-			if strings.ContainsAny(seg, "*?[]") {
-				return nil, false
-			}
-			segs = append(segs, seg)
-			s = s[j:]
-		case '[':
-			if len(s) < 2 || (s[1] != '\'' && s[1] != '"') {
-				return nil, false
-			}
-			q := s[1]
-			end := strings.IndexByte(s[2:], q)
-			if end < 0 {
-				return nil, false
-			}
-			segs = append(segs, s[2:2+end])
-			rest := s[2+end+1:]
-			if len(rest) == 0 || rest[0] != ']' {
-				return nil, false
-			}
-			s = rest[1:]
-		default:
-			return nil, false
-		}
-	}
-	if len(segs) == 0 {
-		return nil, false
-	}
-	return segs, true
 }
 
 // fieldState reports whether all parent objects of the field exist (so a JSON Patch "add" is safe,

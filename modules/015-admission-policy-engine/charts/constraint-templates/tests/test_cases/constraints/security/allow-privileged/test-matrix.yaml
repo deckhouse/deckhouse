@@ -185,6 +185,36 @@ spec:
       template: ../rendered/constraint-template.yaml
       constraint: constraints/pss_baseline.yaml
       cases:
+        - name: allowed-by-exception-privileged-true-container-not-privileged
+          violations: "no"
+          assertionMessage: ""
+          fields:
+            - path: spec.securityContext.privileged.allowedValue
+              scenario: speUnused
+          exception: ""
+          exceptionRef: ""
+          inventory:
+            - base: securityPolicyException
+              merge:
+                metadata:
+                  name: allow-privileged-true-unused
+                spec:
+                  securityContext:
+                    privileged:
+                      allowedValue: true
+          object:
+            base: admissionPod
+            merge:
+              metadata:
+                labels:
+                  security.deckhouse.io/security-policy-exception: allow-privileged-true-unused
+                name: allowed-by-exception-privileged-true-container-not-privileged
+              spec:
+                containers:
+                  - image: nginx
+                    name: nginx
+                    securityContext:
+                      privileged: false
         - name: 014-023-allowed-by-exception-privileged-true
           violations: "no"
           assertionMessage: ""

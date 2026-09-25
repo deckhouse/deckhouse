@@ -40,7 +40,7 @@ func TestSyncModulePackageVersionsFromImage(t *testing.T) {
 		s, cl := newTestSyncer(t, "v1.80.0", dir)
 		require.NoError(t, s.sync(ctx))
 
-		mpv := getModulePackageVersion(t, cl, "embedded-echo-v1.80.0")
+		mpv := getModulePackageVersion(t, cl, "embedded-echo")
 		assert.Equal(t, "echo", mpv.Spec.PackageName)
 		assert.Equal(t, "embedded", mpv.Spec.PackageRepositoryName)
 		assert.Equal(t, "v1.80.0", mpv.Spec.PackageVersion)
@@ -71,7 +71,7 @@ func TestSyncModulePackageVersionsFromImage(t *testing.T) {
 		s, cl := newTestSyncer(t, "v1.80.0", dir)
 		require.NoError(t, s.sync(ctx))
 
-		mpv := getModulePackageVersion(t, cl, "embedded-echo-v1.80.0")
+		mpv := getModulePackageVersion(t, cl, "embedded-echo")
 		require.NotNil(t, mpv.Status.PackageSchemas)
 		require.NotNil(t, mpv.Status.PackageSchemas.SettingsSchema)
 		assert.Contains(t, mpv.Status.PackageSchemas.SettingsSchema.OpenAPIV3Schema.Properties, "logLevel")
@@ -101,7 +101,7 @@ func TestSyncModulePackageVersionsFromImage(t *testing.T) {
 		s, cl := newTestSyncer(t, "v1.80.0", dir)
 		require.NoError(t, s.sync(ctx))
 
-		mpv := getModulePackageVersion(t, cl, "embedded-echo-v1.80.0")
+		mpv := getModulePackageVersion(t, cl, "embedded-echo")
 		require.NotNil(t, mpv.Status.PackageSchemas, "a multi-type field is valid JSON Schema, the version must not be skipped")
 		timeout := mpv.Status.PackageSchemas.SettingsSchema.OpenAPIV3Schema.Properties["timeout"]
 		assert.Equal(t, openapi.StringOrArray{"integer", "string"}, timeout.Type)
@@ -119,7 +119,7 @@ func TestSyncModulePackageVersionsFromImage(t *testing.T) {
 		s, cl := newTestSyncer(t, "v1.80.0", dir)
 		require.NoError(t, s.sync(ctx))
 
-		mpv := getModulePackageVersion(t, cl, "embedded-echo-v1.80.0")
+		mpv := getModulePackageVersion(t, cl, "embedded-echo")
 		require.NotNil(t, mpv.Status.PackageSchemas)
 		rules := mpv.Status.PackageSchemas.SettingsSchema.OpenAPIV3Schema.XValidations
 		require.Len(t, rules, 1)
@@ -135,7 +135,7 @@ func TestSyncModulePackageVersionsFromImage(t *testing.T) {
 		s, cl := newTestSyncer(t, "v1.80.0", dir)
 		require.NoError(t, s.sync(ctx))
 
-		mpv := getModulePackageVersion(t, cl, "embedded-echo-v1.80.0")
+		mpv := getModulePackageVersion(t, cl, "embedded-echo")
 		opts := mpv.Status.PackageMetadata.DisableOptions
 		require.NotNil(t, opts, "the module.yaml disable section must survive")
 		assert.True(t, opts.Confirmation)
@@ -152,7 +152,7 @@ func TestSyncModulePackageVersionsFromImage(t *testing.T) {
 		s, cl := newTestSyncer(t, "v1.80.0", dir)
 		require.NoError(t, s.sync(ctx))
 
-		mpv := getModulePackageVersion(t, cl, "embedded-echo-v1.80.0")
+		mpv := getModulePackageVersion(t, cl, "embedded-echo")
 		require.NotNil(t, mpv.Status.PackageMetadata.Requirements)
 		require.NotNil(t, mpv.Status.PackageMetadata.Requirements.Modules)
 		names := make([]string, 0, 4)
@@ -170,21 +170,21 @@ func TestSyncModulePackageVersionsFromImage(t *testing.T) {
 		s, cl := newTestSyncer(t, "v1.80.0", dir)
 		require.NoError(t, s.sync(ctx))
 
-		mpv := getModulePackageVersion(t, cl, "embedded-parca-v1.80.0")
+		mpv := getModulePackageVersion(t, cl, "embedded-parca")
 		assert.False(t, mpv.IsDraft())
 		require.NotNil(t, mpv.Status.PackageMetadata)
 		assert.Equal(t, "Experimental", mpv.Status.PackageMetadata.Stage)
 		assert.Nil(t, mpv.Status.PackageMetadata.Description, "no descriptions in the file, no description block")
 	})
 
-	t.Run("a build version is normalized in the name and the spec", func(t *testing.T) {
+	t.Run("a build version is normalized in the spec", func(t *testing.T) {
 		dir := t.TempDir()
 		writeModuleYAML(t, filepath.Join(dir, "900-echo"), "name: echo\n")
 
 		s, cl := newTestSyncer(t, "v1.78.0-pr22453+1b47ed2", dir)
 		require.NoError(t, s.sync(ctx))
 
-		mpv := getModulePackageVersion(t, cl, "embedded-echo-v1.78.0")
+		mpv := getModulePackageVersion(t, cl, "embedded-echo")
 		assert.Equal(t, "v1.78.0", mpv.Spec.PackageVersion, "prerelease and metadata are dropped")
 	})
 
@@ -195,7 +195,7 @@ func TestSyncModulePackageVersionsFromImage(t *testing.T) {
 		s, cl := newTestSyncer(t, "dev", dir)
 		require.NoError(t, s.sync(ctx))
 
-		mpv := getModulePackageVersion(t, cl, "embedded-echo-v2.0.0")
+		mpv := getModulePackageVersion(t, cl, "embedded-echo")
 		assert.Equal(t, "v2.0.0", mpv.Spec.PackageVersion)
 	})
 
@@ -207,18 +207,19 @@ func TestSyncModulePackageVersionsFromImage(t *testing.T) {
 		require.NoError(t, s.sync(ctx))
 
 		// the bootstrap places the module on the same string, so both sides still agree
-		mpv := getModulePackageVersion(t, cl, "embedded-echo-latest")
+		mpv := getModulePackageVersion(t, cl, "embedded-echo")
 		assert.Equal(t, "latest", mpv.Spec.PackageVersion)
 	})
 
-	t.Run("a deckhouse version that is no legal object name skips the version", func(t *testing.T) {
+	t.Run("a version that is no legal object name still lands in the spec", func(t *testing.T) {
 		dir := t.TempDir()
 		writeModuleYAML(t, filepath.Join(dir, "900-echo"), "name: echo\n")
 
 		s, cl := newTestSyncer(t, "Latest_Build", dir)
 		require.NoError(t, s.sync(ctx))
 
-		assert.Empty(t, listModulePackageVersionNames(t, cl))
+		// the embedded name carries no version, so only the module name has to be a legal one
+		assert.Equal(t, "Latest_Build", getModulePackageVersion(t, cl, "embedded-echo").Spec.PackageVersion)
 	})
 
 	t.Run("skips dummy and unreadable dirs", func(t *testing.T) {
@@ -238,7 +239,7 @@ func TestSyncModulePackageVersionsFromImage(t *testing.T) {
 
 		stub := &v1alpha1.ModulePackageVersion{
 			ObjectMeta: metav1.ObjectMeta{
-				Name: "embedded-echo-v1.80.0",
+				Name: "embedded-echo",
 				Labels: map[string]string{
 					v1alpha1.PackageLabelDraft:  "true",
 					v1alpha1.PackageLabelLegacy: "true",
@@ -266,7 +267,7 @@ func TestSyncModulePackageVersionsFromImage(t *testing.T) {
 		writeOpenAPI(t, filepath.Join(dir, "900-echo"), "type: object\n", "")
 
 		existing := &v1alpha1.ModulePackageVersion{
-			ObjectMeta: metav1.ObjectMeta{Name: "embedded-echo-v1.80.0"},
+			ObjectMeta: metav1.ObjectMeta{Name: "embedded-echo"},
 			Spec: v1alpha1.ModulePackageVersionSpec{
 				PackageName:           "echo",
 				PackageRepositoryName: "embedded",
@@ -295,7 +296,7 @@ func TestSyncModulePackageVersionsFromImage(t *testing.T) {
 
 		s, cl := newTestSyncer(t, "v1.80.0", dir)
 		require.NoError(t, s.sync(ctx))
-		before := getModulePackageVersion(t, cl, "embedded-echo-v1.80.0")
+		before := getModulePackageVersion(t, cl, "embedded-echo")
 
 		require.NoError(t, s.sync(ctx))
 
@@ -316,7 +317,7 @@ func TestSyncGlobalModulePackageVersion(t *testing.T) {
 		s, cl := newTestSyncerWithGlobal(t, "v1.80.0", t.TempDir(), globalDir)
 		require.NoError(t, s.sync(ctx))
 
-		mpv := getModulePackageVersion(t, cl, "embedded-global-v1.80.0")
+		mpv := getModulePackageVersion(t, cl, "embedded-global")
 		assert.Equal(t, "global", mpv.Spec.PackageName)
 		assert.Equal(t, "embedded", mpv.Spec.PackageRepositoryName)
 		assert.Equal(t, "v1.80.0", mpv.Spec.PackageVersion)
@@ -341,13 +342,13 @@ func TestSyncGlobalModulePackageVersion(t *testing.T) {
 		s, cl := newTestSyncerWithGlobal(t, "v1.80.0", t.TempDir(), globalDir)
 		require.NoError(t, s.sync(ctx))
 
-		mpv := getModulePackageVersion(t, cl, "embedded-global-v1.80.0")
+		mpv := getModulePackageVersion(t, cl, "embedded-global")
 		require.NotNil(t, mpv.Status.PackageMetadata, "an empty object, not none: readers reach into it")
 		assert.Equal(t, new(v1alpha1.ModulePackageVersionStatusMetadata), mpv.Status.PackageMetadata,
 			"the global hooks dir holds no definition to fill any of it from")
 	})
 
-	t.Run("creates the catalog entry no repository offers", func(t *testing.T) {
+	t.Run("creates the catalog entry for a package available in no repository", func(t *testing.T) {
 		globalDir := t.TempDir()
 		writeLegacyOpenAPI(t, globalDir, "type: object\n", "")
 
@@ -366,7 +367,7 @@ func TestSyncGlobalModulePackageVersion(t *testing.T) {
 		s, cl := newTestSyncerWithGlobal(t, "v1.80.0", t.TempDir(), globalDir)
 		require.NoError(t, s.sync(ctx))
 
-		mpv := getModulePackageVersion(t, cl, "embedded-global-v1.80.0")
+		mpv := getModulePackageVersion(t, cl, "embedded-global")
 		require.NotNil(t, mpv.Status.PackageSchemas.SettingsSchema)
 		assert.Contains(t, mpv.Status.PackageSchemas.SettingsSchema.OpenAPIV3Schema.Properties, "modern")
 	})
@@ -377,7 +378,7 @@ func TestSyncGlobalModulePackageVersion(t *testing.T) {
 
 		// the image always ships the schemas; withholding the objects over a dir that
 		// somehow holds none would leave the module controller unable to register global
-		mpv := getModulePackageVersion(t, cl, "embedded-global-v1.80.0")
+		mpv := getModulePackageVersion(t, cl, "embedded-global")
 		assert.Nil(t, mpv.Status.PackageSchemas, "no schemas on disk, none in the status")
 		assert.False(t, mpv.IsDraft(), "nothing is left to fill in, so the version is complete")
 		assert.NotEmpty(t, getModulePackage(t, cl, "global"))
@@ -387,7 +388,7 @@ func TestSyncGlobalModulePackageVersion(t *testing.T) {
 		s, cl := newTestSyncerWithGlobal(t, "v1.80.0", t.TempDir(), filepath.Join(t.TempDir(), "absent"))
 		require.NoError(t, s.sync(ctx))
 
-		mpv := getModulePackageVersion(t, cl, "embedded-global-v1.80.0")
+		mpv := getModulePackageVersion(t, cl, "embedded-global")
 		assert.Nil(t, mpv.Status.PackageSchemas)
 	})
 
@@ -408,7 +409,7 @@ func TestSyncGlobalModulePackageVersion(t *testing.T) {
 
 		s, cl := newTestSyncerWithGlobal(t, "v1.80.0", t.TempDir(), globalDir)
 		require.NoError(t, s.sync(ctx))
-		before := getModulePackageVersion(t, cl, "embedded-global-v1.80.0")
+		before := getModulePackageVersion(t, cl, "embedded-global")
 
 		require.NoError(t, s.sync(ctx))
 
@@ -453,7 +454,7 @@ func TestSyncModulePackageVersionsFromModuleReleases(t *testing.T) {
 			testModuleRelease("parca", "deckhouse", "1.4.2", v1alpha1.ModuleReleasePhaseSuperseded),
 			testModuleRelease("console", "deckhouse", "1.60.1", v1alpha1.ModuleReleasePhaseSuspended),
 			testModuleRelease("orphan", "", "1.0.0", v1alpha1.ModuleReleasePhaseDeployed),
-			testModuleRelease("bad", "deckhouse", "latest", v1alpha1.ModuleReleasePhaseDeployed),
+			testModuleRelease("bad", "deckhouse", "latest", v1alpha1.ModuleReleasePhasePending),
 		)
 
 		require.NoError(t, s.sync(ctx))

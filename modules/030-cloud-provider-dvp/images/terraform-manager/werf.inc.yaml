@@ -33,7 +33,7 @@ import:
   to: /terraform-manager/terraform-provider-kubernetes
   before: setup
 - image: {{ $.ModuleName }}/validator
-  add: /dhctl-provider-dvp
+  add: /validator
   to: /validator
   before: setup
 {{ include "image_spec_for_infrastructure_manager" . }}

@@ -29,6 +29,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	v1 "github.com/deckhouse/node-controller/api/deckhouse.io/v1"
+	"github.com/deckhouse/node-controller/internal/cloudprovider"
 	nodecommon "github.com/deckhouse/node-controller/internal/common"
 	ngcommon "github.com/deckhouse/node-controller/internal/controller/nodegroup/common"
 )
@@ -64,7 +65,7 @@ var epochTimestampAccessor = func() int64 {
 
 // defaultEngine is the answer for a NodeGroup with no machines to look at: the cloud-provider
 // capabilities plus the use-mcm annotation.
-func defaultEngine(ng *v1.NodeGroup, reg CloudProviderRegistration) string {
+func defaultEngine(ng *v1.NodeGroup, reg cloudprovider.Registration) string {
 	switch {
 	case ng.Spec.NodeType == v1.NodeTypeCloudEphemeral:
 		useMCM := ng.GetAnnotations()[useMCMAnnotation] != ""
@@ -76,9 +77,9 @@ func defaultEngine(ng *v1.NodeGroup, reg CloudProviderRegistration) string {
 	}
 }
 
-func defaultCloudEphemeralEngine(reg CloudProviderRegistration, useMCM bool) string {
-	hasMCM := reg.MachineClassKind != ""
-	hasCAPI := reg.CAPIClusterKind != ""
+func defaultCloudEphemeralEngine(provider cloudprovider.Registration, useMCM bool) string {
+	hasMCM := provider.MachineClassKind != ""
+	hasCAPI := provider.CAPIClusterKind != ""
 
 	switch {
 	case hasMCM && hasCAPI:
@@ -99,7 +100,7 @@ func defaultCloudEphemeralEngine(reg CloudProviderRegistration, useMCM bool) str
 // MachineDeployments it already has, else the provider default. The middle step keeps a group
 // upgraded from before the CAPI migration on MCM instead of recreating its machines on CAPI.
 func ResolveEngine(
-	ctx context.Context, reader client.Reader, ng *v1.NodeGroup, reg CloudProviderRegistration,
+	ctx context.Context, reader client.Reader, ng *v1.NodeGroup, reg cloudprovider.Registration,
 ) (string, error) {
 	if !engineUndecided(ng, reg) {
 		return engineFrom(ng, reg, machineDeployments{}), nil
@@ -118,7 +119,7 @@ type machineDeployments struct {
 	CAPI bool
 }
 
-func engineFrom(ng *v1.NodeGroup, reg CloudProviderRegistration, live machineDeployments) string {
+func engineFrom(ng *v1.NodeGroup, reg cloudprovider.Registration, live machineDeployments) string {
 	if ng.Status.Engine != "" {
 		return ng.Status.Engine
 	}
@@ -135,7 +136,7 @@ func engineFrom(ng *v1.NodeGroup, reg CloudProviderRegistration, live machineDep
 
 // engineUndecided is true only when the default is a guess: no pin, a CloudEphemeral group, and a
 // provider publishing both kinds. Everywhere else the answer follows from the spec alone.
-func engineUndecided(ng *v1.NodeGroup, reg CloudProviderRegistration) bool {
+func engineUndecided(ng *v1.NodeGroup, reg cloudprovider.Registration) bool {
 	if ng.Status.Engine != "" || ng.Spec.NodeType != v1.NodeTypeCloudEphemeral {
 		return false
 	}
@@ -261,18 +262,18 @@ func resolveZones(ng *v1.NodeGroup, defaultZones []string) []string {
 	return defaultZones
 }
 
-func applyCloudSpecificDefaults(reg CloudProviderRegistration, instanceClassSpec interface{}) (interface{}, error) {
+func applyCloudSpecificDefaults(provider cloudprovider.Registration, instanceClassSpec interface{}) (interface{}, error) {
 	specMap, ok := instanceClassSpec.(map[string]interface{})
 	if !ok {
 		return instanceClassSpec, nil
 	}
-	if reg.CloudVariables == nil {
+	if provider.CloudVariables == nil {
 		return specMap, nil
 	}
 
-	providerName := strings.ToLower(reg.Type)
+	providerName := strings.ToLower(provider.Type)
 	for _, fillFn := range fillCloudSpecificDefaults[providerName] {
-		if err := fillFn(reg.CloudVariables, specMap); err != nil {
+		if err := fillFn(provider.CloudVariables, specMap); err != nil {
 			return nil, fmt.Errorf("fill %s defaults: %w", providerName, err)
 		}
 	}

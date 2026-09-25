@@ -20,7 +20,7 @@ The following simplifications are made in the diagram:
 
 The Level 2 C4 architecture of the [`csi-yadro-tatlin-unified`](/modules/csi-yadro-tatlin-unified/) module and its interactions with other components of Deckhouse Platform (DP) are shown in the following diagram:
 
-![csi-yadro-tatlin-unified module architecture](../../../images/architecture/storage/c4-l2-csi-yadro-tatlin-unified.png)
+![csi-yadro-tatlin-unified module architecture](../../../images/architecture/storage/c4-l2-csi-yadro-tatlin-unified.svg)
 
 ## Module components
 

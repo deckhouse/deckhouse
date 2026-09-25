@@ -17,30 +17,302 @@ limitations under the License.
 package cloudprovider
 
 import (
+	"bytes"
+	"context"
+	"fmt"
+	"maps"
 	"strings"
 
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"k8s.io/apimachinery/pkg/runtime/schema"
+	"k8s.io/apimachinery/pkg/types"
+	toolscache "k8s.io/client-go/tools/cache"
+	"k8s.io/client-go/util/workqueue"
 	"sigs.k8s.io/controller-runtime/pkg/builder"
+	"sigs.k8s.io/controller-runtime/pkg/cache"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/event"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
+	"sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
+	"sigs.k8s.io/controller-runtime/pkg/reconcile"
+	"sigs.k8s.io/controller-runtime/pkg/source"
 
+	v1 "github.com/deckhouse/node-controller/api/deckhouse.io/v1"
 	"github.com/deckhouse/node-controller/internal/clusterprefix"
 	"github.com/deckhouse/node-controller/internal/common"
 	"github.com/deckhouse/node-controller/internal/register"
 )
 
-// IsInputSecret reports whether a Secret can change provider template rendering.
-func IsInputSecret(object client.Object) bool {
+// IsRegistrationSecret reports whether an object is a registration Secret: right namespace, name
+// prefix and label. Every watch resolves a registration through it. GetCatalog does not: it lists by
+// namespace and label, because a List cannot filter on a name prefix.
+func IsRegistrationSecret(obj client.Object) bool {
+	if obj.GetNamespace() != RegistrationSecretNamespace {
+		return false
+	}
+	if !strings.HasPrefix(obj.GetName(), RegistrationSecretBaseName) {
+		return false
+	}
+	_, ok := obj.GetLabels()[RegistrationSecretLabel]
+	return ok
+}
+
+// IsRegistrationSecretKey reports whether a reconcile key names a registration Secret. No label check:
+// a key carries none, and the watch behind it already filtered on IsRegistrationSecret.
+func IsRegistrationSecretKey(key types.NamespacedName) bool {
+	if key.Namespace != RegistrationSecretNamespace {
+		return false
+	}
+	return strings.HasPrefix(key.Name, RegistrationSecretBaseName)
+}
+
+// IsTemplateSecret is IsInputSecret without the registrations: the inputs no single provider
+// owns, so an event on one has to be answered for the whole cluster.
+func IsTemplateSecret(object client.Object) bool {
 	if object.GetNamespace() != common.KubeSystemNamespace {
 		return false
 	}
 	name := object.GetName()
-	return name == common.CloudProviderSecretName ||
-		name == common.ClusterConfigSecretName ||
+	return name == common.ClusterConfigSecretName ||
 		(strings.HasPrefix(name, "d8-cloud-provider-") &&
 			(strings.HasSuffix(name, "-capi") || strings.HasSuffix(name, "-mcm")))
+}
+
+// IsInputSecret reports whether a Secret can change provider template rendering, registrations
+// included. Every registration counts, not just the one under the bare prefix: a provider
+// registers under a name of its own, and its NodeGroups render from it.
+func IsInputSecret(object client.Object) bool {
+	return IsRegistrationSecret(object) || IsTemplateSecret(object)
+}
+
+// RegistrationSecretPredicate filters a watch down to the registration Secrets.
+func RegistrationSecretPredicate() predicate.Predicate {
+	return predicate.NewPredicateFuncs(IsRegistrationSecret)
+}
+
+// RegistrationSecretsRequests returns one request per registration Secret, for controllers keyed by the
+// Secret itself. A failed List yields none: an event mapper cannot return an error, and the
+// controller resync covers the miss.
+func RegistrationSecretsRequests(ctx context.Context, r client.Reader) []reconcile.Request {
+	secrets := &corev1.SecretList{}
+	if err := r.List(ctx, secrets,
+		client.InNamespace(RegistrationSecretNamespace),
+		client.HasLabels{RegistrationSecretLabel},
+	); err != nil {
+		log.FromContext(ctx).Error(err, "list cloud provider registration secrets for enqueue")
+		return nil
+	}
+
+	ret := make([]reconcile.Request, 0, len(secrets.Items))
+	for i := range secrets.Items {
+		ret = append(ret, reconcile.Request{NamespacedName: types.NamespacedName{
+			Name:      secrets.Items[i].Name,
+			Namespace: secrets.Items[i].Namespace,
+		}})
+	}
+
+	return ret
+}
+
+// NodeGroupHandler enqueues the NodeGroups that run on the registration the event carries. Pair it
+// with RegistrationSecretPredicate.
+func NodeGroupHandler(r client.Reader) handler.EventHandler {
+	enqueue := func(ctx context.Context, q workqueue.TypedRateLimitingInterface[reconcile.Request], carried ...Registration) {
+		for _, req := range nodeGroupRequests(ctx, r, carried...) {
+			q.Add(req)
+		}
+	}
+
+	enqueueObject := func(ctx context.Context, obj client.Object, q workqueue.TypedRateLimitingInterface[reconcile.Request]) {
+		secret, ok := obj.(*corev1.Secret)
+		if !ok {
+			return
+		}
+
+		registration, err := DecodeRegistration(secret.Data)
+		if err != nil {
+			log.FromContext(ctx).Error(err, "decode a cloud provider registration secret", "name", secret.Name)
+			return
+		}
+		enqueue(ctx, q, registration)
+	}
+
+	return handler.Funcs{
+		CreateFunc: func(ctx context.Context, e event.CreateEvent, q workqueue.TypedRateLimitingInterface[reconcile.Request]) {
+			enqueueObject(ctx, e.Object, q)
+		},
+		DeleteFunc: func(ctx context.Context, e event.DeleteEvent, q workqueue.TypedRateLimitingInterface[reconcile.Request]) {
+			enqueueObject(ctx, e.Object, q)
+		},
+		GenericFunc: func(ctx context.Context, e event.GenericEvent, q workqueue.TypedRateLimitingInterface[reconcile.Request]) {
+			enqueueObject(ctx, e.Object, q)
+		},
+		UpdateFunc: func(ctx context.Context, e event.UpdateEvent, q workqueue.TypedRateLimitingInterface[reconcile.Request]) {
+			before, okBefore := e.ObjectOld.(*corev1.Secret)
+			after, okAfter := e.ObjectNew.(*corev1.Secret)
+			if !okBefore || !okAfter {
+				return
+			}
+			if maps.EqualFunc(before.Data, after.Data, bytes.Equal) {
+				return
+			}
+			carried := make([]Registration, 0, 2)
+			for _, data := range []map[string][]byte{before.Data, after.Data} {
+				registration, err := DecodeRegistration(data)
+				if err != nil {
+					log.FromContext(ctx).Error(err, "decode a cloud provider registration secret", "name", after.Name)
+					return
+				}
+				carried = append(carried, registration)
+			}
+			enqueue(ctx, q, carried...)
+		},
+	}
+}
+
+// nodeGroupRequests returns one request per NodeGroup the carried providers run.
+func nodeGroupRequests(ctx context.Context, r client.Reader, carried ...Registration) []reconcile.Request {
+	logger := log.FromContext(ctx)
+
+	ngList := &v1.NodeGroupList{}
+	if err := r.List(ctx, ngList); err != nil {
+		logger.Error(err, "list NodeGroups for a cloud provider registration event")
+		return nil
+	}
+
+	clusterProvider, err := defaultRegistration(ctx, r)
+	if err != nil {
+		logger.Error(err, "read the cluster provider for a cloud provider registration event")
+		return nil
+	}
+
+	if clusterProvider.IsStatic() {
+		return nil
+	}
+
+	defaultProvider, ok := registrationByType(carried, clusterProvider.Type)
+	if !ok {
+		return nil
+	}
+
+	changed := NewCatalog(carried, defaultProvider)
+	ret := make([]reconcile.Request, 0, len(ngList.Items))
+
+	for i := range ngList.Items {
+		ng := &ngList.Items[i]
+		if provider := changed.ByNodeGroup(ng); !provider.IsStatic() {
+			ret = append(ret, reconcile.Request{NamespacedName: types.NamespacedName{Name: ng.Name}})
+		}
+	}
+	return ret
+}
+
+// LazyInstanceClassSource watches every InstanceClass kind the providers register, including the
+// ones registered after this controller started — which a builder watch cannot do, since its watch
+// list closes at start and the kind is data in the registration Secret.
+//
+// Starting a watch is fire-and-forget: source.Kind spawns a goroutine that polls for the informer
+// until the CRD exists, so a registration preceding its CRD needs no retry here.
+//
+// Watches are only added, never removed. A re-versioned registration leaves an orphaned informer
+// retrying under backoff until the next pod restart; unsubscribing would mean hand-rolling the
+// event translation source.Kind gives for free.
+func LazyInstanceClassSource(informers cache.Cache, eventHandler handler.EventHandler, predicates ...predicate.Predicate) source.Source {
+	return source.Func(func(ctx context.Context, queue workqueue.TypedRateLimitingInterface[reconcile.Request]) error {
+		secretInformer, err := informers.GetInformer(ctx, &corev1.Secret{})
+		if err != nil {
+			return fmt.Errorf("get the secret informer: %w", err)
+		}
+
+		// Buffered so the informer callback never blocks; pokes collapse, the goroutine re-reads
+		// everything anyway. Adding the handler replays the store.
+		poke := make(chan struct{}, 1)
+		notify := func() {
+			select {
+			case poke <- struct{}{}:
+			default:
+			}
+		}
+		if _, err := secretInformer.AddEventHandler(toolscache.FilteringResourceEventHandler{
+			FilterFunc: func(obj any) bool {
+				secret, ok := obj.(*corev1.Secret)
+				if !ok {
+					return false
+				}
+				return IsRegistrationSecret(secret)
+			},
+			Handler: toolscache.ResourceEventHandlerFuncs{
+				AddFunc:    func(any) { notify() },
+				UpdateFunc: func(any, any) { notify() },
+				// A deleted registration needs no reaction: watches are never unregistered.
+			},
+		}); err != nil {
+			return fmt.Errorf("subscribe to the registration secrets: %w", err)
+		}
+
+		go func() {
+			logger := log.FromContext(ctx)
+			started := map[schema.GroupVersionKind]bool{}
+			for {
+				select {
+				case <-ctx.Done():
+					return
+				case <-poke:
+				}
+
+				gvks, err := RegisteredInstanceClassGVKs(ctx, informers)
+				if err != nil {
+					logger.V(1).Info("list instance class providers", "error", err.Error())
+					continue
+				}
+				for _, gvk := range gvks {
+					if started[gvk] {
+						continue
+					}
+					obj := &unstructured.Unstructured{}
+					obj.SetGroupVersionKind(gvk)
+					if err := source.Kind(informers, client.Object(obj), eventHandler, predicates...).Start(ctx, queue); err != nil {
+						logger.Error(err, "start instance class watch", "gvk", gvk.String())
+						continue
+					}
+					started[gvk] = true
+					logger.Info("instance class watch registered; it attaches once the CRD is served", "gvk", gvk.String())
+				}
+			}
+		}()
+		return nil
+	})
+}
+
+// InstanceClassToNodeGroups maps an InstanceClass event to the NodeGroups whose classReference
+// points at it. Matching on both kind and name keeps an edit of one provider's class from
+// re-rendering NodeGroups that reference another.
+func InstanceClassToNodeGroups(ctx context.Context, r client.Reader, obj client.Object) []reconcile.Request {
+	u, ok := obj.(*unstructured.Unstructured)
+	if !ok {
+		return nil
+	}
+
+	ngList := &v1.NodeGroupList{}
+	if err := r.List(ctx, ngList); err != nil {
+		log.FromContext(ctx).Error(err, "list nodegroups for instance class event", "kind", u.GetKind(), "name", u.GetName())
+		return nil
+	}
+
+	requests := make([]reconcile.Request, 0, 1)
+	for i := range ngList.Items {
+		ng := &ngList.Items[i]
+		if ng.Spec.CloudInstances == nil {
+			continue
+		}
+		ref := ng.Spec.CloudInstances.ClassReference
+		if ref.Kind == u.GetKind() && ref.Name == u.GetName() {
+			requests = append(requests, reconcile.Request{NamespacedName: types.NamespacedName{Name: ng.Name}})
+		}
+	}
+	return requests
 }
 
 // WatchInputs subscribes a controller to the mutable inputs read by Source.

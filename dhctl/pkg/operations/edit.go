@@ -109,7 +109,7 @@ func Edit(ctx context.Context, data []byte, globalOptions *options.GlobalOptions
 		return nil, err
 	}
 
-	_, err = schemaStore.Validate(&modifiedData, config.ValidateOptionValidateExtensions(true))
+	_, err = schemaStore.Validate(ctx, &modifiedData, config.ValidateOptionValidateExtensions(true))
 	if err != nil {
 		return nil, err
 	}

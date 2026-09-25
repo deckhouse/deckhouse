@@ -14,7 +14,7 @@ spec:
     - path: spec.securityContext.allowPrivilegeEscalation.allowedValue
       level: container
       description: SPE override for allowPrivilegeEscalation per container
-      requiredScenarios: [speMatch, speMismatch, speAbsent, speContainerSpecific]
+      requiredScenarios: [speMatch, speMismatch, speAbsent, speContainerSpecific, speUnused]
   applicableTracks:
     functional: true
     spePod: true

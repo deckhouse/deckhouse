@@ -1,0 +1,17 @@
+{{- if include "cert_manager.yandex_dns_webhook_ready" . }}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: yandex-dns-webhook
+  namespace: d8-cert-manager
+  {{- include "helm_lib_module_labels" (list . (dict "app" "yandex-dns-webhook")) | nindent 2 }}
+spec:
+  ports:
+  - name: https
+    port: 443
+    protocol: TCP
+    targetPort: https
+  selector:
+    app: yandex-dns-webhook
+{{- end }}

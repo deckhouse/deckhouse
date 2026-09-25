@@ -21,7 +21,7 @@ description: Архитектура модуля csi-hpe в Deckhouse Platform.
 
 Архитектура модуля [`csi-hpe`](/modules/csi-hpe/) на уровне 2 модели C4 и его взаимодействия с другими компонентами Deckhouse Platform (DP) изображены на следующей диаграмме:
 
-![Архитектура модуля csi-hpe](../../../images/architecture/storage/c4-l2-csi-hpe.ru.png)
+![Архитектура модуля csi-hpe](../../../images/architecture/storage/c4-l2-csi-hpe.ru.svg)
 
 ## Компоненты модуля
 

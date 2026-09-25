@@ -109,7 +109,7 @@ This mechanism requires Linux kernel version 5.15 or higher to work correctly.
 
 {% alert level="warning" %}The feature is available only in the following Deckhouse Platform editions: SE+, EE, Ultimate.{% endalert %}
 
-Egress Gateway in Deckhouse Platform can be used in one of two modes: [Basic mode](#basic-mode) and [Virtual IP mode](#virtual-ip-mode). Use Custom Resource [EgressGateway](cr.html#egressgateway) (parameter `spec.sourceIP.node`) to select the mode.
+Egress Gateway in Deckhouse Platform can be used in one of two modes: [Basic mode](#basic-mode) and [Virtual IP mode](#virtual-ip-mode). Use Custom Resource [EgressGateway](cr.html#egressgateway) (parameter `spec.sourceIP.mode`) to select the mode.
 
 ### Basic mode
 

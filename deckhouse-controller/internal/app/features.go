@@ -22,6 +22,7 @@ const (
 	EnvEnablePackageSystem     = "DECKHOUSE_ENABLE_PACKAGE_SYSTEM"
 	EnvEnableModulePackageSync = "DECKHOUSE_ENABLE_MODULE_PACKAGE_SYNC"
 	EnvEnableModulePackages    = "DECKHOUSE_ENABLE_MODULE_PACKAGES"
+	EnvEnableResourceRequests  = "DECKHOUSE_ENABLE_RESOURCE_REQUESTS"
 )
 
 // PackageSystemEnabled reports whether the package-system controllers
@@ -37,3 +38,13 @@ func ModulePackageSyncEnabled() bool { return os.Getenv(EnvEnableModulePackageSy
 // ModulePackagesEnabled reports whether the Module v2 controller is enabled.
 // It runs the module packages the sync above records.
 func ModulePackagesEnabled() bool { return os.Getenv(EnvEnableModulePackages) == "true" }
+
+// ResourceRequestsEnabled reports whether spec.resourceRequests is honoured.
+// When on, the nelm service renders the package chart, overlays the per-workload
+// replicas and container resources onto the rendered manifests, and installs the
+// release from the patched manifests instead of the original chart.
+//
+// Gated because that install path replaces the chart nelm renders with a
+// fully-rendered synthetic one: charts whose behaviour depends on anything
+// beyond the manifests they produce are affected.
+func ResourceRequestsEnabled() bool { return os.Getenv(EnvEnableResourceRequests) == "true" }

@@ -164,6 +164,20 @@ spec:
 
 По умолчанию будет сгенерирован специальный сертификат ЦС (CA) и автоматически настроен генератор kubeconfig.
 
+### Через Gateway API
+
+Если в кластере включён модуль [`alb`](/modules/alb/) и для него удаётся определить Gateway (автоматически обнаруженный Gateway по умолчанию, либо явно указанный в настройках `gatewayAPI`), API-сервер дополнительно публикуется через Gateway API: в неймспейсе `kube-system` автоматически создаются `ListenerSet` и `HTTPRoute` с тем же доменным именем, что и для [Ingress](#через-ingress).
+
+Особенности этого способа публикации:
+
+* Управляется тем же параметром [`apiserver.publishAPI.ingress.enabled`](configuration.html#parameters-apiserver-publishapi-ingress). Отдельного параметра для включения нет.
+* Требует, чтобы был задан параметр `global.modules.publicDomainTemplate` (подробнее — [в разделе о служебных доменах в документации API](/products/kubernetes-platform/documentation/v1/reference/api/global.html)).
+* Не зависит от того, включён ли Ingress-контроллер — работает как полностью независимый механизм.
+
+{% alert level="warning" %}
+Если в кластере одновременно включены Ingress-контроллер и модуль `alb` (с определяемым Gateway), API-сервер будет опубликован сразу и через Ingress, и через Gateway API — под одним и тем же доменным именем. Доступен по этому имени будет только один из двух вариантов — в зависимости от того, куда указывает DNS-запись. Второй при этом останется настроенным, но не задействованным. Не отключайте Ingress-контроллер, пока не убедитесь, что публикация через Gateway API работает как ожидается.
+{% endalert %}
+
 ### Через сервис с типом LoadBalancer
 
 Указанием параметров [`apiserver.publishAPI.loadBalancer`](configuration.html#parameters-apiserver-publishapi-loadbalancer) можно создать сервис с типом LoadBalancer `kube-system/d8-control-plane-apiserver`.

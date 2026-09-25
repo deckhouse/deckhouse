@@ -41,22 +41,30 @@ import (
 // with the disk metadata and schemas, deployed and pending releases become
 // draft stubs.
 func (s *syncer) syncModulePackageVersions(ctx context.Context) error {
-	if err := s.syncModulePackageVersionsFromImage(ctx); err != nil {
-		return err
+	// one list serves every catalog entry below, which seeds its available repositories
+	moduleSources := new(v1alpha1.ModuleSourceList)
+	if err := s.reader.List(ctx, moduleSources); err != nil {
+		return fmt.Errorf("list module sources: %w", err)
 	}
 
-	if err := s.syncGlobalModulePackageVersion(ctx); err != nil {
-		return err
+	if err := s.syncModulePackageVersionsFromFS(ctx, moduleSources.Items); err != nil {
+		return fmt.Errorf("sync module package versions from filesystem: %w", err)
 	}
 
-	return s.syncModulePackageVersionsFromModuleReleases(ctx)
+	if err := s.syncModulePackageVersionsFromModuleReleases(ctx); err != nil {
+		return fmt.Errorf("sync module package versions from module releases: %w", err)
+	}
+
+	if err := s.syncGlobalModulePackageVersion(ctx, moduleSources.Items); err != nil {
+		return fmt.Errorf("sync global module package version: %w", err)
+	}
+
+	return nil
 }
 
-// syncModulePackageVersionsFromImage walks the embedded modules dir and ensures a complete
+// syncModulePackageVersionsFromFS walks the embedded modules dir and ensures a complete
 // version for every module the running image ships.
-func (s *syncer) syncModulePackageVersionsFromImage(ctx context.Context) error {
-	version := app.EmbeddedPackageVersion(s.deckhouseVersion)
-
+func (s *syncer) syncModulePackageVersionsFromFS(ctx context.Context, moduleSources []v1alpha1.ModuleSource) error {
 	entries, err := os.ReadDir(s.embeddedModulesDir)
 	if err != nil {
 		return fmt.Errorf("read embedded modules dir: %w", err)
@@ -67,7 +75,7 @@ func (s *syncer) syncModulePackageVersionsFromImage(ctx context.Context) error {
 			continue
 		}
 
-		if err := s.ensureEmbeddedModulePackageVersion(ctx, entry.Name(), version); err != nil {
+		if err := s.ensureEmbeddedModulePackageVersion(ctx, entry.Name(), moduleSources); err != nil {
 			return err
 		}
 	}
@@ -78,7 +86,7 @@ func (s *syncer) syncModulePackageVersionsFromImage(ctx context.Context) error {
 // ensureEmbeddedModulePackageVersion ensures the complete version of one module shipped in
 // the image; the metadata and the settings/values schemas come from the
 // module files on disk.
-func (s *syncer) ensureEmbeddedModulePackageVersion(ctx context.Context, dirName, version string) error {
+func (s *syncer) ensureEmbeddedModulePackageVersion(ctx context.Context, dirName string, moduleSources []v1alpha1.ModuleSource) error {
 	moduleDir := filepath.Join(s.embeddedModulesDir, dirName)
 
 	def, err := loader.LoadEmbeddedDefinition(moduleDir)
@@ -89,14 +97,14 @@ func (s *syncer) ensureEmbeddedModulePackageVersion(ctx context.Context, dirName
 		return nil
 	}
 
-	name := v1alpha1.MakeModulePackageVersionName(repositoryNameEmbedded, def.Name, version)
+	name := fmt.Sprintf("%s-%s", repositoryNameEmbedded, def.Name)
 	if !s.validModulePackageVersionName(name, def.Name) {
 		return nil
 	}
 
-	// no repository offers an embedded package, so no scan ever creates its
-	// catalog entry; the sync does
-	if err := s.ensureModulePackageExists(ctx, def.Name); err != nil {
+	// an embedded package is available in no repository, so no scan ever
+	// creates its catalog entry; the sync does
+	if err := s.ensureModulePackage(ctx, def.Name, moduleSources); err != nil {
 		return err
 	}
 
@@ -121,7 +129,7 @@ func (s *syncer) ensureEmbeddedModulePackageVersion(ctx context.Context, dirName
 	spec := v1alpha1.ModulePackageVersionSpec{
 		PackageName:           def.Name,
 		PackageRepositoryName: repositoryNameEmbedded,
-		PackageVersion:        version,
+		PackageVersion:        app.EmbeddedPackageVersion(),
 	}
 
 	return s.ensureFilledModulePackageVersion(ctx, name, spec, meta, schemas)
@@ -139,10 +147,8 @@ func (s *syncer) ensureEmbeddedModulePackageVersion(ctx context.Context, dirName
 // all: the image always ships them, and the package and the version are what
 // the module controller gates registration on, so withholding them over an
 // unreadable dir would strand the global Module rather than degrade it.
-func (s *syncer) syncGlobalModulePackageVersion(ctx context.Context) error {
-	version := app.EmbeddedPackageVersion(s.deckhouseVersion)
-
-	name := v1alpha1.MakeModulePackageVersionName(repositoryNameEmbedded, packageNameGlobal, version)
+func (s *syncer) syncGlobalModulePackageVersion(ctx context.Context, moduleSources []v1alpha1.ModuleSource) error {
+	name := fmt.Sprintf("%s-%s", repositoryNameEmbedded, packageNameGlobal)
 	if !s.validModulePackageVersionName(name, packageNameGlobal) {
 		return nil
 	}
@@ -163,15 +169,15 @@ func (s *syncer) syncGlobalModulePackageVersion(ctx context.Context) error {
 		return nil
 	}
 
-	// no repository offers the global package either, so the sync creates its catalog entry
-	if err := s.ensureModulePackageExists(ctx, packageNameGlobal); err != nil {
+	// the global package is available in no repository either, so the sync creates its catalog entry
+	if err := s.ensureModulePackage(ctx, packageNameGlobal, moduleSources); err != nil {
 		return err
 	}
 
 	spec := v1alpha1.ModulePackageVersionSpec{
 		PackageName:           packageNameGlobal,
 		PackageRepositoryName: repositoryNameEmbedded,
-		PackageVersion:        version,
+		PackageVersion:        app.EmbeddedPackageVersion(),
 	}
 
 	return s.ensureFilledModulePackageVersion(ctx, name, spec, new(v1alpha1.ModulePackageVersionStatusMetadata), schemas)
@@ -278,6 +284,13 @@ func (s *syncer) ensureFilledModulePackageVersion(ctx context.Context, name stri
 		}
 	}
 
+	// the version is checked before the status, since a build can ship the same schemas under a new one
+	if spec.PackageRepositoryName == repositoryNameEmbedded && mpv.Spec.PackageVersion != spec.PackageVersion {
+		if err := s.moveEmbeddedModulePackageVersion(ctx, mpv, spec.PackageVersion); err != nil {
+			return err
+		}
+	}
+
 	if !mpv.IsDraft() &&
 		equality.Semantic.DeepEqual(mpv.Status.PackageMetadata, meta) &&
 		equality.Semantic.DeepEqual(mpv.Status.PackageSchemas, schemas) {
@@ -295,6 +308,22 @@ func (s *syncer) ensureFilledModulePackageVersion(ctx context.Context, name stri
 	}
 
 	return s.removeModulePackageVersionDraft(ctx, mpv)
+}
+
+// moveEmbeddedModulePackageVersion points the object at the build now on disk. Only the embedded
+// repository allows it: its name carries no version, so one object serves every build.
+func (s *syncer) moveEmbeddedModulePackageVersion(ctx context.Context, mpv *v1alpha1.ModulePackageVersion, version string) error {
+	patch := client.MergeFrom(mpv.DeepCopy())
+	mpv.Spec.PackageVersion = version
+
+	if err := s.writer.Patch(ctx, mpv, patch); err != nil {
+		return fmt.Errorf("patch module package version '%s': %w", mpv.Name, err)
+	}
+
+	s.logger.Debug("embedded module package version moved to a new build",
+		slog.String("name", mpv.Name), slog.String("version", version))
+
+	return nil
 }
 
 // ensureModulePackageVersionStub makes sure the version exists at least as a draft stub; any

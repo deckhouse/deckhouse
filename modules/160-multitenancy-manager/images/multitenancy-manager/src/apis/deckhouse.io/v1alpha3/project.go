@@ -41,12 +41,20 @@ const (
 	// rendering the empty structured shape would delete the objects that string produced. Named so
 	// that True means healthy, like every other condition here.
 	ProjectConditionProjectTemplateUsable = "ProjectTemplateUsable"
+	// ProjectConditionNamespaceDeleted is False on a deleting project while its namespace is still
+	// terminating; the message says for how long and what the namespace reports as remaining, so
+	// that "kubectl describe project" tells what the deletion is waiting for.
+	ProjectConditionNamespaceDeleted = "NamespaceDeleted"
 
 	ProjectAnnotationRequireSync = "projects.deckhouse.io/require-sync"
 
 	ProjectFinalizer = "projects.deckhouse.io/project-exists"
 
 	ProjectLabelVirtualProject = "projects.deckhouse.io/virtual-project"
+	// VirtualProjectTemplateName is the template name of the platform's virtual projects (default,
+	// deckhouse): an inventory of namespaces with no namespace of its own. The project webhook
+	// keeps it out of user projects.
+	VirtualProjectTemplateName = "virtual"
 
 	ResourceLabelProject  = "projects.deckhouse.io/project"
 	ResourceLabelTemplate = "projects.deckhouse.io/project-template"
@@ -266,6 +274,14 @@ type ProjectStatus struct {
 	State string `json:"state,omitempty"`
 }
 
+// IsVirtual reports whether the project is a virtual one: it inventories namespaces and has no
+// namespace of its own, so nothing may be rendered or bound into "its" namespace. The platform's
+// virtual projects carry the label; the template name covers a project that reached the virtual
+// code path of the project controller without it.
+func (p *Project) IsVirtual() bool {
+	return p.Labels[ProjectLabelVirtualProject] == "true" || p.Spec.ProjectTemplateName == VirtualProjectTemplateName
+}
+
 func (p *Project) SetState(state string) {
 	p.Status.State = state
 }
@@ -406,6 +422,17 @@ func (p *Project) SetConditionTrue(condName string) {
 		LastProbeTime:      metav1.Now(),
 		LastTransitionTime: metav1.Now(),
 	})
+}
+
+// IsConditionFalseWithMessage reports whether the condition is already False with exactly this
+// message, so that a caller can skip a status write that would change nothing but the probe time.
+func (p *Project) IsConditionFalseWithMessage(condName, message string) bool {
+	for _, cond := range p.Status.Conditions {
+		if cond.Type == condName {
+			return cond.Status == corev1.ConditionFalse && cond.Message == message
+		}
+	}
+	return false
 }
 
 func (p *Project) SetConditionFalse(condName, message string) {

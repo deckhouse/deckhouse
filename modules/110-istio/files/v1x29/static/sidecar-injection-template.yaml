@@ -20,7 +20,7 @@
     {{- end }}
   {{- else }}
     {{- if .Values.global.proxy.resources }}
-      {{ toYaml .Values.global.proxy.resources | indent 6 }}
+      {{ toYaml (omitNil .Values.global.proxy.resources) | indent 6 }}
     {{- end }}
   {{- end }}
 {{- end }}
@@ -165,6 +165,8 @@ spec:
         drop:
         - ALL
     {{- if not .Values.pilot.cni.enabled }}
+      {{- /* [Deckhouse] upstream leaves this false, but the init container needs no writable
+             root filesystem in practice: it only installs iptables rules and then exits. */}}
       readOnlyRootFilesystem: true
       runAsGroup: 0
       runAsNonRoot: false
@@ -174,6 +176,10 @@ spec:
       runAsGroup: {{ if $tproxy }} 1337 {{ else }} {{ .ProxyGID | default "1337" }} {{ end }}
       runAsUser: {{ if $tproxy }} 1337 {{ else }} {{ .ProxyUID | default "1337" }} {{ end }}
       runAsNonRoot: true
+    {{- end }}
+    {{- if .Values.global.proxy.seccompProfile }}
+      seccompProfile:
+    {{- toYaml .Values.global.proxy.seccompProfile | nindent 8 }}
     {{- end }}
   {{ end -}}
   {{ end -}}
@@ -267,6 +273,7 @@ spec:
       valueFrom:
         resourceFieldRef:
           resource: limits.cpu
+          divisor: "1"
     - name: PROXY_CONFIG
       value: |
              {{ protoToJSON .ProxyConfig }}
@@ -289,10 +296,12 @@ spec:
       valueFrom:
         resourceFieldRef:
           resource: limits.memory
+          divisor: "1"
     - name: GOMAXPROCS
       valueFrom:
         resourceFieldRef:
           resource: limits.cpu
+          divisor: "1"
     {{- if .CompliancePolicy }}
     - name: COMPLIANCE_POLICY
       value: "{{ .CompliancePolicy }}"
@@ -362,6 +371,18 @@ spec:
       periodSeconds: {{ annotation .ObjectMeta `readiness.status.sidecar.istio.io/periodSeconds` .Values.global.proxy.readinessPeriodSeconds }}
       timeoutSeconds: 3
       failureThreshold: {{ annotation .ObjectMeta `readiness.status.sidecar.istio.io/failureThreshold` .Values.global.proxy.readinessFailureThreshold }}
+    {{- /* [Deckhouse] admission-policy-engine's requiredProbes OperationPolicy rejects pods
+           whose containers have no livenessProbe. Guarded by the same status-port check as
+           the probes above, so disabling the status server no longer leaves a liveness
+           probe pointing at a port nothing listens on. */}}
+    livenessProbe:
+      httpGet:
+        path: /healthz/ready
+        port: 15021
+      initialDelaySeconds: 10
+      periodSeconds: 10
+      timeoutSeconds: 3
+      failureThreshold: 60
     {{ end -}}
     securityContext:
       {{- if eq (index .ProxyConfig.ProxyMetadata "IPTABLES_TRACE_LOGGING") "true" }}
@@ -402,6 +423,10 @@ spec:
       runAsGroup: {{ .ProxyGID | default "1337" }}
       {{- end }}
       {{- end }}
+    {{- if .Values.global.proxy.seccompProfile }}
+      seccompProfile:
+    {{- toYaml .Values.global.proxy.seccompProfile | nindent 8 }}
+    {{- end }}
     resources:
   {{ template "resources" . }}
     volumeMounts:
@@ -508,7 +533,7 @@ spec:
   {{- end }}
   - name: istio-ca-crl
     configMap:
-      name: istio-ca-crl
+      name: {{ .Values.pilot.crlConfigMapName | default "istio-ca-crl" }}
       optional: true
   {{- if .Values.global.mountMtlsCerts }}
   # Use the key and cert mounted to /etc/certs/ for the in-cluster mTLS communications.

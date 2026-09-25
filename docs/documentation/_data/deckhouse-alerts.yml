@@ -2380,6 +2380,32 @@ alerts:
         etcd database size is approaching the limit.
       severity: "3"
       markupFormat: markdown
+    - name: D8KubeletCheckpointStateUnpinnedContainers
+      sourceFile: modules/040-node-manager/monitoring/prometheus-rules/kubelet-checkpoint-state-reset.yaml
+      moduleUrl: 040-node-manager
+      module: node-manager
+      edition: ce
+      description: |
+        Kubelet on Node `{{ $labels.node }}` reset the memory manager checkpoint and recorded new NUMA zones for Pod `{{ $labels.namespace }}/{{ $labels.pod }}`. Zones are applied only when a container is created, so the running containers stay in their previous zones, which may differ from the recorded ones.
+
+        As a result, the zone the Pod really uses may also be assigned to another Guaranteed Pod, causing both Pods to share its memory resources. The Pod's CPUs and memory may also be assigned to different NUMA zones, which slows down its memory access.
+
+        The Pod is not restarted automatically. The restart time depends on the workload. To restore resource isolation, do the following:
+
+        - To recreate the Pod's containers in newly assigned NUMA zones, delete the Pod:
+
+          ```bash
+          d8 k -n {{ $labels.namespace }} delete pod {{ $labels.pod }}
+          ```
+
+        - For a virtual machine, perform a live migration to another node instead, without stopping it.
+        - If the node runs many such Pods, you can drain it instead of deleting them one by one.
+
+        The alert resolves within a few minutes after the Pod is recreated. No kubelet restart is needed.
+      summary: |
+        Pod {{ $labels.namespace }}/{{ $labels.pod }} may run in a NUMA zone other than the one recorded by kubelet.
+      severity: "4"
+      markupFormat: markdown
     - name: D8KubernetesStaleTokensDetected
       sourceFile: modules/040-control-plane-manager/monitoring/prometheus-rules/control-plane-manager.yaml
       moduleUrl: 040-control-plane-manager
@@ -4429,10 +4455,34 @@ alerts:
         # recreate it with roleRef.name set to the new role (d8:system:*, d8:subsystem:*, or d8:namespace:*)
         ```
 
+        A ClusterRoleBinding to a deprecated `d8:manage:*` name keeps its cluster-scoped rights, but no longer receives the RoleBindings that used to project it into the module namespaces (`d8-cloud-provider-*`, `d8-monitoring` and the rest): the ones created by the previous release are removed. Reading logs, describing pods and `exec` inside those namespaces come back when the binding is recreated on the new role name.
+
         Note: the new `d8:namespace:admin` no longer grants `serviceaccounts/token` creation or impersonation — these disaster-grade actions now require a `superadmin` role by design.
       summary: |
         A binding still references a deprecated RBACv2 role.
       severity: "7"
+      markupFormat: markdown
+    - name: D8UserAuthzForeignAggregationLabel
+      sourceFile: modules/140-user-authz/monitoring/prometheus-rules/foreign-aggregation-label.yaml
+      moduleUrl: 140-user-authz
+      module: user-authz
+      edition: ce
+      description: |-
+        The ClusterRole `{{ $labels.name }}` carries the `rbac.deckhouse.io/aggregate-to-{{ $labels.lineage }}-as` label but is not labelled `rbac.deckhouse.io/kind: custom-capability`{{ if $labels.kind }} (its kind label is `{{ $labels.kind }}`){{ end }}. The aggregation controller reads nothing but that label, so the rules of this role are merged into the platform `d8:{{ $labels.lineage }}:*` roles for every holder in the cluster, outside the role model's contract.
+
+        The `rbacv2-cluster-roles.deckhouse.io` webhook now refuses such an object: every `UPDATE` of this role, including a GitOps re-apply, is denied until it is fixed. Choose one:
+
+        * If the role is meant to extend the platform roles, make it a custom capability: name it `d8:custom:<scope>-capability:<name>`, label it `rbac.deckhouse.io/kind: custom-capability` and `rbac.deckhouse.io/scope: <scope>`, and drop its `aggregationRule` if it has one. See the user-authz documentation on custom capabilities.
+        * Otherwise remove the `rbac.deckhouse.io/aggregate-to-*-as` labels from it.
+
+        List every such role:
+
+        ```bash
+        d8 k get clusterroles -o json | jq -r '.items[] | select((.metadata.labels // {}) | to_entries | any(.key | startswith("rbac.deckhouse.io/aggregate-to-"))) | select((.metadata.labels.heritage // "") != "deckhouse") | select((.metadata.labels["rbac.deckhouse.io/kind"] // "") != "custom-capability") | .metadata.name'
+        ```
+      summary: |
+        ClusterRole {{ $labels.name }} aggregates into the platform {{ $labels.lineage }} roles without being a custom capability.
+      severity: "6"
       markupFormat: markdown
     - name: D8UserAuthzLegacyRBACv2CustomRoleFound
       sourceFile: modules/140-user-authz/monitoring/prometheus-rules/legacy-rbacv2-custom-roles.yaml
@@ -5559,6 +5609,32 @@ alerts:
         A new release for module {{ $labels.module }} is awaiting manual approval.
       severity: "6"
       markupFormat: markdown
+    - name: MultitenancyManagerDeprecatedConfigParameter
+      sourceFile: modules/160-multitenancy-manager/monitoring/prometheus-rules/deprecated-mc.yaml
+      moduleUrl: 160-multitenancy-manager
+      module: multitenancy-manager
+      edition: ce
+      description: |-
+        The `{{ $labels.parameter }}` parameter of the `multitenancy-manager` ModuleConfig is deprecated and ignored:
+        every user namespace outside a project is now adopted into a project of its own, whatever the parameter says.
+
+        The parameter is kept in the schema for one release only. In the next minor release it is removed, and a
+        ModuleConfig that still sets it will fail validation and stop applying.
+
+        Steps to troubleshoot:
+
+        1. Remove `{{ $labels.parameter }}` from the ModuleConfig, including in the CI or GitOps process that applies it:
+
+           ```bash
+           d8 k edit mc multitenancy-manager
+           ```
+
+        1. Make sure nothing relies on plain namespaces existing beside projects: with the module enabled there are none,
+           and an environment is removed by deleting its Project rather than its Namespace.
+      summary: |
+        The multitenancy-manager ModuleConfig sets the deprecated parameter {{ $labels.parameter }}.
+      severity: "9"
+      markupFormat: markdown
     - name: NATInstanceWithDeprecatedAvailabilityZone
       sourceFile: modules/030-cloud-provider-yandex/monitoring/prometheus-rules/deprecated_availability_zone.yaml
       moduleUrl: 030-cloud-provider-yandex
@@ -5701,6 +5777,35 @@ alerts:
       summary: |
         NodeGroup {{ $labels.node_group }} contains nodes in a deprecated availability zone.
       severity: "9"
+      markupFormat: markdown
+    - name: NodeGroupProviderTypeIsInvalid
+      sourceFile: modules/040-node-manager/monitoring/prometheus-rules/node-group-provider-type.yaml
+      moduleUrl: 040-node-manager
+      module: node-manager
+      edition: ce
+      description: |
+        The `spec.providerType` field of NodeGroup `{{ $labels.name }}` is set to `{{ $labels.provider_type }}`,
+        which is not the cloud provider the nodes of the group run in.
+
+        To resolve this issue, set the field to a correct value:
+
+        - If the nodes of the group run in a cloud, set the field to the `type` of that cloud provider,
+          as published in its registration secret:
+
+          ```bash
+          kubectl -n kube-system get secrets -l cloud-provider.deckhouse.io/registration -o json \
+          | jq -r '.items[] | .data.type | @base64d'
+          ```
+
+        - If the cluster is static, or the NodeGroup has `nodeType: Static`, set the field to `None`
+          or leave it empty:
+
+          ```bash
+          kubectl patch nodegroup {{ $labels.name }} --type=merge -p '{"spec":{"providerType":"None"}}'
+          ```
+      summary: |
+        The spec.providerType field is set incorrectly in NodeGroup {{ $labels.name }}.
+      severity: "4"
       markupFormat: markdown
     - name: NodeGroupReplicasUnavailable
       sourceFile: modules/040-node-manager/monitoring/prometheus-rules/node-group.tpl
@@ -5990,6 +6095,87 @@ alerts:
         NTP daemon on the node {{$labels.node}} haven't synchronized time for too long.
       severity: "5"
       markupFormat: markdown
+    - name: OpenStackPreemptibleUnsupported
+      sourceFile: ee/modules/030-cloud-provider-openstack/monitoring/prometheus-rules/preemptible.yaml
+      moduleUrl: 030-cloud-provider-openstack
+      module: cloud-provider-openstack
+      edition: ee
+      description: |
+        The OpenStackInstanceClass referenced by NodeGroup `{{ $labels.node_group }}` has `spec.preemptible: true`,
+        but the raw Nova `preemptible` tag will not reach the virtual machines:
+        nodes are created as regular (non-preemptible) VMs, and Selectel-side preemption never kicks in.
+
+        {{ if eq $labels.reason "mcm" }}
+        **Reason:** the NodeGroup runs on the **MCM engine**, which has no way to emit raw Nova tags —
+        `machine-controller-manager`'s OpenStackMachineClass CRD does not expose the field. Only the
+        CAPI engine (`capi-controller-manager` + `capo-controller-manager`) renders raw Nova tags via
+        `OpenStackMachineTemplate.spec.template.spec.tags`.
+
+        **How to fix:**
+
+        1. Confirm the current engine and offending InstanceClass:
+
+           ```shell
+           d8 k get ng {{ $labels.node_group }} -o jsonpath='{.status.engine}{"\n"}'
+           d8 k get ng {{ $labels.node_group }} -o jsonpath='{.spec.cloudInstances.classReference}{"\n"}'
+           ```
+
+        2. Choose one of the following actions:
+
+           - **Recommended.** Remove the `node.deckhouse.io/use-mcm` annotation from the NodeGroup so it
+             migrates to CAPI. Nodes will be recreated on the CAPI engine, this time carrying the
+             `preemptible` tag:
+
+             ```shell
+             d8 k annotate ng {{ $labels.node_group }} node.deckhouse.io/use-mcm-
+             ```
+
+           - Alternatively, if this NodeGroup must stay on MCM, set `spec.preemptible: false` on the
+             OpenStackInstanceClass (nodes stay regular, the alert clears):
+
+             ```shell
+             d8 k patch openstackinstanceclass <CLASS_NAME> --type=merge -p '{"spec":{"preemptible":false}}'
+             ```
+
+             Note: a single OpenStackInstanceClass shared between a CAPI NodeGroup (where the field
+             works) and an MCM one (where it doesn't) will keep firing this alert on the MCM side.
+             Use separate InstanceClasses per engine when the classes differ in `preemptible`.
+
+        {{ else if eq $labels.reason "non-selectel" }}
+        **Reason:** the cluster's `connection.authURL` does not point at Selectel (`selcloud.ru` /
+        `selectel`). The raw Nova `preemptible` tag is a **Selectel-specific mechanism**;
+        on other OpenStack providers Nova accepts the tag but ignores it, so instances are billed
+        and behave as regular non-preemptible VMs.
+
+        **How to fix:**
+
+        1. Confirm the offending InstanceClass and the cluster's authURL:
+
+           ```shell
+           d8 k get ng {{ $labels.node_group }} -o jsonpath='{.spec.cloudInstances.classReference}{"\n"}'
+           d8 k -n kube-system get secret d8-node-manager-cloud-provider -o jsonpath='{.data.openstack}' | base64 -d | jq -r '.connection.authURL'
+           ```
+
+        2. Set `spec.preemptible: false` on the OpenStackInstanceClass — the field only makes sense
+           on Selectel-hosted clusters:
+
+           ```shell
+           d8 k patch openstackinstanceclass <CLASS_NAME> --type=merge -p '{"spec":{"preemptible":false}}'
+           ```
+
+           The alert clears on the next scrape after the change; existing nodes stay running (they
+           are already regular VMs — the tag was never emitted).
+
+        {{ else }}
+        **Reason:** unknown (`{{ $labels.reason }}`). This alert should surface only two well-known
+        cases (`mcm`, `non-selectel`). A new reason implies node-controller has been extended without
+        this runbook — check the release notes for
+        `cloud-provider-openstack` before deciding what to do.
+        {{ end }}
+      summary: |
+        NodeGroup {{ $labels.node_group }} requests preemptible instances, but this cluster cannot deliver them (reason: {{ $labels.reason }}).
+      severity: "8"
+      markupFormat: markdown
     - name: OpenVPNClientCertificateExpired
       sourceFile: modules/500-openvpn/monitoring/prometheus-rules/ovpn-admin.yaml
       moduleUrl: 500-openvpn
@@ -6196,7 +6382,7 @@ alerts:
           )
           ```
 
-        - Alternatively, check the admission-policy-engine Grafana dashboard.
+        - Alternatively, check the admission-policy-engine reports in the web interface Deckhouse Platform.
       summary: |
         At least one object violates the configured cluster operation policies.
       severity: "3"
@@ -6224,7 +6410,7 @@ alerts:
           )
           ```
 
-        - Alternatively, check the admission-policy-engine Grafana dashboard.
+        - Alternatively, check the admission-policy-engine reports in the web interface Deckhouse Platform.
       summary: |
         At least one pod violates the configured cluster pod security standards.
       severity: "3"
@@ -6250,7 +6436,7 @@ alerts:
           )
           ```
 
-        - Alternatively, check the admission-policy-engine Grafana dashboard.
+        - Alternatively, check the admission-policy-engine reports in the web interface Deckhouse Platform.
       summary: |
         At least one object violates the configured cluster security policies.
       severity: "3"
@@ -6323,6 +6509,7 @@ modules-having-alerts:
     - cloud-provider-aws
     - cloud-provider-dvp
     - cloud-provider-huaweicloud
+    - cloud-provider-openstack
     - cloud-provider-yandex
     - cni-cilium
     - control-plane-manager

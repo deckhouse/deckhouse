@@ -264,7 +264,7 @@ func DefineCommandParseCloudDiscoveryData(cmd *kingpin.CmdClause, opts *options.
 	app.DefineInputOutputRenderFlags(cmd, &opts.Render)
 
 	return cmd.Action(func(c *kingpin.ParseContext) error {
-		_ = kpcontext.ExtractContext(c)
+		ctx := kpcontext.ExtractContext(c)
 
 		var err error
 		var data []byte
@@ -282,7 +282,7 @@ func DefineCommandParseCloudDiscoveryData(cmd *kingpin.CmdClause, opts *options.
 		}
 
 		schemaStore := config.NewSchemaStore(&opts.Global)
-		_, err = schemaStore.Validate(&data)
+		_, err = schemaStore.Validate(ctx, &data)
 		if err != nil {
 			return fmt.Errorf("validate cloud_discovery_data: %v", err)
 		}

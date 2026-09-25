@@ -10,13 +10,19 @@
   These aliases keep the OLD names alive for exactly one release. Each alias is an empty ClusterRole
   whose aggregationRule reuses the NEW role's selector, so it aggregates the same capabilities as
   its new-model counterpart (roleRef is immutable, so we cannot rewrite their bindings for them).
-  That is not identical to pre-upgrade rights — see the NOTE below. Aliases are also not
-  `delegatable`, so new project RoleBindings to the old names are rejected. Aliases carry
+  That is not identical to pre-upgrade rights — see the NOTE below. The d8:use:role:* aliases are
+  `delegatable` (see below), so a plain RoleBinding to them inside a project namespace keeps working;
+  what is refused is a new ProjectRoleBinding/ClusterProjectRoleBinding to an old name, through the
+  rbac.deckhouse.io/disabled-for-direct-use-in-projects annotation. Aliases carry
   rbac.deckhouse.io/deprecated so the deprecation hook/alert and the console can flag them.
 
   NOTE (intentional, not a bug): the role model moved serviceaccounts/token:create and impersonate from admin
   to superadmin. The d8:use:role:admin -> d8:namespace:admin alias therefore no longer grants those two
   disaster-grade primitives. This is called out in the migration alert/docs.
+
+  An alias carries no `rules` key, not even an empty one: rules belong to the aggregation
+  controller, and shipping `rules: []` makes server-side apply fight it, emptying the role for a
+  moment on every reconcile.
 
   They live under templates/rbacv2-compat/ (NOT templates/rbacv2/) so the RBACv2 template-contract CI
   invariant — which requires the new naming — does not scan them. Remove this whole directory (and the
@@ -99,5 +105,4 @@ aggregationRule:
   clusterRoleSelectors:
     - matchLabels:
         rbac.deckhouse.io/{{ $alias.selector }}: {{ $alias.level | quote }}
-rules: []
 {{- end }}

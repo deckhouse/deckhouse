@@ -16,16 +16,22 @@ package main
 
 import (
 	"bytes"
+	"context"
+	"log/slog"
 	"strings"
 	"testing"
 
 	"github.com/deckhouse/lib-dhctl/pkg/logger"
 )
 
+// TestRootWritesFileAndTTY pins that the debug-log pointer reaches the terminal as well as the
+// file. It is tagged for the compact view the same way initLogger tags it: untagged Info is
+// ordinary detail and a terminal shows the curated view, so without the tag the one message a user
+// needs when something goes wrong would be the one they never see.
 func TestRootWritesFileAndTTY(t *testing.T) {
 	var file, tty bytes.Buffer
 	root := logger.NewRoot(logger.Options{FileWriter: &file, TTYWriter: &tty, IsTTY: true})
-	root.Info("Debug log file: /tmp/x.log")
+	root.LogAttrs(context.Background(), slog.LevelInfo, "Debug log file: /tmp/x.log", logger.ShowInCompacted())
 
 	if !strings.Contains(file.String(), "Debug log file") {
 		t.Fatalf("file missing notice: %q", file.String())

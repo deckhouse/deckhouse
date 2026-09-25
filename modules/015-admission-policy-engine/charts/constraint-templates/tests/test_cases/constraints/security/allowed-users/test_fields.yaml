@@ -58,7 +58,7 @@ spec:
     - path: spec.securityContext.runAsNonRoot.allowedValue
       level: pod
       description: SPE override for allowed runAsNonRoot value
-      requiredScenarios: [speMatch, speMismatch, speAbsent, speContainerSpecific]
+      requiredScenarios: [speMatch, speMismatch, speAbsent, speContainerSpecific, speUnused]
     - path: spec.securityContext.runAsGroup.allowedValues
       level: pod
       description: SPE override for allowed runAsGroup values

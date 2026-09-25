@@ -41,6 +41,21 @@ git:
     - '**/*.go'
     - 'go.mod'
     - 'go.sum'
+# The registry client the OS image root hash is read with. It is a separate module
+# replaced by a relative path, so the build needs the sources here: the destination
+# matches what that path resolves to from /src, the same way the drain module above
+# does it.
+- add: /{{ $.ModulePath }}pkg/registry
+  to: /pkg/registry
+  includePaths:
+  - '**/*.go'
+  - '**/*.mod'
+  - '**/*.sum'
+  stageDependencies:
+    install:
+    - '**/*.go'
+    - 'go.mod'
+    - 'go.sum'
 shell:
   install:
   - cd /src
@@ -56,6 +71,10 @@ import:
 - image: {{ .ModuleName }}/{{ $.ImageName }}-src-artifact
   add: /go_lib/dependency/k8s/drain
   to: /go_lib/dependency/k8s/drain
+  before: install
+- image: {{ .ModuleName }}/{{ $.ImageName }}-src-artifact
+  add: /pkg/registry
+  to: /pkg/registry
   before: install
 mount:
 {{ include "mount points for golang builds" . }}

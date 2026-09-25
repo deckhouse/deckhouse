@@ -147,7 +147,7 @@ func (r *ClusterReconciler) Reconcile(ctx context.Context, _ ctrl.Request) (ctrl
 	}
 
 	staticErr := r.ensureStaticCluster(ctx, clusterConfig)
-	cloudErr := r.ensureCloudCluster(ctx, clusterConfig)
+	cloudErr := r.ensureCloudClusters(ctx, clusterConfig)
 	if err := errors.Join(staticErr, cloudErr); err != nil {
 		// A returned error is already requeued with backoff, and controller-runtime drops
 		// RequeueAfter when one is present. Returning both would read as a repair interval
@@ -157,75 +157,113 @@ func (r *ClusterReconciler) Reconcile(ctx context.Context, _ ctrl.Request) (ctrl
 	return ctrl.Result{RequeueAfter: clusterRepairInterval}, nil
 }
 
-func (r *ClusterReconciler) ensureCloudCluster(ctx context.Context, clusterConfig common.ClusterConfiguration) error {
+// ensureCloudClusters builds the CAPI scaffolding of every registered provider: a NodeGroup that
+// runs on one needs its Cluster, and the catalog is the only place that knows they exist.
+func (r *ClusterReconciler) ensureCloudClusters(ctx context.Context, clusterConfig common.ClusterConfiguration) error {
+	catalog, err := cloudprovider.GetCatalog(ctx, r.Client)
+	if err != nil {
+		return err
+	}
+
 	source := cloudprovider.Source{Reader: r.Client}
-	registration, err := source.LoadValidatedRegistration(ctx)
-	if errors.Is(err, cloudprovider.ErrNoCloudProvider) {
-		return nil
-	}
-	if err != nil {
-		return err
-	}
-	if !registration.HasCAPI() {
-		return nil
-	}
-	if err := registration.ValidateCAPI(); err != nil {
-		return err
+	var errs []error
+	var rendered []providerClusterResources
+	// Whether the desired set below names every provider there is. One that could not be read
+	// leaves it incomplete, and cleaning up against an incomplete set deletes live credentials.
+	complete := true
+
+	for _, registration := range catalog.All() {
+		if registration.IsStatic() || !registration.HasCAPI() {
+			continue
+		}
+		if err := registration.ValidateCore(); err != nil {
+			errs = append(errs, err)
+			complete = false
+			continue
+		}
+		if err := registration.ValidateCAPI(); err != nil {
+			errs = append(errs, err)
+			complete = false
+			continue
+		}
+
+		// The common scaffolding is rendered from the registration and the cluster configuration
+		// alone, so it goes out first: a cluster whose UUID ConfigMap or prefix cannot be read yet
+		// still gets its Cluster, MachineHealthCheck and control plane.
+		errs = append(errs, r.ensureCommonCloudClusterResources(ctx, registration, clusterConfig))
+
+		provider, err := source.LoadWithClusterConfiguration(ctx, registration, clusterConfig)
+		if err != nil {
+			errs = append(errs, err)
+			complete = false
+			continue
+		}
+		resources, err := r.renderProviderClusterResources(ctx, source, provider)
+		if err != nil {
+			errs = append(errs, err)
+			complete = false
+			continue
+		}
+		rendered = append(rendered, resources)
 	}
 
-	// The common scaffolding is rendered from the registration and the cluster configuration
-	// alone, so it goes out first: a cluster whose UUID ConfigMap or prefix cannot be read yet
-	// still gets its Cluster, MachineHealthCheck and control plane.
-	commonErr := r.ensureCommonCloudClusterResources(ctx, registration, clusterConfig)
-
-	provider, err := source.LoadWithClusterConfiguration(ctx, clusterConfig)
-	if err != nil {
-		return errors.Join(commonErr, err)
+	// Cleanup runs before the applies, not after: a failed apply must not leave a Secret with the
+	// old provider's live cloud credentials.
+	if complete && len(rendered) > 0 {
+		desired := make(map[string]bool, len(rendered))
+		for _, resources := range rendered {
+			if resources.credentials != nil {
+				desired[resources.credentials.GetName()] = true
+			}
+		}
+		errs = append(errs, r.removeStaleProviderCredentials(ctx, desired))
 	}
-	providerErr := r.ensureProviderClusterResources(ctx, source, provider)
-	return errors.Join(commonErr, providerErr)
+
+	for _, resources := range rendered {
+		errs = append(errs, r.applyProviderClusterResources(ctx, resources))
+	}
+	return errors.Join(errs...)
 }
 
-func (r *ClusterReconciler) ensureProviderClusterResources(
+type providerClusterResources struct {
+	credentials    *unstructured.Unstructured
+	infrastructure *unstructured.Unstructured
+}
+
+func (r *ClusterReconciler) renderProviderClusterResources(
 	ctx context.Context,
 	source cloudprovider.Source,
 	provider cloudprovider.Provider,
-) error {
+) (providerClusterResources, error) {
 	inputs, err := source.LoadCAPIClusterInputs(ctx, provider)
 	if err != nil {
-		return err
+		return providerClusterResources{}, err
 	}
 	renderData := provider.RenderData()
 	renderData.ControlPlane = r.controlPlaneEndpoints(ctx)
 	credentials, err := renderProviderCredentials(provider, inputs, renderData)
 	if err != nil {
-		return err
+		return providerClusterResources{}, err
 	}
 	infrastructure, err := renderProviderInfrastructure(provider, inputs, renderData)
 	if err != nil {
-		return err
+		return providerClusterResources{}, err
 	}
+	return providerClusterResources{credentials: credentials, infrastructure: infrastructure}, nil
+}
 
-	desiredCredentialsName := ""
-	if credentials != nil {
-		desiredCredentialsName = credentials.GetName()
-	}
-
-	// Cleanup runs before the applies, not after: a failed apply must not leave a Secret with the
-	// old provider's live cloud credentials.
-	var ensureErrors []error
-	if err := r.removeStaleProviderCredentials(ctx, desiredCredentialsName); err != nil {
-		ensureErrors = append(ensureErrors, err)
-	}
-	if credentials != nil {
-		if err := r.applyClusterObject(ctx, credentials); err != nil {
-			ensureErrors = append(ensureErrors, fmt.Errorf("apply credentials Secret %s: %w", credentials.GetName(), err))
+func (r *ClusterReconciler) applyProviderClusterResources(ctx context.Context, resources providerClusterResources) error {
+	var errs []error
+	if resources.credentials != nil {
+		if err := r.applyClusterObject(ctx, resources.credentials); err != nil {
+			errs = append(errs, fmt.Errorf("apply credentials Secret %s: %w", resources.credentials.GetName(), err))
 		}
 	}
-	if err := r.applyClusterObject(ctx, infrastructure); err != nil {
-		ensureErrors = append(ensureErrors, fmt.Errorf("apply provider infrastructure %s %s: %w", infrastructure.GetKind(), infrastructure.GetName(), err))
+	if err := r.applyClusterObject(ctx, resources.infrastructure); err != nil {
+		errs = append(errs, fmt.Errorf("apply provider infrastructure %s %s: %w",
+			resources.infrastructure.GetKind(), resources.infrastructure.GetName(), err))
 	}
-	return errors.Join(ensureErrors...)
+	return errors.Join(errs...)
 }
 
 func (r *ClusterReconciler) ensureCommonCloudClusterResources(
@@ -367,7 +405,7 @@ func renderProviderInfrastructure(
 // and the provider template Secret is one Helm-rendered object, so a missing credentials.yaml is a
 // deliberate removal rather than a half-written Secret. Callers reach this only after both
 // templates rendered, so a render failure never looks like an empty name.
-func (r *ClusterReconciler) removeStaleProviderCredentials(ctx context.Context, desiredName string) error {
+func (r *ClusterReconciler) removeStaleProviderCredentials(ctx context.Context, desired map[string]bool) error {
 	secrets := &corev1.SecretList{}
 	if err := r.APIReader.List(
 		ctx,
@@ -380,7 +418,7 @@ func (r *ClusterReconciler) removeStaleProviderCredentials(ctx context.Context, 
 
 	for i := range secrets.Items {
 		secret := &secrets.Items[i]
-		if secret.Name == desiredName {
+		if desired[secret.Name] {
 			continue
 		}
 		if err := r.Client.Delete(ctx, secret); err != nil && !apierrors.IsNotFound(err) {

@@ -31,7 +31,6 @@ const (
 	MachineDeploymentNodeGroupLabel = "node-group"
 
 	// Re-exported from internal/common.
-	CloudProviderSecretName          = nodecommon.CloudProviderSecretName
 	NodeGroupLabel                   = nodecommon.NodeGroupLabel
 	ConfigurationChecksumAnnotation  = nodecommon.ConfigurationChecksumAnnotation
 	MachineNamespace                 = nodecommon.MachineNamespace

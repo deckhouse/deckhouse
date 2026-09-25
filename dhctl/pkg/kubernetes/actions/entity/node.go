@@ -215,7 +215,7 @@ func CreateNodeGroup(ctx context.Context, kubeCl *client.KubernetesClient, nodeG
 					}
 					return fmt.Errorf("%w: %w", errCreateNodeGroupTransient, err)
 				}
-				dhlog.FromContext(ctx).InfoContext(ctx, "OK!")
+				dhlog.FromContext(ctx).InfoContext(ctx, fmt.Sprintf("NodeGroup %s updated", doc.GetName()))
 				return nil
 			}
 

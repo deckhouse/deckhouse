@@ -27,7 +27,7 @@ The following simplifications are made in the diagram:
 
 Kubelet interactions are shown in the following diagram:
 
-![Kubelet interactions](../../images/architecture/kubernetes-and-scheduling/c4-l2-kubelet.png)
+![Kubelet interactions](../../images/architecture/kubernetes-and-scheduling/c4-l2-kubelet.svg)
 
 Kubelet monitors the state of containers in all pods running on the node, including both user workloads and DP components, by performing Startup, Liveness, and Readiness probes according to the pod specification. For more information about probes, see the [Kubernetes documentation](https://kubernetes.io/docs/tasks/configure-pod-container/configure-liveness-readiness-startup-probes).
 

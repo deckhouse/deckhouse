@@ -43,7 +43,7 @@ Virtualization-controller в процессе импорта образа или
 
 Взаимодействия компонентов модуля [`virtualization`](/modules/virtualization/) при импорте и загрузке образов и дисков ВМ изображены на следующей диаграмме:
 
-![Взаимодействия компонентов модуля virtualization при импорте и загрузке образов и дисков ВМ](../../images/architecture/virtualization/c4-l2-virtualization-import.ru.png)
+![Взаимодействия компонентов модуля virtualization при импорте и загрузке образов и дисков ВМ](../../images/architecture/virtualization/c4-l2-virtualization-import.ru.svg)
 
 В процессе импорта образов и дисков ВМ происходит взаимодействие со следующими внешними компонентами:
 

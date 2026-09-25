@@ -260,22 +260,7 @@ DexAuthenticator работает только по HTTPS. Ingress-ресурс�
 
 ## Как сгенерировать kubeconfig для доступа к Kubernetes API?
 
-`kubeconfig` для удалённого доступа к кластеру через `kubectl` можно сгенерировать в [веб-интерфейсе Deckhouse](/products/kubernetes-platform/documentation/v1/user/web/ui.html).
-
-Настройте параметр [`publishAPI`](/modules/user-authn/configuration.html#parameters-publishapi):
-
-- Откройте настройки модуля `user-authn` (создайте ресурс ModuleConfig `user-authn`, если его нет):
-
-  ```shell
-  d8 k edit mc user-authn
-  ```
-
-- Добавьте следующую секцию в блок `settings` и сохраните изменения:
-
-  ```yaml
-  publishAPI:
-    enabled: true
-  ```
+Для генерации kubeconfig воспользуйтесь разделом [«Как сгенерировать kubeconfig для доступа к Kubernetes API?»](/modules/control-plane-manager/faq.html#как-сгенерировать-kubeconfig-для-доступа-к-kubernetes-api) документации модуля `control-plane-manager`.
 
 ### Настройка kube-apiserver
 
@@ -354,10 +339,12 @@ Dex автоматически смонтирует `keytab` и начнёт п�
 
 ## Как настроить базовую аутентификацию для доступа к Kubernetes API через LDAP?
 
-1. Включите параметр [`publishAPI`](/modules/user-authn/configuration.html#parameters-publishapi) в конфигурации модуля `user-authn`.
+Используйте настройки модуля `control-plane-manager`:
+
+1. Включите параметр [`apiserver.publishAPI`](/modules/control-plane-manager/configuration.html#parameters-apiserver-publishapi) в конфигурации модуля `control-plane-manager`.
 1. Создайте ресурс [DexProvider](/modules/user-authn/cr.html#dexprovider) типа `LDAP` и установите параметр [`enableBasicAuth: true`](/modules/user-authn/cr.html#dexprovider-v1-spec-oidc-enablebasicauth).
 1. Настройте [RBAC](/modules/user-authz/cr.html#clusterauthorizationrule) для групп, получаемых из LDAP.
-1. Передайте пользователям `kubeconfig` с настроенными параметрами базовой аутентификации (логин и пароль LDAP).
+1. Передайте пользователям kubeconfig с настроенными параметрами базовой аутентификации (логин и пароль LDAP).
 
 {% alert level="warning" %}
 В кластере может быть только один провайдер аутентификации со включенным параметром [`enableBasicAuth`](/modules/user-authn/cr.html#dexprovider-v1-spec-oidc-enablebasicauth).

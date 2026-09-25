@@ -121,7 +121,12 @@ func isAllowedScenario(scenario string, isSpe bool) bool {
 	switch scenario {
 	case "positive", "negative", "absent", "multiContainer", "initContainer", "ephemeralContainer":
 		return !isSpe
-	case "speMatch", "speMismatch", "speAbsent", "speContainerSpecific":
+	// speUnused: the exception is in force and the object does not use the feature it permits.
+	// The coverage model requires every (field, scenario) pair separately, so a case tagged
+	// speMatch covers the exception axis and a case tagged absent covers the object axis without
+	// either of them combining the two. That combination is where an exception can invert into a
+	// requirement, so a boolean exception has to name it explicitly.
+	case "speMatch", "speMismatch", "speAbsent", "speContainerSpecific", "speUnused":
 		return isSpe
 	default:
 		return false

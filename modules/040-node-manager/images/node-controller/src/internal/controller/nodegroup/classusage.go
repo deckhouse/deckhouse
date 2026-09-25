@@ -32,7 +32,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/log"
 
 	v1 "github.com/deckhouse/node-controller/api/deckhouse.io/v1"
-	nodecommon "github.com/deckhouse/node-controller/internal/common"
+	"github.com/deckhouse/node-controller/internal/cloudprovider"
 )
 
 // usageKey identifies an InstanceClass the way a NodeGroup's classReference names it.
@@ -89,7 +89,7 @@ func (r *Status) sweepInstanceClassConsumers(ctx context.Context) {
 // InstanceClass: the sorted names of the CloudEphemeral NodeGroups pointing at it. A class that
 // lost its consumers is cleared to an empty list; a class that never had the field keeps none.
 func (r *Status) syncInstanceClassConsumers(ctx context.Context) error {
-	gvks, err := nodecommon.RegisteredInstanceClassGVKs(ctx, r.Client)
+	gvks, err := cloudprovider.RegisteredInstanceClassGVKs(ctx, r.Client)
 	if err != nil {
 		return fmt.Errorf("list registered instance class kinds: %w", err)
 	}

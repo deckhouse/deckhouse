@@ -352,7 +352,7 @@ func (s *SchemaStore) GetModuleConfigVersion(name string) int {
 	return 1
 }
 
-func (s *SchemaStore) Validate(doc *[]byte, opts ...ValidateOption) (*SchemaIndex, error) {
+func (s *SchemaStore) Validate(ctx context.Context, doc *[]byte, opts ...ValidateOption) (*SchemaIndex, error) {
 	var index SchemaIndex
 
 	err := yaml.Unmarshal(*doc, &index)
@@ -360,7 +360,7 @@ func (s *SchemaStore) Validate(doc *[]byte, opts ...ValidateOption) (*SchemaInde
 		return nil, fmt.Errorf("Schema index unmarshal failed: %w", err)
 	}
 
-	err = s.ValidateWithIndex(&index, doc, opts...)
+	err = s.ValidateWithIndex(ctx, &index, doc, opts...)
 	return &index, err
 }
 
@@ -380,8 +380,7 @@ func (s *SchemaStore) getV1alpha1CompatibilitySchema(index *SchemaIndex) *spec.S
 // two separated kinds will validate: ModuleConfig and another kinds with schema eg InitConfiguration
 // if schema not fount then return ErrSchemaNotFound
 // if schema not found for ModuleConfig then return ErrSchemaNotFound also
-func (s *SchemaStore) ValidateWithIndex(index *SchemaIndex, doc *[]byte, opts ...ValidateOption) error {
-	ctx := context.Background()
+func (s *SchemaStore) ValidateWithIndex(ctx context.Context, index *SchemaIndex, doc *[]byte, opts ...ValidateOption) error {
 	options := applyOptions(opts...)
 	if !index.IsValid() {
 		return fmt.Errorf(
@@ -720,10 +719,12 @@ func openAPIValidate(dataObj *[]byte, schema *spec.Schema, options validateOptio
 	return true, nil
 }
 
+// ValidateDiscoveryData is called from module hooks, which have no context of their own, so it
+// validates under context.Background(). Nothing it validates opens a deprecation-report scope.
 func ValidateDiscoveryData(config *[]byte, paths []string, globalOptions *options.GlobalOptions, opts ...ValidateOption) (bool, error) {
 	schemaStore := NewSchemaStore(globalOptions, paths...)
 
-	_, err := schemaStore.Validate(config, opts...)
+	_, err := schemaStore.Validate(context.Background(), config, opts...)
 	if err != nil {
 		return false, fmt.Errorf("Loading schema file: %v", err)
 	}

@@ -312,11 +312,20 @@ func (s *Service) converge(ctx context.Context, p *convergeParams) *pb.ConvergeR
 		Options:                    opts,
 	}
 
+	apiServer := convergeAPIServer(p.request.Options)
+
 	var sshProviderInitializer *providerinitializer.SSHProviderInitializer
 	var kubeProvider libcon.KubeProvider
-	err = dhlog.RunProcess(ctx, dhlog.FromContext(ctx), "Preparing SSH client", func(ctx context.Context) error {
+	err = dhlog.RunProcess(ctx, dhlog.FromContext(ctx), prepareConnectionProcessName(apiServer), func(ctx context.Context) error {
 		var cleanup func() error
-		sshProviderInitializer, kubeProvider, cleanup, err = helper.CreateProviders(ctx, p.request.ConnectionConfig, s.params.IsDebug, s.params.TmpDir, helper.WithKubeConfig(p.request.Kubeconfig))
+		sshProviderInitializer, kubeProvider, cleanup, err = helper.CreateProviders(
+			ctx,
+			p.request.ConnectionConfig,
+			s.params.IsDebug,
+			s.params.TmpDir,
+			helper.WithKubeConfig(p.request.Kubeconfig),
+			helper.WithAPIServer(apiServer),
+		)
 		cleanuper.Add(cleanup)
 		if err != nil {
 			return fmt.Errorf("creating provider: %w", err)

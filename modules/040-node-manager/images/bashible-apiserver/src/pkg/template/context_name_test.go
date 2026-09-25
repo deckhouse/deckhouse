@@ -20,22 +20,22 @@ import (
 	"testing"
 )
 
+// Contexts are keyed by NodeGroup name; the {os}. prefix, when a request carries one, is stripped
+// by TransformName before the key is built.
 func TestGetNodegroupContextKey(t *testing.T) {
 	tests := []struct {
-		name    string
-		arg     string
-		want    string
-		wantErr bool
+		name string
+		arg  string
+		want string
 	}{
-		{"valid", "ubuntu-lts.master-flomaster", "bundle-ubuntu-lts-master-flomaster", false},
-		{"invalid", "ubuntu-lts-master-flomaster", "", true},
+		{"nodegroup name", "master-flomaster", "bundle-master-flomaster"},
+		{"name that still carries the bundle", "ubuntu-lts.master", "bundle-ubuntu-lts.master"},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			got, err := GetNodegroupContextKey(tt.arg)
-			if (err != nil) != tt.wantErr {
-				t.Errorf("GetNodegroupContextKey() error = %v, wantErr %v", err, tt.wantErr)
-				return
+			if err != nil {
+				t.Fatalf("GetNodegroupContextKey() error = %v", err)
 			}
 			if got != tt.want {
 				t.Errorf("GetNodegroupContextKey() = %v, want %v", got, tt.want)

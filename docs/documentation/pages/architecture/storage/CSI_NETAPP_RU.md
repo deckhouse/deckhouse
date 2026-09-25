@@ -21,7 +21,7 @@ description: Архитектура модуля csi-netapp в Deckhouse Platfor
 
 Архитектура модуля [`csi-netapp`](/modules/csi-netapp/) на уровне 2 модели C4 и его взаимодействия с другими компонентами Deckhouse Platform (DP) изображены на следующей диаграмме:
 
-![Архитектура модуля csi-netapp](../../../images/architecture/storage/c4-l2-csi-netapp.ru.png)
+![Архитектура модуля csi-netapp](../../../images/architecture/storage/c4-l2-csi-netapp.ru.svg)
 
 ## Компоненты модуля
 

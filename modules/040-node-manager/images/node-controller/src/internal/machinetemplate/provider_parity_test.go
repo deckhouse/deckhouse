@@ -165,6 +165,10 @@ func providerFixtures() []providerFixture {
 				"podNetworkMode":       "DirectRoutingWithPortSecurityEnabled",
 				"internalNetworkNames": []any{"internal"},
 				"tags":                 map[string]any{"env": "test"},
+				// The openstack fixture is a Selectel-hosted cluster on purpose: `spec.preemptible`
+				// only reaches Nova on Selectel (see the authURL gate in capi/template.yaml). Non-
+				// Selectel behaviour has its own test — TestOpenstackPreemptibleNotEmittedOffSelectel.
+				"connection": map[string]any{"authURL": "https://cloud.api.selcloud.ru/identity/v3"},
 			},
 			instanceClass: map[string]any{
 				"flavorName":               "m1.large",
@@ -175,6 +179,16 @@ func providerFixtures() []providerFixture {
 				"additionalSecurityGroups": []any{"ic-sg"},
 				"additionalTags":           map[string]any{"team": "platform"},
 				"capacity":                 map[string]any{"cores": float64(4), "memory": "8Gi"},
+			},
+			rolloutExceptions: map[string]string{
+				// `preemptible` (PR #21866) is absent from the fixture on purpose: it never shipped
+				// under v1, so the field's history starts with "missing". The v1 checksum gates it
+				// on truthiness, hashing `preemptible: false` exactly like a missing field, while
+				// v2 compares by value and sees the transition to false as a change. The rendered
+				// OpenStackMachineTemplate is identical either way (the CAPI template only emits
+				// the tag when preemptible is truthy). Same trade-off as `additionalTags`: an
+				// unnecessary rollout in exchange for never losing an edit — see TestEmptyValueDivergence.
+				"preemptible/empty": "v1 gates on truthiness — preemptible:false hashes like missing",
 			},
 		},
 		{

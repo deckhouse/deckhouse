@@ -122,6 +122,10 @@ spec:
                     - Cloud
                     - Static
                     - Hybrid
+                providerType:
+                  description: |
+                    Cloud provider type of the node group. `None` or an empty value — for a static node group.
+                  type: string
                 systemType:
                   description: |
                     How the node is managed.
@@ -776,6 +780,10 @@ spec:
                     - Cloud
                     - Static
                     - Hybrid
+                providerType:
+                  description: |
+                    Cloud provider type of the node group. `None` or an empty value — for a static node group.
+                  type: string
                 systemType:
                   description: |
                     How the node is managed.
@@ -1473,6 +1481,10 @@ spec:
                     - CloudPermanent
                     - CloudStatic
                     - Static
+                providerType:
+                  description: |
+                    Cloud provider type of the node group. `None` or an empty value — for a static node group.
+                  type: string
                 systemType:
                   description: |
                     How the node is managed.

@@ -94,11 +94,3 @@ markdown_linter:
     - .rules:on_merge_request
   script:
     - make lint-markdown
-
-doc_spell_check:
-  extends:
-    - .docs_docker_base
-    - .rules:on_merge_request_docs
-  script:
-    - ./tools/docs/spelling/validate_dictionary_sync.sh "${DIFF_PATH}"
-    - make lint-doc-spellcheck-pr

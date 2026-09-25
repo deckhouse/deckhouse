@@ -17,286 +17,163 @@ limitations under the License.
 package hooks
 
 import (
+	"fmt"
+	"maps"
+	"slices"
+	"strings"
+
 	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/ginkgo/extensions/table"
 	. "github.com/onsi/gomega"
 
 	. "github.com/deckhouse/deckhouse/testing/hooks"
 )
 
+type labels = map[string]string
+
+func objectYAML(kind, name, namespace string, l labels) string {
+	var b strings.Builder
+	fmt.Fprintf(&b, "apiVersion: v1\nkind: %s\nmetadata:\n  name: %s\n", kind, name)
+	if namespace != "" {
+		fmt.Fprintf(&b, "  namespace: %s\n", namespace)
+	}
+	if len(l) > 0 {
+		b.WriteString("  labels:\n")
+		for _, k := range slices.Sorted(maps.Keys(l)) {
+			fmt.Fprintf(&b, "    %s: %q\n", k, l[k])
+		}
+	}
+	return b.String()
+}
+
+func namespaceYAML(name string, l labels) string {
+	return objectYAML("Namespace", name, "", l)
+}
+
+func terminatingNamespaceYAML(name string, l labels) string {
+	return namespaceYAML(name, l) + "  deletionTimestamp: \"2020-10-22T21:30:34Z\"\n  finalizers:\n  - kubernetes\n"
+}
+
+func podYAML(name, namespace string, l labels) string {
+	return objectYAML("Pod", name, namespace, l)
+}
+
+type discoveryExpectation int
+
+const (
+	notApplication discoveryExpectation = iota
+	monitoredApplication
+	unmonitoredApplication
+)
+
 var _ = Describe("Istio hooks :: discovery_application_namespaces ::", func() {
 	f := HookExecutionConfigInit(`{"istio":{"internal":{}}}`, "")
 
-	Context("Empty cluster and minimal settings", func() {
-		BeforeEach(func() {
-			f.BindingContexts.Set(f.KubeStateSet(``))
-			f.RunHook()
-		})
+	run := func(objects ...string) {
+		f.BindingContexts.Set(f.KubeStateSet(strings.Join(objects, "---\n")))
+		f.RunHook()
+		Expect(f).To(ExecuteSuccessfully())
+	}
+	applicationNamespaces := func() []string {
+		return f.ValuesGet("istio.internal.applicationNamespaces").AsStringSlice()
+	}
+	applicationNamespacesToMonitor := func() []string {
+		return f.ValuesGet("istio.internal.applicationNamespacesToMonitor").AsStringSlice()
+	}
 
-		It("Hook must execute successfully", func() {
-			Expect(f).To(ExecuteSuccessfully())
-			Expect(f.LoggerOutput.Contents()).To(HaveLen(0))
-
-			Expect(f.ValuesGet("istio.internal.applicationNamespaces").Array()).To(BeEmpty())
-		})
+	It("Empty cluster", func() {
+		run()
+		Expect(f.LoggerOutput.Contents()).To(HaveLen(0))
+		Expect(applicationNamespaces()).To(BeEmpty())
+		Expect(applicationNamespacesToMonitor()).To(BeEmpty())
 	})
 
-	Context("Application namespaces with labels but pods with labels", func() {
-		BeforeEach(func() {
-			f.BindingContexts.Set(f.KubeStateSet(applicationNamespacesWithLabeledPods))
-			f.RunHook()
-		})
+	DescribeTable("Single namespace", func(want discoveryExpectation, objects ...string) {
+		run(objects...)
 
-		It("Should count all pods namespaces properly", func() {
-			Expect(f).To(ExecuteSuccessfully())
-			Expect(f.ValuesGet("istio.internal.applicationNamespaces").AsStringSlice()).To(Equal([]string{"ns-istio-defined-revision-a", "ns-istio-defined-revision-b-with-injection", "ns-istio-injection-enabled", "ns-without-labels-b"}))
-		})
-	})
+		switch want {
+		case notApplication:
+			Expect(applicationNamespaces()).To(BeEmpty())
+			Expect(applicationNamespacesToMonitor()).To(BeEmpty())
+		case monitoredApplication:
+			Expect(applicationNamespaces()).To(Equal([]string{"ns"}))
+			Expect(applicationNamespacesToMonitor()).To(Equal([]string{"ns"}))
+		case unmonitoredApplication:
+			Expect(applicationNamespaces()).To(Equal([]string{"ns"}))
+			Expect(applicationNamespacesToMonitor()).To(BeEmpty())
+		}
+	},
+		// namespace labels
+		Entry("NS without labels", notApplication,
+			namespaceYAML("ns", nil)),
+		Entry("NS with istio-injection=enabled", monitoredApplication,
+			namespaceYAML("ns", labels{"istio-injection": "enabled"})),
+		Entry("NS with istio-injection!=enabled", notApplication,
+			namespaceYAML("ns", labels{"istio-injection": "disabled"})),
+		Entry("NS with definite istio.io/rev", monitoredApplication,
+			namespaceYAML("ns", labels{"istio.io/rev": "v1x13"})),
+		Entry("NS with istio.io/rev=default", monitoredApplication,
+			namespaceYAML("ns", labels{"istio.io/rev": "default"})),
+		Entry("NS with empty istio.io/rev", notApplication,
+			namespaceYAML("ns", labels{"istio.io/rev": ""})),
+		Entry("NS with both istio-injection and istio.io/rev", notApplication,
+			namespaceYAML("ns", labels{"istio-injection": "enabled", "istio.io/rev": "v1x14"})),
 
-	Context("Application namespaces with and without discard-metrics labels", func() {
-		BeforeEach(func() {
-			f.BindingContexts.Set(f.KubeStateSet(applicationNamespacesWithDiscardMetrics))
-			f.RunHook()
-		})
+		// pod labels in a namespace without injection labels
+		Entry("Pod without istio labels", notApplication,
+			namespaceYAML("ns", nil),
+			podYAML("pod", "ns", nil)),
+		Entry("Pod with inject=true", monitoredApplication,
+			namespaceYAML("ns", nil),
+			podYAML("pod", "ns", labels{"sidecar.istio.io/inject": "true"})),
+		Entry("Pod with definite istio.io/rev", monitoredApplication,
+			namespaceYAML("ns", nil),
+			podYAML("pod", "ns", labels{"istio.io/rev": "v1x11"})),
+		Entry("Pod with inject=true and empty istio.io/rev", notApplication,
+			namespaceYAML("ns", nil),
+			podYAML("pod", "ns", labels{"sidecar.istio.io/inject": "true", "istio.io/rev": ""})),
+		Entry("Pod with inject=false and definite istio.io/rev", notApplication,
+			namespaceYAML("ns", nil),
+			podYAML("pod", "ns", labels{"sidecar.istio.io/inject": "false", "istio.io/rev": "v1x11"})),
 
-		It("Should count all pods namespaces properly", func() {
-			Expect(f).To(ExecuteSuccessfully())
-			Expect(f.ValuesGet("istio.internal.applicationNamespaces").AsStringSlice()).To(Equal([]string{"ns-0", "ns-1", "ns-2", "ns-3"}))
-		})
-		It("Should count all pods namespaces to monitor properly", func() {
-			Expect(f).To(ExecuteSuccessfully())
-			Expect(f.ValuesGet("istio.internal.applicationNamespacesToMonitor").AsStringSlice()).To(Equal([]string{"ns-0", "ns-2"}))
-		})
-	})
+		// pod labels are ignored in a namespace with injection labels
+		Entry("NS with istio-injection!=enabled, pod with inject=true", notApplication,
+			namespaceYAML("ns", labels{"istio-injection": "disabled"}),
+			podYAML("pod", "ns", labels{"sidecar.istio.io/inject": "true"})),
+		Entry("NS with istio-injection!=enabled, pod with definite istio.io/rev", notApplication,
+			namespaceYAML("ns", labels{"istio-injection": "disabled"}),
+			podYAML("pod", "ns", labels{"istio.io/rev": "v1x11"})),
+		Entry("NS with both istio-injection and istio.io/rev, pod with definite istio.io/rev", notApplication,
+			namespaceYAML("ns", labels{"istio-injection": "enabled", "istio.io/rev": "v1x14"}),
+			podYAML("pod", "ns", labels{"istio.io/rev": "v1x12"})),
 
-	Context("Application namespaces with labels and IstioOperator", func() {
-		BeforeEach(func() {
-			f.BindingContexts.Set(f.KubeStateSet(applicationNamespacesRevisionAndPrefixes))
-			f.RunHook()
-		})
-		It("Should count all namespaces properly", func() {
-			Expect(f).To(ExecuteSuccessfully())
-			Expect(f.ValuesGet("istio.internal.applicationNamespaces").AsStringSlice()).To(Equal([]string{"d8-ns6", "d8-ns7", "kube-ns8", "kube-ns9", "ns1", "ns2", "ns3", "ns4", "ns5"}))
-		})
+		// terminating namespaces
+		Entry("Terminating NS with istio-injection=enabled", notApplication,
+			terminatingNamespaceYAML("ns", labels{"istio-injection": "enabled"})),
+		Entry("Terminating NS without labels, pod with inject=true", notApplication,
+			terminatingNamespaceYAML("ns", nil),
+			podYAML("pod", "ns", labels{"sidecar.istio.io/inject": "true"})),
+
+		// discard-metrics label
+		Entry("NS with istio-injection=enabled and discard-metrics", unmonitoredApplication,
+			namespaceYAML("ns", labels{"istio-injection": "enabled", "istio.deckhouse.io/discard-metrics": "true"})),
+		Entry("NS with discard-metrics, pod with inject=true", unmonitoredApplication,
+			namespaceYAML("ns", labels{"istio.deckhouse.io/discard-metrics": "true"}),
+			podYAML("pod", "ns", labels{"sidecar.istio.io/inject": "true"})),
+	)
+
+	It("Several namespaces are sorted and deduplicated", func() {
+		run(
+			namespaceYAML("ns-b", labels{"istio-injection": "enabled"}),
+			podYAML("pod-0", "ns-b", labels{"sidecar.istio.io/inject": "true"}),
+			namespaceYAML("ns-a", nil),
+			podYAML("pod-1", "ns-a", labels{"sidecar.istio.io/inject": "true"}),
+			podYAML("pod-2", "ns-a", labels{"istio.io/rev": "v1x13"}),
+			namespaceYAML("kube-ns", labels{"istio.io/rev": "v1x13"}),
+			namespaceYAML("d8-ns", labels{"istio-injection": "enabled", "istio.deckhouse.io/discard-metrics": "true"}),
+			namespaceYAML("ns-c", nil),
+		)
+		Expect(applicationNamespaces()).To(Equal([]string{"d8-ns", "kube-ns", "ns-a", "ns-b"}))
+		Expect(applicationNamespacesToMonitor()).To(Equal([]string{"kube-ns", "ns-a", "ns-b"}))
 	})
 })
-
-const (
-	applicationNamespacesWithLabeledPods = `
----
-apiVersion: v1
-kind: Namespace
-metadata:
-  name: ns-istio-injection-enabled
-  labels:
-    istio-injection: enabled
----
-apiVersion: v1
-kind: Namespace
-metadata:
-  name: ns-istio-defined-revision-a
-  labels:
-    istio.io/rev: v1x13
----
-apiVersion: v1
-kind: Namespace
-metadata:
-  name: ns-istio-defined-revision-b-with-injection
-  labels:
-    istio.io/rev: v1x14
-    istio-injection: enabled
----
-apiVersion: v1
-kind: Namespace
-metadata:
-  name: ns-without-labels-a
----
-apiVersion: v1
-kind: Namespace
-metadata:
-  name: ns-without-labels-b
----
-apiVersion: v1
-kind: Namespace
-metadata:
-  name: ns-without-labels-c
----
-# pod without any revision
-apiVersion: v1
-kind: Pod
-metadata:
-  name: pod-0
-  namespace: ns-without-labels-a
-spec: {}
----
-# pod with global revision
-apiVersion: v1
-kind: Pod
-metadata:
-  name: pod-1
-  namespace: ns-without-labels-b
-  labels:
-    sidecar.istio.io/inject: "true"
-spec: {}
----
-# pod with definite revision on empty ns
-apiVersion: v1
-kind: Pod
-metadata:
-  name: pod-2
-  namespace: ns-without-labels-c
-  labels:
-    istio.io/rev: v1x11
-spec: {}
----
-# pod with definite revision poiniting on revisioned ns
-apiVersion: v1
-kind: Pod
-metadata:
-  name: pod-3
-  namespace: ns-istio-defined-revision-b-with-injection
-  labels:
-    istio.io/rev: v1x12
-spec: {}
-`
-
-	applicationNamespacesWithDiscardMetrics = `
----
-apiVersion: v1
-kind: Namespace
-metadata:
-  name: ns-0
-  labels: {}
----
-apiVersion: v1
-kind: Namespace
-metadata:
-  name: ns-1
-  labels:
-    istio.deckhouse.io/discard-metrics: "true"
----
-apiVersion: v1
-kind: Namespace
-metadata:
-  name: ns-2
-  labels:
-    istio-injection: enabled
----
-apiVersion: v1
-kind: Namespace
-metadata:
-  name: ns-3
-  labels:
-    istio-injection: enabled
-    istio.deckhouse.io/discard-metrics: "true"
----
-apiVersion: v1
-kind: Pod
-metadata:
-  name: pod-0
-  namespace: ns-0
-  labels:
-    sidecar.istio.io/inject: "true"
-spec: {}
----
-apiVersion: v1
-kind: Pod
-metadata:
-  name: pod-1
-  namespace: ns-1
-  labels:
-    sidecar.istio.io/inject: "true"
-spec: {}
-`
-
-	applicationNamespacesRevisionAndPrefixes = `
----
-# regular ns
-apiVersion: v1
-kind: Namespace
-metadata:
-  name: ns0
-  labels: {}
----
-# ns with global revision
-apiVersion: v1
-kind: Namespace
-metadata:
-  name: ns1
-  labels:
-    istio-injection: enabled
----
-# ns with global revision
-apiVersion: v1
-kind: Namespace
-metadata:
-  name: ns2
-  labels:
-    istio-injection: enabled
----
-# ns with definite revision
-apiVersion: v1
-kind: Namespace
-metadata:
-  name: ns3
-  labels:
-    istio.io/rev: v1x7x4
----
-# ns with definite revision
-apiVersion: v1
-kind: Namespace
-metadata:
-  name: ns4
-  labels:
-    istio.io/rev: v1x5x0
----
-# ns with definite revision
-apiVersion: v1
-kind: Namespace
-metadata:
-  name: ns5
-  labels:
-    istio.io/rev: v1x7x4
----
-# ns with definite revision with d8 prefix
-apiVersion: v1
-kind: Namespace
-metadata:
-  name: d8-ns6
-  labels:
-    istio.io/rev: v1x8x0
----
-# ns with global revision with d8 prefix
-apiVersion: v1
-kind: Namespace
-metadata:
-  name: d8-ns7
-  labels:
-    istio-injection: enabled
----
-# ns with definite revision with kube prefix
-apiVersion: v1
-kind: Namespace
-metadata:
-  name: kube-ns8
-  labels:
-    istio.io/rev: v1x9x0
----
-# ns with global revision with kube prefix
-apiVersion: v1
-kind: Namespace
-metadata:
-  name: kube-ns9
-  labels:
-    istio-injection: enabled
----
-# ns with deletionTimestamp
-apiVersion: v1
-kind: Namespace
-metadata:
-  name: kube-ns10
-  annotations:
-    deletionTimestamp: "2020-10-22T21:30:34Z"
-  labels:
-    istio-injection: enabled
-`
-)

@@ -129,7 +129,7 @@ func ParseConnectionConfig(
 
 		dhlog.FromContext(ctx).DebugContext(ctx, fmt.Sprintf("Validating and parsing connection config document %d for index %v", i, index))
 
-		err = schemaStore.ValidateWithIndex(&index, &docData, opts...)
+		err = schemaStore.ValidateWithIndex(ctx, &index, &docData, opts...)
 		if err != nil {
 			appendValidationError(err.Error(), i, &gvk, &obj)
 			continue

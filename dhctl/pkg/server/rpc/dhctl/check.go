@@ -257,17 +257,26 @@ func (s *Service) check(ctx context.Context, p *checkParams) *pb.CheckResult {
 		Options:        opts,
 	}
 
+	apiServer := checkAPIServer(p.request.Options)
+
 	var (
 		kubeProvider           libcon.KubeProvider
 		sshProviderInitializer *providerinitializer.SSHProviderInitializer
 	)
-	err = dhlog.RunProcess(ctx, dhlog.FromContext(ctx), "Preparing SSH client", func(ctx context.Context) error {
+	err = dhlog.RunProcess(ctx, dhlog.FromContext(ctx), prepareConnectionProcessName(apiServer), func(ctx context.Context) error {
 		var cleanup func() error
 		// The SSH initializer used to be dropped here. It is what the node preflights ask
 		// their questions through, and without it check reached the machines with nothing
 		// checked while Commander's skip_preflight_checks went to an operation that had no
 		// checks to skip.
-		sshProviderInitializer, kubeProvider, cleanup, err = helper.CreateProviders(ctx, p.request.ConnectionConfig, s.params.IsDebug, s.params.TmpDir, helper.WithKubeConfig(p.request.Kubeconfig))
+		sshProviderInitializer, kubeProvider, cleanup, err = helper.CreateProviders(
+			ctx,
+			p.request.ConnectionConfig,
+			s.params.IsDebug,
+			s.params.TmpDir,
+			helper.WithKubeConfig(p.request.Kubeconfig),
+			helper.WithAPIServer(apiServer),
+		)
 		cleanuper.Add(cleanup)
 		if err != nil {
 			return fmt.Errorf("creating provider: %w", err)

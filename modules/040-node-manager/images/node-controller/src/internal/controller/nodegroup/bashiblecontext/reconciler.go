@@ -28,6 +28,7 @@ import (
 	"sigs.k8s.io/yaml"
 
 	v1 "github.com/deckhouse/node-controller/api/deckhouse.io/v1"
+	"github.com/deckhouse/node-controller/internal/cloudprovider"
 	"github.com/deckhouse/node-controller/internal/controller/nodegroup/derived_status"
 )
 
@@ -49,11 +50,19 @@ func (r *Reconciler) Assemble(ctx context.Context) error {
 		return fmt.Errorf("list nodegroups: %w", err)
 	}
 
+	// Loaded once for the whole context, not once per NodeGroup: resolving inside the loop meant
+	// one registration read per NodeGroup on every write of the Secret.
+	pCatalog, err := cloudprovider.GetCatalog(ctx, r.Client)
+	if err != nil {
+		return err
+	}
+
 	nodeGroups := make([]map[string]interface{}, 0, len(ngList.Items))
 	for i := range ngList.Items {
 		ng := &ngList.Items[i]
+		provider := pCatalog.ByNodeGroup(ng)
 
-		resolved, errStr, err := r.DerivedStatus.ResolveNodeGroup(ctx, ng)
+		resolved, errStr, err := r.DerivedStatus.ResolveNodeGroup(ctx, ng, provider)
 		if err != nil {
 			return fmt.Errorf("resolve NodeGroup %s: %w", ng.Name, err)
 		}
@@ -61,7 +70,7 @@ func (r *Reconciler) Assemble(ctx context.Context) error {
 		if errStr != "" {
 			logger.Info("NodeGroup failed validation", "nodeGroup", ng.Name, "error", errStr)
 			if p, ok := prior[ng.Name]; ok {
-				nodeGroups = append(nodeGroups, p)
+				nodeGroups = append(nodeGroups, withProviderType(p, provider))
 			}
 			continue
 		}
@@ -84,7 +93,7 @@ func (r *Reconciler) Assemble(ctx context.Context) error {
 
 	setNodeGroupInfo(nodeGroups)
 
-	if err := r.Context.WriteSecret(ctx, nodeGroups); err != nil {
+	if err := r.Context.WriteSecret(ctx, nodeGroups, pCatalog); err != nil {
 		return err
 	}
 	if len(keptCIDRs) > 0 {
@@ -94,6 +103,17 @@ func (r *Reconciler) Assemble(ctx context.Context) error {
 			publishedStatic["internalNetworkCIDRs"], keptCIDRs, secretNamespace, secretName)
 	}
 	return nil
+}
+
+// withProviderType refreshes the provider of an entry carried over from the last published context:
+// an entry written before the key existed names none, and would render without cloud steps.
+func withProviderType(entry map[string]interface{}, provider cloudprovider.Registration) map[string]interface{} {
+	if provider.IsStatic() {
+		delete(entry, "cloudProviderType")
+	} else {
+		entry["cloudProviderType"] = provider.Type
+	}
+	return entry
 }
 
 // readPriorNodeGroups returns the entries of the currently published context, keyed by NodeGroup

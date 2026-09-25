@@ -29,6 +29,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 
 	deckhousev1 "github.com/deckhouse/node-controller/api/deckhouse.io/v1"
+	"github.com/deckhouse/node-controller/internal/cloudprovider"
 	nodecommon "github.com/deckhouse/node-controller/internal/common"
 	"github.com/deckhouse/node-controller/internal/controller/nodegroup/bashiblecontext"
 	ngcommon "github.com/deckhouse/node-controller/internal/controller/nodegroup/common"
@@ -47,7 +48,7 @@ func TestBuildInputRejectsAnUnreadableKubernetesCA(t *testing.T) {
 	}).Build()
 	svc := &bashiblecontext.Service{Client: c, RootCAFile: filepath.Join(t.TempDir(), "absent.crt")}
 
-	_, err := BuildInput(t.Context(), svc, derived_status.ResolvedNodeGroup{Name: "worker"}, "token")
+	_, err := BuildInput(t.Context(), svc, derived_status.ResolvedNodeGroup{Name: "worker"}, cloudprovider.Registration{}, "token")
 
 	require.ErrorContains(t, err, "kubernetes CA is empty")
 }

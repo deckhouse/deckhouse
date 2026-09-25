@@ -21,7 +21,7 @@ description: Архитектура модуля csi-ceph в Deckhouse Platform.
 
 Архитектура модуля [`csi-ceph`](/modules/csi-ceph/) на уровне 2 модели C4 и его взаимодействия с другими компонентами Deckhouse Platform (DP) изображены на следующей диаграмме:
 
-![Архитектура модуля csi-ceph](../../../images/architecture/storage/c4-l2-csi-ceph.ru.png)
+![Архитектура модуля csi-ceph](../../../images/architecture/storage/c4-l2-csi-ceph.ru.svg)
 
 ## Компоненты модуля
 

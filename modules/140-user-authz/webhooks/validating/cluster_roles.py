@@ -190,6 +190,19 @@ def _cluster_level_selector(selectors) -> Optional[str]:
     return None
 
 
+def _platform_lineages_on(labels) -> set:
+    """Lineages of the platform whose aggregation label the object carries on itself."""
+    found = set()
+    for key in labels:
+        m = AGGREGATE_LABEL_RE.match(key)
+        if m is None:
+            continue
+        lineage = m.group(1)
+        if lineage in TENANT_LINEAGES or lineage in SYSTEM_LINEAGES:
+            found.add(lineage)
+    return found
+
+
 def _aggregates_only_tenant_capabilities(selectors) -> bool:
     """
     Whether every aggregated capability is one a project may receive.
@@ -266,6 +279,21 @@ def validate(ctx: DotMap) -> Optional[str]:
             "a role bindable inside a project may aggregate namespace and project capabilities only."
         )
 
+    # A label of a platform lineage on the object itself is what makes the aggregation controller pour
+    # its rules into the platform role of that lineage -- d8:namespace:admin selects exactly
+    # rbac.deckhouse.io/aggregate-to-namespace-as: admin. The API server does not care what else the
+    # object carries, so without this check any ClusterRole with such a label, whatever its name and
+    # with no framework kind at all, joins every holder of that role in the cluster. Only an object
+    # that declares itself a custom capability may carry one; the checks below then hold it to the
+    # rest of the contract.
+    platform_lineages = _platform_lineages_on(labels)
+    if platform_lineages and kind_label != "custom-capability":
+        return (
+            f'ClusterRole "{name}" carries the aggregation label of the '
+            f'"{", ".join(sorted(platform_lineages))}" lineage but is not labeled '
+            f'"{KIND_LABEL}: custom-capability": only a custom capability may aggregate into a platform role.'
+        )
+
     # The rest applies to anything that presents itself as a custom object -- by its framework label
     # or by its name. Judging by the label alone let a "d8:custom:" role skip every rule about what
     # such a name is allowed to mean.
@@ -296,6 +324,16 @@ def validate(ctx: DotMap) -> Optional[str]:
                     f'ClusterRole "{name}" with "{KIND_LABEL}: custom-role" '
                     "must define aggregationRule.clusterRoleSelectors."
                 )
+
+        # A capability is the leaf of the model: it carries rules and is aggregated by roles. The
+        # built-in ones are held to that by the platform contract test, and a custom one is held to it
+        # here, or the rule would depend on who created the object rather than on what it does.
+        if kind_label == "custom-capability" and selectors:
+            return (
+                f'ClusterRole "{name}" with "{KIND_LABEL}: custom-capability" must not define '
+                "aggregationRule: a capability carries rules and is aggregated by roles, it does not "
+                "aggregate other capabilities."
+            )
 
         # Forbid aggregating the system-side lineages together with the namespace/project lineages.
         system_side, tenant_side = None, None

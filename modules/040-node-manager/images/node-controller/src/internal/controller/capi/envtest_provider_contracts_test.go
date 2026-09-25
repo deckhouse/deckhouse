@@ -34,6 +34,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	deckhousev1 "github.com/deckhouse/node-controller/api/deckhouse.io/v1"
+	"github.com/deckhouse/node-controller/internal/cloudprovider"
 	"github.com/deckhouse/node-controller/internal/common"
 	"github.com/deckhouse/node-controller/internal/machinetemplate"
 	"github.com/deckhouse/node-controller/internal/testenv"
@@ -247,7 +248,7 @@ var _ = Describe("shipped provider contracts", Ordered, func() {
 
 		discovery := &corev1.Secret{}
 		Expect(k8sClient.Get(suiteCtx, types.NamespacedName{
-			Namespace: cloudProviderSecretNamespace, Name: cloudProviderSecretName,
+			Namespace: cloudprovider.RegistrationSecretNamespace, Name: cloudprovider.RegistrationSecretBaseName,
 		}, discovery)).To(Succeed())
 		if suiteRegistration == nil {
 			suiteRegistration = copyData(discovery.Data)
@@ -303,7 +304,7 @@ var _ = Describe("shipped provider contracts", Ordered, func() {
 		}
 		discovery := &corev1.Secret{}
 		Expect(k8sClient.Get(suiteCtx, types.NamespacedName{
-			Namespace: cloudProviderSecretNamespace, Name: cloudProviderSecretName,
+			Namespace: cloudprovider.RegistrationSecretNamespace, Name: cloudprovider.RegistrationSecretBaseName,
 		}, discovery)).To(Succeed())
 		discovery.Data = copyData(suiteRegistration)
 		Expect(k8sClient.Update(suiteCtx, discovery)).To(Succeed())

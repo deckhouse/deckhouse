@@ -34,7 +34,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
 	v1 "github.com/deckhouse/node-controller/api/deckhouse.io/v1"
-	nodecommon "github.com/deckhouse/node-controller/internal/common"
+	"github.com/deckhouse/node-controller/internal/cloudprovider"
 	"github.com/deckhouse/node-controller/internal/controller/nodegroup/derived_status"
 	"github.com/deckhouse/node-controller/internal/register"
 )
@@ -107,7 +107,7 @@ func (c *Controller) SetupWatches(w register.Watcher) {
 	// nodes running the previous configuration for up to ten minutes with nothing to show why.
 	// The source is deferred: the kind and version come from the provider registration Secret,
 	// which may appear only after this pod started.
-	w.WatchesRawSource(nodecommon.LazyInstanceClassSource(c.cache, enqueue, predicate.GenerationChangedPredicate{}))
+	w.WatchesRawSource(cloudprovider.LazyInstanceClassSource(c.cache, enqueue, predicate.GenerationChangedPredicate{}))
 }
 
 func inNamespaces(namespaces ...string) predicate.Predicate {

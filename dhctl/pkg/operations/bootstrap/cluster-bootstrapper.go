@@ -197,6 +197,7 @@ type bootstrapContext struct {
 	devicePath                string
 	resourcesTemplateData     map[string]any
 	resourcesToCreateBefore   template.Resources
+	resourcesToCreateModules  template.Resources
 	resourcesToCreateProvider template.Resources
 	resourcesToCreateAfter    template.Resources
 	installDeckhouseResult    *InstallDeckhouseResult
@@ -299,6 +300,8 @@ func (b *ClusterBootstrapper) Bootstrap(ctx context.Context) error {
 		// A failed bootstrap needs the credentials most: the master runs no
 		// sshd, and the success-path print at the end is never reached.
 		b.printCollectedKubeconfig(ctx, bctx)
+		// The other thing a failed bootstrap needs: how to remove what it created.
+		b.printHowToCleanUp(ctx, bctx)
 	}
 
 	if m := bctx.metaConfig; m != nil {
@@ -736,7 +739,7 @@ func requireSplitResources(bctx *bootstrapContext) error {
 		return nil
 	}
 
-	if len(bctx.resourcesToCreateBefore)+len(bctx.resourcesToCreateProvider)+len(bctx.resourcesToCreateAfter) == 0 {
+	if len(bctx.resourcesToCreateBefore)+len(bctx.resourcesToCreateModules)+len(bctx.resourcesToCreateProvider)+len(bctx.resourcesToCreateAfter) == 0 {
 		return fmt.Errorf("resources are configured but none are queued for creation: phase %q produces the queues", phases.ParseResourcesPhase)
 	}
 
@@ -1254,11 +1257,14 @@ func (b *ClusterBootstrapper) bootstrapParseResources(ctx context.Context, bctx 
 		return err
 	}
 
-	before, provider, after := splitResourcesOnPreAndPostDeckhouseInstall(ctx, parsedResources, nodesComeFromResources(bctx.metaConfig))
+	before, modules, provider, after := splitResourcesOnPreAndPostDeckhouseInstall(
+		ctx, parsedResources, nodesComeFromResources(bctx.metaConfig), bctx.metaConfig.ProviderName,
+	)
 
 	applyMasterNodeGroupDefaults(provider)
 
 	bctx.resourcesToCreateBefore = before
+	bctx.resourcesToCreateModules = modules
 	bctx.resourcesToCreateProvider = provider
 	bctx.resourcesToCreateAfter = after
 
@@ -1408,6 +1414,16 @@ func (b *ClusterBootstrapper) bootstrapDeckhouse(ctx context.Context, bctx *boot
 				ctx,
 				&client.KubernetesClient{KubeClient: kubeCl},
 				bctx.resourcesToCreateBefore,
+				nil,
+				true,
+				b.Options.Bootstrap.ResourcesTimeout,
+			)
+		},
+		AfterManifestsTask: func() error {
+			return createResources(
+				ctx,
+				&client.KubernetesClient{KubeClient: kubeCl},
+				bctx.resourcesToCreateModules,
 				nil,
 				true,
 				b.Options.Bootstrap.ResourcesTimeout,
@@ -1772,10 +1788,16 @@ func nodesComeFromResources(metaConfig *config.MetaConfig) bool {
 	return metaConfig.ClusterType == config.CloudClusterType && !metaConfig.HasLegacyProviderConfig()
 }
 
-func splitResourcesOnPreAndPostDeckhouseInstall(ctx context.Context, resourcesToCreate template.Resources, nodesFromResources bool) (template.Resources, template.Resources, template.Resources) {
+// The module queue is separate from the node queue because the two are applied at different
+// moments: the modules while the controller is still starting, the nodes once it is Ready. Joined,
+// the provider module stayed behind the readiness wait its own cloud-controller-manager clears.
+func splitResourcesOnPreAndPostDeckhouseInstall(ctx context.Context, resourcesToCreate template.Resources, nodesFromResources bool, providerName string) (template.Resources, template.Resources, template.Resources, template.Resources) {
 	before := make(template.Resources, 0, len(resourcesToCreate))
+	modules := make(template.Resources, 0)
 	provider := make(template.Resources, 0, len(resourcesToCreate))
 	after := make(template.Resources, 0, len(resourcesToCreate))
+
+	providerModule := config.CloudProviderModuleName(providerName)
 
 	for _, resource := range resourcesToCreate {
 		annotations := resource.Object.GetAnnotations()
@@ -1784,6 +1806,13 @@ func splitResourcesOnPreAndPostDeckhouseInstall(ctx context.Context, resourcesTo
 		if hasBeforeAnnotation || isCloudProviderCredentialSecret(resource) {
 			dhlog.FromContext(ctx).DebugContext(ctx, fmt.Sprintf("Add resource %s - %s to before queue", resource.String(), resource.Object.GetName()))
 			before = append(before, resource)
+			continue
+		}
+
+		if isModuleQueueDocument(resource, providerModule) {
+			dhlog.FromContext(ctx).DebugContext(ctx, fmt.Sprintf("Add resource %s - %s to module queue", resource.String(), resource.Object.GetName()))
+			modules = append(modules, resource)
+
 			continue
 		}
 
@@ -1799,7 +1828,45 @@ func splitResourcesOnPreAndPostDeckhouseInstall(ctx context.Context, resourcesTo
 
 	before = prependMissingNamespaces(before)
 
-	return before, provider, after
+	slices.SortStableFunc(modules, func(a, b *template.Resource) int {
+		return moduleApplyOrder(a) - moduleApplyOrder(b)
+	})
+
+	return before, modules, provider, after
+}
+
+// A ModuleSource is an address and a ModulePullOverride pins a tag; neither enables a module, so
+// both travel early unconditionally, which also puts them ahead of any ModuleConfig naming them.
+// Enabling is what has to wait, and only this cluster's provider module cannot: it ships the
+// cloud-controller-manager that clears node.cloudprovider.kubernetes.io/uninitialized, and a
+// ModuleConfig reaching these documents at all means the image does not carry that module.
+func isModuleQueueDocument(resource *template.Resource, providerModule string) bool {
+	if resource.GVK.Group != config.ModuleConfigGroup {
+		return false
+	}
+
+	switch resource.GVK.Kind {
+	case config.ModuleSourceKind, config.ModulePullOverrideKind:
+		return true
+	case config.ModuleConfigKind:
+		return resource.Object.GetName() == providerModule
+	}
+
+	return false
+}
+
+// The order the controllers consume these in: scanning the source creates the Module the override
+// controller looks up, and the release controller skips a module that already has an override, so
+// an override applied last gets the channel build deployed first and then replaced.
+func moduleApplyOrder(resource *template.Resource) int {
+	switch resource.GVK.Kind {
+	case config.ModuleSourceKind:
+		return 0
+	case config.ModulePullOverrideKind:
+		return 1
+	default:
+		return 2
+	}
 }
 
 // isProviderNodeResource reports the objects dhctl builds cloud nodes from. They
