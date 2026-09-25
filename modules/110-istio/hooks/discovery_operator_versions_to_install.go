@@ -27,6 +27,9 @@ import (
 	k8serrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"k8s.io/utils/ptr"
+
+	sdkobjectpatch "github.com/deckhouse/module-sdk/pkg/object-patch"
 
 	"github.com/deckhouse/deckhouse/go_lib/dependency"
 	"github.com/deckhouse/deckhouse/modules/110-istio/hooks/lib"
@@ -57,29 +60,73 @@ func applyIstioOperatorFilter(obj *unstructured.Unstructured) (go_hook.FilterRes
 	}, nil
 }
 
-func applyIstioFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
-	var istio crd.Istio
+type IstioInfo struct {
+	Namespace string
+	Revision  string
+}
 
-	err := sdk.FromUnstructured(obj, &istio)
+// parseIstio returns the control-plane namespace of an Istio CR and its revision.
+// Istio CRs have no revision field, the module names them after their revisions.
+func parseIstio(obj *unstructured.Unstructured) (IstioInfo, error) {
+	namespace, _, err := unstructured.NestedString(obj.Object, "spec", "namespace")
 	if err != nil {
-		return nil, err
+		return IstioInfo{}, err
 	}
 
-	revision := istio.Spec.Revision
-	if revision == "" {
-		revision = istio.GetName()
-	}
-
-	return IstioOperatorCrdInfo{
-		Name:     istio.GetName(),
-		Revision: revision,
+	return IstioInfo{
+		Namespace: namespace,
+		Revision:  obj.GetName(),
 	}, nil
+}
+
+type IstioRevisionInfo struct {
+	Namespace string
+	Revision  string
+}
+
+func applyIstioRevisionFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
+	return parseIstioRevision(obj)
+}
+
+func parseIstioRevision(obj *unstructured.Unstructured) (IstioRevisionInfo, error) {
+	namespace, _, err := unstructured.NestedString(obj.Object, "spec", "namespace")
+	if err != nil {
+		return IstioRevisionInfo{}, err
+	}
+
+	return IstioRevisionInfo{
+		Namespace: namespace,
+		Revision:  getIstioRevisionRevision(obj),
+	}, nil
+}
+
+// getIstioRevisionRevision returns the revision of the Istio CR owning the IstioRevision.
+// The owner is used rather than the name, as the RevisionBased strategy appends the version
+// to the name, e.g. "v1x25-v1-25-2". Without an owner, the name is used.
+func getIstioRevisionRevision(obj *unstructured.Unstructured) string {
+	for _, owner := range obj.GetOwnerReferences() {
+		if owner.APIVersion == istioGVR.GroupVersion().String() && owner.Kind == "Istio" && ptr.Deref(owner.Controller, false) {
+			return owner.Name
+		}
+	}
+	return obj.GetName()
 }
 
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 	Queue: lib.Queue("discovery"),
 	// Relies on hook discovery_versions_to_install.go (Order: 5) and must run before hooks deprecated_versions_monitoring.go and compatibility_version_istio_k8s_monitoring.go (Order: 10)
 	OnBeforeHelm: &go_hook.OrderedConfig{Order: 9},
+	Kubernetes: []go_hook.KubernetesConfig{
+		{
+			// Re-runs the module to remove the operator once its last IstioRevision is gone.
+			// Status and deletionTimestamp updates don't change the filter result, so they don't trigger the hook.
+			Name:                         "istiorevisions",
+			ApiVersion:                   "sailoperator.io/v1",
+			Kind:                         "IstioRevision",
+			FilterFunc:                   applyIstioRevisionFilter,
+			ExecuteHookOnSynchronization: ptr.To(false),
+		},
+	},
 }, dependency.WithExternalDependencies(operatorRevisionsToInstallDiscovery))
 
 func operatorRevisionsToInstallDiscovery(_ context.Context, input *go_hook.HookInput, dc dependency.Container) error {
@@ -95,6 +142,25 @@ func operatorRevisionsToInstallDiscovery(_ context.Context, input *go_hook.HookI
 			continue
 		}
 		operatorVersionsToInstall = append(operatorVersionsToInstall, version)
+	}
+
+	addRevision := func(revision string) {
+		if !versionMap.IsRevisionSupported(revision) {
+			if isRetiredIstioOperatorRevision(revision) {
+				return
+			}
+			if !lib.Contains(unsupportedRevisions, revision) {
+				unsupportedRevisions = append(unsupportedRevisions, revision)
+			}
+			return
+		}
+		version := versionMap.GetVersionByRevision(revision)
+		if !versionMap.DoesVersionSupportOperator(version) {
+			return
+		}
+		if !lib.Contains(operatorVersionsToInstall, version) {
+			operatorVersionsToInstall = append(operatorVersionsToInstall, version)
+		}
 	}
 
 	k8sClient, err := dc.GetK8sClient()
@@ -118,21 +184,7 @@ func operatorRevisionsToInstallDiscovery(_ context.Context, input *go_hook.HookI
 			if !ok {
 				return fmt.Errorf("unexpected IstioOperator filter result type for %q", iop.GetName())
 			}
-
-			iopVer := versionMap.GetVersionByRevision(iopInfo.Revision)
-			if !versionMap.IsRevisionSupported(iopInfo.Revision) {
-				if isRetiredIstioOperatorRevision(iopInfo.Revision) {
-					continue
-				}
-				unsupportedRevisions = append(unsupportedRevisions, iopInfo.Revision)
-				continue
-			}
-			if !versionMap.DoesVersionSupportOperator(iopVer) {
-				continue
-			}
-			if !lib.Contains(operatorVersionsToInstall, iopVer) {
-				operatorVersionsToInstall = append(operatorVersionsToInstall, iopVer)
-			}
+			addRevision(iopInfo.Revision)
 		}
 	}
 
@@ -144,30 +196,30 @@ func operatorRevisionsToInstallDiscovery(_ context.Context, input *go_hook.HookI
 		}
 	} else {
 		for _, istio := range istios.Items {
-			infoAny, err := applyIstioFilter(&istio)
+			istioInfo, err := parseIstio(&istio)
 			if err != nil {
 				return fmt.Errorf("cannot parse Istio %q: %w", istio.GetName(), err)
 			}
-			istioInfo, ok := infoAny.(IstioOperatorCrdInfo)
-			if !ok {
-				return fmt.Errorf("unexpected Istio filter result type for %q", istio.GetName())
-			}
-
-			istioVer := versionMap.GetVersionByRevision(istioInfo.Revision)
-			if !versionMap.IsRevisionSupported(istioInfo.Revision) {
-				if isRetiredIstioOperatorRevision(istioInfo.Revision) {
-					continue
-				}
-				unsupportedRevisions = append(unsupportedRevisions, istioInfo.Revision)
+			// Istio CRs are cluster-scoped, skip the ones of foreign control-planes.
+			if istioInfo.Namespace != istioNamespace {
 				continue
 			}
-			if !versionMap.DoesVersionSupportOperator(istioVer) {
-				continue
-			}
-			if !lib.Contains(operatorVersionsToInstall, istioVer) {
-				operatorVersionsToInstall = append(operatorVersionsToInstall, istioVer)
-			}
+			addRevision(istioInfo.Revision)
 		}
+	}
+
+	// The Istio CR has no finalizer and is gone right after helm deletes it, while its IstioRevision
+	// waits for the operator to uninstall istiod. Keep the operator until all its IstioRevisions are gone.
+	istioRevisions, err := sdkobjectpatch.UnmarshalToStruct[IstioRevisionInfo](input.Snapshots, "istiorevisions")
+	if err != nil {
+		return fmt.Errorf("failed to unmarshal istiorevisions snapshot: %w", err)
+	}
+	for _, istioRevision := range istioRevisions {
+		// IstioRevisions are cluster-scoped, skip the ones of foreign control-planes.
+		if istioRevision.Namespace != istioNamespace {
+			continue
+		}
+		addRevision(istioRevision.Revision)
 	}
 
 	if len(unsupportedRevisions) > 0 {
