@@ -534,6 +534,62 @@ apiserver:
 		})
 	})
 
+	Context("kube-controller-manager worker counts", func() {
+		kcmCommand := func() []string {
+			s := f.KubernetesResource("Secret", "kube-system", "d8-control-plane-manager-config")
+			Expect(s.Exists()).To(BeTrue())
+			manifest, err := base64.StdEncoding.DecodeString(s.Field("data.kube-controller-manager\\.yaml\\.tpl").String())
+			Expect(err).ShouldNot(HaveOccurred())
+			var pod corev1.Pod
+			Expect(yaml.Unmarshal(manifest, &pod)).To(Succeed())
+			return pod.Spec.Containers[0].Command
+		}
+
+		Context("not configured", func() {
+			BeforeEach(func() {
+				f.HelmRender()
+			})
+
+			It("should leave the upstream defaults (no --concurrent-* flags)", func() {
+				Expect(f.RenderError).ShouldNot(HaveOccurred())
+				for _, item := range kcmCommand() {
+					Expect(item).ToNot(HavePrefix("--concurrent-"))
+				}
+			})
+		})
+
+		Context("configured through the arguments hook", func() {
+			BeforeEach(func() {
+				f.ValuesSetFromYaml("controlPlaneManager.internal.arguments", `{"concurrentDeploymentSyncs": 20, "concurrentReplicaSetSyncs": 20, "concurrentHorizontalPodAutoscalerSyncs": 10}`)
+				f.HelmRender()
+			})
+
+			It("should render one flag per configured controller", func() {
+				Expect(f.RenderError).ShouldNot(HaveOccurred())
+				Expect(kcmCommand()).To(ContainElements(
+					"--concurrent-deployment-syncs=20",
+					"--concurrent-replicaset-syncs=20",
+					"--concurrent-horizontal-pod-autoscaler-syncs=10",
+				))
+			})
+		})
+
+		Context("only one controller configured", func() {
+			BeforeEach(func() {
+				f.ValuesSetFromYaml("controlPlaneManager.internal.arguments", `{"concurrentHorizontalPodAutoscalerSyncs": 10}`)
+				f.HelmRender()
+			})
+
+			It("should not invent flags for the others", func() {
+				Expect(f.RenderError).ShouldNot(HaveOccurred())
+				cmd := kcmCommand()
+				Expect(cmd).To(ContainElement("--concurrent-horizontal-pod-autoscaler-syncs=10"))
+				Expect(cmd).ToNot(ContainElement(HavePrefix("--concurrent-deployment-syncs=")))
+				Expect(cmd).ToNot(ContainElement(HavePrefix("--concurrent-replicaset-syncs=")))
+			})
+		})
+	})
+
 	Context("apiserver tests", func() {
 		Context("DS sing enabled annotation", func() {
 			assertDsSignAnnotation := func(ff *Config, enabled bool) {
