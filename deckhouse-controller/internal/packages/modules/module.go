@@ -393,8 +393,7 @@ func (m *Module) GetSettings() addonutils.Values {
 	return m.values.GetSettings()
 }
 
-// SetMaintenance records the module maintenance mode. Modules do not expose the
-// mode through a CR, so it stays Managed in practice.
+// SetMaintenance records the module maintenance mode from Module.spec.maintenance.
 func (m *Module) SetMaintenance(state nelm.MaintenanceState) {
 	m.maintenance = state
 }

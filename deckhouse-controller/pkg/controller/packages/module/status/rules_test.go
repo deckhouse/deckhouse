@@ -375,3 +375,82 @@ func TestSettingsChanged(t *testing.T) {
 
 	runTestCases(t, cases)
 }
+
+// withMaintenanceMode sets the MaintenanceMode the last successful Run recorded.
+func withMaintenanceMode(status metav1.ConditionStatus) mappingOption {
+	reason := ""
+	if status == metav1.ConditionTrue {
+		reason = string(intstatus.ConditionReasonNoResourceReconciliation)
+	}
+
+	return withInternalCondition(intMaintenanceMode, status, reason)
+}
+
+func TestMaintenanceMode(t *testing.T) {
+	installed := func(opts ...mappingOption) []mappingOption {
+		return append(append(withSuccessfulApply(),
+			withExternalCondition(ConditionInstalled, metav1.ConditionTrue, ConditionInstalled)), opts...)
+	}
+
+	cases := []testCase{
+		{
+			name: "applied maintenance breaks Managed only",
+			opts: installed(withMaintenanceMode(metav1.ConditionTrue)),
+			expected: map[string]*expectedCondition{
+				ConditionManaged:              {status: metav1.ConditionFalse, reason: string(intstatus.ConditionReasonNoResourceReconciliation)},
+				ConditionReady:                {status: metav1.ConditionTrue, reason: ConditionReady},
+				ConditionScaled:               {status: metav1.ConditionTrue, reason: ConditionScaled},
+				ConditionConfigurationApplied: {status: metav1.ConditionTrue, reason: ConditionConfigurationApplied},
+			},
+		},
+		{
+			name: "managed mode keeps Managed true",
+			opts: installed(withMaintenanceMode(metav1.ConditionFalse)),
+			expected: map[string]*expectedCondition{
+				ConditionManaged: {status: metav1.ConditionTrue, reason: ConditionManaged},
+			},
+		},
+		{
+			name: "unknown mode before the first run keeps Managed true",
+			opts: installed(withMaintenanceMode(metav1.ConditionUnknown)),
+			expected: map[string]*expectedCondition{
+				ConditionManaged: {status: metav1.ConditionTrue, reason: ConditionManaged},
+			},
+		},
+		{
+			name: "a failure outranks maintenance",
+			opts: installed(withMaintenanceMode(metav1.ConditionTrue),
+				withInternalCondition(string(intstatus.ConditionManifestsApplied), metav1.ConditionFalse, "boom")),
+			expected: map[string]*expectedCondition{
+				ConditionManaged: {status: metav1.ConditionFalse, reason: "ManifestsApplyFailed"},
+			},
+		},
+		{
+			name: "maintenance outranks pending settings",
+			opts: installed(withMaintenanceMode(metav1.ConditionTrue),
+				withInternalCondition(string(intstatus.ConditionConfigured), metav1.ConditionFalse, string(intstatus.ConditionReasonSettingsChanged))),
+			expected: map[string]*expectedCondition{
+				ConditionManaged: {status: metav1.ConditionFalse, reason: string(intstatus.ConditionReasonNoResourceReconciliation)},
+			},
+		},
+	}
+
+	runTestCases(t, cases)
+}
+
+func TestMaintenanceModeKeepsSummaryReady(t *testing.T) {
+	state := condmap.State{
+		Internal: make(map[string]metav1.Condition),
+		External: make(map[string]metav1.Condition),
+	}
+
+	opts := append(withSuccessfulApply(),
+		withExternalCondition(ConditionInstalled, metav1.ConditionTrue, ConditionInstalled),
+		withMaintenanceMode(metav1.ConditionTrue))
+	for _, opt := range opts {
+		opt(&state)
+	}
+
+	summary, _, _ := summarize(state)
+	assert.Equal(t, stateReady, summary)
+}
