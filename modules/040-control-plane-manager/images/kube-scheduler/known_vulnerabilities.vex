@@ -2,7 +2,7 @@
   "@context": "https://openvex.dev/ns/v0.2.0",
   "@id": "https://openvex.dev/docs/public/vex-83ad327013f034fdd863cf73303584cf735337893acf934c4c3d37ba8b0609f3",
   "author": "Deckhouse <contact@deckhouse.io>",
-  "version": 8,
+  "version": 9,
   "statements": [
     {
       "vulnerability": {
@@ -132,6 +132,26 @@
     },
     {
       "vulnerability": {
+        "name": "CVE-2026-81870"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/go.opentelemetry.io/otel/sdk"
+        },
+        {
+          "@id": "pkg:golang/go.opentelemetry.io/otel/exporters/otlp/otlptrace"
+        },
+        {
+          "@id": "pkg:golang/go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "Для эксплуатации уязвимости CVE-2026-81870 в kube-scheduler должна быть запущена и настроена трассировка OpenTelemetry, а также включено Info-логирование OpenTelemetry через otel.SetLogger. kube-scheduler не поддерживает настройку трассировки OpenTelemetry и не вызывает otel.SetLogger. Уязвимый код присутствует в зависимостях, но отсутствует в достижимом пути выполнения.",
+      "timestamp": "2026-09-25T09:24:02Z"
+    },
+    {
+      "vulnerability": {
         "name": "GO-2026-5932"
       },
       "products": [
@@ -146,5 +166,5 @@
     }
   ],
   "timestamp": "2025-11-07T13:55:00Z",
-  "last_updated": "2026-08-18T12:00:00Z"
+  "last_updated": "2026-09-25T09:24:02Z"
 }
