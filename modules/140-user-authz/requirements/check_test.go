@@ -23,29 +23,26 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/deckhouse/deckhouse/go_lib/dependency/requirements"
+	"github.com/deckhouse/deckhouse/modules/140-user-authz/hooks"
 )
 
 func TestLegacyRBACv2CustomRolesRequirement(t *testing.T) {
-	// Pins the duplicated value-key literal to the hooks package contract (see the counterpart
-	// assertion in hooks/discovery_legacy_custom_roles_test.go).
-	assert.Equal(t, "userAuthz:legacyRBACv2CustomRoles", legacyRBACv2CustomRolesValueKey)
-
 	t.Run("no value stored (module disabled or not synced) — pass", func(t *testing.T) {
-		requirements.RemoveValue(legacyRBACv2CustomRolesValueKey)
+		requirements.RemoveValue(hooks.LegacyRBACv2CustomRolesValueKey)
 		ok, err := requirements.CheckRequirement(legacyRBACv2CustomRolesRequirementKey, "0")
 		assert.True(t, ok)
 		require.NoError(t, err)
 	})
 
 	t.Run("no legacy roles in the cluster — pass", func(t *testing.T) {
-		requirements.SaveValue(legacyRBACv2CustomRolesValueKey, []string{})
+		requirements.SaveValue(hooks.LegacyRBACv2CustomRolesValueKey, []string{})
 		ok, err := requirements.CheckRequirement(legacyRBACv2CustomRolesRequirementKey, "0")
 		assert.True(t, ok)
 		require.NoError(t, err)
 	})
 
 	t.Run("legacy roles present — block with names in the error", func(t *testing.T) {
-		requirements.SaveValue(legacyRBACv2CustomRolesValueKey, []string{
+		requirements.SaveValue(hooks.LegacyRBACv2CustomRolesValueKey, []string{
 			"custom:manage:mycustom:manager",
 			"custom:use:capability:mycustom:superresource:view",
 		})
@@ -58,43 +55,39 @@ func TestLegacyRBACv2CustomRolesRequirement(t *testing.T) {
 	})
 
 	t.Run("deserialized []any representation is tolerated", func(t *testing.T) {
-		requirements.SaveValue(legacyRBACv2CustomRolesValueKey, []any{"custom:manage:mycustom:manager"})
+		requirements.SaveValue(hooks.LegacyRBACv2CustomRolesValueKey, []any{"custom:manage:mycustom:manager"})
 		ok, err := requirements.CheckRequirement(legacyRBACv2CustomRolesRequirementKey, "0")
 		assert.False(t, ok)
 		require.Error(t, err)
 	})
 
 	t.Run("unparsable requirement value — error", func(t *testing.T) {
-		requirements.SaveValue(legacyRBACv2CustomRolesValueKey, []string{"custom:manage:mycustom:manager"})
+		requirements.SaveValue(hooks.LegacyRBACv2CustomRolesValueKey, []string{"custom:manage:mycustom:manager"})
 		ok, err := requirements.CheckRequirement(legacyRBACv2CustomRolesRequirementKey, "not-a-number")
 		assert.False(t, ok)
 		require.Error(t, err)
 	})
 
-	requirements.RemoveValue(legacyRBACv2CustomRolesValueKey)
+	requirements.RemoveValue(hooks.LegacyRBACv2CustomRolesValueKey)
 }
 
 func TestDeprecatedRBACv2BindingsRequirement(t *testing.T) {
-	// Pins the duplicated value-key literal to the hooks package contract (see the counterpart
-	// assertion in hooks/alert_deprecated_rbacv2_bindings_test.go).
-	assert.Equal(t, "userAuthz:deprecatedRBACv2Bindings", deprecatedRBACv2BindingsValueKey)
-
 	t.Run("no value stored (module disabled or not synced) — pass", func(t *testing.T) {
-		requirements.RemoveValue(deprecatedRBACv2BindingsValueKey)
+		requirements.RemoveValue(hooks.DeprecatedRBACv2BindingsValueKey)
 		ok, err := requirements.CheckRequirement(deprecatedRBACv2BindingsRequirementKey, "0")
 		assert.True(t, ok)
 		require.NoError(t, err)
 	})
 
 	t.Run("no bindings to deprecated names — pass", func(t *testing.T) {
-		requirements.SaveValue(deprecatedRBACv2BindingsValueKey, []string{})
+		requirements.SaveValue(hooks.DeprecatedRBACv2BindingsValueKey, []string{})
 		ok, err := requirements.CheckRequirement(deprecatedRBACv2BindingsRequirementKey, "0")
 		assert.True(t, ok)
 		require.NoError(t, err)
 	})
 
 	t.Run("bindings present — block with the bindings in the error", func(t *testing.T) {
-		requirements.SaveValue(deprecatedRBACv2BindingsValueKey, []string{
+		requirements.SaveValue(hooks.DeprecatedRBACv2BindingsValueKey, []string{
 			"ClusterRoleBinding legacy-observability -> d8:manage:observability:manager",
 			"RoleBinding team-a/legacy-viewer -> d8:use:role:viewer",
 		})
@@ -107,18 +100,18 @@ func TestDeprecatedRBACv2BindingsRequirement(t *testing.T) {
 	})
 
 	t.Run("deserialized []any representation is tolerated", func(t *testing.T) {
-		requirements.SaveValue(deprecatedRBACv2BindingsValueKey, []any{"RoleBinding team-a/legacy-viewer -> d8:use:role:viewer"})
+		requirements.SaveValue(hooks.DeprecatedRBACv2BindingsValueKey, []any{"RoleBinding team-a/legacy-viewer -> d8:use:role:viewer"})
 		ok, err := requirements.CheckRequirement(deprecatedRBACv2BindingsRequirementKey, "0")
 		assert.False(t, ok)
 		require.Error(t, err)
 	})
 
 	t.Run("unparsable requirement value — error", func(t *testing.T) {
-		requirements.SaveValue(deprecatedRBACv2BindingsValueKey, []string{"RoleBinding team-a/legacy-viewer -> d8:use:role:viewer"})
+		requirements.SaveValue(hooks.DeprecatedRBACv2BindingsValueKey, []string{"RoleBinding team-a/legacy-viewer -> d8:use:role:viewer"})
 		ok, err := requirements.CheckRequirement(deprecatedRBACv2BindingsRequirementKey, "not-a-number")
 		assert.False(t, ok)
 		require.Error(t, err)
 	})
 
-	requirements.RemoveValue(deprecatedRBACv2BindingsValueKey)
+	requirements.RemoveValue(hooks.DeprecatedRBACv2BindingsValueKey)
 }

@@ -22,6 +22,7 @@ import (
 	"strings"
 
 	"github.com/deckhouse/deckhouse/go_lib/dependency/requirements"
+	"github.com/deckhouse/deckhouse/modules/140-user-authz/hooks"
 )
 
 const (
@@ -31,10 +32,6 @@ const (
 	// scheme; the upgrade to 1.78 itself is not held back.
 	legacyRBACv2CustomRolesRequirementKey = "legacyRBACv2CustomRolesCount"
 
-	// legacyRBACv2CustomRolesValueKey mirrors hooks.LegacyRBACv2CustomRolesValueKey (the packages
-	// must not import each other's internals; the contract is locked by tests).
-	legacyRBACv2CustomRolesValueKey = "userAuthz:legacyRBACv2CustomRoles"
-
 	migrationFAQReference = "see the user-authz module FAQ, section \"How do I migrate custom roles to the new scheme in DKP 1.78?\""
 
 	// deprecatedRBACv2BindingsRequirementKey is the release requirement key of the release that
@@ -43,10 +40,7 @@ const (
 	// deprecated names (0): with the aliases gone such a binding grants nothing, so the release
 	// stays Pending until every binding is recreated on the new name.
 	deprecatedRBACv2BindingsRequirementKey = "deprecatedRBACv2BindingsCount"
-	// deprecatedRBACv2BindingsValueKey mirrors hooks.DeprecatedRBACv2BindingsValueKey (locked by
-	// tests, like the pair above).
-	deprecatedRBACv2BindingsValueKey = "userAuthz:deprecatedRBACv2Bindings"
-	deprecatedNamesReference         = "see the user-authz module documentation, section \"Deprecated role names\", and the D8UserAuthzDeprecatedRBACv2RoleInUse / D8UserAuthzDeprecatedRBACv2CapabilityInUse alerts"
+	deprecatedNamesReference               = "see the user-authz module documentation, section \"Deprecated role names\", and the D8UserAuthzDeprecatedRBACv2RoleInUse / D8UserAuthzDeprecatedRBACv2CapabilityInUse alerts"
 )
 
 func init() {
@@ -56,7 +50,7 @@ func init() {
 			return false, fmt.Errorf("parse requirement value %q: %w", requirementValue, err)
 		}
 
-		raw, exists := getter.Get(legacyRBACv2CustomRolesValueKey)
+		raw, exists := getter.Get(hooks.LegacyRBACv2CustomRolesValueKey)
 		if !exists {
 			// The discovery hook has not published a value (the module is disabled or has not synced
 			// yet) — nothing to enforce.
@@ -81,7 +75,7 @@ func init() {
 		if err != nil {
 			return false, fmt.Errorf("parse requirement value %q: %w", requirementValue, err)
 		}
-		raw, exists := getter.Get(deprecatedRBACv2BindingsValueKey)
+		raw, exists := getter.Get(hooks.DeprecatedRBACv2BindingsValueKey)
 		if !exists {
 			// The hook has not published a value (the module is disabled or has not synced yet) —
 			// nothing to enforce.

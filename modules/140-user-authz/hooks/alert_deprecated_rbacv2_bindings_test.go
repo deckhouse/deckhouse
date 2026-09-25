@@ -131,13 +131,6 @@ subjects:
 var _ = Describe("User-authz hooks :: alert_deprecated_rbacv2_bindings ::", func() {
 	f := HookExecutionConfigInit(`{"userAuthz":{"internal":{}}}`, `{}`)
 
-	It("value key matches the contract with modules/140-user-authz/requirements", func() {
-		// The requirements package duplicates this literal (module requirements packages stay
-		// import-free of the hooks package); this assertion and its counterpart in
-		// requirements/check_test.go pin both copies to the same string.
-		Expect(DeprecatedRBACv2BindingsValueKey).To(Equal("userAuthz:deprecatedRBACv2Bindings"))
-	})
-
 	Context("Bindings to deprecated roles and to a deprecated capability", func() {
 		BeforeEach(func() {
 			f.BindingContexts.Set(f.KubeStateSet(rbDeprecatedUse + crbDeprecatedManage + crbNewModel + rbOrdinary + crbDeprecatedManageCap))
