@@ -555,7 +555,7 @@ podAntiAffinity:
 			Expect(apiService.Field("spec.service.name").String()).To(Equal("yandex-dns-webhook"))
 			Expect(apiService.Field("spec.service.namespace").String()).To(Equal("d8-cert-manager"))
 
-			saSecretRole := f.KubernetesResource("Role", "d8-cert-manager", "yandex-dns-webhook:secrets-reader")
+			saSecretRole := f.KubernetesResource("Role", "d8-cert-manager", "yandex-dns-webhook")
 			Expect(saSecretRole.Exists()).To(BeTrue())
 			Expect(saSecretRole.Field("rules.0.resources.0").String()).To(Equal("secrets"))
 			Expect(saSecretRole.Field("rules.0.resourceNames.0").String()).To(Equal("yandex"))

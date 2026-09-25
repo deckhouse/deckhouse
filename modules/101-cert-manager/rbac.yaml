@@ -625,6 +625,36 @@ serviceAccounts:
             verbs:
               - create
         bind: false
+  - name: yandex-dns-webhook
+    path: yandex-dns-webhook
+    when: include "cert_manager.yandex_dns_configured" .
+    labels:
+      app: yandex-dns-webhook
+    namespaceRules:
+      - apiGroups:
+          - ""
+        resources:
+          - secrets
+        resourceNames:
+          - yandex
+        verbs:
+          - get
+    bindClusterRoles:
+      - system:auth-delegator
+    bindRoles:
+      - namespace: kube-system
+        name: extension-apiserver-authentication-reader
+    extraClusterRoles:
+      - name: flowcontrol
+        rules:
+          - apiGroups:
+              - flowcontrol.apiserver.k8s.io
+            resources:
+              - flowschemas
+              - prioritylevelconfigurations
+            verbs:
+              - list
+              - watch
 prometheusAccess:
   deployments:
     - cert-manager
@@ -700,3 +730,19 @@ access:
           - orders/finalizers
         verbs:
           - update
+  - name: yandex-dns-webhook:domain-solver
+    subjects:
+      - kind: ServiceAccount
+        name: cert-manager
+        namespace: d8-cert-manager
+    path: yandex-dns-webhook
+    when: include "cert_manager.yandex_dns_configured" .
+    labels:
+      app: yandex-dns-webhook
+    clusterRules:
+      - apiGroups:
+          - acme.cloud.yandex.com
+        resources:
+          - yandex-cloud-dns
+        verbs:
+          - create
