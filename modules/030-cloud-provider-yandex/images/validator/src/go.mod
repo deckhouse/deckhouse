@@ -3,7 +3,7 @@ module dhctl-provider-yandex
 go 1.25.11
 
 require (
-	github.com/deckhouse/deckhouse/go_lib/cloud-provider v0.0.0-00010101000000-000000000000
+	github.com/deckhouse/deckhouse/go_lib/cloud-provider 05af09cc8665
 	github.com/deckhouse/deckhouse/go_lib/dhctl-provider-protocol v0.0.0-00010101000000-000000000000
 	github.com/deckhouse/deckhouse/modules/030-cloud-provider-yandex/pkg v0.0.0-00010101000000-000000000000
 	github.com/deckhouse/deckhouse/pkg/log v0.0.0-00010101000000-000000000000
