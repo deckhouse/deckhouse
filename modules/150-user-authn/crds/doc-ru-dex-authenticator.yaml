@@ -58,7 +58,7 @@ spec:
                       description: |
                         Имя неймспейса, в котором располагается объект ListenerSet из Gateway API, на который будет ссылаться создаваемый HTTPRoute.
 
-                        Если не указано, используется пространство имен объекта `DexAuthenticator`.
+                        Если не указано, используется неймспейс объекта `DexAuthenticator`.
                     applicationHTTPRouteListenerSetSectionName:
                       description: |
                         Имя секции объекта ListenerSet из Gateway API, на которую будет ссылаться создаваемый HTTPRoute.
@@ -220,7 +220,7 @@ spec:
                             description: |
                               Имя неймспейса, в котором располагается объект ListenerSet из Gateway API, на который будет ссылаться создаваемый HTTPRoute.
 
-                              Если не указано, используется пространство имен объекта `DexAuthenticator`.
+                              Если не указано, используется неймспейс объекта `DexAuthenticator`.
                           httpRouteListenerSetSectionName:
                             description: |
                               Имя секции объекта ListenerSet из Gateway API, на которую будет ссылаться создаваемый HTTPRoute.
@@ -373,7 +373,7 @@ spec:
                             description: |
                               Имя неймспейса, в котором располагается объект ListenerSet из Gateway API, на который будет ссылаться создаваемый HTTPRoute.
 
-                              Если не указано, используется пространство имен объекта `DexAuthenticator`.
+                              Если не указано, используется неймспейс объекта `DexAuthenticator`.
                           httpRouteListenerSetSectionName:
                             description: |
                               Имя секции объекта ListenerSet из Gateway API, на которую будет ссылаться создаваемый HTTPRoute.
