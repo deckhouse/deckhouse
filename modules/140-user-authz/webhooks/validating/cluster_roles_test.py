@@ -16,9 +16,14 @@
 
 import unittest
 
-import cluster_roles
+import validation_webhook
 from deckhouse import hook, tests
 from dotmap import DotMap
+
+# The hook lives in a ValidationWebhook manifest; the harness assembles it the way webhook-operator does.
+cluster_roles = validation_webhook.load(
+    "modules/140-user-authz/templates/rbacv2-cluster-roles-validation-webhook.yaml"
+)
 
 
 def binding_context(name, labels=None, rules=None, selector_labels=None, annotations=None):
