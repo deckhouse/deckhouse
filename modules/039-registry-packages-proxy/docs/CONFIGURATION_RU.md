@@ -12,4 +12,6 @@ title: "Модуль registry-packages-proxy: настройки"
 
 {% include module-requirements.liquid %}
 
-Модуль не имеет настроек.
+У модуля нет обязательных настроек.
+
+<!-- SCHEMA -->
