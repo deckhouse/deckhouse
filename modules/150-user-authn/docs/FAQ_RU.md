@@ -82,7 +82,7 @@ annotations:
   nginx.ingress.kubernetes.io/auth-response-headers: X-Auth-Request-User,X-Auth-Request-Email
 ```
 
-Для приложения, в котором указан только `applicationIngressClassName`, HTTPRoute не создаётся. Если публикация через Ingress отключена параметром [`global.modules.ingress.enabled`](/products/kubernetes-platform/documentation/v1/reference/api/global.html#parameters-modules-ingress-enabled), для такого приложения не создаётся и Ingress — оно остаётся неопубликованным; остальные приложения рендерятся как обычно.
+Для приложения, в котором указан только `applicationIngressClassName`, HTTPRoute не создаётся. Если публикация через Ingress отключена параметром [`global.modules.ingress.enabled`](/products/kubernetes-platform/documentation/v1/reference/api/global.html#parameters-modules-ingress-enabled), не создаётся и Ingress. Само приложение остаётся доступным через тот маршрут, которым вы его публикуете, а вот его эндпоинты `/dex-authenticator` — нет: редирект на вход попадает в само приложение, и войти невозможно. На остальные приложения это не влияет.
 
 {% endtab %}
 {% tab "Через ALBInstance или ClusterALBInstance" %}
@@ -110,9 +110,9 @@ spec:
     applicationHTTPRouteListenerSetName: my-listenerset
 ```
 
-Создаваемый для DexAuthenticator HTTPRoute подключается к этому же ListenerSet, поэтому ListenerSet должен принимать маршруты из пространства имён, в котором находится DexAuthenticator.
+Создаваемый для DexAuthenticator HTTPRoute подключается к этому же ListenerSet, поэтому ListenerSet должен принимать маршруты из неймспейса, в котором находится DexAuthenticator.
 
-Для приложения, в котором указан только `gatewayAPI`, Ingress не создаётся. Если Gateway API отключён параметром [`global.modules.gatewayAPI.enabled`](/products/kubernetes-platform/documentation/v1/reference/api/global.html#parameters-modules-gatewayapi-enabled) либо в кластере недоступно API `gateway.networking.k8s.io/v1/HTTPRoute`, для такого приложения не создаётся и HTTPRoute — оно остаётся неопубликованным; остальные приложения рендерятся как обычно.
+Для приложения, в котором указан только `gatewayAPI`, Ingress не создаётся. Если Gateway API отключён параметром [`global.modules.gatewayAPI.enabled`](/products/kubernetes-platform/documentation/v1/reference/api/global.html#parameters-modules-gatewayapi-enabled) либо в кластере нет API HTTPRoute, не создаётся и HTTPRoute — с тем же результатом: приложение остаётся доступным, его эндпоинты `/dex-authenticator` — нет, войти невозможно. На остальные приложения это не влияет.
 
 {% endtab %}
 {% endtabs %}

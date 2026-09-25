@@ -82,7 +82,7 @@ annotations:
   nginx.ingress.kubernetes.io/auth-response-headers: X-Auth-Request-User,X-Auth-Request-Email
 ```
 
-An application that specifies only `applicationIngressClassName` gets no HTTPRoute. If Ingress publication is turned off with [`global.modules.ingress.enabled`](/products/kubernetes-platform/documentation/v1/reference/api/global.html#parameters-modules-ingress-enabled), such an application gets no Ingress either and stays unpublished; the remaining applications are rendered as usual.
+An application that specifies only `applicationIngressClassName` gets no HTTPRoute. If Ingress publication is turned off with [`global.modules.ingress.enabled`](/products/kubernetes-platform/documentation/v1/reference/api/global.html#parameters-modules-ingress-enabled), it gets no Ingress either. The application itself stays reachable through the route you publish it with, but none of its `/dex-authenticator` endpoints are, so the redirect to sign in lands on the application and no one can log in. Other applications are unaffected.
 
 {% endtab %}
 {% tab "Through ALBInstance or ClusterALBInstance" %}
@@ -112,7 +112,7 @@ spec:
 
 The HTTPRoute created for the DexAuthenticator attaches to that same ListenerSet, so the ListenerSet must accept routes from the namespace of the DexAuthenticator.
 
-An application that specifies only `gatewayAPI` gets no Ingress. If Gateway API is turned off with [`global.modules.gatewayAPI.enabled`](/products/kubernetes-platform/documentation/v1/reference/api/global.html#parameters-modules-gatewayapi-enabled), or the `gateway.networking.k8s.io/v1/HTTPRoute` API is unavailable in the cluster, such an application gets no HTTPRoute either and stays unpublished; the remaining applications are rendered as usual.
+An application that specifies only `gatewayAPI` gets no Ingress. If Gateway API is turned off with [`global.modules.gatewayAPI.enabled`](/products/kubernetes-platform/documentation/v1/reference/api/global.html#parameters-modules-gatewayapi-enabled), or the cluster serves no HTTPRoute API, it gets no HTTPRoute either, with the same result: the application stays reachable, its `/dex-authenticator` endpoints do not, and no one can log in. Other applications are unaffected.
 
 {% endtab %}
 {% endtabs %}
