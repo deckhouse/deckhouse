@@ -77,3 +77,14 @@ Files:
 Changes:
 
 - Fixes TCP health monitors removal during an update of the pool
+
+### 009-batch-vapp-vm-cache.patch
+
+Files:
+
+- pkg/ccm/vminfocache.go
+
+Changes:
+
+- On a cache miss, request the cluster vApp once and index every VM returned by that response.
+- This removes repeated full-vApp downloads during a burst of Node initialization, while keeping the lock around the shared mutable VCD client.
