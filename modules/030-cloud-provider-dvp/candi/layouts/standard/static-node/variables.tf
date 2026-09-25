@@ -119,6 +119,7 @@ locals {
   virtual_machine_class_name = local.instance_class.virtualMachine.virtualMachineClassName
 
   bootloader            = lookup(local.instance_class.virtualMachine, "bootloader", null)
+  gpus                  = lookup(local.instance_class.virtualMachine, "gpus", [])
   live_migration_policy = lookup(local.instance_class.virtualMachine, "liveMigrationPolicy", "PreferForced")
   run_policy = lookup(
     local.instance_class.virtualMachine,
