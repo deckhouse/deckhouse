@@ -1,0 +1,51 @@
+{
+  "@context": "https://openvex.dev/ns/v0.2.0",
+  "@id": "merged-vex-b1a1946c435f4da180d60407cd91d23479c797457996e08e29dc03ef1e995291",
+  "author": "Deckhouse <contact@deckhouse.io>",
+  "version": 1,
+  "statements": [
+    {
+      "vulnerability": {
+        "name": "CVE-2026-56855"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/golang.org/x/crypto"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_present",
+      "impact_statement": "CVE-2026-56855 затрагивает пакет golang.org/x/crypto/ssh (DoS через SSH mux). Бинарь node-controller не импортирует golang.org/x/crypto/ssh: модуль x/crypto приходит транзитивно через github.com/Masterminds/sprig/v3, и в граф сборки (go list -deps ./cmd/main.go) входят только подпакеты bcrypt, blowfish, pbkdf2, scrypt, hkdf, nacl/secretbox, salsa20/salsa, cryptobyte и internal/*. Уязвимый код в бинарь не компилируется; исправление v0.56.0 требует Go 1.26, тогда как go.mod модуля использует Go 1.25.",
+      "timestamp": "2026-09-25T12:00:00.000000Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-78662"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/golang.org/x/crypto"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_present",
+      "impact_statement": "CVE-2026-78662 затрагивает пакет golang.org/x/crypto/ssh. Бинарь node-controller не импортирует golang.org/x/crypto/ssh: модуль x/crypto приходит транзитивно через github.com/Masterminds/sprig/v3, и в граф сборки (go list -deps ./cmd/main.go) входят только подпакеты bcrypt, blowfish, pbkdf2, scrypt, hkdf, nacl/secretbox, salsa20/salsa, cryptobyte и internal/*. Уязвимый код в бинарь не компилируется; исправление v0.56.0 требует Go 1.26, тогда как go.mod модуля использует Go 1.25.",
+      "timestamp": "2026-09-25T12:00:00.000000Z"
+    },
+    {
+      "vulnerability": {
+        "name": "GO-2026-5932"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/golang.org/x/crypto"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_present",
+      "impact_statement": "GO-2026-5932 относится к пакету golang.org/x/crypto/openpgp, который не поддерживается и признан небезопасным по дизайну; исправленной версии нет. Бинарь node-controller не импортирует openpgp: модуль x/crypto приходит транзитивно через github.com/Masterminds/sprig/v3, и в граф сборки (go list -deps ./cmd/main.go) входят только подпакеты bcrypt, blowfish, pbkdf2, scrypt, hkdf, nacl/secretbox, salsa20/salsa, cryptobyte и internal/*. Уязвимый код в бинарь не компилируется.",
+      "timestamp": "2026-09-25T12:00:00.000000Z"
+    }
+  ],
+  "timestamp": "2026-09-25T12:00:00Z"
+}
