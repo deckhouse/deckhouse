@@ -736,6 +736,14 @@ func TestTheMasterWaitEndsOnWhatTheMachineReports(t *testing.T) {
 	}
 }
 
+// Registration includes the work between the machine taking its payload and
+// kubelet creating the Node. Keep enough headroom for initramfs, nodelet and
+// system-extension startup instead of racing that path at two minutes.
+func TestImmutableMasterRegistrationWaitHasInstallerHeadroom(t *testing.T) {
+	require.Equal(t, 4*time.Minute,
+		time.Duration(waitNodeRegistered.attempts)*waitNodeRegistered.interval)
+}
+
 // A machine that is still working is not a machine that failed: the wait goes
 // on, and what it reports is that the Node is not there yet.
 func TestTheMasterWaitGoesOnWhileTheMachineIsStillWorking(t *testing.T) {
