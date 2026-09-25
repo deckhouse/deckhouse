@@ -156,55 +156,63 @@ spec:
   updatePolicy:
     updateMode: "InPlaceOrRecreate"
   resourcePolicy:
+    {{- /* The recommender runs with --round-memory-bytes=67108864, so it never emits a memory
+           recommendation below 64Mi and always rounds up to a multiple of it. A maxAllowed.memory
+           that is not a multiple of 64Mi wastes the remainder; one below 64Mi caps every
+           recommendation unconditionally. It also splits --pod-recommendation-min-cpu-millicores=25
+           evenly across the containers of a pod, so a maxAllowed.cpu below 25m is always binding
+           for a single-container pod. Ceilings here are multiples of 64Mi covering the observed
+           7-day peaks with headroom; raising them reserves nothing, since container requests come
+           from minAllowed. */}}
     containerPolicies:
     - containerName: "provisioner"
       minAllowed:
         {{- include "provisioner_resources" $context | nindent 8 }}
       maxAllowed:
-        cpu: 20m
-        memory: 50Mi
+        cpu: 50m
+        memory: 128Mi
     - containerName: "attacher"
       minAllowed:
         {{- include "attacher_resources" $context | nindent 8 }}
       maxAllowed:
-        cpu: 20m
-        memory: 50Mi
+        cpu: 50m
+        memory: 128Mi
     {{- if $resizerEnabled }}
     - containerName: "resizer"
       minAllowed:
         {{- include "resizer_resources" $context | nindent 8 }}
       maxAllowed:
-        cpu: 20m
-        memory: 50Mi
+        cpu: 50m
+        memory: 128Mi
     {{- end }}
     {{- if and $syncerEnabled $syncerImage }}
     - containerName: "syncer"
       minAllowed:
         {{- include "syncer_resources" $context | nindent 8 }}
       maxAllowed:
-        cpu: 20m
-        memory: 50Mi
+        cpu: 50m
+        memory: 128Mi
     {{- end }}
     {{- if $snapshotterEnabled }}
     - containerName: "snapshotter"
       minAllowed:
         {{- include "snapshotter_resources" $context | nindent 8 }}
       maxAllowed:
-        cpu: 20m
-        memory: 50Mi
+        cpu: 50m
+        memory: 128Mi
     {{- end }}
     - containerName: "livenessprobe"
       minAllowed:
         {{- include "livenessprobe_resources" $context | nindent 8 }}
       maxAllowed:
-        cpu: 20m
-        memory: 50Mi
+        cpu: 25m
+        memory: 64Mi
     - containerName: "controller"
       minAllowed:
         {{- include "controller_resources" $context | nindent 8 }}
       maxAllowed:
-        cpu: 20m
-        memory: 100Mi
+        cpu: 100m
+        memory: 256Mi
     {{- if $additionalControllerVPA }}
     {{- $additionalControllerVPA | toYaml | nindent 4 }}
     {{- end }}
@@ -730,6 +738,22 @@ rules:
 - apiGroups: ["storage.k8s.io"]
   resources: ["volumeattachments"]
   verbs: ["get", "list", "watch"]
+{{- if (include "helm_lib_api_version_exists" (list . "storage-foundation.deckhouse.io/v1alpha1/VolumeRestoreRequest")) }}
+# When storage-foundation is enabled, the stock external-provisioner is replaced with its fork
+# (see helm_lib_csi_image_with_common_fallback), which additionally runs the VolumeRestoreRequest
+# executor: a cluster-wide informer on volumerestorerequests that provisions the target volume and
+# creates the PV/PVC pair for it. The sidecar is deployed by the driver module, so its
+# provisioner SA needs these permissions in every module that uses this define.
+# volumerestorerequests/status is intentionally NOT granted: the status is owned by the
+# storage-foundation controller, which derives it from the target PVC; the sidecar only executes.
+- apiGroups: ["storage-foundation.deckhouse.io"]
+  resources: ["volumerestorerequests"]
+  verbs: ["get", "list", "watch"]
+# Complements the stock persistentvolumeclaims rule above (get/list/watch/update).
+- apiGroups: [""]
+  resources: ["persistentvolumeclaims"]
+  verbs: ["create", "patch"]
+{{- end }}
 ---
 kind: ClusterRoleBinding
 apiVersion: rbac.authorization.k8s.io/v1
