@@ -94,7 +94,6 @@ spec:
                 properties:
                   confirmation:
                     type: boolean
-                  x-doc-deprecated: true
                   message:
                     description: 'Deprecated: use Messages with localized ru/en fields
                       instead.'
