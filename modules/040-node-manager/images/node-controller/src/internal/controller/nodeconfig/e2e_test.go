@@ -71,6 +71,7 @@ const (
 	testCNIDigest               = testenv.TestCNIDigest
 	testKubeletDigest           = testenv.TestKubeletDigest
 	testNodeletDigest           = testenv.TestNodeletDigest
+	testGuestAgentDigest        = testenv.TestGuestAgentDigest
 	testOSImageDigest           = testenv.TestOSImageDigest
 	testClusterCA               = testenv.TestClusterCA
 	// The extension one spec asks for through a NodeExtensionRequest, and the
@@ -157,10 +158,10 @@ var _ = Describe("NodeConfig controller", func() {
 			// The node talks to the API servers the cluster actually has.
 			g.Expect(nc.Spec.APIServerEndpoints).To(ConsistOf(apiServerEndpoints))
 
-			// Every immutable node runs these four system extensions, pinned
+			// Every immutable node runs these five system extensions, pinned
 			// by the digests of this release. The agent is one of them: it is
 			// delivered the same way as the rest, so it updates without a reboot.
-			g.Expect(nc.Spec.Extensions).To(HaveLen(4))
+			g.Expect(nc.Spec.Extensions).To(HaveLen(5))
 			byName := map[string]string{}
 			for _, ext := range nc.Spec.Extensions {
 				byName[ext.Name] = ext.Digest
@@ -169,6 +170,7 @@ var _ = Describe("NodeConfig controller", func() {
 			g.Expect(byName).To(HaveKeyWithValue(cniExtension, testCNIDigest))
 			g.Expect(byName).To(HaveKeyWithValue(kubeletExtension, testKubeletDigest))
 			g.Expect(byName).To(HaveKeyWithValue(nodeletExtension, testNodeletDigest))
+			g.Expect(byName).To(HaveKeyWithValue(guestAgentExtension, testGuestAgentDigest))
 
 			// The update window is the one the operator configured.
 			g.Expect(nc.Spec.UpdatePolicy.Window.From).To(Equal("03:00"))
@@ -221,7 +223,7 @@ var _ = Describe("NodeConfig controller", func() {
 		createNode(ctx, nodeName, ngName)
 
 		Eventually(func(g Gomega) {
-			g.Expect(getNodeConfig(ctx, g, nodeName).Spec.Extensions).To(HaveLen(4))
+			g.Expect(getNodeConfig(ctx, g, nodeName).Spec.Extensions).To(HaveLen(5))
 		}, testenv.EventuallyTimeout, testenv.EventuallyPoll).Should(Succeed())
 
 		By("asking for an extension on the group")
@@ -1427,7 +1429,7 @@ var _ = Describe("NodeConfig controller", func() {
 
 			// The render did happen: the cluster-wide inputs are in.
 			g.Expect(nc.Spec.APIServerEndpoints).To(ConsistOf(apiServerEndpoints))
-			g.Expect(nc.Spec.Extensions).To(HaveLen(4))
+			g.Expect(nc.Spec.Extensions).To(HaveLen(5))
 
 			// What only the provisioner knew was not dropped.
 			g.Expect(nc.Spec.Network.Interfaces).To(HaveLen(1))
@@ -1590,7 +1592,7 @@ var _ = Describe("NodeConfig controller", func() {
 
 			// The render did happen: the cluster-wide inputs are in.
 			g.Expect(nc.Spec.APIServerEndpoints).To(ConsistOf(apiServerEndpoints))
-			g.Expect(nc.Spec.Extensions).To(HaveLen(4))
+			g.Expect(nc.Spec.Extensions).To(HaveLen(5))
 
 			// What only the installer knew was not dropped.
 			g.Expect(nc.Spec.Kubelet.ResourceReservation).NotTo(BeNil())
@@ -1720,11 +1722,11 @@ func heartbeat(ctx context.Context, nodeName string) {
 func setContainerdDigest(ctx context.Context, digest string) {
 	GinkgoHelper()
 
-	layout := `{"registrypackages":{"containerdSysext224":%q,"kubernetesCniSysext162":%q,"kubeletSysext1356":%q,"nodeletSysext":%q},"nodeManager":{"engine":%q},"common":{"pause":%q}}`
+	layout := `{"registrypackages":{"containerdSysext224":%q,"kubernetesCniSysext162":%q,"kubeletSysext1356":%q,"nodeletSysext":%q,"qemuGuestAgentSysext":%q},"nodeManager":{"engine":%q},"common":{"pause":%q}}`
 	original := fmt.Sprintf(layout, testContainerdDigest, testCNIDigest, testKubeletDigest, testNodeletDigest,
-		testOSImageDigest, testPauseDigest)
+		testGuestAgentDigest, testOSImageDigest, testPauseDigest)
 	updated := fmt.Sprintf(layout, digest, testCNIDigest, testKubeletDigest, testNodeletDigest,
-		testOSImageDigest, testPauseDigest)
+		testGuestAgentDigest, testOSImageDigest, testPauseDigest)
 
 	writeDigests := func(ctx context.Context, data string) {
 		cm := &corev1.ConfigMap{}

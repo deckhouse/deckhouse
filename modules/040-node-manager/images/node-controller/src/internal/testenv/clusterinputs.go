@@ -44,6 +44,7 @@ const (
 	TestKubeletDigest           = "sha256:3333333333333333333333333333333333333333333333333333333333333333"
 	TestPauseDigest             = "sha256:4444444444444444444444444444444444444444444444444444444444444444"
 	TestNodeletDigest           = "sha256:6666666666666666666666666666666666666666666666666666666666666666"
+	TestGuestAgentDigest        = "sha256:8888888888888888888888888888888888888888888888888888888888888888"
 	TestOSImageDigest           = "sha256:7777777777777777777777777777777777777777777777777777777777777777"
 	TestRegistryAddress         = "registry.example.com"
 	TestRegistryPath            = "/deckhouse/ce"
@@ -77,8 +78,8 @@ func EnsureClusterInputs(ctx context.Context, c client.Client) (string, []string
 	EnsureObject(ctx, c, &corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: nodecommon.MachineNamespace}})
 	EnsureObject(ctx, c, &corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: registrySecretNS}})
 
-	digests := fmt.Sprintf(`{"registrypackages":{"containerdSysext224":%q,"kubernetesCniSysext162":%q,"kubeletSysext1356":%q,"nodeletSysext":%q},"nodeManager":{"engine":%q},"common":{"pause":%q}}`,
-		TestContainerdDigest, TestCNIDigest, TestKubeletDigest, TestNodeletDigest,
+	digests := fmt.Sprintf(`{"registrypackages":{"containerdSysext224":%q,"kubernetesCniSysext162":%q,"kubeletSysext1356":%q,"nodeletSysext":%q,"qemuGuestAgentSysext":%q},"nodeManager":{"engine":%q},"common":{"pause":%q}}`,
+		TestContainerdDigest, TestCNIDigest, TestKubeletDigest, TestNodeletDigest, TestGuestAgentDigest,
 		TestOSImageDigest, TestPauseDigest)
 	EnsureObject(ctx, c, &corev1.ConfigMap{
 		ObjectMeta: metav1.ObjectMeta{Namespace: nodecommon.MachineNamespace, Name: imagesDigestsConfigMap},

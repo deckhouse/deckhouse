@@ -64,6 +64,7 @@ func sysextExtensions(images map[string]any, kubernetesVersion string) ([]extens
 		{Name: kubeletExtension, Digest: newestPatchDigest(packages, "kubeletSysext"+minor), RequestedBy: platformExtensionRequestedBy},
 		{Name: cniExtension, Digest: cni, RequestedBy: platformExtensionRequestedBy},
 		{Name: nodeletExtension, Digest: packages[nodeletSysextImage], RequestedBy: platformExtensionRequestedBy},
+		{Name: guestAgentExtension, Digest: packages[guestAgentSysextImage], RequestedBy: platformExtensionRequestedBy},
 	}
 	for _, e := range extensions {
 		if e.Digest == "" {

@@ -583,26 +583,33 @@ func TestSysextDigestsAgent(t *testing.T) {
 		"kubernetesCniSysext162": "sha256:n",
 		"kubeletSysext1356":      "sha256:k",
 		"nodeletSysext":          "sha256:a",
+		"qemuGuestAgentSysext":   "sha256:q",
 	}
 
-	t.Run("the agent digest is picked up", func(t *testing.T) {
+	t.Run("both versionless digests are picked up", func(t *testing.T) {
 		got, err := sysextDigests(map[string]map[string]string{registryPackagesDigestsKey: packages}, "1.35")
 		require.NoError(t, err)
 		require.Equal(t, "sha256:a", got[nodeletExtension])
+		require.Equal(t, "sha256:q", got[guestAgentExtension])
 	})
 
-	t.Run("a release without the agent image is refused", func(t *testing.T) {
-		without := make(map[string]string, len(packages))
-		for name, digest := range packages {
-			if name == "nodeletSysext" {
-				continue
+	for image, name := range map[string]string{
+		"nodeletSysext":        nodeletExtension,
+		"qemuGuestAgentSysext": guestAgentExtension,
+	} {
+		t.Run("a release without "+image+" is refused", func(t *testing.T) {
+			without := make(map[string]string, len(packages))
+			for have, digest := range packages {
+				if have == image {
+					continue
+				}
+				without[have] = digest
 			}
-			without[name] = digest
-		}
 
-		_, err := sysextDigests(map[string]map[string]string{registryPackagesDigestsKey: without}, "1.35")
-		require.ErrorContains(t, err, nodeletExtension)
-	})
+			_, err := sysextDigests(map[string]map[string]string{registryPackagesDigestsKey: without}, "1.35")
+			require.ErrorContains(t, err, name)
+		})
+	}
 }
 
 // Who owns containerd's registry.d is the registry module's answer, read from
