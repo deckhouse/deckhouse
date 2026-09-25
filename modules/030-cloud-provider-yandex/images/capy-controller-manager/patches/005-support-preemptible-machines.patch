@@ -1,0 +1,57 @@
+diff --git a/api/v1alpha1/yandexmachine_types.go b/api/v1alpha1/yandexmachine_types.go
+index c07671f..39db936 100644
+--- a/api/v1alpha1/yandexmachine_types.go
++++ b/api/v1alpha1/yandexmachine_types.go
+@@ -54,6 +54,13 @@ type YandexMachineSpec struct {
+ 	// +kubebuilder:default=standard-v3
+ 	PlatformID *string `json:"platformID,omitempty"`
+ 
++	// Preemptible is set to true if YandexCloud VM should be created as preemptible.
++	// Preemptible VMs are cheaper, but can be stopped by YandexCloud at any time and always after 24 hours.
++	// More information https://yandex.cloud/en/docs/compute/concepts/preemptible-vm .
++	// +optional
++	// +kubebuilder:default=false
++	Preemptible *bool `json:"preemptible,omitempty"`
++
+ 	// Disk is boot storage configuration for YandexCloud VM.
+ 	BootDisk *Disk `json:"bootDisk"`
+ 
+diff --git a/api/v1alpha1/zz_generated.deepcopy.go b/api/v1alpha1/zz_generated.deepcopy.go
+index ab51216..beb9337 100644
+--- a/api/v1alpha1/zz_generated.deepcopy.go
++++ b/api/v1alpha1/zz_generated.deepcopy.go
+@@ -525,6 +525,11 @@ func (in *YandexMachineSpec) DeepCopyInto(out *YandexMachineSpec) {
+ 		*out = new(string)
+ 		**out = **in
+ 	}
++	if in.Preemptible != nil {
++		in, out := &in.Preemptible, &out.Preemptible
++		*out = new(bool)
++		**out = **in
++	}
+ 	if in.BootDisk != nil {
+ 		in, out := &in.BootDisk, &out.BootDisk
+ 		*out = new(Disk)
+diff --git a/internal/pkg/cloud/scope/machine.go b/internal/pkg/cloud/scope/machine.go
+index 0bfa233..d1df608 100644
+--- a/internal/pkg/cloud/scope/machine.go
++++ b/internal/pkg/cloud/scope/machine.go
+@@ -235,6 +235,11 @@ func (m *MachineScope) GetInstanceReq() (*compute.CreateInstanceRequest, error)
+ 	}
+ 	metadata["user-data"] = bootstrapData
+ 
++	schedulingPolicy := &compute.SchedulingPolicy{}
++	if m.YandexMachine.Spec.Preemptible != nil {
++		schedulingPolicy.Preemptible = *m.YandexMachine.Spec.Preemptible
++	}
++
+ 	return &compute.CreateInstanceRequest{
+ 		FolderId:      m.ClusterGetter.GetFolderID(),
+ 		Name:          m.YandexMachine.GetName(),
+@@ -257,5 +262,6 @@ func (m *MachineScope) GetInstanceReq() (*compute.CreateInstanceRequest, error)
+ 			},
+ 		},
+ 		NetworkInterfaceSpecs: networkInterfacesSpecs,
++		SchedulingPolicy:      schedulingPolicy,
+ 	}, nil
+ }
