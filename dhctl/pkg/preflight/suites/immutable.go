@@ -50,12 +50,13 @@ func NewImmutableSuite(deps ImmutableDeps) preflight.Suite {
 }
 
 // NewImmutableStaticSuite is what a static cluster of immutable machines can be checked for. It
-// takes the two checks of NewStaticSuite that read the configuration and nothing else: every
-// other one is built over an SSH provider this path has none of, or over the node interface
+// takes the check of NewStaticSuite that reads the configuration and nothing else: every other
+// one is built over an SSH provider this path has none of, or over the node interface
 // helper.GetNodeInterface hands back without one — the installer container itself.
+//
+// The CIDR comparison that used to be here is part of loading the configuration now.
 func NewImmutableStaticSuite(metaConfig *config.MetaConfig) preflight.Suite {
 	return preflight.NewSuite(
-		checks.CidrIntersectionStatic(metaConfig),
 		checks.StaticInstancesIPDuplication(metaConfig),
 	)
 }

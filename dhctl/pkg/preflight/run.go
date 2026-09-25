@@ -20,13 +20,27 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app/options"
 )
 
-func RunSuite(ctx context.Context, suite Suite, phase Phase, preflightOpts *options.PreflightOptions) error {
+// RunSuite runs one suite under its own title, with no cache.
+//
+// It is for the commands that are not bootstrap: converge, destroy and check reach the same
+// machines over the same SSH, and had no preflight at all. An operator with a key the node does
+// not accept waited about four minutes of "Try to connect to host" before "Timeout while
+// \"Waiting for SSH connection\""; one without sudo waited for "Timeout while \"Get Kubernetes
+// API client\"". Both are one SSH round trip to establish.
+//
+// No cache: these commands run against a cluster that already exists and changes between runs,
+// and the question being asked is whether the machines answer now.
+func RunSuite(ctx context.Context, suite Suite, phase Phase, title string, preflightOpts *options.PreflightOptions) error {
 	if suite == nil || len(suite.Checks()) == 0 {
 		return nil
 	}
+
 	preflight := New(suite)
+	preflight.SetTitle(title)
 	if preflightOpts != nil {
 		preflight.DisableChecks(preflightOpts.DisabledChecks()...)
+		preflight.SetSkippedAll(preflightOpts.SkipAll)
+		preflight.SetFailFast(preflightOpts.FailFast)
 	}
 	return preflight.Run(ctx, phase)
 }

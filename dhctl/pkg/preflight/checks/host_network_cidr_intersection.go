@@ -30,8 +30,10 @@ import (
 )
 
 type HostNetworkCIDRIntersectionCheck struct {
-	MetaConfig    *config.MetaConfig
-	NodeInterface libcon.Interface
+	MetaConfig *config.MetaConfig
+	// NodeInterface is resolved when the check runs, not when its suite is built: see
+	// NodeInterfaceFunc.
+	NodeInterface NodeInterfaceFunc
 }
 
 const HostNetworkCIDRIntersectionCheckName preflight.CheckName = "host-network-cidr-intersection"
@@ -69,7 +71,7 @@ type ipRouteEntry struct {
 }
 
 func (HostNetworkCIDRIntersectionCheck) Description() string {
-	return "cluster CIDRs do not intersect with host networks"
+	return "the cluster CIDRs do not overlap the networks the node uses"
 }
 
 func (HostNetworkCIDRIntersectionCheck) Phase() preflight.Phase {
@@ -77,32 +79,54 @@ func (HostNetworkCIDRIntersectionCheck) Phase() preflight.Phase {
 }
 
 func (HostNetworkCIDRIntersectionCheck) RetryPolicy() preflight.RetryPolicy {
-	return preflight.DefaultRetryPolicy
+	return preflight.NoRetry
 }
 
-func (c HostNetworkCIDRIntersectionCheck) Run(ctx context.Context) error {
+func (c HostNetworkCIDRIntersectionCheck) Run(ctx context.Context) (string, error) {
 	if c.MetaConfig == nil {
-		return fmt.Errorf("metaConfig is required")
+		return "", fmt.Errorf("the cluster configuration was not passed to this check")
 	}
 	if c.NodeInterface == nil {
-		return fmt.Errorf("node interface is required")
+		return "", fmt.Errorf("the connection to the node was not passed to this check")
+	}
+
+	nodeInterface, err := c.NodeInterface(ctx)
+	if err != nil {
+		return "", err
 	}
 
 	podCIDR, serviceCIDR, err := getCIDRs(c.MetaConfig)
 	if err != nil {
-		return err
+		return "", err
 	}
 
-	host, err := collectHostNetworkState(ctx, c.NodeInterface)
+	host, err := collectHostNetworkState(ctx, nodeInterface)
 	if err != nil {
-		return err
+		return "", scriptFailure("read the network configuration", nodeInterface, nil, err)
 	}
 
-	return checkClusterCIDRsAgainstHost(
-		podCIDR,
-		serviceCIDR,
-		host,
-	)
+	conflict, err := findClusterCIDRConflict(podCIDR, serviceCIDR, host)
+	if err != nil {
+		return "", err
+	}
+	if conflict != nil {
+		// A network the node is already on is not going to move between two attempts.
+		return "", preflight.Permanent(&preflight.Failure{
+			Checked:  fmt.Sprintf("ClusterConfiguration.%s against the networks of %s", conflict.field, hostPhrase(nodeInterface)),
+			Observed: conflict.observed,
+			Expected: "cluster CIDRs that do not overlap any network or address of the node",
+			Fix:      fmt.Sprintf("change ClusterConfiguration.%s to a range the node does not use", conflict.field),
+		})
+	}
+
+	return fmt.Sprintf("podSubnetCIDR %s and serviceSubnetCIDR %s do not overlap the networks of %s",
+		podCIDR, serviceCIDR, hostPhrase(nodeInterface)), nil
+}
+
+// cidrConflict is one overlap, named in the reader's vocabulary on both sides.
+type cidrConflict struct {
+	field    string
+	observed string
 }
 
 func collectHostNetworkState(
@@ -123,11 +147,12 @@ func collectHostNetworkState(
 		return hostNetworkState{}, err
 	}
 
-	networks, err := parseIPAddresses(addressOutput)
+	addressState, err := parseIPAddresses(addressOutput)
 	if err != nil {
 		return hostNetworkState{}, err
 	}
-	state.Networks = append(state.Networks, networks...)
+	state.Networks = append(state.Networks, addressState.Networks...)
+	state.Addresses = append(state.Addresses, addressState.Addresses...)
 
 	for _, family := range []string{"-4", "-6"} {
 		routeOutput, err := hostCommandOutput(
@@ -195,106 +220,98 @@ func hostCommandOutput(
 	stderrMessage := strings.TrimSpace(string(stderr))
 	if stderrMessage == "" {
 		return nil, fmt.Errorf(
-			"execute host command %s: %w",
+			"run %s on the node: %w",
 			name,
 			err,
 		)
 	}
 
 	return nil, fmt.Errorf(
-		"execute host command %s: %w: %s",
+		"run %s on the node: %w: %s",
 		name,
 		err,
 		stderrMessage,
 	)
 }
 
-func checkClusterCIDRsAgainstHost(
+// findClusterCIDRConflict looks for the first cluster CIDR that overlaps something the node is
+// already using. The returned error is for input that could not be read at all; an overlap comes
+// back as a *cidrConflict, so the caller can phrase it with the host it was found on.
+func findClusterCIDRConflict(
 	podCIDR string,
 	serviceCIDR string,
 	host hostNetworkState,
-) error {
+) (*cidrConflict, error) {
 	clusterNetworks := []struct {
 		name string
 		cidr string
 	}{
-		{
-			name: "podSubnetCIDR",
-			cidr: podCIDR,
-		},
-		{
-			name: "serviceSubnetCIDR",
-			cidr: serviceCIDR,
-		},
+		{name: "podSubnetCIDR", cidr: podCIDR},
+		{name: "serviceSubnetCIDR", cidr: serviceCIDR},
 	}
 
 	for _, clusterNetwork := range clusterNetworks {
 		clusterPrefix, err := netip.ParsePrefix(clusterNetwork.cidr)
 		if err != nil {
-			return fmt.Errorf(
-				"invalid %s %q: %w",
-				clusterNetwork.name,
-				clusterNetwork.cidr,
-				err,
-			)
+			return nil, preflight.Permanent(&preflight.Failure{
+				Checked:  fmt.Sprintf("ClusterConfiguration.%s", clusterNetwork.name),
+				Observed: fmt.Sprintf("%s is %q, which is not a CIDR: %s", clusterNetwork.name, clusterNetwork.cidr, err),
+				// Both families: netip.ParsePrefix takes either, and the comparison below works on
+				// whatever it returns. Saying IPv4 here promised a restriction the check does not
+				// have, and an operator with an IPv6 range would read it as a refusal.
+				Expected: "an IPv4 or IPv6 range in CIDR notation",
+				Fix: fmt.Sprintf("write %s as an address and a prefix, for example 10.111.0.0/16 or fd00::/48",
+					clusterNetwork.name),
+			})
 		}
 		clusterPrefix = clusterPrefix.Masked()
 
 		for _, detected := range host.Networks {
 			detectedPrefix, err := netip.ParsePrefix(detected.CIDR)
 			if err != nil {
-				return fmt.Errorf(
-					"invalid CIDR %q discovered from %s: %w",
-					detected.CIDR,
-					detected.Source,
-					err,
-				)
+				return nil, fmt.Errorf("parse CIDR %q reported by %s: %w", detected.CIDR, detected.Source, err)
 			}
 
 			if clusterPrefix.Overlaps(detectedPrefix.Masked()) {
-				return fmt.Errorf(
-					"%s %s intersects with %s %s",
-					clusterNetwork.name,
-					clusterNetwork.cidr,
-					detected.Source,
-					detected.CIDR,
-				)
+				return &cidrConflict{
+					field:    clusterNetwork.name,
+					observed: fmt.Sprintf("%s %s overlaps %s, which the node uses (%s)", clusterNetwork.name, clusterNetwork.cidr, detected.CIDR, detected.Source),
+				}, nil
 			}
 		}
 
 		for _, detected := range host.Addresses {
 			detectedAddress, err := netip.ParseAddr(detected.Address)
 			if err != nil {
-				return fmt.Errorf(
-					"invalid IP address %q discovered from %s: %w",
-					detected.Address,
-					detected.Source,
-					err,
-				)
+				return nil, fmt.Errorf("parse IP address %q reported by %s: %w", detected.Address, detected.Source, err)
 			}
 
 			if clusterPrefix.Contains(detectedAddress) {
-				return fmt.Errorf(
-					"%s %s contains %s %s",
-					clusterNetwork.name,
-					clusterNetwork.cidr,
-					detected.Source,
-					detected.Address,
-				)
+				return &cidrConflict{
+					field:    clusterNetwork.name,
+					observed: fmt.Sprintf("%s %s contains %s, which the node uses (%s)", clusterNetwork.name, clusterNetwork.cidr, detected.Address, detected.Source),
+				}, nil
 			}
 		}
 	}
 
-	return nil
+	return nil, nil
 }
 
-func parseIPAddresses(output []byte) ([]detectedNetwork, error) {
+// parseIPAddresses reads `ip -j address show` into both the networks the interfaces are on and
+// the addresses the node itself holds.
+//
+// It used to keep only the masked network and throw the address away, which meant nothing knew
+// what address the node actually has — not the CIDR comparison here, and not the check that asks
+// whether any of them falls inside internalNetworkCIDRs, which could only report the network and
+// so printed 192.168.1.0 where the operator needed to see 192.168.1.15.
+func parseIPAddresses(output []byte) (hostNetworkState, error) {
 	var entries []ipAddressEntry
 	if err := json.Unmarshal(output, &entries); err != nil {
-		return nil, fmt.Errorf("parse ip address output: %w", err)
+		return hostNetworkState{}, fmt.Errorf("parse the output of `ip -j address show`: %w", err)
 	}
 
-	var networks []detectedNetwork
+	var state hostNetworkState
 
 	for _, entry := range entries {
 		for _, addressInfo := range entry.Addresses {
@@ -305,7 +322,7 @@ func parseIPAddresses(output []byte) ([]detectedNetwork, error) {
 
 			address, err := netip.ParseAddr(addressInfo.LocalAddress)
 			if err != nil {
-				return nil, fmt.Errorf(
+				return hostNetworkState{}, fmt.Errorf(
 					"parse address %q on interface %s: %w",
 					addressInfo.LocalAddress,
 					entry.InterfaceName,
@@ -315,7 +332,7 @@ func parseIPAddresses(output []byte) ([]detectedNetwork, error) {
 
 			if addressInfo.PrefixLength < 0 ||
 				addressInfo.PrefixLength > address.BitLen() {
-				return nil, fmt.Errorf(
+				return hostNetworkState{}, fmt.Errorf(
 					"invalid prefix length %d for address %s on interface %s",
 					addressInfo.PrefixLength,
 					addressInfo.LocalAddress,
@@ -328,21 +345,26 @@ func parseIPAddresses(output []byte) ([]detectedNetwork, error) {
 				addressInfo.PrefixLength,
 			).Masked()
 
-			networks = append(networks, detectedNetwork{
+			source := "interface " + entry.InterfaceName
+			state.Networks = append(state.Networks, detectedNetwork{
 				CIDR:   prefix.String(),
-				Source: "interface " + entry.InterfaceName,
+				Source: source,
+			})
+			state.Addresses = append(state.Addresses, detectedAddress{
+				Address: address.String(),
+				Source:  source,
 			})
 		}
 	}
 
-	return networks, nil
+	return state, nil
 }
 
 func parseIPRoutes(output []byte) (hostNetworkState, error) {
 	var routes []ipRouteEntry
 	if err := json.Unmarshal(output, &routes); err != nil {
 		return hostNetworkState{}, fmt.Errorf(
-			"parse ip route output: %w",
+			"parse the output of `ip -j route show table all`: %w",
 			err,
 		)
 	}
@@ -464,7 +486,7 @@ func parseResolvConf(output []byte) ([]detectedAddress, error) {
 		address, err := netip.ParseAddr(fields[1])
 		if err != nil {
 			return nil, fmt.Errorf(
-				"parse nameserver %q on line %d: %w",
+				"parse nameserver %q on line %d of /etc/resolv.conf: %w",
 				fields[1],
 				lineNumber,
 				err,
@@ -484,7 +506,7 @@ func parseResolvConf(output []byte) ([]detectedAddress, error) {
 	}
 
 	if err := scanner.Err(); err != nil {
-		return nil, fmt.Errorf("scan resolv.conf: %w", err)
+		return nil, fmt.Errorf("read /etc/resolv.conf: %w", err)
 	}
 
 	return addresses, nil
@@ -492,7 +514,7 @@ func parseResolvConf(output []byte) ([]detectedAddress, error) {
 
 func HostNetworkCIDRIntersection(
 	metaConfig *config.MetaConfig,
-	nodeInterface libcon.Interface,
+	nodeInterface NodeInterfaceFunc,
 ) preflight.Check {
 	check := HostNetworkCIDRIntersectionCheck{
 		MetaConfig:    metaConfig,
@@ -504,6 +526,7 @@ func HostNetworkCIDRIntersection(
 		Description: check.Description(),
 		Phase:       check.Phase(),
 		Retry:       check.RetryPolicy(),
+		Timeout:     preflight.NodeCheckTimeout,
 		Run:         check.Run,
 	}
 }

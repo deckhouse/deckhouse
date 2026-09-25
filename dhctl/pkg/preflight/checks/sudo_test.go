@@ -21,7 +21,9 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
+	"github.com/stretchr/testify/require"
 
+	preflight "github.com/deckhouse/deckhouse/dhctl/pkg/preflight"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/preflight/checks/mocks"
 )
 
@@ -36,22 +38,12 @@ func TestCheckSudo(t *testing.T) {
 		expectedError string
 	}{
 		{
-			name: "sudo installed and allowed",
+			name: "sudo is allowed",
 			setupMock: func(
 				mni *mocks.MockNodeInterface,
-				checkInstalledCmd *mocks.MockCommand,
+				_ *mocks.MockCommand,
 				sudoCmd *mocks.MockCommand,
 			) {
-				mni.On(
-					"Command",
-					"command",
-					[]string{"-v", "sudo"},
-				).Return(checkInstalledCmd)
-
-				checkInstalledCmd.
-					On("Run", mock.Anything).
-					Return(nil)
-
 				mni.On(
 					"Command",
 					"true",
@@ -65,41 +57,12 @@ func TestCheckSudo(t *testing.T) {
 			},
 		},
 		{
-			name: "sudo is not installed",
-			setupMock: func(
-				mni *mocks.MockNodeInterface,
-				checkInstalledCmd *mocks.MockCommand,
-				_ *mocks.MockCommand,
-			) {
-				mni.On(
-					"Command",
-					"command",
-					[]string{"-v", "sudo"},
-				).Return(checkInstalledCmd)
-
-				checkInstalledCmd.
-					On("Run", mock.Anything).
-					Return(errors.New("exit status 127"))
-			},
-			expectedError: `required command "sudo" is not installed`,
-		},
-		{
 			name: "sudo is not allowed",
 			setupMock: func(
 				mni *mocks.MockNodeInterface,
-				checkInstalledCmd *mocks.MockCommand,
+				_ *mocks.MockCommand,
 				sudoCmd *mocks.MockCommand,
 			) {
-				mni.On(
-					"Command",
-					"command",
-					[]string{"-v", "sudo"},
-				).Return(checkInstalledCmd)
-
-				checkInstalledCmd.
-					On("Run", mock.Anything).
-					Return(nil)
-
 				mni.On(
 					"Command",
 					"true",
@@ -112,26 +75,20 @@ func TestCheckSudo(t *testing.T) {
 				sudoCmd.
 					On("Run", mock.Anything).
 					Return(exitErr)
+				sudoCmd.
+					On("StderrBytes").
+					Return([]byte("sudo: a password is required"))
 			},
-			expectedError: "provided SSH user is not allowed to sudo",
+			// What sudo itself said, rather than dhctl's paraphrase of it.
+			expectedError: "sudo: a password is required",
 		},
 		{
 			name: "unexpected error during sudo check",
 			setupMock: func(
 				mni *mocks.MockNodeInterface,
-				checkInstalledCmd *mocks.MockCommand,
+				_ *mocks.MockCommand,
 				sudoCmd *mocks.MockCommand,
 			) {
-				mni.On(
-					"Command",
-					"command",
-					[]string{"-v", "sudo"},
-				).Return(checkInstalledCmd)
-
-				checkInstalledCmd.
-					On("Run", mock.Anything).
-					Return(nil)
-
 				mni.On(
 					"Command",
 					"true",
@@ -147,7 +104,7 @@ func TestCheckSudo(t *testing.T) {
 					On("StderrBytes").
 					Return([]byte("timeout"))
 			},
-			expectedError: "unexpected error when checking sudo permissions for SSH user:",
+			expectedError: "timeout",
 		},
 	}
 
@@ -177,4 +134,63 @@ func TestCheckSudo(t *testing.T) {
 			mockSudoCmd.AssertExpectations(t)
 		})
 	}
+}
+
+// TestSudoInstalled covers the half of the old check that asks whether the command exists. It is
+// its own check because the fix is a package, not a sudoers rule, and because asking whether the
+// user may sudo is meaningless while sudo is absent.
+func TestSudoInstalled(t *testing.T) {
+	t.Run("sudo is installed", func(t *testing.T) {
+		mockNode := &mocks.MockNodeInterface{}
+		mockCmd := &mocks.MockCommand{}
+		mockNode.On("Command", "command", []string{"-v", "sudo"}).Return(mockCmd)
+		mockCmd.On("Run", mock.Anything).Return(nil)
+
+		check := SudoInstalledCheck{NodeInterface: FixedNodeInterface(mockNode)}
+		_, err := check.Run(t.Context())
+
+		assert.NoError(t, err)
+		mockNode.AssertExpectations(t)
+		mockCmd.AssertExpectations(t)
+	})
+
+	t.Run("sudo is not installed", func(t *testing.T) {
+		mockNode := &mocks.MockNodeInterface{}
+		mockCmd := &mocks.MockCommand{}
+		mockNode.On("Command", "command", []string{"-v", "sudo"}).Return(mockCmd)
+		mockCmd.On("Run", mock.Anything).Return(errors.New("exit status 127"))
+
+		check := SudoInstalledCheck{NodeInterface: FixedNodeInterface(mockNode)}
+		_, err := check.Run(t.Context())
+
+		assert.ErrorContains(t, err, "sudo is not installed")
+		mockNode.AssertExpectations(t)
+		mockCmd.AssertExpectations(t)
+	})
+}
+
+// TestSudoIsRequiredForRootToo pins a decision that is easy to undo by accident: there is no
+// "skip sudo when the user is root" path anywhere. Both lib-connection backends build every
+// privileged command as `sudo -p SudoPassword -H -S -i bash -c …` without looking at the user, so
+// a root account on a node with no sudo binary fails at the first such command. Exempting root
+// here would turn that into a failure discovered during bootstrap instead of before it.
+func TestSudoIsRequiredForRootToo(t *testing.T) {
+	mockNode := &mocks.MockNodeInterface{}
+	mockCmd := &mocks.MockCommand{}
+	mockNode.On("Command", "command", []string{"-v", "sudo"}).Return(mockCmd)
+	mockCmd.On("Run", mock.Anything).Return(errors.New("exit status 127"))
+
+	// The node interface carries no user here, which is the local case; the point is that the
+	// check body has no branch on the user at all.
+	check := SudoInstalledCheck{NodeInterface: FixedNodeInterface(mockNode)}
+	_, err := check.Run(t.Context())
+
+	// Error() is the observation; the advice is in `fix:`, which the report prints under it.
+	var failure *preflight.Failure
+	require.ErrorAs(t, err, &failure)
+	assert.Equal(t, "sudo is not installed", failure.Observed)
+	assert.Contains(t, failure.Fix, "including root")
+
+	mockNode.AssertExpectations(t)
+	mockCmd.AssertExpectations(t)
 }

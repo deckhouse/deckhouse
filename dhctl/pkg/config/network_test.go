@@ -186,4 +186,3 @@ func TestRequireNetworkSingleSource(t *testing.T) {
 		}
 	})
 }
-

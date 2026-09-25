@@ -17,6 +17,8 @@ package helper
 import (
 	"context"
 
+	"github.com/name212/govalue"
+
 	libcon "github.com/deckhouse/lib-connection/pkg"
 	"github.com/deckhouse/lib-connection/pkg/provider"
 	"github.com/deckhouse/lib-connection/pkg/settings"
@@ -27,7 +29,10 @@ import (
 // get ssh node wrapper if hosts are not empty; otherwise, get local NodeInterface
 func GetNodeInterface(ctx context.Context, sshProviderinitializer provider.SSHProviderInitializer, settings *settings.BaseProviders) (libcon.Interface, error) {
 	sshProvider, err := sshProviderinitializer.GetSSHProvider(ctx)
-	if err != nil {
+	// A nil provider without an error is what an uninitialized initializer hands back. It used
+	// to reach Client() below and panic there, which is a worse way to say "there are no hosts"
+	// than the local interface the error branch already falls back to.
+	if err != nil || !govalue.NotNil(sshProvider) {
 		return local.NewNodeInterface(settings), nil
 	}
 

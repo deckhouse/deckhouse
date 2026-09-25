@@ -32,7 +32,8 @@ func TestCheckClusterCIDRsAgainstHost(t *testing.T) {
 		podCIDR           string
 		serviceCIDR       string
 		host              hostNetworkState
-		wantError         string
+		wantField         string
+		wantObserved      string
 		wantErrorContains string
 	}{
 		{
@@ -60,7 +61,8 @@ func TestCheckClusterCIDRsAgainstHost(t *testing.T) {
 					},
 				},
 			},
-			wantError: "serviceSubnetCIDR 10.222.0.0/16 contains DNS server 10.222.0.10",
+			wantField:    "serviceSubnetCIDR",
+			wantObserved: "serviceSubnetCIDR 10.222.0.0/16 contains 10.222.0.10, which the node uses (DNS server)",
 		},
 		{
 			name:        "pod CIDR intersects interface network",
@@ -74,7 +76,8 @@ func TestCheckClusterCIDRsAgainstHost(t *testing.T) {
 					},
 				},
 			},
-			wantError: "podSubnetCIDR 10.111.0.0/16 intersects with interface eth0 10.111.10.0/24",
+			wantField:    "podSubnetCIDR",
+			wantObserved: "podSubnetCIDR 10.111.0.0/16 overlaps 10.111.10.0/24, which the node uses (interface eth0)",
 		},
 		{
 			name:        "service CIDR intersects route",
@@ -88,7 +91,8 @@ func TestCheckClusterCIDRsAgainstHost(t *testing.T) {
 					},
 				},
 			},
-			wantError: "serviceSubnetCIDR 10.222.0.0/16 intersects with route via eth1 10.222.128.0/24",
+			wantField:    "serviceSubnetCIDR",
+			wantObserved: "serviceSubnetCIDR 10.222.0.0/16 overlaps 10.222.128.0/24, which the node uses (route via eth1)",
 		},
 		{
 			name:        "pod CIDR contains default gateway",
@@ -102,7 +106,8 @@ func TestCheckClusterCIDRsAgainstHost(t *testing.T) {
 					},
 				},
 			},
-			wantError: "podSubnetCIDR 10.111.0.0/16 contains default gateway 10.111.0.1",
+			wantField:    "podSubnetCIDR",
+			wantObserved: "podSubnetCIDR 10.111.0.0/16 contains 10.111.0.1, which the node uses (default gateway)",
 		},
 		{
 			name:        "IPv6 networks intersect",
@@ -116,7 +121,8 @@ func TestCheckClusterCIDRsAgainstHost(t *testing.T) {
 					},
 				},
 			},
-			wantError: "podSubnetCIDR fd00:111::/64 intersects with interface eth0 fd00:111::1000/120",
+			wantField:    "podSubnetCIDR",
+			wantObserved: "podSubnetCIDR fd00:111::/64 overlaps fd00:111::1000/120, which the node uses (interface eth0)",
 		},
 		{
 			name:        "invalid discovered network",
@@ -130,25 +136,30 @@ func TestCheckClusterCIDRsAgainstHost(t *testing.T) {
 					},
 				},
 			},
-			wantErrorContains: `invalid CIDR "not-a-cidr" discovered from interface eth0`,
+			wantErrorContains: `parse CIDR "not-a-cidr" reported by interface eth0`,
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			err := checkClusterCIDRsAgainstHost(
+			conflict, err := findClusterCIDRConflict(
 				tt.podCIDR,
 				tt.serviceCIDR,
 				tt.host,
 			)
 
 			switch {
-			case tt.wantError != "":
-				assert.EqualError(t, err, tt.wantError)
 			case tt.wantErrorContains != "":
 				assert.ErrorContains(t, err, tt.wantErrorContains)
+			case tt.wantObserved != "":
+				assert.NoError(t, err)
+				if assert.NotNil(t, conflict, "want a conflict") {
+					assert.Equal(t, tt.wantField, conflict.field)
+					assert.Equal(t, tt.wantObserved, conflict.observed)
+				}
 			default:
 				assert.NoError(t, err)
+				assert.Nil(t, conflict)
 			}
 		})
 	}
@@ -183,7 +194,7 @@ func TestParseIPAddresses(t *testing.T) {
 		}
 	]`)
 
-	networks, err := parseIPAddresses(output)
+	state, err := parseIPAddresses(output)
 
 	assert.NoError(t, err)
 	assert.Equal(t, []detectedNetwork{
@@ -199,7 +210,24 @@ func TestParseIPAddresses(t *testing.T) {
 			CIDR:   "172.16.0.0/16",
 			Source: "interface eth1",
 		},
-	}, networks)
+	}, state.Networks)
+
+	// The addresses the node actually holds, kept alongside the networks they are on. Without
+	// them nothing could report what address a node has — only where it lives.
+	assert.Equal(t, []detectedAddress{
+		{
+			Address: "192.168.10.15",
+			Source:  "interface eth0",
+		},
+		{
+			Address: "fd00:10::15",
+			Source:  "interface eth0",
+		},
+		{
+			Address: "172.16.5.10",
+			Source:  "interface eth1",
+		},
+	}, state.Addresses)
 }
 
 func TestParseIPRoutes(t *testing.T) {
@@ -354,15 +382,15 @@ func TestHostNetworkCIDRIntersectionCheck_Run(t *testing.T) {
 				"serviceSubnetCIDR": []byte(`"10.222.0.0/16"`),
 			},
 		},
-		NodeInterface: nodeInterface,
+		NodeInterface: FixedNodeInterface(nodeInterface),
 	}
 
-	err := check.Run(t.Context())
+	_, err := check.Run(t.Context())
 
-	assert.EqualError(
+	assert.ErrorContains(
 		t,
 		err,
-		"serviceSubnetCIDR 10.222.0.0/16 contains DNS server 10.222.0.10",
+		"serviceSubnetCIDR 10.222.0.0/16 contains 10.222.0.10, which the node uses (DNS server)",
 	)
 
 	nodeInterface.AssertExpectations(t)
@@ -424,7 +452,7 @@ func TestHostCommandOutputReturnsCommandError(t *testing.T) {
 	)
 
 	assert.Nil(t, output)
-	assert.ErrorContains(t, err, "execute host command ip")
+	assert.ErrorContains(t, err, "run ip on the node")
 	assert.ErrorContains(t, err, "exit status 127")
 	assert.ErrorContains(t, err, "ip: command not found")
 
