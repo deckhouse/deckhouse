@@ -331,6 +331,13 @@ func (r *ServiceWithHealthchecksReconciler) buildEndpointStatuses(svc *networkv1
 			failedProbes = result.FailedProbes()
 		}
 
+		// An endpoint is ready when the pod is ready and its probes pass, which is the same
+		// condition the resource aggregates into ReadyEndpoints. Reporting pod readiness alone here
+		// made the status read as a contradiction: ready: true next to a non-empty failedProbes and
+		// a resource-level "Not all endpoints are ready". probesSuccessful still isolates the probe
+		// half, so ready: false with probesSuccessful: true means the pod itself is not ready.
+		ready := result.podReady && probesSuccessful
+
 		lastTransitionTime := metav1.Now()
 		lastProbeTime := metav1.Time{}
 
@@ -340,7 +347,7 @@ func (r *ServiceWithHealthchecksReconciler) buildEndpointStatuses(svc *networkv1
 				reflect.DeepEqual(oldStatus.FailedProbes, failedProbes)
 			stateChanged := oldStatus.ProbesSuccessful != probesSuccessful ||
 				!failedProbesEqual ||
-				oldStatus.Ready != result.podReady
+				oldStatus.Ready != ready
 			if !stateChanged {
 				lastTransitionTime = oldStatus.LastTransitionTime
 			}
@@ -357,7 +364,7 @@ func (r *ServiceWithHealthchecksReconciler) buildEndpointStatuses(svc *networkv1
 		endpointStatuses = append(endpointStatuses, networkv1alpha1.EndpointStatus{
 			PodName:            result.podName,
 			NodeName:           r.nodeName,
-			Ready:              result.podReady,
+			Ready:              ready,
 			ProbesSuccessful:   probesSuccessful,
 			FailedProbes:       failedProbes,
 			LastTransitionTime: lastTransitionTime,
@@ -510,9 +517,10 @@ func (r *ServiceWithHealthchecksReconciler) RunTasksScheduler(ctx context.Contex
 
 					probes := r.getProbesFromServiceWithHealthchecks(swhSpec, healthcheckTarget.targetHost, healthcheckTarget.podNamespace)
 					r.taskQueue.Enqueue(&ProbeTask{
-						host:    healthcheckTarget.targetHost,
-						swhName: swhName,
-						probes:  healthcheckTarget.GetRenewedProbes(probes),
+						host:     healthcheckTarget.targetHost,
+						swhName:  swhName,
+						probes:   healthcheckTarget.GetRenewedProbes(probes),
+						previous: healthcheckTarget.GetProbeResultDetailsMap(),
 					})
 				}
 			}
@@ -556,14 +564,12 @@ func (r *ServiceWithHealthchecksReconciler) RunTaskWorker(ctx context.Context) {
 		for i, probe := range task.probes {
 			g.Go(func() error {
 				err := probe.PerformCheck()
-				var successful bool
 				successCount, failureCount := calculateCounts(err, probe.SuccessCount(), probe.FailureCount())
-				if successCount >= probe.SuccessThreshold() {
-					successful = true
-				}
-				if failureCount >= probe.FailureThreshold() {
-					successful = false
-				}
+				successful := probeSuccessful(
+					task.previous[probe.GetID()].successful,
+					successCount, failureCount,
+					probe.SuccessThreshold(), probe.FailureThreshold(),
+				)
 				probesResultDetails[i] = ProbeResultDetail{
 					id:               probe.GetID(),
 					successful:       successful,
@@ -587,6 +593,26 @@ func (r *ServiceWithHealthchecksReconciler) RunTaskWorker(ctx context.Context) {
 			probeDetails: probesResultDetails,
 			successful:   err == nil,
 		}
+	}
+}
+
+// probeSuccessful applies the threshold semantics the CRD documents: a probe is considered failed
+// only after failureThreshold consecutive failures following a success, and successful again only
+// after successThreshold consecutive successes following a failure. In between it keeps the state
+// it already had.
+//
+// Recomputing the state from the counters alone, as this used to do, silently disabled
+// failureThreshold: the state defaulted to "failed" on every run, so a single failed check withdrew
+// the endpoint no matter how high the threshold was set. The zero state is still "failed", which is
+// what makes a target wait for successThreshold checks before it is published for the first time.
+func probeSuccessful(previous bool, successCount, failureCount, successThreshold, failureThreshold int32) bool {
+	switch {
+	case successCount > 0 && successCount >= successThreshold:
+		return true
+	case failureCount > 0 && failureCount >= failureThreshold:
+		return false
+	default:
+		return previous
 	}
 }
 
@@ -889,16 +915,19 @@ func (r *ServiceWithHealthchecksReconciler) getProbesFromServiceWithHealthchecks
 		switch strings.ToLower(serviceProbe.Mode) {
 		case "http":
 			probes = append(probes, FastHTTPProbeTarget{
-				targetHost:       targetHost,
-				host:             serviceProbe.HTTPHandler.Host,
-				path:             serviceProbe.HTTPHandler.Path,
-				targetPort:       serviceProbe.HTTPHandler.TargetPort.IntValue(),
-				scheme:           string(serviceProbe.HTTPHandler.Scheme),
-				method:           serviceProbe.HTTPHandler.Method,
-				httpHeaders:      serviceProbe.HTTPHandler.HTTPHeaders,
-				successThreshold: serviceProbe.SuccessThreshold,
-				failureThreshold: serviceProbe.FailureThreshold,
-				timeoutSeconds:   serviceProbe.TimeoutSeconds,
+				targetHost:            targetHost,
+				host:                  serviceProbe.HTTPHandler.Host,
+				path:                  serviceProbe.HTTPHandler.Path,
+				targetPort:            serviceProbe.HTTPHandler.TargetPort.IntValue(),
+				scheme:                string(serviceProbe.HTTPHandler.Scheme),
+				method:                serviceProbe.HTTPHandler.Method,
+				httpHeaders:           serviceProbe.HTTPHandler.HTTPHeaders,
+				codes:                 serviceProbe.HTTPHandler.Code,
+				insecureSkipTLSVerify: serviceProbe.HTTPHandler.InsecureSkipTLSVerify,
+				caCert:                serviceProbe.HTTPHandler.CaCert,
+				successThreshold:      serviceProbe.SuccessThreshold,
+				failureThreshold:      serviceProbe.FailureThreshold,
+				timeoutSeconds:        serviceProbe.TimeoutSeconds,
 			})
 		case "tcp":
 			probes = append(probes, TCPProbeTarget{
@@ -1179,8 +1208,9 @@ func sortEndpointStatuses(statuses []networkv1alpha1.EndpointStatus) {
 func onlyReadyEndpoints(statuses []networkv1alpha1.EndpointStatus) int32 {
 	result := int32(0)
 	for _, status := range statuses {
-		// A pod is considered fully ready only if it passes both the standard Kubernetes readiness probes
-		// (handled by kubelet) AND our custom ServiceWithHealthchecks probes (handled by agent).
+		// Ready already combines kubelet readiness with the custom probes. ProbesSuccessful is still
+		// required here because statuses written by another node are carried over untouched, and one
+		// written by an agent that predates that change holds kubelet readiness alone.
 		if status.Ready && status.ProbesSuccessful {
 			result++
 		}

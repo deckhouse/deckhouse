@@ -105,7 +105,9 @@ type PGSQLHandler struct {
 
 type HTTPHandler struct {
 	// Path to access on the HTTP server.
+	// Must start with "/" and must not contain CR or LF characters.
 	// +optional
+	// +kubebuilder:validation:Pattern=`^/[^\r\n]*$`
 	Path string `json:"path,omitempty" protobuf:"bytes,1,opt,name=path"`
 	// Name or number of the port to access on the container.
 	// Number must be in the range 1 to 65535.
@@ -125,6 +127,20 @@ type HTTPHandler struct {
 	// Custom headers to set in the request. HTTP allows repeated headers.
 	// +optional
 	HTTPHeaders []corev1.HTTPHeader `json:"httpHeaders,omitempty" protobuf:"bytes,6,rep,name=httpHeaders"`
+	// Response status codes treated as a successful probe.
+	// If empty, any code in the 200-399 range is considered successful.
+	// +optional
+	// +kubebuilder:validation:items:Minimum=200
+	// +kubebuilder:validation:items:Maximum=399
+	Code []int32 `json:"code,omitempty" protobuf:"varint,7,rep,name=code"`
+	// Indicates if the client should skip verifying the server's TLS certificate chain
+	// and hostname. Only meaningful when Scheme is HTTPS.
+	// +optional
+	InsecureSkipTLSVerify bool `json:"insecureSkipTLSVerify,omitempty" protobuf:"varint,8,opt,name=insecureSkipTLSVerify"`
+	// CA certificate used to verify the server's certificate, in PEM format.
+	// Only meaningful when Scheme is HTTPS.
+	// +optional
+	CaCert string `json:"caCert,omitempty" protobuf:"bytes,9,opt,name=caCert"`
 }
 
 type TCPHandler struct {

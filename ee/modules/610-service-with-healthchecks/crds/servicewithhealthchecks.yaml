@@ -142,8 +142,12 @@ spec:
                               - GET
                               - HEAD
                             path:
-                              description: Path to access on the HTTP server.
+                              description: |-
+                                Path to access on the HTTP server.
+
+                                Must start with `/` and must not contain CR or LF characters.
                               type: string
+                              pattern: '^/[^\r\n]*$'
                             scheme:
                               description: |-
                                 Scheme to use for connecting to the host.
@@ -168,6 +172,16 @@ spec:
                               type: string
                               description: |-
                                 CA certificate for HTTPS connection.
+                            code:
+                              description: |-
+                                Response status codes that are treated as a successful probe.
+
+                                If omitted, any code in the 200-399 range is considered successful.
+                              type: array
+                              items:
+                                type: integer
+                                minimum: 200
+                                maximum: 399
                           required:
                           - targetPort
                           type: object
@@ -666,7 +680,11 @@ spec:
                   properties:
                     failedProbes:
                       description: |-
-                        List of probes that failed during the last check.
+                        List of probes that are currently in the failed state.
+
+                        A probe appears here once it has crossed its `failureThreshold`, and disappears once it
+                        has crossed its `successThreshold` again. This is exactly the set of probes that keeps
+                        `probesSuccessful` false.
                       items:
                         type: string
                       type: array
@@ -684,7 +702,11 @@ spec:
                       type: boolean
                     ready:
                       description: |-
-                        Indicates whether the pod passed standard Kubernetes readiness probes.
+                        Indicates whether the endpoint is ready, meaning the pod passed the standard Kubernetes
+                        readiness probes and all custom ServiceWithHealthchecks probes succeeded.
+
+                        Endpoints counted in `readyEndpoints` are the ones marked ready here. When this is `false`
+                        while `probesSuccessful` is `true`, it is the pod itself that is not ready.
                       type: boolean
                     lastTransitionTime:
                       description: |-
