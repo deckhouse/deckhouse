@@ -34,27 +34,50 @@ shell:
   - chmod 0700 /opt/keepalived-static/usr/sbin/keepalived
   - chmod 0700 /opt/keepalived-static/usr/bin/genhash
 ---
-image: {{ $.ModuleName }}/{{ $.ImageName }}-wheel-artifact
-from: {{ index $.Images "builder/distroless" }}
+image: {{ $.ModuleName }}/{{ $.ImageName }}-prepare-config-src-artifact
+fromImage: common/src-artifact
 final: false
 git:
-- add: /{{ $.ModulePath }}modules/{{ $.ModulePriority }}-{{ $.ModuleName }}/images/{{ $.ImageName }}/src/requirements.txt
-  to: /requirements.txt
+- add: /{{ $.ModulePath }}modules/{{ $.ModulePriority }}-{{ $.ModuleName }}/images/{{ $.ImageName }}/src
+  to: /src
   stageDependencies:
     install:
     - '**/*'
 shell:
-  beforeInstall:
-  - pm install python@3.12 libc python-wheel
   install:
-  - pip3 install -f file:///wheels --no-index --upgrade pip
-  - pip3 install -f file:///wheels --no-index -r /requirements.txt
+  - cd /src
+---
+image: {{ $.ModuleName }}/{{ $.ImageName }}-prepare-config-artifact
+from: {{ index $.Images "builder/golang" }}
+final: false
+import:
+- image: {{ $.ModuleName }}/{{ $.ImageName }}-prepare-config-src-artifact
+  add: /src
+  to: /src
+  before: install
+mount:
+{{ include "mount points for golang builds" . }}
+secrets:
+- id: GOPROXY
+  value: {{ .GOPROXY }}
+shell:
+  install:
+  - cd /src
+  - GOPROXY=$(cat /run/secrets/GOPROXY) go mod download
+  setup:
+  - export GOOS=linux GOARCH=amd64 CGO_ENABLED=0
+  - export GO_VERSION=${GOLANG_VERSION} GOPROXY=$(cat /run/secrets/GOPROXY)
+  - cd /src
+  - |
+    {{- $buildContext := deepCopy $ -}}
+    {{- $_ := set $buildContext "SvaceBuildOptions" "--enable-ptrace-all" -}}
+    {{- $_ := set $buildContext "BuildCommand" `go build -ldflags="-s -w" -o prepare-config .` -}}
+    {{- include "image-build.build" $buildContext | indent 4 }}
+  - chown 64535:64535 /src/prepare-config
+  - chmod 0755 /src/prepare-config
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}
 fromImage: common/distroless
-git:
-- add: /{{ $.ModulePath }}modules/450-{{ $.ModuleName }}/images/{{ $.ImageName }}/src/prepare-config.py
-  to: /prepare-config.py
 import:
 - image: {{ $.ModuleName }}/build-keepalived
   add: /opt/keepalived-static/usr/sbin/keepalived
@@ -64,17 +87,8 @@ import:
   add: /opt/keepalived-static/usr/bin/genhash
   to: /usr/bin/genhash
   before: install
-- image: {{ $.ModuleName }}/{{ $.ImageName }}-wheel-artifact
-  add: /
-  to: /
+- image: {{ $.ModuleName }}/{{ $.ImageName }}-prepare-config-artifact
+  add: /src/prepare-config
+  to: /prepare-config
   before: install
-  includePaths:
-  - usr/bin/python3*
-  - usr/lib/python3*
-  - usr/lib/lib*.so*
-  - usr/lib/ld-linux-x86-64.so.2
-  - lib64
-  excludePaths:
-  - usr/lib/python*/site-packages/pip-25.3*
-  - usr/lib/python*/test
 {{- include "image mount points" . }}
