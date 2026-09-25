@@ -94,3 +94,21 @@ func Test_found_msg(t *testing.T) {
 	}
 
 }
+
+func Test_skip_localized_role_metadata(t *testing.T) {
+	for path, skip := range map[string]bool{
+		"modules/101-cert-manager/templates/rbacv2/use/view.yaml":               true,
+		"ee/modules/110-istio/templates/rbacv2-compat/legacy-role-aliases.yaml": true,
+		"modules/101-cert-manager/rbac.yaml":                                    true,
+		"ee/modules/030-cloud-provider-openstack/rbac.yaml":                     true,
+		"ee/be/modules/350-node-local-dns/rbac.yaml":                            true,
+		"ee/se-plus/modules/015-admission-policy-engine/rbac.yaml":              true,
+		"modules/101-cert-manager/templates/rbac-to-us.yaml":                    false,
+		"modules/101-cert-manager/openapi/rbac.yaml":                            false,
+		"rbac.yaml": false,
+	} {
+		if got := skipRBACv2Re.MatchString(path); got != skip {
+			t.Errorf("%s: skip = %v, want %v", path, got, skip)
+		}
+	}
+}

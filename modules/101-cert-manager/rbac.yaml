@@ -1,0 +1,748 @@
+apiVersion: rbac.deckhouse.io/v1alpha1
+resources:
+  - group: acme.cert-manager.io
+    resource: challenges
+    namespace:
+      manager:
+        - delete
+        - deletecollection
+      viewer:
+        - get
+        - list
+        - watch
+    legacy:
+      Admin:
+        - delete
+        - deletecollection
+      User:
+        - get
+        - list
+        - watch
+  - group: acme.cert-manager.io
+    resource: orders
+    namespace:
+      manager:
+        - delete
+        - deletecollection
+      viewer:
+        - get
+        - list
+        - watch
+    legacy:
+      Admin:
+        - delete
+        - deletecollection
+      User:
+        - get
+        - list
+        - watch
+  - group: cert-manager.io
+    resource: certificaterequests
+    namespace:
+      manager:
+        - delete
+        - deletecollection
+      viewer:
+        - get
+        - list
+        - watch
+    legacy:
+      Admin:
+        - delete
+        - deletecollection
+      User:
+        - get
+        - list
+        - watch
+  - group: cert-manager.io
+    resource: certificates
+    namespace:
+      manager:
+        - create
+        - delete
+        - deletecollection
+        - patch
+        - update
+      viewer:
+        - get
+        - list
+        - watch
+    legacy:
+      Editor:
+        - create
+        - delete
+        - deletecollection
+        - patch
+        - update
+      User:
+        - get
+        - list
+        - watch
+  - group: cert-manager.io
+    resource: clusterissuers
+    system:
+      manager:
+        - create
+        - delete
+        - deletecollection
+        - patch
+        - update
+      viewer:
+        - get
+        - list
+        - watch
+    legacy:
+      ClusterEditor:
+        - create
+        - delete
+        - deletecollection
+        - patch
+        - update
+      User:
+        - get
+        - list
+        - watch
+  - group: cert-manager.io
+    resource: issuers
+    namespace:
+      admin:
+        - create
+        - delete
+        - deletecollection
+        - patch
+        - update
+      viewer:
+        - get
+        - list
+        - watch
+    legacy:
+      Admin:
+        - create
+        - delete
+        - deletecollection
+        - patch
+        - update
+      User:
+        - get
+        - list
+        - watch
+capabilities:
+  namespace.admin:
+    title:
+      en: 'Module cert-manager: admin'
+      ru: 'Модуль cert-manager: администрирование'
+    description:
+      en: Manage cert-manager Issuers in a namespace.
+      ru: Управление Issuer модуля cert-manager в пространстве имён.
+serviceAccounts:
+  - name: cainjector
+    path: cainjector
+    when: .Values.certManager.internal.enableCAInjector
+    labels:
+      app: cainjector
+    clusterRules:
+      - apiGroups:
+          - cert-manager.io
+        resources:
+          - certificates
+        verbs:
+          - get
+          - list
+          - watch
+      - apiGroups:
+          - ""
+        resources:
+          - secrets
+        verbs:
+          - get
+          - list
+          - watch
+      - apiGroups:
+          - ""
+        resources:
+          - events
+        verbs:
+          - get
+          - create
+          - update
+          - patch
+      - apiGroups:
+          - admissionregistration.k8s.io
+        resources:
+          - validatingwebhookconfigurations
+          - mutatingwebhookconfigurations
+        verbs:
+          - get
+          - list
+          - watch
+          - update
+          - patch
+      - apiGroups:
+          - apiregistration.k8s.io
+        resources:
+          - apiservices
+        verbs:
+          - get
+          - list
+          - watch
+          - update
+          - patch
+      - apiGroups:
+          - apiextensions.k8s.io
+        resources:
+          - customresourcedefinitions
+        verbs:
+          - get
+          - list
+          - watch
+          - update
+          - patch
+      - apiGroups:
+          - coordination.k8s.io
+        resources:
+          - leases
+        verbs:
+          - get
+          - list
+          - watch
+          - create
+          - update
+          - patch
+      - apiGroups:
+          - auditregistration.k8s.io
+        resources:
+          - auditsinks
+        verbs:
+          - get
+          - list
+          - watch
+          - update
+  - name: cert-manager
+    path: cert-manager
+    labels:
+      app: cert-manager
+    bindClusterRoles:
+      - d8:rbac-proxy
+    extraClusterRoles:
+      - name: approve
+        rules:
+          - apiGroups:
+              - cert-manager.io
+            resources:
+              - signers
+            resourceNames:
+              - issuers.cert-manager.io/*
+              - clusterissuers.cert-manager.io/*
+            verbs:
+              - approve
+      - name: certificates
+        rules:
+          - apiGroups:
+              - cert-manager.io
+            resources:
+              - certificates
+              - certificates/status
+              - certificaterequests
+              - certificaterequests/status
+            verbs:
+              - update
+              - patch
+          - apiGroups:
+              - cert-manager.io
+            resources:
+              - certificates
+              - certificaterequests
+              - clusterissuers
+              - issuers
+            verbs:
+              - get
+              - list
+              - watch
+          - apiGroups:
+              - cert-manager.io
+            resources:
+              - certificates/finalizers
+              - certificaterequests/finalizers
+            verbs:
+              - update
+          - apiGroups:
+              - acme.cert-manager.io
+            resources:
+              - orders
+            verbs:
+              - create
+              - delete
+              - get
+              - list
+              - watch
+          - apiGroups:
+              - ""
+            resources:
+              - secrets
+            verbs:
+              - get
+              - list
+              - watch
+              - create
+              - update
+              - patch
+              - delete
+          - apiGroups:
+              - ""
+            resources:
+              - events
+            verbs:
+              - create
+              - patch
+      - name: challenges
+        rules:
+          - apiGroups:
+              - acme.cert-manager.io
+            resources:
+              - challenges
+              - challenges/status
+            verbs:
+              - update
+              - patch
+          - apiGroups:
+              - acme.cert-manager.io
+            resources:
+              - challenges
+            verbs:
+              - get
+              - list
+              - watch
+          - apiGroups:
+              - cert-manager.io
+            resources:
+              - issuers
+              - clusterissuers
+            verbs:
+              - get
+              - list
+              - watch
+          - apiGroups:
+              - ""
+            resources:
+              - secrets
+            verbs:
+              - get
+              - list
+              - watch
+          - apiGroups:
+              - ""
+            resources:
+              - events
+            verbs:
+              - create
+              - patch
+          - apiGroups:
+              - ""
+            resources:
+              - pods
+              - services
+            verbs:
+              - get
+              - list
+              - watch
+              - create
+              - delete
+          - apiGroups:
+              - networking.k8s.io
+            resources:
+              - ingresses
+            verbs:
+              - get
+              - list
+              - watch
+              - create
+              - delete
+              - update
+          - apiGroups:
+              - gateway.networking.k8s.io
+            resources:
+              - httproutes
+            verbs:
+              - get
+              - list
+              - watch
+              - create
+              - delete
+              - update
+          - apiGroups:
+              - route.openshift.io
+            resources:
+              - routes/custom-host
+            verbs:
+              - create
+          - apiGroups:
+              - acme.cert-manager.io
+            resources:
+              - challenges/finalizers
+            verbs:
+              - update
+          - apiGroups:
+              - ""
+            resources:
+              - secrets
+            verbs:
+              - get
+              - list
+              - watch
+      - name: clusterissuers
+        rules:
+          - apiGroups:
+              - cert-manager.io
+            resources:
+              - clusterissuers
+              - clusterissuers/status
+            verbs:
+              - update
+              - patch
+          - apiGroups:
+              - cert-manager.io
+            resources:
+              - clusterissuers
+            verbs:
+              - get
+              - list
+              - watch
+          - apiGroups:
+              - ""
+            resources:
+              - secrets
+            verbs:
+              - get
+              - list
+              - watch
+              - create
+              - update
+              - delete
+          - apiGroups:
+              - ""
+            resources:
+              - events
+            verbs:
+              - create
+              - patch
+      - name: ingress-shim
+        rules:
+          - apiGroups:
+              - cert-manager.io
+            resources:
+              - certificates
+              - certificaterequests
+            verbs:
+              - create
+              - update
+              - delete
+          - apiGroups:
+              - cert-manager.io
+            resources:
+              - certificates
+              - certificaterequests
+              - issuers
+              - clusterissuers
+            verbs:
+              - get
+              - list
+              - watch
+          - apiGroups:
+              - networking.k8s.io
+            resources:
+              - ingresses
+            verbs:
+              - get
+              - list
+              - watch
+          - apiGroups:
+              - networking.k8s.io
+            resources:
+              - ingresses/finalizers
+            verbs:
+              - update
+          - apiGroups:
+              - gateway.networking.k8s.io
+            resources:
+              - gateways
+              - httproutes
+              - listenersets
+            verbs:
+              - get
+              - list
+              - watch
+          - apiGroups:
+              - gateway.networking.k8s.io
+            resources:
+              - gateways/finalizers
+              - httproutes/finalizers
+              - listenersets/finalizers
+            verbs:
+              - update
+          - apiGroups:
+              - ""
+            resources:
+              - events
+            verbs:
+              - create
+              - patch
+      - name: issuers
+        rules:
+          - apiGroups:
+              - cert-manager.io
+            resources:
+              - issuers
+              - issuers/status
+            verbs:
+              - update
+              - patch
+          - apiGroups:
+              - cert-manager.io
+            resources:
+              - issuers
+            verbs:
+              - get
+              - list
+              - watch
+          - apiGroups:
+              - ""
+            resources:
+              - secrets
+            verbs:
+              - get
+              - list
+              - watch
+              - create
+              - update
+              - delete
+          - apiGroups:
+              - ""
+            resources:
+              - events
+            verbs:
+              - create
+              - patch
+      - name: leaderelection
+        rules:
+          - apiGroups:
+              - coordination.k8s.io
+            resources:
+              - leases
+            resourceNames:
+              - cert-manager-controller
+            verbs:
+              - get
+              - update
+              - patch
+          - apiGroups:
+              - coordination.k8s.io
+            resources:
+              - leases
+            verbs:
+              - create
+      - name: orders
+        rules:
+          - apiGroups:
+              - acme.cert-manager.io
+            resources:
+              - orders
+              - orders/status
+            verbs:
+              - update
+              - patch
+          - apiGroups:
+              - acme.cert-manager.io
+            resources:
+              - orders
+              - challenges
+            verbs:
+              - get
+              - list
+              - watch
+          - apiGroups:
+              - cert-manager.io
+            resources:
+              - clusterissuers
+              - issuers
+            verbs:
+              - get
+              - list
+              - watch
+          - apiGroups:
+              - acme.cert-manager.io
+            resources:
+              - challenges
+            verbs:
+              - create
+              - delete
+          - apiGroups:
+              - acme.cert-manager.io
+            resources:
+              - orders/finalizers
+            verbs:
+              - update
+          - apiGroups:
+              - cert-manager.io
+            resources:
+              - clusterissuers/finalizers
+              - issuers/finalizers
+            verbs:
+              - update
+          - apiGroups:
+              - ""
+            resources:
+              - secrets
+            verbs:
+              - get
+              - list
+              - watch
+          - apiGroups:
+              - ""
+            resources:
+              - events
+            verbs:
+              - create
+              - patch
+  - name: webhook
+    path: webhook
+    labels:
+      app: webhook
+    bindClusterRoles:
+      - system:auth-delegator
+    bindRoles:
+      - namespace: kube-system
+        name: extension-apiserver-authentication-reader
+    extraClusterRoles:
+      - name: requester
+        rules:
+          - apiGroups:
+              - admission.cert-manager.io
+            resources:
+              - certificates
+              - certificaterequests
+              - issuers
+              - clusterissuers
+            verbs:
+              - create
+        bind: false
+  - name: yandex-dns-webhook
+    path: yandex-dns-webhook
+    when: include "cert_manager.yandex_dns_configured" .
+    labels:
+      app: yandex-dns-webhook
+    namespaceRules:
+      - apiGroups:
+          - ""
+        resources:
+          - secrets
+        resourceNames:
+          - yandex
+        verbs:
+          - get
+    bindClusterRoles:
+      - system:auth-delegator
+    bindRoles:
+      - namespace: kube-system
+        name: extension-apiserver-authentication-reader
+    extraClusterRoles:
+      - name: flowcontrol
+        rules:
+          - apiGroups:
+              - flowcontrol.apiserver.k8s.io
+            resources:
+              - flowschemas
+              - prioritylevelconfigurations
+            verbs:
+              - list
+              - watch
+prometheusAccess:
+  deployments:
+    - cert-manager
+  when: .Values.global.enabledModules | has "prometheus"
+access:
+  - name: admin-kubeconfig
+    subjects:
+      - kind: Group
+        name: kubeadm:cluster-admins
+    path: cert-manager
+    clusterRules:
+      - apiGroups:
+          - cert-manager.io
+        resources:
+          - certificates
+          - certificaterequests
+          - clusterissuers
+          - issuers
+        verbs:
+          - get
+          - list
+          - watch
+          - create
+          - delete
+          - deletecollection
+          - patch
+          - update
+      - apiGroups:
+          - cert-manager.io
+        resources:
+          - certificates/status
+          - certificaterequests/status
+          - clusterissuers/status
+          - issuers/status
+        verbs:
+          - get
+          - patch
+          - update
+      - apiGroups:
+          - cert-manager.io
+        resources:
+          - certificates/finalizers
+          - certificaterequests/finalizers
+        verbs:
+          - update
+      - apiGroups:
+          - acme.cert-manager.io
+        resources:
+          - challenges
+          - orders
+        verbs:
+          - get
+          - list
+          - watch
+          - create
+          - delete
+          - deletecollection
+          - patch
+          - update
+      - apiGroups:
+          - acme.cert-manager.io
+        resources:
+          - challenges/status
+          - orders/status
+        verbs:
+          - get
+          - patch
+          - update
+      - apiGroups:
+          - acme.cert-manager.io
+        resources:
+          - challenges/finalizers
+          - orders/finalizers
+        verbs:
+          - update
+  - name: yandex-dns-webhook:domain-solver
+    subjects:
+      - kind: ServiceAccount
+        name: cert-manager
+        namespace: d8-cert-manager
+    path: yandex-dns-webhook
+    when: include "cert_manager.yandex_dns_configured" .
+    labels:
+      app: yandex-dns-webhook
+    clusterRules:
+      - apiGroups:
+          - acme.cloud.yandex.com
+        resources:
+          - yandex-cloud-dns
+        verbs:
+          - create
