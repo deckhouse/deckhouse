@@ -56,6 +56,35 @@ apiVersions:
               type: string
               minLength: 1
         description: List of storage policies
+      zoneComputeClusterPaths:
+        type: object
+        additionalProperties:
+          type: string
+        description: |
+          Zone tag name to absolute inventory path of the ClusterComputeResource it is
+          attached to (e.g. "e2e-zone-1" -> "/DatacenterLAB/host/stage-hypers"). Populated by
+          cloud-data-discoverer and consumed by the ensure_failure_domains hook to render an
+          absolute resourcePool.
+      tagURNs:
+        type: array
+        items:
+          type: string
+        description: |
+          vCenter tag URNs (format urn:vmomi:InventoryServiceTag:<uuid>:GLOBAL) to attach
+          to every VM CAPV clones for this cluster. Populated by cloud-data-discoverer via
+          EnsureClusterTagURN — currently a single entry, the deckhouse-cluster-name/
+          <clusterUUID> tag reused from the MCM era. Consumed by capi/template.yaml which
+          renders them into VSphereMachineTemplate.spec.tagIDs.
+      thumbprint:
+        type: string
+        pattern: '^([A-Fa-f0-9]{2}:){19}[A-Fa-f0-9]{2}$'
+        description: |
+          Colon-separated SHA-1 fingerprint of the vCenter leaf TLS certificate, computed
+          by cloud-data-discoverer from the same TLS session it uses for discovery
+          (verified against caBundle or the system trust store when insecure=false).
+          Rendered into VSphereCluster.spec.thumbprint by capi/cluster.yaml. CAPV's session
+          code (`insecure := thumbprint == ""`) pins the leaf cert to this value on every
+          reconcile. Empty before the first discovery cycle — CAPV runs insecure until then.
       internalNetworkNames:
         description: List of cluster internal network names
         type: array

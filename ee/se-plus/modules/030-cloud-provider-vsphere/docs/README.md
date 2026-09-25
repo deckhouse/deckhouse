@@ -15,3 +15,13 @@ Features of the `cloud-provider-vsphere` module:
 - Provisioning CloudEphemeral nodes via Machine Controller Manager (MCM). Virtual machine parameters are set in the [VsphereInstanceClass](/modules/cloud-provider-vsphere/cr.html#vsphereinstanceclass) resource.
 - Registering with [`node-manager`](/modules/node-manager/) so that [VsphereInstanceClass](/modules/cloud-provider-vsphere/cr.html#vsphereinstanceclass) can be used when describing a [NodeGroup](/modules/node-manager/cr.html#nodegroup).
 - Enabling CNI for new clusters automatically. By default, [`cni-cilium`](/modules/cni-cilium/) is used.
+
+{% alert level="warning" %}
+This module is transitioning CloudEphemeral node management from Machine Controller Manager (MCM) to Cluster API (CAPI). Existing NodeGroups continue to use MCM, while newly created NodeGroups use CAPI by default. For the migration procedure for existing groups, see [How to migrate node groups to Cluster API (CAPI)](/products/kubernetes-platform/documentation/v1/faq.html#how-to-migrate-node-groups-to-cluster-api-capi).
+{% endalert %}
+
+{% alert level="info" %}
+**vCenter tag parity for CAPI-managed VMs.** Under CAPI, every VM receives the `deckhouse-cluster-name/<clusterUUID>` tag (matching MCM behavior). The per-role tag `deckhouse-node-role/<nodeGroup>-<zone>` that MCM also attached is not yet reproduced by the CAPI pipeline — use Kubernetes node labels (`node.deckhouse.io/group`) to group nodes by NodeGroup instead. Full tag parity is planned as a follow-up.
+
+**Placement fields on `VsphereInstanceClass` under CAPI.** Both `spec.resourcePool` and `spec.datastore` are honored: when either is set, the module creates a per-NodeGroup `VSphereDeploymentZone` for every zone the NodeGroup spans, writes both fields into `placementConstraint`, and points the NodeGroup's `MachineDeployment` at that DZ. The `placementConstraint.datastore` support is a downstream extension of upstream CAPV (`images/capv-controller-manager/patches/003-datastore-on-deployment-zone.patch`) — CAPV upstream reads datastore only from `VSphereFailureDomain.spec.topology.datastore`. The patch adds a precedence: `placementConstraint.datastore` wins when set; otherwise the FD topology value is used, matching upstream behavior.
+{% endalert %}
