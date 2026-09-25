@@ -90,6 +90,25 @@ $ curl -s -o /dev/null -w "%{http_code}" 192.168.2.102:8000
 
 {% endraw %}
 
+### Запуск speaker'ов на узлах с пользовательскими taint'ами
+
+Speaker работает как DaemonSet на узлах, отобранных параметром `nodeSelector` ресурса MetalLoadBalancerClass, и терпит только taint'ы, известные платформе (`node-role.kubernetes.io/control-plane`, `dedicated.deckhouse.io` и другие). Если на такие узлы навешен пользовательский taint, speaker на них не запускается, и анонсирование адресов с этих узлов не выполняется.
+
+Пользовательские ключи taint'ов разрешаются в глобальных настройках, в параметре [`customTolerationKeys`](/products/kubernetes-platform/documentation/v1/reference/api/global.html#parameters-modules-placement-customtolerationkeys) ModuleConfig `global`. Добавление ключа в этот параметр разрешает запуск на таких узлах как speaker'а, так и остальных системных компонентов (CNI, CSI, мониторинг):
+
+```yaml
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleConfig
+metadata:
+  name: global
+spec:
+  settings:
+    modules:
+      placement:
+        customTolerationKeys:
+          - dedicated.example.com
+```
+
 ## Пример использования metallb в режиме BGP LoadBalancer
 
 {% raw %}

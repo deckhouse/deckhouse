@@ -90,6 +90,25 @@ $ curl -s -o /dev/null -w "%{http_code}" 192.168.2.102:8000
 
 {% endraw %}
 
+### Running speakers on nodes with custom taints
+
+The speaker runs as a DaemonSet on the nodes selected by the `nodeSelector` of MetalLoadBalancerClass and tolerates only the taints known to the platform (`node-role.kubernetes.io/control-plane`, `dedicated.deckhouse.io` and others). If such nodes are marked with a custom taint, the speaker is not scheduled on them, and the addresses are not announced from those nodes.
+
+Custom taint keys are allowed platform-wide in the global settings, in the [`customTolerationKeys`](/products/kubernetes-platform/documentation/v1/reference/api/global.html#parameters-modules-placement-customtolerationkeys) parameter of the `global` ModuleConfig. Adding a key there allows both the speaker and the other system components (CNI, CSI, monitoring) to run on such nodes:
+
+```yaml
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleConfig
+metadata:
+  name: global
+spec:
+  settings:
+    modules:
+      placement:
+        customTolerationKeys:
+          - dedicated.example.com
+```
+
 ## Example of metallb usage in BGP LoadBalancer mode
 
 {% raw %}
