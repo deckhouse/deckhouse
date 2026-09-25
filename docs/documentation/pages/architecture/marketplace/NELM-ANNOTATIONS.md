@@ -49,7 +49,7 @@ Classic case: database migration before the application starts.
 apiVersion: batch/v1
 kind: Job
 metadata:
-  name: {{.Application.Instance.Name}}-db-migrate
+  name: d8a-{{ .Application.Instance.Name }}-db-migrate
   annotations:
     werf.io/delete-policy: before-creation
 spec: ...
@@ -57,9 +57,9 @@ spec: ...
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: {{.Application.Instance.Name}}-app
+  name: d8a-{{ .Application.Instance.Name }}-app
   annotations:
-    werf.io/deploy-dependency-migrate: state=ready,kind=Job,name=db-migrate
+    werf.io/deploy-dependency-migrate: state=ready,kind=Job,name=d8a-{{ .Application.Instance.Name }}-db-migrate
 spec: ...
 ```
 
@@ -73,7 +73,7 @@ Use case: a PVC with database data that must not be deleted even when the Applic
 apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:
-  name: {{.Application.Instance.Name}}-postgres-data
+  name: d8a-{{ .Application.Instance.Name }}-postgres-data
   annotations:
     helm.sh/resource-policy: keep
 spec:
@@ -94,7 +94,7 @@ A TLS Secret used by multiple charts should not disappear when any one of them i
 apiVersion: v1
 kind: Secret
 metadata:
-  name: {{.Application.Instance.Name}}-shared-tls
+  name: d8a-{{ .Application.Instance.Name }}-shared-tls
   annotations:
     werf.io/ownership: anyone
 type: kubernetes.io/tls
@@ -111,9 +111,9 @@ Deploy only after cert-manager issues a certificate:
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: {{.Application.Instance.Name}}-app
+  name: d8a-{{ .Application.Instance.Name }}-app
   annotations:
-    cert.external-dependency.werf.io/resource: certificates.v1.cert-manager.io/myapp-tls
+    cert.external-dependency.werf.io/resource: certificates.v1.cert-manager.io/d8a-{{ .Application.Instance.Name }}-tls
 spec: ...
 ```
 
@@ -127,7 +127,7 @@ A metrics DaemonSet whose unavailability should not block the release:
 apiVersion: apps/v1
 kind: DaemonSet
 metadata:
-  name: {{.Application.Instance.Name}}-metrics-agent
+  name: d8a-{{ .Application.Instance.Name }}-metrics-agent
   annotations:
     werf.io/fail-mode: IgnoreAndContinueDeployProcess
     werf.io/track-termination-mode: NonBlocking
@@ -144,7 +144,7 @@ An init Job that runs only during `install`, not `upgrade`:
 apiVersion: batch/v1
 kind: Job
 metadata:
-  name: {{.Application.Instance.Name}}-init-data
+  name: d8a-{{ .Application.Instance.Name }}-init-data
   annotations:
     werf.io/deploy-on: install
     werf.io/ownership: anyone   # CRITICAL
@@ -161,7 +161,7 @@ StatefulSet with a large Docker image (ML models, Elasticsearch with pre-loaded 
 apiVersion: apps/v1
 kind: StatefulSet
 metadata:
-  name: elasticsearch
+  name: d8a-{{ .Application.Instance.Name }}-elasticsearch
   annotations:
     werf.io/no-activity-timeout: 20m
     werf.io/failures-allowed-per-replica: "3"
@@ -194,8 +194,8 @@ metadata:
 ```yaml
 metadata:
   annotations:
-    werf.io/deploy-dependency-db: state=ready,kind=StatefulSet,name=postgres
-    werf.io/deploy-dependency-migrations: state=present,kind=Job,name=db-migrate
+    werf.io/deploy-dependency-db: state=ready,kind=StatefulSet,name=d8a-{{ .Application.Instance.Name }}-postgres
+    werf.io/deploy-dependency-migrations: state=present,kind=Job,name=d8a-{{ .Application.Instance.Name }}-db-migrate
 ```
 
 Dependency states:
@@ -222,8 +222,8 @@ This annotation has no effect if the dependency resource is in a different deplo
 ```yaml
 metadata:
   annotations:
-    cert.external-dependency.werf.io/resource: certificates.v1.cert-manager.io/myapp-tls
-    cert.external-dependency.werf.io/name: myapp-production   # Namespace of the external resource
+    cert.external-dependency.werf.io/resource: certificates.v1.cert-manager.io/d8a-{{ .Application.Instance.Name }}-tls
+    cert.external-dependency.werf.io/namespace: myapp-production   # Namespace of the external resource
 ```
 
 Full format:
@@ -239,7 +239,7 @@ Full format:
 ```yaml
 metadata:
   annotations:
-    werf.io/delete-dependency-app: state=absent,kind=Deployment,name=app
+    werf.io/delete-dependency-app: state=absent,kind=Deployment,name=d8a-{{ .Application.Instance.Name }}-app
 ```
 
 ---
@@ -311,6 +311,12 @@ Kubernetes deletion propagation strategy.
 ---
 
 ## Log annotations
+
+{% endraw %}
+{% alert level="info" %}
+DP doesn't collect Pod logs when it deploys Applications, so these annotations don't affect the deployment.
+{% endalert %}
+{% raw %}
 
 | Annotation | Default | Description |
 |---|---|---|

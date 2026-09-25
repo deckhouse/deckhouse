@@ -1,7 +1,7 @@
 ---
 title: Application development
 permalink: en/architecture/marketplace/application-development.html
-description: "Create an Application package for Deckhouse Platform Marketplace: bootstrap, project structure, package.yaml, CI/CD setup, local build, and OCI artifact layout."
+description: "Create an Application package for Deckhouse Platform Marketplace: bootstrap, project structure, package.yaml, requirements, local rendering, verification, build, CI/CD, and OCI artifact layout."
 ---
 
 ## Prerequisites
@@ -20,12 +20,12 @@ d8 dk cr login -u license-token dev-registry.deckhouse.io --password <LICENSE_TO
 
 ## Bootstrapping an Application package
 
-To create a `<APPLICATION_NAME>/` directory in the current working directory with the package skeleton and initialize a Git repository with the first commit, run the command `d8 package bootstrap application <APPLICATION_NAME>`.
+To create a `<APPLICATION_NAME>/` directory in the current working directory with the package skeleton and initialize a Git repository with the first commit, run the command `d8 package bootstrap app <APPLICATION_NAME>` (`application` is an alias of `app`).
 
 Example:
 
 ```bash
-d8 package bootstrap application myapp --hooks
+d8 package bootstrap app myapp --hooks
 cd myapp
 git remote add origin <GITLAB_REPO_URL>
 git push --set-upstream origin main
@@ -35,9 +35,9 @@ Available options:
 
 | Option | Description |
 |---|---|
-| `--hooks` | Generate a Go hooks skeleton |
-| `--werf` | Use werf for image builds |
-| `--extended` | Add an extended set of files |
+| `--hooks` | Generate Go hooks: a hook example and a settings validation hook |
+| `--werf` | Describe the image build in a `werf.inc.yaml` file instead of a `Dockerfile` |
+| `--extended` | Add the `oss.yaml` file with the list of open source components used by the application |
 | `-o, --output <OUTPUT_PATH>` | Path where the package will be created (default: `<CURRENT_WORKING_DIRECTORY>/<APPLICATION_NAME>`) |
 
 ## Project structure
@@ -47,31 +47,44 @@ In the generated project, the package manifest, schemas, templates, hooks, image
 ```text
 myapp/
 ├── .gitignore
-├── .gitlab-ci.yml          # CI/CD pipeline.
-├── changelog.yaml
+├── .gitlab-ci.yml             # CI/CD pipeline.
+├── .pkglint.yaml              # Settings of the d8 package verify command.
+├── changelog.yaml             # Changes in the package version.
 ├── docs/
-│   └── README.md           # Application documentation.
-├── hooks/                  # Go hooks.
-│   ├── hooks.yaml
+│   ├── README.md              # Application documentation.
+│   ├── README_RU.md
+│   ├── CONFIGURATION.md
+│   ├── CONFIGURATION_RU.md
+│   └── icon.svg               # Application icon.
+├── hooks/                     # Go hooks (--hooks).
+│   ├── hooks.yaml             # Build instructions for the hooks binary.
 │   └── batch/
 │       ├── go.mod
 │       ├── go.sum
 │       ├── main.go
+│       ├── settings/
+│       │   └── check.go       # Settings validation hook.
 │       └── triggers/
-│           └── hook.go
-├── images/                 # Image sources or pull instructions.
-│   └── myapp/
-│       └── werf.inc.yaml
+│           └── hook.go        # Hook example.
+├── images/                    # Container images of the application.
+│   └── echo/
+│       └── Dockerfile         # werf.inc.yaml with --werf.
 ├── openapi/
-│   ├── config-values.yaml  # OpenAPI schema for Application.spec.settings.
-│   └── values.yaml         # OpenAPI schema for Helm values.
-├── oss.yaml
-├── package.yaml            # Package manifest.
-└── templates/              # Helm templates.
+│   ├── settings.yaml          # OpenAPI schema for Application.spec.settings.
+│   ├── doc-ru-settings.yaml   # Russian descriptions of the settings.
+│   └── values.yaml            # OpenAPI schema for Helm values.
+├── oss.yaml                   # Open source components (--extended).
+├── package.yaml               # Package manifest.
+└── templates/                 # Helm templates.
+    ├── _helpers/              # Template helpers.
     ├── deployment.yaml
+    ├── pdb.yaml
     ├── registry-secret.yaml
-    └── service.yaml
+    ├── service.yaml
+    └── vpa.yaml
 ```
+
+Don't add `Chart.yaml` or `values.yaml` to the package root: `d8 package build` doesn't include these files in the package bundle. DP renders the templates as a chart without metadata, and default values are described in the [OpenAPI schemas](settings.html).
 
 ## package.yaml
 
@@ -114,86 +127,174 @@ requirements:
 | `category` | Yes | Category for catalog classification |
 | `requirements.deckhouse` | No | Minimum Deckhouse Platform (DP) version constraint |
 | `requirements.kubernetes` | No | Minimum Kubernetes version constraint |
-| `requirements.modules` | No | Module dependencies (SemVer constraints) |
+| `requirements.modules` | No | Module dependencies (SemVer constraints). See [Requirements](#requirements) |
+| `disable` | No | Confirmation before the application is deleted. See [Deletion confirmation](#deletion-confirmation) |
+
+When DP scans a repository, it publishes the description, stage, requirements, deletion confirmation, and the contents of `changelog.yaml` in the `status.packageMetadata` field of the [ApplicationPackageVersion](../../reference/api/cr.html#applicationpackageversion) resource.
+
+### Requirements
+
+The `requirements` section defines the conditions under which the application can be installed and run:
+
+| Field | Description |
+|---|---|
+| `requirements.deckhouse.constraint` | Constraint on the DP version |
+| `requirements.kubernetes.constraint` | Constraint on the Kubernetes version |
+| `requirements.modules.mandatory` | Modules that must be enabled. `constraint` is optional |
+| `requirements.modules.conditional` | Modules that are not required but, if enabled, must match `constraint`. `constraint` is required |
+| `requirements.modules.anyOf` | Groups of alternative modules: at least one module of each group must be enabled and match its `constraint`, if it is specified |
+| `requirements.modules.noneOf` | Groups of incompatible modules: none of the modules of a group may be enabled. `constraint` narrows the incompatible versions; without it, all versions of the module are incompatible |
+
+Each `anyOf` and `noneOf` group has a unique `name`, which is used in error messages, an optional `description`, and a non-empty `modules` list. A module can be listed in only one of the `mandatory`, `conditional`, `anyOf`, and `noneOf` sections. Within `anyOf` or `noneOf`, the same module can be listed in several groups.
+
+Example:
+
+```yaml
+requirements:
+  deckhouse:
+    constraint: ">= 1.76"
+  kubernetes:
+    constraint: ">= 1.31"
+  modules:
+    mandatory:
+      - name: cert-manager
+    conditional:
+      - name: prometheus
+        constraint: ">= 1.60"
+    anyOf:
+      - name: storage
+        description: "A storage for application data"
+        modules:
+          - name: sds-local-volume
+          - name: csi-ceph
+    noneOf:
+      - name: local-path-storage
+        description: "Local path volumes are not supported"
+        modules:
+          - name: local-path-provisioner
+```
+
+DP checks the requirements:
+
+- When an Application is created or changed. If the requirements are not met, the request is rejected, and the message names the unmet requirement.
+- Before the installation. DP installs the application only after the modules from `requirements.modules.mandatory` are enabled.
+- While the application is installed. If the requirements stop being met, for example, a mandatory module is disabled, DP uninstalls the application (see [Lifecycle and debugging](lifecycle.html#suspension)).
+
+Module versions are compared with constraints without the pre-release and build metadata parts.
+
+### Deletion confirmation
+
+The `disable` section defines a confirmation the user must give before the application is deleted in the web interface:
+
+```yaml
+disable:
+  confirmation: true
+  messages:
+    en: "Deleting the application deletes all the data stored in its volumes."
+    ru: "<RU_MESSAGE>"
+```
+
+DP publishes the section in the `status.packageMetadata.disableOptions` field of the ApplicationPackageVersion, and the web interface shows the message in the language of the user. DP doesn't check the confirmation when an Application is deleted through the Kubernetes API.
+
+### changelog.yaml
+
+The `changelog.yaml` file describes the changes in the package version:
+
+```yaml
+features:
+  - "Added support for Redis 7.4."
+fixes:
+  - "Fixed the readiness probe of the replica."
+```
+
+DP publishes the contents of the file in the `status.packageMetadata.changelog` field of the ApplicationPackageVersion.
 
 ## OpenAPI schemas
 
 The `openapi/` directory defines two schemas:
 
-- `config-values.yaml` (or `settings.yaml`) — the schema for `Application.spec.settings` (user-facing configuration).
+- `settings.yaml` — the schema for `Application.spec.settings` (user-facing configuration). The legacy name `config-values.yaml` is also supported.
 - `values.yaml` — the schema for the full set of Helm values.
 
-### Defaulting a grantable cluster-wide resource value (x-deckhouse-grantable-resource)
+The schemas, validation rules, and the extensions that control defaulting, immutability, and the settings form in the web interface are described in [Application settings](settings.html).
 
-A `settings` field of type `string` can be bound to a grantable cluster-wide resource managed by the
-[`multitenancy-manager`](/modules/multitenancy-manager/) (for example, a StorageClass).
+## Templates and hooks
 
-When the field is bound and the user leaves it empty, the resource name configured as the project default is injected into `values`. When the user provides a value, it is checked against the resources available to the project. A value that is not in this list is rejected.
+- The values available to templates and the rules for templates are described in [Templates](templates.html).
+- Go hooks and the settings validation hook are described in [Hooks](hooks.html).
+- How DP installs, updates, and deletes an application and how to debug it is described in [Lifecycle and debugging](lifecycle.html).
 
-To bind the field to a cluster-wide resource, add the `x-deckhouse-grantable-resource` extension and specify the name of the resource available to the project through a grant (`AvailableClusterResource` or `GrantableClusterResourceDefinition`), for example, `storageclasses`.
+## Local rendering
 
-{% alert level="info" %}
-The resource group, version, and kind (GVK) are defined by the grant. You do not need to specify them in `openapi/settings.yaml`.
-{% endalert %}
+To render the templates of the package and print the resulting manifests, run the following command in the package directory:
 
-Example `openapi/settings.yaml` with `x-deckhouse-grantable-resource`:
-
-```yaml
-type: object
-properties:
-  storageClass:
-    type: string
-    x-deckhouse-grantable-resource: storageclasses
-  postgres:
-    type: object
-    properties:
-      storageClass:
-        type: string
-        x-deckhouse-grantable-resource: postgresclasses
+```bash
+d8 package render
 ```
 
-Behavior:
+Each object in the output is preceded by a comment with the name of its template file.
 
-- The default is resolved per project from the AvailableClusterResource in the Application's namespace, so different projects can receive different defaults.
-- An explicitly specified user value has higher priority than the project default.
-- If the custom resource definition (CRD) is absent, no catalog exists for the project, or the catalog has no default value, the field remains unchanged. No value is injected or validated.
+Available options:
 
-### Immutable fields (x-deckhouse-immutable)
+| Option | Description |
+|---|---|
+| `--file <FILE_NAME>` | Print only the objects rendered from the template with the specified file name |
+| `--render-file <PATH>` | Write the manifests to a file, without the template file name comments |
+| `-r, --remote <REPOSITORY>/<PACKAGE_NAME>:<PACKAGE_VERSION>` | Render a published package bundle instead of the local directory. A tag or a digest is required |
+| `--remote-user`, `--remote-password` | Credentials for the registry. They can also be set in the `PACKAGE_REMOTE_USER` and `PACKAGE_REMOTE_PASSWORD` environment variables |
 
-Some settings should not be changed after the application configuration is applied. For example, changing a `storageClass` after volumes have been created either has no effect or can cause application failures. To prevent changes to the value of such a field after the application configuration has been successfully applied, add the `x-deckhouse-immutable: true` extension to it.
+The command uses stub values instead of the values from a cluster: the `test` instance in the `default` namespace, the `dev` package version, and settings generated from `openapi/settings.yaml` (from `x-example`, `x-examples`, `enum`, or `default`). Image references are stubs keyed by the names of the image directories. To render the templates of an installed application with its actual values, use `deckhouse-controller packages render` (see [Lifecycle and debugging](lifecycle.html#state-in-dp)).
 
-Example `openapi/settings.yaml` with `x-deckhouse-immutable`:
+## Linting
 
-```yaml
-type: object
-properties:
-  storageClass:
-    type: string
-    default: default
-    x-deckhouse-immutable: true
-  postgres:
-    type: object
-    properties:
-      storageClass:
-        type: string
-        x-deckhouse-immutable: true
-      volumeSize:
-        type: string
+To check the structure, manifests, and schemas of the package, run the following command in the package directory:
+
+```bash
+d8 package verify
 ```
 
-Behavior:
+The command reports errors and warnings of the built-in rules and exits with an error if at least one error is found. To get the full list of rules with descriptions, run `d8 package doc`.
 
-- The extension is effective only when set to `true`. Any other value is ignored.
-- When `x-deckhouse-immutable` is added to an object, the entire object becomes immutable. After the application configuration has been successfully applied for the first time, changing any nested field is rejected, even if `x-deckhouse-immutable` is not set on that field. Set the extension on an object only when the entire object must be immutable. To make only one field immutable, add `x-deckhouse-immutable` directly to it, as with `postgres.storageClass` in the example above. In this case, the restriction does not apply to `postgres.volumeSize`, and its value can be changed.
-- If an update changes an immutable value, the validating webhook rejects it and reports the field name.
-- In the web interface, the value of a field with the extension can be set when installing the application. In the edit form of an installed application, the field is read-only.
-- Comparison uses the configuration that was actually applied, after schema defaults are applied. Therefore, a field with the extension can be omitted from the manifest only if its `default` matches the value that has already been applied. If there is no default value or it differs from the applied value, the change is rejected.
+The rules are grouped by linters:
 
-{% alert level="info" %}
-If an entire object is removed from the manifest, default values are not applied to its nested fields. Therefore, removing an object that contains fields using `x-deckhouse-immutable` can cause frozen values to be lost and is rejected.
-{% endalert %}
+| Linter | What it checks |
+|---|---|
+| `package` | Required files (`changelog.yaml`, `docs/`), absence of build artifacts (`werf.yaml`, `.werf/`, `.helmignore`), and correctness of `requirements` in `package.yaml` |
+| `openapi` | Types of `x-deckhouse-*` extension values, `x-deckhouse-ui-advanced` only on top-level settings, `enum` values in CamelCase, and a `doc-ru-*` file for each schema except `values.yaml` |
+| `templates` | Object names (the `d8a-<INSTANCE_NAME>-` prefix, the suffix length of Job and CronJob names), absence of `metadata.namespace`, PodDisruptionBudget and VerticalPodAutoscaler objects for workloads, and named `targetPort` in Services. The templates are rendered with the `test` instance name in the `default` namespace |
+| `docs` | Non-empty `docs/README.md`, a Russian version of every document, and no Cyrillic in English documents |
+| `images` | Image directory names without `_` and the format of patch files |
+| `icon` | Application icon `docs/icon.{png,webp,jpg,jpeg,svg}`: format, size up to 150 KB, and dimensions up to 300×300 pixels |
+| `oss` | Format of `oss.yaml`, if the file exists |
 
-- The mark is not inherited into array elements or map entries that the update adds — a new element has no previous value to be frozen against.
+Available options: `--hide-warnings` (don't show warnings), `--show-ignored` (show the findings of ignored rules), `--lint-config <PATH>` (path to the settings file).
+
+To check a published package, run `d8 package verify remote <REPOSITORY> <PACKAGE_NAME>`. By default, the command checks the bundle of the latest version. Use `--version <PACKAGE_VERSION>` to choose the version and `--release` to also check the version metadata image. The command uses the registry credentials saved with `d8 dk cr login`.
+
+### .pkglint.yaml
+
+The `.pkglint.yaml` file lowers the severity of the rules. The command looks for it in the package directory and its parent directories (for `verify remote`, in the current directory).
+
+Example:
+
+```yaml
+version: "1"
+static:            # d8 package verify.
+  linters:
+    templates:
+      rules:
+        vpa:
+          impact: ignored
+        service-port:
+          impact: warn
+remote:            # d8 package verify remote.
+  bundle:
+    linters:
+      docs:
+        impact: warn
+```
+
+The `impact` field takes the `error`, `warn`, and `ignored` values. The impact of a rule can't be higher than the impact of its linter. The rules of the `package` and `openapi` linters can't be configured, and the `instance-prefix`, `instance-namespace`, and `job-name` rules follow the impact of the `templates` linter.
 
 ## Local build
 
@@ -205,15 +306,25 @@ d8 package build -v v0.0.1 -r dev-registry.deckhouse.io/deckhouse/packages
 
 For local development, use the [`payload-registry`](/modules/payload-registry/) module as your own container image registry.
 
-## Linting
+Specifics of the command:
 
-Validate the package structure and configuration:
+- Specify the root path of the packages in `-r`, the same as the `spec.registry.repo` field of the PackageRepository resource. The command appends the package name to the path itself.
+- Specify the version in the `vMAJOR.MINOR.PATCH` format. DP finds only the versions in this format when it scans the repository.
+- The images are built with werf (`d8 delivery-kit`) for the `linux/amd64` platform, so the package directory must be a Git repository. Uncommitted changes are also included in the build.
+- The `images/` directory must contain at least one image.
+- If the version already exists in the registry, the command exits without building. To rebuild the version, use `-f`.
 
-```bash
-d8 package verify
-```
+Available options:
 
-The command reports errors and warnings based on `.pkglint.yaml` and built-in rules.
+| Option | Environment variable | Description |
+|---|---|---|
+| `-v, --version` | — | Package version (required) |
+| `-r, --repo` | `PACKAGE_BUILD_REPOSITORY` | Root path of the packages in the registry. Without it, the package is only built locally |
+| `-u, --user`, `-t, --token` | `PACKAGE_BUILD_REPOSITORY_USER`, `PACKAGE_BUILD_REPOSITORY_TOKEN` | Registry credentials |
+| `--final-repo`, `--final-user`, `--final-token` | `PACKAGE_BUILD_FINAL_REPOSITORY`, `PACKAGE_BUILD_FINAL_REPOSITORY_USER`, `PACKAGE_BUILD_FINAL_REPOSITORY_TOKEN` | Registry path and credentials to publish the package to, if they differ from the build registry |
+| `-f, --force` | — | Rebuild and publish a version that already exists in the registry |
+| `--insecure` | `PACKAGE_BUILD_INSECURE` | Allow HTTP and skip the verification of the TLS certificates of the registries |
+| `--sign`, `--sign-cert`, `--sign-key` | `PACKAGE_BUILD_SIGN_CERT`, `PACKAGE_BUILD_SIGN_KEY` | Sign the images with the specified certificate and key |
 
 ## CI/CD setup
 
@@ -241,25 +352,32 @@ The pipeline builds the package and pushes it to the OCI registry. Once the pipe
 
 ## OCI artifact layout in the registry
 
-The package and related data are published to an OCI-compatible registry. The package bundle, additional images, and version metadata are stored at separate paths.
+The package and related data are published to an OCI-compatible registry. The package bundle, container images, and version metadata are stored at separate paths.
 
 | Path | Description |
 |---|---|
-| `registry.deckhouse.io/deckhouse/<EDITION>/packages:<PACKAGE_NAME>` | Package name tag — used to list packages |
-| `registry.deckhouse.io/deckhouse/<EDITION>/packages/<PACKAGE_NAME>:<PACKAGE_VERSION>` | Bundle — contains templates, `openapi/`, `hooks/` |
-| `registry.deckhouse.io/deckhouse/<EDITION>/packages/<PACKAGE_NAME>/extra/<IMAGE_NAME>:<PACKAGE_VERSION>` | Additional images (application containers) |
-| `registry.deckhouse.io/deckhouse/<EDITION>/packages/<PACKAGE_NAME>/version:<PACKAGE_VERSION>` | Version metadata — contains `package.yaml`, `version.json`, `changelog.yaml` |
-| `registry.deckhouse.io/deckhouse/<EDITION>/packages/<PACKAGE_NAME>/version:<RELEASE_CHANNEL>` | Recommended version for a release channel |
+| `<REPOSITORY>:<PACKAGE_NAME>` | Package name tag — used to list packages |
+| `<REPOSITORY>/<PACKAGE_NAME>:<PACKAGE_VERSION>` | Bundle — contains templates, `openapi/`, `hooks/` |
+| `<REPOSITORY>/<PACKAGE_NAME>@<DIGEST>` | Container images of the application. Templates reference them by digest (see [Templates](templates.html#container-images)) |
+| `<REPOSITORY>/<PACKAGE_NAME>/version:<PACKAGE_VERSION>` | Version metadata |
+| `<REPOSITORY>/<PACKAGE_NAME>/release-channel:<RELEASE_CHANNEL>` | Version recommended for a release channel |
+
+Here `<REPOSITORY>` is the root path of the packages, for example, `registry.deckhouse.io/deckhouse/<EDITION>/packages`.
 
 ### Bundle contents
 
 The main bundle image (`<PACKAGE_NAME>:<PACKAGE_VERSION>`) contains:
 
 ```text
-├── package.yaml       # Package manifest.
-├── openapi/           # Settings and values schemas.
-├── templates/         # Helm templates.
-└── hooks/             # Lifecycle hooks.
+├── package.yaml         # Package manifest with the version.
+├── images_digests.json  # Digests of the container images.
+├── openapi/             # Settings and values schemas.
+├── templates/           # Helm templates.
+├── charts/              # Helm subcharts, if any.
+├── hooks/               # Hooks binary.
+├── docs/                # Documentation and icon.
+├── changelog.yaml       # Release notes.
+└── oss.yaml             # Open source components, if any.
 ```
 
 ### Version metadata image contents
@@ -269,5 +387,25 @@ The metadata image (`<PACKAGE_NAME>/version:<PACKAGE_VERSION>`) contains:
 ```text
 ├── package.yaml       # Package manifest.
 ├── version.json       # SemVer version.
-└── changelog.yaml     # Release notes.
+├── changelog.yaml     # Release notes.
+├── openapi/           # Settings and values schemas.
+└── docs/              # Documentation and icon.
 ```
+
+DP reads the version metadata when it scans the repository and creates ApplicationPackageVersion objects from it.
+
+### Release channels
+
+A release channel is a tag of the `<PACKAGE_NAME>/release-channel` path that points to a copy of the version metadata image of the recommended version. DP recognizes the `alpha`, `beta`, `early-access`, `stable`, `rock-solid`, and `lts` channels. `d8 package build` doesn't create release channel tags; they are published by the CI/CD pipeline.
+
+When DP scans a repository, it records the versions the channels point to in the `status.releaseChannels` field of the [ApplicationPackage](../../reference/api/cr.html#applicationpackage) resource:
+
+```yaml
+status:
+  releaseChannels:
+    my-registry:        # PackageRepository name.
+      alpha: v0.2.0
+      stable: v0.1.21
+```
+
+The channels are informational: the version of an application is set in `spec.packageVersion` and changes only when the user changes it.

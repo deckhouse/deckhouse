@@ -1096,7 +1096,7 @@ To add access management for a new cluster-wide resource:
 
 To manage access to cluster-wide resources in DP application settings, use the `x-deckhouse-grantable-resource` OpenAPI extension. In this case, deckhouse-controller automatically checks the availability of the specified resource and assigns the default value when necessary. You do not need to create GrantableClusterResourceReference manually.
 
-For a description of the extension and usage examples, refer to ["Application development"](/products/kubernetes-platform/documentation/v1/architecture/marketplace/application-development.html#defaulting-from-cluster-resource-grants-x-deckhouse-grantable-resource).
+For a description of the extension and usage examples, refer to ["Application settings"](/products/kubernetes-platform/documentation/v1/architecture/marketplace/settings.html#defaulting-a-grantable-cluster-wide-resource-value-x-deckhouse-grantable-resource).
 
 #### Checking resource registration status
 
