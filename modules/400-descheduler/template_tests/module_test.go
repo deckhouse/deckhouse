@@ -35,7 +35,7 @@ const globalValues = `
   modules:
     placement: {}
   discovery:
-    kubernetesVersion: 1.32.1
+    kubernetesVersion: 1.33.1
     d8SpecificNodeCountByRole:
       master: 3
 `

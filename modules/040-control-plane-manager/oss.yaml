@@ -4,7 +4,7 @@
   logo: /images/logos/kubernetes.svg
   license: Apache License 2.0
   id: kubernetes
-  version: 1.32+
+  version: 1.33+
 
 - name: Etcd
   link: https://github.com/etcd-io/etcd

@@ -102,6 +102,15 @@ const unsupportedVersionsYAML = `
 "1.34":
   "admissionregistration.k8s.io/v1beta1": ["ValidatingAdmissionPolicy", "ValidatingAdmissionPolicyBinding"]
 
+"1.35":
+  "storagemigration.k8s.io/v1alpha1": ["StorageVersionMigration"]
+
+"1.36":
+  "scheduling.k8s.io/v1alpha1": ["PriorityClass", "Workload"]
+
+"1.37":
+  "scheduling.k8s.io/v1alpha2": ["Workload", "PodGroup"]
+
 `
 
 const (

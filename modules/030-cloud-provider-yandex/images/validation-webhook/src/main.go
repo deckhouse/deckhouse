@@ -19,7 +19,6 @@ import (
 	"os"
 
 	"github.com/spf13/cobra"
-	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
@@ -94,7 +93,7 @@ func main() {
 			// delivers it to this path - one registration covers both served versions, and every
 			// rule always sees the v1 representation (the only one carrying spec.etcdDiskSizeGB).
 			registrars := []cpwebhook.Registrar{
-				webhooks.NewCredentialSecretValidator(factory, &corev1.Secret{}),
+				webhooks.NewCredentialSecretValidator(factory),
 				webhooks.NewModuleConfigValidator(factory, newWebhookObject(moduleConfigGVK)),
 				webhooks.NewNodeGroupValidator(factory, newWebhookObject(nodeGroupGVK)),
 				webhooks.NewYandexInstanceClassValidator(factory, newWebhookObject(ycicv1.GroupVersionKind)),
