@@ -18,7 +18,15 @@
           The `Privileged` default policy is currently applied to non-system namespaces.
           Set the default policy explicitly so that it does not depend on how Deckhouse detects the bootstrap version.
 
-          To set the default policy, specify the `settings.podSecurityStandards.defaultPolicy` parameter in the `admission-policy-engine` ModuleConfig:
+          To set the default policy, add the `settings.podSecurityStandards.defaultPolicy` parameter to the `admission-policy-engine` ModuleConfig.
+
+          If the ModuleConfig already exists, patch it so that its other settings are preserved:
+
+          ```shell
+          d8 k patch mc admission-policy-engine --type=merge -p '{"spec":{"settings":{"podSecurityStandards":{"defaultPolicy":"Privileged"}}}}'
+          ```
+
+          If the ModuleConfig doesn't exist, create it:
 
           ```yaml
           apiVersion: deckhouse.io/v1alpha1
