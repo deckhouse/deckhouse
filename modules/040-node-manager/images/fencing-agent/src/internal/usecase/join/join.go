@@ -45,12 +45,6 @@ const (
 	aliveSlots    = 1
 )
 
-const (
-	classNone      = "none"
-	classTransport = "transport"
-	classNotMember = "not_member"
-)
-
 var ErrNotMember = errors.New("this node is not a member of its NodeGroup any more")
 
 type NodeReader interface {
@@ -172,7 +166,7 @@ func (j *Joiner) Bootstrap(ctx context.Context) {
 		ep.streak.attempts++
 
 		msg := "memberlist bootstrap join failed, retrying"
-		if class == classNotMember {
+		if class == domain.JoinErrorClassNotMember {
 			msg = "this node is not a member of its NodeGroup, the join is retried until that changes"
 		}
 
@@ -209,7 +203,7 @@ type streak struct {
 }
 
 func (e *episode) summary() []any {
-	return runSummary(e.attempts, time.Since(e.start), e.lastDelay, cmp.Or(e.streak.class, classNone))
+	return runSummary(e.attempts, time.Since(e.start), e.lastDelay, cmp.Or(e.streak.class, domain.JoinErrorClassNone))
 }
 
 func (e *episode) streakSummary(end time.Time) []any {
@@ -227,10 +221,10 @@ func runSummary(attempts int, elapsed, lastDelay time.Duration, class string) []
 
 func classOf(err error) string {
 	if errors.Is(err, ErrNotMember) {
-		return classNotMember
+		return domain.JoinErrorClassNotMember
 	}
 
-	return classTransport
+	return domain.JoinErrorClassTransport
 }
 
 func (j *Joiner) Attempt(ctx context.Context) error {

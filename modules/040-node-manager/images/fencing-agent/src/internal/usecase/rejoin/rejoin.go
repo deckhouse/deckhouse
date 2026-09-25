@@ -23,16 +23,14 @@ import (
 	"time"
 
 	"github.com/deckhouse/deckhouse/pkg/log"
+
+	"fencing-agent/internal/domain"
 )
 
 const (
 	idleTick = time.Second
 
 	jitterFraction = 0.2
-
-	classNone      = "none"
-	classTransport = "transport"
-	classNotMember = "not_member"
 )
 
 type Params struct {
@@ -169,7 +167,7 @@ func (l *Loop) begin(quorum, own bool) {
 			quorum:    quorum,
 			own:       own,
 			delay:     l.params.Interval,
-			lastClass: classNone,
+			lastClass: domain.JoinErrorClassNone,
 		}
 
 		if quorum {
@@ -206,9 +204,9 @@ func (l *Loop) report(err error, started time.Time, delay time.Duration, quorum,
 		return
 	}
 
-	class := classTransport
+	class := domain.JoinErrorClassTransport
 	if l.deps.NotMember(err) {
-		class = classNotMember
+		class = domain.JoinErrorClassNotMember
 	}
 
 	l.ep.lastClass = class
@@ -221,7 +219,7 @@ func (l *Loop) report(err error, started time.Time, delay time.Duration, quorum,
 	l.ep.streak.attempts++
 
 	msg := "rejoin attempt failed"
-	if class == classNotMember {
+	if class == domain.JoinErrorClassNotMember {
 		msg = "this node is not a member of its NodeGroup, rejoin does not join until that changes"
 	}
 
