@@ -18,7 +18,7 @@ import (
 	"context"
 
 	admissionv1 "k8s.io/api/admission/v1"
-	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	ctrl "sigs.k8s.io/controller-runtime"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
@@ -32,17 +32,17 @@ import (
 
 type DVPInstanceClassValidator struct {
 	factory *dvpval.AdmissionStateBuilderFactory
-	object  runtime.Object
+	object  *unstructured.Unstructured
 }
 
 var (
-	_ admission.Validator[runtime.Object] = (*DVPInstanceClassValidator)(nil)
-	_ cpwebhook.Registrar                 = (*DVPInstanceClassValidator)(nil)
+	_ admission.Validator[*unstructured.Unstructured] = (*DVPInstanceClassValidator)(nil)
+	_ cpwebhook.Registrar                             = (*DVPInstanceClassValidator)(nil)
 
 	instanceClassLog = logf.Log.WithName("instance-class")
 )
 
-func NewDVPInstanceClassValidator(factory *dvpval.AdmissionStateBuilderFactory, object runtime.Object) *DVPInstanceClassValidator {
+func NewDVPInstanceClassValidator(factory *dvpval.AdmissionStateBuilderFactory, object *unstructured.Unstructured) *DVPInstanceClassValidator {
 	return &DVPInstanceClassValidator{
 		factory: factory,
 		object:  object,
@@ -50,31 +50,30 @@ func NewDVPInstanceClassValidator(factory *dvpval.AdmissionStateBuilderFactory, 
 }
 
 func (v *DVPInstanceClassValidator) Register(manager ctrl.Manager) error {
-	// Typed WithValidator cannot create a decode target for T = runtime.Object; WithCustomValidator copies v.object.
 	return ctrl.NewWebhookManagedBy(manager, v.object).
-		WithCustomValidator(v). //nolint:staticcheck
+		WithValidator(v).
 		Complete()
 }
 
-func (v *DVPInstanceClassValidator) ValidateCreate(ctx context.Context, obj runtime.Object) (admission.Warnings, error) {
+func (v *DVPInstanceClassValidator) ValidateCreate(ctx context.Context, obj *unstructured.Unstructured) (admission.Warnings, error) {
 	return v.validate(ctx, admissionv1.Create, obj)
 }
 
-func (v *DVPInstanceClassValidator) ValidateUpdate(ctx context.Context, _, newObj runtime.Object) (admission.Warnings, error) {
+func (v *DVPInstanceClassValidator) ValidateUpdate(ctx context.Context, _, newObj *unstructured.Unstructured) (admission.Warnings, error) {
 	return v.validate(ctx, admissionv1.Update, newObj)
 }
 
-func (v *DVPInstanceClassValidator) ValidateDelete(ctx context.Context, obj runtime.Object) (admission.Warnings, error) {
+func (v *DVPInstanceClassValidator) ValidateDelete(ctx context.Context, obj *unstructured.Unstructured) (admission.Warnings, error) {
 	return v.validate(ctx, admissionv1.Delete, obj)
 }
 
 func (v *DVPInstanceClassValidator) validate(
 	ctx context.Context,
 	operation admissionv1.Operation,
-	obj runtime.Object,
+	obj *unstructured.Unstructured,
 ) (admission.Warnings, error) {
-	name := objectName(obj)
-	namespace := objectNamespace(obj)
+	name := obj.GetName()
+	namespace := obj.GetNamespace()
 
 	instanceClassLog.Info(
 		"validating resource",

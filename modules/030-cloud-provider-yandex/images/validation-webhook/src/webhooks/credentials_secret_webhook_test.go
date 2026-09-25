@@ -21,7 +21,6 @@ import (
 
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 
 	cpapi "github.com/deckhouse/deckhouse/go_lib/cloud-provider/api"
 	ycmeta "github.com/deckhouse/deckhouse/modules/030-cloud-provider-yandex/pkg/meta"
@@ -31,7 +30,7 @@ func TestCredentialSecretValidatorWithFakeClientValidateCreate(t *testing.T) {
 	t.Parallel()
 
 	factory := newWebhookAdmissionStateBuilderFactory(t, validYandexClusterObjects()...)
-	validator := NewCredentialSecretValidator(factory, &corev1.Secret{})
+	validator := NewCredentialSecretValidator(factory)
 
 	_, err := validator.ValidateCreate(context.Background(), yandexCredentialSecret(validWebhookServiceAccountJSON()))
 	if err != nil {
@@ -43,7 +42,7 @@ func TestCredentialSecretValidatorWithFakeClientAllowsValidCluster(t *testing.T)
 	t.Parallel()
 
 	factory := newWebhookAdmissionStateBuilderFactory(t, validYandexClusterObjects()...)
-	validator := NewCredentialSecretValidator(factory, &corev1.Secret{})
+	validator := NewCredentialSecretValidator(factory)
 
 	secret := yandexCredentialSecret(validWebhookServiceAccountJSON())
 	_, err := validator.ValidateUpdate(context.Background(), nil, secret)
@@ -56,7 +55,7 @@ func TestCredentialSecretValidatorWithFakeClientRejectsCredentialTypeChange(t *t
 	t.Parallel()
 
 	factory := newWebhookAdmissionStateBuilderFactory(t, validYandexClusterObjects()...)
-	validator := NewCredentialSecretValidator(factory, &corev1.Secret{})
+	validator := NewCredentialSecretValidator(factory)
 
 	oldSecret := yandexCredentialSecret(validWebhookServiceAccountJSON())
 	newSecret := oldSecret.DeepCopy()
@@ -72,7 +71,7 @@ func TestCredentialSecretValidatorWithFakeClientRejectsInvalidAuthScheme(t *test
 	t.Parallel()
 
 	factory := newWebhookAdmissionStateBuilderFactory(t, validYandexClusterObjects()...)
-	validator := NewCredentialSecretValidator(factory, &corev1.Secret{})
+	validator := NewCredentialSecretValidator(factory)
 
 	secret := yandexCredentialSecret("updated-token")
 	// kubeconfig is a DVP auth scheme: Yandex accepts only serviceAccount and apiToken.
@@ -88,7 +87,7 @@ func TestCredentialSecretValidatorWithFakeClientValidateDelete(t *testing.T) {
 	t.Parallel()
 
 	factory := newWebhookAdmissionStateBuilderFactory(t, validYandexClusterObjects()...)
-	validator := NewCredentialSecretValidator(factory, &corev1.Secret{})
+	validator := NewCredentialSecretValidator(factory)
 
 	_, err := validator.ValidateDelete(context.Background(), yandexCredentialSecret("token"))
 	if err != nil {
@@ -107,7 +106,7 @@ func TestCredentialSecretValidatorWithFakeClientSkipsMigration(t *testing.T) {
 		},
 	})
 	factory := newWebhookAdmissionStateBuilderFactory(t, objects...)
-	validator := NewCredentialSecretValidator(factory, &corev1.Secret{})
+	validator := NewCredentialSecretValidator(factory)
 
 	secret := yandexCredentialSecret("invalid")
 	// kubeconfig is a DVP auth scheme: Yandex accepts only serviceAccount and apiToken.
@@ -123,7 +122,7 @@ func TestCredentialSecretValidatorWithFakeClientRejectsCreateWithWrongType(t *te
 	t.Parallel()
 
 	factory := newWebhookAdmissionStateBuilderFactory(t, validYandexClusterObjects()...)
-	validator := NewCredentialSecretValidator(factory, &corev1.Secret{})
+	validator := NewCredentialSecretValidator(factory)
 
 	secret := yandexCredentialSecret(validWebhookServiceAccountJSON())
 	secret.Type = corev1.SecretTypeTLS
@@ -148,75 +147,5 @@ func TestValidateCredentialSecretTypeChange(t *testing.T) {
 
 	if err := validateCredentialSecretTypeChange(oldSecret, oldSecret); err != nil {
 		t.Fatalf("validateCredentialSecretTypeChange(same type) error = %v, want nil", err)
-	}
-}
-
-func TestValidateCredentialSecretTypeChangeFailsClosedOnDecodeError(t *testing.T) {
-	t.Parallel()
-
-	oldSecret := yandexCredentialSecret(validWebhookServiceAccountJSON())
-	invalidNew := &unstructured.Unstructured{Object: map[string]any{"metadata": "invalid"}}
-
-	err := validateCredentialSecretTypeChange(oldSecret, invalidNew)
-	if err == nil || !strings.Contains(err.Error(), "build validation state") {
-		t.Fatalf("validateCredentialSecretTypeChange(decode error) error = %v, want internal error", err)
-	}
-}
-
-func TestRejectManagedCredentialSecretWrongTypeFailsClosedOnDecodeError(t *testing.T) {
-	t.Parallel()
-
-	if _, err := asSecret(&metav1.Status{}); err == nil {
-		t.Fatal("asSecret(Status) error = nil, want type error")
-	}
-}
-
-func TestIsManagedCredentialSecretObject(t *testing.T) {
-	t.Parallel()
-
-	primary := &corev1.Secret{
-		ObjectMeta: metav1.ObjectMeta{Name: cpapi.CredentialSecretName},
-		Type:       cpapi.CredentialsSecretType,
-	}
-	if !isManagedCredentialSecretObject(primary) {
-		t.Fatal("isManagedCredentialSecretObject(primary) = false, want true")
-	}
-
-	unstructuredSecret := &unstructured.Unstructured{Object: map[string]any{
-		"metadata": map[string]any{"name": "extra-credentials"},
-		"type":     cpapi.CredentialsSecretType,
-	}}
-	if !isManagedCredentialSecretObject(unstructuredSecret) {
-		t.Fatal("isManagedCredentialSecretObject(unstructured) = false, want true")
-	}
-
-	if isManagedCredentialSecretObject(&corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "other"}, Type: corev1.SecretTypeTLS}) {
-		t.Fatal("isManagedCredentialSecretObject(tls) = true, want false")
-	}
-}
-
-func TestAsSecret(t *testing.T) {
-	t.Parallel()
-
-	typed := &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "s"}}
-	got, err := asSecret(typed)
-	if err != nil || got.Name != "s" {
-		t.Fatalf("asSecret(typed) = (%#v, %v)", got, err)
-	}
-
-	unstructuredSecret := &unstructured.Unstructured{Object: map[string]any{
-		"metadata": map[string]any{"name": "from-unstructured"},
-	}}
-	got, err = asSecret(unstructuredSecret)
-	if err != nil || got.Name != "from-unstructured" {
-		t.Fatalf("asSecret(unstructured) = (%#v, %v)", got, err)
-	}
-
-	if _, err := asSecret(&unstructured.Unstructured{Object: map[string]any{"metadata": "invalid"}}); err == nil {
-		t.Fatal("asSecret(invalid) error = nil, want conversion error")
-	}
-
-	if _, err := asSecret(&metav1.Status{}); err == nil {
-		t.Fatal("asSecret(Status) error = nil, want type error")
 	}
 }
