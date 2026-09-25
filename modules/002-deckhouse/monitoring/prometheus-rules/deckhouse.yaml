@@ -342,6 +342,8 @@
         1. Check that the node running Deckhouse can reach the registry at all, for example through a proxy or a firewall rule that changed.
 
   - record: d8:deckhouse_queue_is_hung:with_head
+    labels:
+      d8_source: dkp
     expr: |
       (max by (pod, instance, queue) (
         min_over_time(deckhouse_tasks_queue_length{queue!~"main-subqueue-kubernetes-.*|/modules/upmeter/update_selector.*|/modules/secret-copier|/modules/deckhouse/update_deckhouse_image"}[__SCRAPE_INTERVAL_X_3__])
