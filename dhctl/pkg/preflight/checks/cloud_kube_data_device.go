@@ -33,6 +33,12 @@ import (
 // candidates: …" when there are several, or with nothing to pick when there are none. Either way
 // it happens inside the retry storm, on a master that has already been created, and etcd ends up
 // on the root filesystem or nowhere.
+//
+// So the question is not "does the reported path exist" but "will step 005 find one disk". A path
+// that does not exist is normal on more providers than not: AWS reports the attachment name
+// (/dev/xvdf) while a Nitro instance presents the disk as /dev/nvme1n1, and the check reported
+// that healthy machine as having no data disk at all. This check answers the same way step 005
+// will, by falling back the same way.
 type CloudKubeDataDeviceCheck struct {
 	// DevicePath is read when the check runs: the provider reports it as an output of the
 	// infrastructure it creates, so it does not exist when this suite is built.
@@ -72,15 +78,23 @@ func (c CloudKubeDataDeviceCheck) Run(ctx context.Context) (string, error) {
 	host := hostPhrase(nodeInterface)
 
 	path := resolveDataDevice(ctx, nodeInterface, reported)
+	autodetected := false
+
 	if path == "" {
-		// The disk is attached by the provider; it does not appear between two attempts.
-		return "", preflight.Permanent(&preflight.Failure{
-			Checked:  fmt.Sprintf("the Kubernetes data disk %q on %s", reported, host),
-			Observed: "no block device on the node matches it",
-			Expected: "the disk the provider reported as attached for Kubernetes data",
-			Fix: "check that the master node group requests a disk for Kubernetes data. " +
-				"Check in the cloud that the disk is attached to the master node",
-		})
+		// What step 005 does next, and the only answer that matters: one unused disk is what it
+		// needs, and it takes it whatever the provider called it.
+		candidates := unusedDisks(ctx, nodeInterface)
+		if len(candidates) != 1 {
+			// The disk is attached by the provider; that does not change between two attempts.
+			return "", preflight.Permanent(&preflight.Failure{
+				Checked:  fmt.Sprintf("the Kubernetes data disk %q on %s", reported, host),
+				Observed: unusedDiskProblem(candidates),
+				Expected: "one disk for Kubernetes data: the one the provider reported, or a single unused one to fall back to",
+				Fix: "check that the master node group requests a disk for Kubernetes data, and that the cloud " +
+					"attached it. If the node has several spare disks, remove the ones Deckhouse must not take",
+			})
+		}
+		path, autodetected = candidates[0], true
 	}
 
 	resolved := commandOutput(ctx, nodeInterface, "readlink", "-f", path)
@@ -91,10 +105,12 @@ func (c CloudKubeDataDeviceCheck) Run(ctx context.Context) (string, error) {
 	// Already carrying a filesystem is not a failure — a resumed bootstrap finds its own — but it
 	// is worth saying, because a disk with someone else's data on it looks exactly the same.
 	if fsType := commandOutput(ctx, nodeInterface, "lsblk", "-no", "FSTYPE", resolved); fsType != "" {
-		return fmt.Sprintf("%s is attached to %s and already carries a filesystem (%s)", resolved, host, fsType), nil
+		return fmt.Sprintf("%s is attached to %s and already carries a filesystem (%s)%s",
+			resolved, host, fsType, autodetectedNote(autodetected, reported)), nil
 	}
 
-	return fmt.Sprintf("%s is attached to %s and is empty", resolved, host), nil
+	return fmt.Sprintf("%s is attached to %s and is empty%s",
+		resolved, host, autodetectedNote(autodetected, reported)), nil
 }
 
 func CloudKubeDataDevice(devicePath func() string, nodeInterface NodeInterfaceFunc) preflight.Check {
@@ -183,4 +199,82 @@ func firstBlockDevice(ctx context.Context, nodeInterface libcon.Interface, scrip
 // shellQuote wraps a value in single quotes for the one place a check builds a shell line.
 func shellQuote(value string) string {
 	return "'" + strings.ReplaceAll(value, "'", `'\''`) + "'"
+}
+
+// autodetectedNote says the device was not the one the provider named, which is worth seeing in a
+// passing line: it is normal on AWS and it is also what a misconfigured attachment looks like.
+func autodetectedNote(autodetected bool, reported string) string {
+	if !autodetected {
+		return ""
+	}
+	return fmt.Sprintf(" (%q does not exist on the node, so bashible will autodetect this one)", reported)
+}
+
+// unusedDiskProblem states which half of "exactly one" failed, because the two need different
+// things done about them.
+func unusedDiskProblem(candidates []string) string {
+	if len(candidates) == 0 {
+		return "no block device matches it, and the node has no unused disk to fall back to"
+	}
+	return fmt.Sprintf("no block device matches it, and the node has %d unused disks, so bashible cannot choose: %s",
+		len(candidates), strings.Join(candidates, ", "))
+}
+
+// unusedDisks lists the whole disks that carry nothing — no partitions, no filesystem, not
+// mounted — which is what step 005 falls back to.
+//
+// The same rule as that step, read out of lsblk's key=value output rather than its JSON: jq is
+// what bashible uses, and bashible has installed it by then. This runs before any of that, on
+// whatever the image shipped.
+func unusedDisks(ctx context.Context, nodeInterface libcon.Interface) []string {
+	output := commandOutput(ctx, nodeInterface, "lsblk", "-Pno", "PATH,TYPE,MOUNTPOINT,FSTYPE")
+
+	type device struct{ path, kind, mountpoint, fstype string }
+
+	var devices []device
+	for _, line := range strings.Split(output, "\n") {
+		fields := lsblkPairs(line)
+		if fields["PATH"] == "" {
+			continue
+		}
+		devices = append(devices, device{fields["PATH"], fields["TYPE"], fields["MOUNTPOINT"], fields["FSTYPE"]})
+	}
+
+	var unused []string
+	for _, candidate := range devices {
+		if candidate.kind != "disk" || candidate.mountpoint != "" || candidate.fstype != "" {
+			continue
+		}
+		// zram is memory, and lsblk reports it as a disk like any other.
+		if strings.Contains(candidate.path, "zram") {
+			continue
+		}
+		// A disk with partitions is in use even when the disk itself carries no filesystem.
+		partitioned := false
+		for _, other := range devices {
+			if other.path != candidate.path && strings.HasPrefix(other.path, candidate.path) {
+				partitioned = true
+				break
+			}
+		}
+		if !partitioned {
+			unused = append(unused, candidate.path)
+		}
+	}
+	return unused
+}
+
+// lsblkPairs reads one KEY="value" line of `lsblk -P`. The pairs form is used rather than the raw
+// one because an empty MOUNTPOINT or FSTYPE is exactly what is being looked for, and raw output
+// collapses empty columns into nothing.
+func lsblkPairs(line string) map[string]string {
+	pairs := map[string]string{}
+	for _, field := range strings.Fields(strings.TrimSpace(line)) {
+		key, value, found := strings.Cut(field, "=")
+		if !found {
+			continue
+		}
+		pairs[key] = strings.Trim(value, `"`)
+	}
+	return pairs
 }

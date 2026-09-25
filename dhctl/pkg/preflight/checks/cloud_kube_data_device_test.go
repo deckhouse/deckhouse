@@ -80,8 +80,8 @@ func TestCloudKubeDataDevice(t *testing.T) {
 
 		var failure *preflight.Failure
 		require.ErrorAs(t, err, &failure)
-		assert.Contains(t, failure.Observed, "no block device on the node matches it")
-		assert.Contains(t, failure.Fix, "the disk is attached to the master node")
+		assert.Contains(t, failure.Observed, "no unused disk to fall back to")
+		assert.Contains(t, failure.Fix, "the cloud attached it")
 	})
 
 	t.Run("no separate disk in this layout", func(t *testing.T) {
@@ -153,5 +153,86 @@ func TestCloudKubeDataDeviceResolvesWhatIsNotAPath(t *testing.T) {
 		var failure *preflight.Failure
 		require.ErrorAs(t, err, &failure)
 		assert.Contains(t, failure.Checked, `"kubernetes-data-0"`)
+	})
+}
+
+// AWS reports the attachment name it asked for, and a Nitro instance presents the disk under a
+// name the kernel chose: /dev/xvdf against /dev/nvme1n1. bashible's step 005 handles that by
+// falling back to the one unused disk on the machine, so a healthy master was being reported as
+// having no data disk. Bought live on ec2-user@3.65.71.55.
+func TestCloudKubeDataDeviceFallsBackTheWayBashibleDoes(t *testing.T) {
+	const lsblk = "lsblk -Pno PATH,TYPE,MOUNTPOINT,FSTYPE"
+
+	rootDisk := `PATH="/dev/nvme0n1" TYPE="disk" MOUNTPOINT="" FSTYPE=""` + "\n" +
+		`PATH="/dev/nvme0n1p1" TYPE="part" MOUNTPOINT="/" FSTYPE="xfs"` + "\n"
+
+	t.Run("the reported name is not the one the kernel chose", func(t *testing.T) {
+		node := newFakeNode().
+			on("test -b /dev/xvdf").exits(1).
+			on(lsblk).prints(rootDisk + `PATH="/dev/nvme1n1" TYPE="disk" MOUNTPOINT="" FSTYPE=""` + "\n").
+			on("readlink -f /dev/nvme1n1").prints("/dev/nvme1n1\n")
+
+		detail, err := CloudKubeDataDeviceCheck{
+			DevicePath:    func() string { return "/dev/xvdf" },
+			NodeInterface: FixedNodeInterface(node),
+		}.Run(t.Context())
+
+		require.NoError(t, err)
+		assert.Contains(t, detail, "/dev/nvme1n1")
+		assert.Contains(t, detail, `"/dev/xvdf" does not exist on the node`,
+			"a passing line has to say the device was not the one the provider named")
+	})
+
+	// The failure the check exists for: step 005 refuses to choose, minutes later, inside the
+	// bashible retry storm.
+	t.Run("several unused disks", func(t *testing.T) {
+		node := newFakeNode().
+			on("test -b /dev/xvdf").exits(1).
+			on(lsblk).prints(rootDisk +
+			`PATH="/dev/nvme1n1" TYPE="disk" MOUNTPOINT="" FSTYPE=""` + "\n" +
+			`PATH="/dev/nvme2n1" TYPE="disk" MOUNTPOINT="" FSTYPE=""` + "\n")
+
+		_, err := CloudKubeDataDeviceCheck{
+			DevicePath:    func() string { return "/dev/xvdf" },
+			NodeInterface: FixedNodeInterface(node),
+		}.Run(t.Context())
+
+		var failure *preflight.Failure
+		require.ErrorAs(t, err, &failure)
+		assert.Contains(t, failure.Observed, "cannot choose")
+		assert.Contains(t, failure.Observed, "/dev/nvme2n1")
+	})
+
+	t.Run("nothing to fall back to", func(t *testing.T) {
+		node := newFakeNode().
+			on("test -b /dev/xvdf").exits(1).
+			on(lsblk).prints(rootDisk)
+
+		_, err := CloudKubeDataDeviceCheck{
+			DevicePath:    func() string { return "/dev/xvdf" },
+			NodeInterface: FixedNodeInterface(node),
+		}.Run(t.Context())
+
+		var failure *preflight.Failure
+		require.ErrorAs(t, err, &failure)
+		assert.Contains(t, failure.Observed, "no unused disk to fall back to")
+	})
+
+	// A disk with partitions on it is somebody's, even when the disk itself carries no filesystem.
+	t.Run("the only spare disk is partitioned", func(t *testing.T) {
+		node := newFakeNode().
+			on("test -b /dev/xvdf").exits(1).
+			on(lsblk).prints(rootDisk +
+			`PATH="/dev/nvme1n1" TYPE="disk" MOUNTPOINT="" FSTYPE=""` + "\n" +
+			`PATH="/dev/nvme1n1p1" TYPE="part" MOUNTPOINT="/data" FSTYPE="ext4"` + "\n")
+
+		_, err := CloudKubeDataDeviceCheck{
+			DevicePath:    func() string { return "/dev/xvdf" },
+			NodeInterface: FixedNodeInterface(node),
+		}.Run(t.Context())
+
+		var failure *preflight.Failure
+		require.ErrorAs(t, err, &failure)
+		assert.Contains(t, failure.Observed, "no unused disk to fall back to")
 	})
 }

@@ -37,13 +37,32 @@ const nodeStatePath = "/var/lib"
 // size against the unformatted requirement failed a node that had exactly the disk the
 // documentation asks for.
 //
-// The floor is deliberately below the documented disk rather than level with it. It started at 45
-// — 50 minus formatting — and that refused masters our own platforms hand out: a DVP master gets a
-// 40 GiB root disk, which measures about 42 GB. Those clusters work, and on the Commander path
-// there is no dhctl command line to put a skip flag on, so a floor that refuses them refuses the
-// product. 40 still catches the mistake this check exists for, a node given 30 GB or less, and the
-// failure names the 50 GB disk the documentation asks for.
+// This is the floor for the shape where etcd has nowhere else to go, which is a static cluster and
+// the few clouds that attach no separate disk; see nodeFilesystemWithSeparateEtcdFloorGB for the
+// other one.
+//
+// It is deliberately below the documented disk rather than level with it. It started at 45 — 50
+// minus formatting — and refused masters our own platforms hand out: a DVP master gets a 40 GiB
+// root, which measures about 42 GB. Those clusters work, and nearly every e2e run reaches dhctl
+// through Commander, where there is no command line to put a skip flag on — so a floor that
+// refuses them refuses the product, with no way around it. 40 keeps a little of that margin while
+// still catching the mistake this check exists for, a node given 30 GB or less.
 const nodeFilesystemFloorGB = 40
+
+// nodeFilesystemWithSeparateEtcdFloorGB is the floor when the cluster has a disk of its own for
+// Kubernetes data, which is nearly every cloud provider.
+//
+// The documented 50 GB is what the master machine needs; this check measures one filesystem. When
+// etcd lives on the disk mounted at /mnt/kubernetes-data — which cloud-kube-data-device is the
+// check for — the root filesystem holds packages, container images and containerd's state, and
+// none of etcd. Measuring that against a floor derived from "50 GB, etcd included" asks for
+// something the documentation never asked for on this shape: an AWS master is created on the AMI's
+// own 20 GiB root (diskSizeGb has no default in the schema) with a separate 20 GiB etcd disk, and
+// was refused at 19 GB while working perfectly.
+//
+// 15 clears the smallest root our own platforms hand a master and still refuses a machine that
+// cannot hold the control-plane images.
+const nodeFilesystemWithSeparateEtcdFloorGB = 15
 
 // minimumFreeDiskGiB is how much of the filesystem has to be free for the bootstrap to finish:
 // unpacking packages, pulling images and writing the first etcd state all happen before anything
@@ -57,6 +76,11 @@ const minimumFreeDiskGiB = 20
 // question, asked by StaticFreeDiskSpaceCheck of a static node only.
 type NodeDiskSpaceCheck struct {
 	NodeInterface NodeInterfaceFunc
+	// KubeDataDevicePath reports the disk the provider attached for Kubernetes data, read when
+	// the check runs because it is an output of the infrastructure. A non-empty value means etcd
+	// will not be on the filesystem being measured, and the floor moves accordingly. nil on a
+	// static cluster, where there is no such disk.
+	KubeDataDevicePath func() string
 }
 
 const NodeDiskSpaceCheckName preflight.CheckName = "node-disk-space"
@@ -102,14 +126,14 @@ func (c NodeDiskSpaceCheck) Run(ctx context.Context) (string, error) {
 	// filesystem 2.3% smaller than it is.
 	totalGB := totalKB * 1024 / 1_000_000_000
 
-	if totalGB < nodeFilesystemFloorGB {
+	floor, separateEtcd := c.floor()
+	if totalGB < floor {
 		// A disk does not grow between two attempts of the same check.
 		return "", preflight.Permanent(&preflight.Failure{
 			Checked:  fmt.Sprintf("the filesystem holding %s on %s", nodeStatePath, host),
 			Observed: fmt.Sprintf("the filesystem is %d GB", totalGB),
-			Expected: fmt.Sprintf("at least %d GB of filesystem at %s; the documentation asks for a %d GB disk",
-				nodeFilesystemFloorGB, nodeStatePath, minimumRequiredRootDiskSizeGB),
-			Fix: "give the node a larger disk, or mount a larger filesystem at " + nodeStatePath,
+			Expected: c.expectation(floor, separateEtcd),
+			Fix:      "give the node a larger disk, or mount a larger filesystem at " + nodeStatePath,
 		})
 	}
 
@@ -213,8 +237,8 @@ func parseDfOutput(output string) (int, int, bool) {
 	return total, free, true
 }
 
-func NodeDiskSpace(nodeInterface NodeInterfaceFunc) preflight.Check {
-	check := NodeDiskSpaceCheck{NodeInterface: nodeInterface}
+func NodeDiskSpace(nodeInterface NodeInterfaceFunc, kubeDataDevicePath func() string) preflight.Check {
+	check := NodeDiskSpaceCheck{NodeInterface: nodeInterface, KubeDataDevicePath: kubeDataDevicePath}
 	return preflight.Check{
 		Name:        NodeDiskSpaceCheckName,
 		Description: check.Description(),
@@ -223,4 +247,26 @@ func NodeDiskSpace(nodeInterface NodeInterfaceFunc) preflight.Check {
 		Timeout:     preflight.NodeCheckTimeout,
 		Run:         check.Run,
 	}
+}
+
+// floor is how big the filesystem has to be, and whether etcd was taken out of the reckoning.
+//
+// etcd is on a disk of its own on nearly every cloud provider, and that disk is exactly what
+// cloud-kube-data-device asks about: a value there means /var/lib will not hold the cluster state.
+func (c NodeDiskSpaceCheck) floor() (int, bool) {
+	if c.KubeDataDevicePath == nil || strings.TrimSpace(c.KubeDataDevicePath()) == "" {
+		return nodeFilesystemFloorGB, false
+	}
+	return nodeFilesystemWithSeparateEtcdFloorGB, true
+}
+
+// expectation says what would have passed, and why the number is what it is — without which a
+// reader who knows the documentation asks for 50 GB has no way to make sense of a 15 GB floor.
+func (c NodeDiskSpaceCheck) expectation(floor int, separateEtcd bool) string {
+	if separateEtcd {
+		return fmt.Sprintf("at least %d GB of filesystem at %s; the cluster state goes on the separate disk "+
+			"for Kubernetes data, so it is not counted here", floor, nodeStatePath)
+	}
+	return fmt.Sprintf("at least %d GB of filesystem at %s; the documentation asks for a %d GB disk",
+		floor, nodeStatePath, minimumRequiredRootDiskSizeGB)
 }

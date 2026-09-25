@@ -156,3 +156,65 @@ func TestStaticFreeDiskSpace(t *testing.T) {
 		})
 	}
 }
+
+// etcd sits on a disk of its own on nearly every cloud provider, and that disk is what
+// cloud-kube-data-device asks about. The floor was derived from "50 GB, etcd included", so it
+// refused masters where etcd was never going to be on this filesystem: an AWS master is created on
+// the AMI's own 20 GiB root — diskSizeGb has no default in the schema — with a separate 20 GiB
+// etcd disk, and was refused at 19 GB while working. Bought live on ec2-user@3.65.71.55.
+func TestNodeDiskSpaceWithASeparateEtcdDisk(t *testing.T) {
+	const awsRoot = 19
+
+	t.Run("the root of an AWS master, etcd elsewhere", func(t *testing.T) {
+		check := NodeDiskSpaceCheck{
+			NodeInterface:      FixedNodeInterface(newFakeNode().on("df -Pk /var/lib").prints(dfOutput(awsRoot, 12))),
+			KubeDataDevicePath: func() string { return "/dev/xvdf" },
+		}
+
+		detail, err := check.Run(t.Context())
+
+		// The size itself is not the point and the fixture's KiB round trip shifts it by a
+		// gigabyte; that this size passes at all is.
+		require.NoError(t, err)
+		assert.Contains(t, detail, "GB at /var/lib")
+	})
+
+	// The same filesystem without that disk: etcd would land here, and 19 GB is not enough.
+	t.Run("the same root with nowhere else for etcd", func(t *testing.T) {
+		check := NodeDiskSpaceCheck{
+			NodeInterface: FixedNodeInterface(newFakeNode().on("df -Pk /var/lib").prints(dfOutput(awsRoot, 12))),
+		}
+
+		_, err := check.Run(t.Context())
+
+		var failure *preflight.Failure
+		require.ErrorAs(t, err, &failure)
+		assert.Contains(t, failure.Expected, "the documentation asks for a 50 GB disk")
+	})
+
+	// A separate disk is not a licence for any disk at all.
+	t.Run("a root too small even for the images", func(t *testing.T) {
+		check := NodeDiskSpaceCheck{
+			NodeInterface:      FixedNodeInterface(newFakeNode().on("df -Pk /var/lib").prints(dfOutput(8, 4))),
+			KubeDataDevicePath: func() string { return "/dev/xvdf" },
+		}
+
+		_, err := check.Run(t.Context())
+
+		var failure *preflight.Failure
+		require.ErrorAs(t, err, &failure)
+		assert.Contains(t, failure.Expected, "separate disk for Kubernetes data")
+	})
+
+	// An empty value is what a layout with no such disk reports, and it must read as "no disk".
+	t.Run("the provider reports no data disk", func(t *testing.T) {
+		check := NodeDiskSpaceCheck{
+			NodeInterface:      FixedNodeInterface(newFakeNode().on("df -Pk /var/lib").prints(dfOutput(awsRoot, 12))),
+			KubeDataDevicePath: func() string { return "" },
+		}
+
+		_, err := check.Run(t.Context())
+
+		require.Error(t, err)
+	})
+}

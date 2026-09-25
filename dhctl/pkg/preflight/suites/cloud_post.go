@@ -73,10 +73,11 @@ func NewPostCloudSuite(deps PostCloudDeps) preflight.Suite {
 	)
 
 	built = append(built, nodeChecks(nodeCheckDeps{
-		MetaConfig:    deps.MetaConfig,
-		InstallConfig: deps.InstallConfig,
-		GlobalOpts:    deps.GlobalOpts,
-		NodeInterface: nodeInterface,
+		MetaConfig:         deps.MetaConfig,
+		InstallConfig:      deps.InstallConfig,
+		GlobalOpts:         deps.GlobalOpts,
+		NodeInterface:      nodeInterface,
+		KubeDataDevicePath: deps.KubeDataDevicePath,
 	})...)
 
 	return preflight.NewSuite(built...)
