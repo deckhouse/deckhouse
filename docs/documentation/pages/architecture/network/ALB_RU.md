@@ -40,7 +40,7 @@ description: Архитектура модуля alb в Deckhouse Platform.
    - выполняет валидацию кастомных ресурсов ClusterALBInstance, ALBInstance и ресурсов API-группы `gateway.networking.k8s.io` через механику [Validating Admission Controllers](https://kubernetes.io/docs/reference/access-authn-authz/admission-controllers/);
    - создаёт временные объекты Ingress для HTTP-01 challenge cert-manager поверх HTTPRoute при миграции с [`ingress-nginx`](/modules/ingress-nginx/);
    - создаёт и удаляет компоненты proxy и geoproxy на каждый ClusterALBInstance или ALBInstance;
-   - предоставляет Graph API интерфейс для получения графа связей модулем [console](/modules/console/).
+   - предоставляет Graph API интерфейс для получения графа связей ресурсов Gateway API модулем [console](/modules/console/).
 
    Состоит из следующих контейнеров:
 
