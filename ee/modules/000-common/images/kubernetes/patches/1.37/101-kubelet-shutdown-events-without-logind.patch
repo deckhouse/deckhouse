@@ -1,0 +1,287 @@
+diff --git a/pkg/kubelet/nodeshutdown/nodelet_inhibiter_linux.go b/pkg/kubelet/nodeshutdown/nodelet_inhibiter_linux.go
+new file mode 100644
+index 00000000000..a924453ebc7
+--- /dev/null
++++ b/pkg/kubelet/nodeshutdown/nodelet_inhibiter_linux.go
+@@ -0,0 +1,264 @@
++/*
++Copyright 2026 Flant JSC.
++
++Licensed under the Apache License, Version 2.0 (the "License");
++you may not use this file except in compliance with the License.
++You may obtain a copy of the License at
++
++    http://www.apache.org/licenses/LICENSE-2.0
++
++Unless required by applicable law or agreed to in writing, software
++distributed under the License is distributed on an "AS IS" BASIS,
++WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
++See the License for the specific language governing permissions and
++limitations under the License.
++*/
++
++package nodeshutdown
++
++// Shutdown events on a node that has no systemd-logind.
++//
++// Deckhouse Engine nodes run a minimal systemd with no logind and no D-Bus:
++// logins are not supported, so neither is shipped. kubelet's graceful node
++// shutdown is built on logind — it takes a delay inhibit lock and waits for
++// PrepareForShutdown — so on such a node it cannot start at all, and every
++// shutdownGracePeriodByPodPriority in the config is silently inert.
++//
++// The node agent (nodelet) is what takes logind's place there. It is the only
++// thing that sees the power button, Ctrl+Alt+Del and SIGPWR, and it is what
++// finally signals PID 1 — so it is in a position to hold the node back the way
++// logind does, and it hands out the same two things over a unix socket:
++//
++//   - a lock, which is the open connection itself. Taking one is connecting,
++//     releasing one is closing, and a holder that dies releases it the same way
++//     a logind holder does when its fd is closed. That is why the connection's
++//     file descriptor is handed back as the InhibitLock: the release path in
++//     this package closes it, and closing it is exactly what the agent watches
++//     for.
++//   - a notice, which is one line of JSON standing in for
++//     PrepareForShutdown(true).
++//
++// Nothing else in kubelet changes: the GracefulShutdownPostpone condition and
++// the wait built on it are untouched, and on a node with no such socket this
++// falls through to logind, so DKP nodes behave exactly as before.
++
++import (
++	"bufio"
++	"encoding/json"
++	"errors"
++	"fmt"
++	"io/fs"
++	"net"
++	"sync/atomic"
++	"time"
++
++	"k8s.io/klog/v2"
++	"k8s.io/kubernetes/pkg/kubelet/nodeshutdown/systemd"
++)
++
++const (
++	// nodeletShutdownSocket is where the node agent hands out shutdown locks.
++	// Its absence is the signal that this is not such a node.
++	nodeletShutdownSocket = "/run/nodelet/shutdown.sock"
++	// nodeletDialTimeout bounds taking the lock at kubelet startup.
++	nodeletDialTimeout = 5 * time.Second
++	// nodeletPrepareForShutdown is the event name the agent sends. It is named
++	// after the logind signal it stands in for.
++	nodeletPrepareForShutdown = "prepare-for-shutdown"
++)
++
++// nodeletInhibitTokens hands out what stands in for logind's lock descriptor.
++// kubelet only stores the value and hands it back to ReleaseInhibitLock, so it
++// means nothing on the wire — but it has to differ between connections, and
++// that is not obvious.
++//
++// kubelet keeps the token in managerImpl.inhibitLock, and that struct outlives
++// the connection: when the agent goes away, the watch ends, Start() runs
++// m.start() again and builds a new inhibiter, while the field still holds the
++// previous token. acquireInhibitLock then does
++//
++//	lock, err := m.dbusCon.InhibitShutdown()
++//	if m.inhibitLock != 0 {
++//		m.dbusCon.ReleaseInhibitLock(m.inhibitLock)
++//	}
++//	m.inhibitLock = lock
++//
++// where m.dbusCon already points at the NEW inhibiter. With logind the two
++// numbers are different descriptors, so this closes the stale one. One constant
++// for every connection would make the new inhibiter recognise the old token as
++// its own and close the connection it had just opened — and then do it again a
++// second later, for ever, leaving kubelet without a lock and the node without
++// the grace period this patch exists to give it.
++var nodeletInhibitTokens atomic.Uint32
++
++// nextInhibitToken returns a token no other connection in this process has
++// held. Never zero: kubelet reads zero as "no lock taken yet".
++func nextInhibitToken() systemd.InhibitLock {
++	return systemd.InhibitLock(nodeletInhibitTokens.Add(1))
++}
++
++// nodeletGreeting is the answer to taking a lock.
++type nodeletGreeting struct {
++	OK              bool `json:"ok"`
++	MaxDelaySeconds int  `json:"maxDelaySeconds"`
++}
++
++// nodeletNotice is what arrives when the node starts going down.
++type nodeletNotice struct {
++	Event  string `json:"event"`
++	Action string `json:"action"`
++}
++
++// nodeletInhibiter implements dbusInhibiter against the node agent.
++type nodeletInhibiter struct {
++	// conn is the lock itself: the agent holds the node until this connection
++	// closes. It stays a net.Conn and is never turned into an *os.File — see
++	// ReleaseInhibitLock for what that costs.
++	conn     net.Conn
++	reader   *bufio.Reader
++	maxDelay time.Duration
++	// token is this connection's stand-in for a lock descriptor, unique in the
++	// process — see nodeletInhibitTokens.
++	token    systemd.InhibitLock
++	released bool
++}
++
++// newNodeletInhibiter takes a shutdown lock from the node agent.
++func newNodeletInhibiter(path string) (*nodeletInhibiter, error) {
++	conn, err := net.DialTimeout("unix", path, nodeletDialTimeout)
++	if err != nil {
++		return nil, err
++	}
++
++	inhibiter := &nodeletInhibiter{conn: conn, reader: bufio.NewReader(conn), token: nextInhibitToken()}
++	line, err := inhibiter.reader.ReadBytes('\n')
++	if err != nil {
++		conn.Close()
++		return nil, fmt.Errorf("read the answer from %s: %v", path, err)
++	}
++	var greeting nodeletGreeting
++	if err := json.Unmarshal(line, &greeting); err != nil {
++		conn.Close()
++		return nil, fmt.Errorf("parse the answer from %s: %v", path, err)
++	}
++	if !greeting.OK {
++		conn.Close()
++		return nil, fmt.Errorf("%s refused the shutdown lock", path)
++	}
++	inhibiter.maxDelay = time.Duration(greeting.MaxDelaySeconds) * time.Second
++	return inhibiter, nil
++}
++
++// CurrentInhibitDelay is how long the agent lets a lock hold the node.
++func (n *nodeletInhibiter) CurrentInhibitDelay() (time.Duration, error) {
++	return n.maxDelay, nil
++}
++
++// InhibitShutdown reports that the lock taken when this was built is still
++// held. Unlike logind's, the value is a token and not a descriptor.
++func (n *nodeletInhibiter) InhibitShutdown() (systemd.InhibitLock, error) {
++	if n.released {
++		return 0, fmt.Errorf("the shutdown lock has already been released")
++	}
++	return n.token, nil
++}
++
++// ReleaseInhibitLock closes the connection, which is how the agent learns that
++// kubelet has finished with the pods and the node may go down.
++//
++// The connection has to stay a net.Conn for that to happen at all. An *os.File
++// — from UnixConn.File(), or from any call to Fd() — is in blocking mode and
++// outside the runtime poller, so the read in monitor() sits in read(2) holding
++// a reference to the descriptor. Close() then marks the file closed and returns
++// nil, but the real close(2) is deferred until that read returns, and it never
++// will: the agent sends nothing more. From the agent's side the connection
++// stays open, and it holds the node for its whole timeout even though kubelet
++// finished with the pods long before. A net.Conn is pollable, so Close()
++// unblocks the reader, the descriptor is closed for real, and the agent sees
++// EOF at once.
++func (n *nodeletInhibiter) ReleaseInhibitLock(lock systemd.InhibitLock) error {
++	if n.released || lock != n.token {
++		return nil
++	}
++	n.released = true
++	return n.conn.Close()
++}
++
++// Close drops the connection. kubelet calls it on the previous inhibiter when
++// it builds a new one, and on a new one it failed to start with. Here the
++// connection is the lock, so this also releases it, which suits both: the
++// previous one is no longer watched, and the failed one never was. Without it
++// every reconnect would leak a descriptor, and a failed start would hold the
++// node until the agent's timeout.
++func (n *nodeletInhibiter) Close() error {
++	if n.released {
++		return nil
++	}
++	n.released = true
++	return n.conn.Close()
++}
++
++// OverrideInhibitDelay does nothing: the delay is the agent's to decide, and it
++// already answers with a limit larger than any grace period kubelet asks for.
++func (n *nodeletInhibiter) OverrideInhibitDelay(time.Duration) error { return nil }
++
++// ReloadLogindConf does nothing: there is no logind on this node.
++func (n *nodeletInhibiter) ReloadLogindConf() error { return nil }
++
++// MonitorShutdown reports when the node agent says the node is going down. It
++// stands in for logind's PrepareForShutdown signal.
++func (n *nodeletInhibiter) MonitorShutdown(logger klog.Logger) (<-chan bool, error) {
++	return n.monitor(logger), nil
++}
++
++// monitor turns the agent's notices into the events kubelet's shutdown loop
++// reads. There is no "shutdown cancelled" here: the agent decides to shut the
++// node down and then does it, so only true is ever sent.
++func (n *nodeletInhibiter) monitor(logger klog.Logger) <-chan bool {
++	events := make(chan bool, 1)
++	go func() {
++		defer close(events)
++		for {
++			line, err := n.reader.ReadBytes('\n')
++			if err != nil {
++				// The lock was released (this is the expected end, after the
++				// pods have been dealt with) or the agent went away.
++				logger.V(1).Info("Stopped watching the node agent for shutdown events", "err", err)
++				return
++			}
++			var notice nodeletNotice
++			if err := json.Unmarshal(line, &notice); err != nil {
++				logger.V(1).Info("Ignoring an unreadable message from the node agent", "err", err)
++				continue
++			}
++			if notice.Event != nodeletPrepareForShutdown {
++				continue
++			}
++			logger.Info("The node agent reports the node is going down", "action", notice.Action)
++			events <- true
++		}
++	}()
++	return events
++}
++
++// nodeletOrLogind picks where shutdown events come from. The socket is the
++// whole of the test: a node that has one has a node agent holding the shutdown
++// for it, and a node that does not is an ordinary logind node.
++//
++// Kept here rather than inline in systemDbus so that this file is the only
++// thing the patch adds to this package.
++func nodeletOrLogind() (dbusInhibiter, error) {
++	inhibiter, err := newNodeletInhibiter(nodeletShutdownSocket)
++	if err == nil {
++		klog.Background().Info("Node shutdown manager is taking its lock from the node agent, not logind",
++			"socket", nodeletShutdownSocket, "maxDelay", inhibiter.maxDelay)
++		return inhibiter, nil
++	}
++	if !errors.Is(err, fs.ErrNotExist) {
++		// The socket is there but unusable. Worth a line: the fallback below
++		// cannot work on a node with no logind, so graceful shutdown is about
++		// to be off.
++		klog.Background().Error(err, "Could not take a shutdown lock from the node agent", "socket", nodeletShutdownSocket)
++	}
++	return systemd.NewDBusCon()
++}
+diff --git a/pkg/kubelet/nodeshutdown/nodeshutdown_manager_linux.go b/pkg/kubelet/nodeshutdown/nodeshutdown_manager_linux.go
+index 68907660103..14a818ed562 100644
+--- a/pkg/kubelet/nodeshutdown/nodeshutdown_manager_linux.go
++++ b/pkg/kubelet/nodeshutdown/nodeshutdown_manager_linux.go
+@@ -47,7 +47,11 @@ const (
+ )
+ 
+ var systemDbus = func() (dbusInhibiter, error) {
+-	return systemd.NewDBusCon()
++	// A Deckhouse Engine node has no systemd-logind, so kubelet's graceful node
++	// shutdown cannot start there at all. The node agent hands out the same two
++	// things over a unix socket instead; see nodelet_inhibiter_linux.go. A node
++	// with no such socket falls through to logind and behaves exactly as before.
++	return nodeletOrLogind()
+ }
+ 
+ type dbusInhibiter interface {
