@@ -18,12 +18,15 @@ package bootstrapsecrets
 
 import (
 	"encoding/base64"
+	"net"
+	"strconv"
 	"strings"
 	"time"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	corev1 "k8s.io/api/core/v1"
+	discoveryv1 "k8s.io/api/discovery/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
@@ -75,6 +78,104 @@ var _ = Describe("Bootstrap secrets controller", func() {
 		Expect(err).NotTo(HaveOccurred())
 		Expect(tokens).To(HaveKey(name))
 		Expect(string(secret.Data["bootstrap.sh"])).To(ContainSubstring(tokens[name]))
+	})
+
+	// dhctl validates immediately before destructive replacement that every
+	// surviving ready apiserver is present in manual-bootstrap-for-master.
+	It("refreshes manual Secrets when a kube-apiserver becomes ready", func() {
+		name := testenv.UniqueName("apiserver")
+		createNodeGroup(staticNodeGroup(name))
+
+		secret := &corev1.Secret{}
+		Eventually(func() error {
+			return k8sClient.Get(suiteCtx, manualSecretKey(name), secret)
+		}, eventuallyTimeout, eventuallyPoll).Should(Succeed())
+
+		pod := &corev1.Pod{
+			ObjectMeta: metav1.ObjectMeta{
+				Namespace: nodecommon.KubeSystemNamespace,
+				Name:      testenv.UniqueName("kube-apiserver"),
+				Labels: map[string]string{
+					"component": "kube-apiserver",
+					"tier":      "control-plane",
+				},
+			},
+			Spec: corev1.PodSpec{Containers: []corev1.Container{{
+				Name:  "kube-apiserver",
+				Image: "registry.k8s.io/kube-apiserver:v1.31.0",
+			}}},
+		}
+		Expect(k8sClient.Create(suiteCtx, pod)).To(Succeed())
+		DeferCleanup(func() {
+			Expect(client.IgnoreNotFound(k8sClient.Delete(suiteCtx, pod))).To(Succeed())
+		})
+
+		pod.Status.PodIP = "10.20.0.8"
+		pod.Status.Conditions = []corev1.PodCondition{{
+			Type: corev1.PodReady, Status: corev1.ConditionTrue,
+		}}
+		Expect(k8sClient.Status().Update(suiteCtx, pod)).To(Succeed())
+
+		Eventually(func(g Gomega) {
+			g.Expect(k8sClient.Get(suiteCtx, manualSecretKey(name), secret)).To(Succeed())
+			g.Expect(string(secret.Data["apiserverEndpoints"])).To(ContainSubstring("10.20.0.8:6443"))
+		}, eventuallyTimeout, eventuallyPoll).Should(Succeed(),
+			"a ready master must reach the bootstrap Secret before dhctl replaces another master")
+	})
+
+	It("refreshes manual Secrets when the kubernetes EndpointSlice changes", func() {
+		name := testenv.UniqueName("endpoint-slice")
+		createNodeGroup(staticNodeGroup(name))
+
+		secret := &corev1.Secret{}
+		Eventually(func() error {
+			return k8sClient.Get(suiteCtx, manualSecretKey(name), secret)
+		}, eventuallyTimeout, eventuallyPoll).Should(Succeed())
+
+		slice := &discoveryv1.EndpointSlice{}
+		sliceKey := types.NamespacedName{Namespace: "default", Name: "kubernetes"}
+		Expect(k8sClient.Get(suiteCtx, sliceKey, slice)).To(Succeed())
+
+		var httpsPort int32
+		for _, port := range slice.Ports {
+			if port.Name != nil && *port.Name == "https" && port.Port != nil {
+				httpsPort = *port.Port
+				break
+			}
+		}
+		Expect(httpsPort).NotTo(BeZero())
+
+		address := "10.20.0.9"
+		endpoint := net.JoinHostPort(address, strconv.Itoa(int(httpsPort)))
+		patch := client.MergeFrom(slice.DeepCopy())
+		slice.Endpoints = append(slice.Endpoints, discoveryv1.Endpoint{Addresses: []string{address}})
+		Expect(k8sClient.Patch(suiteCtx, slice, patch)).To(Succeed())
+		DeferCleanup(func() {
+			current := &discoveryv1.EndpointSlice{}
+			Expect(k8sClient.Get(suiteCtx, sliceKey, current)).To(Succeed())
+			patch := client.MergeFrom(current.DeepCopy())
+			filtered := make([]discoveryv1.Endpoint, 0, len(current.Endpoints))
+			for _, currentEndpoint := range current.Endpoints {
+				remove := false
+				for _, currentAddress := range currentEndpoint.Addresses {
+					if currentAddress == address {
+						remove = true
+						break
+					}
+				}
+				if !remove {
+					filtered = append(filtered, currentEndpoint)
+				}
+			}
+			current.Endpoints = filtered
+			Expect(k8sClient.Patch(suiteCtx, current, patch)).To(Succeed())
+		})
+
+		Eventually(func(g Gomega) {
+			g.Expect(k8sClient.Get(suiteCtx, manualSecretKey(name), secret)).To(Succeed())
+			g.Expect(string(secret.Data["apiserverEndpoints"])).To(ContainSubstring(endpoint))
+		}, eventuallyTimeout, eventuallyPoll).Should(Succeed(),
+			"an EndpointSlice change must refresh the bootstrap Secret without waiting for the resync")
 	})
 
 	// The packages-proxy token reaches the script only through the branch taken

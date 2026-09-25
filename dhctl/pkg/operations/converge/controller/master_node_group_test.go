@@ -196,3 +196,33 @@ func TestHostsMappingConfirmedWithoutTerminal(t *testing.T) {
 
 	require.True(t, confirmOrProceed(convergeCtx)("master-0 -> 10.12.1.10"))
 }
+
+func TestSurvivingMasterNodeNames(t *testing.T) {
+	controller := NewMasterNodeGroupController(
+		NewNodeGroupController("master", state.NodeGroupInfrastructureState{
+			State: map[string][]byte{
+				"cluster-master-2": nil,
+				"cluster-master-0": nil,
+				"cluster-master-1": nil,
+			},
+		}, nil, nil),
+		false,
+	)
+
+	require.Equal(t,
+		[]string{"cluster-master-0", "cluster-master-2"},
+		controller.survivingMasterNodeNames("cluster-master-1"))
+}
+
+// A single master has no surviving endpoint to put in refreshed cloud-init.
+// Its destructive-plan hook must trigger the existing 1→3→1 workflow first.
+func TestSingleMasterHasNoVariablesRefresher(t *testing.T) {
+	controller := NewMasterNodeGroupController(
+		NewNodeGroupController("master", state.NodeGroupInfrastructureState{
+			State: map[string][]byte{"cluster-master-0": nil},
+		}, nil, nil),
+		false,
+	)
+
+	require.Nil(t, controller.makeMasterNodeVariablesRefresher(nil, nil, "cluster-master-0", 0))
+}
