@@ -17,8 +17,10 @@ package template
 import (
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 
+	"github.com/BurntSushi/toml"
 	"github.com/stretchr/testify/require"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app/options"
@@ -95,4 +97,57 @@ func TestRenderBashibleTemplateUsesClusterMasterRPPAddressesForBootstrap(t *test
 	require.Contains(t, content, `export PACKAGES_PROXY_ADDRESSES="http://127.0.0.1:5444"`)
 	require.Contains(t, content, `export PACKAGES_PROXY_TOKEN="passthrough"`)
 	require.Contains(t, content, `bb-minget-install`)
+}
+
+// A mirror that carries both a CA (set via --ca-file) and an "http" scheme (left over
+// from a previous "change-registry" run without --ca-file) must still render as valid
+// TOML: https://github.com/deckhouse/deckhouse/issues/13934
+func TestRenderBashibleContainerdConfigDoesNotDuplicateTLSTable(t *testing.T) {
+	tplContent, err := os.ReadFile("../../../candi/bashible/common-steps/all/032_configure_containerd.sh.tpl")
+	require.NoError(t, err)
+
+	data := map[string]any{
+		"cri": "Containerd",
+		"nodeGroup": map[string]any{
+			"cri": map[string]any{},
+			"gpu": false,
+		},
+		"images":    map[string]any{},
+		"deckhouse": map[string]any{"edition": "EE"},
+		"runType":   "Normal",
+		"normal":    map[string]any{"moduleSourcesCA": map[string]any{}},
+		"registry": map[string]any{
+			"registryModuleEnable": false,
+			"hosts": map[string]any{
+				"harbor.example.com": map[string]any{
+					"mirrors": []any{
+						map[string]any{
+							"host":   "harbor.example.com",
+							"scheme": "http",
+							"ca":     "FAKE-CA-CONTENT",
+						},
+					},
+				},
+			},
+		},
+	}
+
+	rendered, err := RenderTemplate("032_configure_containerd.sh.tpl", tplContent, data)
+	require.NoError(t, err)
+
+	content := rendered.Content.String()
+
+	const marker = "bb-sync-file /etc/containerd/deckhouse.toml - << EOF\n"
+	start := strings.Index(content, marker)
+	require.NotEqual(t, -1, start, "generated config.toml heredoc not found")
+	start += len(marker)
+	end := strings.Index(content[start:], "\nEOF\n")
+	require.NotEqual(t, -1, end, "end of generated config.toml heredoc not found")
+	// The heredoc is expanded by bash at runtime; substitute the one shell variable it
+	// references so the captured body parses the same way the shell-rendered file would.
+	tomlBody := strings.ReplaceAll(content[start:start+end], "${systemd_cgroup}", "true")
+
+	var parsed map[string]any
+	_, err = toml.Decode(tomlBody, &parsed)
+	require.NoError(t, err, "generated containerd config.toml must be valid TOML")
 }
