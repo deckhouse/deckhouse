@@ -43,12 +43,14 @@ AssignImage
 AssignMetadata
 Assumenda
 Atlassian
+AuthorizationConfiguration
 AuthorizationPolicy
 AuthorizationRule
 Authy
 AutoPatch
 Autoloading
 AutoplaceTarget
+AvailableClusterResource
 Avi
 AzureClusterConfiguration
 AzureInstanceClass
@@ -158,11 +160,15 @@ ClusterLoggingConfig
 ClusterName
 ClusterObservabilityAlert
 ClusterPodLoggingConfig
+ClusterProjectRoleBinding
+ClusterResourceGrantPolicy
 ClusterRole
 ClusterRoleBinding
+ClusterRoleBindings
 ClusterRoles
 ClusterTrustBundleAttest
 ClusterVirtualImage
+ClusterXXXMetric
 CoC
 Colocating
 Colour
@@ -362,6 +368,8 @@ GrafanaAlertsChannel
 GrafanaCloud
 GrafanaDashboardDefinition
 Grafanas
+GrantableClusterResourceDefinition
+GrantableClusterResourceReference
 GraphQL
 Graylog
 GuestInfo
@@ -415,6 +423,7 @@ InfrastructureAccident
 InfrastructureMaintenance
 IngressClass
 IngressClassParameters
+IngressClasses
 IngressGateway
 IngressIstioController
 IngressNginxController
@@ -491,6 +500,7 @@ ListenerSet
 LmRlY
 LoadBalanacer
 LoadBalancer
+LoadBalancerClass
 LoadBalancerWithProxyProtocol
 LoadBalancers
 LocalPathProvisioner
@@ -512,6 +522,7 @@ MachineClasses
 MachineControllerManager
 MachineDeployment
 MachineSet
+MachineSets
 MailRu
 Manilla
 Mattermost
@@ -542,6 +553,7 @@ MutatingAdmissionPolicy
 MutatingAdmissionWebhook
 MutatingWebhookConfiguration
 MutatingWebhooks
+MyClusterResource
 MySQL
 MySQL’s
 MySuperResource
@@ -624,6 +636,7 @@ OpenStackInstanceClasses
 OpenTelemetry
 OpenTofu
 OpenVPN
+OpenstackInstanceClasses
 Opentofu
 OperationPolicy
 OpsGenie
@@ -678,6 +691,7 @@ Poly
 PostgreSQL
 Postgres
 PostgresClass
+PostgresDatabase
 PostgresSnapshot
 PowerShell
 Praefect
@@ -758,6 +772,7 @@ ResourceQuota
 Restic
 RockSolid
 RoleBinding
+RoleBindings
 RollingUpdate
 RootConf
 RuleGroup
@@ -999,6 +1014,7 @@ WithNAT
 WithNATInstance
 WithNatInstance
 WithoutNAT
+XFS
 YC
 YCC
 YCloud
@@ -1050,6 +1066,7 @@ api
 apiGroup
 apiGroups
 apiVersion
+apiextensions
 apiserver
 app
 apparmor
@@ -1448,6 +1465,7 @@ kubernetesPods
 kubernetesVersion
 kuma
 labelSelector
+labelled
 labelsRegex
 lang
 ldap
@@ -1764,6 +1782,7 @@ subvolume
 subvolumes
 sudo
 sudoers
+superadmin
 supercronic
 svc
 svg
@@ -1996,6 +2015,7 @@ zoneTagCategory
 агрегирующую
 адимнистраторами
 админки
+адресно
 ает
 алерт
 алерта
@@ -2010,6 +2030,7 @@ zoneTagCategory
 алерты
 ам
 ами
+апгрейда
 апстрима
 архитектурах
 ассетами
@@ -2457,6 +2478,7 @@ zoneTagCategory
 неограничивающая
 неограничивающего
 неподдерживаемые
+неподдерживаемым
 неподдерживаемых
 неподнимающийся
 неподписанным
@@ -2612,7 +2634,10 @@ zoneTagCategory
 подсетям
 подсетями
 подсетях
+подсистемная
+подсистемной
 подсистемные
+подсистемных
 покоммитное
 помотрим
 превью

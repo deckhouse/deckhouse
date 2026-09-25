@@ -22,7 +22,7 @@ import (
 
 	. "github.com/onsi/gomega"
 
-	"github.com/deckhouse/deckhouse/modules/040-node-manager/hooks"
+	"github.com/deckhouse/deckhouse/modules/040-node-manager/hooks/core"
 	"github.com/deckhouse/deckhouse/testing/library/object_store"
 )
 
@@ -53,12 +53,12 @@ func decodeK8sObjField(o *object_store.KubeObject, fullPath string) string {
 func assertKeepPolicyCovers(taken, untouched []string) {
 	for _, name := range taken {
 		Expect(name).NotTo(BeEmpty())
-		Expect(hooks.IsBootstrapSecretName(name)).To(BeTrue(),
+		Expect(core.IsBootstrapSecretName(name)).To(BeTrue(),
 			"keep policy must cover the rendered secret %s", name)
 	}
 	for _, name := range untouched {
 		Expect(name).NotTo(BeEmpty())
-		Expect(hooks.IsBootstrapSecretName(name)).To(BeFalse(),
+		Expect(core.IsBootstrapSecretName(name)).To(BeFalse(),
 			"keep policy must leave the rendered secret %s alone", name)
 	}
 }

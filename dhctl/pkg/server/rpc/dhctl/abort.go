@@ -171,12 +171,15 @@ func (s *Service) abort(ctx context.Context, p *abortParams) *pb.AbortResult {
 
 	ctx = initDhctlLoggerCtx(ctx, p)
 
-	opts := newRequestOptions(
+	opts, err := newRequestOptions(
 		s.params.CacheDir,
-		p.request.Options.CommonOptions.SkipPreflightChecks,
+		p.request.Options.CommonOptions,
 		p.request.Options.ResourcesTimeout.AsDuration(),
 		p.request.Options.DeckhouseTimeout.AsDuration(),
 	)
+	if err != nil {
+		return &pb.AbortResult{Err: err.Error()}
+	}
 
 	logBeforeExit := logInformationAboutInstance(ctx, s.params)
 	defer logBeforeExit()

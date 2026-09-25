@@ -269,6 +269,14 @@ import:
   - ctr
   - runc
   before: install
+# pause is the first pull of every pod, so it ships here and containerd.service
+# imports it on start, at the path the bashible unit uses.
+- image: {{ $.ModuleName }}/pause-artifact
+  add: /
+  to: /sysext/opt/deckhouse/images
+  includePaths:
+  - pause.tar
+  before: install
 {{- include "engine sysext sign imports" $ }}
 git:
 - add: /{{ $.ModulePath }}modules/007-{{ $.ModuleName }}/images/{{ $.ImageName }}/sysext

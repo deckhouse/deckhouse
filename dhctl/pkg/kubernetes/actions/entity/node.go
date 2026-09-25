@@ -342,6 +342,11 @@ func WaitForNodesBecomeReady(ctx context.Context, kubeCl *client.KubernetesClien
 				condition := "NotReady"
 				if _, ok := readyNodes[node.Name]; ok {
 					condition = "Ready"
+				} else if reason := nodeNotReadyReason(node); reason != "" {
+					// kubelet writes why it is holding the node back — most often
+					// "container runtime network not ready" — and repeating a bare
+					// "NotReady" for half an hour throws it away.
+					condition += ": " + reason
 				}
 				fmt.Fprintf(&message, "* %s | %s\n", node.Name, condition)
 			}
@@ -349,6 +354,20 @@ func WaitForNodesBecomeReady(ctx context.Context, kubeCl *client.KubernetesClien
 			if len(readyNodes) >= desiredReadyNodes {
 				dhlog.FromContext(ctx).InfoContext(ctx, message.String())
 				return nil
+			}
+
+			// Nodes that never appear at all leave nothing above to explain them: the list
+			// simply has fewer entries than expected. The NodeGroup knows why it could not
+			// create the machine, and the Instance knows why the machine it did create is
+			// not finishing.
+			for _, section := range []string{
+				describeTroubles("NodeGroups report:", nodeGroupTroubles(ctx, kubeCl, ngsName)),
+				describeTroubles("Instances report:", instanceTroubles(ctx, kubeCl, ngsName)),
+			} {
+				if section != "" {
+					message.WriteString(section)
+					message.WriteString("\n")
+				}
 			}
 
 			return fmt.Errorf("%s", strings.TrimSuffix(message.String(), "\n"))
@@ -400,6 +419,8 @@ func WaitForNodesListBecomeReady(ctx context.Context, kubeCl *client.KubernetesC
 				condition := "NotReady"
 				if _, ok := readyNodes[node.Name]; ok {
 					condition = "Ready"
+				} else if reason := nodeNotReadyReason(node); reason != "" {
+					condition += ": " + reason
 				}
 				fmt.Fprintf(&message, "* %s | %s\n", node.Name, condition)
 			}

@@ -60,6 +60,7 @@ var _ runtime.Object = (*Module)(nil)
 // +kubebuilder:object:root=true
 // +kubebuilder:subresource:status
 // +kubebuilder:resource:scope=Cluster
+// +kubebuilder:unservedversion
 // +kubebuilder:printcolumn:name=Version,type=string,JSONPath=.spec.packageVersion
 // +kubebuilder:printcolumn:name=Repository,type=string,JSONPath=.spec.packageRepositoryName,priority=1
 // +kubebuilder:printcolumn:name=State,type=string,JSONPath=.status.summary.state
@@ -91,8 +92,8 @@ type ModuleSpec struct {
 	// +crd-enricher:deckhouse:documentation:examples=deckhouse
 	PackageRepositoryName string `json:"packageRepositoryName,omitempty"`
 
-	// Version of the module package to install
-	// +crd-enricher:deckhouse:documentation:examples=v1.0.0.
+	// Version of the module package to install.
+	// +crd-enricher:deckhouse:documentation:examples=v1.0.0
 	PackageVersion string `json:"packageVersion"`
 
 	// Release channel for the module package.
@@ -111,7 +112,7 @@ type ModuleSpec struct {
 	//
 	//   - Configuration or hook changes are not reconciled, which prevents resources from being updated automatically.
 	//   - Resource monitoring is disabled, which prevents deleted resources from being restored.
-	//   - All the module's resources are labeled with `maintenance: NoResourceReconciliation`.
+	//   - All the module's resources are labeled with `maintenance.deckhouse.io/no-resource-reconciliation`.
 	//   - The `ModuleIsInMaintenanceMode` alert is triggered.
 	// +kubebuilder:validation:Enum=NoResourceReconciliation
 	// +optional
@@ -153,7 +154,7 @@ type ModuleStatus struct {
 	// +optional
 	LastAppliedConfiguration runtime.RawExtension `json:"lastAppliedConfiguration"`
 
-	// Conditions reflecting the latest observations of the application state.
+	// Conditions reflecting the latest observations of the module state.
 	// +optional
 	// +patchMergeKey=type
 	// +patchStrategy=merge

@@ -802,6 +802,9 @@ labels: {}
 				Expect(deployment.Field("spec.template.spec.hostNetwork").Exists()).To(BeFalse())
 				Expect(deployment.Field(`spec.template.metadata.labels.security\.deckhouse\.io/security-policy-exception`).Exists()).To(BeFalse())
 
+				_, found := envValue(deployment, "KUBERNETES_SERVICE_HOST")
+				Expect(found).To(BeFalse())
+
 				Expect(f.KubernetesResource("Service", moduleNamespace, "validation-webhook").Exists()).To(BeTrue())
 				Expect(f.KubernetesResource("ServiceAccount", moduleNamespace, "validation-webhook").Exists()).To(BeTrue())
 				Expect(f.KubernetesResource("PodDisruptionBudget", moduleNamespace, "validation-webhook").Exists()).To(BeTrue())
@@ -877,6 +880,13 @@ labels: {}
 				deployment := f.KubernetesResource("Deployment", moduleNamespace, "validation-webhook")
 				Expect(deployment.Field("spec.template.spec.hostNetwork").Bool()).To(BeTrue())
 				Expect(deployment.Field(`spec.template.metadata.labels.security\.deckhouse\.io/security-policy-exception`).String()).To(Equal("validation-webhook"))
+
+				_, hostFound := envValue(deployment, "KUBERNETES_SERVICE_HOST")
+				Expect(hostFound).To(BeTrue())
+
+				port, found := envValue(deployment, "KUBERNETES_SERVICE_PORT")
+				Expect(found).To(BeTrue())
+				Expect(port).To(Equal("6443"))
 
 				exception := f.KubernetesResource("SecurityPolicyException", moduleNamespace, "validation-webhook")
 				Expect(exception.Exists()).To(BeTrue())

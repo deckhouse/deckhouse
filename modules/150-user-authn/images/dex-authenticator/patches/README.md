@@ -11,6 +11,18 @@ Storing refresh token in cookie adds the possibility to restore access- and id- 
 
 Upstream PR - https://github.com/oauth2-proxy/oauth2-proxy/pull/313
 
+A persistent store that holds no data for a ticket returns a stub session instead of an error.
+The stub holds the refresh token from the cookie and the placeholder user `Does not found in Redis`.
+With `--cookie-refresh` above zero, the proxy refreshes the stub instead of trusting it.
+If the cookie carries no refresh token, the store returns an error, so a stub never passes
+as an authenticated session.
+The session store tests expect this behaviour.
+
+Sign-out does not invalidate a previously issued cookie.
+A copy of the cookie restores the session while both conditions hold:
+the refresh token in the cookie is still valid in dex,
+and the cookie itself has not expired (`--cookie-expire`, set from `keepUsersLoggedInFor`).
+
 ### 003-remove-groups.patch
 
 Prevents sending groups auth request header (may cause uncontrollable headers grows).
@@ -33,6 +45,17 @@ This patch fixes:
 - CVE-2026-34986
 - CVE-2026-33186
 
+The login.gov provider embeds `jwt.RegisteredClaims` in its ID token claims, as `golang-jwt/jwt/v5`
+requires. An embedded `jwt.Claims` interface stays nil and makes token validation panic.
+The provider parses the ID token with `jwt.WithIssuedAt()`, so a token with an `iat` claim in the
+future is rejected, as with `StandardClaims` of `jwt/v3`.
+
+The patch also adapts upstream tests to the newer toolchain and dependencies:
+
+- the JSON decoding error messages of Go 1.24 and later, including the field names of Go 1.27;
+- an unreachable upstream address that still parses under the strict URL parsing of Go 1.26;
+- valid JSON in a mocked Google Directory API response.
+
 ### 006-return-200-on-success-and-header-on-fail.patch
 
 Oauth2-proxy returns 200 (instead of 202) when the request is authenticated and adds "X-Auth-Request-Result" header on fail.
@@ -46,6 +69,7 @@ Add json logging.
 Additional dependency bumps on top of `005-fix-cves.patch`.
 
 Fix CVEs:
+- CVE-2025-29923
 - CVE-2026-25680
 - CVE-2026-25681
 - CVE-2026-27136
@@ -56,6 +80,12 @@ Fix CVEs:
 - CVE-2026-42506
 - CVE-2026-46600
 - CVE-2026-56852
+- CVE-2026-56854
+- CVE-2026-56855
+- CVE-2026-78662
+- CVE-2026-84303
+- CVE-2026-84304
+- CVE-2026-84445
 
 GHSA:
 - GHSA-hrxh-6v49-42gf

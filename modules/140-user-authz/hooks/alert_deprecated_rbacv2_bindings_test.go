@@ -21,6 +21,7 @@ import (
 	. "github.com/onsi/gomega"
 	"k8s.io/utils/ptr"
 
+	"github.com/deckhouse/deckhouse/go_lib/dependency/requirements"
 	"github.com/deckhouse/deckhouse/pkg/metrics-storage/operation"
 	. "github.com/deckhouse/deckhouse/testing/hooks"
 )
@@ -130,6 +131,25 @@ subjects:
 var _ = Describe("User-authz hooks :: alert_deprecated_rbacv2_bindings ::", func() {
 	f := HookExecutionConfigInit(`{"userAuthz":{"internal":{}}}`, `{}`)
 
+	Context("Bindings to deprecated roles and to a deprecated capability", func() {
+		BeforeEach(func() {
+			f.BindingContexts.Set(f.KubeStateSet(rbDeprecatedUse + crbDeprecatedManage + crbNewModel + rbOrdinary + crbDeprecatedManageCap))
+			f.RunHook()
+		})
+
+		It("Saves the bindings to aliased names, sorted, as the requirement value", func() {
+			Expect(f).To(ExecuteSuccessfully())
+			value, exists := requirements.GetValue(DeprecatedRBACv2BindingsValueKey)
+			Expect(exists).To(BeTrue())
+			// The capability binding raises its alert but does not hold the release: it has no alias
+			// whose removal would change anything for it.
+			Expect(value).To(Equal([]string{
+				"ClusterRoleBinding legacy-observability -> d8:manage:observability:manager",
+				"RoleBinding team-a/legacy-viewer -> d8:use:role:viewer",
+			}))
+		})
+	})
+
 	Context("An empty cluster", func() {
 		BeforeEach(func() {
 			f.RunHook()
@@ -143,6 +163,12 @@ var _ = Describe("User-authz hooks :: alert_deprecated_rbacv2_bindings ::", func
 				Group:  deprecatedRBACv2Metric,
 				Action: operation.ActionExpireMetrics,
 			}))
+		})
+
+		It("Saves an empty list to the requirement value", func() {
+			value, exists := requirements.GetValue(DeprecatedRBACv2BindingsValueKey)
+			Expect(exists).To(BeTrue())
+			Expect(value).To(BeEmpty())
 		})
 	})
 
@@ -236,6 +262,13 @@ var _ = Describe("User-authz hooks :: alert_deprecated_rbacv2_bindings ::", func
 					"aliased":      "false",
 				},
 			}))
+		})
+
+		It("Does not hold the release: the requirement value stays empty", func() {
+			Expect(f).To(ExecuteSuccessfully())
+			value, exists := requirements.GetValue(DeprecatedRBACv2BindingsValueKey)
+			Expect(exists).To(BeTrue())
+			Expect(value).To(BeEmpty())
 		})
 	})
 

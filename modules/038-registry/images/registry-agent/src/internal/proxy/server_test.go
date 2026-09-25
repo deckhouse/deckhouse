@@ -162,10 +162,11 @@ func (s *registryStub) asked() []string {
 
 func newServer(spec *registryv1alpha1.RegistryNodeSpec) *Server {
 	return &Server{
-		Log:            slog.New(slog.NewTextHandler(io.Discard, nil)),
-		Layout:         LayoutFunc(func() *registryv1alpha1.RegistryNodeSpec { return spec }),
-		Self:           self,
-		ForwardTimeout: 5 * time.Second,
+		Log:             slog.New(slog.NewTextHandler(io.Discard, nil)),
+		Layout:          LayoutFunc(func() *registryv1alpha1.RegistryNodeSpec { return spec }),
+		Self:            self,
+		ResponseTimeout: 5 * time.Second,
+		IdleTimeout:     5 * time.Second,
 	}
 }
 
@@ -548,9 +549,9 @@ func TestServeRefusesWhatItCannotRoute(t *testing.T) {
 	assert.Contains(t, bodyOf(t, looping), "loop")
 }
 
-// TestServeHonoursTheForwardTimeout keeps a hung registry from holding the pull for as
+// TestServeHonoursTheResponseTimeout keeps a hung registry from holding the pull for as
 // long as it likes: a fallback that never gets tried is not a fallback.
-func TestServeHonoursTheForwardTimeout(t *testing.T) {
+func TestServeHonoursTheResponseTimeout(t *testing.T) {
 	slow := (&registryStub{name: "slow", delay: 2 * time.Second}).start(t)
 	fast := (&registryStub{name: "fast", body: "from-the-fast-one"}).start(t)
 
@@ -562,7 +563,7 @@ func TestServeHonoursTheForwardTimeout(t *testing.T) {
 	}
 
 	server := newServer(spec)
-	server.ForwardTimeout = 200 * time.Millisecond
+	server.ResponseTimeout = 200 * time.Millisecond
 
 	started := time.Now()
 	response := pull(t, server, constant.Host, "/v2/system/deckhouse/one/manifests/v1")
@@ -570,6 +571,103 @@ func TestServeHonoursTheForwardTimeout(t *testing.T) {
 	assert.Equal(t, http.StatusOK, response.StatusCode)
 	assert.Equal(t, "from-the-fast-one", bodyOf(t, response))
 	assert.Less(t, time.Since(started), 2*time.Second)
+}
+
+// TestServeCarriesATransferSlowerThanTheResponseTimeout is the reason the deadline is
+// split by phase at all.
+//
+// A container disk of a virtual machine is tens of gigabytes, and on a slow link it is
+// on the wire for far longer than any registry is given to answer. Under one deadline
+// over the whole attempt the two are the same number, and it cannot be both short enough
+// to detect a dead registry and long enough to carry the image — so the image is what
+// gets cut, every time, at exactly the same point.
+func TestServeCarriesATransferSlowerThanTheResponseTimeout(t *testing.T) {
+	const chunks = 20
+
+	blobs := httptest.NewServer(http.HandlerFunc(func(writer http.ResponseWriter, _ *http.Request) {
+		writer.WriteHeader(http.StatusOK)
+		for i := 0; i < chunks; i++ {
+			_, _ = writer.Write([]byte("x"))
+			writer.(http.Flusher).Flush()
+			time.Sleep(20 * time.Millisecond)
+		}
+	}))
+	t.Cleanup(blobs.Close)
+
+	parsed, err := url.Parse(blobs.URL)
+	require.NoError(t, err)
+
+	spec := &registryv1alpha1.RegistryNodeSpec{
+		Backends: []registryv1alpha1.Backend{{
+			Name: registryv1alpha1.BackendStorage,
+			Endpoint: registryv1alpha1.Endpoint{
+				Scheme: registryv1alpha1.SchemeHTTP, Host: parsed.Host, Path: constant.Path,
+			},
+		}},
+	}
+
+	server := newServer(spec)
+	// Shorter than the transfer takes, which is the whole point: it is a deadline on
+	// answering, and the answer came long ago.
+	server.ResponseTimeout = 100 * time.Millisecond
+	server.IdleTimeout = time.Second
+
+	started := time.Now()
+	response := pull(t, server, constant.Host, "/v2/system/deckhouse/one/blobs/sha256:abc")
+	require.Equal(t, http.StatusOK, response.StatusCode)
+
+	body, err := io.ReadAll(response.Body)
+	require.NoError(t, err)
+	assert.Len(t, body, chunks)
+	assert.Greater(t, time.Since(started), server.ResponseTimeout,
+		"the transfer outlasted the response timeout, which is what it is allowed to do")
+}
+
+// TestServeAbandonsAStalledTransfer is the other half: a transfer that stops producing
+// anything must not be held open by the same rule that lets a slow one run.
+func TestServeAbandonsAStalledTransfer(t *testing.T) {
+	release := make(chan struct{})
+
+	blobs := httptest.NewServer(http.HandlerFunc(func(writer http.ResponseWriter, _ *http.Request) {
+		writer.WriteHeader(http.StatusOK)
+		// Enough to overflow the response buffer on the way out, so the client is
+		// actually reading a body when the upstream goes quiet. A handful of bytes would
+		// still be sitting in the proxy's buffer, and the stall would arrive as a request
+		// that never produced a response at all.
+		_, _ = writer.Write(make([]byte, 64<<10))
+		writer.(http.Flusher).Flush()
+		<-release
+	}))
+	// Registered in this order so that they run in the other one: Close waits for the
+	// handler above to return, and it only returns once the channel is closed.
+	t.Cleanup(blobs.Close)
+	t.Cleanup(func() { close(release) })
+
+	parsed, err := url.Parse(blobs.URL)
+	require.NoError(t, err)
+
+	spec := &registryv1alpha1.RegistryNodeSpec{
+		Backends: []registryv1alpha1.Backend{{
+			Name: registryv1alpha1.BackendStorage,
+			Endpoint: registryv1alpha1.Endpoint{
+				Scheme: registryv1alpha1.SchemeHTTP, Host: parsed.Host, Path: constant.Path,
+			},
+		}},
+	}
+
+	server := newServer(spec)
+	server.ResponseTimeout = 5 * time.Second
+	server.IdleTimeout = 200 * time.Millisecond
+
+	response := pull(t, server, constant.Host, "/v2/system/deckhouse/one/blobs/sha256:abc")
+	require.Equal(t, http.StatusOK, response.StatusCode)
+
+	started := time.Now()
+	// The status line is long gone, so the stall can only be reported as a body that
+	// ends where it should not. That is what the runtime retries on.
+	_, err = io.ReadAll(response.Body)
+	assert.Error(t, err)
+	assert.Less(t, time.Since(started), 5*time.Second)
 }
 
 // TestServeStreamsWithoutBuffering matters because a layer can be gigabytes and the

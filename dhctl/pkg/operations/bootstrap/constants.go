@@ -34,9 +34,11 @@ var (
 	// forward, not the install, which is over by then. Five minutes.
 	waitAPIServerReady = waitBudget{attempts: 60, interval: 5 * time.Second}
 
-	// Everything after the apiserver answers. Registering the Node is the node's
-	// next step, so a couple of minutes is generous.
-	waitNodeRegistered = waitBudget{attempts: 120, interval: time.Second}
+	// A joining immutable master still has to finish its initramfs work, start
+	// nodelet, install the system extensions and start kubelet after taking its
+	// payload. A live DVP run needed about 122 seconds and raced the old two-minute
+	// limit; four minutes leaves headroom for the same path under load.
+	waitNodeRegistered = waitBudget{attempts: 240, interval: time.Second}
 
 	// The machine may be powering on when the bootstrap starts, and the Deckhouse
 	// Engine init opens the port about thirty seconds into the boot. Ten minutes.

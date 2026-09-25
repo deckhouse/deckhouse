@@ -28,6 +28,16 @@ security.deckhouse.io/security-policy-exception: capdvp-controller-manager
     secretKeyRef:
       name: dvp-credentials-capdvp
       key: clusterUUID
+# KUBERNETES_SERVICE_HOST and KUBERNETES_SERVICE_PORT are needed on the bootstrap phase to make CAPI work without kube-proxy
+{{- if not .Values.global.clusterIsBootstrapped }}
+- name: KUBERNETES_SERVICE_HOST
+  valueFrom:
+    fieldRef:
+      apiVersion: v1
+      fieldPath: status.hostIP
+- name: KUBERNETES_SERVICE_PORT
+  value: "6443"
+{{- end }}
 {{- end -}}
 
 {{- if not (default false (dig "nodes" "disabled" false .Values.cloudProviderDvp)) }}
@@ -42,7 +52,7 @@ security.deckhouse.io/security-policy-exception: capdvp-controller-manager
 {{- $_ := set $capiConfig "additionalPodAnnotations" (include "capdvp_controller_manager_pod_annotations" . | fromYaml) -}}
 {{- $_ := set $capiConfig "additionalPodLabels" (include "capdvp_controller_manager_pod_labels" . | fromYaml) -}}
 {{- $_ := set $capiConfig "hostNetwork" true -}}
-{{- $_ := set $capiConfig "dnsPolicy" "ClusterFirstWithHostNet" -}}
+{{- $_ := set $capiConfig "dnsPolicy" (include "helm_lib_dns_policy_bootstraping_state" (list . "Default" "ClusterFirstWithHostNet")) -}}
 {{- $_ := set $capiConfig "securityPolicyExceptionEnabled" true -}}
 {{- $_ := set $capiConfig "vpaEnabled" true -}}
 

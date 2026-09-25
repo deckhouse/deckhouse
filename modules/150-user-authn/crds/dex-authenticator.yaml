@@ -62,12 +62,23 @@ spec:
                     signOutURL: "/logout"
                     whitelistSourceRanges:
                       - 2.2.2.2/32
+            - apiVersion: deckhouse.io/v1
+              kind: DexAuthenticator
+              metadata:
+                name: app-alb
+                namespace: app-namespace
+              spec:
+                applicationDomain: app.example.com
+                gatewayAPI:
+                  applicationHTTPRouteListenerSetName: app-listeners
           properties:
             spec:
               type: object
               required:
                 - applicationDomain
-                - applicationIngressClassName
+              x-kubernetes-validations:
+                - rule: "has(self.applicationIngressClassName) || has(self.gatewayAPI)"
+                  message: "Specify applicationIngressClassName or gatewayAPI to publish the application."
               properties:
                 applicationDomain:
                   type: string
@@ -101,6 +112,8 @@ spec:
                   type: string
                   description: |
                     The name of the Ingress class to be used in the Ingress resource (it must match the Ingress class name for the application domain).
+
+                    Required unless `gatewayAPI` is specified. If omitted, no Ingress resources are created for this application. Both fields may be specified.
                   x-doc-examples: ['nginx']
                   pattern: '^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$'
                 gatewayAPI:
@@ -125,6 +138,8 @@ spec:
                       type: string
                       description: |
                         Namespace where the ListenerSet object from the Gateway API is deployed to be referred to from the HTTPRoute.
+
+                        If not set, the namespace of the `DexAuthenticator` is used.
                       x-doc-examples: ['default']
                       pattern: '^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$'
                       maxLength: 63
@@ -331,7 +346,9 @@ spec:
                     type: object
                     required:
                       - domain
-                      - ingressClassName
+                    x-kubernetes-validations:
+                      - rule: "has(self.ingressClassName) || has(self.gatewayAPI)"
+                        message: "Specify ingressClassName or gatewayAPI to publish the application."
                     properties:
                       domain:
                         type: string
@@ -348,7 +365,43 @@ spec:
                         type: string
                         description: |-
                           The name of the Ingress class to be used in the Ingress resource (it must match the Ingress class name for the application domain).
+
+                          Required unless `gatewayAPI` is specified. If omitted, no Ingress resources are created for this application. Both fields may be specified.
                         pattern: '^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$'
+                      gatewayAPI:
+                        type: object
+                        required:
+                        - httpRouteListenerSetName
+                        description: |-
+                          A set of parameters to use in HTTPRoute object.
+
+                          > **Warning.** Only applicable in clusters with Gateway API support.
+
+                          > **Warning.** Define the same ListenerSet object which is used to publish the application domain.
+                        properties:
+                          httpRouteListenerSetName:
+                            type: string
+                            description: |
+                              Name of the ListenerSet object from the Gateway API to be referred to from the HTTPRoute.
+                            x-doc-examples: ['default-listener-set']
+                            pattern: '^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$'
+                            maxLength: 253
+                          httpRouteListenerSetNamespace:
+                            type: string
+                            description: |
+                              Namespace where the ListenerSet object from the Gateway API is deployed to be referred to from the HTTPRoute.
+
+                              If not set, the namespace of the `DexAuthenticator` is used.
+                            x-doc-examples: ['default']
+                            pattern: '^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$'
+                            maxLength: 63
+                          httpRouteListenerSetSectionName:
+                            type: string
+                            description: |
+                              Section name from the ListenerSet object in the Gateway API the HTTPRoute refers to.
+                            x-doc-examples: ['web-listener']
+                            pattern: '^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$'
+                            maxLength: 253
                       signOutURL:
                         type: string
                         description: |-
@@ -393,7 +446,9 @@ spec:
                     type: object
                     required:
                       - domain
-                      - ingressClassName
+                    x-kubernetes-validations:
+                      - rule: "has(self.ingressClassName) || has(self.gatewayAPI)"
+                        message: "Specify ingressClassName or gatewayAPI to publish the application."
                     properties:
                       domain:
                         type: string
@@ -411,6 +466,8 @@ spec:
                         type: string
                         description: |-
                           The name of the Ingress class to be used in the Ingress resource (it must match the Ingress class name for the application domain).
+
+                          Required unless `gatewayAPI` is specified. If omitted, no Ingress resources are created for this application. Both fields may be specified.
                         pattern: '^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$'
                       signOutURL:
                         type: string
@@ -428,7 +485,7 @@ spec:
                         - httpRouteListenerSetName
                         description: |-
                           A set of parameters to use in HTTPRoute object.
-                    
+
                           > **Warning.** Only applicable in clusters with Gateway API support.
 
                           > **Warning.** Define the same ListenerSet object which is used to publish the application domain.
@@ -445,7 +502,7 @@ spec:
                             description: |
                               Namespace where the ListenerSet object from the Gateway API is deployed to be referred to from the HTTPRoute.
 
-                              If not set, the namespace of the `DeAuthenticator` is used.
+                              If not set, the namespace of the `DexAuthenticator` is used.
                             x-doc-examples: ['default']
                             pattern: '^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$'
                             maxLength: 63

@@ -29,7 +29,13 @@ var skipSelfRe = regexp.MustCompile(`no_cyrillic(_test)?.go$`)
 // RBACv2 templates ship the localized metadata of the objects they define: every
 // capability and role carries ru.meta.deckhouse.io/{title,description} annotations,
 // which the platform and the UI show to Russian-speaking users.
-var skipRBACv2Re = regexp.MustCompile(`/templates/rbacv2[^/]*/`)
+// The module RBAC declaration carries the same localized texts for the capabilities it declares;
+// the RBACv2 templates are generated from it. It lives in the module's base directory:
+// modules/<module>/, or -- for a module that exists nowhere else -- ee/modules/<module>/ or
+// ee/<edition>/modules/<module>/. The pattern accepts all three and cannot tell a base from an
+// overlay (ee/modules/110-istio is an overlay of modules/110-istio); the dmt rbac linter, which
+// checks the tree, reports an rbac.yaml in an overlay.
+var skipRBACv2Re = regexp.MustCompile(`/templates/rbacv2[^/]*/|^(ee/([^/]+/)?)?modules/[^/]+/rbac\.yaml$`)
 
 var skipFiles = map[string]struct{}{
 	"modules/040-control-plane-manager/hooks/audit_policy.go":    {}, // The code contains a description in Russian and English in the body of each object. This is necessary for autodoc.

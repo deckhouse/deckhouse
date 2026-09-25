@@ -98,10 +98,13 @@ const (
 	cniExtension        = "kubernetes-cni"
 	kubeletExtension    = "kubelet"
 	nodeletExtension    = "nodelet"
+	guestAgentExtension = "qemu-guest-agent"
 
 	// nodeletSysextImage is unversioned, so it is read by its exact key rather
 	// than through soleDigest, which looks for a numeric suffix.
 	nodeletSysextImage = "nodeletSysext"
+	// guestAgentSysextImage is unversioned for the same reason.
+	guestAgentSysextImage = "qemuGuestAgentSysext"
 
 	// platformExtensionRequestedBy names the module that wants the extension, not
 	// the process that wrote the file, so it stays "node-manager" when
@@ -112,12 +115,6 @@ const (
 	// registryPackagesDigestsKey is the images_digests.json module the sysext
 	// images are built in.
 	registryPackagesDigestsKey = "registrypackages"
-
-	// commonDigestsKey and pauseImageName locate the sandbox image. The
-	// registry.k8s.io default of the nodeConfig CRD is unreachable from a node
-	// that only talks to the Deckhouse registry.
-	commonDigestsKey = "common"
-	pauseImageName   = "pause"
 
 	// controlPlaneDigestsKey is the images_digests.json module the control-plane
 	// images are built in.

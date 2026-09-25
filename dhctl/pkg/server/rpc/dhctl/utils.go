@@ -22,6 +22,7 @@ import (
 	dhlog "github.com/deckhouse/lib-dhctl/pkg/logger"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app/options"
+	pb "github.com/deckhouse/deckhouse/dhctl/pkg/server/pb/dhctl"
 )
 
 // newRequestOptions returns a per-request *options.Options seeded with the
@@ -33,19 +34,26 @@ import (
 // resourcesTimeout/deckhouseTimeout default to zero when unset (Bootstrap does
 // not carry these in its request); the consuming operation falls back to its
 // own default in that case.
-func newRequestOptions(cacheDir string, skipPreflightChecks []string, timeouts ...time.Duration) *options.Options {
+// The preflight skip names arrive here as free text from the caller, and are normalized by the
+// same code the CLI flag goes through. Without it the server took an unknown name silently: the
+// operation ran every check, and the caller who had asked for one to be skipped was told nothing.
+func newRequestOptions(cacheDir string, preflightOpts *pb.OperationOptions, timeouts ...time.Duration) (*options.Options, error) {
 	opts := options.New()
 	opts.Global.SanityCheck = true
 	opts.Cache.UseTfCache = options.UseStateCacheYes
 	opts.Cache.Dir = cacheDir
-	opts.Preflight.ApplySkips(skipPreflightChecks)
+	opts.Preflight.ApplySkips(preflightOpts.GetSkipPreflightChecks())
+	opts.Preflight.SkipAll = preflightOpts.GetSkipAllPreflightChecks()
+	if err := opts.Preflight.Normalize(); err != nil {
+		return nil, err
+	}
 	if len(timeouts) > 0 {
 		opts.Bootstrap.ResourcesTimeout = timeouts[0]
 	}
 	if len(timeouts) > 1 {
 		opts.Bootstrap.DeckhouseTimeout = timeouts[1]
 	}
-	return opts
+	return opts, nil
 }
 
 type logAfterReturnFunc func()

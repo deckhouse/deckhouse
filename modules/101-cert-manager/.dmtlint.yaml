@@ -7,6 +7,11 @@ linters-settings:
         # to whoever is choosing what to grant, and `d8:namespace-capability:kubernetes:view_logs`
         # on its own tells that person nothing.
         - templates/rbacv2
+      files:
+        # rbac.yaml carries the same localized texts for the capabilities it declares. dmt skips
+        # the file itself from deckhouse/dmt#479 on; drop this line once tools/dmt-lint.sh pins
+        # that release.
+        - rbac.yaml
   container:
     exclude-rules:
       readiness-probe:

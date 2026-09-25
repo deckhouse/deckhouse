@@ -18,10 +18,10 @@ limitations under the License.
 // rbac.deckhouse.io/kind: manage|use labels or aggregation selectors). The new scheme renames the
 // labels that drive aggregation, so such roles stop aggregating permissions in DKP 1.78 and have no
 // compatibility aliases (unlike the built-in d8:manage:*/d8:use:role:* roles). The discovered names
-// are stored as a release requirement value: the DKP 1.78 release carries the
+// are stored as a release requirement value: the release after DKP 1.78 carries the
 // legacyRBACv2CustomRolesCount requirement and stays Pending until the roles are migrated to the new
 // d8:custom:* scheme (see the user-authz FAQ, "How do I migrate custom roles to the new scheme in
-// DKP 1.78?").
+// DKP 1.78?"). The upgrade to 1.78 itself is not held back.
 
 package hooks
 
@@ -128,7 +128,7 @@ func isLegacyCustomRole(role *rbacv1.ClusterRole) bool {
 }
 
 // discoveryLegacyCustomRolesHandler publishes the sorted legacy role names as a requirement value
-// and a per-role alert metric on every synchronization/event, so the DKP 1.78 release unblocks
+// and a per-role alert metric on every synchronization/event, so the blocked release unblocks
 // itself (and the alert resolves) as soon as the operator migrates or deletes the roles.
 func discoveryLegacyCustomRolesHandler(_ context.Context, input *go_hook.HookInput) error {
 	names := make([]string, 0)

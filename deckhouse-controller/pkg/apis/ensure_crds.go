@@ -21,11 +21,13 @@ import (
 	"path/filepath"
 	"strings"
 
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/client-go/dynamic"
 	"k8s.io/client-go/kubernetes"
 
 	crdinstaller "github.com/deckhouse/module-sdk/pkg/crd-installer"
 
+	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/app"
 	"github.com/deckhouse/deckhouse/pkg/log"
 )
 
@@ -55,6 +57,20 @@ func EnsureCRDs(ctx context.Context, client kubeClient, crdsGlob string) error {
 		crdinstaller.WithExtraLabels(defaultLabels),
 		crdinstaller.WithFileFilter(func(crdFilePath string) bool {
 			return !strings.HasPrefix(filepath.Base(crdFilePath), "doc-")
+		}),
+		crdinstaller.WithMutateFunc(func(crd *unstructured.Unstructured) error {
+			if crd.GetName() != "modules.deckhouse.io" || !app.ModuleV2Enabled() {
+				return nil
+			}
+
+			versions, _, _ := unstructured.NestedSlice(crd.Object, "spec", "versions")
+			for _, v := range versions {
+				m := v.(map[string]any)
+				m["storage"] = m["name"] == "v1beta1"
+				m["served"] = true
+			}
+
+			return unstructured.SetNestedSlice(crd.Object, versions, "spec", "versions")
 		}),
 	)
 

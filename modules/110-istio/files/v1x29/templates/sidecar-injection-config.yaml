@@ -14,9 +14,14 @@ injectedAnnotations:
 template: '{{`{{ Template_Version_And_Istio_Version_Mismatched_Check_Installation }}`}}'
 templates:
   sidecar: |
-{{ $.Files.Get (printf "files/%s/static/sidecar-injection-template.yaml" $revision) | trim | indent 4 }}
+{{ include "istioRequiredChartFile" (list $ (printf "files/%s/static/sidecar-injection-template.yaml" $revision)) | trim | indent 4 }}
   gateway: |
-{{ $.Files.Get (printf "files/%s/static/gateway-injection-template.yaml" $revision) | trim | indent 4 }}
+{{ include "istioRequiredChartFile" (list $ (printf "files/%s/static/gateway-injection-template.yaml" $revision)) | trim | indent 4 }}
+{{- $waypointTemplate := $.Files.Get (printf "files/%s/static/waypoint-template.yaml" $revision) }}
+{{- if $waypointTemplate }}
+  waypoint: |
+{{ $waypointTemplate | trim | indent 4 }}
+{{- end }}
   # Deprecated no-op, remove in 1.79
   d8-seccomp: |
     spec: {}

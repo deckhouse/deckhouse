@@ -163,6 +163,21 @@ spec:
                       requestedBy:
                         description: |
                           Кто запросил расширение (например, `node-manager`).
+                staticPods:
+                  description: |
+                    Манифесты подов, которые kubelet запускает мимо планировщика.
+
+                    Узел пишет их в `/etc/kubernetes/manifests` и больше ничего для пода не готовит: сертификаты под генерит сам, kubeconfig берёт узловой, каталоги состояния монтирует как `hostPath` с `DirectoryOrCreate`. Манифесты control plane, которые агент пишет сам, сюда не попадают и никогда не затрагиваются.
+                  items:
+                    description: |
+                      Один static pod.
+                    properties:
+                      name:
+                        description: |
+                          Имя файла манифеста без расширения, является ключом списка. С `metadata.name` пода внутри манифеста никак не связано: имя зеркальному поду kubelet берёт из документа, а не из файла.
+                      manifest:
+                        description: |
+                          Полный манифест пода. Подстрока `$MY_IP` заменяется на адрес узла при записи на диск — так же, как в манифестах control plane.
                 kernel:
                   description: |
                     Параметры sysctl и модули ядра, которые нужно загрузить.
@@ -276,7 +291,14 @@ spec:
                         Максимальное количество потоков одновременного скачивания слоёв образов.
                     sandboxImage:
                       description: |
-                        Образ pause, используемый для песочниц подов.
+                        Переопределяет образ pause, используемый для песочниц подов. Если не задан, используется образ pause, который импортирует системное расширение containerd.
+                    registryOwner:
+                      description: |
+                        Имя владельца директории `registry.d` containerd.
+
+                        `nodelet` — агент узла рендерит туда `spec.registry` и удаляет всё лишнее. `agent` — каталогом владеет static pod (registry-агент), и агент узла туда ничего не пишет и ничего не удаляет, включая `spec.registry`: явный каталог хоста перекрыл бы `_default` агента и увёл бы платформенный реестр мимо него.
+
+                        Значение выставляет node-controller по режиму registry-модуля.
                 updatePolicy:
                   description: |
                     Определяет, как и когда обновляется узел.
@@ -421,6 +443,29 @@ spec:
                       message:
                         description: |
                           Причина, когда `state` равно `Failed`.
+                staticPods:
+                  description: |
+                    Результат по каждому static pod — по одной записи на под.
+
+                    Публикуется заново на каждом проходе и остаётся пустым, если проход ничего не проверял.
+                  items:
+                    description: |
+                      Результат по одному static pod.
+                    properties:
+                      name:
+                        description: |
+                          Имя пода, совпадает с `spec.staticPods[].name`.
+                      state:
+                        description: |
+                          `Written` — файл на диске совпадает с манифестом из spec. `Failed` — не совпадает, причина в `reason`.
+                      reason:
+                        description: |
+                          Причина, по которой `state` в статусе `Failed`. Три причины требуют трёх разных действий.
+
+                          `ManifestRejected` — узел отверг манифест: править объект. `WriteFailed` — не удалось записать файл: смотреть на узел. `RemoveFailed` — имя ушло из spec, но файл не удалён, то есть под всё ещё запущен.
+                      message:
+                        description: |
+                          Подробности, когда `state` равно `Failed`.
                 network:
                   description: |
                     Адрес, с которым узел вошёл в кластер, и интерфейс, с которого этот адрес взят.

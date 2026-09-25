@@ -1,13 +1,28 @@
-{{- if or .Values.istio.federation.enabled .Values.istio.multicluster.enabled }}
-  {{- if .Values.istio.alliance.ingressGateway.advertise }}
+{{- define "istioMetadataExporterAdvertiseConfigMap" -}}
+  {{- $context := index . 0 -}}
+  {{- $name := index . 1 -}}
+  {{- $advertise := index . 2 -}}
 ---
 apiVersion: v1
 kind: ConfigMap
 metadata:
-  name: metadata-exporter-ingressgateway-advertise
-  namespace: d8-{{ $.Chart.Name }}
-  {{- include "helm_lib_module_labels" (list . (dict "app" "metadata-exporter")) | nindent 2 }}
+  name: {{ $name }}
+  namespace: d8-{{ $context.Chart.Name }}
+  {{- include "helm_lib_module_labels" (list $context (dict
+    "app" "metadata-exporter"
+  )) | nindent 2 }}
 data:
-  ingressgateways-array.json: {{ .Values.istio.alliance.ingressGateway.advertise | toJson | quote }}
+  gateways.json: {{ $advertise | toJson | quote }}
+  ingressgateways-array.json: {{ $advertise | toJson | quote }} # drop in 1.79
+{{ end }}
+
+{{- if or .Values.istio.federation.enabled .Values.istio.multicluster.enabled }}
+  {{- with .Values.istio.alliance.ingressGateway.advertise }}
+    {{- include "istioMetadataExporterAdvertiseConfigMap" (list $ "metadata-exporter-ingressgateway-advertise" .) }}
+  {{- end }}
+{{- end }}
+{{- if include "istioAmbientMulticlusterEnabled" . }}
+  {{- with .Values.istio.alliance.ambientGateway.advertise }}
+    {{- include "istioMetadataExporterAdvertiseConfigMap" (list $ "metadata-exporter-ambientgateway-advertise" .) }}
   {{- end }}
 {{- end }}

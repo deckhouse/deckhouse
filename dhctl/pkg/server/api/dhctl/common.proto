@@ -50,4 +50,12 @@ message Progress {
 
 message OperationOptions {
   repeated string skip_preflight_checks = 1;
+
+  // Turns off every preflight check that can be turned off, the way
+  // --preflight-skip-all-checks does on the command line. The few checks that
+  // guard an assumption dhctl has no code path around are not affected.
+  //
+  // Without it a caller had to enumerate every check name, and the list changes
+  // between releases.
+  bool skip_all_preflight_checks = 2;
 }

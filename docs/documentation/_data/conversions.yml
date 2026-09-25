@@ -189,3 +189,9 @@ user-authn:
         ru: Замените `publishAPI.enable` на `publishAPI.enabled`.
       conversions:
         - if .publishAPI.enable != null then .publishAPI.enabled = .publishAPI.enable | del(.publishAPI.enable) end
+    - version: 3
+      description:
+        en: 'An `idTokenTTL` of 6 hours or more is replaced with `5h59m`: Dex rotates its signing keys every 6 hours.'
+        ru: 'Значение `idTokenTTL` 6 часов и больше заменяется на `5h59m`: ключи подписи Dex ротируются каждые 6 часов.'
+      conversions:
+        - if (.idTokenTTL | type) == "string" and (.idTokenTTL | test("^([0-9]+h)?([0-9]+m)?([0-9]+s)?$")) and ((.idTokenTTL | capture("^((?<h>[0-9]+)h)?((?<m>[0-9]+)m)?((?<s>[0-9]+)s)?$") | ((.h // "0" | tonumber) * 3600 + (.m // "0" | tonumber) * 60 + (.s // "0" | tonumber))) >= 21600) then .idTokenTTL = "5h59m" end

@@ -42,6 +42,7 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/server/pkg/util"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/server/pkg/util/callback"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/state/cache"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/system/providerinitializer"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/telemetry"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/input"
 )
@@ -158,12 +159,15 @@ func (s *Service) check(ctx context.Context, p *checkParams) *pb.CheckResult {
 
 	ctx = initDhctlLoggerCtx(ctx, p)
 
-	opts := newRequestOptions(
+	opts, err := newRequestOptions(
 		s.params.CacheDir,
-		p.request.Options.CommonOptions.SkipPreflightChecks,
+		p.request.Options.CommonOptions,
 		p.request.Options.ResourcesTimeout.AsDuration(),
 		p.request.Options.DeckhouseTimeout.AsDuration(),
 	)
+	if err != nil {
+		return &pb.CheckResult{Err: err.Error()}
+	}
 
 	logBeforeExit := logInformationAboutInstance(ctx, s.params)
 	defer logBeforeExit()
@@ -255,10 +259,17 @@ func (s *Service) check(ctx context.Context, p *checkParams) *pb.CheckResult {
 
 	apiServer := checkAPIServer(p.request.Options)
 
-	var kubeProvider libcon.KubeProvider
+	var (
+		kubeProvider           libcon.KubeProvider
+		sshProviderInitializer *providerinitializer.SSHProviderInitializer
+	)
 	err = dhlog.RunProcess(ctx, dhlog.FromContext(ctx), prepareConnectionProcessName(apiServer), func(ctx context.Context) error {
 		var cleanup func() error
-		_, kubeProvider, cleanup, err = helper.CreateProviders(
+		// The SSH initializer used to be dropped here. It is what the node preflights ask
+		// their questions through, and without it check reached the machines with nothing
+		// checked while Commander's skip_preflight_checks went to an operation that had no
+		// checks to skip.
+		sshProviderInitializer, kubeProvider, cleanup, err = helper.CreateProviders(
 			ctx,
 			p.request.ConnectionConfig,
 			s.params.IsDebug,
@@ -278,6 +289,7 @@ func (s *Service) check(ctx context.Context, p *checkParams) *pb.CheckResult {
 	}
 
 	checkParams.KubeProvider = kubeProvider
+	checkParams.SSHProviderInitializer = sshProviderInitializer
 
 	checker := check.NewChecker(checkParams)
 

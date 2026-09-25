@@ -444,7 +444,11 @@ func TestRunPhases_SkippingTheProviderResourceConsumerIsRefused(t *testing.T) {
 
 // TestRunPhases_RestrictedToOneNode covers the standalone phase commands, base-infra being the
 // first of them: the walk runs Preparation - the config it loads is what the gates are resolved
-// against - then the one node it was given and nothing else, and still completes the pipeline.
+// against - then the one node it was given, and still completes the pipeline.
+//
+// The preflights are the one exception, and they are here on purpose: `bootstrap-phase base-infra`
+// creates the cloud infrastructure, and it used to create it with nothing checked at all, because
+// the configuration checks are a node of the tree like any other.
 func TestRunPhases_RestrictedToOneNode(t *testing.T) {
 	t.Parallel()
 
@@ -452,10 +456,29 @@ func TestRunPhases_RestrictedToOneNode(t *testing.T) {
 
 	require.NoError(t, b.runPhases(context.Background(), bctx, recordingPhaseFuncs(pec, "", nil), phases.BaseInfraPhase))
 
-	expected := []phases.OperationPhase{phases.PreparationPhase, phases.BaseInfraPhase}
+	expected := []phases.OperationPhase{
+		phases.PreparationPhase,
+		phases.PreInfraPreflightsPhase,
+		phases.BaseInfraPhase,
+	}
 	require.Equal(t, expected, pec.announcedPhases())
 	require.Equal(t, expected, pec.phasesOf("run"))
 	require.Equal(t, "complete", pec.events[len(pec.events)-1].kind)
+}
+
+// TestRunPhases_RestrictedToANodeThatIsNotBaseInfra: the preflights ride along with base-infra and
+// with nothing else. A phase command that runs against a cluster which already exists - one that
+// installs Deckhouse, or creates resources - has its own checks or none, and running the pre-infra
+// configuration checks there would ask about infrastructure that was created long ago.
+func TestRunPhases_RestrictedToANodeThatIsNotBaseInfra(t *testing.T) {
+	t.Parallel()
+
+	b, bctx, pec := runPhasesFixture("Cloud", -1)
+
+	require.NoError(t, b.runPhases(context.Background(), bctx, recordingPhaseFuncs(pec, "", nil), phases.InstallDeckhousePhase))
+
+	require.NotContains(t, pec.phasesOf("run"), phases.PreInfraPreflightsPhase)
+	require.Contains(t, pec.phasesOf("run"), phases.InstallDeckhousePhase)
 }
 
 // TestRunPhases_RestrictedToAGatedOutNodeIsRefused is why base-infra on a static cluster still

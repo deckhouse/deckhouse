@@ -17,6 +17,7 @@ limitations under the License.
 package nodeconfig
 
 import (
+	"context"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -582,24 +583,92 @@ func TestSysextDigestsAgent(t *testing.T) {
 		"kubernetesCniSysext162": "sha256:n",
 		"kubeletSysext1356":      "sha256:k",
 		"nodeletSysext":          "sha256:a",
+		"qemuGuestAgentSysext":   "sha256:q",
 	}
 
-	t.Run("the agent digest is picked up", func(t *testing.T) {
+	t.Run("both versionless digests are picked up", func(t *testing.T) {
 		got, err := sysextDigests(map[string]map[string]string{registryPackagesDigestsKey: packages}, "1.35")
 		require.NoError(t, err)
 		require.Equal(t, "sha256:a", got[nodeletExtension])
+		require.Equal(t, "sha256:q", got[guestAgentExtension])
 	})
 
-	t.Run("a release without the agent image is refused", func(t *testing.T) {
-		without := make(map[string]string, len(packages))
-		for name, digest := range packages {
-			if name == "nodeletSysext" {
-				continue
+	for image, name := range map[string]string{
+		"nodeletSysext":        nodeletExtension,
+		"qemuGuestAgentSysext": guestAgentExtension,
+	} {
+		t.Run("a release without "+image+" is refused", func(t *testing.T) {
+			without := make(map[string]string, len(packages))
+			for have, digest := range packages {
+				if have == image {
+					continue
+				}
+				without[have] = digest
 			}
-			without[name] = digest
-		}
 
-		_, err := sysextDigests(map[string]map[string]string{registryPackagesDigestsKey: without}, "1.35")
-		require.ErrorContains(t, err, nodeletExtension)
+			_, err := sysextDigests(map[string]map[string]string{registryPackagesDigestsKey: without}, "1.35")
+			require.ErrorContains(t, err, name)
+		})
+	}
+}
+
+// Who owns containerd's registry.d is the registry module's answer, read from
+// the one secret it already writes for bashible. A cluster where that module
+// never said anything must go on exactly as it did before.
+func TestReadRegistryAgentMode(t *testing.T) {
+	scheme := runtime.NewScheme()
+	require.NoError(t, corev1.AddToScheme(scheme))
+
+	secret := func(data map[string][]byte) client.Client {
+		return fake.NewClientBuilder().WithScheme(scheme).WithObjects(&corev1.Secret{
+			ObjectMeta: metav1.ObjectMeta{Namespace: "d8-system", Name: "registry-bashible-config"},
+			Data:       data,
+		}).Build()
+	}
+
+	tests := []struct {
+		name   string
+		client client.Client
+		want   bool
+	}{
+		{
+			// origin/main: the legacy orchestrator writes this secret and its
+			// config type has no agent field at all.
+			name:   "a config with no agent key",
+			client: secret(map[string][]byte{"config": []byte("mode: Direct\nversion: abc\nimagesBase: registry.example.com\n")}),
+		},
+		{
+			name: "the agent marker",
+			client: secret(map[string][]byte{"config": []byte(
+				"agent:\n  endpoint: 127.0.0.1:5001\n  dropInFile: /etc/containerd/registry.d/_default/hosts.toml\nmode: Managed\n")}),
+			want: true,
+		},
+		{
+			name:   "the secret carries no config key",
+			client: secret(map[string][]byte{"other": []byte("{}")}),
+		},
+		{
+			// A cluster whose registry module never wrote it, or is not enabled.
+			name:   "no secret at all",
+			client: fake.NewClientBuilder().WithScheme(scheme).Build(),
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			s := &sourceReader{Reader: tt.client}
+			agent, err := s.readRegistryAgentMode(context.Background())
+			require.NoError(t, err)
+			require.Equal(t, tt.want, agent)
+		})
+	}
+
+	// A document nobody can parse is not "no agent": it is a read that did not
+	// happen, and guessing "nodelet owns the directory" would take registry.d
+	// away from an agent that is running on every node.
+	t.Run("a config that does not parse stops the pass", func(t *testing.T) {
+		s := &sourceReader{Reader: secret(map[string][]byte{"config": []byte("\tnot: yaml")})}
+		_, err := s.readRegistryAgentMode(context.Background())
+		require.Error(t, err)
 	})
 }

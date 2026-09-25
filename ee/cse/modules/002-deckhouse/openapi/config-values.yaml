@@ -338,6 +338,15 @@ properties:
 
       If `allowExperimentalModules` is `true`, all experimental modules are allowed and this list is ignored.
 
+  enableModuleV2:
+    type: boolean
+    x-examples: [false]
+    default: false
+    description: |
+      Enables the experimental Module v2 controller and installs the Module v2 CRD instead of the legacy Module CRD.
+
+      The feature is experimental and not supported under the Deckhouse SLA. Use it with caution.
+
   reservedPublicHosts:
     type: object
     default: {}
