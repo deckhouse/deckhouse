@@ -40,6 +40,13 @@
   "ai-inference": {
     "extensions": [
       "ai_inference"
+    ],
+    "editions": [
+      "ee"
+    ],
+    "tags": [
+      "ml/ai",
+      "ssdlc"
     ]
   },
   "ai-models": {
@@ -231,6 +238,18 @@
     "tags": [
       "storage",
       "certified",
+      "ssdlc"
+    ]
+  },
+  "csi-mind-ustor": {
+    "extensions": [
+      "storage_integration"
+    ],
+    "editions": [
+      "ee"
+    ],
+    "tags": [
+      "storage",
       "ssdlc"
     ]
   },
@@ -438,6 +457,9 @@
     ]
   },
   "managed-clickhouse": {
+    "extensions": [
+      "managed_services"
+    ],
     "editions": [
       "ee"
     ],
@@ -485,6 +507,9 @@
     ]
   },
   "managed-opensearch": {
+    "extensions": [
+      "managed_services"
+    ],
     "editions": [
       "ee"
     ],
@@ -507,7 +532,22 @@
       "ssdlc"
     ]
   },
+  "managed-rabbit ": {
+    "extensions": [
+      "managed_services"
+    ],
+    "editions": [
+      "ee"
+    ],
+    "tags": [
+      "managed services",
+      "ssdlc"
+    ]
+  },
   "managed-starrocks": {
+    "extensions": [
+      "managed_services"
+    ],
     "editions": [
       "ee",
       "se",
@@ -1006,7 +1046,6 @@
     ],
     "editions": [
       "ce",
-      "be",
       "se",
       "se-plus",
       "ee"
