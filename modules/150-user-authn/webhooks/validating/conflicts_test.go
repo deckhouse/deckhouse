@@ -167,3 +167,54 @@ func TestSameDomainAcrossRoutingModes(t *testing.T) {
 		}
 	}
 }
+
+// Pairs sharing a domain could be created before these checks existed. Refusing every edit to them
+// would leave them stuck, so only what the object did not already claim is checked.
+func TestConflictIsNotRecheckedOnUpdate(t *testing.T) {
+	for _, mode := range []string{"ingress", "gateway"} {
+		claim := func(domain string) map[string]any {
+			app := map[string]any{"domain": domain}
+			if mode == "ingress" {
+				app["ingressClassName"] = "nginx"
+			} else {
+				app["gatewayAPI"] = listenerSetReference("shared", "d8-alb", "https")
+			}
+
+			return app
+		}
+		existing := snapshot(t, withApplication("v1", "team-a", "first", claim("app.example.com"), false))
+
+		for _, tc := range []struct {
+			name             string
+			oldDomain        string
+			deleting, denied bool
+		}{
+			{name: "claim carried over from the old object", oldDomain: "app.example.com"},
+			{name: "claim newly pointed at the taken domain", oldDomain: "other.example.com", denied: true},
+			{name: "object being deleted", oldDomain: "other.example.com", deleting: true},
+		} {
+			t.Run(mode+"/"+tc.name, func(t *testing.T) {
+				object := withApplication("v1", "team-b", "second", claim("app.example.com"), false)
+				old := withApplication("v1", "team-b", "second", claim(tc.oldDomain), false)
+				if tc.deleting {
+					object["metadata"].(map[string]any)["deletionTimestamp"] = "2026-09-25T10:00:00Z"
+				}
+
+				result := runHook(t, map[string]any{
+					"review": map[string]any{"request": map[string]any{
+						"operation": "UPDATE", "object": object, "oldObject": old,
+					}},
+					"snapshots": map[string]any{"dexauthenticators": []any{existing}},
+				})
+				require.Equal(t, !tc.denied, result["allowed"], "%v", result["message"])
+			})
+		}
+
+		// Without an old object the claim is new, whatever it repeats.
+		t.Run(mode+"/created rather than updated", func(t *testing.T) {
+			object := withApplication("v1", "team-b", "second", claim("app.example.com"), false)
+			result := runHook(t, review(object, existing))
+			require.Equal(t, false, result["allowed"])
+		})
+	}
+}

@@ -86,6 +86,13 @@ function __main__() {
   apiVersion=$(context::jq -r '.review.request.object.apiVersion')
   
 
+  # An object being deleted is only passing through: a finalizer set by something else turns the
+  # deletion into updates, and refusing those would leave the object stuck forever.
+  if [[ -n "$(context::jq -r '.review.request.object.metadata.deletionTimestamp // ""')" ]]; then
+    jq -n '{allowed:true}' > "$VALIDATING_RESPONSE_PATH"
+    return 0
+  fi
+
   domains_to_check=()
   
   if [[ "$apiVersion" == "deckhouse.io/v2alpha1" ]]; then
@@ -94,7 +101,7 @@ function __main__() {
       if [[ "$domain" != "null" && "$fieldPath" != "null" ]]; then
         domains_to_check+=("$domain"$'\t'"$ingressClass"$'\t'"$listenerSet"$'\t'"$fieldPath")
       fi
-    done < <(context::jq -r '.review.request.object.spec.applications | to_entries[]? | "\(.value.domain)\t\(.value.ingressClassName)\t\(.value.gatewayAPI.httpRouteListenerSetName)\t.spec.applications[\(.key)].domain"')
+    done < <(context::jq -r '(.review.request.object.spec.applications // []) | to_entries[]? | "\(.value.domain)\t\(.value.ingressClassName)\t\(.value.gatewayAPI.httpRouteListenerSetName)\t.spec.applications[\(.key)].domain"')
   else
 
     main_domain=$(context::jq -r '.review.request.object.spec.applicationDomain')
@@ -107,9 +114,20 @@ function __main__() {
       if [[ "$domain" != "null" && "$fieldPath" != "null" ]]; then
         domains_to_check+=("$domain"$'\t'"$ingressClass"$'\t'"$listenerSet"$'\t'"$fieldPath")
       fi
-    done < <(context::jq -r '.review.request.object.spec.additionalApplications | to_entries[]? | "\(.value.domain)\t\(.value.ingressClassName)\t\(.value.gatewayAPI.httpRouteListenerSetName)\t.spec.additionalApplications[\(.key)].domain"')
+    done < <(context::jq -r '(.review.request.object.spec.additionalApplications // []) | to_entries[]? | "\(.value.domain)\t\(.value.ingressClassName)\t\(.value.gatewayAPI.httpRouteListenerSetName)\t.spec.additionalApplications[\(.key)].domain"')
   fi
   
+
+  # What the object already published is not re-checked, for the same reason as the ListenerSet
+  # check below: conflicting pairs could be created before these checks existed.
+  old_ingress_claims=" $(context::jq -r '
+    (.review.request.oldObject // empty) |
+    [{domain: .spec.applicationDomain, class: .spec.applicationIngressClassName}]
+      + [(.spec.applications // [])[] | {domain: .domain, class: .ingressClassName}]
+      + [(.spec.additionalApplications // [])[] | {domain: .domain, class: .ingressClassName}] |
+    map(select(.domain != null and .class != null)) |
+    map("\(.domain),\(.class)")[]
+  ' | tr "\n" " ")"
 
   # Applications after the first one take a resource-name suffix derived from sha256(domain), so
   # two of them sharing a domain would name two objects of one kind alike. The first application
@@ -153,6 +171,10 @@ function __main__() {
       continue
     fi
 
+    if [[ "$old_ingress_claims" == *" $domain,$ingressClass "* ]]; then
+      continue
+    fi
+
     result=$(context::jq -r --arg domain "$domain" --arg class "$ingressClass" \
       --arg namespace "$newAuthNamespace" --arg name "$newAuthName" '
       .snapshots.dexauthenticators[].filterResult | 
@@ -175,36 +197,48 @@ function __main__() {
 
   # Compare ListenerSet references and overlapping sections only. Detecting conflicts
   # across different ListenerSets attached to one Gateway requires Gateway topology.
+  #
+  # Only what the object did not already claim is checked. Pairs sharing a ListenerSet could be
+  # created before this check existed, and refusing every edit to them would leave them stuck:
+  # nothing about them could be fixed, including the conflict.
   if ! gatewayConflict=$(context::jq -r '
-    . as $context |
-    .review.request.object as $object |
-    [
-      (if $object.apiVersion == "deckhouse.io/v2alpha1" then
-        $object.spec.applications
+    def claims:
+      .metadata.namespace as $namespace |
+      (if .apiVersion == "deckhouse.io/v2alpha1" then
+        .spec.applications
       else
         [{
-          domain: $object.spec.applicationDomain,
+          domain: .spec.applicationDomain,
           gatewayAPI: {
-            httpRouteListenerSetName: $object.spec.gatewayAPI.applicationHTTPRouteListenerSetName,
-            httpRouteListenerSetNamespace: $object.spec.gatewayAPI.applicationHTTPRouteListenerSetNamespace,
-            httpRouteListenerSetSectionName: $object.spec.gatewayAPI.applicationHTTPRouteListenerSetSectionName
+            httpRouteListenerSetName: .spec.gatewayAPI.applicationHTTPRouteListenerSetName,
+            httpRouteListenerSetNamespace: .spec.gatewayAPI.applicationHTTPRouteListenerSetNamespace,
+            httpRouteListenerSetSectionName: .spec.gatewayAPI.applicationHTTPRouteListenerSetSectionName
           }
-        }] + ($object.spec.additionalApplications // [])
+        }] + (.spec.additionalApplications // [])
       end)[] |
       select(.gatewayAPI.httpRouteListenerSetName != null) |
-      .domain as $domain |
-      .gatewayAPI.httpRouteListenerSetName as $listenerSetName |
-      (.gatewayAPI.httpRouteListenerSetNamespace // $object.metadata.namespace) as $listenerSetNamespace |
-      (.gatewayAPI.httpRouteListenerSetSectionName // "") as $sectionName |
+      {
+        domain: .domain,
+        listenerSetName: .gatewayAPI.httpRouteListenerSetName,
+        listenerSetNamespace: (.gatewayAPI.httpRouteListenerSetNamespace // $namespace),
+        sectionName: (.gatewayAPI.httpRouteListenerSetSectionName // "")
+      };
+
+    . as $context |
+    .review.request.object as $object |
+    [$object | claims] as $claimed |
+    [(.review.request.oldObject // empty) | claims] as $kept |
+    [
+      ($claimed - $kept)[] as $claim |
       $context.snapshots.dexauthenticators[].filterResult |
       select(.namespace != $object.metadata.namespace or .name != $object.metadata.name) |
       select(any(.gatewayDomains[]?;
-        .domain == $domain and
-        .listenerSetName == $listenerSetName and
-        .listenerSetNamespace == $listenerSetNamespace and
-        (.sectionName == $sectionName or .sectionName == "" or $sectionName == "")
+        .domain == $claim.domain and
+        .listenerSetName == $claim.listenerSetName and
+        .listenerSetNamespace == $claim.listenerSetNamespace and
+        (.sectionName == $claim.sectionName or .sectionName == "" or $claim.sectionName == "")
       )) |
-      "Desired DexAuthenticator \u0027\($object.metadata.namespace)/\($object.metadata.name)\u0027 conflicts with the existing DexAuthenticator \u0027\(.namespace)/\(.name)\u0027 for domain \u0027\($domain)\u0027 on ListenerSet \u0027\($listenerSetNamespace)/\($listenerSetName)\u0027"
+      "Desired DexAuthenticator \u0027\($object.metadata.namespace)/\($object.metadata.name)\u0027 conflicts with the existing DexAuthenticator \u0027\(.namespace)/\(.name)\u0027 for domain \u0027\($claim.domain)\u0027 on ListenerSet \u0027\($claim.listenerSetNamespace)/\($claim.listenerSetName)\u0027"
     ] | first // empty
   '); then
     return 1
@@ -214,7 +248,7 @@ function __main__() {
     jq -n --arg msg "$gatewayConflict" '{allowed:false, message:$msg}' > "$VALIDATING_RESPONSE_PATH"
     return 0
   fi
-  
+
   jq -n '{allowed:true}' > "$VALIDATING_RESPONSE_PATH"
 }
 
