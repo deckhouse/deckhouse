@@ -25,11 +25,22 @@ import (
 	. "github.com/onsi/gomega"
 
 	. "github.com/deckhouse/deckhouse/testing/helm"
+	"github.com/deckhouse/deckhouse/testing/library/object_store"
 )
 
 func Test(t *testing.T) {
 	RegisterFailHandler(Fail)
 	RunSpecs(t, "")
+}
+
+// envValue pulls one environment variable out of the first container of a workload.
+func envValue(resource object_store.KubeObject, name string) (string, bool) {
+	for _, env := range resource.Field("spec.template.spec.containers.0.env").Array() {
+		if env.Get("name").String() == name {
+			return env.Get("value").String(), true
+		}
+	}
+	return "", false
 }
 
 const providerID = "dvp"
@@ -438,6 +449,8 @@ var _ = Describe("Module :: cloud-provider-dvp :: helm template ::", func() {
 			Expect(capdvpDeployment.Exists()).To(BeTrue())
 			Expect(capdvpDeployment.Field("spec.template.spec.hostNetwork").Bool()).To(BeTrue())
 			Expect(capdvpDeployment.Field("spec.template.spec.dnsPolicy").String()).To(Equal("ClusterFirstWithHostNet"))
+			_, capdvpHostFound := envValue(capdvpDeployment, "KUBERNETES_SERVICE_HOST")
+			Expect(capdvpHostFound).To(BeFalse())
 
 			capdvpVPA := f.KubernetesResource("VerticalPodAutoscaler", moduleNamespace, "capdvp-controller-manager")
 			Expect(capdvpVPA.Exists()).To(BeTrue())
@@ -1065,6 +1078,8 @@ var _ = Describe("Module :: cloud-provider-dvp :: helm template ::", func() {
 			Expect(deploy.Field("spec.template.spec.dnsPolicy").String()).To(Equal("ClusterFirstWithHostNet"))
 			Expect(deploy.Field("spec.template.spec.tolerations").String()).To(MatchYAML(tolerationsAnyNodeWithUninitialized))
 			Expect(deploy.Field("spec.template.spec.serviceAccountName").String()).To(Equal(validationWebhookName))
+			_, webhookHostFound := envValue(deploy, "KUBERNETES_SERVICE_HOST")
+			Expect(webhookHostFound).To(BeFalse())
 
 			containers := deploy.Field("spec.template.spec.containers").Array()
 			Expect(containers).To(HaveLen(1))
@@ -1094,6 +1109,20 @@ var _ = Describe("Module :: cloud-provider-dvp :: helm template ::", func() {
 			Expect(deploy.Field("spec.template.metadata.labels.security\\.deckhouse\\.io/security-policy-exception").String()).
 				To(Equal(validationWebhookName))
 			Expect(deploy.Field("spec.template.spec.dnsPolicy").String()).To(Equal("Default"))
+
+			_, webhookHostFound := envValue(deploy, "KUBERNETES_SERVICE_HOST")
+			Expect(webhookHostFound).To(BeTrue())
+			webhookPort, webhookPortFound := envValue(deploy, "KUBERNETES_SERVICE_PORT")
+			Expect(webhookPortFound).To(BeTrue())
+			Expect(webhookPort).To(Equal("6443"))
+
+			capdvpDeployment := f.KubernetesResource("Deployment", moduleNamespace, "capdvp-controller-manager")
+			Expect(capdvpDeployment.Exists()).To(BeTrue())
+			Expect(capdvpDeployment.Field("spec.template.spec.hostNetwork").Bool()).To(BeTrue())
+			Expect(capdvpDeployment.Field("spec.template.spec.dnsPolicy").String()).To(Equal("Default"))
+			capdvpPort, capdvpPortFound := envValue(capdvpDeployment, "KUBERNETES_SERVICE_PORT")
+			Expect(capdvpPortFound).To(BeTrue())
+			Expect(capdvpPort).To(Equal("6443"))
 		})
 
 		It("renders VPA and PDB", func() {
