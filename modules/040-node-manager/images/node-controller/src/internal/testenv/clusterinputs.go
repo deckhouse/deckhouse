@@ -79,7 +79,8 @@ func EnsureClusterInputs(ctx context.Context, c client.Client) (string, []string
 	EnsureObject(ctx, c, &corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: registrySecretNS}})
 
 	digests := fmt.Sprintf(`{"registrypackages":{"containerdSysext224":%q,"kubernetesCniSysext162":%q,"kubeletSysext1356":%q,"nodeletSysext":%q,"qemuGuestAgentSysext":%q},"nodeManager":{"engine":%q},"common":{"pause":%q}}`,
-		TestContainerdDigest, TestCNIDigest, TestKubeletDigest, TestNodeletDigest, TestGuestAgentDigest, TestOSImageDigest, TestPauseDigest)
+		TestContainerdDigest, TestCNIDigest, TestKubeletDigest, TestNodeletDigest, TestGuestAgentDigest,
+		TestOSImageDigest, TestPauseDigest)
 	EnsureObject(ctx, c, &corev1.ConfigMap{
 		ObjectMeta: metav1.ObjectMeta{Namespace: nodecommon.MachineNamespace, Name: imagesDigestsConfigMap},
 		Data:       map[string]string{imagesDigestsKey: digests},

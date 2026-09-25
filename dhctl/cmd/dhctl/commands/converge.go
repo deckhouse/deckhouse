@@ -43,6 +43,7 @@ func DefineConvergeCommand(cmd *kingpin.CmdClause, opts *options.Options) *kingp
 	app.DefineBecomeFlags(cmd, &opts.Become)
 	app.DefineKubeFlags(cmd, &opts.Kube)
 	app.DefineCacheFlags(cmd, &opts.Cache)
+	app.DefinePreflight(cmd, &opts.Preflight)
 
 	return cmd.Action(func(c *kingpin.ParseContext) error {
 		ctx := kpcontext.ExtractContext(c)
@@ -145,6 +146,7 @@ func DefineAutoConvergeCommand(cmd *kingpin.CmdClause, opts *options.Options) *k
 	app.DefineBecomeFlags(cmd, &opts.Become)
 	app.DefineKubeFlags(cmd, &opts.Kube)
 	app.DefineCacheFlags(cmd, &opts.Cache)
+	app.DefinePreflight(cmd, &opts.Preflight)
 
 	return cmd.Action(func(c *kingpin.ParseContext) error {
 		ctx := kpcontext.ExtractContext(c)
@@ -203,6 +205,7 @@ func DefineConvergeMigrationCommand(cmd *kingpin.CmdClause, opts *options.Option
 	app.DefineKubeFlags(cmd, &opts.Kube)
 	app.DefineCacheFlags(cmd, &opts.Cache)
 	app.DefineCheckHasTerraformStateBeforeMigrateToTofu(cmd, &opts.Converge)
+	app.DefinePreflight(cmd, &opts.Preflight)
 
 	return cmd.Action(func(c *kingpin.ParseContext) error {
 		ctx := kpcontext.ExtractContext(c)

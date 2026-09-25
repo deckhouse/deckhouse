@@ -447,7 +447,7 @@ func CreateDeckhouseDeploymentManifest(cfg *config.DeckhouseInstaller) (*appsv1.
 }
 
 func WaitForKubernetesAPI(ctx context.Context, kubeCl *client.KubernetesClient) error {
-	return retry.NewLoop("Waiting for Kubernetes API to become Ready", 225, 1*time.Second).
+	err := retry.NewLoop("Waiting for Kubernetes API to become Ready", 225, 1*time.Second).
 		RunContext(ctx, func() error {
 			_, err := kubeCl.Discovery().ServerVersion()
 			if err == nil {
@@ -455,6 +455,59 @@ func WaitForKubernetesAPI(ctx context.Context, kubeCl *client.KubernetesClient) 
 			}
 			return fmt.Errorf("kubernetes API is not Ready: %w", err)
 		})
+	if err == nil {
+		return nil
+	}
+
+	// Almost four minutes have just been spent, and the loop's own message ends at the
+	// transport error the last attempt got — "connection refused", "EOF", "i/o timeout".
+	// Which of them it is says a great deal about where to look next, and none of that
+	// reaches the operator unless it is spelled out here.
+	if advice := kubernetesAPIWaitAdvice(err); advice != "" {
+		return fmt.Errorf("%w\n\n%s", err, advice)
+	}
+
+	return err
+}
+
+// kubernetesAPIWaitAdvice turns the last transport error of the API wait into the place to look
+// for the cause. dhctl reaches the apiserver through an SSH tunnel to a kubectl proxy on the
+// master, so a failure can come from either end of that path and the error text is the only thing
+// that separates them.
+func kubernetesAPIWaitAdvice(err error) string {
+	text := err.Error()
+
+	switch {
+	case strings.Contains(text, "connection refused"):
+		// The tunnel is up — something answered — but the proxy is not listening, which
+		// normally means the apiserver behind it never came up.
+		return "The tunnel to the master node is up, but nothing is listening behind it.\n" +
+			"On the master node, check that the control plane started:\n" +
+			"  sudo crictl ps -a --name kube-apiserver\n" +
+			"  sudo journalctl -u kubelet -n 100 --no-pager\n" +
+			"A kube-apiserver that restarts in a loop is most often a bad\n" +
+			"ClusterConfiguration.serviceSubnetCIDR/podSubnetCIDR or an etcd that did not start."
+
+	case strings.Contains(text, "i/o timeout"), strings.Contains(text, "context deadline exceeded"):
+		return "Requests to the apiserver are not being answered at all.\n" +
+			"Check that the SSH connection to the master node is still alive and that\n" +
+			"no firewall drops traffic on port 6445 on the master node itself."
+
+	case strings.Contains(text, "EOF"), strings.Contains(text, "connection reset by peer"):
+		// kubectl proxy exits when admin.conf is unreadable, which is the sudo case.
+		return "The connection to the apiserver is being closed mid-request.\n" +
+			"This is what a kubectl proxy that keeps exiting looks like. On the master node:\n" +
+			"  sudo -n true && echo 'sudo ok'\n" +
+			"  sudo test -r /etc/kubernetes/admin.conf && echo 'admin.conf readable'\n" +
+			"Both must succeed for the SSH user dhctl connects as."
+
+	case strings.Contains(text, "x509"), strings.Contains(text, "certificate"):
+		return "The apiserver's certificate was rejected.\n" +
+			"On a freshly bootstrapped cluster this usually means the control plane is being\n" +
+			"re-issued certificates; on an existing one, that the node's clock is wrong."
+	}
+
+	return ""
 }
 
 // helpers to get tasks

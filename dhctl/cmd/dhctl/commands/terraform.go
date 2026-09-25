@@ -115,6 +115,12 @@ func DefineInfrastructureCheckCommand(cmd *kingpin.CmdClause, opts *options.Opti
 
 		defer providerinitializer.CleanupSSHProvider(ctx, sshProviderInitializer)
 
+		// No node preflights here. check reads the infrastructure state and the cluster and
+		// compares them; it runs no command on any node, so asking whether the SSH user can sudo
+		// would refuse a check for a reason that has nothing to do with what it does. The SSH
+		// connection it does use is a transport to the Kubernetes API, and failing to establish
+		// that is reported by the API client itself.
+
 		if kubeProvider == nil {
 			return fmt.Errorf("kubernetes provider is not initialized")
 		}

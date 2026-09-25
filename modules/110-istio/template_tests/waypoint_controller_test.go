@@ -26,12 +26,12 @@ import (
 var _ = Describe("Module :: istio :: helm template :: waypoint-controller", func() {
 	f := SetupHelmConfig(``)
 
-	Context("Ambient mode enabled with global version 1.25.2 (supports ambient)", func() {
+	Context("Ambient mode enabled with global version 1.25 (supports ambient)", func() {
 		BeforeEach(func() {
 			f.ValuesSetFromYaml("global", globalValues)
 			f.ValuesSet("global.modulesImages", GetModulesImages())
 			f.ValuesSetFromYamlWithOpenAPIDefaults("istio", istioValues)
-			f.ValuesSet("istio.internal.globalVersion", "1.25.2")
+			f.ValuesSet("istio.internal.globalVersion", "1.25")
 			f.ValuesSet("istio.ambient.enabled", true)
 			f.HelmRender()
 		})
@@ -60,7 +60,7 @@ var _ = Describe("Module :: istio :: helm template :: waypoint-controller", func
 			// Verify ISTIO_REVISION env
 			for _, env := range envVars.Array() {
 				if env.Get("name").String() == "ISTIO_REVISION" {
-					Expect(env.Get("value").String()).To(Equal("v1x25x2"))
+					Expect(env.Get("value").String()).To(Equal("v1x25"))
 				}
 			}
 
@@ -100,13 +100,13 @@ var _ = Describe("Module :: istio :: helm template :: waypoint-controller", func
 		})
 	})
 
-	Context("Ambient mode enabled with global version 1.23.0 (does not support ambient)", func() {
+	Context("Ambient mode enabled with global version 1.23 (does not support ambient)", func() {
 		BeforeEach(func() {
 			f.ValuesSetFromYaml("global", globalValues)
 			f.ValuesSet("global.modulesImages", GetModulesImages())
 			f.ValuesSetFromYamlWithOpenAPIDefaults("istio", istioValues)
-			f.ValuesSetFromYaml(`istio.internal.versionMap.1\.23\.0`, `{"supportsAmbient":false,"fullVersion":"1.23.0","imageSuffix":"V1x25x2"}`)
-			f.ValuesSet("istio.internal.globalVersion", "1.23.0")
+			f.ValuesSetFromYaml(`istio.internal.versionMap.1\.23`, `{"revision":"v1x23","supportsAmbient":false,"fullVersion":"1.23.0","imageSuffix":"V1x25x2"}`)
+			f.ValuesSet("istio.internal.globalVersion", "1.23")
 			f.ValuesSet("istio.ambient.enabled", true)
 			f.HelmRender()
 		})
@@ -123,12 +123,12 @@ var _ = Describe("Module :: istio :: helm template :: waypoint-controller", func
 		})
 	})
 
-	Context("Ambient mode disabled with global version 1.25.2", func() {
+	Context("Ambient mode disabled with global version 1.25", func() {
 		BeforeEach(func() {
 			f.ValuesSetFromYaml("global", globalValues)
 			f.ValuesSet("global.modulesImages", GetModulesImages())
 			f.ValuesSetFromYamlWithOpenAPIDefaults("istio", istioValues)
-			f.ValuesSet("istio.internal.globalVersion", "1.25.2")
+			f.ValuesSet("istio.internal.globalVersion", "1.25")
 			f.ValuesSet("istio.ambient.enabled", false)
 			f.HelmRender()
 		})
@@ -152,7 +152,7 @@ var _ = Describe("Module :: istio :: helm template :: waypoint-controller", func
 			f.ValuesSetFromYaml("global.enabledModules", `["operator-prometheus","cert-manager","cni-cilium"]`)
 			f.ValuesSet("global.modulesImages", GetModulesImages())
 			f.ValuesSetFromYamlWithOpenAPIDefaults("istio", istioValues)
-			f.ValuesSet("istio.internal.globalVersion", "1.25.2")
+			f.ValuesSet("istio.internal.globalVersion", "1.25")
 			f.ValuesSet("istio.ambient.enabled", true)
 			f.HelmRender()
 		})
@@ -177,7 +177,7 @@ var _ = Describe("Module :: istio :: helm template :: waypoint-controller", func
 			f.ValuesSetFromYaml("global", globalValues)
 			f.ValuesSet("global.modulesImages", GetModulesImages())
 			f.ValuesSetFromYamlWithOpenAPIDefaults("istio", istioValues)
-			f.ValuesSet("istio.internal.globalVersion", "1.25.2")
+			f.ValuesSet("istio.internal.globalVersion", "1.25")
 			f.ValuesSet("istio.ambient.enabled", true)
 			f.ValuesSetFromYaml("istio.ambient.waypointController.resourcesManagement", `
 mode: Static
@@ -221,7 +221,7 @@ limits:
 			f.ValuesSetFromYaml("global", globalValues)
 			f.ValuesSet("global.modulesImages", GetModulesImages())
 			f.ValuesSetFromYamlWithOpenAPIDefaults("istio", istioValues)
-			f.ValuesSet("istio.internal.globalVersion", "1.25.2")
+			f.ValuesSet("istio.internal.globalVersion", "1.25")
 			f.ValuesSet("istio.ambient.enabled", true)
 			f.ValuesSetFromYaml("istio.ambient.waypointController.resourcesManagement", `
 mode: VPA
@@ -270,7 +270,7 @@ resourcePolicy:
 			f.ValuesSetFromYaml("global", globalValues)
 			f.ValuesSet("global.modulesImages", GetModulesImages())
 			f.ValuesSetFromYamlWithOpenAPIDefaults("istio", istioValues)
-			f.ValuesSet("istio.internal.globalVersion", "1.25.2")
+			f.ValuesSet("istio.internal.globalVersion", "1.25")
 			f.ValuesSet("istio.ambient.enabled", true)
 			f.ValuesSet("global.highAvailability", false)
 			f.HelmRender()
@@ -299,7 +299,7 @@ resourcePolicy:
 			f.ValuesSetFromYaml("global", globalValues)
 			f.ValuesSet("global.modulesImages", GetModulesImages())
 			f.ValuesSetFromYamlWithOpenAPIDefaults("istio", istioValues)
-			f.ValuesSet("istio.internal.globalVersion", "1.25.2")
+			f.ValuesSet("istio.internal.globalVersion", "1.25")
 			f.ValuesSet("istio.ambient.enabled", true)
 			f.HelmRender()
 		})
@@ -354,7 +354,7 @@ resourcePolicy:
 			f.ValuesSetFromYaml("global", globalValues)
 			f.ValuesSet("global.modulesImages", GetModulesImages())
 			f.ValuesSetFromYamlWithOpenAPIDefaults("istio", istioValues)
-			f.ValuesSet("istio.internal.globalVersion", "1.25.2")
+			f.ValuesSet("istio.internal.globalVersion", "1.25")
 			f.ValuesSet("istio.ambient.enabled", true)
 			f.HelmRender()
 		})
@@ -379,7 +379,7 @@ resourcePolicy:
 			f.ValuesSetFromYaml("global", globalValues)
 			f.ValuesSet("global.modulesImages", GetModulesImages())
 			f.ValuesSetFromYamlWithOpenAPIDefaults("istio", istioValues)
-			f.ValuesSet("istio.internal.globalVersion", "1.25.2")
+			f.ValuesSet("istio.internal.globalVersion", "1.25")
 			f.ValuesSet("istio.ambient.enabled", true)
 			f.HelmRender()
 		})

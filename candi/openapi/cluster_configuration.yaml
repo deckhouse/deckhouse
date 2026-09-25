@@ -93,12 +93,15 @@ apiVersions:
             maxLength: 45
       podSubnetCIDR:
         type: string
+        pattern: '^(([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])\.){3}([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])(\/(3[0-2]|[1-2][0-9]|[0-9]))$'
         x-unsafe: true
         x-doc-deprecated: true
         description: |
           **Deprecated.** Use [`podSubnetCIDR`](/modules/control-plane-manager/configuration.html#parameters-network-podsubnetcidr) in the `network` section of the `control-plane-manager` ModuleConfig instead.
 
           Address space of the cluster's Pods.
+
+          Must be an address with a prefix length, for example `10.111.0.0/16`. A value written without one is rejected when the configuration is loaded.
 
           > **Warning!** Changing this parameter in a running cluster is **extremely dangerous** and can lead to complete cluster failure. The change is blocked by default. To bypass this protection, use `dhctl config edit cluster-configuration --yes-i-am-sane-and-i-understand-what-i-am-doing` command. However, it is **strongly recommended to recreate the cluster** instead of changing this parameter. See [documentation](/products/kubernetes-platform/documentation/v1/admin/configuration/#modifying-protected-parameters) for details.
       podSubnetNodeCIDRPrefix:
@@ -121,12 +124,15 @@ apiVersions:
           If the parameter is set in neither place, `24` is used.
       serviceSubnetCIDR:
         type: string
+        pattern: '^(([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])\.){3}([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])(\/(3[0-2]|[1-2][0-9]|[0-9]))$'
         x-unsafe: true
         x-doc-deprecated: true
         description: |
           **Deprecated.** Use [`serviceSubnetCIDR`](/modules/control-plane-manager/configuration.html#parameters-network-servicesubnetcidr) in the `network` section of the `control-plane-manager` ModuleConfig instead.
 
           Address space of the cluster's services.
+
+          Must be an address with a prefix length, for example `10.222.0.0/16`. A value written without one is rejected when the configuration is loaded.
 
           > **Warning!** Changing this parameter in a running cluster is **extremely dangerous** and can lead to complete cluster failure. The change is blocked by default. To bypass this protection, use `dhctl config edit cluster-configuration --yes-i-am-sane-and-i-understand-what-i-am-doing` command. However, it is **strongly recommended to recreate the cluster** instead of changing this parameter. See [documentation](/products/kubernetes-platform/documentation/v1/admin/configuration/#modifying-protected-parameters) for details.
       clusterDomain:

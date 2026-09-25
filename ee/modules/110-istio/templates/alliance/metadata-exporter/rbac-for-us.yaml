@@ -43,6 +43,7 @@ rules:
       - configmaps
     resourceNames:
       - metadata-exporter-ingressgateway-advertise
+      - metadata-exporter-ambientgateway-advertise
       - istio-ca-root-cert
     verbs:
       - get

@@ -42,8 +42,15 @@ type Instance struct {
 // InstanceSpec holds references to related resources.
 type InstanceSpec struct {
 	NodeRef        NodeRef         `json:"nodeRef,omitempty"`
+	NodeGroupRef   NodeGroupRef    `json:"nodeGroupRef,omitempty"`
 	MachineRef     *MachineRef     `json:"machineRef,omitempty"`
 	ClassReference *ClassReference `json:"classReference,omitempty"`
+}
+
+// NodeGroupRef points to the NodeGroup that ordered this instance. It is known from the machine
+// before the node joins the cluster, so consumers can group pending instances by their NodeGroup.
+type NodeGroupRef struct {
+	Name string `json:"name,omitempty"`
 }
 
 // InstanceStatus is the observed state of Instance.

@@ -35,8 +35,10 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/destroy/deckhouse"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/destroy/kube"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/phases"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/preflight/suites"
 	dhctlstate "github.com/deckhouse/deckhouse/dhctl/pkg/state"
 	infrastructurestate "github.com/deckhouse/deckhouse/dhctl/pkg/state/infrastructure"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/system/providerinitializer"
 )
 
 type Destroyer interface {
@@ -56,9 +58,13 @@ type metaConfigPopulator interface {
 }
 
 type Params struct {
-	StateCache   dhctlstate.Cache
-	SSHProvider  libcon.SSHProvider
-	KubeProvider libcon.KubeProvider
+	StateCache  dhctlstate.Cache
+	SSHProvider libcon.SSHProvider
+	// SSHProviderInitializer is what the node preflight checks are built over. SSHProvider above
+	// is a provider already built; the checks resolve one themselves when they run, which is how
+	// they avoid the host list a provider copies at construction.
+	SSHProviderInitializer *providerinitializer.SSHProviderInitializer
+	KubeProvider           libcon.KubeProvider
 
 	// todo pass pipeline provider here
 	OnPhaseFunc            phases.DefaultOnPhaseFunc
@@ -159,6 +165,19 @@ type ClusterDestroyer struct {
 	d8Destroyer   *deckhouse.Destroyer
 	infraProvider *infraDestroyerProvider
 	globalOptions *options.GlobalOptions
+
+	// The node preflight checks, and what they are allowed to skip.
+	sshProviderInitializer *providerinitializer.SSHProviderInitializer
+	options                *options.Options
+}
+
+// preflightOptions is nil-safe: a caller that builds the destroyer without an *options.Options
+// gets the default set, which skips nothing.
+func (d *ClusterDestroyer) preflightOptions() *options.PreflightOptions {
+	if d.options == nil {
+		return nil
+	}
+	return &d.options.Preflight
 }
 
 // NewClusterDestroyer
@@ -237,11 +256,22 @@ func NewClusterDestroyer(ctx context.Context, params *Params) (*ClusterDestroyer
 		d8Destroyer:   d8Destroyer,
 		infraProvider: infraProvider,
 		globalOptions: &params.Options.Global,
+
+		sshProviderInitializer: params.SSHProviderInitializer,
+		options:                params.Options,
 	}, nil
 }
 
 func (d *ClusterDestroyer) DestroyCluster(ctx context.Context, autoApprove bool) error {
 	dhlog.PrintBanner(ctx)
+
+	// Before anything is removed: destroy reaches the nodes over SSH, and a key they do not
+	// accept used to cost about four minutes of "Try to connect to host". It runs here rather
+	// than in the command so that Commander gets it too — it has always sent
+	// skip_preflight_checks to destroy, where nothing read them.
+	if err := suites.RunNodeAccessPreflights(ctx, d.sshProviderInitializer, d.preflightOptions(), "Preflight checks: destroy"); err != nil {
+		return err
+	}
 
 	return d.pipeline.Run(ctx, func(switcher phases.DefaultPipelinePhaseSwitcher) error {
 		return d.destroy(ctx, autoApprove)

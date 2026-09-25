@@ -91,6 +91,18 @@ var commandList = []Command{
 		Parent:     "bootstrap-phase",
 	},
 	{
+		// Top level rather than under bootstrap: converge, destroy and check run the node
+		// checks too, so the list is no longer about bootstrap alone.
+		Name: "preflight",
+		Help: "Preflight checks.",
+	},
+	{
+		Name:       "list",
+		Help:       "List the preflight checks, what each applies to and what it asserts.",
+		DefineFunc: bootstrap.DefinePreflightListCommand,
+		Parent:     "preflight",
+	},
+	{
 		Name:       "converge",
 		Help:       "Converge a Kubernetes cluster.",
 		DefineFunc: commands.DefineConvergeCommand,

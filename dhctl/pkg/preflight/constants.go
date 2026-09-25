@@ -16,4 +16,16 @@ package preflightnew
 
 import "time"
 
+// DefaultPreflightCheckTimeout bounds one attempt of a check that asks a single question and
+// waits for a single answer: a config comparison, one HTTP round trip, one TCP handshake. The
+// constant existed before and was referenced nowhere, so a registry that accepted the connection
+// and never answered hung the bootstrap with no output at all.
 const DefaultPreflightCheckTimeout = 30 * time.Second
+
+// NodeCheckTimeout bounds one attempt of a check that uploads a script to a node and runs it.
+// The budget covers the upload as well as the run, over a link dhctl does not control.
+const NodeCheckTimeout = 2 * time.Minute
+
+// LongCheckTimeout bounds one attempt of a check that walks a list of machines, spending the
+// per-machine budget of the two above on each of them in turn.
+const LongCheckTimeout = 5 * time.Minute

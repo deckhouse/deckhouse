@@ -16,12 +16,6 @@ package checks
 
 import (
 	"context"
-	"errors"
-	"fmt"
-	"os/exec"
-	"strings"
-
-	libcon "github.com/deckhouse/lib-connection/pkg"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app/options"
 	preflight "github.com/deckhouse/deckhouse/dhctl/pkg/preflight"
@@ -29,14 +23,16 @@ import (
 )
 
 type LocalhostDomainCheck struct {
-	NodeInterface libcon.Interface
+	// NodeInterface is resolved when the check runs, not when its suite is built: see
+	// NodeInterfaceFunc.
+	NodeInterface NodeInterfaceFunc
 	globalOptions *options.GlobalOptions
 }
 
 const LocalhostDomainCheckName preflight.CheckName = "resolve-localhost"
 
 func (LocalhostDomainCheck) Description() string {
-	return "resolve the localhost domain"
+	return "the node resolves localhost to 127.0.0.1"
 }
 
 func (LocalhostDomainCheck) Phase() preflight.Phase {
@@ -44,35 +40,37 @@ func (LocalhostDomainCheck) Phase() preflight.Phase {
 }
 
 func (LocalhostDomainCheck) RetryPolicy() preflight.RetryPolicy {
-	return preflight.DefaultRetryPolicy
+	return preflight.NoRetry
 }
 
 func (c LocalhostDomainCheck) Run(ctx context.Context) error {
+	nodeInterface, err := c.NodeInterface(ctx)
+	if err != nil {
+		return err
+	}
+
 	file, err := template.RenderAndSavePreflightCheckLocalhostScript(ctx, c.globalOptions)
 	if err != nil {
 		return err
 	}
 
-	cmd := c.NodeInterface.UploadScript(file)
+	cmd := nodeInterface.UploadScript(file)
 	out, err := cmd.Execute(ctx)
 	if err != nil {
-		if ee, ok := errors.AsType[*exec.ExitError](err); ok {
-			return fmt.Errorf("Localhost domain resolving check failed: %w, %s", err, string(ee.Stderr))
-		}
-		return fmt.Errorf("Could not execute a script to check for localhost domain resolution: %w", err)
+		return scriptFailure("check that localhost resolves", nodeInterface, out, err)
 	}
 
-	_ = strings.TrimSpace(string(out))
 	return nil
 }
 
-func LocalhostDomain(nodeInterface libcon.Interface, globalOptions *options.GlobalOptions) preflight.Check {
+func LocalhostDomain(nodeInterface NodeInterfaceFunc, globalOptions *options.GlobalOptions) preflight.Check {
 	check := LocalhostDomainCheck{NodeInterface: nodeInterface, globalOptions: globalOptions}
 	return preflight.Check{
 		Name:        LocalhostDomainCheckName,
 		Description: check.Description(),
 		Phase:       check.Phase(),
 		Retry:       check.RetryPolicy(),
-		Run:         check.Run,
+		Timeout:     preflight.NodeCheckTimeout,
+		Run:         preflight.Detailless(check.Run),
 	}
 }

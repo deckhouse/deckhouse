@@ -16,7 +16,7 @@ properties:
         type: object
         default: {}
         x-examples:
-          - {"1.25": { "fullVersion": "1.25.2", "revision": "1x25", "imageSuffix": "V1x25x2", "isReady": false, "supportsAmbient": false, "supportsOperator": true } } # must be real
+          - {"1.25": { "fullVersion": "1.25.2", "revision": "v1x25", "imageSuffix": "V1x25x2", "isReady": false, "supportsAmbient": true, "supportsAmbientMulticluster": false, "supportsOperator": true } } # must be real
         additionalProperties:
           type: object
           properties:
@@ -33,6 +33,9 @@ properties:
               type: boolean
               x-examples: [false]
             supportsAmbient:
+              type: boolean
+              x-examples: [true]
+            supportsAmbientMulticluster:
               type: boolean
               x-examples: [false]
             supportsOperator:
@@ -93,7 +96,7 @@ properties:
         type: array
         default: []
         x-examples:
-        - [{"name": "aaa", "clusterUUID": "uuid-aaa", "spiffeEndpoint": "ccc", "rootCA": "---ROOT CA---", "metadataExporterCA": "---METADATA CA---", "insecureSkipVerify": true, "enableIngressGateway": true, "apiHost": "aaa.sss.ddd", "networkName": "network-a-b-c-1-2-3", "clusterID": "a-b-c-1-2-3", "apiJWT": "aAaA.bBbB.CcCc", "ingressGateways": [{"address": "1.2.3.4", "port": 1234}]}]
+        - [{"name": "aaa", "clusterUUID": "uuid-aaa", "spiffeEndpoint": "ccc", "rootCA": "---ROOT CA---", "metadataExporterCA": "---METADATA CA---", "insecureSkipVerify": true, "enableIngressGateway": true, "apiHost": "aaa.sss.ddd", "networkName": "network-a-b-c-1-2-3", "clusterID": "a-b-c-1-2-3", "apiJWT": "aAaA.bBbB.CcCc", "ingressGateways": [{"address": "1.2.3.4", "port": 1234}], "ambientGateways": [{"address": "1.2.3.4", "addressType": "IPAddress", "port": 15008}]}]
       remotePublicMetadata:
         type: object
         default: {}

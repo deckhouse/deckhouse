@@ -856,9 +856,11 @@ func TestImmutablePreflightsDropTheCheckThatWouldTunnelThroughTheMaster(t *testi
 	b, bctx := immutableTestBootstrapper(t)
 	runner := preflight.New()
 
-	b.applyImmutablePreflights(runner, bctx)
+	b.disableChecksImmutableMasterCannotAnswer(runner, bctx)
 
-	require.True(t, runner.IsDisabled(checks.CloudAPICheckName.String()))
+	reason, disabled := runner.DisabledReason(checks.CloudAPICheckName.String())
+	require.True(t, disabled)
+	require.Contains(t, reason, "no sshd", "the record must say why dhctl turned it off, not look like a user skip")
 }
 
 // An immutable machine runs no sshd, so the question a missing --ssh-host
@@ -1136,11 +1138,16 @@ func TestMachinesArePreflightedAgainstTheirDocuments(t *testing.T) {
 		require.False(t, machine.pushed.Load(), "a preflight must not hand the machine anything")
 	})
 
+	// A cloud bootstrap names no machines, and this must not read as a pass: the check's line
+	// says the machines answered, and there are none.
 	t.Run("a cloud names no machines", func(t *testing.T) {
 		b, bctx := immutableTestBootstrapper(t)
 		bctx.immutable.hosts = nil
 
-		require.NoError(t, b.checkMachinesAreAvailable(t.Context(), bctx))
+		err := b.checkMachinesAreAvailable(t.Context(), bctx)
+
+		require.ErrorIs(t, err, preflight.ErrNotApplicable)
+		require.ErrorContains(t, err, "--master-host")
 	})
 }
 
@@ -1559,9 +1566,8 @@ func TestImmutableStaticPreflightsNeedNoSSHHost(t *testing.T) {
 	b.SSHProviderInitializer = providerinitializer.NewSSHProviderInitializer(nil,
 		&sshconfig.ConnectionConfig{Config: &sshconfig.Config{}})
 
-	built, err := b.preflightSuites(t.Context(), bctx)
-	require.NoError(t, err)
-	require.Len(t, built, 2, "the global suite, and the arm this path is checked by")
+	built := b.preflightSuites(bctx)
+	require.Len(t, built, 3, "the global suite, the immutable suite, and the arm this path is checked by")
 
 	// Running it is the assertion: a check that reaches for the SSH provider ends here with
 	// "hosts from cache not found", and one built over the node interface probes the installer
@@ -1569,7 +1575,7 @@ func TestImmutableStaticPreflightsNeedNoSSHHost(t *testing.T) {
 	ctx, cancel := context.WithTimeout(t.Context(), 30*time.Second)
 	defer cancel()
 
-	runner := preflight.New(built[1])
+	runner := preflight.New(built[len(built)-1])
 	require.NoError(t, runner.Run(ctx, preflight.PhasePreInfra))
 	require.NoError(t, runner.Run(ctx, preflight.PhasePostInfra))
 }
@@ -1681,4 +1687,85 @@ func TestSaveAdminKubeconfigNamesTheFileAfterAStaticClusterToo(t *testing.T) {
 
 	// The tmp cleaner spares this file by suffix, as for a cloud cluster.
 	require.True(t, strings.HasSuffix(first, cache.AdminKubeconfigName))
+}
+
+// TestImmutablePreflightsDropEveryCheckThatNeedsSSH: an immutable machine runs no sshd, and the
+// cloud post-infra suite now carries a dozen checks that reach the node over it. Each has to be
+// named — they travel in suites shared with every other cloud bootstrap — and a check left in
+// would probe the installer container instead of the machine and report a ✓ about it.
+func TestImmutablePreflightsDropEveryCheckThatNeedsSSH(t *testing.T) {
+	b, bctx := immutableTestBootstrapper(t)
+	runner := preflight.New()
+
+	b.disableChecksImmutableMasterCannotAnswer(runner, bctx)
+
+	overSSH := []preflight.CheckName{
+		checks.CloudAPICheckName,
+		checks.SudoInstalledCheckName,
+		checks.SudoAllowedCheckName,
+		checks.PythonCheckName,
+		checks.TimeDriftCheckName,
+		checks.NodeHostnameCheckName,
+		checks.NodeDiskSpaceCheckName,
+		checks.RegistryFromMasterCheckName,
+	}
+	for _, name := range overSSH {
+		reason, disabled := runner.DisabledReason(name.String())
+		require.Truef(t, disabled, "check %q reaches the node over SSH and must be turned off", name)
+		require.NotEmptyf(t, reason, "check %q must say who turned it off, not look like a user skip", name)
+	}
+}
+
+// TestLocalBootstrapDisablesTheSSHChecks covers the local mode of a static bootstrap: dhctl was
+// given no --ssh-host and the operator confirmed bootstrapping the machine dhctl runs on. The
+// checks about the connection have nothing to ask; the checks about the machine are asking about
+// the right machine and must stay.
+func TestLocalBootstrapDisablesTheSSHChecks(t *testing.T) {
+	b, bctx := immutableTestBootstrapper(t)
+	bctx.immutable = nil
+	bctx.metaConfig.ClusterType = config.StaticClusterType
+	b.SSHProviderInitializer = providerinitializer.NewSSHProviderInitializer(nil,
+		&sshconfig.ConnectionConfig{Config: &sshconfig.Config{}})
+
+	runner := preflight.New()
+	b.disableChecksWithoutSSHHost(t.Context(), runner, bctx)
+
+	for _, name := range []preflight.CheckName{
+		checks.SSHConnectivityCheckName,
+		checks.SSHCredentialCheckName,
+		checks.SSHTunnelCheckName,
+		checks.BastionAvailabilityCheckName,
+		checks.RegistryFromMasterCheckName,
+	} {
+		reason, disabled := runner.DisabledReason(name.String())
+		require.Truef(t, disabled, "check %q needs an SSH connection there is none of", name)
+		require.Contains(t, reason, "no --ssh-host")
+	}
+
+	// The machine itself is still examined — it is the machine that will become the master.
+	for _, name := range []preflight.CheckName{
+		checks.SudoAllowedCheckName,
+		checks.PythonCheckName,
+		checks.NodeHostnameCheckName,
+		checks.NodeDiskSpaceCheckName,
+	} {
+		_, disabled := runner.DisabledReason(name.String())
+		require.Falsef(t, disabled, "check %q asks about the machine, which is here", name)
+	}
+}
+
+// TestCloudBootstrapKeepsTheSSHChecks: a cloud cluster has no hosts before base infrastructure
+// creates them, and that absence must not be read as the local mode.
+func TestCloudBootstrapKeepsTheSSHChecks(t *testing.T) {
+	b, bctx := immutableTestBootstrapper(t)
+	bctx.immutable = nil
+	bctx.metaConfig.ClusterType = config.CloudClusterType
+	b.SSHProviderInitializer = providerinitializer.NewSSHProviderInitializer(nil,
+		&sshconfig.ConnectionConfig{Config: &sshconfig.Config{}})
+
+	runner := preflight.New()
+	b.disableChecksWithoutSSHHost(t.Context(), runner, bctx)
+
+	_, disabled := runner.DisabledReason(checks.SSHCredentialCheckName.String())
+	require.False(t, disabled, "a cloud cluster gets its hosts from the infrastructure it is about to create")
 }

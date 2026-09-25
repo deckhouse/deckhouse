@@ -116,12 +116,6 @@ const (
 	// images are built in.
 	registryPackagesDigestsKey = "registrypackages"
 
-	// commonDigestsKey and pauseImageName locate the sandbox image. The
-	// registry.k8s.io default of the nodeConfig CRD is unreachable from a node
-	// that only talks to the Deckhouse registry.
-	commonDigestsKey = "common"
-	pauseImageName   = "pause"
-
 	// controlPlaneDigestsKey is the images_digests.json module the control-plane
 	// images are built in.
 	controlPlaneDigestsKey = "controlPlaneManager"

@@ -17,7 +17,6 @@ package bootstrap
 import (
 	"os"
 	"path/filepath"
-	"slices"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -100,13 +99,13 @@ func TestEKSConfigWithoutClusterConfiguration(t *testing.T) {
 		"kube-system/d8-cluster-uuid is the only authority on such a cluster, and the adoption in install-deckhouse stands on dhctl arriving without one",
 	)
 
-	globalChecks := suites.NewGlobalSuite(suites.GlobalDeps{MetaConfig: metaConfig}).Checks()
-
-	for _, name := range []preflight.CheckName{checks.CidrIntersectionCheckName, checks.PublicDomainTemplateCheckName} {
-		at := slices.IndexFunc(globalChecks, func(c preflight.Check) bool { return c.Name == name })
-		require.GreaterOrEqualf(t, at, 0, "check %q left the global suite", name)
-		require.NoErrorf(t, globalChecks[at].Run(t.Context()), "check %q runs before any gate and must pass", name)
-	}
+	// The suite still assembles for a cluster with no ClusterConfiguration. The two checks that
+	// used to be asserted on here — cidr-intersection and public-domain-template — are part of
+	// loading the configuration now, and ParseConfig above is what exercises them: it returned
+	// no error, which is the assertion.
+	require.NotEmpty(t, suites.NewGlobalSuite(suites.GlobalDeps{MetaConfig: metaConfig}).Checks(),
+		"the global suite is the only one that applies to a cluster dhctl did not build the control plane of",
+	)
 
 	declared := make([]phases.OperationPhase, 0)
 	for _, phase := range phases.PhasesFor(phases.OperationBootstrap, phaseClusterConfig(metaConfig, false)) {
@@ -149,14 +148,12 @@ func TestPreflightSuites_WithoutClusterConfigurationTheGlobalSuiteIsAll(t *testi
 		SSHProviderInitializer: hostlessInitializer(),
 	}}
 
-	selected, err := b.preflightSuites(t.Context(), &bootstrapContext{metaConfig: &config.MetaConfig{}})
-	require.NoError(t, err)
+	selected := b.preflightSuites(&bootstrapContext{metaConfig: &config.MetaConfig{}})
 	require.Equal(t, checkNames(suites.NewGlobalSuite(suites.GlobalDeps{})), checkNames(selected...))
 
-	selected, err = b.preflightSuites(t.Context(), &bootstrapContext{
+	selected = b.preflightSuites(&bootstrapContext{
 		metaConfig: bootstrappedMetaConfig(config.StaticClusterType),
 	})
-	require.NoError(t, err)
 	require.Contains(t, checkNames(selected...), checks.SudoAllowedCheckName,
 		"a cluster whose control plane dhctl does build keeps the checks over the node it builds on",
 	)

@@ -277,6 +277,12 @@ func (d *LogPrinter) GetPod(ctx context.Context) error {
 
 	message := fmt.Sprintf("Deckhouse pod found: %s (%s)", pod.Name, pod.Status.Phase)
 	if pod.Status.Phase != corev1.PodRunning {
+		// The phase alone is what this said for fifteen minutes, once per poll, while the reason
+		// sat in the pod the whole time: an image that cannot be pulled, a node that cannot take
+		// the pod. Kubernetes records it; nothing was reading it back.
+		if reason := podNotRunningReason(pod); reason != "" {
+			message += ": " + reason
+		}
 		return fmt.Errorf("%s", message)
 	}
 
@@ -285,6 +291,43 @@ func (d *LogPrinter) GetPod(ctx context.Context) error {
 
 	d.deckhousePod = pod
 	return nil
+}
+
+// podNotRunningReason is what Kubernetes already knows about a pod that has not started.
+//
+// The container statuses carry the cause of the two failures that actually happen here — the
+// image cannot be pulled, or the container crashes on start — and the conditions carry the third,
+// a pod nothing will schedule. Any of them is worth more than repeating "Pending".
+func podNotRunningReason(pod *corev1.Pod) string {
+	for _, status := range append(append([]corev1.ContainerStatus{},
+		pod.Status.InitContainerStatuses...), pod.Status.ContainerStatuses...) {
+		switch {
+		case status.State.Waiting != nil && status.State.Waiting.Reason != "":
+			return containerStateReason(status.Name, status.State.Waiting.Reason, status.State.Waiting.Message)
+		case status.State.Terminated != nil && status.State.Terminated.Reason != "":
+			return containerStateReason(status.Name, status.State.Terminated.Reason, status.State.Terminated.Message)
+		}
+	}
+
+	// Nothing has started because nothing will place it.
+	for _, condition := range pod.Status.Conditions {
+		if condition.Type == corev1.PodScheduled && condition.Status == corev1.ConditionFalse {
+			if condition.Message != "" {
+				return fmt.Sprintf("%s: %s", condition.Reason, condition.Message)
+			}
+			return condition.Reason
+		}
+	}
+
+	return ""
+}
+
+func containerStateReason(container, reason, message string) string {
+	text := fmt.Sprintf("container %q is %s", container, reason)
+	if message != "" {
+		text += ": " + strings.TrimSpace(message)
+	}
+	return text
 }
 
 func (d *LogPrinter) checkDeckhousePodReady(ctx context.Context) (bool, error) {

@@ -35,6 +35,7 @@ import (
 	deckhousev1alpha2 "github.com/deckhouse/node-controller/api/deckhouse.io/v1alpha2"
 	mcmv1alpha1 "github.com/deckhouse/node-controller/api/machine.sapcloud.io/v1alpha1"
 	"github.com/deckhouse/node-controller/internal/controller/instance/common/machine"
+	ngcommon "github.com/deckhouse/node-controller/internal/controller/nodegroup/common"
 	"github.com/deckhouse/node-controller/internal/register"
 )
 
@@ -130,4 +131,28 @@ func TestReconcileMachineStatusMachineNotFound(t *testing.T) {
 	persisted := &deckhousev1alpha2.Instance{}
 	require.NoError(t, k8sClient.Get(ctx, types.NamespacedName{Name: instance.Name}, persisted))
 	require.Empty(t, persisted.Status.MachineStatus)
+}
+
+func TestReconcileSetsNodeGroupRefFromMachine(t *testing.T) {
+	t.Parallel()
+
+	instance := existingInstanceWithFinalizer("nodegroup-ref", deckhousev1alpha2.InstanceSpec{
+		MachineRef: capiMachineRef("nodegroup-ref"),
+		NodeRef:    deckhousev1alpha2.NodeRef{Name: "nodegroup-ref"},
+	}, deckhousev1alpha2.InstancePhaseRunning)
+
+	machineObj := capiMachineWithStatus("nodegroup-ref", capiv1beta2.MachineStatus{
+		Phase: string(capiv1beta2.MachinePhaseRunning),
+	})
+	machineObj.Labels = map[string]string{ngcommon.MachineDeploymentNodeGroupLabel: "engine"}
+
+	ctx := ctrl.LoggerInto(context.Background(), ctrl.Log.WithName("test"))
+	controller, k8sClient := newInterceptedController(t, interceptor.Funcs{}, instance, machineObj)
+
+	_, err := reconcileInstance(ctx, controller, instance.Name)
+	require.NoError(t, err)
+
+	persisted := &deckhousev1alpha2.Instance{}
+	require.NoError(t, k8sClient.Get(ctx, types.NamespacedName{Name: instance.Name}, persisted))
+	require.Equal(t, "engine", persisted.Spec.NodeGroupRef.Name)
 }

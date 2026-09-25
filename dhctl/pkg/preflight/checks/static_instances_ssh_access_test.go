@@ -15,9 +15,17 @@
 package checks
 
 import (
+	"context"
 	"encoding/base64"
+	"errors"
 	"strings"
 	"testing"
+
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+
+	libcon "github.com/deckhouse/lib-connection/pkg"
+	"github.com/deckhouse/lib-connection/pkg/ssh/session"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/apis/deckhouse/v1alpha2"
 )
@@ -76,7 +84,7 @@ func TestParseSSHCredentials(t *testing.T) {
 		sc.Spec.PrivateSSHKey = base64.StdEncoding.EncodeToString([]byte("k"))
 
 		_, err := parseSSHCredentials(sc)
-		if err == nil || !strings.Contains(err.Error(), "metadata.name is empty") {
+		if err == nil || !strings.Contains(err.Error(), "empty metadata.name") {
 			t.Fatalf("unexpected error: %v", err)
 		}
 	})
@@ -88,7 +96,7 @@ func TestParseSSHCredentials(t *testing.T) {
 		sc.Spec.PrivateSSHKey = base64.StdEncoding.EncodeToString([]byte("k"))
 
 		_, err := parseSSHCredentials(sc)
-		if err == nil || !strings.Contains(err.Error(), "User must be specified") {
+		if err == nil || !strings.Contains(err.Error(), "spec.user is empty") {
 			t.Fatalf("unexpected error: %v", err)
 		}
 	})
@@ -100,7 +108,7 @@ func TestParseSSHCredentials(t *testing.T) {
 		sc.Spec.PrivateSSHKey = "%%%"
 
 		_, err := parseSSHCredentials(sc)
-		if err == nil || !strings.Contains(err.Error(), "Cannot decode privateSSHKey") {
+		if err == nil || !strings.Contains(err.Error(), "decode spec.privateSSHKey from base64") {
 			t.Fatalf("unexpected error: %v", err)
 		}
 	})
@@ -111,7 +119,7 @@ func TestParseSSHCredentials(t *testing.T) {
 		sc.Spec.User = "ubuntu"
 
 		_, err := parseSSHCredentials(sc)
-		if err == nil || !strings.Contains(err.Error(), "Must contain privateSSHKey or sudoPasswordEncoded") {
+		if err == nil || !strings.Contains(err.Error(), "neither spec.privateSSHKey nor spec.sudoPasswordEncoded is set") {
 			t.Fatalf("unexpected error: %v", err)
 		}
 	})
@@ -164,7 +172,7 @@ spec:
 
 	t.Run("err: invalid YAML", func(t *testing.T) {
 		_, _, err := parseResources([]string{`kind: StaticInstance: [`})
-		if err == nil || !strings.Contains(err.Error(), "Cannot unmarshal YAML") {
+		if err == nil || !strings.Contains(err.Error(), "parse a resources document of the --config file") {
 			t.Fatalf("unexpected error: %v", err)
 		}
 	})
@@ -180,7 +188,7 @@ spec:
   credentialsRef:
     name: cred-1
 `})
-		if err == nil || !strings.Contains(err.Error(), "metadata.name is empty") {
+		if err == nil || !strings.Contains(err.Error(), "empty metadata.name") {
 			t.Fatalf("unexpected error: %v", err)
 		}
 	})
@@ -196,7 +204,7 @@ spec:
   credentialsRef:
     name: cred-1
 `})
-		if err == nil || !strings.Contains(err.Error(), "spec.address is empty") {
+		if err == nil || !strings.Contains(err.Error(), "empty spec.address") {
 			t.Fatalf("unexpected error: %v", err)
 		}
 	})
@@ -212,7 +220,7 @@ spec:
   credentialsRef:
     name: "   "
 `})
-		if err == nil || !strings.Contains(err.Error(), "spec.credentialsRef.name is empty") {
+		if err == nil || !strings.Contains(err.Error(), "empty spec.credentialsRef.name") {
 			t.Fatalf("unexpected error: %v", err)
 		}
 	})
@@ -233,5 +241,167 @@ spec:
 		if !strings.Contains(err.Error(), "SSHCredentials cred-bad:") {
 			t.Fatalf("expected wrapped error with name, got: %v", err)
 		}
+	})
+}
+
+// TestStaticInstanceSession pins how a StaticInstance is reached. Deckhouse adopts these machines
+// from the master node, so the check has to take the same route — and the route is the part of
+// this check that nothing exercised.
+func TestStaticInstanceSession(t *testing.T) {
+	cred := &v1alpha2.SSHCredentialsSpec{User: "caretaker", SSHPort: 2222}
+
+	masterWith := func(input session.Input) *session.Session {
+		sess := session.NewSession(input)
+		if len(input.AvailableHosts) == 0 {
+			sess.AddAvailableHosts(session.Host{Host: "master-0.example.com"})
+		}
+		return sess
+	}
+
+	t.Run("a local run reaches the instance directly", func(t *testing.T) {
+		// dhctl running on a machine that already has the hosts in reach: there is no
+		// master connection to borrow, and inventing a hop would only fail.
+		got := staticInstanceSession("10.0.0.10", cred, nil)
+
+		assert.Equal(t, "10.0.0.10", got.Host())
+		assert.Equal(t, "caretaker", got.User)
+		assert.Equal(t, "2222", got.Port)
+		assert.Empty(t, got.BastionHost)
+	})
+
+	t.Run("the master becomes the hop", func(t *testing.T) {
+		master := masterWith(session.Input{User: "ubuntu", Port: "22"})
+
+		got := staticInstanceSession("10.0.0.10", cred, master)
+
+		assert.Equal(t, "master-0.example.com", got.BastionHost)
+		assert.Equal(t, "ubuntu", got.BastionUser)
+		assert.Equal(t, "22", got.BastionPort)
+		// The instance's own credentials are unaffected by whose machine the hop is.
+		assert.Equal(t, "caretaker", got.User)
+		assert.Equal(t, "2222", got.Port)
+	})
+
+	t.Run("an existing bastion is kept", func(t *testing.T) {
+		// The master is behind a bastion, so everything behind the master is too. Replacing
+		// it with the master would name a host this process cannot reach.
+		master := masterWith(session.Input{
+			User:            "ubuntu",
+			Port:            "22",
+			BastionHost:     "bastion.example.com",
+			BastionPort:     "2200",
+			BastionUser:     "jump",
+			BastionPassword: "bastion-secret",
+		})
+
+		got := staticInstanceSession("10.0.0.10", cred, master)
+
+		assert.Equal(t, "bastion.example.com", got.BastionHost)
+		assert.Equal(t, "2200", got.BastionPort)
+		assert.Equal(t, "jump", got.BastionUser)
+		assert.Equal(t, "bastion-secret", got.BastionPassword)
+	})
+
+	t.Run("the sudo password is not offered to the hop as an SSH password", func(t *testing.T) {
+		// --ask-become-pass puts the sudo password in BecomePass. It used to be copied into
+		// BastionPassword when the master became the hop, which offers the operator's sudo
+		// password to the master's sshd as a password attempt. The master is reached by key;
+		// there is no SSH password to carry over.
+		master := masterWith(session.Input{User: "ubuntu", Port: "22", BecomePass: "sudo-secret"})
+
+		got := staticInstanceSession("10.0.0.10", cred, master)
+
+		assert.Empty(t, got.BastionPassword)
+	})
+
+	t.Run("the instance carries its own sudo password", func(t *testing.T) {
+		withSudo := &v1alpha2.SSHCredentialsSpec{User: "caretaker", SSHPort: 22, SudoPasswordEncoded: "instance-sudo"}
+
+		got := staticInstanceSession("10.0.0.10", withSudo, nil)
+
+		assert.Equal(t, "instance-sudo", got.BecomePass)
+	})
+}
+
+// switchingSSHProvider records how a check moves the provider's current client around.
+type switchingSSHProvider struct {
+	libcon.SSHProvider
+
+	switched  []string
+	restored  int
+	switchErr error
+}
+
+func (p *switchingSSHProvider) SwitchClient(_ context.Context, sess *session.Session, _ []session.AgentPrivateKey) (libcon.SSHClient, error) {
+	if p.switchErr != nil {
+		return nil, p.switchErr
+	}
+	p.switched = append(p.switched, sess.Host()+"|"+sess.BastionHost)
+	node := newFakeNode().
+		on("sudo -n true").succeeds().
+		on("true").succeeds()
+	return &fakeSSHClient{sess: sess, node: node}, nil
+}
+
+func (p *switchingSSHProvider) SwitchToDefault(context.Context) (libcon.SSHClient, error) {
+	p.restored++
+	return nil, nil
+}
+
+// TestStaticInstancesRestoreTheMasterConnection is the bug a static bootstrap surfaced: this check
+// connects somewhere other than the master, and what it left behind broke every check that ran
+// after it. Fourteen findings came back about a node nobody had looked at.
+func TestStaticInstancesRestoreTheMasterConnection(t *testing.T) {
+	// The master, reached through the bastion the operator named. The whole node network is
+	// behind it, so every instance goes through the same one.
+	master := session.NewSession(session.Input{
+		User:        "ubuntu",
+		Port:        "22",
+		BastionHost: "bastion.example.com",
+		BastionUser: "jump",
+	})
+	master.AddAvailableHosts(session.Host{Host: "10.0.0.2"})
+
+	cred := &v1alpha2.SSHCredentialsSpec{User: "caretaker", SSHPort: 22}
+
+	t.Run("every instance goes through the operator's bastion", func(t *testing.T) {
+		provider := &switchingSSHProvider{}
+		conn := &masterConnection{provider: provider, session: master}
+
+		for _, address := range []string{"10.0.0.10", "10.0.0.11", "10.0.0.12"} {
+			require.NoError(t, conn.check(t.Context(), address, cred))
+		}
+
+		assert.Equal(t, []string{
+			"10.0.0.10|bastion.example.com",
+			"10.0.0.11|bastion.example.com",
+			"10.0.0.12|bastion.example.com",
+		}, provider.switched, "the bastion is the operator's, not the instance visited before")
+	})
+
+	t.Run("the master connection is restored once, not per instance", func(t *testing.T) {
+		// SwitchToDefault builds a fresh connection to the master every time it is called, and
+		// the checks that follow need exactly one.
+		provider := &switchingSSHProvider{}
+		conn := &masterConnection{provider: provider, session: master}
+
+		require.NoError(t, conn.check(t.Context(), "10.0.0.10", cred))
+		require.NoError(t, conn.check(t.Context(), "10.0.0.11", cred))
+		assert.Equal(t, 0, provider.restored, "restoring between instances would rebuild it for nothing")
+
+		conn.restoreDefault(t.Context())
+		assert.Equal(t, 1, provider.restored)
+	})
+
+	t.Run("an instance that cannot be reached still leaves the master connection restored", func(t *testing.T) {
+		// The reason it is a defer: the failure of one instance is reported, not fatal, and the
+		// phase continues over the master's connection either way.
+		provider := &switchingSSHProvider{switchErr: errors.New("no route to host")}
+		conn := &masterConnection{provider: provider, session: master}
+
+		require.Error(t, conn.check(t.Context(), "10.0.0.10", cred))
+
+		conn.restoreDefault(t.Context())
+		assert.Equal(t, 1, provider.restored)
 	})
 }
