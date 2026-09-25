@@ -39,7 +39,7 @@ The module consists of the following components:
    * Validates the ClusterALBInstance and ALBInstance custom resources and the `gateway.networking.k8s.io` API group resources using the [Validating Admission Controllers](https://kubernetes.io/docs/reference/access-authn-authz/admission-controllers/) mechanism.
    * Creates temporary Ingress objects for the cert-manager HTTP-01 challenge on top of HTTPRoute when migrating from [`ingress-nginx`](/modules/ingress-nginx/).
    * Creates and removes the proxy and geoproxy components for every ClusterALBInstance/ALBInstance.
-   * Provides a Graph API interface for retrieving the relationship graph, used by the [console](/modules/console/) module.
+   * Provides a Graph API interface for retrieving the Gateway API resource relationship graph, used by the [console](/modules/console/) module.
 
    It consists of the following containers:
 
