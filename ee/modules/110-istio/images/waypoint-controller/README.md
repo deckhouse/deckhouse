@@ -54,8 +54,8 @@ spec:
         min: 100m
         max: 1000m
       memory:
-        min: 500Mi
-        max: 2000Mi
+        min: 128Mi
+        max: 2048Mi
 ```
 
 The controller creates the waypoint infrastructure: a ServiceAccount, a ClusterIP Service (HBONE port 15008, status port 15021), a Deployment running the Istio `proxyv2` image in waypoint mode, a Gateway API Gateway with `gatewayClassName: istio-waypoint`, and a VPA. When the effective minimum replica count is >= 2, it also creates a PDB.

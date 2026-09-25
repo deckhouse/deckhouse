@@ -11,15 +11,124 @@ import (
 	"encoding/json"
 	"encoding/pem"
 	"fmt"
+	"reflect"
 	"strings"
+	"testing"
 	"time"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	jose "github.com/square/go-jose/v3"
 
+	eeCrd "github.com/deckhouse/deckhouse/ee/modules/110-istio/hooks/ee/lib/crd"
 	. "github.com/deckhouse/deckhouse/testing/hooks"
 )
+
+func TestIngressGatewayEndpoints(t *testing.T) {
+	gws := []eeCrd.MulticlusterIngressGateways{{Address: "1.2.3.4", Port: 15443}, {Address: "lb.example.com", Port: 15443}}
+
+	if got := ingressGatewayEndpoints(nil); got != nil {
+		t.Errorf("nil in: got %+v, want nil", got)
+	}
+
+	if got := ingressGatewayEndpoints(&[]eeCrd.MulticlusterIngressGateways{}); got == nil || len(*got) != 0 {
+		t.Errorf("empty in: got %+v, want a non-nil empty list", got)
+	}
+
+	want := []IngressGatewayEndpoint{{Address: "1.2.3.4", Port: 15443}, {Address: "lb.example.com", Port: 15443}}
+	if got := ingressGatewayEndpoints(&gws); got == nil || !reflect.DeepEqual(*got, want) {
+		t.Errorf("got %+v, want %+v", got, want)
+	}
+}
+
+func TestAmbientGatewayEndpoints(t *testing.T) {
+	gw := func(address string, port uint) eeCrd.MulticlusterIngressGateways {
+		return eeCrd.MulticlusterIngressGateways{Address: address, Port: port}
+	}
+	list := func(gws ...eeCrd.MulticlusterIngressGateways) *[]eeCrd.MulticlusterIngressGateways {
+		return &gws
+	}
+	endpoints := func(eps ...AmbientGatewayEndpoint) *[]AmbientGatewayEndpoint {
+		if eps == nil {
+			eps = []AmbientGatewayEndpoint{}
+		}
+
+		return &eps
+	}
+
+	cases := []struct {
+		name string
+		in   *[]eeCrd.MulticlusterIngressGateways
+		want *[]AmbientGatewayEndpoint
+	}{
+		{
+			name: "a peer with nothing ambient published stays absent from the values",
+			in:   nil,
+			want: nil,
+		},
+		{
+			name: "an empty list stays an empty list",
+			in:   list(),
+			want: endpoints(),
+		},
+		{
+			name: "an IPv4 literal",
+			in:   list(gw("10.0.0.1", 15008)),
+			want: endpoints(AmbientGatewayEndpoint{Address: "10.0.0.1", AddressType: "IPAddress", Port: 15008}),
+		},
+		{
+			name: "an IPv6 literal",
+			in:   list(gw("2001:db8::1", 15008)),
+			want: endpoints(AmbientGatewayEndpoint{Address: "2001:db8::1", AddressType: "IPAddress", Port: 15008}),
+		},
+		{
+			name: "a DNS name",
+			in:   list(gw("ambient.lb.example.com", 15008)),
+			want: endpoints(AmbientGatewayEndpoint{Address: "ambient.lb.example.com", AddressType: "Hostname", Port: 15008}),
+		},
+		{
+			name: "an out-of-range IPv4 is not an address",
+			in:   list(gw("999.999.999.999", 15008)),
+			want: endpoints(AmbientGatewayEndpoint{Address: "999.999.999.999", AddressType: "Hostname", Port: 15008}),
+		},
+		{
+			name: "an address the Gateway API cannot carry is left out",
+			in:   list(gw("lb_1.example.com", 15008), gw("*.example.com", 15008), gw("", 15008)),
+			want: endpoints(),
+		},
+		{
+			name: "an address that only needs canonicalising is kept, canonicalised",
+			in:   list(gw("LB.Example.COM.", 15008), gw("::ffff:10.0.0.2", 15008)),
+			want: endpoints(
+				AmbientGatewayEndpoint{Address: "lb.example.com", AddressType: "Hostname", Port: 15008},
+				AmbientGatewayEndpoint{Address: "10.0.0.2", AddressType: "IPAddress", Port: 15008},
+			),
+		},
+		{
+			name: "a peer whose every address is unusable keeps an empty list, not a nil one",
+			in:   list(gw("lb_1.example.com", 15008)),
+			want: endpoints(),
+		},
+		{
+			name: "a mixed list types each address on its own",
+			in:   list(gw("10.0.0.1", 15008), gw("ambient.lb.example.com", 15008)),
+			want: endpoints(
+				AmbientGatewayEndpoint{Address: "10.0.0.1", AddressType: "IPAddress", Port: 15008},
+				AmbientGatewayEndpoint{Address: "ambient.lb.example.com", AddressType: "Hostname", Port: 15008},
+			),
+		},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			got := ambientGatewayEndpoints(tc.in)
+
+			if !reflect.DeepEqual(got, tc.want) {
+				t.Errorf("got %+v, want %+v", got, tc.want)
+			}
+		})
+	}
+}
 
 var _ = Describe("Istio hooks :: alliance_metadata_merge ::", func() {
 	f := HookExecutionConfigInit(`{
@@ -174,6 +283,8 @@ status:
     private:
       ingressGateways:
       - {"address": "ddd", "port": 333}
+      ambientGateways:
+      - {"address": "eee", "port": 15008}
       apiHost: istio-api-0.example.com
       networkName: network-qqq-123
     public:
@@ -386,6 +497,15 @@ status:
   }
 ]
 `))
+			Expect(f.ValuesGet("istio.internal.multiclusters.0.ambientGateways").String()).To(MatchJSON(`
+[
+  {
+    "address": "eee",
+    "addressType": "Hostname",
+    "port": 15008
+  }
+]
+`))
 			Expect(f.ValuesGet("istio.internal.multiclusters.1.name").String()).To(Equal("multicluster-full-1"))
 			Expect(f.ValuesGet("istio.internal.multiclusters.1.spiffeEndpoint").String()).To(Equal("https://some-proper-host/public/spiffe-bundle-endpoint"))
 			Expect(f.ValuesGet("istio.internal.multiclusters.1.apiHost").String()).To(Equal("istio-api-1.example.com"))
@@ -396,6 +516,7 @@ status:
 			Expect(f.ValuesGet("istio.internal.multiclusters.1.rootCA").String()).To(Equal("abc-m1"))
 			Expect(f.ValuesGet("istio.internal.multiclusters.1.ingressGateways").Exists()).To(BeTrue())
 			Expect(f.ValuesGet("istio.internal.multiclusters.1.ingressGateways").Value()).To(BeNil())
+			Expect(f.ValuesGet("istio.internal.multiclusters.1.ambientGateways").Exists()).To(BeFalse())
 
 			Expect(f.ValuesGet("istio.internal.multiclusters.2").Exists()).To(BeFalse())
 

@@ -64,7 +64,7 @@ var _ = Describe("Module :: istio :: helm template :: istiod-service-accounts Co
 		f.ValuesSetFromYaml("global", globalValues)
 		f.ValuesSet("global.modulesImages", GetModulesImages())
 		f.ValuesSetFromYamlWithOpenAPIDefaults("istio", istioValues)
-		f.ValuesSetFromYaml("istio.internal.versionsToInstall", `["1.25.2"]`)
+		f.ValuesSetFromYaml("istio.internal.versionsToInstall", `["1.25"]`)
 		f.HelmRender()
 
 		Expect(f.RenderError).ShouldNot(HaveOccurred())
@@ -75,21 +75,21 @@ var _ = Describe("Module :: istio :: helm template :: istiod-service-accounts Co
 	})
 
 	It("should list an istiod ServiceAccount for every version in versionMap", func() {
-		// Only 1.25.2 is installed, but every supported revision must be listed.
-		Expect(serviceAccountsOf(renderBasicAuditPolicy(`["1.25.2"]`))).To(ConsistOf(
-			"system:serviceaccount:d8-istio:istiod-v1x25x2",
-			"system:serviceaccount:d8-istio:istiod-v1x27x9",
-			"system:serviceaccount:d8-istio:istiod-v1x29x6",
+		// Only 1.25 is installed, but every supported revision must be listed.
+		Expect(serviceAccountsOf(renderBasicAuditPolicy(`["1.25"]`))).To(ConsistOf(
+			"system:serviceaccount:d8-istio:istiod-v1x25",
+			"system:serviceaccount:d8-istio:istiod-v1x27",
+			"system:serviceaccount:d8-istio:istiod-v1x29",
 		))
 	})
 
 	It("should stay byte-identical across every step of a canary upgrade", func() {
 		// A canary upgrade walks: single version -> both versions -> promoted version.
 		// The ConfigMap must not change, otherwise kube-apiserver is restarted at each step.
-		bootstrap := renderBasicAuditPolicy(`["1.25.2"]`)
-		canary := renderBasicAuditPolicy(`["1.25.2","1.27.9"]`)
-		promoted := renderBasicAuditPolicy(`["1.27.9"]`)
-		all := renderBasicAuditPolicy(`["1.25.2","1.27.9","1.29.6"]`)
+		bootstrap := renderBasicAuditPolicy(`["1.25"]`)
+		canary := renderBasicAuditPolicy(`["1.25","1.27"]`)
+		promoted := renderBasicAuditPolicy(`["1.27"]`)
+		all := renderBasicAuditPolicy(`["1.25","1.27","1.29"]`)
 
 		Expect(canary).To(Equal(bootstrap), "adding an additionalVersion must not change the audit policy input")
 		Expect(promoted).To(Equal(bootstrap), "promoting globalVersion must not change the audit policy input")
@@ -97,7 +97,7 @@ var _ = Describe("Module :: istio :: helm template :: istiod-service-accounts Co
 	})
 
 	It("should not depend on versionsToInstall being set at all", func() {
-		withVersions := renderBasicAuditPolicy(`["1.25.2"]`)
+		withVersions := renderBasicAuditPolicy(`["1.25"]`)
 		withoutVersions := renderBasicAuditPolicy(`[]`)
 
 		Expect(withoutVersions).To(Equal(withVersions))

@@ -31,3 +31,5 @@ werf-giterminism.yaml
 /templates/
 /template_tests/
 /docs/internal/
+# Istio chart files vendored from upstream as is.
+modules/110-istio/files/.+/static/.+\.ya?ml$
