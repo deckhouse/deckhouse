@@ -64,7 +64,8 @@ type FencingSLAProfileFallback struct {
 	KubernetesAPITimeout metav1.Duration `json:"kubernetesAPITimeout"`
 }
 
-// FencingSLAProfileRejoin paces the rejoin loop after quorum loss.
+// FencingSLAProfileRejoin paces the join attempts: the startup join and the
+// rejoin loop.
 type FencingSLAProfileRejoin struct {
 	Interval    metav1.Duration `json:"interval"`
 	MaxInterval metav1.Duration `json:"maxInterval"`

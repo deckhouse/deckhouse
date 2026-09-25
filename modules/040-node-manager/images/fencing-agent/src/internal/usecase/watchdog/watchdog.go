@@ -180,10 +180,22 @@ func (m *Manager) Run(ctx context.Context) error {
 	for {
 		select {
 		case <-ctx.Done():
+			// Disarming here and not only through the caller's defer: that one runs
+			// once every sibling goroutine has returned, and the health server alone
+			// can hold that for its whole shutdown timeout, longer than the watchdog
+			// timeout of the fast profiles.
+			m.Close()
 			m.logger.Info("watchdog feed loop stopped")
 
 			return nil
 		case <-ticker.C:
+			// select picks at random when a tick and the cancellation are both ready.
+			// Dropping the tick leaves the ticker drained, so the next pass takes
+			// ctx.Done(): one extra iteration, not a spin.
+			if ctx.Err() != nil {
+				continue
+			}
+
 			if err := m.tick(); err != nil {
 				return err
 			}

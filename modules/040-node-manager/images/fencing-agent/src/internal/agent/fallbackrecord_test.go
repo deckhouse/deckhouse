@@ -49,8 +49,9 @@ import (
 const (
 	recordNode = "worker-1"
 
-	recordHeartbeat = time.Second
-	recordTTL       = 4 * time.Second
+	recordHeartbeat     = time.Second
+	recordTTL           = 4 * time.Second
+	recordTakeoverDelay = 10 * time.Second
 )
 
 var recordGroup = []string{"worker-1", "worker-2", "worker-3"}
@@ -117,6 +118,21 @@ func (c recordClient) List(context.Context) ([]v1alpha1.FencingFailedNodeState, 
 	}
 
 	return states, nil
+}
+
+func (c recordClient) Get(_ context.Context, name string) (*v1alpha1.FencingFailedNodeState, error) {
+	unlock, err := c.lock()
+	if err != nil {
+		return nil, err
+	}
+	defer unlock()
+
+	record, ok := c.api.records[name]
+	if !ok {
+		return nil, nil
+	}
+
+	return record.DeepCopy(), nil
 }
 
 func (c recordClient) Create(_ context.Context, peer domain.Peer) (bool, error) {
@@ -239,6 +255,60 @@ type recordEvents struct{}
 func (recordEvents) Normal(string, string)  {}
 func (recordEvents) Warning(string, string) {}
 
+func recordPeers(names []string) recordExpected {
+	peers := make(recordExpected, 0, len(names))
+	for _, name := range names {
+		peers = append(peers, domain.Peer{Name: name, IP: "10.0.0.1", UID: "node-uid-" + name})
+	}
+
+	return peers
+}
+
+func newRecordMonitor(node string, alive *recordGossip, expected recordExpected, states fallback.StateStore) *fallback.Monitor {
+	return fallback.New(
+		fallback.Params{
+			Node:            domain.NodeIdentity{Name: node, UID: "node-uid-" + node, IP: "10.0.0.1"},
+			Heartbeat:       recordHeartbeat,
+			APITimeout:      2 * time.Second,
+			WatchdogTimeout: 10 * time.Second,
+		},
+		fallback.Deps{
+			Alive:    alive,
+			Expected: expected,
+			States:   states,
+			Events:   recordEvents{},
+		},
+		log.NewNop(),
+	)
+}
+
+func newRecordWriter(
+	node string,
+	startedAt time.Time,
+	alive *recordGossip,
+	expected recordExpected,
+	states failedstate.StateStore,
+	logger *log.Logger,
+) *failedstate.Writer {
+	return failedstate.New(
+		failedstate.Params{
+			NodeName:         node,
+			RetryInterval:    time.Second,
+			MaxRetryInterval: 10 * time.Second,
+			TakeoverDelay:    recordTakeoverDelay,
+			FallbackTTL:      recordTTL,
+			StartedAt:        startedAt,
+		},
+		failedstate.Deps{
+			Alive:    alive,
+			Expected: expected,
+			States:   states,
+			Events:   recordEvents{},
+		},
+		logger,
+	)
+}
+
 // recordLoops is the node running its fallback monitor and its designated writer
 // running the fencing state writer, each with a gossip view the test controls.
 type recordLoops struct {
@@ -254,10 +324,7 @@ type recordLoops struct {
 func runRecordLoops(t *testing.T, until time.Duration, script func(l *recordLoops)) *recordLoops {
 	t.Helper()
 
-	expected := make(recordExpected, 0, len(recordGroup))
-	for _, name := range recordGroup {
-		expected = append(expected, domain.Peer{Name: name, IP: "10.0.0.1", UID: "node-uid-" + name})
-	}
+	expected := recordPeers(recordGroup)
 
 	l := &recordLoops{
 		api:        newRecordAPI(),
@@ -273,38 +340,8 @@ func runRecordLoops(t *testing.T, until time.Duration, script func(l *recordLoop
 
 	start := time.Now()
 
-	monitor := fallback.New(
-		fallback.Params{
-			Node:            domain.NodeIdentity{Name: recordNode, UID: "node-uid-" + recordNode, IP: "10.0.0.1"},
-			Heartbeat:       recordHeartbeat,
-			APITimeout:      2 * time.Second,
-			WatchdogTimeout: 10 * time.Second,
-		},
-		fallback.Deps{
-			Alive:    l.nodeView,
-			Expected: expected,
-			States:   recordClient{api: l.api, agent: recordNode},
-			Events:   recordEvents{},
-		},
-		log.NewNop(),
-	)
-
-	writer := failedstate.New(
-		failedstate.Params{
-			NodeName:         l.writer,
-			RetryInterval:    time.Second,
-			MaxRetryInterval: 10 * time.Second,
-			TakeoverDelay:    10 * time.Second,
-			FallbackTTL:      recordTTL,
-		},
-		failedstate.Deps{
-			Alive:    l.writerView,
-			Expected: expected,
-			States:   recordClient{api: l.api, agent: l.writer},
-			Events:   recordEvents{},
-		},
-		log.NewNop(),
-	)
+	monitor := newRecordMonitor(recordNode, l.nodeView, expected, recordClient{api: l.api, agent: recordNode})
+	writer := newRecordWriter(l.writer, failedstate.StartOfLife(start), l.writerView, expected, recordClient{api: l.api, agent: l.writer}, log.NewNop())
 
 	ctx, cancel := context.WithCancel(t.Context())
 

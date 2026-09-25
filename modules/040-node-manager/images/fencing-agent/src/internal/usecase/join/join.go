@@ -14,17 +14,20 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-// Package join builds a NodeGroup's seed list from the Kubernetes API and does
-// the startup join into its gossip network.
 package join
 
 import (
+	"cmp"
 	"context"
 	"errors"
 	"fmt"
+	"log/slog"
 	"math/rand/v2"
 	"net"
+	"slices"
 	"strconv"
+	"strings"
+	"sync"
 	"sync/atomic"
 	"time"
 
@@ -33,19 +36,29 @@ import (
 	"fencing-agent/internal/domain"
 )
 
-// maxSeeds caps a join. memberlist dials seeds one by one and exchanges full
-// state with each, so a few reachable ones are enough; gossip does the rest.
+// maxSeeds caps a join. memberlist exchanges full state with each seed, so a few
+// reachable ones are enough; gossip does the rest.
 const maxSeeds = 3
+
+const (
+	notAliveSlots = 2
+	aliveSlots    = 1
+)
 
 var ErrNotMember = errors.New("this node is not a member of its NodeGroup any more")
 
-type NodeLister interface {
-	ListNodeGroup(ctx context.Context, nodeGroup string) ([]domain.Peer, error)
+type NodeReader interface {
+	GetNode(ctx context.Context, name string) (domain.NodeRecord, error)
+}
+
+type ExpectedSource interface {
+	Expected() ([]domain.Peer, uint64)
 }
 
 type Cluster interface {
 	Join(seeds []string) (int, error)
 	NumMembers() int
+	Members() []string
 }
 
 type Params struct {
@@ -62,20 +75,47 @@ type Params struct {
 }
 
 type Joiner struct {
-	nodes   NodeLister
-	cluster Cluster
-	params  Params
-	logger  *log.Logger
-	joined  atomic.Bool
+	nodes    NodeReader
+	expected ExpectedSource
+	cluster  Cluster
+	params   Params
+	logger   *log.Logger
+	joined   atomic.Bool
+
+	mu     sync.Mutex
+	logged map[string]struct{}
 }
 
-func New(nodes NodeLister, cluster Cluster, params Params, logger *log.Logger) *Joiner {
+func New(nodes NodeReader, expected ExpectedSource, cluster Cluster, params Params, logger *log.Logger) *Joiner {
 	return &Joiner{
-		nodes:   nodes,
-		cluster: cluster,
-		params:  params,
-		logger:  logger,
+		nodes:    nodes,
+		expected: expected,
+		cluster:  cluster,
+		params:   params,
+		logger:   logger,
+		logged:   make(map[string]struct{}),
 	}
+}
+
+func (j *Joiner) StartEpisode() {
+	j.mu.Lock()
+	defer j.mu.Unlock()
+
+	j.logged = make(map[string]struct{})
+}
+
+func (j *Joiner) logOnce(level slog.Level, key, msg string, args ...any) {
+	j.mu.Lock()
+
+	if _, seen := j.logged[key]; seen {
+		level = slog.LevelDebug
+	} else {
+		j.logged[key] = struct{}{}
+	}
+
+	j.mu.Unlock()
+
+	j.logger.Log(context.Background(), level, msg, args...)
 }
 
 // Joined is false until the startup join completes; the fencing flow must not start before it.
@@ -86,39 +126,62 @@ func (j *Joiner) Joined() bool {
 // Bootstrap retries the join with exponential backoff until it succeeds or ctx
 // is cancelled; a permanent failure keeps the pod NotReady instead of crashing.
 func (j *Joiner) Bootstrap(ctx context.Context) {
-	backoff := j.params.RetryInterval
-	reportedNotMember := false
+	j.StartEpisode()
 
-	for attempt := 1; ; attempt++ {
+	ep := episode{start: time.Now()}
+	backoff := j.params.RetryInterval
+
+	for {
+		attemptStart := time.Now()
+		ep.attempts++
+
 		err := j.Attempt(ctx)
 		if err == nil {
 			j.joined.Store(true)
+			j.logger.Info("memberlist bootstrap join finished", ep.summary()...)
 
 			return
 		}
 
 		if ctx.Err() != nil {
-			j.logger.Info("memberlist bootstrap join aborted", "error", err)
+			j.logger.Info("memberlist bootstrap join aborted", slices.Concat([]any{"error", err}, ep.summary())...)
 
 			return
 		}
 
-		switch {
-		case !errors.Is(err, ErrNotMember):
-			reportedNotMember = false
+		class := classOf(err)
+		delay := j.delay(backoff)
 
-			j.logger.Warn("memberlist bootstrap join failed, retrying",
-				"error", err,
-				"attempt", attempt,
-				"backoff", backoff.String(),
-			)
-		case !reportedNotMember:
-			reportedNotMember = true
+		level := slog.LevelDebug
 
-			j.logger.Warn("this node is not a member of its NodeGroup, the join is retried until that changes", "error", err)
+		if ep.streak.class != class {
+			if ep.streak.class != "" {
+				j.logger.Info("memberlist bootstrap join failure streak ended", ep.streakSummary(attemptStart)...)
+			}
+
+			ep.streak = streak{class: class, start: attemptStart}
+			level = slog.LevelWarn
 		}
 
-		if !sleep(ctx, j.delay(backoff)) {
+		ep.streak.attempts++
+
+		msg := "memberlist bootstrap join failed, retrying"
+		if class == domain.JoinErrorClassNotMember {
+			msg = "this node is not a member of its NodeGroup, the join is retried until that changes"
+		}
+
+		j.logger.Log(context.Background(), level, msg,
+			"error", err,
+			"attempt", ep.attempts,
+			"attempt_elapsed", time.Since(attemptStart).String(),
+			"next_in", delay.String(),
+		)
+
+		ep.lastDelay = delay
+
+		if !sleep(ctx, delay) {
+			j.logger.Info("memberlist bootstrap join aborted", slices.Concat([]any{"error", err}, ep.summary())...)
+
 			return
 		}
 
@@ -126,23 +189,78 @@ func (j *Joiner) Bootstrap(ctx context.Context) {
 	}
 }
 
+type episode struct {
+	start     time.Time
+	attempts  int
+	lastDelay time.Duration
+	streak    streak
+}
+
+type streak struct {
+	class    string
+	attempts int
+	start    time.Time
+}
+
+func (e *episode) summary() []any {
+	return runSummary(e.attempts, time.Since(e.start), e.lastDelay, cmp.Or(e.streak.class, domain.JoinErrorClassNone))
+}
+
+func (e *episode) streakSummary(end time.Time) []any {
+	return runSummary(e.streak.attempts, end.Sub(e.streak.start), e.lastDelay, e.streak.class)
+}
+
+func runSummary(attempts int, elapsed, lastDelay time.Duration, class string) []any {
+	return []any{
+		"attempts", attempts,
+		"elapsed", elapsed.Truncate(time.Millisecond).String(),
+		"last_delay", lastDelay.String(),
+		"last_error_class", class,
+	}
+}
+
+func classOf(err error) string {
+	if errors.Is(err, ErrNotMember) {
+		return domain.JoinErrorClassNotMember
+	}
+
+	return domain.JoinErrorClassTransport
+}
+
 func (j *Joiner) Attempt(ctx context.Context) error {
-	seeds, peers, err := j.seedList(ctx)
+	if err := j.checkSelf(ctx); err != nil {
+		return err
+	}
+
+	c, err := j.candidates()
 	if err != nil {
 		return err
 	}
 
+	for _, name := range c.clones {
+		j.logOnce(slog.LevelWarn, "clone/"+name, "node shares the local InternalIP, not counted as a peer", "member", name)
+	}
+
+	if len(c.noAddress) > 0 {
+		j.logOnce(slog.LevelWarn, "no_address", "join candidates dropped, the node cache holds no InternalIP for them",
+			"members", strings.Join(c.noAddress, ", "))
+	}
+
+	// Peers exist but none of them has a usable address; declaring "alone" would
+	// split the group into islands.
+	if len(c.notAlive)+len(c.alive) == 0 && len(c.noAddress) > 0 {
+		return fmt.Errorf("none of the %d join candidates has a usable address: %s",
+			len(c.noAddress), strings.Join(c.noAddress, ", "))
+	}
+
 	// First agent of the group: listeners are up, later peers seed from us.
-	if peers == 0 {
-		j.logger.Info("no peers in node group, starting alone", "node_group", j.params.NodeGroup)
+	if len(c.notAlive)+len(c.alive) == 0 {
+		j.logOnce(slog.LevelInfo, "alone", "no peers in node group, starting alone", "node_group", j.params.NodeGroup)
 
 		return nil
 	}
 
-	// Peers exist but have no address yet; declaring "alone" would split the group into islands.
-	if len(seeds) == 0 {
-		return fmt.Errorf("none of the %d peers has a usable address yet", peers)
-	}
+	seeds := j.seeds(pick(c.notAlive, c.alive))
 
 	joined, err := j.join(ctx, seeds)
 	if err != nil {
@@ -150,13 +268,13 @@ func (j *Joiner) Attempt(ctx context.Context) error {
 	}
 
 	if joined < len(seeds) {
-		j.logger.Warn("some seeds are unreachable, gossip will converge",
+		j.logOnce(slog.LevelWarn, "partial", "some seeds are unreachable, gossip will converge",
 			"seeds", len(seeds),
 			"joined", joined,
 		)
 	}
 
-	j.logger.Info("memberlist join completed",
+	j.logOnce(slog.LevelInfo, "completed", "memberlist join completed",
 		"seeds", len(seeds),
 		"joined", joined,
 		"members", j.cluster.NumMembers(),
@@ -197,65 +315,120 @@ func (j *Joiner) join(ctx context.Context, seeds []string) (int, error) {
 	}
 }
 
-// seedList is rebuilt every attempt so a retry uses current membership, not a
-// pre-outage snapshot. It also returns the peer count (self excluded).
-func (j *Joiner) seedList(ctx context.Context) ([]string, int, error) {
-	listCtx, cancel := context.WithTimeout(ctx, j.params.APITimeout)
+// checkSelf performs a consistent GET and deliberately does not use the informer
+// cache: it is the fail-closed gate of the attempt and its only proof that the
+// API answers. The candidates are the opposite trade, their addresses come from
+// the cache, so one attempt costs one request instead of four.
+//
+// Only an unambiguous answer becomes ErrNotMember, because a node that has been
+// deleted, recreated or moved out of its group must not re-add itself to gossip
+// on its own; a transport error is transient and never a verdict.
+func (j *Joiner) checkSelf(ctx context.Context) error {
+	readCtx, cancel := context.WithTimeout(ctx, j.params.APITimeout)
 	defer cancel()
 
-	nodes, err := j.nodes.ListNodeGroup(listCtx, j.params.NodeGroup)
-	if err != nil {
-		return nil, 0, err
+	rec, err := j.nodes.GetNode(readCtx, j.params.NodeName)
+
+	switch {
+	case errors.Is(err, domain.ErrNodeNotFound):
+		return fmt.Errorf("%w: %w", ErrNotMember, err)
+	case err != nil:
+		return fmt.Errorf("read own node: %w", err)
+	case !domain.InNodeGroup(rec.NodeGroup, j.params.NodeGroup):
+		return fmt.Errorf("%w: node %q is labeled into NodeGroup %q, this agent runs for %q",
+			ErrNotMember, j.params.NodeName, rec.NodeGroup, j.params.NodeGroup)
+	case rec.UID != j.params.NodeUID:
+		return fmt.Errorf("%w: node %q has uid %q, this agent started with %q",
+			ErrNotMember, j.params.NodeName, rec.UID, j.params.NodeUID)
 	}
 
-	port := strconv.Itoa(j.params.MemberlistPort)
+	return nil
+}
 
-	peers := 0
-	seeds := make([]string, 0, len(nodes))
+// classes splits the cached membership into what can be seeded and what cannot.
+// A peer without an address is kept apart from the seedable ones, but it is still
+// a peer: a group made of them alone is not a group of one.
+type classes struct {
+	notAlive  []domain.Peer
+	alive     []domain.Peer
+	clones    []string
+	noAddress []string
+}
+
+func (j *Joiner) candidates() (classes, error) {
+	expected, _ := j.expected.Expected()
+	view := domain.NewView(expected, j.cluster.Members())
+
+	c := classes{
+		notAlive: make([]domain.Peer, 0, len(expected)),
+		alive:    make([]domain.Peer, 0, len(expected)),
+	}
 	self := false
 
-	for _, peer := range nodes {
+	for _, peer := range expected {
 		if peer.Name == j.params.NodeName {
-			if peer.UID != j.params.NodeUID {
-				return nil, 0, fmt.Errorf("%w: node %q has uid %q, this agent started with %q",
-					ErrNotMember, peer.Name, peer.UID, j.params.NodeUID)
-			}
-
 			self = true
 
 			continue
 		}
 
-		// Stale Node object of this machine under an old name, not a peer.
+		// Stale Node object of this machine under an old name, not a peer: it must
+		// not take a seed slot away from a reachable one.
 		if peer.IP != "" && peer.IP == j.params.NodeIP {
-			j.logger.Warn("node shares the local InternalIP, excluded from seed list", "member", peer.Name)
+			c.clones = append(c.clones, peer.Name)
 
 			continue
 		}
-
-		peers++
 
 		if peer.IP == "" {
-			j.logger.Warn("node has no InternalIP, excluded from seed list", "member", peer.Name)
+			c.noAddress = append(c.noAddress, peer.Name)
 
 			continue
 		}
 
-		seeds = append(seeds, net.JoinHostPort(peer.IP, port))
+		if view.IsAlive(peer.Name) {
+			c.alive = append(c.alive, peer)
+		} else {
+			c.notAlive = append(c.notAlive, peer)
+		}
 	}
 
 	if !self {
-		return nil, 0, fmt.Errorf("%w: node %q is not labeled into NodeGroup %q", ErrNotMember, j.params.NodeName, j.params.NodeGroup)
+		return classes{}, errors.New("the node cache does not list this node yet")
 	}
 
-	if len(seeds) > maxSeeds {
-		j.logger.Info("seed list sampled", "eligible", len(seeds), "sampled", maxSeeds)
+	return c, nil
+}
 
-		rand.Shuffle(len(seeds), func(a, b int) { seeds[a], seeds[b] = seeds[b], seeds[a] })
-		seeds = seeds[:maxSeeds]
+func pick(notAlive, alive []domain.Peer) []domain.Peer {
+	notAlive, alive = shuffled(notAlive), shuffled(alive)
+
+	notAliveN, aliveN := min(maxSeeds, len(notAlive)), min(maxSeeds, len(alive))
+	if len(notAlive) > 0 && len(alive) > 0 {
+		notAliveN, aliveN = min(notAliveSlots, len(notAlive)), min(aliveSlots, len(alive))
 	}
 
-	return seeds, peers, nil
+	picked := make([]domain.Peer, 0, notAliveN+aliveN)
+	picked = append(picked, notAlive[:notAliveN]...)
+
+	return append(picked, alive[:aliveN]...)
+}
+
+func shuffled(peers []domain.Peer) []domain.Peer {
+	peers = slices.Clone(peers)
+	rand.Shuffle(len(peers), func(a, b int) { peers[a], peers[b] = peers[b], peers[a] })
+
+	return peers
+}
+
+func (j *Joiner) seeds(picked []domain.Peer) []string {
+	seeds := make([]string, 0, len(picked))
+
+	for _, peer := range picked {
+		seeds = append(seeds, net.JoinHostPort(peer.IP, strconv.Itoa(j.params.MemberlistPort)))
+	}
+
+	return seeds
 }
 
 // delay is full jitter in [RetryInterval, backoff]. Narrow jitter would keep the

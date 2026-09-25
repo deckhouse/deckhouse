@@ -43,9 +43,12 @@ func testAgent() *Agent {
 		domain.NodeIdentity{Name: "worker-1", UID: "uid-1", IP: "10.0.0.1"},
 		v1alpha1.FencingSLAProfileSpec{
 			Memberlist: v1alpha1.FencingSLAProfileMemberlist{
-				ProbeInterval: metav1.Duration{Duration: 300 * time.Millisecond},
-				ProbeTimeout:  metav1.Duration{Duration: 120 * time.Millisecond},
-				SuspicionMult: 3,
+				ProbeInterval:       metav1.Duration{Duration: 300 * time.Millisecond},
+				ProbeTimeout:        metav1.Duration{Duration: 120 * time.Millisecond},
+				SuspicionMult:       3,
+				GossipInterval:      metav1.Duration{Duration: 150 * time.Millisecond},
+				RetransmitMult:      4,
+				GossipToTheDeadTime: metav1.Duration{Duration: 7 * time.Second},
 			},
 			Fallback: v1alpha1.FencingSLAProfileFallback{
 				Heartbeat:            metav1.Duration{Duration: 1 * time.Second},

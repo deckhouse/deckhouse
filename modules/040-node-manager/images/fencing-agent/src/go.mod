@@ -5,6 +5,7 @@ go 1.25.0
 require (
 	github.com/deckhouse/deckhouse/pkg/log v0.2.0
 	github.com/evanphx/json-patch/v5 v5.9.11
+	github.com/hashicorp/go-multierror v1.1.1
 	github.com/hashicorp/memberlist v0.5.4
 	github.com/ilyakaznacheev/cleanenv v1.5.0
 	golang.org/x/sync v0.22.0
@@ -36,7 +37,6 @@ require (
 	github.com/hashicorp/go-immutable-radix v1.3.1 // indirect
 	github.com/hashicorp/go-metrics v0.5.4 // indirect
 	github.com/hashicorp/go-msgpack/v2 v2.1.5 // indirect
-	github.com/hashicorp/go-multierror v1.1.1 // indirect
 	github.com/hashicorp/go-sockaddr v1.0.7 // indirect
 	github.com/hashicorp/golang-lru v1.0.2 // indirect
 	github.com/joho/godotenv v1.5.1 // indirect

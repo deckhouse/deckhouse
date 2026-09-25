@@ -55,6 +55,8 @@ func main() {
 }
 
 func run(logger *log.Logger) error {
+	startedAt := time.Now()
+
 	cfg := &config.Config{}
 
 	if err := cfg.Load(); err != nil {
@@ -72,6 +74,8 @@ func run(logger *log.Logger) error {
 	}
 
 	var deps agent.Deps
+
+	deps.StartedAt = startedAt
 
 	deps.K8sClient, err = kubeclient.New(restCfg)
 	if err != nil {

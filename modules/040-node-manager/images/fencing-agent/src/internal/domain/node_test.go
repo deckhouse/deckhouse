@@ -14,19 +14,28 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package agent
+package domain
 
-import (
-	"time"
+import "testing"
 
-	"k8s.io/client-go/kubernetes"
-	"sigs.k8s.io/controller-runtime/pkg/cache"
-	"sigs.k8s.io/controller-runtime/pkg/client"
-)
+func TestInNodeGroup(t *testing.T) {
+	const nodeGroup = "worker"
 
-type Deps struct {
-	K8sClient     kubernetes.Interface
-	FencingClient client.Client
-	FencingCache  cache.Cache
-	StartedAt     time.Time
+	tests := []struct {
+		label string
+		want  bool
+	}{
+		{label: "worker", want: true},
+		{label: "", want: false},
+		{label: "worker-2", want: false},
+		{label: "Worker", want: false},
+		{label: " worker", want: false},
+		{label: "worker ", want: false},
+	}
+
+	for _, tt := range tests {
+		if got := InNodeGroup(tt.label, nodeGroup); got != tt.want {
+			t.Errorf("InNodeGroup(%q, %q) = %v, want %v", tt.label, nodeGroup, got, tt.want)
+		}
+	}
 }

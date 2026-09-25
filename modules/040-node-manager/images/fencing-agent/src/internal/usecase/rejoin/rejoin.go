@@ -18,10 +18,13 @@ package rejoin
 
 import (
 	"context"
+	"log/slog"
 	"math/rand/v2"
 	"time"
 
 	"github.com/deckhouse/deckhouse/pkg/log"
+
+	"fencing-agent/internal/domain"
 )
 
 const (
@@ -36,22 +39,52 @@ type Params struct {
 }
 
 type Deps struct {
-	Attempt      func(ctx context.Context) error
-	HasQuorum    func() bool
-	NotMember    func(err error) bool
-	APIReachable func() bool
-	Changed      <-chan struct{}
-	Sleep        func(ctx context.Context, d time.Duration) bool
+	Attempt         func(ctx context.Context) error
+	EpisodeStarted  func()
+	HasQuorum       func() bool
+	OwnFailedRecord func(ctx context.Context) bool
+	NotMember       func(err error) bool
+	Changed         <-chan struct{}
+	Sleep           func(ctx context.Context, d time.Duration) bool
+}
+
+type episode struct {
+	open        bool
+	start       time.Time
+	quorum, own bool
+	attempts    int
+	delay       time.Duration
+	lastDelay   time.Duration
+	lastClass   string
+	streak      streak
+}
+
+type streak struct {
+	class    string
+	attempts int
+	start    time.Time
 }
 
 type Loop struct {
-	params            Params
-	deps              Deps
-	logger            *log.Logger
-	reportedNotMember bool
+	params Params
+	deps   Deps
+	logger *log.Logger
+	ep     episode
 }
 
 func New(params Params, deps Deps, logger *log.Logger) *Loop {
+	if deps.EpisodeStarted == nil {
+		deps.EpisodeStarted = func() {}
+	}
+
+	if deps.OwnFailedRecord == nil {
+		deps.OwnFailedRecord = func(context.Context) bool { return false }
+	}
+
+	if deps.NotMember == nil {
+		deps.NotMember = func(error) bool { return false }
+	}
+
 	if deps.Sleep == nil {
 		deps.Sleep = sleep
 	}
@@ -63,73 +96,175 @@ func (l *Loop) Run(ctx context.Context) error {
 	ticker := time.NewTicker(idleTick)
 	defer ticker.Stop()
 
-	delay := l.params.Interval
-	attempts := 0
+	defer l.closeEpisode("rejoin stopped by shutdown")
+
+	idle := func() {
+		select {
+		case <-ctx.Done():
+		case <-l.deps.Changed:
+		case <-ticker.C:
+		}
+	}
 
 	for ctx.Err() == nil {
-		if l.deps.HasQuorum() {
-			if attempts > 0 {
-				l.logger.Info("gossip quorum restored", "rejoin_attempts", attempts)
-			}
-
-			attempts, delay = 0, l.params.Interval
-			l.reportedNotMember = false
-
-			select {
-			case <-ctx.Done():
-			case <-l.deps.Changed:
-			case <-ticker.C:
-			}
-
-			continue
-		}
-
-		if !l.deps.APIReachable() {
-			l.logger.Debug("no gossip quorum and no Kubernetes API, rejoin is not attempted")
-
-			if !l.deps.Sleep(ctx, jitter(delay)) {
-				return nil
-			}
-
-			continue
-		}
-
-		attempts++
-
-		if err := l.deps.Attempt(ctx); err != nil {
-			l.reportAttemptError(err, attempts, delay)
-		} else if l.deps.HasQuorum() {
-			continue
-		} else {
-			l.logger.Info("rejoin attempt did not restore quorum", "attempt", attempts, "next_in", delay.String())
-		}
-
-		if !l.deps.Sleep(ctx, jitter(delay)) {
+		quorum, own := l.deps.HasQuorum(), l.deps.OwnFailedRecord(ctx)
+		if ctx.Err() != nil {
 			return nil
 		}
 
-		delay = min(delay*2, l.params.MaxInterval)
+		if quorum && !own {
+			l.finish()
+			idle()
+
+			continue
+		}
+
+		l.begin(quorum, own)
+
+		started := time.Now()
+		l.ep.attempts++
+
+		err := l.deps.Attempt(ctx)
+		if ctx.Err() != nil {
+			return nil
+		}
+
+		if err == nil {
+			quorum, own = l.deps.HasQuorum(), l.deps.OwnFailedRecord(ctx)
+			if ctx.Err() != nil {
+				return nil
+			}
+
+			if quorum && !own {
+				l.finish()
+				idle()
+
+				continue
+			}
+		}
+
+		delay := jitter(l.ep.delay)
+		l.report(err, started, delay, quorum, own)
+
+		slept := l.deps.Sleep(ctx, delay)
+		l.ep.lastDelay = delay
+
+		if !slept {
+			return nil
+		}
+
+		l.ep.delay = min(l.ep.delay*2, l.params.MaxInterval)
 	}
 
 	return nil
 }
 
-func (l *Loop) reportAttemptError(err error, attempt int, delay time.Duration) {
-	if l.deps.NotMember != nil && l.deps.NotMember(err) {
-		if l.reportedNotMember {
-			return
+func (l *Loop) begin(quorum, own bool) {
+	if !l.ep.open {
+		l.ep = episode{
+			open:      true,
+			start:     time.Now(),
+			quorum:    quorum,
+			own:       own,
+			delay:     l.params.Interval,
+			lastClass: domain.JoinErrorClassNone,
 		}
 
-		l.reportedNotMember = true
+		if quorum {
+			l.logger.Warn("a peer recorded this node as failed, rejoin started although gossip quorum holds")
+		} else {
+			l.logger.Info("gossip quorum lost, rejoin started", "own_failed_record", own)
+		}
 
-		l.logger.Warn("this node is not a member of its NodeGroup, rejoin is not attempted until that changes", "error", err)
+		l.deps.EpisodeStarted()
 
 		return
 	}
 
-	l.reportedNotMember = false
+	if quorum == l.ep.quorum && own == l.ep.own {
+		return
+	}
 
-	l.logger.Warn("rejoin attempt failed", "error", err, "attempt", attempt, "next_in", delay.String())
+	l.ep.quorum, l.ep.own = quorum, own
+
+	l.logger.Info("rejoin trigger changed", "has_quorum", quorum, "own_failed_record", own)
+}
+
+func (l *Loop) report(err error, started time.Time, delay time.Duration, quorum, own bool) {
+	if err == nil {
+		l.endStreak(started)
+
+		l.logger.Debug("rejoin attempt joined, the trigger remains",
+			"attempt", l.ep.attempts,
+			"next_in", delay.String(),
+			"has_quorum", quorum,
+			"own_failed_record", own,
+		)
+
+		return
+	}
+
+	class := domain.JoinErrorClassTransport
+	if l.deps.NotMember(err) {
+		class = domain.JoinErrorClassNotMember
+	}
+
+	l.ep.lastClass = class
+
+	if l.ep.streak.class != class {
+		l.endStreak(started)
+		l.ep.streak = streak{class: class, start: started}
+	}
+
+	l.ep.streak.attempts++
+
+	msg := "rejoin attempt failed"
+	if class == domain.JoinErrorClassNotMember {
+		msg = "this node is not a member of its NodeGroup, rejoin does not join until that changes"
+	}
+
+	level := slog.LevelDebug
+	if l.ep.streak.attempts == 1 {
+		level = slog.LevelWarn
+	}
+
+	l.logger.Log(context.Background(), level, msg,
+		"error", err,
+		"attempt", l.ep.attempts,
+		"attempt_elapsed", time.Since(started).String(),
+		"next_in", delay.String(),
+	)
+}
+
+func (l *Loop) endStreak(end time.Time) {
+	if l.ep.streak.class == "" {
+		return
+	}
+
+	l.summarize("rejoin failure streak ended", l.ep.streak.attempts, end.Sub(l.ep.streak.start), l.ep.streak.class)
+	l.ep.streak = streak{}
+}
+
+func (l *Loop) finish() {
+	l.closeEpisode("rejoin finished, gossip quorum holds and no peer records this node as failed")
+}
+
+func (l *Loop) closeEpisode(msg string) {
+	if !l.ep.open {
+		return
+	}
+
+	l.summarize(msg, l.ep.attempts, time.Since(l.ep.start), l.ep.lastClass)
+	l.ep = episode{}
+}
+
+func (l *Loop) summarize(msg string, attempts int, elapsed time.Duration, class string) {
+	l.logger.Info(msg,
+		"attempts", attempts,
+		"elapsed", elapsed.Truncate(time.Millisecond).String(),
+		"last_delay", l.ep.lastDelay.String(),
+		"last_error_class", class,
+	)
 }
 
 func jitter(delay time.Duration) time.Duration {

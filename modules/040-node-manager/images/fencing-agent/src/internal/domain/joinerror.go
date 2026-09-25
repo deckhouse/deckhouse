@@ -14,19 +14,10 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package agent
+package domain
 
-import (
-	"time"
-
-	"k8s.io/client-go/kubernetes"
-	"sigs.k8s.io/controller-runtime/pkg/cache"
-	"sigs.k8s.io/controller-runtime/pkg/client"
+const (
+	JoinErrorClassNone      = "none"
+	JoinErrorClassTransport = "transport"
+	JoinErrorClassNotMember = "not_member"
 )
-
-type Deps struct {
-	K8sClient     kubernetes.Interface
-	FencingClient client.Client
-	FencingCache  cache.Cache
-	StartedAt     time.Time
-}

@@ -27,7 +27,7 @@ spec:
                     Целевое окно memberlist detection в человекочитаемом виде, например `0.8-1.2s`. Используется для документации и проверки расчётов и не парсится как duration.
                 memberlist:
                   description: |
-                    Параметры memberlist и Lifeguard, управляющие probe-опросом peer-узлов, suspicion и gossip.
+                    Параметры memberlist и Lifeguard, управляющие probe-опросом peer-узлов, suspicion и gossip. Остальные тайминги memberlist агент выводит из профиля.
                   properties:
                     probeInterval:
                       description: |
@@ -70,17 +70,23 @@ spec:
                         Должно быть не меньше max(`heartbeat`, `kubernetesAPITimeout`) + `kubernetesAPITimeout` + `watchdog.timeout` + 500ms. Узел, потерявший доступ к API Kubernetes, перестаёт кормить watchdog после первой неудачной записи heartbeat и должен перезагрузиться раньше, чем его последний heartbeat устареет. 500ms — запас на расхождение часов узла и fencing-controller.
                     kubernetesAPITimeout:
                       description: |
-                        Timeout проверки API Kubernetes в fallback-пути. Должен быть меньше `ttl`, чтобы проверка API не блокировала решение.
+                        Верхняя граница одного обращения агента к API Kubernetes. Ограничивает:
+
+                        - каждый запрос к объектам `FencingFailedNodeState`, включая запись fallback heartbeat;
+                        - чтение собственного Node агента в попытке join или rejoin;
+                        - каждый TCP-обмен memberlist — через `TCPTimeout` = max(`kubernetesAPITimeout`, `1s`).
+
+                        Должен быть меньше `ttl` и входит в нижние границы `ttl` и `evacuation.delay`: изолированный узел тратит весь бюджет на первую неудачную попытку heartbeat и только после этого перестаёт кормить watchdog.
                 rejoin:
                   description: |
-                    Параметры rejoin loop, который повторяет `memberlist.Join(seedList)` после потери кворума или долгой сетевой изоляции.
+                    Параметры попыток join агента: стартового join и rejoin loop, который работает, пока у узла нет gossip quorum или пока существует созданный после старта агента `FencingFailedNodeState`, в котором этот узел записан отказавшим.
                   properties:
                     interval:
                       description: |
-                        Начальный интервал между попытками rejoin. После успешного rejoin backoff сбрасывается к этому значению.
+                        Начальная задержка между попытками join и rejoin.
                     maxInterval:
                       description: |
-                        Верхняя граница exponential backoff между попытками rejoin. Должна быть больше или равна `interval`.
+                        Верхняя граница exponential backoff между попытками join и rejoin. Должна быть больше или равна `interval`. Время между началами двух попыток включает и саму попытку: до `fallback.kubernetesAPITimeout` на чтение собственного Node агента и около одного–двух TCP-таймаутов memberlist на join. Также шаг передачи роли: после него следующий по очереди агент записывает отказавший пир, которого не записал designated writer. Столько же failed-запись пира об узле агента должна продержаться, прежде чем writer агента встанет на паузу; запись, которую пиры снимают и пересоздают раньше, начинает это ожидание заново.
                 evacuation:
                   description: |
                     Параметры эвакуации, которые использует fencing-controller.

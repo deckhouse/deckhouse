@@ -106,7 +106,7 @@ spec:
                 memberlist:
                   type: object
                   description: |
-                    memberlist and Lifeguard parameters that control peer probing, suspicion and gossip.
+                    memberlist and Lifeguard parameters that control peer probing, suspicion and gossip. The agent derives the remaining memberlist timings from the profile.
                   required:
                     - probeInterval
                     - probeTimeout
@@ -193,11 +193,17 @@ spec:
                       type: string
                       pattern: '^([0-9]+(\.[0-9]+)?(ms|s|m|h))+$'
                       description: |
-                        Timeout of the Kubernetes API probe on the fallback path. Must be less than `ttl` so the API check does not block the decision.
+                        Upper bound of a single Kubernetes API call by the agent. It bounds:
+
+                        - every request for `FencingFailedNodeState` objects, including the fallback heartbeat write;
+                        - the read of the agent's own Node in a join or rejoin attempt;
+                        - every memberlist TCP exchange, through `TCPTimeout` = max(`kubernetesAPITimeout`, `1s`).
+
+                        Must be less than `ttl`, and enters the lower bounds of `ttl` and `evacuation.delay`: an isolated node spends the whole budget on the heartbeat attempt that fails first, and only then stops feeding the watchdog.
                 rejoin:
                   type: object
                   description: |
-                    Parameters of the rejoin loop that repeats `memberlist.Join(seedList)` after quorum loss or a long network partition.
+                    Parameters of the agent's join attempts: the startup join and the rejoin loop, which runs while the node has no gossip quorum or while a `FencingFailedNodeState` created after the agent started records this node as failed.
                   required:
                     - interval
                     - maxInterval
@@ -206,12 +212,12 @@ spec:
                       type: string
                       pattern: '^([0-9]+(\.[0-9]+)?(ms|s|m|h))+$'
                       description: |
-                        Initial interval between rejoin attempts. Backoff resets to this value after a successful rejoin.
+                        Initial delay between join and rejoin attempts.
                     maxInterval:
                       type: string
                       pattern: '^([0-9]+(\.[0-9]+)?(ms|s|m|h))+$'
                       description: |
-                        Upper bound of the exponential backoff between rejoin attempts. Must be greater than or equal to `interval`.
+                        Upper bound of the exponential backoff between join and rejoin attempts. Must be greater than or equal to `interval`. The time between the starts of two attempts also includes the attempt itself: up to `fallback.kubernetesAPITimeout` for the read of the agent's own Node and about one to two memberlist TCP timeouts for the join. It is also the takeover step after which the next agent in line records a failed peer that the designated writer has not recorded, and how long a peer's failed record about the agent's own node must stay before the agent's fencing state writer pauses; a record that peers remove and re-create sooner restarts that wait.
                 evacuation:
                   type: object
                   description: |

@@ -753,8 +753,13 @@ func TestManagerFeedLoopFeedsOnTheProfileInterval(t *testing.T) {
 		t.Fatalf("Run returned an error: %v", err)
 	}
 
-	if keepAlives, _, _ := h.device.counters(); keepAlives < 3 {
+	keepAlives, magicCloses, _ := h.device.counters()
+	if keepAlives < 3 {
 		t.Errorf("keepalives: %d, want the loop to feed repeatedly within 80ms at a 10ms interval", keepAlives)
+	}
+
+	if magicCloses != 1 {
+		t.Errorf("magic closes: %d, want Run to disarm exactly once when its context ends", magicCloses)
 	}
 }
 
