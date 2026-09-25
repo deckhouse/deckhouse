@@ -234,6 +234,22 @@ func BuildHTTPClientFromEnvironment(tlsOpts TLSOptions) (*http.Client, error) {
 	}, nil
 }
 
+// StopAtFirstAnswer is a CheckRedirect that keeps the redirect the endpoint sent instead of
+// following it. Set it on a client that asks whether an address answers, not what it serves.
+//
+// Two reasons, and either alone is enough. A 301 is an answer, so following it turns a reachable
+// endpoint into a verdict about wherever it pointed. And these clients pin their TLS options to
+// the endpoint — ServerName is its hostname, the CA is the one configured for it — so a redirect
+// to another host is offered the wrong SNI and fails the handshake. That is what
+// GET https://ec2.eu-central-1.amazonaws.com/ did: 301 to aws.amazon.com, then "tls: handshake
+// failure", reported as an unreachable AWS API.
+//
+// It is deliberately not baked into the client builders: the registry checks share one of them,
+// and a registry legitimately redirects.
+func StopAtFirstAnswer(*http.Request, []*http.Request) error {
+	return http.ErrUseLastResponse
+}
+
 // ProxyFromEnvironment is http.ProxyFromEnvironment without its process-wide cache: the standard
 // one reads HTTP_PROXY/HTTPS_PROXY/NO_PROXY exactly once, on its first call, which is fine for a
 // CLI whose environment is fixed before main and wrong for anything that has to answer for the

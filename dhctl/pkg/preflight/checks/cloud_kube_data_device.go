@@ -17,7 +17,10 @@ package checks
 import (
 	"context"
 	"fmt"
+	"regexp"
 	"strings"
+
+	libcon "github.com/deckhouse/lib-connection/pkg"
 
 	preflight "github.com/deckhouse/deckhouse/dhctl/pkg/preflight"
 )
@@ -56,8 +59,8 @@ func (c CloudKubeDataDeviceCheck) Run(ctx context.Context) (string, error) {
 		return "", preflight.NotApplicable("this cluster has no separate disk for Kubernetes data")
 	}
 
-	path := strings.TrimSpace(c.DevicePath())
-	if path == "" {
+	reported := strings.TrimSpace(c.DevicePath())
+	if reported == "" {
 		// Most layouts keep Kubernetes data on the root disk, and then there is nothing to mount.
 		return "", preflight.NotApplicable("this cluster has no separate disk for Kubernetes data")
 	}
@@ -68,13 +71,17 @@ func (c CloudKubeDataDeviceCheck) Run(ctx context.Context) (string, error) {
 	}
 	host := hostPhrase(nodeInterface)
 
-	// -b follows symlinks, which is what the path usually is: providers report it as
-	// /dev/disk/by-id/… and the kernel resolves that to /dev/sdc.
-	if nodeInterface.Command("test", "-b", path).Run(ctx) != nil {
+	path, known := resolveDataDevice(ctx, nodeInterface, reported)
+	if !known {
+		return "", preflight.NotApplicable(
+			"the provider reported %q for the Kubernetes data disk, which is neither a path, an Azure LUN "+
+				"nor a disk serial, so dhctl cannot tell which device it means", reported)
+	}
+	if path == "" {
 		// The disk is attached by the provider; it does not appear between two attempts.
 		return "", preflight.Permanent(&preflight.Failure{
-			Checked:  fmt.Sprintf("%s on %s", path, host),
-			Observed: "the path is not a block device on the node",
+			Checked:  fmt.Sprintf("the Kubernetes data disk %q on %s", reported, host),
+			Observed: "no block device on the node matches it",
 			Expected: "the disk the provider reported as attached for Kubernetes data",
 			Fix: "check that the master node group requests a disk for Kubernetes data. " +
 				"Check in the cloud that the disk is attached to the master node",
@@ -105,4 +112,78 @@ func CloudKubeDataDevice(devicePath func() string, nodeInterface NodeInterfaceFu
 		Timeout:     preflight.NodeCheckTimeout,
 		Run:         check.Run,
 	}
+}
+
+// resolveDataDevice turns what the provider reported into a device path on the node.
+//
+// It is not always a path. Azure reports the LUN of the attachment (data_disk_attachment.lun, so
+// "10"), and GCP reports the disk's device_name, which arrives as the serial of the block device;
+// running `test -b` on either of those fails on every cluster, attached disk or not — which is why
+// this check used to be red on both providers whatever the state of the machine.
+//
+// The three shapes and the order they are tried in mirror the bashible steps that mount the disk
+// (modules/030-cloud-provider-azure/.../001_discover_kubernetes_data_device_path.sh.tpl and the
+// GCP 000_ step beside it), so the check and the mount agree about which device is meant. Like
+// those steps, it branches on the shape of the value rather than on the provider name.
+//
+// Returns the resolved path, and whether the shape was one it knows at all.
+func resolveDataDevice(ctx context.Context, nodeInterface libcon.Interface, reported string) (path string, known bool) {
+	switch {
+	case strings.HasPrefix(reported, "/dev/"):
+		// A direct path, which is what most providers report. -b follows symlinks: they hand out
+		// /dev/disk/by-id/… and the kernel resolves that to /dev/sdc.
+		if nodeInterface.Command("test", "-b", reported).Run(ctx) == nil {
+			return reported, true
+		}
+		return "", true
+
+	case azureLUN.MatchString(reported):
+		lun := azureLUN.FindStringSubmatch(reported)[1]
+		// The three lookups the Azure step does, in its order: the current udev rules, the legacy
+		// SCSI paths, then the NVMe namespaces, which Azure numbers LUN+2, LUN+1 or LUN.
+		script := fmt.Sprintf(
+			"ls -1 /dev/disk/azure/data/by-lun/%[1]s 2>/dev/null | head -n1; "+
+				"ls -1 /dev/disk/azure/data-lun%[1]s /dev/disk/azure/scsi*/lun%[1]s 2>/dev/null | head -n1; "+
+				"for o in 2 1 0; do ls -1 /dev/disk/by-path/*nvme-$((%[1]s+o)) 2>/dev/null | head -n1; done",
+			lun)
+		return firstBlockDevice(ctx, nodeInterface, script), true
+
+	default:
+		// A disk serial, which is how GCP's device_name reaches the node. Matched the way the GCP
+		// step matches it, on the line rather than on the field, so the two agree.
+		script := fmt.Sprintf("lsblk -lo name,serial | grep -F -- %s | head -n1 | cut -d' ' -f1", shellQuote(reported))
+		name := commandOutput(ctx, nodeInterface, "sh", "-c", script)
+		if name == "" {
+			return "", true
+		}
+		device := "/dev/" + name
+		if nodeInterface.Command("test", "-b", device).Run(ctx) != nil {
+			return "", true
+		}
+		return device, true
+	}
+}
+
+// azureLUN matches the LUN Azure reports, written either as the bare number or with the prefix the
+// bashible step also accepts.
+var azureLUN = regexp.MustCompile(`^(?:lun)?([0-9]+)$`)
+
+// firstBlockDevice runs the candidate lookups and returns the first line that names a real block
+// device, so a stale symlink left in /dev/disk does not pass for an attached disk.
+func firstBlockDevice(ctx context.Context, nodeInterface libcon.Interface, script string) string {
+	for _, candidate := range strings.Split(commandOutput(ctx, nodeInterface, "sh", "-c", script), "\n") {
+		candidate = strings.TrimSpace(candidate)
+		if candidate == "" {
+			continue
+		}
+		if nodeInterface.Command("test", "-b", candidate).Run(ctx) == nil {
+			return candidate
+		}
+	}
+	return ""
+}
+
+// shellQuote wraps a value in single quotes for the one place a check builds a shell line.
+func shellQuote(value string) string {
+	return "'" + strings.ReplaceAll(value, "'", `'\''`) + "'"
 }

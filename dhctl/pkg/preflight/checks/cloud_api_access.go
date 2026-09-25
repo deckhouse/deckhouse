@@ -217,6 +217,8 @@ func (c CloudAPICheck) request(ctx context.Context, cloudAPIConfig *cca.CloudAPI
 		})
 	}
 
+	client.CheckRedirect = utils.StopAtFirstAnswer
+
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, cloudAPIConfig.URL.String(), nil)
 	if err != nil {
 		return fmt.Errorf("building the request to %s: %w", cloudAPIConfig.URL, err)

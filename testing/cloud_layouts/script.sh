@@ -897,6 +897,11 @@ ENDSSH
       envsubst <"$cwd/resources.tpl.yaml" >"$cwd/resources.yaml"
 
   # Bootstrap
+  #
+  # node-disk-space is skipped on purpose. The master here sits on the 30 GB volume Static/infra.tf
+  # creates, and the check asks for the 50 GB disk the documentation asks a node for. The check is
+  # right; the layout is deliberately small, and growing every volume in it costs quota on every
+  # run to test nothing this suite is about.
   >&2 echo "Run dhctl bootstrap ..."
   for ((i=1; i<=$testRunAttempts; i++)); do
     $scp_command -i "$ssh_private_key_path" $cwd/configuration.yaml "$ssh_user@$bastion_ip:/tmp/configuration.yaml"
@@ -914,6 +919,7 @@ ENDSSH
         ${IMAGES_REPO}/install:${DEV_BRANCH} \
         dhctl --do-not-write-debug-log-file bootstrap \
             --resources-timeout="30m" --yes-i-want-to-drop-cache \
+            --preflight-skip-check=node-disk-space \
             --ssh-host "$master_ip" \
             --ssh-agent-private-keys "/tmp/sshkey" \
             --ssh-user "$ssh_user" \

@@ -21,6 +21,7 @@ import (
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 	preflight "github.com/deckhouse/deckhouse/dhctl/pkg/preflight"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/preflight/checks/utils"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/providerinitializer"
 )
 
@@ -56,6 +57,25 @@ func (c RegistryFromMasterCheck) Run(ctx context.Context) (string, error) {
 		return "", fmt.Errorf("dhctl was given no cluster configuration")
 	}
 
+	registry := c.MetaConfig.Registry.Settings.RemoteData
+	address, _ := registry.AddressAndPath()
+	registryURL := registryV2URL(c.MetaConfig)
+	endpoint := registryURL.String()
+
+	// A node that is configured to reach the registry through a proxy is not expected to reach it
+	// directly, and this probe goes direct. Asking anyway made the check demand egress the cluster
+	// was never going to have: on a static cluster behind 192.168.199.254:8888 it reported HTTP 000
+	// while registry-access-through-proxy, which asks the same question the right way, passed.
+	proxyURL, noProxy, err := utils.GetProxyFromMetaConfig(c.MetaConfig)
+	if err != nil {
+		return "", fmt.Errorf("reading ClusterConfiguration.proxy: %w", err)
+	}
+	if proxyURL != nil && !utils.ShouldSkipProxyCheck(registryURL, noProxy) {
+		return "", preflight.NotApplicable(
+			"the nodes reach %s through the proxy in ClusterConfiguration.proxy, which "+
+				"registry-access-through-proxy is what asks about", address)
+	}
+
 	nodeInterface, err := c.nodeInterface(ctx)
 	if err != nil {
 		return "", err
@@ -64,10 +84,6 @@ func (c RegistryFromMasterCheck) Run(ctx context.Context) (string, error) {
 		return "", preflight.NotApplicable("dhctl was given no SSH host to make the request from")
 	}
 	host := hostPhrase(nodeInterface)
-
-	registry := c.MetaConfig.Registry.Settings.RemoteData
-	address, _ := registry.AddressAndPath()
-	endpoint := registryV2URL(c.MetaConfig).String()
 
 	// The node is asked with whatever it has. curl and wget are what a Deckhouse-supported
 	// distribution ships; if neither is there the question cannot be asked from here, and saying
@@ -82,7 +98,7 @@ func (c RegistryFromMasterCheck) Run(ctx context.Context) (string, error) {
 	status := strings.TrimSpace(string(stdout))
 
 	if runErr != nil && status == "" {
-		observed, fix := probe.classify(runErr, registryV2URL(c.MetaConfig).Hostname(), address, c.registryMode())
+		observed, fix := probe.classify(runErr, registryURL.Hostname(), address, c.registryMode())
 		return "", &preflight.Failure{
 			Checked:  fmt.Sprintf("GET %s from %s", endpoint, host),
 			Observed: observed,

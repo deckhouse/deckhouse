@@ -80,7 +80,7 @@ func TestCloudKubeDataDevice(t *testing.T) {
 
 		var failure *preflight.Failure
 		require.ErrorAs(t, err, &failure)
-		assert.Contains(t, failure.Observed, "not a block device on the node")
+		assert.Contains(t, failure.Observed, "no block device on the node matches it")
 		assert.Contains(t, failure.Fix, "the disk is attached to the master node")
 	})
 
@@ -99,5 +99,59 @@ func TestCloudKubeDataDevice(t *testing.T) {
 
 		_, err := check.Run(t.Context())
 		assert.ErrorIs(t, err, preflight.ErrNotApplicable)
+	})
+}
+
+// Azure reports the LUN of the attachment and GCP the disk's device_name, which reaches the node
+// as a serial. Neither is a path, so `test -b` on it failed on every cluster of those two
+// providers, attached disk or not — the check was red whatever the state of the machine. The
+// shapes and the lookup order mirror the bashible steps that mount the disk.
+func TestCloudKubeDataDeviceResolvesWhatIsNotAPath(t *testing.T) {
+	t.Run("an Azure LUN through the current udev rules", func(t *testing.T) {
+		node := newFakeNode().
+			on("sh -c ls -1 /dev/disk/azure/data/by-lun/10 2>/dev/null | head -n1; ls -1 /dev/disk/azure/data-lun10 /dev/disk/azure/scsi*/lun10 2>/dev/null | head -n1; for o in 2 1 0; do ls -1 /dev/disk/by-path/*nvme-$((10+o)) 2>/dev/null | head -n1; done").
+			prints("/dev/disk/azure/scsi1/lun10\n").
+			on("test -b /dev/disk/azure/scsi1/lun10").succeeds().
+			on("readlink -f /dev/disk/azure/scsi1/lun10").prints("/dev/sdc\n")
+
+		detail, err := CloudKubeDataDeviceCheck{
+			DevicePath:    func() string { return "10" },
+			NodeInterface: FixedNodeInterface(node),
+		}.Run(t.Context())
+
+		require.NoError(t, err)
+		assert.Contains(t, detail, "/dev/sdc")
+	})
+
+	t.Run("a GCP device name, matched on the serial", func(t *testing.T) {
+		node := newFakeNode().
+			on("sh -c lsblk -lo name,serial | grep -F -- 'kubernetes-data-0' | head -n1 | cut -d' ' -f1").
+			prints("sdb\n").
+			on("test -b /dev/sdb").succeeds().
+			on("readlink -f /dev/sdb").prints("/dev/sdb\n")
+
+		detail, err := CloudKubeDataDeviceCheck{
+			DevicePath:    func() string { return "kubernetes-data-0" },
+			NodeInterface: FixedNodeInterface(node),
+		}.Run(t.Context())
+
+		require.NoError(t, err)
+		assert.Contains(t, detail, "/dev/sdb")
+	})
+
+	// Nothing on the node matches: that is the failure the check exists for, and it now names what
+	// the provider reported rather than a path nobody wrote.
+	t.Run("the disk is not attached", func(t *testing.T) {
+		node := newFakeNode().
+			on("sh -c lsblk -lo name,serial | grep -F -- 'kubernetes-data-0' | head -n1 | cut -d' ' -f1").prints("")
+
+		_, err := CloudKubeDataDeviceCheck{
+			DevicePath:    func() string { return "kubernetes-data-0" },
+			NodeInterface: FixedNodeInterface(node),
+		}.Run(t.Context())
+
+		var failure *preflight.Failure
+		require.ErrorAs(t, err, &failure)
+		assert.Contains(t, failure.Checked, `"kubernetes-data-0"`)
 	})
 }
