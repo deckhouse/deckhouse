@@ -1,0 +1,81 @@
+# Copyright 2026 Flant JSC
+#
+# Licensed under the Apache License, Version 2.0
+#
+# Local GitHub Actions adaptation of modules-gitlab-ci's
+# Replay_Fuzz.gitlab-ci.yml (6c44e20), as used by operator-argo.
+
+{!{ define "fuzz_replay_setup" }!}
+{!{ tmpl.Exec "docker_config_isolation" }!}
+{!{- $secrets := slice -}!}
+{!{- $secrets = append ( slice "projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/registry_host" "DECKHOUSE_DEV_REGISTRY_HOST" "DECKHOUSE_DEV_REGISTRY_HOST" ) $secrets -}!}
+{!{- $secrets = append ( slice "projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/dev-registry/writetoken" "login" "DECKHOUSE_DEV_REGISTRY_USER" ) $secrets -}!}
+{!{- $secrets = append ( slice "projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/dev-registry/writetoken" "password" "DECKHOUSE_DEV_REGISTRY_PASSWORD" ) $secrets -}!}
+{!{- $secrets = append ( slice "projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/team-ssdlc/fuzzing-s3" "FUZZ_S3_ENDPOINT" "FUZZ_S3_ENDPOINT" ) $secrets -}!}
+{!{- $secrets = append ( slice "projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/team-ssdlc/fuzzing-s3" "FUZZ_S3_ACCESS_KEY" "FUZZ_S3_ACCESS_KEY" ) $secrets -}!}
+{!{- $secrets = append ( slice "projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/team-ssdlc/fuzzing-s3" "FUZZ_S3_SECRET_KEY" "FUZZ_S3_SECRET_KEY" ) $secrets -}!}
+{!{ tmpl.Exec "import_secrets" $secrets }!}
+- name: Checkout fuzz scripts
+  uses: {!{ index (ds "actions") "actions/checkout" }!}
+  with:
+    ref: ${{ needs.git_info.outputs.github_sha }}
+{!{ tmpl.Exec "login_dev_registry_step" . }!}
+- name: Download fuzz build report
+  uses: {!{ index (ds "actions") "actions/download-artifact" }!}
+  with:
+    name: fuzz-build-report
+{!{ end }!}
+
+{!{ define "fuzz_s3_env" }!}
+FUZZ_S3_ENDPOINT: ${{ steps.secrets.outputs.FUZZ_S3_ENDPOINT }}
+FUZZ_S3_ACCESS_KEY: ${{ steps.secrets.outputs.FUZZ_S3_ACCESS_KEY }}
+FUZZ_S3_SECRET_KEY: ${{ steps.secrets.outputs.FUZZ_S3_SECRET_KEY }}
+FUZZ_S3_REPOSITORY: ${{ github.event.repository.name }}
+{!{ end }!}
+
+{!{ define "replay_fuzz_template" }!}
+{!{- $ctx := index . 0 -}!}
+{!{- $isDev := eq (index . 1) "dev" -}!}
+# <template: replay_fuzz_template>
+runs-on: [self-hosted, large]
+timeout-minutes: 60
+strategy:
+  fail-fast: false
+  matrix: ${{ fromJSON(needs.build_fuzz.outputs.matrix) }}
+steps:
+{!{ tmpl.Exec "fuzz_replay_setup" $ctx | strings.Indent 2 }!}
+  - name: Replay fuzz corpus
+    env:
+{!{ tmpl.Exec "fuzz_s3_env" | strings.Indent 6 }!}
+      FUZZ_IMAGE: ${{ matrix.image }}
+      FUZZ_ARTIFACT: ${{ matrix.artifact }}
+      FUZZ_RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+{!{- if $isDev }!}
+      FUZZ_S3_BRANCH_SLUG: main
+{!{- else }!}
+      FUZZ_S3_BRANCH_SLUG: ${{ needs.git_info.outputs.ci_commit_ref_slug }}
+{!{- end }!}
+    run: bash .github/scripts/fuzz/replay.sh
+
+  - name: Upload fuzz replay diagnostics
+    if: ${{ always() }}
+    uses: {!{ index (ds "actions") "actions/upload-artifact" }!}
+    with:
+      name: ${{ matrix.artifact }}
+      path: fuzz-replay/
+      if-no-files-found: warn
+      retention-days: 7
+# </template: replay_fuzz_template>
+{!{ end }!}
+
+{!{ define "publish_fuzz_report_template" }!}
+# <template: publish_fuzz_report_template>
+runs-on: [self-hosted, large]
+steps:
+{!{ tmpl.Exec "fuzz_replay_setup" . | strings.Indent 2 }!}
+  - name: Publish fuzz build report
+    env:
+{!{ tmpl.Exec "fuzz_s3_env" | strings.Indent 6 }!}
+    run: bash .github/scripts/fuzz/publish-report.sh
+# </template: publish_fuzz_report_template>
+{!{ end }!}

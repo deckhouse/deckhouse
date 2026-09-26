@@ -1,4 +1,4 @@
-{{- if env "FUZZ_S3_ENDPOINT" "" }}
+{{- if eq (env "FUZZ_BUILD_ENABLED" "false") "true" }}
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-fuzz-src-artifact
 fromImage: common/src-artifact
@@ -19,23 +19,71 @@ git:
       install:
         - '**/*'
 ---
-image: {{ .ModuleName }}/{{ .ImageName }}-fuzz-artifact
-from: {{ index $.Images "builder/golang" }}
+image: {{ $.ModuleName }}/{{ $.ImageName }}-fuzz
+from: registry.flant.com/deckhouse/ssdlc/ci-images/fuzz-go:34fdc16d905326c2fd7097363059baa398c9a1c0
+fromLatest: true
 final: false
 import:
-  - image: {{ .ModuleName }}/{{ .ImageName }}-fuzz-src-artifact
+  - image: {{ $.ModuleName }}/{{ $.ImageName }}-fuzz-src-artifact
     add: /src
     to: /src
     before: install
+git:
+  - add: /{{ $.ModulePath }}modules/{{ $.ModulePriority }}-{{ $.ModuleName }}/Taskfile.fuzz.yml
+    to: /src/Taskfile.yml
+    stageDependencies:
+      install:
+        - Taskfile.fuzz.yml
+secrets:
+  - id: GOPROXY
+    value: {{ $.GOPROXY }}
+shell:
+  install:
+    - cd /src
+    - GOPROXY=$(cat /run/secrets/GOPROXY) go mod download
+    - rm -rf test/e2e tests/e2e tests/ginkgo
+    - chmod -R a+rwX /src /fuzz/gomod
+imageSpec:
+  config:
+    workingDir: /src
+    labels:
+      io.deckhouse.fuzz.engine: go
+    env:
+      FUZZ_WORKDIR: /src
+      FUZZ_PACKAGES: "./modules/038-registry/hooks/orchestrator ./modules/038-registry/hooks/orchestrator/bashible"
+      CGO_ENABLED: "0"
 ---
-{{- $_ := set . "FuzzEngine" "go" }}
-{{- $_ := set . "FuzzSrcImage" (printf "%s/%s-fuzz-artifact" .ModuleName .ImageName) }}
-{{- $_ := set . "FuzzPackages" "./modules/038-registry/hooks/orchestrator ./modules/038-registry/hooks/orchestrator/bashible" }}
-{{- include "fuzz image" . }}
----
-{{- $library := deepCopy . }}
-{{- $_ := set $library "FuzzImageName" "library" }}
-{{- $_ := set $library "FuzzSrcAdd" "/src/go_lib/registry" }}
-{{- $_ := set $library "FuzzPackages" "./const ./helpers ./models/bashible ./models/moduleconfig ./models/node-services ./pki" }}
-{{- include "fuzz image" $library }}
+image: {{ $.ModuleName }}/library-fuzz
+from: registry.flant.com/deckhouse/ssdlc/ci-images/fuzz-go:34fdc16d905326c2fd7097363059baa398c9a1c0
+fromLatest: true
+final: false
+import:
+  - image: {{ $.ModuleName }}/{{ $.ImageName }}-fuzz-src-artifact
+    add: /src/go_lib/registry
+    to: /src/go_lib/registry
+    before: install
+git:
+  - add: /{{ $.ModulePath }}modules/{{ $.ModulePriority }}-{{ $.ModuleName }}/Taskfile.fuzz.yml
+    to: /src/go_lib/registry/Taskfile.yml
+    stageDependencies:
+      install:
+        - Taskfile.fuzz.yml
+secrets:
+  - id: GOPROXY
+    value: {{ $.GOPROXY }}
+shell:
+  install:
+    - cd /src/go_lib/registry
+    - GOPROXY=$(cat /run/secrets/GOPROXY) go mod download
+    - rm -rf test/e2e tests/e2e tests/ginkgo
+    - chmod -R a+rwX /src /fuzz/gomod
+imageSpec:
+  config:
+    workingDir: /src/go_lib/registry
+    labels:
+      io.deckhouse.fuzz.engine: go
+    env:
+      FUZZ_WORKDIR: /src/go_lib/registry
+      FUZZ_PACKAGES: "./const ./helpers ./models/bashible ./models/moduleconfig ./models/node-services ./pki"
+      CGO_ENABLED: "0"
 {{- end }}

@@ -56,8 +56,39 @@ import:
 imageSpec:
   config:
     entrypoint: ["/syncer"]
+{{- if eq (env "FUZZ_BUILD_ENABLED" "false") "true" }}
 ---
-{{- $_ := set . "FuzzEngine" "go" }}
-{{- $_ := set . "FuzzSrcAdd" "/app" }}
-{{- $_ := set . "FuzzPackages" "./pkg/config" }}
-{{- include "fuzz image" . }}
+image: {{ $.ModuleName }}/{{ $.ImageName }}-fuzz
+from: registry.flant.com/deckhouse/ssdlc/ci-images/fuzz-go:34fdc16d905326c2fd7097363059baa398c9a1c0
+fromLatest: true
+final: false
+import:
+  - image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
+    add: /src/app
+    to: /app
+    before: install
+git:
+  - add: /{{ $.ModulePath }}modules/{{ $.ModulePriority }}-{{ $.ModuleName }}/Taskfile.fuzz.yml
+    to: /app/Taskfile.yml
+    stageDependencies:
+      install:
+        - Taskfile.fuzz.yml
+secrets:
+  - id: GOPROXY
+    value: {{ $.GOPROXY }}
+shell:
+  install:
+    - cd /app
+    - GOPROXY=$(cat /run/secrets/GOPROXY) go mod download
+    - rm -rf test/e2e tests/e2e tests/ginkgo
+    - chmod -R a+rwX /app /fuzz/gomod
+imageSpec:
+  config:
+    workingDir: /app
+    labels:
+      io.deckhouse.fuzz.engine: go
+    env:
+      FUZZ_WORKDIR: /app
+      FUZZ_PACKAGES: "./pkg/config"
+      CGO_ENABLED: "0"
+{{- end }}

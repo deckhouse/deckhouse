@@ -799,6 +799,8 @@ jobs:
       - git_info
     # <template: build_fuzz_template>
     runs-on: [self-hosted, large]
+    outputs:
+      matrix: ${{ steps.build.outputs.matrix }}
     steps:
 
       # </template: docker-config-isolation>
@@ -838,9 +840,6 @@ jobs:
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/fox_pull_secret OBSERVABILITY_SOURCE_REPO | OBSERVABILITY_SOURCE_REPO ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/fox_pull_secret DECKHOUSE_PRIVATE_REPO | DECKHOUSE_PRIVATE_REPO ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/fox_pull_secret SOURCE_REPO_SSH_KEY | SOURCE_REPO_SSH_KEY ;
-            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/team-ssdlc/fuzzing-s3 FUZZ_S3_ENDPOINT | FUZZ_S3_ENDPOINT ;
-            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/team-ssdlc/fuzzing-s3 FUZZ_S3_ACCESS_KEY | FUZZ_S3_ACCESS_KEY ;
-            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/team-ssdlc/fuzzing-s3 FUZZ_S3_SECRET_KEY | FUZZ_S3_SECRET_KEY ;
 
       # </template: import_secrets>
 
@@ -983,108 +982,244 @@ jobs:
           CI_COMMIT_TAG: ${{needs.git_info.outputs.ci_commit_tag}}
           CI_COMMIT_BRANCH: ${{needs.git_info.outputs.ci_commit_branch}}
           CI_COMMIT_REF_NAME: ${{needs.git_info.outputs.ci_commit_ref_name}}
-          FUZZ_S3_ENDPOINT: ${{ steps.secrets.outputs.FUZZ_S3_ENDPOINT }}
-          FUZZ_S3_ACCESS_KEY: ${{ steps.secrets.outputs.FUZZ_S3_ACCESS_KEY }}
-          FUZZ_S3_SECRET_KEY: ${{ steps.secrets.outputs.FUZZ_S3_SECRET_KEY }}
           CI_COMMIT_REF_SLUG: ${{needs.git_info.outputs.ci_commit_ref_slug}}
         run: |
           set -euo pipefail
-
           type werf && source "$(werf ci-env github --as-file)"
-
-          # ci-env re-exports FINAL_IMAGES_ONLY=true from werf_envs.yml — drop it for *-fuzz
-          unset WERF_FINAL_IMAGES_ONLY
-
-          if [[ -z "${FUZZ_S3_ENDPOINT:-}" || -z "${FUZZ_S3_ACCESS_KEY:-}" || -z "${FUZZ_S3_SECRET_KEY:-}" ]]; then
-            echo "Fuzz S3 secrets are not set (required for in-image corpus sync)"
-            exit 1
-          fi
-
-          # Corpus lives under s3://anomaloys-materials/<repository>/<branch slug>/...
-          export FUZZ_S3_REPOSITORY="${GITHUB_REPOSITORY##*/}"
-          export FUZZ_S3_BRANCH_SLUG="${CI_COMMIT_REF_SLUG}"
-          if [[ -z "${FUZZ_S3_REPOSITORY}" || -z "${FUZZ_S3_BRANCH_SLUG}" ]]; then
-            echo "FUZZ_S3_REPOSITORY / FUZZ_S3_BRANCH_SLUG could not be determined"
-            exit 1
-          fi
-          echo "Corpus replay path prefix: anomaloys-materials/${FUZZ_S3_REPOSITORY}/${FUZZ_S3_BRANCH_SLUG}/"
-          DEV_REGISTRY_PATH="${DECKHOUSE_DEV_REGISTRY_HOST}/${REGISTRY_PATH}"
-          export REGISTRY_PATH="${DEV_REGISTRY_PATH}"
-          export WERF_REPO="${DEV_REGISTRY_PATH}"
-          echo "main fuzz build: push to ${WERF_REPO}"
-
-          FUZZ_IMAGES="$(werf config list --env "${WERF_ENV}" | grep -- '-fuzz$' || true)"
-          if [[ -z "${FUZZ_IMAGES}" ]]; then
-            echo "No fuzz images found; skipping fuzz build"
-            exit 0
-          fi
-
-          echo "Building fuzz images:"
-          echo "${FUZZ_IMAGES}"
-
+          export WERF_FINAL_IMAGES_ONLY=false
+          export FUZZ_BUILD_ENABLED=true
+          export WERF_REPO="${DECKHOUSE_DEV_REGISTRY_HOST}/${REGISTRY_PATH}"
           export WERF_BUILD_REPORT_OPERATIONS=true
 
-          # shellcheck disable=SC2086
-          werf build ${FUZZ_IMAGES} \
-            --insecure-registry \
+          images=$(werf config list --env "${WERF_ENV}" --final-images-only=false)
+          FUZZ_IMAGES=$(printf '%s\n' "$images" | grep -- '-fuzz$' || true)
+          if [[ -z "$FUZZ_IMAGES" ]]; then
+            echo 'No fuzz images found (expected image names ending in -fuzz)' >&2
+            exit 1
+          fi
+          mapfile -t fuzz_images <<< "$FUZZ_IMAGES"
+          werf build "${fuzz_images[@]}" \
+            --insecure-registry --final-images-only=false \
             --parallel=true --parallel-tasks-limit=10 \
-            --save-build-report=true \
-            --build-report-path images_fuzz_tags_werf.json
-          command -v jq >/dev/null 2>&1 || {
-            echo "jq is required"
-            exit 1
-          }
+            --save-build-report=true --build-report-path images_fuzz_tags_werf.json
 
-          REPOSITORY="${GITHUB_REPOSITORY##*/}"
-          BRANCH="${CI_COMMIT_REF_NAME}"
-          BRANCH_SLUG="${CI_COMMIT_REF_SLUG}"
-          COMMIT="${GITHUB_SHA}"
+          jq -e --arg repository "${GITHUB_REPOSITORY##*/}" \
+            --arg branch "$CI_COMMIT_REF_NAME" --arg branchSlug "$CI_COMMIT_REF_SLUG" \
+            --arg commit "$(git rev-parse HEAD)" '
+            .Images |= with_entries(select(.key | endswith("-fuzz"))) |
+            if (.Images | length) == 0 then error("No fuzz images in build report") else . end |
+            .Source = ((.Source // {}) + {Repository: $repository, Branch: $branch,
+              BranchSlug: $branchSlug, Commit: $commit})
+          ' images_fuzz_tags_werf.json > images_fuzz_tags_werf.json.tmp
+          mv images_fuzz_tags_werf.json.tmp images_fuzz_tags_werf.json
+          matrix=$(jq -c '{include: (.Images | keys | to_entries | map({image: .value,
+            artifact: ("fuzz-replay-" + (.key | tostring) + "-" + (.value | gsub("/"; "-")))}))}' \
+            images_fuzz_tags_werf.json)
+          echo "matrix=$matrix" >> "$GITHUB_OUTPUT"
 
-          if [[ -z "${REPOSITORY}" || -z "${BRANCH}" || -z "${BRANCH_SLUG}" ]]; then
-            echo "Cannot determine repository/branch for fuzz build report upload"
-            exit 1
-          fi
-
-          jq \
-            --arg repository "${REPOSITORY}" \
-            --arg branch "${BRANCH}" \
-            --arg branchSlug "${BRANCH_SLUG}" \
-            --arg commit "${COMMIT}" \
-            '
-            .Source = {
-              Repository: $repository,
-              Branch: $branch,
-              BranchSlug: $branchSlug,
-              Commit: $commit
-            }
-            ' \
-            images_fuzz_tags_werf.json \
-            > images_fuzz_tags_werf.tmp.json
-          mv images_fuzz_tags_werf.tmp.json images_fuzz_tags_werf.json
-
-          if ! command -v aws >/dev/null 2>&1; then
-            AWS_CLI_DIR="$(mktemp -d "${RUNNER_TEMP}/fuzz-aws-cli.XXXXXX")"
-            curl -fsSL \
-              -o "${AWS_CLI_DIR}/awscliv2.zip" \
-              "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip"
-            unzip -q "${AWS_CLI_DIR}/awscliv2.zip" -d "${AWS_CLI_DIR}"
-            "${AWS_CLI_DIR}/aws/install" \
-              --bin-dir "${AWS_CLI_DIR}/bin" \
-              --install-dir "${AWS_CLI_DIR}/cli"
-            export PATH="${AWS_CLI_DIR}/bin:${PATH}"
-            rm -rf "${AWS_CLI_DIR}/aws" "${AWS_CLI_DIR}/awscliv2.zip"
-          fi
-
-          AWS_CA_BUNDLE="${AWS_CA_BUNDLE:-/etc/ssl/certs/ca-certificates.crt}" \
-          AWS_ACCESS_KEY_ID="${FUZZ_S3_ACCESS_KEY}" \
-          AWS_SECRET_ACCESS_KEY="${FUZZ_S3_SECRET_KEY}" \
-          aws --endpoint-url "${FUZZ_S3_ENDPOINT}" \
-            --region us-east-1 \
-            s3 cp "images_fuzz_tags_werf.json" \
-              "s3://anomaloys-materials/build-reports/${REPOSITORY}/${BRANCH_SLUG}/images_fuzz_tags_werf.json" \
-              --only-show-errors
-
+      - name: Upload fuzz build report
+        uses: actions/upload-artifact@v4.4.0
+        with:
+          name: fuzz-build-report
+          path: images_fuzz_tags_werf.json
+          if-no-files-found: error
+          retention-days: 7
     # </template: build_fuzz_template>
+
+
+  replay_fuzz:
+    name: Replay fuzz corpus (${{ matrix.image }})
+    needs:
+      - git_info
+      - build_fuzz
+    # <template: replay_fuzz_template>
+    runs-on: [self-hosted, large]
+    timeout-minutes: 60
+    strategy:
+      fail-fast: false
+      matrix: ${{ fromJSON(needs.build_fuzz.outputs.matrix) }}
+    steps:
+
+
+      # </template: docker-config-isolation>
+      - name: Isolate docker config
+        id: docker-config-isolation
+        run: |
+          mkdir -p $RUNNER_TEMP/.docker
+          echo "DOCKER_CONFIG=$RUNNER_TEMP/.docker" >> $GITHUB_ENV
+
+      # </template: docker_config_isolation>
+      # <template: import_secrets>
+      - name: Split repository name
+        id: split
+        env:
+          REPO: ${{ github.repository }}
+        run: |
+          if [ $REPO == "deckhouse/deckhouse" ]; then
+            echo "name=deckhouse" >> $GITHUB_OUTPUT
+          else
+            echo "name=deckhouse-test" >> $GITHUB_OUTPUT
+          fi
+      - name: Import secrets
+        id: secrets
+        uses: hashicorp/vault-action@v2
+        with:
+          url: https://seguro.flant.com
+          path: github
+          role: "${{ steps.split.outputs.name }}"
+          method: jwt
+          jwtGithubAudience: github-access-aud
+          secrets: |
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/registry_host DECKHOUSE_DEV_REGISTRY_HOST | DECKHOUSE_DEV_REGISTRY_HOST ;
+            projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/dev-registry/writetoken login | DECKHOUSE_DEV_REGISTRY_USER ;
+            projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/dev-registry/writetoken password | DECKHOUSE_DEV_REGISTRY_PASSWORD ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/team-ssdlc/fuzzing-s3 FUZZ_S3_ENDPOINT | FUZZ_S3_ENDPOINT ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/team-ssdlc/fuzzing-s3 FUZZ_S3_ACCESS_KEY | FUZZ_S3_ACCESS_KEY ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/team-ssdlc/fuzzing-s3 FUZZ_S3_SECRET_KEY | FUZZ_S3_SECRET_KEY ;
+
+      # </template: import_secrets>
+      - name: Checkout fuzz scripts
+        uses: actions/checkout@v3.5.2
+        with:
+          ref: ${{ needs.git_info.outputs.github_sha }}
+
+      # <template: login_dev_registry_step>
+      - name: Check dev registry credentials
+        id: check_dev_registry
+        env:
+          HOST: ${{steps.secrets.outputs.DECKHOUSE_DEV_REGISTRY_HOST}}
+        run: |
+          if [[ -n $HOST ]]; then
+            echo "has_credentials=true" >> $GITHUB_OUTPUT
+            echo "web_registry_path=${{steps.secrets.outputs.DECKHOUSE_DEV_REGISTRY_HOST }}/deckhouse/site" >> $GITHUB_OUTPUT
+          fi
+      - name: Login to dev registry
+        uses: docker/login-action@v2.1.0
+        if: ${{ steps.check_dev_registry.outputs.has_credentials == 'true' }}
+        with:
+          registry: ${{ steps.secrets.outputs.DECKHOUSE_DEV_REGISTRY_HOST }}
+          username: ${{ steps.secrets.outputs.DECKHOUSE_DEV_REGISTRY_USER }}
+          password: ${{ steps.secrets.outputs.DECKHOUSE_DEV_REGISTRY_PASSWORD }}
+          logout: false
+      # </template: login_dev_registry_step>
+      - name: Download fuzz build report
+        uses: actions/download-artifact@v4.1.8
+        with:
+          name: fuzz-build-report
+
+      - name: Replay fuzz corpus
+        env:
+
+          FUZZ_S3_ENDPOINT: ${{ steps.secrets.outputs.FUZZ_S3_ENDPOINT }}
+          FUZZ_S3_ACCESS_KEY: ${{ steps.secrets.outputs.FUZZ_S3_ACCESS_KEY }}
+          FUZZ_S3_SECRET_KEY: ${{ steps.secrets.outputs.FUZZ_S3_SECRET_KEY }}
+          FUZZ_S3_REPOSITORY: ${{ github.event.repository.name }}
+
+          FUZZ_IMAGE: ${{ matrix.image }}
+          FUZZ_ARTIFACT: ${{ matrix.artifact }}
+          FUZZ_RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          FUZZ_S3_BRANCH_SLUG: ${{ needs.git_info.outputs.ci_commit_ref_slug }}
+        run: bash .github/scripts/fuzz/replay.sh
+
+      - name: Upload fuzz replay diagnostics
+        if: ${{ always() }}
+        uses: actions/upload-artifact@v4.4.0
+        with:
+          name: ${{ matrix.artifact }}
+          path: fuzz-replay/
+          if-no-files-found: warn
+          retention-days: 7
+    # </template: replay_fuzz_template>
+
+
+  publish_fuzz_report:
+    name: Publish fuzz build report
+    needs:
+      - git_info
+      - build_fuzz
+      - replay_fuzz
+
+    # <template: publish_fuzz_report_template>
+    runs-on: [self-hosted, large]
+    steps:
+
+
+      # </template: docker-config-isolation>
+      - name: Isolate docker config
+        id: docker-config-isolation
+        run: |
+          mkdir -p $RUNNER_TEMP/.docker
+          echo "DOCKER_CONFIG=$RUNNER_TEMP/.docker" >> $GITHUB_ENV
+
+      # </template: docker_config_isolation>
+      # <template: import_secrets>
+      - name: Split repository name
+        id: split
+        env:
+          REPO: ${{ github.repository }}
+        run: |
+          if [ $REPO == "deckhouse/deckhouse" ]; then
+            echo "name=deckhouse" >> $GITHUB_OUTPUT
+          else
+            echo "name=deckhouse-test" >> $GITHUB_OUTPUT
+          fi
+      - name: Import secrets
+        id: secrets
+        uses: hashicorp/vault-action@v2
+        with:
+          url: https://seguro.flant.com
+          path: github
+          role: "${{ steps.split.outputs.name }}"
+          method: jwt
+          jwtGithubAudience: github-access-aud
+          secrets: |
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/registry_host DECKHOUSE_DEV_REGISTRY_HOST | DECKHOUSE_DEV_REGISTRY_HOST ;
+            projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/dev-registry/writetoken login | DECKHOUSE_DEV_REGISTRY_USER ;
+            projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/dev-registry/writetoken password | DECKHOUSE_DEV_REGISTRY_PASSWORD ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/team-ssdlc/fuzzing-s3 FUZZ_S3_ENDPOINT | FUZZ_S3_ENDPOINT ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/team-ssdlc/fuzzing-s3 FUZZ_S3_ACCESS_KEY | FUZZ_S3_ACCESS_KEY ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/team-ssdlc/fuzzing-s3 FUZZ_S3_SECRET_KEY | FUZZ_S3_SECRET_KEY ;
+
+      # </template: import_secrets>
+      - name: Checkout fuzz scripts
+        uses: actions/checkout@v3.5.2
+        with:
+          ref: ${{ needs.git_info.outputs.github_sha }}
+
+      # <template: login_dev_registry_step>
+      - name: Check dev registry credentials
+        id: check_dev_registry
+        env:
+          HOST: ${{steps.secrets.outputs.DECKHOUSE_DEV_REGISTRY_HOST}}
+        run: |
+          if [[ -n $HOST ]]; then
+            echo "has_credentials=true" >> $GITHUB_OUTPUT
+            echo "web_registry_path=${{steps.secrets.outputs.DECKHOUSE_DEV_REGISTRY_HOST }}/deckhouse/site" >> $GITHUB_OUTPUT
+          fi
+      - name: Login to dev registry
+        uses: docker/login-action@v2.1.0
+        if: ${{ steps.check_dev_registry.outputs.has_credentials == 'true' }}
+        with:
+          registry: ${{ steps.secrets.outputs.DECKHOUSE_DEV_REGISTRY_HOST }}
+          username: ${{ steps.secrets.outputs.DECKHOUSE_DEV_REGISTRY_USER }}
+          password: ${{ steps.secrets.outputs.DECKHOUSE_DEV_REGISTRY_PASSWORD }}
+          logout: false
+      # </template: login_dev_registry_step>
+      - name: Download fuzz build report
+        uses: actions/download-artifact@v4.1.8
+        with:
+          name: fuzz-build-report
+
+      - name: Publish fuzz build report
+        env:
+
+          FUZZ_S3_ENDPOINT: ${{ steps.secrets.outputs.FUZZ_S3_ENDPOINT }}
+          FUZZ_S3_ACCESS_KEY: ${{ steps.secrets.outputs.FUZZ_S3_ACCESS_KEY }}
+          FUZZ_S3_SECRET_KEY: ${{ steps.secrets.outputs.FUZZ_S3_SECRET_KEY }}
+          FUZZ_S3_REPOSITORY: ${{ github.event.repository.name }}
+
+        run: bash .github/scripts/fuzz/publish-report.sh
+    # </template: publish_fuzz_report_template>
 
 
   go_generate:
