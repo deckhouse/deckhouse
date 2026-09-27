@@ -10,7 +10,6 @@ require (
 	github.com/prometheus/client_golang v1.22.0
 	github.com/stretchr/testify v1.11.1
 	github.com/tidwall/gjson v1.18.0
-	gopkg.in/yaml.v3 v3.0.1
 	k8s.io/api v0.33.8
 	k8s.io/apimachinery v0.33.12
 	k8s.io/client-go v0.33.8
@@ -25,7 +24,7 @@ require (
 	github.com/cespare/xxhash/v2 v2.3.0 // indirect
 	github.com/containerd/stargz-snapshotter/estargz v0.18.1 // indirect
 	github.com/davecgh/go-spew v1.1.2-0.20180830191138-d8f796af33cc // indirect
-	github.com/deckhouse/delivery-kit-sdk v1.1.0 // indirect
+	github.com/deckhouse/delivery-kit-sdk v1.4.2 // indirect
 	github.com/deckhouse/rootca v0.0.0-20250721220328-2b84d72a5db3 // indirect
 	github.com/docker/cli v29.2.0+incompatible // indirect
 	github.com/docker/distribution v2.8.3+incompatible // indirect
@@ -94,6 +93,7 @@ require (
 	google.golang.org/protobuf v1.36.11 // indirect
 	gopkg.in/evanphx/json-patch.v4 v4.12.0 // indirect
 	gopkg.in/inf.v0 v0.9.1 // indirect
+	gopkg.in/yaml.v3 v3.0.1 // indirect
 	k8s.io/klog/v2 v2.130.1 // indirect
 	k8s.io/kube-openapi v0.0.0-20250318190949-c8a335a9a2ff // indirect
 	k8s.io/utils v0.0.0-20260108192941-914a6e750570 // indirect
