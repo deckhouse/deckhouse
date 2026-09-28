@@ -422,7 +422,11 @@ type cloudProviderModuleSettings struct {
 // Users can supply multiple ModuleConfigs with the same name (e.g. a base v1
 // "enabled: true" entry plus a v2 overlay with the actual settings). We pick
 // the *last* entry that carries non-empty Spec.Settings so that overlays win.
+// Nothing is applied unless one of them is enabled.
 func (m *MetaConfig) applyCloudProviderModuleSettings() error {
+	if !m.HasProviderModuleConfig() {
+		return nil
+	}
 	name := CloudProviderModuleName(m.ProviderName)
 	var picked *ModuleConfig
 	for _, mc := range m.ModuleConfigs {
@@ -649,20 +653,26 @@ func (m *MetaConfig) HasClusterConfiguration() bool {
 	return m != nil && len(m.ClusterConfig) > 0
 }
 
-// findProviderModuleConfig returns the cloud-provider-<name> ModuleConfig
-// when present, or nil. Used to detect whether the cluster is on the new
+// findProviderModuleConfig returns the enabled cloud-provider-<name>
+// ModuleConfig, or nil. Used to detect whether the cluster is on the new
 // mc-flow provider format.
 func (m *MetaConfig) findProviderModuleConfig() *ModuleConfig {
 	if m == nil || m.ProviderName == "" {
 		return nil
 	}
-	if mc := m.FindModuleConfig(CloudProviderModuleName(m.ProviderName)); mc != nil {
-		return mc
+	name := CloudProviderModuleName(m.ProviderName)
+	for _, mc := range m.ModuleConfigs {
+		if mc.GetName() == name && moduleConfigEnabled(mc) {
+			return mc
+		}
 	}
-	return m.externalProviderModuleConfig
+	if m.externalProviderModuleConfig != nil && moduleConfigEnabled(m.externalProviderModuleConfig) {
+		return m.externalProviderModuleConfig
+	}
+	return nil
 }
 
-// HasProviderModuleConfig reports whether the cluster carries a
+// HasProviderModuleConfig reports whether the cluster carries an enabled
 // cloud-provider-<name> ModuleConfig (the new mc-flow provider format).
 func (m *MetaConfig) HasProviderModuleConfig() bool {
 	return m.findProviderModuleConfig() != nil
