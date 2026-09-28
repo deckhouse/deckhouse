@@ -81,3 +81,37 @@ imageSpec:
   config:
     entrypoint: ["/registry"]
     cmd: ["serve", "/config/config.yaml"]
+{{- if env "FUZZ_S3_ENDPOINT" "" }}
+{{- $fuzzCommit := "b998a276dc7e09abbdc36b012d8e898580f17bc9" }}
+---
+# Fuzz the legacy fork's deckhouse branch independently of the v3 wrapper above.
+# Includes the seed regression fixes from 3p-distribution PR #8.
+image: "{{ $.ModuleName }}/{{ $.ImageName }}-fuzz-src-artifact"
+fromImage: common/src-artifact
+final: false
+secrets:
+  - id: SOURCE_REPO
+    value: "{{ $.SOURCE_REPO }}"
+shell:
+  install:
+    - git init /src/distribution
+    - cd /src/distribution
+    - git remote add origin $(cat /run/secrets/SOURCE_REPO)/deckhouse/3p-distribution.git
+    - git fetch --depth 1 origin {{ $fuzzCommit }}
+    - git checkout --detach FETCH_HEAD
+    - rm -rf .git
+---
+image: "{{ $.ModuleName }}/{{ $.ImageName }}-fuzz-artifact"
+from: {{ index $.Images "builder/golang" }}
+final: false
+import:
+  - image: "{{ $.ModuleName }}/{{ $.ImageName }}-fuzz-src-artifact"
+    add: /src/distribution
+    before: install
+---
+{{- $_ := set . "FuzzEngine" "go" }}
+{{- $_ := set . "FuzzSrcImage" (printf "%s/%s-fuzz-artifact" .ModuleName .ImageName) }}
+{{- $_ := set . "FuzzSrcAdd" "/src/distribution" }}
+{{- $_ := set . "FuzzPackages" ". ./registry ./registry/handlers ./registry/proxy" }}
+{{- include "fuzz image" . }}
+{{- end }}
