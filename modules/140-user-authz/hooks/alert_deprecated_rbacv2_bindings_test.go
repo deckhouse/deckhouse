@@ -126,6 +126,131 @@ subjects:
   name: alice@example.com
   apiGroup: rbac.authorization.k8s.io
 `
+
+	// The alias state-snapshotter keeps for the old name of its backup agent role, and a partner's
+	// binding to it.
+	crModuleAlias = `
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: d8:use:capability:module:state-snapshotter:backup_agent
+  labels:
+    heritage: deckhouse
+    module: state-snapshotter
+    rbac.deckhouse.io/deprecated: "true"
+  annotations:
+    rbac.deckhouse.io/deprecated-replaced-by: d8:state-snapshotter:backup-agent
+aggregationRule:
+  clusterRoleSelectors:
+  - matchLabels:
+      state-snapshotter.deckhouse.io/aggregate-to-backup-agent: "true"
+`
+	rbModuleAlias = `
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: backup-agent
+  namespace: backup
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: d8:use:capability:module:state-snapshotter:backup_agent
+subjects:
+- kind: ServiceAccount
+  name: agent
+  namespace: backup
+`
+	// A module that renamed a role already on the 1.78 naming (d8:<module>:<name>) and kept the old
+	// name as an alias, a binding to that alias, and a binding to a current role of a module.
+	crModuleRenamedAlias = `
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: d8:state-snapshotter:backup-agent
+  labels:
+    heritage: deckhouse
+    module: state-snapshotter
+    rbac.deckhouse.io/deprecated: "true"
+  annotations:
+    rbac.deckhouse.io/deprecated-replaced-by: d8:state-snapshotter:snapshot-agent
+aggregationRule:
+  clusterRoleSelectors:
+  - matchLabels:
+      state-snapshotter.deckhouse.io/aggregate-to-snapshot-agent: "true"
+`
+	crbModuleRenamedAlias = `
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: backup-agent
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: d8:state-snapshotter:backup-agent
+subjects:
+- kind: ServiceAccount
+  name: agent
+  namespace: backup
+`
+	crbCurrentModuleRole = `
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: d8:node-manager:caps-controller-manager
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: d8:node-manager:caps-controller-manager
+subjects:
+- kind: ServiceAccount
+  name: caps-controller-manager
+  namespace: d8-cloud-instance-manager
+`
+	// Aliases a module labelled deprecated but left without the replaced-by annotation: one under a
+	// legacy name, one under a 1.78 name.
+	crModuleAliasNoReplacement = `
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: d8:use:capability:module:state-snapshotter:backup_agent
+  labels:
+    heritage: deckhouse
+    module: state-snapshotter
+    rbac.deckhouse.io/deprecated: "true"
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: d8:state-snapshotter:backup-agent
+  labels:
+    heritage: deckhouse
+    module: state-snapshotter
+    rbac.deckhouse.io/deprecated: "true"
+`
+	// An alias of the platform: user-authz's own, told apart by name.
+	crPlatformAlias = `
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: d8:use:role:viewer
+  labels:
+    heritage: deckhouse
+    module: user-authz
+    rbac.deckhouse.io/deprecated: "true"
+  annotations:
+    rbac.deckhouse.io/deprecated-replaced-by: d8:namespace:viewer
+aggregationRule:
+  clusterRoleSelectors:
+  - matchLabels:
+      rbac.deckhouse.io/aggregate-to-namespace-as: viewer
+`
 )
 
 var _ = Describe("User-authz hooks :: alert_deprecated_rbacv2_bindings ::", func() {
@@ -208,6 +333,7 @@ var _ = Describe("User-authz hooks :: alert_deprecated_rbacv2_bindings ::", func
 					"namespace":    "",
 					"role_name":    "d8:manage:observability:manager",
 					"aliased":      "true",
+					"replaced_by":  "",
 				},
 			}))
 		})
@@ -234,6 +360,7 @@ var _ = Describe("User-authz hooks :: alert_deprecated_rbacv2_bindings ::", func
 					"namespace":    "team-a",
 					"role_name":    "d8:use:role:viewer",
 					"aliased":      "true",
+					"replaced_by":  "",
 				},
 			}))
 		})
@@ -260,6 +387,7 @@ var _ = Describe("User-authz hooks :: alert_deprecated_rbacv2_bindings ::", func
 					"namespace":    "",
 					"role_name":    "d8:manage:permission:module:prometheus:view",
 					"aliased":      "false",
+					"replaced_by":  "",
 				},
 			}))
 		})
@@ -269,6 +397,56 @@ var _ = Describe("User-authz hooks :: alert_deprecated_rbacv2_bindings ::", func
 			value, exists := requirements.GetValue(DeprecatedRBACv2BindingsValueKey)
 			Expect(exists).To(BeTrue())
 			Expect(value).To(BeEmpty())
+		})
+	})
+
+	Context("A binding to the alias a module keeps for a role of its own", func() {
+		BeforeEach(func() {
+			f.BindingContexts.Set(f.KubeStateSet(crModuleAlias + rbModuleAlias + crPlatformAlias + rbDeprecatedUse))
+			f.RunHook()
+		})
+
+		It("Flags it as aliased by the module, with the new name, whatever prefix the old name has", func() {
+			Expect(f).To(ExecuteSuccessfully())
+			m := f.MetricsCollector.CollectedMetrics()
+			Expect(m).To(HaveLen(3))
+			Expect(m[1:]).To(ConsistOf(
+				operation.MetricOperation{
+					Name:   deprecatedRBACv2Metric,
+					Group:  deprecatedRBACv2Metric,
+					Action: operation.ActionGaugeSet,
+					Value:  ptr.To(1.0),
+					Labels: map[string]string{
+						"binding_kind": "RoleBinding",
+						"binding_name": "backup-agent",
+						"namespace":    "backup",
+						"role_name":    "d8:use:capability:module:state-snapshotter:backup_agent",
+						"aliased":      "module",
+						"replaced_by":  "d8:state-snapshotter:backup-agent",
+					},
+				},
+				operation.MetricOperation{
+					Name:   deprecatedRBACv2Metric,
+					Group:  deprecatedRBACv2Metric,
+					Action: operation.ActionGaugeSet,
+					Value:  ptr.To(1.0),
+					Labels: map[string]string{
+						"binding_kind": "RoleBinding",
+						"binding_name": "legacy-viewer",
+						"namespace":    "team-a",
+						"role_name":    "d8:use:role:viewer",
+						"aliased":      "true",
+						"replaced_by":  "",
+					},
+				},
+			))
+		})
+
+		It("Holds the release for the alias of the platform only: the module removes its own", func() {
+			Expect(f).To(ExecuteSuccessfully())
+			value, exists := requirements.GetValue(DeprecatedRBACv2BindingsValueKey)
+			Expect(exists).To(BeTrue())
+			Expect(value).To(Equal([]string{"RoleBinding team-a/legacy-viewer -> d8:use:role:viewer"}))
 		})
 	})
 
@@ -293,6 +471,66 @@ var _ = Describe("User-authz hooks :: alert_deprecated_rbacv2_bindings ::", func
 					"namespace":    "team-a",
 					"role_name":    "d8:use:capability:kubernetes:view_secrets",
 					"aliased":      "false",
+					"replaced_by":  "",
+				},
+			}))
+		})
+	})
+	Context("A binding to an alias a module keeps after renaming a role on the 1.78 naming", func() {
+		BeforeEach(func() {
+			f.BindingContexts.Set(f.KubeStateSet(crModuleRenamedAlias + crbModuleRenamedAlias + crbCurrentModuleRole + crbNewModel))
+			f.RunHook()
+		})
+
+		It("Flags the binding to the alias and nothing bound to a current role", func() {
+			Expect(f).To(ExecuteSuccessfully())
+			m := f.MetricsCollector.CollectedMetrics()
+			Expect(m).To(HaveLen(2))
+			Expect(m[1]).To(Equal(operation.MetricOperation{
+				Name:   deprecatedRBACv2Metric,
+				Group:  deprecatedRBACv2Metric,
+				Action: operation.ActionGaugeSet,
+				Value:  ptr.To(1.0),
+				Labels: map[string]string{
+					"binding_kind": "ClusterRoleBinding",
+					"binding_name": "backup-agent",
+					"namespace":    "",
+					"role_name":    "d8:state-snapshotter:backup-agent",
+					"aliased":      "module",
+					"replaced_by":  "d8:state-snapshotter:snapshot-agent",
+				},
+			}))
+		})
+
+		It("Does not hold the release", func() {
+			value, exists := requirements.GetValue(DeprecatedRBACv2BindingsValueKey)
+			Expect(exists).To(BeTrue())
+			Expect(value).To(BeEmpty())
+		})
+	})
+
+	Context("Bindings to aliases of a module without the replaced-by annotation", func() {
+		BeforeEach(func() {
+			f.BindingContexts.Set(f.KubeStateSet(crModuleAliasNoReplacement + rbModuleAlias + crbModuleRenamedAlias))
+			f.RunHook()
+		})
+
+		It("Keeps the classification of the name instead of an alert with no new name", func() {
+			Expect(f).To(ExecuteSuccessfully())
+			m := f.MetricsCollector.CollectedMetrics()
+			Expect(m).To(HaveLen(2), "the binding to the 1.78 name is not flagged at all")
+			Expect(m[1]).To(Equal(operation.MetricOperation{
+				Name:   deprecatedRBACv2Metric,
+				Group:  deprecatedRBACv2Metric,
+				Action: operation.ActionGaugeSet,
+				Value:  ptr.To(1.0),
+				Labels: map[string]string{
+					"binding_kind": "RoleBinding",
+					"binding_name": "backup-agent",
+					"namespace":    "backup",
+					"role_name":    "d8:use:capability:module:state-snapshotter:backup_agent",
+					"aliased":      "false",
+					"replaced_by":  "",
 				},
 			}))
 		})

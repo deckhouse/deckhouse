@@ -93,7 +93,7 @@ done
 
 if [[ ${#FILES[@]} -eq 0 ]]; then
   echo "no RBACv2 templates found under: ${PATHS[*]}"
-  echo "expected files at <module>/templates/rbacv2/{manage,use}/{view,edit}.yaml"
+  echo "expected files at <module>/templates/rbacv2/{manage,use}/<action>.yaml"
   exit 0
 fi
 
@@ -109,8 +109,16 @@ DUAL = os.environ.get("DUAL") == "1"
 
 # The legacy names carry everything needed to build the new ones: the tier the object belonged to
 # (use = permissions inside a namespace, manage = the module's own configuration), the module, and
-# the action.
-LEGACY_NAME = re.compile(r"^(\s*name:\s*)(d8:(use:capability|manage:permission):module:([a-z0-9-]+):(view|edit))\s*$", re.M)
+# the action: view and edit, or an action of the module's own (download_snapshots).
+LEGACY_NAME = re.compile(r"^(\s*name:\s*)(d8:(use:capability|manage:permission):module:([a-z0-9-]+):([a-z0-9_]+))\s*$", re.M)
+
+# The lineages of the platform, before 1.78 and after. Any other rbac.deckhouse.io/aggregate-to-<x>-as
+# is an axis of a module (state-snapshotter's backup-agent), which the 1.78 contract refuses as an
+# unknown lineage: it is neither a level to migrate to nor one to drop, since a role of the module
+# collects the capability by it.
+LINEAGES = ["all", "deckhouse", "infrastructure", "kubernetes", "namespace", "networking", "observability",
+            "project", "security", "storage", "system"]
+LINEAGE = "(?:" + "|".join(LINEAGES) + ")"
 
 SCOPE_OF_TIER = {"use": "namespace", "manage": "system"}
 
@@ -229,6 +237,17 @@ def aggregation_labels(text, helm):
     return re.findall(pattern, text)
 
 
+def generic_texts(action):
+    """Texts for an action outside view/edit, from its name: the script cannot know what it means."""
+    words = action.replace("_", " ")
+    return (
+        "Module {m}: " + words,
+        "Модуль {m}: " + words,
+        "The " + words + " capability of the {m} module.",
+        "Capability " + words + " модуля {m}.",
+    )
+
+
 def migrate(path, text):
     match = LEGACY_NAME.search(text)
     if match is None:
@@ -244,11 +263,32 @@ def migrate(path, text):
     marker = f"{scope}-capability.{module}.{action}"
     new_name = f"d8:{scope}-capability:{module}:{action}"
 
-    helm = "helm_lib_module_labels" in text
-    levels = aggregation_labels(text, helm)
-    if not levels:
-        warn(path, "no rbac.deckhouse.io/aggregate-to-*-as label: the capability would land in no role")
+    # A legacy name on a role that only aggregates (no rules of its own) is a role of the module, and
+    # the 1.78 model has no place for one: it is not a capability to rename.
+    if re.search(r"^aggregationRule:", text, re.M):
+        warn(path, "an aggregating role, not a capability: 1.78 has no role of a module in the model. Ship it as an "
+                   "ordinary ClusterRole outside the model (no rbac.deckhouse.io/kind, named d8:<module>:<name>, "
+                   "aggregationRule by a label of the module) and keep this name as an alias in "
+                   "templates/rbacv2-compat/; see RBACV2_MODULE_MIGRATION.md")
+        skipped.append(f"{path}: an aggregating role, left alone")
         return None
+
+    helm = "helm_lib_module_labels" in text
+    labels = aggregation_labels(text, helm)
+    levels = [(lineage, level) for lineage, level in labels if lineage in LINEAGES]
+    axes = [lineage for lineage, _ in labels if lineage not in LINEAGES]
+    if not levels:
+        if axes:
+            warn(path, f"aggregates only into {', '.join(axes)}, which the role model does not know: a capability also "
+                       "aggregates into a level of the platform, or the contract refuses it -- add one, then rerun")
+        else:
+            warn(path, "no rbac.deckhouse.io/aggregate-to-*-as label: the capability would land in no role")
+        return None
+    for axis in axes:
+        warn(path, f"rbac.deckhouse.io/aggregate-to-{axis}-as is not a lineage of the role model, and the 1.78 contract "
+                   f"refuses it; it is kept so the role that collects it keeps the capability. Move it to a label of "
+                   f"the module (for example {module}.deckhouse.io/aggregate-to-{axis}: \"true\") on every capability "
+                   f"that role collects, and select by it in that role")
     if tier == "use" and len({level for _, level in levels}) > 1:
         warn(path, f"the aggregation labels disagree on the level ({levels}); "
                    "collapsed into the first one, check which level this capability belongs to")
@@ -263,9 +303,9 @@ def migrate(path, text):
         text = re.sub(r"\(dict ", f'(dict "rbac.deckhouse.io/capability" "{marker}" ', text, count=1)
         text = re.sub(r'\s*"rbac\.deckhouse\.io/level"\s+"[a-z]+"', "", text)
         if tier == "use":
-            text = re.sub(r'"rbac\.deckhouse\.io/aggregate-to-[a-z0-9-]+-as"\s+"[a-z]+"',
+            text = re.sub(rf'"rbac\.deckhouse\.io/aggregate-to-{LINEAGE}-as"\s+"[a-z]+"',
                           f'"rbac.deckhouse.io/aggregate-to-namespace-as" "{level}"', text, count=1)
-            text = re.sub(r'\s*"rbac\.deckhouse\.io/aggregate-to-(?!namespace)[a-z0-9-]+-as"\s+"[a-z]+"', "", text)
+            text = re.sub(rf'\s*"rbac\.deckhouse\.io/aggregate-to-(?!namespace-as){LINEAGE}-as"\s+"[a-z]+"', "", text)
     else:
         indent = re.search(r"^(\s*)rbac\.deckhouse\.io/kind:", text, re.M)
         pad = indent.group(1) if indent else "    "
@@ -275,17 +315,23 @@ def migrate(path, text):
                       f"{pad}rbac.deckhouse.io/scope: {scope}", text, count=1, flags=re.M)
         text = re.sub(r"^\s*rbac\.deckhouse\.io/level:\s*\"?[a-z]+\"?\s*$\n", "", text, flags=re.M)
         if tier == "use":
-            text = re.sub(r"^(\s*)rbac\.deckhouse\.io/aggregate-to-[a-z0-9-]+-as:\s*\"?[a-z]+\"?\s*$",
+            text = re.sub(rf"^(\s*)rbac\.deckhouse\.io/aggregate-to-{LINEAGE}-as:\s*\"?[a-z]+\"?\s*$",
                           rf"\g<1>rbac.deckhouse.io/aggregate-to-namespace-as: {level}",
                           text, count=1, flags=re.M)
-            text = re.sub(r"^\s*rbac\.deckhouse\.io/aggregate-to-(?!namespace)[a-z0-9-]+-as:\s*\"?[a-z]+\"?\s*$\n",
+            text = re.sub(rf"^\s*rbac\.deckhouse\.io/aggregate-to-(?!namespace-as){LINEAGE}-as:\s*\"?[a-z]+\"?\s*$\n",
                           "", text, flags=re.M)
 
     if tier == "use" and re.search(r"rbac\.deckhouse\.io/namespace", text):
         warn(path, "the rbac.deckhouse.io/namespace label is only read on system and subsystem "
                    "capabilities; on a namespace one it does nothing")
 
-    en_title, ru_title, en_desc, ru_desc = (t.format(m=module) for t in TEXTS[(tier, action)])
+    texts = TEXTS.get((tier, action))
+    if texts is None:
+        texts = generic_texts(action)
+        if "meta.deckhouse.io/title" not in text:
+            warn(path, f"the titles and descriptions of {new_name} are written from its name; reword them in both "
+                       "languages: the console shows them next to the capability")
+    en_title, ru_title, en_desc, ru_desc = (t.format(m=module) for t in texts)
     annotations = (
         f'  annotations:\n'
         f'    en.meta.deckhouse.io/title: "{en_title}"\n'

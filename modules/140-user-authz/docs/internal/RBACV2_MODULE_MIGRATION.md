@@ -241,6 +241,27 @@ clusters below 1.78.
    part belongs in a separate system capability.
 4. **The wording.** The generated titles and descriptions follow the platform convention and mention
    the module by name; read them once — they are what the console shows next to the capability.
+5. **An action of the module's own.** A capability named after something other than `view` or `edit`
+   (`d8:use:capability:module:state-snapshotter:download_snapshots`) keeps its action:
+   `d8:namespace-capability:state-snapshotter:download_snapshots`. There is no convention for its texts, so
+   the script writes them from the action's name and says so; reword them in both languages.
+6. **An axis of the module, and a role that collects it.** A label `rbac.deckhouse.io/aggregate-to-<axis>-as`
+   whose axis is not a lineage of the platform (state-snapshotter's `backup-agent`) is kept, so the role
+   that collects the capability still has it, and reported: the 1.78 contract refuses it as an unknown
+   lineage. A capability carrying only such an axis is left alone — it aggregates into no level of the
+   platform, and the contract refuses that too; pick a level for it, then rerun. A legacy name on a role
+   that only aggregates (an `aggregationRule` and no rules) is not a capability, and the script leaves it
+   alone. The 1.78 model has no role of a module: ship it as an ordinary ClusterRole outside the model —
+   without `rbac.deckhouse.io/kind`, named `d8:<module>:<name>`, with an `aggregationRule` by a label of
+   the module outside `rbac.deckhouse.io/` (`state-snapshotter.deckhouse.io/aggregate-to-backup-agent: "true"`),
+   the label put on every capability it collects, in every module that ships one. Keep the old name
+   as an alias in `templates/rbacv2-compat/`, the way user-authz keeps its own: an empty ClusterRole whose
+   `aggregationRule` repeats the new role's selector, with the `rbac.deckhouse.io/deprecated: "true"` label
+   and the `rbac.deckhouse.io/deprecated-replaced-by` annotation. A binding to the alias raises
+   `D8UserAuthzDeprecatedRBACv2ModuleRoleInUse` and does not hold a Deckhouse release. The annotation
+   is required: an alias without it is ignored with a warning in the log. The same works for a later
+   rename of a `d8:<module>:<name>` role: the alias may carry any `d8:` name except the platform's own
+   role families (`d8:system:`, `d8:subsystem:`, `d8:namespace:`, `d8:project:`, `d8:custom:`, `d8:dict`).
 
 ## Checking the result
 

@@ -4460,6 +4460,24 @@ alerts:
         A binding references a deprecated RBACv2 capability that no longer grants access.
       severity: "5"
       markupFormat: markdown
+    - name: D8UserAuthzDeprecatedRBACv2ModuleRoleInUse
+      sourceFile: modules/140-user-authz/monitoring/prometheus-rules/deprecated-rbacv2-roles.yaml
+      moduleUrl: 140-user-authz
+      module: user-authz
+      edition: ce
+      description: |-
+        The `{{ $labels.binding_kind }}` `{{ $labels.binding_name }}`{{ if $labels.namespace }} in namespace `{{ $labels.namespace }}`{{ end }} references `{{ $labels.role_name }}`, the old name of a role that a module renamed to `{{ $labels.replaced_by }}`.
+
+        The module keeps the old name as a compatibility alias, so the binding still grants what the new role grants. The module removes the alias in one of its own releases; the Deckhouse release is not held back by this binding. See the documentation of the module for when.
+
+        Recreate the binding on the new name. Because `roleRef` is immutable, delete and recreate the binding pointing at `{{ $labels.replaced_by }}`:
+        ```bash
+        d8 k get {{ $labels.binding_kind | lower }} {{ $labels.binding_name }}{{ if $labels.namespace }} -n {{ $labels.namespace }}{{ end }} -o yaml
+        ```
+      summary: |
+        A binding references the old name of a role a module renamed.
+      severity: "7"
+      markupFormat: markdown
     - name: D8UserAuthzDeprecatedRBACv2RoleInUse
       sourceFile: modules/140-user-authz/monitoring/prometheus-rules/deprecated-rbacv2-roles.yaml
       moduleUrl: 140-user-authz

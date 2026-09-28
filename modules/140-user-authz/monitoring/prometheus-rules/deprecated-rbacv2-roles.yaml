@@ -32,6 +32,34 @@
 
         Note: the new `d8:namespace:admin` no longer grants `serviceaccounts/token` creation or impersonation — these disaster-grade actions now require a `superadmin` role by design.
 
+  # Bindings to the old name of a role a module renamed and keeps as an alias. The alias grants what
+  # the new role grants, and the module, not a release of the platform, removes it: the binding does
+  # not hold the release.
+  - alert: D8UserAuthzDeprecatedRBACv2ModuleRoleInUse
+    expr: |
+      max by (binding_kind, binding_name, namespace, role_name, replaced_by) (d8_rbacv2_deprecated_role_in_use{aliased="module"}) > 0
+    for: 15m
+    labels:
+      severity_level: "7"
+      tier: cluster
+      d8_module: user-authz
+      d8_component: rbacv2
+    annotations:
+      plk_protocol_version: "1"
+      plk_markup_format: "markdown"
+      plk_create_group_if_not_exists__d8_user_authz_deprecated_rbacv2: "D8UserAuthzDeprecatedRBACv2,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
+      plk_grouped_by__d8_user_authz_deprecated_rbacv2: "D8UserAuthzDeprecatedRBACv2,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
+      summary: A binding references the old name of a role a module renamed.
+      description: |-
+        The `{{ $labels.binding_kind }}` `{{ $labels.binding_name }}`{{ if $labels.namespace }} in namespace `{{ $labels.namespace }}`{{ end }} references `{{ $labels.role_name }}`, the old name of a role that a module renamed to `{{ $labels.replaced_by }}`.
+
+        The module keeps the old name as a compatibility alias, so the binding still grants what the new role grants. The module removes the alias in one of its own releases; the Deckhouse release is not held back by this binding. See the documentation of the module for when.
+
+        Recreate the binding on the new name. Because `roleRef` is immutable, delete and recreate the binding pointing at `{{ $labels.replaced_by }}`:
+        ```bash
+        d8 k get {{ $labels.binding_kind | lower }} {{ $labels.binding_name }}{{ if $labels.namespace }} -n {{ $labels.namespace }}{{ end }} -o yaml
+        ```
+
   # Bindings to a deprecated CAPABILITY name — capabilities are aggregation building blocks, were never
   # meant to be bound directly and have NO compat alias, so the binding already grants nothing. Higher
   # urgency than the aliased-role case.
