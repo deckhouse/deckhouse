@@ -129,6 +129,12 @@ properties:
             type: [integer, string]
           nodeStatusUpdateFrequency:
             type: [integer, string]
+          concurrentDeploymentSyncs:
+            type: integer
+          concurrentReplicaSetSyncs:
+            type: integer
+          concurrentHorizontalPodAutoscalerSyncs:
+            type: integer
       kubeSchedulerExtenders:
         type: array
         items:

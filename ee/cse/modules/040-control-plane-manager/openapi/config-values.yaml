@@ -559,6 +559,34 @@ properties:
     description: |
       The number of seconds after which pods will be deleted from the node with the `Unreachable` status.
       > **Note!** If you change the parameter, the pods  must be restarted.
+  controllerManager:
+    type: object
+    description: |
+      `kube-controller-manager` tuning.
+
+      The worker counts below default to the upstream `kube-controller-manager` values (5 each). On clusters where many Deployments roll at once (for example, a per-tenant deploy that restarts hundreds of Deployments in one wave) or with many HorizontalPodAutoscaler objects, five workers keep the corresponding work queue permanently backlogged: each Deployment waits in the queue before its ReplicaSet/pod changes are made, and each HPA is evaluated less often than its sync period. Raise the value for the affected controller when its `workqueue_depth{name="<controller>"}` stays above zero between waves or its `workqueue_queue_duration_seconds` p90 is measured in seconds.
+
+      > Changing any of these parameters restarts `kube-controller-manager` on every master node (one at a time).
+    additionalProperties: false
+    properties:
+      concurrentDeploymentSyncs:
+        type: integer
+        minimum: 1
+        maximum: 100
+        description: |
+          The number of Deployment objects reconciled concurrently (`--concurrent-deployment-syncs`). Upstream default: 5.
+      concurrentReplicaSetSyncs:
+        type: integer
+        minimum: 1
+        maximum: 100
+        description: |
+          The number of ReplicaSet objects reconciled concurrently (`--concurrent-replicaset-syncs`). Upstream default: 5.
+      concurrentHorizontalPodAutoscalerSyncs:
+        type: integer
+        minimum: 1
+        maximum: 100
+        description: |
+          The number of HorizontalPodAutoscaler objects reconciled concurrently (`--concurrent-horizontal-pod-autoscaler-syncs`). Upstream default: 5.
   enabledFeatureGates:
     type: array
     description: |
