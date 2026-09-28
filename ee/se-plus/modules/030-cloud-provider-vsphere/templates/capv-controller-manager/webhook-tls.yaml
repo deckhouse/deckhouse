@@ -1,0 +1,11 @@
+apiVersion: v1
+kind: Secret
+type: kubernetes.io/tls
+metadata:
+  name: capv-controller-manager-webhook-tls
+  namespace: d8-cloud-provider-vsphere
+  {{- include "helm_lib_module_labels" (list . (dict "app" "capv-controller-manager")) | nindent 2 }}
+data:
+  ca.crt: {{ .Values.cloudProviderVsphere.internal.capvControllerManagerWebhookCert.ca | b64enc }}
+  tls.crt: {{ .Values.cloudProviderVsphere.internal.capvControllerManagerWebhookCert.crt | b64enc }}
+  tls.key: {{ .Values.cloudProviderVsphere.internal.capvControllerManagerWebhookCert.key | b64enc }}

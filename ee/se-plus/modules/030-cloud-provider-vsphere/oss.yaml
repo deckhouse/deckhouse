@@ -51,3 +51,11 @@
   license: Mozilla Public License 2.0
   id: terraform-provider-vsphere
   version: "2.0.2"
+
+- name: VMware vSphere Cluster API provider
+  link: https://github.com/kubernetes-sigs/cluster-api-provider-vsphere
+  description: Infrastructure provider for Kubernetes Cluster API in VMware vSphere.
+  logo: /images/logos/vsphere.svg
+  license: Apache License 2.0
+  id: capv-vsphere
+  version: v1.15.3

@@ -206,6 +206,7 @@ rules:
   - openstackmachinetemplates
   - staticmachinetemplates
   - vcdmachinetemplates
+  - vspheremachinetemplates
   - yandexmachinetemplates
   - zvirtmachinetemplates
   verbs:

@@ -11,6 +11,7 @@ At the moment, migration from MCM to CAPI is supported for the following cloud p
 
 - [Yandex Cloud](/modules/cloud-provider-yandex/)
 - [OpenStack](/modules/cloud-provider-openstack/)
+- [VMware vSphere](/modules/cloud-provider-vsphere/)
 
 After CAPI support is introduced for a cloud provider, existing [CloudEphemeral](/products/kubernetes-platform/documentation/v1/admin/configuration/platform-scaling/node/cloud-node.html#adding-cloudephemeral-nodes-to-a-cloud-cluster) node groups continue to use MCM (`status.engine: MCM`). New node groups use CAPI by default (`status.engine: CAPI`).
 

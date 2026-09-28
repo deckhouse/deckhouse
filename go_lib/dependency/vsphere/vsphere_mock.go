@@ -5,6 +5,7 @@ package vsphere
 //go:generate minimock -i github.com/deckhouse/deckhouse/go_lib/dependency/vsphere.Client -o vsphere_mock.go -n ClientMock -p vsphere
 
 import (
+	"context"
 	"sync"
 	mm_atomic "sync/atomic"
 	mm_time "time"
@@ -16,6 +17,13 @@ import (
 type ClientMock struct {
 	t          minimock.Tester
 	finishOnce sync.Once
+
+	funcEnsureClusterTagURN          func(ctx context.Context, clusterUUID string) (s1 string, err error)
+	funcEnsureClusterTagURNOrigin    string
+	inspectFuncEnsureClusterTagURN   func(ctx context.Context, clusterUUID string)
+	afterEnsureClusterTagURNCounter  uint64
+	beforeEnsureClusterTagURNCounter uint64
+	EnsureClusterTagURNMock          mClientMockEnsureClusterTagURN
 
 	funcGetZonesDatastores          func() (op1 *Output, err error)
 	funcGetZonesDatastoresOrigin    string
@@ -47,6 +55,9 @@ func NewClientMock(t minimock.Tester) *ClientMock {
 		controller.RegisterMocker(m)
 	}
 
+	m.EnsureClusterTagURNMock = mClientMockEnsureClusterTagURN{mock: m}
+	m.EnsureClusterTagURNMock.callArgs = []*ClientMockEnsureClusterTagURNParams{}
+
 	m.GetZonesDatastoresMock = mClientMockGetZonesDatastores{mock: m}
 
 	m.ListPoliciesMock = mClientMockListPolicies{mock: m}
@@ -56,6 +67,349 @@ func NewClientMock(t minimock.Tester) *ClientMock {
 	t.Cleanup(m.MinimockFinish)
 
 	return m
+}
+
+type mClientMockEnsureClusterTagURN struct {
+	optional           bool
+	mock               *ClientMock
+	defaultExpectation *ClientMockEnsureClusterTagURNExpectation
+	expectations       []*ClientMockEnsureClusterTagURNExpectation
+
+	callArgs []*ClientMockEnsureClusterTagURNParams
+	mutex    sync.RWMutex
+
+	expectedInvocations       uint64
+	expectedInvocationsOrigin string
+}
+
+// ClientMockEnsureClusterTagURNExpectation specifies expectation struct of the Client.EnsureClusterTagURN
+type ClientMockEnsureClusterTagURNExpectation struct {
+	mock               *ClientMock
+	params             *ClientMockEnsureClusterTagURNParams
+	paramPtrs          *ClientMockEnsureClusterTagURNParamPtrs
+	expectationOrigins ClientMockEnsureClusterTagURNExpectationOrigins
+	results            *ClientMockEnsureClusterTagURNResults
+	returnOrigin       string
+	Counter            uint64
+}
+
+// ClientMockEnsureClusterTagURNParams contains parameters of the Client.EnsureClusterTagURN
+type ClientMockEnsureClusterTagURNParams struct {
+	ctx         context.Context
+	clusterUUID string
+}
+
+// ClientMockEnsureClusterTagURNParamPtrs contains pointers to parameters of the Client.EnsureClusterTagURN
+type ClientMockEnsureClusterTagURNParamPtrs struct {
+	ctx         *context.Context
+	clusterUUID *string
+}
+
+// ClientMockEnsureClusterTagURNResults contains results of the Client.EnsureClusterTagURN
+type ClientMockEnsureClusterTagURNResults struct {
+	s1  string
+	err error
+}
+
+// ClientMockEnsureClusterTagURNOrigins contains origins of expectations of the Client.EnsureClusterTagURN
+type ClientMockEnsureClusterTagURNExpectationOrigins struct {
+	origin            string
+	originCtx         string
+	originClusterUUID string
+}
+
+// Marks this method to be optional. The default behavior of any method with Return() is '1 or more', meaning
+// the test will fail minimock's automatic final call check if the mocked method was not called at least once.
+// Optional() makes method check to work in '0 or more' mode.
+// It is NOT RECOMMENDED to use this option unless you really need it, as default behaviour helps to
+// catch the problems when the expected method call is totally skipped during test run.
+func (mmEnsureClusterTagURN *mClientMockEnsureClusterTagURN) Optional() *mClientMockEnsureClusterTagURN {
+	mmEnsureClusterTagURN.optional = true
+	return mmEnsureClusterTagURN
+}
+
+// Expect sets up expected params for Client.EnsureClusterTagURN
+func (mmEnsureClusterTagURN *mClientMockEnsureClusterTagURN) Expect(ctx context.Context, clusterUUID string) *mClientMockEnsureClusterTagURN {
+	if mmEnsureClusterTagURN.mock.funcEnsureClusterTagURN != nil {
+		mmEnsureClusterTagURN.mock.t.Fatalf("ClientMock.EnsureClusterTagURN mock is already set by Set")
+	}
+
+	if mmEnsureClusterTagURN.defaultExpectation == nil {
+		mmEnsureClusterTagURN.defaultExpectation = &ClientMockEnsureClusterTagURNExpectation{}
+	}
+
+	if mmEnsureClusterTagURN.defaultExpectation.paramPtrs != nil {
+		mmEnsureClusterTagURN.mock.t.Fatalf("ClientMock.EnsureClusterTagURN mock is already set by ExpectParams functions")
+	}
+
+	mmEnsureClusterTagURN.defaultExpectation.params = &ClientMockEnsureClusterTagURNParams{ctx, clusterUUID}
+	mmEnsureClusterTagURN.defaultExpectation.expectationOrigins.origin = minimock.CallerInfo(1)
+	for _, e := range mmEnsureClusterTagURN.expectations {
+		if minimock.Equal(e.params, mmEnsureClusterTagURN.defaultExpectation.params) {
+			mmEnsureClusterTagURN.mock.t.Fatalf("Expectation set by When has same params: %#v", *mmEnsureClusterTagURN.defaultExpectation.params)
+		}
+	}
+
+	return mmEnsureClusterTagURN
+}
+
+// ExpectCtxParam1 sets up expected param ctx for Client.EnsureClusterTagURN
+func (mmEnsureClusterTagURN *mClientMockEnsureClusterTagURN) ExpectCtxParam1(ctx context.Context) *mClientMockEnsureClusterTagURN {
+	if mmEnsureClusterTagURN.mock.funcEnsureClusterTagURN != nil {
+		mmEnsureClusterTagURN.mock.t.Fatalf("ClientMock.EnsureClusterTagURN mock is already set by Set")
+	}
+
+	if mmEnsureClusterTagURN.defaultExpectation == nil {
+		mmEnsureClusterTagURN.defaultExpectation = &ClientMockEnsureClusterTagURNExpectation{}
+	}
+
+	if mmEnsureClusterTagURN.defaultExpectation.params != nil {
+		mmEnsureClusterTagURN.mock.t.Fatalf("ClientMock.EnsureClusterTagURN mock is already set by Expect")
+	}
+
+	if mmEnsureClusterTagURN.defaultExpectation.paramPtrs == nil {
+		mmEnsureClusterTagURN.defaultExpectation.paramPtrs = &ClientMockEnsureClusterTagURNParamPtrs{}
+	}
+	mmEnsureClusterTagURN.defaultExpectation.paramPtrs.ctx = &ctx
+	mmEnsureClusterTagURN.defaultExpectation.expectationOrigins.originCtx = minimock.CallerInfo(1)
+
+	return mmEnsureClusterTagURN
+}
+
+// ExpectClusterUUIDParam2 sets up expected param clusterUUID for Client.EnsureClusterTagURN
+func (mmEnsureClusterTagURN *mClientMockEnsureClusterTagURN) ExpectClusterUUIDParam2(clusterUUID string) *mClientMockEnsureClusterTagURN {
+	if mmEnsureClusterTagURN.mock.funcEnsureClusterTagURN != nil {
+		mmEnsureClusterTagURN.mock.t.Fatalf("ClientMock.EnsureClusterTagURN mock is already set by Set")
+	}
+
+	if mmEnsureClusterTagURN.defaultExpectation == nil {
+		mmEnsureClusterTagURN.defaultExpectation = &ClientMockEnsureClusterTagURNExpectation{}
+	}
+
+	if mmEnsureClusterTagURN.defaultExpectation.params != nil {
+		mmEnsureClusterTagURN.mock.t.Fatalf("ClientMock.EnsureClusterTagURN mock is already set by Expect")
+	}
+
+	if mmEnsureClusterTagURN.defaultExpectation.paramPtrs == nil {
+		mmEnsureClusterTagURN.defaultExpectation.paramPtrs = &ClientMockEnsureClusterTagURNParamPtrs{}
+	}
+	mmEnsureClusterTagURN.defaultExpectation.paramPtrs.clusterUUID = &clusterUUID
+	mmEnsureClusterTagURN.defaultExpectation.expectationOrigins.originClusterUUID = minimock.CallerInfo(1)
+
+	return mmEnsureClusterTagURN
+}
+
+// Inspect accepts an inspector function that has same arguments as the Client.EnsureClusterTagURN
+func (mmEnsureClusterTagURN *mClientMockEnsureClusterTagURN) Inspect(f func(ctx context.Context, clusterUUID string)) *mClientMockEnsureClusterTagURN {
+	if mmEnsureClusterTagURN.mock.inspectFuncEnsureClusterTagURN != nil {
+		mmEnsureClusterTagURN.mock.t.Fatalf("Inspect function is already set for ClientMock.EnsureClusterTagURN")
+	}
+
+	mmEnsureClusterTagURN.mock.inspectFuncEnsureClusterTagURN = f
+
+	return mmEnsureClusterTagURN
+}
+
+// Return sets up results that will be returned by Client.EnsureClusterTagURN
+func (mmEnsureClusterTagURN *mClientMockEnsureClusterTagURN) Return(s1 string, err error) *ClientMock {
+	if mmEnsureClusterTagURN.mock.funcEnsureClusterTagURN != nil {
+		mmEnsureClusterTagURN.mock.t.Fatalf("ClientMock.EnsureClusterTagURN mock is already set by Set")
+	}
+
+	if mmEnsureClusterTagURN.defaultExpectation == nil {
+		mmEnsureClusterTagURN.defaultExpectation = &ClientMockEnsureClusterTagURNExpectation{mock: mmEnsureClusterTagURN.mock}
+	}
+	mmEnsureClusterTagURN.defaultExpectation.results = &ClientMockEnsureClusterTagURNResults{s1, err}
+	mmEnsureClusterTagURN.defaultExpectation.returnOrigin = minimock.CallerInfo(1)
+	return mmEnsureClusterTagURN.mock
+}
+
+// Set uses given function f to mock the Client.EnsureClusterTagURN method
+func (mmEnsureClusterTagURN *mClientMockEnsureClusterTagURN) Set(f func(ctx context.Context, clusterUUID string) (s1 string, err error)) *ClientMock {
+	if mmEnsureClusterTagURN.defaultExpectation != nil {
+		mmEnsureClusterTagURN.mock.t.Fatalf("Default expectation is already set for the Client.EnsureClusterTagURN method")
+	}
+
+	if len(mmEnsureClusterTagURN.expectations) > 0 {
+		mmEnsureClusterTagURN.mock.t.Fatalf("Some expectations are already set for the Client.EnsureClusterTagURN method")
+	}
+
+	mmEnsureClusterTagURN.mock.funcEnsureClusterTagURN = f
+	mmEnsureClusterTagURN.mock.funcEnsureClusterTagURNOrigin = minimock.CallerInfo(1)
+	return mmEnsureClusterTagURN.mock
+}
+
+// When sets expectation for the Client.EnsureClusterTagURN which will trigger the result defined by the following
+// Then helper
+func (mmEnsureClusterTagURN *mClientMockEnsureClusterTagURN) When(ctx context.Context, clusterUUID string) *ClientMockEnsureClusterTagURNExpectation {
+	if mmEnsureClusterTagURN.mock.funcEnsureClusterTagURN != nil {
+		mmEnsureClusterTagURN.mock.t.Fatalf("ClientMock.EnsureClusterTagURN mock is already set by Set")
+	}
+
+	expectation := &ClientMockEnsureClusterTagURNExpectation{
+		mock:               mmEnsureClusterTagURN.mock,
+		params:             &ClientMockEnsureClusterTagURNParams{ctx, clusterUUID},
+		expectationOrigins: ClientMockEnsureClusterTagURNExpectationOrigins{origin: minimock.CallerInfo(1)},
+	}
+	mmEnsureClusterTagURN.expectations = append(mmEnsureClusterTagURN.expectations, expectation)
+	return expectation
+}
+
+// Then sets up Client.EnsureClusterTagURN return parameters for the expectation previously defined by the When method
+func (e *ClientMockEnsureClusterTagURNExpectation) Then(s1 string, err error) *ClientMock {
+	e.results = &ClientMockEnsureClusterTagURNResults{s1, err}
+	return e.mock
+}
+
+// Times sets number of times Client.EnsureClusterTagURN should be invoked
+func (mmEnsureClusterTagURN *mClientMockEnsureClusterTagURN) Times(n uint64) *mClientMockEnsureClusterTagURN {
+	if n == 0 {
+		mmEnsureClusterTagURN.mock.t.Fatalf("Times of ClientMock.EnsureClusterTagURN mock can not be zero")
+	}
+	mm_atomic.StoreUint64(&mmEnsureClusterTagURN.expectedInvocations, n)
+	mmEnsureClusterTagURN.expectedInvocationsOrigin = minimock.CallerInfo(1)
+	return mmEnsureClusterTagURN
+}
+
+func (mmEnsureClusterTagURN *mClientMockEnsureClusterTagURN) invocationsDone() bool {
+	if len(mmEnsureClusterTagURN.expectations) == 0 && mmEnsureClusterTagURN.defaultExpectation == nil && mmEnsureClusterTagURN.mock.funcEnsureClusterTagURN == nil {
+		return true
+	}
+
+	totalInvocations := mm_atomic.LoadUint64(&mmEnsureClusterTagURN.mock.afterEnsureClusterTagURNCounter)
+	expectedInvocations := mm_atomic.LoadUint64(&mmEnsureClusterTagURN.expectedInvocations)
+
+	return totalInvocations > 0 && (expectedInvocations == 0 || expectedInvocations == totalInvocations)
+}
+
+// EnsureClusterTagURN implements Client
+func (mmEnsureClusterTagURN *ClientMock) EnsureClusterTagURN(ctx context.Context, clusterUUID string) (s1 string, err error) {
+	mm_atomic.AddUint64(&mmEnsureClusterTagURN.beforeEnsureClusterTagURNCounter, 1)
+	defer mm_atomic.AddUint64(&mmEnsureClusterTagURN.afterEnsureClusterTagURNCounter, 1)
+
+	mmEnsureClusterTagURN.t.Helper()
+
+	if mmEnsureClusterTagURN.inspectFuncEnsureClusterTagURN != nil {
+		mmEnsureClusterTagURN.inspectFuncEnsureClusterTagURN(ctx, clusterUUID)
+	}
+
+	mm_params := ClientMockEnsureClusterTagURNParams{ctx, clusterUUID}
+
+	// Record call args
+	mmEnsureClusterTagURN.EnsureClusterTagURNMock.mutex.Lock()
+	mmEnsureClusterTagURN.EnsureClusterTagURNMock.callArgs = append(mmEnsureClusterTagURN.EnsureClusterTagURNMock.callArgs, &mm_params)
+	mmEnsureClusterTagURN.EnsureClusterTagURNMock.mutex.Unlock()
+
+	for _, e := range mmEnsureClusterTagURN.EnsureClusterTagURNMock.expectations {
+		if minimock.Equal(*e.params, mm_params) {
+			mm_atomic.AddUint64(&e.Counter, 1)
+			return e.results.s1, e.results.err
+		}
+	}
+
+	if mmEnsureClusterTagURN.EnsureClusterTagURNMock.defaultExpectation != nil {
+		mm_atomic.AddUint64(&mmEnsureClusterTagURN.EnsureClusterTagURNMock.defaultExpectation.Counter, 1)
+		mm_want := mmEnsureClusterTagURN.EnsureClusterTagURNMock.defaultExpectation.params
+		mm_want_ptrs := mmEnsureClusterTagURN.EnsureClusterTagURNMock.defaultExpectation.paramPtrs
+
+		mm_got := ClientMockEnsureClusterTagURNParams{ctx, clusterUUID}
+
+		if mm_want_ptrs != nil {
+
+			if mm_want_ptrs.ctx != nil && !minimock.Equal(*mm_want_ptrs.ctx, mm_got.ctx) {
+				mmEnsureClusterTagURN.t.Errorf("ClientMock.EnsureClusterTagURN got unexpected parameter ctx, expected at\n%s:\nwant: %#v\n got: %#v%s\n",
+					mmEnsureClusterTagURN.EnsureClusterTagURNMock.defaultExpectation.expectationOrigins.originCtx, *mm_want_ptrs.ctx, mm_got.ctx, minimock.Diff(*mm_want_ptrs.ctx, mm_got.ctx))
+			}
+
+			if mm_want_ptrs.clusterUUID != nil && !minimock.Equal(*mm_want_ptrs.clusterUUID, mm_got.clusterUUID) {
+				mmEnsureClusterTagURN.t.Errorf("ClientMock.EnsureClusterTagURN got unexpected parameter clusterUUID, expected at\n%s:\nwant: %#v\n got: %#v%s\n",
+					mmEnsureClusterTagURN.EnsureClusterTagURNMock.defaultExpectation.expectationOrigins.originClusterUUID, *mm_want_ptrs.clusterUUID, mm_got.clusterUUID, minimock.Diff(*mm_want_ptrs.clusterUUID, mm_got.clusterUUID))
+			}
+
+		} else if mm_want != nil && !minimock.Equal(*mm_want, mm_got) {
+			mmEnsureClusterTagURN.t.Errorf("ClientMock.EnsureClusterTagURN got unexpected parameters, expected at\n%s:\nwant: %#v\n got: %#v%s\n",
+				mmEnsureClusterTagURN.EnsureClusterTagURNMock.defaultExpectation.expectationOrigins.origin, *mm_want, mm_got, minimock.Diff(*mm_want, mm_got))
+		}
+
+		mm_results := mmEnsureClusterTagURN.EnsureClusterTagURNMock.defaultExpectation.results
+		if mm_results == nil {
+			mmEnsureClusterTagURN.t.Fatal("No results are set for the ClientMock.EnsureClusterTagURN")
+		}
+		return (*mm_results).s1, (*mm_results).err
+	}
+	if mmEnsureClusterTagURN.funcEnsureClusterTagURN != nil {
+		return mmEnsureClusterTagURN.funcEnsureClusterTagURN(ctx, clusterUUID)
+	}
+	mmEnsureClusterTagURN.t.Fatalf("Unexpected call to ClientMock.EnsureClusterTagURN. %v %v", ctx, clusterUUID)
+	return
+}
+
+// EnsureClusterTagURNAfterCounter returns a count of finished ClientMock.EnsureClusterTagURN invocations
+func (mmEnsureClusterTagURN *ClientMock) EnsureClusterTagURNAfterCounter() uint64 {
+	return mm_atomic.LoadUint64(&mmEnsureClusterTagURN.afterEnsureClusterTagURNCounter)
+}
+
+// EnsureClusterTagURNBeforeCounter returns a count of ClientMock.EnsureClusterTagURN invocations
+func (mmEnsureClusterTagURN *ClientMock) EnsureClusterTagURNBeforeCounter() uint64 {
+	return mm_atomic.LoadUint64(&mmEnsureClusterTagURN.beforeEnsureClusterTagURNCounter)
+}
+
+// Calls returns a list of arguments used in each call to ClientMock.EnsureClusterTagURN.
+// The list is in the same order as the calls were made (i.e. recent calls have a higher index)
+func (mmEnsureClusterTagURN *mClientMockEnsureClusterTagURN) Calls() []*ClientMockEnsureClusterTagURNParams {
+	mmEnsureClusterTagURN.mutex.RLock()
+
+	argCopy := make([]*ClientMockEnsureClusterTagURNParams, len(mmEnsureClusterTagURN.callArgs))
+	copy(argCopy, mmEnsureClusterTagURN.callArgs)
+
+	mmEnsureClusterTagURN.mutex.RUnlock()
+
+	return argCopy
+}
+
+// MinimockEnsureClusterTagURNDone returns true if the count of the EnsureClusterTagURN invocations corresponds
+// the number of defined expectations
+func (m *ClientMock) MinimockEnsureClusterTagURNDone() bool {
+	if m.EnsureClusterTagURNMock.optional {
+		// Optional methods provide '0 or more' call count restriction.
+		return true
+	}
+
+	for _, e := range m.EnsureClusterTagURNMock.expectations {
+		if mm_atomic.LoadUint64(&e.Counter) < 1 {
+			return false
+		}
+	}
+
+	return m.EnsureClusterTagURNMock.invocationsDone()
+}
+
+// MinimockEnsureClusterTagURNInspect logs each unmet expectation
+func (m *ClientMock) MinimockEnsureClusterTagURNInspect() {
+	for _, e := range m.EnsureClusterTagURNMock.expectations {
+		if mm_atomic.LoadUint64(&e.Counter) < 1 {
+			m.t.Errorf("Expected call to ClientMock.EnsureClusterTagURN at\n%s with params: %#v", e.expectationOrigins.origin, *e.params)
+		}
+	}
+
+	afterEnsureClusterTagURNCounter := mm_atomic.LoadUint64(&m.afterEnsureClusterTagURNCounter)
+	// if default expectation was set then invocations count should be greater than zero
+	if m.EnsureClusterTagURNMock.defaultExpectation != nil && afterEnsureClusterTagURNCounter < 1 {
+		if m.EnsureClusterTagURNMock.defaultExpectation.params == nil {
+			m.t.Errorf("Expected call to ClientMock.EnsureClusterTagURN at\n%s", m.EnsureClusterTagURNMock.defaultExpectation.returnOrigin)
+		} else {
+			m.t.Errorf("Expected call to ClientMock.EnsureClusterTagURN at\n%s with params: %#v", m.EnsureClusterTagURNMock.defaultExpectation.expectationOrigins.origin, *m.EnsureClusterTagURNMock.defaultExpectation.params)
+		}
+	}
+	// if func was set then invocations count should be greater than zero
+	if m.funcEnsureClusterTagURN != nil && afterEnsureClusterTagURNCounter < 1 {
+		m.t.Errorf("Expected call to ClientMock.EnsureClusterTagURN at\n%s", m.funcEnsureClusterTagURNOrigin)
+	}
+
+	if !m.EnsureClusterTagURNMock.invocationsDone() && afterEnsureClusterTagURNCounter > 0 {
+		m.t.Errorf("Expected %d calls to ClientMock.EnsureClusterTagURN at\n%s but found %d calls",
+			mm_atomic.LoadUint64(&m.EnsureClusterTagURNMock.expectedInvocations), m.EnsureClusterTagURNMock.expectedInvocationsOrigin, afterEnsureClusterTagURNCounter)
+	}
 }
 
 type mClientMockGetZonesDatastores struct {
@@ -622,6 +976,8 @@ func (m *ClientMock) MinimockRefreshClientInspect() {
 func (m *ClientMock) MinimockFinish() {
 	m.finishOnce.Do(func() {
 		if !m.minimockDone() {
+			m.MinimockEnsureClusterTagURNInspect()
+
 			m.MinimockGetZonesDatastoresInspect()
 
 			m.MinimockListPoliciesInspect()
@@ -650,6 +1006,7 @@ func (m *ClientMock) MinimockWait(timeout mm_time.Duration) {
 func (m *ClientMock) minimockDone() bool {
 	done := true
 	return done &&
+		m.MinimockEnsureClusterTagURNDone() &&
 		m.MinimockGetZonesDatastoresDone() &&
 		m.MinimockListPoliciesDone() &&
 		m.MinimockRefreshClientDone()

@@ -1,0 +1,35 @@
+version: v1
+template: |
+  apiVersion: infrastructure.cluster.x-k8s.io/v1beta1
+  kind: VSphereCluster
+  metadata:
+    namespace: {{ .cluster.namespace | quote }}
+    name: {{ .cluster.name | quote }}
+    labels:
+      app: capv-controller-manager
+  spec:
+    server: {{ .provider.server | required "provider.server is required" | quote }}
+    {{- /* thumbprint comes from providerDiscoveryData — cloud-data-discoverer computes the
+           SHA-1 fingerprint of the vCenter leaf certificate and publishes it. Rendered here
+           lets CAPV's session code (`insecure := thumbprint == ""`) pin the cert on every
+           reconcile. Empty on fresh install until the first discovery cycle finishes; CAPV
+           runs insecure in that window. */ -}}
+    {{- with get .provider "thumbprint" }}
+    thumbprint: {{ . | quote }}
+    {{- end }}
+    {{- /* controlPlaneEndpoint is populated by node-controller from the apiserver addresses
+           it watches; the rendered value wins over the live one on every apply. The
+           .controlPlane root is absent until at least one endpoint is discovered, so guard
+           on it and skip the field entirely otherwise — CAPV's own discovery fills the
+           spec.controlPlaneEndpoint later in that case. */ -}}
+    {{- if hasKey . "controlPlane" }}
+      {{- if gt (len .controlPlane.endpoints) 0 }}
+        {{- $endpoint := first .controlPlane.endpoints }}
+    controlPlaneEndpoint:
+      host: {{ $endpoint.host | quote }}
+      port: {{ $endpoint.port }}
+      {{- end }}
+    {{- end }}
+    identityRef:
+      kind: Secret
+      name: capi-user-credentials

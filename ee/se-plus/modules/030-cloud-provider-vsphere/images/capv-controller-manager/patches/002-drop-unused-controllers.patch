@@ -1,0 +1,32 @@
+diff --git a/main.go b/main.go
+--- a/main.go
++++ b/main.go
+@@ -385,7 +385,6 @@ func setupControllers(ctx context.Context, controllerCtx *capvcontext.Controlle
+ 			crdMigratorConfig[&infrav1.VSphereMachine{}] = crdmigrator.ByObjectConfig{UseCache: true, UseStatusForStorageVersionMigration: true}
+ 			crdMigratorConfig[&infrav1.VSphereMachineTemplate{}] = crdmigrator.ByObjectConfig{UseCache: true}
+ 			crdMigratorConfig[&infrav1.VSphereVM{}] = crdmigrator.ByObjectConfig{UseCache: true, UseStatusForStorageVersionMigration: true}
+-			crdMigratorConfig[&infrav1.VSphereClusterIdentity{}] = crdmigrator.ByObjectConfig{UseCache: true, UseStatusForStorageVersionMigration: true}
+ 			crdMigratorConfig[&infrav1.VSphereDeploymentZone{}] = crdmigrator.ByObjectConfig{UseCache: true, UseStatusForStorageVersionMigration: true}
+ 			crdMigratorConfig[&infrav1.VSphereFailureDomain{}] = crdmigrator.ByObjectConfig{UseCache: true}
+ 		}
+@@ -458,10 +457,6 @@ func setupControllers(ctx context.Context, controllerCtx *capvcontext.Controlle
+ }
+
+ func setupVAPIControllers(ctx context.Context, controllerCtx *capvcontext.ControllerManagerContext, mgr ctrlmgr.Manager, clusterCache clustercache.ClusterCache) error {
+-	if err := (&webhooks.VSphereClusterTemplate{}).SetupWebhookWithManager(mgr); err != nil {
+-		return err
+-	}
+-
+ 	if err := (&webhooks.VSphereMachine{}).SetupWebhookWithManager(mgr); err != nil {
+ 		return err
+ 	}
+@@ -491,9 +486,6 @@ func setupVAPIControllers(ctx context.Context, controllerCtx *capvcontext.Contro
+ 	if err := controllers.AddVMControllerToManager(ctx, controllerCtx, mgr, clusterCache, concurrency(vSphereVMConcurrency)); err != nil {
+ 		return err
+ 	}
+-	if err := controllers.AddVsphereClusterIdentityControllerToManager(ctx, controllerCtx, mgr, concurrency(vSphereClusterIdentityConcurrency)); err != nil {
+-		return err
+-	}
+
+ 	return controllers.AddVSphereDeploymentZoneControllerToManager(ctx, controllerCtx, mgr, concurrency(vSphereDeploymentZoneConcurrency))
+ }
