@@ -55,6 +55,19 @@ spec:
     securityContext:
       runAsUser: {{ .ProxyUID | default "1337" }}
       runAsGroup: {{ .ProxyGID | default "1337" }}
+    {{- /* [Deckhouse] see the seccompProfile note in sidecar-injection-template.yaml: Pod
+           Security Standards "restricted" demands an explicit profile on every container and
+           upstream sets none on templated gateways. Upstream's own knob for this is
+           `gateways.seccompProfile` (see kube-gateway.yaml), but the module writes the injector
+           ConfigMap itself and feeds it only `global.proxy.seccompProfile` (set in
+           templates/sidecar-injection-values.yaml), so that single value drives every injected
+           container in this revision. The legacy operator-backed 1.25 revision can use neither
+           field — the sailoperator Istio CRD exposes neither — and hardcodes the profile
+           instead; see files/v1x25/static/. */}}
+    {{- if .Values.global.proxy.seccompProfile }}
+      seccompProfile:
+    {{- toYaml .Values.global.proxy.seccompProfile | nindent 8 }}
+    {{- end }}
     env:
     - name: PILOT_CERT_PROVIDER
       value: {{ .Values.global.pilotCertProvider }}
@@ -166,6 +179,17 @@ spec:
       periodSeconds: {{ .Values.global.proxy.readinessPeriodSeconds }}
       timeoutSeconds: 3
       failureThreshold: {{ .Values.global.proxy.readinessFailureThreshold }}
+    {{- /* [Deckhouse] admission-policy-engine's requiredProbes OperationPolicy rejects pods
+           whose containers have no livenessProbe. Unconditional, like the readinessProbe
+           above: unlike the sidecar, the gateway template has no status-port switch. */}}
+    livenessProbe:
+      httpGet:
+        path: /healthz/ready
+        port: 15021
+      initialDelaySeconds: 10
+      periodSeconds: 10
+      timeoutSeconds: 3
+      failureThreshold: 60
     volumeMounts:
     - name: workload-socket
       mountPath: /var/run/secrets/workload-spiffe-uds

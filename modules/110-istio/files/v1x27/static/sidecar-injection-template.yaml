@@ -165,6 +165,8 @@ spec:
         drop:
         - ALL
     {{- if not .Values.pilot.cni.enabled }}
+      {{- /* [Deckhouse] upstream leaves this false, but the init container needs no writable
+             root filesystem in practice: it only installs iptables rules and then exits. */}}
       readOnlyRootFilesystem: true
       runAsGroup: 0
       runAsNonRoot: false
@@ -174,6 +176,13 @@ spec:
       runAsGroup: {{ if $tproxy }} 1337 {{ else }} {{ .ProxyGID | default "1337" }} {{ end }}
       runAsUser: {{ if $tproxy }} 1337 {{ else }} {{ .ProxyUID | default "1337" }} {{ end }}
       runAsNonRoot: true
+    {{- end }}
+    {{- /* [Deckhouse] backported from upstream 1.29, which made the profile value-driven.
+           Pod Security Standards "restricted" demands an explicit profile on every container
+           and 1.27 sets none; the value itself lives in sidecar-injection-values.yaml. */}}
+    {{- if .Values.global.proxy.seccompProfile }}
+      seccompProfile:
+    {{- toYaml .Values.global.proxy.seccompProfile | nindent 8 }}
     {{- end }}
   {{ end -}}
   {{ end -}}
@@ -362,6 +371,18 @@ spec:
       periodSeconds: {{ annotation .ObjectMeta `readiness.status.sidecar.istio.io/periodSeconds` .Values.global.proxy.readinessPeriodSeconds }}
       timeoutSeconds: 3
       failureThreshold: {{ annotation .ObjectMeta `readiness.status.sidecar.istio.io/failureThreshold` .Values.global.proxy.readinessFailureThreshold }}
+    {{- /* [Deckhouse] admission-policy-engine's requiredProbes OperationPolicy rejects pods
+           whose containers have no livenessProbe. Guarded by the same status-port check as
+           the probes above, so disabling the status server no longer leaves a liveness
+           probe pointing at a port nothing listens on. */}}
+    livenessProbe:
+      httpGet:
+        path: /healthz/ready
+        port: 15021
+      initialDelaySeconds: 10
+      periodSeconds: 10
+      timeoutSeconds: 3
+      failureThreshold: 60
     {{ end -}}
     securityContext:
       {{- if eq (index .ProxyConfig.ProxyMetadata "IPTABLES_TRACE_LOGGING") "true" }}
@@ -402,6 +423,13 @@ spec:
       runAsGroup: {{ .ProxyGID | default "1337" }}
       {{- end }}
       {{- end }}
+    {{- /* [Deckhouse] see the seccompProfile note on the init container above. Setting it on
+           the proxy's own securityContext also keeps it attached when the proxy moves to
+           initContainers as a native sidecar, which a `containers:` overlay could not do. */}}
+    {{- if .Values.global.proxy.seccompProfile }}
+      seccompProfile:
+    {{- toYaml .Values.global.proxy.seccompProfile | nindent 8 }}
+    {{- end }}
     resources:
   {{ template "resources" . }}
     volumeMounts:
