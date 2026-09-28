@@ -28,6 +28,9 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/fs"
 )
 
+// postScriptCleanupTimeout bounds removal of the script output on the remote host.
+const postScriptCleanupTimeout = 10 * time.Second
+
 type PostBootstrapScriptExecutor struct {
 	path                   string
 	timeout                time.Duration
@@ -91,13 +94,17 @@ func (e *PostBootstrapScriptExecutor) run(ctx context.Context) (string, error) {
 	}
 
 	defer func() {
-		// remove out file on server because it can contain non-safe information
+		// remove out file on server because it can contain non-safe information;
+		// it must be removed even when the operation is canceled
+		cleanupCtx, cancel := context.WithTimeout(context.WithoutCancel(ctx), postScriptCleanupTimeout)
+		defer cancel()
+
 		cmd = sshClient.Command(fmt.Sprintf("rm %s", outputFile))
 		cmd.WithStderrHandler(nil)
 		cmd.WithStdoutHandler(nil)
-		cmd.Sudo(ctx)
+		cmd.Sudo(cleanupCtx)
 		//nolint: errcheck
-		err = cmd.Run(ctx)
+		err = cmd.Run(cleanupCtx)
 	}()
 
 	script := sshClient.UploadScript(e.path)

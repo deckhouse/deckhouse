@@ -68,8 +68,9 @@ func (p *detachParams) loggerOptions(ctx context.Context) logger.Options {
 }
 
 func (s *Service) CommanderDetach(server pb.DHCTL_CommanderDetachServer) error {
-	ctx, cancel := operationCtx(server)
-	defer cancel()
+	op := newOperation(server)
+	defer op.close()
+	ctx := op.ctx
 
 	logger.L(ctx).Info("started")
 
@@ -87,7 +88,7 @@ func (s *Service) CommanderDetach(server pb.DHCTL_CommanderDetachServer) error {
 	}
 
 	startReceiver[*pb.CommanderDetachRequest, *pb.CommanderDetachResponse](server, receiveCh, doneCh, internalErrCh)
-	startSender[*pb.CommanderDetachRequest, *pb.CommanderDetachResponse](server, sendCh, internalErrCh)
+	startOperationSender[*pb.CommanderDetachRequest, *pb.CommanderDetachResponse](op, server, sendCh, internalErrCh)
 
 connectionProcessor:
 	for {
@@ -113,17 +114,17 @@ connectionProcessor:
 						logger.Err(err), slog.String("message", fmt.Sprintf("%T", message)))
 					continue connectionProcessor
 				}
-				go func() {
+				op.Go(func() {
 					result := s.commanderDetachSafe(ctx, &detachParams{
 						request:      message.Start,
 						sendProgress: pt.sendProgress(ctx),
 						sendCh:       sendCh,
 					})
 					_ = sendResponse(server.Context(), sendCh, &pb.CommanderDetachResponse{Message: &pb.CommanderDetachResponse_Result{Result: result}})
-				}()
+				})
 
 			case *pb.CommanderDetachRequest_Cancel:
-				cancel()
+				op.cancel()
 
 			default:
 				logger.L(ctx).Error("got unprocessable message",

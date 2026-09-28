@@ -21,7 +21,11 @@ import (
 	"fmt"
 	"io"
 	"log/slog"
+	"os"
 	"runtime/debug"
+	"runtime/pprof"
+	"strings"
+	"sync"
 	"time"
 
 	"github.com/gogo/protobuf/proto"
@@ -33,6 +37,7 @@ import (
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app/options"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
+	infraexec "github.com/deckhouse/deckhouse/dhctl/pkg/infrastructure/exec"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/check"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/phases"
 	pb "github.com/deckhouse/deckhouse/dhctl/pkg/server/pb/dhctl"
@@ -40,6 +45,23 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/server/pkg/logger"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/state/cache"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/tomb"
+)
+
+const (
+	// operationCloseTimeout bounds how long close waits for a canceled operation: the
+	// worst case of a forced stop of its infrastructure utility, plus time to save the
+	// state and clean up. Only a step that ignores cancellation can take longer.
+	operationCloseTimeout = infraexec.ForcedStopTimeout + 5*time.Minute
+
+	// senderStopTimeout bounds the wait for the sender once the operation is done. A
+	// sender blocked in Send on a stream the client does not read holds nothing, and
+	// returning from the handler cancels the stream and releases it anyway.
+	senderStopTimeout = 30 * time.Second
+
+	// abandonedShutdownTimeout bounds the server shutdown after close gave up: its
+	// callbacks wait for the infrastructure utility and its state saver too, and a
+	// step stuck in the operation can hold them forever as well.
+	abandonedShutdownTimeout = 2 * time.Minute
 )
 
 type Service struct {
@@ -64,40 +86,161 @@ func New(params ServiceParams) *Service {
 	}
 }
 
-func operationCtx(server grpc.ServerStream) (context.Context, context.CancelFunc) {
-	ctx := server.Context()
+// operation owns every goroutine a stream handler starts, and the handler must
+// not return until they are done or until close gives up. The one-shot dhctl
+// server exits as soon as its stream is over, killing whatever is still running at
+// that moment, so the deferred cleanup of an unfinished operation (ssh sessions,
+// kube proxies on the remote hosts, temporary files) would never run.
+type operation struct {
+	ctx    context.Context
+	cancel context.CancelFunc
+	tasks  sync.WaitGroup
 
-	var operation string
+	// The sender lives on its own context: it must outlast the operation,
+	// which still delivers its result after being canceled. Logs and progress
+	// are tied to the operation context and are dropped once it is canceled.
+	senderCtx     context.Context
+	stopSender    context.CancelFunc
+	senderStopped <-chan struct{}
+
+	closeTimeout      time.Duration
+	senderStopTimeout time.Duration
+	shutdown          func(code int)
+
+	abandonedShutdownTimeout time.Duration
+	exit                     func(code int)
+}
+
+func newOperation(server grpc.ServerStream) *operation {
+	streamCtx := server.Context()
+
+	var name string
 	switch server.(type) {
 	case pb.DHCTL_CheckServer:
-		operation = "check"
+		name = "check"
 	case pb.DHCTL_BootstrapServer:
-		operation = "bootstrap"
+		name = "bootstrap"
 	case pb.DHCTL_ConvergeServer:
-		operation = "converge"
+		name = "converge"
 	case pb.DHCTL_DestroyServer:
-		operation = "destroy"
+		name = "destroy"
 	case pb.DHCTL_AbortServer:
-		operation = "abort"
+		name = "abort"
 	case pb.DHCTL_CommanderAttachServer:
-		operation = "commander/attach"
+		name = "commander/attach"
 	case pb.DHCTL_CommanderDetachServer:
-		operation = "commander/detach"
+		name = "commander/detach"
 	default:
-		operation = "unknown"
+		name = "unknown"
 	}
 
+	// Nobody is there to interrupt a stuck infrastructure utility twice: bound its
+	// stop, otherwise a canceled operation, and close with it, could wait forever.
+	//
+	// A Cancel message leaves the stream open: the client waits for the result, and
+	// the utility gets its grace period to finish the work in flight. A closed stream
+	// means the client has given up on the operation and may already retry it, so
+	// the utility is stopped right away instead of overlapping the retry.
+	ctx, cancel := context.WithCancel(infraexec.WithForcedStop(streamCtx, streamCtx.Done()))
+	senderCtx, stopSender := context.WithCancel(streamCtx)
+
+	return &operation{
+		ctx:               logger.ToContext(ctx, logger.L(streamCtx).With(slog.String("operation", name))),
+		cancel:            cancel,
+		senderCtx:         senderCtx,
+		stopSender:        stopSender,
+		closeTimeout:      operationCloseTimeout,
+		senderStopTimeout: senderStopTimeout,
+		shutdown:          tomb.Shutdown,
+
+		abandonedShutdownTimeout: abandonedShutdownTimeout,
+		exit:                     os.Exit,
+	}
+}
+
+// Go runs fn in a goroutine that close waits for.
+func (o *operation) Go(fn func()) {
+	o.tasks.Go(fn)
+}
+
+// close cancels the operation and blocks until its goroutines have returned and
+// their deferred cleanup is done, then stops the sender. Only goroutines that own
+// nothing may outlive the handler, released by the stream cancellation that comes
+// right after it returns: the receiver blocked in Recv, which cannot be interrupted
+// before that, and a sender blocked in Send past senderStopTimeout.
+//
+// The wait for the operation is bounded by closeTimeout, long enough for an
+// infrastructure utility to finish in the worst case: past it, something ignores
+// cancellation, and close reports it and gives up. The server then exits with a
+// failure (unless a shutdown by a signal has already started and set its code),
+// and the shutdown is bounded by abandonedShutdownTimeout: the process exits even
+// if it hangs.
+//
+// Finally the one-shot server is shut down. Asynchronously: its graceful stop
+// waits for this handler to return.
+func (o *operation) close() {
+	exitCode := 0
+	defer func() { go o.shutdown(exitCode) }()
+	// Normally stopped once the operation is done, here only when close gives up.
+	defer o.stopSender()
+
+	o.cancel()
+
+	// Outlives close only when close gives up, and then the process exits anyway.
+	tasksDone := make(chan struct{})
 	go func() {
-		<-ctx.Done()
-		tomb.Shutdown(0)
+		o.tasks.Wait()
+		close(tasksDone)
 	}()
 
-	opCtx, cancel := context.WithCancel(ctx)
+	// A finished operation is done in no time: report only a wait worth noticing.
+	slowWait := time.AfterFunc(time.Second, func() {
+		logger.L(o.ctx).Info("waiting for the canceled operation to finish")
+	})
 
-	return logger.ToContext(
-		opCtx,
-		logger.L(ctx).With(slog.String("operation", operation)),
-	), cancel
+	select {
+	case <-tasksDone:
+		slowWait.Stop()
+	case <-time.After(o.closeTimeout):
+		slowWait.Stop()
+		o.giveUp()
+		exitCode = 1
+		return
+	}
+
+	o.stopSender()
+	if o.senderStopped == nil {
+		return
+	}
+
+	select {
+	case <-o.senderStopped:
+	case <-time.After(o.senderStopTimeout):
+		logger.L(o.ctx).Warn("sender did not stop, leaving it to the stream cancellation",
+			slog.Duration("timeout", o.senderStopTimeout),
+		)
+	}
+}
+
+// giveUp reports the operation close gave up waiting for, with the stacks of all
+// goroutines (identical ones grouped) to find the step that ignores cancellation,
+// and makes the process exit if the server shutdown hangs on the same step.
+func (o *operation) giveUp() {
+	var stacks strings.Builder
+	_ = pprof.Lookup("goroutine").WriteTo(&stacks, 1)
+
+	log := logger.L(o.ctx)
+	log.Error("gave up waiting for the canceled operation, shutting down anyway",
+		slog.Duration("timeout", o.closeTimeout),
+		slog.String("goroutines", stacks.String()),
+	)
+
+	time.AfterFunc(o.abandonedShutdownTimeout, func() {
+		log.Error("server shutdown did not finish, exiting",
+			slog.Duration("timeout", o.abandonedShutdownTimeout),
+		)
+		o.exit(1)
+	})
 }
 
 type serverStream[Request proto.Message, Response proto.Message] interface {
@@ -135,6 +278,9 @@ func startReceiver[Request, Response proto.Message](
 			select {
 			case receiveCh <- request:
 			case <-server.Context().Done():
+				// The handler loop may be busy right now and has no other way to
+				// learn the stream is gone: without this report it would wait forever.
+				sendInternalErr(internalErrCh, fmt.Errorf("receiving message: %w", server.Context().Err()))
 				return
 			}
 		}
@@ -143,7 +289,23 @@ func startReceiver[Request, Response proto.Message](
 	return stoppedCh
 }
 
+// startOperationSender starts the sender that op.close stops once the operation is done.
+func startOperationSender[Request, Response proto.Message](
+	op *operation,
+	server serverStream[Request, Response],
+	sendCh chan Response,
+	internalErrCh chan error,
+) {
+	op.senderStopped = startSender[Request, Response](op.senderCtx, server, sendCh, internalErrCh)
+}
+
+// startSender streams responses from sendCh until ctx is done or sendCh is closed.
+// grpc finishes the stream on any SendMsg error, which cancels ctx and stops the
+// sender. Should a failed send leave the stream alive, the sender drains sendCh
+// from then on: the operation keeps writing to it until it is canceled and done,
+// and must not get blocked on the way out.
 func startSender[Request, Response proto.Message](
+	ctx context.Context,
 	server serverStream[Request, Response],
 	sendCh chan Response,
 	internalErrCh chan error,
@@ -153,6 +315,7 @@ func startSender[Request, Response proto.Message](
 	go func() {
 		defer close(stoppedCh)
 
+		failed := false
 		for {
 			var response Response
 			select {
@@ -161,17 +324,25 @@ func startSender[Request, Response proto.Message](
 					return
 				}
 				response = received
-			case <-server.Context().Done():
+			case <-ctx.Done():
 				return
 			}
 
-			loop := retry.NewSilentLoop("send message", 10, time.Millisecond*100)
-			err := loop.Run(func() error {
+			if failed {
+				continue
+			}
+
+			loop := retry.NewSilentLoopWithParamsOpts(
+				retry.WithName("send message"),
+				retry.WithAttempts(10),
+				retry.WithWait(100*time.Millisecond),
+			)
+			err := loop.RunContext(ctx, func() error {
 				return server.Send(response)
 			})
 			if err != nil {
 				sendInternalErr(internalErrCh, fmt.Errorf("sending message: %w", err))
-				return
+				failed = true
 			}
 		}
 	}()

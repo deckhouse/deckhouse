@@ -61,8 +61,9 @@ func (p *abortParams) loggerOptions(ctx context.Context) logger.Options {
 }
 
 func (s *Service) Abort(server pb.DHCTL_AbortServer) error {
-	ctx, cancel := operationCtx(server)
-	defer cancel()
+	op := newOperation(server)
+	defer op.close()
+	ctx := op.ctx
 
 	logger.L(ctx).Info("started")
 
@@ -83,7 +84,7 @@ func (s *Service) Abort(server pb.DHCTL_AbortServer) error {
 	}
 
 	startReceiver[*pb.AbortRequest, *pb.AbortResponse](server, receiveCh, doneCh, internalErrCh)
-	startSender[*pb.AbortRequest, *pb.AbortResponse](server, sendCh, internalErrCh)
+	startOperationSender[*pb.AbortRequest, *pb.AbortResponse](op, server, sendCh, internalErrCh)
 
 connectionProcessor:
 	for {
@@ -109,7 +110,7 @@ connectionProcessor:
 						logger.Err(err), slog.String("message", fmt.Sprintf("%T", message)))
 					continue connectionProcessor
 				}
-				go func() {
+				op.Go(func() {
 					result := s.abortSafe(ctx, &abortParams{
 						request:      message.Start,
 						switchPhase:  phaseSwitcher.switchPhase(ctx),
@@ -117,7 +118,7 @@ connectionProcessor:
 						sendCh:       sendCh,
 					})
 					_ = sendResponse(server.Context(), sendCh, &pb.AbortResponse{Message: &pb.AbortResponse_Result{Result: result}})
-				}()
+				})
 
 			case *pb.AbortRequest_Continue:
 				err := f.Event("toNextPhase")
@@ -138,7 +139,7 @@ connectionProcessor:
 				}
 
 			case *pb.AbortRequest_Cancel:
-				cancel()
+				op.cancel()
 
 			default:
 				logger.L(ctx).Error("got unprocessable message",

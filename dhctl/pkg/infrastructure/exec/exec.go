@@ -26,11 +26,28 @@ import (
 	"strings"
 	"sync"
 	"syscall"
+	"time"
 
 	dhlog "github.com/deckhouse/lib-dhctl/pkg/logger"
 )
 
-const HasChangesExitCode = 2
+const (
+	HasChangesExitCode = 2
+
+	// ForcedStopTimeout is the longest a canceled utility runs with forced stop enabled:
+	// abandoned at the very end of the grace period, it gets the signal gap on top.
+	ForcedStopTimeout = forcedStopGracePeriod + forcedStopSignalGap + forcedStopKillDelay
+
+	// forcedStopGracePeriod is how long a canceled utility may keep finishing the
+	// resource operations in flight before it is told to exit immediately.
+	forcedStopGracePeriod = 10 * time.Minute
+	// forcedStopKillDelay is how long a utility may take to exit after that.
+	forcedStopKillDelay = 30 * time.Second
+	// forcedStopSignalGap separates the second SIGINT from the first one when the
+	// grace period is skipped: signals do not queue, and one sent right after the
+	// first is merged into it.
+	forcedStopSignalGap = time.Second
+)
 
 // tailLines is the number of recent stdout/stderr lines we hold onto so we can
 // surface them when the subprocess exits non-zero and the unfiltered error
@@ -65,6 +82,29 @@ func (t *ringTail) String() string {
 		}
 	})
 	return b.String()
+}
+
+// WithForcedStop bounds the stop of an infrastructure utility canceled through ctx.
+//
+// Canceling the context sends SIGINT (see cmd.Cancel in tofu and terraform), and the
+// utility then finishes the resource operations in flight, which may take forever.
+// With forced stop, a second SIGINT after a grace period makes it exit immediately,
+// and SIGKILL to its process group, provider plugins included, handles one that still
+// does not exit. The price is a possibly incomplete state: resources being changed at
+// that moment may be missing from it.
+//
+// Closing abandoned skips the grace period once ctx is canceled: nobody waits for the
+// utility to finish its work anymore, and it only delays a retry of the operation and
+// may overlap it. A nil abandoned never skips the grace period.
+//
+// Intended for server mode, where nobody is there to press Ctrl-C twice.
+func WithForcedStop(ctx context.Context, abandoned <-chan struct{}) context.Context {
+	return withForcedStop(ctx, forcedStop{
+		gracePeriod: forcedStopGracePeriod,
+		signalGap:   forcedStopSignalGap,
+		killDelay:   forcedStopKillDelay,
+		abandoned:   abandoned,
+	})
 }
 
 func Exec(ctx context.Context, cmd *exec.Cmd, isDebug bool) (int, error) {
@@ -157,9 +197,12 @@ func Exec(ctx context.Context, cmd *exec.Cmd, isDebug bool) (int, error) {
 		return cmd.ProcessState.ExitCode(), err
 	}
 
+	finishForcedStop := watchForcedStop(ctx, cmd.Process.Pid)
+
 	wg.Wait()
 
 	err = cmd.Wait()
+	forced := finishForcedStop()
 
 	exitCode := cmd.ProcessState.ExitCode() // 2 = exit code, if infrastructure plan has diff
 	if err != nil && exitCode != HasChangesExitCode {
@@ -174,6 +217,12 @@ func Exec(ctx context.Context, cmd *exec.Cmd, isDebug bool) (int, error) {
 	if exitCode == 0 {
 		err = nil
 	}
+
+	if err != nil && forced {
+		err = fmt.Errorf("infrastructure utility was force stopped after cancellation, "+
+			"its state may miss the resources that were being changed: %w", err)
+	}
+
 	return exitCode, err
 }
 
@@ -213,4 +262,85 @@ func ReplaceHomeDirEnv(env []string, homeDir string) []string {
 	}
 
 	return res
+}
+
+type forcedStopKey struct{}
+
+type forcedStop struct {
+	gracePeriod time.Duration
+	signalGap   time.Duration
+	killDelay   time.Duration
+	abandoned   <-chan struct{}
+}
+
+func withForcedStop(ctx context.Context, params forcedStop) context.Context {
+	return context.WithValue(ctx, forcedStopKey{}, params)
+}
+
+// watchForcedStop escalates the stop of the process group led by pid once ctx is
+// canceled, if forced stop is enabled. The returned func must be called after the
+// process is waited for: it stops the watcher, waits for it, and reports whether
+// the stop was forced.
+func watchForcedStop(ctx context.Context, pid int) func() bool {
+	params, ok := ctx.Value(forcedStopKey{}).(forcedStop)
+	if !ok {
+		return func() bool { return false }
+	}
+
+	exited := make(chan struct{})
+	forced := false
+
+	var wg sync.WaitGroup
+	wg.Go(func() {
+		select {
+		case <-exited:
+			return
+		case <-ctx.Done():
+		}
+
+		steps := []struct {
+			after  time.Duration
+			skip   <-chan struct{} // a nil channel never skips the wait
+			signal syscall.Signal
+			name   string
+		}{
+			{after: params.gracePeriod, skip: params.abandoned, signal: syscall.SIGINT, name: "SIGINT"},
+			{after: params.killDelay, signal: syscall.SIGKILL, name: "SIGKILL"},
+		}
+
+		for _, step := range steps {
+			reason := fmt.Sprintf("did not exit %s after the previous signal", step.after)
+			select {
+			case <-exited:
+				return
+			case <-time.After(step.after):
+			case <-step.skip:
+				reason = "is abandoned"
+
+				// When abandoned is done together with ctx, cmd.Cancel sends the first
+				// SIGINT right now: keep the second one apart from it.
+				select {
+				case <-exited:
+					return
+				case <-time.After(params.signalGap):
+				}
+			}
+
+			// The utility may have exited already and be waiting to be reaped: a zombie
+			// takes the signal without an error, so the stop is reported as forced
+			// although it was not. Such a stop happens only right at the step.
+			forced = true
+			dhlog.FromContext(ctx).WarnContext(ctx, fmt.Sprintf(
+				"Infrastructure utility (pid %d) %s, sending %s", pid, reason, step.name,
+			))
+			_ = syscall.Kill(-pid, step.signal)
+		}
+	})
+
+	return func() bool {
+		close(exited)
+		wg.Wait()
+
+		return forced
+	}
 }
