@@ -76,6 +76,13 @@ properties:
         type: integer
         minimum: 0
         x-examples: [ 1, 3 ]
+      clusterSchedulableMasterCount:
+        type: integer
+        minimum: 0
+        description: |
+          Number of control-plane nodes available for scheduling.
+          Cordoned nodes (.spec.unschedulable) are excluded, unlike in clusterMasterCount.
+        x-examples: [ 1, 3 ]
       podSubnet:
         type: string
         pattern: '^[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}/[0-9]{1,2}$'
