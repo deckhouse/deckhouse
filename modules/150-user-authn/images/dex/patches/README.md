@@ -280,6 +280,57 @@ next refresh, as `019` does for client lists. The user-authz webhook trusts
 these fields when deciding who may write the provider, so the patch and
 the CRD field ship in the same release.
 
+### 021-sign-in-logging.patch
+
+Owns the format of the sign-in log lines, so that every connector and every
+flow (login form, connector callback, `grant_type=password`, token exchange,
+refresh, TOTP) logs a sign-in the same way. Earlier patches added these lines
+one at a time with different keys and levels (`user` vs `username`, `error`
+vs `err`, a wrong password at ERROR but a lock at WARN, an OIDC or SAML group
+refusal without the user at all); this patch rewrites them to one scheme.
+
+Every sign-in line carries:
+
+- `connector_id` and `client_id`;
+- whatever is known of the user: `user_id`, `username`, `preferred_username`,
+  `email`;
+- `groups` on success; `user_groups`, `user_groups_count` and
+  `allowed_groups` on a group refusal (`user_groups` is left out when the
+  connector refused the user without fetching the groups, e.g. the GitHub org
+  membership check, and is `[]` when the user has none);
+- `reason` on every refusal: `invalid_credentials`, `invalid_totp`,
+  `not_in_allowed_groups`, `not_allowed` (with `rule` naming the allow-list),
+  `account_locked`;
+- `err` when an error caused the line.
+
+A refusal caused by the user (wrong password or code, not in the allowed
+groups, not on an allow-list, locked) is a warning and is logged once; a
+failure of Dex or of the upstream provider is an error; success is info.
+Message texts do not change.
+
+Group refusals are one typed error for every connector that gates on groups
+(OIDC, SAML, GitHub orgs and teams, GitLab, Bitbucket Cloud, Atlassian Crowd,
+Google, Microsoft, OpenShift): `connector.UserNotInRequiredGroupsError`, whose
+name, `UserID` and `Groups` follow upstream dexidp/dex#4200 (v2.45.0). Its text
+is `user not a member of allowed groups` everywhere. Connectors that learn the
+groups before the full identity (GitHub, GitLab, Bitbucket, Crowd, Microsoft)
+fill the identity in with `connector.AsUserNotInRequiredGroups`.
+
+`NotAllowedError` (DexClient / DexAuthenticator and DexProvider allow-lists,
+`001`, `019`, `020`) records the rule, the client, the connector, the user and
+the user's groups *before* the lists narrowed them.
+
+Logged values are safe: `pkg/logsafe` drops control characters (no forged
+log lines), cuts values to 256 characters and lists to 50 entries with a
+count of the rest. Tokens, codes, passwords, raw claims and connector data are
+never logged, and allowed email lists are not logged because they name other
+users.
+
+**Impact.** Log-only. Responses, status codes and messages shown to users do
+not change. Log consumers see new attributes, `username` instead of `user`,
+`err` instead of `error`, and WARN instead of ERROR for wrong passwords, wrong
+TOTP codes and group refusals.
+
 ### 998-fix-cve.patch
 
 #### Fix CVEs
