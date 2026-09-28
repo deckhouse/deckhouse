@@ -1,0 +1,93 @@
+admission-policy-engine:
+  fixes:
+    - summary: >-
+        Restored the `Privileged` default PSS policy for clusters bootstrapped before v1.55 (without the
+        `install-data` ConfigMap).
+      pull_request: https://github.com/deckhouse/deckhouse/pull/23259
+      impact: >-
+        Clusters bootstrapped before v1.55 were switched to the `Baseline` default PSS policy in 1.77,
+        which denies privileged workloads in user namespaces.
+
+        After the update, the default policy on these clusters becomes less strict: it is switched back
+        to `Privileged`, and privileged pods in user namespaces pass admission again.
+
+        To keep the `Baseline` policy, set `settings.podSecurityStandards.defaultPolicy: Baseline` explicitly
+        in the `admission-policy-engine` ModuleConfig.
+ci:
+  fixes:
+    - summary: update werf to v2.74.2-dk.1
+      pull_request: https://github.com/deckhouse/deckhouse/pull/23223
+cloud-provider-dvp:
+  fixes:
+    - summary: >-
+        Fixed the `D8CloudProviderDVPMigrationPending` alert that kept firing after the migration resources
+        were applied.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/23248
+cloud-provider-yandex:
+  fixes:
+    - summary: fix "Address in use" failures when replacing nodes and when removing external IP addresses
+      pull_request: https://github.com/deckhouse/deckhouse/pull/23256
+      impact: >-
+        dhctl converge no longer deadlocks on master replacement or externalIPAddresses removal in Yandex
+        Cloud; the terraform-manager provider release is patched to detach one-to-one NAT before deleting
+        a reserved address.
+common:
+  fixes:
+    - summary: Fix kubelet podSandbox order
+      pull_request: https://github.com/deckhouse/deckhouse/pull/23215
+    - summary: fixed private build cni-migration-*
+      pull_request: https://github.com/deckhouse/deckhouse/pull/23255
+deckhouse:
+  fixes:
+    - summary: set releaseChannel in CSE
+      pull_request: https://github.com/deckhouse/deckhouse/pull/23235
+    - summary: Fix setting Scaled before Installed.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/23258
+docs:
+  features:
+    - summary: >-
+        Add user-authn-controller, user-api and basic-auth-proxy components to user-authn module architecture
+        section.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/23176
+    - summary: Rename DKP->DP and replace PNG->SVG architecture section
+      pull_request: https://github.com/deckhouse/deckhouse/pull/23271
+  fixes:
+    - summary: Fixed FAQ section for ansible inventory.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/23275
+multitenancy-manager:
+  fixes:
+    - summary: The grant-violation hook re-evaluates policies on change again, not only on its two-minute
+        schedule.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/23213
+      impact: >-
+        Two Go hooks registered in one file shared a derived name, so the Kubernetes-binding half lost
+        its bindings and the `d8_cluster_objects_grant_violated` series was recomputed only by the periodic
+        scan. The series itself was never missing; it could lag a policy change by up to two minutes.
+node-manager:
+  fixes:
+    - summary: >-
+        Increase the capi-controller-manager VPA maximum memory recommendation to prevent health-check
+        failures and restarts under memory pressure.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/23203
+    - summary: >-
+        Stop caps-controller-manager from rewriting StaticInstance objects in a hot loop when a connectivity
+        check fails, which caused a sustained load on etcd.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/23207
+      impact: >-
+        A StaticInstance whose connectivity check fails now keeps its reservation for the whole bootstrap
+        window instead of returning to the pool on every failed attempt, and the bootstrap (20 min) and
+        cleanup (10 min) timeouts, which previously never fired, are now reachable.
+
+        If nothing ever ran on the host, the bootstrap timeout returns the instance to the pool after
+        20 minutes as before.
+
+        If the host was already bootstrapped in part, the instance returns only through MachineHealthCheck
+        remediation (nodeStartupTimeoutSeconds: 1200) plus the cleanup timeout, so it becomes available
+        again roughly 20 + 10 minutes after the failure, and remediation reboots the host as part of the
+        cleanup.
+    - summary: Fix duplicate NVIDIA GPU dashboards when the gpu module is enabled.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/23250
+service-with-healthchecks:
+  fixes:
+    - summary: Fixed metrics endpoints being reachable without going through kube-rbac-proxy authorization.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/23166

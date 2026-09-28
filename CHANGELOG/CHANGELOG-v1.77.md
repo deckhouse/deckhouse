@@ -3,6 +3,9 @@
 ## Know before update
 
 
+ - A StaticInstance whose connectivity check fails now keeps its reservation for the whole bootstrap window instead of returning to the pool on every failed attempt, and the bootstrap (20 min) and cleanup (10 min) timeouts, which previously never fired, are now reachable.
+    If nothing ever ran on the host, the bootstrap timeout returns the instance to the pool after 20 minutes as before.
+    If the host was already bootstrapped in part, the instance returns only through MachineHealthCheck remediation (nodeStartupTimeoutSeconds: 1200) plus the cleanup timeout, so it becomes available again roughly 20 + 10 minutes after the failure, and remediation reboots the host as part of the cleanup.
  - Affects clusters where `publishAPI` is enabled together with `enableBasicAuth` on a
     Crowd, OIDC or LDAP `DexProvider`. Both are disabled by default, so a default
     installation is not affected.
@@ -33,6 +36,9 @@
  - CAPI NodeGroups whose MachineDeployment was stuck on an old MachineTemplate are rolled to the current InstanceClass after the update, within maxSurgePerZone/maxUnavailablePerZone. Groups already on the current template are not touched.
  - Cilium agent pods are restarted to apply the fixes.
  - Cloud provider configuration for DKP clusters deployed in DVP needs to be migrated from ProviderClusterConfiguration to ModuleConfig settings. For migration instructions, refer to "Cluster and Infrastructure" in the DKP FAQ.
+ - Clusters bootstrapped before v1.55 were switched to the `Baseline` default PSS policy in 1.77, which denies privileged workloads in user namespaces.
+    After the update, the default policy on these clusters becomes less strict: it is switched back to `Privileged`, and privileged pods in user namespaces pass admission again.
+    To keep the `Baseline` policy, set `settings.podSecurityStandards.defaultPolicy: Baseline` explicitly in the `admission-policy-engine` ModuleConfig.
  - Containers attached through the `pods/ephemeralcontainers` subresource were not seen by
     the module's webhook, so no policy was evaluated for them: SecurityPolicy, OperationPolicy,
     Pod Security Standards and image signature verification were all bypassed by `kubectl debug`.
@@ -410,6 +416,10 @@
  - **[admission-policy-engine]** Changed the label for container SecurityPolicyExceptions. [#20678](https://github.com/deckhouse/deckhouse/pull/20678)
  - **[admission-policy-engine]** Fixed the constraint-template check for the AssignImage CRD. [#20782](https://github.com/deckhouse/deckhouse/pull/20782)
  - **[admission-policy-engine]** Made Gatekeeper pods tolerate the csi-not-bootstrapped taint to prevent webhook deadlock during worker node replacement. [#19383](https://github.com/deckhouse/deckhouse/pull/19383)
+ - **[admission-policy-engine]** Restored the `Privileged` default PSS policy for clusters bootstrapped before v1.55 (without the `install-data` ConfigMap). [#23259](https://github.com/deckhouse/deckhouse/pull/23259)
+    Clusters bootstrapped before v1.55 were switched to the `Baseline` default PSS policy in 1.77, which denies privileged workloads in user namespaces.
+    After the update, the default policy on these clusters becomes less strict: it is switched back to `Privileged`, and privileged pods in user namespaces pass admission again.
+    To keep the `Baseline` policy, set `settings.podSecurityStandards.defaultPolicy: Baseline` explicitly in the `admission-policy-engine` ModuleConfig.
  - **[admission-policy-engine]** Restrict SecurityPolicyException write access to ClusterAdmin, closing a tenant-to-node privilege escalation. [#22447](https://github.com/deckhouse/deckhouse/pull/22447)
     Project administrators (user-authz Admin access level) can no longer create, update or delete SecurityPolicyException resources; the permission now requires ClusterAdmin. Clusters that granted accessLevel Admin to untrusted tenants over RBAC v1 were exposed to node-level privilege escalation. RBAC v2 use/manage roles were never affected.
  - **[admission-policy-engine]** Updated Gatekeeper to 3.22.2 to fix CVEs. [#20454](https://github.com/deckhouse/deckhouse/pull/20454)
@@ -460,6 +470,7 @@
  - **[cloud-provider-dvp]** Fixed LoadBalancer stuck in pending by retrying on conflict when updating ServiceWithHealthchecks and propagating IP to the child cluster service status. [#19590](https://github.com/deckhouse/deckhouse/pull/19590)
  - **[cloud-provider-dvp]** Fixed ModuleConfig access for users with the d8:manage:infrastructure:viewer and d8:manage:infrastructure:manager roles. [#21487](https://github.com/deckhouse/deckhouse/pull/21487)
  - **[cloud-provider-dvp]** Fixed duplicate volume mounts in the DVP CSI driver on kubelet retries. [#20714](https://github.com/deckhouse/deckhouse/pull/20714)
+ - **[cloud-provider-dvp]** Fixed the `D8CloudProviderDVPMigrationPending` alert that kept firing after the migration resources were applied. [#23248](https://github.com/deckhouse/deckhouse/pull/23248)
  - **[cloud-provider-dvp]** Made cloud-init secrets immutable to prevent post-bootstrap data mutation. [#20930](https://github.com/deckhouse/deckhouse/pull/20930)
  - **[cloud-provider-dvp]** Made the DVP CSI driver wait for VirtualDisk readiness in CreateVolume so provisioning errors are propagated instead of marking the PV as Bound. [#20566](https://github.com/deckhouse/deckhouse/pull/20566)
  - **[cloud-provider-dvp]** Restored correct service-lb-controller enablement in cloud-provider-dvp. [#20177](https://github.com/deckhouse/deckhouse/pull/20177)
@@ -500,6 +511,8 @@
  - **[cloud-provider-yandex]** Bumped Go module dependencies to fix known CVEs in cloud-metrics-exporter, cloud-migrator, cloud-data-discoverer. [#20780](https://github.com/deckhouse/deckhouse/pull/20780)
  - **[cloud-provider-yandex]** Bumped helm_lib with liveness probe parameters for the CSI controller. [#19694](https://github.com/deckhouse/deckhouse/pull/19694)
  - **[cloud-provider-yandex]** Fixed the volume-expansion-mode annotation so Yandex CSI supports online PVC resize. [#20578](https://github.com/deckhouse/deckhouse/pull/20578)
+ - **[cloud-provider-yandex]** fix "Address in use" failures when replacing nodes and when removing external IP addresses [#23256](https://github.com/deckhouse/deckhouse/pull/23256)
+    dhctl converge no longer deadlocks on master replacement or externalIPAddresses removal in Yandex Cloud; the terraform-manager provider release is patched to detach one-to-one NAT before deleting a reserved address.
  - **[cloud-provider-zvirt]** Bumped Go module dependencies to fix known CVEs in cloud-controller-manager, capz, cloud-data-discoverer. [#20780](https://github.com/deckhouse/deckhouse/pull/20780)
  - **[cloud-provider-zvirt]** Bumped helm_lib with liveness probe parameters for the CSI controller. [#19694](https://github.com/deckhouse/deckhouse/pull/19694)
  - **[cloud-provider-zvirt]** Prevent capz-controller-manager from crashlooping without diagnostics when zVirt tags cannot be created. [#22459](https://github.com/deckhouse/deckhouse/pull/22459)
@@ -524,6 +537,7 @@
  - **[common]** Added support for `op_*` PromQL functions to the `operator-prometheus` parser. [#20254](https://github.com/deckhouse/deckhouse/pull/20254)
  - **[common]** Bump golang.org/x/net, golang.org/x/text, golang.org/x/sys and google.golang.org/grpc in CSI sidecar patches to fix the vulnerabilities they carry. [#22614](https://github.com/deckhouse/deckhouse/pull/22614)
  - **[common]** Enforced permanent use of the default CA bundle in `image-availability-exporter` in the `extended-monitoring` module. [#20175](https://github.com/deckhouse/deckhouse/pull/20175)
+ - **[common]** Fix kubelet podSandbox order [#23215](https://github.com/deckhouse/deckhouse/pull/23215)
  - **[common]** Fixed CVE-2026-29181 in CoreDNS. [#20038](https://github.com/deckhouse/deckhouse/pull/20038)
  - **[common]** Fixed CVE-2026-40898 in CoreDNS by updating the quic-go dependency. [#20736](https://github.com/deckhouse/deckhouse/pull/20736)
  - **[common]** Fixed CVEs in the `events-exporter`, `extended-monitoring-exporter`, `image-availability-exporter`, and `x509-certificate-exporter` images. [#20395](https://github.com/deckhouse/deckhouse/pull/20395)
@@ -791,6 +805,7 @@
     Operators can now detect degraded fencing states (quorum loss, API unreachability) through log levels and diagnostic fields without parsing log messages.
  - **[node-manager]** Include system labels in CAPI MachineDeployment capacity annotation for correct scale-from-zero behavior [#20174](https://github.com/deckhouse/deckhouse/pull/20174)
     On CAPI-based clusters (DVP, VCD, zVirt, Dynamix, HuaweiCloud), scale-from-zero now correctly handles pods with nodeSelector targeting system labels (node.deckhouse.io/group, node.deckhouse.io/type, node-role.kubernetes.io/<ng-name>). Previously such pods remained Pending indefinitely when NodeGroup had minPerZone=0. No user action required — the fix is applied automatically on upgrade.
+ - **[node-manager]** Increase the capi-controller-manager VPA maximum memory recommendation to prevent health-check failures and restarts under memory pressure. [#23203](https://github.com/deckhouse/deckhouse/pull/23203)
  - **[node-manager]** MachineDeployment `spec.replicas` is no longer dropped on upgrade, so cloud nodes are not recreated. [#22338](https://github.com/deckhouse/deckhouse/pull/22338)
     Fixes recreation of all CloudEphemeral nodes on upgrade to 1.76.9. The MachineDeployment
     replica count was dropped and the MachineDeployment was scaled to zero.
@@ -800,6 +815,10 @@
     <what to expect for users, possibly MULTI-LINE>, required if impact_level is high ↓
  - **[node-manager]** Removed the conflicting `ms` short name from the CAPI MachineSet CRD. [#21189](https://github.com/deckhouse/deckhouse/pull/21189)
  - **[node-manager]** Require a non-empty cluster UUID when rendering the node bootstrap script, preventing static nodes from stalling ~20m on a registry-packages-proxy 404. [#21132](https://github.com/deckhouse/deckhouse/pull/21132)
+ - **[node-manager]** Stop caps-controller-manager from rewriting StaticInstance objects in a hot loop when a connectivity check fails, which caused a sustained load on etcd. [#23207](https://github.com/deckhouse/deckhouse/pull/23207)
+    A StaticInstance whose connectivity check fails now keeps its reservation for the whole bootstrap window instead of returning to the pool on every failed attempt, and the bootstrap (20 min) and cleanup (10 min) timeouts, which previously never fired, are now reachable.
+    If nothing ever ran on the host, the bootstrap timeout returns the instance to the pool after 20 minutes as before.
+    If the host was already bootstrapped in part, the instance returns only through MachineHealthCheck remediation (nodeStartupTimeoutSeconds: 1200) plus the cleanup timeout, so it becomes available again roughly 20 + 10 minutes after the failure, and remediation reboots the host as part of the cleanup.
  - **[node-manager]** fix webook validation in node-controller on cri changes in nodegroup. [#20050](https://github.com/deckhouse/deckhouse/pull/20050)
  - **[node-manager]** hook to restore apiVersion on CAPI resources. [#20330](https://github.com/deckhouse/deckhouse/pull/20330)
  - **[node-manager]** node-controller no longer removes taints set by other components on the first reconcile of Static and CloudPermanent nodes. [#22988](https://github.com/deckhouse/deckhouse/pull/22988)
@@ -834,6 +853,7 @@
     recovers automatically once the updated agent starts, no manual action is needed.
  - **[service-with-healthchecks]** Fixed an API server overload issue ("status storm"), resolved validation errors for ClusterIP services, corrected pod readiness evaluation logic, and improved code quality. [#19455](https://github.com/deckhouse/deckhouse/pull/19455)
     The `service-with-healthchecks` status logic was heavily refactored to reduce API and etcd load. If you rely on `lastProbeTime` observability on every probe, explicitly enable `verboseStatus` in the module configuration.
+ - **[service-with-healthchecks]** Fixed metrics endpoints being reachable without going through kube-rbac-proxy authorization. [#23166](https://github.com/deckhouse/deckhouse/pull/23166)
  - **[service-with-healthchecks]** Stopped publishing terminated pods in EndpointSlices and started publishing pods being deleted as terminating endpoints. [#22836](https://github.com/deckhouse/deckhouse/pull/22836)
     Endpoints for pods in a terminal phase (Failed/Succeeded) are no longer published. In DVP clusters this prevents traffic from being routed to a VirtualMachine IP that has been reused by another pod. Pods being deleted are now published with the serving and terminating conditions, which enables the graceful shutdown flow for consumers. Pod readiness is derived from the PodReady condition, and stale probe results are reset when a pod becomes not ready, is recreated, or changes its IP.
  - **[user-authn]** Added the missing `kubeconfigPublishAPIEncodedName` field to CSE OpenAPI values. [#20864](https://github.com/deckhouse/deckhouse/pull/20864)
