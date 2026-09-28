@@ -75,9 +75,17 @@ The manage role grants access only to system namespaces (starting with `d8-` or 
 Manage roles are intended for assigning rights to manage the entire platform or a part of it (the [subsystem](#subsystems-of-the-role-based-model)), but not the users applications themselves. Using a manage role you can enable, for example, a security administrator to manage cluster security modules. Thus, the security administrator will be able to configure authentication, authorization, security policies, and other respective parameters.
 
 {% alert level="warning" %}
-A manage role limits which modules and namespaces a subject can address, but it does not limit the privileges a subject can obtain through the modules it is allowed to manage. This matters most for the `security` subsystem: the right to manage authentication and authorization is equivalent to full control over the cluster.
+A manage role does not, by itself, let you grant access to other people.
 
-A subject that can manage the `user-authn` module can register an identity provider or reset the credentials of any local user. A subject that can manage the `user-authz` module can modify authorization rules. In both cases, they can obtain an identity with any privileges, including cluster administrator, so treat a `security` subsystem manage role as a cluster administrator role when planning access.
+Creating a User or Group that is not already a grant subject is ordinary object creation.
+
+Creating a User for an email that already carries a grant, or writing a ClusterAuthorizationRule, is granting roles. The request is admitted only if the requester already has covering permissions or is explicitly allowed to assign those roles.
+
+The ClusterAuthorizationRule `spec.accessLevel` field is a [current-model](#current-role-based-model) level: `User`, `PrivilegedUser`, `Editor`, `Admin`, `ClusterEditor`, `ClusterAdmin`, `SuperAdmin`. A `security` subsystem manager can assign any of those except `SuperAdmin`. That manager also cannot assign the Kubernetes `cluster-admin` ClusterRole. Experimental-model security roles stop at `d8:subsystem:security:admin`.
+
+Webhook deny messages call the `accessLevel` values basic, so they are not confused with manage-role levels (`viewer` / `manager`).
+
+Permission to create User and Group objects in the `user-authn` module is not enough: it does not grant the roles already attached to that email.
 {% endalert %}
 
 The manage role defines access rights:
