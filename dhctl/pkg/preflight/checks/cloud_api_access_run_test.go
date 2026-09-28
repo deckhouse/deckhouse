@@ -435,3 +435,32 @@ func TestCloudAPIAccessWithNoConnection(t *testing.T) {
 		assert.True(t, failure.StopsPhase, "nothing behind an unusable connection is worth asking")
 	})
 }
+
+// The context handed to Client is the client's lifetime — lib-connection's own words are "must
+// outlive every user" — and the provider caches that client for every check that comes after.
+// Passing the check's own context made the client die with the check that happened to create it,
+// so lib-connection would not reconnect it after any drop.
+func TestCloudAPIGivesTheClientALifetimeOfItsOwn(t *testing.T) {
+	server, meta := cloudAPIServer(t, func(w http.ResponseWriter, _ *http.Request) {
+		w.WriteHeader(http.StatusOK)
+	}, "", nil)
+
+	lifetime := make(chan context.Context, 1)
+	client := newFakeSSHClient(server.Listener.Addr().String())
+	source := fakeSSHProviderInitializer{provider: fakeSSHProvider{client: client, lifetime: lifetime}}
+
+	checkCtx, cancel := context.WithCancel(t.Context())
+	check := CloudAPICheck{MetaConfig: meta, SSHProviderInitializer: source}
+
+	_, err := check.Run(checkCtx)
+	require.NoError(t, err)
+
+	given := <-lifetime
+	require.NoError(t, given.Err(), "the client must not be handed an already-cancelled context")
+
+	// What happens when the check is over, or its timeout fires.
+	cancel()
+
+	require.NoError(t, given.Err(),
+		"the client outlives the check that created it: every check after this one shares it")
+}

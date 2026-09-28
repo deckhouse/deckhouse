@@ -1,6 +1,6 @@
 <p align="center">
-  <img alt="Deckhouse Kubernetes Platform" src="docs/documentation/images/logos/DKP_dark_mode.svg#gh-dark-mode-only" alt="Deckhouse Kubernetes Platform" />
-  <img alt="Deckhouse Kubernetes Platform" src="docs/documentation/images/logos/DKP_light_mode.svg#gh-light-mode-only" alt="Deckhouse Kubernetes Platform" />
+  <img alt="Deckhouse Platform" src="docs/documentation/images/logos/DKP_dark_mode.svg#gh-dark-mode-only" alt="Deckhouse Kubernetes Platform" />
+  <img alt="Deckhouse Platform" src="docs/documentation/images/logos/DKP_light_mode.svg#gh-light-mode-only" alt="Deckhouse Kubernetes Platform" />
 </p>
 
 <p align="center">
@@ -11,7 +11,7 @@
   <a href="https://releases.deckhouse.io"><img src="https://img.shields.io/badge/releases-releases.deckhouse.io-blueviolet" alt="Releases"></a>
 </p>
 
-[Deckhouse Kubernetes Platform](https://deckhouse.io/) is an Open Source platform for managing Kubernetes clusters in a fully automatic and uniform fashion. It allows you to create homogeneous Kubernetes clusters anywhere and fully manages them. It supplies all the add-ons you need for auto-scaling, observability, security, and service mesh. It comes in Enterprise Edition (EE) and Community Edition (CE).
+[Deckhouse Platform](https://deckhouse.io/) is an Open Source platform for managing Kubernetes clusters in a fully automatic and uniform fashion. It allows you to create homogeneous Kubernetes clusters anywhere and fully manages them. It supplies all the add-ons you need for auto-scaling, observability, security, and service mesh. It comes in Deckhouse Platform Open and Deckhouse Platform commercial versions.
 
 # Main features
 
@@ -24,35 +24,35 @@
 - Easy to start: you need a couple of CLI commands and 8 minutes to get production-ready Kubernetes.
 - A fully-featured platform. Many features *(check the diagram below)* — carefully configured & integrated — are available right out of the box.
 
-_Deckhouse Kubernetes Platform [has passed](https://landscape.cncf.io/?view-mode=card&item=platform--certified-kubernetes-distribution--flant-deckhouse#app-definition-and-development--application-definition-image-build) the CNCF Certified Kubernetes Conformance Program certification for Kubernetes 1.26—1.30._
+_Deckhouse Platform [has passed](https://landscape.cncf.io/?view-mode=card&item=platform--certified-kubernetes-distribution--flant-deckhouse#app-definition-and-development--application-definition-image-build) the CNCF Certified Kubernetes Conformance Program certification for Kubernetes 1.26—1.30._
 
 ## Platform features across layers
 
-The diagram below illustrates how Deckhouse Kubernetes Platform features are distributed across different layers of the platform — from infrastructure to the control plane and cluster nodes.
+The diagram below illustrates how Deckhouse Platform features are distributed across different layers of the platform — from infrastructure to the control plane and cluster nodes.
 
-![Deckhouse Kubernetes Platform infrastructure](docs/site/images/diagrams/infrastructure.png)
+![Deckhouse Platform infrastructure](docs/site/images/diagrams/infrastructure.png)
 
-## CE vs. EE
+## Deckhouse Platform Open vs. commercial versions
 
-While Deckhouse Kubernetes Platform CE is available free as an Open Source, EE is a commercial version of the platform that can be purchased with a paid subscription. EE's source is also open, but it's neither Open Source nor free to use.
+While Deckhouse Platform Open is available free as an Open Source, there are commercial versions of the platform, which can be purchased with a paid subscription. Commercial versions source is also open, but it's neither Open Source nor free to use.
 
-EE brings many additional features that extend the basic functionality provided in CE. They include OpenStack & vSphere integration, Istio service mesh, multitenancy, enterprise-level security, BGP support, instant autoscaling, local DNS caching, and selectable timeframe for the platform's upgrades.
+Commercial versions brings many additional features that extend the basic functionality provided in Deckhouse Platform Open. They include OpenStack & vSphere integration, Istio service mesh, multitenancy, enterprise-level security, BGP support, instant autoscaling, local DNS caching, and selectable timeframe for the platform's upgrades.
 
-Deckhouse Kubernetes Platform CE is freely available for everyone. Deckhouse Kubernetes Platform EE can be accessed via 30-days tokens issued via [Deckhouse website](https://deckhouse.io/).
+Deckhouse Platform Open is freely available for everyone. Commercial versions of Deckhouse Platform can be accessed via 30-days tokens issued via [Deckhouse website](https://deckhouse.io/).
 
 # Architecture
 
-Deckhouse Kubernetes Platform follows the upstream version of Kubernetes, using that as a basis to build all of its features and configurations on. The added functionality is implemented via two building blocks:
+Deckhouse Platform follows the upstream version of Kubernetes, using that as a basis to build all of its features and configurations on. The added functionality is implemented via two building blocks:
 
 - [shell-operator](https://github.com/flant/shell-operator) — to create Kubernetes operators *(please check the [KubeCon NA 2020 talk](https://www.youtube.com/watch?v=we0s4ETUBLc) for details)*;
 - [addon-operator](https://github.com/flant/addon-operator) — to pack these operators into modules and manage them.
 
-# Trying Deckhouse Kubernetes Platform
+# Trying Deckhouse Platform
 
-Please, refer to the project's [Getting started](https://deckhouse.io/products/kubernetes-platform/gs/) to begin your journey with Deckhouse Kubernetes Platform. Choose the cloud provider or bare-metal option for your infrastructure and follow the relevant step-by-step instructions to deploy your first Deckhouse Kubernetes cluster.
+Please, refer to the project's [Getting started](https://deckhouse.io/products/kubernetes-platform/gs/) to begin your journey with Deckhouse Platform. Choose the cloud provider or bare-metal option for your infrastructure and follow the relevant step-by-step instructions to deploy your first Deckhouse Platform cluster.
 
 If anything works in an unexpected manner or you have any questions, feel free to contact us via GitHub Issues / Discussions or reach a wider [community of Deckhouse users](#online-community) in Telegram and other resources.
 
 # Online community
 
-Besides using the standard GitHub features to contribute and collaborate, you can also join our Telegram chats. These are a great place to ask questions, discuss Deckhouse Kubernetes Platform and our other products, as well as connect with the user community and the Deckhouse engineering team. The chats are available in [English](https://t.me/deckhouse) and [Russian](https://t.me/deckhouse_ru). 
+Besides using the standard GitHub features to contribute and collaborate, you can also join our Telegram chats. These are a great place to ask questions, discuss Deckhouse Platform and our other products, as well as connect with the user community and the Deckhouse engineering team. The chats are available in [English](https://t.me/deckhouse) and [Russian](https://t.me/deckhouse_ru). 

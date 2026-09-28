@@ -330,42 +330,8 @@ func (c *Client) Install(ctx context.Context, namespace, releaseName string, opt
 		maps.Copy(labels, opts.ResourcesLabels)
 	}
 
-	// reportCh receives progress reports from nelm during resource tracking; a
-	// background goroutine forwards each one to the caller's callback.
-	//
-	// We must not close reportCh: ReleaseInstall closes it when it returns. The ok
-	// check makes the forwarder leave on that close instead of reading an endless
-	// stream of empty reports. done stops the forwarder even if the channel stays
-	// open. The wait keeps a report from arriving after Install returned and the
-	// caller published the apply result.
-	reportCh := make(chan progrep.ProgressReport, 1)
-	done := make(chan struct{})
-
-	var wg sync.WaitGroup
-
-	// Deferred in this order so close(done) runs before the wait.
-	defer wg.Wait()
-	defer close(done)
-
-	wg.Add(1)
-	go func() {
-		defer wg.Done()
-
-		for {
-			select {
-			case <-done:
-				return
-			case report, ok := <-reportCh:
-				if !ok {
-					return
-				}
-
-				if opts.OnTrackingEvent != nil {
-					opts.OnTrackingEvent(releaseName, report)
-				}
-			}
-		}
-	}()
+	reportCh, stopReports := forwardReports(releaseName, opts.OnTrackingEvent)
+	defer stopReports()
 
 	if _, err := action.ReleaseInstall(ctx, releaseName, namespace, action.ReleaseInstallOptions{
 		LegacyProgressReportCh: reportCh,
@@ -527,8 +493,11 @@ func (c *Client) RenderResources(ctx context.Context, namespace, releaseName str
 // Delete uninstalls a nelm release
 // Returns nil if the release doesn't exist (idempotent)
 //
+// onTrackingEvent is an optional callback invoked with progress updates
+// as Kubernetes resources are being deleted.
+//
 //nolint:nonamedreturns // named returns required for defer/recover to modify return values
-func (c *Client) Delete(ctx context.Context, namespace, releaseName string) (err error) {
+func (c *Client) Delete(ctx context.Context, namespace, releaseName string, onTrackingEvent func(name string, report progrep.ProgressReport)) (err error) {
 	ctx, span := otel.Tracer(nelmTracer).Start(ctx, "Delete")
 	defer span.End()
 	defer c.recoverPanic("Delete", span, &err,
@@ -546,7 +515,11 @@ func (c *Client) Delete(ctx context.Context, namespace, releaseName string) (err
 		}
 	}
 
+	reportCh, stopReports := forwardReports(releaseName, onTrackingEvent)
+	defer stopReports()
+
 	if err := action.ReleaseUninstall(ctx, releaseName, namespace, action.ReleaseUninstallOptions{
+		LegacyProgressReportCh: reportCh,
 		KubeConnectionOptions: common.KubeConnectionOptions{
 			KubeContextCurrent: c.kubeContext,
 		},
@@ -564,6 +537,48 @@ func (c *Client) Delete(ctx context.Context, namespace, releaseName string) (err
 	}
 
 	return nil
+}
+
+// forwardReports returns the channel nelm sends progress reports to during
+// resource tracking; a background goroutine forwards each one to onEvent.
+//
+// The caller must not close the channel: the nelm action closes it when it
+// returns. The ok check makes the forwarder leave on that close instead of
+// reading an endless stream of empty reports. done stops the forwarder even if
+// the channel stays open. The caller defers the returned stop, whose wait keeps
+// a report from arriving after the action returned and the caller published
+// the result.
+func forwardReports(releaseName string, onEvent func(name string, report progrep.ProgressReport)) (chan progrep.ProgressReport, func()) {
+	reportCh := make(chan progrep.ProgressReport, 1)
+	done := make(chan struct{})
+
+	var wg sync.WaitGroup
+
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+
+		for {
+			select {
+			case <-done:
+				return
+			case report, ok := <-reportCh:
+				if !ok {
+					return
+				}
+
+				if onEvent != nil {
+					onEvent(releaseName, report)
+				}
+			}
+		}
+	}()
+
+	// close(done) runs before the wait.
+	return reportCh, func() {
+		close(done)
+		wg.Wait()
+	}
 }
 
 // getRelease is a helper method to retrieve a release by name

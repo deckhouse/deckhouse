@@ -75,11 +75,6 @@ func (c SSHTunnelCheck) Run(ctx context.Context) (string, error) {
 	if err != nil {
 		return "", fmt.Errorf("render reverse tunnel script: %w", err)
 	}
-	killScript, err := template.RenderAndSaveKillReverseTunnelScript(ctx, localhost, strconv.Itoa(defaultTunnelRemotePort), c.globalOptions)
-	if err != nil {
-		return "", fmt.Errorf("render kill tunnel script: %w", err)
-	}
-
 	shutdown, err := startHTTPServer(ctx, defaultTunnelLocalPort)
 	if err != nil {
 		// This one is about this host, not the node: something local already holds the port.
@@ -108,6 +103,11 @@ func (c SSHTunnelCheck) Run(ctx context.Context) (string, error) {
 			Err:      err,
 		}
 	}
+	// tun.Stop() is the whole of closing it, and it is the only thing that may do the closing.
+	// This check also ran kill_reverse_tunnel.sh on the node afterwards, which finds whatever
+	// process listens on the forwarded port and kills it — and on the go-ssh backend that listener
+	// belongs to sshd, the same sshd serving dhctl's own session. The check closed its tunnel by
+	// killing the connection every check after it was going to use.
 	defer tun.Stop()
 
 	// The forward is up; what is left is whether the node can actually use it. Deckhouse
@@ -124,12 +124,6 @@ func (c SSHTunnelCheck) Run(ctx context.Context) (string, error) {
 				"and that sshd has AllowTcpForwarding yes", defaultTunnelRemotePort),
 			Err: err,
 		}
-	}
-
-	if _, err := utils.NewRunScriptReverseTunnelKiller(sshCl, killScript).
-		SetUploadDirAndCleanup("/tmp").
-		KillTunnel(ctx); err != nil {
-		return "", fmt.Errorf("cannot close the test tunnel on port %d on %s: %w", defaultTunnelRemotePort, host, err)
 	}
 
 	return fmt.Sprintf("%s reached the installer back through a reverse tunnel on port %d", host, defaultTunnelRemotePort), nil

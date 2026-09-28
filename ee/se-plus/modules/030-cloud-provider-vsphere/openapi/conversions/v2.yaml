@@ -1,6 +1,0 @@
-version: 2
-conversions:
-  - if .storageClass | has("compatibilityFlag") then .storageClass.compatibilityFlag |= (.[0:1] | ascii_upcase) + (.[1:] | ascii_downcase) end
-description:
-  ru: "Если поле `.storageClass.compatibilityFlag` существует, перепишите значение с заглавной буквы."
-  en: "If the field `.storageClass.compatibilityFlag` exists, capitalize the field value."

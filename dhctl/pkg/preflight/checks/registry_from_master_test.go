@@ -16,9 +16,14 @@ package checks
 
 import (
 	"errors"
+	"net/http"
+	"net/http/httptest"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+
+	preflight "github.com/deckhouse/deckhouse/dhctl/pkg/preflight"
 )
 
 // TestRegistryFromMasterClassifiesTheCause: the node not reaching the registry has four causes
@@ -123,4 +128,36 @@ func TestRegistryFromMasterProbeWithAPrivateCA(t *testing.T) {
 	verifying, err := nodeRegistryProbe(t.Context(), node, false)
 	assert.NoError(t, err)
 	assert.NotContains(t, verifying.args("https://registry.company.my/v2/"), "-k")
+}
+
+// This probe goes direct, so it has nothing to say about a cluster whose nodes reach the registry
+// through a proxy — and asking anyway demanded egress the cluster was never going to have. Bought
+// live on a static cluster behind 192.168.199.254:8888: HTTP 000 here while
+// registry-access-through-proxy, which asks the same question the right way, passed.
+func TestRegistryFromMasterStepsAsideForTheProxy(t *testing.T) {
+	server := httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		w.WriteHeader(http.StatusOK)
+	}))
+	defer server.Close()
+
+	t.Run("a proxy the registry is not exempt from", func(t *testing.T) {
+		check := RegistryFromMasterCheck{MetaConfig: metaConfigWithProxy(t, server, "http://192.168.199.254:8888", nil)}
+
+		_, err := check.Run(t.Context())
+
+		require.ErrorIs(t, err, preflight.ErrNotApplicable)
+		assert.Contains(t, err.Error(), "registry-access-through-proxy")
+	})
+
+	// noProxy puts the registry back on the direct path, which is this check's subject again.
+	t.Run("a registry exempted by noProxy", func(t *testing.T) {
+		check := RegistryFromMasterCheck{MetaConfig: metaConfigWithProxy(t, server, "http://192.168.199.254:8888", []string{proxiedRegistryHost})}
+
+		_, err := check.Run(t.Context())
+
+		// It goes on to ask the node, which this test gives it no way to reach — what matters is
+		// that it did not step aside for the proxy.
+		require.Error(t, err)
+		assert.NotContains(t, err.Error(), "registry-access-through-proxy")
+	})
 }

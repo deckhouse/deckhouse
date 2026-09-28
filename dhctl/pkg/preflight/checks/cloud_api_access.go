@@ -165,7 +165,9 @@ func (c CloudAPICheck) masterClient(ctx context.Context) (libcon.SSHClient, erro
 		return nil, c.connectionFailure(err)
 	}
 
-	sshClient, err := sshProvider.Client(ctx)
+	// Not this check's context: it is the client's lifetime, and the client is shared with every
+	// check after this one. See helper.GetNodeInterface for the whole of it.
+	sshClient, err := sshProvider.Client(context.WithoutCancel(ctx))
 	if err != nil {
 		return nil, c.connectionFailure(err)
 	}
@@ -216,6 +218,8 @@ func (c CloudAPICheck) request(ctx context.Context, cloudAPIConfig *cca.CloudAPI
 			Fix:      fmt.Sprintf("correct the CA certificate in the provider section of %s", providerDocumentKind(c.MetaConfig.ProviderName)),
 		})
 	}
+
+	client.CheckRedirect = utils.StopAtFirstAnswer
 
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, cloudAPIConfig.URL.String(), nil)
 	if err != nil {

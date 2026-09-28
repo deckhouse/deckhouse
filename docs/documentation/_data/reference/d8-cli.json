@@ -1,7 +1,7 @@
 {
   "name": "d8",
   "description": "d8 controls the Deckhouse Kubernetes Platform",
-  "version": "v0.33.19",
+  "version": "v0.33.22",
   "aliases": null,
   "flags": {
     "help": {
@@ -1217,6 +1217,11 @@
               "shorthand": "",
               "global": false
             },
+            "build-report-operations": {
+              "description": "Collect low-level operations statistics: add Operations and StageCache sections to the build report and print operations summary after the build (by default $WERF_BUILD_REPORT_OPERATIONS or false). Also enabled by --log-debug",
+              "shorthand": "",
+              "global": false
+            },
             "build-report-path": {
               "description": "Change build report path and format (by default $WERF_BUILD_REPORT_PATH or \".werf-build-report.json\" if not set). Extension must be either .json for JSON format or .env for env-file format. If extension not specified, then .json is used",
               "shorthand": "",
@@ -1932,6 +1937,11 @@
                   "shorthand": "",
                   "global": false
                 },
+                "no-create-namespace": {
+                  "description": "Don't create the release namespace (default $WERF_NO_CREATE_NAMESPACE)",
+                  "shorthand": "",
+                  "global": false
+                },
                 "no-final-tracking": {
                   "description": "By default disable tracking operations that have no create/update/delete resource operations after them, which are most tracking operations, to speed up the release (default $WERF_NO_FINAL_TRACKING)",
                   "shorthand": "",
@@ -2088,7 +2098,7 @@
                   "global": false
                 },
                 "set-docker-config-json-value": {
-                  "description": "Shortcut to set current docker config into the .Values.dockerconfigjson",
+                  "description": "Shortcut to set current docker config into the .Values.global.werf.dockerconfigjson",
                   "shorthand": "",
                   "global": false
                 },
@@ -2726,7 +2736,7 @@
                   "global": false
                 },
                 "set-docker-config-json-value": {
-                  "description": "Shortcut to set current docker config into the .Values.dockerconfigjson",
+                  "description": "Shortcut to set current docker config into the .Values.global.werf.dockerconfigjson",
                   "shorthand": "",
                   "global": false
                 },
@@ -2901,6 +2911,11 @@
                 },
                 "bsign-elf-files": {
                   "description": "Enable ELF files signing with bsign (default $WERF_BSIGN_ELF_FILES).\nWhen enabled, the private elf key must be specified with --elf-pgp-private-key-base64 or --elf-pgp-private-key-fingerprint option",
+                  "shorthand": "",
+                  "global": false
+                },
+                "build-report-operations": {
+                  "description": "Collect low-level operations statistics: add Operations and StageCache sections to the build report and print operations summary after the build (by default $WERF_BUILD_REPORT_OPERATIONS or false). Also enabled by --log-debug",
                   "shorthand": "",
                   "global": false
                 },
@@ -3799,7 +3814,7 @@
                   "global": false
                 },
                 "set-docker-config-json-value": {
-                  "description": "Shortcut to set current docker config into the .Values.dockerconfigjson",
+                  "description": "Shortcut to set current docker config into the .Values.global.werf.dockerconfigjson",
                   "shorthand": "",
                   "global": false
                 },
@@ -4407,6 +4422,11 @@
               "shorthand": "",
               "global": false
             },
+            "cleanup-report-path": {
+              "description": "Change cleanup report path (by default $WERF_CLEANUP_REPORT_PATH or \".werf-cleanup-report.json\" if not set). Extension must be .json for JSON format. If extension not specified, then .json is used",
+              "shorthand": "",
+              "global": false
+            },
             "config": {
               "description": "Use custom configuration file (default $WERF_CONFIG or werf.yaml in the project directory)",
               "shorthand": "",
@@ -4587,6 +4607,11 @@
               "shorthand": "",
               "global": false
             },
+            "kube-scan-namespaces": {
+              "description": "Kubernetes namespaces to scan for each selected context (can specify multiple). Takes precedence over --scan-context-namespace-only when set.",
+              "shorthand": "",
+              "global": false
+            },
             "kube-token": {
               "description": "Kubernetes bearer token used for authentication (default $WERF_KUBE_TOKEN)",
               "shorthand": "",
@@ -4717,8 +4742,13 @@
               "shorthand": "",
               "global": false
             },
+            "save-cleanup-report": {
+              "description": "Save cleanup report (by default $WERF_SAVE_CLEANUP_REPORT or false). Its path configured with --cleanup-report-path",
+              "shorthand": "",
+              "global": false
+            },
             "scan-context-namespace-only": {
-              "description": "Scan for used images only in namespace linked with context for each available context in kube-config (or only for the context specified with option --kube-context). When disabled will scan all namespaces in all contexts (or only for the context specified with option --kube-context). (Default $WERF_SCAN_CONTEXT_NAMESPACE_ONLY)",
+              "description": "Scan for used images only in namespace linked with context for each available context in kube-config (or only for the context specified with option --kube-context). When disabled will scan all namespaces in all contexts (or only for the context specified with option --kube-context), unless --kube-scan-namespaces is set. (Default $WERF_SCAN_CONTEXT_NAMESPACE_ONLY)",
               "shorthand": "",
               "global": false
             },
@@ -7170,6 +7200,11 @@
               "shorthand": "",
               "global": false
             },
+            "build-report-operations": {
+              "description": "Collect low-level operations statistics: add Operations and StageCache sections to the build report and print operations summary after the build (by default $WERF_BUILD_REPORT_OPERATIONS or false). Also enabled by --log-debug",
+              "shorthand": "",
+              "global": false
+            },
             "build-report-path": {
               "description": "Change build report path and format (by default $WERF_BUILD_REPORT_PATH or \".werf-build-report.json\" if not set). Extension must be either .json for JSON format or .env for env-file format. If extension not specified, then .json is used",
               "shorthand": "",
@@ -7600,6 +7635,11 @@
               "shorthand": "",
               "global": false
             },
+            "no-create-namespace": {
+              "description": "Don't create the release namespace (default $WERF_NO_CREATE_NAMESPACE)",
+              "shorthand": "",
+              "global": false
+            },
             "no-final-tracking": {
               "description": "By default disable tracking operations that have no create/update/delete resource operations after them, which are most tracking operations, to speed up the release (default $WERF_NO_FINAL_TRACKING)",
               "shorthand": "",
@@ -7796,7 +7836,7 @@
               "global": false
             },
             "set-docker-config-json-value": {
-              "description": "Shortcut to set current docker config into the .Values.dockerconfigjson",
+              "description": "Shortcut to set current docker config into the .Values.global.werf.dockerconfigjson",
               "shorthand": "",
               "global": false
             },
@@ -10530,6 +10570,11 @@
                   "shorthand": "",
                   "global": false
                 },
+                "build-report-operations": {
+                  "description": "Collect low-level operations statistics: add Operations and StageCache sections to the build report and print operations summary after the build (by default $WERF_BUILD_REPORT_OPERATIONS or false). Also enabled by --log-debug",
+                  "shorthand": "",
+                  "global": false
+                },
                 "build-report-path": {
                   "description": "Change build report path and format (by default $WERF_BUILD_REPORT_PATH or \".werf-build-report.json\" if not set). Extension must be either .json for JSON format or .env for env-file format. If extension not specified, then .json is used",
                   "shorthand": "",
@@ -10841,7 +10886,7 @@
                   "global": false
                 },
                 "set-docker-config-json-value": {
-                  "description": "Shortcut to set current docker config into the .Values.dockerconfigjson",
+                  "description": "Shortcut to set current docker config into the .Values.global.werf.dockerconfigjson",
                   "shorthand": "",
                   "global": false
                 },
@@ -19358,6 +19403,11 @@
               "shorthand": "",
               "global": false
             },
+            "build-report-operations": {
+              "description": "Collect low-level operations statistics: add Operations and StageCache sections to the build report and print operations summary after the build (by default $WERF_BUILD_REPORT_OPERATIONS or false). Also enabled by --log-debug",
+              "shorthand": "",
+              "global": false
+            },
             "build-report-path": {
               "description": "Change build report path and format (by default $WERF_BUILD_REPORT_PATH or \".werf-build-report.json\" if not set). Extension must be either .json for JSON format or .env for env-file format. If extension not specified, then .json is used",
               "shorthand": "",
@@ -19738,6 +19788,11 @@
               "shorthand": "",
               "global": false
             },
+            "lookup-resources": {
+              "description": "Manifest files used as a cluster stub for the lookup template function in non-remote mode. Multi-document and kind:List supported. Namespaced resources must set metadata.namespace, otherwise namespace-scoped lookups ignore the requested namespace. Can be also set with $WERF_LOOKUP_RESOURCES_* environment variables (can specify multiple)",
+              "shorthand": "",
+              "global": false
+            },
             "loose-giterminism": {
               "description": "Loose werf giterminism mode restrictions",
               "shorthand": "",
@@ -19894,7 +19949,7 @@
               "global": false
             },
             "set-docker-config-json-value": {
-              "description": "Shortcut to set current docker config into the .Values.dockerconfigjson",
+              "description": "Shortcut to set current docker config into the .Values.global.werf.dockerconfigjson",
               "shorthand": "",
               "global": false
             },
@@ -20994,6 +21049,11 @@
               "shorthand": "",
               "global": false
             },
+            "build-report-operations": {
+              "description": "Collect low-level operations statistics: add Operations and StageCache sections to the build report and print operations summary after the build (by default $WERF_BUILD_REPORT_OPERATIONS or false). Also enabled by --log-debug",
+              "shorthand": "",
+              "global": false
+            },
             "build-report-path": {
               "description": "Change build report path and format (by default $WERF_BUILD_REPORT_PATH or \".werf-build-report.json\" if not set). Extension must be either .json for JSON format or .env for env-file format. If extension not specified, then .json is used",
               "shorthand": "",
@@ -21600,7 +21660,7 @@
               "global": false
             },
             "set-docker-config-json-value": {
-              "description": "Shortcut to set current docker config into the .Values.dockerconfigjson",
+              "description": "Shortcut to set current docker config into the .Values.global.werf.dockerconfigjson",
               "shorthand": "",
               "global": false
             },
@@ -21825,6 +21885,11 @@
             },
             "cache-repo": {
               "description": "Specify one or multiple cache repos with images that will be used as a cache. Cache will be populated when pushing newly built images into the primary repo and when pulling existing images from the primary repo. Cache repo will be used to pull images and to get manifests before making requests to the primary repo.\nAlso, can be specified with $WERF_CACHE_REPO_* (e.g. $WERF_CACHE_REPO_1=..., $WERF_CACHE_REPO_2=...)",
+              "shorthand": "",
+              "global": false
+            },
+            "cleanup-report-path": {
+              "description": "Change cleanup report path (by default $WERF_CLEANUP_REPORT_PATH or \".werf-cleanup-report.json\" if not set). Extension must be .json for JSON format. If extension not specified, then .json is used",
               "shorthand": "",
               "global": false
             },
@@ -22103,6 +22168,11 @@
               "shorthand": "",
               "global": false
             },
+            "save-cleanup-report": {
+              "description": "Save cleanup report (by default $WERF_SAVE_CLEANUP_REPORT or false). Its path configured with --cleanup-report-path",
+              "shorthand": "",
+              "global": false
+            },
             "secondary-repo": {
               "description": "Specify one or multiple secondary read-only repos with images that will be used as a cache.\nAlso, can be specified with $WERF_SECONDARY_REPO_* (e.g. $WERF_SECONDARY_REPO_1=..., $WERF_SECONDARY_REPO_2=...)",
               "shorthand": "",
@@ -22164,6 +22234,11 @@
             },
             "bsign-elf-files": {
               "description": "Enable ELF files signing with bsign (default $WERF_BSIGN_ELF_FILES).\nWhen enabled, the private elf key must be specified with --elf-pgp-private-key-base64 or --elf-pgp-private-key-fingerprint option",
+              "shorthand": "",
+              "global": false
+            },
+            "build-report-operations": {
+              "description": "Collect low-level operations statistics: add Operations and StageCache sections to the build report and print operations summary after the build (by default $WERF_BUILD_REPORT_OPERATIONS or false). Also enabled by --log-debug",
               "shorthand": "",
               "global": false
             },
@@ -22567,6 +22642,11 @@
               "shorthand": "",
               "global": false
             },
+            "lookup-resources": {
+              "description": "Manifest files used as a cluster stub for the lookup template function in non-remote mode. Multi-document and kind:List supported. Namespaced resources must set metadata.namespace, otherwise namespace-scoped lookups ignore the requested namespace. Can be also set with $WERF_LOOKUP_RESOURCES_* environment variables (can specify multiple)",
+              "shorthand": "",
+              "global": false
+            },
             "loose-giterminism": {
               "description": "Loose werf giterminism mode restrictions",
               "shorthand": "",
@@ -22713,7 +22793,7 @@
               "global": false
             },
             "set-docker-config-json-value": {
-              "description": "Shortcut to set current docker config into the .Values.dockerconfigjson",
+              "description": "Shortcut to set current docker config into the .Values.global.werf.dockerconfigjson",
               "shorthand": "",
               "global": false
             },
@@ -23675,14 +23755,14 @@
         },
         {
           "name": "sbom",
-          "description": "Work with werf SBOM images",
+          "description": "Work with SBOM artifacts",
           "aliases": null,
           "flags": {},
           "subcommands": [
             {
               "name": "get [IMAGE_NAME]",
               "description": "Get SBOM of an image",
-              "longDescription": "Get SBOM of an image is described in werf.yaml and prints the result to stdout.\n\nIf SBOM is not found (locally or remotely) it triggers werf build command to generate SBOM.",
+              "longDescription": "Get SBOM of an image that is described in werf.yaml and prints the result to stdout.\n\nSBOM is stored as an OCI artifact attached to the container image in the container registry, so     \n--repo is required.\nIf SBOM is not found, the command triggers werf build to generate one.\n\nA specific version of the image may be selected with --tag or --digest; these flags are mutually    \nexclusive.",
               "aliases": null,
               "flags": {
                 "allowed-backend-storage-volume-usage": {
@@ -23717,6 +23797,11 @@
                 },
                 "backend-storage-path": {
                   "description": "Use specified path to the local backend (Docker or Buildah) storage to check backend storage volume usage while performing garbage collection of local backend images (detect local backend storage path by default or use $WERF_BACKEND_STORAGE_PATH)",
+                  "shorthand": "",
+                  "global": false
+                },
+                "build-report-operations": {
+                  "description": "Collect low-level operations statistics: add Operations and StageCache sections to the build report and print operations summary after the build (by default $WERF_BUILD_REPORT_OPERATIONS or false). Also enabled by --log-debug",
                   "shorthand": "",
                   "global": false
                 },
@@ -24181,7 +24266,7 @@
             {
               "name": "merge",
               "description": "Merge per-image SBOMs into a product-level SBOM",
-              "longDescription": "Merge per-image CycloneDX 1.6 SBOMs into a single product/module-level SBOM.\n\nTakes a JSON mapping file (image name -\u003e sha256 digest) as input, pulls per-image SBOMs from the    \ncontainer registry, and produces an aggregated SBOM with preserved dependency graphs.\n\nTwo ISPRAS-defined output formats are supported:\n- \"container\": hierarchical — each image becomes a top-level container component with nested        \npackages.\n- \"oss\": flat — all packages from all images are merged into a deduplicated flat list.\n\nGOST properties (attack_surface, security_function) are aggregated bottom-up using the \"yes \u003e       \nindirect \u003e no\" precedence rule.",
+              "longDescription": "Merge per-image CycloneDX 1.6 SBOMs into a single product/module-level SBOM.\n\nTakes a JSON mapping file (image name -\u003e sha256 digest) as input, pulls per-image SBOMs from the    \ncontainer registry, and produces an aggregated SBOM with preserved dependency graphs.\n\nTwo ISPRAS-defined output formats are supported:\n- \"container\": hierarchical — each image becomes a top-level container component with nested        \npackages.\n- \"oss\": flat — all packages from all images are merged into a deduplicated flat list.\n\nGOST properties (attack_surface, security_function) are aggregated bottom-up using the \"yes \u003e       \nindirect \u003e no\" precedence rule.\n\nThe flags --input, --ispras-format, --app-name, --app-version and --manufacturer are required. The  \nmerged SBOM is written to stdout unless --output is given.",
               "aliases": null,
               "flags": {
                 "app-name": {
@@ -24205,7 +24290,7 @@
                   "global": false
                 },
                 "docker-config": {
-                  "description": "Specify docker config directory path. Default $WERF_DOCKER_CONFIG or $DOCKER_CONFIG or ~/.docker (in the order of priority)\nCommand needs granted permissions to pull SBOM images from the specified repo",
+                  "description": "Specify docker config directory path. Default $WERF_DOCKER_CONFIG or $DOCKER_CONFIG or ~/.docker (in the order of priority)\nCommand needs granted permissions to pull SBOM artifacts from the specified repo",
                   "shorthand": "",
                   "global": false
                 },
@@ -24360,7 +24445,7 @@
             {
               "name": "validate",
               "description": "Validate SBOM file against ISPRAS schemas",
-              "longDescription": "Validate CycloneDX JSON SBOM files against ISPRAS schemas using sbom-checker.\n\nThe command runs sbom-checker inside a Docker container and reports validation results. Supports    \nboth OSS and container SBOM types.",
+              "longDescription": "Validate CycloneDX JSON SBOM files against ISPRAS schemas using sbom-checker.\n\nThe command runs sbom-checker inside a Docker container and reports validation results. Supports    \nboth OSS and container SBOM types.\n\nThe flags --path and --ispras-format are required. Repeat --path to validate several files in one   \nrun. Pass --check-vcs to additionally validate VCS URLs.",
               "aliases": null,
               "flags": {
                 "check-vcs": {
@@ -24560,6 +24645,11 @@
                 },
                 "backend-storage-path": {
                   "description": "Use specified path to the local backend (Docker or Buildah) storage to check backend storage volume usage while performing garbage collection of local backend images (detect local backend storage path by default or use $WERF_BACKEND_STORAGE_PATH)",
+                  "shorthand": "",
+                  "global": false
+                },
+                "build-report-operations": {
+                  "description": "Collect low-level operations statistics: add Operations and StageCache sections to the build report and print operations summary after the build (by default $WERF_BUILD_REPORT_OPERATIONS or false). Also enabled by --log-debug",
                   "shorthand": "",
                   "global": false
                 },
@@ -47329,6 +47419,11 @@
           "longDescription": "Download Deckhouse Kubernetes Platform distribution to the local filesystem.\n\t\t\nThis command downloads the Deckhouse Kubernetes Platform distribution bundle \ncontaining specific platform releases and it's modules, \nto be pushed into the air-gapped container registry at a later time.\n\nFor more information on how to use it, consult the docs at \nhttps://deckhouse.io/products/kubernetes-platform/documentation/latest/installing/#manual-loading-of-dkp-images-and-vulnerability-db-into-a-private-registry\n\nAdditional configuration options for the d8 mirror family of commands are available as environment variables:\n\n * $SSL_CERT_FILE           — Path to the SSL certificate. If the variable is set, system certificates are not used;\n * $SSL_CERT_DIR            — List of directories to search for SSL certificate files, separated by a colon.\n                              If set, system certificates are not used. More info at https://docs.openssl.org/1.0.2/man1/c_rehash/;\n * $HTTP_PROXY/$HTTPS_PROXY — URL of the proxy server for HTTP(S) requests to hosts that are not listed in the $NO_PROXY;\n * $NO_PROXY                — Comma-separated list of hosts to exclude from proxying.\n                              Supported value formats include IP's', CIDR notations (1.2.3.4/8), domains, and asterisk sign (*).\n                              The IP addresses and domain names can also include a literal port number (1.2.3.4:80).\n                              The domain name matches that name and all the subdomains.\n                              The domain name with a leading . matches subdomains only.\n                              For example, foo.com matches foo.com and bar.foo.com; .y.com matches x.y.com but does not match y.com.\n                              A single asterisk * indicates that no proxying should be done;\n\nLICENSE NOTE:\nThe d8 mirror functionality is exclusively available to users holding a \nvalid license for any commercial version of the Deckhouse Kubernetes Platform.\n\n© Flant JSC 2025",
           "aliases": null,
           "flags": {
+            "deckhouse-cli-tag": {
+              "description": "Specific d8 CLI version to mirror, e.g. \"v0.13.1\". Without this flag the newest published stable version is mirrored.\n\nThe CLI binary lives at the deckhouse-cli registry segment, next to the plugins catalog; a registry that publishes no such repository is reported in the summary instead of failing the pull, unless this flag asked for a version.",
+              "shorthand": "",
+              "global": false
+            },
             "deckhouse-tag": {
               "description": "Specific Deckhouse build tag to pull. Conflicts with --since-version and --include-platform. If registry contains release channel image for specified tag, all release channels in the bundle will be pointed to it.",
               "shorthand": "",
@@ -49136,7 +49231,7 @@
               "global": true
             },
             "exclude": {
-              "description": "Exclude specific files from the debug archive. Use comma-separated values",
+              "description": "Exclude specific files from the debug archive. Use comma-separated names as printed by --list-exclude; the file extension is optional. An unknown name is an error",
               "shorthand": "",
               "global": false
             },
@@ -49146,7 +49241,7 @@
               "global": true
             },
             "list-exclude": {
-              "description": "List all files that can be excluded from the debug archive",
+              "description": "List all files that can be excluded from the debug archive, then exit",
               "shorthand": "l",
               "global": false
             },
@@ -49156,7 +49251,42 @@
               "global": false
             }
           },
-          "subcommands": null
+          "subcommands": [
+            {
+              "name": "virtualization [flags] \u003e deckhouse-debug-virtualization-$(date +\"%Y_%m_%d\").tar.gz",
+              "description": "Collect a separate virtualization debug archive.",
+              "longDescription": "Collect a separate debug archive with detailed data from the d8-virtualization namespace.",
+              "aliases": null,
+              "flags": {
+                "command-timeout": {
+                  "description": "Timeout for each individual debug command execution",
+                  "shorthand": "",
+                  "global": false
+                },
+                "context": {
+                  "description": "The name of the kubeconfig context to use",
+                  "shorthand": "",
+                  "global": true
+                },
+                "kubeconfig": {
+                  "description": "Path to kubeconfig file. (default is $KUBECONFIG when it is set, otherwise the default kubeconfig path for the current OS user)",
+                  "shorthand": "k",
+                  "global": true
+                },
+                "request-interval": {
+                  "description": "Minimum interval between debug command executions to avoid overloading the cluster (e.g. 200ms, 500ms, 1s). Zero disables rate limiting (default 0s)",
+                  "shorthand": "",
+                  "global": false
+                },
+                "skip-ds-logs": {
+                  "description": "Skip collecting logs from pods managed by a DaemonSet (virt-handler, virtualization-dra, vm-route-forge, ...) to reduce archive size on clusters with many nodes",
+                  "shorthand": "",
+                  "global": false
+                }
+              },
+              "subcommands": null
+            }
+          ]
         },
         {
           "name": "edit",

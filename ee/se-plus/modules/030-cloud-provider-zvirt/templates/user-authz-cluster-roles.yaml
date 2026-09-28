@@ -1,5 +1,0 @@
-{{- $userAuthzConfig := dict -}}
-{{- $_ := set $userAuthzConfig "providerName" "cloud-provider-zvirt" -}}
-{{- $_ := set $userAuthzConfig "capiResources" (list "zvirtclusters" "zvirtmachines" "zvirtmachinetemplates") -}}
-{{- $_ := set $userAuthzConfig "instanceClassResource" "zvirtinstanceclasses" -}}
-{{- include "helm_lib_cloud_provider_user_authz_cluster_roles" (list . $userAuthzConfig) }}

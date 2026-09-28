@@ -156,7 +156,7 @@ A [PodMonitor](/modules/operator-prometheus/cr.html#podmonitor) scrapes two endp
 
 1. **DP metrics** (`/metrics`): Core DP operational metrics, including the following:
    - `deckhouse_live_ticks`: Health indicator incrementing every 10 seconds.
-   - `deckhouse_registry_errors`: Registry connectivity issues.
+   - `deckhouse_registry_check_errors_total`: Failed registry checks.
    - `deckhouse_module_hook_run_seconds`: Module hook execution duration.
    - `deckhouse_tasks_queue_action_duration_seconds`: Task queue processing times.
    - Other operational metrics.

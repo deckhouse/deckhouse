@@ -1,7 +1,0 @@
-crds/*
-hooks/*.go
-hooks/gpu/*.go
-monitoring/prometheus-rules/*
-templates/*
-images/*
-openapi/values.yaml

@@ -84,4 +84,45 @@ const (
 
 	// LabelNotificationNotSent indicates whether an update notification has not been sent.
 	LabelNotificationNotSent = "notificationNotSent"
+
+	// ============================================================================
+	// Addon-operator and Shell-operator Label Keys
+	// Used in the metrics defined in metrics-addon.go and metrics-shell.go.
+	// ============================================================================
+
+	// LabelHook is the label key for the hook name.
+	LabelHook = "hook"
+
+	// LabelBinding is the label key for the hook binding name.
+	LabelBinding = "binding"
+
+	// LabelQueue is the label key for the task queue name.
+	LabelQueue = "queue"
+
+	// LabelQueueName is the label key for the task queue name in the task queue operation and compaction metrics.
+	LabelQueueName = "queue_name"
+
+	// LabelQueueAction is the label key for the task queue operation.
+	LabelQueueAction = "queue_action"
+
+	// LabelTaskType is the label key for the task type.
+	LabelTaskType = "task_type"
+
+	// LabelActivation is the label key for the event type that triggered a module, hook or converge run.
+	LabelActivation = "activation"
+
+	// LabelOperation is the label key for the Helm operation.
+	LabelOperation = "operation"
+
+	// LabelErrorType is the label key for the error type.
+	LabelErrorType = "error_type"
+
+	// LabelResource is the label key for the resource reference (namespace/kind/name).
+	LabelResource = "resource"
+
+	// LabelGVR is the label key for the GroupVersionResource of a shared informer.
+	LabelGVR = "gvr"
+
+	// LabelNamespace is the label key for the namespace.
+	LabelNamespace = "namespace"
 )

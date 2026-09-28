@@ -80,6 +80,14 @@ var _ = Describe("Module :: chrony :: helm template ::", func() {
 
 			Expect(chronyDaemonSetTest.Exists()).To(BeTrue())
 			Expect(chronyMasterDaemonsetTest.Exists()).To(BeTrue())
+
+			Expect(chronyDaemonSetTest.Field("spec.template.spec.containers.2.env.1.value").String()).To(
+				ContainSubstring("upstream: http://127.0.0.1:4245/\n  path: /healthz"),
+			)
+			Expect(chronyMasterDaemonsetTest.Field("spec.template.spec.containers.2.env.1.value").String()).To(
+				ContainSubstring("upstream: http://127.0.0.1:4245/\n  path: /healthz"),
+			)
+
 			Expect(chronyDaemonSetTest.Field("spec.template.spec.containers.0.env").String()).To(MatchJSON(`
         [
 		  {

@@ -710,8 +710,12 @@ func (f *DeckhouseReleaseFetcher) GetReleaseImageInfo(ctx context.Context, previ
 	ctx, span := otel.Tracer(serviceName).Start(ctx, "getNewImageInfo")
 	defer span.End()
 
+	// The channel image is the first registry request of every check, so an expired password or
+	// an untrusted certificate shows up here before anything else notices it.
+	f.metricStorage.CounterAdd(metrics.DeckhouseRegistryCheckTotal, 1, map[string]string{})
 	image, err := f.registryClient.Image(ctx, f.GetReleaseChannel())
 	if err != nil {
+		f.metricStorage.CounterAdd(metrics.DeckhouseRegistryCheckErrorsTotal, 1, map[string]string{})
 		return nil, fmt.Errorf("get image from channel '%s': %w", f.GetReleaseChannel(), err)
 	}
 

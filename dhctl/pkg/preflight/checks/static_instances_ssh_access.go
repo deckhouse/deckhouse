@@ -314,7 +314,8 @@ func masterConnectionFor(ctx context.Context, initializer *providerinitializer.S
 		return conn, nil
 	}
 
-	client, err := provider.Client(ctx)
+	// The client's lifetime, not this check's; see helper.GetNodeInterface.
+	client, err := provider.Client(context.WithoutCancel(ctx))
 	if err != nil {
 		return nil, err
 	}

@@ -116,24 +116,24 @@ func ModuleConfigurationErrorLabels(moduleName, version, errorMsg string) map[st
 // This function should be called during controller initialization to ensure all metrics
 // are available when needed.
 func RegisterDeckhouseControllerMetrics(metricStorage metricsstorage.Storage) error {
-	if err := RegisterModuleManagerMetrics(metricStorage); err != nil {
+	if err := registerModuleManagerMetrics(metricStorage); err != nil {
 		return fmt.Errorf("register module manager metrics: %w", err)
 	}
 
-	if err := RegisterDeckhouseReleaseMetrics(metricStorage); err != nil {
+	if err := registerDeckhouseReleaseMetrics(metricStorage); err != nil {
 		return fmt.Errorf("register deckhouse release metrics: %w", err)
 	}
 
-	if err := RegisterModuleControllerMetrics(metricStorage); err != nil {
+	if err := registerModuleControllerMetrics(metricStorage); err != nil {
 		return fmt.Errorf("register module controller metrics: %w", err)
 	}
 
 	return nil
 }
 
-// RegisterModuleManagerMetrics registers metrics related to module management,
+// registerModuleManagerMetrics registers metrics related to module management,
 // including experimental modules, migrations, and deprecation tracking.
-func RegisterModuleManagerMetrics(metricStorage metricsstorage.Storage) error {
+func registerModuleManagerMetrics(metricStorage metricsstorage.Storage) error {
 	// Register module manager metrics
 	moduleLabels := []string{LabelModule}
 
@@ -191,9 +191,9 @@ func RegisterModuleManagerMetrics(metricStorage metricsstorage.Storage) error {
 	return nil
 }
 
-// RegisterDeckhouseReleaseMetrics registers metrics for Deckhouse release operations,
+// registerDeckhouseReleaseMetrics registers metrics for Deckhouse release operations,
 // including registry checks, image digest validation, and update status tracking.
-func RegisterDeckhouseReleaseMetrics(metricStorage metricsstorage.Storage) error {
+func registerDeckhouseReleaseMetrics(metricStorage metricsstorage.Storage) error {
 	// Register registry check counters
 	// These counters are incremented during registry operations
 	_, err := metricStorage.RegisterCounter(
@@ -257,9 +257,9 @@ func RegisterDeckhouseReleaseMetrics(metricStorage metricsstorage.Storage) error
 	return nil
 }
 
-// RegisterModuleControllerMetrics registers metrics for module controllers,
+// registerModuleControllerMetrics registers metrics for module controllers,
 // including config, source, and release controller metrics.
-func RegisterModuleControllerMetrics(metricStorage metricsstorage.Storage) error {
+func registerModuleControllerMetrics(metricStorage metricsstorage.Storage) error {
 	// Define common labels for module controller metrics
 	moduleLabels := []string{LabelModule, LabelSource}
 	configLabels := []string{LabelModule}

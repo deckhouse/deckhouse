@@ -15,10 +15,13 @@
 package status
 
 import (
+	"encoding/json"
 	"testing"
 	"time"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+	"github.com/werf/nelm/pkg/legacy/progrep"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/condmap"
@@ -603,4 +606,34 @@ func TestComputeAndApplyConditionsOnDeletion(t *testing.T) {
 	assert.Equal(t, stateDeleting, app.Status.Summary.State)
 	assert.Empty(t, app.Status.CurrentVersion.Version)
 	assert.Empty(t, app.Status.URLs)
+}
+
+// TestComputeAndApplyTrackingOnDeletion covers the uninstall progress of a CR on its way out:
+// unlike the version, the report is committed despite the deletionTimestamp, and it outlives
+// the runtime status, which is dropped when the teardown drains, before the finalizer is removed.
+func TestComputeAndApplyTrackingOnDeletion(t *testing.T) {
+	deleted := metav1.NewTime(time.Unix(0, 0))
+	app := &v1alpha1.Application{
+		ObjectMeta: metav1.ObjectMeta{Namespace: "ns", Name: "app", DeletionTimestamp: &deleted},
+	}
+
+	tracking := intstatus.Tracking{Completed: 1, Remaining: 1, Report: progrep.ProgressReport{Operations: []progrep.Operation{
+		{OperationRef: progrep.OperationRef{Type: progrep.OperationTypeDelete}, Category: progrep.OperationCategoryResource, Status: progrep.OperationStatusCompleted},
+		{OperationRef: progrep.OperationRef{Type: progrep.OperationTypeTrackAbsence}, Category: progrep.OperationCategoryTrack, Status: progrep.OperationStatusProgressing},
+	}}}
+	want, err := json.Marshal(tracking)
+	require.NoError(t, err)
+
+	current := intstatus.Status{Tracking: tracking}
+	svc := &Service{
+		mapper: buildMapper(),
+		getter: func(string) intstatus.Status { return current },
+	}
+
+	svc.computeAndApplyConditions("ns.app", app)
+	assert.JSONEq(t, string(want), string(app.Status.Tracking.Raw))
+
+	current = intstatus.Status{}
+	svc.computeAndApplyConditions("ns.app", app)
+	assert.JSONEq(t, string(want), string(app.Status.Tracking.Raw))
 }

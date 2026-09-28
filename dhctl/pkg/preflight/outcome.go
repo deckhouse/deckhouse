@@ -40,6 +40,15 @@ const (
 	// StatusBlocked — a check this one depends on failed, so running it would only produce a
 	// second copy of the same error (every SSH check after static-ssh-credential).
 	StatusBlocked Status = "blocked"
+	// StatusWarned — it ran, it did not like what it found, and it let the run continue.
+	//
+	// For the findings that are about how the cluster was sized rather than about whether this
+	// bootstrap can finish. node-disk-space is the one: the documentation asks a master for a
+	// 50 GB disk, and every platform we run e2e on gives it less — those clusters bootstrap and
+	// work. A check that refuses them refuses the product, and nearly every run reaches dhctl
+	// through Commander, where there is no command line to put a skip flag on. Saying it and
+	// going on is the honest answer; failing is not.
+	StatusWarned Status = "warned"
 	// StatusFailed — it ran and failed.
 	StatusFailed Status = "failed"
 )
@@ -58,6 +67,8 @@ func (s Status) glyph() string {
 		return "↷"
 	case StatusBlocked:
 		return "⊘"
+	case StatusWarned:
+		return "⚠"
 	default:
 		return "✗"
 	}
@@ -111,6 +122,8 @@ func (r Result) text() string {
 			return fmt.Sprintf("not applicable: %s", r.Detail)
 		case StatusBlocked:
 			return fmt.Sprintf("blocked: %s", r.Detail)
+		case StatusWarned:
+			return fmt.Sprintf("warning: %s", r.Detail)
 		default:
 			return r.Detail
 		}
@@ -157,6 +170,31 @@ func roundDuration(d time.Duration) time.Duration {
 
 // ErrNotApplicable is what errors.Is matches a not-applicable outcome against.
 var ErrNotApplicable = errors.New("not applicable")
+
+// ErrWarning is what errors.Is matches a warning against.
+var ErrWarning = errors.New("warning")
+
+type warningError struct {
+	reason string
+}
+
+func (e *warningError) Error() string { return e.reason }
+
+func (e *warningError) Is(target error) bool { return target == ErrWarning }
+
+// Warning ends a check with something worth saying that is not worth stopping for. The phase
+// goes on, nothing downstream is blocked, and the record line carries the reason.
+func Warning(format string, args ...any) error {
+	return &warningError{reason: fmt.Sprintf(format, args...)}
+}
+
+func warningReason(err error) string {
+	var w *warningError
+	if errors.As(err, &w) {
+		return w.reason
+	}
+	return ""
+}
 
 type notApplicableError struct {
 	reason string

@@ -300,7 +300,10 @@
         ```
 
   - alert: D8DeckhouseHasNoAccessToRegistry
-    expr: max by (pod, instance) (increase(deckhouse_registry_errors[__SCRAPE_INTERVAL_X_4__])) > 0
+    # A cluster with a release channel checks the registry every 3 minutes, and a check can wait
+    # 2 minutes for the registry to answer. A window shorter than that drops to zero between
+    # checks and resets `for`.
+    expr: max by (pod, instance) (increase(deckhouse_registry_check_errors_total[10m])) > 0
     for: 1h
     labels:
       severity_level: "7"
@@ -315,16 +318,16 @@
       plk_labels_as_annotations: "instance,pod"
       summary: Deckhouse is unable to connect to the registry.
       description: |
-        Deckhouse can't connect to the registry (typically `registry.deckhouse.io`) to check for a new Docker image. These checks are performed every 15 seconds. Without access to the registry, automatic updates are unavailable.
+        Deckhouse can't connect to the registry to check for new releases. With a release channel set, it checks the channel every 3 minutes; without one, it checks the digest of its own image every 15 seconds. Without access to the registry, automatic updates are unavailable.
 
-        This alert often indicates that the Deckhouse Pod is experiencing connectivity issues with the Internet.
+        Module images come from the same registry, so pods that need a new image fail to start as well, sometimes with errors that do not mention the registry. The usual causes are expired or changed credentials, a registry certificate that has expired or was replaced with one signed by an unknown authority, and a network or proxy change.
 
         To investigate the issue, follow these steps:
 
-        1. Read the registry error in the logs. It distinguishes a name-resolution failure, a timeout, and an authorization error:
+        1. Read the registry error in the logs. `UNAUTHORIZED` points at the credentials, `x509` at the certificate, and a timeout or a refused connection at the network:
 
            ```bash
-           d8 k -n d8-system logs -l app=deckhouse --tail=200 | grep -i registry
+           d8 k -n d8-system logs -l app=deckhouse --tail=500 | grep -iE 'check deckhouse release|registry'
            ```
 
         1. Check which registry address the cluster is configured to use:
@@ -337,6 +340,12 @@
 
            ```bash
            d8 k -n d8-system get secret deckhouse-registry
+           ```
+
+        1. If the error mentions `x509`, check who issued the registry certificate and when it expires. Run the command on a master node and substitute the host from the registry address, and its port if it is not 443:
+
+           ```bash
+           openssl s_client -connect <REGISTRY_HOST>:443 -servername <REGISTRY_HOST> </dev/null 2>/dev/null | openssl x509 -noout -issuer -enddate
            ```
 
         1. Check that the node running Deckhouse can reach the registry at all, for example through a proxy or a firewall rule that changed.

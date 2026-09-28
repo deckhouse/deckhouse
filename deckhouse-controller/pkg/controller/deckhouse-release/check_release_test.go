@@ -22,6 +22,7 @@ import (
 	"context"
 	"fmt"
 	"io"
+	"net/http"
 	"sort"
 	"strconv"
 	"testing"
@@ -36,12 +37,15 @@ import (
 	"github.com/stretchr/testify/require"
 	"k8s.io/apimachinery/pkg/types"
 
+	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/metrics"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha2"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/module-controllers/utils"
 	releaseUpdater "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/releaseupdater"
 	"github.com/deckhouse/deckhouse/go_lib/dependency"
 	"github.com/deckhouse/deckhouse/go_lib/dependency/cr"
+	"github.com/deckhouse/deckhouse/pkg/log"
+	metricstorage "github.com/deckhouse/deckhouse/pkg/metrics-storage"
 )
 
 func (suite *ControllerTestSuite) TestCheckDeckhouseRelease() {
@@ -1016,6 +1020,34 @@ func TestKebabCase(t *testing.T) {
 
 		assert.Equal(t, result, kebabed)
 	}
+}
+
+// D8DeckhouseHasNoAccessToRegistry is built on this counter, and a cluster with a release
+// channel only reaches the registry through the release fetcher.
+func TestGetReleaseImageInfoCountsRegistryErrors(t *testing.T) {
+	registryClient := cr.NewClientMock(t)
+	registryClient.ImageMock.Return(nil, &transport.Error{StatusCode: http.StatusUnauthorized})
+	metricStorage := metricstorage.NewMetricStorage(metricstorage.WithNewRegistry(), metricstorage.WithLogger(log.NewNop()))
+
+	fetcher := NewDeckhouseReleaseFetcher(&DeckhouseReleaseFetcherConfig{
+		registryClient: registryClient,
+		releaseChannel: "stable",
+		metricStorage:  metricStorage,
+		logger:         log.NewNop(),
+	})
+
+	_, err := fetcher.GetReleaseImageInfo(context.Background(), "")
+	require.Error(t, err)
+
+	families, err := metricStorage.Gather()
+	require.NoError(t, err)
+
+	counters := make(map[string]float64)
+	for _, family := range families {
+		counters[family.GetName()] = family.GetMetric()[0].GetCounter().GetValue()
+	}
+	assert.Equal(t, 1.0, counters[metrics.DeckhouseRegistryCheckTotal])
+	assert.Equal(t, 1.0, counters[metrics.DeckhouseRegistryCheckErrorsTotal])
 }
 
 func newMockedContainerWithData(t minimock.Tester, versionInChannel string, tags []string) *dependency.MockedContainer {

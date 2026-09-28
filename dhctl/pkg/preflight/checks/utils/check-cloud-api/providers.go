@@ -53,7 +53,7 @@ var endpointHandlers = map[string]func([]byte) (*CloudAPIConfig, error){
 	"vcd":         handleFieldProvider("server", "VCDClusterConfiguration.provider.server"),
 	"zvirt":       handleFieldProvider("server", "ZvirtClusterConfiguration.provider.server"),
 	"dynamix":     handleFieldProvider("controllerUrl", "DynamixClusterConfiguration.provider.controllerUrl"),
-	"huaweicloud": handleFieldProvider("authURL", "HuaweiCloudClusterConfiguration.provider.authURL"),
+	"huaweicloud": handleHuaweiCloudProvider,
 
 	// The endpoint is fixed, or derived from the region.
 	"aws":    handleAWSProvider,
@@ -162,6 +162,47 @@ func handleAWSProvider(providerClusterConfig []byte) (*CloudAPIConfig, error) {
 		return nil, err
 	}
 	return &CloudAPIConfig{URL: endpoint, Field: "AWSClusterConfiguration.provider.region"}, nil
+}
+
+// handleHuaweiCloudProvider resolves the identity endpoint the way the cluster itself will.
+//
+// provider.authURL is optional — the schema requires only cloud and region — and reading it alone
+// refused every configuration that leaves it out, which is the usual one. Terraform passes
+// auth_url only when it is set, and the modules build the endpoint from the other two:
+// "https://iam.<region>.<cloud>" (cloud-controller-manager/secret.yaml, csi/secret.yaml). This
+// derives the same address, so the check asks about the endpoint the cluster will actually use.
+func handleHuaweiCloudProvider(providerClusterConfig []byte) (*CloudAPIConfig, error) {
+	var raw map[string]any
+	if err := json.Unmarshal(providerClusterConfig, &raw); err != nil {
+		return nil, fmt.Errorf("unable to unmarshal provider config for Huawei Cloud: %w", err)
+	}
+
+	field := "HuaweiCloudClusterConfiguration.provider.authURL"
+	value := stringField(raw, "authURL")
+
+	if value == "" {
+		cloud, region := stringField(raw, "cloud"), stringField(raw, "region")
+		if cloud == "" || region == "" {
+			return nil, fmt.Errorf(
+				"HuaweiCloudClusterConfiguration.provider.authURL is not set, and cloud and region are " +
+					"not both set either, so the identity endpoint cannot be derived")
+		}
+		value = fmt.Sprintf("https://iam.%s.%s", region, cloud)
+		field = "HuaweiCloudClusterConfiguration.provider.cloud and .region"
+	}
+
+	endpoint, err := urlParse(value)
+	if err != nil {
+		return nil, fmt.Errorf("%s: %w", field, err)
+	}
+
+	insecure, _ := raw["insecure"].(bool)
+	caCert, err := decodeCABundle(stringField(raw, "caBundle"))
+	if err != nil {
+		return nil, fmt.Errorf("provider.caBundle: %w", err)
+	}
+
+	return &CloudAPIConfig{URL: endpoint, Insecure: insecure, CACert: caCert, Field: field}, nil
 }
 
 // handleDVPProvider reads the API server out of the kubeconfig DVP is configured with. The

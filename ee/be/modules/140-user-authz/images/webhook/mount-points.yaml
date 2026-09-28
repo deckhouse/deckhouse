@@ -1,3 +1,0 @@
-dirs:
-  - /etc/ssl/apiserver-authentication-requestheader-client-ca
-  - /etc/ssl/user-authz-webhook

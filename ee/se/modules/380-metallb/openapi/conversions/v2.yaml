@@ -1,6 +1,0 @@
-version: 2
-conversions:
-  - del(.addressPools[]? | select(.protocol == "layer2"))
-description:
-  ru: "Удалите все элементы `addressPool` с протоколом `layer2`."
-  en: "Remove all `addressPool` elements with the `layer2` protocol."

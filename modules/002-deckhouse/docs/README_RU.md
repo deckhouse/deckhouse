@@ -155,7 +155,7 @@ search: releaseChannel, стабилизация релизного канала
 
 1. **Метрики DP** (`/metrics`) — основные операционные метрики DP, в том числе:
    - `deckhouse_live_ticks` — индикатор состояния, увеличивающийся каждые 10 секунд;
-   - `deckhouse_registry_errors` — проблемы подключения к хранилищу образов;
+   - `deckhouse_registry_check_errors_total` — неудачные проверки хранилища образов;
    - `deckhouse_module_hook_run_seconds` — время выполнения хуков модулей;
    - `deckhouse_tasks_queue_action_duration_seconds` — время обработки очередей задач;
    - другие операционные метрики.

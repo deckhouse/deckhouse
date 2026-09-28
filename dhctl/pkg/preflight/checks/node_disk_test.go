@@ -72,9 +72,19 @@ func TestNodeDiskSpace(t *testing.T) {
 			wantDetail: "has 46 GB at /var/lib",
 		},
 		{
+			// The smallest a master is given on our own platforms: a DVP root disk of 40 GiB,
+			// which measures about 42 GB. The floor used to be 45 and refused it, and the
+			// Commander path it bootstraps through has no command line to skip the check on.
+			name:       "the root disk a DVP master is created with",
+			node:       newFakeNode().on("df -Pk /var/lib").prints(dfOutput(42, 30)),
+			wantDetail: "has 42 GB at /var/lib",
+		},
+		{
+			// Below the floor is a warning now, not a refusal; the table asserts on the text either
+			// way, and TestNodeDiskSpaceWarnsInsteadOfRefusing asserts which outcome it is.
 			name:    "a disk below the floor",
 			node:    newFakeNode().on("df -Pk /var/lib").prints(dfOutput(30, 25)),
-			wantErr: "the filesystem is 30 GB",
+			wantErr: "has 30 GB at /var/lib",
 		},
 		{
 			name:    "df is not there",
@@ -147,4 +157,89 @@ func TestStaticFreeDiskSpace(t *testing.T) {
 			assert.Contains(t, detail, "free at /var/lib")
 		})
 	}
+}
+
+// etcd sits on a disk of its own on nearly every cloud provider, and that disk is what
+// cloud-kube-data-device asks about. The floor was derived from "50 GB, etcd included", so it
+// refused masters where etcd was never going to be on this filesystem: an AWS master is created on
+// the AMI's own 20 GiB root — diskSizeGb has no default in the schema — with a separate 20 GiB
+// etcd disk, and was refused at 19 GB while working. Bought live on ec2-user@3.65.71.55.
+func TestNodeDiskSpaceWithASeparateEtcdDisk(t *testing.T) {
+	const awsRoot = 19
+
+	t.Run("the root of an AWS master, etcd elsewhere", func(t *testing.T) {
+		check := NodeDiskSpaceCheck{
+			NodeInterface:      FixedNodeInterface(newFakeNode().on("df -Pk /var/lib").prints(dfOutput(awsRoot, 12))),
+			KubeDataDevicePath: func() string { return "/dev/xvdf" },
+		}
+
+		detail, err := check.Run(t.Context())
+
+		// The size itself is not the point and the fixture's KiB round trip shifts it by a
+		// gigabyte; that this size passes at all is.
+		require.NoError(t, err)
+		assert.Contains(t, detail, "GB at /var/lib")
+	})
+
+	// The same filesystem without that disk: etcd would land here, and 19 GB is not enough.
+	t.Run("the same root with nowhere else for etcd", func(t *testing.T) {
+		check := NodeDiskSpaceCheck{
+			NodeInterface: FixedNodeInterface(newFakeNode().on("df -Pk /var/lib").prints(dfOutput(awsRoot, 12))),
+		}
+
+		_, err := check.Run(t.Context())
+
+		require.ErrorIs(t, err, preflight.ErrWarning)
+		assert.Contains(t, err.Error(), "the documentation asks for a 50 GB disk")
+	})
+
+	// A separate disk is not a licence for any disk at all.
+	t.Run("a root too small even for the images", func(t *testing.T) {
+		check := NodeDiskSpaceCheck{
+			NodeInterface:      FixedNodeInterface(newFakeNode().on("df -Pk /var/lib").prints(dfOutput(8, 4))),
+			KubeDataDevicePath: func() string { return "/dev/xvdf" },
+		}
+
+		_, err := check.Run(t.Context())
+
+		require.ErrorIs(t, err, preflight.ErrWarning)
+		assert.Contains(t, err.Error(), "separate disk for Kubernetes data")
+	})
+
+	// An empty value is what a layout with no such disk reports, and it must read as "no disk".
+	t.Run("the provider reports no data disk", func(t *testing.T) {
+		check := NodeDiskSpaceCheck{
+			NodeInterface:      FixedNodeInterface(newFakeNode().on("df -Pk /var/lib").prints(dfOutput(awsRoot, 12))),
+			KubeDataDevicePath: func() string { return "" },
+		}
+
+		_, err := check.Run(t.Context())
+
+		require.Error(t, err)
+	})
+}
+
+// The size is said, not enforced. It is about how the machine was sized, not about whether this
+// bootstrap can finish: every platform we run e2e on gives a master less than the documented
+// 50 GB and those clusters work, and on the Commander path there is no flag to skip a check with.
+// What can stop a bootstrap — no room left — is static-free-disk-space, and that still fails.
+func TestNodeDiskSpaceWarnsInsteadOfRefusing(t *testing.T) {
+	// The static master this was bought on: 31 GB of filesystem, 26 GiB of it free.
+	t.Run("a filesystem below the floor", func(t *testing.T) {
+		node := newFakeNode().on("df -Pk /var/lib").prints(dfOutput(31, 26))
+
+		_, err := NodeDiskSpaceCheck{NodeInterface: FixedNodeInterface(node)}.Run(t.Context())
+
+		require.ErrorIs(t, err, preflight.ErrWarning)
+		assert.Contains(t, err.Error(), "the documentation asks for a 50 GB disk")
+	})
+
+	t.Run("the free space of the same node still decides", func(t *testing.T) {
+		node := newFakeNode().on("df -Pk /var/lib").prints(dfOutput(31, 2))
+
+		_, err := StaticFreeDiskSpaceCheck{NodeInterface: FixedNodeInterface(node)}.Run(t.Context())
+
+		require.Error(t, err)
+		require.NotErrorIs(t, err, preflight.ErrWarning)
+	})
 }

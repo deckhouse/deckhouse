@@ -131,15 +131,25 @@ func (c fakeCheck) CheckAvailability(context.Context) error { return c.err }
 
 func (c fakeCheck) String() string { return "fake availability check" }
 
-// fakeSSHProvider hands out the one client the test set up.
+// fakeSSHProvider hands out the one client the test set up, and remembers the context it was
+// asked with — which lib-connection reads as the client's lifetime, not as the call's.
 type fakeSSHProvider struct {
 	libcon.SSHProvider
 
 	client libcon.SSHClient
 	err    error
+	// lifetime is the context of the last Client call. A pointer to the struct is not needed:
+	// the tests that read it hold the channel it closes.
+	lifetime chan context.Context
 }
 
-func (p fakeSSHProvider) Client(context.Context) (libcon.SSHClient, error) {
+func (p fakeSSHProvider) Client(ctx context.Context) (libcon.SSHClient, error) {
+	if p.lifetime != nil {
+		select {
+		case p.lifetime <- ctx:
+		default:
+		}
+	}
 	return p.client, p.err
 }
 

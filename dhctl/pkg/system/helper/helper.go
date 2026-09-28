@@ -36,7 +36,14 @@ func GetNodeInterface(ctx context.Context, sshProviderinitializer provider.SSHPr
 		return local.NewNodeInterface(settings), nil
 	}
 
-	sshClient, err := sshProvider.Client(ctx)
+	// The context handed to Client is the client's lifetime, not this call's: lib-connection
+	// documents it as "must outlive every user", and the provider caches the client for everyone
+	// who asks afterwards. Callers pass their own context — a preflight check passes one that is
+	// cancelled when the check returns, or by its timeout — and a client built on that is dead as
+	// soon as its first user is, with no reconnect after any drop. Detached from cancellation and
+	// nothing else: the logger and the span still travel with it. The connection is closed
+	// explicitly, by the Cleanup the commands defer.
+	sshClient, err := sshProvider.Client(context.WithoutCancel(ctx))
 	if err != nil {
 		return nil, err
 	}
