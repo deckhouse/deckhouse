@@ -12,4 +12,6 @@ title: "The registry-packages-proxy: configuration"
 
 {% include module-requirements.liquid %}
 
-The module does not have any settings.
+The module does not have any mandatory parameters.
+
+<!-- SCHEMA -->
