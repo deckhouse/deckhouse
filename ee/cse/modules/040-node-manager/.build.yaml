@@ -1,6 +1,0 @@
-crds/*
-hooks/*
-monitoring/prometheus-rules/*
-templates/*
-images/*
-openapi/values.yaml

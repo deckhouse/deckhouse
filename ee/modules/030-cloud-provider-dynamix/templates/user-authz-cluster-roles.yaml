@@ -1,5 +1,0 @@
-{{- $userAuthzConfig := dict -}}
-{{- $_ := set $userAuthzConfig "providerName" "cloud-provider-dynamix" -}}
-{{- $_ := set $userAuthzConfig "capiResources" (list "dynamixclusters" "dynamixmachines" "dynamixmachinetemplates") -}}
-{{- $_ := set $userAuthzConfig "instanceClassResource" "dynamixinstanceclasses" -}}
-{{- include "helm_lib_cloud_provider_user_authz_cluster_roles" (list . $userAuthzConfig) }}

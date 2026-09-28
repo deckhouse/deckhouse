@@ -1,4 +1,0 @@
-{{- $userAuthzConfig := dict -}}
-{{- $_ := set $userAuthzConfig "providerName" "cloud-provider-openstack" -}}
-{{- $_ := set $userAuthzConfig "instanceClassResource" "openstackinstanceclasses" -}}
-{{- include "helm_lib_cloud_provider_user_authz_cluster_roles" (list . $userAuthzConfig) }}
