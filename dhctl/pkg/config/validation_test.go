@@ -270,7 +270,7 @@ clusterType: Static
 }
 
 func TestValidateProviderSpecificClusterConfiguration(t *testing.T) {
-	const schemasDir = "./../../../candi/cloud-providers"
+	const schemasDir = "./../../../modules/030-cloud-provider-yandex/candi/openapi"
 	newStore := newSchemaStore(nil, []string{schemasDir})
 
 	tests := map[string]struct {

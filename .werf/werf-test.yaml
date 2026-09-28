@@ -45,6 +45,10 @@ git:
   {{ .Files.Get (printf "tools/build_includes/candi-cloud-providers-%s.yaml" .Env) }}
   {{ .Files.Get (printf "tools/build_includes/candi-%s.yaml" .Env) }}
 import:
+- from: {{ index $.Images "tools/curl" }}
+  add: /usr/bin/curl-static
+  to: /usr/bin/curl
+  before: setup
 - from: {{ index $.Images "tools/jq" }}
   add: /usr/bin/jq
   to: /usr/bin/jq
@@ -72,6 +76,8 @@ shell:
     - find /deckhouse/modules/* -type f -name '*.go' -exec sed -E -i 's|github.com/deckhouse/deckhouse/{{ $edition.modulesDir }}|github.com/deckhouse/deckhouse/modules|g' {} +
       {{- end }}
       {{- end }}
+    - chmod a+w /deckhouse
+    - chmod -R a+w /deckhouse/candi/cloud-providers
 imageSpec:
   config:
     env: { "ADDON_OPERATOR_NAMESPACE": "tests", "DECKHOUSE_POD": "tests", "MODULES_DIR": "/deckhouse/modules", "GLOBAL_HOOKS_DIR": "/deckhouse/global-hooks", "PATH": "${PATH}:/go/bin:/usr/local/go/bin:/root/go/bin" }
