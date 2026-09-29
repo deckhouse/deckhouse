@@ -166,13 +166,13 @@ spec:
                   format: int32
                   minimum: 0
                   description: |
-                    How many nodes the selected groups hold. The denominator of `appliedNodes` and `failedNodes`.
+                    Number of nodes in the selected NodeGroups.
                 pendingNodes:
                   type: integer
                   format: int32
                   minimum: 0
                   description: |
-                    How many of those nodes have reported neither the sysext applied nor a refusal yet.
+                    Number of selected nodes that have not yet reported either successful manifest application or a failure.
                 failureMessage:
                   type: string
                   description: |
