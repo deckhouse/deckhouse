@@ -717,28 +717,28 @@ dhctl bootstrap \
 - `--preflight-skip-check=registry-access-from-master` — пропуск проверки доступности хранилища образов с самого master-узла;
 - `--preflight-skip-check=immutable-api-reachable` — пропуск проверки того, что порт API первого immutable master-узла отвечает.
 
-Подсети кластера и `publicDomainTemplate` больше не preflight-проверки: они читают только
+Подсети кластера и `publicDomainTemplate` не относятся к preflight-проверкам: они читают только
 конфигурацию, поэтому проверяются при её загрузке — одинаково в `dhctl config`, в converge и при
-bootstrap. Пропустить их флагом нельзя; имена `cidr-intersection`, `static-cidr-intersection` и
-`public-domain-template` по-прежнему принимаются для совместимости, но ничего не делают.
+bootstrap. Пропустить их флагом нельзя.
 
-Пропуск проверки, которую впоследствии разделили надвое, по-прежнему отключает всё, что она
-делала раньше: `--preflight-skip-check=registry-credentials` отключает и `registry-reachable`,
-`dhctl-edition` — и `deckhouse-image-available`, `sudo-allowed` — и `sudo-installed`, а
+Имена `cidr-intersection`, `static-cidr-intersection` и
+`public-domain-template` принимаются для совместимости, но не влияют на выполнение проверок.
+
+При указании имени проверки в `--preflight-skip-check` пропускаются обе проверки, соответствующие этому имени:
+`registry-credentials` — и `registry-reachable`, `dhctl-edition` — и `deckhouse-image-available`, `sudo-allowed` — и `sudo-installed`, а
 `ssh-credential` — и `ssh-connectivity`.
 
-Проверки, которые спрашивают о самой машине, называются `node-*`, а те, что о доступе к ней, —
-`ssh-*`; и те, и другие выполняются и на облачном master-узле, и на статическом узле. С префиксом
-`static-` остались только проверки, применимые исключительно к статическому кластеру. Прежние
-имена переименованных проверок по-прежнему принимаются флагом `--preflight-skip-check`.
+Проверки, которые относятся к самой машине, называются `node-*`, а те, что относятся к доступу, —
+`ssh-*`. И те, и другие выполняются и на облачном master-узле, и на статическом узле. С префиксом
+`static-` выполняются проверки, применимые исключительно к статическому кластеру. Имена переименованных проверок принимаются флагом `--preflight-skip-check`.
 
 Проверки узла — `sudo-installed`, `sudo-allowed`, `python-modules`, `resolve-localhost`,
 `time-drift`, `node-hostname`, `node-disk-space`, `node-leftovers`,
 `node-cri-requirements`, `node-internal-network`, `node-system-requirements` и
-`host-network-cidr-intersection` — теперь выполняются и на облачном master-узле, не только на
+`host-network-cidr-intersection` — также выполняются и на облачном master-узле, и на
 статическом. Имена на обоих путях одинаковые.
 
-Еще два флага влияют не на состав проверок, а на то, как они выполняются:
+Еще два флага управляют выполнением проверок:
 
 - `--preflight-fail-fast` — остановиться на первой же ошибке, не выполняя остальные проверки фазы;
 - `--preflight-no-cache` — выполнить все проверки заново, не используя результаты, запомненные в предыдущем запуске.
@@ -752,7 +752,9 @@ bootstrap. Пропустить их флагом нельзя; имена `cidr
     --preflight-skip-all-checks
 ```
 
-> Замените здесь `<SSH_PRIVATE_KEY_FILE>` на имя вашего приватного ключа. Например, для ключа с RSA-шифрованием это может быть `id_rsa`, а для ключа с ED25519-шифрованием — `id_ed25519`.
+{% alert level="info" %}
+Замените здесь `<SSH_PRIVATE_KEY_FILE>` на имя вашего приватного ключа. Например, для ключа с RSA-шифрованием это может быть `id_rsa`, а для ключа с ED25519-шифрованием — `id_ed25519`.
+{% endalert %}
 
 {% endofftopic %}
 

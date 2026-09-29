@@ -256,8 +256,8 @@ registry.deckhouse.ru/deckhouse/<REVISION>/install:<RELEASE_CHANNEL>
 - `--preflight-fail-fast` — остановиться на первой же ошибке, не выполняя остальные проверки фазы.
 - `--preflight-no-cache` — выполнить все проверки заново, не используя результаты, запомненные в предыдущем запуске.
 
-Полный список имен проверок выводит `dhctl bootstrap --help`. Отдельные флаги прежних релизов
-(`--preflight-skip-ssh-forward-check` и остальные) заменены на `--preflight-skip-check`.
+Полный список имён проверок выводит `dhctl bootstrap --help`.
+Для пропуска проверок используется единый флаг `--preflight-skip-check` вместо отдельных флагов, таких как `--preflight-skip-ssh-forward-check`.
 
 Пример применения флага пропуска:
 

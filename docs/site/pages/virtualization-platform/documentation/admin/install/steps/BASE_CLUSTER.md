@@ -251,8 +251,8 @@ List of checks performed by the installer before starting platform installation:
 - `--preflight-fail-fast` — stop at the first failed check instead of reporting every check of the phase.
 - `--preflight-no-cache` — run every check for real, ignoring results remembered from a previous run.
 
-`dhctl bootstrap --help` lists every check name. The per-check flags of earlier releases
-(`--preflight-skip-ssh-forward-check` and the rest) were replaced by `--preflight-skip-check`.
+`dhctl bootstrap --help` lists every check name. The single `--preflight-skip-check` flag is used to
+skip checks instead of separate flags such as `--preflight-skip-ssh-forward-check`.
 
 Example of using the preflight skip flag:
 

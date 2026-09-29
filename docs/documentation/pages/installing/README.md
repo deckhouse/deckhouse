@@ -703,32 +703,33 @@ Node checks (the `PostInfraPreflights` phase):
 - `--preflight-skip-check=registry-access-from-master`: Skip the check that the master node itself can reach the registry.
 - `--preflight-skip-check=immutable-api-reachable`: Skip the check that the API port of an immutable first master answers.
 
-The cluster subnets and `publicDomainTemplate` are no longer preflight checks: they read nothing
-but the configuration, so they are validated when it is loaded — by `dhctl config`, by converge
-and by bootstrap alike. No flag skips them, and the names `cidr-intersection`,
-`static-cidr-intersection` and `public-domain-template` are still accepted for compatibility but
-do nothing.
+The cluster subnets and `publicDomainTemplate` are not preflight checks: they read only the
+configuration, so they are validated when it is loaded — by `dhctl config`, by converge and by
+bootstrap alike. No flag can skip them.
 
-Skipping a check that was later split in two still skips everything it used to do: passing
-`--preflight-skip-check=registry-credentials` also skips `registry-reachable`, `dhctl-edition`
-also skips `deckhouse-image-available`, `sudo-allowed` also skips `sudo-installed`, and
-`ssh-credential` also skips `ssh-connectivity`.
+The names `cidr-intersection`, `static-cidr-intersection` and `public-domain-template` are
+accepted for compatibility but do not affect check execution.
 
-Checks that ask about the machine itself are named `node-*`, and the ones about reaching it
-`ssh-*`; both run on a cloud master as well as on a static node. The ones named `static-*` apply
-to a static cluster only. The previous `static-` spellings of the renamed checks are still
-accepted by `--preflight-skip-check`.
+When a check name is specified with `--preflight-skip-check`, both checks corresponding to that
+name are skipped: `registry-credentials` skips `registry-reachable`, `dhctl-edition` skips
+`deckhouse-image-available`, `sudo-allowed` skips `sudo-installed`, and `ssh-credential` skips
+`ssh-connectivity`.
+
+Checks that concern the machine itself are named `node-*`, while checks that concern access to it
+are named `ssh-*`. Both run on a cloud master as well as on a static node. Checks with the
+`static-` prefix apply only to a static cluster. Renamed check names are accepted by
+`--preflight-skip-check`.
 
 The node checks — `sudo-installed`, `sudo-allowed`, `python-modules`, `resolve-localhost`,
 `time-drift`, `node-hostname`, `node-disk-space`, `node-leftovers`,
 `node-cri-requirements`, `node-internal-network`, `node-system-requirements` and
-`host-network-cidr-intersection` — now run on a cloud master as well as on a static node. They
-keep their names on both paths.
+`host-network-cidr-intersection` — also run on a cloud master as well as on a static node. Their
+names are the same on both paths.
 
-Two more flags control how the checks are run rather than which of them run:
+Two more flags control check execution:
 
-- `--preflight-fail-fast`: Stop at the first failed check instead of reporting every check of the phase.
-- `--preflight-no-cache`: Run every check for real, ignoring results remembered from a previous run.
+- `--preflight-fail-fast`: Stop at the first failed check instead of running the remaining checks in the phase.
+- `--preflight-no-cache`: Run all checks again without using results saved from the previous run.
 
 Example of using a preflight skip flag:
 
@@ -739,7 +740,9 @@ Example of using a preflight skip flag:
       --preflight-skip-all-checks
   ```
 
-> Replace `<SSH_PRIVATE_KEY_FILE>` here with the name of your private key. For example, for a key with RSA encryption it can be `id_rsa`, and for a key with ED25519 encryption it can be `id_ed25519`.
+{% alert level="info" %}
+Replace `<SSH_PRIVATE_KEY_FILE>` here with the name of your private key. For example, for a key with RSA encryption it can be `id_rsa`, and for a key with ED25519 encryption it can be `id_ed25519`.
+{% endalert %}
 
 {% endofftopic %}
 
