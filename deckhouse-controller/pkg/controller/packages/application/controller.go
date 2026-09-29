@@ -23,7 +23,6 @@ import (
 
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/utils/ptr"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -72,7 +71,6 @@ type packageRuntime interface {
 	UpdateApp(repo registry.Remote, inst packageruntime.App)
 	RemoveApp(namespace, name string)
 	Status() *packagestatus.Service
-	Cleanup(ctx context.Context, preserve []packageruntime.PreservePackage)
 }
 
 func RegisterController(
@@ -94,10 +92,6 @@ func RegisterController(
 	r.init.Add(1)
 
 	// add preflight to set the cluster UUID
-	if err := runtimeManager.Add(manager.RunnableFunc(r.preflight)); err != nil {
-		return fmt.Errorf("add preflight: %w", err)
-	}
-
 	r.status = status.NewService(r.client, packageRuntime.Status().GetStatus, r.logger)
 	r.status.Start(context.Background(), packageRuntime.Status().Queue())
 
@@ -107,41 +101,6 @@ func RegisterController(
 		WithEventFilter(predicate.Or(predicate.GenerationChangedPredicate{}, predicate.AnnotationChangedPredicate{})).
 		WithOptions(controller.Options{MaxConcurrentReconciles: maxConcurrentReconciles}).
 		Complete(r)
-}
-
-func (r *reconciler) preflight(ctx context.Context) error {
-	defer r.init.Done()
-
-	// wait until module manager init
-	r.logger.Debug("wait until module manager is inited")
-	if err := wait.PollUntilContextCancel(ctx, 2*time.Second, true, func(_ context.Context) (bool, error) {
-		return r.moduleManager.AreModulesInited(), nil
-	}); err != nil {
-		return fmt.Errorf("init module manager: %w", err)
-	}
-
-	appsList := new(v1alpha1.ApplicationList)
-	if err := r.client.List(ctx, appsList); err != nil {
-		return fmt.Errorf("list applications: %w", err)
-	}
-
-	preserve := make([]packageruntime.PreservePackage, 0, len(appsList.Items))
-	for _, app := range appsList.Items {
-		preserve = append(preserve, packageruntime.PreservePackage{
-			PackageName: app.Spec.PackageName,
-			Repository:  app.Spec.PackageRepositoryName,
-			Version:     app.Spec.PackageVersion,
-
-			ReleaseName:      apps.BuildName(app.Namespace, app.Name),
-			ReleaseNamespace: app.Namespace,
-		})
-	}
-
-	r.runtime.Cleanup(ctx, preserve)
-
-	r.logger.Debug("controller is ready")
-
-	return nil
 }
 
 func (r *reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
