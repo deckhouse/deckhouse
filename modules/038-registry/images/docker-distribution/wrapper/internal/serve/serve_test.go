@@ -23,6 +23,7 @@ import (
 	"crypto/x509"
 	"crypto/x509/pkix"
 	"encoding/pem"
+	"fmt"
 	"io"
 	"log"
 	"log/slog"
@@ -32,6 +33,7 @@ import (
 	"net/url"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 	"time"
 
@@ -146,6 +148,112 @@ func TestTheStoreKeepsTheClusterNamesAndOutlivesTheUpstream(t *testing.T) {
 	require.NoError(t, err, "with the upstream gone the store is the only source, which is the whole design")
 	_, err = offline.Manifest()
 	require.NoError(t, err)
+}
+
+// tokenUpstream puts a registry behind token authentication the way a real upstream does it: every
+// API request wants a Bearer token scoped to the repository under the UPSTREAM's name, basic
+// credentials on the API are ignored, and the token service hands out tokens only for the right basic
+// credentials. The token is the scope itself, which is what lets the check read it back.
+func tokenUpstream(t *testing.T, registry http.Handler, username, password string) *httptest.Server {
+	t.Helper()
+
+	var server *httptest.Server
+	server = httptest.NewServer(http.HandlerFunc(func(writer http.ResponseWriter, request *http.Request) {
+		if request.URL.Path == "/auth" {
+			user, pass, ok := request.BasicAuth()
+			if !ok || user != username || pass != password {
+				http.Error(writer, "bad credentials", http.StatusUnauthorized)
+				return
+			}
+			_, _ = fmt.Fprintf(writer, `{"token":%q,"expires_in":300}`, request.URL.Query().Get("scope"))
+			return
+		}
+
+		repository := strings.TrimPrefix(request.URL.Path, "/v2/")
+		for _, separator := range []string{"/manifests/", "/blobs/", "/tags/"} {
+			if i := strings.LastIndex(repository, separator); i >= 0 {
+				repository = repository[:i]
+			}
+		}
+		scope := "repository:" + repository + ":pull"
+
+		if request.Header.Get("Authorization") != "Bearer "+scope {
+			challenge := fmt.Sprintf(`Bearer realm="%s/auth",service="upstream"`, server.URL)
+			if request.URL.Path != "/v2/" {
+				challenge += fmt.Sprintf(`,scope="%s"`, scope)
+			}
+			writer.Header().Set("Www-Authenticate", challenge)
+			http.Error(writer, `{"errors":[{"code":"UNAUTHORIZED"}]}`, http.StatusUnauthorized)
+			return
+		}
+		registry.ServeHTTP(writer, request)
+	}))
+	t.Cleanup(server.Close)
+	return server
+}
+
+// TestTheCacheReachesAnUpstreamThatWantsATokenForItsOwnNames is the upstream every real cluster has.
+//
+// The cache cannot authenticate with it by itself: it would ask for a token under the cluster's names,
+// and would only send credentials to a token service on the loopback it believes is the upstream. A
+// cache that did either fetched nothing — every miss a 404, with the image right there upstream.
+func TestTheCacheReachesAnUpstreamThatWantsATokenForItsOwnNames(t *testing.T) {
+	inner := craneregistry.New(craneregistry.Logger(log.New(io.Discard, "", 0)))
+	direct := httptest.NewServer(inner)
+	t.Cleanup(direct.Close)
+
+	pushed, err := random.Image(2048, 2)
+	require.NoError(t, err)
+	upstreamTag, err := name.NewTag(direct.Listener.Addr().String()+"/deckhouse/ee/modules/upmeter:v1.0.9", name.Insecure)
+	require.NoError(t, err)
+	require.NoError(t, remote.Write(upstreamTag, pushed))
+
+	real := tokenUpstream(t, inner, "license-token", "fake-license")
+
+	target, err := url.Parse(real.URL)
+	require.NoError(t, err)
+	rewriter, err := upstream.New(&config.Wrapper{
+		Scope: "system/deckhouse",
+		Upstream: &config.Upstream{
+			Address:  target.Host,
+			Scheme:   "http",
+			Path:     "/deckhouse/ee",
+			Username: "license-token",
+			Password: "fake-license",
+		},
+	}, "127.0.0.1:0", quiet())
+	require.NoError(t, err)
+
+	loopback := httptest.NewServer(rewriter.Handler())
+	t.Cleanup(loopback.Close)
+
+	never := time.Duration(0)
+	serving := storeConfiguration(t.TempDir())
+	serving.Proxy = configuration.Proxy{RemoteURL: loopback.URL, TTL: &never}
+
+	cache := httptest.NewServer(handlers.NewApp(context.Background(), serving))
+	t.Cleanup(cache.Close)
+
+	clusterTag, err := name.NewTag(cache.Listener.Addr().String()+"/system/deckhouse/modules/upmeter:v1.0.9", name.Insecure)
+	require.NoError(t, err)
+
+	pulled, err := remote.Image(clusterTag)
+	require.NoError(t, err, "a miss must be fetched from an upstream that authenticates with tokens")
+	layers, err := pulled.Layers()
+	require.NoError(t, err)
+	for _, layer := range layers {
+		content, err := layer.Compressed()
+		require.NoError(t, err)
+		_, err = io.Copy(io.Discard, content)
+		require.NoError(t, err, "the layers are behind the same authentication as the manifest")
+		require.NoError(t, content.Close())
+	}
+
+	want, err := pushed.Digest()
+	require.NoError(t, err)
+	got, err := pulled.Digest()
+	require.NoError(t, err)
+	assert.Equal(t, want, got)
 }
 
 // TestAPushLandsInTheStoreTheCacheServesFrom is the other half of the same store: the cache refuses

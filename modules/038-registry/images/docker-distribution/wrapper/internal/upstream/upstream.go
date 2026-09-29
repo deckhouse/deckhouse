@@ -62,9 +62,9 @@ type Rewriter struct {
 	// Target is the real upstream: scheme and host.
 	Target url.URL
 
-	// Username and Password are sent as basic credentials when set. A registry that answers with a
-	// bearer challenge gets them from the cache's own challenge handling instead — this only
-	// covers the upstreams that ask for basic, which is why it is not an error to leave them empty.
+	// Username and Password are the upstream's credentials, sent as basic credentials to an upstream
+	// that takes them and exchanged for a token with one that challenges — see authenticator. Empty
+	// is an anonymous upstream.
 	Username string
 	Password string
 
@@ -124,7 +124,7 @@ func (r *Rewriter) Handler() http.Handler {
 	}
 
 	proxy := &httputil.ReverseProxy{
-		Transport: transport,
+		Transport: newAuthenticator(transport, r.Target, r.Username, r.Password, r.Log),
 		Director: func(request *http.Request) {
 			request.URL.Scheme = r.Target.Scheme
 			request.URL.Host = r.Target.Host
@@ -133,10 +133,6 @@ func (r *Rewriter) Handler() http.Handler {
 			request.Host = r.Target.Host
 
 			request.URL.Path = r.rewrite(request.URL.Path)
-
-			if r.Username != "" || r.Password != "" {
-				request.SetBasicAuth(r.Username, r.Password)
-			}
 		},
 		ErrorHandler: func(writer http.ResponseWriter, request *http.Request, err error) {
 			// Reported as a gateway failure rather than as this registry's own error: what failed
@@ -149,7 +145,19 @@ func (r *Rewriter) Handler() http.Handler {
 		},
 	}
 
-	return proxy
+	return http.HandlerFunc(func(writer http.ResponseWriter, request *http.Request) {
+		// The version check is answered here, and without a challenge. It is what the cache pings to
+		// learn how to authenticate, and the answer it must learn is that it need not: a challenge
+		// passed through would send it to the upstream's token service under the cluster's
+		// repository names — see authenticator.
+		if request.URL.Path == "/v2/" || request.URL.Path == "/v2" {
+			writer.Header().Set("Docker-Distribution-Api-Version", "registry/2.0")
+			writer.Header().Set("Content-Type", "application/json")
+			_, _ = writer.Write([]byte("{}"))
+			return
+		}
+		proxy.ServeHTTP(writer, request)
+	})
 }
 
 // rewrite maps one request path from the cluster's names to the upstream's.
