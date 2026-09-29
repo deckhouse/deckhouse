@@ -1,4 +1,5 @@
-{{- range $version := .Values.istio.internal.versionsToInstall }}
+{{- /* Also for versions still being removed by their istio-operator: their istiod keeps running (see retire_istio_operators.go). */}}
+{{- range $version := uniq (concat .Values.istio.internal.versionsToInstall .Values.istio.internal.operatorVersionsToInstall) | sortAlpha }}
   {{- $versionInfo := get $.Values.istio.internal.versionMap $version }}
   {{- $revision := get $versionInfo "revision"}}
 ---
