@@ -598,7 +598,7 @@ func (c *MasterNodeGroupController) deleteNodes(ctx *context.Context, nodesToDel
 					nodeName,
 					ctx.CommanderMode(),
 					c.immutable,
-				)
+				).WithConfirm(confirmOrProceed(ctx))
 			},
 			func(nodeName string) {
 				standaloneProvider, ok := sshProvider.(libcon.StandaloneClientProvider)

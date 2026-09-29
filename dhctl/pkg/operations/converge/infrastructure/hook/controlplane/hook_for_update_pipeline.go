@@ -184,7 +184,7 @@ func (h *HookForUpdatePipeline) BeforeAction(ctx context.Context, runner infrast
 		return false, fmt.Errorf("Could not get kube client: %w", err)
 	}
 
-	err = removeControlPlaneRoleFromNode(ctx, kubeClient, h.kubeGetter, h.nodeToConverge, h.commanderMode, h.immutableNode)
+	err = removeControlPlaneRoleFromNode(ctx, kubeClient, h.kubeGetter, h.nodeToConverge, h.confirm, h.commanderMode, h.immutableNode)
 	if err != nil {
 		return false, fmt.Errorf("failed to remove control plane role from node '%s': %v", h.nodeToConverge, err)
 	}
