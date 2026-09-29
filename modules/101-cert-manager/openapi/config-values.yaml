@@ -176,7 +176,9 @@ properties:
     description: |
       Enable ListenerSet support in cert-manager by turning on the `ListenerSets` feature gate.
 
-      Additionally, when Gateway API integration is enabled, this flag also enables ListenerSet integration for Gateway API.
+      Additionally, when Gateway API integration is enabled, this flag also enables ListenerSet integration for Gateway API if the ListenerSet CRD is installed in the cluster and serves the `v1` version.
+
+      Gateway API integration is enabled automatically when the Gateway and HTTPRoute CRDs are installed in the cluster and serve the `v1` version.
   ingressClassHttp01:
     type: string
     x-examples: ["nginx"]

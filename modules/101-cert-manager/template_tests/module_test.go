@@ -17,6 +17,7 @@ limitations under the License.
 package template_tests
 
 import (
+	"fmt"
 	"testing"
 
 	. "github.com/onsi/ginkgo"
@@ -709,12 +710,13 @@ internal:
 name: shared-gateway
 namespace: d8-ingress-gateway
 `)
-			f.ValuesSetFromYaml("global.discovery.apiVersions", `["gateway.networking.k8s.io/v1/Gateway","gateway.networking.k8s.io/v1/HTTPRoute"]`)
+			f.ValuesSetFromYaml("global.discovery.gatewayAPICRDs",
+				gatewayAPICRDsServing("v1", "gateways", "httproutes", "listenersets"))
 			f.ValuesSetFromYaml("certManager", certManager+certManagerGatewayAPI)
-			f.HelmRender()
 		})
 
 		It("should render gateway and listenerset arguments", func() {
+			f.HelmRender()
 			Expect(f.RenderError).ShouldNot(HaveOccurred())
 
 			certManagerDeployment := f.KubernetesResource("Deployment", "d8-cert-manager", "cert-manager")
@@ -724,6 +726,155 @@ namespace: d8-ingress-gateway
 			Expect(args).To(ContainSubstring("--feature-gates=ACMEHTTP01IngressPathTypeExact=false,ListenerSets=true"))
 			Expect(args).To(ContainSubstring("--enable-gateway-api=true"))
 			Expect(args).To(ContainSubstring("--enable-gateway-api-listenerset=true"))
+		})
+
+		It("still renders Gateway ClusterIssuers for the selected Gateway", func() {
+			f.HelmRender()
+			Expect(f.RenderError).ShouldNot(HaveOccurred())
+
+			Expect(f.KubernetesGlobalResource("ClusterIssuer", "letsencrypt-gateway-shared-gateway").Exists()).To(BeTrue())
+			Expect(f.KubernetesGlobalResource("ClusterIssuer", "letsencrypt-staging-gateway-shared-gateway").Exists()).To(BeTrue())
+		})
+	})
+
+	Context("<Gateway API CRDs without a Gateway>", func() {
+		BeforeEach(func() {
+			f.ValuesSetFromYaml("global", globalValuesManagedHa)
+			f.ValuesSet("global.modulesImages", GetModulesImages())
+			f.ValuesSetFromYaml("global.discovery.gatewayAPICRDs",
+				gatewayAPICRDsServing("v1", "gateways", "httproutes"))
+			f.ValuesSetFromYaml("certManager", certManager)
+		})
+
+		It("enables Gateway API without rendering Gateway ClusterIssuers", func() {
+			f.HelmRender()
+			Expect(f.RenderError).ShouldNot(HaveOccurred())
+
+			deployment := f.KubernetesResource("Deployment", "d8-cert-manager", "cert-manager")
+			args := deployment.Field("spec.template.spec.containers.0.args").String()
+			Expect(args).To(ContainSubstring("--enable-gateway-api=true"))
+			Expect(args).NotTo(ContainSubstring("--enable-gateway-api-listenerset=true"))
+			Expect(f.KubernetesGlobalResource("ClusterIssuer", "letsencrypt-gateway-shared-gateway").Exists()).To(BeFalse())
+			Expect(f.KubernetesGlobalResource("ClusterIssuer", "letsencrypt-staging-gateway-shared-gateway").Exists()).To(BeFalse())
+		})
+
+		It("enables ListenerSet integration when requested", func() {
+			f.ValuesSet("certManager.enableListenerSet", true)
+			f.ValuesSetFromYaml("global.discovery.gatewayAPICRDs",
+				gatewayAPICRDsServing("v1", "gateways", "httproutes", "listenersets"))
+			f.HelmRender()
+			Expect(f.RenderError).ShouldNot(HaveOccurred())
+
+			deployment := f.KubernetesResource("Deployment", "d8-cert-manager", "cert-manager")
+			args := deployment.Field("spec.template.spec.containers.0.args").String()
+			Expect(args).To(ContainSubstring("--feature-gates=ACMEHTTP01IngressPathTypeExact=false,ListenerSets=true"))
+			Expect(args).To(ContainSubstring("--enable-gateway-api=true"))
+			Expect(args).To(ContainSubstring("--enable-gateway-api-listenerset=true"))
+		})
+
+		// The integration is built against the stable API, so CRDs present only under an alpha or
+		// beta version are not something it can be switched on for.
+		It("does not enable Gateway API for CRDs served only under a version other than v1", func() {
+			f.ValuesSetFromYaml("global.discovery.gatewayAPICRDs",
+				gatewayAPICRDsServing("v1beta1", "gateways", "httproutes"))
+			f.HelmRender()
+			Expect(f.RenderError).ShouldNot(HaveOccurred())
+
+			deployment := f.KubernetesResource("Deployment", "d8-cert-manager", "cert-manager")
+			args := deployment.Field("spec.template.spec.containers.0.args").String()
+			Expect(args).NotTo(ContainSubstring("--enable-gateway-api=true"))
+		})
+
+		// v1 alongside another version is still v1 being served, so the integration is on.
+		It("enables Gateway API when v1 is served next to another version", func() {
+			f.ValuesSetFromYaml("global.discovery.gatewayAPICRDs", `
+- name: gateways.gateway.networking.k8s.io
+  versions:
+  - name: v1beta1
+    served: true
+    storage: false
+  - name: v1
+    served: true
+    storage: true
+- name: httproutes.gateway.networking.k8s.io
+  versions:
+  - name: v1beta1
+    served: true
+    storage: false
+  - name: v1
+    served: true
+    storage: true
+`)
+			f.HelmRender()
+			Expect(f.RenderError).ShouldNot(HaveOccurred())
+
+			deployment := f.KubernetesResource("Deployment", "d8-cert-manager", "cert-manager")
+			args := deployment.Field("spec.template.spec.containers.0.args").String()
+			Expect(args).To(ContainSubstring("--enable-gateway-api=true"))
+		})
+
+		// Installed is not the same as usable: a CRD whose v1 is withdrawn serves nothing usable.
+		It("does not enable Gateway API when v1 is present but not served", func() {
+			f.ValuesSetFromYaml("global.discovery.gatewayAPICRDs",
+				gatewayAPICRDsWithVersion("v1", false, "gateways", "httproutes"))
+			f.HelmRender()
+			Expect(f.RenderError).ShouldNot(HaveOccurred())
+
+			deployment := f.KubernetesResource("Deployment", "d8-cert-manager", "cert-manager")
+			args := deployment.Field("spec.template.spec.containers.0.args").String()
+			Expect(args).NotTo(ContainSubstring("--enable-gateway-api=true"))
+		})
+
+		It("does not enable ListenerSet integration without the ListenerSet CRD", func() {
+			f.ValuesSet("certManager.enableListenerSet", true)
+			f.HelmRender()
+			Expect(f.RenderError).ShouldNot(HaveOccurred())
+
+			deployment := f.KubernetesResource("Deployment", "d8-cert-manager", "cert-manager")
+			args := deployment.Field("spec.template.spec.containers.0.args").String()
+			Expect(args).To(ContainSubstring("--feature-gates=ACMEHTTP01IngressPathTypeExact=false,ListenerSets=true"))
+			Expect(args).To(ContainSubstring("--enable-gateway-api=true"))
+			Expect(args).NotTo(ContainSubstring("--enable-gateway-api-listenerset=true"))
+		})
+	})
+
+	Context("<Incomplete Gateway API CRDs>", func() {
+		BeforeEach(func() {
+			f.ValuesSetFromYaml("global", globalValuesManagedHa)
+			f.ValuesSet("global.modulesImages", GetModulesImages())
+			f.ValuesSetFromYaml("certManager", certManager+certManagerGatewayAPI)
+		})
+
+		for _, plural := range []string{"gateways", "httproutes"} {
+			It("does not enable Gateway API with only "+plural, func() {
+				f.ValuesSetFromYaml("global.discovery.gatewayAPICRDs", gatewayAPICRDsServing("v1", plural))
+				f.HelmRender()
+				Expect(f.RenderError).ShouldNot(HaveOccurred())
+
+				deployment := f.KubernetesResource("Deployment", "d8-cert-manager", "cert-manager")
+				args := deployment.Field("spec.template.spec.containers.0.args").String()
+				Expect(args).NotTo(ContainSubstring("--enable-gateway-api=true"))
+				Expect(args).NotTo(ContainSubstring("--enable-gateway-api-listenerset=true"))
+			})
+		}
+	})
+
+	Context("<Gateway without Gateway API CRDs>", func() {
+		BeforeEach(func() {
+			f.ValuesSetFromYaml("global", globalValuesManagedHa)
+			f.ValuesSet("global.modulesImages", GetModulesImages())
+			f.ValuesSetFromYaml("global.discovery.gatewayAPIDefaultGateway", `
+name: shared-gateway
+namespace: d8-ingress-gateway
+`)
+			f.ValuesSetFromYaml("certManager", certManager)
+			f.HelmRender()
+		})
+
+		It("does not render Gateway ClusterIssuers", func() {
+			Expect(f.RenderError).ShouldNot(HaveOccurred())
+			Expect(f.KubernetesGlobalResource("ClusterIssuer", "letsencrypt-gateway-shared-gateway").Exists()).To(BeFalse())
+			Expect(f.KubernetesGlobalResource("ClusterIssuer", "letsencrypt-staging-gateway-shared-gateway").Exists()).To(BeFalse())
 		})
 	})
 
@@ -801,4 +952,28 @@ func verbsOn(role object_store.KubeObject, resource string) []string {
 	}
 
 	return verbs
+}
+
+// gatewayAPICRDsServing renders global.discovery.gatewayAPICRDs with the named CRDs serving the
+// given version. The value is a list of CRDs and their versions, so a spec that wants one available
+// states it here rather than flipping a boolean.
+func gatewayAPICRDsServing(version string, plurals ...string) string {
+	return gatewayAPICRDsWithVersion(version, true, plurals...)
+}
+
+// gatewayAPICRDsWithVersion is gatewayAPICRDsServing with control over whether the version is
+// served, for specs about a CRD that is installed but exposes nothing.
+func gatewayAPICRDsWithVersion(version string, served bool, plurals ...string) string {
+	var crds string
+	for _, plural := range plurals {
+		crds += fmt.Sprintf(`
+- name: %s.gateway.networking.k8s.io
+  versions:
+  - name: %s
+    served: %t
+    storage: true
+`, plural, version, served)
+	}
+
+	return crds
 }

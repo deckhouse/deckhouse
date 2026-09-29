@@ -222,6 +222,39 @@ properties:
           - namespace
         description: |
           The name of the discovered default Gateway used for Deckhouse modules if Gateway API is used.
+      gatewayAPICRDs:
+        type: array
+        description: |
+          Gateway API CRDs and the versions they declare. A CRD that is not installed has no versions.
+        items:
+          type: object
+          properties:
+            name:
+              type: string
+              description: |
+                CRD name, for example `gateways.gateway.networking.k8s.io`.
+            versions:
+              type: array
+              description: |
+                Versions the CRD declares, excluding deprecated ones.
+              items:
+                type: object
+                properties:
+                  name:
+                    type: string
+                    description: |
+                      Version name.
+                  served:
+                    type: boolean
+                    description: |
+                      Whether the version is served by the API server.
+                  storage:
+                    type: boolean
+                    description: |
+                      Whether the version is the storage version.
+        x-examples:
+        - - { "name": "gateways.gateway.networking.k8s.io", "versions": [ { "name": "v1", "served": true, "storage": true } ] }
+          - { "name": "inferencepools.inference.networking.k8s.io", "versions": [] }
   clusterConfiguration:
     $ref: '/deckhouse/candi/openapi/cluster_configuration.yaml#/apiVersions/0/openAPISpec'
   modulesImages:

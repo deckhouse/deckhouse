@@ -79,7 +79,9 @@ properties:
     description: |
       Включить поддержку ListenerSet в cert-manager через feature gate `ListenerSets`.
 
-      Также включает интеграцию ListenerSet для Gateway API, если включена интеграция Gateway API.
+      Также включает интеграцию ListenerSet для Gateway API, если включена интеграция Gateway API и в кластере установлен CRD ListenerSet, обслуживающий версию `v1`.
+
+      Интеграция Gateway API включается автоматически, если в кластере установлены CRD Gateway и HTTPRoute, обслуживающие версию `v1`.
   ingressClassHttp01:
     type: string
     x-examples: ["nginx"]

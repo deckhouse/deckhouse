@@ -1,8 +1,4 @@
-{{- $moduleGateway := dict }}
-{{- include "helm_lib_module_gateway" (list . $moduleGateway) }}
-{{- $gatewayKindExists := or (include "helm_lib_kind_exists" (list . "Gateway")) ((.Values.global.discovery.apiVersions | default list) | has "gateway.networking.k8s.io/v1/Gateway") }}
-{{- $httpRouteKindExists := or (include "helm_lib_kind_exists" (list . "HTTPRoute")) ((.Values.global.discovery.apiVersions | default list) | has "gateway.networking.k8s.io/v1/HTTPRoute") }}
-{{- $gatewayAPIEnabled := and $moduleGateway $gatewayKindExists $httpRouteKindExists }}
+{{- $gatewayAPIEnabled := and (include "cert_manager.gateway_api_crd_serves" (list . "gateways.gateway.networking.k8s.io" "v1")) (include "cert_manager.gateway_api_crd_serves" (list . "httproutes.gateway.networking.k8s.io" "v1")) }}
 {{- $featureGates := list "ACMEHTTP01IngressPathTypeExact=false" }}
 {{- if .Values.certManager.enableListenerSet }}
   {{- $featureGates = append $featureGates "ListenerSets=true" }}
@@ -97,7 +93,7 @@ spec:
 {{- if $gatewayAPIEnabled }}
           - --enable-gateway-api=true
 {{- end }}
-{{- if and $.Values.certManager.enableListenerSet $gatewayAPIEnabled }}
+{{- if and $.Values.certManager.enableListenerSet $gatewayAPIEnabled (include "cert_manager.gateway_api_crd_serves" (list $ "listenersets.gateway.networking.k8s.io" "v1")) }}
           - --enable-gateway-api-listenerset=true
 {{- end }}
           ports:
