@@ -46,6 +46,7 @@ PATHS_TO_REMOVE=(
 SERVICES_TO_REMOVE=(
   bashible.service
   bashible.timer
+  d8-bcheck.service
   d8-shutdown-inhibitor.service
   sysctl-tuner.service
   sysctl-tuner.timer
@@ -68,6 +69,7 @@ SYSTEMD_FILES=(
   /lib/systemd/system/containerd-deckhouse*
   /etc/systemd/system/d8-shutdown-inhibitor*
   /lib/systemd/system/d8-shutdown-inhibitor*
+  /etc/systemd/system/d8-bcheck*
   /etc/systemd/logind.conf.d/*d8-shutdown-inhibitor.conf
   /etc/systemd/system/kubelet*
   /lib/systemd/system/kubelet*
