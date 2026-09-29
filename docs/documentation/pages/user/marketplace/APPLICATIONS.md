@@ -107,6 +107,8 @@ The application state is described in detail through a set of conditions:
 | `Managed` | Application is correctly managed by DP |
 | `Ready` | Application is fully operational |
 
+Until the initial installation completes, `Installed` is the only condition reported. The other conditions appear once it becomes `True` and are removed again while it is `False`, for example, when a module the application depends on is disabled.
+
 To quickly view all conditions, use the following command:
 
 ```bash

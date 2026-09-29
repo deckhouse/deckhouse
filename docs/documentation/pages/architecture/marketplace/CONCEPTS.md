@@ -60,7 +60,7 @@ Each [ApplicationPackageVersion](../../reference/api/cr.html#applicationpackagev
 4. User creates an [Application](../../reference/api/cr.html#application) in their namespace referencing `packageName`, `packageVersion`, and optionally `packageRepositoryName`.
 5. DP validates `spec.settings` against the `settingsSchema` from the corresponding ApplicationPackageVersion.
 6. Nelm deploys the Helm templates from the package bundle.
-7. Conditions on the Application reflect deployment progress: `Installed` → `ConfigurationApplied` → `Scaled` → `Ready`.
+7. The `Installed` condition on the Application reflects deployment progress and is the only condition reported until the installation completes. Once it becomes `True`, the other conditions (`ConfigurationApplied`, `Scaled`, `Ready`, and so on) appear.
 
 ## Application constraints
 

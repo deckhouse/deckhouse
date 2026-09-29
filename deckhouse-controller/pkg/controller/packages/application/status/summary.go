@@ -34,8 +34,8 @@ import (
 //   - Ready:     Installed=True and every other primary condition is True.
 //   - Degraded:  Installed=True with a reconcile problem and no active update.
 //   - Suspended: a hard dependency was disabled under a running app
-//     (Installed=False/RequirementsUnmet with the runtime conditions Unknown,
-//     which is what distinguishes it from a first-install Pending).
+//     (Installed=True turning False/RequirementsUnmet, which is what
+//     distinguishes it from a first-install Pending).
 //   - Deleting:  the runtime accepted the removal and is tearing the
 //     application down; every condition reports Deleting until the resource
 //     disappears.
