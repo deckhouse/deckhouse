@@ -245,6 +245,63 @@ d8 k uncordon <ИМЯ_УЗЛА>
 
 {% endcapture %}
 
+{% capture cse_1_73_containerd_integrity_ngc %}
+{% raw %}
+
+```shell
+d8 k apply -f - <<'EOF'
+apiVersion: deckhouse.io/v1alpha1
+kind: NodeGroupConfiguration
+metadata:
+  name: zz-cse-containerd-integrity-migration.sh
+spec:
+  nodeGroups: ['*']
+  bundles: ['*']
+  weight: 32
+  content: |
+    {{- if eq .cri "ContainerdV2" }}
+    command -v containerd &>/dev/null || exit 0
+    containerd --help 2>/dev/null | grep -q -- '--integrity-check-interval' || exit 0
+
+    snapshots="/var/lib/containerd/io.containerd.snapshotter.v1.erofs/snapshots"
+    [ -d "$snapshots" ] || exit 0
+    stale=""
+    for layer in "$snapshots"/*/layer.erofs; do
+      [ -e "$layer" ] || continue
+      [ -e "${layer}.verity" ] || { stale=yes; break; }
+    done
+    [ -n "$stale" ] || exit 0
+
+    bb-log-info "Stale erofs layers without verity found, containerd state wipe is required"
+    bb-deckhouse-get-disruptive-update-approval
+
+    bb-package-install "pause:{{ $.images.registrypackages.pause }}"
+    bb-package-install "kubernetes-api-proxy:{{ $.images.registrypackages.kubernetesApiProxy }}"
+
+    systemctl stop kubelet.service
+    crictl ps -q | xargs -r crictl stop -t 0 && crictl ps -a -q | xargs -r crictl rm -f
+    systemctl stop containerd-deckhouse.service
+    for i in $(mount | grep /var/lib/containerd | cut -d " " -f3); do umount $i; done
+    if [ -d /var/lib/containerd/io.containerd.snapshotter.v1.erofs ]; then
+      chattr -i /var/lib/containerd/io.containerd.snapshotter.v1.erofs/snapshots/*/layer.erofs
+    fi
+    rm -rf /var/lib/containerd/*
+
+    bb-flag-set need-local-images-import
+    bb-flag-set kubelet-need-restart
+    bb-flag-set reboot
+
+    if systemctl start containerd-deckhouse.service; then
+      bb-flag-unset containerd-need-restart
+      systemctl start kubelet.service
+    fi
+    {{- end }}
+EOF
+```
+
+{% endraw %}
+{% endcapture %}
+
 {% capture change_registry_mc_deckhouse_unmanaged %}
 
 ```yaml
@@ -774,6 +831,27 @@ deckhouse=registry-cse.deckhouse.ru/deckhouse/cse:$DECKHOUSE_VERSION
 
    {{ disable_release_channel_cse | regex_replace: "^", "   " }}
 
+1. **Только для DP CSE** — примените конфигурацию миграции состояния containerd:
+
+   {% tabs switch-registry-cse-containerd-ngc %}
+   {% tab "DP CSE 1.73" %}
+
+   **Только для узлов на ContainerdV2.**
+
+   {{ cse_1_73_containerd_integrity_ngc | regex_replace: "^", "   " }}
+
+   Сборка containerd в DP CSE проверяет целостность образов и распаковывает каждый слой вместе с файлом `.verity`. Слои, оставшиеся от предыдущей редакции, такого файла не имеют и переиспользуются по совпадающему дайджесту, из-за чего поды не запускаются с ошибкой `checking hash image: no such file or directory`. Конфигурация обнаруживает такие слои и очищает состояние containerd на узле.
+
+   Применяйте её **до** переключения редакции: узел не должен получить сборку с проверками целостности раньше, чем будет готов к очистке.
+
+   {% endtab %}
+   {% tab "DP CSE 1.77 и выше" %}
+
+   Для DP CSE 1.77 и выше данный шаг не требуется.
+
+   {% endtab %}
+   {% endtabs %}
+
 1. В ModuleConfig [`deckhouse`](/modules/deckhouse/configuration.html#parameters-registry) укажите `imagesRepo` целевой редакции и `checkMode: Relax`:
 
    Выполните команду для редактирования ModuleConfig `deckhouse`:
@@ -925,6 +1003,27 @@ deckhouse=registry-cse.deckhouse.ru/deckhouse/cse:$DECKHOUSE_VERSION
 1. **Только для DP CSE** — подтвердите перезагрузку узлов:
 
    {{ cse_containerd_migration | regex_replace: "^", "   " }}
+
+1. **Только для DP CSE** — удалите ресурс NodeGroupConfiguration, который использовался для миграции состояния containerd:
+
+   {% tabs switch-registry-cse-containerd-ngc-cleanup %}
+   {% tab "DP CSE 1.73" %}
+
+   **Только для узлов на ContainerdV2.**
+
+   ```shell
+   d8 k delete ngc zz-cse-containerd-integrity-migration.sh
+   ```
+
+   Удаляйте его сразу после завершения миграции всех узлов. Оставленный в кластере ресурс продолжает проверять состояние containerd при каждом запуске bashible и может повторно запросить disruptive-обновление узла (аннотация `update.node.deckhouse.io/disruption-required`), то есть очистку состояния containerd с перезагрузкой.
+
+   {% endtab %}
+   {% tab "DP CSE 1.77 и выше" %}
+
+   Для DP CSE 1.77 и выше данный шаг не требуется.
+
+   {% endtab %}
+   {% endtabs %}
 
 1. **Только для DP CSE** — установите `releaseChannel` в moduleConfig `deckhouse`:
 
@@ -1162,6 +1261,14 @@ deckhouse=registry-cse.deckhouse.ru/deckhouse/cse:$DECKHOUSE_VERSION
       | regex_replace: "^", "   "
    }}
 
+1. **Только для узлов на ContainerdV2** — примените конфигурацию миграции состояния containerd:
+
+   {{ cse_1_73_containerd_integrity_ngc | regex_replace: "^", "   " }}
+
+   Сборка containerd в DP CSE проверяет целостность образов и распаковывает каждый слой вместе с файлом `.verity`. Слои, оставшиеся от предыдущей редакции, такого файла не имеют и переиспользуются по совпадающему дайджесту, из-за чего поды не запускаются с ошибкой `checking hash image: no such file or directory`. Конфигурация обнаруживает такие слои и очищает состояние containerd на узле.
+
+   Применяйте её **до** смены образа Deckhouse: узел не должен получить сборку с проверками целостности раньше, чем будет готов к очистке.
+
 1. Обновите данные аутентификации для доступа к хранилищу образов:
 
    {{ change_registry_helper_cse | regex_replace: "^", "   " }}
@@ -1174,7 +1281,7 @@ deckhouse=registry-cse.deckhouse.ru/deckhouse/cse:$DECKHOUSE_VERSION
       | regex_replace: "^", "   "
    }}
 
-1. Подтвердите перезагрузку узлов:
+1. **Только для узлов на ContainerdV2** — подтвердите перезагрузку узлов:
 
    {{ cse_containerd_migration | regex_replace: "^", "   " }}
 
@@ -1212,6 +1319,14 @@ deckhouse=registry-cse.deckhouse.ru/deckhouse/cse:$DECKHOUSE_VERSION
       bashible_sync_wait
       | regex_replace: "^", "   "
    }}
+
+1. **Только для узлов на ContainerdV2** — удалите ресурс NodeGroupConfiguration, который использовался для миграции состояния containerd:
+
+   ```shell
+   d8 k delete ngc zz-cse-containerd-integrity-migration.sh
+   ```
+
+   Удаляйте его сразу после завершения миграции всех узлов. Оставленный в кластере ресурс продолжает проверять состояние containerd при каждом запуске bashible и может повторно запросить disruptive-обновление узла (аннотация `update.node.deckhouse.io/disruption-required`), то есть очистку состояния containerd с перезагрузкой.
 
 {% endtab %}
 
