@@ -103,6 +103,16 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 			},
 			FilterFunc: applyControlPlaneManagerNetworkFilter,
 		},
+		{
+			// Own snapshot, so the two ModuleConfig reads cannot inherit each other's failures.
+			Name:       clusterDomainModuleConfigSnapshot,
+			ApiVersion: "deckhouse.io/v1alpha1",
+			Kind:       "ModuleConfig",
+			NameSelector: &types.NameSelector{
+				MatchNames: []string{"control-plane-manager"},
+			},
+			FilterFunc: applyControlPlaneManagerClusterDomainFilter,
+		},
 	},
 }, clusterConfiguration)
 
@@ -168,24 +178,28 @@ func clusterConfiguration(ctx context.Context, input *go_hook.HookInput) error {
 			return fmt.Errorf("serviceSubnetCIDR is set neither in ModuleConfig control-plane-manager (settings.network) nor in ClusterConfiguration")
 		}
 
+		clusterDomain, fromCC := resolveClusterDomain(
+			readClusterDomainModuleConfig(input),
+			clusterConfigString(metaConfig.ClusterConfig, "clusterDomain"),
+		)
+		if fromCC {
+			input.Logger.Info("clusterDomain still comes from the deprecated ClusterConfiguration; move it into ModuleConfig control-plane-manager")
+		}
+
 		// Substituted back so every template reading global.clusterConfiguration.* — the CPM
 		// $tpl_context, _envs_for_proxy.tpl, 61_proxy.sh.tpl — sees the resolved value without being
 		// touched. Written before global.clusterConfiguration is published, so the two agree.
 		setClusterConfigString(metaConfig.ClusterConfig, "podSubnetCIDR", network.PodSubnetCIDR)
 		setClusterConfigString(metaConfig.ClusterConfig, "serviceSubnetCIDR", network.ServiceSubnetCIDR)
 		setClusterConfigString(metaConfig.ClusterConfig, "podSubnetNodeCIDRPrefix", network.PodSubnetNodeCIDRPrefix)
+		setClusterConfigString(metaConfig.ClusterConfig, "clusterDomain", clusterDomain)
 
 		input.Values.Set("global.clusterConfiguration", metaConfig.ClusterConfig)
 
 		input.Values.Set("global.discovery.podSubnet", network.PodSubnetCIDR)
 		input.Values.Set("global.discovery.serviceSubnet", network.ServiceSubnetCIDR)
 		input.Values.Set("global.discovery.podSubnetNodeCIDRPrefix", network.PodSubnetNodeCIDRPrefix)
-
-		if clusterDomain, ok := metaConfig.ClusterConfig["clusterDomain"]; ok {
-			input.Values.Set("global.discovery.clusterDomain", clusterDomain)
-		} else {
-			return fmt.Errorf("no clusterDomain field in clusterConfiguration")
-		}
+		input.Values.Set("global.discovery.clusterDomain", clusterDomain)
 
 		err = maxNodesAmountMetric(input, network.PodSubnetCIDR, network.PodSubnetNodeCIDRPrefix)
 		if err != nil {

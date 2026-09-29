@@ -186,19 +186,6 @@ func TestGeneratePKIArtifacts_ValidationErrors(t *testing.T) {
 			wantSubstr:  "invalid node IP",
 		},
 		{
-			name:     "missing clusterDomain",
-			nodeName: "master-0",
-			nodeIP:   "10.0.0.1",
-			endpoint: "10.0.0.1",
-			cfg: &controlplane.TemplateConfig{
-				ClusterConfiguration: map[string]interface{}{
-					"serviceSubnetCIDR": "10.96.0.0/12",
-				},
-			},
-			artifactDir: t.TempDir(),
-			wantSubstr:  "clusterDomain",
-		},
-		{
 			name:     "missing serviceSubnetCIDR",
 			nodeName: "master-0",
 			nodeIP:   "10.0.0.1",

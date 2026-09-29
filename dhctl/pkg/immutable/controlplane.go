@@ -148,12 +148,17 @@ func clusterParams(metaConfig *config.MetaConfig) (controlPlaneRenderParams, err
 		},
 		ClusterType: metaConfig.ClusterType,
 	}
+	// A defaulted domain here would reach a new master's --service-account-issuer and split it from
+	// the rest of the cluster, so refuse to render rather than guess.
+	if !metaConfig.ClusterDomainKnown() {
+		return controlPlaneRenderParams{}, errors.New("cannot determine clusterDomain: the control-plane-manager ModuleConfig is unreadable and ClusterConfiguration carries no value")
+	}
+	params.ClusterDomain, _ = clusterConfig["clusterDomain"].(string)
 
 	required := []struct {
 		key    string
 		target *string
 	}{
-		{"clusterDomain", &params.ClusterDomain},
 		{"serviceSubnetCIDR", &params.ServiceSubnetCIDR},
 		{"podSubnetCIDR", &params.PodSubnetCIDR},
 		{"podSubnetNodeCIDRPrefix", &params.PodSubnetNodeCIDRPrefix},

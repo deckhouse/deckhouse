@@ -298,12 +298,14 @@ func validatePublicDomainTemplate(m *MetaConfig) error {
 		return nil
 	}
 
+	domainLabel := m.networkFieldLabel("clusterDomain")
+
 	return configurationFailure(
-		"publicDomainTemplate in the \"global\" ModuleConfig against ClusterConfiguration.clusterDomain",
+		"publicDomainTemplate in the \"global\" ModuleConfig against "+domainLabel,
 		fmt.Sprintf("%q is inside %q", template, m.ClusterDomain),
 		"a template outside clusterDomain",
 		"set spec.settings.modules.publicDomainTemplate to \"%s.example.com\", "+
-			"or change ClusterConfiguration.clusterDomain")
+			"or change "+domainLabel)
 }
 
 func domainIsInside(template, domain string) bool {

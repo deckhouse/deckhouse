@@ -144,6 +144,9 @@ func (v *moduleConfigValidator) validate(ctx context.Context, review *kwhmodel.A
 			if res, err := v.validateControlPlaneManagerNetwork(ctx, nil, rawModuleConfigSettings(cfg), cfg.GetAnnotations()); res != nil || err != nil {
 				return res, err
 			}
+			if res, err := v.validateControlPlaneManagerClusterDomainDelete(ctx, rawModuleConfigSettings(cfg)); res != nil || err != nil {
+				return res, err
+			}
 		}
 		return v.validateDelete(ctx, cfg)
 
@@ -405,6 +408,9 @@ func (v *moduleConfigValidator) validateCommon(
 			return res, err
 		}
 		if res, err := v.validateControlPlaneManagerNetwork(ctx, result.Settings, oldSettingsForMigrationGuards, cfg.GetAnnotations()); res != nil || err != nil {
+			return res, err
+		}
+		if res, err := v.validateControlPlaneManagerClusterDomain(ctx, result.Settings, oldSettingsForMigrationGuards); res != nil || err != nil {
 			return res, err
 		}
 	}

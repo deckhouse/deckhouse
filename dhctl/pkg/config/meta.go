@@ -58,6 +58,9 @@ type MetaConfig struct {
 	ClusterConfig     map[string]json.RawMessage `json:"clusterConfiguration"`
 	InitClusterConfig map[string]json.RawMessage `json:"-"`
 	ModuleConfigs     []*ModuleConfig            `json:"-"`
+	// True when the control-plane-manager ModuleConfig could not be read, which makes a missing
+	// value there "unknown" rather than "not set".
+	CPMModuleConfigUnreadable bool `json:"-"`
 
 	CloudProviderVars *CloudProviderVars `json:"-"`
 	// Operation propagates the dhctl entry point (bootstrap/converge/destroy/
@@ -137,9 +140,8 @@ func (m *MetaConfig) Prepare(ctx context.Context, validatorProvider MetaConfigVa
 		// ServiceSubnetCIDR is set via Network() from network.go, value could be in mc control-plane-manager as well as in deprecated cluster-configuration.
 		m.ClusterDNSAddress = getDNSAddress(ctx, m.Network().ServiceSubnetCIDR)
 
-		if err := json.Unmarshal(m.ClusterConfig["clusterDomain"], &m.ClusterDomain); err != nil {
-			return nil, fmt.Errorf("unable to unmarshal cluster domain from cluster configuration: %w", err)
-		}
+		// May come from ModuleConfig or from the deprecated ClusterConfiguration field.
+		m.ClusterDomain = m.ClusterDomainResolved()
 
 		// Everything about the cluster's address space that the documents alone decide. It lives
 		// here rather than in preflight because preflight does not run for `dhctl config`, does
@@ -866,6 +868,8 @@ func (m *MetaConfig) ClusterConfigMap() (map[string]interface{}, error) {
 	// --cluster-cidr / --service-cluster-ip-range, and the fields may live in ModuleConfig now.
 	// Mirrors the substitution the in-cluster global hook does into global.clusterConfiguration.
 	m.setNetworkInto(out)
+	// kube-apiserver.yaml.tpl reads clusterConfiguration.clusterDomain for the service-account issuer.
+	out["clusterDomain"] = m.ClusterDomainResolved()
 	return out, nil
 }
 
@@ -898,6 +902,7 @@ func (m *MetaConfig) ConfigForBashibleBundleTemplate(ctx context.Context, nodeIP
 	}
 
 	data["kubernetesVersion"] = resolveKubernetesVersion(m.kubernetesVersionRaw())
+	data["clusterDomain"] = m.ClusterDomainResolved()
 
 	clusterBootstrap := map[string]any{
 		"clusterDomain":     data["clusterDomain"],
@@ -1205,11 +1210,7 @@ func (m *MetaConfig) EnrichProxyData() (map[string]any, error) {
 		return nil, fmt.Errorf("cannot unmarshal proxy cfg: %v", err)
 	}
 
-	var clusterDomain string
-	err = json.Unmarshal(m.ClusterConfig["clusterDomain"], &clusterDomain)
-	if err != nil {
-		return nil, err
-	}
+	clusterDomain := m.ClusterDomainResolved()
 
 	// Network CIDRs are set via Network() from network.go, values could be in mc control-plane-manager as well as in deprecated cluster-configuration.
 	network := m.Network()

@@ -120,6 +120,7 @@ func (s *Service) readClusterConfiguration(ctx context.Context) *bashibleCluster
 	cfg.PodSubnetNodeCIDRPrefix = cmp.Or(mcNetwork.PodSubnetNodeCIDRPrefix, cfg.PodSubnetNodeCIDRPrefix)
 	cfg.PodSubnetCIDR = cmp.Or(mcNetwork.PodSubnetCIDR, cfg.PodSubnetCIDR)
 	cfg.ServiceSubnetCIDR = cmp.Or(mcNetwork.ServiceSubnetCIDR, cfg.ServiceSubnetCIDR)
+	cfg.ClusterDomain = cmp.Or(mcNetwork.ClusterDomain, cfg.ClusterDomain, network.DefaultClusterDomain)
 
 	return cfg
 }

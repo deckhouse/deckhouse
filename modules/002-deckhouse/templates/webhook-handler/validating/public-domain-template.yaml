@@ -42,7 +42,7 @@ context:
           - kube-system
       jqFilter: |-
         {
-          "clusterDomain": ( .data."cluster-configuration.yaml" // "" | @base64d | match("[ ]*clusterDomain:[ ]+(.+)").captures[0].string),
+          "clusterDomain": ( .data."cluster-configuration.yaml" // "" | @base64d | [match("[ ]*clusterDomain:[ ]+(.+)")] | if length > 0 then .[0].captures[0].string else "" end ),
         }
   - name: kube-dns-module
     kubernetes:
@@ -54,6 +54,17 @@ context:
       jqFilter: |-
         {
           "status": .status.status,
+        }
+  - name: d8-control-plane-manager-module-config
+    kubernetes:
+      apiVersion: deckhouse.io/v1alpha1
+      kind: ModuleConfig
+      nameSelector:
+        matchNames:
+        - control-plane-manager
+      jqFilter: |-
+        {
+          "clusterDomain": (.spec.settings.network.clusterDomain // ""),
         }
 handler:
   python: |
@@ -76,12 +87,27 @@ handler:
                 kube_dns_conf = snap.filterResult.get("kube-dns-conf", "")
             dns_domains = re.findall(r'(?<=kubernetes )(.*?)(?=ip6\.arpa)', kube_dns_conf)
         else:
-            cluster_config_snapshots = ctx.snapshots.get("d8-cluster-configuration", [])
+            # clusterDomain resolves the same way everywhere: ModuleConfig control-plane-manager
+            # wins, the deprecated ClusterConfiguration field is the fallback.
+            mc_snapshots = ctx.snapshots.get("d8-control-plane-manager-module-config", [])
+            mc_domain = ""
+            for snap in mc_snapshots:
+                mc_domain = snap.filterResult.get("clusterDomain", "")
+
             dns_domains = []
-            for snap in cluster_config_snapshots:
-                domain = snap.filterResult.get("clusterDomain", "")
-                if domain:
-                    dns_domains.append(domain)
+            if mc_domain:
+                dns_domains.append(mc_domain)
+            else:
+                cluster_config_snapshots = ctx.snapshots.get("d8-cluster-configuration", [])
+                for snap in cluster_config_snapshots:
+                    domain = snap.filterResult.get("clusterDomain", "")
+                    if domain:
+                        dns_domains.append(domain)
+
+            if not dns_domains:
+                # Neither document sets clusterDomain, so take the domain the cluster resolved:
+                # a cluster without the ClusterConfiguration Secret discovers it from CoreDNS.
+                dns_domains.append("{{ .Values.global.discovery.clusterDomain }}")
 
         public_domain_template = ctx.review.request.object.spec.settings.modules.get(
             "publicDomainTemplate", ""

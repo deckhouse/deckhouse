@@ -132,6 +132,11 @@ func (s *Service) WriteSecret(ctx context.Context, nodeGroups []map[string]inter
 	if globals.ClusterDNSAddress == "" {
 		return fmt.Errorf("cluster DNS address not discovered yet: refusing to publish bashible context without it")
 	}
+	// Same reason: an empty domain reaches "clusterDomain:" in that kubelet config, so an
+	// empty one produces an invalid entry on every node
+	if globals.ClusterDomain == "" {
+		return fmt.Errorf("cluster domain not discovered yet: refusing to publish bashible context without it")
+	}
 	input, err := s.Build(ctx, globals, nodeGroups, pCatalog)
 	if err != nil {
 		return err

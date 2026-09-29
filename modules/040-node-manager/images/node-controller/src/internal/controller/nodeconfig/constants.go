@@ -88,9 +88,6 @@ const (
 	providerConfigSecretName = "d8-provider-cluster-configuration"
 	providerConfigKey        = "cloud-provider-cluster-configuration.yaml"
 
-	// defaultClusterDomain is what ClusterConfiguration defaults clusterDomain to.
-	defaultClusterDomain = "cluster.local"
-
 	// dnsAppLabel finds the in-cluster DNS service, and kubeDNSServiceName is the
 	// one that wins when several carry the label.
 	dnsAppLabel        = "k8s-app"

@@ -588,7 +588,7 @@ Starting with version 1.74, DP modules are installed as images in the EROFS form
 List of checks performed by the installer before starting Deckhouse Platform installation:
 
 1. General checks:
-   - The values of the parameters [`publicDomainTemplate`](/products/kubernetes-platform/documentation/v1/reference/api/global.html#parameters-modules-publicdomaintemplate) and [`clusterDomain`](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#clusterconfiguration-clusterdomain) do not match.
+   - The values of the parameters [`publicDomainTemplate`](/products/kubernetes-platform/documentation/v1/reference/api/global.html#parameters-modules-publicdomaintemplate) and [`clusterDomain`](/modules/control-plane-manager/configuration.html#parameters-network-clusterdomain) (or the deprecated [`ClusterConfiguration.clusterDomain`](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#clusterconfiguration-clusterdomain)) do not match.
    - The authentication data for the container registry specified in the installation configuration is correct.
    - The host name meets the following requirements:
      - The length does not exceed 63 characters.

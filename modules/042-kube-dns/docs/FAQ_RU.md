@@ -5,6 +5,26 @@ search: DNS, domain, домен, clusterdomain
 
 ## Как поменять домен кластера с минимальным простоем?
 
+{% alert level="warning" %}
+
+**Перед началом.** Домен кластера уже должен управляться из ModuleConfig `control-plane-manager`. Если горит алерт `D8ObsoleteClusterDomainInClusterConfiguration`, значит он всё ещё хранится в `ClusterConfiguration` — сначала завершите миграцию:
+
+1. Перенесите текущее значение в параметр `spec.settings.network.clusterDomain` ModuleConfig `control-plane-manager`. Значение должно остаться прежним: admission-вебхук отклонит несовпадение при первом переносе.
+
+   ```bash
+   d8 k edit mc control-plane-manager
+   ```
+
+1. Удалите `clusterDomain` из `ClusterConfiguration`:
+
+   ```bash
+   d8 system edit cluster-configuration
+   ```
+
+1. Убедитесь, что алерт погас.
+
+{% endalert %}
+
 Добавьте новый домен и сохраните предыдущий. Для этого измените конфигурацию параметров:
 
 1. В [controlPlaneManager.apiserver](../control-plane-manager/configuration.html):
@@ -61,10 +81,10 @@ search: DNS, domain, домен, clusterdomain
    d8 k -n kube-system get pods -l component=kube-apiserver
    ```
 
-1. Поменяйте `clusterDomain` на новый. Для этого выполните команду:
+1. Задайте в параметре `spec.settings.network.clusterDomain` новый домен:
 
    ```bash
-   d8 system edit cluster-configuration
+   d8 k edit mc control-plane-manager
    ```
 
 1. Перезапустите поды deckhouse:

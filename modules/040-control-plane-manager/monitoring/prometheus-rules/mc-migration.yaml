@@ -352,3 +352,53 @@
              Delete `podSubnetCIDR`, `serviceSubnetCIDR` and `podSubnetNodeCIDRPrefix`, then save.
 
           Once all three fields are removed from `ClusterConfiguration`, this alert is resolved.
+    - alert: D8ObsoleteClusterDomainInClusterConfiguration
+      for: 5m
+      expr: |
+        d8_obsolete_cluster_domain_in_cluster_configuration == 1
+      labels:
+        d8_component: control-plane-manager
+        d8_module: control-plane-manager
+        severity_level: "6"
+        tier: cluster
+      annotations:
+        plk_protocol_version: "1"
+        plk_markup_format: "markdown"
+        plk_create_group_if_not_exists__d8_control_plane_manager_migration: "D8ControlPlaneManagerMigrationAlerts,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
+        plk_grouped_by__d8_control_plane_manager_migration: "D8ControlPlaneManagerMigrationAlerts,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
+        summary: The obsolete `clusterDomain` field is still present in `ClusterConfiguration`.
+        description: |-
+          `ClusterConfiguration` still carries the obsolete `clusterDomain` field. The place to manage the cluster domain is ModuleConfig `control-plane-manager`.
+
+          This fires simply because the field is present, even if ModuleConfig `control-plane-manager` already overrides it - the goal is to remove the deprecated field, not just override it.
+
+          **To resolve this alert:**
+
+          1. If ModuleConfig `control-plane-manager` does not exist, create it:
+
+             ```bash
+             d8 s module enable control-plane-manager
+             ```
+
+          2. Migrate the value straight from the Secret into ModuleConfig:
+
+             ```bash
+             DOMAIN=$(d8 k -n kube-system get secret d8-cluster-configuration \
+               -o jsonpath='{.data.cluster-configuration\.yaml}' | base64 -d \
+               | sed -n 's/^clusterDomain:[[:space:]]*//p' | tr -d "\"'")
+
+             d8 k patch moduleconfig control-plane-manager --type merge \
+               -p "{\"spec\":{\"version\":3,\"settings\":{\"network\":{\"clusterDomain\":\"$DOMAIN\"}}}}"
+             ```
+
+             The value must match the one the cluster currently runs with; admission rejects a mismatch.
+
+          3. Remove the field from ClusterConfiguration:
+
+             ```bash
+             d8 system edit cluster-configuration
+             ```
+
+             Delete `clusterDomain`, then save.
+
+          Once the field is removed from `ClusterConfiguration`, this alert is resolved.

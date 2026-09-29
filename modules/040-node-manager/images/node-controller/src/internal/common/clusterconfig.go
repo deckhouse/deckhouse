@@ -82,6 +82,7 @@ func ReadClusterConfiguration(ctx context.Context, reader client.Reader) (Cluste
 	}
 	configuration.PodSubnetCIDR = cmp.Or(mcNetwork.PodSubnetCIDR, configuration.PodSubnetCIDR)
 	configuration.ServiceSubnetCIDR = cmp.Or(mcNetwork.ServiceSubnetCIDR, configuration.ServiceSubnetCIDR)
+	configuration.ClusterDomain = cmp.Or(mcNetwork.ClusterDomain, configuration.ClusterDomain, network.DefaultClusterDomain)
 
 	return configuration, nil
 }

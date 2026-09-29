@@ -804,6 +804,10 @@ func (b *ClusterBootstrapper) bootstrapPreparation(ctx context.Context, bctx *bo
 		return err
 	}
 
+	if err := metaConfig.RequireClusterDomain(); err != nil {
+		return err
+	}
+
 	if err := config.ApplyCNIBootstrap(ctx, metaConfig, &b.Options.Global); err != nil {
 		return fmt.Errorf("apply cni bootstrap: %w", err)
 	}

@@ -187,11 +187,8 @@ func generatePKIArtifacts(nodeName, nodeIP, controlPlaneEndpoint string, cfg *co
 	if serviceSubnetCIDR == "" {
 		return fmt.Errorf("serviceSubnetCIDR is set neither in ModuleConfig control-plane-manager (spec.settings.network) nor in ClusterConfiguration")
 	}
-	// TODO: read from cfg.Settings once clusterDomain is migrated to ModuleConfig.
+	// Already resolved by ClusterConfigMap(), with a default, so it is never empty here.
 	clusterDomain, _ := cfg.ClusterConfiguration["clusterDomain"].(string)
-	if clusterDomain == "" {
-		return fmt.Errorf("clusterDomain is missing or empty in clusterConfiguration")
-	}
 
 	encryptionAlgorithm, _ := cfg.Settings["encryptionAlgorithm"].(string)
 	if encryptionAlgorithm == "" {

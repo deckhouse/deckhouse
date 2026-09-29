@@ -54,33 +54,33 @@ func TestNetwork_Precedence(t *testing.T) {
 		{
 			name: "ClusterConfiguration only",
 			cc:   map[string]string{"podSubnetCIDR": "10.111.0.0/16", "serviceSubnetCIDR": "10.222.0.0/16", "podSubnetNodeCIDRPrefix": "23"},
-			want: NetworkSettings{PodSubnetCIDR: "10.111.0.0/16", ServiceSubnetCIDR: "10.222.0.0/16", PodSubnetNodeCIDRPrefix: "23"},
+			want: NetworkSettings{PodSubnetCIDR: "10.111.0.0/16", ServiceSubnetCIDR: "10.222.0.0/16", PodSubnetNodeCIDRPrefix: "23", ClusterDomain: DefaultClusterDomain},
 		},
 		{
 			name: "ModuleConfig only",
 			mc:   map[string]interface{}{"podSubnetCIDR": "10.111.0.0/16", "serviceSubnetCIDR": "10.222.0.0/16", "podSubnetNodeCIDRPrefix": "23"},
-			want: NetworkSettings{PodSubnetCIDR: "10.111.0.0/16", ServiceSubnetCIDR: "10.222.0.0/16", PodSubnetNodeCIDRPrefix: "23"},
+			want: NetworkSettings{PodSubnetCIDR: "10.111.0.0/16", ServiceSubnetCIDR: "10.222.0.0/16", PodSubnetNodeCIDRPrefix: "23", ClusterDomain: DefaultClusterDomain},
 		},
 		{
 			name: "ModuleConfig wins over ClusterConfiguration",
 			cc:   map[string]string{"podSubnetCIDR": "10.99.0.0/16", "serviceSubnetCIDR": "10.88.0.0/16", "podSubnetNodeCIDRPrefix": "22"},
 			mc:   map[string]interface{}{"podSubnetCIDR": "10.111.0.0/16", "serviceSubnetCIDR": "10.222.0.0/16", "podSubnetNodeCIDRPrefix": "23"},
-			want: NetworkSettings{PodSubnetCIDR: "10.111.0.0/16", ServiceSubnetCIDR: "10.222.0.0/16", PodSubnetNodeCIDRPrefix: "23"},
+			want: NetworkSettings{PodSubnetCIDR: "10.111.0.0/16", ServiceSubnetCIDR: "10.222.0.0/16", PodSubnetNodeCIDRPrefix: "23", ClusterDomain: DefaultClusterDomain},
 		},
 		{
 			name: "a half-migrated cluster resolves each parameter independently",
 			cc:   map[string]string{"podSubnetCIDR": "10.99.0.0/16", "serviceSubnetCIDR": "10.88.0.0/16"},
 			mc:   map[string]interface{}{"podSubnetNodeCIDRPrefix": "23"},
-			want: NetworkSettings{PodSubnetCIDR: "10.99.0.0/16", ServiceSubnetCIDR: "10.88.0.0/16", PodSubnetNodeCIDRPrefix: "23"},
+			want: NetworkSettings{PodSubnetCIDR: "10.99.0.0/16", ServiceSubnetCIDR: "10.88.0.0/16", PodSubnetNodeCIDRPrefix: "23", ClusterDomain: DefaultClusterDomain},
 		},
 		{
 			name: "prefix defaults to 24 when set nowhere",
 			cc:   map[string]string{"podSubnetCIDR": "10.99.0.0/16", "serviceSubnetCIDR": "10.88.0.0/16"},
-			want: NetworkSettings{PodSubnetCIDR: "10.99.0.0/16", ServiceSubnetCIDR: "10.88.0.0/16", PodSubnetNodeCIDRPrefix: DefaultPodSubnetNodeCIDRPrefix},
+			want: NetworkSettings{PodSubnetCIDR: "10.99.0.0/16", ServiceSubnetCIDR: "10.88.0.0/16", PodSubnetNodeCIDRPrefix: DefaultPodSubnetNodeCIDRPrefix, ClusterDomain: DefaultClusterDomain},
 		},
 		{
 			name: "neither document set: both CIDRs stay empty, no invented default",
-			want: NetworkSettings{PodSubnetNodeCIDRPrefix: DefaultPodSubnetNodeCIDRPrefix},
+			want: NetworkSettings{PodSubnetNodeCIDRPrefix: DefaultPodSubnetNodeCIDRPrefix, ClusterDomain: DefaultClusterDomain},
 		},
 	}
 

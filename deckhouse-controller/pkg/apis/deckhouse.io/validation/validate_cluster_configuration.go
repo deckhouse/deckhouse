@@ -480,6 +480,14 @@ func validateUnsafeConfigChanges(ctx context.Context, cli client.Client, oldConf
 		return rejectResult("it is forbidden to change serviceSubnetCIDR in a running cluster")
 	}
 
+	// Only removal: changing the domain here is a supported operation.
+	if oldConfig.ClusterDomain != "" && newConfig.ClusterDomain == "" && !moduleConfigOwnsClusterDomain(ctx, cli) {
+		return rejectResult(
+			"removing clusterDomain would change the cluster domain to \"cluster.local\", restarting " +
+				"kube-apiserver with a different --service-account-issuer and invalidating every token in " +
+				"the cluster; set network.clusterDomain in ModuleConfig control-plane-manager first")
+	}
+
 	return allowResult(nil)
 }
 
