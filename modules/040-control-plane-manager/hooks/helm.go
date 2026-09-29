@@ -22,6 +22,7 @@ import (
 	"context"
 	"encoding/base64"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"log"
@@ -38,6 +39,7 @@ import (
 	"github.com/golang/protobuf/proto" // nolint: staticcheck
 	"helm.sh/helm/v3/pkg/releaseutil"
 	v1 "k8s.io/api/core/v1"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"sigs.k8s.io/yaml"
@@ -59,8 +61,10 @@ import (
 
 // **Attention**
 // Releases are checked via kubeclient not by snapshots to avoid huge memory consumption
-// on some installations snapshots can take gigabytes of memory. Releases are checked by batches with size specified in
-// objectBatchSize. It means, that kubeClient will list only limited amount of releases to avoid memory explosion
+// on some installations snapshots can take gigabytes of memory. Releases are listed by pages of objectBatchSize
+// and decoded one by one, so only a page of raw objects and a page of decoded releases are held at once.
+// The lists must not set resourceVersion=0: such a list is served from the apiserver watch cache, which ignores
+// limit and returns every release in a single response.
 
 const unsupportedVersionsYAML = `
 "1.22":
@@ -108,11 +112,14 @@ const (
 	// delta for k8s versions which are checked for deprecated apis
 	// with delta == 2 for k8s 1.21 will also check apis for 1.22 and 1.23
 	delta = 2
-	// objectBatchSize - how many secrets to list from k8s at once
-	objectBatchSize = int64(10)
+	// objectBatchSize - how many secrets to list from k8s at once. A deployed release
+	// secret is ~50KB, so a page stays within a few MB of raw objects.
+	objectBatchSize = int64(100)
 	// fetchSecretsInterval pause between fetching the helm secrets from apiserver
-	// need for avoiding apiserver overload
-	fetchSecretsInterval = 3 * time.Second
+	// need for avoiding apiserver overload; 16k releases take ~160 pages (~5.5 min),
+	// well within the hourly schedule. A scan that long outlives the continue token
+	// (etcd is compacted every 5 min), so an expired token is resumed, see expiredContinue.
+	fetchSecretsInterval = 2 * time.Second
 
 	K8sVersionsWithDeprecations = "monitoringKubernetes:k8sVersionsWithDeprecations"
 )
@@ -403,13 +410,13 @@ func (h *helmDeprecatedAPIsProcessor) getHelm3Releases(client k8s.Client, releas
 			LabelSelector: "owner=helm,status=deployed",
 			Limit:         objectBatchSize,
 			Continue:      next,
-			// https://kubernetes.io/docs/reference/using-api/api-concepts/#semantics-for-get-and-list
-			// set explicit behavior:
-			//   Return data at any resource version. The newest available resource version is preferred, but strong consistency is not required; data at any resource version may be served.
-			ResourceVersion:      "0",
-			ResourceVersionMatch: metav1.ResourceVersionMatchNotOlderThan,
 		})
 		if err != nil {
+			if token, ok := expiredContinue(err); ok {
+				h.logger.Warn("helm3 releases list continue token expired, resuming the list inconsistently")
+				next = token
+				continue
+			}
 			return fmt.Errorf("listing Secrets failed: %w", err)
 		}
 		secretsList.GetRemainingItemCount()
@@ -454,13 +461,16 @@ func (h *helmDeprecatedAPIsProcessor) getHelm2Releases(client k8s.Client, releas
 
 	for {
 		cmList, err := client.CoreV1().ConfigMaps("").List(h.ctx, metav1.ListOptions{
-			LabelSelector:        "OWNER=TILLER,STATUS=DEPLOYED",
-			Limit:                objectBatchSize,
-			Continue:             next,
-			ResourceVersion:      "0",
-			ResourceVersionMatch: metav1.ResourceVersionMatchNotOlderThan,
+			LabelSelector: "OWNER=TILLER,STATUS=DEPLOYED",
+			Limit:         objectBatchSize,
+			Continue:      next,
 		})
 		if err != nil {
+			if token, ok := expiredContinue(err); ok {
+				h.logger.Warn("helm2 releases list continue token expired, resuming the list inconsistently")
+				next = token
+				continue
+			}
 			return fmt.Errorf("listing ConfigMaps failed: %w", err)
 		}
 
@@ -501,10 +511,24 @@ func (h *helmDeprecatedAPIsProcessor) getHelm2Releases(client k8s.Client, releas
 	return nil
 }
 
+// expiredContinue returns the token to resume a paginated list whose continue token
+// expired after an etcd compaction. apiserver returns 410 ResourceExpired carrying a
+// token that continues at the latest resource version; the resumed list is
+// inconsistent, which is fine for metrics.
+func expiredContinue(err error) (string, bool) {
+	var status apierrors.APIStatus
+	if !apierrors.IsResourceExpired(err) || !errors.As(err, &status) {
+		return "", false
+	}
+
+	token := status.Status().ListMeta.Continue
+	return token, token != ""
+}
+
 func (h *helmDeprecatedAPIsProcessor) getHelmReleases(client k8s.Client) chan *Release {
 	var (
 		wg        sync.WaitGroup
-		releasesC = make(chan *Release, objectBatchSize*2)
+		releasesC = make(chan *Release, objectBatchSize)
 	)
 
 	wg.Add(2)
@@ -535,7 +559,7 @@ func (h *helmDeprecatedAPIsProcessor) getHelmReleases(client k8s.Client) chan *R
 }
 
 func (h *helmDeprecatedAPIsProcessor) FetchHelmManifests(client k8s.Client) chan *manifestHead {
-	manifestsC := make(chan *manifestHead, objectBatchSize*2)
+	manifestsC := make(chan *manifestHead, objectBatchSize)
 	releasesC := h.getHelmReleases(client)
 
 	go func() {
