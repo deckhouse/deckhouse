@@ -23,22 +23,20 @@ import (
 
 // External condition types — what the user sees on the Module resource.
 //
+// Every condition but Installed is gated on it: none is reported until
+// Installed is True, and each is removed from the resource while Installed is
+// not. The first install is therefore reported by Installed alone, and so is a
+// module the scheduler switched off, until it is installed again. The
+// scheduler's verdict itself is no condition: status.enabled carries it (see
+// schedulerVerdict).
+//
 // The reason vocabulary documented per condition below describes a module that
 // exists. While one is being removed the mapper bypasses the rules entirely and
 // reports every condition here as False/Deleting, so each vocabulary gains that
-// reason and the guarantees stated below — Installed's stickiness, Scaled's
-// exclusive ownership by the health monitor — do not hold on that path.
+// reason and the guarantees stated below — the Installed gate, Installed's
+// stickiness, Scaled's exclusive ownership by the health monitor — do not hold
+// on that path.
 const (
-	// ConditionEnabled reflects the scheduler's enablement verdict for the
-	// module — the folded decision over the explicit intent (spec.enabled or
-	// ModuleConfig), the edition bundle, enabled-scripts and module
-	// dependencies. True when the module is scheduled to run. False when the
-	// scheduler forbids it, with the scheduler's own decision reason
-	// (Disabled, DisabledByBundle, DisabledByScript, DependencyNotEnabled,
-	// DependencyVersionMismatch, ...). Absent until the first scheduling
-	// decision.
-	ConditionEnabled = "Enabled"
-
 	// ConditionInstalled reflects the state of the first install of the module.
 	// True when the install pipeline completed; False while it is blocked or has failed
 	// at one of: waiting for dependent modules to converge (Pending), a scheduler
@@ -63,15 +61,14 @@ const (
 	ConditionUpdateInstalled = "UpdateInstalled"
 
 	// ConditionReady reflects user-facing readiness of the module.
-	// On first install it tracks Installed and goes False alongside it on failure.
 	// During an update it can stay True while the previous version keeps working.
 	// On reconcile it goes False when the running version can no longer be trusted
 	// (download, hook, or manifest-apply failures); a settings-only failure does
 	// not affect Ready because the running version's settings are unchanged.
-	// Possible reasons: Pending, the scheduler's decision reason, DownloadFailed,
-	// LoadFromFilesystemFailed, SettingsInvalid, HookInitializationFailed,
-	// HookFailed, ManifestsApplyFailed, ApplyingManifests (mid-apply over a
-	// non-working previous version), SettingsChanged, Ready (when True).
+	// Possible reasons: DownloadFailed, LoadFromFilesystemFailed,
+	// HookInitializationFailed, HookFailed, ManifestsApplyFailed,
+	// ApplyingManifests (mid-apply over a non-working previous version),
+	// SettingsChanged, Ready (when True).
 	ConditionReady = "Ready"
 
 	// ConditionScaled reflects the runtime scaling state of the module.
@@ -86,27 +83,22 @@ const (
 	// module. False means the controller cannot bring the module to
 	// (or keep it in) a managed state: typically hook, Helm, or — during reconcile —
 	// download failures, where continuing to manage the current state is unsafe.
-	// Settings-only failures do not break Managed. Unknown when the scheduler
-	// switched the module off under the running release — managing is meaningless
-	// until it is enabled again, but the cause is external rather than a
-	// controller failure.
-	// Possible reasons: the scheduler's decision reason, DownloadFailed,
-	// HookInitializationFailed, HookFailed, ManifestsApplyFailed,
-	// ApplyingManifests (mid-apply over a non-managed previous version),
-	// SettingsChanged, NoResourceReconciliation (maintenance applied), Managed (when True).
+	// Settings-only failures do not break Managed.
+	// Possible reasons: DownloadFailed, HookInitializationFailed, HookFailed,
+	// ManifestsApplyFailed, ApplyingManifests (mid-apply over a non-managed
+	// previous version), SettingsChanged, NoResourceReconciliation (maintenance
+	// applied), Managed (when True).
 	ConditionManaged = "Managed"
 
 	// ConditionConfigurationApplied reflects whether the desired configuration —
 	// settings, render, hooks, manifests — was successfully applied. False on
 	// invalid settings, hook errors, or Helm errors. On reconcile a download
 	// failure makes the configuration state Unknown (we cannot tell whether the
-	// desired config is on disk). A scheduler switch-off under the running
-	// release also forces Unknown — the desired configuration is no longer
-	// being maintained.
-	// Possible reasons: the scheduler's decision reason, DownloadFailed,
-	// SettingsInvalid, HookInitializationFailed, HookFailed, ManifestsApplyFailed,
-	// ApplyingManifests (the new version's manifests are still being applied),
-	// SettingsChanged, ConfigurationApplied (when True).
+	// desired config is on disk).
+	// Possible reasons: DownloadFailed, SettingsInvalid, HookInitializationFailed,
+	// HookFailed, ManifestsApplyFailed, ApplyingManifests (the new version's
+	// manifests are still being applied), SettingsChanged, ConfigurationApplied
+	// (when True).
 	ConditionConfigurationApplied = "ConfigurationApplied"
 )
 
@@ -340,15 +332,19 @@ func isInstallComplete(state condmap.State) bool {
 // buildMapper returns the standard set of mappers in evaluation order. Each map
 // declares the condition it owns, which is also the set the mapper reports as
 // Deleting while the module is being removed.
+//
+// Every map but Installed runs behind the Installed gate, so its value reaches
+// the resource only once Installed is True after the run: it describes an
+// installed module, and phaseInstall reaches it only on the run that completes
+// the first install.
 func buildMapper() condmap.Mapper {
 	return condmap.NewMapper(
-		condmap.Map{Type: ConditionEnabled, Fn: mapEnabled},
 		condmap.Map{Type: ConditionInstalled, Fn: mapInstalled},
-		condmap.Map{Type: ConditionUpdateInstalled, Fn: mapUpdateInstalled},
-		condmap.Map{Type: ConditionReady, Fn: mapReady},
-		condmap.Map{Type: ConditionScaled, Fn: mapScaled},
-		condmap.Map{Type: ConditionManaged, Fn: mapManaged},
-		condmap.Map{Type: ConditionConfigurationApplied, Fn: mapConfigurationApplied},
+		condmap.Map{Type: ConditionUpdateInstalled, Fn: mapUpdateInstalled, Gate: ConditionInstalled},
+		condmap.Map{Type: ConditionReady, Fn: mapReady, Gate: ConditionInstalled},
+		condmap.Map{Type: ConditionScaled, Fn: mapScaled, Gate: ConditionInstalled},
+		condmap.Map{Type: ConditionManaged, Fn: mapManaged, Gate: ConditionInstalled},
+		condmap.Map{Type: ConditionConfigurationApplied, Fn: mapConfigurationApplied, Gate: ConditionInstalled},
 	)
 }
 
@@ -358,32 +354,35 @@ func buildMapper() condmap.Mapper {
 
 // isDisabled reports whether a previously-installed module has been switched
 // off by the scheduler — an explicit user disable, a bundle or enabled-script
-// decision, or a lost dependency. The cause is external to the module's own
-// pipeline — public conditions reflect that distinction by going to False
-// for user-facing signals (Enabled, Installed, Ready) and Unknown for runtime
-// and configuration signals (Scaled, ConfigurationApplied, Managed). It
-// overrides the Installed stickiness because the disable tears the release
-// down — users must see that the module stopped being installed, not a
-// silently kept Installed=True.
+// decision, or a lost dependency. Installed goes False with the scheduler
+// reason, and the closed Installed gate removes the other conditions until the
+// module is installed again. It overrides the Installed stickiness because the
+// disable tears the release down — users must see that the module stopped being
+// installed, not a silently kept Installed=True.
 func isDisabled(state condmap.State) bool {
 	return state.ExtEqual(ConditionInstalled, metav1.ConditionTrue) &&
 		state.IntEqual(intRequirementsMet, metav1.ConditionFalse)
 }
 
-// mapEnabled mirrors the scheduler's enablement verdict carried on the
-// internal RequirementsMet condition. Unlike the other mappers it has no
-// failure semantics of its own: False is a normal state (the module is
-// switched off), so the verdict is reported symmetrically with the
-// scheduler's reason passed through. The condition stays absent until the
-// scheduler has actually decided (internal RequirementsMet is set Unknown at
-// status reset).
-func mapEnabled(state condmap.State) metav1.Condition {
-	status, ok := state.GetIntStatus(intRequirementsMet)
-	if !ok || status == metav1.ConditionUnknown {
-		return metav1.Condition{}
+// schedulerVerdict returns whether the scheduler enabled the module, as the
+// internal RequirementsMet condition carries it. There is no verdict while the
+// condition is Unknown or absent — before the scheduler first decides, and after
+// every version change resets the status — so the last one committed stands.
+// Nor on a module being removed: the teardown writes False/Deleting over it,
+// which is no scheduler decision.
+func schedulerVerdict(state condmap.State) (bool, bool) {
+	if state.IsDeleting() {
+		return false, false
 	}
 
-	return emit(state, ConditionEnabled, status, intRequirementsMet)
+	switch verdict, _ := state.GetIntStatus(intRequirementsMet); verdict {
+	case metav1.ConditionTrue:
+		return true, true
+	case metav1.ConditionFalse:
+		return false, true
+	}
+
+	return false, false
 }
 
 // mapInstalled is sticky: once Installed=True it is never retracted, except
@@ -408,13 +407,8 @@ func mapInstalled(state condmap.State) metav1.Condition {
 
 // mapUpdateInstalled reports the progress of installing a new version on top of
 // an already-installed module. Fires only after Installed=True and either
-// an update is in progress or a previous update condition exists. Falls silent
-// when the module is switched off — the disabled state is the dominant signal
-// and is reported on the other conditions.
+// an update is in progress or a previous update condition exists.
 func mapUpdateInstalled(state condmap.State) metav1.Condition {
-	if isDisabled(state) {
-		return metav1.Condition{}
-	}
 	if !state.ExtEqual(ConditionInstalled, metav1.ConditionTrue) {
 		return metav1.Condition{}
 	}
@@ -442,25 +436,18 @@ func mapUpdateInstalled(state condmap.State) metav1.Condition {
 }
 
 // mapReady tracks user-facing readiness. Failure chain depends on phase:
-//   - install:   any pipeline failure breaks readiness.
 //   - update:    only hook/manifest failures (old version still works).
 //   - reconcile: filesystem and hook/manifest failures (settings alone do not).
 //
-// A scheduler switch-off under a running module forces Ready=False regardless
-// of phase — the module is no longer working.
+// The run that completes the first install has no failure to report: Installed
+// goes True only once the whole pipeline passed.
 func mapReady(state condmap.State) metav1.Condition {
-	if isDisabled(state) {
-		return emit(state, ConditionReady, metav1.ConditionFalse, intRequirementsMet)
-	}
-
 	ph := phaseOf(state)
 
 	var blocker string
 	var ok bool
 
 	switch ph {
-	case phaseInstall:
-		blocker, ok = pipelineBlocker(state, installPipeline)
 	case phaseUpdate:
 		blocker, ok = firstFalse(state, lateStage)
 	case phaseReconcile:
@@ -472,10 +459,6 @@ func mapReady(state condmap.State) metav1.Condition {
 	}
 	if cond, ok := settingsChanged(state, ph, ConditionReady); ok {
 		return cond
-	}
-	// On first install readiness tracks Installed, so it waits for the same gate.
-	if ph == phaseInstall && !isInstallComplete(state) {
-		return metav1.Condition{}
 	}
 	if state.IntEqual(intScaled, metav1.ConditionTrue) {
 		return emit(state, ConditionReady, metav1.ConditionTrue, intScaled)
@@ -491,15 +474,8 @@ func mapReady(state condmap.State) metav1.Condition {
 
 // mapScaled normally mirrors the workload health monitor, but lifecycle
 // failures override it where the public status model needs failure context.
-// During first install, Scaled stays absent until the module is actually scaled.
 //
 // why per phase:
-//   - install: Scaled was previously emitted as Unknown when intScaled was
-//     missing. For a freshly-created module that briefly produced a
-//     Scaled=Unknown row with empty reason in -owide before any other
-//     condition appeared, and confused users into thinking the controller
-//     had given up. We now suppress the condition entirely until intScaled
-//     actually goes True and the install is complete (see isInstallComplete).
 //   - update: a hook or manifests failure during update is a workload-level
 //     failure as well. We surface that on Scaled (Unknown for hook failures
 //     because the workload state is no longer observable, False for
@@ -508,18 +484,12 @@ func mapReady(state condmap.State) metav1.Condition {
 //   - reconcile: a filesystem failure makes the runtime state untrustworthy,
 //     so Scaled becomes Unknown rather than reporting whatever the health
 //     monitor saw last.
+//
+// The first install needs no case of its own: the health monitor runs
+// independently of the pipeline and may report before the install completes,
+// but the Installed gate withholds Scaled until then.
 func mapScaled(state condmap.State) metav1.Condition {
-	if isDisabled(state) {
-		return emit(state, ConditionScaled, metav1.ConditionUnknown, intRequirementsMet)
-	}
-
 	switch phaseOf(state) {
-	case phaseInstall:
-		// The health monitor runs independently of the pipeline, so wait for the same gate as Installed.
-		if _, ok := pipelineBlocker(state, installPipeline); ok || !isInstallComplete(state) {
-			return metav1.Condition{}
-		}
-		return emit(state, ConditionScaled, metav1.ConditionTrue, intScaled)
 	case phaseUpdate:
 		if cond, ok := firstFalse(state, lateStage); ok {
 			if cond == intManifestsApplied {
@@ -543,32 +513,12 @@ func mapScaled(state condmap.State) metav1.Condition {
 
 // mapManaged reports whether the controller can actively manage the module.
 // Settings failures never break management; filesystem failures break it only
-// during reconcile (the running state is no longer trustworthy). A scheduler
-// switch-off forces Managed=Unknown — managing is meaningless until the module
-// is enabled again, but the cause is external rather than a controller failure.
+// during reconcile (the running state is no longer trustworthy).
 func mapManaged(state condmap.State) metav1.Condition {
-	if isDisabled(state) {
-		return emit(state, ConditionManaged, metav1.ConditionUnknown, intRequirementsMet)
-	}
-
 	ph := phaseOf(state)
 
 	chain := lateStage
-	switch ph {
-	case phaseInstall:
-		// why: during the first install a HookInitializationFailed means we
-		// never started managing the workload — there is nothing to "stop
-		// managing". Emitting Managed=False there would be misleading and
-		// would also light up degraded sub-states.
-		// Runtime HookFailed during install still flows through (we did start
-		// managing), only the init flavour is suppressed.
-		if state.IntEqual(intHooksProcessed, metav1.ConditionFalse) {
-			reason, _ := state.GetIntReason(intHooksProcessed)
-			if canonicalReason(intHooksProcessed, reason) == "HookInitializationFailed" {
-				return metav1.Condition{}
-			}
-		}
-	case phaseReconcile:
+	if ph == phaseReconcile {
 		chain = reconcileChain
 	}
 
@@ -598,20 +548,11 @@ func mapManaged(state condmap.State) metav1.Condition {
 // desired configuration have been applied. During reconcile, a filesystem failure
 // leaves the configuration state Unknown — we cannot tell whether the desired
 // config is on disk. During an update, early failures don't change what's
-// already applied (the old config is still in place). A scheduler switch-off
-// forces Unknown — the desired configuration is no longer being maintained.
+// already applied (the old config is still in place).
 func mapConfigurationApplied(state condmap.State) metav1.Condition {
-	if isDisabled(state) {
-		return emit(state, ConditionConfigurationApplied, metav1.ConditionUnknown, intRequirementsMet)
-	}
-
 	ph := phaseOf(state)
 
 	switch ph {
-	case phaseInstall:
-		if cond, ok := firstFalse(state, configPipeline); ok {
-			return emit(state, ConditionConfigurationApplied, metav1.ConditionFalse, cond)
-		}
 	case phaseUpdate:
 		if cond, ok := firstFalse(state, lateStage); ok {
 			return emit(state, ConditionConfigurationApplied, metav1.ConditionFalse, cond)

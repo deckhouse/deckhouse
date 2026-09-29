@@ -130,6 +130,13 @@ type ModuleSpec struct {
 }
 
 type ModuleStatus struct {
+	// Reports whether the module is enabled: `spec.enabled` resolved against the
+	// edition bundle, the enabled-script and the module dependencies. It can differ
+	// from `spec.enabled` — an explicitly enabled module stays disabled while a
+	// module it requires is disabled. Absent until the first decision.
+	// +optional
+	Enabled *bool `json:"enabled,omitempty"`
+
 	// Summary aggregates the high-level user-facing state, message and
 	// resolution hint for the module. The controller always populates it
 	// on reconcile — every module maps to exactly one lifecycle state — so

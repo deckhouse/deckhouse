@@ -32,9 +32,8 @@ import (
 //   - Ready:     Installed=True and every other primary condition is True.
 //   - Degraded:  Installed=True with a reconcile problem and no active update.
 //   - Suspended: the scheduler withdrew a running module — it was disabled or
-//     lost a requirement (Installed=False with the scheduler reason and the
-//     runtime conditions Unknown, which is what distinguishes it from a
-//     first-install Pending).
+//     lost a requirement (Installed=True turning False with the scheduler
+//     reason, which is what distinguishes it from a first-install Pending).
 //   - Deleting:  the runtime accepted the removal and is tearing the module
 //     down; every condition reports Deleting until the resource disappears.
 const (

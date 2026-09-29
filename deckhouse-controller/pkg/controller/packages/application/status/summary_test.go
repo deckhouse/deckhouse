@@ -22,6 +22,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"github.com/werf/nelm/pkg/legacy/progrep"
+	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/condmap"
@@ -79,15 +80,15 @@ func TestLifecycleScenarios(t *testing.T) {
 		tip       string
 	}{
 		// ── Install (not yet installed) ────────────────────────────────
+		// Installed alone reports the install: the other conditions are
+		// behind its gate.
 
 		{
 			name: "install: waiting for dependent modules",
 			opts: []mappingOption{intCond(intPending, metav1.ConditionTrue, "Waiting")},
-			wantConds: map[string]*expectedCondition{
+			wantConds: gatedAbsent(map[string]*expectedCondition{
 				ConditionInstalled: {metav1.ConditionFalse, "Pending"},
-				ConditionReady:     {metav1.ConditionFalse, "Pending"},
-				ConditionScaled:    nil,
-			},
+			}),
 			state:   statePending,
 			message: "Installation is waiting for dependent modules to converge",
 			tip:     "Wait for dependent modules to converge automatically. No action required.",
@@ -95,10 +96,9 @@ func TestLifecycleScenarios(t *testing.T) {
 		{
 			name: "install: requirements unmet",
 			opts: []mappingOption{intCond(intRequirementsMet, metav1.ConditionFalse, "DependencyNotEnabled")},
-			wantConds: map[string]*expectedCondition{
+			wantConds: gatedAbsent(map[string]*expectedCondition{
 				ConditionInstalled: {metav1.ConditionFalse, "RequirementsUnmet"},
-				ConditionReady:     {metav1.ConditionFalse, "RequirementsUnmet"},
-			},
+			}),
 			state:   statePending,
 			message: "Installation is blocked: application requirements are not satisfied",
 			tip:     "Check the application's spec.requirements: required Deckhouse version or dependent modules do not match the cluster. Update Deckhouse, enable required modules, or adjust requirements.",
@@ -106,10 +106,9 @@ func TestLifecycleScenarios(t *testing.T) {
 		{
 			name: "install: download/mount failed",
 			opts: []mappingOption{intCond(intReadyOnFilesystem, metav1.ConditionFalse, "MountFailed")},
-			wantConds: map[string]*expectedCondition{
+			wantConds: gatedAbsent(map[string]*expectedCondition{
 				ConditionInstalled: {metav1.ConditionFalse, "DownloadFailed"},
-				ConditionReady:     {metav1.ConditionFalse, "DownloadFailed"},
-			},
+			}),
 			state:   stateFailed,
 			message: "Installation failed: application package could not be downloaded or mounted",
 			tip:     "Check network connectivity to the registry, verify imagePullSecret and package signature. Fix the issue — the controller will retry on the next reconcile.",
@@ -117,10 +116,9 @@ func TestLifecycleScenarios(t *testing.T) {
 		{
 			name: "install: load from filesystem failed",
 			opts: []mappingOption{intCond(intLoaded, metav1.ConditionFalse, "RuntimeError")},
-			wantConds: map[string]*expectedCondition{
+			wantConds: gatedAbsent(map[string]*expectedCondition{
 				ConditionInstalled: {metav1.ConditionFalse, "LoadFromFilesystemFailed"},
-				ConditionReady:     {metav1.ConditionFalse, "LoadFromFilesystemFailed"},
-			},
+			}),
 			state:   stateFailed,
 			message: "Installation failed: application package on disk could not be loaded",
 			tip:     "The on-disk artifact is corrupted or has an invalid structure. Delete the cached package from the node disk and re-pull the image. The controller will retry on the next reconcile.",
@@ -128,11 +126,9 @@ func TestLifecycleScenarios(t *testing.T) {
 		{
 			name: "install: invalid settings",
 			opts: []mappingOption{intCond(intConfigured, metav1.ConditionFalse, "InvalidSettings")},
-			wantConds: map[string]*expectedCondition{
-				ConditionInstalled:            {metav1.ConditionFalse, "SettingsInvalid"},
-				ConditionReady:                {metav1.ConditionFalse, "SettingsInvalid"},
-				ConditionConfigurationApplied: {metav1.ConditionFalse, "SettingsInvalid"},
-			},
+			wantConds: gatedAbsent(map[string]*expectedCondition{
+				ConditionInstalled: {metav1.ConditionFalse, "SettingsInvalid"},
+			}),
 			state:   stateFailed,
 			message: "Installation failed: application settings did not pass validation",
 			tip:     "Fix the ModuleConfig fields that fail OpenAPI validation. The controller will retry automatically after the config is changed.",
@@ -140,13 +136,9 @@ func TestLifecycleScenarios(t *testing.T) {
 		{
 			name: "install: hook sync phase failed",
 			opts: []mappingOption{intCond(intHooksProcessed, metav1.ConditionFalse, "HookInitializationFailed")},
-			wantConds: map[string]*expectedCondition{
+			wantConds: gatedAbsent(map[string]*expectedCondition{
 				ConditionInstalled: {metav1.ConditionFalse, "HookInitializationFailed"},
-				ConditionReady:     {metav1.ConditionFalse, "HookInitializationFailed"},
-				// Managed is suppressed on first-install hook-init failure:
-				// nothing was ever managed.
-				ConditionManaged: nil,
-			},
+			}),
 			state:   stateFailed,
 			message: "Installation failed: hook synchronization phase failed",
 			tip:     "Check the hook pod/job logs (kubectl logs). Fix the hook code or its dependencies. Roll back the application version if needed.",
@@ -154,11 +146,9 @@ func TestLifecycleScenarios(t *testing.T) {
 		{
 			name: "install: startup/runtime hooks failed",
 			opts: []mappingOption{intCond(intHooksProcessed, metav1.ConditionFalse, "HookExecutionFailed")},
-			wantConds: map[string]*expectedCondition{
+			wantConds: gatedAbsent(map[string]*expectedCondition{
 				ConditionInstalled: {metav1.ConditionFalse, "HookFailed"},
-				ConditionReady:     {metav1.ConditionFalse, "HookFailed"},
-				ConditionManaged:   {metav1.ConditionFalse, "HookFailed"},
-			},
+			}),
 			state:   stateFailed,
 			message: "Installation failed: startup or runtime hooks failed",
 			tip:     "Check the failed hook logs. Fix the configuration or hook code. The attempt will be retried on the next reconcile.",
@@ -166,11 +156,9 @@ func TestLifecycleScenarios(t *testing.T) {
 		{
 			name: "install: Helm apply failed",
 			opts: []mappingOption{intCond(intManifestsApplied, metav1.ConditionFalse, "boom")},
-			wantConds: map[string]*expectedCondition{
+			wantConds: gatedAbsent(map[string]*expectedCondition{
 				ConditionInstalled: {metav1.ConditionFalse, "ManifestsApplyFailed"},
-				ConditionReady:     {metav1.ConditionFalse, "ManifestsApplyFailed"},
-				ConditionManaged:   {metav1.ConditionFalse, "ManifestsApplyFailed"},
-			},
+			}),
 			state:   stateFailed,
 			message: "Installation failed: Helm could not apply manifests",
 			tip:     "Check helm history and events in the application namespace. Resolve resource conflicts (namespace, CRD, RBAC). The controller will retry on the next reconcile.",
@@ -374,14 +362,9 @@ func TestLifecycleScenarios(t *testing.T) {
 		{
 			name: "suspended: dependency disabled",
 			opts: running(intCond(intRequirementsMet, metav1.ConditionFalse, "DependencyNotEnabled")),
-			wantConds: map[string]*expectedCondition{
-				ConditionInstalled:            {metav1.ConditionFalse, "RequirementsUnmet"},
-				ConditionReady:                {metav1.ConditionFalse, "RequirementsUnmet"},
-				ConditionScaled:               {metav1.ConditionUnknown, "RequirementsUnmet"},
-				ConditionConfigurationApplied: {metav1.ConditionUnknown, "RequirementsUnmet"},
-				ConditionManaged:              {metav1.ConditionUnknown, "RequirementsUnmet"},
-				ConditionUpdateInstalled:      nil,
-			},
+			wantConds: gatedAbsent(map[string]*expectedCondition{
+				ConditionInstalled: {metav1.ConditionFalse, "RequirementsUnmet"},
+			}),
 			state:   stateSuspended,
 			message: "Application is suspended: requirements unmet",
 			tip:     "Solve the application requirements. After it, the controller will automatically restore all conditions and resume operation.",
@@ -571,6 +554,64 @@ func TestSummarize_SuspendedVsPending(t *testing.T) {
 		assert.Equal(t, statePending, state)
 		assert.NotEqual(t, "Application is suspended: requirements unmet", message)
 	})
+}
+
+// TestComputeAndApplyConditionsInstalledGate covers the removal half of the
+// Installed gate, which the mapping cases above cannot see: a gated condition
+// already on the resource is removed while Installed is not True, and the gated
+// conditions come back on the run that installs the application.
+func TestComputeAndApplyConditionsInstalledGate(t *testing.T) {
+	app := &v1alpha1.Application{
+		ObjectMeta: metav1.ObjectMeta{Namespace: "ns", Name: "app"},
+		Status: v1alpha1.ApplicationStatus{
+			// What a first install that failed at manifests used to publish.
+			Conditions: []metav1.Condition{
+				{Type: ConditionInstalled, Status: metav1.ConditionFalse, Reason: "ManifestsApplyFailed"},
+				{Type: ConditionReady, Status: metav1.ConditionFalse, Reason: "ManifestsApplyFailed"},
+				{Type: ConditionManaged, Status: metav1.ConditionFalse, Reason: "ManifestsApplyFailed"},
+			},
+		},
+	}
+
+	internal := func(requirements metav1.ConditionStatus) []intstatus.Condition {
+		return []intstatus.Condition{
+			{Type: intstatus.ConditionRequirementsMet, Status: requirements},
+			{Type: intstatus.ConditionReadyOnFilesystem, Status: metav1.ConditionTrue},
+			{Type: intstatus.ConditionLoaded, Status: metav1.ConditionTrue},
+			{Type: intstatus.ConditionConfigured, Status: metav1.ConditionTrue},
+			{Type: intstatus.ConditionHooksProcessed, Status: metav1.ConditionTrue},
+			{Type: intstatus.ConditionManifestsApplied, Status: metav1.ConditionTrue},
+			{Type: intstatus.ConditionScaled, Status: metav1.ConditionTrue},
+		}
+	}
+
+	current := intstatus.Status{Conditions: []intstatus.Condition{
+		{Type: intstatus.ConditionManifestsApplied, Status: metav1.ConditionFalse, Reason: "HelmFailed"},
+	}}
+	svc := &Service{
+		mapper: buildMapper(),
+		getter: func(string) intstatus.Status { return current },
+	}
+
+	svc.computeAndApplyConditions("ns.app", app)
+	require.Len(t, app.Status.Conditions, 1)
+	assert.Equal(t, ConditionInstalled, app.Status.Conditions[0].Type)
+	assert.Equal(t, "ManifestsApplyFailed", app.Status.Conditions[0].Reason)
+
+	current = intstatus.Status{Version: "1.0.0", Conditions: internal(metav1.ConditionTrue)}
+	svc.computeAndApplyConditions("ns.app", app)
+	for _, condType := range []string{ConditionInstalled, ConditionReady, ConditionScaled, ConditionManaged, ConditionConfigurationApplied} {
+		assert.True(t, meta.IsStatusConditionTrue(app.Status.Conditions, condType), "condition %s", condType)
+	}
+	assert.Nil(t, meta.FindStatusCondition(app.Status.Conditions, ConditionUpdateInstalled))
+
+	// A disabled dependency takes Installed False, and the gated conditions go with it.
+	current = intstatus.Status{Version: "1.0.0", Conditions: internal(metav1.ConditionFalse)}
+	svc.computeAndApplyConditions("ns.app", app)
+	require.Len(t, app.Status.Conditions, 1)
+	assert.Equal(t, ConditionInstalled, app.Status.Conditions[0].Type)
+	assert.Equal(t, "RequirementsUnmet", app.Status.Conditions[0].Reason)
+	assert.Equal(t, stateSuspended, app.Status.Summary.State)
 }
 
 // TestComputeAndApplyConditionsOnDeletion covers this package's own deletionTimestamp

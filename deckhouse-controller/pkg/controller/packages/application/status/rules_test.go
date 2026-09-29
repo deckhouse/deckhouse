@@ -81,7 +81,7 @@ func testMapping(opts ...mappingOption) map[string]metav1.Condition {
 	}
 
 	result := make(map[string]metav1.Condition)
-	for _, cond := range buildMapper().Map(*state) {
+	for _, cond := range buildMapper().Map(*state).Set {
 		result[cond.Type] = cond
 	}
 
@@ -92,6 +92,25 @@ func testMapping(opts ...mappingOption) map[string]metav1.Condition {
 type expectedCondition struct {
 	status metav1.ConditionStatus
 	reason string
+}
+
+// gatedConditions are the conditions behind the Installed gate.
+var gatedConditions = []string{
+	ConditionUpdateInstalled,
+	ConditionReady,
+	ConditionScaled,
+	ConditionManaged,
+	ConditionConfigurationApplied,
+}
+
+// gatedAbsent adds to want the promise of the Installed gate: every condition
+// behind it is absent from the mapping result.
+func gatedAbsent(want map[string]*expectedCondition) map[string]*expectedCondition {
+	for _, condType := range gatedConditions {
+		want[condType] = nil
+	}
+
+	return want
 }
 
 // testCase defines a single test case for condition mapping
@@ -289,12 +308,14 @@ func TestReadyRule(t *testing.T) {
 			},
 		},
 		{
-			name: "false when not installed and Pending",
+			// Readiness of an app that is not installed yet is Installed's to report.
+			name: "absent while the first install is pending",
 			opts: []mappingOption{
 				withInternalCondition(string(intstatus.ConditionPending), metav1.ConditionTrue, "Waiting"),
 			},
 			expected: map[string]*expectedCondition{
-				ConditionReady: {status: metav1.ConditionFalse, reason: "Pending"},
+				ConditionInstalled: {status: metav1.ConditionFalse, reason: "Pending"},
+				ConditionReady:     nil,
 			},
 		},
 		{
@@ -562,6 +583,7 @@ func TestConfigurationAppliedRule(t *testing.T) {
 		{
 			name: "true when all config conditions true",
 			opts: []mappingOption{
+				withExternalCondition(ConditionInstalled, metav1.ConditionTrue, "Installed"),
 				withInternalCondition(string(intstatus.ConditionConfigured), metav1.ConditionTrue, "SettingsOK"),
 				withInternalCondition(string(intstatus.ConditionHooksProcessed), metav1.ConditionTrue, "HooksOK"),
 				withInternalCondition(string(intstatus.ConditionManifestsApplied), metav1.ConditionTrue, "HelmOK"),
@@ -571,8 +593,23 @@ func TestConfigurationAppliedRule(t *testing.T) {
 			},
 		},
 		{
+			// The configuration lands before the workload is up: it is not reported
+			// ahead of Installed.
+			name: "absent on first install until the install completes",
+			opts: []mappingOption{
+				withInternalCondition(string(intstatus.ConditionConfigured), metav1.ConditionTrue, "SettingsOK"),
+				withInternalCondition(string(intstatus.ConditionHooksProcessed), metav1.ConditionTrue, "HooksOK"),
+				withInternalCondition(string(intstatus.ConditionManifestsApplied), metav1.ConditionTrue, "HelmOK"),
+			},
+			expected: map[string]*expectedCondition{
+				ConditionInstalled:            nil,
+				ConditionConfigurationApplied: nil,
+			},
+		},
+		{
 			name: "false when Configured is false",
 			opts: []mappingOption{
+				withExternalCondition(ConditionInstalled, metav1.ConditionTrue, "Installed"),
 				withInternalCondition(string(intstatus.ConditionConfigured), metav1.ConditionFalse, "InvalidSettings"),
 				withInternalCondition(string(intstatus.ConditionHooksProcessed), metav1.ConditionTrue, "HooksOK"),
 				withInternalCondition(string(intstatus.ConditionManifestsApplied), metav1.ConditionTrue, "HelmOK"),
@@ -584,6 +621,7 @@ func TestConfigurationAppliedRule(t *testing.T) {
 		{
 			name: "false when HooksProcessed is false",
 			opts: []mappingOption{
+				withExternalCondition(ConditionInstalled, metav1.ConditionTrue, "Installed"),
 				withInternalCondition(string(intstatus.ConditionConfigured), metav1.ConditionTrue, "SettingsOK"),
 				withInternalCondition(string(intstatus.ConditionHooksProcessed), metav1.ConditionFalse, "HooksFailed"),
 				withInternalCondition(string(intstatus.ConditionManifestsApplied), metav1.ConditionTrue, "HelmOK"),
@@ -595,6 +633,7 @@ func TestConfigurationAppliedRule(t *testing.T) {
 		{
 			name: "false when ManifestsApplied is false",
 			opts: []mappingOption{
+				withExternalCondition(ConditionInstalled, metav1.ConditionTrue, "Installed"),
 				withInternalCondition(string(intstatus.ConditionConfigured), metav1.ConditionTrue, "SettingsOK"),
 				withInternalCondition(string(intstatus.ConditionHooksProcessed), metav1.ConditionTrue, "HooksOK"),
 				withInternalCondition(string(intstatus.ConditionManifestsApplied), metav1.ConditionFalse, "HelmFailed"),
@@ -623,10 +662,9 @@ func TestConfigurationAppliedRule(t *testing.T) {
 
 // TestDependencyDisabled covers the case where an installed and running
 // application loses a hard dependency (e.g. a module it depends on was
-// disabled). The cause is external, so user-facing signals (Installed, Ready)
-// go False, while ConfigurationApplied and Managed go Unknown — managing is
-// meaningless until the dependency returns. Scaled is excluded: it is owned
-// by the workload health monitor and mirrors the internal condition as-is.
+// disabled). Installed goes False — overriding its stickiness, the user must
+// see the app stopped being installed — which closes the Installed gate: the
+// other conditions are removed until the app is installed again.
 func TestDependencyDisabled(t *testing.T) {
 	// Realistic runtime state: app was running with all internal conditions
 	// True from the previous successful reconcile, then RequirementsMet flipped
@@ -644,49 +682,84 @@ func TestDependencyDisabled(t *testing.T) {
 
 	cases := []testCase{
 		{
-			name: "all public conditions reflect dependency disabled",
+			name: "only Installed reports the disabled dependency",
 			opts: runningInternals,
-			expected: map[string]*expectedCondition{
-				// Installed overrides stickiness — the user must see the app stopped being installed.
-				ConditionInstalled:            {status: metav1.ConditionFalse, reason: "RequirementsUnmet"},
-				ConditionReady:                {status: metav1.ConditionFalse, reason: "RequirementsUnmet"},
-				ConditionScaled:               {status: metav1.ConditionUnknown, reason: "RequirementsUnmet"},
-				ConditionConfigurationApplied: {status: metav1.ConditionUnknown, reason: "RequirementsUnmet"},
-				ConditionManaged:              {status: metav1.ConditionUnknown, reason: "RequirementsUnmet"},
-				// UpdateInstalled is silent — the dependency-disabled state is the dominant signal.
-				ConditionUpdateInstalled: nil,
-			},
+			expected: gatedAbsent(map[string]*expectedCondition{
+				ConditionInstalled: {status: metav1.ConditionFalse, reason: "RequirementsUnmet"},
+			}),
 		},
 		{
-			name: "UpdateInstalled silent even while updating",
+			name: "only Installed reports the disabled dependency while updating",
 			opts: append(runningInternals, withVersionChanged()),
-			expected: map[string]*expectedCondition{
-				ConditionInstalled:            {status: metav1.ConditionFalse, reason: "RequirementsUnmet"},
-				ConditionReady:                {status: metav1.ConditionFalse, reason: "RequirementsUnmet"},
-				ConditionScaled:               {status: metav1.ConditionUnknown, reason: "RequirementsUnmet"},
-				ConditionConfigurationApplied: {status: metav1.ConditionUnknown, reason: "RequirementsUnmet"},
-				ConditionManaged:              {status: metav1.ConditionUnknown, reason: "RequirementsUnmet"},
-				ConditionUpdateInstalled:      nil,
-			},
+			expected: gatedAbsent(map[string]*expectedCondition{
+				ConditionInstalled: {status: metav1.ConditionFalse, reason: "RequirementsUnmet"},
+			}),
 		},
 		{
-			name: "first-install dependency unmet still uses install pipeline (no Unknowns)",
+			// The run after the switch reads Installed=False back: it is an install
+			// blocked on requirements now, and the gate stays closed.
+			name: "gate stays closed once Installed went False",
+			opts: append(runningInternals,
+				withExternalCondition(ConditionInstalled, metav1.ConditionFalse, "RequirementsUnmet"),
+			),
+			expected: gatedAbsent(map[string]*expectedCondition{
+				ConditionInstalled: {status: metav1.ConditionFalse, reason: "RequirementsUnmet"},
+			}),
+		},
+		{
+			name: "first-install dependency unmet is reported by Installed alone",
 			opts: []mappingOption{
 				// No external Installed=True — this is a first install, not a running app.
 				withInternalCondition(string(intstatus.ConditionRequirementsMet), metav1.ConditionFalse, "DependencyNotEnabled"),
 			},
-			expected: map[string]*expectedCondition{
-				ConditionInstalled:            {status: metav1.ConditionFalse, reason: "RequirementsUnmet"},
-				ConditionReady:                {status: metav1.ConditionFalse, reason: "RequirementsUnmet"},
-				ConditionScaled:               nil,
-				ConditionConfigurationApplied: nil,
-				ConditionManaged:              nil,
-				ConditionUpdateInstalled:      nil,
-			},
+			expected: gatedAbsent(map[string]*expectedCondition{
+				ConditionInstalled: {status: metav1.ConditionFalse, reason: "RequirementsUnmet"},
+			}),
 		},
 	}
 
 	runTestCases(t, cases)
+}
+
+// TestInstalledGate covers what the gate hands the status service: while
+// Installed is not True every gated condition is listed for removal, so a
+// condition left on the resource does not outlive a closed gate; once it is
+// True nothing is removed.
+func TestInstalledGate(t *testing.T) {
+	mapFor := func(opts ...mappingOption) condmap.Result {
+		state := condmap.State{
+			Internal: make(map[string]metav1.Condition),
+			External: make(map[string]metav1.Condition),
+		}
+		for _, opt := range opts {
+			opt(&state)
+		}
+
+		return buildMapper().Map(state)
+	}
+
+	t.Run("first install removes every gated condition", func(t *testing.T) {
+		result := mapFor(
+			withExternalCondition(ConditionReady, metav1.ConditionFalse, "Pending"),
+			withInternalCondition(intPending, metav1.ConditionTrue, "Waiting"),
+		)
+		assert.ElementsMatch(t, gatedConditions, result.Remove)
+	})
+
+	t.Run("completing run opens the gate", func(t *testing.T) {
+		result := mapFor(withSuccessfulApply()...)
+		assert.Empty(t, result.Remove)
+	})
+
+	t.Run("installed app removes nothing", func(t *testing.T) {
+		result := mapFor(running()...)
+		assert.Empty(t, result.Remove)
+	})
+
+	t.Run("disabled dependency removes every gated condition", func(t *testing.T) {
+		result := mapFor(running(intCond(intRequirementsMet, metav1.ConditionFalse, "DependencyNotEnabled"))...)
+		assert.ElementsMatch(t, gatedConditions, result.Remove)
+	})
 }
 
 // withSettingsChanged marks new settings that the Run task has not applied yet.

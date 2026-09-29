@@ -123,7 +123,8 @@ func (s *Service) computeAndApplyConditions(name string, module *v1beta1.Module)
 	mapperStatus.Deleting = !module.DeletionTimestamp.IsZero()
 
 	// Apply mapped conditions (external user-facing conditions)
-	for _, cond := range s.mapper.Map(mapperStatus) {
+	mapped := s.mapper.Map(mapperStatus)
+	for _, cond := range mapped.Set {
 		// Reason is required by metav1.Condition contract
 		reason := cond.Reason
 		if reason == "" {
@@ -139,6 +140,12 @@ func (s *Service) computeAndApplyConditions(name string, module *v1beta1.Module)
 		})
 	}
 
+	// Gated conditions are not reported while their gate is closed: until the
+	// module is installed, Installed is the only condition it carries.
+	for _, condType := range mapped.Remove {
+		meta.RemoveStatusCondition(&module.Status.Conditions, condType)
+	}
+
 	// Nothing about a live install is committed onto a resource on its way out.
 	// The runtime freezes its own status on removal, but the CR's timestamp is
 	// authoritative even for a package the runtime never tracked.
@@ -150,6 +157,10 @@ func (s *Service) computeAndApplyConditions(name string, module *v1beta1.Module)
 				module.Status.LastAppliedConfiguration = runtime.RawExtension{Raw: raw}
 			}
 		}
+	}
+
+	if enabled, ok := schedulerVerdict(mapperStatus); ok {
+		module.Status.Enabled = &enabled
 	}
 
 	// Skip writing tracking if there's nothing to report — preserves the previous

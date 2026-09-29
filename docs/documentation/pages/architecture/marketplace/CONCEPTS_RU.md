@@ -62,7 +62,7 @@ flowchart TD
 4. Пользователь создаёт [Application](../../reference/api/cr.html#application) в своём неймспейсе, указывая `packageName`, `packageVersion` и опционально `packageRepositoryName`.
 5. DP проверяет `spec.settings` по `settingsSchema` из соответствующего ApplicationPackageVersion.
 6. Nelm разворачивает Helm-шаблоны из bundle пакета.
-7. Условия (conditions) ресурса Application отражают прогресс деплоя: `Installed` → `ConfigurationApplied` → `Scaled` → `Ready`.
+7. Прогресс деплоя отражает условие (condition) `Installed` ресурса Application — до завершения установки это единственное условие ресурса. Когда оно становится `True`, появляются остальные условия (`ConfigurationApplied`, `Scaled`, `Ready` и другие).
 
 ## Ограничения Application
 

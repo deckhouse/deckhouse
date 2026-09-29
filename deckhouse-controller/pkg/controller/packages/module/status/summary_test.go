@@ -22,7 +22,9 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"github.com/werf/nelm/pkg/legacy/progrep"
+	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/utils/ptr"
 
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/condmap"
 	intstatus "github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/status"
@@ -79,11 +81,9 @@ func TestModuleSummaryScenarios(t *testing.T) {
 			opts: []mappingOption{
 				withInternalCondition(string(intstatus.ConditionRequirementsMet), metav1.ConditionFalse, "Disabled"),
 			},
-			wantConds: map[string]*expectedCondition{
-				ConditionEnabled:   {metav1.ConditionFalse, "Disabled"},
+			wantConds: gatedAbsent(map[string]*expectedCondition{
 				ConditionInstalled: {metav1.ConditionFalse, "Disabled"},
-				ConditionReady:     {metav1.ConditionFalse, "Disabled"},
-			},
+			}),
 			state:   statePending,
 			message: "Installation is blocked: the module is disabled",
 			tip:     "Enable the module to start the installation.",
@@ -93,10 +93,9 @@ func TestModuleSummaryScenarios(t *testing.T) {
 			opts: []mappingOption{
 				withInternalCondition(string(intstatus.ConditionRequirementsMet), metav1.ConditionFalse, "DependencyNotEnabled"),
 			},
-			wantConds: map[string]*expectedCondition{
-				ConditionEnabled:   {metav1.ConditionFalse, "DependencyNotEnabled"},
+			wantConds: gatedAbsent(map[string]*expectedCondition{
 				ConditionInstalled: {metav1.ConditionFalse, "DependencyNotEnabled"},
-			},
+			}),
 			state:   statePending,
 			message: "Installation is blocked: a required module is not enabled",
 			tip:     "Enable the required module listed in the condition message. The installation will continue automatically.",
@@ -106,10 +105,9 @@ func TestModuleSummaryScenarios(t *testing.T) {
 			opts: []mappingOption{
 				withInternalCondition(string(intstatus.ConditionRequirementsMet), metav1.ConditionFalse, "EnabledScriptError"),
 			},
-			wantConds: map[string]*expectedCondition{
-				ConditionEnabled:   {metav1.ConditionFalse, "EnabledScriptError"},
+			wantConds: gatedAbsent(map[string]*expectedCondition{
 				ConditionInstalled: {metav1.ConditionFalse, "EnabledScriptError"},
-			},
+			}),
 			state:   stateFailed,
 			message: "Installation failed: the module's enabled-script failed",
 			tip:     "Check the Deckhouse controller logs for the script error. Fix the script or the cluster state it inspects.",
@@ -121,10 +119,9 @@ func TestModuleSummaryScenarios(t *testing.T) {
 			opts: []mappingOption{
 				withInternalCondition(string(intstatus.ConditionRequirementsMet), metav1.ConditionFalse, "CustomRuleForbid"),
 			},
-			wantConds: map[string]*expectedCondition{
-				ConditionEnabled:   {metav1.ConditionFalse, "CustomRuleForbid"},
+			wantConds: gatedAbsent(map[string]*expectedCondition{
 				ConditionInstalled: {metav1.ConditionFalse, "CustomRuleForbid"},
-			},
+			}),
 			state:   statePending,
 			message: "Installation is blocked: CustomRuleForbid",
 			tip:     "",
@@ -137,14 +134,9 @@ func TestModuleSummaryScenarios(t *testing.T) {
 			opts: running(
 				withInternalCondition(string(intstatus.ConditionRequirementsMet), metav1.ConditionFalse, "Disabled"),
 			),
-			wantConds: map[string]*expectedCondition{
-				ConditionEnabled:              {metav1.ConditionFalse, "Disabled"},
-				ConditionInstalled:            {metav1.ConditionFalse, "Disabled"},
-				ConditionReady:                {metav1.ConditionFalse, "Disabled"},
-				ConditionScaled:               {metav1.ConditionUnknown, "Disabled"},
-				ConditionManaged:              {metav1.ConditionUnknown, "Disabled"},
-				ConditionConfigurationApplied: {metav1.ConditionUnknown, "Disabled"},
-			},
+			wantConds: gatedAbsent(map[string]*expectedCondition{
+				ConditionInstalled: {metav1.ConditionFalse, "Disabled"},
+			}),
 			state:   stateSuspended,
 			message: "Module is suspended: the module was disabled",
 			tip:     "Enable the module to resume. The controller will restore all conditions and resume operation automatically.",
@@ -154,11 +146,9 @@ func TestModuleSummaryScenarios(t *testing.T) {
 			opts: running(
 				withInternalCondition(string(intstatus.ConditionRequirementsMet), metav1.ConditionFalse, "DependencyNotEnabled"),
 			),
-			wantConds: map[string]*expectedCondition{
-				ConditionEnabled:   {metav1.ConditionFalse, "DependencyNotEnabled"},
+			wantConds: gatedAbsent(map[string]*expectedCondition{
 				ConditionInstalled: {metav1.ConditionFalse, "DependencyNotEnabled"},
-				ConditionScaled:    {metav1.ConditionUnknown, "DependencyNotEnabled"},
-			},
+			}),
 			state:   stateSuspended,
 			message: "Module is suspended: requirements unmet",
 			tip:     "Solve the module requirements. After it, the controller will automatically restore all conditions and resume operation.",
@@ -170,8 +160,7 @@ func TestModuleSummaryScenarios(t *testing.T) {
 			name: "running: healthy",
 			opts: running(),
 			wantConds: map[string]*expectedCondition{
-				ConditionEnabled: {metav1.ConditionTrue, "Enabled"},
-				ConditionReady:   {metav1.ConditionTrue, "Ready"},
+				ConditionReady: {metav1.ConditionTrue, "Ready"},
 			},
 			state:   stateReady,
 			message: "",
@@ -220,7 +209,6 @@ func TestModuleSummaryScenarios(t *testing.T) {
 				withDeleting(),
 			},
 			wantConds: map[string]*expectedCondition{
-				ConditionEnabled:   {metav1.ConditionFalse, condmap.ReasonDeleting},
 				ConditionInstalled: {metav1.ConditionFalse, condmap.ReasonDeleting},
 			},
 			state:   stateDeleting,
@@ -253,22 +241,162 @@ func TestModuleSummaryScenarios(t *testing.T) {
 	}
 }
 
+// TestComputeAndApplyConditionsInstalledGate covers the removal half of the
+// Installed gate, which the mapping cases above cannot see: switching a running
+// module off removes every gated condition from the resource, enabling it again
+// keeps them away while it installs, and the run that installs it brings them
+// back. status.enabled follows the scheduler throughout.
+func TestComputeAndApplyConditionsInstalledGate(t *testing.T) {
+	module := &v1beta1.Module{ObjectMeta: metav1.ObjectMeta{Name: "mod"}}
+
+	internal := func(requirements, hooks intstatus.Condition) []intstatus.Condition {
+		return []intstatus.Condition{
+			requirements,
+			{Type: intstatus.ConditionReadyOnFilesystem, Status: metav1.ConditionTrue},
+			{Type: intstatus.ConditionLoaded, Status: metav1.ConditionTrue},
+			{Type: intstatus.ConditionConfigured, Status: metav1.ConditionTrue},
+			hooks,
+			{Type: intstatus.ConditionManifestsApplied, Status: metav1.ConditionTrue},
+			{Type: intstatus.ConditionScaled, Status: metav1.ConditionTrue},
+		}
+	}
+	enabled := intstatus.Condition{Type: intstatus.ConditionRequirementsMet, Status: metav1.ConditionTrue}
+	disabled := intstatus.Condition{Type: intstatus.ConditionRequirementsMet, Status: metav1.ConditionFalse, Reason: reasonDisabled}
+	hooksOK := intstatus.Condition{Type: intstatus.ConditionHooksProcessed, Status: metav1.ConditionTrue}
+	hooksFailed := intstatus.Condition{Type: intstatus.ConditionHooksProcessed, Status: metav1.ConditionFalse, Reason: "HookExecutionFailed"}
+
+	current := intstatus.Status{Version: "1.0.0", Conditions: internal(enabled, hooksOK)}
+	svc := &Service{
+		mapper: buildMapper(),
+		getter: func(string) intstatus.Status { return current },
+	}
+
+	svc.computeAndApplyConditions("mod", module)
+	require.Len(t, module.Status.Conditions, 5)
+	require.NotNil(t, module.Status.Enabled)
+	assert.True(t, *module.Status.Enabled)
+
+	assertOnly := func(want map[string]string) {
+		t.Helper()
+
+		require.Len(t, module.Status.Conditions, len(want))
+		for condType, reason := range want {
+			cond := meta.FindStatusCondition(module.Status.Conditions, condType)
+			if assert.NotNil(t, cond, "condition %s", condType) {
+				assert.Equal(t, reason, cond.Reason, "condition %s reason", condType)
+			}
+		}
+	}
+
+	current = intstatus.Status{Version: "1.0.0", Conditions: internal(disabled, hooksOK)}
+	svc.computeAndApplyConditions("mod", module)
+	assertOnly(map[string]string{ConditionInstalled: reasonDisabled})
+	assert.False(t, *module.Status.Enabled)
+
+	// Enabled again, the reinstall fails at hooks: Installed alone reports it.
+	current = intstatus.Status{Version: "1.0.0", Conditions: internal(enabled, hooksFailed)}
+	svc.computeAndApplyConditions("mod", module)
+	assertOnly(map[string]string{ConditionInstalled: "HookFailed"})
+	assert.True(t, *module.Status.Enabled)
+
+	current = intstatus.Status{Version: "1.0.0", Conditions: internal(enabled, hooksOK)}
+	svc.computeAndApplyConditions("mod", module)
+	require.Len(t, module.Status.Conditions, 5)
+	assert.True(t, meta.IsStatusConditionTrue(module.Status.Conditions, ConditionReady))
+}
+
+// TestComputeAndApplyEnabled covers status.enabled: the scheduler's verdict,
+// which spec.enabled only feeds — an explicit intent can still be overruled —
+// and which stands while the scheduler has not decided anew.
+func TestComputeAndApplyEnabled(t *testing.T) {
+	requirements := func(status metav1.ConditionStatus, reason string) intstatus.Status {
+		return intstatus.Status{Conditions: []intstatus.Condition{
+			{Type: intstatus.ConditionRequirementsMet, Status: status, Reason: intstatus.ConditionReason(reason)},
+		}}
+	}
+
+	cases := []struct {
+		name    string
+		spec    *bool
+		current *bool
+		runtime intstatus.Status
+		want    *bool
+	}{
+		{
+			name:    "enabled by the config, disabled by the scheduler",
+			spec:    ptr.To(true),
+			runtime: requirements(metav1.ConditionFalse, "DependencyNotEnabled"),
+			want:    ptr.To(false),
+		},
+		{
+			name:    "disabled by the config and the scheduler",
+			spec:    ptr.To(false),
+			runtime: requirements(metav1.ConditionFalse, reasonDisabled),
+			want:    ptr.To(false),
+		},
+		{
+			name:    "no config, enabled by the scheduler",
+			runtime: requirements(metav1.ConditionTrue, ""),
+			want:    ptr.To(true),
+		},
+		{
+			name:    "absent before the first decision",
+			spec:    ptr.To(true),
+			runtime: requirements(metav1.ConditionUnknown, ""),
+		},
+		{
+			// A version change resets the runtime status to Unknown until the
+			// scheduler runs again.
+			name:    "last verdict stands while the scheduler has not decided",
+			current: ptr.To(true),
+			runtime: requirements(metav1.ConditionUnknown, ""),
+			want:    ptr.To(true),
+		},
+		{
+			// After a restart the runtime has no status for the module yet.
+			name:    "last verdict stands while the runtime tracks nothing",
+			current: ptr.To(false),
+			want:    ptr.To(false),
+		},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			module := &v1beta1.Module{
+				ObjectMeta: metav1.ObjectMeta{Name: "mod"},
+				Spec:       v1beta1.ModuleSpec{Enabled: tc.spec},
+				Status:     v1beta1.ModuleStatus{Enabled: tc.current},
+			}
+			svc := &Service{
+				mapper: buildMapper(),
+				getter: func(string) intstatus.Status { return tc.runtime },
+			}
+
+			svc.computeAndApplyConditions("mod", module)
+			assert.Equal(t, tc.want, module.Status.Enabled)
+		})
+	}
+}
+
 // TestComputeAndApplyConditionsOnDeletion covers this package's own deletionTimestamp
 // wiring: the cases above set condmap.State.Deleting directly and never reach it.
 func TestComputeAndApplyConditionsOnDeletion(t *testing.T) {
 	deleted := metav1.NewTime(time.Unix(0, 0))
 	module := &v1beta1.Module{
 		ObjectMeta: metav1.ObjectMeta{Name: "mod", DeletionTimestamp: &deleted},
+		Status:     v1beta1.ModuleStatus{Enabled: ptr.To(true)},
 	}
 
 	// A Run task that finished after the teardown started still reports
-	// ManifestsApplied, which is what would otherwise commit the version.
+	// ManifestsApplied, which is what would otherwise commit the version. The
+	// teardown itself writes False/Deleting over RequirementsMet.
 	svc := &Service{
 		mapper: buildMapper(),
 		getter: func(string) intstatus.Status {
 			return intstatus.Status{
 				Version: "1.2.3",
 				Conditions: []intstatus.Condition{
+					{Type: intstatus.ConditionRequirementsMet, Status: metav1.ConditionFalse, Reason: intstatus.ConditionReasonDeleting},
 					{Type: intstatus.ConditionManifestsApplied, Status: metav1.ConditionTrue},
 					{Type: intstatus.ConditionScaled, Status: metav1.ConditionTrue},
 				},
@@ -278,13 +406,14 @@ func TestComputeAndApplyConditionsOnDeletion(t *testing.T) {
 
 	svc.computeAndApplyConditions("mod", module)
 
-	assert.Len(t, module.Status.Conditions, 7)
+	assert.Len(t, module.Status.Conditions, 6)
 	for _, cond := range module.Status.Conditions {
 		assert.Equal(t, metav1.ConditionFalse, cond.Status, "condition %s status", cond.Type)
 		assert.Equal(t, condmap.ReasonDeleting, cond.Reason, "condition %s reason", cond.Type)
 	}
 	assert.Equal(t, stateDeleting, module.Status.Summary.State)
 	assert.Empty(t, module.Status.CurrentVersion.Version)
+	assert.Equal(t, ptr.To(true), module.Status.Enabled, "the teardown is no scheduler verdict")
 }
 
 // TestComputeAndApplyTrackingOnDeletion covers the uninstall progress of a CR on its way out:

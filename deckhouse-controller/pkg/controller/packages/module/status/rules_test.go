@@ -81,7 +81,7 @@ func testMapping(opts ...mappingOption) map[string]metav1.Condition {
 	}
 
 	result := make(map[string]metav1.Condition)
-	for _, cond := range buildMapper().Map(*state) {
+	for _, cond := range buildMapper().Map(*state).Set {
 		result[cond.Type] = cond
 	}
 
@@ -92,6 +92,25 @@ func testMapping(opts ...mappingOption) map[string]metav1.Condition {
 type expectedCondition struct {
 	status metav1.ConditionStatus
 	reason string
+}
+
+// gatedConditions are the conditions behind the Installed gate.
+var gatedConditions = []string{
+	ConditionUpdateInstalled,
+	ConditionReady,
+	ConditionScaled,
+	ConditionManaged,
+	ConditionConfigurationApplied,
+}
+
+// gatedAbsent adds to want the promise of the Installed gate: every condition
+// behind it is absent from the mapping result.
+func gatedAbsent(want map[string]*expectedCondition) map[string]*expectedCondition {
+	for _, condType := range gatedConditions {
+		want[condType] = nil
+	}
+
+	return want
 }
 
 // testCase defines a single test case for condition mapping
@@ -126,55 +145,64 @@ func runTestCases(t *testing.T, cases []testCase) {
 	}
 }
 
-func TestEnabledRule(t *testing.T) {
-	cases := []testCase{
+// TestSchedulerVerdict covers what status.enabled is resolved from: the
+// scheduler's verdict on the internal RequirementsMet condition, whatever its
+// reason, and no verdict at all while there is no decision or on removal.
+func TestSchedulerVerdict(t *testing.T) {
+	cases := []struct {
+		name        string
+		opts        []mappingOption
+		wantEnabled bool
+		wantVerdict bool
+	}{
 		{
-			name: "absent before the first scheduling decision",
-			opts: []mappingOption{},
-			expected: map[string]*expectedCondition{
-				ConditionEnabled: nil,
-			},
+			name: "none before the first scheduling decision",
 		},
 		{
-			name: "absent while the scheduler verdict is unknown",
-			opts: []mappingOption{
-				withInternalCondition(string(intstatus.ConditionRequirementsMet), metav1.ConditionUnknown, ""),
-			},
-			expected: map[string]*expectedCondition{
-				ConditionEnabled: nil,
-			},
+			name: "none while the verdict is unknown",
+			opts: []mappingOption{withInternalCondition(intRequirementsMet, metav1.ConditionUnknown, "")},
 		},
 		{
-			name: "true when the module is scheduled",
-			opts: []mappingOption{
-				withInternalCondition(string(intstatus.ConditionRequirementsMet), metav1.ConditionTrue, "Enabled"),
-			},
-			expected: map[string]*expectedCondition{
-				// True conditions use the external condition type as reason — emit() drops the internal one.
-				ConditionEnabled: {status: metav1.ConditionTrue, reason: ConditionEnabled},
-			},
+			name:        "enabled when the module is scheduled",
+			opts:        []mappingOption{withInternalCondition(intRequirementsMet, metav1.ConditionTrue, "Enabled")},
+			wantEnabled: true,
+			wantVerdict: true,
 		},
 		{
-			name: "false with the user disable reason passed through",
-			opts: []mappingOption{
-				withInternalCondition(string(intstatus.ConditionRequirementsMet), metav1.ConditionFalse, "Disabled"),
-			},
-			expected: map[string]*expectedCondition{
-				ConditionEnabled: {status: metav1.ConditionFalse, reason: "Disabled"},
-			},
+			name:        "disabled by the user",
+			opts:        []mappingOption{withInternalCondition(intRequirementsMet, metav1.ConditionFalse, reasonDisabled)},
+			wantVerdict: true,
 		},
 		{
-			name: "false with the bundle reason passed through",
+			name:        "disabled by a lost dependency",
+			opts:        []mappingOption{withInternalCondition(intRequirementsMet, metav1.ConditionFalse, "DependencyNotEnabled")},
+			wantVerdict: true,
+		},
+		{
+			// The teardown writes False/Deleting over every internal condition.
+			name: "none while the module is removed",
 			opts: []mappingOption{
-				withInternalCondition(string(intstatus.ConditionRequirementsMet), metav1.ConditionFalse, "DisabledByBundle"),
-			},
-			expected: map[string]*expectedCondition{
-				ConditionEnabled: {status: metav1.ConditionFalse, reason: "DisabledByBundle"},
+				withInternalCondition(intRequirementsMet, metav1.ConditionFalse, string(intstatus.ConditionReasonDeleting)),
+				withDeleting(),
 			},
 		},
 	}
 
-	runTestCases(t, cases)
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			state := condmap.State{
+				Internal: make(map[string]metav1.Condition),
+				External: make(map[string]metav1.Condition),
+			}
+			for _, opt := range tc.opts {
+				opt(&state)
+			}
+
+			enabled, ok := schedulerVerdict(state)
+			assert.Equal(t, tc.wantVerdict, ok, "verdict")
+			assert.Equal(t, tc.wantEnabled, enabled, "enabled")
+		})
+	}
 }
 
 // TestSchedulerReasonPassthrough covers the module-specific canonicalReason
@@ -187,22 +215,18 @@ func TestSchedulerReasonPassthrough(t *testing.T) {
 			opts: []mappingOption{
 				withInternalCondition(string(intstatus.ConditionRequirementsMet), metav1.ConditionFalse, "DependencyNotEnabled"),
 			},
-			expected: map[string]*expectedCondition{
-				ConditionEnabled:   {status: metav1.ConditionFalse, reason: "DependencyNotEnabled"},
+			expected: gatedAbsent(map[string]*expectedCondition{
 				ConditionInstalled: {status: metav1.ConditionFalse, reason: "DependencyNotEnabled"},
-				ConditionReady:     {status: metav1.ConditionFalse, reason: "DependencyNotEnabled"},
-			},
+			}),
 		},
 		{
 			name: "install blocked by an explicit disable carries the scheduler reason",
 			opts: []mappingOption{
 				withInternalCondition(string(intstatus.ConditionRequirementsMet), metav1.ConditionFalse, "Disabled"),
 			},
-			expected: map[string]*expectedCondition{
-				ConditionEnabled:   {status: metav1.ConditionFalse, reason: "Disabled"},
+			expected: gatedAbsent(map[string]*expectedCondition{
 				ConditionInstalled: {status: metav1.ConditionFalse, reason: "Disabled"},
-				ConditionReady:     {status: metav1.ConditionFalse, reason: "Disabled"},
-			},
+			}),
 		},
 	}
 
@@ -210,9 +234,9 @@ func TestSchedulerReasonPassthrough(t *testing.T) {
 }
 
 // TestDisabledModule covers the isDisabled branch: the scheduler switches a
-// previously-installed module off. User-facing signals go False with the
-// scheduler reason, runtime and configuration signals go Unknown, and
-// UpdateInstalled falls silent.
+// previously-installed module off. Installed goes False with the scheduler
+// reason, and the closed Installed gate removes every other condition until the
+// module is installed again.
 func TestDisabledModule(t *testing.T) {
 	cases := []testCase{
 		{
@@ -221,15 +245,9 @@ func TestDisabledModule(t *testing.T) {
 				withExternalCondition(ConditionInstalled, metav1.ConditionTrue, "Installed"),
 				withInternalCondition(string(intstatus.ConditionRequirementsMet), metav1.ConditionFalse, "Disabled"),
 			),
-			expected: map[string]*expectedCondition{
-				ConditionEnabled:              {status: metav1.ConditionFalse, reason: "Disabled"},
-				ConditionInstalled:            {status: metav1.ConditionFalse, reason: "Disabled"},
-				ConditionReady:                {status: metav1.ConditionFalse, reason: "Disabled"},
-				ConditionScaled:               {status: metav1.ConditionUnknown, reason: "Disabled"},
-				ConditionManaged:              {status: metav1.ConditionUnknown, reason: "Disabled"},
-				ConditionConfigurationApplied: {status: metav1.ConditionUnknown, reason: "Disabled"},
-				ConditionUpdateInstalled:      nil,
-			},
+			expected: gatedAbsent(map[string]*expectedCondition{
+				ConditionInstalled: {status: metav1.ConditionFalse, reason: "Disabled"},
+			}),
 		},
 		{
 			name: "installed module switched off by a lost dependency",
@@ -237,15 +255,21 @@ func TestDisabledModule(t *testing.T) {
 				withExternalCondition(ConditionInstalled, metav1.ConditionTrue, "Installed"),
 				withInternalCondition(string(intstatus.ConditionRequirementsMet), metav1.ConditionFalse, "DependencyNotEnabled"),
 			),
-			expected: map[string]*expectedCondition{
-				ConditionEnabled:              {status: metav1.ConditionFalse, reason: "DependencyNotEnabled"},
-				ConditionInstalled:            {status: metav1.ConditionFalse, reason: "DependencyNotEnabled"},
-				ConditionReady:                {status: metav1.ConditionFalse, reason: "DependencyNotEnabled"},
-				ConditionScaled:               {status: metav1.ConditionUnknown, reason: "DependencyNotEnabled"},
-				ConditionManaged:              {status: metav1.ConditionUnknown, reason: "DependencyNotEnabled"},
-				ConditionConfigurationApplied: {status: metav1.ConditionUnknown, reason: "DependencyNotEnabled"},
-				ConditionUpdateInstalled:      nil,
-			},
+			expected: gatedAbsent(map[string]*expectedCondition{
+				ConditionInstalled: {status: metav1.ConditionFalse, reason: "DependencyNotEnabled"},
+			}),
+		},
+		{
+			// Enabling it again starts an install: Installed reports the progress,
+			// the rest wait for the install to complete.
+			name: "switched-off module enabled again",
+			opts: append(withSuccessfulApply(),
+				withExternalCondition(ConditionInstalled, metav1.ConditionFalse, "Disabled"),
+				withInternalCondition(string(intstatus.ConditionPending), metav1.ConditionTrue, "Waiting"),
+			),
+			expected: gatedAbsent(map[string]*expectedCondition{
+				ConditionInstalled: {status: metav1.ConditionFalse, reason: "Pending"},
+			}),
 		},
 	}
 

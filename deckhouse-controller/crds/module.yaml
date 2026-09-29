@@ -379,6 +379,13 @@ spec:
                     description: Semantic version of the installed module.
                     type: string
                 type: object
+              enabled:
+                description: |-
+                  Reports whether the module is enabled: `spec.enabled` resolved against the
+                  edition bundle, the enabled-script and the module dependencies. It can differ
+                  from `spec.enabled` — an explicitly enabled module stays disabled while a
+                  module it requires is disabled. Absent until the first decision.
+                type: boolean
               lastAppliedConfiguration:
                 description: |-
                   LastAppliedConfiguration is the effective settings (user configuration merged

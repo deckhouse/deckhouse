@@ -135,7 +135,8 @@ func (s *Service) computeAndApplyConditions(ev string, app *v1alpha1.Application
 	mapperStatus.Deleting = !app.DeletionTimestamp.IsZero()
 
 	// Apply mapped conditions (external user-facing conditions)
-	for _, cond := range s.mapper.Map(mapperStatus) {
+	mapped := s.mapper.Map(mapperStatus)
+	for _, cond := range mapped.Set {
 		// Reason is required by metav1.Condition contract
 		reason := cond.Reason
 		if reason == "" {
@@ -149,6 +150,12 @@ func (s *Service) computeAndApplyConditions(ev string, app *v1alpha1.Application
 			Message:            cond.Message,
 			ObservedGeneration: app.Generation,
 		})
+	}
+
+	// Gated conditions are not reported while their gate is closed: until the
+	// application is installed, Installed is the only condition it carries.
+	for _, condType := range mapped.Remove {
+		meta.RemoveStatusCondition(&app.Status.Conditions, condType)
 	}
 
 	// Nothing about a live install is committed onto a resource on its way out.
