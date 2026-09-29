@@ -1463,11 +1463,11 @@ updatePolicy:
 			f.HelmRender()
 		})
 
-		It("renders empty sidecar resources", func() {
+		It("omits sidecar resources", func() {
 			Expect(f.RenderError).ShouldNot(HaveOccurred())
 			istio := f.KubernetesResource("Istio", "d8-istio", "v1x25")
 			Expect(istio.Exists()).To(BeTrue())
-			Expect(istio.Field("spec.values.global.proxy.resources").String()).To(MatchYAML(`{}`))
+			Expect(istio.Field("spec.values.global.proxy.resources").Exists()).To(BeFalse())
 		})
 	})
 
