@@ -183,6 +183,17 @@ func cleanupDeployed(ctx context.Context, deployed string, keepImages map[string
 		}
 
 		path := filepath.Join(deployed, entry.Name())
+
+		// erofs never creates symlinks here, they are leftovers of the symlink backend
+		if entry.Type()&os.ModeSymlink != 0 {
+			logger.Info("delete leftover deployed symlink", slog.String("path", path))
+			if err = os.Remove(path); err != nil && !os.IsNotExist(err) {
+				return err
+			}
+
+			continue
+		}
+
 		imagePath, imageErr := verity.GetImagePathByDevice(ctx, entry.Name())
 		if imageErr != nil {
 			// Best-effort: a single missing/transient mapper must not block the rest of cleanup.
@@ -569,7 +580,8 @@ func (d *Deployer) Undeploy(ctx context.Context, deployedName string, keep bool)
 
 	logger.Debug("undeploy package")
 
-	if _, err := os.Stat(deployed); err != nil {
+	// Lstat, so a dangling symlink left by the symlink backend is still undeployed
+	if _, err := os.Lstat(deployed); err != nil {
 		if os.IsNotExist(err) {
 			return nil
 		}

@@ -44,14 +44,29 @@ func Mount(ctx context.Context, name, mountPath string) error {
 	span.SetAttributes(attribute.String("mapper", dmPath))
 	span.SetAttributes(attribute.String("path", mountPath))
 
-	// create the mount path if it does not exist
-	if _, err := os.Stat(mountPath); os.IsNotExist(err) {
-		if err = os.MkdirAll(mountPath, 0755); err != nil {
-			return fmt.Errorf("create the path '%s': %w", mountPath, err)
-		}
+	if err := ensureMountDir(mountPath); err != nil {
+		return fmt.Errorf("create the path '%s': %w", mountPath, err)
 	}
 
 	return unix.Mount(dmPath, mountPath, erofsType, unix.MS_RDONLY, "")
+}
+
+// ensureMountDir makes mountPath a directory, replacing a leftover non-directory entry such as a symlink.
+func ensureMountDir(mountPath string) error {
+	info, err := os.Lstat(mountPath)
+	if err == nil && info.IsDir() {
+		return nil
+	}
+
+	if err == nil {
+		if err = os.Remove(mountPath); err != nil {
+			return fmt.Errorf("remove non-directory: %w", err)
+		}
+	} else if !os.IsNotExist(err) {
+		return err
+	}
+
+	return os.MkdirAll(mountPath, 0755)
 }
 
 // Unmount unmounts image and remove mount path
@@ -61,13 +76,19 @@ func Unmount(ctx context.Context, mountPath string) error {
 
 	span.SetAttributes(attribute.String("path", mountPath))
 
-	// ignore if not exist
-	if _, err := os.Stat(mountPath); os.IsNotExist(err) {
+	// Lstat, so a dangling symlink is seen and removed instead of treated as absent
+	info, err := os.Lstat(mountPath)
+	if os.IsNotExist(err) {
 		return nil
 	}
 
+	// a symlink is never a mount point, it is a leftover of the symlink backend
+	if err == nil && info.Mode()&os.ModeSymlink != 0 {
+		return os.Remove(mountPath)
+	}
+
 	// unmount to /deckhouse/downloaded/modules/<module>
-	if err := unix.Unmount(mountPath, 0); err != nil {
+	if err = unix.Unmount(mountPath, unix.UMOUNT_NOFOLLOW); err != nil {
 		// if we get this error, it means the target is not mount so just delete it
 		if !errors.Is(err, unix.EINVAL) {
 			return fmt.Errorf("unmount the path '%s' : %w", mountPath, err)
