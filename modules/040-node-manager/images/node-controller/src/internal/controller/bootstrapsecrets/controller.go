@@ -24,6 +24,7 @@ import (
 	"time"
 
 	corev1 "k8s.io/api/core/v1"
+	discoveryv1 "k8s.io/api/discovery/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
@@ -132,10 +133,19 @@ func (r *Reconciler) SetupWatches(w register.Watcher) {
 	// alone: it has no provider, and no registration can change its bootstrap script.
 	w.Watches(&corev1.Secret{}, cloudprovider.NodeGroupHandler(r.Client),
 		builder.WithPredicates(cloudprovider.RegistrationSecretPredicate()))
+
+	// apiserverEndpoints comes from these two sources (bashiblecontext.ReadEndpoints), and dhctl
+	// waits for a new master to appear there. Same watches as nodegroup/bashiblecontext/controller.go.
+	w.Watches(&corev1.Pod{}, handler.EnqueueRequestsFromMapFunc(r.allNodeGroups),
+		builder.WithPredicates(predicate.NewPredicateFuncs(func(obj client.Object) bool {
+			return nodecommon.IsAPIServerPod(obj)
+		})))
+	w.Watches(&discoveryv1.EndpointSlice{}, handler.EnqueueRequestsFromMapFunc(r.allNodeGroups),
+		builder.WithPredicates(named("default", "kubernetes")))
 }
 
-// named selects one object by namespace and name. Both watched namespaces are covered by the
-// Secret and ConfigMap scopes of common/cache.go, so no watch here starts an informer of its own.
+// named selects one object by namespace and name. Every watched object is covered by the scopes
+// of common/cache.go, so no watch here starts an informer of its own.
 func named(namespace, name string) predicate.Predicate {
 	return predicate.NewPredicateFuncs(func(obj client.Object) bool {
 		return obj.GetNamespace() == namespace && obj.GetName() == name

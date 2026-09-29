@@ -18,12 +18,15 @@ package bootstrapsecrets
 
 import (
 	"encoding/base64"
+	"net"
+	"strconv"
 	"strings"
 	"time"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	corev1 "k8s.io/api/core/v1"
+	discoveryv1 "k8s.io/api/discovery/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
@@ -333,6 +336,82 @@ var _ = Describe("Bootstrap secrets controller", func() {
 			g.Expect(warningEventMessages(name, eventReasonFailed)).To(ContainElement(ContainSubstring("cluster UUID is empty")))
 		}, eventuallyTimeout, eventuallyPoll).Should(Succeed())
 	})
+
+	// dhctl adds a master and waits for its address in apiserverEndpoints (entity/node.go:111).
+	// A new kube-apiserver Pod bumps no NodeGroup, so without a watch the address arrives only
+	// with the 30-minute resync and dhctl gives up first.
+	It("re-renders the secrets when a kube-apiserver pod becomes ready", func() {
+		name := testenv.UniqueName("apiserver-pod")
+		createNodeGroup(staticNodeGroup(name))
+		Eventually(func() error {
+			return k8sClient.Get(suiteCtx, manualSecretKey(name), &corev1.Secret{})
+		}, eventuallyTimeout, eventuallyPoll).Should(Succeed())
+
+		pod := &corev1.Pod{
+			ObjectMeta: metav1.ObjectMeta{
+				Namespace: nodecommon.KubeSystemNamespace,
+				Name:      testenv.UniqueName("kube-apiserver"),
+				Labels:    map[string]string{"component": "kube-apiserver", "tier": "control-plane"},
+			},
+			Spec: corev1.PodSpec{Containers: []corev1.Container{{
+				Name:  "kube-apiserver",
+				Image: "registry.k8s.io/kube-apiserver:v1.31.0",
+			}}},
+		}
+		Expect(k8sClient.Create(suiteCtx, pod)).To(Succeed())
+		DeferCleanup(func() {
+			Expect(client.IgnoreNotFound(k8sClient.Delete(suiteCtx, pod))).To(Succeed())
+		})
+		pod.Status.PodIP = "10.20.0.8"
+		pod.Status.Conditions = []corev1.PodCondition{{Type: corev1.PodReady, Status: corev1.ConditionTrue}}
+		Expect(k8sClient.Status().Update(suiteCtx, pod)).To(Succeed())
+
+		Eventually(func(g Gomega) {
+			secret := &corev1.Secret{}
+			g.Expect(k8sClient.Get(suiteCtx, manualSecretKey(name), secret)).To(Succeed())
+			g.Expect(string(secret.Data["apiserverEndpoints"])).To(ContainSubstring("- 10.20.0.8:6443"))
+		}, eventuallyTimeout, eventuallyPoll).Should(Succeed())
+	})
+
+	// The other source ReadEndpoints merges. The envtest apiserver drops the extra address
+	// again after its reconcile period, so the spec only gives the controller seconds.
+	It("re-renders the secrets when the kubernetes EndpointSlice changes", func() {
+		name := testenv.UniqueName("apiserver-slice")
+		createNodeGroup(staticNodeGroup(name))
+		Eventually(func() error {
+			return k8sClient.Get(suiteCtx, manualSecretKey(name), &corev1.Secret{})
+		}, eventuallyTimeout, eventuallyPoll).Should(Succeed())
+
+		slice := &discoveryv1.EndpointSlice{}
+		Expect(k8sClient.Get(suiteCtx, types.NamespacedName{Namespace: "default", Name: "kubernetes"}, slice)).To(Succeed())
+		var port int32
+		for _, p := range slice.Ports {
+			if p.Name != nil && *p.Name == "https" && p.Port != nil {
+				port = *p.Port
+			}
+		}
+		Expect(port).NotTo(BeZero(), "the kubernetes EndpointSlice must publish an https port")
+
+		original := slice.DeepCopy()
+		patch := client.MergeFrom(original)
+		slice.Endpoints = append(slice.Endpoints, discoveryv1.Endpoint{Addresses: []string{"10.10.0.98"}})
+		Expect(k8sClient.Patch(suiteCtx, slice, patch)).To(Succeed())
+		// The first spec pins a single endpoint; the apiserver's own revert may come too late for it.
+		DeferCleanup(func() {
+			restored := &discoveryv1.EndpointSlice{}
+			Expect(k8sClient.Get(suiteCtx, client.ObjectKeyFromObject(original), restored)).To(Succeed())
+			restorePatch := client.MergeFrom(restored.DeepCopy())
+			restored.Endpoints = original.Endpoints
+			Expect(k8sClient.Patch(suiteCtx, restored, restorePatch)).To(Succeed())
+		})
+
+		added := "- " + net.JoinHostPort("10.10.0.98", strconv.Itoa(int(port)))
+		Eventually(func(g Gomega) {
+			secret := &corev1.Secret{}
+			g.Expect(k8sClient.Get(suiteCtx, manualSecretKey(name), secret)).To(Succeed())
+			g.Expect(string(secret.Data["apiserverEndpoints"])).To(ContainSubstring(added))
+		}, eventuallyTimeout, eventuallyPoll).Should(Succeed())
+	})
 })
 
 // warningEventMessages returns the messages of the Warning events recorded on the
@@ -583,6 +662,7 @@ var _ = Describe("Bootstrap secret cleanup", func() {
 		}, eventuallyTimeout, eventuallyPoll).Should(Succeed(),
 			"a change to the packages-proxy token must re-render the bootstrap secrets")
 	})
+
 })
 
 // labelledSecret creates a Secret in the machine namespace with exactly the given
