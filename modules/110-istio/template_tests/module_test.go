@@ -91,6 +91,10 @@ const istioValues = `
           supportsAmbientMulticluster: false
           supportsOperator: true
       kialiSigningKey: "kiali"
+      kialiRBACProxyTLS:
+        ca: kialica
+        crt: kialicrt
+        key: kialikey
       remoteAuthnKeypair:
         priv: aaa
         pub: bbb
@@ -207,6 +211,40 @@ var _ = Describe("Module :: istio :: helm template :: main", func() {
 			Expect(f.KubernetesResource("PodMonitor", "d8-monitoring", "istio-ingressgateway").Exists()).To(BeFalse())
 
 			Expect(f.KubernetesResource("Secret", "d8-istio", "d8-remote-clusters-public-metadata").Exists()).To(BeFalse())
+		})
+	})
+
+	Context("kiali kube-rbac-proxy serving certificate", func() {
+		BeforeEach(func() {
+			f.ValuesSetFromYaml("global", globalValues)
+			f.ValuesSet("global.modulesImages", GetModulesImages())
+			f.ValuesSetFromYamlWithOpenAPIDefaults("istio", istioValues)
+			f.HelmRender()
+		})
+
+		It("puts the certificate into a secret and hands it to the sidecar", func() {
+			Expect(f.RenderError).ShouldNot(HaveOccurred())
+
+			secret := f.KubernetesResource("Secret", "d8-istio", "kiali-kube-rbac-proxy-tls")
+			Expect(secret.Exists()).To(BeTrue())
+			Expect(secret.Field("type").String()).To(Equal("kubernetes.io/tls"))
+			Expect(secret.Field(`data.tls\.crt`).String()).To(Equal(base64.StdEncoding.EncodeToString([]byte("kialicrt"))))
+			Expect(secret.Field(`data.tls\.key`).String()).To(Equal(base64.StdEncoding.EncodeToString([]byte("kialikey"))))
+			Expect(secret.Field(`data.ca\.crt`).String()).To(Equal(base64.StdEncoding.EncodeToString([]byte("kialica"))))
+
+			deployment := f.KubernetesResource("Deployment", "d8-istio", "kiali")
+			Expect(deployment.Exists()).To(BeTrue())
+
+			args := deployment.Field(`spec.template.spec.containers.#(name=="kube-rbac-proxy").args`).Array()
+			var argStrings []string
+			for _, arg := range args {
+				argStrings = append(argStrings, arg.String())
+			}
+			Expect(argStrings).To(ContainElement("--tls-cert-file=/etc/kube-rbac-proxy-tls/tls.crt"))
+			Expect(argStrings).To(ContainElement("--tls-private-key-file=/etc/kube-rbac-proxy-tls/tls.key"))
+
+			Expect(deployment.Field(`spec.template.spec.volumes.#(name=="kube-rbac-proxy-tls").secret.secretName`).String()).
+				To(Equal("kiali-kube-rbac-proxy-tls"))
 		})
 	})
 
