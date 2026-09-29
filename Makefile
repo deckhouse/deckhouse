@@ -616,7 +616,7 @@ GOTESTSUM = $(LOCALBIN)/gotestsum
 ## TODO: remap in yaml file (version.yaml or smthng)
 ## Tool Versions
 GOLANGCI_LINT_VERSION = v2.13.1
-DECKHOUSE_CLI_VERSION ?= v0.33.19
+DECKHOUSE_CLI_VERSION ?= v0.33.22
 CRD_ENRICHER_VERSION ?= v0.0.1
 DMT_VERSION ?= 0.1.95
 CONTROLLER_TOOLS_VERSION ?= v0.19.0
@@ -643,11 +643,16 @@ dmt-gen: ## Update DMT_VERSION in tools/dmt-lint.sh.
 	@sed -i.bak -E 's/DMT_VERSION=[0-9.]+/DMT_VERSION=$(DMT_VERSION)/' tools/dmt-lint.sh && rm -f tools/dmt-lint.sh.bak
 	@echo "Updated DMT_VERSION to $(DMT_VERSION) in tools/dmt-lint.sh"
 
-## Generate tools documentation
+## Generate tools documentation. A file that hardcodes the d8 version needs its own line
+## below as well, or bumping DECKHOUSE_CLI_VERSION leaves that file behind.
 .PHONY: generate-docs
 generate-docs: yq deckhouse-cli ## Generate documentation for deckhouse-cli.
+  ##~ Before regenerating d8-cli.json, writes DECKHOUSE_CLI_VERSION to candi/version_map.yml,
+  ##~ .gitlab/helpers.yml and testing/cloud_layouts/script-commander.sh.
 	@$(DECKHOUSE_CLI) --version
 	@$(YQ) eval '.d8.d8CliVersion = "$(DECKHOUSE_CLI_VERSION)"' -i ./candi/version_map.yml
+	@sed -i.bak -E 's/^([[:space:]]*D8_VERSION=)"[^"]*"/\1"$(DECKHOUSE_CLI_VERSION)"/' ./.gitlab/helpers.yml && rm -f ./.gitlab/helpers.yml.bak
+	@sed -i.bak -E 's|(deckhouse-cli/releases/download/)[^/]+/d8-[^/]+-linux-amd64|\1$(DECKHOUSE_CLI_VERSION)/d8-$(DECKHOUSE_CLI_VERSION)-linux-amd64|' ./testing/cloud_layouts/script-commander.sh && rm -f ./testing/cloud_layouts/script-commander.sh.bak
 	@DECKHOUSE_PLUGINS_ENABLED=false HELM_PLUGINS="" $(DECKHOUSE_CLI)  help-json --username-replace=$(WHOAMI) > ./docs/documentation/_data/reference/d8-cli.json && echo "d8 help-json content is updated"
 
 ## Generate codebase for deckhouse-controllers kubernetes entities
