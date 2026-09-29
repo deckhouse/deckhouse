@@ -4,7 +4,7 @@ permalink: ru/admin/configuration/network/alliance/multicluster.html
 lang: ru
 ---
 
-## Мультикластер средствами Istio
+## Мультикластер
 
 <!-- перенесено из https://deckhouse.ru/products/kubernetes-platform/documentation/latest/modules/istio/#%D0%BC%D1%83%D0%BB%D1%8C%D1%82%D0%B8%D0%BA%D0%BB%D0%B0%D1%81%D1%82%D0%B5%D1%80 -->
 
@@ -86,7 +86,3 @@ metadata:
 spec:
   metadataEndpoint: https://istio.k8s-b.example.com/metadata/
 ```
-
-<!-- ## Мультикластер средствами Cilium
-
-Нужен контент -->

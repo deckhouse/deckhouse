@@ -8,8 +8,8 @@ Deckhouse Platform (DP) supports two inter-cluster communication models:
 - [Multicluster](../alliance/multicluster.html)
 - [Federation](../alliance/federation.html)
 
-Both models can be implemented using Istio (via the [`istio`](/modules/istio/) module) or Cilium (via the [`cni-cilium`](/modules/cni-cilium/) module).
-Both tools provide deployment of a service mesh for managing and configuring network interactions between applications within a cluster.
+Both models can be implemented using Istio (via the [`istio`](/modules/istio/) module).
+Istio provides deployment of a service mesh for managing and configuring network interactions between applications within a cluster.
 
 ## Service mesh usage specifics in DP
 
