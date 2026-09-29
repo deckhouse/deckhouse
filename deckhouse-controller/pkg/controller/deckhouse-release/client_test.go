@@ -30,6 +30,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 
+	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/app"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha2"
 	d8edition "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/edition"
@@ -117,7 +118,7 @@ func newDeckhouseReleaseReconciler(
 		updateSettings:   helpers.NewDeckhouseSettingsContainer(ds, metricStorage),
 		metricStorage:    metricStorage,
 		metricsUpdater:   releaseUpdater.NewMetricsUpdater(metricstorage.NewMetricStorage(metricstorage.WithNewRegistry(), metricstorage.WithLogger(log.NewNop())), releaseUpdater.D8ReleaseBlockedMetricName),
-		exts:             extenders.NewExtendersStack(new(d8edition.Edition), nil, log.NewNop()),
+		exts:             extenders.NewExtendersStack(app.Version, new(d8edition.Edition), nil, log.NewNop()),
 	}
 	rec.clusterUUID = rec.getClusterUUID(context.Background())
 

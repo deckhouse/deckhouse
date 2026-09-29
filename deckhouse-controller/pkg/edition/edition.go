@@ -28,19 +28,17 @@ import (
 const defaultBundle = "Default"
 
 type Edition struct {
-	Name    string
-	Bundle  string
-	Version string
+	Name   string
+	Bundle string
 }
 
-func Parse(version string) (*Edition, error) {
+func Parse() (*Edition, error) {
 	content, err := os.ReadFile(app.PathEdition)
 	if err != nil {
 		return nil, fmt.Errorf("read the '%s' edition file: %w", app.PathEdition, err)
 	}
 
 	edition := new(Edition)
-	edition.Version = version
 	edition.Name = strings.ToLower(strings.TrimSpace(string(content)))
 	edition.Bundle = strings.TrimSpace(os.Getenv(envconfig.EnvBundle))
 	if edition.Bundle == "" {

@@ -28,6 +28,7 @@ import (
 	"github.com/Masterminds/semver/v3"
 	"github.com/flant/addon-operator/pkg"
 	"github.com/flant/addon-operator/pkg/hook/types"
+	"github.com/flant/addon-operator/pkg/metrics"
 	"github.com/flant/addon-operator/pkg/module_manager/models/hooks/kind"
 	bctx "github.com/flant/shell-operator/pkg/hook/binding_context"
 	hookcontroller "github.com/flant/shell-operator/pkg/hook/controller"
@@ -52,6 +53,7 @@ import (
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/registry"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/addonutils"
 	"github.com/deckhouse/deckhouse/pkg/log"
+	metricsstorage "github.com/deckhouse/deckhouse/pkg/metrics-storage"
 )
 
 // d8aPrefix is reserved for application objects by the d8a-prefix.deckhouse.io
@@ -108,6 +110,9 @@ type Application struct {
 	scheduleManager   schedulemanager.ScheduleManager
 	kubeEventsManager kubeeventsmanager.KubeEventsManager
 
+	metricStorage     metricsstorage.Storage
+	hookMetricStorage metricsstorage.Storage
+
 	// globalValuesGetter returns the platform global values exposed to helm
 	// templates under .Platform.
 	globalValuesGetter GlobalValuesGetter
@@ -135,6 +140,9 @@ type Config struct {
 	Patcher           *objectpatch.ObjectPatcher
 	ScheduleManager   schedulemanager.ScheduleManager
 	KubeEventsManager kubeeventsmanager.KubeEventsManager
+
+	MetricStorage     metricsstorage.Storage
+	HookMetricStorage metricsstorage.Storage
 
 	// GrantResolver resolves cluster resource grants for x-deckhouse-grantable-resource
 	// settings fields. When nil, grant defaulting/validation is disabled.
@@ -175,6 +183,8 @@ func NewAppByConfig(name string, cfg *Config, logger *log.Logger) (*Application,
 	a.patcher = cfg.Patcher
 	a.scheduleManager = cfg.ScheduleManager
 	a.kubeEventsManager = cfg.KubeEventsManager
+	a.metricStorage = cfg.MetricStorage
+	a.hookMetricStorage = cfg.HookMetricStorage
 	a.grantResolver = cfg.GrantResolver
 	if a.grantResolver == nil {
 		a.grantResolver = grants.NoopResolver{}
@@ -710,7 +720,26 @@ func (a *Application) runHook(ctx context.Context, h hooks.Hook, bctx []bctx.Bin
 	hookValues := a.values.GetValues()
 	hookVersion := h.GetConfigVersion()
 
+	metricLabels := map[string]string{
+		pkg.MetricKeyHook: h.GetName(),
+		pkg.LogKeyModule:  a.GetName(),
+	}
+
 	hookResult, err := h.Execute(ctx, hookVersion, bctx, a.GetName(), hookConfigValues, hookValues, make(map[string]string))
+
+	if hookResult != nil && hookResult.Usage != nil {
+		a.metricStorage.HistogramObserve(metrics.ModuleHookRunSysCPUSeconds, hookResult.Usage.Sys.Seconds(), metricLabels, nil)
+		a.metricStorage.HistogramObserve(metrics.ModuleHookRunUserCPUSeconds, hookResult.Usage.User.Seconds(), metricLabels, nil)
+		a.metricStorage.GaugeSet(metrics.ModuleHookRunMaxRSSBytes, float64(hookResult.Usage.MaxRss)*1024, metricLabels)
+	}
+
+	if hookResult != nil && len(hookResult.Metrics) > 0 {
+		metricsErr := a.hookMetricStorage.ApplyBatchOperations(hookResult.Metrics, metricLabels)
+		if metricsErr != nil {
+			return metricsErr
+		}
+	}
+
 	if err != nil {
 		// we have to check if there are some status patches to apply
 		if hookResult != nil && len(hookResult.ObjectPatcherOperations) > 0 {

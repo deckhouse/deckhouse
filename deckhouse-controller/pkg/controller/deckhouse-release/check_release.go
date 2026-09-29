@@ -435,13 +435,12 @@ func (f *DeckhouseReleaseFetcher) ensureReleases(
 	releaseMetadata *ReleaseMetadata,
 	releaseForUpdate *v1alpha1.DeckhouseRelease,
 	releasesInCluster []*v1alpha1.DeckhouseRelease,
-	newSemver *semver.Version) (*ReleaseMetadata, error) {
+	newSemver *semver.Version,
+) (*ReleaseMetadata, error) {
 	ctx, span := otel.Tracer(serviceName).Start(ctx, "ensureReleases")
 	defer span.End()
 
-	var (
-		notificationShiftTime *metav1.Time
-	)
+	var notificationShiftTime *metav1.Time
 
 	// if no releases in cluster - create from channel
 	if len(releasesInCluster) == 0 {
@@ -1050,5 +1049,4 @@ func buildSuspendAnnotation(suspend bool) []byte {
 
 type moduleManager interface {
 	GetEnabledModuleNames() []string
-	IsModuleEnabled(name string) bool
 }

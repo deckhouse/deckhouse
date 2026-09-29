@@ -43,6 +43,9 @@ func discoveryModulesImagesDigests(_ context.Context, input *go_hook.HookInput) 
 
 	if env := d8env.GetDownloadedModulesDir(); env != "" {
 		downloadedModulesDir = filepath.Join(env, "modules")
+		if os.Getenv("DECKHOUSE_ENABLE_MODULE_V2") == "true" {
+			downloadedModulesDir = filepath.Join(downloadedModulesDir, "deployed")
+		}
 	}
 
 	if os.Getenv("D8_IS_TESTS_ENVIRONMENT") != "" {

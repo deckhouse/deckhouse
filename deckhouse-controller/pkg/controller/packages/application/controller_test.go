@@ -19,6 +19,7 @@ package application_test
 import (
 	"context"
 	"errors"
+	"sync"
 	"testing"
 	"time"
 
@@ -123,20 +124,25 @@ func registerController(t *testing.T, cl client.Client, manager *packageManagerS
 	t.Helper()
 
 	mgr := &managerStub{scheme: testScheme(t), client: cl}
-	require.NoError(t, application.RegisterController(mgr, manager, modules, log.NewNop()))
+	require.NoError(t, application.RegisterController(new(sync.WaitGroup), mgr, manager, modules, log.NewNop()))
 
 	h := new(harness)
+
+	var funcs []ctrlmanager.Runnable
 	for _, runnable := range mgr.runnables {
 		if reconciler, ok := runnable.(reconcile.Reconciler); ok {
 			h.Reconciler = reconciler
 			continue
 		}
 
-		h.preflight = runnable
+		funcs = append(funcs, runnable)
 	}
 
 	require.NotNil(t, h.Reconciler, "the controller must be registered in the manager")
-	require.NotNil(t, h.preflight, "the preflight must be registered in the manager")
+	require.Len(t, funcs, 2, "the preflight and the status runnable must be registered, in that order")
+
+	h.preflight = funcs[0]
+	require.NoError(t, funcs[1].Start(t.Context()))
 
 	return h
 }
@@ -692,7 +698,7 @@ type packageManagerStub struct {
 	queue workqueue.TypedRateLimitingInterface[string]
 }
 
-// newPackageManagerStub hands out a real queue: RegisterController starts the status
+// newPackageManagerStub hands out a real queue: the status runnable starts the status
 // service on it, and that goroutine only exits once the queue is shut down.
 func newPackageManagerStub(t *testing.T) *packageManagerStub {
 	t.Helper()

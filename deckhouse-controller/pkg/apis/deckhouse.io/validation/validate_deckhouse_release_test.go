@@ -484,7 +484,7 @@ func TestDeckhouseReleaseValidationHandler(t *testing.T) {
 			logger := log.NewNop()
 			edition := &edition.Edition{}
 			isHA := func() (bool, error) { return false, nil }
-			exts := extenders.NewExtendersStack(edition, isHA, logger)
+			exts := extenders.NewExtendersStack("", edition, isHA, logger)
 
 			// Create the validation handler
 			handler := validation.DeckhouseReleaseValidationHandler(
@@ -607,7 +607,7 @@ func TestDeckhouseReleaseValidation_RequirementsCoverage(t *testing.T) {
 			logger := log.NewNop()
 			edition := &edition.Edition{}
 			isHA := func() (bool, error) { return false, nil }
-			exts := extenders.NewExtendersStack(edition, isHA, logger)
+			exts := extenders.NewExtendersStack("", edition, isHA, logger)
 
 			// Create the validation handler
 			handler := validation.DeckhouseReleaseValidationHandler(

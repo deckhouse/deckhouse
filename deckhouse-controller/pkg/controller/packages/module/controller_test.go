@@ -120,8 +120,8 @@ func reconcilerFor(t *testing.T, cl client.Client, manager *packageManagerStub) 
 	return registerController(t, cl, manager, new(sync.WaitGroup))
 }
 
-// registerController runs the package's only exported entry point against a manager stub
-// and picks up the reconciler it registered.
+// registerController runs the package's only exported entry point against a manager stub,
+// starts the status runnable as the manager would and picks up the reconciler it registered.
 func registerController(
 	t *testing.T,
 	cl client.Client,
@@ -133,10 +133,25 @@ func registerController(
 	mgr := &managerStub{scheme: testScheme(t), client: cl}
 	require.NoError(t, module.RegisterController(init, mgr, manager, log.NewNop()))
 
-	require.Len(t, mgr.runnables, 1, "the controller must be the only runnable registered")
+	require.Len(t, mgr.runnables, 2, "the controller and the status runnable must be registered")
 
-	reconciler, ok := mgr.runnables[0].(reconcile.Reconciler)
-	require.True(t, ok, "the registered runnable must be the controller")
+	var (
+		reconciler reconcile.Reconciler
+		status     ctrlmanager.Runnable
+	)
+
+	for _, runnable := range mgr.runnables {
+		if r, ok := runnable.(reconcile.Reconciler); ok {
+			reconciler = r
+			continue
+		}
+
+		status = runnable
+	}
+
+	require.NotNil(t, reconciler, "the controller must be registered in the manager")
+	require.NotNil(t, status, "the status runnable must be registered in the manager")
+	require.NoError(t, status.Start(t.Context()))
 
 	return reconciler
 }
@@ -883,7 +898,7 @@ type packageManagerStub struct {
 	queue workqueue.TypedRateLimitingInterface[string]
 }
 
-// newPackageManagerStub hands out a real queue: RegisterController starts the status
+// newPackageManagerStub hands out a real queue: the status runnable starts the status
 // service on it, and that goroutine only exits once the queue is shut down.
 func newPackageManagerStub(t *testing.T) *packageManagerStub {
 	t.Helper()

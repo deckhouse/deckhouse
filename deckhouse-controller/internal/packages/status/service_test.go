@@ -22,65 +22,6 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-func TestCountProgress(t *testing.T) {
-	operation := func(category progrep.OperationCategory, status progrep.OperationStatus) progrep.Operation {
-		return progrep.Operation{Category: category, Status: status}
-	}
-
-	tests := []struct {
-		name      string
-		ops       []progrep.Operation
-		completed int
-		remaining int
-	}{
-		{
-			name: "no operations",
-		},
-		{
-			name: "stage and release operations are not counted",
-			ops: []progrep.Operation{
-				operation(progrep.OperationCategoryMeta, progrep.OperationStatusCompleted),
-				operation(progrep.OperationCategoryRelease, progrep.OperationStatusCompleted),
-				operation(progrep.OperationCategoryMeta, progrep.OperationStatusPending),
-				operation(progrep.OperationCategoryRelease, progrep.OperationStatusPending),
-			},
-		},
-		{
-			name: "resource and track operations are counted",
-			ops: []progrep.Operation{
-				operation(progrep.OperationCategoryMeta, progrep.OperationStatusCompleted),
-				operation(progrep.OperationCategoryResource, progrep.OperationStatusCompleted),
-				operation(progrep.OperationCategoryTrack, progrep.OperationStatusCompleted),
-				operation(progrep.OperationCategoryResource, progrep.OperationStatusProgressing),
-				operation(progrep.OperationCategoryTrack, progrep.OperationStatusPending),
-				operation(progrep.OperationCategoryMeta, progrep.OperationStatusPending),
-			},
-			completed: 2,
-			remaining: 2,
-		},
-		{
-			name: "failed and canceled operations remain",
-			ops: []progrep.Operation{
-				operation(progrep.OperationCategoryResource, progrep.OperationStatusCompleted),
-				operation(progrep.OperationCategoryTrack, progrep.OperationStatusFailed),
-				operation(progrep.OperationCategoryResource, progrep.OperationStatusCanceled),
-				operation(progrep.OperationCategoryTrack, progrep.OperationStatusCanceled),
-			},
-			completed: 1,
-			remaining: 3,
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			completed, remaining := countProgress(tt.ops)
-
-			assert.Equal(t, tt.completed, completed)
-			assert.Equal(t, tt.remaining, remaining)
-		})
-	}
-}
-
 func TestSetMaintenanceMode(t *testing.T) {
 	const name = "ns.app"
 

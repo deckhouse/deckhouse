@@ -292,12 +292,12 @@ func NewDeckhouseController(
 		return bootstrapped, nil
 	}
 
-	edition, err := d8edition.Parse(version)
+	edition, err := d8edition.Parse()
 	if err != nil {
 		return nil, fmt.Errorf("parse edition: %w", err)
 	}
 
-	exts := extenders.NewExtendersStack(edition, bootstrappedHelper, logger.Named("extenders"))
+	exts := extenders.NewExtendersStack(version, edition, bootstrappedHelper, logger.Named("extenders"))
 
 	// register extenders
 	for _, extender := range exts.GetExtenders() {
@@ -335,7 +335,7 @@ func NewDeckhouseController(
 	loader := moduleloader.New(runtimeManager.GetClient(), version, operator.ModuleManager.ModulesDir, operator.ModuleManager.GlobalHooksDir, dc, exts, embeddedPolicy, conversionsStore, logger.Named("module-loader"))
 	operator.ModuleManager.SetModuleLoader(loader)
 
-	err = deckhouserelease.NewDeckhouseReleaseController(ctx, runtimeManager, dc, exts, operator.ModuleManager, settingsContainer, operator.MetricStorage, preflightCountDown, version, logger.Named("deckhouse-release-controller"))
+	err = deckhouserelease.NewDeckhouseReleaseController(ctx, runtimeManager, dc, exts, operator.ModuleManager, settingsContainer, operator.MetricStorage, logger)
 	if err != nil {
 		return nil, fmt.Errorf("create deckhouse release controller: %w", err)
 	}
@@ -404,7 +404,7 @@ func NewDeckhouseController(
 			return nil, fmt.Errorf("register application package version controller: %w", err)
 		}
 
-		err = application.RegisterController(runtimeManager, pkgRuntime, operator.ModuleManager, logger)
+		err = application.RegisterController(new(sync.WaitGroup), runtimeManager, pkgRuntime, operator.ModuleManager, logger)
 		if err != nil {
 			return nil, fmt.Errorf("register application controller: %w", err)
 		}

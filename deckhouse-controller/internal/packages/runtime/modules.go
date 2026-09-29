@@ -295,6 +295,8 @@ func (r *Runtime) registerModule(ctx context.Context, conf *modules.Config) (*mo
 	conf.ScheduleManager = r.scheduleManager
 	conf.KubeEventsManager = r.kubeEventsManager
 	conf.GlobalValuesGetter = r.global.GetValues
+	conf.MetricStorage = r.metricStorage
+	conf.HookMetricStorage = r.hookMetricStorage
 
 	module, err := modules.NewModuleByConfig(conf.Definition.Name, conf, r.logger)
 	if err != nil {
@@ -417,6 +419,21 @@ func (r *Runtime) cleanupModule(name string) func() {
 			}
 		}()
 	}
+}
+
+// GetEnabledModuleNames returns the names of all enabled modules.
+func (r *Runtime) GetEnabledModuleNames() []string {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+
+	var names []string
+	for name := range r.modules {
+		if r.scheduler.IsEnabled(name) {
+			names = append(names, name)
+		}
+	}
+
+	return names
 }
 
 // GetModuleDigest resolves the digest the tag currently points at. It is what a caller

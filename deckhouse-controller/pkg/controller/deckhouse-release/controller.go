@@ -25,7 +25,6 @@ import (
 	"net/http"
 	"strconv"
 	"strings"
-	"sync"
 	"time"
 
 	"github.com/Masterminds/semver/v3"
@@ -117,7 +116,6 @@ type deckhouseReleaseReconciler struct {
 	updateSettings *helpers.DeckhouseSettingsContainer
 	metricStorage  metricsstorage.Storage
 
-	preflightCountDown      *sync.WaitGroup
 	clusterUUID             string
 	releaseVersionImageHash string
 
@@ -129,34 +127,31 @@ type deckhouseReleaseReconciler struct {
 }
 
 func NewDeckhouseReleaseController(ctx context.Context, mgr manager.Manager, dc dependency.Container, exts extenders.IExtendersStack,
-	moduleManager moduleManager, updateSettings *helpers.DeckhouseSettingsContainer, metricStorage metricsstorage.Storage,
-	preflightCountDown *sync.WaitGroup, deckhouseVersion string, logger *log.Logger,
+	moduleManager moduleManager, updateSettings *helpers.DeckhouseSettingsContainer, metricStorage metricsstorage.Storage, logger *log.Logger,
 ) error {
-	parsedVersion, err := semver.NewVersion(deckhouseVersion)
+	parsedVersion, err := semver.NewVersion(app.Version)
 	if err != nil {
 		return fmt.Errorf("parse deckhouse version: %w", err)
 	}
 
 	r := &deckhouseReleaseReconciler{
-		client:             mgr.GetClient(),
-		dc:                 dc,
-		exts:               exts,
-		logger:             logger,
-		moduleManager:      moduleManager,
-		updateSettings:     updateSettings,
-		metricStorage:      metricStorage,
-		preflightCountDown: preflightCountDown,
-		deckhouseVersion:   fmt.Sprintf("v%d.%d.%d", parsedVersion.Major(), parsedVersion.Minor(), parsedVersion.Patch()),
+		client:           mgr.GetClient(),
+		dc:               dc,
+		exts:             exts,
+		logger:           logger.Named(controllerName),
+		moduleManager:    moduleManager,
+		updateSettings:   updateSettings,
+		metricStorage:    metricStorage,
+		deckhouseVersion: fmt.Sprintf("v%d.%d.%d", parsedVersion.Major(), parsedVersion.Minor(), parsedVersion.Patch()),
 
 		metricsUpdater: releaseUpdater.NewMetricsUpdater(metricStorage, releaseUpdater.D8ReleaseBlockedMetricName),
 		eventRecorder:  mgr.GetEventRecorderFor("deckhouse-release-controller"),
 	}
 
 	// Add Preflight Check
-	if err = mgr.Add(manager.RunnableFunc(r.PreflightCheck)); err != nil {
+	if err = mgr.Add(manager.RunnableFunc(r.preflight)); err != nil {
 		return fmt.Errorf("add a runnable function: %w", err)
 	}
-	r.preflightCountDown.Add(1)
 
 	// wait for cache sync
 	go func() {
@@ -220,9 +215,8 @@ func (r *deckhouseReleaseReconciler) Reconcile(ctx context.Context, req ctrl.Req
 	return r.createOrUpdateReconcile(ctx, release)
 }
 
-func (r *deckhouseReleaseReconciler) PreflightCheck(ctx context.Context) error {
+func (r *deckhouseReleaseReconciler) preflight(ctx context.Context) error {
 	r.clusterUUID = r.getClusterUUID(ctx)
-	r.preflightCountDown.Done()
 
 	return nil
 }

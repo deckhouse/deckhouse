@@ -67,9 +67,9 @@ type reconciler struct {
 func RegisterController(runtimeManager manager.Manager, dc dependency.Container, logger *log.Logger) error {
 	r := &reconciler{
 		client:   runtimeManager.GetClient(),
-		logger:   logger,
 		registry: registry.NewService(dc, logger),
 		dc:       dc,
+		logger:   logger.Named(controllerName),
 	}
 
 	return ctrl.NewControllerManagedBy(runtimeManager).

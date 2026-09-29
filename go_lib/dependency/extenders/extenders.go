@@ -61,15 +61,23 @@ type ExtendersStack struct {
 	editionEnabled    editionenabled.IExtender
 }
 
-func NewExtendersStack(edition *d8edition.Edition, bootstrappedHelper func() (bool, error), logger *log.Logger) *ExtendersStack {
-	return &ExtendersStack{
-		deckhouseVersion:  deckhouseversion.NewExtender(edition.Version, logger.Named("deckhouse-version-extender")),
+func NewExtendersStack(version string, edition *d8edition.Edition, bootstrappedHelper func() (bool, error), logger *log.Logger) *ExtendersStack {
+	ext := &ExtendersStack{
+		deckhouseVersion:  deckhouseversion.NewExtender(version, logger.Named("deckhouse-version-extender")),
 		kubernetesVersion: kubernetesversion.Instance(),
 		moduleDependency:  moduledependency.Instance(),
-		bootstrapped:      bootstrapped.NewExtender(bootstrappedHelper, logger.Named("bootstrapped-extender")),
-		editionAvailable:  editionavailable.New(edition.Name, logger.Named("edition-available-extender")),
-		editionEnabled:    editionenabled.New(edition.Name, edition.Bundle, logger.Named("edition-enabled-extender")),
 	}
+
+	if edition != nil {
+		ext.editionAvailable = editionavailable.New(edition.Name, logger.Named("edition-available-extender"))
+		ext.editionEnabled = editionenabled.New(edition.Name, edition.Bundle, logger.Named("edition-enabled-extender"))
+	}
+
+	if bootstrappedHelper != nil {
+		ext.bootstrapped = bootstrapped.NewExtender(bootstrappedHelper, logger.Named("bootstrapped-extender"))
+	}
+
+	return ext
 }
 
 func (b *ExtendersStack) GetDeckhouseVersion() deckhouseversion.IExtender {

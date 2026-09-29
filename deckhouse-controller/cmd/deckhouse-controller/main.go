@@ -102,7 +102,9 @@ func main() {
 	app.ApplyConfig(cfg)
 	sh_debug.DefaultSocketPath = cfg.Debug.UnixSocket
 
-	logger := log.NewLogger()
+	logger := log.NewLogger(
+		log.WithLevel(log.LogLevelFromStr(cfg.Log.Level).Level()),
+	)
 	log.SetDefault(logger)
 
 	fileName := filepath.Base(os.Args[0])

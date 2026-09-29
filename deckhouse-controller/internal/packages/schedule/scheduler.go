@@ -477,13 +477,14 @@ func (s *Scheduler) canSchedule(n *node) bool {
 	return true
 }
 
-// IsEnabled returns true if the given node is currently enabled (in the active state).
+// IsEnabled reports whether the named node's rule chain resolved to Enable. It
+// reads the decision, never the state: compute() parks not-enabled nodes in
+// nodeStateActive, so state says nothing about enablement.
 func (s *Scheduler) IsEnabled(name string) bool {
-	for _, n := range s.nodes {
-		if n.name == name && n.state == nodeStateActive {
-			return true
-		}
-	}
+	s.mu.RLock()
+	defer s.mu.RUnlock()
 
-	return false
+	n, ok := s.nodes[name]
+
+	return ok && n.enabled()
 }

@@ -51,6 +51,7 @@ import (
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha2"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1beta1"
+	deckhouserelease "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/deckhouse-release"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/module-controllers/docbuilder"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/objectkeeper"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/packages/application"
@@ -61,6 +62,7 @@ import (
 	packagerepositoryoperation "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/packages/package-repository-operation"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/helpers"
 	"github.com/deckhouse/deckhouse/go_lib/dependency"
+	"github.com/deckhouse/deckhouse/go_lib/dependency/extenders"
 	"github.com/deckhouse/deckhouse/pkg/log"
 	metricsstorage "github.com/deckhouse/deckhouse/pkg/metrics-storage"
 )
@@ -85,8 +87,7 @@ type Controller struct {
 
 	embeddedPolicy *helpers.ModuleUpdatePolicySpecContainer
 
-	settings   *helpers.DeckhouseSettingsContainer
-	settingsCh <-chan addonutils.Values
+	settings *helpers.DeckhouseSettingsContainer
 
 	dc dependency.Container
 
@@ -94,7 +95,7 @@ type Controller struct {
 }
 
 // Build assembles the manager, the package runtime and the shared containers; it starts nothing.
-func Build(ctx context.Context, ms metricsstorage.Storage, logger *log.Logger) (*Controller, error) {
+func Build(ctx context.Context, logger *log.Logger) (*Controller, error) {
 	scheme, err := buildSchema()
 	if err != nil {
 		return nil, fmt.Errorf("build schema: %w", err)
@@ -106,7 +107,22 @@ func Build(ctx context.Context, ms metricsstorage.Storage, logger *log.Logger) (
 	// but otherwise we get a warning from the controller-runtime.
 	ctrl.SetLogger(logr.New(ctrllog.NullLogSink{}))
 
+	ms := metricsstorage.NewMetricStorage(
+		metricsstorage.WithLogger(logger.Named("metric-storage")),
+	)
+
+	if err = metrics.RegisterDeckhouseControllerMetrics(ms); err != nil {
+		return nil, fmt.Errorf("register deckhouse controller metrics: %w", err)
+	}
+
 	client := klient.New(klient.WithLogger(logger.Named("controller-client")))
+	client.WithContextName(app.KubeContext())
+	client.WithConfigPath(app.KubeConfig())
+
+	if err := client.Init(); err != nil {
+		return nil, fmt.Errorf("init client: %w", err)
+	}
+
 	rest := client.RestConfig()
 
 	// inject otel tripper; the manager reads the transport when it builds its clients, so wrap first
@@ -146,14 +162,16 @@ func Build(ctx context.Context, ms metricsstorage.Storage, logger *log.Logger) (
 	dc := dependency.NewDependencyContainer()
 	settingsContainer := helpers.NewDeckhouseSettingsContainer(nil, ms)
 
-	err = metrics.RegisterDeckhouseControllerMetrics(ms)
-	if err != nil {
-		return nil, fmt.Errorf("register deckhouse controller metrics: %w", err)
-	}
-
 	manager, err := pkgruntime.Build(runtime.GetClient(), nil, dc, ms, logger)
 	if err != nil {
 		return nil, fmt.Errorf("create runtime: %w", err)
+	}
+
+	// TODO: get rid of stack extenders, its no longer needed, but deckhouse release controller still depends on it
+	exts := extenders.NewExtendersStack(app.Version, nil, nil, logger.Named("extenders"))
+	err = deckhouserelease.NewDeckhouseReleaseController(ctx, runtime, dc, exts, manager, settingsContainer, ms, logger)
+	if err != nil {
+		return nil, fmt.Errorf("create deckhouse release controller: %w", err)
 	}
 
 	err = applicationpackageversion.RegisterController(runtime, dc, logger)
@@ -171,7 +189,7 @@ func Build(ctx context.Context, ms metricsstorage.Storage, logger *log.Logger) (
 		return nil, fmt.Errorf("register module controller: %w", err)
 	}
 
-	err = application.RegisterController(runtime, manager, nil, logger)
+	err = application.RegisterController(synced, runtime, manager, nil, logger)
 	if err != nil {
 		return nil, fmt.Errorf("register application controller: %w", err)
 	}
@@ -196,8 +214,6 @@ func Build(ctx context.Context, ms metricsstorage.Storage, logger *log.Logger) (
 		return nil, fmt.Errorf("register objectkeeper controller: %w", err)
 	}
 
-	settingsCh := make(chan addonutils.Values, 1)
-
 	return &Controller{
 		ctrl: runtime,
 		sync: synced,
@@ -206,8 +222,7 @@ func Build(ctx context.Context, ms metricsstorage.Storage, logger *log.Logger) (
 
 		embeddedPolicy: embeddedPolicy,
 
-		settings:   settingsContainer,
-		settingsCh: settingsCh,
+		settings: settingsContainer,
 
 		dc: dc,
 
@@ -378,7 +393,7 @@ func (c *Controller) runSyncDeckhouseSettingsLoop(ctx context.Context) {
 		select {
 		case <-ctx.Done():
 			return
-		case config, ok := <-c.settingsCh:
+		case config, ok := <-c.manager.GetDeckhouseSettingsCh():
 			if !ok {
 				return
 			}

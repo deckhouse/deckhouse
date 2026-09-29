@@ -48,6 +48,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/yaml"
 
+	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/app"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/metrics"
 	installermock "github.com/deckhouse/deckhouse/deckhouse-controller/internal/module/installer/mock"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/addonutils"
@@ -1015,7 +1016,7 @@ type: Opaque
 
 		embeddedPolicy: helpers.NewModuleUpdatePolicySpecContainer(embeddedMUP),
 		metricsUpdater: releaseUpdater.NewMetricsUpdater(metricstorage.NewMetricStorage(metricstorage.WithNewRegistry(), metricstorage.WithLogger(logger)), releaseUpdater.ModuleReleaseBlockedMetricName),
-		exts:           extenders.NewExtendersStack(new(d8edition.Edition), nil, log.NewNop()),
+		exts:           extenders.NewExtendersStack(app.Version, new(d8edition.Edition), nil, log.NewNop()),
 	}
 
 	for _, option := range options {
