@@ -1129,6 +1129,23 @@ updatePolicy:
 		})
 	})
 
+	Context("istiod 1.25 with sidecar not use custom static resourcesManagement configuration", func() {
+		BeforeEach(func() {
+			f.ValuesSetFromYaml("global", globalValues)
+			f.ValuesSet("global.modulesImages", GetModulesImages())
+			f.ValuesSetFromYamlWithOpenAPIDefaults("istio", istioValues)
+			f.ValuesSetFromYaml("istio.internal.versionsToInstall", `["1.25.2"]`)
+			f.HelmRender()
+		})
+
+		It("omits sidecar resources", func() {
+			Expect(f.RenderError).ShouldNot(HaveOccurred())
+			istio := f.KubernetesResource("Istio", "d8-istio", "v1x25x2")
+			Expect(istio.Exists()).To(BeTrue())
+			Expect(istio.Field("spec.values.global.proxy.resources").Exists()).To(BeFalse())
+		})
+	})
+
 	Context("istiod with sidecar custom static resourcesManagement configuration", func() {
 		BeforeEach(func() {
 			f.ValuesSetFromYaml("global", globalValues)
