@@ -35,6 +35,9 @@ import (
 
 const (
 	Name extenders.ExtenderName = "KubernetesVersion"
+
+	kubeVersionFile      = "/tmp/kubectl_version"
+	watcherRetryInterval = 30 * time.Second
 )
 
 var (
@@ -57,8 +60,8 @@ var _ IExtender = &Extender{}
 type Extender struct {
 	logger         *log.Logger
 	versionMatcher *versionmatcher.Matcher
-	mtx            sync.Mutex
-	err            error
+	// err is set only inside kubernetesOnce, so reading it after getKubernetesVersion needs no lock
+	err error
 }
 
 // TODO: refactor
@@ -81,7 +84,7 @@ func (e *Extender) getKubernetesVersion() {
 			}
 			instance.logger.Warn("cannot parse TEST_EXTENDER_KUBERNETES_VERSION env variable value", slog.String("value", val), log.Err(err))
 		}
-		content, err := e.waitForFileExists("/tmp/kubectl_version")
+		content, err := e.waitForFileExists(kubeVersionFile)
 		if err != nil {
 			e.err = err
 			return
@@ -93,7 +96,7 @@ func (e *Extender) getKubernetesVersion() {
 		}
 		instance.logger.Debug("setting kubernets version from file to", slog.String("version", parsed.String()))
 		e.versionMatcher.ChangeBaseVersion(parsed)
-		go instance.watchForKubernetesVersion()
+		go instance.watchForKubernetesVersion(kubeVersionFile, watcherRetryInterval)
 	})
 }
 
@@ -120,15 +123,18 @@ func (e *Extender) waitForFileExists(path string) ([]byte, error) {
 }
 
 // update kubernetes version if kubectl_version is updated
-func (e *Extender) watchForKubernetesVersion() {
+//
+// The base version is already known here, so a failed watcher (e.g. inotify limit reached) must not fail the extender:
+// it only delays noticing a new version, therefore the watcher is retried instead of setting e.err.
+func (e *Extender) watchForKubernetesVersion(path string, retryInterval time.Duration) {
 	versionCh := make(chan *semver.Version)
-	watcher := &versionWatcher{ch: versionCh, logger: e.logger}
 	go func() {
-		if err := watcher.watch("/tmp/kubectl_version"); err != nil {
-			e.mtx.Lock()
-			e.err = err
-			e.mtx.Unlock()
-			close(versionCh)
+		for {
+			watcher := &versionWatcher{ch: versionCh, logger: e.logger}
+			if err := watcher.watch(path); err != nil {
+				e.logger.Warn("watch kubernetes version failed, retrying", slog.String("path", path), log.Err(err))
+			}
+			time.Sleep(retryInterval)
 		}
 	}()
 	for version := range versionCh {
@@ -167,12 +173,9 @@ func (e *Extender) Filter(name string, _ map[string]string) (*bool, error) {
 		return nil, nil
 	}
 	e.getKubernetesVersion()
-	e.mtx.Lock()
 	if e.err != nil {
-		e.mtx.Unlock()
 		return nil, &scherror.PermanentError{Err: fmt.Errorf("parse kubernetes version failed: %s", e.err)}
 	}
-	e.mtx.Unlock()
 	if err := e.versionMatcher.Validate(name); err != nil {
 		e.logger.Debug("requirements of the module are not satisfied: current kubernetes version is not suitable", slog.String("name", name), log.Err(err))
 		return ptr.To(false), fmt.Errorf("requirements are not satisfied: current kubernetes version is not suitable: %s", err.Error())
@@ -196,12 +199,9 @@ func (e *Extender) ValidateBaseVersion(baseVersion string) (string, error) {
 
 func (e *Extender) ValidateRelease(releaseName, rawConstraint string) error {
 	e.getKubernetesVersion()
-	e.mtx.Lock()
 	if e.err != nil {
-		e.mtx.Unlock()
 		return fmt.Errorf("parse kubernetes version failed: %s", e.err)
 	}
-	e.mtx.Unlock()
 	e.logger.Debug("validate requirements", slog.String("name", releaseName))
 	if err := e.versionMatcher.ValidateConstraint(rawConstraint); err != nil {
 		e.logger.Debug("requirements of the module release are not satisfied: current kubernetes version is not suitable", slog.String("name", releaseName), log.Err(err))
