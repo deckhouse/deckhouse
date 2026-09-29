@@ -40,8 +40,13 @@ func (w *versionWatcher) watch(path string) error {
 	if err != nil {
 		return fmt.Errorf("new watcher: %w", err)
 	}
+	defer w.watcher.Close()
 	if err = w.watcher.Add(path); err != nil {
 		return fmt.Errorf("add: %w", err)
+	}
+	// inotify reports only changes made after Add, so read the current content to catch up
+	if err = w.handler(path); err != nil {
+		return err
 	}
 	for {
 		select {
