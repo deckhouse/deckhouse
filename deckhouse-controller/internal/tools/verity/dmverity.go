@@ -17,6 +17,7 @@ limitations under the License.
 package verity
 
 import (
+	"bytes"
 	"context"
 	"errors"
 	"fmt"
@@ -26,6 +27,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/flant/shell-operator/pkg/executor"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
 	"k8s.io/apimachinery/pkg/util/wait"
@@ -96,7 +98,7 @@ func waitUntilMapperCreated(ctx context.Context, name, imagePath, hash string) e
 
 		// veritysetup open <imagePath> <name> <hashPath> <hash>
 		cmd := exec.CommandContext(ctx, verityCommand, args...)
-		if out, err := cmd.CombinedOutput(); err != nil {
+		if out, err := combinedOutput(cmd); err != nil {
 			lastErr = fmt.Errorf("veritysetup open: %w (last output: %s)", err, string(out))
 			return false, nil
 		}
@@ -128,7 +130,7 @@ func CloseMapper(ctx context.Context, name string) error {
 
 	// veritysetup close <name>
 	cmd := exec.CommandContext(ctx, verityCommand, args...)
-	if output, err := cmd.CombinedOutput(); err != nil {
+	if output, err := combinedOutput(cmd); err != nil {
 		// mapper not found
 		if strings.Contains(string(output), "not active") {
 			return nil
@@ -227,7 +229,7 @@ func VerifyImage(ctx context.Context, imagePath, rootHash string) error {
 
 	// veritysetup verify <imagePath> <hashPath> <root_hash>
 	cmd := exec.CommandContext(ctx, verityCommand, args...)
-	if output, err := cmd.CombinedOutput(); err != nil {
+	if output, err := combinedOutput(cmd); err != nil {
 		return fmt.Errorf("veritysetup verify: %w (output: %s)", err, string(output))
 	}
 
@@ -250,7 +252,7 @@ func veritySetupFormat(ctx context.Context, imagePath, hashPath string) (string,
 
 	// veritysetup format --data-block-size=4096 --hash-block-size=4096 --salt=<salt> <imagePath> <hashPath>
 	cmd := exec.CommandContext(ctx, verityCommand, args...)
-	output, err := cmd.CombinedOutput()
+	output, err := combinedOutput(cmd)
 	if err != nil {
 		// CommandContext kills the child with SIGKILL once the context is done, which is
 		// reported as 'signal: killed' - the same as an OOM kill, hence the explicit check
@@ -309,7 +311,7 @@ func GetImagePathByDevice(ctx context.Context, name string) (string, error) {
 
 	// veritysetup status <name>
 	cmd := exec.CommandContext(ctx, verityCommand, args...)
-	output, err := cmd.CombinedOutput()
+	output, err := combinedOutput(cmd)
 	if err != nil {
 		return "", fmt.Errorf("veritysetup status: %w (output: %s)", err, string(output))
 	}
@@ -335,4 +337,15 @@ func parseImagePath(output string) string {
 	}
 
 	return path
+}
+
+// combinedOutput runs cmd via the shell-operator executor so the PID-1 zombie reaper skips it
+func combinedOutput(cmd *exec.Cmd) ([]byte, error) {
+	var out bytes.Buffer
+	cmd.Stdout = &out
+	cmd.Stderr = &out
+
+	err := executor.Run(cmd)
+
+	return out.Bytes(), err
 }
