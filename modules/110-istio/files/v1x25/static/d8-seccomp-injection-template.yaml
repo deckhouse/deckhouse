@@ -1,0 +1,41 @@
+{{- define "d8LivenessProbe" }}
+    livenessProbe:
+      httpGet:
+        path: /healthz/ready
+        port: 15021
+      initialDelaySeconds: 10
+      periodSeconds: 10
+      timeoutSeconds: 3
+      failureThreshold: 60
+{{- end }}
+{{- $nativeSidecar := (or (and (not (isset .ObjectMeta.Annotations `sidecar.istio.io/nativeSidecar`)) (eq (env "ENABLE_NATIVE_SIDECARS" "false") "true")) (eq (index .ObjectMeta.Annotations `sidecar.istio.io/nativeSidecar`) "true")) }}
+{{- $hasInitContainer := ne (annotation .ObjectMeta `sidecar.istio.io/interceptionMode` .ProxyConfig.InterceptionMode) `NONE` }}
+{{- $hasStatusPort := ne (annotation .ObjectMeta `status.sidecar.istio.io/port` .Values.global.proxy.statusPort) `0` }}
+spec:
+{{- if or $hasInitContainer $nativeSidecar }}
+  initContainers:
+  {{- if $hasInitContainer }}
+  {{- /* CNIPlugin mode validates the redirection the plugin already set up; InitContainer mode
+         applies it here. Same container, different name. */}}
+  - name: {{ if .Values.pilot.cni.enabled }}istio-validation{{ else }}istio-init{{ end }}
+    securityContext:
+      seccompProfile:
+        type: RuntimeDefault
+  {{- end }}
+  {{- if $nativeSidecar }}
+  {{- /* As a native sidecar the proxy is an init container with restartPolicy: Always. */}}
+  - name: istio-proxy
+    securityContext:
+      seccompProfile:
+        type: RuntimeDefault
+  {{- if $hasStatusPort }}{{ template "d8LivenessProbe" }}{{ end }}
+  {{- end }}
+{{- end }}
+{{- if not $nativeSidecar }}
+  containers:
+  - name: istio-proxy
+    securityContext:
+      seccompProfile:
+        type: RuntimeDefault
+  {{- if $hasStatusPort }}{{ template "d8LivenessProbe" }}{{ end }}
+{{- end }}
