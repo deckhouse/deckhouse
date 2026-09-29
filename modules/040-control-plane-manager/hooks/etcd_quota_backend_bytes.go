@@ -49,7 +49,8 @@ type etcdNode struct {
 }
 
 const (
-	etcdBackendBytesGroup = "etcd_quota_backend_should_decrease"
+	etcdBackendBytesGroup     = "etcd_quota_backend_should_decrease"
+	etcdQuotaBackendBytesPath = "controlPlaneManager.internal.etcdQuotaBackendBytes"
 )
 
 var (
@@ -59,6 +60,8 @@ var (
 
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 	Queue: moduleQueue + "/etcd_maintenance",
+	// Kubernetes bindings do not run on ModuleConfig changes, so maxDbSize is picked up here.
+	OnBeforeHelm: &go_hook.OrderedConfig{Order: 10},
 	Kubernetes: []go_hook.KubernetesConfig{
 		{
 			Name:       "master_nodes",
@@ -169,6 +172,13 @@ func getCurrentEtcdQuotaBytes(_ context.Context, input *go_hook.HookInput) (int6
 			currentQuotaBytes = quotaForInstance
 			nodeWithMaxQuota = endpoint.Node
 		}
+	}
+
+	// The etcd mirror pod is recreated (and is not Running for a while) on every manifest change,
+	// so the last applied quota is the floor: otherwise the quota falls back to the default on a single master.
+	if prevQuotaBytes := input.Values.Get(etcdQuotaBackendBytesPath); prevQuotaBytes.Exists() && prevQuotaBytes.Int() > currentQuotaBytes {
+		currentQuotaBytes = prevQuotaBytes.Int()
+		nodeWithMaxQuota = "values"
 	}
 
 	if currentQuotaBytes == 0 {
@@ -286,7 +296,7 @@ func etcdQuotaBackendBytesHandler(ctx context.Context, input *go_hook.HookInput)
 	}
 
 	// use string because helm render big number in scientific format
-	input.Values.Set("controlPlaneManager.internal.etcdQuotaBackendBytes", strconv.FormatInt(newQuotaBytes, 10))
+	input.Values.Set(etcdQuotaBackendBytesPath, strconv.FormatInt(newQuotaBytes, 10))
 
 	input.MetricsCollector.Set(
 		"d8_etcd_quota_backend_total",

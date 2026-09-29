@@ -467,6 +467,103 @@ status:
 
 	})
 
+	Context("Hook bindings", func() {
+		It("must be triggered by OnBeforeHelm", func() {
+			Expect(f.GoHook).NotTo(BeNil())
+
+			// Kubernetes bindings do not run on ModuleConfig changes,
+			// without OnBeforeHelm a new maxDbSize is not applied until deckhouse restarts.
+			Expect(f.GoHook.GetConfig().OnBeforeHelm).NotTo(BeNil())
+		})
+	})
+
+	Context("BeforeHelm", func() {
+		nodeName := "control-plane-1"
+
+		BeforeEach(func() {
+			podManifest := etcdPodManifest(map[string]interface{}{
+				"maxDbSize": gb(2),
+				"nodeName":  nodeName,
+				"hostIP":    "192.162.1.1",
+			})
+			nodeManifest := getNodeManifest(nodeName, gb(24), true)
+
+			JoinKubeResourcesAndSet(f, podManifest, nodeManifest)
+		})
+
+		Context("user changes quota in config", func() {
+			BeforeEach(func() {
+				f.ValuesSetFromYaml("controlPlaneManager.etcd", []byte(fmt.Sprintf(`{"maxDbSize": %d}`, gb(4))))
+				f.BindingContexts.Set(f.GenerateBeforeHelmContext())
+				f.RunHook()
+				Expect(f).Should(ExecuteSuccessfully())
+				assertNewQuotaBackendsWithMetric(f, gb(4))
+
+				f.ValuesSetFromYaml("controlPlaneManager.etcd", []byte(fmt.Sprintf(`{"maxDbSize": %d}`, gb(6))))
+				f.BindingContexts.Set(f.GenerateBeforeHelmContext())
+				f.RunHook()
+			})
+
+			It("set new quota-backend-bytes from config", func() {
+				Expect(f).Should(ExecuteSuccessfully())
+
+				assertNewQuotaBackendsWithMetric(f, gb(6))
+			})
+		})
+
+		Context("quota is not set in config", func() {
+			BeforeEach(func() {
+				f.BindingContexts.Set(f.GenerateBeforeHelmContext())
+				f.RunHook()
+			})
+
+			It("calculates quota-backend-bytes from snapshots", func() {
+				Expect(f).Should(ExecuteSuccessfully())
+
+				assertNewQuotaBackendsWithMetric(f, gb(3))
+			})
+		})
+	})
+
+	Context("Last applied quota", func() {
+		nodeName := "control-plane-1"
+
+		Context("etcd pod is missing from snapshot while its mirror pod is being recreated", func() {
+			BeforeEach(func() {
+				JoinKubeResourcesAndSet(f, getNodeManifest(nodeName, gb(16), false))
+				f.ValuesSet(etcdQuotaBackendBytesPath, strconv.FormatInt(gb(4), 10))
+
+				f.RunHook()
+			})
+
+			It("keeps last applied quota-backend-bytes instead of default", func() {
+				Expect(f).Should(ExecuteSuccessfully())
+
+				assertNewQuotaBackendsWithMetric(f, gb(4))
+			})
+		})
+
+		Context("etcd pod has greater quota than last applied", func() {
+			BeforeEach(func() {
+				podManifest := etcdPodManifest(map[string]interface{}{
+					"maxDbSize": gb(5),
+					"nodeName":  nodeName,
+					"hostIP":    "192.162.1.1",
+				})
+				JoinKubeResourcesAndSet(f, podManifest, getNodeManifest(nodeName, gb(16), false))
+				f.ValuesSet(etcdQuotaBackendBytesPath, strconv.FormatInt(gb(4), 10))
+
+				f.RunHook()
+			})
+
+			It("uses quota-backend-bytes from etcd pod", func() {
+				Expect(f).Should(ExecuteSuccessfully())
+
+				assertNewQuotaBackendsWithMetric(f, gb(5))
+			})
+		})
+	})
+
 	Context("Single master", func() {
 		Context("etcd does not have quota-backend-bytes parameter", func() {
 			nodeName := "control-plane-0"
