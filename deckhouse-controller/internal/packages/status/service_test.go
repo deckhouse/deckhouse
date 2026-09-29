@@ -79,3 +79,32 @@ func TestCountProgress(t *testing.T) {
 		})
 	}
 }
+
+func TestUpdateUninstallTrackingWritesThroughDeletionFreeze(t *testing.T) {
+	const name = "ns.app"
+
+	s := NewService()
+	s.NewStatus(name)
+	s.SetDeleting(name)
+
+	report := progrep.ProgressReport{Operations: []progrep.Operation{
+		{Category: progrep.OperationCategoryResource, Status: progrep.OperationStatusCompleted},
+		{Category: progrep.OperationCategoryResource, Status: progrep.OperationStatusProgressing},
+	}}
+
+	// The install path is frozen along with the conditions it rewrites.
+	s.UpdateTracking(name, report)
+	assert.Empty(t, s.GetStatus(name).Tracking.Report.Operations)
+
+	s.UpdateUninstallTracking(name, report)
+
+	got := s.GetStatus(name)
+	assert.Equal(t, Tracking{Completed: 1, Remaining: 1, Report: report}, got.Tracking)
+	for _, cond := range got.Conditions {
+		assert.Equal(t, ConditionReasonDeleting, cond.Reason, cond.Type)
+	}
+
+	// Trailing empty reports keep the last snapshot.
+	s.UpdateUninstallTracking(name, progrep.ProgressReport{})
+	assert.Equal(t, report, s.GetStatus(name).Tracking.Report)
+}
