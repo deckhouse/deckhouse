@@ -549,6 +549,37 @@ podAntiAffinity:
 		})
 	})
 
+	Context("The previous global version is still being removed by its istio-operator", func() {
+		BeforeEach(func() {
+			f.ValuesSetFromYaml("global", globalValues)
+			f.ValuesSet("global.modulesImages", GetModulesImages())
+			f.ValuesSetFromYamlWithOpenAPIDefaults("istio", istioValues)
+			f.ValuesSet("istio.internal.globalVersion", "1.25.2")
+			f.ValuesSetFromYaml("istio.internal.versionsToInstall", `["1.25.2"]`)
+			f.ValuesSetFromYaml("istio.internal.operatorVersionsToInstall", `["1.21.6","1.25.2"]`)
+			f.ValuesSet("istio.jwksResolverAdditionalRootCA", jwksResolverAdditionalRootCA)
+			f.HelmRender()
+		})
+
+		It("keeps what its istiod runs with, but not its IstioOperator", func() {
+			Expect(f.RenderError).ShouldNot(HaveOccurred())
+
+			Expect(f.KubernetesResource("IstioOperator", "d8-istio", "v1x21x6").Exists()).To(BeFalse())
+			Expect(f.KubernetesResource("Deployment", "d8-istio", "operator-v1x21x6").Exists()).To(BeTrue())
+
+			for _, revision := range []string{"v1x21x6", "v1x25x2"} {
+				Expect(f.KubernetesResource("ServiceAccount", "d8-istio", "istiod-"+revision).Exists()).To(BeTrue())
+				Expect(f.KubernetesGlobalResource("ClusterRole", "d8:istio:control-plane:iop:istiod-"+revision).Exists()).To(BeTrue())
+				Expect(f.KubernetesGlobalResource("ClusterRoleBinding", "d8:istio:control-plane:iop:istiod-"+revision).Exists()).To(BeTrue())
+				Expect(f.KubernetesResource("ConfigMap", "d8-istio", "pilot-jwks-extra-cacerts-"+revision).Exists()).To(BeTrue())
+			}
+
+			auditPolicy := f.KubernetesResource("ConfigMap", "d8-istio", "istiod-service-accounts").Field("data.basicAuditPolicy").String()
+			Expect(auditPolicy).To(ContainSubstring("system:serviceaccount:d8-istio:istiod-v1x21x6"))
+			Expect(auditPolicy).To(ContainSubstring("system:serviceaccount:d8-istio:istiod-v1x25x2"))
+		})
+	})
+
 	Context("There is one federation", func() {
 		BeforeEach(func() {
 			f.ValuesSetFromYaml("global", globalValues)
