@@ -60,6 +60,10 @@ func FuzzGenerateProxyEndpoints(f *testing.F) {
 	f.Add(" 10.0.0.1 ")
 	f.Add("\x00")
 	f.Add("999.999.999.999")
+	// Replay finding 1 (job 6990025): brackets around an IPv4 address laundered
+	// a non-address into an endpoint the validator accepted.
+	f.Add("[0.0.0.0]")
+	f.Add("[0]")
 
 	f.Fuzz(func(t *testing.T, address string) {
 		if len(address) > 512 {

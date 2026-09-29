@@ -324,12 +324,43 @@ func splitHostPort(raw string) (string, string, error) {
 		if splitPort == "" {
 			return "", "", errors.New("has a trailing colon but no port")
 		}
+		if err := bracketsHoldIPv6(raw, splitHost); err != nil {
+			return "", "", err
+		}
 		return splitHost, splitPort, nil
 	} else if strings.ContainsRune(raw, ':') {
 		return "", "", fmt.Errorf("is not a valid host:port pair: %w", splitErr)
 	}
 
 	return raw, "", nil
+}
+
+// bracketsHoldIPv6 checks the contents of an IP literal.
+//
+// net.SplitHostPort strips the brackets of an IP literal, and with them the only
+// thing that said what the value was meant to be. Brackets in an authority mean
+// an IPv6 address and nothing else, so the contents have to be checked before
+// they are handed on to be read as a DNS name or an address: "[0]:1" would
+// otherwise pass as the hostname "0", and "[0.0.0.0]:5001" as the address
+// 0.0.0.0 -- neither of which is a host the sinks accept. `<scheme>://<host>`
+// would not parse for distribution, and the NGINX `server` directive would not
+// take it either.
+//
+// The test is "parses as an IP and is written in IPv6 notation", which is what
+// net/url accepts: it takes "[::ffff:192.168.0.1]" but refuses "[192.168.0.1]",
+// so an address that merely maps to IPv4 is fine while one written in IPv4
+// notation is not.
+//
+// It is shared by every rule that reads a host with a port, so that the producer
+// and the validator cannot drift apart on what a bracketed value means.
+func bracketsHoldIPv6(raw, host string) error {
+	if !strings.HasPrefix(raw, "[") {
+		return nil
+	}
+	if net.ParseIP(host) == nil || !strings.Contains(host, ":") {
+		return fmt.Errorf("brackets enclose %q, which is not an IPv6 address", host)
+	}
+	return nil
 }
 
 func validHostName(host string) error {
@@ -362,6 +393,9 @@ func ipWithPort(raw string) error {
 	host, port, err := net.SplitHostPort(raw)
 	if err != nil {
 		return fmt.Errorf("is not a valid host:port pair: %w", err)
+	}
+	if err := bracketsHoldIPv6(raw, host); err != nil {
+		return err
 	}
 	if net.ParseIP(host) == nil {
 		return fmt.Errorf("host %q is not an IP address", host)

@@ -199,6 +199,9 @@ func FuzzDockerCfgRoundTrip(f *testing.F) {
 	f.Add("user", "password", "%80")
 	f.Add("user", "password", "[fd00::1]:5001")
 	f.Add("user", "password", "registry.example.com/system/deckhouse")
+	// Replay finding 4 (job 6990025): normalizeHost decodes "%25" to "%", which
+	// is no longer a host it can read back.
+	f.Add("0", "", "%25")
 
 	f.Fuzz(func(t *testing.T, username, password, host string) {
 		// The credentials travel through json.Marshal, which replaces invalid UTF-8

@@ -149,7 +149,37 @@ func CredsFromDockerCfg(rawConfig []byte, host string) (string, string, error) {
 	return auth.Username, auth.Password, nil
 }
 
+// normalizeHost reduces a registry address to the `host[:port]` used as the key
+// of an auths entry.
+//
+// The result has to be a value this function accepts again and maps to itself.
+// A docker config is written with the normalized host as the key and read back
+// by normalizing both the requested host and every key in the file, so a key
+// that cannot be normalized a second time is a credential that can be written
+// and never found.
+//
+// url.Parse decodes percent escapes in the host, and the decoded form need not
+// be a host at all: "%25" becomes "%", which is an invalid escape. Such an
+// address is refused here rather than turned into an entry nothing can read.
 func normalizeHost(host string) (string, error) {
+	normalized, err := hostAuthority(host)
+	if err != nil {
+		return "", err
+	}
+
+	again, err := hostAuthority(normalized)
+	if err != nil {
+		return "", fmt.Errorf("parse host %q: normalizes to %q, which is not a host: %w", host, normalized, err)
+	}
+	if again != normalized {
+		return "", fmt.Errorf("parse host %q: normalizes to %q, which normalizes further to %q",
+			host, normalized, again)
+	}
+
+	return normalized, nil
+}
+
+func hostAuthority(host string) (string, error) {
 	targetHost := host
 
 	if !strings.HasPrefix(host, "http://") && !strings.HasPrefix(host, "https://") {
