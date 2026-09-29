@@ -119,12 +119,11 @@ class ModuleSearch {
     this.initI18n();
 
     // Initialize IndexedDB
-    this.initIndexedDB().then(() => {
-      this.init();
-    }).catch(() => {
-      // If IndexedDB fails, continue with fallback method
-      this.init();
-    });
+    this.initIndexedDB()
+      .catch(() => {
+        // If IndexedDB fails, continue with fallback method
+      })
+      .then(() => this.init());
   }
 
   initI18n() {
@@ -439,14 +438,41 @@ class ModuleSearch {
       return new Promise((resolve, reject) => {
         const request = indexedDB.open(this.dbName, this.dbVersion);
 
+        // The cache is optional: never let a slow or stuck open() delay search initialization.
+        const openTimeout = setTimeout(() => {
+          console.warn('IndexedDB open is taking too long, continuing without cache');
+          resolve();
+        }, 3000);
+
         request.onerror = () => {
+          clearTimeout(openTimeout);
           console.warn('IndexedDB initialization failed, using fallback method');
           this.indexedDBAvailable = false;
           reject(new Error('IndexedDB initialization failed'));
         };
 
+        // A version upgrade waits until every other connection to the old version closes.
+        // A tab running an older script may keep its connection open, so continue without
+        // cache for now. The request stays pending and onsuccess enables the cache later.
+        request.onblocked = () => {
+          clearTimeout(openTimeout);
+          console.warn('IndexedDB upgrade is blocked by another tab, continuing without cache');
+          resolve();
+        };
+
         request.onsuccess = () => {
-          this.db = request.result;
+          clearTimeout(openTimeout);
+          const db = request.result;
+          // Release the connection when a newer script bumps dbVersion in another tab,
+          // otherwise that tab's upgrade is blocked.
+          db.onversionchange = () => {
+            db.close();
+            if (this.db === db) {
+              this.db = null;
+              this.indexedDBAvailable = false;
+            }
+          };
+          this.db = db;
           this.indexedDBAvailable = true;
           console.log('IndexedDB initialized successfully');
           resolve();
