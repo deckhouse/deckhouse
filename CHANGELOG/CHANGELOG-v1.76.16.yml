@@ -22,3 +22,7 @@ istio:
       pull_request: https://fox.flant.com/deckhouse/deckhouse/-/merge_requests/201
     - summary: Fix leaking istiod control plane after removing an Istio version or disabling the module.
       pull_request: https://fox.flant.com/deckhouse/deckhouse/-/merge_requests/255
+    - summary: >-
+        Switching back to Istio 1.21 no longer removes the `networking.istio.io/v1` API from the Istio
+        CRDs and no longer breaks the istio release.
+      pull_request: https://fox.flant.com/deckhouse/deckhouse/-/merge_requests/269
