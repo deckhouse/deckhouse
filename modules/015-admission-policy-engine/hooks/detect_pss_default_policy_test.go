@@ -21,6 +21,8 @@ import (
 	. "github.com/onsi/gomega"
 	"k8s.io/utils/ptr"
 
+	"github.com/deckhouse/deckhouse/go_lib/dependency/requirements"
+	apeRequirements "github.com/deckhouse/deckhouse/modules/015-admission-policy-engine/requirements"
 	"github.com/deckhouse/deckhouse/pkg/metrics-storage/operation"
 	. "github.com/deckhouse/deckhouse/testing/hooks"
 )
@@ -37,6 +39,11 @@ var _ = Describe("Modules :: admission-policy-engine :: hooks :: detect pss defa
 		`{"admissionPolicyEngine": {"podSecurityStandards": {}}}`,
 	)
 
+	// the requirement values are stored per process, so a value from a previous context must not satisfy the next one
+	BeforeEach(func() {
+		requirements.RemoveValue(apeRequirements.ImplicitPrivilegedKey)
+	})
+
 	Context("Empty cluster with podSecurityStandards.defaultPolicy preset", func() {
 		BeforeEach(func() {
 			f.BindingContexts.Set(f.GenerateBeforeHelmContext())
@@ -45,6 +52,7 @@ var _ = Describe("Modules :: admission-policy-engine :: hooks :: detect pss defa
 		})
 		It("should have the same default policy", func() {
 			Expect(f).To(ExecuteSuccessfully())
+			expectImplicitPrivileged(false)
 			Expect(f.ValuesGet("admissionPolicyEngine.podSecurityStandards.defaultPolicy").String()).To(Equal(pssRestrictedPolicy))
 			m := f.MetricsCollector.CollectedMetrics()
 			Expect(m).To(HaveLen(2))
@@ -69,6 +77,7 @@ var _ = Describe("Modules :: admission-policy-engine :: hooks :: detect pss defa
 		})
 		It("should have the default policy set to Privileged and report that it must be set explicitly", func() {
 			Expect(f).To(ExecuteSuccessfully())
+			expectImplicitPrivileged(true)
 			Expect(f.ValuesGet("admissionPolicyEngine.podSecurityStandards.defaultPolicy").String()).To(Equal(pssPrivilegedPolicy))
 			m := f.MetricsCollector.CollectedMetrics()
 			Expect(m).To(HaveLen(3))
@@ -101,6 +110,7 @@ var _ = Describe("Modules :: admission-policy-engine :: hooks :: detect pss defa
 		})
 		It("should not report that the default policy must be set explicitly", func() {
 			Expect(f).To(ExecuteSuccessfully())
+			expectImplicitPrivileged(false)
 			Expect(f.ValuesGet("admissionPolicyEngine.podSecurityStandards.defaultPolicy").String()).To(Equal(pssPrivilegedPolicy))
 			m := f.MetricsCollector.CollectedMetrics()
 			Expect(m).To(HaveLen(2))
@@ -124,11 +134,12 @@ var _ = Describe("Modules :: admission-policy-engine :: hooks :: detect pss defa
 			f.BindingContexts.Set(f.GenerateBeforeHelmContext())
 			f.RunHook()
 		})
-		It("should have the default policy set to Baseline", func() {
+		It("should have the default policy set to Privileged and report that it must be set explicitly", func() {
 			Expect(f).To(ExecuteSuccessfully())
-			Expect(f.ValuesGet("admissionPolicyEngine.podSecurityStandards.defaultPolicy").String()).To(Equal(pssBaselinePolicy))
+			expectImplicitPrivileged(true)
+			Expect(f.ValuesGet("admissionPolicyEngine.podSecurityStandards.defaultPolicy").String()).To(Equal(pssPrivilegedPolicy))
 			m := f.MetricsCollector.CollectedMetrics()
-			Expect(m).To(HaveLen(2))
+			Expect(m).To(HaveLen(3))
 			Expect(m[0]).To(BeEquivalentTo(operation.MetricOperation{
 				Group:  "d8_admission_policy_engine_pss_default_policy",
 				Action: operation.ActionExpireMetrics,
@@ -137,7 +148,14 @@ var _ = Describe("Modules :: admission-policy-engine :: hooks :: detect pss defa
 				Name:   "d8_admission_policy_engine_pss_default_policy",
 				Group:  "d8_admission_policy_engine_pss_default_policy",
 				Action: operation.ActionGaugeSet,
-				Value:  ptr.To(policyCode("Baseline")),
+				Value:  ptr.To(policyCode("Privileged")),
+				Labels: map[string]string{},
+			}))
+			Expect(m[2]).To(BeEquivalentTo(operation.MetricOperation{
+				Name:   "d8_admission_policy_engine_pss_default_policy_not_set",
+				Group:  "d8_admission_policy_engine_pss_default_policy",
+				Action: operation.ActionGaugeSet,
+				Value:  ptr.To(1.0),
 				Labels: map[string]string{},
 			}))
 		})
@@ -149,8 +167,75 @@ var _ = Describe("Modules :: admission-policy-engine :: hooks :: detect pss defa
 			f.BindingContexts.Set(f.GenerateBeforeHelmContext())
 			f.RunHook()
 		})
+		It("should have the default policy set to Privileged and report that it must be set explicitly", func() {
+			Expect(f).To(ExecuteSuccessfully())
+			expectImplicitPrivileged(true)
+			Expect(f.ValuesGet("admissionPolicyEngine.podSecurityStandards.defaultPolicy").String()).To(Equal(pssPrivilegedPolicy))
+			m := f.MetricsCollector.CollectedMetrics()
+			Expect(m).To(HaveLen(3))
+			Expect(m[0]).To(BeEquivalentTo(operation.MetricOperation{
+				Group:  "d8_admission_policy_engine_pss_default_policy",
+				Action: operation.ActionExpireMetrics,
+			}))
+			Expect(m[1]).To(BeEquivalentTo(operation.MetricOperation{
+				Name:   "d8_admission_policy_engine_pss_default_policy",
+				Group:  "d8_admission_policy_engine_pss_default_policy",
+				Action: operation.ActionGaugeSet,
+				Value:  ptr.To(policyCode("Privileged")),
+				Labels: map[string]string{},
+			}))
+			Expect(m[2]).To(BeEquivalentTo(operation.MetricOperation{
+				Name:   "d8_admission_policy_engine_pss_default_policy_not_set",
+				Group:  "d8_admission_policy_engine_pss_default_policy",
+				Action: operation.ActionGaugeSet,
+				Value:  ptr.To(1.0),
+				Labels: map[string]string{},
+			}))
+		})
+	})
+
+	Context("Cluster with install-data configmap with v1.54 version field", func() {
+		BeforeEach(func() {
+			f.KubeStateSet(v154ConfigMap)
+			f.BindingContexts.Set(f.GenerateBeforeHelmContext())
+			f.RunHook()
+		})
+		It("should have the default policy set to Privileged and report that it must be set explicitly", func() {
+			Expect(f).To(ExecuteSuccessfully())
+			expectImplicitPrivileged(true)
+			Expect(f.ValuesGet("admissionPolicyEngine.podSecurityStandards.defaultPolicy").String()).To(Equal(pssPrivilegedPolicy))
+			m := f.MetricsCollector.CollectedMetrics()
+			Expect(m).To(HaveLen(3))
+			Expect(m[0]).To(BeEquivalentTo(operation.MetricOperation{
+				Group:  "d8_admission_policy_engine_pss_default_policy",
+				Action: operation.ActionExpireMetrics,
+			}))
+			Expect(m[1]).To(BeEquivalentTo(operation.MetricOperation{
+				Name:   "d8_admission_policy_engine_pss_default_policy",
+				Group:  "d8_admission_policy_engine_pss_default_policy",
+				Action: operation.ActionGaugeSet,
+				Value:  ptr.To(policyCode("Privileged")),
+				Labels: map[string]string{},
+			}))
+			Expect(m[2]).To(BeEquivalentTo(operation.MetricOperation{
+				Name:   "d8_admission_policy_engine_pss_default_policy_not_set",
+				Group:  "d8_admission_policy_engine_pss_default_policy",
+				Action: operation.ActionGaugeSet,
+				Value:  ptr.To(1.0),
+				Labels: map[string]string{},
+			}))
+		})
+	})
+
+	Context("Cluster with install-data configmap with dev version field", func() {
+		BeforeEach(func() {
+			f.KubeStateSet(devConfigMap)
+			f.BindingContexts.Set(f.GenerateBeforeHelmContext())
+			f.RunHook()
+		})
 		It("should have the default policy set to Baseline", func() {
 			Expect(f).To(ExecuteSuccessfully())
+			expectImplicitPrivileged(false)
 			Expect(f.ValuesGet("admissionPolicyEngine.podSecurityStandards.defaultPolicy").String()).To(Equal(pssBaselinePolicy))
 			m := f.MetricsCollector.CollectedMetrics()
 			Expect(m).To(HaveLen(2))
@@ -163,31 +248,6 @@ var _ = Describe("Modules :: admission-policy-engine :: hooks :: detect pss defa
 				Group:  "d8_admission_policy_engine_pss_default_policy",
 				Action: operation.ActionGaugeSet,
 				Value:  ptr.To(policyCode("Baseline")),
-				Labels: map[string]string{},
-			}))
-		})
-	})
-
-	Context("Cluster with install-data configmap with v1.54 version field", func() {
-		BeforeEach(func() {
-			f.KubeStateSet(v154ConfigMap)
-			f.BindingContexts.Set(f.GenerateBeforeHelmContext())
-			f.RunHook()
-		})
-		It("should have the default policy set to Privileged", func() {
-			Expect(f).To(ExecuteSuccessfully())
-			Expect(f.ValuesGet("admissionPolicyEngine.podSecurityStandards.defaultPolicy").String()).To(Equal(pssPrivilegedPolicy))
-			m := f.MetricsCollector.CollectedMetrics()
-			Expect(m).To(HaveLen(2))
-			Expect(m[0]).To(BeEquivalentTo(operation.MetricOperation{
-				Group:  "d8_admission_policy_engine_pss_default_policy",
-				Action: operation.ActionExpireMetrics,
-			}))
-			Expect(m[1]).To(BeEquivalentTo(operation.MetricOperation{
-				Name:   "d8_admission_policy_engine_pss_default_policy",
-				Group:  "d8_admission_policy_engine_pss_default_policy",
-				Action: operation.ActionGaugeSet,
-				Value:  ptr.To(policyCode("Privileged")),
 				Labels: map[string]string{},
 			}))
 		})
@@ -201,6 +261,7 @@ var _ = Describe("Modules :: admission-policy-engine :: hooks :: detect pss defa
 		})
 		It("should have the default policy set to Baseline", func() {
 			Expect(f).To(ExecuteSuccessfully())
+			expectImplicitPrivileged(false)
 			Expect(f.ValuesGet("admissionPolicyEngine.podSecurityStandards.defaultPolicy").String()).To(Equal(pssBaselinePolicy))
 			m := f.MetricsCollector.CollectedMetrics()
 			Expect(m).To(HaveLen(2))
@@ -226,6 +287,7 @@ var _ = Describe("Modules :: admission-policy-engine :: hooks :: detect pss defa
 		})
 		It("should have the default policy set to Baseline", func() {
 			Expect(f).To(ExecuteSuccessfully())
+			expectImplicitPrivileged(false)
 			Expect(f.ValuesGet("admissionPolicyEngine.podSecurityStandards.defaultPolicy").String()).To(Equal(pssBaselinePolicy))
 			m := f.MetricsCollector.CollectedMetrics()
 			Expect(m).To(HaveLen(2))
@@ -298,3 +360,20 @@ metadata:
 data:
   version: "v1.56.56"
 `
+
+var devConfigMap = `
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: install-data
+  namespace: d8-system
+data:
+  version: dev
+`
+
+func expectImplicitPrivileged(expected bool) {
+	value, exists := requirements.GetValue(apeRequirements.ImplicitPrivilegedKey)
+	Expect(exists).To(BeTrue())
+	Expect(value).To(Equal(expected))
+}

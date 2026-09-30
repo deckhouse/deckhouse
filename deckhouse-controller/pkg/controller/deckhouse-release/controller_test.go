@@ -24,6 +24,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"regexp"
+	"slices"
 	"strings"
 	"testing"
 	"time"
@@ -48,6 +49,7 @@ import (
 	"github.com/deckhouse/deckhouse/go_lib/dependency/requirements"
 	"github.com/deckhouse/deckhouse/go_lib/hooks/update"
 	"github.com/deckhouse/deckhouse/go_lib/libapi"
+	apeRequirements "github.com/deckhouse/deckhouse/modules/015-admission-policy-engine/requirements"
 	"github.com/deckhouse/deckhouse/testing/controller/reconcilertest"
 )
 
@@ -556,6 +558,36 @@ func (suite *ControllerTestSuite) TestCreateReconcile() {
 		dr := suite.getDeckhouseRelease("v1.30.0")
 		_, err := suite.ctr.createOrUpdateReconcile(ctx, dr)
 		require.NoError(suite.T(), err)
+	})
+
+	suite.Run("Release blocked by an implicit Privileged PSS default policy", func() {
+		requirements.SaveValue(apeRequirements.ImplicitPrivilegedKey, true)
+		defer requirements.RemoveValue(apeRequirements.ImplicitPrivilegedKey)
+
+		suite.setupController("pss-implicit-privileged-blocked.yaml", initValues, embeddedMUP,
+			withModuleManager(enabledModulesStub{"admission-policy-engine"}))
+		dr := suite.getDeckhouseRelease("v1.30.0")
+		_, err := suite.ctr.createOrUpdateReconcile(ctx, dr)
+		require.NoError(suite.T(), err)
+
+		dr = suite.getDeckhouseRelease("v1.30.0")
+		require.Equal(suite.T(), v1alpha1.DeckhouseReleasePhasePending, dr.Status.Phase)
+		require.Contains(suite.T(), dr.Status.Message, `"pssDefaultPolicyImplicitPrivileged" requirement for DeckhouseRelease "1.30.0" not met`)
+		require.Contains(suite.T(), dr.Status.Message, "settings.podSecurityStandards.defaultPolicy")
+	})
+
+	suite.Run("Release not blocked by an explicit PSS default policy", func() {
+		requirements.SaveValue(apeRequirements.ImplicitPrivilegedKey, false)
+		defer requirements.RemoveValue(apeRequirements.ImplicitPrivilegedKey)
+
+		suite.setupController("pss-implicit-privileged-passed.yaml", initValues, embeddedMUP,
+			withModuleManager(enabledModulesStub{"admission-policy-engine"}))
+		dr := suite.getDeckhouseRelease("v1.30.0")
+		_, err := suite.ctr.createOrUpdateReconcile(ctx, dr)
+		require.NoError(suite.T(), err)
+
+		dr = suite.getDeckhouseRelease("v1.30.0")
+		require.NotContains(suite.T(), dr.Status.Message, "pssDefaultPolicyImplicitPrivileged")
 	})
 
 	suite.Run("Disruption release", func() {
@@ -1077,6 +1109,17 @@ func (suite *ControllerTestSuite) loopUntilDeploy(dc *dependency.MockedContainer
 	}
 
 	suite.T().Fatal("Loop was broken")
+}
+
+// enabledModulesStub is a module manager with the given modules enabled.
+type enabledModulesStub []string
+
+func (s enabledModulesStub) GetEnabledModuleNames() []string {
+	return s
+}
+
+func (s enabledModulesStub) IsModuleEnabled(name string) bool {
+	return slices.Contains(s, name)
 }
 
 type stubModulesManager struct{}

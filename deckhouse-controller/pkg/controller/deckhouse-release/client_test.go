@@ -74,6 +74,12 @@ func withDependencyContainer(dc dependency.Container) reconcilerOption {
 	}
 }
 
+func withModuleManager(mm moduleManager) reconcilerOption {
+	return func(r *deckhouseReleaseReconciler) {
+		r.moduleManager = mm
+	}
+}
+
 func setupControllerSettings(
 	t *testing.T,
 	filename,

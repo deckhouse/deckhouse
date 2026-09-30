@@ -4562,13 +4562,20 @@ alerts:
       module: admission-policy-engine
       edition: ce
       description: |-
-        The `d8-system/install-data` ConfigMap is missing, so Deckhouse can't determine the version the cluster was bootstrapped with.
-        dhctl creates this ConfigMap starting from v1.55, so the cluster is most likely bootstrapped with an earlier version.
+        The default policy isn't set in the `admission-policy-engine` ModuleConfig,
+        so Deckhouse derives it from the version the cluster was bootstrapped with
+        and applies `Privileged` to non-system namespaces.
+        This happens when the cluster was bootstrapped with a Deckhouse version lower than v1.55,
+        or when the bootstrap version can't be determined:
+        the `d8-system/install-data` ConfigMap is missing or can't be read,
+        or its `version` field is empty or isn't a valid version.
 
-        The `Privileged` default policy is currently applied to non-system namespaces.
-        Set the default policy explicitly so that it does not depend on how Deckhouse detects the bootstrap version.
+        **The update to Deckhouse 1.78 is blocked until you set the default policy explicitly.**
+        Starting from 1.78, `Baseline` is the default policy for all clusters,
+        so without an explicit value the cluster would switch from `Privileged` to `Baseline` on update.
 
-        To set the default policy, add the `settings.podSecurityStandards.defaultPolicy` parameter to the `admission-policy-engine` ModuleConfig.
+        To set the default policy,
+        add the `settings.podSecurityStandards.defaultPolicy` parameter to the `admission-policy-engine` ModuleConfig.
 
         If the ModuleConfig already exists, patch it so that its other settings are preserved:
 
@@ -4591,13 +4598,14 @@ alerts:
         ```
 
         Choose the value that suits your cluster: `Privileged`, `Baseline`, or `Restricted`.
-        Before switching to `Baseline` or `Restricted`, make sure that the workloads in non-system namespaces comply with the chosen policy.
+        Before switching to `Baseline` or `Restricted`,
+        make sure that the workloads in non-system namespaces comply with the chosen policy.
         Otherwise, their pods are denied when recreated if the `enforcementAction` parameter is set to `Deny`.
 
         The alert is resolved within 15 minutes after the parameter is set.
       summary: |
         The default Pod Security Standards policy must be set explicitly.
-      severity: "4"
+      severity: "5"
       markupFormat: markdown
     - name: PodSecurityStandardsViolation
       sourceFile: modules/015-admission-policy-engine/monitoring/prometheus-rules/propagated-audit.yaml
