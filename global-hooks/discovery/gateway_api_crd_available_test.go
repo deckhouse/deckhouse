@@ -107,6 +107,10 @@ func expectedValue(versionsByCRD map[string][]crdVersion) string {
 var _ = Describe("Global hooks :: discovery :: gateway_api_crd_available ::", func() {
 	f := HookExecutionConfigInit(`{"global": {"discovery": {}}}`, `{}`)
 
+	v1 := crdVersion{name: "v1", served: true, storage: true}
+	v1beta1 := crdVersion{name: "v1beta1", served: true}
+	deprecatedV1alpha2 := crdVersion{name: "v1alpha2", served: true, deprecated: true}
+
 	Context("Empty cluster", func() {
 		BeforeEach(func() {
 			f.BindingContexts.Set(f.KubeStateSet(``))
@@ -123,10 +127,6 @@ var _ = Describe("Global hooks :: discovery :: gateway_api_crd_available ::", fu
 	})
 
 	Context("Gateway API CRDs are installed", func() {
-		v1 := crdVersion{name: "v1", served: true, storage: true}
-		v1beta1 := crdVersion{name: "v1beta1", served: true}
-		deprecatedV1alpha2 := crdVersion{name: "v1alpha2", served: true, deprecated: true}
-
 		BeforeEach(func() {
 			f.BindingContexts.Set(f.KubeStateSet(
 				crdManifest("gateways.gateway.networking.k8s.io", "Gateway", v1, v1beta1) +
@@ -148,38 +148,42 @@ var _ = Describe("Global hooks :: discovery :: gateway_api_crd_available ::", fu
 					"inferencepools.inference.networking.k8s.io":   {v1},
 				})))
 		})
+	})
 
-		// A deprecated version is dropped rather than reported, so nothing downstream has to know
-		// what deprecation means.
-		Context("and one of them also declares a deprecated version", func() {
-			BeforeEach(func() {
-				f.BindingContexts.Set(f.KubeStateSet(
-					crdManifest("gateways.gateway.networking.k8s.io", "Gateway", v1, deprecatedV1alpha2)))
-				f.RunHook()
-			})
+	// The deprecation cases are siblings of the one above rather than nested in it: shrinking the
+	// fake cluster from its CRDs to one relies on Deleted events that race with the end of the state
+	// change, so a nested case could still see some of them installed.
 
-			It("leaves the deprecated version out", func() {
-				Expect(f).To(ExecuteSuccessfully())
-				Expect(f.ValuesGet("global.discovery.gatewayAPICRDs")).To(MatchJSON(
-					expectedValue(map[string][]crdVersion{
-						"gateways.gateway.networking.k8s.io": {v1},
-					})))
-			})
+	// A deprecated version is dropped rather than reported, so nothing downstream has to know
+	// what deprecation means.
+	Context("A CRD also declares a deprecated version", func() {
+		BeforeEach(func() {
+			f.BindingContexts.Set(f.KubeStateSet(
+				crdManifest("gateways.gateway.networking.k8s.io", "Gateway", v1, deprecatedV1alpha2)))
+			f.RunHook()
 		})
 
-		// Dropping every version it has leaves the CRD indistinguishable from one that is absent,
-		// which is what a consumer should conclude: there is nothing here it may use.
-		Context("and a CRD declares nothing but deprecated versions", func() {
-			BeforeEach(func() {
-				f.BindingContexts.Set(f.KubeStateSet(
-					crdManifest("gateways.gateway.networking.k8s.io", "Gateway", deprecatedV1alpha2)))
-				f.RunHook()
-			})
+		It("leaves the deprecated version out", func() {
+			Expect(f).To(ExecuteSuccessfully())
+			Expect(f.ValuesGet("global.discovery.gatewayAPICRDs")).To(MatchJSON(
+				expectedValue(map[string][]crdVersion{
+					"gateways.gateway.networking.k8s.io": {v1},
+				})))
+		})
+	})
 
-			It("reports it with no versions at all", func() {
-				Expect(f).To(ExecuteSuccessfully())
-				Expect(f.ValuesGet("global.discovery.gatewayAPICRDs")).To(MatchJSON(expectedValue(nil)))
-			})
+	// Dropping every version it has leaves the CRD indistinguishable from one that is absent,
+	// which is what a consumer should conclude: there is nothing here it may use.
+	Context("A CRD declares nothing but deprecated versions", func() {
+		BeforeEach(func() {
+			f.BindingContexts.Set(f.KubeStateSet(
+				crdManifest("gateways.gateway.networking.k8s.io", "Gateway", deprecatedV1alpha2)))
+			f.RunHook()
+		})
+
+		It("reports it with no versions at all", func() {
+			Expect(f).To(ExecuteSuccessfully())
+			Expect(f.ValuesGet("global.discovery.gatewayAPICRDs")).To(MatchJSON(expectedValue(nil)))
 		})
 	})
 
