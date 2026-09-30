@@ -1,0 +1,24 @@
+ci:
+  fixes:
+    - summary: Fix changelog-generator image tag in changelog-update job to use the shared CI_IMAGES_TAG
+      pull_request: https://fox.flant.com/deckhouse/deckhouse/-/merge_requests/266
+cloud-provider-vcd:
+  fixes:
+    - summary: >-
+        Fixes cluster bootstrap getting stuck when `capcd-controller-manager` cannot reach the API server
+        and DNS before the CNI is ready.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/23358
+docs:
+  features:
+    - summary: Add managed services modules architecture documentation section.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/23383
+istio:
+  fixes:
+    - summary: Aligned CNI templates with upstream and fixed Istio 1.25 compatibility.
+      pull_request: https://fox.flant.com/deckhouse/deckhouse/-/merge_requests/160
+    - summary: >-
+        Fixed the istio module getting stuck when switching `globalVersion` from 1.21 while proxies are
+        still connected to the 1.21 control plane.
+      pull_request: https://fox.flant.com/deckhouse/deckhouse/-/merge_requests/201
+    - summary: Fix leaking istiod control plane after removing an Istio version or disabling the module.
+      pull_request: https://fox.flant.com/deckhouse/deckhouse/-/merge_requests/255
