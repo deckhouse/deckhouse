@@ -16,9 +16,11 @@ package static
 
 import (
 	"maps"
+	"os/exec"
 	"slices"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/require"
 
@@ -37,6 +39,14 @@ const connectedHost = "10.0.0.1"
 // API-discovered master IPs. availableHosts defaults to the single host --ssh-host would give.
 // cleaned counts the cleanup script per host.
 func abortDestroyer(t *testing.T, cachedHosts map[string]string, availableHosts ...string) (*Destroyer, map[string]int) {
+	t.Helper()
+
+	return abortDestroyerWithCommands(t, cachedHosts, nil, availableHosts...)
+}
+
+// abortDestroyerWithCommands is abortDestroyer where a host from commands runs that cleanup command
+// instead of the default successful one. cleaned does not count those hosts.
+func abortDestroyerWithCommands(t *testing.T, cachedHosts map[string]string, commands map[string]*testssh.Command, availableHosts ...string) (*Destroyer, map[string]int) {
 	t.Helper()
 
 	stateCache := cache.NewTestCache()
@@ -66,6 +76,10 @@ func abortDestroyer(t *testing.T, cachedHosts map[string]string, availableHosts 
 		sshProvider.AddCommandProvider(host, func(_ testssh.Bastion, scriptPath string, _ ...string) *testssh.Command {
 			if !strings.Contains(scriptPath, "cleanup_static_node.sh") {
 				return nil
+			}
+
+			if c, ok := commands[host]; ok {
+				return c
 			}
 
 			return testssh.NewCommand([]byte("ok")).WithRun(func() { cleaned[host]++ })
@@ -112,6 +126,54 @@ func TestDestroyerAbortWithoutCachedHostsCleansTheGivenHost(t *testing.T) {
 
 	require.NoError(t, destroyer.destroyCluster(t.Context(), true))
 	require.Equal(t, map[string]int{connectedHost: 1}, cleaned)
+}
+
+// ssh exits 255 on its own failures: no connection, failed auth, a dropped session. The cleanup
+// script never exits 255, so a 255 means the host was not cleaned up and destroy has to fail.
+func TestDestroyerFailsWhenSSHExits255(t *testing.T) {
+	sshFailure := exec.Command("sh", "-c", "exit 255").Run()
+	var exitErr *exec.ExitError
+	require.ErrorAs(t, sshFailure, &exitErr)
+	require.Equal(t, 255, exitErr.ExitCode())
+
+	destroyer, _ := abortDestroyerWithCommands(t, nil, map[string]*testssh.Command{
+		// what ssh prints when a master behind the first one as bastion refuses the connection
+		connectedHost: testssh.NewCommand(nil).
+			WithStdErr([]byte(strings.Join([]string{
+				"channel 0: open failed: connect failed: Connection refused",
+				"stdio forwarding failed",
+				"kex_exchange_identification: Connection closed by remote host",
+				"Connection closed by UNKNOWN port 65535",
+				"debug1: Exit status 255",
+			}, "\n"))).
+			WithErr(sshFailure),
+	})
+
+	err := destroyer.destroyCluster(t.Context(), true)
+	require.ErrorContains(t, err, "exit status 255, last output: channel 0: open failed: connect failed: Connection refused | stdio forwarding failed")
+	require.NotContains(t, err.Error(), "debug1")
+}
+
+// lib-connection stops a command that outlives its timeout and reports the stop as a clean exit, so
+// a cleanup killed halfway would pass for a finished one. The fake command returns nil after the
+// deadline the same way.
+func TestDestroyerFailsWhenCleanupOutlivesTimeout(t *testing.T) {
+	defaultTimeout := cleanupAttemptTimeout
+	cleanupAttemptTimeout = 10 * time.Millisecond
+	t.Cleanup(func() { cleanupAttemptTimeout = defaultTimeout })
+
+	attempts := 0
+	destroyer, _ := abortDestroyerWithCommands(t, nil, map[string]*testssh.Command{
+		connectedHost: testssh.NewCommand(nil).WithRun(func() {
+			attempts++
+			time.Sleep(100 * time.Millisecond)
+		}),
+	})
+	destroyer.params.Loops.DestroyMaster = retry.NewEmptyParams(retry.WithAttempts(3), retry.WithWait(time.Millisecond))
+
+	require.ErrorContains(t, destroyer.destroyCluster(t.Context(), true), "context deadline exceeded")
+	// the script was killed partway, so it is not run again on the half-cleaned host
+	require.Equal(t, 1, attempts)
 }
 
 // TestDestroyerAbortRefusesCacheOfAnotherCluster guards the mine every static cluster shares: one
