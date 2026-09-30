@@ -38,6 +38,12 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 	OnBeforeHelm: &go_hook.OrderedConfig{Order: 10}, // Order matters — we need globalVersion from discovery_versions_to_install.go
 }, dependency.WithExternalDependencies(ensureCRDs))
 
+// minCRDBundleVersion is the oldest CRD bundle the hook installs, whatever Istio versions are configured.
+// The 1.21 bundle lacks the networking.istio.io/v1 API that the newer bundles serve (and 1.27 stores).
+// Installing it over them removes v1 while managedFields and stored objects still refer to it,
+// so every server-side apply of such an object fails. Istio 1.21 runs fine with the 1.25 CRDs.
+var minCRDBundleVersion = semver.MustParse("1.25")
+
 func ensureCRDs(ctx context.Context, input *go_hook.HookInput, dc dependency.Container) error {
 	// collect all istio versions (global + additional | uniq)
 	istioVersions := make([]string, 0)
@@ -66,7 +72,12 @@ func ensureCRDs(ctx context.Context, input *go_hook.HookInput, dc dependency.Con
 
 	sort.Sort(semver.Collection(semvers))
 
-	CRDversionToInstall := fmt.Sprintf("%d.%d", semvers[len(semvers)-1].Major(), semvers[len(semvers)-1].Minor())
+	crdBundleVersion := semvers[len(semvers)-1]
+	if crdBundleVersion.LessThan(minCRDBundleVersion) {
+		crdBundleVersion = minCRDBundleVersion
+	}
+
+	CRDversionToInstall := fmt.Sprintf("%d.%d", crdBundleVersion.Major(), crdBundleVersion.Minor())
 
 	crdsGlob := "/deckhouse/modules/110-istio/_crds/istio/" + CRDversionToInstall + "/*.yaml"
 
