@@ -17,15 +17,14 @@
 
 package config
 
-import (
-	"cmp"
-	"fmt"
-)
+import "cmp"
 
-// Used when neither ModuleConfig nor ClusterConfiguration sets the domain.
+// Used when neither ModuleConfig nor ClusterConfiguration sets the domain. It lives here rather
+// than as a schema default because ApplyDefaults would fill the deprecated field on every
+// parse, leaving "set by the user" and "not set" indistinguishable.
 const DefaultClusterDomain = "cluster.local"
 
-// One source for both candidate values, so the resolver and the two checks below cannot drift apart.
+// One source for both candidate values, so the resolver and the check below cannot drift apart.
 func (m *MetaConfig) clusterDomainParam() networkParam {
 	return networkParam{
 		name: "clusterDomain",
@@ -42,17 +41,4 @@ func (m *MetaConfig) ClusterDomainResolved() string {
 // carries no domain: resolving the default then would render a wrong service-account issuer.
 func (m *MetaConfig) ClusterDomainKnown() bool {
 	return !m.CPMModuleConfigUnreadable || m.clusterDomainParam().cc != ""
-}
-
-// Fails when the domain is set in neither document. Bootstrap and render only: the in-cluster hook
-// parses without ModuleConfig documents, where this would reject every migrated cluster.
-func (m *MetaConfig) RequireClusterDomain() error {
-	if m.clusterDomainParam().resolved() != "" {
-		return nil
-	}
-
-	return fmt.Errorf(
-		"clusterDomain is not set: add spec.settings.network.clusterDomain to ModuleConfig " +
-			"control-plane-manager (the deprecated ClusterConfiguration.clusterDomain is still " +
-			"accepted, but raises a migration alert)")
 }

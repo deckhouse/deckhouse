@@ -411,6 +411,7 @@ properties:
       clusterDomain:
         type: string
         pattern: '^[0-9a-zA-Z._-]+$'
+        x-doc-default: "cluster.local"
         description: |
           Cluster domain (used for local routing).
 
