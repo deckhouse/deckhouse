@@ -109,8 +109,22 @@ DUAL = os.environ.get("DUAL") == "1"
 
 # The legacy names carry everything needed to build the new ones: the tier the object belonged to
 # (use = permissions inside a namespace, manage = the module's own configuration), the module, and
-# the action: view and edit, or an action of the module's own (download_snapshots).
-LEGACY_NAME = re.compile(r"^(\s*name:\s*)(d8:(use:capability|manage:permission):module:([a-z0-9-]+):([a-z0-9_]+))\s*$", re.M)
+# the action: view and edit, or an action of the module's own (download_snapshots). A module with a
+# subsystem of its own named its objects after it instead (virtualization:
+# d8:use:capability:virtualization:<action>, d8:manage:permission:subsystem:virtualization:<action>).
+# A name without a segment is the module's only when its module label says so, a subsystem: name only
+# when the subsystem is one the module's module.yaml declares: d8:use:capability:kubernetes:* and
+# d8:manage:permission:subsystem:kubernetes:* are lineages of the platform.
+LEGACY_NAME = re.compile(r"^(\s*name:\s*)(d8:(use:capability|manage:permission):(?:(module|subsystem):)?([a-z0-9-]+):([a-z0-9_]+))\s*$", re.M)
+
+# The roles a module with a subsystem of its own shipped in the legacy scheme: namespace roles that
+# gathered its use capabilities (d8:use:role:<level>:<module>, d8:use:<module>:<level>), and the
+# subsystem roles (d8:manage:<subsystem>:<level>) that 1.78 names d8:subsystem:<subsystem>:<level>.
+LEGACY_USE_ROLE = re.compile(r"^\s*name:\s*(d8:use:(?:role:([a-z]+):([a-z0-9-]+)|([a-z0-9-]+):([a-z]+)))\s*$", re.M)
+LEGACY_MANAGE_ROLE = re.compile(r"^(\s*name:\s*)(d8:manage:([a-z0-9-]+):([a-z]+))\s*$", re.M)
+
+NAMESPACE_LEVELS = ["viewer", "user", "manager", "admin", "superadmin"]
+SYSTEM_LEVELS = ["viewer", "manager", "superadmin"]
 
 # The lineages of the platform, before 1.78 and after. Any other rbac.deckhouse.io/aggregate-to-<x>-as
 # is an axis of a module (state-snapshotter's backup-agent), which the 1.78 contract refuses as an
@@ -217,6 +231,51 @@ def chart_root(path):
     return rooted[:index] if index != -1 else os.path.dirname(rooted)
 
 
+def module_subsystems(path):
+    """The subsystems the chart's module.yaml declares beyond the platform's: a subsystem of the
+    module's own (virtualization). Read without a YAML library, as the script needs none: an inline
+    list or a block list under subsystems."""
+    try:
+        with open(os.path.join(chart_root(path), "module.yaml"), encoding="utf-8") as handle:
+            text = handle.read()
+    except OSError:
+        return []
+    inline = re.search(r"(?m)^subsystems:\s*\[([^\]]*)\]", text)
+    if inline:
+        names = [n.strip().strip("'\"") for n in inline.group(1).split(",")]
+    else:
+        block = re.search(r"(?m)^subsystems:\s*\n((?:[ \t]*-[^\n]*\n?)+)", text)
+        names = [n.strip().lstrip("-").strip().strip("'\"") for n in block.group(1).splitlines()] if block else []
+    return [n for n in names if n and n not in LINEAGES]
+
+
+def chart_module(path):
+    """The module helm_lib_module_labels names the objects of this chart after: .Chart.Name, that is the
+    name of Chart.yaml, then the name of module.yaml, then the chart directory without its NNN- prefix."""
+    root = chart_root(path)
+    for name in ("Chart.yaml", "module.yaml"):
+        try:
+            with open(os.path.join(root, name), encoding="utf-8") as handle:
+                m = re.search(r'(?m)^name:\s*"?([a-z0-9-]+)"?\s*$', handle.read())
+        except OSError:
+            continue
+        if m:
+            return m.group(1)
+    return re.sub(r"^[0-9]+-", "", os.path.basename(os.path.normpath(root)))
+
+
+def module_label(text, path):
+    """The module label of a template: a plain label, a "module" pair of a dict, or, for a template that
+    writes its labels through helm_lib_module_labels, the chart's module that helper injects at render
+    time. None when there is none."""
+    m = re.search(r'(?m)^\s*module:\s*"?([a-z0-9-]+)"?\s*$', text) or re.search(r'"module"\s+"([a-z0-9-]+)"', text)
+    if m:
+        return m.group(1)
+    if "helm_lib_module_labels" in text:
+        return chart_module(path)
+    return None
+
+
 warnings = []
 migrated = []
 skipped = []
@@ -248,20 +307,123 @@ def generic_texts(action):
     )
 
 
+LEGACY_ONLY = ""   # migrate() returns it for an object 1.78 has no counterpart of: the gate keeps its legacy branch
+gate_module = {}  # path -> module the gate of the file is named after, for objects that are not capabilities
+
+
+def migrate_role(path, text):
+    """A legacy role of a module with a subsystem of its own, migrated or kept for the legacy branch
+    only; None when the text holds none."""
+    if not re.search(r"^aggregationRule:", text, re.M):
+        return None
+    module = module_label(text, path)
+    use = LEGACY_USE_ROLE.search(text)
+    if use and re.search(r'kind"?[:\s]+"?use\b', text):
+        level, owner = (use.group(2), use.group(3)) if use.group(2) else (use.group(5), use.group(4))
+        if owner == module and level in NAMESPACE_LEVELS:
+            gate_module[path] = module
+            below = ", ".join(NAMESPACE_LEVELS[:NAMESPACE_LEVELS.index(level) + 1])
+            warn(path, f"{use.group(1)} gathered the module's use capabilities; in 1.78 d8:namespace:{level} gathers the "
+                       "migrated ones, so the role has no counterpart and only the legacy branch keeps it. If bindings use "
+                       f"the name, keep it as an alias in templates/rbacv2-compat/: selectors by module: {module}, "
+                       f"rbac.deckhouse.io/kind: capability and rbac.deckhouse.io/aggregate-to-namespace-as for each of "
+                       f"{below}, with rbac.deckhouse.io/deprecated: \"true\" and a deprecated-replaced-by annotation")
+            return LEGACY_ONLY
+    manage = LEGACY_MANAGE_ROLE.search(text)
+    if manage and re.search(r'kind"?[:\s]+"?manage\b', text):
+        subsystem, level = manage.group(3), manage.group(4)
+        if subsystem in module_subsystems(path) and level in SYSTEM_LEVELS:
+            if "helm_lib_module_labels" in text:
+                warn(path, f"{manage.group(2)} writes its labels through helm_lib_module_labels; migrate it to "
+                           f"d8:subsystem:{subsystem}:{level} by hand (see RBACV2_MODULE_MIGRATION.md, "
+                           "\"A subsystem of the module's own\")")
+                return None
+            # The gate is named after the chart's module, so every gated file of the chart asks the same
+            # define; a role without a module label still gets one.
+            gate_module[path] = module or chart_module(path)
+            if not module:
+                warn(path, f"{manage.group(2)} carries no module label; the gate is named after the chart ({gate_module[path]}), "
+                           f"and d8:subsystem:{subsystem}:{level} needs module: {gate_module[path]} like the rest of the module")
+            return subsystem_role(path, text, manage, subsystem, level)
+    return None
+
+
+def subsystem_role(path, text, match, subsystem, level):
+    """d8:manage:<subsystem>:<level> of the module's own subsystem as the 1.78 subsystem role
+    d8:subsystem:<subsystem>:<level>, shaped as user-authz's own: kind role and scope subsystem, the
+    subsystem label, the ladder of its lineage kept, aggregate-to-all-as moved to aggregate-to-system-as,
+    and the selector by its lineage alone."""
+    head, sep, rule = text.partition("\naggregationRule:")
+    head = re.sub(r"^(\s*)rbac\.deckhouse\.io/kind:\s*\"?manage\"?\s*$",
+                  rf"\g<1>rbac.deckhouse.io/kind: role\n\g<1>rbac.deckhouse.io/scope: subsystem", head, count=1, flags=re.M)
+    head = re.sub(r"^\s*rbac\.deckhouse\.io/level:\s*\"?[a-z]+\"?\s*$\n", "", head, flags=re.M)
+    head = re.sub(r"^(\s*)rbac\.deckhouse\.io/aggregate-to-all-as:", r"\g<1>rbac.deckhouse.io/aggregate-to-system-as:", head, flags=re.M)
+    if not re.search(r"^\s*rbac\.deckhouse\.io/subsystem:", head, re.M):
+        head = re.sub(r"^(\s*)rbac\.deckhouse\.io/scope: subsystem$", rf"\g<0>\n\g<1>rbac.deckhouse.io/subsystem: {subsystem}", head, count=1, flags=re.M)
+    if not re.search(r"^\s*rbac\.deckhouse\.io/use-role:", head, re.M):
+        warn(path, f"d8:subsystem:{subsystem}:{level} needs rbac.deckhouse.io/use-role, the namespace role its holders get "
+                   "in the module's namespaces; add it")
+    # The capabilities of 1.78 carry kind capability: a selector that still asks for kind manage matches none.
+    rule = re.sub(r"^\s*rbac\.deckhouse\.io/kind:\s*\"?manage\"?\s*$\n", "", rule, flags=re.M)
+    title = f"Subsystem {subsystem}: {level}"
+    annotations = ""
+    if "meta.deckhouse.io/title" not in text:
+        annotations = (
+            f'\n  annotations:\n'
+            f'    en.meta.deckhouse.io/title: "{title}"\n'
+            f'    ru.meta.deckhouse.io/title: "Подсистема {subsystem}: {level}"\n'
+            f'    en.meta.deckhouse.io/description: "The {level} role of the {subsystem} subsystem."\n'
+            f'    ru.meta.deckhouse.io/description: "Роль {level} подсистемы {subsystem}."'
+        )
+        warn(path, f"the titles and descriptions of d8:subsystem:{subsystem}:{level} are written from its name; reword them "
+                   "in both languages: the console shows them next to the role")
+    head = LEGACY_MANAGE_ROLE.sub(lambda m: f"{m.group(1)}d8:subsystem:{subsystem}:{level}{annotations}", head, count=1)
+    return head + sep + rule
+
+
 def migrate(path, text):
     match = LEGACY_NAME.search(text)
+    reason = "not a legacy module capability"
+    if match is not None:
+        segment, name = match.group(4), match.group(5)
+        if segment is None and module_label(text, path) != name:
+            match = None  # d8:use:capability:kubernetes:* and the like: a lineage of the platform, not a module
+        elif segment == "subsystem" and name not in module_subsystems(path):
+            match = None
+            reason = "a subsystem of the platform, not one the module declares"
     if match is None:
+        role = migrate_role(path, text)
+        if role is not None:
+            return role
         if "rbac.deckhouse.io/kind" in text and re.search(r'kind"?[:\s]+"?(capability|role)', text):
             skipped.append(f"{path}: already migrated")
-        else:
-            skipped.append(f"{path}: not a legacy module capability, left alone")
+            return None
+        # A use capability left alone that still carries the label of the module's own subsystem pours
+        # its namespace rules into the cluster-wide subsystem role of 1.78, which selects by that label
+        # alone. Say so rather than leave it among the files that are fine.
+        if re.search(r'kind"?[:\s]+"?use\b', text):
+            for subsystem in module_subsystems(path):
+                if re.search(rf'rbac\.deckhouse\.io/aggregate-to-{re.escape(subsystem)}-as', text):
+                    warn(path, f"a use capability the script does not recognise carries rbac.deckhouse.io/aggregate-to-{subsystem}-as: "
+                               f"in 1.78 d8:subsystem:{subsystem}:<level> selects by that label alone and would grant its "
+                               "rules cluster-wide; migrate it by hand (see RBACV2_MODULE_MIGRATION.md, "
+                               "\"A subsystem of the module's own\")")
+                    break
+        skipped.append(f"{path}: {reason}, left alone")
         return None
 
     tier = "use" if match.group(3) == "use:capability" else "manage"
-    module, action = match.group(4), match.group(5)
+    module, action = match.group(5), match.group(6)
+    own = module_subsystems(path)
+    gate_module[path] = module
     scope = SCOPE_OF_TIER[tier]
     marker = f"{scope}-capability.{module}.{action}"
     new_name = f"d8:{scope}-capability:{module}:{action}"
+    if len(marker) > 63:
+        room = 63 - len(marker) + len(action)
+        warn(path, f"the marker {marker} is {len(marker)} characters, and a label value holds 63: the API server refuses "
+                   f"the object and the release of the module fails. Shorten the action to at most {room} characters "
+                   "in the new name and marker before deploying")
 
     # A legacy name on a role that only aggregates (no rules of its own) is a role of the module, and
     # the 1.78 model has no place for one: it is not a capability to rename.
@@ -276,7 +438,19 @@ def migrate(path, text):
     helm = "helm_lib_module_labels" in text
     labels = aggregation_labels(text, helm)
     levels = [(lineage, level) for lineage, level in labels if lineage in LINEAGES]
-    axes = [lineage for lineage, _ in labels if lineage not in LINEAGES]
+    # The module's own subsystem is a lineage of 1.78 for a system capability. For a use capability it
+    # was the ladder of the module's namespace roles (virtualization's use and manage objects shared
+    # it, told apart by kind); 1.78 subsystem roles select by the label alone, so a namespace
+    # capability that kept it would pour its rules into the cluster-wide subsystem role. Its level
+    # moves to the namespace lineage, and the label goes.
+    own_levels = [(lineage, level) for lineage, level in labels if lineage in own]
+    if tier == "manage":
+        levels += own_levels
+    elif not levels:
+        levels = [(lineage, level) for lineage, level in own_levels if level in NAMESPACE_LEVELS]
+    axes = [lineage for lineage, _ in labels if lineage not in LINEAGES and lineage not in own]
+    # The lineages a use capability's labels are rewritten from: the platform's and the module's own.
+    use_lineage = "(?:" + "|".join(LINEAGES + own) + ")"
     if not levels:
         if axes:
             warn(path, f"aggregates only into {', '.join(axes)}, which the role model does not know: a capability also "
@@ -303,9 +477,9 @@ def migrate(path, text):
         text = re.sub(r"\(dict ", f'(dict "rbac.deckhouse.io/capability" "{marker}" ', text, count=1)
         text = re.sub(r'\s*"rbac\.deckhouse\.io/level"\s+"[a-z]+"', "", text)
         if tier == "use":
-            text = re.sub(rf'"rbac\.deckhouse\.io/aggregate-to-{LINEAGE}-as"\s+"[a-z]+"',
+            text = re.sub(rf'"rbac\.deckhouse\.io/aggregate-to-{use_lineage}-as"\s+"[a-z]+"',
                           f'"rbac.deckhouse.io/aggregate-to-namespace-as" "{level}"', text, count=1)
-            text = re.sub(rf'\s*"rbac\.deckhouse\.io/aggregate-to-(?!namespace-as){LINEAGE}-as"\s+"[a-z]+"', "", text)
+            text = re.sub(rf'\s*"rbac\.deckhouse\.io/aggregate-to-(?!namespace-as){use_lineage}-as"\s+"[a-z]+"', "", text)
     else:
         indent = re.search(r"^(\s*)rbac\.deckhouse\.io/kind:", text, re.M)
         pad = indent.group(1) if indent else "    "
@@ -315,10 +489,10 @@ def migrate(path, text):
                       f"{pad}rbac.deckhouse.io/scope: {scope}", text, count=1, flags=re.M)
         text = re.sub(r"^\s*rbac\.deckhouse\.io/level:\s*\"?[a-z]+\"?\s*$\n", "", text, flags=re.M)
         if tier == "use":
-            text = re.sub(rf"^(\s*)rbac\.deckhouse\.io/aggregate-to-{LINEAGE}-as:\s*\"?[a-z]+\"?\s*$",
+            text = re.sub(rf"^(\s*)rbac\.deckhouse\.io/aggregate-to-{use_lineage}-as:\s*\"?[a-z]+\"?\s*$",
                           rf"\g<1>rbac.deckhouse.io/aggregate-to-namespace-as: {level}",
                           text, count=1, flags=re.M)
-            text = re.sub(rf"^\s*rbac\.deckhouse\.io/aggregate-to-(?!namespace-as){LINEAGE}-as:\s*\"?[a-z]+\"?\s*$\n",
+            text = re.sub(rf"^\s*rbac\.deckhouse\.io/aggregate-to-(?!namespace-as){use_lineage}-as:\s*\"?[a-z]+\"?\s*$\n",
                           "", text, flags=re.M)
 
     if tier == "use" and re.search(r"rbac\.deckhouse\.io/namespace", text):
@@ -348,6 +522,8 @@ def migrate(path, text):
 
 def wrap(path, legacy, new, module):
     """Put the new object and the legacy one in one file, behind the version gate."""
+    if not module:
+        sys.exit(f"{path}: no module to name the version gate after; this is a bug of the script")
     gates.setdefault(chart_root(path), set()).add(module)
     return (
         gate_open(module)
@@ -388,9 +564,13 @@ for path in sys.argv[1:]:
     after = migrate(path, before)
     if after is None or after == before:
         continue
+    if after == LEGACY_ONLY and not DUAL:
+        warn(path, "has no counterpart in the 1.78 model and --replace keeps no legacy branch: delete the file, and "
+                   "keep its name as an alias in templates/rbacv2-compat/ if bindings use it")
+        skipped.append(f"{path}: a legacy role with no 1.78 counterpart, left for you to delete")
+        continue
     if DUAL:
-        module_match = LEGACY_NAME.search(before)
-        after = wrap(path, before, after, module_match.group(4))
+        after = wrap(path, before, after, gate_module[path])
     migrated.append(path)
     if DRY_RUN:
         sys.stdout.write(unified_diff(path, before, after))

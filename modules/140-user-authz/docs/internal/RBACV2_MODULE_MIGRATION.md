@@ -262,6 +262,25 @@ clusters below 1.78.
    is required: an alias without it is ignored with a warning in the log. The same works for a later
    rename of a `d8:<module>:<name>` role: the alias may carry any `d8:` name except the platform's own
    role families (`d8:system:`, `d8:subsystem:`, `d8:namespace:`, `d8:project:`, `d8:custom:`, `d8:dict`).
+7. **A subsystem of the module's own.** A module that declares one in `module.yaml` (`subsystems: [virtualization]`)
+   named its objects after it: `d8:use:capability:<module>:<action>`, `d8:manage:permission:subsystem:<module>:<action>`,
+   namespace roles `d8:use:role:<level>:<module>` and subsystem roles `d8:manage:<subsystem>:<level>`, all on the
+   lineage of the subsystem, told apart by `rbac.deckhouse.io/kind`. The script migrates them:
+   - a use capability becomes a namespace capability, its level moves from the subsystem's lineage to
+     `aggregate-to-namespace-as`, and that label goes: the 1.78 subsystem roles select by it alone, and a namespace
+     capability that kept it would pour its rules into the cluster-wide role;
+   - a manage permission becomes a system capability that keeps the subsystem's lineage;
+   - `d8:manage:<subsystem>:<level>` becomes the subsystem role `d8:subsystem:<subsystem>:<level>` (kind `role`, scope
+     `subsystem`, `aggregate-to-all-as` moved to `aggregate-to-system-as`, the selector by the lineage alone);
+   - a namespace role of the module has no counterpart — `d8:namespace:<level>` gathers the capabilities — so it stays
+     in the legacy branch of the gate only, and `--replace` leaves it for you to delete. Keep its name as an alias if
+     bindings use it.
+
+   The script also reports a marker past 63 characters: the API server refuses such a label, so shorten the action.
+   A `subsystem:` name is migrated only for a subsystem the module's `module.yaml` declares, and a template that
+   writes its labels through `helm_lib_module_labels` is taken for the module of its chart (the name in `Chart.yaml`).
+   A use capability the script cannot recognise that still carries the subsystem's label is reported for you to
+   migrate by hand.
 
 ## Checking the result
 
