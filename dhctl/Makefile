@@ -161,7 +161,8 @@ define BUILD_VARIABLES
 -X github.com/deckhouse/deckhouse/dhctl/pkg/config.RppSignCheck=$(RPP_SIGN_CHECK) \
 -X github.com/deckhouse/deckhouse/dhctl/pkg/config.Edition=$(EDITION) \
 -X github.com/deckhouse/deckhouse/dhctl/pkg/config.CommaSeparatedEEEditions=$(EE_EDITIONS) \
--X github.com/deckhouse/deckhouse/dhctl/pkg/app.AppVersion=$(D8_VERSION) \
+-X github.com/deckhouse/deckhouse/dhctl/pkg/app/options.AppVersion=$(D8_VERSION) \
+-X github.com/deckhouse/deckhouse/dhctl/pkg/app/options.AppEdition=$(EDITION) \
 -X github.com/deckhouse/deckhouse/dhctl/pkg/config.DefaultKubernetesVersion=$(DEFAULT_KUBERNETES_VERSION)
 endef
 
