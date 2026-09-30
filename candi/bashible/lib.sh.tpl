@@ -280,19 +280,34 @@ bb-minget-install() {
 }
 {{- end }}
 bb-rpp-get-binary-ready() { "$1" version &>/dev/null; }
+# Both branches must turn a non-2xx response into a non-zero exit code: d8-curl needs -f and
+# minget needs --fail. Without them the error body is written out as if it were the binary,
+# the caller only ever sees a file that does not run, and the reason is lost.
 bb-rpp-get-fetch() {
   if command -v d8-curl >/dev/null 2>&1; then
     d8-curl -sS -f -x "" --connect-timeout 10 --max-time 300 "http://$1"
     return
   fi
-  /opt/deckhouse/bin/minget "$1"
+  /opt/deckhouse/bin/minget "$1" --fail
+}
+# One line per failed source, so a node that cannot reach the bootstrap proxy says why instead
+# of repeating the same anonymous retry thirty times.
+bb-rpp-get-report() {
+  local attempt="$1" attempts="$2" address="$3" reason="$4" details_file="${5:-}"
+  local details=""
+  if [[ -n "$details_file" && -s "$details_file" ]]; then
+    details=": $(tr -s '\r\n\t' '   ' < "$details_file" | tr -cd '[:print:] ' | cut -c1-300 | sed -e 's/[[:space:]]*$//')"
+  fi
+  >&2 echo "rpp-get: attempt ${attempt} of ${attempts}: ${address}: ${reason}${details}"
 }
 bb-rpp-get-install() {
   local bin="/opt/deckhouse/bin/rpp-get"
   local digest="{{ get $registryPackages "rppGet" }}"
   local digest_file="${BB_RP_INSTALLED_PACKAGES_STORE:-/var/cache/registrypackages}/rpp-get/digest"
   local tmp="${bin}.tmp"
+  local fetch_log="${bin}.fetch.log"
   local prefix="${PACKAGES_PROXY_BOOTSTRAP_CLUSTER_UUID:+/${PACKAGES_PROXY_BOOTSTRAP_CLUSTER_UUID}}"
+  local attempts=30
   local attempt address
   if [[ -f "$digest_file" &&
         "$(<"$digest_file")" == "$digest" ]] &&
@@ -304,20 +319,31 @@ bb-rpp-get-install() {
     return 1
   fi
   mkdir -p "${bin%/*}" "${digest_file%/*}"
-  for ((attempt = 1; attempt <= 30; attempt++)); do
+  for ((attempt = 1; attempt <= attempts; attempt++)); do
     for address in ${PACKAGES_PROXY_BOOTSTRAP_ADDRESSES}; do
-      bb-rpp-get-fetch "${address}${prefix}/rpp-get?digest=${digest}" > "$tmp" || continue
+      if ! bb-rpp-get-fetch "${address}${prefix}/rpp-get?digest=${digest}" > "$tmp" 2> "$fetch_log"; then
+        bb-rpp-get-report "$attempt" "$attempts" "$address" "download failed" "$fetch_log"
+        continue
+      fi
       chmod +x "$tmp"
-      bb-rpp-get-binary-ready "$tmp" || continue
+      if ! bb-rpp-get-binary-ready "$tmp"; then
+        # The download reported success, so what arrived is worth showing: a proxy error page
+        # or a truncated body looks exactly like this and nothing else would name it.
+        bb-rpp-get-report "$attempt" "$attempts" "$address" \
+          "downloaded $(wc -c < "$tmp" | tr -d ' ') bytes that do not run as rpp-get" "$tmp"
+        continue
+      fi
       mv -f "$tmp" "$bin"
       echo "$digest" > "$digest_file"
+      rm -f "$fetch_log"
       return 0
     done
-    >&2 echo "Failed to install rpp-get (attempt ${attempt} of 30), retrying in 5 seconds"
+    >&2 echo "Failed to install rpp-get (attempt ${attempt} of ${attempts}), retrying in 5 seconds"
     sleep 5
   done
-  >&2 echo "Failed to install rpp-get after 30 attempts"
-  rm -f "$tmp"
+  >&2 echo "Failed to install rpp-get after ${attempts} attempts"
+  >&2 echo "rpp-get is served by registry-packages-proxy on the master nodes (${PACKAGES_PROXY_BOOTSTRAP_ADDRESSES}); check that the port is reachable from this node and that the module is running"
+  rm -f "$tmp" "$fetch_log"
   return 1
 }
 {{- end }}
