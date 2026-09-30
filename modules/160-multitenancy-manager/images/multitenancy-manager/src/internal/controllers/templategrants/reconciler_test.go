@@ -18,17 +18,31 @@ package templategrants
 
 import (
 	"context"
+	"net/http"
+	"sync"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/client-go/rest"
+	toolscache "k8s.io/client-go/tools/cache"
+	"k8s.io/utils/ptr"
 	ctrl "sigs.k8s.io/controller-runtime"
+	"sigs.k8s.io/controller-runtime/pkg/cache"
+	"sigs.k8s.io/controller-runtime/pkg/cache/informertest"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
+	"sigs.k8s.io/controller-runtime/pkg/config"
+	"sigs.k8s.io/controller-runtime/pkg/controller/controllertest"
+	"sigs.k8s.io/controller-runtime/pkg/manager"
+	metricsserver "sigs.k8s.io/controller-runtime/pkg/metrics/server"
 
 	grantsv1alpha1 "controller/api/v1alpha1"
 	deckhousev1alpha2 "controller/apis/deckhouse.io/v1alpha2"
@@ -69,6 +83,150 @@ func getPolicy(t *testing.T, c client.Client, name string) *grantsv1alpha1.Clust
 	p := &grantsv1alpha1.ClusterResourceGrantPolicy{}
 	require.NoError(t, c.Get(context.Background(), client.ObjectKey{Name: name}, p))
 	return p
+}
+
+// lockedInformer serialises the handler registration the controller does with the events the test
+// fires (the fake informer is not safe for concurrent use), and reports when the expected number of
+// handlers is in place.
+type lockedInformer struct {
+	*controllertest.FakeInformer
+
+	mu    sync.Mutex
+	want  int
+	count int
+	ready chan struct{}
+}
+
+func newLockedInformer(want int) *lockedInformer {
+	return &lockedInformer{FakeInformer: &controllertest.FakeInformer{Synced: true}, want: want, ready: make(chan struct{})}
+}
+
+func (l *lockedInformer) AddEventHandlerWithOptions(
+	h toolscache.ResourceEventHandler,
+	o toolscache.HandlerOptions,
+) (toolscache.ResourceEventHandlerRegistration, error) {
+	l.mu.Lock()
+	defer l.mu.Unlock()
+
+	reg, err := l.FakeInformer.AddEventHandlerWithOptions(h, o)
+	if l.count++; l.count == l.want {
+		close(l.ready)
+	}
+
+	return reg, err
+}
+
+func (l *lockedInformer) Update(oldObj, newObj metav1.Object) {
+	l.mu.Lock()
+	defer l.mu.Unlock()
+
+	l.FakeInformer.Update(oldObj, newObj)
+}
+
+func (l *lockedInformer) Delete(obj metav1.Object) {
+	l.mu.Lock()
+	defer l.mu.Unlock()
+
+	l.FakeInformer.Delete(obj)
+}
+
+// The watch SetupWithManager registers is what brings a library policy edit to the templates: a spec
+// edit wakes the template, an update that keeps the generation (a status write) is filtered out, and
+// a delete passes the predicate and prunes the copy.
+func TestSetupWithManager_LibraryPolicyWatch(t *testing.T) {
+	lib := libraryPolicy("lib", grantsv1alpha1.GrantResource{ResourceName: "storageclasses", Allowed: []string{"fast", "slow"}})
+	r, c := newReconciler(t, template("a", deckhousev1alpha2.ProjectTemplateSpec{GrantPolicies: []string{"lib"}}), lib)
+	runReconcile(t, r, "a")
+
+	// Owns and Watches both register a handler on the policy informer.
+	policies := newLockedInformer(2)
+	informers := &informertest.FakeInformers{Scheme: r.Scheme, InformersByGVK: map[schema.GroupVersionKind]toolscache.SharedIndexInformer{
+		grantsv1alpha1.GroupVersion.WithKind("ClusterResourceGrantPolicy"): policies,
+		deckhousev1alpha2.SchemeGroupVersion.WithKind("ProjectTemplate"):   &controllertest.FakeInformer{Synced: true},
+	}}
+	mgr, err := manager.New(&rest.Config{Host: "http://127.0.0.1:1"}, manager.Options{
+		Scheme:     r.Scheme,
+		Metrics:    metricsserver.Options{BindAddress: "0"},
+		Controller: config.Controller{SkipNameValidation: ptr.To(true)},
+		MapperProvider: func(*rest.Config, *http.Client) (meta.RESTMapper, error) {
+			return meta.NewDefaultRESTMapper(nil), nil
+		},
+		NewCache:  func(*rest.Config, cache.Options) (cache.Cache, error) { return informers, nil },
+		NewClient: func(*rest.Config, client.Options) (client.Client, error) { return c, nil },
+	})
+	require.NoError(t, err)
+	require.NoError(t, r.SetupWithManager(mgr))
+
+	ctx, cancel := context.WithCancel(context.Background())
+	t.Cleanup(cancel)
+
+	go func() { _ = mgr.Start(ctx) }()
+
+	select {
+	case <-policies.ready:
+	case <-time.After(5 * time.Second):
+		require.FailNow(t, "the controller did not register its policy handlers")
+	}
+
+	allowed := func() []string { return getPolicy(t, c, PolicyName("a", "lib")).Spec.Resources[0].Allowed }
+	edit := func(values ...string) (*grantsv1alpha1.ClusterResourceGrantPolicy, *grantsv1alpha1.ClusterResourceGrantPolicy) {
+		cur := getPolicy(t, c, "lib")
+		old := cur.DeepCopy()
+		cur.Spec.Resources[0].Allowed = values
+		require.NoError(t, c.Update(ctx, cur))
+
+		return old, cur
+	}
+
+	old, cur := edit("slow")
+	cur.Generation = old.Generation + 1
+	policies.Update(old, cur)
+	require.Eventually(t, func() bool { return len(allowed()) == 1 }, 2*time.Second, 20*time.Millisecond, "a spec edit reaches the copy")
+
+	old, cur = edit("fast", "slow")
+	cur.Generation = old.Generation
+	policies.Update(old, cur)
+	assert.Never(t, func() bool { return len(allowed()) == 2 }, 300*time.Millisecond, 20*time.Millisecond, "an update that keeps the generation is filtered")
+
+	require.NoError(t, c.Delete(ctx, cur))
+	policies.Delete(cur)
+	assert.Eventually(t, func() bool {
+		err := c.Get(ctx, client.ObjectKey{Name: PolicyName("a", "lib")}, &grantsv1alpha1.ClusterResourceGrantPolicy{})
+		return apierrors.IsNotFound(err)
+	}, 2*time.Second, 20*time.Millisecond, "a deleted library policy takes its copy along")
+}
+
+// A changed grant policy wakes exactly the templates that reference it; a managed copy wakes none,
+// because Owns already maps it to its template.
+func TestTemplatesReferencing(t *testing.T) {
+	r, _ := newReconciler(t,
+		template("a", deckhousev1alpha2.ProjectTemplateSpec{GrantPolicies: []string{"lib", "other"}}),
+		template("b", deckhousev1alpha2.ProjectTemplateSpec{GrantPolicies: []string{"lib"}}),
+		template("c", deckhousev1alpha2.ProjectTemplateSpec{GrantPolicies: []string{"other"}}),
+		template("d", deckhousev1alpha2.ProjectTemplateSpec{}),
+	)
+	// The label decides, not the name: an object carrying it is skipped even under a referenced name.
+	managedCopy := libraryPolicy("lib")
+	managedCopy.Labels = map[string]string{LabelManagedByTemplate: "a"}
+
+	tests := []struct {
+		name     string
+		policy   *grantsv1alpha1.ClusterResourceGrantPolicy
+		expected []string
+	}{
+		{name: "a library policy referenced by two templates", policy: libraryPolicy("lib"), expected: []string{"a", "b"}},
+		{name: "a policy no template references", policy: libraryPolicy("unused")},
+		{name: "an object with the managed-by-template label", policy: managedCopy},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			names := []string{}
+			for _, req := range r.templatesReferencing(context.Background(), tt.policy) {
+				names = append(names, req.Name)
+			}
+			assert.ElementsMatch(t, tt.expected, names)
+		})
+	}
 }
 
 // One managed policy per source (inline + each grantPolicy), never merged; each targets the template
@@ -158,4 +316,52 @@ func TestReconcile_TemplateGoneIsNoop(t *testing.T) {
 	require.NoError(t, err)
 	assert.False(t, res.Requeue)
 	assert.Zero(t, res.RequeueAfter)
+}
+
+// An edit of a library policy reaches the managed copy of every template that references it: the
+// watch maps the policy to those templates, and their reconcile copies the new resources.
+func TestReconcile_ManagedCopyFollowsLibraryEdit(t *testing.T) {
+	lib := libraryPolicy("lib", grantsv1alpha1.GrantResource{ResourceName: "storageclasses", Allowed: []string{"fast", "slow"}})
+	r, c := newReconciler(t,
+		template("a", deckhousev1alpha2.ProjectTemplateSpec{GrantPolicies: []string{"lib"}}),
+		template("b", deckhousev1alpha2.ProjectTemplateSpec{GrantPolicies: []string{"lib"}}),
+		lib,
+	)
+	runReconcile(t, r, "a")
+	runReconcile(t, r, "b")
+
+	cur := &grantsv1alpha1.ClusterResourceGrantPolicy{}
+	require.NoError(t, c.Get(context.Background(), client.ObjectKey{Name: "lib"}, cur))
+	cur.Spec.Resources[0].Allowed = []string{"slow"}
+	require.NoError(t, c.Update(context.Background(), cur))
+
+	requests := r.templatesReferencing(context.Background(), cur)
+	require.Len(t, requests, 2)
+	for _, req := range requests {
+		runReconcile(t, r, req.Name)
+	}
+
+	for _, tmpl := range []string{"a", "b"} {
+		managed := getPolicy(t, c, PolicyName(tmpl, "lib"))
+		require.Len(t, managed.Spec.Resources, 1, tmpl)
+		assert.Equal(t, []string{"slow"}, managed.Spec.Resources[0].Allowed, tmpl)
+	}
+}
+
+// Deleting a library policy prunes its managed copy at once: the deleted object still maps to the
+// templates that reference it, and their reconcile finds the reference gone.
+func TestReconcile_ManagedCopyGoesWithDeletedLibrary(t *testing.T) {
+	lib := libraryPolicy("lib", grantsv1alpha1.GrantResource{ResourceName: "storageclasses", Allowed: []string{"fast"}})
+	r, c := newReconciler(t, template("a", deckhousev1alpha2.ProjectTemplateSpec{GrantPolicies: []string{"lib"}}), lib)
+	runReconcile(t, r, "a")
+	getPolicy(t, c, PolicyName("a", "lib"))
+
+	require.NoError(t, c.Delete(context.Background(), lib))
+	requests := r.templatesReferencing(context.Background(), lib)
+	require.Len(t, requests, 1)
+	res := runReconcile(t, r, requests[0].Name)
+
+	assert.Positive(t, res.RequeueAfter, "the template still references the deleted policy")
+	err := c.Get(context.Background(), client.ObjectKey{Name: PolicyName("a", "lib")}, &grantsv1alpha1.ClusterResourceGrantPolicy{})
+	assert.True(t, apierrors.IsNotFound(err), "the managed copy of a deleted library policy must be pruned")
 }

@@ -27,20 +27,26 @@ limitations under the License.
 //     future) projects of the template without per-project objects.
 //   - Every managed policy is owned by the ProjectTemplate, so deleting the template garbage-collects
 //     its managed policies; removing a source prunes just that policy.
+//   - A change to a referenced library policy reaches its managed copies right away: editing it
+//     updates them, deleting it prunes them.
 package templategrants
 
 import (
 	"context"
 	"fmt"
+	"slices"
 	"time"
 
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	ctrl "sigs.k8s.io/controller-runtime"
+	"sigs.k8s.io/controller-runtime/pkg/builder"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
+	"sigs.k8s.io/controller-runtime/pkg/handler"
 	ctrllog "sigs.k8s.io/controller-runtime/pkg/log"
+	"sigs.k8s.io/controller-runtime/pkg/predicate"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
 	grantsv1alpha1 "controller/api/v1alpha1"
@@ -79,7 +85,34 @@ func (r *Reconciler) SetupWithManager(mgr ctrl.Manager) error {
 		Named("template-grants").
 		For(&deckhousev1alpha2.ProjectTemplate{}).
 		Owns(&grantsv1alpha1.ClusterResourceGrantPolicy{}).
+		// A library policy has no owner reference to the templates that copy it, so Owns does not see
+		// it. Its status is written by the policy reconciler and says nothing the copies take, hence
+		// the generation predicate; creates and deletes pass it.
+		Watches(&grantsv1alpha1.ClusterResourceGrantPolicy{}, handler.EnqueueRequestsFromMapFunc(r.templatesReferencing),
+			builder.WithPredicates(predicate.GenerationChangedPredicate{})).
 		Complete(r)
+}
+
+// templatesReferencing maps a ClusterResourceGrantPolicy to the ProjectTemplates that list it in
+// spec.grantPolicies, so an edit or a deletion of a library policy reaches its managed copies without
+// waiting for an unrelated template change or a resync. A managed copy is skipped: Owns already wakes
+// its template. Templates are few, so they are listed and filtered rather than indexed.
+func (r *Reconciler) templatesReferencing(ctx context.Context, obj client.Object) []reconcile.Request {
+	if _, managed := obj.GetLabels()[LabelManagedByTemplate]; managed {
+		return nil
+	}
+	templates := &deckhousev1alpha2.ProjectTemplateList{}
+	if err := r.Client.List(ctx, templates); err != nil {
+		ctrllog.FromContext(ctx).Error(err, "list project templates referencing a grant policy", "policy", obj.GetName())
+		return nil
+	}
+	var requests []reconcile.Request
+	for i := range templates.Items {
+		if slices.Contains(templates.Items[i].Spec.GrantPolicies, obj.GetName()) {
+			requests = append(requests, reconcile.Request{NamespacedName: client.ObjectKey{Name: templates.Items[i].Name}})
+		}
+	}
+	return requests
 }
 
 func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
