@@ -31,6 +31,7 @@ chmod 700 /var/lib/kubelet/
 
 if [[ -d /etc/containerd ]]; then
     chmod 700 /etc/containerd
+    find /etc/containerd -type f ! -perm 600 -exec chmod 600 {} \;
 fi
 
 if [[ -d /var/lib/etcd ]]; then

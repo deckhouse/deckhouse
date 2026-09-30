@@ -192,11 +192,7 @@ func writeIfChanged(path string, content []byte) (bool, error) {
 	if err := temporary.Close(); err != nil {
 		return false, fmt.Errorf("closing %s: %w", temporary.Name(), err)
 	}
-	// World-readable: containerd reads these, and it does not run as this process.
-	// The credentials inside are no more exposed than they already are in the
-	// runtime's own memory, and a directory the runtime cannot read is a node that
-	// cannot pull.
-	if err := os.Chmod(temporary.Name(), 0o644); err != nil {
+	if err := os.Chmod(temporary.Name(), 0o600); err != nil {
 		return false, fmt.Errorf("setting the mode of %s: %w", temporary.Name(), err)
 	}
 	if err := os.Rename(temporary.Name(), path); err != nil {

@@ -50,11 +50,9 @@ func TestApplyWritesTheConfiguration(t *testing.T) {
 	require.NoError(t, err)
 	assert.Contains(t, string(content), "[host]")
 
-	// World-readable: containerd reads these and does not run as this process. A
-	// directory the runtime cannot read is a node that cannot pull.
 	info, err := os.Stat(filepath.Join(writer.Root, "registry.d8-system.svc:5001", "hosts.toml"))
 	require.NoError(t, err)
-	assert.Equal(t, os.FileMode(0o644), info.Mode().Perm())
+	assert.Equal(t, os.FileMode(0o600), info.Mode().Perm())
 }
 
 // TestApplyIsIdempotent is what keeps a scheduled re-render from touching the
