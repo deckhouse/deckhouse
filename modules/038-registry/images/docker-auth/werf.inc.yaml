@@ -1,4 +1,4 @@
-{{- $version := "v1.14.0-deckhouse.10"}}
+{{- $version := "v1.14.0-deckhouse.11"}}
 ---
 image: "{{ $.ModuleName }}/{{ $.ImageName }}-src-artifact"
 fromImage: common/src-artifact
