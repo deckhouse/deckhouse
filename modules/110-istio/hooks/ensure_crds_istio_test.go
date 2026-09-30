@@ -17,6 +17,7 @@ limitations under the License.
 package hooks
 
 import (
+	"github.com/Masterminds/semver/v3"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 
@@ -25,6 +26,16 @@ import (
 
 var _ = Describe("Modules :: istio :: hooks :: ensure_crds_istio ::", func() {
 	f := HookExecutionConfigInit(`{ "istio": { "internal": { } } }`, `{"istio":{}}`)
+	realMinCRDBundleVersion := minCRDBundleVersion
+
+	// the test bundles (0.990-0.992) are older than the real floor
+	BeforeEach(func() {
+		minCRDBundleVersion = semver.MustParse("0.0")
+	})
+
+	AfterEach(func() {
+		minCRDBundleVersion = realMinCRDBundleVersion
+	})
 
 	Context("Empty cluster, no globalVersion in values", func() {
 		BeforeEach(func() {
@@ -84,6 +95,78 @@ var _ = Describe("Modules :: istio :: hooks :: ensure_crds_istio ::", func() {
 			Expect(f).To(ExecuteSuccessfully())
 			Expect(f.KubernetesGlobalResource("CustomResourceDefinition", "testcrds.deckhouse.io").Exists()).To(BeTrue())
 			Expect(f.KubernetesGlobalResource("CustomResourceDefinition", "testcrds.deckhouse.io").Field("spec.scope").String()).To(Equal("0.992"))
+		})
+	})
+})
+
+var _ = Describe("Modules :: istio :: hooks :: ensure_crds_istio :: real CRD bundles ::", func() {
+	f := HookExecutionConfigInit(`{ "istio": { "internal": { } } }`, `{"istio":{}}`)
+
+	// ServiceEntry CRD as installed by the 1.25 bundle
+	const serviceEntryCRD = `
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  name: serviceentries.networking.istio.io
+spec:
+  group: networking.istio.io
+  names:
+    kind: ServiceEntry
+    listKind: ServiceEntryList
+    plural: serviceentries
+    singular: serviceentry
+  scope: Namespaced
+  versions:
+  - name: v1
+    served: true
+    storage: false
+    schema: &schema
+      openAPIV3Schema:
+        type: object
+        x-kubernetes-preserve-unknown-fields: true
+  - name: v1alpha3
+    served: true
+    storage: false
+    schema: *schema
+  - name: v1beta1
+    served: true
+    storage: true
+    schema: *schema
+status:
+  storedVersions:
+  - v1alpha3
+  - v1beta1
+`
+
+	Context("Empty cluster, globalVersion 1.21", func() {
+		BeforeEach(func() {
+			f.KubeStateSet(``)
+			f.ValuesSet("istio.internal.globalVersion", "1.21")
+			f.BindingContexts.Set(f.GenerateOnStartupContext())
+			f.RunHook()
+		})
+
+		It("Hook must not fail, CRDs from the 1.25 bundle should be created", func() {
+			Expect(f).To(ExecuteSuccessfully())
+			serviceEntry := f.KubernetesGlobalResource("CustomResourceDefinition", "serviceentries.networking.istio.io")
+			Expect(serviceEntry.Field("spec.versions.#.name").String()).To(MatchJSON(`["v1","v1alpha3","v1beta1"]`))
+			Expect(f.KubernetesGlobalResource("CustomResourceDefinition", "istios.sailoperator.io").Exists()).To(BeTrue())
+		})
+	})
+
+	Context("CRDs of a newer bundle in the cluster, globalVersion goes back to 1.21", func() {
+		BeforeEach(func() {
+			f.KubeStateSet(serviceEntryCRD)
+			f.ValuesSet("istio.internal.globalVersion", "1.21")
+			f.BindingContexts.Set(f.GenerateOnStartupContext())
+			f.RunHook()
+		})
+
+		It("Hook must not fail, the v1 API must stay in the CRD", func() {
+			Expect(f).To(ExecuteSuccessfully())
+			serviceEntry := f.KubernetesGlobalResource("CustomResourceDefinition", "serviceentries.networking.istio.io")
+			Expect(serviceEntry.Field("spec.versions.#.name").String()).To(MatchJSON(`["v1","v1alpha3","v1beta1"]`))
+			Expect(serviceEntry.Field("status.storedVersions").String()).To(MatchJSON(`["v1alpha3","v1beta1"]`))
 		})
 	})
 })
