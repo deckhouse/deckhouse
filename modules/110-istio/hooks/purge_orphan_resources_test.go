@@ -57,9 +57,8 @@ metadata:
 apiVersion: sailoperator.io/v1
 kind: Istio
 metadata:
-  finalizers:
-  - istio-finalizer.sailoperator.io
   name: v1x16
+spec:
   namespace: d8-istio
 `
 		federationYAML = `
@@ -226,9 +225,10 @@ metadata:
 
 	f := HookExecutionConfigInit(`{}`, `{}`)
 	f.RegisterCRD(iopGVK.Group, iopGVK.Version, iopGVK.Kind, true)
-	f.RegisterCRD(istioGVK.Group, istioGVK.Version, istioGVK.Kind, true)
+	f.RegisterCRD(istioGVK.Group, istioGVK.Version, istioGVK.Kind, false) // cluster-scoped
 	f.RegisterCRD("deckhouse.io", "v1alpha1", "IstioFederation", false)   // cluster-scoped
 	f.RegisterCRD("deckhouse.io", "v1alpha1", "IstioMulticluster", false) // cluster-scoped
+	f.RegisterCRD("sailoperator.io", "v1", "IstioRevision", false)        // cluster-scoped
 
 	Context("Empty cluster and minimal settings", func() {
 		BeforeEach(func() {
@@ -282,7 +282,7 @@ metadata:
 			_, _ = f.KubeClient().CoreV1().Namespaces().Create(context.TODO(), ns, metav1.CreateOptions{})
 			_, _ = f.KubeClient().CoreV1().Namespaces().Create(context.TODO(), otherNs1, metav1.CreateOptions{})
 			_, _ = f.KubeClient().Dynamic().Resource(iopGVR).Namespace(istioSystemNs).Create(context.TODO(), iop, metav1.CreateOptions{})
-			_, _ = f.KubeClient().Dynamic().Resource(istioGVR).Namespace(istioSystemNs).Create(context.TODO(), istio, metav1.CreateOptions{})
+			_, _ = f.KubeClient().Dynamic().Resource(istioGVR).Create(context.TODO(), istio, metav1.CreateOptions{})
 			_, _ = f.KubeClient().Dynamic().Resource(federationGVR).Create(context.TODO(), federation, metav1.CreateOptions{})
 			_, _ = f.KubeClient().Dynamic().Resource(multiclusterGVR).Create(context.TODO(), multicluster, metav1.CreateOptions{})
 			_, _ = f.KubeClient().RbacV1().ClusterRoles().Create(context.TODO(), cr1, metav1.CreateOptions{})
@@ -306,7 +306,7 @@ metadata:
 
 			// Verify namespace-scoped resources are deleted
 			Expect(f.KubernetesResource("IstioOperator", "d8-istio", "v1x16").Exists()).To(BeFalse())
-			Expect(f.KubernetesResource("Istio", "d8-istio", "v1x16").Exists()).To(BeFalse())
+			Expect(f.KubernetesGlobalResource("Istio", "v1x16").Exists()).To(BeFalse())
 			Expect(f.KubernetesGlobalResource("Namespace", "d8-istio").Exists()).To(BeFalse())
 
 			// Verify other resources are deleted
@@ -321,7 +321,6 @@ metadata:
 
 			// Verify logs contain expected messages
 			// structured log messages no longer include formatted resource names
-			Expect(string(f.LoggerOutput.Contents())).To(ContainSubstring("\"msg\":\"Finalizers from Istio removed\",\"name\":\"v1x16\""))
 			Expect(string(f.LoggerOutput.Contents())).To(ContainSubstring("\"msg\":\"Istio deleted\",\"name\":\"v1x16\""))
 		})
 	})
@@ -367,25 +366,29 @@ apiVersion: sailoperator.io/v1
 kind: Istio
 metadata:
   name: v1x25
-  namespace: d8-istio
 spec:
-  revision: v1x25
+  namespace: d8-istio
 ---
 apiVersion: sailoperator.io/v1
 kind: Istio
 metadata:
   name: v1x27
-  namespace: d8-istio
 spec:
-  revision: v1x27
+  namespace: d8-istio
 ---
 apiVersion: sailoperator.io/v1
 kind: Istio
 metadata:
   name: v1x29
-  namespace: d8-istio
 spec:
-  revision: v1x29
+  namespace: d8-istio
+---
+apiVersion: sailoperator.io/v1
+kind: Istio
+metadata:
+  name: default
+spec:
+  namespace: istio-system
 ---
 apiVersion: v1
 kind: ConfigMap
@@ -400,10 +403,136 @@ metadata:
 			Expect(f).To(ExecuteSuccessfully())
 
 			Expect(f.KubernetesResource("IstioOperator", "d8-istio", "v1x25").Exists()).To(BeFalse())
-			Expect(f.KubernetesResource("Istio", "d8-istio", "v1x25").Exists()).To(BeFalse())
+			Expect(f.KubernetesGlobalResource("Istio", "v1x25").Exists()).To(BeFalse())
 
-			Expect(f.KubernetesResource("Istio", "d8-istio", "v1x27").Exists()).To(BeTrue())
-			Expect(f.KubernetesResource("Istio", "d8-istio", "v1x29").Exists()).To(BeTrue())
+			Expect(f.KubernetesGlobalResource("Istio", "v1x27").Exists()).To(BeTrue())
+			Expect(f.KubernetesGlobalResource("Istio", "v1x29").Exists()).To(BeTrue())
+
+			Expect(f.KubernetesGlobalResource("Istio", "default").Exists()).To(BeTrue())
+		})
+	})
+
+	Context("Cluster with IstioRevisions left behind by the deleted operator", func() {
+		BeforeEach(func() {
+			f.BindingContexts.Set(f.GenerateAfterDeleteHelmContext())
+			f.ValuesSetFromYaml("istio", []byte(`
+internal:
+  versionMap:
+    "1.25":
+      revision: "v1x25"
+      supportsOperator: true
+    "1.27":
+      revision: "v1x27"
+      supportsOperator: false
+`))
+			f.KubeStateSet(`
+---
+apiVersion: sailoperator.io/v1
+kind: IstioRevision
+metadata:
+  name: v1x25
+  finalizers:
+  - sailoperator.io/sail-operator
+spec:
+  namespace: d8-istio
+---
+apiVersion: sailoperator.io/v1
+kind: IstioRevision
+metadata:
+  name: v1x25-v1-25-2
+  finalizers:
+  - sailoperator.io/sail-operator
+  ownerReferences:
+  - apiVersion: sailoperator.io/v1
+    kind: Istio
+    name: v1x25
+    uid: 4a3b1c2d-0000-0000-0000-000000000000
+    controller: true
+    blockOwnerDeletion: true
+spec:
+  namespace: d8-istio
+---
+apiVersion: sailoperator.io/v1
+kind: IstioRevision
+metadata:
+  name: v1x27
+spec:
+  namespace: d8-istio
+---
+apiVersion: sailoperator.io/v1
+kind: IstioRevision
+metadata:
+  name: v1x27-v1-27-1
+  ownerReferences:
+  - apiVersion: sailoperator.io/v1
+    kind: Istio
+    name: v1x27
+    uid: 5b4c2d3e-0000-0000-0000-000000000000
+    controller: true
+    blockOwnerDeletion: true
+spec:
+  namespace: d8-istio
+---
+apiVersion: sailoperator.io/v1
+kind: IstioRevision
+metadata:
+  name: default
+  finalizers:
+  - sailoperator.io/sail-operator
+spec:
+  namespace: istio-system
+`)
+			f.RunHook()
+		})
+
+		It("Should delete operator-supported IstioRevisions of d8-istio only", func() {
+			Expect(f).To(ExecuteSuccessfully())
+
+			Expect(f.KubernetesGlobalResource("IstioRevision", "v1x25").Exists()).To(BeFalse())
+			Expect(f.KubernetesGlobalResource("IstioRevision", "v1x25-v1-25-2").Exists()).To(BeFalse())
+			Expect(f.KubernetesGlobalResource("IstioRevision", "v1x27").Exists()).To(BeTrue())
+			Expect(f.KubernetesGlobalResource("IstioRevision", "v1x27-v1-27-1").Exists()).To(BeTrue())
+
+			foreign := f.KubernetesGlobalResource("IstioRevision", "default")
+			Expect(foreign.Exists()).To(BeTrue())
+			Expect(foreign.Field("metadata.finalizers").AsStringSlice()).To(Equal([]string{"sailoperator.io/sail-operator"}))
+
+			Expect(string(f.LoggerOutput.Contents())).To(ContainSubstring("\"msg\":\"IstioRevision deleted\",\"name\":\"v1x25\""))
+		})
+	})
+
+	Context("Cluster with a terminating IstioRevision stuck on the finalizer", func() {
+		BeforeEach(func() {
+			f.BindingContexts.Set(f.GenerateAfterDeleteHelmContext())
+			f.ValuesSetFromYaml("istio", []byte(`
+internal:
+  versionMap:
+    "1.25":
+      revision: "v1x25"
+      supportsOperator: true
+`))
+			f.KubeStateSet(`
+---
+apiVersion: sailoperator.io/v1
+kind: IstioRevision
+metadata:
+  name: v1x25
+  deletionTimestamp: "2026-09-23T19:38:40Z"
+  finalizers:
+  - sailoperator.io/sail-operator
+spec:
+  namespace: d8-istio
+`)
+			f.RunHook()
+		})
+
+		It("Should remove finalizers without deleting it again", func() {
+			Expect(f).To(ExecuteSuccessfully())
+
+			Expect(f.KubernetesGlobalResource("IstioRevision", "v1x25").Field("metadata.finalizers").Exists()).To(BeFalse())
+
+			Expect(string(f.LoggerOutput.Contents())).To(ContainSubstring("\"msg\":\"Finalizers from IstioRevision removed\",\"name\":\"v1x25\""))
+			Expect(string(f.LoggerOutput.Contents())).ToNot(ContainSubstring("\"msg\":\"IstioRevision deleted\""))
 		})
 	})
 })
