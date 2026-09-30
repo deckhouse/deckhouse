@@ -205,7 +205,7 @@ Starting with version 1.74, Deckhouse Platform has a module integrity control me
 Such clusters lack fault tolerance. We highly advise you against using this kind of clusters in production environments.
 {% endalert %}
 
-In some cases, a single-node cluster is enough. In this case, the node will take care of all the node roles described above. For example, this may be useful if you just want to familiarize yourself with the technology or run some fairly lightweight workloads.
+In some cases, a cluster can consist of a single node that performs all the node roles described above. This configuration may be used, for example, to familiarize yourself with the technology or to run workloads with low resource requirements.
 
 The [Getting Started guide](/products/kubernetes-platform/gs/bm/step5.html) contains instructions for deploying a single-node cluster. Once you un-taint the node, it will run all cluster components included in the selected module bundle ([bundle: Default](/modules/deckhouse/configuration.html#parameters-bundle) by default). To successfully run a cluster in this mode, you will need at least 16 CPUs, 32 GB of RAM, and 100 GB of disk space on a performance disk (400+ IOPS). Such a configuration would allow some workloads to be run.
 
