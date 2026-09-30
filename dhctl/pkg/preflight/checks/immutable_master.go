@@ -170,6 +170,9 @@ func ImmutableSupportedProvider(metaConfig *config.MetaConfig) preflight.Check {
 			if metaConfig.ClusterType == config.StaticClusterType {
 				return nil
 			}
+			if !metaConfig.HasLegacyProviderConfig() {
+				return preflight.NotApplicable("this check does not cover a provider configured through its ModuleConfig")
+			}
 			if strings.EqualFold(metaConfig.ProviderName, immutableProviderDVP) {
 				return nil
 			}

@@ -16,6 +16,7 @@ package checks
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"path/filepath"
 	"testing"
@@ -127,8 +128,9 @@ func TestImmutableSupportedProvider(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			check := ImmutableSupportedProvider(&config.MetaConfig{
-				ClusterType:  tt.clusterType,
-				ProviderName: tt.provider,
+				ClusterType:           tt.clusterType,
+				ProviderName:          tt.provider,
+				ProviderClusterConfig: map[string]json.RawMessage{"provider": json.RawMessage(`{}`)},
 			})
 
 			_, err := check.Run(t.Context())
@@ -142,6 +144,16 @@ func TestImmutableSupportedProvider(t *testing.T) {
 			require.Contains(t, err.Error(), config.StaticClusterType)
 		})
 	}
+}
+
+func TestImmutableSupportedProviderWithoutProviderClusterConfigurationIsNotApplicable(t *testing.T) {
+	check := ImmutableSupportedProvider(&config.MetaConfig{
+		ClusterType:  config.CloudClusterType,
+		ProviderName: "aws",
+	})
+
+	_, err := check.Run(t.Context())
+	require.ErrorIs(t, err, preflight.ErrNotApplicable)
 }
 
 // A cloud bootstrap of immutable masters names no machines with --master-host: the provider

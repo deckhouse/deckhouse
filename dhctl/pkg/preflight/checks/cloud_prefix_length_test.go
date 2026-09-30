@@ -15,6 +15,7 @@
 package checks
 
 import (
+	"encoding/json"
 	"strings"
 	"testing"
 
@@ -175,6 +176,9 @@ func TestCloudDiskNameLength(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			if tt.metaConfig != nil {
+				tt.metaConfig.ProviderClusterConfig = map[string]json.RawMessage{"provider": json.RawMessage(`{}`)}
+			}
 			check := CloudDiskNameLengthCheck{MetaConfig: tt.metaConfig}
 			_, err := check.Run(t.Context())
 
@@ -189,4 +193,14 @@ func TestCloudDiskNameLength(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestCloudDiskNameLengthWithoutProviderClusterConfigurationIsNotApplicable(t *testing.T) {
+	check := CloudDiskNameLengthCheck{MetaConfig: &config.MetaConfig{
+		ClusterPrefix: strings.Repeat("f", 30),
+		ProviderName:  "dvp",
+	}}
+
+	_, err := check.Run(t.Context())
+	require.ErrorIs(t, err, preflight.ErrNotApplicable)
 }

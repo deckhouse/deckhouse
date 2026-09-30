@@ -88,6 +88,9 @@ func (c CloudDiskNameLengthCheck) Run(_ context.Context) (string, error) {
 	if c.MetaConfig == nil {
 		return "", fmt.Errorf("no configuration was loaded from --config")
 	}
+	if !c.MetaConfig.HasLegacyProviderConfig() {
+		return "", preflight.NotApplicable("this check does not cover a provider configured through its ModuleConfig")
+	}
 
 	prefix := c.MetaConfig.ClusterPrefix
 	provider := c.MetaConfig.ProviderName

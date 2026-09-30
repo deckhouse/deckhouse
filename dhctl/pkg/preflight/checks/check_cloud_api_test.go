@@ -186,6 +186,16 @@ func TestCloudAPIMalformedProviderConfigIsAFailure(t *testing.T) {
 	require.Contains(t, failure.Observed, "kubeconfigDataBase64")
 }
 
+// A provider configured through its ModuleConfig carries no <Provider>ClusterConfiguration to
+// read the address from.
+func TestCloudAPIWithoutProviderClusterConfigurationIsNotApplicable(t *testing.T) {
+	meta := metaConfigForProvider(t, "dvp", `{}`)
+	meta.ProviderClusterConfig = nil
+
+	_, err := CloudAPICheck{MetaConfig: meta}.Run(t.Context())
+	require.ErrorIs(t, err, preflight.ErrNotApplicable)
+}
+
 func metaConfigForProvider(t *testing.T, providerName, providerConfigJSON string) *config.MetaConfig {
 	t.Helper()
 

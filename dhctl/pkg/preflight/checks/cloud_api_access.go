@@ -72,6 +72,9 @@ func (c CloudAPICheck) Run(ctx context.Context) (string, error) {
 	if c.MetaConfig == nil {
 		return "", errors.New("no configuration was loaded from --config")
 	}
+	if !c.MetaConfig.HasLegacyProviderConfig() {
+		return "", preflight.NotApplicable("there is no %s to read the API address from", providerDocumentKind(c.MetaConfig.ProviderName))
+	}
 
 	cloudAPIConfig, err := c.endpoint()
 	if err != nil {
