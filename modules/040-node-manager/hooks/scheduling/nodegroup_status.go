@@ -22,7 +22,7 @@ import (
 )
 
 func patchNodeGroupStatus(patcher go_hook.PatchCollector, nodeGroupName string, patch interface{}) {
-	patcher.PatchWithMerge(patch, "deckhouse.io/v1", "NodeGroup", "", nodeGroupName, object_patch.WithSubresource("/status"))
+	patcher.PatchWithMerge(patch, "deckhouse.io/v1", "NodeGroup", "", nodeGroupName, object_patch.WithSubresource("/status"), object_patch.WithIgnoreMissingObject())
 }
 
 func setNodeGroupStatus(patcher go_hook.PatchCollector, nodeGroupName string, statusField string, value interface{}) {

@@ -17,8 +17,11 @@ limitations under the License.
 package gpu
 
 import (
+	"context"
+
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 
 	ngv1 "github.com/deckhouse/deckhouse/modules/040-node-manager/hooks/internal/v1"
@@ -195,6 +198,23 @@ var _ = Describe("Modules :: nodeManager :: hooks :: gpu_enabled ::", func() {
 
 		It("Must be executed successfully", func() {
 			Expect(f).To(ExecuteSuccessfully())
+		})
+	})
+
+	Context("Node is deleted after the snapshot is taken", func() {
+		BeforeEach(func() {
+			f.KubeStateSet(ngsYaml + gpuNode0Yaml + gpuNode1Yaml)
+			f.BindingContexts.Set(f.GenerateAfterHelmContext())
+			nodes := schema.GroupVersionResource{Version: "v1", Resource: "nodes"}
+			err := f.KubeClient().Dynamic().Resource(nodes).Delete(context.Background(), "worker-gpu-0", metav1.DeleteOptions{})
+			Expect(err).ToNot(HaveOccurred())
+			f.RunGoHook()
+		})
+
+		It("Must be executed successfully; the remaining node must be labeled", func() {
+			Expect(f).To(ExecuteSuccessfully())
+			Expect(f.KubernetesGlobalResource("Node", "worker-gpu-0").Exists()).To(BeFalse())
+			Expect(f.KubernetesGlobalResource("Node", "worker-gpu-1").Field(`metadata.labels.nvidia\.com/mig\.config`).String()).To(Equal("all-disabled"))
 		})
 	})
 

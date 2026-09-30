@@ -17,10 +17,13 @@ limitations under the License.
 package scheduling
 
 import (
+	"context"
 	"fmt"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 
 	. "github.com/deckhouse/deckhouse/testing/hooks"
 )
@@ -346,6 +349,47 @@ status:
 		It("Hook must not fail; no standby NGs should be discovered", func() {
 			Expect(f).To(ExecuteSuccessfully())
 			Expect(f.ValuesGet("nodeManager.internal.standbyNodeGroups").Array()).To(BeEmpty())
+		})
+	})
+
+	Context("NodeGroup is deleted after the snapshot is taken", func() {
+		BeforeEach(func() {
+			f.BindingContexts.Set(f.KubeStateSet(`
+---
+apiVersion: deckhouse.io/v1
+kind: NodeGroup
+metadata:
+  name: deleted
+spec:
+  nodeType: CloudEphemeral
+  cloudInstances:
+    minPerZone: 1
+    maxPerZone: 5
+status:
+  standby: 3
+---
+apiVersion: deckhouse.io/v1
+kind: NodeGroup
+metadata:
+  name: remaining
+spec:
+  nodeType: CloudEphemeral
+  cloudInstances:
+    minPerZone: 1
+    maxPerZone: 5
+status:
+  standby: 3
+`))
+			nodeGroups := schema.GroupVersionResource{Group: "deckhouse.io", Version: "v1", Resource: "nodegroups"}
+			err := f.KubeClient().Dynamic().Resource(nodeGroups).Delete(context.Background(), "deleted", metav1.DeleteOptions{})
+			Expect(err).ToNot(HaveOccurred())
+			f.RunHook()
+		})
+
+		It("Hook must not fail and must reset the standby status of the remaining NodeGroup", func() {
+			Expect(f).To(ExecuteSuccessfully())
+			Expect(f.KubernetesGlobalResource("NodeGroup", "deleted").Exists()).To(BeFalse())
+			Expect(f.KubernetesGlobalResource("NodeGroup", "remaining").Field("status.standby").Exists()).To(BeFalse())
 		})
 	})
 

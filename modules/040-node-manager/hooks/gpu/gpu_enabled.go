@@ -22,6 +22,7 @@ import (
 
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
+	"github.com/flant/shell-operator/pkg/kube/object_patch"
 	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 
@@ -195,7 +196,7 @@ func setGPULabel(_ context.Context, input *go_hook.HookInput) error {
 				},
 			}
 
-			input.PatchCollector.PatchWithMerge(metadata, "v1", "Node", "", node.Name)
+			input.PatchCollector.PatchWithMerge(metadata, "v1", "Node", "", node.Name, object_patch.WithIgnoreMissingObject())
 		}
 	}
 	return nil

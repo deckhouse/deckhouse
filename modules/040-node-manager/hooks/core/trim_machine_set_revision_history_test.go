@@ -17,8 +17,12 @@ limitations under the License.
 package core
 
 import (
+	"context"
+
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 
 	. "github.com/deckhouse/deckhouse/testing/hooks"
 )
@@ -76,6 +80,23 @@ metadata:
 
 	f := HookExecutionConfigInit(`{"nodeManager":{"internal":{}}}`, `{}`)
 	f.RegisterCRD("machine.sapcloud.io", "v1alpha1", "MachineSet", true)
+
+	Context("MachineSet is deleted after the snapshot is taken", func() {
+		BeforeEach(func() {
+			f.BindingContexts.Set(f.KubeStateSet(machineSets))
+			machineSetsGVR := schema.GroupVersionResource{Group: "machine.sapcloud.io", Version: "v1alpha1", Resource: "machinesets"}
+			err := f.KubeClient().Dynamic().Resource(machineSetsGVR).Namespace("d8-cloud-instance-manager").Delete(context.Background(), "long-revision-history", metav1.DeleteOptions{})
+			Expect(err).ToNot(HaveOccurred())
+			f.RunHook()
+		})
+
+		It("Hook must not fail and must keep other MachineSets unchanged", func() {
+			Expect(f).To(ExecuteSuccessfully())
+			Expect(f.KubernetesResource("MachineSet", "d8-cloud-instance-manager", "long-revision-history").Exists()).To(BeFalse())
+			shortMachineSet := f.KubernetesResource("MachineSet", "d8-cloud-instance-manager", "short-revision-history")
+			Expect(shortMachineSet.Field(`metadata.annotations.deployment\.kubernetes\.io\/revision-history`).String()).To(Equal("1,2,3"))
+		})
+	})
 
 	Context("Cluster with MachineSets", func() {
 		BeforeEach(func() {

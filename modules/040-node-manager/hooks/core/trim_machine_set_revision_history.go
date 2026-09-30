@@ -23,6 +23,7 @@ import (
 
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
+	"github.com/flant/shell-operator/pkg/kube/object_patch"
 	"github.com/flant/shell-operator/pkg/kube_events_manager/types"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/utils/ptr"
@@ -95,7 +96,7 @@ func handleTrimMachineSetRevisionHistory(_ context.Context, input *go_hook.HookI
 			},
 		}
 
-		input.PatchCollector.PatchWithMerge(patch, mcmMachineSetAPIVersion, "MachineSet", ms.Namespace, ms.Name)
+		input.PatchCollector.PatchWithMerge(patch, mcmMachineSetAPIVersion, "MachineSet", ms.Namespace, ms.Name, object_patch.WithIgnoreMissingObject())
 	}
 
 	return nil

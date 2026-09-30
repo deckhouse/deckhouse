@@ -17,10 +17,13 @@ limitations under the License.
 package core
 
 import (
+	"context"
 	"fmt"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 
 	. "github.com/deckhouse/deckhouse/testing/hooks"
 )
@@ -238,6 +241,25 @@ metadata:
 					Expect(f.KubernetesResource("Machine", "d8-cloud-instance-manager", "node2").Exists()).To(BeTrue())
 					Expect(f.KubernetesResource("Machine", "d8-cloud-instance-manager", "node3").Exists()).To(BeFalse())
 					Expect(f.KubernetesResource("Machine", "d8-cloud-instance-manager", "smallnode1").Exists()).To(BeTrue())
+				})
+			})
+
+			Context("Victim machine is deleted after the snapshot is taken", func() {
+				BeforeEach(func() {
+					f.KubeStateSet(stateNGSmall + stateNGLarge + stateNodes + stateMachines)
+					f.BindingContexts.Set(f.GenerateScheduleContext("* * * * *"))
+					f.AddHookEnv("D8_TEST_RANDOM_SEED=11")
+					machines := schema.GroupVersionResource{Group: "machine.sapcloud.io", Version: "v1alpha1", Resource: "machines"}
+					err := f.KubeClient().Dynamic().Resource(machines).Namespace("d8-cloud-instance-manager").Delete(context.Background(), "node3", metav1.DeleteOptions{})
+					Expect(err).ToNot(HaveOccurred())
+					f.RunHook()
+				})
+
+				It("Hook must not fail; other machines must survive", func() {
+					Expect(f).To(ExecuteSuccessfully())
+					Expect(f.KubernetesResource("Machine", "d8-cloud-instance-manager", "node1").Exists()).To(BeTrue())
+					Expect(f.KubernetesResource("Machine", "d8-cloud-instance-manager", "node2").Exists()).To(BeTrue())
+					Expect(f.KubernetesResource("Machine", "d8-cloud-instance-manager", "node3").Exists()).To(BeFalse())
 				})
 			})
 
