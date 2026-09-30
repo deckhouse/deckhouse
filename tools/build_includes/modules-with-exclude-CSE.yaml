@@ -1360,6 +1360,11 @@
   stageDependencies:
     install:
         - '**/*'
+- add: /ee/cse/modules/150-user-authn/crds/doc-ru-dex-provider.yaml
+  to: /deckhouse/modules/150-user-authn/crds/doc-ru-dex-provider.yaml
+  stageDependencies:
+    install:
+        - '**/*'
 - add: /ee/cse/modules/150-user-authn/openapi/values.yaml
   to: /deckhouse/modules/150-user-authn/openapi/values.yaml
   stageDependencies:
