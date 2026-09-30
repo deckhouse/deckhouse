@@ -332,7 +332,7 @@ func getCRDsHandler(_ context.Context, input *go_hook.HookInput) error {
 
 		ngForValues := nodeGroupForValues(nodeGroup.Spec.DeepCopy())
 		// set observed status fields
-		input.PatchCollector.PatchWithMutatingFunc(set_cr_statuses.SetObservedStatus(nodeGroup, applyNodeGroupCrdFilter), "deckhouse.io/v1", "nodegroup", "", nodeGroup.Name, object_patch.WithSubresource("/status"), object_patch.WithIgnoreHookError())
+		input.PatchCollector.PatchWithMutatingFunc(set_cr_statuses.SetObservedStatus(nodeGroup, applyNodeGroupCrdFilter), "deckhouse.io/v1", "nodegroup", "", nodeGroup.Name, object_patch.WithSubresource("/status"), object_patch.WithIgnoreHookError(), object_patch.WithIgnoreMissingObject())
 		// Copy manualRolloutID and name.
 		ngForValues["name"] = nodeGroup.Name
 		ngForValues["manualRolloutID"] = nodeGroup.ManualRolloutID

@@ -18,6 +18,7 @@ package hooks
 
 import (
 	"bytes"
+	"context"
 	"fmt"
 	"strconv"
 	"testing"
@@ -26,6 +27,8 @@ import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	"k8s.io/apimachinery/pkg/api/resource"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 
 	"github.com/deckhouse/deckhouse/go_lib/cloud-data/apis/v1alpha1"
 	. "github.com/deckhouse/deckhouse/testing/hooks"
@@ -357,6 +360,22 @@ metadata:
 
 		It("Hook must not fail", func() {
 			Expect(f).To(ExecuteSuccessfully())
+		})
+	})
+
+	Context("NodeGroup is deleted after the snapshot is taken", func() {
+		BeforeEach(func() {
+			f.BindingContexts.Set(f.KubeStateSet(stateNGStaticAndCloudPermanent))
+			nodeGroups := schema.GroupVersionResource{Group: "deckhouse.io", Version: "v1", Resource: "nodegroups"}
+			err := f.KubeClient().Dynamic().Resource(nodeGroups).Delete(context.Background(), "static1", metav1.DeleteOptions{})
+			Expect(err).ToNot(HaveOccurred())
+			f.RunHook()
+		})
+
+		It("Hook must not fail and must update the status of the remaining NodeGroup", func() {
+			Expect(f).To(ExecuteSuccessfully())
+			Expect(f.KubernetesGlobalResource("NodeGroup", "static1").Exists()).To(BeFalse())
+			Expect(f.KubernetesGlobalResource("NodeGroup", "cp1").Field("status.engine").String()).To(Equal("None"))
 		})
 	})
 

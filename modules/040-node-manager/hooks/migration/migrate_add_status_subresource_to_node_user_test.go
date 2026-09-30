@@ -17,8 +17,12 @@ limitations under the License.
 package hooks
 
 import (
+	"context"
+
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 
 	. "github.com/deckhouse/deckhouse/testing/hooks"
 )
@@ -39,6 +43,48 @@ nodeManager:
 
 		It("Hook should execute successfully", func() {
 			Expect(f).To(ExecuteSuccessfully())
+		})
+	})
+
+	Context("NodeUser is deleted after the snapshot is taken", func() {
+		BeforeEach(func() {
+			f.KubeStateSet(`
+---
+apiVersion: deckhouse.io/v1
+kind: NodeUser
+metadata:
+  name: deleted
+spec:
+  isSudoer: false
+  nodeGroups:
+  - '*'
+  passwordHash: $6$YO.
+  sshPublicKey: ssh-rsa AAAAB
+  uid: 1001
+---
+apiVersion: deckhouse.io/v1
+kind: NodeUser
+metadata:
+  name: remaining
+spec:
+  isSudoer: false
+  nodeGroups:
+  - '*'
+  passwordHash: $6$YO.
+  sshPublicKey: ssh-rsa AAAAB
+  uid: 1002
+`)
+			f.BindingContexts.Set(f.GenerateBeforeHelmContext())
+			nodeUsers := schema.GroupVersionResource{Group: "deckhouse.io", Version: "v1", Resource: "nodeusers"}
+			err := f.KubeClient().Dynamic().Resource(nodeUsers).Delete(context.Background(), "deleted", metav1.DeleteOptions{})
+			Expect(err).ToNot(HaveOccurred())
+			f.RunHook()
+		})
+
+		It("Hook should not fail and should set status for the remaining node user", func() {
+			Expect(f).To(ExecuteSuccessfully())
+			Expect(f.KubernetesResource("NodeUser", "", "deleted").Exists()).To(BeFalse())
+			Expect(f.KubernetesResource("NodeUser", "", "remaining").Field("status.errors").Exists()).To(BeTrue())
 		})
 	})
 

@@ -23,6 +23,7 @@ import (
 
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
+	"github.com/flant/shell-operator/pkg/kube/object_patch"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/utils/ptr"
 
@@ -89,7 +90,7 @@ func addStatusSubresourceForNodeUser(_ context.Context, input *go_hook.HookInput
 				return nil, err
 			}
 			return objCopy, nil
-		}, "deckhouse.io/v1", "NodeUser", "", nu.UserName)
+		}, "deckhouse.io/v1", "NodeUser", "", nu.UserName, object_patch.WithIgnoreMissingObject())
 	}
 
 	return nil

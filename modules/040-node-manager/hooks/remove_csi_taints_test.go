@@ -17,8 +17,12 @@ limitations under the License.
 package hooks
 
 import (
+	"context"
+
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 
 	. "github.com/deckhouse/deckhouse/testing/hooks"
 )
@@ -115,6 +119,22 @@ metadata:
 
 		It("Hook must execute successfully", func() {
 			Expect(f).To(ExecuteSuccessfully())
+		})
+	})
+
+	Context("Node is deleted after the snapshot is taken", func() {
+		BeforeEach(func() {
+			f.BindingContexts.Set(f.KubeStateSetAndWaitForBindingContexts(stateNodes+stateCSINode1+stateCSINode2, 1))
+			nodes := schema.GroupVersionResource{Version: "v1", Resource: "nodes"}
+			err := f.KubeClient().Dynamic().Resource(nodes).Delete(context.Background(), "node-1", metav1.DeleteOptions{})
+			Expect(err).ToNot(HaveOccurred())
+			f.RunHook()
+		})
+
+		It("Hook must not fail and must remove the taint from the remaining node", func() {
+			Expect(f).To(ExecuteSuccessfully())
+			Expect(f.KubernetesGlobalResource("Node", "node-1").Exists()).To(BeFalse())
+			Expect(f.KubernetesGlobalResource("Node", "node-2").Field("spec.taints").String()).To(MatchJSON(`[{"effect": "PreferNoSchedule","key":"somekey-2"}]`))
 		})
 	})
 

@@ -23,6 +23,7 @@ import (
 
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
+	"github.com/flant/shell-operator/pkg/kube/object_patch"
 	"github.com/flant/shell-operator/pkg/kube_events_manager/types"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -129,7 +130,7 @@ func systemReserve(_ context.Context, input *go_hook.HookInput) error {
 				return nil, err
 			}
 			return objCopy, nil
-		}, "deckhouse.io/v1", "NodeGroup", "", ng.Name)
+		}, "deckhouse.io/v1", "NodeGroup", "", ng.Name, object_patch.WithIgnoreMissingObject())
 	}
 
 	input.PatchCollector.CreateIfNotExists(&corev1.ConfigMap{
