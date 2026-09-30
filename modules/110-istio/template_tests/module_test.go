@@ -68,6 +68,7 @@ discovery:
 const istioValues = `
     internal:
       applicationNamespaces: []
+      enableAmbientMode: false
       globalVersion: "1.21.6"
       versionMap:
         "1.25.2":

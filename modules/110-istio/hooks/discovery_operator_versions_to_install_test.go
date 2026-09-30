@@ -27,7 +27,8 @@ import (
 var _ = Describe("Istio hooks :: discovery_operator_versions_to_install ::", func() {
 	f := HookExecutionConfigInit(`{"istio":{}}`, "")
 	f.RegisterCRD("install.istio.io", "v1alpha1", "IstioOperator", true)
-	f.RegisterCRD("sailoperator.io", "v1", "Istio", true)
+	f.RegisterCRD("sailoperator.io", "v1", "Istio", false)
+	f.RegisterCRD("sailoperator.io", "v1", "IstioRevision", false)
 
 	Context("Empty cluster and minimal settings", func() {
 		BeforeEach(func() {
@@ -131,17 +132,15 @@ apiVersion: sailoperator.io/v1
 kind: Istio
 metadata:
   name: v1x8
-  namespace: d8-istio
 spec:
-  revision: v1x8
+  namespace: d8-istio
 ---
 apiVersion: sailoperator.io/v1
 kind: Istio
 metadata:
   name: v1x2
-  namespace: d8-istio
 spec:
-  revision: v1x2
+  namespace: d8-istio
 `))
 
 			f.RunHook()
@@ -211,6 +210,181 @@ spec:
 			value, exists := requirements.GetValue(minVersionValuesKey)
 			Expect(exists).To(BeTrue())
 			Expect(value).To(BeEquivalentTo("1.2"))
+		})
+	})
+
+	Context("Terminating IstioRevision outlives its deleted Istio CR", func() {
+		BeforeEach(func() {
+			values := `
+internal:
+  versionMap:
+    "1.21":
+        revision: "v1x21"
+    "1.25":
+        revision: "v1x25"
+  versionsToInstall: ["1.21"]
+`
+			f.ValuesSetFromYaml("istio", []byte(values))
+			f.KubeStateSet(`
+---
+apiVersion: sailoperator.io/v1
+kind: IstioRevision
+metadata:
+  name: v1x25
+  deletionTimestamp: "2026-09-23T19:38:40Z"
+  finalizers:
+  - sailoperator.io/sail-operator
+spec:
+  namespace: d8-istio
+  version: v1.25.2
+`)
+			f.BindingContexts.Set(f.GenerateBeforeHelmContext())
+			f.RunHook()
+		})
+
+		It("Should keep operator until it finalizes the IstioRevision", func() {
+			Expect(f).To(ExecuteSuccessfully())
+			Expect(f.ValuesGet("istio.internal.operatorVersionsToInstall").AsStringSlice()).To(Equal([]string{"1.21", "1.25"}))
+		})
+
+		Context("The operator finalizes the IstioRevision", func() {
+			BeforeEach(func() {
+				f.BindingContexts.Set(f.KubeStateSet(``))
+				f.RunHook()
+			})
+
+			It("Should drop the operator once the IstioRevision is gone", func() {
+				Expect(f).To(ExecuteSuccessfully())
+				Expect(f.ValuesGet("istio.internal.operatorVersionsToInstall").AsStringSlice()).To(Equal([]string{"1.21"}))
+			})
+		})
+	})
+
+	Context("Terminating IstioRevision of the RevisionBased update strategy", func() {
+		BeforeEach(func() {
+			values := `
+internal:
+  versionMap:
+    "1.21":
+        revision: "v1x21"
+    "1.25":
+        revision: "v1x25"
+  versionsToInstall: ["1.21"]
+`
+			f.ValuesSetFromYaml("istio", []byte(values))
+			f.KubeStateSet(`
+---
+apiVersion: sailoperator.io/v1
+kind: IstioRevision
+metadata:
+  name: v1x25-v1-25-2
+  deletionTimestamp: "2026-09-23T19:38:40Z"
+  finalizers:
+  - sailoperator.io/sail-operator
+  ownerReferences:
+  - apiVersion: sailoperator.io/v1
+    kind: Istio
+    name: v1x25
+    uid: 4a3b1c2d-0000-0000-0000-000000000000
+    controller: true
+    blockOwnerDeletion: true
+spec:
+  namespace: d8-istio
+  version: v1.25.2
+`)
+			f.BindingContexts.Set(f.GenerateBeforeHelmContext())
+			f.RunHook()
+		})
+
+		It("Should take the revision from the owning Istio CR", func() {
+			Expect(f).To(ExecuteSuccessfully())
+			Expect(f.ValuesGet("istio.internal.operatorVersionsToInstall").AsStringSlice()).To(Equal([]string{"1.21", "1.25"}))
+		})
+	})
+
+	Context("Istio and IstioRevision of a foreign control-plane in cluster", func() {
+		BeforeEach(func() {
+			values := `
+internal:
+  versionMap:
+    "1.25":
+        revision: "v1x25"
+  versionsToInstall: []
+`
+			f.ValuesSetFromYaml("istio", []byte(values))
+			f.KubeStateSet(`
+---
+apiVersion: sailoperator.io/v1
+kind: Istio
+metadata:
+  name: default
+spec:
+  namespace: istio-system
+---
+apiVersion: sailoperator.io/v1
+kind: Istio
+metadata:
+  name: v1x25
+spec:
+  namespace: istio-system
+---
+apiVersion: sailoperator.io/v1
+kind: IstioRevision
+metadata:
+  name: default
+spec:
+  namespace: istio-system
+---
+apiVersion: sailoperator.io/v1
+kind: IstioRevision
+metadata:
+  name: v1x25
+spec:
+  namespace: istio-system
+`)
+			f.BindingContexts.Set(f.GenerateBeforeHelmContext())
+			f.RunHook()
+		})
+
+		It("Should ignore it", func() {
+			Expect(f).To(ExecuteSuccessfully())
+			Expect(f.ValuesGet("istio.internal.operatorVersionsToInstall").AsStringSlice()).To(BeEmpty())
+		})
+	})
+
+	Context("Unsupported revision is present both as Istio and IstioRevision", func() {
+		BeforeEach(func() {
+			values := `
+internal:
+  versionMap:
+    "1.25":
+        revision: "v1x25"
+  versionsToInstall: ["1.25"]
+`
+			f.ValuesSetFromYaml("istio", []byte(values))
+			f.KubeStateSet(`
+---
+apiVersion: sailoperator.io/v1
+kind: Istio
+metadata:
+  name: v1x9
+spec:
+  namespace: d8-istio
+---
+apiVersion: sailoperator.io/v1
+kind: IstioRevision
+metadata:
+  name: v1x9
+spec:
+  namespace: d8-istio
+`)
+			f.BindingContexts.Set(f.GenerateBeforeHelmContext())
+			f.RunHook()
+		})
+
+		It("Should report the revision once", func() {
+			Expect(f).ToNot(ExecuteSuccessfully())
+			Expect(f.GoHookError).To(MatchError("unsupported revisions: [v1x9]"))
 		})
 	})
 })
