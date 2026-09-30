@@ -79,6 +79,8 @@ spec:
           valueFrom:
             fieldRef:
               fieldPath: spec.nodeName
+        - name: DHCTL_IMAGES_DIGESTS_FILE
+          value: /images-digests/images_digests.json
         resources:
           requests:
             {{- include "helm_lib_module_ephemeral_storage_only_logs" 10 | nindent 12 }}
@@ -86,6 +88,9 @@ spec:
         volumeMounts:
           - mountPath: /tmp
             name: tmp
+          - mountPath: /images-digests
+            name: images-digests
+            readOnly: true
       {{- end }}
       containers:
       - name: converger
