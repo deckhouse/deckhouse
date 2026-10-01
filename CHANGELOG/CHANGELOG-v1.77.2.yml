@@ -4,6 +4,21 @@ admission-policy-engine:
         Added the `PodSecurityStandardsDefaultPolicyNotSet` alert that fires when the `install-data` ConfigMap
         is missing and the default PSS policy must be set explicitly in the ModuleConfig.
       pull_request: https://github.com/deckhouse/deckhouse/pull/23269
+    - summary: >-
+        The `PodSecurityStandardsDefaultPolicyNotSet` alert now fires when `podSecurityStandards.defaultPolicy`
+        isn't set and the `Privileged` policy is derived from the bootstrap version. The update to Deckhouse
+        1.78 is blocked until the policy is set explicitly.
+      pull_request: https://fox.flant.com/deckhouse/deckhouse/-/merge_requests/83
+      impact: >-
+        Deckhouse 1.78 makes `Baseline` the default PSS policy for all clusters.
+
+        On clusters bootstrapped with a Deckhouse version lower than v1.55 or with an unknown bootstrap
+        version, the `PodSecurityStandardsDefaultPolicyNotSet` alert fires, and the update to 1.78 is
+        blocked until `settings.podSecurityStandards.defaultPolicy` is set explicitly in the `admission-policy-engine`
+        ModuleConfig.
+
+        To keep the current behavior, set `defaultPolicy: Privileged`. To switch to `Baseline` or `Restricted`,
+        make sure that the workloads in non-system namespaces comply with the chosen policy first.
   fixes:
     - summary: >-
         Restored the `Privileged` default PSS policy for clusters bootstrapped before v1.55 (without the
@@ -20,6 +35,21 @@ admission-policy-engine:
         in the `admission-policy-engine` ModuleConfig.
     - summary: Fixed CVEs in the `gatekeeper` and `ratify` images.
       pull_request: https://github.com/deckhouse/deckhouse/pull/23321
+    - summary: >-
+        Fixed the default Pod Security Standards (PSS) policy being switched to `Baseline` without notice
+        when the bootstrap version in the `d8-system/install-data` ConfigMap is empty or invalid. Such
+        clusters now get the `Privileged` policy.
+      pull_request: https://fox.flant.com/deckhouse/deckhouse/-/merge_requests/83
+      impact: >-
+        Clusters whose `d8-system/install-data` ConfigMap holds an empty or invalid version and whose
+        `podSecurityStandards.defaultPolicy` isn't set were switched to the `Baseline` default PSS policy
+        in 1.77.
+
+        After the update, the default policy on these clusters becomes less strict: it is switched back
+        to `Privileged`.
+
+        To keep the `Baseline` policy, set `settings.podSecurityStandards.defaultPolicy: Baseline` explicitly
+        in the `admission-policy-engine` ModuleConfig.
 candi:
   fixes:
     - summary: remove d8-bcheck in cleanup_static_node
@@ -49,6 +79,8 @@ ci:
       pull_request: https://fox.flant.com/deckhouse/deckhouse/-/merge_requests/223
     - summary: Fix changelog-generator image tag in changelog-update job to use the shared CI_IMAGES_TAG
       pull_request: https://fox.flant.com/deckhouse/deckhouse/-/merge_requests/266
+    - summary: add skip docs validation label
+      pull_request: https://fox.flant.com/deckhouse/deckhouse/-/merge_requests/313
 cloud-provider-dvp:
   fixes:
     - summary: >-
@@ -107,6 +139,10 @@ deckhouse:
       pull_request: https://github.com/deckhouse/deckhouse/pull/23258
     - summary: Remove leftover symlink-backend entries when deploying packages with the erofs backend.
       pull_request: https://fox.flant.com/deckhouse/deckhouse/-/merge_requests/199
+    - summary: Fix random startup failures with 'waitid - no child processes' when restoring erofs modules.
+      pull_request: https://fox.flant.com/deckhouse/deckhouse/-/merge_requests/169
+    - summary: Fix CVEs in deckhouse-cli.
+      pull_request: https://fox.flant.com/deckhouse/deckhouse/-/merge_requests/307
 deckhouse-controller:
   features:
     - summary: >-
@@ -154,6 +190,8 @@ docs:
       pull_request: https://github.com/deckhouse/deckhouse/pull/23277
     - summary: Fix search hanging when IndexedDB upgrade is blocked.
       pull_request: https://fox.flant.com/deckhouse/deckhouse/-/merge_requests/227
+    - summary: Removed mentions of Cilium from the inter-cluster cooperation documentation page.
+      pull_request: https://fox.flant.com/deckhouse/deckhouse/-/merge_requests/133
 istio:
   fixes:
     - summary: >-
@@ -234,6 +272,16 @@ node-manager:
         snapshot and the patch. Such failures delayed the readiness of the `deckhouse` pod in clusters
         that delete NodeGroups often.
       pull_request: https://fox.flant.com/deckhouse/deckhouse/-/merge_requests/197
+registry:
+  fixes:
+    - summary: Bump dependencies in registry.
+      pull_request: https://fox.flant.com/deckhouse/deckhouse/-/merge_requests/150
+registrypackages:
+  fixes:
+    - summary: >-
+        Bumped `containerd` to 1.7.36 / 2.2.9 and OpenTelemetry to 1.45.0 in `containerd` and `crictl`
+        to fix CVEs.
+      pull_request: https://fox.flant.com/deckhouse/deckhouse/-/merge_requests/185
 service-with-healthchecks:
   fixes:
     - summary: Fixed metrics endpoints being reachable without going through kube-rbac-proxy authorization.
@@ -244,6 +292,10 @@ terraform-manager:
         Bump google.golang.org/grpc to v1.82.2 in opentofu to fix CVE-2026-84445. CVE-2026-84304 is not
         exploitable in opentofu and is covered by VEX.
       pull_request: https://github.com/deckhouse/deckhouse/pull/23303
+    - summary: >-
+        Fixed the `to-tofu-migrator` init container of `terraform-auto-converger` failing to resolve the
+        provider bundle digest, which kept auto-converge from starting.
+      pull_request: https://fox.flant.com/deckhouse/deckhouse/-/merge_requests/288
 user-authn:
   fixes:
     - summary: >-
@@ -265,7 +317,7 @@ user-authn:
         the module.
       pull_request: https://fox.flant.com/deckhouse/deckhouse/-/merge_requests/178
       impact: >-
-        In Deckhouse CSE, a DexProvider that already has `enableBasicAuth - true` keeps it after the update,
+        In Deckhouse CSE, a DexProvider that already has `enableBasicAuth: true` keeps it after the update,
         and any change to its `oidc` or `ldap` section is rejected until `enableBasicAuth` is set to `false`.
         The same holds for an LDAP provider that combines `insecureNoSSL` with `startTLS`, `insecureSkipVerify`
         or `rootCAData`. Set `enableBasicAuth: false` and resolve the LDAP TLS settings on such providers.
@@ -273,3 +325,7 @@ user-authz:
   fixes:
     - summary: Fixed CVEs in the `permission-browser-apiserver` image.
       pull_request: https://github.com/deckhouse/deckhouse/pull/23324
+    - summary: >-
+        The authorization webhook answers 500 and logs the real error instead of terminating when it cannot
+        marshal a response.
+      pull_request: https://fox.flant.com/deckhouse/deckhouse/-/merge_requests/309

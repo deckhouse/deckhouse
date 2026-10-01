@@ -10,16 +10,30 @@
  - Clusters bootstrapped before v1.55 were switched to the `Baseline` default PSS policy in 1.77, which denies privileged workloads in user namespaces.
     After the update, the default policy on these clusters becomes less strict: it is switched back to `Privileged`, and privileged pods in user namespaces pass admission again.
     To keep the `Baseline` policy, set `settings.podSecurityStandards.defaultPolicy: Baseline` explicitly in the `admission-policy-engine` ModuleConfig.
+ - Clusters whose `d8-system/install-data` ConfigMap holds an empty or invalid version and whose `podSecurityStandards.defaultPolicy` isn't set were switched to the `Baseline` default PSS policy in 1.77.
+    After the update, the default policy on these clusters becomes less strict: it is switched back to `Privileged`.
+    To keep the `Baseline` policy, set `settings.podSecurityStandards.defaultPolicy: Baseline` explicitly in the `admission-policy-engine` ModuleConfig.
+ - Deckhouse 1.78 makes `Baseline` the default PSS policy for all clusters.
+    On clusters bootstrapped with a Deckhouse version lower than v1.55 or with an unknown bootstrap version, the `PodSecurityStandardsDefaultPolicyNotSet` alert fires, and the update to 1.78 is blocked until `settings.podSecurityStandards.defaultPolicy` is set explicitly in the `admission-policy-engine` ModuleConfig.
+    To keep the current behavior, set `defaultPolicy: Privileged`. To switch to `Baseline` or `Restricted`, make sure that the workloads in non-system namespaces comply with the chosen policy first.
 
 ## Features
 
 
  - **[admission-policy-engine]** Added the `PodSecurityStandardsDefaultPolicyNotSet` alert that fires when the `install-data` ConfigMap is missing and the default PSS policy must be set explicitly in the ModuleConfig. [#23269](https://github.com/deckhouse/deckhouse/pull/23269)
+ - **[admission-policy-engine]** The `PodSecurityStandardsDefaultPolicyNotSet` alert now fires when `podSecurityStandards.defaultPolicy` isn't set and the `Privileged` policy is derived from the bootstrap version. The update to Deckhouse 1.78 is blocked until the policy is set explicitly. [#83](https://fox.flant.com/deckhouse/deckhouse/-/merge_requests/83)
+    Deckhouse 1.78 makes `Baseline` the default PSS policy for all clusters.
+    On clusters bootstrapped with a Deckhouse version lower than v1.55 or with an unknown bootstrap version, the `PodSecurityStandardsDefaultPolicyNotSet` alert fires, and the update to 1.78 is blocked until `settings.podSecurityStandards.defaultPolicy` is set explicitly in the `admission-policy-engine` ModuleConfig.
+    To keep the current behavior, set `defaultPolicy: Privileged`. To switch to `Baseline` or `Restricted`, make sure that the workloads in non-system namespaces comply with the chosen policy first.
 
 ## Fixes
 
 
  - **[admission-policy-engine]** Fixed CVEs in the `gatekeeper` and `ratify` images. [#23321](https://github.com/deckhouse/deckhouse/pull/23321)
+ - **[admission-policy-engine]** Fixed the default Pod Security Standards (PSS) policy being switched to `Baseline` without notice when the bootstrap version in the `d8-system/install-data` ConfigMap is empty or invalid. Such clusters now get the `Privileged` policy. [#83](https://fox.flant.com/deckhouse/deckhouse/-/merge_requests/83)
+    Clusters whose `d8-system/install-data` ConfigMap holds an empty or invalid version and whose `podSecurityStandards.defaultPolicy` isn't set were switched to the `Baseline` default PSS policy in 1.77.
+    After the update, the default policy on these clusters becomes less strict: it is switched back to `Privileged`.
+    To keep the `Baseline` policy, set `settings.podSecurityStandards.defaultPolicy: Baseline` explicitly in the `admission-policy-engine` ModuleConfig.
  - **[admission-policy-engine]** Restored the `Privileged` default PSS policy for clusters bootstrapped before v1.55 (without the `install-data` ConfigMap). [#23259](https://github.com/deckhouse/deckhouse/pull/23259)
     Clusters bootstrapped before v1.55 were switched to the `Baseline` default PSS policy in 1.77, which denies privileged workloads in user namespaces.
     After the update, the default policy on these clusters becomes less strict: it is switched back to `Privileged`, and privileged pods in user namespaces pass admission again.
@@ -37,6 +51,7 @@
  - **[common]** Fixed known vulnerabilities in the CoreDNS image used by the node-local-dns module. [#187](https://fox.flant.com/deckhouse/deckhouse/-/merge_requests/187)
  - **[control-plane-manager]** A new etcd `maxDbSize` is applied without a `deckhouse` restart. [#204](https://fox.flant.com/deckhouse/deckhouse/-/merge_requests/204)
  - **[control-plane-manager]** Fix kubectl exec through Kubernetes API published with Gateway API. [#274](https://fox.flant.com/deckhouse/deckhouse/-/merge_requests/274)
+ - **[deckhouse]** Fix random startup failures with 'waitid - no child processes' when restoring erofs modules. [#169](https://fox.flant.com/deckhouse/deckhouse/-/merge_requests/169)
  - **[dhctl]** Fixed terraform-auto-converger, terraform-state-exporter and `dhctl converge` failing on cloud clusters whose `cloud-provider-<name>` ModuleConfig has no `spec.enabled` field. dhctl now treats `spec.enabled` as optional and a ModuleConfig without it as disabled. [#23317](https://github.com/deckhouse/deckhouse/pull/23317)
  - **[dhctl]** Fixed the terraform-auto-converger init container failing on clusters already migrated to OpenTofu - the migration check now skips planning when no Terraform state is stored in the cluster. [#23329](https://github.com/deckhouse/deckhouse/pull/23329)
  - **[dhctl]** Restoring of handling api_server_url and api_server_token in dhctl [#23293](https://github.com/deckhouse/deckhouse/pull/23293)
@@ -54,12 +69,15 @@
     A StaticInstance whose connectivity check fails now keeps its reservation for the whole bootstrap window instead of returning to the pool on every failed attempt, and the bootstrap (20 min) and cleanup (10 min) timeouts, which previously never fired, are now reachable.
     If nothing ever ran on the host, the bootstrap timeout returns the instance to the pool after 20 minutes as before.
     If the host was already bootstrapped in part, the instance returns only through MachineHealthCheck remediation (nodeStartupTimeoutSeconds: 1200) plus the cleanup timeout, so it becomes available again roughly 20 + 10 minutes after the failure, and remediation reboots the host as part of the cleanup.
+ - **[registry]** Bump dependencies in registry. [#150](https://fox.flant.com/deckhouse/deckhouse/-/merge_requests/150)
+ - **[registrypackages]** Bumped `containerd` to 1.7.36 / 2.2.9 and OpenTelemetry to 1.45.0 in `containerd` and `crictl` to fix CVEs. [#185](https://fox.flant.com/deckhouse/deckhouse/-/merge_requests/185)
  - **[service-with-healthchecks]** Fixed metrics endpoints being reachable without going through kube-rbac-proxy authorization. [#23166](https://github.com/deckhouse/deckhouse/pull/23166)
+ - **[terraform-manager]** Fixed the `to-tofu-migrator` init container of `terraform-auto-converger` failing to resolve the provider bundle digest, which kept auto-converge from starting. [#288](https://fox.flant.com/deckhouse/deckhouse/-/merge_requests/288)
  - **[user-authn]** An idTokenTTL of 6h or more no longer stops Deckhouse from starting; it raises the D8UserAuthnIDTokenTTLTooLong alert and blocks the update to the next minor release until it is lowered. [#23267](https://github.com/deckhouse/deckhouse/pull/23267)
     A cluster still on 1.76 whose user-authn ModuleConfig sets idTokenTTL to 6h or more updates to this release without Deckhouse crash-looping, and stays on it until idTokenTTL is lowered below 6h. A cluster already crash-looping on 1.77.0 or 1.77.1 does not recover by itself, since the release controller runs in the pod that is down; set failurePolicy Ignore on the module-configs.deckhouse-webhook.deckhouse.io webhook of the deckhouse-webhook ValidatingWebhookConfiguration, lower idTokenTTL below 6h, and restart the deckhouse pod.
  - **[user-authn]** Fixed CVEs in the module images. [#23373](https://github.com/deckhouse/deckhouse/pull/23373)
  - **[user-authn]** In Deckhouse CSE, a DexProvider with `enableBasicAuth` is rejected, since the edition does not ship the basic authentication proxy; the CSE copy of the CRD also gets the LDAP TLS checks of the module. [#178](https://fox.flant.com/deckhouse/deckhouse/-/merge_requests/178)
-    In Deckhouse CSE, a DexProvider that already has `enableBasicAuth - true` keeps it after the update, and any change to its `oidc` or `ldap` section is rejected until `enableBasicAuth` is set to `false`. The same holds for an LDAP provider that combines `insecureNoSSL` with `startTLS`, `insecureSkipVerify` or `rootCAData`. Set `enableBasicAuth: false` and resolve the LDAP TLS settings on such providers.
+    In Deckhouse CSE, a DexProvider that already has `enableBasicAuth: true` keeps it after the update, and any change to its `oidc` or `ldap` section is rejected until `enableBasicAuth` is set to `false`. The same holds for an LDAP provider that combines `insecureNoSSL` with `startTLS`, `insecureSkipVerify` or `rootCAData`. Set `enableBasicAuth: false` and resolve the LDAP TLS settings on such providers.
  - **[user-authz]** Fixed CVEs in the `permission-browser-apiserver` image. [#23324](https://github.com/deckhouse/deckhouse/pull/23324)
 
 ## Chore

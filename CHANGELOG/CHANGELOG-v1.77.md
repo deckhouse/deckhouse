@@ -40,6 +40,9 @@
  - Clusters bootstrapped before v1.55 were switched to the `Baseline` default PSS policy in 1.77, which denies privileged workloads in user namespaces.
     After the update, the default policy on these clusters becomes less strict: it is switched back to `Privileged`, and privileged pods in user namespaces pass admission again.
     To keep the `Baseline` policy, set `settings.podSecurityStandards.defaultPolicy: Baseline` explicitly in the `admission-policy-engine` ModuleConfig.
+ - Clusters whose `d8-system/install-data` ConfigMap holds an empty or invalid version and whose `podSecurityStandards.defaultPolicy` isn't set were switched to the `Baseline` default PSS policy in 1.77.
+    After the update, the default policy on these clusters becomes less strict: it is switched back to `Privileged`.
+    To keep the `Baseline` policy, set `settings.podSecurityStandards.defaultPolicy: Baseline` explicitly in the `admission-policy-engine` ModuleConfig.
  - Containers attached through the `pods/ephemeralcontainers` subresource were not seen by
     the module's webhook, so no policy was evaluated for them: SecurityPolicy, OperationPolicy,
     Pod Security Standards and image signature verification were all bypassed by `kubectl debug`.
@@ -55,6 +58,9 @@
     not affected.
  - Creating a `Group` or a `User`, or renaming an existing one, so that `Group.spec.name` matches a group subject or `User.spec.email` matches a user subject of an existing AuthorizationRule or ClusterAuthorizationRule is now rejected, preventing an unintended privilege grant. The email is compared after lowercasing, since that is the form that reaches the token. Set the `user-authz.deckhouse.io/allow-authorization-rule-collision` annotation to `"true"` on the object if the collision is intentional. Already existing objects keep working and only produce a warning. Any declarative flow that manages both the rule and the identity is affected, not only one that deletes and recreates the identity: a first-time apply denies the `Group` or `User` whenever the rule happens to be applied first, and nothing guarantees the order. Add the annotation to such objects before upgrading. Deleting a `Group` or a `User` whose name is still a subject of a rule now produces a warning, since the rule keeps granting that name.
  - Custom roles of the legacy experimental RBACv2 scheme must be migrated to the new `d8:custom:*` scheme before upgrading to DKP 1.78. The `D8UserAuthzLegacyRBACv2CustomRoleFound` alert identifies affected roles. Refer to the `user-authz` module FAQ for migration instructions.
+ - Deckhouse 1.78 makes `Baseline` the default PSS policy for all clusters.
+    On clusters bootstrapped with a Deckhouse version lower than v1.55 or with an unknown bootstrap version, the `PodSecurityStandardsDefaultPolicyNotSet` alert fires, and the update to 1.78 is blocked until `settings.podSecurityStandards.defaultPolicy` is set explicitly in the `admission-policy-engine` ModuleConfig.
+    To keep the current behavior, set `defaultPolicy: Privileged`. To switch to `Baseline` or `Restricted`, make sure that the workloads in non-system namespaces comply with the chosen policy first.
  - During the first `user-authz` release after the update the per-role bindings are protected from the release engine, the aggregated ones are created, and the per-role bindings are deleted right after the release. Permissions granted through annotated ClusterRoles stay in place throughout.
     The `user-authz.deckhouse.io/access-level` label is now set automatically on annotated ClusterRoles.
     In audit logs, access granted through annotated ClusterRoles is attributed to `user-authz:<level>:custom` instead of the individual ClusterRole.
@@ -206,6 +212,10 @@
  - **[admission-policy-engine]** Added the `PodSecurityStandardsDefaultPolicyNotSet` alert that fires when the `install-data` ConfigMap is missing and the default PSS policy must be set explicitly in the ModuleConfig. [#23269](https://github.com/deckhouse/deckhouse/pull/23269)
  - **[admission-policy-engine]** Grant kubeadm:cluster-admins group granular full access to module CRDs via dedicated ClusterRole d8:admission-policy-engine:admin-kubeconfig. [#19420](https://github.com/deckhouse/deckhouse/pull/19420)
  - **[admission-policy-engine]** Refactored constraints and tests and added support for container-level SecurityPolicyException. [#18668](https://github.com/deckhouse/deckhouse/pull/18668)
+ - **[admission-policy-engine]** The `PodSecurityStandardsDefaultPolicyNotSet` alert now fires when `podSecurityStandards.defaultPolicy` isn't set and the `Privileged` policy is derived from the bootstrap version. The update to Deckhouse 1.78 is blocked until the policy is set explicitly. [#83](https://fox.flant.com/deckhouse/deckhouse/-/merge_requests/83)
+    Deckhouse 1.78 makes `Baseline` the default PSS policy for all clusters.
+    On clusters bootstrapped with a Deckhouse version lower than v1.55 or with an unknown bootstrap version, the `PodSecurityStandardsDefaultPolicyNotSet` alert fires, and the update to 1.78 is blocked until `settings.podSecurityStandards.defaultPolicy` is set explicitly in the `admission-policy-engine` ModuleConfig.
+    To keep the current behavior, set `defaultPolicy: Privileged`. To switch to `Baseline` or `Restricted`, make sure that the workloads in non-system namespaces comply with the chosen policy first.
  - **[candi]** Added golang v1.27.0 [#22485](https://github.com/deckhouse/deckhouse/pull/22485)
  - **[candi]** Added oss.yaml files for cloud provider modules. [#18989](https://github.com/deckhouse/deckhouse/pull/18989)
  - **[candi]** Added support for Kubernetes 1.36 and discontinued support for Kubernetes 1.31. The default Kubernetes version was changed from 1.33 to 1.34. [#19623](https://github.com/deckhouse/deckhouse/pull/19623)
@@ -418,6 +428,10 @@
  - **[admission-policy-engine]** Changed the label for container SecurityPolicyExceptions. [#20678](https://github.com/deckhouse/deckhouse/pull/20678)
  - **[admission-policy-engine]** Fixed CVEs in the `gatekeeper` and `ratify` images. [#23321](https://github.com/deckhouse/deckhouse/pull/23321)
  - **[admission-policy-engine]** Fixed the constraint-template check for the AssignImage CRD. [#20782](https://github.com/deckhouse/deckhouse/pull/20782)
+ - **[admission-policy-engine]** Fixed the default Pod Security Standards (PSS) policy being switched to `Baseline` without notice when the bootstrap version in the `d8-system/install-data` ConfigMap is empty or invalid. Such clusters now get the `Privileged` policy. [#83](https://fox.flant.com/deckhouse/deckhouse/-/merge_requests/83)
+    Clusters whose `d8-system/install-data` ConfigMap holds an empty or invalid version and whose `podSecurityStandards.defaultPolicy` isn't set were switched to the `Baseline` default PSS policy in 1.77.
+    After the update, the default policy on these clusters becomes less strict: it is switched back to `Privileged`.
+    To keep the `Baseline` policy, set `settings.podSecurityStandards.defaultPolicy: Baseline` explicitly in the `admission-policy-engine` ModuleConfig.
  - **[admission-policy-engine]** Made Gatekeeper pods tolerate the csi-not-bootstrapped taint to prevent webhook deadlock during worker node replacement. [#19383](https://github.com/deckhouse/deckhouse/pull/19383)
  - **[admission-policy-engine]** Restored the `Privileged` default PSS policy for clusters bootstrapped before v1.55 (without the `install-data` ConfigMap). [#23259](https://github.com/deckhouse/deckhouse/pull/23259)
     Clusters bootstrapped before v1.55 were switched to the `Baseline` default PSS policy in 1.77, which denies privileged workloads in user namespaces.
@@ -656,6 +670,7 @@
  - **[deckhouse]** Fix an empty package status after a successful install [#22651](https://github.com/deckhouse/deckhouse/pull/22651)
  - **[deckhouse]** Fix exp modules auto enabling. [#19670](https://github.com/deckhouse/deckhouse/pull/19670)
  - **[deckhouse]** Fix package status deadlock via coalescing workqueue. [#20676](https://github.com/deckhouse/deckhouse/pull/20676)
+ - **[deckhouse]** Fix random startup failures with 'waitid - no child processes' when restoring erofs modules. [#169](https://fox.flant.com/deckhouse/deckhouse/-/merge_requests/169)
  - **[deckhouse]** Fixed ModulePullOverride for bundle-enabled modules. [#20763](https://github.com/deckhouse/deckhouse/pull/20763)
  - **[deckhouse]** Fixed Scaled stuck in Unknown on controller startup. [#20169](https://github.com/deckhouse/deckhouse/pull/20169)
  - **[deckhouse]** Fixed image extraction to respect opaque whiteouts. [#20502](https://github.com/deckhouse/deckhouse/pull/20502)
@@ -854,10 +869,12 @@
  - **[registry-packages-proxy]** Grant registry-packages-proxy RBAC to read unmasked registry credentials (modulesources/sensitive, packagerepositories/sensitive), restoring authentication to private registries. [#21513](https://github.com/deckhouse/deckhouse/pull/21513)
  - **[registry-packages-proxy]** The proxy serves `deckhouse-cli` and `deckhouse-cli/plugins/<name>` images from the registry root above the cluster's edition repository. [#22391](https://github.com/deckhouse/deckhouse/pull/22391)
  - **[registry-packages-proxy]** deckhouse-cli and plugin downloads now work in registries filled by `d8 mirror push`; the proxy probes the cluster repo first, then the edition-trimmed root, and remembers the working one. [#22661](https://github.com/deckhouse/deckhouse/pull/22661)
+ - **[registry]** Bump dependencies in registry. [#150](https://fox.flant.com/deckhouse/deckhouse/-/merge_requests/150)
  - **[registry]** Fix the order in which the Unmanaged params are stored for the fallback to the Legacy mode. [#22976](https://github.com/deckhouse/deckhouse/pull/22976)
  - **[registrypackages]** Bump `containerd` v2 to 2.2.7 and patch `crictl` 1.36.0 Go dependencies to fix known CVEs. [#22152](https://github.com/deckhouse/deckhouse/pull/22152)
     Nodes with `ContainerdV2` will restarts the `containerd` service .
  - **[registrypackages]** Bump kubernetes-cni to 1.9.1 and update vulnerable Go dependencies to fix CVEs. [#21963](https://github.com/deckhouse/deckhouse/pull/21963)
+ - **[registrypackages]** Bumped `containerd` to 1.7.36 / 2.2.9 and OpenTelemetry to 1.45.0 in `containerd` and `crictl` to fix CVEs. [#185](https://fox.flant.com/deckhouse/deckhouse/-/merge_requests/185)
  - **[registrypackages]** Bumped containerd to 1.7.35/2.2.8; bumped grpc, x/crypto, and websocket in containerd, crictl, and Kubernetes 1.32–1.36 gomod patches. [#23087](https://github.com/deckhouse/deckhouse/pull/23087)
  - **[registrypackages]** Close CVEs in `cfssl`, `docker-registry` and `rpp-get` by bumping vulnerable Go dependencies, and build `yq` from `pm` at 4.53.6. [#22684](https://github.com/deckhouse/deckhouse/pull/22684)
  - **[registrypackages]** Fix dm-verity devices that could never be closed for containerd 2.2.7 (CSE only). [#22807](https://github.com/deckhouse/deckhouse/pull/22807)
@@ -880,6 +897,7 @@
  - **[service-with-healthchecks]** Fixed metrics endpoints being reachable without going through kube-rbac-proxy authorization. [#23166](https://github.com/deckhouse/deckhouse/pull/23166)
  - **[service-with-healthchecks]** Stopped publishing terminated pods in EndpointSlices and started publishing pods being deleted as terminating endpoints. [#22836](https://github.com/deckhouse/deckhouse/pull/22836)
     Endpoints for pods in a terminal phase (Failed/Succeeded) are no longer published. In DVP clusters this prevents traffic from being routed to a VirtualMachine IP that has been reused by another pod. Pods being deleted are now published with the serving and terminating conditions, which enables the graceful shutdown flow for consumers. Pod readiness is derived from the PodReady condition, and stale probe results are reset when a pod becomes not ready, is recreated, or changes its IP.
+ - **[terraform-manager]** Fixed the `to-tofu-migrator` init container of `terraform-auto-converger` failing to resolve the provider bundle digest, which kept auto-converge from starting. [#288](https://fox.flant.com/deckhouse/deckhouse/-/merge_requests/288)
  - **[user-authn]** Added the missing `kubeconfigPublishAPIEncodedName` field to CSE OpenAPI values. [#20864](https://github.com/deckhouse/deckhouse/pull/20864)
  - **[user-authn]** Adding the allow-access-to-kubernetes annotation to a DexClient or a DexAuthenticator now requires cluster-level authority over the user-authn module. [#22358](https://github.com/deckhouse/deckhouse/pull/22358)
     Only a subject allowed to update the user-authn ModuleConfig, or the Deckhouse service account, may add the `dexclient.deckhouse.io/allow-access-to-kubernetes` or `dexauthenticator.deckhouse.io/allow-access-to-kubernetes` annotation. Objects that already carry it keep working and stay editable by their owners as long as they are updated in place. A GitOps controller that deletes and recreates such an object instead of patching it will have the recreation denied, and the object will come back without access to the Kubernetes API unless the controller's service account is allowed to update the user-authn ModuleConfig.
@@ -916,7 +934,7 @@
     User.spec.password patches after create are rejected; reset via UserOperation or d8 iam user reset-password.
  - **[user-authn]** Improve basic-auth-proxy request handling, cache implementation, and shutdown behavior. [#20076](https://github.com/deckhouse/deckhouse/pull/20076)
  - **[user-authn]** In Deckhouse CSE, a DexProvider with `enableBasicAuth` is rejected, since the edition does not ship the basic authentication proxy; the CSE copy of the CRD also gets the LDAP TLS checks of the module. [#178](https://fox.flant.com/deckhouse/deckhouse/-/merge_requests/178)
-    In Deckhouse CSE, a DexProvider that already has `enableBasicAuth - true` keeps it after the update, and any change to its `oidc` or `ldap` section is rejected until `enableBasicAuth` is set to `false`. The same holds for an LDAP provider that combines `insecureNoSSL` with `startTLS`, `insecureSkipVerify` or `rootCAData`. Set `enableBasicAuth: false` and resolve the LDAP TLS settings on such providers.
+    In Deckhouse CSE, a DexProvider that already has `enableBasicAuth: true` keeps it after the update, and any change to its `oidc` or `ldap` section is rejected until `enableBasicAuth` is set to `false`. The same holds for an LDAP provider that combines `insecureNoSSL` with `startTLS`, `insecureSkipVerify` or `rootCAData`. Set `enableBasicAuth: false` and resolve the LDAP TLS settings on such providers.
  - **[user-authn]** Issue a dedicated OAuth2 client secret per DexAuthenticator instead of reusing the shared cluster client secret. [#22360](https://github.com/deckhouse/deckhouse/pull/22360)
     On upgrade, every DexAuthenticator that carries the
     `dexauthenticator.deckhouse.io/allow-access-to-kubernetes` annotation gets a freshly generated client
