@@ -26,7 +26,6 @@ import (
 	"sigs.k8s.io/yaml"
 
 	"github.com/deckhouse/deckhouse/go_lib/dependency"
-	"github.com/deckhouse/deckhouse/go_lib/dependency/requirements"
 	. "github.com/deckhouse/deckhouse/testing/hooks"
 )
 
@@ -67,10 +66,6 @@ globalVersion: "1.27" # default version "from openapi/values.yaml"
 
 			Expect(f.ValuesGet("istio.internal.versionsToInstall").String()).To(MatchJSON(`["1.27"]`))
 			Expect(f.ValuesGet("istio.internal.globalVersion").String()).To(Equal("1.27"))
-
-			value, exists := requirements.GetValue(minVersionValuesKey)
-			Expect(exists).To(BeTrue())
-			Expect(value).To(BeEquivalentTo("1.27"))
 
 			assertTelemetryMetrics(f, "1.27.9")
 		})
@@ -242,7 +237,7 @@ spec: {}
 		})
 	})
 
-	Context("Migration from 1.21 to 1.25 publishes only the configured supported version", func() {
+	Context("Migration from 1.21 to 1.25 installs only the configured supported version", func() {
 		BeforeEach(func() {
 			f.KubeStateSet("")
 			values := `
@@ -259,16 +254,13 @@ globalVersion: "1.25"
 			f.RunHook()
 		})
 
-		It("does not treat the retired revision as installed for release requirements", func() {
+		It("does not install the retired revision", func() {
 			Expect(f).To(ExecuteSuccessfully())
 			Expect(f.ValuesGet("istio.internal.versionsToInstall").AsStringSlice()).To(Equal([]string{"1.25"}))
-			value, exists := requirements.GetValue(minVersionValuesKey)
-			Expect(exists).To(BeTrue())
-			Expect(value).To(BeEquivalentTo("1.25"))
 		})
 	})
 
-	Context("Operator-free versions set minimal version requirement", func() {
+	Context("Operator-free versions are installed", func() {
 		BeforeEach(func() {
 			f.KubeStateSet("")
 
@@ -286,17 +278,9 @@ globalVersion: "1.27"
 			f.RunHook()
 		})
 
-		It("Should publish minimal version from versionsToInstall", func() {
+		It("Should install every configured version", func() {
 			Expect(f).To(ExecuteSuccessfully())
 			Expect(f.ValuesGet("istio.internal.versionsToInstall").AsStringSlice()).To(Equal([]string{"1.27", "1.29"}))
-
-			value, exists := requirements.GetValue(minVersionValuesKey)
-			Expect(exists).To(BeTrue())
-			Expect(value).To(BeEquivalentTo("1.27"))
-
-			installedVersions, exists := requirements.GetValue(installedVersionsValuesKey)
-			Expect(exists).To(BeTrue())
-			Expect(installedVersions).To(BeEquivalentTo([]string{"1.27", "1.29"}))
 		})
 	})
 })

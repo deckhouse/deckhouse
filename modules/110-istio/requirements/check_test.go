@@ -26,50 +26,63 @@ import (
 )
 
 func TestIstioOperatorVersionRequirement(t *testing.T) {
-	t.Cleanup(func() { requirements.RemoveValue(minVersionValuesKey) })
+	t.Cleanup(func() { requirements.RemoveValue(installedVersionsValuesKey) })
 
 	t.Run("configured 1.25 satisfies requirement", func(t *testing.T) {
-		requirements.SaveValue(minVersionValuesKey, "1.25")
+		requirements.SaveValue(installedVersionsValuesKey, []string{"1.25"})
 		ok, err := requirements.CheckRequirement(requirementIstioMinimalVersionKey, "1.25")
 		assert.True(t, ok)
 		require.NoError(t, err)
 	})
 
 	t.Run("configured 1.21 fails requirement", func(t *testing.T) {
-		requirements.SaveValue(minVersionValuesKey, "1.21.6")
+		requirements.SaveValue(installedVersionsValuesKey, []string{"1.21"})
 		ok, err := requirements.CheckRequirement(requirementIstioMinimalVersionKey, "1.25")
 		assert.False(t, ok)
-		require.EqualError(t, err, "installed Istio version '1.21.6' is lower than required")
+		require.EqualError(t, err, "installed Istio version '1.21' is lower than required")
 	})
 
 	t.Run("newer configured version satisfies requirement", func(t *testing.T) {
-		requirements.SaveValue(minVersionValuesKey, "1.29")
+		requirements.SaveValue(installedVersionsValuesKey, []string{"1.29"})
 		ok, err := requirements.CheckRequirement(requirementIstioMinimalVersionKey, "1.25")
 		assert.True(t, ok)
 		require.NoError(t, err)
 	})
 
 	t.Run("Istio is not installed on the cluster", func(t *testing.T) {
-		requirements.RemoveValue(minVersionValuesKey)
+		requirements.RemoveValue(installedVersionsValuesKey)
 		ok, err := requirements.CheckRequirement(requirementIstioMinimalVersionKey, "1.25")
 		assert.True(t, ok)
 		require.NoError(t, err)
 	})
 
 	t.Run("minimum of multiple configured revisions is checked", func(t *testing.T) {
-		requirements.SaveValue(minVersionValuesKey, "1.25")
+		requirements.SaveValue(installedVersionsValuesKey, []string{"1.25", "1.27"})
 		ok, err := requirements.CheckRequirement(requirementIstioMinimalVersionKey, "1.25")
 		assert.True(t, ok)
 		require.NoError(t, err)
 	})
 
+	t.Run("control plane still being removed fails requirement", func(t *testing.T) {
+		requirements.SaveValue(installedVersionsValuesKey, []string{"1.25", "1.27"})
+		ok, err := requirements.CheckRequirement(requirementIstioMinimalVersionKey, "1.27")
+		assert.False(t, ok)
+		require.EqualError(t, err, "installed Istio version '1.25' is lower than required")
+	})
+
+	t.Run("malformed installed versions fail requirement", func(t *testing.T) {
+		requirements.SaveValue(installedVersionsValuesKey, "1.25")
+		ok, err := requirements.CheckRequirement(requirementIstioMinimalVersionKey, "1.25")
+		assert.False(t, ok)
+		require.EqualError(t, err, "istio:installedVersions key format is incorrect")
+	})
+
 	requirements.RemoveValue(isK8sVersionAutomaticKey)
 	requirements.RemoveValue(istioToK8sCompatibilityMapKey)
 	requirements.RemoveValue(installedVersionsValuesKey)
-	requirements.RemoveValue(minVersionValuesKey)
 	t.Run("requirement for k8s version pass", func(t *testing.T) {
 		requirements.SaveValue(isK8sVersionAutomaticKey, true)
-		requirements.SaveValue(minVersionValuesKey, "1.13")
+		requirements.SaveValue(installedVersionsValuesKey, []string{"1.13"})
 		var mapVersions = map[string][]string{"1.13": {"1.21", "1.20", "1.21"}}
 		requirements.SaveValue(istioToK8sCompatibilityMapKey, mapVersions)
 		ok, err := requirements.CheckRequirement(requirementDefaultK8sKey, "1.20.0")
@@ -79,7 +92,7 @@ func TestIstioOperatorVersionRequirement(t *testing.T) {
 
 	t.Run("requirement for k8s version failed", func(t *testing.T) {
 		requirements.SaveValue(isK8sVersionAutomaticKey, true)
-		requirements.SaveValue(minVersionValuesKey, "1.13")
+		requirements.SaveValue(installedVersionsValuesKey, []string{"1.13"})
 		var mapVersions = map[string][]string{"1.13": {"1.21", "1.20", "1.21"}}
 		requirements.SaveValue(istioToK8sCompatibilityMapKey, mapVersions)
 		ok, err := requirements.CheckRequirement(requirementDefaultK8sKey, "1.22.0")

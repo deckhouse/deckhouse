@@ -22,6 +22,7 @@ import (
 	"sort"
 	"strings"
 
+	"github.com/Masterminds/semver/v3"
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
 	k8serrors "k8s.io/apimachinery/pkg/api/errors"
@@ -32,13 +33,15 @@ import (
 	sdkobjectpatch "github.com/deckhouse/module-sdk/pkg/object-patch"
 
 	"github.com/deckhouse/deckhouse/go_lib/dependency"
+	"github.com/deckhouse/deckhouse/go_lib/dependency/requirements"
 	"github.com/deckhouse/deckhouse/modules/110-istio/hooks/lib"
 	"github.com/deckhouse/deckhouse/modules/110-istio/hooks/lib/crd"
 	"github.com/deckhouse/deckhouse/modules/110-istio/hooks/lib/istio_versions"
 )
 
 const (
-	istioNamespace = "d8-istio"
+	istioNamespace             = "d8-istio"
+	installedVersionsValuesKey = "istio:installedVersions"
 )
 
 type IstioOperatorCrdInfo struct {
@@ -229,6 +232,32 @@ func operatorRevisionsToInstallDiscovery(_ context.Context, input *go_hook.HookI
 
 	sort.Strings(operatorVersionsToInstall)
 	input.Values.Set("istio.internal.operatorVersionsToInstall", operatorVersionsToInstall)
+
+	// Release requirements must see every control plane still in the cluster:
+	// the configured ones and those whose operator has not removed them yet.
+	controlPlaneVersions := make([]string, 0, len(versionsToInstall)+len(operatorVersionsToInstall))
+	for _, versionResult := range versionsToInstall {
+		controlPlaneVersions = append(controlPlaneVersions, versionResult.String())
+	}
+	controlPlaneVersions = append(controlPlaneVersions, operatorVersionsToInstall...)
+
+	if len(controlPlaneVersions) == 0 {
+		requirements.RemoveValue(installedVersionsValuesKey)
+	} else {
+		installedVersions := make([]string, 0, len(controlPlaneVersions))
+		for _, version := range controlPlaneVersions {
+			versionSemver, err := semver.NewVersion(version)
+			if err != nil {
+				return err
+			}
+			majorMinor := fmt.Sprintf("%d.%d", versionSemver.Major(), versionSemver.Minor())
+			if !lib.Contains(installedVersions, majorMinor) {
+				installedVersions = append(installedVersions, majorMinor)
+			}
+		}
+		sort.Strings(installedVersions)
+		requirements.SaveValue(installedVersionsValuesKey, installedVersions)
+	}
 
 	return nil
 }
