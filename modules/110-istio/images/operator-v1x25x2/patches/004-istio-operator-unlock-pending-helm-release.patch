@@ -1,0 +1,106 @@
+diff --git a/pkg/helm/chartmanager.go b/pkg/helm/chartmanager.go
+index 4c9dbeb3..6360104b 100644
+--- a/pkg/helm/chartmanager.go
++++ b/pkg/helm/chartmanager.go
+@@ -82,27 +82,41 @@ func (h *ChartManager) UpgradeOrInstallChart(
+ 		return rel, err
+ 	}
+ 
+-	var releaseExists bool
++	releaseExists := rel != nil
++
++	// A helm release can be stuck in pending state when:
++	// - operator exit/crashes during helm install/upgrade/uninstall
++	// - lost connection to apiserver
++	// - helm release timeouts (context timeouts, cancellation)
++	// - etc
++	// let's try to brutally unlock it and then remediate later by either rollback or uninstall
++	if releaseExists && rel.Info.Status.IsPending() {
++		log.V(2).Info("Unlocking helm release", "status", rel.Info.Status, "release", releaseName)
++		rel.SetStatus(release.StatusFailed, fmt.Sprintf("Release unlocked from %q state", rel.Info.Status))
++
++		if err := cfg.Releases.Update(rel); err != nil {
++			return nil, fmt.Errorf("failed to unlock helm release %s: %w", releaseName, err)
++		}
++	}
+ 
+-	if rel == nil {
+-		releaseExists = false
+-	} else if rel.Info.Status == release.StatusDeployed {
+-		releaseExists = true
+-	} else if rel.Info.Status == release.StatusPendingUpgrade || (rel.Info.Status == release.StatusFailed && rel.Version > 1) {
++	switch {
++	case !releaseExists:
++		break
++	case rel.Info.Status == release.StatusDeployed:
++		break
++	case rel.Info.Status == release.StatusFailed && rel.Version > 1:
+ 		log.V(2).Info("Performing helm rollback", "release", releaseName)
+ 		if err := action.NewRollback(cfg).Run(releaseName); err != nil {
+ 			return nil, fmt.Errorf("failed to roll back helm release %s: %w", releaseName, err)
+ 		}
+-		releaseExists = true
+-	} else if rel.Info.Status == release.StatusPendingInstall || (rel.Info.Status == release.StatusFailed && rel.Version <= 1) {
+-		log.V(2).Info("Performing helm uninstall", "release", releaseName)
++	case rel.Info.Status == release.StatusUninstalling,
++		rel.Info.Status == release.StatusFailed && rel.Version <= 1:
++		log.V(2).Info("Performing helm uninstall", "release", releaseName, "status", rel.Info.Status)
+ 		if _, err := action.NewUninstall(cfg).Run(releaseName); err != nil {
+ 			return nil, fmt.Errorf("failed to uninstall failed helm release %s: %w", releaseName, err)
+ 		}
+ 		releaseExists = false
+-	} else if rel.Info.Status == release.StatusPendingRollback {
+-		return nil, fmt.Errorf("unrecoverable helm release status %s", rel.Info.Status)
+-	} else {
++	default:
+ 		return nil, fmt.Errorf("unexpected helm release status %s", rel.Info.Status)
+ 	}
+ 
+diff --git a/pkg/helm/chartmanager_test.go b/pkg/helm/chartmanager_test.go
+index ff6ef6fb..828a8fcc 100644
+--- a/pkg/helm/chartmanager_test.go
++++ b/pkg/helm/chartmanager_test.go
+@@ -93,21 +93,20 @@ var (
+ 			},
+ 		},
+ 		{
+-			name: "release in uninstalled state",
++			name: "release in uninstalling state",
+ 			setup: func(g *WithT, cl client.Client, helm *ChartManager, ns string) {
+ 				install(g, helm, chartDir, ns, relName, owner)
+-				setReleaseStatus(g, helm, ns, relName, release.StatusUninstalled)
++				setReleaseStatus(g, helm, ns, relName, release.StatusUninstalling)
+ 			},
+-			wantErrOnInstall:  true,
+-			skipUninstallTest: true, // If the release is marked as Uninstalled, helm doesn't uninstall it
+ 		},
+ 		{
+-			name: "release in uninstalling state",
++			name: "release in uninstalled state",
+ 			setup: func(g *WithT, cl client.Client, helm *ChartManager, ns string) {
+ 				install(g, helm, chartDir, ns, relName, owner)
+-				setReleaseStatus(g, helm, ns, relName, release.StatusUninstalling)
++				setReleaseStatus(g, helm, ns, relName, release.StatusUninstalled)
+ 			},
+-			wantErrOnInstall: true,
++			wantErrOnInstall:  true,
++			skipUninstallTest: true, // If the release is marked as Uninstalled, helm doesn't uninstall it
+ 		},
+ 		{
+ 			name: "release in unknown state",
+@@ -131,7 +130,14 @@ var (
+ 				install(g, helm, chartDir, ns, relName, owner)
+ 				setReleaseStatus(g, helm, ns, relName, release.StatusPendingRollback)
+ 			},
+-			wantErrOnInstall: true,
++		},
++		{
++			name: "release in pending-rollback state with previous revision",
++			setup: func(g *WithT, cl client.Client, helm *ChartManager, ns string) {
++				install(g, helm, chartDir, ns, relName, owner)
++				upgrade(g, helm, chartDir, ns, relName, owner)
++				setReleaseStatus(g, helm, ns, relName, release.StatusPendingRollback)
++			},
+ 		},
+ 	}
+ )
