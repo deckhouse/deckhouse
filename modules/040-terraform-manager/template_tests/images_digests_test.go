@@ -18,42 +18,12 @@ package template_tests
 
 import (
 	"strings"
-	"testing"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 
 	. "github.com/deckhouse/deckhouse/testing/helm"
 )
-
-func Test(t *testing.T) {
-	RegisterFailHandler(Fail)
-	RunSpecs(t, "")
-}
-
-const globalValues = `
-clusterIsBootstrapped: true
-enabledModules: ["vertical-pod-autoscaler", "terraform-manager"]
-clusterConfiguration:
-  apiVersion: deckhouse.io/v1
-  cloud:
-    prefix: sandbox
-    provider: OpenStack
-  clusterDomain: cluster.local
-  clusterType: Cloud
-  defaultCRI: Containerd
-  kind: ClusterConfiguration
-  kubernetesVersion: "Automatic"
-  podSubnetCIDR: 10.111.0.0/16
-  podSubnetNodeCIDRPrefix: "24"
-  serviceSubnetCIDR: 10.222.0.0/16
-modules:
-  placement: {}
-discovery:
-  d8SpecificNodeCountByRole:
-    master: 3
-  kubernetesVersion: "1.33.4"
-`
 
 const imagesDigestsFile = "/images-digests/images_digests.json"
 
