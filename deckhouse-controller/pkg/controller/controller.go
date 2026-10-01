@@ -104,9 +104,11 @@ type DeckhouseController struct {
 	dc dependency.Container
 
 	deckhouseConfigCh <-chan utils.Values
+	globalConfigCh    <-chan utils.Values
 
-	embeddedPolicy *helpers.ModuleUpdatePolicySpecContainer
-	settings       *helpers.DeckhouseSettingsContainer
+	embeddedPolicy       *helpers.ModuleUpdatePolicySpecContainer
+	settings             *helpers.DeckhouseSettingsContainer
+	applicationsSettings *helpers.ApplicationsSettingsContainer
 
 	defaultReleaseChannel string
 
@@ -245,8 +247,9 @@ func NewDeckhouseController(
 	conversionsStore := conversion.NewConversionsStore()
 
 	deckhouseConfigCh := make(chan utils.Values, 1)
+	globalConfigCh := make(chan utils.Values, 1)
 
-	configHandler := confighandler.New(runtimeManager.GetClient(), conversionsStore, deckhouseConfigCh)
+	configHandler := confighandler.New(runtimeManager.GetClient(), conversionsStore, deckhouseConfigCh, globalConfigCh)
 	operator.SetupKubeConfigManager(configHandler)
 
 	// setup module manager
@@ -323,6 +326,7 @@ func NewDeckhouseController(
 
 	dc := dependency.NewDependencyContainer()
 	settingsContainer := helpers.NewDeckhouseSettingsContainer(nil, operator.MetricStorage)
+	applicationsSettings := helpers.NewApplicationsSettingsContainer()
 
 	pkgRuntime, err := packageruntime.Build(runtimeManager.GetClient(), operator.ModuleManager, operator.MetricStorage, logger)
 	if err != nil {
@@ -404,7 +408,7 @@ func NewDeckhouseController(
 			return nil, fmt.Errorf("register application package version controller: %w", err)
 		}
 
-		err = application.RegisterController(new(sync.WaitGroup), runtimeManager, pkgRuntime, operator.ModuleManager, logger)
+		err = application.RegisterController(new(sync.WaitGroup), runtimeManager, pkgRuntime, operator.ModuleManager, settingsContainer, applicationsSettings, logger)
 		if err != nil {
 			return nil, fmt.Errorf("register application controller: %w", err)
 		}
@@ -440,9 +444,11 @@ func NewDeckhouseController(
 		dc: dc,
 
 		deckhouseConfigCh: deckhouseConfigCh,
+		globalConfigCh:    globalConfigCh,
 
-		embeddedPolicy: embeddedPolicy,
-		settings:       settingsContainer,
+		embeddedPolicy:       embeddedPolicy,
+		settings:             settingsContainer,
+		applicationsSettings: applicationsSettings,
 
 		defaultReleaseChannel: defaultReleaseChannel,
 
@@ -483,6 +489,9 @@ func (c *DeckhouseController) Start(ctx context.Context) error {
 
 	// update embedded policy and deckhouse settings by the deckhouse moduleConfig
 	go c.syncDeckhouseSettings()
+
+	// update the global applications settings by the global moduleConfig
+	go c.syncGlobalSettings()
 
 	return nil
 }
@@ -525,5 +534,16 @@ func (c *DeckhouseController) syncDeckhouseSettings() {
 		}
 
 		c.embeddedPolicy.Set(settings)
+	}
+}
+
+// syncGlobalSettings updates the global applications settings by the global moduleConfig
+func (c *DeckhouseController) syncGlobalSettings() {
+	for globalConfig := range c.globalConfigCh {
+		c.log.Debug("update global applications settings")
+
+		if err := c.applicationsSettings.Set(globalConfig); err != nil {
+			c.log.Error("failed to parse the global applications settings", log.Err(err))
+		}
 	}
 }

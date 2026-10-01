@@ -95,6 +95,15 @@ type ApplicationSpec struct {
 	// +crd-enricher:deckhouse:documentation:examples=stable
 	ReleaseChannel string `json:"releaseChannel,omitempty"`
 
+	// Update settings of the application: the update mode, update windows, and blocking the update on alerts.
+	//
+	// If the parameter is omitted, the application uses the global [`applications.update`](global.html#parameters-applications-update) settings. If those are not set either, it uses the Deckhouse update settings: the [`update`](/modules/deckhouse/configuration.html#parameters-update) parameter of the `deckhouse` module.
+	//
+	// Update notifications cannot be configured for a single application. The application always uses the global ones: [`applications.update.notification`](global.html#parameters-applications-update-notification) if the global `applications.update` settings are set, and the Deckhouse notification settings otherwise.
+	// +optional
+	// +crd-enricher:deckhouse:documentation:examples={mode: Auto, windows: [{from: "8:00", to: "15:00", days: [Tue, Sat]}], blockOnAlerts: {enabled: true, severity: 2}}
+	Update *ApplicationUpdate `json:"update,omitempty"`
+
 	// Configuration settings for the application.
 	// +kubebuilder:pruning:PreserveUnknownFields
 	// +optional
@@ -127,6 +136,77 @@ type ApplicationSpec struct {
 	// +listMapKey=name
 	// +optional
 	ResourceRequests []ApplicationResourceRequest `json:"resourceRequests,omitempty"`
+}
+
+// ApplicationUpdate is the update policy of a single application. It mirrors the global
+// applications.update settings, except for the notification ones.
+type ApplicationUpdate struct {
+	// Update mode of the application on its [release channel](#application-v1alpha1-spec-releasechannel).
+	//
+	// - `AutoPatch`: Automatic update mode for patch versions.
+	//
+	//   To change a minor version (for example, from `v1.2.*` to `v1.3.*`), confirmation is required.
+	//
+	//   A patch version update (for example, from `v1.3.1` to `v1.3.2`) is applied taking into account the [update windows](#application-v1alpha1-spec-update-windows), if they are set.
+	// - `Auto`: Automatic update mode for all versions.
+	//
+	//   Minor version updates (for example, from `v1.2.*` to `v1.3.*`) and patch version updates (for example, from `v1.3.1` to `v1.3.2`) are applied taking into account the [update windows](#application-v1alpha1-spec-update-windows), if they are set.
+	// - `Manual`: Manual update mode for all versions.
+	//
+	//   Confirmation is required for updating both minor and patch versions.
+	// +kubebuilder:validation:Enum=AutoPatch;Auto;Manual
+	// +kubebuilder:default=AutoPatch
+	// +optional
+	// +crd-enricher:deckhouse:documentation:examples=[AutoPatch, Auto, Manual]
+	Mode string `json:"mode,omitempty"`
+
+	// List of update windows during the day.
+	// +optional
+	Windows []ApplicationUpdateWindow `json:"windows,omitempty"`
+
+	// Settings for blocking the application update while there are alerts in the cluster.
+	// +optional
+	BlockOnAlerts *ApplicationUpdateBlockOnAlerts `json:"blockOnAlerts,omitempty"`
+}
+
+// ApplicationUpdateWindow is a time range of a day in which the application may be updated.
+type ApplicationUpdateWindow struct {
+	// Start time of the update window (UTC timezone).
+	//
+	// Should be less than the end time of the update window.
+	// +kubebuilder:validation:Pattern=`^(?:\d|[01]\d|2[0-3]):[0-5]\d$`
+	// +crd-enricher:deckhouse:documentation:examples="13:00"
+	From string `json:"from"`
+
+	// End time of the update window (UTC timezone).
+	//
+	// Should be more than the start time of the update window.
+	// +kubebuilder:validation:Pattern=`^(?:\d|[01]\d|2[0-3]):[0-5]\d$`
+	// +crd-enricher:deckhouse:documentation:examples="18:30"
+	To string `json:"to"`
+
+	// The days of the week on which the update window is applied.
+	//
+	// If the parameter is omitted, the update window is applied every day.
+	// +kubebuilder:validation:items:Enum=Mon;Tue;Wed;Thu;Fri;Sat;Sun
+	// +optional
+	Days []string `json:"days,omitempty"`
+}
+
+// ApplicationUpdateBlockOnAlerts holds the settings for blocking the application update on alerts.
+type ApplicationUpdateBlockOnAlerts struct {
+	// If enabled, the application update is blocked while there are alerts in the cluster with a severity level equal to or higher than the one set in the [`severity`](#application-v1alpha1-spec-update-blockonalerts-severity) parameter.
+	// +optional
+	Enabled bool `json:"enabled,omitempty"`
+
+	// The severity level of the alerts that block the update.
+	//
+	// The severity level is a number from 0 to 9, where 0 is the highest severity and 9 is the lowest severity.
+	// +kubebuilder:validation:Minimum=0
+	// +kubebuilder:validation:Maximum=9
+	// +kubebuilder:default=4
+	// +optional
+	Severity *int32 `json:"severity,omitempty"`
 }
 
 // ApplicationResourceRequest pins the resource footprint of a single workload

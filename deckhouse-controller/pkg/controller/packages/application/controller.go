@@ -67,15 +67,19 @@ func RegisterController(
 	runtime ctrlmanager.Manager,
 	manager packageManager,
 	moduleManager moduleManager,
+	deckhouseSettings deckhouseSettings,
+	applicationsSettings applicationsSettings,
 	logger *log.Logger,
 ) error {
 	r := &reconciler{
-		preflightInit: synced,
-		client:        runtime.GetClient(),
-		manager:       manager,
-		moduleManager: moduleManager,
-		status:        status.NewService(runtime.GetClient(), manager.GetStatus, logger),
-		logger:        logger.Named(controllerName),
+		preflightInit:        synced,
+		client:               runtime.GetClient(),
+		manager:              manager,
+		moduleManager:        moduleManager,
+		deckhouseSettings:    deckhouseSettings,
+		applicationsSettings: applicationsSettings,
+		status:               status.NewService(runtime.GetClient(), manager.GetStatus, logger),
+		logger:               logger.Named(controllerName),
 	}
 
 	if !app.ModuleV2Enabled() {
@@ -95,6 +99,9 @@ func RegisterController(
 	return ctrl.NewControllerManagedBy(runtime).
 		Named(controllerName).
 		For(&v1alpha1.Application{}).
+		// The update settings of an application fall back to global.applications.update and
+		// then to the deckhouse ones, so a change of either is merged into every application again.
+		WatchesRawSource(r.requeueOnSettingsChange(applicationsSettings.SubscribeUpdate(), deckhouseSettings.SubscribeUpdate())).
 		WithEventFilter(predicate.Or(predicate.GenerationChangedPredicate{}, predicate.AnnotationChangedPredicate{})).
 		WithOptions(controller.Options{MaxConcurrentReconciles: maxConcurrentReconciles}).
 		Complete(r)
@@ -102,12 +109,14 @@ func RegisterController(
 
 // reconciler reconciles Application objects.
 type reconciler struct {
-	preflightInit *sync.WaitGroup
-	client        client.Client
-	manager       packageManager
-	status        *status.Service
-	moduleManager moduleManager
-	logger        *log.Logger
+	preflightInit        *sync.WaitGroup
+	client               client.Client
+	manager              packageManager
+	status               *status.Service
+	moduleManager        moduleManager
+	deckhouseSettings    deckhouseSettings
+	applicationsSettings applicationsSettings
+	logger               *log.Logger
 }
 
 // moduleManager reports whether addon-operator has finished initialising modules.
@@ -281,6 +290,7 @@ func (r *reconciler) handleCreateOrUpdate(ctx context.Context, app *v1alpha1.App
 		Maintenance:      app.Spec.Maintenance,
 		Repository:       registry.BuildRemote(repo),
 		ResourceRequests: toResourceRequests(app.Spec.ResourceRequests),
+		UpdateSettings:   r.updateSettings(app),
 	})
 
 	// Both references are non-controller and block owner deletion, so neither the package

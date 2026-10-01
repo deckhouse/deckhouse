@@ -114,6 +114,9 @@ type Service struct {
 	// deckhouseSettingsCh holds the latest deckhouse settings; a newer update replaces an unread one.
 	deckhouseSettingsCh chan addonutils.Values
 
+	// globalSettingsCh holds the latest global settings; a newer update replaces an unread one.
+	globalSettingsCh chan addonutils.Values
+
 	// appQueue carries names of packages whose status changed. It coalesces
 	// repeated notifications for the same package into a single item, so a
 	// flood of updates (e.g. nelm progress) cannot outgrow the number of
@@ -185,6 +188,7 @@ func NewService() *Service {
 		resyncStop:          make(chan struct{}),
 		resyncDone:          make(chan struct{}),
 		deckhouseSettingsCh: make(chan addonutils.Values, 1),
+		globalSettingsCh:    make(chan addonutils.Values, 1),
 	}
 }
 
@@ -204,6 +208,11 @@ func (s *Service) ModuleQueue() workqueue.TypedRateLimitingInterface[string] {
 // DeckhouseSettingsCh returns the channel for receiving deckhouse settings updates.
 func (s *Service) DeckhouseSettingsCh() <-chan addonutils.Values {
 	return s.deckhouseSettingsCh
+}
+
+// GlobalSettingsCh returns the channel for receiving global settings updates.
+func (s *Service) GlobalSettingsCh() <-chan addonutils.Values {
+	return s.globalSettingsCh
 }
 
 // queueFor returns the notification queue that owns the given package name.
@@ -545,22 +554,25 @@ func (s *Service) UpdateSettings(name string, settings addonutils.Values) {
 		s.queueFor(name).Add(name)
 	}
 
-	if name == "deckhouse" {
-		s.publishDeckhouseSettings(settings)
+	switch name {
+	case "deckhouse":
+		publishSettings(s.deckhouseSettingsCh, settings)
+	case "global":
+		publishSettings(s.globalSettingsCh, settings)
 	}
 }
 
-// publishDeckhouseSettings never blocks: with no reader the unread value is dropped for the latest one.
-func (s *Service) publishDeckhouseSettings(settings addonutils.Values) {
+// publishSettings never blocks: with no reader the unread value is dropped for the latest one.
+func publishSettings(ch chan addonutils.Values, settings addonutils.Values) {
 	for {
 		select {
-		case s.deckhouseSettingsCh <- settings:
+		case ch <- settings:
 			return
 		default:
 		}
 
 		select {
-		case <-s.deckhouseSettingsCh:
+		case <-ch:
 		default:
 		}
 	}

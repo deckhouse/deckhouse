@@ -420,3 +420,216 @@ properties:
 
                   This Secret must be in the [`kubernetes.io/tls`](https://kubernetes.github.io/ingress-nginx/user-guide/tls/#tls-secrets) format.
                 default: "false"
+      update:
+        type: object
+        additionalProperties: false
+        description: |
+          Update settings of the Deckhouse ecosystem applications: the update mode, update windows, update notifications, and blocking the update on alerts.
+
+          The settings are used by applications that do not have their own [`spec.update`](cr.html#application-v1alpha1-spec-update) settings. The [notification](#parameters-applications-update-notification) settings are also used by applications that have their own update settings, because notifications cannot be configured for a single application.
+
+          If the parameter is omitted, applications use the Deckhouse update settings: the [`update`](/modules/deckhouse/configuration.html#parameters-update) parameter of the `deckhouse` module.
+        x-examples:
+        - mode: AutoPatch
+          windows:
+          - from: "8:00"
+            to: "15:00"
+            days:
+            - Tue
+            - Sat
+          notification:
+            webhook: https://release-webhook.mydomain.com
+            minimalNotificationTime: 6h
+            auth:
+              basic:
+                username: user
+                password: password
+        properties:
+          mode:
+            type: string
+            default: AutoPatch
+            description: |
+              Update mode of applications on the [release channel](cr.html#application-v1alpha1-spec-releasechannel) selected for them.
+
+              - `AutoPatch`: Automatic update mode for patch versions.
+
+                To change a minor version (for example, from `v1.2.*` to `v1.3.*`), confirmation is required.
+
+                A patch version update (for example, from `v1.3.1` to `v1.3.2`) is applied taking into account the [update windows](#parameters-applications-update-windows), if they are set.
+              - `Auto`: Automatic update mode for all versions.
+
+                Minor version updates (for example, from `v1.2.*` to `v1.3.*`) and patch version updates (for example, from `v1.3.1` to `v1.3.2`) are applied taking into account the [update windows](#parameters-applications-update-windows), if they are set.
+              - `Manual`: Manual update mode for all versions.
+
+                Confirmation is required for updating both minor and patch versions.
+            enum:
+            - AutoPatch
+            - Auto
+            - Manual
+          windows:
+            type: array
+            description: |
+              List of update windows during the day.
+            items:
+              type: object
+              additionalProperties: false
+              required:
+              - from
+              - to
+              properties:
+                from:
+                  type: string
+                  pattern: '^(?:\d|[01]\d|2[0-3]):[0-5]\d$'
+                  example: '13:00'
+                  description: |
+                    Start time of the update window (UTC timezone).
+
+                    Should be less than the end time of the update window.
+                to:
+                  type: string
+                  pattern: '^(?:\d|[01]\d|2[0-3]):[0-5]\d$'
+                  example: '18:30'
+                  description: |
+                    End time of the update window (UTC timezone).
+
+                    Should be more than the start time of the update window.
+                days:
+                  type: array
+                  description: The days of the week on which the update window is applied.
+                  example: ["Mon", "Wed"]
+                  items:
+                    type: string
+                    description: Day of the week.
+                    x-examples: [Mon]
+                    enum:
+                    - Mon
+                    - Tue
+                    - Wed
+                    - Thu
+                    - Fri
+                    - Sat
+                    - Sun
+          notification:
+            type: object
+            additionalProperties: false
+            description: |
+              Settings for notifications of scheduled application updates.
+
+              Has an effect **only** when an automatic [update mode](#parameters-applications-update-mode) is set.
+            x-examples:
+            - webhook: https://release-webhook.mydomain.com
+              minimalNotificationTime: 8h
+              retryMinTime: 2s
+            properties:
+              webhook:
+                type: string
+                pattern: "^https?://[^\\s/$.?#].[^\\s]*$"
+                x-doc-example: 'https://webhook.site/#!/bc8f71ac-c182-4181-9159-6ba6950afffa'
+                description: |
+                  URL for an external webhook handler.
+
+                  The POST request is sent to the webhook URL after a new minor version of an application appears on its release channel, before it is applied to the cluster.
+
+                  > **Warning.** If you specify an invalid webhook address, application updates will be blocked.
+
+                  Use the [`minimalNotificationTime`](#parameters-applications-update-notification-minimalnotificationtime) parameter if necessary to set the minimum time that must pass before updating from the moment a new minor version appears on the release channel.
+              tlsSkipVerify:
+                type: boolean
+                default: false
+                description: Skip TLS certificate verification while webhook request.
+              minimalNotificationTime:
+                type: string
+                pattern: '^([0-9]+h([0-9]+m)?|[0-9]+m)$'
+                x-doc-example: '6h'
+                description: |
+                  The minimum time that must pass before updating from the moment a new minor version of an application appears on its release channel.
+
+                  It is specified as a string containing the time unit in hours and minutes: 30m, 1h, 2h30m, 24h.
+
+                  The update mechanism ensures that an application will not be updated until the specified period of time has passed.
+
+                  When using update windows, the application update will happen at the nearest possible update window but not before the time specified in `minimalNotificationTime` expires.
+              retryMinTime:
+                type: string
+                pattern: '^([0-9]+h([0-9]+m)?|[0-9]+m|[0-9]+s)$'
+                x-doc-example: '2s'
+                description: |
+                  The minimum time between webhook retry attempts when the webhook request fails.
+
+                  It is specified as a string containing the time unit in hours, minutes, or seconds: 30s, 1m, 1h, 2h30m.
+
+                  The retry mechanism uses exponential backoff: each subsequent retry attempt waits twice as long as the previous one.
+                  For example, if `retryMinTime` is set to `2s`, the retry delays will be: 2s, 4s, 8s, 16s, 32s.
+
+                  Default value is 2 seconds if not specified.
+              auth:
+                type: object
+                additionalProperties: false
+                oneOf:
+                - required: [ basic ]
+                - required: [ bearerToken ]
+                description: |
+                  Authentication settings for the webhook.
+
+                  If the parameter is omitted, the webhook will be called without authentication.
+                properties:
+                  basic:
+                    type: object
+                    additionalProperties: false
+                    description: |
+                      Basic authentication settings for the webhook.
+                    required:
+                    - username
+                    - password
+                    properties:
+                      username:
+                        type: string
+                        description: |
+                          The username for the webhook.
+
+                          The username and password will be sent in the `Authorization` header in the format `Basic <base64(username:password)>`.
+                      password:
+                        type: string
+                        description: |
+                          The password for the webhook.
+
+                          The username and password will be sent in the `Authorization` header in the format `Basic <base64(username:password)>`.
+                  bearerToken:
+                    type: string
+                    description: |
+                      The token for the webhook.
+
+                      The token will be sent in the `Authorization` header in the format `Bearer <token>`.
+              releaseType:
+                type: string
+                description: |
+                  Defines the type of version for which the notification will be sent:
+
+                  - `Minor`: Only for updating the minor version.
+                  - `All`: For any updates, including updating a patch version.
+                x-examples: ["All"]
+                enum:
+                - All
+                - Minor
+                default: Minor
+          blockOnAlerts:
+            type: object
+            additionalProperties: false
+            default: {}
+            description: |
+              Settings for blocking application updates while there are alerts in the cluster.
+            properties:
+              enabled:
+                type: boolean
+                default: false
+                description: |
+                  If enabled, application updates are blocked while there are alerts in the cluster with a severity level equal to or higher than the one set in the [`severity`](#parameters-applications-update-blockonalerts-severity) parameter.
+              severity:
+                type: integer
+                default: 4
+                minimum: 0
+                maximum: 9
+                description: |
+                  The severity level of the alerts that block the update.
+
+                  The severity level is a number from 0 to 9, where 0 is the highest severity and 9 is the lowest severity.

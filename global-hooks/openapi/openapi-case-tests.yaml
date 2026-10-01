@@ -43,6 +43,42 @@ positive:
         publicDomainTemplate: "example-%s.com"
     # cluster prefix at the maximum allowed length (45 chars)
     - prefix: "lysov-test-0000000000-1111111111-2222222222-3"
+    # applications update settings: all in
+    - applications:
+        update:
+          mode: Auto
+          windows:
+            - from: "8:00"
+              to: "15:00"
+              days:
+                - Tue
+                - Sat
+            - from: "22:00"
+              to: "23:30"
+          notification:
+            webhook: https://release-webhook.example.com
+            tlsSkipVerify: true
+            minimalNotificationTime: 2h30m
+            retryMinTime: 30s
+            releaseType: All
+            auth:
+              basic:
+                username: user
+                password: password
+          blockOnAlerts:
+            enabled: true
+            severity: 2
+    # applications update settings: manual mode
+    - applications:
+        update:
+          mode: Manual
+    # applications update settings: webhook with a bearer token
+    - applications:
+        update:
+          notification:
+            webhook: https://release-webhook.example.com
+            auth:
+              bearerToken: token
   values:
     # all-in
     - clusterConfiguration:
@@ -177,6 +213,68 @@ negative:
   - prefix: "common-test-0000000000-1111111111-2222222222-3333333333"
   # cluster prefix with an uppercase letter (violates the DNS-label pattern)
   - prefix: "Common-test"
+  # applications update mode: incorrect value, begins with a small letter
+  - applications:
+      update:
+        mode: manual
+  # applications update settings: unknown parameter
+  - applications:
+      update:
+        window:
+          - from: "8:00"
+            to: "15:00"
+  # applications update window: the end time is required
+  - applications:
+      update:
+        windows:
+          - from: "8:00"
+  # applications update window: the hour is out of range
+  - applications:
+      update:
+        windows:
+          - from: "8:00"
+            to: "24:00"
+  # applications update window: the day of the week is in a wrong format
+  - applications:
+      update:
+        windows:
+          - from: "8:00"
+            to: "15:00"
+            days:
+              - Monday
+  # applications update notification: the webhook is not a URL
+  - applications:
+      update:
+        notification:
+          webhook: release-webhook.example.com
+  # applications update notification: days are not supported in minimalNotificationTime
+  - applications:
+      update:
+        notification:
+          minimalNotificationTime: 1d
+  # applications update notification: basic auth and bearer token are mutually exclusive
+  - applications:
+      update:
+        notification:
+          webhook: https://release-webhook.example.com
+          auth:
+            basic:
+              username: user
+              password: password
+            bearerToken: token
+  # applications update notification: basic auth without a password
+  - applications:
+      update:
+        notification:
+          webhook: https://release-webhook.example.com
+          auth:
+            basic:
+              username: user
+  # applications update blockOnAlerts: the severity is out of range
+  - applications:
+      update:
+        blockOnAlerts:
+          severity: 10
   values:
     # cluster configuration: not support k8s version
     - clusterConfiguration:

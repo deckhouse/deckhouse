@@ -18,6 +18,7 @@ package application_test
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"sync"
 	"testing"
@@ -47,8 +48,14 @@ import (
 	packageruntime "github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/runtime"
 	packagestatus "github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/status"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/registry"
+	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/addonutils"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
+	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha2"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/packages/application"
+	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/helpers"
+	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/releaseupdater"
+	"github.com/deckhouse/deckhouse/go_lib/hooks/update"
+	"github.com/deckhouse/deckhouse/go_lib/libapi"
 	"github.com/deckhouse/deckhouse/go_lib/project"
 	"github.com/deckhouse/deckhouse/pkg/log"
 	"github.com/deckhouse/deckhouse/testing/controller/reconcilertest"
@@ -92,10 +99,23 @@ func (suite *ControllerTestSuite) SetupSuite() {
 }
 
 func (suite *ControllerTestSuite) setupController(filename string) {
+	suite.setupControllerWithSettings(filename, updateSettings{})
+}
+
+// setupControllerWithSettings is setupController with the given settings to fall back to.
+func (suite *ControllerTestSuite) setupControllerWithSettings(filename string, settings updateSettings) {
 	suite.Seed(filename)
 
 	suite.manager = newPackageManagerStub(suite.T())
-	suite.ctr = reconcilerFor(suite.T(), suite.Client(), suite.manager)
+	suite.ctr = reconcilerWithSettings(suite.T(), suite.Client(), suite.manager, settings)
+}
+
+// updateSettings are the deckhouse and the global ModuleConfig settings, as JSON, that the
+// update settings of an application fall back to. Empty ones leave the deckhouse defaults and
+// no global applications settings.
+type updateSettings struct {
+	deckhouse string
+	global    string
 }
 
 // harness is the controller as RegisterController leaves it behind in the manager: the
@@ -112,19 +132,40 @@ type harness struct {
 func reconcilerFor(t *testing.T, cl client.Client, manager *packageManagerStub) *harness {
 	t.Helper()
 
-	h := registerController(t, cl, manager, modulesInited(true))
+	return reconcilerWithSettings(t, cl, manager, updateSettings{})
+}
+
+// reconcilerWithSettings is reconcilerFor with the given settings to fall back to.
+func reconcilerWithSettings(t *testing.T, cl client.Client, manager *packageManagerStub, settings updateSettings) *harness {
+	t.Helper()
+
+	h := registerController(t, cl, manager, modulesInited(true), settings)
 	require.NoError(t, h.preflight.Start(context.Background()))
 
 	return h
 }
 
 // registerController runs the package's only exported entry point against a manager stub
-// and picks up the runnables it registered.
-func registerController(t *testing.T, cl client.Client, manager *packageManagerStub, modules modulesInited) *harness {
+// and picks up the runnables it registered. The settings containers are filled the way the
+// deckhouse and the global ModuleConfigs fill them in a running controller.
+func registerController(t *testing.T, cl client.Client, manager *packageManagerStub, modules modulesInited, settings updateSettings) *harness {
 	t.Helper()
 
+	deckhouse := helpers.DefaultDeckhouseSettings()
+	if settings.deckhouse != "" {
+		require.NoError(t, json.Unmarshal([]byte(settings.deckhouse), deckhouse))
+	}
+
+	applications := helpers.NewApplicationsSettingsContainer()
+	if settings.global != "" {
+		global := make(addonutils.Values)
+		require.NoError(t, json.Unmarshal([]byte(settings.global), &global))
+		require.NoError(t, applications.Set(global))
+	}
+
 	mgr := &managerStub{scheme: testScheme(t), client: cl}
-	require.NoError(t, application.RegisterController(new(sync.WaitGroup), mgr, manager, modules, log.NewNop()))
+	require.NoError(t, application.RegisterController(new(sync.WaitGroup), mgr, manager, modules,
+		helpers.NewDeckhouseSettingsContainer(deckhouse, nil), applications, log.NewNop()))
 
 	h := new(harness)
 
@@ -206,7 +247,98 @@ func (suite *ControllerTestSuite) TestReconcile() {
 				CA:           "test-ca",
 				Scheme:       "https",
 			},
+			// No ModuleConfig sets anything, so these are the deckhouse defaults.
+			UpdateSettings: releaseupdater.Settings{
+				Mode:          v1alpha2.UpdateModeAutoPatch,
+				BlockOnAlerts: releaseupdater.BlockOnAlerts{Severity: 4},
+			},
 		}, suite.manager.updated[0])
+	})
+
+	suite.Run("update settings are taken from the global applications settings", func() {
+		suite.setupControllerWithSettings("update-settings.yaml", updateSettings{
+			deckhouse: `{"update": {
+				"mode": "Manual",
+				"windows": [{"from": "1:00", "to": "2:00"}],
+				"notification": {"webhook": "https://deckhouse.example.com/webhook"},
+				"blockOnAlerts": {"enabled": true, "severity": 1}
+			}}`,
+			global: `{"applications": {"update": {
+				"mode": "Auto",
+				"windows": [{"from": "8:00", "to": "15:00", "days": ["Tue", "Sat"]}],
+				"notification": {"webhook": "https://applications.example.com/webhook", "minimalNotificationTime": "6h", "releaseType": "All"},
+				"blockOnAlerts": {"enabled": true}
+			}}}`,
+		})
+
+		for _, name := range []string{"inherit-app", "own-app"} {
+			_, err := suite.ctr.Reconcile(ctx, suite.Request(name, appNamespace))
+			require.NoError(suite.T(), err)
+		}
+
+		require.Len(suite.T(), suite.manager.updated, 2)
+
+		notification := releaseupdater.NotificationConfig{
+			WebhookURL:              "https://applications.example.com/webhook",
+			MinimalNotificationTime: libapi.Duration{Duration: 6 * time.Hour},
+			ReleaseType:             releaseupdater.ReleaseTypeAll,
+		}
+
+		assert.Equal(suite.T(), releaseupdater.Settings{
+			Mode:               v1alpha2.UpdateModeAuto,
+			Windows:            update.Windows{{From: "8:00", To: "15:00", Days: []string{"Tue", "Sat"}}},
+			NotificationConfig: notification,
+			BlockOnAlerts:      releaseupdater.BlockOnAlerts{Enabled: true, Severity: 4},
+		}, suite.manager.updated[0].UpdateSettings,
+			"an application without its own settings must take the global applications settings as a whole")
+
+		assert.Equal(suite.T(), releaseupdater.Settings{
+			Mode:               v1alpha2.UpdateModeManual,
+			Windows:            update.Windows{{From: "20:00", To: "23:30", Days: []string{"Sun"}}},
+			NotificationConfig: notification,
+			BlockOnAlerts:      releaseupdater.BlockOnAlerts{Enabled: true, Severity: 0},
+		}, suite.manager.updated[1].UpdateSettings,
+			"an application with its own settings must take only the notification settings from the global applications settings")
+	})
+
+	suite.Run("update settings fall back to the deckhouse settings", func() {
+		suite.setupControllerWithSettings("update-settings.yaml", updateSettings{
+			deckhouse: `{"releaseChannel": "Stable", "update": {
+				"mode": "Manual",
+				"windows": [{"from": "1:00", "to": "2:00"}],
+				"notification": {"webhook": "https://deckhouse.example.com/webhook", "tlsSkipVerify": true},
+				"blockOnAlerts": {"enabled": true}
+			}}`,
+			global: `{"applications": {"ingressClass": "nginx"}}`,
+		})
+
+		for _, name := range []string{"inherit-app", "own-app"} {
+			_, err := suite.ctr.Reconcile(ctx, suite.Request(name, appNamespace))
+			require.NoError(suite.T(), err)
+		}
+
+		require.Len(suite.T(), suite.manager.updated, 2)
+
+		notification := releaseupdater.NotificationConfig{
+			WebhookURL:    "https://deckhouse.example.com/webhook",
+			SkipTLSVerify: true,
+		}
+
+		assert.Equal(suite.T(), releaseupdater.Settings{
+			Mode:               v1alpha2.UpdateModeManual,
+			Windows:            update.Windows{{From: "1:00", To: "2:00"}},
+			NotificationConfig: notification,
+			BlockOnAlerts:      releaseupdater.BlockOnAlerts{Enabled: true, Severity: 4},
+		}, suite.manager.updated[0].UpdateSettings,
+			"without the global applications settings an application must take the deckhouse settings as a whole")
+
+		assert.Equal(suite.T(), releaseupdater.Settings{
+			Mode:               v1alpha2.UpdateModeManual,
+			Windows:            update.Windows{{From: "20:00", To: "23:30", Days: []string{"Sun"}}},
+			NotificationConfig: notification,
+			BlockOnAlerts:      releaseupdater.BlockOnAlerts{Enabled: true, Severity: 0},
+		}, suite.manager.updated[1].UpdateSettings,
+			"without the global applications settings an application with its own settings must take the deckhouse notification settings")
 	})
 
 	suite.Run("maintenance mode reaches the runtime", func() {
@@ -578,7 +710,7 @@ func TestPreflightPreservesEveryApplication(t *testing.T) {
 		Build()
 
 	manager := newPackageManagerStub(t)
-	ctr := registerController(t, cl, manager, modulesInited(true))
+	ctr := registerController(t, cl, manager, modulesInited(true), updateSettings{})
 	require.NoError(t, ctr.preflight.Start(context.Background()))
 
 	require.Len(t, manager.cleanups, 1)
@@ -604,7 +736,7 @@ func TestPreflightWaitsForModuleManager(t *testing.T) {
 	cl := fake.NewClientBuilder().WithScheme(testScheme(t)).Build()
 
 	manager := newPackageManagerStub(t)
-	ctr := registerController(t, cl, manager, modulesInited(false))
+	ctr := registerController(t, cl, manager, modulesInited(false), updateSettings{})
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Millisecond)
 	defer cancel()
 

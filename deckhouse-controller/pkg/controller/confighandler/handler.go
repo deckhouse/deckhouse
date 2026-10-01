@@ -40,16 +40,19 @@ type Handler struct {
 	client            client.Client
 	conversionsStore  *conversion.ConversionsStore
 	deckhouseConfigCh chan<- utils.Values
+	// globalConfigCh holds the latest global settings; a newer update replaces an unread one.
+	globalConfigCh chan utils.Values
 
 	l             sync.Mutex
 	configEventCh chan<- config.Event
 }
 
-func New(client client.Client, conversionsStore *conversion.ConversionsStore, deckhouseConfigCh chan<- utils.Values) *Handler {
+func New(client client.Client, conversionsStore *conversion.ConversionsStore, deckhouseConfigCh chan<- utils.Values, globalConfigCh chan utils.Values) *Handler {
 	return &Handler{
 		client:            client,
 		conversionsStore:  conversionsStore,
 		deckhouseConfigCh: deckhouseConfigCh,
+		globalConfigCh:    globalConfigCh,
 	}
 }
 
@@ -74,6 +77,9 @@ func (h *Handler) HandleEvent(moduleConfig *v1alpha1.ModuleConfig, op config.Op)
 			Values:   values,
 			Checksum: values.Checksum(),
 		}
+
+		// update global applications settings
+		h.publishGlobalSettings(values)
 	} else {
 		addonOperatorModuleConfig := utils.NewModuleConfig(moduleConfig.Name, values)
 		addonOperatorModuleConfig.IsEnabled = moduleConfig.Spec.Enabled
@@ -125,6 +131,9 @@ func (h *Handler) LoadConfig(ctx context.Context, _ ...string) (*config.KubeConf
 				Values:   values,
 				Checksum: values.Checksum(),
 			}
+
+			// update global applications settings
+			h.publishGlobalSettings(values)
 			continue
 		}
 
@@ -145,6 +154,26 @@ func (h *Handler) LoadConfig(ctx context.Context, _ ...string) (*config.KubeConf
 	}
 
 	return kubeConfig, nil
+}
+
+// publishGlobalSettings never blocks: with no reader the unread value is dropped for the latest one.
+func (h *Handler) publishGlobalSettings(values utils.Values) {
+	if h.globalConfigCh == nil {
+		return
+	}
+
+	for {
+		select {
+		case h.globalConfigCh <- values:
+			return
+		default:
+		}
+
+		select {
+		case <-h.globalConfigCh:
+		default:
+		}
+	}
 }
 
 func (h *Handler) valuesByModuleConfig(moduleConfig *v1alpha1.ModuleConfig) (utils.Values, error) {

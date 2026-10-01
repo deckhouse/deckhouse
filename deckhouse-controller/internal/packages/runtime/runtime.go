@@ -984,6 +984,11 @@ func (r *Runtime) GetDeckhouseSettingsCh() <-chan addonutils.Values {
 	return r.status.DeckhouseSettingsCh()
 }
 
+// GetGlobalSettingsCh returns the channel for receiving global settings updates.
+func (r *Runtime) GetGlobalSettingsCh() <-chan addonutils.Values {
+	return r.status.GlobalSettingsCh()
+}
+
 // PauseScheduler suspends the scheduler so it stops firing enable/disable callbacks.
 func (r *Runtime) PauseScheduler() {
 	r.scheduler.Pause()

@@ -256,6 +256,117 @@ spec:
                 description: Configuration settings for the application.
                 type: object
                 x-kubernetes-preserve-unknown-fields: true
+              update:
+                description: |-
+                  Update settings of the application: the update mode, update windows, and blocking the update on alerts.
+
+                  If the parameter is omitted, the application uses the global [`applications.update`](global.html#parameters-applications-update) settings. If those are not set either, it uses the Deckhouse update settings: the [`update`](/modules/deckhouse/configuration.html#parameters-update) parameter of the `deckhouse` module.
+
+                  Update notifications cannot be configured for a single application. The application always uses the global ones: [`applications.update.notification`](global.html#parameters-applications-update-notification) if the global `applications.update` settings are set, and the Deckhouse notification settings otherwise.
+                properties:
+                  blockOnAlerts:
+                    description: Settings for blocking the application update while
+                      there are alerts in the cluster.
+                    properties:
+                      enabled:
+                        description: If enabled, the application update is blocked
+                          while there are alerts in the cluster with a severity level
+                          equal to or higher than the one set in the [`severity`](#application-v1alpha1-spec-update-blockonalerts-severity)
+                          parameter.
+                        type: boolean
+                      severity:
+                        default: 4
+                        description: |-
+                          The severity level of the alerts that block the update.
+
+                          The severity level is a number from 0 to 9, where 0 is the highest severity and 9 is the lowest severity.
+                        format: int32
+                        maximum: 9
+                        minimum: 0
+                        type: integer
+                    type: object
+                  mode:
+                    default: AutoPatch
+                    description: |-
+                      Update mode of the application on its [release channel](#application-v1alpha1-spec-releasechannel).
+
+                      - `AutoPatch`: Automatic update mode for patch versions.
+
+                        To change a minor version (for example, from `v1.2.*` to `v1.3.*`), confirmation is required.
+
+                        A patch version update (for example, from `v1.3.1` to `v1.3.2`) is applied taking into account the [update windows](#application-v1alpha1-spec-update-windows), if they are set.
+                      - `Auto`: Automatic update mode for all versions.
+
+                        Minor version updates (for example, from `v1.2.*` to `v1.3.*`) and patch version updates (for example, from `v1.3.1` to `v1.3.2`) are applied taking into account the [update windows](#application-v1alpha1-spec-update-windows), if they are set.
+                      - `Manual`: Manual update mode for all versions.
+
+                        Confirmation is required for updating both minor and patch versions.
+                    enum:
+                    - AutoPatch
+                    - Auto
+                    - Manual
+                    type: string
+                    x-doc-examples:
+                    - AutoPatch
+                    - Auto
+                    - Manual
+                  windows:
+                    description: List of update windows during the day.
+                    items:
+                      description: ApplicationUpdateWindow is a time range of a day
+                        in which the application may be updated.
+                      properties:
+                        days:
+                          description: |-
+                            The days of the week on which the update window is applied.
+
+                            If the parameter is omitted, the update window is applied every day.
+                          items:
+                            enum:
+                            - Mon
+                            - Tue
+                            - Wed
+                            - Thu
+                            - Fri
+                            - Sat
+                            - Sun
+                            type: string
+                          type: array
+                        from:
+                          description: |-
+                            Start time of the update window (UTC timezone).
+
+                            Should be less than the end time of the update window.
+                          pattern: ^(?:\d|[01]\d|2[0-3]):[0-5]\d$
+                          type: string
+                          x-doc-examples:
+                          - "13:00"
+                        to:
+                          description: |-
+                            End time of the update window (UTC timezone).
+
+                            Should be more than the start time of the update window.
+                          pattern: ^(?:\d|[01]\d|2[0-3]):[0-5]\d$
+                          type: string
+                          x-doc-examples:
+                          - "18:30"
+                      required:
+                      - from
+                      - to
+                      type: object
+                    type: array
+                type: object
+                x-doc-examples:
+                - mode: Auto
+                  windows:
+                  - from: "8:00"
+                    to: "15:00"
+                    days:
+                    - Tue
+                    - Sat
+                  blockOnAlerts:
+                    enabled: true
+                    severity: 2
             required:
             - packageName
             - packageVersion

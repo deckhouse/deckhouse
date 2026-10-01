@@ -17,6 +17,7 @@ limitations under the License.
 package helpers
 
 import (
+	"reflect"
 	"slices"
 	"sync"
 
@@ -27,6 +28,10 @@ import (
 	"github.com/deckhouse/deckhouse/go_lib/telemetry"
 	metricsstorage "github.com/deckhouse/deckhouse/pkg/metrics-storage"
 )
+
+// DefaultBlockOnAlertsSeverity is the default of update.blockOnAlerts.severity in the deckhouse
+// settings, in global.applications.update and in the Application spec alike.
+const DefaultBlockOnAlertsSeverity = 4
 
 // DeckhouseSettings is an openapi spec for deckhouse settings, it's not a part of DeckhouseReleaseSpec but rather
 // it's a part of DeckhouseReleaseController
@@ -59,7 +64,7 @@ func DefaultDeckhouseSettings() *DeckhouseSettings {
 	settings.Update.Mode = v1alpha2.UpdateModeAutoPatch.String()
 	settings.Update.DisruptionApprovalMode = "Auto"
 	settings.Update.BlockOnAlerts.Enabled = false
-	settings.Update.BlockOnAlerts.Severity = 4
+	settings.Update.BlockOnAlerts.Severity = DefaultBlockOnAlertsSeverity
 
 	return settings
 }
@@ -73,10 +78,13 @@ type DeckhouseSettingsContainer struct {
 	lock          sync.Mutex
 	inited        chan struct{}
 	metricStorage metricsstorage.Storage
+
+	// updateSubscribers are signalled when Set changes the update settings.
+	updateSubscribers []chan struct{}
 }
 
 // Set update settings in container
-// TODO: notify controllers and requeue all releases
+// TODO: requeue all releases on a change, as SubscribeUpdate lets the Application controller do
 func (c *DeckhouseSettingsContainer) Set(settings *DeckhouseSettings) {
 	if settings == nil {
 		panic("argument should be defined")
@@ -85,10 +93,14 @@ func (c *DeckhouseSettingsContainer) Set(settings *DeckhouseSettings) {
 	c.lock.Lock()
 	defer c.lock.Unlock()
 
-	if c.settings == nil {
+	inited := c.settings != nil
+	if !inited {
 		c.settings = DefaultDeckhouseSettings()
 		close(c.inited)
 	}
+
+	// Every field of the update settings is copied below, so this is whether the copy changes them.
+	updateChanged := !inited || !reflect.DeepEqual(c.settings.Update, settings.Update)
 
 	c.settings.ReleaseChannel = settings.ReleaseChannel
 	c.settings.AllowExperimentalModules = settings.AllowExperimentalModules
@@ -100,6 +112,15 @@ func (c *DeckhouseSettingsContainer) Set(settings *DeckhouseSettings) {
 	c.settings.Update.BlockOnAlerts.Enabled = settings.Update.BlockOnAlerts.Enabled
 	c.settings.Update.BlockOnAlerts.Severity = settings.Update.BlockOnAlerts.Severity
 
+	if updateChanged {
+		for _, subscriber := range c.updateSubscribers {
+			select {
+			case subscriber <- struct{}{}:
+			default: // a signal is already pending, and it covers this change as well
+			}
+		}
+	}
+
 	allowExperimentalModules := 0.
 
 	if c.settings.AllowExperimentalModules {
@@ -107,6 +128,41 @@ func (c *DeckhouseSettingsContainer) Set(settings *DeckhouseSettings) {
 	}
 
 	c.metricStorage.GaugeSet(telemetry.WrapName(metrics.ExperimentalModulesAreAllowedMetricName), allowExperimentalModules, map[string]string{metrics.LabelModule: "deckhouse-controller"})
+}
+
+// SubscribeUpdate returns a channel signalled whenever Set changes the update settings, the first
+// Set included. Signals do not queue up: a subscriber that reads late gets one for all the
+// changes in between, so it has to read the settings back rather than count the signals.
+func (c *DeckhouseSettingsContainer) SubscribeUpdate() <-chan struct{} {
+	c.lock.Lock()
+	defer c.lock.Unlock()
+
+	subscriber := make(chan struct{}, 1)
+	c.updateSubscribers = append(c.updateSubscribers, subscriber)
+
+	return subscriber
+}
+
+// GetUpdateSettings returns the update settings in the form the release updater takes them. They
+// are read under the lock, which reading them through Get is not, and Set replaces the windows and
+// the notification settings rather than changing them in place, so the result cannot be torn. It
+// blocks until the settings are first set, the same as Get.
+func (c *DeckhouseSettingsContainer) GetUpdateSettings() releaseUpdater.Settings {
+	c.lock.Lock()
+	if c.settings == nil {
+		c.lock.Unlock()
+		<-c.inited
+		c.lock.Lock()
+	}
+	defer c.lock.Unlock()
+
+	return releaseUpdater.Settings{
+		NotificationConfig:     c.settings.Update.NotificationConfig,
+		BlockOnAlerts:          c.settings.Update.BlockOnAlerts,
+		DisruptionApprovalMode: c.settings.Update.DisruptionApprovalMode,
+		Mode:                   v1alpha2.ParseUpdateMode(c.settings.Update.Mode),
+		Windows:                c.settings.Update.Windows,
+	}
 }
 
 func (c *DeckhouseSettingsContainer) Get() *DeckhouseSettings {
