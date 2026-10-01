@@ -34,7 +34,7 @@ flowchart TD
 
 | Resource | Short | Scope | Role |
 |---|---|---|---|
-| [`PackageRepository`](../../reference/api/cr.html#packagerepository) | — | Cluster | Registry connection and scan schedule |
+| [`PackageRepository`](../../reference/api/cr.html#packagerepository) | — | Cluster | Connection to a container registry and scan schedule |
 | [`PackageRepositoryOperation`](../../reference/api/cr.html#packagerepositoryoperation) | `pro` | Cluster | Scan job that discovers versions |
 | [`ApplicationPackageVersion`](../../reference/api/cr.html#applicationpackageversion) | `apv` | Cluster | One per discovered package version; carries metadata, OpenAPI schemas, and requirements |
 | [`ApplicationPackage`](../../reference/api/cr.html#applicationpackage) | `ap` | Cluster | Informational aggregate: which repos have the package, which versions the release channels point to, how many instances use it |
@@ -56,8 +56,8 @@ Each [ApplicationPackageVersion](../../reference/api/cr.html#applicationpackagev
 
 1. Administrator creates [PackageRepository](../../reference/api/cr.html#packagerepository).
 2. DP creates a [PackageRepositoryOperation](../../reference/api/cr.html#packagerepositoryoperation) automatically (first scan on creation, then every `scanInterval`).
-3. The operation scans the registry and creates [ApplicationPackageVersion](../../reference/api/cr.html#applicationpackageversion) objects for each discovered version.
-4. User creates an [Application](../../reference/api/cr.html#application) in their namespace referencing `packageName`, `packageVersion`, and optionally `packageRepositoryName`.
+3. The operation scans the container registry and creates [ApplicationPackageVersion](../../reference/api/cr.html#applicationpackageversion) objects for each discovered version.
+4. User creates an [Application](../../reference/api/cr.html#application) in their namespace referencing `packageRepositoryName`, `packageName`, and `packageVersion`.
 5. DP validates `spec.settings` against the `settingsSchema` from the corresponding ApplicationPackageVersion.
 6. Nelm deploys the Helm templates from the package bundle.
 7. The `Installed` condition on the Application reflects deployment progress and is the only condition reported until the installation completes. Once it becomes `True`, the other conditions (`ConfigurationApplied`, `Scaled`, `Ready`, and so on) appear.

@@ -92,9 +92,7 @@ spec:
                 x-doc-examples:
                 - console
               packageRepositoryName:
-                description: |-
-                  Name of the repository where the package is located.
-                  If not specified, the default repository is used.
+                description: Name of the PackageRepository where the package is located.
                 type: string
                 x-doc-examples:
                 - deckhouse

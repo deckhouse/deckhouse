@@ -1,12 +1,12 @@
 ---
 title: Репозитории пакетов
 permalink: ru/admin/configuration/marketplace/package-repository.html
-description: "Подключение реестра пакетов к Deckhouse Platform Marketplace через PackageRepository. Настройка аутентификации, интервала сканирования и мониторинг статуса репозитория."
+description: "Подключение хранилища образов с пакетами к Deckhouse Platform Marketplace с помощью PackageRepository. Настройка аутентификации, интервала сканирования и мониторинг статуса репозитория."
 lang: ru
-search: PackageRepository, package repository, registry packages, репозиторий пакетов, реестр пакетов, сканирование
+search: PackageRepository, package repository, container registry, репозиторий пакетов, хранилище образов, сканирование
 ---
 
-Подключение Deckhouse Platform (DP) к container registry, содержащему пакеты приложений, выполняется с помощью [PackageRepository](../../../reference/api/cr.html#packagerepository). После подключения DP автоматически сканирует реестр и создаёт объекты [ApplicationPackageVersion](../../../reference/api/cr.html#applicationpackageversion) для каждой обнаруженной версии пакета.
+Чтобы подключить Deckhouse Platform (DP) к хранилищу образов с пакетами приложений, используйте ресурс [PackageRepository](../../../reference/api/cr.html#packagerepository). После создания ресурса DP сканирует хранилище образов и создаёт объект [ApplicationPackageVersion](../../../reference/api/cr.html#applicationpackageversion) для каждой обнаруженной версии пакета.
 
 Пример манифеста PackageRepository:
 
@@ -19,17 +19,17 @@ spec:
   registry:
     repo: registry.example.com/packages
     scheme: HTTPS
-    dockerCfg: <base64-encoded-docker-config>
+    dockerCfg: <BASE64_ENCODED_DOCKER_CONFIG>
 ```
 
 ## Управление аутентификацией и интервалом сканирования
 
 ### Аутентификация
 
-Для аутентификации в реестре может использоваться один из следующих способов:
+Для аутентификации в хранилище образов используйте один из следующих способов:
 
-- **`dockerCfg`**: Docker-конфиг в формате base64 (формат `~/.docker/config.json`). Предпочтителен, если реестр использует токен-based аутентификацию.
-- **`login` + `password`**: явные учётные данные.
+- **`dockerCfg`**: конфигурация Docker в формате `~/.docker/config.json` в кодировке Base64. Она должна содержать запись `auths` для хоста хранилища образов: DP использует имя пользователя и пароль из этой записи.
+- **`login` + `password`**: явно заданные учётные данные. Если указаны оба способа, используются `login` и `password`.
 
   ```yaml
   spec:
@@ -40,14 +40,14 @@ spec:
       password: my-password
   ```
 
-Если реестр использует самоподписанный TLS-сертификат, передайте его через параметр `ca`:
+Если хранилище образов использует самоподписанный TLS-сертификат, укажите CA-сертификат в параметре `ca`:
 
 ```yaml
 spec:
   registry:
     repo: registry.example.com/packages
     scheme: HTTPS
-    dockerCfg: <base64-encoded-docker-config>
+    dockerCfg: <BASE64_ENCODED_DOCKER_CONFIG>
     ca: |
       -----BEGIN CERTIFICATE-----
       ...
@@ -56,7 +56,7 @@ spec:
 
 ### Интервал сканирования
 
-По умолчанию DP пересканирует реестр каждые **6 часов**. Переопределить интервал можно с помощью параметра `scanInterval`:
+По умолчанию DP сканирует хранилище образов каждые **6 часов**. Чтобы изменить интервал, задайте параметр `scanInterval`. Минимальный интервал — 3 минуты:
 
 ```yaml
 spec:
@@ -65,11 +65,13 @@ spec:
   scanInterval: 1h30m
 ```
 
+Когда запускается сканирование и как запустить его вручную, описано в разделе [«Сканирование»](scanning.html#запуск-сканирования-вручную).
+
 ## Проверка состояния репозитория
 
 Состояние репозитория отображается в статусе объекта PackageRepository.
 
-Для вывода краткой информации о статусе, используйте следующую команду:
+Чтобы вывести краткую информацию о статусе, выполните следующую команду:
 
 ```bash
 d8 k get packagerepository <REPOSITORY_NAME>
@@ -79,12 +81,13 @@ d8 k get packagerepository <REPOSITORY_NAME>
 
 | Колонка | Описание |
 |---|---|
-| `Phase` | Текущее состояние репозитория |
-| `Scan` | Время последнего сканирования |
-| `MSG` | Сообщение из условия последнего сканирования |
-| `Packages` | Общее количество обнаруженных пакетов (скрыто по умолчанию, используйте `-o wide`) |
+| `Phase` | Фаза репозитория: `Active` после первого успешного сканирования |
+| `Scan` | Время последнего успешного сканирования |
+| `Repository` | Адрес репозитория (`spec.registry.repo`) |
+| `Packages` | Количество пакетов в репозитории |
+| `MSG` | Сообщение условия `LastScanSucceeded`, например, ошибка последнего сканирования |
 
-Для получения детальной информации о статусе, используйте следующую команду:
+Чтобы получить подробную информацию о статусе, выполните следующую команду:
 
 ```bash
 d8 k get packagerepository <REPOSITORY_NAME> -o yaml
@@ -94,24 +97,26 @@ d8 k get packagerepository <REPOSITORY_NAME> -o yaml
 
 | Поле | Описание |
 |---|---|
-| `status.phase` | Текущая фаза репозитория |
-| `status.lastScanTime` | Время последнего сканирования с любым результатом |
+| `status.phase` | Фаза репозитория: `Active` после первого успешного сканирования |
+| `status.lastScanTime` | Время последнего успешного сканирования. Неудачное сканирование его не обновляет |
 | `status.lastChangeTime` | Время последнего сканирования, которое нашло хотя бы одну новую версию |
-| `status.lastNewVersions` | Количество новых версий, найденных при последнем сканировании |
-| `status.packagesCount` | Общее число пакетов в репозитории |
+| `status.lastNewVersions` | Количество новых версий, найденных при последнем успешном сканировании |
+| `status.packagesCount` | Общее количество пакетов в репозитории |
 | `status.packages[]` | Список пакетов с полями `name` и `type` |
-| `status.conditions` | Детальные условия, включая `LastScanSucceeded` |
+| `status.conditions` | Подробные условия, включая `LastScanSucceeded` |
 
-Условие `LastScanSucceeded`:
+Чтобы проверить результат последнего сканирования, посмотрите условие `LastScanSucceeded`:
 
 ```bash
-d8 k get packagerepository my-registry \
-  -o jsonpath='{.status.conditions[?(@.type=="LastScanSucceeded")].message}'
+d8 k get packagerepository <REPOSITORY_NAME> \
+  -o jsonpath='{.status.conditions[?(@.type=="LastScanSucceeded")]}'
 ```
+
+Условие имеет статус `True`, если последнее сканирование прошло успешно. Иначе оно имеет статус `False`, а его сообщение содержит ошибку.
 
 ## Просмотр обнаруженных версий пакетов
 
-После успешного сканирования в кластере появляются объекты [ApplicationPackageVersion](../../../reference/api/cr.html#applicationpackageversion) (можно использовать сокращенное имя — `apv`):
+После успешного сканирования в кластере появляются объекты [ApplicationPackageVersion](../../../reference/api/cr.html#applicationpackageversion) (можно использовать сокращённое имя — `apv`):
 
 ```bash
 d8 k get apv
@@ -121,19 +126,19 @@ d8 k get apv
 
 <!-- markdownlint-disable MD031 -->
 ```console
-NAME                           PACKAGE     REPOSITORY   TRANSITIONTIME   METADATALOADED   MESSAGE   USEDBY
-my-registry-redis-v7.2.0       redis       my-registry  5m               True
-my-registry-postgres-v15.0.0   postgres    my-registry  5m               True
+NAME                           PACKAGE    REPOSITORY    METADATALOADED   USEDBY   AGE
+my-registry-redis-v7.2.0       redis      my-registry   True                      5m
+my-registry-postgres-v15.0.0   postgres   my-registry   True                      5m
 ```
 {: .nowrap-default }
 <!-- markdownlint-enable MD031 -->
 
-Фильтрация по имени пакета, можно использовать следующую команду (в примере фильтруются версии пакета `redis`):
+Чтобы отфильтровать версии по имени пакета, выполните следующую команду (в примере — версии пакета `redis`):
 
 ```bash
-d8 k get apv -l package=redis
+d8 k get apv -l packages.deckhouse.io/package=redis
 ```
 
 {% alert level="info" %}
-`MetadataLoaded=True` означает, что OpenAPI-схема пакета, описание и требования успешно загружены из реестра. Пакет с `MetadataLoaded=False` не может быть установлен до получения метаданных.
+`MetadataLoaded=True` означает, что OpenAPI-схема пакета, описание и требования успешно загружены из хранилища образов. Версию пакета с `MetadataLoaded=False` нельзя установить, пока не загружены метаданные.
 {% endalert %}

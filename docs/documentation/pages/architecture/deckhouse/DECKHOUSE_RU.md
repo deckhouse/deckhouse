@@ -29,11 +29,11 @@ description: Архитектура модуля deckhouse в Deckhouse Platform
   - [DeckhouseRelease](../../reference/api/cr.html#deckhouserelease) — объект, определяющий релиз (версию) DP и политику обновления платформы;
 
 - управление пакетами ([Marketplace](../marketplace/)):
-  - [Application](../../reference/api/cr.html#application) — описание и желаемое состояние прикладного пакета (группы компонентов или приложения);
-  - [ApplicationPackage](../../reference/api/cr.html#applicationpackage) — метаданные, источники и настройки пакета;
-  - [ApplicationPackageVersion](../../reference/api/cr.html#applicationpackageversion) — описание конкретной версией пакета и ее параметров;
-  - [PackageRepository](../../reference/api/cr.html#packagerepository) — объект, описывающий источник репозиториев пакетов и их параметры;
-  - [PackageRepositoryOperation](../../reference/api/cr.html#packagerepositoryoperation) — операции над репозиториями пакетов, такие как синхронизация или обновление;
+  - [Application](../../reference/api/cr.html#application) — установленный экземпляр пакета приложения и его настройки;
+  - [ApplicationPackage](../../reference/api/cr.html#applicationpackage) — сводная информация о пакете: репозитории, в которых он доступен, версии, на которые указывают каналы обновлений, и приложения, которые его используют;
+  - [ApplicationPackageVersion](../../reference/api/cr.html#applicationpackageversion) — обнаруженная версия пакета: её метаданные, OpenAPI-схемы и требования;
+  - [PackageRepository](../../reference/api/cr.html#packagerepository) — подключение к хранилищу образов с пакетами и расписание сканирования;
+  - [PackageRepositoryOperation](../../reference/api/cr.html#packagerepositoryoperation) — операция сканирования, которая обнаруживает версии пакетов в репозитории;
 
 - управление утилитами:
   - [CNIMigration](../../reference/api/cr.html#cnimigration) — процесс миграции сетевого плагина [Container Network Interface (CNI)](https://github.com/containernetworking/cni), содержит параметры и статус миграции;

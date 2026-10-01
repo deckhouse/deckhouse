@@ -81,8 +81,7 @@ type ApplicationSpec struct {
 	// +crd-enricher:deckhouse:documentation:examples=console
 	PackageName string `json:"packageName"`
 
-	// Name of the repository where the package is located.
-	// If not specified, the default repository is used.
+	// Name of the PackageRepository where the package is located.
 	// +optional
 	// +crd-enricher:deckhouse:documentation:examples=deckhouse
 	PackageRepositoryName string `json:"packageRepositoryName,omitempty"`

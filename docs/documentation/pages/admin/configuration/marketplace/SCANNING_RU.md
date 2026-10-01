@@ -6,15 +6,17 @@ lang: ru
 search: PackageRepositoryOperation, scanning, scan operation, сканирование, операция сканирования, репозиторий пакетов
 ---
 
-Deckhouse Platform (DP) использует [PackageRepositoryOperation](../../../reference/api/cr.html#packagerepositoryoperation) для сканирования реестров пакетов. Каждая операция сканирования обнаруживает новые версии пакетов и создаёт или обновляет объекты [ApplicationPackageVersion](../../../reference/api/cr.html#applicationpackageversion). Операции создаются автоматически по расписанию или могут создаваться вручную при необходимости.
+Deckhouse Platform (DP) сканирует репозитории пакетов с помощью объектов [PackageRepositoryOperation](../../../reference/api/cr.html#packagerepositoryoperation). Каждая операция сканирования обнаруживает новые версии пакетов и создаёт для них объекты [ApplicationPackageVersion](../../../reference/api/cr.html#applicationpackageversion). DP создаёт операции автоматически, также их можно создавать вручную.
 
 ## Просмотр операций сканирования
 
-Для просмотра всех операций сканирования используйте команду (можно использовать `pro` — сокращенное имя для `packagerepositoryoperations`):
+Чтобы посмотреть операции сканирования, выполните следующую команду (можно использовать `pro` — сокращённое имя для `packagerepositoryoperations`):
 
 ```bash
 d8 k get pro
 ```
+
+DP хранит 10 последних операций каждого репозитория и удаляет более старые.
 
 Пример вывода:
 
@@ -32,22 +34,22 @@ test-scan-1780053890   23      True              3h22m
 | Колонка | Описание |
 |---|---|
 | `Count` | Общее количество пакетов, найденных при сканировании |
-| `Completed` | Завершена ли операция (`True` / `False`) |
-| `MSG` | Сообщение из условия `Completed` |
+| `Completed` | Завершена ли операция (`True` / `False`). Операция, завершившаяся с ошибкой, тоже считается завершённой: результат определяется причиной условия `Completed` — `ScanSucceeded` или `ScanFailed` |
+| `MSG` | Сообщение условия `Completed`, например, ошибка сканирования |
 | `CompletionTime` | Время завершения операции |
 
-Для фильтрации операций по конкретному репозиторию используйте следующую команду:
+Чтобы отфильтровать операции по репозиторию, выполните следующую команду:
 
 ```bash
-d8 k get pro -l packages.deckhouse.io/repository=<REPO_NAME>
+d8 k get pro -l packages.deckhouse.io/repository=<REPOSITORY_NAME>
 ```
 
 ## Детали операции сканирования
 
-Для получения полных результатов сканирования с детализацией по пакетам используйте следующую команду:
+Чтобы получить полные результаты сканирования с детализацией по пакетам, выполните следующую команду:
 
 ```bash
-d8 k get pro <имя-операции> -o yaml
+d8 k get pro <OPERATION_NAME> -o yaml
 ```
 
 Ключевые поля статуса:
@@ -56,54 +58,57 @@ d8 k get pro <имя-операции> -o yaml
 |---|---|
 | `status.startTime` | Время начала операции |
 | `status.completionTime` | Время завершения операции |
-| `status.packages.total` | Всего найдено пакетов |
-| `status.packages.processedOverall` | Всего успешно обработано пакетов |
+| `status.packages.total` | Общее количество найденных пакетов |
+| `status.packages.processedOverall` | Количество уже обработанных пакетов, включая пакеты с ошибками |
 | `status.packages.newVersionsOverall` | Суммарное количество новых версий по всем пакетам |
 | `status.packages.processed[]` | Результаты по каждому пакету: `name`, `type`, `foundVersions`, `newVersions` |
 | `status.packages.failed[]` | Пакеты с ошибками: `name`, `errors[]` с полями `version` и `message` |
-| `status.packages.discovered[]` | Пакеты, впервые обнаруженные в этой операции |
+| `status.packages.discovered[]` | Пакеты, которые ещё ожидают обработки. После завершения операции список пуст |
 
 Пример команды для просмотра пакетов с ошибками:
 
 ```bash
-d8 k get pro <имя-операции> \
+d8 k get pro <OPERATION_NAME> \
   -o jsonpath='{range .status.packages.failed[*]}{.name}: {range .errors[*]}{.version} - {.message}{"\n"}{end}{end}'
 ```
 
 ## Запуск сканирования вручную
 
-По умолчанию каждый [PackageRepository](../../../reference/api/cr.html#packagerepository) создаёт новую операцию сканирования через **6 часов** после завершения предыдущей (настраивается через `spec.scanInterval`).
+DP запускает сканирование [PackageRepository](../../../reference/api/cr.html#packagerepository) при создании ресурса, при изменении его спецификации, при перезапуске DP, а затем с интервалом `spec.scanInterval` (по умолчанию — 6 часов, не меньше 3 минут). Сканирование пропускается, если предыдущая операция репозитория ещё не завершилась.
 
-Для немедленного сканирования создайте PackageRepositoryOperation вручную, по следующему примеру:
+Чтобы запустить сканирование немедленно, создайте PackageRepositoryOperation вручную, например:
 
 ```yaml
 apiVersion: deckhouse.io/v1alpha1
 kind: PackageRepositoryOperation
+metadata:
+  generateName: my-registry-scan-manual-
 spec:
   packageRepositoryName: my-registry
   type: Update
   update:
     fullScan: true
-    timeout: 5m
 ```
 
 {% alert level="info" %}
-Используйте `generateName` вместо `name`, чтобы создавать несколько операций без конфликтов имён.
+Поле `generateName` задаёт каждой операции уникальное имя. Оно работает только с `d8 k create`, но не с `d8 k apply`.
 {% endalert %}
 
-Альтернативно, для создания операции сканирования, можно использовать следующую команду:
+Операцию сканирования также можно создать следующей командой:
 
 ```bash
-d8 system package scan <REPO_NAME>
+d8 system package scan <REPOSITORY_NAME>
 ```
 
 Эта команда создаёт PackageRepositoryOperation с `spec.type: Update` и `spec.update.fullScan: true`.
 
-### Флаг `fullScan`
+### Параметр `fullScan`
 
 | Значение | Поведение |
 |---|---|
-| `true` | Повторно проверяет все теги в реестре, включая уже известные |
-| `false` (по умолчанию) | Обрабатывает только теги, добавленные с момента последнего сканирования (инкрементальное) |
+| `true` | Получает все semver-теги каждого пакета и создаёт версии, которых нет в кластере. Уже существующие версии повторно не читаются |
+| `false` (по умолчанию) | Обрабатывает только теги с версией выше последней версии пакета, уже обработанной в кластере |
 
-Используйте `fullScan: true`, если вы подозреваете, что реестр был изменён вне обычного рабочего процесса, или когда в объектах [ApplicationPackageVersion](../../../reference/api/cr.html#applicationpackageversion) отсутствуют версии, которые есть в реестре.
+Автоматические операции репозитория выполняют полное сканирование до первого успешного сканирования, а затем — инкрементальное.
+
+Используйте `fullScan: true`, если версия была опубликована после более высокой, например, патч для более старой минорной версии, или если в объектах [ApplicationPackageVersion](../../../reference/api/cr.html#applicationpackageversion) отсутствуют версии, которые есть в хранилище образов.

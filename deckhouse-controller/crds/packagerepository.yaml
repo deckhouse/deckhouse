@@ -33,8 +33,7 @@ spec:
     name: v1alpha1
     schema:
       openAPIV3Schema:
-        description: PackageRepository is a source of packages for Deckhouse Kubernetes
-          Platform.
+        description: PackageRepository is a source of packages for Deckhouse Platform.
         properties:
           apiVersion:
             description: |-
@@ -192,7 +191,9 @@ spec:
                   Set to zero when the last scan found nothing new.
                 type: integer
               lastScanTime:
-                description: Time of the most recent scan of any outcome.
+                description: |-
+                  Time of the most recent completed scan. A failed scan does not update it: the failure is
+                  reported in the `LastScanSucceeded` condition.
                 format: date-time
                 type: string
               message:

@@ -311,8 +311,9 @@ func (r *reconciler) handleDelete(ctx context.Context, app *v1alpha1.Application
 	defer logger.Debug("handle delete application complete")
 
 	// The runtime tears the application down asynchronously — the Disable task uninstalls the Helm
-	// release, Undeploy takes the files off disk, and the cleanup riding the last task drops the
-	// state — so RemoveApp is polled until it reports the teardown finished.
+	// release, Purge deletes the orphan resources the application left beside it, Undeploy takes
+	// the files off disk, and the cleanup riding the last task drops the state — so RemoveApp is
+	// polled until it reports the teardown finished.
 	if !r.manager.RemoveApp(app.Namespace, app.Name) {
 		logger.Info("application is still being removed by the runtime")
 

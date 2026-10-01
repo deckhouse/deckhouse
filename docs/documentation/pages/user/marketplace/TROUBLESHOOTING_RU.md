@@ -8,7 +8,7 @@ search: Application troubleshooting, application conditions, диагности�
 
 ## Проверка наличия CRD Marketplace
 
-Если `d8 k get app` возвращает ошибку, возможно, CRD Marketplace не установлены. Для проверки выполните следующую команду:
+Если `d8 k get applications` возвращает ошибку о том, что такого типа ресурсов нет, возможно, CRD Marketplace не установлены. Чтобы это проверить, выполните следующую команду:
 
 ```bash
 d8 k get crd | grep -E 'application|package'
@@ -21,20 +21,22 @@ d8 k get crd | grep -E 'application|package'
 applicationpackages.deckhouse.io                     2026-02-10T14:54:41Z
 applicationpackageversions.deckhouse.io              2026-02-10T14:54:41Z
 applications.deckhouse.io                            2026-02-10T14:54:41Z
+modulepackages.deckhouse.io                          2026-02-10T14:54:41Z
+modulepackageversions.deckhouse.io                   2026-02-10T14:54:41Z
 packagerepositories.deckhouse.io                     2026-02-10T14:54:41Z
 packagerepositoryoperations.deckhouse.io             2026-02-10T14:54:41Z
 ```
 {: .nowrap-default }
 <!-- markdownlint-enable MD031 -->
 
-Если какие-либо CRD отсутствуют, обратитесь к администратору кластера. Marketplace требует DP версии 1.76 или выше.
+Если каких-то CRD нет, обратитесь к администратору кластера. Для Marketplace нужна DP версии 1.76 или выше.
 
 ## Чтение summary приложения
 
-Самый быстрый способ понять, почему приложение не работает — проверить `status.summary`. Для этого выполните следующую команду (можно использовать сокращённое имя — `app`):
+Быстрее всего понять, почему приложение не работает, можно по полю `status.summary`. Для этого выполните следующую команду:
 
 ```bash
-d8 k get app -n <NAMESPACE> <APPLICATION_NAME> -o yaml | grep -A5 'summary:'
+d8 k get applications -n <NAMESPACE> <APPLICATION_NAME> -o yaml | grep -A5 'summary:'
 ```
 
 Пример вывода:
@@ -43,103 +45,82 @@ d8 k get app -n <NAMESPACE> <APPLICATION_NAME> -o yaml | grep -A5 'summary:'
 summary:
   state: Updating
   message: "Update is waiting for dependent modules to converge; previous version is still serving"
-  tip: "Waiting until DP processes all dependent modules to start the update."
+  tip: "Wait — the previous version is still working. The update will continue automatically once dependent modules converge."
 ```
 
-- **`state`** — текущее общее состояние приложения.
+- **`state`** — текущее общее состояние приложения: `Pending`, `Failed`, `Updating`, `Ready`, `Degraded`, `Suspended` или `Deleting`.
 - **`message`** — объясняет, почему приложение находится в этом состоянии.
 - **`tip`** — что нужно сделать для решения проблемы или чего ожидает DP.
 
 ## Чтение отдельных условий
 
-Для более детального просмотра состояния выполните следующую команду:
+Чтобы посмотреть состояние приложения подробнее, выполните следующую команду:
 
 ```bash
-d8 k get app -n <NAMESPACE> <APPLICATION_NAME> \
+d8 k get applications -n <NAMESPACE> <APPLICATION_NAME> \
   -o jsonpath='{range .status.conditions[*]}{.type}: {.status} ({.reason}) - {.message}{"\n"}{end}'
 ```
 
-Пример вывода при зависшем обновлении:
+Пример вывода для обновления, которое ожидает выполнения:
 
-```yaml
-conditions:
-  - lastTransitionTime: "2026-02-25T16:39:30Z"
-    message: ""
-    observedGeneration: 1
-    reason: Installed
-    status: "True"
-    type: Installed
-  - lastTransitionTime: "2026-02-25T17:12:25Z"
-    message: "Update is waiting for dependent modules to converge"
-    observedGeneration: 1
-    reason: Pending
-    status: "False"
-    type: UpdateInstalled
-  - lastTransitionTime: "2026-02-25T16:39:30Z"
-    message: ""
-    observedGeneration: 1
-    reason: ConfigurationApplied
-    status: "True"
-    type: ConfigurationApplied
-  - lastTransitionTime: "2026-02-25T16:39:30Z"
-    message: ""
-    observedGeneration: 1
-    reason: Managed
-    status: "True"
-    type: Managed
-  - lastTransitionTime: "2026-02-25T16:39:30Z"
-    message: ""
-    observedGeneration: 1
-    reason: Scaled
-    status: "True"
-    type: Scaled
-  - lastTransitionTime: "2026-02-25T16:39:30Z"
-    message: ""
-    observedGeneration: 1
-    reason: Ready
-    status: "True"
-    type: Ready
-currentVersion:
-  version: v0.0.20
+```console
+Installed: True (Installed) -
+UpdateInstalled: False (Pending) - waiting for processing
+ConfigurationApplied: True (ConfigurationApplied) -
+Managed: True (Managed) -
+Scaled: True (Scaled) -
+Ready: True (Ready) -
 ```
 
-В этом примере `Installed=True` (приложение запущено на версии v0.0.20), но `UpdateInstalled=False/Pending` означает, что обновление в очереди и ожидает завершения зависимого модуля.
+В этом примере `Installed=True` означает, что работает ранее установленная версия приложения, а `UpdateInstalled=False` с причиной `Pending` — что обновление ожидает выполнения, например, пока не будут готовы модули, от которых зависит приложение. Установленная версия указана в поле `status.currentVersion.version`.
 
-## Просмотр логов контроллера DP
+## Просмотр логов DP
 
-Если условий статуса недостаточно для диагностики, просмотрите логи контроллера:
+Если условий недостаточно для диагностики, попросите администратора кластера посмотреть лог DP. Лог доступен только в неймспейсе `d8-system`:
 
 ```bash
-d8 k logs deployments/deckhouse -n d8-system | grep <APPLICATION_NAME>
+d8 k -n d8-system logs svc/deckhouse-leader -c deckhouse | grep '<NAMESPACE>.<APPLICATION_NAME>'
 ```
 
 ## Просмотр логов подов приложения
 
-Для получения списка подов, созданных приложением, выполните следующую команду:
+Объекты приложения называются `d8a-<APPLICATION_NAME>-<SUFFIX>`. Чтобы получить список Deployment и StatefulSet приложения, выполните следующую команду:
 
 ```bash
-d8 k get pods -n <NAMESPACE> -l app.kubernetes.io/instance=<APPLICATION_NAME>
+d8 k get deployments,statefulsets -n <NAMESPACE> -l packages.deckhouse.io/instance=<APPLICATION_NAME>
 ```
 
-Для просмотра логов конкретного пода выполните:
+Имена подов этих рабочих нагрузок начинаются с того же префикса. Чтобы получить их список, выполните:
+
+```bash
+d8 k get pods -n <NAMESPACE> | grep 'd8a-<APPLICATION_NAME>-'
+```
+
+Чтобы посмотреть логи конкретного пода, выполните:
 
 ```bash
 d8 k logs -n <NAMESPACE> <POD_NAME>
 ```
 
-Для просмотра логов конкретного деплоймента с префиксом имени экземпляра выполните:
+Чтобы посмотреть логи Deployment приложения, выполните:
 
 ```bash
-d8 k logs -n <NAMESPACE> deployments/<APPLICATION_NAME>-<RESOURCE_NAME>
+d8 k logs -n <NAMESPACE> deployments/d8a-<APPLICATION_NAME>-<SUFFIX>
 ```
 
-## Частые условия и их значение
+## Частые причины условий
 
-| Условие | Reason при Status=False | Что проверить |
+| Причина | Условия | Значение и что проверить |
 |---|---|---|
-| `Installed` | `InstallFailed` | Логи контроллера DP, проверьте настройки по OpenAPI-схеме |
-| `UpdateInstalled` | `Pending` | Конвергенция зависимых модулей — проверьте условия модуля `d8` |
-| `UpdateInstalled` | `UpdateFailed` | Указанная `packageVersion` не существует в репозитории — проверьте через `d8 k get apv -l package=<имя>` |
-| `ConfigurationApplied` | `ConfigurationFailed` | Ошибка валидации настроек — проверьте по схеме [ApplicationPackageVersion](../../reference/api/cr.html#applicationpackageversion) |
-| `Scaled` | `NotScaled` | Поды не готовы — проверьте события пода через `d8 k describe pod` |
-| `Ready` | `NotReady` | Одно или несколько условий выше не выполнены |
+| `Pending` | `Installed`, `UpdateInstalled` | DP ждёт возможности установить версию, например, пока не будут включены модули из `requirements.modules` пакета. Попросите администратора проверить эти модули |
+| `RequirementsUnmet` | `Installed` | Кластер не удовлетворяет требованиям пакета. В сообщении указано невыполненное требование |
+| `DownloadFailed` | `Installed`, `UpdateInstalled`, `ConfigurationApplied`, `Managed`, `Ready` | DP не удаётся загрузить версию пакета. Попросите администратора проверить PackageRepository и доступ к хранилищу образов |
+| `LoadFromFilesystemFailed` | `Installed`, `UpdateInstalled`, `Ready` | DP не удаётся прочитать загруженный пакет. Обратитесь к разработчику пакета |
+| `SettingsInvalid` | `Installed`, `UpdateInstalled`, `ConfigurationApplied` | Настройки не прошли проверку. Сверьте `spec.settings` со схемой настроек в [ApplicationPackageVersion](../../reference/api/cr.html#applicationpackageversion) |
+| `HookInitializationFailed`, `HookFailed` | `Installed`, `UpdateInstalled`, `ConfigurationApplied`, `Managed`, `Ready` | Хук пакета завершился с ошибкой. Текст ошибки указан в сообщении |
+| `ManifestsApplyFailed` | `Installed`, `UpdateInstalled`, `ConfigurationApplied`, `Managed`, `Ready` | DP не удаётся применить манифесты пакета. Проверьте сообщение и события в неймспейсе |
+| `ApplyingManifests`, `SettingsChanged` | `UpdateInstalled`, `ConfigurationApplied`, `Managed`, `Ready` | Не ошибка: DP применяет манифесты или изменённые настройки |
+| `Reconciling` | `Scaled` | Идёт развёртывание рабочей нагрузки. Её имя указано в сообщении |
+| `Degraded` | `Scaled` | Рабочую нагрузку не удалось развернуть. Проверьте события и поды рабочей нагрузки с помощью `d8 k describe` |
+| `NoResourceReconciliation` | `Managed` | Приложение находится в режиме обслуживания (поле `spec.maintenance`) |
+| `Deleting` | Все | Приложение удаляется |

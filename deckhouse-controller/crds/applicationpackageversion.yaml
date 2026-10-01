@@ -263,7 +263,7 @@ spec:
                         type: object
                       modules:
                         description: Required modules, partitioned into mandatory,
-                          conditional, and anyOf dependencies.
+                          conditional, anyOf, and noneOf dependencies.
                         properties:
                           anyOf:
                             description: |-
@@ -272,18 +272,16 @@ spec:
                               start. Groups are checker-only and add no edges to the dependency graph.
                             items:
                               description: |-
-                                PackageModuleGroup is a group of alternative module dependencies. At least one
-                                member must be installed (and satisfy its constraint, if any) for the package
-                                to start. The Name is required and surfaces in scheduler diagnostics; the
-                                Description is optional human-facing documentation.
+                                PackageModuleGroup is a named group of module dependencies: alternatives in anyOf,
+                                forbidden modules in noneOf. The Name is required and surfaces in scheduler
+                                diagnostics; the Description is optional human-facing documentation.
                               properties:
                                 description:
                                   description: Human-readable description of the group's
                                     purpose.
                                   type: string
                                 modules:
-                                  description: Alternative module dependencies in
-                                    this group.
+                                  description: Module dependencies in this group.
                                   items:
                                     description: |-
                                       PackageModuleDependency is a single named module dependency with an optional
@@ -360,18 +358,16 @@ spec:
                               dependency graph.
                             items:
                               description: |-
-                                PackageModuleGroup is a group of alternative module dependencies. At least one
-                                member must be installed (and satisfy its constraint, if any) for the package
-                                to start. The Name is required and surfaces in scheduler diagnostics; the
-                                Description is optional human-facing documentation.
+                                PackageModuleGroup is a named group of module dependencies: alternatives in anyOf,
+                                forbidden modules in noneOf. The Name is required and surfaces in scheduler
+                                diagnostics; the Description is optional human-facing documentation.
                               properties:
                                 description:
                                   description: Human-readable description of the group's
                                     purpose.
                                   type: string
                                 modules:
-                                  description: Alternative module dependencies in
-                                    this group.
+                                  description: Module dependencies in this group.
                                   items:
                                     description: |-
                                       PackageModuleDependency is a single named module dependency with an optional

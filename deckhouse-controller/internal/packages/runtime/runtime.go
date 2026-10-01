@@ -54,6 +54,7 @@ import (
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/modules"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/modules/global"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/nelm"
+	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/orphans"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/runtime/api/socket"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/runtime/api/tcp"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/runtime/hookevent"
@@ -116,6 +117,7 @@ type Runtime struct {
 	hookEventHandler *hookevent.Handler // Routes Kube/schedule events into hook tasks
 	queueService     *queue.Service     // Per-package task queues with retry
 	nelmService      *nelm.Service      // Helm release management and drift monitoring
+	orphanService    *orphans.Service   // Deletes what removed applications leave beside their releases
 	healthService    *health.Service    // Resources health monitor
 	appDeployer      deployerI          // Deploys and undeploys application package images
 	moduleDeployer   deployerI          // Deploys and undeploys module package images
@@ -241,6 +243,11 @@ func Build(cli kclient.Client, moduleManager moduleManagerI, dc dependency.Conta
 	// Build NELM service with its own client and runtime cache for resource monitoring
 	if err := r.buildNelmService(); err != nil {
 		return nil, fmt.Errorf("build nelm service: %w", err)
+	}
+
+	// Build Orphan service with its own client
+	if err := r.buildOrphanService(); err != nil {
+		return nil, fmt.Errorf("build orphan service: %w", err)
 	}
 
 	// Build CRD service with its own client
@@ -377,6 +384,29 @@ func (r *Runtime) buildNelmService() error {
 	reschedule := func(name string) { r.scheduler.Reschedule(name, reasonDriftDetected) }
 
 	r.nelmService = nelm.NewService(client, reschedule, r.status, r.logger)
+
+	return nil
+}
+
+// buildOrphanService creates the service that deletes what an application leaves beside
+// its Helm release — objects its workloads or hooks create at runtime, and the release
+// hooks an uninstall does not delete — once a removal has uninstalled the release.
+//
+// Its client is shaped like the object patcher's: both delete objects in batches, where
+// a slow API call must not hang the package queue behind them.
+func (r *Runtime) buildOrphanService() error {
+	client := klient.New(klient.WithLogger(r.logger.Named("orphans-client")))
+	client.WithContextName(app.KubeContext())
+	client.WithConfigPath(app.KubeConfig())
+	client.WithRateLimiterSettings(app.ObjectPatcherKubeClientQPS(), app.ObjectPatcherKubeClientBurst())
+	client.WithTimeout(app.ObjectPatcherKubeClientTimeout())
+	client.WithMetricPrefix("packages_orphans_")
+
+	if err := client.Init(); err != nil {
+		return fmt.Errorf("initialize orphan service client: %w", err)
+	}
+
+	r.orphanService = orphans.NewService(client, r.logger)
 
 	return nil
 }

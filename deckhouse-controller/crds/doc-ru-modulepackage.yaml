@@ -31,7 +31,7 @@ spec:
                     Информация о модуле, использующем этот пакет.
                   properties:
                     repositoryName:
-                      description: Название PackageRepository, используемого этим модулем.
+                      description: Имя PackageRepository, который использует этот модуль.
                       type: string
                     version:
                       description: |

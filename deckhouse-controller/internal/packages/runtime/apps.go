@@ -31,6 +31,7 @@ import (
 	taskdeploy "github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/runtime/tasks/deploy"
 	taskdisable "github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/runtime/tasks/disable"
 	taskload "github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/runtime/tasks/load"
+	taskpurge "github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/runtime/tasks/purge"
 	taskundeploy "github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/runtime/tasks/undeploy"
 	taskuninstall "github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/runtime/tasks/uninstall"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/status"
@@ -231,8 +232,13 @@ func (r *Runtime) RemoveApp(namespace, instance string) bool {
 
 	if pkg := r.apps[name]; pkg != nil {
 		r.queueService.Enqueue(ctx, name, taskdisable.NewTask(pkg, pkg.GetNamespace(), false, r.nelmService, r.queueService, r.logger))
+		// Purge rides behind Disable: once the release is uninstalled and the hooks are stopped,
+		// nothing of the application is left to recreate what it deletes. Only a removal purges —
+		// a disable by the scheduler keeps the Application, and what it left may be used again.
+		r.queueService.Enqueue(ctx, name, taskpurge.NewTask(pkg, r.orphanService, r.logger))
 	} else {
 		// A failed Load may roll the instance out of r.apps while the previous release is still live.
+		// No values are loaded to read orphan resources from, so nothing is purged.
 		r.queueService.Enqueue(ctx, name, taskuninstall.NewTask(name, namespace, r.nelmService, r.logger))
 	}
 

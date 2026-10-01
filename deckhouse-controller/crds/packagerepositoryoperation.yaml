@@ -95,7 +95,7 @@ spec:
                   Conditions reflecting the latest observations of the operation state.
                   The operation phase is determined by the `Completed` condition: while its status is `False`,
                   the operation is in one of the intermediate phases (`Discover`, `Processing`);
-                  when the status is `True`, the operation has finished with reason `Succeeded` or `Failed`.
+                  when the status is `True`, the operation has finished with reason `ScanSucceeded` or `ScanFailed`.
                 items:
                   description: Condition contains details for one aspect of the current
                     state of this API Resource.
@@ -163,7 +163,9 @@ spec:
                 description: Information about packages processed during the operation.
                 properties:
                   discovered:
-                    description: List of packages discovered during the operation.
+                    description: |-
+                      Packages discovered during the operation that are still waiting to be processed.
+                      The list is empty once the operation completes.
                     items:
                       properties:
                         name:
@@ -207,8 +209,8 @@ spec:
 
                       A version is counted as new if its ApplicationPackageVersion or
                       ModulePackageVersion did not exist in the cluster, or (ApplicationPackageVersion
-                      only) existed with the "not in registry" mark and its image was found in the
-                      registry during this operation.
+                      only) existed with the "not in the container registry" mark and its image was
+                      found in the registry during this operation.
                     type: integer
                   processed:
                     description: List of packages successfully processed.
@@ -226,8 +228,8 @@ spec:
 
                             A version is counted as new if its ApplicationPackageVersion or
                             ModulePackageVersion did not exist in the cluster, or (ApplicationPackageVersion
-                            only) existed with the "not in registry" mark and its image was found in the
-                            registry during this operation.
+                            only) existed with the "not in the container registry" mark and its image was
+                            found in the registry during this operation.
                           type: integer
                         type:
                           description: Type of the package.

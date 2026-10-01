@@ -196,7 +196,7 @@ Behavior:
 - module-sdk sets the application namespace in every operation, regardless of the namespace specified in the object.
 - Typed objects must have `TypeMeta` with `apiVersion` and `kind` set. Otherwise, the operation is not executed.
 - Patching a missing object fails the hook. Check that the object exists, for example, in a snapshot, before patching it.
-- Objects created by hooks are not part of the Helm release: DP doesn't delete them when the application is deleted, and doesn't add [platform labels](templates.html#labels-and-object-protection) to them. Delete such objects in `OnBeforeDeleteHelm` or `OnAfterDeleteHelm` hooks, or set an owner reference to an object of the release.
+- Objects created by hooks are not part of the Helm release, and DP doesn't add [platform labels](templates.html#labels-and-object-protection) to them, so uninstalling the release doesn't delete them. To delete such objects together with the application, set the `packages.deckhouse.io/instance` label to the instance name and list their kind in [`orphanResources`](lifecycle.html#orphan-resources). You can also set an owner reference to an object of the release, or delete the objects in `OnBeforeDeleteHelm` or `OnAfterDeleteHelm` hooks.
 
 ### Object names
 

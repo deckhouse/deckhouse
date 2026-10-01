@@ -12,7 +12,7 @@ Marketplace is available starting from DP version 1.76.
 
 The [Concepts](concepts.html) section describes the Package abstraction, resource model, Application constraints, and the full scan-to-deploy lifecycle.
 
-The [Application development](application-development.html) section describes how to create an Application package from scratch: bootstrapping, project structure, `package.yaml`, local rendering and linting, build, CI/CD, and artifact layout in the registry.
+The [Application development](application-development.html) section describes how to create an Application package from scratch: bootstrapping, project structure, `package.yaml`, local rendering and linting, build, CI/CD, and package artifacts in the container registry.
 
 The [Application settings](settings.html) section describes the OpenAPI schemas of settings and values: validation, default values, and the extensions that control the settings form in the web interface.
 

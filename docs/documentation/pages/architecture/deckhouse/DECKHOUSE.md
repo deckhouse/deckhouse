@@ -28,11 +28,11 @@ The module manages the following custom resources in the `deckhouse.io` API grou
   - [DeckhouseRelease](../../reference/api/cr.html#deckhouserelease): An object that defines the DP release (version) and platform update policy.
 
 - Package management ([Marketplace](../marketplace/)):
-  - [Application](../../reference/api/cr.html#application): Description and desired state of an application package (a group of components or an application).
-  - [ApplicationPackage](../../reference/api/cr.html#applicationpackage): Package metadata, sources, and settings.
-  - [ApplicationPackageVersion](../../reference/api/cr.html#applicationpackageversion): Description of a specific package version and its parameters.
-  - [PackageRepository](../../reference/api/cr.html#packagerepository): An object that describes a package repository source and its parameters.
-  - [PackageRepositoryOperation](../../reference/api/cr.html#packagerepositoryoperation): Operations on package repositories, such as synchronization or updates.
+  - [Application](../../reference/api/cr.html#application): An installed instance of an application package and its settings.
+  - [ApplicationPackage](../../reference/api/cr.html#applicationpackage): Aggregated information about a package: the repositories that provide it, the versions the release channels point to, and the applications that use it.
+  - [ApplicationPackageVersion](../../reference/api/cr.html#applicationpackageversion): A discovered package version: its metadata, OpenAPI schemas, and requirements.
+  - [PackageRepository](../../reference/api/cr.html#packagerepository): Connection to a container registry with packages and the scan schedule.
+  - [PackageRepositoryOperation](../../reference/api/cr.html#packagerepositoryoperation): A scan operation that discovers package versions in a repository.
 
 - Utility management:
   - [CNIMigration](../../reference/api/cr.html#cnimigration): [Container Network Interface (CNI)](https://github.com/containernetworking/cni) migration process, including migration parameters and status.
@@ -117,7 +117,7 @@ The module interacts with the following components:
 
 1. [**Documentation**](/modules/documentation/): Updating documentation when a DP module is added or updated.
 
-1. **Image registry**: Retrieving module component images along with metadata when the [`registry`](/modules/registry/) module is installed in `Unmanaged` mode.
+1. **Container registry**: Retrieving module component images along with metadata when the [`registry`](/modules/registry/) module is installed in `Unmanaged` mode.
 
 1. **`registry` module**: Retrieving module component images along with metadata when the [`registry`](/modules/registry/) module is installed in one of the following modes: `Direct`, `Proxy`, or `Local`.
 
