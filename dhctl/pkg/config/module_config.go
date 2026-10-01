@@ -61,6 +61,13 @@ type ModuleConfigSpec struct {
 	Source string `json:"source,omitempty"`
 }
 
+// moduleConfigEnabled reports whether mc explicitly enables its module.
+// A ModuleConfig without spec.enabled counts as disabled, as in
+// isModuleConfigEnabled in go_lib/cloud-provider/validation/migration.go.
+func moduleConfigEnabled(mc *ModuleConfig) bool {
+	return mc.Spec.Enabled != nil && *mc.Spec.Enabled
+}
+
 func buildModuleConfig(
 	ctx context.Context,
 	schemasStore *SchemaStore,

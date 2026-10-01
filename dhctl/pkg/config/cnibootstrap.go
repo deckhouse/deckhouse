@@ -244,10 +244,10 @@ func cniBootstrapDecision(user, recommended *ModuleConfig) (CNIBootstrapMismatch
 			"user configured %q, provider recommends %q", user.GetName(), recommended.GetName(),
 		)
 	}
-	if cniEnabledValue(user) != cniEnabledValue(recommended) {
+	if moduleConfigEnabled(user) != moduleConfigEnabled(recommended) {
 		return CNIBootstrapMismatchReasonDifferentSettings, fmt.Sprintf(
 			"%s enabled differs from recommendation (user=%t, recommended=%t)",
-			recommended.GetName(), cniEnabledValue(user), cniEnabledValue(recommended),
+			recommended.GetName(), moduleConfigEnabled(user), moduleConfigEnabled(recommended),
 		)
 	}
 	same, err := sameCNISettings(user.Spec.Settings, recommended.Spec.Settings)
@@ -265,14 +265,6 @@ func cniBootstrapDecision(user, recommended *ModuleConfig) (CNIBootstrapMismatch
 	return CNIBootstrapMismatchReasonNone, ""
 }
 
-// cniEnabledValue treats a nil *bool as the documented default (enabled).
-func cniEnabledValue(mc *ModuleConfig) bool {
-	if mc.Spec.Enabled == nil {
-		return true
-	}
-	return *mc.Spec.Enabled
-}
-
 func cniBootstrapConfirmMessage(a *CNIBootstrapAnalysis) string {
 	user := a.ModuleConfig.UserInput
 	recommended := a.ModuleConfig.Recommended
@@ -280,8 +272,8 @@ func cniBootstrapConfirmMessage(a *CNIBootstrapAnalysis) string {
 		return fmt.Sprintf(
 			"Provider cni-bootstrap.yml recommends a different config for %s.\n  user:        enabled=%t settings=%s\n  recommended: enabled=%t settings=%s\nReplace your ModuleConfig with the recommended one? Any custom settings in your ModuleConfig will be discarded.",
 			recommended.GetName(),
-			cniEnabledValue(user), formatCNISettings(user.Spec.Settings),
-			cniEnabledValue(recommended), formatCNISettings(recommended.Spec.Settings),
+			moduleConfigEnabled(user), formatCNISettings(user.Spec.Settings),
+			moduleConfigEnabled(recommended), formatCNISettings(recommended.Spec.Settings),
 		)
 	}
 	return fmt.Sprintf(

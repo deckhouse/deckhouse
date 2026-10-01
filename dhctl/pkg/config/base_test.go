@@ -376,8 +376,11 @@ spec:
 		})
 
 		t.Run("Module without enabled field", func(t *testing.T) {
-			_, err := ParseConfigFromData(t.Context(), clusterConfig+initConfig+staticConfig+moduleConfigCommonWithoutEnabled, DummyValidatorProvider(), nil)
-			require.Error(t, err)
+			metaConfig, err := ParseConfigFromData(t.Context(), clusterConfig+initConfig+staticConfig+moduleConfigCommonWithoutEnabled, DummyValidatorProvider(), nil)
+			require.NoError(t, err)
+
+			require.Len(t, metaConfig.ModuleConfigs, 1)
+			require.Nil(t, metaConfig.ModuleConfigs[0].Spec.Enabled, "the field must reach the cluster as written")
 		})
 
 		t.Run("Module without settings", func(t *testing.T) {

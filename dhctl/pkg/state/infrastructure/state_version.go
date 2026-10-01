@@ -22,6 +22,7 @@ import (
 
 	dhlog "github.com/deckhouse/lib-dhctl/pkg/logger"
 
+	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/client"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/input"
 )
 
@@ -106,4 +107,38 @@ func AskCanIConvergeTerraformStateWhenWeUseTofu(output []byte) error {
 	}
 
 	return nil
+}
+
+// HasTerraformStateInCluster reports whether the cluster state or any node
+// state stored in the cluster was written by Terraform rather than OpenTofu.
+func HasTerraformStateInCluster(ctx context.Context, kubeCl *client.KubernetesClient) (bool, error) {
+	clusterState, err := GetClusterStateFromCluster(ctx, kubeCl)
+	if err != nil {
+		return false, fmt.Errorf("get cluster infrastructure state: %w", err)
+	}
+	states := [][]byte{clusterState}
+
+	nodesState, err := GetNodesStateFromCluster(ctx, kubeCl)
+	if err != nil {
+		return false, fmt.Errorf("get nodes infrastructure state: %w", err)
+	}
+	for _, nodeGroup := range nodesState {
+		for _, st := range nodeGroup.State {
+			states = append(states, st)
+		}
+	}
+
+	for _, st := range states {
+		if len(st) == 0 {
+			continue
+		}
+		isTerraform, err := IsTerraformState(st)
+		if err != nil {
+			return false, err
+		}
+		if isTerraform {
+			return true, nil
+		}
+	}
+	return false, nil
 }

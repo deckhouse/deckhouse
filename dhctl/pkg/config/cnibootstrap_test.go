@@ -267,16 +267,16 @@ func TestCNIBootstrapDecision_UserDisabled(t *testing.T) {
 }
 
 // Nil *bool means "use default", which for ModuleConfig is enabled=true.
-// Treat nil and explicit true as equal so users who omit the field do not
-// trip the mismatch path.
-func TestCNIBootstrapDecision_NilEnabledEqualsTrue(t *testing.T) {
+// A ModuleConfig without spec.enabled counts as disabled, so it differs from
+// the recommended enabled one.
+func TestCNIBootstrapDecision_NilEnabledEqualsFalse(t *testing.T) {
 	user := newTestCNIModuleConfig(t, "cni-cilium", map[string]any{"tunnelMode": "VXLAN"}, true)
 	user.Spec.Enabled = nil
 
 	rec := newTestCNIModuleConfig(t, "cni-cilium", map[string]any{"tunnelMode": "VXLAN"}, true)
 
 	reason, _ := cniBootstrapDecision(user, rec)
-	require.Equal(t, CNIBootstrapMismatchReasonNone, reason)
+	require.Equal(t, CNIBootstrapMismatchReasonDifferentSettings, reason)
 }
 
 func TestAnalyzeCNIBootstrap_StaticCluster_IgnoresContent(t *testing.T) {
