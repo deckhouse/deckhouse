@@ -18,6 +18,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"regexp"
 	"strconv"
 	"strings"
 
@@ -34,11 +35,8 @@ const (
 	containerdV2MinKernelMinor = 8
 	containerdV2MinSystemd     = 244
 	containerdV2CRI            = "ContainerdV2"
-	// What kernelHasErofsCVE actually matches, which is every 6.12.x and 6.14.x. The message used
-	// to print the advisory's patch ranges (6.12.0–6.12.28, 6.14.0–6.14.6) while the matcher
-	// ignored the patch level, so a node on 6.12.40 was told it was affected and shown a range it
-	// sits outside of. See kernelHasErofsCVE: the matcher is the half that is wrong.
-	containerdV2ErofsCVEMessage = "is affected by CVE-2025-37999 in EROFS (kernels 6.12.x and 6.14.x)"
+	// The ranges kernelHasErofsCVE matches, before the per-flavour exceptions it also carries.
+	containerdV2ErofsCVEMessage = "is affected by CVE-2025-37999 in EROFS (kernels 6.12.0 to 6.12.28 and 6.14.0 to 6.14.6)"
 )
 
 // NodeCRIRequirementsCheck asks the node for what containerd v2 needs, before bashible does.
@@ -94,7 +92,7 @@ func (c NodeCRIRequirementsCheck) Run(ctx context.Context) (string, error) {
 	case major < containerdV2MinKernelMajor || (major == containerdV2MinKernelMajor && minor < containerdV2MinKernelMinor):
 		unmet = append(unmet, fmt.Sprintf("kernel %s is older than %d.%d",
 			kernel, containerdV2MinKernelMajor, containerdV2MinKernelMinor))
-	case kernelHasErofsCVE(major, minor):
+	case kernelHasErofsCVE(kernel):
 		unmet = append(unmet, fmt.Sprintf("kernel %s %s", kernel, containerdV2ErofsCVEMessage))
 	default:
 		reported = append(reported, "kernel "+kernel)
@@ -166,19 +164,83 @@ func criLabel(cri string) string {
 	return cri
 }
 
-// kernelHasErofsCVE covers the two ranges the bashible check names. A node inside them boots
-// containerd v2 and then hits the bug in EROFS, which is what containerd v2 stores images on.
-// kernelHasErofsCVE is coarser than the check it mirrors, and the comment here used to claim
-// otherwise: is_kernel_erofs_cve_vulnerable in
-// candi/bashible/common-steps/all/000_check_containerd_v2_support.sh.tpl compares full versions
-// (6.12.0 up to but not including 6.12.29, and 6.14.0 up to but not including 6.14.7) and carries
-// per-flavour exceptions for the -generic, -aws, -azure, -gcp, -oracle, -oem and el9uek/el10uek
-// kernels whose fix was backported. This one flags every 6.12.x and 6.14.x, so it refuses a node
-// on 6.12.40 that bashible would let through — a preflight that blocks a bootstrap the node would
-// have survived. Narrowing it means comparing the patch level and porting those exceptions, which
-// is a behaviour change rather than the wording fix this pass was.
-func kernelHasErofsCVE(major, minor int) bool {
-	return major == 6 && (minor == 12 || minor == 14)
+// kernelHasErofsCVE answers what is_kernel_erofs_cve_vulnerable in
+// candi/bashible/common-steps/all/000_check_containerd_v2_support.sh.tpl answers, for the full
+// `uname -r`. A node it matches boots containerd v2 and then hits the bug in EROFS, which is what
+// containerd v2 stores images on; one it does not match is let through by bashible, and refusing
+// it here blocks a bootstrap the node would have survived.
+//
+// It used to flag every 6.12.x and 6.14.x. That refused 6.12.63 on ALT Linux, which bashible
+// accepts: the fix is in 6.12.29 and 6.14.7, and several vendor kernels carry it backported under
+// a base version that never moves.
+func kernelHasErofsCVE(kernel string) bool {
+	kernel = strings.TrimSpace(kernel)
+
+	// Vendor kernels that keep 6.14.0 and count the fix in the build number.
+	if match := ubuntuFlavour614.FindStringSubmatch(kernel); match != nil {
+		build, _ := strconv.Atoi(match[1])
+		return build < erofsCVEFixedBuild[match[2]]
+	}
+
+	// Oracle Linux UEK8 keeps 6.12.0 while the fix is backported (ELSA-2025-20480). Anchoring on
+	// 6.12.0 keeps the 5.15-based UEK7 out of it.
+	if match := oracleUEK8.FindStringSubmatch(kernel); match != nil {
+		return !versionAtLeast("6.12.0."+match[1], "6.12.0.101.33.4.3")
+	}
+
+	version, _, _ := strings.Cut(kernel, "-")
+	return (versionAtLeast(version, "6.12.0") && !versionAtLeast(version, "6.12.29")) ||
+		(versionAtLeast(version, "6.14.0") && !versionAtLeast(version, "6.14.7"))
+}
+
+var (
+	ubuntuFlavour614 = regexp.MustCompile(`^6\.14\.0-([0-9]+)\b.*-(generic|aws|azure|gcp|oracle|oem)$`)
+	oracleUEK8       = regexp.MustCompile(`^6\.12\.0-([0-9.]+)\.el(?:9|10)uek`)
+
+	// The first build of each flavour that carries the fix, as the bashible check lists them.
+	erofsCVEFixedBuild = map[string]int{
+		"generic": 28,
+		"aws":     1011,
+		"azure":   1010,
+		"gcp":     1014,
+		"oracle":  1011,
+		"oem":     1010,
+	}
+)
+
+// versionAtLeast compares dotted versions number by number, the way `sort -V` orders the ones
+// bashible compares. What follows the leading digits of a part ("28+bpo") is ignored, and a
+// version that runs out of parts is the lower one, as 6.12 is below 6.12.0 for sort -V.
+func versionAtLeast(version, floor string) bool {
+	have, want := versionParts(version), versionParts(floor)
+	for i := range want {
+		if i >= len(have) {
+			return false
+		}
+		if have[i] != want[i] {
+			return have[i] > want[i]
+		}
+	}
+	return true
+}
+
+func versionParts(version string) []int {
+	var parts []int
+	for _, field := range strings.Split(version, ".") {
+		end := 0
+		for end < len(field) && field[end] >= '0' && field[end] <= '9' {
+			end++
+		}
+		if end == 0 {
+			break
+		}
+		number, _ := strconv.Atoi(field[:end])
+		parts = append(parts, number)
+		if end < len(field) {
+			break
+		}
+	}
+	return parts
 }
 
 // parseKernelVersion reads the major and minor out of what `uname -r` printed, which carries a
@@ -217,12 +279,18 @@ func parseSystemdVersion(output string) (int, bool) {
 	return 0, false
 }
 
-// hasErofs accepts the module either built in or loadable.
+// hasErofs accepts the module either built in, loaded or loadable.
+//
+// The second half used to run a bare `modprobe -n erofs` as the SSH user. bashible asks the same
+// question as root, and modprobe lives in /sbin, which is not on an unprivileged PATH on Debian or
+// ALT Linux: the command was not found, and a node shipping erofs as a module
+// (CONFIG_EROFS_FS=m) was refused although containerd v2 installs on it. It now asks the way
+// node-kernel-modules does, so the two checks cannot disagree about the same module.
 func hasErofs(ctx context.Context, nodeInterface libcon.Interface) bool {
 	if strings.Contains(commandOutput(ctx, nodeInterface, "cat", "/proc/filesystems"), "erofs") {
 		return true
 	}
-	return nodeInterface.Command("modprobe", "-n", "erofs").Run(ctx) == nil
+	return moduleAvailable(ctx, nodeInterface, "erofs")
 }
 
 // commandOutput returns a command's stdout, trimmed, or "" if it could not be run. The checks
