@@ -575,13 +575,22 @@ data:
   - fullname: name for the resources (default: "controller")
   - roleRules: rules for namespaced Role (required)
   - clusterRoleRules: rules for ClusterRole (required)
+  - controllerMetricsProxyPort: pass the same value given to
+    helm_lib_module_controller_manifests. It is not used as a port here: it is how
+    this helper learns that the pod carries a kube-rbac-proxy in front of the
+    metrics, and therefore needs the extra ClusterRoleBinding to d8:rbac-proxy that
+    lets the sidecar create TokenReviews and SubjectAccessReviews. Omitting it when
+    the sidecar is rendered costs nothing at deploy time and everything at scrape
+    time: the proxy fails closed with 401, the module looks healthy, and the only
+    symptom is up == 0 and a permanent TargetDown.
 */ -}}
 {{- define "helm_lib_module_controller_rbac" -}}
   {{- $context := index . 0 -}}
   {{- $config := index . 1 -}}
   {{- $fullname := $config.fullname | default "controller" -}}
   {{- $roleRules := $config.roleRules | required "$config.roleRules is required" -}}
-  {{- $clusterRoleRules := $config.clusterRoleRules | required "$config.clusterRoleRules is required" }}
+  {{- $clusterRoleRules := $config.clusterRoleRules | required "$config.clusterRoleRules is required" -}}
+  {{- $controllerMetricsProxyPort := $config.controllerMetricsProxyPort }}
 ---
 apiVersion: v1
 kind: ServiceAccount
@@ -635,6 +644,31 @@ roleRef:
   kind: ClusterRole
   name: d8:{{ $context.Chart.Name }}:{{ $fullname }}
   apiGroup: rbac.authorization.k8s.io
+{{- if $controllerMetricsProxyPort }}
+{{- /* The kube-rbac-proxy helm_lib_module_controller_manifests puts in front of the
+       metrics port answers every scrape by asking the API server who the caller is
+       (TokenReview) and whether they hold get on the prometheus-metrics subresource
+       (SubjectAccessReview). Both verbs live in d8:rbac-proxy, the ClusterRole
+       Deckhouse ships for exactly this. The binding is rendered here rather than
+       left to the module because the sidecar it serves is rendered by this helper's
+       twin: a module that sets controllerMetricsProxyPort in one config and forgets
+       the binding in the other gets a proxy that rejects Prometheus and no other
+       sign of it. */}}
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: d8:{{ $context.Chart.Name }}:{{ $fullname }}:rbac-proxy
+  {{- include "helm_lib_module_labels" (list $context (dict "app" $fullname)) | nindent 2 }}
+subjects:
+  - kind: ServiceAccount
+    name: {{ $fullname }}
+    namespace: d8-{{ $context.Chart.Name }}
+roleRef:
+  kind: ClusterRole
+  name: d8:rbac-proxy
+  apiGroup: rbac.authorization.k8s.io
+{{- end }}
 {{- end }}
 
 

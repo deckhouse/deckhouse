@@ -1879,6 +1879,11 @@ list:
 ### helm_lib_resources_management_cpu_units_to_millicores
 
  helper for converting cpu units to millicores 
+ Accepts any Kubernetes CPU quantity: an optional sign, a decimal mantissa, and any of the 
+ n, u, m, k, M, G, T, P, E and Ki...Ei suffixes or a decimal exponent. A fractional result is 
+ rounded up. An unparsable value yields 0 and never aborts the rendering. 
+ It converts, it does not validate: a negative quantity comes back as a negative number, and a 
+ result that does not fit an int64 comes back as 0. Rejecting either is the caller's business. 
 
 #### Usage
 
@@ -1889,6 +1894,11 @@ list:
 ### helm_lib_resources_management_memory_units_to_bytes
 
  helper for converting memory units to bytes 
+ Accepts any Kubernetes memory quantity: an optional sign, a decimal mantissa, and any of the 
+ n, u, m, k, M, G, T, P, E and Ki...Ei suffixes or a decimal exponent. A fractional result is 
+ rounded up. A value carrying a known suffix but an unparsable mantissa yields 0, as it did 
+ before, and so does a result that does not fit an int64. It converts, it does not validate. 
+ The `fail` is reached only by a value that carries neither a known suffix nor a number. 
 
 #### Usage
 
