@@ -21,6 +21,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"time"
 
 	dvpapi "dvp-common/api"
 
@@ -37,6 +38,9 @@ import (
 
 const (
 	ParameterDVPStorageClass = "dvpStorageClass"
+
+	// unpublishDetachWaitTimeout covers a regular detach within one call; a longer one is retried by the external-attacher.
+	unpublishDetachWaitTimeout = 15 * time.Second
 )
 
 type ControllerService struct {
@@ -354,7 +358,8 @@ func (c *ControllerService) ControllerUnpublishVolume(
 	diskName := req.VolumeId
 	vmHostname := req.NodeId
 
-	if _, err := c.dvpCloudAPI.ComputeService.GetVMByHostname(ctx, vmHostname); err != nil {
+	vm, err := c.dvpCloudAPI.ComputeService.GetVMByHostname(ctx, vmHostname)
+	if err != nil {
 		if errors.Is(err, dvpapi.ErrNotFound) || errors.Is(err, cloudprovider.InstanceNotFound) {
 			klog.Infof(
 				"VM %v not found in parent DVP cluster, will try to cleanup disk %v attachment anyway",
@@ -369,35 +374,7 @@ func (c *ControllerService) ControllerUnpublishVolume(
 		}
 	}
 
-	exists, attached, err := c.getDiskAttachState(ctx, diskName, vmHostname)
-	if err != nil {
-		return nil, err
-	}
-
-	if !exists {
-		klog.Infof(
-			"Disk attachment %v for VM %v detached, OK",
-			diskName, vmHostname,
-		)
-		return &csi.ControllerUnpublishVolumeResponse{}, nil
-	}
-
-	if !attached {
-		klog.Errorf(
-			"vmBDA exists for disk=%s vm=%s but is not Attached; still trying to unpublish(detach)",
-			diskName, vmHostname,
-		)
-	}
-
 	if err := c.dvpCloudAPI.ComputeService.DetachDiskFromVM(ctx, diskName, vmHostname); err != nil {
-		if errors.Is(err, dvpapi.ErrNotFound) {
-			klog.Infof(
-				"disk attachment %v for VM %v already detached (not found), OK",
-				diskName, vmHostname,
-			)
-			return &csi.ControllerUnpublishVolumeResponse{}, nil
-		}
-
 		return nil, status.Errorf(
 			codes.Internal,
 			"error from parent DVP cluster while removing disk %v from VM %v: %v",
@@ -405,7 +382,31 @@ func (c *ControllerService) ControllerUnpublishVolume(
 		)
 	}
 
-	klog.Infof("detached disk=%s from vm=%s, vmBDA deleted", diskName, vmHostname)
+	if vm == nil {
+		klog.Infof("VM %v is gone, disk %v is detached, OK", vmHostname, diskName)
+		return &csi.ControllerUnpublishVolumeResponse{}, nil
+	}
+
+	// The attachment disappears before the VM releases the volume, and the volume must not be
+	// published to another node while this VM still holds it.
+	waitCtx, cancel := context.WithTimeout(ctx, unpublishDetachWaitTimeout)
+	defer cancel()
+	if err := c.dvpCloudAPI.ComputeService.WaitDiskDetaching(waitCtx, diskName, vmHostname, vm.Name); err != nil {
+		if errors.Is(err, context.DeadlineExceeded) || errors.Is(err, context.Canceled) {
+			return nil, status.Errorf(
+				codes.Unavailable,
+				"disk %v is still being detached from VM %v in parent DVP cluster, will retry",
+				diskName, vmHostname,
+			)
+		}
+		return nil, status.Errorf(
+			codes.Internal,
+			"error from parent DVP cluster while waiting for disk %v to be detached from VM %v: %v",
+			diskName, vmHostname, err,
+		)
+	}
+
+	klog.Infof("detached disk=%s from vm=%s", diskName, vmHostname)
 	return &csi.ControllerUnpublishVolumeResponse{}, nil
 }
 

@@ -45,6 +45,13 @@ type NodeService struct {
 	volumeLocks *volumeLocks
 }
 
+const (
+	// vmBlockDeviceLimit is the DVP limit on block devices per VM (VMBlockDeviceAttachedLimit in virtualization).
+	vmBlockDeviceLimit = 16
+	// fallbackMaxVolumesPerNode leaves room for the system disk when the node VM cannot be read.
+	fallbackMaxVolumesPerNode = vmBlockDeviceLimit - 1
+)
+
 var NodeCaps = []csi.NodeServiceCapability_RPC_Type{
 	csi.NodeServiceCapability_RPC_STAGE_UNSTAGE_VOLUME,
 	csi.NodeServiceCapability_RPC_GET_VOLUME_STATS,
@@ -382,8 +389,24 @@ func (n *NodeService) NodeExpandVolume(_ context.Context, req *csi.NodeExpandVol
 	return &csi.NodeExpandVolumeResponse{}, nil
 }
 
-func (n *NodeService) NodeGetInfo(context.Context, *csi.NodeGetInfoRequest) (*csi.NodeGetInfoResponse, error) {
-	return &csi.NodeGetInfoResponse{NodeId: n.nodeName}, nil
+func (n *NodeService) NodeGetInfo(ctx context.Context, _ *csi.NodeGetInfoRequest) (*csi.NodeGetInfoResponse, error) {
+	maxVolumes := int64(fallbackMaxVolumesPerNode)
+	vm, err := n.dvpCloudAPI.ComputeService.GetVMByHostname(ctx, n.nodeName)
+	if err != nil {
+		// Failing here would keep the plugin unregistered on the node, so a limit that may be off by a few disks is better.
+		klog.Warningf("Failed to get VM %v from parent DVP cluster, reporting %d volumes per node: %v", n.nodeName, maxVolumes, err)
+	} else {
+		maxVolumes = maxVolumesPerNode(len(vm.Spec.BlockDeviceRefs))
+		klog.Infof("VM %v has %d static block devices, reporting %d volumes per node", n.nodeName, len(vm.Spec.BlockDeviceRefs), maxVolumes)
+	}
+
+	return &csi.NodeGetInfoResponse{NodeId: n.nodeName, MaxVolumesPerNode: maxVolumes}, nil
+}
+
+// maxVolumesPerNode returns how many volumes can be hotplugged to a VM with the given number of static block devices.
+func maxVolumesPerNode(staticDisks int) int64 {
+	// Zero means no limit in CSI, so a VM without free slots still reports one.
+	return int64(max(vmBlockDeviceLimit-staticDisks, 1))
 }
 
 func (n *NodeService) NodeGetCapabilities(context.Context, *csi.NodeGetCapabilitiesRequest) (*csi.NodeGetCapabilitiesResponse, error) {
