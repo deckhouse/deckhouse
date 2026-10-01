@@ -296,6 +296,16 @@ function current_uptime() {
   cat /proc/uptime | cut -d " " -f1
 }
 
+function uptime_has_increased() {
+  local stored_uptime="${1%%.*}"
+  local actual_uptime="${2%%.*}"
+
+  [[ "$stored_uptime" =~ ^[0-9]+$ ]] || return 1
+  [[ "$actual_uptime" =~ ^[0-9]+$ ]] || return 1
+
+  (( 10#$stored_uptime < 10#$actual_uptime ))
+}
+
 # curl request to get list of pods with labelSelector
 # $1 namespace
 # $2 labelSelector
@@ -475,7 +485,7 @@ function main() {
       bb-label-node-bashible-first-run-finished
     fi
   fi
-  if [[ -f $CONFIGURATION_CHECKSUM_FILE ]] && [[ "$(<$CONFIGURATION_CHECKSUM_FILE)" == "$CONFIGURATION_CHECKSUM" ]] && [[ "$REBOOT_ANNOTATION" == "null" ]] && [[ -f $UPTIME_FILE ]] && [[ "$(<$UPTIME_FILE)" < "$(current_uptime)" ]] 2>/dev/null; then
+  if [[ -f $CONFIGURATION_CHECKSUM_FILE ]] && [[ "$(<$CONFIGURATION_CHECKSUM_FILE)" == "$CONFIGURATION_CHECKSUM" ]] && [[ "$REBOOT_ANNOTATION" == "null" ]] && [[ -f $UPTIME_FILE ]] && uptime_has_increased "$(<$UPTIME_FILE)" "$(current_uptime)"; then
     annotate_node node.deckhouse.io/configuration-checksum=${CONFIGURATION_CHECKSUM}
     current_uptime > $UPTIME_FILE
 
