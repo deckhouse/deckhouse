@@ -26,7 +26,7 @@ import (
 	"net"
 	"net/http"
 
-	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/runtime/api"
+	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/api"
 	"github.com/deckhouse/deckhouse/pkg/log"
 )
 

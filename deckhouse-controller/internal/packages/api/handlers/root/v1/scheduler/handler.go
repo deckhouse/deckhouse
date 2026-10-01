@@ -19,7 +19,7 @@ import (
 
 	"github.com/go-chi/chi/v5"
 
-	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/runtime/api"
+	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/api"
 )
 
 // Provider provides scheduler state to the endpoints.

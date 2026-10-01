@@ -296,7 +296,6 @@ func (r *Runtime) registerModule(ctx context.Context, conf *modules.Config) (*mo
 	conf.KubeEventsManager = r.kubeEventsManager
 	conf.GlobalValuesGetter = r.global.GetValues
 	conf.MetricStorage = r.metricStorage
-	conf.HookMetricStorage = r.hookMetricStorage
 
 	module, err := modules.NewModuleByConfig(conf.Definition.Name, conf, r.logger)
 	if err != nil {
@@ -434,6 +433,29 @@ func (r *Runtime) GetEnabledModuleNames() []string {
 	}
 
 	return names
+}
+
+// IsConverged reports whether global and every module have settled at least once; applications do not count.
+func (r *Runtime) IsConverged() bool {
+	if r.converged.Load() {
+		return true
+	}
+
+	r.mu.RLock()
+	names := make([]string, 0, len(r.modules)+1)
+	names = append(names, r.global.GetName())
+	for name := range r.modules {
+		names = append(names, name)
+	}
+	r.mu.RUnlock()
+
+	if !r.scheduler.Settled(names...) {
+		return false
+	}
+
+	r.converged.Store(true)
+
+	return true
 }
 
 // GetModuleDigest resolves the digest the tag currently points at. It is what a caller

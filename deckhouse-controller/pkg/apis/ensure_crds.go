@@ -45,10 +45,10 @@ var defaultLabels = map[string]string{
 }
 
 // EnsureCRDs installs or update primary CRDs for deckhouse-controller
-func EnsureCRDs(ctx context.Context, client kubeClient, crdsGlob string) error {
-	crds, err := filepath.Glob(crdsGlob)
+func EnsureCRDs(ctx context.Context, client kubeClient) error {
+	crds, err := filepath.Glob(app.PathDeckhouseCRDs)
 	if err != nil {
-		return fmt.Errorf("glob %q: %w", crdsGlob, err)
+		return fmt.Errorf("glob %q: %w", app.PathDeckhouseCRDs, err)
 	}
 
 	inst := crdinstaller.NewCRDsInstaller(

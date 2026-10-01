@@ -11,7 +11,7 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
-package handlers_test
+package root_test
 
 import (
 	"context"
@@ -21,10 +21,11 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"k8s.io/client-go/tools/leaderelection"
 
+	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/api/handlers/root"
+	v1 "github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/api/handlers/root/v1"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/nelm"
-	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/runtime/api/handlers"
-	v1 "github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/runtime/api/handlers/v1"
 	metricsstorage "github.com/deckhouse/deckhouse/pkg/metrics-storage"
 )
 
@@ -64,11 +65,22 @@ func newDeps(provider fakeProvider) v1.Deps {
 	}
 }
 
-// rootDeps backs the metrics routes with empty storages.
-func rootDeps() handlers.Deps {
-	return handlers.Deps{
-		MetricStorage:     metricsstorage.NewMetricStorage(),
-		HookMetricStorage: metricsstorage.NewMetricStorage(),
+// rootProvider backs the metrics route with an empty storage and runs without an elector, as outside HA.
+type rootProvider struct {
+	metrics   metricsstorage.Storage
+	converged bool
+}
+
+func (p rootProvider) GetMetrics() metricsstorage.Storage { return p.metrics }
+
+func (rootProvider) GetElector() *leaderelection.LeaderElector { return nil }
+
+func (p rootProvider) IsConverged() bool { return p.converged }
+
+// rootDeps backs the root routes with an empty storage, no elector and a finished startup converge.
+func rootDeps() root.Deps {
+	return root.Deps{
+		Provider: rootProvider{metrics: metricsstorage.NewMetricStorage(), converged: true},
 	}
 }
 
@@ -97,12 +109,12 @@ func TestPublicRouterHidesPackages(t *testing.T) {
 		{give: "/api/v1/scheduler/dump", want: http.StatusOK},
 		{give: "/api/v1/requirements/dump", want: http.StatusOK},
 		{give: "/healthz", want: http.StatusOK},
+		{give: "/readyz", want: http.StatusOK},
 		{give: "/endpoints", want: http.StatusOK},
 		{give: "/metrics", want: http.StatusOK},
-		{give: "/metrics/hooks", want: http.StatusOK},
 	}
 
-	router := handlers.NewRootHandler(v1.NewPublicHandler(newDeps(fakeProvider{})), rootDeps())
+	router := root.NewHandler(v1.NewPublicHandler(newDeps(fakeProvider{})), rootDeps())
 
 	for _, tt := range tests {
 		t.Run(tt.give, func(t *testing.T) {
@@ -128,7 +140,7 @@ func TestPrivateRouterServesPackages(t *testing.T) {
 		{give: "/api/v1/packages/snapshots/missing", want: http.StatusNotFound, wantType: "text/plain; charset=utf-8", wantPayload: "package not found\n"},
 	}
 
-	router := handlers.NewRootHandler(v1.NewPrivateHandler(newDeps(fakeProvider{})), rootDeps())
+	router := root.NewHandler(v1.NewPrivateHandler(newDeps(fakeProvider{})), rootDeps())
 
 	for _, tt := range tests {
 		t.Run(tt.give, func(t *testing.T) {
@@ -155,7 +167,7 @@ func TestOutputFormat(t *testing.T) {
 		{give: "/api/v1/requirements/dump?output=xml", want: http.StatusBadRequest, wantType: "text/plain; charset=utf-8"},
 	}
 
-	router := handlers.NewRootHandler(v1.NewPublicHandler(newDeps(fakeProvider{})), rootDeps())
+	router := root.NewHandler(v1.NewPublicHandler(newDeps(fakeProvider{})), rootDeps())
 
 	for _, tt := range tests {
 		t.Run(tt.give, func(t *testing.T) {
@@ -182,12 +194,36 @@ func TestRenderErrors(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.give, func(t *testing.T) {
-			router := handlers.NewRootHandler(v1.NewPrivateHandler(newDeps(fakeProvider{renderErr: tt.giveErr})), rootDeps())
+			router := root.NewHandler(v1.NewPrivateHandler(newDeps(fakeProvider{renderErr: tt.giveErr})), rootDeps())
 
 			recorder := get(t, router, "/api/v1/packages/render/known")
 
 			require.Equal(t, tt.want, recorder.Code)
 			assert.Equal(t, tt.wantPayload, recorder.Body.String())
+		})
+	}
+}
+
+// TestReadyzReportsStartupConverge pins the probe to the startup converge outside HA: not ready
+// until the controller has converged once, ready afterwards.
+func TestReadyzReportsStartupConverge(t *testing.T) {
+	tests := []struct {
+		name          string
+		giveConverged bool
+		want          int
+	}{
+		{name: "converge in progress", giveConverged: false, want: http.StatusInternalServerError},
+		{name: "converge done", giveConverged: true, want: http.StatusOK},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			deps := root.Deps{
+				Provider: rootProvider{metrics: metricsstorage.NewMetricStorage(), converged: tt.giveConverged},
+			}
+			router := root.NewHandler(v1.NewPublicHandler(newDeps(fakeProvider{})), deps)
+
+			assert.Equal(t, tt.want, get(t, router, "/readyz").Code)
 		})
 	}
 }

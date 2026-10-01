@@ -159,7 +159,6 @@ func (r *Runtime) loadApp(ctx context.Context, repo registry.Remote, packagePath
 	conf.GrantResolver = r.grantResolver
 	conf.GlobalValuesGetter = r.addonModuleManager.GetGlobal().GetValues
 	conf.MetricStorage = r.metricStorage
-	conf.HookMetricStorage = r.hookMetricStorage
 
 	app, err := apps.NewAppByConfig(filepath.Base(packagePath), conf, r.logger)
 	if err != nil {

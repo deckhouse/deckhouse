@@ -77,7 +77,10 @@ func (r *reaperMutex) Release() {
 }
 
 func start(logger *log.Logger, cfg *app.Config) func(cmd *cobra.Command, args []string) error {
-	return func(_ *cobra.Command, _ []string) error {
+	return func(cmd *cobra.Command, _ []string) error {
+		// flags are parsed by now; a start failure is not a usage error
+		cmd.SilenceUsage = true
+
 		if os.Getenv(envconfig.EnvSkipEntrypoint) != "true" {
 			if err := entrypoint(logger); err != nil {
 				logger.Error("entrypoint run", log.Err(err))
@@ -117,21 +120,8 @@ func start(logger *log.Logger, cfg *app.Config) func(cmd *cobra.Command, args []
 
 		operator.StartAPIServer()
 
-		versionFile := app.VersionFilePath
-
-		version := "unknown"
-		content, err := os.ReadFile(versionFile)
-		if err != nil {
-			logger.Warn("failed to get deckhouse version", log.Err(err))
-		} else {
-			version = strings.TrimSuffix(string(content), "\n")
-		}
-
-		if version == "dev" && !envconfig.EnabledHA() {
-			if err := run(ctx, operator, logger); err != nil {
-				logger.Error("run", log.Err(err))
-				os.Exit(1)
-			}
+		if !enabledHA(logger) {
+			return run(ctx, operator, logger)
 		}
 
 		logger.Info("deckhouse starts in HA mode")
@@ -190,28 +180,9 @@ func entrypoint(logger *log.Logger) error {
 }
 
 func runWithLeaderElection(ctx context.Context, operator *addonoperator.AddonOperator, logger *log.Logger) error {
-	var identity string
-	podName := envconfig.PodName()
-	if len(podName) == 0 {
-		return fmt.Errorf("DECKHOUSE_POD env not set or empty")
-	}
-
-	podIP := envconfig.PodIP()
-	if len(podIP) == 0 {
-		return fmt.Errorf("ADDON_OPERATOR_LISTEN_ADDRESS env not set or empty")
-	}
-
-	podNs := envconfig.PodNamespace()
-	if len(podNs) == 0 {
-		podNs = app.NamespaceDeckhouse
-	}
-
-	clusterDomain := envconfig.ClusterDomain()
-	if len(clusterDomain) == 0 {
-		logger.Warn("KUBERNETES_CLUSTER_DOMAIN env not set or empty - its value won't be used for the leader election")
-		identity = fmt.Sprintf("%s.%s.%s.pod", podName, strings.ReplaceAll(podIP, ".", "-"), podNs)
-	} else {
-		identity = fmt.Sprintf("%s.%s.%s.pod.%s", podName, strings.ReplaceAll(podIP, ".", "-"), podNs, clusterDomain)
+	identity, err := buildIdentity(logger)
+	if err != nil {
+		return fmt.Errorf("build identity: %w", err)
 	}
 
 	elector, err := leaderelection.NewLeaderElector(leaderelection.LeaderElectionConfig{
@@ -219,7 +190,7 @@ func runWithLeaderElection(ctx context.Context, operator *addonoperator.AddonOpe
 		Lock: &resourcelock.LeaseLock{
 			LeaseMeta: metav1.ObjectMeta{
 				Name:      leaseName,
-				Namespace: podNs,
+				Namespace: app.NamespaceDeckhouse,
 			},
 			Client: operator.KubeClient().CoordinationV1(),
 			LockConfig: resourcelock.ResourceLockConfig{
@@ -265,12 +236,55 @@ func runWithLeaderElection(ctx context.Context, operator *addonoperator.AddonOpe
 	return nil
 }
 
+func buildIdentity(logger *log.Logger) (string, error) {
+	var identity string
+	podName := envconfig.PodName()
+	if len(podName) == 0 {
+		return "", fmt.Errorf("DECKHOUSE_POD env not set or empty")
+	}
+
+	podIP := envconfig.PodIP()
+	if len(podIP) == 0 {
+		return "", fmt.Errorf("ADDON_OPERATOR_LISTEN_ADDRESS env not set or empty")
+	}
+
+	podNs := app.NamespaceDeckhouse
+
+	clusterDomain := envconfig.ClusterDomain()
+	if len(clusterDomain) == 0 {
+		logger.Warn("KUBERNETES_CLUSTER_DOMAIN env not set or empty - its value won't be used for the leader election")
+		identity = fmt.Sprintf("%s.%s.%s.pod", podName, strings.ReplaceAll(podIP, ".", "-"), podNs)
+	} else {
+		identity = fmt.Sprintf("%s.%s.%s.pod.%s", podName, strings.ReplaceAll(podIP, ".", "-"), podNs, clusterDomain)
+	}
+
+	return identity, nil
+}
+
+func enabledHA(logger *log.Logger) bool {
+	versionFile := app.VersionFilePath
+
+	version := "unknown"
+	content, err := os.ReadFile(versionFile)
+	if err != nil {
+		logger.Warn("failed to get deckhouse version", log.Err(err))
+	} else {
+		version = strings.TrimSuffix(string(content), "\n")
+	}
+
+	if version == "dev" && !envconfig.EnabledHA() {
+		return false
+	}
+
+	return true
+}
+
 func run(ctx context.Context, operator *addonoperator.AddonOperator, logger *log.Logger) error {
 	exitCh := make(chan struct{})
 	operatorStarted := false
 	go signalHandler(ctx, exitCh, operator, &operatorStarted, logger)
 
-	if err := d8apis.EnsureCRDs(ctx, operator.KubeClient(), app.PathDeckhouseCRDs); err != nil {
+	if err := d8apis.EnsureCRDs(ctx, operator.KubeClient()); err != nil {
 		return fmt.Errorf("ensure crds: %w", err)
 	}
 

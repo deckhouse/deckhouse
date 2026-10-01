@@ -43,7 +43,6 @@ import (
 
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/app"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/controller/pkgsync"
-	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/metrics"
 	pkgmodules "github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/modules"
 	pkgruntime "github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/runtime"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/registry"
@@ -95,7 +94,7 @@ type Controller struct {
 }
 
 // Build assembles the manager, the package runtime and the shared containers; it starts nothing.
-func Build(ctx context.Context, logger *log.Logger) (*Controller, error) {
+func Build(ctx context.Context, client *klient.Client, ms metricsstorage.Storage, logger *log.Logger) (*Controller, error) {
 	scheme, err := buildSchema()
 	if err != nil {
 		return nil, fmt.Errorf("build schema: %w", err)
@@ -106,22 +105,6 @@ func Build(ctx context.Context, logger *log.Logger) (*Controller, error) {
 	// logger is *very* verbose even at info level. This is not really needed,
 	// but otherwise we get a warning from the controller-runtime.
 	ctrl.SetLogger(logr.New(ctrllog.NullLogSink{}))
-
-	ms := metricsstorage.NewMetricStorage(
-		metricsstorage.WithLogger(logger.Named("metric-storage")),
-	)
-
-	if err = metrics.RegisterDeckhouseControllerMetrics(ms); err != nil {
-		return nil, fmt.Errorf("register deckhouse controller metrics: %w", err)
-	}
-
-	client := klient.New(klient.WithLogger(logger.Named("controller-client")))
-	client.WithContextName(app.KubeContext())
-	client.WithConfigPath(app.KubeConfig())
-
-	if err := client.Init(); err != nil {
-		return nil, fmt.Errorf("init client: %w", err)
-	}
 
 	rest := client.RestConfig()
 
@@ -158,14 +141,14 @@ func Build(ctx context.Context, logger *log.Logger) (*Controller, error) {
 		ReleaseChannel: app.DefaultReleaseChannel,
 	})
 
-	synced := new(sync.WaitGroup)
-	dc := dependency.NewDependencyContainer()
-	settingsContainer := helpers.NewDeckhouseSettingsContainer(nil, ms)
-
-	manager, err := pkgruntime.Build(runtime.GetClient(), nil, dc, ms, logger)
+	manager, err := pkgruntime.Build(runtime.GetClient(), nil, ms, logger)
 	if err != nil {
 		return nil, fmt.Errorf("create runtime: %w", err)
 	}
+
+	settingsContainer := helpers.NewDeckhouseSettingsContainer(nil, ms)
+	synced := new(sync.WaitGroup)
+	dc := dependency.NewDependencyContainer()
 
 	// TODO: get rid of stack extenders, its no longer needed, but deckhouse release controller still depends on it
 	exts := extenders.NewExtendersStack(app.Version, nil, nil, logger.Named("extenders"))
@@ -385,6 +368,11 @@ func (c *Controller) Start(ctx context.Context) error {
 // Stop stops the controller and package runtime.
 func (c *Controller) Stop() {
 	c.manager.Stop()
+}
+
+// GetRuntime returns the package runtime.
+func (c *Controller) GetRuntime() *pkgruntime.Runtime {
+	return c.manager
 }
 
 // runSyncDeckhouseSettingsLoop updates the embedded policy and Deckhouse settings until ctx is canceled.

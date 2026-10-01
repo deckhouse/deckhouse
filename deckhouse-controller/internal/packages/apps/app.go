@@ -28,7 +28,6 @@ import (
 	"github.com/Masterminds/semver/v3"
 	"github.com/flant/addon-operator/pkg"
 	"github.com/flant/addon-operator/pkg/hook/types"
-	"github.com/flant/addon-operator/pkg/metrics"
 	"github.com/flant/addon-operator/pkg/module_manager/models/hooks/kind"
 	bctx "github.com/flant/shell-operator/pkg/hook/binding_context"
 	hookcontroller "github.com/flant/shell-operator/pkg/hook/controller"
@@ -43,6 +42,7 @@ import (
 
 	"github.com/deckhouse/module-sdk/pkg/settingscheck"
 
+	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/metrics"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/grants"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/hooks"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/nelm"
@@ -115,8 +115,7 @@ type Application struct {
 	scheduleManager   schedulemanager.ScheduleManager
 	kubeEventsManager kubeeventsmanager.KubeEventsManager
 
-	metricStorage     metricsstorage.Storage
-	hookMetricStorage metricsstorage.Storage
+	metricStorage metricsstorage.Storage
 
 	// globalValuesGetter returns the platform global values exposed to helm
 	// templates under .Platform.
@@ -146,8 +145,7 @@ type Config struct {
 	ScheduleManager   schedulemanager.ScheduleManager
 	KubeEventsManager kubeeventsmanager.KubeEventsManager
 
-	MetricStorage     metricsstorage.Storage
-	HookMetricStorage metricsstorage.Storage
+	MetricStorage metricsstorage.Storage
 
 	// GrantResolver resolves cluster resource grants for x-deckhouse-grantable-resource
 	// settings fields. When nil, grant defaulting/validation is disabled.
@@ -189,7 +187,6 @@ func NewAppByConfig(name string, cfg *Config, logger *log.Logger) (*Application,
 	a.scheduleManager = cfg.ScheduleManager
 	a.kubeEventsManager = cfg.KubeEventsManager
 	a.metricStorage = cfg.MetricStorage
-	a.hookMetricStorage = cfg.HookMetricStorage
 	a.grantResolver = cfg.GrantResolver
 	if a.grantResolver == nil {
 		a.grantResolver = grants.NoopResolver{}
@@ -768,7 +765,7 @@ func (a *Application) runHook(ctx context.Context, h hooks.Hook, bctx []bctx.Bin
 	}
 
 	if hookResult != nil && len(hookResult.Metrics) > 0 {
-		metricsErr := a.hookMetricStorage.ApplyBatchOperations(hookResult.Metrics, metricLabels)
+		metricsErr := a.metricStorage.ApplyBatchOperations(hookResult.Metrics, metricLabels)
 		if metricsErr != nil {
 			return metricsErr
 		}

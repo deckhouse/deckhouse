@@ -19,10 +19,10 @@ import (
 
 	"github.com/go-chi/chi/v5"
 
-	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/runtime/api/handlers/v1/packages"
-	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/runtime/api/handlers/v1/queues"
-	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/runtime/api/handlers/v1/requirements"
-	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/runtime/api/handlers/v1/scheduler"
+	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/api/handlers/root/v1/packages"
+	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/api/handlers/root/v1/queues"
+	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/api/handlers/root/v1/requirements"
+	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/api/handlers/root/v1/scheduler"
 )
 
 // Deps carries the state providers the endpoints read from.

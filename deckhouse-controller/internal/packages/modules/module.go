@@ -26,7 +26,6 @@ import (
 	"github.com/Masterminds/semver/v3"
 	"github.com/flant/addon-operator/pkg"
 	addontypes "github.com/flant/addon-operator/pkg/hook/types"
-	"github.com/flant/addon-operator/pkg/metrics"
 	"github.com/flant/addon-operator/pkg/module_manager/models/hooks/kind"
 	bctx "github.com/flant/shell-operator/pkg/hook/binding_context"
 	hookcontroller "github.com/flant/shell-operator/pkg/hook/controller"
@@ -40,6 +39,7 @@ import (
 
 	"github.com/deckhouse/module-sdk/pkg/settingscheck"
 
+	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/metrics"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/hooks"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/nelm"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/schedule"
@@ -93,8 +93,7 @@ type Module struct {
 	scheduleManager   schedulemanager.ScheduleManager
 	kubeEventsManager kubeeventsmanager.KubeEventsManager
 
-	metricStorage     metricsstorage.Storage
-	hookMetricStorage metricsstorage.Storage
+	metricStorage metricsstorage.Storage
 
 	globalValuesGetter GlobalValuesGetter
 
@@ -124,8 +123,7 @@ type Config struct {
 	ScheduleManager   schedulemanager.ScheduleManager
 	KubeEventsManager kubeeventsmanager.KubeEventsManager
 
-	MetricStorage     metricsstorage.Storage
-	HookMetricStorage metricsstorage.Storage
+	MetricStorage metricsstorage.Storage
 
 	GlobalValuesGetter GlobalValuesGetter
 }
@@ -151,7 +149,6 @@ func NewModuleByConfig(name string, cfg *Config, logger *log.Logger) (*Module, e
 	m.converter = cfg.Conversions
 	m.patcher = cfg.Patcher
 	m.metricStorage = cfg.MetricStorage
-	m.hookMetricStorage = cfg.HookMetricStorage
 	m.scheduleManager = cfg.ScheduleManager
 	m.kubeEventsManager = cfg.KubeEventsManager
 	m.globalValuesGetter = cfg.GlobalValuesGetter
@@ -591,7 +588,7 @@ func (m *Module) runHook(ctx context.Context, h hooks.Hook, bctx []bctx.BindingC
 	}
 
 	if hookResult != nil && len(hookResult.Metrics) > 0 {
-		metricsErr := m.hookMetricStorage.ApplyBatchOperations(hookResult.Metrics, metricLabels)
+		metricsErr := m.metricStorage.ApplyBatchOperations(hookResult.Metrics, metricLabels)
 		if metricsErr != nil {
 			return metricsErr
 		}

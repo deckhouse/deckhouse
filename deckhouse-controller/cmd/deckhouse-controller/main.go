@@ -159,6 +159,10 @@ func main() {
 		Short: "Start deckhouse.",
 		RunE:  start(logger, cfg),
 	}
+	if app.ModuleV2Enabled() {
+		startCmd.RunE = startV2(logger)
+	}
+
 	app.BindFlags(cfg, rootCmd, startCmd)
 	rootCmd.AddCommand(startCmd)
 
@@ -223,6 +227,10 @@ func main() {
 
 	// Make "start" the default action when no subcommand is given.
 	rootCmd.RunE = start(logger, cfg)
+
+	if app.ModuleV2Enabled() {
+		rootCmd.RunE = startV2(logger)
+	}
 
 	if err := rootCmd.Execute(); err != nil {
 		os.Exit(1)

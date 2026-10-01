@@ -324,7 +324,7 @@ func NewDeckhouseController(
 	dc := dependency.NewDependencyContainer()
 	settingsContainer := helpers.NewDeckhouseSettingsContainer(nil, operator.MetricStorage)
 
-	pkgRuntime, err := packageruntime.Build(runtimeManager.GetClient(), operator.ModuleManager, dc, operator.MetricStorage, logger)
+	pkgRuntime, err := packageruntime.Build(runtimeManager.GetClient(), operator.ModuleManager, operator.MetricStorage, logger)
 	if err != nil {
 		return nil, fmt.Errorf("create package operator: %w", err)
 	}

@@ -1317,3 +1317,70 @@ func (s *SchedulerSuite) TestScriptRuleDisableSurfacesReason() {
 	s.Equal("DisabledByScript", disable.Reason)
 	s.Contains(disable.Message, "not today")
 }
+
+// TestSettledFalseWhilePaused confirms a paused scheduler is never settled, even with no nodes.
+func (s *SchedulerSuite) TestSettledFalseWhilePaused() {
+	s.Require().NoError(s.sched.AddNode(&testPackage{
+		name:        globalName,
+		version:     mustVersion("1.0.0"),
+		constraints: schedule.Constraints{Order: 0},
+	}))
+
+	s.False(s.sched.Settled(), "a paused scheduler must not report settled")
+	s.False(s.sched.Settled(globalName))
+}
+
+// TestSettledFalseWhileScheduled confirms an enabled node that has not completed its run holds settlement back.
+func (s *SchedulerSuite) TestSettledFalseWhileScheduled() {
+	s.activateGlobal()
+
+	s.Require().NoError(s.sched.AddNode(&testPackage{
+		name:        "alpha",
+		version:     mustVersion("1.0.0"),
+		constraints: schedule.Constraints{Order: schedule.FunctionalOrder},
+	}))
+	s.Require().Contains(eventNames(s.collectEvents(), schedule.EventSchedule), "alpha")
+
+	s.False(s.sched.Settled(globalName, "alpha"), "a scheduled node must hold settlement back")
+	s.True(s.sched.Settled(globalName), "an unrelated active node must not be held back by alpha")
+}
+
+// TestSettledAfterComplete confirms every named node reaching active settles the scheduler.
+func (s *SchedulerSuite) TestSettledAfterComplete() {
+	s.activateGlobal()
+
+	s.Require().NoError(s.sched.AddNode(&testPackage{
+		name:        "alpha",
+		version:     mustVersion("1.0.0"),
+		constraints: schedule.Constraints{Order: schedule.FunctionalOrder},
+	}))
+	s.drainEvents()
+
+	s.sched.Complete("alpha")
+
+	s.True(s.sched.Settled(globalName, "alpha"))
+}
+
+// TestSettledDisabledNodeCounts confirms a not-enabled node, parked active, does not hold settlement back.
+func (s *SchedulerSuite) TestSettledDisabledNodeCounts() {
+	s.activateGlobal()
+
+	s.Require().NoError(s.sched.AddNode(&testPackage{
+		name:    "alpha",
+		version: mustVersion("1.0.0"),
+		constraints: schedule.Constraints{
+			Order: schedule.FunctionalOrder,
+			Floor: rule.Static(rule.Disable),
+		},
+	}))
+	s.drainEvents()
+
+	s.True(s.sched.Settled(globalName, "alpha"), "a disabled node has nothing to converge")
+}
+
+// TestSettledIgnoresUnknownName confirms a name absent from the graph does not hold settlement back.
+func (s *SchedulerSuite) TestSettledIgnoresUnknownName() {
+	s.activateGlobal()
+
+	s.True(s.sched.Settled(globalName, "missing"))
+}

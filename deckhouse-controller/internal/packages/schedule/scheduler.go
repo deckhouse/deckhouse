@@ -488,3 +488,22 @@ func (s *Scheduler) IsEnabled(name string) bool {
 
 	return ok && n.enabled()
 }
+
+// Settled reports whether the scheduler is running and every named node is active; not-enabled
+// nodes are parked active, so they count, and names absent from the graph are skipped.
+func (s *Scheduler) Settled(names ...string) bool {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+
+	if s.pause.Load() {
+		return false
+	}
+
+	for _, name := range names {
+		if n, ok := s.nodes[name]; ok && n.state != nodeStateActive {
+			return false
+		}
+	}
+
+	return true
+}

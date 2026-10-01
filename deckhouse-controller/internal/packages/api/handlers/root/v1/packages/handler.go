@@ -24,8 +24,8 @@ import (
 
 	"github.com/go-chi/chi/v5"
 
+	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/api"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/nelm"
-	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/runtime/api"
 )
 
 // Provider provides package state to the endpoints.

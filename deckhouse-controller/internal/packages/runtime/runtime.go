@@ -22,17 +22,16 @@ import (
 	"path/filepath"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/Masterminds/semver/v3"
-	"github.com/flant/addon-operator/pkg/metrics"
 	addonmodules "github.com/flant/addon-operator/pkg/module_manager/models/modules"
 	klient "github.com/flant/kube-client/client"
 	objectpatch "github.com/flant/shell-operator/pkg/kube/object_patch"
 	kubeeventsmanager "github.com/flant/shell-operator/pkg/kube_events_manager"
 	schedulemanager "github.com/flant/shell-operator/pkg/schedule_manager"
 	"go.opentelemetry.io/otel"
-	"golang.org/x/sync/errgroup"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/client-go/util/retry"
@@ -55,8 +54,6 @@ import (
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/modules/global"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/nelm"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/orphans"
-	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/runtime/api/socket"
-	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/runtime/api/tcp"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/runtime/hookevent"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/runtime/lifecycle"
 	taskconfigure "github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/runtime/tasks/configure"
@@ -90,8 +87,6 @@ const (
 
 	// nelmMonitorRequestTimeout bounds discovery and metadata requests made by the NELM monitor client.
 	nelmMonitorRequestTimeout = 30 * time.Second
-	// apiShutdownTimeout bounds how long shutdown waits for in-flight API requests.
-	apiShutdownTimeout = 5 * time.Second
 )
 
 // Reschedule reasons the runtime hands to the scheduler, which logs them with the pass they
@@ -123,19 +118,15 @@ type Runtime struct {
 	moduleDeployer   deployerI          // Deploys and undeploys module package images
 	registry         *registry.Service  // Registry service for managing package digests
 
-	status       *status.Service     // Tracks per-package condition chain
-	scheduler    *schedule.Scheduler // Evaluates enable/disable based on version constraints
-	socketServer *socket.Server      // Full API surface over the Unix socket
-	tcpServer    *tcp.Server         // Public subset over the pod address; started only with Module v2
-	apiServers   errgroup.Group      // Serve loops of both API servers
+	status    *status.Service     // Tracks per-package condition chain
+	scheduler *schedule.Scheduler // Evaluates enable/disable based on version constraints
 
 	crdService        *crd.Service                        // Installs CRDs from package paths
 	objectPatcher     *objectpatch.ObjectPatcher          // Applies resource patches from hooks
 	scheduleManager   schedulemanager.ScheduleManager     // Cron-based schedule triggers
 	kubeEventsManager kubeeventsmanager.KubeEventsManager // Watches Kubernetes resources for hooks
 
-	edition *edition.Edition
-	global  *global.Module
+	global *global.Module
 
 	grantResolver grants.Resolver // Resolves cluster resource grants for x-deckhouse-grantable-resource fields
 
@@ -146,8 +137,10 @@ type Runtime struct {
 
 	addonModuleManager moduleManagerI
 
-	metricStorage     metricsstorage.Storage // Publishes the application maintenance gauge
-	hookMetricStorage metricsstorage.Storage // Publishes the hooks metrics
+	converged atomic.Bool // Latched once global and every module first settle; never reset
+	started   atomic.Bool // Set once Run has started every component; Stop is a no-op before that
+
+	metricStorage metricsstorage.Storage // Publishes the maintenance gauge and hook metrics
 
 	logger *log.Logger
 }
@@ -167,7 +160,7 @@ type moduleManagerI interface {
 
 // Build creates and initializes a Runtime with all subsystems wired together.
 // Blocks until the NELM cache completes its initial sync.
-func Build(cli kclient.Client, moduleManager moduleManagerI, dc dependency.Container, metricStorage metricsstorage.Storage, logger *log.Logger) (*Runtime, error) {
+func Build(cli kclient.Client, moduleManager moduleManagerI, metricStorage metricsstorage.Storage, logger *log.Logger) (*Runtime, error) {
 	r := new(Runtime)
 
 	r.apps = make(map[string]*apps.Application)
@@ -178,27 +171,12 @@ func Build(cli kclient.Client, moduleManager moduleManagerI, dc dependency.Conta
 	r.addonModuleManager = moduleManager
 	r.grantResolver = grants.NewResolver(cli)
 	r.metricStorage = metricStorage
-	r.hookMetricStorage = metricsstorage.NewMetricStorage(
-		metricsstorage.WithNewRegistry(),
-		metricsstorage.WithLogger(logger.Named("hook-metric-storage")),
-	)
 	r.logger = logger.Named("package-runtime")
-	r.scheduleManager = cron.NewManager(r.logger)
+	r.scheduleManager = cron.NewManager(logger)
 	r.queueService = queue.NewService(logger)
 	r.status = status.NewService()
 
-	// Register addon-operator specific metrics
-	if err := metrics.RegisterHookMetrics(r.hookMetricStorage); err != nil {
-		return nil, fmt.Errorf("register hook metrics: %w", err)
-	}
-
-	edit, err := edition.Parse()
-	if err != nil {
-		return nil, fmt.Errorf("new edition: %w", err)
-	}
-
-	r.edition = edit
-
+	dc := dependency.NewDependencyContainer()
 	r.registry = registry.NewService(dc, logger)
 	downloadedDir := app.DownloadedModulesDir()
 
@@ -237,8 +215,13 @@ func Build(cli kclient.Client, moduleManager moduleManagerI, dc dependency.Conta
 		return nil, fmt.Errorf("load global: %w", err)
 	}
 
+	edit, err := edition.Parse()
+	if err != nil {
+		return nil, fmt.Errorf("new edition: %w", err)
+	}
+
 	// Initialize scheduler with enabling/disabling callbacks
-	r.buildScheduler(cli)
+	r.buildScheduler(cli, edit)
 
 	// Build NELM service with its own client and runtime cache for resource monitoring
 	if err := r.buildNelmService(); err != nil {
@@ -260,8 +243,6 @@ func Build(cli kclient.Client, moduleManager moduleManagerI, dc dependency.Conta
 		return nil, fmt.Errorf("build health service: %w", err)
 	}
 
-	r.buildAPIServers()
-
 	return r, nil
 }
 
@@ -282,6 +263,7 @@ func (r *Runtime) loadGlobal(ctx context.Context) error {
 	conf.Patcher = r.objectPatcher
 	conf.ScheduleManager = r.scheduleManager
 	conf.KubeEventsManager = r.kubeEventsManager
+	conf.MetricStorage = r.metricStorage
 
 	r.global, err = global.NewModuleByConfig(conf, r.logger)
 	if err != nil {
@@ -473,7 +455,7 @@ func (r *Runtime) buildHealthService() error {
 //   - onDisable: Stops hooks and transitions package back to Loaded state
 //
 // The scheduler starts paused and is resumed after initial package loading completes.
-func (r *Runtime) buildScheduler(cli kclient.Client) {
+func (r *Runtime) buildScheduler(cli kclient.Client, edition *edition.Edition) {
 	deckhouseVersionGetter := func() (*semver.Version, error) {
 		value, ok := r.addonModuleManager.GetGlobal().GetValues(false)[deckhouseVersionValue]
 		if !ok {
@@ -556,27 +538,24 @@ func (r *Runtime) buildScheduler(cli kclient.Client) {
 	r.scheduler = schedule.NewScheduler(
 		r.logger,
 		schedule.WithDynamicGetter(r.global.IsEnabled),
-		schedule.WithBundleChecker(r.edition.IsEnabled),
+		schedule.WithBundleChecker(edition.IsEnabled),
 		schedule.WithBootstrapCondition(bootstrapCondition),
 		schedule.WithDependencyGetter(dependencyGetter),
 		schedule.WithDeckhouseVersionGetter(deckhouseVersionGetter),
 		schedule.WithKubeVersionGetter(kubernetesVersionGetter))
 }
 
-// Run binds the API listeners and starts the scheduler event loop in a
-// background goroutine. The loop listens for schedule and disable events from
-// the scheduler and dispatches them to the appropriate handler, driving the
-// enable/disable lifecycle for all packages. It also starts the status resync,
+// Run starts the scheduler event loop in a background goroutine. The loop listens for
+// schedule and disable events from the scheduler and dispatches them to the appropriate
+// handler, driving the enable/disable lifecycle for all packages. It also starts the status resync,
 // the periodic re-enqueue that republishes every package status regardless of
 // whether anything changed.
 func (r *Runtime) Run() error {
-	if err := r.startAPIServers(); err != nil {
-		return fmt.Errorf("start api servers: %w", err)
-	}
-
 	r.hookEventHandler.Start()
 	r.status.StartResync()
 	r.healthService.Start()
+
+	r.started.Store(true)
 
 	go func() {
 		for event := range r.scheduler.Ch() {
@@ -772,6 +751,11 @@ func (r *Runtime) setMaintenanceMetric(name string, state nelm.MaintenanceState)
 // This order prevents new work from entering the system while allowing
 // in-flight operations to complete gracefully where possible.
 func (r *Runtime) Stop() {
+	// nothing to stop: a lost election can call Stop before Run
+	if !r.started.Load() {
+		return
+	}
+
 	r.logger.Info("stop operator")
 
 	// Clean up resource monitors
@@ -794,14 +778,6 @@ func (r *Runtime) Stop() {
 	// Stop the status resync and then reflecting status to CRs (unblocks the
 	// status consumer loop)
 	r.status.Shutdown()
-
-	// Close the API listeners last so state stays introspectable during shutdown
-	ctx, cancel := context.WithTimeout(context.Background(), apiShutdownTimeout)
-	defer cancel()
-
-	if err := r.stopAPIServers(ctx); err != nil {
-		r.logger.Warn("stop api servers failed", log.Err(err))
-	}
 }
 
 // PreservePackage identifies one installed Package instance to preserve during Cleanup.
