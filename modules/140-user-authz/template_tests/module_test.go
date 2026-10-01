@@ -183,6 +183,21 @@ var _ = Describe("Module :: user-authz :: helm template ::", func() {
 			f.HelmRender()
 		})
 
+		// Liveness must not depend on the API server: the authorizer is fail-closed, and a webhook
+		// killed while the API server restarts takes the API server's own probes down with it.
+		It("Should keep the API server out of the webhook liveness probe", func() {
+			Expect(f.RenderError).ShouldNot(HaveOccurred())
+			ds := f.KubernetesResource("DaemonSet", "d8-user-authz", "user-authz-webhook")
+			Expect(ds.Exists()).To(BeTrue())
+
+			webhook := ds.Field(`spec.template.spec.containers.#(name=="webhook")`)
+			Expect(webhook.Get("livenessProbe.exec.command").String()).To(MatchJSON(`["/healthcheck", "healthz"]`))
+			Expect(webhook.Get("livenessProbe.timeoutSeconds").Int()).To(BeEquivalentTo(15))
+			Expect(webhook.Get("readinessProbe.exec.command").String()).To(MatchJSON(`["/healthcheck", "readyz"]`))
+			Expect(webhook.Get("readinessProbe.timeoutSeconds").Int()).To(BeEquivalentTo(15))
+			Expect(webhook.Get("startupProbe").Exists()).To(BeFalse())
+		})
+
 		It("Should create a ClusterRoleBinding for each additionalRole", func() {
 			Expect(f.RenderError).ShouldNot(HaveOccurred())
 
