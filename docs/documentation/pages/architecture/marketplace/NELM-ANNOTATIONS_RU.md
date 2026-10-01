@@ -104,7 +104,7 @@ type: kubernetes.io/tls
 data: ...
 ```
 
-`anyone` сообщает Nelm, что он не единственный владелец ресурса, поэтому Nelm пропускает удаление при uninstall.
+`anyone` сообщает Nelm, что он не единственный владелец ресурса, поэтому Nelm пропускает удаление при uninstall. Если тип секрета перечислен в [`orphanResources`](lifecycle.html#осиротевшие-ресурсы), DP всё равно удаляет секрет вместе с Application. Чтобы сохранить секрет, добавьте аннотацию `helm.sh/resource-policy: keep`.
 
 ### 4. Зависимость от ресурса, созданного оператором
 
@@ -154,7 +154,7 @@ metadata:
 spec: ...
 ```
 
-Без `werf.io/ownership: anyone` при upgrade ресурс рендерится как отсутствующий, и владеющий релиз его удалит. `anyone` предотвращает это.
+Без `werf.io/ownership: anyone` при upgrade ресурс рендерится как отсутствующий, и владеющий релиз его удалит. `anyone` предотвращает это. При uninstall Nelm такую Job тоже не удаляет. Чтобы DP удалял её вместе с Application, перечислите тип `Job` в [`orphanResources`](lifecycle.html#осиротевшие-ресурсы).
 
 ### 7. Медленно стартующий ресурс с большим образом
 
@@ -251,7 +251,7 @@ metadata:
 
 ### `helm.sh/resource-policy`
 
-`keep` — не удалять ресурс при uninstall или удалении из чарта. Ресурс продолжает обновляться при install/upgrade, пока рендерится. Такой ресурс не удаляется и вместе с [осиротевшими ресурсами](lifecycle.html#осиротевшие-ресурсы) приложения. Если задана аннотация `werf.io/resource-policy`, `helm.sh/resource-policy` не учитывается.
+`keep` — не удалять ресурс при uninstall или удалении из чарта. Ресурс продолжает обновляться при install/upgrade, пока рендерится. Если задана аннотация `werf.io/resource-policy`, Nelm не учитывает `helm.sh/resource-policy`. DP не удаляет ресурс с аннотацией `helm.sh/resource-policy: keep` вместе с [осиротевшими ресурсами](lifecycle.html#осиротевшие-ресурсы) приложения, даже если задана аннотация `werf.io/resource-policy`: только эта аннотация защищает ресурс от такого удаления.
 
 ### `werf.io/resource-policy`
 
@@ -262,6 +262,8 @@ metadata:
 - `skip-recreate` — не пересоздавать ресурс, когда иначе потребовалось бы пересоздание;
 - `skip-delete` (псевдоним — `keep`) — не удалять ресурс.
 
+Ресурс с политикой `skip-delete` или `keep` DP удаляет вместе с Application, если его тип перечислен в [`orphanResources`](lifecycle.html#осиротевшие-ресурсы). Чтобы сохранить ресурс, задайте также аннотацию `helm.sh/resource-policy: keep`.
+
 ### `werf.io/ownership`
 
 - `release` (по умолчанию для обычных ресурсов) — ресурс удаляется при uninstall и при отсутствии в чарте. Применяются release metadata-аннотации.
@@ -269,7 +271,7 @@ metadata:
 
 Используйте `anyone` для ресурсов, общих между релизами, или для ресурсов, которые должны переживать свой релиз (init Job с `werf.io/deploy-on: install`).
 
-Хуки, которые остаются после uninstall, DP удаляет вместе с Application, если их тип перечислен в [`orphanResources`](lifecycle.html#осиротевшие-ресурсы). Ресурс с явно заданной аннотацией `werf.io/ownership: anyone` не удаляется.
+Ресурсы, которые остаются после uninstall, то есть хуки и ресурсы с `werf.io/ownership: anyone`, DP удаляет вместе с Application, если их тип перечислен в [`orphanResources`](lifecycle.html#осиротевшие-ресурсы). Чтобы сохранить такой ресурс, задайте `helm.sh/resource-policy: keep`.
 
 ### `werf.io/deploy-on`
 

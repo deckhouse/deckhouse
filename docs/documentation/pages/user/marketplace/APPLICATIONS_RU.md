@@ -205,7 +205,7 @@ d8 k patch applications -n <NAMESPACE> <APPLICATION_NAME> --type=merge -p '{"spe
 d8 k delete applications -n <NAMESPACE> <APPLICATION_NAME>
 ```
 
-При удалении Application DP удаляет объекты Kubernetes приложения, кроме объектов, которые шаблоны пакета защищают аннотациями политики ресурса или владения, например, `helm.sh/resource-policy: keep`. Объекты, которые приложение создаёт во время работы, удаляются, если пакет объявляет их [осиротевшими ресурсами](../../architecture/marketplace/lifecycle.html#осиротевшие-ресурсы). Application остаётся в кластере, пока DP не завершит удаление.
+При удалении Application DP удаляет объекты Kubernetes приложения, кроме объектов, которые шаблоны пакета защищают аннотацией `helm.sh/resource-policy: keep`. Объекты, которые приложение создаёт во время работы, и объекты, которые остаются после удаления Helm-релиза, например, Helm-хуки, удаляются, если пакет объявляет их [осиротевшими ресурсами](../../architecture/marketplace/lifecycle.html#осиротевшие-ресурсы). Application остаётся в кластере, пока DP не завершит удаление.
 
 ## FAQ
 

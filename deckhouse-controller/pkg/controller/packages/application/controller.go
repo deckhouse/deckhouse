@@ -64,9 +64,11 @@ type reconciler struct {
 	runtime packageRuntime
 	status  *status.Service
 
-	moduleManager moduleManager
-	dc            dependency.Container
-	logger        *log.Logger
+	moduleManager        moduleManager
+	dc                   dependency.Container
+	deckhouseSettings    deckhouseSettings
+	applicationsSettings applicationsSettings
+	logger               *log.Logger
 }
 
 type moduleManager interface {
@@ -87,15 +89,19 @@ func RegisterController(
 	packageRuntime packageRuntime,
 	moduleManager moduleManager,
 	dc dependency.Container,
+	deckhouseSettings deckhouseSettings,
+	applicationsSettings applicationsSettings,
 	logger *log.Logger,
 ) error {
 	r := &reconciler{
-		init:          new(sync.WaitGroup),
-		client:        runtimeManager.GetClient(),
-		runtime:       packageRuntime,
-		moduleManager: moduleManager,
-		dc:            dc,
-		logger:        logger,
+		init:                 new(sync.WaitGroup),
+		client:               runtimeManager.GetClient(),
+		runtime:              packageRuntime,
+		moduleManager:        moduleManager,
+		dc:                   dc,
+		deckhouseSettings:    deckhouseSettings,
+		applicationsSettings: applicationsSettings,
+		logger:               logger,
 	}
 
 	r.init.Add(1)
@@ -111,6 +117,9 @@ func RegisterController(
 	return ctrl.NewControllerManagedBy(runtimeManager).
 		Named(controllerName).
 		For(&v1alpha1.Application{}).
+		// The update settings of an application fall back to global.applications.update and
+		// then to the deckhouse ones, so a change of either is merged into every application again.
+		WatchesRawSource(r.requeueOnSettingsChange(applicationsSettings.SubscribeUpdate(), deckhouseSettings.SubscribeUpdate())).
 		WithEventFilter(predicate.Or(predicate.GenerationChangedPredicate{}, predicate.AnnotationChangedPredicate{})).
 		WithOptions(controller.Options{MaxConcurrentReconciles: maxConcurrentReconciles}).
 		Complete(r)
@@ -332,8 +341,9 @@ func (r *reconciler) handleCreateOrUpdate(ctx context.Context, app *v1alpha1.App
 			Name:    app.Spec.PackageName,
 			Version: app.Spec.PackageVersion,
 		},
-		Settings:    app.Spec.Settings.GetMap(),
-		Maintenance: app.Spec.Maintenance,
+		Settings:       app.Spec.Settings.GetMap(),
+		Maintenance:    app.Spec.Maintenance,
+		UpdateSettings: r.updateSettings(app),
 	})
 
 	// set finalizer if it is not set

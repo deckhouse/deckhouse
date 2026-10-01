@@ -205,7 +205,7 @@ To delete an application, delete the Application object. For example:
 d8 k delete applications -n <NAMESPACE> <APPLICATION_NAME>
 ```
 
-When an Application is deleted, DP deletes the Kubernetes objects of the application, except for the objects that the package templates protect with the resource policy or ownership annotations, for example, `helm.sh/resource-policy: keep`. The objects that the application creates at runtime are deleted if the package declares them as [orphan resources](../../architecture/marketplace/lifecycle.html#orphan-resources). The Application stays in the cluster until DP completes the deletion.
+When an Application is deleted, DP deletes the Kubernetes objects of the application, except for the objects that the package templates protect with the `helm.sh/resource-policy: keep` annotation. The objects that the application creates at runtime and the objects that stay after the Helm release is uninstalled, for example, Helm hooks, are deleted if the package declares them as [orphan resources](../../architecture/marketplace/lifecycle.html#orphan-resources). The Application stays in the cluster until DP completes the deletion.
 
 ## FAQ
 

@@ -38,6 +38,7 @@ import (
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/status"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/queue"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/registry"
+	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/releaseupdater"
 )
 
 const (
@@ -45,8 +46,8 @@ const (
 )
 
 // App represents an application instance as received from the Application controller.
-// It carries the user-specified package identity, version constraints, settings, and
-// maintenance mode.
+// It carries the user-specified package identity, version constraints, settings,
+// maintenance mode and the update settings.
 type App struct {
 	Name            string
 	Namespace       string
@@ -54,6 +55,12 @@ type App struct {
 	Settings        addonutils.Values
 	SettingsVersion int // schema version from Application.Spec.Version (reserved for future use)
 	Maintenance     string
+
+	// UpdateSettings are the update settings the application follows, already merged by the
+	// controller: Application.spec.update with the global notification settings, otherwise
+	// global.applications.update, otherwise the update settings of the deckhouse ModuleConfig.
+	// The runtime does not act on them yet.
+	UpdateSettings releaseupdater.Settings
 }
 
 // UpdateApp handles application creation and version changes from the Application controller.

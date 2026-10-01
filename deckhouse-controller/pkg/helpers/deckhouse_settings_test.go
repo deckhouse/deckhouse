@@ -23,6 +23,9 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha2"
+	releaseUpdater "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/releaseupdater"
+	"github.com/deckhouse/deckhouse/pkg/log"
+	metricsstorage "github.com/deckhouse/deckhouse/pkg/metrics-storage"
 )
 
 // The documented OpenAPI default for settings.update.mode is AutoPatch
@@ -51,4 +54,31 @@ func TestExplicitUpdateModeOverridesDefault(t *testing.T) {
 	require.NoError(t, json.Unmarshal([]byte(`{"update":{"mode":"Auto"}}`), settings))
 
 	require.Equal(t, v1alpha2.UpdateModeAuto.String(), settings.Update.Mode)
+}
+
+// Subscribers follow the update settings only: the first Set and every change of them are
+// signalled, a change of anything else is not.
+func TestDeckhouseSettingsSubscribeUpdate(t *testing.T) {
+	metricStorage := metricsstorage.NewMetricStorage(metricsstorage.WithNewRegistry(), metricsstorage.WithLogger(log.NewNop()))
+	container := NewDeckhouseSettingsContainer(nil, metricStorage)
+	changes := container.SubscribeUpdate()
+
+	container.Set(DefaultDeckhouseSettings())
+	require.Len(t, changes, 1, "the first settings must be signalled")
+	<-changes
+
+	settings := DefaultDeckhouseSettings()
+	settings.ReleaseChannel = "Stable"
+	container.Set(settings)
+	require.Empty(t, changes, "a change of the release channel alone must not be signalled")
+
+	settings = DefaultDeckhouseSettings()
+	settings.Update.Mode = v1alpha2.UpdateModeManual.String()
+	container.Set(settings)
+	container.Set(settings)
+	require.Len(t, changes, 1, "a change of the update settings must be signalled, and only once")
+
+	got := container.GetUpdateSettings()
+	require.Equal(t, v1alpha2.UpdateModeManual, got.Mode)
+	require.Equal(t, releaseUpdater.BlockOnAlerts{Severity: DefaultBlockOnAlertsSeverity}, got.BlockOnAlerts)
 }
