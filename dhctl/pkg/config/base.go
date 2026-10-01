@@ -53,10 +53,10 @@ var (
 	CommaSeparatedEEEditions = "EE,FE,CSE"
 )
 
-// errParseConfigTransient marks a transport/API-level failure while reading the cluster
-// configuration secret, as opposed to a permanent parse/schema-validation failure of the
-// secret's own content that will fail identically on every attempt.
-var errParseConfigTransient = errors.New("parse cluster config: transient error, may succeed on retry")
+// ErrParseConfigTransient marks a transport/API-level failure while reading the cluster
+// configuration, as opposed to a permanent parse/schema-validation failure that will fail
+// identically on every attempt.
+var ErrParseConfigTransient = errors.New("parse cluster config: transient error, may succeed on retry")
 
 func LoadConfigFromFile(
 	ctx context.Context,
@@ -196,7 +196,7 @@ func ParseConfigFromCluster(
 		retry.WithName("Get cluster configuration from Kubernetes cluster"),
 		retry.WithAttempts(50),
 		retry.WithWait(1*time.Second),
-		retry.WithWhitelist(errParseConfigTransient, registrydata.ErrRegistryDataTransient),
+		retry.WithWhitelist(ErrParseConfigTransient, registrydata.ErrRegistryDataTransient),
 	)
 
 	return metaConfig, dhlog.RunProcess(ctx, dhlog.FromContext(ctx), "Get cluster configuration", func(ctx context.Context) error {
@@ -228,7 +228,7 @@ func ParseConfigInCluster(
 		retry.WithName("Get cluster configuration from inside Kubernetes cluster"),
 		retry.WithAttempts(25),
 		retry.WithWait(1*time.Second),
-		retry.WithWhitelist(errParseConfigTransient, registrydata.ErrRegistryDataTransient),
+		retry.WithWhitelist(ErrParseConfigTransient, registrydata.ErrRegistryDataTransient),
 	)
 
 	err = retry.NewSilentLoopWithParams(loopParams).
@@ -562,6 +562,11 @@ deckhouse: {}
 	}
 	if options.downloadRootDir != "" {
 		metaConfig.DownloadRootDir = options.downloadRootDir
+	}
+	for _, mc := range options.clusterModuleConfigs {
+		if metaConfig.FindModuleConfig(mc.GetName()) == nil {
+			metaConfig.ModuleConfigs = append(metaConfig.ModuleConfigs, mc)
+		}
 	}
 
 	return metaConfig.Prepare(ctx, validatorProvider)

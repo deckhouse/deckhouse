@@ -91,12 +91,7 @@ type clusterCIDR struct {
 // fallback, so the document to correct is whichever one the value actually came from — quoting
 // the wrong one sends the reader to edit a field that is not there.
 func (m *MetaConfig) networkFieldLabel(name string) string {
-	for _, p := range m.networkParams() {
-		if p.name == name && p.mc != "" {
-			return "ModuleConfig control-plane-manager spec.settings.network." + name
-		}
-	}
-	return "ClusterConfiguration." + name
+	return m.setting(clusterSetting(name)).label()
 }
 
 // clusterCIDRField reads one CIDR through Network(), which resolves ModuleConfig over the
@@ -280,17 +275,8 @@ func validatePublicDomainTemplate(m *MetaConfig) error {
 		return nil
 	}
 
-	mc := m.FindModuleConfig("global")
-	if mc == nil {
-		return nil
-	}
-
-	modules, ok := mc.Spec.Settings["modules"].(map[string]any)
-	if !ok {
-		return nil
-	}
-	template, ok := modules["publicDomainTemplate"].(string)
-	if !ok || strings.TrimSpace(template) == "" {
+	template := m.setting(clusterSettingPublicDomainTemplate).value()
+	if strings.TrimSpace(template) == "" {
 		return nil
 	}
 

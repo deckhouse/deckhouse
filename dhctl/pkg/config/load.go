@@ -70,6 +70,7 @@ type validateOptions struct {
 	skipSchemaValidation bool
 	operation            string
 	downloadRootDir      string
+	clusterModuleConfigs []*ModuleConfig
 }
 
 type ValidateOption func(o *validateOptions)
@@ -137,6 +138,14 @@ func ValidateOptionOperation(op string) ValidateOption {
 func ValidateOptionDownloadRootDir(dir string) ValidateOption {
 	return func(o *validateOptions) {
 		o.downloadRootDir = dir
+	}
+}
+
+// ValidateOptionModuleConfigsFromCluster adds ModuleConfigs read from the cluster to a parse of request
+// documents. A ModuleConfig with the same name among the documents wins.
+func ValidateOptionModuleConfigsFromCluster(mcs []*ModuleConfig) ValidateOption {
+	return func(o *validateOptions) {
+		o.clusterModuleConfigs = mcs
 	}
 }
 

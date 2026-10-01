@@ -27,8 +27,10 @@ import (
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app/options"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/commander"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/destroy/deckhouse"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/phases"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/tests"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/cache"
 )
 
@@ -127,4 +129,22 @@ func TestDestroy_CommanderModeAnnouncesStaticPhases(t *testing.T) {
 		phases.UpdateStaticDestroyerIPs,
 		phases.AllNodesPhase,
 	}, announced)
+}
+
+// DestroyCluster runs the node access preflights first. A loader that dialled the cluster while the
+// destroyer is built would spend the SSH retry budget on a key the preflight refuses in a second.
+func TestInitStateLoader_CommanderParsesOnFirstUse(t *testing.T) {
+	tests.StubDeliveredProviderBundle(t, options.DefaultTmpDir(), "yandex")
+	stateCache := cache.NewTestCache()
+	require.NoError(t, stateCache.Save(t.Context(), "uuid", []byte(uuid.Must(uuid.NewRandom()).String())))
+
+	loader, _, err := initStateLoader(t.Context(), &stateLoaderParams{
+		commanderMode:   true,
+		commanderParams: commander.NewCommanderModeParams([]byte(cloudClusterGenericConfigYAML), []byte(providerConfigYAML)),
+		stateCache:      stateCache,
+	}, newKubeClientErrorProvider("the cluster is not dialled yet"))
+	require.NoError(t, err)
+
+	_, err = loader.PopulateMetaConfig(t.Context(), nil)
+	require.ErrorContains(t, err, "the cluster is not dialled yet")
 }

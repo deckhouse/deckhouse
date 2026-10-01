@@ -136,14 +136,7 @@ func initStateLoader(ctx context.Context, params *stateLoaderParams, kubeProvide
 		//	panic("CommanderUUID required for destroy operation in commander mode!")
 		// }
 
-		// Commander sends no registry_config; the external provider bundle registry is read from
-		// the target cluster inside ParseMetaConfig. A cloud destroy does dial: which module build
-		// a cluster runs is a property of that cluster. See KubeClientGetter.
-		metaConfig, err := commander.ParseMetaConfig(ctx, params.stateCache, params.commanderParams, infrastructureprovider.DhctlOperationDestroy, kubeProvider.KubeClientCtx, params.globalOptions)
-		if err != nil {
-			return nil, nil, fmt.Errorf("Unable to parse meta configuration: %w", err)
-		}
-		return infrastructurestate.NewFileTerraStateLoader(params.stateCache, metaConfig), kubeProvider, nil
+		return &commanderStateLoader{params: params, kubeProvider: kubeProvider}, kubeProvider, nil
 	}
 
 	stateLoaderKubeProvider := kubeProvider
@@ -154,6 +147,38 @@ func initStateLoader(ctx context.Context, params *stateLoaderParams, kubeProvide
 	cached := infrastructurestate.NewCachedTerraStateLoader(stateLoaderKubeProvider, params.stateCache, infrastructureprovider.DhctlOperationDestroy).
 		WithForceFromCache(params.forceFromCache)
 	return infrastructurestate.NewLazyTerraStateLoader(cached), stateLoaderKubeProvider, nil
+}
+
+// commanderStateLoader parses the commander configuration on first use. That is inside
+// DestroyCluster: after the node access preflights, which answer a refused SSH key in a second, and
+// before anything is deleted.
+type commanderStateLoader struct {
+	params       *stateLoaderParams
+	kubeProvider kube.ClientProviderWithCleanup
+	metaConfig   *config.MetaConfig
+}
+
+func (l *commanderStateLoader) PopulateMetaConfig(ctx context.Context, _ *options.GlobalOptions) (*config.MetaConfig, error) {
+	if l.metaConfig != nil {
+		return l.metaConfig, nil
+	}
+
+	// Commander sends no registry_config and no cluster settings ModuleConfigs: ParseMetaConfig reads
+	// them from the target cluster. See KubeClientGetter.
+	metaConfig, err := commander.ParseMetaConfig(ctx, l.params.stateCache, l.params.commanderParams, infrastructureprovider.DhctlOperationDestroy, l.kubeProvider.KubeClientCtx, l.params.globalOptions)
+	if err != nil {
+		return nil, fmt.Errorf("Unable to parse meta configuration: %w", err)
+	}
+	l.metaConfig = metaConfig
+	return metaConfig, nil
+}
+
+func (l *commanderStateLoader) PopulateClusterState(ctx context.Context) ([]byte, map[string]dhctlstate.NodeGroupInfrastructureState, error) {
+	metaConfig, err := l.PopulateMetaConfig(ctx, nil)
+	if err != nil {
+		return nil, nil, err
+	}
+	return infrastructurestate.NewFileTerraStateLoader(l.params.stateCache, metaConfig).PopulateClusterState(ctx)
 }
 
 type ClusterDestroyer struct {

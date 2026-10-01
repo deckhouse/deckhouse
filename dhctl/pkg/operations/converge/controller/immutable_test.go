@@ -30,6 +30,7 @@ import (
 	k8stesting "k8s.io/client-go/testing"
 
 	libcon "github.com/deckhouse/lib-connection/pkg"
+	"github.com/deckhouse/lib-dhctl/pkg/retry"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app/options"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/immutable/immutabletest"
@@ -150,8 +151,15 @@ func TestImmutableMasterPayloadLeavesSharedMetaConfigUntouched(t *testing.T) {
 	stateCache := cache.NewTestCache()
 	require.NoError(t, stateCache.Save(t.Context(), "uuid", []byte("f1e9c0de-0000-4000-8000-000000000000")))
 
+	// The payload stops on the registry this empty cluster does not publish; keep that lookup to one try.
+	wasInTestEnvironment := retry.InTestEnvironment
+	retry.InTestEnvironment = true
+	t.Cleanup(func() { retry.InTestEnvironment = wasInTestEnvironment })
+
+	// Commander converge reads the cluster settings ModuleConfigs, so the cluster must answer.
+	kubeCl := client.NewFakeKubernetesClient()
 	convergeCtx := context.NewCommanderContext(t.Context(), context.Params{
-		KubeProvider: unreachableKubeProvider{},
+		KubeProvider: staticKubeProvider{client: execCapableClient{kubeCl.KubeClient}},
 		Cache:        stateCache,
 		Opts: &options.GlobalOptions{
 			CandiDir:    immutabletest.CandiDir(t),
@@ -166,7 +174,7 @@ func TestImmutableMasterPayloadLeavesSharedMetaConfigUntouched(t *testing.T) {
 	require.Empty(t, shared.Images, "the configuration parsed from the cluster carries no digests")
 
 	_, err = immutableNodePayload(convergeCtx, "master", "cluster-master-0")
-	require.Error(t, err, "the payload needs the cluster it cannot reach here")
+	require.Error(t, err, "the payload needs the cluster registry this empty cluster does not publish")
 
 	require.Empty(t, shared.Images, "the payload loaded its image digests into the shared configuration")
 }

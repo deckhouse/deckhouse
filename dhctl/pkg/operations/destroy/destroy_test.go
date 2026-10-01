@@ -143,6 +143,8 @@ func TestInitStateLoader(t *testing.T) {
 		}
 	})
 
+	// The commander loader parses on first use, like the CLI one: a parse failure surfaces from
+	// PopulateMetaConfig, after the node access preflights of DestroyCluster.
 	t.Run("in commander", func(t *testing.T) {
 		assertFileKeysInCacheAfterLoad := func(t *testing.T, tst *testInitStateLoader) {
 			tst.assertFileKeysInCacheAfterLoad(t)
@@ -166,7 +168,7 @@ func TestInitStateLoader(t *testing.T) {
 				assertLoader: assertFileKeysInCacheAfterLoad,
 				clusterUUID:  clusterUUID,
 
-				expectedStateLoaderType:  &infrastructurestate.FileTerraStateLoader{},
+				expectedStateLoaderType:  &commanderStateLoader{},
 				expectedKubeProviderType: commanderKubeProvider,
 				hasInitError:             false,
 				kubeProviderAsPassed:     true,
@@ -190,7 +192,7 @@ func TestInitStateLoader(t *testing.T) {
 				assertLoader: assertFileKeysInCacheAfterLoad,
 				clusterUUID:  clusterUUID,
 
-				expectedStateLoaderType:  &infrastructurestate.FileTerraStateLoader{},
+				expectedStateLoaderType:  &commanderStateLoader{},
 				expectedKubeProviderType: commanderKubeProvider,
 				hasInitError:             false,
 				kubeProviderAsPassed:     true,
@@ -214,9 +216,9 @@ func TestInitStateLoader(t *testing.T) {
 				assertLoader: noAssertFunc,
 				clusterUUID:  clusterUUID,
 
-				expectedStateLoaderType:  nil,
-				expectedKubeProviderType: nil,
-				hasInitError:             true,
+				expectedStateLoaderType:  &commanderStateLoader{},
+				expectedKubeProviderType: commanderKubeProvider,
+				hasInitError:             false,
 				kubeProviderAsPassed:     true,
 				hasLoadMetaConfigError:   true,
 				hasLoadStateError:        true,
@@ -238,10 +240,10 @@ func TestInitStateLoader(t *testing.T) {
 				assertLoader: assertFileKeysInCacheAfterLoad,
 				clusterUUID:  clusterUUID,
 
-				expectedStateLoaderType:  nil,
-				expectedKubeProviderType: nil,
-				hasInitError:             true,
-				kubeProviderAsPassed:     false,
+				expectedStateLoaderType:  &commanderStateLoader{},
+				expectedKubeProviderType: commanderKubeProvider,
+				hasInitError:             false,
+				kubeProviderAsPassed:     true,
 				hasLoadMetaConfigError:   true,
 				hasLoadStateError:        true,
 			}),

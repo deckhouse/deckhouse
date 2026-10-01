@@ -17,11 +17,16 @@ package config
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"testing"
 
 	"github.com/stretchr/testify/require"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"k8s.io/apimachinery/pkg/runtime"
+	dynamicfake "k8s.io/client-go/dynamic/fake"
+	k8stesting "k8s.io/client-go/testing"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/client"
 )
@@ -160,22 +165,46 @@ func mustSeedGlobalMC(t *testing.T, kubeCl *client.KubernetesClient, prefix stri
 	require.NoError(t, err)
 }
 
-func TestLoadGlobalModuleConfig_Present(t *testing.T) {
+// Before, a failed read of the global ModuleConfig was logged and dropped, and the prefix fell back to
+// an empty cloud.prefix. Now it is an error the retry loops recognise as transient.
+func TestCloudFiller_ModuleConfigReadErrorIsTransient(t *testing.T) {
 	kubeCl := client.NewFakeKubernetesClient()
-	mustSeedGlobalMC(t, kubeCl, "mcprefix")
+	mustSeedCloudProviderMC(t, kubeCl, "yandex")
+	kubeCl.Dynamic().(*dynamicfake.FakeDynamicClient).PrependReactor("get", ModuleConfigResource,
+		func(action k8stesting.Action) (bool, runtime.Object, error) {
+			if action.(k8stesting.GetAction).GetName() != "global" {
+				return false, nil, nil
+			}
+			return true, nil, apierrors.NewInternalError(errors.New("apiserver unavailable"))
+		})
 
-	gmc := loadGlobalModuleConfig(context.Background(), kubeCl)
-	require.NotNil(t, gmc)
-	require.Equal(t, "mcprefix", gmc.Spec.Settings["prefix"])
+	mc := mustMetaConfigForProvider(t, "yandex")
+	filler := newFromClusterMetaConfigFiller(kubeCl, newSchemaStore(nil, nil))
+
+	_, err := filler.Cloud(context.Background(), mc)
+	require.ErrorIs(t, err, ErrParseConfigTransient)
 }
 
-func TestLoadGlobalModuleConfig_Absent(t *testing.T) {
+func TestLoadClusterSettingsModuleConfigs_Present(t *testing.T) {
+	kubeCl := client.NewFakeKubernetesClient()
+	mustSeedGlobalMC(t, kubeCl, "mcprefix")
+	mustSeedControlPlaneManagerMC(t, kubeCl, map[string]interface{}{"podSubnetCIDR": "10.11.0.0/16"})
+
+	mcs, err := LoadClusterSettingsModuleConfigs(context.Background(), kubeCl)
+	require.NoError(t, err)
+	require.Len(t, mcs, 2)
+	require.Equal(t, "control-plane-manager", mcs[0].GetName())
+	require.Equal(t, "global", mcs[1].GetName())
+	require.Equal(t, "mcprefix", mcs[1].Spec.Settings["prefix"])
+}
+
+// A missing ModuleConfig is normal: the fields it replaces are still read from ClusterConfiguration.
+func TestLoadClusterSettingsModuleConfigs_Absent(t *testing.T) {
 	kubeCl := client.NewFakeKubernetesClient()
 
-	// Missing global ModuleConfig must be a soft miss (nil), never an error:
-	// converge/destroy fall back to ClusterConfiguration.cloud.prefix.
-	gmc := loadGlobalModuleConfig(context.Background(), kubeCl)
-	require.Nil(t, gmc)
+	mcs, err := LoadClusterSettingsModuleConfigs(context.Background(), kubeCl)
+	require.NoError(t, err)
+	require.Empty(t, mcs)
 }
 
 func mustSeedControlPlaneManagerMC(t *testing.T, kubeCl *client.KubernetesClient, network map[string]interface{}) {
@@ -194,28 +223,6 @@ func mustSeedControlPlaneManagerMC(t *testing.T, kubeCl *client.KubernetesClient
 		},
 	}}
 	_, err := kubeCl.Dynamic().Resource(ModuleConfigGVR).Create(t.Context(), mc, metav1.CreateOptions{})
-	require.NoError(t, err)
-}
-
-func TestLoadControlPlaneManagerModuleConfig_Present(t *testing.T) {
-	kubeCl := client.NewFakeKubernetesClient()
-	mustSeedControlPlaneManagerMC(t, kubeCl, map[string]interface{}{"podSubnetCIDR": "10.11.0.0/16"})
-
-	cpm, err := loadControlPlaneManagerModuleConfig(context.Background(), kubeCl)
-	require.NoError(t, err)
-	require.NotNil(t, cpm)
-	network, _ := cpm.Spec.Settings["network"].(map[string]interface{})
-	require.Equal(t, "10.11.0.0/16", network["podSubnetCIDR"])
-}
-
-func TestLoadControlPlaneManagerModuleConfig_Absent(t *testing.T) {
-	kubeCl := client.NewFakeKubernetesClient()
-
-	// Missing control-plane-manager ModuleConfig must be a soft miss (nil), never an error:
-	// converge/destroy fall back to the deprecated ClusterConfiguration network fields. The read
-	// still counts as successful - the object is genuinely absent, its value is not unknown.
-	cpm, err := loadControlPlaneManagerModuleConfig(context.Background(), kubeCl)
-	require.Nil(t, cpm)
 	require.NoError(t, err)
 }
 

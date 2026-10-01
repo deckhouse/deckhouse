@@ -58,9 +58,6 @@ type MetaConfig struct {
 	ClusterConfig     map[string]json.RawMessage `json:"clusterConfiguration"`
 	InitClusterConfig map[string]json.RawMessage `json:"-"`
 	ModuleConfigs     []*ModuleConfig            `json:"-"`
-	// True when the control-plane-manager ModuleConfig could not be read, which makes a missing
-	// value there "unknown" rather than "not set".
-	CPMModuleConfigUnreadable bool `json:"-"`
 
 	CloudProviderVars *CloudProviderVars `json:"-"`
 	// Operation propagates the dhctl entry point (bootstrap/converge/destroy/
@@ -177,14 +174,11 @@ func (m *MetaConfig) Prepare(ctx context.Context, validatorProvider MetaConfigVa
 	if err := m.prepareProviderName(); err != nil {
 		return nil, err
 	}
-	cloudSpec, err := m.clusterCloudSpec()
+	prefix, err := m.effectiveClusterPrefix()
 	if err != nil {
 		return nil, err
 	}
-	m.ClusterPrefix, err = m.effectiveClusterPrefix(cloudSpec.Prefix)
-	if err != nil {
-		return nil, err
-	}
+	m.ClusterPrefix = prefix
 
 	if err := m.extractProviderClusterFields(); err != nil {
 		return nil, err
@@ -828,24 +822,8 @@ func isClusterConfigurationPinned(version string) bool {
 // pinned ClusterConfiguration → empty. Presence of the ModuleConfig field decides, so Default there
 // returns empty and bootstrap starts on the Deckhouse default.
 func (m *MetaConfig) kubernetesVersionRaw() string {
-	mcVersion := ""
-	if mc := m.FindModuleConfig("control-plane-manager"); mc != nil {
-		// Read straight off spec.settings: at bootstrap the settings-version conversion chain is not
-		// wired up. A future conversion touching this key must be reflected here, or dhctl and
-		// admission (which sees converted settings) would disagree. A non-string is dropped, not
-		// coerced: 1.40 would come back as "1.4".
-		if v, ok := mc.Spec.Settings["kubernetesVersion"].(string); ok {
-			mcVersion = v
-		}
-	}
-
-	ccVersion := ""
-	if raw, ok := m.ClusterConfig["kubernetesVersion"]; ok {
-		var v string
-		if err := json.Unmarshal(raw, &v); err == nil {
-			ccVersion = v
-		}
-	}
+	version := m.setting(clusterSettingKubernetesVersion)
+	mcVersion, ccVersion := version.fromModuleConfig, version.fromClusterConfig
 
 	switch {
 	case isModuleConfigTrackDefault(mcVersion):
@@ -1263,15 +1241,9 @@ func (m *MetaConfig) LoadImagesDigests() error {
 // The mismatch used to be resolved silently in favour of the ModuleConfig. The operator learned
 // about it from the cloud rejecting a resource name, or from bashible ten minutes in with
 // "FAIL Hostname '<prefix>-master-0'".
-func (m *MetaConfig) effectiveClusterPrefix(cloudPrefix string) (string, error) {
-	modulePrefix := ""
-	if mc := m.FindModuleConfig("global"); mc != nil {
-		if raw, ok := mc.Spec.Settings["prefix"]; ok {
-			if p, ok := raw.(string); ok {
-				modulePrefix = p
-			}
-		}
-	}
+func (m *MetaConfig) effectiveClusterPrefix() (string, error) {
+	prefix := m.setting(clusterSettingPrefix)
+	modulePrefix, cloudPrefix := prefix.fromModuleConfig, prefix.fromClusterConfig
 
 	switch {
 	case modulePrefix == "":
@@ -1280,10 +1252,10 @@ func (m *MetaConfig) effectiveClusterPrefix(cloudPrefix string) (string, error) 
 		return modulePrefix, nil
 	case modulePrefix != cloudPrefix:
 		return "", fmt.Errorf(
-			"ClusterConfiguration.cloud.prefix is %q and spec.settings.prefix in the \"global\" ModuleConfig is %q. "+
-				"They name the same cluster and must match: the installer names cloud objects from the first, "+
-				"and the modules in the cluster read the second",
-			cloudPrefix, modulePrefix)
+			"the cluster prefix is set twice with different values: spec.settings.prefix in the \"global\" ModuleConfig is %q, "+
+				"the deprecated ClusterConfiguration.cloud.prefix is %q. Keep the one the cluster was created with "+
+				"in the ModuleConfig and remove cloud.prefix from ClusterConfiguration",
+			modulePrefix, cloudPrefix)
 	default:
 		return modulePrefix, nil
 	}

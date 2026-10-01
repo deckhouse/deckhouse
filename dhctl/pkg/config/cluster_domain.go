@@ -24,21 +24,6 @@ import "cmp"
 // parse, leaving "set by the user" and "not set" indistinguishable.
 const DefaultClusterDomain = "cluster.local"
 
-// One source for both candidate values, so the resolver and the check below cannot drift apart.
-func (m *MetaConfig) clusterDomainParam() networkParam {
-	return networkParam{
-		name: "clusterDomain",
-		mc:   m.moduleConfigNetwork().ClusterDomain,
-		cc:   m.clusterConfigNetwork().ClusterDomain,
-	}
-}
-
 func (m *MetaConfig) ClusterDomainResolved() string {
-	return cmp.Or(m.clusterDomainParam().resolved(), DefaultClusterDomain)
-}
-
-// ClusterDomainKnown is false only when the ModuleConfig could not be read and ClusterConfiguration
-// carries no domain: resolving the default then would render a wrong service-account issuer.
-func (m *MetaConfig) ClusterDomainKnown() bool {
-	return !m.CPMModuleConfigUnreadable || m.clusterDomainParam().cc != ""
+	return cmp.Or(m.setting(clusterSettingClusterDomain).value(), DefaultClusterDomain)
 }

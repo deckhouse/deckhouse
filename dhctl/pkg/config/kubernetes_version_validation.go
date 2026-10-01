@@ -16,9 +16,9 @@ package config
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 
+	validatev1 "github.com/deckhouse/deckhouse/go_lib/dhctl-provider-protocol/api/validate/v1"
 	dhlog "github.com/deckhouse/lib-dhctl/pkg/logger"
 )
 
@@ -39,7 +39,8 @@ const endOfLifeStatus = "end-of-life"
 //
 // Both are warnings: neither makes the configuration invalid, and converge re-reads this.
 func warnAboutKubernetesVersion(ctx context.Context, m *MetaConfig) {
-	declared := m.declaredKubernetesVersion()
+	version := m.setting(clusterSettingKubernetesVersion)
+	declared, moduleVersion := version.fromClusterConfig, version.fromModuleConfig
 	if declared == "" || declared == "Automatic" {
 		return
 	}
@@ -52,35 +53,19 @@ func warnAboutKubernetesVersion(ctx context.Context, m *MetaConfig) {
 			"set kubernetesVersion to a supported version, or to Automatic").Error())
 	}
 
-	if moduleVersion := m.moduleKubernetesVersion(); moduleVersion != "" && moduleVersion != declared {
+	// "Will be created" holds only before the cluster exists. On a live one the deprecation notice of
+	// the field says the same, and check or the exporter would repeat this on every run.
+	if m.Operation == string(validatev1.OperationConverge) || m.Operation == string(validatev1.OperationDestroy) {
+		return
+	}
+
+	if moduleVersion != "" && moduleVersion != declared {
 		dhlog.FromContext(ctx).WarnContext(ctx, configurationFailure(
 			"ClusterConfiguration.kubernetesVersion against kubernetesVersion in the \"control-plane-manager\" ModuleConfig",
 			fmt.Sprintf("%q and %q. The cluster will be created on %s.", declared, moduleVersion, moduleVersion),
 			"the same version in both documents",
 			"set both to the same version, or remove ClusterConfiguration.kubernetesVersion").Error())
 	}
-}
-
-func (m *MetaConfig) declaredKubernetesVersion() string {
-	raw, ok := m.ClusterConfig["kubernetesVersion"]
-	if !ok || len(raw) == 0 {
-		return ""
-	}
-	var version string
-	if err := json.Unmarshal(raw, &version); err != nil {
-		return ""
-	}
-	return version
-}
-
-// moduleKubernetesVersion reads the setting that overrides the ClusterConfiguration field.
-func (m *MetaConfig) moduleKubernetesVersion() string {
-	mc := m.FindModuleConfig("control-plane-manager")
-	if mc == nil {
-		return ""
-	}
-	version, _ := mc.Spec.Settings["kubernetesVersion"].(string)
-	return version
 }
 
 // kubernetesVersionStatus reads the status version_map.yml records for a version. An unknown

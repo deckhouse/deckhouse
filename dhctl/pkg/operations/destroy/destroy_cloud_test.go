@@ -794,7 +794,8 @@ func createTestCloudDestroyTest(t *testing.T, params testCloudDestroyTestParams)
 		_, err := kubeCl.CoreV1().ConfigMaps(uuidCM.GetNamespace()).Create(ctx, uuidCM, metav1.CreateOptions{})
 		require.NoError(t, err, "commander uuid cm should create")
 		testAddCloudStatesToCache(t, stateCache, clusterUUID)
-		metaConfig, err = commander.ParseMetaConfig(ctx, stateCache, params.commanderModeParams, infrastructureprovider.DhctlOperationDestroy, nil, nil)
+		metaConfig, err = commander.ParseMetaConfig(ctx, stateCache, params.commanderModeParams, infrastructureprovider.DhctlOperationDestroy,
+			func(context.Context) (*client.KubernetesClient, error) { return kubeCl, nil }, nil)
 		require.NoError(t, err)
 	} else {
 		d8SystemNs := corev1.Namespace{

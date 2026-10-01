@@ -46,6 +46,7 @@ func TestWarnAboutKubernetesVersion(t *testing.T) {
 		name          string
 		version       string
 		moduleConfigs []*ModuleConfig
+		operation     string
 		wantWarnings  []string
 		wantQuiet     bool
 	}{
@@ -73,6 +74,15 @@ func TestWarnAboutKubernetesVersion(t *testing.T) {
 			wantWarnings:  []string{"The cluster will be created on 1.34."},
 		},
 		{
+			// A live cluster is not being created: the deprecation notice of the field covers it,
+			// and check or the exporter would repeat this on every run.
+			name:          "the two disagree on a live cluster",
+			version:       "1.33",
+			moduleConfigs: moduleConfig("1.34"),
+			operation:     "converge",
+			wantQuiet:     true,
+		},
+		{
 			name:          "the two agree",
 			version:       "1.33",
 			moduleConfigs: moduleConfig("1.33"),
@@ -93,6 +103,7 @@ func TestWarnAboutKubernetesVersion(t *testing.T) {
 			warnAboutKubernetesVersion(ctx, &MetaConfig{
 				ClusterConfig: map[string]json.RawMessage{"kubernetesVersion": encoded},
 				ModuleConfigs: tt.moduleConfigs,
+				Operation:     tt.operation,
 				VersionMap:    versionMap,
 			})
 

@@ -67,14 +67,17 @@ func TestEffectiveClusterPrefix(t *testing.T) {
 			name:        "a mismatch is refused instead of resolved",
 			moduleCfgs:  globalMC("mcprefix"),
 			cloudPrefix: "cloudprefix",
-			wantErr:     `ClusterConfiguration.cloud.prefix is "cloudprefix" and spec.settings.prefix in the "global" ModuleConfig is "mcprefix"`,
+			wantErr: `spec.settings.prefix in the "global" ModuleConfig is "mcprefix", the deprecated ClusterConfiguration.cloud.prefix is "cloudprefix". ` +
+				`Keep the one the cluster was created with in the ModuleConfig and remove cloud.prefix from ClusterConfiguration`,
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			m := &MetaConfig{ModuleConfigs: tt.moduleCfgs}
-			prefix, err := m.effectiveClusterPrefix(tt.cloudPrefix)
+			cloud, err := json.Marshal(ClusterConfigCloudSpec{Provider: "Yandex", Prefix: tt.cloudPrefix})
+			require.NoError(t, err)
+			m := &MetaConfig{ClusterConfig: map[string]json.RawMessage{"cloud": cloud}, ModuleConfigs: tt.moduleCfgs}
+			prefix, err := m.effectiveClusterPrefix()
 
 			if tt.wantErr != "" {
 				require.Error(t, err)

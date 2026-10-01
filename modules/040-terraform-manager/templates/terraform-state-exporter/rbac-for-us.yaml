@@ -83,11 +83,11 @@ rules:
   resources: ["nodegroups"]
   verbs: ["get", "list", "watch"]
 # In-cluster dhctl parses the provider ModuleConfig (mc-flow, get-by-name),
-# lists provider InstanceClasses for CloudProviderVars, and reads the global
-# ModuleConfig for the cluster prefix (migrated from ClusterConfiguration.cloud.prefix).
+# lists provider InstanceClasses for CloudProviderVars, and reads the ModuleConfigs that carry
+# cluster settings (dhctl/pkg/config/cluster_settings.go).
 - apiGroups: ["deckhouse.io"]
   resources: ["moduleconfigs"]
-  resourceNames: ["cloud-provider-{{ .Values.global.clusterConfiguration.cloud.provider | lower }}", "global"]
+  resourceNames: ["cloud-provider-{{ .Values.global.clusterConfiguration.cloud.provider | lower }}", "global", "control-plane-manager"]
   verbs: ["get"]
 # In-cluster dhctl resolves the cloud provider bundle through the module chain when the
 # provider is an external module: the Module object says which ModuleSource it came from and

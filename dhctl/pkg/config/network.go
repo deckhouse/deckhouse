@@ -25,7 +25,7 @@
 package config
 
 import (
-	"encoding/json"
+	"cmp"
 	"fmt"
 	"strings"
 )
@@ -43,86 +43,12 @@ type NetworkSettings struct {
 	ClusterDomain           string
 }
 
-// networkParam is one parameter's candidate values, in precedence order.
-type networkParam struct {
-	name string
-	mc   string
-	cc   string
-}
-
-// networkParams enumerates the three parameters once, so the resolver, the "which document did it
-// come from" report and the required-field check cannot drift apart.
-func (m *MetaConfig) networkParams() []networkParam {
-	mc := m.moduleConfigNetwork()
-	cc := m.clusterConfigNetwork()
-
-	return []networkParam{
-		{"podSubnetCIDR", mc.PodSubnetCIDR, cc.PodSubnetCIDR},
-		{"serviceSubnetCIDR", mc.ServiceSubnetCIDR, cc.ServiceSubnetCIDR},
-		{"podSubnetNodeCIDRPrefix", mc.PodSubnetNodeCIDRPrefix, cc.PodSubnetNodeCIDRPrefix},
-		{"clusterDomain", mc.ClusterDomain, cc.ClusterDomain},
-	}
-}
-
-// resolved returns the winning value: ModuleConfig if set there, else the deprecated field.
-func (p networkParam) resolved() string {
-	if p.mc != "" {
-		return p.mc
-	}
-	return p.cc
-}
-
-// moduleConfigNetwork reads spec.settings.network off ModuleConfig control-plane-manager.
-//
-// Read raw, exactly like kubernetesVersionRaw: at bootstrap the settings-version conversion chain is
-// not wired up, so a future conversion touching these keys must be reflected here or dhctl and
-// admission (which sees converted settings) would disagree. The read is two-level and nil-safe: an
-// absent network group is "nothing set in ModuleConfig", not an error. Non-strings are dropped
-// rather than coerced.
-func (m *MetaConfig) moduleConfigNetwork() NetworkSettings {
-	out := NetworkSettings{}
-
-	mc := m.FindModuleConfig("control-plane-manager")
-	if mc == nil || mc.Spec.Settings == nil {
-		return out
-	}
-
-	group, ok := mc.Spec.Settings["network"].(map[string]interface{})
-	if !ok {
-		return out
-	}
-
-	out.PodSubnetCIDR, _ = group["podSubnetCIDR"].(string)
-	out.ServiceSubnetCIDR, _ = group["serviceSubnetCIDR"].(string)
-	out.PodSubnetNodeCIDRPrefix, _ = group["podSubnetNodeCIDRPrefix"].(string)
-	out.ClusterDomain, _ = group["clusterDomain"].(string)
-
-	return out
-}
-
-// clusterConfigNetwork reads the three deprecated ClusterConfiguration fields. All three are
-// optional now: the two CIDRs are no longer in the schema's required list and the prefix no longer
-// carries a default, so a missing field is a normal state rather than an error.
-func (m *MetaConfig) clusterConfigNetwork() NetworkSettings {
-	return NetworkSettings{
-		PodSubnetCIDR:           m.clusterConfigString("podSubnetCIDR"),
-		ServiceSubnetCIDR:       m.clusterConfigString("serviceSubnetCIDR"),
-		PodSubnetNodeCIDRPrefix: m.clusterConfigString("podSubnetNodeCIDRPrefix"),
-		ClusterDomain:           m.clusterConfigString("clusterDomain"),
-	}
-}
-
-func (m *MetaConfig) clusterConfigString(key string) string {
-	raw, ok := m.ClusterConfig[key]
-	if !ok || len(raw) == 0 || string(raw) == "null" {
-		return ""
-	}
-
-	var v string
-	if err := json.Unmarshal(raw, &v); err != nil {
-		return ""
-	}
-	return v
+// networkSettings are the settings RequireNetworkSingleSource and the network checks walk.
+var networkSettings = []clusterSetting{
+	clusterSettingPodSubnetCIDR,
+	clusterSettingServiceSubnetCIDR,
+	clusterSettingPodSubnetNodeCIDRPrefix,
+	clusterSettingClusterDomain,
 }
 
 // Network returns the resolved network parameters: the ModuleConfig value when set, otherwise the
@@ -133,20 +59,12 @@ func (m *MetaConfig) clusterConfigString(key string) string {
 // and an empty string would be rendered into a master manifest. Use RequireNetwork to reject that
 // before anything is rendered.
 func (m *MetaConfig) Network() NetworkSettings {
-	params := m.networkParams()
-
-	out := NetworkSettings{
-		PodSubnetCIDR:           params[0].resolved(),
-		ServiceSubnetCIDR:       params[1].resolved(),
-		PodSubnetNodeCIDRPrefix: params[2].resolved(),
+	return NetworkSettings{
+		PodSubnetCIDR:           m.setting(clusterSettingPodSubnetCIDR).value(),
+		ServiceSubnetCIDR:       m.setting(clusterSettingServiceSubnetCIDR).value(),
+		PodSubnetNodeCIDRPrefix: cmp.Or(m.setting(clusterSettingPodSubnetNodeCIDRPrefix).value(), DefaultPodSubnetNodeCIDRPrefix),
 		ClusterDomain:           m.ClusterDomainResolved(),
 	}
-
-	if out.PodSubnetNodeCIDRPrefix == "" {
-		out.PodSubnetNodeCIDRPrefix = DefaultPodSubnetNodeCIDRPrefix
-	}
-
-	return out
 }
 
 // RequireNetworkSingleSource fails when a parameter is set in both documents at once. A
@@ -154,9 +72,10 @@ func (m *MetaConfig) Network() NetworkSettings {
 // unambiguously at bootstrap, even though Network() would silently pick the ModuleConfig one.
 func (m *MetaConfig) RequireNetworkSingleSource() error {
 	var both []string
-	for _, p := range m.networkParams() {
-		if p.mc != "" && p.cc != "" {
-			both = append(both, p.name)
+	for _, name := range networkSettings {
+		candidates := m.setting(name)
+		if candidates.fromModuleConfig != "" && candidates.fromClusterConfig != "" {
+			both = append(both, string(name))
 		}
 	}
 

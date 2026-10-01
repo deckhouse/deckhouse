@@ -16,7 +16,6 @@ package immutable
 
 import (
 	"context"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"strings"
@@ -136,22 +135,12 @@ func clusterParams(metaConfig *config.MetaConfig) (controlPlaneRenderParams, err
 		return controlPlaneRenderParams{}, fmt.Errorf("read the cluster configuration: %w", err)
 	}
 
-	encryption, err := encryptionAlgorithm(metaConfig)
-	if err != nil {
-		return controlPlaneRenderParams{}, err
-	}
-
 	params := controlPlaneRenderParams{
 		clusterParamsSpec: clusterParamsSpec{
-			EncryptionAlgorithm: encryption,
+			EncryptionAlgorithm: metaConfig.EncryptionAlgorithm(),
 			CertSANs:            certSANs(metaConfig),
 		},
 		ClusterType: metaConfig.ClusterType,
-	}
-	// A defaulted domain here would reach a new master's --service-account-issuer and split it from
-	// the rest of the cluster, so refuse to render rather than guess.
-	if !metaConfig.ClusterDomainKnown() {
-		return controlPlaneRenderParams{}, errors.New("cannot determine clusterDomain: the control-plane-manager ModuleConfig is unreadable and ClusterConfiguration carries no value")
 	}
 	params.ClusterDomain, _ = clusterConfig["clusterDomain"].(string)
 
@@ -238,26 +227,4 @@ func certSANs(metaConfig *config.MetaConfig) []string {
 		return nil
 	}
 	return sans
-}
-
-// encryptionAlgorithm reads the algorithm the cluster pins for its keys. An
-// empty result means "use the library default" and is passed through as such.
-func encryptionAlgorithm(metaConfig *config.MetaConfig) (string, error) {
-	mc := metaConfig.FindModuleConfig("control-plane-manager")
-	if mc != nil {
-		if value, ok := mc.Spec.Settings["encryptionAlgorithm"].(string); ok && value != "" {
-			return value, nil
-		}
-	}
-
-	raw := metaConfig.ClusterConfig["encryptionAlgorithm"]
-	if len(raw) == 0 {
-		return "", nil
-	}
-
-	var value string
-	if err := json.Unmarshal(raw, &value); err != nil {
-		return "", fmt.Errorf("parse encryptionAlgorithm from the cluster configuration: %w", err)
-	}
-	return value, nil
 }
