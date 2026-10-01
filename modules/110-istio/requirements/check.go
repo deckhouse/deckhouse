@@ -27,7 +27,6 @@ import (
 const (
 	requirementIstioMinimalVersionKey = "istioMinimalVersion"
 	requirementDefaultK8sKey          = "k8s"
-	minVersionValuesKey               = "istio:minimalVersion"
 	installedVersionsValuesKey        = "istio:installedVersions"
 	isK8sVersionAutomaticKey          = "istio:isK8sVersionAutomatic"
 	istioToK8sCompatibilityMapKey     = "istio:istioToK8sCompatibilityMap"
@@ -39,18 +38,22 @@ func init() {
 		if err != nil {
 			return false, err
 		}
-		currentVersionRaw, exists := getter.Get(minVersionValuesKey)
-		if !exists {
-			return true, nil
-		}
-		currentVersionStr := currentVersionRaw.(string)
-		currentVersion, err := semver.NewVersion(currentVersionStr)
+		installedIstioVersions, exists, err := getInstalledIstioVersions(getter)
 		if err != nil {
 			return false, err
 		}
+		if !exists {
+			return true, nil
+		}
 
-		if currentVersion.LessThan(minimalIstioVersion) {
-			return false, fmt.Errorf("installed Istio version '%s' is lower than required", currentVersionStr)
+		for _, installedVersionStr := range installedIstioVersions {
+			installedVersion, err := semver.NewVersion(installedVersionStr)
+			if err != nil {
+				return false, err
+			}
+			if installedVersion.LessThan(minimalIstioVersion) {
+				return false, fmt.Errorf("installed Istio version '%s' is lower than required", installedVersionStr)
+			}
 		}
 
 		return true, nil
@@ -63,7 +66,10 @@ func init() {
 		}
 		comingDefaultK8sVersion := fmt.Sprintf("%d.%d", comingDefaultK8sVersionSemver.Major(), comingDefaultK8sVersionSemver.Minor())
 
-		installedIstioVersions, exists := getInstalledIstioVersions(getter)
+		installedIstioVersions, exists, err := getInstalledIstioVersions(getter)
+		if err != nil {
+			return false, err
+		}
 		if !exists {
 			return true, nil
 		}
@@ -110,24 +116,18 @@ func init() {
 	requirements.RegisterCheck(requirementDefaultK8sKey, checkIstioAndK8sVersionsCompatibilityFunc)
 }
 
-func getInstalledIstioVersions(getter requirements.ValueGetter) ([]string, bool) {
-	if raw, exists := getter.Get(installedVersionsValuesKey); exists {
-		switch versions := raw.(type) {
-		case []string:
-			return versions, true
-		case []interface{}:
-			result := make([]string, 0, len(versions))
-			for _, version := range versions {
-				result = append(result, fmt.Sprint(version))
-			}
-			return result, true
-		}
-	}
-
-	raw, exists := getter.Get(minVersionValuesKey)
+// getInstalledIstioVersions returns the Major.Minor versions of every Istio
+// control plane in the cluster, as discovery_operator_versions_to_install.go
+// saves them.
+func getInstalledIstioVersions(getter requirements.ValueGetter) ([]string, bool, error) {
+	raw, exists := getter.Get(installedVersionsValuesKey)
 	if !exists {
-		return nil, false
+		return nil, false, nil
 	}
 
-	return []string{raw.(string)}, true
+	versions, ok := raw.([]string)
+	if !ok {
+		return nil, false, fmt.Errorf("%s key format is incorrect", installedVersionsValuesKey)
+	}
+	return versions, true, nil
 }
