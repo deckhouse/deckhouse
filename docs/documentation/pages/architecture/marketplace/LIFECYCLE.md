@@ -73,7 +73,10 @@ If a step fails, DP retries it with an increasing delay, from 15 seconds up to 2
 Uninstalling the Helm release deletes only the objects of the release. The following objects stay in the namespace:
 
 - objects that the workloads or hooks of the application create at runtime;
-- Helm hooks, that is, objects of the templates with the `helm.sh/hook` annotation, if they are still in the cluster: Nelm doesn't delete hooks when it uninstalls a release (see [Nelm annotations](nelm-annotations.html#lifecycle-annotations)).
+- objects of the templates that Nelm doesn't delete when it uninstalls a release, if they are still in the cluster (see [Nelm annotations](nelm-annotations.html#lifecycle-annotations)):
+  - Helm hooks, that is, objects with the `helm.sh/hook` annotation;
+  - objects with the `werf.io/ownership: anyone` annotation, for example, a Job that is deployed only on install;
+  - objects with the `helm.sh/resource-policy: keep` annotation and objects whose `werf.io/resource-policy` annotation contains `keep` or `skip-delete`.
 
 To make DP delete such objects together with the Application, list their kinds in the `orphanResources` field of the values, as the default value of the field in `openapi/values.yaml`. For example:
 
@@ -125,7 +128,7 @@ DP deletes the objects after the Helm release is uninstalled and the hooks are s
 
 DP doesn't delete:
 
-- Objects that must outlive the release: objects with the `helm.sh/resource-policy: keep` or `werf.io/ownership: anyone` annotation, and objects whose `werf.io/resource-policy` annotation contains `keep` or `skip-delete`. As in Nelm, `helm.sh/resource-policy` is ignored if `werf.io/resource-policy` is set. For example, the Job from [Resource rendered only on first install](nelm-annotations.html#6-resource-rendered-only-on-first-install) stays after the Application is deleted. Helm hooks without these annotations are deleted.
+- Objects with the `helm.sh/resource-policy: keep` annotation, even if the `werf.io/resource-policy` annotation is set. Other annotations don't protect an object: DP deletes objects whose `werf.io/resource-policy` annotation contains `keep` or `skip-delete` and objects with the `werf.io/ownership: anyone` annotation, for example, the Job from [Resource rendered only on first install](nelm-annotations.html#6-resource-rendered-only-on-first-install).
 - Objects that are already being deleted.
 - Objects of cluster-wide kinds and of kinds that the cluster doesn't serve, for example, custom resources whose CustomResourceDefinition is not installed. DP skips such kinds and writes a warning to its log.
 
@@ -133,7 +136,7 @@ DP deletes orphan resources only when the Application is deleted. When the appli
 
 If DP fails to list or delete the objects, for example, when the API server is unavailable, DP deletes the rest of the objects and retries the step. If the `orphanResources` value is not a list of kinds, DP writes an error to its log and removes the Application without deleting orphan resources.
 
-DP writes every deleted object and every skipped kind to its log: search the [log](#logs) for `orphan`. While DP retries the step, the queue of the application contains the `Purge` task with the error (see [State in DP](#state-in-dp)).
+DP writes every deleted object, every object with the `helm.sh/resource-policy: keep` annotation and every skipped kind to its log: search the [log](#logs) for `orphan`. While DP retries the step, the queue of the application contains the `Purge` task with the error (see [State in DP](#state-in-dp)).
 
 ## Resource restoration
 

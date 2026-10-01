@@ -555,10 +555,10 @@ func (a *Application) GetResourceRequests() []resourcerequests.Request {
 }
 
 // GetOrphanResources returns the kinds of objects the application leaves beside its
-// release — created at runtime by its workloads or hooks, or release hooks the uninstall
-// does not delete — which a removal deletes once the release is uninstalled. The package
-// declares them under orphanResources in its values, typically as the default of that
-// field in openapi/values.yaml:
+// release — created at runtime by its workloads or hooks, or rendered objects the uninstall
+// does not delete, such as release hooks and objects owned by anyone — which a removal
+// deletes once the release is uninstalled. The package declares them under orphanResources
+// in its values, typically as the default of that field in openapi/values.yaml:
 //
 //	orphanResources:
 //	  - kind: Job

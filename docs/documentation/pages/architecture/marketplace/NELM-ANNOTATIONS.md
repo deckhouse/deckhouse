@@ -101,7 +101,7 @@ type: kubernetes.io/tls
 data: ...
 ```
 
-`anyone` tells Nelm it is not the sole owner, so it skips deletion on uninstall.
+`anyone` tells Nelm it is not the sole owner, so it skips deletion on uninstall. DP still deletes the Secret together with the Application if its kind is listed in [`orphanResources`](lifecycle.html#orphan-resources). To keep the Secret, add `helm.sh/resource-policy: keep`.
 
 ### 4. Wait for a resource created by an operator
 
@@ -151,7 +151,7 @@ metadata:
 spec: ...
 ```
 
-Without `werf.io/ownership: anyone`, on upgrade the resource renders as absent and the owning release removes it. `anyone` prevents that.
+Without `werf.io/ownership: anyone`, on upgrade the resource renders as absent and the owning release removes it. `anyone` prevents that. Nelm doesn't delete such a Job on uninstall either. To make DP delete it together with the Application, list `Job` in [`orphanResources`](lifecycle.html#orphan-resources).
 
 ### 7. Slow-starting resource with a large image
 
@@ -248,7 +248,7 @@ metadata:
 
 ### `helm.sh/resource-policy`
 
-`keep` — do not delete the resource on uninstall or when removed from the chart. The resource continues to be updated on install/upgrade as long as it renders. DP doesn't delete such a resource as an [orphan resource](lifecycle.html#orphan-resources) either. If `werf.io/resource-policy` is set, `helm.sh/resource-policy` is ignored.
+`keep` — do not delete the resource on uninstall or when removed from the chart. The resource continues to be updated on install/upgrade as long as it renders. If `werf.io/resource-policy` is set, Nelm ignores `helm.sh/resource-policy`. DP doesn't delete a resource with `helm.sh/resource-policy: keep` as an [orphan resource](lifecycle.html#orphan-resources), even if `werf.io/resource-policy` is set: only this annotation protects a resource from such deletion.
 
 ### `werf.io/resource-policy`
 
@@ -259,6 +259,8 @@ A comma-separated list of policies:
 - `skip-recreate` — do not recreate the resource when a recreation would otherwise be required;
 - `skip-delete` (alias: `keep`) — do not delete the resource.
 
+DP deletes a resource with `skip-delete` or `keep` together with the Application if its kind is listed in [`orphanResources`](lifecycle.html#orphan-resources). To keep the resource, also set `helm.sh/resource-policy: keep`.
+
 ### `werf.io/ownership`
 
 - `release` (default for regular resources) — resource is deleted on uninstall and when absent from the chart. Release metadata annotations are applied.
@@ -266,7 +268,7 @@ A comma-separated list of policies:
 
 Use `anyone` for resources shared between releases or for resources that should survive their release (init Jobs with `werf.io/deploy-on: install`).
 
-Hooks that stay after uninstall are deleted by DP together with the Application if their kind is listed in [`orphanResources`](lifecycle.html#orphan-resources). A resource with an explicit `werf.io/ownership: anyone` annotation is not deleted.
+Resources that stay after uninstall, that is, hooks and resources with `werf.io/ownership: anyone`, are deleted by DP together with the Application if their kind is listed in [`orphanResources`](lifecycle.html#orphan-resources). To keep such a resource, set `helm.sh/resource-policy: keep`.
 
 ### `werf.io/deploy-on`
 

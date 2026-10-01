@@ -377,8 +377,9 @@ func (r *Runtime) buildNelmService() error {
 }
 
 // buildOrphanService creates the service that deletes what an application leaves beside
-// its Helm release — objects its workloads or hooks create at runtime, and the release
-// hooks an uninstall does not delete — once a removal has uninstalled the release.
+// its Helm release — objects its workloads or hooks create at runtime, and the rendered
+// objects an uninstall does not delete, such as release hooks and objects owned by
+// anyone — once a removal has uninstalled the release.
 //
 // Its client is shaped like the object patcher's: both delete objects in batches, where
 // a slow API call must not hang the package queue behind them.

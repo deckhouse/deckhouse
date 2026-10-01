@@ -13,9 +13,10 @@
 // limitations under the License.
 
 // Package orphans deletes what an application instance leaves beside its Helm release: objects its
-// workloads or hooks create at runtime, and the release hooks an uninstall does not delete. The
-// package declares the kinds of such objects; the instance's objects among them are the ones in its
-// namespace that carry its instance label.
+// workloads or hooks create at runtime, and the rendered objects an uninstall does not delete — the
+// release hooks, the objects owned by anyone, such as a Job deployed on install only, and the objects
+// a werf resource policy keeps. The package declares the kinds of such objects; the instance's objects
+// among them are the ones in its namespace that carry its instance label.
 package orphans
 
 import (
@@ -99,8 +100,8 @@ func NewService(client kubeClient, logger *log.Logger) *Service {
 // Only what a retry can fix fails the call, since a removal waits on it. A kind the cluster does not
 // serve has no objects to delete. A cluster-scoped kind is skipped: the instance label names an
 // instance within its namespace alone, so across the cluster it matches the instances of the same
-// name in other namespaces too. An object that says it outlives its release is left, as the
-// uninstall left it.
+// name in other namespaces too. An object with the keep Helm resource policy is left, as the uninstall
+// left it.
 func (s *Service) Delete(ctx context.Context, namespace, instance string, resources []Resource) error {
 	ctx, span := otel.Tracer(serviceTracer).Start(ctx, "Delete")
 	defer span.End()
@@ -261,8 +262,8 @@ func (s *Service) deleteObjects(ctx context.Context, gvr schema.GroupVersionReso
 			continue
 		}
 
-		if outlivesRelease(obj.GetAnnotations()) {
-			s.logger.Debug("keep orphan resource, it outlives its release",
+		if protected(obj.GetAnnotations()) {
+			s.logger.Info("keep orphan resource, its resource policy protects it",
 				slog.String("resource", gvr.String()),
 				slog.String("namespace", namespace),
 				slog.String("name", obj.GetName()))
@@ -295,26 +296,14 @@ func (s *Service) deleteObjects(ctx context.Context, gvr schema.GroupVersionReso
 	return errs
 }
 
-// outlivesRelease reports whether the annotations say the object outlives the release that rendered
-// it, which is why the uninstall left it: a keep or skip-delete resource policy, or ownership shared
-// with anyone. Nelm counts release hooks as shared too, but by its own default rather than by an
-// annotation, and that default is what leaves hooks behind — so a hook is not kept here.
-func outlivesRelease(annotations map[string]string) bool {
-	if common.Ownership(strings.TrimSpace(annotations[common.AnnotationKeyHumanOwnership])) == common.OwnershipAnyone {
-		return true
-	}
+// protected reports whether the annotations protect the object from deletion, which only the keep Helm
+// resource policy does, whatever the werf one beside it says. The werf resource policy and ownership
+// shared with anyone only steer what nelm does with the object in its release — a Job deployed on
+// install only is shared so that an upgrade does not delete it — and what the uninstall leaves for
+// them is what is purged.
+func protected(annotations map[string]string) bool {
+	// trimmed, as nelm reads the policy
+	policy := strings.TrimSpace(annotations[common.AnnotationKeyHumanResourcePolicy])
 
-	// the werf policy takes precedence over the Helm one, as nelm reads them
-	policies, ok := annotations[common.AnnotationKeyHumanWerfResourcePolicy]
-	if !ok {
-		policies = annotations[common.AnnotationKeyHumanResourcePolicy]
-	}
-
-	for policy := range strings.SplitSeq(policies, ",") {
-		if p := common.ResourcePolicy(strings.TrimSpace(policy)); p == common.ResourcePolicyKeep || p == common.ResourcePolicySkipDelete {
-			return true
-		}
-	}
-
-	return false
+	return common.ResourcePolicy(policy) == common.ResourcePolicyKeep
 }

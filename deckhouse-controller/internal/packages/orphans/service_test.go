@@ -214,25 +214,43 @@ func TestDelete(t *testing.T) {
 		assert.Empty(t, left(t, client, jobs, testNamespace))
 	})
 
-	t.Run("keeps objects that outlive their release", func(t *testing.T) {
+	t.Run("deletes rendered objects the uninstall leaves", func(t *testing.T) {
+		client := newClient(t,
+			// shared by nelm's default for hooks
+			newObject("batch/v1", "Job", testNamespace, "d8a-app-hook", testInstance,
+				map[string]string{"helm.sh/hook": "post-install"}),
+			// deployed on install only, so shared by an annotation to survive an upgrade
+			newObject("batch/v1", "Job", testNamespace, "d8a-app-post-install", testInstance,
+				map[string]string{"werf.io/deploy-on": "post-install", "werf.io/ownership": "anyone"}),
+			newObject("v1", "Secret", testNamespace, "d8a-app-shared", testInstance,
+				map[string]string{"werf.io/ownership": "anyone"}),
+			// kept on uninstall by the werf policy, which protects the object from nelm alone
+			newObject("v1", "Secret", testNamespace, "d8a-app-werf-kept", testInstance,
+				map[string]string{"werf.io/resource-policy": "keep"}),
+			newObject("v1", "Secret", testNamespace, "d8a-app-werf-protected", testInstance,
+				map[string]string{"werf.io/resource-policy": "skip-update, skip-delete"}),
+		)
+
+		require.NoError(t, NewService(client, log.NewNop()).Delete(ctx, testNamespace, testInstance, declared))
+
+		assert.Empty(t, left(t, client, jobs, testNamespace))
+		assert.Empty(t, left(t, client, secrets, testNamespace))
+	})
+
+	t.Run("keeps objects with the keep Helm resource policy", func(t *testing.T) {
 		client := newClient(t,
 			newObject("v1", "Secret", testNamespace, "d8a-app-kept", testInstance,
 				map[string]string{"helm.sh/resource-policy": "keep"}),
-			newObject("v1", "Secret", testNamespace, "d8a-app-protected", testInstance,
-				map[string]string{"werf.io/resource-policy": "skip-update, skip-delete"}),
 			newObject("v1", "Secret", testNamespace, "d8a-app-shared", testInstance,
-				map[string]string{"werf.io/ownership": "anyone"}),
-			// shared by nelm's default for hooks, not by an annotation
-			newObject("v1", "Secret", testNamespace, "d8a-app-hook", testInstance,
-				map[string]string{"helm.sh/hook": "pre-install"}),
-			// the werf policy takes precedence over the Helm one
+				map[string]string{"werf.io/ownership": "anyone", "helm.sh/resource-policy": "keep"}),
+			// whatever the werf policy beside it says
 			newObject("v1", "Secret", testNamespace, "d8a-app-updatable", testInstance,
 				map[string]string{"werf.io/resource-policy": "skip-update", "helm.sh/resource-policy": "keep"}),
 		)
 
 		require.NoError(t, NewService(client, log.NewNop()).Delete(ctx, testNamespace, testInstance, declared))
 
-		assert.ElementsMatch(t, []string{"d8a-app-kept", "d8a-app-protected", "d8a-app-shared"}, left(t, client, secrets, testNamespace))
+		assert.ElementsMatch(t, []string{"d8a-app-kept", "d8a-app-shared", "d8a-app-updatable"}, left(t, client, secrets, testNamespace))
 	})
 
 	t.Run("does not delete an object already being deleted", func(t *testing.T) {
