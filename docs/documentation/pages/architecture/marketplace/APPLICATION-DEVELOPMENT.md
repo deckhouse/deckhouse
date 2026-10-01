@@ -1,7 +1,7 @@
 ---
 title: Application development
 permalink: en/architecture/marketplace/application-development.html
-description: "Create an Application package for Deckhouse Platform Marketplace: bootstrap, project structure, package.yaml, requirements, local rendering, verification, build, CI/CD, and OCI artifact layout."
+description: "Create an Application package for Deckhouse Platform Marketplace: bootstrap, project structure, package.yaml, requirements, local rendering, verification, build, CI/CD, and package artifacts in the container registry."
 ---
 
 ## Prerequisites
@@ -12,7 +12,7 @@ Install `deckhouse-cli` (`d8`):
 sh -c "$(curl -fsSL https://raw.githubusercontent.com/deckhouse/deckhouse-cli/main/tools/install.sh)"
 ```
 
-Log in to the OCI registry with your [license token](https://license.deckhouse.io/):
+Log in to the container registry with your [license token](https://license.deckhouse.io/):
 
 ```bash
 d8 dk cr login -u license-token dev-registry.deckhouse.io --password <LICENSE_TOKEN>
@@ -241,7 +241,7 @@ Available options:
 | `--file <FILE_NAME>` | Print only the objects rendered from the template with the specified file name |
 | `--render-file <PATH>` | Write the manifests to a file, without the template file name comments |
 | `-r, --remote <REPOSITORY>/<PACKAGE_NAME>:<PACKAGE_VERSION>` | Render a published package bundle instead of the local directory. A tag or a digest is required |
-| `--remote-user`, `--remote-password` | Credentials for the registry. They can also be set in the `PACKAGE_REMOTE_USER` and `PACKAGE_REMOTE_PASSWORD` environment variables |
+| `--remote-user`, `--remote-password` | Container registry credentials. They can also be set in the `PACKAGE_REMOTE_USER` and `PACKAGE_REMOTE_PASSWORD` environment variables |
 
 The command uses stub values instead of the values from a cluster: the `test` instance in the `default` namespace, the `dev` package version, and settings generated from `openapi/settings.yaml` (from `x-example`, `x-examples`, `enum`, or `default`). Image references are stubs keyed by the names of the image directories. To render the templates of an installed application with its actual values, use `deckhouse-controller packages render` (see [Lifecycle and debugging](lifecycle.html#state-in-dp)).
 
@@ -269,7 +269,7 @@ The rules are grouped by linters:
 
 Available options: `--hide-warnings` (don't show warnings), `--show-ignored` (show the findings of ignored rules), `--lint-config <PATH>` (path to the settings file).
 
-To check a published package, run `d8 package verify remote <REPOSITORY> <PACKAGE_NAME>`. By default, the command checks the bundle of the latest version. Use `--version <PACKAGE_VERSION>` to choose the version and `--release` to also check the version metadata image. The command uses the registry credentials saved with `d8 dk cr login`.
+To check a published package, run `d8 package verify remote <REPOSITORY> <PACKAGE_NAME>`. By default, the command checks the bundle of the latest version. Use `--version <PACKAGE_VERSION>` to choose the version and `--release` to also check the version metadata image. The command uses the container registry credentials saved with `d8 dk cr login`.
 
 ### .pkglint.yaml
 
@@ -298,13 +298,13 @@ The `impact` field takes the `error`, `warn`, and `ignored` values. The impact o
 
 ## Local build
 
-To build and publish the package to an OCI registry, run:
+To build the package and publish it to a container registry, run:
 
 ```bash
 d8 package build -v v0.0.1 -r dev-registry.deckhouse.io/deckhouse/packages
 ```
 
-For local development, use the [`payload-registry`](/modules/payload-registry/) module as your own container image registry.
+For local development, use the [`payload-registry`](/modules/payload-registry/) module as your own container registry.
 
 Specifics of the command:
 
@@ -319,25 +319,25 @@ Available options:
 | Option | Environment variable | Description |
 |---|---|---|
 | `-v, --version` | — | Package version (required) |
-| `-r, --repo` | `PACKAGE_BUILD_REPOSITORY` | Root path of the packages in the registry. Without it, the package is only built locally |
-| `-u, --user`, `-t, --token` | `PACKAGE_BUILD_REPOSITORY_USER`, `PACKAGE_BUILD_REPOSITORY_TOKEN` | Registry credentials |
-| `--final-repo`, `--final-user`, `--final-token` | `PACKAGE_BUILD_FINAL_REPOSITORY`, `PACKAGE_BUILD_FINAL_REPOSITORY_USER`, `PACKAGE_BUILD_FINAL_REPOSITORY_TOKEN` | Registry path and credentials to publish the package to, if they differ from the build registry |
+| `-r, --repo` | `PACKAGE_BUILD_REPOSITORY` | Root path of the packages in the container registry. Without it, the package is only built locally |
+| `-u, --user`, `-t, --token` | `PACKAGE_BUILD_REPOSITORY_USER`, `PACKAGE_BUILD_REPOSITORY_TOKEN` | Container registry credentials |
+| `--final-repo`, `--final-user`, `--final-token` | `PACKAGE_BUILD_FINAL_REPOSITORY`, `PACKAGE_BUILD_FINAL_REPOSITORY_USER`, `PACKAGE_BUILD_FINAL_REPOSITORY_TOKEN` | Container registry to publish the package to (path and credentials), if it differs from the build registry |
 | `-f, --force` | — | Rebuild and publish a version that already exists in the registry |
-| `--insecure` | `PACKAGE_BUILD_INSECURE` | Allow HTTP and skip the verification of the TLS certificates of the registries |
+| `--insecure` | `PACKAGE_BUILD_INSECURE` | Allow HTTP and skip the verification of the TLS certificates of the container registries |
 | `--sign`, `--sign-cert`, `--sign-key` | `PACKAGE_BUILD_SIGN_CERT`, `PACKAGE_BUILD_SIGN_KEY` | Sign the images with the specified certificate and key |
 
 ## CI/CD setup
 
-The CI/CD pipeline publishes package releases to the OCI registry. To publish a release, configure the OCI registry credentials, then create a Git tag in SemVer format and push it to the repository.
+The CI/CD pipeline publishes package releases to the container registry. To publish a release, configure the container registry credentials, then create a Git tag in SemVer format and push it to the repository.
 
 ### Environment variables
 
-The pipeline uses the following variables to authenticate to the OCI registry:
+The pipeline uses the following variables to authenticate to the container registry:
 
 | Variable | Description |
 |---|---|
-| `PACKAGES_REGISTRY_LOGIN` | OCI registry username for publishing |
-| `PACKAGES_REGISTRY_PASSWORD` | OCI registry password or token |
+| `PACKAGES_REGISTRY_LOGIN` | Container registry username for publishing |
+| `PACKAGES_REGISTRY_PASSWORD` | Container registry password or token |
 
 ### Triggering a release
 
@@ -348,11 +348,11 @@ git tag v0.1.0
 git push origin v0.1.0
 ```
 
-The pipeline builds the package and pushes it to the OCI registry. Once the pipeline completes, the package version is available for scanning via PackageRepository.
+The pipeline builds the package and pushes it to the container registry. Once the pipeline completes, the package version is available for scanning via PackageRepository.
 
-## OCI artifact layout in the registry
+## Package artifacts in the container registry
 
-The package and related data are published to an OCI-compatible registry. The package bundle, container images, and version metadata are stored at separate paths.
+The package and related data are published to a container registry. The package bundle, container images, and version metadata are stored at separate paths.
 
 | Path | Description |
 |---|---|

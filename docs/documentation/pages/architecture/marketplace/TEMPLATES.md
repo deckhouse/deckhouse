@@ -1,7 +1,7 @@
 ---
 title: Templates
 permalink: en/architecture/marketplace/templates.html
-description: "Helm templates of an Application package: template values, object naming, container images and registry access, Ingress and application endpoints, labels, and workload health."
+description: "Helm templates of an Application package: template values, object naming, container images and container registry access, Ingress and application endpoints, labels, and workload health."
 ---
 
 {% raw %}
@@ -81,6 +81,8 @@ DP adds the following labels to the metadata of every rendered object:
 
 The labels are added only to the metadata of the rendered objects, not to Pod templates. Define the labels used in Pod selectors in the templates yourself.
 
+When the Application is deleted, DP finds the objects that the instance has left in the namespace by the `packages.deckhouse.io/instance` label (see [Orphan resources](lifecycle.html#orphan-resources)).
+
 Objects with the `heritage: deckhouse` label are protected by the `label-objects.deckhouse.io` admission policy, and objects with the `d8a-` name prefix are protected by the `d8a-prefix.deckhouse.io` policy. As a result:
 
 - Users can't change or delete objects rendered by the templates. To change them manually, for example, when debugging, switch the application to [maintenance mode](lifecycle.html#maintenance-mode).
@@ -115,9 +117,10 @@ data:
 
 | Field | Description |
 |---|---|
+| `name` | Name of the PackageRepository resource |
 | `repository` | Repository address from the PackageRepository resource |
 | `dockercfg` | Base64-encoded Docker configuration for accessing the repository. If the PackageRepository uses `login` and `password`, DP builds the configuration from them |
-| `scheme` | Protocol for accessing the repository: `HTTP` or `HTTPS` |
+| `scheme` | Protocol for accessing the repository as specified in the PackageRepository resource, for example, `HTTPS`. DP passes the value as is: it can be in any case or empty, which means HTTPS |
 | `ca` | CA certificate of the repository, if specified |
 
 ## Ingress and HTTPS

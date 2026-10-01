@@ -11,7 +11,7 @@ The user configures an application instance in the `spec.settings` field of the 
 The `openapi/` directory of the package contains two schemas:
 
 - `settings.yaml` — the schema of `Application.spec.settings`, that is, of the settings the user can change. The legacy file name `config-values.yaml` is supported for backward compatibility: DP reads it only if `settings.yaml` is absent.
-- `values.yaml` — the schema of the full set of values available to templates as `.Values`, including internal values set by hooks.
+- `values.yaml` — the schema of the full set of values available to templates as `.Values`, including internal values set by hooks. In this schema, the package also lists the kinds of [orphan resources](lifecycle.html#orphan-resources) that DP deletes together with the application.
 - `doc-ru-settings.yaml` — Russian descriptions of the settings. The `d8 package verify` command requires a `doc-ru-<NAME>.yaml` file for every schema file except `values.yaml`.
 
 The settings are located at the root of the values, so the values schema must declare them too. To include all settings in the values schema without duplicating them, add the `x-extend` extension to `openapi/values.yaml`. Without it, the values fail the validation when a hook changes them.
@@ -99,8 +99,7 @@ Rules that reference `oldSelf` compare the new settings with the previously appl
 
 ### Defaulting a grantable cluster-wide resource value (x-deckhouse-grantable-resource)
 
-A `settings` field of type `string` can be bound to a grantable cluster-wide resource managed by the
-[`multitenancy-manager`](/modules/multitenancy-manager/) (for example, a StorageClass).
+A `settings` field of type `string` can be bound to a grantable cluster-wide resource managed by the [`multitenancy-manager`](/modules/multitenancy-manager/) (for example, a StorageClass).
 
 When the field is bound and the user leaves it empty, the resource name configured as the project default is injected into `values`. When the user provides a value, it is checked against the resources available to the project. A value that is not in this list is rejected.
 
@@ -162,12 +161,11 @@ Behavior:
 - If an update changes an immutable value, the validating webhook rejects it and reports the field name.
 - In the web interface, the value of a field with the extension can be set when installing the application. In the edit form of an installed application, the field is read-only.
 - Comparison uses the configuration that was actually applied, after schema defaults are applied. Therefore, a field with the extension can be omitted from the manifest only if its `default` matches the value that has already been applied. If there is no default value or it differs from the applied value, the change is rejected.
+- The extension doesn't apply to array elements and map entries that an update adds: a new element has no previous value to compare with.
 
 {% alert level="info" %}
 If an entire object is removed from the manifest, default values are not applied to its nested fields. Therefore, removing an object that contains fields using `x-deckhouse-immutable` can cause frozen values to be lost and is rejected.
 {% endalert %}
-
-- The mark is not inherited into array elements or map entries that the update adds — a new element has no previous value to be frozen against.
 
 ## Web interface form
 

@@ -47,6 +47,7 @@ import (
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/grants"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/hooks"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/nelm"
+	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/orphans"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/schedule"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/schedule/rule/script"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/values"
@@ -58,6 +59,10 @@ import (
 // d8aPrefix is reserved for application objects by the d8a-prefix.deckhouse.io
 // admission policy.
 const d8aPrefix = "d8a-"
+
+// orphanResourcesValue is the values key under which a package declares the kinds of
+// objects it leaves beside its release; see GetOrphanResources.
+const orphanResourcesValue = "orphanResources"
 
 // Application represents a running instance of a package.
 // It contains hooks, values storage, and configuration for execution.
@@ -524,6 +529,35 @@ func (a *Application) GetSettings() addonutils.Values {
 // task on the package's serialized queue.
 func (a *Application) SetMaintenance(state nelm.MaintenanceState) {
 	a.maintenance = state
+}
+
+// GetOrphanResources returns the kinds of objects the application leaves beside its
+// release — created at runtime by its workloads or hooks, or release hooks the uninstall
+// does not delete — which a removal deletes once the release is uninstalled. The package
+// declares them under orphanResources in its values, typically as the default of that
+// field in openapi/values.yaml:
+//
+//	orphanResources:
+//	  - kind: Job
+//	    version: v1
+func (a *Application) GetOrphanResources() ([]orphans.Resource, error) {
+	declared, ok := a.values.GetValues()[orphanResourcesValue]
+	if !ok || declared == nil {
+		return nil, nil
+	}
+
+	// values hold plain JSON types, so a round trip is what decodes them
+	raw, err := json.Marshal(declared)
+	if err != nil {
+		return nil, fmt.Errorf("marshal %s: %w", orphanResourcesValue, err)
+	}
+
+	var resources []orphans.Resource
+	if err = json.Unmarshal(raw, &resources); err != nil {
+		return nil, fmt.Errorf("unmarshal %s: %w", orphanResourcesValue, err)
+	}
+
+	return resources, nil
 }
 
 // GetMaintenance returns the application maintenance mode. Empty (Managed) means

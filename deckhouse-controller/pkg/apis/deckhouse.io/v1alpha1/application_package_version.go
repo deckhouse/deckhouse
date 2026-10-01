@@ -286,7 +286,7 @@ type PackageRequirements struct {
 	// +optional
 	Kubernetes *VersionConstraint `json:"kubernetes,omitempty"`
 
-	// Required modules, partitioned into mandatory, conditional, and anyOf dependencies.
+	// Required modules, partitioned into mandatory, conditional, anyOf, and noneOf dependencies.
 	// +optional
 	Modules *PackageModulesRequirements `json:"modules,omitempty"`
 }
@@ -337,10 +337,9 @@ type PackageModuleDependency struct {
 	Constraint string `json:"constraint,omitempty"`
 }
 
-// PackageModuleGroup is a group of alternative module dependencies. At least one
-// member must be installed (and satisfy its constraint, if any) for the package
-// to start. The Name is required and surfaces in scheduler diagnostics; the
-// Description is optional human-facing documentation.
+// PackageModuleGroup is a named group of module dependencies: alternatives in anyOf,
+// forbidden modules in noneOf. The Name is required and surfaces in scheduler
+// diagnostics; the Description is optional human-facing documentation.
 type PackageModuleGroup struct {
 	// Stable identifier used by the scheduler in diagnostics.
 	Name string `json:"name"`
@@ -349,7 +348,7 @@ type PackageModuleGroup struct {
 	// +optional
 	Description string `json:"description,omitempty"`
 
-	// Alternative module dependencies in this group.
+	// Module dependencies in this group.
 	Modules []PackageModuleDependency `json:"modules"`
 }
 

@@ -136,7 +136,7 @@ type PackageRepositoryOperationStatus struct {
 	// Conditions reflecting the latest observations of the operation state.
 	// The operation phase is determined by the `Completed` condition: while its status is `False`,
 	// the operation is in one of the intermediate phases (`Discover`, `Processing`);
-	// when the status is `True`, the operation has finished with reason `Succeeded` or `Failed`.
+	// when the status is `True`, the operation has finished with reason `ScanSucceeded` or `ScanFailed`.
 	// +optional
 	// +patchMergeKey=type
 	// +patchStrategy=merge
@@ -147,7 +147,8 @@ type PackageRepositoryOperationStatus struct {
 }
 
 type PackageRepositoryOperationStatusPackages struct {
-	// List of packages discovered during the operation.
+	// Packages discovered during the operation that are still waiting to be processed.
+	// The list is empty once the operation completes.
 	// +optional
 	Discovered []PackageRepositoryOperationStatusDiscoveredPackage `json:"discovered,omitempty"`
 
@@ -171,8 +172,8 @@ type PackageRepositoryOperationStatusPackages struct {
 	//
 	// A version is counted as new if its ApplicationPackageVersion or
 	// ModulePackageVersion did not exist in the cluster, or (ApplicationPackageVersion
-	// only) existed with the "not in registry" mark and its image was found in the
-	// registry during this operation.
+	// only) existed with the "not in the container registry" mark and its image was
+	// found in the registry during this operation.
 	// +optional
 	NewVersionsOverall int `json:"newVersionsOverall,omitempty"`
 }
@@ -214,8 +215,8 @@ type PackageRepositoryOperationStatusPackage struct {
 	//
 	// A version is counted as new if its ApplicationPackageVersion or
 	// ModulePackageVersion did not exist in the cluster, or (ApplicationPackageVersion
-	// only) existed with the "not in registry" mark and its image was found in the
-	// registry during this operation.
+	// only) existed with the "not in the container registry" mark and its image was
+	// found in the registry during this operation.
 	// +optional
 	NewVersions int `json:"newVersions,omitempty"`
 }
