@@ -25,6 +25,7 @@
     Deckhouse 1.78 makes `Baseline` the default PSS policy for all clusters.
     On clusters bootstrapped with a Deckhouse version lower than v1.55 or with an unknown bootstrap version, the `PodSecurityStandardsDefaultPolicyNotSet` alert fires, and the update to 1.78 is blocked until `settings.podSecurityStandards.defaultPolicy` is set explicitly in the `admission-policy-engine` ModuleConfig.
     To keep the current behavior, set `defaultPolicy: Privileged`. To switch to `Baseline` or `Restricted`, make sure that the workloads in non-system namespaces comply with the chosen policy first.
+ - **[deckhouse-controller]** When an Application is deleted, Deckhouse also deletes the objects of the kinds listed in the package's `orphanResources` value that the application left in its namespace. [#308](https://fox.flant.com/deckhouse/deckhouse/-/merge_requests/308)
 
 ## Fixes
 
@@ -55,9 +56,11 @@
  - **[dhctl]** Fixed terraform-auto-converger, terraform-state-exporter and `dhctl converge` failing on cloud clusters whose `cloud-provider-<name>` ModuleConfig has no `spec.enabled` field. dhctl now treats `spec.enabled` as optional and a ModuleConfig without it as disabled. [#23317](https://github.com/deckhouse/deckhouse/pull/23317)
  - **[dhctl]** Fixed the terraform-auto-converger init container failing on clusters already migrated to OpenTofu - the migration check now skips planning when no Terraform state is stored in the cluster. [#23329](https://github.com/deckhouse/deckhouse/pull/23329)
  - **[dhctl]** Restoring of handling api_server_url and api_server_token in dhctl [#23293](https://github.com/deckhouse/deckhouse/pull/23293)
+ - **[istio]** Deckhouse update requirements now take into account Istio control planes that are still being removed. [#198](https://fox.flant.com/deckhouse/deckhouse/-/merge_requests/198)
  - **[istio]** Fix leaking istiod control plane after removing an Istio version or disabling the module. [#254](https://fox.flant.com/deckhouse/deckhouse/-/merge_requests/254)
  - **[istio]** Fixed the istio module getting stuck when switching `globalVersion` from 1.21 while proxies are still connected to the 1.21 control plane. [#200](https://fox.flant.com/deckhouse/deckhouse/-/merge_requests/200)
  - **[istio]** Switching back to Istio 1.21 no longer removes the `networking.istio.io/v1` API from the Istio CRDs and no longer breaks the istio release. [#268](https://fox.flant.com/deckhouse/deckhouse/-/merge_requests/268)
+ - **[istio]** The Istio operator now recovers Helm releases stuck in the `pending-*` or `uninstalling` state. [#260](https://fox.flant.com/deckhouse/deckhouse/-/merge_requests/260)
  - **[kube-dns]** Set resource limits for the `render-etc-hosts-with-cluster-domain-aliases` init container so that pods can be created in namespaces with a ResourceQuota on `limits.cpu`/`limits.memory`. [#23295](https://github.com/deckhouse/deckhouse/pull/23295)
  - **[kube-proxy]** Fixed kube-proxy failing to start on Kubernetes 1.36 and higher because of the removed `TopologyAwareHints` feature gate. [#23336](https://github.com/deckhouse/deckhouse/pull/23336)
     The `d8-kube-proxy` pods will be restarted on all nodes.
@@ -86,3 +89,5 @@
  - **[cni-cilium]** BPF conntrack, NAT, neighbor and socket reverse NAT map sizes can now be set per node with CiliumNodeConfig. [#23385](https://github.com/deckhouse/deckhouse/pull/23385)
     `cilium-agent` Pods will be restarted.
  - **[deckhouse-controller]** Bump nelm to v1.31.0. The `status.tracking` report of Application now has the operation graph (`id`, `category`, `dependsOn`), the `Canceled` status, and no `waitingFor`. [#23191](https://github.com/deckhouse/deckhouse/pull/23191)
+ - **[registry-packages-proxy]** Add VEX statements for x/crypto/ssh findings. [#311](https://fox.flant.com/deckhouse/deckhouse/-/merge_requests/311)
+ - **[terraform-manager]** Add VEX statements for the opentofu binary in base-opentofu. [#311](https://fox.flant.com/deckhouse/deckhouse/-/merge_requests/311)
