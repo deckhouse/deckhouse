@@ -12,6 +12,17 @@
             margin-bottom: 20px !important;
         }
     }
+
+    &__lead {
+        max-width: 800px;
+        margin: -10px 0 30px;
+        color: variables.$color-text-secondary;
+        line-height: 1.5;
+
+        @include breakpoints.max-w(m) {
+            margin-bottom: 20px;
+        }
+    }
 }
 
 .cards-text {
@@ -94,6 +105,20 @@
 
     &__title-text {
         color: variables.$color-main;
+    }
+
+    &__badge {
+        display: inline-block;
+        vertical-align: middle;
+        margin-left: 8px;
+        padding: 2px 8px;
+        border-radius: 10px;
+        background: variables.$color-smooth;
+        color: variables.$color-text-secondary;
+        font-size: 12px;
+        font-weight: normal;
+        line-height: 18px;
+        white-space: nowrap;
     }
 
     &_smooth {
