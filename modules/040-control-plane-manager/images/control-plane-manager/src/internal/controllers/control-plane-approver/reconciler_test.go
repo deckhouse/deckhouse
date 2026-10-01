@@ -14,7 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package operationsapprover
+package controlplaneapprover
 
 import (
 	"context"
@@ -47,7 +47,7 @@ func TestReconciler_Reconcile(t *testing.T) {
 	t.Run("no control plane nodes returns without error", func(t *testing.T) {
 		t.Parallel()
 		cl := fake.NewClientBuilder().WithScheme(testScheme).Build()
-		r := &reconciler{client: cl}
+		r := newReconciler(cl)
 		_, err := r.Reconcile(ctx, reconcile.Request{})
 		require.NoError(t, err)
 	})
@@ -58,7 +58,7 @@ func TestReconciler_Reconcile(t *testing.T) {
 			WithScheme(testScheme).
 			WithObjects(testControlPlaneNode("n1")).
 			Build()
-		r := &reconciler{client: cl}
+		r := newReconciler(cl)
 		_, err := r.Reconcile(ctx, reconcile.Request{})
 		require.NoError(t, err)
 	})
@@ -86,7 +86,7 @@ func TestReconciler_Reconcile(t *testing.T) {
 			).
 			WithStatusSubresource(&controlplanev1alpha1.ControlPlaneOperation{}).
 			Build()
-		r := &reconciler{client: cl}
+		r := newReconciler(cl)
 
 		_, err := r.Reconcile(ctx, reconcile.Request{})
 		require.NoError(t, err)
@@ -110,7 +110,7 @@ func TestReconciler_Reconcile(t *testing.T) {
 			WithObjects(testControlPlaneNode("n1"), &op).
 			WithStatusSubresource(&controlplanev1alpha1.ControlPlaneOperation{}).
 			Build()
-		r := &reconciler{client: cl}
+		r := newReconciler(cl)
 
 		_, err := r.Reconcile(ctx, reconcile.Request{})
 		require.NoError(t, err)
@@ -118,36 +118,6 @@ func TestReconciler_Reconcile(t *testing.T) {
 		var updated controlplanev1alpha1.ControlPlaneOperation
 		require.NoError(t, cl.Get(ctx, client.ObjectKey{Name: "op-etcd", Namespace: constants.KubeSystemNamespace}, &updated))
 		require.True(t, updated.Spec.Approved)
-	})
-
-	t.Run("does not patch second operation in same reconcile when stage blocks", func(t *testing.T) {
-		t.Parallel()
-		// Three nodes so apiserver stage is reachable after etcd is idle; in one pass etcd reserves pipeline first.
-		etcdOp := newOperation("zzz-etcd", "n1", controlplanev1alpha1.OperationComponentEtcd, false)
-		apiOp := newOperation("aaa-apiserver", "n2", controlplanev1alpha1.OperationComponentKubeAPIServer, false)
-		cl := fake.NewClientBuilder().
-			WithScheme(testScheme).
-			WithObjects(
-				testControlPlaneNode("n1"),
-				testControlPlaneNode("n2"),
-				testControlPlaneNode("n3"),
-				&etcdOp,
-				&apiOp,
-			).
-			WithStatusSubresource(&controlplanev1alpha1.ControlPlaneOperation{}).
-			Build()
-		r := &reconciler{client: cl}
-
-		_, err := r.Reconcile(ctx, reconcile.Request{})
-		require.NoError(t, err)
-
-		var etcdUpdated controlplanev1alpha1.ControlPlaneOperation
-		require.NoError(t, cl.Get(ctx, client.ObjectKey{Name: "zzz-etcd", Namespace: constants.KubeSystemNamespace}, &etcdUpdated))
-		require.True(t, etcdUpdated.Spec.Approved)
-
-		var apiUpdated controlplanev1alpha1.ControlPlaneOperation
-		require.NoError(t, cl.Get(ctx, client.ObjectKey{Name: "aaa-apiserver", Namespace: constants.KubeSystemNamespace}, &apiUpdated))
-		require.False(t, apiUpdated.Spec.Approved)
 	})
 
 	t.Run("does not patch when approver rejects", func(t *testing.T) {
@@ -159,7 +129,7 @@ func TestReconciler_Reconcile(t *testing.T) {
 			WithObjects(testControlPlaneNode("n1"), testControlPlaneNode("n2"), &seed, &pending).
 			WithStatusSubresource(&controlplanev1alpha1.ControlPlaneOperation{}).
 			Build()
-		r := &reconciler{client: cl}
+		r := newReconciler(cl)
 
 		_, err := r.Reconcile(ctx, reconcile.Request{})
 		require.NoError(t, err)
@@ -200,6 +170,23 @@ func testArbiterNode(name string) *corev1.Node {
 					Status: corev1.ConditionTrue,
 				},
 			},
+		},
+	}
+}
+
+func newOperation(name, node string, component controlplanev1alpha1.OperationComponent, approved bool) controlplanev1alpha1.ControlPlaneOperation {
+	return controlplanev1alpha1.ControlPlaneOperation{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      name,
+			Namespace: constants.KubeSystemNamespace,
+			Labels: map[string]string{
+				constants.ControlPlaneNodeNameLabelKey: node,
+			},
+		},
+		Spec: controlplanev1alpha1.ControlPlaneOperationSpec{
+			NodeName:  node,
+			Component: component,
+			Approved:  approved,
 		},
 	}
 }

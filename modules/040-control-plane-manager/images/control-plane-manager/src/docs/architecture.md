@@ -10,7 +10,7 @@
 - `operations-approver-controller`
 - `update-observer-controller`
 
-The manager registers all of them in `internal/manager.go`.
+The manager registers all of them in `internal/manager/configurator_staticpod.go`.
 
 Runtime endpoints:
 

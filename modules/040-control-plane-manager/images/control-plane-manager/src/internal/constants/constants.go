@@ -21,11 +21,22 @@ import (
 	"time"
 )
 
+type ControlPlaneType string
+
+const (
+	ControlPlaneTypeStaticPod ControlPlaneType = "StaticPod"
+)
+
+// StaticPod control plane manager constants
+const (
+	CpcControllerName                = "control-plane-configuration-controller"
+	CpnControllerName                = "control-plane-node-controller"
+	CpoControllerName                = "control-plane-operation-controller"
+	OperationsApproverControllerName = "operations_approver_controller"
+)
+
 const (
 	KubeSystemNamespace                 = "kube-system"
-	CpcControllerName                   = "control-plane-configuration-controller"
-	CpnControllerName                   = "control-plane-node-controller"
-	CpoControllerName                   = "control-plane-operation-controller"
 	ControlPlaneManagerConfigSecretName = "d8-control-plane-manager-config"
 	PkiSecretName                       = "d8-pki"
 	ControlPlaneNodeLabelKey            = "node-role.kubernetes.io/control-plane"

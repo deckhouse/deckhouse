@@ -24,14 +24,19 @@ import (
 
 	"github.com/deckhouse/deckhouse/pkg/log"
 
-	"control-plane-manager/internal"
 	"control-plane-manager/internal/constants"
+	"control-plane-manager/internal/manager"
 )
 
 func main() {
 	ctx, cancel := context.WithCancel(context.Background())
 
-	manager, err := internal.NewManager(ctx, false) // TODO pprof flag
+	builder, err := manager.NewBuilder(constants.ControlPlaneTypeStaticPod)
+	if err != nil {
+		log.Fatal("Failed to create manager builder", log.Err(err))
+	}
+
+	manager, err := builder.Build(ctx)
 	if err != nil {
 		log.Fatal("Failed to create a manager", log.Err(err))
 	}
@@ -46,7 +51,7 @@ func main() {
 	for range sigs {
 		log.Info("Shutdown signal received")
 		cancel()
-		log.Info("Bye from %s", constants.CpcControllerName)
+		log.Info("Bye")
 		break
 	}
 }
