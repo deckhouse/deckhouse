@@ -57,7 +57,7 @@ type Constraints struct {
 	Kubernetes   *semver.Constraints   // Kubernetes version constraint (e.g., ">=1.21")
 	Deckhouse    *semver.Constraints   // Deckhouse version constraint (e.g., ">=1.60")
 	Dependencies map[string]Dependency // Inter-package dependencies; keyed by package name. Source of topological ordering and gate-rule inputs.
-	AnyOf        []AnyOfGroup          // Groups of alternative dependencies. Gate-only: never contributes edges to the topological graph, so fallback chains across packages do not produce cycles.
+	AnyOf        []AnyOfGroup          // Groups of alternative dependencies. Members are soft ordering edges: waited for, but dropped where they close a cycle, so fallback chains stay legal.
 	NoneOf       []NoneOfGroup         // Groups of forbidden dependencies. Gate-only: "must not be installed" is an admission predicate, not an ordering relation.
 
 	Subscriptions map[string]struct{} // Subscriptions to other nodes: this node will be notified when the subscribed node changes state.
@@ -116,9 +116,15 @@ type node struct {
 	state nodeState // Lifecycle phase: idle → scheduled → active.
 	order Order     // Scheduling priority; lower values run before higher ones.
 
+	effectiveOrder Order // Tier canSchedule enforces: order raised to the highest dependency's; recomputed every pass.
+
 	decision rule.Decision // Last computed decision from the rule chain; the node is enabled iff Kind == rule.Enable.
+	decided  bool          // Set by the first pass that resolved decision; the next passes report only flips.
 
 	dependencies map[string]Dependency // Declared dependency constraints — source of topological ordering and rule inputs.
+
+	anyOf      map[string]struct{} // Members of every AnyOf group: soft ordering edges, dropped where they close a cycle.
+	anyOfWaits map[string]struct{} // AnyOf members the last pass kept as ordering edges; canSchedule waits for them.
 
 	subscriptions map[string]struct{} // Subscriptions to other nodes: this node will be notified when the subscribed node changes state.
 	subscribers   map[string]struct{} // Set of nodes that are subscribed to this node's state changes.
@@ -147,13 +153,16 @@ func (s *Scheduler) addNode(pkg Package) {
 	constraints := pkg.GetConstraints()
 
 	n := &node{
-		name:          pkg.GetName(),
-		version:       pkg.GetVersion(),
-		state:         nodeStateIdle,
-		order:         constraints.Order,
-		dependencies:  maps.Clone(constraints.Dependencies),
-		subscriptions: maps.Clone(constraints.Subscriptions),
-		subscribers:   make(map[string]struct{}),
+		name:    pkg.GetName(),
+		version: pkg.GetVersion(),
+		state:   nodeStateIdle,
+		order:   constraints.Order,
+		// seeded so a node added between passes is not tier 0 until compute refines it
+		effectiveOrder: constraints.Order,
+		dependencies:   maps.Clone(constraints.Dependencies),
+		anyOf:          anyOfMembers(constraints.AnyOf),
+		subscriptions:  maps.Clone(constraints.Subscriptions),
+		subscribers:    make(map[string]struct{}),
 	}
 
 	// The package's floor sits first (lowest precedence): gates appended after
@@ -176,24 +185,36 @@ func (s *Scheduler) addNode(pkg Package) {
 		n.rules = append(n.rules, condition.NewRule(s.bootstrapCondition, reasonRequirementsBootstrap, messageRequirementsBootstrap))
 	}
 
-	if len(constraints.Dependencies) > 0 && s.dependencyGetter != nil {
+	if len(constraints.Dependencies) > 0 {
 		deps := make(map[string]dependency.Dependency, len(constraints.Dependencies))
-		for name, dep := range constraints.Dependencies {
-			deps[name] = dependency.Dependency{
+		for depName, dep := range constraints.Dependencies {
+			deps[depName] = dependency.Dependency{
 				Constraint: dep.Constraint,
 				Optional:   dep.Optional,
 			}
 		}
 
-		n.rules = append(n.rules, dependency.NewRule(s.dependencyGetter, deps))
+		if s.dependencyGetter == nil {
+			n.rules = append(n.rules, dependency.NewRule(s.dependencyVersion, deps))
+		} else {
+			n.rules = append(n.rules, dependency.NewRule(s.dependencyGetter, deps))
+		}
 	}
 
-	if len(constraints.AnyOf) > 0 && s.dependencyGetter != nil {
-		n.rules = append(n.rules, dependency.NewAnyOfRule(s.dependencyGetter, toAnyOfGroups(constraints.AnyOf)))
+	if len(constraints.AnyOf) > 0 {
+		if s.dependencyGetter == nil {
+			n.rules = append(n.rules, dependency.NewAnyOfRule(s.dependencyVersion, toAnyOfGroups(constraints.AnyOf)))
+		} else {
+			n.rules = append(n.rules, dependency.NewAnyOfRule(s.dependencyGetter, toAnyOfGroups(constraints.AnyOf)))
+		}
 	}
 
-	if len(constraints.NoneOf) > 0 && s.dependencyGetter != nil {
-		n.rules = append(n.rules, dependency.NewNoneOfRule(s.dependencyGetter, toNoneOfGroups(constraints.NoneOf)))
+	if len(constraints.NoneOf) > 0 {
+		if s.dependencyGetter == nil {
+			n.rules = append(n.rules, dependency.NewNoneOfRule(s.dependencyVersion, toNoneOfGroups(constraints.NoneOf)))
+		} else {
+			n.rules = append(n.rules, dependency.NewNoneOfRule(s.dependencyGetter, toNoneOfGroups(constraints.NoneOf)))
+		}
 	}
 
 	// Modules (floor = Static(Disable)) trigger a full-graph reschedule when they
@@ -257,6 +278,22 @@ func (s *Scheduler) rebuildSubscribers() {
 			}
 		}
 	}
+}
+
+// anyOfMembers returns the union of every group's members, or nil without groups.
+func anyOfMembers(groups []AnyOfGroup) map[string]struct{} {
+	if len(groups) == 0 {
+		return nil
+	}
+
+	members := make(map[string]struct{})
+	for _, g := range groups {
+		for name := range g.Members {
+			members[name] = struct{}{}
+		}
+	}
+
+	return members
 }
 
 // toAnyOfGroups translates schedule.AnyOfGroup values into the dependency

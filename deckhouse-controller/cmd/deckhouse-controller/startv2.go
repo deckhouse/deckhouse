@@ -21,6 +21,7 @@ import (
 	"os"
 	"os/signal"
 	"slices"
+	"sync/atomic"
 	"syscall"
 	"time"
 
@@ -44,6 +45,19 @@ import (
 	metricsstorage "github.com/deckhouse/deckhouse/pkg/metrics-storage"
 )
 
+// shutdownTimeout bounds flushing telemetry on the way out.
+const shutdownTimeout = 5 * time.Second
+
+// signalError is the cause a caught SIGINT or SIGTERM cancels the run with.
+type signalError struct {
+	sig syscall.Signal
+}
+
+// Error names the signal.
+func (e signalError) Error() string {
+	return fmt.Sprintf("signal %q received", e.sig.String())
+}
+
 func startV2(logger *log.Logger) func(cmd *cobra.Command, args []string) error {
 	return func(cmd *cobra.Command, _ []string) error {
 		// flags are parsed by now; a start failure is not a usage error
@@ -55,6 +69,17 @@ func startV2(logger *log.Logger) func(cmd *cobra.Command, args []string) error {
 				os.Exit(1)
 			}
 		}
+
+		// a signal cancels the startup as well as the run, and the elector releases the lease on it
+		ctx, cancel := context.WithCancelCause(cmd.Context())
+		defer cancel(nil)
+
+		signals := make(chan os.Signal, 1)
+		signal.Notify(signals, syscall.SIGINT, syscall.SIGTERM)
+		go cancelOnSignal(ctx, cancel, signals, logger)
+		go reapZombies(ctx, logger)
+
+		telemetryShutdown := registerTelemetry(ctx, logger.Named("otlp-tracing"))
 
 		// addon-operator prints its own startup banner via its AppStartMessage.
 		app.SetAppStartMessage(version())
@@ -77,11 +102,19 @@ func startV2(logger *log.Logger) func(cmd *cobra.Command, args []string) error {
 			return fmt.Errorf("register hook metrics: %w", err)
 		}
 
+		if err := metrics.RegisterShellOperatorMetrics(ms, []string{}); err != nil {
+			return fmt.Errorf("register shell operator metrics: %w", err)
+		}
+
 		if err := metrics.RegisterDeckhouseControllerMetrics(ms); err != nil {
 			return fmt.Errorf("register deckhouse controller metrics: %w", err)
 		}
 
-		deckhouse, err := controller.Build(cmd.Context(), client, ms, logger)
+		if err := d8apis.EnsureCRDs(ctx, client); err != nil {
+			return ignoreCanceled(ctx, fmt.Errorf("ensure crds: %w", err))
+		}
+
+		deckhouse, err := controller.Build(ctx, client, ms, logger)
 		if err != nil {
 			return fmt.Errorf("create deckhouse controller: %w", err)
 		}
@@ -100,20 +133,53 @@ func startV2(logger *log.Logger) func(cmd *cobra.Command, args []string) error {
 			return fmt.Errorf("start server: %w", err)
 		}
 
-		if !enabledHA(logger) {
-			return runV2(cmd.Context(), server, deckhouse, client, logger)
+		shutdown := func() {
+			stopV2(deckhouse, server, telemetryShutdown, logger)
 		}
 
-		logger.Info("deckhouse starts in HA mode")
-		return runV2WithLeaderElection(cmd.Context(), server, deckhouse, client, logger)
+		if enabledHA(logger) {
+			logger.Info("deckhouse starts in HA mode")
+			err = runV2WithLeaderElection(ctx, shutdown, server, deckhouse, client, logger)
+		} else {
+			err = runV2(ctx, deckhouse, client, logger)
+		}
+
+		shutdown()
+
+		var sigErr signalError
+		if errors.As(context.Cause(ctx), &sigErr) {
+			os.Exit(128 + int(sigErr.sig))
+		}
+
+		return err
 	}
 }
 
-func runV2WithLeaderElection(ctx context.Context, server *apiserver.Server, deckhouse *controller.Controller, client *klient.Client, logger *log.Logger) error {
+// cancelOnSignal cancels ctx with the first SIGINT or SIGTERM.
+func cancelOnSignal(ctx context.Context, cancel context.CancelCauseFunc, signals <-chan os.Signal, logger *log.Logger) {
+	select {
+	case <-ctx.Done():
+	case sig := <-signals:
+		logger.Info(fmt.Sprintf("signal %q was received, deckhouse is shutting down...", sig.String()))
+
+		if s, ok := sig.(syscall.Signal); ok {
+			cancel(signalError{sig: s})
+			return
+		}
+
+		cancel(nil)
+	}
+}
+
+func runV2WithLeaderElection(ctx context.Context, shutdown func(), server *apiserver.Server, deckhouse *controller.Controller, client *klient.Client, logger *log.Logger) error {
 	identity, err := buildIdentity(logger)
 	if err != nil {
 		return fmt.Errorf("build identity: %w", err)
 	}
+
+	// the run started on leading winds down with the lease; the caller stops only once it has
+	var leading atomic.Bool
+	runDone := make(chan struct{})
 
 	elector, err := leaderelection.NewLeaderElector(leaderelection.LeaderElectionConfig{
 		// Create a leaderElectionConfig for leader election
@@ -131,14 +197,23 @@ func runV2WithLeaderElection(ctx context.Context, server *apiserver.Server, deck
 		RenewDeadline: time.Duration(renewalDeadline) * time.Second,
 		RetryPeriod:   time.Duration(retryPeriod) * time.Second,
 		Callbacks: leaderelection.LeaderCallbacks{
-			OnStartedLeading: func(ctx context.Context) {
-				if err := runV2(ctx, server, deckhouse, client, logger); err != nil {
+			OnStartedLeading: func(leaderCtx context.Context) {
+				leading.Store(true)
+				defer close(runDone)
+
+				if err := runV2(leaderCtx, deckhouse, client, logger); err != nil && leaderCtx.Err() == nil {
 					logger.Error("run", log.Err(err))
 					os.Exit(1)
 				}
 			},
 			OnStoppedLeading: func() {
-				deckhouse.Stop()
+				// on a signal the caller shuts down; only a lost lease ends the process from here
+				if ctx.Err() != nil {
+					return
+				}
+
+				logger.Info("leadership lost, deckhouse is shutting down")
+				shutdown()
 				os.Exit(0)
 			},
 		},
@@ -151,107 +226,124 @@ func runV2WithLeaderElection(ctx context.Context, server *apiserver.Server, deck
 	server.SetElector(elector)
 	elector.Run(ctx)
 
+	// a run that has not stored the flag yet meets a canceled ctx at its first call and does nothing
+	if leading.Load() {
+		<-runDone
+	}
+
 	return nil
 }
 
-func runV2(ctx context.Context, server *apiserver.Server, deckhouse *controller.Controller, client *klient.Client, logger *log.Logger) error {
-	if err := d8apis.EnsureCRDs(ctx, client); err != nil {
-		return fmt.Errorf("ensure crds: %w", err)
-	}
-
+// runV2 starts the controller and blocks until ctx is canceled; a cancel during startup is not an error.
+func runV2(ctx context.Context, deckhouse *controller.Controller, client *klient.Client, logger *log.Logger) error {
 	// we have to lock the controller run if dhctl lock configmap exists
 	if err := lockUntilClusterBootstraped(ctx, client, logger); err != nil {
-		return fmt.Errorf("lock until cluster bootstraped: %w", err)
+		return ignoreCanceled(ctx, fmt.Errorf("lock until cluster bootstraped: %w", err))
 	}
 
 	if err := deckhouse.Start(ctx); err != nil {
-		return fmt.Errorf("start deckhouse controller: %w", err)
+		return ignoreCanceled(ctx, fmt.Errorf("start deckhouse controller: %w", err))
 	}
 
-	signalHandlerV2(ctx, deckhouse, server, logger)
+	<-ctx.Done()
 
 	return nil
 }
 
-func signalHandlerV2(ctx context.Context, deckhouse *controller.Controller, server *apiserver.Server, logger *log.Logger) {
-	telemetryShutdown := registerTelemetry(ctx, logger.Named("otlp-tracing"))
+// ignoreCanceled drops an error caused by ctx being canceled, which is a shutdown and not a failure.
+func ignoreCanceled(ctx context.Context, err error) error {
+	if ctx.Err() != nil {
+		return nil
+	}
 
-	interruptCh := make(chan os.Signal, 5)
-	signal.Notify(interruptCh, syscall.SIGINT, syscall.SIGTERM, syscall.SIGCHLD)
+	return err
+}
+
+// stopV2 stops the controller and the API, flushes telemetry and kills the hook processes left behind.
+func stopV2(deckhouse *controller.Controller, server *apiserver.Server, telemetryShutdown func(context.Context) error, logger *log.Logger) {
+	deckhouse.Stop()
+	if err := server.Stop(); err != nil {
+		logger.Error("server stop", log.Err(err))
+	}
+
+	ctx, cancel := context.WithTimeout(context.Background(), shutdownTimeout)
+	defer cancel()
+
+	if err := telemetryShutdown(ctx); err != nil {
+		logger.Error("telemetry shutdown", log.Err(err))
+	}
+
+	if err := syscall.Kill(-1, syscall.SIGKILL); err != nil {
+		if !errors.Is(err, syscall.ECHILD) && !errors.Is(err, syscall.ESRCH) {
+			logger.Error("couldn't kill child processes", log.Err(err))
+		}
+	}
+}
+
+// reapZombies reaps orphaned zombies on SIGCHLD from the start, since deckhouse runs as PID 1; hook processes the executor tracks are left to it.
+func reapZombies(ctx context.Context, logger *log.Logger) {
+	children := make(chan os.Signal, 5)
+	signal.Notify(children, syscall.SIGCHLD)
+	defer signal.Stop(children)
+
 	rm := reaperMutex{}
 	for {
 		select {
 		case <-ctx.Done():
-			logger.Info("context canceled - exiting")
 			return
 
-		case sig := <-interruptCh:
-			switch sig {
-			case syscall.SIGCHLD:
-				rm.Lock()
-				if !rm.scheduled {
-					rm.scheduled = true
-					rm.Unlock()
-					go func() {
-						defer rm.Release()
-						processes, err := process.Processes()
-						if err != nil {
-							logger.Debug("get processes", log.Err(err))
-							return
-						}
+		case <-children:
+			rm.Lock()
+			if rm.scheduled {
+				rm.Unlock()
+				continue
+			}
 
-						for _, ps := range processes {
-							status, err := ps.Status()
-							if err != nil {
-								logger.Debug("get process status", log.Err(err))
-								continue
-							}
+			rm.scheduled = true
+			rm.Unlock()
 
-							if slices.Contains(status, process.Zombie) {
-								ppid, err := ps.Ppid()
-								if err != nil {
-									logger.Debug("get parent process id", log.Err(err))
-									continue
-								}
+			go func() {
+				defer rm.Release()
+				reapOrphans(logger)
+			}()
+		}
+	}
+}
 
-								if ppid == 1 && !executor.Tracker().IsActive(int(ps.Pid)) {
-									var status syscall.WaitStatus
-									_, err := syscall.Wait4(int(ps.Pid), &status, syscall.WNOHANG, nil)
-									if err != nil {
-										// ignore if a child has already been reaped
-										if !errors.Is(err, syscall.ECHILD) && !errors.Is(err, syscall.ESRCH) {
-											logger.Error("process SIGCHLD signal", log.Err(err))
-										}
-									}
-								}
-							}
-						}
-					}()
-				} else {
-					rm.Unlock()
-				}
+// reapOrphans waits on every zombie whose parent is PID 1 and that the executor does not track.
+func reapOrphans(logger *log.Logger) {
+	processes, err := process.Processes()
+	if err != nil {
+		logger.Debug("get processes", log.Err(err))
+		return
+	}
 
-			case syscall.SIGINT, syscall.SIGTERM:
-				logger.Info(fmt.Sprintf("signal %q was received, deckhouse is shutting down...", sig.String()))
-				if err := telemetryShutdown(ctx); err != nil {
-					logger.Error("telemetry shutdown", log.Err(err))
-				}
+	for _, ps := range processes {
+		status, err := ps.Status()
+		if err != nil {
+			logger.Debug("get process status", log.Err(err))
+			continue
+		}
 
-				deckhouse.Stop()
-				if err := server.Stop(); err != nil {
-					logger.Error("server stop", log.Err(err))
-				}
+		if !slices.Contains(status, process.Zombie) {
+			continue
+		}
 
-				if err := syscall.Kill(-1, syscall.SIGKILL); err != nil {
-					if !errors.Is(err, syscall.ECHILD) && !errors.Is(err, syscall.ESRCH) {
-						logger.Error("couldn't kill child processes", log.Err(err))
-					}
-				}
-				signum := 0
-				if v, ok := sig.(syscall.Signal); ok {
-					signum = int(v)
-				}
-				os.Exit(128 + signum)
+		ppid, err := ps.Ppid()
+		if err != nil {
+			logger.Debug("get parent process id", log.Err(err))
+			continue
+		}
+
+		if ppid != 1 || executor.Tracker().IsActive(int(ps.Pid)) {
+			continue
+		}
+
+		var waitStatus syscall.WaitStatus
+		if _, err := syscall.Wait4(int(ps.Pid), &waitStatus, syscall.WNOHANG, nil); err != nil {
+			// ignore if a child has already been reaped
+			if !errors.Is(err, syscall.ECHILD) && !errors.Is(err, syscall.ESRCH) {
+				logger.Error("process SIGCHLD signal", log.Err(err))
 			}
 		}
 	}

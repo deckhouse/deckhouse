@@ -72,8 +72,9 @@ const (
 	ConditionReady = "Ready"
 
 	// ConditionScaled reflects the runtime scaling state of the module.
-	// Owned exclusively by the workload health monitor — no other condition
-	// influences this value. True at steady state, False when at least one
+	// Owned by the workload health monitor — no other condition influences
+	// this value. True at steady state, and for a module whose release renders
+	// no watched workload (internal NoWorkloads); False when at least one
 	// workload is rolling out (Reconciling) or failed (Degraded), Unknown
 	// when there are no workloads to observe yet.
 	// Possible reasons: Reconciling (False), Degraded (False), Scaled (True).

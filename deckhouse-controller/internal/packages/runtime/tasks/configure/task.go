@@ -98,7 +98,7 @@ func (t *task) String() string {
 // Reports failures on ConditionConfigured; the Run task sets it True once the settings are applied.
 func (t *task) Execute(ctx context.Context) error {
 	if err := t.applySettings(ctx); err != nil {
-		t.status.HandleError(t.pkg.GetName(), status.ConditionConfigured, err)
+		t.status.HandleError(ctx, t.pkg.GetName(), status.ConditionConfigured, err)
 		return fmt.Errorf("configure: %w", err)
 	}
 

@@ -105,7 +105,7 @@ func (t *task) Execute(ctx context.Context) error {
 	// Step 1: Enable kubernetes/schedule hooks - registers watchers and cron schedules
 	infos, err := t.initializeHooks(ctx)
 	if err != nil {
-		t.status.HandleError(t.pkg.GetName(), status.ConditionHooksProcessed, err)
+		t.status.HandleError(ctx, t.pkg.GetName(), status.ConditionHooksProcessed, err)
 
 		return fmt.Errorf("initialize hooks: %w", err)
 	}
@@ -140,7 +140,7 @@ func (t *task) Execute(ctx context.Context) error {
 
 	// Step 3: Run package startup hooks (onStartup binding)
 	if err = t.startupPackage(ctx); err != nil {
-		t.status.HandleError(t.pkg.GetName(), status.ConditionHooksProcessed, err)
+		t.status.HandleError(ctx, t.pkg.GetName(), status.ConditionHooksProcessed, err)
 		return fmt.Errorf("startup package: %w", err)
 	}
 

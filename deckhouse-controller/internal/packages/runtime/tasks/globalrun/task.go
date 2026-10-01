@@ -167,7 +167,7 @@ func (t *task) String() string {
 // barrier, exactly as a broken CRD does; gating on the chart scan keeps modules
 // that ship no webhooks out of that path entirely.
 //
-// On success it sets ManifestsApplied, HooksProcessed and Configured, as the module Run does.
+// On success it sets ManifestsApplied, HooksProcessed, Configured and Scaled (NoWorkloads).
 func (t *task) Execute(ctx context.Context) error {
 	ctx, span := otel.Tracer(taskTracer).Start(ctx, "Run")
 	defer span.End()
@@ -177,7 +177,7 @@ func (t *task) Execute(ctx context.Context) error {
 	// The Enable task ahead of this on the global queue has already initialized and
 	// synced the hooks.
 	if err := t.global.RunHooksByBinding(ctx, addontypes.BeforeAll); err != nil {
-		t.status.HandleError(t.global.GetName(), status.ConditionHooksProcessed, err)
+		t.status.HandleError(ctx, t.global.GetName(), status.ConditionHooksProcessed, status.NewError("BeforeAllHookFailed", err))
 		return fmt.Errorf("run beforeAll hooks: %w", err)
 	}
 
@@ -224,6 +224,8 @@ func (t *task) Execute(ctx context.Context) error {
 	t.status.SetConditionTrue(t.global.GetName(), status.ConditionManifestsApplied)
 	t.status.SetConditionTrue(t.global.GetName(), status.ConditionHooksProcessed)
 	t.status.SetConditionTrue(t.global.GetName(), status.ConditionConfigured)
+	// Global owns no release, so the health monitor has nothing to report on.
+	t.status.SetNoWorkloads(t.global.GetName(), true)
 
 	return nil
 }

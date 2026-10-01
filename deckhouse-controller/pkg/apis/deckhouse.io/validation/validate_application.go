@@ -144,187 +144,202 @@ func validateAppAgainstApv(ctx context.Context, cli client.Client, manager packa
 		return fmt.Errorf("validate settings: %w", err)
 	}
 
-	// Parse the APV's requirements into schedule.Constraints if metadata is present.
-	constraints := schedule.Constraints{
-		Order: schedule.FunctionalOrder,
+	var reqs *v1alpha1.PackageRequirements
+	if apv.Status.PackageMetadata != nil {
+		reqs = apv.Status.PackageMetadata.Requirements
 	}
-	if apv.Status.PackageMetadata != nil && apv.Status.PackageMetadata.Requirements != nil {
-		reqs := apv.Status.PackageMetadata.Requirements
 
-		// Parse the minimum Kubernetes version constraint (e.g. ">= 1.28").
-		kubernetesConstraint, err := parsePackageConstraint(reqs.Kubernetes)
-		if err != nil {
-			return fmt.Errorf("parse kubernetes requirement: %w", err)
-		}
-
-		constraints.Kubernetes = kubernetesConstraint
-
-		// Parse the minimum Deckhouse version constraint (e.g. ">= 1.60").
-		deckhouseConstraint, err := parsePackageConstraint(reqs.Deckhouse)
-		if err != nil {
-			return fmt.Errorf("parse deckhouse requirement: %w", err)
-		}
-
-		constraints.Deckhouse = deckhouseConstraint
-
-		// Parse module dependency constraints. Mandatory entries must be present;
-		// conditional entries (formerly the "!optional" suffix) are skippable;
-		// anyOf groups require ≥1 installed member that satisfies its constraint;
-		// noneOf groups require zero installed members that match their constraints.
-		// A name listed in both mandatory and conditional is rejected — silently
-		// letting conditional overwrite mandatory would weaken the requirement
-		// without telling the user.
-		modules := make(map[string]schedule.Dependency)
-		var anyOfGroups []schedule.AnyOfGroup
-		var noneOfGroups []schedule.NoneOfGroup
-		if reqs.Modules != nil {
-			for _, dep := range reqs.Modules.Mandatory {
-				constraint, err := parsePackageDependencyConstraint(dep.Constraint)
-				if err != nil {
-					return fmt.Errorf("parse mandatory module requirement '%s': %w", dep.Name, err)
-				}
-
-				modules[dep.Name] = schedule.Dependency{
-					Constraint: constraint,
-					Optional:   false,
-				}
-			}
-			for _, dep := range reqs.Modules.Conditional {
-				if _, ok := modules[dep.Name]; ok {
-					return fmt.Errorf("parse conditional module requirement '%s': also listed as mandatory", dep.Name)
-				}
-
-				if len(dep.Constraint) == 0 {
-					return fmt.Errorf("parse conditional module requirement '%s': constraint is required", dep.Name)
-				}
-
-				constraint, err := parsePackageDependencyConstraint(dep.Constraint)
-				if err != nil {
-					return fmt.Errorf("parse conditional module requirement '%s': %w", dep.Name, err)
-				}
-
-				modules[dep.Name] = schedule.Dependency{
-					Constraint: constraint,
-					Optional:   true,
-				}
-			}
-
-			anyOfGroups = make([]schedule.AnyOfGroup, 0, len(reqs.Modules.AnyOf))
-			seenAnyOfNames := make(map[string]struct{}, len(reqs.Modules.AnyOf))
-			for i, group := range reqs.Modules.AnyOf {
-				if len(group.Name) == 0 {
-					return fmt.Errorf("parse anyOf group [%d]: name is required", i)
-				}
-
-				if _, dup := seenAnyOfNames[group.Name]; dup {
-					return fmt.Errorf("parse anyOf group '%s': duplicate group name", group.Name)
-				}
-
-				seenAnyOfNames[group.Name] = struct{}{}
-
-				if len(group.Modules) == 0 {
-					return fmt.Errorf("parse anyOf group '%s': at least one member is required", group.Name)
-				}
-
-				members := make(map[string]*semver.Constraints, len(group.Modules))
-				for _, m := range group.Modules {
-					if len(m.Name) == 0 {
-						return fmt.Errorf("parse anyOf group '%s': member name is required", group.Name)
-					}
-
-					if _, dup := members[m.Name]; dup {
-						return fmt.Errorf("parse anyOf group '%s': duplicate member '%s'", group.Name, m.Name)
-					}
-
-					if existing, clash := modules[m.Name]; clash {
-						bucket := "mandatory"
-						if existing.Optional {
-							bucket = "conditional"
-						}
-
-						return fmt.Errorf("parse anyOf group '%s' member '%s': also listed as %s", group.Name, m.Name, bucket)
-					}
-
-					constraint, err := parsePackageDependencyConstraint(m.Constraint)
-					if err != nil {
-						return fmt.Errorf("parse anyOf group '%s' member '%s': %w", group.Name, m.Name, err)
-					}
-
-					members[m.Name] = constraint
-				}
-
-				anyOfGroups = append(anyOfGroups, schedule.AnyOfGroup{
-					Name:    group.Name,
-					Members: members,
-				})
-			}
-
-			noneOfGroups = make([]schedule.NoneOfGroup, 0, len(reqs.Modules.NoneOf))
-			seenNoneOfNames := make(map[string]struct{}, len(reqs.Modules.NoneOf))
-			for i, group := range reqs.Modules.NoneOf {
-				if len(group.Name) == 0 {
-					return fmt.Errorf("parse noneOf group [%d]: name is required", i)
-				}
-
-				if _, dup := seenNoneOfNames[group.Name]; dup {
-					return fmt.Errorf("parse noneOf group '%s': duplicate group name", group.Name)
-				}
-
-				seenNoneOfNames[group.Name] = struct{}{}
-
-				if len(group.Modules) == 0 {
-					return fmt.Errorf("parse noneOf group '%s': at least one member is required", group.Name)
-				}
-
-				members := make(map[string]*semver.Constraints, len(group.Modules))
-				for _, m := range group.Modules {
-					if len(m.Name) == 0 {
-						return fmt.Errorf("parse noneOf group '%s': member name is required", group.Name)
-					}
-
-					if _, dup := members[m.Name]; dup {
-						return fmt.Errorf("parse noneOf group '%s': duplicate member '%s'", group.Name, m.Name)
-					}
-
-					if existing, clash := modules[m.Name]; clash {
-						bucket := "mandatory"
-						if existing.Optional {
-							bucket = "conditional"
-						}
-
-						return fmt.Errorf("parse noneOf group '%s' member '%s': also listed as %s", group.Name, m.Name, bucket)
-					}
-
-					for _, ag := range anyOfGroups {
-						if _, clash := ag.Members[m.Name]; clash {
-							return fmt.Errorf("parse noneOf group '%s' member '%s': also listed in anyOf group '%s'", group.Name, m.Name, ag.Name)
-						}
-					}
-
-					constraint, err := parsePackageDependencyConstraint(m.Constraint)
-					if err != nil {
-						return fmt.Errorf("parse noneOf group '%s' member '%s': %w", group.Name, m.Name, err)
-					}
-
-					members[m.Name] = constraint
-				}
-
-				noneOfGroups = append(noneOfGroups, schedule.NoneOfGroup{
-					Name:    group.Name,
-					Members: members,
-				})
-			}
-		}
-
-		constraints.Dependencies = modules
-		constraints.AnyOf = anyOfGroups
-		constraints.NoneOf = noneOfGroups
+	constraints, err := buildPackageConstraints(reqs)
+	if err != nil {
+		return err
 	}
 
 	// Delegate to the manager which checks the parsed constraints against the
 	// actual cluster state and rejects on dependency cycles. The name is the
 	// scheduler-side identifier (namespace.name) used by the cycle simulation.
 	return manager.CheckConstraints(apps.BuildName(app.Namespace, app.Name), constraints)
+}
+
+// buildPackageConstraints parses a package version's requirements into scheduler constraints; nil requirements yield none.
+func buildPackageConstraints(reqs *v1alpha1.PackageRequirements) (schedule.Constraints, error) {
+	constraints := schedule.Constraints{
+		Order: schedule.FunctionalOrder,
+	}
+
+	if reqs == nil {
+		return constraints, nil
+	}
+
+	// Parse the minimum Kubernetes version constraint (e.g. ">= 1.28").
+	kubernetesConstraint, err := parsePackageConstraint(reqs.Kubernetes)
+	if err != nil {
+		return schedule.Constraints{}, fmt.Errorf("parse kubernetes requirement: %w", err)
+	}
+
+	constraints.Kubernetes = kubernetesConstraint
+
+	// Parse the minimum Deckhouse version constraint (e.g. ">= 1.60").
+	deckhouseConstraint, err := parsePackageConstraint(reqs.Deckhouse)
+	if err != nil {
+		return schedule.Constraints{}, fmt.Errorf("parse deckhouse requirement: %w", err)
+	}
+
+	constraints.Deckhouse = deckhouseConstraint
+
+	// Parse module dependency constraints. Mandatory entries must be present;
+	// conditional entries (formerly the "!optional" suffix) are skippable;
+	// anyOf groups require ≥1 installed member that satisfies its constraint;
+	// noneOf groups require zero installed members that match their constraints.
+	// A name listed in both mandatory and conditional is rejected — silently
+	// letting conditional overwrite mandatory would weaken the requirement
+	// without telling the user.
+	modules := make(map[string]schedule.Dependency)
+	var anyOfGroups []schedule.AnyOfGroup
+	var noneOfGroups []schedule.NoneOfGroup
+	if reqs.Modules != nil {
+		for _, dep := range reqs.Modules.Mandatory {
+			constraint, err := parsePackageDependencyConstraint(dep.Constraint)
+			if err != nil {
+				return schedule.Constraints{}, fmt.Errorf("parse mandatory module requirement '%s': %w", dep.Name, err)
+			}
+
+			modules[dep.Name] = schedule.Dependency{
+				Constraint: constraint,
+				Optional:   false,
+			}
+		}
+		for _, dep := range reqs.Modules.Conditional {
+			if _, ok := modules[dep.Name]; ok {
+				return schedule.Constraints{}, fmt.Errorf("parse conditional module requirement '%s': also listed as mandatory", dep.Name)
+			}
+
+			if len(dep.Constraint) == 0 {
+				return schedule.Constraints{}, fmt.Errorf("parse conditional module requirement '%s': constraint is required", dep.Name)
+			}
+
+			constraint, err := parsePackageDependencyConstraint(dep.Constraint)
+			if err != nil {
+				return schedule.Constraints{}, fmt.Errorf("parse conditional module requirement '%s': %w", dep.Name, err)
+			}
+
+			modules[dep.Name] = schedule.Dependency{
+				Constraint: constraint,
+				Optional:   true,
+			}
+		}
+
+		anyOfGroups = make([]schedule.AnyOfGroup, 0, len(reqs.Modules.AnyOf))
+		seenAnyOfNames := make(map[string]struct{}, len(reqs.Modules.AnyOf))
+		for i, group := range reqs.Modules.AnyOf {
+			if len(group.Name) == 0 {
+				return schedule.Constraints{}, fmt.Errorf("parse anyOf group [%d]: name is required", i)
+			}
+
+			if _, dup := seenAnyOfNames[group.Name]; dup {
+				return schedule.Constraints{}, fmt.Errorf("parse anyOf group '%s': duplicate group name", group.Name)
+			}
+
+			seenAnyOfNames[group.Name] = struct{}{}
+
+			if len(group.Modules) == 0 {
+				return schedule.Constraints{}, fmt.Errorf("parse anyOf group '%s': at least one member is required", group.Name)
+			}
+
+			members := make(map[string]*semver.Constraints, len(group.Modules))
+			for _, m := range group.Modules {
+				if len(m.Name) == 0 {
+					return schedule.Constraints{}, fmt.Errorf("parse anyOf group '%s': member name is required", group.Name)
+				}
+
+				if _, dup := members[m.Name]; dup {
+					return schedule.Constraints{}, fmt.Errorf("parse anyOf group '%s': duplicate member '%s'", group.Name, m.Name)
+				}
+
+				if existing, clash := modules[m.Name]; clash {
+					bucket := "mandatory"
+					if existing.Optional {
+						bucket = "conditional"
+					}
+
+					return schedule.Constraints{}, fmt.Errorf("parse anyOf group '%s' member '%s': also listed as %s", group.Name, m.Name, bucket)
+				}
+
+				constraint, err := parsePackageDependencyConstraint(m.Constraint)
+				if err != nil {
+					return schedule.Constraints{}, fmt.Errorf("parse anyOf group '%s' member '%s': %w", group.Name, m.Name, err)
+				}
+
+				members[m.Name] = constraint
+			}
+
+			anyOfGroups = append(anyOfGroups, schedule.AnyOfGroup{
+				Name:    group.Name,
+				Members: members,
+			})
+		}
+
+		noneOfGroups = make([]schedule.NoneOfGroup, 0, len(reqs.Modules.NoneOf))
+		seenNoneOfNames := make(map[string]struct{}, len(reqs.Modules.NoneOf))
+		for i, group := range reqs.Modules.NoneOf {
+			if len(group.Name) == 0 {
+				return schedule.Constraints{}, fmt.Errorf("parse noneOf group [%d]: name is required", i)
+			}
+
+			if _, dup := seenNoneOfNames[group.Name]; dup {
+				return schedule.Constraints{}, fmt.Errorf("parse noneOf group '%s': duplicate group name", group.Name)
+			}
+
+			seenNoneOfNames[group.Name] = struct{}{}
+
+			if len(group.Modules) == 0 {
+				return schedule.Constraints{}, fmt.Errorf("parse noneOf group '%s': at least one member is required", group.Name)
+			}
+
+			members := make(map[string]*semver.Constraints, len(group.Modules))
+			for _, m := range group.Modules {
+				if len(m.Name) == 0 {
+					return schedule.Constraints{}, fmt.Errorf("parse noneOf group '%s': member name is required", group.Name)
+				}
+
+				if _, dup := members[m.Name]; dup {
+					return schedule.Constraints{}, fmt.Errorf("parse noneOf group '%s': duplicate member '%s'", group.Name, m.Name)
+				}
+
+				if existing, clash := modules[m.Name]; clash {
+					bucket := "mandatory"
+					if existing.Optional {
+						bucket = "conditional"
+					}
+
+					return schedule.Constraints{}, fmt.Errorf("parse noneOf group '%s' member '%s': also listed as %s", group.Name, m.Name, bucket)
+				}
+
+				for _, ag := range anyOfGroups {
+					if _, clash := ag.Members[m.Name]; clash {
+						return schedule.Constraints{}, fmt.Errorf("parse noneOf group '%s' member '%s': also listed in anyOf group '%s'", group.Name, m.Name, ag.Name)
+					}
+				}
+
+				constraint, err := parsePackageDependencyConstraint(m.Constraint)
+				if err != nil {
+					return schedule.Constraints{}, fmt.Errorf("parse noneOf group '%s' member '%s': %w", group.Name, m.Name, err)
+				}
+
+				members[m.Name] = constraint
+			}
+
+			noneOfGroups = append(noneOfGroups, schedule.NoneOfGroup{
+				Name:    group.Name,
+				Members: members,
+			})
+		}
+	}
+
+	constraints.Dependencies = modules
+	constraints.AnyOf = anyOfGroups
+	constraints.NoneOf = noneOfGroups
+
+	return constraints, nil
 }
 
 // validateAppSettings validates Application.spec.settings against the OpenAPI settings
@@ -337,23 +352,9 @@ func validateAppAgainstApv(ctx context.Context, cli client.Client, manager packa
 //
 // On UPDATE it additionally enforces x-deckhouse-immutable against oldApp.
 func validateAppSettings(apv *v1alpha1.ApplicationPackageVersion, app, oldApp *v1alpha1.Application) error {
-	if apv.Status.PackageSchemas == nil {
-		return nil
-	}
-
-	schemas := apv.Status.PackageSchemas
-	if schemas.SettingsSchema == nil || schemas.SettingsSchema.OpenAPIV3Schema == nil {
-		return nil
-	}
-
-	rawSchema, err := json.Marshal(schemas.SettingsSchema.OpenAPIV3Schema)
-	if err != nil {
-		return fmt.Errorf("get settings schema: %w", err)
-	}
-
-	storage, err := validation.NewSchemaStorage(rawSchema, nil)
-	if err != nil {
-		return fmt.Errorf("create storage schema: %w", err)
+	storage, err := settingsSchemaStorage(apv.Status.PackageSchemas)
+	if err != nil || storage == nil {
+		return err
 	}
 
 	values := addonutils.Values{app.Spec.PackageName: app.Spec.Settings.GetMap()}
@@ -362,6 +363,25 @@ func validateAppSettings(apv *v1alpha1.ApplicationPackageVersion, app, oldApp *v
 	}
 
 	return checkImmutableSettings(storage.Schemas[validation.ConfigValuesSchema], app, oldApp)
+}
+
+// settingsSchemaStorage builds a schema storage from a package version's settings schema; nil when it publishes none.
+func settingsSchemaStorage(schemas *v1alpha1.PackageVersionStatusSchemas) (*validation.SchemaStorage, error) {
+	if schemas == nil || schemas.SettingsSchema == nil || schemas.SettingsSchema.OpenAPIV3Schema == nil {
+		return nil, nil
+	}
+
+	rawSchema, err := json.Marshal(schemas.SettingsSchema.OpenAPIV3Schema)
+	if err != nil {
+		return nil, fmt.Errorf("get settings schema: %w", err)
+	}
+
+	storage, err := validation.NewSchemaStorage(rawSchema, nil)
+	if err != nil {
+		return nil, fmt.Errorf("create storage schema: %w", err)
+	}
+
+	return storage, nil
 }
 
 // extractOldApplication decodes the stored object the admission request replaces.

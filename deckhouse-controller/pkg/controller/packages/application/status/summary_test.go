@@ -94,6 +94,20 @@ func TestLifecycleScenarios(t *testing.T) {
 			tip:     "Wait for dependent modules to converge automatically. No action required.",
 		},
 		{
+			// Enable took the application off Pending; the pipeline is running.
+			name: "install: in progress",
+			opts: []mappingOption{
+				intCond(intRequirementsMet, metav1.ConditionTrue, ""),
+				intCond(intPending, metav1.ConditionFalse, "Scheduled"),
+			},
+			wantConds: gatedAbsent(map[string]*expectedCondition{
+				ConditionInstalled: nil,
+			}),
+			state:   statePending,
+			message: "Installation is in progress",
+			tip:     "No action is required unless this state persists.",
+		},
+		{
 			name: "install: requirements unmet",
 			opts: []mappingOption{intCond(intRequirementsMet, metav1.ConditionFalse, "DependencyNotEnabled")},
 			wantConds: gatedAbsent(map[string]*expectedCondition{

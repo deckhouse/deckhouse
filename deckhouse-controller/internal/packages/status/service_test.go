@@ -15,11 +15,15 @@
 package status
 
 import (
+	"context"
+	"errors"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/werf/nelm/pkg/legacy/progrep"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+
+	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/health"
 )
 
 func TestSetMaintenanceMode(t *testing.T) {
@@ -130,4 +134,130 @@ func TestUpdateUninstallTrackingWritesThroughDeletionFreeze(t *testing.T) {
 	// Trailing empty reports keep the last snapshot.
 	s.UpdateUninstallTracking(name, progrep.ProgressReport{})
 	assert.Equal(t, report, s.GetStatus(name).Tracking.Report)
+}
+
+func TestSetNoWorkloads(t *testing.T) {
+	const name = "module"
+
+	scaled := func(s *Service) Condition {
+		cond, _ := s.statuses[name].condition(ConditionScaled)
+		return cond
+	}
+
+	newService := func(t *testing.T) *Service {
+		s := NewService()
+		s.NewStatus(name)
+		t.Cleanup(func() {
+			s.AppQueue().ShutDown()
+			s.ModuleQueue().ShutDown()
+		})
+
+		return s
+	}
+
+	t.Run("marks unobserved package scaled", func(t *testing.T) {
+		s := newService(t)
+
+		s.SetNoWorkloads(name, true)
+
+		cond := scaled(s)
+		assert.Equal(t, metav1.ConditionTrue, cond.Status)
+		assert.Equal(t, ConditionReasonNoWorkloads, cond.Reason)
+		assert.Equal(t, 1, s.ModuleQueue().Len())
+	})
+
+	t.Run("keeps monitor verdict", func(t *testing.T) {
+		s := newService(t)
+
+		s.UpdateHealth(name, health.Event{Health: health.Health{State: health.StateReconciling}})
+		s.SetNoWorkloads(name, true)
+
+		cond := scaled(s)
+		assert.Equal(t, metav1.ConditionFalse, cond.Status)
+		assert.Equal(t, ConditionReason(health.StateReconciling), cond.Reason)
+	})
+
+	t.Run("monitor overrides it once workloads appear", func(t *testing.T) {
+		s := newService(t)
+
+		s.SetNoWorkloads(name, true)
+		s.UpdateHealth(name, health.Event{Health: health.Health{State: health.StateReconciling}})
+
+		assert.Equal(t, metav1.ConditionFalse, scaled(s).Status)
+	})
+
+	t.Run("last workload removed maps unknown to no workloads", func(t *testing.T) {
+		s := newService(t)
+
+		s.UpdateHealth(name, health.Event{Health: health.Health{State: health.StateScaled}})
+		s.SetNoWorkloads(name, true)
+		s.UpdateHealth(name, health.Event{Health: health.Health{State: health.StateUnknown}})
+
+		cond := scaled(s)
+		assert.Equal(t, metav1.ConditionTrue, cond.Status)
+		assert.Equal(t, ConditionReasonNoWorkloads, cond.Reason)
+	})
+
+	t.Run("workloads coming back reset it to unknown", func(t *testing.T) {
+		s := newService(t)
+
+		s.SetNoWorkloads(name, true)
+		s.SetNoWorkloads(name, false)
+
+		assert.Equal(t, metav1.ConditionUnknown, scaled(s).Status)
+	})
+
+	t.Run("survives version reset", func(t *testing.T) {
+		s := newService(t)
+
+		s.SetNoWorkloads(name, true)
+		s.NewStatus(name)
+		s.UpdateHealth(name, health.Event{Health: health.Health{State: health.StateReconciling}})
+		s.UpdateHealth(name, health.Event{Health: health.Health{State: health.StateUnknown}})
+
+		assert.Equal(t, ConditionReasonNoWorkloads, scaled(s).Reason)
+	})
+}
+
+func TestHandleError(t *testing.T) {
+	const name = "module"
+
+	hooksProcessed := func(s *Service) Condition {
+		cond, _ := s.statuses[name].condition(ConditionHooksProcessed)
+		return cond
+	}
+
+	newService := func(t *testing.T) *Service {
+		s := NewService()
+		s.NewStatus(name)
+		t.Cleanup(func() {
+			s.AppQueue().ShutDown()
+			s.ModuleQueue().ShutDown()
+		})
+
+		return s
+	}
+
+	err := NewError("HookFailed", errors.New("boom"))
+
+	t.Run("records status error", func(t *testing.T) {
+		s := newService(t)
+
+		s.HandleError(context.Background(), name, ConditionHooksProcessed, err)
+
+		cond := hooksProcessed(s)
+		assert.Equal(t, metav1.ConditionFalse, cond.Status)
+		assert.Equal(t, ConditionReason("HookFailed"), cond.Reason)
+	})
+
+	t.Run("skips cancelled context", func(t *testing.T) {
+		s := newService(t)
+
+		ctx, cancel := context.WithCancel(context.Background())
+		cancel()
+		s.HandleError(ctx, name, ConditionHooksProcessed, err)
+
+		assert.Equal(t, metav1.ConditionUnknown, hooksProcessed(s).Status)
+		assert.Zero(t, s.ModuleQueue().Len())
+	})
 }

@@ -24,9 +24,9 @@ import (
 
 // Provider provides scheduler state to the endpoints.
 type Provider interface {
-	Dump() any
-	// DumpByName returns nil when no scheduler node has that name.
-	DumpByName(name string) any
+	DumpScheduler() any
+	// DumpSchedulerByName returns nil when no scheduler node has that name.
+	DumpSchedulerByName(name string) any
 }
 
 // NewHandler returns the scheduler subtree, ready to mount.
@@ -47,10 +47,10 @@ type handler struct {
 // dump serves every scheduler node, or the one named by the name query parameter.
 func (h *handler) dump(w http.ResponseWriter, req *http.Request) {
 	if name := req.URL.Query().Get("name"); name != "" {
-		api.EncodeResponse(w, req, h.provider.DumpByName(name))
+		api.EncodeResponse(w, req, h.provider.DumpSchedulerByName(name))
 
 		return
 	}
 
-	api.EncodeResponse(w, req, h.provider.Dump())
+	api.EncodeResponse(w, req, h.provider.DumpScheduler())
 }

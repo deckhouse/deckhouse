@@ -93,7 +93,7 @@ func (t *task) Execute(ctx context.Context) error {
 	// Cache package content locally and expose it at the path consumed by the load task.
 	logger.Debug("deploy package")
 	if err := t.deployer.Deploy(ctx, t.repository, t.packageName, t.name, t.version, t.force); err != nil {
-		t.status.HandleError(t.name, status.ConditionReadyOnFilesystem, err)
+		t.status.HandleError(ctx, t.name, status.ConditionReadyOnFilesystem, err)
 		return fmt.Errorf("deploy package: %w", err)
 	}
 

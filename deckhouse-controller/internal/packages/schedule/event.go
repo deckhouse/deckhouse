@@ -22,6 +22,9 @@ const (
 	EventSchedule EventKind = iota
 	// EventDisable is emitted when a node loses eligibility during a scheduling pass.
 	EventDisable
+	// EventDecision reports a node's first decision and every flip, ahead of the pass's
+	// EventSchedule/EventDisable. Informational: a consumer must not enqueue work on it.
+	EventDecision
 )
 
 // Event represents a single lifecycle transition in the scheduling graph.
@@ -33,6 +36,8 @@ type Event struct {
 	Reason  string
 	Message string
 	Enabled []string
+	// Allowed is the decision an [EventDecision] reports: true when the node is enabled.
+	Allowed bool
 }
 
 // Ch returns a read-only channel that emits [Event] values as the graph

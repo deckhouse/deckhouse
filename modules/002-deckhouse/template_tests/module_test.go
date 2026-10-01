@@ -161,6 +161,38 @@ var _ = Describe("Module :: deckhouse :: helm template ::", func() {
 		})
 	})
 
+	// The Module webhook follows the Module stack: Module v2 keeps the user-facing spec in v1beta1 only.
+	Context("The Module admission webhook", func() {
+		modulesWebhook := func() string {
+			vwc := f.KubernetesGlobalResource("ValidatingWebhookConfiguration", "deckhouse-webhook")
+			Expect(vwc.Exists()).To(BeTrue())
+
+			return vwc.Field(`webhooks.#(name=="modules.deckhouse-webhook.deckhouse.io")`).String()
+		}
+
+		render := func(enableModuleV2 bool) {
+			f.ValuesSetFromYaml("global", globalValues)
+			f.ValuesSet("global.modulesImages", GetModulesImages())
+			f.ValuesSet("global.clusterIsBootstrapped", true)
+			f.ValuesSetFromYaml("deckhouse", moduleValuesForMasterNode)
+			f.ValuesSet("deckhouse.enableModuleV2", enableModuleV2)
+			f.HelmRender()
+			Expect(f.RenderError).ShouldNot(HaveOccurred())
+		}
+
+		It("validates v1alpha1 Modules without Module v2", func() {
+			render(false)
+
+			Expect(modulesWebhook()).To(MatchJSON(modulesWebhookJSON("v1alpha1")))
+		})
+
+		It("validates v1beta1 Modules with Module v2", func() {
+			render(true)
+
+			Expect(modulesWebhook()).To(MatchJSON(modulesWebhookJSON("v1beta1")))
+		})
+	})
+
 	// The previous implementation's registry contour, and the one fact that decides whether it exists.
 	//
 	// Nothing writes `deckhouse.registry.*` after the handover, so on a migrated cluster
@@ -633,3 +665,16 @@ var _ = Describe("Module :: deckhouse :: helm template ::", func() {
 		})
 	})
 })
+
+// modulesWebhookJSON is the rendered Module webhook for the given API version.
+func modulesWebhookJSON(version string) string {
+	return `{
+  "name": "modules.deckhouse-webhook.deckhouse.io",
+  "rules": [{"apiGroups": ["deckhouse.io"], "apiVersions": ["` + version + `"], "resources": ["modules"], "operations": ["CREATE", "UPDATE", "DELETE"], "scope": "Cluster"}],
+  "admissionReviewVersions": ["v1"],
+  "matchPolicy": "Equivalent",
+  "failurePolicy": "Ignore",
+  "sideEffects": "None",
+  "clientConfig": {"caBundle": "Yw==", "service": {"name": "deckhouse", "namespace": "d8-system", "port": 4223, "path": "/validate/` + version + `/modules"}}
+}`
+}

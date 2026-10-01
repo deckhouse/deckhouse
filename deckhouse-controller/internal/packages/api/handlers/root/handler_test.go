@@ -56,6 +56,12 @@ func (fakeProvider) Snapshots(name string) (any, bool) {
 
 func (fakeProvider) DumpQueues(string) any { return map[string]any{"queues": map[string]any{}} }
 
+func (fakeProvider) DumpScheduler() any { return map[string]any{"scheduler": map[string]any{}} }
+
+func (fakeProvider) DumpSchedulerByName(string) any {
+	return map[string]any{"scheduler": map[string]any{}}
+}
+
 func newDeps(provider fakeProvider) v1.Deps {
 	return v1.Deps{
 		Packages:     provider,

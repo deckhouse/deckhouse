@@ -495,6 +495,10 @@ func (s *Service) Upgrade(ctx context.Context, namespace string, pkg Package) er
 	// upgrade itself is skipped.
 	s.status.UpdateURLs(pkg.GetName(), extractEndpointURLs(renderedManifests))
 
+	// The health monitor reports only on workloads it sees, so a release without
+	// any would leave Scaled Unknown and the first install never complete.
+	s.status.SetNoWorkloads(pkg.GetName(), !hasWorkloads(renderedManifests))
+
 	// Calculate checksum to detect changes in rendered manifests
 	checksum := addonutils.CalculateStringsChecksum(renderedManifests)
 

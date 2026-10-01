@@ -133,14 +133,19 @@ func (t *task) runPackage(ctx context.Context) error {
 
 	if err := t.pkg.RunHooksByBinding(ctx, addontypes.BeforeHelm); err != nil {
 		span.SetStatus(codes.Error, err.Error())
-		t.status.HandleError(t.pkg.GetName(), status.ConditionHooksProcessed, status.NewError("BeforeHelmHookFailed", err))
+		t.status.HandleError(ctx, t.pkg.GetName(), status.ConditionHooksProcessed, status.NewError("BeforeHelmHookFailed", err))
 		return err
 	}
 
 	t.logger.Debug("run nelm upgrade")
-	if err := t.nelm.Upgrade(ctx, t.namespace, t.pkg); err != nil && !errors.Is(err, nelm.ErrPackageNotHelm) {
+	err := t.nelm.Upgrade(ctx, t.namespace, t.pkg)
+	switch {
+	case errors.Is(err, nelm.ErrPackageNotHelm):
+		// No chart means no workloads, so the health monitor never reports on it.
+		t.status.SetNoWorkloads(t.pkg.GetName(), true)
+	case err != nil:
 		span.SetStatus(codes.Error, err.Error())
-		t.status.HandleError(t.pkg.GetName(), status.ConditionManifestsApplied, status.NewError("ManifestsApplyFailed", err))
+		t.status.HandleError(ctx, t.pkg.GetName(), status.ConditionManifestsApplied, status.NewError("ManifestsApplyFailed", err))
 		return err
 	}
 
@@ -150,14 +155,14 @@ func (t *task) runPackage(ctx context.Context) error {
 	oldChecksum := t.pkg.GetValuesChecksum()
 	if err := t.pkg.RunHooksByBinding(ctx, addontypes.AfterHelm); err != nil {
 		span.SetStatus(codes.Error, err.Error())
-		t.status.HandleError(t.pkg.GetName(), status.ConditionHooksProcessed, status.NewError("AfterHelmHookFailed", err))
+		t.status.HandleError(ctx, t.pkg.GetName(), status.ConditionHooksProcessed, status.NewError("AfterHelmHookFailed", err))
 		return err
 	}
 
 	if oldChecksum != t.pkg.GetValuesChecksum() {
 		if err := t.nelm.Upgrade(ctx, t.namespace, t.pkg); err != nil && !errors.Is(err, nelm.ErrPackageNotHelm) {
 			span.SetStatus(codes.Error, err.Error())
-			t.status.HandleError(t.pkg.GetName(), status.ConditionManifestsApplied, status.NewError("ManifestsApplyFailed", err))
+			t.status.HandleError(ctx, t.pkg.GetName(), status.ConditionManifestsApplied, status.NewError("ManifestsApplyFailed", err))
 			return err
 		}
 	}

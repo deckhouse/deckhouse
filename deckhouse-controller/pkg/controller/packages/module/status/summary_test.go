@@ -74,6 +74,50 @@ func TestModuleSummaryScenarios(t *testing.T) {
 		message   string
 		tip       string
 	}{
+		// ── Install waiting or running ─────────────────────────────────
+
+		{
+			name: "install: enabled, waiting for its turn",
+			opts: []mappingOption{
+				withInternalCondition(string(intstatus.ConditionRequirementsMet), metav1.ConditionTrue, ""),
+				withInternalCondition(string(intstatus.ConditionPending), metav1.ConditionTrue, ""),
+			},
+			wantConds: gatedAbsent(map[string]*expectedCondition{
+				ConditionInstalled: {metav1.ConditionFalse, "Pending"},
+			}),
+			state:   statePending,
+			message: "Installation is waiting for dependent modules to converge",
+			tip:     "Wait for dependent modules to converge automatically. No action required.",
+		},
+		{
+			// Enable took the module off Pending; the pipeline is running.
+			name: "install: in progress",
+			opts: []mappingOption{
+				withInternalCondition(string(intstatus.ConditionRequirementsMet), metav1.ConditionTrue, ""),
+				withInternalCondition(string(intstatus.ConditionPending), metav1.ConditionFalse, "Scheduled"),
+			},
+			wantConds: gatedAbsent(map[string]*expectedCondition{
+				ConditionInstalled: nil,
+			}),
+			state:   statePending,
+			message: "Installation is in progress",
+			tip:     "No action is required unless this state persists.",
+		},
+		{
+			// A module born disabled: the decision clears Pending along with the verdict.
+			name: "install: born disabled",
+			opts: []mappingOption{
+				withInternalCondition(string(intstatus.ConditionRequirementsMet), metav1.ConditionFalse, "DisabledByBundle"),
+				withInternalCondition(string(intstatus.ConditionPending), metav1.ConditionFalse, "DisabledByBundle"),
+			},
+			wantConds: gatedAbsent(map[string]*expectedCondition{
+				ConditionInstalled: {metav1.ConditionFalse, "DisabledByBundle"},
+			}),
+			state:   statePending,
+			message: "Installation is blocked: the module is disabled by the edition bundle",
+			tip:     "Enable the module explicitly to override the bundle default.",
+		},
+
 		// ── Install blocked by a scheduler verdict ─────────────────────
 
 		{

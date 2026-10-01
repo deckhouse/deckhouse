@@ -102,7 +102,7 @@ func (t *task) Execute(ctx context.Context) error {
 	t.logger.Debug("load package")
 	version, err := t.loader(ctx, t.repository, t.deployed)
 	if err != nil {
-		t.status.HandleError(t.name, status.ConditionLoaded, err)
+		t.status.HandleError(ctx, t.name, status.ConditionLoaded, err)
 		return fmt.Errorf("load package: %w", err)
 	}
 

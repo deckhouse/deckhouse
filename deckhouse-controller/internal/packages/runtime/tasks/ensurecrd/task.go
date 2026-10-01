@@ -89,7 +89,7 @@ func (t *task) Execute(ctx context.Context) error {
 		// HandleError only reacts to *status.Error, so wrap the plain install
 		// error to surface ConditionCustomResourcesApplied=False on the CR.
 		err = status.NewError("CustomResourcesApplyFailed", err)
-		t.status.HandleError(t.pkg.GetName(), status.ConditionCustomResourcesApplied, err)
+		t.status.HandleError(ctx, t.pkg.GetName(), status.ConditionCustomResourcesApplied, err)
 		return fmt.Errorf("ensureCRDs: %w", err)
 	}
 

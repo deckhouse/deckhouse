@@ -210,3 +210,13 @@ func (r *Runtime) collectQueues(name string) []string {
 
 	return queues
 }
+
+// DumpScheduler returns a snapshot of the scheduler state for all packages.
+func (r *Runtime) DumpScheduler() any {
+	return r.scheduler.Dump()
+}
+
+// DumpSchedulerByName returns a snapshot of the scheduler state for a specific package.
+func (r *Runtime) DumpSchedulerByName(name string) any {
+	return r.scheduler.DumpByName(name)
+}

@@ -42,8 +42,8 @@ type AnyOfGroup struct {
 // group must have ≥1 installed member that meets its constraint. It is a gate:
 // it returns Undefined or Forbid only.
 //
-// AnyOf groups add no edges to the topological graph, so fallback chains across
-// packages (A any-of {B, C}; B any-of {A, D}) do not produce cycles.
+// The scheduler orders AnyOf members only by soft edges it drops where they
+// close a cycle, so fallback chains (A any-of {B, C}; B any-of {A, D}) stay legal.
 type AnyOfRule struct {
 	getter Getter
 	groups []AnyOfGroup

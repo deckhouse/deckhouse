@@ -243,3 +243,29 @@ spec:
 		})
 	}
 }
+
+func TestHasWorkloads(t *testing.T) {
+	tests := []struct {
+		name     string
+		rendered string
+		expected bool
+	}{
+		{name: "empty", rendered: "", expected: false},
+		{
+			name:     "config only",
+			rendered: "apiVersion: v1\nkind: ConfigMap\nmetadata:\n  name: a\n---\napiVersion: apiextensions.k8s.io/v1\nkind: CustomResourceDefinition\n",
+			expected: false,
+		},
+		{name: "deployment", rendered: "apiVersion: v1\nkind: ConfigMap\n---\napiVersion: apps/v1\nkind: Deployment\n", expected: true},
+		{name: "statefulset", rendered: "---\napiVersion: apps/v1\nkind: StatefulSet\n", expected: true},
+		{name: "unwatched workload kind", rendered: "apiVersion: apps/v1\nkind: DaemonSet\n", expected: false},
+		{name: "foreign group", rendered: "apiVersion: example.io/v1\nkind: Deployment\n", expected: false},
+		{name: "json syntax error terminates", rendered: `{"kind":"A"} {"kind":"B"} {bad`, expected: false},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			assert.Equal(t, tt.expected, hasWorkloads(tt.rendered))
+		})
+	}
+}

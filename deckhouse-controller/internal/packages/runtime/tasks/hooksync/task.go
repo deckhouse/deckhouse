@@ -99,7 +99,7 @@ func (t *task) Execute(ctx context.Context) error {
 	if err := t.runPackageSyncHook(ctx); err != nil {
 		// If AllowFailure=true, log warning and continue
 		if !t.info.AllowFailure {
-			t.status.HandleError(t.pkg.GetName(), status.ConditionHooksProcessed, err)
+			t.status.HandleError(ctx, t.pkg.GetName(), status.ConditionHooksProcessed, err)
 			return fmt.Errorf("run hook '%s': %w", t.hook, err)
 		}
 		t.logger.Warn("hook failed", log.Err(err))

@@ -85,3 +85,26 @@ func RegisterAdmissionHandlers(
 	reg.Register("/validate/v1alpha1/deckhouse-releases", withInvalidReason(DeckhouseReleaseValidationHandler(cli, metricStorage, mm, exts)))
 	reg.Register("/validate/v1alpha1/applications", withInvalidReason(applicationValidationHandler(cli, pm)))
 }
+
+// RegisterAdmissionHandlersV2 registers the webhook handlers of Module v2, where the package runtime replaces addon-operator.
+func RegisterAdmissionHandlersV2(
+	reg registerer,
+	cli client.Client,
+	pm modulePackageManager,
+	metricStorage metricsstorage.Storage,
+	schemaStore *config.SchemaStore,
+	settings *helpers.DeckhouseSettingsContainer,
+	exts extenders.IExtendersStack,
+) {
+	mm := packageModuleManager{pm}
+
+	reg.Register("/validate/v1/deckhouse-registry-secret", withInvalidReason(RegistrySecretHandler()))
+	reg.Register("/validate/v1alpha1/module-configs", withInvalidReason(moduleConfigValidationHandlerV2(cli, pm, metricStorage, settings)))
+	reg.Register("/validate/v1beta1/modules", withInvalidReason(moduleValidationHandlerV2(cli, pm, metricStorage, settings)))
+	reg.Register("/validate/v1/configuration-secret", withInvalidReason(clusterConfigurationHandler(mm, cli, schemaStore)))
+	reg.Register("/validate/v1/provider-configuration-secret", withInvalidReason(providerConfigurationHandler(schemaStore)))
+	reg.Register("/validate/v1/static-configuration-secret", withInvalidReason(staticConfigurationHandler(schemaStore)))
+	reg.Register("/validate/v1alpha1/update-policies", withInvalidReason(updatePolicyHandler(cli)))
+	reg.Register("/validate/v1alpha1/deckhouse-releases", withInvalidReason(DeckhouseReleaseValidationHandler(cli, metricStorage, mm, exts)))
+	reg.Register("/validate/v1alpha1/applications", withInvalidReason(applicationValidationHandler(cli, pm)))
+}

@@ -223,6 +223,12 @@ func Build(cli kclient.Client, moduleManager moduleManagerI, metricStorage metri
 	// Initialize scheduler with enabling/disabling callbacks
 	r.buildScheduler(cli, edit)
 
+	if app.ModuleV2Enabled() {
+		if err := r.scheduler.AddNode(r.global); err != nil {
+			return nil, fmt.Errorf("add node: %w", err)
+		}
+	}
+
 	// Build NELM service with its own client and runtime cache for resource monitoring
 	if err := r.buildNelmService(); err != nil {
 		return nil, fmt.Errorf("build nelm service: %w", err)
@@ -456,8 +462,14 @@ func (r *Runtime) buildHealthService() error {
 //
 // The scheduler starts paused and is resumed after initial package loading completes.
 func (r *Runtime) buildScheduler(cli kclient.Client, edition *edition.Edition) {
+	// without addon-operator (Module v2) the global values are the runtime's own global module
+	globalValues := r.global.GetValues
+	if r.addonModuleManager != nil {
+		globalValues = func() addonutils.Values { return r.addonModuleManager.GetGlobal().GetValues(false) }
+	}
+
 	deckhouseVersionGetter := func() (*semver.Version, error) {
-		value, ok := r.addonModuleManager.GetGlobal().GetValues(false)[deckhouseVersionValue]
+		value, ok := globalValues()[deckhouseVersionValue]
 		if !ok {
 			return nil, fmt.Errorf("deckhouse version not found in global values")
 		}
@@ -475,7 +487,7 @@ func (r *Runtime) buildScheduler(cli kclient.Client, edition *edition.Edition) {
 	}
 
 	kubernetesVersionGetter := func() (*semver.Version, error) {
-		discovery := r.addonModuleManager.GetGlobal().GetValues(false).GetKeySection("discovery")
+		discovery := globalValues().GetKeySection("discovery")
 		if len(discovery) == 0 {
 			return nil, fmt.Errorf("discovery section not found in global values")
 		}
@@ -495,7 +507,7 @@ func (r *Runtime) buildScheduler(cli kclient.Client, edition *edition.Edition) {
 
 	// Bootstrap condition checks if cluster initialization is complete
 	bootstrapCondition := func() bool {
-		value, ok := r.addonModuleManager.GetGlobal().GetValues(false)[bootstrappedGlobalValue]
+		value, ok := globalValues()[bootstrappedGlobalValue]
 		if !ok {
 			return false
 		}
@@ -508,8 +520,25 @@ func (r *Runtime) buildScheduler(cli kclient.Client, edition *edition.Edition) {
 		return bootstrapped
 	}
 
-	// Dependency getter returns the version of enabled module
-	dependencyGetter := func(name string) *semver.Version {
+	opts := []schedule.Option{
+		schedule.WithDynamicGetter(r.global.IsEnabled),
+		schedule.WithBundleChecker(edition.IsEnabled),
+		schedule.WithBootstrapCondition(bootstrapCondition),
+		schedule.WithDeckhouseVersionGetter(deckhouseVersionGetter),
+		schedule.WithKubeVersionGetter(kubernetesVersionGetter),
+	}
+
+	// without a dependency getter the scheduler answers dependency rules from its own graph
+	if r.addonModuleManager != nil {
+		opts = append(opts, schedule.WithDependencyGetter(r.addonDependencyGetter(cli)))
+	}
+
+	r.scheduler = schedule.NewScheduler(r.logger, opts...)
+}
+
+// addonDependencyGetter returns the version of a module addon-operator has enabled, nil otherwise.
+func (r *Runtime) addonDependencyGetter(cli kclient.Client) func(name string) *semver.Version {
+	return func(name string) *semver.Version {
 		if !r.addonModuleManager.IsModuleEnabled(name) {
 			return nil
 		}
@@ -534,23 +563,18 @@ func (r *Runtime) buildScheduler(cli kclient.Client, edition *edition.Edition) {
 
 		return version
 	}
-
-	r.scheduler = schedule.NewScheduler(
-		r.logger,
-		schedule.WithDynamicGetter(r.global.IsEnabled),
-		schedule.WithBundleChecker(edition.IsEnabled),
-		schedule.WithBootstrapCondition(bootstrapCondition),
-		schedule.WithDependencyGetter(dependencyGetter),
-		schedule.WithDeckhouseVersionGetter(deckhouseVersionGetter),
-		schedule.WithKubeVersionGetter(kubernetesVersionGetter))
 }
 
 // Run starts the scheduler event loop in a background goroutine. The loop listens for
 // schedule and disable events from the scheduler and dispatches them to the appropriate
 // handler, driving the enable/disable lifecycle for all packages. It also starts the status resync,
 // the periodic re-enqueue that republishes every package status regardless of
-// whether anything changed.
+// whether anything changed, and, without addon-operator, the deckhouse_live_ticks heartbeat.
 func (r *Runtime) Run() error {
+	if r.ownsLiveTicks() {
+		r.startLiveTicks()
+	}
+
 	r.hookEventHandler.Start()
 	r.status.StartResync()
 	r.healthService.Start()
@@ -571,6 +595,8 @@ func (r *Runtime) Run() error {
 				r.schedulePackage(event.Name, event.Reason)
 			case schedule.EventDisable:
 				r.disablePackage(event.Name, event.Reason, event.Message)
+			case schedule.EventDecision:
+				r.reportDecision(event)
 			default:
 			}
 		}
@@ -684,6 +710,21 @@ func (r *Runtime) schedulePackage(name, reason string) {
 		r.queueService.Enqueue(ctx, name, taskenable.NewTask(pkg, r.nelmService, r.queueService, r.status, r.logger))
 		r.queueService.Enqueue(ctx, name, taskrun.NewTask(pkg, app.NamespaceDeckhouse, r.nelmService, r.status, r.logger), onDone)
 	}
+}
+
+// reportDecision publishes a scheduler verdict the moment it is made: an enabled package
+// may wait long for its turn, and a package born disabled gets no other event at all.
+// Status only — the Schedule or Disable event of the same pass carries the work.
+func (r *Runtime) reportDecision(event schedule.Event) {
+	if event.Allowed {
+		r.status.SetConditionTrue(event.Name, status.ConditionRequirementsMet)
+		r.status.SetConditionTrue(event.Name, status.ConditionPending)
+
+		return
+	}
+
+	r.status.SetConditionFalse(event.Name, status.ConditionRequirementsMet, event.Reason, event.Message)
+	r.status.SetConditionFalse(event.Name, status.ConditionPending, event.Reason, "")
 }
 
 // disablePackage handles scheduler disable events by enqueueing a Disable task that
@@ -951,6 +992,11 @@ func (r *Runtime) PauseScheduler() {
 // ResumeScheduler resumes the scheduler after a previous pause.
 func (r *Runtime) ResumeScheduler() {
 	r.scheduler.Resume()
+}
+
+// IsPackageEnabled returns true if the package is enabled, false otherwise.
+func (r *Runtime) IsPackageEnabled(name string) bool {
+	return r.scheduler.IsEnabled(name)
 }
 
 // CheckConstraints validates the proposed package constraints against the

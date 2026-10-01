@@ -45,7 +45,12 @@ webhooks:
       - apiGroups:
           - "deckhouse.io"
         apiVersions:
+          {{- /* Module v2 keeps the user-facing spec (settings, enabled) in v1beta1 only */}}
+          {{- if .Values.deckhouse.enableModuleV2 }}
+          - "v1beta1"
+          {{- else }}
           - "v1alpha1"
+          {{- end }}
         resources:
           - "modules"
         operations:
@@ -56,6 +61,7 @@ webhooks:
     admissionReviewVersions:
       - v1
     matchPolicy: Equivalent
+    {{- /* Ignore: the controller writes Modules at startup, before its pod carries the leader label the service selects */}}
     failurePolicy: Ignore
     sideEffects: None
     clientConfig:
@@ -64,7 +70,11 @@ webhooks:
         name: deckhouse
         namespace: d8-system
         port: 4223
+        {{- if .Values.deckhouse.enableModuleV2 }}
+        path: /validate/v1beta1/modules
+        {{- else }}
         path: /validate/v1alpha1/modules
+        {{- end }}
   - name: module-configs.deckhouse-webhook.deckhouse.io
     rules:
       - apiGroups:

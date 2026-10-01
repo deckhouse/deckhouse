@@ -120,7 +120,7 @@ func (t *task) Execute(ctx context.Context) error {
 		// HandleError only reacts to *status.Error, so wrap the plain render error
 		// to record ConditionWebhooksEnsured=False.
 		err = status.NewError(conditionReasonRenderFailed, err)
-		t.status.HandleError(t.pkg.GetName(), status.ConditionWebhooksEnsured, err)
+		t.status.HandleError(ctx, t.pkg.GetName(), status.ConditionWebhooksEnsured, err)
 
 		return fmt.Errorf("get conversion webhooks: %w", err)
 	}
@@ -135,7 +135,7 @@ func (t *task) Execute(ctx context.Context) error {
 
 		if err := t.objectpatcher.ExecuteOperations(ops); err != nil {
 			err = status.NewError(conditionReasonApplyFailed, err)
-			t.status.HandleError(t.pkg.GetName(), status.ConditionWebhooksEnsured, err)
+			t.status.HandleError(ctx, t.pkg.GetName(), status.ConditionWebhooksEnsured, err)
 
 			return fmt.Errorf("apply conversion webhooks: %w", err)
 		}

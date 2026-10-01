@@ -200,6 +200,125 @@ func (s *SchedulerSuite) TestFloorDisableKeepsNodeOff() {
 		"a node with a Disable floor must not be scheduled")
 }
 
+// decisionsFor returns the EventDecision events for the named node, in order.
+func decisionsFor(events []schedule.Event, name string) []schedule.Event {
+	var decisions []schedule.Event
+	for _, e := range events {
+		if e.Kind == schedule.EventDecision && e.Name == name {
+			decisions = append(decisions, e)
+		}
+	}
+
+	return decisions
+}
+
+// TestBornDisabledNodeEmitsDecision confirms a node that is off from its first pass
+// reports that verdict, although no EventDisable follows: it has nothing to tear down.
+func (s *SchedulerSuite) TestBornDisabledNodeEmitsDecision() {
+	s.activateGlobal()
+
+	s.Require().NoError(s.sched.AddNode(&testPackage{
+		name:    "alpha",
+		version: mustVersion("1.0.0"),
+		constraints: schedule.Constraints{
+			Order: schedule.FunctionalOrder,
+			Floor: rule.Static(rule.Disable),
+		},
+	}))
+
+	events := s.collectEvents()
+	decisions := decisionsFor(events, "alpha")
+	s.Require().Len(decisions, 1)
+	s.False(decisions[0].Allowed)
+	s.NotContains(eventNames(events, schedule.EventDisable), "alpha")
+}
+
+// TestBornEnabledNodeDecisionPrecedesSchedule confirms the verdict is reported ahead of
+// the EventSchedule of the same pass, so a consumer sees the decision before the work.
+func (s *SchedulerSuite) TestBornEnabledNodeDecisionPrecedesSchedule() {
+	s.activateGlobal()
+
+	s.Require().NoError(s.sched.AddNode(&testPackage{
+		name:        "alpha",
+		version:     mustVersion("1.0.0"),
+		constraints: schedule.Constraints{Order: schedule.FunctionalOrder},
+	}))
+
+	var kinds []schedule.EventKind
+	for _, e := range s.collectEvents() {
+		if e.Name == "alpha" {
+			kinds = append(kinds, e.Kind)
+		}
+	}
+	s.Equal([]schedule.EventKind{schedule.EventDecision, schedule.EventSchedule}, kinds)
+}
+
+// TestUnchangedDecisionEmitsNothing confirms a pass that resolves the same verdict
+// reports no decision again.
+func (s *SchedulerSuite) TestUnchangedDecisionEmitsNothing() {
+	s.activateGlobal()
+
+	s.Require().NoError(s.sched.AddNode(&testPackage{
+		name:        "alpha",
+		version:     mustVersion("1.0.0"),
+		constraints: schedule.Constraints{Order: schedule.FunctionalOrder},
+	}))
+	s.drainEvents()
+
+	s.sched.Schedule()
+
+	s.Empty(decisionsFor(s.collectEvents(), "alpha"))
+}
+
+// TestDecisionFlipPrecedesDisable confirms an enabled node that loses eligibility
+// reports the new verdict ahead of the EventDisable that tears it down.
+func (s *SchedulerSuite) TestDecisionFlipPrecedesDisable() {
+	s.activateGlobal()
+
+	s.versions["parent"] = mustVersion("1.0.0")
+	s.Require().NoError(s.sched.AddNode(&testPackage{
+		name:    "consumer",
+		version: mustVersion("1.0.0"),
+		constraints: schedule.Constraints{
+			Order:        schedule.FunctionalOrder,
+			Dependencies: map[string]schedule.Dependency{"parent": {}},
+		},
+	}))
+	s.drainEvents()
+
+	delete(s.versions, "parent")
+	s.sched.Schedule()
+
+	var kinds []schedule.EventKind
+	for _, e := range s.collectEvents() {
+		if e.Name == "consumer" {
+			kinds = append(kinds, e.Kind)
+		}
+	}
+	s.Equal([]schedule.EventKind{schedule.EventDecision, schedule.EventDisable}, kinds)
+}
+
+// TestReAddedNodeEmitsDecision confirms a node re-added for a new version reports its
+// first decision again, even when the verdict is unchanged.
+func (s *SchedulerSuite) TestReAddedNodeEmitsDecision() {
+	s.activateGlobal()
+
+	pkg := &testPackage{
+		name:        "alpha",
+		version:     mustVersion("1.0.0"),
+		constraints: schedule.Constraints{Order: schedule.FunctionalOrder},
+	}
+	s.Require().NoError(s.sched.AddNode(pkg))
+	s.drainEvents()
+
+	pkg.version = mustVersion("1.1.0")
+	s.Require().NoError(s.sched.AddNode(pkg))
+
+	decisions := decisionsFor(s.collectEvents(), "alpha")
+	s.Require().Len(decisions, 1)
+	s.True(decisions[0].Allowed)
+}
+
 // TestOrderTierGate confirms that canSchedule's order-tier check holds a
 // higher-tier node back until every lower-tier node is active.
 func (s *SchedulerSuite) TestOrderTierGate() {
@@ -622,10 +741,9 @@ func (s *SchedulerSuite) TestAnyOfMultipleGroupsAllMustPass() {
 }
 
 // TestAnyOfDoesNotCreateDependencyEdge is the load-bearing test for the
-// design decision in ENG-7: AnyOf groups must not contribute to the
-// topological graph, so two packages whose AnyOf groups reference each other
-// do not produce a cycle. The same scenario expressed with hard dependencies
-// would be rejected as a *CycleError.
+// design decision in ENG-7: AnyOf edges are soft, so two packages whose AnyOf
+// groups reference each other do not produce a cycle. The same scenario
+// expressed with hard dependencies would be rejected as a *CycleError.
 func (s *SchedulerSuite) TestAnyOfDoesNotCreateDependencyEdge() {
 	s.activateGlobal()
 
@@ -644,7 +762,7 @@ func (s *SchedulerSuite) TestAnyOfDoesNotCreateDependencyEdge() {
 	}))
 
 	// Adding beta whose AnyOf references alpha must NOT trigger a CycleError —
-	// AnyOf members are not predecessors in the topo graph.
+	// a soft edge that closes a cycle is dropped, not reported.
 	s.Require().NoError(s.sched.AddNode(&testPackage{
 		name:    "beta",
 		version: mustVersion("1.0.0"),
@@ -658,6 +776,149 @@ func (s *SchedulerSuite) TestAnyOfDoesNotCreateDependencyEdge() {
 			}},
 		},
 	}))
+}
+
+// TestAnyOfMemberRunsBeforeConsumer confirms a consumer waits for an AnyOf member in the graph to finish.
+func (s *SchedulerSuite) TestAnyOfMemberRunsBeforeConsumer() {
+	s.activateGlobal()
+
+	s.versions["gcp"] = mustVersion("1.5.0")
+
+	s.Require().NoError(s.sched.AddNode(&testPackage{
+		name:        "gcp",
+		version:     mustVersion("1.5.0"),
+		constraints: schedule.Constraints{Order: schedule.FunctionalOrder},
+	}))
+	s.Require().Contains(eventNames(s.collectEvents(), schedule.EventSchedule), "gcp")
+
+	s.Require().NoError(s.sched.AddNode(&testPackage{
+		name:    "consumer",
+		version: mustVersion("1.0.0"),
+		constraints: schedule.Constraints{
+			Order: schedule.FunctionalOrder,
+			AnyOf: []schedule.AnyOfGroup{{
+				Name: "cloud-provider",
+				Members: map[string]*semver.Constraints{
+					"gcp": mustConstraint(">=1.5.0"),
+					"aws": nil,
+				},
+			}},
+		},
+	}))
+	s.NotContains(eventNames(s.collectEvents(), schedule.EventSchedule), "consumer", "a running member must hold the consumer back")
+
+	s.sched.Complete("gcp")
+
+	s.Contains(eventNames(s.collectEvents(), schedule.EventSchedule), "consumer")
+}
+
+// TestAnyOfDisabledMemberDoesNotHoldConsumer confirms a not-enabled member, parked active, is not waited for.
+func (s *SchedulerSuite) TestAnyOfDisabledMemberDoesNotHoldConsumer() {
+	s.activateGlobal()
+
+	s.versions["gcp"] = mustVersion("1.5.0")
+
+	s.Require().NoError(s.sched.AddNode(&testPackage{
+		name:    "aws",
+		version: mustVersion("2.0.0"),
+		constraints: schedule.Constraints{
+			Order: schedule.FunctionalOrder,
+			Floor: rule.Static(rule.Disable),
+		},
+	}))
+	s.drainEvents()
+
+	s.Require().NoError(s.sched.AddNode(&testPackage{
+		name:    "consumer",
+		version: mustVersion("1.0.0"),
+		constraints: schedule.Constraints{
+			Order: schedule.FunctionalOrder,
+			AnyOf: []schedule.AnyOfGroup{{
+				Name: "cloud-provider",
+				Members: map[string]*semver.Constraints{
+					"gcp": nil,
+					"aws": nil,
+				},
+			}},
+		},
+	}))
+
+	s.Contains(eventNames(s.collectEvents(), schedule.EventSchedule), "consumer")
+}
+
+// TestAnyOfRaisesConsumerTier confirms a consumer declared below its member's order is raised, not deadlocked.
+func (s *SchedulerSuite) TestAnyOfRaisesConsumerTier() {
+	s.versions["gcp"] = mustVersion("1.5.0")
+
+	s.Require().NoError(s.sched.AddNode(&testPackage{
+		name:        globalName,
+		version:     mustVersion("1.0.0"),
+		constraints: schedule.Constraints{Order: 0},
+	}))
+	s.Require().NoError(s.sched.AddNode(&testPackage{
+		name:    "consumer",
+		version: mustVersion("1.0.0"),
+		constraints: schedule.Constraints{
+			Order: schedule.FunctionalOrder,
+			AnyOf: []schedule.AnyOfGroup{{
+				Name:    "cloud-provider",
+				Members: map[string]*semver.Constraints{"gcp": nil},
+			}},
+		},
+	}))
+	s.Require().NoError(s.sched.AddNode(&testPackage{
+		name:        "gcp",
+		version:     mustVersion("1.5.0"),
+		constraints: schedule.Constraints{Order: schedule.FunctionalOrder + 1},
+	}))
+
+	s.sched.Resume()
+	s.sched.Complete(globalName)
+
+	scheduled := eventNames(s.collectEvents(), schedule.EventSchedule)
+	s.Contains(scheduled, "gcp", "the member must not wait behind its consumer's declared tier")
+	s.NotContains(scheduled, "consumer")
+
+	s.sched.Complete("gcp")
+
+	s.Contains(eventNames(s.collectEvents(), schedule.EventSchedule), "consumer")
+}
+
+// TestAnyOfMutualMembersDoNotDeadlock confirms a mutual AnyOf pair drops one edge and runs in name order.
+func (s *SchedulerSuite) TestAnyOfMutualMembersDoNotDeadlock() {
+	s.versions["alpha"] = mustVersion("1.0.0")
+	s.versions["beta"] = mustVersion("1.0.0")
+
+	s.Require().NoError(s.sched.AddNode(&testPackage{
+		name:        globalName,
+		version:     mustVersion("1.0.0"),
+		constraints: schedule.Constraints{Order: 0},
+	}))
+
+	for name, member := range map[string]string{"alpha": "beta", "beta": "alpha"} {
+		s.Require().NoError(s.sched.AddNode(&testPackage{
+			name:    name,
+			version: mustVersion("1.0.0"),
+			constraints: schedule.Constraints{
+				Order: schedule.FunctionalOrder,
+				AnyOf: []schedule.AnyOfGroup{{
+					Name:    "fallback",
+					Members: map[string]*semver.Constraints{member: nil},
+				}},
+			},
+		}))
+	}
+
+	s.sched.Resume()
+	s.sched.Complete(globalName)
+
+	scheduled := eventNames(s.collectEvents(), schedule.EventSchedule)
+	s.Contains(scheduled, "alpha", "the cycle is broken at the lowest name")
+	s.NotContains(scheduled, "beta")
+
+	s.sched.Complete("alpha")
+
+	s.Contains(eventNames(s.collectEvents(), schedule.EventSchedule), "beta")
 }
 
 // TestCheckConstraintsAnyOfRejectsAtAdmission pins the admission-time parity:

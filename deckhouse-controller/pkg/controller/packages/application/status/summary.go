@@ -243,6 +243,14 @@ var summaryDeleting = advice{
 // there is no message or tip.
 var summaryReady = advice{state: stateReady}
 
+// summaryInstalling is the fixed Summary for a first install whose pipeline is
+// running with no failing gate: the application left Pending, and nothing is installed yet.
+var summaryInstalling = advice{
+	state:   statePending,
+	message: "Installation is in progress",
+	tip:     "No action is required unless this state persists.",
+}
+
 // summaryUpdating is the fixed Summary for an update that is mid-flight with no
 // failing gate: the new version's manifests are still being applied
 // (ManifestsApplied=False/ApplyingManifests), so the previous version is the
@@ -279,10 +287,13 @@ func summarize(state condmap.State) (string, string, string) {
 		blocker, ok := pipelineBlocker(state, installPipeline)
 		if !ok {
 			// Pipeline clear: install just completed (mirrors mapInstalled's
-			// success check) → ready; otherwise still waiting for dependent
-			// modules to converge.
+			// success check) → ready; once Enable has taken it off Pending the
+			// pipeline is running; before that no decision has arrived yet.
 			if isInstallComplete(state) {
 				return summaryReady.state, summaryReady.message, summaryReady.tip
+			}
+			if state.IntEqual(intPending, metav1.ConditionFalse) {
+				return summaryInstalling.state, summaryInstalling.message, summaryInstalling.tip
 			}
 			return adviseFor(phaseInstall, "Pending")
 		}

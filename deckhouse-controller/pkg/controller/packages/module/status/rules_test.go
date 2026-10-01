@@ -287,6 +287,18 @@ func TestScaledRule(t *testing.T) {
 			},
 		},
 		{
+			// A package the health monitor never observes, like global, over a stale failure.
+			name: "true when a workload-less install completes",
+			opts: append(withSuccessfulApply(),
+				withInternalCondition(string(intstatus.ConditionScaled), metav1.ConditionTrue, string(intstatus.ConditionReasonNoWorkloads)),
+				withExternalCondition(ConditionInstalled, metav1.ConditionFalse, "HookFailed"),
+			),
+			expected: map[string]*expectedCondition{
+				ConditionInstalled: {status: metav1.ConditionTrue, reason: ConditionInstalled},
+				ConditionScaled:    {status: metav1.ConditionTrue, reason: ConditionScaled},
+			},
+		},
+		{
 			// The health monitor can report Scaled before the install pipeline finishes.
 			name: "absent when Scaled arrives before manifests are applied",
 			opts: []mappingOption{
@@ -471,6 +483,22 @@ func TestMaintenanceModeKeepsSummaryReady(t *testing.T) {
 	opts := append(withSuccessfulApply(),
 		withExternalCondition(ConditionInstalled, metav1.ConditionTrue, ConditionInstalled),
 		withMaintenanceMode(metav1.ConditionTrue))
+	for _, opt := range opts {
+		opt(&state)
+	}
+
+	summary, _, _ := summarize(state)
+	assert.Equal(t, stateReady, summary)
+}
+
+func TestNoWorkloadsSummaryReady(t *testing.T) {
+	state := condmap.State{
+		Internal: make(map[string]metav1.Condition),
+		External: make(map[string]metav1.Condition),
+	}
+
+	opts := append(withSuccessfulApply(),
+		withInternalCondition(intScaled, metav1.ConditionTrue, string(intstatus.ConditionReasonNoWorkloads)))
 	for _, opt := range opts {
 		opt(&state)
 	}

@@ -15,6 +15,7 @@
 package status
 
 import (
+	"context"
 	"errors"
 	"slices"
 	"strings"
@@ -43,7 +44,7 @@ const (
 	ConditionScaled ConditionType = "Scaled"
 	// ConditionConfigured indicates the current settings passed validation and the Run task applied them
 	ConditionConfigured ConditionType = "Configured"
-	// ConditionPending indicates that the package wait converge
+	// ConditionPending is True while an enabled package waits for its turn in the scheduler
 	ConditionPending ConditionType = "Pending"
 	// ConditionCustomResourcesApplied indicates that CRDs are ensured
 	ConditionCustomResourcesApplied ConditionType = "CustomResourcesApplied"
@@ -63,6 +64,8 @@ const (
 	ConditionReasonSettingsChanged ConditionReason = "SettingsChanged"
 	// ConditionReasonNoResourceReconciliation marks a package whose resources are left to the user
 	ConditionReasonNoResourceReconciliation ConditionReason = "NoResourceReconciliation"
+	// ConditionReasonNoWorkloads marks Scaled True for a package that renders nothing the health monitor watches
+	ConditionReasonNoWorkloads ConditionReason = "NoWorkloads"
 
 	// appQueueName labels the application notification workqueue for metrics.
 	appQueueName = "application-status"
@@ -140,6 +143,10 @@ type Status struct {
 	// deleting freezes the status once a removal is accepted: the teardown cancels
 	// the context, and the tasks unwinding from it would undo the Deleting conditions.
 	deleting bool
+
+	// noWorkloads records that the last render held nothing the health monitor
+	// watches, so its Unknown means "nothing to scale", not "not observed yet".
+	noWorkloads bool
 }
 
 // URL is a single application endpoint collected from the rendered manifests.
@@ -389,7 +396,8 @@ func (s *Service) SetDeleting(name string) {
 	}
 }
 
-// UpdateVersion sets the current version of package
+// UpdateVersion sets the current version of package. Pending is left to the
+// scheduler's decision, which may already have arrived by the time Load finishes.
 func (s *Service) UpdateVersion(name string, version string) {
 	s.mu.Lock()
 	status, ok := s.mutableStatus(name)
@@ -400,7 +408,6 @@ func (s *Service) UpdateVersion(name string, version string) {
 
 	status.Version = version
 	status.setCondition(Condition{Type: ConditionLoaded, Status: metav1.ConditionTrue})
-	status.setCondition(Condition{Type: ConditionPending, Status: metav1.ConditionTrue, Message: "waiting for processing"})
 	s.mu.Unlock()
 
 	s.queueFor(name).Add(name)
@@ -579,7 +586,8 @@ func (s *Status) setSettings(settings addonutils.Values) bool {
 //
 //	StateScaled                          → True,    Reason="Scaled"
 //	StateReconciling, StateDegraded      → False,   Reason=State, Message=workload detail
-//	StateUnknown                         → Unknown, Reason="" (no workloads to observe)
+//	StateUnknown                         → Unknown, Reason="" (no workloads to observe);
+//	                                       True/NoWorkloads when the last render had none
 //
 // If the package is not yet tracked by the service, the event is buffered
 // and applied by the next ClearStatus call for the same name. This closes
@@ -607,6 +615,34 @@ func (s *Service) UpdateHealth(name string, event health.Event) {
 	}
 }
 
+// SetNoWorkloads records whether the package renders no workload the health monitor watches.
+// It rewrites only an Unknown or an own ConditionScaled; a monitor verdict is kept.
+func (s *Service) SetNoWorkloads(name string, none bool) {
+	s.mu.Lock()
+	status, ok := s.mutableStatus(name)
+	if !ok {
+		s.mu.Unlock()
+		return
+	}
+
+	status.noWorkloads = none
+
+	var notify bool
+	cond, _ := status.condition(ConditionScaled)
+	switch {
+	case none && (cond.Status == metav1.ConditionUnknown || cond.Reason == ConditionReasonNoWorkloads):
+		notify = status.setCondition(noWorkloadsCondition())
+	case !none && cond.Reason == ConditionReasonNoWorkloads:
+		// Workloads are coming: wait for the monitor rather than keep a stale True.
+		notify = status.setCondition(Condition{Type: ConditionScaled, Status: metav1.ConditionUnknown})
+	}
+	s.mu.Unlock()
+
+	if notify {
+		s.queueFor(name).Add(name)
+	}
+}
+
 // applyHealthEventLocked translates a health event into a ConditionScaled
 // update on the given status and reports whether the condition changed.
 // The caller must hold s.mu.
@@ -617,7 +653,11 @@ func applyHealthEventLocked(status *Status, event health.Event) bool {
 		cond.Status = metav1.ConditionTrue
 		cond.Reason = ConditionReason(health.StateScaled)
 	case health.StateUnknown:
-		cond.Status = metav1.ConditionUnknown
+		if status.noWorkloads {
+			cond = noWorkloadsCondition()
+		} else {
+			cond.Status = metav1.ConditionUnknown
+		}
 	default:
 		cond.Status = metav1.ConditionFalse
 		cond.Reason = ConditionReason(event.Health.State)
@@ -626,9 +666,19 @@ func applyHealthEventLocked(status *Status, event health.Event) bool {
 	return status.setCondition(cond)
 }
 
+// noWorkloadsCondition is ConditionScaled for a package with nothing to scale.
+func noWorkloadsCondition() Condition {
+	return Condition{Type: ConditionScaled, Status: metav1.ConditionTrue, Reason: ConditionReasonNoWorkloads}
+}
+
 // HandleError processes an error and extracts status conditions from it
-// Notifies listeners if any conditions changed
-func (s *Service) HandleError(name string, cond ConditionType, err error) {
+// Notifies listeners if any conditions changed. A cancelled ctx records nothing:
+// the error is the cancellation, not a failure of the package.
+func (s *Service) HandleError(ctx context.Context, name string, cond ConditionType, err error) {
+	if ctx.Err() != nil {
+		return
+	}
+
 	statusErr := new(Error)
 	if !errors.As(err, &statusErr) {
 		return
@@ -713,7 +763,13 @@ func (s *Service) NewStatus(name string) {
 
 	scaled := s.observedScaledLocked(name)
 
+	var noWorkloads bool
+	if prev, ok := s.statuses[name]; ok {
+		noWorkloads = prev.noWorkloads
+	}
+
 	s.statuses[name] = &Status{
+		noWorkloads: noWorkloads,
 		Conditions: []Condition{
 			{Type: ConditionRequirementsMet, Status: metav1.ConditionUnknown},
 			{Type: ConditionReadyOnFilesystem, Status: metav1.ConditionUnknown},

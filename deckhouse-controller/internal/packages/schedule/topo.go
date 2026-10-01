@@ -37,9 +37,11 @@ func (e *CycleError) Error() string {
 // with Order as the primary tiebreaker and name as the secondary tiebreaker
 // for nodes at the same topological level.
 //
-// Predecessor edges are derived from n.dependencies directly.
+// Hard edges come from n.dependencies; soft edges come from n.anyOf and are
+// kept only while they do not close a cycle: when only soft edges hold the
+// rest back, the lowest ready-by-hard-edges node is released first.
 //
-// On cycle, returns the partial sort plus a *CycleError naming the
+// On a hard cycle, returns the partial sort plus a *CycleError naming the
 // participants. Callers (CheckConstraints, AddNode) use this to reject
 // configurations that introduce cycles before they hit the live scheduler
 // graph. compute() falls back gracefully if a cycle ever slips through,
@@ -50,10 +52,12 @@ func topoSort(nodes map[string]*node) ([]*node, error) {
 		return nil, nil
 	}
 
-	// Build the reverse dep map locally so we know whose in-degree to
+	// Build the reverse edge maps locally so we know whose in-degree to
 	// decrement when a node is processed.
 	dependents := make(map[string][]string, len(nodes))
+	softDependents := make(map[string][]string, len(nodes))
 	inDegree := make(map[string]int, len(nodes))
+	softDegree := make(map[string]int, len(nodes))
 	for name, n := range nodes {
 		deg := 0
 		for dep := range n.dependencies {
@@ -63,38 +67,70 @@ func topoSort(nodes map[string]*node) ([]*node, error) {
 			}
 		}
 		inDegree[name] = deg
+
+		soft := 0
+		for member := range n.anyOf {
+			if _, hard := n.dependencies[member]; hard || member == name {
+				continue
+			}
+
+			if _, ok := nodes[member]; ok {
+				soft++
+				softDependents[member] = append(softDependents[member], name)
+			}
+		}
+		softDegree[name] = soft
 	}
 
 	// Collect initial zero-in-degree nodes.
 	var ready []*node
 	for name, deg := range inDegree {
-		if deg == 0 {
+		if deg == 0 && softDegree[name] == 0 {
 			ready = append(ready, nodes[name])
 		}
 	}
 
+	placed := make(map[string]struct{}, len(nodes))
 	result := make([]*node, 0, len(nodes))
-	for len(ready) > 0 {
-		// Sort ready nodes: Order ASC, then name ASC for determinism.
-		slices.SortFunc(ready, func(a, b *node) int {
-			if c := cmp.Compare(a.order, b.order); c != 0 {
-				return c
+	for len(result) < len(nodes) {
+		if len(ready) == 0 {
+			released := releaseSoft(nodes, inDegree, placed)
+			if released == nil {
+				break
 			}
-			return cmp.Compare(a.name, b.name)
-		})
+
+			softDegree[released.name] = 0
+			ready = append(ready, released)
+		}
+
+		// Sort ready nodes: Order ASC, then name ASC for determinism.
+		slices.SortFunc(ready, compareNodes)
 
 		// Take the highest-priority node.
 		n := ready[0]
 		ready = ready[1:]
 		result = append(result, n)
+		placed[n.name] = struct{}{}
 
 		// Decrement in-degree for everyone that depends on n.
 		for _, dependentName := range dependents[n.name] {
 			inDegree[dependentName]--
-			if inDegree[dependentName] == 0 {
+			if inDegree[dependentName] == 0 && softDegree[dependentName] == 0 {
 				if dn, ok := nodes[dependentName]; ok {
 					ready = append(ready, dn)
 				}
+			}
+		}
+
+		// A released node already has softDegree 0, so it is never queued twice.
+		for _, dependentName := range softDependents[n.name] {
+			if softDegree[dependentName] == 0 {
+				continue
+			}
+
+			softDegree[dependentName]--
+			if inDegree[dependentName] == 0 && softDegree[dependentName] == 0 {
+				ready = append(ready, nodes[dependentName])
 			}
 		}
 	}
@@ -114,4 +150,29 @@ func topoSort(nodes map[string]*node) ([]*node, error) {
 	}
 
 	return result, nil
+}
+
+// releaseSoft picks the unplaced node with no hard predecessor left, dropping its soft edges; nil means a hard cycle.
+func releaseSoft(nodes map[string]*node, inDegree map[string]int, placed map[string]struct{}) *node {
+	var released *node
+	for name, deg := range inDegree {
+		if _, ok := placed[name]; ok || deg > 0 {
+			continue
+		}
+
+		if released == nil || compareNodes(nodes[name], released) < 0 {
+			released = nodes[name]
+		}
+	}
+
+	return released
+}
+
+// compareNodes orders nodes by Order, then by name.
+func compareNodes(a, b *node) int {
+	if c := cmp.Compare(a.order, b.order); c != 0 {
+		return c
+	}
+
+	return cmp.Compare(a.name, b.name)
 }

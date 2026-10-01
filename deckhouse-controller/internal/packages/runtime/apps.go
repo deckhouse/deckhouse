@@ -157,7 +157,11 @@ func (r *Runtime) loadApp(ctx context.Context, repo registry.Remote, packagePath
 	conf.ScheduleManager = r.scheduleManager
 	conf.KubeEventsManager = r.kubeEventsManager
 	conf.GrantResolver = r.grantResolver
-	conf.GlobalValuesGetter = r.addonModuleManager.GetGlobal().GetValues
+	// without addon-operator (Module v2) the global values are the runtime's own global module
+	conf.GlobalValuesGetter = func(bool) addonutils.Values { return r.global.GetValues() }
+	if r.addonModuleManager != nil {
+		conf.GlobalValuesGetter = r.addonModuleManager.GetGlobal().GetValues
+	}
 	conf.MetricStorage = r.metricStorage
 
 	app, err := apps.NewAppByConfig(filepath.Base(packagePath), conf, r.logger)

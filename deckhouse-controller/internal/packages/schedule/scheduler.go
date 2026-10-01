@@ -19,6 +19,8 @@ import (
 	"sync"
 	"sync/atomic"
 
+	"github.com/Masterminds/semver/v3"
+
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/schedule/rule"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/schedule/rule/bundle"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/schedule/rule/condition"
@@ -200,7 +202,7 @@ func (s *Scheduler) CheckConstraints(name string, constraints Constraints) error
 		rules = append(rules, condition.NewRule(s.bootstrapCondition, reasonRequirementsBootstrap, messageRequirementsBootstrap))
 	}
 
-	if len(constraints.Dependencies) > 0 && s.dependencyGetter != nil {
+	if len(constraints.Dependencies) > 0 {
 		deps := make(map[string]dependency.Dependency, len(constraints.Dependencies))
 		for depName, dep := range constraints.Dependencies {
 			deps[depName] = dependency.Dependency{
@@ -209,15 +211,27 @@ func (s *Scheduler) CheckConstraints(name string, constraints Constraints) error
 			}
 		}
 
-		rules = append(rules, dependency.NewRule(s.dependencyGetter, deps))
+		if s.dependencyGetter == nil {
+			rules = append(rules, dependency.NewRule(s.dependencyVersion, deps))
+		} else {
+			rules = append(rules, dependency.NewRule(s.dependencyGetter, deps))
+		}
 	}
 
-	if len(constraints.AnyOf) > 0 && s.dependencyGetter != nil {
-		rules = append(rules, dependency.NewAnyOfRule(s.dependencyGetter, toAnyOfGroups(constraints.AnyOf)))
+	if len(constraints.AnyOf) > 0 {
+		if s.dependencyGetter == nil {
+			rules = append(rules, dependency.NewAnyOfRule(s.dependencyVersion, toAnyOfGroups(constraints.AnyOf)))
+		} else {
+			rules = append(rules, dependency.NewAnyOfRule(s.dependencyGetter, toAnyOfGroups(constraints.AnyOf)))
+		}
 	}
 
-	if len(constraints.NoneOf) > 0 && s.dependencyGetter != nil {
-		rules = append(rules, dependency.NewNoneOfRule(s.dependencyGetter, toNoneOfGroups(constraints.NoneOf)))
+	if len(constraints.NoneOf) > 0 {
+		if s.dependencyGetter == nil {
+			rules = append(rules, dependency.NewNoneOfRule(s.dependencyVersion, toNoneOfGroups(constraints.NoneOf)))
+		} else {
+			rules = append(rules, dependency.NewNoneOfRule(s.dependencyGetter, toNoneOfGroups(constraints.NoneOf)))
+		}
 	}
 
 	if d := rule.Resolve(rules...); d.Kind == rule.Forbid {
@@ -378,10 +392,10 @@ func (s *Scheduler) schedule() {
 // compute recomputes every node's decision in topological order, guaranteeing
 // that dependencies are resolved before dependents. Nodes whose enabled status
 // flipped are individually reset to idle so they re-enter the scheduling path
-// on the next pass; nodes that lose eligibility emit an [EventDisable]. No
-// global reconverge happens — canSchedule no longer gates on per-dep state, so
-// one node's decision change cannot invalidate another node's schedulability
-// beyond the live order-tier check.
+// on the next pass; nodes that lose eligibility emit an [EventDisable]. A first
+// decision and every flip emit an [EventDecision] ahead of both. No
+// global reconverge happens — canSchedule reads only live states (tier,
+// dependencies, kept AnyOf members), so a decision change needs no replay.
 func (s *Scheduler) compute() ([]string, []*node) {
 	// AddNode is the authoritative cycle gate, so topoSort should never
 	// return an error here. The not-enabled sweep below walks `sorted`
@@ -391,10 +405,20 @@ func (s *Scheduler) compute() ([]string, []*node) {
 	reschedule := false
 	trigger := ""
 	sorted, _ := topoSort(s.nodes)
+
+	s.computeOrdering(sorted)
+
 	for _, n := range sorted {
 		current := n.enabled()
 		n.decision = rule.Resolve(n.rules...)
-		if current == n.enabled() {
+
+		flipped := current != n.enabled()
+		if flipped || !n.decided {
+			s.send(Event{Name: n.name, Kind: EventDecision, Reason: n.decision.Reason, Message: n.decision.Message, Allowed: n.enabled()})
+		}
+		n.decided = true
+
+		if !flipped {
 			continue
 		}
 
@@ -455,21 +479,71 @@ func (s *Scheduler) compute() ([]string, []*node) {
 	return enabled, sorted
 }
 
-// canSchedule returns true if a node is eligible to transition from idle to
-// scheduled. Two conditions must hold:
-//  1. The node must be enabled (its rule chain resolved to Enable).
-//  2. All nodes with a strictly lower Order must be active.
-//
-// Dependency-level ordering between same-tier nodes is encoded in the rule
-// chain (the dependency.Getter contract returns versions only for nodes that
-// have reached nodeStateActive).
+// dependencyVersion answers dependency rules from the graph: an enabled node's version, nil otherwise.
+// Callers hold s.mu in either mode; it must not lock, the RWMutex is not reentrant.
+func (s *Scheduler) dependencyVersion(name string) *semver.Version {
+	n, ok := s.nodes[name]
+	if !ok || !n.enabled() {
+		return nil
+	}
+
+	return n.version
+}
+
+// computeOrdering keeps the AnyOf members placed before each node as its waits and raises the node to
+// its highest predecessor's tier, so an order declared below one cannot deadlock the tier barrier.
+// sorted must be topological; s.mu held for writing.
+func (s *Scheduler) computeOrdering(sorted []*node) {
+	placed := make(map[string]struct{}, len(sorted))
+	for _, n := range sorted {
+		effective := n.order
+
+		for name := range n.dependencies {
+			if dep, ok := s.nodes[name]; ok && dep.effectiveOrder > effective {
+				effective = dep.effectiveOrder
+			}
+		}
+
+		// a member placed after n is absent or its edge closed a cycle, so it is not waited for
+		n.anyOfWaits = make(map[string]struct{}, len(n.anyOf))
+		for name := range n.anyOf {
+			if _, ok := placed[name]; !ok {
+				continue
+			}
+
+			n.anyOfWaits[name] = struct{}{}
+			if member := s.nodes[name]; member.effectiveOrder > effective {
+				effective = member.effectiveOrder
+			}
+		}
+
+		n.effectiveOrder = effective
+		placed[n.name] = struct{}{}
+	}
+}
+
+// canSchedule reports whether an idle node may be scheduled: it is enabled, every node in a lower
+// effective tier is active, and every dependency present in the graph, optional included, and every
+// kept AnyOf member is active.
 func (s *Scheduler) canSchedule(n *node) bool {
 	if !n.enabled() {
 		return false
 	}
 
 	for _, other := range s.nodes {
-		if other.order < n.order && other.state != nodeStateActive {
+		if other.effectiveOrder < n.effectiveOrder && other.state != nodeStateActive {
+			return false
+		}
+	}
+
+	for name := range n.dependencies {
+		if dep, ok := s.nodes[name]; ok && dep.state != nodeStateActive {
+			return false
+		}
+	}
+
+	for name := range n.anyOfWaits {
+		if member, ok := s.nodes[name]; ok && member.state != nodeStateActive {
 			return false
 		}
 	}
