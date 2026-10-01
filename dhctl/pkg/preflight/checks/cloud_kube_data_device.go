@@ -48,6 +48,10 @@ type CloudKubeDataDeviceCheck struct {
 
 const CloudKubeDataDeviceCheckName preflight.CheckName = "cloud-kube-data-device"
 
+// kubeDataDeviceInstalledMarker is what step 005 leaves once the disk is mounted
+// (005_integrate_kubernetes_data_device.sh.tpl).
+const kubeDataDeviceInstalledMarker = "/var/lib/bashible/kubernetes-data-device-installed"
+
 func (CloudKubeDataDeviceCheck) Description() string {
 	return "the disk the provider attached for Kubernetes data is on the master"
 }
@@ -81,6 +85,15 @@ func (c CloudKubeDataDeviceCheck) Run(ctx context.Context) (string, error) {
 	autodetected := false
 
 	if path == "" {
+		// A resumed bootstrap, where step 005 has already run: it leaves this marker and exits
+		// on it from then on. The disk it took is mounted by now, so the fallback below finds
+		// no unused one — which on zVirt, whose reported /dev/sdb is a virtio /dev/vdb on the
+		// node, was a failure on every resume.
+		if nodeInterface.Command("test", "-f", kubeDataDeviceInstalledMarker).Run(ctx) == nil {
+			return fmt.Sprintf("bashible has already set up the Kubernetes data disk on %s (%s)",
+				host, kubeDataDeviceInstalledMarker), nil
+		}
+
 		// What step 005 does next, and the only answer that matters: one unused disk is what it
 		// needs, and it takes it whatever the provider called it.
 		candidates := unusedDisks(ctx, nodeInterface)

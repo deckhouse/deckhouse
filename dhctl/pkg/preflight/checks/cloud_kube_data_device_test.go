@@ -218,6 +218,43 @@ func TestCloudKubeDataDeviceFallsBackTheWayBashibleDoes(t *testing.T) {
 		assert.Contains(t, failure.Observed, "no unused disk to fall back to")
 	})
 
+	// zVirt reports /dev/sdb and attaches the disk over virtio, so the node has /dev/vdb and never
+	// a /dev/sdb. The cloud-init CD-ROM is a rom, not a disk, and is not a candidate.
+	t.Run("zVirt: the reported sdb is a virtio vdb on the node", func(t *testing.T) {
+		node := newFakeNode().
+			on("test -b /dev/sdb").exits(1).
+			on(lsblk).prints(`PATH="/dev/sr0" TYPE="rom" MOUNTPOINT="" FSTYPE="iso9660"` + "\n" +
+			`PATH="/dev/vda" TYPE="disk" MOUNTPOINT="" FSTYPE=""` + "\n" +
+			`PATH="/dev/vda1" TYPE="part" MOUNTPOINT="/" FSTYPE="ext4"` + "\n" +
+			`PATH="/dev/vdb" TYPE="disk" MOUNTPOINT="" FSTYPE=""` + "\n").
+			on("readlink -f /dev/vdb").prints("/dev/vdb\n")
+
+		detail, err := CloudKubeDataDeviceCheck{
+			DevicePath:    func() string { return "/dev/sdb" },
+			NodeInterface: FixedNodeInterface(node),
+		}.Run(t.Context())
+
+		require.NoError(t, err)
+		assert.Contains(t, detail, "/dev/vdb is attached")
+		assert.Contains(t, detail, `"/dev/sdb" does not exist on the node`)
+	})
+
+	// A resumed bootstrap: step 005 has mounted the disk and exits on its marker from then on, so
+	// there is no unused disk left and none is needed.
+	t.Run("step 005 has already run", func(t *testing.T) {
+		node := newFakeNode().
+			on("test -b /dev/sdb").exits(1).
+			on("test -f " + kubeDataDeviceInstalledMarker).succeeds()
+
+		detail, err := CloudKubeDataDeviceCheck{
+			DevicePath:    func() string { return "/dev/sdb" },
+			NodeInterface: FixedNodeInterface(node),
+		}.Run(t.Context())
+
+		require.NoError(t, err)
+		assert.Contains(t, detail, "already set up")
+	})
+
 	// A disk with partitions on it is somebody's, even when the disk itself carries no filesystem.
 	t.Run("the only spare disk is partitioned", func(t *testing.T) {
 		node := newFakeNode().
