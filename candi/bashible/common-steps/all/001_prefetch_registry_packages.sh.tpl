@@ -22,9 +22,9 @@
 {{- $kubernetesVersion := printf "%s%s" (.kubernetesVersion | toString) (index .k8s .kubernetesVersion "patch" | toString) | replace "." "" }}
 {{- $kubernetesCniVersion := "1.9.1" | replace "." "" }}
 
-{{- $containerd := "containerd1735"}}
+{{- $containerd := "containerd1736"}}
 {{- if eq .cri "ContainerdV2" }}
-  {{- $containerd = "containerd228" }}
+  {{- $containerd = "containerd229" }}
 {{- end }}
 
 if ! command -v systemd-run >/dev/null 2>&1 || ! command -v systemctl >/dev/null 2>&1; then
