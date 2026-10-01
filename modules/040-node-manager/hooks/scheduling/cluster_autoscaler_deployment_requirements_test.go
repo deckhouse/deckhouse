@@ -27,24 +27,26 @@ import (
 )
 
 var _ = Describe("Modules :: node-manager :: hooks :: cluster_autoscaler_deployment_requirements ::", func() {
+	// nodeManager.internal.instancePrefix is deliberately absent: set_instance_prefix publishes it at
+	// Order 100, after this hook, so the hook has to resolve the prefix from global values itself.
 	f := HookExecutionConfigInit(`
 global:
+  prefix: "sandbox"
   discovery:
     clusterUUID: "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa"
 nodeManager:
   internal:
-    instancePrefix: "sandbox"
     nodeGroups: []
 `, `{}`)
 
 	Context("nodeManager.internal.nodeGroups is absent", func() {
 		emptyValuesF := HookExecutionConfigInit(`
 global:
+  prefix: "sandbox"
   discovery:
     clusterUUID: "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa"
 nodeManager:
-  internal:
-    instancePrefix: "sandbox"
+  internal: {}
 `, `{}`)
 
 		BeforeEach(func() {
@@ -85,6 +87,60 @@ nodeManager:
 ]`,
 				fmt.Sprintf("%x", sha256.Sum256([]byte("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaaru-central1-a")))[:8],
 				fmt.Sprintf("%x", sha256.Sum256([]byte("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaaru-central1-b")))[:8],
+			)))
+		})
+	})
+
+	Context("first run after a restart: nodeManager.internal.instancePrefix is not published yet", func() {
+		BeforeEach(func() {
+			f.ValuesSetFromYaml("nodeManager.internal.nodeGroups", []byte(`
+- name: system
+  nodeType: CloudEphemeral
+  engine: MCM
+  cloudInstances:
+    minPerZone: 1
+    maxPerZone: 2
+    zones:
+    - europe-west3-a
+`))
+			f.BindingContexts.Set(f.GenerateBeforeHelmContext())
+			f.RunHook()
+		})
+
+		It("must name the MachineDeployment with the resolved prefix", func() {
+			Expect(f).To(ExecuteSuccessfully())
+			Expect(f.ValuesGet("nodeManager.internal.deployAutoscalerMCM").String()).To(Equal("true"))
+			Expect(f.ValuesGet("nodeManager.internal.autoscalerMCMNodes").String()).To(MatchJSON(fmt.Sprintf(`[
+  "--nodes=1:2:d8-cloud-instance-manager.sandbox-system-%s"
+]`,
+				fmt.Sprintf("%x", sha256.Sum256([]byte("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaaeurope-west3-a")))[:8],
+			)))
+		})
+	})
+
+	Context("nodeManager.internal.instancePrefix is left over from a previous run", func() {
+		BeforeEach(func() {
+			f.ValuesSet("nodeManager.internal.instancePrefix", "stale")
+			f.ValuesSetFromYaml("nodeManager.internal.nodeGroups", []byte(`
+- name: system
+  nodeType: CloudEphemeral
+  engine: MCM
+  cloudInstances:
+    minPerZone: 1
+    maxPerZone: 2
+    zones:
+    - europe-west3-a
+`))
+			f.BindingContexts.Set(f.GenerateBeforeHelmContext())
+			f.RunHook()
+		})
+
+		It("must ignore it and use the current prefix", func() {
+			Expect(f).To(ExecuteSuccessfully())
+			Expect(f.ValuesGet("nodeManager.internal.autoscalerMCMNodes").String()).To(MatchJSON(fmt.Sprintf(`[
+  "--nodes=1:2:d8-cloud-instance-manager.sandbox-system-%s"
+]`,
+				fmt.Sprintf("%x", sha256.Sum256([]byte("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaaeurope-west3-a")))[:8],
 			)))
 		})
 	})

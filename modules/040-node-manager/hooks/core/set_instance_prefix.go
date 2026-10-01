@@ -21,24 +21,18 @@ import (
 
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
+
+	"github.com/deckhouse/deckhouse/modules/040-node-manager/hooks/internal/instanceprefix"
 )
 
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 	OnBeforeHelm: &go_hook.OrderedConfig{Order: 100},
 }, handleSetInstancePrefix)
 
+// The value is published for templates only: they render after every beforeHelm hook. Hooks call
+// instanceprefix.Resolve themselves, since they may run before this one.
 func handleSetInstancePrefix(_ context.Context, input *go_hook.HookInput) error {
-	prefix, exists := input.Values.GetOk("nodeManager.instancePrefix")
-	if !exists {
-		// global.prefix (global ModuleConfig) is the new home for the cluster prefix;
-		// fall back to the deprecated ClusterConfiguration.cloud.prefix.
-		prefix, exists = input.Values.GetOk("global.prefix")
-	}
-	if !exists {
-		prefix = input.Values.Get("global.clusterConfiguration.cloud.prefix")
-	}
-
-	input.Values.Set("nodeManager.internal.instancePrefix", prefix.String())
+	input.Values.Set("nodeManager.internal.instancePrefix", instanceprefix.Resolve(input.Values))
 
 	return nil
 }

@@ -26,6 +26,7 @@ import (
 
 	sdkobjectpatch "github.com/deckhouse/module-sdk/pkg/object-patch"
 
+	"github.com/deckhouse/deckhouse/modules/040-node-manager/hooks/internal/instanceprefix"
 	ngv1 "github.com/deckhouse/deckhouse/modules/040-node-manager/hooks/internal/v1"
 )
 
@@ -71,15 +72,7 @@ func setPriorityFilterNG(obj *unstructured.Unstructured) (go_hook.FilterResult, 
 
 func handleSetPriorities(_ context.Context, input *go_hook.HookInput) error {
 	priorities := make(map[int32][]string)
-	prefix, exists := input.Values.GetOk("nodeManager.instancePrefix")
-	if !exists {
-		// global.prefix (global ModuleConfig) is the new home for the cluster prefix;
-		// fall back to the deprecated ClusterConfiguration.cloud.prefix.
-		prefix, exists = input.Values.GetOk("global.prefix")
-	}
-	if !exists {
-		prefix = input.Values.Get("global.clusterConfiguration.cloud.prefix")
-	}
+	prefix := instanceprefix.Resolve(input.Values)
 
 	snaps := input.Snapshots.Get("ngs")
 	for ng, err := range sdkobjectpatch.SnapshotIter[setPriorityNodeGroup](snaps) {

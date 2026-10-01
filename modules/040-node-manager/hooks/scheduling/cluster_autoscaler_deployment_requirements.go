@@ -25,6 +25,7 @@ import (
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
 
+	"github.com/deckhouse/deckhouse/modules/040-node-manager/hooks/internal/instanceprefix"
 	ngv1 "github.com/deckhouse/deckhouse/modules/040-node-manager/hooks/internal/v1"
 )
 
@@ -52,7 +53,10 @@ func handleClusterAutoscalerDeploymentRequirements(_ context.Context, input *go_
 	mcmNodes := make([]string, 0)
 	capiNodes := make([]string, 0)
 
-	prefix := input.Values.Get("nodeManager.internal.instancePrefix").String()
+	// Resolved here rather than read from nodeManager.internal.instancePrefix: set_instance_prefix
+	// publishes that at Order 100, so on the first run after a restart it is still empty at this
+	// Order, and --nodes would name MachineDeployments without the prefix node-controller uses.
+	prefix := instanceprefix.Resolve(input.Values)
 	clusterUUID := input.Values.Get("global.discovery.clusterUUID").String()
 
 	var nodeGroups []autoscalerNodeGroupValue
