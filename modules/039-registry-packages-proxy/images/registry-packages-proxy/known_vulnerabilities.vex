@@ -17,7 +17,35 @@
       "justification": "vulnerable_code_not_in_execute_path",
       "impact_statement": "GO-2026-5932 относится к пакету golang.org/x/crypto/openpgp, который помечен как unmaintained. Бинарник registry-packages-proxy не импортирует golang.org/x/crypto/openpgp; модуль golang.org/x/crypto подтягивается транзитивно через github.com/deckhouse/deckhouse/go_lib/registry-packages-proxy/registry и github.com/deckhouse/delivery-kit-sdk/pkg/signver, где задействованы только подпакеты ed25519, cryptobyte, nacl/secretbox, salsa20/salsa, pbkdf2 и scrypt. Ни поиск по исходникам, ни go list -deps не находят openpgp в графе импортов. Исправленной версии пакета нет; уязвимый код в данном компоненте не выполняется.",
       "timestamp": "2026-08-27T13:00:19.000000000Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-56855"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/golang.org/x/crypto@v0.55.0"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_present",
+      "impact_statement": "Уязвимость в golang.org/x/crypto/ssh: удалённая сторона может вызвать взаимную блокировку SSH-соединения специально сформированными сообщениями. registry-packages-proxy не работает с SSH. Из golang.org/x/crypto в него собираются только cryptobyte, ed25519, nacl/secretbox, pbkdf2 и scrypt, golang.org/x/crypto/ssh в сборку не входит.",
+      "timestamp": "2026-10-01T09:08:28.000000000Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-78662"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/golang.org/x/crypto@v0.55.0"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_present",
+      "impact_statement": "Уязвимость в golang.org/x/crypto/ssh: удалённая сторона может вызвать взаимную блокировку SSH-соединения, отправляя поток запросов в канал. registry-packages-proxy не работает с SSH. Из golang.org/x/crypto в него собираются только cryptobyte, ed25519, nacl/secretbox, pbkdf2 и scrypt, golang.org/x/crypto/ssh в сборку не входит.",
+      "timestamp": "2026-10-01T09:08:28.000000000Z"
     }
   ],
-  "timestamp": "2026-08-27T13:00:19.000000000Z"
+  "timestamp": "2026-10-01T09:08:28.000000000Z"
 }

@@ -31,7 +31,100 @@
       "justification": "vulnerable_code_cannot_be_controlled_by_adversary",
       "impact_statement": "CVE-2026-84304: получатель в gRPC-соединении тратит память на каждый DATA-кадр HTTP/2, и поток из множества мелких кадров приводит к OOM. Образ содержит один бинарник opentofu v1.12.5 (./cmd/tofu). В Deckhouse его запускает только dhctl. opentofu не поднимает gRPC-сервер. Клиентом он подключается только к провайдерам из каталога плагинов образа (-plugin-dir): запускает их дочерними процессами и соединяется через локальный unix-сокет. OTLP-экспорт телеметрии включается только при OTEL_TRACES_EXPORTER=otlp, Deckhouse эту переменную не задаёт. Backend и шифрование state в конфигурации Deckhouse не настраиваются. Прислать opentofu такой поток может только провайдер. Чтобы подменить провайдер или его сокет, нужно уже выполнять код в контейнере. Исправление есть только в grpc 1.83.1 и выше. grpc 1.83 требует otel 1.44, а с ним opentofu 1.12.5 без правки кода не запускается при включённой телеметрии.",
       "timestamp": "2026-09-24T12:09:15.000000000Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-56855"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/golang.org/x/crypto@v0.55.0"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "Уязвимость в golang.org/x/crypto/ssh: удалённая сторона может вызвать взаимную блокировку SSH-соединения специально сформированными сообщениями. opentofu открывает SSH-соединения только в провижинерах с блоком connection. В конфигурации Deckhouse провижинеров нет.",
+      "timestamp": "2026-10-01T09:08:28.000000000Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-78662"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/golang.org/x/crypto@v0.55.0"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "Уязвимость в golang.org/x/crypto/ssh: удалённая сторона может вызвать взаимную блокировку SSH-соединения, отправляя поток запросов в канал. opentofu открывает SSH-соединения только в провижинерах с блоком connection. В конфигурации Deckhouse провижинеров нет.",
+      "timestamp": "2026-10-01T09:08:28.000000000Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-81871"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploggrpc@v0.18.0"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "Уязвимость в экспортере логов OTLP по gRPC: он не применяет TLS-настройки из переменных окружения. opentofu создаёт только экспортер трейсов.",
+      "timestamp": "2026-10-01T09:08:28.000000000Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-84303"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/google.golang.org/grpc@v1.82.2"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "Уязвимость в RBAC-фильтре xDS-сервера gRPC. opentofu не запускает xDS-сервер, функции xds.NewGRPCServer в бинарнике нет. RBAC-фильтр попадает в бинарник только как зависимость клиента Google Cloud Storage.",
+      "timestamp": "2026-10-01T09:08:28.000000000Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-81870"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/go.opentelemetry.io/otel/sdk@v1.43.0"
+        },
+        {
+          "@id": "pkg:golang/go.opentelemetry.io/otel/exporters/otlp/otlptrace@v1.43.0"
+        },
+        {
+          "@id": "pkg:golang/go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc@v1.42.0"
+        },
+        {
+          "@id": "pkg:golang/go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracehttp@v1.43.0"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "Уязвимость в SDK OpenTelemetry: адрес коллектора трейсов попадает в Info-логи. opentofu включает трейсинг только при OTEL_TRACES_EXPORTER=otlp. Deckhouse эту переменную не задаёт.",
+      "timestamp": "2026-10-01T09:08:28.000000000Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-81872"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/go.opentelemetry.io/otel/sdk/log@v0.19.0"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_present",
+      "impact_statement": "Уязвимость в BatchingProcessor из SDK логов OpenTelemetry: при переполненном буфере экспорта он в цикле повторяет экспорт и занимает CPU. opentofu не отправляет логи через OpenTelemetry, BatchingProcessor в его сборку не входит.",
+      "timestamp": "2026-10-01T09:08:28.000000000Z"
     }
   ],
-  "timestamp": "2026-09-24T12:09:15.000000000Z"
+  "timestamp": "2026-10-01T09:08:28.000000000Z"
 }
