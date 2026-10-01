@@ -27,27 +27,39 @@ When a `ControlPlaneNode` has the `maintenance` label, the controller:
 
 This mode is useful for manual node maintenance or administrative operations without automatic operation creation interference.
 
+## Code Layout
+
+- `internal/controllers/control-plane-node` - controller wiring (watches, predicates, options).
+- `internal/cpn/cpnreconcile` - reconciler: loads state, applies the plan (status patch, create, rotate).
+- `internal/cpn/cpnplanner` - pure planning: computes target status and the operations to create/delete.
+- `internal/operations` - shared CPO helpers: constructors, dedup predicates, rotation, ownership filter.
+
 ## Reconciliation Stages
 
 1. Load `CPN` and all CPOs for this node.
 2. Filter operations to objects owned by the current `CPN` UID.
-3. Update `CPN.status` from operations:
+3. Compute the plan (`cpnplanner.ComputePlan`, no API calls):
+- target `CPN.status` from operations:
 - for each component, choose operation matching current desired checksums (`DesiredConfig/PKI/CA`)
-- for component condition (`Synced` / `Updating` / `UpdateFailed`), priority is deterministic:
-- active (non-terminal) -> completed -> other terminal
-- apply checksums from latest terminal operation that is either:
+- for component condition, priority is deterministic:
+- running (approved, non-terminal) -> pending (not approved) -> completed -> other terminal
+- apply checksums from latest terminal non-observe operation that is either:
 - `Completed`, or
 - has commit-point step completed (`SyncManifests` / `JoinEtcdCluster`)
 - apply cert dates from completed operations that include `CertObserve` step, in monotonic `observedAt` order
 - update per-component `status.components.<component>.lastCertObserveTime`
 - update component conditions and global `CertificatesHealthy`
-4. Check for maintenance mode (label `maintenance`); if present, exit reconciliation (operations remain unchanged).
-5. Create missing drift CPOs for components where `spec != status`.
-6. Ensure cert-renewal CPO exists for components expiring within threshold (30 days):
-- only when component is in-sync (`spec/config,pki,ca == status/config,pki,ca`)
-- only when there is no active CPO for this component
-- renewal CPO is created with the same `DesiredConfig/PKI/CA` checksums tuple as current component state
-7. Ensure periodic observe-only CPO exists per deployed static-pod component (interval: 7 days):
+- in maintenance mode (label `maintenance`) planning stops here: no operations are created or rotated.
+- operations to create, per component (lifecycle and renewal are independent decisions):
+- lifecycle: converge CPO when `spec != status`; otherwise observe-only CPO when observation is due (interval: 7 days)
+- renewal: cert-renewal CPO when certificates expire within threshold (30 days) and the component is in sync; otherwise signature-renewal CPO (CSE only, kube-apiserver)
+- a converge CPO already includes cert renewal steps when certificates expire soon
+- terminal CPOs to rotate (keep latest 5 per component).
+4. Patch `CPN.status` (optimistic lock) if it changed.
+5. Create planned CPOs; dedup is re-checked against an uncached list right before creation.
+6. Delete rotated CPOs.
+
+Observe-only CPO:
 - `spec.component=<real component>`
 - `spec.steps=[CertObserve]`
 - `spec.approved=true`
@@ -56,14 +68,16 @@ This mode is useful for manual node maintenance or administrative operations wit
 
 - Regular drift operations are created only when no active operation with the same desired checksums tuple exists:
 - `DesiredConfigChecksum + DesiredPKIChecksum + DesiredCAChecksum`
+- Cert-renewal operations are created only when no active operation with `RenewPKICerts` / `RenewKubeconfigs` step exists; signature-renewal - with `RenewSignature` step.
+- Observe-only operations are created only when there is no active operation for the component.
 - `OperationFailed` is retryable and non-terminal, so a failed CPO with matching desired checksums prevents duplicate CPO creation while it is retried by the CPO controller.
-- Active-operation lookup is unified via shared predicate-based helper (used by regular, renewal, and observe-only creation paths).
 - For regular drift operations, if desired checksums changed while another operation is running, a new operation may be created for the same component.
 - Cert-renewal operations are expiry-triggered, but still use the same desired checksums tuple and normal stale/cancel flow in CPO controller.
 - CPO name uses `GenerateName` with deterministic prefix:
 - `<component>-<short desired checksums>-`
-- Steps are selected by component and changed dimensions (`config`, `pki`, `ca`).
-- Generated step list always starts with `Backup`.
+- Steps are selected by component and changed dimensions (`config`, `pki`, `ca`):
+- `Backup`, then `SyncCA` + `RenewPKICerts` (etcd, kube-apiserver) + `RenewKubeconfigs` (all except etcd) when certificates change or expire soon, then `RenewSignature` (CSE, kube-apiserver bootstrap/renewal), then the sync step, `WaitPodReady`, `CertObserve`.
+- The sync step is `JoinEtcdCluster` for etcd (it also syncs the manifest of an already joined member) and `SyncManifests` for other components.
 - After creating a CPO, keep only latest 5 terminal CPOs per component (active CPOs are never deleted).
 
 ## Condition Logic (CPN)

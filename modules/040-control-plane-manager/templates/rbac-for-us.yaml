@@ -42,6 +42,10 @@ rules:
 - apiGroups: ["control-plane.deckhouse.io"]
   resources: ["controlplanenodes/status"]
   verbs: ["get", "update", "patch"]
+# Required by OwnerReferencesPermissionEnforcement to create CPOs with blockOwnerDeletion=true.
+- apiGroups: ["control-plane.deckhouse.io"]
+  resources: ["controlplanenodes/finalizers"]
+  verbs: ["update"]
 - apiGroups: ["control-plane.deckhouse.io"]
   resources: ["controlplaneoperations/status"]
   verbs: ["get", "update", "patch"]

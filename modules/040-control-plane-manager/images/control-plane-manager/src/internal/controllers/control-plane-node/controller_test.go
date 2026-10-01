@@ -27,17 +27,19 @@ import (
 
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
+	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 	"sigs.k8s.io/yaml"
 
-	"github.com/deckhouse/deckhouse/pkg/log"
-
 	controlplanev1alpha1 "control-plane-manager/api/v1alpha1"
 	"control-plane-manager/internal/constants"
+	"control-plane-manager/internal/cpn/cpnplanner"
+	"control-plane-manager/internal/cpn/cpnreconcile"
 )
 
 var (
@@ -58,7 +60,7 @@ type ControllerTestSuite struct {
 
 	ctx        context.Context
 	client     client.Client
-	controller *Reconciler
+	controller *cpnreconcile.Reconciler
 }
 
 const testNodeName = "master-1"
@@ -74,15 +76,18 @@ func (suite *ControllerTestSuite) setupController(objs []client.Object) {
 		WithStatusSubresource(&controlplanev1alpha1.ControlPlaneNode{}).
 		Build()
 
-	suite.controller = &Reconciler{
-		client: suite.client,
-		log:    log.NewNop(),
-	}
+	suite.controller = cpnreconcile.New(
+		suite.client,
+		suite.client,
+		scheme,
+		cpnplanner.StaticPodOperationBuilder{},
+		nil,
+	)
 }
 
 func (suite *ControllerTestSuite) reconcile() {
 	_, err := suite.controller.Reconcile(suite.ctx, reconcile.Request{
-		NamespacedName: client.ObjectKey{Name: testNodeName},
+		NamespacedName: client.ObjectKey{Name: testNodeName, Namespace: constants.KubeSystemNamespace},
 	})
 	require.NoError(suite.T(), err)
 }
@@ -263,6 +268,11 @@ func (suite *ControllerTestSuite) compareOperations(
 			"spec of operation for component %s must match golden file", sortedActual[i].Spec.Component)
 		require.Equal(suite.T(), constants.HeritageLabelValue, sortedActual[i].Labels[constants.HeritageLabelKey],
 			"operation for component %s must have heritage label", sortedActual[i].Spec.Component)
+		owner := metav1.GetControllerOf(&sortedActual[i])
+		require.NotNil(suite.T(), owner,
+			"operation for component %s must have a controller owner reference", sortedActual[i].Spec.Component)
+		require.Equal(suite.T(), ptr.To(true), owner.BlockOwnerDeletion,
+			"operation for component %s must block owner deletion", sortedActual[i].Spec.Component)
 	}
 }
 
