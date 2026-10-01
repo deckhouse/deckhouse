@@ -29,6 +29,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/apimachinery/pkg/util/wait"
 	cloudprovider "k8s.io/cloud-provider"
 	"k8s.io/klog/v2"
 	"k8s.io/utils/ptr"
@@ -358,6 +359,35 @@ func (c *ComputeService) DetachDiskFromVM(ctx context.Context, diskName string, 
 		return err
 	}
 	return nil
+}
+
+// WaitDiskDetaching waits until the VM releases the disk: the attachment is gone and the disk
+// no longer lists the VM. A missing disk counts as released.
+func (c *ComputeService) WaitDiskDetaching(ctx context.Context, diskName, vmHostname, vmName string) error {
+	return wait.PollUntilContextCancel(ctx, defaultWaitCheckInterval, true, func(ctx context.Context) (bool, error) {
+		_, err := c.getVMBDA(ctx, diskName, vmHostname)
+		if err == nil {
+			return false, nil
+		}
+		if !errors.Is(err, ErrNotFound) {
+			return false, err
+		}
+
+		disk, err := NewDiskService(c.Service).GetDiskByName(ctx, diskName)
+		if err != nil {
+			if errors.Is(err, ErrNotFound) {
+				return true, nil
+			}
+			return false, err
+		}
+
+		for _, vm := range disk.Status.AttachedToVirtualMachines {
+			if vm.Name == vmName {
+				return false, nil
+			}
+		}
+		return true, nil
+	})
 }
 
 func (c *ComputeService) DetachDisksFromVM(ctx context.Context, disksName []string, vmName string) error {
