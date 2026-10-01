@@ -150,6 +150,10 @@ deckhouse-controller:
         extensions to Application package settings schemas; the Application webhook rejects changes to
         `x-deckhouse-immutable` fields after the settings were applied.
       pull_request: https://github.com/deckhouse/deckhouse/pull/23360
+    - summary: >-
+        When an Application is deleted, Deckhouse also deletes the objects of the kinds listed in the
+        package's `orphanResources` value that the application left in its namespace.
+      pull_request: https://fox.flant.com/deckhouse/deckhouse/-/merge_requests/308
 dhctl:
   fixes:
     - summary: Restoring of handling api_server_url and api_server_token in dhctl
@@ -204,6 +208,13 @@ istio:
         Switching back to Istio 1.21 no longer removes the `networking.istio.io/v1` API from the Istio
         CRDs and no longer breaks the istio release.
       pull_request: https://fox.flant.com/deckhouse/deckhouse/-/merge_requests/268
+    - summary: >-
+        Deckhouse update requirements now take into account Istio control planes that are still being
+        removed.
+      pull_request: https://fox.flant.com/deckhouse/deckhouse/-/merge_requests/198
+    - summary: The Istio operator now recovers Helm releases stuck in the `pending-*` or `uninstalling`
+        state.
+      pull_request: https://fox.flant.com/deckhouse/deckhouse/-/merge_requests/260
 kube-dns:
   fixes:
     - summary: >-
@@ -276,6 +287,10 @@ registry:
   fixes:
     - summary: Bump dependencies in registry.
       pull_request: https://fox.flant.com/deckhouse/deckhouse/-/merge_requests/150
+    - summary: >-
+        Bump golang.org/x/crypto in nodeservices-manager to fix CVE-2026-56854, add VEX statements for
+        x/crypto/ssh findings.
+      pull_request: https://fox.flant.com/deckhouse/deckhouse/-/merge_requests/311
 registrypackages:
   fixes:
     - summary: >-
