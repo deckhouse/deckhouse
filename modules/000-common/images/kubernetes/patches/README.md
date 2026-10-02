@@ -198,3 +198,22 @@ When the CPU or memory manager checkpoint is unusable, the kubelet resets that m
 The CPU manager moves running containers onto their new CPUs by itself. The memory manager cannot change a running container's NUMA zone, so such containers are reported until they are recreated: gauge `kubelet_checkpoint_state_unpinned_containers`, event `NUMACheckpointReset` and alert `D8KubeletCheckpointStateUnpinnedContainers`.
 
 See issue: https://github.com/kubernetes/kubernetes/issues/131253
+
+### json-patch-require-value.patch
+
+Rejects JSON Patch operations without the `value` member where `gopkg.in/evanphx/json-patch.v4` dereferences a nil value and kube-apiserver panics while applying the patch:
+
+- `add` and `replace` that target the whole document (`"path": ""`), in v4.12.0 and v4.13.0;
+- `test` with any path. v4.12.0 panics when the tested field is missing or `null`; v4.13.0 does not panic but lets such a test pass, which makes no sense either.
+
+The check runs before `Patch.Apply` in every place kube-apiserver applies a JSON Patch:
+
+- `PATCH` requests with `application/json-patch+json` (`pkg/endpoints/handlers/patch.go`), answered with `400 Bad Request`;
+- patches returned by mutating admission webhooks (`pkg/admission/plugin/webhook/mutating/dispatcher.go`);
+- patches produced by MutatingAdmissionPolicy (`pkg/admission/plugin/policy/mutating/patch/json_patch.go`).
+
+The shared check lives in a new package, `k8s.io/apiserver/pkg/util/jsonpatch`. It checks whether the `value` key is present, so an explicit `"value": null` is still accepted.
+
+`add` and `replace` operations with a non-empty path and no `value` are deliberately left as they are: the library treats the missing value as `null` there. RFC 6902 requires `value`, but rejecting such patches would break existing clients.
+
+The patch is carried on 1.33 (`016`), 1.34 (`017`), 1.35 (`016`) and 1.36 (`015`).
