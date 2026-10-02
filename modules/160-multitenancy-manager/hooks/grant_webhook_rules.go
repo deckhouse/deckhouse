@@ -17,12 +17,52 @@ limitations under the License.
 package hooks
 
 import (
-	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
-	admissionregistrationv1 "k8s.io/api/admissionregistration/v1"
-	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"cmp"
+	"context"
+	"slices"
 
-	"github.com/deckhouse/module-sdk/pkg/utils/ptr"
+	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
+	"github.com/flant/addon-operator/sdk"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 )
+
+const grantWebhookRulesValuesPath = "multitenancyManager.internal.grantWebhookRules"
+
+// grantWebhookRule is one (group, resource) the cluster-objects grant webhooks intercept.
+// templates/cluster-objects-controller/grant-webhooks.yaml turns each into a CREATE/UPDATE rule
+// on every version of the namespaced resource.
+type grantWebhookRule struct {
+	APIGroup string `json:"apiGroup"`
+	Resource string `json:"resource"`
+}
+
+// The rules are values, not objects: Helm renders both webhook configurations, so they are part
+// of the module release and go away with it when the module is disabled. Any values change made
+// here, from this queue too, schedules a module run, and Helm applies the new rules. OnBeforeHelm
+// recomputes them before every render, so the release never sees rules from an older snapshot.
+var _ = sdk.RegisterFunc(&go_hook.HookConfig{
+	Queue:        "/modules/160-multitenancy-manager",
+	OnBeforeHelm: &go_hook.OrderedConfig{Order: 10},
+	Kubernetes: []go_hook.KubernetesConfig{
+		{
+			Name:       "registrations",
+			ApiVersion: "multitenancy.deckhouse.io/v1alpha1",
+			Kind:       "GrantableClusterResourceDefinition",
+			FilterFunc: filterRegistrations,
+		},
+		{
+			Name:       "references",
+			ApiVersion: "multitenancy.deckhouse.io/v1alpha1",
+			Kind:       "GrantableClusterResourceReference",
+			FilterFunc: filterReferences,
+		},
+	},
+}, discoverGrantWebhookRules)
+
+func discoverGrantWebhookRules(_ context.Context, input *go_hook.HookInput) error {
+	input.Values.Set(grantWebhookRulesValuesPath, grantableWebhookRules(input))
+	return nil
+}
 
 // filterRegistrations is the snapshot filter for GrantableClusterResourceDefinition objects.
 func filterRegistrations(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
@@ -35,11 +75,11 @@ func filterReferences(obj *unstructured.Unstructured) (go_hook.FilterResult, err
 }
 
 // grantableWebhookRules derives the admission webhook rules from the registered
-// GrantableClusterResourceReference paths: one CREATE/UPDATE rule per (group, resource) of their rule,
-// but only for references whose target GrantableClusterResourceDefinition exists and is Managed.
-// Versions are matched with "*" (the controller selects the right path per version). Snapshots must be
-// collected under the names "registrations" (definitions) and "references".
-func grantableWebhookRules(input *go_hook.HookInput) []admissionregistrationv1.RuleWithOperations {
+// GrantableClusterResourceReference paths: one rule per (group, resource) of their rule, but only for
+// references whose target GrantableClusterResourceDefinition exists and is Managed. Versions are
+// matched with "*" in the template (the controller selects the right path per version). The result is
+// sorted, so the values change only when the set of rules does.
+func grantableWebhookRules(input *go_hook.HookInput) []grantWebhookRule {
 	// Enforcement mode by definition name; absent ⇒ the reference is dangling and intercepts nothing.
 	enforcement := make(map[string]string)
 	for _, snap := range input.Snapshots.Get("registrations") {
@@ -51,8 +91,8 @@ func grantableWebhookRules(input *go_hook.HookInput) []admissionregistrationv1.R
 		enforcement[def.GetName()] = e
 	}
 
-	rules := make([]admissionregistrationv1.RuleWithOperations, 0)
-	seen := make(map[string]struct{})
+	rules := make([]grantWebhookRule, 0)
+	seen := make(map[grantWebhookRule]struct{})
 
 	for _, snap := range input.Snapshots.Get("references") {
 		ref := &unstructured.Unstructured{}
@@ -77,25 +117,19 @@ func grantableWebhookRules(input *go_hook.HookInput) []admissionregistrationv1.R
 				continue
 			}
 			for _, res := range toStringSlice(rule["resources"]) {
-				key := g + "/" + res
-				if _, dup := seen[key]; dup {
+				r := grantWebhookRule{APIGroup: g, Resource: res}
+				if _, dup := seen[r]; dup {
 					continue
 				}
-				seen[key] = struct{}{}
-				rules = append(rules, admissionregistrationv1.RuleWithOperations{
-					Rule: admissionregistrationv1.Rule{
-						APIGroups:   []string{g},
-						APIVersions: []string{"*"},
-						Resources:   []string{res},
-						Scope:       ptr.To(admissionregistrationv1.NamespacedScope),
-					},
-					Operations: []admissionregistrationv1.OperationType{
-						admissionregistrationv1.Create, admissionregistrationv1.Update,
-					},
-				})
+				seen[r] = struct{}{}
+				rules = append(rules, r)
 			}
 		}
 	}
+
+	slices.SortFunc(rules, func(a, b grantWebhookRule) int {
+		return cmp.Or(cmp.Compare(a.APIGroup, b.APIGroup), cmp.Compare(a.Resource, b.Resource))
+	})
 	return rules
 }
 

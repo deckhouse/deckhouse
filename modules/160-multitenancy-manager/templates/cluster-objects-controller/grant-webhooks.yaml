@@ -1,0 +1,105 @@
+{{- /*
+  The cluster-objects grant webhooks: /defaults fills in grant defaults and /is-granted refuses a
+  namespaced object that references a cluster resource the project is not granted. They intercept the
+  resources listed in internal.grantWebhookRules, which hooks/grant_webhook_rules.go derives from the
+  GrantableClusterResourceReference objects. Being part of the release, they are removed together with
+  the module; left behind, failurePolicy: Fail with no backend would refuse every matching request.
+
+  namespaceSelector restricts them to namespaces managed by the multitenancy-manager (project
+  namespaces). Without it, an unavailable controller would block create/update of the configured
+  resources in every namespace, system ones included, which can deadlock the cluster. The in-handler
+  IsSystem check remains as defense-in-depth. Every namespace outside a project is adopted into one
+  now, so the selector covers former orphans as well; the basic-model RoleBindings (user-authz:*) that
+  user-authz-controller emits for AuthorizationRules there do not deadlock on that, because its service
+  account is excluded by matchConditions.
+
+  matchConditions make the apiserver SKIP these webhooks for system and module writers, evaluated
+  locally (CEL) BEFORE any network call to the backend. This is the anti-deadlock guarantee: the grant
+  allow-list polices PROJECT USERS, but every module's resources land in project namespaces via that
+  module's Helm release applied by the deckhouse-controller (system:serviceaccount:d8-system:deckhouse),
+  or, for the AuthorizationRule bindings, via user-authz-controller
+  (system:serviceaccount:d8-user-authz:controller). With failurePolicy: Fail, if the webhook denies OR
+  is merely unreachable or slow, that apply fails and addon-operator retries it forever, locking the
+  module's queue (observed: user-authz emitting "RoleBinding/...:d8:user-authz:*:user" into every
+  project namespace -> "webhook retry timed out after 2m0s"). Excluding system writers at the apiserver
+  removes the lock even when the backend is down. Project users are still policed and get a fast,
+  terminal denial. Unlike the list in admission/validation.yaml, this one also excludes system:masters:
+  these webhooks intercept every grantable cluster-resource write into project namespaces, a far larger
+  surface for a deadlock.
+
+  Handler-level backstops differ: /defaults and /protect use isSystemRequest (usernames + groups,
+  including system:masters); /is-granted uses the narrower isAutomatedSystemWriter (three groups, no
+  usernames, no system:masters). In-cluster, matchConditions already skip system:masters before any
+  handler runs.
+*/ -}}
+{{- define "multitenancy_manager_grant_webhook" }}
+{{- $internal := .context.Values.multitenancyManager.internal -}}
+clientConfig:
+  caBundle: {{ $internal.admissionWebhookCert.ca | b64enc }}
+  service:
+    name: multitenancy-manager
+    namespace: d8-multitenancy-manager
+    port: 9443
+    path: {{ .path }}
+namespaceSelector:
+  matchLabels:
+    heritage: multitenancy-manager
+matchConditions:
+  - name: exclude-apiserver
+    expression: 'request.userInfo.username != "system:apiserver"'
+  - name: exclude-deckhouse-controller
+    expression: 'request.userInfo.username != "system:serviceaccount:d8-system:deckhouse"'
+  - name: exclude-multitenancy-manager
+    expression: 'request.userInfo.username != "system:serviceaccount:d8-multitenancy-manager:multitenancy-manager"'
+  # user-authz-controller writes the RoleBindings of AuthorizationRules into project namespaces,
+  # the very objects the chart used to apply as the deckhouse-controller.
+  - name: exclude-user-authz-controller
+    expression: 'request.userInfo.username != "system:serviceaccount:d8-user-authz:controller"'
+  - name: exclude-system-serviceaccounts
+    expression: '!request.userInfo.groups.exists(g, g == "system:serviceaccounts:d8-system" || g == "system:serviceaccounts:kube-system" || g == "system:serviceaccounts:d8-user-authz")'
+  - name: exclude-cluster-admins-and-nodes
+    expression: '!request.userInfo.groups.exists(g, g == "system:masters" || g == "system:nodes")'
+sideEffects: None
+admissionReviewVersions: ["v1"]
+failurePolicy: Fail
+timeoutSeconds: 10
+{{- with $internal.grantWebhookRules }}
+rules:
+  {{- range . }}
+  - apiGroups: [{{ .apiGroup | quote }}]
+    apiVersions: ["*"]
+    resources: [{{ .resource | quote }}]
+    operations: ["CREATE", "UPDATE"]
+    scope: Namespaced
+  {{- end }}
+{{- else }}
+rules: []
+{{- end }}
+{{- end }}
+
+{{- if .Values.multitenancyManager.internal.admissionWebhookCert.ca }}
+---
+apiVersion: admissionregistration.k8s.io/v1
+kind: MutatingWebhookConfiguration
+metadata:
+  name: cluster-objects-grants-defaulting
+  annotations:
+    werf.io/deploy-dependency-deployment: state=ready,kind=Deployment,name=multitenancy-manager,namespace=d8-multitenancy-manager
+    werf.io/deploy-dependency-service: state=present,kind=Service,name=multitenancy-manager,namespace=d8-multitenancy-manager
+  {{- include "helm_lib_module_labels" (list . (dict "app" "cluster-objects-controller")) | nindent 2 }}
+webhooks:
+  - name: cluster-objects-grants-defaulting.multitenancy.deckhouse.io
+    {{- include "multitenancy_manager_grant_webhook" (dict "context" . "path" "/defaults") | nindent 4 }}
+---
+apiVersion: admissionregistration.k8s.io/v1
+kind: ValidatingWebhookConfiguration
+metadata:
+  name: cluster-objects-grants-validator
+  annotations:
+    werf.io/deploy-dependency-deployment: state=ready,kind=Deployment,name=multitenancy-manager,namespace=d8-multitenancy-manager
+    werf.io/deploy-dependency-service: state=present,kind=Service,name=multitenancy-manager,namespace=d8-multitenancy-manager
+  {{- include "helm_lib_module_labels" (list . (dict "app" "cluster-objects-controller")) | nindent 2 }}
+webhooks:
+  - name: cluster-objects-grants-validator.multitenancy.deckhouse.io
+    {{- include "multitenancy_manager_grant_webhook" (dict "context" . "path" "/is-granted") | nindent 4 }}
+{{- end }}

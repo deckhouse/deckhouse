@@ -14,7 +14,7 @@
     failurePolicy: Ignore, so only a deliberate refusal can fail an apply (see the comment at the
     GrantableClusterResourceReference webhook).
 
-  The cluster-objects grant webhooks (hooks/configure_grant_validation_webhook.go) keep a similar list
+  The cluster-objects grant webhooks (cluster-objects-controller/grant-webhooks.yaml) keep a similar list
   but also exclude system:masters: they intercept every grantable cluster-resource write into project
   namespaces, a far larger surface for a deadlock.
 

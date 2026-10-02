@@ -23,4 +23,20 @@ properties:
           ca:
             type: string
             x-examples: ["YjY0ZW5jX3N0cmluZwo="]
+      grantWebhookRules:
+        type: array
+        default: []
+        description: |
+          Resources the cluster-objects grant webhooks intercept, one (group, resource) pair per item,
+          derived from GrantableClusterResourceReference objects by hooks/grant_webhook_rules.go.
+        x-examples:
+          - [{"apiGroup": "rbac.authorization.k8s.io", "resource": "rolebindings"}]
+        items:
+          type: object
+          required: ["apiGroup", "resource"]
+          properties:
+            apiGroup:
+              type: string
+            resource:
+              type: string
 

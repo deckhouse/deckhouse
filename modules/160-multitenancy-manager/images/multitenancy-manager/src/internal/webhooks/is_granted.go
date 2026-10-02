@@ -43,8 +43,8 @@ import (
 // system:serviceaccounts:d8-user-authz) deadlocks. Unlike protect.go's broader systemBypassGroups,
 // system:masters is absent here: the handler itself still polices a cluster-admin (unit tests call
 // the handler directly). In-cluster, the matchConditions of the grant webhooks skip system:masters
-// before this code runs; they live in hooks/configure_grant_validation_webhook.go
-// (systemWriterMatchConditions). The Project/ProjectTemplate/PRB/PN/CPRB webhooks in
+// before this code runs; they live in templates/cluster-objects-controller/grant-webhooks.yaml.
+// The Project/ProjectTemplate/PRB/PN/CPRB webhooks in
 // templates/admission/validation.yaml do NOT skip system:masters -- only these grant webhooks do.
 var automatedSystemWriterGroups = map[string]struct{}{
 	"system:nodes":                         {},
