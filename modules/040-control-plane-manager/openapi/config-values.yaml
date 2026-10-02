@@ -494,6 +494,8 @@ properties:
             - "0 1 * * *"
             description: |
               Backup schedule etcd in cron format. The local time zone of the `kube-controller-manager` is used.
+
+              Backups on different master nodes are started with a 15-minute offset from each other to avoid simultaneous disk load on all etcd members. Nodes are processed in reverse order of their names, so the node with the lowest name (for example, `master-0`) is backed up last and stores the most recent snapshot.
           hostPath:
             type: string
             default: /var/lib/etcd

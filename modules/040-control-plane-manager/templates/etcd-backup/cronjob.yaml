@@ -55,11 +55,11 @@ spec:
             description: etcd TLS certificates used to authenticate to the local etcd.
 {{- end }}
 {{- $nodes := list }}
-{{- $nodes = concat $nodes .Values.controlPlaneManager.internal.mastersNode }}
 {{- if .Values.controlPlaneManager.internal.hasEtcdArbiterNode }}
   {{- $nodes = append $nodes "etcd-arbiter" }}
 {{- end }}
-{{- range $node := $nodes }}
+{{- $nodes = concat $nodes (.Values.controlPlaneManager.internal.mastersNode | sortAlpha | reverse) }}
+{{- range $i, $node := $nodes }}
 ---
 apiVersion: batch/v1
 kind: CronJob
@@ -101,6 +101,8 @@ spec:
             image: {{ include "helm_lib_module_image" (list $ "etcdBackup") }}
             imagePullPolicy: IfNotPresent
             env:
+            - name: BACKUP_DELAY_SECONDS
+              value: {{ mul $i 900 | quote }}
             - name: ETCDQUOTA
               value: {{ $etcdQuotaBackendBytes | quote }}
             - name: HOSTPATH

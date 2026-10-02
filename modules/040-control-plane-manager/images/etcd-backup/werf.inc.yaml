@@ -24,6 +24,7 @@ import:
   - usr/bin/chmod
   - usr/bin/df
   - usr/bin/mv
+  - usr/bin/sleep
   - usr/bin/tail
   before: setup
 imageSpec:

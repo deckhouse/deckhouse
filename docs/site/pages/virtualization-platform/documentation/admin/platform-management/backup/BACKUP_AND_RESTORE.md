@@ -572,6 +572,13 @@ spec:
         enabled: true
 ```
 
+Backups on different master nodes run with a 15-minute offset from each other, so the archives on different nodes can contain snapshots taken at different times. If a backup job fails on a node, its archive can be even older. To restore, use the snapshot with the highest revision. To find out the revision, unpack the archive and run:
+
+```shell
+tar -xzf etcd-backup.tar.gz
+etcdutl snapshot status etcd-backup.snapshot -w table
+```
+
 ### Cluster configuration backup
 
 The `d8 backup cluster-config` command creates an archive containing a set of key resources related to the cluster configuration. This is not a full backup of all objects, but a specific whitelist.

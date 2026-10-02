@@ -1145,7 +1145,14 @@ When deciding on the appropriate threshold values, consider resources consumed b
 
 ### What is done automatically
 
-CronJob `kube-system/d8-etcd-backup-*` is automatically started at 00:00 UTC+0. The result is saved in `/var/lib/etcd/etcd-backup.tar.gz` on all nodes with `control-plane` in the cluster (master nodes).
+CronJob `kube-system/d8-etcd-backup-*` is automatically started at 00:00 UTC+0. Master nodes are backed up one by one with a 15-minute offset in reverse order of node names, so the node with the lowest name (for example, `master-0`) is backed up last and stores the most recent snapshot. The result is saved in `/var/lib/etcd/etcd-backup.tar.gz` on all nodes with `control-plane` in the cluster (master nodes). `/var/lib/etcd` is the default directory, it can be changed in the [etcd.backup.hostPath](configuration.html#parameters-etcd-backup-hostpath) parameter.
+
+The archives on different nodes can contain snapshots taken at different times. If a backup job fails on a node, its archive can be even older. To restore, use the snapshot with the highest revision. To find out the revision, unpack the archive and run:
+
+```shell
+tar -xzf etcd-backup.tar.gz
+etcdutl snapshot status etcd-backup.snapshot -w table
+```
 
 ### How to manually backup etcd
 

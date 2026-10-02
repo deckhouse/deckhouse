@@ -15,6 +15,7 @@
 # limitations under the License.
 
 set -xe
+sleep "${BACKUP_DELAY_SECONDS:-0}"
 cd /tmp/
 etcd=etcd-backup.snapshot
 archive=etcd-backup.tar.gz
