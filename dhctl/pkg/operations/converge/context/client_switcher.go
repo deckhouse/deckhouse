@@ -395,14 +395,7 @@ func (s *KubeClientSwitcher) replaceKubeClient(ctx context.Context, params repla
 		BecomePass:     params.convergeState.NodeUserCredentials.Password,
 	})
 
-	pkeys := make([]session.AgentPrivateKey, 0)
-	appendPKey := params.appendPKey
-
-	if appendPKey != nil {
-		pkeys = append(pkeys, *appendPKey)
-	} else {
-		pkeys = sshCl.PrivateKeys()
-	}
+	pkeys := privateKeysForSwitch(sshCl.PrivateKeys(), params.appendPKey)
 
 	newSSHClient, err := sshProvider.SwitchClient(ctx, sess, pkeys)
 	if err != nil {
@@ -429,6 +422,15 @@ func (s *KubeClientSwitcher) replaceKubeClient(ctx context.Context, params repla
 	}
 
 	return nil
+}
+
+func privateKeysForSwitch(current []session.AgentPrivateKey, additional *session.AgentPrivateKey) []session.AgentPrivateKey {
+	privateKeys := append([]session.AgentPrivateKey(nil), current...)
+	if additional != nil {
+		privateKeys = append(privateKeys, *additional)
+	}
+
+	return privateKeys
 }
 
 func (s *KubeClientSwitcher) tmpDirForConverger() (string, error) {
