@@ -19,7 +19,14 @@ limitations under the License.
 package run
 
 import (
+	"crypto/sha256"
+	"encoding/hex"
+	"sort"
+	"strings"
+
 	registryv1alpha1 "github.com/deckhouse/deckhouse/go_lib/registry/apis/deckhouse.io/v1alpha1"
+
+	"github.com/deckhouse/registry-syncer/internal/fill"
 )
 
 // Action is the work a replica does on one pass, beyond keeping the registry
@@ -164,4 +171,45 @@ func Role(isLeader bool) registryv1alpha1.ReplicaRole {
 		return registryv1alpha1.ReplicaRoleLeader
 	}
 	return registryv1alpha1.ReplicaRoleFollower
+}
+
+// SetKey is a fingerprint of the set the cluster needs: the platform's versions, and every module it
+// keeps with its version and where it comes from.
+//
+// Only what the set is made of, never what it resolves to. Reading the set out of the releases means
+// pulling images; this is two lists from the API server, cheap enough for every pass, and it moves
+// exactly when the set can: a module installed, removed, updated or moved to another source, the
+// platform updated or rolled back.
+func SetKey(deployed, previous string, modules []fill.ModuleRef) string {
+	lines := make([]string, 0, len(modules))
+	for _, module := range modules {
+		lines = append(lines, module.Name+"@"+module.Version+"<"+strings.TrimRight(module.Source.Repository, "/"))
+	}
+	sort.Strings(lines)
+
+	sum := sha256.Sum256([]byte("platform " + deployed + " " + previous + "\n" + strings.Join(lines, "\n")))
+	return hex.EncodeToString(sum[:16])
+}
+
+// Reverify turns a leader's "nothing to do" into a verification when the set has moved since it was
+// found full.
+//
+// The controller asks for a fill only while the leader is not full, and a full leader is not asked
+// again — so, left alone, Full outlived the set it was measured against: a module installed, or the
+// platform updated, and the store kept reporting itself complete for a set it had never seen, which is
+// the answer that authorizes cutting an air-gapped cluster off from its upstream. So when the leader
+// would do nothing and its fingerprint is not the current one, it withdraws Full and fills — which
+// copies only what is missing.
+//
+// A fingerprint that could not be computed changes nothing: the pass cannot tell whether the set
+// moved, and withdrawing on every such pass would make Full flap with the API server. After a
+// restart the reported fingerprint is read back from the status, so an unchanged set costs nothing.
+func Reverify(action Action, isLeader bool, spec *registryv1alpha1.RegistryStorageSpec, reported, current string) (Action, bool) {
+	if action != ActionNone || !isLeader || spec == nil || spec.Upstream == nil || current == "" {
+		return action, false
+	}
+	if reported == current {
+		return action, false
+	}
+	return ActionFill, true
 }

@@ -52,6 +52,11 @@ const (
 	// break workloads that never asked to be involved.
 	KindPassThrough Kind = "PassThrough"
 
+	// KindUpstreamSibling is a repository beside the image set on the upstream's own
+	// registry, asked for through the in-cluster address: `flant/modules` next to
+	// `deckhouse/ee` on registry.deckhouse.io.
+	KindUpstreamSibling Kind = "UpstreamSibling"
+
 	// KindKnown is a registry the cluster holds credentials for, asked for by its own
 	// address rather than through the in-cluster one.
 	//
@@ -315,9 +320,47 @@ func primaryDecision(
 	// `system/deckhouse/system/deckhouse`, which no registry has ever heard of. It
 	// affected every image the platform runs, and nothing noticed for as long as no pod
 	// image named the in-cluster address at all.
-	trimmed := trimPrefixPath(repository, strings.Trim(constant.Path, "/"))
+	prefix := strings.Trim(constant.Path, "/")
+	if repository != prefix && !strings.HasPrefix(repository, prefix+"/") {
+		return upstreamSiblingDecision(spec, repository, remainder)
+	}
+	trimmed := trimPrefixPath(repository, prefix)
 
 	return primaryTargets(spec, trimmed, remainder)
+}
+
+// upstreamSiblingDecision sends a repository outside the image set to the upstream's own
+// registry, at the same path.
+//
+// The in-cluster address is the only registry a cluster pulling through the agent names, so
+// content the platform used to address by the upstream's host alone arrives here too. The
+// Flant module source is that content: `<upstream host>/flant/modules`, beside the edition's
+// image set rather than under it. Put under a backend's prefix the way the image set is, it
+// became `deckhouse/ee/flant/modules` — a repository that does not exist.
+//
+// The upstream only, never the cache: the cache holds the image set and nothing beside it. And
+// with the upstream's account, which is the one the cluster always used for that host. An
+// air-gapped cluster has no upstream, and then there is nowhere this can be fetched from.
+func upstreamSiblingDecision(
+	spec *registryv1alpha1.RegistryNodeSpec, repository, remainder string,
+) (Decision, error) {
+	upstream := spec.Backend(registryv1alpha1.BackendUpstream)
+	if upstream == nil {
+		return Decision{}, fmt.Errorf(
+			"%q is outside the image set, and only an upstream serves that: this layout has none", repository)
+	}
+
+	return Decision{
+		Kind: KindUpstreamSibling,
+		Targets: []Target{{
+			Name:   string(upstream.Name),
+			Scheme: upstream.Scheme,
+			Host:   upstream.Host,
+			Path:   apiPath(repository, remainder),
+			CA:     upstream.CA,
+			Auth:   upstream.Auth,
+		}},
+	}, nil
 }
 
 // primaryTargets builds the ordered attempts for a primary-set repository, given it already

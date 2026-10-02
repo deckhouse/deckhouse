@@ -60,6 +60,13 @@ const (
 	registryImagesKey       = "imagesRegistry"
 	registryDockerConfigKey = ".dockerconfigjson"
 
+	// registryConfig* name the registry module's resolved configuration, which
+	// carries the upstream that module fetches from. Read as unstructured: the
+	// kind is that module's CRD, absent from a cluster that does not run it.
+	registryConfigAPIVersion = "deckhouse.io/v1alpha1"
+	registryConfigKind       = "RegistryConfig"
+	registryConfigName       = "registry"
+
 	// registryOwnerNodelet and registryOwnerAgent are the two answers
 	// containerRuntime.registryOwner has, mirroring the CRD enum
 	// (crds/nodeconfig.yaml). Written explicitly because the bootstrap file path

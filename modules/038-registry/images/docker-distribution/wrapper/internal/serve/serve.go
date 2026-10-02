@@ -61,6 +61,7 @@ import (
 	gorhandlers "github.com/gorilla/handlers"
 
 	"github.com/deckhouse/registry-distribution/internal/authproxy"
+	"github.com/deckhouse/registry-distribution/internal/bound"
 	"github.com/deckhouse/registry-distribution/internal/config"
 	"github.com/deckhouse/registry-distribution/internal/realip"
 	"github.com/deckhouse/registry-distribution/internal/upstream"
@@ -74,6 +75,11 @@ import (
 // rendered configuration carries no proxy section at all.
 const LoopbackUpstreamAddress = "127.0.0.1:5004"
 
+// measureEvery is how often the store is walked to replace the guard's running count with what is
+// on disk. The count errs only toward refusing early between walks, so this is about how soon space
+// a collection freed becomes usable again, not about safety.
+const measureEvery = 30 * time.Second
+
 // Run starts everything and returns when the serving listener stops.
 func Run(ctx context.Context, distribution *configuration.Configuration, wrapper *config.Wrapper, log *slog.Logger) error {
 	if distribution.Proxy.RemoteURL != "" {
@@ -83,6 +89,16 @@ func Run(ctx context.Context, distribution *configuration.Configuration, wrapper
 		return errors.New("the rendered configuration carries a proxy section; the upstream is " +
 			"configured in this module's own file instead")
 	}
+
+	guard, err := storeGuard(distribution, wrapper, log)
+	if err != nil {
+		return err
+	}
+	go guard.Run(ctx, measureEvery)
+
+	// The serving half's writes are the local copies of cache misses. A refusal in the middle of
+	// one drops the copy and keeps the client's stream — see bound.Discard.
+	distribution.Middleware = bounded(distribution.Middleware, guard, bound.Discard)
 
 	rewriter, err := upstream.New(wrapper, LoopbackUpstreamAddress, log)
 	if err != nil {
@@ -114,6 +130,12 @@ func Run(ctx context.Context, distribution *configuration.Configuration, wrapper
 			"it serves what it holds and nothing else")
 	}
 
+	// First, so that it sits right around distribution's own handler: a miss the store could not keep
+	// must reach the client as the blob it is, and not the blob with an error after it. See settle.
+	dregistry.RegisterHandler(func(_ *configuration.Configuration, handler http.Handler) http.Handler {
+		return settle(handler)
+	})
+
 	// What this module adds to the serving listener, through upstream's own extension point. The
 	// serving listener has nothing in front of it, so no client certificate authority is given to
 	// realip: a header there is a claim a node made about itself.
@@ -140,7 +162,7 @@ func Run(ctx context.Context, distribution *configuration.Configuration, wrapper
 	}
 
 	if wrapper.WriteEndpoint.Address != "" {
-		writing, err := writeEndpoint(ctx, distribution, wrapper, log)
+		writing, err := writeEndpoint(ctx, distribution, wrapper, guard, log)
 		if err != nil {
 			return err
 		}
@@ -154,12 +176,34 @@ func Run(ctx context.Context, distribution *configuration.Configuration, wrapper
 		}()
 	}
 
-	return serving.ListenAndServe()
+	// A reissued certificate is served by starting again: see ErrCertificateChanged.
+	reissued := make(chan struct{})
+	if distribution.HTTP.TLS.Certificate != "" {
+		self, _, _ := net.SplitHostPort(distribution.HTTP.Addr)
+		go watchCertificate(ctx, distribution.HTTP.TLS.Certificate, distribution.HTTP.TLS.Key, self,
+			certificateEvery, log, func() {
+				close(reissued)
+				shutdown, cancel := context.WithTimeout(context.WithoutCancel(ctx), 10*time.Second)
+				defer cancel()
+				if err := serving.Shutdown(shutdown); err != nil {
+					log.Warn("the serving listener did not stop cleanly", "error", err.Error())
+				}
+			})
+	}
+
+	err = serving.ListenAndServe()
+	select {
+	case <-reissued:
+		return ErrCertificateChanged
+	default:
+		return err
+	}
 }
 
 // writeEndpoint builds the listener that accepts a push, and returns the function that runs it.
 func writeEndpoint(
-	ctx context.Context, serving *configuration.Configuration, wrapper *config.Wrapper, log *slog.Logger,
+	ctx context.Context, serving *configuration.Configuration, wrapper *config.Wrapper, guard *bound.Guard,
+	log *slog.Logger,
 ) (func() error, error) {
 	if wrapper.WriteEndpoint.Address == serving.HTTP.Addr {
 		return nil, fmt.Errorf(
@@ -167,7 +211,7 @@ func writeEndpoint(
 				"listeners in one process", serving.HTTP.Addr)
 	}
 
-	settings := writeConfiguration(serving, wrapper)
+	settings := writeConfiguration(serving, wrapper, guard)
 
 	app := handlers.NewApp(ctx, settings)
 	// No RegisterHealthChecks: the health registry is global to the process and the serving half
@@ -175,6 +219,9 @@ func writeEndpoint(
 	// is nothing it would watch that the first does not.
 
 	var handler http.Handler = app
+	// Right in front of distribution, behind everything that decides who the client is: a full store
+	// is answered with 507 and a reason, not with the unknown error the storage would produce.
+	handler = bound.Handler(guard, handler)
 	handler = health.Handler(handler)
 
 	handler, err := authproxy.Handler(wrapper.AuthProxy, handler)
@@ -221,9 +268,12 @@ func writeEndpoint(
 // authentication, the token service, the storage path and the read-only flag a garbage collection
 // sets cannot drift between the two halves, because there is only one of each. What differs is
 // exactly what has to: no proxying, so a push is answered by the store; its own address, since two
-// listeners cannot share a port; and no debug listener, because the metrics collectors are
-// registered process-globally and a second registration panics.
-func writeConfiguration(serving *configuration.Configuration, wrapper *config.Wrapper) *configuration.Configuration {
+// listeners cannot share a port; no debug listener, because the metrics collectors are registered
+// process-globally and a second registration panics; and the same guard in a different mode, because
+// here the client sending the bytes is the one who should hear the refusal, and the sooner the better.
+func writeConfiguration(
+	serving *configuration.Configuration, wrapper *config.Wrapper, guard *bound.Guard,
+) *configuration.Configuration {
 	settings := *serving
 
 	// The storage parameters are a map, so a shallow copy would share them with the half that
@@ -237,12 +287,70 @@ func writeConfiguration(serving *configuration.Configuration, wrapper *config.Wr
 		settings.Storage[kind] = copied
 	}
 
+	settings.Middleware = bounded(serving.Middleware, guard, bound.Fail)
 	settings.Proxy = configuration.Proxy{}
 	settings.HTTP.Addr = wrapper.WriteEndpoint.Address
 	settings.HTTP.Debug.Addr = ""
 	settings.HTTP.Debug.Prometheus.Enabled = false
 
 	return &settings
+}
+
+// storeGuard is the one accounting of the store both halves write through.
+//
+// Measured before any listener opens: a guard that has not walked the store believes it empty, and
+// would admit a budget's worth of writes on top of whatever is already there.
+func storeGuard(distribution *configuration.Configuration, wrapper *config.Wrapper, log *slog.Logger) (*bound.Guard, error) {
+	if kind := distribution.Storage.Type(); kind != "filesystem" {
+		return nil, fmt.Errorf("the store is bounded on a filesystem, and the configuration names %q", kind)
+	}
+	root, _ := distribution.Storage.Parameters()["rootdirectory"].(string)
+	if root == "" {
+		return nil, errors.New("the configuration names no rootdirectory for the store")
+	}
+
+	guard := bound.New(root, wrapper.Store.Budget, wrapper.Store.Reserve).WithLogger(log)
+
+	started := time.Now()
+	if err := guard.Measure(); err != nil {
+		return nil, fmt.Errorf("measuring the store before serving it: %w", err)
+	}
+	log.Info("the store is bounded",
+		"used", guard.Used(), "budget", wrapper.Store.Budget, "reserve", wrapper.Store.Reserve,
+		"measured_in", time.Since(started).String())
+
+	// Asked once so that a store starting full says so at startup — the guard logs the refusal
+	// itself. Not a reason to stay down: a full store still serves everything it holds.
+	_ = guard.Refusal()
+
+	return guard, nil
+}
+
+// bounded returns the storage middleware list with the guard in front, in the given mode.
+//
+// A new list every time: the two halves are derived from one configuration, and a list shared
+// between them would put the serving half's mode on the write endpoint or the other way round.
+func bounded(middleware map[string][]configuration.Middleware, guard *bound.Guard, mode bound.Mode) map[string][]configuration.Middleware {
+	result := make(map[string][]configuration.Middleware, len(middleware)+1)
+	for kind, list := range middleware {
+		result[kind] = append([]configuration.Middleware(nil), list...)
+	}
+
+	storage := make([]configuration.Middleware, 0, len(result["storage"])+1)
+	for _, entry := range result["storage"] {
+		if entry.Name != bound.MiddlewareName {
+			storage = append(storage, entry)
+		}
+	}
+	// Last in the list, which distribution applies outermost: whatever else wraps the driver, the
+	// guard sees the write first.
+	storage = append(storage, configuration.Middleware{
+		Name:    bound.MiddlewareName,
+		Options: configuration.Parameters(bound.Options(guard, mode)),
+	})
+	result["storage"] = storage
+
+	return result
 }
 
 // writeTLS is the serving certificate plus the authority whose client certificates this listener

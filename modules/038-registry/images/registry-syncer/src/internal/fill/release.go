@@ -179,6 +179,16 @@ func (r Release) Discover(
 		add(reference)
 	}
 
+	// And the catalogues of the other sources the cluster installs modules from, which a source
+	// repointed at the store after the move to air-gap lists to know what it offers.
+	sourceCatalogues, err := SourceCatalogues(ctx, source, r.Modules, r.CatalogueUnavailable)
+	if err != nil {
+		return nil, err
+	}
+	for _, reference := range sourceCatalogues {
+		add(reference)
+	}
+
 	return references, nil
 }
 

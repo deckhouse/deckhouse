@@ -56,8 +56,15 @@ func DeclaredDigests(
 			continue
 		}
 
-		// A tag — the release image and its installer. What counts is whatever it points at now.
+		// A tag — the release image, a module package. What counts is whatever it points at now.
 		descriptor, err := puller.Head(ctx, reference)
+		if absentAtSource(err) {
+			// Not in this store yet. It is still part of the set, as something this store does not
+			// hold: a key no manifest on disk can match, so the count stays below the set until it
+			// arrives. Failing instead left the replica with no idea what the cluster needs.
+			declared[missingPrefix+reference.String()] = struct{}{}
+			continue
+		}
 		if err != nil {
 			return nil, fmt.Errorf("resolving %s: %w", reference, err)
 		}
@@ -66,6 +73,10 @@ func DeclaredDigests(
 
 	return declared, nil
 }
+
+// missingPrefix marks a member of the declared set that could not be resolved to a digest, because
+// the store does not hold it yet. Never a digest, so never held.
+const missingPrefix = "missing:"
 
 // CountDeclaredHeld is how much of the set this replica holds, counted on its own disk.
 //

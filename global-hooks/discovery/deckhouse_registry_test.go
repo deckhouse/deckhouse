@@ -172,29 +172,34 @@ spec:
 		})
 	})
 
-	// The registry module can move where image references point, and only that.
+	// Once the cluster pulls through the node agent, the in-cluster registry is the only registry the
+	// platform describes: not the secret's, and not the upstream the module fetches from.
 	//
-	// Everything else here describes the registry the cluster was installed with, and has
-	// to keep describing it: those values are read by the Deckhouse controller's own HTTP
-	// client — the release check and the default module source — which has no node agent
-	// in its path and cannot reach an in-cluster address. Image references are resolved by
-	// the container runtime, which does.
+	// What reads these values and dials is on a node — the Deckhouse controller, registry-packages-proxy
+	// — and on a node the in-cluster address is the agent, which needs no account. The upstream's
+	// account used to travel here from the resource, and from here into the secret and every pull secret
+	// copied from it, and it sent both of those processes straight to the upstream past the agent.
 	Context("The registry module has published an image address", func() {
 		BeforeEach(func() {
-			f.BindingContexts.Set(f.KubeStateSet(stateDeckhouseRegistrySecret + statePublishedImageAddress))
+			f.BindingContexts.Set(f.KubeStateSet(stateDeckhouseRegistrySecret + statePublishedImageAddress +
+				"\n---\n" + stateRegistryConfigResource))
 			f.RunHook()
 		})
 
-		It("renders image references from it, and leaves the rest on the upstream registry", func() {
+		It("describes the in-cluster registry, with no account for anything", func() {
 			Expect(f).To(ExecuteSuccessfully())
 			Expect(f.ValuesGet("global.modulesImages.registry.base").String()).
 				To(Equal("registry.d8-system.svc:5001/system/deckhouse"))
 
-			Expect(f.ValuesGet("global.modulesImages.registry.address").String()).To(Equal("registry.test.com"))
-			Expect(f.ValuesGet("global.modulesImages.registry.path").String()).To(Equal("/deckhouse"))
-			Expect(f.ValuesGet("global.modulesImages.registry.scheme").String()).To(Equal("http"))
-			Expect(f.ValuesGet("global.modulesImages.registry.CA").String()).To(Equal("CACACA"))
-			Expect(f.ValuesGet("global.modulesImages.registry.dockercfg").String()).To(Equal("eHl6Cg=="))
+			Expect(f.ValuesGet("global.modulesImages.registry.address").String()).To(Equal("registry.d8-system.svc:5001"))
+			Expect(f.ValuesGet("global.modulesImages.registry.path").String()).To(Equal("/system/deckhouse"))
+			Expect(f.ValuesGet("global.modulesImages.registry.scheme").String()).To(Equal("https"))
+			Expect(f.ValuesGet("global.modulesImages.registry.CA").String()).To(BeEmpty())
+
+			raw, err := base64.StdEncoding.DecodeString(f.ValuesGet("global.modulesImages.registry.dockercfg").String())
+			Expect(err).ShouldNot(HaveOccurred())
+			Expect(string(raw)).To(MatchJSON(`{"auths":{"registry.d8-system.svc:5001":{}}}`),
+				"the host is named for what looks it up, and nothing authenticates to the agent")
 		})
 	})
 

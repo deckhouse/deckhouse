@@ -167,3 +167,29 @@ func TestEveryManagedInstallationAsksForTheAgent(t *testing.T) {
 		})
 	}
 }
+
+// TestTheInstallerSaysTheClusterPullsThroughTheAgent: where the first master comes up with the agent
+// on it, the image address is published by the installer, and nowhere else.
+//
+// Left to the module the answer waits for every node's agent to report, and a second master joining
+// is a node that has not reported yet — so image references fell back to the upstream, every workload
+// rolled onto it and back, and the roll of registry-packages-proxy took down the one port the third
+// master could fetch its first package from.
+func TestTheInstallerSaysTheClusterPullsThroughTheAgent(t *testing.T) {
+	config := ConfigBuilder(WithModeDirect(), WithImagesRepo("registry.example.com/deckhouse/ee"))
+	config.AgentOwnsRuntime = true
+
+	publish, data := config.Manifest().ImageAddressData()
+	require.True(t, publish)
+	require.Equal(t, map[string]string{"base": "registry.d8-system.svc:5001/system/deckhouse"}, data)
+
+	// A cluster whose nodes pull straight from the upstream is one where the module has to ask.
+	for _, config := range []Config{
+		ConfigBuilder(WithModeUnmanaged(), WithLegacyMode()),
+		ConfigBuilder(WithModeDirect()),
+		ConfigBuilder(WithModeProxy()),
+	} {
+		publish, _ := config.Manifest().ImageAddressData()
+		require.False(t, publish, "mode %s was told it pulls through an agent it does not have", config.Settings.Mode)
+	}
+}

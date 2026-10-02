@@ -25,7 +25,10 @@ import (
 )
 
 const (
-	Port       = 5001
+	Port = 5001
+	// WritePort is the storage's second listener, the one that accepts a push: the serving one is a
+	// pull-through cache, which refuses writes.
+	WritePort  = 5003
 	Path       = "/system/deckhouse"
 	PathRegexp = "^system/deckhouse"
 	Scheme     = "https"
@@ -76,6 +79,20 @@ const (
 
 	// AgentCAFile is the authority that signs what the agent serves.
 	AgentCAFile = AgentPKIPath + "/ca.crt"
+
+	// ImageAddressConfigMapName is the record that the cluster's pull path goes through the
+	// node agent: its presence says image references name HostWithPath, and its one key says
+	// so in words.
+	//
+	// A shared constant because it has more than one writer and more than one reader. The
+	// module publishes it once every node's agent applies its layout, and the installer
+	// publishes it itself on a cluster whose first master comes up with the agent already
+	// on it — there the answer is known before any node exists to report it. Everything that
+	// has to know which registry the cluster pulls from reads it.
+	ImageAddressConfigMapName = "registry-image-address"
+
+	// ImageAddressConfigMapKey is its only key.
+	ImageAddressConfigMapKey = "base"
 )
 
 var (

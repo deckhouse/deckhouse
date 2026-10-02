@@ -24,6 +24,7 @@ import (
 	appsv1 "k8s.io/api/apps/v1"
 	coordinationv1 "k8s.io/api/coordination/v1"
 	corev1 "k8s.io/api/core/v1"
+	discoveryv1 "k8s.io/api/discovery/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
@@ -131,6 +132,10 @@ func cacheOptions() cache.Options {
 		ByObject: map[client.Object]cache.ByObject{
 			&corev1.Pod{}:         inModuleNamespace,
 			&appsv1.StatefulSet{}: inModuleNamespace,
+			// The publication endpoint's slice, written and read here, and the storage lease, watched
+			// for who holds it — both granted by a Role in d8-system and nowhere else.
+			&discoveryv1.EndpointSlice{}: inModuleNamespace,
+			&coordinationv1.Lease{}:      inModuleNamespace,
 		},
 	}
 }

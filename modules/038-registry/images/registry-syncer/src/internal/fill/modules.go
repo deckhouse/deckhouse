@@ -23,6 +23,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"strings"
 
 	"github.com/google/go-containerregistry/pkg/name"
 	v1 "github.com/google/go-containerregistry/pkg/v1"
@@ -33,6 +34,21 @@ import (
 // modulesRepository is where a module's package lives under the platform's own repository:
 // `<repository>/modules/<name>`, tagged with the module's version.
 const modulesRepository = "modules"
+
+// moduleSourcesRepository is where the store keeps the modules of every other ModuleSource: under
+// `<repository>/module-sources/<source>/<name>`, with the source's catalogue as the tags of
+// `<repository>/module-sources/<source>`.
+//
+// A path of their own, and not the platform's `modules`. While an upstream is configured the store
+// is a pull-through cache of it, and the platform's path is the upstream's: every tag asked for
+// there is fetched from the upstream and recorded over whatever the store held. A module another
+// source ships under a name the platform also has — and most names are shared — was copied in, and
+// the next read put the upstream's build back over it; the store could never hold what the cluster
+// runs. Nothing in the upstream lives under this path, so nothing overwrites it.
+const moduleSourcesRepository = "module-sources"
+
+// platformSource is the ModuleSource the platform installs for its own modules.
+const platformSource = "deckhouse"
 
 // moduleDigestsFile is how a module package declares the images it consists of.
 //
@@ -46,6 +62,58 @@ const moduleDigestsFile = "images_digests.json"
 type ModuleRef struct {
 	Name    string
 	Version string
+
+	// Source is the ModuleSource the cluster installs the module from. Empty when its release names
+	// none, or the sources could not be read.
+	Source ModuleSource
+
+	// Origin is where the module is read from when that is not the copy's own source: a module of
+	// another ModuleSource is fetched from that source's registry, with its credentials. Nil means the
+	// copy's source, under its `modules` repository. Wherever it is read from, the store keeps it
+	// under its own `modules/<name>` — see ResolveOrigins.
+	Origin *Registry
+}
+
+// FromPlatform tells a module of the platform's own source, which the store keeps under the
+// platform's path. A module whose source is not known is taken for one: that is where it was kept
+// before sources were looked at.
+func (m ModuleRef) FromPlatform() bool {
+	return m.Source.Name == "" || m.Source.Name == platformSource
+}
+
+// StorePath is where the store keeps the module, relative to the store's own repository.
+//
+// A function of the source's name alone, so that every reader agrees without knowing the upstream:
+// the leader filling, a follower replicating, a count of the set, a collection — and an air-gapped
+// cluster, which has no upstream to compare anything with.
+func (m ModuleRef) StorePath() string {
+	if m.FromPlatform() {
+		return modulesRepository + "/" + m.Name
+	}
+	return SourceStorePath(m.Source.Name) + "/" + m.Name
+}
+
+// SourceStorePath is where the store keeps a ModuleSource's modules and, as its tags, its catalogue.
+func SourceStorePath(source string) string {
+	return moduleSourcesRepository + "/" + source
+}
+
+// ModuleSource is what a ModuleSource says about where its modules are.
+type ModuleSource struct {
+	// Name of the ModuleSource object.
+	Name string
+
+	// Repository is `spec.registry.repo`: the repository its modules live under, one per name.
+	Repository string
+
+	// DockerCfg is `spec.registry.dockerCfg`, base64 of a Docker config.
+	DockerCfg string
+
+	// CA is `spec.registry.ca`.
+	CA string
+
+	// Scheme is `spec.registry.scheme`, HTTP or HTTPS.
+	Scheme string
 }
 
 // ModuleReferences enumerates what the modules a cluster keeps consist of.
@@ -84,19 +152,42 @@ func ModuleReferences(
 		references = append(references, reference)
 	}
 
+	pullers := map[*Registry]*remote.Puller{}
+
 	for _, module := range modules {
 		if module.Name == "" || module.Version == "" {
 			continue
 		}
 
-		repository := registry.Repo(source.Repository, modulesRepository, module.Name)
+		repository := registry.Repo(source.Repository, module.StorePath())
+		from := puller
+		if origin := module.Origin; origin != nil {
+			originRegistry, err := parseRegistry(*origin)
+			if err != nil {
+				return nil, fmt.Errorf("module %s: %w", module.Name, err)
+			}
+			repository = originRegistry.Repo(origin.Repository, module.Name)
+			if from = pullers[origin]; from == nil {
+				if from, err = remote.NewPuller(origin.Options...); err != nil {
+					return nil, fmt.Errorf("building the client for module %s: %w", module.Name, err)
+				}
+				pullers[origin] = from
+			}
+		}
 
 		// The package itself, by tag: it is an image like any other, and a cluster that cannot pull it
 		// cannot reinstall the module.
 		packaged := repository.Tag(module.Version)
 		add(packaged)
 
-		digests, err := moduleImageSet(ctx, puller, packaged)
+		digests, err := moduleImageSet(ctx, from, packaged)
+		if absentAtSource(err) {
+			// Not there yet — a leader still filling, a follower's own store before its first pass.
+			// The package stays in the set, so a store without it is incomplete; what it consists of
+			// is read once it arrives. Failing here instead failed the whole set, and with it every
+			// count and every replication of everything else.
+			continue
+		}
 		if err != nil {
 			return nil, fmt.Errorf("reading the image set of module %s: %w", module.Name, err)
 		}
@@ -223,6 +314,53 @@ func ModuleCatalogue(
 			continue
 		}
 		references = append(references, repository.Tag(tag))
+	}
+	return references, nil
+}
+
+// SourceCatalogues enumerates the catalogue of every other ModuleSource the cluster installs modules
+// from: the modules the source offers, one tag each, which is what a ModuleSource reads to know what
+// it can install. Without it a source repointed at the store after the move to air-gap would list
+// nothing, and nothing could be installed or updated from it.
+//
+// Read where the source's modules are read — its own registry, the upstream, or the store — and, like
+// the platform's catalogue, a listing that is refused is a degradation reported to the caller rather
+// than a failure.
+func SourceCatalogues(
+	ctx context.Context, source Registry, modules []ModuleRef, unavailable func(error),
+) ([]name.Reference, error) {
+	seen := map[string]bool{}
+	var references []name.Reference
+	for _, module := range modules {
+		if module.FromPlatform() || seen[module.Source.Name] {
+			continue
+		}
+		seen[module.Source.Name] = true
+
+		from := source
+		from.Repository = strings.Trim(source.Repository, "/") + "/" + SourceStorePath(module.Source.Name)
+		if module.Origin != nil {
+			from = *module.Origin
+		}
+		registry, err := parseRegistry(from)
+		if err != nil {
+			return nil, err
+		}
+		repository := registry.Repo(strings.Trim(from.Repository, "/"))
+
+		options := append(append([]remote.Option{}, from.Options...), remote.WithContext(ctx))
+		tags, err := remote.List(repository, options...)
+		if err != nil {
+			if unavailable != nil {
+				unavailable(fmt.Errorf("listing the modules of source %s at %s: %w", module.Source.Name, repository, err))
+			}
+			continue
+		}
+		for _, tag := range tags {
+			if tag != "" {
+				references = append(references, repository.Tag(tag))
+			}
+		}
 	}
 	return references, nil
 }

@@ -54,6 +54,11 @@ const (
 
 	// agentScheme is fixed, whatever the registry behind the agent speaks.
 	agentScheme = "https"
+
+	// imageAddressConfigMap and imageAddressKey are the record that the cluster pulls through the
+	// agent. Source of truth: `ImageAddressConfigMapName` and `ImageAddressConfigMapKey`.
+	imageAddressConfigMap = "registry-image-address"
+	imageAddressKey       = "base"
 )
 
 // servedByTheAgent reports whether a repository is one the node agent answers for.

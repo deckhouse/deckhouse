@@ -383,6 +383,101 @@ func (l *Loop) PublishCollection(ctx context.Context, finished time.Time, failur
 	return l.Publisher.PublishCollection(ctx, state)
 }
 
+// progressEvery is how often a pass under way reports how far it has got, after the first report.
+const progressEvery = 30 * time.Second
+
+// progress is the callback a copier reports through: logged at every reference, and published — see
+// report.PublishProgress — the first time and then at most every progressEvery.
+//
+// The first report is the one that matters most. It comes with the first reference copied or found —
+// never before, since the copier calls this after every reference, failed ones included — which means
+// the set could be read and the destination written: whatever failed the previous pass is behind this
+// one, and the error it left in the status stops holding the storage at Failed.
+func (l *Loop) progress(ctx context.Context, state report.State, source, what string) func(done, total int32) {
+	var published time.Time
+	return func(done, total int32) {
+		l.Log.Debug(what+" progress", "done", done, "total", total)
+
+		// Nothing copied or found yet, and publishing takes the previous pass's error back — on a
+		// leader whose writes all fail, for the whole of every pass, which kept the storage out of
+		// Failed and the leader looking healthy to the election. The error goes once something lands.
+		if done == 0 {
+			return
+		}
+		if l.Publisher == nil || (!published.IsZero() && time.Since(published) < progressEvery) {
+			return
+		}
+		published = time.Now()
+
+		update := report.State{
+			Node: state.Node, Role: state.Role, Address: state.Address, Source: source,
+			VerifiedDigests: done, DeclaredDigests: total,
+		}
+		if err := l.Publisher.PublishProgress(ctx, update); err != nil && ctx.Err() == nil {
+			l.Log.Warn("reporting the "+what+" progress failed", "error", err.Error())
+		}
+	}
+}
+
+// storeEvery is how often the store is measured and reported apart from the passes. A pass can last
+// an hour; a store filling at the speed of the node's network needs to be seen sooner than that.
+const storeEvery = time.Minute
+
+// watchStore reports the store's measurement on its own schedule, whatever the pass is doing.
+//
+// Only the store field is written — see report.PublishStore — so a fill in progress, a collection
+// and this never erase each other. The registry enforces the limits either way: this is what the
+// alerts and the StoreWritable condition see.
+func (l *Loop) watchStore(ctx context.Context, every time.Duration) {
+	ticker := time.NewTicker(every)
+	defer ticker.Stop()
+
+	for {
+		select {
+		case <-ctx.Done():
+			return
+		case <-ticker.C:
+		}
+
+		spec := l.desired.Load()
+		if spec == nil || l.Publisher == nil {
+			continue
+		}
+		usage := l.measureStore(spec)
+		if usage == nil {
+			continue
+		}
+		state := report.State{
+			Node:    l.Node,
+			Role:    Role(l.Leadership != nil && l.Leadership.IsLeader()),
+			Address: l.ReportedAddress,
+			Store:   usage,
+		}
+		if err := l.Publisher.PublishStore(ctx, state); err != nil && ctx.Err() == nil {
+			l.Log.Warn("reporting the store failed", "error", err.Error())
+		}
+	}
+}
+
+// measureStore reads how much of the node's disk the store takes. Nil when it cannot be read, and
+// the last measurement stays in the status: the registry enforces the limits whether or not this
+// succeeds, so a failed measurement is worth a warning and nothing more.
+func (l *Loop) measureStore(spec *registryv1alpha1.RegistryStorageSpec) *registryv1alpha1.StoreUsage {
+	if l.DataDir == "" {
+		return nil
+	}
+	var capacity int64
+	if l.Applier != nil {
+		capacity = l.Applier.Options.StoreCapacity
+	}
+	usage, err := distribution.MeasureStore(l.DataDir, spec, capacity)
+	if err != nil {
+		l.Log.Warn("measuring the store failed", "error", err.Error())
+		return nil
+	}
+	return usage
+}
+
 func errorText(err error) string {
 	if err == nil {
 		return ""
@@ -434,6 +529,8 @@ func (l *Loop) Run(ctx context.Context) error {
 	if interval <= 0 {
 		interval = 30 * time.Second
 	}
+
+	go l.watchStore(ctx, storeEvery)
 
 	ticker := time.NewTicker(interval)
 	defer ticker.Stop()
@@ -490,7 +587,31 @@ func (l *Loop) once(ctx context.Context) error {
 
 	l.observeLeadership(isLeader)
 
-	switch action := Decide(spec, isLeader, leader); action {
+	action := Decide(spec, isLeader, leader)
+
+	// Which set a full report would be about. Every replica says, so that whoever decides who may
+	// lead compares reports about the same set — see MayLead. Only the leader with an upstream acts
+	// on a change of it — see Reverify.
+	var setKey string
+	if key, err := l.setKey(ctx); err != nil {
+		l.Log.Warn("cannot tell which set the cluster needs, so this pass reports no set with its count",
+			"error", err.Error())
+	} else {
+		setKey = key
+	}
+	reverified, withdraw := Reverify(action, isLeader, spec, l.reportedVerifiedSet(ctx), setKey)
+	if withdraw {
+		l.Log.Info("the set the cluster needs changed since the store was found full; " +
+			"withdrawing that and verifying the store against the new one")
+		if err := l.Publisher.Withdraw(ctx, state); err != nil {
+			// Not verifying on a Full that could not be withdrawn would leave it standing; verifying
+			// anyway at least replaces it at the end of the pass.
+			l.Log.Warn("withdrawing the full report failed", "error", err.Error())
+		}
+	}
+	action = reverified
+
+	switch action {
 	case ActionFill:
 		started := time.Now()
 		l.filling.Store(true)
@@ -534,6 +655,16 @@ func (l *Loop) once(ctx context.Context) error {
 	// holds — whatever the pass above managed to do.
 	if StoreIsAuthority(spec, isLeader) {
 		l.recountFromStore(ctx, &state)
+	}
+
+	// Full, and about which set: the one read before the pass. Had it moved during the pass, the next
+	// pass sees a different fingerprint. A pass that did nothing carried the last report over, set
+	// included, and says nothing new about either.
+	if action != ActionNone {
+		state.VerifiedSet = ""
+		if state.Full && state.Error == "" {
+			state.VerifiedSet = setKey
+		}
 	}
 
 	// TotalDigests is NOT recomputed here, and that is the correction.
@@ -587,6 +718,10 @@ func (l *Loop) once(ctx context.Context) error {
 	// Remembered for the garbage collection, which asks on its own schedule: an incomplete store
 	// must not be collected, and the loop is the one that knows.
 	l.complete.Store(state.Full)
+
+	// Measured last, after whatever the pass wrote: a figure taken at the start of an hour-long
+	// fill would, published at its end, put back what the store watcher had long since replaced.
+	state.Store = l.measureStore(spec)
 
 	return l.Publisher.Publish(ctx, state)
 }
@@ -644,6 +779,7 @@ func (l *Loop) applyFill(
 		state.Error = err.Error()
 		return
 	}
+	copier.OnProgress = l.progress(ctx, *state, "", "fill")
 
 	// `stated` is logged and nothing more. It is what an operator counted in a bundle, and by the
 	// owner's rule it may not enter the decision — the fill is judged against the set the run
@@ -729,6 +865,8 @@ func (l *Loop) applyReplicate(
 	// The same modules the count and the fill enumerate: a follower that copied less than the leader
 	// holds would report itself incomplete forever, and one that copied more would look for images
 	// nobody published.
+	// Origins are not resolved here: a follower reads every module from the leader's store, where the
+	// leader keeps them all under the same path whatever their source.
 	modules, err := gc.ModulesFromCluster(ctx, l.Client)
 	if err != nil {
 		state.Error = err.Error()
@@ -751,10 +889,8 @@ func (l *Loop) applyReplicate(
 		},
 		// So that an image the store holds without its layers is copied rather than skipped: the
 		// registry answers "present" for those, and a follower would otherwise never repair itself.
-		StoreDir: l.dataDir(),
-		OnProgress: func(done, total int32) {
-			l.Log.Debug("replication progress", "done", done, "total", total)
-		},
+		StoreDir:   l.dataDir(),
+		OnProgress: l.progress(ctx, *state, leader.Node, "replication"),
 	}
 
 	result, err := copier.Run(ctx)
@@ -917,6 +1053,42 @@ func versionsOf(releases gc.Releases) []string {
 // reports full, the controller clears `needSync`, the next pass goes idle and erases the fullness, the
 // controller asks for a fill again — and since eligibility to lead depends on being full, the lease
 // travels with it and the whole thing reads as flapping leader election.
+// setKey is the fingerprint of the set the cluster needs now — see SetKey.
+func (l *Loop) setKey(ctx context.Context) (string, error) {
+	return CurrentSetKey(ctx, l.Client)
+}
+
+// CurrentSetKey is the fingerprint of the set the cluster needs now, read from the API server: what
+// a replica's Full is compared against, both by the replica reporting it and by every replica
+// deciding who may lead.
+func CurrentSetKey(ctx context.Context, c client.Client) (string, error) {
+	releases, err := gc.FromCluster(ctx, c)
+	if err != nil {
+		return "", err
+	}
+	modules, err := gc.ModulesFromCluster(ctx, c)
+	if err != nil {
+		return "", err
+	}
+	return SetKey(releases.Deployed, releases.Previous, modules), nil
+}
+
+// reportedVerifiedSet is the fingerprint this replica last reported Full against, read back from the
+// status so that it survives a restart. Empty when it cannot be read, which Reverify treats as "not
+// verified" — the one direction that costs a pass rather than a wrong answer.
+func (l *Loop) reportedVerifiedSet(ctx context.Context) string {
+	storage := &registryv1alpha1.RegistryStorage{}
+	if err := l.Client.Get(ctx, types.NamespacedName{Name: registryv1alpha1.SingletonName}, storage); err != nil {
+		return ""
+	}
+	for i := range storage.Status.Replicas {
+		if storage.Status.Replicas[i].Node == l.Node && storage.Status.Replicas[i].Full {
+			return storage.Status.Replicas[i].VerifiedSet
+		}
+	}
+	return ""
+}
+
 func (l *Loop) carryOverCount(ctx context.Context, state *report.State) error {
 	storage := &registryv1alpha1.RegistryStorage{}
 	if err := l.Client.Get(ctx, types.NamespacedName{Name: registryv1alpha1.SingletonName}, storage); err != nil {
@@ -931,6 +1103,7 @@ func (l *Loop) carryOverCount(ctx context.Context, state *report.State) error {
 		state.DeclaredDigests = storage.Status.Replicas[i].DeclaredDigests
 		state.Full = storage.Status.Replicas[i].Full
 		state.Source = storage.Status.Replicas[i].Source
+		state.VerifiedSet = storage.Status.Replicas[i].VerifiedSet
 		return nil
 	}
 	return nil
@@ -1006,12 +1179,23 @@ func (l *Loop) copier(
 		}
 	}
 
+	upstream := fill.Registry{
+		Address:    spec.Upstream.Host,
+		Repository: trimSlashes(spec.Upstream.Path),
+		Options:    upstreamOptions,
+	}
+
+	// Where each module is read from: the upstream, its own ModuleSource's registry, or — for a source
+	// already pointed at this store — the store itself, through the listener that does not proxy, so
+	// that what is checked is what the store holds.
+	modules, err = fill.ResolveOrigins(modules, upstream, local)
+	if err != nil {
+		return nil, err
+	}
+
 	return &fill.Copier{
-		Source: fill.Registry{
-			Address:    spec.Upstream.Host,
-			Repository: trimSlashes(spec.Upstream.Path),
-			Options:    upstreamOptions,
-		},
+		Source:      upstream,
+		Routes:      fill.Routes(modules, local),
 		Destination: local,
 		// Read out of the releases themselves rather than by listing the upstream. Listing
 		// somebody else's registry is a privilege of its own, which credentials scoped to
@@ -1027,9 +1211,6 @@ func (l *Loop) copier(
 		// The same repair the replication path needs: a store filled by proxying holds manifests
 		// without layers, and the registry reports those as present.
 		StoreDir: l.dataDir(),
-		OnProgress: func(done, total int32) {
-			l.Log.Debug("fill progress", "done", done, "total", total)
-		},
 	}, nil
 }
 

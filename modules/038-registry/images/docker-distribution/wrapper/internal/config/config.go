@@ -54,6 +54,22 @@ type Wrapper struct {
 
 	// AuthProxy is the token service this registry fetches tokens from on its clients' behalf.
 	AuthProxy *AuthProxy `yaml:"authProxy,omitempty"`
+
+	// Store is how much the store may take of the disk it is on.
+	Store Store `yaml:"store"`
+}
+
+// Store bounds what the store writes. Both figures are in bytes and both are the syncer's: the
+// budget comes from `storage.size`, the reserve from the size of the filesystem under the store.
+type Store struct {
+	// Budget is how much the blobs and the uploads in progress may take. Zero means no budget was
+	// configured, and only the reserve applies.
+	Budget int64 `yaml:"budget,omitempty"`
+
+	// Reserve is how much of the filesystem must stay free. Required: it is the one limit that
+	// holds whatever the budget says, and a registry started without it would write until the node
+	// has nothing left.
+	Reserve int64 `yaml:"reserve"`
 }
 
 // Upstream is the registry a cache miss is fetched from, and the path it serves the image set
@@ -165,6 +181,14 @@ func (w *Wrapper) Validate() error {
 	if w.WriteEndpoint.ClientCertCA != "" && w.WriteEndpoint.Address == "" {
 		return fmt.Errorf("writeEndpoint.clientCertCA is set without writeEndpoint.address, " +
 			"so nothing would present it")
+	}
+
+	if w.Store.Reserve <= 0 {
+		return fmt.Errorf("store.reserve is required: without it the store writes until the node " +
+			"has no space left")
+	}
+	if w.Store.Budget < 0 {
+		return fmt.Errorf("store.budget %d is negative", w.Store.Budget)
 	}
 
 	return nil

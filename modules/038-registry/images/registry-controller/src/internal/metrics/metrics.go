@@ -149,6 +149,36 @@ var (
 		Name: "d8_registry_storage_stale_data_bytes",
 		Help: "Cache data left on a node while no cache is configured.",
 	}, []string{"node"})
+
+	// The store against its two limits, per replica, as the replica's syncer measured it. The
+	// registry enforces the limits itself on every write; these are for seeing it coming and
+	// for being told when it has happened.
+	StoreUsed = prometheus.NewGaugeVec(prometheus.GaugeOpts{
+		Name: "d8_registry_store_used_bytes",
+		Help: "Bytes the store's blobs and uploads in progress take on the replica's node.",
+	}, []string{"node"})
+	StoreBudget = prometheus.NewGaugeVec(prometheus.GaugeOpts{
+		Name: "d8_registry_store_budget_bytes",
+		Help: "storage.size, the most the store may hold; 0 when none is set.",
+	}, []string{"node"})
+	StoreReserve = prometheus.NewGaugeVec(prometheus.GaugeOpts{
+		Name: "d8_registry_store_reserve_bytes",
+		Help: "Bytes the store leaves free on its filesystem for the node.",
+	}, []string{"node"})
+	StoreFilesystemFree = prometheus.NewGaugeVec(prometheus.GaugeOpts{
+		Name: "d8_registry_store_filesystem_free_bytes",
+		Help: "Free bytes on the filesystem the store is on.",
+	}, []string{"node"})
+	StoreFilesystemCapacity = prometheus.NewGaugeVec(prometheus.GaugeOpts{
+		Name: "d8_registry_store_filesystem_capacity_bytes",
+		Help: "Size of the filesystem the store is on.",
+	}, []string{"node"})
+
+	// StoreWritable is 0 while a replica's store refuses writes, with the limit it refuses on.
+	StoreWritable = prometheus.NewGaugeVec(prometheus.GaugeOpts{
+		Name: "d8_registry_store_writable",
+		Help: "1 while the replica's store accepts writes; 0 with the reason while it refuses them.",
+	}, []string{"node", "reason"})
 )
 
 // Outcomes of a preflight probe.
@@ -168,5 +198,6 @@ func init() {
 		Managed, ConfigValid, EffectiveUpstream, Nodes, NodeReconciled, NodeFromCache,
 		StorageReplicas, StorageReplicaFull, StorageAllReplicasFull,
 		StorageSafeToDropUpstream, StorageStaleData,
+		StoreUsed, StoreBudget, StoreReserve, StoreFilesystemFree, StoreFilesystemCapacity, StoreWritable,
 	)
 }

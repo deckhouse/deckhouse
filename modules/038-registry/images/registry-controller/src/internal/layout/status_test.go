@@ -21,6 +21,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	registryv1alpha1 "github.com/deckhouse/deckhouse/go_lib/registry/apis/deckhouse.io/v1alpha1"
 )
@@ -390,4 +391,51 @@ func TestLeaderFull(t *testing.T) {
 			assert.Equal(t, tt.want, LeaderFull(tt.replicas, tt.holder))
 		})
 	}
+}
+
+func TestStoreWritable(t *testing.T) {
+	measured := func(node string, writable bool, reason registryv1alpha1.StoreRefusal) registryv1alpha1.StorageReplicaStatus {
+		return registryv1alpha1.StorageReplicaStatus{
+			Node:  node,
+			Store: &registryv1alpha1.StoreUsage{Writable: writable, Reason: reason},
+		}
+	}
+
+	t.Run("unknown until measured", func(t *testing.T) {
+		condition := StoreWritable([]registryv1alpha1.StorageReplicaStatus{{Node: "master-0"}}, 3)
+		assert.Equal(t, metav1.ConditionUnknown, condition.Status)
+		assert.Equal(t, int64(3), condition.ObservedGeneration)
+	})
+
+	t.Run("true when every replica writes", func(t *testing.T) {
+		condition := StoreWritable([]registryv1alpha1.StorageReplicaStatus{
+			measured("master-0", true, ""), measured("master-1", true, ""), {Node: "master-2"},
+		}, 1)
+		assert.Equal(t, metav1.ConditionTrue, condition.Status)
+		assert.Equal(t, registryv1alpha1.ReasonStoreWritable, condition.Reason)
+	})
+
+	t.Run("false names every refusing node and its way out", func(t *testing.T) {
+		condition := StoreWritable([]registryv1alpha1.StorageReplicaStatus{
+			measured("master-2", false, registryv1alpha1.StoreReserveExhausted),
+			measured("master-0", true, ""),
+			measured("master-1", false, registryv1alpha1.StoreReserveExhausted),
+		}, 1)
+		assert.Equal(t, metav1.ConditionFalse, condition.Status)
+		assert.Equal(t, "ReserveExhausted", condition.Reason)
+		assert.Contains(t, condition.Message, "master-1, master-2")
+		assert.Contains(t, condition.Message, "dedicated disk")
+		assert.NotContains(t, condition.Message, "master-0")
+	})
+
+	t.Run("both limits at once", func(t *testing.T) {
+		condition := StoreWritable([]registryv1alpha1.StorageReplicaStatus{
+			measured("master-0", false, registryv1alpha1.StoreBudgetExhausted),
+			measured("master-1", false, registryv1alpha1.StoreBudgetExhausted),
+			measured("master-2", false, registryv1alpha1.StoreReserveExhausted),
+		}, 1)
+		assert.Equal(t, "BudgetExhausted", condition.Reason, "the limit most replicas hit")
+		assert.Contains(t, condition.Message, "storage.size")
+		assert.Contains(t, condition.Message, "dedicated disk")
+	})
 }

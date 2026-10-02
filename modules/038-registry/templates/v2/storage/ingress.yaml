@@ -35,18 +35,23 @@ metadata:
   namespace: d8-system
   {{- include "helm_lib_module_labels" (list . (dict "app" "registry-storage")) | nindent 2 }}
 spec:
-  # A routable service, unlike the headless one the cluster pulls through: the
-  # ingress controller needs an address to send a write to, and any replica will do
-  # — an upload is signed with a secret shared by all of them.
-  selector:
-    app: registry-storage
+  # A routable service, unlike the headless one the cluster pulls through: the ingress controller
+  # needs an address to send a write to.
+  #
+  # And no selector: a push goes to the storage leader and to no other replica. The cluster reads
+  # from the leader — agents ask it first, and its 404 does not fall through to the followers — and
+  # replication runs from it to them, never back, so a push that landed on a follower sat in a store
+  # nobody reads. The registry controller writes this Service's one EndpointSlice with the address of
+  # the replica the election lease names, the same answer the agents get. With no leader it is empty,
+  # and a push is refused rather than written where the cluster would not find it.
   ports:
   - name: registry-push
     port: 5001
     protocol: TCP
     # The write listener, not the one the cluster pulls through — that one proxies, and a proxying
-    # registry answers every write with UNSUPPORTED.
-    targetPort: registry-push
+    # registry answers every write with UNSUPPORTED. A number: without a selector there are no pods to
+    # resolve a port name against; the EndpointSlice carries the same port.
+    targetPort: 5003
 ---
 apiVersion: networking.k8s.io/v1
 kind: Ingress
@@ -66,9 +71,6 @@ metadata:
     nginx.ingress.kubernetes.io/proxy-body-size: "0"
     nginx.ingress.kubernetes.io/proxy-read-timeout: "600"
     nginx.ingress.kubernetes.io/proxy-send-timeout: "600"
-    # A push is a sequence of requests that has to reach the same replica: an upload
-    # started against one and finished against another would fail halfway.
-    nginx.ingress.kubernetes.io/upstream-hash-by: "$remote_addr"
     {{- if .Values.registry.whitelistSourceRanges }}
     nginx.ingress.kubernetes.io/whitelist-source-range: {{ .Values.registry.whitelistSourceRanges | join "," }}
     {{- end }}

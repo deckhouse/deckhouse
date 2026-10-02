@@ -22,6 +22,8 @@ import (
 	"github.com/stretchr/testify/assert"
 
 	registryv1alpha1 "github.com/deckhouse/deckhouse/go_lib/registry/apis/deckhouse.io/v1alpha1"
+
+	"github.com/deckhouse/registry-syncer/internal/fill"
 )
 
 func passThrough(needSync bool) *registryv1alpha1.RegistryStorageSpec {
@@ -249,6 +251,62 @@ func TestStoreIsAuthority(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			assert.Equal(t, tt.want, StoreIsAuthority(tt.spec, tt.isLeader))
+		})
+	}
+}
+
+func TestSetKeyMovesExactlyWithTheSet(t *testing.T) {
+	modules := []fill.ModuleRef{
+		{Name: "console", Version: "v1.2.0", Source: fill.ModuleSource{Repository: "registry.d8-system.svc:5001/system/deckhouse/modules"}},
+		{Name: "pushgateway", Version: "v1.0.2", Source: fill.ModuleSource{Repository: "registry.deckhouse.io/deckhouse/ce/modules"}},
+	}
+	base := SetKey("v1.70.1", "v1.69.3", modules)
+
+	reordered := []fill.ModuleRef{modules[1], modules[0]}
+	assert.Equal(t, base, SetKey("v1.70.1", "v1.69.3", reordered), "the order modules are listed in is not the set")
+
+	moved := func(mutate func([]fill.ModuleRef) []fill.ModuleRef) string {
+		copied := append([]fill.ModuleRef(nil), modules...)
+		return SetKey("v1.70.1", "v1.69.3", mutate(copied))
+	}
+	assert.NotEqual(t, base, SetKey("v1.71.0", "v1.70.1", modules), "the platform updated")
+	assert.NotEqual(t, base, moved(func(m []fill.ModuleRef) []fill.ModuleRef { m[1].Version = "v1.0.3"; return m }),
+		"a module updated")
+	assert.NotEqual(t, base, moved(func(m []fill.ModuleRef) []fill.ModuleRef {
+		m[1].Source.Repository = "registry.d8-system.svc:5001/system/deckhouse/modules"
+		return m
+	}), "a module repointed at the store ahead of air-gap")
+	assert.NotEqual(t, base, moved(func(m []fill.ModuleRef) []fill.ModuleRef { return m[:1] }), "a module removed")
+	assert.NotEqual(t, base, moved(func(m []fill.ModuleRef) []fill.ModuleRef {
+		return append(m, fill.ModuleRef{Name: "stronghold", Version: "v1.0.0"})
+	}), "a module installed")
+}
+
+func TestReverify(t *testing.T) {
+	withUpstream := &registryv1alpha1.RegistryStorageSpec{Upstream: &registryv1alpha1.Upstream{}}
+	airGap := &registryv1alpha1.RegistryStorageSpec{}
+
+	for _, tc := range []struct {
+		name              string
+		action            Action
+		leader            bool
+		spec              *registryv1alpha1.RegistryStorageSpec
+		reported, current string
+		want              Action
+		withdraw          bool
+	}{
+		{"a full leader, the set moved", ActionNone, true, withUpstream, "old", "new", ActionFill, true},
+		{"a full leader, the same set", ActionNone, true, withUpstream, "same", "same", ActionNone, false},
+		{"after an upgrade from before fingerprints", ActionNone, true, withUpstream, "", "new", ActionFill, true},
+		{"the set could not be read", ActionNone, true, withUpstream, "old", "", ActionNone, false},
+		{"already filling", ActionFill, true, withUpstream, "old", "new", ActionFill, false},
+		{"a follower", ActionReplicate, false, withUpstream, "old", "new", ActionReplicate, false},
+		{"air-gapped: nowhere to fill from", ActionCountCatalogue, true, airGap, "old", "new", ActionCountCatalogue, false},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			action, withdraw := Reverify(tc.action, tc.leader, tc.spec, tc.reported, tc.current)
+			assert.Equal(t, tc.want, action)
+			assert.Equal(t, tc.withdraw, withdraw)
 		})
 	}
 }

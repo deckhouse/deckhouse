@@ -18,6 +18,7 @@ package gc
 
 import (
 	"context"
+	"sort"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -27,6 +28,8 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
+
+	"github.com/deckhouse/registry-syncer/internal/fill"
 )
 
 func release(name, version, phase string) *unstructured.Unstructured {
@@ -220,4 +223,95 @@ func TestImageTagTellsAPortFromATag(t *testing.T) {
 			assert.Equal(t, tt.want, tag)
 		})
 	}
+}
+
+func moduleRelease(name, module, version, phase, source string) *unstructured.Unstructured {
+	object := &unstructured.Unstructured{Object: map[string]any{
+		"apiVersion": "deckhouse.io/v1alpha1",
+		"kind":       "ModuleRelease",
+		"metadata":   map[string]any{"name": name},
+		"spec":       map[string]any{"moduleName": module, "version": version},
+		"status":     map[string]any{"phase": phase},
+	}}
+	if source != "" {
+		object.SetLabels(map[string]string{"source": source})
+	}
+	return object
+}
+
+func moduleSource(name, repo string) *unstructured.Unstructured {
+	return &unstructured.Unstructured{Object: map[string]any{
+		"apiVersion": "deckhouse.io/v1alpha1",
+		"kind":       "ModuleSource",
+		"metadata":   map[string]any{"name": name},
+		"spec":       map[string]any{"registry": map[string]any{"repo": repo}},
+	}}
+}
+
+func moduleClient(t *testing.T, withSources bool, objects ...client.Object) client.Client {
+	t.Helper()
+
+	scheme := runtime.NewScheme()
+	scheme.AddKnownTypeWithName(
+		schema.GroupVersionKind{Group: "deckhouse.io", Version: "v1alpha1", Kind: "ModuleRelease"},
+		&unstructured.Unstructured{})
+	scheme.AddKnownTypeWithName(moduleReleaseGVK, &unstructured.UnstructuredList{})
+	if withSources {
+		scheme.AddKnownTypeWithName(
+			schema.GroupVersionKind{Group: "deckhouse.io", Version: "v1alpha1", Kind: "ModuleSource"},
+			&unstructured.Unstructured{})
+		scheme.AddKnownTypeWithName(moduleSourceGVK, &unstructured.UnstructuredList{})
+	}
+	return fake.NewClientBuilder().WithScheme(scheme).WithObjects(objects...).Build()
+}
+
+func names(modules []fill.ModuleRef) []string {
+	out := make([]string, 0, len(modules))
+	for _, module := range modules {
+		out = append(out, module.Name+"@"+module.Version+"<"+module.Source.Name)
+	}
+	sort.Strings(out)
+	return out
+}
+
+// TestEveryModuleIsPartOfTheSetWithItsSource: a module the operator installed from a source of their
+// own is one the cluster needs, and after the move to air-gap the store is the only place left to
+// get it from. So it is kept, and what its source says travels with it.
+func TestEveryModuleIsPartOfTheSetWithItsSource(t *testing.T) {
+	c := moduleClient(t, true,
+		moduleSource("deckhouse", "registry.d8-system.svc:5001/system/deckhouse/modules"),
+		moduleSource("sds-node-configurator", "registry.deckhouse.io/deckhouse/ee/modules"),
+
+		moduleRelease("console-v1.2.0", "console", "1.2.0", "Deployed", "deckhouse"),
+		moduleRelease("sds-node-configurator-v0.7.5", "sds-node-configurator", "v0.7.5", "Deployed", "sds-node-configurator"),
+		moduleRelease("stronghold-v1.0.0", "stronghold", "1.0.0", "Deployed", ""),
+		moduleRelease("sds-node-configurator-v0.7.4", "sds-node-configurator", "v0.7.4", "Superseded", "sds-node-configurator"),
+	)
+
+	modules, err := ModulesFromCluster(context.Background(), c)
+	require.NoError(t, err)
+
+	assert.Equal(t, []string{
+		"console@v1.2.0<deckhouse",
+		"sds-node-configurator@v0.7.5<sds-node-configurator",
+		"stronghold@v1.0.0<",
+	}, names(modules))
+	for _, module := range modules {
+		if module.Name == "sds-node-configurator" {
+			assert.Equal(t, "registry.deckhouse.io/deckhouse/ee/modules", module.Source.Repository)
+		}
+	}
+}
+
+// TestWithoutSourcesEveryModuleIsKept: sources that cannot be read leave the modules without one,
+// which a fill reads from the upstream, as it did before sources were looked at.
+func TestWithoutSourcesEveryModuleIsKept(t *testing.T) {
+	c := moduleClient(t, false,
+		moduleRelease("console-v1.2.0", "console", "1.2.0", "Deployed", "deckhouse"),
+		moduleRelease("sds-node-configurator-v0.7.5", "sds-node-configurator", "v0.7.5", "Deployed", "sds-node-configurator"),
+	)
+
+	modules, err := ModulesFromCluster(context.Background(), c)
+	require.NoError(t, err)
+	assert.Equal(t, []string{"console@v1.2.0<", "sds-node-configurator@v0.7.5<"}, names(modules))
 }

@@ -202,12 +202,29 @@ var moduleReleaseGVK = schema.GroupVersionKind{
 	Kind:    "ModuleReleaseList",
 }
 
+// moduleSourceGVK is where each module release's origin is described: the registry its package and
+// images are pulled from, with the credentials to pull them.
+var moduleSourceGVK = schema.GroupVersionKind{
+	Group:   "deckhouse.io",
+	Version: "v1alpha1",
+	Kind:    "ModuleSourceList",
+}
+
+// moduleSourceLabel is the label a module release names its source by.
+const moduleSourceLabel = "source"
+
 // ModulesFromCluster reads which modules the cluster keeps, so that the images they consist of can be
 // counted as part of what the cluster needs.
 //
 // Deployed only. A module release that is pending or superseded is not what the cluster runs, and
 // including it would raise the bar for completeness by images no pod refers to — the mirror image of
 // the failure this exists to prevent, and just as effective at making air-gap unreachable.
+//
+// Whatever ModuleSource a module came from. The operator installed it, so the cluster needs it, and
+// after the move to air-gap the store is the only place left to get it from. Each module carries what
+// its source says about where it lives, which is what decides where a fill reads it — see
+// fill.ResolveOrigins. The sources are best effort: a cluster whose sources cannot be read keeps every
+// module, read from the upstream as before.
 //
 // An absent CRD is not an error but an empty answer: a cluster can legitimately have no modules beyond
 // the platform's own, and on such a cluster nothing about the previous behaviour changes.
@@ -221,6 +238,8 @@ func ModulesFromCluster(ctx context.Context, c client.Client) ([]fill.ModuleRef,
 		}
 		return nil, fmt.Errorf("listing the modules the cluster keeps: %w", err)
 	}
+
+	sources := moduleSources(ctx, c)
 
 	var modules []fill.ModuleRef
 	for i := range list.Items {
@@ -241,10 +260,41 @@ func ModulesFromCluster(ctx context.Context, c client.Client) ([]fill.ModuleRef,
 
 		// Versions are recorded without the leading "v" in the object and with it in the registry,
 		// which is where these are about to be looked for.
-		modules = append(modules, fill.ModuleRef{Name: name, Version: registryTag(version)})
+		modules = append(modules, fill.ModuleRef{
+			Name:    name,
+			Version: registryTag(version),
+			Source:  sources[item.GetLabels()[moduleSourceLabel]],
+		})
 	}
 
 	return modules, nil
+}
+
+// moduleSources reads what every ModuleSource says about where its modules are, by name. Empty when
+// they cannot be read.
+func moduleSources(ctx context.Context, c client.Client) map[string]fill.ModuleSource {
+	list := &unstructured.UnstructuredList{}
+	list.SetGroupVersionKind(moduleSourceGVK)
+	if err := c.List(ctx, list); err != nil {
+		return nil
+	}
+
+	sources := make(map[string]fill.ModuleSource, len(list.Items))
+	for i := range list.Items {
+		item := &list.Items[i]
+		field := func(name string) string {
+			value, _, _ := unstructured.NestedString(item.Object, "spec", "registry", name)
+			return value
+		}
+		sources[item.GetName()] = fill.ModuleSource{
+			Name:       item.GetName(),
+			Repository: field("repo"),
+			DockerCfg:  field("dockerCfg"),
+			CA:         field("ca"),
+			Scheme:     field("scheme"),
+		}
+	}
+	return sources
 }
 
 // registryTag is the module version as the registry tags it.

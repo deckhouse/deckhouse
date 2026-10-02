@@ -67,6 +67,18 @@ rules:
       - get
       - list
       - watch
+  # The registry module's record that the cluster pulls through the node agent. While it exists it is
+  # the cluster's registry as far as the proxy is concerned, and the secret above is not consulted.
+  - apiGroups:
+      - ""
+    resources:
+      - configmaps
+    resourceNames:
+      - registry-image-address
+    verbs:
+      - get
+      - list
+      - watch
 # To read secrets in d8-system
 ---
 apiVersion: rbac.authorization.k8s.io/v1

@@ -345,6 +345,19 @@ miss otherwise.
 : A node holds cache data that nothing uses. See
   [how to remove it](#how-do-i-remove-leftover-cache-data-from-a-node).
 
+`D8RegistryStoreWritesRefused`
+: The cache on a master has stopped accepting writes: its store reached `storage.size`
+  (`BudgetExhausted`) or the space kept free for the node (`ReserveExhausted`). The node is
+  safe and the cache keeps serving what it holds; what stops is filling it. See
+  [what happens when the store is full](#what-happens-when-the-caches-store-is-full).
+
+`D8RegistryStoreNearlyFull`
+: The store on a master holds over 85% of `storage.size`. The next release may not fit.
+
+`D8RegistryStoreUnbounded`
+: The cache is on and `storage.size` is not set, so the only limit is the space kept free for
+  the node.
+
 ## How do I remove leftover cache data from a node?
 
 When the cache is turned off, the data under `/opt/deckhouse/registry` is intentionally kept:
@@ -451,6 +464,37 @@ becomes a problem. Note that
 [`D8RegistryStorageNotReclaimed`](#what-do-the-registry-alerts-mean) still fires a week after
 the last collection: from the outside, "turned off" and "silently stopped" look the same.
 
+## What happens when the cache's store is full?
+
+Each master's store has two limits, and the registry checks both on every write:
+
+- the budget, `storage.size` in the `registry` ModuleConfig — how much the store may hold;
+- the reserve — how much of the filesystem under the store must stay free for the node: the
+  kubelet's soft eviction threshold (10% of the filesystem, at most 40 GiB) plus a margin (10%,
+  at most 20 GiB). It applies whatever `storage.size` says, including when it is not set.
+
+When either is reached, the store refuses new writes and keeps serving everything it holds:
+
+- a fill or a replication stops, and the replica reports why in `.status.replicas[].error`;
+- `d8 mirror push` gets `507 Insufficient Storage` with the reason and the way out;
+- a pull the store cannot keep is streamed from the upstream while there is one, so the nodes
+  do not notice; in an air-gapped cluster a release that is not in the store cannot be
+  installed.
+
+Nothing is deleted to make room. Space is freed by the garbage collection, or made by raising
+`storage.size` or giving the store more disk.
+
+To see where each replica stands:
+
+```shell
+d8 k get registrystorage registry -o json | jq '.status.replicas[] | {node, store}'
+```
+
+`writable: false` with `reason: BudgetExhausted` means `storage.size` is reached: raise it if the
+disk has room, or let the collection reclaim what no deployed release needs.
+`reason: ReserveExhausted` means the disk is: free space on the node, or move the store to a disk
+of its own.
+
 ## A pull is failing on a node. Where do I look?
 
 Start with the agent: it is on the path of every pull on the node. It is deployed as a static
@@ -488,6 +532,67 @@ If this file is missing, the agent has not applied a configuration yet: nothing 
 can pull, and the reason is in the agent's log. If the file is present and pulls still fail,
 the failure is beyond the agent — the metrics above name the target that failed and the error.
 
+## Modules from other ModuleSources: what the cache holds and what to do before air-gap
+
+The cache holds every module the cluster runs, whichever ModuleSource it was installed from, and
+counts it towards completeness: a cluster does not go air-gap while a module it runs is missing
+from the store.
+
+- A module whose ModuleSource is on the upstream's registry is filled from the upstream, like the
+  platform itself.
+- A module whose ModuleSource is on a registry of its own is filled from that registry, with the
+  credentials and certificate authority the ModuleSource carries.
+
+The platform's own modules — ModuleSource `deckhouse` — are stored under `system/deckhouse/modules`.
+Every other ModuleSource has a path of its own in the in-cluster registry,
+`system/deckhouse/module-sources/<ModuleSource>`: its modules under `<path>/<module>`, and its list of
+modules as the tags of `<path>`. A path apart, because the platform's is the upstream's as long as an
+upstream is configured, and a module another source ships under a name the platform also has would
+be replaced there by the upstream's build.
+
+That path is the only place a node can pull the source's modules from once the upstream is gone, but
+the module's pods keep referring to their ModuleSource's registry until the source is changed. So
+before removing the upstream, point every such ModuleSource at its path, with the registry settings
+the platform's own source uses:
+
+```shell
+NAME=<ModuleSource>
+REGISTRY=$(d8 k get modulesource deckhouse -o json | jq -c --arg name "$NAME" \
+  '.spec.registry | .repo = "registry.d8-system.svc:5001/system/deckhouse/module-sources/" + $name')
+d8 k patch modulesource "$NAME" --type merge -p "{\"spec\":{\"registry\":$REGISTRY}}"
+```
+
+After that the module's images are rendered with the in-cluster address and are served from the
+cache.
+
+## Image availability alerts from `extended-monitoring` for the in-cluster registry
+
+With the module in charge, every image reference in the cluster names `registry.d8-system.svc:5001`.
+That address is served on the nodes only — containerd hands the pull to the node agent on the
+loopback — so it does not resolve from a pod, and the image availability exporter of the
+`extended-monitoring` module, which checks images from a pod, reports every such image as
+`…ImageAvailabilityUnknownError` (`no such host`, later `x509: certificate signed by unknown
+authority`).
+
+Nothing is wrong with the images: what the exporter would detect is covered by this module's own
+alerts — `D8RegistryStorageIncomplete`, `D8RegistryUpstreamProbeFailing`,
+`D8RegistryNodeNotConverged`. Exclude the in-cluster address from the exporter's checks:
+
+```yaml
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleConfig
+metadata:
+  name: extended-monitoring
+spec:
+  version: 2
+  settings:
+    imageAvailability:
+      ignoredImages:
+      - 'registry\.d8-system\.svc:5001/.*'
+```
+
+Each entry is a regular expression. Images from other registries are still checked.
+
 ## How do I check the state of the in-cluster cache?
 
 The state of the cache is published in the status of the RegistryStorage resource. To view it, use the command:
@@ -502,10 +607,12 @@ Description of the response fields:
   own account of itself. A replica reporting `full: true` alongside an `error` is not
   complete: `full` says what it holds, and the error says whether its last pass finished.
 - `leader` is the replica that fills from the upstream and serves as the replication source
-  for the others. The election is deliberately not symmetric: only a replica holding the whole
-  expected set stands for leadership, and a leader steps aside when another replica becomes
-  complete. This is what keeps an air-gapped cluster from deadlocking with an empty leader and
-  a full follower.
+  for the others. The election is deliberately not symmetric: once a replica holds the whole
+  expected set, a leader that cannot complete it by itself steps aside for that replica. A leader
+  cannot complete the set by itself when there is no upstream, when its last pass failed, or when its
+  store refuses writes. This is what keeps an air-gapped cluster from deadlocking with an empty leader
+  and a full follower. A leader that is still completing the set from the upstream keeps leading:
+  a follower copies from it and may finish first, and moving the lease then would gain nothing.
 
 ## The previous implementation
 

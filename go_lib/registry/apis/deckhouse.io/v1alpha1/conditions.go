@@ -30,6 +30,11 @@ const (
 	// ConditionStorageConverged reports whether the storage has reached the
 	// state the configuration asks for.
 	ConditionStorageConverged = "StorageConverged"
+
+	// ConditionStoreWritable reports whether every replica's store still accepts writes. False
+	// names the replicas that refuse and the limit they refuse on — the reasons are the
+	// StoreRefusal values. Reads are served either way.
+	ConditionStoreWritable = "StoreWritable"
 )
 
 // Condition types on RegistryUpstream.status.
@@ -66,6 +71,8 @@ const (
 	ReasonAirGap           = "AirGap"
 	ReasonAPIUnavailable   = "APIUnavailable"
 	ReasonAppliedFromCache = "AppliedFromCache"
+	ReasonStoreWritable    = "Writable"
+	ReasonStoreNotMeasured = "NotMeasured"
 )
 
 // StoragePhase is a coarse, human-facing summary of RegistryStorage.status.

@@ -32,6 +32,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 
+	registry_const "github.com/deckhouse/deckhouse/go_lib/registry/const"
 	dhlog "github.com/deckhouse/lib-dhctl/pkg/logger"
 	"github.com/deckhouse/lib-dhctl/pkg/retry"
 
@@ -729,6 +730,35 @@ func getRegistryConfigTasks(ctx context.Context, kubeCl *client.KubernetesClient
 				_, err := kubeCl.
 					CoreV1().Secrets("d8-system").
 					Update(ctx, manifest.(*apiv1.Secret), metav1.UpdateOptions{})
+
+				return err
+			},
+		})
+	}
+
+	if publish, data := cfg.Manifest().ImageAddressData(); publish {
+		tasks = append(tasks, actions.ManifestTask{
+			Name: `ConfigMap "` + registry_const.ImageAddressConfigMapName + `"`,
+			Manifest: func() any {
+				return manifests.RegistryImageAddressConfigMap(data)
+			},
+			CreateFunc: func(ctx context.Context, manifest any) error {
+				_, err := kubeCl.
+					CoreV1().ConfigMaps("d8-system").
+					Create(ctx, manifest.(*apiv1.ConfigMap), metav1.CreateOptions{})
+
+				// Kept as found: once the module has read it, the record is the module's, and it holds
+				// the same answer this would write.
+				if err != nil && apierrors.IsAlreadyExists(err) {
+					dhlog.FromContext(ctx).InfoContext(ctx, "Already exists. Skip!")
+					return nil
+				}
+				return err
+			},
+			UpdateFunc: func(ctx context.Context, manifest any) error {
+				_, err := kubeCl.
+					CoreV1().ConfigMaps("d8-system").
+					Update(ctx, manifest.(*apiv1.ConfigMap), metav1.UpdateOptions{})
 
 				return err
 			},

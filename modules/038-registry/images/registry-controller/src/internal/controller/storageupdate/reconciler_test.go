@@ -346,50 +346,25 @@ func publishingStorage(complete bool) *registryv1alpha1.RegistryStorage {
 	return storage
 }
 
-// TestLoadingTheCacheDefersTheUpdate covers an update that lands while the operator is still
-// pushing, which is a thing that happens: `d8 mirror push` takes the best part of an hour.
-//
-// Replacing the replica the push is writing to aborts it — and confusingly, with `UNSUPPORTED`
-// from a half-started registry rather than anything that suggests retrying. On a cluster heading
-// for air-gap that transfer is the only way images ever get in, so an update that keeps
-// interrupting it could leave the platform moving towards images that never arrived. Measured
-// before this gate existed: a push killed at image 350 of 474.
-func TestLoadingTheCacheDefersTheUpdate(t *testing.T) {
-	r, c := newReconciler(t,
-		storageSet(3, newRevision),
-		replica(0, "master-0", oldRevision, true),
-		replica(1, "master-1", oldRevision, true),
-		replica(2, "master-2", oldRevision, true),
-		lease("master-0"),
-		publishingStorage(false),
-	)
+// TestAnIncompleteCacheIsUpdatedLikeAComplete one: completeness gates dropping the upstream, which
+// the layout controller holds until the leader has the whole set, and has nothing to say about
+// replacing a replica. A gate on it here meant a cache that could not complete — a budget reached,
+// a fill failing on what the update itself fixes — could never be updated at all.
+func TestAnIncompleteCacheIsUpdatedLikeAComplete(t *testing.T) {
+	for _, complete := range []bool{false, true} {
+		r, c := newReconciler(t,
+			storageSet(3, newRevision),
+			replica(0, "master-0", oldRevision, true),
+			replica(1, "master-1", oldRevision, true),
+			replica(2, "master-2", oldRevision, true),
+			lease("master-0"),
+			publishingStorage(complete),
+		)
 
-	result := reconcile(t, r)
+		reconcile(t, r)
 
-	for _, ordinal := range []string{"-0", "-1", "-2"} {
-		assert.False(t, deleted(t, c, StorageName+ordinal),
-			"no replica may be replaced while the cache is still being loaded")
+		assert.False(t, deleted(t, c, StorageName+"-0"), "complete=%v: the leader still goes last", complete)
+		assert.True(t, deleted(t, c, StorageName+"-1") || deleted(t, c, StorageName+"-2"),
+			"complete=%v: a follower is replaced whether or not the cache holds its set", complete)
 	}
-	assert.Equal(t, blockedInterval, result.RequeueAfter,
-		"deferred rather than refused: the push finishes and the update proceeds by itself")
-}
-
-// TestACompleteCacheIsUpdatedNormally is the other side of the same gate: the deferral lasts
-// exactly as long as the loading does. Without this the air-gapped cluster could never be
-// updated at all, which is a worse failure than the one the gate prevents.
-func TestACompleteCacheIsUpdatedNormally(t *testing.T) {
-	r, c := newReconciler(t,
-		storageSet(3, newRevision),
-		replica(0, "master-0", oldRevision, true),
-		replica(1, "master-1", oldRevision, true),
-		replica(2, "master-2", oldRevision, true),
-		lease("master-0"),
-		publishingStorage(true),
-	)
-
-	reconcile(t, r)
-
-	assert.False(t, deleted(t, c, StorageName+"-0"), "the leader still goes last")
-	assert.True(t, deleted(t, c, StorageName+"-1") || deleted(t, c, StorageName+"-2"),
-		"a follower should have been replaced once the cache holds its set")
 }

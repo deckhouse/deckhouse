@@ -44,6 +44,15 @@ type wrapperConfig struct {
 
 	// AuthProxy is the token service this registry forwards token requests to.
 	AuthProxy *wrapperAuthProxy `json:"authProxy,omitempty"`
+
+	// Store bounds what the store writes: the budget from `storage.size`, and the reserve kept free
+	// on the filesystem under it. See Reserve.
+	Store wrapperStore `json:"store"`
+}
+
+type wrapperStore struct {
+	Budget  int64 `json:"budget,omitempty"`
+	Reserve int64 `json:"reserve"`
 }
 
 type wrapperUpstream struct {
@@ -101,6 +110,18 @@ func RenderWrapper(spec *registryv1alpha1.RegistryStorageSpec, opts Options) ([]
 			CA:  PKIDir + "/ca.crt",
 		},
 	}
+
+	budget, err := Budget(spec.Store.Size)
+	if err != nil {
+		return nil, err
+	}
+	if opts.StoreCapacity <= 0 {
+		// Never rendered without a reserve: the registry refuses to start on such a file, and
+		// rightly — the reserve is the one limit that holds when the budget is wrong or absent.
+		return nil, fmt.Errorf("the size of the filesystem under the store is unknown, so no " +
+			"reserve can be derived from it")
+	}
+	config.Store = wrapperStore{Budget: budget, Reserve: Reserve(opts.StoreCapacity)}
 
 	if upstream := spec.Upstream; upstream != nil {
 		scheme := upstream.Scheme

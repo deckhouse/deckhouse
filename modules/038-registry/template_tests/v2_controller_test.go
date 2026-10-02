@@ -881,7 +881,13 @@ var _ = Describe("Module :: registry :: helm template :: v2 publication endpoint
 
 			// At the write instance specifically: sending it to the serving one would mean pushing into
 			// a registry that proxies, which refuses every write.
-			Expect(service.Field("spec.ports.0.targetPort").String()).To(Equal("registry-push"))
+			Expect(service.Field("spec.ports.0.targetPort").Int()).To(BeEquivalentTo(5003))
+			// And at the leader only: no selector, so the only endpoint is the one the controller
+			// writes — see applyPushEndpoint. A selector over every replica let a push land on a
+			// follower, where the cluster never reads it.
+			Expect(service.Field("spec.selector").Exists()).To(BeFalse())
+			Expect(service.Field("spec.ports.0.name").String()).To(Equal("registry-push"),
+				"the controller's EndpointSlice names this port")
 		})
 	})
 
@@ -902,8 +908,8 @@ var _ = Describe("Module :: registry :: helm template :: v2 publication endpoint
 				To(Equal("d8-system/registry-storage-ingress-client"))
 			// An image layer has no meaningful size limit.
 			Expect(annotations["nginx.ingress.kubernetes.io/proxy-body-size"].String()).To(Equal("0"))
-			// A push is a sequence of requests that has to reach the same replica.
-			Expect(annotations).To(HaveKey("nginx.ingress.kubernetes.io/upstream-hash-by"))
+			// No choice of replica is left to the ingress: the Service has one endpoint, the leader.
+			Expect(annotations).NotTo(HaveKey("nginx.ingress.kubernetes.io/upstream-hash-by"))
 
 			// A routable service, unlike the headless one the cluster pulls through.
 			service := f.KubernetesResource("Service", "d8-system", "registry-push")
@@ -1052,7 +1058,10 @@ var _ = Describe("Module :: registry :: helm template :: v2 object ownership", f
 	It("gives the publication endpoint to the new implementation alone", func() {
 		service := f.KubernetesResource("Service", "d8-system", "registry-push")
 		Expect(service.Exists()).To(BeTrue())
-		Expect(service.Field("spec.selector.app").String()).To(Equal("registry-storage"))
+		// The new definition is the one without a selector: its endpoint is the storage leader,
+		// written by the controller. The legacy one selects its own components.
+		Expect(service.Field("metadata.labels.app").String()).To(Equal("registry-storage"))
+		Expect(service.Field("spec.selector").Exists()).To(BeFalse())
 
 		// The legacy publication Ingress is named `registry`, the new one `registry-push`.
 		// Both existing at once would publish two write endpoints for one cluster.

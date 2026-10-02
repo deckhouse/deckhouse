@@ -27,6 +27,7 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"sync/atomic"
 	"testing"
 
 	"github.com/google/go-containerregistry/pkg/name"
@@ -844,4 +845,56 @@ func TestACopyRepairsAnImageWhoseManifestArrivedAlone(t *testing.T) {
 		require.NoError(t, err, "layer %s is named by the manifest but absent from the destination", digest)
 		require.NoError(t, content.Close())
 	}
+}
+
+// TestAFullDestinationStopsTheFill: a store refusing for lack of room refuses every later copy the
+// same way, so the pass ends at the first one instead of asking the source for the rest.
+func TestAFullDestinationStopsTheFill(t *testing.T) {
+	var manifestReads atomic.Int32
+	source := httptest.NewServer(http.HandlerFunc(func() http.HandlerFunc {
+		inner := registry.New(registry.Logger(log.New(io.Discard, "", 0)))
+		return func(writer http.ResponseWriter, request *http.Request) {
+			if request.Method == http.MethodGet && strings.Contains(request.URL.Path, "/manifests/") {
+				manifestReads.Add(1)
+			}
+			inner.ServeHTTP(writer, request)
+		}
+	}()))
+	t.Cleanup(source.Close)
+
+	full := httptest.NewServer(http.HandlerFunc(func() http.HandlerFunc {
+		inner := registry.New(registry.Logger(log.New(io.Discard, "", 0)))
+		return func(writer http.ResponseWriter, request *http.Request) {
+			if request.Method == http.MethodPost && strings.Contains(request.URL.Path, "/blobs/uploads/") {
+				writer.Header().Set("Content-Type", "application/json")
+				writer.WriteHeader(http.StatusInsufficientStorage)
+				_, _ = io.WriteString(writer, `{"errors":[{"code":"UNKNOWN","message":"the store is full"}]}`)
+				return
+			}
+			inner.ServeHTTP(writer, request)
+		}
+	}()))
+	t.Cleanup(full.Close)
+
+	sourceURL, err := url.Parse(source.URL)
+	require.NoError(t, err)
+	fullURL, err := url.Parse(full.URL)
+	require.NoError(t, err)
+	from := Registry{Address: sourceURL.Host, Insecure: true, Repository: "deckhouse/ee"}
+	into := Registry{Address: fullURL.Host, Insecure: true, Repository: "system/deckhouse"}
+
+	for i := range 5 {
+		pushImage(t, from, fmt.Sprintf("deckhouse/ee/module-%d:v1", i))
+	}
+	manifestReads.Store(0)
+
+	copier := &Copier{Source: from, Destination: into, Discover: Catalogue{}}
+	report, err := copier.Run(context.Background())
+
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "the destination store is full")
+	assert.Contains(t, err.Error(), "the store is full", "the registry's own reason is kept")
+	assert.Len(t, report.Failed, 1)
+	assert.EqualValues(t, 0, report.Written)
+	assert.EqualValues(t, 1, manifestReads.Load(), "the source was asked for more than the one copy")
 }

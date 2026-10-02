@@ -20,6 +20,17 @@ metadata:
     werf.io/track-termination-mode: WaitUntilResourceReady
   {{- include "helm_lib_module_labels" (list . (dict "app" "node-controller")) | nindent 2 }}
 rules:
+# The registry module's resolved configuration: the upstream a NodeConfig names and the OS image
+# root hash is resolved from. On a cluster whose pull path that module manages, deckhouse-registry
+# names the in-cluster registry, which only the node agent answers for.
+- apiGroups:
+  - deckhouse.io
+  resources:
+  - registryconfigs
+  resourceNames:
+  - registry
+  verbs:
+  - get
 # NodeGroups - full access for status updates; create is only used to ensure the master NodeGroup
 # exists (master-node-group controller, taken over from the create_master_node_group hook)
 - apiGroups:

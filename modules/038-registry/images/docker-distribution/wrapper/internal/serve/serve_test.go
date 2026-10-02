@@ -47,12 +47,21 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/deckhouse/registry-distribution/internal/authproxy"
+	"github.com/deckhouse/registry-distribution/internal/bound"
 	"github.com/deckhouse/registry-distribution/internal/config"
 	"github.com/deckhouse/registry-distribution/internal/upstream"
 )
 
 func quiet() *slog.Logger {
 	return slog.New(slog.NewTextHandler(io.Discard, nil))
+}
+
+// unbounded is a guard over root that refuses nothing a test would write.
+func unbounded(t *testing.T, root string) *bound.Guard {
+	t.Helper()
+	guard := bound.New(root, 0, 1)
+	require.NoError(t, guard.Measure())
+	return guard
 }
 
 func storeConfiguration(root string) *configuration.Configuration {
@@ -278,7 +287,7 @@ func TestAPushLandsInTheStoreTheCacheServesFrom(t *testing.T) {
 	}
 
 	// The write half's configuration, derived by the code that runs in production.
-	writing := writeConfiguration(serving, wrapper)
+	writing := writeConfiguration(serving, wrapper, unbounded(t, root))
 	assert.Empty(t, writing.Proxy.RemoteURL, "a push must be answered by the store, not by a cache")
 	assert.Equal(t, root, writing.Storage.Parameters()["rootdirectory"],
 		"both halves are one store, or a fill would not be what the cluster pulls")
@@ -333,7 +342,7 @@ func TestWriteConfigurationCarriesTheStoreAndNotTheCache(t *testing.T) {
 	writing := writeConfiguration(serving, &config.Wrapper{
 		Scope:         "system/deckhouse",
 		WriteEndpoint: config.WriteEndpoint{Address: "0.0.0.0:5003"},
-	})
+	}, unbounded(t, t.TempDir()))
 
 	assert.Equal(t, "0.0.0.0:5003", writing.HTTP.Addr)
 	assert.Equal(t, serving.Auth, writing.Auth, "one token service for both halves")
@@ -368,7 +377,7 @@ func TestTheWriteEndpointRefusesToShareThePort(t *testing.T) {
 	_, err := writeEndpoint(context.Background(), settings, &config.Wrapper{
 		Scope:         "system/deckhouse",
 		WriteEndpoint: config.WriteEndpoint{Address: "0.0.0.0:5001"},
-	}, quiet())
+	}, unbounded(t, t.TempDir()), quiet())
 
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "two listeners in one process")

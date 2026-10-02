@@ -1747,8 +1747,9 @@ func bootstrapAdditionalNodesForCloudCluster(
 	defer span.End()
 
 	// Machines this node builds cannot boot without registry-packages-proxy: rpp-get comes from
-	// a master's bootstrap port, that port is published by the module alone, and cloud-init
-	// gives up on it after 150 seconds. So the module is a precondition for building them.
+	// a master's bootstrap port, and that port is published by the module alone. A joining node
+	// keeps asking until it answers, but a module that never comes up leaves it asking forever,
+	// so the module is a precondition for building them.
 	//
 	// On the ordinary path the install phase has already waited for Deckhouse, and a critical
 	// module's pods are up by the time that wait returns - this costs nothing there. It is here

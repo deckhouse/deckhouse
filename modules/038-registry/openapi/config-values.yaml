@@ -205,7 +205,13 @@ properties:
         type: string
         pattern: '^[0-9]+(\.[0-9]+)?(E|P|T|G|M|k|Ei|Pi|Ti|Gi|Mi|Ki)?$'
         description: |
-          The size of the persistent volume backing the cache.
+          How much the cache may hold on each master: the budget of its store, which the registry enforces on every write.
+
+          Once the store holds this much, it refuses new writes — a fill, a replication, a `d8 mirror push` — and keeps serving everything it holds. It never deletes anything to make room; that is the garbage collection's job.
+
+          Independently of this value, the store never takes the space kept free for the node: the kubelet's soft eviction threshold (10% of the filesystem, at most 40 GiB) plus a margin (10%, at most 20 GiB). So an unset or too large value cannot fill a master's disk — but it leaves the reserve as the only limit, which the `D8RegistryStoreUnbounded` alert reports.
+
+          Size it at two releases of the image set at least, and so that it fits on the disk under the store above the reserve.
         x-examples:
           - 50Gi
       source:

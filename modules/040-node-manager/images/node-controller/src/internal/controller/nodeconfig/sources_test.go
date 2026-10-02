@@ -18,6 +18,7 @@ package nodeconfig
 
 import (
 	"context"
+	"encoding/base64"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -33,6 +34,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 	sigsyaml "sigs.k8s.io/yaml"
 
+	internalv1alpha1 "github.com/deckhouse/node-controller/api/internal.deckhouse.io/v1alpha1"
 	"github.com/deckhouse/node-controller/internal/network"
 )
 
@@ -670,5 +672,72 @@ func TestReadRegistryAgentMode(t *testing.T) {
 		s := &sourceReader{Reader: secret(map[string][]byte{"config": []byte("\tnot: yaml")})}
 		_, err := s.readRegistryAgentMode(context.Background())
 		require.Error(t, err)
+	})
+}
+
+// TestTheRegistryComesFromTheModulesConfiguration: on a cluster whose pull path the registry module
+// manages, deckhouse-registry names the in-cluster registry with no account — on a node that is the
+// agent. The resolver here dials from the pod network and a node is told its registry before an
+// agent of its own runs, so the upstream from the module's configuration is the answer, and the
+// secret is what is left without one.
+func TestTheRegistryComesFromTheModulesConfiguration(t *testing.T) {
+	scheme := runtime.NewScheme()
+	require.NoError(t, corev1.AddToScheme(scheme))
+
+	inCluster := &corev1.Secret{
+		ObjectMeta: metav1.ObjectMeta{Namespace: "d8-system", Name: "deckhouse-registry"},
+		Data: map[string][]byte{
+			"address":           []byte("registry.d8-system.svc:5001"),
+			"path":              []byte("/system/deckhouse"),
+			"scheme":            []byte("https"),
+			".dockerconfigjson": []byte(`{"auths":{"registry.d8-system.svc:5001":{}}}`),
+		},
+	}
+	registryConfig := func(upstream map[string]any) *unstructured.Unstructured {
+		u := &unstructured.Unstructured{Object: map[string]any{
+			"apiVersion": "deckhouse.io/v1alpha1",
+			"kind":       "RegistryConfig",
+			"metadata":   map[string]any{"name": "registry"},
+			"spec":       map[string]any{"mode": "Managed"},
+		}}
+		if upstream != nil {
+			require.NoError(t, unstructured.SetNestedMap(u.Object, upstream, "spec", "primary", "upstream"))
+		}
+		return u
+	}
+
+	t.Run("the upstream, with its account", func(t *testing.T) {
+		cl := fake.NewClientBuilder().WithScheme(scheme).WithObjects(inCluster, registryConfig(map[string]any{
+			"scheme": "HTTPS", "host": "dev-registry.deckhouse.io", "path": "/sys/deckhouse-oss", "ca": "CA",
+			"auth": map[string]any{"username": "license-token", "password": "key"},
+		})).Build()
+
+		registry, imagesRepo, err := (&sourceReader{Reader: cl}).readRegistry(context.Background())
+		require.NoError(t, err)
+		require.Equal(t, "dev-registry.deckhouse.io/sys/deckhouse-oss", imagesRepo)
+		require.Equal(t, &internalv1alpha1.Registry{
+			Address: "dev-registry.deckhouse.io",
+			Path:    "/sys/deckhouse-oss",
+			Scheme:  "HTTPS",
+			CA:      "CA",
+			Auth:    base64.StdEncoding.EncodeToString([]byte("license-token:key")),
+		}, registry)
+	})
+
+	// Air-gapped: no upstream at all, and the in-cluster registry is the only one there is.
+	t.Run("no upstream leaves the secret", func(t *testing.T) {
+		cl := fake.NewClientBuilder().WithScheme(scheme).WithObjects(inCluster, registryConfig(nil)).Build()
+
+		_, imagesRepo, err := (&sourceReader{Reader: cl}).readRegistry(context.Background())
+		require.NoError(t, err)
+		require.Equal(t, "registry.d8-system.svc:5001/system/deckhouse", imagesRepo)
+	})
+
+	t.Run("no configuration at all leaves the secret", func(t *testing.T) {
+		cl := fake.NewClientBuilder().WithScheme(scheme).WithObjects(inCluster).Build()
+
+		_, imagesRepo, err := (&sourceReader{Reader: cl}).readRegistry(context.Background())
+		require.NoError(t, err)
+		require.Equal(t, "registry.d8-system.svc:5001/system/deckhouse", imagesRepo)
 	})
 }

@@ -172,7 +172,7 @@ func (md *ModuleDownloader) GetReleaseChannelChecksum(ctx context.Context, modul
 	span.SetAttributes(attribute.String("module", moduleName))
 	span.SetAttributes(attribute.String("releaseChannel", releaseChannel))
 
-	regCli, err := md.dc.GetRegistryClient(path.Join(md.ms.Spec.Registry.Repo, moduleName, "release"), md.registryOptions...)
+	regCli, err := md.dc.GetRegistryClient(md.repository(moduleName, "release"), md.registryOptions...)
 	if err != nil {
 		return "", fmt.Errorf("get registry client: %w", err)
 	}

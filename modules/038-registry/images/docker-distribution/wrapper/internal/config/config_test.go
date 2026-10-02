@@ -49,10 +49,16 @@ writeEndpoint:
 authProxy:
   url: https://127.0.0.1:5051/auth
   ca: /pki/ca.crt
+store:
+  budget: 107374182400
+  reserve: 10737418240
 `)
 
 	wrapper, err := Load(path)
 	require.NoError(t, err)
+
+	assert.Equal(t, int64(100<<30), wrapper.Store.Budget)
+	assert.Equal(t, int64(10<<30), wrapper.Store.Reserve)
 
 	assert.Equal(t, "system/deckhouse", wrapper.Scope)
 	require.NotNil(t, wrapper.Upstream)
@@ -70,10 +76,12 @@ authProxy:
 // TestAnAirGappedClusterHasNoUpstreamAtAll: absent, not empty. The store is then authoritative, and
 // the difference is what the whole air-gap transition turns on.
 func TestAnAirGappedClusterHasNoUpstreamAtAll(t *testing.T) {
-	wrapper, err := Load(write(t, "scope: system/deckhouse\nwriteEndpoint:\n  address: 0.0.0.0:5003\n"))
+	wrapper, err := Load(write(t, "scope: system/deckhouse\nwriteEndpoint:\n  address: 0.0.0.0:5003\n"+
+		"store:\n  reserve: 1073741824\n"))
 	require.NoError(t, err)
 
 	assert.Nil(t, wrapper.Upstream)
+	assert.Zero(t, wrapper.Store.Budget, "no storage.size: no budget, only the reserve")
 	assert.Empty(t, wrapper.RemotePrefix(), "there is nothing to map towards")
 }
 
@@ -84,6 +92,8 @@ func TestAnUpstreamServingTheSameLayoutNeedsNoPath(t *testing.T) {
 scope: system/deckhouse
 upstream:
   address: mirror.example.com
+store:
+  reserve: 1073741824
 `))
 	require.NoError(t, err)
 	assert.Equal(t, "/v2", wrapper.RemotePrefix())
@@ -123,6 +133,16 @@ func TestLoadRefusesWhatCannotWork(t *testing.T) {
 			// asked for.
 			content:  "scope: system/deckhouse\nupstrem:\n  address: typo\n",
 			contains: "field upstrem not found",
+		},
+		"no reserve": {
+			// The one limit that holds whatever the budget says; a file without it is a file
+			// written by a syncer that does not know about it, and the store would fill the node.
+			content:  "scope: system/deckhouse\nstore:\n  budget: 1073741824\n",
+			contains: "store.reserve is required",
+		},
+		"a negative budget": {
+			content:  "scope: system/deckhouse\nstore:\n  budget: -1\n  reserve: 1\n",
+			contains: "is negative",
 		},
 	}
 

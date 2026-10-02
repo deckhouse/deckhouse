@@ -28,6 +28,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
 
+	registry_const "github.com/deckhouse/deckhouse/go_lib/registry/const"
 	dhlog "github.com/deckhouse/lib-dhctl/pkg/logger"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config/digests"
@@ -614,6 +615,32 @@ func RegistryBashibleConfigSecret(data map[string][]byte) *apiv1.Secret {
 		Data: data,
 	}
 	return ret
+}
+
+// RegistryImageAddressConfigMap is the registry module's record that image references name the
+// in-cluster registry, written by the installer where that is true from the start.
+//
+// Owned by the module's release rather than by the installer: the release is what withdraws it once
+// the module stops managing the pull path, and the module keeps it from the moment it first reads it.
+// No `keep` policy, unlike the bashible configuration, for exactly that reason.
+func RegistryImageAddressConfigMap(data map[string]string) *apiv1.ConfigMap {
+	return &apiv1.ConfigMap{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      registry_const.ImageAddressConfigMapName,
+			Namespace: "d8-system",
+			Labels: map[string]string{
+				"heritage":                     "deckhouse",
+				"module":                       "registry",
+				"app":                          "registry",
+				"app.kubernetes.io/managed-by": "Helm",
+			},
+			Annotations: map[string]string{
+				"meta.helm.sh/release-name":      "registry",
+				"meta.helm.sh/release-namespace": "d8-system",
+			},
+		},
+		Data: data,
+	}
 }
 
 func generateSecret(name, namespace string, data map[string][]byte, labels map[string]string) *apiv1.Secret {

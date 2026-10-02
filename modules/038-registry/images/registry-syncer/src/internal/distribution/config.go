@@ -128,6 +128,11 @@ type Options struct {
 	// — and a miss simply becomes a pull from the upstream, which the agent already falls
 	// back to.
 	ReadOnly bool
+
+	// StoreCapacity is the size of the filesystem under DataDir, in bytes: what the reserve the
+	// registry keeps free is derived from. Measured once when the syncer starts, since it changes
+	// only with the disk.
+	StoreCapacity int64
 }
 
 // WriteEndpointPort is the second address of the same registry: the one that accepts a push.
@@ -142,7 +147,7 @@ type Options struct {
 // ports on the NODE, and two listeners in one process cannot share one. It used to be a second
 // container over the same data directory, with its own rendered configuration and a store-wide flag
 // keeping each instance from deleting the other's data at startup.
-const WriteEndpointPort = 5003
+const WriteEndpointPort = constant.WritePort
 
 // debugAddress is the metrics and pprof listener, on loopback. Only the serving half has one: the
 // write endpoint is the same process, and its metrics namespace is the same namespace.

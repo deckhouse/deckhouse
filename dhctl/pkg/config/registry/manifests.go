@@ -117,6 +117,27 @@ func (b *ManifestBuilder) RegistryBashibleConfigSecretData(pkiProvider PKIProvid
 	return true, SecretData{"config": cfgYaml}, nil
 }
 
+// ImageAddressData is what the installer publishes as the registry module's answer to "which
+// address do image references name", or nothing when the module has to reach that answer itself.
+//
+// Published only where the first master comes up with the node agent on it. There the answer is
+// already given — that master pulls through the agent from its first image, and every node after it
+// is installed the same way — while the module can give it only once every node's agent reports the
+// layout it applied. Left to the module, the question stays open for as long as some node is still
+// joining, and in the meantime image references fall back to the upstream: on a cluster installed
+// this way that re-rendered every workload onto the upstream and back while the second master was
+// joining, and the roll of registry-packages-proxy it caused closed the only port the third master
+// could fetch its first package from.
+//
+// Everywhere else — a cluster whose nodes pull straight from the upstream — the module's own
+// question is the right one, and it is asked from nothing.
+func (b *ManifestBuilder) ImageAddressData() (bool, map[string]string) {
+	if b.legacyMode || !b.modeModel.AgentOwnsRuntime {
+		return false, nil
+	}
+	return true, map[string]string{constant.ImageAddressConfigMapKey: constant.HostWithPath}
+}
+
 // KubeadmContext builds kubeadm context struct.
 // Returns:
 //   - KubeadmContext: context structure

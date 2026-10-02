@@ -101,3 +101,40 @@ func TestAnUnknownRepositoryIsAnError(t *testing.T) {
 	_, err := w.Get("registry.example.com/whatever")
 	require.Error(t, err)
 }
+
+// TestTheImageAddressOverridesTheSecret: once the cluster pulls through the agent, the secret says
+// nothing about where this proxy fetches from.
+//
+// The secret is rendered by another module out of values the registry module does not own, and while
+// a second master was joining it named the upstream with the upstream's account — every package
+// fetched in that window went to the upstream past the agent on this node.
+func TestTheImageAddressOverridesTheSecret(t *testing.T) {
+	w := &Watcher{registryClientConfigs: map[string]*registry.ClientConfig{}}
+
+	w.fromRegistrySecret = &registry.ClientConfig{
+		Repository: "dev-registry.deckhouse.io/sys/deckhouse-oss",
+		Scheme:     "https",
+		Auth:       "dXBzdHJlYW06c2VjcmV0",
+	}
+	w.applyClusterRegistry()
+	require.Equal(t, "dev-registry.deckhouse.io/sys/deckhouse-oss",
+		w.registryClientConfigs[registry.DefaultRepository].Repository)
+
+	w.fromImageAddress = imageAddressRegistry("registry.d8-system.svc:5001/system/deckhouse")
+	w.applyClusterRegistry()
+
+	got := w.registryClientConfigs[registry.DefaultRepository]
+	require.Equal(t, "registry.d8-system.svc:5001/system/deckhouse", got.Repository)
+	assert.Empty(t, got.Auth, "nothing authenticates to the agent, and the upstream's account stays out of here")
+	assert.True(t, servedByTheAgent(got.Repository), "and Get turns it into the agent")
+	assert.NotContains(t, w.registryClientConfigs, "dev-registry.deckhouse.io/sys/deckhouse-oss",
+		"the upstream is withdrawn, not left behind as a key nothing should serve")
+
+	// The record withdrawn — the module no longer manages the pull path — and the secret is the answer again.
+	w.fromImageAddress = nil
+	w.applyClusterRegistry()
+	require.Equal(t, "dev-registry.deckhouse.io/sys/deckhouse-oss",
+		w.registryClientConfigs[registry.DefaultRepository].Repository)
+
+	assert.Nil(t, imageAddressRegistry(""), "an empty record is no record")
+}

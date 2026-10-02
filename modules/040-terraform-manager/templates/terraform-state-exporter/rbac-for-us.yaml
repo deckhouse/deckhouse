@@ -82,6 +82,13 @@ rules:
 - apiGroups: ["deckhouse.io"]
   resources: ["nodegroups"]
   verbs: ["get", "list", "watch"]
+# In-cluster dhctl takes the registry to pull from out of the registry module's configuration:
+# on a cluster whose pull path that module manages, deckhouse-registry names the in-cluster registry,
+# which from the pod network is the node agent's address and nothing else.
+- apiGroups: ["deckhouse.io"]
+  resources: ["registryconfigs"]
+  resourceNames: ["registry"]
+  verbs: ["get"]
 # In-cluster dhctl parses the provider ModuleConfig (mc-flow, get-by-name),
 # lists provider InstanceClasses for CloudProviderVars, and reads the ModuleConfigs that carry
 # cluster settings (dhctl/pkg/config/cluster_settings.go).

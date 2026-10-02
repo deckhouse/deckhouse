@@ -91,7 +91,8 @@ type StorageStore struct {
 	// +optional
 	Path string `json:"path,omitempty"`
 
-	// Size of the persistent volume, taken from ModuleConfig.
+	// Size is the budget of each replica's store, taken from ModuleConfig: how much its blobs
+	// and uploads in progress may take. Unset means no budget; the reserve applies either way.
 	// +optional
 	Size string `json:"size,omitempty"`
 }
@@ -213,6 +214,18 @@ type StorageReplicaStatus struct {
 	// +optional
 	Full bool `json:"full,omitempty"`
 
+	// VerifiedSet is a fingerprint of the set this replica was last found full against: the
+	// platform's versions and the modules the cluster keeps, each with its version and source.
+	//
+	// Full is only as good as the set it was measured against, and the set moves — a module is
+	// installed, the platform is updated — while a full leader is not asked to fill again. Every
+	// replica reports it with its Full. The leader compares its own with the set the cluster needs
+	// now and, when they differ, takes Full back and verifies before anything may rely on it; and a
+	// Full for another set counts for nothing when the replicas decide who may lead. Empty when Full
+	// is not set.
+	// +optional
+	VerifiedSet string `json:"verifiedSet,omitempty"`
+
 	// VerifiedDigests is how many digests OF THE SET were confirmed present.
 	//
 	// Of the set, and only of it: the set is what the cluster's releases and kept modules declare —
@@ -285,6 +298,55 @@ type StorageReplicaStatus struct {
 	// serves every image it holds, so the two say different things about how worried to be.
 	// +optional
 	CollectionError string `json:"collectionError,omitempty"`
+
+	// Store is how much of its node's disk this replica's store takes, and whether it still
+	// accepts writes. Absent until the replica has measured it.
+	// +optional
+	Store *StoreUsage `json:"store,omitempty"`
+}
+
+// StoreRefusal names the limit a store refuses writes on.
+// +kubebuilder:validation:Enum=BudgetExhausted;ReserveExhausted
+type StoreRefusal string
+
+const (
+	// StoreBudgetExhausted: the store holds as much as `storage.size` allows.
+	StoreBudgetExhausted StoreRefusal = "BudgetExhausted"
+
+	// StoreReserveExhausted: the filesystem under the store is down to the space kept free for
+	// the node — the kubelet's eviction threshold plus a margin.
+	StoreReserveExhausted StoreRefusal = "ReserveExhausted"
+)
+
+// StoreUsage is one replica's store against its two limits.
+//
+// The registry itself enforces both, on every write; this is the syncer's account of the same
+// figures, measured beside it, for the status and the alerts. Sizes are rounded to 16 MiB — used
+// up, free down — so that a filesystem shared with the rest of the node does not rewrite the status
+// on every pass.
+type StoreUsage struct {
+	// UsedBytes is what the store's blobs and uploads in progress take.
+	UsedBytes int64 `json:"usedBytes"`
+
+	// BudgetBytes is `storage.size`. Absent when none is set, and then only the reserve applies.
+	// +optional
+	BudgetBytes int64 `json:"budgetBytes,omitempty"`
+
+	// ReserveBytes is how much of the filesystem the store leaves free for the node.
+	ReserveBytes int64 `json:"reserveBytes"`
+
+	// FilesystemFreeBytes and FilesystemCapacityBytes describe the filesystem the store is on,
+	// which on a node without a dedicated disk is the one the kubelet and containerd use too.
+	FilesystemFreeBytes     int64 `json:"filesystemFreeBytes"`
+	FilesystemCapacityBytes int64 `json:"filesystemCapacityBytes"`
+
+	// Writable is false while the store refuses new writes. Reads are never refused: a full
+	// store serves everything it holds, and a pull it cannot keep is streamed from the upstream.
+	Writable bool `json:"writable"`
+
+	// Reason is the limit writes are refused on, when they are.
+	// +optional
+	Reason StoreRefusal `json:"reason,omitempty"`
 }
 
 // LeaderReplica returns the leader's status, or nil when no leader is reported.

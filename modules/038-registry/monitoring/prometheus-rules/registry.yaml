@@ -37,7 +37,7 @@
         What was wrong is in the resource:
 
         ```
-        kubectl get registryconfig registry -o jsonpath='{.status.conditions}' | jq
+        d8 k get registryconfig registry -o jsonpath='{.status.conditions}' | jq
         ```
 
   - alert: D8RegistryNodeNotConverged
@@ -64,9 +64,9 @@
         Which nodes, and what their agents say:
 
         ```
-        kubectl get registrynodes -o custom-columns=\
+        d8 k get registrynodes -o custom-columns=\
         NODE:.metadata.name,GEN:.metadata.generation,APPLIED:.status.observedGeneration,OK:.status.reconciled
-        kubectl -n kube-system logs -l component=registry-agent --tail=50
+        d8 k -n kube-system logs -l component=registry-agent --tail=50
         ```
 
         Twenty minutes, because the agent re-reads its layout on a timer and a node that is
@@ -98,7 +98,7 @@
         has not seen it since is.
 
         ```
-        kubectl get registrynodes -o json | jq -r '
+        d8 k get registrynodes -o json | jq -r '
           .items[] | select(.status.conditions[]? | select(.type=="Reconciled" and .reason=="AppliedFromCache"))
           | .metadata.name'
         ```
@@ -128,7 +128,7 @@
         Two hours, because filling a cache over a slow link legitimately takes that long.
 
         ```
-        kubectl get registrystorage registry -o jsonpath='{.status.replicas}' | jq
+        d8 k get registrystorage registry -o jsonpath='{.status.replicas}' | jq
         ```
 
   - alert: D8RegistryAirGapTransitionHeld
@@ -155,8 +155,8 @@
         nothing about it resolves on its own if the cache has stopped filling.
 
         ```
-        kubectl get registrystorage registry -o jsonpath='{.status}' | jq '{phase,fill,safeToDropUpstream,leader}'
-        kubectl get registryconfig registry -o jsonpath='{.status.effectiveUpstream}' | jq
+        d8 k get registrystorage registry -o jsonpath='{.status}' | jq '{phase,fill,safeToDropUpstream,leader}'
+        d8 k get registryconfig registry -o jsonpath='{.status.effectiveUpstream}' | jq
         ```
 
   # `and on()` and not a bare `and`: the left side keeps its labels so the description can
@@ -196,7 +196,7 @@
         Current outcome: `{{ $labels.outcome }}`
 
         ```
-        kubectl get registryconfig registry -o jsonpath='{.status.conditions}' | jq
+        d8 k get registryconfig registry -o jsonpath='{.status.conditions}' | jq
         ```
 
   - alert: D8RegistryUpstreamRejected
@@ -220,7 +220,7 @@
         Reason: `{{ $labels.reason }}`
 
         ```
-        kubectl get registryupstreams -o custom-columns=\
+        d8 k get registryupstreams -o custom-columns=\
         NAME:.metadata.name,MATCH:.spec.match,ACCEPTED:.status.conditions[0].status,REASON:.status.conditions[0].reason
         ```
 
@@ -303,9 +303,9 @@
         Where to look:
 
         ```
-        kubectl get registrystorage registry -o jsonpath='{.status.replicas}' | jq \
+        d8 k get registrystorage registry -o jsonpath='{.status.replicas}' | jq \
           'map({node, collectedAt, collectionError})'
-        kubectl get registrystorage registry -o jsonpath='{.spec.garbageCollection}' | jq
+        d8 k get registrystorage registry -o jsonpath='{.spec.garbageCollection}' | jq
         ```
 
         The likely reasons, in the order they are worth checking:
@@ -325,9 +325,124 @@
         that is scheduled and failing:
 
         ```
-        kubectl -n d8-system logs registry-storage-0 -c syncer | grep -i "garbage collection"
+        d8 k -n d8-system logs registry-storage-0 -c syncer | grep -i "garbage collection"
         ```
 
         Collecting puts one replica read-only while it runs. That is not an outage — it keeps
         serving every image it holds — but it does mean the schedule belongs at a quiet hour,
         which is where it defaults to.
+
+  # The store's two limits. The registry enforces both itself, synchronously, on every write —
+  # these alerts are not what keeps the node alive, and could not be: between "fine" and "full"
+  # there are minutes. They say that it has happened, and what to do about it.
+  #
+  # Two minutes, not zero, because the syncer decides writability from one measurement per pass
+  # and a store at the very edge can read either way for a pass. The refusal itself is not
+  # transient: once here, it stays until somebody acts or a collection runs.
+  - alert: D8RegistryStoreWritesRefused
+    expr: |
+      (max by (node, reason) (d8_registry_store_writable) == 0)
+      and on() (max(d8_registry_managed) > 0)
+    for: 2m
+    labels:
+      severity_level: "4"
+      tier: cluster
+      d8_module: registry
+    annotations:
+      plk_protocol_version: "1"
+      plk_markup_format: "markdown"
+      plk_create_group_if_not_exists__d8_registry_alerts: "D8RegistryAlerts,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
+      plk_grouped_by__d8_registry_alerts: "D8RegistryAlerts,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
+      summary: The registry cache on node {{ $labels.node }} refuses writes ({{ $labels.reason }}).
+      description: |-
+        The in-cluster registry cache on node `{{ $labels.node }}` has stopped accepting writes,
+        because `{{ $labels.reason }}`. The node is safe — this is the limit doing its job — and
+        the cache keeps serving every image it holds. What stops is everything that ADDS to it:
+        filling the next release, replicating from the leader, `d8 mirror push`. Images the store
+        cannot keep are streamed from the upstream while there is one; in an air-gapped cluster a
+        release that is not in the cache cannot be installed.
+
+        What the replica measured:
+
+        ```
+        d8 k get registrystorage registry -o json | jq '.status.replicas[] | {node, store}'
+        ```
+
+        `BudgetExhausted` — the store holds as much as `storage.size` allows. Either raise
+        `storage.size` in the `registry` ModuleConfig, if the disk has room for it, or let the
+        garbage collection reclaim what no deployed release needs any more: it runs on
+        `storage.garbageCollection.schedule` and keeps the deployed release, the previous one and
+        everything newer.
+
+        `ReserveExhausted` — the filesystem under the store is down to the space kept free for
+        the node: the kubelet's eviction threshold plus a margin. `storage.size` is not what
+        stops it, the disk is. Free space on the node, or — which is what fixes it for good —
+        give the store a disk of its own, sized for `storage.size`.
+
+  # Nearly, and not yet: a store already refusing writes is D8RegistryStoreWritesRefused's to report,
+  # and firing both for one full store — which is what a live cluster did — is two alerts for one
+  # fix.
+  - alert: D8RegistryStoreNearlyFull
+    expr: |
+      (
+        max by (node) (d8_registry_store_used_bytes)
+          / max by (node) (d8_registry_store_budget_bytes > 0)
+        > 0.85
+      )
+      unless on(node) (max by (node) (d8_registry_store_writable) == 0)
+      and on() (max(d8_registry_managed) > 0)
+    for: 5m
+    labels:
+      severity_level: "6"
+      tier: cluster
+      d8_module: registry
+    annotations:
+      plk_protocol_version: "1"
+      plk_markup_format: "markdown"
+      plk_create_group_if_not_exists__d8_registry_alerts: "D8RegistryAlerts,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
+      plk_grouped_by__d8_registry_alerts: "D8RegistryAlerts,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
+      summary: The registry cache on node {{ $labels.node }} holds over 85% of storage.size.
+      description: |-
+        The in-cluster registry cache on node `{{ $labels.node }}` holds more than 85% of its
+        budget, `storage.size` in the `registry` ModuleConfig. Nothing is refused yet. The next
+        release may not fit: once the budget is reached, the cache stops accepting writes and
+        `D8RegistryStoreWritesRefused` follows.
+
+        ```
+        d8 k get registrystorage registry -o json | jq '.status.replicas[] | {node, store}'
+        ```
+
+        Raise `storage.size` if the disk under the store has room — `filesystemFreeBytes` above
+        `reserveBytes` is what is left — or check that the garbage collection runs: it is the only
+        thing that reclaims space, and `D8RegistryStorageNotReclaimed` says when it has not.
+
+  - alert: D8RegistryStoreUnbounded
+    expr: |
+      (max by (node) (d8_registry_store_budget_bytes) == 0)
+      and on() (max(d8_registry_managed) > 0)
+    for: 1h
+    labels:
+      severity_level: "7"
+      tier: cluster
+      d8_module: registry
+    annotations:
+      plk_protocol_version: "1"
+      plk_markup_format: "markdown"
+      plk_create_group_if_not_exists__d8_registry_alerts: "D8RegistryAlerts,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
+      plk_grouped_by__d8_registry_alerts: "D8RegistryAlerts,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
+      summary: The registry cache has no storage.size, so only the node's disk limits it.
+      description: |-
+        The in-cluster registry cache is on, and `storage.size` is not set in the `registry`
+        ModuleConfig. The node is still protected: the store never takes the space kept free for
+        the kubelet. But that is the only limit, so the store may grow until it leaves the node
+        exactly that and no more — and on a master that shares its disk with the store, everything
+        else on it then works with the minimum.
+
+        Set `storage.size` to what the store may take on each master: two releases of the image
+        set is the usual floor, and it has to fit on the disk under the store, above the reserve:
+
+        ```
+        d8 k get registrystorage registry -o json | jq '.status.replicas[] | {node, store}'
+        ```
+
+        An hour, so that turning the cache on and setting the size in two steps does not raise it.

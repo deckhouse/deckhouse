@@ -44,23 +44,20 @@ import (
 // the fast local path, so it is used directly. Falls back to the mirror when no
 // upstream is configured (older clusters that expose the reachable registry in
 // deckhouse-registry directly).
+//
+// Except on a cluster whose pull path the registry module manages: there `deckhouse-registry` names the
+// in-cluster registry with no account and no authority, because on a node that address is the agent
+// and the agent needs neither. This process is not on a node — the auto-converger runs in the pod
+// network — so the upstream from the module's own configuration comes first here too, and the mirror
+// is what is left when there is none.
 func GetRegistryDataPreferUpstream(ctx context.Context, kubeCl *client.KubernetesClient, inCluster bool) (*image.RegistryConfig, string, error) {
 	if inCluster {
+		if conf, dockerCfg, found, err := registryDataFromConfigResource(ctx, kubeCl); err != nil {
+			return nil, "", err
+		} else if found {
+			return conf, dockerCfg, nil
+		}
 		return GetRegistryData(ctx, kubeCl)
-	}
-
-	// The cluster's own configuration object, asked first, because on a cluster running the
-	// controller-based implementation it is the only source that is kept current.
-	//
-	// `registry-config` below is rendered from the PREVIOUS implementation's settings in
-	// `mc/deckhouse`, and on a migrated cluster nobody writes those any more — so it keeps describing
-	// whatever registry the cluster was migrated from. Stale registry data, preferred by the tooling,
-	// is worse than no data at all: absence falls back and works, staleness dials the wrong registry
-	// with the wrong account.
-	if conf, dockerCfg, found, err := registryDataFromConfigResource(ctx, kubeCl); err != nil {
-		return nil, "", err
-	} else if found {
-		return conf, dockerCfg, nil
 	}
 
 	conf, dockerCfg, found, err := getUpstreamRegistryData(ctx, kubeCl)
@@ -130,6 +127,7 @@ func registryDataFromConfigResource(
 	err := retry.NewLoop("Get registry configuration from cluster", 5, 1*time.Second).
 		BreakIf(apierrors.IsNotFound).
 		BreakIf(meta.IsNoMatchError).
+		BreakIf(apierrors.IsForbidden).
 		RunContext(ctx, func() error {
 			got, err := kubeCl.Dynamic().Resource(gvr).Get(ctx, registryConfigResourceName, metav1.GetOptions{})
 			if err != nil {
@@ -139,8 +137,10 @@ func registryDataFromConfigResource(
 			return nil
 		})
 	switch {
-	case apierrors.IsNotFound(err), meta.IsNoMatchError(err):
-		// No resource, or no such kind in this cluster at all: both mean "ask something else".
+	case apierrors.IsNotFound(err), meta.IsNoMatchError(err), apierrors.IsForbidden(err):
+		// No resource, or no such kind in this cluster at all: both mean "ask something else". So does a
+		// caller not allowed to read it — an in-cluster one whose role predates this read gets the answer
+		// it got before rather than none.
 		return nil, "", false, nil
 	case err != nil:
 		return nil, "", false, err
@@ -247,7 +247,7 @@ func GetRegistryData(ctx context.Context, kubeCl *client.KubernetesClient) (*ima
 }
 
 // GetUpstreamRegistryData reads the upstream (externally reachable) registry from
-// the d8-system/registry-config secret. On clusters running an in-cluster
+// the RegistryConfig resource, or else the d8-system/registry-config secret. On clusters running an in-cluster
 // registry (Direct/Proxy modes) the deckhouse-registry secret points at the
 // in-cluster mirror (registry.d8-system.svc), which an out-of-cluster caller
 // (the commander dhctl-server) cannot resolve; the upstream imagesRepo is the
@@ -263,7 +263,20 @@ func GetUpstreamRegistryData(ctx context.Context, kubeCl *client.KubernetesClien
 // docker config json) from the upstream credentials, so a caller that also
 // needs the dockercfg for lazy image pulls does not fall back to the
 // in-cluster mirror's credentials.
+//
+// The cluster's own configuration object is asked first, because on a cluster running the
+// controller-based implementation it is the only source that is kept current — and the only one there
+// is at all: `registry-config` is not rendered on such a cluster.
+//
+// `registry-config` is rendered from the PREVIOUS implementation's settings in `mc/deckhouse`, and on a
+// migrated cluster nobody writes those any more — so it keeps describing whatever registry the cluster
+// was migrated from. Stale registry data, preferred by the tooling, is worse than no data at all:
+// absence falls back and works, staleness dials the wrong registry with the wrong account.
 func getUpstreamRegistryData(ctx context.Context, kubeCl *client.KubernetesClient) (*image.RegistryConfig, string, bool, error) {
+	if conf, dockerCfg, found, err := registryDataFromConfigResource(ctx, kubeCl); err != nil || found {
+		return conf, dockerCfg, found, err
+	}
+
 	var secret *corev1.Secret
 	err := retry.NewLoop("Get upstream registry data from cluster", 225, 1*time.Second).
 		BreakIf(apierrors.IsNotFound).

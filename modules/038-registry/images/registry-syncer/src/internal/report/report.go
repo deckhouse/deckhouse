@@ -89,6 +89,14 @@ type State struct {
 	// Separate from Error, which is about filling: a store that cannot be reclaimed still
 	// serves every image it holds, so the two say different things about how worried to be.
 	CollectionError string
+
+	// Store is this replica's store against its budget and its reserve. Nil when the pass did
+	// not measure it, and then the last measurement stays.
+	Store *registryv1alpha1.StoreUsage
+
+	// VerifiedSet is the fingerprint of the set Full was found against — see the field of the same
+	// name on the CRD. Empty unless Full is.
+	VerifiedSet string
 }
 
 // Publisher writes a replica's own entry.
@@ -220,6 +228,88 @@ func (p *Publisher) Announce(ctx context.Context, state State) error {
 	})
 }
 
+// Withdraw takes this replica's Full back, because the set it was measured against is no longer the
+// set the cluster needs.
+//
+// Before the pass that verifies the new set, not after it: a verification over a slow link takes
+// minutes, and for all of them a full leader would keep authorizing the move to air-gap on a set the
+// cluster has stopped needing. So the leader withdraws first — its Full, and the two permissions the
+// controller derived from it, in the same write, as Announce and Publish do — and the pass that
+// follows earns Full back, or does not.
+func (p *Publisher) Withdraw(ctx context.Context, state State) error {
+	if state.Node == "" {
+		return fmt.Errorf("a withdrawal needs the node it came from")
+	}
+
+	return p.publish(ctx, func(storage *registryv1alpha1.RegistryStorage) bool {
+		changed := MergeWithdraw(&storage.Status.Replicas, state)
+		if state.Role == registryv1alpha1.ReplicaRoleLeader &&
+			(storage.Status.SafeToDropUpstream || storage.Status.AllReplicasFull) {
+			storage.Status.SafeToDropUpstream = false
+			storage.Status.AllReplicasFull = false
+			changed = true
+		}
+		return changed
+	})
+}
+
+// MergeWithdraw clears Full and VerifiedSet in this replica's entry and leaves every other field
+// alone: the counts still say what the store holds, which a withdrawal does not change.
+func MergeWithdraw(replicas *[]registryv1alpha1.StorageReplicaStatus, state State) bool {
+	for i := range *replicas {
+		entry := &(*replicas)[i]
+		if entry.Node != state.Node {
+			continue
+		}
+		if !entry.Full && entry.VerifiedSet == "" {
+			return false
+		}
+		entry.Full = false
+		entry.VerifiedSet = ""
+		return true
+	}
+	return false
+}
+
+// PublishProgress says that a pass is under way and how far it has got, and nothing else.
+//
+// The pass reports its outcome when it ends, and a fill over a slow link ends an hour later. Until
+// then the entry carried the previous pass's words — an error included, which the controller reads
+// before anything else — so a fill working normally showed `Failed` with no progress for as long as
+// it ran. A pass that is copying has, by that alone, got past whatever stopped the previous one:
+// the error is cleared, and the count shows how far it is.
+//
+// The count only ever goes up here. A pass counts from zero, while the entry may hold what the
+// store was measured to hold last time; showing the lower of the two would read as a store that
+// emptied. The pass's own report at its end is the one that may say otherwise.
+func (p *Publisher) PublishProgress(ctx context.Context, state State) error {
+	if state.Node == "" {
+		return fmt.Errorf("a progress report needs the node it came from")
+	}
+
+	return p.publish(ctx, func(storage *registryv1alpha1.RegistryStorage) bool {
+		return MergeProgress(&storage.Status.Replicas, state)
+	})
+}
+
+// PublishStore records a measurement of the store, and nothing else.
+//
+// Its own reporter because a pass can take an hour: a fill over a slow link publishes when it
+// ends, and a status that only moved then would show a store at zero bytes for the whole of the
+// fill that is filling it — while the budget alerts and the StoreWritable condition read it.
+func (p *Publisher) PublishStore(ctx context.Context, state State) error {
+	if state.Node == "" {
+		return fmt.Errorf("a store report needs the node it came from")
+	}
+	if state.Store == nil {
+		return nil
+	}
+
+	return p.publish(ctx, func(storage *registryv1alpha1.RegistryStorage) bool {
+		return MergeStore(&storage.Status.Replicas, state)
+	})
+}
+
 // PublishCollection records the outcome of a garbage collection.
 func (p *Publisher) PublishCollection(ctx context.Context, state State) error {
 	if state.Node == "" {
@@ -249,6 +339,8 @@ func Merge(replicas *[]registryv1alpha1.StorageReplicaStatus, state State) bool 
 		Address:         state.Address,
 		Source:          state.Source,
 		Error:           state.Error,
+		Store:           state.Store,
+		VerifiedSet:     state.VerifiedSet,
 	}
 
 	// At most one replica may carry the leader's role, and the one publishing it now is the one
@@ -284,6 +376,11 @@ func Merge(replicas *[]registryv1alpha1.StorageReplicaStatus, state State) bool 
 		// flaps for no reason.
 		entry.CollectedAt = (*replicas)[i].CollectedAt
 		entry.CollectionError = (*replicas)[i].CollectionError
+		// A report that did not measure the store — the one announcing a pass, say — keeps the
+		// last measurement rather than erasing it, or the status would flap between the two.
+		if entry.Store == nil {
+			entry.Store = (*replicas)[i].Store
+		}
 
 		if equality.Semantic.DeepEqual((*replicas)[i], entry) {
 			return changedOther
@@ -330,6 +427,72 @@ func MergeCollection(replicas *[]registryv1alpha1.StorageReplicaStatus, state St
 		Address:         state.Address,
 		CollectedAt:     collectedAt,
 		CollectionError: state.CollectionError,
+	})
+	return true
+}
+
+// MergeStore records a measurement of the store in this replica's entry, and leaves every other
+// field alone — the same rule MergeCollection follows, for the same reason.
+func MergeStore(replicas *[]registryv1alpha1.StorageReplicaStatus, state State) bool {
+	for i := range *replicas {
+		if (*replicas)[i].Node != state.Node {
+			continue
+		}
+		if equality.Semantic.DeepEqual((*replicas)[i].Store, state.Store) {
+			return false
+		}
+		(*replicas)[i].Store = state.Store.DeepCopy()
+		return true
+	}
+
+	// No entry yet: the first pass has not reported. The entry is created with what is known.
+	*replicas = append(*replicas, registryv1alpha1.StorageReplicaStatus{
+		Node:    state.Node,
+		Role:    state.Role,
+		Address: state.Address,
+		Store:   state.Store.DeepCopy(),
+	})
+	return true
+}
+
+// MergeProgress records a pass under way in this replica's entry: its error cleared, its count
+// raised to what the pass has reached, its denominator filled in if it had none. Every other field is
+// left alone — above all Full, which a pass in progress has not yet earned or lost.
+func MergeProgress(replicas *[]registryv1alpha1.StorageReplicaStatus, state State) bool {
+	for i := range *replicas {
+		entry := &(*replicas)[i]
+		if entry.Node != state.Node {
+			continue
+		}
+
+		changed := false
+		if entry.Error != "" {
+			entry.Error = ""
+			changed = true
+		}
+		if state.VerifiedDigests > entry.VerifiedDigests {
+			entry.VerifiedDigests = state.VerifiedDigests
+			changed = true
+		}
+		if entry.DeclaredDigests == 0 && state.DeclaredDigests > 0 {
+			entry.DeclaredDigests = state.DeclaredDigests
+			changed = true
+		}
+		if state.Source != "" && entry.Source != state.Source {
+			entry.Source = state.Source
+			changed = true
+		}
+		return changed
+	}
+
+	// No entry yet: the first pass of this replica, which Announce normally covers.
+	*replicas = append(*replicas, registryv1alpha1.StorageReplicaStatus{
+		Node:            state.Node,
+		Role:            state.Role,
+		Address:         state.Address,
+		Source:          state.Source,
+		VerifiedDigests: state.VerifiedDigests,
+		DeclaredDigests: state.DeclaredDigests,
 	})
 	return true
 }

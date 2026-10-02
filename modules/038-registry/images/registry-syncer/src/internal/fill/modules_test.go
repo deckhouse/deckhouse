@@ -90,21 +90,40 @@ func TestAModuleWithNoImagesOfItsOwnIsNotAFailure(t *testing.T) {
 	require.Len(t, references, 1, "the package, and nothing it does not declare")
 }
 
-// TestAModuleThatCannotBeReadIsAnError, rather than a module quietly left out.
+// TestAModuleNotThereYetStaysInTheSet, rather than failing the set or being quietly left out.
 //
-// Leaving it out would lower the bar for completeness by exactly the images nobody could account for —
-// silently, and in the direction that authorizes dropping the upstream. An error stops that, and says
-// which module to look at.
-func TestAModuleThatCannotBeReadIsAnError(t *testing.T) {
+// Left out, it would lower the bar for completeness by exactly the images nobody could account for —
+// silently, and in the direction that authorizes dropping the upstream. Failing the whole set instead
+// is what a live cluster did: a follower reading the set from a leader still filling got
+// MANIFEST_UNKNOWN for one module, could not tell what the cluster needs, and replicated nothing at
+// all. So the package stays, as something the store does not hold yet.
+func TestAModuleNotThereYetStaysInTheSet(t *testing.T) {
 	source := startRegistry(t)
 
 	puller, err := remote.NewPuller(source.Options...)
 	require.NoError(t, err)
 
-	_, err = ModuleReferences(t.Context(), source, puller,
+	references, err := ModuleReferences(t.Context(), source, puller,
 		[]ModuleRef{{Name: "absent", Version: "v9.9.9"}})
+	require.NoError(t, err)
+	require.Len(t, references, 1)
+	assert.Equal(t, source.Address+"/modules/absent:v9.9.9", references[0].String())
+}
+
+// TestAModuleThatCannotBeReadIsAnError: there, and unreadable, is not "not there yet".
+func TestAModuleThatCannotBeReadIsAnError(t *testing.T) {
+	source := startRegistry(t)
+	pushInstaller(t, source, "modules/broken:v1.0.0", map[string]any{
+		"images_digests.json": []string{"not", "a", "map"},
+	})
+
+	puller, err := remote.NewPuller(source.Options...)
+	require.NoError(t, err)
+
+	_, err = ModuleReferences(t.Context(), source, puller,
+		[]ModuleRef{{Name: "broken", Version: "v1.0.0"}})
 	require.Error(t, err)
-	assert.Contains(t, err.Error(), "absent", "the message has to name the module")
+	assert.Contains(t, err.Error(), "broken", "the message has to name the module")
 }
 
 // TestNoModulesIsNotAnEmptySet: a cluster with nothing but the platform's own modules is ordinary, and

@@ -32,7 +32,9 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	discoveryv1 "k8s.io/api/discovery/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	"k8s.io/apimachinery/pkg/api/meta"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/intstr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -313,7 +315,18 @@ func (s *sourceReader) rootHashes() *rootHashResolver {
 
 // readRegistry describes the cluster's registry: the spec a node needs to reach
 // it, and the repository every image of the release lives in.
+//
+// The registry module's configuration comes first, and the secret is what is left
+// without one. On a cluster whose pull path that module manages, the secret names
+// the in-cluster registry with no account, because on a node that address is the
+// agent and the agent asks for none — but the resolver here dials from the pod
+// network, and a node this controller describes is told the registry before any
+// agent of its own runs.
 func (s *sourceReader) readRegistry(ctx context.Context) (*internalv1alpha1.Registry, string, error) {
+	if registry, imagesRepo, found, err := s.readRegistryUpstream(ctx); err != nil || found {
+		return registry, imagesRepo, err
+	}
+
 	secret := &corev1.Secret{}
 	if err := s.Reader.Get(ctx, types.NamespacedName{Namespace: d8SystemNS, Name: deckhouseRegistrySecret}, secret); err != nil {
 		return nil, "", fmt.Errorf("read the registry configuration from %s/%s: %w", d8SystemNS, deckhouseRegistrySecret, err)
@@ -342,6 +355,54 @@ func (s *sourceReader) readRegistry(ctx context.Context) (*internalv1alpha1.Regi
 		imagesRepo = address + registry.Path
 	}
 	return registry, imagesRepo, nil
+}
+
+// readRegistryUpstream is the upstream the registry module fetches from, as its
+// resolved configuration names it. found is false, with no error, wherever that
+// object cannot answer: no such kind in the cluster, no object, a role that does
+// not allow reading it yet, or no upstream at all — which is what an air-gapped
+// cluster is, and there the in-cluster registry is the only one there is.
+func (s *sourceReader) readRegistryUpstream(ctx context.Context) (*internalv1alpha1.Registry, string, bool, error) {
+	config := &unstructured.Unstructured{}
+	config.SetAPIVersion(registryConfigAPIVersion)
+	config.SetKind(registryConfigKind)
+	err := s.Reader.Get(ctx, types.NamespacedName{Name: registryConfigName}, config)
+	switch {
+	case apierrors.IsNotFound(err), apierrors.IsForbidden(err), meta.IsNoMatchError(err), runtime.IsNotRegisteredError(err):
+		return nil, "", false, nil
+	case err != nil:
+		return nil, "", false, fmt.Errorf("read the registry configuration %s: %w", registryConfigName, err)
+	}
+
+	upstream, _, err := unstructured.NestedMap(config.Object, "spec", "primary", "upstream")
+	if err != nil {
+		return nil, "", false, fmt.Errorf("read the upstream from %s %s: %w", registryConfigKind, registryConfigName, err)
+	}
+	host, _ := upstream["host"].(string)
+	if host == "" {
+		return nil, "", false, nil
+	}
+
+	registry := &internalv1alpha1.Registry{Address: host, Scheme: "HTTPS"}
+	registry.Path, _ = upstream["path"].(string)
+	registry.CA, _ = upstream["ca"].(string)
+	if scheme, _ := upstream["scheme"].(string); scheme != "" {
+		registry.Scheme = strings.ToUpper(scheme)
+	}
+
+	// Carried the way a docker config carries it, which is what the node and the
+	// resolver both read: base64 of "user:password", or the pre-encoded form as typed.
+	if auth, ok := upstream["auth"].(map[string]any); ok {
+		username, _ := auth["username"].(string)
+		password, _ := auth["password"].(string)
+		if username != "" || password != "" {
+			registry.Auth = base64.StdEncoding.EncodeToString([]byte(username + ":" + password))
+		} else {
+			registry.Auth, _ = auth["auth"].(string)
+		}
+	}
+
+	return registry, host + registry.Path, true, nil
 }
 
 // registryAuth pulls one registry's credentials out of a docker config. No

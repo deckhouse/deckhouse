@@ -32,6 +32,7 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"strings"
 
 	"github.com/google/go-containerregistry/pkg/authn"
 	"github.com/google/go-containerregistry/pkg/name"
@@ -145,6 +146,15 @@ type Copier struct {
 	// rather than going silent for however long it takes.
 	OnProgress func(done, total int32)
 
+	// Routes send the repositories read from somewhere other than Source — the registries of other
+	// ModuleSources, or the upstream for a source kept apart from the platform — to where the store
+	// keeps them. See Routes in origins.go. A reference in one of them is pulled with the route's own
+	// options and lands in its Into.
+	Routes []Route
+
+	// routes are Routes with their clients, by repository, built by Run.
+	routes map[string]route
+
 	// StoreDir is the destination's data directory, when the destination is this replica's own
 	// store — which it always is here.
 	//
@@ -180,6 +190,30 @@ func (c *Copier) Run(ctx context.Context) (Report, error) {
 		return report, fmt.Errorf("building the destination pusher: %w", err)
 	}
 
+	sourceRegistry, err := parseRegistry(c.Source)
+	if err != nil {
+		return report, err
+	}
+	c.routes = make(map[string]route, len(c.Routes))
+	for _, r := range c.Routes {
+		parsed, err := parseRegistry(r.From)
+		if err != nil {
+			return report, err
+		}
+		puller, err := remote.NewPuller(r.From.Options...)
+		if err != nil {
+			return report, fmt.Errorf("building the client for %s: %w", r.From.Address, err)
+		}
+		from := strings.Trim(r.From.Repository, "/")
+		c.routes[parsed.RegistryStr()+"/"+from] = route{
+			puller: puller,
+			into:   r.Into,
+			// Read from inside the source itself: the platform reads the very same repository and
+			// needs it at the platform's own path as well. See targets.
+			alsoAsSource: parsed.RegistryStr() == sourceRegistry.RegistryStr() && c.underSource(from),
+		}
+	}
+
 	if c.Discover == nil {
 		return report, errors.New("no way to discover what to copy")
 	}
@@ -197,6 +231,13 @@ func (c *Copier) Run(ctx context.Context) (Report, error) {
 
 		written, err := c.copyOne(ctx, sourcePuller, destinationPuller, pusher, reference)
 		switch {
+		case err != nil && destinationFull(err):
+			// The one failure that is not per reference. Every later one would be refused the
+			// same way, so carrying on would only spend requests to the source on copies that
+			// cannot land. What was copied so far stays, and the next pass tries again — by
+			// then a collection may have made room, or the budget been raised.
+			report.Failed = append(report.Failed, reference.String())
+			return report, fmt.Errorf("the destination store is full, stopped at %s: %w", reference, err)
 		case err != nil && absentAtSource(err):
 			// Not there yet, which is what a source still filling looks like.
 			report.Pending = append(report.Pending, reference.String())
@@ -228,10 +269,26 @@ func (c *Copier) copyOne(
 		return false, err
 	}
 
+	written := false
+	for _, target := range c.targets(sourcePuller, source) {
+		wrote, err := c.copyTo(ctx, target.puller, target.into, destinationRegistry, destinationPuller, pusher, source)
+		if err != nil {
+			return written, err
+		}
+		written = written || wrote
+	}
+	return written, nil
+}
+
+// copyTo copies one reference, read with puller, into path in the destination.
+func (c *Copier) copyTo(
+	ctx context.Context, sourcePuller *remote.Puller, path string, destinationRegistry name.Registry,
+	destinationPuller *remote.Puller, pusher *remote.Pusher, source name.Reference,
+) (bool, error) {
 	// By whatever the source names it: a release declares its images by digest, while a
 	// replica's catalogue lists tags. Copying a digest under a tag would invent a tag the
 	// upstream never published, and the cluster refers to those images by digest anyway.
-	repository := destinationRegistry.Repo(c.rewriteRepository(source.Context().RepositoryStr()))
+	repository := destinationRegistry.Repo(path)
 	destination, err := sameKind(repository, source)
 	if err != nil {
 		return false, err
@@ -400,6 +457,45 @@ func (c *Copier) rewriteRepository(repository string) string {
 	}
 }
 
+// route is one of Routes, ready to pull from.
+type route struct {
+	puller *remote.Puller
+	into   string
+
+	// alsoAsSource marks a route out of a repository inside Source: see targets.
+	alsoAsSource bool
+}
+
+// targets says which client pulls a reference and where in the destination it lands: as one of Routes
+// says for the repository it is in, and as rewriteRepository says otherwise — and as both, for a route
+// out of a repository inside Source.
+//
+// Both, because a route is keyed by the repository it reads, and a repository inside Source is one the
+// platform reads too. A second ModuleSource on the upstream's own `modules` repository reads exactly
+// the platform's catalogue and the platform's module repositories; routed by repository alone, every
+// one of those references landed under that source's path and the platform's own path stayed empty —
+// so once the upstream was gone, the platform's catalogue answered NAME_UNKNOWN. The same content in
+// both places is the price, and it is the upstream's own build in each.
+func (c *Copier) targets(sourcePuller *remote.Puller, reference name.Reference) []route {
+	repository := reference.Context().RepositoryStr()
+	r, found := c.routes[reference.Context().RegistryStr()+"/"+repository]
+	asSource := route{puller: sourcePuller, into: c.rewriteRepository(repository)}
+	switch {
+	case !found:
+		return []route{asSource}
+	case r.alsoAsSource:
+		return []route{asSource, r}
+	default:
+		return []route{r}
+	}
+}
+
+// underSource reports whether a repository is Source's own or one beneath it.
+func (c *Copier) underSource(repository string) bool {
+	root := strings.Trim(c.Source.Repository, "/")
+	return root == "" || repository == root || strings.HasPrefix(repository, root+"/")
+}
+
 func (c *Copier) registry(registry Registry) (name.Registry, error) {
 	return parseRegistry(registry)
 }
@@ -443,6 +539,16 @@ func sameKind(repository name.Repository, source name.Reference) (name.Reference
 // Only 404: a refusal (401/403) is a real failure, and treating it as "not yet" would turn a
 // credential problem into an endless quiet wait — which is exactly the shape of failure this store
 // has produced before.
+// destinationFull tells a refusal by a store that has run out of room: its budget, or the reserve
+// it keeps free on the node's disk. The registry answers those with 507 before it reads the body.
+func destinationFull(err error) bool {
+	var transportError *transport.Error
+	if !errors.As(err, &transportError) {
+		return false
+	}
+	return transportError.StatusCode == http.StatusInsufficientStorage
+}
+
 func absentAtSource(err error) bool {
 	var transportError *transport.Error
 	if !errors.As(err, &transportError) {

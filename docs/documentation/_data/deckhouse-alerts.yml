@@ -3629,8 +3629,8 @@ alerts:
         nothing about it resolves on its own if the cache has stopped filling.
 
         ```
-        kubectl get registrystorage registry -o jsonpath='{.status}' | jq '{phase,fill,safeToDropUpstream,leader}'
-        kubectl get registryconfig registry -o jsonpath='{.status.effectiveUpstream}' | jq
+        d8 k get registrystorage registry -o jsonpath='{.status}' | jq '{phase,fill,safeToDropUpstream,leader}'
+        d8 k get registryconfig registry -o jsonpath='{.status.effectiveUpstream}' | jq
         ```
       summary: |
         The registry upstream cannot be removed yet.
@@ -3649,7 +3649,7 @@ alerts:
         What was wrong is in the resource:
 
         ```
-        kubectl get registryconfig registry -o jsonpath='{.status.conditions}' | jq
+        d8 k get registryconfig registry -o jsonpath='{.status.conditions}' | jq
         ```
       summary: |
         The registry configuration was rejected.
@@ -3676,13 +3676,13 @@ alerts:
            count is a metric:
 
            ```
-           kubectl -n d8-system logs deploy/deckhouse -c deckhouse | grep "still serving the in-cluster registry"
+           d8 k -n d8-system logs deploy/deckhouse -c deckhouse | grep "still serving the in-cluster registry"
            ```
 
         2. Then the workloads themselves, which is where the answer usually is:
 
            ```
-           kubectl get pods,deployments,daemonsets,statefulsets -A -o json \
+           d8 k get pods,deployments,daemonsets,statefulsets -A -o json \
              | jq -r '.items[] | select([.spec.template.spec.containers[]?.image, .spec.containers[]?.image] | any(startswith("registry.d8-system.svc:5001"))) | "\(.kind) \(.metadata.namespace)/\(.metadata.name)"'
            ```
 
@@ -3692,7 +3692,7 @@ alerts:
         its own store has no such registry to name. It says so in the log:
 
         ```
-        kubectl -n d8-system logs deploy/deckhouse -c deckhouse | grep "no upstream to point the cluster back at"
+        d8 k -n d8-system logs deploy/deckhouse -c deckhouse | grep "no upstream to point the cluster back at"
         ```
 
         Give the cluster a registry to pull from, or ask for `Managed` again. Nothing is degraded
@@ -3703,7 +3703,7 @@ alerts:
         rendered again:
 
         ```
-        kubectl -n d8-system exec deploy/deckhouse -c deckhouse -- deckhouse-controller queue main
+        d8 k -n d8-system exec deploy/deckhouse -c deckhouse -- deckhouse-controller queue main
         ```
 
         Or something outside the platform's own renders names the address: a workload of yours
@@ -3720,7 +3720,7 @@ alerts:
         pod that cannot start:
 
         ```
-        kubectl get pods -A --field-selector status.phase=Pending
+        d8 k get pods -A --field-selector status.phase=Pending
         ```
 
         A drain can also be abandoned by asking for `Managed` again: the module then keeps the
@@ -3769,8 +3769,8 @@ alerts:
            `Unmanaged` and wait for that transition to finish:
 
            ```
-           kubectl get mc deckhouse -o jsonpath='{.spec.settings.registry.mode}'
-           kubectl -n d8-system get secret registry-state -o jsonpath='{.data.state}' | base64 -d | head
+           d8 k get mc deckhouse -o jsonpath='{.spec.settings.registry.mode}'
+           d8 k -n d8-system get secret registry-state -o jsonpath='{.data.state}' | base64 -d | head
            ```
 
         2. Once the state reports `mode: Unmanaged` with no pending target mode, the
@@ -3835,8 +3835,8 @@ alerts:
           step into an outage. Fix the reachability first:
 
           ```
-          kubectl -n d8-system get secret registry-state -o jsonpath='{.data.state}' | base64 -d | head
-          kubectl -n d8-system logs deploy/deckhouse -c deckhouse | grep -i 'registry checker'
+          d8 k -n d8-system get secret registry-state -o jsonpath='{.data.state}' | base64 -d | head
+          d8 k -n d8-system logs deploy/deckhouse -c deckhouse | grep -i 'registry checker'
           ```
 
         The non-blocking checks are reported by the same metric with `blocking="false"`:
@@ -3924,9 +3924,9 @@ alerts:
         Which nodes, and what their agents say:
 
         ```
-        kubectl get registrynodes -o custom-columns=\
+        d8 k get registrynodes -o custom-columns=\
         NODE:.metadata.name,GEN:.metadata.generation,APPLIED:.status.observedGeneration,OK:.status.reconciled
-        kubectl -n kube-system logs -l component=registry-agent --tail=50
+        d8 k -n kube-system logs -l component=registry-agent --tail=50
         ```
 
         Twenty minutes, because the agent re-reads its layout on a timer and a node that is
@@ -3951,7 +3951,7 @@ alerts:
         has not seen it since is.
 
         ```
-        kubectl get registrynodes -o json | jq -r '
+        d8 k get registrynodes -o json | jq -r '
           .items[] | select(.status.conditions[]? | select(.type=="Reconciled" and .reason=="AppliedFromCache"))
           | .metadata.name'
         ```
@@ -4001,7 +4001,7 @@ alerts:
         Two hours, because filling a cache over a slow link legitimately takes that long.
 
         ```
-        kubectl get registrystorage registry -o jsonpath='{.status.replicas}' | jq
+        d8 k get registrystorage registry -o jsonpath='{.status.replicas}' | jq
         ```
       summary: |
         Some registry cache replicas do not hold the whole image set.
@@ -4025,9 +4025,9 @@ alerts:
         Where to look:
 
         ```
-        kubectl get registrystorage registry -o jsonpath='{.status.replicas}' | jq \
+        d8 k get registrystorage registry -o jsonpath='{.status.replicas}' | jq \
           'map({node, collectedAt, collectionError})'
-        kubectl get registrystorage registry -o jsonpath='{.spec.garbageCollection}' | jq
+        d8 k get registrystorage registry -o jsonpath='{.spec.garbageCollection}' | jq
         ```
 
         The likely reasons, in the order they are worth checking:
@@ -4047,7 +4047,7 @@ alerts:
         that is scheduled and failing:
 
         ```
-        kubectl -n d8-system logs registry-storage-0 -c syncer | grep -i "garbage collection"
+        d8 k -n d8-system logs registry-storage-0 -c syncer | grep -i "garbage collection"
         ```
 
         Collecting puts one replica read-only while it runs. That is not an outage — it keeps
@@ -4056,6 +4056,85 @@ alerts:
       summary: |
         The registry cache has not reclaimed its disk for a week.
       severity: "6"
+      markupFormat: markdown
+    - name: D8RegistryStoreNearlyFull
+      sourceFile: modules/038-registry/monitoring/prometheus-rules/registry.yaml
+      moduleUrl: 038-registry
+      module: registry
+      edition: ce
+      description: |-
+        The in-cluster registry cache on node `{{ $labels.node }}` holds more than 85% of its
+        budget, `storage.size` in the `registry` ModuleConfig. Nothing is refused yet. The next
+        release may not fit: once the budget is reached, the cache stops accepting writes and
+        `D8RegistryStoreWritesRefused` follows.
+
+        ```
+        d8 k get registrystorage registry -o json | jq '.status.replicas[] | {node, store}'
+        ```
+
+        Raise `storage.size` if the disk under the store has room — `filesystemFreeBytes` above
+        `reserveBytes` is what is left — or check that the garbage collection runs: it is the only
+        thing that reclaims space, and `D8RegistryStorageNotReclaimed` says when it has not.
+      summary: |
+        The registry cache on node {{ $labels.node }} holds over 85% of storage.size.
+      severity: "6"
+      markupFormat: markdown
+    - name: D8RegistryStoreUnbounded
+      sourceFile: modules/038-registry/monitoring/prometheus-rules/registry.yaml
+      moduleUrl: 038-registry
+      module: registry
+      edition: ce
+      description: |-
+        The in-cluster registry cache is on, and `storage.size` is not set in the `registry`
+        ModuleConfig. The node is still protected: the store never takes the space kept free for
+        the kubelet. But that is the only limit, so the store may grow until it leaves the node
+        exactly that and no more — and on a master that shares its disk with the store, everything
+        else on it then works with the minimum.
+
+        Set `storage.size` to what the store may take on each master: two releases of the image
+        set is the usual floor, and it has to fit on the disk under the store, above the reserve:
+
+        ```
+        d8 k get registrystorage registry -o json | jq '.status.replicas[] | {node, store}'
+        ```
+
+        An hour, so that turning the cache on and setting the size in two steps does not raise it.
+      summary: |
+        The registry cache has no storage.size, so only the node's disk limits it.
+      severity: "7"
+      markupFormat: markdown
+    - name: D8RegistryStoreWritesRefused
+      sourceFile: modules/038-registry/monitoring/prometheus-rules/registry.yaml
+      moduleUrl: 038-registry
+      module: registry
+      edition: ce
+      description: |-
+        The in-cluster registry cache on node `{{ $labels.node }}` has stopped accepting writes,
+        because `{{ $labels.reason }}`. The node is safe — this is the limit doing its job — and
+        the cache keeps serving every image it holds. What stops is everything that ADDS to it:
+        filling the next release, replicating from the leader, `d8 mirror push`. Images the store
+        cannot keep are streamed from the upstream while there is one; in an air-gapped cluster a
+        release that is not in the cache cannot be installed.
+
+        What the replica measured:
+
+        ```
+        d8 k get registrystorage registry -o json | jq '.status.replicas[] | {node, store}'
+        ```
+
+        `BudgetExhausted` — the store holds as much as `storage.size` allows. Either raise
+        `storage.size` in the `registry` ModuleConfig, if the disk has room for it, or let the
+        garbage collection reclaim what no deployed release needs any more: it runs on
+        `storage.garbageCollection.schedule` and keeps the deployed release, the previous one and
+        everything newer.
+
+        `ReserveExhausted` — the filesystem under the store is down to the space kept free for
+        the node: the kubelet's eviction threshold plus a margin. `storage.size` is not what
+        stops it, the disk is. Free space on the node, or — which is what fixes it for good —
+        give the store a disk of its own, sized for `storage.size`.
+      summary: |
+        The registry cache on node {{ $labels.node }} refuses writes ({{ $labels.reason }}).
+      severity: "4"
       markupFormat: markdown
     - name: D8RegistryUpstreamProbeFailing
       sourceFile: modules/038-registry/monitoring/prometheus-rules/registry.yaml
@@ -4081,7 +4160,7 @@ alerts:
         Current outcome: `{{ $labels.outcome }}`
 
         ```
-        kubectl get registryconfig registry -o jsonpath='{.status.conditions}' | jq
+        d8 k get registryconfig registry -o jsonpath='{.status.conditions}' | jq
         ```
       summary: |
         The configured registry upstream does not pass its preflight check.
@@ -4100,7 +4179,7 @@ alerts:
         Reason: `{{ $labels.reason }}`
 
         ```
-        kubectl get registryupstreams -o custom-columns=\
+        d8 k get registryupstreams -o custom-columns=\
         NAME:.metadata.name,MATCH:.spec.match,ACCEPTED:.status.conditions[0].status,REASON:.status.conditions[0].reason
         ```
       summary: |

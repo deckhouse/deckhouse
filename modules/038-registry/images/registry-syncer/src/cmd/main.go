@@ -36,6 +36,7 @@ import (
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/collectors"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
+	coordinationv1 "k8s.io/api/coordination/v1"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -251,6 +252,13 @@ func serve(ctx context.Context, log *slog.Logger, opts options) error {
 		return fmt.Errorf("building the API client: %w", err)
 	}
 
+	// The registry keeps a reserve free on this filesystem, derived from its size. Measured here,
+	// once: without it the registry's configuration cannot be rendered at all.
+	storeCapacity, err := distribution.Capacity(distribution.DataDir)
+	if err != nil {
+		return err
+	}
+
 	// Credentials of this replica's own registry. Read from the environment rather
 	// than from the custom resource: they are the pod's own identity, and the
 	// storage has to stay reachable even when the desired state cannot be read.
@@ -280,7 +288,8 @@ func serve(ctx context.Context, log *slog.Logger, opts options) error {
 				// be believed.
 				AuthRealm: fmt.Sprintf("https://%s:%d%s",
 					opts.listenAddress, constant.Port, distribution.AuthTokenPath),
-				TokenIssuer: os.Getenv("REGISTRY_TOKEN_ISSUER"),
+				TokenIssuer:   os.Getenv("REGISTRY_TOKEN_ISSUER"),
+				StoreCapacity: storeCapacity,
 			},
 		},
 		Publisher: &report.Publisher{Client: kubeClient},
@@ -393,7 +402,16 @@ func serve(ctx context.Context, log *slog.Logger, opts options) error {
 			}
 			return false, err
 		}
-		return run.MayLead(opts.nodeName, storage.Status.Replicas), nil
+		// Against the set the cluster needs now: a report of full measured for the previous one is
+		// not complete for this one. Unknown, every report is taken at its word, as it always was.
+		currentSet, err := run.CurrentSetKey(ctx, kubeClient)
+		if err != nil {
+			currentSet = ""
+		}
+		lease := readLease(ctx, clientset, opts.namespace, opts.leaseName, time.Now())
+		lease.CanFill = storage.Spec.Upstream != nil && storage.Spec.Upstream.Host != ""
+		replicas := presentReplicas(ctx, clientset, opts.namespace, opts.nodeName, storage.Status.Replicas)
+		return run.MayLead(opts.nodeName, replicas, currentSet, lease), nil
 	}
 
 	// Reclaiming the disk, on its own schedule and its own lease.
@@ -406,6 +424,84 @@ func serve(ctx context.Context, log *slog.Logger, opts options) error {
 	candidate := &run.Candidate{Log: log, Eligible: eligible, Elect: elect}
 	candidate.Run(ctx)
 	return nil
+}
+
+// storagePodSelector picks the storage replicas' pods; see the StatefulSet.
+const storagePodSelector = "app=registry-storage"
+
+// presentReplicas drops the reports of replicas whose pod is gone. A report outlives its pod, and an
+// election read from reports alone counted a removed replica as the fullest, or as full, or as the one
+// leading — and waited for it. This replica's own report always stays. When the pods cannot be listed,
+// every report stays, as before this existed.
+func presentReplicas(
+	ctx context.Context, clientset kubernetes.Interface, namespace, self string,
+	replicas []registryv1alpha1.StorageReplicaStatus,
+) []registryv1alpha1.StorageReplicaStatus {
+	pods, err := clientset.CoreV1().Pods(namespace).List(ctx, metav1.ListOptions{LabelSelector: storagePodSelector})
+	if err != nil {
+		return replicas
+	}
+	return replicasOnNodes(self, replicas, pods.Items)
+}
+
+// replicasOnNodes keeps the reports of the nodes that run a storage pod which is not being deleted.
+func replicasOnNodes(
+	self string, replicas []registryv1alpha1.StorageReplicaStatus, pods []corev1.Pod,
+) []registryv1alpha1.StorageReplicaStatus {
+	running := map[string]bool{self: true}
+	for i := range pods {
+		pod := &pods[i]
+		if pod.DeletionTimestamp == nil && pod.Spec.NodeName != "" &&
+			(pod.Status.Phase == corev1.PodRunning || pod.Status.Phase == corev1.PodPending) {
+			running[pod.Spec.NodeName] = true
+		}
+	}
+
+	present := make([]registryv1alpha1.StorageReplicaStatus, 0, len(replicas))
+	for _, replica := range replicas {
+		if running[replica.Node] {
+			present = append(present, replica)
+		}
+	}
+	return present
+}
+
+// leaseGrace is how long past its expiry a lease's holder still counts as the one leading. Long
+// enough to ride out an API server that could not be reached for a minute, short enough that a
+// leader whose node is gone is replaced in about the time the lease takes to expire twice.
+const leaseGrace = time.Minute
+
+// readLease reads who leads from the storage lease itself. Unknown when it cannot be read: the
+// reported roles decide then, as they did before this existed.
+func readLease(ctx context.Context, clientset kubernetes.Interface, namespace, name string, now time.Time) run.Lease {
+	lease, err := clientset.CoordinationV1().Leases(namespace).Get(ctx, name, metav1.GetOptions{})
+	switch {
+	case apierrors.IsNotFound(err):
+		// Never taken: nobody leads, which is a fact rather than an unknown.
+		return run.Lease{Known: true}
+	case err != nil:
+		return run.Lease{}
+	}
+	return leaseAt(lease, now)
+}
+
+// leaseAt is what a lease says at a moment: its holder while it is live and for leaseGrace after,
+// nobody once it was released or that has passed.
+func leaseAt(lease *coordinationv1.Lease, now time.Time) run.Lease {
+	view := run.Lease{Known: true}
+
+	spec := lease.Spec
+	if spec.HolderIdentity == nil || *spec.HolderIdentity == "" || spec.RenewTime == nil || spec.LeaseDurationSeconds == nil {
+		return view
+	}
+	expires := spec.RenewTime.Add(time.Duration(*spec.LeaseDurationSeconds) * time.Second)
+	if now.After(expires.Add(leaseGrace)) {
+		return view
+	}
+
+	view.Holder = *spec.HolderIdentity
+	view.Live = !now.After(expires)
+	return view
 }
 
 // startCollector runs the garbage collection schedule for this replica's own store.

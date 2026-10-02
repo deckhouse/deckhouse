@@ -135,6 +135,7 @@ func (r *Reconciler) observeStorage(ctx context.Context) error {
 		// no longer exists.
 		metrics.StorageReplicaFull.Reset()
 		metrics.StorageStaleData.Reset()
+		resetStore()
 		metrics.StorageReplicas.Set(0)
 		metrics.StorageSafeToDropUpstream.Set(0)
 		metrics.StorageAllReplicasFull.Set(0)
@@ -153,7 +154,35 @@ func (r *Reconciler) observeStorage(ctx context.Context) error {
 			Set(boolean(replica.Full && replica.Error == ""))
 	}
 
+	resetStore()
+	for i := range storage.Status.Replicas {
+		replica := &storage.Status.Replicas[i]
+		store := replica.Store
+		if store == nil {
+			// Not measured yet: no series rather than zeros, which would read as an empty store
+			// with no reserve on a disk of no size.
+			continue
+		}
+		metrics.StoreUsed.WithLabelValues(replica.Node).Set(float64(store.UsedBytes))
+		metrics.StoreBudget.WithLabelValues(replica.Node).Set(float64(store.BudgetBytes))
+		metrics.StoreReserve.WithLabelValues(replica.Node).Set(float64(store.ReserveBytes))
+		metrics.StoreFilesystemFree.WithLabelValues(replica.Node).Set(float64(store.FilesystemFreeBytes))
+		metrics.StoreFilesystemCapacity.WithLabelValues(replica.Node).Set(float64(store.FilesystemCapacityBytes))
+		metrics.StoreWritable.WithLabelValues(replica.Node, string(store.Reason)).Set(boolean(store.Writable))
+	}
+
 	return nil
+}
+
+// resetStore drops every per-replica store series, so that a replica that went away, or a
+// reason that no longer holds, stops being reported.
+func resetStore() {
+	metrics.StoreUsed.Reset()
+	metrics.StoreBudget.Reset()
+	metrics.StoreReserve.Reset()
+	metrics.StoreFilesystemFree.Reset()
+	metrics.StoreFilesystemCapacity.Reset()
+	metrics.StoreWritable.Reset()
 }
 
 func (r *Reconciler) observeNodes(ctx context.Context) error {

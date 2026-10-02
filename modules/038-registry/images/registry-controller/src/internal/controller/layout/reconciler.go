@@ -43,9 +43,12 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
 	ctrl "sigs.k8s.io/controller-runtime"
+	"sigs.k8s.io/controller-runtime/pkg/builder"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
+	"sigs.k8s.io/controller-runtime/pkg/event"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
+	"sigs.k8s.io/controller-runtime/pkg/predicate"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
 	registryv1alpha1 "github.com/deckhouse/deckhouse/go_lib/registry/apis/deckhouse.io/v1alpha1"
@@ -143,6 +146,33 @@ func (r *Reconciler) SetupWatches(w register.Watcher) {
 	w.Watches(&registryv1alpha1.RegistryNode{}, toSingleton)
 	// Any writer may declare an additional upstream at any time.
 	w.Watches(&registryv1alpha1.RegistryUpstream{}, toSingleton)
+	// The storage lease, for who holds it: the publication endpoint follows the leader, and a push
+	// sent to the previous one until something else happens to trigger a pass is a push the cluster
+	// does not read. Renewals change the lease every few seconds and say nothing new, so only a
+	// change of holder is let through.
+	w.Watches(&coordinationv1.Lease{}, toSingleton, builder.WithPredicates(storageLeaseHolderChanged()))
+}
+
+// storageLeaseHolderChanged lets through the storage lease being created, deleted, or changing hands.
+func storageLeaseHolderChanged() predicate.Predicate {
+	holder := func(object client.Object) string {
+		lease, ok := object.(*coordinationv1.Lease)
+		if !ok || lease.Spec.HolderIdentity == nil {
+			return ""
+		}
+		return *lease.Spec.HolderIdentity
+	}
+	isStorage := func(object client.Object) bool {
+		return object.GetNamespace() == Namespace && object.GetName() == StorageLeaseName
+	}
+	return predicate.Funcs{
+		CreateFunc:  func(e event.CreateEvent) bool { return isStorage(e.Object) },
+		DeleteFunc:  func(e event.DeleteEvent) bool { return isStorage(e.Object) },
+		GenericFunc: func(event.GenericEvent) bool { return false },
+		UpdateFunc: func(e event.UpdateEvent) bool {
+			return isStorage(e.ObjectNew) && holder(e.ObjectOld) != holder(e.ObjectNew)
+		},
+	}
 }
 
 func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
@@ -206,6 +236,17 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 	}
 	if err := r.applyStorage(ctx, desired.Storage); err != nil {
 		return ctrl.Result{}, fmt.Errorf("applying RegistryStorage: %w", err)
+	}
+	if desired.Storage != nil {
+		// Where a push goes follows where the cluster reads from: the same leader the agents were
+		// just pointed at. See applyPushEndpoint.
+		storage := &registryv1alpha1.RegistryStorage{}
+		if err := r.Client.Get(ctx, types.NamespacedName{Name: registryv1alpha1.SingletonName}, storage); err != nil {
+			return ctrl.Result{}, fmt.Errorf("reading RegistryStorage: %w", err)
+		}
+		if err := r.applyPushEndpoint(ctx, storage, inputs.StorageAccess.Leader); err != nil {
+			return ctrl.Result{}, err
+		}
 	}
 	if err := r.applyNodes(ctx, desired.Nodes); err != nil {
 		return ctrl.Result{}, fmt.Errorf("applying RegistryNode objects: %w", err)
@@ -804,6 +845,8 @@ func (r *Reconciler) patchStorageStatus(
 	previous := storage.Status
 	storage.Status = aggregate
 	conditionChanged := apimeta.SetStatusCondition(&storage.Status.Conditions, converged)
+	writable := layout.StoreWritable(storage.Status.Replicas, storage.Generation)
+	conditionChanged = apimeta.SetStatusCondition(&storage.Status.Conditions, writable) || conditionChanged
 
 	if !conditionChanged && equality.Semantic.DeepEqual(previous, storage.Status) {
 		// Skip the write when nothing changed: this object is watched by every

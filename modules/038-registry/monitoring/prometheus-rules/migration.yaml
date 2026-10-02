@@ -48,8 +48,8 @@
            `Unmanaged` and wait for that transition to finish:
 
            ```
-           kubectl get mc deckhouse -o jsonpath='{.spec.settings.registry.mode}'
-           kubectl -n d8-system get secret registry-state -o jsonpath='{.data.state}' | base64 -d | head
+           d8 k get mc deckhouse -o jsonpath='{.spec.settings.registry.mode}'
+           d8 k -n d8-system get secret registry-state -o jsonpath='{.data.state}' | base64 -d | head
            ```
 
         2. Once the state reports `mode: Unmanaged` with no pending target mode, the
@@ -123,8 +123,8 @@
           step into an outage. Fix the reachability first:
 
           ```
-          kubectl -n d8-system get secret registry-state -o jsonpath='{.data.state}' | base64 -d | head
-          kubectl -n d8-system logs deploy/deckhouse -c deckhouse | grep -i 'registry checker'
+          d8 k -n d8-system get secret registry-state -o jsonpath='{.data.state}' | base64 -d | head
+          d8 k -n d8-system logs deploy/deckhouse -c deckhouse | grep -i 'registry checker'
           ```
 
         The non-blocking checks are reported by the same metric with `blocking="false"`:

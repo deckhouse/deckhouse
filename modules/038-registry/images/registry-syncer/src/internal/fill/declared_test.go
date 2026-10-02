@@ -17,6 +17,7 @@ limitations under the License.
 package fill
 
 import (
+	"context"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -72,4 +73,29 @@ func TestCountDeclaredHeldWithNothingDeclared(t *testing.T) {
 	held, err := CountDeclaredHeld(root, "system/deckhouse", nil)
 	require.NoError(t, err)
 	assert.Zero(t, held)
+}
+
+// TestAModuleTheStoreDoesNotHoldYetKeepsTheSetIncomplete: the set is still known — a replica can
+// count what it holds and replicate the rest — and it cannot be held in full until the module arrives.
+func TestAModuleTheStoreDoesNotHoldYetKeepsTheSetIncomplete(t *testing.T) {
+	source := startRegistry(t)
+	source.Repository = "system/deckhouse"
+
+	platformImage := pushByDigest(t, source, "system/deckhouse")
+	pushInstaller(t, source, "system/deckhouse:v1.70.1", map[string]any{
+		platformDigestsFile: map[string]map[string]string{"registry": {"controller": platformImage.String()}},
+	})
+
+	declared, err := DeclaredDigests(context.Background(), source, []string{"v1.70.1"},
+		[]ModuleRef{{Name: "sds-node-configurator", Version: "v0.7.5"}})
+	require.NoError(t, err, "a module not there yet is not a set that cannot be told")
+
+	assert.Contains(t, declared, platformImage.String())
+	assert.Contains(t, declared,
+		missingPrefix+source.Address+"/system/deckhouse/modules/sds-node-configurator:v0.7.5",
+		"the module's package is a member of the set this store does not hold")
+
+	held, err := CountDeclaredHeld(store(t), "system/deckhouse", declared)
+	require.NoError(t, err)
+	assert.Less(t, int(held), len(declared))
 }

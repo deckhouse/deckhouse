@@ -155,6 +155,37 @@ func TestObserveStorage(t *testing.T) {
 		metrics.StorageReplicaFull.WithLabelValues("master-2", string(registryv1alpha1.ReplicaRoleFollower))))
 }
 
+func TestObserveStore(t *testing.T) {
+	storage := &registryv1alpha1.RegistryStorage{
+		ObjectMeta: metav1.ObjectMeta{Name: registryv1alpha1.SingletonName},
+		Status: registryv1alpha1.RegistryStorageStatus{
+			Replicas: []registryv1alpha1.StorageReplicaStatus{
+				{Node: "master-0", Store: &registryv1alpha1.StoreUsage{
+					UsedBytes: 80 << 30, BudgetBytes: 100 << 30, ReserveBytes: 10 << 30,
+					FilesystemFreeBytes: 20 << 30, FilesystemCapacityBytes: 50 << 30, Writable: true,
+				}},
+				{Node: "master-1", Store: &registryv1alpha1.StoreUsage{
+					UsedBytes: 40 << 30, ReserveBytes: 10 << 30,
+					FilesystemFreeBytes: 10 << 30, FilesystemCapacityBytes: 50 << 30,
+					Reason: registryv1alpha1.StoreReserveExhausted,
+				}},
+				// Not measured yet.
+				{Node: "master-2"},
+			},
+		},
+	}
+
+	r := newReconciler(t, storage)
+	run(t, r)
+
+	assert.EqualValues(t, 80<<30, testutil.ToFloat64(metrics.StoreUsed.WithLabelValues("master-0")))
+	assert.EqualValues(t, 100<<30, testutil.ToFloat64(metrics.StoreBudget.WithLabelValues("master-0")))
+	assert.EqualValues(t, 1, testutil.ToFloat64(metrics.StoreWritable.WithLabelValues("master-0", "")))
+	assert.Zero(t, testutil.ToFloat64(metrics.StoreBudget.WithLabelValues("master-1")), "no storage.size")
+	assert.Zero(t, testutil.ToFloat64(metrics.StoreWritable.WithLabelValues("master-1", "ReserveExhausted")))
+	assert.Equal(t, 2, testutil.CollectAndCount(metrics.StoreUsed), "no series for a replica not measured")
+}
+
 // TestObserveStorageGoesAwayWithIt: a cache that was turned off must stop being reported,
 // or the gauges keep describing a storage that no longer exists.
 func TestObserveStorageGoesAwayWithIt(t *testing.T) {
@@ -166,6 +197,8 @@ func TestObserveStorageGoesAwayWithIt(t *testing.T) {
 
 	assert.Zero(t, testutil.ToFloat64(metrics.StorageReplicas))
 	assert.Zero(t, testutil.CollectAndCount(metrics.StorageReplicaFull))
+	assert.Zero(t, testutil.CollectAndCount(metrics.StoreUsed))
+	assert.Zero(t, testutil.CollectAndCount(metrics.StoreWritable))
 }
 
 func node(name string, generation int64, status registryv1alpha1.RegistryNodeStatus) *registryv1alpha1.RegistryNode {

@@ -203,7 +203,7 @@ func useUpstreamRegistry(ctx context.Context, kubeCl *client.KubernetesClient, s
 		return nil
 	}
 
-	repo = upstream.GetRegistry() + strings.TrimPrefix(strings.TrimPrefix(repo, registry_const.HostWithPath), registry_const.Host)
+	repo = upstreamRepository(upstream.GetRegistry(), repo)
 	conf, err := image.NewRegistryConfig(upstream.GetScheme(), repo, upstream.GetUsername(), upstream.GetPassword(), upstream.GetCA())
 	if err != nil {
 		return fmt.Errorf("upstream registry config for ModuleSource %q: %w", src.GetName(), err)
@@ -211,6 +211,19 @@ func useUpstreamRegistry(ctx context.Context, kubeCl *client.KubernetesClient, s
 	src.Spec.Registry.Repo = repo
 	src.conf = conf
 	return nil
+}
+
+// upstreamRepository is where the upstream serves what the cluster names by the in-cluster address.
+//
+// Under the image set's prefix it is the upstream's own prefix that stands in for it, exactly as the
+// node agent swaps them. Beside it — the Flant module source, `flant/modules` — it is the same path at
+// the upstream's host, because that content sits next to the edition's image set rather than under it.
+func upstreamRepository(upstreamRegistry, repo string) string {
+	if rest, found := strings.CutPrefix(repo, registry_const.HostWithPath); found && (rest == "" || strings.HasPrefix(rest, "/")) {
+		return upstreamRegistry + rest
+	}
+	host, _, _ := strings.Cut(upstreamRegistry, "/")
+	return host + strings.TrimPrefix(repo, registry_const.Host)
 }
 
 // An override the controller is not following (deleted, or not Ready because its tag does not

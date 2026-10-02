@@ -298,8 +298,17 @@ bb-rpp-get-report() {
   if [[ -n "$details_file" && -s "$details_file" ]]; then
     details=": $(tr -s '\r\n\t' '   ' < "$details_file" | tr -cd '[:print:] ' | cut -c1-300 | sed -e 's/[[:space:]]*$//')"
   fi
-  >&2 echo "rpp-get: attempt ${attempt} of ${attempts}: ${address}: ${reason}${details}"
+  local of=" of ${attempts}"
+  [[ "$attempts" == 0 ]] && of=""
+  >&2 echo "rpp-get: attempt ${attempt}${of}: ${address}: ${reason}${details}"
 }
+# bb-rpp-get-install [attempts]
+#
+# attempts is how many rounds over the bootstrap addresses to make, 30 by default; 0 is until it
+# is installed. A caller that is run again when it fails can afford a bound. A node's first boot
+# cannot: cloud-init runs bootstrap.sh once, and a bound shorter than one roll of
+# registry-packages-proxy — whose host port is closed from the moment the old pod stops until the
+# new one starts — leaves the node with no kubelet and nothing that will ever retry.
 bb-rpp-get-install() {
   local bin="/opt/deckhouse/bin/rpp-get"
   local digest="{{ get $registryPackages "rppGet" }}"
@@ -307,7 +316,7 @@ bb-rpp-get-install() {
   local tmp="${bin}.tmp"
   local fetch_log="${bin}.fetch.log"
   local prefix="${PACKAGES_PROXY_BOOTSTRAP_CLUSTER_UUID:+/${PACKAGES_PROXY_BOOTSTRAP_CLUSTER_UUID}}"
-  local attempts=30
+  local attempts="${1:-30}"
   local attempt address
   if [[ -f "$digest_file" &&
         "$(<"$digest_file")" == "$digest" ]] &&
@@ -319,7 +328,7 @@ bb-rpp-get-install() {
     return 1
   fi
   mkdir -p "${bin%/*}" "${digest_file%/*}"
-  for ((attempt = 1; attempt <= attempts; attempt++)); do
+  for ((attempt = 1; attempts == 0 || attempt <= attempts; attempt++)); do
     for address in ${PACKAGES_PROXY_BOOTSTRAP_ADDRESSES}; do
       if ! bb-rpp-get-fetch "${address}${prefix}/rpp-get?digest=${digest}" > "$tmp" 2> "$fetch_log"; then
         bb-rpp-get-report "$attempt" "$attempts" "$address" "download failed" "$fetch_log"
@@ -338,7 +347,11 @@ bb-rpp-get-install() {
       rm -f "$fetch_log"
       return 0
     done
-    >&2 echo "Failed to install rpp-get (attempt ${attempt} of ${attempts}), retrying in 5 seconds"
+    if (( attempts == 0 )); then
+      >&2 echo "Failed to install rpp-get (attempt ${attempt}), retrying in 5 seconds"
+    else
+      >&2 echo "Failed to install rpp-get (attempt ${attempt} of ${attempts}), retrying in 5 seconds"
+    fi
     sleep 5
   done
   >&2 echo "Failed to install rpp-get after ${attempts} attempts"

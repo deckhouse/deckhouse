@@ -65,7 +65,8 @@ type StorageConfig struct {
 	// +optional
 	Cache bool `json:"cache,omitempty"`
 
-	// Size is the size of the persistent volume backing the cache.
+	// Size is how much the cache may hold on each replica: the budget of its store. Unset means
+	// no budget, and then only the reserve the store keeps free on the node's disk applies.
 	// +optional
 	Size string `json:"size,omitempty"`
 

@@ -1225,3 +1225,19 @@ func TestModuleDocsFromClusterSubstitutesUpstreamRegistry(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, registry_const.HostWithPath+"/modules", md.Sources[0].Spec.Registry.Repo)
 }
+
+// TestTheUpstreamServesWhatTheClusterNamesInCluster: the image set moves under the upstream's prefix,
+// and what sits beside it — the Flant module source — stays beside it, at the upstream's host.
+func TestTheUpstreamServesWhatTheClusterNamesInCluster(t *testing.T) {
+	const upstream = "registry.deckhouse.io/deckhouse/ee"
+
+	require.Equal(t, "registry.deckhouse.io/deckhouse/ee/modules",
+		upstreamRepository(upstream, "registry.d8-system.svc:5001/system/deckhouse/modules"))
+	require.Equal(t, "registry.deckhouse.io/deckhouse/ee",
+		upstreamRepository(upstream, "registry.d8-system.svc:5001/system/deckhouse"))
+	require.Equal(t, "registry.deckhouse.io/flant/modules",
+		upstreamRepository(upstream, "registry.d8-system.svc:5001/flant/modules"),
+		"not deckhouse/ee/flant/modules, which does not exist")
+	require.Equal(t, "registry.deckhouse.io/system/deckhouse-extra",
+		upstreamRepository(upstream, "registry.d8-system.svc:5001/system/deckhouse-extra"))
+}

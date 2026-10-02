@@ -563,3 +563,34 @@ func TestResolvePrefersAnAdditionalRouteOverItsOwnAddress(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, KindRoute, decision.Kind)
 }
+
+// TestResolveSendsASiblingOfTheImageSetToTheUpstream: the Flant module source lives beside the
+// edition's image set on the upstream's registry, `registry.deckhouse.io/flant/modules` next to
+// `registry.deckhouse.io/deckhouse/ee`. Once the cluster names only the in-cluster address it asks
+// for `registry.d8-system.svc:5001/flant/modules`, and swapping a prefix in the way the image set's
+// is swapped produced `deckhouse/ee/flant/modules`, which does not exist.
+func TestResolveSendsASiblingOfTheImageSetToTheUpstream(t *testing.T) {
+	for _, namespace := range []string{constant.Host, ""} {
+		decision, err := Resolve(namespace, "/v2/flant/modules/console/release/manifests/stable", layout(), self)
+		require.NoError(t, err, "ns=%q", namespace)
+
+		assert.Equal(t, KindUpstreamSibling, decision.Kind)
+		require.Len(t, decision.Targets, 1, "the cache holds the image set and nothing beside it")
+		assert.Equal(t,
+			"https://registry.deckhouse.io/v2/flant/modules/console/release/manifests/stable",
+			decision.Targets[0].URL())
+		assert.Equal(t, "license-key", decision.Targets[0].Auth.Password,
+			"with the account the cluster always used for that host")
+	}
+
+	// A name that merely starts like the prefix is outside it too.
+	decision, err := Resolve(constant.Host, "/v2/system/deckhouse-extra/one/manifests/v1", layout(), self)
+	require.NoError(t, err)
+	assert.Equal(t, KindUpstreamSibling, decision.Kind)
+
+	// Air-gapped: no upstream, and nothing else can serve it.
+	spec := layout()
+	spec.Backends = spec.Backends[:1]
+	_, err = Resolve(constant.Host, "/v2/flant/modules/console/manifests/v1", spec, self)
+	require.ErrorContains(t, err, "outside the image set")
+}

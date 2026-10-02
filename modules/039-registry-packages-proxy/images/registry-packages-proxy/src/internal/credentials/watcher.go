@@ -52,6 +52,10 @@ type Watcher struct {
 	// so that the keys it owns can be withdrawn when it changes. See applyClusterRegistry.
 	fromRegistrySecret *registry.ClientConfig
 
+	// The cluster's own registry once it pulls through the node agent, which is then the only answer:
+	// see applyClusterRegistry for why the secret is not consulted at all while this is set.
+	fromImageAddress *registry.ClientConfig
+
 	// How to read the cluster's own STORE, from the secret the module renders only where a store runs.
 	// Used while this node has no agent to fetch through — see storeAuthority for why that window
 	// exists and why the installer's secret cannot serve in it.
@@ -152,6 +156,12 @@ func (w *Watcher) Watch(ctx context.Context) {
 		defer wg.Done()
 
 		w.watchSecret(ctx)
+	}()
+
+	go func() {
+		defer wg.Done()
+
+		w.watchImageAddress(ctx)
 	}()
 
 	go func() {
@@ -309,7 +319,78 @@ func (w *Watcher) processSecretEvent(secretEvent watch.Event) error {
 	return nil
 }
 
+// watchImageAddress follows the registry module's record that the cluster pulls through the agent.
+func (w *Watcher) watchImageAddress(ctx context.Context) {
+	watchFunc := func(ctx context.Context, _ metav1.ListOptions) (watch.Interface, error) {
+		return w.k8sClient.CoreV1().ConfigMaps("d8-system").Watch(ctx, metav1.ListOptions{
+			FieldSelector: fields.OneTermEqualSelector("metadata.name", imageAddressConfigMap).String(),
+		})
+	}
+
+	addressWatcher, err := toolsWatch.NewRetryWatcherWithContext(ctx, "1",
+		&cache.ListWatch{WatchFuncWithContext: watchFunc})
+	if err != nil {
+		w.logger.Error("Watch the image address: %v", err)
+		return
+	}
+	defer addressWatcher.Stop()
+
+	for {
+		select {
+		case <-ctx.Done():
+			return
+		case <-addressWatcher.Done():
+			return
+		case event, ok := <-addressWatcher.ResultChan():
+			if !ok {
+				return
+			}
+			w.processImageAddressEvent(event)
+		}
+	}
+}
+
+func (w *Watcher) processImageAddressEvent(event watch.Event) {
+	configMap, ok := event.Object.(*v1.ConfigMap)
+	if !ok {
+		return
+	}
+
+	w.Lock()
+	defer w.Unlock()
+
+	switch event.Type {
+	case watch.Added, watch.Modified:
+		w.fromImageAddress = imageAddressRegistry(configMap.Data[imageAddressKey])
+		if w.fromImageAddress != nil {
+			w.logger.Info("the cluster pulls through the node agent, so its registry is the in-cluster one",
+				slog.String("repo", w.fromImageAddress.Repository))
+		}
+	case watch.Deleted:
+		w.logger.Info("the cluster no longer pulls through the node agent")
+		w.fromImageAddress = nil
+	}
+	w.applyClusterRegistry()
+}
+
+// imageAddressRegistry is the cluster's own registry as the image address names it: the in-cluster
+// address, and nothing to authenticate with, because Get turns it into the agent and the agent asks
+// for no credentials.
+func imageAddressRegistry(base string) *registry.ClientConfig {
+	base = strings.Trim(base, "/")
+	if base == "" {
+		return nil
+	}
+	return &registry.ClientConfig{Repository: base, Scheme: agentScheme}
+}
+
 // applyClusterRegistry installs the cluster's own registry under the keys it is asked for.
+//
+// The image address wins over the secret whenever it is there, and the secret is not read at all
+// then. On a cluster that pulls through the agent the secret is at best a copy of the same answer,
+// rendered by another module out of values the registry module does not own; at worst it names the
+// upstream with the upstream's account — which it did while a second master was joining, and every
+// package fetched in that window went to the upstream past the agent on this very node.
 //
 // Kept as a derivation rather than written straight into the map from the watch, because the keys it
 // owns have to be withdrawn when the address changes: on a cluster that moves from one registry to
@@ -327,7 +408,10 @@ func (w *Watcher) applyClusterRegistry() {
 	}
 	w.clusterRegistryKeys = nil
 
-	config := w.fromRegistrySecret
+	config := w.fromImageAddress
+	if config == nil {
+		config = w.fromRegistrySecret
+	}
 	if config == nil {
 		return
 	}

@@ -230,3 +230,34 @@ func TestAnAirGappedResourceFallsThrough(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, mirror, conf.GetRegistry(), "with no upstream the store is the only thing left")
 }
+
+// TestAManagedClusterIsReadFromTheResourceEverywhere: on a cluster whose pull path the registry module
+// manages, `deckhouse-registry` names the in-cluster registry with no account, because on a node that
+// address is the agent. Neither the auto-converger in the pod network nor a caller out of the cluster
+// is on a node, and there is no `registry-config` secret on such a cluster to ask instead — so the
+// resource is the answer for both, and for every path that asks only for the upstream.
+func TestAManagedClusterIsReadFromTheResourceEverywhere(t *testing.T) {
+	const (
+		upstream = "dev-registry.deckhouse.io/sys/deckhouse-oss"
+		mirror   = "registry.d8-system.svc:5001/system/deckhouse"
+	)
+
+	kubeCl := client.NewFakeKubernetesClient()
+	createRegistryConfigResource(t, kubeCl, "dev-registry.deckhouse.io", "/sys/deckhouse-oss",
+		map[string]interface{}{"username": "license-token", "password": "current-key"})
+	createDeckhouseRegistrySecret(t, kubeCl, mirror)
+
+	for _, inCluster := range []bool{true, false} {
+		conf, _, err := GetRegistryDataPreferUpstream(t.Context(), kubeCl, inCluster)
+		require.NoError(t, err)
+		require.Equal(t, upstream, conf.GetRegistry(), "inCluster=%v", inCluster)
+		require.Equal(t, "license-token", conf.GetUsername(), "inCluster=%v", inCluster)
+	}
+
+	// The provider bundle and a ModuleSource templated from the in-cluster address ask for the upstream
+	// alone, and used to find nothing here.
+	conf, found, err := GetUpstreamRegistryData(t.Context(), kubeCl)
+	require.NoError(t, err)
+	require.True(t, found)
+	require.Equal(t, upstream, conf.GetRegistry())
+}

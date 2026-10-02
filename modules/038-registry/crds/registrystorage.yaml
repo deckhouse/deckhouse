@@ -201,7 +201,7 @@ spec:
                       type: string
                       pattern: '^[0-9]+(\.[0-9]+)?(E|P|T|G|M|k|Ei|Pi|Ti|Gi|Mi|Ki)?$'
                       description: |
-                        The size of the persistent volume, taken from ModuleConfig.
+                        The budget of each replica's store, taken from `storage.size` of the ModuleConfig: how much its blobs and uploads in progress may take. Unset means no budget; the reserve kept free for the node applies either way.
                 publish:
                   type: boolean
                   description: |
@@ -388,6 +388,64 @@ spec:
                           Why the last fill or verification task failed, as reported by this replica's syncer. Empty when the last task succeeded.
 
                           Safety does not depend on this field: a failed replica is simply not `full`, and the upstream is only ever dropped once the leader **is** full. It exists so that an operator can tell "still filling" from "broken", which the fill counters alone cannot express.
+                      verifiedSet:
+                        type: string
+                        description: |
+                          A fingerprint of the set this replica was last found `full` against: the platform's versions and the modules the cluster keeps, each with its version and source.
+
+                          `full` is only as good as the set it was measured against, and the set moves — a module is installed, the platform is updated. Every replica reports it with its `full`. The leader compares its own with the set the cluster needs now; when they differ it takes `full` back and verifies before an air-gap transition may rely on it. A `full` for another set counts for nothing when the replicas decide who may lead. Empty when `full` is not set.
+                      store:
+                        type: object
+                        description: |
+                          How much of its node's disk this replica's store takes, and whether it still accepts writes. Absent until the replica has measured it.
+
+                          The registry enforces both limits itself, on every write; this is the syncer's account of the same figures, for the status and the alerts. Sizes are rounded to 16 MiB — used up, free down — so that a filesystem shared with the rest of the node does not rewrite the status on every pass.
+                        required:
+                          - usedBytes
+                          - reserveBytes
+                          - filesystemFreeBytes
+                          - filesystemCapacityBytes
+                          - writable
+                        properties:
+                          usedBytes:
+                            type: integer
+                            format: int64
+                            description: |
+                              What the store's blobs and uploads in progress take.
+                          budgetBytes:
+                            type: integer
+                            format: int64
+                            description: |
+                              `storage.size` of the module configuration. Absent when none is set, and then only the reserve applies.
+                          reserveBytes:
+                            type: integer
+                            format: int64
+                            description: |
+                              How much of the filesystem the store leaves free for the node: the kubelet's soft eviction threshold plus a margin.
+                          filesystemFreeBytes:
+                            type: integer
+                            format: int64
+                            description: |
+                              Free space on the filesystem the store is on. On a node without a dedicated disk it is the filesystem the kubelet and containerd use too.
+                          filesystemCapacityBytes:
+                            type: integer
+                            format: int64
+                            description: |
+                              Size of the filesystem the store is on.
+                          writable:
+                            type: boolean
+                            description: |
+                              False while the store refuses new writes. Reads are never refused: a full store serves everything it holds, and a pull it cannot keep is streamed from the upstream.
+                          reason:
+                            type: string
+                            enum:
+                              - BudgetExhausted
+                              - ReserveExhausted
+                            description: |
+                              The limit writes are refused on, when they are.
+
+                              - `BudgetExhausted` — the store holds as much as `storage.size` allows;
+                              - `ReserveExhausted` — the filesystem under the store is down to the space kept free for the node.
                 conditions:
                   type: array
                   description: |

@@ -72,6 +72,9 @@ var expectedFor = map[string]string{
 	"D8RegistryUpstreamRejected":     "15m",
 	"D8RegistryStaleCacheData":       "24h",
 	"D8RegistryStorageNotReclaimed":  "1h",
+	"D8RegistryStoreWritesRefused":   "2m",
+	"D8RegistryStoreNearlyFull":      "5m",
+	"D8RegistryStoreUnbounded":       "1h",
 }
 
 func loadRules(t *testing.T) ruleFile {

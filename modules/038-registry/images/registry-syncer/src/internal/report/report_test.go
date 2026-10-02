@@ -563,3 +563,87 @@ func TestAnnounceRequiresANode(t *testing.T) {
 
 	require.Error(t, publisher.Announce(context.Background(), State{Role: registryv1alpha1.ReplicaRoleLeader}))
 }
+
+// TestMergeKeepsTheLastStoreMeasurement: a report that did not measure the store must not erase
+// the last measurement, or the status flaps between having one and not.
+func TestMergeKeepsTheLastStoreMeasurement(t *testing.T) {
+	measured := &registryv1alpha1.StoreUsage{UsedBytes: 1 << 30, ReserveBytes: 5 << 30, Writable: true}
+	replicas := []registryv1alpha1.StorageReplicaStatus{{Node: "master-0", Store: measured}}
+
+	assert.False(t, Merge(&replicas, State{Node: "master-0"}), "nothing new was said")
+	require.NotNil(t, replicas[0].Store)
+	assert.Equal(t, int64(1<<30), replicas[0].Store.UsedBytes)
+
+	full := &registryv1alpha1.StoreUsage{
+		UsedBytes: 2 << 30, ReserveBytes: 5 << 30,
+		Reason: registryv1alpha1.StoreBudgetExhausted,
+	}
+	assert.True(t, Merge(&replicas, State{Node: "master-0", Store: full}))
+	assert.False(t, replicas[0].Store.Writable)
+	assert.Equal(t, registryv1alpha1.StoreBudgetExhausted, replicas[0].Store.Reason)
+}
+
+func TestMergeStoreTouchesOnlyTheStore(t *testing.T) {
+	replicas := []registryv1alpha1.StorageReplicaStatus{
+		{Node: "master-0", Full: true, VerifiedDigests: 459, Error: "3 references failed"},
+		{Node: "master-1", Full: true},
+	}
+	usage := &registryv1alpha1.StoreUsage{UsedBytes: 1 << 30, ReserveBytes: 5 << 30, Writable: true}
+
+	assert.True(t, MergeStore(&replicas, State{Node: "master-0", Store: usage}))
+	assert.True(t, replicas[0].Full)
+	assert.EqualValues(t, 459, replicas[0].VerifiedDigests)
+	assert.Equal(t, "3 references failed", replicas[0].Error)
+	assert.Equal(t, int64(1<<30), replicas[0].Store.UsedBytes)
+	assert.Nil(t, replicas[1].Store)
+
+	assert.False(t, MergeStore(&replicas, State{Node: "master-0", Store: usage.DeepCopy()}),
+		"the same figures write nothing")
+
+	assert.True(t, MergeStore(&replicas, State{Node: "master-2", Store: usage}))
+	require.Len(t, replicas, 3)
+	assert.Equal(t, "master-2", replicas[2].Node)
+}
+
+// TestProgressClearsTheLastPassesError is the other defect a live cluster found: the leader's first
+// attempt failed, the next one worked, and the status said Failed for the forty minutes it ran.
+func TestProgressClearsTheLastPassesError(t *testing.T) {
+	replicas := []registryv1alpha1.StorageReplicaStatus{{
+		Node: "master-0", Role: registryv1alpha1.ReplicaRoleLeader, Full: false,
+		VerifiedDigests: 120, Error: "reading the image set of main: MANIFEST_UNKNOWN",
+	}}
+
+	assert.True(t, MergeProgress(&replicas, State{Node: "master-0", VerifiedDigests: 40, DeclaredDigests: 459}))
+	assert.Empty(t, replicas[0].Error, "a pass that is copying is past what failed the last one")
+	assert.EqualValues(t, 120, replicas[0].VerifiedDigests, "a pass counting from zero must not read as an emptied store")
+	assert.EqualValues(t, 459, replicas[0].DeclaredDigests)
+	assert.Equal(t, registryv1alpha1.ReplicaRoleLeader, replicas[0].Role)
+
+	assert.True(t, MergeProgress(&replicas, State{Node: "master-0", VerifiedDigests: 300, DeclaredDigests: 459}))
+	assert.EqualValues(t, 300, replicas[0].VerifiedDigests)
+	assert.False(t, replicas[0].Full, "progress does not make a replica full; its own report does")
+
+	assert.False(t, MergeProgress(&replicas, State{Node: "master-0", VerifiedDigests: 300, DeclaredDigests: 459}),
+		"the same progress writes nothing")
+}
+
+func TestMergeWithdrawTakesBackOnlyFull(t *testing.T) {
+	replicas := []registryv1alpha1.StorageReplicaStatus{{
+		Node: "master-0", Role: registryv1alpha1.ReplicaRoleLeader, Full: true,
+		VerifiedDigests: 459, DeclaredDigests: 459, VerifiedSet: "abc",
+	}}
+
+	assert.True(t, MergeWithdraw(&replicas, State{Node: "master-0"}))
+	assert.False(t, replicas[0].Full)
+	assert.Empty(t, replicas[0].VerifiedSet)
+	assert.EqualValues(t, 459, replicas[0].VerifiedDigests, "what the store holds does not change")
+	assert.False(t, MergeWithdraw(&replicas, State{Node: "master-0"}), "twice is once")
+	assert.False(t, MergeWithdraw(&replicas, State{Node: "master-1"}), "nothing to withdraw for an absent replica")
+}
+
+func TestMergeCarriesTheVerifiedSet(t *testing.T) {
+	var replicas []registryv1alpha1.StorageReplicaStatus
+	Merge(&replicas, State{Node: "master-0", Full: true, VerifiedSet: "abc"})
+	require.Len(t, replicas, 1)
+	assert.Equal(t, "abc", replicas[0].VerifiedSet)
+}

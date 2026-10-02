@@ -17,6 +17,12 @@ limitations under the License.
 package layout
 
 import (
+	"fmt"
+	"sort"
+	"strings"
+
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+
 	registryv1alpha1 "github.com/deckhouse/deckhouse/go_lib/registry/apis/deckhouse.io/v1alpha1"
 )
 
@@ -183,4 +189,66 @@ func leaseHolderReport(
 		}
 	}
 	return nil
+}
+
+// StoreWritable is the StoreWritable condition, from what each replica measured of its own store.
+//
+// False as soon as one replica refuses: the replicas hold the same set, so one that cannot take the
+// next release is a replica that falls behind, and the fix — a larger budget, a collection, a
+// dedicated disk — is the operator's either way. The reason is the limit hit on the most replicas;
+// the message names every refusing node and what frees each. Unknown until a replica has measured.
+func StoreWritable(replicas []registryv1alpha1.StorageReplicaStatus, generation int64) metav1.Condition {
+	condition := metav1.Condition{
+		Type:               registryv1alpha1.ConditionStoreWritable,
+		ObservedGeneration: generation,
+		Status:             metav1.ConditionUnknown,
+		Reason:             registryv1alpha1.ReasonStoreNotMeasured,
+		Message:            "No replica has measured its store yet.",
+	}
+
+	refusing := map[registryv1alpha1.StoreRefusal][]string{}
+	measured := 0
+	for _, replica := range replicas {
+		if replica.Store == nil {
+			continue
+		}
+		measured++
+		if !replica.Store.Writable {
+			refusing[replica.Store.Reason] = append(refusing[replica.Store.Reason], replica.Node)
+		}
+	}
+	if measured == 0 {
+		return condition
+	}
+	if len(refusing) == 0 {
+		condition.Status = metav1.ConditionTrue
+		condition.Reason = registryv1alpha1.ReasonStoreWritable
+		condition.Message = "Every replica's store accepts writes."
+		return condition
+	}
+
+	budget := refusing[registryv1alpha1.StoreBudgetExhausted]
+	reserve := refusing[registryv1alpha1.StoreReserveExhausted]
+	sort.Strings(budget)
+	sort.Strings(reserve)
+
+	condition.Status = metav1.ConditionFalse
+	condition.Reason = string(registryv1alpha1.StoreReserveExhausted)
+	if len(budget) >= len(reserve) {
+		condition.Reason = string(registryv1alpha1.StoreBudgetExhausted)
+	}
+
+	var parts []string
+	if len(budget) > 0 {
+		parts = append(parts, fmt.Sprintf("the store on %s holds as much as storage.size allows: "+
+			"raise storage.size or wait for the garbage collection to reclaim space",
+			strings.Join(budget, ", ")))
+	}
+	if len(reserve) > 0 {
+		parts = append(parts, fmt.Sprintf("the filesystem under the store on %s is down to the "+
+			"space kept free for the node: free space on the node or move the store to a dedicated disk",
+			strings.Join(reserve, ", ")))
+	}
+	condition.Message = "Writes are refused and reads still served; " + strings.Join(parts, "; ") + "."
+	return condition
 }

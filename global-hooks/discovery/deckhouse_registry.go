@@ -34,6 +34,7 @@ import (
 	sdkobjectpatch "github.com/deckhouse/module-sdk/pkg/object-patch"
 
 	"github.com/deckhouse/deckhouse/go_lib/dependency"
+	registry_const "github.com/deckhouse/deckhouse/go_lib/registry/const"
 	registry_helpers "github.com/deckhouse/deckhouse/go_lib/registry/helpers"
 	deckhouse_registry "github.com/deckhouse/deckhouse/go_lib/registry/models/deckhouseregistry"
 )
@@ -51,8 +52,8 @@ const (
 	// questions that module already answers; asking them a second time in a global hook
 	// would put two writers on one decision, and the one that got it wrong would point
 	// every image reference in the cluster at something nothing can pull.
-	imageAddressConfigMapName = "registry-image-address"
-	imageAddressConfigMapKey  = "base"
+	imageAddressConfigMapName = registry_const.ImageAddressConfigMapName
+	imageAddressConfigMapKey  = registry_const.ImageAddressConfigMapKey
 
 	// registryConfigSnap is the resolved configuration of the registry module: cluster-scoped,
 	// singleton, and on a cluster running that module the only description of the registry that is kept
@@ -241,6 +242,26 @@ func discoveryDeckhouseRegistry(ctx context.Context, input *go_hook.HookInput, d
 		registrySecretRaw, fromSecret = registryConfSnap[0], true
 	}
 
+	published, err := publishedImageAddress(input)
+	if err != nil {
+		return err
+	}
+
+	// A cluster whose pull path goes through the node agent has one registry as far as anything in it
+	// is concerned: the in-cluster one. The upstream, and the account for it, exist in the registry
+	// module's configuration and in the layout every agent is given — and nowhere else.
+	//
+	// So neither the secret nor the resource is read here. The secret is rendered out of these very
+	// values, and taking them from the resource's upstream is what put that upstream's account into
+	// the secret and into every pull secret copied from it, and what sent every process that reads it
+	// — registry-packages-proxy, the Deckhouse controller — straight to the upstream past the agent
+	// beside it.
+	if published != "" {
+		input.Logger.Info("the cluster pulls through the node agent, so it is described as the in-cluster registry",
+			slog.String("address", published))
+		return setRegistryValues(input, inClusterRegistry(), published)
+	}
+
 	resolvedFromResource, err := resolvedUpstream(ctx, dc)
 	if err != nil {
 		return err
@@ -278,26 +299,39 @@ func discoveryDeckhouseRegistry(ctx context.Context, input *go_hook.HookInput, d
 	if registrySecretRaw.Address == "" {
 		return fmt.Errorf("address field not found in 'deckhouse-registry' secret")
 	}
+	return setRegistryValues(input, registrySecretRaw,
+		fmt.Sprintf("%s%s", registrySecretRaw.Address, registrySecretRaw.Path))
+}
+
+// inClusterRegistry is the in-cluster registry as the platform records it.
+//
+// No authority and no account, and both on purpose. Whatever dials this address from a node goes
+// through the agent, which serves under an authority generated on that node and asks the client for
+// no credentials; a container runtime is redirected into the agent by a drop-in, and the agent drops
+// whatever a pull secret offers it. An account here would be an account for something that never
+// asks for one — and the one that used to be here was the upstream's.
+//
+// The host is still in the docker config, without credentials, because what reads the secret looks
+// the registry up by host there: the admission webhook refuses a secret with no registry in it, and
+// dhctl refuses a cluster whose docker config does not name the host it is told about.
+func inClusterRegistry() registrySecret {
+	return registrySecret{
+		RegistryDockercfg: []byte(fmt.Sprintf(`{"auths":{%q:{}}}`, registry_const.Host)),
+		Address:           registry_const.Host,
+		Path:              registry_const.Path,
+		Scheme:            registry_const.Scheme,
+	}
+}
+
+// setRegistryValues writes the registry the platform renders from.
+//
+// `base` is passed separately because it is the one value the registry module moves on its own: every
+// other field describes a registry, and `base` is where image references point, which on a cluster
+// pulling through the agent is the in-cluster address before the rest of the description follows it.
+func setRegistryValues(input *go_hook.HookInput, registrySecretRaw registrySecret, imageBase string) error {
 	// yes, we store base64 encoded string but in secret object store decoded data
 	// In values we store base64-encoded docker config because in this form it is applied in other places.
 	registryConfEncoded := base64.StdEncoding.EncodeToString(registrySecretRaw.RegistryDockercfg)
-
-	// `base` is the address container image references are rendered from, and it is the only
-	// one of these values that the registry module can move.
-	//
-	// The others describe the registry the cluster was installed with, and they keep doing
-	// that: `address`, `path` and the docker config are what an out-of-cluster caller reads —
-	// dhctl among them, which refuses to touch a cluster whose docker config has no
-	// credentials for the host they name. Whether anything in the cluster fetches through the
-	// node agent instead is decided from `base`, by the party that has to dial it.
-	imageBase := fmt.Sprintf("%s%s", registrySecretRaw.Address, registrySecretRaw.Path)
-	if published, err := publishedImageAddress(input); err != nil {
-		return err
-	} else if published != "" {
-		input.Logger.Info("rendering image references from the address the registry module published",
-			slog.String("address", published))
-		imageBase = published
-	}
 
 	input.Values.Set("global.modulesImages.registry.base", imageBase)
 	input.Values.Set("global.modulesImages.registry.dockercfg", registryConfEncoded)

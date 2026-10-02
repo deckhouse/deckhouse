@@ -30,7 +30,7 @@ func caFrom(value string) func() ([]byte, error) {
 
 func noCA() ([]byte, error) { return nil, errors.New("no such file") }
 
-// TestTheAddressesArePinnedToTheirSource covers the four literals this proxy carries in place of an
+// TestTheAddressesArePinnedToTheirSource covers the literals this proxy carries in place of an
 // import — it is its own Go module and cannot depend on the platform's registry package.
 //
 // Divergence here is not a build error, it is a proxy quietly dialling something else.
@@ -40,6 +40,8 @@ func TestTheAddressesArePinnedToTheirSource(t *testing.T) {
 	require.Equal(t, "127.0.0.1:5001", proxyHost, "go_lib/registry/const: ProxyHost")
 	require.Equal(t, "/etc/kubernetes/registry-agent/pki/ca.crt", agentCAFile,
 		"go_lib/registry/const: AgentCAFile, and the mount path in the deployment")
+	require.Equal(t, "registry-image-address", imageAddressConfigMap, "go_lib/registry/const: ImageAddressConfigMapName")
+	require.Equal(t, "base", imageAddressKey, "go_lib/registry/const: ImageAddressConfigMapKey")
 }
 
 // TestFetchingGoesThroughTheAgent is the model: a client on a node does not reach a registry, it

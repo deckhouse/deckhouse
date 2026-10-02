@@ -182,6 +182,10 @@ func CacheOptions() (cache.Options, client.Options) {
 			// informer and still send every read to the apiserver.
 			DisableFor: []client.Object{
 				&coordinationv1.Lease{},
+				// One object of another module's CRD, read once per render: an informer would
+				// watch a kind this binary may not be allowed to list, and would not sync at all
+				// on a cluster where that module never installed it.
+				newUnstructured("deckhouse.io", "v1alpha1", "RegistryConfig"),
 			},
 		},
 	}

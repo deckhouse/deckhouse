@@ -32,7 +32,12 @@ export PACKAGES_PROXY_TOKEN="{{ get $packagesProxy "token" | default "passthroug
 export PACKAGES_PROXY_ADDRESSES="{{ .clusterMasterRPPAddresses | join "," }}"
 {{ end }}
 bb-minget-install
-bb-rpp-get-install
+{{- /*
+  Until installed on a joining node: nothing runs this script a second time, so giving up here
+  is final. The first master is bootstrapped by the installer, over its own tunnel, and the
+  installer reports a failure to someone who can act on it.
+*/}}
+bb-rpp-get-install{{ if ne .runType "ClusterBootstrap" }} 0{{ end }}
 {{ with .images.registrypackages }}
 /opt/deckhouse/bin/rpp-get install "jq:{{ .jq171 }}" "curl:{{ .d8Curl891 }}" "tailLog:{{ .tailLog }}"
 export PATH="/opt/deckhouse/bin:/usr/local/bin:$PATH"

@@ -45,10 +45,15 @@ import (
 // disabling the module removes it, and the platform falls back to the registry it was
 // installed with. That fallback is the reason this is conditional at all; in the state
 // this module is heading for, the address is simply a constant.
-const ImageAddressConfigMapName = "registry-image-address"
+//
+// The installer publishes it too, on a cluster whose first master comes up with the agent
+// already on it: there the answer is known before any node exists to report it, and asking
+// the question anyway is what moved every image reference onto the upstream and back while
+// the second master was joining.
+const ImageAddressConfigMapName = registry_const.ImageAddressConfigMapName
 
 // ImageAddressKey is the only key in it.
-const ImageAddressKey = "base"
+const ImageAddressKey = registry_const.ImageAddressConfigMapKey
 
 const (
 	imageAddressSnapName  = "image-address"

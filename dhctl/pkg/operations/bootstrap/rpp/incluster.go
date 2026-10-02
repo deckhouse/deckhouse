@@ -37,7 +37,7 @@ const (
 
 	// Ten minutes: room for a slow registry, and no more. The budget only bites where the module
 	// is not coming up at all, and a longer one buys nothing there - machines built against a
-	// proxy that never answers die on their own 150-second timer regardless.
+	// proxy that never answers keep asking it, and only a failed installation says why.
 	inClusterProxyReadyAttempts = 120
 	inClusterProxyReadyInterval = 5 * time.Second
 )
