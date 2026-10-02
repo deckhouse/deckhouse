@@ -20,7 +20,7 @@ require (
 	github.com/deckhouse/deckhouse/pkg/deckhouse-registry v0.0.0-00010101000000-000000000000
 	github.com/deckhouse/deckhouse/pkg/log v0.2.1
 	github.com/deckhouse/deckhouse/pkg/registry v0.0.2-0.20260916084840-a97e86c61556
-	github.com/deckhouse/lib-connection v0.15.0
+	github.com/deckhouse/lib-connection v0.16.1
 	github.com/deckhouse/lib-dhctl v0.23.0
 	github.com/deckhouse/lib-gossh v0.3.0
 	github.com/deckhouse/module-sdk v0.12.2
