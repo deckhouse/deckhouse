@@ -17,15 +17,19 @@ limitations under the License.
 package controller
 
 import (
+	"fmt"
 	"testing"
 	"time"
 
 	"github.com/deckhouse/virtualization/api/core/v1alpha2"
+	"github.com/deckhouse/virtualization/api/core/v1alpha2/vmcondition"
+	"github.com/go-logr/logr"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"k8s.io/apimachinery/pkg/api/errors"
+	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/utils/ptr"
@@ -312,6 +316,174 @@ func TestDataSecretNameChanged(t *testing.T) {
 			if got := dataSecretNameChanged(tt.before, tt.after); got != tt.want {
 				t.Fatalf("dataSecretNameChanged() = %v, want %v", got, tt.want)
 			}
+		})
+	}
+}
+
+// A machine without GPUs must leave the field absent from the VM manifest rather
+// than send an empty list: DVP rejects `gpus: []` on a VM, and a machine that
+// never asked for a GPU would stop being creatable.
+func TestBuildGPUs(t *testing.T) {
+	machine := func(gpus ...string) *infrastructurev1alpha1.DeckhouseMachine {
+		m := &infrastructurev1alpha1.DeckhouseMachine{}
+		for _, name := range gpus {
+			m.Spec.GPUs = append(m.Spec.GPUs, infrastructurev1alpha1.GPUDevice{GPUClassName: name})
+		}
+		return m
+	}
+
+	tests := []struct {
+		name string
+		in   *infrastructurev1alpha1.DeckhouseMachine
+		want []v1alpha2.GPUDeviceSpec
+	}{
+		{
+			name: "no gpus requested",
+			in:   machine(),
+			want: nil,
+		},
+		{
+			name: "single gpu",
+			in:   machine("nvidia-h100"),
+			want: []v1alpha2.GPUDeviceSpec{{GPUClassName: "nvidia-h100"}},
+		},
+		{
+			name: "several devices of the same class",
+			in:   machine("nvidia-h100", "nvidia-h100"),
+			want: []v1alpha2.GPUDeviceSpec{{GPUClassName: "nvidia-h100"}, {GPUClassName: "nvidia-h100"}},
+		},
+		{
+			name: "devices of different classes keep their order",
+			in:   machine("nvidia-h100", "nvidia-a100"),
+			want: []v1alpha2.GPUDeviceSpec{{GPUClassName: "nvidia-h100"}, {GPUClassName: "nvidia-a100"}},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			assert.Equal(t, tt.want, buildGPUs(tt.in))
+		})
+	}
+}
+
+// The reason a GPU machine is stuck lives in the parent cluster, where the owner of the
+// DeckhouseMachine usually cannot look. handleGPUClassNotReady copies it onto the machine —
+// but only for machines that asked for a GPU, and never as a FailureReason, because both
+// GPUClassNotFound and GPUClassNotReady are fixed in the parent cluster without recreating
+// the machine.
+func TestHandleGPUClassNotReady(t *testing.T) {
+	machine := func(gpus ...string) *infrastructurev1alpha1.DeckhouseMachine {
+		m := &infrastructurev1alpha1.DeckhouseMachine{}
+		for _, name := range gpus {
+			m.Spec.GPUs = append(m.Spec.GPUs, infrastructurev1alpha1.GPUDevice{GPUClassName: name})
+		}
+		return m
+	}
+
+	vmWithCondition := func(status metav1.ConditionStatus, reason, message string) *v1alpha2.VirtualMachine {
+		vm := &v1alpha2.VirtualMachine{}
+		vm.Status.Conditions = []metav1.Condition{{
+			Type:    vmcondition.TypeGPUClassReady.String(),
+			Status:  status,
+			Reason:  reason,
+			Message: message,
+		}}
+		return vm
+	}
+
+	tests := []struct {
+		name        string
+		machine     *infrastructurev1alpha1.DeckhouseMachine
+		vm          *v1alpha2.VirtualMachine
+		wantHandled bool
+		wantReason  string
+		wantMessage string
+	}{
+		{
+			name:        "machine without gpus is left to the generic path",
+			machine:     machine(),
+			vm:          vmWithCondition(metav1.ConditionFalse, vmcondition.ReasonGPUClassNotFound.String(), "no such GPUClass"),
+			wantHandled: false,
+		},
+		{
+			name:        "no GPUClassReady condition yet",
+			machine:     machine("nvidia-h100"),
+			vm:          &v1alpha2.VirtualMachine{},
+			wantHandled: false,
+		},
+		{
+			name:        "classes are ready, the VM waits for something else",
+			machine:     machine("nvidia-h100"),
+			vm:          vmWithCondition(metav1.ConditionTrue, vmcondition.ReasonGPUClassReady.String(), ""),
+			wantHandled: false,
+		},
+		{
+			name:        "missing class",
+			machine:     machine("nvidia-h100"),
+			vm:          vmWithCondition(metav1.ConditionFalse, vmcondition.ReasonGPUClassNotFound.String(), `GPUClass "nvidia-h100" not found`),
+			wantHandled: true,
+			wantReason:  infrastructurev1alpha1.GPUClassNotFoundReason,
+			wantMessage: `GPUClass "nvidia-h100" not found. Requested GPU classes: nvidia-h100`,
+		},
+		{
+			name:        "class exists but is not ready",
+			machine:     machine("nvidia-h100"),
+			vm:          vmWithCondition(metav1.ConditionFalse, vmcondition.ReasonGPUClassNotReady.String(), "GPUClass is not ready"),
+			wantHandled: true,
+			wantReason:  infrastructurev1alpha1.GPUClassNotReadyReason,
+			wantMessage: "GPUClass is not ready. Requested GPU classes: nvidia-h100",
+		},
+		{
+			name:        "the VM message already ends with a period",
+			machine:     machine("nvidia-h100", "nvidia-t4"),
+			vm:          vmWithCondition(metav1.ConditionFalse, vmcondition.ReasonGPUClassNotReady.String(), "GPUClass is not ready yet."),
+			wantHandled: true,
+			wantReason:  infrastructurev1alpha1.GPUClassNotReadyReason,
+			wantMessage: "GPUClass is not ready yet. Requested GPU classes: nvidia-h100, nvidia-t4",
+		},
+		{
+			name:        "unknown status counts as not ready",
+			machine:     machine("nvidia-h100"),
+			vm:          vmWithCondition(metav1.ConditionUnknown, "", ""),
+			wantHandled: true,
+			wantReason:  infrastructurev1alpha1.GPUClassNotReadyReason,
+			wantMessage: fmt.Sprintf("VM condition %s is Unknown. Requested GPU classes: nvidia-h100",
+				vmcondition.TypeGPUClassReady.String()),
+		},
+		{
+			name:        "no message, but the reason is kept in the fallback",
+			machine:     machine("nvidia-h100"),
+			vm:          vmWithCondition(metav1.ConditionFalse, vmcondition.ReasonGPUClassNotReady.String(), ""),
+			wantHandled: true,
+			wantReason:  infrastructurev1alpha1.GPUClassNotReadyReason,
+			wantMessage: fmt.Sprintf("VM condition %s is False (%s). Requested GPU classes: nvidia-h100",
+				vmcondition.TypeGPUClassReady.String(), vmcondition.ReasonGPUClassNotReady.String()),
+		},
+	}
+
+	r := &DeckhouseMachineReconciler{}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result, handled := r.handleGPUClassNotReady(logr.Discard(), tt.machine, tt.vm)
+			require.Equal(t, tt.wantHandled, handled)
+			if !tt.wantHandled {
+				assert.Empty(t, tt.machine.Status.Conditions)
+				return
+			}
+
+			assert.Equal(t, 30*time.Second, result.RequeueAfter)
+
+			cond := meta.FindStatusCondition(tt.machine.Status.Conditions, string(infrastructurev1alpha1.VMReadyCondition))
+			require.NotNil(t, cond)
+			assert.Equal(t, metav1.ConditionFalse, cond.Status)
+			assert.Equal(t, tt.wantReason, cond.Reason)
+			assert.Contains(t, cond.Message, "nvidia-h100")
+			assert.Equal(t, tt.wantMessage, cond.Message)
+			assert.NotContains(t, cond.Message, "..", "an already terminated VM message must not gain a second period")
+			assert.NotContains(t, cond.Message, "()", "a condition without a reason must not render empty parens")
+
+			assert.Nil(t, tt.machine.Status.FailureReason, "a missing GPUClass is fixed in the parent cluster, the machine must stay recoverable")
+			assert.Nil(t, tt.machine.Status.FailureMessage)
 		})
 	}
 }

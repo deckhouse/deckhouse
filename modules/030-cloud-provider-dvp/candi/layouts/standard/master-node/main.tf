@@ -154,6 +154,7 @@ module "master" {
   live_migration_policy      = local.live_migration_policy
   run_policy                 = local.run_policy
   bootloader                 = local.bootloader
+  gpus                       = local.gpus
   cpu                        = local.cpu
   ssh_public_key             = local.ssh_public_key
   hostname                   = local.hostname
