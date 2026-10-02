@@ -535,8 +535,8 @@ func compileRenderedPolicy(renderedPolicy string) compiledPolicy {
 	Expect(yaml.UnmarshalStrict([]byte(renderedPolicy), &policy)).To(Succeed())
 
 	// kube-apiserver declares the authorizer for validations but not for message expressions.
-	validationVars := admissioncel.OptionalVariableDeclarations{HasAuthorizer: true, StrictCost: true}
-	messageVars := admissioncel.OptionalVariableDeclarations{StrictCost: true}
+	validationVars := admissioncel.OptionalVariableDeclarations{HasAuthorizer: true}
+	messageVars := admissioncel.OptionalVariableDeclarations{}
 
 	// The environment is pinned to the lowest Kubernetes version this branch supports, not to the
 	// compatibility version of the vendored apiserver, which is higher. With failurePolicy: Fail an
@@ -547,7 +547,7 @@ func compileRenderedPolicy(renderedPolicy string) compiledPolicy {
 	// keeps every library available so that policies already persisted in etcd keep evaluating, and
 	// it is NewExpressions that kube-apiserver validates a freshly submitted policy against.
 	compiler, err := admissioncel.NewCompositedCompiler(
-		environment.MustBaseEnvSet(minimalSupportedKubernetesVersion(), true),
+		environment.MustBaseEnvSet(minimalSupportedKubernetesVersion()),
 	)
 	Expect(err).ToNot(HaveOccurred())
 
@@ -566,7 +566,7 @@ func compileRenderedPolicy(renderedPolicy string) compiledPolicy {
 	// The authorizer, in contrast, is declared there as well. Sharing the compiler above would let a
 	// match condition using variables pass here and be refused by a real API server.
 	matchCompiler, err := admissioncel.NewCompositedCompiler(
-		environment.MustBaseEnvSet(minimalSupportedKubernetesVersion(), true),
+		environment.MustBaseEnvSet(minimalSupportedKubernetesVersion()),
 	)
 	Expect(err).ToNot(HaveOccurred())
 

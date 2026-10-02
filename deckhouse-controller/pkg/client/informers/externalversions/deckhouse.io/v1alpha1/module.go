@@ -53,7 +53,7 @@ func NewModuleInformer(client versioned.Interface, resyncPeriod time.Duration, i
 // one. This reduces memory footprint and number of connections to the server.
 func NewFilteredModuleInformer(client versioned.Interface, resyncPeriod time.Duration, indexers cache.Indexers, tweakListOptions internalinterfaces.TweakListOptionsFunc) cache.SharedIndexInformer {
 	return cache.NewSharedIndexInformer(
-		&cache.ListWatch{
+		cache.ToListWatcherWithWatchListSemantics(&cache.ListWatch{
 			ListFunc: func(options v1.ListOptions) (runtime.Object, error) {
 				if tweakListOptions != nil {
 					tweakListOptions(&options)
@@ -78,7 +78,7 @@ func NewFilteredModuleInformer(client versioned.Interface, resyncPeriod time.Dur
 				}
 				return client.DeckhouseV1alpha1().Modules().Watch(ctx, options)
 			},
-		},
+		}, client),
 		&apisdeckhouseiov1alpha1.Module{},
 		resyncPeriod,
 		indexers,

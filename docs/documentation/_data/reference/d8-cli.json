@@ -1,7 +1,7 @@
 {
   "name": "d8",
   "description": "d8 controls the Deckhouse Kubernetes Platform",
-  "version": "v0.33.24",
+  "version": "v0.34.2",
   "aliases": null,
   "flags": {
     "help": {
@@ -26772,6 +26772,11 @@
           "shorthand": "",
           "global": false
         },
+        "as-user-extra": {
+          "description": "User extras to impersonate for the operation, this flag can be repeated to specify multiple values for the same key.",
+          "shorthand": "",
+          "global": false
+        },
         "cache-dir": {
           "description": "Default cache directory",
           "shorthand": "",
@@ -26843,7 +26848,7 @@
           "global": false
         },
         "profile": {
-          "description": "Name of profile to capture. One of (none|cpu|heap|goroutine|threadcreate|block|mutex)",
+          "description": "Name of profile to capture. One of (none|cpu|heap|goroutine|threadcreate|block|mutex|trace)",
           "shorthand": "",
           "global": false
         },
@@ -26920,6 +26925,11 @@
               "shorthand": "",
               "global": true
             },
+            "as-user-extra": {
+              "description": "User extras to impersonate for the operation, this flag can be repeated to specify multiple values for the same key.",
+              "shorthand": "",
+              "global": true
+            },
             "cache-dir": {
               "description": "Default cache directory",
               "shorthand": "",
@@ -26991,7 +27001,7 @@
               "global": true
             },
             "profile": {
-              "description": "Name of profile to capture. One of (none|cpu|heap|goroutine|threadcreate|block|mutex)",
+              "description": "Name of profile to capture. One of (none|cpu|heap|goroutine|threadcreate|block|mutex|trace)",
               "shorthand": "",
               "global": true
             },
@@ -27046,7 +27056,526 @@
               "global": true
             }
           },
-          "subcommands": null
+          "subcommands": [
+            {
+              "name": "kuberc SUBCOMMAND",
+              "description": "Manage kuberc configuration files",
+              "longDescription": "Manage user preferences (kuberc) file.\n\n The kuberc file allows you to customize your kubectl experience.",
+              "aliases": null,
+              "flags": {
+                "as": {
+                  "description": "Username to impersonate for the operation. User could be a regular user or a service account in a namespace.",
+                  "shorthand": "",
+                  "global": true
+                },
+                "as-group": {
+                  "description": "Group to impersonate for the operation, this flag can be repeated to specify multiple groups.",
+                  "shorthand": "",
+                  "global": true
+                },
+                "as-uid": {
+                  "description": "UID to impersonate for the operation.",
+                  "shorthand": "",
+                  "global": true
+                },
+                "as-user-extra": {
+                  "description": "User extras to impersonate for the operation, this flag can be repeated to specify multiple values for the same key.",
+                  "shorthand": "",
+                  "global": true
+                },
+                "cache-dir": {
+                  "description": "Default cache directory",
+                  "shorthand": "",
+                  "global": true
+                },
+                "certificate-authority": {
+                  "description": "Path to a cert file for the certificate authority",
+                  "shorthand": "",
+                  "global": true
+                },
+                "client-certificate": {
+                  "description": "Path to a client certificate file for TLS",
+                  "shorthand": "",
+                  "global": true
+                },
+                "client-key": {
+                  "description": "Path to a client key file for TLS",
+                  "shorthand": "",
+                  "global": true
+                },
+                "cluster": {
+                  "description": "The name of the kubeconfig cluster to use",
+                  "shorthand": "",
+                  "global": true
+                },
+                "context": {
+                  "description": "The name of the kubeconfig context to use",
+                  "shorthand": "",
+                  "global": true
+                },
+                "disable-compression": {
+                  "description": "If true, opt-out of response compression for all requests to the server",
+                  "shorthand": "",
+                  "global": true
+                },
+                "insecure-skip-tls-verify": {
+                  "description": "If true, the server's certificate will not be checked for validity. This will make your HTTPS connections insecure",
+                  "shorthand": "",
+                  "global": true
+                },
+                "kubeconfig": {
+                  "description": "Path to the kubeconfig file to use for CLI requests.",
+                  "shorthand": "",
+                  "global": true
+                },
+                "kuberc": {
+                  "description": "Path to the kuberc file to use for preferences. This can be disabled by exporting KUBECTL_KUBERC=false feature gate or turning off the feature KUBERC=off.",
+                  "shorthand": "",
+                  "global": true
+                },
+                "log-flush-frequency": {
+                  "description": "Maximum number of seconds between log flushes",
+                  "shorthand": "",
+                  "global": true
+                },
+                "match-server-version": {
+                  "description": "Require server version to match client version",
+                  "shorthand": "",
+                  "global": true
+                },
+                "namespace": {
+                  "description": "If present, the namespace scope for this CLI request",
+                  "shorthand": "n",
+                  "global": true
+                },
+                "password": {
+                  "description": "Password for basic authentication to the API server",
+                  "shorthand": "",
+                  "global": true
+                },
+                "profile": {
+                  "description": "Name of profile to capture. One of (none|cpu|heap|goroutine|threadcreate|block|mutex|trace)",
+                  "shorthand": "",
+                  "global": true
+                },
+                "profile-output": {
+                  "description": "Name of the file to write the profile to",
+                  "shorthand": "",
+                  "global": true
+                },
+                "request-timeout": {
+                  "description": "The length of time to wait before giving up on a single server request. Non-zero values should contain a corresponding time unit (e.g. 1s, 2m, 3h). A value of zero means don't timeout requests.",
+                  "shorthand": "",
+                  "global": true
+                },
+                "server": {
+                  "description": "The address and port of the Kubernetes API server",
+                  "shorthand": "s",
+                  "global": true
+                },
+                "tls-server-name": {
+                  "description": "Server name to use for server certificate validation. If it is not provided, the hostname used to contact the server is used",
+                  "shorthand": "",
+                  "global": true
+                },
+                "token": {
+                  "description": "Bearer token for authentication to the API server",
+                  "shorthand": "",
+                  "global": true
+                },
+                "user": {
+                  "description": "The name of the kubeconfig user to use",
+                  "shorthand": "",
+                  "global": true
+                },
+                "username": {
+                  "description": "Username for basic authentication to the API server",
+                  "shorthand": "",
+                  "global": true
+                },
+                "v": {
+                  "description": "number for the log level verbosity",
+                  "shorthand": "v",
+                  "global": true
+                },
+                "vmodule": {
+                  "description": "comma-separated list of pattern=N settings for file-filtered logging (only works for the default text log format)",
+                  "shorthand": "",
+                  "global": true
+                },
+                "warnings-as-errors": {
+                  "description": "Treat warnings received from the server as errors and exit with a non-zero exit code",
+                  "shorthand": "",
+                  "global": true
+                }
+              },
+              "subcommands": [
+                {
+                  "name": "set --section (defaults|aliases) --command COMMAND",
+                  "description": "Set values in the kuberc configuration",
+                  "longDescription": "Set values in the kuberc configuration file.\n\n Use --section to specify whether to set defaults or aliases.\n\n For defaults: Sets default flag values for kubectl commands. The --command flag should specify only the command (e.g., \"get\", \"create\", \"set env\"), not resources.\n\n For aliases: Creates command aliases with optional default flag values and arguments. Use --prependarg and --appendarg to include resources or other arguments.",
+                  "aliases": null,
+                  "flags": {
+                    "appendarg": {
+                      "description": "Argument to append to the command (can be specified multiple times, for aliases only)",
+                      "shorthand": "",
+                      "global": false
+                    },
+                    "as": {
+                      "description": "Username to impersonate for the operation. User could be a regular user or a service account in a namespace.",
+                      "shorthand": "",
+                      "global": true
+                    },
+                    "as-group": {
+                      "description": "Group to impersonate for the operation, this flag can be repeated to specify multiple groups.",
+                      "shorthand": "",
+                      "global": true
+                    },
+                    "as-uid": {
+                      "description": "UID to impersonate for the operation.",
+                      "shorthand": "",
+                      "global": true
+                    },
+                    "as-user-extra": {
+                      "description": "User extras to impersonate for the operation, this flag can be repeated to specify multiple values for the same key.",
+                      "shorthand": "",
+                      "global": true
+                    },
+                    "cache-dir": {
+                      "description": "Default cache directory",
+                      "shorthand": "",
+                      "global": true
+                    },
+                    "certificate-authority": {
+                      "description": "Path to a cert file for the certificate authority",
+                      "shorthand": "",
+                      "global": true
+                    },
+                    "client-certificate": {
+                      "description": "Path to a client certificate file for TLS",
+                      "shorthand": "",
+                      "global": true
+                    },
+                    "client-key": {
+                      "description": "Path to a client key file for TLS",
+                      "shorthand": "",
+                      "global": true
+                    },
+                    "cluster": {
+                      "description": "The name of the kubeconfig cluster to use",
+                      "shorthand": "",
+                      "global": true
+                    },
+                    "command": {
+                      "description": "Command to configure (e.g., 'get', 'create', 'set env')",
+                      "shorthand": "",
+                      "global": false
+                    },
+                    "context": {
+                      "description": "The name of the kubeconfig context to use",
+                      "shorthand": "",
+                      "global": true
+                    },
+                    "disable-compression": {
+                      "description": "If true, opt-out of response compression for all requests to the server",
+                      "shorthand": "",
+                      "global": true
+                    },
+                    "insecure-skip-tls-verify": {
+                      "description": "If true, the server's certificate will not be checked for validity. This will make your HTTPS connections insecure",
+                      "shorthand": "",
+                      "global": true
+                    },
+                    "kubeconfig": {
+                      "description": "Path to the kubeconfig file to use for CLI requests.",
+                      "shorthand": "",
+                      "global": true
+                    },
+                    "kuberc": {
+                      "description": "Path to the kuberc file to use for preferences. This can be disabled by exporting KUBECTL_KUBERC=false feature gate or turning off the feature KUBERC=off.",
+                      "shorthand": "",
+                      "global": false
+                    },
+                    "log-flush-frequency": {
+                      "description": "Maximum number of seconds between log flushes",
+                      "shorthand": "",
+                      "global": true
+                    },
+                    "match-server-version": {
+                      "description": "Require server version to match client version",
+                      "shorthand": "",
+                      "global": true
+                    },
+                    "name": {
+                      "description": "Alias name (required for --section=aliases)",
+                      "shorthand": "",
+                      "global": false
+                    },
+                    "namespace": {
+                      "description": "If present, the namespace scope for this CLI request",
+                      "shorthand": "n",
+                      "global": true
+                    },
+                    "option": {
+                      "description": "Flag option in the form flag=value (can be specified multiple times)",
+                      "shorthand": "",
+                      "global": false
+                    },
+                    "overwrite": {
+                      "description": "Allow overwriting existing entries",
+                      "shorthand": "",
+                      "global": false
+                    },
+                    "password": {
+                      "description": "Password for basic authentication to the API server",
+                      "shorthand": "",
+                      "global": true
+                    },
+                    "prependarg": {
+                      "description": "Argument to prepend to the command (can be specified multiple times, for aliases only)",
+                      "shorthand": "",
+                      "global": false
+                    },
+                    "profile": {
+                      "description": "Name of profile to capture. One of (none|cpu|heap|goroutine|threadcreate|block|mutex|trace)",
+                      "shorthand": "",
+                      "global": true
+                    },
+                    "profile-output": {
+                      "description": "Name of the file to write the profile to",
+                      "shorthand": "",
+                      "global": true
+                    },
+                    "request-timeout": {
+                      "description": "The length of time to wait before giving up on a single server request. Non-zero values should contain a corresponding time unit (e.g. 1s, 2m, 3h). A value of zero means don't timeout requests.",
+                      "shorthand": "",
+                      "global": true
+                    },
+                    "section": {
+                      "description": "Section to modify: 'defaults' or 'aliases'",
+                      "shorthand": "",
+                      "global": false
+                    },
+                    "server": {
+                      "description": "The address and port of the Kubernetes API server",
+                      "shorthand": "s",
+                      "global": true
+                    },
+                    "tls-server-name": {
+                      "description": "Server name to use for server certificate validation. If it is not provided, the hostname used to contact the server is used",
+                      "shorthand": "",
+                      "global": true
+                    },
+                    "token": {
+                      "description": "Bearer token for authentication to the API server",
+                      "shorthand": "",
+                      "global": true
+                    },
+                    "user": {
+                      "description": "The name of the kubeconfig user to use",
+                      "shorthand": "",
+                      "global": true
+                    },
+                    "username": {
+                      "description": "Username for basic authentication to the API server",
+                      "shorthand": "",
+                      "global": true
+                    },
+                    "v": {
+                      "description": "number for the log level verbosity",
+                      "shorthand": "v",
+                      "global": true
+                    },
+                    "vmodule": {
+                      "description": "comma-separated list of pattern=N settings for file-filtered logging (only works for the default text log format)",
+                      "shorthand": "",
+                      "global": true
+                    },
+                    "warnings-as-errors": {
+                      "description": "Treat warnings received from the server as errors and exit with a non-zero exit code",
+                      "shorthand": "",
+                      "global": true
+                    }
+                  },
+                  "subcommands": null
+                },
+                {
+                  "name": "view",
+                  "description": "Display the current kuberc configuration",
+                  "longDescription": "Display the contents of the kuberc file in the specified output format.",
+                  "aliases": null,
+                  "flags": {
+                    "allow-missing-template-keys": {
+                      "description": "If true, ignore any errors in templates when a field or map key is missing in the template. Only applies to golang and jsonpath output formats.",
+                      "shorthand": "",
+                      "global": false
+                    },
+                    "as": {
+                      "description": "Username to impersonate for the operation. User could be a regular user or a service account in a namespace.",
+                      "shorthand": "",
+                      "global": true
+                    },
+                    "as-group": {
+                      "description": "Group to impersonate for the operation, this flag can be repeated to specify multiple groups.",
+                      "shorthand": "",
+                      "global": true
+                    },
+                    "as-uid": {
+                      "description": "UID to impersonate for the operation.",
+                      "shorthand": "",
+                      "global": true
+                    },
+                    "as-user-extra": {
+                      "description": "User extras to impersonate for the operation, this flag can be repeated to specify multiple values for the same key.",
+                      "shorthand": "",
+                      "global": true
+                    },
+                    "cache-dir": {
+                      "description": "Default cache directory",
+                      "shorthand": "",
+                      "global": true
+                    },
+                    "certificate-authority": {
+                      "description": "Path to a cert file for the certificate authority",
+                      "shorthand": "",
+                      "global": true
+                    },
+                    "client-certificate": {
+                      "description": "Path to a client certificate file for TLS",
+                      "shorthand": "",
+                      "global": true
+                    },
+                    "client-key": {
+                      "description": "Path to a client key file for TLS",
+                      "shorthand": "",
+                      "global": true
+                    },
+                    "cluster": {
+                      "description": "The name of the kubeconfig cluster to use",
+                      "shorthand": "",
+                      "global": true
+                    },
+                    "context": {
+                      "description": "The name of the kubeconfig context to use",
+                      "shorthand": "",
+                      "global": true
+                    },
+                    "disable-compression": {
+                      "description": "If true, opt-out of response compression for all requests to the server",
+                      "shorthand": "",
+                      "global": true
+                    },
+                    "insecure-skip-tls-verify": {
+                      "description": "If true, the server's certificate will not be checked for validity. This will make your HTTPS connections insecure",
+                      "shorthand": "",
+                      "global": true
+                    },
+                    "kubeconfig": {
+                      "description": "Path to the kubeconfig file to use for CLI requests.",
+                      "shorthand": "",
+                      "global": true
+                    },
+                    "kuberc": {
+                      "description": "Path to the kuberc file to use for preferences. This can be disabled by exporting KUBECTL_KUBERC=false feature gate or turning off the feature KUBERC=off.",
+                      "shorthand": "",
+                      "global": false
+                    },
+                    "log-flush-frequency": {
+                      "description": "Maximum number of seconds between log flushes",
+                      "shorthand": "",
+                      "global": true
+                    },
+                    "match-server-version": {
+                      "description": "Require server version to match client version",
+                      "shorthand": "",
+                      "global": true
+                    },
+                    "namespace": {
+                      "description": "If present, the namespace scope for this CLI request",
+                      "shorthand": "n",
+                      "global": true
+                    },
+                    "output": {
+                      "description": "Output format. One of: (json, yaml, kyaml, name, go-template, go-template-file, template, templatefile, jsonpath, jsonpath-as-json, jsonpath-file).",
+                      "shorthand": "o",
+                      "global": false
+                    },
+                    "password": {
+                      "description": "Password for basic authentication to the API server",
+                      "shorthand": "",
+                      "global": true
+                    },
+                    "profile": {
+                      "description": "Name of profile to capture. One of (none|cpu|heap|goroutine|threadcreate|block|mutex|trace)",
+                      "shorthand": "",
+                      "global": true
+                    },
+                    "profile-output": {
+                      "description": "Name of the file to write the profile to",
+                      "shorthand": "",
+                      "global": true
+                    },
+                    "request-timeout": {
+                      "description": "The length of time to wait before giving up on a single server request. Non-zero values should contain a corresponding time unit (e.g. 1s, 2m, 3h). A value of zero means don't timeout requests.",
+                      "shorthand": "",
+                      "global": true
+                    },
+                    "server": {
+                      "description": "The address and port of the Kubernetes API server",
+                      "shorthand": "s",
+                      "global": true
+                    },
+                    "show-managed-fields": {
+                      "description": "If true, keep the managedFields when printing objects in JSON or YAML format.",
+                      "shorthand": "",
+                      "global": false
+                    },
+                    "template": {
+                      "description": "Template string or path to template file to use when -o=go-template, -o=go-template-file. The template format is golang templates [http://golang.org/pkg/text/template/#pkg-overview].",
+                      "shorthand": "",
+                      "global": false
+                    },
+                    "tls-server-name": {
+                      "description": "Server name to use for server certificate validation. If it is not provided, the hostname used to contact the server is used",
+                      "shorthand": "",
+                      "global": true
+                    },
+                    "token": {
+                      "description": "Bearer token for authentication to the API server",
+                      "shorthand": "",
+                      "global": true
+                    },
+                    "user": {
+                      "description": "The name of the kubeconfig user to use",
+                      "shorthand": "",
+                      "global": true
+                    },
+                    "username": {
+                      "description": "Username for basic authentication to the API server",
+                      "shorthand": "",
+                      "global": true
+                    },
+                    "v": {
+                      "description": "number for the log level verbosity",
+                      "shorthand": "v",
+                      "global": true
+                    },
+                    "vmodule": {
+                      "description": "comma-separated list of pattern=N settings for file-filtered logging (only works for the default text log format)",
+                      "shorthand": "",
+                      "global": true
+                    },
+                    "warnings-as-errors": {
+                      "description": "Treat warnings received from the server as errors and exit with a non-zero exit code",
+                      "shorthand": "",
+                      "global": true
+                    }
+                  },
+                  "subcommands": null
+                }
+              ]
+            }
+          ]
         },
         {
           "name": "annotate [--overwrite] (-f FILENAME | TYPE NAME) KEY_1=VAL_1 ... KEY_N=VAL_N [--resource-version=version]",
@@ -27081,6 +27610,11 @@
             },
             "as-uid": {
               "description": "UID to impersonate for the operation.",
+              "shorthand": "",
+              "global": true
+            },
+            "as-user-extra": {
+              "description": "User extras to impersonate for the operation, this flag can be repeated to specify multiple values for the same key.",
               "shorthand": "",
               "global": true
             },
@@ -27185,7 +27719,7 @@
               "global": true
             },
             "output": {
-              "description": "Output format. One of: (json, yaml, name, go-template, go-template-file, template, templatefile, jsonpath, jsonpath-as-json, jsonpath-file).",
+              "description": "Output format. One of: (json, yaml, kyaml, name, go-template, go-template-file, template, templatefile, jsonpath, jsonpath-as-json, jsonpath-file).",
               "shorthand": "o",
               "global": false
             },
@@ -27200,7 +27734,7 @@
               "global": true
             },
             "profile": {
-              "description": "Name of profile to capture. One of (none|cpu|heap|goroutine|threadcreate|block|mutex)",
+              "description": "Name of profile to capture. One of (none|cpu|heap|goroutine|threadcreate|block|mutex|trace)",
               "shorthand": "",
               "global": true
             },
@@ -27313,6 +27847,11 @@
               "shorthand": "",
               "global": true
             },
+            "as-user-extra": {
+              "description": "User extras to impersonate for the operation, this flag can be repeated to specify multiple values for the same key.",
+              "shorthand": "",
+              "global": true
+            },
             "cache-dir": {
               "description": "Default cache directory",
               "shorthand": "",
@@ -27399,7 +27938,7 @@
               "global": false
             },
             "output": {
-              "description": "Output format. One of: (json, yaml, name, wide).",
+              "description": "Output format. One of: (json, yaml, kyaml, name, wide).",
               "shorthand": "o",
               "global": false
             },
@@ -27409,7 +27948,7 @@
               "global": true
             },
             "profile": {
-              "description": "Name of profile to capture. One of (none|cpu|heap|goroutine|threadcreate|block|mutex)",
+              "description": "Name of profile to capture. One of (none|cpu|heap|goroutine|threadcreate|block|mutex|trace)",
               "shorthand": "",
               "global": true
             },
@@ -27502,6 +28041,11 @@
               "shorthand": "",
               "global": true
             },
+            "as-user-extra": {
+              "description": "User extras to impersonate for the operation, this flag can be repeated to specify multiple values for the same key.",
+              "shorthand": "",
+              "global": true
+            },
             "cache-dir": {
               "description": "Default cache directory",
               "shorthand": "",
@@ -27573,7 +28117,7 @@
               "global": true
             },
             "profile": {
-              "description": "Name of profile to capture. One of (none|cpu|heap|goroutine|threadcreate|block|mutex)",
+              "description": "Name of profile to capture. One of (none|cpu|heap|goroutine|threadcreate|block|mutex|trace)",
               "shorthand": "",
               "global": true
             },
@@ -27658,6 +28202,11 @@
             },
             "as-uid": {
               "description": "UID to impersonate for the operation.",
+              "shorthand": "",
+              "global": true
+            },
+            "as-user-extra": {
+              "description": "User extras to impersonate for the operation, this flag can be repeated to specify multiple values for the same key.",
               "shorthand": "",
               "global": true
             },
@@ -27772,7 +28321,7 @@
               "global": false
             },
             "output": {
-              "description": "Output format. One of: (json, yaml, name, go-template, go-template-file, template, templatefile, jsonpath, jsonpath-as-json, jsonpath-file).",
+              "description": "Output format. One of: (json, yaml, kyaml, name, go-template, go-template-file, template, templatefile, jsonpath, jsonpath-as-json, jsonpath-file).",
               "shorthand": "o",
               "global": false
             },
@@ -27787,7 +28336,7 @@
               "global": true
             },
             "profile": {
-              "description": "Name of profile to capture. One of (none|cpu|heap|goroutine|threadcreate|block|mutex)",
+              "description": "Name of profile to capture. One of (none|cpu|heap|goroutine|threadcreate|block|mutex|trace)",
               "shorthand": "",
               "global": true
             },
@@ -27929,6 +28478,11 @@
                   "shorthand": "",
                   "global": true
                 },
+                "as-user-extra": {
+                  "description": "User extras to impersonate for the operation, this flag can be repeated to specify multiple values for the same key.",
+                  "shorthand": "",
+                  "global": true
+                },
                 "cache-dir": {
                   "description": "Default cache directory",
                   "shorthand": "",
@@ -28010,7 +28564,7 @@
                   "global": true
                 },
                 "output": {
-                  "description": "Output format. One of: (json, yaml, name, go-template, go-template-file, template, templatefile, jsonpath, jsonpath-as-json, jsonpath-file).",
+                  "description": "Output format. One of: (json, yaml, kyaml, name, go-template, go-template-file, template, templatefile, jsonpath, jsonpath-as-json, jsonpath-file).",
                   "shorthand": "o",
                   "global": false
                 },
@@ -28020,7 +28574,7 @@
                   "global": true
                 },
                 "profile": {
-                  "description": "Name of profile to capture. One of (none|cpu|heap|goroutine|threadcreate|block|mutex)",
+                  "description": "Name of profile to capture. One of (none|cpu|heap|goroutine|threadcreate|block|mutex|trace)",
                   "shorthand": "",
                   "global": true
                 },
@@ -28133,6 +28687,11 @@
                   "shorthand": "",
                   "global": true
                 },
+                "as-user-extra": {
+                  "description": "User extras to impersonate for the operation, this flag can be repeated to specify multiple values for the same key.",
+                  "shorthand": "",
+                  "global": true
+                },
                 "cache-dir": {
                   "description": "Default cache directory",
                   "shorthand": "",
@@ -28214,7 +28773,7 @@
                   "global": true
                 },
                 "output": {
-                  "description": "Output format. One of: (json, yaml, name, go-template, go-template-file, template, templatefile, jsonpath, jsonpath-as-json, jsonpath-file).",
+                  "description": "Output format. One of: (json, yaml, kyaml, name, go-template, go-template-file, template, templatefile, jsonpath, jsonpath-as-json, jsonpath-file).",
                   "shorthand": "o",
                   "global": false
                 },
@@ -28224,7 +28783,7 @@
                   "global": true
                 },
                 "profile": {
-                  "description": "Name of profile to capture. One of (none|cpu|heap|goroutine|threadcreate|block|mutex)",
+                  "description": "Name of profile to capture. One of (none|cpu|heap|goroutine|threadcreate|block|mutex|trace)",
                   "shorthand": "",
                   "global": true
                 },
@@ -28317,6 +28876,11 @@
                   "shorthand": "",
                   "global": true
                 },
+                "as-user-extra": {
+                  "description": "User extras to impersonate for the operation, this flag can be repeated to specify multiple values for the same key.",
+                  "shorthand": "",
+                  "global": true
+                },
                 "cache-dir": {
                   "description": "Default cache directory",
                   "shorthand": "",
@@ -28403,7 +28967,7 @@
                   "global": true
                 },
                 "profile": {
-                  "description": "Name of profile to capture. One of (none|cpu|heap|goroutine|threadcreate|block|mutex)",
+                  "description": "Name of profile to capture. One of (none|cpu|heap|goroutine|threadcreate|block|mutex|trace)",
                   "shorthand": "",
                   "global": true
                 },
@@ -28493,6 +29057,11 @@
               "shorthand": "",
               "global": true
             },
+            "as-user-extra": {
+              "description": "User extras to impersonate for the operation, this flag can be repeated to specify multiple values for the same key.",
+              "shorthand": "",
+              "global": true
+            },
             "cache-dir": {
               "description": "Default cache directory",
               "shorthand": "",
@@ -28574,7 +29143,7 @@
               "global": false
             },
             "profile": {
-              "description": "Name of profile to capture. One of (none|cpu|heap|goroutine|threadcreate|block|mutex)",
+              "description": "Name of profile to capture. One of (none|cpu|heap|goroutine|threadcreate|block|mutex|trace)",
               "shorthand": "",
               "global": true
             },
@@ -28667,6 +29236,11 @@
               "shorthand": "",
               "global": true
             },
+            "as-user-extra": {
+              "description": "User extras to impersonate for the operation, this flag can be repeated to specify multiple values for the same key.",
+              "shorthand": "",
+              "global": true
+            },
             "cache-dir": {
               "description": "Default cache directory",
               "shorthand": "",
@@ -28738,7 +29312,7 @@
               "global": true
             },
             "profile": {
-              "description": "Name of profile to capture. One of (none|cpu|heap|goroutine|threadcreate|block|mutex)",
+              "description": "Name of profile to capture. One of (none|cpu|heap|goroutine|threadcreate|block|mutex|trace)",
               "shorthand": "",
               "global": true
             },
@@ -28817,6 +29391,11 @@
                 },
                 "as-uid": {
                   "description": "UID to impersonate for the operation.",
+                  "shorthand": "",
+                  "global": true
+                },
+                "as-user-extra": {
+                  "description": "User extras to impersonate for the operation, this flag can be repeated to specify multiple values for the same key.",
                   "shorthand": "",
                   "global": true
                 },
@@ -28901,7 +29480,7 @@
                   "global": true
                 },
                 "profile": {
-                  "description": "Name of profile to capture. One of (none|cpu|heap|goroutine|threadcreate|block|mutex)",
+                  "description": "Name of profile to capture. One of (none|cpu|heap|goroutine|threadcreate|block|mutex|trace)",
                   "shorthand": "",
                   "global": true
                 },
@@ -28994,6 +29573,11 @@
                   "shorthand": "",
                   "global": true
                 },
+                "as-user-extra": {
+                  "description": "User extras to impersonate for the operation, this flag can be repeated to specify multiple values for the same key.",
+                  "shorthand": "",
+                  "global": true
+                },
                 "cache-dir": {
                   "description": "Default cache directory",
                   "shorthand": "",
@@ -29075,7 +29659,7 @@
                   "global": true
                 },
                 "output": {
-                  "description": "Output format. One of: (json, yaml, name, go-template, go-template-file, template, templatefile, jsonpath, jsonpath-as-json, jsonpath-file).",
+                  "description": "Output format. One of: (json, yaml, kyaml, name, go-template, go-template-file, template, templatefile, jsonpath, jsonpath-as-json, jsonpath-file).",
                   "shorthand": "o",
                   "global": false
                 },
@@ -29085,7 +29669,7 @@
                   "global": true
                 },
                 "profile": {
-                  "description": "Name of profile to capture. One of (none|cpu|heap|goroutine|threadcreate|block|mutex)",
+                  "description": "Name of profile to capture. One of (none|cpu|heap|goroutine|threadcreate|block|mutex|trace)",
                   "shorthand": "",
                   "global": true
                 },
@@ -29193,6 +29777,11 @@
                   "shorthand": "",
                   "global": true
                 },
+                "as-user-extra": {
+                  "description": "User extras to impersonate for the operation, this flag can be repeated to specify multiple values for the same key.",
+                  "shorthand": "",
+                  "global": true
+                },
                 "cache-dir": {
                   "description": "Default cache directory",
                   "shorthand": "",
@@ -29259,7 +29848,7 @@
                   "global": true
                 },
                 "output": {
-                  "description": "Output format. One of: (json, yaml, name, go-template, go-template-file, template, templatefile, jsonpath, jsonpath-as-json, jsonpath-file).",
+                  "description": "Output format. One of: (json, yaml, kyaml, name, go-template, go-template-file, template, templatefile, jsonpath, jsonpath-as-json, jsonpath-file).",
                   "shorthand": "o",
                   "global": false
                 },
@@ -29269,7 +29858,7 @@
                   "global": true
                 },
                 "profile": {
-                  "description": "Name of profile to capture. One of (none|cpu|heap|goroutine|threadcreate|block|mutex)",
+                  "description": "Name of profile to capture. One of (none|cpu|heap|goroutine|threadcreate|block|mutex|trace)",
                   "shorthand": "",
                   "global": true
                 },
@@ -29361,6 +29950,11 @@
             },
             "as-uid": {
               "description": "UID to impersonate for the operation.",
+              "shorthand": "",
+              "global": true
+            },
+            "as-user-extra": {
+              "description": "User extras to impersonate for the operation, this flag can be repeated to specify multiple values for the same key.",
               "shorthand": "",
               "global": true
             },
@@ -29480,7 +30074,7 @@
               "global": true
             },
             "output": {
-              "description": "Output format. One of: (json, yaml, name, go-template, go-template-file, template, templatefile, jsonpath, jsonpath-as-json, jsonpath-file).",
+              "description": "Output format. One of: (json, yaml, kyaml, name, go-template, go-template-file, template, templatefile, jsonpath, jsonpath-as-json, jsonpath-file).",
               "shorthand": "o",
               "global": false
             },
@@ -29490,7 +30084,7 @@
               "global": true
             },
             "profile": {
-              "description": "Name of profile to capture. One of (none|cpu|heap|goroutine|threadcreate|block|mutex)",
+              "description": "Name of profile to capture. One of (none|cpu|heap|goroutine|threadcreate|block|mutex|trace)",
               "shorthand": "",
               "global": true
             },
@@ -29593,6 +30187,11 @@
               "shorthand": "",
               "global": true
             },
+            "as-user-extra": {
+              "description": "User extras to impersonate for the operation, this flag can be repeated to specify multiple values for the same key.",
+              "shorthand": "",
+              "global": true
+            },
             "cache-dir": {
               "description": "Default cache directory",
               "shorthand": "",
@@ -29664,7 +30263,7 @@
               "global": true
             },
             "profile": {
-              "description": "Name of profile to capture. One of (none|cpu|heap|goroutine|threadcreate|block|mutex)",
+              "description": "Name of profile to capture. One of (none|cpu|heap|goroutine|threadcreate|block|mutex|trace)",
               "shorthand": "",
               "global": true
             },
@@ -29743,6 +30342,11 @@
                 },
                 "as-uid": {
                   "description": "UID to impersonate for the operation.",
+                  "shorthand": "",
+                  "global": true
+                },
+                "as-user-extra": {
+                  "description": "User extras to impersonate for the operation, this flag can be repeated to specify multiple values for the same key.",
                   "shorthand": "",
                   "global": true
                 },
@@ -29827,7 +30431,7 @@
                   "global": true
                 },
                 "output": {
-                  "description": "Output format. One of: (json, yaml, name, go-template, go-template-file, template, templatefile, jsonpath, jsonpath-as-json, jsonpath-file).",
+                  "description": "Output format. One of: (json, yaml, kyaml, name, go-template, go-template-file, template, templatefile, jsonpath, jsonpath-as-json, jsonpath-file).",
                   "shorthand": "o",
                   "global": false
                 },
@@ -29837,7 +30441,7 @@
                   "global": true
                 },
                 "profile": {
-                  "description": "Name of profile to capture. One of (none|cpu|heap|goroutine|threadcreate|block|mutex)",
+                  "description": "Name of profile to capture. One of (none|cpu|heap|goroutine|threadcreate|block|mutex|trace)",
                   "shorthand": "",
                   "global": true
                 },
@@ -29935,6 +30539,11 @@
                   "shorthand": "",
                   "global": true
                 },
+                "as-user-extra": {
+                  "description": "User extras to impersonate for the operation, this flag can be repeated to specify multiple values for the same key.",
+                  "shorthand": "",
+                  "global": true
+                },
                 "cache-dir": {
                   "description": "Default cache directory",
                   "shorthand": "",
@@ -30016,7 +30625,7 @@
                   "global": true
                 },
                 "output": {
-                  "description": "Output format. One of: (json, yaml, name, go-template, go-template-file, template, templatefile, jsonpath, jsonpath-as-json, jsonpath-file).",
+                  "description": "Output format. One of: (json, yaml, kyaml, name, go-template, go-template-file, template, templatefile, jsonpath, jsonpath-as-json, jsonpath-file).",
                   "shorthand": "o",
                   "global": false
                 },
@@ -30026,7 +30635,7 @@
                   "global": true
                 },
                 "profile": {
-                  "description": "Name of profile to capture. One of (none|cpu|heap|goroutine|threadcreate|block|mutex)",
+                  "description": "Name of profile to capture. One of (none|cpu|heap|goroutine|threadcreate|block|mutex|trace)",
                   "shorthand": "",
                   "global": true
                 },
@@ -30121,6 +30730,11 @@
               "shorthand": "",
               "global": true
             },
+            "as-user-extra": {
+              "description": "User extras to impersonate for the operation, this flag can be repeated to specify multiple values for the same key.",
+              "shorthand": "",
+              "global": true
+            },
             "cache-dir": {
               "description": "Default cache directory",
               "shorthand": "",
@@ -30192,7 +30806,7 @@
               "global": true
             },
             "profile": {
-              "description": "Name of profile to capture. One of (none|cpu|heap|goroutine|threadcreate|block|mutex)",
+              "description": "Name of profile to capture. One of (none|cpu|heap|goroutine|threadcreate|block|mutex|trace)",
               "shorthand": "",
               "global": true
             },
@@ -30279,6 +30893,11 @@
                   "shorthand": "",
                   "global": true
                 },
+                "as-user-extra": {
+                  "description": "User extras to impersonate for the operation, this flag can be repeated to specify multiple values for the same key.",
+                  "shorthand": "",
+                  "global": true
+                },
                 "cache-dir": {
                   "description": "Default cache directory",
                   "shorthand": "",
@@ -30350,7 +30969,7 @@
                   "global": false
                 },
                 "output": {
-                  "description": "Output format. One of: (json, yaml, name, go-template, go-template-file, template, templatefile, jsonpath, jsonpath-as-json, jsonpath-file).",
+                  "description": "Output format. One of: (json, yaml, kyaml, name, go-template, go-template-file, template, templatefile, jsonpath, jsonpath-as-json, jsonpath-file).",
                   "shorthand": "o",
                   "global": false
                 },
@@ -30370,7 +30989,7 @@
                   "global": false
                 },
                 "profile": {
-                  "description": "Name of profile to capture. One of (none|cpu|heap|goroutine|threadcreate|block|mutex)",
+                  "description": "Name of profile to capture. One of (none|cpu|heap|goroutine|threadcreate|block|mutex|trace)",
                   "shorthand": "",
                   "global": true
                 },
@@ -30460,6 +31079,11 @@
               "shorthand": "",
               "global": true
             },
+            "as-user-extra": {
+              "description": "User extras to impersonate for the operation, this flag can be repeated to specify multiple values for the same key.",
+              "shorthand": "",
+              "global": true
+            },
             "cache-dir": {
               "description": "Default cache directory",
               "shorthand": "",
@@ -30531,7 +31155,7 @@
               "global": true
             },
             "profile": {
-              "description": "Name of profile to capture. One of (none|cpu|heap|goroutine|threadcreate|block|mutex)",
+              "description": "Name of profile to capture. One of (none|cpu|heap|goroutine|threadcreate|block|mutex|trace)",
               "shorthand": "",
               "global": true
             },
@@ -30609,6 +31233,11 @@
               "shorthand": "",
               "global": true
             },
+            "as-user-extra": {
+              "description": "User extras to impersonate for the operation, this flag can be repeated to specify multiple values for the same key.",
+              "shorthand": "",
+              "global": true
+            },
             "cache-dir": {
               "description": "Default cache directory",
               "shorthand": "",
@@ -30680,7 +31309,7 @@
               "global": true
             },
             "profile": {
-              "description": "Name of profile to capture. One of (none|cpu|heap|goroutine|threadcreate|block|mutex)",
+              "description": "Name of profile to capture. One of (none|cpu|heap|goroutine|threadcreate|block|mutex|trace)",
               "shorthand": "",
               "global": true
             },
@@ -30757,6 +31386,11 @@
                   "shorthand": "",
                   "global": true
                 },
+                "as-user-extra": {
+                  "description": "User extras to impersonate for the operation, this flag can be repeated to specify multiple values for the same key.",
+                  "shorthand": "",
+                  "global": true
+                },
                 "cache-dir": {
                   "description": "Default cache directory",
                   "shorthand": "",
@@ -30828,7 +31462,7 @@
                   "global": true
                 },
                 "profile": {
-                  "description": "Name of profile to capture. One of (none|cpu|heap|goroutine|threadcreate|block|mutex)",
+                  "description": "Name of profile to capture. One of (none|cpu|heap|goroutine|threadcreate|block|mutex|trace)",
                   "shorthand": "",
                   "global": true
                 },
@@ -30906,6 +31540,11 @@
                   "shorthand": "",
                   "global": true
                 },
+                "as-user-extra": {
+                  "description": "User extras to impersonate for the operation, this flag can be repeated to specify multiple values for the same key.",
+                  "shorthand": "",
+                  "global": true
+                },
                 "cache-dir": {
                   "description": "Default cache directory",
                   "shorthand": "",
@@ -30977,7 +31616,7 @@
                   "global": true
                 },
                 "profile": {
-                  "description": "Name of profile to capture. One of (none|cpu|heap|goroutine|threadcreate|block|mutex)",
+                  "description": "Name of profile to capture. One of (none|cpu|heap|goroutine|threadcreate|block|mutex|trace)",
                   "shorthand": "",
                   "global": true
                 },
@@ -31055,6 +31694,11 @@
                   "shorthand": "",
                   "global": true
                 },
+                "as-user-extra": {
+                  "description": "User extras to impersonate for the operation, this flag can be repeated to specify multiple values for the same key.",
+                  "shorthand": "",
+                  "global": true
+                },
                 "cache-dir": {
                   "description": "Default cache directory",
                   "shorthand": "",
@@ -31126,7 +31770,7 @@
                   "global": true
                 },
                 "profile": {
-                  "description": "Name of profile to capture. One of (none|cpu|heap|goroutine|threadcreate|block|mutex)",
+                  "description": "Name of profile to capture. One of (none|cpu|heap|goroutine|threadcreate|block|mutex|trace)",
                   "shorthand": "",
                   "global": true
                 },
@@ -31204,6 +31848,11 @@
                   "shorthand": "",
                   "global": true
                 },
+                "as-user-extra": {
+                  "description": "User extras to impersonate for the operation, this flag can be repeated to specify multiple values for the same key.",
+                  "shorthand": "",
+                  "global": true
+                },
                 "cache-dir": {
                   "description": "Default cache directory",
                   "shorthand": "",
@@ -31275,7 +31924,7 @@
                   "global": true
                 },
                 "profile": {
-                  "description": "Name of profile to capture. One of (none|cpu|heap|goroutine|threadcreate|block|mutex)",
+                  "description": "Name of profile to capture. One of (none|cpu|heap|goroutine|threadcreate|block|mutex|trace)",
                   "shorthand": "",
                   "global": true
                 },
@@ -31353,6 +32002,11 @@
                   "shorthand": "",
                   "global": true
                 },
+                "as-user-extra": {
+                  "description": "User extras to impersonate for the operation, this flag can be repeated to specify multiple values for the same key.",
+                  "shorthand": "",
+                  "global": true
+                },
                 "cache-dir": {
                   "description": "Default cache directory",
                   "shorthand": "",
@@ -31424,7 +32078,7 @@
                   "global": true
                 },
                 "profile": {
-                  "description": "Name of profile to capture. One of (none|cpu|heap|goroutine|threadcreate|block|mutex)",
+                  "description": "Name of profile to capture. One of (none|cpu|heap|goroutine|threadcreate|block|mutex|trace)",
                   "shorthand": "",
                   "global": true
                 },
@@ -31499,6 +32153,11 @@
                 },
                 "as-uid": {
                   "description": "UID to impersonate for the operation.",
+                  "shorthand": "",
+                  "global": true
+                },
+                "as-user-extra": {
+                  "description": "User extras to impersonate for the operation, this flag can be repeated to specify multiple values for the same key.",
                   "shorthand": "",
                   "global": true
                 },
@@ -31583,7 +32242,7 @@
                   "global": true
                 },
                 "profile": {
-                  "description": "Name of profile to capture. One of (none|cpu|heap|goroutine|threadcreate|block|mutex)",
+                  "description": "Name of profile to capture. One of (none|cpu|heap|goroutine|threadcreate|block|mutex|trace)",
                   "shorthand": "",
                   "global": true
                 },
@@ -31661,6 +32320,11 @@
                   "shorthand": "",
                   "global": true
                 },
+                "as-user-extra": {
+                  "description": "User extras to impersonate for the operation, this flag can be repeated to specify multiple values for the same key.",
+                  "shorthand": "",
+                  "global": true
+                },
                 "cache-dir": {
                   "description": "Default cache directory",
                   "shorthand": "",
@@ -31732,7 +32396,7 @@
                   "global": true
                 },
                 "profile": {
-                  "description": "Name of profile to capture. One of (none|cpu|heap|goroutine|threadcreate|block|mutex)",
+                  "description": "Name of profile to capture. One of (none|cpu|heap|goroutine|threadcreate|block|mutex|trace)",
                   "shorthand": "",
                   "global": true
                 },
@@ -31810,6 +32474,11 @@
                   "shorthand": "",
                   "global": true
                 },
+                "as-user-extra": {
+                  "description": "User extras to impersonate for the operation, this flag can be repeated to specify multiple values for the same key.",
+                  "shorthand": "",
+                  "global": true
+                },
                 "cache-dir": {
                   "description": "Default cache directory",
                   "shorthand": "",
@@ -31881,7 +32550,7 @@
                   "global": true
                 },
                 "profile": {
-                  "description": "Name of profile to capture. One of (none|cpu|heap|goroutine|threadcreate|block|mutex)",
+                  "description": "Name of profile to capture. One of (none|cpu|heap|goroutine|threadcreate|block|mutex|trace)",
                   "shorthand": "",
                   "global": true
                 },
@@ -31959,6 +32628,11 @@
                   "shorthand": "",
                   "global": true
                 },
+                "as-user-extra": {
+                  "description": "User extras to impersonate for the operation, this flag can be repeated to specify multiple values for the same key.",
+                  "shorthand": "",
+                  "global": true
+                },
                 "cache-dir": {
                   "description": "Default cache directory",
                   "shorthand": "",
@@ -32030,7 +32704,7 @@
                   "global": true
                 },
                 "profile": {
-                  "description": "Name of profile to capture. One of (none|cpu|heap|goroutine|threadcreate|block|mutex)",
+                  "description": "Name of profile to capture. One of (none|cpu|heap|goroutine|threadcreate|block|mutex|trace)",
                   "shorthand": "",
                   "global": true
                 },
@@ -32113,6 +32787,11 @@
                   "shorthand": "",
                   "global": true
                 },
+                "as-user-extra": {
+                  "description": "User extras to impersonate for the operation, this flag can be repeated to specify multiple values for the same key.",
+                  "shorthand": "",
+                  "global": true
+                },
                 "cache-dir": {
                   "description": "Default cache directory",
                   "shorthand": "",
@@ -32189,7 +32868,7 @@
                   "global": true
                 },
                 "profile": {
-                  "description": "Name of profile to capture. One of (none|cpu|heap|goroutine|threadcreate|block|mutex)",
+                  "description": "Name of profile to capture. One of (none|cpu|heap|goroutine|threadcreate|block|mutex|trace)",
                   "shorthand": "",
                   "global": true
                 },
@@ -32272,6 +32951,11 @@
                   "shorthand": "",
                   "global": true
                 },
+                "as-user-extra": {
+                  "description": "User extras to impersonate for the operation, this flag can be repeated to specify multiple values for the same key.",
+                  "shorthand": "",
+                  "global": true
+                },
                 "cache-dir": {
                   "description": "Default cache directory",
                   "shorthand": "",
@@ -32339,7 +33023,7 @@
                 },
                 "namespace": {
                   "description": "namespace for the context entry in kubeconfig",
-                  "shorthand": "",
+                  "shorthand": "n",
                   "global": false
                 },
                 "password": {
@@ -32348,7 +33032,7 @@
                   "global": true
                 },
                 "profile": {
-                  "description": "Name of profile to capture. One of (none|cpu|heap|goroutine|threadcreate|block|mutex)",
+                  "description": "Name of profile to capture. One of (none|cpu|heap|goroutine|threadcreate|block|mutex|trace)",
                   "shorthand": "",
                   "global": true
                 },
@@ -32423,6 +33107,11 @@
                 },
                 "as-uid": {
                   "description": "UID to impersonate for the operation.",
+                  "shorthand": "",
+                  "global": true
+                },
+                "as-user-extra": {
+                  "description": "User extras to impersonate for the operation, this flag can be repeated to specify multiple values for the same key.",
                   "shorthand": "",
                   "global": true
                 },
@@ -32542,7 +33231,7 @@
                   "global": false
                 },
                 "profile": {
-                  "description": "Name of profile to capture. One of (none|cpu|heap|goroutine|threadcreate|block|mutex)",
+                  "description": "Name of profile to capture. One of (none|cpu|heap|goroutine|threadcreate|block|mutex|trace)",
                   "shorthand": "",
                   "global": true
                 },
@@ -32620,6 +33309,11 @@
                   "shorthand": "",
                   "global": true
                 },
+                "as-user-extra": {
+                  "description": "User extras to impersonate for the operation, this flag can be repeated to specify multiple values for the same key.",
+                  "shorthand": "",
+                  "global": true
+                },
                 "cache-dir": {
                   "description": "Default cache directory",
                   "shorthand": "",
@@ -32691,7 +33385,7 @@
                   "global": true
                 },
                 "profile": {
-                  "description": "Name of profile to capture. One of (none|cpu|heap|goroutine|threadcreate|block|mutex)",
+                  "description": "Name of profile to capture. One of (none|cpu|heap|goroutine|threadcreate|block|mutex|trace)",
                   "shorthand": "",
                   "global": true
                 },
@@ -32771,6 +33465,11 @@
                   "shorthand": "",
                   "global": true
                 },
+                "as-user-extra": {
+                  "description": "User extras to impersonate for the operation, this flag can be repeated to specify multiple values for the same key.",
+                  "shorthand": "",
+                  "global": true
+                },
                 "cache-dir": {
                   "description": "Default cache directory",
                   "shorthand": "",
@@ -32842,7 +33541,7 @@
                   "global": true
                 },
                 "profile": {
-                  "description": "Name of profile to capture. One of (none|cpu|heap|goroutine|threadcreate|block|mutex)",
+                  "description": "Name of profile to capture. One of (none|cpu|heap|goroutine|threadcreate|block|mutex|trace)",
                   "shorthand": "",
                   "global": true
                 },
@@ -32922,6 +33621,11 @@
                 },
                 "as-uid": {
                   "description": "UID to impersonate for the operation.",
+                  "shorthand": "",
+                  "global": true
+                },
+                "as-user-extra": {
+                  "description": "User extras to impersonate for the operation, this flag can be repeated to specify multiple values for the same key.",
                   "shorthand": "",
                   "global": true
                 },
@@ -33006,7 +33710,7 @@
                   "global": true
                 },
                 "output": {
-                  "description": "Output format. One of: (json, yaml, name, go-template, go-template-file, template, templatefile, jsonpath, jsonpath-as-json, jsonpath-file).",
+                  "description": "Output format. One of: (json, yaml, kyaml, name, go-template, go-template-file, template, templatefile, jsonpath, jsonpath-as-json, jsonpath-file).",
                   "shorthand": "o",
                   "global": false
                 },
@@ -33016,7 +33720,7 @@
                   "global": true
                 },
                 "profile": {
-                  "description": "Name of profile to capture. One of (none|cpu|heap|goroutine|threadcreate|block|mutex)",
+                  "description": "Name of profile to capture. One of (none|cpu|heap|goroutine|threadcreate|block|mutex|trace)",
                   "shorthand": "",
                   "global": true
                 },
@@ -33111,6 +33815,11 @@
               "shorthand": "",
               "global": true
             },
+            "as-user-extra": {
+              "description": "User extras to impersonate for the operation, this flag can be repeated to specify multiple values for the same key.",
+              "shorthand": "",
+              "global": true
+            },
             "cache-dir": {
               "description": "Default cache directory",
               "shorthand": "",
@@ -33187,7 +33896,7 @@
               "global": true
             },
             "profile": {
-              "description": "Name of profile to capture. One of (none|cpu|heap|goroutine|threadcreate|block|mutex)",
+              "description": "Name of profile to capture. One of (none|cpu|heap|goroutine|threadcreate|block|mutex|trace)",
               "shorthand": "",
               "global": true
             },
@@ -33267,6 +33976,11 @@
             },
             "as-uid": {
               "description": "UID to impersonate for the operation.",
+              "shorthand": "",
+              "global": true
+            },
+            "as-user-extra": {
+              "description": "User extras to impersonate for the operation, this flag can be repeated to specify multiple values for the same key.",
               "shorthand": "",
               "global": true
             },
@@ -33351,7 +34065,7 @@
               "global": true
             },
             "profile": {
-              "description": "Name of profile to capture. One of (none|cpu|heap|goroutine|threadcreate|block|mutex)",
+              "description": "Name of profile to capture. One of (none|cpu|heap|goroutine|threadcreate|block|mutex|trace)",
               "shorthand": "",
               "global": true
             },
@@ -33436,6 +34150,11 @@
             },
             "as-uid": {
               "description": "UID to impersonate for the operation.",
+              "shorthand": "",
+              "global": true
+            },
+            "as-user-extra": {
+              "description": "User extras to impersonate for the operation, this flag can be repeated to specify multiple values for the same key.",
               "shorthand": "",
               "global": true
             },
@@ -33530,7 +34249,7 @@
               "global": true
             },
             "output": {
-              "description": "Output format. One of: (json, yaml, name, go-template, go-template-file, template, templatefile, jsonpath, jsonpath-as-json, jsonpath-file).",
+              "description": "Output format. One of: (json, yaml, kyaml, name, go-template, go-template-file, template, templatefile, jsonpath, jsonpath-as-json, jsonpath-file).",
               "shorthand": "o",
               "global": false
             },
@@ -33540,7 +34259,7 @@
               "global": true
             },
             "profile": {
-              "description": "Name of profile to capture. One of (none|cpu|heap|goroutine|threadcreate|block|mutex)",
+              "description": "Name of profile to capture. One of (none|cpu|heap|goroutine|threadcreate|block|mutex|trace)",
               "shorthand": "",
               "global": true
             },
@@ -33672,6 +34391,11 @@
                   "shorthand": "",
                   "global": true
                 },
+                "as-user-extra": {
+                  "description": "User extras to impersonate for the operation, this flag can be repeated to specify multiple values for the same key.",
+                  "shorthand": "",
+                  "global": true
+                },
                 "cache-dir": {
                   "description": "Default cache directory",
                   "shorthand": "",
@@ -33753,7 +34477,7 @@
                   "global": false
                 },
                 "output": {
-                  "description": "Output format. One of: (json, yaml, name, go-template, go-template-file, template, templatefile, jsonpath, jsonpath-as-json, jsonpath-file).",
+                  "description": "Output format. One of: (json, yaml, kyaml, name, go-template, go-template-file, template, templatefile, jsonpath, jsonpath-as-json, jsonpath-file).",
                   "shorthand": "o",
                   "global": false
                 },
@@ -33763,7 +34487,7 @@
                   "global": true
                 },
                 "profile": {
-                  "description": "Name of profile to capture. One of (none|cpu|heap|goroutine|threadcreate|block|mutex)",
+                  "description": "Name of profile to capture. One of (none|cpu|heap|goroutine|threadcreate|block|mutex|trace)",
                   "shorthand": "",
                   "global": true
                 },
@@ -33881,6 +34605,11 @@
                   "shorthand": "",
                   "global": true
                 },
+                "as-user-extra": {
+                  "description": "User extras to impersonate for the operation, this flag can be repeated to specify multiple values for the same key.",
+                  "shorthand": "",
+                  "global": true
+                },
                 "cache-dir": {
                   "description": "Default cache directory",
                   "shorthand": "",
@@ -33967,7 +34696,7 @@
                   "global": true
                 },
                 "output": {
-                  "description": "Output format. One of: (json, yaml, name, go-template, go-template-file, template, templatefile, jsonpath, jsonpath-as-json, jsonpath-file).",
+                  "description": "Output format. One of: (json, yaml, kyaml, name, go-template, go-template-file, template, templatefile, jsonpath, jsonpath-as-json, jsonpath-file).",
                   "shorthand": "o",
                   "global": false
                 },
@@ -33977,7 +34706,7 @@
                   "global": true
                 },
                 "profile": {
-                  "description": "Name of profile to capture. One of (none|cpu|heap|goroutine|threadcreate|block|mutex)",
+                  "description": "Name of profile to capture. One of (none|cpu|heap|goroutine|threadcreate|block|mutex|trace)",
                   "shorthand": "",
                   "global": true
                 },
@@ -34092,6 +34821,11 @@
                   "shorthand": "",
                   "global": true
                 },
+                "as-user-extra": {
+                  "description": "User extras to impersonate for the operation, this flag can be repeated to specify multiple values for the same key.",
+                  "shorthand": "",
+                  "global": true
+                },
                 "cache-dir": {
                   "description": "Default cache directory",
                   "shorthand": "",
@@ -34183,7 +34917,7 @@
                   "global": true
                 },
                 "output": {
-                  "description": "Output format. One of: (json, yaml, name, go-template, go-template-file, template, templatefile, jsonpath, jsonpath-as-json, jsonpath-file).",
+                  "description": "Output format. One of: (json, yaml, kyaml, name, go-template, go-template-file, template, templatefile, jsonpath, jsonpath-as-json, jsonpath-file).",
                   "shorthand": "o",
                   "global": false
                 },
@@ -34193,7 +34927,7 @@
                   "global": true
                 },
                 "profile": {
-                  "description": "Name of profile to capture. One of (none|cpu|heap|goroutine|threadcreate|block|mutex)",
+                  "description": "Name of profile to capture. One of (none|cpu|heap|goroutine|threadcreate|block|mutex|trace)",
                   "shorthand": "",
                   "global": true
                 },
@@ -34298,6 +35032,11 @@
                   "shorthand": "",
                   "global": true
                 },
+                "as-user-extra": {
+                  "description": "User extras to impersonate for the operation, this flag can be repeated to specify multiple values for the same key.",
+                  "shorthand": "",
+                  "global": true
+                },
                 "cache-dir": {
                   "description": "Default cache directory",
                   "shorthand": "",
@@ -34379,7 +35118,7 @@
                   "global": true
                 },
                 "output": {
-                  "description": "Output format. One of: (json, yaml, name, go-template, go-template-file, template, templatefile, jsonpath, jsonpath-as-json, jsonpath-file).",
+                  "description": "Output format. One of: (json, yaml, kyaml, name, go-template, go-template-file, template, templatefile, jsonpath, jsonpath-as-json, jsonpath-file).",
                   "shorthand": "o",
                   "global": false
                 },
@@ -34389,7 +35128,7 @@
                   "global": true
                 },
                 "profile": {
-                  "description": "Name of profile to capture. One of (none|cpu|heap|goroutine|threadcreate|block|mutex)",
+                  "description": "Name of profile to capture. One of (none|cpu|heap|goroutine|threadcreate|block|mutex|trace)",
                   "shorthand": "",
                   "global": true
                 },
@@ -34504,6 +35243,11 @@
                   "shorthand": "",
                   "global": true
                 },
+                "as-user-extra": {
+                  "description": "User extras to impersonate for the operation, this flag can be repeated to specify multiple values for the same key.",
+                  "shorthand": "",
+                  "global": true
+                },
                 "cache-dir": {
                   "description": "Default cache directory",
                   "shorthand": "",
@@ -34585,7 +35329,7 @@
                   "global": true
                 },
                 "output": {
-                  "description": "Output format. One of: (json, yaml, name, go-template, go-template-file, template, templatefile, jsonpath, jsonpath-as-json, jsonpath-file).",
+                  "description": "Output format. One of: (json, yaml, kyaml, name, go-template, go-template-file, template, templatefile, jsonpath, jsonpath-as-json, jsonpath-file).",
                   "shorthand": "o",
                   "global": false
                 },
@@ -34600,7 +35344,7 @@
                   "global": false
                 },
                 "profile": {
-                  "description": "Name of profile to capture. One of (none|cpu|heap|goroutine|threadcreate|block|mutex)",
+                  "description": "Name of profile to capture. One of (none|cpu|heap|goroutine|threadcreate|block|mutex|trace)",
                   "shorthand": "",
                   "global": true
                 },
@@ -34715,6 +35459,11 @@
                   "shorthand": "",
                   "global": true
                 },
+                "as-user-extra": {
+                  "description": "User extras to impersonate for the operation, this flag can be repeated to specify multiple values for the same key.",
+                  "shorthand": "",
+                  "global": true
+                },
                 "cache-dir": {
                   "description": "Default cache directory",
                   "shorthand": "",
@@ -34801,7 +35550,7 @@
                   "global": true
                 },
                 "output": {
-                  "description": "Output format. One of: (json, yaml, name, go-template, go-template-file, template, templatefile, jsonpath, jsonpath-as-json, jsonpath-file).",
+                  "description": "Output format. One of: (json, yaml, kyaml, name, go-template, go-template-file, template, templatefile, jsonpath, jsonpath-as-json, jsonpath-file).",
                   "shorthand": "o",
                   "global": false
                 },
@@ -34811,7 +35560,7 @@
                   "global": true
                 },
                 "profile": {
-                  "description": "Name of profile to capture. One of (none|cpu|heap|goroutine|threadcreate|block|mutex)",
+                  "description": "Name of profile to capture. One of (none|cpu|heap|goroutine|threadcreate|block|mutex|trace)",
                   "shorthand": "",
                   "global": true
                 },
@@ -34919,6 +35668,11 @@
                   "shorthand": "",
                   "global": true
                 },
+                "as-user-extra": {
+                  "description": "User extras to impersonate for the operation, this flag can be repeated to specify multiple values for the same key.",
+                  "shorthand": "",
+                  "global": true
+                },
                 "cache-dir": {
                   "description": "Default cache directory",
                   "shorthand": "",
@@ -34965,7 +35719,7 @@
                   "global": false
                 },
                 "from": {
-                  "description": "The name of the resource to create a Job from (only cronjob is supported).",
+                  "description": "The name of the resource to create a Job from (only CronJob is supported).",
                   "shorthand": "",
                   "global": false
                 },
@@ -35005,7 +35759,7 @@
                   "global": true
                 },
                 "output": {
-                  "description": "Output format. One of: (json, yaml, name, go-template, go-template-file, template, templatefile, jsonpath, jsonpath-as-json, jsonpath-file).",
+                  "description": "Output format. One of: (json, yaml, kyaml, name, go-template, go-template-file, template, templatefile, jsonpath, jsonpath-as-json, jsonpath-file).",
                   "shorthand": "o",
                   "global": false
                 },
@@ -35015,7 +35769,7 @@
                   "global": true
                 },
                 "profile": {
-                  "description": "Name of profile to capture. One of (none|cpu|heap|goroutine|threadcreate|block|mutex)",
+                  "description": "Name of profile to capture. One of (none|cpu|heap|goroutine|threadcreate|block|mutex|trace)",
                   "shorthand": "",
                   "global": true
                 },
@@ -35120,6 +35874,11 @@
                   "shorthand": "",
                   "global": true
                 },
+                "as-user-extra": {
+                  "description": "User extras to impersonate for the operation, this flag can be repeated to specify multiple values for the same key.",
+                  "shorthand": "",
+                  "global": true
+                },
                 "cache-dir": {
                   "description": "Default cache directory",
                   "shorthand": "",
@@ -35196,7 +35955,7 @@
                   "global": true
                 },
                 "output": {
-                  "description": "Output format. One of: (json, yaml, name, go-template, go-template-file, template, templatefile, jsonpath, jsonpath-as-json, jsonpath-file).",
+                  "description": "Output format. One of: (json, yaml, kyaml, name, go-template, go-template-file, template, templatefile, jsonpath, jsonpath-as-json, jsonpath-file).",
                   "shorthand": "o",
                   "global": false
                 },
@@ -35206,7 +35965,7 @@
                   "global": true
                 },
                 "profile": {
-                  "description": "Name of profile to capture. One of (none|cpu|heap|goroutine|threadcreate|block|mutex)",
+                  "description": "Name of profile to capture. One of (none|cpu|heap|goroutine|threadcreate|block|mutex|trace)",
                   "shorthand": "",
                   "global": true
                 },
@@ -35311,6 +36070,11 @@
                   "shorthand": "",
                   "global": true
                 },
+                "as-user-extra": {
+                  "description": "User extras to impersonate for the operation, this flag can be repeated to specify multiple values for the same key.",
+                  "shorthand": "",
+                  "global": true
+                },
                 "cache-dir": {
                   "description": "Default cache directory",
                   "shorthand": "",
@@ -35397,7 +36161,7 @@
                   "global": true
                 },
                 "output": {
-                  "description": "Output format. One of: (json, yaml, name, go-template, go-template-file, template, templatefile, jsonpath, jsonpath-as-json, jsonpath-file).",
+                  "description": "Output format. One of: (json, yaml, kyaml, name, go-template, go-template-file, template, templatefile, jsonpath, jsonpath-as-json, jsonpath-file).",
                   "shorthand": "o",
                   "global": false
                 },
@@ -35407,7 +36171,7 @@
                   "global": true
                 },
                 "profile": {
-                  "description": "Name of profile to capture. One of (none|cpu|heap|goroutine|threadcreate|block|mutex)",
+                  "description": "Name of profile to capture. One of (none|cpu|heap|goroutine|threadcreate|block|mutex|trace)",
                   "shorthand": "",
                   "global": true
                 },
@@ -35517,6 +36281,11 @@
                   "shorthand": "",
                   "global": true
                 },
+                "as-user-extra": {
+                  "description": "User extras to impersonate for the operation, this flag can be repeated to specify multiple values for the same key.",
+                  "shorthand": "",
+                  "global": true
+                },
                 "cache-dir": {
                   "description": "Default cache directory",
                   "shorthand": "",
@@ -35603,7 +36372,7 @@
                   "global": true
                 },
                 "output": {
-                  "description": "Output format. One of: (json, yaml, name, go-template, go-template-file, template, templatefile, jsonpath, jsonpath-as-json, jsonpath-file).",
+                  "description": "Output format. One of: (json, yaml, kyaml, name, go-template, go-template-file, template, templatefile, jsonpath, jsonpath-as-json, jsonpath-file).",
                   "shorthand": "o",
                   "global": false
                 },
@@ -35618,7 +36387,7 @@
                   "global": false
                 },
                 "profile": {
-                  "description": "Name of profile to capture. One of (none|cpu|heap|goroutine|threadcreate|block|mutex)",
+                  "description": "Name of profile to capture. One of (none|cpu|heap|goroutine|threadcreate|block|mutex|trace)",
                   "shorthand": "",
                   "global": true
                 },
@@ -35728,6 +36497,11 @@
                   "shorthand": "",
                   "global": true
                 },
+                "as-user-extra": {
+                  "description": "User extras to impersonate for the operation, this flag can be repeated to specify multiple values for the same key.",
+                  "shorthand": "",
+                  "global": true
+                },
                 "cache-dir": {
                   "description": "Default cache directory",
                   "shorthand": "",
@@ -35809,7 +36583,7 @@
                   "global": true
                 },
                 "output": {
-                  "description": "Output format. One of: (json, yaml, name, go-template, go-template-file, template, templatefile, jsonpath, jsonpath-as-json, jsonpath-file).",
+                  "description": "Output format. One of: (json, yaml, kyaml, name, go-template, go-template-file, template, templatefile, jsonpath, jsonpath-as-json, jsonpath-file).",
                   "shorthand": "o",
                   "global": false
                 },
@@ -35819,7 +36593,7 @@
                   "global": true
                 },
                 "profile": {
-                  "description": "Name of profile to capture. One of (none|cpu|heap|goroutine|threadcreate|block|mutex)",
+                  "description": "Name of profile to capture. One of (none|cpu|heap|goroutine|threadcreate|block|mutex|trace)",
                   "shorthand": "",
                   "global": true
                 },
@@ -35927,6 +36701,11 @@
                   "shorthand": "",
                   "global": true
                 },
+                "as-user-extra": {
+                  "description": "User extras to impersonate for the operation, this flag can be repeated to specify multiple values for the same key.",
+                  "shorthand": "",
+                  "global": true
+                },
                 "cache-dir": {
                   "description": "Default cache directory",
                   "shorthand": "",
@@ -36003,7 +36782,7 @@
                   "global": true
                 },
                 "output": {
-                  "description": "Output format. One of: (json, yaml, name, go-template, go-template-file, template, templatefile, jsonpath, jsonpath-as-json, jsonpath-file).",
+                  "description": "Output format. One of: (json, yaml, kyaml, name, go-template, go-template-file, template, templatefile, jsonpath, jsonpath-as-json, jsonpath-file).",
                   "shorthand": "o",
                   "global": false
                 },
@@ -36013,7 +36792,7 @@
                   "global": true
                 },
                 "profile": {
-                  "description": "Name of profile to capture. One of (none|cpu|heap|goroutine|threadcreate|block|mutex)",
+                  "description": "Name of profile to capture. One of (none|cpu|heap|goroutine|threadcreate|block|mutex|trace)",
                   "shorthand": "",
                   "global": true
                 },
@@ -36131,6 +36910,11 @@
                   "shorthand": "",
                   "global": true
                 },
+                "as-user-extra": {
+                  "description": "User extras to impersonate for the operation, this flag can be repeated to specify multiple values for the same key.",
+                  "shorthand": "",
+                  "global": true
+                },
                 "cache-dir": {
                   "description": "Default cache directory",
                   "shorthand": "",
@@ -36217,7 +37001,7 @@
                   "global": true
                 },
                 "output": {
-                  "description": "Output format. One of: (json, yaml, name, go-template, go-template-file, template, templatefile, jsonpath, jsonpath-as-json, jsonpath-file).",
+                  "description": "Output format. One of: (json, yaml, kyaml, name, go-template, go-template-file, template, templatefile, jsonpath, jsonpath-as-json, jsonpath-file).",
                   "shorthand": "o",
                   "global": false
                 },
@@ -36227,7 +37011,7 @@
                   "global": true
                 },
                 "profile": {
-                  "description": "Name of profile to capture. One of (none|cpu|heap|goroutine|threadcreate|block|mutex)",
+                  "description": "Name of profile to capture. One of (none|cpu|heap|goroutine|threadcreate|block|mutex|trace)",
                   "shorthand": "",
                   "global": true
                 },
@@ -36335,6 +37119,11 @@
                   "shorthand": "",
                   "global": true
                 },
+                "as-user-extra": {
+                  "description": "User extras to impersonate for the operation, this flag can be repeated to specify multiple values for the same key.",
+                  "shorthand": "",
+                  "global": true
+                },
                 "cache-dir": {
                   "description": "Default cache directory",
                   "shorthand": "",
@@ -36406,7 +37195,7 @@
                   "global": true
                 },
                 "profile": {
-                  "description": "Name of profile to capture. One of (none|cpu|heap|goroutine|threadcreate|block|mutex)",
+                  "description": "Name of profile to capture. One of (none|cpu|heap|goroutine|threadcreate|block|mutex|trace)",
                   "shorthand": "",
                   "global": true
                 },
@@ -36490,6 +37279,11 @@
                     },
                     "as-uid": {
                       "description": "UID to impersonate for the operation.",
+                      "shorthand": "",
+                      "global": true
+                    },
+                    "as-user-extra": {
+                      "description": "User extras to impersonate for the operation, this flag can be repeated to specify multiple values for the same key.",
                       "shorthand": "",
                       "global": true
                     },
@@ -36594,7 +37388,7 @@
                       "global": true
                     },
                     "output": {
-                      "description": "Output format. One of: (json, yaml, name, go-template, go-template-file, template, templatefile, jsonpath, jsonpath-as-json, jsonpath-file).",
+                      "description": "Output format. One of: (json, yaml, kyaml, name, go-template, go-template-file, template, templatefile, jsonpath, jsonpath-as-json, jsonpath-file).",
                       "shorthand": "o",
                       "global": false
                     },
@@ -36604,7 +37398,7 @@
                       "global": true
                     },
                     "profile": {
-                      "description": "Name of profile to capture. One of (none|cpu|heap|goroutine|threadcreate|block|mutex)",
+                      "description": "Name of profile to capture. One of (none|cpu|heap|goroutine|threadcreate|block|mutex|trace)",
                       "shorthand": "",
                       "global": true
                     },
@@ -36712,6 +37506,11 @@
                       "shorthand": "",
                       "global": true
                     },
+                    "as-user-extra": {
+                      "description": "User extras to impersonate for the operation, this flag can be repeated to specify multiple values for the same key.",
+                      "shorthand": "",
+                      "global": true
+                    },
                     "cache-dir": {
                       "description": "Default cache directory",
                       "shorthand": "",
@@ -36803,7 +37602,7 @@
                       "global": true
                     },
                     "output": {
-                      "description": "Output format. One of: (json, yaml, name, go-template, go-template-file, template, templatefile, jsonpath, jsonpath-as-json, jsonpath-file).",
+                      "description": "Output format. One of: (json, yaml, kyaml, name, go-template, go-template-file, template, templatefile, jsonpath, jsonpath-as-json, jsonpath-file).",
                       "shorthand": "o",
                       "global": false
                     },
@@ -36813,7 +37612,7 @@
                       "global": true
                     },
                     "profile": {
-                      "description": "Name of profile to capture. One of (none|cpu|heap|goroutine|threadcreate|block|mutex)",
+                      "description": "Name of profile to capture. One of (none|cpu|heap|goroutine|threadcreate|block|mutex|trace)",
                       "shorthand": "",
                       "global": true
                     },
@@ -36926,6 +37725,11 @@
                       "shorthand": "",
                       "global": true
                     },
+                    "as-user-extra": {
+                      "description": "User extras to impersonate for the operation, this flag can be repeated to specify multiple values for the same key.",
+                      "shorthand": "",
+                      "global": true
+                    },
                     "cache-dir": {
                       "description": "Default cache directory",
                       "shorthand": "",
@@ -37012,7 +37816,7 @@
                       "global": true
                     },
                     "output": {
-                      "description": "Output format. One of: (json, yaml, name, go-template, go-template-file, template, templatefile, jsonpath, jsonpath-as-json, jsonpath-file).",
+                      "description": "Output format. One of: (json, yaml, kyaml, name, go-template, go-template-file, template, templatefile, jsonpath, jsonpath-as-json, jsonpath-file).",
                       "shorthand": "o",
                       "global": false
                     },
@@ -37022,7 +37826,7 @@
                       "global": true
                     },
                     "profile": {
-                      "description": "Name of profile to capture. One of (none|cpu|heap|goroutine|threadcreate|block|mutex)",
+                      "description": "Name of profile to capture. One of (none|cpu|heap|goroutine|threadcreate|block|mutex|trace)",
                       "shorthand": "",
                       "global": true
                     },
@@ -37124,6 +37928,11 @@
                   "shorthand": "",
                   "global": true
                 },
+                "as-user-extra": {
+                  "description": "User extras to impersonate for the operation, this flag can be repeated to specify multiple values for the same key.",
+                  "shorthand": "",
+                  "global": true
+                },
                 "cache-dir": {
                   "description": "Default cache directory",
                   "shorthand": "",
@@ -37195,7 +38004,7 @@
                   "global": true
                 },
                 "profile": {
-                  "description": "Name of profile to capture. One of (none|cpu|heap|goroutine|threadcreate|block|mutex)",
+                  "description": "Name of profile to capture. One of (none|cpu|heap|goroutine|threadcreate|block|mutex|trace)",
                   "shorthand": "",
                   "global": true
                 },
@@ -37274,6 +38083,11 @@
                     },
                     "as-uid": {
                       "description": "UID to impersonate for the operation.",
+                      "shorthand": "",
+                      "global": true
+                    },
+                    "as-user-extra": {
+                      "description": "User extras to impersonate for the operation, this flag can be repeated to specify multiple values for the same key.",
                       "shorthand": "",
                       "global": true
                     },
@@ -37358,7 +38172,7 @@
                       "global": true
                     },
                     "output": {
-                      "description": "Output format. One of: (json, yaml, name, go-template, go-template-file, template, templatefile, jsonpath, jsonpath-as-json, jsonpath-file).",
+                      "description": "Output format. One of: (json, yaml, kyaml, name, go-template, go-template-file, template, templatefile, jsonpath, jsonpath-as-json, jsonpath-file).",
                       "shorthand": "o",
                       "global": false
                     },
@@ -37368,7 +38182,7 @@
                       "global": true
                     },
                     "profile": {
-                      "description": "Name of profile to capture. One of (none|cpu|heap|goroutine|threadcreate|block|mutex)",
+                      "description": "Name of profile to capture. One of (none|cpu|heap|goroutine|threadcreate|block|mutex|trace)",
                       "shorthand": "",
                       "global": true
                     },
@@ -37476,6 +38290,11 @@
                       "shorthand": "",
                       "global": true
                     },
+                    "as-user-extra": {
+                      "description": "User extras to impersonate for the operation, this flag can be repeated to specify multiple values for the same key.",
+                      "shorthand": "",
+                      "global": true
+                    },
                     "cache-dir": {
                       "description": "Default cache directory",
                       "shorthand": "",
@@ -37557,7 +38376,7 @@
                       "global": true
                     },
                     "output": {
-                      "description": "Output format. One of: (json, yaml, name, go-template, go-template-file, template, templatefile, jsonpath, jsonpath-as-json, jsonpath-file).",
+                      "description": "Output format. One of: (json, yaml, kyaml, name, go-template, go-template-file, template, templatefile, jsonpath, jsonpath-as-json, jsonpath-file).",
                       "shorthand": "o",
                       "global": false
                     },
@@ -37567,7 +38386,7 @@
                       "global": true
                     },
                     "profile": {
-                      "description": "Name of profile to capture. One of (none|cpu|heap|goroutine|threadcreate|block|mutex)",
+                      "description": "Name of profile to capture. One of (none|cpu|heap|goroutine|threadcreate|block|mutex|trace)",
                       "shorthand": "",
                       "global": true
                     },
@@ -37675,6 +38494,11 @@
                       "shorthand": "",
                       "global": true
                     },
+                    "as-user-extra": {
+                      "description": "User extras to impersonate for the operation, this flag can be repeated to specify multiple values for the same key.",
+                      "shorthand": "",
+                      "global": true
+                    },
                     "cache-dir": {
                       "description": "Default cache directory",
                       "shorthand": "",
@@ -37751,7 +38575,7 @@
                       "global": true
                     },
                     "output": {
-                      "description": "Output format. One of: (json, yaml, name, go-template, go-template-file, template, templatefile, jsonpath, jsonpath-as-json, jsonpath-file).",
+                      "description": "Output format. One of: (json, yaml, kyaml, name, go-template, go-template-file, template, templatefile, jsonpath, jsonpath-as-json, jsonpath-file).",
                       "shorthand": "o",
                       "global": false
                     },
@@ -37761,7 +38585,7 @@
                       "global": true
                     },
                     "profile": {
-                      "description": "Name of profile to capture. One of (none|cpu|heap|goroutine|threadcreate|block|mutex)",
+                      "description": "Name of profile to capture. One of (none|cpu|heap|goroutine|threadcreate|block|mutex|trace)",
                       "shorthand": "",
                       "global": true
                     },
@@ -37869,6 +38693,11 @@
                       "shorthand": "",
                       "global": true
                     },
+                    "as-user-extra": {
+                      "description": "User extras to impersonate for the operation, this flag can be repeated to specify multiple values for the same key.",
+                      "shorthand": "",
+                      "global": true
+                    },
                     "cache-dir": {
                       "description": "Default cache directory",
                       "shorthand": "",
@@ -37950,7 +38779,7 @@
                       "global": false
                     },
                     "output": {
-                      "description": "Output format. One of: (json, yaml, name, go-template, go-template-file, template, templatefile, jsonpath, jsonpath-as-json, jsonpath-file).",
+                      "description": "Output format. One of: (json, yaml, kyaml, name, go-template, go-template-file, template, templatefile, jsonpath, jsonpath-as-json, jsonpath-file).",
                       "shorthand": "o",
                       "global": false
                     },
@@ -37960,7 +38789,7 @@
                       "global": true
                     },
                     "profile": {
-                      "description": "Name of profile to capture. One of (none|cpu|heap|goroutine|threadcreate|block|mutex)",
+                      "description": "Name of profile to capture. One of (none|cpu|heap|goroutine|threadcreate|block|mutex|trace)",
                       "shorthand": "",
                       "global": true
                     },
@@ -38072,6 +38901,11 @@
                   "shorthand": "",
                   "global": true
                 },
+                "as-user-extra": {
+                  "description": "User extras to impersonate for the operation, this flag can be repeated to specify multiple values for the same key.",
+                  "shorthand": "",
+                  "global": true
+                },
                 "cache-dir": {
                   "description": "Default cache directory",
                   "shorthand": "",
@@ -38148,7 +38982,7 @@
                   "global": true
                 },
                 "output": {
-                  "description": "Output format. One of: (json, yaml, name, go-template, go-template-file, template, templatefile, jsonpath, jsonpath-as-json, jsonpath-file).",
+                  "description": "Output format. One of: (json, yaml, kyaml, name, go-template, go-template-file, template, templatefile, jsonpath, jsonpath-as-json, jsonpath-file).",
                   "shorthand": "o",
                   "global": false
                 },
@@ -38158,7 +38992,7 @@
                   "global": true
                 },
                 "profile": {
-                  "description": "Name of profile to capture. One of (none|cpu|heap|goroutine|threadcreate|block|mutex)",
+                  "description": "Name of profile to capture. One of (none|cpu|heap|goroutine|threadcreate|block|mutex|trace)",
                   "shorthand": "",
                   "global": true
                 },
@@ -38261,6 +39095,11 @@
                   "shorthand": "",
                   "global": true
                 },
+                "as-user-extra": {
+                  "description": "User extras to impersonate for the operation, this flag can be repeated to specify multiple values for the same key.",
+                  "shorthand": "",
+                  "global": true
+                },
                 "audience": {
                   "description": "Audience of the requested token. If unset, defaults to requesting a token for use with the Kubernetes API server. May be repeated to request a token valid for multiple audiences.",
                   "shorthand": "",
@@ -38352,7 +39191,7 @@
                   "global": true
                 },
                 "output": {
-                  "description": "Output format. One of: (json, yaml, name, go-template, go-template-file, template, templatefile, jsonpath, jsonpath-as-json, jsonpath-file).",
+                  "description": "Output format. One of: (json, yaml, kyaml, name, go-template, go-template-file, template, templatefile, jsonpath, jsonpath-as-json, jsonpath-file).",
                   "shorthand": "o",
                   "global": false
                 },
@@ -38362,7 +39201,7 @@
                   "global": true
                 },
                 "profile": {
-                  "description": "Name of profile to capture. One of (none|cpu|heap|goroutine|threadcreate|block|mutex)",
+                  "description": "Name of profile to capture. One of (none|cpu|heap|goroutine|threadcreate|block|mutex|trace)",
                   "shorthand": "",
                   "global": true
                 },
@@ -38454,6 +39293,11 @@
             },
             "as-uid": {
               "description": "UID to impersonate for the operation.",
+              "shorthand": "",
+              "global": true
+            },
+            "as-user-extra": {
+              "description": "User extras to impersonate for the operation, this flag can be repeated to specify multiple values for the same key.",
               "shorthand": "",
               "global": true
             },
@@ -38726,6 +39570,11 @@
               "shorthand": "",
               "global": true
             },
+            "as-user-extra": {
+              "description": "User extras to impersonate for the operation, this flag can be repeated to specify multiple values for the same key.",
+              "shorthand": "",
+              "global": true
+            },
             "cache-dir": {
               "description": "Default cache directory",
               "shorthand": "",
@@ -38852,7 +39701,7 @@
               "global": true
             },
             "profile": {
-              "description": "Name of profile to capture. One of (none|cpu|heap|goroutine|threadcreate|block|mutex)",
+              "description": "Name of profile to capture. One of (none|cpu|heap|goroutine|threadcreate|block|mutex|trace)",
               "shorthand": "",
               "global": true
             },
@@ -38960,6 +39809,11 @@
               "shorthand": "",
               "global": true
             },
+            "as-user-extra": {
+              "description": "User extras to impersonate for the operation, this flag can be repeated to specify multiple values for the same key.",
+              "shorthand": "",
+              "global": true
+            },
             "cache-dir": {
               "description": "Default cache directory",
               "shorthand": "",
@@ -38971,7 +39825,7 @@
               "global": true
             },
             "chunk-size": {
-              "description": "Return large lists in chunks rather than all at once. Pass 0 to disable. This flag is beta and may change in the future.",
+              "description": "Return large lists in chunks rather than all at once. Pass 0 to disable.",
               "shorthand": "",
               "global": false
             },
@@ -39046,7 +39900,7 @@
               "global": true
             },
             "profile": {
-              "description": "Name of profile to capture. One of (none|cpu|heap|goroutine|threadcreate|block|mutex)",
+              "description": "Name of profile to capture. One of (none|cpu|heap|goroutine|threadcreate|block|mutex|trace)",
               "shorthand": "",
               "global": true
             },
@@ -39136,6 +39990,11 @@
             },
             "as-uid": {
               "description": "UID to impersonate for the operation.",
+              "shorthand": "",
+              "global": true
+            },
+            "as-user-extra": {
+              "description": "User extras to impersonate for the operation, this flag can be repeated to specify multiple values for the same key.",
               "shorthand": "",
               "global": true
             },
@@ -39235,7 +40094,7 @@
               "global": true
             },
             "profile": {
-              "description": "Name of profile to capture. One of (none|cpu|heap|goroutine|threadcreate|block|mutex)",
+              "description": "Name of profile to capture. One of (none|cpu|heap|goroutine|threadcreate|block|mutex|trace)",
               "shorthand": "",
               "global": true
             },
@@ -39343,6 +40202,11 @@
               "shorthand": "",
               "global": true
             },
+            "as-user-extra": {
+              "description": "User extras to impersonate for the operation, this flag can be repeated to specify multiple values for the same key.",
+              "shorthand": "",
+              "global": true
+            },
             "cache-dir": {
               "description": "Default cache directory",
               "shorthand": "",
@@ -39354,7 +40218,7 @@
               "global": true
             },
             "chunk-size": {
-              "description": "Return large lists in chunks rather than all at once. Pass 0 to disable. This flag is beta and may change in the future.",
+              "description": "Return large lists in chunks rather than all at once. Pass 0 to disable.",
               "shorthand": "",
               "global": false
             },
@@ -39454,7 +40318,7 @@
               "global": false
             },
             "profile": {
-              "description": "Name of profile to capture. One of (none|cpu|heap|goroutine|threadcreate|block|mutex)",
+              "description": "Name of profile to capture. One of (none|cpu|heap|goroutine|threadcreate|block|mutex|trace)",
               "shorthand": "",
               "global": true
             },
@@ -39552,6 +40416,11 @@
               "shorthand": "",
               "global": true
             },
+            "as-user-extra": {
+              "description": "User extras to impersonate for the operation, this flag can be repeated to specify multiple values for the same key.",
+              "shorthand": "",
+              "global": true
+            },
             "cache-dir": {
               "description": "Default cache directory",
               "shorthand": "",
@@ -39633,7 +40502,7 @@
               "global": true
             },
             "output": {
-              "description": "Output format. One of: (json, yaml, name, go-template, go-template-file, template, templatefile, jsonpath, jsonpath-as-json, jsonpath-file).",
+              "description": "Output format. One of: (json, yaml, kyaml, name, go-template, go-template-file, template, templatefile, jsonpath, jsonpath-as-json, jsonpath-file).",
               "shorthand": "o",
               "global": false
             },
@@ -39648,7 +40517,7 @@
               "global": true
             },
             "profile": {
-              "description": "Name of profile to capture. One of (none|cpu|heap|goroutine|threadcreate|block|mutex)",
+              "description": "Name of profile to capture. One of (none|cpu|heap|goroutine|threadcreate|block|mutex|trace)",
               "shorthand": "",
               "global": true
             },
@@ -39746,7 +40615,7 @@
           "subcommands": null
         },
         {
-          "name": "events [(-o|--output=)json|yaml|name|go-template|go-template-file|template|templatefile|jsonpath|jsonpath-as-json|jsonpath-file] [--for TYPE/NAME] [--watch] [--types=Normal,Warning]",
+          "name": "events [(-o|--output=)json|yaml|kyaml|name|go-template|go-template-file|template|templatefile|jsonpath|jsonpath-as-json|jsonpath-file] [--for TYPE/NAME] [--watch] [--types=Normal,Warning]",
           "description": "List events",
           "longDescription": "Display events.\n\n Prints a table of the most important information about events. You can request events for a namespace, for all namespace, or filtered to only those pertaining to a specified resource.",
           "aliases": null,
@@ -39776,6 +40645,11 @@
               "shorthand": "",
               "global": true
             },
+            "as-user-extra": {
+              "description": "User extras to impersonate for the operation, this flag can be repeated to specify multiple values for the same key.",
+              "shorthand": "",
+              "global": true
+            },
             "cache-dir": {
               "description": "Default cache directory",
               "shorthand": "",
@@ -39787,7 +40661,7 @@
               "global": true
             },
             "chunk-size": {
-              "description": "Return large lists in chunks rather than all at once. Pass 0 to disable. This flag is beta and may change in the future.",
+              "description": "Return large lists in chunks rather than all at once. Pass 0 to disable.",
               "shorthand": "",
               "global": false
             },
@@ -39857,7 +40731,7 @@
               "global": false
             },
             "output": {
-              "description": "Output format. One of: (json, yaml, name, go-template, go-template-file, template, templatefile, jsonpath, jsonpath-as-json, jsonpath-file).",
+              "description": "Output format. One of: (json, yaml, kyaml, name, go-template, go-template-file, template, templatefile, jsonpath, jsonpath-as-json, jsonpath-file).",
               "shorthand": "o",
               "global": false
             },
@@ -39867,7 +40741,7 @@
               "global": true
             },
             "profile": {
-              "description": "Name of profile to capture. One of (none|cpu|heap|goroutine|threadcreate|block|mutex)",
+              "description": "Name of profile to capture. One of (none|cpu|heap|goroutine|threadcreate|block|mutex|trace)",
               "shorthand": "",
               "global": true
             },
@@ -39965,6 +40839,11 @@
               "shorthand": "",
               "global": true
             },
+            "as-user-extra": {
+              "description": "User extras to impersonate for the operation, this flag can be repeated to specify multiple values for the same key.",
+              "shorthand": "",
+              "global": true
+            },
             "cache-dir": {
               "description": "Default cache directory",
               "shorthand": "",
@@ -40051,7 +40930,7 @@
               "global": false
             },
             "profile": {
-              "description": "Name of profile to capture. One of (none|cpu|heap|goroutine|threadcreate|block|mutex)",
+              "description": "Name of profile to capture. One of (none|cpu|heap|goroutine|threadcreate|block|mutex|trace)",
               "shorthand": "",
               "global": true
             },
@@ -40149,6 +41028,11 @@
               "shorthand": "",
               "global": true
             },
+            "as-user-extra": {
+              "description": "User extras to impersonate for the operation, this flag can be repeated to specify multiple values for the same key.",
+              "shorthand": "",
+              "global": true
+            },
             "cache-dir": {
               "description": "Default cache directory",
               "shorthand": "",
@@ -40225,7 +41109,7 @@
               "global": true
             },
             "profile": {
-              "description": "Name of profile to capture. One of (none|cpu|heap|goroutine|threadcreate|block|mutex)",
+              "description": "Name of profile to capture. One of (none|cpu|heap|goroutine|threadcreate|block|mutex|trace)",
               "shorthand": "",
               "global": true
             },
@@ -40310,6 +41194,11 @@
             },
             "as-uid": {
               "description": "UID to impersonate for the operation.",
+              "shorthand": "",
+              "global": true
+            },
+            "as-user-extra": {
+              "description": "User extras to impersonate for the operation, this flag can be repeated to specify multiple values for the same key.",
               "shorthand": "",
               "global": true
             },
@@ -40424,7 +41313,7 @@
               "global": true
             },
             "output": {
-              "description": "Output format. One of: (json, yaml, name, go-template, go-template-file, template, templatefile, jsonpath, jsonpath-as-json, jsonpath-file).",
+              "description": "Output format. One of: (json, yaml, kyaml, name, go-template, go-template-file, template, templatefile, jsonpath, jsonpath-as-json, jsonpath-file).",
               "shorthand": "o",
               "global": false
             },
@@ -40449,7 +41338,7 @@
               "global": false
             },
             "profile": {
-              "description": "Name of profile to capture. One of (none|cpu|heap|goroutine|threadcreate|block|mutex)",
+              "description": "Name of profile to capture. One of (none|cpu|heap|goroutine|threadcreate|block|mutex|trace)",
               "shorthand": "",
               "global": true
             },
@@ -40484,7 +41373,7 @@
               "global": false
             },
             "selector": {
-              "description": "A label selector to use for this service. Only equality-based selector requirements are supported. If empty (the default) infer the selector from the replication controller or replica set.)",
+              "description": "A label selector to use for this service. Only equality-based selector requirements are supported. If empty (the default) infer the selector from the resource being exposed.",
               "shorthand": "",
               "global": false
             },
@@ -40557,7 +41446,7 @@
           "subcommands": null
         },
         {
-          "name": "get [(-o|--output=)json|yaml|name|go-template|go-template-file|template|templatefile|jsonpath|jsonpath-as-json|jsonpath-file|custom-columns|custom-columns-file|wide] (TYPE[.VERSION][.GROUP] [NAME | -l label] | TYPE[.VERSION][.GROUP]/NAME ...) [flags]",
+          "name": "get [(-o|--output=)json|yaml|kyaml|name|go-template|go-template-file|template|templatefile|jsonpath|jsonpath-as-json|jsonpath-file|custom-columns|custom-columns-file|wide] (TYPE[.VERSION][.GROUP] [NAME | -l label] | TYPE[.VERSION][.GROUP]/NAME ...) [flags]",
           "description": "Display one or many resources",
           "longDescription": "Display one or many resources.\n\n Prints a table of the most important information about the specified resources. You can filter the list using a label selector and the --selector flag. If the desired resource type is namespaced you will only see results in the current namespace if you don't specify any namespace.\n\n By specifying the output as 'template' and providing a Go template as the value of the --template flag, you can filter the attributes of the fetched resources.\n\nUse \"kubectl api-resources\" for a complete list of supported resources.",
           "aliases": null,
@@ -40587,6 +41476,11 @@
               "shorthand": "",
               "global": true
             },
+            "as-user-extra": {
+              "description": "User extras to impersonate for the operation, this flag can be repeated to specify multiple values for the same key.",
+              "shorthand": "",
+              "global": true
+            },
             "cache-dir": {
               "description": "Default cache directory",
               "shorthand": "",
@@ -40598,7 +41492,7 @@
               "global": true
             },
             "chunk-size": {
-              "description": "Return large lists in chunks rather than all at once. Pass 0 to disable. This flag is beta and may change in the future.",
+              "description": "Return large lists in chunks rather than all at once. Pass 0 to disable.",
               "shorthand": "",
               "global": false
             },
@@ -40688,7 +41582,7 @@
               "global": false
             },
             "output": {
-              "description": "Output format. One of: (json, yaml, name, go-template, go-template-file, template, templatefile, jsonpath, jsonpath-as-json, jsonpath-file, custom-columns, custom-columns-file, wide). See custom columns [https://kubernetes.io/docs/reference/kubectl/#custom-columns], golang template [http://golang.org/pkg/text/template/#pkg-overview] and jsonpath template [https://kubernetes.io/docs/reference/kubectl/jsonpath/].",
+              "description": "Output format. One of: (json, yaml, kyaml, name, go-template, go-template-file, template, templatefile, jsonpath, jsonpath-as-json, jsonpath-file, custom-columns, custom-columns-file, wide). See custom columns [https://kubernetes.io/docs/reference/kubectl/#custom-columns], golang template [http://golang.org/pkg/text/template/#pkg-overview] and jsonpath template [https://kubernetes.io/docs/reference/kubectl/jsonpath/].",
               "shorthand": "o",
               "global": false
             },
@@ -40703,7 +41597,7 @@
               "global": true
             },
             "profile": {
-              "description": "Name of profile to capture. One of (none|cpu|heap|goroutine|threadcreate|block|mutex)",
+              "description": "Name of profile to capture. One of (none|cpu|heap|goroutine|threadcreate|block|mutex|trace)",
               "shorthand": "",
               "global": true
             },
@@ -40851,6 +41745,11 @@
               "shorthand": "",
               "global": true
             },
+            "as-user-extra": {
+              "description": "User extras to impersonate for the operation, this flag can be repeated to specify multiple values for the same key.",
+              "shorthand": "",
+              "global": true
+            },
             "cache-dir": {
               "description": "Default cache directory",
               "shorthand": "",
@@ -40987,7 +41886,7 @@
               "global": true
             },
             "profile": {
-              "description": "Name of profile to capture. One of (none|cpu|heap|goroutine|threadcreate|block|mutex)",
+              "description": "Name of profile to capture. One of (none|cpu|heap|goroutine|threadcreate|block|mutex|trace)",
               "shorthand": "",
               "global": true
             },
@@ -41082,6 +41981,11 @@
             },
             "as-uid": {
               "description": "UID to impersonate for the operation.",
+              "shorthand": "",
+              "global": true
+            },
+            "as-user-extra": {
+              "description": "User extras to impersonate for the operation, this flag can be repeated to specify multiple values for the same key.",
               "shorthand": "",
               "global": true
             },
@@ -41186,7 +42090,7 @@
               "global": true
             },
             "output": {
-              "description": "Output format. One of: (json, yaml, name, go-template, go-template-file, template, templatefile, jsonpath, jsonpath-as-json, jsonpath-file).",
+              "description": "Output format. One of: (json, yaml, kyaml, name, go-template, go-template-file, template, templatefile, jsonpath, jsonpath-as-json, jsonpath-file).",
               "shorthand": "o",
               "global": false
             },
@@ -41201,7 +42105,7 @@
               "global": true
             },
             "profile": {
-              "description": "Name of profile to capture. One of (none|cpu|heap|goroutine|threadcreate|block|mutex)",
+              "description": "Name of profile to capture. One of (none|cpu|heap|goroutine|threadcreate|block|mutex|trace)",
               "shorthand": "",
               "global": true
             },
@@ -41316,6 +42220,11 @@
             },
             "as-uid": {
               "description": "UID to impersonate for the operation.",
+              "shorthand": "",
+              "global": true
+            },
+            "as-user-extra": {
+              "description": "User extras to impersonate for the operation, this flag can be repeated to specify multiple values for the same key.",
               "shorthand": "",
               "global": true
             },
@@ -41435,7 +42344,7 @@
               "global": false
             },
             "profile": {
-              "description": "Name of profile to capture. One of (none|cpu|heap|goroutine|threadcreate|block|mutex)",
+              "description": "Name of profile to capture. One of (none|cpu|heap|goroutine|threadcreate|block|mutex|trace)",
               "shorthand": "",
               "global": true
             },
@@ -41538,6 +42447,11 @@
               "shorthand": "",
               "global": true
             },
+            "as-user-extra": {
+              "description": "User extras to impersonate for the operation, this flag can be repeated to specify multiple values for the same key.",
+              "shorthand": "",
+              "global": true
+            },
             "cache-dir": {
               "description": "Default cache directory",
               "shorthand": "",
@@ -41609,7 +42523,7 @@
               "global": true
             },
             "profile": {
-              "description": "Name of profile to capture. One of (none|cpu|heap|goroutine|threadcreate|block|mutex)",
+              "description": "Name of profile to capture. One of (none|cpu|heap|goroutine|threadcreate|block|mutex|trace)",
               "shorthand": "",
               "global": true
             },
@@ -41689,6 +42603,11 @@
             },
             "as-uid": {
               "description": "UID to impersonate for the operation.",
+              "shorthand": "",
+              "global": true
+            },
+            "as-user-extra": {
+              "description": "User extras to impersonate for the operation, this flag can be repeated to specify multiple values for the same key.",
               "shorthand": "",
               "global": true
             },
@@ -41783,7 +42702,7 @@
               "global": true
             },
             "output": {
-              "description": "Output format. One of: (json, yaml, name, go-template, go-template-file, template, templatefile, jsonpath, jsonpath-as-json, jsonpath-file).",
+              "description": "Output format. One of: (json, yaml, kyaml, name, go-template, go-template-file, template, templatefile, jsonpath, jsonpath-as-json, jsonpath-file).",
               "shorthand": "o",
               "global": false
             },
@@ -41803,7 +42722,7 @@
               "global": false
             },
             "profile": {
-              "description": "Name of profile to capture. One of (none|cpu|heap|goroutine|threadcreate|block|mutex)",
+              "description": "Name of profile to capture. One of (none|cpu|heap|goroutine|threadcreate|block|mutex|trace)",
               "shorthand": "",
               "global": true
             },
@@ -41911,6 +42830,11 @@
               "shorthand": "",
               "global": true
             },
+            "as-user-extra": {
+              "description": "User extras to impersonate for the operation, this flag can be repeated to specify multiple values for the same key.",
+              "shorthand": "",
+              "global": true
+            },
             "cache-dir": {
               "description": "Default cache directory",
               "shorthand": "",
@@ -41982,7 +42906,7 @@
               "global": true
             },
             "profile": {
-              "description": "Name of profile to capture. One of (none|cpu|heap|goroutine|threadcreate|block|mutex)",
+              "description": "Name of profile to capture. One of (none|cpu|heap|goroutine|threadcreate|block|mutex|trace)",
               "shorthand": "",
               "global": true
             },
@@ -42056,6 +42980,11 @@
                 },
                 "as-uid": {
                   "description": "UID to impersonate for the operation.",
+                  "shorthand": "",
+                  "global": true
+                },
+                "as-user-extra": {
+                  "description": "User extras to impersonate for the operation, this flag can be repeated to specify multiple values for the same key.",
                   "shorthand": "",
                   "global": true
                 },
@@ -42135,7 +43064,7 @@
                   "global": true
                 },
                 "profile": {
-                  "description": "Name of profile to capture. One of (none|cpu|heap|goroutine|threadcreate|block|mutex)",
+                  "description": "Name of profile to capture. One of (none|cpu|heap|goroutine|threadcreate|block|mutex|trace)",
                   "shorthand": "",
                   "global": true
                 },
@@ -42220,6 +43149,11 @@
               "shorthand": "",
               "global": true
             },
+            "as-user-extra": {
+              "description": "User extras to impersonate for the operation, this flag can be repeated to specify multiple values for the same key.",
+              "shorthand": "",
+              "global": true
+            },
             "cache-dir": {
               "description": "Default cache directory",
               "shorthand": "",
@@ -42296,7 +43230,7 @@
               "global": false
             },
             "profile": {
-              "description": "Name of profile to capture. One of (none|cpu|heap|goroutine|threadcreate|block|mutex)",
+              "description": "Name of profile to capture. One of (none|cpu|heap|goroutine|threadcreate|block|mutex|trace)",
               "shorthand": "",
               "global": true
             },
@@ -42399,6 +43333,11 @@
               "shorthand": "",
               "global": true
             },
+            "as-user-extra": {
+              "description": "User extras to impersonate for the operation, this flag can be repeated to specify multiple values for the same key.",
+              "shorthand": "",
+              "global": true
+            },
             "cache-dir": {
               "description": "Default cache directory",
               "shorthand": "",
@@ -42485,7 +43424,7 @@
               "global": false
             },
             "profile": {
-              "description": "Name of profile to capture. One of (none|cpu|heap|goroutine|threadcreate|block|mutex)",
+              "description": "Name of profile to capture. One of (none|cpu|heap|goroutine|threadcreate|block|mutex|trace)",
               "shorthand": "",
               "global": true
             },
@@ -42593,6 +43532,11 @@
               "shorthand": "",
               "global": true
             },
+            "as-user-extra": {
+              "description": "User extras to impersonate for the operation, this flag can be repeated to specify multiple values for the same key.",
+              "shorthand": "",
+              "global": true
+            },
             "cache-dir": {
               "description": "Default cache directory",
               "shorthand": "",
@@ -42694,7 +43638,7 @@
               "global": true
             },
             "output": {
-              "description": "Output format. One of: (json, yaml, name, go-template, go-template-file, template, templatefile, jsonpath, jsonpath-as-json, jsonpath-file).",
+              "description": "Output format. One of: (json, yaml, kyaml, name, go-template, go-template-file, template, templatefile, jsonpath, jsonpath-as-json, jsonpath-file).",
               "shorthand": "o",
               "global": false
             },
@@ -42704,7 +43648,7 @@
               "global": true
             },
             "profile": {
-              "description": "Name of profile to capture. One of (none|cpu|heap|goroutine|threadcreate|block|mutex)",
+              "description": "Name of profile to capture. One of (none|cpu|heap|goroutine|threadcreate|block|mutex|trace)",
               "shorthand": "",
               "global": true
             },
@@ -42827,6 +43771,11 @@
               "shorthand": "",
               "global": true
             },
+            "as-user-extra": {
+              "description": "User extras to impersonate for the operation, this flag can be repeated to specify multiple values for the same key.",
+              "shorthand": "",
+              "global": true
+            },
             "cache-dir": {
               "description": "Default cache directory",
               "shorthand": "",
@@ -42898,7 +43847,7 @@
               "global": true
             },
             "profile": {
-              "description": "Name of profile to capture. One of (none|cpu|heap|goroutine|threadcreate|block|mutex)",
+              "description": "Name of profile to capture. One of (none|cpu|heap|goroutine|threadcreate|block|mutex|trace)",
               "shorthand": "",
               "global": true
             },
@@ -42980,6 +43929,11 @@
                   "shorthand": "",
                   "global": true
                 },
+                "as-user-extra": {
+                  "description": "User extras to impersonate for the operation, this flag can be repeated to specify multiple values for the same key.",
+                  "shorthand": "",
+                  "global": true
+                },
                 "cache-dir": {
                   "description": "Default cache directory",
                   "shorthand": "",
@@ -43056,7 +44010,7 @@
                   "global": true
                 },
                 "output": {
-                  "description": "Output format. One of: (json, yaml, name, go-template, go-template-file, template, templatefile, jsonpath, jsonpath-as-json, jsonpath-file).",
+                  "description": "Output format. One of: (json, yaml, kyaml, name, go-template, go-template-file, template, templatefile, jsonpath, jsonpath-as-json, jsonpath-file).",
                   "shorthand": "o",
                   "global": false
                 },
@@ -43066,7 +44020,7 @@
                   "global": true
                 },
                 "profile": {
-                  "description": "Name of profile to capture. One of (none|cpu|heap|goroutine|threadcreate|block|mutex)",
+                  "description": "Name of profile to capture. One of (none|cpu|heap|goroutine|threadcreate|block|mutex|trace)",
                   "shorthand": "",
                   "global": true
                 },
@@ -43174,6 +44128,11 @@
                   "shorthand": "",
                   "global": true
                 },
+                "as-user-extra": {
+                  "description": "User extras to impersonate for the operation, this flag can be repeated to specify multiple values for the same key.",
+                  "shorthand": "",
+                  "global": true
+                },
                 "cache-dir": {
                   "description": "Default cache directory",
                   "shorthand": "",
@@ -43255,7 +44214,7 @@
                   "global": true
                 },
                 "output": {
-                  "description": "Output format. One of: (json, yaml, name, go-template, go-template-file, template, templatefile, jsonpath, jsonpath-as-json, jsonpath-file).",
+                  "description": "Output format. One of: (json, yaml, kyaml, name, go-template, go-template-file, template, templatefile, jsonpath, jsonpath-as-json, jsonpath-file).",
                   "shorthand": "o",
                   "global": false
                 },
@@ -43265,7 +44224,7 @@
                   "global": true
                 },
                 "profile": {
-                  "description": "Name of profile to capture. One of (none|cpu|heap|goroutine|threadcreate|block|mutex)",
+                  "description": "Name of profile to capture. One of (none|cpu|heap|goroutine|threadcreate|block|mutex|trace)",
                   "shorthand": "",
                   "global": true
                 },
@@ -43368,6 +44327,11 @@
                   "shorthand": "",
                   "global": true
                 },
+                "as-user-extra": {
+                  "description": "User extras to impersonate for the operation, this flag can be repeated to specify multiple values for the same key.",
+                  "shorthand": "",
+                  "global": true
+                },
                 "cache-dir": {
                   "description": "Default cache directory",
                   "shorthand": "",
@@ -43449,7 +44413,7 @@
                   "global": true
                 },
                 "output": {
-                  "description": "Output format. One of: (json, yaml, name, go-template, go-template-file, template, templatefile, jsonpath, jsonpath-as-json, jsonpath-file).",
+                  "description": "Output format. One of: (json, yaml, kyaml, name, go-template, go-template-file, template, templatefile, jsonpath, jsonpath-as-json, jsonpath-file).",
                   "shorthand": "o",
                   "global": false
                 },
@@ -43459,7 +44423,7 @@
                   "global": true
                 },
                 "profile": {
-                  "description": "Name of profile to capture. One of (none|cpu|heap|goroutine|threadcreate|block|mutex)",
+                  "description": "Name of profile to capture. One of (none|cpu|heap|goroutine|threadcreate|block|mutex|trace)",
                   "shorthand": "",
                   "global": true
                 },
@@ -43562,6 +44526,11 @@
                   "shorthand": "",
                   "global": true
                 },
+                "as-user-extra": {
+                  "description": "User extras to impersonate for the operation, this flag can be repeated to specify multiple values for the same key.",
+                  "shorthand": "",
+                  "global": true
+                },
                 "cache-dir": {
                   "description": "Default cache directory",
                   "shorthand": "",
@@ -43643,7 +44612,7 @@
                   "global": true
                 },
                 "output": {
-                  "description": "Output format. One of: (json, yaml, name, go-template, go-template-file, template, templatefile, jsonpath, jsonpath-as-json, jsonpath-file).",
+                  "description": "Output format. One of: (json, yaml, kyaml, name, go-template, go-template-file, template, templatefile, jsonpath, jsonpath-as-json, jsonpath-file).",
                   "shorthand": "o",
                   "global": false
                 },
@@ -43653,7 +44622,7 @@
                   "global": true
                 },
                 "profile": {
-                  "description": "Name of profile to capture. One of (none|cpu|heap|goroutine|threadcreate|block|mutex)",
+                  "description": "Name of profile to capture. One of (none|cpu|heap|goroutine|threadcreate|block|mutex|trace)",
                   "shorthand": "",
                   "global": true
                 },
@@ -43751,6 +44720,11 @@
                   "shorthand": "",
                   "global": true
                 },
+                "as-user-extra": {
+                  "description": "User extras to impersonate for the operation, this flag can be repeated to specify multiple values for the same key.",
+                  "shorthand": "",
+                  "global": true
+                },
                 "cache-dir": {
                   "description": "Default cache directory",
                   "shorthand": "",
@@ -43832,7 +44806,7 @@
                   "global": true
                 },
                 "profile": {
-                  "description": "Name of profile to capture. One of (none|cpu|heap|goroutine|threadcreate|block|mutex)",
+                  "description": "Name of profile to capture. One of (none|cpu|heap|goroutine|threadcreate|block|mutex|trace)",
                   "shorthand": "",
                   "global": true
                 },
@@ -43940,6 +44914,11 @@
                   "shorthand": "",
                   "global": true
                 },
+                "as-user-extra": {
+                  "description": "User extras to impersonate for the operation, this flag can be repeated to specify multiple values for the same key.",
+                  "shorthand": "",
+                  "global": true
+                },
                 "cache-dir": {
                   "description": "Default cache directory",
                   "shorthand": "",
@@ -44021,7 +45000,7 @@
                   "global": true
                 },
                 "output": {
-                  "description": "Output format. One of: (json, yaml, name, go-template, go-template-file, template, templatefile, jsonpath, jsonpath-as-json, jsonpath-file).",
+                  "description": "Output format. One of: (json, yaml, kyaml, name, go-template, go-template-file, template, templatefile, jsonpath, jsonpath-as-json, jsonpath-file).",
                   "shorthand": "o",
                   "global": false
                 },
@@ -44031,7 +45010,7 @@
                   "global": true
                 },
                 "profile": {
-                  "description": "Name of profile to capture. One of (none|cpu|heap|goroutine|threadcreate|block|mutex)",
+                  "description": "Name of profile to capture. One of (none|cpu|heap|goroutine|threadcreate|block|mutex|trace)",
                   "shorthand": "",
                   "global": true
                 },
@@ -44143,6 +45122,11 @@
             },
             "as-uid": {
               "description": "UID to impersonate for the operation.",
+              "shorthand": "",
+              "global": true
+            },
+            "as-user-extra": {
+              "description": "User extras to impersonate for the operation, this flag can be repeated to specify multiple values for the same key.",
               "shorthand": "",
               "global": true
             },
@@ -44287,7 +45271,7 @@
               "global": true
             },
             "output": {
-              "description": "Output format. One of: (json, yaml, name, go-template, go-template-file, template, templatefile, jsonpath, jsonpath-as-json, jsonpath-file).",
+              "description": "Output format. One of: (json, yaml, kyaml, name, go-template, go-template-file, template, templatefile, jsonpath, jsonpath-as-json, jsonpath-file).",
               "shorthand": "o",
               "global": false
             },
@@ -44322,7 +45306,7 @@
               "global": false
             },
             "profile": {
-              "description": "Name of profile to capture. One of (none|cpu|heap|goroutine|threadcreate|block|mutex)",
+              "description": "Name of profile to capture. One of (none|cpu|heap|goroutine|threadcreate|block|mutex|trace)",
               "shorthand": "",
               "global": true
             },
@@ -44470,6 +45454,11 @@
               "shorthand": "",
               "global": true
             },
+            "as-user-extra": {
+              "description": "User extras to impersonate for the operation, this flag can be repeated to specify multiple values for the same key.",
+              "shorthand": "",
+              "global": true
+            },
             "cache-dir": {
               "description": "Default cache directory",
               "shorthand": "",
@@ -44556,7 +45545,7 @@
               "global": true
             },
             "output": {
-              "description": "Output format. One of: (json, yaml, name, go-template, go-template-file, template, templatefile, jsonpath, jsonpath-as-json, jsonpath-file).",
+              "description": "Output format. One of: (json, yaml, kyaml, name, go-template, go-template-file, template, templatefile, jsonpath, jsonpath-as-json, jsonpath-file).",
               "shorthand": "o",
               "global": false
             },
@@ -44566,7 +45555,7 @@
               "global": true
             },
             "profile": {
-              "description": "Name of profile to capture. One of (none|cpu|heap|goroutine|threadcreate|block|mutex)",
+              "description": "Name of profile to capture. One of (none|cpu|heap|goroutine|threadcreate|block|mutex|trace)",
               "shorthand": "",
               "global": true
             },
@@ -44684,6 +45673,11 @@
               "shorthand": "",
               "global": true
             },
+            "as-user-extra": {
+              "description": "User extras to impersonate for the operation, this flag can be repeated to specify multiple values for the same key.",
+              "shorthand": "",
+              "global": true
+            },
             "cache-dir": {
               "description": "Default cache directory",
               "shorthand": "",
@@ -44755,7 +45749,7 @@
               "global": true
             },
             "profile": {
-              "description": "Name of profile to capture. One of (none|cpu|heap|goroutine|threadcreate|block|mutex)",
+              "description": "Name of profile to capture. One of (none|cpu|heap|goroutine|threadcreate|block|mutex|trace)",
               "shorthand": "",
               "global": true
             },
@@ -44839,6 +45833,11 @@
                 },
                 "as-uid": {
                   "description": "UID to impersonate for the operation.",
+                  "shorthand": "",
+                  "global": true
+                },
+                "as-user-extra": {
+                  "description": "User extras to impersonate for the operation, this flag can be repeated to specify multiple values for the same key.",
                   "shorthand": "",
                   "global": true
                 },
@@ -44958,7 +45957,7 @@
                   "global": true
                 },
                 "output": {
-                  "description": "Output format. One of: (json, yaml, name, go-template, go-template-file, template, templatefile, jsonpath, jsonpath-as-json, jsonpath-file).",
+                  "description": "Output format. One of: (json, yaml, kyaml, name, go-template, go-template-file, template, templatefile, jsonpath, jsonpath-as-json, jsonpath-file).",
                   "shorthand": "o",
                   "global": false
                 },
@@ -44978,7 +45977,7 @@
                   "global": false
                 },
                 "profile": {
-                  "description": "Name of profile to capture. One of (none|cpu|heap|goroutine|threadcreate|block|mutex)",
+                  "description": "Name of profile to capture. One of (none|cpu|heap|goroutine|threadcreate|block|mutex|trace)",
                   "shorthand": "",
                   "global": true
                 },
@@ -45091,6 +46090,11 @@
                   "shorthand": "",
                   "global": true
                 },
+                "as-user-extra": {
+                  "description": "User extras to impersonate for the operation, this flag can be repeated to specify multiple values for the same key.",
+                  "shorthand": "",
+                  "global": true
+                },
                 "cache-dir": {
                   "description": "Default cache directory",
                   "shorthand": "",
@@ -45182,7 +46186,7 @@
                   "global": true
                 },
                 "output": {
-                  "description": "Output format. One of: (json, yaml, name, go-template, go-template-file, template, templatefile, jsonpath, jsonpath-as-json, jsonpath-file).",
+                  "description": "Output format. One of: (json, yaml, kyaml, name, go-template, go-template-file, template, templatefile, jsonpath, jsonpath-as-json, jsonpath-file).",
                   "shorthand": "o",
                   "global": false
                 },
@@ -45192,7 +46196,7 @@
                   "global": true
                 },
                 "profile": {
-                  "description": "Name of profile to capture. One of (none|cpu|heap|goroutine|threadcreate|block|mutex)",
+                  "description": "Name of profile to capture. One of (none|cpu|heap|goroutine|threadcreate|block|mutex|trace)",
                   "shorthand": "",
                   "global": true
                 },
@@ -45305,6 +46309,11 @@
                   "shorthand": "",
                   "global": true
                 },
+                "as-user-extra": {
+                  "description": "User extras to impersonate for the operation, this flag can be repeated to specify multiple values for the same key.",
+                  "shorthand": "",
+                  "global": true
+                },
                 "cache-dir": {
                   "description": "Default cache directory",
                   "shorthand": "",
@@ -45406,7 +46415,7 @@
                   "global": true
                 },
                 "output": {
-                  "description": "Output format. One of: (json, yaml, name, go-template, go-template-file, template, templatefile, jsonpath, jsonpath-as-json, jsonpath-file).",
+                  "description": "Output format. One of: (json, yaml, kyaml, name, go-template, go-template-file, template, templatefile, jsonpath, jsonpath-as-json, jsonpath-file).",
                   "shorthand": "o",
                   "global": false
                 },
@@ -45416,7 +46425,7 @@
                   "global": true
                 },
                 "profile": {
-                  "description": "Name of profile to capture. One of (none|cpu|heap|goroutine|threadcreate|block|mutex)",
+                  "description": "Name of profile to capture. One of (none|cpu|heap|goroutine|threadcreate|block|mutex|trace)",
                   "shorthand": "",
                   "global": true
                 },
@@ -45534,6 +46543,11 @@
                   "shorthand": "",
                   "global": true
                 },
+                "as-user-extra": {
+                  "description": "User extras to impersonate for the operation, this flag can be repeated to specify multiple values for the same key.",
+                  "shorthand": "",
+                  "global": true
+                },
                 "cache-dir": {
                   "description": "Default cache directory",
                   "shorthand": "",
@@ -45620,7 +46634,7 @@
                   "global": true
                 },
                 "output": {
-                  "description": "Output format. One of: (json, yaml, name, go-template, go-template-file, template, templatefile, jsonpath, jsonpath-as-json, jsonpath-file).",
+                  "description": "Output format. One of: (json, yaml, kyaml, name, go-template, go-template-file, template, templatefile, jsonpath, jsonpath-as-json, jsonpath-file).",
                   "shorthand": "o",
                   "global": false
                 },
@@ -45630,7 +46644,7 @@
                   "global": true
                 },
                 "profile": {
-                  "description": "Name of profile to capture. One of (none|cpu|heap|goroutine|threadcreate|block|mutex)",
+                  "description": "Name of profile to capture. One of (none|cpu|heap|goroutine|threadcreate|block|mutex|trace)",
                   "shorthand": "",
                   "global": true
                 },
@@ -45745,6 +46759,11 @@
                   "shorthand": "",
                   "global": true
                 },
+                "as-user-extra": {
+                  "description": "User extras to impersonate for the operation, this flag can be repeated to specify multiple values for the same key.",
+                  "shorthand": "",
+                  "global": true
+                },
                 "cache-dir": {
                   "description": "Default cache directory",
                   "shorthand": "",
@@ -45836,7 +46855,7 @@
                   "global": true
                 },
                 "output": {
-                  "description": "Output format. One of: (json, yaml, name, go-template, go-template-file, template, templatefile, jsonpath, jsonpath-as-json, jsonpath-file).",
+                  "description": "Output format. One of: (json, yaml, kyaml, name, go-template, go-template-file, template, templatefile, jsonpath, jsonpath-as-json, jsonpath-file).",
                   "shorthand": "o",
                   "global": false
                 },
@@ -45846,7 +46865,7 @@
                   "global": true
                 },
                 "profile": {
-                  "description": "Name of profile to capture. One of (none|cpu|heap|goroutine|threadcreate|block|mutex)",
+                  "description": "Name of profile to capture. One of (none|cpu|heap|goroutine|threadcreate|block|mutex|trace)",
                   "shorthand": "",
                   "global": true
                 },
@@ -45954,6 +46973,11 @@
                   "shorthand": "",
                   "global": true
                 },
+                "as-user-extra": {
+                  "description": "User extras to impersonate for the operation, this flag can be repeated to specify multiple values for the same key.",
+                  "shorthand": "",
+                  "global": true
+                },
                 "cache-dir": {
                   "description": "Default cache directory",
                   "shorthand": "",
@@ -46050,7 +47074,7 @@
                   "global": true
                 },
                 "output": {
-                  "description": "Output format. One of: (json, yaml, name, go-template, go-template-file, template, templatefile, jsonpath, jsonpath-as-json, jsonpath-file).",
+                  "description": "Output format. One of: (json, yaml, kyaml, name, go-template, go-template-file, template, templatefile, jsonpath, jsonpath-as-json, jsonpath-file).",
                   "shorthand": "o",
                   "global": false
                 },
@@ -46060,7 +47084,7 @@
                   "global": true
                 },
                 "profile": {
-                  "description": "Name of profile to capture. One of (none|cpu|heap|goroutine|threadcreate|block|mutex)",
+                  "description": "Name of profile to capture. One of (none|cpu|heap|goroutine|threadcreate|block|mutex|trace)",
                   "shorthand": "",
                   "global": true
                 },
@@ -46175,6 +47199,11 @@
               "shorthand": "",
               "global": true
             },
+            "as-user-extra": {
+              "description": "User extras to impersonate for the operation, this flag can be repeated to specify multiple values for the same key.",
+              "shorthand": "",
+              "global": true
+            },
             "cache-dir": {
               "description": "Default cache directory",
               "shorthand": "",
@@ -46251,7 +47280,7 @@
               "global": true
             },
             "output": {
-              "description": "Output format. One of: (json, yaml, name, go-template, go-template-file, template, templatefile, jsonpath, jsonpath-as-json, jsonpath-file).",
+              "description": "Output format. One of: (json, yaml, kyaml, name, go-template, go-template-file, template, templatefile, jsonpath, jsonpath-as-json, jsonpath-file).",
               "shorthand": "o",
               "global": false
             },
@@ -46266,7 +47295,7 @@
               "global": true
             },
             "profile": {
-              "description": "Name of profile to capture. One of (none|cpu|heap|goroutine|threadcreate|block|mutex)",
+              "description": "Name of profile to capture. One of (none|cpu|heap|goroutine|threadcreate|block|mutex|trace)",
               "shorthand": "",
               "global": true
             },
@@ -46364,6 +47393,11 @@
               "shorthand": "",
               "global": true
             },
+            "as-user-extra": {
+              "description": "User extras to impersonate for the operation, this flag can be repeated to specify multiple values for the same key.",
+              "shorthand": "",
+              "global": true
+            },
             "cache-dir": {
               "description": "Default cache directory",
               "shorthand": "",
@@ -46435,7 +47469,7 @@
               "global": true
             },
             "profile": {
-              "description": "Name of profile to capture. One of (none|cpu|heap|goroutine|threadcreate|block|mutex)",
+              "description": "Name of profile to capture. One of (none|cpu|heap|goroutine|threadcreate|block|mutex|trace)",
               "shorthand": "",
               "global": true
             },
@@ -46515,6 +47549,11 @@
                   "shorthand": "",
                   "global": true
                 },
+                "as-user-extra": {
+                  "description": "User extras to impersonate for the operation, this flag can be repeated to specify multiple values for the same key.",
+                  "shorthand": "",
+                  "global": true
+                },
                 "cache-dir": {
                   "description": "Default cache directory",
                   "shorthand": "",
@@ -46591,7 +47630,7 @@
                   "global": true
                 },
                 "profile": {
-                  "description": "Name of profile to capture. One of (none|cpu|heap|goroutine|threadcreate|block|mutex)",
+                  "description": "Name of profile to capture. One of (none|cpu|heap|goroutine|threadcreate|block|mutex|trace)",
                   "shorthand": "",
                   "global": true
                 },
@@ -46702,6 +47741,11 @@
                   "shorthand": "",
                   "global": true
                 },
+                "as-user-extra": {
+                  "description": "User extras to impersonate for the operation, this flag can be repeated to specify multiple values for the same key.",
+                  "shorthand": "",
+                  "global": true
+                },
                 "cache-dir": {
                   "description": "Default cache directory",
                   "shorthand": "",
@@ -46788,7 +47832,7 @@
                   "global": true
                 },
                 "profile": {
-                  "description": "Name of profile to capture. One of (none|cpu|heap|goroutine|threadcreate|block|mutex)",
+                  "description": "Name of profile to capture. One of (none|cpu|heap|goroutine|threadcreate|block|mutex|trace)",
                   "shorthand": "",
                   "global": true
                 },
@@ -46893,6 +47937,11 @@
               "shorthand": "",
               "global": true
             },
+            "as-user-extra": {
+              "description": "User extras to impersonate for the operation, this flag can be repeated to specify multiple values for the same key.",
+              "shorthand": "",
+              "global": true
+            },
             "cache-dir": {
               "description": "Default cache directory",
               "shorthand": "",
@@ -46969,7 +48018,7 @@
               "global": true
             },
             "profile": {
-              "description": "Name of profile to capture. One of (none|cpu|heap|goroutine|threadcreate|block|mutex)",
+              "description": "Name of profile to capture. One of (none|cpu|heap|goroutine|threadcreate|block|mutex|trace)",
               "shorthand": "",
               "global": true
             },
@@ -47049,6 +48098,11 @@
             },
             "as-uid": {
               "description": "UID to impersonate for the operation.",
+              "shorthand": "",
+              "global": true
+            },
+            "as-user-extra": {
+              "description": "User extras to impersonate for the operation, this flag can be repeated to specify multiple values for the same key.",
               "shorthand": "",
               "global": true
             },
@@ -47133,7 +48187,7 @@
               "global": true
             },
             "profile": {
-              "description": "Name of profile to capture. One of (none|cpu|heap|goroutine|threadcreate|block|mutex)",
+              "description": "Name of profile to capture. One of (none|cpu|heap|goroutine|threadcreate|block|mutex|trace)",
               "shorthand": "",
               "global": true
             },
@@ -47192,8 +48246,8 @@
         },
         {
           "name": "wait ([-f FILENAME] | resource.group/resource.name | resource.group [(-l label | --all)]) [--for=create|--for=delete|--for condition=available|--for=jsonpath='{}'[=value]]",
-          "description": "Experimental: Wait for a specific condition on one or many resources",
-          "longDescription": "Experimental: Wait for a specific condition on one or many resources.\n\n The command takes multiple resources and waits until the specified condition is seen in the Status field of every given resource.\n\n Alternatively, the command can wait for the given set of resources to be created or deleted by providing the \"create\" or \"delete\" keyword as the value to the --for flag.\n\n A successful message will be printed to stdout indicating when the specified condition has been met. You can use -o option to change to output destination.",
+          "description": "Wait for a specific condition on one or many resources",
+          "longDescription": "Wait for a specific condition on one or many resources.\n\n The command takes multiple resources and waits until the specified condition is seen in the Status field of every given resource.\n\n Alternatively, the command can wait for the given set of resources to be created or deleted by providing the \"create\" or \"delete\" keyword as the value to the --for flag.\n\n A successful message will be printed to stdout indicating when the specified condition has been met. You can use -o option to change to output destination.",
           "aliases": null,
           "flags": {
             "all": {
@@ -47223,6 +48277,11 @@
             },
             "as-uid": {
               "description": "UID to impersonate for the operation.",
+              "shorthand": "",
+              "global": true
+            },
+            "as-user-extra": {
+              "description": "User extras to impersonate for the operation, this flag can be repeated to specify multiple values for the same key.",
               "shorthand": "",
               "global": true
             },
@@ -47312,7 +48371,7 @@
               "global": true
             },
             "output": {
-              "description": "Output format. One of: (json, yaml, name, go-template, go-template-file, template, templatefile, jsonpath, jsonpath-as-json, jsonpath-file).",
+              "description": "Output format. One of: (json, yaml, kyaml, name, go-template, go-template-file, template, templatefile, jsonpath, jsonpath-as-json, jsonpath-file).",
               "shorthand": "o",
               "global": false
             },
@@ -47322,7 +48381,7 @@
               "global": true
             },
             "profile": {
-              "description": "Name of profile to capture. One of (none|cpu|heap|goroutine|threadcreate|block|mutex)",
+              "description": "Name of profile to capture. One of (none|cpu|heap|goroutine|threadcreate|block|mutex|trace)",
               "shorthand": "",
               "global": true
             },
@@ -47677,6 +48736,45 @@
               "subcommands": null
             }
           ]
+        },
+        {
+          "name": "istio",
+          "description": "Run an interactive istioctl debug container",
+          "longDescription": "Start an interactive debug container with istioctl and the RBAC needed to inspect pods in a target namespace (get/list pods and create pods/portforward).\n\n The ServiceAccount is created in --namespace. Roles and RoleBindings are created in --target-namespace (workload pods) and --istio-namespace (default d8-istio): pods get/list, pods/portforward create, and in the Istio namespace also serviceaccounts get plus serviceaccounts/token create for istiod RPC auth (istioctl proxy-status). No Istio config mutations. The debug image is taken from ConfigMap d8-system/debug-container unless --image is set.\n\n The pod is deleted when the session ends. RBAC objects are left in place so the next run can reuse them.\n\n © Flant JSC 2026",
+          "aliases": null,
+          "flags": {
+            "context": {
+              "description": "The name of the kubeconfig context to use",
+              "shorthand": "",
+              "global": false
+            },
+            "image": {
+              "description": "Debug container image (default: ConfigMap d8-system/debug-container)",
+              "shorthand": "",
+              "global": false
+            },
+            "istio-namespace": {
+              "description": "Istio control-plane namespace for read-only access (istioctl proxy-status)",
+              "shorthand": "",
+              "global": false
+            },
+            "kubeconfig": {
+              "description": "Path to kubeconfig file",
+              "shorthand": "k",
+              "global": false
+            },
+            "namespace": {
+              "description": "Namespace for the ServiceAccount and debug pod (default: current kubeconfig namespace)",
+              "shorthand": "n",
+              "global": false
+            },
+            "target-namespace": {
+              "description": "Namespace whose workload pods istioctl should inspect (default: --namespace)",
+              "shorthand": "",
+              "global": false
+            }
+          },
+          "subcommands": null
         }
       ]
     },
