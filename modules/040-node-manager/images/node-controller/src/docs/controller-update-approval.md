@@ -84,6 +84,13 @@ The controller skips draining when:
 - Deckhouse pod runs on this node and NodeGroup has < 2 ready nodes
 - `spec.disruptions.automatic.drainBeforeApproval` is explicitly `false`
 
+A requested drain that keeps failing never comes back as `drained`, so this phase
+never approves the disruption and the node holds its update slot — the `approved`
+annotation, one per NodeGroup, since `spec.update.maxConcurrent` defaults to 1. That
+is intended: the node still carries its pods. `NodeStuckInDraining` fires five minutes
+into the failure. Once an attempt finally succeeds the disruption is approved, the node
+updates, and `ProcessUpdatedNodes` removes `approved`. See `controller-draining.md`.
+
 ## Sub-packages
 
 | Package | Purpose |
