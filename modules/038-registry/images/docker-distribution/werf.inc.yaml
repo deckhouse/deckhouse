@@ -81,3 +81,40 @@ imageSpec:
   config:
     entrypoint: ["/registry"]
     cmd: ["serve", "/config/config.yaml"]
+---
+# Fuzz the legacy fork's deckhouse branch independently of the v3 wrapper above.
+image: {{ $.ModuleName }}/{{ $.ImageName }}-fuzz
+from: registry.flant.com/deckhouse/ssdlc/ci-images/fuzz-go:34fdc16d905326c2fd7097363059baa398c9a1c0
+fromLatest: true
+final: false
+git:
+  - url: {{ $.SOURCE_REPO }}/deckhouse/3p-distribution.git
+    branch: deckhouse
+    add: /
+    to: /src/distribution
+    stageDependencies:
+      install:
+        - '**/*'
+  - add: /{{ $.ModulePath }}modules/{{ $.ModulePriority }}-{{ $.ModuleName }}/Taskfile.fuzz.yml
+    to: /src/distribution/Taskfile.yml
+    stageDependencies:
+      install:
+        - Taskfile.fuzz.yml
+secrets:
+  - id: GOPROXY
+    value: {{ $.GOPROXY }}
+shell:
+  install:
+    - cd /src/distribution
+    - GOPROXY=$(cat /run/secrets/GOPROXY) go mod download
+    - rm -rf test/e2e tests/e2e tests/ginkgo
+    - chmod -R a+rwX /src/distribution /fuzz/gomod
+imageSpec:
+  config:
+    workingDir: /src/distribution
+    labels:
+      io.deckhouse.fuzz.engine: go
+    env:
+      FUZZ_WORKDIR: /src/distribution
+      FUZZ_PACKAGES: ". ./registry ./registry/handlers ./registry/proxy"
+      CGO_ENABLED: "0"

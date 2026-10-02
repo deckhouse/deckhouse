@@ -151,6 +151,17 @@ func NodeRegistryAddr(addr string) string {
 // net.JoinHostPort is used rather than string concatenation so that an IPv6
 // address is bracketed: `fd00::1:5001` is ambiguous and would be rejected by
 // both the NGINX `server` directive and the endpoint validation.
+//
+// The contract is narrow on purpose: an entry is a bare IP address, and nothing
+// else. This function does not validate, it formats -- it joins whatever it is
+// given to the module's port, so an input that is not an address comes out
+// looking like an endpoint. Its callers take the value from
+// Node.status.addresses, which kubelet fills with a bare address but which the
+// API server does not check the format of, so a subject able to patch node
+// status decides what arrives here. helpers.ProxyEndpoint is what stands between
+// that value and `server <value>;`, and the two must agree on the shape they
+// exchange: an already bracketed input such as "[0.0.0.0]" is not an address and
+// must not become an acceptable endpoint by passing through here.
 func GenerateProxyEndpoints(masterNodesIPs []string) []string {
 	proxyEndpoints := make([]string, 0, len(masterNodesIPs))
 	for _, ip := range masterNodesIPs {

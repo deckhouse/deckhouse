@@ -38,22 +38,40 @@ import (
 	"net"
 	"net/url"
 	"strconv"
-	"strings"
 	"testing"
+
+	"github.com/deckhouse/deckhouse/go_lib/registry/helpers"
 )
 
-// unsafeInConfigFile are characters that let a value escape the YAML scalar or
-// the shell context it is interpolated into by the rendering templates.
-const unsafeInConfigFile = "\"'\n\r$`\\{}#"
-
-// assertRenderSafe fails if a value accepted by Validate() could alter the
-// structure of a rendered configuration file.
+// assertRenderSafe fails if a value accepted by Validate() could not be written
+// into the files the templates generate.
+//
+// The property asserted is representability, not a list of forbidden
+// characters. Every one of these values is substituted through `quote`, so it
+// becomes a YAML double-quoted scalar and no shell takes part: a "$" in the
+// userinfo of a proxy URL is a value candi/openapi/cluster_configuration.yaml
+// documents, and it reaches a container environment variable unchanged.
+// Refusing it here rejected a supported configuration on the strength of a sink
+// these fields do not have.
+//
+// What a value must not be is something the generated file cannot carry at all.
+// helpers.EncodableString is the module's own statement of that, and every rule
+// these fields are validated by composes it, so asserting it here checks that
+// the composition is still in place.
+//
+// Structural safety -- that a substituted value cannot change the shape of the
+// rendered document -- is checked against the real templates by
+// FuzzStaticPodManifestProxyEnvs and FuzzDistributionConfigUpstream in
+// modules/038-registry/images/nodeservices-manager, which render and decode the
+// actual files. It cannot be checked from here: the templates live in that
+// module, and a stand-in renderer written in this one would only be asserting
+// its own quoting.
 func assertRenderSafe(t *testing.T, field, value string) {
 	t.Helper()
 
-	if i := strings.IndexAny(value, unsafeInConfigFile); i >= 0 {
-		t.Fatalf("%s = %q was accepted by Validate() but contains %q at offset %d, "+
-			"which can escape the scalar it is rendered into", field, value, value[i], i)
+	if err := helpers.EncodableString(value); err != nil {
+		t.Fatalf("%s = %q was accepted by Validate() but cannot be written into a generated file: %v",
+			field, value, err)
 	}
 }
 
@@ -151,6 +169,10 @@ func FuzzProxyConfigValidate(f *testing.F) {
 	f.Add("http://proxy.example.com:8080", "https://proxy.example.com:8443", "local host")
 	f.Add("http://proxy.example.com:8080", "https://proxy.example.com:8443", "$(id)")
 	f.Add("http://proxy.example.com:8080", "https://proxy.example.com:8443", "\x00")
+	// Replay finding 14 (job 6990025): "$" sits in the userinfo of a proxy URL
+	// and is legitimate -- the value is quoted into a container environment
+	// variable, not handed to a shell.
+	f.Add("", "http://$@0", "")
 
 	f.Fuzz(func(t *testing.T, proxyHTTP, proxyHTTPS, noProxy string) {
 		config := ProxyConfig{
@@ -283,6 +305,10 @@ func FuzzUpstreamRegistryValidate(f *testing.F) {
 	f.Add("https", "upstream.example.com", "/x", "u\ny", "pass")
 	f.Add("https", "upstream.example.com", "/x", "user", "p\x00q")
 	f.Add("https", "upstream.example.com", "/x", "$(id)", "`id`")
+	// Replay finding 15 (job 6990025): brackets assert an IPv6 literal, so the
+	// contents must be one -- "[0]:1" was read as the hostname "0".
+	f.Add("http", "[0]:1", "/x", "user", "pass")
+	f.Add("http", "[192.168.0.1]:1", "/x", "user", "pass")
 
 	f.Fuzz(func(t *testing.T, scheme, host, path, user, password string) {
 		upstream := UpstreamRegistry{

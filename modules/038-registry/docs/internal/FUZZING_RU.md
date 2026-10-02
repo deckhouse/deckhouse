@@ -146,15 +146,35 @@ Harness'ы 3, 4, 5 и 8 из плана модели угроз требуют �
 Отдельная CI-сборка фаззинга включает шесть образов для harness'ов из этого репозитория:
 `registry/hooks-fuzz`, `registry/library-fuzz`, `registry/nodeservices-manager-fuzz`,
 `registry/mirrorer-fuzz`, `registry/syncer-fuzz` и `registry/registry-proxy-fuzz`.
-Они используют общий шаблон `fuzz image`, как `user-authn`, и рендерятся только
-при заданном `FUZZ_S3_ENDPOINT`. Все образы промежуточные (`final: false`).
+Также включены `registry/docker-distribution-fuzz` и `registry/docker-auth-fuzz`
+для harness'ов из веток `deckhouse` сторонних форков. Оба образа используют
+актуальную ветку `deckhouse` через удалённые Git-источники werf.
+Эти исходники отделены от production-сборок:
+distribution теперь использует локальную обёртку над v3, а релизный тег
+docker-auth ещё не содержит harness'ов.
+Все восемь образов используют закреплённый базовый образ `fuzz-go`
+и загружают Go-зависимости при сборке. Werf учитывает изменения исходников
+обоих форков в зависимостях стадии `install`. Образы hooks и library получают
+исходники напрямую из этого репозитория через Git-секции. Остальные четыре
+образа импортируют существующие артефакты исходников production-сборки.
+Все образы промежуточные (`final: false`). Обычные CI-сборки
+используют `WERF_FINAL_IMAGES_ONLY=true` и исключают их, поскольку финальные образы
+от них не зависят. Fuzz-сборка выбирает образы с суффиксом `-fuzz`
+через `--final-images-only=false`.
 
 В каждом образе `Taskfile.yml` находится в каталоге соответствующего Go-модуля,
 а `FUZZ_PACKAGES` содержит пакеты с harness'ами. Задачи `fuzz:list`, `fuzz:run`,
 `fuzz:coverage` и `fuzz:replay` используют тот же интерфейс, что и `user-authn`.
-Общая сборка восстанавливает корпус из S3, выполняет replay каждой найденной цели
-и удаляет восстановленный корпус перед публикацией образа. Описанные ниже
-harness'ы из сторонних форков в эти образы не входят.
+Для distribution выбраны пакеты `. ./registry ./registry/handlers ./registry/proxy`,
+для docker-auth — `./server` из Go-модуля `auth_server`. Harness'ы nginx в сборку не входят.
+Задача `build_fuzz` находит все образы по суффиксу `-fuzz`, собирает и публикует их,
+затем формирует матрицу replay. Отдельные задачи `replay_fuzz` восстанавливают
+корпус из S3 и выполняют replay каждой найденной цели через `go test -run`.
+Доступ к S3 нужен только для replay и публикации отчёта о сборке.
+Общие шаблоны GitLab CI и схема replay описаны
+в разделе [Fuzz build and corpus replay](../../../../.github/ci_development.md#fuzz-build-and-corpus-replay).
+
+Цели не исключены, переменная `FUZZ_ALLOW_KNOWN_5XX` в образах не включена.
 
 ## Запуск
 
@@ -238,14 +258,15 @@ heredoc, и это сделано намеренно: в режимах Proxy и
 
 ## Сторонние форки
 
-Три образа модуля собираются из форков, и код, читающий данные, форма которых
-определяется нарушителем, находится в них, а не здесь. Их harness'ы лежат в
-ветке `deckhouse-fuzzing` каждого форка, рядом с проверяемым кодом.
+Сторонние harness'ы находятся рядом с проверяемым кодом. Harness'ы distribution
+и docker-auth влиты в ветки `deckhouse` соответствующих форков; nginx пока
+использует `deckhouse-fuzzing`. Форк distribution покрывает прежнюю реализацию,
+а текущий production-образ собирается из локальной обёртки над v3.
 
 | Форк | Ветка | Harness'ы |
 | --- | --- | --- |
-| `3p-distribution` | `deckhouse-fuzzing` | `FuzzUnmarshalManifest`, `FuzzProxyHeadersClientCert`, `FuzzBlobUploadSession`, `FuzzManifestPut`, `FuzzAuthProxyRequest`, `FuzzProxyCachePoisoning`, `TestManifestGetAcceptIsCaseInsensitive` |
-| `3p-docker_auth` | `deckhouse-fuzzing` | `FuzzAuthEndpoint`, `FuzzAuthRequest`, `TestStaticUserWithoutPasswordAuthenticatesAnyPassword`, `TestScopeTypeIsNotAnchored`, `TestAccountOverridesAreRefused` |
+| `3p-distribution` | `deckhouse` | `FuzzUnmarshalManifest`, `FuzzProxyHeadersClientCert`, `FuzzBlobUploadSession`, `FuzzManifestPut`, `FuzzAuthProxyRequest`, `FuzzProxyCachePoisoning`, `TestManifestGetAcceptIsCaseInsensitive` |
+| `3p-docker_auth` | `deckhouse` | `FuzzAuthEndpoint`, `FuzzAuthRequest`, `TestStaticUserWithoutPasswordAuthenticatesAnyPassword`, `TestScopeTypeIsNotAnchored`, `TestAccountOverridesAreRefused` |
 | `nginx` | `deckhouse-fuzzing` (от `release-1.27.3`) | `fuzz/conf_parse_fuzzer.c`, `fuzz/stream_fuzz.c`, см. `fuzz/README.md` |
 
 ### Что они покрывают
@@ -265,7 +286,8 @@ HTTP-обработчики. Harness загрузки читает фаззир�
 которые у хранилища уже есть.
 
 `FuzzProxyHeadersClientCert` покрывает собственный фильтр `real_ip` форка
-(TM-10 / AS-10) и именно он воспроизводит дефект — см. ниже.
+(TM-10 / AS-10) и защищает от повторного появления описанного ниже дефекта
+проверки цепочки сертификатов.
 
 `FuzzAuthProxyRequest` покрывает `registry/auth_proxy.go` — обратный прокси,
 который форк ставит перед службой аутентификации, — против враждебно отвечающего
@@ -324,6 +346,10 @@ UndefinedBehaviorSanitizer, с сидами из конфигурации, ко�
 
 ### Находки
 
+Находки distribution ниже описывают код до PR #8. Все три исправлены
+в закреплённом коммите `b998a27`; регрессионные тесты проходят без
+`FUZZ_ALLOW_KNOWN_5XX`.
+
 `FuzzProxyHeadersClientCert` воспроизводит **AS-10**.
 `registry/proxy_headers.go` перебирает все элементы `r.TLS.PeerCertificates` и
 доверяет `X-Forwarded-For`, если против настроенного УЦ проходит *любой* из них.
@@ -342,13 +368,12 @@ UndefinedBehaviorSanitizer, с сидами из конфигурации, ко�
 оставлены фаззеру:
 
 - Манифест, у которого `schemaVersion` отсутствует или не равен 2, получает
-  ответ **500** вместо 400. `verifyManifest` накапливает все прочие отказы в
-  `distribution.ErrManifestVerification`, который отображается в
-  `MANIFEST_INVALID`, но ветка версии схемы возвращает голый `fmt.Errorf`, и он
-  проваливается в `UNKNOWN` (`registry/storage/schema2manifesthandler.go:75`, то
-  же в `ocimanifesthandler.go:69`). Клиенту достаточно тела в 15 байт.
-  `FuzzManifestPut` сообщает об этом из сида; чтобы фаззить дальше, задайте
-  `FUZZ_ALLOW_KNOWN_5XX=1`.
+  ответ **500** вместо 400. Ветка версии схемы в `verifyManifest` возвращает
+  обычный `fmt.Errorf`, который превращается в `UNKNOWN` в HTTP-обработчике.
+  PR #8 возвращает типизированную `distribution.ErrManifestInvalid` из
+  `schema2manifesthandler.go` и `ocimanifesthandler.go` и преобразует её
+  в `400 MANIFEST_INVALID`. Регрессию покрывают `FuzzManifestPut` и
+  `TestManifestPutSchemaVersionIsRejectedAsBadRequest`.
 - `Accept` сопоставляется регистрозависимо
   (`registry/handlers/manifests.go:109`), тогда как `Content-Type` проходит через
   `mime.ParseMediaType`, приводящий к нижнему регистру. Тип носителя
@@ -428,22 +453,29 @@ IP-адрес.
 
 ### Как их запускать
 
-Форки — отдельные рабочие копии, в сборку этого модуля они не входят.
+Для локального запуска нужны отдельные рабочие копии форков. Для distribution
+и docker-auth используйте актуальные ветки `deckhouse`.
+Чтобы воспроизвести конкретное падение в CI, используйте fuzz-образ той задачи,
+поскольку ветки могут обновиться.
 
 ```sh
 # distribution
-cd <3p-distribution> && git switch deckhouse-fuzzing
+cd <3p-distribution>
+git fetch origin deckhouse
+git switch --detach FETCH_HEAD
 go test ./registry/ ./registry/handlers/ ./registry/proxy/ .    # находки и сиды
-FUZZ_ALLOW_KNOWN_5XX=1 go test ./registry/handlers/ -fuzz FuzzManifestPut
+go test ./registry/handlers/ -fuzz FuzzManifestPut
 go test ./registry/proxy/ -fuzz FuzzProxyCachePoisoning
 # Прокси аутентификации делает настоящий HTTP-обход на итерацию — ограничьте воркеры.
 go test ./registry/ -fuzz FuzzAuthProxyRequest -parallel 4
 
 # docker_auth
-cd <3p-docker_auth>/auth_server && git switch deckhouse-fuzzing
-GOTOOLCHAIN=go1.25.0 go test ./server/ ./authz/
-GOTOOLCHAIN=go1.25.0 go test ./server/ -fuzz FuzzAuthEndpoint
-GOTOOLCHAIN=go1.25.0 go test ./server/ -fuzz FuzzAuthRequest
+cd <3p-docker_auth>/auth_server
+git fetch origin deckhouse
+git switch --detach FETCH_HEAD
+go test ./server/ ./authz/
+go test ./server/ -fuzz FuzzAuthEndpoint
+go test ./server/ -fuzz FuzzAuthRequest
 
 # nginx — требуется linux/amd64, см. примечание ниже
 cd <nginx> && git switch deckhouse-fuzzing

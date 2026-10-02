@@ -69,3 +69,40 @@ import:
 imageSpec:
   config:
     entrypoint: ["/auth_server"]
+---
+# The deckhouse branch contains the fuzz harnesses; the release tag above does not.
+image: {{ $.ModuleName }}/{{ $.ImageName }}-fuzz
+from: registry.flant.com/deckhouse/ssdlc/ci-images/fuzz-go:34fdc16d905326c2fd7097363059baa398c9a1c0
+fromLatest: true
+final: false
+git:
+  - url: {{ $.SOURCE_REPO }}/deckhouse/3p-docker_auth.git
+    branch: deckhouse
+    add: /
+    to: /src/docker_auth
+    stageDependencies:
+      install:
+        - '**/*'
+  - add: /{{ $.ModulePath }}modules/{{ $.ModulePriority }}-{{ $.ModuleName }}/Taskfile.fuzz.yml
+    to: /src/docker_auth/auth_server/Taskfile.yml
+    stageDependencies:
+      install:
+        - Taskfile.fuzz.yml
+secrets:
+  - id: GOPROXY
+    value: {{ $.GOPROXY }}
+shell:
+  install:
+    - cd /src/docker_auth/auth_server
+    - GOPROXY=$(cat /run/secrets/GOPROXY) go mod download
+    - rm -rf test/e2e tests/e2e tests/ginkgo
+    - chmod -R a+rwX /src/docker_auth /fuzz/gomod
+imageSpec:
+  config:
+    workingDir: /src/docker_auth/auth_server
+    labels:
+      io.deckhouse.fuzz.engine: go
+    env:
+      FUZZ_WORKDIR: /src/docker_auth/auth_server
+      FUZZ_PACKAGES: "./server"
+      CGO_ENABLED: "0"
