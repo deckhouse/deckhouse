@@ -201,7 +201,7 @@ spec:
             # resources, and installs the release from the rendered manifests instead
             # of the chart itself.
             - name: DECKHOUSE_ENABLE_RESOURCE_REQUESTS
-              value: "false"
+              value: "true"
             - name: DECKHOUSE_ENABLE_MODULE_V2
               value: {{ .Values.deckhouse.enableModuleV2 | quote }}
             - name: USE_NELM
