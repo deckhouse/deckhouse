@@ -499,6 +499,32 @@ func TestYandexDefaultDiskSizeDivergence(t *testing.T) {
 	assert.Equal(t, "diskSizeGB", changes[0].Path)
 }
 
+// TestYandexPreemptibleGatedEmission pins the gated-emission design behind L5: the v1 reference
+// template never rendered preemptible into the YandexMachineTemplate (it only fed the rollout
+// checksum), so v2 must render spec.template.spec.preemptible only when truthy and omit the key
+// otherwise -- an unconditional emit would add a key v1 never had and break TestProviderRenderParity
+// for the yandex fixture, whose instanceClass carries "preemptible": false.
+func TestYandexPreemptibleGatedEmission(t *testing.T) {
+	fixture := fixtureByName(t, "yandex")
+	contract := loadContract(t, fixture.contractPath)
+
+	withPreemptible := deepCopySpec(t, fixture.instanceClass)
+	withPreemptible["preemptible"] = true
+
+	obj, err := renderV2Spec(fixture, contract, withPreemptible)
+	require.NoError(t, err)
+	spec := obj["spec"].(map[string]any)["template"].(map[string]any)["spec"].(map[string]any)
+	assert.Equal(t, true, spec["preemptible"], "preemptible: true must render into the YandexMachineTemplate")
+
+	withoutPreemptible := deepCopySpec(t, fixture.instanceClass)
+	delete(withoutPreemptible, "preemptible")
+
+	obj, err = renderV2Spec(fixture, contract, withoutPreemptible)
+	require.NoError(t, err)
+	spec = obj["spec"].(map[string]any)["template"].(map[string]any)["spec"].(map[string]any)
+	assert.NotContains(t, spec, "preemptible", "an absent preemptible must not appear in the rendered object")
+}
+
 func fixtureByName(t *testing.T, name string) providerFixture {
 	t.Helper()
 	for _, fixture := range providerFixtures() {

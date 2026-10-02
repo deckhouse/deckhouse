@@ -37,3 +37,18 @@ only carries the runtime and API changes required by the Deckhouse CAPY fork.
 
 Bumps `google.golang.org/grpc` to `v1.79.3` and the dependency set required by
 that version to fix CVE-2026-33186.
+
+## 005-support-preemptible-machines.patch
+
+Pulls in the runtime and API changes from upstream PR
+`yandex-cloud/cluster-api-provider-yandex#50`: adds `Preemptible *bool` to
+`YandexMachineSpec` and its deepcopy, and sets `compute.SchedulingPolicy` on
+the instance create request in `GetInstanceReq` so a `YandexMachine` with
+`spec.preemptible: true` is created as a preemptible Yandex Cloud VM.
+
+This patch intentionally excludes upstream's test, CRD and `templates/`
+changes: the test is not exercised by any test gate on this source tree (only
+`go build` runs on it), Deckhouse ships its own preserve-unknown-fields CRD
+stub for `YandexMachine`/`YandexMachineTemplate`, and the `templates/` files
+are upstream's own `clusterctl`/e2e example manifests, never read by
+Deckhouse.
