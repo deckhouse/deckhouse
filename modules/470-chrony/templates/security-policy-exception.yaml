@@ -1,0 +1,76 @@
+{{- if or (.Values.global.discovery.apiVersions | has "deckhouse.io/v1alpha1/SecurityPolicyException") (.Capabilities.APIVersions.Has "deckhouse.io/v1alpha1/SecurityPolicyException") }}
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: SecurityPolicyException
+metadata:
+  name: chrony
+  namespace: d8-{{ .Chart.Name }}
+  {{- include "helm_lib_module_labels" (list . (dict "app" "chrony")) | nindent 2 }}
+spec:
+  securityContext:
+    runAsNonRoot:
+      allowedValue: false
+      metadata:
+        description: |
+          chronyd starts as root to adjust the node clock and bind its NTP port, then
+          switches to the deckhouse user set by the `user` directive of chrony.conf.
+    runAsUser:
+      allowedValues:
+        - 0
+      metadata:
+        description: |
+          UID 0 is required to start chronyd, which drops to the deckhouse user itself.
+    allowPrivilegeEscalation:
+      allowedValue: true
+      metadata:
+        description: |
+          The chrony container does not set allowPrivilegeEscalation, so the runtime
+          default applies to the root process that starts chronyd.
+    capabilities:
+      allowedValues:
+        add:
+          - SYS_TIME
+          - CHOWN
+          - DAC_OVERRIDE
+          - SETGID
+          - SETUID
+        drop:
+          - ALL
+      metadata:
+        description: |
+          SYS_TIME is required to adjust the node clock. CHOWN and DAC_OVERRIDE are required
+          to prepare /var/run/chrony, SETGID and SETUID to switch chronyd to the deckhouse user.
+  network:
+    hostNetwork:
+      allowedValue: true
+      metadata:
+        description: |
+          chronyd serves NTP on the node address, and chrony on the other nodes syncs
+          with chrony-master through that address.
+    hostPorts:
+      - port: 4234
+        protocol: UDP
+        metadata:
+          description: NTP port chronyd listens on.
+      - port: 4245
+        protocol: TCP
+        metadata:
+          description: HTTPS metrics endpoint exposed through kube-rbac-proxy.
+  volumes:
+    types:
+      allowedValues:
+        - hostPath
+      metadata:
+        description: |
+          chronyd reads the node time zone, which exists only on the host.
+    hostPath:
+      allowedValues:
+        - path: /etc/localtime
+          readOnly: true
+          metadata:
+            description: Node time zone file.
+        - path: /etc/timezone
+          readOnly: true
+          metadata:
+            description: Node time zone name.
+{{- end }}

@@ -95,6 +95,7 @@ spec:
       labels:
         tier: node
         app: chrony
+        security.deckhouse.io/security-policy-exception: chrony
     spec:
       affinity:
         nodeAffinity:
@@ -300,6 +301,7 @@ spec:
       labels:
         tier: node
         app: chrony-master
+        security.deckhouse.io/security-policy-exception: chrony
     spec:
       affinity:
         nodeAffinity:

@@ -141,5 +141,78 @@ var _ = Describe("Module :: chrony :: helm template ::", func() {
         ]
 `))
 		})
+
+		It("Namespace must opt into the restricted policy with exception checks", func() {
+			Expect(f.RenderError).ShouldNot(HaveOccurred())
+
+			namespace := f.KubernetesGlobalResource("Namespace", "d8-chrony")
+			Expect(namespace.Field(`metadata.labels.security\.deckhouse\.io/pod-policy`).String()).To(Equal("restricted"))
+			Expect(namespace.Field(`metadata.labels.security\.deckhouse\.io/enable-security-policy-check`).String()).To(Equal("true"))
+		})
+
+		It("SecurityPolicyException must not be rendered without its API", func() {
+			Expect(f.RenderError).ShouldNot(HaveOccurred())
+			Expect(f.KubernetesResource("SecurityPolicyException", "d8-chrony", "chrony").Exists()).To(BeFalse())
+		})
+	})
+
+	Context("SecurityPolicyException", func() {
+		BeforeEach(func() {
+			f.ValuesSetFromYaml("global", globalValues)
+			f.ValuesSetFromYaml("global.discovery.apiVersions", `["deckhouse.io/v1alpha1/SecurityPolicyException"]`)
+			f.ValuesSet("global.modulesImages", GetModulesImages())
+			f.ValuesSetFromYaml("chrony", moduleValues)
+			f.HelmRender()
+		})
+
+		for _, name := range []string{"chrony", "chrony-master"} {
+			It(name+" must be covered by the exception it points to", func() {
+				Expect(f.RenderError).ShouldNot(HaveOccurred())
+
+				ds := f.KubernetesResource("DaemonSet", "d8-chrony", name)
+				speName := ds.Field(`spec.template.metadata.labels.security\.deckhouse\.io/security-policy-exception`).String()
+				spe := f.KubernetesResource("SecurityPolicyException", "d8-chrony", speName)
+				Expect(spe.Exists()).To(BeTrue())
+
+				allowedCapabilities := map[string]bool{}
+				for _, capability := range spe.Field("spec.securityContext.capabilities.allowedValues.add").Array() {
+					allowedCapabilities[capability.String()] = true
+				}
+				allowedPorts := map[string]bool{}
+				for _, port := range spe.Field("spec.network.hostPorts").Array() {
+					allowedPorts[port.Get("port").String()+"/"+port.Get("protocol").String()] = true
+				}
+				// The exception matches a hostPath only when its readOnly equals the mount's.
+				allowedHostPaths := map[string]bool{}
+				for _, entry := range spe.Field("spec.volumes.hostPath.allowedValues").Array() {
+					allowedHostPaths[entry.Get("path").String()] = entry.Get("readOnly").Bool()
+				}
+
+				mountReadOnly := map[string]bool{}
+				for _, container := range ds.Field("spec.template.spec.containers").Array() {
+					for _, capability := range container.Get("securityContext.capabilities.add").Array() {
+						Expect(allowedCapabilities).To(HaveKey(capability.String()), "container %s", container.Get("name"))
+					}
+					// The pod runs in the host network, so every container port is a host port.
+					for _, port := range container.Get("ports").Array() {
+						protocol := port.Get("protocol").String()
+						if protocol == "" {
+							protocol = "TCP"
+						}
+						Expect(allowedPorts).To(HaveKey(port.Get("containerPort").String()+"/"+protocol), "container %s", container.Get("name"))
+					}
+					for _, mount := range container.Get("volumeMounts").Array() {
+						mountReadOnly[mount.Get("name").String()] = mount.Get("readOnly").Bool()
+					}
+				}
+				for _, volume := range ds.Field("spec.template.spec.volumes").Array() {
+					hostPath := volume.Get("hostPath.path")
+					if !hostPath.Exists() {
+						continue
+					}
+					Expect(allowedHostPaths).To(HaveKeyWithValue(hostPath.String(), mountReadOnly[volume.Get("name").String()]))
+				}
+			})
+		}
 	})
 })
