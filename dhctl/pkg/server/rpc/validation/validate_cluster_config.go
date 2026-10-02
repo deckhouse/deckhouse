@@ -66,9 +66,11 @@ func (s *Service) ValidateProviderSpecificClusterConfig(
 	// validated here. An external provider (e.g. DVP) validates against a schema
 	// that lives in its OCI bundle, which this stateless request cannot fetch
 	// (no cluster, no registry); skip it — the actual operation revalidates
-	// after reading the registry from the target cluster.
+	// after reading the registry from the target cluster. A bundle this server
+	// loaded for some other cluster is no substitute: the schema store is keyed
+	// by provider name alone, so it would answer for whichever build ran last.
 	provider := clusterConfig.Cloud.Provider
-	if provider != "" && !config.ProviderBundledInCandi(provider, s.globalOptions) {
+	if provider != "" && !config.IsInternalCloudProviderBundle(provider, s.globalOptions) {
 		return &pb.ValidateProviderSpecificClusterConfigResponse{}, nil
 	}
 

@@ -15,6 +15,7 @@
 package providerdir
 
 import (
+	"os"
 	"path/filepath"
 	"strings"
 )
@@ -36,4 +37,54 @@ func ProviderDigestDir(root, provider, digest string) string {
 // validator binary inside the unpacked bundle.
 func ValidatorPath(root, provider string) string {
 	return filepath.Join(ProviderDir(root, provider), "validator")
+}
+
+// SchemaPath returns the ClusterConfiguration schema inside an unpacked bundle.
+// A bundle without it carries nothing dhctl can validate against.
+func SchemaPath(dir string) string {
+	return filepath.Join(dir, "openapi", "cluster_configuration.yaml")
+}
+
+// DigestFromDir reads the digest out of a ProviderDigestDir name. Empty for any
+// other directory.
+func DigestFromDir(dir string) string {
+	_, digest, found := strings.Cut(filepath.Base(dir), "@")
+	if !found {
+		return ""
+	}
+	return digest
+}
+
+// Delivered resolves the provider's default alias and reports the digest-pinned
+// directory it currently points at, together with that digest. Not delivered
+// when the alias is missing, is not a symlink, dangles, or leads anywhere but a
+// digest dir directly under root.
+func Delivered(root, provider string) (string, string, bool) {
+	link := ProviderDir(root, provider)
+	info, err := os.Lstat(link)
+	if err != nil || info.Mode()&os.ModeSymlink == 0 {
+		return "", "", false
+	}
+
+	dir, err := filepath.EvalSymlinks(link)
+	if err != nil {
+		return "", "", false
+	}
+
+	// The alias and the digest dir are siblings, so the comparison is against
+	// the resolved root: a symlinked DownloadDir would otherwise never match.
+	resolvedRoot, err := filepath.EvalSymlinks(root)
+	if err != nil || filepath.Dir(dir) != resolvedRoot {
+		return "", "", false
+	}
+
+	if info, err := os.Stat(dir); err != nil || !info.IsDir() {
+		return "", "", false
+	}
+
+	digest, ok := strings.CutPrefix(filepath.Base(dir), strings.ToLower(provider)+"@")
+	if !ok || digest == "" {
+		return "", "", false
+	}
+	return dir, digest, true
 }

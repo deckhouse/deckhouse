@@ -28,9 +28,9 @@ import (
 // must fall back to the lightweight prefix-only check instead of demanding an
 // external validator binary.
 func TestSelectValidatorInTreeFallback(t *testing.T) {
-	orig := providerBundledInCandi
-	providerBundledInCandi = func(string) bool { return true }
-	t.Cleanup(func() { providerBundledInCandi = orig })
+	orig := isInternalCloudProviderBundle
+	isInternalCloudProviderBundle = func(string) bool { return true }
+	t.Cleanup(func() { isInternalCloudProviderBundle = orig })
 
 	validate := selectValidator(context.Background(), "gcp", t.TempDir())
 	require.NotNil(t, validate)
@@ -39,9 +39,9 @@ func TestSelectValidatorInTreeFallback(t *testing.T) {
 }
 
 func TestSelectValidatorExternalMissingValidator(t *testing.T) {
-	orig := providerBundledInCandi
-	providerBundledInCandi = func(string) bool { return false }
-	t.Cleanup(func() { providerBundledInCandi = orig })
+	orig := isInternalCloudProviderBundle
+	isInternalCloudProviderBundle = func(string) bool { return false }
+	t.Cleanup(func() { isInternalCloudProviderBundle = orig })
 
 	validate := selectValidator(context.Background(), "dvp", t.TempDir())
 	err := validate(context.Background(), config.ProviderInput{})
@@ -52,9 +52,9 @@ func TestSelectValidatorExternalMissingValidator(t *testing.T) {
 // validator provider, so it must take the external path and hard-fail without a binary rather
 // than falling back to the prefix-only check.
 func TestSelectValidatorYandexRequiresExternalBinary(t *testing.T) {
-	orig := providerBundledInCandi
-	providerBundledInCandi = func(string) bool { return false }
-	t.Cleanup(func() { providerBundledInCandi = orig })
+	orig := isInternalCloudProviderBundle
+	isInternalCloudProviderBundle = func(string) bool { return false }
+	t.Cleanup(func() { isInternalCloudProviderBundle = orig })
 
 	validate := selectValidator(context.Background(), "yandex", t.TempDir())
 	require.NotNil(t, validate)
@@ -67,9 +67,9 @@ func TestSelectValidatorYandexRequiresExternalBinary(t *testing.T) {
 }
 
 func TestSelectValidatorYandexUsesDeliveredBinary(t *testing.T) {
-	orig := providerBundledInCandi
-	providerBundledInCandi = func(string) bool { return false }
-	t.Cleanup(func() { providerBundledInCandi = orig })
+	orig := isInternalCloudProviderBundle
+	isInternalCloudProviderBundle = func(string) bool { return false }
+	t.Cleanup(func() { isInternalCloudProviderBundle = orig })
 
 	downloadDir := t.TempDir()
 	tests.StubDeliveredProviderBundle(t, downloadDir, "yandex")

@@ -30,6 +30,7 @@ import (
 
 	dhlog "github.com/deckhouse/lib-dhctl/pkg/logger"
 
+	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider/providerdir"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/state"
 )
 
@@ -54,6 +55,20 @@ func isProviderBundleDir(tmpDir, fullPath string) bool {
 		return false
 	}
 	return providerBundleDirRe.MatchString(filepath.Base(fullPath))
+}
+
+// isProviderAlias reports whether fullPath is a provider's default alias right
+// under tmpDir, leading to a digest-pinned bundle kept beside it. A run that
+// cannot resolve the digest reaches its bundle only through this symlink, so
+// deleting it leaves the kept directory unreachable.
+func isProviderAlias(tmpDir, fullPath string) bool {
+	provider := filepath.Base(fullPath)
+	if providerdir.ProviderDir(tmpDir, provider) != fullPath {
+		return false
+	}
+
+	dir, _, ok := providerdir.Delivered(tmpDir, provider)
+	return ok && providerBundleDirRe.MatchString(filepath.Base(dir))
 }
 
 type ClearTmpParams struct {
@@ -227,6 +242,11 @@ func (r *regularTmpCleaner) Cleanup() {
 			}
 
 			dirsForDeletion = append(dirsForDeletion, fullPath)
+			return nil
+		}
+
+		if isProviderAlias(tmpDir, fullPath) {
+			keepFiles = append(keepFiles, fullPath)
 			return nil
 		}
 

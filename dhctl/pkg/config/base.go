@@ -22,9 +22,9 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"sync"
 	"time"
 
-	"golang.org/x/sync/singleflight"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"sigs.k8s.io/yaml"
 
@@ -36,7 +36,6 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app/options"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config/digests"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config/registry"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider/providerdir"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/actions/registrydata"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/client"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/fs"
@@ -80,7 +79,7 @@ func LoadConfigFromFile(
 		}
 	}
 
-	if err := EnsureProviderBundle(ctx, "", docs, globalOptions); err != nil {
+	if err := EnsureProviderBundleFromConfig(ctx, "", docs, globalOptions); err != nil {
 		return nil, err
 	}
 
@@ -242,6 +241,24 @@ func ParseConfigInCluster(
 	return metaConfig, nil
 }
 
+// clusterRegistryData reads the cluster's registry on the first caller that needs it and hands the
+// same answer, error included, to every caller after.
+func clusterRegistryData(kubeCl *client.KubernetesClient, inCluster bool) func(ctx context.Context) (*image.RegistryConfig, string, error) {
+	var (
+		once      sync.Once
+		conf      *image.RegistryConfig
+		dockerCfg string
+		err       error
+	)
+
+	return func(ctx context.Context) (*image.RegistryConfig, string, error) {
+		once.Do(func() {
+			conf, dockerCfg, err = registrydata.GetRegistryDataPreferUpstream(ctx, kubeCl, inCluster)
+		})
+		return conf, dockerCfg, err
+	}
+}
+
 func parseConfigFromCluster(ctx context.Context, kubeCl *client.KubernetesClient, validatorProvider MetaConfigValidatorProvider, globalOptions *options.GlobalOptions, operation string) (*MetaConfig, error) {
 	metaConfig := &MetaConfig{Operation: operation}
 
@@ -254,41 +271,52 @@ func parseConfigFromCluster(ctx context.Context, kubeCl *client.KubernetesClient
 		return nil, err
 	}
 	cloudProvider := clusterConfig.Provider
-	needProviderCandi := cloudProvider != "" && !providerCandiPresent(cloudProvider, globalOptions)
+	registryData := clusterRegistryData(kubeCl, globalOptions.KubeInCluster)
 
-	// Cloud clusters need registry data even without downloads: provider
-	// plugins are pulled lazily and read DeckhouseConfig.RegistryDockerCfg.
-	needRegistryData := globalOptions.EnsureCandiAvailable || needProviderCandi || clusterConfig.Type == CloudClusterType
-	if needRegistryData {
-		// Out of the cluster (manual dhctl over SSH) the deckhouse-registry mirror
-		// registry.d8-system.svc is unresolvable, so prefer the upstream registry
-		// for the candi/provider-bundle download; in-cluster callers keep the mirror.
-		conf, b64dc, err := registrydata.GetRegistryDataPreferUpstream(ctx, kubeCl, globalOptions.KubeInCluster)
+	if globalOptions.EnsureCandiAvailable {
+		conf, _, err := registryData(ctx)
 		if err != nil {
 			return nil, err
 		}
-
-		if globalOptions.EnsureCandiAvailable {
-			if err = prepareCandiDir(ctx, conf, globalOptions); err != nil {
-				return nil, err
-			}
+		if err := prepareCandiDir(ctx, conf, globalOptions); err != nil {
+			return nil, err
 		}
-		if needProviderCandi {
-			ref, err := resolveProviderBundleRef(ctx, cloudProvider, clusterModuleDocs(
-				func(context.Context) (*client.KubernetesClient, error) { return kubeCl, nil },
-				cloudProvider, globalOptions.KubeInCluster), globalOptions)
-			if err != nil {
-				return nil, err
-			}
-			if err := ensureProviderBundle(ctx, cloudProvider, ref, conf, globalOptions); err != nil {
-				return nil, fmt.Errorf("prepare provider bundle: %w", err)
-			}
+	}
+
+	if !IsInternalCloudProviderBundle(cloudProvider, globalOptions) {
+		lookup := clusterModuleDocs(
+			func(context.Context) (*client.KubernetesClient, error) { return kubeCl, nil },
+			cloudProvider,
+			globalOptions.KubeInCluster,
+		)
+
+		registry := func(ctx context.Context) (*image.RegistryConfig, error) {
+			conf, _, err := registryData(ctx)
+			return conf, err
 		}
 
-		metaConfig.DeckhouseConfig.RegistryDockerCfg = b64dc
-		metaConfig.DeckhouseConfig.ImagesRepo = conf.GetRegistry()
-		metaConfig.DeckhouseConfig.RegistryCA = conf.GetCA()
-		metaConfig.DeckhouseConfig.RegistryScheme = conf.GetScheme()
+		if err := updateProviderBundle(
+			ctx,
+			cloudProvider,
+			lookup,
+			registry,
+			globalOptions,
+			operationRequiresFreshBundle(operation),
+		); err != nil {
+			return nil, fmt.Errorf("prepare provider bundle: %w", err)
+		}
+	}
+
+	// The lazy provider-plugin and terraform-manager pulls read these off DeckhouseConfig long after
+	// this parse, so a cloud cluster needs them whether or not anything was downloaded above.
+	if clusterConfig.Type == CloudClusterType {
+		conf, dockerCfg, err := registryData(ctx)
+		if err == nil {
+			metaConfig.DeckhouseConfig.RegistryDockerCfg = dockerCfg
+			metaConfig.DeckhouseConfig.ImagesRepo = conf.GetRegistry()
+			metaConfig.DeckhouseConfig.RegistryCA = conf.GetCA()
+			metaConfig.DeckhouseConfig.RegistryScheme = conf.GetScheme()
+		}
 	}
 
 	metaConfig.DownloadRootDir = globalOptions.DownloadDir
@@ -592,7 +620,12 @@ func ParseConfigFromDataEnsureProvider(
 	globalOptions = withDownloadDir(globalOptions)
 
 	docs := input.YAMLSplitRegexp.Split(strings.TrimSpace(configData), -1)
-	if err := EnsureProviderBundle(ctx, "", docs, globalOptions); err != nil {
+
+	provider, err := cloudProviderNameOrFromDocs("", docs)
+	if err != nil {
+		return nil, err
+	}
+	if err := ensureProviderSchemas(ctx, provider, docs, globalOptions); err != nil {
 		return nil, err
 	}
 
@@ -708,25 +741,6 @@ func FetchDocuments(ctx context.Context, paths []string) ([]string, error) {
 	return docs, nil
 }
 
-// inTreeValidatorProviders mirrors selectValidator in infrastructureprovider
-// (not imported from here to avoid a cycle).
-var inTreeValidatorProviders = map[string]struct{}{
-	"vcd": {},
-}
-
-// ProviderBundledInCandi reports whether the provider ships its schemas in the
-// image's candi (an in-tree provider). External providers (e.g. DVP) are not
-// baked and arrive as OCI bundles downloaded at runtime instead.
-func ProviderBundledInCandi(provider string, globalOptions *options.GlobalOptions) bool {
-	candiDir := options.DefaultCandiDir
-	if globalOptions != nil && globalOptions.CandiDir != "" {
-		candiDir = globalOptions.CandiDir
-	}
-	schemaPath := filepath.Join(candiDir, "cloud-providers", strings.ToLower(provider), "openapi", "cluster_configuration.yaml")
-	_, err := os.Stat(schemaPath)
-	return err == nil
-}
-
 // The modules directory is filled by werf from the edition built, and every cloud-provider module
 // carries openapi/config-values.yaml, so no directory here means the build does not ship it. An
 // unreadable directory answers "shipped": otherwise an empty filesystem externalises every module.
@@ -748,66 +762,6 @@ func moduleShippedInImage(moduleName string, globalOptions *options.GlobalOption
 	}
 
 	return false
-}
-
-// providerCandiPresent reports whether the provider's schemas — and, for
-// external providers, the validator binary — are already on disk, so the
-// terraform-manager image download can be skipped.
-func providerCandiPresent(provider string, globalOptions *options.GlobalOptions) bool {
-	if provider == "" {
-		return true
-	}
-	candiDir := globalOptions.CandiDir
-	if candiDir == "" {
-		candiDir = options.DefaultCandiDir
-	}
-	schemaPresent := false
-	systemPath := filepath.Join(candiDir, "cloud-providers", provider, "openapi", "cluster_configuration.yaml")
-	if _, err := os.Stat(systemPath); err == nil {
-		schemaPresent = true
-	}
-	downloadPath := filepath.Join(providerdir.ProviderDir(globalOptions.DownloadDir, provider), "openapi", "cluster_configuration.yaml")
-	if _, err := os.Stat(downloadPath); err == nil {
-		schemaPresent = true
-	}
-
-	if _, inTree := inTreeValidatorProviders[provider]; inTree {
-		return schemaPresent
-	}
-
-	// The validator binary ships in the same image as the schemas, so its
-	// presence alone marks the bundle as delivered.
-	validatorPath := providerdir.ValidatorPath(globalOptions.DownloadDir, provider)
-	if _, err := os.Stat(validatorPath); err == nil {
-		return true
-	}
-	return false
-}
-
-// loadDeliveredProviderSchemas loads an already-delivered external provider
-// bundle's schemas from disk into the in-process store when they are not loaded
-// yet. providerCandiPresent only checks on-disk presence, so on a shared or
-// persisted download dir the schemas can be on disk yet absent from this
-// process's store (built once at startup). In-tree providers (schemas loaded
-// from candi at build time) and already-loaded providers are a no-op.
-func loadDeliveredProviderSchemas(provider string, globalOptions *options.GlobalOptions) error {
-	if _, inTree := inTreeValidatorProviders[provider]; inTree {
-		return nil
-	}
-	store := NewSchemaStore(globalOptions)
-	if store.HasProviderSchemas(provider) {
-		return nil
-	}
-	dir := providerdir.ProviderDir(globalOptions.DownloadDir, provider)
-	if resolved, err := filepath.EvalSymlinks(dir); err == nil {
-		dir = resolved
-	}
-	if _, err := os.Stat(dir); err != nil {
-		// Not under the download dir (candi-delivered schemas are loaded at
-		// build time); nothing to load here.
-		return nil
-	}
-	return store.LoadProviderDir(provider, "delivered", dir)
 }
 
 // buildRegistryConfig derives an OCI registry config from the input documents
@@ -918,253 +872,6 @@ func prepareCandiDir(ctx context.Context, conf *image.RegistryConfig, globalOpti
 	return os.MkdirAll(filepath.Join(globalOptions.DownloadDir, "plugins"), 0o755)
 }
 
-func fetchCloudProvider(docs []string) (string, error) {
-	for _, doc := range docs {
-		if err := detectMergedDocuments(doc); err != nil {
-			return "", fmt.Errorf("config validation failed: %w\ndata:\n%s\n", err, numerateManifestLines([]byte(doc)))
-		}
-
-		var config struct {
-			Kind  string `yaml:"kind"`
-			Cloud struct {
-				Provider string `yaml:"provider"`
-			} `yaml:"cloud"`
-		}
-		if err := yaml.Unmarshal([]byte(doc), &config); err != nil {
-			return "", err
-		}
-		if config.Kind == "ClusterConfiguration" {
-			return strings.ToLower(config.Cloud.Provider), nil
-		}
-	}
-	return "", nil
-}
-
-var ensureProviderGroup singleflight.Group
-
-// Vars (not funcs) so unit tests can stub bundle resolution and the download.
-var (
-	// Prefers the module chain, falls back to this installer's embedded digests. globalOptions
-	// travels along because providerIsExternal reads the modules directory, whose path is not
-	// fixed: ResolveAndApplyPaths roots it at the working directory, or under DownloadDir.
-	resolveProviderBundleRef = func(ctx context.Context, provider string, lookup providerModuleLookup, globalOptions *options.GlobalOptions) (providerBundleRef, error) {
-		ref, err := resolveModuleProviderBundle(ctx, provider, lookup, globalOptions)
-		if err != nil {
-			return providerBundleRef{}, err
-		}
-		if ref.Digest != "" {
-			return ref, nil
-		}
-
-		digest, err := digests.GetImage(sectionForProvider(provider), terraformManagerImageName)
-		if err != nil {
-			return providerBundleRef{}, fmt.Errorf("get terraform-manager image digest for provider %s: %w", provider, err)
-		}
-		return providerBundleRef{Digest: digest}, nil
-	}
-	downloadProviderBundle = image.DownloadAndUnpackImage
-)
-
-// EnsureProviderBundle downloads the external provider bundle and loads its
-// schemas so the provider becomes validatable in this process. No-op for
-// static clusters and already-present candi (in-tree or unpacked). Empty
-// provider is extracted from docs; docs also supply registry access (default
-// public registry otherwise). Concurrent same-provider calls share one download.
-func EnsureProviderBundle(ctx context.Context, provider string, docs []string, globalOptions *options.GlobalOptions) error {
-	globalOptions = withDownloadDir(globalOptions)
-
-	if provider == "" {
-		fetched, err := fetchCloudProvider(docs)
-		if err != nil {
-			return err
-		}
-		provider = fetched
-	}
-	provider = strings.ToLower(provider)
-	if provider == "" {
-		return nil
-	}
-
-	// Read before the early return below: for inTreeValidatorProviders providerCandiPresent answers
-	// true on the candi schemas alone, so an opt-in would never reach the resolver and dhctl would
-	// install the pinned build while validating against another build's schemas.
-	md, err := ParseModuleDocs(docs)
-	if err != nil {
-		return err
-	}
-
-	if providerCandiPresent(provider, globalOptions) && !md.providerModulePinned(CloudProviderModuleName(provider)) {
-		// The bundle is delivered on disk (in-tree candi, image bake, or an
-		// unpack by another process on a shared download dir). Make sure its
-		// schemas are loaded into THIS process's store before skipping download:
-		// providerCandiPresent only checks on-disk presence, and the store is
-		// built once at startup, so a bundle delivered later is on disk yet
-		// absent from the store.
-		return loadDeliveredProviderSchemas(provider, globalOptions)
-	}
-
-	ref, err := resolveProviderBundleRef(ctx, provider, configModuleDocs(docs), globalOptions)
-	if err != nil {
-		return err
-	}
-	if providerBundleReady(provider, ref.Digest, globalOptions) {
-		return nil
-	}
-
-	registryConf, err := buildRegistryConfig(docs)
-	if err != nil {
-		return fmt.Errorf("registry data to fetch provider bundle for %q: %w", provider, err)
-	}
-	return ensureProviderBundle(ctx, provider, ref, registryConf, globalOptions)
-}
-
-// KubeClientGetter lazily provides a kube client for the target cluster. Only providerCandiPresent
-// returns before the first use, so past it every operation dials. Do not optimise that away with a
-// local check: which module build a cluster runs is a property of that cluster.
-type KubeClientGetter func(ctx context.Context) (*client.KubernetesClient, error)
-
-// EnsureExternalProviderBundle downloads and unpacks the external provider's OCI bundle using the
-// registry read from the target cluster. Commander operations receive no registry_config, so the
-// bundle registry is unknown from the request and the cluster is the only source of truth.
-func EnsureExternalProviderBundle(ctx context.Context, kubeClient KubeClientGetter, clusterConfigData string, globalOptions *options.GlobalOptions) error {
-	globalOptions = withDownloadDir(globalOptions)
-
-	provider, err := fetchCloudProvider(input.YAMLSplitRegexp.Split(strings.TrimSpace(clusterConfigData), -1))
-	if err != nil {
-		return err
-	}
-	provider = strings.ToLower(provider)
-	if provider == "" {
-		return nil
-	}
-	if providerCandiPresent(provider, globalOptions) {
-		return loadDeliveredProviderSchemas(provider, globalOptions)
-	}
-
-	ref, err := resolveProviderBundleRef(ctx, provider, clusterModuleDocs(kubeClient, provider, globalOptions.KubeInCluster), globalOptions)
-	if err != nil {
-		return err
-	}
-	if providerBundleReady(provider, ref.Digest, globalOptions) {
-		return nil
-	}
-
-	// A ModuleSource brought its own registry with the reference, and ensureProviderBundle then
-	// ignores anything read here.
-	var conf *image.RegistryConfig
-
-	if ref.Registry == nil {
-		kubeCl, err := kubeClient(ctx)
-		if err != nil {
-			return fmt.Errorf("get kube client for provider bundle: %w", err)
-		}
-
-		// deckhouse-registry points at the registry.d8-system.svc mirror on clusters with an
-		// in-cluster registry, which an out-of-cluster caller cannot resolve.
-		var found bool
-		conf, found, err = registrydata.GetUpstreamRegistryData(ctx, kubeCl)
-		if err != nil {
-			return fmt.Errorf("get upstream registry data from cluster: %w", err)
-		}
-		if !found {
-			conf, _, err = registrydata.GetRegistryData(ctx, kubeCl)
-			if err != nil {
-				return fmt.Errorf("get registry data from cluster: %w", err)
-			}
-		}
-	}
-	return ensureProviderBundle(ctx, provider, ref, conf, globalOptions)
-}
-
-func providerBundleReady(provider, digest string, globalOptions *options.GlobalOptions) bool {
-	if !NewSchemaStore(globalOptions).ProviderSchemasLoaded(provider, digest) {
-		return false
-	}
-	_, err := os.Stat(providerdir.ProviderDir(globalOptions.DownloadDir, provider))
-	return err == nil
-}
-
-func ensureProviderBundle(ctx context.Context, provider string, ref providerBundleRef, conf *image.RegistryConfig, globalOptions *options.GlobalOptions) error {
-	// The bundle lives in the ModuleSource's registry, not the one resolved for deckhouse.
-	if ref.Registry != nil {
-		conf = ref.Registry
-	}
-	_, err, _ := ensureProviderGroup.Do(provider+"@"+ref.Digest, func() (interface{}, error) {
-		if providerBundleReady(provider, ref.Digest, globalOptions) {
-			return nil, nil
-		}
-		if err := unpackProviderBundle(ctx, provider, ref, conf, globalOptions); err != nil {
-			return nil, err
-		}
-		// Load from the real digest dir: filepath.Walk does not follow the
-		// <provider> symlink root.
-		digestDir := providerdir.ProviderDigestDir(globalOptions.DownloadDir, provider, ref.Digest)
-		return nil, NewSchemaStore(globalOptions).LoadProviderDir(provider, ref.Digest, digestDir)
-	})
-	return err
-}
-
-func unpackProviderBundle(ctx context.Context, provider string, ref providerBundleRef, conf *image.RegistryConfig, globalOptions *options.GlobalOptions) error {
-	digest := ref.Digest
-	digestDir := providerdir.ProviderDigestDir(globalOptions.DownloadDir, provider, digest)
-	if _, err := os.Stat(digestDir); err != nil {
-		// The module chain knows the repository; the in-tree path pins the flat images repo.
-		imgName := ref.Image
-		if imgName == "" {
-			imgName = conf.GetRegistry() + "@" + digest
-		}
-		dhlog.FromContext(ctx).DebugContext(ctx, fmt.Sprintf("Downloading provider bundle for %s", provider))
-		// Download into a temp dir and rename into place on success: the image
-		// puller creates the destination before writing, so a failed or killed
-		// download would otherwise leave a partial digestDir whose bare
-		// existence short-circuits the re-download above (and the tmp cleaner
-		// deliberately keeps bundle dirs), permanently poisoning the cache. An
-		// orphaned .partial dir does not match the cleaner's bundle-dir pattern
-		// and is swept on the next run.
-		partialDir := digestDir + ".partial"
-		if err := os.RemoveAll(partialDir); err != nil {
-			return fmt.Errorf("clean partial provider bundle dir %s: %w", partialDir, err)
-		}
-		if err := downloadProviderBundle(ctx, imgName, partialDir, globalOptions.DownloadCacheDir, *conf, globalOptions.ShowProgress); err != nil {
-			_ = os.RemoveAll(partialDir)
-			// Runs before every preflight check, so this message is all the operator gets.
-			return fmt.Errorf("download provider bundle for %q from %s: %w\n"+
-				"It carries the provider schemas and the validator, so the configuration cannot be checked without it. "+
-				"Make that reference reachable with the registry credentials from the configuration, "+
-				"or unpack the bundle into %s yourself before dhctl starts.",
-				provider, imgName, err, providerdir.ProviderDir(globalOptions.DownloadDir, provider))
-		}
-		// The image puller leaves the downloaded tarball next to the unpacked
-		// tree. The digest-pinned directory itself is the cache (its presence
-		// short-circuits the download above), so the tarball only duplicates
-		// the bundle on disk — drop it.
-		_ = os.Remove(filepath.Join(partialDir, digest))
-		if err := os.Rename(partialDir, digestDir); err != nil {
-			return fmt.Errorf("move provider bundle into place %s: %w", digestDir, err)
-		}
-	}
-	return switchProviderSymlink(providerdir.ProviderDir(globalOptions.DownloadDir, provider), digestDir)
-}
-
-// switchProviderSymlink atomically points linkPath at target. A pre-symlink
-// layout may have left a real directory at linkPath — it is replaced.
-func switchProviderSymlink(linkPath, target string) error {
-	if info, err := os.Lstat(linkPath); err == nil && info.Mode()&os.ModeSymlink == 0 {
-		if err := os.RemoveAll(linkPath); err != nil {
-			return fmt.Errorf("remove legacy provider dir %s: %w", linkPath, err)
-		}
-	}
-	tmp := linkPath + ".tmp"
-	_ = os.Remove(tmp)
-	if err := os.Symlink(target, tmp); err != nil {
-		return fmt.Errorf("create provider symlink: %w", err)
-	}
-	if err := os.Rename(tmp, linkPath); err != nil {
-		return fmt.Errorf("activate provider symlink: %w", err)
-	}
-	return nil
-}
-
 // prepare CandiDir if not exists
 func PrepareCandiDir(ctx context.Context, kubeCl *client.KubernetesClient, globalOptions *options.GlobalOptions) error {
 	// test only
@@ -1219,9 +926,4 @@ func IsEEEdition(ed string) bool {
 
 func IsCSEdition(ed string) bool {
 	return strings.ToLower(ed) == "cse"
-}
-
-// The images_digests.json section a provider's images live under.
-func sectionForProvider(provider string) string {
-	return "cloudProvider" + strings.ToUpper(provider[:1]) + provider[1:]
 }

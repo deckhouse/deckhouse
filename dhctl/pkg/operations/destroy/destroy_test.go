@@ -26,6 +26,7 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app/options"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/global"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructure/controller"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/actions/manifests"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/commander"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/destroy/kube"
@@ -115,7 +116,7 @@ func TestInitStateLoader(t *testing.T) {
 				kubeProvider: createKubeProvider(),
 				before: func(t *testing.T, tst *testInitStateLoader) {
 					testCreateMetaConfigForInitLoaderTestInCluster(t, tst)
-					loader := infrastructurestate.NewCachedTerraStateLoader(tst.kubeProvider, tst.params.StateCache, "")
+					loader := infrastructurestate.NewCachedTerraStateLoader(tst.kubeProvider, tst.params.StateCache, infrastructureprovider.DhctlOperationDestroy)
 					ctx := t.Context()
 					_, err := loader.PopulateMetaConfig(ctx, nil)
 					require.NoError(t, err, "populate metaconfig before test")

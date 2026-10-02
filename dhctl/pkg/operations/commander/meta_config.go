@@ -49,8 +49,10 @@ func ParseMetaConfig(ctx context.Context, stateCache state.Cache, params *Comman
 	// Commander does not send registry access in the request; read it from the
 	// target cluster and deliver the external provider bundle before parsing, so
 	// the parse below finds it on disk and skips the registry-less download.
-	if err := config.EnsureExternalProviderBundle(ctx, kubeClient, string(params.ClusterConfigurationData), globalOptions); err != nil {
-		return nil, fmt.Errorf("ensure provider bundle from cluster: %w", err)
+	if kubeClient != nil {
+		if err := config.EnsureProviderBundleFromCluster(ctx, kubeClient, string(params.ClusterConfigurationData), globalOptions, operation); err != nil {
+			return nil, fmt.Errorf("ensure provider bundle from cluster: %w", err)
+		}
 	}
 
 	// Commander sends only ClusterConfiguration and the provider configuration. The cluster settings that

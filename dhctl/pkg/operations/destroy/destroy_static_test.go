@@ -44,6 +44,7 @@ import (
 	v1 "github.com/deckhouse/deckhouse/dhctl/pkg/apis/deckhouse/v1"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/global"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/actions/entity"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/client"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/destroy/deckhouse"
@@ -1671,7 +1672,7 @@ func createTestStaticDestroyTest(t *testing.T, params testStaticDestroyTestParam
 
 	testCreateClusterUUIDCM(t, kubeCl, clusterUUID)
 
-	metaConfig, err := config.ParseConfigFromCluster(ctx, kubeCl, config.DummyValidatorProvider(), nil, "")
+	metaConfig, err := config.ParseConfigFromCluster(ctx, kubeCl, config.DummyValidatorProvider(), nil, infrastructureprovider.DhctlOperationDestroy)
 	require.NoError(t, err)
 
 	const commanderMode = false

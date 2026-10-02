@@ -72,7 +72,7 @@ func selectValidator(ctx context.Context, provider, downloadRootDir string) conf
 		// In-tree providers ship their schemas in the image's candi and need no
 		// external validator: keep the lightweight prefix-only check. Only truly
 		// external providers (not in candi) require the downloaded binary.
-		if providerBundledInCandi(provider) {
+		if isInternalCloudProviderBundle(provider) {
 			return validateInTreePrefix
 		}
 		// Hard-fail instead of silently skipping the provider's own
@@ -101,9 +101,9 @@ func findExternalValidatorBinary(pluginsDir, providerName string) string {
 	return path
 }
 
-// providerBundledInCandi is a var so tests can stub the candi lookup.
-var providerBundledInCandi = func(provider string) bool {
-	return config.ProviderBundledInCandi(provider, nil)
+// isInternalCloudProviderBundle is a var so tests can stub the candi lookup.
+var isInternalCloudProviderBundle = func(provider string) bool {
+	return config.IsInternalCloudProviderBundle(provider, nil)
 }
 
 // validateInTreePrefix is the fallback for in-tree providers without a

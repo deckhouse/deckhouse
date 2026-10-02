@@ -834,3 +834,26 @@ func TestKeepProviderBundleDirs(t *testing.T) {
 	require.FileExists(t, filepath.Join(bundle, "validator"))
 	require.NoDirExists(t, junkDir)
 }
+
+func TestKeepProviderAlias(t *testing.T) {
+	tmpDir := t.TempDir()
+
+	bundle := filepath.Join(tmpDir, "dvp@sha256:"+strings.Repeat("a", 64))
+	testMkDir(t, bundle)
+	alias := filepath.Join(tmpDir, "dvp")
+	require.NoError(t, os.Symlink(bundle, alias))
+
+	// Nothing on disk says which digest this one points at, so the run that
+	// cannot resolve it reaches the bundle through the alias alone.
+	dangling := filepath.Join(tmpDir, "yandex")
+	require.NoError(t, os.Symlink(filepath.Join(tmpDir, "yandex@sha256:"+strings.Repeat("b", 64)), dangling))
+
+	NewTmpCleaner(ClearTmpParams{TmpDir: tmpDir, DefaultTmpDir: tmpDir}).Cleanup()
+
+	target, err := os.Readlink(alias)
+	require.NoError(t, err)
+	require.Equal(t, bundle, target)
+
+	_, err = os.Lstat(dangling)
+	require.Error(t, err, "an alias leading nowhere must not be kept")
+}

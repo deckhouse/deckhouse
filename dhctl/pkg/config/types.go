@@ -29,12 +29,13 @@ const (
 // instead of a hardcoded provider list, so dhctl needs no knowledge of new
 // providers: a provider whose schemas ship in the image's candi (in-tree)
 // follows the legacy contract, anything else (external OCI-bundle providers,
-// e.g. DVP) may be configured via ModuleConfig alone. The section's content is
-// enforced by the provider's own OpenAPI schema (required: [layout,
-// masterNodeGroup, ...]), and where candi is absent that schema is absent too,
-// so such a section could not have been parsed in the first place.
+// e.g. DVP) may be configured via ModuleConfig alone.
+//
+// No provider, no section to require. The predicate below answers the bundle
+// question, where an empty provider is a static cluster that needs no download,
+// and that is not the same answer.
 func ProviderRequiresClusterConfig(providerName string) bool {
-	return ProviderBundledInCandi(providerName, nil)
+	return providerName != "" && IsInternalCloudProviderBundle(providerName, nil)
 }
 
 type SchemaIndex struct {

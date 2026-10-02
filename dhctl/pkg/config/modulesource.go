@@ -302,9 +302,9 @@ func configModuleDocs(docs []string) providerModuleLookup {
 }
 
 // Walks the module chain: release image gives the version, module image gives images_digests.json,
-// its terraformManager entry gives the bundle. A zero ref means the provider is not external; an
-// error must never fall back to the embedded digests, a stale provider schema is worse than
-// refusing to run, and returning early on it is what makes that impossible to get wrong.
+// its terraformManager entry gives the bundle. A zero ref means the provider is not external. An
+// error never falls back to the embedded digests — the installer's build is not the one this
+// cluster runs; the caller falls back to the bundle this cluster already delivered instead.
 func resolveModuleProviderBundle(ctx context.Context, provider string, lookup providerModuleLookup, globalOptions *options.GlobalOptions) (providerBundleRef, error) {
 	if lookup == nil {
 		return providerBundleRef{}, nil

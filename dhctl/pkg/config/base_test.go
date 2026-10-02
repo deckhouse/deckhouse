@@ -34,6 +34,7 @@ import (
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app/options"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/global"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider/providerdir"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/client"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/tests"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/image"
@@ -705,12 +706,10 @@ internalNetworkCIDRs:
 	})
 
 	t.Run("Cloud cluster", func(t *testing.T) {
-		// Yandex now ships its external validator inside the terraform-manager
-		// bundle (no longer an in-tree validator provider), so
-		// providerCandiPresent requires a downloaded bundle. Stub the
-		// resolve+download vars instead of hitting the registry, copying the
-		// real schema from the provider's candi so these tests keep exercising
-		// actual YandexClusterConfiguration validation.
+		// Yandex ships no schemas in candi, so a bundle has to be delivered. Stub the
+		// resolve+download vars instead of hitting the registry, copying the real schema from
+		// the provider's candi so these tests keep exercising actual
+		// YandexClusterConfiguration validation.
 		origDigest := resolveProviderBundleRef
 		resolveProviderBundleRef = func(_ context.Context, _ string, _ providerModuleLookup, _ *options.GlobalOptions) (providerBundleRef, error) {
 			return providerBundleRef{Digest: "sha256:test-yandex-digest"}, nil
@@ -729,6 +728,16 @@ internalNetworkCIDRs:
 			return os.WriteFile(filepath.Join(dest, "openapi", "cluster_configuration.yaml"), schema, 0o644)
 		}
 		t.Cleanup(func() { downloadProviderBundle = origDownload })
+
+		writeDeliveredYandexBundle := func(t *testing.T, downloadDir, digest string) {
+			t.Helper()
+			digestDir := providerdir.ProviderDigestDir(downloadDir, "yandex", digest)
+			schema, err := os.ReadFile(filepath.Join(yandexCandiDir, "openapi", "cluster_configuration.yaml"))
+			require.NoError(t, err)
+			require.NoError(t, os.MkdirAll(filepath.Join(digestDir, "openapi"), 0o755))
+			require.NoError(t, os.WriteFile(providerdir.SchemaPath(digestDir), schema, 0o644))
+			require.NoError(t, os.Symlink(digestDir, providerdir.ProviderDir(downloadDir, "yandex")))
+		}
 
 		clusterGenericConfig := `
 apiVersion: deckhouse.io/v1
@@ -897,21 +906,80 @@ provider:
 		t.Run("neither marker present", func(t *testing.T) {
 			tst := createTestParseConfigFromCluster(t, testParams)
 
-			_, err := parseConfigFromCluster(t.Context(), tst.kubeCl, tst.validatorProvider, &options.GlobalOptions{}, "")
+			_, err := parseConfigFromCluster(t.Context(), tst.kubeCl, tst.validatorProvider, globalOptions(), "")
 			require.Error(t, err)
 			require.Contains(t, err.Error(), "ModuleConfig")
 			require.Contains(t, err.Error(), "d8-provider-cluster-configuration")
 		})
 
-		t.Run("cloud cluster loads registry-fields even when EnsureCandiAvailable=false", func(t *testing.T) {
+		// The lazy provider-plugin and terraform-manager pulls read these off DeckhouseConfig, and
+		// they happen long after the parse, so a cloud cluster needs them whether or not anything
+		// was downloaded here.
+		t.Run("cloud cluster reads registry data even when candi is already available", func(t *testing.T) {
 			tst := createTestParseConfigFromCluster(t, testParams)
 			testCreateCloudProviderModuleConfig(t, tst.kubeCl, "yandex")
-			// deckhouse-registry Secret is already seeded by createTestParseConfigFromCluster.
 
-			metaConfig, err := parseConfigFromCluster(t.Context(), tst.kubeCl, tst.validatorProvider, &options.GlobalOptions{EnsureCandiAvailable: false}, "")
+			opts := globalOptions()
+			opts.EnsureCandiAvailable = false
+			metaConfig, err := parseConfigFromCluster(t.Context(), tst.kubeCl, tst.validatorProvider, opts, "")
 			require.NoError(t, err)
-			require.NotEmpty(t, metaConfig.DeckhouseConfig.RegistryDockerCfg, "registry docker cfg must be populated for cloud cluster")
+			require.NotEmpty(t, metaConfig.DeckhouseConfig.RegistryDockerCfg)
 			require.NotEmpty(t, metaConfig.DeckhouseConfig.ImagesRepo)
+		})
+
+		t.Run("destroy falls back to delivered bundle when registry data is invalid", func(t *testing.T) {
+			tst := createTestParseConfigFromCluster(t, testParams)
+			testCreateCloudProviderModuleConfig(t, tst.kubeCl, "yandex")
+
+			secret, err := tst.kubeCl.CoreV1().Secrets("d8-system").Get(t.Context(), "deckhouse-registry", metav1.GetOptions{})
+			require.NoError(t, err)
+			secret.Data[".dockerconfigjson"] = []byte("not-json")
+			_, err = tst.kubeCl.CoreV1().Secrets("d8-system").Update(t.Context(), secret, metav1.UpdateOptions{})
+			require.NoError(t, err)
+
+			origDigest := resolveProviderBundleRef
+			resolveProviderBundleRef = func(context.Context, string, providerModuleLookup, *options.GlobalOptions) (providerBundleRef, error) {
+				return providerBundleRef{Digest: "sha256:registry-unreachable-new"}, nil
+			}
+			t.Cleanup(func() { resolveProviderBundleRef = origDigest })
+
+			opts := globalOptions()
+			opts.DownloadDir = t.TempDir()
+			opts.DownloadCacheDir = filepath.Join(opts.DownloadDir, "cache")
+			writeDeliveredYandexBundle(t, opts.DownloadDir, "sha256:registry-unreachable-old")
+
+			_, err = parseConfigFromCluster(t.Context(), tst.kubeCl, tst.validatorProvider, opts, "destroy")
+			require.NoError(t, err)
+		})
+
+		t.Run("destroy keeps a ready bundle when registry data is invalid", func(t *testing.T) {
+			const digest = "sha256:registry-unreachable-ready"
+
+			tst := createTestParseConfigFromCluster(t, testParams)
+			testCreateCloudProviderModuleConfig(t, tst.kubeCl, "yandex")
+
+			secret, err := tst.kubeCl.CoreV1().Secrets("d8-system").Get(t.Context(), "deckhouse-registry", metav1.GetOptions{})
+			require.NoError(t, err)
+			secret.Data[".dockerconfigjson"] = []byte("not-json")
+			_, err = tst.kubeCl.CoreV1().Secrets("d8-system").Update(t.Context(), secret, metav1.UpdateOptions{})
+			require.NoError(t, err)
+
+			origDigest := resolveProviderBundleRef
+			resolveProviderBundleRef = func(context.Context, string, providerModuleLookup, *options.GlobalOptions) (providerBundleRef, error) {
+				return providerBundleRef{Digest: digest}, nil
+			}
+			t.Cleanup(func() { resolveProviderBundleRef = origDigest })
+
+			opts := globalOptions()
+			opts.DownloadDir = t.TempDir()
+			opts.DownloadCacheDir = filepath.Join(opts.DownloadDir, "cache")
+			writeDeliveredYandexBundle(t, opts.DownloadDir, digest)
+			dir, _, ok := deliveredBundle("yandex", opts)
+			require.True(t, ok)
+			require.NoError(t, NewSchemaStore(opts).LoadProviderDir("yandex", digest, dir))
+
+			_, err = parseConfigFromCluster(t.Context(), tst.kubeCl, tst.validatorProvider, opts, "destroy")
+			require.NoError(t, err)
 		})
 	})
 }
@@ -1487,4 +1555,31 @@ spec:
 	require.Len(t, metaConfig.TerraNodeGroupSpecs, 1)
 	require.Equal(t, "worker", metaConfig.TerraNodeGroupSpecs[0].Name)
 	require.Equal(t, 1, metaConfig.TerraNodeGroupSpecs[0].Replicas)
+}
+
+func TestApplyRegistryToDeckhouseConfigPopulatesDecodableDockerCfg(t *testing.T) {
+	// Commander cold-pod ops carry registry creds in a separate registryConfig
+	// doc, not in the cluster config; the lazy provider-plugin download then
+	// decodes DeckhouseConfig.RegistryDockerCfg. An empty value used to crash
+	// with "unmarshaling dockerconfig JSON: unexpected end of JSON input".
+	metaConfig := &MetaConfig{}
+	require.NoError(t, applyRegistryToDeckhouseConfig(metaConfig, []string{ensureRegistryMCDoc}))
+
+	require.NotEmpty(t, metaConfig.DeckhouseConfig.RegistryDockerCfg, "dockercfg must be populated from registry MC")
+	require.Equal(t, "r.example.com/test", metaConfig.DeckhouseConfig.ImagesRepo)
+	require.True(t, strings.EqualFold("HTTPS", metaConfig.DeckhouseConfig.RegistryScheme))
+
+	// The exact round-trip the lazy image download performs must succeed.
+	dc, err := image.DecodeDockerConfig(metaConfig.DeckhouseConfig.RegistryDockerCfg)
+	require.NoError(t, err)
+	rc, err := image.RegistryConfigFromDockerConfig(dc, "HTTPS", metaConfig.DeckhouseConfig.ImagesRepo)
+	require.NoError(t, err)
+	require.NotNil(t, rc)
+}
+
+func TestApplyRegistryToDeckhouseConfigKeepsExisting(t *testing.T) {
+	metaConfig := &MetaConfig{}
+	metaConfig.DeckhouseConfig.RegistryDockerCfg = "preset"
+	require.NoError(t, applyRegistryToDeckhouseConfig(metaConfig, []string{ensureRegistryMCDoc}))
+	require.Equal(t, "preset", metaConfig.DeckhouseConfig.RegistryDockerCfg, "must not clobber dockercfg already supplied by configData")
 }
