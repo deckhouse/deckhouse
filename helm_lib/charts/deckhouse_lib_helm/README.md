@@ -8,6 +8,7 @@
 | [helm_lib_admission_webhook_client_ca_certificate](#helm_lib_admission_webhook_client_ca_certificate) |
 | **Api Version And Kind** |
 | [helm_lib_kind_exists](#helm_lib_kind_exists) |
+| [helm_lib_api_version_exists](#helm_lib_api_version_exists) |
 | [helm_lib_get_api_version_by_kind](#helm_lib_get_api_version_by_kind) |
 | **Application Image** |
 | [helm_lib_application_image](#helm_lib_application_image) |
@@ -41,6 +42,8 @@
 | [helm_lib_cloud_data_discoverer_pod_monitor](#helm_lib_cloud_data_discoverer_pod_monitor) |
 | **Cloud Provider User Authz Roles** |
 | [helm_lib_cloud_provider_user_authz_cluster_roles](#helm_lib_cloud_provider_user_authz_cluster_roles) |
+| **Cluster Prefix** |
+| [helm_lib_cluster_prefix](#helm_lib_cluster_prefix) |
 | **Csi Controller** |
 | [helm_lib_csi_image_with_common_fallback](#helm_lib_csi_image_with_common_fallback) |
 | **Dns Policy** |
@@ -63,8 +66,9 @@
 | **Module Ephemeral Storage** |
 | [helm_lib_module_ephemeral_storage_logs_with_extra](#helm_lib_module_ephemeral_storage_logs_with_extra) |
 | [helm_lib_module_ephemeral_storage_only_logs](#helm_lib_module_ephemeral_storage_only_logs) |
-| **Module Gateway** |
+| **Module Gateway Api** |
 | [helm_lib_module_gateway](#helm_lib_module_gateway) |
+| [helm_lib_module_gateway_enabled](#helm_lib_module_gateway_enabled) |
 | **Module Generate Common Name** |
 | [helm_lib_module_generate_common_name](#helm_lib_module_generate_common_name) |
 | **Module Https** |
@@ -83,10 +87,14 @@
 | [helm_lib_module_common_image_no_fail](#helm_lib_module_common_image_no_fail) |
 | [helm_lib_module_image_digest](#helm_lib_module_image_digest) |
 | [helm_lib_module_image_digest_no_fail](#helm_lib_module_image_digest_no_fail) |
-| **Module Ingress Class** |
+| [helm_lib_internal_module_own_package](#helm_lib_internal_module_own_package) |
+| [helm_lib_internal_module_package_registry_base](#helm_lib_internal_module_package_registry_base) |
+| [helm_lib_internal_module_raw_name](#helm_lib_internal_module_raw_name) |
+| [helm_lib_internal_module_registry_base](#helm_lib_internal_module_registry_base) |
+| **Module Ingress** |
 | [helm_lib_module_ingress_class](#helm_lib_module_ingress_class) |
-| **Module Ingress Snippets** |
 | [helm_lib_module_ingress_configuration_snippet](#helm_lib_module_ingress_configuration_snippet) |
+| [helm_lib_module_ingress_enabled](#helm_lib_module_ingress_enabled) |
 | **Module Init Container** |
 | [helm_lib_module_init_container_chown_nobody_volume](#helm_lib_module_init_container_chown_nobody_volume) |
 | [helm_lib_module_init_container_chown_deckhouse_volume](#helm_lib_module_init_container_chown_deckhouse_volume) |
@@ -193,6 +201,21 @@ list:
 list:
 -  Template context with .Values, .Chart, etc 
 -  Kind name portion 
+
+
+### helm_lib_api_version_exists
+
+ returns "true" if the GVK is available: installed from modules' crds (global.discovery.apiVersions) or present in cluster discovery (Capabilities) 
+
+#### Usage
+
+`{{ if (include "helm_lib_api_version_exists" (list . "<group>/<version>/<Kind>")) }} `
+
+#### Arguments
+
+list:
+-  Template context with .Values, .Chart, etc 
+-  Group/version/kind string, e.g. "snapshot.storage.k8s.io/v1/VolumeSnapshotClass" 
 
 
 ### helm_lib_get_api_version_by_kind
@@ -653,6 +676,19 @@ list:
 `{{- include "helm_lib_cloud_provider_user_authz_cluster_roles" (list . $config) }} `
 
 
+## Cluster Prefix
+
+### helm_lib_cluster_prefix
+
+ returns the cluster object prefix: the global ModuleConfig value 
+ (global.prefix) when set, otherwise the deprecated 
+ ClusterConfiguration.cloud.prefix. Safe when the cloud section is absent. 
+
+#### Usage
+
+`{{ include "helm_lib_cluster_prefix" . }} `
+
+
 ## Csi Controller
 
 ### helm_lib_csi_image_with_common_fallback
@@ -827,7 +863,7 @@ list:
 
 -  Template context with .Values, .Chart, etc 
 
-## Module Gateway
+## Module Gateway Api
 
 ### helm_lib_module_gateway
 
@@ -842,6 +878,20 @@ list:
 list:
 -  Template context with .Values, .Chart, etc 
 -  An empty dict to update with current default gateway name and namespace 
+
+
+### helm_lib_module_gateway_enabled
+
+ returns whether Gateway API is enabled from module settings or if not exists from global config, 
+ and, unlike a plain enabled flag, only true when a gateway is actually resolvable (see 
+ helm_lib_module_gateway) — there is no safe default gateway the way ingressClass defaults to 
+ "nginx", so an unresolvable gateway must not be treated as enabled or every gatewayAPI-gated 
+ template would have to re-check this itself to avoid rendering broken manifests. 
+
+#### Usage
+
+`{{- if eq (include "helm_lib_module_gateway_enabled" .) "true" }} `
+
 
 ## Module Generate Common Name
 
@@ -958,11 +1008,15 @@ list:
 
 ### helm_lib_module_https_secret_name
 
- returns custom certificate name 
+ or:    {{ include "helm_lib_module_https_secret_name" (list . "secret_name_prefix" "own_secret_name_prefix_for_gateway_api") }} 
+ returns secret_name_prefix's secret name for the current mode. With a third argument, CertManager 
+ mode uses it instead (Gateway API's own certificate, since it's validated through a separate 
+ ClusterIssuer); every other mode still uses secret_name_prefix, since CustomCertificate is the same 
+ static data regardless of mechanism and isn't duplicated 
 
 #### Usage
 
-`{{ include "helm_lib_module_https_secret_name (list . "secret_name_prefix") }} `
+`{{ include "helm_lib_module_https_secret_name" (list . "secret_name_prefix") }} `
 
 #### Arguments
 
@@ -993,7 +1047,7 @@ list:
 
 #### Usage
 
-`{{ include "helm_lib_module_image_no_fail" (list . "<container-name>") }} `
+`{{ include "helm_lib_module_image_no_fail" (list . "<container-name>" "<module-name>(optional)") }} `
 
 #### Arguments
 
@@ -1061,7 +1115,49 @@ list:
 -  Template context with .Values, .Chart, etc 
 -  Container name 
 
-## Module Ingress Class
+
+### helm_lib_internal_module_own_package
+
+ Decide whether the images resolve from the module's own package. 
+ Returns a non-empty string when the context carries a package and no other module was named. 
+
+#### Arguments
+
+list:
+-  Template context with .Values, .Chart, etc 
+-  An explicit module name asks for another module's image, which only the global map holds 
+
+
+### helm_lib_internal_module_package_registry_base
+
+ Resolve the registry path of the images shipped in the module's own package. 
+ Returns the platform registry base for an embedded package, the package path otherwise, empty when unresolvable. 
+
+#### Arguments
+
+-  Embedded packages are built into the platform image set, so their images are addressed by digest alone 
+
+
+### helm_lib_internal_module_raw_name
+
+ Resolve the module name passed to an image helper. 
+ Returns the optional third argument, or the chart name when it is omitted. 
+
+
+
+### helm_lib_internal_module_registry_base
+
+ Resolve the registry path the legacy module images live in. 
+ Returns the platform registry base, or the external module override when the module values set one. 
+
+#### Arguments
+
+list:
+-  Template context with .Values, .Chart, etc 
+-  Camelcased module name, the key the module values live under 
+-  Path appended to the override host 
+
+## Module Ingress
 
 ### helm_lib_module_ingress_class
 
@@ -1071,11 +1167,7 @@ list:
 
 `{{ include "helm_lib_module_ingress_class" . }} `
 
-#### Arguments
 
--  Template context with .Values, .Chart, etc 
-
-## Module Ingress Snippets
 
 ### helm_lib_module_ingress_configuration_snippet
 
@@ -1088,6 +1180,16 @@ list:
 #### Arguments
 
 -  Template context with .Values, .Chart, etc 
+
+
+### helm_lib_module_ingress_enabled
+
+ returns whether Ingress is enabled from module settings or if not exists from global config 
+
+#### Usage
+
+`{{- if eq (include "helm_lib_module_ingress_enabled" .) "true" }} `
+
 
 ## Module Init Container
 
@@ -1577,7 +1679,7 @@ list:
 
 #### Usage
 
-`{{ include "helm_lib_tolerations" (tuple . "any-node" "with-uninitialized" "without-storage-problems") }} `
+`{{ include "helm_lib_tolerations" (tuple . "any-node" "with-uninitialized") }} `
 
 #### Arguments
 
@@ -1673,11 +1775,11 @@ list:
 
 ### _helm_lib_additional_tolerations_storage_problems
 
- Additional strategy "storage-problems" - used for shedule critical components on nodes with drbd problems. This additional strategy enabled by default in any base strategy except "wildcard". 
+ Additional strategy "storage-problems" - deprecated, renders nothing. It used to tolerate the DRBD taints drbd.linbit.com/lost-quorum, drbd.linbit.com/force-io-error and drbd.linbit.com/ignore-fail-over on every base strategy except "wildcard". Nothing sets those taints anymore, so the strategy is kept as a no-op to let existing "with-storage-problems" and "without-storage-problems" call sites keep rendering, and will be removed once they are gone. 
 
 #### Usage
 
-`{{ include "helm_lib_tolerations" (tuple . "any-node" "without-storage-problems") }} `
+`{{ include "helm_lib_tolerations" (tuple . "any-node" "with-storage-problems") }} `
 
 
 
@@ -1777,6 +1879,11 @@ list:
 ### helm_lib_resources_management_cpu_units_to_millicores
 
  helper for converting cpu units to millicores 
+ Accepts any Kubernetes CPU quantity: an optional sign, a decimal mantissa, and any of the 
+ n, u, m, k, M, G, T, P, E and Ki...Ei suffixes or a decimal exponent. A fractional result is 
+ rounded up. An unparsable value yields 0 and never aborts the rendering. 
+ It converts, it does not validate: a negative quantity comes back as a negative number, and a 
+ result that does not fit an int64 comes back as 0. Rejecting either is the caller's business. 
 
 #### Usage
 
@@ -1787,6 +1894,11 @@ list:
 ### helm_lib_resources_management_memory_units_to_bytes
 
  helper for converting memory units to bytes 
+ Accepts any Kubernetes memory quantity: an optional sign, a decimal mantissa, and any of the 
+ n, u, m, k, M, G, T, P, E and Ki...Ei suffixes or a decimal exponent. A fractional result is 
+ rounded up. A value carrying a known suffix but an unparsable mantissa yields 0, as it did 
+ before, and so does a result that does not fit an int64. It converts, it does not validate. 
+ The `fail` is reached only by a value that carries neither a known suffix nor a number. 
 
 #### Usage
 
@@ -1827,13 +1939,14 @@ list:
 
 #### Usage
 
-`{{ include "helm_lib_pod_anti_affinity_for_ha" (list . (dict "app" "test")) }} `
+`{{ include "helm_lib_pod_anti_affinity_for_ha" (list . (dict "app" "test") (dict "revisionScoped" true)) }} `
 
 #### Arguments
 
 list:
 -  Template context with .Values, .Chart, etc 
 -  Match labels for podAntiAffinity label selector 
+-  Whether to scope podAntiAffinity to pods from the same Deployment revision 
 
 
 ### helm_lib_pod_affinity

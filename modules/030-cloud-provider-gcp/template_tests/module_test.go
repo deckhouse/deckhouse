@@ -146,9 +146,6 @@ const tolerationsAnyNodeWithUninitialized = `
   operator: "Exists"
 - key: DeletionCandidateOfClusterAutoscaler
 - key: ToBeDeletedByClusterAutoscaler
-- key: drbd.linbit.com/lost-quorum
-- key: drbd.linbit.com/force-io-error
-- key: drbd.linbit.com/ignore-fail-over
 - effect: NoSchedule
   key: node.deckhouse.io/bashible-uninitialized
   operator: Exists

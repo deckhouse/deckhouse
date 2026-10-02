@@ -59,7 +59,7 @@ nodeSelector:
 
 
 {{- /* Returns tolerations for workloads depend on strategy. */ -}}
-{{- /* Usage: {{ include "helm_lib_tolerations" (tuple . "any-node" "with-uninitialized" "without-storage-problems") }} */ -}}
+{{- /* Usage: {{ include "helm_lib_tolerations" (tuple . "any-node" "with-uninitialized") }} */ -}}
 {{- define "helm_lib_tolerations" }}
   {{- $context := index . 0 }}  {{- /* Template context with .Values, .Chart, etc */ -}}
   {{- $strategy := index . 1 | include "helm_lib_internal_check_tolerations_strategy" }} {{- /* base strategy, one of "frontend" "monitoring" "system" any-node" "wildcard" */ -}}
@@ -68,8 +68,6 @@ nodeSelector:
     {{ if lt (len .) 3 }}
         {{- fail (print "additional strategies is required") }}
     {{- end }}
-  {{- else }}
-    {{- $additionalStrategies = tuple "storage-problems" }}
   {{- end }}
   {{- $module_values := (index $context.Values (include "helm_lib_module_camelcase_name" $context)) }}
   {{- if gt (len .) 2 }}
@@ -234,12 +232,9 @@ tolerations:
 - key: node.kubernetes.io/network-unavailable
 {{- end }}
 
-{{- /* Additional strategy "storage-problems" - used for shedule critical components on nodes with drbd problems. This additional strategy enabled by default in any base strategy except "wildcard". */ -}}
-{{- /* Usage: {{ include "helm_lib_tolerations" (tuple . "any-node" "without-storage-problems") }} */ -}}
+{{- /* Additional strategy "storage-problems" - deprecated, renders nothing. It used to tolerate the DRBD taints drbd.linbit.com/lost-quorum, drbd.linbit.com/force-io-error and drbd.linbit.com/ignore-fail-over on every base strategy except "wildcard". Nothing sets those taints anymore, so the strategy is kept as a no-op to let existing "with-storage-problems" and "without-storage-problems" call sites keep rendering, and will be removed once they are gone. */ -}}
+{{- /* Usage: {{ include "helm_lib_tolerations" (tuple . "any-node" "with-storage-problems") }} */ -}}
 {{- define "_helm_lib_additional_tolerations_storage_problems" }}
-- key: drbd.linbit.com/lost-quorum
-- key: drbd.linbit.com/force-io-error
-- key: drbd.linbit.com/ignore-fail-over
 {{- end }}
 
 {{- /* Additional strategy "no-csi" - used for any node with no CSI: any node, which was initialized by deckhouse, but have no csi-node driver registered on it. */ -}}

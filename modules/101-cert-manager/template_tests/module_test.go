@@ -169,9 +169,6 @@ var _ = Describe("Module :: cert-manager :: helm template ::", func() {
   operator: Exists
 - key: DeletionCandidateOfClusterAutoscaler
 - key: ToBeDeletedByClusterAutoscaler
-- key: drbd.linbit.com/lost-quorum
-- key: drbd.linbit.com/force-io-error
-- key: drbd.linbit.com/ignore-fail-over
 - effect: NoSchedule
   key: node.deckhouse.io/bashible-uninitialized
   operator: Exists
@@ -199,9 +196,6 @@ var _ = Describe("Module :: cert-manager :: helm template ::", func() {
 - key: dedicated.deckhouse.io
   operator: Equal
   value: "system"
-- key: drbd.linbit.com/lost-quorum
-- key: drbd.linbit.com/force-io-error
-- key: drbd.linbit.com/ignore-fail-over
 `))
 			Expect(certManager.Field("spec.replicas").Int()).To(BeEquivalentTo(1))
 			Expect(certManager.Field("spec.strategy").Exists()).To(BeFalse())
@@ -240,9 +234,6 @@ var _ = Describe("Module :: cert-manager :: helm template ::", func() {
   operator: Exists
 - key: DeletionCandidateOfClusterAutoscaler
 - key: ToBeDeletedByClusterAutoscaler
-- key: drbd.linbit.com/lost-quorum
-- key: drbd.linbit.com/force-io-error
-- key: drbd.linbit.com/ignore-fail-over
 - effect: NoSchedule
   key: node.deckhouse.io/bashible-uninitialized
   operator: Exists
@@ -281,9 +272,6 @@ podAntiAffinity:
 - key: dedicated.deckhouse.io
   operator: Equal
   value: "system"
-- key: drbd.linbit.com/lost-quorum
-- key: drbd.linbit.com/force-io-error
-- key: drbd.linbit.com/ignore-fail-over
 `))
 			Expect(certManager.Field("spec.replicas").Int()).To(BeEquivalentTo(2))
 			Expect(certManager.Field("spec.strategy").String()).To(MatchYAML(`
@@ -350,9 +338,6 @@ podAntiAffinity:
   operator: Exists
 - key: DeletionCandidateOfClusterAutoscaler
 - key: ToBeDeletedByClusterAutoscaler
-- key: drbd.linbit.com/lost-quorum
-- key: drbd.linbit.com/force-io-error
-- key: drbd.linbit.com/ignore-fail-over
 - effect: NoSchedule
   key: node.deckhouse.io/bashible-uninitialized
   operator: Exists
@@ -380,9 +365,6 @@ podAntiAffinity:
 - key: dedicated.deckhouse.io
   operator: Equal
   value: "system"
-- key: drbd.linbit.com/lost-quorum
-- key: drbd.linbit.com/force-io-error
-- key: drbd.linbit.com/ignore-fail-over
 `))
 			Expect(certManager.Field("spec.replicas").Int()).To(BeEquivalentTo(1))
 			Expect(certManager.Field("spec.strategy").Exists()).To(BeFalse())
@@ -421,9 +403,6 @@ podAntiAffinity:
   operator: Exists
 - key: DeletionCandidateOfClusterAutoscaler
 - key: ToBeDeletedByClusterAutoscaler
-- key: drbd.linbit.com/lost-quorum
-- key: drbd.linbit.com/force-io-error
-- key: drbd.linbit.com/ignore-fail-over
 - effect: NoSchedule
   key: node.deckhouse.io/bashible-uninitialized
   operator: Exists
@@ -462,9 +441,6 @@ podAntiAffinity:
 - key: dedicated.deckhouse.io
   operator: Equal
   value: "system"
-- key: drbd.linbit.com/lost-quorum
-- key: drbd.linbit.com/force-io-error
-- key: drbd.linbit.com/ignore-fail-over
 `))
 			Expect(certManager.Field("spec.replicas").Int()).To(BeEquivalentTo(2))
 			Expect(certManager.Field("spec.strategy").String()).To(MatchYAML(`
