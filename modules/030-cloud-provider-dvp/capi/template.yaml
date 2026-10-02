@@ -6,6 +6,7 @@ version: v2
 rolloutFields:
   - virtualMachine.virtualMachineClassName
   - virtualMachine.bootloader
+  - virtualMachine.gpus
   - virtualMachine.cpu.cores
   - virtualMachine.cpu.coreFraction
   - virtualMachine.memory.size
@@ -58,6 +59,12 @@ template: |
         {{- end }}
         {{- if get .instanceClass.virtualMachine "bootloader" }}
         bootloader: {{ .instanceClass.virtualMachine.bootloader | quote }}
+        {{- end }}
+        {{- with get .instanceClass.virtualMachine "gpus" }}
+        gpus:
+          {{- range $gpu := . }}
+          - gpuClassName: {{ $gpu.gpuClassName | quote }}
+          {{- end }}
         {{- end }}
         {{- with get .provider "additionalVMLabels" }}
         additionalVMLabels:

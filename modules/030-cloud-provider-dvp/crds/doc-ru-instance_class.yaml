@@ -127,6 +127,34 @@ spec:
                           Количество ядер процессора для виртуальной машины.
                         type: integer
                     type: object
+                  gpus:
+                    description: |
+                      Список GPU-устройств, подключаемых к виртуальной машине.
+
+                      Каждый элемент ссылается на `GPUClass` по имени, порядок элементов не важен. Чтобы подключить несколько устройств одного класса, повторите элемент. К одной виртуальной машине подключается не более 16 устройств.
+
+                      В кластере, где создаются виртуальные машины, включите feature gate `GPU` в параметре [`featureGates`](/modules/virtualization/configuration.html#parameters-featuregates) модуля [`virtualization`](/modules/virtualization/), включите модуль [`gpu`](/modules/gpu/) в режиме DRA и создайте нужный `GPUClass`. Полный список требований приведён в разделе [«GPU-устройства в виртуальных машинах»](/products/kubernetes-platform/documentation/admin/configuration/virtualization/gpu-devices.html). Виртуальная машина с подключённым GPU не переносится живой миграцией.
+
+                      Изменение параметра у существующего класса по-разному влияет на узлы в зависимости от типа NodeGroup, которая на него ссылается:
+
+                      * `CloudEphemeral` — узлы пересоздаются;
+                      * `CloudPermanent` и master-узлы — команда `dhctl converge` применяет изменение к существующим виртуальным машинам. Виртуальная машина обновляется на месте, а не пересоздаётся, и, поскольку для неё задан [`disruptions.restartApprovalMode`](/modules/virtualization/cr.html#virtualmachine-v1alpha2-spec-disruptions-restartapprovalmode) со значением `Automatic`, изменение применяется перезагрузкой виртуальной машины без дополнительного подтверждения. Master-узлы команда обновляет по одному и дожидается готовности каждого.
+
+                      > Проброс делает устройство доступным внутри виртуальной машины, но не публикует на узле ресурс `nvidia.com/gpu`. Чтобы узел предоставлял этот ресурс, установите драйвер NVIDIA модулем [`gpu`](/modules/gpu/) и задайте в NodeGroup секцию [`spec.gpu`](/modules/node-manager/cr.html#nodegroup-v1-spec-gpu).
+
+                      > Cluster Autoscaler строит шаблонный узел пустой NodeGroup только из CPU и памяти, GPU в него не попадает. Поэтому NodeGroup с GPU и [`cloudInstances.minPerZone`](/modules/node-manager/cr.html#nodegroup-v1-spec-cloudinstances-minperzone) со значением `0` не масштабируется с нуля под рабочие нагрузки, запрашивающие GPU. Для таких NodeGroup задавайте [`minPerZone`](/modules/node-manager/cr.html#nodegroup-v1-spec-cloudinstances-minperzone) не меньше 1.
+                    items:
+                      description: |
+                        GPU-устройство, подключаемое к виртуальной машине.
+                      properties:
+                        gpuClassName:
+                          description: |
+                            Имя `GPUClass`, который выбирает подключаемый GPU, например `nvidia-h100`.
+
+                            `GPUClass` должен существовать в кластере, где создаются виртуальные машины.
+                          type: string
+                      type: object
+                    type: array
                   liveMigrationPolicy:
                     description: |
                       Политика живой миграции виртуальной машины.

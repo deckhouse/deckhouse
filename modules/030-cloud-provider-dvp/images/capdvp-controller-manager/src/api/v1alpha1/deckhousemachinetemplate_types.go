@@ -69,6 +69,14 @@ type DeckhouseMachineSpecTemplate struct {
 	// +kubebuilder:validation:Enum:={"BIOS", "EFI", "EFIWithSecureBoot"}
 	Bootloader string `json:"bootloader,omitempty"`
 
+	// GPUs holds the GPU devices to attach to every VM created from this template. Each entry
+	// references a GPUClass by name; repeating a name attaches several devices of that class.
+	// Requires the GPU feature gate enabled in the DVP cluster. A VM with an attached GPU is
+	// not live migratable.
+	// +kubebuilder:validation:MaxItems=16
+	// +optional
+	GPUs []GPUDevice `json:"gpus,omitempty"`
+
 	// RunPolicy specifies the run policy for the virtual machine.
 	// Defaults to AlwaysOnUnlessStoppedManually to allow manual VM stop for maintenance.
 	// +kubebuilder:validation:Enum=AlwaysOn;AlwaysOff;Manual;AlwaysOnUnlessStoppedManually
