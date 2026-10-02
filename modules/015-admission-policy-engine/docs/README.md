@@ -47,8 +47,7 @@ a rule that inspects `input.review.operation` only runs if the request reaches G
 {% alert level="warning" %}
 The webhook uses `failurePolicy: Fail`.
 While Gatekeeper is unavailable, both creating and deleting the resource kinds listed above is blocked.
-To restore operations, bring the `gatekeeper-controller-manager` deployment back up
-or remove the `d8-admission-policy-engine-config` ValidatingWebhookConfiguration.
+To restore operations, bring the `gatekeeper-controller-manager` deployment back up.
 {% endalert %}
 
 {% alert level="warning" %}
@@ -643,3 +642,39 @@ The module allows you to use the [Gatekeeper Custom Resources](gatekeeper-cr.htm
 - [AssignImage](gatekeeper-cr.html#assignimage) — to change the `image` parameter of the resource.
 
 You can read more about the available options in the [gatekeeper](https://open-policy-agent.github.io/gatekeeper/website/docs/mutation/) documentation.
+
+## Availability of the module components
+
+The module is on the critical path of the cluster: while its validating webhook is unavailable, the API server rejects the requests the webhook intercepts.
+
+### Why the validating webhook is a critical component
+
+The `gatekeeper-controller-manager` deployment serves the ValidatingWebhookConfiguration named `d8-admission-policy-engine-config`. Its main webhook is configured with `failurePolicy: Fail`, which means that a request the API server cannot deliver to the webhook is rejected rather than admitted.
+
+While the webhook is unavailable, no object bypasses the policies, but the objects the webhook intercepts cannot be created or changed during that time either.
+
+While no replica of `gatekeeper-controller-manager` is available, the following stops working in the namespaces the webhook covers:
+
+- Operations on the objects listed in [Controller-level validation](#controller-level-validation), including `d8 k exec` and `d8 k attach`, as well as `d8 k debug`
+- Creation, modification and deletion of Role, RoleBinding and Gatekeeper constraints
+- `d8 k exec` and `d8 k attach` in namespaces whose names start with `d8-` and `kube-`, which a separate webhook with `failurePolicy: Fail` intercepts
+
+The mutating webhook is configured differently: its `failurePolicy` is `Ignore`, and an unavailable deployment only means that mutations are not applied.
+
+Disabling the module unblocks the cluster, but the control goes with it: no policy is enforced any more, and an object a policy used to forbid is created without hindrance. The FAQ describes [what to do](faq.html#what-to-do-if-the-validating-webhook-is-unavailable) while the webhook is unavailable.
+
+### Which objects are excluded from validation
+
+The exclusions define which objects can be created and changed while the webhook is unavailable.
+
+The webhooks of the module do not validate the following:
+
+- Objects in namespaces with the `heritage: deckhouse` label, which the main webhook excludes through `namespaceSelector`
+- Objects with the `gatekeeper.sh/operation: webhook` label that Gatekeeper sets on its own pods, which the webhooks exclude through `objectSelector`
+- Requests from service accounts of the `d8-virtualization` namespace
+
+Namespaces that also carry the `security.deckhouse.io/enable-security-policy-check` label, including `d8-admission-policy-engine`, are validated by a separate webhook.
+
+The exclusion by the `gatekeeper.sh/operation: webhook` label is required in the namespace of the module. Without this exclusion, the webhook could not recover from its own outage. Once the last replica is gone, the API server would reject the creation of a replacement pod, since no replica is available to validate it.
+
+The exclusions do not apply to the webhook that intercepts `d8 k exec` and `d8 k attach` in the `d8-*` and `kube-*` namespaces: it has neither `namespaceSelector` nor `objectSelector`, so `d8 k exec` and `d8 k attach` into the pods of the module are blocked during an outage as well.
