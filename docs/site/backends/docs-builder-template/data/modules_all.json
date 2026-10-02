@@ -532,7 +532,7 @@
       "ssdlc"
     ]
   },
-  "managed-rabbit ": {
+  "managed-rabbit": {
     "extensions": [
       "managed_services"
     ],
