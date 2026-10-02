@@ -179,6 +179,49 @@ func TestAuthorize_ClusterScoped(t *testing.T) {
 	}
 }
 
+// A rule that names every namespace and opens the system namespaces limits nothing, so its subject
+// may list pods across the cluster. Each spelling of "every namespace" keeps that access, and an
+// entry that only happens to match every name keeps the rule limiting.
+func TestAuthorize_ClusterScopedWithEveryNamespace(t *testing.T) {
+	t.Parallel()
+	req := Request{User: "alice", Resource: "pods", APIGroup: ""}
+	cases := []struct {
+		entry      string
+		wantDenied bool
+	}{
+		{entry: ".*"},
+		{entry: "^.*"},
+		{entry: ".*$"},
+		{entry: "^.*$"},
+		{entry: ".+"},
+		{entry: "^.+"},
+		{entry: ".+$"},
+		{entry: "^.+$"},
+		{entry: "(.*)", wantDenied: true},
+		{entry: `.*\$`, wantDenied: true},
+		{entry: "team-.*", wantDenied: true},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.entry, func(t *testing.T) {
+			rule := limited("every-namespace", "alice", tc.entry)
+			rule.AllowAccessToSystemNamespaces = true
+			src := Sources{
+				Directory:     dir(rule),
+				Bindings:      staticBindings{},
+				ResourceScope: scopeOf(rules.ResourceScope{Known: true, Namespaced: true}, nil),
+			}
+			got := Authorize(req, src)
+			if got.Denied() != tc.wantDenied {
+				t.Errorf("limitNamespaces [%q]: got %+v, want denied=%v", tc.entry, got, tc.wantDenied)
+			}
+			if tc.wantDenied && got.Reason != rules.NamespaceLimitedAccessReason {
+				t.Errorf("limitNamespaces [%q]: reason %q, want %q", tc.entry, got.Reason, rules.NamespaceLimitedAccessReason)
+			}
+		})
+	}
+}
+
 func TestAuthorize_OrderingGuard(t *testing.T) {
 	t.Parallel()
 	// The binding says alice is bound by a rule the directory has not observed naming her.

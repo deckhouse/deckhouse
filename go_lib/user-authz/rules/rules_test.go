@@ -90,12 +90,68 @@ func TestMatcher_LiteralAndRegex(t *testing.T) {
 	if _, err := c.compile("team-("); err == nil {
 		t.Errorf("an invalid pattern must fail to compile")
 	}
+}
 
-	for pattern, everything := range map[string]bool{".*": true, ".+": true, "^.*$": true, "team-.*": false} {
-		m, _ := c.compile(pattern)
-		if m.MatchesEverything() != everything {
-			t.Errorf("%q: MatchesEverything = %v, want %v", pattern, m.MatchesEverything(), everything)
-		}
+// The spellings of "every namespace" are the eight the webhook has always accepted. A rule with one
+// of them and allowAccessToSystemNamespaces limits nothing, so its subjects may list namespaced
+// resources across the cluster. Every other entry keeps the rule limiting, including the ones that
+// happen to match every name.
+func TestMatcher_MatchesEverything(t *testing.T) {
+	t.Parallel()
+	cases := []struct {
+		entry    string
+		expected bool
+	}{
+		{entry: ".*", expected: true},
+		{entry: "^.*", expected: true},
+		{entry: ".*$", expected: true},
+		{entry: "^.*$", expected: true},
+		{entry: ".+", expected: true},
+		{entry: "^.+", expected: true},
+		{entry: ".+$", expected: true},
+		{entry: "^.+$", expected: true},
+
+		// They match every name as well, but never counted.
+		{entry: "(.*)", expected: false},
+		{entry: "(?:.*)", expected: false},
+		{entry: "^(?:.*)$", expected: false},
+		{entry: ".*.*", expected: false},
+		{entry: ".*?", expected: false},
+		{entry: ".+?", expected: false},
+		{entry: "(?s).*", expected: false},
+		{entry: "^^.*$", expected: false},
+		{entry: "^.*$$", expected: false},
+		{entry: ".*|team-a", expected: false},
+
+		// They do not match every name.
+		{entry: "^.*x", expected: false},
+		{entry: "x.*$", expected: false},
+		{entry: ".*x", expected: false},
+		{entry: ".", expected: false},
+		{entry: ".?", expected: false},
+		{entry: "^$", expected: false},
+		{entry: "", expected: false},
+		{entry: " .*", expected: false},
+		{entry: ".* ", expected: false},
+		{entry: "team-.*", expected: false},
+
+		// An escaped anchor is a character to match, not an anchor.
+		{entry: `.*\$`, expected: false},
+		{entry: `^.*\$`, expected: false},
+		{entry: `\^.*`, expected: false},
+		{entry: `\^.*$`, expected: false},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.entry, func(t *testing.T) {
+			m, err := newCompileCache().compile(tc.entry)
+			if err != nil {
+				t.Fatalf("%q must compile: %v", tc.entry, err)
+			}
+			if got := m.MatchesEverything(); got != tc.expected {
+				t.Errorf("%q: MatchesEverything = %v, want %v", tc.entry, got, tc.expected)
+			}
+		})
 	}
 }
 

@@ -401,6 +401,47 @@ func TestLegacyEquivalence_SubjectKinds(t *testing.T) {
 	t.Logf("compared %d decisions", compared)
 }
 
+// TestLegacyEquivalence_HasAnyFilters compares the answer to "does this entry limit anything" on
+// its own, because the cross-product above cannot see it. A pattern that matches every name opens
+// every namespace in both implementations whether or not it counts as matching everything, so the
+// namespaced decisions agree either way. The answer decides the cluster-scoped half instead: an
+// entry that limits nothing lets its subject list and watch namespaced resources across the
+// cluster, and an entry that limits denies that. A spelling such as "^.*" that stopped counting
+// changed no namespaced decision above and still took the cluster-wide list away.
+func TestLegacyEquivalence_HasAnyFilters(t *testing.T) {
+	t.Parallel()
+	patterns := []string{
+		".*", "^.*", ".*$", "^.*$", ".+", "^.+", ".+$", "^.+$",
+		"(.*)", "(?:.*)", ".*.*", ".*?", "^^.*$", "^.*$$", ".*|team-a",
+		"^.*x", ".*x", ".?", "", `.*\$`, `^.*\$`, `\^.*`, "team-.*", "team-a",
+	}
+	subject := Subject{Kind: "User", Name: "alice"}
+
+	for _, pattern := range patterns {
+		for _, system := range []bool{false, true} {
+			rule := Rule{
+				Name:                          "rule",
+				Subjects:                      []Subject{subject},
+				LimitNamespaces:               []string{pattern},
+				AllowAccessToSystemNamespaces: system,
+			}
+			legacyDir, ok := legacyBuildDirectory([]Rule{rule})
+			if !ok {
+				t.Fatalf("the reference implementation abandoned the build for %q", pattern)
+			}
+			legacy := legacyCombine(legacyAffected(legacyDir, "alice", nil))
+
+			dir, _ := NewBuilder().Build([]Rule{rule})
+			library := Combine(dir.Lookup("alice", nil))
+
+			if want, got := legacyHasAnyFilters(&legacy), library.HasAnyFilters(); want != got {
+				t.Errorf("%q with allowAccessToSystemNamespaces=%v: the webhook had filters=%v, "+
+					"the library has filters=%v", pattern, system, want, got)
+			}
+		}
+	}
+}
+
 // TestLegacyEquivalence_DeliberateDifferences records where the library is meant to differ, so that
 // a change to either behaviour has to come here and say so.
 func TestLegacyEquivalence_DeliberateDifferences(t *testing.T) {

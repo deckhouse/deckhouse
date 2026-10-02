@@ -51,11 +51,19 @@ func (m Matcher) Matches(namespace string) bool {
 // MatchesEverything reports whether the pattern covers every namespace name. Such a pattern means
 // the rule limits nothing, and only the system-namespace gate remains.
 //
-// It reads the entry, not the anchored form. Both spellings a rule can use for "anything" are
-// listed: the bare quantifier and the one where the author wrote the anchors themselves.
+// It reads the entry, not the anchored form, and lists every spelling the webhook has always read
+// this way. The older anchoring added "^" and "$" only where the entry lacked them and compared the
+// result with ^.*$ and ^.+$, so each quantifier counts bare, with the author's own "^", with the
+// author's own "$", and with both. A spelling left out makes a rule that also opens the system
+// namespaces limit again, and its subjects lose the cluster-wide list and watch of namespaced
+// resources.
+//
+// Nothing else counts. "(.*)", ".*.*" and ".*?" match every name too, but they never counted, and
+// counting them would let the subjects of such a rule list namespaced resources across the cluster.
 func (m Matcher) MatchesEverything() bool {
 	switch m.entry {
-	case ".*", ".+", "^.*$", "^.+$":
+	case ".*", "^.*", ".*$", "^.*$",
+		".+", "^.+", ".+$", "^.+$":
 		return true
 	}
 	return false
