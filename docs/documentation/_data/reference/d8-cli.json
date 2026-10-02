@@ -1,7 +1,7 @@
 {
   "name": "d8",
   "description": "d8 controls the Deckhouse Kubernetes Platform",
-  "version": "v0.33.23",
+  "version": "v0.33.24",
   "aliases": null,
   "flags": {
     "help": {
@@ -49868,6 +49868,14 @@
       ],
       "flags": {},
       "subcommands": [
+        {
+          "name": "cosign",
+          "description": "Sign and verify container images with cosign v2",
+          "longDescription": "Built-in cosign v2 for signing and verifying container images.\n\n Deckhouse image signature verification (admission-policy-engine) supports cosign v2 signatures only, cosign v3 is not supported.\n\n Run \"d8 tools cosign --help\" for the full list of cosign commands.\n\n © Flant JSC 2026",
+          "aliases": null,
+          "flags": {},
+          "subcommands": null
+        },
         {
           "name": "far-convert",
           "description": "Converts files with Falco rules to FalcoAuditRules CRD format",
