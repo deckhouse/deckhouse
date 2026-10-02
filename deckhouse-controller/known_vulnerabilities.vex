@@ -2,7 +2,7 @@
   "@context": "https://openvex.dev/ns/v0.2.0",
   "@id": "https://openvex.dev/docs/public/vex-5a4509a04e8128126aee080324a6b663a7748bf44b58a9a4b9c74d4801844f53",
   "author": "Deckhouse \u003ccontact@deckhouse.io\u003e",
-  "version": 17,
+  "version": 18,
   "statements": [
     {
       "vulnerability": {
@@ -449,8 +449,32 @@
       "justification": "vulnerable_code_not_in_execute_path",
       "impact_statement": "Уязвимость в построении цепочки сертификатов (build_chain_inner — экспоненциальный рост при дублировании self-signed сертификатов, DoS-амплификация). deckhouse-controller не выполняет валидацию недоверенных цепочек сертификатов средствами pypi/cryptography — уязвимый код не выполняется.",
       "timestamp": "2026-09-15T12:00:00Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-81871"
+      },
+      "products": [
+        {"@id": "pkg:golang/go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploggrpc@v0.19.0"}
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "otlploggrpc v0.19.0 попадает в deckhouse-controller транзитивно через dhctl/pkg/telemetry (deckhouse-controller/internal/dhctlcli → dhctl/pkg/telemetry), из которого контроллер использует только telemetry.SpanFromContext. OTLP-экспортер логов создаётся исключительно в telemetry.Bootstrap, которая вызывается только из точки входа бинаря dhctl (dhctl/cmd/dhctl/main.go) и дополнительно требует переменную DHCTL_TRACE. В deckhouse-controller otlploggrpc.New не вызывается, gRPC-соединение с коллектором логов не устанавливается, переменные OTEL_EXPORTER_OTLP_*CERTIFICATE не читаются — уязвимый код не в пути выполнения. Исправление в v0.21.0 требует go.opentelemetry.io/otel/log v0.21.0 с несовместимым API, под который не собирается github.com/090809/oteljsonl v0.0.2.",
+      "timestamp": "2026-10-02T12:00:00Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-81872"
+      },
+      "products": [
+        {"@id": "pkg:golang/go.opentelemetry.io/otel/sdk/log@v0.19.0"}
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "go.opentelemetry.io/otel/sdk/log v0.19.0 попадает в deckhouse-controller транзитивно через dhctl/pkg/telemetry (deckhouse-controller/internal/dhctlcli → dhctl/pkg/telemetry), из которого контроллер использует только telemetry.SpanFromContext. LoggerProvider с BatchProcessor создаётся исключительно в telemetry.Bootstrap, которая вызывается только из точки входа бинаря dhctl (dhctl/cmd/dhctl/main.go) и дополнительно требует переменную DHCTL_TRACE. В deckhouse-controller BatchProcessor не создаётся и логи через OTel SDK не экспортируются — уязвимый цикл опроса буфера не в пути выполнения. Исправление в v0.21.0 требует go.opentelemetry.io/otel/log v0.21.0 с несовместимым API, под который не собирается github.com/090809/oteljsonl v0.0.2.",
+      "timestamp": "2026-10-02T12:00:00Z"
     }
   ],
   "timestamp": "2025-10-09T14:31:31Z",
-  "last_updated": "2026-09-15T12:00:00Z"
+  "last_updated": "2026-10-02T12:00:00Z"
 }
