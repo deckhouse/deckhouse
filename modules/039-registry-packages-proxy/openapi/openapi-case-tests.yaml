@@ -1,5 +1,9 @@
 positive:
-  config_values: {}
+  configValues:
+    - {}
+    - highAvailability: true
+    - highAvailability: false
 negative:
-  config_values:
-    - aaa
+  configValues:
+    - highAvailability: enabled
+    - unknownParameter: true
