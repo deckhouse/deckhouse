@@ -52,7 +52,10 @@ func handleClusterAutoscalerDeploymentRequirements(_ context.Context, input *go_
 	mcmNodes := make([]string, 0)
 	capiNodes := make([]string, 0)
 
-	prefix := input.Values.Get("nodeManager.internal.instancePrefix").String()
+	// Resolved here rather than read from nodeManager.internal.instancePrefix: set_instance_prefix
+	// publishes that at Order 100, so on the first run after a restart it is still empty at this
+	// Order, and --nodes would name MachineDeployments without the prefix they are created with.
+	prefix := resolveInstancePrefix(input)
 	clusterUUID := input.Values.Get("global.discovery.clusterUUID").String()
 
 	var nodeGroups []autoscalerNodeGroupValue

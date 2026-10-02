@@ -71,10 +71,7 @@ func setPriorityFilterNG(obj *unstructured.Unstructured) (go_hook.FilterResult, 
 
 func handleSetPriorities(_ context.Context, input *go_hook.HookInput) error {
 	priorities := make(map[int32][]string)
-	prefix, exists := input.Values.GetOk("nodeManager.instancePrefix")
-	if !exists {
-		prefix = input.Values.Get("global.clusterConfiguration.cloud.prefix")
-	}
+	prefix := resolveInstancePrefix(input)
 
 	snaps := input.Snapshots.Get("ngs")
 	for ng, err := range sdkobjectpatch.SnapshotIter[setPriorityNodeGroup](snaps) {

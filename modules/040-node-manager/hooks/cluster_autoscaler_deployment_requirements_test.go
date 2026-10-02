@@ -27,24 +27,63 @@ import (
 )
 
 var _ = Describe("Modules :: node-manager :: hooks :: cluster_autoscaler_deployment_requirements ::", func() {
+	// nodeManager.internal.instancePrefix is deliberately absent: set_instance_prefix publishes it at
+	// Order 100, after this hook, so on the first run after a restart of deckhouse the hook has to
+	// resolve the prefix from config and global values itself.
 	f := HookExecutionConfigInit(`
 global:
+  clusterConfiguration:
+    apiVersion: deckhouse.io/v1
+    cloud:
+      prefix: sandbox
+      provider: OpenStack
+    clusterDomain: cluster.local
+    clusterType: Cloud
+    defaultCRI: Containerd
+    kind: ClusterConfiguration
+    kubernetesVersion: "1.32"
+    podSubnetCIDR: 10.111.0.0/16
+    podSubnetNodeCIDRPrefix: "24"
+    serviceSubnetCIDR: 10.222.0.0/16
   discovery:
     clusterUUID: "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa"
 nodeManager:
   internal:
-    instancePrefix: "sandbox"
     nodeGroups: []
 `, `{}`)
+
+	mcmNodeGroup := []byte(`
+- name: system
+  nodeType: CloudEphemeral
+  engine: MCM
+  cloudInstances:
+    minPerZone: 1
+    maxPerZone: 2
+    zones:
+    - europe-west3-a
+`)
+	mcmHash := fmt.Sprintf("%x", sha256.Sum256([]byte("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaaeurope-west3-a")))[:8]
 
 	Context("nodeManager.internal.nodeGroups is absent", func() {
 		emptyValuesF := HookExecutionConfigInit(`
 global:
+  clusterConfiguration:
+    apiVersion: deckhouse.io/v1
+    cloud:
+      prefix: sandbox
+      provider: OpenStack
+    clusterDomain: cluster.local
+    clusterType: Cloud
+    defaultCRI: Containerd
+    kind: ClusterConfiguration
+    kubernetesVersion: "1.32"
+    podSubnetCIDR: 10.111.0.0/16
+    podSubnetNodeCIDRPrefix: "24"
+    serviceSubnetCIDR: 10.222.0.0/16
   discovery:
     clusterUUID: "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa"
 nodeManager:
-  internal:
-    instancePrefix: "sandbox"
+  internal: {}
 `, `{}`)
 
 		BeforeEach(func() {
@@ -86,6 +125,78 @@ nodeManager:
 				fmt.Sprintf("%x", sha256.Sum256([]byte("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaaru-central1-a")))[:8],
 				fmt.Sprintf("%x", sha256.Sum256([]byte("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaaru-central1-b")))[:8],
 			)))
+		})
+	})
+
+	Context("MCM NodeGroup with the prefix from ClusterConfiguration.cloud.prefix", func() {
+		BeforeEach(func() {
+			f.ValuesSetFromYaml("nodeManager.internal.nodeGroups", mcmNodeGroup)
+			f.BindingContexts.Set(f.GenerateBeforeHelmContext())
+			f.RunHook()
+		})
+
+		It("must name the MachineDeployment with the cloud prefix", func() {
+			Expect(f).To(ExecuteSuccessfully())
+			Expect(f.ValuesGet("nodeManager.internal.deployAutoscalerMCM").String()).To(Equal("true"))
+			Expect(f.ValuesGet("nodeManager.internal.autoscalerMCMNodes").String()).To(MatchJSON(fmt.Sprintf(`[
+  "--nodes=1:2:d8-cloud-instance-manager.sandbox-system-%s"
+]`, mcmHash)))
+		})
+	})
+
+	Context("nodeManager.instancePrefix is set", func() {
+		BeforeEach(func() {
+			f.ValuesSet("nodeManager.instancePrefix", "kube")
+			f.ValuesSetFromYaml("nodeManager.internal.nodeGroups", mcmNodeGroup)
+			f.BindingContexts.Set(f.GenerateBeforeHelmContext())
+			f.RunHook()
+		})
+
+		It("must prefer it over ClusterConfiguration.cloud.prefix", func() {
+			Expect(f).To(ExecuteSuccessfully())
+			Expect(f.ValuesGet("nodeManager.internal.autoscalerMCMNodes").String()).To(MatchJSON(fmt.Sprintf(`[
+  "--nodes=1:2:d8-cloud-instance-manager.kube-system-%s"
+]`, mcmHash)))
+		})
+	})
+
+	Context("nodeManager.internal.instancePrefix is left over from a previous run", func() {
+		BeforeEach(func() {
+			f.ValuesSet("nodeManager.internal.instancePrefix", "stale")
+			f.ValuesSetFromYaml("nodeManager.internal.nodeGroups", mcmNodeGroup)
+			f.BindingContexts.Set(f.GenerateBeforeHelmContext())
+			f.RunHook()
+		})
+
+		It("must ignore it and use the current prefix", func() {
+			Expect(f).To(ExecuteSuccessfully())
+			Expect(f.ValuesGet("nodeManager.internal.autoscalerMCMNodes").String()).To(MatchJSON(fmt.Sprintf(`[
+  "--nodes=1:2:d8-cloud-instance-manager.sandbox-system-%s"
+]`, mcmHash)))
+		})
+	})
+
+	Context("no prefix is configured", func() {
+		noPrefixF := HookExecutionConfigInit(`
+global:
+  discovery:
+    clusterUUID: "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa"
+nodeManager:
+  internal:
+    nodeGroups: []
+`, `{}`)
+
+		BeforeEach(func() {
+			noPrefixF.ValuesSetFromYaml("nodeManager.internal.nodeGroups", mcmNodeGroup)
+			noPrefixF.BindingContexts.Set(noPrefixF.GenerateBeforeHelmContext())
+			noPrefixF.RunHook()
+		})
+
+		It("must name the MachineDeployment without a prefix", func() {
+			Expect(noPrefixF).To(ExecuteSuccessfully())
+			Expect(noPrefixF.ValuesGet("nodeManager.internal.autoscalerMCMNodes").String()).To(MatchJSON(fmt.Sprintf(`[
+  "--nodes=1:2:d8-cloud-instance-manager.system-%s"
+]`, mcmHash)))
 		})
 	})
 })

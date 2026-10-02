@@ -27,13 +27,26 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 	OnBeforeHelm: &go_hook.OrderedConfig{Order: 100},
 }, handleSetInstancePrefix)
 
+// The value is published for templates only: they render after every beforeHelm hook. Hooks call
+// resolveInstancePrefix themselves, since they may run before this one.
 func handleSetInstancePrefix(_ context.Context, input *go_hook.HookInput) error {
+	input.Values.Set("nodeManager.internal.instancePrefix", resolveInstancePrefix(input))
+
+	return nil
+}
+
+// resolveInstancePrefix returns the prefix put in front of MachineDeployment names:
+// nodeManager.instancePrefix when set, otherwise global.clusterConfiguration.cloud.prefix.
+//
+// It reads only config and global values, which are complete before any node-manager hook runs.
+// Hooks must call it rather than read nodeManager.internal.instancePrefix: that value is written by
+// a beforeHelm hook, so it is absent on the first module run after a restart of deckhouse and stale
+// on the run after a prefix change.
+func resolveInstancePrefix(input *go_hook.HookInput) string {
 	prefix, exists := input.Values.GetOk("nodeManager.instancePrefix")
 	if !exists {
 		prefix = input.Values.Get("global.clusterConfiguration.cloud.prefix")
 	}
 
-	input.Values.Set("nodeManager.internal.instancePrefix", prefix.String())
-
-	return nil
+	return prefix.String()
 }
