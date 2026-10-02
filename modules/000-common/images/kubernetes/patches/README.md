@@ -37,6 +37,17 @@ Add resource quota ignore mechanism for k8s pvc and pod based on labels
 
 Kubelet strictly checks that the `kernel.panic` parameter equals 10, now, regardless of kubelet settings, only a warning is used. The `kernel.panic` parameter itself is strictly controlled by the DKP platform
 
+### kubelet-machine-resources-self-restart
+
+Kubelet reads CPU and memory only at start, so node capacity does not follow CPU/memory hotplug in a VM.
+Every 5 minutes (cAdvisor machine info refresh rate) kubelet compares the cAdvisor machine info with its own
+start snapshot and exits (code 75) when CPUs grew or memory grew by 100 MiB or more; systemd restarts it with
+the new capacity. Any decrease vetoes the restart: readmission would fail Pods on the shrunk resource.
+No restart loop: the baseline is the process's own snapshot, so a restart happens only on a new maximum,
+at most once per check interval. Disable by creating `<root-dir>/machine-resources-restart-disabled`. Skipped restarts and toggling the file are logged once per state change.
+
+> Upstream KEP-3953 (node resource hot plug) is implemented started with 1.38. 
+
 ### namespace-list-acl-filtering.patch
 
 Two related mechanisms, both opt-in and both leaving default `list/get/watch`

@@ -1,0 +1,180 @@
+diff --git a/pkg/kubelet/kubelet.go b/pkg/kubelet/kubelet.go
+index 0d051dd3717..70fe6cfd963 100644
+--- a/pkg/kubelet/kubelet.go
++++ b/pkg/kubelet/kubelet.go
+@@ -1825,6 +1825,8 @@ func (kl *Kubelet) Run(updates <-chan kubetypes.PodUpdate) {
+ 	}
+ 	go wait.Until(kl.updateRuntimeUp, 5*time.Second, wait.NeverStop)
+ 
++	go kl.exitOnMachineResourcesGrowth()
++
+ 	// Set up iptables util rules
+ 	if kl.makeIPTablesUtilChains {
+ 		kl.initNetworkUtil()
+diff --git a/pkg/kubelet/kubelet_machine_resources.go b/pkg/kubelet/kubelet_machine_resources.go
+new file mode 100644
+index 00000000000..39dc6eeae45
+--- /dev/null
++++ b/pkg/kubelet/kubelet_machine_resources.go
+@@ -0,0 +1,91 @@
++/*
++Copyright 2026 The Kubernetes Authors.
++
++Licensed under the Apache License, Version 2.0 (the "License");
++you may not use this file except in compliance with the License.
++You may obtain a copy of the License at
++
++    http://www.apache.org/licenses/LICENSE-2.0
++
++Unless required by applicable law or agreed to in writing, software
++distributed under the License is distributed on an "AS IS" BASIS,
++WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
++See the License for the specific language governing permissions and
++limitations under the License.
++*/
++
++package kubelet
++
++import (
++	"os"
++	"path/filepath"
++	"time"
++
++	cadvisorapi "github.com/google/cadvisor/info/v1"
++	"k8s.io/apimachinery/pkg/util/wait"
++	"k8s.io/klog/v2"
++)
++
++const (
++	// cadvisor refreshes machine info at this rate (checking faster sees the same cache)
++	machineResourcesCheckInterval   = 5 * time.Minute
++	machineResourcesMemoryThreshold = 100 * 1024 * 1024
++	machineResourcesDisableFile     = "machine-resources-restart-disabled"
++	// 1 is kubelet fatal error, keep self-restart observable
++	machineResourcesExitCode = 75
++)
++
++// Exits on CPU/memory growth since start, systemd restarts kubelet with new capacity.
++// Baseline = snapshot taken at construction by the same cadvisor code, so equal readings mean no change.
++func (kl *Kubelet) exitOnMachineResourcesGrowth() {
++	base, err := kl.GetCachedMachineInfo()
++	if err != nil || base == nil {
++		return
++	}
++	disableFile := filepath.Join(kl.getRootDir(), machineResourcesDisableFile)
++	// log only on state change
++	disabled := false
++	var lastCores int
++	var lastMem uint64
++	wait.Until(func() {
++		if _, err := os.Stat(disableFile); err == nil {
++			if !disabled {
++				disabled = true
++				klog.InfoS("Kubelet restart on machine resources growth disabled", "file", disableFile)
++			}
++			return
++		}
++		if disabled {
++			disabled = false
++			klog.InfoS("Kubelet restart on machine resources growth enabled", "file", disableFile)
++		}
++		cur, err := kl.cadvisor.MachineInfo()
++		if err != nil {
++			return
++		}
++		switch {
++		case machineResourcesShrunk(base, cur):
++			if cur.NumCores != lastCores || cur.MemoryCapacity != lastMem {
++				lastCores, lastMem = cur.NumCores, cur.MemoryCapacity
++				klog.InfoS("Skipping kubelet restart: machine resources decreased",
++					"cpusBefore", base.NumCores, "cpusNow", cur.NumCores,
++					"memoryBefore", base.MemoryCapacity, "memoryNow", cur.MemoryCapacity)
++			}
++		case !machineResourcesGrew(base, cur):
++			lastCores, lastMem = 0, 0
++		default:
++			klog.InfoS("Restarting kubelet: machine resources grew",
++				"cpusBefore", base.NumCores, "cpusNow", cur.NumCores,
++				"memoryBefore", base.MemoryCapacity, "memoryNow", cur.MemoryCapacity)
++			klog.FlushAndExit(klog.ExitFlushTimeout, machineResourcesExitCode)
++		}
++	}, machineResourcesCheckInterval, wait.NeverStop)
++}
++
++func machineResourcesShrunk(base, cur *cadvisorapi.MachineInfo) bool {
++	return cur.NumCores < base.NumCores || cur.MemoryCapacity < base.MemoryCapacity
++}
++
++func machineResourcesGrew(base, cur *cadvisorapi.MachineInfo) bool {
++	return cur.NumCores > base.NumCores || cur.MemoryCapacity >= base.MemoryCapacity+machineResourcesMemoryThreshold
++}
+diff --git a/pkg/kubelet/kubelet_machine_resources_test.go b/pkg/kubelet/kubelet_machine_resources_test.go
+new file mode 100644
+index 00000000000..8bce69297ce
+--- /dev/null
++++ b/pkg/kubelet/kubelet_machine_resources_test.go
+@@ -0,0 +1,64 @@
++/*
++Copyright 2026 The Kubernetes Authors.
++
++Licensed under the Apache License, Version 2.0 (the "License");
++you may not use this file except in compliance with the License.
++You may obtain a copy of the License at
++
++    http://www.apache.org/licenses/LICENSE-2.0
++
++Unless required by applicable law or agreed to in writing, software
++distributed under the License is distributed on an "AS IS" BASIS,
++WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
++See the License for the specific language governing permissions and
++limitations under the License.
++*/
++
++package kubelet
++
++import (
++	"testing"
++
++	cadvisorapi "github.com/google/cadvisor/info/v1"
++)
++
++func TestMachineResourcesGrewShrunk(t *testing.T) {
++	const (
++		mib = 1024 * 1024
++		gib = 1024 * mib
++	)
++	base := &cadvisorapi.MachineInfo{NumCores: 4, MemoryCapacity: 8 * gib}
++
++	tests := []struct {
++		name   string
++		cpus   int
++		mem    uint64
++		grown  bool
++		shrunk bool
++	}{
++		{"same", 4, 8 * gib, false, false},
++		{"memory below threshold", 4, 8*gib + 99*mib, false, false},
++		{"memory at threshold", 4, 8*gib + 100*mib, true, false},
++		{"memory +1Gi", 4, 9 * gib, true, false},
++		{"cpu +1", 5, 8 * gib, true, false},
++		{"cpu +1 memory +50Mi", 5, 8*gib + 50*mib, true, false},
++		{"cpu +1 memory +1Gi", 5, 9 * gib, true, false},
++		{"memory -1Mi", 4, 8*gib - mib, false, true},
++		{"cpu -1", 3, 8 * gib, false, true},
++		{"cpu +1 memory -1Mi", 5, 8*gib - mib, true, true},
++		{"memory +1Gi cpu -1", 3, 9 * gib, true, true},
++		// cadvisor reports 0 cores when topology read fails
++		{"cpu unreadable", 0, 9 * gib, true, true},
++	}
++	for _, tc := range tests {
++		t.Run(tc.name, func(t *testing.T) {
++			cur := &cadvisorapi.MachineInfo{NumCores: tc.cpus, MemoryCapacity: tc.mem}
++			if got := machineResourcesGrew(base, cur); got != tc.grown {
++				t.Errorf("machineResourcesGrew(4 CPUs 8Gi -> %d CPUs %d bytes) = %v, want %v", tc.cpus, tc.mem, got, tc.grown)
++			}
++			if got := machineResourcesShrunk(base, cur); got != tc.shrunk {
++				t.Errorf("machineResourcesShrunk(4 CPUs 8Gi -> %d CPUs %d bytes) = %v, want %v", tc.cpus, tc.mem, got, tc.shrunk)
++			}
++		})
++	}
++}
