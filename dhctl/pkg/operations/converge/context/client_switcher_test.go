@@ -21,6 +21,7 @@ import (
 
 	"github.com/deckhouse/lib-connection/pkg/settings"
 	sshconfig "github.com/deckhouse/lib-connection/pkg/ssh/config"
+	"github.com/deckhouse/lib-connection/pkg/ssh/session"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/providerinitializer"
 )
@@ -57,4 +58,19 @@ func TestSSHlessIsFalseWhileHostsAreKnown(t *testing.T) {
 	ctx := NewContext(t.Context(), Params{KubeOwnCredentials: true, SSHProviderInitializer: initializer})
 
 	require.False(t, ctx.SSHless())
+}
+
+func TestPrivateKeysForSwitch(t *testing.T) {
+	current := []session.AgentPrivateKey{
+		{Key: "node-key"},
+		{Key: "bastion-key"},
+	}
+	additional := session.AgentPrivateKey{Key: "converger-key", Passphrase: "secret"}
+
+	require.Equal(t, current, privateKeysForSwitch(current, nil))
+	require.Equal(t, []session.AgentPrivateKey{
+		{Key: "node-key"},
+		{Key: "bastion-key"},
+		{Key: "converger-key", Passphrase: "secret"},
+	}, privateKeysForSwitch(current, &additional))
 }
