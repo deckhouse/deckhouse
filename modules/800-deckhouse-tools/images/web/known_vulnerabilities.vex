@@ -2,7 +2,7 @@
   "@context": "https://openvex.dev/ns/v0.2.0",
   "@id": "https://openvex.dev/docs/public/vex-5a4509a04e8128126aee080324a6b663a7748bf44b58a9a4b9c74d4801844f53",
   "author": "Deckhouse <contact@deckhouse.io>",
-  "version": 16,
+  "version": 17,
   "statements": [
     {
       "vulnerability": {
@@ -773,8 +773,22 @@
       "justification": "vulnerable_code_not_in_execute_path",
       "impact_statement": "Уязвимость в golang.org/x/crypto/ssh версии v0.55.0 (deadlock соединения при флуде channel request до установления канала). Пакет попадает в бинарь d8 транзитивно через werf (pkg/ssh_agent), go-git (transport/ssh), buildkit (session/sshforward) и vault sdk. Собственных SSH-соединений d8 не устанавливает и SSH-сервер не поднимает: подкоманды работают с container registry по HTTPS, уязвимый код не выполняется. Исправленная версия v0.56.0 требует Go 1.26; закроется бампом Go в deckhouse-cli.",
       "timestamp": "2026-09-16T12:00:00Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-53493"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/github.com/containerd/containerd@v1.7.27"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_cannot_be_controlled_by_adversary",
+      "impact_statement": "Эта уязвимость относится к подкоманде d8 delivery-kit. github.com/containerd/containerd v1.7.27 поступает транзитивно через werf/delivery-kit; уязвимые обработчики images.Walk/images.Dispatch вызываются через oras-go (OCI-чарты helm/nelm) и buildkit/buildx при pull из container registry. Эксплуатация требует загрузки специально сформированного OCI image index из реестра, контролируемого нарушителем; адреса реестров задаются и контролируются администратором, недоверенные реестры в штатных операциях d8 не используются. Демон containerd и CRI в d8 не запускаются, поэтому последствия ограничены расходом ресурсов самого процесса d8 и не влияют на узлы кластера. Обновление до v1.7.36 невозможно без обновления buildah в werf/delivery-kit (требует opencontainers/selinux v1.13+, несовместимый с buildah v1.37.6).",
+      "timestamp": "2026-10-02T12:00:00Z"
     }
   ],
   "timestamp": "2026-01-16T12:00:00Z",
-  "last_updated": "2026-09-15T12:00:00Z"
+  "last_updated": "2026-10-02T12:00:00Z"
 }
