@@ -21,13 +21,13 @@ presets:
     description:
       en: |
         - The cluster consists of one master node and one worker node.
-        - Kubernetes Control Plane and Deckhouse controller run on the master node.
-        - Deckhouse deploys non-system components (Ingress Controller, Prometheus, cert-manager, etc.) on the worker node.
+        - Kubernetes control plane and the Deckhouse controller run on the master node.
+        - Deckhouse Platform deploys non-system components (Ingress controller, Prometheus, cert-manager and others) on the worker node. In the Enterprise Edition configuration, the master node has no taints, so these components can also run on the master node.
         - Your applications should run on the worker node.
       ru: |
         - Кластер состоит из одного master-узла и одного worker-узла.
         - Управляющие компоненты Kubernetes-кластера и Deckhouse-контроллер работают на master-узле.
-        - Deckhouse запускает несистемные компоненты (Ingress-контроллер, Prometheus, cert-manager и т.д.) на worker-узле.
+        - Deckhouse Platform запускает несистемные компоненты (Ingress-контроллер, Prometheus, cert-manager и другие) на worker-узле. В конфигурации Enterprise Edition на master-узле нет taints, поэтому эти компоненты могут работать и на master-узле.
         - Ваши приложения должны работать на worker-узле.
 
 installTypes:
@@ -108,7 +108,7 @@ installTypes:
       step5:
         name:
           en: Getting access to the cluster
-          ru: Получаем доступ к кластеру
+          ru: Получение доступа к кластеру
         template: getting_started/stronghold/global/STEP_CLUSTER_ACCESS.md
       step6:
         name:
@@ -146,7 +146,7 @@ installTypes:
       step5:
         name:
           en: Getting access to the cluster
-          ru: Получаем доступ к кластеру
+          ru: Получение доступа к кластеру
         template: getting_started/stronghold/global/STEP_CLUSTER_ACCESS.md
       step6:
         name:

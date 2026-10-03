@@ -1,12 +1,3 @@
-Installation Requirements:
-- A deployed Deckhouse Platform cluster of any edition except Community Edition and version no lower than 1.68.
+Deckhouse Stronghold requires a deployed Deckhouse Platform cluster of version 1.68 or later in any edition except Community Edition.
 
-To install Deckhouse Stronghold, enable the stronghold module. The module can be enabled via CLI.
-
-## Enabling the Module via CLI
-
-On a host with access to the DP cluster, execute the following command using the [Deckhouse CLI](/products/kubernetes-platform/documentation/v1/cli/d8/):
-
-```bash
-d8 system module enable stronghold
-```
+To install Deckhouse Stronghold, [enable the module](/modules/stronghold/configuration.html#enable) `stronghold`.

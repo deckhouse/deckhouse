@@ -1,9 +1,10 @@
 {%- include getting_started/global/partials/NOTICES_ENVIRONMENT.liquid %}
 
-You need to create a service account so that Deckhouse Platform can manage resources in the {{ page.platform_name[page.lang] }}. The detailed instructions for creating a service account are available in the [documentation](/modules/cloud-provider-openstack/environment.html).
+Prepare the {{ page.platform_name[page.lang] }} environment so that Deckhouse Platform can manage cloud resources. The full procedure is described on the [environment preparation page](/modules/cloud-provider-openstack/environment.html) of the `cloud-provider-openstack` module.
 
-A brief sequence of actions (run them on the **personal computer**) necessary to obtain authorization data:
-- Follow this [link](https://mcs.mail.ru/app/project/keys/);
-- Switch to the «API keys» tab;
-- Click the «Download openrc version 3» button;
-- Run the downloaded shell script. It will create values for environment variables to use in the `provider` parameters of the Deckhouse Platform configuration.
+To get the authorization data, run the following steps on the **personal computer**:
+
+1. Open the [project keys page](https://mcs.mail.ru/app/project/keys/) in VK Cloud.
+1. Switch to the "API keys" tab.
+1. Click "Download openrc version 3".
+1. Run the downloaded shell script. It sets environment variables whose values are used in the `provider` parameters of the Deckhouse Platform configuration.

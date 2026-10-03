@@ -1,5 +1,7 @@
 {%- include getting_started/global/partials/NOTICES_ENVIRONMENT.liquid %}
 
+Подготовьте окружение {{ page.platform_name[page.lang] }}, чтобы Deckhouse Platform мог управлять ресурсами в облаке. Полная инструкция приведена [на странице подготовки окружения](/modules/cloud-provider-huaweicloud/environment.html) модуля `cloud-provider-huaweicloud`.
+
 Для взаимодействия с ресурсами в облаке Huawei Cloud компоненты Deckhouse Platform используют API Huawei Cloud. Для настройки этого подключения требуется создать пользователя в сервисе Huawei Cloud IAM и назначить ему соответствующие права доступа.
 
 ## Настройка IAM через веб-интерфейс

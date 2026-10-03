@@ -16,10 +16,10 @@ layout: sidebar-guides
 
 * Параметры прокси-сервера, задаваемые [в конфигурации кластера](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#clusterconfiguration-proxy) при установке, автоматически транслируются в переменные окружения `HTTP_PROXY`, `HTTPS_PROXY` и `NO_PROXY` для **узлов кластера и компонентов DP**.
   Пользовательские приложения (поды) не получают эти переменные из конфигурации кластера автоматически. Чтобы обеспечить им доступ в Интернет через прокси, необходимо явно задать переменные окружения (`HTTP_PROXY`, `HTTPS_PROXY` и, при необходимости, `NO_PROXY`) в манифестах. В зависимости от корпоративных политик доступ для приложений может быть организован и другими способами — например, через открытие прямого доступа для узлов.
-* container registry с образами контейнеров DP разворачивается отдельно с доступом изнутри контура, а в кластере настраивается его использование и необходимые права доступа.
+* хранилище образов контейнеров с образами DP разворачивается отдельно с доступом изнутри контура, а в кластере настраивается его использование и необходимые права доступа.
 
 Взаимодействие с узлами кластера, как правило, осуществляется через отдельный физический сервер или виртуальную машину — bastion-хост. Прокси для доступа к внешним ресурсам из внутреннего контура разворачивается в соответствии с сетевой политикой и архитектурой инфраструктуры. В зависимости от требований он может быть размещён как на bastion-хосте, так и на отдельной машине.
-Приватный container registry рекомендуется размещать на отдельной виртуальной машине или сервере во внутренней сети. Совмещение registry с bastion-хостом в продуктивных средах не рекомендуется. Исключение могут составлять учебные или упрощённые стенды для ограниченных задач.
+Приватное хранилище образов контейнеров рекомендуется размещать на отдельной виртуальной машине или сервере во внутренней сети. Совмещение хранилища с bastion-хостом в production-окружениях не рекомендуется. Исключение могут составлять учебные или упрощённые стенды для ограниченных задач.
 
 {% alert level="info" %}
 В зависимости от принятых в компании политик безопасности доступ к внешним ресурсам может отсутствовать полностью. В таких случаях прокси-сервер для выхода во внешние сети не используется. Необходимые внешние зависимости (например, архив с образами контейнеров DP) доставляются в контур на требуемую виртуальную машину любым разрешённым способом — например, с использованием съёмных носителей.
@@ -27,13 +27,13 @@ layout: sidebar-guides
 
 Общая схема закрытого окружения:
 
-<img src="/images/guides/install_to_private_environment/private_environment-scheme_ru.png" alt="Схема развертывания Deckhouse Platform в закрытом окружении">
+<img src="/images/guides/install_to_private_environment/private_environment-scheme_ru.png" alt="Схема развёртывания Deckhouse Platform в закрытом окружении">
 
 {% alert level="info" %}
 На схеме также показан внутренний репозиторий пакетов ОС. Он используется для установки пакетов на узлы в случае, если доступ к официальным репозиториям отсутствует даже через прокси.
-Во многих закрытых контурах уже развернуты собственные репозитории пакетов ОС, и установка выполняется из них — в этом случае прокси-сервер для работы с пакетами не требуется.
+Во многих закрытых контурах уже развёрнуты собственные репозитории пакетов ОС, и установка выполняется из них — в этом случае прокси-сервер для работы с пакетами не требуется.
 Прокси-сервер используется для других типов трафика:
-- загрузка образов контейнеров с публичного registry DP на bastion-хост;
+- загрузка образов контейнеров из публичного хранилища образов контейнеров DP на bastion-хост;
 - обращения компонентов DP и узлов к внешним ресурсам (если такие обращения разрешены политикой безопасности);
 - при необходимости — доступ приложений в подах к внешним сервисам.
 {% endalert %}
@@ -46,29 +46,29 @@ layout: sidebar-guides
 
 - персональный компьютер, с которого будут выполняться операции;
 - отдельный физический сервер или виртуальная машина Bastion (bastion-хост);
-- отдельный физический сервер или виртуальная машина под container registry;
+- отдельный физический сервер или виртуальная машина под хранилище образов контейнеров;
 - при необходимости физический сервер или виртуальная машина под прокси-сервер;
 - два физических сервера или две виртуальные машины под узлы кластера.
 
 Требования к серверам:
 
-* **Bastion** — не менее 4 ядер CPU, 8 ГБ ОЗУ, 150 ГБ на быстром диске. Такой объём дискового пространства необходим, поскольку на bastion-хосте временно хранятся все образы DP, используемые при установке. Перед загрузкой в приватный container registry образы скачиваются с публичного registry DP на bastion-хост, после чего упаковываются в архивы. Эти операции требуют значительного объёма свободного места.
-* **ВМ под приватный registry** — не менее 4 ядер CPU, 8 ГБ ОЗУ и не менее 150 ГБ на быстром диске для хранения образов DP. Требуемый объём дискового пространства рекомендуется планировать с запасом, ориентируясь на размер бандла после выполнения команды `d8 mirror push`.
+* **Bastion** — не менее 4 ядер CPU, 8 ГБ ОЗУ, 150 ГБ на быстром диске. Такой объём дискового пространства необходим, поскольку на bastion-хосте временно хранятся все образы DP, используемые при установке. Перед загрузкой в приватное хранилище образов контейнеров образы скачиваются из публичного хранилища DP на bastion-хост, после чего упаковываются в архивы. Эти операции требуют значительного объёма свободного места.
+* **ВМ под приватное хранилище образов контейнеров** — не менее 4 ядер CPU, 8 ГБ ОЗУ и не менее 150 ГБ на быстром диске для хранения образов DP. Требуемый объём дискового пространства рекомендуется планировать с запасом, ориентируясь на размер бандла после выполнения команды `d8 mirror push`.
 * **Узлы кластера** — [ресурсы под будущие узлы кластера](./hardware-requirements.html#выбор-ресурсов-для-узлов) выбираются исходя из требований к планируемой нагрузке. Для примера подойдёт минимально рекомендуемая конфигурация — 4 ядра CPU (_рекомендовано  8 ядер CPU_), 8 ГБ ОЗУ (_рекомендовано 16 ГБ ОЗУ_) и 60 ГБ на быстром диске (400+ IOPS) на каждый узел.
 
-## Подготовка приватного container registry
+## Подготовка приватного хранилища образов контейнеров
 
 {% alert level="warning" %}
-DP поддерживает аутентификацию в container registry по схемам Basic и Bearer token (сначала проверяется Basic, при неуспехе — Bearer).
+DP поддерживает аутентификацию в хранилище образов контейнеров по схемам Basic и Bearer token (сначала проверяется Basic, при неуспехе — Bearer).
 
-Если перед registry стоит прокси-сервер, он должен корректно проксировать заголовок Registry API v2 `Docker-Distribution-API-Version: registry/2.0`, иначе проверка Basic может завершиться ошибкой, а последующая попытка Bearer сообщением с ошибкой `couldn't find bearer realm parameter`.
+Если перед хранилищем образов контейнеров стоит прокси-сервер, он должен корректно проксировать заголовок Registry API v2 `Docker-Distribution-API-Version: registry/2.0`, иначе проверка Basic может завершиться ошибкой, а последующая попытка Bearer сообщением с ошибкой `couldn't find bearer realm parameter`.
 {% endalert %}
 
 В качестве приватного container registry можно использовать любой из поддерживаемых. Протестирована и гарантируется работа со следующими container registry — [Nexus](https://github.com/sonatype/nexus-public), [Harbor](https://github.com/goharbor/harbor), [Artifactory](https://jfrog.com/artifactory/), [Docker Registry](https://docs.docker.com/registry/), [Quay](https://quay.io/).
 
 Ниже приведены инструкции по развёртыванию двух вариантов приватного container registry — [Docker Registry](https://docs.docker.com/registry/) и [Harbor](https://goharbor.io/). Выберите подходящий вариант на соответствующей вкладке.
 
-### Установка container registry
+### Установка хранилища образов контейнеров
 
 {% tabs registry-install %}
 {% tab "Docker Registry" %}
@@ -85,7 +85,7 @@ dnf install registry httpd-tools
 htpasswd -bcB /etc/registry/htpasswd deckhouse deckhouse
 ```
 
-Сгенерируйте самоподписанный сертификат, который будет использоваться для работы с registry:
+Сгенерируйте самоподписанный сертификат, который будет использоваться для работы с хранилищем образов контейнеров:
 
 ```bash
 openssl req -x509 -newkey ec -pkeyopt ec_paramgen_curve:prime256v1 -keyout /etc/registry/private.key -out /etc/registry/public.crt -days 3650 -nodes -subj "/C=RU/ST=SPB/L=SPB/O=FLANT/OU=ARCH/CN=registry.local" -addext "subjectAltName=DNS:registry.local"
@@ -151,7 +151,7 @@ systemctl status registry.service
 {% offtopic title="Как скачать архив с помощью wget..." %}
 Выполните команду (укажите актуальную ссылку):
 
-```console
+```bash
 wget https://github.com/goharbor/harbor/releases/download/v2.14.1/harbor-offline-installer-v2.14.1.tgz
 ```
 
@@ -160,7 +160,7 @@ wget https://github.com/goharbor/harbor/releases/download/v2.14.1/harbor-offline
 {% offtopic title="Как скачать архив с помощью curl..." %}
 Выполните команду (укажите актуальную ссылку):
 
-```console
+```bash
 curl -O https://github.com/goharbor/harbor/releases/download/v2.14.1/harbor-offline-installer-v2.14.1.tgz
 ```
 
@@ -168,13 +168,13 @@ curl -O https://github.com/goharbor/harbor/releases/download/v2.14.1/harbor-offl
 
 Распакуйте скачанный архив (укажите имя архива):
 
-```console
+```bash
 tar -zxf ./harbor-offline-installer-v2.14.1.tgz
 ```
 
 В полученной директории `harbor` расположены файлы, необходимые для установки.
 
-Установите на **эту же ВМ** [Docker](https://docs.docker.com/engine/install/) и плагин [Docker Compose](https://docs.docker.com/compose/install/#plugin-linux-only). Они потребуются для настройки доступа к registry по TLS, а также для запуска установщика Harbor.
+Установите на **эту же ВМ** [Docker](https://docs.docker.com/engine/install/) и плагин [Docker Compose](https://docs.docker.com/compose/install/#plugin-linux-only). Они потребуются для настройки доступа к хранилищу образов контейнеров по TLS, а также для запуска установщика Harbor.
 
 Перед развёртыванием хранилища сгенерируйте самоподписанный (self-signed) TLS-сертификат.
 
@@ -195,11 +195,7 @@ cd certs
 Сгенерируйте самоподписанный сертификат, который будет использоваться для работы с Harbor:
 
 ```bash
-openssl req -x509 -newkey ec -pkeyopt ec_paramgen_curve:prime256v1 \
-  -keyout registry.local.key -out registry.local.crt \
-  -sha256 -days 3650 -nodes \
-  -subj "/C=RU/ST=SPB/L=SPB/O=FLANT/OU=ARCH/CN=registry.local" \
-  -addext "subjectAltName=DNS:registry.local"
+openssl req -x509 -newkey ec -pkeyopt ec_paramgen_curve:prime256v1 -keyout registry.local.key -out registry.local.crt -sha256 -days 3650 -nodes -subj "/C=RU/ST=SPB/L=SPB/O=FLANT/OU=ARCH/CN=registry.local" -addext "subjectAltName=DNS:registry.local"
 ```
 
 Не забудьте заменить `registry.local` на адрес, который будет использоваться для хранилища образов в вашей сети.
@@ -212,7 +208,7 @@ ls -la
 
 {% offtopic title="Пример вывода команды..." %}
 
-```bash
+```console
 $ ls -la
 total 12
 drwxrwxr-x 2 ubuntu ubuntu 4096 Dec  5 14:58 .
@@ -651,7 +647,7 @@ ef18d7f24777   goharbor/redis-photon:v2.14.1         "redis-server /etc/r…"   
 
 Добавьте в файл `/etc/hosts` на ВМ с Harbor ассоциацию доменного имени `registry.local` с `localhost`, чтобы можно было обращаться к Harbor по этому имени с этой же машины:
 
-```bash
+```text
 127.0.0.1 localhost registry.local
 ```
 
@@ -670,7 +666,7 @@ ef18d7f24777   goharbor/redis-photon:v2.14.1         "redis-server /etc/r…"   
 Если у вашего провайдера действует такая схема, внесите соответствующие изменения также в файл шаблона, указанный в комментарии, чтобы настройки сохранялись после перезагрузки.
 {% endalert %}
 
-На этом установка Harbor завершена! 🎉
+На этом установка Harbor завершена.
 
 #### Настройка Harbor
 
@@ -732,18 +728,18 @@ ef18d7f24777   goharbor/redis-photon:v2.14.1         "redis-server /etc/r…"   
 <img src="/images/guides/install_to_private_environment/harbor_robot_created_ru.png" alt="Главная страница Harbor...">
 </div>
 
-На этом настройка Harbor завершена! 🎉
+На этом настройка Harbor завершена.
 
 {% endtab %}
 {% endtabs %}
 <br>
 
-## Копирование образов DP в приватный container registry
+## Копирование образов DP в приватное хранилище образов контейнеров
 
-Следующим шагом необходимо скопировать образы компонентов DP из публичного registry Deckhouse Platform в Harbor.
+Следующим шагом необходимо скопировать образы компонентов DP из публичного хранилища образов контейнеров Deckhouse Platform в Harbor.
 
 {% alert level="info" %}
-Для дальнейших действий в этом разделе потребуется утилита Deckhouse CLI. Установите её на тот хост, с которого будут выполняться работы по переносу образов DP в приватный registry. Для примера из этого руководства это bastion-хост. Инструкция по установке CLI — [в документации](../documentation/v1/cli/d8/#как-установить-deckhouse-cli).
+Для дальнейших действий в этом разделе потребуется утилита Deckhouse CLI. Установите её на тот хост, с которого будут выполняться работы по переносу образов DP в приватное хранилище образов контейнеров. Для примера из этого руководства это bastion-хост. Инструкция по установке CLI — [в документации](../documentation/v1/cli/d8/#как-установить-deckhouse-cli).
 {% endalert %}
 
 {% alert level="warning" %}
@@ -759,7 +755,7 @@ ef18d7f24777   goharbor/redis-photon:v2.14.1         "redis-server /etc/r…"   
   0: 1 windows (created Thu Dec 11 13:52:41 2025)
   ```
 
-* Подключение к запущенной сессии: `tmux attach -t <ИДЕНТИФИКАТОР СЕССИИ>`. Для примера выше `<ИДЕНТИФИКАТОР СЕССИИ>` будет `0`.
+* Подключение к запущенной сессии: `tmux attach -t <SESSION_ID>`. Для примера выше `<SESSION_ID>` будет `0`.
 {% endofftopic %}
 
 {% offtopic title="Как работать со screen..." %}
@@ -777,7 +773,7 @@ ef18d7f24777   goharbor/redis-photon:v2.14.1         "redis-server /etc/r…"   
   Type "screen [-d] -r [pid.]tty.host" to resume one of them.
   ```
 
-* Подключение к запущенной сессии: `screen -r <ИДЕНТИФИКАТОР СЕССИИ>`. Для примера выше `<ИДЕНТИФИКАТОР СЕССИИ>` будет `166154.pts-0.guide-bastion`.
+* Подключение к запущенной сессии: `screen -r <SESSION_ID>`. Для примера выше `<SESSION_ID>` будет `166154.pts-0.guide-bastion`.
 {% endofftopic %}
 {% endalert %}
 
@@ -788,14 +784,12 @@ ef18d7f24777   goharbor/redis-photon:v2.14.1         "redis-server /etc/r…"   
 Выполните следующую команду, чтобы скачать образы актуальных версий. Перед запуском подставьте вместо плейсхолдеров свои данные: `<EDITION>`, `<LICENSE_KEY>` и при необходимости путь к директории:
 
 ```shell
-d8 mirror pull \
-  --source='registry.deckhouse.ru/deckhouse/<EDITION>' \
-  --license='<LICENSE_KEY>' /home/ubuntu/d8-bundle
+d8 mirror pull --source='registry.deckhouse.ru/deckhouse/<EDITION>' --license='<LICENSE_KEY>' /home/ubuntu/d8-bundle
 ```
 
 где:
 
-- `--source` — адрес хранилища образов Deckhouse;
+- `--source` — адрес хранилища образов контейнеров DP;
 - `<EDITION>` — код редакции Deckhouse Platform (например, `ee`, `se`, `se-plus`). По умолчанию используется значение `ee` (Enterprise Edition), поэтому параметр `--source` можно не указывать;
 - `--license` — параметр для указания лицензионного ключа Deckhouse Platform для аутентификации в официальном хранилище образов;
 - `<LICENSE_KEY>` — лицензионный ключ Deckhouse Platform;
@@ -917,18 +911,18 @@ $ ls -lh
 -rw-rw-r-- 1 ubuntu ubuntu  1,3G фев 26 17:51 security.tar
 ```
 
-Загрузите скачанные образы в приватный registry. В команде подставьте редакцию DP и учётные данные robot-аккаунта Harbor:
+Загрузите скачанные образы в приватное хранилище образов контейнеров. В команде подставьте редакцию DP и учётные данные robot-аккаунта Harbor:
 
 * `<ROBOT_ACCOUNT_NAME>` — имя robot-аккаунта;
 * `<PASSWORD>` — токен, выданный при создании robot-аккаунта.
 
 ```bash
-d8 mirror push $(pwd)/d8-bundle 'registry.local:443/deckhouse/<РЕДАКЦИЯ_DP>' --registry-login='robot$<ROBOT_ACCOUNT_NAME>' --registry-password='<PASSWORD>' --tls-skip-verify
+d8 mirror push $(pwd)/d8-bundle 'registry.local:443/deckhouse/<EDITION>' --registry-login='robot$<ROBOT_ACCOUNT_NAME>' --registry-password='<PASSWORD>' --tls-skip-verify
 ```
 
-> Флаг `--tls-skip-verify` указывает утилите доверять сертификату registry и пропустить его проверку.
+> Флаг `--tls-skip-verify` указывает утилите доверять сертификату хранилища и пропустить его проверку.
 
-Архив будет распакован, после чего образы будут загружены в registry. Этот этап обычно выполняется быстрее, чем скачивание, так как работа идёт с локальным архивом. Как правило, он занимает около 15 минут.
+Архив будет распакован, после чего образы будут загружены в хранилище. Этот этап обычно выполняется быстрее, чем скачивание, так как работа идёт с локальным архивом. Как правило, он занимает около 15 минут.
 
 {% offtopic title="Пример успешного завершения процесса заливки образов..." %}
 
@@ -955,14 +949,14 @@ Dec 11 18:25:33.837 INFO   Modules pushed: code, commander-agent, commander, con
 <img src="/images/guides/install_to_private_environment/harbor_state_with_images_ru.png" alt="Главная страница Harbor...">
 </div>
 
-Образы загружены и готовы к использованию! 🎉
+Образы загружены в приватное хранилище образов контейнеров.
 
-## Вход в registry для запуска установщика
+## Вход в хранилище образов контейнеров для запуска установщика
 
 Выполните вход на хост, с которого будет запускаться установщик (в примере — bastion-хост). На этой машине имя `registry.local` должно разрешаться в адрес ВМ с Harbor (через запись в `/etc/hosts` или DNS).
-На этом же хосте настройте доверие Docker к TLS-реестру аналогично разделу про Harbor: создайте каталог `/etc/docker/certs.d/registry.local/` и разместите в нём необходимые сертификаты. Их можно скопировать с ВМ с Harbor либо подготовить заново.
+На этом же хосте настройте доверие Docker к хранилищу образов контейнеров по TLS аналогично разделу про Harbor: создайте каталог `/etc/docker/certs.d/registry.local/` и разместите в нём необходимые сертификаты. Их можно скопировать с ВМ с Harbor либо подготовить заново.
 
-Выполните вход в registry Harbor, чтобы Docker получил доступ к образу установщика [dhctl](../documentation/v1/installing/):
+Выполните вход в хранилище Harbor, чтобы Docker получил доступ к образу установщика [dhctl](../documentation/v1/installing/):
 
 ```bash
 docker login registry.local
@@ -989,14 +983,15 @@ Login Succeeded
 ### Требования к ВМ
 
 {% alert level="warning" %}
-Во время установки в качестве container runtime по умолчанию на узлах кластера используется `ContainerdV2`.
+В примере конфигурации в этом руководстве задан container runtime `ContainerdV2` (`defaultCRI: ContainerdV2`).
 Для его работы узлы должны соответствовать следующим требованиям:
 
 - поддержка `CgroupsV2`;
-- systemd версии `244`;
+- systemd версии `244` или новее;
+- ядро Linux версии `5.8` или новее, кроме версий 6.12.0–6.12.28 и 6.14.0–6.14.6;
 - поддержка модуля ядра `erofs`.
 
-Некоторые дистрибутивы (например, Astra Linux 1.7.4) не соответствуют этим требованиям, и ОС на узлах необходимо привести в соответствие требованиям перед установкой Deckhouse Platform. Подробнее — [в документации](../documentation/v1/reference/api/cr.html#clusterconfiguration-defaultcri).
+Некоторые дистрибутивы (например, Astra Linux 1.7.4) не соответствуют этим требованиям, и ОС на узлах необходимо привести в соответствие требованиям перед установкой Deckhouse Platform. Подробнее — [в описании параметра defaultCRI](../documentation/v1/reference/api/cr.html#clusterconfiguration-defaultcri).
 {% endalert %}
 
 Серверы для будущих узлов кластера должны соответствовать следующим требованиям:
@@ -1011,7 +1006,7 @@ Login Succeeded
 
   **Важно:** в РЕД ОС по умолчанию могут отсутствовать `yum` и `which`, поэтому их необходимо заранее установить;
 - установленный Python;
-- доступ к проксирующему registry или к приватному хранилищу образов контейнеров с образами Deckhouse;
+- доступ к проксирующему хранилищу образов контейнеров или к приватному хранилищу образов контейнеров с образами DP;
 - доступ к стандартным для используемой ОС репозиториям пакетов (через прокси-сервер или до внутреннего сервера-репозитория пакетов);
 - SSH-доступ от сервера Bastion по ключу;
 - сетевой доступ от сервера Bastion по порту <code>22/TCP</code>;
@@ -1021,9 +1016,9 @@ Login Succeeded
 Для правильного выбора ресурсов серверов ознакомьтесь с [рекомендациями по подготовке к production](/products/kubernetes-platform/guides/production.html) и [инструкцией](/products/kubernetes-platform/guides/hardware-requirements.html) по выбору типов и количества узлов кластера, а также ресурсов для них, в зависимости от ваших требований к эксплуатации будущего кластера.
 {% endalert %}
 
-### Сопоставление `registry.local` с адресом ВМ с Harbor
+### Сопоставление registry.local с адресом ВМ с Harbor
 
-Чтобы серверы, на которых будут разворачиваться master и worker-узлы, могли получить доступ к приватному registry, настройте на них соответствие доменного имени `registry.local` внутреннему IP-адресу ВМ с Harbor в приватной сети.
+Чтобы серверы, на которых будут разворачиваться master и worker-узлы, могли получить доступ к приватному хранилищу образов контейнеров, настройте на них соответствие доменного имени `registry.local` внутреннему IP-адресу ВМ с Harbor в приватной сети.
 
 Для этого по очереди подключитесь к каждому серверу и добавьте запись в `/etc/hosts` (а при необходимости также в облачный шаблон, если провайдер управляет этим файлом).
 
@@ -1055,11 +1050,11 @@ Login Succeeded
 
 {% endofftopic %}
 
-```console
-<INTERNAL-IP-ADDRESS> registry.local proxy.local
+```text
+<INTERNAL_IP_ADDRESS> registry.local proxy.local
 ```
 
-> Не забудьте заменить `<INTERNAL-IP-ADDRESS>` на реальный внутренний IP-адрес ВМ с Harbor.
+> Не забудьте заменить `<INTERNAL_IP_ADDRESS>` на реальный внутренний IP-адрес ВМ с Harbor.
 
 ### Настройка подключения к master-узлу
 
@@ -1067,7 +1062,7 @@ Login Succeeded
 
 Выполните команды от `root` (подставьте публичную часть своего SSH-ключа):
 
-```console
+```bash
 mkdir /home/<USER>/.ssh
 export KEY='ssh-rsa AAAAB3NzaC1yc2EAAAADA...'
 echo $KEY >> /home/<USER>/.ssh/authorized_keys
@@ -1082,11 +1077,7 @@ echo '<USER> ALL=(ALL) NOPASSWD: ALL' | sudo EDITOR='tee -a' visudo
 Узнать публичную часть ключа можно командой `cat ~/.ssh/id_rsa.pub`.
 {% endofftopic %}
 
-В результате этих команд:
-
-* пользователь `<USER>`добавляется в группу `sudo` (если это не было предусмотрено изначально в выбранной ОС);
-* настраиваются права на повышение привилегий без ввода пароля;
-* копируется публичная часть ключа, по которому можно будет войти на сервер под этим пользователем.
+Эти команды добавляют публичную часть ключа, по которой можно войти на сервер под пользователем `<USER>`, и настраивают для этого пользователя повышение привилегий без ввода пароля.
 
 Проверьте подключение под пользователем:
 
@@ -1108,9 +1099,9 @@ ssh-keygen -t rsa -f /dev/shm/caps-id -C "" -N ""
 
 На подготовленном сервере для worker-узла создайте пользователя `caps`. Для этого выполните следующую команду, указав публичную часть SSH-ключа, полученную на предыдущем шаге:
 
-```console
+```bash
 # Укажите публичную часть SSH-ключа пользователя.
-export KEY='<SSH-PUBLIC-KEY>'
+export KEY='<SSH_PUBLIC_KEY>'
 useradd -m -s /bin/bash caps
 usermod -aG sudo caps
 echo 'caps ALL=(ALL) NOPASSWD: ALL' | sudo EDITOR='tee -a' visudo
@@ -1124,9 +1115,9 @@ chmod 600 /home/caps/.ssh/authorized_keys
 {% offtopic title="Если у вас CentOS, Rocky Linux, ALT Linux, РОСА Сервер, РЕД ОС или МОС ОС..." %}
 В операционных системах на базе RHEL (Red Hat Enterprise Linux) добавьте пользователя `caps` в группу `wheel`. Для этого выполните следующую команду, указав публичную часть SSH-ключа, полученную на предыдущем шаге:
 
-```console
+```bash
 # Укажите публичную часть SSH-ключа пользователя.
-export KEY='<SSH-PUBLIC-KEY>'
+export KEY='<SSH_PUBLIC_KEY>'
 useradd -m -s /bin/bash caps
 usermod -aG wheel caps
 echo 'caps ALL=(ALL) NOPASSWD: ALL' | sudo EDITOR='tee -a' visudo
@@ -1156,7 +1147,7 @@ pdpl-user -i 63 caps
 
 {% offtopic title="Пример установки прокси-сервера на базе Squid..." %}
 
-Прокси-сервер может быть нужен для доступа к внешним ресурсам из закрытого контура: загрузка образов контейнеров с публичного registry DP на bastion, обращение компонентов DP и узлов кластера к внешним URL (если это допускается политикой). Установка пакетов ОС на узлы при этом может выполняться из внутренних репозиториев — в таком случае прокси для пакетов не используется.
+Прокси-сервер может быть нужен для доступа к внешним ресурсам из закрытого контура: загрузка образов контейнеров из публичного хранилища образов контейнеров DP на bastion, обращение компонентов DP и узлов кластера к внешним URL (если это допускается политикой). Установка пакетов ОС на узлы при этом может выполняться из внутренних репозиториев — в таком случае прокси для пакетов не используется.
 
 Разверните на отдельной машине прокси-сервер, через который будет обеспечиваться доступ к внешним ресурсам (при наличии такого доступа в вашем контуре).
 
@@ -1236,7 +1227,7 @@ Status: Downloaded newer image for ubuntu/squid:latest
       # Домен НЕ ДОЛЖЕН совпадать с указанным в параметре clusterDomain ресурса ClusterConfiguration.
       # Можете изменить на свой сразу, либо следовать шагам руководства и сменить его после установки.
       publicDomainTemplate: "%s.test.local"
-      # Способ реализации протокола HTTPS, используемый модулями Deckhouse.
+      # Способ реализации протокола HTTPS, используемый модулями DP.
       https:
         certManager:
           clusterIssuerName: selfsigned
@@ -1248,8 +1239,8 @@ Status: Downloaded newer image for ubuntu/squid:latest
 
   ```yaml
   settings:
-  controlPlaneConfigurator:
-    dexCAMode: FromIngressSecret
+    controlPlaneConfigurator:
+      dexCAMode: FromIngressSecret
   ```
 
 * Добавьте включение и конфигурацию модуля [cert-manager](/modules/cert-manager/), в которой будет отключено использование Let's Encrypt:
@@ -1311,11 +1302,11 @@ spec:
     bundle: Default
     releaseChannel: Stable
     logLevel: Info
-    # Настройки для доступа к хранилищу образов контейнеров с образами Deckhouse.
+    # Настройки для доступа к хранилищу образов контейнеров с образами DP.
     registry:
       mode: Unmanaged
       unmanaged:
-        # Адрес хранилища образов контейнеров с образами Deckhouse.
+        # Адрес хранилища образов контейнеров с образами DP.
         imagesRepo: <IMAGES_REPO_URI>
         # Имя пользователя для аутентификации в хранилище образов контейнеров.
         username: <USERNAME>
@@ -1328,7 +1319,7 @@ spec:
           ...
           -----END CERTIFICATE-----
 ---
-# Глобальные настройки Deckhouse.
+# Глобальные настройки DP.
 # https://deckhouse.ru/products/kubernetes-platform/documentation/v1/reference/api/global.html#%D0%BF%D0%B0%D1%80%D0%B0%D0%BC%D0%B5%D1%82%D1%80%D1%8B
 apiVersion: deckhouse.io/v1alpha1
 kind: ModuleConfig
@@ -1343,10 +1334,10 @@ spec:
       # Домен НЕ ДОЛЖЕН совпадать с указанным в параметре clusterDomain ресурса ClusterConfiguration.
       # Можете изменить на свой сразу, либо следовать шагам руководства и сменить его после установки.
       publicDomainTemplate: "%s.test.local"
-      # Способ реализации протокола HTTPS, используемый модулями Deckhouse.
+      # Способ реализации протокола HTTPS, используемый модулями DP.
       https:
         certManager:
-          # Использовать самоподписанные сертификаты для модулей Deckhouse.
+          # Использовать самоподписанные сертификаты для модулей DP.
           clusterIssuerName: selfsigned
 ---
 # Настройки модуля user-authn.
@@ -1427,7 +1418,7 @@ internalNetworkCIDRs:
 Перенесите подготовленный конфигурационный файл на хост, с которого выполняется установка, например в директорию `~/deckhouse`. Перейдите в директорию и запустите установщик командой:
 
 ```bash
-docker run --pull=always -it -v "$PWD/config.yml:/config.yml" -v "$HOME/.ssh/:/tmp/.ssh/" --network=host -v "$PWD/dhctl-tmp:/tmp/dhctl" registry.local/deckhouse/<РЕДАКЦИЯ_DP>/install:stable bash
+docker run --pull=always -it -v "$PWD/config.yml:/config.yml" -v "$HOME/.ssh/:/tmp/.ssh/" --network=host -v "$PWD/dhctl-tmp:/tmp/dhctl" registry.local/deckhouse/<EDITION>/install:stable bash
 ```
 
 {% offtopic title="Если появилась ошибка `509: certificate signed by unknown authority`..." %}
@@ -1447,10 +1438,15 @@ docker run --pull=always -it -v "$PWD/config.yml:/config.yml" -v "$HOME/.ssh/:/t
 Запустите установку DP командой (укажите внутренний IP-адрес master-узла):
 
 ```bash
-dhctl bootstrap --ssh-user=deckhouse --ssh-host=<master_ip> --ssh-agent-private-keys=/tmp/.ssh/id_rsa \
-  --config=/config.yml \
-  --ask-become-pass
+dhctl bootstrap --ssh-user=<USER> --ssh-host=<MASTER_IP> --ssh-agent-private-keys=/tmp/.ssh/id_rsa --config=/config.yml
 ```
+
+Здесь:
+
+* `<USER>` — пользователь на master-узле, для которого настроены SSH-доступ и `sudo` без пароля;
+* `<MASTER_IP>` — внутренний IP-адрес master-узла.
+
+Если файл приватного ключа называется иначе, замените `id_rsa` на его имя.
 
 Процесс установки может занять до 30 минут в зависимости от скорости сетевого соединения.
 
@@ -1478,7 +1474,7 @@ dhctl bootstrap --ssh-user=deckhouse --ssh-host=<master_ip> --ssh-agent-private-
 
 * Настройте StorageClass [локального хранилища](/modules/local-path-provisioner/cr.html#localpathprovisioner), выполнив на master-узле следующую команду:
 
-  ```console
+  ```bash
   sudo -i d8 k create -f - << EOF
   apiVersion: deckhouse.io/v1alpha1
   kind: LocalPathProvisioner
@@ -1493,13 +1489,12 @@ dhctl bootstrap --ssh-user=deckhouse --ssh-host=<master_ip> --ssh-agent-private-
 * Укажите, что созданный StorageClass должен использоваться как StorageClass по умолчанию. Для этого выполните на master-узле следующую команду:
 
   ```bash
-  sudo -i d8 k patch mc global --type merge \
-    -p "{\"spec\": {\"settings\":{\"defaultClusterStorageClass\":\"localpath\"}}}"
+  sudo -i d8 k patch mc global --type merge -p "{\"spec\": {\"settings\":{\"defaultClusterStorageClass\":\"localpath\"}}}"
   ```
 
 * Создайте NodeGroup `worker` и добавьте узел с помощью Cluster API Provider Static (CAPS):
 
-  ```console
+  ```bash
   sudo -i d8 k create -f - <<EOF
   apiVersion: deckhouse.io/v1
   kind: NodeGroup
@@ -1517,7 +1512,7 @@ dhctl bootstrap --ssh-user=deckhouse --ssh-host=<master_ip> --ssh-agent-private-
 
 * Создайте в кластере ресурс [SSHCredentials](/modules/node-manager/cr.html#sshcredentials). Для этого выполните на master-узле следующую команду:
 
-  ```console
+  ```bash
   sudo -i d8 k create -f - <<EOF
   apiVersion: deckhouse.io/v1alpha2
   kind: SSHCredentials
@@ -1531,15 +1526,15 @@ dhctl bootstrap --ssh-user=deckhouse --ssh-host=<master_ip> --ssh-agent-private-
 
 * Выведите публичную часть сгенерированного ранее SSH-ключа (он понадобится на следующем шаге). Для этого выполните на master-узле следующую команду:
 
-  ```console
+  ```bash
   cat /dev/shm/caps-id.pub
   ```
 
 * Создайте [StaticInstance](/modules/node-manager/cr.html#staticinstance) для добавляемого узла. Для этого выполните на master-узле следующую команду, указав IP-адрес добавляемого узла:
 
-  ```console
+  ```bash
   # Укажите IP-адрес узла, который нужно подключить к кластеру.
-  export NODE=<NODE-IP-ADDRESS>
+  export NODE=<NODE_IP_ADDRESS>
   sudo -i d8 k create -f - <<EOF
   apiVersion: deckhouse.io/v1alpha2
   kind: StaticInstance
@@ -1575,7 +1570,7 @@ dhctl bootstrap --ssh-user=deckhouse --ssh-host=<master_ip> --ssh-agent-private-
 
 Убедитесь, что под Kruise controller manager модуля [ingress-nginx](/modules/ingress-nginx/) запустился и находится в статусе `Running`. Для этого выполните на master-узле следующую команду:
 
-```bash
+```console
 $ sudo -i d8 k -n d8-ingress-nginx get po -l app=kruise
 NAME                                         READY   STATUS    RESTARTS    AGE
 kruise-controller-manager-7dfcbdc549-b4wk7   3/3     Running   0           15m
@@ -1676,7 +1671,7 @@ spec:
 
 Примените его, выполнив на master-узле следующую команду:
 
-```console
+```bash
 sudo -i d8 k create -f $PWD/user.yml
 ```
 
@@ -1684,7 +1679,7 @@ sudo -i d8 k create -f $PWD/user.yml
 
 Для доступа к веб-интерфейсам кластера настройте соответствие следующих доменных имён внутреннему IP-адресу master-узла (используйте DNS-имена в соответствии с шаблоном DNS-имён, указанным в параметре [publicDomainTemplate](../documentation/v1/reference/api/global.html#parameters-modules-publicdomaintemplate)). Например, можно прописать их в `/etc/hosts` на локальной машине для шаблона DNS-имён `%s.test.local`. Перед выполнением замените плейсхолдер `<MASTER_IP>` на внутренний IP-адрес master-узла:
 
-```text
+```bash
 export PUBLIC_IP="<MASTER_IP>"
 sudo -E bash -c "cat <<EOF >> /etc/hosts
 $PUBLIC_IP api.test.local
@@ -1709,13 +1704,13 @@ EOF
 
 Проверить, что кластер корректно развёрнут и работает, можно в веб-интерфейсе Grafana, где отображается состояние кластера. Адрес Grafana формируется по шаблону `publicDomainTemplate`. Например, при значении `%s.test.local` интерфейс будет доступен по адресу `grafana.test.local`. Для входа используйте учётные данные пользователя, созданного ранее.
 
-## Куда двигаться дальше?
+## Дальнейшие шаги
 
-Все установлено, настроено и работает! Теперь можно воспользоваться предоставляемыми веб-интерфейсами для управления кластером:
+DP установлен, настроен и работает. Теперь можно воспользоваться предоставляемыми веб-интерфейсами для управления кластером:
 
 * **Веб-интерфейс Deckhouse** — управление кластером и основными компонентами. Адрес: **console.test.local**. Утилиту командной строки `d8` можно скачать из этого интерфейса.
 * **Документация** — документация по установленной в кластере версии DP. Адрес: **documentation.test.local**.
-* **Мониторинг** — дэшборды Grafana, поставляемые с DP. Адрес: **grafana.test.local** (путь к Prometheus: **/prometheus/**).
+* **Мониторинг** — дашборды Grafana, поставляемые с DP. Адрес: **grafana.test.local** (путь к Prometheus: **/prometheus/**).
   Подробнее [в документации](/products/kubernetes-platform/documentation/v1/admin/configuration/monitoring/).
 * **Status page** — общий статус DP и его компонентов. Адрес: **status.test.local**.
 * **Upmeter** — контроль соблюдения SLA с детализацией по компонентам и периодам. Адрес: **upmeter.test.local**.
@@ -1727,6 +1722,6 @@ EOF
 * **Направление трафика на приложение** — создайте Service и Ingress для приложения. Подробнее о возможностях сетевого взаимодействия в разделе [«Обработка входящего трафика»](/products/kubernetes-platform/documentation/v1/user/network/ingress/).
 * **Мониторинг приложения** — добавьте к созданному Service аннотации `prometheus.deckhouse.io/custom-target: "my-app"` и `prometheus.deckhouse.io/port: "80"`. Подробнее о настройке мониторинга приложений в разделе [«Мониторинг приложений и инфраструктур»](/products/kubernetes-platform/documentation/v1/user/monitoring/).
 
-### Что дальше?
+### Дополнительная информация
 
 Подробная информация о системе и компонентах Deckhouse Platform — в [документации](/products/kubernetes-platform/documentation/). По вопросам можно обратиться в [онлайн-сообщество](https://t.me/deckhouse_ru).

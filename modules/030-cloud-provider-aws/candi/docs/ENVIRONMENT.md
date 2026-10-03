@@ -278,7 +278,7 @@ You will see the following:
 Attach the specified `Policy` to the specified `User`:
 
 ```shell
-aws iam attach-user-policy --user-name username --policy-arn arn:aws:iam::123:policy/D8CloudProviderAWS
+aws iam attach-user-policy --user-name deckhouse --policy-arn arn:aws:iam::123:policy/D8CloudProviderAWS
 ```
 
 ## Configuring IAM via Terraform

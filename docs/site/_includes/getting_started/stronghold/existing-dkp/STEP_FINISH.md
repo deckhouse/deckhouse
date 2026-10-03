@@ -5,15 +5,15 @@
 {::options parse_block_html="false" /}
 
 <div markdown="1">
-## Everything is installed, configured, and working!
+## Everything is installed, configured, and working
 
-Let's explore the additional capabilities of Deckhouse Stronghold that become available immediately after installation.
+Below are the Deckhouse Stronghold capabilities available right after installation.
 
-Open `https://stronghold.<example.com>` in your browser and log in using the authentication method configured in your cluster.
+Open `https://stronghold.<PUBLIC_DOMAIN>` in your browser and log in using the authentication method configured in your cluster.
 
 {% alert level="info" %}
-Replace `<example.com>` with the actual domain name of your Deckhouse Platform cluster.
+Replace `<PUBLIC_DOMAIN>` with the actual domain name of your Deckhouse Platform cluster.
 {% endalert %}
 </div>
 
-{% include getting_started/stronghold/global/partials/FINISH_CARDS_RU.md %}
+{% include getting_started/stronghold/global/partials/FINISH_CARDS.md %}

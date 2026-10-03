@@ -2,7 +2,7 @@ recommended:
   en: recommended
   ru: рекомендованная
 copied_to_clipboard:
-  en: Has been copied to clipboard
+  en: Copied to clipboard
   ru: Скопировано в буфер обмена
 copy_filename:
   en: Copy filename
@@ -39,7 +39,7 @@ getting_started:
       en: Key accepted
       ru: Ключ принят
     network_error:
-      en: Failed to fetch the version list. Please try again later.
+      en: Failed to fetch the version list. Try again later.
       ru: Не удалось получить список версий. Повторите попытку позже.
     no_versions:
       en: No versions available.
@@ -51,11 +51,11 @@ getting_started:
       en: Stronghold version
       ru: Версия Stronghold
     no_key:
-      en: Have no key?
+      en: Don't have a key?
       ru: Нет ключа?
     request_trial:
       en: Request free trial
-      ru: Запросить бесплатный триал
+      ru: Запросить бесплатный пробный период
 ce: Community Edition
 be: Basic Edition
 se: Standard Edition
@@ -153,7 +153,7 @@ common:
     ru: "скоро..."
   tech_support_stronghold_notice_ce:
     en: "Technical Support and Warranty Technical Support are available if Deckhouse Stronghold CE is used as part of the commercial editions of the Deckhouse Platform, with a valid Deckhouse Platform Technical Support certificate and compliance with the Terms."
-    ru: "Техническая поддержка и Гарантийная техническая поддержка доступны при условии использования Deckhouse Stronghold CE в составе коммерческих редакций Deckhouse Platform, наличии действующего сертификата на Техническую поддержку Deckhouse Platform и выполнения Условий, опубликованных на legal.flant.ru"
+    ru: "Техническая поддержка и Гарантийная техническая поддержка доступны при условии использования Deckhouse Stronghold CE в составе коммерческих редакций Deckhouse Platform, наличии действующего сертификата на Техническую поддержку Deckhouse Platform и выполнения Условий, опубликованных на legal.flant.ru."
   tech_support_stronghold_notice_commercial:
     en: "Purchased separately"
     ru: "Приобретается отдельно"
@@ -191,7 +191,7 @@ common:
     en: length
     ru: длина
   min_length:
-    en: minimal length
+    en: minimum length
     ru: минимальная длина
   max_length:
     en: maximum length
@@ -228,13 +228,13 @@ common:
     ru: Поиск...
   search_placeholder_text_guides:
     en: Search for guides...
-    ru: Поиск гайдов...
+    ru: Поиск руководств...
   search_placeholder_text_filter:
     en: Enter a&nbsp;name
     ru: Введите название
   search_placeholder_text_404:
     en: Enter a&nbsp;name
-    ru: Поиск по каталогу
+    ru: Введите название
   search_context_dkpdocs_and_modules:
     en: The search is performed throughout DP documentation and modules.
     ru: Поиск выполняется по всей документации DP и модулям.
@@ -254,7 +254,7 @@ common:
     en: |
       **Starting from version 1.76, Deckhouse Kubernetes Platform has been renamed to Deckhouse Platform.**
 
-      The platform now offers more features, and editions have changed. We are already updating the documentation, but if you have any questions, please contact your account manager or technical support.
+      The platform now offers more features, and editions have changed. The documentation is being updated. If you have any questions, contact your account manager or technical support.
     ru: |
       **Начиная с версии 1.76, Deckhouse Kubernetes Platform переименована в Deckhouse Platform.**
 
@@ -264,13 +264,13 @@ common:
     ru: Модули, входящие в область
   namespaces_used_by_modules:
     en: Namespaces in which modules of a scope operate
-    ru: Пространства имен используемых модулями области
+    ru: Неймспейсы, используемые модулями области
   all_modules:
     en: All modules
     ru: Все модули
   all_namespaces:
     en: All namespaces
-    ru: Все пространства имен
+    ru: Все неймспейсы
   channel_or_version:
     en: Channel/version
     ru: Канал/версия
@@ -296,8 +296,8 @@ common:
     en: Scope
     ru: Область (scope)
   notice-latest:
-    en: You are viewing the documentation for an unreleased version of Deckhouse. You may choose the appropriate release channel from the versions menu or <a href="/products/kubernetes-platform/documentation/v1/">go to the latest stable Deckhouse version</a>.
-    ru: Вы просматриваете документацию еще не вышедшей версии Deckhouse. Вы можете выбрать необходимый канал обновлений в меню версий или <a href="/products/kubernetes-platform/documentation/v1/">перейти к последней стабильной версии Deckhouse</a>.
+    en: You are viewing the documentation for an unreleased version of Deckhouse Platform. You may choose the appropriate release channel from the versions menu or <a href="/products/kubernetes-platform/documentation/v1/">go to the latest stable Deckhouse Platform version</a>.
+    ru: Вы просматриваете документацию ещё не вышедшей версии Deckhouse Platform. Вы можете выбрать необходимый канал обновлений в меню версий или <a href="/products/kubernetes-platform/documentation/v1/">перейти к последней стабильной версии Deckhouse Platform</a>.
   os_supported_phrase:
     en: The following Linux distributions are currently supported for nodes
     ru: В настоящий момент в качестве ОС для узлов поддерживаются следующие дистрибутивы Linux
@@ -305,7 +305,7 @@ common:
     en: The following Kubernetes versions are currently supported
     ru: В настоящий момент поддерживаются следующие версии Kubernetes
   linux_distro:
-    en: Linux Distribution
+    en: Linux distribution
     ru: Дистрибутив Linux
   for_domain_template:
     en: for the domain template
@@ -350,7 +350,7 @@ common:
     en: includes all rules from the role
     ru: включает все правила из роли
   gs_description:
-    en: Getting Started. <TITLE>. <STEP>
+    en: Getting started. <TITLE>. <STEP>
     ru: Быстрый старт. <TITLE>. <STEP>
   documentation_develop:
     en: The documentation is under development and may contain incomplete information.
@@ -368,10 +368,10 @@ common:
     en: Hide details
     ru: Скрыть подробности
   guides_description:
-    en: Helping you achieve a goal or solve a problem with Deckhouse.
-    ru: Помогут решить задачу или достичь нужной цели с помощью Deckhouse.
+    en: Helping you achieve a goal or solve a problem with Deckhouse Platform.
+    ru: Помогут решить задачу или достичь нужной цели с помощью Deckhouse Platform.
   breadcrumbs_link_guides:
-    en: All Guides
+    en: All guides
     ru: Все руководства
   additional_property_name:
     en: item (key) name
@@ -393,7 +393,7 @@ feedback:
     ru: Была&nbsp;ли страница полезна?
   response_processed:
     en: Your response is&nbsp;being processed, and changes can be&nbsp;made in&nbsp;5&nbsp;minutes.
-    ru: Ваш отклик обрабатыватся, внести изменения можно будет через 5&nbsp;минут
+    ru: Ваш отклик обрабатывается, внести изменения можно будет через 5&nbsp;минут.
   error_happened:
     en: An error has occurred
     ru: Произошла ошибка
@@ -402,7 +402,7 @@ feedback:
     ru: Пожалуйста, попробуйте позже
   tell_us_what_you_didnt_like:
     en: Tell&nbsp;us what you didn&rsquo;t like.
-    ru: Расскажите, что не&nbsp;понравилось
+    ru: Расскажите, что не&nbsp;понравилось.
   not_useful:
     en: Little useful
     ru: Мало полезного
@@ -428,7 +428,7 @@ feedback:
 features:
   experimental:
     en: The functionality of the module might significantly change. Compatibility with future versions is not guaranteed.
-    ru: Функциональность модуля может сильно измениться. Совместимость с будущими версиями не гарантируется
+    ru: Функциональность модуля может сильно измениться. Совместимость с будущими версиями не гарантируется.
   preview:
     en: The functionality of the module might change, but the main features will remain. Compatibility with future versions is guaranteed, but might require additional migration steps.
     ru: Функциональность модуля может измениться, но основные возможности сохранятся. Совместимость с будущими версиями обеспечивается, но может потребовать дополнительных действий по миграции.
@@ -446,7 +446,7 @@ features:
     ru: Доступно только в Enterprise Edition.
   requiresSeparateLicense:
     en: Licensed separately, not included in the DP license cost.
-    ru: Лицензируется на отдельных условиях, не включен в стоимость лицензии DP. Подробнее см. <a href="https://deckhouse.ru/products/kubernetes-platform/features/">Условия и цены</a>.
+    ru: Лицензируется на отдельных условиях, не включён в стоимость лицензии DP. Подробнее — <a href="https://deckhouse.ru/products/kubernetes-platform/features/">на странице «Условия и цены»</a>.
   requiresSeparateLicenseObservability:
     en: Licensed separately, not included in the DP license cost.
-    ru: Лицензируется на отдельных условиях, не включен в стоимость лицензии DP. Подробнее см. на<a href=https://deckhouse.ru/products/observability-platform/">Главной странице платформы</a>.
+    ru: Лицензируется на отдельных условиях, не включён в стоимость лицензии DP. Подробнее — <a href="https://deckhouse.ru/products/observability-platform/">на странице продукта</a>.

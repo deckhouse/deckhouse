@@ -10,7 +10,7 @@ layout: sidebar-guides
 This guide is intended for DP Enterprise Edition,
 but the mechanism is the same [for other editions](../documentation/v1/reference/revision-comparison.html).
 
-To run the commands given in the guide, you need to authenticate in the container registry `registry.deckhouse.io`. Use `license-token` as the username and the your license token as the password for authentication.
+To run the commands given in the guide, you need to authenticate in the container registry `registry.deckhouse.io`. Use `license-token` as the username and your license token as the password for authentication.
 
 The guide uses the third-party utility [crane](https://github.com/google/go-containerregistry?tab=readme-ov-file#crane) to analyze the container registry.
 Install it first following the [official instructions](https://github.com/google/go-containerregistry/blob/main/cmd/crane/README.md#installation).
@@ -37,7 +37,7 @@ and a tag corresponding to the release channel.
 This tag points to an image of a specific DP version (when a new version is released,
 the tag is updated to point to the new image).
 
-Let's examine the contents of a DP Enterprise Edition image with the Alpha release channel.
+The example below examines the contents of a DP Enterprise Edition image with the Alpha release channel.
 
 To do that, run the following command:
 
@@ -241,7 +241,7 @@ DP will automatically attempt to reconstruct intermediate `modulerelease` object
 ## Vulnerability scanner database update mechanism
 
 {% alert level="warning" %}
-Available in DP EE, Ultimate.
+Available in DP EE and DP Ultimate.
 {% endalert %}
 
 Vulnerability databases are updated every 6 hours.
@@ -249,7 +249,7 @@ The `operator-trivy` module in the cluster downloads them from the registry once
 
 Vulnerability database images in [DP EE](/modules/operator-trivy/) have fixed names and tags and are available at:
 
-```bash
+```text
 registry.deckhouse.io/deckhouse/ee/security/trivy-db:2
 registry.deckhouse.io/deckhouse/ee/security/trivy-java-db:1
 registry.deckhouse.io/deckhouse/ee/security/trivy-checks:0
@@ -259,15 +259,21 @@ registry.deckhouse.io/deckhouse/ee/security/trivy-bdu:1
 To configure periodic updates of vulnerability database images, run the command in the following format:
 
 ```bash
-d8 mirror pull --source='registry.deckhouse.io/deckhouse/ee' --license='YOUR_LICENSE_TOKEN' --no-platform --no-modules $(pwd)/d8-bundle-security-db && d8 mirror push $(pwd)/d8-bundle-security-db YOUR_PRIVATE_REGISTRY_HOSTNAME:5050/dkp/ee --registry-login='YOUR_REGISTRY_LOGIN' --registry-password='YOUR_REGISTRY_PASSWORD' --tls-skip-verify
+d8 mirror pull --source='registry.deckhouse.io/deckhouse/ee' --license='<LICENSE_TOKEN>' --no-platform --no-modules $(pwd)/d8-bundle-security-db && d8 mirror push $(pwd)/d8-bundle-security-db <PRIVATE_REGISTRY_HOSTNAME>:5050/dkp/ee --registry-login='<REGISTRY_LOGIN>' --registry-password='<REGISTRY_PASSWORD>' --tls-skip-verify
 ```
+
+Here:
+
+* `<LICENSE_TOKEN>`: DP license token.
+* `<PRIVATE_REGISTRY_HOSTNAME>`: Address of the private container registry.
+* `<REGISTRY_LOGIN>` and `<REGISTRY_PASSWORD>`: Credentials for the private container registry.
 
 ## Example workflow for updating the platform, modules, and vulnerability databases
 
 To update DP, its modules, and vulnerability databases to the latest versions in an air-gapped environment,
 download the latest patch releases of all required platform minor versions and modules, then upload them to your registry.
 
-Running `d8 mirror pull --source='registry.deckhouse.io/deckhouse/ee' --license='YOUR_LICENSE_TOKEN' $(pwd)/d8-bundle`
+Running `d8 mirror pull --source='registry.deckhouse.io/deckhouse/ee' --license='<LICENSE_TOKEN>' $(pwd)/d8-bundle`
 downloads all release channel images and all modules (over 30 in DP EE).
 This results in a very large `d8-bundle` (at the time of writing, the volume of the `d8-bundle` directory is more than 50 GB).
 
@@ -301,7 +307,7 @@ To avoid this, download only the images relevant to your version following these
    console-v1.35.1                    Deployed                     7d4h
    ```
 
-   Add this list to the `d8 mirror pull` command as flags: `--include-module='commander-agent@v1.2.4' --include-module='console@v1.35.1'`
+   Add this list to the `d8 mirror pull` command as flags: `--include-module='commander-agent@1.2.4' --include-module='console@1.35.1'`
 
    Alternatively, use a one-liner:
 
@@ -312,7 +318,7 @@ To avoid this, download only the images relevant to your version following these
 1. Create the final command for pulling images with the obtained parameters:
 
    ```bash
-   d8 mirror pull --source='registry.deckhouse.io/deckhouse/ee' --license='YOUR_LICENSE_TOKEN' --since-version='v1.68.13' --include-module='commander-agent@1.2.4' --include-module='console@1.35.1' $(pwd)/d8-bundle
+   d8 mirror pull --source='registry.deckhouse.io/deckhouse/ee' --license='<LICENSE_TOKEN>' --since-version='v1.68.13' --include-module='commander-agent@1.2.4' --include-module='console@1.35.1' $(pwd)/d8-bundle
    ```
 
    > If you have already set up periodic downloading and pushing of vulnerability databases to your registry,
@@ -324,7 +330,7 @@ To avoid this, download only the images relevant to your version following these
 1. Push the artifacts to your registry using the following command:
 
    ```bash
-   d8 mirror push $(pwd)/d8-bundle YOUR_PRIVATE_REGISTRY_HOSTNAME:5050/dkp/ee --registry-login='YOUR_REGISTRY_LOGIN' --registry-password='YOUR_REGISTRY_PASSWORD' --tls-skip-verify
+   d8 mirror push $(pwd)/d8-bundle <PRIVATE_REGISTRY_HOSTNAME>:5050/dkp/ee --registry-login='<REGISTRY_LOGIN>' --registry-password='<REGISTRY_PASSWORD>' --tls-skip-verify
    ```
 
 1. Check the update status in the cluster by running the following commands:
@@ -339,7 +345,7 @@ To avoid this, download only the images relevant to your version following these
 
 ### Release is suspended
 
-When trying to download platform images with `d8 mirror pull d8-bundle/ --license='YOUR_LICENSE_KEY'`,
+When trying to download platform images with `d8 mirror pull d8-bundle/ --license='<LICENSE_KEY>'`,
 you may encounter the following error:
 
 ```console
@@ -356,7 +362,7 @@ Nevertheless, you can still download the platform version by specifying the `--d
 For example:
 
 ```bash
-d8 mirror pull d8-bundle/ --license='YOUR_LICENSE_KEY' --deckhouse-tag='v1.71.3'
+d8 mirror pull d8-bundle/ --license='<LICENSE_KEY>' --deckhouse-tag='v1.71.3'
 ```
 
 Example output:

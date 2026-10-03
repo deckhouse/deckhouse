@@ -92,10 +92,10 @@
     </div>
     <div class="form__field" style="flex: 1; min-width: 250px;">
       <label class="label" for="nfsshare" title="share">
-        {% if page.lang == 'ru' %}Каталог NFS{% else %}NFS directory{% endif %}
+        {% if page.lang == 'ru' %}Директория NFS{% else %}NFS directory{% endif %}
       </label>
       <input class="textfield" type="text" id="nfsshare" name="nfsshare" placeholder="/srv/nfs/dvp" autocomplete="off" />
-      <span class="info">{% if page.lang == 'ru' %}Каталог на NFS-сервере, который экспортируется в кластер для дисков и образов ВМ. Абсолютный путь, например <code>/srv/nfs/dvp</code>.{% else %}Directory on the NFS server exported to the cluster for VM disks and images. Absolute path, e.g. <code>/srv/nfs/dvp</code>.{% endif %}</span>
+      <span class="info">{% if page.lang == 'ru' %}Директория на NFS-сервере, которая экспортируется в кластер для дисков и образов ВМ. Абсолютный путь, например <code>/srv/nfs/dvp</code>.{% else %}Directory on the NFS server exported to the cluster for VM disks and images. Absolute path, e.g. <code>/srv/nfs/dvp</code>.{% endif %}</span>
       <span class="info invalid-message invalid-message-main">{% if page.lang == 'ru' %}Укажите абсолютный путь, начинающийся с <code>/</code>.{% else %}Enter an absolute path starting with <code>/</code>.{% endif %}</span>
     </div>
   </div>

@@ -16,7 +16,7 @@
   link: "hardware-requirements.html"
   #minutesToRead: 45
   description:
-    ru: Поможет рассчитать параметры "железа" при развертывании на bare metal
+    ru: Поможет рассчитать параметры оборудования при развёртывании на bare metal
     en: Helps determine hardware specifications for deploying on bare metal
   tags:
     - baremetal
@@ -34,12 +34,12 @@
     - baremetal
     - production
 - name:
-    ru: "Разметка и объем дисков"
+    ru: "Разметка и объём дисков"
     en: "Disk layout and size"
   link: "fs-requirements.html"
   #minutesToRead: 30
   description:
-    ru: Руководство по выбору объема дисков и разметке файловой системы перед установкой Deckhouse Platform
+    ru: Руководство по выбору объёма дисков и разметке файловой системы перед установкой Deckhouse Platform
     en: A guide on how to select the disk size and layout of the file system before installing the Deckhouse Platform
   tags:
     - storage
@@ -50,7 +50,7 @@
   #minutesToRead: 30
   description:
     ru: Руководство по установке Deckhouse Platform в закрытом окружении.
-    en: A guide to installing the Deckhouse Platform in a closed environment.
+    en: A guide to installing the Deckhouse Platform in a private environment.
   tags:
     - private environment
 - name:
@@ -59,8 +59,8 @@
   link: "cni-migration.html"
   #minutesToRead: 10
   description:
-    ru: Инструкция по переключению (миграции) CNI в кластере Deckhouse
-    en: Guide on switching (migrating) CNI in a Deckhouse cluster
+    ru: Инструкция по переключению (миграции) CNI в кластере Deckhouse Platform
+    en: Guide on switching (migrating) CNI in a Deckhouse Platform cluster
   tags:
     - baremetal
     - cloud
@@ -77,12 +77,12 @@
     - cloud
     - production
 - name:
-    ru: "Установка DKP в существующий Talos-кластер"
-    en: "Installing DKP in an existing Talos cluster"
+    ru: "Установка DP в существующий Talos-кластер"
+    en: "Installing DP in an existing Talos cluster"
   link: "talos-existing-cluster.html"
   description:
-    ru: Руководство по установке Deckhouse Kubernetes Platform в существующий Talos-кластер
-    en: A guide to installing Deckhouse Kubernetes Platform in an existing Talos cluster
+    ru: Руководство по установке Deckhouse Platform в существующий Talos-кластер
+    en: A guide to installing Deckhouse Platform in an existing Talos cluster
   tags:
     - baremetal
     - cloud

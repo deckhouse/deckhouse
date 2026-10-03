@@ -112,7 +112,7 @@ Make sure the cluster is healthy and set up DNS so you can open DVP web interfac
    - **Wildcard template** (for example `%s.domain.my`) — one wildcard A record pointing to the Ingress node IP.
    - **Non-wildcard template** (for example `%s-kube.company.my`) — A or CNAME records for each hostname:
 
-     ```bash
+     ```text
      api.domain.my
      code.domain.my
      commander.domain.my

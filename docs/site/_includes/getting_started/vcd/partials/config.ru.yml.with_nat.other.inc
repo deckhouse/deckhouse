@@ -50,7 +50,7 @@ spec:
         license: <YOUR_ACCESS_STRING_IS_HERE>
 ---
 # [<en>] Global Deckhouse settings.
-# [<en>] https://deckhouse.ru/products/kubernetes-platform/documentation/v1/reference/api/global.html#parameters
+# [<en>] https://deckhouse.io/products/kubernetes-platform/documentation/v1/reference/api/global.html#parameters
 # [<ru>] Глобальные настройки Deckhouse.
 # [<ru>] https://deckhouse.ru/products/kubernetes-platform/documentation/v1/reference/api/global.html#%D0%BF%D0%B0%D1%80%D0%B0%D0%BC%D0%B5%D1%82%D1%80%D1%8B
 apiVersion: deckhouse.io/v1alpha1
@@ -114,31 +114,73 @@ spec:
 apiVersion: deckhouse.io/v1
 kind: VCDClusterConfiguration
 layout: WithNAT
+# [<en>] VMware Cloud Director API access parameters.
+# [<ru>] Параметры доступа к API VMware Cloud Director.
 provider:
+  # [<en>] Host or IP address of the VCD server.
+  # [<ru>] Хост или IP-адрес VCD-сервера.
   server: *!CHANGE_SERVER*
   username: *!CHANGE_USERNAME*
   password: *!CHANGE_PASSWORD*
+  # [<en>] Set to true if VCD has a self-signed certificate.
+  # [<ru>] Укажите true, если у VCD самоподписанный сертификат.
   insecure: *!CHANGE_INSECURE*
+# [<en>] Public SSH key for accessing cloud nodes.
+# [<en>] This key will be added to the user on created nodes (the user name depends on the image used).
+# [<ru>] Публичная часть SSH-ключа для доступа к узлам облака.
+# [<ru>] Этот ключ будет добавлен пользователю на созданных узлах (имя пользователя зависит от используемого образа).
 sshPublicKey: *!CHANGE_SSH_KEY*
+# [<en>] VMware Cloud Director organization name.
+# [<ru>] Имя организации (Organization) VMware Cloud Director.
 organization: *!CHANGE_ORG*
-virtualDataCenter: *!CHANGE__DC*
+# [<en>] Virtual data center name.
+# [<ru>] Имя виртуального дата-центра (Virtual Data Center).
+virtualDataCenter: *!CHANGE_DC*
+# [<en>] Virtual application (vApp) name.
+# [<ru>] Имя виртуального приложения (vApp).
 virtualApplicationName: *!CHANGE_VAPP*
+# [<en>] Subnet of the internal network of the cluster nodes.
+# [<ru>] Адресация внутренней сети узлов кластера.
 internalNetworkCIDR: 192.168.199.0/24
+# [<en>] Addresses of the recursive DNS servers.
+# [<ru>] Адреса рекурсивных DNS-серверов.
 internalNetworkDNSServers:
   - 77.88.8.8
   - 1.1.1.1
+# [<en>] Network that the primary NICs of the virtual machines connect to.
+# [<ru>] Сеть, к которой подключаются основные сетевые интерфейсы виртуальных машин.
 mainNetwork: internal
+# [<en>] Bastion host for administrative access to the cluster nodes over SSH.
+# [<ru>] Бастион-хост для административного доступа к узлам кластера по SSH.
 bastion:
   instanceClass:
     rootDiskSizeGb: 30
     sizingPolicy: *!CHANGE_SIZING_POLICY_BASTION*
     storageProfile: *!CHANGE_STORAGE_PROFILE*
+    # [<en>] Template path in the <CATALOG>/<TEMPLATE> format.
+    # [<ru>] Путь к шаблону в формате <CATALOG>/<TEMPLATE>.
     template: *!CHANGE_TEMPLATE_NAME_WITH_CATALOG*
+    # [<en>] Must be an address from internalNetworkCIDR.
+    # [<ru>] Должен быть адресом из internalNetworkCIDR.
     mainNetworkIPAddress: 192.168.199.10
+# [<en>] Edge Gateway parameters.
+# [<ru>] Параметры Edge Gateway.
 edgeGateway:
   name: *!CHANGE_EDGE_GW_NAME*
+  # [<en>] Network virtualization platform of the Edge Gateway: NSX-T or NSX-V. Check it with the VCD administrator.
+  # [<en>] For NSX-V, also set the edgeGateway.NSX-V parameters and configure DHCP in the cluster network manually.
+  # [<en>] https://deckhouse.io/modules/cloud-provider-vcd/layouts.html
+  # [<ru>] Платформа сетевой виртуализации Edge Gateway: NSX-T или NSX-V. Уточните её у администратора VCD.
+  # [<ru>] Для NSX-V также задайте параметры edgeGateway.NSX-V и вручную настройте DHCP в сети кластера.
+  # [<ru>] https://deckhouse.ru/modules/cloud-provider-vcd/layouts.html
+  # [<en>] You might consider changing this.
+  # [<ru>] Возможно, захотите изменить.
   type: "NSX-T"
+  # [<en>] External IP address for SSH access to the bastion host and for SNAT of the cluster nodes.
+  # [<ru>] Внешний IP-адрес для SSH-доступа к бастиону и SNAT узлов кластера.
   externalIP: *!CHANGE_EDGE_EXTERNAL_IP*
+  # [<en>] External port of the DNAT rule for SSH access to the bastion host.
+  # [<ru>] Внешний порт правила DNAT для SSH-доступа к бастиону.
   externalPort: 10022
 createDefaultFirewallRules: false
 masterNodeGroup:
@@ -146,6 +188,8 @@ masterNodeGroup:
   instanceClass:
     sizingPolicy: *!CHANGE_SIZING_POLICY*
     storageProfile: *!CHANGE_STORAGE_PROFILE*
+    # [<en>] Template path in the <CATALOG>/<TEMPLATE> format.
+    # [<ru>] Путь к шаблону в формате <CATALOG>/<TEMPLATE>.
     template: *!CHANGE_TEMPLATE_NAME_WITH_CATALOG*
     mainNetworkIPAddresses:
       - 192.168.199.2
@@ -162,7 +206,9 @@ spec:
   rootDiskSizeGb: 50
   sizingPolicy: *!CHANGE_SIZING_POLICY*
   storageProfile: *!CHANGE_STORAGE_PROFILE*
-  template: *!CHANGE_TEMPLATE_NAME*
+  # [<en>] Template path in the <CATALOG>/<TEMPLATE> format.
+  # [<ru>] Путь к шаблону в формате <CATALOG>/<TEMPLATE>.
+  template: *!CHANGE_TEMPLATE_NAME_WITH_CATALOG*
 ---
 # [<en>] Section containing the parameters of worker node group.
 # [<en>] https://deckhouse.io/modules/node-manager/cr.html#nodegroup
@@ -177,10 +223,18 @@ spec:
     classReference:
       kind: VCDInstanceClass
       name: worker
+    # [<en>] The maximum number of instances for the group in each zone (used by the autoscaler).
+    # [<en>] You might consider changing this.
+    # [<ru>] Максимальное количество инстансов в каждой зоне (используется при масштабировании).
+    # [<ru>] Возможно, захотите изменить.
     maxPerZone: 2
     maxSurgePerZone: 0
     maxUnavailablePerZone: 0
+    # [<en>] The minimum number of instances for the group in each zone. To launch more nodes, increase maxPerZone.
+    # [<ru>] Минимальное количество инстансов в каждой зоне. Чтобы запустить больше узлов, увеличьте maxPerZone.
     minPerZone: 1
+  disruptions:
+    approvalMode: Automatic
   nodeType: CloudEphemeral
 ---
 # [<en>] Section containing the parameters of Ingress NGINX Controller.
@@ -244,7 +298,7 @@ spec:
   # [<en>] This is a hash of the password <GENERATED_PASSWORD>, generated when loading the page of the Getting Started.
   # [<en>] Generate your own or use it at your own risk (for testing purposes)
   # [<en>] echo -n '<GENERATED_PASSWORD>' | htpasswd -BinC 10 "" | cut -d: -f2 | tr -d '\n' | base64 -w0; echo
-  # [<ru>] Это хеш пароля <GENERATED_PASSWORD>, сгенерированного при загрузке страницы "Быстрого Старта".
+  # [<ru>] Это хеш пароля <GENERATED_PASSWORD>, сгенерированного при загрузке страницы «Быстрый старт».
   # [<ru>] Сгенерируйте свой или используйте этот, но только для тестирования
   # [<ru>] echo -n '<GENERATED_PASSWORD>' | htpasswd -BinC 10 "" | cut -d: -f2 | tr -d '\n' | base64 -w0; echo
   # [<en>] You might consider changing this.

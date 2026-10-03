@@ -281,7 +281,7 @@ aws iam create-access-key --user-name deckhouse
 Объедините `User` и `Policy`:
 
 ```shell
-aws iam attach-user-policy --user-name username --policy-arn arn:aws:iam::123:policy/D8CloudProviderAWS
+aws iam attach-user-policy --user-name deckhouse --policy-arn arn:aws:iam::123:policy/D8CloudProviderAWS
 ```
 
 ## Настройка IAM через Terraform

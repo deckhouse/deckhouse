@@ -2,6 +2,7 @@
 title: "Выбор инфраструктуры"
 custom_class: "gs__container"
 permalink: ru/stronghold/gs/
+description: Пошаговая установка Deckhouse Stronghold в существующий кластер Deckhouse Platform, вместе с Deckhouse Platform или в ОС Linux.
 layout: page-nosidebar
 lang: ru
 toc: false
@@ -10,9 +11,9 @@ toc: false
 <link rel="stylesheet" type="text/css" href='{% css_asset_tag getting-started-css %}[_assets/css/getting-started.css]{% endcss_asset_tag %}' />
 <script type="text/javascript" src='{% javascript_asset_tag getting-started %}[_assets/js/getting-started.js]{% endjavascript_asset_tag %}'></script>
 
-<p>В данном руководстве рассмотрен пошаговый процесс установки Deckhouse Stronghold.</p>
+<p>Ниже приведён пошаговый процесс установки Deckhouse Stronghold.</p>
 
-<p>Установка Deckhouse Stronghold отличается в случае установки в существующий кластер Deckhouse Platform, в случае чистой установки вместе с Deckhouse Platform, а также в случае локального запуска в ОС Linux.</p>
+<p>Процесс установки Deckhouse Stronghold зависит от варианта: установка в существующий кластер Deckhouse Platform, установка вместе с Deckhouse Platform с нуля или локальный запуск в ОС Linux.</p>
 
 <h2>Выберите вариант установки Deckhouse Stronghold</h2>
 
@@ -31,7 +32,7 @@ toc: false
           class="button button_default button_card button_disabled">{{ provider[1].name[page.lang] }} ({{ site.data.i18n.soon[page.lang] }})</a>
         {%- else %}
         <a class="button button_default button_card" href="/products/stronghold/gs/{{ provider[0] }}/step2.html">
-          {% if provider[1].iconPath %}<div class="icon"><img src="/{{provider[1].iconPath}}" alt="{{ provider[1].name[page.lang] }} icon"/></div>{% endif %}
+          {% if provider[1].iconPath %}<div class="icon"><img src="/{{provider[1].iconPath}}" alt="Значок {{ provider[1].name[page.lang] }}"/></div>{% endif %}
           <span class="name">{{ provider[1].name[page.lang] }}</span>
           {% if provider[1].extraIcons %}
           <div class="footer">
@@ -58,7 +59,7 @@ toc: false
           class="button button_default button_card button_disabled">{{ provider[1].name[page.lang] }} ({{ site.data.i18n.soon[page.lang] }})</a>
         {%- else %}
         <a class="button button_default button_card" href="/products/stronghold/gs/{{ provider[0] }}/step2.html">
-          {% if provider[1].iconPath %}<div class="icon"><img src="/{{provider[1].iconPath}}" alt="{{ provider[1].name[page.lang] }} icon"/></div>{% endif %}
+          {% if provider[1].iconPath %}<div class="icon"><img src="/{{provider[1].iconPath}}" alt="Значок {{ provider[1].name[page.lang] }}"/></div>{% endif %}
           <span class="name">{{ provider[1].name[page.lang] }}</span>
           {% if provider[1].extraIcons %}
           <div class="footer">
@@ -85,7 +86,7 @@ toc: false
           class="button button_default button_card button_disabled">{{ provider[1].name[page.lang] }} ({{ site.data.i18n.soon[page.lang] }})</a>
         {%- else %}
         <a class="button button_default button_card" href="/products/stronghold/gs/{{ provider[0] }}/step2.html">
-          {% if provider[1].iconPath %}<div class="icon"><img src="/{{provider[1].iconPath}}" alt="{{ provider[1].name[page.lang] }} icon"/></div>{% endif %}
+          {% if provider[1].iconPath %}<div class="icon"><img src="/{{provider[1].iconPath}}" alt="Значок {{ provider[1].name[page.lang] }}"/></div>{% endif %}
           <span class="name">{{ provider[1].name[page.lang] }}</span>
         </a>
         {%- endif %}

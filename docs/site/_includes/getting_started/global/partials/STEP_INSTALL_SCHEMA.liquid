@@ -25,7 +25,7 @@ The minimal preset will be used during the installation:
 {%- offtopic title="Used layout..." %}
 {%- capture layout_path %}getting_started/{{ layout_platform_code }}/layouts/{{ layout.code | upcase }}{% if page.lang == 'ru' %}_RU{% endif %}.md{% endcapture %}
 {%- capture layout_doc_path %}/modules/cloud-provider-{% if page.platform_code == 'dvp-provider' %}dvp{%- else %}{{ layout_platform_code }}{%- endif %}/layouts.html{% endcapture %}
-Layout is the way how resources are located and communicate in the cloud. There are several pre-defined layouts, which you can learn more about in [the documentation]({{ layout_doc_path }}).
+Layout is the way how resources are located and communicate in the cloud. There are several pre-defined layouts; see the [layouts description]({{ layout_doc_path }}) for details.
 
 The `{{ layout.name }}` layout will be used during the installation.
 
@@ -37,27 +37,27 @@ The `{{ layout.name }}` layout will be used during the installation.
 
 {% if page.ee_only == true and page.se_support == true and page.platform_code != 'vsphere' and page.platform_code != 'bm-private' %}
 {% alert level="warning" %}
-The {{ page.title_main }} installation is not available in the Community Edition. [See information about commercial editions](https://deckhouse.io/products/kubernetes-platform/).
+The {{ page.title_main }} installation is not available in the Community Edition. [See information about commercial editions](/products/kubernetes-platform/).
 {% endalert %}
 {% endif %}
 
-The presentation contains an overview of the actions required to install Deckhouse.
+The presentation contains an overview of the actions required to install Deckhouse Platform.
 
 <div data-presentation="{{ include.presentation }}" class="pdf-slider__small"></div>
 {%- endif %}
 
 {% if page.platform_type == "existing" %}
-If you want to install Deckhouse into a **new** cluster, we recommend going back to the previous step and sticking to the section that describes how to deploy a cluster using Deckhouse.
+If you want to install Deckhouse Platform into a **new** cluster, we recommend going back to the previous step and sticking to the section that describes how to deploy a cluster using Deckhouse Platform.
 
-Kubernetes clusters have their own particularities and differences depending on the specific cloud provider, just like clusters deployed manually. The best strategy for installing Deckhouse in such clusters is to install the minimal Deckhouse configuration first, and then enable the necessary modules.
+Kubernetes clusters have their own particularities and differences depending on the specific cloud provider, just like clusters deployed manually. The best strategy for installing Deckhouse Platform in such clusters is to install the minimal Deckhouse Platform configuration first, and then enable the necessary modules.
 
-This guide covers installing Deckhouse in a **minimal** configuration, with the [internal documentation module](/modules/documentation/) (for a sample web application) and [cert-manager](/modules/cert-manager/) module enabled.
+This guide covers installing Deckhouse Platform in a **minimal** configuration, with the [internal documentation module](/modules/documentation/) (for a sample web application) and [cert-manager](/modules/cert-manager/) module enabled.
 
-After completing all the steps in this guide, you will be able to enable all the modules of interest on your own. Please, refer to the [documentation](/products/kubernetes-platform/documentation/v1/) to learn more or reach out to the Deckhouse [community](/community/about.html).
+After completing all the steps in this guide, you will be able to enable all the modules of interest on your own. Refer to the [Deckhouse Platform documentation](/products/kubernetes-platform/documentation/v1/) to learn more or reach out to the [Deckhouse community](/community/about.html).
 
 {% elsif page.platform_code == "bm-private" %}
 ## Installation scheme
-This guide focuses on deploying a Kubernetes cluster using Deckhouse in a private environment from which there is no direct access to the public container image registry (registry.deckhouse.io) or public deb/rpm packages repositories.
+This guide focuses on deploying a Kubernetes cluster using Deckhouse Platform in a private environment from which there is no direct access to the public container image registry (registry.deckhouse.io) or public deb/rpm packages repositories.
 
 Installation in a private environment is generally similar to installation on [bare metal](../bm/step2.html). The only difference is in some additional settings.
 
@@ -65,8 +65,8 @@ Installation in a private environment is generally similar to installation on [b
 For more details on installing and updating DP in an air-gapped environment, see the [“Installing DP in an air-gapped environment”](/products/kubernetes-platform/guides/private-environment.html) and [“Updating DP in an air-gapped environment”](/products/kubernetes-platform/guides/airgapped-update.html) guides.
 {% endalert %}
 
-Scheme of Deckhouse installation in a private environment:<br />
-<img src="/images/gs/private-env-schema.png" alt="Scheme of Deckhouse installation in a private environment">
+Scheme of Deckhouse Platform installation in a private environment:<br />
+<img src="/images/gs/private-env-schema.png" alt="Scheme of Deckhouse Platform installation in a private environment">
 
 {% alert %}An internal repository of OS packages is necessary to install curl on future cluster nodes (if there is no access to the official repositories via a proxy server).
 {% endalert %}
@@ -75,14 +75,14 @@ Scheme of Deckhouse installation in a private environment:<br />
 ## Installation requirements
 
 <ol>
-  <li><p><strong>Personal computer.</strong> The computer from which the installation will be performed.{% unless page.platform_type == "existing" %} It is only needed to run the Deckhouse installer and will not be part of the cluster.{% endunless %}</p>
+  <li><p><strong>Personal computer.</strong> The computer from which the installation will be performed.{% unless page.platform_type == "existing" %} It is only needed to run the Deckhouse Platform installer and will not be part of the cluster.{% endunless %}</p>
 
    {% offtopic title="Requirements..." %}
    - OS: Windows 10+, macOS 10.15+, Linux (e.g. Ubuntu 18.04+, Fedora 35+);
-   - installed docker to run the installer (here are the instructions for [Ubuntu](https://docs.docker.com/engine/install/ubuntu/), [macOS](https://docs.docker.com/desktop/mac/install/), [Windows](https://docs.docker.com/desktop/windows/install/));
+   - installed docker to run the installer (installation instructions for [Ubuntu](https://docs.docker.com/engine/install/ubuntu/), [macOS](https://docs.docker.com/desktop/mac/install/), [Windows](https://docs.docker.com/desktop/windows/install/));
      - on computers with Apple Silicon processors, enable the option "Use Rosetta for x86_64/amd64 emulation on Apple Silicon" in Docker Desktop settings to avoid possible issues running `ssh-agent` during the installation;
 {% if page.platform_code == "bm-private" %}
-   - access to a proxy registry ([read more](/products/kubernetes-platform/documentation/v1/admin/configuration/registry/third-party.html) about setting them up) or to a private container image registry containing Deckhouse images;
+   - access to a proxy registry ([setting up a third-party registry](/products/kubernetes-platform/documentation/v1/admin/configuration/registry/third-party.html)) or to a private container image registry containing Deckhouse Platform images;
 {%- else %}
    - HTTPS access to the `registry.deckhouse.io` container image registry;
 {%- endif %}
@@ -106,14 +106,15 @@ Scheme of Deckhouse installation in a private environment:<br />
    - the `kubectl` command-line tool must be configured to communicate with your cluster.
 {%- elsif page.platform_type == "baremetal"  %}
    - SSH key access to the node, the **master node** of the future cluster.
+   - SSH key access to the node, the **worker node** of the future cluster (if the cluster will consist of more than a single master node).
 {%- endif %}
    {% endofftopic %}
   </li>
 <li>
 {% if page.platform_type == "existing" %}
   <p><strong>The existing Kubernetes cluster.</strong></p>
-  <p>The Kubernetes versions and OS of cluster nodes should be on <a href="/products/kubernetes-platform/documentation/v1/supported_versions.html">the list of supported</a>.</p>
-  <p>During the installation, the Deckhouse installer running on the <strong>personal computer</strong> (see step 1) will connect to the cluster and deploy Deckhouse.</p>
+  <p>The Kubernetes versions and OS of cluster nodes should be on <a href="/products/kubernetes-platform/documentation/v1/reference/supported_versions.html">the list of supported</a>.</p>
+  <p>During the installation, the Deckhouse Platform installer running on the <strong>personal computer</strong> (see step 1) will connect to the cluster and deploy Deckhouse Platform.</p>
   <p><strong>Note</strong> that master node-based installation is not currently supported.</p>
 {%- elsif page.platform_type == 'cloud' and page.platform_code != 'zvirt' %}
   <p><strong>Cloud Provider Resources.</strong></p>
@@ -140,7 +141,7 @@ Scheme of Deckhouse installation in a private environment:<br />
    {% offtopic title="Requirements..." %}
 
    {% alert level="info" %}
-   Starting with version 1.74, the Deckhouse Platform has a module integrity control mechanism that protects modules from being replaced or modified. This mechanism is enabled automatically when the operating system on the nodes where Deckhouse is installed supports the `erofs` kernel module. If this kernel module is not present, Deckhouse will continue to operate without the module integrity control mechanism, but an alert will be displayed indicating that this functionality is not working.
+   Starting with version 1.74, the Deckhouse Platform has a module integrity control mechanism that protects modules from being replaced or modified. This mechanism is enabled automatically when the operating system on the nodes where Deckhouse Platform is installed supports the `erofs` kernel module. If this kernel module is not present, Deckhouse Platform will continue to operate without the module integrity control mechanism, but an alert will be displayed indicating that this functionality is not working.
    {% endalert %}
 
    {% alert level="warning" %}
@@ -148,7 +149,7 @@ Scheme of Deckhouse installation in a private environment:<br />
    To use `ContainerdV2` as the container runtime on cluster nodes, they must meet the following requirements:
 
    - `CgroupsV2` support
-   - systemd version `244`
+   - systemd version `244` or newer
    - `erofs` kernel module support
    - Linux kernel version not in the ranges 6.12.0–6.12.28 or 6.14.0–6.14.6 (these versions are affected by CVE-2025-37999 in EROFS)
 
@@ -158,15 +159,15 @@ Scheme of Deckhouse installation in a private environment:<br />
    - at least 4 CPU cores (_8 CPU cores recommended_)
    - at least 8 GB of RAM (_16 GB of RAM recommended_)
    - at least 60 GB of disk space for the cluster and etcd data on a fast disk (400+ IOPS)
-   - [supported OS](/products/kubernetes-platform/documentation/v1/supported_versions.html)
+   - [supported OS](/products/kubernetes-platform/documentation/v1/reference/supported_versions.html)
    - Linux kernel version `5.8` or newer
    - **Unique hostname** within servers (virtual machines) of the cluster
    - one of the package managers (`apt`/`apt-get`, `yum`, or `rpm`) should be installed
    - Python should be installed
    {% if page.platform_code == "bm-private" %}
-   - access to a proxy registry or to a private container image registry containing Deckhouse images;
+   - access to a proxy registry or to a private container image registry containing Deckhouse Platform images;
    - when using private image storage, you must first [upload images](/products/kubernetes-platform/documentation/v1/admin/configuration/security/scanning.html)
-     of the Deckhouse Platform, vulnerability scanner database, and Deckhouse modules to the private storage;
+     of the Deckhouse Platform, vulnerability scanner database, and modules to the private storage;
    - access to the default OS package repositories (via a proxy server or an internal package repository server);
    {%- else %}
    - HTTPS access to the `registry.deckhouse.io` container image registry
@@ -189,7 +190,7 @@ Scheme of Deckhouse installation in a private environment:<br />
 {% if page.platform_type == "baremetal" or page.platform_type == "baremetal" or page.platform_type == "cloud" %}
 {% alert level="warning" %}
 The recommendations above provide the minimum {% if page.platform_type == "cloud" %}summary{% endif %} resources required for the initial deployment of a cluster with one master node and one worker node.
-This configuration is sufficient for introductory purposes, but it is not suitable for production environments. Read the [recommendations for going for production](/products/kubernetes-platform/guides/production.html), [recommendations for disk layout and sizing](/products/kubernetes-platform/guides/fs-requirements.html) and the [instructions](/products/kubernetes-platform/guides/hardware-requirements.html) for choosing the types and number of cluster nodes, as well as the resources for them, depending on your requirements
+This configuration is sufficient for introductory purposes, but it is not suitable for production environments. Read the [recommendations for going for production](/products/kubernetes-platform/guides/production.html), [recommendations for disk layout and sizing](/products/kubernetes-platform/guides/fs-requirements.html) and the [instructions for choosing the types and number of cluster nodes](/products/kubernetes-platform/guides/hardware-requirements.html), as well as the resources for them, depending on your requirements
 for the operation of the future cluster.
 {% endalert %}
 {%- endif %}

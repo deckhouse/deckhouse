@@ -9,7 +9,7 @@ relatedLinks:
     url: /products/kubernetes-platform/gs/existing/step3.html
   - title: "Настройки модуля deckhouse"
     url: /modules/deckhouse/configuration.html
-  - title: "Bundle и управление модулями"
+  - title: "Наборы модулей и управление модулями"
     url: /products/kubernetes-platform/documentation/v1/admin/configuration/
   - title: "Изменение Talos MachineConfig с помощью патчей"
     url: "https://docs.siderolabs.com/talos/v1.13/configure-your-talos-cluster/system-configuration/patching"
@@ -17,7 +17,7 @@ relatedLinks:
 
 Эта инструкция подходит для ситуации, когда Kubernetes-кластер на базе [Talos Linux](https://www.siderolabs.com/talos-linux) уже создан и работает: control plane запущен, worker-узлы присоединены, CNI установлен, а Kubernetes API доступен через `d8 k`.
 
-Deckhouse Platform (DP) устанавливается поверх готового Kubernetes-кластера в режиме установки в существующий кластер. В примере используется Deckhouse Platform Open, [канал обновлений `EarlyAccess`](/modules/deckhouse/configuration.html#parameters-releasechannel) и [bundle `Managed`](/modules/deckhouse/configuration.html#parameters-bundle).
+Deckhouse Platform (DP) устанавливается поверх готового Kubernetes-кластера в режиме установки в существующий кластер. В примере используется Deckhouse Platform Open, [канал обновлений `EarlyAccess`](/modules/deckhouse/configuration.html#parameters-releasechannel) и [набор модулей `Managed`](/modules/deckhouse/configuration.html#parameters-bundle).
 
 В этой схеме:
 
@@ -207,7 +207,7 @@ DP не должна одновременно с Talos или внешним и�
 Если в Talos-кластере уже установлен Cilium, включать модуль DP `cni-cilium` нельзя: два оператора не должны одновременно управлять одним CNI.
 {% endalert %}
 
-Bundle `Managed` включает `ingress-nginx`, `cert-manager`, `local-path-provisioner`, VPA, мониторинг и модуль `user-authz`. До установки проверьте, нет ли в кластере их внешних аналогов:
+Набор модулей `Managed` включает `ingress-nginx`, `cert-manager`, `local-path-provisioner`, VPA, мониторинг и модуль `user-authz`. До установки проверьте, нет ли в кластере их внешних аналогов:
 
 ```bash
 d8 k --kubeconfig="$ADMIN_KUBECONFIG" get storageclass
@@ -357,7 +357,7 @@ d8 k --kubeconfig="$ADMIN_KUBECONFIG" get modules -o wide
 
 У включённых модулей ожидаются `PHASE: Ready`, `ENABLED: True` и `READY: True`.
 
-Статуса Module недостаточно: он может быть `Ready`, даже если отдельный workload модуля не был создан или перезапускается. Проверьте реальные ресурсы:
+Статуса Module недостаточно: он может быть `Ready`, даже если отдельный Deployment, StatefulSet или DaemonSet модуля не был создан или перезапускается. Проверьте реальные ресурсы:
 
 ```bash
 d8 k --kubeconfig="$ADMIN_KUBECONFIG" get deployment,statefulset,daemonset -A
@@ -416,5 +416,5 @@ d8 k --kubeconfig="$ADMIN_KUBECONFIG" get nodes -o wide
 - Deployment `deckhouse` готов;
 - включённые модули имеют `READY: True`;
 - реальные Deployment, StatefulSet и DaemonSet модулей готовы;
-- lifecycle-модули DP остаются выключенными;
+- модули DP, которые могут управлять компонентами Talos, остаются выключенными;
 - административный доступ через Talos admin kubeconfig сохранён.

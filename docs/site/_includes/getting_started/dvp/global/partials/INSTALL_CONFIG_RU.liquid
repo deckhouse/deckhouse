@@ -35,7 +35,7 @@
 <div markdown="1">
 
 {% alert level="info" %}
-При загрузке больших образов ВМ (особенно при медленном канале), если загрузка обрывается при перезагрузке конфигурации Ingress-контроллера, замените значение `worker-shutdown-timeout` в `config.yml` (ресурс `IngressNginxController` / `nginx`) на `1800s` или больше:
+При загрузке больших образов ВМ (особенно при медленном канале), если загрузка обрывается при перезагрузке конфигурации Ingress-контроллера, замените значение `worker-shutdown-timeout` в `config.yml` (IngressNginxController `nginx`) на `1800s` или больше:
 
 ```yaml
   config:

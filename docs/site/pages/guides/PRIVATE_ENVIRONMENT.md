@@ -151,7 +151,7 @@ If that VM has no direct Internet access, download the archive on your workstati
 {% offtopic title="How to download the archive with wget..." %}
 Run the command (use the current URL):
 
-```console
+```bash
 wget https://github.com/goharbor/harbor/releases/download/v2.14.1/harbor-offline-installer-v2.14.1.tgz
 ```
 
@@ -160,7 +160,7 @@ wget https://github.com/goharbor/harbor/releases/download/v2.14.1/harbor-offline
 {% offtopic title="How to download the archive with curl..." %}
 Run the command (use the current URL):
 
-```console
+```bash
 curl -O https://github.com/goharbor/harbor/releases/download/v2.14.1/harbor-offline-installer-v2.14.1.tgz
 ```
 
@@ -168,7 +168,7 @@ curl -O https://github.com/goharbor/harbor/releases/download/v2.14.1/harbor-offl
 
 Extract the downloaded archive (specify the archive name):
 
-```console
+```bash
 tar -zxf ./harbor-offline-installer-v2.14.1.tgz
 ```
 
@@ -195,11 +195,7 @@ cd certs
 Generate a self-signed certificate for Harbor:
 
 ```bash
-openssl req -x509 -newkey ec -pkeyopt ec_paramgen_curve:prime256v1 \
-  -keyout registry.local.key -out registry.local.crt \
-  -sha256 -days 3650 -nodes \
-  -subj "/C=US/ST=California/L=SanFrancisco/O=example/OU=IT/CN=registry.local" \
-  -addext "subjectAltName=DNS:registry.local"
+openssl req -x509 -newkey ec -pkeyopt ec_paramgen_curve:prime256v1 -keyout registry.local.key -out registry.local.crt -sha256 -days 3650 -nodes -subj "/C=US/ST=California/L=SanFrancisco/O=example/OU=IT/CN=registry.local" -addext "subjectAltName=DNS:registry.local"
 ```
 
 Replace `registry.local` with the address that will be used for the image registry in your network.
@@ -212,7 +208,7 @@ ls -la
 
 {% offtopic title="Example command output..." %}
 
-```bash
+```console
 $ ls -la
 total 12
 drwxrwxr-x 2 ubuntu ubuntu 4096 Dec  5 14:58 .
@@ -651,7 +647,7 @@ ef18d7f24777   goharbor/redis-photon:v2.14.1         "redis-server /etc/r…"   
 
 On the Harbor VM, add an entry to `/etc/hosts` that maps the `registry.local` domain name to `localhost` so you can open Harbor by that name from the same machine:
 
-```bash
+```text
 127.0.0.1 localhost registry.local
 ```
 
@@ -670,7 +666,7 @@ In some cloud providers (for example, Yandex Cloud), changes to `/etc/hosts` may
 If your provider uses the same mechanism, apply the corresponding changes to the template file referenced in the comment so that the settings persist after reboot.
 {% endalert %}
 
-Harbor installation is now complete! 🎉
+Harbor installation is now complete.
 
 #### Configuring Harbor
 
@@ -732,7 +728,7 @@ Save the secret immediately. Harbor will not show it again, and it cannot be ret
 <img src="/images/guides/install_to_private_environment/harbor_robot_created.png" alt="Harbor robot account created...">
 </div>
 
-Harbor configuration is now complete! 🎉
+Harbor configuration is now complete.
 
 {% endtab %}
 {% endtabs %}
@@ -788,9 +784,7 @@ By default, `d8 mirror pull` downloads current DP releases, vulnerability scanne
 Run the following command to download current image versions. Replace the placeholders with your values: `<EDITION>`, `<LICENSE_KEY>`, and optionally the target directory path:
 
 ```shell
-d8 mirror pull \
-  --source='registry.deckhouse.io/deckhouse/<EDITION>' \
-  --license='<LICENSE_KEY>' /home/ubuntu/d8-bundle
+d8 mirror pull --source='registry.deckhouse.io/deckhouse/<EDITION>' --license='<LICENSE_KEY>' /home/ubuntu/d8-bundle
 ```
 
 where:
@@ -918,7 +912,7 @@ To verify the push, open the `deckhouse` project in the Harbor web UI.
 <img src="/images/guides/install_to_private_environment/harbor_state_with_images.png" alt="Harbor project page...">
 </div>
 
-The images are now available and ready to use! 🎉
+The images are now available in the private container registry.
 
 ## Signing in to the registry to run the installer
 
@@ -952,13 +946,14 @@ Login Succeeded
 ### VM requirements
 
 {% alert level="warning" %}
-During installation, `ContainerdV2` is used as the default container runtime on cluster nodes. To use it, the nodes must meet the following requirements:
+The example configuration in this guide sets the `ContainerdV2` container runtime (`defaultCRI: ContainerdV2`). To use it, the nodes must meet the following requirements:
 
 - `CgroupsV2` support;
-- systemd version `244`;
+- systemd version `244` or newer;
+- Linux kernel version `5.8` or newer, except for versions 6.12.0–6.12.28 and 6.14.0–6.14.6;
 - support for the `erofs` kernel module.
 
-Some distributions do not meet these requirements. Bring the node OS into compliance before installing Deckhouse Platform. For details, see the [documentation](../documentation/v1/reference/api/cr.html#clusterconfiguration-defaultcri).
+Some distributions (for example, Astra Linux 1.7.4) do not meet these requirements. Bring the node OS into compliance before installing Deckhouse Platform. For details, see the [defaultCRI parameter description](../documentation/v1/reference/api/cr.html#clusterconfiguration-defaultcri).
 {% endalert %}
 
 Servers intended for future cluster nodes must meet the following requirements:
@@ -968,21 +963,21 @@ Servers intended for future cluster nodes must meet the following requirements:
 - at least 60 GB of disk space on fast storage (400+ IOPS);
 - a [supported OS](../documentation/v1/reference/supported_versions.html#linux);
 - Linux kernel version `5.8` or later;
-- a **unique hostname** across all cluster servers (physical servers and virtual machines)
+- a **unique hostname** across all cluster servers (physical servers and virtual machines);
 - one of the package managers available (`apt`/`apt-get`, `yum`, or `rpm`).
 
-- Python installed
-- access to the proxying registry or to the private container registry that holds Deckhouse images
-- access to the standard OS package repositories for your distribution (via a proxy or an internal package mirror)
-- SSH access from the bastion host using a key
-- network access from the bastion host on port `22/TCP`
+- Python installed;
+- access to the proxying registry or to the private container registry that holds DP images;
+- access to the standard OS package repositories for your distribution (via a proxy or an internal package mirror);
+- SSH access from the bastion host using a key;
+- network access from the bastion host on port `22/TCP`;
 - no container runtime packages installed on the node (for example, no containerd or Docker).
 
 {% alert level="warning" %}
 For proper resource sizing, read [the production preparation guide](../guides/production.html) and [the hardware requirements](../guides/hardware-requirements.html) for node roles, node counts, and sizing based on workload and operations.
 {% endalert %}
 
-### Mapping `registry.local` to the Harbor VM
+### Mapping registry.local to the Harbor VM
 
 On the servers where the master and worker nodes will run, make the `registry.local` hostname resolve to the Harbor VM’s internal IP address in the private network.
 
@@ -1016,11 +1011,11 @@ There are two ways to connect:
 
 {% endofftopic %}
 
-```console
-<INTERNAL-IP-ADDRESS> registry.local proxy.local
+```text
+<INTERNAL_IP_ADDRESS> registry.local proxy.local
 ```
 
-> Replace `<INTERNAL-IP-ADDRESS>` with the Harbor VM’s actual internal IP address.
+> Replace `<INTERNAL_IP_ADDRESS>` with the Harbor VM’s actual internal IP address.
 
 ### Configuring SSH access to the master node
 
@@ -1028,7 +1023,7 @@ To install DP, add the public part of your SSH key to `.ssh/authorized_keys` for
 
 Run the commands as `root` (substitute the public part of your SSH key):
 
-```console
+```bash
 mkdir /home/<USER>/.ssh
 export KEY='ssh-rsa AAAAB3NzaC1yc2EAAAADA...'
 echo $KEY >> /home/<USER>/.ssh/authorized_keys
@@ -1043,11 +1038,7 @@ Here `<USER>` is the username on the master node.
 Run `cat ~/.ssh/id_rsa.pub` to print the public key (or use the path to your key’s `.pub` file).
 {% endofftopic %}
 
-As a result of these commands:
-
-* the `<USER>` user is added to the `sudo` group (if the chosen OS did not already do this);
-* passwordless privilege escalation is configured;
-* the public SSH key is added so you can log in to the server as this user.
+These commands add the public SSH key so you can log in to the server as `<USER>`, and configure passwordless privilege escalation for this user.
 
 Verify that you can connect as the user:
 
@@ -1069,9 +1060,9 @@ ssh-keygen -t rsa -f /dev/shm/caps-id -C "" -N ""
 
 On the worker node server, create the `caps` user. Run the following commands and set the public key from the previous step:
 
-```console
+```bash
 # Set the user’s public SSH key.
-export KEY='<SSH-PUBLIC-KEY>'
+export KEY='<SSH_PUBLIC_KEY>'
 useradd -m -s /bin/bash caps
 usermod -aG sudo caps
 echo 'caps ALL=(ALL) NOPASSWD: ALL' | sudo EDITOR='tee -a' visudo
@@ -1085,9 +1076,9 @@ chmod 600 /home/caps/.ssh/authorized_keys
 {% offtopic title="If you are using CentOS, Rocky Linux, ALT Linux, ROSA Server, RED OS, or MOS OS..." %}
 On RHEL-based operating systems, add the `caps` user to the `wheel` group. Run the following commands and set the public key from the previous step:
 
-```console
+```bash
 # Set the user’s public SSH key.
-export KEY='<SSH-PUBLIC-KEY>'
+export KEY='<SSH_PUBLIC_KEY>'
 useradd -m -s /bin/bash caps
 usermod -aG wheel caps
 echo 'caps ALL=(ALL) NOPASSWD: ALL' | sudo EDITOR='tee -a' visudo
@@ -1195,7 +1186,7 @@ You should see a container named `squid` in the list.
       # MUST NOT match clusterDomain in ClusterConfiguration.
       # You may change this now or after installation.
       publicDomainTemplate: "%s.test.local"
-      # How Deckhouse modules terminate HTTPS.
+      # How DP modules terminate HTTPS.
       https:
         certManager:
           clusterIssuerName: selfsigned
@@ -1270,11 +1261,11 @@ spec:
     bundle: Default
     releaseChannel: Stable
     logLevel: Info
-    # Settings for accessing the container registry with Deckhouse images.
+    # Settings for accessing the container registry with DP images.
     registry:
       mode: Unmanaged
       unmanaged:
-        # Address of the Docker registry where the Deckhouse images are located.
+        # Address of the Docker registry where the DP images are located.
         imagesRepo: <IMAGES_REPO_URI>
         # The username for authenticating with the container registry.
         username: <USERNAME>
@@ -1287,7 +1278,7 @@ spec:
           ...
           -----END CERTIFICATE-----
 ---
-# Global Deckhouse settings.
+# Global DP settings.
 # https://deckhouse.io/products/kubernetes-platform/documentation/v1/reference/api/global.html#%D0%BF%D0%B0%D1%80%D0%B0%D0%BC%D0%B5%D1%82%D1%80%D1%8B
 apiVersion: deckhouse.io/v1alpha1
 kind: ModuleConfig
@@ -1302,10 +1293,10 @@ spec:
       # The domain MUST NOT match the value specified in the clusterDomain parameter of the ClusterConfiguration resource.
       # You can set your own value right away, or follow the guide and change it after installation.
       publicDomainTemplate: "%s.test.local"
-      # The HTTPS implementation method used by Deckhouse modules.
+      # The HTTPS implementation method used by DP modules.
       https:
         certManager:
-          # Use self-signed certificates for Deckhouse modules.
+          # Use self-signed certificates for DP modules.
           clusterIssuerName: selfsigned
 ---
 # user-authn module settings.
@@ -1406,12 +1397,15 @@ After the image is pulled and the container starts successfully, you will see a 
 Start the DP installation with the following command (specify the master node’s internal IP address):
 
 ```bash
-dhctl bootstrap --ssh-user=deckhouse --ssh-host=<master_ip> --ssh-agent-private-keys=/tmp/.ssh/id_rsa \
-  --config=/config.yml \
-  --ask-become-pass
+dhctl bootstrap --ssh-user=<USER> --ssh-host=<MASTER_IP> --ssh-agent-private-keys=/tmp/.ssh/id_rsa --config=/config.yml
 ```
 
-> Replace `id_rsa` with the name of your private key file if it differs.
+Here:
+
+* `<USER>`: User on the master node for whom you configured SSH access and passwordless `sudo`.
+* `<MASTER_IP>`: Internal IP address of the master node.
+
+Replace `id_rsa` with the name of your private key file if it differs.
 
 The installation process may take up to 30 minutes depending on the network speed.
 
@@ -1439,7 +1433,7 @@ Perform the following steps:
 
 * Configure a StorageClass for [local storage](/modules/local-path-provisioner/cr.html#localpathprovisioner) by running the following command on the master node:
 
-  ```console
+  ```bash
   sudo -i d8 k create -f - << EOF
   apiVersion: deckhouse.io/v1alpha1
   kind: LocalPathProvisioner
@@ -1454,13 +1448,12 @@ Perform the following steps:
 * Set the created StorageClass as the default StorageClass. To do this, run the following command on the master node:
 
   ```bash
-  sudo -i d8 k patch mc global --type merge \
-    -p "{\"spec\": {\"settings\":{\"defaultClusterStorageClass\":\"localpath\"}}}"
+  sudo -i d8 k patch mc global --type merge -p "{\"spec\": {\"settings\":{\"defaultClusterStorageClass\":\"localpath\"}}}"
   ```
 
 * Create the `worker` NodeGroup and add a node using Cluster API Provider Static (CAPS):
 
-  ```console
+  ```bash
   sudo -i d8 k create -f - <<EOF
   apiVersion: deckhouse.io/v1
   kind: NodeGroup
@@ -1478,7 +1471,7 @@ Perform the following steps:
 
 * Create an [SSHCredentials](/modules/node-manager/cr.html#sshcredentials) resource in the cluster. Run on the master node:
 
-  ```console
+  ```bash
   sudo -i d8 k create -f - <<EOF
   apiVersion: deckhouse.io/v1alpha2
   kind: SSHCredentials
@@ -1492,15 +1485,15 @@ Perform the following steps:
 
 * Print the public SSH key (needed for verification). On the master node:
 
-  ```console
+  ```bash
   cat /dev/shm/caps-id.pub
   ```
 
 * Create a [StaticInstance](/modules/node-manager/cr.html#staticinstance) for the node to add. On the master node, set the node IP and apply:
 
-  ```console
+  ```bash
   # Specify the IP address of the node to be added to the cluster.
-  export NODE=<NODE-IP-ADDRESS>
+  export NODE=<NODE_IP_ADDRESS>
   sudo -i d8 k create -f - <<EOF
   apiVersion: deckhouse.io/v1alpha2
   kind: StaticInstance
@@ -1533,7 +1526,7 @@ Perform the following steps:
 
 Make sure the Kruise controller manager Pod of the [ingress-nginx](/modules/ingress-nginx/) module is running and in the `Running` status. To do this, run the following command on the master node:
 
-```bash
+```console
 $ sudo -i d8 k -n d8-ingress-nginx get po -l app=kruise
 NAME                                         READY   STATUS    RESTARTS    AGE
 kruise-controller-manager-7dfcbdc549-b4wk7   3/3     Running   0           15m
@@ -1634,7 +1627,7 @@ spec:
 
 Apply it by running the following command on the master node:
 
-```console
+```bash
 sudo -i d8 k create -f $PWD/user.yml
 ```
 
@@ -1642,7 +1635,7 @@ sudo -i d8 k create -f $PWD/user.yml
 
 To reach the cluster web UIs, make the hostnames below resolve to the master node’s internal IP address. Names must follow the [`publicDomainTemplate`](../documentation/v1/reference/api/global.html#parameters-modules-publicdomaintemplate) you configured (here, `%s.test.local`). Replace `<MASTER_IP>` with the master’s internal IP before running:
 
-```text
+```bash
 export PUBLIC_IP="<MASTER_IP>"
 sudo -E bash -c "cat <<EOF >> /etc/hosts
 $PUBLIC_IP api.test.local
@@ -1667,9 +1660,9 @@ EOF
 
 To confirm the cluster is healthy, open Grafana (built from `publicDomainTemplate`, e.g. `grafana.test.local` for `%s.test.local`) and sign in with the user you created earlier.
 
-## Where to go next?
+## Next steps
 
-Everything is installed and running. You can use the web UIs to manage the cluster:
+DP is installed and running. You can use the web UIs to manage the cluster:
 
 * **Deckhouse Console** — cluster and core component management. URL: **console.test.local**. You can download the `d8` CLI from this UI.
 * **Documentation** — documentation for the DP version running in the cluster. URL: **documentation.test.local**.

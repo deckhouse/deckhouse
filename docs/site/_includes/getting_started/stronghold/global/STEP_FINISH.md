@@ -5,16 +5,16 @@
 {::options parse_block_html="false" /}
 
 <div markdown="1">
-## Everything is installed, configured, and working!
+## Everything is installed, configured, and working
 
-Now that you have installed and properly configured Deckhouse Stronghold, let's look at what you can do with it.
+Below are the Deckhouse Stronghold capabilities available right after installation.
 
-By default, the [Dex](https://dexidp.io/) is used for accessing all the components.
+By default, all components are accessed through [Dex](https://dexidp.io/) using the static user created in the cluster during installation.
 
 Here are credentials **generated** in the previous steps:
 
 - Username — `admin@deckhouse.io`
-- Password — `<GENERATED_PASSWORD>` (you can also find it in the `User` CustomResource in the `resource.yml` file)
+- Password — `<GENERATED_PASSWORD>` (you can also find it in the User in the `{% if page.platform_type == 'baremetal' %}user.yml{% else %}config.yml{% endif %}` file)
 
 Open `https://stronghold.example.com` in your browser and sign in via Dex using the provided username and password.
 </div>

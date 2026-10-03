@@ -4,7 +4,7 @@
 {::options parse_block_html="false" /}
 
 <div markdown="1">
-## Everything is installed, configured, and working!
+## Everything is installed, configured, and working
 
 Open `http://127.0.0.1:8200` in your browser and log in using the "Token" method and the `root` token specified at startup.
 
@@ -12,9 +12,9 @@ Open `http://127.0.0.1:8200` in your browser and log in using the "Token" method
 If you specified a different value for the `-dev-root-token-id` parameter at startup, use it instead of `root`.
 {% endalert %}
 
-Now you can start exploring the capabilities of Deckhouse Stronghold: create secret stores and configure authentication methods for users and applications. Detailed information about the system as a whole and about each component is available in the [documentation](/products/stronghold/documentation/admin/overview.html).
+Now you can start exploring the capabilities of Deckhouse Stronghold: create secret stores and configure authentication methods for users and applications. Detailed information about the system as a whole and about each component is available in the [Stronghold documentation](/products/stronghold/documentation/admin/overview.html).
 
 To stop Stronghold, press Ctrl+C in the terminal where it is running.
 
-If you have any questions, feel free to contact our [online community](/community/about.html#online-community).
+If you have any questions, contact the [Deckhouse online community](/community/about.html#online-community).
 </div>

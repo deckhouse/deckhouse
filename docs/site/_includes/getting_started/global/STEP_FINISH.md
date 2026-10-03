@@ -5,17 +5,17 @@
 {::options parse_block_html="false" /}
 
 <div markdown="1">
-## Everything is installed, configured, and working!
+## Everything is installed and configured
 
-Now that you have installed and properly configured Deckhouse Platform, let's look at what you can do with it.
+The following Deckhouse Platform capabilities are available right after the installation.
 
-By default, the [Dex](https://dexidp.io/) is used for accessing all the components.
+By default, [Dex](https://dexidp.io/) is used for accessing all the components.
 
 {% unless page.gs_installer %}
 Here are credentials **generated** in the previous steps:
 
 - Username — `admin@deckhouse.io`
-- Password — `<GENERATED_PASSWORD>` (you can also find it in the `User` CustomResource in the `config.yml` file)
+- Password — `<GENERATED_PASSWORD>` (you can also find it in the User manifest in the `config.yml` file)
 
 Use them to access the web interface of the Deckhouse Platform components.
 {% endunless %}
@@ -27,28 +27,28 @@ Use them to access the web interface of the Deckhouse Platform components.
 Open the cluster web interface by clicking the "Connect and open" button in the row with the created cluster on the main screen.
 
 {%- if page.platform_code == 'yandex' or page.platform_code == "bm" %}
-<img src="/images/gs/installer/ya-open-console.png" alt="What does the Connect and open button look like..." style="width: 100%;">
+<img src="/images/gs/installer/ya-open-console.png" alt="What the Connect and open button looks like..." style="width: 100%;">
 {%- endif %}
 {%- if page.platform_code == 'dvp-provider' %}
-<img src="/images/gs/installer/dvp-open-console.png" alt="What does the Connect and open button look like..." style="width: 100%;">
+<img src="/images/gs/installer/dvp-open-console.png" alt="What the Connect and open button looks like..." style="width: 100%;">
 {%- endif %}
 {%- if page.platform_code == 'openstack' %}
-<img src="/images/gs/installer/openstack-open-console.png" alt="What does the Connect and open button look like..." style="width: 100%;">
+<img src="/images/gs/installer/openstack-open-console.png" alt="What the Connect and open button looks like..." style="width: 100%;">
 {%- endif %}
 {%- if page.platform_code == 'openstack_selectel' %}
-<img src="/images/gs/installer/selectel-open-console.png" alt="What does the Connect and open button look like..." style="width: 100%;">
+<img src="/images/gs/installer/selectel-open-console.png" alt="What the Connect and open button looks like..." style="width: 100%;">
 {%- endif %}
 {%- if page.platform_code == 'openstack_vk' %}
-<img src="/images/gs/installer/vk-open-console.png" alt="What does the Connect and open button look like..." style="width: 100%;">
+<img src="/images/gs/installer/vk-open-console.png" alt="What the Connect and open button looks like..." style="width: 100%;">
 {%- endif %}
 {%- if page.platform_code == 'vsphere' %}
-<img src="/images/gs/installer/vsphere-open-console.png" alt="What does the Connect and open button look like..." style="width: 100%;">
+<img src="/images/gs/installer/vsphere-open-console.png" alt="What the Connect and open button looks like..." style="width: 100%;">
 {%- endif %}
 {%- if page.platform_code == 'vcd' %}
-<img src="/images/gs/installer/vcd-open-console.png" alt="What does the Connect and open button look like..." style="width: 100%;">
+<img src="/images/gs/installer/vcd-open-console.png" alt="What the Connect and open button looks like..." style="width: 100%;">
 {%- endif %}
 {%- if page.platform_code == 'zvirt' %}
-<img src="/images/gs/installer/zvirt-open-console.png" alt="What does the Connect and open button look like..." style="width: 100%;">
+<img src="/images/gs/installer/zvirt-open-console.png" alt="What the Connect and open button looks like..." style="width: 100%;">
 {%- endif %}
 
 The web interface for managing the installed DP cluster will open in the same window.
@@ -71,7 +71,7 @@ Follow these steps:
 
    <img src="/images/gs/installer/ingress-settings.png" alt="New Ingress controller settings" style="width: 100%;">
 
-2. Configure the DNS name template to be used for cluster components.
+1. Configure the DNS name template to be used for cluster components.
    {% alert level="info" %}
    The DNS name template is used to configure Ingress resources for system applications. For example, the Grafana UI is bound to the name `grafana`. Then, for the template `%s.kube.company.my`, Grafana will be available at `grafana.kube.company.my`, and so on.
    {% endalert %}

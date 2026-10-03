@@ -31,7 +31,7 @@
 {%- offtopic title="Схема размещения и взаимодействия ресурсов в облаке..." %}
 {%- capture layout_path %}getting_started/{{ layout_platform_code }}/layouts/{{ layout.code | upcase }}{% if page.lang == 'ru' %}_RU{% endif %}.md{% endcapture %}
 {%- capture layout_doc_path %}/modules/cloud-provider-{% if page.platform_code == 'dvp-provider' %}dvp{%- else %}{{ layout_platform_code }}{%- endif %}/layouts.html{% endcapture %}
-Схема размещения ресурсов (layout) определяет расположение ресурсов в облаке и их сетевое взаимодействие. Существует несколько предопределённых схем размещения, о которых подробнее вы можете узнать [в документации]({{ layout_doc_path }}).
+Схема размещения ресурсов (layout) определяет расположение ресурсов в облаке и их сетевое взаимодействие. Существует несколько предопределённых схем размещения, подробнее о них — [в описании схем размещения]({{ layout_doc_path }}).
 
 При установке будет использоваться схема размещения ресурсов `{{ layout.name }}`.
 
@@ -53,17 +53,17 @@
 {%- endif %}
 
 {% if page.platform_type == "existing" %}
-Если вы развернули **новый** кластер и хотите поставить в него Deckhouse, то рекомендуем вернуться на предыдущий шаг и использовать руководство по развертыванию кластера с помощью самого Deckhouse.
+Если вы развернули **новый** кластер и хотите поставить в него Deckhouse Platform, то рекомендуем вернуться на предыдущий шаг и использовать руководство по развертыванию кластера с помощью самого Deckhouse Platform.
 
-Кластеры Kubernetes, предлагаемые различными облачными провайдерами, имеют свои особенности и различия, так же как и кластеры, развернутые вручную. Правильная стратегия установки Deckhouse в таких кластерах — установить Deckhouse в минимальной конфигурации, после чего включить необходимые модули.
+Кластеры Kubernetes, предлагаемые различными облачными провайдерами, имеют свои особенности и различия, так же как и кластеры, развернутые вручную. Правильная стратегия установки Deckhouse Platform в таких кластерах — установить Deckhouse Platform в минимальной конфигурации, после чего включить необходимые модули.
 
-Данное руководство предлагает установку Deckhouse в **минимальной** конфигурации с включенным модулем [внутренней документации](/modules/documentation/) (для примера работы web-приложения) и модулем [cert-manager](/modules/cert-manager/).
+Данное руководство предлагает установку Deckhouse Platform в **минимальной** конфигурации с включенным модулем [внутренней документации](/modules/documentation/) (для примера работы web-приложения) и модулем [cert-manager](/modules/cert-manager/).
 
-После выполнения всех шагов данного руководства вам нужно будет самостоятельно включить интересующие вас модули. Воспользуйтесь [документацией](/products/kubernetes-platform/documentation/), чтобы получить об этом необходимую информацию. Также, при возникновении вопросов, вы можете попросить помощи [сообщества](/community/about.html).
+После выполнения всех шагов данного руководства вам нужно будет самостоятельно включить интересующие вас модули. Необходимая информация приведена [в документации Deckhouse Platform](/products/kubernetes-platform/documentation/v1/). При возникновении вопросов обратитесь [к сообществу Deckhouse](/community/about.html).
 
 {% elsif page.platform_code == "bm-private" %}
 ## Схема развертывания
-Данное руководство предлагает развертывание кластера Kubernetes с помощью Deckhouse в закрытом окружении, из которого нет прямого доступа к внешнему хранилищу образов контейнеров (registry.deckhouse.ru) или внешним репозиториям deb/rpm-пакетов.
+Данное руководство предлагает развертывание кластера Kubernetes с помощью Deckhouse Platform в закрытом окружении, из которого нет прямого доступа к внешнему хранилищу образов контейнеров (registry.deckhouse.ru) или внешним репозиториям deb/rpm-пакетов.
 
 Установка в закрытом окружении в целом аналогична установке [на bare metal](../bm/step2.html). Отличие только в некоторых дополнительных параметрах настройки.
 
@@ -71,8 +71,8 @@
 Подробнее с установкой и обновлением DP в закрытом окружении можно ознакомиться в руководствах [«Установка DP в закрытом окружении»](/products/kubernetes-platform/guides/private-environment.html) и [«Обновление DP в закрытом окружении»](/products/kubernetes-platform/guides/airgapped-update.html).
 {% endalert %}
 
-Схема развертывания Deckhouse в закрытом окружении:<br />
-<img src="/images/gs/private-env-schema-RU.png" alt="Схема развертывания Deckhouse в закрытом окружении">
+Схема развертывания Deckhouse Platform в закрытом окружении:<br />
+<img src="/images/gs/private-env-schema-RU.png" alt="Схема развертывания Deckhouse Platform в закрытом окружении">
 
 {% alert %}Внутренний репозиторий пакетов ОС необходим для установки curl на узлах будущего кластера (при
 отсутствии возможности доступа к официальным репозиториям через прокси-сервер).
@@ -82,19 +82,19 @@
 ## Что необходимо для установки
 
 <ol>
-  <li><p><strong>Персональный компьютер.</strong> Компьютер, с которого будет производиться установка.{% unless page.platform_type == "existing" %} Он нужен только для запуска инсталлятора Deckhouse и не будет частью кластера.{% endunless %}</p>
+  <li><p><strong>Персональный компьютер.</strong> Компьютер, с которого будет производиться установка.{% unless page.platform_type == "existing" %} Он нужен только для запуска инсталлятора Deckhouse Platform и не будет частью кластера.{% endunless %}</p>
 
    {% offtopic title="Требования..." %}
    - ОС: Windows 10+, macOS 10.15+, Linux (Ubuntu 18.04+, Fedora 35+);
-   - установленный docker для запуска инсталлятора Deckhouse (инструкции для [Ubuntu](https://docs.docker.com/engine/install/ubuntu/), [macOS](https://docs.docker.com/desktop/mac/install/), [Windows](https://docs.docker.com/desktop/windows/install/));
+   - установленный docker для запуска инсталлятора Deckhouse Platform (инструкции для [Ubuntu](https://docs.docker.com/engine/install/ubuntu/), [macOS](https://docs.docker.com/desktop/mac/install/), [Windows](https://docs.docker.com/desktop/windows/install/));
      - на компьютерах с процессорами семейства Apple Silicon включите опцию «Use Rosetta for x86_64/amd64 emulation on Apple Silicon» в настройках Docker Desktop, чтобы избежать возможных проблем с запуском `ssh-agent` во время установки;
 {% if page.platform_code == "bm-private" %}
-   - доступ до проксирующего registry ([читайте подробнее](/products/kubernetes-platform/documentation/v1/admin/configuration/registry/third-party.html) про их настройку) или до частного хранилища образов контейнеров с образами контейнеров Deckhouse;
+   - доступ до проксирующего registry ([настройка стороннего registry](/products/kubernetes-platform/documentation/v1/admin/configuration/registry/third-party.html)) или до частного хранилища образов контейнеров с образами контейнеров Deckhouse Platform;
 {%- else %}
    - HTTPS-доступ до хранилища образов контейнеров `registry.deckhouse.ru`;
 {%- endif %}
 {%- if page.platform_type == 'cloud' %}
-   - доступ до API облачного провайдера, учетная запись с правами на создание ресурсов
+   - доступ до API облачного провайдера, учётная запись с правами на создание ресурсов
      {%- unless page.platform_code == 'zvirt' %}
      и настроенная
      {%- if page.platform_code == 'aws' %} утилита [awscli](https://aws.amazon.com/cli/)
@@ -120,8 +120,8 @@
 <li>
 {% if page.platform_type == "existing" %}
   <p><strong>Существующий кластер Kubernetes.</strong></p>
-  <p>Версии Kubernetes и ОС узлов кластера должны быть <a href="/products/kubernetes-platform/documentation/v1/supported_versions.html">в списке поддерживаемых</a>.</p>
-  <p>В процессе установки инсталлятор, запущенный на <strong>персональном компьютере</strong> (см. п.1), подключится к кластеру и развернет Deckhouse.</p>
+  <p>Версии Kubernetes и ОС узлов кластера должны быть <a href="/products/kubernetes-platform/documentation/v1/reference/supported_versions.html">в списке поддерживаемых</a>.</p>
+  <p>В процессе установки инсталлятор, запущенный на <strong>персональном компьютере</strong> (пункт 1), подключится к кластеру и развернёт Deckhouse Platform.</p>
   <p><strong>Обратите внимание</strong>, что установка непосредственно с master-узла не поддерживается.</p>
 {%- elsif page.platform_type == 'cloud' and page.platform_code != 'zvirt' %}
   <p><strong>Ресурсы облачного провайдера.</strong></p>
@@ -147,41 +147,41 @@
    <p><strong>Физический сервер или виртуальная машина для master-узла.</strong></p>
    {% offtopic title="Требования..." %}
    {% alert level="info" %}
-   Deckhouse Platform, начиная с версии 1.74, имеет механизм контроля целостности модулей, который защищает их от подмены и изменения. Этот механизм включается автоматически при поддержке операционной системой на узлах, где установлен Deckhouse, модуля ядра `erofs`. При отсутствии этого модуля ядра Deckhouse продолжит работу без механизма контроля целостности модулей, при этом появится алерт о неработоспособности этой функциональности.
+   Deckhouse Platform имеет механизм контроля целостности модулей, который защищает их от подмены и изменения. Этот механизм включается автоматически при поддержке операционной системой на узлах, где установлен Deckhouse Platform, модуля ядра `erofs`. При отсутствии этого модуля ядра Deckhouse Platform продолжит работу без механизма контроля целостности модулей, при этом появится алерт о неработоспособности этой функциональности.
    {% endalert %}
    {% alert level="warning" %}
    На следующем шаге данного руководства в качестве container runtime по умолчанию на узлах кластера указан `ContainerdV2`.
    Чтобы использовать `ContainerdV2` в качестве container runtime на узлах кластера, они должны соответствовать следующим требованиям:
 
    - поддержка `CgroupsV2`;
-   - systemd версии `244`;
+   - systemd версии `244` и новее;
    - поддержка модуля ядра `erofs`;
    - версия ядра Linux не входит в диапазоны 6.12.0–6.12.28 или 6.14.0–6.14.6 (эти версии подвержены уязвимости CVE-2025-37999 в EROFS).
 
-   Некоторые дистрибутивы (например, Astra Linux 1.7.4) не соответствуют этим требованиям, и ОС на узлах необходимо привести в соответствие требованиям перед установкой Deckhouse Platform. Подробнее — [в документации](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#clusterconfiguration-defaultcri).
+   Некоторые дистрибутивы (например, Astra Linux 1.7.4) не соответствуют этим требованиям, и ОС на узлах необходимо привести в соответствие требованиям перед установкой Deckhouse Platform. Подробнее — [в описании параметра defaultCRI](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#clusterconfiguration-defaultcri).
    {% endalert %}
 
-   - не менее 4 ядер CPU (_рекомендовано  8 ядер CPU_);
+   - не менее 4 ядер CPU (_рекомендовано 8 ядер CPU_);
    - не менее 8 ГБ RAM (_рекомендовано 16 ГБ RAM_);
    - не менее 60 ГБ дискового пространства на быстром диске (400+ IOPS);
-   - [поддерживаемая ОС](/products/kubernetes-platform/documentation/v1/supported_versions.html);
+   - [поддерживаемая ОС](/products/kubernetes-platform/documentation/v1/reference/supported_versions.html);
    - ядро Linux версии `5.8` или новее;
    - **уникальный hostname** в пределах серверов (виртуальных машин) кластера;
    - наличие одного из пакетных менеджеров (`apt`/`apt-get`, `yum` или `rpm`).
 
-     **Важно.** — в РЕД ОС по умолчанию могут отсутствовать `yum` и `which`, поэтому их следует заранее установить;
+     **Важно.** В РЕД ОС по умолчанию могут отсутствовать `yum` и `which`, поэтому установите их заранее;
    - установленный Python;
    {% if page.platform_code == "bm-private" %}
-   - доступ до проксирующего registry или до частного хранилища образов контейнеров с образами контейнеров Deckhouse;
+   - доступ до проксирующего registry или до частного хранилища образов контейнеров с образами контейнеров Deckhouse Platform;
    - при использовании частного хранилища образов необходимо предварительно [загрузить образы](/products/kubernetes-platform/documentation/v1/admin/configuration/security/scanning.html)
-     Deckhouse Platform, БД сканера уязвимостей и модулей Deckhouse в частное хранилище;
+     Deckhouse Platform, БД сканера уязвимостей и модулей в частное хранилище;
    - доступ к стандартным для используемой ОС репозиториям пакетов (через прокси-сервер или до внутреннего сервера-репозитория пакетов);
    {%- else %}
    - HTTPS-доступ до хранилища образов контейнеров `registry.deckhouse.ru`;
    - доступ к стандартным для используемой ОС репозиториям пакетов;
    {%- endif %}
-   - SSH-доступ от **персонального компьютера** (см. п.1) по ключу;
-   - сетевой доступ от **персонального компьютера** (см. п.1) по порту <code>22/TCP</code>;
+   - SSH-доступ от **персонального компьютера** (пункт 1) по ключу;
+   - сетевой доступ от **персонального компьютера** (пункт 1) по порту <code>22/TCP</code>;
    - на узле не должно быть установлено пакетов container runtime, например containerd или Docker.
    {% endofftopic %}
 {%- endif %}
@@ -196,6 +196,6 @@
 {% if page.platform_type == "baremetal" or page.platform_type == "baremetal" or page.platform_type == "cloud" %}
 {% alert level="warning" %}
 В рекомендациях выше приведены минимальные {% if page.platform_type == "cloud" %}суммарные{% endif %} ресурсы, необходимые для начального развёртывания кластера с одним master-узлом и одним worker-узлом.
-Такой конфигурации достаточно для ознакомительных целей, но для production-окружений она не подходит. Ознакомьтесь с [рекомендациями по подготовке к production](/products/kubernetes-platform/guides/production.html), [рекомендациями по разметке и объему дисков](/products/kubernetes-platform/guides/fs-requirements.html) и [инструкцией](/products/kubernetes-platform/guides/hardware-requirements.html) по выбору типов и количества узлов кластера, а также ресурсов для них, в зависимости от ваших требований к эксплуатации будущего кластера.
+Такой конфигурации достаточно для ознакомительных целей, но для production-окружений она не подходит. Ознакомьтесь с [рекомендациями по подготовке к production](/products/kubernetes-platform/guides/production.html), [рекомендациями по разметке и объёму дисков](/products/kubernetes-platform/guides/fs-requirements.html) и [инструкцией по выбору типов и количества узлов кластера](/products/kubernetes-platform/guides/hardware-requirements.html), а также ресурсов для них, в зависимости от ваших требований к эксплуатации будущего кластера.
 {% endalert %}
 {%- endif %}

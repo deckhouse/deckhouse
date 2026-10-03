@@ -1,8 +1,10 @@
 {%- include getting_started/global/partials/NOTICES_ENVIRONMENT.liquid %}
 
-You need to create a Yandex Cloud service account with the editor role to manage cloud resources. The detailed instructions for creating a service account with Yandex Cloud are available in the [documentation](/modules/cloud-provider-yandex/environment.html). Below, we will provide a brief overview of the necessary actions:
+Prepare the {{ page.platform_name[page.lang] }} environment so that Deckhouse Platform can manage cloud resources. The full procedure is described on the [environment preparation page](/modules/cloud-provider-yandex/environment.html) of the `cloud-provider-yandex` module.
 
-1. Create a user named `deckhouse`:
+Create a service account for Deckhouse Platform and assign the `compute.editor`, `vpc.admin`, and `load-balancer.editor` roles to it:
+
+1. Create a service account named `deckhouse`:
 
    ```shell
    yc iam service-account create --name deckhouse
@@ -17,7 +19,7 @@ You need to create a Yandex Cloud service account with the editor role to manage
    name: deckhouse
    ```
 
-1. Assign the required roles to the newly created user for your cloud:
+1. Assign the roles to the service account in the folder:
 
    ```shell
    yc resource-manager folder add-access-binding --id <folderID> --role compute.editor --subject serviceAccount:<userID>
@@ -25,7 +27,7 @@ You need to create a Yandex Cloud service account with the editor role to manage
    yc resource-manager folder add-access-binding --id <folderID> --role load-balancer.editor --subject serviceAccount:<userID>
    ```
 
-1. Create a JSON file containing the parameters for user authorization in the cloud. These parameters will be used to log in to the cloud:
+1. Create a JSON file with the authorized key of the service account. Deckhouse Platform uses it to access the cloud:
 
    ```shell
    yc iam key create --service-account-name deckhouse --output deckhouse-sa-key.json

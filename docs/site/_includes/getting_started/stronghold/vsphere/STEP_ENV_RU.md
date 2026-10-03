@@ -3,7 +3,7 @@
 ## Список необходимых ресурсов vSphere
 
 {% alert %}
-Deckhouse использует интерфейс `ens192`, как интерфейс по умолчанию для виртуальных машин в vSphere. Поэтому, при использовании статических IP-адресов в `mainNetwork`, вы должны в образе ОС создать интерфейс с именем `ens192`, как интерфейс по умолчанию.
+Deckhouse Platform использует интерфейс `ens192`, как интерфейс по умолчанию для виртуальных машин в vSphere. Поэтому, при использовании статических IP-адресов в `mainNetwork`, вы должны в образе ОС создать интерфейс с именем `ens192`, как интерфейс по умолчанию.
 {% endalert %}
 
 * **User** с необходимым [набором привилегий](#создание-и-назначение-роли).
@@ -15,6 +15,10 @@ Deckhouse использует интерфейс `ens192`, как интерф�
 
 ## Конфигурация vSphere
 
+{% alert level="info" %}
+Чтобы настроить теги, теги Datastore и роль для Deckhouse Platform через интерфейс **VMware vSphere Client**, выполните шаги из раздела [«Настройка через vSphere Client»](/modules/cloud-provider-vsphere/environment.html#настройка-через-vsphere-client) документации модуля. Ниже описана настройка **только с помощью `govc`**.
+{% endalert %}
+
 ### Установка govc
 
 Для дальнейшей конфигурации vSphere вам понадобится vSphere CLI — [govc](https://github.com/vmware/govmomi/tree/master/govc#installation).
@@ -23,8 +27,8 @@ Deckhouse использует интерфейс `ens192`, как интерф�
 
 ```shell
 export GOVC_URL=example.com
-export GOVC_USERNAME=<username>@vsphere.local
-export GOVC_PASSWORD=<password>
+export GOVC_USERNAME=<USERNAME>@vsphere.local
+export GOVC_PASSWORD=<PASSWORD>
 export GOVC_INSECURE=1
 ```
 
@@ -50,14 +54,14 @@ govc tags.create -d "Kubernetes Zone Test 2" -c k8s-zone test-zone-2
 Назначьте тег «региона» на `Datacenter`:
 
 ```shell
-govc tags.attach -c k8s-region test-region /<DatacenterName>
+govc tags.attach -c k8s-region test-region /<DATACENTER_NAME>
 ```
 
 Назначьте теги «зон» на объекты `Cluster`:
 
 ```shell
-govc tags.attach -c k8s-zone test-zone-1 /<DatacenterName>/host/<ClusterName1>
-govc tags.attach -c k8s-zone test-zone-2 /<DatacenterName>/host/<ClusterName2>
+govc tags.attach -c k8s-zone test-zone-1 /<DATACENTER_NAME>/host/<CLUSTER_NAME_1>
+govc tags.attach -c k8s-zone test-zone-2 /<DATACENTER_NAME>/host/<CLUSTER_NAME_2>
 ```
 
 #### Настройка Datastore
@@ -69,11 +73,11 @@ govc tags.attach -c k8s-zone test-zone-2 /<DatacenterName>/host/<ClusterName2>
 Для автоматического создания `StorageClass` в кластере Kubernetes назначьте созданные ранее теги «региона» и «зоны» на объекты `Datastore`:
 
 ```shell
-govc tags.attach -c k8s-region test-region /<DatacenterName>/datastore/<DatastoreName1>
-govc tags.attach -c k8s-zone test-zone-1 /<DatacenterName>/datastore/<DatastoreName1>
+govc tags.attach -c k8s-region test-region /<DATACENTER_NAME>/datastore/<DATASTORE_NAME_1>
+govc tags.attach -c k8s-zone test-zone-1 /<DATACENTER_NAME>/datastore/<DATASTORE_NAME_1>
 
-govc tags.attach -c k8s-region test-region /<DatacenterName>/datastore/<DatastoreName2>
-govc tags.attach -c k8s-zone test-zone-2 /<DatacenterName>/datastore/<DatastoreName2>
+govc tags.attach -c k8s-region test-region /<DATACENTER_NAME>/datastore/<DATASTORE_NAME_2>
+govc tags.attach -c k8s-zone test-zone-2 /<DATACENTER_NAME>/datastore/<DATASTORE_NAME_2>
 ```
 
 ### Создание и назначение роли
@@ -81,7 +85,7 @@ govc tags.attach -c k8s-zone test-zone-2 /<DatacenterName>/datastore/<DatastoreN
 {% alert %}
 Ввиду разнообразия подключаемых к vSphere SSO-провайдеров шаги по созданию пользователя в данной статье не рассматриваются.
 
-Роль, которую предлагается создать далее, включает в себя привилегии из раздела [«Список необходимых привилегий»](/modules/cloud-provider-vsphere/environment.html#список-необходимых-привилегий). При необходимости более гранулярных прав обратитесь в техподдержку Deckhouse.
+Роль, которую предлагается создать далее, включает в себя привилегии из раздела [«Список необходимых привилегий»](/modules/cloud-provider-vsphere/environment.html#список-необходимых-привилегий). При необходимости более гранулярных прав обратитесь в техподдержку Deckhouse Platform.
 {% endalert %}
 
 Создайте роль с необходимыми привилегиями:
@@ -125,12 +129,12 @@ govc role.create deckhouse \
 Назначьте пользователю роль на объекте `vCenter`:
 
 ```shell
-govc permissions.set -principal <username>@vsphere.local -role deckhouse /
+govc permissions.set -principal <USERNAME>@vsphere.local -role deckhouse /
 ```
 
 ### Подготовка образа виртуальной машины
 
-Для создания шаблона виртуальной машины (`Template`) рекомендуется использовать готовый cloud-образ/OVA-файл, предоставляемый вендором ОС:
+Для создания шаблона виртуальной машины (`Template`) используйте готовый cloud-образ/OVA-файл, предоставляемый вендором ОС:
 
 * [**Ubuntu**](https://cloud-images.ubuntu.com/)
 * [**Debian**](https://cloud.debian.org/images/cloud/)
@@ -141,4 +145,4 @@ govc permissions.set -principal <username>@vsphere.local -role deckhouse /
 Если вы планируете использовать дистрибутив отечественной ОС, обратитесь к вендору ОС для получения образа/OVA-файла.
 {% endalert %}
 
-Если вам необходимо использовать собственный образ, обратитесь к [документации](/modules/cloud-provider-vsphere/environment.html#требования-к-образу-виртуальной-машины).
+Если вам необходимо использовать собственный образ, ознакомьтесь с [требованиями к образу виртуальной машины](/modules/cloud-provider-vsphere/environment.html#требования-к-образу-виртуальной-машины).

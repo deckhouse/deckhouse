@@ -11,7 +11,7 @@
 📚 <span class="cards-item__title-text">Документация</span>
 </h3>
 <div class="cards-item__text">
-<p>Документация по установленной в кластере версии Deckhouse.</p>
+<p>Документация по установленной в кластере версии Deckhouse Platform.</p>
 <p>Имя веб-сервиса: {% include getting_started/global/partials/dns-template-title.html.liquid name="documentation" %}</p>
 </div>
 </div>
@@ -23,10 +23,10 @@
 📊 <span class="cards-item__title-text">Мониторинг</span>
 </h3>
 <div class="cards-item__text">
-<p>Изучите дашборды Grafana, поставляемые с Deckhouse.</p>
+<p>Изучите дашборды Grafana, поставляемые с Deckhouse Platform.</p>
 <p>Имя веб-сервиса: {% include getting_started/global/partials/dns-template-title.html.liquid name="grafana" %}</p>
 <p>Для доступа к Prometheus: {% include getting_started/global/partials/dns-template-title.html.liquid name="grafana" path="/prometheus/" onlyPath="true" %}</p>
-<p><a href="/modules/prometheus/" target="_blank">Подробнее</a> о модуле <code>monitoring</code>.</p>
+<p>Подробнее — <a href="/modules/prometheus/" target="_blank">в документации модуля <code>prometheus</code></a>.</p>
 </div>
 </div>
 {% endif %}
@@ -36,7 +36,7 @@
 ☸ <span class="cards-item__title-text">Kubernetes Dashboard</span>
 </h3>
 <div class="cards-item__text">
-<p>Получите доступ к Kubernetes Dashboard</p>
+<p>Получите доступ к Kubernetes Dashboard.</p>
 <p>Имя веб-сервиса: {% include getting_started/global/partials/dns-template-title.html.liquid name="dashboard" %}</p>
 </div>
 </div>
@@ -46,7 +46,7 @@
 👌 <span class="cards-item__title-text">Страница состояния</span>
 </h3>
 <div class="cards-item__text">
-<p>Узнайте общий статус Deckhouse и его компонентов.<br />
+<p>Узнайте общий статус Deckhouse Platform и его компонентов.<br />
 Имя веб-сервиса: {% include getting_started/global/partials/dns-template-title.html.liquid name="status" %}</p>
 
 <p>Контролируйте соблюдение SLA с детализацией по каждому компоненту и временному периоду.<br />
@@ -73,7 +73,7 @@
 <section class="cards-blocks">
 <div class="cards-blocks__content">
 <h2 class="cards-blocks__title text_h2">
-Деплой первого приложения
+Развёртывание первого приложения
 </h2>
 <div class="cards-blocks__cards">
 
@@ -82,21 +82,20 @@
 ⟳ <span class="cards-item__title-text">Настройка CI/CD-системы</span>
 </h3>
 <div class="cards-item__text" markdown="1">
-[Создайте](/modules/user-authz/usage.html#создание-serviceaccount-для-сервера-и-предоставление-ему-доступа) ServiceAccount, который будет осуществлять деплой в кластер, и выделите ему права.
+[Создайте](/modules/user-authz/usage.html#создание-serviceaccount-для-сервера-и-предоставление-ему-доступа) ServiceAccount, от имени которого приложения будут развёртываться в кластере, и выделите ему права.
 
-Результатом станет `kubeconfig`, который можно использовать во всех системах деплоя в Kubernetes.
+Результатом станет `kubeconfig`, который можно использовать в любой системе развёртывания в Kubernetes.
 </div>
 </div>
 
 <div class="cards-item cards-item_inverse">
 <h3 class="cards-item__title text_h3">
-🔀 <span class="cards-item__title-text">Направляем трафик на приложение</span>
+🔀 <span class="cards-item__title-text">Маршрутизация трафика</span>
 </h3>
 <div class="cards-item__text" markdown="1">
 Создайте `Service` и `Ingress` для вашего приложения.
 
-[Подробнее](/modules/ingress-nginx/) о возможностях `ingress-nginx`
-модуля.
+Подробнее — [в документации модуля `ingress-nginx`](/modules/ingress-nginx/).
 </div>
 </div>
 
@@ -106,9 +105,9 @@
 </h3>
 <div class="cards-item__text" markdown="1">
 Добавьте аннотации `prometheus.deckhouse.io/custom-target: "my-app"` и `prometheus.deckhouse.io/port: "80"` к созданному
-Service'у.
+Service.
 
-[Подробнее](/modules/monitoring-custom/) о модуле `monitoring-custom`.
+Подробнее — [в документации модуля `monitoring-custom`](/modules/monitoring-custom/).
 </div>
 </div>
 
@@ -129,19 +128,14 @@ Service'у.
 ⚖ <span class="cards-item__title-text">Управление узлами</span>
 </h3>
 <div class="cards-item__text" markdown="1">
-{% if page.platform_type == 'cloud' %}
-При создании кластера были созданы две группы узлов. Чтобы увидеть их в кластере, выполните команду `d8 k get
-nodegroups`. Подробнее об этом в [документации](/modules/node-manager/) по модулю управления узлами.
+При создании кластера были созданы две группы узлов. Чтобы увидеть их в кластере, выполните команду `d8 k get nodegroups`. Подробнее — [в документации модуля `node-manager`](/modules/node-manager/).
 
 Чтобы отмасштабировать существующие группы, вам достаточно изменить параметры `minPerZone` и `maxPerZone`. При этом,
 если они не равны, — у вас автоматически заработает автоскейлинг.
 
-Чтобы создать новые группы вам понадобится создать новый [InstanceClass](/modules/cloud-provider-{{ page.platform_code | regex_replace: "^(openstack)_.+$", "\1" | downcase }}/cr.html) и
+Чтобы создать новые группы, вам понадобится создать новый [InstanceClass](/modules/cloud-provider-{{ page.platform_code | regex_replace: "^(openstack)_.+$", "\1" | downcase }}/cr.html) и
 [NodeGroup](/modules/node-manager/cr.html#nodegroup), которая на него
 ссылается.
-{% else %}
-# TODO Bare metal!!!
-{% endif %}
 </div>
 </div>
 
@@ -153,7 +147,7 @@ nodegroups`. Подробнее об этом в [документации](/mod
 <div markdown="1">
 ## Следующие шаги
 
-Подробная информация о системе в целом и по каждому компоненту расположена в [документации](/products/stronghold/documentation/admin/overview.html).
+Подробная информация о системе в целом и по каждому компоненту расположена [в документации Stronghold](/products/stronghold/documentation/admin/overview.html).
 
-По всем возникающим вопросам вы можете связаться с [онлайн-сообществом](/community/about.html#online-community).
+С вопросами обращайтесь [в онлайн-сообщество Deckhouse](/community/about.html#online-community).
 </div>

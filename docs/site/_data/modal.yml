@@ -4,15 +4,15 @@ request-access:
       title: "Запросить пробный доступ"
       text: "Заполните форму, и&nbsp;в&nbsp;течение ближайшего рабочего дня мы&nbsp;свяжемся с&nbsp;вами для&nbsp;уточнения деталей — будьте на&nbsp;связи!"
     en:
-      title: " Request trial access"
+      title: "Request trial access"
       text: "Fill out the form, and we&nbsp;will contact you within the next business day&nbsp;&mdash; please stay in&nbsp;touch!"
   success-message:
     ru:
       title: "Запрос получен"
-      text: "Спасибо за ваш интерес к платформе Deckhouse Platform!<br/>В течение ближайшего рабочего дня мы свяжемся с вами для уточнения деталей запроса — будьте на связи!"
+      text: "Спасибо за ваш интерес к Deckhouse Platform!<br/>В течение ближайшего рабочего дня мы свяжемся с вами для уточнения деталей запроса — будьте на связи!"
     en:
       title: "Thank you"
-      text: "Thank you for your interest in the Deckhouse Platform!<br/>We will contact you within the next business day regarding the details of your request — please be in touch!"
+      text: "Thank you for your interest in Deckhouse Platform!<br/>We will contact you within the next business day regarding the details of your request — please stay in touch!"
   error-message:
     ru:
       title: "Ошибка"
@@ -24,7 +24,7 @@ request-callback:
   header:
     ru:
       title: "Связаться со специалистом Deckhouse"
-      text: "Ответим на вопросы о продуктах, разберем ваш кейс, назначим встречу с техническим экспертом"
+      text: "Ответим на вопросы о продуктах, разберём ваш кейс, назначим встречу с техническим экспертом"
     en:
       title: "Request callback"
       text: "Fill out this form, and we will contact you soon."
@@ -43,7 +43,7 @@ request-callback:
   error-message:
     ru:
       title: "Возникла ошибка отправки формы"
-      text: "Попробуйте еще раз"
+      text: "Попробуйте ещё раз"
     en:
       title: "Something went wrong"
       text: "Please try again later"
@@ -97,7 +97,7 @@ get-a-report:
       title: "Получите отчет о&nbsp;соответствии рекомендациям PCI&nbsp;SSC"
       text: "Документ ориентирован на&nbsp;компании, которые используют платежные системы на&nbsp;базе контейнеров, и&nbsp;помогает защитить эти системы от&nbsp;актуальных угроз. Мы&nbsp;выяснили, насколько Deckhouse соответствует критериям PCI&nbsp;SSC."
     en:
-      title: "Get the PCI SSC Compliance Report"
+      title: "Get the PCI SSC compliance report"
       text: "The document is aimed at companies that use container-based payment systems. It contains a list of common threats along with the best practices and measures we put in place to address them. Find out the extent to which Deckhouse meets the PCI SSC criteria!"
   success-message:
     ru:
@@ -105,7 +105,7 @@ get-a-report:
       text: "Файл загрузится автоматически. Если этого не&nbsp;произошло, нажмите кнопку «Скачать»."
     en:
       title: "Thank you"
-      text: "The file is loaded automatically. If it doesn't, click the «Download» button."
+      text: "The file is loaded automatically. If it doesn't, click the \"Download the report\" button."
   error-message:
     ru:
       title: "Ошибка"
@@ -123,11 +123,20 @@ become-a-partner:
     ru:
       title: "Запросить подробности партнёрской программы"
       text: "Оставьте ваши данные, и мы свяжемся с вами."
+    en:
+      title: "Request partner program details"
+      text: "Leave your contact details, and we will contact you."
   success-message:
     ru:
       title: "Запрос получен"
       text: "Мы свяжемся с вами в течение рабочего дня"
+    en:
+      title: "Request received"
+      text: "We will contact you within a business day"
   error-message:
     ru:
       title: "Ошибка"
       text: "Что-то пошло не так"
+    en:
+      title: "Error"
+      text: "Something went wrong..."

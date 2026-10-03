@@ -15,9 +15,9 @@
 The recommended settings for a DVP {{ site.data.i18n[revision] }} installation are generated below:
 - `config.yml` — a file with the configuration needed to bootstrap the cluster. Contains the installer parameters and the initial cluster parameters.
 
-**Please pay attention to**:
+**Note**:
 - <span class="mightChange">Highlighted parameters</span> can be adjusted if needed.
-- If you run the installer on **Windows**, ensure the configuration YAML files use UTF-8 encoding (or remove Russian comments).
+- If you run the installer on **Windows**, ensure the configuration YAML files use UTF-8 encoding.
 - Run the installation from a **personal computer** with SSH access to the node that will be the cluster **master node**.
 
 Create the `config.yml` file.
@@ -35,7 +35,7 @@ Create the `config.yml` file.
 <div markdown="1">
 
 {% alert level="info" %}
-When uploading large VM images (especially over a slow link), if the upload is interrupted when the Ingress controller reloads configuration, replace the `worker-shutdown-timeout` value in `config.yml` (`IngressNginxController` / `nginx`) with `1800s` or more:
+When uploading large VM images (especially over a slow link), if the upload is interrupted when the Ingress controller reloads configuration, replace the `worker-shutdown-timeout` value in `config.yml` (IngressNginxController `nginx`) with `1800s` or more:
 
 ```yaml
   config:

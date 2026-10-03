@@ -21,7 +21,7 @@ When you have chosen an architecture, use [Platform installation](/products/virt
 {% endalert %}
 
 {% alert level="warning" %}
-If you deploy the lab on virtual machines (not bare-metal servers), enable nested virtualization on the hypervisor for the **worker node**. Without it, DVP cannot run guest VMs. Installation on VMs is for evaluation only; see [platform requirements](/products/virtualization-platform/documentation/about/requirements.html).
+If you deploy the lab on virtual machines (not bare-metal servers), enable nested virtualization on the hypervisor for the **worker node**. Without it, DVP cannot run guest VMs. Installation on VMs is for evaluation only, as stated in the [platform requirements](/products/virtualization-platform/documentation/about/requirements.html).
 {% endalert %}
 
 ## Hardware and software requirements
@@ -48,10 +48,11 @@ Installing Deckhouse Virtualization Platform requires the following components t
   To use `ContainerdV2`, nodes must meet the following requirements:
 
   - `CgroupsV2` support;
+  - Linux kernel `5.8` or newer, except `6.12.0`–`6.12.28` and `6.14.0`–`6.14.6`;
   - systemd version `244` or newer;
   - `erofs` kernel module support.
 
-  Some distributions (for example, Astra Linux 1.7.4) do not meet these requirements; bring the OS on the nodes into compliance before installing Deckhouse Virtualization Platform. See the [documentation](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#clusterconfiguration-defaultcri).
+  Some distributions (for example, Astra Linux 1.7.4) do not meet these requirements. Bring the OS on the nodes into compliance with the [`ContainerdV2` requirements](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#clusterconfiguration-defaultcri) before installing.
   {% endalert %}
 
   - **CPU**:
@@ -101,7 +102,7 @@ Installing Deckhouse Virtualization Platform requires the following components t
   - **Access and networking**:
     - NFS access (NFSv4.1 recommended) from master and worker nodes;
     - export the DVP directory with the `no_root_squash` option;
-    - SSH key-based access from the **personal computer** (see item 1) for NFS server administration.
+    - SSH key-based access from the **personal computer** (item 1) for NFS server administration.
   {% endofftopic %}
   </li>
 

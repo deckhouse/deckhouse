@@ -26,12 +26,12 @@ presets:
       en: |
         - The cluster consists of one master node and one worker node.
         - Kubernetes Control Plane and Deckhouse controller run on the master node.
-        - Deckhouse deploys non-system components (Ingress Controller, Prometheus, cert-manager, etc.) on the worker node.
+        - Deckhouse Platform deploys non-system components (Ingress Controller, Prometheus, cert-manager, etc.) on the worker node.
         - Your applications should run on the worker node.
       ru: |
         - Кластер состоит из одного master-узла и одного worker-узла.
         - Управляющие компоненты Kubernetes-кластера и Deckhouse-контроллер работают на master-узле.
-        - Deckhouse запускает несистемные компоненты (Ingress-контроллер, Prometheus, cert-manager и т.д.) на worker-узле.
+        - Deckhouse Platform запускает несистемные компоненты (Ingress-контроллер, Prometheus, cert-manager и т. д.) на worker-узле.
         - Ваши приложения должны работать на worker-узле.
 
 installTypes:
@@ -66,7 +66,7 @@ installTypes:
       step5:
         name:
           en: Getting access to the cluster
-          ru: Получаем доступ к кластеру
+          ru: Получение доступа к кластеру
         template: getting_started/global/STEP_CLUSTER_ACCESS.md
       step6:
         name:
@@ -105,7 +105,7 @@ installTypes:
       step5:
         name:
           en: Getting access to the cluster
-          ru: Получаем доступ к кластеру
+          ru: Получение доступа к кластеру
         template: getting_started/global/STEP_CLUSTER_ACCESS.md
       step6:
         name:
@@ -179,7 +179,7 @@ installTypes:
       step5:
         name:
           en: Getting access to the cluster
-          ru: Получаем доступ к кластеру
+          ru: Получение доступа к кластеру
         template: getting_started/global/STEP_CLUSTER_ACCESS.md
       step6:
         name:
@@ -218,7 +218,7 @@ installTypes:
       step5:
         name:
           en: Getting access to the cluster
-          ru: Получаем доступ к кластеру
+          ru: Получение доступа к кластеру
         template: getting_started/global/STEP_CLUSTER_ACCESS.md
       step6:
         name:
@@ -256,7 +256,7 @@ installTypes:
       step5:
         name:
           en: Getting access to the cluster
-          ru: Получаем доступ к кластеру
+          ru: Получение доступа к кластеру
         template: getting_started/global/STEP_CLUSTER_ACCESS.md
       step6:
         name:
@@ -296,7 +296,7 @@ installTypes:
       step5:
         name:
           en: Getting access to the cluster
-          ru: Получаем доступ к кластеру
+          ru: Получение доступа к кластеру
         template: getting_started/global/STEP_CLUSTER_ACCESS.md
       step6:
         name:
@@ -371,7 +371,7 @@ installTypes:
       step5:
         name:
           en: Getting access to the cluster
-          ru: Получаем доступ к кластеру
+          ru: Получение доступа к кластеру
         template: getting_started/global/STEP_CLUSTER_ACCESS.md
       step6:
         name:
@@ -411,7 +411,7 @@ installTypes:
       step5:
         name:
           en: Getting access to the cluster
-          ru: Получаем доступ к кластеру
+          ru: Получение доступа к кластеру
         template: getting_started/global/STEP_CLUSTER_ACCESS.md
       step6:
         name:
@@ -487,7 +487,7 @@ installTypes:
       step5:
         name:
           en: Getting access to the cluster
-          ru: Получаем доступ к кластеру
+          ru: Получение доступа к кластеру
         template: getting_started/global/STEP_CLUSTER_ACCESS.md
       step6:
         name:
@@ -563,7 +563,7 @@ installTypes:
       step5:
         name:
           en: Getting access to the cluster
-          ru: Получаем доступ к кластеру
+          ru: Получение доступа к кластеру
         template: getting_started/global/STEP_CLUSTER_ACCESS.md
       step6:
         name:
@@ -640,7 +640,7 @@ installTypes:
       step5:
         name:
           en: Getting access to the cluster
-          ru: Получаем доступ к кластеру
+          ru: Получение доступа к кластеру
         template: getting_started/global/STEP_CLUSTER_ACCESS.md
       step6:
         name:
@@ -715,7 +715,7 @@ installTypes:
       step5:
         name:
           en: Getting access to the cluster
-          ru: Получаем доступ к кластеру
+          ru: Получение доступа к кластеру
         template: getting_started/global/STEP_CLUSTER_ACCESS.md
       step6:
         name:
@@ -770,7 +770,6 @@ installTypes:
       ru: "Deckhouse Platform на Zvirt"
     type: cloud
     installer_support: true
-    # Например, это надписи на плитке
     name:
       en: zVirt
       ru: zVirt
@@ -793,7 +792,7 @@ installTypes:
       step5:
         name:
           en: Getting access to the cluster
-          ru: Получаем доступ к кластеру
+          ru: Получение доступа к кластеру
         template: getting_started/global/STEP_CLUSTER_ACCESS.md
       step6:
         name:
@@ -868,7 +867,7 @@ installTypes:
       step5:
         name:
           en: Getting access to the cluster
-          ru: Получаем доступ к кластеру
+          ru: Получение доступа к кластеру
         template: getting_started/global/STEP_CLUSTER_ACCESS.md
       step6:
         name:

@@ -2,33 +2,33 @@
 Расширенные параметры будущего кластера, такие как схема размещения или настройка подсетей, доступны при нажатии кнопки «Дополнительные настройки».</p>
 <div class="gs-installer__image">
 {%- if page.platform_code == 'yandex' %}
-<img src="/images/gs/installer/ya-cloud-extended.png" alt="Как выглядит окно доплнительных настроек кластера..." style="width: 100%;">
+<img src="/images/gs/installer/ya-cloud-extended.png" alt="Как выглядит окно дополнительных настроек кластера..." style="width: 100%;">
 {%- endif %}
 {%- if page.platform_code == 'dvp-provider' %}
-<img src="/images/gs/installer/dvp-cloud-extended.png" alt="Как выглядит окно доплнительных настроек кластера..." style="width: 100%;">
+<img src="/images/gs/installer/dvp-cloud-extended.png" alt="Как выглядит окно дополнительных настроек кластера..." style="width: 100%;">
 {%- endif %}
 {%- if page.platform_code == 'openstack' %}
-<img src="/images/gs/installer/openstack-cloud-extended.png" alt="Как выглядит окно доплнительных настроек кластера..." style="width: 100%;">
+<img src="/images/gs/installer/openstack-cloud-extended.png" alt="Как выглядит окно дополнительных настроек кластера..." style="width: 100%;">
 {%- endif %}
 {%- if page.platform_code == 'openstack_selectel' %}
-<img src="/images/gs/installer/selectel-cloud-extended.png" alt="Как выглядит окно доплнительных настроек кластера..." style="width: 100%;">
+<img src="/images/gs/installer/selectel-cloud-extended.png" alt="Как выглядит окно дополнительных настроек кластера..." style="width: 100%;">
 {%- endif %}
 {%- if page.platform_code == 'openstack_vk' %}
-<img src="/images/gs/installer/vk-cloud-extended.png" alt="Как выглядит окно доплнительных настроек кластера..." style="width: 100%;">
+<img src="/images/gs/installer/vk-cloud-extended.png" alt="Как выглядит окно дополнительных настроек кластера..." style="width: 100%;">
 {%- endif %}
 {%- if page.platform_code == 'vsphere' %}
-<img src="/images/gs/installer/vsphere-cloud-extended.png" alt="Как выглядит окно доплнительных настроек кластера..." style="width: 100%;">
+<img src="/images/gs/installer/vsphere-cloud-extended.png" alt="Как выглядит окно дополнительных настроек кластера..." style="width: 100%;">
 {%- endif %}
 {%- if page.platform_code == 'vcd' %}
-<img src="/images/gs/installer/vcd-cloud-extended.png" alt="Как выглядит окно доплнительных настроек кластера..." style="width: 100%;">
+<img src="/images/gs/installer/vcd-cloud-extended.png" alt="Как выглядит окно дополнительных настроек кластера..." style="width: 100%;">
 {%- endif %}
 {%- if page.platform_code == 'zvirt' %}
-<img src="/images/gs/installer/zvirt-cloud-extended.png" alt="Как выглядит окно доплнительных настроек кластера..." style="width: 100%;">
+<img src="/images/gs/installer/zvirt-cloud-extended.png" alt="Как выглядит окно дополнительных настроек кластера..." style="width: 100%;">
 {%- endif %}
 </div>
-<p>Кнопка «Продвинутая конфигурация» в левой нижней части экрана (чтобы увидеть ее, прокрутите окно вниз) позволяет просмотреть и скачать сгенерированные YAML-файлы конфигурации. Это может понадобиться для того, чтобы вручную запустить <a href="../../../documentation/v1/installing/">dhctl</a> с использованием этих файлов.</p>
+<p>Кнопка «Продвинутая конфигурация» в левой нижней части экрана (чтобы увидеть её, прокрутите окно вниз) позволяет просмотреть и скачать сгенерированные YAML-файлы конфигурации. Это может понадобиться для того, чтобы вручную запустить <a href="../../../documentation/v1/installing/">dhctl</a> с использованием этих файлов.</p>
 <div class="gs-installer__image">
-<img src="/images/gs/installer/cloud-mega-setup.png" alt="Как выглядит окно продвинутой конфигурации..." style="width: 100%;">
+<img src="/images/gs/installer/cloud-mega-setup.png" alt="Как выглядит окно продвинутой конфигурации" style="width: 100%;">
 </div>
 <div class="gs-installer__image">
 {%- if page.platform_code == 'yandex' %}

@@ -16,9 +16,9 @@ spec:
     httpsPort: 443
   # [<en>] Describes on which nodes the Ingress Controller will be located.
   # [<ru>] Описывает, на каких узлах будет находиться Ingress-контроллер.
-  # [<en>] More examples here.
+  # [<en>] Configuration examples:
   # [<en>] https://deckhouse.io/modules/ingress-nginx/examples.html
-  # [<ru>] Больше примеров здесь
+  # [<ru>] Примеры настройки:
   # [<ru>] https://deckhouse.ru/modules/ingress-nginx/examples.html
   # [<ru>] Возможно, захотите изменить.
   # [<en>] You might consider changing this.

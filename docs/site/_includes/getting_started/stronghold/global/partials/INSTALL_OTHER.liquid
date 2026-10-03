@@ -33,22 +33,23 @@ Run the installer on the **personal computer**.
 <!-- Linux or macOS install, EE -->
 
 {% alert level="info" %}
-If, with VPN enabled, the container with the installer cannot access the network, use the [instructions](/products/kubernetes-platform/documentation/v1/faq.html#what-to-do-if-with-vpn-enabled-the-container-with-the-installer).
+If, with VPN enabled, the container with the installer cannot access the network, follow the [VPN troubleshooting steps](/products/kubernetes-platform/documentation/v1/faq.html#what-to-do-if-with-vpn-enabled-the-container-with-the-installer).
 {% endalert %}
 
 ```shell
- echo <LICENSE_TOKEN> | docker login -u license-token --password-stdin registry.deckhouse.io
+ echo <LICENSE_TOKEN> | docker login -u license-token --password-stdin {%- if page.platform_code == "bm-private" %} <IMAGES_REPO_URI>{%- else %} registry.deckhouse.io{% endif %}
 docker run --pull=always {% if page.platform_code == "kind" %} --network host {% endif %}-it -v "$PWD/config.yml:/config.yml"{%- if page.platform_type != 'existing' %} -v "$HOME/.ssh/:/tmp/.ssh/"{% endif %}
 {%- if page.platform_type == "existing" or page.platform_code == "kind" %} \
   -v "$HOME/.kube/config:/kubeconfig"{% endif %}
-registry.deckhouse.io/deckhouse/{{ revision }}/install:stable bash
+{%- if page.platform_code == "bm-private" %} <IMAGES_REPO_URI>/install:stable
+{%- else %} registry.deckhouse.io/deckhouse/{{ revision }}/install:stable{% endif %} bash
 ```
 </div>
 <div id='block_installer_windows_{{ revision }}' class="tabs__container tabs__container--descr" markdown="1">
 <!-- Windows install, EE -->
 Log in on the **personal computer** to the container image registry by providing the license key as a password:
 ```shell
-docker login -u license-token registry.deckhouse.io
+docker login -u license-token {%- if page.platform_code == "bm-private" %} <IMAGES_REPO_URI>{%- else %} registry.deckhouse.io{% endif %}
 ```
 
 Run a container with the installer:
@@ -56,7 +57,8 @@ Run a container with the installer:
 docker run --pull=always {% if page.platform_code == "kind" %} --network host {% endif %}-it -v "%cd%\config.yml:/config.yml"
 {%- if page.platform_type != 'existing' %} -v "%userprofile%\.ssh\:/tmp/.ssh/"{% endif %}
 {%- if page.platform_type == "existing" or page.platform_code == "kind" %} -v "%userprofile%\.kube\config:/kubeconfig"{% endif %}
-registry.deckhouse.io/deckhouse/{{ revision }}/install:stable bash -c "chmod 400 /tmp/.ssh/<SSH_PRIVATE_KEY_FILE>; bash"
+{%- if page.platform_code == "bm-private" %} <IMAGES_REPO_URI>/install:stable
+{%- else %} registry.deckhouse.io/deckhouse/{{ revision }}/install:stable{% endif %} bash -c "chmod 400 /tmp/.ssh/<SSH_PRIVATE_KEY_FILE>; bash"
 ```
 </div>
 </div>
@@ -82,7 +84,7 @@ registry.deckhouse.io/deckhouse/{{ revision }}/install:stable bash -c "chmod 400
 <!-- Linux or macOS install, CE -->
 
 {% alert level="info" %}
-If, with VPN enabled, the container with the installer cannot access the network, use the [instructions](/products/kubernetes-platform/documentation/v1/faq.html#what-to-do-if-with-vpn-enabled-the-container-with-the-installer).
+If, with VPN enabled, the container with the installer cannot access the network, follow the [VPN troubleshooting steps](/products/kubernetes-platform/documentation/v1/faq.html#what-to-do-if-with-vpn-enabled-the-container-with-the-installer).
 {% endalert %}
 
 ```shell
@@ -118,9 +120,7 @@ Now, to initiate the process of installation, you need to execute inside the con
 {%- if page.platform_type == "existing" or page.platform_code == "kind" %}
 dhctl bootstrap-phase install-deckhouse --kubeconfig=/kubeconfig --config=/config.yml
 {%- elsif page.platform_type == "baremetal" %}
-dhctl bootstrap --ssh-user=<username> --ssh-host=<master_ip> --ssh-agent-private-keys=/tmp/.ssh/<SSH_PRIVATE_KEY_FILE> \
-  --config=/config.yml \
-  --ask-become-pass
+dhctl bootstrap --ssh-user=<SSH_USER> --ssh-host=<MASTER_IP> --ssh-agent-private-keys=/tmp/.ssh/<SSH_PRIVATE_KEY_FILE> --config=/config.yml --ask-become-pass
 {%- elsif page.platform_type == "cloud" %}
 dhctl bootstrap --ssh-user={% if page.platform_code == "azure" %}azureuser{%- elsif page.platform_code == "gcp" %}user{%- else %}ubuntu{%- endif %} --ssh-agent-private-keys=/tmp/.ssh/<SSH_PRIVATE_KEY_FILE> --config=/config.yml
 {%- endif %}
@@ -128,7 +128,7 @@ dhctl bootstrap --ssh-user={% if page.platform_code == "azure" %}azureuser{%- el
 
 {%- if page.platform_type == "baremetal" or page.platform_type == "cloud" %}
 {%- if page.platform_type == "baremetal" %}
-The `--ssh-user` parameter here refers to the user that generated the SSH key. If a password is required to run sudo on the server, then specify it in response to the request `[sudo] Password:`.
+In `<SSH_USER>`, specify the user that generated the SSH key. In `<MASTER_IP>`, specify the IP address of the master node. If a password is required to run sudo on the server, then specify it in response to the request `[sudo] Password:`.
 {%- else %}
 The `--ssh-user` parameter here refers to the default user for the relevant VM image.
 {%- if page.platform_code == "azure" %} It is `azureuser` in case of {{ page.platform_name[page.lang] }} (for the image suggested in this guide).
@@ -154,7 +154,8 @@ The installation process may take about from 5 to 30 minutes, depending on the c
 
 {% if page.platform_type == "baremetal" %}
 Example of output upon successful completion of the installation:
-```
+
+```console
 ...
 │ │ No more converge tasks found in Deckhouse queue.
 │ │ Deckhouse pod is Ready!
@@ -168,7 +169,8 @@ Example of output upon successful completion of the installation:
 ```
 {% else  %}
 After the installation is complete, the installer will output the IP of the **master node** (you will need it further). Example output:
-```
+
+```console
 ...
 ┌ 🎈 ~ Common: Kubernetes Master Node addresses for SSH
 │ cloud-demo-master-0 | ssh {% if page.platform_code == "azure" %}azureuser{% elsif page.platform_code == "gcp" %}user{% else %}ubuntu{% endif %}@1.2.3.4
@@ -198,7 +200,7 @@ Wait for the Ingress controller Pod to switch to `Ready` state.
 You have installed Deckhouse Platform in `kind`!
 {%- else %}
 
-Almost everything is ready for a fully-fledged Deckhouse Platform to work!
+Almost everything is ready for a fully-fledged Deckhouse Platform to work.
 {%- endif %}
 
 <!-- Troubleshooting in existing cluster //-->

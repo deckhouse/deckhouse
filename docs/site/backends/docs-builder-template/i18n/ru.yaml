@@ -13,7 +13,7 @@ module: модуль
 module_enabling_details_title: Как явно включить или отключить модуль…
 module_enabling_details_content: |
   <span id="enable"></span>Явно включить или выключить модуль можно одним из следующих способов:
-  - **С помощью [веб-интерфейса Deckhouse](/products/kubernetes-platform/documentation/v1/user/web/ui.html).** В разделе «Система» → «Управление системой» → «Deckhouse» → «Модули», откройте модуль `<ModuleName>`, включите (или выключите) переключатель «Модуль включен». Сохраните изменения.
+  - **С помощью [веб-интерфейса Deckhouse](/products/kubernetes-platform/documentation/v1/user/web/ui.html).** В разделе «Система» → «Управление системой» → «Deckhouse» → «Модули» откройте модуль `<ModuleName>` и включите (или выключите) переключатель «Модуль включен». Сохраните изменения.
 
     Пример:
 
@@ -21,7 +21,7 @@ module_enabling_details_content: |
 
   - **С помощью [Deckhouse CLI (d8)](/products/kubernetes-platform/documentation/v1/cli/d8/).**
 
-    Используйте команду [d8 system module enable](/products/kubernetes-platform/documentation/v1/cli/d8/reference/#d8-system-module-enable) для включения модуля, или [d8 system module disable](/products/kubernetes-platform/documentation/v1/cli/d8/reference/#d8-system-module-disable) для выключения модуля (требуется [Deckhouse CLI (d8)](/products/kubernetes-platform/documentation/v1/cli/d8/), настроенный на работу с кластером).
+    Используйте команду [d8 system module enable](/products/kubernetes-platform/documentation/v1/cli/d8/reference/#d8-system-module-enable) для включения модуля или [d8 system module disable](/products/kubernetes-platform/documentation/v1/cli/d8/reference/#d8-system-module-disable) для выключения модуля (требуется [Deckhouse CLI (d8)](/products/kubernetes-platform/documentation/v1/cli/d8/), настроенный на работу с кластером).
 
     Пример включения модуля `<ModuleName>`:
 
@@ -31,7 +31,7 @@ module_enabling_details_content: |
 
   - **С помощью ModuleConfig `<ModuleName>`.**
 
-    Установите `spec.enabled` в `true` или `false` в ModuleConfig `<ModuleName>` (создайте его, при необходимости).
+    Установите `spec.enabled` в `true` или `false` в ModuleConfig `<ModuleName>` (при необходимости создайте его).
 
     Пример манифеста для включения модуля `<ModuleName>`:
 
@@ -49,7 +49,7 @@ module_settings_details_content: |
   <span id="setup"></span>Настроить модуль можно одним из следующих способов:
   - **С помощью [веб-интерфейса Deckhouse](/products/kubernetes-platform/documentation/v1/user/web/ui.html).**
 
-    В разделе «Система» → «Управление системой» → «Deckhouse» → «Модули», откройте модуль `<ModuleName>`, включите переключатель «Дополнительные настройки». Заполните необходимые поля формы на вкладке «Конфигурация», или укажите настройки модуля в формате YAML на вкладке «YAML», **не включая секцию settings**. Сохраните изменения.
+    В разделе «Система» → «Управление системой» → «Deckhouse» → «Модули» откройте модуль `<ModuleName>` и включите переключатель «Дополнительные настройки». Заполните необходимые поля формы на вкладке «Конфигурация» или укажите настройки модуля в формате YAML на вкладке «YAML» **без ключа верхнего уровня `settings`**. Сохраните изменения.
 
     Пример:
 
@@ -59,7 +59,7 @@ module_settings_details_content: |
 
   - **С помощью [Deckhouse CLI (d8)](/products/kubernetes-platform/documentation/v1/cli/d8/)** (требуется [Deckhouse CLI (d8)](/products/kubernetes-platform/documentation/v1/cli/d8/), настроенный на работу с кластером).
 
-    Отредактируйте существующий ModuleConfig `<ModuleName>` (подробнее о настройке Deckhouse читайте [в документации](/products/kubernetes-platform/documentation/v1/admin/configuration/)), выполнив следующую команду:
+    Отредактируйте существующий ModuleConfig `<ModuleName>` (подробнее о настройке Deckhouse Platform читайте [в документации](/products/kubernetes-platform/documentation/v1/admin/configuration/)), выполнив следующую команду:
 
     ```shell
     d8 k edit mc <ModuleName>
@@ -85,11 +85,11 @@ module_settings_details_content: |
     spec:
       version: <configVersion>
       enabled: true
-      settings: # Параметры модуля из раздела "Параметры" ниже.
+      settings: # Параметры модуля из раздела «Параметры» ниже.
     ```
 module_release_channel_details_title: Как сменить канал обновлений модуля...
 module_release_channel_details_content: |
-  Для смены канала обновлений модуля воспользуйтесь [инструкцией](/products/kubernetes-platform/documentation/v1/faq.html#как-сменить-канал-обновлений-для-модуля).
+  Чтобы сменить канал обновлений модуля, выполните действия из раздела [Как сменить канал обновлений для модуля?](/products/kubernetes-platform/documentation/v1/faq.html#как-сменить-канал-обновлений-для-модуля).
 module_versions: Версии модуля
 module_version: Версия модуля
 embedded_in_dkp: Встроенный в DP
@@ -112,16 +112,19 @@ extensions_filter: Расширение
 extensions_filter_all_selected: Все расширения
 certification_filter: Статус сертификации
 certification_filter_all_selected: Все статусы
+certification_filter_certified: Сертифицирован
+certification_filter_not_certified: Не сертифицирован
 stage_filter: Стадия жизненного цикла
 stage_filter_all_selected: Все стадии
 tags_filter: Тег
 tags_filter_all_selected: Все теги
+filter_apply: Применить
 core: ядро
 community_edition_en: community edition
 commercial_editions_en: commercial editions
 requirements_for_alert: У модуля есть [требования](./configuration.html#требования) для установки
 requirements_title: Требования
-requirements_deckhouse_title: К версии Deckhouse
+requirements_deckhouse_title: К версии Deckhouse Platform
 requirements_kubernetes_title: К версии Kubernetes
 requirements_modules_title: К версиям других модулей
 requirements_modules_any_version: любая версия
@@ -153,7 +156,7 @@ pattern: шаблон
 length: длина
 min_length: минимальная длина
 max_length: максимальная длина
-moduleLinkTitleADVANCED_USAGE: Расширенная конфигурация
+moduleLinkTitleADVANCED_USAGE: Расширенное использование
 moduleLinkTitleREADME: Описание
 moduleLinkTitleEXAMPLES: Примеры
 moduleLinkTitleCONFIGURATION: Настройки
@@ -162,7 +165,7 @@ moduleLinkTitleSETUP: Настройка
 moduleLinkTitleFAQ: FAQ
 moduleLinkTitleCRD: Кастомные ресурсы
 moduleLinkTitleCR: Кастомные ресурсы
-module_is_available_in_ee_only: Модуль доступен только в Deckhouse Enterprise Edition.
+module_is_available_in_ee_only: Модуль доступен только в Deckhouse Platform Ultimate/Enterprise Edition.
 module_available_editions_prefix: Доступно в редакциях
 module_available_with_limitations_prefix: Доступно с ограничениями в редакциях
 module_available_without_limitations_prefix: Доступно без ограничений в редакциях
@@ -175,9 +178,9 @@ module_alert_preview: Предварительная версия (preview)
 module_alert_general_availability: Общедоступная версия
 module_alert_deprecated: Устарело
 module_alert_experimental_long: Экспериментальная версия. Функциональность может сильно измениться. Совместимость с будущими версиями не гарантируется.
-module_alert_preview_long: Предварительная версия. Функциональность может измениться, но основные возможности сохранятся. Совместимость с будущими версиями может потребовать ручных действий по миграции.
-module_alert_general_availability_long: Общедоступная версия. Готово к использованию в production-средах.
-module_alert_deprecated_long: Устарело. Развитие и поддержка прекращены.
+module_alert_preview_long: Предварительная версия. Функциональность может измениться, но основные возможности сохранятся. Совместимость с будущими версиями обеспечивается, но может потребовать дополнительных действий по миграции.
+module_alert_general_availability_long: Общедоступная версия. Готова к использованию в production-окружении.
+module_alert_deprecated_long: Устаревшая версия. Развитие и поддержка прекращены.
 related_additional_resources: Дополнительные ресурсы
 deprecated_parameter: Параметр устарел
 deprecated_parameter_hint: Поддержка параметра может быть исключена в следующих версиях.
@@ -192,7 +195,7 @@ object: объект
 of_object: объектов
 number: число
 of_number: чисел
-integer: целочисленный
+integer: целое число
 of_integer: целых чисел
 string: строка
 of_string: строк
@@ -204,4 +207,10 @@ version_of_schema: Версия схемы
 required_value_sentence: Обязательный параметр
 parameters: параметры
 api: API
+crd_short_names: Короткие имена
+crd_scope: Область
+oss_license: Лицензия
+details_default_summary: Подробнее
 no_custom_configuration: У модуля нет параметров для настройки.
+description_configuration: Deckhouse Platform — параметры конфигурации модуля <MODULENAME>.
+description_cr: Deckhouse Platform — кастомные ресурсы модуля <MODULENAME>.

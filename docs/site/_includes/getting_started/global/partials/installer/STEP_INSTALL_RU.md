@@ -5,7 +5,7 @@
 <img src="/images/gs/installer/install-process.png" alt="Как выглядит окно настройки узлов..." style="width: 100%;">
 </div>
 <div class="gs-installer__image">
-<img src="/images/gs/installer/install-log.png" alt="Как выглядит окно настройки узлов..." style="width: 100%;">
+<img src="/images/gs/installer/install-log.png" alt="Как выглядит окно установки с логом..." style="width: 100%;">
 </div>
 <p>Процесс установки может занять от 5 до 30 минут, в зависимости от качества соединения и количества настраиваемых узлов.</p>
 <p><b>Кластер DP развёрнут!</b> 🎉</p>

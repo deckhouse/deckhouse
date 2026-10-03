@@ -2,8 +2,8 @@
 ---
 # [<ru>] Данные статического пользователя.
 # [<en>] Static user data.
-# [<ru>] https://deckhouse.ru/documentation/v1/modules/150-user-authn/cr.html#user
-# [<en>] https://deckhouse.io/documentation/v1/modules/150-user-authn/cr.html#user
+# [<ru>] https://deckhouse.ru/modules/user-authn/cr.html#user
+# [<en>] https://deckhouse.io/modules/user-authn/cr.html#user
 apiVersion: deckhouse.io/v1
 kind: User
 metadata:
@@ -24,8 +24,8 @@ spec:
 ---
 # [<ru>] Группа пользователей.
 # [<en>] User group.
-# [<ru>] https://deckhouse.ru/documentation/v1/modules/150-user-authn/cr.html#group
-# [<en>] https://deckhouse.io/documentation/v1/modules/150-user-authn/cr.html#group
+# [<ru>] https://deckhouse.ru/modules/user-authn/cr.html#group
+# [<en>] https://deckhouse.io/modules/user-authn/cr.html#group
 apiVersion: deckhouse.io/v1alpha1
 kind: Group
 metadata:
@@ -38,8 +38,8 @@ spec:
 ---
 # [<ru>] Настройки RBAC и авторизации.
 # [<en>] RBAC and authorization settings.
-# [<ru>] https://deckhouse.ru/documentation/v1/modules/140-user-authz/cr.html#clusterauthorizationrule
-# [<en>] https://deckhouse.io/documentation/v1/modules/140-user-authz/cr.html#clusterauthorizationrule
+# [<ru>] https://deckhouse.ru/modules/user-authz/cr.html#clusterauthorizationrule
+# [<en>] https://deckhouse.io/modules/user-authz/cr.html#clusterauthorizationrule
 apiVersion: deckhouse.io/v1
 kind: ClusterAuthorizationRule
 metadata:

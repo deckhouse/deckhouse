@@ -1,12 +1,12 @@
 ---
 title: Switching CNI in the cluster
 permalink: en/guides/cni-migration.html
-description: Guide on switching (migrating) CNI in a Deckhouse cluster.
+description: Guide on switching (migrating) CNI in a Deckhouse Platform cluster.
 lang: en
 layout: sidebar-guides
 ---
 
-This document describes the procedure for changing the network plugin (CNI) in a Deckhouse Platform cluster. The tool used in Deckhouse allows performing the automated migration (e.g., from Flannel to Cilium) with minimal application downtime and without a full restart of the cluster nodes.
+This document describes the procedure for changing the network plugin (CNI) in a Deckhouse Platform (DP) cluster. The tool used in DP allows performing the automated migration (e.g., from Flannel to Cilium) with minimal application downtime and without a full restart of the cluster nodes.
 
 {% alert level="danger" %}
 * This guide is applicable for DP version 1.76 and above. For DP version 1.75 and earlier, use the [Switching CNI from Flannel or Simple bridge to Cilium](/products/kubernetes-platform/documentation/v1/admin/configuration/network/internal/flannel-simple-to-cilium.html) guide.
@@ -20,9 +20,9 @@ This document describes the procedure for changing the network plugin (CNI) in a
 * Before carrying out work, it is necessary to disable external cluster management systems (CI/CD, GitOps, ArgoCD, etc.) that may conflict with the process (e.g., trying to restore deleted pods prematurely or rolling back settings). Also, ensure that the cluster management system does not enable the old CNI module.
 {% endalert %}
 
-Supported CNI switching modes:
+Supported CNI switching modes (rows are the current CNI, columns are the target CNI):
 
-|                  | simple-bridge | flannel (hostgw) | flannel (vxlan) | cilium (native) | cilium (vxlan) |
+| Current CNI      | simple-bridge | flannel (hostgw) | flannel (vxlan) | cilium (native) | cilium (vxlan) |
 | ---------------- | :-----------: | :--------------: | :-------------: | :-------------: | :------------: |
 | simple-bridge    |      🟫       |        🟩        |       🟩        |       🟩        |       🟩       |
 | flannel (hostgw) |      🟩       |        🟫        |       🟨        |       🟩        |       🟩       |
@@ -63,13 +63,13 @@ You will see a dynamic interface with the following information:
 Main phases of the process:
 
 1. **Preparing**: Validating the request and waiting for the environment to be ready (e.g., webhooks disabled).
-2. **WaitingForAgents**: Waiting for migration agents to start on all nodes.
-3. **EnablingTargetCNI**: Enabling the target CNI module in the Deckhouse configuration.
-4. **DisablingCurrentCNI**: Disabling the current CNI module.
-5. **CleaningNodes**: Agents clean up the network settings of the current CNI on the nodes.
-6. **WaitingTargetCNI**: Waiting for the new CNI pods (DaemonSet) to be ready.
-7. **RestartingPods**: Restarting application pods to switch them to the new network.
-8. **Completed**: Migration successfully completed.
+1. **WaitingForAgents**: Waiting for migration agents to start on all nodes.
+1. **EnablingTargetCNI**: Enabling the target CNI module in the DP configuration.
+1. **DisablingCurrentCNI**: Disabling the current CNI module.
+1. **CleaningNodes**: Agents clean up the network settings of the current CNI on the nodes.
+1. **WaitingTargetCNI**: Waiting for the new CNI pods (DaemonSet) to be ready.
+1. **RestartingPods**: Restarting application pods to switch them to the new network.
+1. **Completed**: Migration successfully completed.
 
 ### Completion and cleanup
 
@@ -142,7 +142,7 @@ After successful completion (the `CNIMigration` status shows condition `Type: Su
 d8 k delete cnimigration migration-to-cilium
 ```
 
-This action signals Deckhouse to remove all previously created resources in the cluster.
+This action signals DP to remove all previously created resources in the cluster.
 
 ## Troubleshooting
 
@@ -168,7 +168,7 @@ Possible reason: inability to delete CNI configuration files due to permissions,
 
 ### Target CNI pods do not start
 
-If the target CNI (e.g., Cilium) is in `Init:0/1` status, check the logs of its init container `cni-migration-init-checker`. It waits for the node cleanup to complete. If cleanup is not finished (see the point above), the new CNI will not start. In a critical situation, you can edit the Daemonset to remove the `cni-migration-init-checker` init container.
+If the target CNI (e.g., Cilium) is in `Init:0/1` status, check the logs of its init container `cni-migration-init-checker`. It waits for the node cleanup to complete. If cleanup is not finished (see the previous section), the new CNI will not start. In a critical situation, you can edit the Daemonset to remove the `cni-migration-init-checker` init container.
 
 ### Migration stuck
 

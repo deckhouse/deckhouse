@@ -1,9 +1,4 @@
 {%- if page.lang == "ru" %}
-{%- if page.platform_code == "spacevm" or  page.platform_code == "red" %}
-{%- alert level="warning" %}
-Доступно начиная с версии 1.65 Deckhouse Platform.
-{% endalert %}
-{%- endif %}
 {%- if page.platform_code == "red" %}
 {%- alert level="info" %}
 Перед установкой Deckhouse Platform в среде РЕД виртуализации необходимо предварительно создать нужное количество виртуальных машин с требуемыми параметрами.
@@ -13,13 +8,10 @@
 {% alert level="warning" %}
 Установка {{ page.title_main }} возможна только в Enterprise Edition. [Ознакомиться с условиями и ценами](/products/kubernetes-platform/features/).
 {% endalert %}
-{%- alert level="warning" %}
-Доступно начиная с версии 1.66 Deckhouse Platform.
-{% endalert %}
 {%- endif %}
 {%- if page.platform_code == "azure" %}
 {% alert level="warning" %}
-Поддерживаются только [регионы](https://docs.microsoft.com/ru-ru/azure/availability-zones/az-region) в которых доступны `Availability Zones`.
+Поддерживаются только [регионы](https://docs.microsoft.com/ru-ru/azure/availability-zones/az-region), в которых доступны `Availability Zones`.
 {% endalert %}
 {%- endif %}
 {%- else %}

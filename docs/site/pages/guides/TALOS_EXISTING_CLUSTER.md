@@ -357,7 +357,7 @@ d8 k --kubeconfig="$ADMIN_KUBECONFIG" get modules -o wide
 
 Enabled modules are expected to have `PHASE: Ready`, `ENABLED: True`, and `READY: True`.
 
-The Module status alone is not sufficient: a module may be `Ready` even if one of its workloads was not created or is restarting. Check the actual resources:
+The Module status alone is not sufficient: a module may be `Ready` even if one of its Deployments, StatefulSets, or DaemonSets was not created or is restarting. Check the actual resources:
 
 ```bash
 d8 k --kubeconfig="$ADMIN_KUBECONFIG" get deployment,statefulset,daemonset -A
@@ -415,5 +415,5 @@ The installation is considered successful when all of the following conditions a
 - Deployment `deckhouse` is ready.
 - Enabled modules have `READY: True`.
 - The actual module Deployments, StatefulSets, and DaemonSets are ready.
-- DP lifecycle modules remain disabled.
+- DP modules that can manage Talos components remain disabled.
 - Administrative access through the Talos administrative kubeconfig is preserved.

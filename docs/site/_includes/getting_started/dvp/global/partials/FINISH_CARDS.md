@@ -23,7 +23,7 @@ Follow the [virtual machine creation guide](/products/virtualization-platform/do
 <div class="cards-item__text" markdown="1">
 Prepare your cluster to receive traffic.
 
-Use our [checklist](/products/virtualization-platform/guides/production.html) to make sure you haven't forgotten anything.
+Use the [production readiness checklist](/products/virtualization-platform/guides/production.html) to make sure you haven't forgotten anything.
 </div>
 </div>
 
@@ -43,7 +43,7 @@ See also
 📚 <span class="cards-item__title-text">Documentation</span>
 </h3>
 <div class="cards-item__text">
-<p>The documentation for the installed in your cluster version of Deckhouse.</p>
+<p>Documentation for the platform version installed in your cluster.</p>
 <p>Web service name: {% include getting_started/global/partials/dns-template-title.html.liquid name="documentation" %}</p>
 </div>
 </div>
@@ -53,10 +53,10 @@ See also
 📊 <span class="cards-item__title-text">Monitoring</span>
 </h3>
 <div class="cards-item__text">
-<p>Explore Grafana dashboards bundled with Deckhouse.</p>
+<p>Explore the Grafana dashboards bundled with the platform.</p>
 <p>Web service name: {% include getting_started/global/partials/dns-template-title.html.liquid name="grafana" %}</p>
 <p>To access Prometheus: {% include getting_started/global/partials/dns-template-title.html.liquid name="grafana" path="/prometheus/" onlyPath="true" %}</p>
-<p><a href="/modules/prometheus/" target="_blank">Learn more</a> about the <code>monitoring</code> module.</p>
+<p><a href="/modules/prometheus/" target="_blank">Learn more</a> about the <code>prometheus</code> module.</p>
 </div>
 </div>
 
@@ -65,7 +65,7 @@ See also
 👌 <span class="cards-item__title-text">Status page</span>
 </h3>
 <div class="cards-item__text">
-<p>Get information about the overall status of Deckhouse and its components.<br />
+<p>Get information about the overall status of the platform and its components.<br />
 Web service name: {% include getting_started/global/partials/dns-template-title.html.liquid name="status" %}</p>
 </div>
 </div>
@@ -77,5 +77,5 @@ Web service name: {% include getting_started/global/partials/dns-template-title.
 <div markdown="1">
 ## Support
 
-Please, reach us via our [online community](/community/about.html#online-community) if you have any questions.
+If you have any questions, ask them in the [online community](/community/about.html#online-community).
 </div>

@@ -10,7 +10,7 @@
 {{- end }}
 {{- $shortNamesLine := "" }}
 {{- if gt ( $shortNames | len ) 0 }}
-  {{- $shortNamesLine = printf "<p><font size=\"-1\"><strong>Short names: %s</strong></font></p>" ( delimit $shortNames ", " ) }}
+  {{- $shortNamesLine = printf "<p><font size=\"-1\"><strong>%s: %s</strong></font></p>" (T "crd_short_names") ( delimit $shortNames ", " ) }}
 {{- end }}
 
 <h2>{{ $kind }}</h2>
@@ -25,7 +25,7 @@
 {{- if and $data.spec.versions (gt ( $data.spec.versions | len ) 0) }}
   {{- if gt ( $data.spec.versions | len ) 1 }}
     {{- $shortNamesLine | safeHTML }}
-    <p><font size="-1">Scope: {{ $data.spec.scope }}</font></p>
+    <p><font size="-1">{{ T "crd_scope" }}: {{ $data.spec.scope }}</font></p>
     <div class="tabs-block">
     <ul class="tabs__container tabs__container--title">
     {{- $status := " active" }}
@@ -43,8 +43,8 @@
 
     {{- if eq ( $data.spec.versions | len ) 1 }}
       {{- $shortNamesLine | safeHTML }}
-      <p><font size="-1">Scope: {{ $data.spec.scope }}
-      <br/>Version: {{ $versionName }}</font></p>
+      <p><font size="-1">{{ T "crd_scope" }}: {{ $data.spec.scope }}
+      <br/>{{ T "version" | humanize }}: {{ $versionName }}</font></p>
     {{- end }}
 
     {{- if gt ( $data.spec.versions | len ) 1 }}

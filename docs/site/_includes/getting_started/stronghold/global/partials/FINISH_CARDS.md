@@ -11,7 +11,7 @@ Getting started with the cluster
 📚 <span class="cards-item__title-text">Documentation</span>
 </h3>
 <div class="cards-item__text">
-<p>The documentation for the installed in your cluster version of Deckhouse.</p>
+<p>Documentation for the Deckhouse Platform version installed in your cluster.</p>
 <p>Web service name: {% include getting_started/global/partials/dns-template-title.html.liquid name="documentation" %}</p>
 </div>
 </div>
@@ -23,10 +23,10 @@ Getting started with the cluster
 📊 <span class="cards-item__title-text">Monitoring</span>
 </h3>
 <div class="cards-item__text">
-<p>Explore Grafana dashboards bundled with Deckhouse.</p>
+<p>Explore Grafana dashboards bundled with Deckhouse Platform.</p>
 <p>Web service name: {% include getting_started/global/partials/dns-template-title.html.liquid name="grafana" %}</p>
 <p>To access Prometheus: {% include getting_started/global/partials/dns-template-title.html.liquid name="grafana" path="/prometheus/" onlyPath="true" %}</p>
-<a href="/modules/prometheus/" target="_blank">Learn more</a> about the <code>monitoring</code> module.
+<p>For details, see the <a href="/modules/prometheus/" target="_blank"><code>prometheus</code> module documentation</a>.</p>
 </div>
 </div>
 {% endif %}
@@ -46,7 +46,7 @@ Getting started with the cluster
 👌 <span class="cards-item__title-text">Status page</span>
 </h3>
 <div class="cards-item__text">
-<p>Get information about the overall status of Deckhouse and its components.<br />
+<p>Get information about the overall status of Deckhouse Platform and its components.<br />
 Web service name: {% include getting_started/global/partials/dns-template-title.html.liquid name="status" %}</p>
 
 <p>Get detailed SLA statistics for each component and time frame.<br />
@@ -62,7 +62,7 @@ Web service name: {% include getting_started/global/partials/dns-template-title.
 <div class="cards-item__text" markdown="1">
 Prepare your cluster to receive traffic.
 
-Use our [checklist](/products/kubernetes-platform/guides/production.html) to make sure you haven't forgotten anything.
+Use the [production readiness checklist](/products/kubernetes-platform/guides/production.html) to make sure you haven't forgotten anything.
 </div>
 </div>
 {%- endif %}
@@ -96,7 +96,7 @@ You can use the generated `kubeconfig` file in Kubernetes with any deployment sy
 <div class="cards-item__text" markdown="1">
 Create a `Service` and `Ingress` for your application.
 
-[Learn more](/modules/ingress-nginx/) about the capabilities of the `ingress-nginx` module.
+For details, see the [`ingress-nginx` module documentation](/modules/ingress-nginx/).
 </div>
 </div>
 
@@ -107,7 +107,7 @@ Create a `Service` and `Ingress` for your application.
 <div class="cards-item__text" markdown="1">
 Add `prometheus.deckhouse.io/custom-target: "my-app"` and `prometheus.deckhouse.io/port: "80"` annotations to the Service created.
 
-For more information, see the `monitoring-custom` module's [documentation](/modules/monitoring-custom/).
+For details, see the [`monitoring-custom` module documentation](/modules/monitoring-custom/).
 </div>
 </div>
 
@@ -128,7 +128,7 @@ Other features
 ⚖ <span class="cards-item__title-text">Managing nodes</span>
 </h3>
 <div class="cards-item__text" markdown="1">
-Run the following command to list nodegroups created in the cluster during the deployment process: `d8 k get nodegroups`. For more information, see the node-manager's [documentation](/modules/node-manager/).
+Run the following command to list NodeGroups created in the cluster during the deployment process: `d8 k get nodegroups`. For details, see the [`node-manager` module documentation](/modules/node-manager/).
 
 You only need to make changes to `minPerZone` and `maxPerZone` parameters to scale the existing groups. If these two parameters are not equal, Deckhouse will automatically launch an autoscaler.
 
@@ -146,7 +146,7 @@ You need to create a new
 <div markdown="1">
 ## Next steps
 
-Detailed information about the system and components is available in the [documentation](/products/stronghold/documentation/admin/overview.html).
+Detailed information about the system and components is available in the [Stronghold documentation](/products/stronghold/documentation/admin/overview.html).
 
-Contact our [online community](/community/about.html#online-community) if you have any questions.
+If you have any questions, contact the [Deckhouse online community](/community/about.html#online-community).
 </div>

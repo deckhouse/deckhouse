@@ -68,10 +68,7 @@ Use this mode when you want to preview documentation from an external module rep
    Example:
 
    ```bash
-   make external-module \
-     MODULE_PATH=/home/kar/fox/platform-security/operator-trivy \
-     CHANNEL=stable \
-     MODULE_VERSION=v1.2.3
+   make external-module MODULE_PATH=<MODULE_PATH> CHANNEL=stable MODULE_VERSION=v1.2.3
    ```
 
 1. Open the DP documentation in your browser at <http://localhost/products/kubernetes-platform/documentation/v1/>.
@@ -147,15 +144,13 @@ Requirements on the machine running the check:
 Run from the module repository root:
 
 ```bash
-curl -sSfL https://raw.githubusercontent.com/deckhouse/deckhouse/main/tools/docs/check-external-module.sh \
-  | bash -s -- --module-path .
+curl -sSfL https://raw.githubusercontent.com/deckhouse/deckhouse/main/tools/docs/check-external-module.sh | bash -s -- --module-path .
 ```
 
 Or download and invoke explicitly:
 
 ```bash
-curl -sSfL https://raw.githubusercontent.com/deckhouse/deckhouse/main/tools/docs/check-external-module.sh \
-  -o /tmp/check-external-module.sh
+curl -sSfL https://raw.githubusercontent.com/deckhouse/deckhouse/main/tools/docs/check-external-module.sh -o /tmp/check-external-module.sh
 bash /tmp/check-external-module.sh --module-path "$(pwd)" --channel alpha
 ```
 
@@ -182,27 +177,6 @@ jobs:
         run: /tmp/check-external-module.sh --module-path "$(pwd)"
 ```
 
-## Debugging (WIP)
-
-The [Delve](https://github.com/go-delve/delve) debugger is used for debugging the documentation site's backend.
-
-Files available for debugging:
-
-- `docs/site/werf-debug.yaml`: Used for compiling the backend.
-- `docs/site/docker-compose-debug.yml`: Used for running the backend.
-
-To run the debugger:
-
-1. Navigate to the `docs/site` directory and run the following command:
-
-   ```shell
-   werf compose up --config werf-debug.yaml --follow --docker-compose-command-options='-d --force-recreate' --docker-compose-options='-f docker-compose-debug.yml'
-   ```
-
-   Alternatively, run `docs/site/backend/debug.sh`.
-
-1. Once the process is running, connect to `localhost:2345`.
-
 ## Working with spellchecker
 
 > Run the following commands from the root of the repository.
@@ -215,7 +189,7 @@ Spellchecking commands:
   Example:
 
   ```shell
-  file=ee/se-plus/modules/cloud-provider-vsphere/docs/CONFIGURATION_RU.md make docs-spellcheck`
+  file=ee/se-plus/modules/030-cloud-provider-vsphere/docs/CONFIGURATION_RU.md make docs-spellcheck
   ```
 
 - `make docs-spellcheck-generate-dictionary`: Generate a word dictionary. Run it after adding new words to the `tools/docs/spelling/wordlist` file.
@@ -224,7 +198,8 @@ Spellchecking commands:
 
 ## Architecture (WIP)
 
-> ![NOTE] Architecture has been updated. This section is a work in progress. Some information may be incomplete or outdated.
+> [!NOTE]
+> Architecture has been updated. This section is a work in progress. Some information may be incomplete or outdated.
 
 The Deckhouse website consists of the following parts:
 
@@ -252,7 +227,7 @@ The Deckhouse website consists of the following parts:
 
 - **Documentation for DP modules**. Includes the following sections:
 
-  - `/products/kubernetes-platform/modules/`
+  - `/modules/`
 
   The content is generated using Hugo:
   
@@ -263,11 +238,11 @@ The Deckhouse website consists of the following parts:
 
 > Some information is outdated.
 
-The project uses [werf](werf.io) to build and deploy documentation.
+The project uses [werf](https://werf.io) to build and deploy documentation.
 
 Things to note:
 
-- The `_tool` directory contains scripts used for building the documentation.
+- The `_tools` directory contains scripts used for building the documentation.
 - The `_assets` directory stores assets (styles and scripts), which are used by Jekyll Asset Pipeline plugin.
   Assets are compiled and minified into the `/assets` directory (absolute path) and include a digest in their path.
   If you don't need a digest in the path, use the `/css` or `/js` directory instead.
@@ -357,7 +332,7 @@ Below are some data structures used in the Jekyll projects.
   {
     "module-name": {
       "path": "A path to the documentation on the site",  <-- null, if the module doesn't have documentation
-      "editionMinimumAvailable": "<EDITION>" <-- the "smallest" edition, where module is available. It is computed from the repo folder structure. **Don't use it in logic.** It seems to be deprecated in the future.
+      "editionMinimumAvailable": "<EDITION>" <-- the "smallest" edition, where module is available. It is computed from the repo folder structure. **Don't use it in logic.**
     }
   }
   ```
@@ -389,7 +364,7 @@ Below are some data structures used in the Jekyll projects.
 
 - `site.data.modules.all`: A list of all modules.
 
-  The data is defined by `werf-web.inc.yaml`.
+  The data is defined by `docs/documentation/werf-web.inc.yaml`.
   
   - `editionFullyAvailable`: A list of editions where the module available without restrictions. Used for overriding computed values. Takes precedence over `excludeModules` and `includeModules` from the `site.data.editions` file (see below). The `editionFullyAvailable` for a module can be set in the `docs/documentation/_data/modules/modules-addition.json` file. It's recommended that you don't use it in logic (but you can use it for adding editions to the module).
   - `editionsWithRestrictions`: A list of editions where the module is available with restrictions. Used for overriding computed values. Takes precedence over `excludeModules` and `includeModules` from the `site.data.editions` file (see below). Takes precedence over `editionFullyAvailable`. The `editionsWithRestrictions` for a module can be set in the `docs/documentation/_data/modules/modules-addition.json` file.
@@ -403,7 +378,7 @@ Below are some data structures used in the Jekyll projects.
   ```text
   {
     "<module-kebab-name>": {
-    "editionMinimumAvailable": "<EDITION>",  <-- the "smallest" edition according to the edition weight (_data/modules/editions-weight.yml) where a module is available. It is computed from the module folder of the repo (_tools/modules_list.sh), can be specified in the `_data/modules/modules-addition.json`. **Don't use it in logic.** It seems to be deprecated in the future. Use editions array instead. 
+    "editionMinimumAvailable": "<EDITION>",  <-- the "smallest" edition according to the edition weight (_data/modules/editions-weight.yml) where a module is available. It is computed from the module folder of the repo (_tools/modules_list.sh), can be specified in the `_data/modules/modules-addition.json`. **Don't use it in logic.** Use editions array instead.
     "editions": [],  <-- a list of editions where the module is available with or without restrictions
     "external": "true|false", <-- Optional, true if the module is installed from the modulesource
     "path": "modules/<module-kebab-name>/",  <-- Optional, path to the module documentation on the site.
@@ -450,7 +425,7 @@ Below are some data structures used in the Jekyll projects.
 
   - `docs/documentation/_data/modules/editions-addition.json`: Merged with the data from the `/editions.yaml` file.
   - Each edition in the file can include both `excludeModules` and `includeModules` filters. In this case, the module will be added to the edition if its name is in `includeModules` and not in `excludeModules`.
-  - `docs/documentation/_data/modules-addition.json`
+  - `docs/documentation/_data/modules/modules-addition.json`
   
   ```json
   {
@@ -665,7 +640,8 @@ This feature allows you to display a contextual message above the "ready" search
 
 ### Examples
 
-#### Modules Documentation
+#### Modules documentation
+
 ```html
 <input type="text" id="search-input" 
        placeholder="Search modules..." 
@@ -674,7 +650,8 @@ This feature allows you to display a contextual message above the "ready" search
        data-search-context="Searching in modules documentation">
 ```
 
-#### Platform Documentation
+#### Platform documentation
+
 ```html
 <input type="text" id="search-input" 
        placeholder="Search..." 
@@ -683,13 +660,14 @@ This feature allows you to display a contextual message above the "ready" search
        data-search-context="Searching in platform documentation and modules">
 ```
 
-#### Product-Specific Documentation
+#### Product-specific documentation
+
 ```html
 <input type="text" id="search-input" 
        placeholder="Search..." 
        class="input"
        data-search-index-path="/products/kubernetes-platform/documentation/search.json"
-       data-search-context="Searching in Kubernetes Platform documentation">
+       data-search-context="Searching in Deckhouse Platform documentation">
 ```
 
 ### Behavior
@@ -791,14 +769,15 @@ Behavior:
 - A synonym is highlighted exactly as written, never word by word: `siem` marks «Security Information and Event Management» and leaves a stray «management» alone. Words of the *query* are still highlighted separately, because Lunr does match them independently. The trade-off: a page found through a synonym whose phrase it does not contain literally gets a snippet with nothing marked.
 - Highlighting tolerates inflections (a Russian query «провайдеры» also marks «провайдеров»), prefers whole phrases over separate words, and anchors matches at word starts.
 
-### OpenAPI Specifications rendering
+## OpenAPI specifications rendering
 
 The `x-doc-` prefix in the parameter names is reserved in the OpenAPI specifications for rendering the documentation. Parameters with this prefix are only used for rendering the documentation and are not mandatory.
 A list of `x-doc-` parameters:
+
 - `x-doc-deprecated:` (boolean). It is used to indicate that the parameter is deprecated.
 - `x-doc-required:` (boolean). It is used to indicate explicitly on the site if a particular parameter is mandatory or optional.
-- `x-doc-default:` (arbitrary type). The default value to show on the site. It is helpful if you cannot specify the `default` parameter for some reason. The x-doc specification value must be of the same type as the target parameter, and it **cannot contain** markdown elements or arbitrary text (well, it can, but the rendering will be ugly). **Only** the value from the English version of the resource is used.
-- `x-doc-d8Editions` (array of strings). Array of Deckhouse Platform editions the target parameter can be used with. E.g. `["se", "ee"]`. Legacy, and will be deprecated.
+- `x-doc-default:` (arbitrary type). The default value to show on the site. It is helpful if you cannot specify the `default` parameter for some reason. The x-doc specification value must be of the same type as the target parameter, and it **must not contain** Markdown elements or arbitrary text: they are not rendered correctly. **Only** the value from the English version of the resource is used.
+- `x-doc-d8Editions` (array of strings). Array of Deckhouse Platform editions the target parameter can be used with. E.g. `["se", "ee"]`. Legacy.
 - `x-doc-example` (arbitrary type). Provides an example of the target parameter's value. If specified, it takes precedence over the `example` and `x-examples` parameters. The x-doc-example specification value can contain markdown elements or arbitrary text. **Only** the value from the English version of the resource is used. Use `x-doc-examples` for specifying an array of YAMLs.
 - `x-doc-examples` (arbitrary type). Provides an ARRAY of examples of the target parameter's value. If specified, it takes precedence over the `example` and `x-examples` parameters.
 - `x-doc-search` (string). Comma-separated search keywords. Are used in the search index on the site to search parameters better.
@@ -881,7 +860,7 @@ The artifacts are static files, but they are published under URLs that do not ma
 
 ## Markup (external modules documentation)
 
-[Hugo](gohugo.io) SSG is used for rendering.
+[Hugo](https://gohugo.io) SSG is used for rendering.
 
 The documentation content is written in Markdown with some custom shortcodes.
 
@@ -948,7 +927,7 @@ Markdown content...
 
 The same as the [details shortcode](#user-content-shortcode-details), but used in templates.
 
-```
+```go-html-template
 {{ partial "details" ( dict "summary" "Summary..." "content" "Markdown content..." ) }}
 ```
 
@@ -956,7 +935,7 @@ The same as the [details shortcode](#user-content-shortcode-details), but used i
 
 The same as the [alert shortcode](#user-content-alert-details), but used in templates.
 
-```
+```go-html-template
 {{ partial "alert" ( dict "level" "warning" "content" "Markdown content..." ) }}
 ```
 
@@ -1052,7 +1031,7 @@ Example:
 make docs-generate-pdf DOC_VERSION=1.67
 ```
 
-Local builds use a local Docker registry at `localhost:4999/docs` (started automatically by `make up`).
+Local builds use a local Docker registry at `localhost:4999/docs`. `generate-pdf.sh` does not start it. Before running, start the registry with `make -C docs/site registry` (or run `USE_LOCALHOST_REPO=1 make up` in `docs/site`).
 
 #### werf image definition
 

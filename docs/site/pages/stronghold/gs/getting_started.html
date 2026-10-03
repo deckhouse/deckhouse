@@ -2,6 +2,7 @@
 title: "Selecting infrastructure"
 custom_class: "gs__container"
 permalink: en/stronghold/gs/
+description: Step-by-step installation of Deckhouse Stronghold in an existing Deckhouse Platform cluster, together with Deckhouse Platform, or on Linux.
 layout: page-nosidebar
 toc: false
 ---
@@ -9,16 +10,16 @@ toc: false
 <link rel="stylesheet" type="text/css" href='{% css_asset_tag getting-started-css %}[_assets/css/getting-started.css]{% endcss_asset_tag %}' />
 <script type="text/javascript" src='{% javascript_asset_tag getting-started %}[_assets/js/getting-started.js]{% endjavascript_asset_tag %}'></script>
 
-<p>This getting started guide walks you through the step-by-step process of installing Deckhouse Stronghold.</p>
+<p>The steps below describe how to install Deckhouse Stronghold.</p>
 
-<p>The installation process of Deckhouse Stronghold differs when installed in an existing Deckhouse Platform cluster, in the case of a fresh installation along with the Deckhouse Platform, and in the case of a local run on Linux OS.</p>
+<p>The installation process of Deckhouse Stronghold depends on the option: installing in an existing Deckhouse Platform cluster, installing together with Deckhouse Platform from scratch, or running locally on Linux.</p>
 
-<h2>Select the infrastructure type to install Deckhouse Stronghold in</h2>
+<h2>Select the Deckhouse Stronghold installation option</h2>
 
 <div class="block" style="margin: 0;">
   <div class="block__columns block__columns_top">
     <div>
-      <h3>Installation of the Deckhouse Platform with Stronghold</h3>
+      <h3>Installing Deckhouse Platform with Stronghold</h3>
       <div class="button-group">
         {%- for provider in site.data.getting_started.stronghold.installTypes %}
         {%- if provider[1].type != 'cloud' and provider[1].type != 'baremetal' %}{% continue %}{% endif %}
@@ -50,7 +51,7 @@ toc: false
       </div>
     </div>
     <div>
-      <h3>Installation in an existing cluster</h3>
+      <h3>Installing in an existing cluster</h3>
       <div class="button-group">
         {%- for provider in site.data.getting_started.stronghold.installTypes %}
         {%- if provider[1].type != 'existing-dkp' %}{% continue %}{% endif %}
@@ -68,7 +69,7 @@ toc: false
       </div>
     </div>
     <div>
-      <h3>Installation on Linux OS</h3>
+      <h3>Installing on Linux</h3>
       <div class="button-group">
         {%- for provider in site.data.getting_started.stronghold.installTypes %}
         {%- if provider[1].type != 'linux' %}{% continue %}{% endif %}

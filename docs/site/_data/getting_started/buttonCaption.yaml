@@ -12,10 +12,10 @@ finish:
   ru: Куда двигаться дальше?
 getClusterAccess:
   en: Getting access to the cluster
-  ru: Получаем доступ к кластеру
+  ru: Получение доступа к кластеру
 installing:
   en: Installation
-  ru:  Установка
+  ru: Установка
 next:
   en: "Next: "
   ru: "Далее: "

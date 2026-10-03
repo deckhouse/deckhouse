@@ -1,8 +1,10 @@
 {%- include getting_started/global/partials/NOTICES_ENVIRONMENT.liquid %}
 
-You have to create an IAM account with the {{ page.platform_name[page.lang] }} cloud provider so that Deckhouse Platform can manage cloud resources. The detailed instructions for creating an IAM account with AWS are available in the [documentation](/modules/cloud-provider-aws/environment.html). Below, we will provide a brief overview of the necessary actions (run them on the **personal computer**):
+Prepare the {{ page.platform_name[page.lang] }} environment so that Deckhouse Platform can manage cloud resources. The full procedure is described on the [environment preparation page](/modules/cloud-provider-aws/environment.html) of the `cloud-provider-aws` module.
 
-Create the `JSON specification` using the following command.
+Create an IAM user for Deckhouse Platform. Run the following commands on the **personal computer**.
+
+Create the JSON specification of the policy using the following command:
 
 {% offtopic title="Command to create policy.json" %}
 ```bash
@@ -92,7 +94,7 @@ cat > policy.json << EOF
                 "ec2:DescribeNetworkInterfaceAttribute",
                 "ec2:ModifyNetworkInterfaceAttribute",
                 "ec2:DeleteNetworkInterface",
-                "ec2:DescribeNetworkInterfaces",                
+                "ec2:DescribeNetworkInterfaces",
                 "elasticloadbalancing:AddTags",
                 "elasticloadbalancing:ApplySecurityGroupsToLoadBalancer",
                 "elasticloadbalancing:AttachLoadBalancerToSubnets",
@@ -156,23 +158,24 @@ Create a new Policy based on the specification created above with `D8CloudProvid
 aws iam create-policy --policy-name D8CloudProviderAWS --policy-document file://policy.json
 ```
 
-> You will see the following:
-> ```yaml
-  {
-      "Policy": {
-          "PolicyName": "D8CloudProviderAWS",
-          "PolicyId": "AAA",
-          "Arn": "arn:aws:iam::123:policy/D8CloudProviderAWS",
-          "Path": "/",
-          "DefaultVersionId": "v1",
-          "AttachmentCount": 0,
-          "PermissionsBoundaryUsageCount": 0,
-          "IsAttachable": true,
-          "CreateDate": "2020-08-27T02:52:06+00:00",
-          "UpdateDate": "2020-08-27T02:52:06+00:00"
-      }
-  }
-  ```
+You will see the following:
+
+```console
+{
+    "Policy": {
+        "PolicyName": "D8CloudProviderAWS",
+        "PolicyId": "AAA",
+        "Arn": "arn:aws:iam::123:policy/D8CloudProviderAWS",
+        "Path": "/",
+        "DefaultVersionId": "v1",
+        "AttachmentCount": 0,
+        "PermissionsBoundaryUsageCount": 0,
+        "IsAttachable": true,
+        "CreateDate": "2020-08-27T02:52:06+00:00",
+        "UpdateDate": "2020-08-27T02:52:06+00:00"
+    }
+}
+```
 
 Create a new user:
 
@@ -180,18 +183,19 @@ Create a new user:
 aws iam create-user --user-name deckhouse
 ```
 
-> You will see the following:
-> ```yaml
-  {
-      "User": {
-          "Path": "/",
-          "UserName": "deckhouse",
-          "UserId": "AAAXXX",
-          "Arn": "arn:aws:iam::123:user/deckhouse",
-          "CreateDate": "2020-08-27T03:05:42+00:00"
-      }
-  }
-  ```
+You will see the following:
+
+```console
+{
+    "User": {
+        "Path": "/",
+        "UserName": "deckhouse",
+        "UserId": "AAAXXX",
+        "Arn": "arn:aws:iam::123:user/deckhouse",
+        "CreateDate": "2020-08-27T03:05:42+00:00"
+    }
+}
+```
 
 You need to allow access to the API and remember your `AccessKeyId` + `SecretAccessKey` values:
 
@@ -199,21 +203,24 @@ You need to allow access to the API and remember your `AccessKeyId` + `SecretAcc
 aws iam create-access-key --user-name deckhouse
 ```
 
-> You will see the following:
-> ```yaml
-  {
-      "AccessKey": {
-          "UserName": "deckhouse",
-          "AccessKeyId": "XXXYYY",
-          "Status": "Active",
-          "SecretAccessKey": "ZZZzzz",
-          "CreateDate": "2020-08-27T03:06:22+00:00"
-      }
-  }
-  ```
+You will see the following:
 
-Attach the specified `Policy` to the specified `User`:
+```console
+{
+    "AccessKey": {
+        "UserName": "deckhouse",
+        "AccessKeyId": "XXXYYY",
+        "Status": "Active",
+        "SecretAccessKey": "ZZZzzz",
+        "CreateDate": "2020-08-27T03:06:22+00:00"
+    }
+}
+```
+
+Attach the policy to the user:
 
 ```shell
-aws iam attach-user-policy --user-name username --policy-arn arn:aws:iam::123:policy/D8CloudProviderAWS
+aws iam attach-user-policy --user-name deckhouse --policy-arn arn:aws:iam::<ACCOUNT_ID>:policy/D8CloudProviderAWS
 ```
+
+Replace `<ACCOUNT_ID>` with the AWS account ID. It is part of the `Arn` field in the output of the `aws iam create-policy` command, for example, `123` in `arn:aws:iam::123:policy/D8CloudProviderAWS`.

@@ -8,7 +8,7 @@ layout: sidebar-guides
 
 Before deploying a cluster running Deckhouse Platform, you have to plan the configuration of the future cluster and decide on the parameters of its nodes (e.g., RAM, CPU, etc.).
 
-## Installation Planning
+## Installation planning
 
 Before deploying a cluster, you need to plan for the resources that you might need to run the cluster. The following questions will help you plan ahead:
 
@@ -17,13 +17,13 @@ Before deploying a cluster, you need to plan for the resources that you might ne
 * Does your cluster require a high availability mode?
 * Which Deckhouse Platform (DP) modules do you intend to use?
 
-The answers to these questions can help you estimate the number of nodes recommended for your cluster deployment. See [Deployment Scenarios](#deployment-scenarios) to learn more.
+The answers to these questions can help you estimate the number of nodes recommended for your cluster deployment. See [Deployment scenarios](#deployment-scenarios) to learn more.
 
 {% alert level="info" %}
 The information below applies to a Deckhouse Platform installation running the [Default module set](/products/kubernetes-platform/documentation/v1/admin/configuration/#module-bundles).
 {% endalert %}
 
-## Deployment Scenarios
+## Deployment scenarios
 
 This section helps you **estimate the resources** required for the cluster based on the expected load.
 
@@ -74,13 +74,13 @@ Where:
 * **system nodes** — intended to run DP modules;
 * **worker nodes** — intended to run user applications.
 
-See [Configuration Features](./production.html#things-to-consider-when-configuring) of the "Going to Production" guide for details on these node types.
+See [Configuration Features](./production.html#things-to-consider-when-configuring) of the "Going to production" guide for details on these node types.
 
 Features of the configurations listed in the table above:
 
 * **Minimum** — Minimum cluster configuration is suitable for small, light-load projects with low reliability requirements. It is up to you to define the characteristics of the worker node based on the expected user load. Note that in this configuration, some of the DP components will also run on the worker node.
   > Such a cluster configuration is risky because if a single master node fails, the entire cluster will be affected.
-* **Typical** — This is the recommended configuration that can tolerate the failure of two master nodes. It greatly improves service availability.
+* **Typical** — This is the recommended configuration that can tolerate the failure of one master node. It greatly improves service availability.
 * **Increased load** — Unlike the typical configuration, this configuration includes dedicated monitoring nodes, enabling a high level of observability in the cluster even under high loads.
 
 {% alert level="info" %}
@@ -104,7 +104,7 @@ Starting with version 1.74, Deckhouse Platform has a module integrity control me
       <td rowspan="6" style="width: 45%;">
         <b>Minimum</b><br><br>
         <i>The way the cluster will run on minimum requirement nodes largely depends on which DP modules are enabled.<br>
-        We recommend increasing node resources if the number of enabled modules is large.<br><br>
+        If the number of enabled modules is large, increase node resources.<br><br>
         </i>
       </td>
       <td>Master node</td>
@@ -194,7 +194,7 @@ Starting with version 1.74, Deckhouse Platform has a module integrity control me
 </table>
 
 {% alert level="info" %}
-* <span id="storage"></span>PVC disk space for system components: If the local disk space of the node will be used to store system PVCs (`prometheus`, `upmeter` modules, etc.), then it is necessary to additionally allocate >= 100 GB.
+* <span id="storage"></span>PVC disk space for system components: If the local disk space of the node will be used to store system PVCs (`prometheus`, `upmeter` modules, etc.), then it is necessary to additionally allocate >= 100 GB. The second value in the "Disk space" column (for example, 150 in "50 / 150") includes these 100 GB.
 * The parameters of worker nodes are largely dictated by the nature of the workload running on the node(s); the table lists the minimum requirements. For system services (`kubelet`) and system pods on worker nodes, you need to allocate at least 1 CPU and 2 GB of memory.
 * Note that all nodes require high performance disks (400+ IOPS).
 {% endalert %}
@@ -202,7 +202,7 @@ Starting with version 1.74, Deckhouse Platform has a module integrity control me
 ### Single-node cluster
 
 {% alert level="warning" %}
-Such clusters lack fault tolerance. We highly advise you against using this kind of clusters in production environments.
+Such clusters lack fault tolerance. Do not use this kind of clusters in production environments.
 {% endalert %}
 
 In some cases, a cluster can consist of a single node that performs all the node roles described above. This configuration may be used, for example, to familiarize yourself with the technology or to run workloads with low resource requirements.
@@ -215,7 +215,7 @@ With this configuration, a load of 2500 RPS on a typical web application (e.g., 
 * RAM and disk resource consumption figures will remain largely unchanged. In the end, however, it comes down to the number of metrics collected and the nature of the workload being run.
 
 {% alert level="info" %}
-We recommend load testing the application and adjusting the server capacity accordingly.
+Run load testing of the application and adjust the server capacity according to its results.
 {% endalert %}
 
 ### Configuration examples
@@ -231,7 +231,7 @@ To deploy Deckhouse Platform Enterprise Edition with the [Default](/modules/deck
 If needed, you can also run DP in the same configuration on a single node with 16 CPU and 32 GB RAM for a virtual machine, or 10 CPU and 24 GB RAM for a bare metal server.
 {% endalert %}
 
-## Node Hardware Requirements
+## Node hardware requirements
 
 The machines you intend to turn into nodes of your future cluster must meet the following requirements:
 
@@ -239,11 +239,11 @@ The machines you intend to turn into nodes of your future cluster must meet the 
 * **Identical nodes** — all nodes of the same type must have the same hardware configuration. Nodes must be of the same make and model with the same CPU, memory, and storage.
 * **Network interfaces** — each node must have at least one network interface for the routed network.
 
-## Network Requirements
+## Network requirements
 
 The following network requirements apply to cluster nodes:
 
-* Nodes must be able to access each other over the network. The [network policies](../documentation/v1/network_security_setup.html) must be met.
+* Nodes must be able to access each other over the network. The [network policies](/products/kubernetes-platform/documentation/v1/reference/network_interaction.html) must be met.
 * There are no MTU requirements.
 * Each node must have a permanent IP address. If you use a DHCP server to assign IP addresses to nodes, you must configure the DHCP server to explicitly assign addresses to each node. Changing the IP addresses of the nodes is undesirable.
 * Master nodes must be able to access time servers external to the cluster via NTP. Cluster nodes use master nodes to synchronize time, but can also synchronize with other time servers (see the [ntpServers](/modules/chrony/configuration.html#parameters-ntpservers) parameter).
@@ -256,4 +256,4 @@ Join our [Telegram channel](https://t.me/deckhouse) to stay up to date.
 
 Join the [Deckhouse community](https://deckhouse.io/community/about.html) for updates on important developments and news. There, you will be able to chat with others and learn from their experiences. This way, you can avoid many common mistakes.
 
-The Deckhouse Platform team knows firsthand the dedication it takes to set up and orchestrate a production Kubernetes cluster. We're thrilled if DP empowers you to bring your vision to life. Share your journey and ignite others to embark on their own Kubernetes endeavors!
+Setting up and running a production Kubernetes cluster takes effort. Share your experience with DP in the community to help others move to Kubernetes.

@@ -35,7 +35,7 @@ To configure NFS, complete the following steps:
    {% endtab %}
    {% endtabs %}
 
-1. Verify NFS access from the **master node**. Run the following commands on the **master node**:
+1. Verify NFS access from the **master node** and the **worker node**. Run the following commands on each of these nodes:
 
    {% tabs dvp-nfs-master %}
    {% tab "For Ubuntu-based OS" %}
@@ -88,7 +88,7 @@ Private key:
 {% endalert %}
 
 {% alert level="warning" %}
-If you deploy the lab on virtual machines, enable nested virtualization on the hypervisor for the **worker node**. See [installation requirements](./#hardware-and-software-requirements).
+If you deploy the lab on virtual machines, enable nested virtualization on the hypervisor for the **worker node**, as described in the [installation requirements](./#hardware-and-software-requirements).
 {% endalert %}
 
 To continue setup, create the `caps` user by running the following commands on the **worker node**:
@@ -121,9 +121,5 @@ sudo chmod 600 /home/caps/.ssh/authorized_keys
 ```
 {% endtab %}
 {% endtabs %}
-On **Astra Linux** with Parsec enabled, set the maximum integrity level for `caps`:
-```bash
-sudo pdpl-user -i 63 caps
-```
 
 The cluster nodes are ready for Deckhouse Virtualization Platform installation.

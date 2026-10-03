@@ -11,7 +11,7 @@
 1. Настройте NFS-сервер для хранения дисков ВМ. Выполните следующие команды на **NFS-сервере**:
 
    {% tabs dvp-nfs-server %}
-   {% tab "ОС на базе Ubuntu" %}
+   {% tab "Для ОС на базе Ubuntu и Astra Linux" %}
    ```bash
    sudo apt update
    sudo apt install nfs-kernel-server
@@ -22,7 +22,7 @@
    sudo systemctl restart nfs-kernel-server
    ```
    {% endtab %}
-   {% tab "Для CentOS, Rocky Linux, ALT Linux, РОСА Сервер, РЕД ОС, МОС ОС" %}
+   {% tab "Для CentOS, Rocky Linux, РОСА Сервер, РЕД ОС" %}
    ```bash
    sudo dnf install -y nfs-utils
    sudo mkdir -p <NFS_SHARE>
@@ -35,10 +35,10 @@
    {% endtab %}
    {% endtabs %}
 
-1. Проверьте доступ к NFS с **master-узла**. Выполните следующие команды на **master-узле**:
+1. Проверьте доступ к NFS с **master-узла** и **worker-узла**. Выполните следующие команды на каждом из этих узлов:
 
    {% tabs dvp-nfs-master %}
-   {% tab "ОС на базе Ubuntu" %}
+   {% tab "Для ОС на базе Ubuntu и Astra Linux" %}
    ```bash
    sudo apt update
    sudo apt install nfs-common
@@ -50,7 +50,7 @@
    sudo rmdir /mnt/dvp-nfs-test
    ```
    {% endtab %}
-   {% tab "Для CentOS, Rocky Linux, ALT Linux, РОСА Сервер, РЕД ОС, МОС ОС" %}
+   {% tab "Для CentOS, Rocky Linux, РОСА Сервер, РЕД ОС" %}
    ```bash
    sudo dnf install -y nfs-utils
    sudo mkdir -p /mnt/dvp-nfs-test
@@ -63,11 +63,11 @@
    {% endtab %}
    {% endtabs %}
 
-   Строка `OK: монтирование и запись работают` означает, что узел смонтировал каталог и записал в него от имени root, то есть работает и сеть, и опция `no_root_squash`. Если строки нет, ориентируйтесь на сообщение об ошибке:
+   Строка `OK: монтирование и запись работают` означает, что узел смонтировал директорию и записал в него от имени root, то есть работает и сеть, и опция `no_root_squash`. Если строки нет, ориентируйтесь на сообщение об ошибке:
 
    - `mount.nfs4: Connection timed out` — NFS-сервер недоступен по сети. Проверьте firewall и что его IP не совпадает с IP master- и worker-узлов.
    - `mount.nfs4: access denied by server` — узел не попадает в подсеть, указанную в `/etc/exports` на NFS-сервере.
-   - `touch: cannot touch ...: Permission denied` — каталог экспортирован без опции `no_root_squash`.
+   - `touch: cannot touch ...: Permission denied` — директория экспортирована без опции `no_root_squash`.
 
 ## Подготовка worker-узла
 
@@ -88,13 +88,13 @@
 {% endalert %}
 
 {% alert level="warning" %}
-При развёртывании тестового окружения на виртуальных машинах (ВМ) включите nested virtualization на гипервизоре для **worker-узла**. См. [требования к установке](./#требования-к-аппаратному-и-программному-обеспечению).
+При развёртывании тестового окружения на виртуальных машинах (ВМ) включите вложенную виртуализацию на гипервизоре для **worker-узла**, как указано в [требованиях к установке](./#требования-к-аппаратному-и-программному-обеспечению).
 {% endalert %}
 
-Для дальнейшей настройки создайте пользователя `caps`, выполнив следующие команды на **worker-узле** :
+Для дальнейшей настройки создайте пользователя `caps`, выполнив следующие команды на **worker-узле**:
 
 {% tabs dvp-caps-worker %}
-{% tab "ОС на базе Ubuntu" %}
+{% tab "Для ОС на базе Ubuntu и Astra Linux" %}
 ```bash
 export KEY='<CAPS_SSH_PUBLIC_KEY>'
 sudo useradd -m -s /bin/bash caps
@@ -107,7 +107,7 @@ sudo chmod 700 /home/caps/.ssh
 sudo chmod 600 /home/caps/.ssh/authorized_keys
 ```
 {% endtab %}
-{% tab "Для CentOS, Rocky Linux, ALT Linux, РОСА Сервер, РЕД ОС, МОС ОС" %}
+{% tab "Для CentOS, Rocky Linux, РОСА Сервер, РЕД ОС" %}
 ```bash
 export KEY='<CAPS_SSH_PUBLIC_KEY>'
 sudo useradd -m -s /bin/bash caps
@@ -121,7 +121,9 @@ sudo chmod 600 /home/caps/.ssh/authorized_keys
 ```
 {% endtab %}
 {% endtabs %}
-**В Astra Linux** с Parsec задайте максимальный уровень целостности для `caps`:
+
+**В Astra Linux** с Parsec дополнительно задайте максимальный уровень целостности для `caps`:
+
 ```bash
 sudo pdpl-user -i 63 caps
 ```

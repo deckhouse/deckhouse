@@ -33,7 +33,7 @@ echo <LICENSE_TOKEN> | docker login -u license-token --password-stdin registry.d
 Run a container with the installer:
 
 {% alert level="info" %}
-If, with VPN enabled, the container with the installer cannot access the network, use the [instructions](/products/kubernetes-platform/documentation/v1/faq.html#what-to-do-if-with-vpn-enabled-the-container-with-the-installer).
+If, with VPN enabled, the container with the installer cannot access the network, follow the [VPN troubleshooting steps in the FAQ](/products/kubernetes-platform/documentation/v1/faq.html#what-to-do-if-with-vpn-enabled-the-container-with-the-installer).
 {% endalert %}
 
 ```shell
@@ -77,7 +77,7 @@ docker run --pull=always -it -v "%cd%\config.yml:/config.yml" -v "%userprofile%\
 <!-- Linux or macOS install, CE -->
 
 {% alert level="info" %}
-If, with VPN enabled, the container with the installer cannot access the network, use the [instructions](/products/kubernetes-platform/documentation/v1/faq.html#what-to-do-if-with-vpn-enabled-the-container-with-the-installer).
+If, with VPN enabled, the container with the installer cannot access the network, follow the [VPN troubleshooting steps in the FAQ](/products/kubernetes-platform/documentation/v1/faq.html#what-to-do-if-with-vpn-enabled-the-container-with-the-installer).
 {% endalert %}
 
 Run a container with the installer:
@@ -100,23 +100,21 @@ docker run --pull=always -it -v "%cd%\config.yml:/config.yml" -v "%userprofile%\
 Inside the container, run:
 
 ```shell
-dhctl bootstrap --ssh-user=ubuntu --ssh-host=<MASTER_IP> --ssh-agent-private-keys=/tmp/.ssh/id_ed25519 \
-  --config=/config.yml \
-  --ask-become-pass
+dhctl bootstrap --ssh-user=ubuntu --ssh-host=<MASTER_IP> --ssh-agent-private-keys=/tmp/.ssh/id_ed25519 --config=/config.yml --ask-become-pass
 ```
 
 Where:
 
 - `<MASTER_IP>` — **master node** IP address for SSH.
-- `--ssh-user=ubuntu` — user name on the **master node** (defaults to `ubuntu`; change it if your master uses another account).
+- `--ssh-user=ubuntu` — user name on the **master node**; replace `ubuntu` if the master node uses another account.
 - `--ssh-agent-private-keys=/tmp/.ssh/id_ed25519` — Ed25519 private key: the `id_ed25519` file from `~/.ssh/` on your computer (mounted in the container as `/tmp/.ssh/id_ed25519`).
-- `--ask-become-pass` — add this flag if `sudo` on the server asks for a password; enter the password when prompted with `[sudo] Password:`.
+- `--ask-become-pass` — makes the installer ask for the `sudo` password on the master node; enter the password when prompted with `[sudo] Password:`. If `sudo` on the master node does not ask for a password, remove this flag from the command.
 
 The installation process may take from 5 to 30 minutes, depending on the connection between the master node and the image registry.
 
 Example output upon successful completion:
 
-```
+```text
 ...
 │ │ No more converge tasks found in Deckhouse queue.
 │ │ Deckhouse pod is Ready!

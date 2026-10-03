@@ -26,7 +26,7 @@ EOF
 </div>
   </li>
   <li>
-<p>Make the created StorageClass as the default one in the cluster:</p>
+<p>Make the created StorageClass the default one in the cluster:</p>
 <div markdown="1">
 ```shell
 sudo -i d8 k patch mc global --type merge \
@@ -38,7 +38,7 @@ sudo -i d8 k patch mc global --type merge \
 </div>
 
 <div id="block_layout_worker" class="tabs__content_worker">
-<p>Add a new node to the cluster (for more information about adding a static node to a cluster, read <a href="/modules/node-manager/examples.html#adding-a-static-node-to-a-cluster">the documentation</a>):</p>
+<p>Add a new node to the cluster (for details, see the <a href="/modules/node-manager/examples.html#adding-a-static-node-to-a-cluster">example of adding a static node to a cluster</a>):</p>
 
 <ul>
   <li>
@@ -61,7 +61,7 @@ EOF
 </div>
   </li>
   <li>
-  <p>Make the created StorageClass as the default one in the cluster:</p>
+  <p>Make the created StorageClass the default one in the cluster:</p>
 <div markdown="1">
 ```shell
 sudo -i d8 k patch mc global --type merge \
@@ -241,16 +241,15 @@ sudo -i d8 k get no
 </div>
 
 {% offtopic title="Example of the output..." %}
-```
+```console
 sudo -i d8 k get no
 NAME               STATUS   ROLES                  AGE    VERSION
-d8cluster          Ready    control-plane,master   30m   v1.23.17
-d8cluster-worker   Ready    worker                 10m   v1.23.17
+d8cluster          Ready    control-plane,master   30m   v1.33.13
+d8cluster-worker   Ready    worker                 10m   v1.33.13
 ```
 {%- endofftopic %}
 </li>
 </ul>
-{% alert type="info" %}
 {% offtopic title="Adding two or more worker nodes..." %}
 **Bootstrap script**:  
 Use the same NodeGroup `worker` and the same bootstrap script you used to add the first node.
@@ -272,7 +271,6 @@ If you use CAPS and want to add more static nodes in the `worker` NodeGroup:
    - The IP address of this node in <a href="/modules/node-manager/cr.html#staticinstance-v1alpha2-spec-address">spec.address</a>.
    - A reference to <a href="/modules/node-manager/cr.html#sshcredentials">SSHCredentials</a> in <a href="/modules/node-manager/cr.html#staticinstance-v1alpha2-spec-credentialsref">spec.credentialsRef</a>.
 {%- endofftopic %}
-{% endalert %}
 
 </div>
 
@@ -289,7 +287,7 @@ sudo -i d8 k -n d8-ingress-nginx get po -l app=kruise
 </div>
 
 {% offtopic title="Example of the output..." %}
-```
+```console
 $ sudo -i d8 k -n d8-ingress-nginx get po -l app=kruise
 NAME                                         READY   STATUS    RESTARTS    AGE
 kruise-controller-manager-7dfcbdc549-b4wk7   3/3     Running   0           15m
@@ -323,7 +321,7 @@ sudo -i d8 k -n d8-ingress-nginx get po -l app=controller
 Wait for the Ingress controller pods to switch to <code>Ready</code> state.
 
 {% offtopic title="Example of the output..." %}
-```
+```console
 $ sudo -i d8 k -n d8-ingress-nginx get po -l app=controller
 NAME                                       READY   STATUS    RESTARTS   AGE
 controller-nginx-r6hxc                     3/3     Running   0          5m
@@ -346,7 +344,7 @@ sudo -i d8 k create -f $PWD/user.yml
 </li>
 <li><strong>Create DNS records</strong> to organize access to the cluster web interfaces.
 
-{% alert type="info" %}
+{% alert level="info" %}
 If you use `sslip.io` or a similar wildcard DNS service as the cluster DNS name template, there is no need to create DNS records manually.
 {% endalert %}
 

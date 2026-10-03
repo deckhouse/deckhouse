@@ -1,8 +1,8 @@
 ---
-title: "Быстрый старт — выбор инфраструктуры"
+title: "Быстрый старт — выбор инфраструктуры для графического установщика"
 custom_class: "gs__container"
 permalink: ru/gs/installer/
-description: Пошаговый процесс установки Deckhouse Platform поверх любой инфраструктуры.
+description: Пошаговый процесс установки Deckhouse Platform с помощью графического установщика.
 layout: page-nosidebar
 lang: ru
 toc: false
@@ -13,18 +13,18 @@ toc: false
 
 <div class="gs-tabs">
   <div class="gs-tabs__list">
-    <a class="gs-tabs__item gs-tabs__item--active" href="/gs/installer/">{{ site.data.i18n.getting_started_nav.gui_installer[page.lang] }}</a>
-    <a class="gs-tabs__item" href="/gs/">{{ site.data.i18n.getting_started_nav.manual_cli[page.lang] }}</a>
+    <a class="gs-tabs__item gs-tabs__item--active" href="/products/kubernetes-platform/gs/installer/">{{ site.data.i18n.getting_started_nav.gui_installer[page.lang] }}</a>
+    <a class="gs-tabs__item" href="/products/kubernetes-platform/gs/">{{ site.data.i18n.getting_started_nav.manual_cli[page.lang] }}</a>
   </div>
 </div>
 <p>Скорее всего, вы уже ознакомились с основными <a href="/products/kubernetes-platform/">возможностями Deckhouse
   Platform</a>. В данном руководстве рассмотрен пошаговый процесс установки платформы.</p>
 
 {% alert level="info" %}
-Дополнительные материалы по администрированию и обучению работе с платформой представлены в курсе [«Администрирование Deckhouse Platform»](https://deckhouse.ru/courses/basics-administration-deckhouse-kubernetes-platform/) в [Deckhouse Академии](https://deckhouse.ru/academy/).
+Дополнительные материалы по администрированию и обучению работе с платформой представлены в курсе [«Администрирование Deckhouse Platform»](https://deckhouse.ru/courses/basics-administration-deckhouse-kubernetes-platform/) [в Deckhouse Академии](https://deckhouse.ru/academy/).
 {% endalert %}
 
-<p>Установка платформы Deckhouse Platform возможна как на физические серверы (bare metal), так и в инфраструктуру одного
+<p>Установка DP возможна как на физические серверы (bare metal), так и в инфраструктуру одного
   из поддерживаемых облачных провайдеров. В зависимости от выбранной инфраструктуры процесс может немного отличаться,
   поэтому ниже приведены примеры установки для разных вариантов.</p>
 
@@ -39,8 +39,8 @@ toc: false
       </div>
       <p>
         <small>
-          Полный список настроек облачных провайдеров Deckhouse&nbsp;Platform доступен <a href="/products/kubernetes-platform/documentation/v1/admin/integrations/integrations-overview.html"
-          title="Поддерживаемые облачные провайдеры и параметры конфигурации облачных провайдеров">в документации</a>.
+          Полный список поддерживаемых облачных провайдеров и их параметров приведён <a href="/products/kubernetes-platform/documentation/v1/admin/integrations/integrations-overview.html"
+          title="Поддерживаемые облачные провайдеры и их параметры">в&nbsp;разделе «Интеграция с&nbsp;IaaS»</a> документации.
         </small>
       </p>
     </div>
@@ -60,7 +60,7 @@ toc: false
         <a class="button button_default button_card"
           href="/products/kubernetes-platform/gs/installer/{{ provider[0] }}/step2.html">
           {% if provider[1].iconPath %}
-            <div class="icon"><img src="/{{provider[1].iconPath}}" alt="{{ provider[1].name[page.lang] }} icon"/></div>
+            <div class="icon"><img src="/{{provider[1].iconPath}}" alt="Значок {{ provider[1].name[page.lang] }}"/></div>
           {% endif %}
           <span class="name">{{ provider[1].name[page.lang] }}</span>
         </a>

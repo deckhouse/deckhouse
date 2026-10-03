@@ -581,7 +581,7 @@ features:
     ru: Доступно в других коммерческих редакциях.
   requiresSeparateLicense:
     en: Licensed separately, not included in the DP license cost.
-    ru: Лицензируется на отдельных условиях, не включен в стоимость лицензии DP. Подробнее см. <a href="https://deckhouse.ru/products/kubernetes-platform/features/">Условия и цены</a>.
+    ru: Лицензируется на отдельных условиях, не включён в стоимость лицензии DP. Подробнее — <a href="https://deckhouse.ru/products/kubernetes-platform/features/">на странице «Условия и цены»</a>.
   requiresSeparateLicenseObservability:
     en: Licensed separately, not included in the DP license cost.
-    ru: Лицензируется на отдельных условиях, не включен в стоимость лицензии DP. Подробнее см. на<a href=https://deckhouse.ru/products/observability-platform/">Главной странице платформы</a>.
+    ru: Лицензируется на отдельных условиях, не включён в стоимость лицензии DP. Подробнее — <a href="https://deckhouse.ru/products/observability-platform/">на странице продукта</a>.

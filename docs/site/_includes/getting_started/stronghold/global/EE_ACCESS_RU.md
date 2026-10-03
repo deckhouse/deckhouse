@@ -36,7 +36,7 @@ $(document).ready(function() {
   Нет ключа?
 </h3>
 <div class="button-group">
-  <a href="" data-open-modal="request_access" class="button button_alt">Запросить бесплатный триал</a>
+  <a href="" data-open-modal="request_access" class="button button_alt">Запросить пробную лицензию</a>
 </div>
 </div>
 </div>

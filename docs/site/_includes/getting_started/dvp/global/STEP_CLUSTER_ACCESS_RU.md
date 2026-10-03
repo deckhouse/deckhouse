@@ -112,7 +112,7 @@
    - **Wildcard-шаблон** (например `%s.domain.my`) — одна wildcard A-запись на IP узла с Ingress.
    - **Шаблон без wildcard** (например `%s-kube.company.my`) — A- или CNAME-записи для каждого имени:
 
-     ```bash
+     ```text
      api.domain.my
      code.domain.my
      commander.domain.my

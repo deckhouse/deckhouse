@@ -24,7 +24,7 @@
 
 <div id='block_installer_linux_{{ revision }}' class="tabs__container tabs__container--descr active" markdown="1">
 
-Авторизуйтесь на **персональном компьютере** в container image registry:
+Авторизуйтесь на **персональном компьютере** в хранилище образов контейнеров:
 
 ```shell
 echo <LICENSE_TOKEN> | docker login -u license-token --password-stdin registry.deckhouse.ru
@@ -33,7 +33,7 @@ echo <LICENSE_TOKEN> | docker login -u license-token --password-stdin registry.d
 Запустите контейнер с установщиком:
 
 {% alert level="info" %}
-Если при включенном VPN контейнер с установщиком не может получить доступ к сети, воспользуйтесь [инструкцией](/products/kubernetes-platform/documentation/v1/faq.html#что-делать-если-при-включенном-vpn-контейнер-с-установщиком-не-м).
+Если при включённом VPN контейнер с установщиком не может получить доступ к сети, выполните [действия из FAQ по работе с VPN](/products/kubernetes-platform/documentation/v1/faq.html#что-делать-если-при-включенном-vpn-контейнер-с-установщиком-не-м).
 {% endalert %}
 
 ```shell
@@ -42,7 +42,7 @@ docker run --pull=always -it -v "$PWD/config.yml:/config.yml" -v "$HOME/.ssh/:/t
 </div>
 <div id='block_installer_windows_{{ revision }}' class="tabs__container tabs__container--descr" markdown="1">
 <!-- Windows install, EE -->
-Авторизуйтесь на **персональном компьютере** в container image registry, введя лицензионный ключ на запрос пароля:
+Авторизуйтесь на **персональном компьютере** в хранилище образов контейнеров, введя лицензионный ключ на запрос пароля:
 
 ```text
 docker login -u license-token registry.deckhouse.ru
@@ -76,7 +76,7 @@ docker run --pull=always -it -v "%cd%\config.yml:/config.yml" -v "%userprofile%\
 <div id='block_installer_linux_{{ revision }}' class="tabs__container tabs__container--descr active" markdown="1">
 <!-- Linux or macOS install, CE -->
 {% alert level="info" %}
-Если при включенном VPN контейнер с установщиком не может получить доступ к сети, воспользуйтесь [инструкцией](/products/kubernetes-platform/documentation/v1/faq.html#что-делать-если-при-включенном-vpn-контейнер-с-установщиком-не-м).
+Если при включённом VPN контейнер с установщиком не может получить доступ к сети, выполните [действия из FAQ по работе с VPN](/products/kubernetes-platform/documentation/v1/faq.html#что-делать-если-при-включенном-vpn-контейнер-с-установщиком-не-м).
 {% endalert %}
 
 Запустите контейнер с установщиком:
@@ -99,23 +99,21 @@ docker run --pull=always -it -v "%cd%\config.yml:/config.yml" -v "%userprofile%\
 Внутри контейнера выполните команду:
 
 ```shell
-dhctl bootstrap --ssh-user=ubuntu --ssh-host=<MASTER_IP> --ssh-agent-private-keys=/tmp/.ssh/id_ed25519 \
-  --config=/config.yml \
-  --ask-become-pass
+dhctl bootstrap --ssh-user=ubuntu --ssh-host=<MASTER_IP> --ssh-agent-private-keys=/tmp/.ssh/id_ed25519 --config=/config.yml --ask-become-pass
 ```
 
 Переменные, используемые в данной команде:
 
 - `<MASTER_IP>` — адрес **master-узла** для подключения по SSH.
-- `--ssh-user=ubuntu` — имя пользователя на **master-узле** (по умолчанию `ubuntu`; замените, если на master используется другая учётная запись).
+- `--ssh-user=ubuntu` — имя пользователя на **master-узле**; замените `ubuntu`, если на master-узле используется другая учётная запись.
 - `--ssh-agent-private-keys=/tmp/.ssh/id_ed25519` — приватный ключ Ed25519: файл `id_ed25519` из `~/.ssh/` на персональном компьютере (в контейнере — `/tmp/.ssh/id_ed25519`).
-- `--ask-become-pass` — укажите параметр, если для запуска `sudo` на сервере необходим пароль; введите пароль в ответ на запрос `[sudo] Password:`.
+- `--ask-become-pass` — установщик запросит пароль для `sudo` на master-узле; введите пароль в ответ на запрос `[sudo] Password:`. Если `sudo` на master-узле не запрашивает пароль, удалите этот параметр из команды.
 
 Процесс установки может занять от 5 до 30 минут, в зависимости от качества соединения между master-узлом и хранилищем образов.
 
 Пример вывода при успешном окончании установки:
 
-```
+```text
 ...
 │ │ No more converge tasks found in Deckhouse queue.
 │ │ Deckhouse pod is Ready!

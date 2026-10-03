@@ -50,7 +50,7 @@ spec:
         license: <YOUR_ACCESS_STRING_IS_HERE>
 ---
 # [<en>] Global Deckhouse settings.
-# [<en>] https://deckhouse.ru/products/kubernetes-platform/documentation/v1/reference/api/global.html#parameters
+# [<en>] https://deckhouse.io/products/kubernetes-platform/documentation/v1/reference/api/global.html#parameters
 # [<ru>] Глобальные настройки Deckhouse.
 # [<ru>] https://deckhouse.ru/products/kubernetes-platform/documentation/v1/reference/api/global.html#%D0%BF%D0%B0%D1%80%D0%B0%D0%BC%D0%B5%D1%82%D1%80%D1%8B
 apiVersion: deckhouse.io/v1alpha1
@@ -99,12 +99,12 @@ spec:
 # [<en>] Cloud provider settings.
 # [<en>] https://deckhouse.io/modules/cloud-provider-vsphere/cluster_configuration.html
 # [<ru>] Настройки облачного провайдера.
-# [<ru>] https://deckhouse.io/modules/cloud-provider-vsphere/cluster_configuration.html
+# [<ru>] https://deckhouse.ru/modules/cloud-provider-vsphere/cluster_configuration.html
 apiVersion: deckhouse.io/v1
 kind: VsphereClusterConfiguration
 layout: Standard
-# [<en>] vCenter API access parameters
-# [<ru>] параметры доступа к API vCenter
+# [<en>] vCenter API access parameters.
+# [<ru>] Параметры доступа к API vCenter
 provider:
   server: *!CHANGE_SERVER*
   username: *!CHANGE_USERNAME*
@@ -118,7 +118,7 @@ provider:
 # [<ru>] иначе укажите true (или удалите строку с параметром useNestedResourcePool).
 # [<en>] Set to false if vSphere DRS is turned off,
 # [<en>] otherwise set true (or delete the string below with the useNestedResourcePool parameter).
-useNestedResourcePool: *!CHANGE_INSECURE*
+useNestedResourcePool: *!CHANGE_USE_NESTED_RESOURCE_POOL*
 # [<en>] Path to a Folder in which VirtualMachines will be created.
 # [<en>] The folder itself will be created by the Deckhouse Installer.
 # [<ru>] Путь до Folder, в котором будут создаваться виртуальные машины.
@@ -284,7 +284,7 @@ spec:
   # [<en>] This is a hash of the password <GENERATED_PASSWORD>, generated when loading the page of the Getting Started.
   # [<en>] Generate your own or use it at your own risk (for testing purposes)
   # [<en>] echo -n '<GENERATED_PASSWORD>' | htpasswd -BinC 10 "" | cut -d: -f2 | tr -d '\n' | base64 -w0; echo
-  # [<ru>] Это хеш пароля <GENERATED_PASSWORD>, сгенерированного при загрузке страницы "Быстрого Старта".
+  # [<ru>] Это хеш пароля <GENERATED_PASSWORD>, сгенерированного при загрузке страницы «Быстрый старт».
   # [<ru>] Сгенерируйте свой или используйте этот, но только для тестирования
   # [<ru>] echo -n '<GENERATED_PASSWORD>' | htpasswd -BinC 10 "" | cut -d: -f2 | tr -d '\n' | base64 -w0; echo
   # [<en>] You might consider changing this.

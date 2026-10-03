@@ -3,7 +3,7 @@
 ## List of required vSphere resources
 
 {% alert %}
-Deckhouse uses the `ens192` interface as the default interface for virtual machines in vSphere. Therefore, when using static IP addresses in `mainNetwork`, you must create an interface named `ens192` in the OS image as the default interface.
+Deckhouse Platform uses the `ens192` interface as the default interface for virtual machines in vSphere. Therefore, when using static IP addresses in `mainNetwork`, you must create an interface named `ens192` in the OS image as the default interface.
 {% endalert %}
 
 * **User** with required [set of privileges](#creating-and-assigning-a-role).
@@ -16,7 +16,7 @@ Deckhouse uses the `ens192` interface as the default interface for virtual machi
 ## vSphere configuration
 
 {% alert level="info" %}
-To configure tags, datastore tagging, and the Deckhouse service role through the **VMware vSphere Client** UI, follow [Configuration via vSphere Client](/modules/cloud-provider-vsphere/environment.html#configuration-via-vsphere-client) in the module documentation. The steps below use **`govc` only**.
+To configure tags, datastore tagging, and the Deckhouse Platform service role through the **VMware vSphere Client** UI, follow [Configuration in vSphere Client](/modules/cloud-provider-vsphere/environment.html#configuration-in-vsphere-client) in the module documentation. The steps below use **`govc` only**.
 {% endalert %}
 
 ### Installing govc
@@ -27,14 +27,14 @@ After the installation is complete, set the environment variables required to wo
 
 ```shell
 export GOVC_URL=example.com
-export GOVC_USERNAME=<username>@vsphere.local
-export GOVC_PASSWORD=<password>
+export GOVC_USERNAME=<USERNAME>@vsphere.local
+export GOVC_PASSWORD=<PASSWORD>
 export GOVC_INSECURE=1
 ```
 
 ### Creating tags and tag categories
 
-Instead of "regions" and "zones", VMware vSphere provides `Datacenter` and `Cluster` objects. We will use tags to match them with "regions"/"zones". These tags fall into two categories: one for "regions" tags and the other for "zones" tags.
+Instead of "regions" and "zones", VMware vSphere provides `Datacenter` and `Cluster` objects. Tags are used to match them with "regions"/"zones". These tags fall into two categories: one for "regions" tags and the other for "zones" tags.
 
 Create a tag category using the following commands:
 
@@ -54,14 +54,14 @@ govc tags.create -d "Kubernetes Zone Test 2" -c k8s-zone test-zone-2
 Attach the "region" tag to `Datacenter`:
 
 ```shell
-govc tags.attach -c k8s-region test-region /<DatacenterName>
+govc tags.attach -c k8s-region test-region /<DATACENTER_NAME>
 ```
 
 Attach "zone" tags to `Cluster` objects:
 
 ```shell
-govc tags.attach -c k8s-zone test-zone-1 /<DatacenterName>/host/<ClusterName1>
-govc tags.attach -c k8s-zone test-zone-2 /<DatacenterName>/host/<ClusterName2>
+govc tags.attach -c k8s-zone test-zone-1 /<DATACENTER_NAME>/host/<CLUSTER_NAME_1>
+govc tags.attach -c k8s-zone test-zone-2 /<DATACENTER_NAME>/host/<CLUSTER_NAME_2>
 ```
 
 #### Datastore configuration
@@ -73,19 +73,19 @@ For dynamic `PersistentVolume` provisioning, a `Datastore` must be available on 
 Assign the "region" and "zone" tags to the `Datastore` objects to automatically create a `StorageClass` in the Kubernetes cluster:
 
 ```shell
-govc tags.attach -c k8s-region test-region /<DatacenterName>/datastore/<DatastoreName1>
-govc tags.attach -c k8s-zone test-zone-1 /<DatacenterName>/datastore/<DatastoreName1>
+govc tags.attach -c k8s-region test-region /<DATACENTER_NAME>/datastore/<DATASTORE_NAME_1>
+govc tags.attach -c k8s-zone test-zone-1 /<DATACENTER_NAME>/datastore/<DATASTORE_NAME_1>
 
-govc tags.attach -c k8s-region test-region /<DatacenterName>/datastore/<DatastoreName2>
-govc tags.attach -c k8s-zone test-zone-2 /<DatacenterName>/datastore/<DatastoreName2>
+govc tags.attach -c k8s-region test-region /<DATACENTER_NAME>/datastore/<DATASTORE_NAME_2>
+govc tags.attach -c k8s-zone test-zone-2 /<DATACENTER_NAME>/datastore/<DATASTORE_NAME_2>
 ```
 
 ### Creating and assigning a role
 
 {% alert %}
-We've intentionally skipped User creation since there are many ways to authenticate a user in the vSphere.
+User creation is not covered in this guide because vSphere supports many ways to authenticate users.
 
-The role that you are asked to create next includes the privileges from the section ["List of required privileges"](/modules/cloud-provider-vsphere/environment.html#list-of-required-privileges). If you need a more granular Role, please contact your Deckhouse support.
+The role that you are asked to create next includes the privileges from the section ["List of required privileges"](/modules/cloud-provider-vsphere/environment.html#list-of-required-privileges). If you need a more granular role, contact Deckhouse Platform technical support.
 {% endalert %}
 
 Create a role with the required privileges:
@@ -129,16 +129,16 @@ govc role.create deckhouse \
 Assign the role to a user on the `vCenter` object:
 
 ```shell
-govc permissions.set -principal <username>@vsphere.local -role deckhouse /
+govc permissions.set -principal <USERNAME>@vsphere.local -role deckhouse /
 ```
 
 ### Preparing a virtual machine image
 
-It is recommended to use a pre-built cloud image/OVA file provided by the OS vendor to create a `Template`:
+To create a `Template`, use a pre-built cloud image/OVA file provided by the OS vendor:
 
 * [**Ubuntu**](https://cloud-images.ubuntu.com/)
 * [**Debian**](https://cloud.debian.org/images/cloud/)
 * [**CentOS**](https://cloud.centos.org/)
 * [**Rocky Linux**](https://rockylinux.org/alternative-images/) (*Generic Cloud / OpenStack* section)
 
-If you need to use your own image, please refer to the [documentation](/modules/cloud-provider-vsphere/environment.html#virtual-machine-image-requirements).
+If you need to use your own image, see the [VM image requirements](/modules/cloud-provider-vsphere/environment.html#vm-image-requirements).
