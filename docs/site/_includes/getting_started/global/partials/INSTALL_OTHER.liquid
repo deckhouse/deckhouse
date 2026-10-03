@@ -32,7 +32,7 @@ echo <LICENSE_TOKEN> | docker login -u license-token --password-stdin {%- if pag
 Run a container with the installer:
 
 {% alert level="info" %}
-If, with VPN enabled, the container with the installer cannot access the network, use the [instructions](/products/kubernetes-platform/documentation/v1/faq.html#what-to-do-if-with-vpn-enabled-the-container-with-the-installer).
+If, with VPN enabled, the container with the installer cannot access the network, follow the [instructions in the FAQ](/products/kubernetes-platform/documentation/v1/faq.html#what-to-do-if-with-vpn-enabled-the-container-with-the-installer).
 {% endalert %}
 
 ```shell
@@ -82,7 +82,7 @@ docker run --pull=always {% if page.platform_code == "kind" %} --network host {%
 <!-- Linux or macOS install, CE -->
 
 {% alert level="info" %}
-If, with VPN enabled, the container with the installer cannot access the network, use the [instructions](/products/kubernetes-platform/documentation/v1/faq.html#what-to-do-if-with-vpn-enabled-the-container-with-the-installer).
+If, with VPN enabled, the container with the installer cannot access the network, follow the [instructions in the FAQ](/products/kubernetes-platform/documentation/v1/faq.html#what-to-do-if-with-vpn-enabled-the-container-with-the-installer).
 {% endalert %}
 
 ```shell
@@ -120,7 +120,7 @@ docker run --pull=always {% if page.platform_code == "kind" %} --network host {%
 
 {%- if page.platform_type == "existing" or page.platform_code == "kind" %}
 Notes:
-- Kubectl configuration file with access to Kubernetes API must be mount as the /kubeconfig file in the container.
+- The kubectl configuration file with access to the Kubernetes API must be mounted as the `/kubeconfig` file in the container. The guide assumes that it is the `.kube/config` file in the user's home directory.
 {% endif %}
 
 
@@ -156,17 +156,18 @@ The `--ssh-user` parameter here refers to the default user for the relevant VM i
 > If the installation failed, and you need to delete the resources created in the cloud, run the following command:
 >
 > ```shell
-  dhctl bootstrap-phase abort --ssh-user={% if page.platform_code == "azure" %}azureuser{%- elsif page.platform_code == "gcp" %}user{%- else %}ubuntu{%- endif %} --ssh-agent-private-keys=/tmp/.ssh/<SSH_PRIVATE_KEY_FILE> --config=/config.yml
-  ```
+> dhctl bootstrap-phase abort --ssh-user={% if page.platform_code == "azure" %}azureuser{%- elsif page.platform_code == "gcp" or page.platform_code == "dynamix" %}user{%- else %}ubuntu{%- endif %} --ssh-agent-private-keys=/tmp/.ssh/<SSH_PRIVATE_KEY_FILE> --config=/config.yml
+> ```
 {%- endofftopic %}
 {%- endif %}
 {%- endif %}
 
-The installation process may take about from 5 to 30 minutes, depending on the connection.
+The installation process may take from 5 to 30 minutes, depending on the connection.
 
 {% if page.platform_type == "baremetal" %}
 Example of output upon successful completion of the installation:
-```
+
+```console
 ...
 │ │ No more converge tasks found in Deckhouse queue.
 │ │ Deckhouse pod is Ready!
@@ -180,17 +181,18 @@ Example of output upon successful completion of the installation:
 ```
 {% else  %}
 After the installation is complete, the installer will output the IP of the **master node** (you will need it further). Example output:
-```
+
+```console
 ...
 ┌ 🎈 ~ Common: Kubernetes Master Node addresses for SSH
-│ cloud-demo-master-0 | ssh {% if page.platform_code == "azure" %}azureuser{% elsif page.platform_code == "gcp" %}user{% else %}ubuntu{% endif %}@1.2.3.4
+│ cloud-demo-master-0 | ssh {% if page.platform_code == "azure" %}azureuser{% elsif page.platform_code == "gcp" or page.platform_code == "dynamix" %}user{% else %}ubuntu{% endif %}@1.2.3.4
 └ 🎈 ~ Common: Kubernetes Master Node addresses for SSH (0.00 seconds)
 ```
 {% endif %}
 
 {%- if page.platform_code == "kind" %}
 
-It remains to create the Ingress controller configuration. Create the `ingress-nginx-controller` file.yml with the following content:
+It remains to create the Ingress controller configuration. Create the `ingress-nginx-controller.yml` file with the following content:
 
 {% capture includePath %}_includes/getting_started/{{ page.platform_code }}/partials/ingress-nginx-controller.yml.inc{% endcapture %}
 {% include_file "{{ includePath }}" syntax="yaml" %}
@@ -202,17 +204,17 @@ kubectl create -f ingress-nginx-controller.yml
 
 It may take some time to start the Ingress controller.
 
-To check the status of the Ingress Controller Pod, run the following command:
+To check the status of the Ingress controller pod, run the following command:
 ```shell
 kubectl -n d8-ingress-nginx get po
 ```
 
-Wait for the Ingress controller Pod to switch to `Ready` state.
+Wait for the Ingress controller pod to switch to the `Ready` state.
 
-You have installed Deckhouse Platform in `kind`!
+Deckhouse Platform is installed in `kind`.
 {%- else %}
 
-Almost everything is ready for a fully-fledged Deckhouse Platform to work!
+Almost everything is ready for a fully-fledged Deckhouse Platform to work.
 {%- endif %}
 
 <!-- Troubleshooting in existing cluster //-->

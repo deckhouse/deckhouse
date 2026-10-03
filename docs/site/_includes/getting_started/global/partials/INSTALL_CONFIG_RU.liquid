@@ -16,7 +16,7 @@
 
 **Обратите внимание**:
 - <span class="mustChange">Так выделены параметры</span>, обязательные для самостоятельного заполнения.
-- <span class="mightChange">Так выделены параметры</span>, которые вы возможно захотите изменить.
+- <span class="mightChange">Так выделены параметры</span>, которые вы, возможно, захотите изменить.
 - Если вы запускаете инсталлятор под **Windows**, то убедитесь, что кодировка создаваемого YAML-файла конфигурации UTF-8 (либо удалите примечания на русском языке).
 {% if page.platform_code == 'yandex' %}
 - Начиная с версии Deckhouse Platform 1.76, в Yandex Cloud для новых кластеров по умолчанию используется CNI `cilium`. При использовании CentOS 8 необходимо явно включить модуль `cni-simple-bridge` в файле `config.yml`.
@@ -36,7 +36,7 @@
 - Выполнять установку необходимо с **[персонального компьютера](step2.html#что-необходимо-для-установки)**, имеющего SSH-доступ до узла, который будет **master-узлом** будущего кластера.
 {%- endif %}
 {%- if page.platform_type == 'existing' %}
-- Ознакомьтесь с разделом *[Если что-то пошло не так](#если-что-то-пошло-не-так)*, возможно там описан случай для вашего провайдера. Обращайтесь к нему, если испытываете какие-то проблемы в процессе установки.
+- Ознакомьтесь с разделом *[Если что-то пошло не так](#если-что-то-пошло-не-так)*: возможно, там описан случай для вашего провайдера. Обращайтесь к нему, если испытываете какие-то проблемы в процессе установки.
 {%- endif %}
 
 Создайте файл `config.yml`.
@@ -79,25 +79,25 @@
 
 {%- if page.platform_type == 'existing' %}
 {% offtopic title="Про nodeSelector, taints и tolerations..." %}
-Управлять тем, на каких узлах будет запускаться ядро Deckhouse, можно с помощью параметра `spec.setting.nodeSelector` в ModuleConfig `deckhouse` в конфигурации установки.
+Управлять тем, на каких узлах будет запускаться контроллер Deckhouse Platform, можно с помощью параметра `spec.settings.nodeSelector` в ModuleConfig `deckhouse` в конфигурации установки.
 
-> Пример указания `nodeSelector` для модуля `deckhouse` для работы остальных компонентов Deckhouse (не копируйте этот пример без изменения в вашу конфигурацию, т.к. у вас будут другие значения):
+> Пример указания `nodeSelector` в ModuleConfig `deckhouse` (не копируйте этот пример в вашу конфигурацию без изменений, так как у вас будут другие значения):
 > ```yaml
 > apiVersion: deckhouse.io/v1alpha1
 > kind: ModuleConfig
 > metadata:
 >   name: deckhouse
->   spec:
->     version: 1
->     enabled: true
+> spec:
+>   version: 1
+>   enabled: true
 >   settings:
 >     nodeSelector:
->       node-role.kubernetes.io/master: master
+>       node-role.kubernetes.io/control-plane: ""
 > ```
 
-Также, вы можете перечислить необходимые taint'ы узлов кластера в ModuleConfig `global` в массиве `.spec.settings.modules.placement.customTolerationKeys`, чтобы Deckhouse автоматически указывал соответствующие toleration своим компонентам.
+Также вы можете перечислить необходимые taint'ы узлов кластера в ModuleConfig `global` в массиве `.spec.settings.modules.placement.customTolerationKeys`, чтобы Deckhouse автоматически указывал соответствующие tolerations своим компонентам.
 
-> Пример указания `customTolerationKeys` для модуля `deckhouse` и списка tolerations в массиве `customTolerationKeys` для работы остальных компонентов Deckhouse (не копируйте этот пример без изменения в вашу конфигурацию, т.к. у вас будут другие значения):
+> Пример указания списка taint'ов в массиве `customTolerationKeys` в ModuleConfig `global` (не копируйте этот пример в вашу конфигурацию без изменений, так как у вас будут другие значения):
 > ```yaml
 > apiVersion: deckhouse.io/v1alpha1
 > kind: ModuleConfig
@@ -108,7 +108,7 @@
 >     modules:
 >       placement:
 >         customTolerationKeys:
->         - Systemload
+>         - SystemLoad
 >         - kubernetes.io/instance
 > ```
 {% endofftopic %}

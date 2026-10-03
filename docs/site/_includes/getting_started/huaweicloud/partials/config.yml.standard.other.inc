@@ -27,9 +27,9 @@ clusterDomain: "cluster.local"
 defaultCRI: "ContainerdV2"
 ---
 # [<en>] Deckhouse module settings.
-# [<en>] https://deckhouse.io/modules/002-deckhouse/configuration.html
+# [<en>] https://deckhouse.io/modules/deckhouse/configuration.html
 # [<ru>] Настройки модуля deckhouse.
-# [<ru>] https://deckhouse.ru/modules/002-deckhouse/configuration.html
+# [<ru>] https://deckhouse.ru/modules/deckhouse/configuration.html
 apiVersion: deckhouse.io/v1alpha1
 kind: ModuleConfig
 metadata:
@@ -50,7 +50,7 @@ spec:
         license: <YOUR_ACCESS_STRING_IS_HERE>
 ---
 # [<en>] Global Deckhouse settings.
-# [<en>] https://deckhouse.ru/products/kubernetes-platform/documentation/v1/reference/api/global.html#parameters
+# [<en>] https://deckhouse.io/products/kubernetes-platform/documentation/v1/reference/api/global.html#parameters
 # [<ru>] Глобальные настройки Deckhouse.
 # [<ru>] https://deckhouse.ru/products/kubernetes-platform/documentation/v1/reference/api/global.html#%D0%BF%D0%B0%D1%80%D0%B0%D0%BC%D0%B5%D1%82%D1%80%D1%8B
 apiVersion: deckhouse.io/v1alpha1
@@ -72,9 +72,9 @@ spec:
       publicDomainTemplate: "%s.example.com"
 ---
 # [<en>] user-authn module settings.
-# [<en>] https://deckhouse.io/modules/150-user-authn/configuration.html
+# [<en>] https://deckhouse.io/modules/user-authn/configuration.html
 # [<ru>] Настройки модуля user-authn.
-# [<ru>] https://deckhouse.ru/modules/150-user-authn/configuration.html
+# [<ru>] https://deckhouse.ru/modules/user-authn/configuration.html
 apiVersion: deckhouse.io/v1alpha1
 kind: ModuleConfig
 metadata:
@@ -86,9 +86,9 @@ spec:
     controlPlaneConfigurator:
       dexCAMode: DoNotNeed
     # [<ru>] Включение доступа к API-серверу Kubernetes через Ingress.
-    # [<ru>] https://deckhouse.ru/modules/150-user-authn/configuration.html#parameters-publishapi
+    # [<ru>] https://deckhouse.ru/modules/user-authn/configuration.html#parameters-publishapi
     # [<en>] Enabling access to the API server through Ingress.
-    # [<en>] https://deckhouse.io/modules/150-user-authn/configuration.html#parameters-publishapi
+    # [<en>] https://deckhouse.io/modules/user-authn/configuration.html#parameters-publishapi
     publishAPI:
       enabled: true
       https:
@@ -97,9 +97,9 @@ spec:
           kubeconfigGeneratorMasterCA: ""
 ---
 # [<en>] Cloud provider settings.
-# [<en>] https://deckhouse.io/modules/030-cloud-provider-huaweicloud/cluster_configuration.html
+# [<en>] https://deckhouse.io/modules/cloud-provider-huaweicloud/cluster_configuration.html
 # [<ru>] Настройки облачного провайдера.
-# [<ru>] https://deckhouse.io/modules/030-cloud-provider-huaweicloud/cluster_configuration.html
+# [<ru>] https://deckhouse.ru/modules/cloud-provider-huaweicloud/cluster_configuration.html
 apiVersion: deckhouse.io/v1
 kind: HuaweiCloudClusterConfiguration
 layout: Standard
@@ -120,36 +120,36 @@ standard:
   # [<en>] Enable Elastic IP for the master nodes.
   # [<ru>] Включите Elastic IP для master-узлов.
   enableEIP: true
-# [<en>] HuaweiCloud API access parameters
-# [<ru>] параметры доступа к HuaweiCloud API
+# [<en>] Huawei Cloud API access parameters.
+# [<ru>] Параметры доступа к API Huawei Cloud.
 provider:
   # [<en>] The endpoint of the cloud provider.
-  # [<ru>] Конечная точка поставщика облачных услуг.
-  cloud: "<Endpoint>"
+  # [<ru>] Эндпоинт облачного провайдера.
+  cloud: *!CHANGE_ENDPOINT*
   # [<en>] The Huawei Cloud region where the cluster will be deployed.
-  # [<ru>] Регион Huawei Cloud, в котором будет развернут кластер.
-  region: "<Region>"
+  # [<ru>] Регион Huawei Cloud, в котором будет развёрнут кластер.
+  region: *!CHANGE_REGION*
   # [<en>] The Huawei Cloud access key.
   # [<ru>] Ключ доступа к облаку Huawei Cloud.
-  accessKey: "<Access key>"
+  accessKey: *!CHANGE_ACCESS_KEY*
   # [<en>] The Huawei Cloud secret key.
   # [<ru>] Секретный ключ облака Huawei Cloud.
-  secretKey: "<Secret key>"
+  secretKey: *!CHANGE_SECRET_KEY*
   # [<en>] Optional. Trust self-signed SSL certificates.
   # [<ru>] Необязательный параметр. Доверять самоподписанным SSL-сертификатам.
   insecure: false
   # [<en>] Optional. The identity authentication URL.
   # [<ru>] Необязательный параметр. URL-адрес аутентификации.
-  authURL: "<Auth URL>"
+  # authURL: <AUTH_URL>
   # [<en>] Optional. The IAM account name used for scoping.
-  # [<ru>] Необязательный параметр. Имя учетной записи IAM, используемое для определения области действия.
-  domainName: "<Domain Name>"
-  # [<en>] The project ID.
-  # [<ru>] Идентификатор проекта.
-  projectID: "<Project ID>"
-  # [<en>] The project ID.
-  # [<ru>] Идентификатор проекта.
-  projectID: "<Project ID>"
+  # [<ru>] Необязательный параметр. Имя учётной записи IAM, используемое для определения области действия.
+  # domainName: <DOMAIN_NAME>
+  # [<en>] ID of the project where the cluster will be deployed.
+  # [<ru>] Идентификатор проекта, в котором будет развёрнут кластер.
+  projectID: *!CHANGE_PROJECT_ID*
+  # [<en>] Optional. ID of the Enterprise Project to place the cluster resources in.
+  # [<ru>] Необязательный параметр. Идентификатор Enterprise Project, в котором будут размещены ресурсы кластера.
+  # enterpriseProjectID: <ENTERPRISE_PROJECT_ID>
 masterNodeGroup:
   replicas: 1
   # [<en>] Disk type array.
@@ -173,7 +173,7 @@ masterNodeGroup:
     imageName: ubuntu-24-04-cloud-amd64
     # [<en>] Disk size for the root FS.
     # [<ru>] Размер диска для корневой ФС.
-    rootDiskSize: 40
+    rootDiskSize: 50
 # [<en>] Public SSH key for accessing cloud nodes.
 # [<en>] This key will be added to the user on created nodes (the user name depends on the image used).
 # [<ru>] Публичная часть SSH-ключа для доступа к узлам облака.
@@ -181,9 +181,9 @@ masterNodeGroup:
 sshPublicKey: *!CHANGE_SSH_KEY*
 ---
 # [<en>] Section containing the parameters of instance class for worker nodes.
-# [<en>] https://deckhouse.io/modules/030-cloud-provider-huaweicloud/cr.html
+# [<en>] https://deckhouse.io/modules/cloud-provider-huaweicloud/cr.html
 # [<ru>] Секция, описывающая параметры инстанс-класса для узлов c компонентами, обеспечивающими рабочую нагрузку.
-# [<ru>] https://deckhouse.ru/modules/030-cloud-provider-huaweicloud/cr.html
+# [<ru>] https://deckhouse.ru/modules/cloud-provider-huaweicloud/cr.html
 apiVersion: deckhouse.io/v1
 kind: HuaweiCloudInstanceClass
 metadata:
@@ -204,9 +204,9 @@ spec:
   imageName: ubuntu-24-04-cloud-amd64
 ---
 # [<en>] Section containing the parameters of worker node group.
-# [<en>] https://deckhouse.io/modules/040-node-manager/cr.html#nodegroup
+# [<en>] https://deckhouse.io/modules/node-manager/cr.html#nodegroup
 # [<ru>] Секция, описывающая параметры группы узлов c компонентами, обеспечивающими рабочую нагрузку.
-# [<ru>] https://deckhouse.ru/modules/040-node-manager/cr.html#nodegroup
+# [<ru>] https://deckhouse.ru/modules/node-manager/cr.html#nodegroup
 apiVersion: deckhouse.io/v1
 kind: NodeGroup
 metadata:
@@ -235,9 +235,9 @@ spec:
   nodeType: CloudEphemeral
 ---
 # [<en>] Section containing the parameters of Ingress NGINX Controller.
-# [<en>] https://deckhouse.io/modules/402-ingress-nginx/cr.html
+# [<en>] https://deckhouse.io/modules/ingress-nginx/cr.html
 # [<ru>] Секция, описывающая параметры Ingress NGINX Controller.
-# [<ru>] https://deckhouse.ru/modules/402-ingress-nginx/cr.html
+# [<ru>] https://deckhouse.ru/modules/ingress-nginx/cr.html
 apiVersion: deckhouse.io/v1
 kind: IngressNginxController
 metadata:
@@ -280,9 +280,9 @@ spec:
     tunnelMode: VXLAN
 ---
 # [<en>] RBAC and authorization settings.
-# [<en>] https://deckhouse.io/modules/140-user-authz/cr.html#clusterauthorizationrule
+# [<en>] https://deckhouse.io/modules/user-authz/cr.html#clusterauthorizationrule
 # [<ru>] Настройки RBAC и авторизации.
-# [<ru>] https://deckhouse.ru/modules/140-user-authz/cr.html#clusterauthorizationrule
+# [<ru>] https://deckhouse.ru/modules/user-authz/cr.html#clusterauthorizationrule
 apiVersion: deckhouse.io/v1
 kind: ClusterAuthorizationRule
 metadata:
@@ -295,9 +295,9 @@ spec:
   portForwarding: true
 ---
 # [<en>] Parameters of the static user.
-# [<en>] https://deckhouse.io/modules/150-user-authn/cr.html#user
+# [<en>] https://deckhouse.io/modules/user-authn/cr.html#user
 # [<ru>] Данные статического пользователя.
-# [<ru>] https://deckhouse.ru/modules/150-user-authn/cr.html#user
+# [<ru>] https://deckhouse.ru/modules/user-authn/cr.html#user
 apiVersion: deckhouse.io/v1
 kind: User
 metadata:
@@ -309,7 +309,7 @@ spec:
   # [<en>] This is a hash of the password <GENERATED_PASSWORD>, generated when loading the page of the Getting Started.
   # [<en>] Generate your own or use it at your own risk (for testing purposes)
   # [<en>] echo -n '<GENERATED_PASSWORD>' | htpasswd -BinC 10 "" | cut -d: -f2 | tr -d '\n' | base64 -w0; echo
-  # [<ru>] Это хеш пароля <GENERATED_PASSWORD>, сгенерированного при загрузке страницы "Быстрого Старта".
+  # [<ru>] Это хеш пароля <GENERATED_PASSWORD>, сгенерированного при загрузке страницы «Быстрый старт».
   # [<ru>] Сгенерируйте свой или используйте этот, но только для тестирования
   # [<ru>] echo -n '<GENERATED_PASSWORD>' | htpasswd -BinC 10 "" | cut -d: -f2 | tr -d '\n' | base64 -w0; echo
   # [<en>] You might consider changing this.

@@ -1,12 +1,12 @@
 {%- if page.platform_type == 'cloud' and page.platform_code == 'aws' %}
 {% if include.mode == 'hosts' %}
 ```shell
-BALANCER_HOSTNAME=$(sudo /opt/deckhouse/bin/kubectl -n d8-ingress-nginx get svc nginx-load-balancer -o json | jq -r '.status.loadBalancer.ingress[0].hostname') && \
+BALANCER_HOSTNAME=$(sudo /opt/deckhouse/bin/kubectl -n d8-ingress-nginx get svc nginx-load-balancer -o json | jq -r '.status.loadBalancer.ingress[0].ip') && \
 BALANCER_IP=$(dig "$BALANCER_HOSTNAME" +short | head -1) && echo "Balancer IP is ${BALANCER_IP}"
 ```
 {% else %}
 ```shell
-sudo /opt/deckhouse/bin/kubectl -n d8-ingress-nginx get svc nginx-load-balancer -o json | jq -r '.status.loadBalancer.ingress[0].hostname'
+sudo /opt/deckhouse/bin/kubectl -n d8-ingress-nginx get svc nginx-load-balancer -o json | jq -r '.status.loadBalancer.ingress[0].ip'
 ```
 {%- endif -%}
 {%- elsif page.platform_type == 'cloud' and page.platform_code != 'vsphere' %}

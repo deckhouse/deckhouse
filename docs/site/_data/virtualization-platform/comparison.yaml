@@ -69,7 +69,7 @@ featureSections:
       dkp-cse-pro: supported
   - title:
       ru: Масштабирование до 1000 узлов и 50 000 ВМ
-      en: Scaling up to 1000 nodes and 50000 VMs
+      en: Scaling up to 1,000 nodes and 50,000 VMs
     editions:
       dvp-ee: supported
       dvp-cse: supported
@@ -78,7 +78,7 @@ featureSections:
       dkp-ee: supported
       dkp-cse-pro: supported
   - title:
-      ru: Провайдер для развертывания DP на DP в режиме полной интеграции
+      ru: Провайдер для развёртывания DP на DP в режиме полной интеграции
       en: Provider for deploying DP on DP in full integration mode
     editions:
       dvp-ee: supported
@@ -233,7 +233,7 @@ featureSections:
         ru: |
           Некоторые функции доступны только в коммерческих редакциях
   - title:
-      ru: Возможность запуска контейнеров (<a target='_blank' href='/products/virtualization-platform/licensing-dvp/'>полный список возможностей DKP</a>)
+      ru: Возможность запуска контейнеров (<a target='_blank' href='/products/virtualization-platform/licensing-dvp/'>полный список возможностей DP</a>)
       en: Ability to run containers
     editions:
       dvp-ee: partly
@@ -278,7 +278,7 @@ featureSections:
       dkp-ee: supported
       dkp-cse-pro: supported
   - title:
-      ru: Автоматическая очистка удаленных образов ВМ
+      ru: Автоматическая очистка удалённых образов ВМ
       en: Automatic cleanup of removed VM images
     editions:
       dvp-ee: supported
@@ -453,7 +453,7 @@ featureSections:
         ru: |
           Планируется к включению
   - title:
-      ru: Живая миграция ВМ с подключенными USB-устройствами
+      ru: Живая миграция ВМ с подключёнными USB-устройствами
       en: Live migration of VMs with attached USB devices
     editions:
       dvp-ee: supported
@@ -602,7 +602,7 @@ featureSections:
       dkp-cse-pro: supported
   - title:
       ru: Поддержка СХД с использованием API (Yadro, Huawei, HPE, NetApp)
-      en: Support for API-based storage array support (Yadro, Huawei, HPE, NetApp)
+      en: Support for API-based storage arrays (Yadro, Huawei, HPE, NetApp)
     editions:
       dvp-ee: supported
       dvp-cse: supported

@@ -11,17 +11,17 @@ Installation of {{ page.title_main }} is only possible in the Enterprise Edition
 {% endif %}
 
 <div markdown="1">
-  The recommended settings for a Deckhouse Platform {{ site.data.i18n[revision] }} installation are generated below:
-- `config.yml` — a file with the configuration needed to bootstrap the cluster. Contains the installer parameters, {% if page. platform_type== 'cloud' %}cloud provider related parameters (such as credentials, instance type, etc), description of the resources that must be installed after the installation (nodes description, Ingress controller description, etc), access parameters{% endif %} and the initial cluster parameters.
+The recommended settings for a Deckhouse Platform {{ site.data.i18n[revision] }} installation are generated below:
+- `config.yml` — a file with the configuration needed to bootstrap the cluster. Contains the installer parameters, {% if page.platform_type == 'cloud' %}cloud provider related parameters (such as credentials, instance type, etc), description of the resources that must be installed after the installation (nodes description, Ingress controller description, etc), access parameters{% endif %} and the initial cluster parameters.
 
-**Please pay attention to**:
+**Pay attention to**:
 - <span class="mustChange">highlighted</span> parameters you *must* define.
 - <span class="mightChange">parameters</span> you might want to change.
 {%- if page.platform_type == 'baremetal' %}
 - The installation must be performed from a **personal computer** with SSH access to the node, the **master node** of the future cluster.
 {%- endif %}
 {%- if page.platform_type == 'existing' %}
-- We recommend that you read the section *[If something went wrong](#if-something-went-wrong)* first; perhaps, your ISP case is already addressed there. Refer to it if you have any problems during the installation process.
+- Read the *[If something went wrong](#if-something-went-wrong)* section first: it may already describe the case of your provider. Refer to it if you have any problems during the installation process.
 {%- endif %}
 {% if page.platform_code == 'yandex' %}
 - Starting with Deckhouse Platform version 1.76, Yandex Cloud uses the `cilium` CNI by default for new clusters. When using CentOS 8, you must explicitly enable the `cni-simple-bridge` module in the `config.yml` file.
@@ -77,25 +77,25 @@ Create the `config.yml` file.
 
 {%- if page.platform_type == 'existing' %}
 {% offtopic title="About nodeSelector, taints and tolerations..." %}
-You can control which nodes the Deckhouse kernel will run on by using the `spec.setting.nodeSelector` parameter in the ModuleConfig `deckhouse` of the installation configuration.
+You can control which nodes the Deckhouse controller runs on by using the `spec.settings.nodeSelector` parameter of the `deckhouse` ModuleConfig in the installation configuration.
 
-> Example of specifying a `nodeSelector` for the 'deckhouse` module for the rest of the Deckhouse components to work (do not copy this example without changing your configuration, because you will have other values):
+> Example of specifying `nodeSelector` in the `deckhouse` ModuleConfig (do not copy this example to your configuration without changes, because you will have other values):
 > ```yaml
 > apiVersion: deckhouse.io/v1alpha1
 > kind: ModuleConfig
 > metadata:
 >   name: deckhouse
->   spec:
->     version: 1
->     enabled: true
+> spec:
+>   version: 1
+>   enabled: true
 >   settings:
 >     nodeSelector:
->       node-role.kubernetes.io/master: master
+>       node-role.kubernetes.io/control-plane: ""
 > ```
 
-Also, you can list the necessary cluster node taints in ModuleConfig `global` in the array `.spec.settings.modules.placement.customTolerationKeys` so that Deckhouse automatically specifies the appropriate tolerance for its components.
+Also, you can list the necessary cluster node taints in the `global` ModuleConfig in the `.spec.settings.modules.placement.customTolerationKeys` array so that Deckhouse automatically adds the corresponding tolerations to its components.
 
-> Example of specifying `customTolerationKeys` for the 'deckhouse` module and the list of tolerations in the `customTolerationKeys` array for the rest of the Deckhouse components to work (do not copy this example without changing your configuration, because you will have other values):
+> Example of specifying the list of taints in the `customTolerationKeys` array of the `global` ModuleConfig (do not copy this example to your configuration without changes, because you will have other values):
 > ```yaml
 > apiVersion: deckhouse.io/v1alpha1
 > kind: ModuleConfig
@@ -106,7 +106,7 @@ Also, you can list the necessary cluster node taints in ModuleConfig `global` in
 >     modules:
 >       placement:
 >         customTolerationKeys:
->         - Systemload
+>         - SystemLoad
 >         - kubernetes.io/instance
 > ```
 {% endofftopic %}

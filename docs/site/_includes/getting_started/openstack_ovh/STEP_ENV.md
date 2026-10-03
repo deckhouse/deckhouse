@@ -1,5 +1,5 @@
 {%- include getting_started/global/partials/NOTICES_ENVIRONMENT.liquid %}
 
-You need to create a service account so that Deckhouse Platform can manage resources in the {{ page.platform_name[page.lang] }}. The detailed instructions for creating a service account are available in the [documentation](/modules/cloud-provider-openstack/environment.html).
+Prepare the {{ page.platform_name[page.lang] }} environment so that Deckhouse Platform can manage cloud resources. The full procedure is described on the [environment preparation page](/modules/cloud-provider-openstack/environment.html) of the `cloud-provider-openstack` module.
 
 Create the service account and download openrc file. The data from the openrc file will be required further to fill in the `provider` section in the Deckhouse Platform configuration.

@@ -1,4 +1,4 @@
-{{- $summary := or (.Get "summary") "Details" }}
+{{- $summary := or (.Get "summary") (T "details_default_summary") }}
 <div class="details">
   <p class="details__lnk"><a href="javascript:void(0)" class="details__summary">{{ $summary | .Page.RenderString }}</a></p>
   <div class="details__content">

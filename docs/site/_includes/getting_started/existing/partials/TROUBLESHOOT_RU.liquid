@@ -1,52 +1,34 @@
-Кластеры некоторых провайдеров могут требовать дополнительных действий до или после установки Deckhouse.
+Кластеры некоторых провайдеров могут требовать дополнительных действий до или после установки Deckhouse Platform.
 
-Ниже приведены частые проблемы и способы их решения. Если вы столкнулись с другими особенностями установки Deckhouse в существующем кластере, пожалуйста, опишите ваш опыт в [issue](https://github.com/deckhouse/deckhouse/issues).
+Ниже приведены частые проблемы и способы их решения. Если вы столкнулись с другими особенностями установки Deckhouse Platform в существующем кластере, опишите их [в issue на GitHub](https://github.com/deckhouse/deckhouse/issues).
 
 {% offtopic title="Ошибки установки на этапе 'Waiting for Deckhouse to become Ready'" %}
 - Ошибка вида:
-  ```
+
+  ```console
   │ │ ┌ Waiting for Deckhouse to become Ready
   │ │ │ Deckhouse pod found: deckhouse-64649df6f9-mf6dt (Pending)
   │ │ │ Deckhouse pod found: deckhouse-64649df6f9-mf6dt (Pending)
   ```
 
-  Возможная причина — в кластере нет узла с label `node-role.kubernetes.io/control-plane: ""`, который первоначально используется в `nodeSelector` манифеста deployment `deckhouse`.
+  Возможная причина — в кластере нет узла с лейблом `node-role.kubernetes.io/control-plane: ""`, который первоначально используется в `nodeSelector` манифеста Deployment `deckhouse`.
 
   Варианты решения:
-  - Отредактировать deployment `deckhouse` и указать нужный `nodeSelector`:
+  - Отредактируйте Deployment `deckhouse` и укажите нужный `nodeSelector`:
     ```shell
     kubectl -n d8-system edit deployment/deckhouse
     ```
-  - Удалить nodeSelector у deployment `deckhouse`:
+  - Удалите `nodeSelector` у Deployment `deckhouse`:
     ```shell
     kubectl patch -n d8-system deployment deckhouse --type json -p '[{"op": "remove", "path": "/spec/template/spec/nodeSelector"}]'
     ```
 
-
-- Ошибка вида:
-  ```
-  Waiting for Deckhouse to become Ready
-  │ │ Deckhouse pod found: deckhouse-7cc8b6f4bd-9l99t (Running)
-  │ │ Running pod found! Checking logs...
-  │ │ Request failed. Probably pod was restarted during installation.
-  │ │ No Deckhouse pod found.
-  ```
-  А так же в модуле deckhouse появляется ошибка со статусом:
-  ```
-  Status:   ModuleError: unable to build kubernetes objects from release manifest: [resource mapping not found for name: "system-ns.deckhouse.io" namespace: "" from "": no matches for kind "ValidatingAdmissionPolicy" in version "admissionregistration.k8s.io/v1beta1" ensure CRDs are installed first, resource mapping not found for name: "label-objects.deckhouse.io" namespace: "" from "": no matches for kind "ValidatingAdmissionPolicy" in version "admissionregistration.k8s.io/v1beta1" ensure CRDs are installed first, resource mapping not found for name: "system-ns.deckhouse.io" namespace: "" from "": no matches for kind "ValidatingAdmissionPolicyBinding" in version "admissionregistration.k8s.io/v1beta1" ensure CRDs are installed first, resource mapping not found for name: "heritage-label-objects.deckhouse.io" namespace: "" from "": no matches for kind "ValidatingAdmissionPolicyBinding" in version "admissionregistration.k8s.io/v1beta1" ensure CRDs are installed first]
-  ```
-
-  Скорее всего в статичном манифесте `kube-apiserver.yaml` не указан `runtime-config`.
-
-  Добавьте в `/etc/kubernetes/manifests/kube-apiserver.yaml` в параметр `spec.containers.command` значение `- --runtime-config=admissionregistration.k8s.io/v1beta1=true,admissionregistration.k8s.io/v1alpha1=true`.
-
-  **Внимание.** `kube-apiserver` может некоторое время не отвечать на запросы.
-
 {% endofftopic %}
 
-{% offtopic title="Ошибка в случае установки Deckhouse после прерывания" %}
-В случае, если установка Deckhouse была прервана по неизвестным причинам, при повторной установке может быть выведена следующая ошибка:
-```
+{% offtopic title="Ошибка в случае установки Deckhouse Platform после прерывания" %}
+В случае, если установка Deckhouse Platform была прервана по неизвестным причинам, при повторной установке может быть выведена следующая ошибка:
+
+```console
   ┌ ⛵ ~ Bootstrap: Install Deckhouse
   └ ⛵ ~ Bootstrap: Install Deckhouse (43.50 seconds) FAILED
 
@@ -56,72 +38,44 @@
   Please check hostname.
 ```
 
-Чтобы заново установить Deckhouse на кластер, необходимо удалить следующие ConfigMap-ы в namespace `kube-system`:
-```
+Чтобы заново установить Deckhouse Platform в кластер, удалите следующие ConfigMap в неймспейсе `kube-system`:
+
+```text
   d8-cluster-is-bootstraped
   d8-cluster-uuid
 ```
-и далее начать установку заново.
+После этого запустите установку заново.
 {% endofftopic %}
 
-{% offtopic title="В кластере нет Ingress-контроллера..." %}
-Для работы модуля `documentation` (`deckhouse-web` в Deckhouse версии 1.45 и старее), предоставляющего веб-интерфейс к документации кластера, необходимо наличие в кластере Ingress-контроллера. Если в вашем кластере нет Ingress-контролллера, вы можете использовать модуль [ingress-nginx](/modules/ingress-nginx/) следующим способом:
+{% offtopic title="Кластер в VK Cloud" %}
+- В ModuleConfig `global` конфигурации установки укажите taint `CriticalAddonsOnly` в массиве <code>modules.placement.customTolerationKeys</code>. Пример:
 
-- Включите модуль <code>ingress-nginx</code>, выполнив следующую команду:
-
-  ```shell
-  kubectl create -f - <<EOF
+  ```yaml
   apiVersion: deckhouse.io/v1alpha1
   kind: ModuleConfig
   metadata:
-    name: ingress-nginx
+    name: global
   spec:
-    enabled: true
-  EOF
+    version: 2
+    settings:
+      modules:
+        placement:
+          customTolerationKeys:
+          - CriticalAddonsOnly
+        publicDomainTemplate: "%s.example.com"
   ```
 
-- Создайте файл <code>ingress-nginx-controller.yml</code> следующего содержания:
-  {% capture includePath %}_includes/getting_started/{{ page.platform_code }}/partials/ingress-nginx-controller.yml.inc{% endcapture %}
-  ```yaml
-  {% include_file "{{ includePath }}" syntax="yaml" %}
-  ```
+- В кластерах VK Cloud с Kubernetes версии 1.21 и новее установлен Gatekeeper (OPA), который требует указывать requests и limits для подов. У пода <code>deckhouse</code> requests и limits не заданы. Остальные компоненты и модули Deckhouse Platform получают вычисляемые значения requests и limits в процессе работы Deckhouse Platform.
 
-- Примените его, после установки Deckhouse, выполнив следующую команду:
-
-  ```shell
-  kubectl create -f ingress-nginx-controller.yml
-  ```
-{% endofftopic %}
-
-
-{% offtopic title="Кластер в VK Cloud Solutions (MailRu Cloud Solutions)" %}
-- В конфигурации инсталляции Deckhouse в массиве <code>customTolerationKeys</code> укажите taint <code>CriticalAddonsOnly</code>. Пример:
-
-  ```yaml
-  deckhouse:
-    releaseChannel: Stable
-    bundle: Minimal
-    configOverrides:
-      global:
-        modules:
-          placement:
-            customTolerationKeys:
-            - CriticalAddonsOnly
-          publicDomainTemplate: "%s.example.com"
-  ```
-
-- В кластерах версии 1.21+ VK Cloud Solutions установлен Gatekeeper (OPA), который требует выставления requests и limits Pod'ам. Pod <code>deckhouse</code> не имеет requests/limits, остальные компоненты и модули Deckhouse получают вычисляемые параметры requests/limits в процессе работы Deckhouse.
-
-  При просмотре событий Deployment <code>deckhouse</code> вы можете увидеть следующую ошибку:
+  В событиях Deployment <code>deckhouse</code> может появиться следующая ошибка:
 
   ```text
   admission webhook "validation.gatekeeper.sh" denied the request: [container-must-have-limits] container <...> has no resource limits...
   ```
 
-  Чтобы Deckhouse смог запуститься, необходимо перед установкой Deckhouse в таких кластерах добавить исключение GateKeeper (OPA) для namespace'ов компонентов Deckhouse (<code>d8*-</code>). Выполните в кластере:
+  Чтобы Deckhouse Platform смог запуститься в таких кластерах, перед установкой Deckhouse Platform добавьте исключение Gatekeeper (OPA) для неймспейсов компонентов Deckhouse Platform (<code>d8-*</code>). Выполните в кластере команду:
 
   ```shell
   kubectl patch constraints container-must-have-limits --type json -p '[{"op": "replace", "path": "/spec/match/excludedNamespaces", "value": ["d8-*"]}]'
   ```
 {% endofftopic %}
-

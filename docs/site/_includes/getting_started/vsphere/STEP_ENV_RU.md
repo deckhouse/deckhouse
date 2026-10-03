@@ -1,5 +1,7 @@
 {%- include getting_started/global/partials/NOTICES_ENVIRONMENT.liquid %}
 
+Подготовьте окружение {{ page.platform_name[page.lang] }}, чтобы Deckhouse Platform мог управлять ресурсами платформы виртуализации. Полная инструкция приведена [на странице подготовки окружения](/modules/cloud-provider-vsphere/environment.html) модуля `cloud-provider-vsphere`.
+
 Для установки Deckhouse Platform на VMware vSphere требуется версия vSphere `7.x` или `8.x` с поддержкой механизма [`Online volume expansion`](https://github.com/kubernetes-sigs/vsphere-csi-driver/blob/v2.3.0/docs/book/features/volume_expansion.md#vsphere-csi-driver---volume-expansion).
 
 ## Список необходимых ресурсов vSphere
@@ -12,7 +14,7 @@ Deckhouse использует интерфейс `ens192`, как интерф�
 * **Network** с DHCP и доступом в интернет.
 * **Datacenter** с соответствующим тегом [`k8s-region`](#создание-тегов-и-категорий-тегов).
 * **Cluster** с соответствующим тегом [`k8s-zone`](#создание-тегов-и-категорий-тегов).
-* **Datastore** в любом количестве, с соответствующими [тегами](#настройка-datastore).
+* **Datastore** с соответствующими [тегами](#настройка-datastore).
 * **Template** — [подготовленный](#подготовка-образа-виртуальной-машины) образ виртуальной машины.
 
 ## Конфигурация vSphere
@@ -131,7 +133,7 @@ govc role.create deckhouse \
    VirtualMachine.Provisioning.GetVmFiles VirtualMachine.Provisioning.PutVmFiles VirtualMachine.Provisioning.ReadCustSpecs \
    VirtualMachine.State.CreateSnapshot VirtualMachine.State.RemoveSnapshot VirtualMachine.State.RenameSnapshot
 ```
-    
+
 Назначьте пользователю роль на объекте `vCenter`.
 
 {% alert level="warning" %}
@@ -155,4 +157,4 @@ govc permissions.set -principal <username>@vsphere.local -role deckhouse /
 Если вы планируете использовать дистрибутив отечественной ОС, обратитесь к вендору ОС для получения образа/OVA-файла.
 {% endalert %}
 
-Если вам необходимо использовать собственный образ, обратитесь к [документации](/modules/cloud-provider-vsphere/environment.html#требования-к-образу-виртуальной-машины).
+Чтобы использовать собственный образ, выполните [требования к образу виртуальной машины](/modules/cloud-provider-vsphere/environment.html#требования-к-образу-виртуальной-машины).

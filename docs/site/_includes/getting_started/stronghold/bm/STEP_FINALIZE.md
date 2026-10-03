@@ -50,8 +50,7 @@ EOF
 <p>Make the created StorageClass as the default one in the cluster:</p>
 <div markdown="1">
 ```shell
-sudo -i d8 k patch mc global --type merge \
-  -p "{\"spec\": {\"settings\":{\"defaultClusterStorageClass\":\"localpath\"}}}"
+sudo -i d8 k patch mc global --type merge -p "{\"spec\": {\"settings\":{\"defaultClusterStorageClass\":\"localpath\"}}}"
 ```
 </div>
   </li>
@@ -59,7 +58,7 @@ sudo -i d8 k patch mc global --type merge \
 </div>
 
 <div id="block_layout_worker" class="tabs__container tabs__container--descr active">
-<p>Add a new node to the cluster (for more information about adding a static node to a cluster, read <a href="/modules/node-manager/examples.html#adding-a-static-node-to-a-cluster">the documentation</a>):</p>
+<p>Add a new node to the cluster (for more information, see <a href="/modules/node-manager/examples.html#adding-a-static-node-to-a-cluster">adding a static node to a cluster</a>):</p>
 
 <ul>
   <li>
@@ -85,8 +84,7 @@ EOF
   <p>Make the created StorageClass as the default one in the cluster:</p>
 <div markdown="1">
 ```shell
-sudo -i d8 k patch mc global --type merge \
-  -p "{\"spec\": {\"settings\":{\"defaultClusterStorageClass\":\"localpath\"}}}"
+sudo -i d8 k patch mc global --type merge -p "{\"spec\": {\"settings\":{\"defaultClusterStorageClass\":\"localpath\"}}}"
 ```
 </div>
   </li>
@@ -119,10 +117,10 @@ ssh-keygen -t ed25519 -f /dev/shm/caps-id -C "" -N ""
 </div>
   </li>
   <li>
-    <p>Create an <a href="/modules/node-manager/cr.html#sshcredentials">SSHCredentials</a> resource in the cluster. To do so, run the following command on the <strong>master node</strong>:</p>
+    <p>Create an <a href="/modules/node-manager/cr.html#sshcredentials">SSHCredentials</a>. To do so, run the following command on the <strong>master node</strong>:</p>
 <div markdown="1">
 ```bash
-sudo -i d8 k -f - <<EOF
+sudo -i d8 k create -f - <<EOF
 apiVersion: deckhouse.io/v1alpha2
 kind: SSHCredentials
 metadata:
@@ -147,7 +145,7 @@ cat /dev/shm/caps-id.pub
 <div markdown="1">
 ```bash
 # Specify the public part of the user SSH key.
-export KEY='<SSH-PUBLIC-KEY>'
+export KEY='<SSH_PUBLIC_KEY>'
 useradd -m -s /bin/bash caps
 usermod -aG sudo caps
 echo 'caps ALL=(ALL) NOPASSWD: ALL' | sudo EDITOR='tee -a' visudo
@@ -164,8 +162,8 @@ chmod 600 /home/caps/.ssh/authorized_keys
 <div markdown="1">
 ```bash
 # Specify the IP address of the node you want to connect to the cluster.
-export NODE=<NODE-IP-ADDRESS>
-sudo -i d8 k -f - <<EOF
+export NODE=<NODE_IP_ADDRESS>
+sudo -i d8 k create -f - <<EOF
 apiVersion: deckhouse.io/v1alpha2
 kind: StaticInstance
 metadata:
@@ -190,11 +188,11 @@ sudo -i d8 k get no
 </div>
 
 {% offtopic title="Example of the output..." %}
-```
+```console
 sudo -i d8 k get no
 NAME               STATUS   ROLES                  AGE    VERSION
-d8cluster          Ready    control-plane,master   30m   v1.23.17
-d8cluster-worker   Ready    worker                 10m   v1.23.17
+d8cluster          Ready    control-plane,master   30m   v1.33.13
+d8cluster-worker   Ready    worker                 10m   v1.33.13
 ```
 {%- endofftopic %}
 </li>
@@ -215,7 +213,7 @@ sudo -i d8 k -n d8-ingress-nginx get po -l app=kruise
 </div>
 
 {% offtopic title="Example of the output..." %}
-```
+```console
 $ sudo -i d8 k -n d8-ingress-nginx get po -l app=kruise
 NAME                                         READY   STATUS    RESTARTS    AGE
 kruise-controller-manager-7dfcbdc549-b4wk7   3/3     Running   0           15m
@@ -247,7 +245,7 @@ sudo -i d8 k -n d8-ingress-nginx get po -l app=controller
 <p>Wait for the Ingress controller pods to switch to <code>Ready</code> state.</p>
 
 {% offtopic title="Example of the output..." %}
-```
+```console
 $ sudo -i d8 k -n d8-ingress-nginx get po -l app=controller
 NAME                                       READY   STATUS    RESTARTS   AGE
 controller-nginx-r6hxc                     3/3     Running   0          5m
@@ -266,9 +264,9 @@ sudo -i d8 k create -f $PWD/user.yml
 ```
 </div>
 </li>
-<li><strong>Create DNS records</strong> to organize access to the cluster web-interfaces:
+<li><strong>Create DNS records</strong> to organize access to the cluster web interfaces:
   <ul><li>Discover public IP address of the node where the Ingress controller is running.</li>
-  <li>If you have the DNS server and you can add a DNS records:
+  <li>If you have the DNS server and you can add DNS records:
   <ul>
     <li>If your cluster DNS name template is a <a href="https://en.wikipedia.org/wiki/Wildcard_DNS_record">wildcard DNS</a> (e.g., <code>%s.kube.my</code>), then add a corresponding wildcard A record containing the public IP, you've discovered previously.
     </li>
@@ -299,10 +297,10 @@ upmeter.example.com</code>
       </li>
     </ul>
   </li>
-  <li><p>If you <strong>don't have a DNS server</strong>: on your PC add static entries (specify your public IP address in the <code>PUBLIC_IP</code>variable) that match the names of specific services to the public IP to the <code>/etc/hosts</code> file for Linux (<code>%SystemRoot%\system32\drivers\etc\hosts</code> for Windows):</p>
+  <li><p>If you <strong>don't have a DNS server</strong>: on your PC add static entries (specify your public IP address in the <code>PUBLIC_IP</code> variable) that match the names of specific services to the public IP to the <code>/etc/hosts</code> file for Linux (<code>%SystemRoot%\system32\drivers\etc\hosts</code> for Windows):</p>
 <div markdown="1">
 ```bash
-export PUBLIC_IP="<PUT_PUBLIC_IP_HERE>"
+export PUBLIC_IP="<PUBLIC_IP>"
 sudo -E bash -c "cat <<EOF >> /etc/hosts
 $PUBLIC_IP stronghold.example.com
 $PUBLIC_IP api.example.com

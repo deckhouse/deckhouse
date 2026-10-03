@@ -9,7 +9,7 @@ layout: sidebar-guides
 {% alert level="info" %}
 В руководстве рассматривается DP Enterprise Edition, но механизмы аналогичны и для [других редакций](../documentation/v1/reference/revision-comparison.html).
 
-Для выполнения приведенных в руководстве команд потребуется аутентификация в хранилище образов контейнеров `registry.deckhouse.ru`. Для аутентификации используйте `license-token` в качестве имени и ваш лицензионный ключ в качестве пароля.
+Для выполнения приведённых в руководстве команд потребуется аутентификация в хранилище образов контейнеров `registry.deckhouse.ru`. Для аутентификации используйте `license-token` в качестве имени и ваш лицензионный ключ в качестве пароля.
 
 В руководстве используется сторонняя утилита [crane](https://github.com/google/go-containerregistry?tab=readme-ov-file#crane) для анализа хранилища образов. Перед началом работ установите её в соответствии [с официальной инструкцией](https://github.com/google/go-containerregistry/blob/main/cmd/crane/README.md#installation).
 {% endalert %}
@@ -30,9 +30,9 @@ Stable
 
 Технически обновление DP выглядит следующим образом: в хранилище образов находится образ с именем `release-channel` и тегом по названию канала обновлений, который указывает на образ уже конкретной версии DP (при выпуске новой версии этот образ заменяется на новый).
 
-Рассмотрим содержимое образа DP Enterprise Edition с каналом обновлений Alpha.
+Пример ниже показывает содержимое образа DP Enterprise Edition с каналом обновлений Alpha.
 
-Выполните следующую команду (требуется предварительная аутентификация в хранилище образов контейнеров `registry.deckhouse.ru`?используя ):
+Выполните следующую команду:
 
 ```bash
 crane export registry.deckhouse.ru/deckhouse/ee/release-channel:alpha | tar -tf -
@@ -222,11 +222,11 @@ crane export registry.deckhouse.ru/deckhouse/ee/modules/console/release:alpha | 
 Доступно в DP EE, DP Ultimate, DP CSE Lite, DP CSE Pro, DP Certified Pro и DP Certified Core.
 {% endalert %}
 
-Базы уязвимостей обновляются раз в 6 часов. Модуль `operator-trivy` в кластере самостоятельно скачивает их из registry один раз за этот промежуток.
+Базы уязвимостей обновляются раз в 6 часов. Модуль `operator-trivy` в кластере самостоятельно скачивает их из хранилища образов контейнеров один раз за этот промежуток.
 
 Образы баз уязвимостей на примере [DP EE](/modules/operator-trivy/) имеют постоянные имена и теги и находятся по путям:
 
-```bash
+```text
 registry.deckhouse.ru/deckhouse/ee/security/trivy-db:2
 registry.deckhouse.ru/deckhouse/ee/security/trivy-java-db:1
 registry.deckhouse.ru/deckhouse/ee/security/trivy-checks:0
@@ -236,18 +236,24 @@ registry.deckhouse.ru/deckhouse/ee/security/trivy-bdu:1
 Для настройки периодического обновления образов баз данных уязвимостей используйте конструкцию вида:
 
 ```bash
-d8 mirror pull --source='registry.deckhouse.ru/deckhouse/ee' --license='YOUR_LICENSE_TOKEN' --no-platform --no-modules $(pwd)/d8-bundle-security-db && d8 mirror push $(pwd)/d8-bundle-security-db YOUR_PRIVATE_REGISTRY_HOSTNAME:5050/dkp/ee --registry-login='YOUR_REGISTRY_LOGIN' --registry-password='YOUR_REGISTRY_PASSWORD' --tls-skip-verify
+d8 mirror pull --source='registry.deckhouse.ru/deckhouse/ee' --license='<LICENSE_TOKEN>' --no-platform --no-modules $(pwd)/d8-bundle-security-db && d8 mirror push $(pwd)/d8-bundle-security-db <PRIVATE_REGISTRY_HOSTNAME>:5050/dkp/ee --registry-login='<REGISTRY_LOGIN>' --registry-password='<REGISTRY_PASSWORD>' --tls-skip-verify
 ```
+
+Здесь:
+
+* `<LICENSE_TOKEN>` — лицензионный ключ DP;
+* `<PRIVATE_REGISTRY_HOSTNAME>` — адрес приватного хранилища образов контейнеров;
+* `<REGISTRY_LOGIN>` и `<REGISTRY_PASSWORD>` — учётные данные для доступа к приватному хранилищу образов контейнеров.
 
 ## Пример сценария обновления платформы, модулей и баз данных уязвимостей
 
 Чтобы выполнить в закрытом окружении обновление DP, используемых модулей и баз данных уязвимостей до актуальных версий, скачайте последние патч-релизы всех минорных версий платформы и указанных модулей и загрузите их в ваше хранилище образов.
 
-Если запустить конструкцию `d8 mirror pull --source='registry.deckhouse.ru/deckhouse/ee' --license='YOUR_LICENSE_TOKEN' $(pwd)/d8-bundle` для скачивания всех образов, находящихся на релизных каналах, и всех модулей (которых уже более 30 для DP EE), то в результате получится объёмный `d8-bundle` (на момент написания руководства объём директории `d8-bundle` составил более 50 ГБ).
+Если запустить конструкцию `d8 mirror pull --source='registry.deckhouse.ru/deckhouse/ee' --license='<LICENSE_TOKEN>' $(pwd)/d8-bundle` для скачивания всех образов, находящихся на релизных каналах, и всех модулей (которых уже более 30 для DP EE), то в результате получится объёмный `d8-bundle` (на момент написания руководства объём директории `d8-bundle` составил более 50 ГБ).
 
 Чтобы этого не происходило, выкачивать следует только соответствующие вашей версии образы по следующей инструкции:
 
-1. Получите версию DP в Вашем кластере с помощью команды:
+1. Получите версию DP в кластере с помощью команды:
 
    ```bash
    d8 k -n d8-system get deployment deckhouse -o json | jq -r '.metadata.annotations | {"core.deckhouse.io/edition","core.deckhouse.io/version"}'
@@ -275,7 +281,7 @@ d8 mirror pull --source='registry.deckhouse.ru/deckhouse/ee' --license='YOUR_LIC
    console-v1.35.1                    Deployed                     7d4h
    ```
 
-   Добавьте полученный список к команде `d8 mirror pull` в виде ключей: `--include-module='commander-agent@v1.2.4' --include-module='console@v1.35.1'`.
+   Добавьте полученный список к команде `d8 mirror pull` в виде ключей: `--include-module='commander-agent@1.2.4' --include-module='console@1.35.1'`.
 
    Или используйте однострочник вида:
 
@@ -286,17 +292,17 @@ d8 mirror pull --source='registry.deckhouse.ru/deckhouse/ee' --license='YOUR_LIC
 1. Сформируйте финальную команду для скачивания образов, используя полученные ранее параметры:
 
    ```bash
-   d8 mirror pull --source='registry.deckhouse.ru/deckhouse/ee' --license='YOUR_LICENSE_TOKEN' --since-version='v1.68.13' --include-module='commander-agent@1.2.4' --include-module='console@1.35.1' $(pwd)/d8-bundle
+   d8 mirror pull --source='registry.deckhouse.ru/deckhouse/ee' --license='<LICENSE_TOKEN>' --since-version='v1.68.13' --include-module='commander-agent@1.2.4' --include-module='console@1.35.1' $(pwd)/d8-bundle
    ```
 
-   > Если вы настроили периодическое скачивание и загрузку в ваш registry баз данных уязвимостей, то можно добавить флаг `--no-security-db` для исключения их из процесса перекачивания образов.
+   > Если вы настроили периодическое скачивание и загрузку в ваше хранилище образов контейнеров баз данных уязвимостей, то можно добавить флаг `--no-security-db` для исключения их из процесса перекачивания образов.
 
    В результате выполнения команды будут скачаны последние патч-релизы всех минорных версий платформы и указанных модулей, начиная с последних патч-версий минорных версий релиза до актуальных версий, находящихся [на релизных каналах](https://releases.deckhouse.ru/ee).
 
 1. Загрузите полученные артефакты в ваше хранилище следующей командой:
 
    ```bash
-   d8 mirror push $(pwd)/d8-bundle YOUR_PRIVATE_REGISTRY_HOSTNAME:5050/dkp/ee --registry-login='YOUR_REGISTRY_LOGIN' --registry-password='YOUR_REGISTRY_PASSWORD' --tls-skip-verify
+   d8 mirror push $(pwd)/d8-bundle <PRIVATE_REGISTRY_HOSTNAME>:5050/dkp/ee --registry-login='<REGISTRY_LOGIN>' --registry-password='<REGISTRY_PASSWORD>' --tls-skip-verify
    ```
 
 1. Проверьте состояние обновления в кластере с помощью команд:
@@ -311,7 +317,7 @@ d8 mirror pull --source='registry.deckhouse.ru/deckhouse/ee' --license='YOUR_LIC
 
 ### Release is suspended
 
-При попытке скачать образы платформы с помощью команды `d8 mirror pull d8-bundle/ --license='YOUR_LICENSE_KEY'` возможно возникновение следующей ошибки:
+При попытке скачать образы платформы с помощью команды `d8 mirror pull d8-bundle/ --license='<LICENSE_KEY>'` возможно возникновение следующей ошибки:
 
 ```console
 Sep  9 00:10:57.145 INFO  ╔ Pull Deckhouse Platform
@@ -319,12 +325,12 @@ Sep  9 00:11:01.532 ERROR Pull Deckhouse Platform failed error="Find tags to mir
 Error: pull failed, see the log for details
 ```
 
-Это значит, что на одном из каналов обновлений развертывание релиза остановлено. Такая ситуация возникает, если в образ канала обновлений поступает версия, на которую нужно обновляться, но случилась ситуация, при которой дальнейшее развертывание релиза на канал остановлено — образ канала обновлений патчится, и в него добавляется флаг `suspend`.
+Это значит, что на одном из каналов обновлений развёртывание релиза остановлено. Такая ситуация возникает, если в образ канала обновлений поступает версия, на которую нужно обновляться, но случилась ситуация, при которой дальнейшее развёртывание релиза на канал остановлено — образ канала обновлений патчится, и в него добавляется флаг `suspend`.
 
-Тем не менее скачать версию платформы в таком случае все равно возможно с указанием флага `--deckhouse-tag` для `d8 mirror pull`. Например:
+Тем не менее скачать версию платформы в таком случае всё равно возможно с указанием флага `--deckhouse-tag` для `d8 mirror pull`. Например:
 
 ```bash
-d8 mirror pull d8-bundle/ --license='YOUR_LICENSE_KEY' --deckhouse-tag='v1.71.3'
+d8 mirror pull d8-bundle/ --license='<LICENSE_KEY>' --deckhouse-tag='v1.71.3'
 ```
 
 Пример вывода:

@@ -20,7 +20,7 @@ kubernetesVersion: "Automatic"
 # [<ru>] Домен кластера.
 clusterDomain: "cluster.local"
 # [<en>] The container runtime type that used on cluster nodes (NodeGroups) by default.
-# [<ru>] Тип container runtime, используемый на узлах кластера (в NodeGroup’ах) по умолчанию.
+# [<ru>] Тип container runtime, используемый на узлах кластера (в NodeGroup) по умолчанию.
 defaultCRI: "ContainerdV2"
 # [<en>] Proxy server settings. In the exception list (noProxy parameter), also specify the subnet of the cluster nodes.
 # [<ru>] Настройки proxy-сервера. В списке исключений (параметр noProxy) также укажите подсеть узлов кластера.
@@ -64,7 +64,7 @@ spec:
         ca: <REGISTRY_CA>
 ---
 # [<en>] Global Deckhouse settings.
-# [<en>] https://deckhouse.ru/products/kubernetes-platform/documentation/v1/reference/api/global.html#parameters
+# [<en>] https://deckhouse.io/products/kubernetes-platform/documentation/v1/reference/api/global.html#parameters
 # [<ru>] Глобальные настройки Deckhouse.
 # [<ru>] https://deckhouse.ru/products/kubernetes-platform/documentation/v1/reference/api/global.html#%D0%BF%D0%B0%D1%80%D0%B0%D0%BC%D0%B5%D1%82%D1%80%D1%8B
 apiVersion: deckhouse.io/v1alpha1

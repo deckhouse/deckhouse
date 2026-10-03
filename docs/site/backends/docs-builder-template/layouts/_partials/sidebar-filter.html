@@ -23,9 +23,9 @@
                 <!-- <input type="checkbox" id="certificationSelectAll" data-select-all="true">
                 <label class="filter__checkboxes--all" for="certificationSelectAll">{{ T "certification_filter_all_selected" | humanize }}</label> //-->
                 <input type="checkbox" id="certified" value="certified">
-                <label for="certified">Сертифицирован</label>
+                <label for="certified">{{ T "certification_filter_certified" }}</label>
                 <input type="checkbox" id="notCertified" value="notCertified">
-                <label for="notCertified">Не сертифицирован</label>
+                <label for="notCertified">{{ T "certification_filter_not_certified" }}</label>
             </div>
         </div>
         {{- else }}
@@ -71,21 +71,21 @@
                 <label class="filter__checkboxes--all" for="stagesSelectAll">{{ T "stage_filter_all_selected" | humanize }}</label>
                 <input type="checkbox" id="experimental" value="experimental">
                 <label for="experimental">
-                    Experimental
+                    {{ T "module_alert_experimental" }}
                     <img class="zoom-image-disable" src="/images/experimental.svg">
                 </label>
                 <input type="checkbox" id="preview" value="preview">
                 <label for="preview">
-                    Preview
+                    {{ T "module_alert_preview" }}
                     <img class="zoom-image-disable" src="/images/preview.svg">
                 </label>
                 <input type="checkbox" id="generalAvailability" value="generalAvailability">
                 <label for="generalAvailability">
-                    General Availability (GA)
+                    {{ T "module_alert_general_availability" }} (GA)
                 </label>
                 <input type="checkbox" id="deprecated" value="deprecated">
                 <label for="deprecated">
-                    Deprecated
+                    {{ T "module_alert_deprecated" }}
                     <img class="zoom-image-disable" src="/images/deprecated.svg">
                 </label>
             </div>
@@ -99,7 +99,7 @@
         </div>
         <div class="filter__block--apply">
             <div class="filter__container filter__container--apply">
-                <button type="button" class="apply-filter" disabled>Применить</button>
+                <button type="button" class="apply-filter" disabled>{{ T "filter_apply" }}</button>
             </div>
         </div>
     </div>

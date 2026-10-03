@@ -7,7 +7,7 @@
 {% endalert %}
 {% else %}
 {% alert level="warning" %}
-Installation of {{ page.title_main }} is only possible in the Enterprise Edition. [See information about commercial editions](https://deckhouse.io/products/kubernetes-platform/).
+Installation of {{ page.title_main }} is only possible in the Enterprise Edition. [See information about commercial editions](/products/kubernetes-platform/).
 {% endalert %}
 {% endif %}
 {% endif %}
@@ -18,7 +18,7 @@ Installation of {{ page.title_main }} is only possible in the Enterprise Edition
 {% endalert %}
 {% else %}
 {% alert level="warning" %}
-The {{ page.title_main }} installation is not available in the Community Edition. [See information about commercial editions](https://deckhouse.io/products/kubernetes-platform/).
+The {{ page.title_main }} installation is not available in the Community Edition. [See information about commercial editions](/products/kubernetes-platform/).
 {% endalert %}
 {% endif %}
 {% endif %}
@@ -69,7 +69,7 @@ The {{ page.title_main }} installation is not available in the Community Edition
 
   {%- endif %}
 
-- Начиная с версии 1.74 в Deckhouse появился механизм контроля целостности модулей (защита от подмены и модификаций). Он включается автоматически, если на узлах ОС поддерживает модуль ядра `erofs`. Если `erofs` недоступен, Deckhouse продолжит работать как раньше, но контроль целостности будет отключён, и в мониторинге появится алерт о недоступности механизма.
+- Начиная с версии 1.74 в Deckhouse Platform появился механизм контроля целостности модулей (защита от подмены и модификаций). Он включается автоматически, если на узлах ОС поддерживает модуль ядра `erofs`. Если `erofs` недоступен, Deckhouse Platform продолжит работать как раньше, но контроль целостности будет отключён, и в мониторинге появится алерт о недоступности механизма.
 {% endofftopic %}
 {%- else %}
 {% alert level="warning" %}
@@ -117,7 +117,7 @@ It is recommended to change the run frequency of the `update-hostname` module to
 
   {%- endif %}
 
-- From version 1.74, Deckhouse has a module integrity control mechanism (protection against replacement and modification). It turns on automatically when the OS on the nodes supports the `erofs` kernel module. Without it, Deckhouse runs as before but the mechanism is off — an alert will indicate it is unavailable.
+- From version 1.74, Deckhouse Platform has a module integrity control mechanism (protection against replacement and modification). It turns on automatically when the OS on the nodes supports the `erofs` kernel module. Without it, Deckhouse Platform runs as before but the mechanism is off — an alert will indicate it is unavailable.
 {% endofftopic %}
 {%- endif %}
 

@@ -50,7 +50,7 @@ spec:
         license: <YOUR_ACCESS_STRING_IS_HERE>
 ---
 # [<en>] Global Deckhouse settings.
-# [<en>] https://deckhouse.ru/products/kubernetes-platform/documentation/v1/reference/api/global.html#parameters
+# [<en>] https://deckhouse.io/products/kubernetes-platform/documentation/v1/reference/api/global.html#parameters
 # [<ru>] Глобальные настройки Deckhouse.
 # [<ru>] https://deckhouse.ru/products/kubernetes-platform/documentation/v1/reference/api/global.html#%D0%BF%D0%B0%D1%80%D0%B0%D0%BC%D0%B5%D1%82%D1%80%D1%8B
 apiVersion: deckhouse.io/v1alpha1
@@ -116,14 +116,14 @@ spec:
 # [<en>] Cloud provider settings.
 # [<en>] https://deckhouse.io/modules/cloud-provider-openstack/cluster_configuration.html
 # [<ru>] Настройки облачного провайдера.
-# [<ru>] https://deckhouse.io/modules/cloud-provider-openstack/cluster_configuration.html
+# [<ru>] https://deckhouse.ru/modules/cloud-provider-openstack/cluster_configuration.html
 apiVersion: deckhouse.io/v1
 kind: OpenStackClusterConfiguration
 layout: Standard
 standard:
   # [<en>] Clusters in Selectel VPC should be installed with a bastion host because Security Groups are not supported.
   # [<en>] Otherwise ports on master nodes will be exposed to WAN.
-  # [<ru>] Кластера в Selectel VPC должны устанавливаться с bastion-хостом в целях безопасности, из-за отсутствия поддержки Security Groups.
+  # [<ru>] Кластеры в Selectel VPC должны устанавливаться с bastion-хостом в целях безопасности, из-за отсутствия поддержки Security Groups.
   # [<ru>] В противном случае в WAN будут открыты порты на master-узлах.
   bastion:
     zone: ru-3a
@@ -147,7 +147,7 @@ standard:
     - 8.8.4.4
   internalNetworkSecurity: true
 # [<en>] OpenStack API access parameters
-# [<ru>] параметры доступа к OpenStack API
+# [<ru>] Параметры доступа к OpenStack API
 provider:
   authURL: 'https://api.selvpc.ru/identity/v3'
   # [<en>] OS_USER_DOMAIN_NAME variable from the openrc file.
@@ -261,7 +261,7 @@ metadata:
 spec:
   ingressClass: nginx
   inlet: LoadBalancer
-  # [<en>] Describes on which nodes the Ingress Controller will be located. Label node.deckhouse.io/group: <NAME_GROUP_NAME> is set automatically.
+  # [<en>] Describes on which nodes the Ingress Controller will be located. Label node.deckhouse.io/group: <NODE_GROUP_NAME> is set automatically.
   # [<ru>] Описывает, на каких узлах будет находиться Ingress-контроллер. Лейбл node.deckhouse.io/group: <NODE_GROUP_NAME> устанавливается автоматически.
   nodeSelector:
     node.deckhouse.io/group: worker
@@ -296,7 +296,7 @@ spec:
   # [<en>] This is a hash of the password <GENERATED_PASSWORD>, generated when loading the page of the Getting Started.
   # [<en>] Generate your own or use it at your own risk (for testing purposes)
   # [<en>] echo -n '<GENERATED_PASSWORD>' | htpasswd -BinC 10 "" | cut -d: -f2 | tr -d '\n' | base64 -w0; echo
-  # [<ru>] Это хеш пароля <GENERATED_PASSWORD>, сгенерированного при загрузке страницы "Быстрого Старта".
+  # [<ru>] Это хеш пароля <GENERATED_PASSWORD>, сгенерированного при загрузке страницы «Быстрый старт».
   # [<ru>] Сгенерируйте свой или используйте этот, но только для тестирования
   # [<ru>] echo -n '<GENERATED_PASSWORD>' | htpasswd -BinC 10 "" | cut -d: -f2 | tr -d '\n' | base64 -w0; echo
   # [<en>] You might consider changing this.

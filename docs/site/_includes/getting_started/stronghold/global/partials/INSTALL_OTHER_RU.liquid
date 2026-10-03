@@ -1,13 +1,13 @@
 {% assign revision=include.revision %}
 
 {% if revision != "ce" %}
-<div class="dimmer-block-content{% if page.ee_only %} disabled{% endif %}" markdown="1"> 
+<div class="dimmer-block-content{% if page.ee_only %} disabled{% endif %}" markdown="1">
 {% endif %}
 
 
 Для установки **Deckhouse Platform** используется Docker-образ, в который необходимо передать конфигурационные файлы{%- if page.platform_type != 'existing' %} и SSH-ключи доступа на **master-узел** (далее подразумевается что используется SSH-ключ `~/.ssh/<SSH_PRIVATE_KEY_FILE>`){% endif %}.
 {% if page.platform_code == 'bm-private' %}
-Авторизуйтесь на **персональном компьютере** в container image registry, который вы указали на предыдущем этапе.
+Авторизуйтесь на **персональном компьютере** в хранилище образов контейнеров, которое вы указали на предыдущем этапе.
 {%- endif %}
 
 Запустите установщик на **персональном компьютере**.
@@ -34,11 +34,11 @@
 <!-- Linux or macOS install, EE -->
 
 {% alert level="info" %}
-Если при включенном VPN контейнер с установщиком не может получить доступ к сети, воспользуйтесь [инструкцией](/products/kubernetes-platform/documentation/v1/faq.html#что-делать-если-при-включенном-vpn-контейнер-с-установщиком-не-м).
+Если при включённом VPN контейнер с установщиком не может получить доступ к сети, воспользуйтесь [инструкцией по решению проблем с VPN](/products/kubernetes-platform/documentation/v1/faq.html#что-делать-если-при-включенном-vpn-контейнер-с-установщиком-не-м).
 {% endalert %}
 
 ```shell
- echo <LICENSE_TOKEN> | docker login -u license-token --password-stdin registry.deckhouse.ru
+ echo <LICENSE_TOKEN> | docker login -u license-token --password-stdin {%- if page.platform_code == "bm-private" %} <IMAGES_REPO_URI>{%- else %} registry.deckhouse.ru{% endif %}
 docker run --pull=always {% if page.platform_code == "kind" %} --network host {% endif %}-it -v "$PWD/config.yml:/config.yml"{%- if page.platform_type != 'existing' %} -v "$HOME/.ssh/:/tmp/.ssh/"{% endif %}
 {%- if page.platform_type == "existing" or page.platform_code == "kind" %} \
   -v "$HOME/.kube/config:/kubeconfig"{% endif %}
@@ -47,9 +47,9 @@ registry.deckhouse.ru/deckhouse/{{ revision }}/install:stable bash
 </div>
 <div id='block_installer_windows_{{ revision }}' class="tabs__container tabs__container--descr" markdown="1">
 <!-- Windows install, EE -->
-Авторизуйтесь на **персональном компьютере** в container image registry, введя лицензионный ключ на запрос пароля:
+Авторизуйтесь на **персональном компьютере** в хранилище образов контейнеров, введя лицензионный ключ на запрос пароля:
 ```shell
-docker login -u license-token registry.deckhouse.ru
+docker login -u license-token {%- if page.platform_code == "bm-private" %} <IMAGES_REPO_URI>{%- else %} registry.deckhouse.ru{% endif %}
 ```
 
 Запустите контейнер с установщиком:
@@ -57,7 +57,8 @@ docker login -u license-token registry.deckhouse.ru
 docker run --pull=always {% if page.platform_code == "kind" %} --network host {% endif %}-it -v "%cd%\config.yml:/config.yml"
 {%- if page.platform_type != 'existing' %} -v "%userprofile%\.ssh\:/tmp/.ssh/"{% endif %}
 {%- if page.platform_type == "existing" or page.platform_code == "kind" %} -v "%userprofile%\.kube\config:/kubeconfig"{% endif %}
-registry.deckhouse.ru/deckhouse/{{ revision }}/install:stable bash -c "chmod 400 /tmp/.ssh/<SSH_PRIVATE_KEY_FILE>; bash"
+{%- if page.platform_code == "bm-private" %} <IMAGES_REPO_URI>/install:stable
+{%- else %} registry.deckhouse.ru/deckhouse/{{ revision }}/install:stable{% endif %} bash -c "chmod 400 /tmp/.ssh/<SSH_PRIVATE_KEY_FILE>; bash"
 ```
 </div>
 </div>
@@ -82,7 +83,7 @@ registry.deckhouse.ru/deckhouse/{{ revision }}/install:stable bash -c "chmod 400
 <div id='block_installer_linux_{{ revision }}' class="tabs__container tabs__container--descr active" markdown="1">
 <!-- Linux or macOS install, CE -->
 {% alert level="info" %}
-Если при включенном VPN контейнер с установщиком не может получить доступ к сети, воспользуйтесь [инструкцией](/products/kubernetes-platform/documentation/v1/faq.html#что-делать-если-при-включенном-vpn-контейнер-с-установщиком-не-м).
+Если при включённом VPN контейнер с установщиком не может получить доступ к сети, воспользуйтесь [инструкцией по решению проблем с VPN](/products/kubernetes-platform/documentation/v1/faq.html#что-делать-если-при-включенном-vpn-контейнер-с-установщиком-не-м).
 {% endalert %}
 
 
@@ -118,9 +119,7 @@ docker run --pull=always {% if page.platform_code == "kind" %} --network host {%
 {%- if page.platform_type == "existing" or page.platform_code == "kind" %}
 dhctl bootstrap-phase install-deckhouse --kubeconfig=/kubeconfig --config=/config.yml
 {%- elsif page.platform_type == "baremetal" %}
-dhctl bootstrap --ssh-user=<username> --ssh-host=<master_ip> --ssh-agent-private-keys=/tmp/.ssh/<SSH_PRIVATE_KEY_FILE> \
-  --config=/config.yml \
-  --ask-become-pass
+dhctl bootstrap --ssh-user=<SSH_USER> --ssh-host=<MASTER_IP> --ssh-agent-private-keys=/tmp/.ssh/<SSH_PRIVATE_KEY_FILE> --config=/config.yml --ask-become-pass
 {%- elsif page.platform_type == "cloud" %}
 dhctl bootstrap --ssh-user={% if page.platform_code == "azure" %}azureuser{%- elsif page.platform_code == "gcp" or page.platform_code == "dynamix" %}user{%- else %}ubuntu{%- endif %} --ssh-agent-private-keys=/tmp/.ssh/<SSH_PRIVATE_KEY_FILE> --config=/config.yml
 {%- endif %}
@@ -128,7 +127,7 @@ dhctl bootstrap --ssh-user={% if page.platform_code == "azure" %}azureuser{%- el
 
 {%- if page.platform_type == "baremetal" or page.platform_type == "cloud" %}
 {%- if page.platform_type == "baremetal" %}
-В параметре `--ssh-user` укажите имя пользователя, от которого генерировался SSH-ключ для установки. Если для запуска sudo на сервере необходим пароль, то укажите его в ответ на запрос `[sudo] Password:`.
+В `<SSH_USER>` укажите имя пользователя, от которого генерировался SSH-ключ для установки. В `<MASTER_IP>` укажите IP-адрес master-узла. Если для запуска sudo на сервере необходим пароль, то укажите его в ответ на запрос `[sudo] Password:`.
 {%- else %}
 В параметре `--ssh-user` укажите имя пользователя по умолчанию для выбранного образа виртуальной машины.
 {%- if page.platform_code == "azure" %} В случае c {{ page.platform_name[page.lang] }}, это `azureuser` (для используемого в этом руководстве образа).
@@ -139,7 +138,7 @@ dhctl bootstrap --ssh-user={% if page.platform_code == "azure" %}azureuser{%- el
 
 {% if page.platform_type == "cloud" %}
 {% offtopic title="Если установка была прервана..." %}
-> Если установка была прервана (не хватило квот, ошибки сети и т.п.), вы можете ее перезапустить. Установка корректно продолжится, никакие дублирующие ресурсы в облаке созданы не будут.
+> Если установка была прервана (не хватило квот, возникли ошибки сети), вы можете её перезапустить. Установка корректно продолжится, никакие дублирующие ресурсы в облаке созданы не будут.
 >
 > Если установка не может быть продолжена и вам нужно удалить созданные в облаке ресурсы, выполните следующую команду:
 >
@@ -154,7 +153,7 @@ dhctl bootstrap --ssh-user={% if page.platform_code == "azure" %}azureuser{%- el
 {% if page.platform_type == "baremetal" %}
 Пример вывода при успешном окончании установки:
 
-```shell
+```console
 ...
 │ │ No more converge tasks found in Deckhouse queue.
 │ │ Deckhouse pod is Ready!
@@ -169,7 +168,7 @@ dhctl bootstrap --ssh-user={% if page.platform_code == "azure" %}azureuser{%- el
 {% else  %}
 По окончании установки инсталлятор выведет IP-адрес **master-узла** (он вам потребуется далее). Пример вывода:
 
-```shell
+```console
 ...
 ┌ 🎈 ~ Common: Kubernetes Master Node addresses for SSH
 │ cloud-demo-master-0 | ssh {% if page.platform_code == "azure" %}azureuser{% elsif page.platform_code == "gcp" or page.platform_code == "dynamix" %}user{% else %}ubuntu{% endif %}@1.2.3.4
@@ -198,7 +197,7 @@ kubectl -n d8-ingress-nginx get po
 Вы установили Deckhouse Platform в `kind`!
 {%- else %}
 
-Почти все готово для полноценной работы Deckhouse Platform!
+Почти всё готово для полноценной работы Deckhouse Platform.
 {%- endif %}
 
 <!-- Troubleshooting in existing cluster //-->

@@ -1,5 +1,7 @@
 {%- include getting_started/global/partials/NOTICES_ENVIRONMENT.liquid %}
 
+Prepare the {{ page.platform_name[page.lang] }} environment so that Deckhouse Platform can manage the resources of the virtualization platform. The full procedure is described on the [environment preparation page](/modules/cloud-provider-vsphere/environment.html) of the `cloud-provider-vsphere` module.
+
 To install Deckhouse Platform on VMware vSphere, you need vSphere version `7.x` or `8.x` with support for the [`Online volume expansion`](https://github.com/kubernetes-sigs/vsphere-csi-driver/blob/v2.3.0/docs/book/features/volume_expansion.md#vsphere-csi-driver---volume-expansion) mechanism.
 
 ## List of required vSphere resources
@@ -40,7 +42,7 @@ export GOVC_INSECURE=1
 
 ### Creating tags and tag categories
 
-Instead of "regions" and "zones", VMware vSphere provides `Datacenter` and `Cluster` objects. We will use tags to match them with "regions"/"zones". These tags fall into two categories: one for "regions" tags and the other for "zones" tags.
+Instead of "regions" and "zones", VMware vSphere provides `Datacenter` and `Cluster` objects. Tags match them with "regions" and "zones". These tags fall into two categories: one for "regions" tags and the other for "zones" tags.
 
 Create a tag category using the following commands:
 
@@ -89,9 +91,9 @@ govc tags.attach -c k8s-zone test-zone-2 /<DatacenterName>/datastore/<DatastoreN
 ### Creating and assigning a role
 
 {% alert %}
-We've intentionally skipped User creation since there are many ways to authenticate a user in the vSphere.
+User creation is not covered here because vSphere supports many ways to authenticate a user.
 
-The role that you are asked to create next includes the privileges from the section [List of required privileges](/modules/cloud-provider-vsphere/environment.html#list-of-required-privileges). If you need a more granular Role, please contact your Deckhouse support.
+The role that you are asked to create next includes the privileges from the section [List of required privileges](/modules/cloud-provider-vsphere/environment.html#list-of-required-privileges). To configure a more granular role, contact Deckhouse technical support.
 {% endalert %}
 
 Create a role with the required privileges:
@@ -151,4 +153,4 @@ It is recommended to use a pre-built cloud image/OVA file provided by the OS ven
 * [**CentOS**](https://cloud.centos.org/)
 * [**Rocky Linux**](https://rockylinux.org/alternative-images/) (*Generic Cloud / OpenStack* section)
 
-If you need to use your own image, please refer to the [documentation](/modules/cloud-provider-vsphere/environment.html#virtual-machine-image-requirements).
+To use your own image, follow the [virtual machine image requirements](/modules/cloud-provider-vsphere/environment.html#virtual-machine-image-requirements).

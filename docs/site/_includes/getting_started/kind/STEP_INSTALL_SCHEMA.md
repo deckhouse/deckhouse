@@ -1,11 +1,11 @@
 [kind](https://kind.sigs.k8s.io/) is a tool for running local Kubernetes clusters using container “nodes” and  was primarily designed for testing Kubernetes itself, but may be used for local development or CI.
 
-Installing Deckhouse on kind, will allow you to get a Kubernetes cluster with Deckhouse installed in less than 15 minutes. It will allow you to get acquainted with Deckhouse main features quickly.
+Installing Deckhouse on kind allows you to get a Kubernetes cluster with Deckhouse installed in less than 15 minutes. It will allow you to get acquainted with Deckhouse main features quickly.
 
-Deckhouse will be installed in a **minimal** configuration, with Grafana based [monitoring](/modules/prometheus/) enabled. Some features, such as [node management](/modules/node-manager/) and [control plane management](/modules/control-plane-manager/) will not work. To simplify, the [sslip.io](https://sslip.io ) service is used for working with DNS.
+Deckhouse will be installed in a **minimal** configuration, with Grafana based [monitoring](/modules/prometheus/) enabled. Some features, such as [node management](/modules/node-manager/) and [control plane management](/modules/control-plane-manager/) will not work. To simplify, the [sslip.io](https://sslip.io) service is used for working with DNS.
 
 {% alert level="warning" %}
-Some providers are blocking work sslip.io and similar services. If you encounter such a problem, put the necessary domain names in the `hosts` file locally, or use a real domain and fix [DNS names template](/products/kubernetes-platform/documentation/v1/reference/api/global.html#parameters-modules-publicdomaintemplate).
+Some providers block sslip.io and similar services. If you encounter such a problem, put the necessary domain names in the `hosts` file locally, or use a real domain and fix [DNS names template](/products/kubernetes-platform/documentation/v1/reference/api/global.html#parameters-modules-publicdomaintemplate).
 {% endalert %}
 
 {% comment %}
@@ -27,8 +27,8 @@ If you are installing Deckhouse Platform in kind on an Apple computer with an AR
 To do this, in the Docker Desktop interface, go to `Settings > General > Virtual Machine Options` and disable the `Use Rosetta for x86_64/amd64 emulation on Apple Silicon` option.
 {% endalert %}
 
-A Kubernetes cluster will be deployed and Deckhouse will be installed into a cluster using [the Shell script](https://github.com/deckhouse/deckhouse/blob/main/tools/kind-d8.sh):
-- Run the following command for installing Deckhouse **Community Edition**:
+A Kubernetes cluster will be deployed and Deckhouse Platform will be installed into a cluster using [the Shell script](https://github.com/deckhouse/deckhouse/blob/main/tools/kind-d8.sh):
+- Run the following command for installing Deckhouse Platform Open:
 
 ```shell
 bash -c "$(curl -Ls https://raw.githubusercontent.com/deckhouse/deckhouse/main/tools/kind-d8.sh)"
@@ -49,7 +49,7 @@ After installation is complete, you will get the `admin` user password for acces
 Waiting for the Ingress controller to be ready.........................................
 Ingress controller is running.
 
-You have installed Deckhouse Platform in kind!
+You have installed Deckhouse Platform Open in kind!
 
 Don't forget that the default kubectl context has been changed to 'kind-d8'.
 

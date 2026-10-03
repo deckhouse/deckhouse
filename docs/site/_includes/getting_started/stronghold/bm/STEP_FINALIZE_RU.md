@@ -50,8 +50,7 @@ EOF
 <p>Укажите, что созданный StorageClass должен использоваться как StorageClass по умолчанию. Для этого выполните на <strong>master-узле</strong> следующую команду:</p>
 <div markdown="1">
 ```shell
-sudo -i d8 k patch mc global --type merge \
-  -p "{\"spec\": {\"settings\":{\"defaultClusterStorageClass\":\"localpath\"}}}"
+sudo -i d8 k patch mc global --type merge -p "{\"spec\": {\"settings\":{\"defaultClusterStorageClass\":\"localpath\"}}}"
 ```
 </div>
   </li>
@@ -59,7 +58,7 @@ sudo -i d8 k patch mc global --type merge \
 </div>
 
 <div id="block_layout_worker" class="tabs__container tabs__container--descr active">
-<p>Добавьте узел в кластер (подробнее о добавлении статического узла в кластер читайте в <a href="/modules/node-manager/examples.html#добавление-статического-узла-в-кластер">документации</a>):</p>
+<p>Добавьте узел в кластер (подробнее — <a href="/modules/node-manager/examples.html#добавление-статического-узла-в-кластер">в разделе о добавлении статического узла в кластер</a>):</p>
 
 <ul>
   <li>
@@ -85,8 +84,7 @@ EOF
 <p>Укажите, что созданный StorageClass должен использоваться как StorageClass по умолчанию. Для этого выполните на <strong>master-узле</strong> следующую команду:</p>
 <div markdown="1">
 ```shell
-sudo -i d8 k patch mc global --type merge \
-  -p "{\"spec\": {\"settings\":{\"defaultClusterStorageClass\":\"localpath\"}}}"
+sudo -i d8 k patch mc global --type merge -p "{\"spec\": {\"settings\":{\"defaultClusterStorageClass\":\"localpath\"}}}"
 ```
 </div>
   </li>
@@ -119,10 +117,10 @@ ssh-keygen -t ed25519 -f /dev/shm/caps-id -C "" -N ""
 </div>
   </li>
   <li>
-    <p>Создайте в кластере ресурс <a href="/modules/node-manager/cr.html#sshcredentials">SSHCredentials</a>. Для этого выполните на <strong>master-узле</strong> следующую команду:</p>
+    <p>Создайте <a href="/modules/node-manager/cr.html#sshcredentials">SSHCredentials</a>. Для этого выполните на <strong>master-узле</strong> следующую команду:</p>
 <div markdown="1">
 ```bash
-sudo -i d8 k -f - <<EOF
+sudo -i d8 k create -f - <<EOF
 apiVersion: deckhouse.io/v1alpha2
 kind: SSHCredentials
 metadata:
@@ -147,7 +145,7 @@ cat /dev/shm/caps-id.pub
 <div markdown="1">
 ```bash
 # Укажите публичную часть SSH-ключа пользователя.
-export KEY='<SSH-PUBLIC-KEY>'
+export KEY='<SSH_PUBLIC_KEY>'
 useradd -m -s /bin/bash caps
 usermod -aG sudo caps
 echo 'caps ALL=(ALL) NOPASSWD: ALL' | sudo EDITOR='tee -a' visudo
@@ -172,8 +170,8 @@ pdpl-user -i 63 caps
 <div markdown="1">
 ```bash
 # Укажите IP-адрес узла, который необходимо подключить к кластеру.
-export NODE=<NODE-IP-ADDRESS>
-sudo -i d8 k -f - <<EOF
+export NODE=<NODE_IP_ADDRESS>
+sudo -i d8 k create -f - <<EOF
 apiVersion: deckhouse.io/v1alpha2
 kind: StaticInstance
 metadata:
@@ -198,11 +196,11 @@ sudo -i d8 k get no
 </div>
 
 {% offtopic title="Пример вывода..." %}
-```
+```console
 $ sudo -i d8 k get no
 NAME               STATUS   ROLES                  AGE    VERSION
-d8cluster          Ready    control-plane,master   30m   v1.23.17
-d8cluster-worker   Ready    worker                 10m   v1.23.17
+d8cluster          Ready    control-plane,master   30m   v1.33.13
+d8cluster-worker   Ready    worker                 10m   v1.33.13
 ```
 {%- endofftopic %}
   </li>
@@ -223,7 +221,7 @@ sudo -i d8 k -n d8-ingress-nginx get po -l app=kruise
 </div>
 
 {% offtopic title="Пример вывода..." %}
-```
+```console
 $ sudo -i d8 k -n d8-ingress-nginx get po -l app=kruise
 NAME                                         READY   STATUS    RESTARTS    AGE
 kruise-controller-manager-7dfcbdc549-b4wk7   3/3     Running   0           15m
@@ -256,7 +254,7 @@ sudo -i d8 k -n d8-ingress-nginx get po -l app=controller
 <p>Дождитесь перехода подов Ingress-контроллера в статус <code>Ready</code>.</p>
 
 {% offtopic title="Пример вывода..." %}
-```
+```console
 $ sudo -i d8 k -n d8-ingress-nginx get po -l app=controller
 NAME                                       READY   STATUS    RESTARTS   AGE
 controller-nginx-r6hxc                     3/3     Running   0          5m
@@ -264,7 +262,7 @@ controller-nginx-r6hxc                     3/3     Running   0          5m
 {%- endofftopic %}
 </li>
 <li><p><strong>Создание пользователя</strong> для доступа в веб-интерфейсы кластера</p>
-<p>Создайте на <strong>master-узле</strong> файл <code>user.yml</code> содержащий описание учетной записи пользователя и прав доступа:</p>
+<p>Создайте на <strong>master-узле</strong> файл <code>user.yml</code> содержащий описание учётной записи пользователя и прав доступа:</p>
 <div markdown="1">
 {% include_file "_includes/getting_started/stronghold/{{ page.platform_code }}/partials/user.yml.inc" syntax="yaml" %}
 </div>
@@ -279,14 +277,14 @@ sudo -i d8 k create -f $PWD/user.yml
   <ul><li>Выясните публичный IP-адрес узла, на котором работает Ingress-контроллер.</li>
   <li>Если у вас есть возможность добавить DNS-запись используя DNS-сервер:
     <ul>
-      <li>Если ваш шаблон DNS-имен кластера является <a href="https://en.wikipedia.org/wiki/Wildcard_DNS_record">wildcard
+      <li>Если ваш шаблон DNS-имён кластера является <a href="https://en.wikipedia.org/wiki/Wildcard_DNS_record">wildcard
         DNS-шаблоном</a> (например, <code>%s.kube.my</code>), то добавьте соответствующую wildcard A-запись со значением публичного IP-адреса, который вы получили выше.
       </li>
       <li>
-        Если ваш шаблон DNS-имен кластера <strong>НЕ</strong> является <a
+        Если ваш шаблон DNS-имён кластера <strong>НЕ</strong> является <a
               href="https://en.wikipedia.org/wiki/Wildcard_DNS_record">wildcard DNS-шаблоном</a> (например, <code>%s-kube.company.my</code>),
         то добавьте А или CNAME-записи со значением публичного IP-адреса, который вы
-        получили выше, для следующих DNS-имен сервисов Deckhouse в вашем кластере:
+        получили выше, для следующих DNS-имён сервисов Deckhouse в вашем кластере:
         <div class="highlight">
 <pre class="highlight">
 <code example-hosts>stronghold.example.com
@@ -313,7 +311,7 @@ upmeter.example.com</code>
     </ul>
   </li>
 
-  <li><p>Если вы <strong>не</strong> имеете под управлением DNS-сервер: добавьте статические записи соответствия имен конкретных сервисов публичному IP-адресу узла, на котором работает Ingress-контроллер.</p><p>Например, на персональном Linux-компьютере, с которого необходим доступ к сервисам Deckhouse, выполните следующую команду (укажите ваш публичный IP-адрес в переменной <code>PUBLIC_IP</code>) для добавления записей в файл <code>/etc/hosts</code> (для Windows используйте файл <code>%SystemRoot%\system32\drivers\etc\hosts</code>):</p>
+  <li><p>Если вы <strong>не</strong> имеете под управлением DNS-сервер: добавьте статические записи соответствия имён конкретных сервисов публичному IP-адресу узла, на котором работает Ingress-контроллер.</p><p>Например, на персональном Linux-компьютере, с которого необходим доступ к сервисам Deckhouse, выполните следующую команду (укажите ваш публичный IP-адрес в переменной <code>PUBLIC_IP</code>) для добавления записей в файл <code>/etc/hosts</code> (для Windows используйте файл <code>%SystemRoot%\system32\drivers\etc\hosts</code>):</p>
 <div markdown="1">
 ```bash
 export PUBLIC_IP="<PUBLIC_IP>"

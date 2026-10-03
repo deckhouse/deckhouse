@@ -1,19 +1,3 @@
-Требования к установке:
-- Развернутый кластер Deckhouse Platform любой редакции кроме Community Edition и версии не ниже 1.68.
+Для Deckhouse Stronghold требуется развёрнутый кластер Deckhouse Platform версии 1.68 или новее в любой редакции, кроме Community Edition.
 
-Для установки Deckhouse Stronghold включите модуль stronghold. Включить модуль можно с помощью веб-интерфейса, или используя CLI.
-
-## Включение модуля через веб-интерфейс
-
-1. Перейдите в раздел «Deckhouse» → «Модули».
-1. Найдите в списке модулей модуль `stronghold` и нажмите на него.
-1. В открывшемся окне включите переключатель «Модуль включен» и нажмите «Сохранить».
-1. Дождитесь включения модуля.
-
-## Включение модуля через CLI
-
-На хосте, имеющем доступ к кластеру DP, выполните следующую команду, используя утилиту [Deckhouse CLI](/products/kubernetes-platform/documentation/v1/cli/d8/):
-
-```bash
-d8 system module enable stronghold
-```
+Чтобы установить Deckhouse Stronghold, [включите модуль](/modules/stronghold/configuration.html#enable) `stronghold`.

@@ -39,17 +39,17 @@ spec:
   enabled: true
   settings:
     bundle: Default
-    # [<ru>] Канал обновлений Deckhouse. Канал Early Access достаточно стабилен, его можно использовать в продуктивных окружениях.
+    # [<ru>] Канал обновлений Deckhouse. Канал Early Access можно использовать в production-окружениях.
     # [<ru>] Если планируется использовать несколько кластеров, то рекомендуется установить на них разные каналы обновлений.
     # [<ru>] Подробнее: https://deckhouse.ru/products/kubernetes-platform/documentation/v1/reference/release-channels.html
-    # [<en>] Deckhouse release channel. The Early Access channel is stable enough to be used in productive environments.
+    # [<en>] Deckhouse release channel. The Early Access channel can be used in production environments.
     # [<en>] If you plan to use several clusters, it is recommended to use different release channels on them.
     # [<en>] More info: https://deckhouse.io/products/kubernetes-platform/documentation/v1/reference/release-channels.html
     releaseChannel: EarlyAccess
     logLevel: Info
 ---
 # [<en>] Global Deckhouse settings.
-# [<en>] https://deckhouse.ru/products/kubernetes-platform/documentation/v1/reference/api/global.html#parameters
+# [<en>] https://deckhouse.io/products/kubernetes-platform/documentation/v1/reference/api/global.html#parameters
 # [<ru>] Глобальные настройки Deckhouse.
 # [<ru>] https://deckhouse.ru/products/kubernetes-platform/documentation/v1/reference/api/global.html#%D0%BF%D0%B0%D1%80%D0%B0%D0%BC%D0%B5%D1%82%D1%80%D1%8B
 apiVersion: deckhouse.io/v1alpha1
@@ -110,7 +110,7 @@ spec:
 # [<en>] Cloud provider settings.
 # [<en>] https://deckhouse.io/modules/cloud-provider-yandex/cluster_configuration.html
 # [<ru>] Настройки облачного провайдера.
-# [<ru>] https://deckhouse.io/modules/cloud-provider-yandex/cluster_configuration.html
+# [<ru>] https://deckhouse.ru/modules/cloud-provider-yandex/cluster_configuration.html
 apiVersion: deckhouse.io/v1
 kind: YandexClusterConfiguration
 layout: Standard
@@ -223,7 +223,7 @@ metadata:
 spec:
   ingressClass: nginx
   inlet: LoadBalancer
-  # [<en>] Describes on which nodes the Ingress Controller will be located. Label node.deckhouse.io/group: <NAME_GROUP_NAME> is set automatically.
+  # [<en>] Describes on which nodes the Ingress Controller will be located. Label node.deckhouse.io/group: <NODE_GROUP_NAME> is set automatically.
   # [<ru>] Описывает, на каких узлах будет находиться Ingress-контроллер. Лейбл node.deckhouse.io/group: <NODE_GROUP_NAME> устанавливается автоматически.
   nodeSelector:
     node.deckhouse.io/group: worker

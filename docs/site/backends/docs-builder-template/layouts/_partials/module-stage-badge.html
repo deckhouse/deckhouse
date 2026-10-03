@@ -30,8 +30,17 @@
     {{- end }}
 
     {{- $stageLink := partial "helpers/rewrite-link" (dict "href" (T "module_lifecycle_stage_link") "inner" (T "module_lifecycle_stage")) }}
-    {{- $content := printf "%s: <span data-tippy-content='%s' class='alert__info'>%s</span>" $stageLink (T (printf "module_alert_%s_long" $statusKey )) $moduleStage }}
+    {{- $content := printf "%s: <span data-tippy-content='%s' class='alert__info'>%s</span>" $stageLink (T (printf "module_alert_%s_long" $statusKey )) (T (printf "module_alert_%s" $statusKey )) }}
+    {{- /* Link to the requirements only if CONFIGURATION renders them: the page exists and the module has openapi/config-values.yaml */}}
+    {{- $hasRequirementsSection := false }}
     {{- if $hasRequirements }}
+      {{- with index $moduleData "openapi" }}
+        {{- if and (index . "config-values") ($.ctx.GetPage (printf "modules/%s/%s/CONFIGURATION.md" $module $channel)) }}
+          {{- $hasRequirementsSection = true }}
+        {{- end }}
+      {{- end }}
+    {{- end }}
+    {{- if $hasRequirementsSection }}
       {{- $content = printf "%s\n\n%s" $content (T "requirements_for_alert") }}
     {{- end }}
     {{- partial "alert" ( dict "level" $alertLevel "content" $content ) }}

@@ -31,13 +31,13 @@
       {{- end }}
       <p>{{- $itemLine | safeHTML -}}</p>
       {{- if .license -}}
-        <p>{{- printf "License: %s" .license }}</p>
+        <p>{{- printf "%s: %s" (T "oss_license") .license }}</p>
       {{- end }}
       {{- if .description }}
         <p>{{- printf "%s" .description }}</p>
       {{- end }}
+      </li>
     {{- end }}
-    </li>
+    </ul>
   {{- end }}
-  </ul>
 {{- end }}

@@ -11,11 +11,11 @@ In the [guide to choosing the minimum required disk space](hardware-requirements
 Problems may arise not through the fault of the administrator, but due to the peculiarities of the installer of the selected Linux distribution. For example, during installation, Astra Linux may allocate 15 GB for the root file system (`/`), 15 GB for the user's home directory (`/home`), and leave the rest unallocated, despite the connected disk having a total capacity of 60 GB, as recommended in the guide. With this configuration, the DP installation will not fail with an error about insufficient disk space.
 {% endalert %}
 
-To avoid problems in the future, before installing, it is better to make sure that the file system partitions of the disk allocated for the machine meet the DP volume requirements.
+To avoid problems in the future, before installing, make sure that the file system partitions of the disk allocated for the machine meet the DP volume requirements.
 
 ## Where and what does DP store
 
-DP stores various types of data in specific file system directories. Let's look at the main ones in more detail:
+DP stores various types of data in specific file system directories. The main ones are:
 
 * `/etc/kubernetes/`, `/etc/containerd`, etc. — directories with Kubernetes component configuration;
 * `/var/lib/containerd` — layers of images of DP components and other containers running on the node. The more DP components are installed on a node or user load containers are launched on it, the more free space in this directory will be required.
@@ -23,18 +23,18 @@ DP stores various types of data in specific file system directories. Let's look 
   * data about the pods running in the cluster;
   * ephemeral-storage data — for example, if 7 GB of ephemeral-storage is requested on the master node, and there is not enough space in this directory, pods will not be scheduled for this node.
 * `/var/lib/etcd` — the etcd database, which stores the information necessary for the operation of the Kubernetes cluster;
-* `/var/lib/deckhouse/downloaded/` — repository of release configurations for Deckhouse DP modules ([ModuleRelease](../documentation/v1/reference/api/cr.html#modulerelease));
+* `/var/lib/deckhouse/downloaded/` — repository of release configurations for DP modules ([ModuleRelease](../documentation/v1/reference/api/cr.html#modulerelease));
 * `/var/lib/deckhouse/stronghold/` — data storage for [Stronghold](../../stronghold/) (if the corresponding module is enabled);
 * `/var/log/pods/` — storage of pod logs;
 * `/opt/deckhouse/` — DP service components such as kubelet, containerd, static utilities (e.g. lsblk), etc.;
-* `/opt/local-path-provider/` — directory for storing data when using [local storage Local Path Provisioner](../documentation/v1/admin/configuration/storage/sds/local-path-provisioner.html) (may be redefined [in configuration](../documentation/v1/admin/configuration/storage/sds/local-path-provisioner.html#example-localpathprovisioner-resources)).
+* `/opt/local-path-provisioner/` — directory for storing data when using [local storage Local Path Provisioner](../documentation/v1/admin/configuration/storage/sds/local-path-provisioner.html). The directory is set in the required `spec.path` parameter of LocalPathProvisioner, and the [configuration examples](../documentation/v1/admin/configuration/storage/sds/local-path-provisioner.html#example-localpathprovisioner-resources) use `/opt/local-path-provisioner`.
 
-## Disk Space Recommendations
+## Disk space recommendations
 
 The sections below show the disk volumes occupied by the various cluster components.
 
 {% alert level="info" %}
-The total amount of space specified in the tables may exceed the minimum recommended disk size for a cluster node specified in the "Quick Start" or ["Bare metal Cluster Requirements"](./hardware-requirements.html ). This is due to the fact that the table shows the maximum required values for the components, and the minimum requirements for the node indicate the average value.
+The total amount of space specified in the tables may exceed the minimum recommended disk size for a cluster node specified in the "Quick Start" or ["Picking resources for a bare metal cluster"](./hardware-requirements.html). This is due to the fact that the table shows the maximum required values for the components, and the minimum requirements for the node indicate the average value.
 {% endalert %}
 
 ### Master nodes
@@ -93,7 +93,7 @@ The table below shows the recommended amounts of space for the directories used 
     </tr>
     <tr>
       <td><code>/var/log/pods</code></td>
-      <td>5 (<a href="#pod-log-storage">details...</a>)</td>
+      <td>18 (<a href="#pod-log-storage">details...</a>)</td>
     </tr>
   </tbody>
 </table>
@@ -169,18 +169,20 @@ If you use a cluster configuration without dedicated system nodes, the above loa
 
 ### Pod log storage
 
-Pod logs are stored in the `/var/log/pods/` directory. The amount of logs used depends on the number of containers and DP settings. On average, about 90 containers are running on the master node when using the [Default module set](../documentation/v1/admin/configuration/#module-bundles), with about 50 MB of space allocated to the logs of each of them by default. That is, there should be a minimum of `90 * 50 MB = 4.5 GB` space available in the directory `/var/log/pods/`.
+Pod logs are stored in the `/var/log/pods/` directory. The amount of logs used depends on the number of containers and DP settings. On average, about 90 containers are running on the master node when using the [Default module set](../documentation/v1/admin/configuration/#module-bundles), By default, up to 4 log files of up to 50 MB each are stored for each container, that is, up to 200 MB per container. That is, there should be a minimum of `90 * 200 MB = 18 GB` space available in the directory `/var/log/pods/`.
 
-The log storage parameters can also be redefined in the `containerLogMaxSize` parameter of [node groups](../documentation/v1/admin/configuration/platform-scaling/node/node-customization.html):
+The log storage parameters can be redefined in the `spec.kubelet.containerLogMaxSize` and `spec.kubelet.containerLogMaxFiles` parameters of the [NodeGroup](/modules/node-manager/cr.html#nodegroup) (see [node customization](../documentation/v1/admin/configuration/platform-scaling/node/node-customization.html)). Default values:
 
 ```yaml
-containerLogMaxSize: 50Mi
-containerLogMaxFiles: 4
+spec:
+  kubelet:
+    containerLogMaxSize: 50Mi
+    containerLogMaxFiles: 4
 ```
 
-### Trivy Vulnerability Database Repository
+### Trivy vulnerability database repository
 
-DP has a built-in [vulnerability image scanning system](../documentation/v1/admin/configuration/security/scanning.html) based on [Trivy](https://github.com/aquasecurity/trivy), which scans all container images used in the cluster's files. Both public vulnerability databases and enriched data from Astra Linux, ALT Linux and RED OS are used for scanning. The total amount of disk space occupied by databases is 5 GB, so it must be taken into account when choosing the disk partition configuration.
+DP has a built-in [vulnerability image scanning system](../documentation/v1/admin/configuration/security/scanning.html) based on [Trivy](https://github.com/aquasecurity/trivy), which scans all container images used in the cluster's pods. Both public vulnerability databases and enriched data from Astra Linux, ALT Linux and RED OS are used for scanning. The total amount of disk space occupied by databases is 5 GB, so it must be taken into account when choosing the disk partition configuration.
 
 Databases are stored on the cluster's system nodes, and if there are no such nodes in the cluster, the databases will be located on the worker node.
 

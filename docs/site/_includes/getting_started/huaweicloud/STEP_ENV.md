@@ -1,6 +1,8 @@
 {%- include getting_started/global/partials/NOTICES_ENVIRONMENT.liquid %}
 
-Deckhouse Platform components interact with Huawei Cloud resources through the Huawei Cloud API. To configure this connection, you need to create a user in the Huawei Cloud IAM service and provide it with the necessary permissions.
+Prepare the {{ page.platform_name[page.lang] }} environment so that Deckhouse Platform can manage cloud resources. The full procedure is described on the [environment preparation page](/modules/cloud-provider-huaweicloud/environment.html) of the `cloud-provider-huaweicloud` module.
+
+Deckhouse Platform components interact with Huawei Cloud resources through the Huawei Cloud API. To configure this connection, create a user in the Huawei Cloud IAM service and grant it the necessary permissions.
 
 ## Configuring IAM via the web interface
 

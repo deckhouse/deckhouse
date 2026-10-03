@@ -33,7 +33,7 @@ $(document).ready(function() {
 
 <div class="license-form-request">
 <h3 class="text text_h3">
-  Have no key?
+  No license key?
 </h3>
 <div class="button-group">
   <a href="" data-open-modal="request_access" class="button button_alt">Request free trial</a>

@@ -1,6 +1,6 @@
 {%- include getting_started/stronghold/global/partials/NOTICES.liquid %}
 
-## Configure cluster
+## Cluster parameters
 
 <div class="form">
 {%- if page.platform_type == 'baremetal' %}
@@ -13,14 +13,14 @@
       name="domain" placeholder="%s.domain.my"
       autocomplete="off" />
     <span class="info invalid-message invalid-message-main">Enter a domain name template containing <code>%s</code>, e.g., <code>%s.domain.my</code> or <code>%s-kube.domain.my</code>.</span>
-    <span class="info invalid-message invalid-message-example-com">Please don't use the <code>example.com</code> domain name.</span>
+    <span class="info invalid-message invalid-message-example-com">Do not use the <code>example.com</code> domain name.</span>
     <span class="info">
       This template is used for system apps domains within the cluster, e.g., Grafana for <code>%s.domain.my</code> will be available as <code>grafana.domain.my</code>.<br />
       This tutorial assumes the use of a public domain pointing to a public cluster address.
       It is necessary to obtain <a href="https://letsencrypt.org/">Let's Encrypt</a> certificates for Deckhouse services.
       If the existing certificates (including self-signed ones) are used, you need to adjust the <a href="/products/kubernetes-platform/documentation/v1/reference/api/global.html#parameters-modules-https"><code>modules.https</code></a> section in the global settings.<br />
       {%- unless page.platform_code == 'bm-private' %}
-      We recommend using the <a href="https://sslip.io/">sslip.io</a> service (or similar) for testing if wildcard DNS records are unavailable to you for some reason.
+      If wildcard DNS records are unavailable to you, you can use the <a href="https://sslip.io/">sslip.io</a> service (or similar) for testing.
       {%- endunless %}
     </span>
   </div>
@@ -54,7 +54,7 @@
       name="proxyHttpURI" placeholder="http[s]://[[USER][:PASSWORD]@]proxy.company.my[:PORT]"
       autocomplete="off"/>
     <span class="info invalid-message invalid-message-main">Proxy address should match <code>http://proxy.company.my</code> or <code>http[s]://[[USER][:PASSWORD]@]proxy.company.my[:PORT]</code>.</span>
-    <span class="info invalid-message invalid-message-example-com">Please don't use the <code>proxy.company.my</code> domain name.</span>
+    <span class="info invalid-message invalid-message-example-com">Do not use the <code>proxy.company.my</code> domain name.</span>
     <span class="info">
          Leave it blank if you don't use the HTTP proxy server.
       </span>
@@ -70,9 +70,9 @@
       name="proxyHttpsURI" placeholder="http[s]://[[USER][:PASSWORD]@]proxy.company.my[:PORT]"
       autocomplete="off"/>
     <span class="info invalid-message invalid-message-main">Proxy address should match <code>http://proxy.company.my</code> or <code>http[s]://[[USER][:PASSWORD]@]proxy.company.my[:PORT]</code>.</span>
-    <span class="info invalid-message invalid-message-example-com">Please don't use the <code>proxy.company.my</code> domain name.</span>
+    <span class="info invalid-message invalid-message-example-com">Do not use the <code>proxy.company.my</code> domain name.</span>
     <span class="info">
-        Leave it blank if you don't use the HTTP proxy server.
+        Leave it blank if you don't use the HTTPS proxy server.
       </span>
   </div>
 
@@ -86,7 +86,7 @@
       name="noProxyAddressList" placeholder=""
       autocomplete="off"/>
     <span class="info invalid-message invalid-message-main">The addresses must match the templates <code>127.0.0.1</code>, <code>192.168.0.0/24</code>, <code>example.com</code> and <code>".example.com"</code>.</span>
-    <span class="info invalid-message invalid-message-example-com">Please don't use the <code>example.com</code> domain name.</span>
+    <span class="info invalid-message invalid-message-example-com">Do not use the <code>example.com</code> domain name.</span>
       <span class="info">
          Specify a list of IP addresses, networks, and domain names that can be accessed directly without using a proxy server. Also specify here the subnet of the cluster nodes if the cluster is supposed to have pods interacting with services located in the node network. For wildcard domains, use a domain name with a dot prefix, e.g., ".example.com".
       </span>
@@ -103,7 +103,7 @@
 
   <div class="form__row">
     <label class="label" title="Specify the path prefix for Deckhouse container images">
-      The path prefix for Deckhouse container images (e.g., <code>registry.deckhouse.io/deckhouse/ee</code> for Deckhouse EE).
+      The path prefix for Deckhouse container images (e.g., <code>registry.deckhouse.io/deckhouse/ee</code> for Deckhouse Platform Commercial Editions).
     </label>
     <input
       class="textfield"

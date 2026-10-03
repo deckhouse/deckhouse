@@ -1,14 +1,16 @@
 {%- include getting_started/global/partials/NOTICES_ENVIRONMENT.liquid %}
 
-Для управления ресурсами в Yandex Cloud, необходимо создать сервисный аккаунт с правами на редактирование. Подробная инструкция по созданию сервисного аккаунта в Yandex Cloud доступна в [документации](/modules/cloud-provider-yandex/environment.html). Ниже краткая версия:
+Подготовьте окружение {{ page.platform_name[page.lang] }}, чтобы Deckhouse Platform мог управлять ресурсами в облаке. Полная инструкция приведена [на странице подготовки окружения](/modules/cloud-provider-yandex/environment.html) модуля `cloud-provider-yandex`.
 
-1. Создайте пользователя с именем `deckhouse`:
+Создайте сервисный аккаунт для Deckhouse Platform и назначьте ему роли `compute.editor`, `vpc.admin` и `load-balancer.editor`:
+
+1. Создайте сервисный аккаунт с именем `deckhouse`:
 
    ```shell
    yc iam service-account create --name deckhouse
    ```
 
-   В ответ вернутся параметры пользователя:
+   В ответ вернутся параметры сервисного аккаунта:
 
    ```console
    id: <userID>
@@ -17,7 +19,7 @@
    name: deckhouse
    ```
 
-1. Назначьте необходимые роли вновь созданному пользователю для своего облака:
+1. Назначьте роли сервисному аккаунту в каталоге:
 
    ```shell
    yc resource-manager folder add-access-binding --id <folderID> --role compute.editor --subject serviceAccount:<userID>
@@ -25,7 +27,7 @@
    yc resource-manager folder add-access-binding --id <folderID> --role load-balancer.editor --subject serviceAccount:<userID>
    ```
 
-1. Создайте JSON-файл с параметрами авторизации пользователя в облаке. В дальнейшем с помощью этих данных будет происходить авторизация в облаке:
+1. Создайте JSON-файл с авторизованным ключом сервисного аккаунта. Deckhouse Platform использует его для доступа к облаку:
 
    ```shell
    yc iam key create --service-account-name deckhouse --output deckhouse-sa-key.json

@@ -5,7 +5,18 @@
 {{- if .Description }}
   {{- $description = .Description }}
 {{- else }}
-  {{- $description = partial "get-description-from-content" (dict "content" .RawContent) }}
+  {{- /* CONFIGURATION and CR pages have no body text: describe them by the module name */}}
+  {{- with .File }}
+    {{- $descriptionKey := index (dict "CONFIGURATION" "description_configuration" "CR" "description_cr" "CRD" "description_cr") (strings.ToUpper .TranslationBaseName) }}
+    {{- if $descriptionKey }}
+      {{- with findRESubmatch `^modules/([a-zA-Z0-9-]+)/` .Dir 1 }}
+        {{- $description = replace (T $descriptionKey) "<MODULENAME>" (index (index . 0) 1) }}
+      {{- end }}
+    {{- end }}
+  {{- end }}
+  {{- if not $description }}
+    {{- $description = partial "get-description-from-content" (dict "content" .RawContent) }}
+  {{- end }}
 {{- end }}
 {{- if lt ( $description | len ) 20 }}{{ $description = .Site.Params.description }}{{ end }}
 

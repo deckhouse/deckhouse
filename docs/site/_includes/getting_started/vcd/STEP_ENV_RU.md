@@ -1,8 +1,13 @@
 {%- include getting_started/global/partials/NOTICES_ENVIRONMENT.liquid %}
+
+Подготовьте окружение {{ page.platform_name[page.lang] }}, чтобы Deckhouse Platform мог управлять ресурсами в облаке. Полная инструкция приведена [на странице подготовки окружения](/modules/cloud-provider-vcd/environment.html) модуля `cloud-provider-vcd`.
+
 {% alert level="warning" %}
 Работоспособность провайдера подтверждена только для шаблонов виртуальных машин на базе Ubuntu 22.04.
 {% endalert %}
 
-Для начала работы с провайдером необходим созданный тенант с ресурсами, указанными в [документации](/modules/cloud-provider-vcd/environment.html#список-необходимых-ресурсов-vcd).
+Выполните предварительные настройки:
 
-После получения тенанта, необходимо настроить внутреннюю сеть, EDGE Gateway и подготовить шаблон виртуальной машины. Следуйте инструкциям по настройке окружения в [документации](/modules/cloud-provider-vcd/environment.html) провайдера.
+1. Получите тенант с ресурсами из [списка необходимых ресурсов VCD](/modules/cloud-provider-vcd/environment.html#список-необходимых-ресурсов-vcd). В виртуальном дата-центре должен быть Edge Gateway. Внутренняя сеть кластера в схеме размещения `WithNAT`, которая используется на этой странице, создаётся автоматически.
+1. Получите пользователя с [необходимыми правами](/modules/cloud-provider-vcd/environment.html#права-пользователя).
+1. Подготовьте [шаблон виртуальной машины](/modules/cloud-provider-vcd/environment.html#шаблон-виртуальной-машины).
