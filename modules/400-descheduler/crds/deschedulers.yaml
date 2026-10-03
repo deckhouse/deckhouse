@@ -490,6 +490,29 @@ spec:
                   type: boolean
                   default: false
                   description: Allows Pods using local storage to be evicted.
+                protectedStorageClasses:
+                  type: array
+                  description: |-
+                    A list of StorageClass names whose Pods must not be evicted.
+
+                    If a Pod refers to a PersistentVolumeClaim provisioned by one of the listed StorageClasses,
+                    the descheduler will never evict such a Pod.
+
+                    Note the following:
+                    - An empty list (or an omitted parameter) keeps the current behavior: Pods with PVCs are evicted as usual.
+                    - A Pod whose PersistentVolumeClaim cannot be resolved (the PVC is missing or has an empty `storageClassName`)
+                      is considered protected as well.
+                  items:
+                    type: string
+                    description: A StorageClass name.
+                    minLength: 1
+                    maxLength: 253
+                    pattern: '^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$'
+                  minItems: 1
+                  uniqueItems: true
+                  x-doc-examples:
+                    - - local-path
+                      - ceph-rbd
                 strategies:
                   type: object
                   description: Settings of strategies for the Descheduler instances.

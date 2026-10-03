@@ -59,3 +59,32 @@ spec:
         cpu: 50
         memory: 50
 ```
+
+## Защита подов по StorageClass
+
+Параметр [`protectedStorageClasses`](cr.html#descheduler-v1alpha2-spec-protectedstorageclasses) запрещает вытеснять поды, использующие PersistentVolumeClaim из указанных StorageClass. Это полезно для хранилищ, привязанных к узлу (например, `local-path`), где вытеснение пода либо ломает локальность данных, либо оставляет под без возможности запуска.
+
+```yaml
+---
+apiVersion: deckhouse.io/v1alpha2
+kind: Descheduler
+metadata:
+  name: protect-local-storage
+spec:
+  protectedStorageClasses:
+    - local-path
+  strategies:
+    lowNodeUtilization:
+      enabled: true
+      thresholds:
+        cpu: 20
+      targetThresholds:
+        cpu: 50
+```
+
+С такой конфигурацией descheduler продолжит перераспределять остальные поды, но под с PersistentVolumeClaim из StorageClass `local-path` вытеснен не будет.
+
+Обратите внимание:
+
+- Если параметр не указан или список пуст, поведение не меняется: поды с PersistentVolumeClaim вытесняются как обычно.
+- Под также считается защищённым, если его PersistentVolumeClaim не удалось определить, то есть PVC отсутствует или у него пустой `storageClassName`. Такие поды не вытесняются, пока параметр задан.
