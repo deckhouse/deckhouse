@@ -43,18 +43,33 @@ function openTab(evt, linksClass, contentClass, contentId) {
   trigger.className += " active";
 }
 
+// Returns the arguments of the first openTab call in the onclick attribute of a tab button:
+// [linksClass, contentClass, contentId], or null.
+// The string arguments can be in single or double quotes:
+// the HTML minifier of the Hugo product sites rewrites onclick="f(event, 'a')" to onclick='f(event,"a")'.
+function getTabButtonArgs(btn) {
+  var onclickStr = (btn && btn.getAttribute && btn.getAttribute("onclick")) || "";
+  var match = onclickStr.match(/openTab\w*\(\s*event\s*,\s*(['"])(.+?)\1\s*,\s*(['"])(.+?)\3\s*,\s*(['"])(.+?)\5/);
+  return match ? [match[2], match[4], match[6]] : null;
+}
+
+// Returns true if the onclick attribute of a tab button opens the content block with the given id.
+function tabButtonOpens(btn, id) {
+  var onclickStr = btn.getAttribute("onclick") || "";
+  return onclickStr.indexOf("'" + id + "'") !== -1 || onclickStr.indexOf('"' + id + '"') !== -1;
+}
+
 // Activate a tab button without a real click event and without writing to sessionStorage.
 function activateTabBtn(btn) {
-  var linksClass, contentClass, block, onclickStr, match;
+  var block;
 
   // Derive classes and target block id from the onclick attribute.
-  onclickStr = btn.getAttribute("onclick") || "";
-  match = onclickStr.match(/openTab\w*\(event,\s*'([^']+)',\s*'([^']+)',\s*'([^']+)'/);
-  if (!match) return;
+  var args = getTabButtonArgs(btn);
+  if (!args) return;
 
-  linksClass  = match[1];
-  contentClass = match[2];
-  var blockId = match[3];
+  var linksClass = args[0];
+  var contentClass = args[1];
+  var blockId = args[2];
 
   var scope = getTabScope(btn);
   var tabcontent = scope.getElementsByClassName(contentClass);
@@ -95,6 +110,15 @@ function warnDuplicateTabIds() {
   }
 }
 
+// Returns the first tab button in the scope that opens the content block with the given id.
+function findTabButton(scope, id) {
+  var buttons = scope.querySelectorAll("a[onclick], li[onclick]");
+  for (var i = 0; i < buttons.length; i++) {
+    if (tabButtonOpens(buttons[i], id)) return buttons[i];
+  }
+  return null;
+}
+
 // Opens the tabs that contain the element of the URL hash anchor, from the outermost to the innermost, and scrolls to it.
 // On page load, scrolls to the element in any case.
 // On a hash change, does nothing for an element outside tabs: the browser has already scrolled to it.
@@ -119,9 +143,8 @@ function openTabsForHash(hash, onlyInTabs) {
     // Activate outermost → innermost so nested tabs open correctly.
     // Look for the button in the tabs block of the panel: another tab set can have a panel with the same id.
     panels.forEach(function (panel) {
-      var selector = "a[onclick*=\"'" + panel.id + "'\"], li[onclick*=\"'" + panel.id + "'\"]";
       var scope = getTabScope(panel);
-      var btn = (scope !== document && scope.querySelector(selector)) || document.querySelector(selector);
+      var btn = findTabButton(scope, panel.id) || (scope !== document && findTabButton(document, panel.id));
       if (btn) activateTabBtn(btn);
     });
 
