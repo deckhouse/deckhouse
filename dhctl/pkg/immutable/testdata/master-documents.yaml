@@ -188,7 +188,7 @@ spec:
           - --bind-address=$MY_IP
           - --etcd-servers=https://127.0.0.1:2379
           - --feature-gates=RotateKubeletServerCertificate=true,CRDSensitiveData=true,TopologyAwareHints=true,DRADeviceBindingConditions=true,DRAConsumableCapacity=true,DRAExtendedResource=true,DRADeviceTaints=true,DRAPartitionableDevices=true
-          - --runtime-config=admissionregistration.k8s.io/v1beta1=true,admissionregistration.k8s.io/v1alpha1=true,resource.k8s.io/v1alpha3=true
+          - --runtime-config=admissionregistration.k8s.io/v1beta1=true,admissionregistration.k8s.io/v1alpha1=true,resource.k8s.io/v1beta1=true,resource.k8s.io/v1alpha3=true
           - --profiling=false
           - --request-timeout=60s
           - --tls-cipher-suites=TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256,TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256,TLS_ECDHE_ECDSA_WITH_CHACHA20_POLY1305,TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384,TLS_ECDHE_RSA_WITH_CHACHA20_POLY1305,TLS_ECDHE_ECDSA_WITH_AES_256_GCM_SHA384,TLS_ECDHE_ECDSA_WITH_CHACHA20_POLY1305_SHA256,TLS_ECDHE_RSA_WITH_CHACHA20_POLY1305_SHA256

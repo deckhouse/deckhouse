@@ -30,7 +30,9 @@
 {{- end -}}
 {{- $apiserverFeatureGatesStr := $apiserverFeatureGates | uniq | join "," -}}
 {{- $runtimeConfigList := list "admissionregistration.k8s.io/v1beta1=true" "admissionregistration.k8s.io/v1alpha1=true" -}}
-{{- if semverCompare ">=1.32 <1.34" .clusterConfiguration.kubernetesVersion }}
+{{- /* 1.34 serves resource.k8s.io/v1 by default, but kube-scheduler and kube-controller-manager 1.33 still read v1beta1:
+       keep it for 1.34 so the control plane survives the version skew during the 1.33 -> 1.34 upgrade */ -}}
+{{- if semverCompare ">=1.32 <1.35" .clusterConfiguration.kubernetesVersion }}
   {{- $runtimeConfigList = append $runtimeConfigList "resource.k8s.io/v1beta1=true" -}}
 {{- end }}
 {{- if semverCompare ">=1.33 <1.36" .clusterConfiguration.kubernetesVersion }}
