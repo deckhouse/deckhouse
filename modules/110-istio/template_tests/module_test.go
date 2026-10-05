@@ -664,6 +664,7 @@ networks:
 			f.ValuesSetFromYaml("istio.internal.versionsToInstall", `["1.25","1.27"]`)
 			f.ValuesSetFromYaml("istio.internal.operatorVersionsToInstall", `["1.25","1.27"]`)
 			f.ValuesSetFromYaml("istio.internal.applicationNamespaces", `[foo,bar]`)
+			f.ValuesSetFromYaml("istio.internal.waypointNamespaces", `[bar,baz]`)
 			f.HelmRender()
 		})
 
@@ -681,6 +682,7 @@ networks:
 
 			secretD8RegistryFoo := f.KubernetesResource("Secret", "foo", "d8-istio-sidecar-registry")
 			secretD8RegistryBar := f.KubernetesResource("Secret", "bar", "d8-istio-sidecar-registry")
+			secretD8RegistryBaz := f.KubernetesResource("Secret", "baz", "d8-istio-sidecar-registry")
 
 			secretCacerts := f.KubernetesResource("Secret", "d8-istio", "cacerts")
 
@@ -694,6 +696,7 @@ networks:
 
 			Expect(secretD8RegistryFoo.Exists()).To(BeTrue())
 			Expect(secretD8RegistryBar.Exists()).To(BeTrue())
+			Expect(secretD8RegistryBaz.Exists()).To(BeTrue())
 
 			Expect(mwh.Exists()).To(BeTrue())
 			Expect(serviceGlobal.Exists()).To(BeTrue())

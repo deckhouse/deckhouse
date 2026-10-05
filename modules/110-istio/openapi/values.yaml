@@ -211,9 +211,16 @@ properties:
         type: array
         items:
           type: string
-        default: [ ]
+        default: []
         x-examples:
-          - [ "myns" ]
+        - ["myns"]
+      waypointNamespaces:
+        type: array
+        items:
+          type: string
+        default: []
+        x-examples:
+        - ["myns"]
       multiclustersNeedIngressGateway:
         type: boolean
         default: false
