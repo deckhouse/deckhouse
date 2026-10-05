@@ -45,20 +45,6 @@
       "justification": "vulnerable_code_not_in_execute_path",
       "impact_statement": "CVE-2026-78662 is a denial of service in golang.org/x/crypto/ssh: a malicious peer can flood the incoming requests of a channel that is not yet established and deadlock the connection. This component does not import or execute the golang.org/x/crypto/ssh package and neither accepts nor initiates SSH connections; golang.org/x/crypto is pulled in transitively for other subpackages only.",
       "timestamp": "2026-09-09T09:20:42.000000000Z"
-    },
-    {
-      "vulnerability": {
-        "name": "CVE-2026-47262"
-      },
-      "products": [
-        {
-          "@id": "pkg:golang/github.com/containerd/containerd@v1.7.33"
-        }
-      ],
-      "status": "not_affected",
-      "justification": "vulnerable_code_not_in_execute_path",
-      "impact_statement": "CVE-2026-47262 is a DoS via a maliciously crafted image in containerd. The Istio/Sail operator does not pull or run untrusted OCI images via containerd CRI in the vulnerable path; containerd is a transitive dependency and the vulnerable execute path is not used.",
-      "timestamp": "2026-07-24T12:00:00.000000000Z"
     }
   ],
   "timestamp": "2026-09-09T09:20:42Z"
