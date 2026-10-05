@@ -385,7 +385,7 @@ Use [`spec.resourcesRequests`](cr.html#ingressistiocontroller-v1alpha1-spec-reso
           max: 1000m
         memory:
           min: 128Mi
-          max: 2000Mi
+          max: 2048Mi
   ```
 
 ### Ingress NGINX
@@ -799,7 +799,7 @@ spec:
         max: 1000m
       memory:
         min: 128Mi
-        max: 2000Mi
+        max: 2048Mi
 ```
 
 The controller provisions the waypoint infrastructure (Deployment, Service, Gateway, VPA, and a PDB — when the effective replica count is `>= 2`). The controller **does not** attach workloads to the waypoint. You can do that with the `istio.io/use-waypoint` label.

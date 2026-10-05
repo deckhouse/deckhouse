@@ -1732,7 +1732,7 @@ MY_VAR: "myvalue"
 			Expect(ingressSvc.Exists()).To(BeTrue())
 
 			Expect(ingressVpa.Field("spec.updatePolicy.updateMode").String()).To(Equal("Initial"))
-			Expect(ingressVpa.Field("spec.resourcePolicy").String()).To(MatchJSON(`{"containerPolicies":[{"containerName":"istio-proxy","controlledValues":"RequestsAndLimits","maxAllowed":{"cpu":"1000m","memory":"2000Mi"},"minAllowed":{"cpu":"100m","memory":"128Mi"}}]}`))
+			Expect(ingressVpa.Field("spec.resourcePolicy").String()).To(MatchJSON(`{"containerPolicies":[{"containerName":"istio-proxy","controlledValues":"RequestsAndLimits","maxAllowed":{"cpu":"1000m","memory":"2048Mi"},"minAllowed":{"cpu":"100m","memory":"128Mi"}}]}`))
 
 			Expect(ingressDs.Field("metadata.labels").String()).To(MatchJSON(`{"app":"ingress-gateway-controller","heritage":"deckhouse","instance":"nodeport-test","istio":"ingressgateway","istio.deckhouse.io/ingress-gateway-class":"np","istio.io/dataplane-mode":"none","module":"istio"}`))
 

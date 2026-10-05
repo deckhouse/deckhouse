@@ -11,7 +11,7 @@
   {{- $vpaConfig := dict
       "mode" ($vpa.mode | default "Initial")
       "cpu" (dict "min" ($cpu.min | default "100m") "max" ($cpu.max | default "1000m"))
-      "memory" (dict "min" ($memory.min | default "128Mi") "max" ($memory.max | default "2000Mi"))
+      "memory" (dict "min" ($memory.min | default "128Mi") "max" ($memory.max | default "2048Mi"))
   -}}
   {{- dict "mode" "VPA" "vpa" $vpaConfig | toYaml -}}
 {{- else -}}

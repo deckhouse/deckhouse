@@ -386,7 +386,7 @@ spec:
           max: 1000m
         memory:
           min: 128Mi
-          max: 2000Mi
+          max: 2048Mi
   ```
 
 ### Ingress NGINX
@@ -801,7 +801,7 @@ spec:
         max: 1000m
       memory:
         min: 128Mi
-        max: 2000Mi
+        max: 2048Mi
 ```
 
 Контроллер создаёт инфраструктуру waypoint (Deployment, Service, Gateway, VPA, а также PDB — если эффективное количество реплик `>= 2`). Контроллер **не** подключает рабочие нагрузки к waypoint. Для этого используйте лейбл `istio.io/use-waypoint`.
