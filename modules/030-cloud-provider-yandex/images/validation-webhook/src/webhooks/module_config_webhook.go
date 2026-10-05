@@ -18,7 +18,7 @@ import (
 	"context"
 
 	admissionv1 "k8s.io/api/admission/v1"
-	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	ctrl "sigs.k8s.io/controller-runtime"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
@@ -32,17 +32,17 @@ import (
 // ModuleConfigValidator validates the cloud-provider-yandex ModuleConfig.
 type ModuleConfigValidator struct {
 	factory *ycval.AdmissionStateBuilderFactory
-	object  runtime.Object
+	object  *unstructured.Unstructured
 }
 
 var (
-	_ admission.CustomValidator = (*ModuleConfigValidator)(nil)
-	_ cpwebhook.Registrar       = (*ModuleConfigValidator)(nil)
+	_ admission.Validator[*unstructured.Unstructured] = (*ModuleConfigValidator)(nil)
+	_ cpwebhook.Registrar                             = (*ModuleConfigValidator)(nil)
 
 	moduleConfigLog = logf.Log.WithName("module-config")
 )
 
-func NewModuleConfigValidator(factory *ycval.AdmissionStateBuilderFactory, object runtime.Object) *ModuleConfigValidator {
+func NewModuleConfigValidator(factory *ycval.AdmissionStateBuilderFactory, object *unstructured.Unstructured) *ModuleConfigValidator {
 	return &ModuleConfigValidator{
 		factory: factory,
 		object:  object,
@@ -50,36 +50,35 @@ func NewModuleConfigValidator(factory *ycval.AdmissionStateBuilderFactory, objec
 }
 
 func (v *ModuleConfigValidator) Register(manager ctrl.Manager) error {
-	return ctrl.NewWebhookManagedBy(manager).
-		For(v.object).
+	return ctrl.NewWebhookManagedBy(manager, v.object).
 		WithValidator(v).
 		Complete()
 }
 
-func (v *ModuleConfigValidator) ValidateCreate(ctx context.Context, obj runtime.Object) (admission.Warnings, error) {
+func (v *ModuleConfigValidator) ValidateCreate(ctx context.Context, obj *unstructured.Unstructured) (admission.Warnings, error) {
 	return v.validate(ctx, admissionv1.Create, obj)
 }
 
-func (v *ModuleConfigValidator) ValidateUpdate(ctx context.Context, _, newObj runtime.Object) (admission.Warnings, error) {
+func (v *ModuleConfigValidator) ValidateUpdate(ctx context.Context, _, newObj *unstructured.Unstructured) (admission.Warnings, error) {
 	return v.validate(ctx, admissionv1.Update, newObj)
 }
 
-func (v *ModuleConfigValidator) ValidateDelete(ctx context.Context, obj runtime.Object) (admission.Warnings, error) {
+func (v *ModuleConfigValidator) ValidateDelete(ctx context.Context, obj *unstructured.Unstructured) (admission.Warnings, error) {
 	return v.validate(ctx, admissionv1.Delete, obj)
 }
 
 // shouldValidateModuleConfig reports whether the reviewed object is the provider ModuleConfig.
 // ModuleConfig is cluster-scoped, so the name alone identifies it.
-func (v *ModuleConfigValidator) shouldValidateModuleConfig(obj runtime.Object) bool {
-	return objectName(obj) == ycmeta.ModuleName
+func (v *ModuleConfigValidator) shouldValidateModuleConfig(obj *unstructured.Unstructured) bool {
+	return obj.GetName() == ycmeta.ModuleName
 }
 
 func (v *ModuleConfigValidator) validate(
 	ctx context.Context,
 	operation admissionv1.Operation,
-	obj runtime.Object,
+	obj *unstructured.Unstructured,
 ) (admission.Warnings, error) {
-	name := objectName(obj)
+	name := obj.GetName()
 
 	if !v.shouldValidateModuleConfig(obj) {
 		moduleConfigLog.V(2).Info("skipping validation", "reason", "not the provider ModuleConfig", "name", name)

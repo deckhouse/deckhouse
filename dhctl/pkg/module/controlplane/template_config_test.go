@@ -33,7 +33,7 @@ func TestConfigForControlPlaneTemplates_NoModuleConfig(t *testing.T) {
 	cfg := getTestTemplateConfig(t, m, "")
 
 	require.Equal(t, "RSA-4096", cfg.ClusterConfiguration["encryptionAlgorithm"].(string))
-	require.Equal(t, "1.32", cfg.ClusterConfiguration["kubernetesVersion"].(string))
+	require.Equal(t, "1.33", cfg.ClusterConfiguration["kubernetesVersion"].(string))
 	require.Empty(t, cfg.Settings)
 }
 
@@ -161,7 +161,7 @@ func newMetaConfig(t *testing.T, clusterConfig map[string]json.RawMessage, modul
 
 func baseClusterConfig() map[string]json.RawMessage {
 	return map[string]json.RawMessage{
-		"kubernetesVersion":       mustRawMessage("1.32"),
+		"kubernetesVersion":       mustRawMessage("1.33"),
 		"clusterDomain":           mustRawMessage("cluster.local"),
 		"serviceSubnetCIDR":       mustRawMessage("192.168.0.0/16"),
 		"podSubnetCIDR":           mustRawMessage("10.244.0.0/16"),

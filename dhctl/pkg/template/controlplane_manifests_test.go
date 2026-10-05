@@ -60,14 +60,14 @@ func testVersionSelection(t *testing.T) {
 		expectedKind string
 	}{
 		{
-			name:         "Kubernetes 1.32 should generate pod manifests",
-			k8sVersion:   "1.32",
+			name:         "Kubernetes 1.33 should generate pod manifests",
+			k8sVersion:   "1.33",
 			expectedAPI:  "apiVersion: v1",
 			expectedKind: "kind: Pod",
 		},
 		{
-			name:         "Kubernetes 1.33 should generate pod manifests",
-			k8sVersion:   "1.33",
+			name:         "Kubernetes 1.34 should generate pod manifests",
+			k8sVersion:   "1.34",
 			expectedAPI:  "apiVersion: v1",
 			expectedKind: "kind: Pod",
 		},
@@ -128,7 +128,7 @@ func getDataForFullManifestRendering(version string) map[string]any {
 
 func testManifestsRendering(t *testing.T) {
 	t.Run("All Control Plane Pod Manifests Render Successfully", func(t *testing.T) {
-		versions := []string{"1.32", "1.33"}
+		versions := []string{"1.33", "1.34"}
 
 		for _, version := range versions {
 			t.Run("Version "+version, func(t *testing.T) {
@@ -162,8 +162,8 @@ func testFeatureGates(t *testing.T) {
 		expectedFeatures []string
 	}{
 		{
-			name:       "Kubernetes 1.32 should not include legacy feature gates",
-			k8sVersion: "1.32",
+			name:       "Kubernetes 1.33 should not include legacy feature gates",
+			k8sVersion: "1.33",
 			expectedFeatures: []string{
 				"TopologyAwareHints=true",
 				"RotateKubeletServerCertificate=true",
@@ -226,7 +226,7 @@ func testAPIServerConfiguration(t *testing.T) {
 	}{
 		{
 			name:       "authentication configuration",
-			k8sVersion: "1.32",
+			k8sVersion: "1.33",
 		},
 	}
 
@@ -496,7 +496,7 @@ func testClusterTypes(t *testing.T) {
 		},
 	}
 
-	versions := []string{"1.32", "1.33"}
+	versions := []string{"1.33", "1.34"}
 
 	for _, version := range versions {
 		for _, tt := range tests {
@@ -546,7 +546,7 @@ func testRunTypes(t *testing.T) {
 		},
 	}
 
-	versions := []string{"1.32", "1.33"}
+	versions := []string{"1.33", "1.34"}
 
 	for _, version := range versions {
 		for _, tt := range tests {
@@ -592,7 +592,7 @@ func testRunTypes(t *testing.T) {
 }
 
 func testServiceAccountConfiguration(t *testing.T) {
-	versions := []string{"1.32", "1.33"}
+	versions := []string{"1.33", "1.34"}
 
 	for _, version := range versions {
 		t.Run(fmt.Sprintf("Default Service Account (v%s)", version), func(t *testing.T) {
@@ -710,7 +710,7 @@ func testServiceAccountConfiguration(t *testing.T) {
 }
 
 func testETCDConfiguration(t *testing.T) {
-	versions := []string{"1.32", "1.33"}
+	versions := []string{"1.33", "1.34"}
 
 	for _, version := range versions {
 		t.Run(fmt.Sprintf("No ETCD Configuration (v%s)", version), func(t *testing.T) {
@@ -743,8 +743,9 @@ func testETCDConfiguration(t *testing.T) {
 				if !strings.Contains(manifest, "initial-cluster-state=existing") {
 					t.Error("Expected initial-cluster-state not found")
 				}
-				if !strings.Contains(manifest, "InitialCorruptCheck=true") {
-					t.Error("Expected corrupt check not found")
+				// etcd.yaml.tpl emits the gate only below 1.34; on 1.34+ the check is on by default.
+				if hasCorruptCheck := strings.Contains(manifest, "InitialCorruptCheck=true"); hasCorruptCheck != (version < "1.34") {
+					t.Errorf("InitialCorruptCheck=true present=%v for %s, want %v", hasCorruptCheck, version, version < "1.34")
 				}
 				if !strings.Contains(manifest, "--metrics=extensive") {
 					t.Error("Expected metrics configuration not found")
@@ -775,7 +776,7 @@ func testETCDConfiguration(t *testing.T) {
 }
 
 func testOptionalArguments(t *testing.T) {
-	versions := []string{"1.32", "1.33"}
+	versions := []string{"1.33", "1.34"}
 
 	for _, version := range versions {
 		t.Run(fmt.Sprintf("Node Monitor Arguments (v%s)", version), func(t *testing.T) {
@@ -826,7 +827,7 @@ func testOptionalArguments(t *testing.T) {
 
 func testPatchesRendering(t *testing.T) {
 	t.Run("All Patches Render Successfully", func(t *testing.T) {
-		versions := []string{"1.32", "1.33"}
+		versions := []string{"1.33", "1.34"}
 
 		for _, version := range versions {
 			t.Run("Version "+version, func(t *testing.T) {
@@ -878,7 +879,7 @@ func testPatchesRendering(t *testing.T) {
 }
 
 func testEdgeCases(t *testing.T) {
-	versions := []string{"1.32", "1.33"}
+	versions := []string{"1.33", "1.34"}
 
 	for _, version := range versions {
 		t.Run(fmt.Sprintf("Complex Configuration Combination (v%s)", version), func(t *testing.T) {
@@ -1248,7 +1249,7 @@ func testSignatureArgsAPIServerRender(t *testing.T) {
 }
 
 func testMissingCoverage(t *testing.T) {
-	versions := []string{"1.32", "1.33"}
+	versions := []string{"1.33", "1.34"}
 
 	for _, version := range versions {
 		t.Run(fmt.Sprintf("Runtime Config Version Condition (v%s)", version), func(t *testing.T) {
@@ -1388,8 +1389,8 @@ func testMissingCoverage(t *testing.T) {
 	}
 
 	t.Run("Feature Gates Version Boundaries", func(t *testing.T) {
-		// Test exactly version 1.32 boundary
-		data := getBaseTemplateData("1.32")
+		// Test exactly version 1.33 boundary
+		data := getBaseTemplateData("1.33")
 		result, err := renderFullManifests(data, "kube-apiserver", "kube-controller-manager", "kube-scheduler")
 		if err != nil {
 			t.Fatalf("Failed to render control-plane config: %v", err)
@@ -1401,13 +1402,13 @@ func testMissingCoverage(t *testing.T) {
 			if len(matches) >= 2 {
 				featureGates := matches[1]
 				if strings.Contains(featureGates, "ValidatingAdmissionPolicy=true") {
-					t.Errorf("Unexpected legacy feature gate found for Kubernetes 1.32 in %s", name)
+					t.Errorf("Unexpected legacy feature gate found for Kubernetes 1.33 in %s", name)
 				}
 				if !strings.Contains(featureGates, "DynamicResourceAllocation=true") {
-					t.Errorf("Expected feature gate not found for Kubernetes 1.32 in %s", name)
+					t.Errorf("Expected feature gate not found for Kubernetes 1.33 in %s", name)
 				}
 				if name == "kube-apiserver.yaml" && !strings.Contains(featureGates, "CRDSensitiveData=true") {
-					t.Errorf("Expected CRDSensitiveData=true for Kubernetes 1.32 in %s", name)
+					t.Errorf("Expected CRDSensitiveData=true for Kubernetes 1.33 in %s", name)
 				}
 			}
 		}

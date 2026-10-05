@@ -22,9 +22,6 @@
   id: cluster-autoscaler
   versions:
     - condition:
-        k8s: "1.32"
-      version: v1.32.3
-    - condition:
         k8s: "1.33"
       version: v1.33.1
     - condition:
@@ -35,4 +32,7 @@
       version: v1.35.1
     - condition:
         k8s: "1.36"
+      version: v1.35.1
+    - condition:
+        k8s: "1.37"
       version: v1.35.1

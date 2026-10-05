@@ -1,56 +1,3 @@
-"1.32":
-  forbidden: []
-  deprecated:
-    - DisableNodeKubeProxyVersion
-  kubelet:
-    - ComponentFlagz
-    - ComponentStatusz
-    - ConcurrentWatchObjectDecode
-    - ImageVolume
-    - InPlacePodVerticalScaling
-    - KubeletPodResourcesGet
-    - MemoryQoS
-    - MutatingAdmissionPolicy
-    - PodLogsQuerySplitStreams
-    - ResourceHealthStatus
-    - SELinuxMount
-    - InPlacePodVerticalScalingAllocatedStatus
-  apiserver:
-    - AllowUnsafeMalformedObjectDeletion
-    - ComponentFlagz
-    - ComponentStatusz
-    - ConcurrentWatchObjectDecode
-    - CrossNamespaceVolumeDataSource
-    - HPAScaleToZero
-    - ImageVolume
-    - InPlacePodVerticalScaling
-    - MaxUnavailableStatefulSet
-    - MutatingAdmissionPolicy
-    - PodLogsQuerySplitStreams
-    - ProcMountType
-    - ResourceHealthStatus
-    - SELinuxChangePolicy
-    - SELinuxMount
-    - DisableAllocatorDualWrite
-    - InPlacePodVerticalScalingAllocatedStatus
-    - OrderedNamespaceDeletion
-    - PodLifecycleSleepActionAllowZero
-    - RelaxedDNSSearchValidation
-  kubeControllerManager:
-    - ComponentFlagz
-    - ComponentStatusz
-    - ConcurrentWatchObjectDecode
-    - CrossNamespaceVolumeDataSource
-    - InPlacePodVerticalScaling
-    - MaxUnavailableStatefulSet
-    - SELinuxChangePolicy
-    - SELinuxMount
-  kubeScheduler:
-    - ComponentFlagz
-    - ComponentStatusz
-    - ConcurrentWatchObjectDecode
-    - InPlacePodVerticalScaling
-    - SchedulerAsyncPreemption
 "1.33":
   forbidden: []
   deprecated:
@@ -253,4 +200,38 @@
   kubeScheduler:
     - ConcurrentWatchObjectDecode
     - NativeHistograms
+    - TaintTolerationComparisonOperators
+"1.37":
+  forbidden: []
+  deprecated:
+    - KubeProxyIPVS
+  kubelet:
+    - AtomicWriteVolumeUserFields
+    - ContainerStopSignals
+    - CRIListStreaming
+    - EmptyDirVolumeMode
+    - GRPCContainerProbeTLS
+    - H2CContainerProbe
+    - InPlacePodVerticalScalingMemoryBackedVolumes
+    - MutablePVNodeAffinity
+    - PodLogsQuerySplitStreams
+  apiserver:
+    - AtomicWriteVolumeUserFields
+    - ContainerStopSignals
+    - CRDObservedGenerationTracking
+    - CrossNamespaceVolumeDataSource
+    - EmptyDirVolumeMode
+    - GRPCContainerProbeTLS
+    - H2CContainerProbe
+    - InPlacePodVerticalScalingMemoryBackedVolumes
+    - MutablePVNodeAffinity
+    - PodLogsQuerySplitStreams
+    - ShardedListAndWatch
+    - StatefulSetRecreateStrategy
+    - TaintTolerationComparisonOperators
+  kubeControllerManager:
+    - ControllerManagerReleaseLeaderElectionLockOnExit
+    - CrossNamespaceVolumeDataSource
+    - StatefulSetRecreateStrategy
+  kubeScheduler:
     - TaintTolerationComparisonOperators

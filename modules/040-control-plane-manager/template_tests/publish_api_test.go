@@ -69,7 +69,7 @@ const globalValues = `
       master:
         __ConstantChoices__: "3"
     podSubnet: 10.0.1.0/16
-    kubernetesVersion: 1.32.13
+    kubernetesVersion: 1.33.13
 `
 const publishAPIValues = (`
 publishAPI:
@@ -87,7 +87,7 @@ var _ = Describe("Module :: control-plane-manager :: helm template :: publish ap
 
 	BeforeEach(func() {
 		hec.ValuesSetFromYaml("global", globalValues)
-		hec.ValuesSet("global.discovery.kubernetesVersion", "1.32.13")
+		hec.ValuesSet("global.discovery.kubernetesVersion", "1.33.13")
 		hec.ValuesSet("global.modules.publicDomainTemplate", "%s.example.com")
 		hec.ValuesSet("global.modules.ingressClass", "nginx")
 		hec.ValuesSet("global.modules.https.mode", "CertManager")
@@ -97,8 +97,8 @@ var _ = Describe("Module :: control-plane-manager :: helm template :: publish ap
 		hec.ValuesSet("global.discovery.d8SpecificNodeCountByRole.system", 2)
 		hec.ValuesSet("global.discovery.kubernetesCA", "plainstring")
 		hec.ValuesSet("global.discovery.clusterDomain", "cluster.local")
-		hec.ValuesSet("controlPlaneManager.internal.effectiveKubernetesVersion", "1.32")
-		hec.ValuesSet("controlPlaneManager.internal.maxUsedKubernetesVersion", "1.32")
+		hec.ValuesSet("controlPlaneManager.internal.effectiveKubernetesVersion", "1.33")
+		hec.ValuesSet("controlPlaneManager.internal.maxUsedKubernetesVersion", "1.33")
 		hec.ValuesSet("controlPlaneManager.internal.authn.enableBasicAuth", true)
 		hec.ValuesSet("controlPlaneManager.internal.authn.publishedAPIKubeconfigGeneratorMasterCA", "publishedapica")
 		hec.ValuesSet("controlPlaneManager.internal.selfSignedCA.cert", "test")

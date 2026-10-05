@@ -28,7 +28,6 @@ import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	admissionv1 "k8s.io/api/admission/v1"
-	corev1 "k8s.io/api/core/v1"
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -119,7 +118,7 @@ var _ = BeforeSuite(func() {
 		NamespaceName:    dvpmeta.Namespace,
 		InstanceClassGVK: dvpicv1alpha1.GroupVersionKind,
 	})
-	Expect(NewCredentialSecretValidator(factory, &corev1.Secret{}).Register(mgr)).To(Succeed())
+	Expect(NewCredentialSecretValidator(factory).Register(mgr)).To(Succeed())
 	Expect(NewNodeGroupValidator(factory, newWebhookTestObject(nodeGroupGVK())).Register(mgr)).To(Succeed())
 	Expect(NewDVPInstanceClassValidator(factory, newWebhookTestObject(instanceClassGVK())).Register(mgr)).To(Succeed())
 

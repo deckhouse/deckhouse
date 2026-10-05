@@ -18,7 +18,7 @@ import (
 	"context"
 
 	admissionv1 "k8s.io/api/admission/v1"
-	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	ctrl "sigs.k8s.io/controller-runtime"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
@@ -33,17 +33,17 @@ import (
 
 type NodeGroupValidator struct {
 	factory *dvpval.AdmissionStateBuilderFactory
-	object  runtime.Object
+	object  *unstructured.Unstructured
 }
 
 var (
-	_ admission.CustomValidator = (*NodeGroupValidator)(nil)
-	_ cpwebhook.Registrar       = (*NodeGroupValidator)(nil)
+	_ admission.Validator[*unstructured.Unstructured] = (*NodeGroupValidator)(nil)
+	_ cpwebhook.Registrar                             = (*NodeGroupValidator)(nil)
 
 	nodeGroupLog = logf.Log.WithName("node-group")
 )
 
-func NewNodeGroupValidator(factory *dvpval.AdmissionStateBuilderFactory, object runtime.Object) *NodeGroupValidator {
+func NewNodeGroupValidator(factory *dvpval.AdmissionStateBuilderFactory, object *unstructured.Unstructured) *NodeGroupValidator {
 	return &NodeGroupValidator{
 		factory: factory,
 		object:  object,
@@ -51,33 +51,32 @@ func NewNodeGroupValidator(factory *dvpval.AdmissionStateBuilderFactory, object 
 }
 
 func (v *NodeGroupValidator) Register(manager ctrl.Manager) error {
-	return ctrl.NewWebhookManagedBy(manager).
-		For(v.object).
+	return ctrl.NewWebhookManagedBy(manager, v.object).
 		WithValidator(v).
 		Complete()
 }
 
-func (v *NodeGroupValidator) ValidateCreate(ctx context.Context, obj runtime.Object) (admission.Warnings, error) {
+func (v *NodeGroupValidator) ValidateCreate(ctx context.Context, obj *unstructured.Unstructured) (admission.Warnings, error) {
 	if !v.shouldValidateNodeGroup(obj) {
-		nodeGroupLog.V(2).Info("skipping validation", "reason", "not DVP-relevant NodeGroup", "name", objectName(obj))
+		nodeGroupLog.V(2).Info("skipping validation", "reason", "not DVP-relevant NodeGroup", "name", obj.GetName())
 		return nil, nil
 	}
 
 	return v.validate(ctx, admissionv1.Create, obj)
 }
 
-func (v *NodeGroupValidator) ValidateUpdate(ctx context.Context, oldObj, newObj runtime.Object) (admission.Warnings, error) {
+func (v *NodeGroupValidator) ValidateUpdate(ctx context.Context, oldObj, newObj *unstructured.Unstructured) (admission.Warnings, error) {
 	if !v.shouldValidateNodeGroupUpdate(oldObj, newObj) {
-		nodeGroupLog.V(2).Info("skipping validation", "reason", "not DVP-relevant NodeGroup update", "name", objectName(newObj))
+		nodeGroupLog.V(2).Info("skipping validation", "reason", "not DVP-relevant NodeGroup update", "name", newObj.GetName())
 		return nil, nil
 	}
 
 	return v.validate(ctx, admissionv1.Update, newObj)
 }
 
-func (v *NodeGroupValidator) ValidateDelete(ctx context.Context, obj runtime.Object) (admission.Warnings, error) {
+func (v *NodeGroupValidator) ValidateDelete(ctx context.Context, obj *unstructured.Unstructured) (admission.Warnings, error) {
 	if !v.shouldValidateNodeGroup(obj) {
-		nodeGroupLog.V(2).Info("skipping validation", "reason", "not DVP-relevant NodeGroup delete", "name", objectName(obj))
+		nodeGroupLog.V(2).Info("skipping validation", "reason", "not DVP-relevant NodeGroup delete", "name", obj.GetName())
 		return nil, nil
 	}
 
@@ -87,15 +86,15 @@ func (v *NodeGroupValidator) ValidateDelete(ctx context.Context, obj runtime.Obj
 func (v *NodeGroupValidator) validate(
 	ctx context.Context,
 	operation admissionv1.Operation,
-	obj runtime.Object,
+	obj *unstructured.Unstructured,
 ) (admission.Warnings, error) {
-	name := objectName(obj)
+	name := obj.GetName()
 	nodeGroupLog.Info(
 		"validating resource",
 		"operation", operation,
 		"resource", "NodeGroup",
 		"name", name,
-		"namespace", objectNamespace(obj),
+		"namespace", obj.GetNamespace(),
 	)
 
 	builder := v.factory.CreateBuilder()
@@ -134,13 +133,13 @@ func (v *NodeGroupValidator) validate(
 		"operation", operation,
 		"resource", "NodeGroup",
 		"name", name,
-		"namespace", objectNamespace(obj),
+		"namespace", obj.GetNamespace(),
 	)
 
 	return warnings, nil
 }
 
-func (v *NodeGroupValidator) shouldValidateNodeGroup(obj runtime.Object) bool {
+func (v *NodeGroupValidator) shouldValidateNodeGroup(obj *unstructured.Unstructured) bool {
 	if obj == nil {
 		return true
 	}
@@ -153,7 +152,7 @@ func (v *NodeGroupValidator) shouldValidateNodeGroup(obj runtime.Object) bool {
 	return v.isDVPRelevantNodeGroup(nodeGroup)
 }
 
-func (v *NodeGroupValidator) shouldValidateNodeGroupUpdate(oldObj, newObj runtime.Object) bool {
+func (v *NodeGroupValidator) shouldValidateNodeGroupUpdate(oldObj, newObj *unstructured.Unstructured) bool {
 	if v.shouldValidateNodeGroup(newObj) {
 		return true
 	}

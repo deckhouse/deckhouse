@@ -19,8 +19,6 @@ import (
 	"strings"
 
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
-	"k8s.io/apimachinery/pkg/api/meta"
-	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/util/validation/field"
 	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
@@ -108,22 +106,4 @@ func violationFieldPath(path string) *field.Path {
 
 func internalBuildError(err error) error {
 	return apierrors.NewInternalError(fmt.Errorf("build validation state: %w", err))
-}
-
-func objectName(obj runtime.Object) string {
-	accessor, err := meta.Accessor(obj)
-	if err != nil {
-		return ""
-	}
-
-	return accessor.GetName()
-}
-
-func objectNamespace(obj runtime.Object) string {
-	accessor, err := meta.Accessor(obj)
-	if err != nil {
-		return ""
-	}
-
-	return accessor.GetNamespace()
 }

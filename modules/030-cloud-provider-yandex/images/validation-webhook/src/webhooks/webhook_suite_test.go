@@ -27,7 +27,6 @@ import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	admissionv1 "k8s.io/api/admission/v1"
-	corev1 "k8s.io/api/core/v1"
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -120,7 +119,7 @@ var _ = BeforeSuite(func() {
 		NamespaceName:    ycmeta.Namespace,
 		InstanceClassGVK: instanceClassGVK(),
 	})
-	Expect(NewCredentialSecretValidator(factory, &corev1.Secret{}).Register(mgr)).To(Succeed())
+	Expect(NewCredentialSecretValidator(factory).Register(mgr)).To(Succeed())
 	Expect(NewModuleConfigValidator(factory, newWebhookTestObject(moduleConfigGVK())).Register(mgr)).To(Succeed())
 	Expect(NewNodeGroupValidator(factory, newWebhookTestObject(nodeGroupGVK())).Register(mgr)).To(Succeed())
 	Expect(NewYandexInstanceClassValidator(factory, newWebhookTestObject(instanceClassGVK())).Register(mgr)).To(Succeed())

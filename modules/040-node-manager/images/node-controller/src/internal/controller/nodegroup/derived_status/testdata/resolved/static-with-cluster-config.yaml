@@ -11,7 +11,7 @@ kubelet:
   resourceReservation:
     mode: Auto
   topologyManager: {}
-kubernetesVersion: "1.32"
+kubernetesVersion: "1.33"
 manualRolloutID: ""
 name: static-full
 nodeTemplate:

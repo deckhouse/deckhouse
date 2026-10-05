@@ -18,7 +18,7 @@ import (
 	"context"
 
 	admissionv1 "k8s.io/api/admission/v1"
-	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	ctrl "sigs.k8s.io/controller-runtime"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
@@ -32,17 +32,17 @@ import (
 
 type YandexInstanceClassValidator struct {
 	factory *ycval.AdmissionStateBuilderFactory
-	object  runtime.Object
+	object  *unstructured.Unstructured
 }
 
 var (
-	_ admission.CustomValidator = (*YandexInstanceClassValidator)(nil)
-	_ cpwebhook.Registrar       = (*YandexInstanceClassValidator)(nil)
+	_ admission.Validator[*unstructured.Unstructured] = (*YandexInstanceClassValidator)(nil)
+	_ cpwebhook.Registrar                             = (*YandexInstanceClassValidator)(nil)
 
 	instanceClassLog = logf.Log.WithName("instance-class")
 )
 
-func NewYandexInstanceClassValidator(factory *ycval.AdmissionStateBuilderFactory, object runtime.Object) *YandexInstanceClassValidator {
+func NewYandexInstanceClassValidator(factory *ycval.AdmissionStateBuilderFactory, object *unstructured.Unstructured) *YandexInstanceClassValidator {
 	return &YandexInstanceClassValidator{
 		factory: factory,
 		object:  object,
@@ -50,36 +50,35 @@ func NewYandexInstanceClassValidator(factory *ycval.AdmissionStateBuilderFactory
 }
 
 func (v *YandexInstanceClassValidator) Register(manager ctrl.Manager) error {
-	return ctrl.NewWebhookManagedBy(manager).
-		For(v.object).
+	return ctrl.NewWebhookManagedBy(manager, v.object).
 		WithValidator(v).
 		Complete()
 }
 
-func (v *YandexInstanceClassValidator) ValidateCreate(ctx context.Context, obj runtime.Object) (admission.Warnings, error) {
+func (v *YandexInstanceClassValidator) ValidateCreate(ctx context.Context, obj *unstructured.Unstructured) (admission.Warnings, error) {
 	return v.validate(ctx, admissionv1.Create, obj)
 }
 
-func (v *YandexInstanceClassValidator) ValidateUpdate(ctx context.Context, _, newObj runtime.Object) (admission.Warnings, error) {
+func (v *YandexInstanceClassValidator) ValidateUpdate(ctx context.Context, _, newObj *unstructured.Unstructured) (admission.Warnings, error) {
 	return v.validate(ctx, admissionv1.Update, newObj)
 }
 
-func (v *YandexInstanceClassValidator) ValidateDelete(ctx context.Context, obj runtime.Object) (admission.Warnings, error) {
+func (v *YandexInstanceClassValidator) ValidateDelete(ctx context.Context, obj *unstructured.Unstructured) (admission.Warnings, error) {
 	return v.validate(ctx, admissionv1.Delete, obj)
 }
 
 func (v *YandexInstanceClassValidator) validate(
 	ctx context.Context,
 	operation admissionv1.Operation,
-	obj runtime.Object,
+	obj *unstructured.Unstructured,
 ) (admission.Warnings, error) {
-	name := objectName(obj)
-	namespace := objectNamespace(obj)
+	name := obj.GetName()
+	namespace := obj.GetNamespace()
 
 	instanceClassLog.Info(
 		"validating resource",
 		"operation", operation,
-		"resource", obj.GetObjectKind().GroupVersionKind().Kind,
+		"resource", obj.GetKind(),
 		"name", name,
 		"namespace", namespace,
 	)
@@ -130,7 +129,7 @@ func (v *YandexInstanceClassValidator) validate(
 	instanceClassLog.Info(
 		"validation allowed",
 		"operation", operation,
-		"resource", obj.GetObjectKind().GroupVersionKind().Kind,
+		"resource", obj.GetKind(),
 		"name", name,
 		"namespace", namespace,
 	)

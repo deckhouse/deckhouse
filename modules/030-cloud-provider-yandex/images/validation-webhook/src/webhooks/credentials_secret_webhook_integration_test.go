@@ -52,11 +52,10 @@ var _ = Describe("CredentialSecret webhook", func() {
 		Entry("unsupported authScheme", func(secret *corev1.Secret) {
 			secret.Data[cpapi.CredentialSecretAuthSchemeKey] = []byte(cpapi.AuthSchemeKubeconfig)
 		}, `d8-credentials.data.authScheme: Invalid value: "kubeconfig": authScheme "kubeconfig" is not allowed`),
-		// An empty authScheme reaches CombinedCredentialValidator, which reports it as a value
-		// outside the allowed set rather than as a missing key.
+		// A removed authScheme key is reported as missing rather than as a value outside the allowed set.
 		Entry("missing authScheme", func(secret *corev1.Secret) {
 			delete(secret.Data, cpapi.CredentialSecretAuthSchemeKey)
-		}, `d8-credentials.data.authScheme: Invalid value: "": authScheme "" is not allowed`),
+		}, `d8-credentials.data.authScheme: Invalid value: null: authScheme is required`),
 		Entry("missing serviceAccount secret", func(secret *corev1.Secret) {
 			secret.Data[cpapi.CredentialSecretAuthSchemeKey] = []byte(cpapi.AuthSchemeServiceAccount)
 			delete(secret.Data, cpapi.CredentialSecretSecretKey)

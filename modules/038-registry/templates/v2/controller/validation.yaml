@@ -6,7 +6,7 @@ apiVersion, with no helm_lib_kind_exists gate: a gate answers from the Helm
 capabilities, which the template tests cannot satisfy, so a gated file is never
 rendered in CI — and a policy that silently does not exist is exactly the failure
 that matters here. ValidatingAdmissionPolicy has been GA since Kubernetes 1.30
-and candi/version_map.yml supports 1.32 upwards, so the gate would protect
+and candi/version_map.yml supports 1.33 upwards, so the gate would protect
 nothing either.
 */ -}}
 {{- if eq (include "registry_v2_manages" .) "true" }}

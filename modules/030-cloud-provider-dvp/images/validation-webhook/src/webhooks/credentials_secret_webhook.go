@@ -21,8 +21,6 @@ import (
 	admissionv1 "k8s.io/api/admission/v1"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
-	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
-	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/util/validation/field"
 	ctrl "sigs.k8s.io/controller-runtime"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
@@ -37,60 +35,57 @@ import (
 
 type CredentialSecretValidator struct {
 	factory *dvpval.AdmissionStateBuilderFactory
-	object  runtime.Object
 }
 
 var (
-	_ admission.CustomValidator = (*CredentialSecretValidator)(nil)
-	_ cpwebhook.Registrar       = (*CredentialSecretValidator)(nil)
+	_ admission.Validator[*corev1.Secret] = (*CredentialSecretValidator)(nil)
+	_ cpwebhook.Registrar                 = (*CredentialSecretValidator)(nil)
 
 	credentialSecretLog = logf.Log.WithName("credential-secret")
 )
 
-func NewCredentialSecretValidator(factory *dvpval.AdmissionStateBuilderFactory, object runtime.Object) *CredentialSecretValidator {
+func NewCredentialSecretValidator(factory *dvpval.AdmissionStateBuilderFactory) *CredentialSecretValidator {
 	return &CredentialSecretValidator{
 		factory: factory,
-		object:  object,
 	}
 }
 
 func (v *CredentialSecretValidator) Register(manager ctrl.Manager) error {
-	return ctrl.NewWebhookManagedBy(manager).
-		For(v.object).
+	return ctrl.NewWebhookManagedBy(manager, &corev1.Secret{}).
 		WithValidator(v).
 		Complete()
 }
 
-func (v *CredentialSecretValidator) ValidateCreate(ctx context.Context, obj runtime.Object) (admission.Warnings, error) {
-	return v.validate(ctx, admissionv1.Create, obj)
+func (v *CredentialSecretValidator) ValidateCreate(ctx context.Context, secret *corev1.Secret) (admission.Warnings, error) {
+	return v.validate(ctx, admissionv1.Create, secret)
 }
 
-func (v *CredentialSecretValidator) ValidateUpdate(ctx context.Context, oldObj, newObj runtime.Object) (admission.Warnings, error) {
-	if err := validateCredentialSecretTypeChange(oldObj, newObj); err != nil {
+func (v *CredentialSecretValidator) ValidateUpdate(ctx context.Context, oldSecret, newSecret *corev1.Secret) (admission.Warnings, error) {
+	if err := validateCredentialSecretTypeChange(oldSecret, newSecret); err != nil {
 		return nil, err
 	}
 
-	return v.validate(ctx, admissionv1.Update, newObj)
+	return v.validate(ctx, admissionv1.Update, newSecret)
 }
 
-func (v *CredentialSecretValidator) ValidateDelete(ctx context.Context, obj runtime.Object) (admission.Warnings, error) {
-	return v.validate(ctx, admissionv1.Delete, obj)
+func (v *CredentialSecretValidator) ValidateDelete(ctx context.Context, secret *corev1.Secret) (admission.Warnings, error) {
+	return v.validate(ctx, admissionv1.Delete, secret)
 }
 
 func (v *CredentialSecretValidator) validate(
 	ctx context.Context,
 	operation admissionv1.Operation,
-	obj runtime.Object,
+	secret *corev1.Secret,
 ) (admission.Warnings, error) {
-	namespace := objectNamespace(obj)
-	name := objectName(obj)
+	namespace := secret.Namespace
+	name := secret.Name
 
 	if namespace != dvpmeta.Namespace {
 		credentialSecretLog.V(2).Info("skipping validation", "reason", "not module namespace", "namespace", namespace, "name", name)
 		return nil, nil
 	}
 
-	if !isManagedCredentialSecretObject(obj) {
+	if secret.Type != cpapi.CredentialsSecretType {
 		credentialSecretLog.V(2).Info("skipping validation", "reason", "not managed credential secret", "name", name)
 		return nil, nil
 	}
@@ -102,12 +97,6 @@ func (v *CredentialSecretValidator) validate(
 		"name", name,
 		"namespace", namespace,
 	)
-
-	secret, err := asSecret(obj)
-	if err != nil {
-		credentialSecretLog.Error(err, "failed to build validation state", "name", name, "namespace", namespace)
-		return nil, internalBuildError(err)
-	}
 
 	builder := v.factory.CreateBuilder()
 	if operation != admissionv1.Delete {
@@ -149,35 +138,12 @@ func (v *CredentialSecretValidator) validate(
 	return warnings, nil
 }
 
-func isManagedCredentialSecretObject(obj runtime.Object) bool {
-	if secret, ok := obj.(*corev1.Secret); ok {
-		return secret.Type == cpapi.CredentialsSecretType
-	}
-
-	if unstructuredObj, ok := obj.(*unstructured.Unstructured); ok {
-		secretType, _, _ := unstructured.NestedString(unstructuredObj.Object, "type")
-		return secretType == cpapi.CredentialsSecretType
-	}
-
-	return false
-}
-
-func validateCredentialSecretTypeChange(oldObj, newObj runtime.Object) error {
-	if oldObj == nil || newObj == nil {
+func validateCredentialSecretTypeChange(oldSecret, newSecret *corev1.Secret) error {
+	if oldSecret == nil || newSecret == nil {
 		return nil
 	}
 
-	oldSecret, errOld := asSecret(oldObj)
-	if errOld != nil {
-		return internalBuildError(fmt.Errorf("decode old Secret: %w", errOld))
-	}
-
-	newSecret, errNew := asSecret(newObj)
-	if errNew != nil {
-		return internalBuildError(fmt.Errorf("decode new Secret: %w", errNew))
-	}
-
-	if objectNamespace(oldSecret) != dvpmeta.Namespace {
+	if oldSecret.Namespace != dvpmeta.Namespace {
 		return nil
 	}
 
@@ -204,21 +170,4 @@ func invalidCredentialSecretTypeError(name string) error {
 			),
 		},
 	)
-}
-
-func asSecret(obj runtime.Object) (*corev1.Secret, error) {
-	if secret, ok := obj.(*corev1.Secret); ok {
-		return secret, nil
-	}
-
-	if unstructuredObj, ok := obj.(*unstructured.Unstructured); ok {
-		secret := &corev1.Secret{}
-		if err := runtime.DefaultUnstructuredConverter.FromUnstructured(unstructuredObj.Object, secret); err != nil {
-			return nil, fmt.Errorf("convert unstructured Secret: %w", err)
-		}
-
-		return secret, nil
-	}
-
-	return nil, fmt.Errorf("expected Secret object but got %T", obj)
 }

@@ -109,6 +109,14 @@ func init() {
 				"SchedulerQueueingHints",
 			},
 		},
+		"1.37": {
+			Kubelet: []string{
+				"H2CContainerProbe",
+			},
+			APIServer: []string{
+				"H2CContainerProbe",
+			},
+		},
 	}
 }
 
@@ -193,6 +201,31 @@ var _ = Describe("Modules :: control-plane-manager :: hooks :: get_feature_gates
 				"kubelet": ["CPUManager", "MemoryManager"],
 				"kubeControllerManager": ["CronJobsScheduledAnnotation"],
 				"kubeScheduler": ["SchedulerQueueingHints"]
+			}`))
+		})
+	})
+
+	Context("Feature gates with digits in their names for Kubernetes 1.37", func() {
+		BeforeEach(func() {
+			setTargetKubernetesVersion("1.37")
+			f.ValuesSet("controlPlaneManager.enabledFeatureGates", []interface{}{
+				"H2CContainerProbe",
+			})
+			f.BindingContexts.Set(f.GenerateBeforeHelmContext())
+			f.RunHook()
+		})
+
+		It("Must be executed successfully", func() {
+			Expect(f).To(ExecuteSuccessfully())
+		})
+
+		It("Digits in gate names must survive the values schema", func() {
+			Expect(f).To(ExecuteSuccessfully())
+			Expect(f.ValuesGet("controlPlaneManager.internal.allowedFeatureGates").String()).To(MatchJSON(`{
+				"apiserver": ["H2CContainerProbe"],
+				"kubelet": ["H2CContainerProbe"],
+				"kubeControllerManager": [],
+				"kubeScheduler": []
 			}`))
 		})
 	})

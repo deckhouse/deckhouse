@@ -19,13 +19,10 @@ import (
 	"testing"
 
 	dvpval "github.com/deckhouse/deckhouse/modules/030-cloud-provider-dvp/pkg/validation"
-	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	cpapi "github.com/deckhouse/deckhouse/go_lib/cloud-provider/api"
 	cpvalapi "github.com/deckhouse/deckhouse/go_lib/cloud-provider/validation/api"
-	dvpmeta "github.com/deckhouse/deckhouse/modules/030-cloud-provider-dvp/pkg/meta"
 )
 
 func TestShouldSkipState(t *testing.T) {
@@ -115,17 +112,5 @@ func TestResultToAdmission(t *testing.T) {
 	}
 	if !strings.Contains(details.Causes[0].Message, `authScheme "apiToken" is not allowed`) {
 		t.Fatalf("field error message = %q, want authScheme denial text", details.Causes[0].Message)
-	}
-}
-
-func TestObjectNameAndNamespace(t *testing.T) {
-	t.Parallel()
-
-	secret := &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "s", Namespace: dvpmeta.Namespace}}
-	if objectName(secret) != "s" || objectNamespace(secret) != dvpmeta.Namespace {
-		t.Fatalf("objectName/Namespace() = (%q, %q)", objectName(secret), objectNamespace(secret))
-	}
-	if objectName(&metav1.Status{}) != "" {
-		t.Fatal("objectName() without metadata = non-empty")
 	}
 }

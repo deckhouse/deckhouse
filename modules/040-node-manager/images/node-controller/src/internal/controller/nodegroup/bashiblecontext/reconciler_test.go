@@ -52,7 +52,7 @@ func newReconciler(t *testing.T, objs ...client.Object) *Reconciler {
 		clusterConfigurationSecret("cluster.local"),
 		&corev1.ConfigMap{
 			ObjectMeta: metav1.ObjectMeta{Name: "d8-cluster-kubernetes", Namespace: kubeSystemNS},
-			Data:       map[string]string{"spec": "desiredVersion: \"1.32\"\nupdateMode: Manual\n"},
+			Data:       map[string]string{"spec": "desiredVersion: \"1.33\"\nupdateMode: Manual\n"},
 		},
 	)
 	c := fake.NewClientBuilder().WithScheme(scheme).WithObjects(objs...).Build()
@@ -256,7 +256,7 @@ func TestAssemble_KeepsPublishedCIDRsAndReportsIt(t *testing.T) {
 		entry := byName[name]
 		assert.Equal(t, want, entry["static"], "%s: the CIDRs are one cluster-wide value", name)
 		assert.NotContains(t, entry, "marker", "%s: only the static block comes from the prior entry", name)
-		assert.Equal(t, "1.32", entry["kubernetesVersion"], "%s: everything else must be freshly derived", name)
+		assert.Equal(t, "1.33", entry["kubernetesVersion"], "%s: everything else must be freshly derived", name)
 	}
 }
 

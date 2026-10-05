@@ -1,0 +1,398 @@
+diff --git a/staging/src/k8s.io/apiserver/pkg/admission/plugin/policy/mutating/patch/json_patch.go b/staging/src/k8s.io/apiserver/pkg/admission/plugin/policy/mutating/patch/json_patch.go
+index 439473d839c..a64e39de755 100644
+--- a/staging/src/k8s.io/apiserver/pkg/admission/plugin/policy/mutating/patch/json_patch.go
++++ b/staging/src/k8s.io/apiserver/pkg/admission/plugin/policy/mutating/patch/json_patch.go
+@@ -39,6 +39,7 @@ import (
+ 	plugincel "k8s.io/apiserver/pkg/admission/plugin/cel"
+ 	"k8s.io/apiserver/pkg/cel/mutation"
+ 	"k8s.io/apiserver/pkg/cel/mutation/dynamic"
++	utiljsonpatch "k8s.io/apiserver/pkg/util/jsonpatch"
+ 	pointer "k8s.io/utils/ptr"
+ )
+ 
+@@ -89,6 +90,9 @@ func (e *jsonPatcher) Patch(ctx context.Context, r Request, runtimeCELCostBudget
+ 	if err != nil {
+ 		return nil, fmt.Errorf("failed to create JSON patch: %w", err)
+ 	}
++	if err := utiljsonpatch.ValidateRequiredValue(patchObj); err != nil {
++		return nil, fmt.Errorf("JSON Patch: %w", err)
++	}
+ 	patchedJS, err := patchObj.Apply(objJS)
+ 	if err != nil {
+ 		if errors.Is(err, jsonpatch.ErrTestFailed) {
+diff --git a/staging/src/k8s.io/apiserver/pkg/admission/plugin/policy/mutating/patch/json_patch_test.go b/staging/src/k8s.io/apiserver/pkg/admission/plugin/policy/mutating/patch/json_patch_test.go
+index 1cae4e43c6d..e12038414f0 100644
+--- a/staging/src/k8s.io/apiserver/pkg/admission/plugin/policy/mutating/patch/json_patch_test.go
++++ b/staging/src/k8s.io/apiserver/pkg/admission/plugin/policy/mutating/patch/json_patch_test.go
+@@ -725,6 +725,33 @@ func TestJSONPatch(t *testing.T) {
+ 				{Name: "main-app", Image: "nginx:1.24"},
+ 			}),
+ 		},
++		{
++			name: "jsonPatch replace whole document without value",
++			expression: `[
++					JSONPatch{op: "replace", path: ""},
++				]`,
++			gvr:         deploymentGVR,
++			object:      &appsv1.Deployment{Spec: appsv1.DeploymentSpec{Replicas: ptr.To[int32](1)}},
++			expectedErr: `JSON Patch: json patch operation 0 ("replace") at path "": missing required field "value"`,
++		},
++		{
++			name: "jsonPatch test whole document without value",
++			expression: `[
++					JSONPatch{op: "test", path: ""},
++				]`,
++			gvr:         deploymentGVR,
++			object:      &appsv1.Deployment{Spec: appsv1.DeploymentSpec{Replicas: ptr.To[int32](1)}},
++			expectedErr: `JSON Patch: json patch operation 0 ("test") at path "": missing required field "value"`,
++		},
++		{
++			name: "jsonPatch test missing field without value",
++			expression: `[
++					JSONPatch{op: "test", path: "/spec/paused"},
++				]`,
++			gvr:         deploymentGVR,
++			object:      &appsv1.Deployment{Spec: appsv1.DeploymentSpec{Replicas: ptr.To[int32](1)}},
++			expectedErr: `JSON Patch: json patch operation 0 ("test") at path "/spec/paused": missing required field "value"`,
++		},
+ 	}
+ 
+ 	compiler, err := cel.NewCompositedCompiler(environment.MustBaseEnvSet(environment.DefaultCompatibilityVersion()))
+diff --git a/staging/src/k8s.io/apiserver/pkg/admission/plugin/webhook/mutating/dispatcher.go b/staging/src/k8s.io/apiserver/pkg/admission/plugin/webhook/mutating/dispatcher.go
+index 17b3172dd34..12686c5c323 100644
+--- a/staging/src/k8s.io/apiserver/pkg/admission/plugin/webhook/mutating/dispatcher.go
++++ b/staging/src/k8s.io/apiserver/pkg/admission/plugin/webhook/mutating/dispatcher.go
+@@ -45,6 +45,7 @@ import (
+ 	webhookrequest "k8s.io/apiserver/pkg/admission/plugin/webhook/request"
+ 	auditinternal "k8s.io/apiserver/pkg/apis/audit"
+ 	endpointsrequest "k8s.io/apiserver/pkg/endpoints/request"
++	utiljsonpatch "k8s.io/apiserver/pkg/util/jsonpatch"
+ 	webhookutil "k8s.io/apiserver/pkg/util/webhook"
+ 	"k8s.io/apiserver/pkg/warning"
+ 	"k8s.io/component-base/tracing"
+@@ -356,6 +357,9 @@ func (a *mutatingDispatcher) callAttrMutatingHook(ctx context.Context, h *admiss
+ 		if err != nil {
+ 			return false, apierrors.NewInternalError(err)
+ 		}
++		if err := utiljsonpatch.ValidateRequiredValue(patchObj); err != nil {
++			return false, apierrors.NewInternalError(fmt.Errorf("admission webhook %q returned an invalid patch: %w", h.Name, err))
++		}
+ 		patchedJS, err = patchObj.Apply(objJS)
+ 		if err != nil {
+ 			return false, apierrors.NewInternalError(err)
+diff --git a/staging/src/k8s.io/apiserver/pkg/admission/plugin/webhook/testing/testcase.go b/staging/src/k8s.io/apiserver/pkg/admission/plugin/webhook/testing/testcase.go
+index 4581b8e0e7c..658185c5aed 100644
+--- a/staging/src/k8s.io/apiserver/pkg/admission/plugin/webhook/testing/testcase.go
++++ b/staging/src/k8s.io/apiserver/pkg/admission/plugin/webhook/testing/testcase.go
+@@ -913,6 +913,22 @@ func NewMutatingTestCases(url *url.URL, configurationName string) []MutatingTest
+ 				"patch.webhook.admission.k8s.io/round_0_index_0":    patchAnnotationValue(configurationName, "removelabel.example.com", `[{"op": "remove", "path": "/metadata/labels/remove"}]`),
+ 			},
+ 		},
++		{
++			Name: "match & replace whole document without value",
++			Webhooks: []registrationv1.MutatingWebhook{{
++				Name:                    "replaceRootWithoutValue",
++				ClientConfig:            ccfgSVC("replaceRootWithoutValue"),
++				Rules:                   matchEverythingRules,
++				NamespaceSelector:       &metav1.LabelSelector{},
++				ObjectSelector:          &metav1.LabelSelector{},
++				AdmissionReviewVersions: []string{"v1beta1"},
++			}},
++			ExpectStatusCode: http.StatusInternalServerError,
++			ErrorContains:    `missing required field "value"`,
++			ExpectAnnotations: map[string]string{
++				"mutation.webhook.admission.k8s.io/round_0_index_0": mutationAnnotationValue(configurationName, "replaceRootWithoutValue", false),
++			},
++		},
+ 		{
+ 			Name: "match & invalid mutation",
+ 			Webhooks: []registrationv1.MutatingWebhook{{
+diff --git a/staging/src/k8s.io/apiserver/pkg/admission/plugin/webhook/testing/webhook_server.go b/staging/src/k8s.io/apiserver/pkg/admission/plugin/webhook/testing/webhook_server.go
+index d4d232f2d00..adccde4a147 100644
+--- a/staging/src/k8s.io/apiserver/pkg/admission/plugin/webhook/testing/webhook_server.go
++++ b/staging/src/k8s.io/apiserver/pkg/admission/plugin/webhook/testing/webhook_server.go
+@@ -147,6 +147,16 @@ func webhookHandler(w http.ResponseWriter, r *http.Request) {
+ 				Patch:     []byte(`[{`),
+ 			},
+ 		})
++	case "/replaceRootWithoutValue":
++		w.Header().Set("Content-Type", "application/json")
++		pt := v1beta1.PatchTypeJSONPatch
++		json.NewEncoder(w).Encode(&v1beta1.AdmissionReview{
++			Response: &v1beta1.AdmissionResponse{
++				Allowed:   true,
++				PatchType: &pt,
++				Patch:     []byte(`[{"op": "replace", "path": ""}]`),
++			},
++		})
+ 	case "/invalidMutation":
+ 		w.Header().Set("Content-Type", "application/json")
+ 		pt := v1beta1.PatchTypeJSONPatch
+diff --git a/staging/src/k8s.io/apiserver/pkg/endpoints/handlers/patch.go b/staging/src/k8s.io/apiserver/pkg/endpoints/handlers/patch.go
+index 1f6482c58e6..7d1404e1a58 100644
+--- a/staging/src/k8s.io/apiserver/pkg/endpoints/handlers/patch.go
++++ b/staging/src/k8s.io/apiserver/pkg/endpoints/handlers/patch.go
+@@ -57,6 +57,7 @@ import (
+ 	"k8s.io/apiserver/pkg/registry/rest"
+ 	"k8s.io/apiserver/pkg/util/dryrun"
+ 	utilfeature "k8s.io/apiserver/pkg/util/feature"
++	utiljsonpatch "k8s.io/apiserver/pkg/util/jsonpatch"
+ 	"k8s.io/component-base/tracing"
+ )
+ 
+@@ -420,6 +421,9 @@ func (p *jsonPatcher) applyJSPatch(versionedJS []byte) (patchedJS []byte, strict
+ 				fmt.Sprintf("The allowed maximum operations in a JSON patch is %d, got %d",
+ 					maxJSONPatchOperations, len(patchObj)))
+ 		}
++		if err := utiljsonpatch.ValidateRequiredValue(patchObj); err != nil {
++			return nil, nil, errors.NewBadRequest(err.Error())
++		}
+ 		patchedJS, err := patchObj.Apply(versionedJS)
+ 		if err != nil {
+ 			return nil, nil, errors.NewGenericServerResponse(http.StatusUnprocessableEntity, "", schema.GroupResource{}, "", err.Error(), 0, false)
+diff --git a/staging/src/k8s.io/apiserver/pkg/endpoints/handlers/rest_test.go b/staging/src/k8s.io/apiserver/pkg/endpoints/handlers/rest_test.go
+index d44ec60178d..2310dcb4e29 100644
+--- a/staging/src/k8s.io/apiserver/pkg/endpoints/handlers/rest_test.go
++++ b/staging/src/k8s.io/apiserver/pkg/endpoints/handlers/rest_test.go
+@@ -259,6 +259,52 @@ func TestJSONPatch(t *testing.T) {
+ 				{"op":"test", "path":"/metadata/path", "value":"foo"}
+ 			]`,
+ 		},
++		{
++			name:              "replace-root-missing-value",
++			patch:             `[{"op": "replace", "path": ""}]`,
++			expectedError:     `json patch operation 0 ("replace") at path "": missing required field "value"`,
++			expectedErrorType: metav1.StatusReasonBadRequest,
++		},
++		{
++			name:              "test-root-missing-value",
++			patch:             `[{"op": "test", "path": ""}]`,
++			expectedError:     `json patch operation 0 ("test") at path "": missing required field "value"`,
++			expectedErrorType: metav1.StatusReasonBadRequest,
++		},
++		{
++			name:              "test-missing-value-non-root",
++			patch:             `[{"op": "test", "path": "/metadata/generateName"}]`,
++			expectedError:     `json patch operation 0 ("test") at path "/metadata/generateName": missing required field "value"`,
++			expectedErrorType: metav1.StatusReasonBadRequest,
++		},
++		{
++			name:  "test-null-value-non-root",
++			patch: `[{"op": "test", "path": "/metadata/generateName", "value": null}]`,
++		},
++		{
++			name:              "add-root-then-replace-root-missing-value",
++			patch:             `[{"op": "add", "path": ""}, {"op": "replace", "path": ""}]`,
++			expectedError:     `json patch operation 0 ("add") at path "": missing required field "value"`,
++			expectedErrorType: metav1.StatusReasonBadRequest,
++		},
++		{
++			// Not RFC 6902 compliant, kept for backward compatibility: the value is treated as null.
++			name:  "replace-missing-value-non-root",
++			patch: `[{"op": "replace", "path": "/metadata/name"}]`,
++		},
++		{
++			// Not RFC 6902 compliant, kept for backward compatibility: the value is treated as null.
++			name:  "add-missing-value-non-root",
++			patch: `[{"op": "add", "path": "/metadata/generateName"}]`,
++		},
++		{
++			name:  "add-null-value",
++			patch: `[{"op": "add", "path": "/metadata/generateName", "value": null}]`,
++		},
++		{
++			name:  "replace-null-value",
++			patch: `[{"op": "replace", "path": "/metadata/finalizers", "value": null}]`,
++		},
+ 	} {
+ 		p := &patcher{
+ 			patchType:  types.JSONPatchType,
+diff --git a/staging/src/k8s.io/apiserver/pkg/util/jsonpatch/validate.go b/staging/src/k8s.io/apiserver/pkg/util/jsonpatch/validate.go
+new file mode 100644
+index 00000000000..a539256c24d
+--- /dev/null
++++ b/staging/src/k8s.io/apiserver/pkg/util/jsonpatch/validate.go
+@@ -0,0 +1,63 @@
++/*
++Copyright 2026 The Kubernetes Authors.
++
++Licensed under the Apache License, Version 2.0 (the "License");
++you may not use this file except in compliance with the License.
++You may obtain a copy of the License at
++
++    http://www.apache.org/licenses/LICENSE-2.0
++
++Unless required by applicable law or agreed to in writing, software
++distributed under the License is distributed on an "AS IS" BASIS,
++WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
++See the License for the specific language governing permissions and
++limitations under the License.
++*/
++
++// Package jsonpatch contains helpers for validating RFC 6902 JSON Patch
++// documents before they are applied with gopkg.in/evanphx/json-patch.v4.
++package jsonpatch
++
++import (
++	"fmt"
++
++	jsonpatch "gopkg.in/evanphx/json-patch.v4"
++)
++
++// ValidateRequiredValue rejects operations that lack the "value" member
++// required by RFC 6902 sections 4.1, 4.3 and 4.6 where json-patch v4 would
++// dereference a nil value and panic:
++//
++//   - "test" operations with any path: comparing against a missing value is
++//     meaningless, and json-patch v4.12.0 panics when the target is missing
++//     or null;
++//   - "add" and "replace" operations that target the whole document (empty
++//     path).
++//
++// Key presence is checked, not the value itself: an explicit "value": null is
++// a valid JSON value and is accepted. "add" and "replace" operations with a
++// non-empty path are not checked to keep the historical behaviour of the
++// library, which treats a missing value as null there. Operations with a
++// missing or malformed path are left to Patch.Apply to report.
++func ValidateRequiredValue(patch jsonpatch.Patch) error {
++	for i, op := range patch {
++		kind := op.Kind()
++		switch kind {
++		case "add", "replace", "test":
++		default:
++			continue
++		}
++		if _, ok := op["value"]; ok {
++			continue
++		}
++		path, err := op.Path()
++		if err != nil {
++			continue
++		}
++		if kind != "test" && path != "" {
++			continue
++		}
++		return fmt.Errorf("json patch operation %d (%q) at path %q: missing required field \"value\"", i, kind, path)
++	}
++	return nil
++}
+diff --git a/staging/src/k8s.io/apiserver/pkg/util/jsonpatch/validate_test.go b/staging/src/k8s.io/apiserver/pkg/util/jsonpatch/validate_test.go
+new file mode 100644
+index 00000000000..0d677a8c7a4
+--- /dev/null
++++ b/staging/src/k8s.io/apiserver/pkg/util/jsonpatch/validate_test.go
+@@ -0,0 +1,114 @@
++/*
++Copyright 2026 The Kubernetes Authors.
++
++Licensed under the Apache License, Version 2.0 (the "License");
++you may not use this file except in compliance with the License.
++You may obtain a copy of the License at
++
++    http://www.apache.org/licenses/LICENSE-2.0
++
++Unless required by applicable law or agreed to in writing, software
++distributed under the License is distributed on an "AS IS" BASIS,
++WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
++See the License for the specific language governing permissions and
++limitations under the License.
++*/
++
++package jsonpatch
++
++import (
++	"strings"
++	"testing"
++
++	jsonpatch "gopkg.in/evanphx/json-patch.v4"
++)
++
++func TestValidateRequiredValue(t *testing.T) {
++	for _, tc := range []struct {
++		name          string
++		patch         string
++		expectedError string
++	}{
++		{
++			name:          "replace root without value",
++			patch:         `[{"op": "replace", "path": ""}]`,
++			expectedError: `json patch operation 0 ("replace") at path "": missing required field "value"`,
++		},
++		{
++			name:          "add root without value",
++			patch:         `[{"op": "add", "path": ""}]`,
++			expectedError: `json patch operation 0 ("add") at path "": missing required field "value"`,
++		},
++		{
++			name:          "test root without value",
++			patch:         `[{"op": "test", "path": ""}]`,
++			expectedError: `json patch operation 0 ("test") at path "": missing required field "value"`,
++		},
++		{
++			name:          "test non-root without value",
++			patch:         `[{"op": "test", "path": "/a"}]`,
++			expectedError: `json patch operation 0 ("test") at path "/a": missing required field "value"`,
++		},
++		{
++			name:          "reports index of the offending operation",
++			patch:         `[{"op": "add", "path": "/a", "value": 1}, {"op": "test", "path": "/b"}]`,
++			expectedError: `json patch operation 1 ("test") at path "/b"`,
++		},
++		{
++			name:  "replace root with object value",
++			patch: `[{"op": "replace", "path": "", "value": {"a": 1}}]`,
++		},
++		{
++			name:  "replace root with null value",
++			patch: `[{"op": "replace", "path": "", "value": null}]`,
++		},
++		{
++			name:  "test root with null value",
++			patch: `[{"op": "test", "path": "", "value": null}]`,
++		},
++		{
++			name:  "test non-root with null value",
++			patch: `[{"op": "test", "path": "/a", "value": null}]`,
++		},
++		{
++			name:  "add without value on non-root path is left as is",
++			patch: `[{"op": "add", "path": "/a"}]`,
++		},
++		{
++			name:  "replace without value on non-root path is left as is",
++			patch: `[{"op": "replace", "path": "/a"}]`,
++		},
++		{
++			name:  "remove does not require value",
++			patch: `[{"op": "remove", "path": ""}]`,
++		},
++		{
++			name:  "missing path is left to Apply",
++			patch: `[{"op": "test"}]`,
++		},
++		{
++			name:  "malformed path is left to Apply",
++			patch: `[{"op": "replace", "path": 1}]`,
++		},
++	} {
++		t.Run(tc.name, func(t *testing.T) {
++			patch, err := jsonpatch.DecodePatch([]byte(tc.patch))
++			if err != nil {
++				t.Fatalf("unexpected decode error: %v", err)
++			}
++			err = ValidateRequiredValue(patch)
++			if len(tc.expectedError) == 0 {
++				if err != nil {
++					t.Fatalf("unexpected error: %v", err)
++				}
++				return
++			}
++			if err == nil {
++				t.Fatalf("expected error %q, got nil", tc.expectedError)
++			}
++			if !strings.Contains(err.Error(), tc.expectedError) {
++				t.Fatalf("expected error %q, got %q", tc.expectedError, err.Error())
++			}
++		})
++	}
++}
