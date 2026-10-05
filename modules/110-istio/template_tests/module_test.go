@@ -976,6 +976,8 @@ test.deckhouse.io/annotation: test-value
 			Expect(f.KubernetesResource("ServiceAccount", "d8-istio", "alliance-metadata-exporter").Exists()).To(BeTrue())
 			Expect(f.KubernetesGlobalResource("ClusterRole", "d8:istio:alliance:metadata-exporter").Exists()).To(BeTrue())
 			Expect(f.KubernetesGlobalResource("ClusterRoleBinding", "d8:istio:alliance:metadata-exporter").Exists()).To(BeTrue())
+			Expect(exporterEnv(f, "INGRESS_GATEWAY_ENABLED")).To(Equal("true"))
+			Expect(exporterEnv(f, "AMBIENT_GATEWAY_ENABLED")).To(BeEmpty())
 
 			ingressgatewayDaemonSet := f.KubernetesResource("DaemonSet", "d8-istio", "ingressgateway")
 			Expect(ingressgatewayDaemonSet.Exists()).To(BeTrue())
@@ -1360,6 +1362,8 @@ users:
 			Expect(f.KubernetesResource("ServiceAccount", "d8-istio", "alliance-metadata-exporter").Exists()).To(BeTrue())
 			Expect(f.KubernetesGlobalResource("ClusterRole", "d8:istio:alliance:metadata-exporter").Exists()).To(BeTrue())
 			Expect(f.KubernetesGlobalResource("ClusterRoleBinding", "d8:istio:alliance:metadata-exporter").Exists()).To(BeTrue())
+			Expect(exporterEnv(f, "INGRESS_GATEWAY_ENABLED")).To(Equal("true"))
+			Expect(exporterEnv(f, "AMBIENT_GATEWAY_ENABLED")).To(BeEmpty())
 
 			Expect(f.KubernetesResource("DaemonSet", "d8-istio", "ingressgateway").Exists()).To(BeTrue())
 			Expect(f.KubernetesResource("VerticalPodAutoscaler", "d8-istio", "ingressgateway").Exists()).To(BeTrue())
@@ -1394,7 +1398,7 @@ network-neigh-0-cluster-id:
 			Expect(f.KubernetesResource("PodMonitor", "d8-monitoring", "istio-ingressgateway").Exists()).To(BeTrue())
 
 			// The ambient east-west gateway is a separate workload: multicluster alone is
-			// not enough, ambient and ambient.multicluster must be on too.
+			// not enough, ambient must be on and multicluster.mode must be Ambient.
 			Expect(f.KubernetesResource("DaemonSet", "d8-istio", "ambientgateway").Exists()).To(BeFalse())
 			Expect(f.KubernetesResource("Service", "d8-istio", "ambientgateway").Exists()).To(BeFalse())
 			Expect(f.KubernetesResource("ServiceAccount", "d8-istio", "alliance-ambientgateway").Exists()).To(BeFalse())

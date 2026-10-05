@@ -25,7 +25,8 @@ Available only in DP Enterprise Edition (EE) and DP Ultimate.
   >
   > If the IP addresses of services or pods in different clusters match, requests from other pods in other clusters may mistakenly fall under the Istio's rules.
   > The intersection of subnets of services and pods is not recommended ([source](https://istio.io/latest/docs/ops/deployment/deployment-models/#network-models)).
-  > Istio operates in the [multi-network](https://istio.io/latest/docs/ops/deployment/deployment-models/#multiple-networks) mode — pods from different clusters can only communicate with each other through the Istio ingress gateway. Direct communication between pods of different clusters is not supported.
+
+By default, pods from different clusters communicate through the Istio ingress gateway ([multi-network](https://istio.io/latest/docs/ops/deployment/deployment-models/#multiple-networks) mode). If the pods of two clusters are directly reachable from each other (flat network), set [`spec.enableIngressGateway`](/modules/istio/cr.html#istiomulticluster-v1alpha1-spec-enableingressgateway) to `false` in both clusters, in the IstioMulticluster that describes the other cluster.
 
 {% alert level="warning" %}
 Only sidecar-mode workloads can take part in a multicluster. For details, refer to [Ambient mesh limitations](/modules/istio/#ambient-mesh-limitations).

@@ -40,27 +40,28 @@ positive:
         trafficRedirectionSetupMode: CNIPlugin
     - ambient:
         enabled: true
-        multicluster:
-          enabled: false
+      multicluster:
+        enabled: true
+        mode: Sidecar
       dataPlane:
         trafficRedirectionSetupMode: CNIPlugin
     - ambient:
         enabled: true
-        multicluster:
-          enabled: true
       multicluster:
         enabled: true
+        mode: Ambient
+      globalVersion: "1.29"
       dataPlane:
         trafficRedirectionSetupMode: CNIPlugin
 
-  # One external load balancer in front of both gateways: its address is named
-  # in both advertise lists, each at that gateway's own port.
+  # The schema accepts both gateway blocks in either mode; in the Ambient mode
+  # ingressGateway is unused.
     - ambient:
         enabled: true
-        multicluster:
-          enabled: true
       multicluster:
         enabled: true
+        mode: Ambient
+      globalVersion: "1.29"
       alliance:
         ingressGateway:
           advertise:
@@ -77,10 +78,10 @@ positive:
   # could not have expressed.
     - ambient:
         enabled: true
-        multicluster:
-          enabled: true
       multicluster:
         enabled: true
+        mode: Ambient
+      globalVersion: "1.29"
       alliance:
         ingressGateway:
           advertise:
@@ -96,10 +97,10 @@ positive:
   # An IPv6 address for the ambient gateway.
     - ambient:
         enabled: true
-        multicluster:
-          enabled: true
       multicluster:
         enabled: true
+        mode: Ambient
+      globalVersion: "1.29"
       alliance:
         ambientGateway:
           advertise:
@@ -112,10 +113,10 @@ positive:
   # hands out names gives you. Peer ztunnels resolve it themselves.
     - ambient:
         enabled: true
-        multicluster:
-          enabled: true
       multicluster:
         enabled: true
+        mode: Ambient
+      globalVersion: "1.29"
       alliance:
         ambientGateway:
           advertise:
@@ -128,10 +129,10 @@ positive:
   # on the way out, so neither the case nor the root dot has to be got right here.
     - ambient:
         enabled: true
-        multicluster:
-          enabled: true
       multicluster:
         enabled: true
+        mode: Ambient
+      globalVersion: "1.29"
       alliance:
         ambientGateway:
           advertise:
@@ -144,10 +145,10 @@ positive:
   # its own port.
     - ambient:
         enabled: true
-        multicluster:
-          enabled: true
       multicluster:
         enabled: true
+        mode: Ambient
+      globalVersion: "1.29"
       alliance:
         ingressGateway:
           advertise:
@@ -160,14 +161,14 @@ positive:
       dataPlane:
         trafficRedirectionSetupMode: CNIPlugin
 
-  # ambient multicluster with the NodePort inlet: each east-west gateway gets a
-  # static node port of its own.
+  # ambient multicluster with the NodePort inlet, with a static node port for
+  # each east-west gateway.
     - ambient:
         enabled: true
-        multicluster:
-          enabled: true
       multicluster:
         enabled: true
+        mode: Ambient
+      globalVersion: "1.29"
       alliance:
         ingressGateway:
           inlet: NodePort
@@ -184,10 +185,10 @@ positive:
   # ambient one on a load balancer.
     - ambient:
         enabled: true
-        multicluster:
-          enabled: true
       multicluster:
         enabled: true
+        mode: Ambient
+      globalVersion: "1.29"
       alliance:
         ingressGateway:
           inlet: NodePort
@@ -202,6 +203,25 @@ positive:
             node-role.deckhouse.io/istio-ambient-gateway: ""
           tolerations:
           - operator: Exists
+      dataPlane:
+        trafficRedirectionSetupMode: CNIPlugin
+
+  # The Sidecar mode works alongside federation, and needs no ambient.
+    - multicluster:
+        enabled: true
+        mode: Sidecar
+      federation:
+        enabled: true
+
+  # The Ambient mode with federation explicitly off.
+    - ambient:
+        enabled: true
+      multicluster:
+        enabled: true
+        mode: Ambient
+      globalVersion: "1.29"
+      federation:
+        enabled: false
       dataPlane:
         trafficRedirectionSetupMode: CNIPlugin
 
@@ -271,19 +291,78 @@ negative:
       dataPlane:
         trafficRedirectionSetupMode: InitContainer
 
-  # ambient.multicluster.enabled=true without ambient.enabled
+  # multicluster.mode=Ambient without ambient.enabled
     - ambient:
         enabled: false
+      multicluster:
+        enabled: true
+        mode: Ambient
+      globalVersion: "1.29"
+    - multicluster:
+        enabled: true
+        mode: Ambient
+      globalVersion: "1.29"
+
+  # multicluster.mode=Ambient without multicluster.enabled
+    - ambient:
+        enabled: true
+      multicluster:
+        mode: Ambient
+      globalVersion: "1.29"
+      dataPlane:
+        trafficRedirectionSetupMode: CNIPlugin
+    - ambient:
+        enabled: true
+      multicluster:
+        enabled: false
+        mode: Ambient
+      globalVersion: "1.29"
+      dataPlane:
+        trafficRedirectionSetupMode: CNIPlugin
+
+  # multicluster.mode=Ambient together with federation
+    - ambient:
+        enabled: true
+      multicluster:
+        enabled: true
+        mode: Ambient
+      globalVersion: "1.29"
+      federation:
+        enabled: true
+      dataPlane:
+        trafficRedirectionSetupMode: CNIPlugin
+
+  # multicluster.mode=Ambient without an explicit globalVersion
+    - ambient:
+        enabled: true
+      multicluster:
+        enabled: true
+        mode: Ambient
+      dataPlane:
+        trafficRedirectionSetupMode: CNIPlugin
+
+  # multicluster.mode=Ambient with a globalVersion that has no ambient multicluster
+    - ambient:
+        enabled: true
+      multicluster:
+        enabled: true
+        mode: Ambient
+      globalVersion: "1.27"
+      dataPlane:
+        trafficRedirectionSetupMode: CNIPlugin
+
+  # multicluster.mode only takes the listed values
+    - multicluster:
+        enabled: true
+        mode: Both
+
+  # The switch multicluster.mode replaced is gone
+    - ambient:
+        enabled: true
         multicluster:
           enabled: true
       multicluster:
         enabled: true
-
-  # ambient.multicluster.enabled=true without multicluster.enabled
-    - ambient:
-        enabled: true
-        multicluster:
-          enabled: true
       dataPlane:
         trafficRedirectionSetupMode: CNIPlugin
 

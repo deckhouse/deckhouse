@@ -364,9 +364,7 @@ d8 k -n d8-istio get serviceentry,destinationrule
 Если IP-адреса сервисов или подов пересекаются между кластерами, под правила маршрутизации, запрета или разрешения Istio могут попасть запросы подов из других кластеров. Пересечение подсетей сервисов и подов не рекомендуется.
 {% endalert %}
 
-{% alert level="info" %}
-Istio работает в режиме [multi-network](https://istio.io/latest/docs/ops/deployment/deployment-models/#multiple-networks): поды разных кластеров взаимодействуют только через Istio ingress gateway. Прямое взаимодействие между подами разных кластеров не поддерживается.
-{% endalert %}
+По умолчанию поды разных кластеров взаимодействуют через Istio ingress gateway (режим [multi-network](https://istio.io/latest/docs/ops/deployment/deployment-models/#multiple-networks)). Если поды двух кластеров доступны друг другу напрямую (плоская сеть), задайте параметр [`spec.enableIngressGateway`](cr.html#istiomulticluster-v1alpha1-spec-enableingressgateway) равным `false` в обоих кластерах — в IstioMulticluster, который описывает другой кластер.
 
 {% alert level="warning" %}
 В мультикластере могут участвовать только рабочие нагрузки в режиме сайдкаров. Подробнее — в разделе [Ограничения ambient mesh](#ограничения-ambient-mesh).
@@ -402,8 +400,16 @@ Istio работает в режиме [multi-network](https://istio.io/latest/d
 
 В случае проблем при работе с мультикластером необходимо проверить в каждом кластере:
 
-1. Состояние ресурсов `IstioMultiCluster`. Для этого выполните команду `d8 k describe istiomulticluster cluster-name`. Важно, чтобы в статусе ресурса был указан `Root CA` и в поле `Public Last Fetch Timestamp` была свежий лейбл времени.
-1. В поле `Ingress Gateways` ресурса `IstioMultiCluster` должен быть указан корректный адрес (IP или FQDN) IngressGateway второго кластера.
+1. Условия (conditions) объектов IstioMulticluster. Чтобы их посмотреть, выполните команду:
+
+   ```shell
+   d8 k get istiomulticluster <NAME> -o jsonpath='{range .status.conditions[*]}{.type}: {.status}: {.reason}: {.message}{"\n"}{end}'
+   ```
+
+   Здесь `<NAME>` — имя IstioMulticluster. Проверьте все объекты IstioMulticluster в кластере. Их список выводит команда `d8 k get istiomulticluster`.
+
+   Все условия должны быть в состоянии `True`. Если условие не в состоянии `True`, причина указана в его полях `reason` и `message`.
+
 1. С помощью утилиты `istioctl` из debug-контейнера DP убедитесь, что удалённые кластеры находятся в состоянии `synced`, и для них указан экземпляр `istiod` (подробнее — в подразделе [«Диагностика Istio с помощью istioctl»](examples.html#диагностика-istio-с-помощью-istioctl-из-debug-контейнера)):
 
    ```shell

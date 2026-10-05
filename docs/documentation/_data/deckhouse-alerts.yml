@@ -1824,11 +1824,11 @@ alerts:
       module: istio
       edition: ee
       description: |
-        The ambient east-west gateway is deployed in this cluster, but publishes no address peer clusters can dial: either it has no external address at all, or every address it has is neither an IP address nor a usable DNS name. The `metadata-exporter` pod logs in `d8-istio` say which.
+        The ambient east-west gateway is deployed in this cluster, but publishes no address peer clusters can dial: its Service is missing, it has no external address, no node is running a gateway pod, or every address it has is neither an IP address nor a usable DNS name. The `metadata-exporter` pod logs in `d8-istio` say which.
 
-        Ambient-mode workloads in peer clusters therefore cannot reach services here. Sidecar-mode multicluster is unaffected.
+        Peer clusters keep using the addresses they fetched last, if any. Those that have none cannot reach ambient-mode workloads here.
 
-        To fix, set `alliance.ambientGateway.advertise` to the IP address or DNS name peers should dial. Or make the load balancer assign an address (`alliance.ambientGateway.loadBalancerClass`, `.serviceAnnotations`). Or switch `alliance.ambientGateway.inlet` to `NodePort` and check that gateway pods are scheduled (`.nodeSelector`, `.tolerations`). Or turn `ambient.multicluster.enabled` off if ambient multicluster is not needed here.
+        To fix, set `alliance.ambientGateway.advertise` to the IP address or DNS name peers should dial. Or make the load balancer assign an address (`alliance.ambientGateway.loadBalancerClass`, `.serviceAnnotations`). Or switch `alliance.ambientGateway.inlet` to `NodePort` and check that gateway pods are scheduled (`.nodeSelector`, `.tolerations`). Or, if ambient multicluster is not needed, switch all multicluster members back to sidecar mode.
       summary: |
         The ambient east-west gateway has no address peers can dial.
       severity: "6"
@@ -1877,6 +1877,21 @@ alerts:
       summary: |
         A peer cluster requests private metadata using a deprecated subdomain.
       severity: "5"
+      markupFormat: markdown
+    - name: D8IstioAllianceIngressGatewayAddressUnusable
+      sourceFile: ee/modules/110-istio/monitoring/prometheus-rules/alliance.yaml
+      moduleUrl: 110-istio
+      module: istio
+      edition: ee
+      description: |
+        The ingress gateway that peer clusters reach this cluster through is deployed, but publishes no address they can dial: its Service is missing, it has no external address, or no node is running a gateway pod. The `metadata-exporter` pod logs in `d8-istio` say which.
+
+        Peer clusters keep using the addresses they fetched last, if any. Those that have none cannot reach federated services or, over multicluster, sidecar-mode workloads here.
+
+        To fix, set `alliance.ingressGateway.advertise` to the addresses peers should dial. Or make the load balancer assign an address (`alliance.ingressGateway.loadBalancerClass`, `.serviceAnnotations`). Or switch `alliance.ingressGateway.inlet` to `NodePort` and check that gateway pods are scheduled (`.nodeSelector`, `.tolerations`).
+      summary: |
+        The ingress gateway for federation and multicluster has no address peers can dial.
+      severity: "6"
       markupFormat: markdown
     - name: D8IstioConfigAnalysisConflictingGateways
       sourceFile: ee/modules/110-istio/monitoring/prometheus-rules/config-analysis.yaml
@@ -2242,7 +2257,15 @@ alerts:
       module: istio
       edition: ee
       description: |
-        The metadata endpoint `{{$labels.endpoint}}` for IstioFederation `{{$labels.federation_name}}` has failed to fetch via the Deckhouse hook.
+        The Deckhouse hook could not get usable metadata from the endpoint `{{$labels.endpoint}}` for IstioFederation `{{$labels.federation_name}}`.
+
+        The reason and the details are in the `PublicMetadataExchangeReady` and `PrivateMetadataExchangeReady` conditions of the IstioFederation. The endpoint may respond normally while the metadata is still unusable, for example, when the ingress gateway of the remote cluster has no address yet.
+
+        To view the conditions, run the following command:
+
+        ```bash
+        d8 k get istiofederation {{$labels.federation_name}} -o jsonpath='{range .status.conditions[*]}{.type}: {.status}: {.reason}: {.message}{"\n"}{end}'
+        ```
 
         To reproduce the request to the public endpoint, run the following command:
 
@@ -2260,7 +2283,7 @@ alerts:
         curl -H "Authorization: Bearer $TOKEN" {{$labels.endpoint}}
         ```
       summary: |
-        Federation metadata endpoint failed.
+        IstioFederation {{$labels.federation_name}} gets no usable metadata from the remote cluster.
       severity: "6"
       markupFormat: markdown
     - name: D8IstioFederationRemoteClusterUUIDMismatch
@@ -2312,7 +2335,15 @@ alerts:
       module: istio
       edition: ee
       description: |
-        The metadata endpoint `{{$labels.endpoint}}` for IstioMulticluster `{{$labels.multicluster_name}}` has failed to fetch via the Deckhouse hook.
+        The Deckhouse hook could not get usable metadata from the endpoint `{{$labels.endpoint}}` for IstioMulticluster `{{$labels.multicluster_name}}`.
+
+        The reason and the details are in the `PublicMetadataExchangeReady` and `PrivateMetadataExchangeReady` conditions of the IstioMulticluster. The endpoint may respond normally while the metadata is still unusable, for example, when the remote cluster does not deploy the gateway this cluster reaches it through.
+
+        To view the conditions, run the following command:
+
+        ```bash
+        d8 k get istiomulticluster {{$labels.multicluster_name}} -o jsonpath='{range .status.conditions[*]}{.type}: {.status}: {.reason}: {.message}{"\n"}{end}'
+        ```
 
         To reproduce the request to the public endpoint, run the following command:
 
@@ -2330,7 +2361,7 @@ alerts:
         curl -H "Authorization: Bearer $TOKEN" {{$labels.endpoint}}
         ```
       summary: |
-        Multicluster metadata endpoint failed.
+        IstioMulticluster {{$labels.multicluster_name}} gets no usable metadata from the remote cluster.
       severity: "6"
       markupFormat: markdown
     - name: D8IstioMulticlusterRemoteAPIHostDoesntWork
@@ -2425,13 +2456,13 @@ alerts:
         - There is a TLS or certificate issue between the clusters.
         - Remote and local Istio versions mismatch.
 
-        {{ if $labels.multicluster_name }}Inspect the resource:
+        {{ if $labels.multicluster_name }}Check the conditions of the IstioMulticluster:
 
         ```bash
-        d8 k describe istiomulticluster {{$labels.multicluster_name}}
+        d8 k get istiomulticluster {{$labels.multicluster_name}} -o jsonpath='{range .status.conditions[*]}{.type}: {.status}: {.reason}: {.message}{"\n"}{end}'
         ```
 
-        `Root CA` should be set, `Public Last Fetch Timestamp` should be recent, and `Ingress Gateways` should list the remote cluster's IngressGateway addresses.
+        All conditions must be `True`. If a condition is not `True`, its `reason` and `message` say what is wrong. Access to the remote API is reported by the `RemoteAPIServerReady` condition.
 
         If there is no such resource, this cluster was registered by the secret `{{$labels.secret}}` alone — check the API address and the token in the kubeconfig it stores.
         {{ else }}No IstioMulticluster resource registered this cluster, so check the API address and the token in the kubeconfig stored in the secret `{{$labels.secret}}`.

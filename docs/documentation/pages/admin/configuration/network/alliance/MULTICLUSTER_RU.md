@@ -23,8 +23,8 @@ lang: ru
   >
   > Если IP-адреса сервисов или подов пересекутся между кластерами, то под маршрутизирующие, запрещающие или разрешающие правила Istio могут попасть запросы из подов других кластеров.
   > Пересечение подсетей сервисов и подов не рекомендуется (подробнее — [в документации Istio](https://istio.io/latest/docs/ops/deployment/deployment-models/#network-models)).
-  >
-  > Istio работает в режиме [multi-network](https://istio.io/latest/docs/ops/deployment/deployment-models/#multiple-networks) — поды разных кластеров взаимодействуют друг с другом только через Istio ingress gateway. Прямое взаимодействие между подами разных кластеров не поддерживается.
+
+По умолчанию поды разных кластеров взаимодействуют через Istio ingress gateway (режим [multi-network](https://istio.io/latest/docs/ops/deployment/deployment-models/#multiple-networks)). Если поды двух кластеров доступны друг другу напрямую (плоская сеть), задайте параметр [`spec.enableIngressGateway`](/modules/istio/cr.html#istiomulticluster-v1alpha1-spec-enableingressgateway) равным `false` в обоих кластерах — в IstioMulticluster, который описывает другой кластер.
 
 {% alert level="warning" %}
 В мультикластере могут участвовать только рабочие нагрузки в режиме сайдкаров. Подробнее — в разделе [Ограничения ambient mesh](/modules/istio/#ограничения-ambient-mesh).

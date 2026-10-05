@@ -46,7 +46,7 @@ metadata:
 data:
   meshNetworks: |-
     networks:
-    {{- if $.Values.istio.multicluster.enabled }}
+    {{- if include "istioSidecarMulticlusterEnabled" $ }}
     {{- range $multicluster := $.Values.istio.internal.multiclusters }}
     {{- if $multicluster.enableIngressGateway }}
       {{ $multicluster.networkName }}:

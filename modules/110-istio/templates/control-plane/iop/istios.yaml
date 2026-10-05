@@ -52,7 +52,7 @@ spec:
       network: {{ include "istioNetworkName" $ }}
       multiCluster:
         clusterName: {{ include "istioClusterID" $ }}
-  {{- if $.Values.istio.multicluster.enabled }}
+  {{- if include "istioSidecarMulticlusterEnabled" $ }}
       meshNetworks:
       {{- range $multicluster := $.Values.istio.internal.multiclusters }}
         {{- if $multicluster.enableIngressGateway }}

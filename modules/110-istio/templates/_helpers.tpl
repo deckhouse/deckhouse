@@ -60,13 +60,33 @@
   {{- end -}}
 {{- end -}}
 
+{{- /*
+  Keep in sync with multiclusterGatewayModes in ee/modules/110-istio/hooks/ee.
+*/ -}}
+{{- define "istioSidecarMulticlusterEnabled" -}}
+  {{- if and .Values.istio.multicluster.enabled (eq (.Values.istio.multicluster.mode | default "Sidecar") "Sidecar") -}}
+    true
+  {{- end -}}
+{{- end -}}
+
 {{- define "istioAmbientMulticlusterEnabled" -}}
-  {{- $versionInfo := get .Values.istio.internal.versionMap .Values.istio.internal.globalVersion -}}
   {{- if and
-        (get $versionInfo "supportsAmbientMulticluster")
-        .Values.istio.ambient.enabled
         .Values.istio.multicluster.enabled
-        .Values.istio.ambient.multicluster.enabled
+        .Values.istio.ambient.enabled
+        (eq (.Values.istio.multicluster.mode | default "Sidecar") "Ambient")
+  -}}
+    {{- $versionInfo := get .Values.istio.internal.versionMap .Values.istio.internal.globalVersion -}}
+    {{- if not (get $versionInfo "supportsAmbientMulticluster") -}}
+      {{- fail (printf "istio: multicluster.mode is Ambient, but the global Istio version %s does not support ambient multicluster; use 1.29 or newer, or switch multicluster.mode to Sidecar" .Values.istio.internal.globalVersion) -}}
+    {{- end -}}
+    true
+  {{- end -}}
+{{- end -}}
+
+{{- define "istioIngressGatewayEnabled" -}}
+  {{- if or
+        .Values.istio.federation.enabled
+        (and (include "istioSidecarMulticlusterEnabled" .) .Values.istio.internal.multiclustersNeedIngressGateway)
   -}}
     true
   {{- end -}}

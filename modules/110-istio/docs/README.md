@@ -359,9 +359,7 @@ Istio uses traffic analysis as follows:
 If service or pod IP addresses overlap between clusters, requests from pods in other clusters may unintentionally match Istio's routing, allow, or deny rules. Overlapping service and pod subnets is not recommended ([Istio network models](https://istio.io/latest/docs/ops/deployment/deployment-models/#network-models)).
 {% endalert %}
 
-{% alert level="info" %}
-Istio operates in the [multi-network](https://istio.io/latest/docs/ops/deployment/deployment-models/#multiple-networks) mode: pods from different clusters can only communicate through the Istio ingress gateway. Direct communication between pods of different clusters is not supported.
-{% endalert %}
+By default, pods from different clusters communicate through the Istio ingress gateway ([multi-network](https://istio.io/latest/docs/ops/deployment/deployment-models/#multiple-networks) mode). If the pods of two clusters are directly reachable from each other (flat network), set [`spec.enableIngressGateway`](cr.html#istiomulticluster-v1alpha1-spec-enableingressgateway) to `false` in both clusters, in the IstioMulticluster that describes the other cluster.
 
 {% alert level="warning" %}
 Only sidecar-mode workloads can take part in a multicluster. For details, refer to [Ambient mesh limitations](#ambient-mesh-limitations).
@@ -397,8 +395,16 @@ To create a multicluster, you need to create a set of `IstioMulticluster` resour
 
 In case of issues when working with a multi-cluster, it is necessary to check in each cluster:
 
-1. The status of the `IstioMultiCluster` resources. To do this, run the command `d8 k describe istiomulticluster cluster-name`. It is important that the resource status shows `Root CA` and that the `Public Last Fetch Timestamp` field has a recent timestamp.
-1. The `Ingress Gateways` field of the `IstioMultiCluster` resource should contain the IP address of the second cluster's `IngressGateway`.
+1. The conditions of the IstioMulticluster objects. To view them, run the following command:
+
+   ```shell
+   d8 k get istiomulticluster <NAME> -o jsonpath='{range .status.conditions[*]}{.type}: {.status}: {.reason}: {.message}{"\n"}{end}'
+   ```
+
+   Here, `<NAME>` is the name of the IstioMulticluster. Check every IstioMulticluster in the cluster. The `d8 k get istiomulticluster` command lists them.
+
+   All conditions must be `True`. If a condition is not `True`, its `reason` and `message` say what is wrong.
+
 1. Using the `istioctl` utility from the DP debug container, ensure that remote clusters have the `synced` status and a specified `istiod` instance (for details, refer to [Debugging Istio with istioctl from the debug container](examples.html#debugging-istio-with-istioctl-from-the-debug-container)):
 
    ```shell

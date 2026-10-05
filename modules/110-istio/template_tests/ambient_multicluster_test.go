@@ -24,9 +24,10 @@ import (
 	. "github.com/deckhouse/deckhouse/testing/helm"
 )
 
-// Native ambient multicluster: the ambient east-west gateway, the per-peer `istio-remote`
-// Gateways, the network labelling that ties them together, and the switches that keep the
-// whole feature off. globalValues and istioValues come from module_test.go.
+// Native ambient multicluster (multicluster.mode: Ambient): the ambient east-west gateway,
+// the per-peer `istio-remote` Gateways, network labelling, the sidecar path the mode turns
+// off, and the switches that keep the feature off. globalValues and istioValues come from
+// module_test.go.
 
 // Peers covering every case the per-peer `istio-remote` Gateway has to distinguish: one
 // running the ambient gateway, one not, a flat peer that opted out of the gateway hop, one
@@ -149,8 +150,9 @@ func setUpAmbientMulticluster(f *Config) {
 	f.ValuesSetFromYaml("istio.internal.versionsToInstall", `["1.29"]`)
 	f.ValuesSetFromYaml("istio.internal.operatorVersionsToInstall", `[]`)
 	f.ValuesSet("istio.ambient.enabled", true)
-	f.ValuesSet("istio.ambient.multicluster.enabled", true)
 	f.ValuesSet("istio.multicluster.enabled", true)
+	f.ValuesSet("istio.multicluster.mode", "Ambient")
+	// Unused in the Ambient mode. Set to show that the sidecar gateway stays off anyway.
 	f.ValuesSet("istio.internal.multiclustersNeedIngressGateway", true)
 }
 
@@ -330,10 +332,9 @@ var _ = Describe("Module :: istio :: helm template :: ambient multicluster", fun
 			Expect(f.KubernetesResource("Gateway", "d8-istio", "ambientgateway-remote-neighbour-sidecar-only-0").Exists()).
 				To(BeFalse())
 
-			// Nor a flat, directly routable peer, which says so with enableIngressGateway
-			// false - and that governs both data planes.
+			// enableIngressGateway is ignored: ambient multicluster does not support flat networks.
 			Expect(f.KubernetesResource("Gateway", "d8-istio", "ambientgateway-remote-neighbour-flat-0").Exists()).
-				To(BeFalse())
+				To(BeTrue())
 		})
 
 		// The address type is carried in the values, decided once by the merge hook: istiod
@@ -442,15 +443,38 @@ var _ = Describe("Module :: istio :: helm template :: ambient multicluster", fun
 			Expect(values).To(ContainSubstring(`"seccompProfile": {"type": "RuntimeDefault"}`))
 		})
 
-		It("Leaves the sidecar east-west gateway Service unlabelled", func() {
+		// Even though every peer has enableIngressGateway set.
+		It("Runs no sidecar east-west path", func() {
 			Expect(f.RenderError).ShouldNot(HaveOccurred())
 
-			// Re-adding this label is a plausible future "fix" that would break the ambient
-			// path, so it is pinned. Same reason as the ambient gateway's own Service.
-			svc := f.KubernetesResource("Service", "d8-istio", "ingressgateway")
-			Expect(svc.Exists()).To(BeTrue())
-			Expect(svc.Field(`metadata.labels.topology\.istio\.io/network`).Exists()).To(BeFalse())
-			Expect(svc.Field(`metadata.labels.networking\.istio\.io/gatewayPort`).Exists()).To(BeFalse())
+			Expect(f.KubernetesResource("DaemonSet", "d8-istio", "ingressgateway").Exists()).To(BeFalse())
+			Expect(f.KubernetesResource("Service", "d8-istio", "ingressgateway").Exists()).To(BeFalse())
+			Expect(f.KubernetesResource("ServiceAccount", "d8-istio", "alliance-ingressgateway").Exists()).To(BeFalse())
+			Expect(f.KubernetesResource("VerticalPodAutoscaler", "d8-istio", "ingressgateway").Exists()).To(BeFalse())
+			Expect(f.KubernetesResource("PodMonitor", "d8-monitoring", "istio-ingressgateway").Exists()).To(BeFalse())
+			// The Istio Gateway for the sidecar gateway's AUTO_PASSTHROUGH listener.
+			Expect(f.KubernetesResource("Gateway", "d8-istio", "ingressgateway").Exists()).To(BeFalse())
+
+			Expect(f.KubernetesResource("ConfigMap", "d8-istio", "istio-v1x29").
+				Field("data.meshNetworks").String()).To(MatchYAML(`networks: {}`))
+
+			// So the exporter publishes an empty ingressGateways list.
+			Expect(exporterEnv(f, "INGRESS_GATEWAY_ENABLED")).To(BeEmpty())
+		})
+
+		// Everything that is not a sidecar data path is shared by both modes.
+		It("Keeps the multicluster plumbing the ambient path relies on", func() {
+			Expect(f.RenderError).ShouldNot(HaveOccurred())
+
+			Expect(f.KubernetesResource("Secret", "d8-istio", "istio-remote-secret-neighbour-ambient").Exists()).To(BeTrue())
+			Expect(f.KubernetesResource("Deployment", "d8-istio", "api-proxy").Exists()).To(BeTrue())
+			Expect(f.KubernetesResource("Deployment", "d8-istio", "metadata-exporter").Exists()).To(BeTrue())
+			Expect(exporterEnv(f, "MULTICLUSTER_ENABLED")).To(Equal("true"))
+			Expect(exporterEnv(f, "AMBIENT_GATEWAY_ENABLED")).To(Equal("true"))
+
+			meshConfig := f.KubernetesResource("ConfigMap", "d8-istio", "istio-v1x29").Field("data.mesh").String()
+			Expect(meshConfig).To(ContainSubstring("caCertificates:"))
+			Expect(meshConfig).To(ContainSubstring("---ROOT CA---"))
 		})
 
 		It("Scopes cross-cluster service visibility to istio.io/global", func() {
@@ -492,7 +516,7 @@ var _ = Describe("Module :: istio :: helm template :: ambient multicluster", fun
 	Context("A long cluster domain without ambient multicluster", func() {
 		BeforeEach(func() {
 			setUpAmbientMulticluster(f)
-			f.ValuesSet("istio.ambient.multicluster.enabled", false)
+			f.ValuesSet("istio.multicluster.mode", "Sidecar")
 			f.ValuesSet("global.discovery.clusterDomain", "aaaaaaaaaa.bbbbbbbbbb.cccccccccc.dddddddddd.eee")
 			f.HelmRender()
 		})
@@ -515,13 +539,11 @@ var _ = Describe("Module :: istio :: helm template :: ambient multicluster", fun
 			f.HelmRender()
 		})
 
-		It("Gives each east-west gateway a node port of its own", func() {
+		It("Gives the ambient east-west gateway its own node port", func() {
 			Expect(f.RenderError).ShouldNot(HaveOccurred())
 
-			// Two Services carrying different protocols, each with its own inlet settings.
-			sidecar := f.KubernetesResource("Service", "d8-istio", "ingressgateway")
-			Expect(sidecar.Field("spec.type").String()).To(Equal("NodePort"))
-			Expect(sidecar.Field("spec.ports").Array()[0].Get("nodePort").Int()).To(Equal(int64(30001)))
+			// Only the ambient gateway is deployed in this mode.
+			Expect(f.KubernetesResource("Service", "d8-istio", "ingressgateway").Exists()).To(BeFalse())
 
 			ambient := f.KubernetesResource("Service", "d8-istio", "ambientgateway")
 			Expect(ambient.Field("spec.type").String()).To(Equal("NodePort"))
@@ -541,7 +563,7 @@ var _ = Describe("Module :: istio :: helm template :: ambient multicluster", fun
 		})
 	})
 
-	Context("Ambient multicluster is enabled with an inlet per gateway", func() {
+	Context("Ambient multicluster is enabled with a different inlet set for each gateway", func() {
 		BeforeEach(func() {
 			setUpAmbientMulticluster(f)
 			f.ValuesSet("istio.alliance.ingressGateway.inlet", "NodePort")
@@ -550,14 +572,11 @@ var _ = Describe("Module :: istio :: helm template :: ambient multicluster", fun
 			f.HelmRender()
 		})
 
-		// The recommended shape where only the ambient half needs an IP address: the
-		// sidecar gateway stays on node ports, which was impossible while one `inlet`
-		// governed both Services.
-		It("Exposes the sidecar gateway on node ports and the ambient one on a load balancer", func() {
+		// The ambient gateway follows its own inlet, never the sidecar gateway's.
+		It("Exposes the ambient gateway on a load balancer", func() {
 			Expect(f.RenderError).ShouldNot(HaveOccurred())
 
-			Expect(f.KubernetesResource("Service", "d8-istio", "ingressgateway").
-				Field("spec.type").String()).To(Equal("NodePort"))
+			Expect(f.KubernetesResource("Service", "d8-istio", "ingressgateway").Exists()).To(BeFalse())
 			Expect(f.KubernetesResource("Service", "d8-istio", "ambientgateway").
 				Field("spec.type").String()).To(Equal("LoadBalancer"))
 
@@ -566,7 +585,7 @@ var _ = Describe("Module :: istio :: helm template :: ambient multicluster", fun
 		})
 	})
 
-	Context("Ambient multicluster is enabled with both east-west gateways on one node port", func() {
+	Context("Ambient multicluster is enabled with the same node port set for both east-west gateways", func() {
 		BeforeEach(func() {
 			setUpAmbientMulticluster(f)
 			f.ValuesSet("istio.alliance.ingressGateway.inlet", "NodePort")
@@ -576,14 +595,14 @@ var _ = Describe("Module :: istio :: helm template :: ambient multicluster", fun
 			f.HelmRender()
 		})
 
-		It("Refuses to render rather than letting the two Services race for the port", func() {
-			// Left to the API server, the loser is rejected with a message naming neither
-			// parameter, and which one loses is arbitrary.
-			Expect(f.RenderError).To(HaveOccurred())
-			Expect(f.RenderError.Error()).To(ContainSubstring("cannot share a node port"))
-			// Both parameters are named, so the message says what to change.
-			Expect(f.RenderError.Error()).To(ContainSubstring("alliance.ingressGateway.nodePort.port"))
-			Expect(f.RenderError.Error()).To(ContainSubstring("alliance.ambientGateway.nodePort.port"))
+		// The node port conflict check only applies when both gateways are deployed, which no
+		// mode does yet.
+		It("Renders, because the sidecar gateway that would claim the port is not deployed", func() {
+			Expect(f.RenderError).ShouldNot(HaveOccurred())
+
+			Expect(f.KubernetesResource("Service", "d8-istio", "ingressgateway").Exists()).To(BeFalse())
+			Expect(f.KubernetesResource("Service", "d8-istio", "ambientgateway").
+				Field("spec.ports").Array()[0].Get("nodePort").Int()).To(Equal(int64(30001)))
 		})
 	})
 
@@ -630,15 +649,11 @@ node-role.deckhouse.io/istio-ambient-gateway: ""
 			f.HelmRender()
 		})
 
-		// Each gateway reads its own block and nothing of the other's.
-		It("Keeps each gateway's annotations and placement to itself", func() {
+		// The ambient gateway reads its own block and nothing of the sidecar gateway's.
+		It("Keeps the ambient gateway's annotations and placement to itself", func() {
 			Expect(f.RenderError).ShouldNot(HaveOccurred())
 
-			sidecar := f.KubernetesResource("DaemonSet", "d8-istio", "ingressgateway").Field("spec.template")
-			Expect(sidecar.Get(`metadata.annotations.checksum/config`).String()).To(Equal("sidecar-123"))
-			Expect(sidecar.Get(`spec.nodeSelector.node-role\.deckhouse\.io/istio-gateway`).Exists()).To(BeTrue())
-			Expect(sidecar.Get(`spec.nodeSelector.node-role\.deckhouse\.io/istio-ambient-gateway`).Exists()).To(BeFalse())
-			Expect(sidecar.Get("spec.tolerations").Exists()).To(BeFalse())
+			Expect(f.KubernetesResource("DaemonSet", "d8-istio", "ingressgateway").Exists()).To(BeFalse())
 
 			ambient := f.KubernetesResource("DaemonSet", "d8-istio", "ambientgateway").Field("spec.template")
 			Expect(ambient.Get(`metadata.annotations.checksum/config`).String()).To(Equal("ambient-123"))
@@ -669,30 +684,26 @@ node-role.deckhouse.io/istio-ambient-gateway: ""
 	// nothing else rolls has to roll itself when that half of the ConfigMap changes -
 	// and only when it does. The hash is deliberately narrower than the ConfigMap.
 	Context("Ambient multicluster is enabled and the mesh ConfigMap changes", func() {
-		bootstrapChecksums := func(mutate func()) (sidecar, ambient string) {
+		bootstrapChecksum := func(mutate func()) string {
 			setUpAmbientMulticluster(f)
 			f.ValuesSetFromYaml("istio.internal.multiclusters", ambientMulticlusters)
 			mutate()
 			f.HelmRender()
 			Expect(f.RenderError).ShouldNot(HaveOccurred())
 
-			const path = `spec.template.metadata.annotations.checksum/proxy-bootstrap-config`
-
-			return f.KubernetesResource("DaemonSet", "d8-istio", "ingressgateway").Field(path).String(),
-				f.KubernetesResource("DaemonSet", "d8-istio", "ambientgateway").Field(path).String()
+			return f.KubernetesResource("DaemonSet", "d8-istio", "ambientgateway").
+				Field(`spec.template.metadata.annotations.checksum/proxy-bootstrap-config`).String()
 		}
 
-		It("Rolls both gateways when a value they can only read at startup changes", func() {
-			baseSidecar, baseAmbient := bootstrapChecksums(func() {})
-			Expect(baseSidecar).ToNot(BeEmpty())
-			Expect(baseSidecar).To(Equal(baseAmbient), "both mount the global revision's ConfigMap")
+		It("Rolls the gateway when a value it can only read at startup changes", func() {
+			base := bootstrapChecksum(func() {})
+			Expect(base).ToNot(BeEmpty())
 
 			// holdApplicationUntilProxyStarts and idleTimeout both land in defaultConfig.
-			changedSidecar, changedAmbient := bootstrapChecksums(func() {
+			changed := bootstrapChecksum(func() {
 				f.ValuesSet("istio.dataPlane.proxyConfig.idleTimeout", "42m")
 			})
-			Expect(changedSidecar).ToNot(Equal(baseSidecar))
-			Expect(changedAmbient).ToNot(Equal(baseAmbient))
+			Expect(changed).ToNot(Equal(base))
 		})
 
 		It("Leaves them alone when only what reaches the proxy dynamically changes", func() {
@@ -700,23 +711,22 @@ node-role.deckhouse.io/istio-ambient-gateway: ""
 				return f.KubernetesResource("ConfigMap", "d8-istio", "istio-v1x29").Field("data.mesh").String()
 			}
 
-			baseSidecar, baseAmbient := bootstrapChecksums(func() {})
-			Expect(baseSidecar).ToNot(BeEmpty())
+			base := bootstrapChecksum(func() {})
+			Expect(base).ToNot(BeEmpty())
 			baseMesh := meshData()
 
 			// caCertificates is rewritten on every peer addition and CA rotation, and
 			// reaches the agent over xDS through PROXY_CONFIG_XDS_AGENT. Hashing the
 			// whole ConfigMap would roll every gateway pod on peer churn for nothing.
-			fewerPeers, fewerPeersAmbient := bootstrapChecksums(func() {
+			fewerPeers := bootstrapChecksum(func() {
 				f.ValuesSetFromYaml("istio.internal.multiclusters", `[]`)
 			})
 			Expect(fewerPeers).ToNot(BeEmpty())
-			// Without this the assertions below would hold for a ConfigMap that never
+			// Without this the assertion below would hold for a ConfigMap that never
 			// changed, and the test would pass while proving nothing.
 			Expect(meshData()).ToNot(Equal(baseMesh), "dropping the peers must change the ConfigMap")
 
-			Expect(fewerPeers).To(Equal(baseSidecar))
-			Expect(fewerPeersAmbient).To(Equal(baseAmbient))
+			Expect(fewerPeers).To(Equal(base))
 		})
 	})
 
@@ -736,14 +746,11 @@ yandex.cpi.flant.com/listener-subnet-id: ambient-123
 
 		// An annotation or class that pins one external resource - a static IP, an
 		// address pool, an existing load balancer's name - cannot be honoured by two
-		// Services at once, so neither is ever copied across.
-		It("Gives each Service its own annotations and load balancer class", func() {
+		// Services at once, so the sidecar gateway's are never copied across.
+		It("Gives the ambient Service its own annotations and load balancer class", func() {
 			Expect(f.RenderError).ShouldNot(HaveOccurred())
 
-			sidecar := f.KubernetesResource("Service", "d8-istio", "ingressgateway")
-			Expect(sidecar.Field(`metadata.annotations.yandex\.cpi\.flant\.com/listener-subnet-id`).
-				String()).To(Equal("sidecar-123"))
-			Expect(sidecar.Field("spec.loadBalancerClass").String()).To(Equal("sidecar-class"))
+			Expect(f.KubernetesResource("Service", "d8-istio", "ingressgateway").Exists()).To(BeFalse())
 
 			ambient := f.KubernetesResource("Service", "d8-istio", "ambientgateway")
 			Expect(ambient.Field(`metadata.annotations.yandex\.cpi\.flant\.com/listener-subnet-id`).
@@ -766,15 +773,13 @@ yandex.cpi.flant.com/listener-subnet-id: ambient-123
 			f.HelmRender()
 		})
 
-		// A ConfigMap each, so the exporter can tell the two lists apart. A DNS name is a
-		// supported way to advertise the sidecar gateway, and must not reach the ambient one.
-		It("Publishes each list to the exporter separately", func() {
+		// A ConfigMap per gateway, so the exporter can tell the lists apart. The sidecar list
+		// is not published in this mode.
+		It("Publishes the ambient list to the exporter, and only it", func() {
 			Expect(f.RenderError).ShouldNot(HaveOccurred())
 
-			sidecar := f.KubernetesResource("ConfigMap", "d8-istio", "metadata-exporter-ingressgateway-advertise")
-			Expect(sidecar.Exists()).To(BeTrue())
-			Expect(sidecar.Field(`data.gateways\.json`).String()).
-				To(MatchJSON(`[{"address": "istio-ew.example.com", "port": 15443}]`))
+			Expect(f.KubernetesResource("ConfigMap", "d8-istio", "metadata-exporter-ingressgateway-advertise").
+				Exists()).To(BeFalse())
 
 			ambient := f.KubernetesResource("ConfigMap", "d8-istio", "metadata-exporter-ambientgateway-advertise")
 			Expect(ambient.Exists()).To(BeTrue())
@@ -789,14 +794,9 @@ yandex.cpi.flant.com/listener-subnet-id: ambient-123
 		It("Keeps writing the key the previous release's exporter reads", func() {
 			Expect(f.RenderError).ShouldNot(HaveOccurred())
 
-			for name, expected := range map[string]string{
-				"metadata-exporter-ingressgateway-advertise": `[{"address": "istio-ew.example.com", "port": 15443}]`,
-				"metadata-exporter-ambientgateway-advertise": `[{"address": "172.16.0.6", "port": 15008}]`,
-			} {
-				cm := f.KubernetesResource("ConfigMap", "d8-istio", name)
-				Expect(cm.Field(`data.ingressgateways-array\.json`).String()).
-					To(MatchJSON(expected), "%s lost the deprecated key", name)
-			}
+			cm := f.KubernetesResource("ConfigMap", "d8-istio", "metadata-exporter-ambientgateway-advertise")
+			Expect(cm.Field(`data.ingressgateways-array\.json`).String()).
+				To(MatchJSON(`[{"address": "172.16.0.6", "port": 15008}]`))
 		})
 	})
 
@@ -855,11 +855,11 @@ yandex.cpi.flant.com/listener-subnet-id: ambient-123
 	})
 
 	// The global revision does support ambient multicluster here, so the only thing
-	// keeping the feature off is ambient.multicluster.enabled.
-	Context("Ambient and multicluster are enabled but ambient multicluster is not", func() {
+	// keeping the feature off is multicluster.mode.
+	Context("Ambient and multicluster are enabled, with multicluster in the Sidecar mode", func() {
 		BeforeEach(func() {
 			setUpAmbientMulticluster(f)
-			f.ValuesSet("istio.ambient.multicluster.enabled", false)
+			f.ValuesSet("istio.multicluster.mode", "Sidecar")
 			f.HelmRender()
 		})
 
@@ -871,11 +871,16 @@ yandex.cpi.flant.com/listener-subnet-id: ambient-123
 			Expect(f.KubernetesResource("VerticalPodAutoscaler", "d8-istio", "ambientgateway").Exists()).To(BeFalse())
 			Expect(f.KubernetesResource("PodMonitor", "d8-monitoring", "istio-ambientgateway").Exists()).To(BeFalse())
 
-			// The sidecar east-west gateway is governed by IstioMulticluster alone and
-			// must be unaffected by the ambient multicluster switch.
+			// The sidecar east-west gateway is the Sidecar mode's own.
 			Expect(f.KubernetesResource("DaemonSet", "d8-istio", "ingressgateway").Exists()).To(BeTrue())
+			Expect(exporterEnv(f, "INGRESS_GATEWAY_ENABLED")).To(Equal("true"))
 
-			// And it must not be labelled as a network gateway, with the switch off either.
+			// Deployment is signalled separately, so the inlet is always set.
+			Expect(exporterEnv(f, "AMBIENT_GATEWAY_ENABLED")).To(BeEmpty())
+			Expect(exporterEnv(f, "AMBIENT_INLET")).To(Equal("LoadBalancer"))
+
+			// It must not be labelled as a network gateway: that would break the ambient path
+			// once both paths run side by side. Same as for the ambient gateway's Service.
 			svc := f.KubernetesResource("Service", "d8-istio", "ingressgateway")
 			Expect(svc.Exists()).To(BeTrue())
 			Expect(svc.Field(`metadata.labels.topology\.istio\.io/network`).Exists()).To(BeFalse())
@@ -893,6 +898,25 @@ yandex.cpi.flant.com/listener-subnet-id: ambient-123
 
 			Expect(f.KubernetesResource("ConfigMap", "d8-istio", "istio-v1x29").
 				Field("data.mesh").String()).ToNot(ContainSubstring("serviceScopeConfigs"))
+		})
+	})
+
+	// A flat network: the sidecar east-west gateway is not deployed, so the exporter must not
+	// look for its Service.
+	Context("Multicluster in the Sidecar mode with no peer needing the east-west gateway", func() {
+		BeforeEach(func() {
+			setUpAmbientMulticluster(f)
+			f.ValuesSet("istio.multicluster.mode", "Sidecar")
+			f.ValuesSet("istio.internal.multiclustersNeedIngressGateway", false)
+			f.HelmRender()
+		})
+
+		It("Tells the exporter the sidecar east-west gateway is not deployed", func() {
+			Expect(f.RenderError).ShouldNot(HaveOccurred())
+
+			Expect(f.KubernetesResource("Service", "d8-istio", "ingressgateway").Exists()).To(BeFalse())
+			Expect(f.KubernetesResource("Deployment", "d8-istio", "metadata-exporter").Exists()).To(BeTrue())
+			Expect(exporterEnv(f, "INGRESS_GATEWAY_ENABLED")).To(BeEmpty())
 		})
 	})
 
@@ -922,21 +946,21 @@ yandex.cpi.flant.com/listener-subnet-id: ambient-123
 		})
 	})
 
-	// Likewise, the only thing keeping it off here is multicluster.enabled.
-	Context("Ambient multicluster is enabled but multicluster is not", func() {
+	// The Ambient mode turns the sidecar path off, so a silent fallback on an unsupported
+	// version would leave the multicluster with no data path.
+	Context("Ambient multicluster is enabled on a global version that does not support it", func() {
 		BeforeEach(func() {
 			setUpAmbientMulticluster(f)
-			f.ValuesSet("istio.multicluster.enabled", false)
-			f.ValuesSet("istio.internal.multiclustersNeedIngressGateway", false)
+			f.ValuesSet("istio.internal.globalVersion", "1.27")
+			f.ValuesSetFromYaml("istio.internal.versionsToInstall", `["1.27"]`)
 			f.HelmRender()
 		})
 
-		It("Renders no ambient east-west gateway", func() {
-			Expect(f.RenderError).ShouldNot(HaveOccurred())
-			Expect(f.KubernetesResource("DaemonSet", "d8-istio", "ambientgateway").Exists()).To(BeFalse())
-			Expect(f.KubernetesResource("Service", "d8-istio", "ambientgateway").Exists()).To(BeFalse())
-			Expect(f.KubernetesResource("VerticalPodAutoscaler", "d8-istio", "ambientgateway").Exists()).To(BeFalse())
-			Expect(f.KubernetesResource("PodMonitor", "d8-monitoring", "istio-ambientgateway").Exists()).To(BeFalse())
+		It("Refuses to render, naming the version and the way out", func() {
+			Expect(f.RenderError).To(HaveOccurred())
+			Expect(f.RenderError.Error()).To(ContainSubstring("does not support ambient multicluster"))
+			Expect(f.RenderError.Error()).To(ContainSubstring("1.27"))
+			Expect(f.RenderError.Error()).To(ContainSubstring("multicluster.mode to Sidecar"))
 		})
 	})
 })

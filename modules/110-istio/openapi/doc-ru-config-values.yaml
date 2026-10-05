@@ -30,28 +30,39 @@ properties:
           Обозначить данный кластер как участник мультикластера. Подробнее — в разделе [Включение мультикластера](./#включение-мультикластера).
 
           Мультикластер работает только с рабочими нагрузками в режиме сайдкаров, рабочие нагрузки в режиме ambient в нём участвовать не могут. Подробнее — в разделе [Ограничения ambient mesh](./#ограничения-ambient-mesh).
+      mode:
+        description: |
+          Определяет, для какого data plane мультикластер передаёт межкластерный трафик.
+
+          - `Sidecar` — рабочие нагрузки в режиме сайдкаров обращаются к соседнему кластеру через его ingress gateway (sidecar east-west-шлюз) или напрямую к его подам, если в IstioMulticluster `spec.enableIngressGateway` равен `false`. Ingress gateway этого кластера настраивается в [`alliance.ingressGateway`](#parameters-alliance-ingressgateway).
+          - `Ambient` — рабочие нагрузки в режиме ambient всегда обращаются к соседнему кластеру через его ambient east-west-шлюз. Ambient east-west-шлюз этого кластера настраивается в [`alliance.ambientGateway`](#parameters-alliance-ambientgateway). Параметр IstioMulticluster `spec.enableIngressGateway` не учитывается, плоские сети не поддерживаются. Рабочие нагрузки в режиме сайдкаров межкластерной связности не получают.
+
+          Задайте одинаковое значение `mode` во всех кластерах мультикластера. Кластер, который обращается к соседнему кластеру через east-west-шлюз, не подключается к соседнему кластеру с другим значением.
+
+          Значение `Ambient` требует включённых параметров [`ambient.enabled`](#parameters-ambient-enabled) и [`multicluster.enabled`](#parameters-multicluster-enabled), а также явно заданного параметра [`globalVersion`](#parameters-globalversion) со значением `1.29` или новее. Оно несовместимо с включённым параметром [`federation.enabled`](#parameters-federation-enabled).
   alliance:
     description: Общие настройки для федерации и мультикластера.
     properties:
       ingressGateway:
-        description: Параметры для ingressgateway.
+        description: Параметры ingress gateway.
         properties:
           advertise:
             description: Фактические адреса, которые будут объявлены удаленным кластерам для организации межкластерных запросов приложений. Если не указано, адреса будут выявлены автоматически.
           inlet:
             description: |
-              Способ публикации ingressgateway:
-              - `LoadBalancer` — рекомендуется в случае, если площадка облачная и поддерживает LB;
-              - `NodePort` — для площадок без LB.
+              Способ публикации ingress gateway:
+
+              - `LoadBalancer` — для кластеров, облачный провайдер или инфраструктура которых поддерживает балансировщики нагрузки;
+              - `NodePort` — для кластеров без балансировщика нагрузки.
           nodePort:
-            description: Специальные настройки для ingressgateway с инлетом `NodePort`.
+            description: Специальные настройки для ingress gateway с инлетом `NodePort`.
             properties:
               port:
                 type: integer
                 description: Статичный порт для сервиса с типом NodePort. Должен быть из диапазона, заданного аргументом `kube-apiserver --service-node-port-range` (по умолчанию 30000-32767).
           serviceAnnotations:
             description: |
-              Дополнительные аннотации для сервиса ingressgateway.
+              Дополнительные аннотации для сервиса ingress gateway.
 
               Полезно, например, для настройки локального LB в Yandex Cloud (аннотация `yandex.cpi.flant.com/listener-subnet-id`).
           loadBalancerClass:
@@ -61,32 +72,30 @@ properties:
               Применяется только при `inlet`, равном `LoadBalancer`.
           gatewayPodAnnotations:
             description: |
-              Дополнительные аннотации для подов DaemonSet'а ingressgateway.
+              Дополнительные аннотации для подов DaemonSet'а ingress gateway.
           nodeSelector:
             description: |
-              Селектор для DaemonSet'а ingressgateway.
+              Селектор для DaemonSet'а ingress gateway.
 
               Структура, аналогичная `spec.nodeSelector` пода Kubernetes.
           tolerations:
             description: |
-              tolerations для DaemonSet'а ingressgateway.
+              tolerations для DaemonSet'а ingress gateway.
 
               Структура, аналогичная `spec.tolerations` пода Kubernetes.
       ambientGateway:
         description: |
           Параметры ambient east-west-шлюза.
 
-          Отдельный компонент со своим сервисом-инлетом, независимый от [`ingressGateway`](#parameters-alliance-ingressgateway): соседние кластеры обращаются к нему по double HBONE, а не по mTLS/SNI, и один сервис не может нести оба протокола. Размещение, инлет и объявляемые адреса настраиваются здесь независимо, поэтому шлюзы могут стоять за разными балансировщиками — или за одним, если указать его адрес в обоих списках `advertise` с портом каждого шлюза.
+          Отдельный от [`ingressGateway`](#parameters-alliance-ingressgateway) компонент со своим сервисом-инлетом. Соседние кластеры обращаются к нему по double HBONE. Его размещение, инлет и объявляемые адреса настраиваются здесь, независимо от `ingressGateway`.
 
-          Используется только при включённом параметре [`ambient.multicluster.enabled`](#parameters-ambient-multicluster-enabled), в остальных случаях не влияет ни на что.
+          Используется только при значении `Ambient` параметра [`multicluster.mode`](#parameters-multicluster-mode), в остальных случаях не влияет ни на что.
         properties:
           advertise:
             description: |
               Фактические адреса, которые будут объявлены удалённым кластерам как ambient east-west-шлюз этого кластера.
 
               Если не указано, адреса будут выявлены автоматически из сервиса самого шлюза.
-
-              Независим от [`ingressGateway.advertise`](#parameters-alliance-ingressgateway-advertise), который описывает sidecar east-west-шлюз. Если оба шлюза стоят за одним балансировщиком, укажите его адрес в обоих списках и задайте каждому свой `port`.
             items:
               properties:
                 address:
@@ -97,14 +106,10 @@ properties:
                   description: Порт, по которому соседние кластеры обращаются по этому адресу к ambient east-west-шлюзу.
           inlet:
             description: |
-              Способ публикации ambient east-west-шлюза.
+              Способ публикации ambient east-west-шлюза:
 
-              В любом случае весь межкластерный ambient-трафик идёт через ровно один адрес.
-
-              Возможные значения:
-
-              - `LoadBalancer` — рекомендуемый способ.
-              - `NodePort` — для площадок без LB.
+              - `LoadBalancer` — для кластеров, облачный провайдер или инфраструктура которых поддерживает балансировщики нагрузки;
+              - `NodePort` — для кластеров без балансировщика нагрузки.
           nodePort:
             description: Специальные настройки для ambient east-west-шлюза с инлетом `NodePort`.
             properties:
@@ -114,15 +119,11 @@ properties:
                   Статичный порт для сервиса с типом NodePort.
 
                   Должен быть из диапазона, заданного аргументом `kube-apiserver --service-node-port-range` (по умолчанию 30000-32767).
-
-                  Node port'ы выделяются на весь кластер, поэтому значение должно отличаться от [`ingressGateway.nodePort.port`](#parameters-alliance-ingressgateway-nodeport-port).
           serviceAnnotations:
             description: |
               Дополнительные аннотации для сервиса ambient east-west-шлюза.
 
               Полезно, например, для настройки локального LB в Yandex Cloud (аннотация `yandex.cpi.flant.com/listener-subnet-id`).
-
-              Задаются независимо от [`ingressGateway.serviceAnnotations`](#parameters-alliance-ingressgateway-serviceannotations): аннотация, которая закрепляет один внешний ресурс — статический IP, пул адресов, существующий балансировщик, — не может относиться к двум сервисам одновременно.
           loadBalancerClass:
             description: |
               Класс балансировщика входящих сетевых запросов (пробрасывается в параметр `spec.loadBalancerClass` заказанного сервиса с типом `LoadBalancer`).
@@ -643,18 +644,6 @@ properties:
           Включить ambient mesh.
 
           Рабочие нагрузки в режиме ambient не могут участвовать в [федерации](./#федерация) и [мультикластере](./#мультикластер). Федерация и мультикластер при этом продолжают работать для рабочих нагрузок в режиме сайдкаров. Подробнее — в разделе [Ограничения ambient mesh](./#ограничения-ambient-mesh).
-      multicluster:
-        description: |
-          Нативный ambient-мультикластер: позволяет нагрузкам в режиме ambient обращаться
-          к сервисам соседних кластеров через ambient east-west-шлюз (double HBONE).
-
-          Требует включённых [`ambient.enabled`](#parameters-ambient-enabled) и
-          [`multicluster.enabled`](#parameters-multicluster-enabled). Сам шлюз настраивается
-          в [`alliance.ambientGateway`](#parameters-alliance-ambientgateway).
-        properties:
-          enabled:
-            description: |
-              Включить нативный ambient-мультикластер.
       waypointController:
         description: |
           Настройки для компонента waypoint-controller.
