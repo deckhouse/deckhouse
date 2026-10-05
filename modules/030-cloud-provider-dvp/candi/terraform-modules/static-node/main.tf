@@ -29,7 +29,8 @@ resource "kubernetes_secret" "cloudinit-secret" {
   immutable = true
   lifecycle {
     ignore_changes = [
-      data
+      data,
+      metadata[0].annotations,
     ]
   }
 }
