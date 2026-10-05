@@ -30,6 +30,11 @@ authorizers:
         # Deckhouse modules run under d8-* namespaces; exclude their serviceaccounts so Deckhouse can
         # always reconcile and restore the webhook if it becomes unhealthy.
         - expression: '!(request.user.startsWith("system:serviceaccount:d8-"))'
+
+        # kube-apiserver health probes are anonymous: they must not depend on the webhook pod,
+        # otherwise a webhook that cannot start keeps the API server failing its own probes.
+        # RBAC (system:public-info-viewer) allows these paths for system:unauthenticated.
+        - expression: '!(request.user == "system:anonymous" && has(request.nonResourceAttributes) && request.nonResourceAttributes.path in ["/livez", "/readyz", "/healthz"])'
       authorizedTTL: 5m
       unauthorizedTTL: 30s
       timeout: 3s
