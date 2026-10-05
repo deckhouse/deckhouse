@@ -23,7 +23,8 @@ import "strings"
 // They mirror the matchConditions of the Webhook authorizer in
 // modules/040-control-plane-manager/templates/_authorization_config.tpl, which is the source of
 // truth; TestExemptionsMirrorTheAuthorizationConfig reads that file and fails when the two stop
-// agreeing, so a change there cannot land quietly here.
+// agreeing, so a change there cannot land quietly here. The condition for anonymous kube-apiserver
+// health probes is not mirrored: it is scoped to /livez, /readyz and /healthz, not to an identity.
 var exemptUsers = map[string]struct{}{
 	"system:aggregator":              {},
 	"system:kube-aggregator":         {},

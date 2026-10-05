@@ -51,6 +51,8 @@ func TestExemptionsMirrorTheAuthorizationConfig(t *testing.T) {
 		`'!(request.user.startsWith("system:node:"))'`,
 		`'!(request.user.startsWith("system:serviceaccount:kube-system:"))'`,
 		`'!(request.user.startsWith("system:serviceaccount:d8-"))'`,
+		// Scoped to kube-apiserver health paths, not to an identity: nothing to mirror in exempt.go.
+		`'!(request.user == "system:anonymous" && has(request.nonResourceAttributes) && request.nonResourceAttributes.path in ["/livez", "/readyz", "/healthz"])'`,
 	}
 
 	var got []string
@@ -100,6 +102,8 @@ func TestExemptFromWebhook(t *testing.T) {
 		{"system:nodes", false},
 		{"system:node", false},
 		{"", false},
+		// Only its health probes skip the webhook, not the identity as a whole.
+		{"system:anonymous", false},
 		// The condition matches the whole name, not a prefix of it.
 		{"kubernetes-admin-2", false},
 		{"system:kube-scheduler-shadow", false},

@@ -1150,6 +1150,7 @@ apiserver:
 				Expect(authzConfigYaml).To(ContainSubstring(`expression: '!(request.user.startsWith("system:node:"))'`))
 				Expect(authzConfigYaml).To(ContainSubstring(`expression: '!(request.user.startsWith("system:serviceaccount:kube-system:"))'`))
 				Expect(authzConfigYaml).To(ContainSubstring(`expression: '!(request.user.startsWith("system:serviceaccount:d8-"))'`))
+				Expect(authzConfigYaml).To(ContainSubstring(`expression: '!(request.user == "system:anonymous" && has(request.nonResourceAttributes) && request.nonResourceAttributes.path in ["/livez", "/readyz", "/healthz"])'`))
 
 				kubeApiserver, err := base64.StdEncoding.DecodeString(secret.Field("data.kube-apiserver\\.yaml\\.tpl").String())
 				Expect(err).ShouldNot(HaveOccurred())
