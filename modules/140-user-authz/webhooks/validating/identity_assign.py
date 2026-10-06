@@ -26,7 +26,9 @@
 #        or every target role is inside the actor's labeled can-assign range
 #
 # Range labels are honored only on platform-owned ClusterRole names. Custom
-# roles are cover-only (fail closed).
+# roles are cover-only (fail closed). An actor whose cluster-wide rules grant
+# everything, such as a subject of the default cluster-admin ClusterRole, holds
+# the SuperAdmin range.
 
 from typing import Any, Iterable, List, NamedTuple, Optional, Sequence, Set, Tuple
 
@@ -42,6 +44,7 @@ CAR_SNAP = "d8-user-authz-assign-cluster-authorization-rules"
 AR_SNAP = "d8-user-authz-assign-authorization-rules"
 CRB_SNAP = "d8-user-authz-assign-cluster-role-bindings"
 CROLE_SNAP = "d8-user-authz-assign-cluster-roles"
+MT_STATE_SNAP = "d8-user-authz-assign-multitenancy-state"
 
 SA_PREFIX = "system:serviceaccount:"
 
@@ -92,6 +95,17 @@ EXEMPT_GROUPS = frozenset({
 
 AR_ACCESS_LEVEL_CAP = "Admin"
 
+# Every verb on every resource of every API group and on every non-resource
+# URL: the rules of the default cluster-admin ClusterRole.
+FULL_ACCESS_RULES = (
+    {"apiGroups": ["*"], "resources": ["*"], "verbs": ["*"]},
+    {"nonResourceURLs": ["*"], "verbs": ["*"]},
+)
+
+# Name prefix of the ClusterRoleBindings rendered from a ClusterAuthorizationRule:
+# user-authz:<rule>:<postfix>. A rule name cannot contain a colon.
+RULE_BINDING_PREFIX = "user-authz:"
+
 _ALL_NAMES = object()
 
 
@@ -106,6 +120,10 @@ class AssignRange(NamedTuple):
     scope: Optional[str]
     subsystems: Tuple[str, ...]
     max_level: Optional[str]
+
+
+SUPERADMIN_RANGE = AssignRange(basic_max="SuperAdmin", scope="system", subsystems=(),
+                               max_level="superadmin")
 
 
 class CatalogEntry(NamedTuple):
@@ -320,6 +338,98 @@ def actor_roles(user_info: Any, snapshots: Any) -> List[str]:
     return found
 
 
+def multitenancy_enabled(snapshots: Any) -> bool:
+    """Whether enableMultiTenancy is in effect.
+
+    templates/namespace.yaml renders the d8-user-authz-multitenancy-state
+    ConfigMap only when it is, so a missing ConfigMap reads as off, the same
+    way multitenancy.py reads it.
+    """
+    return any(fr.get("enableMultiTenancy") is True for fr in iter_filter_results(snapshots, MT_STATE_SNAP))
+
+
+def car_is_namespace_limited(fr: dict, *, multitenancy: bool) -> bool:
+    """Whether a ClusterAuthorizationRule snapshot may leave out some namespaces.
+
+    Any namespaceSelector counts, matchAny included, and so does any non-empty
+    limitNamespaces, whether or not multi-tenancy is on. This holds on purpose
+    even for entries that cover every namespace, such as ".*" with
+    allowAccessToSystemNamespaces. The check does not read the patterns, so
+    such a rule errs on the strict side.
+
+    With multi-tenancy on, a rule without allowAccessToSystemNamespaces counts
+    too, because the authorization webhook keeps it out of the system
+    namespaces, and a rule that does not reach them must not assign a role
+    that would. With multi-tenancy off, the authorization webhook is not
+    installed, and multitenancy.py refuses all three fields, so a rule reaches
+    every namespace.
+    """
+    if fr.get("namespaceSelector") is not None or bool(_list(fr.get("limitNamespaces"))):
+        return True
+    return multitenancy and fr.get("allowAccessToSystemNamespaces") is not True
+
+
+def rule_of_binding(name: Any) -> str:
+    """The rule named in a user-authz:<rule>:<postfix> binding name, or an empty string."""
+    if not isinstance(name, str) or not name.startswith(RULE_BINDING_PREFIX):
+        return ""
+    rule, sep, _ = name[len(RULE_BINDING_PREFIX):].partition(":")
+    return rule if sep else ""
+
+
+def actor_cluster_wide_roles(user_info: Any, snapshots: Any) -> List[str]:
+    """Roles the actor holds in every namespace and over cluster-scoped objects.
+
+    They come from ClusterRoleBindings and from the ClusterAuthorizationRules
+    that are not namespace-limited (car_is_namespace_limited). A
+    namespace-limited rule still renders cluster-wide bindings, user-authz:<rule>:<postfix>, and the
+    multi-tenancy authorization webhook keeps them inside the rule's
+    namespaces, so those bindings do not count either.
+    """
+    info = _dict(user_info)
+    username = info.get("username") or ""
+    sa = sa_key(username) or ""
+    groups = {g for g in _list(info.get("groups")) if isinstance(g, str)}
+
+    def is_subject(fr: dict) -> bool:
+        if username and username in _subjects(fr, "userSubjects"):
+            return True
+        if sa and sa in _subjects(fr, "saSubjects"):
+            return True
+        return any(g in groups for g in _subjects(fr, "groupSubjects"))
+
+    found: List[str] = []
+    seen: Set[str] = set()
+
+    def add(role: Any) -> None:
+        if isinstance(role, str) and role and role not in seen:
+            seen.add(role)
+            found.append(role)
+
+    multitenancy = multitenancy_enabled(snapshots)
+    limited: Set[str] = set()
+    for fr in iter_filter_results(snapshots, CAR_SNAP):
+        if car_is_namespace_limited(fr, multitenancy=multitenancy):
+            name = fr.get("name")
+            if isinstance(name, str) and name:
+                limited.add(name)
+            continue
+        if is_subject(fr):
+            for role in _fr_role_names(fr, namespaced=False):
+                add(role)
+
+    for fr in iter_filter_results(snapshots, CRB_SNAP):
+        if is_subject(fr) and rule_of_binding(fr.get("name")) not in limited:
+            add(fr.get("role"))
+    return found
+
+
+def actor_has_full_access(user_info: Any, snapshots: Any, catalog: dict) -> bool:
+    """Whether the actor's cluster-wide roles grant every verb on everything."""
+    rules = union_rules(actor_cluster_wide_roles(user_info, snapshots), catalog)
+    return covers(rules, FULL_ACCESS_RULES)
+
+
 def target_user_roles(snapshots: Any, email: str, groups: Optional[Iterable[str]] = None) -> List[str]:
     found: List[str] = []
     seen: Set[str] = set()
@@ -462,7 +572,16 @@ def merge_ranges(entries: Iterable[CatalogEntry]) -> AssignRange:
     )
 
 
-def actor_range(actor_role_names: Sequence[str], catalog: dict) -> AssignRange:
+def actor_range(actor_role_names: Sequence[str], catalog: dict, *,
+                full_access: bool = False) -> AssignRange:
+    """The actor's can-assign range.
+
+    An actor with full access (actor_has_full_access) holds the SuperAdmin
+    range on both ladders. Otherwise the range merges the can-assign labels
+    of the actor's platform roles.
+    """
+    if full_access:
+        return SUPERADMIN_RANGE
     entries = []
     for name in actor_role_names:
         entry = catalog.get(name)
@@ -595,21 +714,21 @@ def _has_coverable_rules(rules: Sequence[dict]) -> bool:
 
 
 def can_assign(actor_role_names: Sequence[str], target_role_names: Sequence[str],
-               catalog: dict) -> Optional[List[str]]:
+               catalog: dict, *, full_access: bool = False) -> Optional[List[str]]:
     """
     None means allow. A list is the leftover target roles the actor cannot assign.
 
     Disaster names (cluster-admin, SuperAdmin, rbacv2 superadmin) require the
     SuperAdmin range even when the live ClusterRole was rewritten to rules the
-    actor already covers. Cover is only used for non-disaster roles that still
-    have atoms. A role missing from the catalog is leftover: range is not
-    inferred from the name alone.
+    actor already covers. An actor with full access holds that range. Cover is
+    only used for non-disaster roles that still have atoms. A role missing from
+    the catalog is leftover: range is not inferred from the name alone.
     """
     targets = [n for n in target_role_names if isinstance(n, str) and n]
     if not targets:
         return None
 
-    rng = actor_range(actor_role_names, catalog)
+    rng = actor_range(actor_role_names, catalog, full_access=full_access)
     actor_rules = union_rules(actor_role_names, catalog)
     leftover = []
     for name in targets:
@@ -688,6 +807,9 @@ CAR_JQ_FILTER = """
   "name": .metadata.name,
   "accessLevel": (.spec.accessLevel // ""),
   "additionalRoles": [.spec.additionalRoles[]? | .name],
+  "namespaceSelector": (.spec.namespaceSelector // null),
+  "limitNamespaces": [.spec.limitNamespaces[]?],
+  "allowAccessToSystemNamespaces": (.spec.allowAccessToSystemNamespaces == true),
   "groupSubjects": [.spec.subjects[]? | select(.kind == "Group") | .name],
   "userSubjects": [.spec.subjects[]? | select(.kind == "User") | .name],
   "saSubjects": [.spec.subjects[]? | select(.kind == "ServiceAccount") | "\\(.namespace):\\(.name)"]
@@ -734,9 +856,11 @@ CROLE_JQ_FILTER = """
 
 
 def kubernetes_snapshots() -> str:
+    # ClusterAuthorizationRule is read in v1: v1alpha1 has no namespaceSelector,
+    # and the apiserver drops that field from objects served in v1alpha1.
     return f"""
 - name: {CAR_SNAP}
-  apiVersion: deckhouse.io/v1alpha1
+  apiVersion: deckhouse.io/v1
   kind: ClusterAuthorizationRule
   executeHookOnEvent: []
   executeHookOnSynchronization: false
@@ -767,4 +891,19 @@ def kubernetes_snapshots() -> str:
   keepFullObjectsInMemory: false
   jqFilter: |-
 { _indent(CROLE_JQ_FILTER.strip(), 4) }
+- name: {MT_STATE_SNAP}
+  apiVersion: v1
+  kind: ConfigMap
+  executeHookOnEvent: []
+  executeHookOnSynchronization: false
+  keepFullObjectsInMemory: false
+  namespace:
+    nameSelector:
+      matchNames:
+      - d8-user-authz
+  nameSelector:
+    matchNames:
+    - d8-user-authz-multitenancy-state
+  jqFilter: |-
+    {{"enableMultiTenancy": (.data.enableMultiTenancy == "true")}}
 """

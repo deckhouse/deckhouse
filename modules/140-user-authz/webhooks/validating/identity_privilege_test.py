@@ -55,10 +55,8 @@ def default_croles():
             "can-assign-scope": "system",
             "can-assign-max-level": "superadmin",
         }),
-        clusterrole("cluster-admin", STAR_ALL, {
-            "can-assign-basic-max": "SuperAdmin",
-            "can-assign-max-level": "superadmin",
-        }),
+        # The default Kubernetes ClusterRole: every rule, no can-assign labels.
+        clusterrole("cluster-admin", STAR_ALL),
         clusterrole("d8:manage:security:manager", CAR_EDIT + USERS_EDIT, {
             "can-assign-basic-max": "ClusterAdmin",
             "can-assign-scope": "subsystem",
@@ -166,6 +164,50 @@ def isolated_helpdesk_ctx(*args, **kwargs):
     context = ctx(*args, **kwargs)
     context.snapshots[assign.CAR_SNAP][1].filterResult.userSubjects = [CLUSTER_ADMIN]
     return context
+
+
+GITOPS = "system:serviceaccount:gitops:deployer"
+GITOPS_GROUPS = ["system:serviceaccounts", "system:serviceaccounts:gitops", "system:authenticated"]
+
+
+def gitops_crb():
+    return {assign.CRB_SNAP: [{"filterResult": {
+        "name": "gitops-deployer",
+        "role": "cluster-admin",
+        "userSubjects": [],
+        "groupSubjects": [],
+        "saSubjects": ["gitops:deployer"],
+    }}]}
+
+
+def limited_car_with_cluster_admin(**limits):
+    """A CAR granting cluster-admin to the gitops SA in some namespaces, and the bindings it renders."""
+    car = {
+        "name": "gitops-apps",
+        "accessLevel": "User",
+        "additionalRoles": ["cluster-admin"],
+        "namespaceSelector": None,
+        "limitNamespaces": [],
+        "userSubjects": [],
+        "groupSubjects": [],
+        "saSubjects": ["gitops:deployer"],
+    }
+    car.update(limits)
+    bindings = [
+        ("user-authz:gitops-apps:additional-role:cluster-admin", "cluster-admin"),
+        ("user-authz:gitops-apps:user", "user-authz:user"),
+        ("user-authz:gitops-apps:user:custom", "user-authz:user:custom"),
+    ]
+    return {
+        assign.CAR_SNAP: [{"filterResult": car}],
+        assign.CRB_SNAP: [{"filterResult": {
+            "name": name,
+            "role": role,
+            "userSubjects": [],
+            "groupSubjects": [],
+            "saSubjects": ["gitops:deployer"],
+        }} for name, role in bindings],
+    }
 
 
 class TestIdentityAssignHook(unittest.TestCase):
@@ -412,6 +454,99 @@ class TestIdentityAssignHook(unittest.TestCase):
             username=SECURITY, extra_snaps=extra))
         self.assertFalse(out.validations.data[0]["allowed"])
 
+    def test_cluster_admin_crb_can_write_superadmin_car(self):
+        out = self.run_hook(ctx(
+            "ClusterAuthorizationRule", "CREATE",
+            {"accessLevel": "SuperAdmin",
+             "subjects": [{"kind": "User", "name": "peer@corp"}]},
+            username=GITOPS, groups=GITOPS_GROUPS, extra_snaps=gitops_crb()))
+        tests.assert_validation_allowed(self, out, None)
+
+    def test_cluster_admin_crb_can_write_cluster_admin_additional_role(self):
+        out = self.run_hook(ctx(
+            "ClusterAuthorizationRule", "CREATE",
+            {"accessLevel": "User",
+             "additionalRoles": [{"apiGroup": "rbac.authorization.k8s.io",
+                                  "kind": "ClusterRole", "name": "cluster-admin"}],
+             "subjects": [{"kind": "User", "name": "peer@corp"}]},
+            username=GITOPS, groups=GITOPS_GROUPS, extra_snaps=gitops_crb()))
+        tests.assert_validation_allowed(self, out, None)
+
+    def test_cluster_admin_crb_can_write_group_bound_to_cluster_admin(self):
+        extra = gitops_crb()
+        extra[assign.CRB_SNAP].append({"filterResult": {
+            "name": "platform-admins",
+            "role": "cluster-admin",
+            "userSubjects": [],
+            "groupSubjects": ["platform-admins"],
+            "saSubjects": [],
+        }})
+        out = self.run_hook(ctx(
+            "Group", "UPDATE",
+            {"name": "platform-admins", "members": [{"kind": "User", "name": "ops"}]},
+            old_spec={"name": "platform-admins", "members": []},
+            username=GITOPS, groups=GITOPS_GROUPS, extra_snaps=extra))
+        tests.assert_validation_allowed(self, out, None)
+
+    def test_cluster_admin_crb_can_recreate_superadmin_user(self):
+        out = self.run_hook(ctx(
+            "User", "CREATE", {"email": PRIVILEGED_EMAIL},
+            username=GITOPS, groups=GITOPS_GROUPS, extra_snaps=gitops_crb()))
+        tests.assert_validation_allowed(self, out, None)
+
+    def test_limited_car_with_cluster_admin_cannot_write_superadmin_car(self):
+        out = self.run_hook(ctx(
+            "ClusterAuthorizationRule", "CREATE",
+            {"accessLevel": "SuperAdmin",
+             "subjects": [{"kind": "User", "name": "peer@corp"}]},
+            username=GITOPS, groups=GITOPS_GROUPS,
+            extra_snaps=limited_car_with_cluster_admin(limitNamespaces=["app-.*"])))
+        self.assertFalse(out.validations.data[0]["allowed"])
+        self.assertIn("user-authz:super-admin", out.validations.data[0]["message"])
+
+    def test_limited_car_that_allows_system_namespaces_cannot_write_superadmin_car(self):
+        out = self.run_hook(ctx(
+            "ClusterAuthorizationRule", "CREATE",
+            {"accessLevel": "SuperAdmin",
+             "subjects": [{"kind": "User", "name": "peer@corp"}]},
+            username=GITOPS, groups=GITOPS_GROUPS,
+            extra_snaps=limited_car_with_cluster_admin(limitNamespaces=["app-.*"],
+                                                       allowAccessToSystemNamespaces=True)))
+        self.assertFalse(out.validations.data[0]["allowed"])
+        self.assertIn("user-authz:super-admin", out.validations.data[0]["message"])
+
+    def test_open_car_counts_as_full_access_only_without_multitenancy(self):
+        # A rule without namespace limits and without allowAccessToSystemNamespaces: with multi-tenancy
+        # on, the authorization webhook keeps it out of the system namespaces; without it, the rule
+        # reaches every namespace.
+        spec = {"accessLevel": "SuperAdmin", "subjects": [{"kind": "User", "name": "peer@corp"}]}
+        for multitenancy in (False, True):
+            with self.subTest(multitenancy=multitenancy):
+                extra = limited_car_with_cluster_admin()
+                if multitenancy:
+                    extra[assign.MT_STATE_SNAP] = [{"filterResult": {"enableMultiTenancy": True}}]
+                out = self.run_hook(ctx("ClusterAuthorizationRule", "CREATE", spec,
+                                        username=GITOPS, groups=GITOPS_GROUPS, extra_snaps=extra))
+                self.assertEqual(out.validations.data[0]["allowed"], not multitenancy)
+
+    def test_selector_car_with_cluster_admin_cannot_write_group_bound_to_cluster_admin(self):
+        extra = limited_car_with_cluster_admin(
+            namespaceSelector={"labelSelector": {"matchLabels": {"team": "apps"}}})
+        extra[assign.CRB_SNAP].append({"filterResult": {
+            "name": "platform-admins",
+            "role": "cluster-admin",
+            "userSubjects": [],
+            "groupSubjects": ["platform-admins"],
+            "saSubjects": [],
+        }})
+        out = self.run_hook(ctx(
+            "Group", "UPDATE",
+            {"name": "platform-admins", "members": [{"kind": "User", "name": "ops"}]},
+            old_spec={"name": "platform-admins", "members": []},
+            username=GITOPS, groups=GITOPS_GROUPS, extra_snaps=extra))
+        self.assertFalse(out.validations.data[0]["allowed"])
+        self.assertIn("cluster-admin", out.validations.data[0]["message"])
+
     def test_group_occupied_name_denied_for_helpdesk(self):
         out = self.run_hook(isolated_helpdesk_ctx(
             "Group", "CREATE", {"name": PRIVILEGED_GROUP, "members": []}))
@@ -515,8 +650,22 @@ class TestIdentityAssignConfigContract(unittest.TestCase):
         kinds = [b["kind"] for b in self.config["kubernetes"]]
         self.assertEqual(kinds, [
             "ClusterAuthorizationRule", "AuthorizationRule",
-            "ClusterRoleBinding", "ClusterRole",
+            "ClusterRoleBinding", "ClusterRole", "ConfigMap",
         ])
+
+    def test_every_snapshot_is_included(self):
+        names = [b["name"] for b in self.config["kubernetes"]]
+        self.assertEqual(sorted(self.config["kubernetesValidating"][0]["includeSnapshotsFrom"]), sorted(names))
+
+    def test_multitenancy_state_snapshot_reads_the_state_config_map(self):
+        state = [b for b in self.config["kubernetes"] if b["name"] == assign.MT_STATE_SNAP][0]
+        self.assertEqual(state["namespace"]["nameSelector"]["matchNames"], ["d8-user-authz"])
+        self.assertEqual(state["nameSelector"]["matchNames"], ["d8-user-authz-multitenancy-state"])
+
+    def test_car_snapshot_reads_the_version_with_namespace_selector(self):
+        # v1alpha1 has no namespaceSelector, and the apiserver prunes it from objects read in v1alpha1.
+        car = [b for b in self.config["kubernetes"] if b["name"] == assign.CAR_SNAP]
+        self.assertEqual(car[0]["apiVersion"], "deckhouse.io/v1")
 
 
 @unittest.skipUnless(shutil.which("jq"), "jq is required to execute the hook's jqFilter programs")
@@ -549,6 +698,37 @@ class TestAssignSnapshotJQFilters(unittest.TestCase):
         })
         self.assertEqual(out["additionalRoles"], ["cluster-admin"])
         self.assertEqual(out["saSubjects"], ["ns:sa"])
+        self.assertIsNone(out["namespaceSelector"])
+        self.assertEqual(out["limitNamespaces"], [])
+
+    def test_car_filter_keeps_namespace_limits(self):
+        selector = {"labelSelector": {"matchLabels": {"team": "apps"}}}
+        out = self.run_filter(assign.CAR_SNAP, {
+            "metadata": {"name": "limited"},
+            "spec": {
+                "accessLevel": "User",
+                "namespaceSelector": selector,
+                "limitNamespaces": ["app-.*"],
+                "subjects": [{"kind": "User", "name": "u@x"}],
+            },
+        })
+        self.assertEqual(out["namespaceSelector"], selector)
+        self.assertEqual(out["limitNamespaces"], ["app-.*"])
+        self.assertTrue(assign.car_is_namespace_limited(out, multitenancy=True))
+
+    def test_car_filter_reads_allow_access_to_system_namespaces(self):
+        for spec, expected in (({}, False), ({"allowAccessToSystemNamespaces": False}, False),
+                               ({"allowAccessToSystemNamespaces": True}, True)):
+            with self.subTest(spec=spec):
+                out = self.run_filter(assign.CAR_SNAP, {"metadata": {"name": "r"}, "spec": spec})
+                self.assertIs(out["allowAccessToSystemNamespaces"], expected)
+
+    def test_multitenancy_state_filter(self):
+        for data, expected in (({"enableMultiTenancy": "true"}, True), ({"enableMultiTenancy": "false"}, False),
+                               ({}, False)):
+            with self.subTest(data=data):
+                out = self.run_filter(assign.MT_STATE_SNAP, {"metadata": {"name": "s"}, "data": data})
+                self.assertEqual(out, {"enableMultiTenancy": expected})
 
     def test_crb_filter(self):
         out = self.run_filter(assign.CRB_SNAP, {

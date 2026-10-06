@@ -55,7 +55,8 @@ CONFIG = f"""
 configVersion: v1
 kubernetesValidating:
 - name: d8-user-authz-identity-assign.deckhouse.io
-  includeSnapshotsFrom: ["{assign.CAR_SNAP}", "{assign.AR_SNAP}", "{assign.CRB_SNAP}", "{assign.CROLE_SNAP}"]
+  includeSnapshotsFrom: ["{assign.CAR_SNAP}", "{assign.AR_SNAP}", "{assign.CRB_SNAP}", "{assign.CROLE_SNAP}",
+                         "{assign.MT_STATE_SNAP}"]
 {MATCH_CONDITIONS}
   rules:
   - apiGroups:   ["deckhouse.io"]
@@ -127,17 +128,19 @@ def validate(ctx: DotMap) -> Optional[str]:
 
     catalog = assign.load_catalog(ctx.snapshots)
     actor = assign.actor_roles(req.userInfo, ctx.snapshots)
+    full_access = assign.actor_has_full_access(req.userInfo, ctx.snapshots, catalog)
 
     if kind == "user":
-        return validate_user(req, ctx.snapshots, actor, catalog)
+        return validate_user(req, ctx.snapshots, actor, catalog, full_access)
     if kind == "group":
-        return validate_group(req, ctx.snapshots, actor, catalog)
+        return validate_group(req, ctx.snapshots, actor, catalog, full_access)
     if kind == "clusterauthorizationrule":
-        return validate_car(req, actor, catalog)
+        return validate_car(req, actor, catalog, full_access)
     return None
 
 
-def validate_user(req, snapshots, actor: List[str], catalog: dict) -> Optional[str]:
+def validate_user(req, snapshots, actor: List[str], catalog: dict,
+                  full_access: bool) -> Optional[str]:
     new_spec = _spec(req.object)
     old_spec = _spec(req.oldObject)
 
@@ -168,14 +171,15 @@ def validate_user(req, snapshots, actor: List[str], catalog: dict) -> Optional[s
 
     if not targets:
         return None
-    rng = assign.actor_range(actor, catalog)
-    leftover = assign.can_assign(actor, targets, catalog)
+    rng = assign.actor_range(actor, catalog, full_access=full_access)
+    leftover = assign.can_assign(actor, targets, catalog, full_access=full_access)
     if leftover is None:
         return None
     return assign.deny_message("users.deckhouse.io", ".spec.email", display_email, leftover, rng)
 
 
-def validate_group(req, snapshots, actor: List[str], catalog: dict) -> Optional[str]:
+def validate_group(req, snapshots, actor: List[str], catalog: dict,
+                   full_access: bool) -> Optional[str]:
     names = []
     new_spec = _spec(req.object)
     old_spec = _spec(req.oldObject)
@@ -199,20 +203,20 @@ def validate_group(req, snapshots, actor: List[str], catalog: dict) -> Optional[
 
     if not targets:
         return None
-    rng = assign.actor_range(actor, catalog)
-    leftover = assign.can_assign(actor, targets, catalog)
+    rng = assign.actor_range(actor, catalog, full_access=full_access)
+    leftover = assign.can_assign(actor, targets, catalog, full_access=full_access)
     if leftover is None:
         return None
     return assign.deny_message("groups.deckhouse.io", ".spec.name", display, leftover, rng)
 
 
-def validate_car(req, actor: List[str], catalog: dict) -> Optional[str]:
+def validate_car(req, actor: List[str], catalog: dict, full_access: bool) -> Optional[str]:
     spec = _spec(req.object)
     targets = assign.car_target_roles(spec)
-    leftover = assign.can_assign(actor, targets, catalog)
+    leftover = assign.can_assign(actor, targets, catalog, full_access=full_access)
     if leftover is None:
         return None
-    rng = assign.actor_range(actor, catalog)
+    rng = assign.actor_range(actor, catalog, full_access=full_access)
     return assign.deny_car_message(_meta_name(req.object) or "obj", leftover, rng)
 
 

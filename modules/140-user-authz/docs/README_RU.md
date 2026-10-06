@@ -82,6 +82,11 @@ Manage-роль сама по себе не даёт права раздават
 
 У ClusterAuthorizationRule поле `spec.accessLevel` задаёт уровень [текущей ролевой модели](#текущая-ролевая-модель): `User`, `PrivilegedUser`, `Editor`, `Admin`, `ClusterEditor`, `ClusterAdmin`, `SuperAdmin`. Менеджер подсистемы `security` может назначить любой из них, кроме `SuperAdmin`. Кластерную роль Kubernetes `cluster-admin` он тоже назначить не может. Роли экспериментальной модели подсистемы security — не выше `d8:subsystem:security:admin`.
 
+Запрашивающий, у которого есть все права во всём кластере, в этих проверках приравнивается к SuperAdmin и может назначить любую роль, которая есть в кластере, в том числе `SuperAdmin` и `cluster-admin`. Например, такие права есть у субъекта кластерной роли Kubernetes `cluster-admin`, если роль выдана через ClusterRoleBinding или через ClusterAuthorizationRule без `namespaceSelector` и `limitNamespaces`. Если включён режим мультитенантности, такое правило должно ещё задавать `allowAccessToSystemNamespaces: true`, иначе оно не даёт доступа к системным неймспейсам. Права из ClusterAuthorizationRule с `namespaceSelector` или `limitNamespaces` в эту проверку не входят, даже если правило выдаёт `cluster-admin`.
+Любой непустой `limitNamespaces` намеренно считается ограничением, даже если его записи подходят под все неймспейсы, например `.*` вместе с `allowAccessToSystemNamespaces: true`. По `accessLevel` такое правило учитывается как обычно: например, `accessLevel: SuperAdmin` даёт диапазон SuperAdmin независимо от ограничений неймспейсов в правиле.
+
+`limitNamespaces` и `namespaceSelector` ограничивают только доступ к ресурсам в неймспейсах. Субъект с уровнем доступа `ClusterAdmin` или `SuperAdmin` по-прежнему может создавать объекты ClusterRoleBinding и ClusterAuthorizationRule, поэтому эти поля не ограничивают то, что он может выдать на весь кластер. Выдавайте эти уровни только тем, кому можно иметь доступ ко всему кластеру.
+
 В тексте отказа вебхука уровни `accessLevel` называются basic, чтобы не путать их с уровнями manage-ролей (`viewer` / `manager`).
 
 Права модуля `user-authn` создать User или Group для этого недостаточны: они не раздают роли, которые уже висят на этом email.
