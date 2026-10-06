@@ -224,6 +224,21 @@ func TestHandle_FromParamTypeValidation(t *testing.T) {
 		assert.Contains(t, resp.Result.Message, "requires type 'boolean'")
 	})
 
+	t.Run("boolean field bound to a string parameter next to additionalProperties is denied", func(t *testing.T) {
+		v := newValidator(t)
+		resp := v.Handle(ctx, createRequest(t, tmpl(func(s *v1alpha2.ProjectTemplateSpec) {
+			s.ParametersSchema.OpenAPIV3Schema = map[string]any{
+				"type":                 "object",
+				"properties":           schema["properties"],
+				"additionalProperties": true,
+			}
+			s.RuntimeAudit = &v1alpha2.RuntimeAuditSpec{Enabled: v1alpha2.FromParamRef[bool]("strParam")}
+		})))
+		require.False(t, resp.Allowed)
+		assert.Contains(t, resp.Result.Message, "runtimeAudit.enabled")
+		assert.Contains(t, resp.Result.Message, "requires type 'boolean'")
+	})
+
 	t.Run("string field bound to a boolean parameter is denied", func(t *testing.T) {
 		v := newValidator(t)
 		resp := v.Handle(ctx, createRequest(t, tmpl(func(s *v1alpha2.ProjectTemplateSpec) {

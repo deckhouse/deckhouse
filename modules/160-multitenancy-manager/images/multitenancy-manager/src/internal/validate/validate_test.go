@@ -32,8 +32,8 @@ func TestMergeWithDefaults_AdditionalProperties(t *testing.T) {
 
 	out := MergeDefaults(schema, map[string]any{"free": "value", "declared": "kept"})
 
-	// only the non-property key survives; the declared property and its schema default are dropped.
-	assert.Equal(t, map[string]any{"free": "value"}, out)
+	// the declared property keeps the project value, and the undeclared key is kept next to it.
+	assert.Equal(t, map[string]any{"free": "value", "declared": "kept"}, out)
 }
 
 // TestMergeWithDefaults_ObjectDefaultPreserved pins the behaviour the schema-based ProjectTemplate

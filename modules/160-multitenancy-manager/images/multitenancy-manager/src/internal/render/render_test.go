@@ -17,6 +17,7 @@ limitations under the License.
 package render
 
 import (
+	"maps"
 	"slices"
 	"strings"
 	"testing"
@@ -37,8 +38,9 @@ func TestManifestsFanOutMultiNamespace(t *testing.T) {
 	t.Parallel()
 	tmpl := &v1alpha2.ProjectTemplate{
 		Spec: v1alpha2.ProjectTemplateSpec{
-			NetworkPolicy: &v1alpha2.NetworkPolicySpec{Mode: v1alpha2.LiteralParam(v1alpha2.NetworkPolicyModeIsolated)},
-			LogShipping:   &v1alpha2.LogShippingSpec{ClusterDestinationRef: v1alpha2.LiteralParam("central")},
+			NetworkPolicy:    &v1alpha2.NetworkPolicySpec{Mode: v1alpha2.LiteralParam(v1alpha2.NetworkPolicyModeIsolated)},
+			LogShipping:      &v1alpha2.LogShippingSpec{ClusterDestinationRef: v1alpha2.LiteralParam("central")},
+			ParametersSchema: requiredRequestsSchema(map[string]any{"type": "boolean", "default": true}),
 		},
 	}
 	// Two additional namespaces plus a duplicate of the main entry to exercise sort + dedup.
@@ -193,38 +195,127 @@ func TestManifestsSingleNamespace(t *testing.T) {
 	require.Equal(t, 1, count, "single-namespace project renders exactly one NetworkPolicy")
 }
 
-func TestManifestsSkipsOperationPolicyWhenRequiredRequestsDisabled(t *testing.T) {
+// TestManifestsRequiredRequests pins when the required-requests OperationPolicy is rendered: only when
+// the template declares the requiredRequests parameter as a boolean and it resolves to true for the
+// project.
+func TestManifestsRequiredRequests(t *testing.T) {
 	t.Parallel()
-	tmpl := &v1alpha2.ProjectTemplate{
-		Spec: v1alpha2.ProjectTemplateSpec{
-			ParametersSchema: v1alpha2.ParametersSchema{
-				OpenAPIV3Schema: map[string]any{
-					"type": "object",
-					"properties": map[string]any{
-						"requiredRequests": map[string]any{"type": "boolean", "default": true},
-					},
-				},
-			},
+
+	tests := []struct {
+		name     string
+		schema   v1alpha2.ParametersSchema
+		params   map[string]any
+		expected bool
+	}{
+		{
+			name:     "template without a schema",
+			expected: false,
+		},
+		{
+			name: "schema without the parameter",
+			schema: v1alpha2.ParametersSchema{OpenAPIV3Schema: map[string]any{
+				"type":       "object",
+				"properties": map[string]any{"team": map[string]any{"type": "string"}},
+			}},
+			expected: false,
+		},
+		{
+			name:     "project sets a parameter the template does not declare",
+			params:   map[string]any{"requiredRequests": true},
+			expected: false,
+		},
+		{
+			name:     "declared with default true",
+			schema:   requiredRequestsSchema(map[string]any{"type": "boolean", "default": true}),
+			expected: true,
+		},
+		{
+			name:     "declared with default true and turned off by the project",
+			schema:   requiredRequestsSchema(map[string]any{"type": "boolean", "default": true}),
+			params:   map[string]any{"requiredRequests": false},
+			expected: false,
+		},
+		{
+			name:     "declared with default false",
+			schema:   requiredRequestsSchema(map[string]any{"type": "boolean", "default": false}),
+			expected: false,
+		},
+		{
+			name:     "declared with default false and turned on by the project",
+			schema:   requiredRequestsSchema(map[string]any{"type": "boolean", "default": false}),
+			params:   map[string]any{"requiredRequests": true},
+			expected: true,
+		},
+		{
+			name:     "declared without a default",
+			schema:   requiredRequestsSchema(map[string]any{"type": "boolean"}),
+			expected: false,
+		},
+		{
+			name:     "declared as a string",
+			schema:   requiredRequestsSchema(map[string]any{"type": "string", "default": "true"}),
+			expected: false,
+		},
+		{
+			name: "declared with default true next to additionalProperties",
+			schema: withAdditionalProperties(
+				requiredRequestsSchema(map[string]any{"type": "boolean", "default": true}), true),
+			expected: true,
+		},
+		{
+			name: "declared with default false next to additionalProperties and turned on by the project",
+			schema: withAdditionalProperties(
+				requiredRequestsSchema(map[string]any{"type": "boolean", "default": false}), true),
+			params:   map[string]any{"requiredRequests": true},
+			expected: true,
+		},
+		{
+			name: "declared with default true next to additionalProperties false",
+			schema: withAdditionalProperties(
+				requiredRequestsSchema(map[string]any{"type": "boolean", "default": true}), false),
+			expected: true,
+		},
+		{
+			name: "project sets an undeclared parameter that additionalProperties allows",
+			schema: v1alpha2.ParametersSchema{OpenAPIV3Schema: map[string]any{
+				"type":                 "object",
+				"additionalProperties": true,
+			}},
+			params:   map[string]any{"requiredRequests": true},
+			expected: false,
 		},
 	}
-	project := &v1alpha3.Project{
-		ObjectMeta: metav1.ObjectMeta{Name: "proj"},
-		Spec:       v1alpha3.ProjectSpec{Parameters: map[string]any{"requiredRequests": false}},
-	}
 
-	out, err := Manifests(tmpl, project)
-	require.NoError(t, err)
-	require.NotContains(t, out, "kind: OperationPolicy")
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			tmpl := &v1alpha2.ProjectTemplate{Spec: v1alpha2.ProjectTemplateSpec{ParametersSchema: tt.schema}}
+			project := &v1alpha3.Project{
+				ObjectMeta: metav1.ObjectMeta{Name: "proj"},
+				Spec:       v1alpha3.ProjectSpec{Parameters: tt.params},
+			}
+
+			out, err := Manifests(tmpl, project)
+			require.NoError(t, err)
+			require.Equal(t, tt.expected, strings.Contains(out, "kind: OperationPolicy"),
+				"required-requests OperationPolicy rendered")
+		})
+	}
 }
 
-func TestManifestsKeepsOperationPolicyByDefault(t *testing.T) {
-	t.Parallel()
-	tmpl := &v1alpha2.ProjectTemplate{Spec: v1alpha2.ProjectTemplateSpec{}}
-	project := &v1alpha3.Project{ObjectMeta: metav1.ObjectMeta{Name: "proj"}}
+// requiredRequestsSchema is a parametersSchema declaring only the requiredRequests parameter.
+func requiredRequestsSchema(property map[string]any) v1alpha2.ParametersSchema {
+	return v1alpha2.ParametersSchema{OpenAPIV3Schema: map[string]any{
+		"type":       "object",
+		"properties": map[string]any{"requiredRequests": property},
+	}}
+}
 
-	out, err := Manifests(tmpl, project)
-	require.NoError(t, err)
-	require.Contains(t, out, "kind: OperationPolicy")
+// withAdditionalProperties returns a copy of the schema with additionalProperties set on its root.
+func withAdditionalProperties(schema v1alpha2.ParametersSchema, value any) v1alpha2.ParametersSchema {
+	root := maps.Clone(schema.OpenAPIV3Schema)
+	root["additionalProperties"] = value
+	return v1alpha2.ParametersSchema{OpenAPIV3Schema: root}
 }
 
 // TestManifestsDedicatedPlacementBeatsMirroredAnnotation: adoption mirrors the placement annotations

@@ -78,8 +78,10 @@ func LoadSchema(properties map[string]any) (*spec.Schema, error) {
 
 // MergeDefaults overlays a parametersSchema's property defaults onto the project-supplied values,
 // producing the effective parameters a template renders against. A project value always wins over a
-// schema default; nested objects are merged recursively; an additionalProperties (free-form map)
-// schema keeps the user's own keys. This is the single source of truth for parameter defaulting.
+// schema default; nested objects are merged recursively. The declared properties are merged the same
+// way whatever additionalProperties says; a schema whose additionalProperties allows other keys (a
+// free-form map) also keeps the project's undeclared keys as they are. This is the single source of
+// truth for parameter defaulting.
 func MergeDefaults(schema *spec.Schema, projectValues map[string]any) map[string]any {
 	result := make(map[string]any)
 
@@ -102,17 +104,14 @@ func MergeDefaults(schema *spec.Schema, projectValues map[string]any) map[string
 		}
 	}
 
-	// additionalProperties models a free-form map: the user's keys win and the named-property
-	// defaults computed above are discarded (the two are not combined).
-	if schema.AdditionalProperties != nil {
-		mapResult := make(map[string]any)
+	// additionalProperties models a free-form map: the project's undeclared keys are added next to the
+	// declared properties merged above, which already hold the project's values for their own keys.
+	if allowsAdditional(schema) {
 		for key, value := range projectValues {
-			if _, exists := schema.Properties[key]; exists {
-				continue
+			if _, declared := schema.Properties[key]; !declared {
+				result[key] = value
 			}
-			mapResult[key] = value
 		}
-		result = mapResult
 	}
 
 	return result
@@ -120,11 +119,13 @@ func MergeDefaults(schema *spec.Schema, projectValues map[string]any) map[string
 
 // ParamPath verifies that a (optionally dotted) fromParam reference resolves to a parameter declared
 // in the loaded parametersSchema, and that the parameter's declared type can satisfy the field it is
-// bound to. It walks the schema's properties segment by segment; descent stops successfully as soon
-// as it reaches a free-form node (additionalProperties or x-kubernetes-preserve-unknown-fields),
-// since the remaining segments address user-defined keys the schema cannot enumerate (the type check
-// is skipped there — the value shape is user-defined). A segment that is neither a declared property
-// nor under a free-form node is reported as undefined.
+// bound to. It walks the schema's properties segment by segment and follows a declared property
+// whatever additionalProperties says, so a declared parameter is type-checked in a free-form node
+// too. Descent stops successfully only at a segment that a free-form node (additionalProperties or
+// x-kubernetes-preserve-unknown-fields) does not declare, since that segment and the remaining ones
+// address user-defined keys the schema cannot enumerate (the type check is skipped there — the value
+// shape is user-defined). A segment that is neither a declared property nor under a free-form node is
+// reported as undefined.
 //
 // fieldType is the OpenAPI type the field renders the parameter into ("string", "boolean", "object",
 // "array"); empty fieldType or a parameter without a declared type skips the compatibility check.
@@ -138,11 +139,11 @@ func ParamPath(schema *spec.Schema, path, fieldType string) error {
 	node := schema
 	walked := make([]string, 0, len(path))
 	for _, segment := range strings.Split(path, ".") {
-		if allowsUnknown(node) {
-			return nil
-		}
-		child, ok := node.Properties[segment]
-		if !ok {
+		child, declared := node.Properties[segment]
+		if !declared {
+			if allowsUnknown(node) {
+				return nil
+			}
 			where := "spec.parametersSchema.properties"
 			if len(walked) > 0 {
 				where = "property '" + strings.Join(walked, ".") + "'"
@@ -169,7 +170,7 @@ func allowsUnknown(s *spec.Schema) bool {
 	if s == nil {
 		return false
 	}
-	if ap := s.AdditionalProperties; ap != nil && (ap.Allows || ap.Schema != nil) {
+	if allowsAdditional(s) {
 		return true
 	}
 	if ext, ok := s.Extensions["x-kubernetes-preserve-unknown-fields"]; ok {
@@ -178,6 +179,13 @@ func allowsUnknown(s *spec.Schema) bool {
 		}
 	}
 	return false
+}
+
+// allowsAdditional reports whether a schema node's additionalProperties accepts keys the node does
+// not declare, that is additionalProperties is true or a schema rather than absent or false.
+func allowsAdditional(s *spec.Schema) bool {
+	ap := s.AdditionalProperties
+	return ap != nil && (ap.Allows || ap.Schema != nil)
 }
 
 // transform sets undefined AdditionalProperties to false recursively.

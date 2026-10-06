@@ -114,7 +114,11 @@ func (r *renderer) build(spec *v1alpha2.ProjectTemplateSpec) ([]map[string]any, 
 	}
 	docs = append(docs, plcs...)
 
-	if r.requiredRequestsEnabled() {
+	requiredRequests, err := r.requiredRequestsEnabled(spec)
+	if err != nil {
+		return nil, fmt.Errorf("resolve requiredRequests: %w", err)
+	}
+	if requiredRequests {
 		docs = append(docs, r.operationPolicy())
 	}
 
@@ -319,20 +323,22 @@ func (r *renderer) podLoggingConfigs(spec *v1alpha2.ProjectTemplateSpec) ([]map[
 	return out, nil
 }
 
-// requiredRequestsEnabled reports whether the built-in required-requests
-// OperationPolicy should be rendered. Structured templates historically always
-// emitted it; a missing parameter keeps that behaviour. Adoption seeds
-// requiredRequests=false so a live namespace is not suddenly denied.
-func (r *renderer) requiredRequestsEnabled() bool {
-	raw, ok := r.params["requiredRequests"]
-	if !ok {
-		return true
+// requiredRequestsEnabled reports whether the required-requests OperationPolicy is rendered: only
+// when the parametersSchema of the template declares the requiredRequests parameter and it resolves
+// to true. A template that does not declare the parameter renders no such policy, even when
+// additionalProperties lets a project's own requiredRequests key into the effective parameters. The
+// built-in templates declare it with an explicit default, and adoption sets it to false so a live
+// namespace is not suddenly denied.
+func (r *renderer) requiredRequestsEnabled(spec *v1alpha2.ProjectTemplateSpec) (bool, error) {
+	schema, err := validate.LoadSchema(spec.ParametersSchema.OpenAPIV3Schema)
+	if err != nil {
+		return false, fmt.Errorf("load parameters schema: %w", err)
 	}
-	enabled, ok := raw.(bool)
-	if !ok {
-		return true
+	if _, declared := schema.Properties["requiredRequests"]; !declared {
+		return false, nil
 	}
-	return enabled
+	enabled, ok := r.params["requiredRequests"].(bool)
+	return ok && enabled, nil
 }
 
 func (r *renderer) operationPolicy() map[string]any {

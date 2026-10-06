@@ -76,6 +76,11 @@ func TestBuiltinTemplatesAreStructured(t *testing.T) {
 			assert.Contains(t, props, "podSecurityProfile")
 			assert.Contains(t, props, "networkPolicy")
 			assert.Contains(t, props, "namespace")
+			// the required-requests policy is rendered only for a declared parameter, so these
+			// templates declare it and keep the policy on unless the project turns it off
+			required, ok := props["requiredRequests"].(map[string]any)
+			require.True(t, ok)
+			assert.Equal(t, true, required["default"])
 		})
 	}
 }

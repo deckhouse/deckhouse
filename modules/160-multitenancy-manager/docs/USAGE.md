@@ -470,6 +470,21 @@ spec:
 
 The `fromParam` references are validated when the template is created: a reference to an undeclared parameter or to a parameter of an incompatible type (for example, a string parameter for a boolean field) is rejected.
 
+A declared parameter is type-checked even where the schema allows undeclared keys with `additionalProperties` or `x-kubernetes-preserve-unknown-fields`. A reference to an undeclared key is accepted only in such places, and the type of such a key is not checked.
+
+The `requiredRequests` parameter is read by name, without `fromParam`. When the template declares it in `parametersSchema` with `type: boolean` and its value for the project is `true`, the controller renders an OperationPolicy in the `Deny` mode that requires CPU and memory requests from the pods in every namespace of the project. A template that does not declare the parameter renders no such policy, even if its schema allows `additionalProperties` and the project sets `requiredRequests` as an undeclared key. To keep the policy on unless a project turns it off, declare the parameter with `default: true`, as the `default`, `secure` and `secure-with-dedicated-nodes` templates do:
+
+```yaml
+spec:
+  parametersSchema:
+    openAPIV3Schema:
+      type: object
+      properties:
+        requiredRequests:
+          type: boolean
+          default: true
+```
+
 ### Template checks
 
 The following rules apply to template operations:
