@@ -39,8 +39,11 @@ shell:
     - export GOARCH=amd64
     - export CGO_ENABLED=0
     - cd /src/distribution
-    - make build
-    - make binaries
+    - |
+      {{- $buildContext := deepCopy $ -}}
+      {{- $_ := set $buildContext "SvaceBuildOptions" "--enable-ptrace-all" -}}
+      {{- $_ := set $buildContext "BuildCommand" `make build binaries` -}}
+      {{- include "image-build.build" $buildContext | indent 6 }}
     - chmod +x ./registry
     - mv ./bin/registry /registry
 ---
