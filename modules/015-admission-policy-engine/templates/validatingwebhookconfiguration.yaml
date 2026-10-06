@@ -35,9 +35,16 @@ sideEffects: None
   `failurePolicy: Fail` is in effect, deleting a tracked resource is blocked
   along with creating one. Operators recover by scaling the webhook back up, or
   by removing the ValidatingWebhookConfiguration, exactly as for CREATE.
+
+  `pods/exec` and `pods/attach` are dropped from the tracked resources. A constraint on
+  `PodExecOptions`, such as `D8DenyExecHeritage`, puts them there, but every webhook that includes
+  this list carries an `objectSelector`, which the API server never matches for exec and attach.
+  Those requests are routed by the `exec-attach` and `deny-exec-heritage` webhooks instead.
 */}}
 {{- define "validating.webhook.tracked.resources"}}
   {{- range $trackResource := .Values.admissionPolicyEngine.internal.trackedConstraintResources }}
+  {{- $resources := without $trackResource.resources "pods/exec" "pods/attach" }}
+  {{- if $resources }}
 - apiGroups:
     {{- $trackResource.apiGroups | toYaml | nindent 4 }}
   apiVersions:
@@ -51,7 +58,8 @@ sideEffects: None
     - DELETE
   {{- end }}
   resources:
-    {{- $trackResource.resources | toYaml | nindent 4 }}
+    {{- $resources | toYaml | nindent 4 }}
+  {{- end }}
   {{- end }}
 - apiGroups:
   - rbac.authorization.k8s.io
@@ -109,11 +117,6 @@ webhooks:
         - webhook
   rules:
   {{- include "validating.webhook.tracked.resources" . | nindent 2 }}
-  {{/* Always validate CONNECT for exec/attach subresources */}}
-  - apiGroups: [""]
-    apiVersions: ["*"]
-    resources: ["pods/exec", "pods/attach"]
-    operations: ["CONNECT"]
   {{/* Ephemeral containers are attached through a subresource, which the `pods` rule does not match */}}
   - apiGroups: [""]
     apiVersions: ["*"]
@@ -132,9 +135,44 @@ webhooks:
 {{- end }}
 
 {{/*
+  Webhook for exec and attach in the namespaces the main webhook serves.
+
+  It is split from the main webhook because of the `objectSelector` there. The object of an exec or
+  attach request is `PodExecOptions` or `PodAttachOptions`, which cannot have labels, and the API
+  server never calls a webhook with a non-empty `objectSelector` for such an object, whatever the
+  operator. On the main webhook exec and attach therefore never reached Gatekeeper, and every
+  policy against them was silently skipped.
+
+  No `objectSelector` is needed here: the selector on the main webhook keeps Gatekeeper away from
+  its own pods at bootstrap, and exec into a running pod cannot stop it from starting.
+*/}}
+{{- if (gt (len .Values.admissionPolicyEngine.internal.trackedConstraintResources) 0) }}
+- name: exec-attach.admission-policy-engine.deckhouse.io
+  namespaceSelector:
+    matchExpressions:
+    - key: heritage
+      operator: NotIn
+      values:
+        - deckhouse
+  rules:
+  - apiGroups: [""]
+    apiVersions: ["*"]
+    resources: ["pods/exec", "pods/attach"]
+    operations: ["CONNECT"]
+  matchConditions:
+    {{/* System namespaces are left to `deny-exec-heritage` below, as on the main webhook. */}}
+    - name: 'exclude-system-namespaces'
+      expression: '!({{ include "system_namespaces_cel" . }})'
+    - name: 'exclude-virtualization'
+      expression: '!(request.userInfo.groups.exists(e, (e == "system:serviceaccounts:d8-virtualization")))'
+  timeoutSeconds: 15
+  {{- include "validating.webhook.config" (list .) | nindent 2 }}
+{{- end }}
+
+{{/*
   Webhook for system namespaces that have not opted into policy enforcement.
 
-  The webhook above skips every namespace named `d8-*` or `kube-*`, so without this one Gatekeeper
+  The main webhook skips every namespace named `d8-*` or `kube-*`, so without this one Gatekeeper
   never sees their workloads. The constraints that match here run in warn mode only: Pod Security
   Standards through `d8-pod-security-<standard>-system`, and user policies through their
   `d8-system-default-<name>` variant. A namespace whose
@@ -249,7 +287,8 @@ webhooks:
 {{- end }}
 
 {{/*
-  Webhook for deny-exec in system namespaces, which the main webhook leaves out by name.
+  Webhook for deny-exec in system namespaces, which the main and exec-attach webhooks leave out
+  by name.
 
   This is the only path that keeps `failurePolicy: Fail` in a system namespace: denying exec and
   attach cannot stop a component from starting, so failing closed costs nothing at bootstrap.

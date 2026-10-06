@@ -677,4 +677,6 @@ Namespaces that also carry the `security.deckhouse.io/enable-security-policy-che
 
 The exclusion by the `gatekeeper.sh/operation: webhook` label is required in the namespace of the module. Without this exclusion, the webhook could not recover from its own outage. Once the last replica is gone, the API server would reject the creation of a replacement pod, since no replica is available to validate it.
 
+`d8 k exec` and `d8 k attach` are not covered by the exclusion by label. The object of such a request cannot have labels, and the API server never calls a webhook with `objectSelector` for it. In the other namespaces these requests are intercepted by a separate webhook without `objectSelector`, which excludes the same namespaces as the main webhook.
+
 The exclusions do not apply to the webhook that intercepts `d8 k exec` and `d8 k attach` in the `d8-*` and `kube-*` namespaces: it has neither `namespaceSelector` nor `objectSelector`, so `d8 k exec` and `d8 k attach` into the pods of the module are blocked during an outage as well.

@@ -344,7 +344,11 @@ var _ = Describe("Module :: admissionPolicyEngine :: helm template ::", func() {
 	Context("Cluster with deckhouse on master node with bootstrapped module and trackedConstraintResources", func() {
 		BeforeEach(func() {
 			f.ValuesSet("admissionPolicyEngine.internal.bootstrapped", true)
-			f.ValuesSetFromYaml("admissionPolicyEngine.internal.trackedConstraintResources", `[{"apiGroups":[""],"resources":["pods"]}]`)
+			// The second entry is what constraint-exporter derives from `D8DenyExecHeritage`, which
+			// every non-dev cluster has. It must not bring exec and attach back onto a webhook with
+			// an objectSelector.
+			f.ValuesSetFromYaml("admissionPolicyEngine.internal.trackedConstraintResources",
+				`[{"apiGroups":[""],"resources":["pods"]},{"apiGroups":[""],"resources":["pods/attach","pods/exec"],"operations":["CONNECT"]}]`)
 			f.HelmRender()
 		})
 
@@ -352,12 +356,13 @@ var _ = Describe("Module :: admissionPolicyEngine :: helm template ::", func() {
 			Expect(f.RenderError).ShouldNot(HaveOccurred())
 		})
 
-		It("Renders ValidatingWebhookConfiguration with main, the two system-namespace webhooks and deny-exec-heritage", func() {
-			mainRules := `[{"apiGroups":[""],"apiVersions":["*"],"operations":["CREATE","UPDATE","DELETE"],"resources":["pods"]},{"apiGroups":["rbac.authorization.k8s.io"],"apiVersions":["*"],"operations":["CREATE","UPDATE","DELETE"],"resources":["roles","rolebindings"]},{"apiGroups":["constraints.gatekeeper.sh"],"apiVersions":["*"],"operations":["CREATE","UPDATE","DELETE"],"resources":["*"],"scope":"*"},{"apiGroups":[""],"apiVersions":["*"],"resources":["pods/exec","pods/attach"],"operations":["CONNECT"]},{"apiGroups":[""],"apiVersions":["*"],"resources":["pods/ephemeralcontainers"],"operations":["UPDATE"]}]`
+		It("Renders ValidatingWebhookConfiguration with main, exec-attach, the two system-namespace webhooks and deny-exec-heritage", func() {
+			mainRules := `[{"apiGroups":[""],"apiVersions":["*"],"operations":["CREATE","UPDATE","DELETE"],"resources":["pods"]},{"apiGroups":["rbac.authorization.k8s.io"],"apiVersions":["*"],"operations":["CREATE","UPDATE","DELETE"],"resources":["roles","rolebindings"]},{"apiGroups":["constraints.gatekeeper.sh"],"apiVersions":["*"],"operations":["CREATE","UPDATE","DELETE"],"resources":["*"],"scope":"*"},{"apiGroups":[""],"apiVersions":["*"],"resources":["pods/ephemeralcontainers"],"operations":["UPDATE"]}]`
 			// The system-namespaces webhook leaves out exec and attach: deny-exec-heritage already routes them.
 			systemNamespacesRules := `[{"apiGroups":[""],"apiVersions":["*"],"operations":["CREATE","UPDATE","DELETE"],"resources":["pods"]},{"apiGroups":["rbac.authorization.k8s.io"],"apiVersions":["*"],"operations":["CREATE","UPDATE","DELETE"],"resources":["roles","rolebindings"]},{"apiGroups":["constraints.gatekeeper.sh"],"apiVersions":["*"],"operations":["CREATE","UPDATE","DELETE"],"resources":["*"],"scope":"*"},{"apiGroups":[""],"apiVersions":["*"],"resources":["pods/ephemeralcontainers"],"operations":["UPDATE"]}]`
+			execAttachRules := `[{"apiGroups":[""],"apiVersions":["*"],"resources":["pods/exec","pods/attach"],"operations":["CONNECT"]}]`
 			denyExecHeritageRules := `[{"apiGroups":[""],"apiVersions":["*"],"operations":["CONNECT"],"resources":["pods/exec","pods/attach"]}]`
-			checkVWC(f, 4, mainRules, systemNamespacesRules, systemNamespacesRules, denyExecHeritageRules)
+			checkVWC(f, 5, mainRules, execAttachRules, systemNamespacesRules, systemNamespacesRules, denyExecHeritageRules)
 
 			vw := f.KubernetesGlobalResource("ValidatingWebhookConfiguration", "d8-admission-policy-engine-config")
 			systemNamespacesExpr := `has(request.namespace) && (request.namespace.startsWith("d8-") || request.namespace.startsWith("kube-"))`
@@ -370,33 +375,66 @@ var _ = Describe("Module :: admissionPolicyEngine :: helm template ::", func() {
 			Expect(vw.Field("webhooks.0.matchConditions.0.expression").String()).To(Equal("!(" + systemNamespacesExpr + ")"))
 			Expect(vw.Field("webhooks.0.failurePolicy").String()).To(Equal("Fail"))
 
-			Expect(vw.Field("webhooks.1.name").String()).To(Equal("system-namespaces.admission-policy-engine.deckhouse.io"))
-			Expect(vw.Field("webhooks.1.matchConditions.0.expression").String()).To(Equal(systemNamespacesExpr))
+			// Exec and attach in the same namespaces go through a webhook of their own, routed
+			// exactly as the main one and failing closed as well.
+			Expect(vw.Field("webhooks.1.name").String()).To(Equal("exec-attach.admission-policy-engine.deckhouse.io"))
+			Expect(vw.Field("webhooks.1.namespaceSelector").String()).To(MatchJSON(vw.Field("webhooks.0.namespaceSelector").String()))
+			Expect(vw.Field("webhooks.1.matchConditions").String()).To(MatchJSON(vw.Field("webhooks.0.matchConditions").String()))
+			Expect(vw.Field("webhooks.1.failurePolicy").String()).To(Equal("Fail"))
+			Expect(vw.Field("webhooks.1.timeoutSeconds").Int()).To(Equal(vw.Field("webhooks.0.timeoutSeconds").Int()))
+			Expect(vw.Field("webhooks.1.objectSelector").Exists()).To(BeFalse())
+
+			Expect(vw.Field("webhooks.2.name").String()).To(Equal("system-namespaces.admission-policy-engine.deckhouse.io"))
+			Expect(vw.Field("webhooks.2.matchConditions.0.expression").String()).To(Equal(systemNamespacesExpr))
 			// The enforce webhook routes by the opt-in label alone, with no name condition, so a
 			// namespace a module opted in reaches Gatekeeper even if it is not named `d8-*`. It does
 			// carry the namespaced-only condition: a namespaceSelector never keeps a cluster-scoped
 			// object out, and the main webhook already validates those.
-			Expect(vw.Field("webhooks.2.name").String()).To(Equal("system-namespaces-enforce.admission-policy-engine.deckhouse.io"))
-			Expect(vw.Field("webhooks.2.matchConditions.0.expression").String()).To(Equal("has(request.namespace)"))
-			Expect(vw.Field("webhooks.2.matchConditions.1.name").String()).To(Equal("exclude-virtualization"))
+			Expect(vw.Field("webhooks.3.name").String()).To(Equal("system-namespaces-enforce.admission-policy-engine.deckhouse.io"))
+			Expect(vw.Field("webhooks.3.matchConditions.0.expression").String()).To(Equal("has(request.namespace)"))
+			Expect(vw.Field("webhooks.3.matchConditions.1.name").String()).To(Equal("exclude-virtualization"))
 
 			// Neither system-namespace webhook may block a workload while Gatekeeper is unavailable,
 			// nor hold up a pod create for long while Gatekeeper is running but hung.
-			Expect(vw.Field("webhooks.1.failurePolicy").String()).To(Equal("Ignore"))
 			Expect(vw.Field("webhooks.2.failurePolicy").String()).To(Equal("Ignore"))
-			Expect(vw.Field("webhooks.1.timeoutSeconds").Int()).To(BeNumerically("<=", 5))
+			Expect(vw.Field("webhooks.3.failurePolicy").String()).To(Equal("Ignore"))
 			Expect(vw.Field("webhooks.2.timeoutSeconds").Int()).To(BeNumerically("<=", 5))
+			Expect(vw.Field("webhooks.3.timeoutSeconds").Int()).To(BeNumerically("<=", 5))
 
 			// Both select on the label VALUE, exactly as the constraints they serve do, so a
 			// namespace labeled with anything but "true" cannot fall between them.
-			Expect(vw.Field("webhooks.1.namespaceSelector.matchExpressions").String()).To(MatchJSON(
-				`[{"key":"security.deckhouse.io/enable-security-policy-check","operator":"NotIn","values":["true"]}]`))
 			Expect(vw.Field("webhooks.2.namespaceSelector.matchExpressions").String()).To(MatchJSON(
+				`[{"key":"security.deckhouse.io/enable-security-policy-check","operator":"NotIn","values":["true"]}]`))
+			Expect(vw.Field("webhooks.3.namespaceSelector.matchExpressions").String()).To(MatchJSON(
 				`[{"key":"security.deckhouse.io/enable-security-policy-check","operator":"In","values":["true"]}]`))
 
 			// Exec and attach stay the one deliberate Fail path in system namespaces.
-			Expect(vw.Field("webhooks.3.name").String()).To(Equal("deny-exec-heritage.admission-policy-engine.deckhouse.io"))
-			Expect(vw.Field("webhooks.3.failurePolicy").String()).To(Equal("Fail"))
+			Expect(vw.Field("webhooks.4.name").String()).To(Equal("deny-exec-heritage.admission-policy-engine.deckhouse.io"))
+			Expect(vw.Field("webhooks.4.failurePolicy").String()).To(Equal("Fail"))
+		})
+
+		It("Routes exec and attach only through webhooks without an objectSelector", func() {
+			// The object of an exec or attach request cannot have labels, and the API server skips a
+			// webhook with a non-empty objectSelector for such an object. A selector on any webhook
+			// that routes exec or attach silently disables every policy against them.
+			vw := f.KubernetesGlobalResource("ValidatingWebhookConfiguration", "d8-admission-policy-engine-config")
+			execWebhooks := []string{}
+			for _, webhook := range vw.Field("webhooks").Array() {
+				for _, rule := range webhook.Get("rules").Array() {
+					if !strings.Contains(rule.Get("resources").String(), "pods/exec") {
+						continue
+					}
+					name := webhook.Get("name").String()
+					execWebhooks = append(execWebhooks, name)
+					Expect(webhook.Get("objectSelector.matchExpressions").Array()).To(BeEmpty(), name)
+					Expect(webhook.Get("objectSelector.matchLabels").Map()).To(BeEmpty(), name)
+					break
+				}
+			}
+			Expect(execWebhooks).To(Equal([]string{
+				"exec-attach.admission-policy-engine.deckhouse.io",
+				"deny-exec-heritage.admission-policy-engine.deckhouse.io",
+			}))
 		})
 
 		It("Guards every request.namespace reference against a cluster-scoped request", func() {
@@ -458,6 +496,7 @@ var _ = Describe("Module :: admissionPolicyEngine :: helm template ::", func() {
 			}
 			Expect(names).To(Equal([]string{
 				"admission-policy-engine.deckhouse.io",
+				"exec-attach.admission-policy-engine.deckhouse.io",
 				"system-namespaces.admission-policy-engine.deckhouse.io",
 				"system-namespaces-enforce.admission-policy-engine.deckhouse.io",
 			}))
