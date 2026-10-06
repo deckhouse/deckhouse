@@ -192,7 +192,11 @@ spec:
                       minimum: 0
                     maxSurgePerZone:
                       description: |
-                        The maximum number of instances to rollout simultaneously in the group in each zone.
+                        The maximum number of instances the platform creates in each zone above the desired number while it replaces the instances of the group.
+
+                        Replacement happens when parameters that require recreating a virtual machine change, for example in the InstanceClass. The parameter does not limit the number of instances that the cluster autoscaler orders when it scales the group up. For details on what NodeGroup parameters affect, see [NodeGroup parameters and their result](faq.html#nodegroup-parameters-and-their-result).
+
+                        The value `0` is treated as if the parameter is not set, so the default value applies.
                       type: integer
                       x-doc-default: 1
                       minimum: 0
@@ -855,7 +859,11 @@ spec:
                       minimum: 0
                     maxSurgePerZone:
                       description: |
-                        The maximum number of instances to rollout simultaneously in the group in each zone.
+                        The maximum number of instances the platform creates in each zone above the desired number while it replaces the instances of the group.
+
+                        Replacement happens when parameters that require recreating a virtual machine change, for example in the InstanceClass. The parameter does not limit the number of instances that the cluster autoscaler orders when it scales the group up. For details on what NodeGroup parameters affect, see [NodeGroup parameters and their result](faq.html#nodegroup-parameters-and-their-result).
+
+                        The value `0` is treated as if the parameter is not set, so the default value applies.
                       type: integer
                       x-doc-default: 1
                       minimum: 0
@@ -1774,7 +1782,11 @@ spec:
                       minimum: 0
                     maxSurgePerZone:
                       description: |
-                        The maximum number of instances to rollout simultaneously in the group in each zone.
+                        The maximum number of instances the platform creates in each zone above the desired number while it replaces the instances of the group.
+
+                        Replacement happens when parameters that require recreating a virtual machine change, for example in the InstanceClass. The parameter does not limit the number of instances that the cluster autoscaler orders when it scales the group up. For details on what NodeGroup parameters affect, see [NodeGroup parameters and their result](faq.html#nodegroup-parameters-and-their-result).
+
+                        The value `0` is treated as if the parameter is not set, so the default value applies.
                       type: integer
                       x-doc-default: 1
                       minimum: 0

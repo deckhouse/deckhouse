@@ -156,6 +156,6 @@ For example, a node reboot is needed after modifying `sysctl` parameters like `k
 
 For full details, see the [NodeGroup custom resource](/modules/node-manager/cr.html#nodegroup) documentation.
 
-If InstanceClass or `instancePrefix` values change in the DP configuration, no `RollingUpdate` will occur. Instead, new MachineDeployment objects will be created and old ones removed. The number of simultaneously provisioned MachineDeployments is defined by the `cloudInstances.maxSurgePerZone` parameter.
+When the InstanceClass parameters change, the platform replaces the group machines with new ones. How many instances are replaced at the same time is defined by the [`cloudInstances.maxSurgePerZone`](/modules/node-manager/cr.html#nodegroup-v1-spec-cloudinstances-maxsurgeperzone) and [`cloudInstances.maxUnavailablePerZone`](/modules/node-manager/cr.html#nodegroup-v1-spec-cloudinstances-maxunavailableperzone) parameters. When `instancePrefix` changes in the DP configuration, the platform creates new MachineDeployment objects and removes the old ones.
 
 When an update requires a node disruption, a pod eviction process is initiated. If a pod cannot be evicted, the eviction attempt is retried every 20 seconds for up to 5 minutes global timeout. After that, pods that have not been evicted are forcefully removed.
