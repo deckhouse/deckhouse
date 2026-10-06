@@ -23,8 +23,8 @@ positive:
         repeatedChars: false
   - idTokenTTL: 5h59m
   - idTokenTTL: 1h
-  # Accepted in 1.77 so that a cluster upgrading from 1.76 with such a value starts; the alert and
-  # the release requirement ask for it to be lowered before 1.78, which rejects it.
+  # Accepted so that a ModuleConfig that already sets such a value keeps working; the
+  # D8UserAuthnIDTokenTTLTooLong alert asks for it to be lowered.
   - idTokenTTL: 6h
   - idTokenTTL: 24h
 negative:

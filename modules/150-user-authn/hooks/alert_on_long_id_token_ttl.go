@@ -36,16 +36,17 @@ import (
 // unset) for the userAuthnIDTokenTTLBelow release requirement.
 const IDTokenTTLValueKey = "userAuthn:idTokenTTL"
 
-// Dex expiry.signingKeys is hardcoded to 6h. idTokenTTL values >= 6h force Dex to
-// retain every previous signing key until tokens expire, so the key set grows
-// without bound. This hook emits a metric for a cluster that has such a TTL
-// (the D8UserAuthnIDTokenTTLTooLong alert) and publishes the value for the
-// userAuthnIDTokenTTLBelow release requirement (requirements/check.go), which
-// keeps a release that refuses the value from being deployed. An existing
-// ModuleConfig is not grandfathered by its OpenAPI schema: addon-operator
-// validates the stored ModuleConfigs at startup and does not start on a
-// violation, so the schema must not reject the value in the release a cluster
-// upgrades into before the requirement has blocked that upgrade.
+// Dex expiry.signingKeys is hardcoded to 6h. With idTokenTTL >= 6h an ID token
+// outlives the rotation of the key that signed it, so Dex keeps and publishes one
+// more previous key for every 6 hours of idTokenTTL. The next version of the
+// module settings accepts only values below 6h: converting the ModuleConfig to it
+// replaces a value of 6h or more with 5h59m, which shortens DexAuthenticator
+// sessions and can get ID tokens already issued rejected before they expire.
+// This hook emits a metric for a cluster that has such a TTL (the
+// D8UserAuthnIDTokenTTLTooLong alert), so the operator can lower the value in
+// advance, and publishes the value for the userAuthnIDTokenTTLBelow release
+// requirement (requirements/check.go), which holds a release that declares it
+// until the value is lowered.
 
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 	Queue: "/modules/user-authn",

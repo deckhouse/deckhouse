@@ -48,15 +48,22 @@
       plk_protocol_version: "1"
       plk_create_group_if_not_exists__d8_user_authn_deprecations: "UserAuthnDeprecations,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
       plk_grouped_by__d8_user_authn_deprecations: "UserAuthnDeprecations,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
-      summary: user-authn `idTokenTTL` is {{ $labels.id_token_ttl }}, which is too long.
+      summary: user-authn `idTokenTTL` is {{ $labels.id_token_ttl }}; the next settings version lowers it to `5h59m`.
       description: |
-        The ModuleConfig `user-authn` sets `idTokenTTL: {{ $labels.id_token_ttl }}`.
+        The ModuleConfig `user-authn` sets `idTokenTTL: {{ $labels.id_token_ttl }}`, which is 6 hours or more.
 
         Dex is configured with `expiry.signingKeys: 6h`: every 6 hours it rotates the key used to sign ID tokens and keeps previous keys only while tokens signed with them can still be valid.
 
-        `idTokenTTL` maps to Dex `expiry.idTokens`. If that lifetime is greater than or equal to the signing-key rotation period (`6h`), every rotation must retain an extra previous key until all tokens from that key expire. Over time the set of retained signing keys grows without bound and Dex persists that growing key material.
+        `idTokenTTL` maps to Dex `expiry.idTokens`. If that lifetime is 6 hours or more, an ID token outlives the rotation of the key that signed it, and Dex keeps and publishes one more previous key for every 6 hours of `idTokenTTL`. That is why `idTokenTTL` should be less than `6h`.
 
-        That is why `idTokenTTL` must be strictly less than `6h`. Lower it, for example:
+        The next version of the module settings (`spec.version` of the ModuleConfig) accepts only values less than `6h`. When this ModuleConfig is converted to it, `idTokenTTL` is replaced with `5h59m`, which Dex and DexAuthenticator then use. The alert fires until the ModuleConfig itself sets a value less than `6h`.
+
+        Lowering `idTokenTTL`, in the ModuleConfig or by this conversion, has the following effects:
+
+        - DexAuthenticator sessions whose `keepUsersLoggedInFor` is less than the previous `idTokenTTL` become shorter. A session lasts `keepUsersLoggedInFor` or `idTokenTTL + 1s`, whichever is longer. For example, when `idTokenTTL` goes from `24h` to `5h59m`, a session with `keepUsersLoggedInFor: 12h` lasts 12 hours instead of 24 hours and 1 second.
+        - ID tokens that Dex signed before the change with the signing key current at that moment can be rejected about 6 to 12 hours after the change, before they expire, because Dex then keeps a replaced signing key only for as long as the new `idTokenTTL` requires. A client that refreshes an ID token only when it expires, such as kubectl with `auth-provider: oidc` in the kubeconfig, keeps sending the rejected token until the token expires. To make such a client request a new token, remove `id-token` from its kubeconfig.
+
+        To choose when this happens, lower `idTokenTTL` yourself, for example:
 
         ```yaml
         apiVersion: deckhouse.io/v1alpha1
@@ -68,5 +75,3 @@
           settings:
             idTokenTTL: 1h
         ```
-
-        New ModuleConfig values with `idTokenTTL >= 6h` are rejected by OpenAPI validation; this alert covers clusters that still have a long TTL from before the restriction was added.

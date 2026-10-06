@@ -25,14 +25,16 @@ import (
 )
 
 const (
-	// idTokenTTLRequirementKey is the release requirement key. A release.yaml sets it to the
-	// idTokenTTL the release refuses (a duration, e.g. "6h"): the release is not deployed while the
-	// user-authn ModuleConfig sets idTokenTTL to that value or more.
+	// idTokenTTLRequirementKey is the release requirement key. A release.yaml sets it to a duration
+	// (e.g. "6h"), and the release is not deployed while the user-authn ModuleConfig sets idTokenTTL
+	// to that value or more.
 	//
-	// The check runs in the version already INSTALLED, before it switches to the release, so a
-	// release that makes the value invalid for the ModuleConfig OpenAPI schema does not reach a
-	// cluster that would fail to start with it: addon-operator validates stored ModuleConfigs at
-	// startup and does not start on a violation.
+	// The check runs in the version already INSTALLED, before it switches to the release. It holds
+	// the update until the value is lowered, so the operator chooses when that happens. Without it
+	// the update goes ahead: the next version of the module settings accepts only values below 6h,
+	// and converting the ModuleConfig to it replaces a value of 6h or more with 5h59m, which
+	// shortens DexAuthenticator sessions and can get ID tokens already issued rejected before they
+	// expire (see the D8UserAuthnIDTokenTTLTooLong alert).
 	idTokenTTLRequirementKey = "userAuthnIDTokenTTLBelow"
 )
 
@@ -70,8 +72,9 @@ func checkIDTokenTTL(requirementValue string, getter requirements.ValueGetter) (
 	}
 
 	return false, fmt.Errorf(
-		"the user-authn ModuleConfig sets idTokenTTL to %s; the new release requires it to be less than %s "+
-			"(Dex rotates its signing keys every 6 hours) and would not start otherwise: "+
-			"lower spec.settings.idTokenTTL of ModuleConfig user-authn, for example to 1h",
+		"the user-authn ModuleConfig sets idTokenTTL to %s; the update waits until it is less than %s "+
+			"(Dex rotates its signing keys every 6 hours): "+
+			"lower spec.settings.idTokenTTL of ModuleConfig user-authn, for example to 1h; "+
+			"the D8UserAuthnIDTokenTTLTooLong alert describes what lowering it changes",
 		ttl, requirementValue)
 }

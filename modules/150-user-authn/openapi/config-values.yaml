@@ -289,7 +289,7 @@ properties:
 
       Set as a string specifying hours, minutes, or seconds: `30m`, `20s`, `2h30m10s`, `5h`.
 
-      Should be less than 6 hours (Dex signing keys rotate every 6 hours). A value of 6 hours or more raises the `D8UserAuthnIDTokenTTLTooLong` alert and blocks the update to the next minor release of Deckhouse Platform, which rejects such a value.
+      Should be less than 6 hours (Dex signing keys rotate every 6 hours). A value of 6 hours or more raises the `D8UserAuthnIDTokenTTLTooLong` alert.
 
       Defines the minimum possible user session lifetime (via [`keepUsersLoggedInFor`](cr.html#dexauthenticator-v1-spec-keepusersloggedinfor) in the DexAuthenticator resource
       and parameters like `auth.sessionTTL`, for example, in the [`console`](/modules/console/configuration.html#parameters-auth-sessionttl) module).
@@ -297,6 +297,13 @@ properties:
       If the session TTL is less than or equal to `idTokenTTL`, the effective logout time is `idTokenTTL + 1s`.
 
       To force logout sooner than the default `idTokenTTL`, decrease this parameter value as well.
+
+      The next version of the module settings (`spec.version` of the ModuleConfig) accepts only values less than 6 hours. When a ModuleConfig of an earlier settings version is converted to it, a value of 6 hours or more is replaced with `5h59m`, which Dex and DexAuthenticator then use. Lowering `idTokenTTL` from 6 hours or more, in the ModuleConfig or by this conversion, has the following effects:
+
+      - DexAuthenticator sessions whose `keepUsersLoggedInFor` is less than the previous `idTokenTTL` become shorter. A session lasts `keepUsersLoggedInFor` or `idTokenTTL + 1s`, whichever is longer. For example, when `idTokenTTL` goes from `24h` to `5h59m`, a session with `keepUsersLoggedInFor: 12h` lasts 12 hours instead of 24 hours and 1 second.
+      - ID tokens that Dex signed before the change with the signing key current at that moment can be rejected about 6 to 12 hours after the change, before they expire, because Dex then keeps a replaced signing key only for as long as the new `idTokenTTL` requires. A client that refreshes an ID token only when it expires, such as kubectl with `auth-provider: oidc` in the kubeconfig, keeps sending the rejected token until the token expires. To make such a client request a new token, remove `id-token` from its kubeconfig.
+
+      To choose when this happens, lower `idTokenTTL` in the ModuleConfig in advance.
   refreshTokenAbsoluteLifetime:
     type: string
     pattern: '^([0-9]+h)?([0-9]+m)?([0-9]+s)?$'
