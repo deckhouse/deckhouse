@@ -174,7 +174,7 @@ d8 k get project my-project -o jsonpath='{range .status.conditions[*]}{.type}={.
 
 Статус виртуального проекта заново формируется из текущего списка неймспейсов: удалённый неймспейс из этого списка пропадает. Виртуальные проекты неймспейсы не создают заново.
 
-Виртуальные проекты нужны для полноты картины: с ними каждый неймспейс кластера относится к какому-то проекту. Управлять ими нельзя: они не редактируются, в них нельзя создавать [ProjectNamespace](cr.html#projectnamespace) и [ProjectRoleBinding](cr.html#projectrolebinding), и на них не распространяются [ClusterProjectRoleBinding](cr.html#clusterprojectrolebinding). Их шаблон `virtual` зарезервирован за ними: пользовательский проект с `projectTemplateName: virtual` вебхук отклонит — у такого проекта не было бы своего неймспейса.
+Виртуальные проекты нужны для полноты картины: с ними каждый неймспейс кластера относится к какому-то проекту. Управлять ими нельзя: они не редактируются, в них нельзя создавать [ProjectNamespace](cr.html#projectnamespace) и [ProjectRoleBinding](cr.html#projectrolebinding), и на них не распространяются [ClusterProjectRoleBinding](cr.html#clusterprojectrolebinding). Их шаблон `virtual` зарезервирован за ними: пользовательский проект с `projectTemplateName: virtual` вебхук отклонит — у такого проекта не было бы своего неймспейса. Политики ClusterResourceGrantPolicy к их неймспейсам тоже не применяются, даже если селекторы политики выбирают виртуальный Project, потому что [правила доступности кластерных ресурсов](#управление-доступом-к-cluster-wide-ресурсам) действуют только в неймспейсах с лейблом `projects.deckhouse.io/project`, а на неймспейсах виртуальных проектов его нет.
 
 ## Дополнительные неймспейсы проекта
 
@@ -210,23 +210,30 @@ d8 k get project my-project -o jsonpath='{.status.namespaces}'
 - **Доступ**: привязки [ProjectRoleBinding](cr.html#projectrolebinding) и [ClusterProjectRoleBinding](cr.html#clusterprojectrolebinding), включая автоматический доступ администраторов проекта. При добавлении нового неймспейса все существующие привязки разворачиваются в него без каких-либо действий со стороны пользователя.
 - **Namespaced-объекты шаблона**: сетевая политика (`networkPolicy.mode: Isolated`) и настройка сбора логов (`logShipping`) создаются в каждом неймспейсе проекта. Сетевая изоляция при этом разрешает трафик между неймспейсами одного проекта.
 - **Кластерные политики шаблона** (`OperationPolicy`, `SecurityPolicy` из `allowedUIDs`/`allowedGIDs`): выбирают неймспейсы по лейблу `projects.deckhouse.io/project`, то есть покрывают весь проект.
-- **Наследуемые лейблы**: профиль безопасности подов (`security.deckhouse.io/pod-policy`), расширенный мониторинг (`extended-monitoring.deckhouse.io/enabled`), сканирование уязвимостей (`security-scanning.deckhouse.io/enabled`) и лейбл шаблона (`projects.deckhouse.io/project-template`) синхронизируются с основного неймспейса на дополнительные. Синхронизация полная: если соответствующую функцию выключили в шаблоне, лейбл снимется и с дополнительных неймспейсов. Благодаря лейблу шаблона [правила доступности кластерных ресурсов](#управление-доступом-к-cluster-wide-ресурсам) тоже действуют во всех неймспейсах проекта.
+- **Наследуемые лейблы**: профиль безопасности подов (`security.deckhouse.io/pod-policy`), расширенный мониторинг (`extended-monitoring.deckhouse.io/enabled`), сканирование уязвимостей (`security-scanning.deckhouse.io/enabled`), лейбл шаблона (`projects.deckhouse.io/project-template`) и лейблы, которые шаблон задаёт через `namespaceMetadata.labels`, синхронизируются с основного неймспейса на дополнительные. Синхронизация полная: если функцию выключили или лейбл убрали в шаблоне, лейбл снимется и с дополнительных неймспейсов. Лейблы шаблона перечислены в аннотации `projects.deckhouse.io/template-labels` каждого неймспейса проекта; их меняют через Project или его ProjectTemplate, а прямая правка такого лейбла на дополнительном неймспейсе откатывается. Благодаря лейблу шаблона [правила доступности кластерных ресурсов](#управление-доступом-к-cluster-wide-ресурсам) тоже действуют во всех неймспейсах проекта.
 
 Действуют только в **основном** неймспейсе:
 
 - квота проекта (`ResourceQuota` из [`.spec.quota`](cr.html#project-v1alpha3-spec-quota));
-- дополнительные лейблы и аннотации из `namespaceMetadata` шаблона;
+- аннотации из `namespaceMetadata` шаблона;
+- лейблы, поставленные на основной неймспейс вручную;
+- лейблы отслеживания GitOps-инструментов (`app.kubernetes.io/instance`, `argocd.argoproj.io/*`, `kustomize.toolkit.fluxcd.io/*`, `helm.toolkit.fluxcd.io/*`, `kapp.k14s.io/*`), даже если их задаёт шаблон;
 - аннотации размещения на узлах (из полей `nodeSelector` и `tolerations` шаблона).
+
+Лейблы отслеживания GitOps-инструментов не наследуются, потому что GitOps-инструмент считал бы дополнительный неймспейс с такими лейблами своим и мог бы его удалить. Модуль распознаёт только перечисленные ключи. Собственный ключ отслеживания, заданный через шаблон (например, ключ из параметра `application.instanceLabelKey` в Argo CD), наследуется.
+
+Когда неймспейс [становится проектом автоматически](#автоматическое-создание-проекта-для-неймспейса), его собственные лейблы попадают в параметр проекта `namespace.labels`. Встроенные шаблоны передают этот параметр в `namespaceMetadata.labels`, поэтому такие лейблы становятся лейблами шаблона проекта и наследуются. Если на таком неймспейсе есть лейбл отслеживания GitOps-инструмента, которого нет в списке выше, удалите его из `spec.parameters.namespace.labels` объекта Project до создания дополнительных неймспейсов. При следующем применении шаблона контроллер удалит лейбл и с основного неймспейса. Верните его на основной неймспейс вручную или дайте GitOps-инструменту восстановить его. Лейбл, поставленный вручную, не наследуется.
 
 ### Лейблы неймспейсов проекта
 
 | Лейбл | Основной | Дополнительные | Назначение |
 |-------|:--------:|:--------------:|------------|
-| `projects.deckhouse.io/project: <имя проекта>` | ✓ | ✓ | Принадлежность к проекту — общий лейбл всех неймспейсов проекта. |
-| `projects.deckhouse.io/project-namespace: <spec.name>` | — | ✓ | Признак дополнительного неймспейса (имя ресурса ProjectNamespace). |
-| `projects.deckhouse.io/project-template: <имя шаблона>` | ✓ | ✓ | Шаблон проекта; по нему применяются правила доступности кластерных ресурсов. |
-| `heritage: multitenancy-manager` | ✓ | ✓ | Неймспейс управляется контроллером проектов: его `spec`, поле `finalizers` и лейблы из этой таблицы меняются через Project; остальные лейблы и аннотации можно менять напрямую. |
-| `security.deckhouse.io/pod-policy`, `extended-monitoring.deckhouse.io/enabled`, `security-scanning.deckhouse.io/enabled` | ✓ | ✓ (наследуются) | Политики и фичи из шаблона проекта. |
+| `projects.deckhouse.io/project: <PROJECT_NAME>` | ✓ | ✓ | Принадлежность к проекту — общий лейбл всех неймспейсов проекта |
+| `projects.deckhouse.io/project-namespace: <spec.name>` | — | ✓ | Признак дополнительного неймспейса (имя ресурса ProjectNamespace) |
+| `projects.deckhouse.io/project-template: <PROJECT_TEMPLATE_NAME>` | ✓ | ✓ | Шаблон проекта; по нему применяются правила доступности кластерных ресурсов |
+| `heritage: multitenancy-manager` | ✓ | ✓ | Неймспейс управляется контроллером проектов: его `spec`, поле `finalizers` и лейблы из этой таблицы меняются через Project; остальные лейблы и аннотации можно менять напрямую |
+| `security.deckhouse.io/pod-policy`, `extended-monitoring.deckhouse.io/enabled`, `security-scanning.deckhouse.io/enabled` | ✓ | ✓ (наследуются) | Политики и функции из шаблона проекта |
+| Лейблы из `namespaceMetadata.labels` шаблона | ✓ | ✓ (наследуются) | Лейблы шаблона проекта. Перечислены в аннотации `projects.deckhouse.io/template-labels` неймспейса и меняются через Project или его ProjectTemplate |
 
 Общий лейбл `projects.deckhouse.io/project` позволяет выбирать неймспейсы проекта с помощью команды `get ns`. Примеры:
 
@@ -408,7 +415,7 @@ spec:
 | `nodeSelector`, `tolerations` | Размещение подов проекта на выделенных узлах. |
 | `allowedUIDs`, `allowedGIDs` | Допустимые диапазоны UID/GID контейнеров проекта. |
 | `runtimeAudit.enabled` | Аудит обращений процессов проекта к ядру Linux .|
-| `namespaceMetadata.labels`, `namespaceMetadata.annotations` | Дополнительные лейблы и аннотации неймспейсов проекта. |
+| `namespaceMetadata.labels`, `namespaceMetadata.annotations` | Дополнительные лейблы и аннотации неймспейсов проекта. Лейблы, которыми управляет модуль, здесь задать нельзя. Шаблон или Project с таким лейблом отклоняется. Шаблон или Project, в котором такой лейбл уже есть, можно изменять, пока лейбл остаётся прежним. Лейбл не применяется, и ответ API предупреждает об этом. |
 | `resources`, `grantPolicies` | [Выдача кластерных ресурсов через шаблон проекта](#выдача-кластерных-ресурсов-через-шаблон-проекта). |
 | `parametersSchema.openAPIV3Schema` | Схема параметров, которые задаются при создании проекта. |
 
@@ -493,7 +500,7 @@ spec:
 
 Для действий над шаблонами существуют следующие правила:
 
-- Шаблон, который используется хотя бы одним проектом, нельзя удалить.
+- Шаблон нельзя удалить, пока его использует хотя бы один проект или пока он ещё применён хотя бы к одному неймспейсу проекта. Если проект перешёл на другой шаблон, старый шаблон остаётся, пока контроллер не применит новый.
 - Изменение шаблона автоматически применяется ко всем проектам, созданным из него.
 - Версия `deckhouse.io/v1alpha1` ресурса ProjectTemplate с текстовым полем `resourcesTemplate` (Helm-шаблонизация) больше не обслуживается, а в `v1alpha2` такого поля нет. Шаблон, сохранённый как `v1alpha1` с непустым `resourcesTemplate`, читается в `v1alpha2` без Helm-текста и с аннотацией `projects.deckhouse.io/legacy-helm-template: "true"`:
   - проекты такого шаблона контроллер не применяет. Они переходят в состояние `Error` с условием `ProjectTemplateUsable` со значением `False`, а их объекты остаются ровно такими, какими были;
@@ -707,24 +714,33 @@ data:
 
 Далее приведены основные сценарии настройки и использования механизма.
 
-### Как политика выбирает проекты
+### Как политика выбирает неймспейсы
 
-У ClusterResourceGrantPolicy один селектор — `projectSelector`, и вычисляется он **по неймспейсу**, а не по объекту Project. Для каждого неймспейса проекта модуль объединяет два набора лейблов — лейблы объекта Project и лейблы этого неймспейса — и сопоставляет селектор с объединением. Если один и тот же ключ задан и там, и там, побеждает значение неймспейса.
+У [ресурса ClusterResourceGrantPolicy](cr.html#clusterresourcegrantpolicy) (`multitenancy.deckhouse.io/v1alpha2`) два селектора: [`projectSelector`](cr.html#clusterresourcegrantpolicy-v1alpha2-spec-projectselector) и [`namespaceSelector`](cr.html#clusterresourcegrantpolicy-v1alpha2-spec-namespaceselector). Политика применяется к неймспейсу проекта, если совпали все заданные в ней селекторы:
 
-На практике это значит:
+- `projectSelector` сопоставляется с лейблами объекта **Project**. Он выбирает сразу все неймспейсы проекта, в том числе дополнительный неймспейс, созданный позже, поэтому используйте его, чтобы выбрать проект целиком. Модуль ставит на каждый Project лейблы `projects.deckhouse.io/project: <PROJECT_NAME>` и `projects.deckhouse.io/project-template: <PROJECT_TEMPLATE_NAME>`, поэтому проект можно выбрать и по имени, и по шаблону. На виртуальных проектах есть только первый из этих лейблов. Эти два лейбла нельзя изменить на имя другого проекта или шаблона. Манифест, который заменяет Project целиком, может их не содержать. Такой запрос принимается с предупреждением, и модуль возвращает лейблы. Лейбл шаблона на Project меняется сразу вместе со `spec.projectTemplateName`. Тот же лейбл на неймспейсах показывает шаблон, который к ним применён, и по нему служебные политики шаблона выбирают неймспейсы.
+- `namespaceSelector` сопоставляется с лейблами объекта **Namespace**. Он сужает выбор до части неймспейсов выбранных проектов или, если `projectSelector` не задан, всех проектов. Например, он может выбрать только основной неймспейс (лейбла `projects.deckhouse.io/project-namespace` нет) или только неймспейсы с лейблом шаблона.
+- Политика, у которой **не задан ни один** селектор, сама по себе не выбирает ни одного проекта. Это библиотечная политика, которую подключают к проекту через `grantPolicies` его ProjectTemplate. Явно пустой селектор (`{}`) выбирает всё.
 
-- лейбл на **Project** выбирает основной и все дополнительные неймспейсы проекта сразу — это место, где помечают проект целиком, потому что у ProjectNamespace собственных лейблов нет;
-- лейбл на **Namespace** выбирает только этот неймспейс — точечное переопределение или способ дотянуться до неймспейса по лейблу, который поставила платформа (например `projects.deckhouse.io/project=<имя>`, его модуль ставит на каждый неймспейс проекта);
-- отдельного `namespaceSelector` нет: оба источника лейблов питают один `projectSelector`;
-- политика **без** `projectSelector` сама по себе не выбирает ни одного проекта: это библиотечная политика, которую подключают к проекту через `resourceGrantPolicies` его ProjectTemplate. Явно пустой селектор (`projectSelector: {}`) выбирает все проекты.
+Неймспейсы [виртуальных проектов](#виртуальные-проекты) `deckhouse` и `default` не выбираются никогда, даже селектором `{}`.
+
+Дополнительный неймспейс создаёт пользователь проекта, и на нём есть только лейблы, которые ставит модуль, и [лейблы шаблона проекта](#что-распространяется-на-дополнительные-неймспейсы). Поэтому политика, которая ограничивает ресурс через `namespaceSelector`, может не распространяться на новый дополнительный неймспейс. Так бывает, если селектор опирается на лейбл, поставленный на неймспейс вручную, на лейбл шаблона, значение которого на основном неймспейсе изменили вручную, или на `projects.deckhouse.io/project-namespace`, значение которого — выбранное пользователем имя. Если в GrantableClusterResourceDefinition ресурса задано [`defaultAvailability: All`](cr.html#grantableclusterresourcedefinition-v1alpha1-spec-defaultavailability) (значение по умолчанию), такому неймспейсу доступны все ресурсы этого типа.
+
+Политика сообщает об этом в условии `NewNamespacesCovered`. Условие проверяет `namespaceSelector` на лейблах, которые получил бы новый дополнительный неймспейс каждого охваченного проекта. Запрещённые имена считаются ограничением при любом значении `defaultAvailability`. Список разрешённых или `availabilityDefault: None` считается ограничением, только если `defaultAvailability` равно `All`.
+
+Не выбирайте неймспейсы по лейблу `projects.deckhouse.io/project-namespace` без `projectSelector`. Пользователь любого проекта может создать ProjectNamespace с именем, которое ожидает такой `namespaceSelector`. Тогда политика начнёт действовать в его проекте и откроет там доступ к разрешённым ею ресурсам.
+
+Версия `multitenancy.deckhouse.io/v1alpha1` по-прежнему обслуживается. Её `projectSelector` сопоставляется с лейблами неймспейса и соответствует `namespaceSelector` версии `v1alpha2`. Для `projectSelector` версии `v1alpha2` в `v1alpha1` поля нет, поэтому клиент `v1alpha1` видит его как JSON в аннотации `multitenancy.deckhouse.io/v1alpha2-project-selector`. Политика с такой аннотацией выбирает проекты по ней, хотя её `projectSelector` в `v1alpha1` пуст.
+
+Меняя такую политику через `v1alpha1`, сохраняйте аннотацию. `d8 k apply` и `d8 k edit` её сохраняют, а `d8 k replace` с манифестом без аннотации удаляет `projectSelector`. Чтобы вернуться к старому манифесту `v1alpha1` после того, как вы задали `projectSelector` версии `v1alpha2`, удалите аннотацию явно, потому что `d8 k apply` старого манифеста её не удаляет.
 
 ### Для администраторов кластера
 
 Ниже приведены примеры настройки доступа проектов к cluster-wide-ресурсам с помощью ClusterResourceGrantPolicy.
 
-В примерах ниже лейбл стоит на Project — он выбирает все неймспейсы проекта. Лейблы, которые шаблон добавляет через `namespaceMetadata.labels`, попадают только в **основной** неймспейс проекта — дополнительный получает лейблы принадлежности от платформы и фиксированный набор наследуемых, — поэтому, когда политика должна покрывать проект целиком, помечайте Project, а не шаблон.
+В примерах ниже проекты выбираются через `projectSelector` по лейблу на Project, поэтому политика охватывает все неймспейсы проекта.
 
-Поскольку лейблы неймспейса участвуют в сопоставлении, право менять лейблы объекта Namespace определяет, какие политики к нему применяются. Это право кластерного уровня (`d8:manage:permission:subsystem:kubernetes:manage_resources`); проектные роли `d8:project:*` и `d8:namespace:*` неймспейсы только читают, поэтому пользователь проекта не может подтянуть на свой неймспейс политику другого проекта.
+Поскольку в сопоставлении участвуют лейблы Project и его неймспейсов, от права менять эти лейблы зависит, какие политики применяются. Лейблы Project меняют с правом `d8:system-capability:multitenancy-manager:edit`, которое есть у менеджера подсистемы `deckhouse`; это же право позволяет создавать и изменять политики. Лейблы неймспейса меняют с правом `d8:subsystem-capability:kubernetes:manage_resources`, которое есть у менеджера подсистемы `kubernetes`. Проектные роли `d8:project:*` и `d8:namespace:*` неймспейсы только читают.
 
 #### Ограничение StorageClass для проекта
 
@@ -733,7 +749,7 @@ data:
 {% raw %}
 
 ```yaml
-apiVersion: multitenancy.deckhouse.io/v1alpha1
+apiVersion: multitenancy.deckhouse.io/v1alpha2
 kind: ClusterResourceGrantPolicy
 metadata:
   name: production-storage
@@ -768,7 +784,7 @@ d8 k get available storageclasses -n <PROJECT_NAME> -o yaml
 {% raw %}
 
 ```yaml
-apiVersion: multitenancy.deckhouse.io/v1alpha1
+apiVersion: multitenancy.deckhouse.io/v1alpha2
 kind: ClusterResourceGrantPolicy
 metadata:
   name: production-issuers
@@ -808,7 +824,7 @@ spec:
 {% raw %}
 
 ```yaml
-apiVersion: multitenancy.deckhouse.io/v1alpha1
+apiVersion: multitenancy.deckhouse.io/v1alpha2
 kind: ClusterResourceGrantPolicy
 metadata:
   name: extra-roles
@@ -849,7 +865,7 @@ d8 k get clusterresourcegrantpolicy extra-roles -o jsonpath='{.status.conditions
 {% raw %}
 
 ```yaml
-apiVersion: multitenancy.deckhouse.io/v1alpha1
+apiVersion: multitenancy.deckhouse.io/v1alpha2
 kind: ClusterResourceGrantPolicy
 metadata:
   name: lb-classes
@@ -875,14 +891,14 @@ spec:
 
 #### Предоставление доступа ко всем ресурсам определённого типа
 
-Чтобы разрешить определённым проектам использовать все ресурсы выбранного типа без явного перечисления, установите [`availabilityDefault: All`](cr.html#clusterresourcegrantpolicy-v1alpha1-spec-resources-availabilitydefault).
+Чтобы разрешить определённым проектам использовать все ресурсы выбранного типа без явного перечисления, установите [`availabilityDefault: All`](cr.html#clusterresourcegrantpolicy-v1alpha2-spec-resources-availabilitydefault).
 
 Следующая политика разрешает всем проектам с лейблом `environment: sandbox` использовать любые StorageClass:
 
 {% raw %}
 
 ```yaml
-apiVersion: multitenancy.deckhouse.io/v1alpha1
+apiVersion: multitenancy.deckhouse.io/v1alpha2
 kind: ClusterResourceGrantPolicy
 metadata:
   name: open-storage-for-sandbox
@@ -897,18 +913,18 @@ spec:
 
 {% endraw %}
 
-Обычно для управления доступом достаточно явно указывать разрешённые ресурсы с помощью [`allowed`](cr.html#clusterresourcegrantpolicy-v1alpha1-spec-resources-allowed) или [`allowedSelector`](cr.html#clusterresourcegrantpolicy-v1alpha1-spec-resources-allowedselector). Используйте параметр `availabilityDefault: All`, если выбранным проектам необходимо предоставить доступ ко всем ресурсам указанного типа.
+Обычно для управления доступом достаточно явно указывать разрешённые ресурсы с помощью [`allowed`](cr.html#clusterresourcegrantpolicy-v1alpha2-spec-resources-allowed) или [`allowedSelector`](cr.html#clusterresourcegrantpolicy-v1alpha2-spec-resources-allowedselector). Используйте параметр `availabilityDefault: All`, если выбранным проектам необходимо предоставить доступ ко всем ресурсам указанного типа.
 
 #### Запрет отдельных ресурсов
 
-Чтобы запретить проектам использовать отдельные ресурсы, оставив остальные доступными, используйте параметр [`denied`](cr.html#clusterresourcegrantpolicy-v1alpha1-spec-resources-denied) или [`deniedSelector`](cr.html#clusterresourcegrantpolicy-v1alpha1-spec-resources-deniedselector).
+Чтобы запретить проектам использовать отдельные ресурсы, оставив остальные доступными, используйте параметр [`denied`](cr.html#clusterresourcegrantpolicy-v1alpha2-spec-resources-denied) или [`deniedSelector`](cr.html#clusterresourcegrantpolicy-v1alpha2-spec-resources-deniedselector).
 
 Следующая политика запрещает проектам с лейблом `environment: dev` использовать StorageClass с именами `expensive-nvme` и `archived-hdd`:
 
 {% raw %}
 
 ```yaml
-apiVersion: multitenancy.deckhouse.io/v1alpha1
+apiVersion: multitenancy.deckhouse.io/v1alpha2
 kind: ClusterResourceGrantPolicy
 metadata:
   name: deny-expensive-storage
@@ -929,14 +945,14 @@ spec:
 
 #### Управление доступом с помощью label-селекторов
 
-Чтобы управлять доступом к ресурсам без перечисления их имён, используйте параметры [`allowedSelector`](cr.html#clusterresourcegrantpolicy-v1alpha1-spec-resources-allowedselector) и [`deniedSelector`](cr.html#clusterresourcegrantpolicy-v1alpha1-spec-resources-deniedselector). Селекторы позволяют разрешать или запрещать ресурсы на основе их лейблов.
+Чтобы управлять доступом к ресурсам без перечисления их имён, используйте параметры [`allowedSelector`](cr.html#clusterresourcegrantpolicy-v1alpha2-spec-resources-allowedselector) и [`deniedSelector`](cr.html#clusterresourcegrantpolicy-v1alpha2-spec-resources-deniedselector). Селекторы позволяют разрешать или запрещать ресурсы на основе их лейблов.
 
 Следующая политика разрешает проектам с лейблом `tier: shared` использовать StorageClass с лейблом `shared: "true"`, за исключением StorageClass с лейблом `deprecated: "true"`:
 
 {% raw %}
 
 ```yaml
-apiVersion: multitenancy.deckhouse.io/v1alpha1
+apiVersion: multitenancy.deckhouse.io/v1alpha2
 kind: ClusterResourceGrantPolicy
 metadata:
   name: shared-storage-only
@@ -961,7 +977,7 @@ spec:
 Правила доступности кластерных ресурсов можно задавать прямо в [структурированном шаблоне](#структурированные-шаблоны) — тогда они автоматически применяются ко всем проектам, созданным из этого шаблона:
 
 - `spec.resources` — правила «внутри» шаблона: тот же формат, что и `resources` в ClusterResourceGrantPolicy (имя ресурса, `allowed`/`allowedSelector`, `default`);
-- `spec.grantPolicies` — список имён **библиотечных** политик ClusterResourceGrantPolicy. Библиотечная политика описывает переиспользуемый набор правил и не должна иметь `projectSelector` — к каким проектам её применять, определяет ссылающийся шаблон. Так, например, политику «корпоративные StorageClass» может поддерживать один администратор, а использовать — несколько шаблонов.
+- `spec.grantPolicies` — список имён **библиотечных** политик ClusterResourceGrantPolicy. Библиотечная политика описывает переиспользуемый набор правил и не задаёт ни `projectSelector`, ни `namespaceSelector`, потому что проекты, к которым её применять, определяет ссылающийся шаблон. Так, например, политику «корпоративные StorageClass» может поддерживать один администратор, а использовать — несколько шаблонов.
 
 ```yaml
 apiVersion: deckhouse.io/v1alpha2
@@ -974,10 +990,11 @@ spec:
       allowed: ["standard"]
       default: standard
   grantPolicies:
-    - corporate-issuers   # Библиотечная ClusterResourceGrantPolicy без projectSelector.
+    # Библиотечная ClusterResourceGrantPolicy без селекторов.
+    - corporate-issuers
 ```
 
-Для каждого источника контроллер создаёт служебную политику с именем `template-<шаблон>-<источник>` (для `spec.resources` — `template-<шаблон>-inline`); имя `inline` для библиотечной политики зарезервировано. Ссылка на несуществующую политику или на политику с `projectSelector` отклоняется при создании шаблона.
+Для каждого источника контроллер создаёт служебную политику с именем `template-<шаблон>-<источник>` (для `spec.resources` — `template-<шаблон>-inline`); имя `inline` для библиотечной политики зарезервировано. Ссылка на несуществующую политику или на политику с любым из селекторов отклоняется при создании шаблона. Служебная политика выбирает неймспейсы проектов шаблона через `namespaceSelector` по их лейблу `projects.deckhouse.io/project-template`. Этот лейбл ставится при применении шаблона, поэтому после перехода проекта на другой шаблон правила старого шаблона действуют, пока контроллер не применит новый.
 
 ### Для пользователей проекта
 

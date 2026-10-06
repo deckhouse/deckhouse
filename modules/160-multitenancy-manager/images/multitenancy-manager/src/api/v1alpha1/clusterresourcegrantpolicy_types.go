@@ -22,7 +22,8 @@ import (
 
 // NOTE: json tags are required. Any new fields you add must have json tags for the fields to be serialized.
 
-// GrantResource is one entry of a grant: it references a GrantableClusterResourceDefinition and decides
+// GrantResource is one entry of a ClusterResourceGrantPolicy (multitenancy.deckhouse.io/v1alpha2) or of the
+// resources of a ProjectTemplate: it references a GrantableClusterResourceDefinition and decides
 // the per-project allow-list and default.
 type GrantResource struct {
 	// ResourceName is the name of the GrantableClusterResourceDefinition this entry configures.
@@ -57,66 +58,4 @@ type GrantResource struct {
 	// matched projects, None to lock it down.
 	// +optional
 	AvailabilityDefault AvailabilityDefault `json:"availabilityDefault,omitempty"`
-}
-
-// ClusterResourceGrantPolicySpec defines the desired state of ClusterResourceGrantPolicy.
-type ClusterResourceGrantPolicySpec struct {
-	// ProjectSelector selects the namespaces this grant applies to. It is matched against the union
-	// of the labels of the Project object and the labels of the namespace (the namespace wins a
-	// shared key), so a label on the Project selects every namespace of the project. A nil selector
-	// matches no projects; an explicit empty selector matches all.
-	// +optional
-	ProjectSelector *metav1.LabelSelector `json:"projectSelector,omitempty"`
-
-	// Resources holds the per-resource allow-list/default entries applied to matched projects.
-	// +required
-	Resources []GrantResource `json:"resources"`
-}
-
-// ClusterResourceGrantPolicyStatus defines the observed state of ClusterResourceGrantPolicy.
-type ClusterResourceGrantPolicyStatus struct {
-	// ObservedGeneration is the most recent generation observed by the controller.
-	// +optional
-	ObservedGeneration int64 `json:"observedGeneration,omitempty"`
-
-	// Conditions represent the current state of the ClusterResourceGrantPolicy resource.
-	// +listType=map
-	// +listMapKey=type
-	// +optional
-	Conditions []metav1.Condition `json:"conditions,omitempty"`
-}
-
-// +kubebuilder:object:root=true
-// +kubebuilder:subresource:status
-// +kubebuilder:resource:scope=Cluster,shortName=crgp
-// +kubebuilder:printcolumn:name="Age",type=date,JSONPath=`.metadata.creationTimestamp`
-
-// ClusterResourceGrantPolicy is the Schema for the clusterresourcegrantpolicies API.
-type ClusterResourceGrantPolicy struct {
-	metav1.TypeMeta `json:",inline"`
-
-	// metadata is a standard object metadata.
-	// +optional
-	metav1.ObjectMeta `json:"metadata,omitzero"`
-
-	// spec defines the desired state of ClusterResourceGrantPolicy.
-	// +required
-	Spec ClusterResourceGrantPolicySpec `json:"spec"`
-
-	// status defines the observed state of ClusterResourceGrantPolicy.
-	// +optional
-	Status ClusterResourceGrantPolicyStatus `json:"status,omitzero"`
-}
-
-// +kubebuilder:object:root=true
-
-// ClusterResourceGrantPolicyList contains a list of ClusterResourceGrantPolicy.
-type ClusterResourceGrantPolicyList struct {
-	metav1.TypeMeta `json:",inline"`
-	metav1.ListMeta `json:"metadata,omitzero"`
-	Items           []ClusterResourceGrantPolicy `json:"items"`
-}
-
-func init() {
-	SchemeBuilder.Register(&ClusterResourceGrantPolicy{}, &ClusterResourceGrantPolicyList{})
 }

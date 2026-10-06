@@ -155,9 +155,9 @@ The mechanism determines cluster-wide resource availability and default values b
 If multiple rules apply to a cluster-wide resource, its availability is determined in the following order:
 
 1. The [`excluded`](./cr.html#grantableclusterresourcedefinition-v1alpha1-spec-excluded) value in GrantableClusterResourceDefinition: the resource is unavailable regardless of policy settings.
-2. The [`denied`](./cr.html#clusterresourcegrantpolicy-v1alpha1-spec-resources-denied) and [`deniedSelector`](./cr.html#clusterresourcegrantpolicy-v1alpha1-spec-resources-deniedselector) values in the corresponding ClusterResourceGrantPolicy entry.
-3. The [`allowed`](./cr.html#clusterresourcegrantpolicy-v1alpha1-spec-resources-allowed) and [`allowedSelector`](./cr.html#clusterresourcegrantpolicy-v1alpha1-spec-resources-allowedselector) values in the corresponding ClusterResourceGrantPolicy entry.
-4. The [`availabilityDefault`](./cr.html#clusterresourcegrantpolicy-v1alpha1-spec-resources-availabilitydefault) value in the corresponding ClusterResourceGrantPolicy entry.
+2. The [`denied`](./cr.html#clusterresourcegrantpolicy-v1alpha2-spec-resources-denied) and [`deniedSelector`](./cr.html#clusterresourcegrantpolicy-v1alpha2-spec-resources-deniedselector) values in the corresponding ClusterResourceGrantPolicy entry.
+3. The [`allowed`](./cr.html#clusterresourcegrantpolicy-v1alpha2-spec-resources-allowed) and [`allowedSelector`](./cr.html#clusterresourcegrantpolicy-v1alpha2-spec-resources-allowedselector) values in the corresponding ClusterResourceGrantPolicy entry.
+4. The [`availabilityDefault`](./cr.html#clusterresourcegrantpolicy-v1alpha2-spec-resources-availabilitydefault) value in the corresponding ClusterResourceGrantPolicy entry.
 5. The [`defaultAvailability`](./cr.html#grantableclusterresourcedefinition-v1alpha1-spec-defaultavailability) value in GrantableClusterResourceDefinition.
 
 The first matching rule applies.
@@ -172,7 +172,7 @@ The behavior when an object is created depends on the mode configured in [Granta
 
 The project default is determined in the following order:
 
-1. The [`default`](./cr.html#clusterresourcegrantpolicy-v1alpha1-spec-resources-default) value from the corresponding ClusterResourceGrantPolicy entry.
+1. The [`default`](./cr.html#clusterresourcegrantpolicy-v1alpha2-spec-resources-default) value from the corresponding ClusterResourceGrantPolicy entry.
 2. The value determined using [`defaultFrom`](./cr.html#grantableclusterresourcedefinition-v1alpha1-spec-defaultfrom) in GrantableClusterResourceDefinition.
 3. If no value is found, no default is assigned.
 

@@ -1,0 +1,127 @@
+#!/usr/bin/env bash
+
+# Copyright 2026 Flant JSC
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+# v1alpha1 has one selector, projectSelector, matched against the labels of a namespace. v1alpha2
+# splits it: projectSelector is matched against the labels of the Project, namespaceSelector against
+# the labels of the namespace. So the v1alpha1 projectSelector is the v1alpha2 namespaceSelector, one
+# for one. The v1alpha2 projectSelector has no v1alpha1 field; while the object is served as
+# v1alpha1 it is kept, as JSON, in the multitenancy.deckhouse.io/v1alpha2-project-selector
+# annotation, so a round trip loses nothing.
+#
+# The annotation is the only part of a v1alpha1 write that becomes a v1alpha2 field without passing
+# the v1alpha2 schema: the API server validates the v1alpha1 request, where it is just a string, and
+# stores whatever the conversion returns. So the up conversion accepts it only when it is a label
+# selector; anything else is refused, because a projectSelector of the wrong type would make every
+# typed list of the policies fail to decode, in the controller and in the grant webhooks alike. The
+# down conversion always derives the annotation from spec.projectSelector, so a stale copy written
+# through v1alpha2 never comes back as a selector. shell-operator hands the API server its own
+# "Conversion ... was not successful" for a refused object, not the failedMessage below.
+
+source /shell_lib.sh
+
+function __config__() {
+  cat <<EOF
+configVersion: v1
+kubernetesCustomResourceConversion:
+  - name: v1alpha1_to_v1alpha2
+    crdName: clusterresourcegrantpolicies.multitenancy.deckhouse.io
+    conversions:
+    - fromVersion: multitenancy.deckhouse.io/v1alpha1
+      toVersion: multitenancy.deckhouse.io/v1alpha2
+  - name: v1alpha2_to_v1alpha1
+    crdName: clusterresourcegrantpolicies.multitenancy.deckhouse.io
+    conversions:
+    - fromVersion: multitenancy.deckhouse.io/v1alpha2
+      toVersion: multitenancy.deckhouse.io/v1alpha1
+EOF
+}
+
+function __on_conversion::v1alpha1_to_v1alpha2() {
+  if converted=$(context::jq -r '
+  def strings_only: all(.[]; type == "string");
+  def null_or(t; check): . == null or (type == t and check);
+  def label_selector:
+    type == "object"
+    and ((keys - ["matchLabels", "matchExpressions"]) | length) == 0
+    and (.matchLabels | null_or("object"; strings_only))
+    and (.matchExpressions | null_or("array"; all(.[];
+          type == "object"
+          and ((keys - ["key", "operator", "values"]) | length) == 0
+          and (.key | type == "string")
+          and (.operator | IN("In", "NotIn", "Exists", "DoesNotExist"))
+          and (.values | null_or("array"; strings_only)))));
+  .review.request.objects//[] | map(
+     if .apiVersion == "multitenancy.deckhouse.io/v1alpha1" then
+       .apiVersion = "multitenancy.deckhouse.io/v1alpha2" |
+       (.metadata.annotations["multitenancy.deckhouse.io/v1alpha2-project-selector"]) as $kept |
+       (if .spec then
+          (.spec.projectSelector) as $namespaceSelector |
+          .spec |= (del(.projectSelector) | del(.namespaceSelector)) |
+          (if $namespaceSelector != null then .spec.namespaceSelector = $namespaceSelector else . end) |
+          (if $kept != null then
+             ($kept | try fromjson catch null) as $projectSelector |
+             if ($projectSelector | label_selector) then .spec.projectSelector = $projectSelector
+             else error("the multitenancy.deckhouse.io/v1alpha2-project-selector annotation is not a JSON label selector") end
+           else . end)
+        else . end) |
+       (if .metadata.annotations != null then
+          .metadata.annotations |= del(.["multitenancy.deckhouse.io/v1alpha2-project-selector"]) |
+          (if (.metadata.annotations | length) == 0 then del(.metadata.annotations) else . end)
+        else . end)
+     else . end
+  )')
+  then
+    cat <<EOF >"$CONVERSION_RESPONSE_PATH"
+{"convertedObjects": $converted}
+EOF
+  else
+    cat <<EOF >"$CONVERSION_RESPONSE_PATH"
+{"failedMessage":"Conversion of clusterresourcegrantpolicies.multitenancy.deckhouse.io failed: the multitenancy.deckhouse.io/v1alpha2-project-selector annotation must be a JSON label selector (matchLabels with string values; matchExpressions with a string key, an operator In, NotIn, Exists or DoesNotExist, and string values). Remove the annotation to drop the projectSelector."}
+EOF
+  fi
+}
+
+function __on_conversion::v1alpha2_to_v1alpha1() {
+  if converted=$(context::jq -r '.review.request.objects//[] | map(
+     if .apiVersion == "multitenancy.deckhouse.io/v1alpha2" then
+       .apiVersion = "multitenancy.deckhouse.io/v1alpha1" |
+       (if .metadata.annotations != null then
+          .metadata.annotations |= del(.["multitenancy.deckhouse.io/v1alpha2-project-selector"]) |
+          (if (.metadata.annotations | length) == 0 then del(.metadata.annotations) else . end)
+        else . end) |
+       (if .spec then
+          (.spec.projectSelector) as $projectSelector |
+          (.spec.namespaceSelector) as $namespaceSelector |
+          .spec |= (del(.projectSelector) | del(.namespaceSelector)) |
+          (if $namespaceSelector != null then .spec.projectSelector = $namespaceSelector else . end) |
+          (if $projectSelector != null then
+             .metadata.annotations["multitenancy.deckhouse.io/v1alpha2-project-selector"] = ($projectSelector | tojson)
+           else . end)
+        else . end)
+     else . end
+  )')
+  then
+    cat <<EOF >"$CONVERSION_RESPONSE_PATH"
+{"convertedObjects": $converted}
+EOF
+  else
+    cat <<EOF >"$CONVERSION_RESPONSE_PATH"
+{"failedMessage":"Conversion of clusterresourcegrantpolicies.multitenancy.deckhouse.io failed"}
+EOF
+  fi
+}
+
+hook::run "$@"

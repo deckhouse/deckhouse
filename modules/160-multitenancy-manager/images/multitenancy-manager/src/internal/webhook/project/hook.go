@@ -36,9 +36,35 @@ import (
 	"controller/apis/deckhouse.io/v1alpha2"
 	"controller/apis/deckhouse.io/v1alpha3"
 	projectmanager "controller/internal/manager/project"
+	"controller/internal/naming"
 	"controller/internal/validate"
 	rolebindingwebhook "controller/internal/webhook/rolebinding"
 )
+
+// ownLabelChange checks an update against the labels the controller stamps on every Project. Grant
+// policies select projects by them, so pointing projects.deckhouse.io/project-template at a template the
+// project does not use is refused, as it would move the project into or out of policies. Removing either
+// label is let through with a warning that names it. A manifest that replaces the whole Project (kubectl
+// replace, Argo CD with Replace=true) does not carry them, and the controller puts them back, as
+// ownLabelsDrifted wakes it. Keeping the old value, or setting the one the controller is about to stamp,
+// is fine.
+func ownLabelChange(old, project *v1alpha3.Project) (string, []string) {
+	if value, ok := project.Labels[v1alpha3.ResourceLabelTemplate]; ok &&
+		value != project.Spec.ProjectTemplateName && value != old.Labels[v1alpha3.ResourceLabelTemplate] {
+		return fmt.Sprintf("the %s label of the %q project must be its template %q, got %q",
+			v1alpha3.ResourceLabelTemplate, project.Name, project.Spec.ProjectTemplateName, value), nil
+	}
+	var warnings []string
+	for _, key := range []string{v1alpha3.ResourceLabelProject, v1alpha3.ResourceLabelTemplate} {
+		_, had := old.Labels[key]
+		_, has := project.Labels[key]
+		if had && !has {
+			warnings = append(warnings, fmt.Sprintf(
+				"the %s label of the %q project is set by the multitenancy-manager controller, which puts it back", key, project.Name))
+		}
+	}
+	return "", warnings
+}
 
 func Register(runtimeManager manager.Manager) {
 	hook := &webhook.Admission{Handler: &validator{client: runtimeManager.GetClient()}}
@@ -76,10 +102,34 @@ func (v *validator) Handle(ctx context.Context, req admission.Request) admission
 			projectmanager.DefaultProjectName, projectmanager.DeckhouseProjectName, projectmanager.VirtualTemplate))
 	}
 
+	// projects.deckhouse.io/project names the project it is on: grant policies select projects by it
+	// (projectSelector), so a Project must not claim another project's name. The controller stamps it;
+	// a manifest may leave it out or repeat the project's own name.
+	if value, ok := project.Labels[v1alpha3.ResourceLabelProject]; ok && !privileged && value != project.Name {
+		return admission.Denied(fmt.Sprintf("the %s label of the %q project must be the project name, got %q",
+			v1alpha3.ResourceLabelProject, project.Name, value))
+	}
+
+	// The warnings of the checks below go out with whichever response allows the request.
+	var warnings []string
+
+	var old *v1alpha3.Project
+	if req.Operation == admissionv1.Update && !privileged {
+		old = new(v1alpha3.Project)
+		if err := yaml.Unmarshal(req.OldObject.Raw, old); err != nil {
+			return admission.Errored(http.StatusBadRequest, err)
+		}
+		reason, labelWarnings := ownLabelChange(old, project)
+		if reason != "" {
+			return admission.Denied(reason)
+		}
+		warnings = append(warnings, labelWarnings...)
+	}
+
 	if req.Operation == admissionv1.Create {
 		// pass the platform's virtual projects: the controller creates them without a namespace
 		if virtualName {
-			return admission.Allowed("")
+			return admission.Allowed("").WithWarnings(warnings...)
 		}
 
 		if strings.HasPrefix(project.Name, "d8-") || strings.HasPrefix(project.Name, "kube-") {
@@ -135,7 +185,7 @@ func (v *validator) Handle(ctx context.Context, req admission.Request) admission
 		if privileged {
 			if annotations := project.Annotations; annotations != nil {
 				if require, ok := annotations[v1alpha3.ProjectAnnotationRequireSync]; ok && require == "true" {
-					return admission.Allowed("")
+					return admission.Allowed("").WithWarnings(warnings...)
 				}
 			}
 		}
@@ -145,13 +195,13 @@ func (v *validator) Handle(ctx context.Context, req admission.Request) admission
 		// non-privileged user editing such a project still goes through full template/render
 		// validation instead of slipping further invalid spec edits past admission.
 		if privileged && project.Status.State == v1alpha3.ProjectStateError {
-			return admission.Allowed("").WithWarnings("The project skip validation due to the status")
+			return admission.Allowed("").WithWarnings(warnings...).WithWarnings("The project skip validation due to the status")
 		}
 	}
 
 	// skip project with empty template
 	if project.Spec.ProjectTemplateName == "" {
-		return admission.Allowed("")
+		return admission.Allowed("").WithWarnings(warnings...)
 	}
 
 	template, err := v.projectTemplateByName(ctx, project.Spec.ProjectTemplateName)
@@ -159,7 +209,7 @@ func (v *validator) Handle(ctx context.Context, req admission.Request) admission
 		return admission.Errored(http.StatusInternalServerError, err)
 	}
 	if template == nil {
-		return admission.Allowed("").WithWarnings("The project template not found")
+		return admission.Allowed("").WithWarnings(warnings...).WithWarnings("The project template not found")
 	}
 
 	// validate the project parameters against the template schema. The render itself is not
@@ -170,7 +220,53 @@ func (v *validator) Handle(ctx context.Context, req admission.Request) admission
 		return admission.Denied(fmt.Sprintf("The project '%s' is invalid: %v", project.Name, err))
 	}
 
-	return admission.Allowed("")
+	// The namespace labels the template takes from the parameters (the built-in templates wire
+	// namespaceMetadata.labels to namespace.labels) cannot carry a label the module owns: the renderer
+	// drops it, and the project would lack what its user asked for without a word. The template
+	// webhook checks a literal; a parameter is known only here.
+	//
+	// A project written before this check may already carry such a label. Refusing every later edit
+	// of it for that label would lock the project, so an update on the same template is refused only
+	// for a label it sets anew, and the ones it keeps are named in a warning. The controller and
+	// Deckhouse never set one, and their updates are not checked.
+	if privileged {
+		return admission.Allowed("").WithWarnings(warnings...)
+	}
+	labels, ref := namespaceLabels(project, template)
+	var previous map[string]string
+	if old != nil && old.Spec.ProjectTemplateName == project.Spec.ProjectTemplateName {
+		previous, _ = namespaceLabels(old, template)
+	}
+	set, kept := naming.SplitModuleOwnedLabels(labels, previous)
+	if len(set) > 0 {
+		return admission.Denied(fmt.Sprintf("The project '%s' is invalid: the parameter '%s' sets namespace labels the module owns: %s",
+			project.Name, ref, strings.Join(naming.ModuleOwnedLabelsIn(set), "; ")))
+	}
+	if len(kept) > 0 {
+		return admission.Allowed("").WithWarnings(warnings...).WithWarnings(fmt.Sprintf(
+			"the parameter '%s' of the '%s' project sets namespace labels the module owns, and the project does not apply them: %s; remove them from the parameter",
+			ref, project.Name, strings.Join(naming.ModuleOwnedLabelsIn(kept), "; ")))
+	}
+
+	return admission.Allowed("").WithWarnings(warnings...)
+}
+
+// namespaceLabels resolves namespaceMetadata.labels of the template against the project parameters,
+// as the renderer does, and names the parameter they come from. Nil when the template takes no
+// labels from the parameters.
+func namespaceLabels(project *v1alpha3.Project, template *v1alpha2.ProjectTemplate) (map[string]string, string) {
+	if template.Spec.NamespaceMetadata == nil || template.Spec.NamespaceMetadata.Labels.Ref() == "" {
+		return nil, ""
+	}
+	schema, err := validate.LoadSchema(template.Spec.ParametersSchema.OpenAPIV3Schema)
+	if err != nil {
+		return nil, "" // validate.Project refuses a template whose schema does not load
+	}
+	labels, ok, err := template.Spec.NamespaceMetadata.Labels.Resolve(validate.MergeDefaults(schema, project.Spec.Parameters))
+	if err != nil || !ok {
+		return nil, ""
+	}
+	return labels, template.Spec.NamespaceMetadata.Labels.Ref()
 }
 
 // byteQuantityUnitRE matches a Kubernetes Quantity that carries an explicit byte-scale unit.

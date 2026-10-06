@@ -346,3 +346,263 @@ func TestHandle_VirtualTemplateIsReserved(t *testing.T) {
 		}
 	})
 }
+
+// TestHandle_ProjectLabelIsTheProjectName: projects.deckhouse.io/project on a Project names that
+// project and nothing else, since grant policies select projects by it. Removing it is let through with
+// a warning, since the controller puts it back.
+func TestHandle_ProjectLabelIsTheProjectName(t *testing.T) {
+	v := newValidator(t)
+	ctx := context.Background()
+
+	withLabel := func(value string) *v1alpha3.Project {
+		p := projectWithParameters(nil)
+		if value != "" {
+			p.Labels = map[string]string{v1alpha3.ResourceLabelProject: value}
+		}
+		return p
+	}
+
+	tests := []struct {
+		name     string
+		user     string
+		value    string
+		expected bool
+		warns    bool
+	}{
+		{name: "the project name", user: "alice", value: "foo", expected: true},
+		{name: "removing the label", user: "alice", value: "", expected: true, warns: true},
+		{name: "another project's name", user: "alice", value: "bar", expected: false},
+		{name: "the controller is not checked", user: rolebindingwebhook.ControllerServiceAccount, value: "bar", expected: true},
+		{name: "the controller may remove it", user: rolebindingwebhook.ControllerServiceAccount, value: "", expected: true},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			resp := v.Handle(ctx, updateRequest(t, tt.user, withLabel("foo"), withLabel(tt.value)))
+			assert.Equal(t, tt.expected, resp.Allowed, "%v", resp.Result)
+			if !tt.warns {
+				assert.Empty(t, resp.Warnings)
+				return
+			}
+			require.Len(t, resp.Warnings, 1)
+			assert.Contains(t, resp.Warnings[0], v1alpha3.ResourceLabelProject)
+			assert.Contains(t, resp.Warnings[0], "puts it back")
+		})
+	}
+
+	t.Run("a project that never had the label, before the controller stamps it", func(t *testing.T) {
+		resp := v.Handle(ctx, updateRequest(t, "alice", withLabel(""), withLabel("")))
+		assert.True(t, resp.Allowed, "%v", resp.Result)
+		assert.Empty(t, resp.Warnings)
+	})
+}
+
+// TestHandle_ProjectTemplateLabelFollowsTheTemplate: the project-template label says which template the
+// project uses, and template-managed policies and template wake-ups rely on it. It keeps its value or
+// takes the one of spec.projectTemplateName and cannot name another template. Removing it is let through
+// with a warning, since the controller puts it back.
+func TestHandle_ProjectTemplateLabelFollowsTheTemplate(t *testing.T) {
+	v := newValidator(t)
+	ctx := context.Background()
+
+	project := func(template, label string) *v1alpha3.Project {
+		p := projectWithParameters(nil)
+		p.Spec.ProjectTemplateName = template
+		if label != "" {
+			p.Labels = map[string]string{v1alpha3.ResourceLabelTemplate: label}
+		}
+		return p
+	}
+
+	tests := []struct {
+		name     string
+		old      *v1alpha3.Project
+		updated  *v1alpha3.Project
+		expected bool
+	}{
+		{name: "unchanged", old: project("a", "a"), updated: project("a", "a"), expected: true},
+		{name: "a template switch keeps the old label until the controller stamps it", old: project("a", "a"), updated: project("b", "a"), expected: true},
+		{name: "a template switch that sets the new label", old: project("a", "a"), updated: project("b", "b"), expected: true},
+		{name: "another template", old: project("a", "a"), updated: project("a", "c"), expected: false},
+		{name: "removing the label", old: project("a", "a"), updated: project("a", ""), expected: true},
+		{name: "setting a wrong label where there was none", old: project("a", ""), updated: project("a", "c"), expected: false},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			resp := v.Handle(ctx, updateRequest(t, "alice", tt.old, tt.updated))
+			assert.Equal(t, tt.expected, resp.Allowed, "%v", resp.Result)
+		})
+	}
+
+	// A manifest that replaces the whole Project (kubectl replace, Argo CD with Replace=true) carries
+	// neither label. The update goes through with one warning per label, ahead of the warnings of the
+	// later checks, and the controller stamps them again.
+	t.Run("a replace without the labels the controller stamped", func(t *testing.T) {
+		old := project("a", "a")
+		old.Labels[v1alpha3.ResourceLabelProject] = "foo"
+		resp := v.Handle(ctx, updateRequest(t, "alice", old, project("a", "")))
+		require.True(t, resp.Allowed, "%v", resp.Result)
+		require.GreaterOrEqual(t, len(resp.Warnings), 2, "%v", resp.Warnings)
+		assert.Contains(t, resp.Warnings[0], v1alpha3.ResourceLabelProject+" label")
+		assert.Contains(t, resp.Warnings[1], v1alpha3.ResourceLabelTemplate+" label")
+	})
+}
+
+// TestHandle_ModuleOwnedNamespaceLabels: the built-in templates take namespaceMetadata.labels from the
+// namespace.labels parameter, so only the Project webhook sees what a project sets there, and a label
+// the module owns is refused instead of being dropped by the renderer. A project that already carries
+// one stays editable: only a label set anew is refused, a kept one is named in a warning. The
+// controller and Deckhouse are not checked.
+func TestHandle_ModuleOwnedNamespaceLabels(t *testing.T) {
+	template := &v1alpha2.ProjectTemplate{
+		ObjectMeta: metav1.ObjectMeta{Name: "tmpl"},
+		Spec: v1alpha2.ProjectTemplateSpec{
+			NamespaceMetadata: &v1alpha2.NamespaceMetadata{Labels: v1alpha2.FromParamRef[map[string]string]("namespace.labels")},
+			ParametersSchema: v1alpha2.ParametersSchema{OpenAPIV3Schema: map[string]any{
+				"type": "object", "properties": map[string]any{"namespace": map[string]any{"type": "object", "properties": map[string]any{
+					"labels": map[string]any{"type": "object", "additionalProperties": map[string]any{"type": "string"}},
+				}}},
+			}},
+		},
+	}
+	v := newValidator(t, template)
+	ctx := context.Background()
+
+	withLabels := func(labels map[string]any) *v1alpha3.Project {
+		project := projectWithParameters(map[string]any{"namespace": map[string]any{"labels": labels}})
+		project.Spec.ProjectTemplateName = "tmpl"
+		project.Labels = map[string]string{v1alpha3.ResourceLabelTemplate: "tmpl"}
+		return project
+	}
+	privileged := map[string]any{"security.deckhouse.io/pod-policy": "privileged"}
+	privilegedAndTeam := map[string]any{"security.deckhouse.io/pod-policy": "privileged", "team": "a"}
+
+	t.Run("create", func(t *testing.T) {
+		raw, err := json.Marshal(withLabels(privileged))
+		require.NoError(t, err)
+		resp := v.Handle(ctx, admission.Request{AdmissionRequest: admissionv1.AdmissionRequest{
+			Operation: admissionv1.Create,
+			UserInfo:  authnv1.UserInfo{Username: "alice"},
+			Object:    runtime.RawExtension{Raw: raw},
+		}})
+		require.False(t, resp.Allowed)
+		assert.Contains(t, resp.Result.Message, "the parameter 'namespace.labels' sets namespace labels the module owns")
+		assert.Contains(t, resp.Result.Message, "security.deckhouse.io/pod-policy (set it through spec.podSecurityStandard)")
+	})
+
+	tests := []struct {
+		name     string
+		user     string
+		old      *v1alpha3.Project
+		updated  *v1alpha3.Project
+		allowed  bool
+		mentions string
+		warns    string
+	}{
+		{
+			name:     "a pod policy label set anew",
+			user:     "alice",
+			old:      withLabels(map[string]any{"team": "a"}),
+			updated:  withLabels(privilegedAndTeam),
+			mentions: "security.deckhouse.io/pod-policy (set it through spec.podSecurityStandard)",
+		},
+		{
+			name:     "a label of the controller set anew",
+			user:     "alice",
+			old:      withLabels(nil),
+			updated:  withLabels(map[string]any{"projects.deckhouse.io/project": "other"}),
+			mentions: "projects.deckhouse.io/project (the controller sets it)",
+		},
+		{
+			name:     "a new value of a label the project had",
+			user:     "alice",
+			old:      withLabels(privileged),
+			updated:  withLabels(map[string]any{"security.deckhouse.io/pod-policy": "baseline"}),
+			mentions: "security.deckhouse.io/pod-policy",
+		},
+		{
+			name:     "a label kept on a template switch is set anew",
+			user:     "alice",
+			old:      func() *v1alpha3.Project { p := withLabels(privileged); p.Spec.ProjectTemplateName = "other"; return p }(),
+			updated:  withLabels(privileged),
+			mentions: "security.deckhouse.io/pod-policy",
+		},
+		{
+			name:    "an ordinary label",
+			user:    "alice",
+			old:     withLabels(nil),
+			updated: withLabels(map[string]any{"team": "a"}),
+			allowed: true,
+		},
+		{
+			name:    "an edit that keeps a label the project had",
+			user:    "alice",
+			old:     withLabels(privileged),
+			updated: withLabels(privilegedAndTeam),
+			allowed: true,
+			warns:   "security.deckhouse.io/pod-policy (set it through spec.podSecurityStandard)",
+		},
+		{
+			name:    "removing a label the project had",
+			user:    "alice",
+			old:     withLabels(privilegedAndTeam),
+			updated: withLabels(map[string]any{"team": "a"}),
+			allowed: true,
+		},
+		{
+			name: "the controller stamps a project that carries one",
+			user: rolebindingwebhook.ControllerServiceAccount,
+			old: func() *v1alpha3.Project {
+				p := withLabels(privileged)
+				p.Annotations = map[string]string{v1alpha3.ProjectAnnotationRequireSync: "true"}
+				return p
+			}(),
+			updated: func() *v1alpha3.Project {
+				p := withLabels(privileged)
+				p.Labels[v1alpha3.ResourceLabelProject] = p.Name
+				p.Finalizers = []string{v1alpha3.ProjectFinalizer}
+				return p
+			}(),
+			allowed: true,
+		},
+		{
+			name: "the controller removes the finalizer of a deleted project that carries one",
+			user: rolebindingwebhook.ControllerServiceAccount,
+			old: func() *v1alpha3.Project {
+				p := withLabels(privileged)
+				p.Finalizers = []string{v1alpha3.ProjectFinalizer}
+				p.DeletionTimestamp = &metav1.Time{}
+				return p
+			}(),
+			updated: func() *v1alpha3.Project {
+				p := withLabels(privileged)
+				p.DeletionTimestamp = &metav1.Time{}
+				return p
+			}(),
+			allowed: true,
+		},
+		{
+			name:    "Deckhouse is not checked either",
+			user:    rolebindingwebhook.DeckhouseServiceAccount,
+			old:     withLabels(nil),
+			updated: withLabels(privileged),
+			allowed: true,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			resp := v.Handle(ctx, updateRequest(t, tt.user, tt.old, tt.updated))
+			require.Equal(t, tt.allowed, resp.Allowed, resp.Result.Message)
+			if tt.mentions != "" {
+				assert.Contains(t, resp.Result.Message, "the parameter 'namespace.labels' sets namespace labels the module owns")
+				assert.Contains(t, resp.Result.Message, tt.mentions)
+			}
+			if tt.warns == "" {
+				assert.Empty(t, resp.Warnings)
+				return
+			}
+			require.Len(t, resp.Warnings, 1)
+			assert.Contains(t, resp.Warnings[0], "the project does not apply them")
+			assert.Contains(t, resp.Warnings[0], tt.warns)
+		})
+	}
+}

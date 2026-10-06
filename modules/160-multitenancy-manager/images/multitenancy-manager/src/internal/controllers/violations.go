@@ -28,6 +28,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/metrics"
 
 	"controller/api/v1alpha1"
+	grantsv1alpha2 "controller/api/v1alpha2"
 	"controller/internal/engine"
 	"controller/internal/jsonpath"
 	"controller/internal/resolve"
@@ -97,7 +98,7 @@ func scanViolations(
 	mapper meta.RESTMapper,
 	factory jsonpath.Factory,
 	namespace string,
-	grants []*v1alpha1.ClusterResourceGrantPolicy,
+	grants []*grantsv1alpha2.ClusterResourceGrantPolicy,
 	definitions []v1alpha1.GrantableClusterResourceDefinition,
 ) ([]violation, error) {
 	refList := &v1alpha1.GrantableClusterResourceReferenceList{}
@@ -195,7 +196,7 @@ refs:
 }
 
 // grantsNaming returns the names of the applicable policies that hold an entry for the definition.
-func grantsNaming(grants []*v1alpha1.ClusterResourceGrantPolicy, definition string) []string {
+func grantsNaming(grants []*grantsv1alpha2.ClusterResourceGrantPolicy, definition string) []string {
 	var names []string
 	for _, g := range grants {
 		for i := range g.Spec.Resources {

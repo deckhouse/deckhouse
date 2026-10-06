@@ -23,12 +23,17 @@ package projectnamespace
 
 import (
 	"context"
+	"encoding/json"
+	"errors"
 	"fmt"
+	"slices"
+	"strings"
 
 	corev1 "k8s.io/api/core/v1"
 	k8serrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/client-go/tools/record"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/builder"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -39,12 +44,16 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
 	"controller/apis/deckhouse.io/v1alpha3"
+	"controller/internal/naming"
 	"controller/internal/rolebinding"
 )
 
 // Reconciler owns the additional namespace of a ProjectNamespace.
 type Reconciler struct {
 	client.Client
+
+	// Recorder reports a restored template label on the ProjectNamespace. Optional.
+	Recorder record.EventRecorder
 }
 
 // Reconcile keeps the additional namespace of a single ProjectNamespace in sync with its object.
@@ -142,9 +151,67 @@ var inheritedNamespaceLabels = []string{
 	v1alpha3.ResourceLabelTemplate,
 }
 
-// ensureNamespace creates or updates the additional namespace, stamping the project ownership
-// labels and inheriting the project's policy/grant labels from the main namespace. It refuses to
-// adopt a pre-existing namespace that belongs to a different project.
+// IsInheritedFromProject reports whether every new additional namespace of a project takes the label
+// from the project or from its main namespace, whatever the template lists: the ownership labels and
+// the fixed inherited ones of NewNamespaceLabels. Such a label cannot tell a new namespace of a
+// project from the existing ones.
+func IsInheritedFromProject(key string) bool {
+	return key == v1alpha3.ResourceLabelHeritage || key == v1alpha3.ResourceLabelProject || slices.Contains(inheritedNamespaceLabels, key)
+}
+
+// errMainNamespaceNotRendered stops the reconcile of an additional namespace until the renderer has
+// written the template labels on the main namespace: a namespace created without them could fall
+// outside a ClusterResourceGrantPolicy that restricts by one of them.
+var errMainNamespaceNotRendered = errors.New("the main namespace of the project is not rendered yet")
+
+// templateLabelsOf returns the labels listed in the template-labels annotation of a namespace, without
+// the keys the module owns or GitOps tools use for tracking, which are never inherited.
+func templateLabelsOf(ns *corev1.Namespace) (map[string]string, error) {
+	raw, ok := ns.Annotations[naming.TemplateLabelsAnnotation]
+	if !ok {
+		return nil, fmt.Errorf("the %s annotation is missing", naming.TemplateLabelsAnnotation)
+	}
+	labels := map[string]string{}
+	if err := json.Unmarshal([]byte(raw), &labels); err != nil {
+		return nil, fmt.Errorf("parse the %s annotation: %w", naming.TemplateLabelsAnnotation, err)
+	}
+	for key := range labels {
+		if naming.IsModuleOwnedLabel(key) || naming.IsGitOpsTrackingLabel(key) {
+			delete(labels, key)
+		}
+	}
+	return labels, nil
+}
+
+// NewNamespaceLabels returns the labels an additional namespace of the project gets when it is created:
+// the labels of the project template the main namespace lists, the policy and grant labels inherited
+// from the main namespace, and the ownership labels. The labels derived from the name of the
+// ProjectNamespace, which the project user chooses, are not part of it. Like ensureNamespace, it fails
+// while the main namespace is not rendered.
+func NewNamespaceLabels(main *corev1.Namespace, project string) (map[string]string, error) {
+	labels, err := templateLabelsOf(main)
+	if err != nil {
+		return nil, fmt.Errorf("%w: namespace %q: %w", errMainNamespaceNotRendered, project, err)
+	}
+	for _, key := range inheritedNamespaceLabels {
+		if value, ok := main.Labels[key]; ok {
+			labels[key] = value
+		}
+	}
+	labels[v1alpha3.ResourceLabelHeritage] = v1alpha3.ResourceHeritageMultitenancy
+	labels[v1alpha3.ResourceLabelProject] = project
+	return labels, nil
+}
+
+// ensureNamespace creates or updates the additional namespace: the labels of the project template
+// (listed on the main namespace by the renderer), the fixed inherited policy/grant labels, and the
+// project ownership labels, in that order, so the module's keys always win.
+//
+// The template owns the labels it lists: a hand edit of one on the additional namespace is put back
+// with a Warning event, and a key the template stops listing is removed. The additional namespace
+// records what it took in its own template-labels annotation; labels outside that record belong to
+// whoever set them and are left alone. It refuses to adopt a pre-existing namespace that belongs to a
+// different project.
 func (r *Reconciler) ensureNamespace(ctx context.Context, pns *v1alpha3.ProjectNamespace, project string) error {
 	name := r.namespaceName(pns)
 
@@ -158,39 +225,87 @@ func (r *Reconciler) ensureNamespace(ctx context.Context, pns *v1alpha3.ProjectN
 		return fmt.Errorf("get namespace %q: %w", name, err)
 	}
 
-	// The main namespace of a project is named after the project; its labels are read so that the
-	// policies and grants they carry can be inherited.
-	mainLabels := map[string]string{}
+	// The main namespace of a project is named after the project. Without it, or before the renderer
+	// has written its template labels, nothing is created or changed (fail-static).
 	main := &corev1.Namespace{}
 	switch err := r.Get(ctx, types.NamespacedName{Name: project}, main); {
-	case err == nil:
-		mainLabels = main.Labels
-	case !k8serrors.IsNotFound(err):
+	case k8serrors.IsNotFound(err):
+		return fmt.Errorf("%w: namespace %q does not exist", errMainNamespaceNotRendered, project)
+	case err != nil:
 		return fmt.Errorf("get main namespace %q: %w", project, err)
 	}
+	desired, err := templateLabelsOf(main)
+	if err != nil {
+		return fmt.Errorf("%w: namespace %q: %w", errMainNamespaceNotRendered, project, err)
+	}
 
+	record, err := json.Marshal(desired)
+	if err != nil {
+		return fmt.Errorf("marshal template labels: %w", err)
+	}
+
+	var reverted []string
 	ns := &corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: name}}
-	_, err := controllerutil.CreateOrUpdate(ctx, r.Client, ns, func() error {
+	_, err = controllerutil.CreateOrUpdate(ctx, r.Client, ns, func() error {
 		if ns.Labels == nil {
 			ns.Labels = map[string]string{}
 		}
-		ns.Labels[v1alpha3.ResourceLabelHeritage] = v1alpha3.ResourceHeritageMultitenancy
-		ns.Labels[v1alpha3.ResourceLabelProject] = project
-		ns.Labels[v1alpha3.ResourceLabelProjectNamespace] = pns.Name
+		if ns.Annotations == nil {
+			ns.Annotations = map[string]string{}
+		}
+
+		// What this controller set last time, read from the object being updated, so the record and
+		// the labels come from the same read; an unreadable record is treated as empty, so at worst a
+		// stale key stays until the administrator removes it.
+		previous, _ := templateLabelsOf(ns)
+		reverted = reverted[:0]
+
+		for key := range previous {
+			if _, still := desired[key]; !still {
+				delete(ns.Labels, key)
+			}
+		}
+		for key, value := range desired {
+			// A value that differs from what this controller set last time was changed by hand (or
+			// was there before the template took the key); a value equal to the last one is simply
+			// the template moving on.
+			current, set := ns.Labels[key]
+			last, owned := previous[key]
+			switch {
+			case set && current != value && (!owned || current != last):
+				reverted = append(reverted, fmt.Sprintf("%s=%q (was %q)", key, value, current))
+			case !set && owned:
+				reverted = append(reverted, fmt.Sprintf("%s=%q (was removed)", key, value))
+			}
+			ns.Labels[key] = value
+		}
+		ns.Annotations[naming.TemplateLabelsAnnotation] = string(record)
+
 		// Inherit the policy and grant labels of the main namespace, and drop the ones it no longer
 		// carries: an additional namespace that keeps a label the project has switched off in its
 		// template would quietly diverge from the rest of the project.
 		for _, key := range inheritedNamespaceLabels {
-			if value, ok := mainLabels[key]; ok {
+			if value, ok := main.Labels[key]; ok {
 				ns.Labels[key] = value
 			} else {
 				delete(ns.Labels, key)
 			}
 		}
+
+		ns.Labels[v1alpha3.ResourceLabelHeritage] = v1alpha3.ResourceHeritageMultitenancy
+		ns.Labels[v1alpha3.ResourceLabelProject] = project
+		ns.Labels[v1alpha3.ResourceLabelProjectNamespace] = pns.Name
 		return nil
 	})
 	if err != nil {
 		return fmt.Errorf("ensure namespace %q: %w", name, err)
+	}
+
+	if len(reverted) > 0 && r.Recorder != nil {
+		slices.Sort(reverted)
+		r.Recorder.Eventf(pns, corev1.EventTypeWarning, "TemplateLabelsRestored",
+			"namespace %s: labels of the project template restored: %s; change them through the Project or its ProjectTemplate",
+			name, strings.Join(reverted, ", "))
 	}
 	return nil
 }

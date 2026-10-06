@@ -45,6 +45,7 @@ import (
 	metricsserver "sigs.k8s.io/controller-runtime/pkg/metrics/server"
 
 	grantsv1alpha1 "controller/api/v1alpha1"
+	grantsv1alpha2 "controller/api/v1alpha2"
 	deckhousev1alpha2 "controller/apis/deckhouse.io/v1alpha2"
 )
 
@@ -52,7 +53,7 @@ func newReconciler(t *testing.T, objs ...client.Object) (*Reconciler, client.Cli
 	t.Helper()
 	scheme := runtime.NewScheme()
 	for _, add := range []func(*runtime.Scheme) error{
-		deckhousev1alpha2.AddToScheme, grantsv1alpha1.AddToScheme,
+		deckhousev1alpha2.AddToScheme, grantsv1alpha1.AddToScheme, grantsv1alpha2.AddToScheme,
 	} {
 		require.NoError(t, add(scheme))
 	}
@@ -64,10 +65,10 @@ func template(name string, spec deckhousev1alpha2.ProjectTemplateSpec) *deckhous
 	return &deckhousev1alpha2.ProjectTemplate{ObjectMeta: metav1.ObjectMeta{Name: name}, Spec: spec}
 }
 
-func libraryPolicy(name string, resources ...grantsv1alpha1.GrantResource) *grantsv1alpha1.ClusterResourceGrantPolicy {
-	return &grantsv1alpha1.ClusterResourceGrantPolicy{
+func libraryPolicy(name string, resources ...grantsv1alpha1.GrantResource) *grantsv1alpha2.ClusterResourceGrantPolicy {
+	return &grantsv1alpha2.ClusterResourceGrantPolicy{
 		ObjectMeta: metav1.ObjectMeta{Name: name},
-		Spec:       grantsv1alpha1.ClusterResourceGrantPolicySpec{Resources: resources},
+		Spec:       grantsv1alpha2.ClusterResourceGrantPolicySpec{Resources: resources},
 	}
 }
 
@@ -78,9 +79,9 @@ func runReconcile(t *testing.T, r *Reconciler, name string) ctrl.Result {
 	return res
 }
 
-func getPolicy(t *testing.T, c client.Client, name string) *grantsv1alpha1.ClusterResourceGrantPolicy {
+func getPolicy(t *testing.T, c client.Client, name string) *grantsv1alpha2.ClusterResourceGrantPolicy {
 	t.Helper()
-	p := &grantsv1alpha1.ClusterResourceGrantPolicy{}
+	p := &grantsv1alpha2.ClusterResourceGrantPolicy{}
 	require.NoError(t, c.Get(context.Background(), client.ObjectKey{Name: name}, p))
 	return p
 }
@@ -141,7 +142,7 @@ func TestSetupWithManager_LibraryPolicyWatch(t *testing.T) {
 	// Owns and Watches both register a handler on the policy informer.
 	policies := newLockedInformer(2)
 	informers := &informertest.FakeInformers{Scheme: r.Scheme, InformersByGVK: map[schema.GroupVersionKind]toolscache.SharedIndexInformer{
-		grantsv1alpha1.GroupVersion.WithKind("ClusterResourceGrantPolicy"): policies,
+		grantsv1alpha2.GroupVersion.WithKind("ClusterResourceGrantPolicy"): policies,
 		deckhousev1alpha2.SchemeGroupVersion.WithKind("ProjectTemplate"):   &controllertest.FakeInformer{Synced: true},
 	}}
 	mgr, err := manager.New(&rest.Config{Host: "http://127.0.0.1:1"}, manager.Options{
@@ -169,7 +170,7 @@ func TestSetupWithManager_LibraryPolicyWatch(t *testing.T) {
 	}
 
 	allowed := func() []string { return getPolicy(t, c, PolicyName("a", "lib")).Spec.Resources[0].Allowed }
-	edit := func(values ...string) (*grantsv1alpha1.ClusterResourceGrantPolicy, *grantsv1alpha1.ClusterResourceGrantPolicy) {
+	edit := func(values ...string) (*grantsv1alpha2.ClusterResourceGrantPolicy, *grantsv1alpha2.ClusterResourceGrantPolicy) {
 		cur := getPolicy(t, c, "lib")
 		old := cur.DeepCopy()
 		cur.Spec.Resources[0].Allowed = values
@@ -191,7 +192,7 @@ func TestSetupWithManager_LibraryPolicyWatch(t *testing.T) {
 	require.NoError(t, c.Delete(ctx, cur))
 	policies.Delete(cur)
 	assert.Eventually(t, func() bool {
-		err := c.Get(ctx, client.ObjectKey{Name: PolicyName("a", "lib")}, &grantsv1alpha1.ClusterResourceGrantPolicy{})
+		err := c.Get(ctx, client.ObjectKey{Name: PolicyName("a", "lib")}, &grantsv1alpha2.ClusterResourceGrantPolicy{})
 		return apierrors.IsNotFound(err)
 	}, 2*time.Second, 20*time.Millisecond, "a deleted library policy takes its copy along")
 }
@@ -211,7 +212,7 @@ func TestTemplatesReferencing(t *testing.T) {
 
 	tests := []struct {
 		name     string
-		policy   *grantsv1alpha1.ClusterResourceGrantPolicy
+		policy   *grantsv1alpha2.ClusterResourceGrantPolicy
 		expected []string
 	}{
 		{name: "a library policy referenced by two templates", policy: libraryPolicy("lib"), expected: []string{"a", "b"}},
@@ -244,8 +245,9 @@ func TestReconcile_MaterializesOnePolicyPerSource(t *testing.T) {
 	inline := getPolicy(t, c, "template-grants-demo-inline")
 	assert.Equal(t, "grants-demo", inline.Labels[LabelManagedByTemplate])
 	assert.Equal(t, GrantSourceInline, inline.Labels[LabelGrantSource])
-	require.NotNil(t, inline.Spec.ProjectSelector)
-	assert.Equal(t, "grants-demo", inline.Spec.ProjectSelector.MatchLabels[deckhousev1alpha2.ResourceLabelTemplate])
+	require.NotNil(t, inline.Spec.NamespaceSelector)
+	assert.Equal(t, "grants-demo", inline.Spec.NamespaceSelector.MatchLabels[deckhousev1alpha2.ResourceLabelTemplate])
+	assert.Nil(t, inline.Spec.ProjectSelector)
 	require.Len(t, inline.Spec.Resources, 1)
 	assert.Equal(t, "storageclasses", inline.Spec.Resources[0].ResourceName)
 	require.Len(t, inline.OwnerReferences, 1)
@@ -256,8 +258,9 @@ func TestReconcile_MaterializesOnePolicyPerSource(t *testing.T) {
 	assert.Equal(t, grantSourcePolicy, fromLib.Labels[LabelGrantSource])
 	require.Len(t, fromLib.Spec.Resources, 1)
 	assert.Equal(t, "clusterissuers", fromLib.Spec.Resources[0].ResourceName)
-	require.NotNil(t, fromLib.Spec.ProjectSelector)
-	assert.Equal(t, "grants-demo", fromLib.Spec.ProjectSelector.MatchLabels[deckhousev1alpha2.ResourceLabelTemplate])
+	require.NotNil(t, fromLib.Spec.NamespaceSelector)
+	assert.Equal(t, "grants-demo", fromLib.Spec.NamespaceSelector.MatchLabels[deckhousev1alpha2.ResourceLabelTemplate])
+	assert.Nil(t, fromLib.Spec.ProjectSelector)
 }
 
 // A template with neither inline resources nor grantPolicies owns no managed policies.
@@ -265,7 +268,7 @@ func TestReconcile_NoSourcesNoPolicies(t *testing.T) {
 	r, c := newReconciler(t, template("empty", deckhousev1alpha2.ProjectTemplateSpec{}))
 	require.False(t, runReconcile(t, r, "empty").Requeue)
 
-	list := &grantsv1alpha1.ClusterResourceGrantPolicyList{}
+	list := &grantsv1alpha2.ClusterResourceGrantPolicyList{}
 	require.NoError(t, c.List(context.Background(), list))
 	assert.Empty(t, list.Items)
 }
@@ -288,7 +291,7 @@ func TestReconcile_PrunesRemovedSource(t *testing.T) {
 	runReconcile(t, r, "demo")
 
 	getPolicy(t, c, "template-demo-inline") // inline survives
-	err := c.Get(context.Background(), client.ObjectKey{Name: "template-demo-lib"}, &grantsv1alpha1.ClusterResourceGrantPolicy{})
+	err := c.Get(context.Background(), client.ObjectKey{Name: "template-demo-lib"}, &grantsv1alpha2.ClusterResourceGrantPolicy{})
 	assert.True(t, apierrors.IsNotFound(err), "managed policy of the removed source must be pruned")
 }
 
@@ -305,7 +308,7 @@ func TestReconcile_MissingReferenceRequeues(t *testing.T) {
 	assert.Positive(t, res.RequeueAfter, "a missing reference must requeue")
 
 	getPolicy(t, c, "template-demo-inline") // inline still materialized
-	err = c.Get(context.Background(), client.ObjectKey{Name: "template-demo-absent"}, &grantsv1alpha1.ClusterResourceGrantPolicy{})
+	err = c.Get(context.Background(), client.ObjectKey{Name: "template-demo-absent"}, &grantsv1alpha2.ClusterResourceGrantPolicy{})
 	assert.True(t, apierrors.IsNotFound(err))
 }
 
@@ -316,6 +319,29 @@ func TestReconcile_TemplateGoneIsNoop(t *testing.T) {
 	require.NoError(t, err)
 	assert.False(t, res.Requeue)
 	assert.Zero(t, res.RequeueAfter)
+}
+
+// TestReconcile_ManagedPolicyOwnsBothSelectors: the reconciler owns both selectors of the policies it
+// materializes. A managed policy an earlier build wrote with a projectSelector on the Project label is
+// moved to the namespaceSelector, not left with both.
+func TestReconcile_ManagedPolicyOwnsBothSelectors(t *testing.T) {
+	tmpl := template("grants-demo", deckhousev1alpha2.ProjectTemplateSpec{
+		Resources: []grantsv1alpha1.GrantResource{{ResourceName: "storageclasses", Allowed: []string{"fast"}}},
+	})
+	earlier := &grantsv1alpha2.ClusterResourceGrantPolicy{
+		ObjectMeta: metav1.ObjectMeta{Name: "template-grants-demo-inline"},
+		Spec: grantsv1alpha2.ClusterResourceGrantPolicySpec{
+			ProjectSelector: &metav1.LabelSelector{MatchLabels: map[string]string{deckhousev1alpha2.ResourceLabelTemplate: "grants-demo"}},
+			Resources:       []grantsv1alpha1.GrantResource{{ResourceName: "storageclasses", Allowed: []string{"fast"}}},
+		},
+	}
+	r, c := newReconciler(t, tmpl, earlier)
+	runReconcile(t, r, "grants-demo")
+
+	got := getPolicy(t, c, "template-grants-demo-inline")
+	require.NotNil(t, got.Spec.NamespaceSelector)
+	assert.Equal(t, "grants-demo", got.Spec.NamespaceSelector.MatchLabels[deckhousev1alpha2.ResourceLabelTemplate])
+	assert.Nil(t, got.Spec.ProjectSelector, "the projectSelector of an earlier build must be cleared")
 }
 
 // An edit of a library policy reaches the managed copy of every template that references it: the
@@ -330,7 +356,7 @@ func TestReconcile_ManagedCopyFollowsLibraryEdit(t *testing.T) {
 	runReconcile(t, r, "a")
 	runReconcile(t, r, "b")
 
-	cur := &grantsv1alpha1.ClusterResourceGrantPolicy{}
+	cur := &grantsv1alpha2.ClusterResourceGrantPolicy{}
 	require.NoError(t, c.Get(context.Background(), client.ObjectKey{Name: "lib"}, cur))
 	cur.Spec.Resources[0].Allowed = []string{"slow"}
 	require.NoError(t, c.Update(context.Background(), cur))
@@ -362,6 +388,6 @@ func TestReconcile_ManagedCopyGoesWithDeletedLibrary(t *testing.T) {
 	res := runReconcile(t, r, requests[0].Name)
 
 	assert.Positive(t, res.RequeueAfter, "the template still references the deleted policy")
-	err := c.Get(context.Background(), client.ObjectKey{Name: PolicyName("a", "lib")}, &grantsv1alpha1.ClusterResourceGrantPolicy{})
+	err := c.Get(context.Background(), client.ObjectKey{Name: PolicyName("a", "lib")}, &grantsv1alpha2.ClusterResourceGrantPolicy{})
 	assert.True(t, apierrors.IsNotFound(err), "the managed copy of a deleted library policy must be pruned")
 }

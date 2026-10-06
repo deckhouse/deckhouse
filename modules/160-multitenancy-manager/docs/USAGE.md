@@ -174,7 +174,7 @@ Besides the user-created projects, the `d8 k get projects` list always contains 
 
 Virtual-project status is rebuilt from the live namespace list: a deleted namespace disappears from that list. Virtual projects do not recreate namespaces.
 
-Virtual projects exist for completeness: with them, every namespace of the cluster belongs to some project. They cannot be managed: they are not editable, [ProjectNamespace](cr.html#projectnamespace) and [ProjectRoleBinding](cr.html#projectrolebinding) resources cannot be created in them, and [ClusterProjectRoleBinding](cr.html#clusterprojectrolebinding) does not extend to them. Their project template, `virtual`, is reserved for them: a user project with `projectTemplateName: virtual` is refused by the webhook, since such a project would get no namespace of its own.
+Virtual projects exist for completeness: with them, every namespace of the cluster belongs to some project. They cannot be managed: they are not editable, [ProjectNamespace](cr.html#projectnamespace) and [ProjectRoleBinding](cr.html#projectrolebinding) resources cannot be created in them, and [ClusterProjectRoleBinding](cr.html#clusterprojectrolebinding) does not extend to them. Their project template, `virtual`, is reserved for them: a user project with `projectTemplateName: virtual` is refused by the webhook, since such a project would get no namespace of its own. No ClusterResourceGrantPolicy applies to their namespaces either, even one whose selectors match a virtual Project, because the [cluster resource availability rules](#managing-access-to-cluster-wide-resources) apply only in namespaces with the `projects.deckhouse.io/project` label, and the namespaces of virtual projects do not carry it.
 
 ## Additional project namespaces
 
@@ -210,23 +210,30 @@ The following automatically applies in **all** namespaces of the project (the ma
 - **Access**: the [ProjectRoleBinding](cr.html#projectrolebinding) and [ClusterProjectRoleBinding](cr.html#clusterprojectrolebinding) bindings, including the automatic access of the project administrators. When a new namespace is added, all existing bindings fan out into it without any user action.
 - **Namespaced template objects**: the network policy (`networkPolicy.mode: Isolated`) and the log collection setup (`logShipping`) are created in every namespace of the project. The network isolation allows traffic between the namespaces of one project.
 - **Cluster-scoped template policies** (`OperationPolicy`, the `SecurityPolicy` from `allowedUIDs`/`allowedGIDs`): they select namespaces by the `projects.deckhouse.io/project` label, that is, they cover the whole project.
-- **Inherited labels**: the pod security profile (`security.deckhouse.io/pod-policy`), extended monitoring (`extended-monitoring.deckhouse.io/enabled`), vulnerability scanning (`security-scanning.deckhouse.io/enabled`), and the template label (`projects.deckhouse.io/project-template`) are synced from the main namespace to the additional ones. The sync is complete: if a feature is turned off in the template, the label is removed from the additional namespaces as well. Thanks to the template label, the [cluster resource availability rules](#managing-access-to-cluster-wide-resources) also apply in all namespaces of the project.
+- **Inherited labels**: the pod security profile (`security.deckhouse.io/pod-policy`), extended monitoring (`extended-monitoring.deckhouse.io/enabled`), vulnerability scanning (`security-scanning.deckhouse.io/enabled`), the template label (`projects.deckhouse.io/project-template`) and the labels the template sets through `namespaceMetadata.labels` are synced from the main namespace to the additional ones. The sync is complete: if a feature is turned off or a label is removed in the template, the label is removed from the additional namespaces as well. The labels of the template are listed in the `projects.deckhouse.io/template-labels` annotation of each project namespace; they are changed through the Project or its ProjectTemplate, and a direct edit of one on an additional namespace is reverted. Thanks to the template label, the [cluster resource availability rules](#managing-access-to-cluster-wide-resources) also apply in all namespaces of the project.
 
 The following stays in the **main** namespace only:
 
-- the project quota (the `ResourceQuota` from [`.spec.quota`](cr.html#project-v1alpha3-spec-quota));
-- the extra labels and annotations from the template's `namespaceMetadata`;
-- the node placement annotations (from the template's `nodeSelector` and `tolerations` fields).
+- The project quota (the `ResourceQuota` from [`.spec.quota`](cr.html#project-v1alpha3-spec-quota))
+- The annotations from the template's `namespaceMetadata`
+- The labels set on the main namespace by hand
+- The GitOps tracking labels (`app.kubernetes.io/instance`, `argocd.argoproj.io/*`, `kustomize.toolkit.fluxcd.io/*`, `helm.toolkit.fluxcd.io/*`, `kapp.k14s.io/*`), even when the template sets them
+- The node placement annotations (from the template's `nodeSelector` and `tolerations` fields)
+
+GitOps tracking labels are not inherited because a GitOps tool would treat an additional namespace that carries them as its own and could delete it. The module recognizes only the keys listed above. A custom tracking key that the template sets, for example the one configured with `application.instanceLabelKey` in Argo CD, is inherited.
+
+When a namespace [becomes a project automatically](#creating-a-project-automatically-for-a-namespace), its own labels go into the `namespace.labels` parameter of the project. The built-in templates put this parameter into `namespaceMetadata.labels`, so these labels become labels of the project template and are inherited. If such a namespace carries a tracking label of a GitOps tool not listed above, remove the label from `spec.parameters.namespace.labels` of the Project before you create additional namespaces. The next render also removes the label from the main namespace. Set it back on the main namespace by hand or let the GitOps tool restore it. A label set by hand is not inherited.
 
 ### Labels of the project namespaces
 
 | Label | Main | Additional | Purpose |
 |-------|:----:|:----------:|---------|
-| `projects.deckhouse.io/project: <project name>` | ✓ | ✓ | Project ownership — the common label of all namespaces of the project. |
-| `projects.deckhouse.io/project-namespace: <spec.name>` | — | ✓ | Marks an additional namespace (the name of the ProjectNamespace resource). |
-| `projects.deckhouse.io/project-template: <template name>` | ✓ | ✓ | The project template; the cluster resource availability rules match by it. |
-| `heritage: multitenancy-manager` | ✓ | ✓ | The namespace is managed by the project controller: its `spec`, finalizers and the labels listed in this table are changed through the Project; other labels and annotations may be changed directly. |
-| `security.deckhouse.io/pod-policy`, `extended-monitoring.deckhouse.io/enabled`, `security-scanning.deckhouse.io/enabled` | ✓ | ✓ (inherited) | Policies and features from the project template. |
+| `projects.deckhouse.io/project: <PROJECT_NAME>` | ✓ | ✓ | Project ownership — the common label of all namespaces of the project |
+| `projects.deckhouse.io/project-namespace: <spec.name>` | — | ✓ | Marks an additional namespace (the name of the ProjectNamespace resource) |
+| `projects.deckhouse.io/project-template: <PROJECT_TEMPLATE_NAME>` | ✓ | ✓ | The project template; the cluster resource availability rules match by it |
+| `heritage: multitenancy-manager` | ✓ | ✓ | The namespace is managed by the project controller: its `spec`, finalizers and the labels listed in this table are changed through the Project; other labels and annotations may be changed directly |
+| `security.deckhouse.io/pod-policy`, `extended-monitoring.deckhouse.io/enabled`, `security-scanning.deckhouse.io/enabled` | ✓ | ✓ (inherited) | Policies and features from the project template |
+| Labels from the template's `namespaceMetadata.labels` | ✓ | ✓ (inherited) | Labels of the project template. They are listed in the `projects.deckhouse.io/template-labels` annotation of the namespace and changed through the Project or its ProjectTemplate |
 
 The common `projects.deckhouse.io/project` label makes it possible to select the project namespaces with a plain `get ns`:
 
@@ -408,7 +415,7 @@ Available fields (all optional; the complete reference is [in the ProjectTemplat
 | `nodeSelector`, `tolerations` | Placing the project pods on dedicated nodes. |
 | `allowedUIDs`, `allowedGIDs` | The allowed UID/GID ranges of the project containers. |
 | `runtimeAudit.enabled` | Auditing the project processes' access to the Linux kernel. |
-| `namespaceMetadata.labels`, `namespaceMetadata.annotations` | Extra labels and annotations of the project namespaces. |
+| `namespaceMetadata.labels`, `namespaceMetadata.annotations` | Extra labels and annotations of the project namespaces. The labels the module manages cannot be set here. A template or a Project that sets one is refused. One that already has such a label can still be changed while it keeps the label as it is. The label is not applied, and the response warns about it. |
 | `resources`, `grantPolicies` | [Granting cluster-scoped resources through a project template](#granting-cluster-scoped-resources-through-a-project-template). |
 | `parametersSchema.openAPIV3Schema` | The schema of parameters set when creating a project. |
 
@@ -493,7 +500,7 @@ spec:
 
 The following rules apply to template operations:
 
-- A template used by at least one project cannot be deleted.
+- A template cannot be deleted while at least one project uses it or a project namespace is still rendered from it. After a project switches to another template, the old template stays until the new one has rendered.
 - A change to a template is automatically applied to all projects created from it.
 - The `deckhouse.io/v1alpha1` version of ProjectTemplate with the text `resourcesTemplate` field (Helm templating) is no longer served, and `v1alpha2` has no such field. A template that was stored as `v1alpha1` with a non-empty `resourcesTemplate` comes up in `v1alpha2` without the Helm text and with the `projects.deckhouse.io/legacy-helm-template: "true"` annotation:
   - the controller does not render the projects of such a template. They switch to the `Error` state with the `ProjectTemplateUsable` condition set to `False`, and their objects stay exactly as they were;
@@ -703,22 +710,31 @@ For a description of the mechanism, the resources it uses, and the cluster-wide 
 
 The following sections provide common scenarios for configuring and using the mechanism.
 
-### How a policy selects its projects
+### How a policy selects namespaces
 
-A ClusterResourceGrantPolicy has one selector, `projectSelector`, and it is evaluated **per namespace**, not per Project object. For every namespace of a project the module merges two label sets — the labels of the Project object and the labels of that namespace — and matches the selector against the union. When the same key is set on both, the namespace value wins.
+A [ClusterResourceGrantPolicy](cr.html#clusterresourcegrantpolicy) (`multitenancy.deckhouse.io/v1alpha2`) has two selectors, [`projectSelector`](cr.html#clusterresourcegrantpolicy-v1alpha2-spec-projectselector) and [`namespaceSelector`](cr.html#clusterresourcegrantpolicy-v1alpha2-spec-namespaceselector). The policy applies to a namespace of a project when every selector it sets matches:
 
-Which means, in practice:
+- `projectSelector` is matched against the labels of the **Project** object. It selects every namespace of a project at once, including an additional namespace created later, so use it to select a project as a whole. The module puts the `projects.deckhouse.io/project: <PROJECT_NAME>` and `projects.deckhouse.io/project-template: <PROJECT_TEMPLATE_NAME>` labels on every Project, so a project can also be selected by its name or template. The virtual projects carry only the first of these labels. The two labels cannot be set to another project or template. A manifest that replaces a whole Project may leave them out. The request is admitted with a warning, and the module puts the labels back. The template label of a Project changes as soon as `spec.projectTemplateName` changes. The same label on the namespaces shows the template they were rendered from, and the service policies of a template select namespaces by it.
+- `namespaceSelector` is matched against the labels of the **Namespace**. It narrows the choice to some namespaces of the selected projects, or of all projects when `projectSelector` is not set. For example, it can select only the main namespace (the `projects.deckhouse.io/project-namespace` label does not exist) or only the namespaces labeled by a template.
+- A policy with **neither** selector matches no project on its own. Such a policy is a library policy, applied to a project through `grantPolicies` of its ProjectTemplate. An explicit empty selector (`{}`) matches everything.
 
-- a label on the **Project** selects the project's main namespace and all of its additional namespaces at once — this is the place to label a project as a whole, because a ProjectNamespace carries no labels of its own;
-- a label on a **Namespace** selects that namespace only — a per-namespace override, or a way to reach a namespace by a label the platform set (for example `projects.deckhouse.io/project=<name>`, which the module puts on every project namespace);
-- there is no separate `namespaceSelector`; both label sources feed the same `projectSelector`;
-- a policy **without** a `projectSelector` matches no project on its own: that is a library policy, applied to a project through `resourceGrantPolicies` of its ProjectTemplate. An explicit empty selector (`projectSelector: {}`) matches every project.
+The namespaces of the [virtual projects](#virtual-projects) `deckhouse` and `default` are never covered, even by `{}`.
+
+An additional namespace is created by a project user and carries only the labels the module sets and the [labels of the project template](#what-applies-to-the-additional-namespaces). A policy that restricts a resource through `namespaceSelector` may therefore not cover a new additional namespace. This happens when the selector relies on a label set on a namespace by hand, on a template label whose value was changed by hand on the main namespace, or on `projects.deckhouse.io/project-namespace`, whose value is the name the user chooses. If the GrantableClusterResourceDefinition of the resource has [`defaultAvailability: All`](cr.html#grantableclusterresourcedefinition-v1alpha1-spec-defaultavailability) (the default), such a namespace gets access to every resource of that type.
+
+The policy reports this in its `NewNamespacesCovered` condition. The condition checks `namespaceSelector` against the labels that a new additional namespace of each covered project would get. Denied names count as a restriction for any `defaultAvailability` value. An allow-list or `availabilityDefault: None` counts only when `defaultAvailability` is `All`.
+
+Do not select namespaces by the `projects.deckhouse.io/project-namespace` label without a `projectSelector`. A user of any project can create a ProjectNamespace with the name that such a `namespaceSelector` expects. The policy then applies in that project and makes the resources it allows available there.
+
+The `multitenancy.deckhouse.io/v1alpha1` version is still served. Its `projectSelector` is matched against the labels of the namespace and corresponds to `namespaceSelector` of `v1alpha2`. `v1alpha1` has no field for the `v1alpha2` `projectSelector`, so a `v1alpha1` client sees it as JSON in the `multitenancy.deckhouse.io/v1alpha2-project-selector` annotation. A policy with this annotation selects projects by it, even though its `v1alpha1` `projectSelector` is empty.
+
+When you change such a policy through `v1alpha1`, keep the annotation. `d8 k apply` and `d8 k edit` keep it, while `d8 k replace` with a manifest that lacks the annotation removes the `projectSelector`. To return to an old `v1alpha1` manifest after you set the `v1alpha2` `projectSelector`, remove the annotation explicitly, because `d8 k apply` of the old manifest leaves it in place.
 
 ### For cluster administrators
 
-The following examples show how to configure project access to cluster-wide resources using ClusterResourceGrantPolicy. They put the label on the Project, which selects every namespace of the project. Labels a template adds through `namespaceMetadata.labels` reach the project's **main** namespace only — an additional namespace gets the platform's ownership labels and a fixed set of inherited ones — so when a policy has to cover the whole project, label the Project, not the template.
+The following examples show how to configure project access to cluster-wide resources using ClusterResourceGrantPolicy. They select projects with `projectSelector` by a label on the Project, which covers every namespace of the project.
 
-Because the namespace labels take part in the match, writing labels on a Namespace object decides which policies apply to it. That permission is cluster-level (`d8:manage:permission:subsystem:kubernetes:manage_resources`); the project roles `d8:project:*` and `d8:namespace:*` only read namespaces, so a project user cannot bring another project's policy onto their namespace.
+Because the labels of a Project and of its namespaces take part in the match, the right to change these labels decides which policies apply. The labels of a Project are changed with the `d8:system-capability:multitenancy-manager:edit` capability, which the `deckhouse` subsystem manager has and which also allows creating and changing the policies. The labels of a namespace are changed with the `d8:subsystem-capability:kubernetes:manage_resources` capability, which the `kubernetes` subsystem manager has. The project roles `d8:project:*` and `d8:namespace:*` only read namespaces.
 
 #### Restricting StorageClass for a project
 
@@ -727,7 +743,7 @@ To allow projects to use only the `fast-ssd` and `standard` StorageClasses and u
 {% raw %}
 
 ```yaml
-apiVersion: multitenancy.deckhouse.io/v1alpha1
+apiVersion: multitenancy.deckhouse.io/v1alpha2
 kind: ClusterResourceGrantPolicy
 metadata:
   name: production-storage
@@ -762,7 +778,7 @@ To allow projects to use only the `letsencrypt-prod` and `vault-issuer` ClusterI
 {% raw %}
 
 ```yaml
-apiVersion: multitenancy.deckhouse.io/v1alpha1
+apiVersion: multitenancy.deckhouse.io/v1alpha2
 kind: ClusterResourceGrantPolicy
 metadata:
   name: production-issuers
@@ -802,7 +818,7 @@ To allow projects belonging to the `payments` team to use additional ClusterRole
 {% raw %}
 
 ```yaml
-apiVersion: multitenancy.deckhouse.io/v1alpha1
+apiVersion: multitenancy.deckhouse.io/v1alpha2
 kind: ClusterResourceGrantPolicy
 metadata:
   name: extra-roles
@@ -843,7 +859,7 @@ To allow projects to use only the `internal-lb` and `edge-lb` LoadBalancerClass 
 {% raw %}
 
 ```yaml
-apiVersion: multitenancy.deckhouse.io/v1alpha1
+apiVersion: multitenancy.deckhouse.io/v1alpha2
 kind: ClusterResourceGrantPolicy
 metadata:
   name: lb-classes
@@ -869,14 +885,14 @@ The policy does not apply to Services of other types.
 
 #### Granting access to all resources of a specific type
 
-To allow specific projects to use all resources of a selected type without listing them explicitly, set [`availabilityDefault: All`](cr.html#clusterresourcegrantpolicy-v1alpha1-spec-resources-availabilitydefault).
+To allow specific projects to use all resources of a selected type without listing them explicitly, set [`availabilityDefault: All`](cr.html#clusterresourcegrantpolicy-v1alpha2-spec-resources-availabilitydefault).
 
 The following policy allows all projects with the `environment: sandbox` label to use any StorageClass:
 
 {% raw %}
 
 ```yaml
-apiVersion: multitenancy.deckhouse.io/v1alpha1
+apiVersion: multitenancy.deckhouse.io/v1alpha2
 kind: ClusterResourceGrantPolicy
 metadata:
   name: open-storage-for-sandbox
@@ -891,18 +907,18 @@ spec:
 
 {% endraw %}
 
-Usually, explicitly specifying allowed resources using [`allowed`](cr.html#clusterresourcegrantpolicy-v1alpha1-spec-resources-allowed) or [`allowedSelector`](cr.html#clusterresourcegrantpolicy-v1alpha1-spec-resources-allowedselector) is sufficient for access management. Use `availabilityDefault: All` when the selected projects need access to all resources of the specified type.
+Usually, explicitly specifying allowed resources using [`allowed`](cr.html#clusterresourcegrantpolicy-v1alpha2-spec-resources-allowed) or [`allowedSelector`](cr.html#clusterresourcegrantpolicy-v1alpha2-spec-resources-allowedselector) is sufficient for access management. Use `availabilityDefault: All` when the selected projects need access to all resources of the specified type.
 
 #### Denying individual resources
 
-To prevent projects from using individual resources while keeping the others available, use [`denied`](cr.html#clusterresourcegrantpolicy-v1alpha1-spec-resources-denied) or [`deniedSelector`](cr.html#clusterresourcegrantpolicy-v1alpha1-spec-resources-deniedselector).
+To prevent projects from using individual resources while keeping the others available, use [`denied`](cr.html#clusterresourcegrantpolicy-v1alpha2-spec-resources-denied) or [`deniedSelector`](cr.html#clusterresourcegrantpolicy-v1alpha2-spec-resources-deniedselector).
 
 The following policy prevents projects with the `environment: dev` label from using the `expensive-nvme` and `archived-hdd` StorageClasses:
 
 {% raw %}
 
 ```yaml
-apiVersion: multitenancy.deckhouse.io/v1alpha1
+apiVersion: multitenancy.deckhouse.io/v1alpha2
 kind: ClusterResourceGrantPolicy
 metadata:
   name: deny-expensive-storage
@@ -923,14 +939,14 @@ Deny rules take precedence over allow rules. If a resource matches both `denied`
 
 #### Managing access using label selectors
 
-To manage access to resources without listing their names, use [`allowedSelector`](cr.html#clusterresourcegrantpolicy-v1alpha1-spec-resources-allowedselector) and [`deniedSelector`](cr.html#clusterresourcegrantpolicy-v1alpha1-spec-resources-deniedselector). Selectors allow or deny resources based on their labels.
+To manage access to resources without listing their names, use [`allowedSelector`](cr.html#clusterresourcegrantpolicy-v1alpha2-spec-resources-allowedselector) and [`deniedSelector`](cr.html#clusterresourcegrantpolicy-v1alpha2-spec-resources-deniedselector). Selectors allow or deny resources based on their labels.
 
 The following policy allows projects with the `tier: shared` label to use StorageClasses with the `shared: "true"` label, except for StorageClasses with the `deprecated: "true"` label:
 
 {% raw %}
 
 ```yaml
-apiVersion: multitenancy.deckhouse.io/v1alpha1
+apiVersion: multitenancy.deckhouse.io/v1alpha2
 kind: ClusterResourceGrantPolicy
 metadata:
   name: shared-storage-only
@@ -955,7 +971,7 @@ spec:
 The availability rules for cluster-scoped resources can be set directly in a [structured template](#structured-templates) — they then automatically apply to all projects created from that template:
 
 - `spec.resources` — the rules "inside" the template: the same format as `resources` in a ClusterResourceGrantPolicy (resource name, `allowed`/`allowedSelector`, `default`);
-- `spec.grantPolicies` — a list of names of **library** ClusterResourceGrantPolicy objects. A library policy describes a reusable set of rules and must not have a `projectSelector` — which projects it applies to is determined by the referencing template. This way, for example, a "corporate StorageClasses" policy can be maintained by one administrator and used by several templates.
+- `spec.grantPolicies` — a list of names of **library** ClusterResourceGrantPolicy objects. A library policy describes a reusable set of rules and sets neither `projectSelector` nor `namespaceSelector`, because the referencing template determines which projects it applies to. This way, for example, a "corporate StorageClasses" policy can be maintained by one administrator and used by several templates.
 
 ```yaml
 apiVersion: deckhouse.io/v1alpha2
@@ -968,10 +984,11 @@ spec:
       allowed: ["standard"]
       default: standard
   grantPolicies:
-    - corporate-issuers   # A library ClusterResourceGrantPolicy without a projectSelector.
+    # A library ClusterResourceGrantPolicy without selectors.
+    - corporate-issuers
 ```
 
-For each source, the controller creates a service policy named `template-<template>-<source>` (for `spec.resources` — `template-<template>-inline`); the `inline` name is reserved for library policies. A reference to a non-existent policy or to a policy with a `projectSelector` is rejected when the template is created.
+For each source, the controller creates a service policy named `template-<template>-<source>` (for `spec.resources` — `template-<template>-inline`); the `inline` name is reserved for library policies. A reference to a non-existent policy or to a policy with either selector is rejected when the template is created. A service policy selects the namespaces of the template's projects with `namespaceSelector` by their `projects.deckhouse.io/project-template` label. The label is set when the template renders, so after a project switches to another template, the rules of the old template apply until the new one has rendered.
 
 ### For project users
 

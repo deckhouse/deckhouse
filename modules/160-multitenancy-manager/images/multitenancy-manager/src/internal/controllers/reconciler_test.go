@@ -39,6 +39,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 
 	"controller/api/v1alpha1"
+	grantsv1alpha2 "controller/api/v1alpha2"
 	"controller/apis/deckhouse.io/v1alpha3"
 	"controller/internal/jsonpath"
 	"controller/internal/naming"
@@ -54,7 +55,7 @@ func testMapper() meta.RESTMapper {
 func buildClient(t *testing.T, objs ...client.Object) client.Client {
 	t.Helper()
 	scheme := runtime.NewScheme()
-	for _, add := range []func(*runtime.Scheme) error{corev1.AddToScheme, storagev1.AddToScheme, rbacv1.AddToScheme, v1alpha1.AddToScheme, v1alpha3.AddToScheme} {
+	for _, add := range []func(*runtime.Scheme) error{corev1.AddToScheme, storagev1.AddToScheme, rbacv1.AddToScheme, v1alpha1.AddToScheme, grantsv1alpha2.AddToScheme, v1alpha3.AddToScheme} {
 		if err := add(scheme); err != nil {
 			t.Fatal(err)
 		}
@@ -66,7 +67,7 @@ func buildClient(t *testing.T, objs ...client.Object) client.Client {
 			&v1alpha1.AvailableClusterResource{},
 			&v1alpha1.GrantableClusterResourceDefinition{},
 			&v1alpha1.GrantableClusterResourceReference{},
-			&v1alpha1.ClusterResourceGrantPolicy{},
+			&grantsv1alpha2.ClusterResourceGrantPolicy{},
 		).
 		Build()
 }
@@ -89,11 +90,11 @@ func TestReconcile_Catalog(t *testing.T) {
 			DefaultAvailability: v1alpha1.AvailabilityNone,
 		},
 	}
-	grant := &v1alpha1.ClusterResourceGrantPolicy{
+	grant := &grantsv1alpha2.ClusterResourceGrantPolicy{
 		ObjectMeta: metav1.ObjectMeta{Name: "g"},
-		Spec: v1alpha1.ClusterResourceGrantPolicySpec{
-			ProjectSelector: &metav1.LabelSelector{MatchLabels: map[string]string{"env": "prod"}},
-			Resources:       []v1alpha1.GrantResource{{ResourceName: "storageclasses", Allowed: []string{"standard"}, Default: "standard"}},
+		Spec: grantsv1alpha2.ClusterResourceGrantPolicySpec{
+			NamespaceSelector: &metav1.LabelSelector{MatchLabels: map[string]string{"env": "prod"}},
+			Resources:         []v1alpha1.GrantResource{{ResourceName: "storageclasses", Allowed: []string{"standard"}, Default: "standard"}},
 		},
 	}
 	sc := &storagev1.StorageClass{ObjectMeta: metav1.ObjectMeta{Name: "standard"}, Provisioner: "x"}
@@ -526,11 +527,11 @@ func TestReconcile_CatalogFieldsOfAValueBackedDefinitionAreIgnored(t *testing.T)
 			CatalogFields:       []v1alpha1.CatalogField{{Name: "name", Path: "$.metadata.name"}},
 		},
 	}
-	grant := &v1alpha1.ClusterResourceGrantPolicy{
+	grant := &grantsv1alpha2.ClusterResourceGrantPolicy{
 		ObjectMeta: metav1.ObjectMeta{Name: "g"},
-		Spec: v1alpha1.ClusterResourceGrantPolicySpec{
-			ProjectSelector: &metav1.LabelSelector{MatchLabels: map[string]string{naming.ProjectLabel: "team-a"}},
-			Resources:       []v1alpha1.GrantResource{{ResourceName: "loadbalancerclasses", Allowed: []string{"lb"}}},
+		Spec: grantsv1alpha2.ClusterResourceGrantPolicySpec{
+			NamespaceSelector: &metav1.LabelSelector{MatchLabels: map[string]string{naming.ProjectLabel: "team-a"}},
+			Resources:         []v1alpha1.GrantResource{{ResourceName: "loadbalancerclasses", Allowed: []string{"lb"}}},
 		},
 	}
 	r := &ProjectReconciler{Client: buildClient(t, ns, def, grant), Mapper: testMapper(), Factory: jsonpath.NewWithCache()}
@@ -603,11 +604,11 @@ func TestReconcile_AllowedNameWithoutAnObjectHasNoFields(t *testing.T) {
 	ns := &corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: "team-a", Labels: map[string]string{naming.ProjectLabel: "team-a"}}}
 	def := storageClassDefinition(v1alpha1.AvailabilityAll)
 	def.Spec.CatalogFields = []v1alpha1.CatalogField{{Name: "provisioner", Path: "$.provisioner"}}
-	grant := &v1alpha1.ClusterResourceGrantPolicy{
+	grant := &grantsv1alpha2.ClusterResourceGrantPolicy{
 		ObjectMeta: metav1.ObjectMeta{Name: "g"},
-		Spec: v1alpha1.ClusterResourceGrantPolicySpec{
-			ProjectSelector: &metav1.LabelSelector{MatchLabels: map[string]string{naming.ProjectLabel: "team-a"}},
-			Resources:       []v1alpha1.GrantResource{{ResourceName: "storageclasses", Allowed: []string{"ghost", "standard"}}},
+		Spec: grantsv1alpha2.ClusterResourceGrantPolicySpec{
+			NamespaceSelector: &metav1.LabelSelector{MatchLabels: map[string]string{naming.ProjectLabel: "team-a"}},
+			Resources:         []v1alpha1.GrantResource{{ResourceName: "storageclasses", Allowed: []string{"ghost", "standard"}}},
 		},
 	}
 	sc := &storagev1.StorageClass{ObjectMeta: metav1.ObjectMeta{Name: "standard"}, Provisioner: "x"}

@@ -36,6 +36,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client/interceptor"
 
 	"controller/api/v1alpha1"
+	grantsv1alpha2 "controller/api/v1alpha2"
 	"controller/apis/deckhouse.io/v1alpha3"
 )
 
@@ -55,7 +56,7 @@ func newClient(t *testing.T, objs ...client.Object) client.Client {
 	t.Helper()
 	scheme := runtime.NewScheme()
 	for _, add := range []func(*runtime.Scheme) error{
-		corev1.AddToScheme, storagev1.AddToScheme, rbacv1.AddToScheme, v1alpha1.AddToScheme, v1alpha3.AddToScheme,
+		corev1.AddToScheme, storagev1.AddToScheme, rbacv1.AddToScheme, v1alpha1.AddToScheme, grantsv1alpha2.AddToScheme, v1alpha3.AddToScheme,
 	} {
 		if err := add(scheme); err != nil {
 			t.Fatal(err)

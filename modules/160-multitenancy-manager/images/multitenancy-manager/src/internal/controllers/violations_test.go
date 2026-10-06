@@ -33,6 +33,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"controller/api/v1alpha1"
+	grantsv1alpha2 "controller/api/v1alpha2"
 	"controller/internal/jsonpath"
 	"controller/internal/naming"
 )
@@ -53,12 +54,12 @@ func pvc(ns, name, storageClass string) *corev1.PersistentVolumeClaim {
 	}
 }
 
-func storageClassGrant(name, allowed string) *v1alpha1.ClusterResourceGrantPolicy {
-	return &v1alpha1.ClusterResourceGrantPolicy{
+func storageClassGrant(name, allowed string) *grantsv1alpha2.ClusterResourceGrantPolicy {
+	return &grantsv1alpha2.ClusterResourceGrantPolicy{
 		ObjectMeta: metav1.ObjectMeta{Name: name},
-		Spec: v1alpha1.ClusterResourceGrantPolicySpec{
-			ProjectSelector: &metav1.LabelSelector{MatchLabels: map[string]string{"env": "prod"}},
-			Resources:       []v1alpha1.GrantResource{{ResourceName: "storageclasses", Allowed: []string{allowed}}},
+		Spec: grantsv1alpha2.ClusterResourceGrantPolicySpec{
+			NamespaceSelector: &metav1.LabelSelector{MatchLabels: map[string]string{"env": "prod"}},
+			Resources:         []v1alpha1.GrantResource{{ResourceName: "storageclasses", Allowed: []string{allowed}}},
 		},
 	}
 }
@@ -177,7 +178,7 @@ func TestViolations_PolicyChangeClearsTheSeries(t *testing.T) {
 	r, cl := violationsFixture(t)
 	reconcileNamespace(t, r, "team-a")
 
-	g := &v1alpha1.ClusterResourceGrantPolicy{}
+	g := &grantsv1alpha2.ClusterResourceGrantPolicy{}
 	if err := cl.Get(context.Background(), types.NamespacedName{Name: "grant-a"}, g); err != nil {
 		t.Fatal(err)
 	}
@@ -254,11 +255,11 @@ func TestViolations_UnresolvableDefinitionIsSkipped(t *testing.T) {
 				},
 			}
 			// A policy entry for the definition, so the scan does not skip it before resolving it.
-			grant := &v1alpha1.ClusterResourceGrantPolicy{
+			grant := &grantsv1alpha2.ClusterResourceGrantPolicy{
 				ObjectMeta: metav1.ObjectMeta{Name: "grant-unresolvable"},
-				Spec: v1alpha1.ClusterResourceGrantPolicySpec{
-					ProjectSelector: &metav1.LabelSelector{MatchLabels: map[string]string{"env": "prod"}},
-					Resources:       []v1alpha1.GrantResource{{ResourceName: "aaa-unresolvable", Allowed: []string{"x"}}},
+				Spec: grantsv1alpha2.ClusterResourceGrantPolicySpec{
+					NamespaceSelector: &metav1.LabelSelector{MatchLabels: map[string]string{"env": "prod"}},
+					Resources:         []v1alpha1.GrantResource{{ResourceName: "aaa-unresolvable", Allowed: []string{"x"}}},
 				},
 			}
 			for _, obj := range []client.Object{bad, ref, grant} {

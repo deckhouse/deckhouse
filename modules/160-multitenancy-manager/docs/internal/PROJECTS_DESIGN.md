@@ -15,9 +15,10 @@
 > the `projects.deckhouse.io/namespace-role` label (declared in `internal/naming`, never set),
 > the `ClusterResourceGrant` object-quota pool (quota is delegated to Kubernetes `ResourceQuota`,
 > see the grants design), and **Project-label propagation onto namespaces**. What shipped instead of
-> propagation: `ClusterResourceGrantPolicy.projectSelector` is evaluated against the union of the
-> Project labels and the namespace labels (the namespace wins a shared key), so a label on the
-> Project reaches every namespace of the project without being copied.
+> propagation: `ClusterResourceGrantPolicy.projectSelector` is matched against the labels of the
+> Project and a separate `namespaceSelector` against the labels of the namespace, so a label on the
+> Project reaches every namespace of the project without being copied. The labels a template sets
+> through `namespaceMetadata.labels` are copied to the additional namespaces.
 
 ## Problem
 
@@ -521,15 +522,15 @@ nothing new here.
 Quota lives on the `Project` (compute) and `ClusterResourceGrant` (objects); **availability** — *which* cluster
 objects a project may use and the per-project default — is authored separately as a `ClusterResourceGrantPolicy`
 and **attaches to a project by label**. A grant's `projectSelector` matches the **Project's labels**; the controller expands the
-matched Projects to their namespaces and materializes availability there. *Shipped form:* the selector is
-evaluated per namespace against the union of the Project labels and the namespace labels (the namespace
-wins a shared key); no labels are copied onto the namespace. This is the same
+matched Projects to their namespaces and materializes availability there. *Shipped form:* `projectSelector` is
+matched against the Project labels and a separate `namespaceSelector` against the namespace labels; no
+Project labels are copied onto the namespace. This is the same
 "author once, match by label" model used for `SecurityPolicy` ([above](#security-policies--pre-created-by-the-admin-matched-by-label));
 the full grant model is in the [cluster resource grants design](./CLUSTER_OBJECT_GRANTS_DESIGN.md).
 
 ```yaml
 # A reusable preset: attaches to every Project labelled environment=production.
-apiVersion: multitenancy.deckhouse.io/v1alpha1
+apiVersion: multitenancy.deckhouse.io/v1alpha2
 kind: ClusterResourceGrantPolicy
 metadata:
   name: production
@@ -612,7 +613,7 @@ spec:
 #     authored SEPARATELY — see the cluster resource grants design (CLUSTER_OBJECT_GRANTS_DESIGN.md).
 #     The grant does allow-list + default only; the per-class limits live on the ClusterResourceGrant above.
 #     A grant attaches to this project by matching its labels:
-apiVersion: multitenancy.deckhouse.io/v1alpha1
+apiVersion: multitenancy.deckhouse.io/v1alpha2
 kind: ClusterResourceGrantPolicy
 metadata:
   name: production
@@ -745,8 +746,9 @@ Existing projects are single-namespace (project == namespace) and must keep work
   from the template), because Kubernetes rejects pods without requests/limits under a compute quota.
 - **The controller propagates `Project` labels onto its namespaces**, so network isolation and
   admin-authored `SecurityPolicy` can target a class of projects by label. *Not shipped:* grant
-  selectors read the Project labels directly (union with the namespace labels); other label-driven
-  targeting sees the namespace labels only.
+  selectors read the Project labels directly (`projectSelector`, while `namespaceSelector` reads the
+  namespace labels; both must match when set); other label-driven targeting sees the namespace labels
+  only.
 - **Network isolation is rendered by the controller** (from the template, per namespace, on creation)
   with a project-scoped selector; **`SecurityPolicy` is pre-created by the admin and matched by
   label**, like grants.

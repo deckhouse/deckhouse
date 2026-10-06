@@ -390,3 +390,42 @@ func TestNamespaceDeletionPollGrows(t *testing.T) {
 		}
 	}
 }
+
+// TestPrepareProjectStampsTheProjectLabel: the Project carries its own name in
+// projects.deckhouse.io/project, so a ClusterResourceGrantPolicy can select a project by name through
+// projectSelector, the same key every namespace of the project carries.
+func TestPrepareProjectStampsTheProjectLabel(t *testing.T) {
+	project := &v1alpha3.Project{
+		ObjectMeta: metav1.ObjectMeta{Name: "proj", Labels: map[string]string{v1alpha3.ResourceLabelProject: "someone-else"}},
+		Spec:       v1alpha3.ProjectSpec{ProjectTemplateName: "secure"},
+	}
+	m, c := newManager(t, project)
+	require.NoError(t, m.prepareProject(context.Background(), project))
+
+	got := new(v1alpha3.Project)
+	require.NoError(t, c.Get(context.Background(), client.ObjectKey{Name: "proj"}, got))
+	assert.Equal(t, "proj", got.Labels[v1alpha3.ResourceLabelProject])
+	assert.Equal(t, "secure", got.Labels[v1alpha3.ResourceLabelTemplate])
+}
+
+// TestEnsureVirtualProjectsStampsTheProjectLabel: the virtual projects carry their own name in
+// projects.deckhouse.io/project like every other Project, including one created before the label
+// existed.
+func TestEnsureVirtualProjectsStampsTheProjectLabel(t *testing.T) {
+	existing := &v1alpha3.Project{
+		ObjectMeta: metav1.ObjectMeta{Name: DefaultProjectName, Labels: map[string]string{
+			v1alpha3.ResourceLabelHeritage:      v1alpha3.ResourceHeritageDeckhouse,
+			v1alpha3.ProjectLabelVirtualProject: "true",
+		}},
+		Spec: v1alpha3.ProjectSpec{ProjectTemplateName: VirtualTemplate},
+	}
+	m, c := newManager(t, existing)
+	require.NoError(t, m.ensureVirtualProjects(context.Background()))
+
+	for _, name := range []string{DeckhouseProjectName, DefaultProjectName} {
+		got := new(v1alpha3.Project)
+		require.NoError(t, c.Get(context.Background(), client.ObjectKey{Name: name}, got))
+		assert.Equal(t, name, got.Labels[v1alpha3.ResourceLabelProject], name)
+		assert.Equal(t, "true", got.Labels[v1alpha3.ProjectLabelVirtualProject], name)
+	}
+}

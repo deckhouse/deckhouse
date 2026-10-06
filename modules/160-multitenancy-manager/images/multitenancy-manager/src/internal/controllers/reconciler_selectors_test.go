@@ -25,8 +25,10 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	ctrl "sigs.k8s.io/controller-runtime"
+	"sigs.k8s.io/controller-runtime/pkg/event"
 
 	"controller/api/v1alpha1"
+	grantsv1alpha2 "controller/api/v1alpha2"
 	"controller/apis/deckhouse.io/v1alpha3"
 	"controller/internal/naming"
 )
@@ -45,9 +47,9 @@ func TestReconcile_ProjectLabelSelectsAdditionalNamespace(t *testing.T) {
 			DefaultAvailability: v1alpha1.AvailabilityNone,
 		},
 	}
-	grant := &v1alpha1.ClusterResourceGrantPolicy{
+	grant := &grantsv1alpha2.ClusterResourceGrantPolicy{
 		ObjectMeta: metav1.ObjectMeta{Name: "prod-classes"},
-		Spec: v1alpha1.ClusterResourceGrantPolicySpec{
+		Spec: grantsv1alpha2.ClusterResourceGrantPolicySpec{
 			ProjectSelector: &metav1.LabelSelector{MatchLabels: map[string]string{"env": "production"}},
 			Resources:       []v1alpha1.GrantResource{{ResourceName: "storageclasses", Allowed: []string{"standard"}}},
 		},
@@ -107,5 +109,37 @@ func TestNamespacesOfProject_WithoutMainNamespaceYet(t *testing.T) {
 	system := &v1alpha3.Project{ObjectMeta: metav1.ObjectMeta{Name: "d8-system"}}
 	if reqs := r.namespacesOfProject(context.Background(), system); len(reqs) != 0 {
 		t.Fatalf("system namespaces must not be enqueued, got %v", reqs)
+	}
+}
+
+// TestPolicySpecChanged: the catalogs are recomputed when the spec of a policy changes, with or without
+// a new generation, and not when only its status does.
+func TestPolicySpecChanged(t *testing.T) {
+	policy := func(generation int64, team string, condition string) *grantsv1alpha2.ClusterResourceGrantPolicy {
+		p := &grantsv1alpha2.ClusterResourceGrantPolicy{
+			ObjectMeta: metav1.ObjectMeta{Name: "p", Generation: generation},
+			Spec: grantsv1alpha2.ClusterResourceGrantPolicySpec{
+				ProjectSelector: &metav1.LabelSelector{MatchLabels: map[string]string{"team": team}},
+			},
+		}
+		p.Status.Conditions = []metav1.Condition{{Type: condition, Status: metav1.ConditionTrue}}
+		return p
+	}
+	old := policy(1, "a", PolicyConditionSelectorsValid)
+
+	for _, tt := range []struct {
+		name     string
+		updated  *grantsv1alpha2.ClusterResourceGrantPolicy
+		expected bool
+	}{
+		{name: "status only", updated: policy(1, "a", PolicyConditionNewNamespacesCovered), expected: false},
+		{name: "spec with a new generation", updated: policy(2, "b", PolicyConditionSelectorsValid), expected: true},
+		{name: "spec without a new generation (a v1alpha1 annotation write)", updated: policy(1, "b", PolicyConditionSelectorsValid), expected: true},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := policySpecChanged(event.UpdateEvent{ObjectOld: old, ObjectNew: tt.updated}); got != tt.expected {
+				t.Fatalf("got %v, expected %v", got, tt.expected)
+			}
+		})
 	}
 }

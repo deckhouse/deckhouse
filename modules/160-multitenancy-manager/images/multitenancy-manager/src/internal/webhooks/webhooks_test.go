@@ -36,6 +36,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 
 	"controller/api/v1alpha1"
+	grantsv1alpha2 "controller/api/v1alpha2"
 	"controller/apis/deckhouse.io/v1alpha3"
 	"controller/internal/jsonpath"
 )
@@ -44,7 +45,7 @@ func newClient(t *testing.T, objs ...client.Object) client.Client {
 	t.Helper()
 	scheme := runtime.NewScheme()
 	for _, add := range []func(*runtime.Scheme) error{
-		corev1.AddToScheme, storagev1.AddToScheme, v1alpha1.AddToScheme, v1alpha3.AddToScheme,
+		corev1.AddToScheme, storagev1.AddToScheme, v1alpha1.AddToScheme, grantsv1alpha2.AddToScheme, v1alpha3.AddToScheme,
 	} {
 		if err := add(scheme); err != nil {
 			t.Fatal(err)
@@ -144,11 +145,11 @@ func lbRef(defaulting v1alpha1.DefaultingMode) *v1alpha1.GrantableClusterResourc
 	}
 }
 
-func lbGrant() *v1alpha1.ClusterResourceGrantPolicy {
-	return &v1alpha1.ClusterResourceGrantPolicy{
+func lbGrant() *grantsv1alpha2.ClusterResourceGrantPolicy {
+	return &grantsv1alpha2.ClusterResourceGrantPolicy{
 		ObjectMeta: metav1.ObjectMeta{Name: "g"},
-		Spec: v1alpha1.ClusterResourceGrantPolicySpec{
-			ProjectSelector: &metav1.LabelSelector{MatchLabels: map[string]string{"env": "prod"}},
+		Spec: grantsv1alpha2.ClusterResourceGrantPolicySpec{
+			NamespaceSelector: &metav1.LabelSelector{MatchLabels: map[string]string{"env": "prod"}},
 			Resources: []v1alpha1.GrantResource{{
 				ResourceName: "loadbalancerclasses",
 				Allowed:      []string{"external", "internal"},
@@ -399,10 +400,10 @@ func TestIsGranted_ObjectBackedSelector(t *testing.T) {
 			FieldPaths:                   []v1alpha1.FieldPath{{Path: "$.spec.storageClassName"}},
 		},
 	}
-	grant := &v1alpha1.ClusterResourceGrantPolicy{
+	grant := &grantsv1alpha2.ClusterResourceGrantPolicy{
 		ObjectMeta: metav1.ObjectMeta{Name: "g"},
-		Spec: v1alpha1.ClusterResourceGrantPolicySpec{
-			ProjectSelector: &metav1.LabelSelector{MatchLabels: map[string]string{"env": "prod"}},
+		Spec: grantsv1alpha2.ClusterResourceGrantPolicySpec{
+			NamespaceSelector: &metav1.LabelSelector{MatchLabels: map[string]string{"env": "prod"}},
 			Resources: []v1alpha1.GrantResource{{
 				ResourceName:    "storageclasses",
 				AllowedSelector: &metav1.LabelSelector{MatchLabels: map[string]string{"shared": "true"}},
@@ -604,11 +605,11 @@ func TestDefaults_UnavailableDefaultNotCoerced(t *testing.T) {
 			FieldPaths:                   []v1alpha1.FieldPath{{Path: "$.spec.storageClassName", Defaulting: v1alpha1.DefaultingCoerce}},
 		},
 	}
-	grant := &v1alpha1.ClusterResourceGrantPolicy{
+	grant := &grantsv1alpha2.ClusterResourceGrantPolicy{
 		ObjectMeta: metav1.ObjectMeta{Name: "g"},
-		Spec: v1alpha1.ClusterResourceGrantPolicySpec{
-			ProjectSelector: &metav1.LabelSelector{MatchLabels: map[string]string{"env": "prod"}},
-			Resources:       []v1alpha1.GrantResource{{ResourceName: "storageclasses", Allowed: []string{"local"}}},
+		Spec: grantsv1alpha2.ClusterResourceGrantPolicySpec{
+			NamespaceSelector: &metav1.LabelSelector{MatchLabels: map[string]string{"env": "prod"}},
+			Resources:         []v1alpha1.GrantResource{{ResourceName: "storageclasses", Allowed: []string{"local"}}},
 		},
 	}
 	repl := &storagev1.StorageClass{ObjectMeta: metav1.ObjectMeta{Name: "replicated", Annotations: map[string]string{"storageclass.kubernetes.io/is-default-class": "true"}}, Provisioner: "x"}

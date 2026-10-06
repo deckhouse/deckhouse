@@ -224,9 +224,9 @@ spec:
                           - None
                 grantPolicies:
                   description: |
-                    References to library `ClusterResourceGrantPolicy` objects (created without a `projectSelector`).
-                    The controller materializes one managed policy per reference, copying its resources and binding
-                    them to the projects of this template.
+                    References to library ClusterResourceGrantPolicy objects (created without `projectSelector` and `namespaceSelector`).
+
+                    The controller creates and maintains one managed policy per reference, copying its resources and binding them to the namespaces rendered from this template.
                   type: array
                   items:
                     type: string
@@ -271,10 +271,20 @@ spec:
                     labels:
                       description: |
                         A literal label map or a parameter reference `{fromParam: "<name>"}`.
+
+                        The labels are set on every namespace of the project, including the additional ones, and are listed in the `projects.deckhouse.io/template-labels` annotation of each.
+
+                        Labels that the module manages (`heritage`, `app.kubernetes.io/managed-by`, `projects.deckhouse.io/*`, `multitenancy.deckhouse.io/*`, and the pod security, monitoring and scanning labels) and the `kubernetes.io/metadata.name` label cannot be set in this field. A template that sets one here is refused, and so is a Project whose parameters put one here. A template or Project that already has such a label can still be changed while it keeps the label as it is. The label is not applied, and the response warns about it.
+
+                        GitOps tracking labels (`app.kubernetes.io/instance`, `argocd.argoproj.io/*`, `kustomize.toolkit.fluxcd.io/*`, `helm.toolkit.fluxcd.io/*`, `kapp.k14s.io/*`) are set on the main namespace only. A custom tracking key is inherited like any other label.
+
+                        When a namespace becomes a project automatically, its labels reach this field through the `namespace.labels` parameter of the built-in templates and are inherited too.
                       x-kubernetes-preserve-unknown-fields: true
                     annotations:
                       description: |
                         A literal annotation map or a parameter reference `{fromParam: "<name>"}`.
+
+                        The annotations are set on the main namespace of the project only.
                       x-kubernetes-preserve-unknown-fields: true
                 features:
                   description: Optional project capabilities.

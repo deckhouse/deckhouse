@@ -246,11 +246,13 @@ batch/v1 у Job это `$.spec.template.spec.priorityClassName`, а у CronJob �
 
 ### ClusterResourceGrantPolicy (без изменений)
 
-Per-проект allow-list и дефолт; `projectSelector` вычисляется для каждого неймспейса по объединению
-меток Project и меток неймспейса (при совпадении ключа побеждает неймспейс), так что метка на Project
-выбирает все его неймспейсы (`internal/resolve.GrantsForNamespace`, общий для вебхуков и catalog
-reconciler), на
-ресурс (`resourceName`) задаёт `allowed`/`allowedSelector`/`denied`/`deniedSelector`/`default`/
+Per-проект allow-list и дефолт. В `v1alpha2` (версия хранения) политика применяется к неймспейсу, если
+совпали все заданные селекторы: `projectSelector` — с лейблами Project, `namespaceSelector` — с лейблами
+неймспейса, так что лейбл на Project выбирает все его неймспейсы (`internal/resolve.PolicyMatches`,
+общий для вебхуков, catalog reconciler и пересчёта нарушений). Политика без обоих селекторов —
+библиотечная. `projectSelector` версии `v1alpha1` — это `namespaceSelector` версии `v1alpha2` (хук
+конверсии `webhooks/conversion/clusterresourcegrantpolicies`). Для каждого ресурса (`resourceName`)
+политика задаёт `allowed`/`allowedSelector`/`denied`/`deniedSelector`/`default`/
 `availabilityDefault`. Непустой allow-лист или `allowedSelector` подразумевает базу `None`; пустой `allowed: []` — нет.
 
 ### AvailableClusterResource

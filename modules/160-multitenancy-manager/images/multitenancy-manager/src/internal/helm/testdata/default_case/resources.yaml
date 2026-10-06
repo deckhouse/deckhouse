@@ -5,6 +5,7 @@ kind: Namespace
 metadata:
   annotations:
     owner: platform
+    projects.deckhouse.io/template-labels: '{"team":"backend"}'
   labels:
     extended-monitoring.deckhouse.io/enabled: ""
     heritage: multitenancy-manager

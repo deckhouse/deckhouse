@@ -24,6 +24,7 @@ import (
 	"strings"
 
 	admissionv1 "k8s.io/api/admission/v1"
+	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -32,10 +33,11 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
 	"sigs.k8s.io/yaml"
 
-	grantsv1alpha1 "controller/api/v1alpha1"
+	grantsv1alpha2 "controller/api/v1alpha2"
 	"controller/apis/deckhouse.io/v1alpha2"
 	"controller/apis/deckhouse.io/v1alpha3"
 	"controller/internal/controllers/templategrants"
+	"controller/internal/naming"
 	"controller/internal/validate"
 )
 
@@ -60,6 +62,7 @@ type validator struct {
 // Equivalent up-converts a served older version to v1alpha2 before delivery. v1alpha1 is
 // unserved. The handler path is registered as /validate/v1alpha1/templates for historical reasons.
 func (v *validator) Handle(ctx context.Context, req admission.Request) admission.Response {
+	var warnings []string
 	template := new(v1alpha2.ProjectTemplate)
 	if req.Operation == admissionv1.Create || req.Operation == admissionv1.Update {
 		if err := yaml.Unmarshal(req.Object.Raw, template); err != nil {
@@ -88,6 +91,31 @@ func (v *validator) Handle(ctx context.Context, req admission.Request) admission
 			return admission.Denied(fmt.Sprintf("the '%s' project template %v", template.Name, err))
 		}
 
+		// namespaceMetadata.labels cannot carry a label the module owns: the renderer drops it, and the
+		// namespace would lack what the template says without a word. A {fromParam} reference is
+		// resolved per project and checked by the Project webhook. A template written before this
+		// check may already carry such a label; refusing every later edit of it for that label would
+		// lock the template, so an update is refused only for a label it sets anew, and the ones it
+		// keeps are named in a warning.
+		if template.Spec.NamespaceMetadata != nil {
+			if labels, isLiteral := template.Spec.NamespaceMetadata.Labels.Literal(); isLiteral {
+				previous, err := previousNamespaceLabels(req)
+				if err != nil {
+					return admission.Errored(http.StatusBadRequest, err)
+				}
+				set, kept := naming.SplitModuleOwnedLabels(labels, previous)
+				if len(set) > 0 {
+					return admission.Denied(fmt.Sprintf("the '%s' project template field 'namespaceMetadata.labels' sets labels the module owns: %s",
+						template.Name, strings.Join(naming.ModuleOwnedLabelsIn(set), "; ")))
+				}
+				if len(kept) > 0 {
+					warnings = append(warnings, fmt.Sprintf(
+						"the '%s' project template field 'namespaceMetadata.labels' sets labels the module owns, and its namespaces do not get them: %s; remove them from the field",
+						template.Name, strings.Join(naming.ModuleOwnedLabelsIn(kept), "; ")))
+				}
+			}
+		}
+
 		// the legacy-Helm mark may not be dropped while the template still renders nothing
 		if resp := legacyMarkRemoval(req, template); !resp.Allowed {
 			return resp
@@ -100,7 +128,7 @@ func (v *validator) Handle(ctx context.Context, req admission.Request) admission
 			return resp
 		}
 
-		// grantPolicies must reference existing library policies (without a projectSelector)
+		// grantPolicies must reference existing library policies (without a selector)
 		if resp := v.validateGrantPolicies(ctx, template); !resp.Allowed {
 			return resp
 		}
@@ -125,8 +153,54 @@ func (v *validator) Handle(ctx context.Context, req admission.Request) admission
 			msg := fmt.Sprintf("The '%s' project template cannot be deleted, it is used in the '%s' project", template.Name, projects.Items[0].Name)
 			return admission.Denied(msg)
 		}
+
+		// Nor while a namespace is still rendered from it. The policies of the template select
+		// namespaces by that label, so a project that switched to a template that has not rendered yet
+		// keeps the rules of this one only while this one exists.
+		namespaces := new(corev1.NamespaceList)
+		if err := v.client.List(ctx, namespaces, client.MatchingLabels{
+			v1alpha3.ResourceLabelTemplate: template.Name,
+			v1alpha3.ResourceLabelHeritage: v1alpha3.ResourceHeritageMultitenancy,
+		}); err != nil {
+			return admission.Errored(http.StatusInternalServerError, err)
+		}
+		// A namespace on its way out is rendered from nothing any more: nothing can be created in it.
+		namespaces.Items = slices.DeleteFunc(namespaces.Items, func(ns corev1.Namespace) bool { return ns.DeletionTimestamp != nil })
+		if len(namespaces.Items) > 0 {
+			ns := slices.MinFunc(namespaces.Items, func(a, b corev1.Namespace) int { return strings.Compare(a.Name, b.Name) })
+			project := ns.Labels[v1alpha3.ResourceLabelProject]
+			hint := "wait until the project renders its new template"
+			switch err := v.client.Get(ctx, client.ObjectKey{Name: project}, new(v1alpha3.Project)); {
+			case apierrors.IsNotFound(err):
+				hint = "the project is gone; delete the namespace first"
+			case err != nil:
+				return admission.Errored(http.StatusInternalServerError, err)
+			}
+			msg := fmt.Sprintf("The '%s' project template cannot be deleted, the '%s' namespace of the '%s' project is still rendered from it; %s",
+				template.Name, ns.Name, project, hint)
+			return admission.Denied(msg)
+		}
 	}
-	return admission.Allowed("")
+	return admission.Allowed("").WithWarnings(warnings...)
+}
+
+// previousNamespaceLabels returns the literal namespaceMetadata.labels of the template an update
+// replaces: empty on create, or when the old template took them from a parameter.
+func previousNamespaceLabels(req admission.Request) (map[string]string, error) {
+	if req.Operation != admissionv1.Update {
+		return map[string]string{}, nil
+	}
+	old := new(v1alpha2.ProjectTemplate)
+	if err := yaml.Unmarshal(req.OldObject.Raw, old); err != nil {
+		return nil, fmt.Errorf("decode the old project template: %w", err)
+	}
+	if old.Spec.NamespaceMetadata == nil {
+		return map[string]string{}, nil
+	}
+	if labels, isLiteral := old.Spec.NamespaceMetadata.Labels.Literal(); isLiteral {
+		return labels, nil
+	}
+	return map[string]string{}, nil
 }
 
 // legacyMarkRemoval refuses an update that takes the legacy-Helm mark off a template that still
@@ -197,12 +271,12 @@ func validateInlineGrantSelectors(template *v1alpha2.ProjectTemplate) admission.
 }
 
 // validateGrantPolicies enforces the library convention for spec.grantPolicies: every referenced
-// ClusterResourceGrantPolicy must exist and must NOT carry a projectSelector. A policy with a
-// projectSelector is already bound to its own set of projects (or is a controller-managed materialized
-// policy), so referencing it from a template would double-bind it.
+// ClusterResourceGrantPolicy must exist and must carry neither a projectSelector nor a
+// namespaceSelector. A policy with a selector is already bound to its own set of namespaces (or is a
+// controller-managed materialized policy), so referencing it from a template would double-bind it.
 func (v *validator) validateGrantPolicies(ctx context.Context, template *v1alpha2.ProjectTemplate) admission.Response {
 	for _, name := range template.Spec.GrantPolicies {
-		policy := new(grantsv1alpha1.ClusterResourceGrantPolicy)
+		policy := new(grantsv1alpha2.ClusterResourceGrantPolicy)
 		if err := v.reader.Get(ctx, client.ObjectKey{Name: name}, policy); err != nil {
 			if apierrors.IsNotFound(err) {
 				return admission.Denied(fmt.Sprintf(
@@ -211,10 +285,10 @@ func (v *validator) validateGrantPolicies(ctx context.Context, template *v1alpha
 			}
 			return admission.Errored(http.StatusInternalServerError, err)
 		}
-		if policy.Spec.ProjectSelector != nil {
+		if !policy.Spec.IsLibrary() {
 			return admission.Denied(fmt.Sprintf(
-				"the '%s' project template references ClusterResourceGrantPolicy '%s' which has a projectSelector; "+
-					"grantPolicies may only reference library policies (without a projectSelector)",
+				"the '%s' project template references ClusterResourceGrantPolicy '%s' which has a projectSelector or a namespaceSelector; "+
+					"grantPolicies may only reference library policies (without either selector)",
 				template.Name, name))
 		}
 	}

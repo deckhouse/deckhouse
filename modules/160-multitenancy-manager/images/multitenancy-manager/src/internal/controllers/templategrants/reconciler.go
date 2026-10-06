@@ -20,11 +20,14 @@ limitations under the License.
 // Contract (the behaviour the CRD promises, independent of how it is implemented):
 //   - One managed policy PER SOURCE, never merged:
 //   - template.spec.resources      -> "template-<tmpl>-inline"
-//   - each template.spec.grantPolicies[i] (a library policy without a projectSelector)
+//   - each template.spec.grantPolicies[i] (a library policy without a selector)
 //     -> "template-<tmpl>-<policyName>" copying its resources
-//   - Every managed policy targets the projects of the template via a projectSelector on the
-//     projects.deckhouse.io/project-template namespace label, so it applies to all (current and
-//     future) projects of the template without per-project objects.
+//   - Every managed policy targets the namespaces of the template via a namespaceSelector on their
+//     projects.deckhouse.io/project-template label, so it applies to every namespace of all (current
+//     and future) projects of the template without per-project objects. The label of the namespaces,
+//     not the one of the Project, is what the template actually rendered: the post-renderer sets it
+//     on the main namespace and additional namespaces inherit it, while the Project label follows
+//     spec.projectTemplateName before the new template has rendered, or when it never can.
 //   - Every managed policy is owned by the ProjectTemplate, so deleting the template garbage-collects
 //     its managed policies; removing a source prunes just that policy.
 //   - A change to a referenced library policy reaches its managed copies right away: editing it
@@ -50,6 +53,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
 	grantsv1alpha1 "controller/api/v1alpha1"
+	grantsv1alpha2 "controller/api/v1alpha2"
 	deckhousev1alpha2 "controller/apis/deckhouse.io/v1alpha2"
 )
 
@@ -84,11 +88,11 @@ func (r *Reconciler) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
 		Named("template-grants").
 		For(&deckhousev1alpha2.ProjectTemplate{}).
-		Owns(&grantsv1alpha1.ClusterResourceGrantPolicy{}).
+		Owns(&grantsv1alpha2.ClusterResourceGrantPolicy{}).
 		// A library policy has no owner reference to the templates that copy it, so Owns does not see
 		// it. Its status is written by the policy reconciler and says nothing the copies take, hence
 		// the generation predicate; creates and deletes pass it.
-		Watches(&grantsv1alpha1.ClusterResourceGrantPolicy{}, handler.EnqueueRequestsFromMapFunc(r.templatesReferencing),
+		Watches(&grantsv1alpha2.ClusterResourceGrantPolicy{}, handler.EnqueueRequestsFromMapFunc(r.templatesReferencing),
 			builder.WithPredicates(predicate.GenerationChangedPredicate{})).
 		Complete(r)
 }
@@ -172,7 +176,7 @@ func (r *Reconciler) desiredPolicies(ctx context.Context, tmpl *deckhousev1alpha
 
 	requeue := false
 	for _, policy := range tmpl.Spec.GrantPolicies {
-		lib := &grantsv1alpha1.ClusterResourceGrantPolicy{}
+		lib := &grantsv1alpha2.ClusterResourceGrantPolicy{}
 		if err := r.Client.Get(ctx, client.ObjectKey{Name: policy}, lib); err != nil {
 			if apierrors.IsNotFound(err) {
 				requeue = true
@@ -186,16 +190,19 @@ func (r *Reconciler) desiredPolicies(ctx context.Context, tmpl *deckhousev1alpha
 }
 
 func (r *Reconciler) applyManaged(ctx context.Context, tmpl *deckhousev1alpha2.ProjectTemplate, name string, spec managedSpec) error {
-	managed := &grantsv1alpha1.ClusterResourceGrantPolicy{ObjectMeta: metav1.ObjectMeta{Name: name}}
+	managed := &grantsv1alpha2.ClusterResourceGrantPolicy{ObjectMeta: metav1.ObjectMeta{Name: name}}
 	_, err := controllerutil.CreateOrUpdate(ctx, r.Client, managed, func() error {
 		if managed.Labels == nil {
 			managed.Labels = make(map[string]string, 2)
 		}
 		managed.Labels[LabelManagedByTemplate] = tmpl.Name
 		managed.Labels[LabelGrantSource] = spec.source
-		managed.Spec.ProjectSelector = &metav1.LabelSelector{
+		managed.Spec.NamespaceSelector = &metav1.LabelSelector{
 			MatchLabels: map[string]string{deckhousev1alpha2.ResourceLabelTemplate: tmpl.Name},
 		}
+		// The reconciler owns both selectors: a projectSelector someone added, or one an earlier build
+		// set, is cleared rather than kept beside the namespaceSelector.
+		managed.Spec.ProjectSelector = nil
 		managed.Spec.Resources = deepCopyResources(spec.resources)
 		return controllerutil.SetControllerReference(tmpl, managed, r.Scheme)
 	})
@@ -203,7 +210,7 @@ func (r *Reconciler) applyManaged(ctx context.Context, tmpl *deckhousev1alpha2.P
 }
 
 func (r *Reconciler) pruneStale(ctx context.Context, tmplName string, desired map[string]managedSpec) error {
-	list := &grantsv1alpha1.ClusterResourceGrantPolicyList{}
+	list := &grantsv1alpha2.ClusterResourceGrantPolicyList{}
 	if err := r.Client.List(ctx, list, client.MatchingLabels{LabelManagedByTemplate: tmplName}); err != nil {
 		return fmt.Errorf("list managed grant policies: %w", err)
 	}

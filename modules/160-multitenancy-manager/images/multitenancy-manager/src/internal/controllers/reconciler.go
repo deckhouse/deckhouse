@@ -30,6 +30,7 @@ import (
 	"time"
 
 	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/equality"
 	k8serrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -38,12 +39,14 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/builder"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/event"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
 	ctrllog "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
 	"controller/api/v1alpha1"
+	grantsv1alpha2 "controller/api/v1alpha2"
 	"controller/apis/deckhouse.io/v1alpha3"
 	"controller/internal/engine"
 	"controller/internal/jsonpath"
@@ -277,7 +280,7 @@ func (r *ProjectReconciler) reconcileCatalog(ctx context.Context, ns *corev1.Nam
 }
 
 // reconcileRegistration resolves one registration for the namespace and upserts its catalog.
-func (r *ProjectReconciler) reconcileRegistration(ctx context.Context, ns, project string, grants []*v1alpha1.ClusterResourceGrantPolicy, reg *v1alpha1.GrantableClusterResourceDefinition) error {
+func (r *ProjectReconciler) reconcileRegistration(ctx context.Context, ns, project string, grants []*grantsv1alpha2.ClusterResourceGrantPolicy, reg *v1alpha1.GrantableClusterResourceDefinition) error {
 	resolved, err := resolve.Resolve(ctx, r.Client, r.Mapper, reg, resolve.EntriesFor(grants, reg.Name))
 	if err != nil {
 		return err
@@ -450,16 +453,32 @@ func (r *ProjectReconciler) SetupWithManager(mgr ctrl.Manager) error {
 
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&corev1.Namespace{}).
-		Watches(&v1alpha1.ClusterResourceGrantPolicy{}, enqueueProjectNamespaces).
+		// The catalogs follow the spec of a policy, never its status: the policy reconciler writes
+		// conditions there, and each write would otherwise send every project namespace through here.
+		Watches(&grantsv1alpha2.ClusterResourceGrantPolicy{}, enqueueProjectNamespaces,
+			builder.WithPredicates(predicate.Funcs{UpdateFunc: policySpecChanged})).
 		Watches(&v1alpha1.GrantableClusterResourceDefinition{}, enqueueProjectNamespaces).
 		Watches(&v1alpha1.GrantableClusterResourceReference{}, enqueueProjectNamespaces).
-		// The policies are matched against the union of Project and namespace labels, so a label
-		// change on the Project has to re-evaluate its namespaces; nothing else about a Project
-		// matters here, hence the label predicate.
+		// A policy's projectSelector is matched against the labels of the Project, so a label change
+		// on the Project has to re-evaluate its namespaces; nothing else about a Project matters
+		// here, hence the label predicate.
 		Watches(&v1alpha3.Project{}, handler.EnqueueRequestsFromMapFunc(r.namespacesOfProject),
 			builder.WithPredicates(predicate.LabelChangedPredicate{})).
 		Named("project-grants").
 		Complete(r)
+}
+
+// policySpecChanged passes a policy update when its spec changed. The generation alone is not enough:
+// a v1alpha1 write that changes only the multitenancy.deckhouse.io/v1alpha2-project-selector annotation
+// changes the stored spec.projectSelector, while the API server, comparing the v1alpha1 view where the
+// selector is metadata, keeps the generation.
+func policySpecChanged(e event.UpdateEvent) bool {
+	before, okBefore := e.ObjectOld.(*grantsv1alpha2.ClusterResourceGrantPolicy)
+	after, okAfter := e.ObjectNew.(*grantsv1alpha2.ClusterResourceGrantPolicy)
+	if !okBefore || !okAfter {
+		return true
+	}
+	return before.Generation != after.Generation || !equality.Semantic.DeepEqual(before.Spec, after.Spec)
 }
 
 // namespacesOfProject maps a Project to the reconcile requests of its namespaces: every namespace

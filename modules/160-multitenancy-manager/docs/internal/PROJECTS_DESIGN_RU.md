@@ -15,9 +15,10 @@
 > лейбл `projects.deckhouse.io/namespace-role` (объявлен в `internal/naming`, никогда не ставится),
 > пул квоты объектов `ClusterResourceGrant` (квота делегирована Kubernetes `ResourceQuota`, см.
 > дизайн грантов) и **пропагация лейблов Project на неймспейсы**. Вместо пропагации поставлено:
-> `ClusterResourceGrantPolicy.projectSelector` вычисляется по объединению лейблов Project и лейблов
-> неймспейса (при совпадении ключа побеждает неймспейс), так что лейбл на Project достигает каждого
-> неймспейса проекта без копирования.
+> `ClusterResourceGrantPolicy.projectSelector` сопоставляется с лейблами Project, а отдельный
+> `namespaceSelector` — с лейблами неймспейса, так что лейбл на Project достигает каждого неймспейса
+> проекта без копирования. Лейблы, которые шаблон задаёт через `namespaceMetadata.labels`, копируются
+> в дополнительные неймспейсы.
 
 ## Проблема
 
@@ -512,15 +513,15 @@ Compute-`ResourceQuota` заставляет Kubernetes требовать `requ
 объекты можно проекту и per-project дефолт — задаётся отдельно как `ClusterResourceGrantPolicy` и
 **навешивается на проект по лейблу**.
 `projectSelector` гранта матчит **метки Project**; контроллер разворачивает совпавшие Project в их
-namespace и материализует там доступность. *Поставленный вариант:* селектор вычисляется для каждого
-namespace по объединению меток Project и меток namespace (при совпадении ключа побеждает namespace);
-метки на namespace не копируются. Это та же модель «author once, match by label», что и у
+namespace и материализует там доступность. *Поставленный вариант:* `projectSelector` сопоставляется с
+метками Project, отдельный `namespaceSelector` — с метками namespace; метки Project на namespace не
+копируются. Это та же модель «author once, match by label», что и у
 `SecurityPolicy` (см. [Security-политики](#security-политики--преднастраивает-админ-матчит-по-лейблу-как-гранты));
 полная модель грантов — в [дизайне грантов](./CLUSTER_OBJECT_GRANTS_DESIGN_RU.md).
 
 ```yaml
 # Переиспользуемый пресет: навешивается на каждый Project с меткой environment=production.
-apiVersion: multitenancy.deckhouse.io/v1alpha1
+apiVersion: multitenancy.deckhouse.io/v1alpha2
 kind: ClusterResourceGrantPolicy
 metadata:
   name: production
@@ -601,7 +602,7 @@ spec:
 # 2b. Cluster-admin выдаёт, какие кластерные ресурсы можно проекту (storage / LB-классы и дефолты).
 #     Грант делает только allow-list + default; per-class лимиты живут в ClusterResourceGrant выше.
 #     (Домен дизайна грантов; матчится projectSelector'ом по меткам Project.)
-apiVersion: multitenancy.deckhouse.io/v1alpha1
+apiVersion: multitenancy.deckhouse.io/v1alpha2
 kind: ClusterResourceGrantPolicy
 metadata:
   name: production
@@ -743,8 +744,8 @@ team-a-backend`.
   т.к. Kubernetes отклоняет поды без requests/limits под compute-квотой.
 - **Контроллер пробрасывает метки `Project` на его namespace**, чтобы сетевая изоляция и админский
   `SecurityPolicy` могли таргетить класс проектов по лейблу. *Не поставлено:* селекторы грантов читают
-  метки Project напрямую (объединение с метками namespace); прочий таргетинг по лейблам видит только
-  метки namespace.
+  метки Project напрямую (`projectSelector`, а `namespaceSelector` читает метки namespace; если заданы
+  оба, должны совпасть оба); прочий таргетинг по лейблам видит только метки namespace.
 - **Сетевую изоляцию рендерит контроллер** (из шаблона, на каждый namespace, при создании) с
   селектором на уровне проекта; **`SecurityPolicy` преднастраивает админ и матчит по лейблу**, как
   гранты.

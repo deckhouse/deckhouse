@@ -39,6 +39,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/webhook"
 
 	grantsv1alpha1 "controller/api/v1alpha1"
+	grantsv1alpha2 "controller/api/v1alpha2"
 	deckhousev1alpha2 "controller/apis/deckhouse.io/v1alpha2"
 	"controller/apis/deckhouse.io/v1alpha3"
 	namespacecontroller "controller/internal/controller/namespace"
@@ -198,7 +199,10 @@ func main() {
 	}
 
 	// register the project namespace reconciler
-	if err = (&projectnamespacecontroller.Reconciler{Client: runtimeManager.GetClient()}).SetupWithManager(runtimeManager); err != nil {
+	if err = (&projectnamespacecontroller.Reconciler{
+		Client:   runtimeManager.GetClient(),
+		Recorder: runtimeManager.GetEventRecorderFor(controllerName),
+	}).SetupWithManager(runtimeManager); err != nil {
 		fatal(logger, err, "set up project namespace reconciler")
 	}
 
@@ -224,7 +228,7 @@ func setupRuntimeManager(logger logr.Logger) (ctrl.Manager, error) {
 	addToScheme := []func(s *runtime.Scheme) error{
 		deckhousev1alpha2.AddToScheme,
 		v1alpha3.AddToScheme,
-		grantsv1alpha1.AddToScheme,
+		grantsv1alpha1.AddToScheme, grantsv1alpha2.AddToScheme,
 		corev1.AddToScheme,
 		rbacv1.AddToScheme,
 		authorizationv1.AddToScheme,

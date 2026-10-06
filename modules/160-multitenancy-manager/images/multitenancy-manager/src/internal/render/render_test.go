@@ -435,3 +435,70 @@ func TestManifestsDedicatedPlacementBeatsMirroredAnnotation(t *testing.T) {
 	}
 	require.True(t, found, "the render must contain the project namespace")
 }
+
+// renderedNamespace returns the metadata of the project Namespace in a render.
+func renderedNamespace(t *testing.T, out string) (labels, annotations map[string]any) {
+	t.Helper()
+	for _, doc := range strings.Split(out, "---\n") {
+		if strings.TrimSpace(doc) == "" {
+			continue
+		}
+		var obj map[string]any
+		require.NoError(t, yaml.Unmarshal([]byte(doc), &obj))
+		if obj["kind"] != "Namespace" {
+			continue
+		}
+		md, _ := obj["metadata"].(map[string]any)
+		labels, _ = md["labels"].(map[string]any)
+		annotations, _ = md["annotations"].(map[string]any)
+		return labels, annotations
+	}
+	t.Fatal("the render must contain the project namespace")
+	return nil, nil
+}
+
+// TestManifestsTemplateLabels: the labels a template puts on the main namespace through
+// namespaceMetadata are listed, with their values, in the template-labels annotation, which the
+// additional namespaces inherit from. Module-owned keys cannot be set through namespaceMetadata, so
+// the dedicated fields win them; GitOps tracking labels stay on the main namespace but are not listed.
+func TestManifestsTemplateLabels(t *testing.T) {
+	t.Parallel()
+
+	tmpl := &v1alpha2.ProjectTemplate{
+		Spec: v1alpha2.ProjectTemplateSpec{
+			PodSecurityStandard: v1alpha2.LiteralParam(v1alpha2.PodSecurityStandardBaseline),
+			NamespaceMetadata: &v1alpha2.NamespaceMetadata{
+				Labels: v1alpha2.LiteralParam(map[string]string{
+					"team":                             "backend",
+					"security.deckhouse.io/pod-policy": "privileged",
+					"projects.deckhouse.io/project":    "other",
+					"app.kubernetes.io/instance":       "argo-app",
+					"argocd.argoproj.io/tracking-id":   "x",
+				}),
+			},
+		},
+	}
+	project := &v1alpha3.Project{ObjectMeta: metav1.ObjectMeta{Name: "proj"}}
+
+	out, err := Manifests(tmpl, project)
+	require.NoError(t, err)
+
+	labels, annotations := renderedNamespace(t, out)
+	require.Equal(t, "baseline", labels["security.deckhouse.io/pod-policy"], "the dedicated field wins a module key")
+	require.NotContains(t, labels, "projects.deckhouse.io/project", "a module key cannot come from namespaceMetadata")
+	require.Equal(t, "backend", labels["team"])
+	require.Equal(t, "argo-app", labels["app.kubernetes.io/instance"], "a GitOps tracking label stays on the main namespace")
+	require.JSONEq(t, `{"team":"backend"}`, annotations[naming.TemplateLabelsAnnotation].(string))
+}
+
+// TestManifestsTemplateLabelsAlwaysPresent: a template without namespaceMetadata still writes the
+// annotation, empty, so an additional namespace can tell "no template labels" from "not rendered yet".
+func TestManifestsTemplateLabelsAlwaysPresent(t *testing.T) {
+	t.Parallel()
+
+	out, err := Manifests(&v1alpha2.ProjectTemplate{}, &v1alpha3.Project{ObjectMeta: metav1.ObjectMeta{Name: "proj"}})
+	require.NoError(t, err)
+
+	_, annotations := renderedNamespace(t, out)
+	require.Equal(t, "{}", annotations[naming.TemplateLabelsAnnotation])
+}

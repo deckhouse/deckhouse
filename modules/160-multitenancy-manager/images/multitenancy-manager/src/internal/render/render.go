@@ -174,15 +174,27 @@ func (r *renderer) namespace(spec *v1alpha2.ProjectTemplateSpec) (map[string]any
 
 	annotations := map[string]any{}
 
+	// templateLabels are the labels the additional namespaces of the project inherit: those of
+	// namespaceMetadata.labels, minus GitOps tracking labels (see naming.IsGitOpsTrackingLabel).
+	templateLabels := map[string]string{}
+
 	// The free-form namespace metadata is merged first so that the dedicated fields below win a
 	// shared key. Adoption mirrors the placement annotations of a namespace into this parameter, and
 	// a stale mirror must not outrank a template that declares nodeSelector or tolerations itself.
+	// A label the module owns cannot be set here at all: the dedicated fields and the post-renderer
+	// set those, and namespaceMetadata must not override them.
 	if spec.NamespaceMetadata != nil {
 		if extra, ok, err := spec.NamespaceMetadata.Labels.Resolve(r.params); err != nil {
 			return nil, fmt.Errorf("resolve namespaceMetadata.labels: %w", err)
 		} else if ok {
 			for k, v := range extra {
+				if naming.IsModuleOwnedLabel(k) {
+					continue
+				}
 				labels[k] = v
+				if !naming.IsGitOpsTrackingLabel(k) {
+					templateLabels[k] = v
+				}
 			}
 		}
 		if extra, ok, err := spec.NamespaceMetadata.Annotations.Resolve(r.params); err != nil {
@@ -213,6 +225,14 @@ func (r *renderer) namespace(spec *v1alpha2.ProjectTemplateSpec) (map[string]any
 		}
 		annotations[naming.NodeSelectorAnnotation] = annotation
 	}
+
+	// Always written, empty when there are none, so an additional namespace can tell "no template
+	// labels" from "not rendered yet". encoding/json sorts the keys, so the value is stable.
+	rawTemplateLabels, err := json.Marshal(templateLabels)
+	if err != nil {
+		return nil, fmt.Errorf("marshal template labels: %w", err)
+	}
+	annotations[naming.TemplateLabelsAnnotation] = string(rawTemplateLabels)
 
 	metadata := map[string]any{"name": r.name}
 	if len(labels) > 0 {

@@ -140,3 +140,34 @@ func TestCustomPredicate_StatusOnlyWriteDoesNotRequeue(t *testing.T) {
 		t.Fatal("the require-sync annotation must requeue the project")
 	}
 }
+
+// TestOwnLabelsDrifted: a label-only edit that takes the project or project-template label away from
+// what the controller stamps wakes the project; an update that leaves them in step does not.
+func TestOwnLabelsDrifted(t *testing.T) {
+	project := func(labels map[string]string) *v1alpha3.Project {
+		return &v1alpha3.Project{
+			ObjectMeta: metav1.ObjectMeta{Name: "foo", Labels: labels},
+			Spec:       v1alpha3.ProjectSpec{ProjectTemplateName: "default"},
+		}
+	}
+	stamped := map[string]string{v1alpha3.ResourceLabelProject: "foo", v1alpha3.ResourceLabelTemplate: "default"}
+
+	tests := []struct {
+		name     string
+		project  *v1alpha3.Project
+		expected bool
+	}{
+		{name: "in step", project: project(stamped), expected: false},
+		{name: "project label removed", project: project(map[string]string{v1alpha3.ResourceLabelTemplate: "default"}), expected: true},
+		{name: "project-template label points elsewhere", project: project(map[string]string{v1alpha3.ResourceLabelProject: "foo", v1alpha3.ResourceLabelTemplate: "secure"}), expected: true},
+		{name: "a virtual project", project: &v1alpha3.Project{
+			ObjectMeta: metav1.ObjectMeta{Name: "default", Labels: map[string]string{v1alpha3.ProjectLabelVirtualProject: "true"}},
+			Spec:       v1alpha3.ProjectSpec{ProjectTemplateName: "virtual"},
+		}, expected: false},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			assert.Equal(t, tt.expected, ownLabelsDrifted(event.UpdateEvent{ObjectOld: project(stamped), ObjectNew: tt.project}))
+		})
+	}
+}

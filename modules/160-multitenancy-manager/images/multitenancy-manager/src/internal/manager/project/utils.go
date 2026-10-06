@@ -68,6 +68,9 @@ func sameVirtualNamespaces(have []v1alpha3.NamespaceStatus, want []string) bool 
 	return true
 }
 
+// ensureVirtualProjects creates or updates the deckhouse and default virtual projects. Like every
+// Project they carry their own name in projects.deckhouse.io/project; grant policies still never apply
+// to their namespaces, which the grant webhooks and the catalog do not reach.
 func (m *Manager) ensureVirtualProjects(ctx context.Context) error {
 	deckhouseProject := &v1alpha3.Project{
 		TypeMeta: metav1.TypeMeta{
@@ -79,6 +82,7 @@ func (m *Manager) ensureVirtualProjects(ctx context.Context) error {
 			Labels: map[string]string{
 				v1alpha3.ResourceLabelHeritage:      v1alpha3.ResourceHeritageDeckhouse,
 				v1alpha3.ProjectLabelVirtualProject: "true",
+				v1alpha3.ResourceLabelProject:       DeckhouseProjectName,
 			},
 		},
 		Spec: v1alpha3.ProjectSpec{
@@ -101,6 +105,7 @@ func (m *Manager) ensureVirtualProjects(ctx context.Context) error {
 			Labels: map[string]string{
 				v1alpha3.ResourceLabelHeritage:      v1alpha3.ResourceHeritageDeckhouse,
 				v1alpha3.ProjectLabelVirtualProject: "true",
+				v1alpha3.ResourceLabelProject:       DefaultProjectName,
 			},
 		},
 		Spec: v1alpha3.ProjectSpec{
@@ -174,7 +179,9 @@ func (m *Manager) updateProjectStatus(ctx context.Context, project *v1alpha3.Pro
 	})
 }
 
-// prepareProject sets template label and finalizer
+// prepareProject sets the template and project labels and the finalizer. The project label carries the
+// project's own name, the same key every namespace of the project carries, so a
+// ClusterResourceGrantPolicy can select a project by name through its projectSelector.
 func (m *Manager) prepareProject(ctx context.Context, project *v1alpha3.Project) error {
 	return retry.OnError(retry.DefaultRetry, apierrors.IsServiceUnavailable, func() error {
 		return retry.RetryOnConflict(retry.DefaultRetry, func() error {
@@ -186,6 +193,7 @@ func (m *Manager) prepareProject(ctx context.Context, project *v1alpha3.Project)
 				project.Labels = make(map[string]string, 1)
 			}
 			project.Labels[v1alpha3.ResourceLabelTemplate] = project.Spec.ProjectTemplateName
+			project.Labels[v1alpha3.ResourceLabelProject] = project.Name
 
 			delete(project.Annotations, v1alpha3.ProjectAnnotationRequireSync)
 

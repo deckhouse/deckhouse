@@ -90,6 +90,7 @@ func Register(runtimeManager manager.Manager, helmClient *helm.Client, logger lo
 			predicate.AnnotationChangedPredicate{},
 			predicate.GenerationChangedPredicate{},
 			customPredicate[client.Object]{logger: logger},
+			predicate.Funcs{UpdateFunc: ownLabelsDrifted},
 		))).
 		Watches(&corev1.Namespace{}, namespaceProjectHandler{},
 			builder.WithPredicates(namespaceWatchPredicate{})).
@@ -240,6 +241,21 @@ func (r *reconciler) Reconcile(ctx context.Context, req reconcile.Request) (reco
 	// ensure the project
 	r.logger.Info("ensure the project", "project", project.Name)
 	return r.manager.Handle(ctx, project)
+}
+
+// ownLabelsDrifted wakes a project whose projects.deckhouse.io/project or project-template label no
+// longer says what the controller stamps (the project name, spec.projectTemplateName). Grant policies
+// select projects by these labels, and a label-only edit changes neither the generation nor an
+// annotation, so the other predicates miss it. The Project webhook refuses another value from anyone but
+// the platform and lets a removal through with a warning; this puts the labels back after either. Virtual
+// projects are stamped once, when they are created, and are left out.
+func ownLabelsDrifted(e event.UpdateEvent) bool {
+	project, ok := e.ObjectNew.(*v1alpha3.Project)
+	if !ok || project.IsVirtual() {
+		return false
+	}
+	return project.Labels[v1alpha3.ResourceLabelProject] != project.Name ||
+		project.Labels[v1alpha3.ResourceLabelTemplate] != project.Spec.ProjectTemplateName
 }
 
 type customPredicate[T metav1.Object] struct {

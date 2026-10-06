@@ -276,11 +276,13 @@ The resource scope exists because one path is not enough per group/version: in c
 
 ### ClusterResourceGrantPolicy (unchanged)
 
-Per-project allow-list and default; `projectSelector` is evaluated per namespace against the union of
-the Project labels and the namespace labels (the namespace wins a shared key), so a label on the Project
-selects all its namespaces (`internal/resolve.GrantsForNamespace`, shared by the webhooks and the
-catalog reconciler), and
-per resource (`resourceName`) sets `allowed` / `allowedSelector` / `denied` / `deniedSelector` /
+Per-project allow-list and default. In `v1alpha2` (the storage version) the policy applies to a
+namespace when every selector it sets matches: `projectSelector` the labels of the Project,
+`namespaceSelector` the labels of the namespace, so a label on the Project selects all its namespaces
+(`internal/resolve.PolicyMatches`, shared by the webhooks, the catalog reconciler and the violation
+recount). A policy with neither selector is a library policy. The `v1alpha1` `projectSelector` is the
+`v1alpha2` `namespaceSelector` (conversion hook `webhooks/conversion/clusterresourcegrantpolicies`).
+Per resource (`resourceName`), the policy sets `allowed` / `allowedSelector` / `denied` / `deniedSelector` /
 `default` / `availabilityDefault`. A non-empty allow-list or an `allowedSelector` infers a `None` baseline; empty `allowed: []` does not.
 
 ### AvailableClusterResource

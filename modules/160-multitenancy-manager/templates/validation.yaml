@@ -62,7 +62,7 @@ spec:
     - name: managedLabels
       expression: '["heritage", "app.kubernetes.io/managed-by", "kubernetes.io/metadata.name", "projects.deckhouse.io/project", "projects.deckhouse.io/project-template", "projects.deckhouse.io/project-namespace", "projects.deckhouse.io/namespace-role", "multitenancy.deckhouse.io/project-managed-by-namespace", "security.deckhouse.io/pod-policy", "extended-monitoring.deckhouse.io/enabled", "security-scanning.deckhouse.io/enabled"]'
     - name: managedAnnotations
-      expression: '["meta.helm.sh/release-name", "meta.helm.sh/release-namespace", "scheduler.alpha.kubernetes.io/node-selector", "scheduler.alpha.kubernetes.io/defaultTolerations"]'
+      expression: '["meta.helm.sh/release-name", "meta.helm.sh/release-namespace", "scheduler.alpha.kubernetes.io/node-selector", "scheduler.alpha.kubernetes.io/defaultTolerations", "projects.deckhouse.io/template-labels"]'
     - name: isNamespaceUpdate
       expression: 'object != null && oldObject != null && request.kind.kind == "Namespace" && request.operation == "UPDATE"'
     - name: oldLabels
@@ -157,7 +157,7 @@ spec:
     - name: managedLabels
       expression: '["heritage", "app.kubernetes.io/managed-by", "kubernetes.io/metadata.name", "projects.deckhouse.io/project", "projects.deckhouse.io/project-template", "projects.deckhouse.io/project-namespace", "projects.deckhouse.io/namespace-role", "multitenancy.deckhouse.io/project-managed-by-namespace", "security.deckhouse.io/pod-policy", "extended-monitoring.deckhouse.io/enabled", "security-scanning.deckhouse.io/enabled"]'
     - name: managedAnnotations
-      expression: '["meta.helm.sh/release-name", "meta.helm.sh/release-namespace", "scheduler.alpha.kubernetes.io/node-selector", "scheduler.alpha.kubernetes.io/defaultTolerations"]'
+      expression: '["meta.helm.sh/release-name", "meta.helm.sh/release-namespace", "scheduler.alpha.kubernetes.io/node-selector", "scheduler.alpha.kubernetes.io/defaultTolerations", "projects.deckhouse.io/template-labels"]'
     - name: oldLabels
       expression: 'oldObject != null && has(oldObject.metadata.labels) ? oldObject.metadata.labels : {}'
     - name: newLabels

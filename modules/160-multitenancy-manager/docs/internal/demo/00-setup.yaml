@@ -22,7 +22,7 @@ spec:
 ---
 # Availability: what each project may reference. clusterroles is available by default from its
 # GrantableClusterResourceDefinition (use + user-authz roles), so it is not listed here.
-apiVersion: multitenancy.deckhouse.io/v1alpha1
+apiVersion: multitenancy.deckhouse.io/v1alpha2
 kind: ClusterResourceGrantPolicy
 metadata:
   name: demo-grant

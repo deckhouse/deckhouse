@@ -169,9 +169,9 @@ flowchart LR
 Если на cluster-wide-ресурс распространяется несколько правил, его доступность определяется в следующем порядке:
 
 1. Значение [`excluded`](./cr.html#grantableclusterresourcedefinition-v1alpha1-spec-excluded) в GrantableClusterResourceDefinition — ресурс недоступен независимо от настроек политик.
-1. Значение [`denied`](./cr.html#clusterresourcegrantpolicy-v1alpha1-spec-resources-denied) и [`deniedSelector`](./cr.html#clusterresourcegrantpolicy-v1alpha1-spec-resources-deniedselector) в соответствующей записи ClusterResourceGrantPolicy.
-1. Значение [`allowed`](./cr.html#clusterresourcegrantpolicy-v1alpha1-spec-resources-allowed) и [`allowedSelector`](./cr.html#clusterresourcegrantpolicy-v1alpha1-spec-resources-allowedselector) в соответствующей записи ClusterResourceGrantPolicy.
-1. Значение [`availabilityDefault`](./cr.html#clusterresourcegrantpolicy-v1alpha1-spec-resources-availabilitydefault) в соответствующей записи ClusterResourceGrantPolicy.
+1. Значение [`denied`](./cr.html#clusterresourcegrantpolicy-v1alpha2-spec-resources-denied) и [`deniedSelector`](./cr.html#clusterresourcegrantpolicy-v1alpha2-spec-resources-deniedselector) в соответствующей записи ClusterResourceGrantPolicy.
+1. Значение [`allowed`](./cr.html#clusterresourcegrantpolicy-v1alpha2-spec-resources-allowed) и [`allowedSelector`](./cr.html#clusterresourcegrantpolicy-v1alpha2-spec-resources-allowedselector) в соответствующей записи ClusterResourceGrantPolicy.
+1. Значение [`availabilityDefault`](./cr.html#clusterresourcegrantpolicy-v1alpha2-spec-resources-availabilitydefault) в соответствующей записи ClusterResourceGrantPolicy.
 1. Значение [`defaultAvailability`](./cr.html#grantableclusterresourcedefinition-v1alpha1-spec-defaultavailability) в GrantableClusterResourceDefinition.
 
 Применяется первое подходящее правило.
@@ -186,7 +186,7 @@ flowchart LR
 
 Значение по умолчанию для проекта определяется в следующем порядке:
 
-1. Значение [`default`](./cr.html#clusterresourcegrantpolicy-v1alpha1-spec-resources-default) из соответствующей записи ClusterResourceGrantPolicy.
+1. Значение [`default`](./cr.html#clusterresourcegrantpolicy-v1alpha2-spec-resources-default) из соответствующей записи ClusterResourceGrantPolicy.
 1. Значение, определённое с помощью [`defaultFrom`](./cr.html#grantableclusterresourcedefinition-v1alpha1-spec-defaultfrom) в GrantableClusterResourceDefinition.
 1. Если значение не найдено, оно не подставляется.
 

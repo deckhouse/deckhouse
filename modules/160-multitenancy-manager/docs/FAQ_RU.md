@@ -24,7 +24,7 @@ d8 k get available storageclasses -n <PROJECT_NAME> -o yaml
 
 ### Как узнать, какие политики доступа применяются к проекту?
 
-Политика [ClusterResourceGrantPolicy](cr.html#clusterresourcegrantpolicy) применяется к проекту, если значение `spec.projectSelector` в ней соответствует лейблам неймспейсов проекта.
+Политика [ClusterResourceGrantPolicy](cr.html#clusterresourcegrantpolicy) применяется к неймспейсу проекта, если совпали все заданные в ней селекторы: `spec.projectSelector` сопоставляется с лейблами Project, `spec.namespaceSelector` — с лейблами неймспейса. Политика без обоих селекторов является библиотечной и применяется только через параметр [`spec.grantPolicies`](cr.html#projecttemplate-v1alpha2-spec-grantpolicies) шаблона проекта. Подробнее — [в подразделе «Как политика выбирает неймспейсы»](usage.html#как-политика-выбирает-неймспейсы).
 
 Чтобы просмотреть все политики и их селекторы, выполните следующую команду:
 
@@ -56,7 +56,7 @@ d8 k get available -n <PROJECT_NAME>
 
 ### Как разрешить все StorageClasses, кроме отдельных?
 
-Чтобы запретить отдельные StorageClass, оставив остальные доступными, используйте параметр [`denied`](cr.html#clusterresourcegrantpolicy-v1alpha1-spec-resources-denied) или [`deniedSelector`](cr.html#clusterresourcegrantpolicy-v1alpha1-spec-resources-deniedselector). Запрет имеет приоритет над разрешением.
+Чтобы запретить отдельные StorageClass, оставив остальные доступными, используйте параметр [`denied`](cr.html#clusterresourcegrantpolicy-v1alpha2-spec-resources-denied) или [`deniedSelector`](cr.html#clusterresourcegrantpolicy-v1alpha2-spec-resources-deniedselector). Запрет имеет приоритет над разрешением.
 
 Пример настройки приведён [в подразделе «Запрет отдельных ресурсов»](usage.html#запрет-отдельных-ресурсов).
 
@@ -72,11 +72,14 @@ d8 k get available -n <PROJECT_NAME>
 
 Проверьте по порядку:
 
-1. **Соответствие проекта селектору**. Убедитесь, что [`spec.projectSelector`](cr.html#clusterresourcegrantpolicy-v1alpha1-spec-projectselector) политики соответствует лейблам неймспейса проекта:
+1. **Соответствие селекторам**. Убедитесь, что [`spec.projectSelector`](cr.html#clusterresourcegrantpolicy-v1alpha2-spec-projectselector) политики соответствует лейблам Project, а [`spec.namespaceSelector`](cr.html#clusterresourcegrantpolicy-v1alpha2-spec-namespaceselector) — лейблам неймспейса:
 
    ```shell
-   d8 k get ns <PROJECT_NAME> --show-labels
+   d8 k get project <PROJECT_NAME> --show-labels
+   d8 k get ns -l projects.deckhouse.io/project=<PROJECT_NAME> --show-labels
    ```
+
+   В манифесте `v1alpha1` поле `spec.projectSelector` — это `spec.namespaceSelector` версии `v1alpha2`. Также проверьте условия в статусе политики. Условие `SelectorsValid` принимает значение `False`, если селектор некорректен. Условие `NewNamespacesCovered` принимает значение `False`, если ограничение не распространяется на новый дополнительный неймспейс проекта.
 
 1. **Доступные ресурсы проекта**. Проверьте, отражает ли AvailableClusterResource ожидаемые настройки политики:
 

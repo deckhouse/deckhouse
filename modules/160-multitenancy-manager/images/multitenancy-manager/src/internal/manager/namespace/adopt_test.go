@@ -251,6 +251,19 @@ func TestFilterUserMeta(t *testing.T) {
 	assert.Equal(t, map[string]string{"team": "blue", "heritageSomething": "keep"}, got)
 }
 
+// Adoption never mirrors a label the Project webhook refuses in namespaceMetadata.labels, so a user
+// can edit an adopted project without first cleaning its parameters.
+func TestFilterUserMeta_DropsEveryModuleOwnedLabel(t *testing.T) {
+	labels := map[string]string{"team": "a", "projects.deckhouse.io/anything": "x", "multitenancy.deckhouse.io/anything": "x"}
+	for _, key := range naming.ManagedNamespaceLabels {
+		labels[key] = "x"
+	}
+
+	kept := filterUserMeta(labels)
+	assert.Empty(t, naming.ModuleOwnedLabelsIn(kept))
+	assert.Equal(t, map[string]string{"team": "a"}, kept)
+}
+
 func TestFilterUserMeta_NilWhenNothingLeft(t *testing.T) {
 	assert.Nil(t, filterUserMeta(map[string]string{v1alpha3.ResourceLabelProject: "foo"}))
 	assert.Nil(t, filterUserMeta(nil))

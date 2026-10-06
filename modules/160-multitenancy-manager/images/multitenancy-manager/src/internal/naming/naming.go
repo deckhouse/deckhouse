@@ -18,6 +18,12 @@ limitations under the License.
 // shared across the controller and webhooks.
 package naming
 
+import (
+	"fmt"
+	"slices"
+	"strings"
+)
+
 const (
 	// ProjectLabel marks a namespace (and every controller-managed object) with its project.
 	ProjectLabel = "projects.deckhouse.io/project"
@@ -78,6 +84,12 @@ const (
 	TolerationsAnnotation  = "scheduler.alpha.kubernetes.io/defaultTolerations"
 )
 
+// TemplateLabelsAnnotation lists, as a JSON object, the labels a project template puts on the
+// namespaces of a project through namespaceMetadata.labels. The renderer writes it on the main
+// namespace, always, empty when there are none; the ProjectNamespace controller copies those labels
+// to every additional namespace and writes the same annotation there as the record of what it set.
+const TemplateLabelsAnnotation = "projects.deckhouse.io/template-labels"
+
 // ManagedNamespaceAnnotations are the annotations on a project namespace that the module owns; see
 // ManagedNamespaceLabels.
 var ManagedNamespaceAnnotations = []string{
@@ -85,4 +97,71 @@ var ManagedNamespaceAnnotations = []string{
 	"meta.helm.sh/release-namespace",
 	NodeSelectorAnnotation,
 	TolerationsAnnotation,
+	TemplateLabelsAnnotation,
+}
+
+// IsModuleOwnedLabel reports whether the module owns the label key on a project namespace, so a
+// template cannot set it through namespaceMetadata.labels.
+func IsModuleOwnedLabel(key string) bool {
+	return slices.Contains(ManagedNamespaceLabels, key) ||
+		strings.HasPrefix(key, "projects.deckhouse.io/") ||
+		strings.HasPrefix(key, "multitenancy.deckhouse.io/")
+}
+
+// labelFields are the ProjectTemplate fields that set the module-owned labels a user may choose.
+var labelFields = map[string]string{
+	"security.deckhouse.io/pod-policy":         "spec.podSecurityStandard",
+	"extended-monitoring.deckhouse.io/enabled": "spec.features.monitoring",
+	"security-scanning.deckhouse.io/enabled":   "spec.features.vulnerabilityScanning",
+}
+
+// ModuleOwnedLabelsIn describes, sorted, the keys of labels that the module owns, each with where it
+// is set instead: a field of the template, or the controller. It returns nil when there are none.
+// namespaceMetadata.labels cannot set such a key; the renderer would drop it without a word.
+func ModuleOwnedLabelsIn(labels map[string]string) []string {
+	var out []string
+	for key := range labels {
+		if !IsModuleOwnedLabel(key) {
+			continue
+		}
+		where := "the controller sets it"
+		if field, ok := labelFields[key]; ok {
+			where = "set it through " + field
+		}
+		out = append(out, fmt.Sprintf("%s (%s)", key, where))
+	}
+	slices.Sort(out)
+	return out
+}
+
+// SplitModuleOwnedLabels sorts the module-owned labels of labels into those previous does not carry
+// with the same value (set) and those it does (kept). An update may keep a module-owned label the
+// object already had, so that the object stays editable; only one it sets anew is refused.
+func SplitModuleOwnedLabels(labels, previous map[string]string) (map[string]string, map[string]string) {
+	set := map[string]string{}
+	kept := map[string]string{}
+	for key, value := range labels {
+		if !IsModuleOwnedLabel(key) {
+			continue
+		}
+		if old, ok := previous[key]; ok && old == value {
+			kept[key] = value
+			continue
+		}
+		set[key] = value
+	}
+	return set, kept
+}
+
+// IsGitOpsTrackingLabel reports whether the label key is one a GitOps tool uses to recognise the
+// objects it manages. Such a label may reach the main namespace (adoption mirrors what a namespace
+// already had), but it is not inherited by the additional namespaces: the tool would take them for
+// its own and could prune them. The list covers the default keys of Argo CD, Flux and kapp; a custom
+// tracking key (Argo CD application.instanceLabelKey) is not known here and is inherited.
+func IsGitOpsTrackingLabel(key string) bool {
+	return key == "app.kubernetes.io/instance" ||
+		strings.HasPrefix(key, "argocd.argoproj.io/") ||
+		strings.HasPrefix(key, "kustomize.toolkit.fluxcd.io/") ||
+		strings.HasPrefix(key, "helm.toolkit.fluxcd.io/") ||
+		strings.HasPrefix(key, "kapp.k14s.io/")
 }

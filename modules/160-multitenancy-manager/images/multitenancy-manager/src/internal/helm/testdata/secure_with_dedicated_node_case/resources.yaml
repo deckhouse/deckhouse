@@ -4,6 +4,7 @@ apiVersion: v1
 kind: Namespace
 metadata:
   annotations:
+    projects.deckhouse.io/template-labels: '{}'
     scheduler.alpha.kubernetes.io/node-selector: node-role/gpu-shared=
   labels:
     extended-monitoring.deckhouse.io/enabled: ""

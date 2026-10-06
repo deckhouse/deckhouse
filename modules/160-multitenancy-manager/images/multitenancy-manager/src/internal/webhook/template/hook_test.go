@@ -24,6 +24,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	admissionv1 "k8s.io/api/admission/v1"
+	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -31,6 +32,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
 
 	grantsv1alpha1 "controller/api/v1alpha1"
+	grantsv1alpha2 "controller/api/v1alpha2"
 	"controller/apis/deckhouse.io/v1alpha2"
 	"controller/apis/deckhouse.io/v1alpha3"
 )
@@ -39,7 +41,7 @@ func newValidator(t *testing.T, objs ...client.Object) *validator {
 	t.Helper()
 	scheme := runtime.NewScheme()
 	for _, add := range []func(*runtime.Scheme) error{
-		v1alpha2.AddToScheme, v1alpha3.AddToScheme, grantsv1alpha1.AddToScheme,
+		v1alpha2.AddToScheme, v1alpha3.AddToScheme, grantsv1alpha1.AddToScheme, grantsv1alpha2.AddToScheme, corev1.AddToScheme,
 	} {
 		require.NoError(t, add(scheme))
 	}
@@ -47,14 +49,14 @@ func newValidator(t *testing.T, objs ...client.Object) *validator {
 	return &validator{client: c, reader: c}
 }
 
-func libraryPolicy(name string) *grantsv1alpha1.ClusterResourceGrantPolicy {
-	return &grantsv1alpha1.ClusterResourceGrantPolicy{
+func libraryPolicy(name string) *grantsv1alpha2.ClusterResourceGrantPolicy {
+	return &grantsv1alpha2.ClusterResourceGrantPolicy{
 		ObjectMeta: metav1.ObjectMeta{Name: name},
-		Spec:       grantsv1alpha1.ClusterResourceGrantPolicySpec{Resources: []grantsv1alpha1.GrantResource{{ResourceName: "storageclasses"}}},
+		Spec:       grantsv1alpha2.ClusterResourceGrantPolicySpec{Resources: []grantsv1alpha1.GrantResource{{ResourceName: "storageclasses"}}},
 	}
 }
 
-func boundPolicy(name string) *grantsv1alpha1.ClusterResourceGrantPolicy {
+func boundPolicy(name string) *grantsv1alpha2.ClusterResourceGrantPolicy {
 	p := libraryPolicy(name)
 	p.Spec.ProjectSelector = &metav1.LabelSelector{MatchLabels: map[string]string{"example": "true"}}
 	return p
@@ -83,6 +85,15 @@ func structuredTemplate(name string, grantPolicies ...string) *v1alpha2.ProjectT
 
 func TestHandle_GrantPoliciesValidation(t *testing.T) {
 	ctx := context.Background()
+
+	t.Run("reference to a policy with only a namespace selector is rejected", func(t *testing.T) {
+		policy := libraryPolicy("by-namespace")
+		policy.Spec.NamespaceSelector = &metav1.LabelSelector{MatchLabels: map[string]string{"example": "true"}}
+		v := newValidator(t, policy)
+		resp := v.Handle(ctx, createRequest(t, structuredTemplate("tmpl", "by-namespace")))
+		require.False(t, resp.Allowed)
+		require.Contains(t, resp.Result.Message, "namespaceSelector")
+	})
 
 	t.Run("reference to an existing library policy is allowed", func(t *testing.T) {
 		v := newValidator(t, libraryPolicy("lib"))
@@ -452,6 +463,80 @@ func TestHandle_LiteralValidation(t *testing.T) {
 	})
 }
 
+// TestHandle_ModuleOwnedNamespaceLabels: a literal namespaceMetadata.labels may not set a label the
+// module owns; the renderer would drop it, and the template would say something its namespaces lack.
+// A template that already carries one stays editable: only a label set anew is refused, a kept one
+// is named in a warning.
+func TestHandle_ModuleOwnedNamespaceLabels(t *testing.T) {
+	ctx := context.Background()
+	withLabels := func(labels v1alpha2.Param[map[string]string]) *v1alpha2.ProjectTemplate {
+		tmpl := &v1alpha2.ProjectTemplate{ObjectMeta: metav1.ObjectMeta{Name: "tmpl"}}
+		tmpl.Spec.NamespaceMetadata = &v1alpha2.NamespaceMetadata{Labels: labels}
+		tmpl.Spec.ParametersSchema = v1alpha2.ParametersSchema{OpenAPIV3Schema: map[string]any{
+			"type": "object", "properties": map[string]any{"namespace": map[string]any{"type": "object", "properties": map[string]any{
+				"labels": map[string]any{"type": "object", "additionalProperties": map[string]any{"type": "string"}},
+			}}},
+		}}
+		return tmpl
+	}
+
+	tests := []struct {
+		name     string
+		labels   v1alpha2.Param[map[string]string]
+		allowed  bool
+		mentions string
+	}{
+		{name: "a pod policy label points to the field", labels: v1alpha2.LiteralParam(map[string]string{"security.deckhouse.io/pod-policy": "privileged"}), mentions: "set it through spec.podSecurityStandard"},
+		{name: "a label of the controller", labels: v1alpha2.LiteralParam(map[string]string{"projects.deckhouse.io/foo": "x"}), mentions: "projects.deckhouse.io/foo (the controller sets it)"},
+		{name: "an ordinary label", labels: v1alpha2.LiteralParam(map[string]string{"team": "a"}), allowed: true},
+		{name: "a reference is checked per project", labels: v1alpha2.FromParamRef[map[string]string]("namespace.labels"), allowed: true},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			resp := newValidator(t).Handle(ctx, createRequest(t, withLabels(tt.labels)))
+			require.Equal(t, tt.allowed, resp.Allowed, resp.Result.Message)
+			if tt.mentions != "" {
+				assert.Contains(t, resp.Result.Message, tt.mentions)
+			}
+		})
+	}
+
+	literal := func(labels map[string]string) v1alpha2.Param[map[string]string] { return v1alpha2.LiteralParam(labels) }
+	privileged := map[string]string{"security.deckhouse.io/pod-policy": "privileged"}
+	privilegedAndTeam := map[string]string{"security.deckhouse.io/pod-policy": "privileged", "team": "a"}
+	updates := []struct {
+		name     string
+		old      v1alpha2.Param[map[string]string]
+		updated  v1alpha2.Param[map[string]string]
+		allowed  bool
+		mentions string
+		warns    string
+	}{
+		{name: "a label set anew", old: literal(map[string]string{"team": "a"}), updated: literal(privilegedAndTeam), mentions: "set it through spec.podSecurityStandard"},
+		{name: "a new value of a label the template had", old: literal(privileged), updated: literal(map[string]string{"security.deckhouse.io/pod-policy": "baseline"}), mentions: "security.deckhouse.io/pod-policy"},
+		{name: "a literal replacing a reference", old: v1alpha2.FromParamRef[map[string]string]("namespace.labels"), updated: literal(privileged), mentions: "security.deckhouse.io/pod-policy"},
+		{name: "an edit that keeps a label the template had", old: literal(privileged), updated: literal(privilegedAndTeam), allowed: true, warns: "security.deckhouse.io/pod-policy (set it through spec.podSecurityStandard)"},
+		{name: "removing a label the template had", old: literal(privilegedAndTeam), updated: literal(map[string]string{"team": "a"}), allowed: true},
+	}
+	for _, tt := range updates {
+		t.Run("update: "+tt.name, func(t *testing.T) {
+			resp := newValidator(t).Handle(ctx, updateRequest(t, withLabels(tt.old), withLabels(tt.updated)))
+			require.Equal(t, tt.allowed, resp.Allowed, resp.Result.Message)
+			if tt.mentions != "" {
+				assert.Contains(t, resp.Result.Message, "sets labels the module owns")
+				assert.Contains(t, resp.Result.Message, tt.mentions)
+			}
+			if tt.warns == "" {
+				assert.Empty(t, resp.Warnings)
+				return
+			}
+			require.Len(t, resp.Warnings, 1)
+			assert.Contains(t, resp.Warnings[0], "its namespaces do not get them")
+			assert.Contains(t, resp.Warnings[0], tt.warns)
+		})
+	}
+}
+
 // TestHandle_InlineGrantSelectors: the template schema accepts selector shapes the
 // ClusterResourceGrantPolicy schema refuses, and the managed policy built from them is then rejected
 // at admission on every reconcile, with nothing on the template to say why.
@@ -501,4 +586,92 @@ func TestHandle_InlineGrantSelectors(t *testing.T) {
 		)))
 		assert.True(t, resp.Allowed, resp.Result)
 	})
+}
+
+// TestHandle_DeleteTemplateStillRendered: a project that switched to a template that has not rendered
+// yet no longer carries the old template's label, but its namespaces do, and the policies of the old
+// template select them by it. The old template stays until nothing is rendered from it.
+func TestHandle_DeleteTemplateStillRendered(t *testing.T) {
+	ctx := context.Background()
+	project := &v1alpha3.Project{
+		ObjectMeta: metav1.ObjectMeta{Name: "proj", Labels: map[string]string{v1alpha3.ResourceLabelTemplate: "tmpl-v2"}},
+	}
+	rendered := &corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: "proj", Labels: map[string]string{
+		v1alpha3.ResourceLabelTemplate: "tmpl",
+		v1alpha3.ResourceLabelHeritage: v1alpha3.ResourceHeritageMultitenancy,
+		v1alpha3.ResourceLabelProject:  "proj",
+	}}}
+	v := newValidator(t, project, rendered)
+
+	old, err := json.Marshal(structuredTemplate("tmpl"))
+	require.NoError(t, err)
+	resp := v.Handle(ctx, admission.Request{AdmissionRequest: admissionv1.AdmissionRequest{
+		Operation: admissionv1.Delete,
+		OldObject: runtime.RawExtension{Raw: old},
+	}})
+	require.False(t, resp.Allowed)
+	assert.Contains(t, resp.Result.Message, "still rendered from it")
+	assert.Contains(t, resp.Result.Message, "'proj' project")
+}
+
+// TestHandle_DeleteTemplateNothingRendered: the delete guard counts only live project namespaces that
+// carry the template label. A template nothing is rendered from, a namespace of another template, a
+// namespace the module does not own, and one that is being deleted do not hold it.
+func TestHandle_DeleteTemplateNothingRendered(t *testing.T) {
+	ctx := context.Background()
+	namespace := func(name, template, heritage string, terminating bool) *corev1.Namespace {
+		ns := &corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: name, Labels: map[string]string{
+			v1alpha3.ResourceLabelTemplate: template,
+			v1alpha3.ResourceLabelProject:  name,
+		}}}
+		if heritage != "" {
+			ns.Labels[v1alpha3.ResourceLabelHeritage] = heritage
+		}
+		if terminating {
+			ns.Finalizers = []string{"kubernetes"}
+			ns.DeletionTimestamp = &metav1.Time{Time: metav1.Now().Time}
+		}
+		return ns
+	}
+
+	for _, tt := range []struct {
+		name string
+		objs []client.Object
+	}{
+		{name: "no namespaces"},
+		{name: "a namespace of another template", objs: []client.Object{namespace("other", "tmpl-v2", v1alpha3.ResourceHeritageMultitenancy, false)}},
+		{name: "a namespace the module does not own", objs: []client.Object{namespace("foreign", "tmpl", "", false)}},
+		{name: "a namespace being deleted", objs: []client.Object{namespace("leaving", "tmpl", v1alpha3.ResourceHeritageMultitenancy, true)}},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			v := newValidator(t, tt.objs...)
+			old, err := json.Marshal(structuredTemplate("tmpl"))
+			require.NoError(t, err)
+			resp := v.Handle(ctx, admission.Request{AdmissionRequest: admissionv1.AdmissionRequest{
+				Operation: admissionv1.Delete,
+				OldObject: runtime.RawExtension{Raw: old},
+			}})
+			assert.True(t, resp.Allowed, "%v", resp.Result)
+		})
+	}
+}
+
+// TestHandle_DeleteTemplateLeftoverNamespace: a live namespace rendered from the template whose project is
+// gone holds the template too, and the refusal says what to do.
+func TestHandle_DeleteTemplateLeftoverNamespace(t *testing.T) {
+	leftover := &corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: "gone", Labels: map[string]string{
+		v1alpha3.ResourceLabelTemplate: "tmpl",
+		v1alpha3.ResourceLabelHeritage: v1alpha3.ResourceHeritageMultitenancy,
+		v1alpha3.ResourceLabelProject:  "gone",
+	}}}
+	v := newValidator(t, leftover)
+
+	old, err := json.Marshal(structuredTemplate("tmpl"))
+	require.NoError(t, err)
+	resp := v.Handle(context.Background(), admission.Request{AdmissionRequest: admissionv1.AdmissionRequest{
+		Operation: admissionv1.Delete,
+		OldObject: runtime.RawExtension{Raw: old},
+	}})
+	require.False(t, resp.Allowed)
+	assert.Contains(t, resp.Result.Message, "the project is gone; delete the namespace first")
 }

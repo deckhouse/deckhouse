@@ -24,7 +24,7 @@ You can check the availability of other cluster-wide resources, such as ClusterI
 
 ### How can I view access policies applied to a project?
 
-A [ClusterResourceGrantPolicy](cr.html#clusterresourcegrantpolicy) applies to a project if its `spec.projectSelector` matches the labels of the project namespaces.
+A [ClusterResourceGrantPolicy](cr.html#clusterresourcegrantpolicy) applies to a namespace of a project when every selector it sets matches: `spec.projectSelector` is matched against the labels of the Project, `spec.namespaceSelector` against the labels of the namespace. A policy with neither selector is a library policy and applies only through [`spec.grantPolicies`](cr.html#projecttemplate-v1alpha2-spec-grantpolicies) of a ProjectTemplate. For details, refer to ["How a policy selects namespaces"](usage.html#how-a-policy-selects-namespaces).
 
 To view all policies and their selectors, run the following command:
 
@@ -56,7 +56,7 @@ Detailed information about violations is available on the Grafana dashboard unde
 
 ### How can I allow all StorageClasses except specific ones?
 
-To deny specific StorageClasses while keeping the others available, use [`denied`](cr.html#clusterresourcegrantpolicy-v1alpha1-spec-resources-denied) or [`deniedSelector`](cr.html#clusterresourcegrantpolicy-v1alpha1-spec-resources-deniedselector). Deny rules take precedence over allow rules.
+To deny specific StorageClasses while keeping the others available, use [`denied`](cr.html#clusterresourcegrantpolicy-v1alpha2-spec-resources-denied) or [`deniedSelector`](cr.html#clusterresourcegrantpolicy-v1alpha2-spec-resources-deniedselector). Deny rules take precedence over allow rules.
 
 For a configuration example, refer to ["Denying individual resources"](usage.html#denying-individual-resources).
 
@@ -72,11 +72,14 @@ To restrict access, create a [ClusterResourceGrantPolicy](cr.html#clusterresourc
 
 Check the following:
 
-1. **Project selector match**. Make sure the policy's [`spec.projectSelector`](cr.html#clusterresourcegrantpolicy-v1alpha1-spec-projectselector) matches the labels of the project namespace:
+1. **Selector match**. Make sure the policy's [`spec.projectSelector`](cr.html#clusterresourcegrantpolicy-v1alpha2-spec-projectselector) matches the labels of the Project, and its [`spec.namespaceSelector`](cr.html#clusterresourcegrantpolicy-v1alpha2-spec-namespaceselector) the labels of the namespace:
 
    ```shell
-   d8 k get ns <PROJECT_NAME> --show-labels
+   d8 k get project <PROJECT_NAME> --show-labels
+   d8 k get ns -l projects.deckhouse.io/project=<PROJECT_NAME> --show-labels
    ```
+
+   In a `v1alpha1` manifest, `spec.projectSelector` is what `v1alpha2` calls `spec.namespaceSelector`. Also check the conditions in the policy status. The `SelectorsValid` condition is `False` when a selector is invalid. The `NewNamespacesCovered` condition is `False` when a restriction does not cover a new additional namespace of the project.
 
 1. **Resources available to the project**. Check whether AvailableClusterResource reflects the expected policy settings:
 

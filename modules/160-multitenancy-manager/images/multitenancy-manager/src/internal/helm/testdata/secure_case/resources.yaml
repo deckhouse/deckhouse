@@ -3,6 +3,8 @@
 apiVersion: v1
 kind: Namespace
 metadata:
+  annotations:
+    projects.deckhouse.io/template-labels: '{}'
   labels:
     extended-monitoring.deckhouse.io/enabled: ""
     heritage: multitenancy-manager

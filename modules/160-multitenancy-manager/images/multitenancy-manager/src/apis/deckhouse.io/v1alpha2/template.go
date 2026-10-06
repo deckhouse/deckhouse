@@ -134,9 +134,9 @@ type ProjectTemplateSpec struct {
 	// ClusterResourceGrantPolicy bound to projects of this template.
 	Resources []grantsv1alpha1.GrantResource `json:"resources,omitempty"`
 
-	// GrantPolicies references library ClusterResourceGrantPolicy objects (created without a
-	// projectSelector). The controller materializes one managed policy per reference, copying its
-	// resources and binding them to projects of this template.
+	// GrantPolicies references library ClusterResourceGrantPolicy objects (created without
+	// projectSelector and namespaceSelector). The controller creates and maintains one managed policy
+	// per reference, copying its resources and binding them to the namespaces rendered from this template.
 	GrantPolicies []string `json:"grantPolicies,omitempty"`
 
 	// PodSecurityStandard selects the Pod Security Standard profile applied to the project
@@ -154,7 +154,9 @@ type ProjectTemplateSpec struct {
 	// namespace's scheduler default-tolerations annotation).
 	Tolerations Param[[]corev1.Toleration] `json:"tolerations,omitempty"`
 
-	// NamespaceMetadata adds extra labels and annotations to the project namespaces.
+	// NamespaceMetadata adds extra labels to every namespace of the project and extra annotations to
+	// its main namespace. Labels the module owns cannot be set here; GitOps tracking labels reach the
+	// main namespace only.
 	NamespaceMetadata *NamespaceMetadata `json:"namespaceMetadata,omitempty"`
 
 	// Features toggles optional project capabilities (monitoring, vulnerability scanning).

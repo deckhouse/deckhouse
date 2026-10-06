@@ -23,13 +23,15 @@ spec:
     - jsonPath: .metadata.creationTimestamp
       name: Age
       type: date
+    deprecated: true
+    deprecationWarning: multitenancy.deckhouse.io/v1alpha1 ClusterResourceGrantPolicy is deprecated; use multitenancy.deckhouse.io/v1alpha2, where spec.projectSelector matches Project labels and spec.namespaceSelector matches namespace labels
     name: v1alpha1
     schema:
       openAPIV3Schema:
         description: |-
           Defines a policy for project access to cluster-wide resources and the values used by default.
 
-          The resource applies to projects whose namespaces match `spec.projectSelector`. For each type of cluster-wide resource, the policy allows you to configure allowed and denied resources, as well as their availability rules and default values.
+          The resource applies to the project namespaces whose labels match `spec.projectSelector`. A policy written through `multitenancy.deckhouse.io/v1alpha2` may also select projects by the labels of the Project; this version shows that selector as JSON in the `multitenancy.deckhouse.io/v1alpha2-project-selector` annotation. For each type of cluster-wide resource, the policy allows you to configure allowed and denied resources, as well as their availability rules and default values.
 
           The cluster-wide resource type is specified using `spec.resources[].resourceName`, which references the corresponding GrantableClusterResourceDefinition.
 
@@ -62,11 +64,376 @@ spec:
             properties:
               projectSelector:
                 description: |-
+                  Label selector for project namespaces to which the policy applies.
+
+                  The selector is matched against the labels of the namespace, the same as `spec.namespaceSelector` of `multitenancy.deckhouse.io/v1alpha2`, which is the version to use.
+
+                  If the selector is not specified and the `multitenancy.deckhouse.io/v1alpha2-project-selector` annotation is absent, the policy does not apply to any projects. An empty selector matches all project namespaces, except the namespaces of the virtual projects `deckhouse` and `default`.
+
+                  The annotation holds `spec.projectSelector` of `v1alpha2`, which is matched against the labels of the Project. Keep the annotation when you update the policy through this version.
+                properties:
+                  matchExpressions:
+                    description: |-
+                      List of label selector expressions.
+
+                      All expressions must match.
+                    items:
+                      description: |-
+                        Label selector expression.
+                      properties:
+                        key:
+                          description: Label key to which the expression applies.
+                          type: string
+                        operator:
+                          description: |-
+                            Operator that defines the relationship between the key and the set of values.
+                          type: string
+                        values:
+                          description: |-
+                            List of label values.
+
+                            For the `In` and `NotIn` operators, the list must contain at least one value. For the `Exists` and `DoesNotExist` operators, the list must be empty.
+                          items:
+                            type: string
+                          type: array
+                          x-kubernetes-list-type: atomic
+                      required:
+                      - key
+                      - operator
+                      type: object
+                    type: array
+                    x-kubernetes-list-type: atomic
+                  matchLabels:
+                    additionalProperties:
+                      type: string
+                    description: |-
+                      Set of namespace labels to which the policy applies.
+
+                      All specified labels must match.
+                    type: object
+                type: object
+                x-kubernetes-map-type: atomic
+              resources:
+                description: Access settings for cluster-wide resources for the selected projects.
+                items:
+                  description: |-
+                    Access settings for one type of cluster-wide resource.
+                  properties:
+                    allowed:
+                      description: |-
+                        List of names of cluster-wide resources available to the projects.
+
+                        Combined with resources selected using `allowedSelector`. An empty list is not accepted: omit the field instead, or set `availabilityDefault: None` to make nothing available.
+                      items:
+                        type: string
+                      minItems: 1
+                      type: array
+                    allowedSelector:
+                      description: |-
+                        Label selector for cluster-wide resources available to the projects.
+
+                        Combined with resources specified in `allowed`. Applies only to cluster-wide resources represented by Kubernetes objects. An empty selector is not accepted: omit the field instead, or set `availabilityDefault` to open or lock the resource without a list.
+                      properties:
+                        matchExpressions:
+                          description: |-
+                            List of label selector expressions.
+
+                            All expressions must match.
+                          items:
+                            description: |-
+                              Label selector expression.
+                            properties:
+                              key:
+                                description: Label key to which the expression applies.
+                                type: string
+                              operator:
+                                description: |-
+                                  Operator that defines the relationship between the key and the set of values.
+                                type: string
+                              values:
+                                description: |-
+                                  List of label values.
+
+                                  For the `In` and `NotIn` operators, the list must contain at least one value. For the `Exists` and `DoesNotExist` operators, the list must be empty.
+                                items:
+                                  type: string
+                                type: array
+                                x-kubernetes-list-type: atomic
+                            required:
+                            - key
+                            - operator
+                            type: object
+                          minItems: 1
+                          type: array
+                          x-kubernetes-list-type: atomic
+                        matchLabels:
+                          additionalProperties:
+                            type: string
+                          description: |-
+                            Set of labels for cluster-wide resources.
+
+                            All specified labels must match.
+                          minProperties: 1
+                          type: object
+                      type: object
+                      x-kubernetes-map-type: atomic
+                      x-kubernetes-validations:
+                        - rule: 'has(self.matchLabels) || has(self.matchExpressions)'
+                          message: 'a selector must carry matchLabels or matchExpressions; an empty selector is not accepted'
+                    availabilityDefault:
+                      description: |-
+                        Determines the availability of cluster-wide resources that are not explicitly specified using `allowed`, `allowedSelector`, `denied`, or `deniedSelector`.
+
+                        Overrides `defaultAvailability` of the corresponding GrantableClusterResourceDefinition for the projects selected by the policy.
+
+                        `All` makes all such cluster-wide resources available, while `None` makes them unavailable.
+
+                        Usually, you do not need to specify this parameter. If `allowed` or `allowedSelector` is set and `availabilityDefault` is not specified, access to all other cluster-wide resources of this type is automatically denied. Set this parameter explicitly only to change availability without specifying a list of allowed resources: `All` to make all resources of the type available, or `None` to make them unavailable.
+                      enum:
+                      - All
+                      - None
+                      type: string
+                    default:
+                      description: |-
+                        Name of the cluster-wide resource used by default in the selected projects.
+
+                        Overrides the value determined using `defaultFrom` in the corresponding GrantableClusterResourceDefinition.
+                      type: string
+                    denied:
+                      description: |-
+                        List of names of cluster-wide resources unavailable to the projects.
+
+                        Deny rules take precedence over `allowed` and `allowedSelector`.
+                      items:
+                        type: string
+                      type: array
+                    deniedSelector:
+                      description: |-
+                        Label selector for cluster-wide resources unavailable to the projects.
+
+                        Deny rules take precedence over `allowed` and `allowedSelector`. Applies only to cluster-wide resources represented by Kubernetes objects. An empty selector is not accepted.
+                      properties:
+                        matchExpressions:
+                          description: |-
+                            List of label selector expressions.
+
+                            All expressions must match.
+                          items:
+                            description: |-
+                              Label selector expression.
+                            properties:
+                              key:
+                                description: Label key to which the expression applies.
+                                type: string
+                              operator:
+                                description: |-
+                                  Operator that defines the relationship between the key and the set of values.
+                                type: string
+                              values:
+                                description: |-
+                                  List of label values.
+
+                                  For the `In` and `NotIn` operators, the list must contain at least one value. For the `Exists` and `DoesNotExist` operators, the list must be empty.
+                                items:
+                                  type: string
+                                type: array
+                                x-kubernetes-list-type: atomic
+                            required:
+                            - key
+                            - operator
+                            type: object
+                          minItems: 1
+                          type: array
+                          x-kubernetes-list-type: atomic
+                        matchLabels:
+                          additionalProperties:
+                            type: string
+                          description: |-
+                            Set of labels for cluster-wide resources.
+
+                            All specified labels must match.
+                          minProperties: 1
+                          type: object
+                      type: object
+                      x-kubernetes-map-type: atomic
+                      x-kubernetes-validations:
+                        - rule: 'has(self.matchLabels) || has(self.matchExpressions)'
+                          message: 'a selector must carry matchLabels or matchExpressions; an empty selector is not accepted'
+                    resourceName:
+                      description: Name of the GrantableClusterResourceDefinition for which the access settings are configured.
+                      type: string
+                  required:
+                  - resourceName
+                  type: object
+                type: array
+            required:
+            - resources
+            type: object
+          status:
+            description: ClusterResourceGrantPolicy status.
+            properties:
+              conditions:
+                description: Current state of the ClusterResourceGrantPolicy.
+                items:
+                  description: Information about one aspect of the current resource state.
+                  properties:
+                    lastTransitionTime:
+                      description: |-
+                        Time when the condition last changed.
+                      format: date-time
+                      type: string
+                    message:
+                      description: |-
+                        Message with additional information about the condition state.
+                      maxLength: 32768
+                      type: string
+                    observedGeneration:
+                      description: |-
+                        Resource generation on which the condition state is based.
+                      format: int64
+                      minimum: 0
+                      type: integer
+                    reason:
+                      description: |-
+                        Reason for the last change in the condition state.
+                      maxLength: 1024
+                      minLength: 1
+                      pattern: ^[A-Za-z]([A-Za-z0-9_,:]*[A-Za-z0-9_])?$
+                      type: string
+                    status:
+                      description: Condition state.
+                      enum:
+                      - "True"
+                      - "False"
+                      - Unknown
+                      type: string
+                    type:
+                      description: Condition type.
+                      maxLength: 316
+                      pattern: ^([a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*/)?(([A-Za-z0-9][-A-Za-z0-9_.]*)?[A-Za-z0-9])$
+                      type: string
+                  required:
+                  - lastTransitionTime
+                  - message
+                  - reason
+                  - status
+                  - type
+                  type: object
+                type: array
+                x-kubernetes-list-map-keys:
+                - type
+                x-kubernetes-list-type: map
+              observedGeneration:
+                description: Latest resource generation processed by the controller.
+                format: int64
+                type: integer
+            type: object
+        required:
+        - spec
+        type: object
+    served: true
+    storage: false
+    subresources:
+      status: {}
+  - additionalPrinterColumns:
+    - jsonPath: .metadata.creationTimestamp
+      name: Age
+      type: date
+    name: v1alpha2
+    schema:
+      openAPIV3Schema:
+        description: |-
+          Defines a policy for project access to cluster-wide resources and the values used by default.
+
+          The resource applies to the project namespaces selected by `spec.projectSelector` (by the labels of the Project) and `spec.namespaceSelector` (by the labels of the namespace). For each type of cluster-wide resource, the policy allows you to configure allowed and denied resources, as well as their availability rules and default values.
+
+          The cluster-wide resource type is specified using `spec.resources[].resourceName`, which references the corresponding GrantableClusterResourceDefinition.
+
+          The policy is created by a cluster administrator.
+
+          For configuration examples, refer to [Usage examples](usage.html#for-cluster-administrators).
+        properties:
+          apiVersion:
+            description: |-
+              APIVersion defines the versioned schema of this representation of an object.
+              Servers should convert recognized schemas to the latest internal value, and
+              may reject unrecognized values.
+              More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources
+            type: string
+            x-doc-skip: true
+          kind:
+            description: |-
+              Kind is a string value representing the REST resource this object represents.
+              Servers may infer this from the endpoint the client submits requests to.
+              Cannot be updated.
+              In CamelCase.
+              More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds
+            type: string
+            x-doc-skip: true
+          metadata:
+            type: object
+            x-doc-skip: true
+          spec:
+            description: ClusterResourceGrantPolicy parameters.
+            properties:
+              namespaceSelector:
+                description: |-
+                  Label selector for project namespaces to which the policy applies.
+
+                  The selector is matched against the labels of the namespace. When `spec.projectSelector` is also specified, both must match. If the selector is not specified, all namespaces of the selected projects are covered. An empty selector matches all namespaces. The namespaces of the virtual projects `deckhouse` and `default` are never covered.
+
+                  The value of the `projects.deckhouse.io/project-namespace` label is the name that a project user gives to a ProjectNamespace. Without `spec.projectSelector`, a selector on this label also covers the namespace of a ProjectNamespace with the same name in any other project.
+
+                  An additional namespace of a project is created by a project user. It carries the labels set by the module and the labels of the project template, which it inherits from the main namespace; a label set by hand on the main namespace is not inherited. A policy that restricts resources by such a label does not cover a new additional namespace.
+                properties:
+                  matchExpressions:
+                    description: |-
+                      List of label selector expressions.
+
+                      All expressions must match.
+                    items:
+                      description: |-
+                        Label selector expression.
+                      properties:
+                        key:
+                          description: Label key to which the expression applies.
+                          type: string
+                        operator:
+                          description: |-
+                            Operator that defines the relationship between the key and the set of values.
+                          type: string
+                        values:
+                          description: |-
+                            List of label values.
+
+                            For the `In` and `NotIn` operators, the list must contain at least one value. For the `Exists` and `DoesNotExist` operators, the list must be empty.
+                          items:
+                            type: string
+                          type: array
+                          x-kubernetes-list-type: atomic
+                      required:
+                      - key
+                      - operator
+                      type: object
+                    type: array
+                    x-kubernetes-list-type: atomic
+                  matchLabels:
+                    additionalProperties:
+                      type: string
+                    description: |-
+                      Set of namespace labels to which the policy applies.
+
+                      All specified labels must match.
+                    type: object
+                type: object
+                x-kubernetes-map-type: atomic
+              projectSelector:
+                description: |-
                   Label selector for projects to which the policy applies.
 
-                  The selector is matched against the union of the labels of the Project object and the labels of each namespace of the project; when the same key is set on both, the namespace value wins. A label on the Project selects all its namespaces; a label on one namespace selects that namespace only.
+                  The selector is matched against the labels of the Project object. The policy applies to every namespace of a selected project, including an additional namespace created later, unless `spec.namespaceSelector` narrows the choice. If the selector is not specified, projects are not chosen by their labels. An empty selector matches all projects, except the virtual projects `deckhouse` and `default`, whose namespaces are never covered.
 
-                  If the selector is not specified, the policy does not apply to any projects. An empty selector matches all projects.
+                  If neither `spec.projectSelector` nor `spec.namespaceSelector` is specified, the policy does not apply to any projects on its own. Such a policy is a library policy that a ProjectTemplate applies through `spec.grantPolicies`.
                 properties:
                   matchExpressions:
                     description: |-

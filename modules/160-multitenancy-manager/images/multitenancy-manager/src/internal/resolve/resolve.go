@@ -37,6 +37,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"controller/api/v1alpha1"
+	grantsv1alpha2 "controller/api/v1alpha2"
 	"controller/apis/deckhouse.io/v1alpha3"
 	"controller/internal/engine"
 	"controller/internal/jsonpath"
@@ -54,7 +55,7 @@ func ProjectName(ns *corev1.Namespace) string {
 
 // ApplicableGrants returns every ClusterResourceGrantPolicy that applies to the namespace of the
 // given name (see GrantsForNamespace). A namespace that does not exist has no grants.
-func ApplicableGrants(ctx context.Context, cl client.Reader, namespace string) ([]*v1alpha1.ClusterResourceGrantPolicy, error) {
+func ApplicableGrants(ctx context.Context, cl client.Reader, namespace string) ([]*grantsv1alpha2.ClusterResourceGrantPolicy, error) {
 	ns := &corev1.Namespace{}
 	if err := cl.Get(ctx, client.ObjectKey{Name: namespace}, ns); err != nil {
 		if k8serrors.IsNotFound(err) {
@@ -65,74 +66,67 @@ func ApplicableGrants(ctx context.Context, cl client.Reader, namespace string) (
 	return GrantsForNamespace(ctx, cl, ns)
 }
 
-// GrantsForNamespace returns every ClusterResourceGrantPolicy whose projectSelector matches the
-// namespace. The selector is evaluated against the union of the labels of the Project object and
-// the labels of the namespace itself (EffectiveLabels), so a policy written against a label the
-// administrator put on the Project -- the way USAGE describes it -- covers the main and every
-// additional namespace of that project, while the labels the controller stamps on namespaces
-// (projects.deckhouse.io/project-namespace and the rest) keep selecting as they always did.
+// GrantsForNamespace returns every ClusterResourceGrantPolicy that applies to the namespace (see
+// PolicyMatches): its projectSelector is matched against the labels of the Project that owns the
+// namespace, its namespaceSelector against the labels of the namespace itself.
 //
 // This is the one place the rule lives: /is-granted, /defaults, the catalog reconciler and the
 // violation recount all come through here, so they cannot disagree about which policies apply.
-func GrantsForNamespace(ctx context.Context, cl client.Reader, ns *corev1.Namespace) ([]*v1alpha1.ClusterResourceGrantPolicy, error) {
+func GrantsForNamespace(ctx context.Context, cl client.Reader, ns *corev1.Namespace) ([]*grantsv1alpha2.ClusterResourceGrantPolicy, error) {
 	project := &v1alpha3.Project{}
-	if err := cl.Get(ctx, client.ObjectKey{Name: ProjectName(ns)}, project); err != nil {
-		if !k8serrors.IsNotFound(err) {
-			return nil, fmt.Errorf("get project %s: %w", ProjectName(ns), err)
-		}
-		// A namespace no Project owns yet (adoption pending) or a namespace of a virtual project is
-		// selected by its own labels only.
-		project = nil
-	}
 	var projectLabels map[string]string
-	if project != nil {
+	switch err := cl.Get(ctx, client.ObjectKey{Name: ProjectName(ns)}, project); {
+	case err == nil:
 		projectLabels = project.Labels
+	case !k8serrors.IsNotFound(err):
+		return nil, fmt.Errorf("get project %s: %w", ProjectName(ns), err)
 	}
-	return GrantsForLabels(ctx, cl, EffectiveLabels(projectLabels, ns.Labels))
-}
+	// A namespace no Project owns yet (adoption pending) has no project labels: only a policy whose
+	// projectSelector accepts an empty label set, or that sets none, can apply to it.
 
-// EffectiveLabels merges the labels of a Project with the labels of one of its namespaces. On a
-// shared key the namespace wins: it is the object closest to what is being checked, and a
-// per-namespace override is the only reason to put the same key on both.
-func EffectiveLabels(projectLabels, nsLabels map[string]string) map[string]string {
-	out := make(map[string]string, len(projectLabels)+len(nsLabels))
-	for k, v := range projectLabels {
-		out[k] = v
-	}
-	for k, v := range nsLabels {
-		out[k] = v
-	}
-	return out
-}
-
-// GrantsForLabels returns every ClusterResourceGrantPolicy whose projectSelector matches the given
-// labels. Callers that hold a namespace use GrantsForNamespace; this is the matching step itself.
-func GrantsForLabels(ctx context.Context, cl client.Reader, nsLabels map[string]string) ([]*v1alpha1.ClusterResourceGrantPolicy, error) {
-	grantList := &v1alpha1.ClusterResourceGrantPolicyList{}
+	grantList := &grantsv1alpha2.ClusterResourceGrantPolicyList{}
 	if err := cl.List(ctx, grantList); err != nil {
-		return nil, fmt.Errorf("list ClusterResourceGrantPolicys: %w", err)
+		return nil, fmt.Errorf("list ClusterResourceGrantPolicies: %w", err)
 	}
-	set := labels.Set(nsLabels)
-	out := make([]*v1alpha1.ClusterResourceGrantPolicy, 0, len(grantList.Items))
+	out := make([]*grantsv1alpha2.ClusterResourceGrantPolicy, 0, len(grantList.Items))
 	for i := range grantList.Items {
-		g := &grantList.Items[i]
-		if g.Spec.ProjectSelector == nil {
-			continue
-		}
-		sel, err := metav1.LabelSelectorAsSelector(g.Spec.ProjectSelector)
-		if err != nil {
-			continue
-		}
-		if sel.Matches(set) {
-			out = append(out, g)
+		if PolicyMatches(&grantList.Items[i], projectLabels, ns.Labels) {
+			out = append(out, &grantList.Items[i])
 		}
 	}
 	return out, nil
 }
 
+// PolicyMatches reports whether the policy applies to a namespace with the given namespace labels,
+// owned by a project with the given project labels. Every selector the policy sets must match: the
+// projectSelector against the project labels, the namespaceSelector against the namespace labels. A
+// policy that sets neither is a library policy and matches nothing on its own; an explicit empty
+// selector matches everything. A selector that does not parse matches nothing (the policy reconciler
+// reports it in the SelectorsValid condition).
+func PolicyMatches(policy *grantsv1alpha2.ClusterResourceGrantPolicy, projectLabels, namespaceLabels map[string]string) bool {
+	if policy.Spec.IsLibrary() {
+		return false
+	}
+	return selectorMatches(policy.Spec.ProjectSelector, projectLabels) &&
+		selectorMatches(policy.Spec.NamespaceSelector, namespaceLabels)
+}
+
+// selectorMatches reports whether an optional selector matches the labels; an unset selector does not
+// restrict anything.
+func selectorMatches(selector *metav1.LabelSelector, set map[string]string) bool {
+	if selector == nil {
+		return true
+	}
+	sel, err := metav1.LabelSelectorAsSelector(selector)
+	if err != nil {
+		return false
+	}
+	return sel.Matches(labels.Set(set))
+}
+
 // EntriesFor collects the grant resource entries referencing the given registration name across all
 // the supplied grants.
-func EntriesFor(grants []*v1alpha1.ClusterResourceGrantPolicy, resourceName string) []v1alpha1.GrantResource {
+func EntriesFor(grants []*grantsv1alpha2.ClusterResourceGrantPolicy, resourceName string) []v1alpha1.GrantResource {
 	out := make([]v1alpha1.GrantResource, 0, len(grants))
 	for _, g := range grants {
 		for i := range g.Spec.Resources {
