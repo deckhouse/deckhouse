@@ -1,4 +1,9 @@
 positive:
+  configValues:
+    - logLevel: "Debug"
+    - logLevel: "Info"
+    - logLevel: "Warning"
+    - logLevel: "Error"
   values:
     - deschedulingInterval: "Frequent"
       internal:
@@ -72,6 +77,11 @@ positive:
                   pods: 50
                   gpu: "gpuNode"
 negative:
+  configValues:
+    - logLevel: "warning"
+    - logLevel: "Warn"
+    - logLevel: "Trace"
+    - logLevel: 4
   values:
     - internal:
         deschedulers:

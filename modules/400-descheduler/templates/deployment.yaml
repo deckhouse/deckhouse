@@ -92,7 +92,8 @@ spec:
         - "--logging-format"
         - "json"
         - "--v"
-        - "6"
+        {{- $logLevelMap := dict "Debug" "6" "Info" "2" "Warning" "1" "Error" "0" }}
+        - {{ index $logLevelMap (.Values.descheduler.logLevel | default "Warning") | quote }}
         - "--descheduling-interval"
         {{- $intervalMap := dict "Frequent" "5m" "Moderate" "15m" "Rare" "30m" }}
         - {{ index $intervalMap (.Values.descheduler.deschedulingInterval | default "Moderate") | quote }}

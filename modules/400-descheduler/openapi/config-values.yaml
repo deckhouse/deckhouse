@@ -13,3 +13,18 @@ properties:
       - `Frequent`: Runs every 5 minutes. Suitable for clusters where faster pod redistribution is important.
       - `Moderate`: Runs every 15 minutes (default).
       - `Rare`: Runs every 30 minutes. Suitable for clusters where it's important to minimize the number of pod redistributions.
+  logLevel:
+    type: string
+    enum: ["Debug", "Info", "Warning", "Error"]
+    default: "Warning"
+    description: |
+      Descheduler logging level.
+
+      Each level includes the messages of the less detailed levels. Some informational messages and warnings, such as startup messages, are logged at any level.
+
+      Supported values:
+
+      - `Error`: Errors only.
+      - `Warning`: Configuration warnings, evicted pods, and descheduling cycle results (default).
+      - `Info`: The progress of each descheduling cycle, such as the nodes being processed.
+      - `Debug`: Detailed information on eviction decisions, such as why a pod was not evicted, and every request to the Kubernetes API. Produces a very large volume of logs, so use it for troubleshooting only.

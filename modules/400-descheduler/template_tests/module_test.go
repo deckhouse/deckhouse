@@ -21,6 +21,7 @@ import (
 	"testing"
 
 	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/ginkgo/extensions/table"
 	. "github.com/onsi/gomega"
 
 	. "github.com/deckhouse/deckhouse/testing/helm"
@@ -557,5 +558,59 @@ profiles:
 			Expect(strings.Count(policy, "evictSystemCriticalPods:")).To(Equal(1))
 			Expect(strings.Count(policy, "ignorePvcPods:")).To(Equal(1))
 		})
+	})
+
+	Context("logLevel", func() {
+		const moduleValues = `
+internal:
+  deschedulers:
+  - name: test1
+    strategies:
+      lowNodeUtilization:
+        enabled: true
+        thresholds:
+          cpu: 10
+        targetThresholds:
+          cpu: 40
+`
+
+		// verbosityArgs returns every value passed to the descheduler container via --v.
+		verbosityArgs := func() []string {
+			deploy := f.KubernetesResource("Deployment", "d8-descheduler", "descheduler")
+			Expect(deploy.Exists()).To(BeTrue())
+			args := deploy.Field("spec.template.spec.containers.0.args").AsStringSlice()
+			var values []string
+			for i := 1; i < len(args); i++ {
+				if args[i-1] == "--v" {
+					values = append(values, args[i])
+				}
+			}
+			return values
+		}
+
+		BeforeEach(func() {
+			f.ValuesSetFromYaml("global", globalValues)
+			f.ValuesSet("global.modulesImages", GetModulesImages())
+			f.ValuesSetFromYamlWithOpenAPIDefaults("descheduler", moduleValues)
+		})
+
+		It("Should default to Warning (--v 1)", func() {
+			f.HelmRender()
+			Expect(f.RenderError).ShouldNot(HaveOccurred())
+			Expect(verbosityArgs()).To(Equal([]string{"1"}))
+		})
+
+		DescribeTable("Should map logLevel to the descheduler --v flag",
+			func(logLevel, verbosity string) {
+				f.ValuesSet("descheduler.logLevel", logLevel)
+				f.HelmRender()
+				Expect(f.RenderError).ShouldNot(HaveOccurred())
+				Expect(verbosityArgs()).To(Equal([]string{verbosity}))
+			},
+			Entry("Error", "Error", "0"),
+			Entry("Warning", "Warning", "1"),
+			Entry("Info", "Info", "2"),
+			Entry("Debug", "Debug", "6"),
+		)
 	})
 })
