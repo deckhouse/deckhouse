@@ -1,0 +1,12 @@
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleConfig
+metadata:
+  name: control-plane-manager
+spec:
+  enabled: true
+  settings:
+    # Example only. The test builds enabledFeatureGates dynamically from
+    # candi/feature_gates_map.yml for the cluster Kubernetes version.
+    enabledFeatureGates:
+    - ComponentFlagz
+  version: 3
