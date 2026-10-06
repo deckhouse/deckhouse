@@ -835,6 +835,21 @@ To disable the ambient mode, follow these steps:
 
 ## Control the data-plane behavior
 
+### Jobs with an Istio sidecar
+
+A regular Istio sidecar keeps running after a Job's application container exits, preventing the Pod (and therefore the Job) from completing. For Jobs and CronJobs that need Istio, enable a Kubernetes native sidecar in the Pod template. The proxy then won't prevent the Job from completing:
+
+```yaml
+spec:
+  template:
+    metadata:
+      annotations:
+        sidecar.istio.io/inject: "true"
+        sidecar.istio.io/nativeSidecar: "true"
+```
+
+This example assumes the namespace is labeled for Istio injection. In a namespace without an injection label, use the Pod template label `sidecar.istio.io/inject: "true"` instead of the injection annotation; keep `sidecar.istio.io/nativeSidecar: "true"` as a Pod template annotation. For a CronJob, put these settings under `spec.jobTemplate.spec.template.metadata`.
+
 ### Prevent istio-proxy from terminating before the main application's connections are closed
 
 By default, during termination, all containers in a Pod, including istio-proxy one, receive SIGTERM signal simultaneously. But some applications need time to properly handle the termination and sometimes they need to do some network requests. It isn't possible when the istio-proxy stops before the application do. The solution is to add a preStop hook which evaluates the application's activity via discovering application's network sockets and let the sidecar stop when they aren't in the network namespace.
