@@ -1,0 +1,54 @@
+- name: d8.multitenancy-manager.project-templates
+  rules:
+  - alert: MultitenancyManagerProjectTemplateNameReserved
+    expr: |
+      max by (template) (d8_multitenancy_manager_reserved_template_name) > 0
+    labels:
+      severity_level: "6"
+      tier: cluster
+      d8_module: multitenancy-manager
+    annotations:
+      plk_protocol_version: "1"
+      plk_markup_format: "markdown"
+      summary: The user ProjectTemplate `{{ $labels.template }}` has a name reserved for a built-in template. The Deckhouse update will overwrite it with the built-in one.
+      description: |-
+        The cluster has a user ProjectTemplate named `{{ $labels.template }}`. The next Deckhouse release adds a built-in template with this name that creates only the project namespace.
+
+        The controller keeps built-in templates in sync with its own copies. After the update, it overwrites the `spec`, labels and annotations of the existing template named `{{ $labels.template }}` with those of the built-in template. The user template is lost, including its `resourcesTemplate` and `parametersSchema`.
+
+        The projects that use the template then switch from the Helm text of the user template to the structured fields of the built-in one. The AuthorizationRule objects with the `Admin` access level of the administrators are replaced by the `d8-administrators` ProjectRoleBinding. A ResourceQuota such as `all-pods` is replaced by the `d8-project-quota` ResourceQuota when `.spec.quota` of the project sets each of its limits to the same value or a lower one. The replaced objects are deleted only once their replacements work, so the administrators keep their access without a gap and the namespace keeps its quota. From then on, the administrators have the `d8:project:admin` role instead of the `Admin` access level, and the two do not grant the same permissions.
+
+        Every other object that the Helm text created, apart from the project namespace, stays in place and keeps working, but the project no longer manages it. Such an object gets the `projects.deckhouse.io/kept-from-helm-template` label and is listed in `.status.keptObjects` of the project, and the `MultitenancyManagerProjectKeepsHelmTemplateObjects` alert names the project.
+
+        The project namespace stays managed by the project. The labels and annotations that the Helm text put on it are removed, except those that the `namespace` parameter of the built-in template sets. The pod security, monitoring and scanning labels (`security.deckhouse.io/pod-policy`, `extended-monitoring.deckhouse.io/enabled` and `security-scanning.deckhouse.io/enabled`) cannot be set that way, so the projects that need them use a renamed copy of the template or another template.
+
+        The built-in template declares only the boolean `requiredRequests` parameter and the `namespace` parameter with the labels and annotations of the project namespace. It does not check the `administrators` and `resourceQuota` parameters. The update moves them to `.spec.administrators` and `.spec.quota` where it can, and a value it cannot move stays in the parameters without effect. A project with any other parameter, or with a `requiredRequests` or `namespace` value of another form, goes to the `Error` state. It is not rendered until its parameters are changed, and its objects stay as they are until then.
+
+        To keep the template, move it to a name of its own before updating Deckhouse:
+
+        1. Create a copy of the template under a new name, for example, `my-simple`:
+
+           ```bash
+           d8 k get projecttemplates {{ $labels.template }} -o json \
+             | jq '{apiVersion, kind, metadata: {name: "my-simple"}, spec}' \
+             | d8 k create -f -
+           ```
+
+           If the template is applied from a Git repository or by CI, rename it there as well.
+
+        1. Switch every project that uses the template to the copy, and make the same change in the Git repository or CI process that applies the projects:
+
+           ```bash
+           d8 k get projects -l projects.deckhouse.io/project-template={{ $labels.template }}
+           d8 k patch project <PROJECT_NAME> --type=merge -p '{"spec":{"projectTemplateName":"my-simple"}}'
+           ```
+
+           The copy renders the same objects, so the objects in the project namespaces stay in place. The exception is a Helm text that puts the template name (`.projectTemplateName`) into object names. Such objects are recreated under the new name.
+
+        1. When no project uses the template `{{ $labels.template }}` any more, delete it:
+
+           ```bash
+           d8 k delete projecttemplates {{ $labels.template }}
+           ```
+
+        If the projects are to switch to the built-in template instead, save the user template before updating Deckhouse, for example with `d8 k get projecttemplates {{ $labels.template }} -o yaml > {{ $labels.template }}.yaml`, and check the parameters of the projects that use it.

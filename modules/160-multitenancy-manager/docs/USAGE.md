@@ -137,7 +137,7 @@ To create your own template:
    Project templates support all [Helm templating functions](https://helm.sh/docs/chart_template_guide/function_list/).
    {% endalert %}
 
-1. Change the template name in the `.metadata.name` field.
+1. Change the template name in the `.metadata.name` field. Do not name it `simple`. This name is reserved for a built-in template, which overwrites a user template with the same name once it is installed.
 1. Apply your new template with the command:
 
    ```shell
