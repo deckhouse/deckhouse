@@ -1,0 +1,316 @@
+# Golden fixture of webhooks/conversion/projects, function v1alpha3_to_v1alpha2.
+# Each case is one ConversionReview: objects is request.objects as the apiserver sends it, converted is
+# the response.convertedObjects the hook has to answer with, in the same order.
+
+# The status is carried as it is apart from the namespaces; the apiserver prunes what the v1alpha2
+# schema does not describe (usage).
+- name: pushes administrators and quota back into the parameters
+  objects:
+    - apiVersion: deckhouse.io/v1alpha3
+      kind: Project
+      metadata:
+        name: backend
+        resourceVersion: "1003"
+        labels:
+          team: backend
+      spec:
+        description: Backend services
+        projectTemplateName: default
+        administrators:
+          - kind: Group
+            name: backend-admins
+          - kind: User
+            name: alice@example.com
+        quota:
+          requests.cpu: 5
+          requests.memory: 5Gi
+          requests.storage: 1Gi
+          limits.cpu: 5
+          limits.memory: 5Gi
+        parameters:
+          networkPolicy: Isolated
+          podSecurityProfile: Restricted
+      status:
+        state: Deployed
+        observedGeneration: 5
+        namespaces:
+          - name: backend
+            kind: Main
+          - name: backend-cache
+            kind: Additional
+        usage:
+          requests.cpu: 750m
+  converted:
+    - apiVersion: deckhouse.io/v1alpha2
+      kind: Project
+      metadata:
+        name: backend
+        resourceVersion: "1003"
+        labels:
+          team: backend
+      spec:
+        description: Backend services
+        projectTemplateName: default
+        parameters:
+          networkPolicy: Isolated
+          podSecurityProfile: Restricted
+          administrators:
+            - subject: Group
+              name: backend-admins
+            - subject: User
+              name: alice@example.com
+          resourceQuota:
+            requests:
+              cpu: 5
+              memory: 5Gi
+              storage: 1Gi
+            limits:
+              cpu: 5
+              memory: 5Gi
+      status:
+        state: Deployed
+        observedGeneration: 5
+        namespaces:
+          - backend
+          - backend-cache
+        usage:
+          requests.cpu: 750m
+
+# Only a requests. or limits. prefix is nesting, and the rest of the key is kept whole.
+- name: keeps flat quota keys next to requests and limits
+  objects:
+    - apiVersion: deckhouse.io/v1alpha3
+      kind: Project
+      metadata:
+        name: flat
+      spec:
+        projectTemplateName: custom
+        quota:
+          requests.cpu: "1"
+          requests.nvidia.com/gpu: "2"
+          limits.memory: 2Gi
+          pods: "10"
+          count/deployments.apps: "5"
+          services.loadbalancers: 2
+  converted:
+    - apiVersion: deckhouse.io/v1alpha2
+      kind: Project
+      metadata:
+        name: flat
+      spec:
+        projectTemplateName: custom
+        parameters:
+          resourceQuota:
+            requests:
+              cpu: "1"
+              nvidia.com/gpu: "2"
+            limits:
+              memory: 2Gi
+            pods: "10"
+            count/deployments.apps: "5"
+            services.loadbalancers: 2
+
+# v1alpha2 has one key for a bare requests and the nesting under it; the nested form wins.
+- name: gives a bare requests key up to the nested form
+  objects:
+    - apiVersion: deckhouse.io/v1alpha3
+      kind: Project
+      metadata:
+        name: clash
+      spec:
+        projectTemplateName: custom
+        quota:
+          requests: "5"
+          requests.cpu: "1"
+          limits: "7"
+  converted:
+    - apiVersion: deckhouse.io/v1alpha2
+      kind: Project
+      metadata:
+        name: clash
+      spec:
+        projectTemplateName: custom
+        parameters:
+          resourceQuota:
+            requests:
+              cpu: "1"
+            limits: "7"
+
+- name: lets administrators and quota replace the same keys in the parameters
+  objects:
+    - apiVersion: deckhouse.io/v1alpha3
+      kind: Project
+      metadata:
+        name: both
+      spec:
+        projectTemplateName: custom
+        administrators:
+          - kind: User
+            name: alice@example.com
+        quota:
+          pods: "10"
+        parameters:
+          administrators:
+            - subject: User
+              name: stale@example.com
+          resourceQuota:
+            pods: "1"
+          networkPolicy: Isolated
+  converted:
+    - apiVersion: deckhouse.io/v1alpha2
+      kind: Project
+      metadata:
+        name: both
+      spec:
+        projectTemplateName: custom
+        parameters:
+          administrators:
+            - subject: User
+              name: alice@example.com
+          resourceQuota:
+            pods: "10"
+          networkPolicy: Isolated
+
+- name: pushes an empty administrators list and an empty quota as they are
+  objects:
+    - apiVersion: deckhouse.io/v1alpha3
+      kind: Project
+      metadata:
+        name: empty
+      spec:
+        projectTemplateName: custom
+        administrators: []
+        quota: {}
+  converted:
+    - apiVersion: deckhouse.io/v1alpha2
+      kind: Project
+      metadata:
+        name: empty
+      spec:
+        projectTemplateName: custom
+        parameters:
+          administrators: []
+          resourceQuota: {}
+
+- name: changes only the version of a project without administrators or quota
+  objects:
+    - apiVersion: deckhouse.io/v1alpha3
+      kind: Project
+      metadata:
+        name: plain
+      spec:
+        projectTemplateName: simple
+        parameters:
+          networkPolicy: Isolated
+    - apiVersion: deckhouse.io/v1alpha3
+      kind: Project
+      metadata:
+        name: nothing
+      spec:
+        projectTemplateName: simple
+  converted:
+    - apiVersion: deckhouse.io/v1alpha2
+      kind: Project
+      metadata:
+        name: plain
+      spec:
+        projectTemplateName: simple
+        parameters:
+          networkPolicy: Isolated
+    - apiVersion: deckhouse.io/v1alpha2
+      kind: Project
+      metadata:
+        name: nothing
+      spec:
+        projectTemplateName: simple
+
+- name: drops a namespace entry without a name
+  objects:
+    - apiVersion: deckhouse.io/v1alpha3
+      kind: Project
+      metadata:
+        name: backend
+      spec:
+        projectTemplateName: default
+      status:
+        namespaces:
+          - name: backend
+            kind: Main
+          - kind: Additional
+          - backend-legacy
+  converted:
+    - apiVersion: deckhouse.io/v1alpha2
+      kind: Project
+      metadata:
+        name: backend
+      spec:
+        projectTemplateName: default
+      status:
+        namespaces:
+          - backend
+          - backend-legacy
+
+- name: does not conjure a missing spec and keeps an empty namespace list
+  objects:
+    - apiVersion: deckhouse.io/v1alpha3
+      kind: Project
+      metadata:
+        name: bare
+      status:
+        namespaces: []
+  converted:
+    - apiVersion: deckhouse.io/v1alpha2
+      kind: Project
+      metadata:
+        name: bare
+      status:
+        namespaces: []
+
+- name: leaves an object at another version alone
+  objects:
+    - apiVersion: deckhouse.io/v1alpha3
+      kind: Project
+      metadata:
+        name: current
+      spec:
+        projectTemplateName: default
+        administrators:
+          - kind: User
+            name: alice@example.com
+    - apiVersion: deckhouse.io/v1alpha2
+      kind: Project
+      metadata:
+        name: old
+      spec:
+        projectTemplateName: default
+        administrators:
+          - kind: User
+            name: stays@example.com
+      status:
+        namespaces:
+          - name: old
+            kind: Main
+  converted:
+    - apiVersion: deckhouse.io/v1alpha2
+      kind: Project
+      metadata:
+        name: current
+      spec:
+        projectTemplateName: default
+        parameters:
+          administrators:
+            - subject: User
+              name: alice@example.com
+    - apiVersion: deckhouse.io/v1alpha2
+      kind: Project
+      metadata:
+        name: old
+      spec:
+        projectTemplateName: default
+        administrators:
+          - kind: User
+            name: stays@example.com
+      status:
+        namespaces:
+          - name: old
+            kind: Main

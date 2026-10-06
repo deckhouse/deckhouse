@@ -1,0 +1,100 @@
+# Golden fixture of webhooks/conversion/projects, the chain v1alpha1_to_v1alpha2 then v1alpha2_to_v1alpha3
+# that shell-operator runs for a project still stored as v1alpha1 and read at v1alpha3.
+# Each case is one ConversionReview: objects is request.objects as the apiserver sends it, converted is
+# the response.convertedObjects the hook has to answer with, in the same order.
+
+- name: brings a project stored as v1alpha1 to the storage version
+  objects:
+    - apiVersion: deckhouse.io/v1alpha1
+      kind: Project
+      metadata:
+        name: backend
+        labels:
+          team: backend
+      spec:
+        description: Backend services
+        projectTypeName: default
+        template:
+          administrators:
+            - subject: Group
+              name: backend-admins
+          resourceQuota:
+            requests:
+              cpu: 5
+              memory: 5Gi
+          networkPolicy: Isolated
+      status:
+        state: Deployed
+        sync: true
+  converted:
+    - apiVersion: deckhouse.io/v1alpha3
+      kind: Project
+      metadata:
+        name: backend
+        labels:
+          team: backend
+      spec:
+        description: Backend services
+        projectTemplateName: default
+        administrators:
+          - kind: Group
+            name: backend-admins
+        quota:
+          requests.cpu: 5
+          requests.memory: 5Gi
+        parameters:
+          networkPolicy: Isolated
+      status:
+        state: Deployed
+        sync: true
+
+# A list holds objects stored at either older version; each step converts only its own.
+- name: converts a list of objects stored at both older versions
+  objects:
+    - apiVersion: deckhouse.io/v1alpha1
+      kind: Project
+      metadata:
+        name: old
+      spec:
+        projectTypeName: default
+        template:
+          administrators:
+            - subject: User
+              name: alice@example.com
+    - apiVersion: deckhouse.io/v1alpha2
+      kind: Project
+      metadata:
+        name: newer
+      spec:
+        projectTemplateName: default
+        parameters:
+          resourceQuota:
+            requests:
+              cpu: "2"
+      status:
+        namespaces:
+          - newer
+  converted:
+    - apiVersion: deckhouse.io/v1alpha3
+      kind: Project
+      metadata:
+        name: old
+      spec:
+        projectTemplateName: default
+        administrators:
+          - kind: User
+            name: alice@example.com
+        parameters: {}
+    - apiVersion: deckhouse.io/v1alpha3
+      kind: Project
+      metadata:
+        name: newer
+      spec:
+        projectTemplateName: default
+        quota:
+          requests.cpu: "2"
+        parameters: {}
+      status:
+        namespaces:
+          - name: newer
+            kind: Main

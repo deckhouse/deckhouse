@@ -1,0 +1,229 @@
+# Golden fixture of webhooks/conversion/projecttemplates, function v1alpha1_to_v1alpha2.
+# Each case is one ConversionReview: objects is request.objects as the apiserver sends it, converted is
+# the response.convertedObjects the hook has to answer with, in the same order.
+# Strings over 64 KiB are checked in conversion_projecttemplates_test.go, where they are built.
+
+- name: marks a helm string and keeps it in the body annotation
+  objects:
+    - apiVersion: deckhouse.io/v1alpha1
+      kind: ProjectTemplate
+      metadata:
+        name: custom
+        resourceVersion: "2001"
+        labels:
+          team: platform
+        annotations:
+          example.com/owner: platform-team
+      spec:
+        description: A copy of the default template
+        parametersSchema:
+          openAPIV3Schema:
+            type: object
+            properties:
+              size:
+                type: string
+        resourcesTemplate: |
+          ---
+          apiVersion: v1
+          kind: ResourceQuota
+          metadata:
+            name: all-pods
+          spec:
+            hard:
+              requests.cpu: {{ .parameters.size | quote }}
+      status:
+        ready: true
+        message: ""
+  converted:
+    - apiVersion: deckhouse.io/v1alpha2
+      kind: ProjectTemplate
+      metadata:
+        name: custom
+        resourceVersion: "2001"
+        labels:
+          team: platform
+        annotations:
+          example.com/owner: platform-team
+          projects.deckhouse.io/legacy-helm-template: "true"
+          projects.deckhouse.io/legacy-helm-template-body: |
+            ---
+            apiVersion: v1
+            kind: ResourceQuota
+            metadata:
+              name: all-pods
+            spec:
+              hard:
+                requests.cpu: {{ .parameters.size | quote }}
+      spec:
+        description: A copy of the default template
+        parametersSchema:
+          openAPIV3Schema:
+            type: object
+            properties:
+              size:
+                type: string
+      status:
+        ready: true
+        message: ""
+
+- name: keeps the body byte for byte and adds annotations to a template without any
+  objects:
+    - apiVersion: deckhouse.io/v1alpha1
+      kind: ProjectTemplate
+      metadata:
+        name: spaced
+      spec:
+        parametersSchema:
+          openAPIV3Schema: {}
+        resourcesTemplate: "\n  # café — naïve ☃\n---\nkind: Namespace\n  \n"
+  converted:
+    - apiVersion: deckhouse.io/v1alpha2
+      kind: ProjectTemplate
+      metadata:
+        name: spaced
+        annotations:
+          projects.deckhouse.io/legacy-helm-template: "true"
+          projects.deckhouse.io/legacy-helm-template-body: "\n  # café — naïve ☃\n---\nkind: Namespace\n  \n"
+      spec:
+        parametersSchema:
+          openAPIV3Schema: {}
+
+- name: does not mark an empty string
+  objects:
+    - apiVersion: deckhouse.io/v1alpha1
+      kind: ProjectTemplate
+      metadata:
+        name: empty
+        annotations:
+          example.com/owner: platform-team
+      spec:
+        parametersSchema:
+          openAPIV3Schema: {}
+        resourcesTemplate: ""
+  converted:
+    - apiVersion: deckhouse.io/v1alpha2
+      kind: ProjectTemplate
+      metadata:
+        name: empty
+        annotations:
+          example.com/owner: platform-team
+      spec:
+        parametersSchema:
+          openAPIV3Schema: {}
+
+# ASCII whitespace only: gojq and jq disagree on what else \s matches.
+- name: does not mark whitespace
+  objects:
+    - apiVersion: deckhouse.io/v1alpha1
+      kind: ProjectTemplate
+      metadata:
+        name: blank
+      spec:
+        parametersSchema:
+          openAPIV3Schema: {}
+        resourcesTemplate: " \n\t\r\n "
+  converted:
+    - apiVersion: deckhouse.io/v1alpha2
+      kind: ProjectTemplate
+      metadata:
+        name: blank
+      spec:
+        parametersSchema:
+          openAPIV3Schema: {}
+
+- name: does not mark a template without resourcesTemplate
+  objects:
+    - apiVersion: deckhouse.io/v1alpha1
+      kind: ProjectTemplate
+      metadata:
+        name: none
+      spec:
+        description: No resources
+        parametersSchema:
+          openAPIV3Schema: {}
+  converted:
+    - apiVersion: deckhouse.io/v1alpha2
+      kind: ProjectTemplate
+      metadata:
+        name: none
+      spec:
+        description: No resources
+        parametersSchema:
+          openAPIV3Schema: {}
+
+- name: does not conjure a missing spec
+  objects:
+    - apiVersion: deckhouse.io/v1alpha1
+      kind: ProjectTemplate
+      metadata:
+        name: bare
+  converted:
+    - apiVersion: deckhouse.io/v1alpha2
+      kind: ProjectTemplate
+      metadata:
+        name: bare
+
+# The v1alpha1 view of a marked template: the way down keeps the annotations and backfills an empty
+# string, so the way back up keeps the mark and the body.
+- name: keeps a mark and a body that are already there
+  objects:
+    - apiVersion: deckhouse.io/v1alpha1
+      kind: ProjectTemplate
+      metadata:
+        name: parked
+        annotations:
+          projects.deckhouse.io/legacy-helm-template: "true"
+          projects.deckhouse.io/legacy-helm-template-body: "kind: Namespace\n"
+      spec:
+        parametersSchema:
+          openAPIV3Schema: {}
+        resourcesTemplate: ""
+  converted:
+    - apiVersion: deckhouse.io/v1alpha2
+      kind: ProjectTemplate
+      metadata:
+        name: parked
+        annotations:
+          projects.deckhouse.io/legacy-helm-template: "true"
+          projects.deckhouse.io/legacy-helm-template-body: "kind: Namespace\n"
+      spec:
+        parametersSchema:
+          openAPIV3Schema: {}
+
+- name: leaves an object at another version alone
+  objects:
+    - apiVersion: deckhouse.io/v1alpha1
+      kind: ProjectTemplate
+      metadata:
+        name: old
+      spec:
+        parametersSchema:
+          openAPIV3Schema: {}
+        resourcesTemplate: "kind: Namespace\n"
+    - apiVersion: deckhouse.io/v1alpha2
+      kind: ProjectTemplate
+      metadata:
+        name: current
+      spec:
+        parametersSchema:
+          openAPIV3Schema: {}
+        resourcesTemplate: "kind: Namespace\n"
+  converted:
+    - apiVersion: deckhouse.io/v1alpha2
+      kind: ProjectTemplate
+      metadata:
+        name: old
+        annotations:
+          projects.deckhouse.io/legacy-helm-template: "true"
+          projects.deckhouse.io/legacy-helm-template-body: "kind: Namespace\n"
+      spec:
+        parametersSchema:
+          openAPIV3Schema: {}
+    - apiVersion: deckhouse.io/v1alpha2
+      kind: ProjectTemplate
+      metadata:
+        name: current
+      spec:
+        parametersSchema:
+          openAPIV3Schema: {}
+        resourcesTemplate: "kind: Namespace\n"

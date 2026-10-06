@@ -1,0 +1,133 @@
+# Golden fixture of webhooks/conversion/projecttemplates, function v1alpha2_to_v1alpha1.
+# Each case is one ConversionReview: objects is request.objects as the apiserver sends it, converted is
+# the response.convertedObjects the hook has to answer with, in the same order.
+
+# The structured fields stay in what the hook returns; the apiserver prunes them against the v1alpha1
+# schema, which does not describe them.
+- name: backfills resourcesTemplate and keeps everything else
+  objects:
+    - apiVersion: deckhouse.io/v1alpha2
+      kind: ProjectTemplate
+      metadata:
+        name: structured
+        resourceVersion: "2002"
+        annotations:
+          projects.deckhouse.io/legacy-helm-template: "true"
+          projects.deckhouse.io/legacy-helm-template-body: "kind: Namespace\n"
+      spec:
+        title: Structured
+        description: Structured fields only
+        podSecurityStandard: Restricted
+        networkPolicy:
+          mode: Isolated
+        parametersSchema:
+          openAPIV3Schema:
+            type: object
+      status:
+        ready: true
+  converted:
+    - apiVersion: deckhouse.io/v1alpha1
+      kind: ProjectTemplate
+      metadata:
+        name: structured
+        resourceVersion: "2002"
+        annotations:
+          projects.deckhouse.io/legacy-helm-template: "true"
+          projects.deckhouse.io/legacy-helm-template-body: "kind: Namespace\n"
+      spec:
+        title: Structured
+        description: Structured fields only
+        podSecurityStandard: Restricted
+        networkPolicy:
+          mode: Isolated
+        parametersSchema:
+          openAPIV3Schema:
+            type: object
+        resourcesTemplate: ""
+      status:
+        ready: true
+
+- name: backfills an empty parameters schema
+  objects:
+    - apiVersion: deckhouse.io/v1alpha2
+      kind: ProjectTemplate
+      metadata:
+        name: no-schema
+      spec:
+        description: Structured fields only
+  converted:
+    - apiVersion: deckhouse.io/v1alpha1
+      kind: ProjectTemplate
+      metadata:
+        name: no-schema
+      spec:
+        description: Structured fields only
+        resourcesTemplate: ""
+        parametersSchema:
+          openAPIV3Schema: {}
+
+- name: backfills openAPIV3Schema into a parameters schema without it
+  objects:
+    - apiVersion: deckhouse.io/v1alpha2
+      kind: ProjectTemplate
+      metadata:
+        name: hollow-schema
+      spec:
+        parametersSchema: {}
+  converted:
+    - apiVersion: deckhouse.io/v1alpha1
+      kind: ProjectTemplate
+      metadata:
+        name: hollow-schema
+      spec:
+        resourcesTemplate: ""
+        parametersSchema:
+          openAPIV3Schema: {}
+
+# v1alpha1 requires both fields, and the apiserver validates what a conversion returns.
+- name: gives a template without a spec the one v1alpha1 requires
+  objects:
+    - apiVersion: deckhouse.io/v1alpha2
+      kind: ProjectTemplate
+      metadata:
+        name: bare
+  converted:
+    - apiVersion: deckhouse.io/v1alpha1
+      kind: ProjectTemplate
+      metadata:
+        name: bare
+      spec:
+        resourcesTemplate: ""
+        parametersSchema:
+          openAPIV3Schema: {}
+
+- name: leaves an object at another version alone
+  objects:
+    - apiVersion: deckhouse.io/v1alpha2
+      kind: ProjectTemplate
+      metadata:
+        name: current
+      spec:
+        parametersSchema:
+          openAPIV3Schema: {}
+    - apiVersion: deckhouse.io/v1alpha1
+      kind: ProjectTemplate
+      metadata:
+        name: old
+      spec:
+        description: Left as it is
+  converted:
+    - apiVersion: deckhouse.io/v1alpha1
+      kind: ProjectTemplate
+      metadata:
+        name: current
+      spec:
+        parametersSchema:
+          openAPIV3Schema: {}
+        resourcesTemplate: ""
+    - apiVersion: deckhouse.io/v1alpha1
+      kind: ProjectTemplate
+      metadata:
+        name: old
+      spec:
+        description: Left as it is

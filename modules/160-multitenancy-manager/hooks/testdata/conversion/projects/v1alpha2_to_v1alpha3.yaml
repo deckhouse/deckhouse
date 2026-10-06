@@ -1,0 +1,324 @@
+# Golden fixture of webhooks/conversion/projects, function v1alpha2_to_v1alpha3.
+# Each case is one ConversionReview: objects is request.objects as the apiserver sends it, converted is
+# the response.convertedObjects the hook has to answer with, in the same order.
+
+- name: lifts administrators and resourceQuota out of the parameters
+  objects:
+    - apiVersion: deckhouse.io/v1alpha2
+      kind: Project
+      metadata:
+        name: backend
+        resourceVersion: "1002"
+        labels:
+          team: backend
+      spec:
+        description: Backend services
+        projectTemplateName: default
+        parameters:
+          administrators:
+            - subject: Group
+              name: backend-admins
+            - subject: User
+              name: alice@example.com
+          resourceQuota:
+            requests:
+              cpu: 5
+              memory: 5Gi
+              storage: 1Gi
+            limits:
+              cpu: 5
+              memory: 5Gi
+          networkPolicy: Isolated
+          podSecurityProfile: Restricted
+      status:
+        state: Deployed
+        observedGeneration: 4
+        namespaces:
+          - backend
+          - backend-cache
+  converted:
+    - apiVersion: deckhouse.io/v1alpha3
+      kind: Project
+      metadata:
+        name: backend
+        resourceVersion: "1002"
+        labels:
+          team: backend
+      spec:
+        description: Backend services
+        projectTemplateName: default
+        administrators:
+          - kind: Group
+            name: backend-admins
+          - kind: User
+            name: alice@example.com
+        quota:
+          requests.cpu: 5
+          requests.memory: 5Gi
+          requests.storage: 1Gi
+          limits.cpu: 5
+          limits.memory: 5Gi
+        parameters:
+          networkPolicy: Isolated
+          podSecurityProfile: Restricted
+      status:
+        state: Deployed
+        observedGeneration: 4
+        namespaces:
+          - name: backend
+            kind: Main
+          - name: backend-cache
+            kind: Additional
+
+- name: leaves the parameters empty when they held nothing else
+  objects:
+    - apiVersion: deckhouse.io/v1alpha2
+      kind: Project
+      metadata:
+        name: minimal
+      spec:
+        projectTemplateName: default
+        parameters:
+          administrators:
+            - subject: User
+              name: alice@example.com
+          resourceQuota:
+            requests:
+              cpu: 500m
+  converted:
+    - apiVersion: deckhouse.io/v1alpha3
+      kind: Project
+      metadata:
+        name: minimal
+      spec:
+        projectTemplateName: default
+        administrators:
+          - kind: User
+            name: alice@example.com
+        quota:
+          requests.cpu: 500m
+        parameters: {}
+
+# spec.quota is anyOf[integer, string]: a fraction is only representable as a string, and a whole
+# number stays a number so that the way back returns what the client wrote.
+- name: keeps a whole number a number and turns a fraction into a string
+  objects:
+    - apiVersion: deckhouse.io/v1alpha2
+      kind: Project
+      metadata:
+        name: numbers
+      spec:
+        projectTemplateName: custom
+        parameters:
+          resourceQuota:
+            requests:
+              cpu: 0.5
+              memory: 512Mi
+            limits:
+              cpu: 1
+  converted:
+    - apiVersion: deckhouse.io/v1alpha3
+      kind: Project
+      metadata:
+        name: numbers
+      spec:
+        projectTemplateName: custom
+        quota:
+          requests.cpu: "0.5"
+          requests.memory: 512Mi
+          limits.cpu: 1
+        parameters: {}
+
+- name: carries flat quota keys over and drops nested objects and lists
+  objects:
+    - apiVersion: deckhouse.io/v1alpha2
+      kind: Project
+      metadata:
+        name: flat
+      spec:
+        projectTemplateName: custom
+        parameters:
+          resourceQuota:
+            requests:
+              cpu: "1"
+            pods: 20
+            count/deployments.apps: "5"
+            nested:
+              any: thing
+            listed:
+              - a
+  converted:
+    - apiVersion: deckhouse.io/v1alpha3
+      kind: Project
+      metadata:
+        name: flat
+      spec:
+        projectTemplateName: custom
+        quota:
+          requests.cpu: "1"
+          pods: 20
+          count/deployments.apps: "5"
+        parameters: {}
+
+- name: takes a scalar requests for a key and not for nesting
+  objects:
+    - apiVersion: deckhouse.io/v1alpha2
+      kind: Project
+      metadata:
+        name: scalar
+      spec:
+        projectTemplateName: custom
+        parameters:
+          resourceQuota:
+            requests: "5"
+            limits: "7"
+  converted:
+    - apiVersion: deckhouse.io/v1alpha3
+      kind: Project
+      metadata:
+        name: scalar
+      spec:
+        projectTemplateName: custom
+        quota:
+          requests: "5"
+          limits: "7"
+        parameters: {}
+
+- name: lifts an empty administrators list and an empty quota as they are
+  objects:
+    - apiVersion: deckhouse.io/v1alpha2
+      kind: Project
+      metadata:
+        name: empty
+      spec:
+        projectTemplateName: custom
+        parameters:
+          administrators: []
+          resourceQuota: {}
+  converted:
+    - apiVersion: deckhouse.io/v1alpha3
+      kind: Project
+      metadata:
+        name: empty
+      spec:
+        projectTemplateName: custom
+        administrators: []
+        quota: {}
+        parameters: {}
+
+- name: leaves namespaces already in the new shape alone
+  objects:
+    - apiVersion: deckhouse.io/v1alpha2
+      kind: Project
+      metadata:
+        name: backend
+      spec:
+        projectTemplateName: default
+      status:
+        namespaces:
+          - name: backend
+            kind: Main
+          - backend-cache
+  converted:
+    - apiVersion: deckhouse.io/v1alpha3
+      kind: Project
+      metadata:
+        name: backend
+      spec:
+        projectTemplateName: default
+      status:
+        namespaces:
+          - name: backend
+            kind: Main
+          - name: backend-cache
+            kind: Additional
+
+- name: changes only the version of a project without parameters or namespaces
+  objects:
+    - apiVersion: deckhouse.io/v1alpha2
+      kind: Project
+      metadata:
+        name: plain
+      spec:
+        projectTemplateName: simple
+      status:
+        state: Error
+        conditions:
+          - type: Validated
+            status: "False"
+            message: the template is missing
+  converted:
+    - apiVersion: deckhouse.io/v1alpha3
+      kind: Project
+      metadata:
+        name: plain
+      spec:
+        projectTemplateName: simple
+      status:
+        state: Error
+        conditions:
+          - type: Validated
+            status: "False"
+            message: the template is missing
+
+- name: does not conjure a missing spec or status
+  objects:
+    - apiVersion: deckhouse.io/v1alpha2
+      kind: Project
+      metadata:
+        name: bare
+  converted:
+    - apiVersion: deckhouse.io/v1alpha3
+      kind: Project
+      metadata:
+        name: bare
+
+- name: leaves an object at another version alone
+  objects:
+    - apiVersion: deckhouse.io/v1alpha2
+      kind: Project
+      metadata:
+        name: old
+      spec:
+        projectTemplateName: default
+        parameters:
+          administrators:
+            - subject: User
+              name: alice@example.com
+    - apiVersion: deckhouse.io/v1alpha3
+      kind: Project
+      metadata:
+        name: current
+      spec:
+        projectTemplateName: default
+        parameters:
+          administrators:
+            - subject: User
+              name: stays@example.com
+      status:
+        namespaces:
+          - current
+  converted:
+    - apiVersion: deckhouse.io/v1alpha3
+      kind: Project
+      metadata:
+        name: old
+      spec:
+        projectTemplateName: default
+        administrators:
+          - kind: User
+            name: alice@example.com
+        parameters: {}
+    - apiVersion: deckhouse.io/v1alpha3
+      kind: Project
+      metadata:
+        name: current
+      spec:
+        projectTemplateName: default
+        parameters:
+          administrators:
+            - subject: User
+              name: stays@example.com
+      status:
+        namespaces:
+          - current

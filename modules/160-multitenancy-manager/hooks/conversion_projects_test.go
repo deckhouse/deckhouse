@@ -17,13 +17,19 @@ limitations under the License.
 package hooks
 
 import (
+	"bytes"
+	"encoding/json"
 	"os"
+	"os/exec"
+	"path/filepath"
 	"reflect"
 	"strings"
 	"testing"
 
 	"github.com/itchyny/gojq"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+	"sigs.k8s.io/yaml"
 )
 
 // conversionHook is the shell hook whose jq programs are under test. The programs are read out of the
@@ -33,6 +39,32 @@ const (
 	conversionHook         = "../webhooks/conversion/projects"
 	templateConversionHook = "../webhooks/conversion/projecttemplates"
 )
+
+// conversionFixtures holds the golden fixtures of the conversion hooks, a directory per hook and a file
+// per conversion path. The fixtures describe the hooks, not this test, so any copy of the hooks can be
+// checked against them as they are.
+const conversionFixtures = "testdata/conversion"
+
+// The golden fixtures pin each conversion of the projects hook object by object rather than field by
+// field, so whatever a change to the hook adds, drops or leaves behind shows up. The last path is the
+// chain shell-operator runs for a project still stored as v1alpha1 and read at the storage version.
+func TestProjectConversionGolden(t *testing.T) {
+	t.Parallel()
+
+	for _, path := range []string{
+		"v1alpha1_to_v1alpha2",
+		"v1alpha2_to_v1alpha1",
+		"v1alpha2_to_v1alpha3",
+		"v1alpha3_to_v1alpha2",
+		"v1alpha1_to_v1alpha2_to_v1alpha3",
+	} {
+		t.Run(path, func(t *testing.T) {
+			t.Parallel()
+
+			testConversionGolden(t, conversionHook, filepath.Join(conversionFixtures, "projects", path+".yaml"))
+		})
+	}
+}
 
 // A project version round-trip has to return the object it started from. The two conversions are
 // written independently, in jq, against a quota whose shape is only partly nesting -- "requests.cpu"
@@ -157,140 +189,6 @@ func TestProjectQuotaDropsNestedObjects(t *testing.T) {
 	}
 }
 
-// v1alpha2 has no resourcesTemplate. A v1alpha1 template that carried a Helm string comes up without
-// it and marked with the legacy-helm-template annotation, so the controller refuses to render the
-// empty structured shape over the release that string built; a template whose string was empty (or
-// whitespace) is not marked -- there was nothing to lose.
-func TestProjectTemplateUpConversionDropsTheHelmString(t *testing.T) {
-	t.Parallel()
-
-	const mark = "projects.deckhouse.io/legacy-helm-template"
-
-	tests := []struct {
-		name     string
-		resource any
-		marked   bool
-	}{
-		{name: "a helm string", resource: "---\napiVersion: v1\nkind: Namespace\n", marked: true},
-		{name: "an empty string", resource: "", marked: false},
-		{name: "whitespace only", resource: "  \n\t", marked: false},
-		{name: "no field at all", resource: nil, marked: false},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			t.Parallel()
-
-			spec := map[string]any{
-				"description":      "a template",
-				"parametersSchema": map[string]any{"openAPIV3Schema": map[string]any{"type": "object"}},
-			}
-			if tt.resource != nil {
-				spec["resourcesTemplate"] = tt.resource
-			}
-			template := map[string]any{
-				"apiVersion": "deckhouse.io/v1alpha1",
-				"kind":       "ProjectTemplate",
-				"metadata":   map[string]any{"name": "test", "annotations": map[string]any{"keep": "me"}},
-				"spec":       spec,
-			}
-
-			up := convertWith(t, templateConversionHook, "v1alpha1_to_v1alpha2", template)
-			assert.Equal(t, "deckhouse.io/v1alpha2", up["apiVersion"])
-			assert.Nil(t, specField(up, "resourcesTemplate"), "v1alpha2 must not carry the Helm string")
-			assert.Equal(t, "a template", specField(up, "description"))
-			assert.Equal(t, spec["parametersSchema"], specField(up, "parametersSchema"))
-
-			annotations, _ := up["metadata"].(map[string]any)["annotations"].(map[string]any)
-			assert.Equal(t, "me", annotations["keep"], "the other annotations survive")
-			if tt.marked {
-				assert.Equal(t, "true", annotations[mark])
-				assert.Equal(t, tt.resource, annotations[mark+"-body"],
-					"the string the administrator is asked to rewrite must stay readable")
-			} else {
-				assert.NotContains(t, annotations, mark)
-				assert.NotContains(t, annotations, mark+"-body")
-			}
-		})
-	}
-}
-
-// A Helm string too large to live in an annotation still gets the mark: the projects must be parked
-// either way. All annotations of an object together may not exceed 256 KiB, and an object carrying a
-// body near that cap could not be written back -- which is the very thing the administrator has to
-// do to fix it.
-func TestProjectTemplateUpConversionSkipsAnOversizedHelmString(t *testing.T) {
-	t.Parallel()
-
-	const mark = "projects.deckhouse.io/legacy-helm-template"
-	huge := strings.Repeat("x", 65536+1)
-
-	template := map[string]any{
-		"apiVersion": "deckhouse.io/v1alpha1",
-		"kind":       "ProjectTemplate",
-		"metadata":   map[string]any{"name": "test"},
-		"spec":       map[string]any{"resourcesTemplate": huge},
-	}
-
-	up := convertWith(t, templateConversionHook, "v1alpha1_to_v1alpha2", template)
-	annotations, _ := up["metadata"].(map[string]any)["annotations"].(map[string]any)
-	assert.Equal(t, "true", annotations[mark])
-	assert.NotContains(t, annotations, mark+"-body")
-	assert.Nil(t, specField(up, "resourcesTemplate"))
-}
-
-// The apiserver keeps asking for the conversion of whatever v1alpha1 objects it holds, and a
-// template with no spec at all is a shape it can hold. The conversion must answer, not fail.
-func TestProjectTemplateConversionSurvivesAMissingSpec(t *testing.T) {
-	t.Parallel()
-
-	bare := map[string]any{
-		"apiVersion": "deckhouse.io/v1alpha1",
-		"kind":       "ProjectTemplate",
-		"metadata":   map[string]any{"name": "test"},
-	}
-
-	up := convertWith(t, templateConversionHook, "v1alpha1_to_v1alpha2", bare)
-	assert.Equal(t, "deckhouse.io/v1alpha2", up["apiVersion"])
-	_, hasSpec := up["spec"]
-	assert.False(t, hasSpec, "a missing spec is not conjured")
-
-	down := convertWith(t, templateConversionHook, "v1alpha2_to_v1alpha1", map[string]any{
-		"apiVersion": "deckhouse.io/v1alpha2",
-		"kind":       "ProjectTemplate",
-		"metadata":   map[string]any{"name": "test"},
-	})
-	assert.Equal(t, "deckhouse.io/v1alpha1", down["apiVersion"])
-	assert.Equal(t, "", specField(down, "resourcesTemplate"), "v1alpha1 requires the field, so it is backfilled")
-}
-
-// A round trip through v1alpha1 keeps what both versions can describe. The Helm string is not among
-// that: it goes down as the empty string v1alpha1 requires and does not come back.
-func TestProjectTemplateVersionBump(t *testing.T) {
-	t.Parallel()
-
-	template := map[string]any{
-		"apiVersion": "deckhouse.io/v1alpha2",
-		"kind":       "ProjectTemplate",
-		"metadata":   map[string]any{"name": "test"},
-		"spec": map[string]any{
-			"description":      "a template",
-			"parametersSchema": map[string]any{"openAPIV3Schema": map[string]any{"type": "object"}},
-		},
-	}
-
-	down := convertWith(t, templateConversionHook, "v1alpha2_to_v1alpha1", template)
-	assert.Equal(t, "deckhouse.io/v1alpha1", down["apiVersion"])
-	assert.Equal(t, specField(template, "description"), specField(down, "description"))
-	assert.Equal(t, "", specField(down, "resourcesTemplate"))
-
-	up := convertWith(t, templateConversionHook, "v1alpha1_to_v1alpha2", down)
-	assert.Equal(t, "deckhouse.io/v1alpha2", up["apiVersion"])
-	assert.Equal(t, template["spec"], up["spec"])
-	annotations, _ := up["metadata"].(map[string]any)["annotations"].(map[string]any)
-	assert.NotContains(t, annotations, "projects.deckhouse.io/legacy-helm-template", "an empty string is not a Helm template")
-}
-
 // status.namespaces is a list of names in v1alpha2 and a list of {name, kind} objects in v1alpha3.
 // A view at either version has to validate against its own schema, so the status is converted with
 // the spec: down to names, up to objects with the kind derived from the project name.
@@ -350,23 +248,6 @@ func TestProjectConversionSurvivesMissingSpecAndStatus(t *testing.T) {
 	}
 }
 
-// A structured template has neither of the two fields the v1alpha1 schema requires, and the apiserver
-// validates what a conversion returns, so they are backfilled rather than left missing.
-func TestProjectTemplateBackfillsWhatV1alpha1Requires(t *testing.T) {
-	t.Parallel()
-
-	structured := map[string]any{
-		"apiVersion": "deckhouse.io/v1alpha2",
-		"kind":       "ProjectTemplate",
-		"metadata":   map[string]any{"name": "test"},
-		"spec":       map[string]any{"description": "structured only"},
-	}
-
-	down := convertWith(t, templateConversionHook, "v1alpha2_to_v1alpha1", structured)
-	assert.Equal(t, "", specField(down, "resourcesTemplate"))
-	assert.Equal(t, map[string]any{"openAPIV3Schema": map[string]any{}}, specField(down, "parametersSchema"))
-}
-
 // convert runs one conversion function of the projects hook over a single object and returns it.
 func convert(t *testing.T, function string, object map[string]any) map[string]any {
 	t.Helper()
@@ -377,26 +258,7 @@ func convert(t *testing.T, function string, object map[string]any) map[string]an
 func convertWith(t *testing.T, hook, function string, object map[string]any) map[string]any {
 	t.Helper()
 
-	query, err := gojq.Parse(jqProgram(t, hook, function))
-	if err != nil {
-		t.Fatalf("the jq program of %s does not parse: %v", function, err)
-	}
-
-	review := map[string]any{"review": map[string]any{"request": map[string]any{"objects": []any{object}}}}
-
-	iter := query.Run(review)
-	result, ok := iter.Next()
-	if !ok {
-		t.Fatalf("%s produced nothing", function)
-	}
-	if err, isErr := result.(error); isErr {
-		t.Fatalf("%s failed: %v", function, err)
-	}
-
-	converted, ok := result.([]any)
-	if !ok || len(converted) != 1 {
-		t.Fatalf("%s produced %v", function, result)
-	}
+	converted := runConversion(t, gojqEngine, hook, function, []any{object})
 
 	out, ok := converted[0].(map[string]any)
 	if !ok {
@@ -404,6 +266,167 @@ func convertWith(t *testing.T, hook, function string, object map[string]any) map
 	}
 
 	return out
+}
+
+// conversionCase is one ConversionReview of a golden fixture: the objects the apiserver sends and the
+// objects the hook has to answer with, in the same order.
+type conversionCase struct {
+	Name      string `json:"name"`
+	Objects   []any  `json:"objects"`
+	Converted []any  `json:"converted"`
+}
+
+// testConversionGolden runs every case of a fixture file through the conversion path the file is named
+// after, with every jq engine. A name such as v1alpha1_to_v1alpha2 is one function of the hook; a longer
+// one is the chain shell-operator builds when no single function covers the pair: the whole review goes
+// through each step in turn, and each step converts the objects at its source version and has to leave
+// the others alone.
+func testConversionGolden(t *testing.T, hook, fixture string) {
+	t.Helper()
+
+	raw, err := os.ReadFile(fixture)
+	require.NoError(t, err)
+
+	var cases []conversionCase
+	require.NoError(t, yaml.UnmarshalStrict(raw, &cases), "decoding %s", fixture)
+	require.NotEmpty(t, cases, "%s holds no cases", fixture)
+
+	chain := conversionChain(t, strings.TrimSuffix(filepath.Base(fixture), filepath.Ext(fixture)))
+
+	for _, engine := range jqEngines(t) {
+		for _, tc := range cases {
+			t.Run(engine.name+"/"+tc.Name, func(t *testing.T) {
+				t.Parallel()
+
+				objects := tc.Objects
+				for _, function := range chain {
+					objects = runConversion(t, engine, hook, function, objects)
+				}
+
+				want, err := json.Marshal(tc.Converted)
+				require.NoError(t, err)
+				got, err := json.Marshal(objects)
+				require.NoError(t, err)
+				assert.JSONEq(t, string(want), string(got))
+			})
+		}
+	}
+}
+
+// conversionChain splits a conversion path such as v1alpha1_to_v1alpha2_to_v1alpha3 into the functions
+// of the hook it runs, in order.
+func conversionChain(t *testing.T, path string) []string {
+	t.Helper()
+
+	versions := strings.Split(path, "_to_")
+	if len(versions) < 2 {
+		t.Fatalf("%q names no conversion", path)
+	}
+
+	chain := make([]string, 0, len(versions)-1)
+	for i := 1; i < len(versions); i++ {
+		chain = append(chain, versions[i-1]+"_to_"+versions[i])
+	}
+
+	return chain
+}
+
+// runConversion runs one conversion function of a hook over the objects of one review and returns the
+// converted objects. shell-operator refuses an answer that does not hold one object per object sent,
+// so that is checked here too.
+func runConversion(t *testing.T, engine jqEngine, hook, function string, objects []any) []any {
+	t.Helper()
+
+	review := map[string]any{"review": map[string]any{"request": map[string]any{"objects": objects}}}
+	result := engine.run(t, jqProgram(t, hook, function), review)
+
+	converted, ok := result.([]any)
+	if !ok || len(converted) != len(objects) {
+		t.Fatalf("%s with %s produced %v for %d objects", function, engine.name, result, len(objects))
+	}
+
+	return converted
+}
+
+// jqEngine runs a jq program over one input and returns its one output.
+type jqEngine struct {
+	name string
+	run  func(t *testing.T, program string, input any) any
+}
+
+// gojqEngine is linked into the test binary, so it is always there.
+var gojqEngine = jqEngine{name: "gojq", run: runGojq}
+
+// jqEngines lists the engines the fixtures are checked with. The hook runs jq in the cluster, and the
+// jq binary is used whenever it is on PATH, because gojq is not the same language in every corner: its
+// \s is the ASCII class of RE2, where the \s of jq is the Unicode class of Oniguruma. The fixtures hold
+// only inputs the two agree on.
+func jqEngines(t *testing.T) []jqEngine {
+	t.Helper()
+
+	engines := []jqEngine{gojqEngine}
+
+	path, err := exec.LookPath("jq")
+	if err != nil {
+		t.Log("jq is not on PATH, the conversions are checked with gojq only")
+
+		return engines
+	}
+
+	return append(engines, jqEngine{name: "jq", run: jqBinary(path)})
+}
+
+func runGojq(t *testing.T, program string, input any) any {
+	t.Helper()
+
+	query, err := gojq.Parse(program)
+	if err != nil {
+		t.Fatalf("the jq program does not parse: %v", err)
+	}
+
+	// gojq writes into the maps of its input while it deletes paths, and the input of one test can be
+	// read by another one running in parallel, so the program runs over a copy.
+	raw, err := json.Marshal(input)
+	require.NoError(t, err)
+	var copied any
+	require.NoError(t, json.Unmarshal(raw, &copied))
+
+	result, ok := query.Run(copied).Next()
+	if !ok {
+		t.Fatal("the jq program produced nothing")
+	}
+	if err, isErr := result.(error); isErr {
+		t.Fatalf("the jq program failed: %v", err)
+	}
+
+	return result
+}
+
+// jqBinary runs a program the way the hook does, with jq reading the review from its input.
+func jqBinary(path string) func(t *testing.T, program string, input any) any {
+	return func(t *testing.T, program string, input any) any {
+		t.Helper()
+
+		raw, err := json.Marshal(input)
+		require.NoError(t, err)
+
+		var stderr bytes.Buffer
+		cmd := exec.CommandContext(t.Context(), path, "-c", program)
+		cmd.Stdin = bytes.NewReader(raw)
+		cmd.Stderr = &stderr
+
+		out, err := cmd.Output()
+		if err != nil {
+			t.Fatalf("jq failed: %v: %s", err, stderr.String())
+		}
+
+		var result any
+		if err := json.Unmarshal(out, &result); err != nil {
+			t.Fatalf("jq produced %q: %v", out, err)
+		}
+
+		return result
+	}
 }
 
 // jqProgram extracts the jq source of one conversion function from the shell hook. The programs are
