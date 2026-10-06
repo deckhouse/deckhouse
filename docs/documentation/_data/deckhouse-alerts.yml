@@ -4715,7 +4715,7 @@ alerts:
 
         Recreate the binding against the appropriate new role (or a custom role aggregating the new capability). Because `roleRef` is immutable, delete and recreate the binding:
         ```bash
-        d8 k get {{ $labels.binding_kind | lower }} {{ $labels.binding_name }}{{ if $labels.namespace }} -n {{ $labels.namespace }}{{ end }} -o yaml
+        d8 k get {{ $labels.binding_kind | toLower }} {{ $labels.binding_name }}{{ if $labels.namespace }} -n {{ $labels.namespace }}{{ end }} -o yaml
         ```
       summary: |
         A binding references a deprecated RBACv2 capability that no longer grants access.
@@ -4733,7 +4733,7 @@ alerts:
 
         Recreate the binding on the new name. Because `roleRef` is immutable, delete and recreate the binding pointing at `{{ $labels.replaced_by }}`:
         ```bash
-        d8 k get {{ $labels.binding_kind | lower }} {{ $labels.binding_name }}{{ if $labels.namespace }} -n {{ $labels.namespace }}{{ end }} -o yaml
+        d8 k get {{ $labels.binding_kind | toLower }} {{ $labels.binding_name }}{{ if $labels.namespace }} -n {{ $labels.namespace }}{{ end }} -o yaml
         ```
       summary: |
         A binding references the old name of a role a module renamed.
@@ -4751,7 +4751,7 @@ alerts:
 
         Migrate the binding to the new role name. Because `roleRef` is immutable, delete and recreate the binding pointing at the new role:
         ```bash
-        d8 k get {{ $labels.binding_kind | lower }} {{ $labels.binding_name }}{{ if $labels.namespace }} -n {{ $labels.namespace }}{{ end }} -o yaml
+        d8 k get {{ $labels.binding_kind | toLower }} {{ $labels.binding_name }}{{ if $labels.namespace }} -n {{ $labels.namespace }}{{ end }} -o yaml
         # recreate it with roleRef.name set to the new role (d8:system:*, d8:subsystem:*, or d8:namespace:*)
         ```
 
@@ -4768,11 +4768,13 @@ alerts:
       module: user-authz
       edition: ce
       description: |-
-        The ClusterRole `{{ $labels.name }}` carries the `rbac.deckhouse.io/aggregate-to-{{ $labels.lineage }}-as` label but is not labelled `rbac.deckhouse.io/kind: custom-capability`{{ if $labels.kind }} (its kind label is `{{ $labels.kind }}`){{ end }}. The aggregation controller reads nothing but that label, so the rules of this role are merged into the platform `d8:{{ $labels.lineage }}:*` roles for every holder in the cluster, outside the role model's contract.
+        The ClusterRole `{{ $labels.name }}` carries the `rbac.deckhouse.io/aggregate-to-{{ $labels.lineage }}-as` label but is not labelled `rbac.deckhouse.io/kind: custom-capability`{{ if $labels.kind }} (its kind label is `{{ $labels.kind }}`){{ end }}. The aggregation controller reads nothing but that label, so it merges the rules of this role into {{ if eq $labels.lineage "system" "namespace" "project" }}the platform `d8:{{ $labels.lineage }}:*` roles{{ else if eq $labels.lineage "all" }}every custom role that selects the label, because no built-in role selects this label of the old scheme any longer{{ else }}the `d8:subsystem:{{ $labels.lineage }}:*` roles, if a subsystem has this name, and into every custom role that selects the label{{ end }}. Every holder of these roles in the cluster gets the rules, outside the role model's contract.
 
-        The `rbacv2-cluster-roles.deckhouse.io` webhook now refuses such an object: every `UPDATE` of this role, including a GitOps re-apply, is denied until it is fixed. Choose one:
+        For the aggregation label of the system scope, of the namespace or project scope, or of a built-in subsystem, the `rbacv2-cluster-roles.deckhouse.io` webhook refuses such an object, and every `UPDATE` of this role, including a GitOps re-apply, is denied until it is fixed. Choose one:
 
-        * If the role is meant to extend the platform roles, make it a custom capability: name it `d8:custom:<scope>-capability:<name>`, label it `rbac.deckhouse.io/kind: custom-capability` and `rbac.deckhouse.io/scope: <scope>`, and drop its `aggregationRule` if it has one. See the user-authz documentation on custom capabilities.
+        * If the role is meant to extend the platform roles, replace it with a custom capability. The name of an object cannot be changed, so create `d8:custom:<scope>-capability:<name>` with the same rules and aggregation label, the `rbac.deckhouse.io/kind: custom-capability` and `rbac.deckhouse.io/scope: <scope>` labels, the `rbac.deckhouse.io/namespace` label if this role has one, and no `aggregationRule`, and then delete this role.
+          Deckhouse reads `rbac.deckhouse.io/namespace` only on a system or subsystem capability, so only there it gives the RoleBinding objects in that namespace back.
+          A capability of the old scheme with the `rbac.deckhouse.io/kind: use` label and `rbac.deckhouse.io/aggregate-to-kubernetes-as: <LEVEL>` or `rbac.deckhouse.io/aggregate-to-all-as: <LEVEL>` extended the namespace roles, so its replacement is `d8:custom:namespace-capability:<name>` with `rbac.deckhouse.io/scope: namespace` and `rbac.deckhouse.io/aggregate-to-namespace-as: <LEVEL>` instead. For the commands, refer to the [corresponding section](https://deckhouse.io/modules/user-authz/faq.html#replacing-a-capability) in the `user-authz` module FAQ.
         * Otherwise remove the `rbac.deckhouse.io/aggregate-to-*-as` labels from it.
 
         List every such role:
@@ -4781,7 +4783,7 @@ alerts:
         d8 k get clusterroles -o json | jq -r '.items[] | select((.metadata.labels // {}) | to_entries | any(.key | startswith("rbac.deckhouse.io/aggregate-to-"))) | select((.metadata.labels.heritage // "") != "deckhouse") | select((.metadata.labels["rbac.deckhouse.io/kind"] // "") != "custom-capability") | .metadata.name'
         ```
       summary: |
-        ClusterRole {{ $labels.name }} aggregates into the platform {{ $labels.lineage }} roles without being a custom capability.
+        ClusterRole {{ $labels.name }} carries the {{ $labels.lineage }} aggregation label without being a custom capability.
       severity: "6"
       markupFormat: markdown
     - name: D8UserAuthzLegacyRBACv2CustomRoleFound
@@ -4790,27 +4792,62 @@ alerts:
       module: user-authz
       edition: ce
       description: |-
-        The ClusterRole `{{ $labels.name }}` is a custom role or capability created with the legacy experimental RBACv2 scheme. Such roles have a `custom:*` name and use either the `rbac.deckhouse.io/kind: manage` or `use` labels, or aggregation selectors based on these labels.
+        The ClusterRole `{{ $labels.name }}` has no `heritage: deckhouse` label and has an `aggregationRule` field, and one of the following holds:
 
-        In DKP 1.78, the role model changes the labels that drive aggregation. Legacy custom roles get **no compatibility aliases** and will stop aggregating permissions entirely after the upgrade.
+        - A selector of its `aggregationRule` field requires the `rbac.deckhouse.io/kind: manage` or `use` label of the experimental role model. The built-in capabilities no longer carry these labels, so such a selector matches none of them. The Kubernetes aggregation controller keeps from it only the rules of the custom capabilities that still carry the old labels, and the subjects of the role have lost the other permissions it gave. Custom roles get no compatibility aliases.
+        - The role has the `rbac.deckhouse.io/use-role` label without `rbac.deckhouse.io/scope: system` or `subsystem`. Deckhouse creates the RoleBinding objects for the subjects of a role in the namespaces of the modules only for roles with that scope, so it has deleted the ones it had created for this role, even if its selectors are already rewritten.
+        - A selector of its `aggregationRule` field requires the aggregation label of a lineage that no built-in role collects, such as `rbac.deckhouse.io/aggregate-to-all-as` of the old scheme, the label of a subsystem the role model no longer has, or the label of a subsystem a module has left. The modules label their capabilities only with the lineages that the built-in roles collect, so such a selector matches none of the built-in capabilities either.
+          A selector by a lineage that a custom capability carries is not counted, because it still gets the rules of that capability. A custom capability here is a ClusterRole without the `heritage: deckhouse` label and without an `aggregationRule` field. Neither is a selector by the lineage of the subsystem in the `rbac.deckhouse.io/subsystem` label of the role, because the custom capabilities of that subsystem carry it. Neither exception applies to the `all`, `deckhouse`, `infrastructure`, `kubernetes` and `networking` lineages, which do not count as custom ones. A compatibility alias of an old role, a ClusterRole with the `rbac.deckhouse.io/deprecated: "true"` label, does not count as a built-in role that collects a lineage, because it collects the lineage of an old subsystem only for the bindings to the old name.
 
-        The upgrade to DKP 1.78 is not blocked. Until every such role is migrated, the upgrade to the release after 1.78 is held back by the `legacyRBACv2CustomRolesCount` release requirement.
+        Repair the access in this order:
 
-        Migrate the role to the new scheme:
+        1. Create a role of the new scheme next to this one. Give it the `d8:custom:` name prefix and the `rbac.deckhouse.io/kind: custom-role` label, and select the capabilities by the labels of the new scheme, without `rbac.deckhouse.io/kind`. Select the capabilities that a selector by a lineage no built-in role collects was meant for by their `rbac.deckhouse.io/capability` labels, or by `rbac.deckhouse.io/scope: system` and the `module` label of their module. If this role has the `rbac.deckhouse.io/use-role` label, keep the label on the new role and add `rbac.deckhouse.io/scope: subsystem` with `rbac.deckhouse.io/subsystem: <SUBSYSTEM>`, or `rbac.deckhouse.io/scope: system`, so that Deckhouse creates the RoleBinding objects in the namespaces of the modules again.
+        1. Create capabilities of the new scheme in place of the custom capabilities of the old scheme that this role aggregates. The `D8UserAuthzForeignAggregationLabel` alert names them.
+        1. For every RoleBinding and ClusterRoleBinding object to this role, create one with the same subjects to the new role. If this role has the `rbac.deckhouse.io/aggregate-to-all-as: <LEVEL>` label, what it extended depends on its kind label. With `rbac.deckhouse.io/kind: manage`, its permissions also reached the subjects of `d8:manage:all:<LEVEL>`. A custom role cannot be aggregated into `d8:system:<LEVEL>`, so bind the new role to those subjects with a ClusterRoleBinding. With `rbac.deckhouse.io/kind: use`, they reached the subjects of `d8:use:role:<LEVEL>` in every namespace, so move the permissions into a namespace capability with `rbac.deckhouse.io/aggregate-to-namespace-as: <LEVEL>`, which extends `d8:namespace:<LEVEL>`.
+        1. Check the permissions of the subjects with `d8 k auth can-i <VERB> <RESOURCE> --as=<USER_NAME>`.
+        1. Delete the old bindings, this role and the old capabilities.
 
-        - Rename it using the `d8:custom:` name prefix.
-        - Replace the labels with the `rbac.deckhouse.io/kind: custom-role` or `custom-capability` label.
-        - Update aggregation selectors to use the new labels.
+        For the commands, refer to the [corresponding section](https://deckhouse.io/modules/user-authz/faq.html#how-do-i-migrate-custom-roles-to-the-new-scheme) in the `user-authz` module FAQ.
 
-        For migration instructions, refer to the [corresponding section](https://deckhouse.io/modules/user-authz/faq.html#how-do-i-migrate-custom-roles-to-the-new-scheme-in-dkp-178) in the `user-authz` module FAQ.
-
-        List all legacy custom roles:
+        List all such roles:
 
         ```bash
-        d8 k get clusterroles -o json | jq -r '.items[] | select((.metadata.name | startswith("custom:")) and ((.metadata.labels["rbac.deckhouse.io/kind"] // "" | IN("manage", "use")) or ([.aggregationRule.clusterRoleSelectors[]?.matchLabels["rbac.deckhouse.io/kind"] // ""] | any(IN("manage", "use"))))) | .metadata.name'
+        d8 k get clusterroles -o json | jq -r '
+          def lineages: [((.matchLabels // {}) | keys[]), (.matchExpressions[]? | select(.operator == "In" or .operator == "Exists") | .key)]
+            | map(capture("^rbac\\.deckhouse\\.io/aggregate-to-(?<lineage>.+)-as$").lineage);
+          ([.items[] | select(.metadata.labels.heritage == "deckhouse" and .metadata.labels["rbac.deckhouse.io/deprecated"] != "true")
+                | .aggregationRule.clusterRoleSelectors[]? | lineages[]] + ["system", "namespace", "project"]) as $collected
+          | ([.items[] | select(.metadata.labels.heritage != "deckhouse" and .aggregationRule == null) | (.metadata.labels // {}) | keys[]
+                | capture("^rbac\\.deckhouse\\.io/aggregate-to-(?<lineage>.+)-as$").lineage]) as $carried
+          | .items[]
+          | select(.metadata.labels.heritage != "deckhouse" and .aggregationRule != null)
+          | (.metadata.labels["rbac.deckhouse.io/subsystem"] // "") as $own
+          | select(
+              (
+                ((.metadata.labels["rbac.deckhouse.io/use-role"] // "") != "")
+                and (((.metadata.labels["rbac.deckhouse.io/scope"] // "") | IN("system", "subsystem")) | not)
+              )
+              or (
+                [
+                  .aggregationRule.clusterRoleSelectors[]?
+                  | (.matchLabels["rbac.deckhouse.io/kind"] // empty),
+                    (.matchExpressions[]? | select(.key == "rbac.deckhouse.io/kind" and .operator == "In") | .values[])
+                ]
+                | any(IN("manage", "use"))
+              )
+              or (
+                [
+                  .aggregationRule.clusterRoleSelectors[]? | lineages[]
+                  | select((IN($collected[]) | not)
+                      and (IN("all", "deckhouse", "infrastructure", "kubernetes", "networking") or (. != $own and (IN($carried[]) | not))))
+                ]
+                | length > 0
+              )
+            )
+          | .metadata.name'
         ```
       summary: |
-        A legacy RBACv2 custom role is present in the cluster.
+        The custom role {{ $labels.name }} has lost access it gave through the labels of an earlier role model.
       severity: "7"
       markupFormat: markdown
     - name: D8UserAuthzPermissionBrowserUnavailable

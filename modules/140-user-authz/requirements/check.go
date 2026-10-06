@@ -26,16 +26,23 @@ import (
 )
 
 const (
-	// legacyRBACv2CustomRolesRequirementKey is the release requirement key. The release.yaml of the
-	// release after DKP 1.78 sets it to the maximum allowed number of legacy custom roles (0), which
-	// blocks that release until every legacy-scheme custom role is migrated to the new d8:custom:*
-	// scheme; the upgrade to 1.78 itself is not held back.
+	// legacyRBACv2CustomRolesRequirementKey is the release requirement key. Its value is the maximum
+	// number of custom roles that have lost access the role model gave them, because their
+	// aggregationRule selects capabilities by the rbac.deckhouse.io/kind manage or use label or by
+	// the aggregation label of a lineage that no built-in role collects and no custom capability
+	// carries, or because they have rbac.deckhouse.io/use-role without the system or subsystem scope
+	// and get no RoleBindings in the namespaces of the modules. A release that carries the key waits
+	// while the cluster has more of them.
+	//
+	// The check stays registered, but no release.yaml declares the key: such a role loses that access
+	// at the upgrade to DKP 1.78 already, so holding a later release would give nothing back, and the
+	// D8UserAuthzLegacyRBACv2CustomRoleFound alert names the role instead.
 	legacyRBACv2CustomRolesRequirementKey = "legacyRBACv2CustomRolesCount"
 
-	migrationFAQReference = "see the user-authz module FAQ, section \"How do I migrate custom roles to the new scheme in DKP 1.78?\""
+	migrationFAQReference = "see the user-authz module FAQ, section \"How do I migrate custom roles to the new scheme?\""
 
 	// deprecatedRBACv2BindingsRequirementKey is the release requirement key of the release that
-	// removes the compatibility aliases of the pre-1.78 RBACv2 role names (d8:manage:*,
+	// removes the compatibility aliases of the previous RBACv2 role names (d8:manage:*,
 	// d8:use:role:*). That release.yaml sets it to the maximum allowed number of bindings to the
 	// deprecated names (0): with the aliases gone such a binding grants nothing, so the release
 	// stays Pending until every binding is recreated on the new name.
@@ -63,8 +70,12 @@ func init() {
 		}
 
 		return false, fmt.Errorf(
-			"the cluster has %d custom role(s) of the legacy experimental RBACv2 scheme: %s; "+
-				"they stopped aggregating permissions in DKP 1.78 — migrate them to the new d8:custom:* scheme, %s",
+			"the cluster has %d custom role(s) that have lost access the role model gave them: %s; their "+
+				"aggregationRule selects capabilities by the rbac.deckhouse.io/kind: manage or use label, or "+
+				"by the aggregation label of a lineage that no built-in role collects and no custom capability "+
+				"carries, or they have rbac.deckhouse.io/use-role without the system or subsystem scope, so "+
+				"they get no RoleBindings in the namespaces of the modules; replace them with d8:custom:* "+
+				"roles of the new scheme, %s",
 			len(names), strings.Join(names, ", "), migrationFAQReference)
 	}
 

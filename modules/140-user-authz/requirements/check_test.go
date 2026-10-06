@@ -44,14 +44,17 @@ func TestLegacyRBACv2CustomRolesRequirement(t *testing.T) {
 	t.Run("legacy roles present — block with names in the error", func(t *testing.T) {
 		requirements.SaveValue(hooks.LegacyRBACv2CustomRolesValueKey, []string{
 			"custom:manage:mycustom:manager",
-			"custom:use:capability:mycustom:superresource:view",
+			"platform-operators",
 		})
 		ok, err := requirements.CheckRequirement(legacyRBACv2CustomRolesRequirementKey, "0")
 		assert.False(t, ok)
 		require.Error(t, err)
 		assert.Contains(t, err.Error(), "custom:manage:mycustom:manager")
-		assert.Contains(t, err.Error(), "custom:use:capability:mycustom:superresource:view")
+		assert.Contains(t, err.Error(), "platform-operators")
+		assert.Contains(t, err.Error(), "aggregationRule")
+		assert.Contains(t, err.Error(), "lineage that no built-in role collects")
 		assert.Contains(t, err.Error(), "d8:custom:")
+		assert.Contains(t, err.Error(), `section "How do I migrate custom roles to the new scheme?"`)
 	})
 
 	t.Run("deserialized []any representation is tolerated", func(t *testing.T) {

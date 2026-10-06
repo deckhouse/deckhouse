@@ -24,7 +24,7 @@
 
         Migrate the binding to the new role name. Because `roleRef` is immutable, delete and recreate the binding pointing at the new role:
         ```bash
-        d8 k get {{ $labels.binding_kind | lower }} {{ $labels.binding_name }}{{ if $labels.namespace }} -n {{ $labels.namespace }}{{ end }} -o yaml
+        d8 k get {{ $labels.binding_kind | toLower }} {{ $labels.binding_name }}{{ if $labels.namespace }} -n {{ $labels.namespace }}{{ end }} -o yaml
         # recreate it with roleRef.name set to the new role (d8:system:*, d8:subsystem:*, or d8:namespace:*)
         ```
 
@@ -57,7 +57,7 @@
 
         Recreate the binding on the new name. Because `roleRef` is immutable, delete and recreate the binding pointing at `{{ $labels.replaced_by }}`:
         ```bash
-        d8 k get {{ $labels.binding_kind | lower }} {{ $labels.binding_name }}{{ if $labels.namespace }} -n {{ $labels.namespace }}{{ end }} -o yaml
+        d8 k get {{ $labels.binding_kind | toLower }} {{ $labels.binding_name }}{{ if $labels.namespace }} -n {{ $labels.namespace }}{{ end }} -o yaml
         ```
 
   # Bindings to a deprecated CAPABILITY name — capabilities are aggregation building blocks, were never
@@ -85,5 +85,5 @@
 
         Recreate the binding against the appropriate new role (or a custom role aggregating the new capability). Because `roleRef` is immutable, delete and recreate the binding:
         ```bash
-        d8 k get {{ $labels.binding_kind | lower }} {{ $labels.binding_name }}{{ if $labels.namespace }} -n {{ $labels.namespace }}{{ end }} -o yaml
+        d8 k get {{ $labels.binding_kind | toLower }} {{ $labels.binding_name }}{{ if $labels.namespace }} -n {{ $labels.namespace }}{{ end }} -o yaml
         ```
