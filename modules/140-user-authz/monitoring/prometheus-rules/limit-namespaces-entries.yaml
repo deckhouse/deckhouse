@@ -1,0 +1,83 @@
+- name: d8.user-authz.limit-namespaces-entries
+  rules:
+  # A limitNamespaces entry that the authorization webhook reads differently from the same entry
+  # anchored as a whole: a "|" outside parentheses, a leading "^" made optional by a quantifier, or an
+  # entry that compiles only the way the webhook anchors it. Also an entry that does not compile at
+  # all, or ends with a backslash, on a rule with a namespaceSelector, whose entries the webhook does
+  # not use (invalid-unused).
+  - alert: D8UserAuthzLimitNamespacesEntryNeedsRewrite
+    expr: |
+      max by (name, entry, reason) (d8_user_authz_limit_namespaces_entry_needs_rewrite{reason!="invalid"}) > 0
+    for: 15m
+    labels:
+      severity_level: "6"
+      tier: cluster
+      d8_module: user-authz
+      d8_component: user-authz
+    annotations:
+      plk_protocol_version: "1"
+      plk_markup_format: "markdown"
+      plk_create_group_if_not_exists__d8_user_authz_misconfigured: "D8UserAuthzMisconfigured,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
+      plk_grouped_by__d8_user_authz_misconfigured: "D8UserAuthzMisconfigured,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
+      summary: A limitNamespaces entry of ClusterAuthorizationRule `{{ $labels.name }}` has to be rewritten.
+      description: |-
+        The ClusterAuthorizationRule `{{ $labels.name }}` has the `limitNamespaces` entry `{{ $labels.entry }}` (reason `{{ $labels.reason }}`).
+
+        The authorization webhook anchors an entry by adding `^` at the start and `$` at the end, unless the entry already starts with `^` or ends with `$`. For an entry with the reason `alternation`, `optional-anchor` or `anchored-invalid`, the anchors do not apply to the whole pattern:
+
+        - `alternation`: The entry has a `|` outside parentheses and character classes, so the anchors apply to the first and the last alternative only. For example, `team-a|team-b` becomes `^team-a|team-b$` and covers every namespace whose name starts with `team-a` or ends with `team-b`, such as `team-a-dev`. An alternative in the middle matches any part of the name.
+        - `optional-anchor`: The entry starts with a `^` that a quantifier makes optional, such as `^*team`, and the webhook adds no `^` of its own. Such an entry covers every namespace whose name ends with `team`.
+        - `anchored-invalid`: The entry is a valid regular expression only the way the webhook anchors it. `*-dev` starts with a quantifier, which the webhook reads as `^*-dev$`, so it covers every namespace whose name ends with `-dev`. `\Qteam` has no `\E`, so the quote takes in the anchors. Anchored as a whole, such an entry is not a valid expression and covers no namespace. The `D8UserAuthzWebhookRulesQuarantined` alert appears with the update, and after the update the webhook reports the rule of such an entry in it. An entry such as `\Qteam` already covers no namespace, so for it only the alert is new.
+
+        Anchored as a whole, `^(?:team-a|team-b)$` or `^(?:^*team)$`, the same entry covers only the names that match it completely: `team-a` and `team-b`, or `team`. When entries are anchored as a whole, the subjects of the rule lose access to the namespaces that only the partial match covers.
+
+        Rewrite the entry so that it covers the same namespaces under both anchorings:
+
+        - Put the alternatives in parentheses, `(team-a|team-b)`, or into separate entries.
+        - Remove the quantifier after the leading `^`.
+        - Write what a leading quantifier stands for, `.*-dev` instead of `*-dev`, and close a `\Q` quote with `\E`.
+        - If the subjects of the rule need the namespaces that only the partial match covers, write them into the entry explicitly, for example `team-a.*` or `.*team-b`.
+
+        With the reason `invalid-unused`, the entry is not a valid regular expression, for example `team-(a` with an unclosed parenthesis or `team-a\` with a trailing backslash. The rule has a `namespaceSelector`, so the webhook does not use its `limitNamespaces` entries, and the entry has no effect now. After the update, a ClusterAuthorizationRule cannot be created or changed while one of its entries has an unbalanced parenthesis or bracket, a trailing backslash, or a construct RE2 does not have, such as lookaround, a backreference, a possessive quantifier or a repetition count over 1000, whatever its `namespaceSelector`. Remove the entry, which changes no access, or fix it.
+
+        Review the rule:
+
+        ```bash
+        d8 k get clusterauthorizationrule {{ $labels.name }} -o yaml
+        ```
+
+  # A limitNamespaces entry that Go regexp cannot compile the way the authorization webhook anchors it,
+  # on a rule without a namespaceSelector.
+  - alert: D8UserAuthzLimitNamespacesEntryInvalid
+    expr: |
+      max by (name, entry) (d8_user_authz_limit_namespaces_entry_needs_rewrite{reason="invalid"}) > 0
+    for: 5m
+    labels:
+      severity_level: "6"
+      tier: cluster
+      d8_module: user-authz
+      d8_component: user-authz
+    annotations:
+      plk_protocol_version: "1"
+      plk_markup_format: "markdown"
+      plk_create_group_if_not_exists__d8_user_authz_misconfigured: "D8UserAuthzMisconfigured,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
+      plk_grouped_by__d8_user_authz_misconfigured: "D8UserAuthzMisconfigured,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
+      summary: A limitNamespaces entry of ClusterAuthorizationRule `{{ $labels.name }}` is not a valid regular expression.
+      description: |-
+        The ClusterAuthorizationRule `{{ $labels.name }}` has the `limitNamespaces` entry `{{ $labels.entry }}`, which is not a valid regular expression in the RE2 syntax the way the authorization webhook anchors it, with `^` in front and `$` at the end. For example, `team-(a` has an unclosed parenthesis, and `^(?!kube-).*` uses a lookahead, which RE2 does not have.
+
+        The rule has no `namespaceSelector`, so the authorization webhook reads its `limitNamespaces` entries. It cannot compile this entry and leaves it out, and permission-browser does the same. The rule still limits its subjects to namespaces, so they have no access to the namespaces that only this entry was meant to cover. If no entry of the rule compiles, the rule adds no namespace through its entries, though its `allowAccessToSystemNamespaces` is still merged with the other rules of the same subjects. Other rules and their subjects are not affected, and changes of ClusterAuthorizationRules keep being applied.
+
+        The webhook logs the entry it leaves out:
+
+        ```bash
+        d8 k -n d8-user-authz logs -l app=user-authz-webhook -c webhook --tail=-1 --prefix | grep 'the pattern is left out'
+        ```
+
+        Fix the entry. Remove it only when the rule keeps other `limitNamespaces` entries. A rule with neither `limitNamespaces` entries nor a `namespaceSelector` covers every namespace except the system ones, so removing its only entry widens the access of its subjects.
+
+        Review the rule:
+
+        ```bash
+        d8 k get clusterauthorizationrule {{ $labels.name }} -o yaml
+        ```

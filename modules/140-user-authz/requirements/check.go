@@ -25,16 +25,19 @@ import (
 )
 
 const (
-	// legacyRBACv2CustomRolesRequirementKey is the release requirement key. The DKP 1.78 release.yaml
-	// sets it to the maximum allowed number of legacy custom roles (0), which blocks the release
-	// until every legacy-scheme custom role is migrated to the new d8:custom:* scheme.
+	// legacyRBACv2CustomRolesRequirementKey is the release requirement key. Its value is the maximum
+	// number of custom roles whose aggregation selectors require the rbac.deckhouse.io/kind manage
+	// or use label, or the aggregation label of a lineage that no role of the new role model
+	// collects and no custom capability carries, or that carry the rbac.deckhouse.io/kind: manage
+	// and rbac.deckhouse.io/use-role labels; a release that carries the key waits while the cluster
+	// has more of them.
 	legacyRBACv2CustomRolesRequirementKey = "legacyRBACv2CustomRolesCount"
 
 	// legacyRBACv2CustomRolesValueKey mirrors hooks.LegacyRBACv2CustomRolesValueKey (the packages
 	// must not import each other's internals; the contract is locked by tests).
 	legacyRBACv2CustomRolesValueKey = "userAuthz:legacyRBACv2CustomRoles"
 
-	migrationFAQReference = "see the user-authz module FAQ, section \"How do I migrate custom roles to the new scheme in DKP 1.78?\""
+	migrationFAQReference = "see the user-authz module FAQ, section \"How do I migrate custom roles to the new scheme?\""
 )
 
 func init() {
@@ -57,8 +60,14 @@ func init() {
 		}
 
 		return false, fmt.Errorf(
-			"the cluster has %d custom role(s) of the legacy experimental RBACv2 scheme: %s; "+
-				"they will stop aggregating permissions in DKP 1.78 — migrate them to the new d8:custom:* scheme, %s",
+			"the cluster has %d custom role(s) whose aggregationRule selects capabilities by the "+
+				"rbac.deckhouse.io/kind: manage or use label, or by the aggregation label of a lineage that "+
+				"no role of the new role model collects and no custom capability carries, or that carry the "+
+				"rbac.deckhouse.io/kind: manage and rbac.deckhouse.io/use-role labels: %s; with the new "+
+				"role model such a role aggregates none of the built-in capabilities, or loses the "+
+				"RoleBindings that Deckhouse creates for its subjects in the namespaces of the modules; "+
+				"bind the use roles explicitly, and freeze a role whose selectors rely on these labels "+
+				"while the built-in capabilities still carry them, %s",
 			len(names), strings.Join(names, ", "), migrationFAQReference)
 	}
 
