@@ -1,0 +1,19 @@
+{{- /*
+  Returns the content of a tab shortcode (the .Inner passed as the context) without the common indent.
+
+  The tabs shortcode renders the content separately, so the indent of a {{< tab >}} inside a list item is removed:
+  otherwise, at 4+ spaces, Markdown renders the content as a code block.
+  .InnerDeindent is not used: Hugo passes {{% tab %}} content already rendered to HTML,
+  and .InnerDeindent would remove the source indent from the lines inside <pre> too.
+  The rendered HTML has lines starting at column 0, so the common indent there is 0.
+*/ -}}
+{{- $content := . | string -}}
+{{- $indent := -1 -}}
+{{- range findRE `(?m)^ *[^ \r\n]` $content -}}
+  {{- $n := sub (len .) 1 -}}
+  {{- if or (lt $indent 0) (lt $n $indent) -}}{{- $indent = $n -}}{{- end -}}
+{{- end -}}
+{{- if gt $indent 0 -}}
+  {{- $content = replaceRE (printf `(?m)^ {0,%d}` $indent) "" $content -}}
+{{- end -}}
+{{- return $content -}}

@@ -144,9 +144,28 @@ Markdown content.
 {{< /tabs >}}
 ```
 
-`name` of `tabs` is optional: by default, every tab set on the page gets a unique identifier.
-If you set `name`, make it unique on the page.
-`name` of `tab` is the tab caption; it is required.
+The two `name` parameters mean different things:
+
+- `name` of `tabs` is the identifier of the tab set. The element IDs of the tabs and the key of the remembered choice are built from it.
+  It is optional, but set it, unique on the page and meaningful, for example `install_method`.
+  Without it, the identifier is generated from the page path and the number of the tab set on the page,
+  so it changes when a tab set is added above.
+- `name` of `tab` is the caption of the tab. It is required.
+
+Both can also be passed as the first positional parameter, `{{< tabs "install_method" >}}` and `{{< tab "Using d8" >}}`, but prefer `name=`.
+
+Write tab sets in the `{{< … >}}` form: `{{< tabs name="…" >}}` and `{{< tab name="…" >}}`.
+Do not write `{{% tab name="…" %}}` unless you need it for a specific reason:
+Hugo renders its content to HTML itself, with the source indent, so content indented by 4 or more spaces
+(for example, tabs nested in a list item inside another tab) becomes a code block.
+
+Tab sets can be nested at any depth, including inside list items.
+The `alert` and `details` shortcodes work inside a tab.
+A link to an anchor inside a tab, for example to a heading, opens the tab and all the tabs around it.
+
+The selected tab is remembered for the browser session by the tab set name and the tab caption,
+and is opened again when the page is reloaded.
+Tab sets with the same name on different pages share the choice when their captions match.
 
 ### Translate
 

@@ -1,0 +1,48 @@
+<script>
+(function () {
+  // Finds a tab content block with findTabBlock() of tab.js: in the given tabs block first, then in the document.
+  // Falls back to document.getElementById() with a tab.js version that does not have findTabBlock().
+  function findBlock(scope, id) {
+    if (typeof window.findTabBlock === 'function') {
+      return window.findTabBlock(scope || document, id);
+    }
+    return document.getElementById(id);
+  }
+
+  function resetNestedTabsToFirst(panel) {
+    if (!panel) return;
+
+    var tabsBlock = panel.querySelector('.tabs-block');
+    if (!tabsBlock) return;
+
+    var firstBtn = tabsBlock.querySelector('ul.tabs__container--title > li');
+    if (!firstBtn || typeof activateTabBtn !== 'function') return;
+
+    activateTabBtn(firstBtn);
+
+    // getTabButtonArgs() of tab.js parses the onclick attribute; the HTML minifier changes its quotes.
+    var args = typeof window.getTabButtonArgs === 'function' ? window.getTabButtonArgs(firstBtn) : null;
+    if (args) {
+      resetNestedTabsToFirst(findBlock(tabsBlock, args[2]));
+    }
+  }
+
+  function install() {
+    if (window.__tabsNestedResetInstalled || typeof window.openTab !== 'function') {
+      return;
+    }
+    window.__tabsNestedResetInstalled = true;
+
+    var origOpenTab = window.openTab;
+    window.openTab = function (evt, linksClass, contentClass, contentId) {
+      origOpenTab.apply(this, arguments);
+      var trigger = evt && (evt.currentTarget || evt);
+      var scope = trigger && trigger.closest ? trigger.closest('.tabs-block') : null;
+      resetNestedTabsToFirst(findBlock(scope, contentId));
+    };
+  }
+
+  install();
+  document.addEventListener('DOMContentLoaded', install);
+})();
+</script>

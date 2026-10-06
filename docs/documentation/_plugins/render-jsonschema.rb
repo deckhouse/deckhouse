@@ -11,11 +11,13 @@ module JSONSchemaRenderer
       '%' => '&#37;'
     }
 
-    # The `alert` Liquid block (see _plugins/alert.rb) with its content.
-    @@ALERT_BLOCK_REGEX = /\{%-?\s*alert(?:\s[^%]*?)?\s*-?%\}.*?\{%-?\s*endalert\s*-?%\}/m
-    # Temporary substitute of an alert in a description. Must survive the Markdown
+    # Opening and closing tags of the Liquid blocks rendered in descriptions:
+    # `alert` (see _plugins/alert.rb) and `tabs` (see _plugins/tabs.rb).
+    @@LIQUID_BLOCK_TAG_REGEX = /\{%-?\s*(alert|endalert|tabs|endtabs)(?:\s[^%]*?)?\s*-?%\}/m
+    @@LIQUID_BLOCKS = ['alert', 'tabs']
+    # Temporary substitute of a Liquid block in a description. Must survive the Markdown
     # conversion and the escaping of the Liquid characters, hence letters and digits only.
-    @@ALERT_PLACEHOLDER = 'xjekyllalertplaceholder%dx'
+    @@LIQUID_BLOCK_PLACEHOLDER = 'xjekyllliquidblockplaceholder%dx'
 
     def convert(content)
       if @converter.nil?
@@ -32,34 +34,73 @@ module JSONSchemaRenderer
     end
 
     # Converts a description of a resource or a parameter to HTML rendering the `alert`
-    # Liquid blocks it contains.
+    # and `tabs` Liquid blocks it contains.
     #
     # A description can't be passed to Liquid as a whole, because it may contain Go
     # templates (e.g. `{{ .projectName }}`) which have to be shown as is. That's why the
-    # alerts are cut out, rendered separately and put back after the Markdown conversion.
+    # top-level blocks are cut out, rendered separately and put back after the Markdown
+    # conversion. Blocks nested into a top-level block are rendered together with it.
     def convert_description(content)
-      alerts = []
+      blocks = []
 
-      content = content.to_s.gsub(@@ALERT_BLOCK_REGEX) do |block|
+      content = replace_liquid_blocks(content.to_s) do |block|
         rendered = render_liquid_block(block)
         # Leave the block as is if it can't be rendered.
         next block if rendered.nil?
 
-        alerts.push(rendered)
-        # An alert is a block element, so isolate it from the surrounding text.
-        %Q(\n\n#{format(@@ALERT_PLACEHOLDER, alerts.length - 1)}\n\n)
+        blocks.push(rendered)
+        # A block is a block element, so isolate it from the surrounding text.
+        %Q(\n\n#{format(@@LIQUID_BLOCK_PLACEHOLDER, blocks.length - 1)}\n\n)
       end
 
       result = escape_chars(convert(content))
 
-      alerts.each_with_index do |alert, index|
-        placeholder = format(@@ALERT_PLACEHOLDER, index)
+      blocks.each_with_index do |block, index|
+        placeholder = format(@@LIQUID_BLOCK_PLACEHOLDER, index)
         # Get rid of the paragraph the placeholder has been wrapped into.
-        result = result.sub(%r{<p>\s*#{placeholder}\s*</p>}) { alert }
-        result = result.sub(placeholder) { alert }
+        result = result.sub(%r{<p>\s*#{placeholder}\s*</p>}) { block }
+        result = result.sub(placeholder) { block }
       end
 
       result
+    end
+
+    # Replaces each top-level Liquid block of @@LIQUID_BLOCKS in the content with the
+    # result of the given block. Nesting is tracked by counting the opening and closing
+    # tags of the top-level block, so `tabs` may contain other `tabs`. An unclosed block
+    # is left as is.
+    def replace_liquid_blocks(content)
+      result = String.new
+      copied_up_to = 0
+      block_start = nil
+      block_name = nil
+      depth = 0
+      offset = 0
+
+      while (match = @@LIQUID_BLOCK_TAG_REGEX.match(content, offset))
+        offset = match.end(0)
+        tag = match[1]
+
+        if block_start.nil?
+          # Skip a closing tag without an opening one.
+          next unless @@LIQUID_BLOCKS.include?(tag)
+
+          block_start = match.begin(0)
+          block_name = tag
+          depth = 1
+        elsif tag == block_name
+          depth += 1
+        elsif tag == "end#{block_name}"
+          depth -= 1
+          next unless depth.zero?
+
+          result << content[copied_up_to...block_start] << yield(content[block_start...offset])
+          copied_up_to = offset
+          block_start = nil
+        end
+      end
+
+      result << content[copied_up_to..]
     end
 
     def render_liquid_block(block)
