@@ -122,6 +122,13 @@ func setServiceWithHealthchecksSpec(
 ) error {
 	probes := make([]any, 0, len(ports))
 	for _, p := range ports {
+		// ServiceWithHealthchecks supports an empty probes list. UDP cannot be
+		// checked with a TCP probe, so let such endpoints be published based on
+		// pod readiness alone.
+		if p.Protocol == v1.ProtocolUDP {
+			continue
+		}
+
 		var target int64
 		if p.TargetPort.Type == intstr.Int {
 			target = int64(p.TargetPort.IntVal)
