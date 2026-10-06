@@ -132,6 +132,9 @@ func TestEKSConfigWithoutClusterConfiguration(t *testing.T) {
 	require.NoError(t, err, "the loader of a full bootstrap must accept a cluster whose control plane dhctl did not create")
 	require.False(t, fullBootstrapConfig.HasClusterConfiguration())
 	require.Empty(t, fullBootstrapConfig.ClusterType, "with no ClusterConfiguration the cluster type is unknown, not static")
+	require.NoError(t, requireControlPlaneNetwork(fullBootstrapConfig),
+		"the EKS config declares no podSubnetCIDR or serviceSubnetCIDR, and a full bootstrap must not demand them",
+	)
 }
 
 // TestPreflightSuites_WithoutClusterConfigurationTheGlobalSuiteIsAll is the other half of a full
@@ -177,6 +180,18 @@ func TestBootstrapPreflight_ParksTheRunnerPostInfraPreflightsReads(t *testing.T)
 
 	require.NoError(t, b.bootstrapPreflight(t.Context(), bctx))
 	require.NoError(t, b.validatePostInfraPreflightsInputs(t.Context(), bctx))
+}
+
+// TestRequireControlPlaneNetwork_OnlyForAControlPlaneDhctlBuilds: the two CIDRs are read only when
+// a ClusterConfiguration is present, so a cluster without one bootstraps with neither of them set,
+// while one with ClusterConfiguration is still refused.
+func TestRequireControlPlaneNetwork_OnlyForAControlPlaneDhctlBuilds(t *testing.T) {
+	t.Parallel()
+
+	require.NoError(t, requireControlPlaneNetwork(&config.MetaConfig{}))
+	require.ErrorContains(t, requireControlPlaneNetwork(bootstrappedMetaConfig(config.StaticClusterType)),
+		"podSubnetCIDR and serviceSubnetCIDR must be set",
+	)
 }
 
 // TestAbort_RefusesWithoutClusterConfiguration keeps the other refusal the loader gave up. Abort

@@ -465,6 +465,19 @@ func setControlPlaneInstallFlags(installConfig *config.DeckhouseInstaller, metaC
 	installConfig.MasterNodeSelector = metaConfig.HasClusterConfiguration()
 }
 
+// requireControlPlaneNetwork follows the second gate axis too. Both CIDRs lost their
+// ClusterConfiguration schema requirement now that they may live in ModuleConfig instead (see
+// RequireNetwork), so bootstrap refuses here — before any infrastructure is created — rather than
+// render an empty --service-cluster-ip-range into a master manifest. A cluster dhctl did not create
+// gets no such manifest, and its CIDRs are the provider's, not ours to declare.
+func requireControlPlaneNetwork(metaConfig *config.MetaConfig) error {
+	if !metaConfig.HasClusterConfiguration() {
+		return nil
+	}
+
+	return metaConfig.RequireNetwork()
+}
+
 // runPreparation runs the first node outside the walk below. It produces the cluster type every
 // gate reads, so it cannot be selected by a tree that does not exist until it has run.
 func (b *ClusterBootstrapper) runPreparation(ctx context.Context, bctx *bootstrapContext, funcs map[phases.OperationPhase]bootstrapPhase, only phases.OperationPhase) error {
@@ -797,11 +810,7 @@ func (b *ClusterBootstrapper) bootstrapPreparation(ctx context.Context, bctx *bo
 
 	dhlog.FromContext(ctx).DebugContext(ctx, "MetaConfig was loaded")
 
-	// Both CIDRs lost their ClusterConfiguration schema requirement now that they may live in
-	// ModuleConfig instead (see RequireNetwork); bootstrap is the one caller that must still refuse
-	// to proceed when neither document sets them, and it must do so here — before any infrastructure
-	// is created — rather than render an empty --service-cluster-ip-range into a master manifest.
-	if err := metaConfig.RequireNetwork(); err != nil {
+	if err := requireControlPlaneNetwork(metaConfig); err != nil {
 		return err
 	}
 
