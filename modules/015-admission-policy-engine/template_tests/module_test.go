@@ -331,7 +331,11 @@ var _ = Describe("Module :: admissionPolicyEngine :: helm template ::", func() {
 	Context("Cluster with deckhouse on master node with bootstrapped module and trackedConstraintResources", func() {
 		BeforeEach(func() {
 			f.ValuesSet("admissionPolicyEngine.internal.bootstrapped", true)
-			f.ValuesSetFromYaml("admissionPolicyEngine.internal.trackedConstraintResources", `[{"apiGroups":[""],"resources":["pods"]}]`)
+			// The second entry is what constraint-exporter derives from `D8DenyExecHeritage`, which
+			// every non-dev cluster has. It must not bring exec and attach back onto a webhook with
+			// an objectSelector.
+			f.ValuesSetFromYaml("admissionPolicyEngine.internal.trackedConstraintResources",
+				`[{"apiGroups":[""],"resources":["pods"]},{"apiGroups":[""],"resources":["pods/attach","pods/exec"],"operations":["CONNECT"]}]`)
 			f.HelmRender()
 		})
 
@@ -339,11 +343,47 @@ var _ = Describe("Module :: admissionPolicyEngine :: helm template ::", func() {
 			Expect(f.RenderError).ShouldNot(HaveOccurred())
 		})
 
-		It("Renders ValidatingWebhookConfiguration with main webhook, deny-exec-heritage webhook and security-policy-exception webhook", func() {
-			mainRules := `[{"apiGroups":[""],"apiVersions":["*"],"operations":["CREATE","UPDATE","DELETE"],"resources":["pods"]},{"apiGroups":["rbac.authorization.k8s.io"],"apiVersions":["*"],"operations":["CREATE","UPDATE","DELETE"],"resources":["roles","rolebindings"]},{"apiGroups":["constraints.gatekeeper.sh"],"apiVersions":["*"],"operations":["CREATE","UPDATE","DELETE"],"resources":["*"],"scope":"*"},{"apiGroups":[""],"apiVersions":["*"],"resources":["pods/exec","pods/attach"],"operations":["CONNECT"]},{"apiGroups":[""],"apiVersions":["*"],"resources":["pods/ephemeralcontainers"],"operations":["UPDATE"]}]`
+		It("Renders ValidatingWebhookConfiguration with main, exec-attach, deny-exec-heritage and the two security-policy-exception webhooks", func() {
+			mainRules := `[{"apiGroups":[""],"apiVersions":["*"],"operations":["CREATE","UPDATE","DELETE"],"resources":["pods"]},{"apiGroups":["rbac.authorization.k8s.io"],"apiVersions":["*"],"operations":["CREATE","UPDATE","DELETE"],"resources":["roles","rolebindings"]},{"apiGroups":["constraints.gatekeeper.sh"],"apiVersions":["*"],"operations":["CREATE","UPDATE","DELETE"],"resources":["*"],"scope":"*"},{"apiGroups":[""],"apiVersions":["*"],"resources":["pods/ephemeralcontainers"],"operations":["UPDATE"]}]`
+			execAttachRules := `[{"apiGroups":[""],"apiVersions":["*"],"resources":["pods/exec","pods/attach"],"operations":["CONNECT"]}]`
 			denyExecHeritageRules := `[{"apiGroups":[""],"apiVersions":["*"],"operations":["CONNECT"],"resources":["pods/exec","pods/attach"]}]`
 			securityPolicyExceptionRules := mainRules
-			checkVWC(f, 3, mainRules, denyExecHeritageRules, securityPolicyExceptionRules)
+			checkVWC(f, 5, mainRules, execAttachRules, denyExecHeritageRules, securityPolicyExceptionRules, execAttachRules)
+
+			// Each exec-attach webhook is routed exactly as the webhook it is split from.
+			vw := f.KubernetesGlobalResource("ValidatingWebhookConfiguration", "d8-admission-policy-engine-config")
+			for split, origin := range map[int]int{1: 0, 4: 3} {
+				Expect(vw.Field(fmt.Sprintf("webhooks.%d.namespaceSelector", split)).String()).To(
+					MatchJSON(vw.Field(fmt.Sprintf("webhooks.%d.namespaceSelector", origin)).String()))
+				Expect(vw.Field(fmt.Sprintf("webhooks.%d.matchConditions", split)).String()).To(
+					MatchJSON(vw.Field(fmt.Sprintf("webhooks.%d.matchConditions", origin)).String()))
+				Expect(vw.Field(fmt.Sprintf("webhooks.%d.failurePolicy", split)).String()).To(Equal("Fail"))
+			}
+		})
+
+		It("Routes exec and attach only through webhooks without an objectSelector", func() {
+			// The object of an exec or attach request cannot have labels, and the API server skips a
+			// webhook with a non-empty objectSelector for such an object. A selector on any webhook
+			// that routes exec or attach silently disables every policy against them.
+			vw := f.KubernetesGlobalResource("ValidatingWebhookConfiguration", "d8-admission-policy-engine-config")
+			execWebhooks := []string{}
+			for _, webhook := range vw.Field("webhooks").Array() {
+				for _, rule := range webhook.Get("rules").Array() {
+					if !strings.Contains(rule.Get("resources").String(), "pods/exec") {
+						continue
+					}
+					name := webhook.Get("name").String()
+					execWebhooks = append(execWebhooks, name)
+					Expect(webhook.Get("objectSelector.matchExpressions").Array()).To(BeEmpty(), name)
+					Expect(webhook.Get("objectSelector.matchLabels").Map()).To(BeEmpty(), name)
+					break
+				}
+			}
+			Expect(execWebhooks).To(Equal([]string{
+				"exec-attach.admission-policy-engine.deckhouse.io",
+				"deny-exec-heritage.admission-policy-engine.deckhouse.io",
+				"security-policy-exception-exec-attach.admission-policy-engine.deckhouse.io",
+			}))
 		})
 	})
 

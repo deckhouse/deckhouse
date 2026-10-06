@@ -12,8 +12,16 @@ matchPolicy: Exact
 sideEffects: None
 {{- end }}
 
+{{/*
+  `pods/exec` and `pods/attach` are dropped from the tracked resources. A constraint on
+  `PodExecOptions`, such as `D8DenyExecHeritage`, puts them there, but every webhook that includes
+  this list carries an `objectSelector`, which the API server never matches for exec and attach.
+  Those requests are routed by the exec-attach webhooks below instead.
+*/}}
 {{- define "validating.webhook.tracked.resources"}}
   {{- range $trackResource := .Values.admissionPolicyEngine.internal.trackedConstraintResources }}
+  {{- $resources := without $trackResource.resources "pods/exec" "pods/attach" }}
+  {{- if $resources }}
 - apiGroups:
     {{- $trackResource.apiGroups | toYaml | nindent 4 }}
   apiVersions:
@@ -27,7 +35,8 @@ sideEffects: None
     - DELETE
   {{- end }}
   resources:
-    {{- $trackResource.resources | toYaml | nindent 4 }}
+    {{- $resources | toYaml | nindent 4 }}
+  {{- end }}
   {{- end }}
 - apiGroups:
   - rbac.authorization.k8s.io
@@ -80,16 +89,45 @@ webhooks:
         - webhook
   rules:
   {{- include "validating.webhook.tracked.resources" . | nindent 2 }}
-  {{/* Always validate CONNECT for exec/attach subresources */}}
-  - apiGroups: [""]
-    apiVersions: ["*"]
-    resources: ["pods/exec", "pods/attach"]
-    operations: ["CONNECT"]
   {{/* Ephemeral containers are attached through a subresource, which the `pods` rule does not match */}}
   - apiGroups: [""]
     apiVersions: ["*"]
     resources: ["pods/ephemeralcontainers"]
     operations: ["UPDATE"]
+{{- if semverCompare ">= 1.27" .Values.global.discovery.kubernetesVersion }}
+  matchConditions:
+    - name: 'exclude-virtualization'
+      expression: '!(request.userInfo.groups.exists(e, (e == "system:serviceaccounts:d8-virtualization")))'
+{{- end }}
+  timeoutSeconds: 15
+  {{- include "validating.webhook.config" . | nindent 2 }}
+{{- end }}
+
+{{/*
+  Webhook for exec and attach in the namespaces the main webhook serves.
+
+  It is split from the main webhook because of the `objectSelector` there. The object of an exec or
+  attach request is `PodExecOptions` or `PodAttachOptions`, which cannot have labels, and the API
+  server never calls a webhook with a non-empty `objectSelector` for such an object, whatever the
+  operator. On the main webhook exec and attach therefore never reached Gatekeeper, and every
+  policy against them was silently skipped.
+
+  No `objectSelector` is needed here: the selector on the main webhook keeps Gatekeeper away from
+  its own pods at bootstrap, and exec into a running pod cannot stop it from starting.
+*/}}
+{{- if (gt (len .Values.admissionPolicyEngine.internal.trackedConstraintResources) 0) }}
+- name: exec-attach.admission-policy-engine.deckhouse.io
+  namespaceSelector:
+    matchExpressions:
+    - key: heritage
+      operator: NotIn
+      values:
+        - deckhouse
+  rules:
+  - apiGroups: [""]
+    apiVersions: ["*"]
+    resources: ["pods/exec", "pods/attach"]
+    operations: ["CONNECT"]
 {{- if semverCompare ">= 1.27" .Values.global.discovery.kubernetesVersion }}
   matchConditions:
     - name: 'exclude-virtualization'
@@ -133,16 +171,36 @@ webhooks:
         - webhook
   rules:
   {{- include "validating.webhook.tracked.resources" . | nindent 2 }}
-  {{/* Always validate CONNECT for exec/attach subresources */}}
-  - apiGroups: [""]
-    apiVersions: ["*"]
-    resources: ["pods/exec", "pods/attach"]
-    operations: ["CONNECT"]
   {{/* Ephemeral containers are attached through a subresource, which the `pods` rule does not match */}}
   - apiGroups: [""]
     apiVersions: ["*"]
     resources: ["pods/ephemeralcontainers"]
     operations: ["UPDATE"]
+{{- if semverCompare ">= 1.27" .Values.global.discovery.kubernetesVersion }}
+  matchConditions:
+    - name: 'exclude-virtualization'
+      expression: '!(request.userInfo.groups.exists(e, (e == "system:serviceaccounts:d8-virtualization")))'
+{{- end }}
+  timeoutSeconds: 15
+  {{- include "validating.webhook.config" . | nindent 2 }}
+{{- end }}
+
+{{/* Exec and attach in the namespaces of the webhook above, split out for the same reason as `exec-attach` */}}
+{{- if (gt (len .Values.admissionPolicyEngine.internal.trackedConstraintResources) 0) }}
+- name: security-policy-exception-exec-attach.admission-policy-engine.deckhouse.io
+  namespaceSelector:
+    matchExpressions:
+    - key: security.deckhouse.io/enable-security-policy-check
+      operator: Exists
+  {{- if include "trivy.provider.enabled" . }}
+    - key: security.deckhouse.io/trivy-provider
+      operator: DoesNotExist
+  {{- end }}
+  rules:
+  - apiGroups: [""]
+    apiVersions: ["*"]
+    resources: ["pods/exec", "pods/attach"]
+    operations: ["CONNECT"]
 {{- if semverCompare ">= 1.27" .Values.global.discovery.kubernetesVersion }}
   matchConditions:
     - name: 'exclude-virtualization'
