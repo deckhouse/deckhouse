@@ -13,4 +13,5 @@ aggregationRule:
     - matchLabels:
         rbac.deckhouse.io/kind: use
         rbac.deckhouse.io/aggregate-to-kubernetes-as: admin
+    {{- include "user_authz_rbacv2_next_release_selectors" "d8:use:role:admin:kubernetes" | trim | nindent 4 }}
 rules: []

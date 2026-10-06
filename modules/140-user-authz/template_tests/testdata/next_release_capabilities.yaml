@@ -1,0 +1,414 @@
+# The ClusterRoles of kind capability that the modules of this repository render in the next release,
+# each with the old roles whose aliases collect it there. An entry marked external is a capability
+# of a module installed from a module source that already ships the labels of the next release. The
+# aliases collect it, and a role of this release must not.
+- name: d8:system-capability:admission-policy-engine:edit
+  labels: {module: admission-policy-engine, rbac.deckhouse.io/aggregate-to-security-as: manager, rbac.deckhouse.io/capability: system-capability.admission-policy-engine.edit, rbac.deckhouse.io/kind: capability, rbac.deckhouse.io/namespace: d8-admission-policy-engine, rbac.deckhouse.io/scope: system}
+  collectedBy: [d8:manage:all:manager, d8:manage:security:manager]
+- name: d8:system-capability:admission-policy-engine:view
+  labels: {module: admission-policy-engine, rbac.deckhouse.io/aggregate-to-security-as: viewer, rbac.deckhouse.io/capability: system-capability.admission-policy-engine.view, rbac.deckhouse.io/kind: capability, rbac.deckhouse.io/namespace: d8-admission-policy-engine, rbac.deckhouse.io/scope: system}
+  collectedBy: [d8:manage:all:manager, d8:manage:all:viewer, d8:manage:security:manager, d8:manage:security:viewer]
+- name: d8:namespace-capability:cert-manager:admin
+  labels: {module: cert-manager, rbac.deckhouse.io/aggregate-to-namespace-as: admin, rbac.deckhouse.io/capability: namespace-capability.cert-manager.admin, rbac.deckhouse.io/kind: capability, rbac.deckhouse.io/scope: namespace}
+  collectedBy: [d8:use:role:admin, d8:use:role:admin:kubernetes]
+- name: d8:namespace-capability:cert-manager:edit
+  labels: {module: cert-manager, rbac.deckhouse.io/aggregate-to-namespace-as: manager, rbac.deckhouse.io/capability: namespace-capability.cert-manager.edit, rbac.deckhouse.io/kind: capability, rbac.deckhouse.io/scope: namespace}
+  collectedBy: [d8:use:role:admin, d8:use:role:admin:kubernetes, d8:use:role:manager, d8:use:role:manager:kubernetes]
+- name: d8:namespace-capability:cert-manager:view
+  labels: {module: cert-manager, rbac.deckhouse.io/aggregate-to-namespace-as: viewer, rbac.deckhouse.io/capability: namespace-capability.cert-manager.view, rbac.deckhouse.io/kind: capability, rbac.deckhouse.io/scope: namespace}
+  collectedBy: [d8:use:role:admin, d8:use:role:admin:kubernetes, d8:use:role:manager, d8:use:role:manager:kubernetes, d8:use:role:user, d8:use:role:user:kubernetes, d8:use:role:viewer, d8:use:role:viewer:kubernetes]
+- name: d8:system-capability:cert-manager:edit
+  labels: {module: cert-manager, rbac.deckhouse.io/aggregate-to-security-as: manager, rbac.deckhouse.io/capability: system-capability.cert-manager.edit, rbac.deckhouse.io/kind: capability, rbac.deckhouse.io/namespace: d8-cert-manager, rbac.deckhouse.io/scope: system}
+  collectedBy: [d8:manage:all:manager, d8:manage:security:manager]
+- name: d8:system-capability:cert-manager:view
+  labels: {module: cert-manager, rbac.deckhouse.io/aggregate-to-security-as: viewer, rbac.deckhouse.io/capability: system-capability.cert-manager.view, rbac.deckhouse.io/kind: capability, rbac.deckhouse.io/namespace: d8-cert-manager, rbac.deckhouse.io/scope: system}
+  collectedBy: [d8:manage:all:manager, d8:manage:all:viewer, d8:manage:security:manager, d8:manage:security:viewer]
+- name: d8:system-capability:chrony:edit
+  labels: {module: chrony, rbac.deckhouse.io/aggregate-to-cluster-as: manager, rbac.deckhouse.io/capability: system-capability.chrony.edit, rbac.deckhouse.io/kind: capability, rbac.deckhouse.io/namespace: d8-chrony, rbac.deckhouse.io/scope: system}
+  collectedBy: [d8:manage:all:manager, d8:manage:infrastructure:manager]
+- name: d8:system-capability:chrony:view
+  labels: {module: chrony, rbac.deckhouse.io/aggregate-to-cluster-as: viewer, rbac.deckhouse.io/capability: system-capability.chrony.view, rbac.deckhouse.io/kind: capability, rbac.deckhouse.io/namespace: d8-chrony, rbac.deckhouse.io/scope: system}
+  collectedBy: [d8:manage:all:manager, d8:manage:all:viewer, d8:manage:infrastructure:manager, d8:manage:infrastructure:viewer]
+- name: d8:system-capability:cilium-hubble:edit
+  labels: {module: cilium-hubble, rbac.deckhouse.io/aggregate-to-network-as: manager, rbac.deckhouse.io/capability: system-capability.cilium-hubble.edit, rbac.deckhouse.io/kind: capability, rbac.deckhouse.io/namespace: d8-cni-cilium, rbac.deckhouse.io/scope: system}
+  collectedBy: [d8:manage:all:manager, d8:manage:networking:manager]
+- name: d8:system-capability:cilium-hubble:view
+  labels: {module: cilium-hubble, rbac.deckhouse.io/aggregate-to-network-as: viewer, rbac.deckhouse.io/capability: system-capability.cilium-hubble.view, rbac.deckhouse.io/kind: capability, rbac.deckhouse.io/namespace: d8-cni-cilium, rbac.deckhouse.io/scope: system}
+  collectedBy: [d8:manage:all:manager, d8:manage:all:viewer, d8:manage:networking:manager, d8:manage:networking:viewer]
+- name: d8:system-capability:cloud-provider-aws:edit
+  labels: {module: cloud-provider-aws, rbac.deckhouse.io/aggregate-to-cluster-as: manager, rbac.deckhouse.io/capability: system-capability.cloud-provider-aws.edit, rbac.deckhouse.io/kind: capability, rbac.deckhouse.io/namespace: d8-cloud-provider-aws, rbac.deckhouse.io/scope: system}
+  collectedBy: [d8:manage:all:manager, d8:manage:infrastructure:manager]
+- name: d8:system-capability:cloud-provider-aws:view
+  labels: {module: cloud-provider-aws, rbac.deckhouse.io/aggregate-to-cluster-as: viewer, rbac.deckhouse.io/capability: system-capability.cloud-provider-aws.view, rbac.deckhouse.io/kind: capability, rbac.deckhouse.io/namespace: d8-cloud-provider-aws, rbac.deckhouse.io/scope: system}
+  collectedBy: [d8:manage:all:manager, d8:manage:all:viewer, d8:manage:infrastructure:manager, d8:manage:infrastructure:viewer]
+- name: d8:system-capability:cloud-provider-azure:edit
+  labels: {module: cloud-provider-azure, rbac.deckhouse.io/aggregate-to-cluster-as: manager, rbac.deckhouse.io/capability: system-capability.cloud-provider-azure.edit, rbac.deckhouse.io/kind: capability, rbac.deckhouse.io/namespace: d8-cloud-provider-azure, rbac.deckhouse.io/scope: system}
+  collectedBy: [d8:manage:all:manager, d8:manage:infrastructure:manager]
+- name: d8:system-capability:cloud-provider-azure:view
+  labels: {module: cloud-provider-azure, rbac.deckhouse.io/aggregate-to-cluster-as: viewer, rbac.deckhouse.io/capability: system-capability.cloud-provider-azure.view, rbac.deckhouse.io/kind: capability, rbac.deckhouse.io/namespace: d8-cloud-provider-azure, rbac.deckhouse.io/scope: system}
+  collectedBy: [d8:manage:all:manager, d8:manage:all:viewer, d8:manage:infrastructure:manager, d8:manage:infrastructure:viewer]
+- name: d8:system-capability:cloud-provider-dvp:edit
+  labels: {module: cloud-provider-dvp, rbac.deckhouse.io/aggregate-to-cluster-as: manager, rbac.deckhouse.io/capability: system-capability.cloud-provider-dvp.edit, rbac.deckhouse.io/kind: capability, rbac.deckhouse.io/namespace: d8-cloud-provider-dvp, rbac.deckhouse.io/scope: system}
+  collectedBy: [d8:manage:all:manager, d8:manage:infrastructure:manager]
+- name: d8:system-capability:cloud-provider-dvp:view
+  labels: {module: cloud-provider-dvp, rbac.deckhouse.io/aggregate-to-cluster-as: viewer, rbac.deckhouse.io/capability: system-capability.cloud-provider-dvp.view, rbac.deckhouse.io/kind: capability, rbac.deckhouse.io/namespace: d8-cloud-provider-dvp, rbac.deckhouse.io/scope: system}
+  collectedBy: [d8:manage:all:manager, d8:manage:all:viewer, d8:manage:infrastructure:manager, d8:manage:infrastructure:viewer]
+- name: d8:system-capability:cloud-provider-dynamix:edit
+  labels: {module: cloud-provider-dynamix, rbac.deckhouse.io/aggregate-to-cluster-as: manager, rbac.deckhouse.io/capability: system-capability.cloud-provider-dynamix.edit, rbac.deckhouse.io/kind: capability, rbac.deckhouse.io/namespace: d8-cloud-provider-dynamix, rbac.deckhouse.io/scope: system}
+  collectedBy: [d8:manage:all:manager, d8:manage:infrastructure:manager]
+- name: d8:system-capability:cloud-provider-dynamix:view
+  labels: {module: cloud-provider-dynamix, rbac.deckhouse.io/aggregate-to-cluster-as: viewer, rbac.deckhouse.io/capability: system-capability.cloud-provider-dynamix.view, rbac.deckhouse.io/kind: capability, rbac.deckhouse.io/namespace: d8-cloud-provider-dynamix, rbac.deckhouse.io/scope: system}
+  collectedBy: [d8:manage:all:manager, d8:manage:all:viewer, d8:manage:infrastructure:manager, d8:manage:infrastructure:viewer]
+- name: d8:system-capability:cloud-provider-gcp:edit
+  labels: {module: cloud-provider-gcp, rbac.deckhouse.io/aggregate-to-cluster-as: manager, rbac.deckhouse.io/capability: system-capability.cloud-provider-gcp.edit, rbac.deckhouse.io/kind: capability, rbac.deckhouse.io/namespace: d8-cloud-provider-gcp, rbac.deckhouse.io/scope: system}
+  collectedBy: [d8:manage:all:manager, d8:manage:infrastructure:manager]
+- name: d8:system-capability:cloud-provider-gcp:view
+  labels: {module: cloud-provider-gcp, rbac.deckhouse.io/aggregate-to-cluster-as: viewer, rbac.deckhouse.io/capability: system-capability.cloud-provider-gcp.view, rbac.deckhouse.io/kind: capability, rbac.deckhouse.io/namespace: d8-cloud-provider-gcp, rbac.deckhouse.io/scope: system}
+  collectedBy: [d8:manage:all:manager, d8:manage:all:viewer, d8:manage:infrastructure:manager, d8:manage:infrastructure:viewer]
+- name: d8:system-capability:cloud-provider-huaweicloud:edit
+  labels: {module: cloud-provider-huaweicloud, rbac.deckhouse.io/aggregate-to-cluster-as: manager, rbac.deckhouse.io/capability: system-capability.cloud-provider-huaweicloud.edit, rbac.deckhouse.io/kind: capability, rbac.deckhouse.io/namespace: d8-cloud-provider-huaweicloud, rbac.deckhouse.io/scope: system}
+  collectedBy: [d8:manage:all:manager, d8:manage:infrastructure:manager]
+- name: d8:system-capability:cloud-provider-huaweicloud:view
+  labels: {module: cloud-provider-huaweicloud, rbac.deckhouse.io/aggregate-to-cluster-as: viewer, rbac.deckhouse.io/capability: system-capability.cloud-provider-huaweicloud.view, rbac.deckhouse.io/kind: capability, rbac.deckhouse.io/namespace: d8-cloud-provider-huaweicloud, rbac.deckhouse.io/scope: system}
+  collectedBy: [d8:manage:all:manager, d8:manage:all:viewer, d8:manage:infrastructure:manager, d8:manage:infrastructure:viewer]
+- name: d8:system-capability:cloud-provider-openstack:edit
+  labels: {module: cloud-provider-openstack, rbac.deckhouse.io/aggregate-to-cluster-as: manager, rbac.deckhouse.io/capability: system-capability.cloud-provider-openstack.edit, rbac.deckhouse.io/kind: capability, rbac.deckhouse.io/namespace: d8-cloud-provider-openstack, rbac.deckhouse.io/scope: system}
+  collectedBy: [d8:manage:all:manager, d8:manage:infrastructure:manager]
+- name: d8:system-capability:cloud-provider-openstack:view
+  labels: {module: cloud-provider-openstack, rbac.deckhouse.io/aggregate-to-cluster-as: viewer, rbac.deckhouse.io/capability: system-capability.cloud-provider-openstack.view, rbac.deckhouse.io/kind: capability, rbac.deckhouse.io/namespace: d8-cloud-provider-openstack, rbac.deckhouse.io/scope: system}
+  collectedBy: [d8:manage:all:manager, d8:manage:all:viewer, d8:manage:infrastructure:manager, d8:manage:infrastructure:viewer]
+- name: d8:system-capability:cloud-provider-vcd:edit
+  labels: {module: cloud-provider-vcd, rbac.deckhouse.io/aggregate-to-cluster-as: manager, rbac.deckhouse.io/capability: system-capability.cloud-provider-vcd.edit, rbac.deckhouse.io/kind: capability, rbac.deckhouse.io/namespace: d8-cloud-provider-vcd, rbac.deckhouse.io/scope: system}
+  collectedBy: [d8:manage:all:manager, d8:manage:infrastructure:manager]
+- name: d8:system-capability:cloud-provider-vcd:view
+  labels: {module: cloud-provider-vcd, rbac.deckhouse.io/aggregate-to-cluster-as: viewer, rbac.deckhouse.io/capability: system-capability.cloud-provider-vcd.view, rbac.deckhouse.io/kind: capability, rbac.deckhouse.io/namespace: d8-cloud-provider-vcd, rbac.deckhouse.io/scope: system}
+  collectedBy: [d8:manage:all:manager, d8:manage:all:viewer, d8:manage:infrastructure:manager, d8:manage:infrastructure:viewer]
+- name: d8:system-capability:cloud-provider-vsphere:edit
+  labels: {module: cloud-provider-vsphere, rbac.deckhouse.io/aggregate-to-cluster-as: manager, rbac.deckhouse.io/capability: system-capability.cloud-provider-vsphere.edit, rbac.deckhouse.io/kind: capability, rbac.deckhouse.io/namespace: d8-cloud-provider-vsphere, rbac.deckhouse.io/scope: system}
+  collectedBy: [d8:manage:all:manager, d8:manage:infrastructure:manager]
+- name: d8:system-capability:cloud-provider-vsphere:view
+  labels: {module: cloud-provider-vsphere, rbac.deckhouse.io/aggregate-to-cluster-as: viewer, rbac.deckhouse.io/capability: system-capability.cloud-provider-vsphere.view, rbac.deckhouse.io/kind: capability, rbac.deckhouse.io/namespace: d8-cloud-provider-vsphere, rbac.deckhouse.io/scope: system}
+  collectedBy: [d8:manage:all:manager, d8:manage:all:viewer, d8:manage:infrastructure:manager, d8:manage:infrastructure:viewer]
+- name: d8:system-capability:cloud-provider-yandex:edit
+  labels: {module: cloud-provider-yandex, rbac.deckhouse.io/aggregate-to-cluster-as: manager, rbac.deckhouse.io/capability: system-capability.cloud-provider-yandex.edit, rbac.deckhouse.io/kind: capability, rbac.deckhouse.io/namespace: d8-cloud-provider-yandex, rbac.deckhouse.io/scope: system}
+  collectedBy: [d8:manage:all:manager, d8:manage:infrastructure:manager]
+- name: d8:system-capability:cloud-provider-yandex:view
+  labels: {module: cloud-provider-yandex, rbac.deckhouse.io/aggregate-to-cluster-as: viewer, rbac.deckhouse.io/capability: system-capability.cloud-provider-yandex.view, rbac.deckhouse.io/kind: capability, rbac.deckhouse.io/namespace: d8-cloud-provider-yandex, rbac.deckhouse.io/scope: system}
+  collectedBy: [d8:manage:all:manager, d8:manage:all:viewer, d8:manage:infrastructure:manager, d8:manage:infrastructure:viewer]
+- name: d8:system-capability:cloud-provider-zvirt:edit
+  labels: {module: cloud-provider-zvirt, rbac.deckhouse.io/aggregate-to-cluster-as: manager, rbac.deckhouse.io/capability: system-capability.cloud-provider-zvirt.edit, rbac.deckhouse.io/kind: capability, rbac.deckhouse.io/namespace: d8-cloud-provider-zvirt, rbac.deckhouse.io/scope: system}
+  collectedBy: [d8:manage:all:manager, d8:manage:infrastructure:manager]
+- name: d8:system-capability:cloud-provider-zvirt:view
+  labels: {module: cloud-provider-zvirt, rbac.deckhouse.io/aggregate-to-cluster-as: viewer, rbac.deckhouse.io/capability: system-capability.cloud-provider-zvirt.view, rbac.deckhouse.io/kind: capability, rbac.deckhouse.io/namespace: d8-cloud-provider-zvirt, rbac.deckhouse.io/scope: system}
+  collectedBy: [d8:manage:all:manager, d8:manage:all:viewer, d8:manage:infrastructure:manager, d8:manage:infrastructure:viewer]
+- name: d8:namespace-capability:cni-cilium:edit
+  labels: {module: cni-cilium, rbac.deckhouse.io/aggregate-to-namespace-as: manager, rbac.deckhouse.io/capability: namespace-capability.cni-cilium.edit, rbac.deckhouse.io/kind: capability, rbac.deckhouse.io/scope: namespace}
+  collectedBy: [d8:use:role:admin, d8:use:role:admin:kubernetes, d8:use:role:manager, d8:use:role:manager:kubernetes]
+- name: d8:namespace-capability:cni-cilium:view
+  labels: {module: cni-cilium, rbac.deckhouse.io/aggregate-to-namespace-as: viewer, rbac.deckhouse.io/capability: namespace-capability.cni-cilium.view, rbac.deckhouse.io/kind: capability, rbac.deckhouse.io/scope: namespace}
+  collectedBy: [d8:use:role:admin, d8:use:role:admin:kubernetes, d8:use:role:manager, d8:use:role:manager:kubernetes, d8:use:role:user, d8:use:role:user:kubernetes, d8:use:role:viewer, d8:use:role:viewer:kubernetes]
+- name: d8:system-capability:cni-cilium:edit
+  labels: {module: cni-cilium, rbac.deckhouse.io/aggregate-to-network-as: manager, rbac.deckhouse.io/capability: system-capability.cni-cilium.edit, rbac.deckhouse.io/kind: capability, rbac.deckhouse.io/namespace: d8-cni-cilium, rbac.deckhouse.io/scope: system}
+  collectedBy: [d8:manage:all:manager, d8:manage:networking:manager]
+- name: d8:system-capability:cni-cilium:view
+  labels: {module: cni-cilium, rbac.deckhouse.io/aggregate-to-network-as: viewer, rbac.deckhouse.io/capability: system-capability.cni-cilium.view, rbac.deckhouse.io/kind: capability, rbac.deckhouse.io/namespace: d8-cni-cilium, rbac.deckhouse.io/scope: system}
+  collectedBy: [d8:manage:all:manager, d8:manage:all:viewer, d8:manage:networking:manager, d8:manage:networking:viewer]
+- name: d8:system-capability:cni-flannel:edit
+  labels: {module: cni-flannel, rbac.deckhouse.io/aggregate-to-network-as: manager, rbac.deckhouse.io/capability: system-capability.cni-flannel.edit, rbac.deckhouse.io/kind: capability, rbac.deckhouse.io/namespace: d8-cni-flannel, rbac.deckhouse.io/scope: system}
+  collectedBy: [d8:manage:all:manager, d8:manage:networking:manager]
+- name: d8:system-capability:cni-flannel:view
+  labels: {module: cni-flannel, rbac.deckhouse.io/aggregate-to-network-as: viewer, rbac.deckhouse.io/capability: system-capability.cni-flannel.view, rbac.deckhouse.io/kind: capability, rbac.deckhouse.io/namespace: d8-cni-flannel, rbac.deckhouse.io/scope: system}
+  collectedBy: [d8:manage:all:manager, d8:manage:all:viewer, d8:manage:networking:manager, d8:manage:networking:viewer]
+- name: d8:system-capability:cni-simple-bridge:edit
+  labels: {module: cni-simple-bridge, rbac.deckhouse.io/aggregate-to-network-as: manager, rbac.deckhouse.io/capability: system-capability.cni-simple-bridge.edit, rbac.deckhouse.io/kind: capability, rbac.deckhouse.io/namespace: d8-cni-simple-bridge, rbac.deckhouse.io/scope: system}
+  collectedBy: [d8:manage:all:manager, d8:manage:networking:manager]
+- name: d8:system-capability:cni-simple-bridge:view
+  labels: {module: cni-simple-bridge, rbac.deckhouse.io/aggregate-to-network-as: viewer, rbac.deckhouse.io/capability: system-capability.cni-simple-bridge.view, rbac.deckhouse.io/kind: capability, rbac.deckhouse.io/namespace: d8-cni-simple-bridge, rbac.deckhouse.io/scope: system}
+  collectedBy: [d8:manage:all:manager, d8:manage:all:viewer, d8:manage:networking:manager, d8:manage:networking:viewer]
+- name: d8:system-capability:control-plane-manager:edit
+  labels: {module: control-plane-manager, rbac.deckhouse.io/aggregate-to-cluster-as: manager, rbac.deckhouse.io/capability: system-capability.control-plane-manager.edit, rbac.deckhouse.io/kind: capability, rbac.deckhouse.io/namespace: kube-system, rbac.deckhouse.io/scope: system}
+  collectedBy: [d8:manage:all:manager, d8:manage:kubernetes:manager]
+- name: d8:system-capability:control-plane-manager:view
+  labels: {module: control-plane-manager, rbac.deckhouse.io/aggregate-to-cluster-as: viewer, rbac.deckhouse.io/capability: system-capability.control-plane-manager.view, rbac.deckhouse.io/kind: capability, rbac.deckhouse.io/namespace: kube-system, rbac.deckhouse.io/scope: system}
+  collectedBy: [d8:manage:all:manager, d8:manage:all:viewer, d8:manage:kubernetes:manager, d8:manage:kubernetes:viewer]
+- name: d8:system-capability:csi-vsphere:edit
+  labels: {module: csi-vsphere, rbac.deckhouse.io/aggregate-to-cluster-as: manager, rbac.deckhouse.io/capability: system-capability.csi-vsphere.edit, rbac.deckhouse.io/kind: capability, rbac.deckhouse.io/namespace: d8-csi-vsphere, rbac.deckhouse.io/scope: system}
+  collectedBy: [d8:manage:all:manager, d8:manage:infrastructure:manager]
+- name: d8:system-capability:csi-vsphere:view
+  labels: {module: csi-vsphere, rbac.deckhouse.io/aggregate-to-cluster-as: viewer, rbac.deckhouse.io/capability: system-capability.csi-vsphere.view, rbac.deckhouse.io/kind: capability, rbac.deckhouse.io/namespace: d8-csi-vsphere, rbac.deckhouse.io/scope: system}
+  collectedBy: [d8:manage:all:manager, d8:manage:all:viewer, d8:manage:infrastructure:manager, d8:manage:infrastructure:viewer]
+- name: d8:namespace-capability:deckhouse:edit
+  labels: {module: deckhouse, rbac.deckhouse.io/aggregate-to-namespace-as: manager, rbac.deckhouse.io/capability: namespace-capability.deckhouse.edit, rbac.deckhouse.io/kind: capability, rbac.deckhouse.io/scope: namespace}
+  collectedBy: [d8:use:role:admin, d8:use:role:admin:kubernetes, d8:use:role:manager, d8:use:role:manager:kubernetes]
+- name: d8:namespace-capability:deckhouse:view
+  labels: {module: deckhouse, rbac.deckhouse.io/aggregate-to-namespace-as: viewer, rbac.deckhouse.io/capability: namespace-capability.deckhouse.view, rbac.deckhouse.io/kind: capability, rbac.deckhouse.io/scope: namespace}
+  collectedBy: [d8:use:role:admin, d8:use:role:admin:kubernetes, d8:use:role:manager, d8:use:role:manager:kubernetes, d8:use:role:user, d8:use:role:user:kubernetes, d8:use:role:viewer, d8:use:role:viewer:kubernetes]
+- name: d8:system-capability:deckhouse:edit
+  labels: {module: deckhouse, rbac.deckhouse.io/aggregate-to-cluster-as: manager, rbac.deckhouse.io/capability: system-capability.deckhouse.edit, rbac.deckhouse.io/kind: capability, rbac.deckhouse.io/namespace: d8-system, rbac.deckhouse.io/scope: system}
+  collectedBy: [d8:manage:all:manager, d8:manage:deckhouse:manager]
+- name: d8:system-capability:deckhouse:view
+  labels: {module: deckhouse, rbac.deckhouse.io/aggregate-to-cluster-as: viewer, rbac.deckhouse.io/capability: system-capability.deckhouse.view, rbac.deckhouse.io/kind: capability, rbac.deckhouse.io/namespace: d8-system, rbac.deckhouse.io/scope: system}
+  collectedBy: [d8:manage:all:manager, d8:manage:all:viewer, d8:manage:deckhouse:manager, d8:manage:deckhouse:viewer]
+- name: d8:system-capability:descheduler:edit
+  labels: {module: descheduler, rbac.deckhouse.io/aggregate-to-cluster-as: manager, rbac.deckhouse.io/capability: system-capability.descheduler.edit, rbac.deckhouse.io/kind: capability, rbac.deckhouse.io/namespace: d8-descheduler, rbac.deckhouse.io/scope: system}
+  collectedBy: [d8:manage:all:manager, d8:manage:infrastructure:manager]
+- name: d8:system-capability:descheduler:view
+  labels: {module: descheduler, rbac.deckhouse.io/aggregate-to-cluster-as: viewer, rbac.deckhouse.io/capability: system-capability.descheduler.view, rbac.deckhouse.io/kind: capability, rbac.deckhouse.io/namespace: d8-descheduler, rbac.deckhouse.io/scope: system}
+  collectedBy: [d8:manage:all:manager, d8:manage:all:viewer, d8:manage:infrastructure:manager, d8:manage:infrastructure:viewer]
+- name: d8:system-capability:istio:edit
+  labels: {module: istio, rbac.deckhouse.io/aggregate-to-network-as: manager, rbac.deckhouse.io/capability: system-capability.istio.edit, rbac.deckhouse.io/kind: capability, rbac.deckhouse.io/namespace: d8-istio, rbac.deckhouse.io/scope: system}
+  collectedBy: [d8:manage:all:manager, d8:manage:infrastructure:manager, d8:manage:networking:manager]
+- name: d8:system-capability:istio:view
+  labels: {module: istio, rbac.deckhouse.io/aggregate-to-network-as: viewer, rbac.deckhouse.io/capability: system-capability.istio.view, rbac.deckhouse.io/kind: capability, rbac.deckhouse.io/namespace: d8-istio, rbac.deckhouse.io/scope: system}
+  collectedBy: [d8:manage:all:manager, d8:manage:all:viewer, d8:manage:infrastructure:manager, d8:manage:infrastructure:viewer, d8:manage:networking:manager, d8:manage:networking:viewer]
+- name: d8:system-capability:keepalived:edit
+  labels: {module: keepalived, rbac.deckhouse.io/aggregate-to-network-as: manager, rbac.deckhouse.io/capability: system-capability.keepalived.edit, rbac.deckhouse.io/kind: capability, rbac.deckhouse.io/namespace: d8-keepalived, rbac.deckhouse.io/scope: system}
+  collectedBy: [d8:manage:all:manager, d8:manage:infrastructure:manager]
+- name: d8:system-capability:keepalived:view
+  labels: {module: keepalived, rbac.deckhouse.io/aggregate-to-network-as: viewer, rbac.deckhouse.io/capability: system-capability.keepalived.view, rbac.deckhouse.io/kind: capability, rbac.deckhouse.io/namespace: d8-keepalived, rbac.deckhouse.io/scope: system}
+  collectedBy: [d8:manage:all:manager, d8:manage:all:viewer, d8:manage:infrastructure:manager, d8:manage:infrastructure:viewer]
+- name: d8:system-capability:kube-dns:edit
+  labels: {module: kube-dns, rbac.deckhouse.io/aggregate-to-network-as: manager, rbac.deckhouse.io/capability: system-capability.kube-dns.edit, rbac.deckhouse.io/kind: capability, rbac.deckhouse.io/namespace: kube-system, rbac.deckhouse.io/scope: system}
+  collectedBy: [d8:manage:all:manager, d8:manage:kubernetes:manager, d8:manage:networking:manager]
+- name: d8:system-capability:kube-dns:view
+  labels: {module: kube-dns, rbac.deckhouse.io/aggregate-to-network-as: viewer, rbac.deckhouse.io/capability: system-capability.kube-dns.view, rbac.deckhouse.io/kind: capability, rbac.deckhouse.io/namespace: kube-system, rbac.deckhouse.io/scope: system}
+  collectedBy: [d8:manage:all:manager, d8:manage:all:viewer, d8:manage:kubernetes:manager, d8:manage:kubernetes:viewer, d8:manage:networking:manager, d8:manage:networking:viewer]
+- name: d8:system-capability:kube-proxy:edit
+  labels: {module: kube-proxy, rbac.deckhouse.io/aggregate-to-network-as: manager, rbac.deckhouse.io/capability: system-capability.kube-proxy.edit, rbac.deckhouse.io/kind: capability, rbac.deckhouse.io/namespace: kube-system, rbac.deckhouse.io/scope: system}
+  collectedBy: [d8:manage:all:manager, d8:manage:kubernetes:manager, d8:manage:networking:manager]
+- name: d8:system-capability:kube-proxy:view
+  labels: {module: kube-proxy, rbac.deckhouse.io/aggregate-to-network-as: viewer, rbac.deckhouse.io/capability: system-capability.kube-proxy.view, rbac.deckhouse.io/kind: capability, rbac.deckhouse.io/namespace: kube-system, rbac.deckhouse.io/scope: system}
+  collectedBy: [d8:manage:all:manager, d8:manage:all:viewer, d8:manage:kubernetes:manager, d8:manage:kubernetes:viewer, d8:manage:networking:manager, d8:manage:networking:viewer]
+- name: d8:system-capability:local-path-provisioner:edit
+  labels: {module: local-path-provisioner, rbac.deckhouse.io/aggregate-to-storage-as: manager, rbac.deckhouse.io/capability: system-capability.local-path-provisioner.edit, rbac.deckhouse.io/kind: capability, rbac.deckhouse.io/namespace: d8-local-path-provisioner, rbac.deckhouse.io/scope: system}
+  collectedBy: [d8:manage:all:manager, d8:manage:infrastructure:manager]
+- name: d8:system-capability:local-path-provisioner:view
+  labels: {module: local-path-provisioner, rbac.deckhouse.io/aggregate-to-storage-as: viewer, rbac.deckhouse.io/capability: system-capability.local-path-provisioner.view, rbac.deckhouse.io/kind: capability, rbac.deckhouse.io/namespace: d8-local-path-provisioner, rbac.deckhouse.io/scope: system}
+  collectedBy: [d8:manage:all:manager, d8:manage:all:viewer, d8:manage:infrastructure:manager, d8:manage:infrastructure:viewer]
+- name: d8:system-capability:metallb:edit
+  labels: {module: metallb, rbac.deckhouse.io/aggregate-to-network-as: manager, rbac.deckhouse.io/capability: system-capability.metallb.edit, rbac.deckhouse.io/kind: capability, rbac.deckhouse.io/namespace: d8-metallb, rbac.deckhouse.io/scope: system}
+  collectedBy: [d8:manage:all:manager, d8:manage:networking:manager]
+- name: d8:system-capability:metallb:view
+  labels: {module: metallb, rbac.deckhouse.io/aggregate-to-network-as: viewer, rbac.deckhouse.io/capability: system-capability.metallb.view, rbac.deckhouse.io/kind: capability, rbac.deckhouse.io/namespace: d8-metallb, rbac.deckhouse.io/scope: system}
+  collectedBy: [d8:manage:all:manager, d8:manage:all:viewer, d8:manage:networking:manager, d8:manage:networking:viewer]
+- name: d8:namespace-capability:multitenancy-manager:view
+  labels: {module: multitenancy-manager, rbac.deckhouse.io/aggregate-to-namespace-as: viewer, rbac.deckhouse.io/capability: namespace-capability.multitenancy-manager.view, rbac.deckhouse.io/kind: capability, rbac.deckhouse.io/scope: namespace}
+  collectedBy: [d8:use:role:admin, d8:use:role:admin:kubernetes, d8:use:role:manager, d8:use:role:manager:kubernetes, d8:use:role:user, d8:use:role:user:kubernetes, d8:use:role:viewer, d8:use:role:viewer:kubernetes]
+- name: d8:project-capability:multitenancy-manager:manage_namespaces
+  labels: {module: multitenancy-manager, rbac.deckhouse.io/aggregate-to-project-as: manager, rbac.deckhouse.io/capability: project-capability.multitenancy-manager.manage_namespaces, rbac.deckhouse.io/kind: capability, rbac.deckhouse.io/scope: project}
+  collectedBy: []
+- name: d8:project-capability:multitenancy-manager:manage_rbac
+  labels: {module: multitenancy-manager, rbac.deckhouse.io/aggregate-to-project-as: admin, rbac.deckhouse.io/capability: project-capability.multitenancy-manager.manage_rbac, rbac.deckhouse.io/kind: capability, rbac.deckhouse.io/scope: project}
+  collectedBy: []
+- name: d8:project-capability:multitenancy-manager:view
+  labels: {module: multitenancy-manager, rbac.deckhouse.io/aggregate-to-project-as: viewer, rbac.deckhouse.io/capability: project-capability.multitenancy-manager.view, rbac.deckhouse.io/kind: capability, rbac.deckhouse.io/scope: project}
+  collectedBy: []
+- name: d8:system-capability:multitenancy-manager:edit
+  labels: {module: multitenancy-manager, rbac.deckhouse.io/aggregate-to-iam-as: manager, rbac.deckhouse.io/capability: system-capability.multitenancy-manager.edit, rbac.deckhouse.io/kind: capability, rbac.deckhouse.io/namespace: d8-multitenancy-manager, rbac.deckhouse.io/scope: system}
+  collectedBy: [d8:manage:all:manager, d8:manage:deckhouse:manager]
+- name: d8:system-capability:multitenancy-manager:view
+  labels: {module: multitenancy-manager, rbac.deckhouse.io/aggregate-to-iam-as: viewer, rbac.deckhouse.io/capability: system-capability.multitenancy-manager.view, rbac.deckhouse.io/kind: capability, rbac.deckhouse.io/namespace: d8-multitenancy-manager, rbac.deckhouse.io/scope: system}
+  collectedBy: [d8:manage:all:manager, d8:manage:all:viewer, d8:manage:deckhouse:manager, d8:manage:deckhouse:viewer]
+- name: d8:system-capability:network-gateway:edit
+  labels: {module: network-gateway, rbac.deckhouse.io/aggregate-to-network-as: manager, rbac.deckhouse.io/capability: system-capability.network-gateway.edit, rbac.deckhouse.io/kind: capability, rbac.deckhouse.io/namespace: d8-network-gateway, rbac.deckhouse.io/scope: system}
+  collectedBy: [d8:manage:all:manager, d8:manage:networking:manager]
+- name: d8:system-capability:network-gateway:view
+  labels: {module: network-gateway, rbac.deckhouse.io/aggregate-to-network-as: viewer, rbac.deckhouse.io/capability: system-capability.network-gateway.view, rbac.deckhouse.io/kind: capability, rbac.deckhouse.io/namespace: d8-network-gateway, rbac.deckhouse.io/scope: system}
+  collectedBy: [d8:manage:all:manager, d8:manage:all:viewer, d8:manage:networking:manager, d8:manage:networking:viewer]
+- name: d8:system-capability:network-policy-engine:edit
+  labels: {module: network-policy-engine, rbac.deckhouse.io/aggregate-to-network-as: manager, rbac.deckhouse.io/capability: system-capability.network-policy-engine.edit, rbac.deckhouse.io/kind: capability, rbac.deckhouse.io/namespace: d8-system, rbac.deckhouse.io/scope: system}
+  collectedBy: [d8:manage:all:manager, d8:manage:networking:manager]
+- name: d8:system-capability:network-policy-engine:view
+  labels: {module: network-policy-engine, rbac.deckhouse.io/aggregate-to-network-as: viewer, rbac.deckhouse.io/capability: system-capability.network-policy-engine.view, rbac.deckhouse.io/kind: capability, rbac.deckhouse.io/namespace: d8-system, rbac.deckhouse.io/scope: system}
+  collectedBy: [d8:manage:all:manager, d8:manage:all:viewer, d8:manage:networking:manager, d8:manage:networking:viewer]
+- name: d8:system-capability:node-local-dns:edit
+  labels: {module: node-local-dns, rbac.deckhouse.io/aggregate-to-network-as: manager, rbac.deckhouse.io/capability: system-capability.node-local-dns.edit, rbac.deckhouse.io/kind: capability, rbac.deckhouse.io/namespace: kube-system, rbac.deckhouse.io/scope: system}
+  collectedBy: [d8:manage:all:manager, d8:manage:networking:manager]
+- name: d8:system-capability:node-local-dns:view
+  labels: {module: node-local-dns, rbac.deckhouse.io/aggregate-to-network-as: viewer, rbac.deckhouse.io/capability: system-capability.node-local-dns.view, rbac.deckhouse.io/kind: capability, rbac.deckhouse.io/namespace: kube-system, rbac.deckhouse.io/scope: system}
+  collectedBy: [d8:manage:all:manager, d8:manage:all:viewer, d8:manage:networking:manager, d8:manage:networking:viewer]
+- name: d8:system-capability:node-manager:edit
+  labels: {module: node-manager, rbac.deckhouse.io/aggregate-to-cluster-as: manager, rbac.deckhouse.io/capability: system-capability.node-manager.edit, rbac.deckhouse.io/kind: capability, rbac.deckhouse.io/namespace: d8-cloud-instance-manager, rbac.deckhouse.io/scope: system}
+  collectedBy: [d8:manage:all:manager, d8:manage:infrastructure:manager]
+- name: d8:system-capability:node-manager:view
+  labels: {module: node-manager, rbac.deckhouse.io/aggregate-to-cluster-as: viewer, rbac.deckhouse.io/capability: system-capability.node-manager.view, rbac.deckhouse.io/kind: capability, rbac.deckhouse.io/namespace: d8-cloud-instance-manager, rbac.deckhouse.io/scope: system}
+  collectedBy: [d8:manage:all:manager, d8:manage:all:viewer, d8:manage:infrastructure:manager, d8:manage:infrastructure:viewer]
+- name: d8:system-capability:okmeter:edit
+  labels: {module: okmeter, rbac.deckhouse.io/aggregate-to-observability-as: manager, rbac.deckhouse.io/capability: system-capability.okmeter.edit, rbac.deckhouse.io/kind: capability, rbac.deckhouse.io/namespace: d8-okmeter, rbac.deckhouse.io/scope: system}
+  collectedBy: [d8:manage:all:manager, d8:manage:observability:manager]
+- name: d8:system-capability:okmeter:view
+  labels: {module: okmeter, rbac.deckhouse.io/aggregate-to-observability-as: viewer, rbac.deckhouse.io/capability: system-capability.okmeter.view, rbac.deckhouse.io/kind: capability, rbac.deckhouse.io/namespace: d8-okmeter, rbac.deckhouse.io/scope: system}
+  collectedBy: [d8:manage:all:manager, d8:manage:all:viewer, d8:manage:observability:manager, d8:manage:observability:viewer]
+- name: d8:system-capability:openvpn:edit
+  labels: {module: openvpn, rbac.deckhouse.io/aggregate-to-network-as: manager, rbac.deckhouse.io/capability: system-capability.openvpn.edit, rbac.deckhouse.io/kind: capability, rbac.deckhouse.io/namespace: d8-openvpn, rbac.deckhouse.io/scope: system}
+  collectedBy: [d8:manage:all:manager, d8:manage:networking:manager]
+- name: d8:system-capability:openvpn:view
+  labels: {module: openvpn, rbac.deckhouse.io/aggregate-to-network-as: viewer, rbac.deckhouse.io/capability: system-capability.openvpn.view, rbac.deckhouse.io/kind: capability, rbac.deckhouse.io/namespace: d8-openvpn, rbac.deckhouse.io/scope: system}
+  collectedBy: [d8:manage:all:manager, d8:manage:all:viewer, d8:manage:networking:manager, d8:manage:networking:viewer]
+- name: d8:system-capability:secret-copier:edit
+  labels: {module: secret-copier, rbac.deckhouse.io/aggregate-to-security-as: manager, rbac.deckhouse.io/capability: system-capability.secret-copier.edit, rbac.deckhouse.io/kind: capability, rbac.deckhouse.io/scope: system}
+  collectedBy: [d8:manage:all:manager, d8:manage:security:manager]
+- name: d8:system-capability:secret-copier:view
+  labels: {module: secret-copier, rbac.deckhouse.io/aggregate-to-security-as: viewer, rbac.deckhouse.io/capability: system-capability.secret-copier.view, rbac.deckhouse.io/kind: capability, rbac.deckhouse.io/scope: system}
+  collectedBy: [d8:manage:all:manager, d8:manage:all:viewer, d8:manage:security:manager, d8:manage:security:viewer]
+- name: d8:namespace-capability:service-with-healthchecks:edit
+  labels: {module: service-with-healthchecks, rbac.deckhouse.io/aggregate-to-namespace-as: manager, rbac.deckhouse.io/capability: namespace-capability.service-with-healthchecks.edit, rbac.deckhouse.io/kind: capability, rbac.deckhouse.io/scope: namespace}
+  collectedBy: [d8:use:role:admin, d8:use:role:admin:kubernetes, d8:use:role:manager, d8:use:role:manager:kubernetes]
+- name: d8:namespace-capability:service-with-healthchecks:view
+  labels: {module: service-with-healthchecks, rbac.deckhouse.io/aggregate-to-namespace-as: viewer, rbac.deckhouse.io/capability: namespace-capability.service-with-healthchecks.view, rbac.deckhouse.io/kind: capability, rbac.deckhouse.io/scope: namespace}
+  collectedBy: [d8:use:role:admin, d8:use:role:admin:kubernetes, d8:use:role:manager, d8:use:role:manager:kubernetes, d8:use:role:user, d8:use:role:user:kubernetes, d8:use:role:viewer, d8:use:role:viewer:kubernetes]
+- name: d8:system-capability:service-with-healthchecks:edit
+  labels: {module: service-with-healthchecks, rbac.deckhouse.io/aggregate-to-network-as: manager, rbac.deckhouse.io/capability: system-capability.service-with-healthchecks.edit, rbac.deckhouse.io/kind: capability, rbac.deckhouse.io/namespace: d8-service-with-healthchecks, rbac.deckhouse.io/scope: system}
+  collectedBy: [d8:manage:all:manager, d8:manage:networking:manager]
+- name: d8:system-capability:service-with-healthchecks:view
+  labels: {module: service-with-healthchecks, rbac.deckhouse.io/aggregate-to-network-as: viewer, rbac.deckhouse.io/capability: system-capability.service-with-healthchecks.view, rbac.deckhouse.io/kind: capability, rbac.deckhouse.io/namespace: d8-service-with-healthchecks, rbac.deckhouse.io/scope: system}
+  collectedBy: [d8:manage:all:manager, d8:manage:all:viewer, d8:manage:networking:manager, d8:manage:networking:viewer]
+- name: d8:system-capability:terraform-manager:edit
+  labels: {module: terraform-manager, rbac.deckhouse.io/aggregate-to-cluster-as: manager, rbac.deckhouse.io/capability: system-capability.terraform-manager.edit, rbac.deckhouse.io/kind: capability, rbac.deckhouse.io/namespace: d8-system, rbac.deckhouse.io/scope: system}
+  collectedBy: [d8:manage:all:manager, d8:manage:infrastructure:manager]
+- name: d8:system-capability:terraform-manager:view
+  labels: {module: terraform-manager, rbac.deckhouse.io/aggregate-to-cluster-as: viewer, rbac.deckhouse.io/capability: system-capability.terraform-manager.view, rbac.deckhouse.io/kind: capability, rbac.deckhouse.io/namespace: d8-system, rbac.deckhouse.io/scope: system}
+  collectedBy: [d8:manage:all:manager, d8:manage:all:viewer, d8:manage:infrastructure:manager, d8:manage:infrastructure:viewer]
+- name: d8:namespace-capability:user-authn:edit
+  labels: {module: user-authn, rbac.deckhouse.io/aggregate-to-namespace-as: manager, rbac.deckhouse.io/capability: namespace-capability.user-authn.edit, rbac.deckhouse.io/kind: capability, rbac.deckhouse.io/scope: namespace}
+  collectedBy: [d8:use:role:admin, d8:use:role:admin:kubernetes, d8:use:role:manager, d8:use:role:manager:kubernetes]
+- name: d8:namespace-capability:user-authn:view
+  labels: {module: user-authn, rbac.deckhouse.io/aggregate-to-namespace-as: viewer, rbac.deckhouse.io/capability: namespace-capability.user-authn.view, rbac.deckhouse.io/kind: capability, rbac.deckhouse.io/scope: namespace}
+  collectedBy: [d8:use:role:admin, d8:use:role:admin:kubernetes, d8:use:role:manager, d8:use:role:manager:kubernetes, d8:use:role:user, d8:use:role:user:kubernetes, d8:use:role:viewer, d8:use:role:viewer:kubernetes]
+- name: d8:system-capability:user-authn:edit
+  labels: {module: user-authn, rbac.deckhouse.io/aggregate-to-iam-as: manager, rbac.deckhouse.io/capability: system-capability.user-authn.edit, rbac.deckhouse.io/kind: capability, rbac.deckhouse.io/namespace: d8-user-authn, rbac.deckhouse.io/scope: system}
+  collectedBy: [d8:manage:all:manager, d8:manage:security:manager]
+- name: d8:system-capability:user-authn:view
+  labels: {module: user-authn, rbac.deckhouse.io/aggregate-to-iam-as: viewer, rbac.deckhouse.io/capability: system-capability.user-authn.view, rbac.deckhouse.io/kind: capability, rbac.deckhouse.io/namespace: d8-user-authn, rbac.deckhouse.io/scope: system}
+  collectedBy: [d8:manage:all:manager, d8:manage:all:viewer, d8:manage:security:manager, d8:manage:security:viewer]
+- name: d8:namespace-capability:kubernetes:access_terminal
+  labels: {module: user-authz, rbac.deckhouse.io/aggregate-to-namespace-as: user, rbac.deckhouse.io/capability: namespace-capability.kubernetes.access_terminal, rbac.deckhouse.io/kind: capability, rbac.deckhouse.io/scope: namespace}
+  collectedBy: [d8:use:role:admin, d8:use:role:admin:kubernetes, d8:use:role:manager, d8:use:role:manager:kubernetes, d8:use:role:user, d8:use:role:user:kubernetes]
+- name: d8:namespace-capability:kubernetes:delete_pods
+  labels: {module: user-authz, rbac.deckhouse.io/aggregate-to-namespace-as: user, rbac.deckhouse.io/capability: namespace-capability.kubernetes.delete_pods, rbac.deckhouse.io/kind: capability, rbac.deckhouse.io/scope: namespace}
+  collectedBy: [d8:use:role:admin, d8:use:role:admin:kubernetes, d8:use:role:manager, d8:use:role:manager:kubernetes, d8:use:role:user, d8:use:role:user:kubernetes]
+- name: d8:namespace-capability:kubernetes:forward_port
+  labels: {module: user-authz, rbac.deckhouse.io/aggregate-to-namespace-as: user, rbac.deckhouse.io/capability: namespace-capability.kubernetes.forward_port, rbac.deckhouse.io/kind: capability, rbac.deckhouse.io/scope: namespace}
+  collectedBy: [d8:use:role:admin, d8:use:role:admin:kubernetes, d8:use:role:manager, d8:use:role:manager:kubernetes, d8:use:role:user, d8:use:role:user:kubernetes]
+- name: d8:namespace-capability:kubernetes:manage_limits
+  labels: {module: user-authz, rbac.deckhouse.io/aggregate-to-namespace-as: admin, rbac.deckhouse.io/capability: namespace-capability.kubernetes.manage_limits, rbac.deckhouse.io/kind: capability, rbac.deckhouse.io/scope: namespace}
+  collectedBy: [d8:use:role:admin, d8:use:role:admin:kubernetes]
+- name: d8:namespace-capability:kubernetes:manage_quotas
+  labels: {module: user-authz, rbac.deckhouse.io/aggregate-to-namespace-as: admin, rbac.deckhouse.io/capability: namespace-capability.kubernetes.manage_quotas, rbac.deckhouse.io/kind: capability, rbac.deckhouse.io/scope: namespace}
+  collectedBy: [d8:use:role:admin, d8:use:role:admin:kubernetes]
+- name: d8:namespace-capability:kubernetes:manage_resources
+  labels: {module: user-authz, rbac.deckhouse.io/aggregate-to-namespace-as: manager, rbac.deckhouse.io/capability: namespace-capability.kubernetes.manage_resources, rbac.deckhouse.io/kind: capability, rbac.deckhouse.io/scope: namespace}
+  collectedBy: [d8:use:role:admin, d8:use:role:admin:kubernetes, d8:use:role:manager, d8:use:role:manager:kubernetes]
+- name: d8:namespace-capability:kubernetes:manage_security
+  labels: {module: user-authz, rbac.deckhouse.io/aggregate-to-namespace-as: admin, rbac.deckhouse.io/capability: namespace-capability.kubernetes.manage_security, rbac.deckhouse.io/kind: capability, rbac.deckhouse.io/scope: namespace}
+  collectedBy: [d8:use:role:admin, d8:use:role:admin:kubernetes]
+- name: d8:namespace-capability:kubernetes:manage_serviceaccount_tokens
+  labels: {module: user-authz, rbac.deckhouse.io/aggregate-to-namespace-as: superadmin, rbac.deckhouse.io/capability: namespace-capability.kubernetes.manage_serviceaccount_tokens, rbac.deckhouse.io/kind: capability, rbac.deckhouse.io/scope: namespace}
+  collectedBy: []
+- name: d8:namespace-capability:kubernetes:proxy_resources
+  labels: {module: user-authz, rbac.deckhouse.io/aggregate-to-namespace-as: user, rbac.deckhouse.io/capability: namespace-capability.kubernetes.proxy_resources, rbac.deckhouse.io/kind: capability, rbac.deckhouse.io/scope: namespace}
+  collectedBy: [d8:use:role:admin, d8:use:role:admin:kubernetes, d8:use:role:manager, d8:use:role:manager:kubernetes, d8:use:role:user, d8:use:role:user:kubernetes]
+- name: d8:namespace-capability:kubernetes:scale_controllers
+  labels: {module: user-authz, rbac.deckhouse.io/aggregate-to-namespace-as: user, rbac.deckhouse.io/capability: namespace-capability.kubernetes.scale_controllers, rbac.deckhouse.io/kind: capability, rbac.deckhouse.io/scope: namespace}
+  collectedBy: [d8:use:role:admin, d8:use:role:admin:kubernetes, d8:use:role:manager, d8:use:role:manager:kubernetes, d8:use:role:user, d8:use:role:user:kubernetes]
+- name: d8:namespace-capability:kubernetes:view_logs
+  labels: {module: user-authz, rbac.deckhouse.io/aggregate-to-namespace-as: viewer, rbac.deckhouse.io/capability: namespace-capability.kubernetes.view_logs, rbac.deckhouse.io/kind: capability, rbac.deckhouse.io/scope: namespace}
+  collectedBy: [d8:use:role:admin, d8:use:role:admin:kubernetes, d8:use:role:manager, d8:use:role:manager:kubernetes, d8:use:role:user, d8:use:role:user:kubernetes, d8:use:role:viewer, d8:use:role:viewer:kubernetes]
+- name: d8:namespace-capability:kubernetes:view_metrics
+  labels: {module: user-authz, rbac.deckhouse.io/aggregate-to-namespace-as: viewer, rbac.deckhouse.io/capability: namespace-capability.kubernetes.view_metrics, rbac.deckhouse.io/kind: capability, rbac.deckhouse.io/scope: namespace}
+  collectedBy: [d8:use:role:admin, d8:use:role:admin:kubernetes, d8:use:role:manager, d8:use:role:manager:kubernetes, d8:use:role:user, d8:use:role:user:kubernetes, d8:use:role:viewer, d8:use:role:viewer:kubernetes]
+- name: d8:namespace-capability:kubernetes:view_resources
+  labels: {module: user-authz, rbac.deckhouse.io/aggregate-to-namespace-as: viewer, rbac.deckhouse.io/capability: namespace-capability.kubernetes.view_resources, rbac.deckhouse.io/kind: capability, rbac.deckhouse.io/scope: namespace}
+  collectedBy: [d8:use:role:admin, d8:use:role:admin:kubernetes, d8:use:role:manager, d8:use:role:manager:kubernetes, d8:use:role:user, d8:use:role:user:kubernetes, d8:use:role:viewer, d8:use:role:viewer:kubernetes]
+- name: d8:namespace-capability:kubernetes:view_secrets
+  labels: {module: user-authz, rbac.deckhouse.io/aggregate-to-namespace-as: user, rbac.deckhouse.io/capability: namespace-capability.kubernetes.view_secrets, rbac.deckhouse.io/kind: capability, rbac.deckhouse.io/scope: namespace}
+  collectedBy: [d8:use:role:admin, d8:use:role:admin:kubernetes, d8:use:role:manager, d8:use:role:manager:kubernetes, d8:use:role:user, d8:use:role:user:kubernetes]
+- name: d8:namespace-capability:user-authz:edit
+  labels: {module: user-authz, rbac.deckhouse.io/aggregate-to-namespace-as: manager, rbac.deckhouse.io/capability: namespace-capability.user-authz.edit, rbac.deckhouse.io/kind: capability, rbac.deckhouse.io/scope: namespace}
+  collectedBy: [d8:use:role:admin, d8:use:role:admin:kubernetes, d8:use:role:manager, d8:use:role:manager:kubernetes]
+- name: d8:namespace-capability:user-authz:view
+  labels: {module: user-authz, rbac.deckhouse.io/aggregate-to-namespace-as: viewer, rbac.deckhouse.io/capability: namespace-capability.user-authz.view, rbac.deckhouse.io/kind: capability, rbac.deckhouse.io/scope: namespace}
+  collectedBy: [d8:use:role:admin, d8:use:role:admin:kubernetes, d8:use:role:manager, d8:use:role:manager:kubernetes, d8:use:role:user, d8:use:role:user:kubernetes, d8:use:role:viewer, d8:use:role:viewer:kubernetes]
+- name: d8:subsystem-capability:cluster:manage_resources
+  labels: {module: user-authz, rbac.deckhouse.io/aggregate-to-cluster-as: manager, rbac.deckhouse.io/capability: subsystem-capability.cluster.manage_resources, rbac.deckhouse.io/kind: capability, rbac.deckhouse.io/scope: subsystem, rbac.deckhouse.io/subsystem: cluster}
+  collectedBy: [d8:manage:all:manager, d8:manage:infrastructure:manager, d8:manage:kubernetes:manager]
+- name: d8:subsystem-capability:cluster:view_resources
+  labels: {module: user-authz, rbac.deckhouse.io/aggregate-to-cluster-as: viewer, rbac.deckhouse.io/capability: subsystem-capability.cluster.view_resources, rbac.deckhouse.io/kind: capability, rbac.deckhouse.io/scope: subsystem, rbac.deckhouse.io/subsystem: cluster}
+  collectedBy: [d8:manage:all:manager, d8:manage:all:viewer, d8:manage:infrastructure:manager, d8:manage:infrastructure:viewer, d8:manage:kubernetes:manager, d8:manage:kubernetes:viewer]
+- name: d8:subsystem-capability:iam:inspect_access
+  labels: {module: user-authz, rbac.deckhouse.io/aggregate-to-iam-as: manager, rbac.deckhouse.io/aggregate-to-security-as: manager, rbac.deckhouse.io/capability: subsystem-capability.iam.inspect_access, rbac.deckhouse.io/kind: capability, rbac.deckhouse.io/scope: subsystem, rbac.deckhouse.io/subsystem: iam}
+  collectedBy: [d8:manage:all:manager, d8:manage:security:manager]
+- name: d8:subsystem-capability:network:manage_resources
+  labels: {module: user-authz, rbac.deckhouse.io/aggregate-to-cluster-as: manager, rbac.deckhouse.io/aggregate-to-network-as: manager, rbac.deckhouse.io/capability: subsystem-capability.network.manage_resources, rbac.deckhouse.io/kind: capability, rbac.deckhouse.io/scope: subsystem, rbac.deckhouse.io/subsystem: network}
+  collectedBy: [d8:manage:all:manager, d8:manage:kubernetes:manager, d8:manage:networking:manager]
+- name: d8:subsystem-capability:network:view_resources
+  labels: {module: user-authz, rbac.deckhouse.io/aggregate-to-cluster-as: viewer, rbac.deckhouse.io/aggregate-to-network-as: viewer, rbac.deckhouse.io/capability: subsystem-capability.network.view_resources, rbac.deckhouse.io/kind: capability, rbac.deckhouse.io/scope: subsystem, rbac.deckhouse.io/subsystem: network}
+  collectedBy: [d8:manage:all:manager, d8:manage:all:viewer, d8:manage:kubernetes:manager, d8:manage:kubernetes:viewer, d8:manage:networking:manager, d8:manage:networking:viewer]
+- name: d8:subsystem-capability:security:manage_resources
+  labels: {module: user-authz, rbac.deckhouse.io/aggregate-to-cluster-as: manager, rbac.deckhouse.io/aggregate-to-security-as: manager, rbac.deckhouse.io/capability: subsystem-capability.security.manage_resources, rbac.deckhouse.io/kind: capability, rbac.deckhouse.io/scope: subsystem, rbac.deckhouse.io/subsystem: security}
+  collectedBy: [d8:manage:all:manager, d8:manage:kubernetes:manager, d8:manage:security:manager]
+- name: d8:subsystem-capability:security:view_resources
+  labels: {module: user-authz, rbac.deckhouse.io/aggregate-to-cluster-as: viewer, rbac.deckhouse.io/aggregate-to-security-as: viewer, rbac.deckhouse.io/capability: subsystem-capability.security.view_resources, rbac.deckhouse.io/kind: capability, rbac.deckhouse.io/scope: subsystem, rbac.deckhouse.io/subsystem: security}
+  collectedBy: [d8:manage:all:manager, d8:manage:all:viewer, d8:manage:kubernetes:manager, d8:manage:kubernetes:viewer, d8:manage:security:manager, d8:manage:security:viewer]
+- name: d8:subsystem-capability:storage:manage_resources
+  labels: {module: user-authz, rbac.deckhouse.io/aggregate-to-cluster-as: manager, rbac.deckhouse.io/aggregate-to-storage-as: manager, rbac.deckhouse.io/capability: subsystem-capability.storage.manage_resources, rbac.deckhouse.io/kind: capability, rbac.deckhouse.io/scope: subsystem, rbac.deckhouse.io/subsystem: storage}
+  collectedBy: [d8:manage:all:manager, d8:manage:kubernetes:manager, d8:manage:storage:manager]
+- name: d8:subsystem-capability:storage:view_resources
+  labels: {module: user-authz, rbac.deckhouse.io/aggregate-to-cluster-as: viewer, rbac.deckhouse.io/aggregate-to-storage-as: viewer, rbac.deckhouse.io/capability: subsystem-capability.storage.view_resources, rbac.deckhouse.io/kind: capability, rbac.deckhouse.io/scope: subsystem, rbac.deckhouse.io/subsystem: storage}
+  collectedBy: [d8:manage:all:manager, d8:manage:all:viewer, d8:manage:kubernetes:manager, d8:manage:kubernetes:viewer, d8:manage:storage:manager, d8:manage:storage:viewer]
+- name: d8:system-capability:user-authz:edit
+  labels: {module: user-authz, rbac.deckhouse.io/aggregate-to-iam-as: manager, rbac.deckhouse.io/capability: system-capability.user-authz.edit, rbac.deckhouse.io/kind: capability, rbac.deckhouse.io/scope: system}
+  collectedBy: [d8:manage:all:manager, d8:manage:security:manager]
+- name: d8:system-capability:user-authz:view
+  labels: {module: user-authz, rbac.deckhouse.io/aggregate-to-iam-as: viewer, rbac.deckhouse.io/capability: system-capability.user-authz.view, rbac.deckhouse.io/kind: capability, rbac.deckhouse.io/scope: system}
+  collectedBy: [d8:manage:all:manager, d8:manage:all:viewer, d8:manage:security:manager, d8:manage:security:viewer]
+- name: d8:system-capability:vertical-pod-autoscaler:edit
+  labels: {module: vertical-pod-autoscaler, rbac.deckhouse.io/aggregate-to-cluster-as: manager, rbac.deckhouse.io/capability: system-capability.vertical-pod-autoscaler.edit, rbac.deckhouse.io/kind: capability, rbac.deckhouse.io/namespace: kube-system, rbac.deckhouse.io/scope: system}
+  collectedBy: [d8:manage:all:manager, d8:manage:infrastructure:manager]
+- name: d8:system-capability:vertical-pod-autoscaler:view
+  labels: {module: vertical-pod-autoscaler, rbac.deckhouse.io/aggregate-to-cluster-as: viewer, rbac.deckhouse.io/capability: system-capability.vertical-pod-autoscaler.view, rbac.deckhouse.io/kind: capability, rbac.deckhouse.io/namespace: kube-system, rbac.deckhouse.io/scope: system}
+  collectedBy: [d8:manage:all:manager, d8:manage:all:viewer, d8:manage:infrastructure:manager, d8:manage:infrastructure:viewer]
+- name: d8:system-capability:csi-nfs:edit
+  labels: {module: csi-nfs, rbac.deckhouse.io/aggregate-to-storage-as: manager, rbac.deckhouse.io/capability: system-capability.csi-nfs.edit, rbac.deckhouse.io/kind: capability, rbac.deckhouse.io/namespace: d8-csi-nfs, rbac.deckhouse.io/scope: system}
+  collectedBy: [d8:manage:all:manager, d8:manage:storage:manager]
+  external: true
+- name: d8:system-capability:csi-nfs:view
+  labels: {module: csi-nfs, rbac.deckhouse.io/aggregate-to-storage-as: viewer, rbac.deckhouse.io/capability: system-capability.csi-nfs.view, rbac.deckhouse.io/kind: capability, rbac.deckhouse.io/namespace: d8-csi-nfs, rbac.deckhouse.io/scope: system}
+  collectedBy: [d8:manage:all:manager, d8:manage:all:viewer, d8:manage:storage:manager, d8:manage:storage:viewer]
+  external: true
+- name: d8:namespace-capability:state-snapshotter:download_snapshots
+  labels: {module: state-snapshotter, rbac.deckhouse.io/aggregate-to-namespace-as: manager, rbac.deckhouse.io/capability: namespace-capability.state-snapshotter.download_snapshots, rbac.deckhouse.io/kind: capability, rbac.deckhouse.io/scope: namespace}
+  collectedBy: [d8:use:role:admin, d8:use:role:admin:kubernetes, d8:use:role:manager, d8:use:role:manager:kubernetes]
+  external: true
+- name: d8:namespace-capability:state-snapshotter:edit
+  labels: {module: state-snapshotter, rbac.deckhouse.io/aggregate-to-namespace-as: manager, rbac.deckhouse.io/capability: namespace-capability.state-snapshotter.edit, rbac.deckhouse.io/kind: capability, rbac.deckhouse.io/scope: namespace}
+  collectedBy: [d8:use:role:admin, d8:use:role:admin:kubernetes, d8:use:role:manager, d8:use:role:manager:kubernetes]
+  external: true
+- name: d8:namespace-capability:state-snapshotter:manage_snapshots
+  labels: {module: state-snapshotter, rbac.deckhouse.io/aggregate-to-namespace-as: manager, rbac.deckhouse.io/capability: namespace-capability.state-snapshotter.manage_snapshots, rbac.deckhouse.io/kind: capability, rbac.deckhouse.io/scope: namespace}
+  collectedBy: [d8:use:role:admin, d8:use:role:admin:kubernetes, d8:use:role:manager, d8:use:role:manager:kubernetes]
+  external: true
+- name: d8:namespace-capability:state-snapshotter:restore_snapshots
+  labels: {module: state-snapshotter, rbac.deckhouse.io/aggregate-to-namespace-as: admin, rbac.deckhouse.io/capability: namespace-capability.state-snapshotter.restore_snapshots, rbac.deckhouse.io/kind: capability, rbac.deckhouse.io/scope: namespace}
+  collectedBy: [d8:use:role:admin, d8:use:role:admin:kubernetes]
+  external: true
+- name: d8:namespace-capability:state-snapshotter:upload_snapshots
+  labels: {module: state-snapshotter, rbac.deckhouse.io/aggregate-to-namespace-as: admin, rbac.deckhouse.io/capability: namespace-capability.state-snapshotter.upload_snapshots, rbac.deckhouse.io/kind: capability, rbac.deckhouse.io/scope: namespace}
+  collectedBy: [d8:use:role:admin, d8:use:role:admin:kubernetes]
+  external: true
+- name: d8:namespace-capability:state-snapshotter:view
+  labels: {module: state-snapshotter, rbac.deckhouse.io/aggregate-to-namespace-as: viewer, rbac.deckhouse.io/capability: namespace-capability.state-snapshotter.view, rbac.deckhouse.io/kind: capability, rbac.deckhouse.io/scope: namespace}
+  collectedBy: [d8:use:role:admin, d8:use:role:admin:kubernetes, d8:use:role:manager, d8:use:role:manager:kubernetes, d8:use:role:user, d8:use:role:user:kubernetes, d8:use:role:viewer, d8:use:role:viewer:kubernetes]
+  external: true
+- name: d8:namespace-capability:state-snapshotter:view_snapshots
+  labels: {module: state-snapshotter, rbac.deckhouse.io/aggregate-to-namespace-as: viewer, rbac.deckhouse.io/capability: namespace-capability.state-snapshotter.view_snapshots, rbac.deckhouse.io/kind: capability, rbac.deckhouse.io/scope: namespace}
+  collectedBy: [d8:use:role:admin, d8:use:role:admin:kubernetes, d8:use:role:manager, d8:use:role:manager:kubernetes, d8:use:role:user, d8:use:role:user:kubernetes, d8:use:role:viewer, d8:use:role:viewer:kubernetes]
+  external: true
+- name: d8:system-capability:state-snapshotter:edit
+  labels: {module: state-snapshotter, rbac.deckhouse.io/aggregate-to-storage-as: manager, rbac.deckhouse.io/capability: system-capability.state-snapshotter.edit, rbac.deckhouse.io/kind: capability, rbac.deckhouse.io/namespace: d8-state-snapshotter, rbac.deckhouse.io/scope: system}
+  collectedBy: [d8:manage:all:manager, d8:manage:storage:manager]
+  external: true
+- name: d8:system-capability:state-snapshotter:view
+  labels: {module: state-snapshotter, rbac.deckhouse.io/aggregate-to-storage-as: viewer, rbac.deckhouse.io/capability: system-capability.state-snapshotter.view, rbac.deckhouse.io/kind: capability, rbac.deckhouse.io/namespace: d8-state-snapshotter, rbac.deckhouse.io/scope: system}
+  collectedBy: [d8:manage:all:manager, d8:manage:all:viewer, d8:manage:storage:manager, d8:manage:storage:viewer]
+  external: true

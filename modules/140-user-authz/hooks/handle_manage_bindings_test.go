@@ -109,6 +109,41 @@ var _ = Describe("Modules :: user-authz :: hooks :: handle-manage-bindings ::", 
 		})
 	})
 
+	// The manage roles also select the capabilities of the next release, by matchLabels with
+	// rbac.deckhouse.io/kind: capability and a module In expression. The hook follows only the
+	// ClusterRoles of kind manage, so the RoleBindings still go to the namespaces of this scheme.
+	Context("A manage role also selects the capabilities of the next release", func() {
+		BeforeEach(func() {
+			nextReleaseSelector := metav1.LabelSelector{
+				MatchLabels: map[string]string{
+					"rbac.deckhouse.io/kind":                   "capability",
+					"rbac.deckhouse.io/aggregate-to-others-as": "manager",
+				},
+				MatchExpressions: []metav1.LabelSelectorRequirement{
+					{Key: "module", Operator: metav1.LabelSelectorOpIn, Values: []string{"test2"}},
+				},
+			}
+			resources := []string{
+				manageModuleRole("d8:manage:permission:module:test:edit", "others", "test-ns"),
+				nextReleaseCapability("d8:system-capability:test2:edit", "test2", "test2-ns"),
+				manageRole("d8:manage:others:manager", "subsystem", "others", nextReleaseSelector),
+				manageBinding("test", "d8:manage:others:manager"),
+			}
+			f.BindingContexts.Set(f.KubeStateSet(strings.Join(resources, "\n---\n")))
+			f.RunHook()
+		})
+
+		It("Should create RoleBindings only in the namespaces of the roles of this scheme", func() {
+			Expect(f).To(ExecuteSuccessfully())
+
+			roleBinding := f.KubernetesResource("RoleBinding", "test-ns", "d8:use:admin:binding:test")
+			Expect(roleBinding.Field("metadata.name").Str).To(Equal("d8:use:admin:binding:test"))
+
+			roleBinding = f.KubernetesResource("RoleBinding", "test2-ns", "d8:use:admin:binding:test")
+			Expect(roleBinding).To(BeEmpty())
+		})
+	})
+
 	Context("There`s UseBinding", func() {
 		BeforeEach(func() {
 			resources := []string{
@@ -135,7 +170,7 @@ var _ = Describe("Modules :: user-authz :: hooks :: handle-manage-bindings ::", 
 	})
 })
 
-func manageRole(name, level, subsystem string) string {
+func manageRole(name, level, subsystem string, extraSelectors ...metav1.LabelSelector) string {
 	role := rbacv1.ClusterRole{
 		TypeMeta: metav1.TypeMeta{
 			APIVersion: "rbac.authorization.k8s.io/v1",
@@ -158,6 +193,7 @@ func manageRole(name, level, subsystem string) string {
 			},
 		}},
 	}
+	role.AggregationRule.ClusterRoleSelectors = append(role.AggregationRule.ClusterRoleSelectors, extraSelectors...)
 	if level != "all" {
 		role.Labels["rbac.deckhouse.io/aggregate-to-all-as"] = "manager"
 	}
@@ -178,6 +214,29 @@ func manageModuleRole(name, subsystem, namespace string) string {
 				"rbac.deckhouse.io/kind":                                       "manage",
 				"rbac.deckhouse.io/namespace":                                  namespace,
 				fmt.Sprintf("rbac.deckhouse.io/aggregate-to-%s-as", subsystem): "manager",
+			},
+		},
+	}
+	marshaled, _ := yaml.Marshal(&role)
+	return string(marshaled)
+}
+
+// nextReleaseCapability is a system capability with the labels of the next release, which the
+// roles of this release select in advance.
+func nextReleaseCapability(name, module, namespace string) string {
+	role := rbacv1.ClusterRole{
+		TypeMeta: metav1.TypeMeta{
+			APIVersion: "rbac.authorization.k8s.io/v1",
+			Kind:       "ClusterRole",
+		},
+		ObjectMeta: metav1.ObjectMeta{
+			Name: name,
+			Labels: map[string]string{
+				"module":                                   module,
+				"rbac.deckhouse.io/kind":                   "capability",
+				"rbac.deckhouse.io/scope":                  "system",
+				"rbac.deckhouse.io/namespace":              namespace,
+				"rbac.deckhouse.io/aggregate-to-others-as": "manager",
 			},
 		},
 	}
