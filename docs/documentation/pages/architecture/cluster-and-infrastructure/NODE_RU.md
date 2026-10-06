@@ -157,6 +157,6 @@ DP имеет набор встроенных метрик мониторинг�
 
 Подробно о всех параметрах можно прочитать в описании кастомного ресурса [NodeGroup](/modules/node-manager/cr.html#nodegroup).
 
-В случае изменения параметров InstanceClass или `instancePrefix` в конфигурации DP не будет происходить `RollingUpdate`. DP создаст новые MachineDeployment, а старые удалит. Количество заказываемых одновременно MachineDeployment определяется параметром `cloudInstances.maxSurgePerZone`.
+При изменении параметров InstanceClass платформа заменяет машины группы новыми. Сколько инстансов заменяется одновременно, задают параметры [`cloudInstances.maxSurgePerZone`](/modules/node-manager/cr.html#nodegroup-v1-spec-cloudinstances-maxsurgeperzone) и [`cloudInstances.maxUnavailablePerZone`](/modules/node-manager/cr.html#nodegroup-v1-spec-cloudinstances-maxunavailableperzone). При изменении `instancePrefix` в конфигурации DP платформа создаёт новые MachineDeployment, а старые удаляет.
 
 При обновлении, которое требует прерывания работы узла (disruption update), выполняется процесс вытеснения подов с узла. Если какой-либо под не может быть вытеснен, попытка повторяется каждые 20 секунд до достижения глобального таймаута в 5 минут. После истечения этого времени, поды, которые не удалось вытеснить, удаляются принудительно.
