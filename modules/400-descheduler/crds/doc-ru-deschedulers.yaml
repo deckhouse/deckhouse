@@ -252,6 +252,19 @@ spec:
                       description: Значение класса приоритета.
                 evictLocalStoragePods:
                   description: Позволяет вытеснять поды, использующие локальное хранилище.
+                protectedStorageClasses:
+                  description: |-
+                    Список имён StorageClass, поды которых запрещено вытеснять.
+
+                    Если под использует PersistentVolumeClaim, созданный одним из перечисленных StorageClass,
+                    descheduler никогда не будет вытеснять такой под.
+
+                    Обратите внимание:
+                    - Пустой список (или отсутствие параметра) сохраняет текущее поведение: поды с PVC вытесняются как обычно.
+                    - Под, для которого не удалось определить PersistentVolumeClaim (PVC отсутствует или у него пустой `storageClassName`),
+                      также считается защищённым.
+                  items:
+                    description: Имя StorageClass.
                 strategies:
                   description:
                     Настройки стратегий данного экземпляра ресурса Descheduler.

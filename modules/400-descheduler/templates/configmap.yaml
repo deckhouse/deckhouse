@@ -23,10 +23,40 @@ data:
           {{- if $d.nodeLabelSelector }}
           nodeSelector: {{ $d.nodeLabelSelector }}
           {{- end }}
+          {{- if $d.protectedStorageClasses }}
+          {{- /*
+            Upstream forbids mixing the deprecated boolean flags (evictLocalStoragePods,
+            evictSystemCriticalPods, ignorePvcPods, evictFailedBarePods) with podProtections:
+            DefaultEvictor validation rejects such a policy and the descheduler refuses to start.
+            So when protectedStorageClasses is set, the very same behaviour is expressed
+            through podProtections only.
+            Default protections are: PodsWithLocalStorage, SystemCriticalPods, FailedBarePods, DaemonSetPods.
+            Disabling FailedBarePods is the equivalent of `evictFailedBarePods: true`,
+            disabling PodsWithLocalStorage is the equivalent of `evictLocalStoragePods: true`.
+            The `PodsWithPVC` key under `config` is upper-camel-cased on purpose:
+            it must match the protection name, and an unknown key is silently ignored,
+            which would protect every Pod with a PVC instead of the listed StorageClasses only.
+          */}}
+          podProtections:
+            defaultDisabled:
+            - "FailedBarePods"
+            {{- if $d.evictLocalStoragePods }}
+            - "PodsWithLocalStorage"
+            {{- end }}
+            extraEnabled:
+            - "PodsWithPVC"
+            config:
+              PodsWithPVC:
+                protectedStorageClasses:
+                {{- range $d.protectedStorageClasses }}
+                - name: {{ . | quote }}
+                {{- end }}
+          {{- else }}
           evictLocalStoragePods: {{ if $d.evictLocalStoragePods }}{{ $d.evictLocalStoragePods }}{{- else }}false{{- end }}
           evictSystemCriticalPods: false
           ignorePvcPods: false
           evictFailedBarePods: true
+          {{- end }}
           nodeFit: true
           {{- if $d.podLabelSelector }}
           labelSelector:

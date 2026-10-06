@@ -1,0 +1,47 @@
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: test-sts-pvc
+  labels:
+    e2e-test: ($stsTestLabel)
+spec:
+  serviceName: test-sts-pvc
+  replicas: 1
+  updateStrategy:
+    type: OnDelete
+  selector:
+    matchLabels:
+      e2e-test: ($stsTestLabel)
+  template:
+    metadata:
+      labels:
+        e2e-test: ($stsTestLabel)
+    spec:
+      terminationGracePeriodSeconds: 5
+      affinity:
+        podAntiAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            - labelSelector:
+                matchLabels:
+                  e2e-test: ($conflictLabel)
+              topologyKey: kubernetes.io/hostname
+      containers:
+        - name: pause
+          image: registry.k8s.io/pause:3.9
+          resources:
+            requests:
+              cpu: 10m
+              memory: 16Mi
+          volumeMounts:
+            - name: data
+              mountPath: /data
+  volumeClaimTemplates:
+    - metadata:
+        name: data
+      spec:
+        accessModes:
+          - ReadWriteOnce
+        storageClassName: ($storageClass)
+        resources:
+          requests:
+            storage: 1Gi

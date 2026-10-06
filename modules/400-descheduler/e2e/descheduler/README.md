@@ -6,7 +6,7 @@ End-to-end tests for the `descheduler` module, using [Kyverno Chainsaw](https://
 
 These tests validate Descheduler behavior in a Deckhouse cluster: pod rebalancing via LowNodeUtilization and HighNodeUtilization strategies, the Deckhouse patch that excludes `d8-*` and `kube-system` namespaces from eviction, the always-on `EvictionsInBackground` feature gate, and StatefulSet-specific behavior (RemoveDuplicates redistribution, PodDisruptionBudget handling, single-replica eviction, and the unsupported `minReplicas` knob).
 
-Each scenario lives in `tests/<name>/` and is executed via Task wrappers that call `chainsaw test` with JUnit reports in `./reports/`.
+Each scenario lives in `tests/<name>/` and is executed via Task wrappers that call `chainsaw test` with `JUnit` reports in `./reports/`.
 
 ## Chainsaw
 
@@ -33,7 +33,7 @@ Shared Chainsaw settings are in `chainsaw-config.yaml` at the suite root (`failF
 
 **Install Chainsaw**
 
-Homebrew (macOS/Linux):
+Using `brew` (macOS/Linux):
 
 ```bash
 brew tap kyverno/chainsaw https://github.com/kyverno/chainsaw
@@ -60,7 +60,7 @@ kubectl cluster-info
 
 - Multi-node Kubernetes cluster (minimum 3 nodes including the control plane)
 - Descheduler module enabled and deployment ready in `d8-descheduler`
-- RBAC permissions to create/delete namespaces, Deployments, Descheduler CRs, and cordon/uncordon nodes
+- RBAC permissions to create/delete namespaces, Deployments, Descheduler CRs, and `cordon`/`uncordon` nodes
 - For faster test cycles, set `deschedulingInterval: Frequent` (5m) in the module ModuleConfig
 
 ## Directory Structure
@@ -96,6 +96,8 @@ descheduler/
     │   └── ...
     ├── statefulset-single-replica-eviction/
     │   └── ...
+    ├── protected-storage-class-blocks-eviction/
+    │   └── ...
     └── descheduler-minreplicas-not-supported/
         └── ...
 ```
@@ -106,7 +108,7 @@ Per-scenario details (steps, manifests, expected outcomes): `tests/<name>/README
 
 | Task command                                  | Test directory                              | Description                                                    |
 | --------------------------------------------- | ------------------------------------------- | -------------------------------------------------------------- |
-| `task low-node-utilization:run`               | `tests/low-node-utilization/`               | LowNodeUtilization rebalances pods from overloaded nodes       |
+| `task low-node-utilization:run`               | `tests/low-node-utilization/`               | LowNodeUtilization evicts pods from overloaded nodes           |
 | `task high-node-utilization:run`              | `tests/high-node-utilization/`              | HighNodeUtilization consolidates pods onto fewer nodes         |
 | `task exclude-namespaces-from-processing:run` | `tests/exclude-namespaces-from-processing/` | Deckhouse patch prevents eviction of pods in `d8-*` namespaces |
 | `task evictions-in-background:run`            | `tests/evictions-in-background/`            | The `EvictionsInBackground` feature gate is always on, accepted by the binary, and a no-op without a cooperating controller |
@@ -114,6 +116,7 @@ Per-scenario details (steps, manifests, expected outcomes): `tests/<name>/README
 | `task statefulset-pdb-blocks-eviction:run` | `tests/statefulset-pdb-blocks-eviction/` | StatefulSet + PDB `maxUnavailable: 0`: every eviction is blocked, pods stay in place |
 | `task statefulset-pdb-allows-one-disruption:run` | `tests/statefulset-pdb-allows-one-disruption/` | StatefulSet + PDB `maxUnavailable: 1`: evictions are serialized, StatefulSet stays available |
 | `task statefulset-single-replica-eviction:run` | `tests/statefulset-single-replica-eviction/` | Single-replica StatefulSet is evicted — no `minReplicas` protection exists in Deckhouse |
+| `task protected-storage-class-blocks-eviction:run` | `tests/protected-storage-class-blocks-eviction/` | `spec.protectedStorageClasses` blocks eviction of a pod using a PVC from the listed StorageClass; dropping the protection evicts the same pod |
 | `task descheduler-minreplicas-not-supported:run` | `tests/descheduler-minreplicas-not-supported/` | `spec.minReplicas` cannot be persisted in the CR; manual ConfigMap edits are overwritten |
 
 ## Running Tests
@@ -203,7 +206,7 @@ Individual steps may poll descheduler logs for one or more descheduling cycles. 
 
 ## Reports and Debugging
 
-- JUnit reports: `tests/<scenario>/reports/chainsaw-report.xml` (`reports/` is gitignored)
+- `JUnit` reports: `tests/<scenario>/reports/chainsaw-report.xml` (`reports/` is listed in `.gitignore`)
 - On failure, tests collect events and descheduler pod logs from `d8-descheduler`
 - Useful manual checks:
 
