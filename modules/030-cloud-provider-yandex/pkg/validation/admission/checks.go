@@ -60,6 +60,7 @@ func ValidateInstanceClass(
 	case admissionv1.Create, admissionv1.Update:
 		result.Merge(
 			cpval.ValidateInstanceClassesEtcdDisk(state),
+			ycval.ValidateDiskSizeByType(state),
 		)
 	case admissionv1.Delete:
 		result.Merge(

@@ -244,36 +244,24 @@ func TestValidatePreflightInvalidKindStillChecksNameWhenPresent(t *testing.T) {
 	}
 }
 
-func TestValidateMasterNodeGroupReplicasAndIPAddresses(t *testing.T) {
+// The legacy PCC rules run before the migration gate, so a cluster still on the PCC with
+// migration pending is checked by them even though the new-model rules are skipped.
+func TestValidatePreflightChecksLegacyPCCDuringMigration(t *testing.T) {
 	t.Parallel()
 
-	pcc := &ycpccv1.YandexProviderClusterConfiguration{
-		MasterNodeGroup: ycpccv1.YandexMasterNodeGroup{
-			Replicas: 3,
-			InstanceClass: ycpccv1.YandexMasterInstanceClass{
-				YandexInstanceClass: ycpccv1.YandexInstanceClass{
-					ExternalIPAddresses: []string{"1.1.1.1"},
-				},
+	state := &ycval.State{
+		MigrationStatus: cpapi.MigrationStatus{MigrationPending: true, LegacyPCCPresent: true},
+		ProviderClusterConfig: &ycpccv1.YandexProviderClusterConfiguration{
+			Layout: ycval.LayoutWithNATInstance,
+			Provider: ycpccv1.YandexProvider{
+				ServiceAccountJSON: "invalid",
 			},
-		},
-	}
-
-	result := validateMasterNodeGroupReplicasAndIPAddresses(pcc)
-	if !hasViolationCode(result, CodePCCMasterReplicasGreaterExternalIPAddresses) {
-		t.Fatalf("validateMasterNodeGroupReplicasAndIPAddresses() = %q, want %s", result.Error(), CodePCCMasterReplicasGreaterExternalIPAddresses)
-	}
-}
-
-func TestValidateNodeGroupsReplicasAndIPAddresses(t *testing.T) {
-	t.Parallel()
-
-	pcc := &ycpccv1.YandexProviderClusterConfiguration{
-		NodeGroups: []ycpccv1.YandexStaticNodeGroup{
-			{
-				Name:     "worker",
-				Replicas: 2,
-				InstanceClass: ycpccv1.YandexStaticInstanceClass{
+			MasterNodeGroup: ycpccv1.YandexMasterNodeGroup{
+				Replicas: 3,
+				InstanceClass: ycpccv1.YandexMasterInstanceClass{
 					YandexInstanceClass: ycpccv1.YandexInstanceClass{
+						DiskType:            ptr.To("network-ssd-nonreplicated"),
+						DiskSizeGB:          ptr.To(100),
 						ExternalIPAddresses: []string{"1.1.1.1"},
 					},
 				},
@@ -281,50 +269,71 @@ func TestValidateNodeGroupsReplicasAndIPAddresses(t *testing.T) {
 		},
 	}
 
-	result := validateNodeGroupsReplicasAndIPAddresses(pcc)
-	if !hasViolationCode(result, CodePCCNodeGroupReplicasGreaterExternalIPAddresses) {
-		t.Fatalf("validateNodeGroupsReplicasAndIPAddresses() = %q, want %s", result.Error(), CodePCCNodeGroupReplicasGreaterExternalIPAddresses)
+	result := ValidatePreflight(state, validatev1.OperationBootstrap, testClusterPrefix)
+	for _, code := range []string{
+		ycval.CodePCCInvalidServiceAccountSecret,
+		ycval.CodePCCMasterReplicasGreaterExternalIPAddresses,
+		ycval.CodePCCNATInstanceSubnetRequired,
+		ycval.CodePCCDiskHasNonMultipleSize,
+	} {
+		if !hasViolationCode(result, code) {
+			t.Errorf("ValidatePreflight() = %q, want %s", result.Error(), code)
+		}
 	}
 }
 
-func TestValidateWithNATInstanceLayoutRequiresSubnetOnBootstrap(t *testing.T) {
+func TestValidatePreflightAllowsValidLegacyPCC(t *testing.T) {
 	t.Parallel()
 
-	pcc := &ycpccv1.YandexProviderClusterConfiguration{
-		Layout: ycval.LayoutWithNATInstance,
+	state := &ycval.State{
+		MigrationStatus: cpapi.MigrationStatus{MigrationPending: true, LegacyPCCPresent: true},
+		ProviderClusterConfig: &ycpccv1.YandexProviderClusterConfiguration{
+			Layout: "Standard",
+			Provider: ycpccv1.YandexProvider{
+				ServiceAccountJSON: "{}",
+			},
+			MasterNodeGroup: ycpccv1.YandexMasterNodeGroup{
+				Replicas: 1,
+				InstanceClass: ycpccv1.YandexMasterInstanceClass{
+					YandexInstanceClass: ycpccv1.YandexInstanceClass{
+						DiskType:   ptr.To("network-ssd-nonreplicated"),
+						DiskSizeGB: ptr.To(93),
+					},
+					EtcdDiskSizeGB: ptr.To(93),
+				},
+			},
+		},
 	}
 
-	result := validateWithNATInstanceLayout(pcc, validatev1.OperationBootstrap)
-	if !hasViolationCode(result, CodePCCNATInstanceSubnetRequired) {
-		t.Fatalf("validateWithNATInstanceLayout() = %q, want %s", result.Error(), CodePCCNATInstanceSubnetRequired)
+	if result := ValidatePreflight(state, validatev1.OperationBootstrap, testClusterPrefix); result.HasErrors() {
+		t.Fatalf("ValidatePreflight() = %q, want no errors", result.Error())
 	}
 }
 
-func TestValidateWithNATInstanceLayoutSkipsCheckOnConverge(t *testing.T) {
+func TestValidatePreflightRejectsNonMultipleInstanceClassDiskSize(t *testing.T) {
 	t.Parallel()
 
-	pcc := &ycpccv1.YandexProviderClusterConfiguration{
-		Layout: ycval.LayoutWithNATInstance,
-	}
+	state := validState(t)
+	state.InstanceClasses[0].Spec.DiskType = "network-ssd-io-m3"
+	state.InstanceClasses[0].Spec.DiskSizeGB = 100
+	state.InstanceClasses[0].Spec.EtcdDiskSizeGB = ptr.To(93)
 
-	if result := validateWithNATInstanceLayout(pcc, validatev1.OperationConverge); result.HasErrors() {
-		t.Fatalf("validateWithNATInstanceLayout() on converge = %q, want no errors", result.Error())
+	result := ValidatePreflight(state, validatev1.OperationBootstrap, testClusterPrefix)
+	if !hasViolationCode(result, ycval.CodeDiskHasNonMultipleSize) {
+		t.Fatalf("ValidatePreflight() = %q, want %s", result.Error(), ycval.CodeDiskHasNonMultipleSize)
 	}
 }
 
-func TestPCCChecksEmptyPCC(t *testing.T) {
+func TestValidatePreflightAllowsMultipleInstanceClassDiskSize(t *testing.T) {
 	t.Parallel()
 
-	pcc := &ycpccv1.YandexProviderClusterConfiguration{}
+	state := validState(t)
+	state.InstanceClasses[0].Spec.DiskType = "network-ssd-io-m3"
+	state.InstanceClasses[0].Spec.DiskSizeGB = 186
+	state.InstanceClasses[0].Spec.EtcdDiskSizeGB = ptr.To(93)
 
-	result := cpvalapi.Result{}
-	result.Merge(
-		validateMasterNodeGroupReplicasAndIPAddresses(pcc),
-		validateNodeGroupsReplicasAndIPAddresses(pcc),
-		validateWithNATInstanceLayout(pcc, validatev1.OperationBootstrap),
-	)
-	if result.HasErrors() {
-		t.Fatalf("PCC checks on empty PCC = %q, want no errors", result.Error())
+	if result := ValidatePreflight(state, validatev1.OperationBootstrap, testClusterPrefix); result.HasErrors() {
+		t.Fatalf("ValidatePreflight() = %q, want no errors", result.Error())
 	}
 }
 

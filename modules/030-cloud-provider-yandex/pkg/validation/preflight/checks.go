@@ -23,18 +23,13 @@ import (
 	cpvalapi "github.com/deckhouse/deckhouse/go_lib/cloud-provider/validation/api"
 	validatev1 "github.com/deckhouse/deckhouse/go_lib/dhctl-provider-protocol/api/validate/v1"
 
-	ycpccv1 "github.com/deckhouse/deckhouse/modules/030-cloud-provider-yandex/pkg/api/pcc/v1"
 	ycmeta "github.com/deckhouse/deckhouse/modules/030-cloud-provider-yandex/pkg/meta"
 	ycval "github.com/deckhouse/deckhouse/modules/030-cloud-provider-yandex/pkg/validation"
 )
 
-// Validation violation codes for legacy ProviderClusterConfiguration checks.
+// Validation violation codes for preflight-only checks.
 const (
-	CodeInvalidClusterPrefix                           = "cluster_prefix_invalid"
-	CodePCCInvalidServiceAccountSecret                 = "pcc_invalid_service_account_secret"
-	CodePCCMasterReplicasGreaterExternalIPAddresses    = "pcc_master_node_group_replicas_greater_length_of_extrenal_ip_addresses"
-	CodePCCNodeGroupReplicasGreaterExternalIPAddresses = "pcc_node_group_replicas_greater_length_of_extrenal_ip_addresses"
-	CodePCCNATInstanceSubnetRequired                   = "pcc_internal_subnet_cidr_or_internal_subnet_id_empty"
+	CodeInvalidClusterPrefix = "cluster_prefix_invalid"
 )
 
 var (
@@ -59,10 +54,10 @@ func ValidatePreflight(state *ycval.State, operation validatev1.Operation, clust
 	// Validate legacy ProviderClusterConfiguration.
 	if state.HasProviderClusterConfig() {
 		result.Merge(
-			validateServiceAccount(state.ProviderClusterConfig),
-			validateMasterNodeGroupReplicasAndIPAddresses(state.ProviderClusterConfig),
-			validateNodeGroupsReplicasAndIPAddresses(state.ProviderClusterConfig),
-			validateWithNATInstanceLayout(state.ProviderClusterConfig, operation),
+			ycval.ValidatePCCServiceAccount(state.ProviderClusterConfig),
+			ycval.ValidatePCCNodeGroupsReplicasAndIPAddresses(state.ProviderClusterConfig),
+			ycval.ValidatePCCWithNATInstanceLayout(state.ProviderClusterConfig, operation),
+			ycval.ValidatePCCDiskSizeByType(state.ProviderClusterConfig),
 		)
 	}
 
@@ -82,6 +77,7 @@ func ValidatePreflight(state *ycval.State, operation validatev1.Operation, clust
 		ycval.ValidateNodeGroupExternalIPAddresses(state),
 		ycval.ValidateWithNATInstanceLayout(state),
 		ycval.ValidateProvisionedStorageClasses(state),
+		ycval.ValidateDiskSizeByType(state),
 	)
 
 	return result
@@ -98,94 +94,6 @@ func validateClusterPrefix(prefix string) cpvalapi.Result {
 			fmt.Sprintf("invalid prefix %q, prefix must match the pattern: %s", prefix, prefixRegex.String()),
 		)
 	}
-
-	return result
-}
-
-func validateServiceAccount(pcc *ycpccv1.YandexProviderClusterConfiguration) cpvalapi.Result {
-	result := cpvalapi.Result{}
-
-	if err := ycval.ValidateServiceAccountFunc(pcc.Provider.ServiceAccountJSON); err != nil {
-		result.AddError(
-			"ProviderClusterConfiguration.provider.serviceAccountJSON",
-			CodePCCInvalidServiceAccountSecret,
-			"masked",
-			fmt.Sprintf("invalid service account: %v", err),
-		)
-	}
-
-	return result
-}
-
-func validateMasterNodeGroupReplicasAndIPAddresses(pcc *ycpccv1.YandexProviderClusterConfiguration) cpvalapi.Result {
-	result := cpvalapi.Result{}
-
-	masterNodeGroup := pcc.MasterNodeGroup
-	addresses := masterNodeGroup.InstanceClass.ExternalIPAddresses
-
-	if masterNodeGroup.Replicas > 0 && len(addresses) > 0 && masterNodeGroup.Replicas > len(addresses) {
-		result.AddError(
-			"ProviderClusterConfiguration.masterNodeGroup.instanceClass.externalIPAddresses",
-			CodePCCMasterReplicasGreaterExternalIPAddresses,
-			addresses,
-			fmt.Sprintf(
-				"number of masterNodeGroup.replicas (%d) should be less or equal to the length of masterNodeGroup.instanceClass.externalIPAddresses (%d)",
-				masterNodeGroup.Replicas, len(addresses),
-			),
-		)
-	}
-
-	return result
-}
-
-func validateNodeGroupsReplicasAndIPAddresses(pcc *ycpccv1.YandexProviderClusterConfiguration) cpvalapi.Result {
-	result := cpvalapi.Result{}
-
-	for i, nodeGroup := range pcc.NodeGroups {
-		addresses := nodeGroup.InstanceClass.ExternalIPAddresses
-		if nodeGroup.Replicas <= 0 || len(addresses) == 0 || nodeGroup.Replicas <= len(addresses) {
-			continue
-		}
-
-		result.AddError(
-			fmt.Sprintf("ProviderClusterConfiguration.nodeGroups[%d].instanceClass.externalIPAddresses", i),
-			CodePCCNodeGroupReplicasGreaterExternalIPAddresses,
-			addresses,
-			fmt.Sprintf(
-				`number of nodeGroups["%s"].replicas (%d) should be less or equal to the length of nodeGroups["%s"].instanceClass.externalIPAddresses (%d)`,
-				nodeGroup.Name, nodeGroup.Replicas, nodeGroup.Name, len(addresses),
-			),
-		)
-	}
-
-	return result
-}
-
-func validateWithNATInstanceLayout(pcc *ycpccv1.YandexProviderClusterConfiguration, operation validatev1.Operation) cpvalapi.Result {
-	result := cpvalapi.Result{}
-
-	if pcc.Layout != ycval.LayoutWithNATInstance {
-		return result
-	}
-
-	if operation != validatev1.OperationBootstrap {
-		return result
-	}
-
-	natInstance := pcc.WithNATInstance
-	hasInternalSubnetCIDR := natInstance != nil && natInstance.InternalSubnetCIDR != nil && *natInstance.InternalSubnetCIDR != ""
-	hasInternalSubnetID := natInstance != nil && natInstance.InternalSubnetID != nil && *natInstance.InternalSubnetID != ""
-
-	if hasInternalSubnetCIDR || hasInternalSubnetID {
-		return result
-	}
-
-	result.AddError(
-		"ProviderClusterConfiguration.withNATInstance",
-		CodePCCNATInstanceSubnetRequired,
-		natInstance,
-		"must provide internalSubnetCIDR or internalSubnetID for withNATInstance",
-	)
 
 	return result
 }

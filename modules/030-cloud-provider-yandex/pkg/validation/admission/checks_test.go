@@ -129,6 +129,52 @@ func TestValidateInstanceClassRequiresMasterEtcdDisk(t *testing.T) {
 	}
 }
 
+func TestValidateInstanceClassRejectsNonMultipleDiskSize(t *testing.T) {
+	t.Parallel()
+
+	for _, operation := range []admissionv1.Operation{admissionv1.Create, admissionv1.Update} {
+		state := validState(t)
+		state.InstanceClasses[0].Spec.DiskType = "network-ssd-nonreplicated"
+		state.InstanceClasses[0].Spec.DiskSizeGB = 100
+		state.InstanceClasses[0].Spec.EtcdDiskSizeGB = ptr.To(93)
+
+		result := ValidateInstanceClass(state, operation, nil)
+		if !hasViolationCode(result, ycval.CodeDiskHasNonMultipleSize) {
+			t.Fatalf("ValidateInstanceClass(%s) = %q, want %s", operation, result.Error(), ycval.CodeDiskHasNonMultipleSize)
+		}
+	}
+}
+
+func TestValidateInstanceClassAllowsMultipleDiskSize(t *testing.T) {
+	t.Parallel()
+
+	state := validState(t)
+	state.InstanceClasses[0].Spec.DiskType = "network-ssd-io-m3"
+	state.InstanceClasses[0].Spec.DiskSizeGB = 93
+	state.InstanceClasses[0].Spec.EtcdDiskSizeGB = ptr.To(186)
+
+	result := ValidateInstanceClass(state, admissionv1.Update, nil)
+	if result.HasErrors() {
+		t.Fatalf("ValidateInstanceClass() = %q, want no errors", result.Error())
+	}
+}
+
+// Deleting a class must not be blocked by its disk size: the size check only guards writes.
+func TestValidateInstanceClassSkipsDiskSizeOnDelete(t *testing.T) {
+	t.Parallel()
+
+	state := validState(t)
+	deleted := yandexInstanceClass("orphan-yandex", nil)
+	deleted.Spec.DiskType = "network-ssd-nonreplicated"
+	deleted.Spec.DiskSizeGB = 100
+	state.InstanceClasses = append(state.InstanceClasses, deleted)
+
+	result := ValidateInstanceClass(state, admissionv1.Delete, deleted)
+	if hasViolationCode(result, ycval.CodeDiskHasNonMultipleSize) {
+		t.Fatalf("ValidateInstanceClass(%s) = %q, want no %s", admissionv1.Delete, result.Error(), ycval.CodeDiskHasNonMultipleSize)
+	}
+}
+
 func TestValidateNodeGroupAllowsNilCloudInstancesOnCloudPermanentWorker(t *testing.T) {
 	t.Parallel()
 
