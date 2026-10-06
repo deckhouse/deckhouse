@@ -1,0 +1,59 @@
+{{- /*
+  With allowNamespacesWithoutProjects set to false, a namespace is created only as a part of a project:
+  the controller creates the namespaces of a Project and of a ProjectNamespace, and nobody else may
+  create one. This is the restriction DKP 1.77 enforced with the namespaces.multitenancy-webhook.deckhouse.io
+  webhook, with the writers it left out and the same namespace allowed to everybody, so a cluster that
+  set false keeps it through the upgrade. system:sudouser is left out as well, as in the other checks of
+  the module. As a policy the API server evaluates itself, it no longer
+  depends on the controller pod: namespace creation does not stop while the pod is down.
+
+  The namespaces that already exist outside a project are not affected: the controller adopts them into
+  projects of their own, whatever the setting says.
+*/ -}}
+{{- if not .Values.multitenancyManager.allowNamespacesWithoutProjects }}
+{{- if and (include "helm_lib_kind_exists" (list . "ValidatingAdmissionPolicy")) (include "helm_lib_kind_exists" (list . "ValidatingAdmissionPolicyBinding")) }}
+{{- $policyName := "d8-multitenancy-manager-namespace-creation" }}
+---
+apiVersion: {{ include "helm_lib_get_api_version_by_kind" (list . "ValidatingAdmissionPolicy") }}
+kind: ValidatingAdmissionPolicy
+metadata:
+  name: {{ $policyName }}
+  {{- include "helm_lib_module_labels" (list . (dict "app" "multitenancy-manager")) | nindent 2 }}
+spec:
+  failurePolicy: Fail
+  matchConstraints:
+    resourceRules:
+      - apiGroups:   [""]
+        apiVersions: ["v1"]
+        operations:  ["CREATE"]
+        resources:   ["namespaces"]
+  matchConditions:
+    # The writers DKP 1.77 left out: the API server, which recreates its own namespaces, Deckhouse and
+    # this module, the upmeter agent with its probe namespaces, the service accounts of d8-system and
+    # kube-system, the system:masters group and the nodes. And system:sudouser, as in the other checks
+    # of the module: the identity an administrator impersonates on purpose to get past them, which the
+    # audit log shows.
+    - name: exclude-system-writers
+      expression: >-
+        request.userInfo.username != "system:apiserver"
+        && request.userInfo.username != "system:sudouser"
+        && request.userInfo.username != "system:serviceaccount:d8-system:deckhouse"
+        && request.userInfo.username != "system:serviceaccount:d8-multitenancy-manager:multitenancy-manager"
+        && request.userInfo.username != "system:serviceaccount:d8-upmeter:upmeter-agent"
+        && !request.userInfo.groups.exists(g, g == "system:serviceaccounts:d8-system" || g == "system:serviceaccounts:kube-system" || g == "system:masters" || g == "system:nodes")
+  validations:
+    # As in DKP 1.77, default is the one namespace that anybody may create.
+    - expression: 'object.metadata.name == "default"'
+      reason: Forbidden
+      message: 'Namespaces can be created only as a part of a project: create a Project, or a ProjectNamespace in the main namespace of a project. The allowNamespacesWithoutProjects parameter of the multitenancy-manager module is false.'
+---
+apiVersion: {{ include "helm_lib_get_api_version_by_kind" (list . "ValidatingAdmissionPolicyBinding") }}
+kind: ValidatingAdmissionPolicyBinding
+metadata:
+  name: {{ $policyName }}
+  {{- include "helm_lib_module_labels" (list . (dict "app" "multitenancy-manager")) | nindent 2 }}
+spec:
+  policyName: {{ $policyName }}
+  validationActions: [Deny, Audit]
+{{- end }}
+{{- end }}

@@ -92,7 +92,7 @@ The bindings use the project and namespace roles of the DP role model (`d8:proje
 
 ### Automatic project creation for namespaces
 
-Users can still create namespaces directly (`d8 k create namespace`). Every namespace that belongs to no project becomes a project of its own, with the same name and a full-fledged template:
+Users can still create namespaces directly (`d8 k create namespace`), unless the [`allowNamespacesWithoutProjects`](configuration.html#parameters-allownamespaceswithoutprojects) parameter is `false`: then users create environments as Project objects, and only cluster administrators (`system:masters`, `system:sudouser`), Deckhouse, the module controller and system components create namespaces directly. Every namespace that belongs to no project becomes a project of its own, with the same name and a full-fledged template:
 
 * the template is picked from what the namespace already carries — `secure` if it has vulnerability scanning enabled, `default` if it has a Pod Security Standard or extended monitoring, and `simple` (namespace only) otherwise;
 * the project parameters are filled in from the current state of the namespace, so adopting it changes nothing inside;

@@ -3,9 +3,12 @@ properties:
   allowNamespacesWithoutProjects:
     type: boolean
     default: true
-    deprecated: true
     description: |
-      Deprecated and ignored: every non-system namespace outside a project is now adopted into a project of its own, whatever this parameter says. It is kept for one release so existing ModuleConfigs keep applying, and is removed in the next minor release; a ModuleConfig that still sets it will then fail validation. While it is set, the `MultitenancyManagerDeprecatedConfigParameter` alert fires. Remove the parameter.
+      Whether namespaces can be created directly, outside a Project.
+
+      If `true`, anyone allowed to create namespaces can create one directly (`d8 k create namespace`), and the controller turns such a namespace into a project of its own (see [Automatic project creation for namespaces](./#automatic-project-creation-for-namespaces)).
+
+      If `false`, users create environments as Project objects, and additional namespaces of a project as ProjectNamespace objects. Only cluster administrators (the `system:masters` group and `system:sudouser`), Deckhouse, the module controller and system components create namespaces directly; the full list is in [Who bypasses admission](usage.html#who-bypasses-admission). Anyone can create the `default` namespace. The check is a ValidatingAdmissionPolicy that the API server evaluates itself, so it does not depend on the module controller being available.
 
   highAvailability:
     type: boolean

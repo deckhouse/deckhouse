@@ -91,7 +91,6 @@ The module consists of the following components:
 
   - Managing the Project and ProjectTemplate custom resources.
   - Validating the Project and ProjectTemplate custom resources.
-  - Validating Namespace if [`.spec.settings.allowNamespacesWithoutProjects=false`](/modules/multitenancy-manager/configuration.html#parameters-allownamespaceswithoutprojects) is set in the `multitenancy-manager` module parameters.
   - Creating the resources specified in the ProjectTemplate custom resource based on the parameters set in Project.
   - Managing the grants mechanism for cluster-wide resources — the
     [`GrantableClusterResourceDefinition`](/modules/multitenancy-manager/cr.html#grantableclusterresourcedefinition),

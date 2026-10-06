@@ -607,7 +607,7 @@ data:
 
 1. ValidatingAdmissionPolicy — определяет правила валидации:
    - Операции: `CREATE`, `UPDATE` и `DELETE`; группа `system:masters` исключением не является;
-   - Проверка: менять такой объект могут только контроллер модуля и идентичности, перечисленные в разделе [«Кто обходит валидацию»](#кто-обходит-валидацию). Для неймспейса проекта также разрешено обновление, меняющее только лейблы и аннотации вне ключей, которыми управляет модуль (подробнее — в разделе [«Автоматическое создание проекта для неймспейса»](#автоматическое-создание-проекта-для-неймспейса));
+   - Проверка: менять такой объект могут только контроллер модуля и идентичности, которые пропускает эта политика (см. раздел [«Кто обходит валидацию»](#кто-обходит-валидацию)). Для неймспейса проекта также разрешено обновление, меняющее только лейблы и аннотации вне ключей, которыми управляет модуль (подробнее — в разделе [«Автоматическое создание проекта для неймспейса»](#автоматическое-создание-проекта-для-неймспейса));
    - Применяется ко всем ресурсам и API группам.
 
 1. ValidatingAdmissionPolicyBinding — определяет на какие объекты распространяется валидация:
@@ -615,15 +615,16 @@ data:
 
 ### Кто обходит валидацию
 
-Действуют три списка исключений, и они не совпадают:
+У вебхуков и политик модуля разные списки исключений:
 
 - **Вебхуки Project и ProjectTemplate** пропускают без проверки компоненты платформы — API-сервер (`system:apiserver`), service account'ы Deckhouse (`d8-system:deckhouse`), этого модуля (`d8-multitenancy-manager:multitenancy-manager`) и `user-authz` (`d8-user-authz:controller`), все service account'ы неймспейсов `d8-system`, `kube-system` и `d8-user-authz`, kubelet'ы (`system:nodes`) — и пользователя `system:sudouser`. Все остальные проверяются, включая группу `system:masters`.
 - **Вебхуки ProjectRoleBinding, ProjectNamespace и ClusterProjectRoleBinding** не пропускают никого: платформа такие объекты из шаблонов не создаёт, deadlock релиза на них невозможен, поэтому проверяется каждый запрос. Особые права внутри них есть только у service account'ов контроллера и Deckhouse; `system:sudouser` и `system:masters` там — обычные пользователи.
 - **Описанная выше `ValidatingAdmissionPolicy`** пропускает контроллер модуля; пользователей `system:apiserver`, `system:kube-controller-manager`, `system:kube-scheduler`, `system:volume-scheduler`, `dhctl`, `observability` и `system:sudouser`; группы `system:nodes`, `system:serviceaccounts:kube-system` и `system:serviceaccounts:d8-system` (но не `d8-user-authz`); а также rollout restart нагрузки проекта. Всем остальным отказывает, включая `system:masters`.
+- **ValidatingAdmissionPolicy `d8-multitenancy-manager-namespace-creation`** проверяет создание неймспейсов и действует, только пока параметр [`allowNamespacesWithoutProjects`](configuration.html#parameters-allownamespaceswithoutprojects) равен `false`. Она пропускает API-сервер (`system:apiserver`), service account'ы Deckhouse (`d8-system:deckhouse`), этого модуля (`d8-multitenancy-manager:multitenancy-manager`) и агента `upmeter` (`d8-upmeter:upmeter-agent`), все service account'ы неймспейсов `d8-system` и `kube-system`, группы `system:masters` и `system:nodes`, а также пользователя `system:sudouser`. В отличие от списков выше, её список включает `system:masters`, поэтому администраторы кластера по-прежнему создают неймспейсы напрямую. Все остальные могут создать только неймспейс `default`.
 
 Вебхуки, охраняющие cluster-wide-ресурсы, доступ к которым в неймспейсах проектов выдаётся политиками (`/is-granted`, `/defaults`, `/protect`, см. [«Управление доступом к cluster-wide-ресурсам»](#управление-доступом-к-cluster-wide-ресурсам)), оставляют `system:masters` в списке исключений рядом с компонентами платформы: они перехватывают каждую запись такого ресурса — поверхность для deadlock'а куда больше.
 
-Администратор, которому нужно пройти мимо вебхука Project или ProjectTemplate либо политики, делает это явно, от имени `system:sudouser` — `d8 k --as system:sudouser …`; такой обход виден в audit-логе. Для ProjectRoleBinding, ProjectNamespace и ClusterProjectRoleBinding такой двери нет.
+Администратор, которому нужно пройти мимо вебхука Project или ProjectTemplate либо политики для объектов с лейблом `heritage: multitenancy-manager`, делает это явно, от имени `system:sudouser` — `d8 k --as system:sudouser …`; такой обход виден в audit-логе. Для ProjectRoleBinding, ProjectNamespace и ClusterProjectRoleBinding такой двери нет.
 
 ### Создание собственной валидации
 

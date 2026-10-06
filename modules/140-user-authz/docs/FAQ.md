@@ -121,7 +121,7 @@ For `SuperAdmin`, replace the roles with `d8:system:superadmin` and `d8:project:
 
 Specifics:
 
-- With [automatic project creation](/modules/multitenancy-manager/configuration.html#parameters-allownamespaceswithoutprojects) enabled, every user namespace is a project, so the "system role + ClusterProjectRoleBinding" pair covers both the platform and all user namespaces. Only the `default` namespace is not covered — it is neither a project nor a system namespace.
+- With the `multitenancy-manager` module enabled, [every user namespace is a project](/modules/multitenancy-manager/#automatic-project-creation-for-namespaces), so the "system role + ClusterProjectRoleBinding" pair covers both the platform and all user namespaces. Only the `default` namespace is not covered — it is neither a project nor a system namespace.
 - You cannot create a custom "all permissions" role (`apiGroups: ["*"], resources: ["*"], verbs: ["*"]`): such a role gives, among other things, project management permissions and is rejected by the [built-in protections](./#built-in-protections-of-the-role-model). If you need truly unrestricted access to the whole API (outside the platform role model), use a ClusterRoleBinding to the built-in Kubernetes `cluster-admin` role — only someone who already has such permissions can assign it.
 
 ## How do I grant a user access to the resources of one module only?

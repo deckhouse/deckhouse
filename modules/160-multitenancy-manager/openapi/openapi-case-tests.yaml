@@ -3,8 +3,11 @@ positive:
     - {}
   configValues:
     - {}
+    - { allowNamespacesWithoutProjects: false }
+    - { allowNamespacesWithoutProjects: true }
 negative:
   configValues:
     - { somethingInConfig: yes }
+    - { allowNamespacesWithoutProjects: "false" }
   values:
     - { somethingInConfig: yes }

@@ -607,22 +607,23 @@ The following components are used for this:
 
 1. `ValidatingAdmissionPolicy`: Defines validation rules:
    - Operations: `CREATE`, `UPDATE` and `DELETE`. `system:masters` is not exempt.
-   - Check: only the module's controller, and the identities listed under [Who bypasses admission](#who-bypasses-admission), may change such an object. For a project namespace, an update that changes only labels and annotations outside the keys the module owns is allowed as well (see [Creating a project automatically for a namespace](#creating-a-project-automatically-for-a-namespace)).
+   - Check: only the module's controller and the identities this policy lets through (see [Who bypasses admission](#who-bypasses-admission)) may change such an object. For a project namespace, an update that changes only labels and annotations outside the keys the module owns is allowed as well (see [Creating a project automatically for a namespace](#creating-a-project-automatically-for-a-namespace)).
    - Applies to all resources and API groups.
 1. `ValidatingAdmissionPolicyBinding`: Defines which objects the validation applies to:
    - Uses `namespaceSelector` and `objectSelector` to select resources by the label `heritage: multitenancy-manager`.
 
 ### Who bypasses admission
 
-Three exclusion lists are in force, and they are not identical:
+The webhooks and policies of the module have different exclusion lists:
 
 - The **Project and ProjectTemplate webhooks** skip requests from platform components — the API server (`system:apiserver`), the service accounts of Deckhouse (`d8-system:deckhouse`), of this module (`d8-multitenancy-manager:multitenancy-manager`) and of `user-authz` (`d8-user-authz:controller`), every service account of the `d8-system`, `kube-system` and `d8-user-authz` namespaces, kubelets (`system:nodes`) — and from the `system:sudouser` identity. Everyone else is validated, `system:masters` included.
 - The **ProjectRoleBinding, ProjectNamespace and ClusterProjectRoleBinding webhooks** skip nobody: nothing in the platform renders these objects, so no release can deadlock on them, and every request is validated. Inside them only the controller and Deckhouse service accounts are privileged; `system:sudouser` and `system:masters` are ordinary users there.
 - The **`ValidatingAdmissionPolicy`** above lets through this module's controller; the users `system:apiserver`, `system:kube-controller-manager`, `system:kube-scheduler`, `system:volume-scheduler`, `dhctl`, `observability` and `system:sudouser`; the groups `system:nodes`, `system:serviceaccounts:kube-system` and `system:serviceaccounts:d8-system` (not `d8-user-authz`); and a rollout restart of a project workload. Everyone else is refused, `system:masters` included.
+- The **`d8-multitenancy-manager-namespace-creation` ValidatingAdmissionPolicy** checks namespace creation and is in force only while [`allowNamespacesWithoutProjects`](configuration.html#parameters-allownamespaceswithoutprojects) is `false`. It lets through the API server (`system:apiserver`), the service accounts of Deckhouse (`d8-system:deckhouse`), of this module (`d8-multitenancy-manager:multitenancy-manager`) and of the `upmeter` agent (`d8-upmeter:upmeter-agent`), every service account of the `d8-system` and `kube-system` namespaces, the groups `system:masters` and `system:nodes`, and `system:sudouser`. Unlike the lists above, it includes `system:masters`, so cluster administrators still create namespaces directly. Everyone else can create only the `default` namespace.
 
 The webhooks that guard grantable cluster resources in project namespaces (`/is-granted`, `/defaults`, `/protect`, see [Managing access to cluster-wide resources](#managing-access-to-cluster-wide-resources)) keep `system:masters` on their exclusion list next to the platform components: they intercept every write of such a resource, a far larger surface for a deadlock.
 
-An administrator who has to get past the Project or ProjectTemplate webhook, or the policy, does it deliberately, as `system:sudouser` — `d8 k --as system:sudouser …` — and the bypass is then visible in the audit log. There is no such door for ProjectRoleBinding, ProjectNamespace and ClusterProjectRoleBinding.
+An administrator who has to get past the Project or ProjectTemplate webhook, or the policy for `heritage: multitenancy-manager` objects, does it deliberately, as `system:sudouser` — `d8 k --as system:sudouser …` — and the bypass is then visible in the audit log. There is no such door for ProjectRoleBinding, ProjectNamespace and ClusterProjectRoleBinding.
 
 ### Creating your own validation
 

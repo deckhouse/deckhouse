@@ -5946,32 +5946,6 @@ alerts:
         A new release for module {{ $labels.module }} is awaiting manual approval.
       severity: "6"
       markupFormat: markdown
-    - name: MultitenancyManagerDeprecatedConfigParameter
-      sourceFile: modules/160-multitenancy-manager/monitoring/prometheus-rules/deprecated-mc.yaml
-      moduleUrl: 160-multitenancy-manager
-      module: multitenancy-manager
-      edition: ce
-      description: |-
-        The `{{ $labels.parameter }}` parameter of the `multitenancy-manager` ModuleConfig is deprecated and ignored:
-        every user namespace outside a project is now adopted into a project of its own, whatever the parameter says.
-
-        The parameter is kept in the schema for one release only. In the next minor release it is removed, and a
-        ModuleConfig that still sets it will fail validation and stop applying.
-
-        Steps to troubleshoot:
-
-        1. Remove `{{ $labels.parameter }}` from the ModuleConfig, including in the CI or GitOps process that applies it:
-
-           ```bash
-           d8 k edit mc multitenancy-manager
-           ```
-
-        1. Make sure nothing relies on plain namespaces existing beside projects: with the module enabled there are none,
-           and an environment is removed by deleting its Project rather than its Namespace.
-      summary: |
-        The multitenancy-manager ModuleConfig sets the deprecated parameter {{ $labels.parameter }}.
-      severity: "9"
-      markupFormat: markdown
     - name: NATInstanceWithDeprecatedAvailabilityZone
       sourceFile: modules/030-cloud-provider-yandex/monitoring/prometheus-rules/deprecated_availability_zone.yaml
       moduleUrl: 030-cloud-provider-yandex

@@ -86,7 +86,6 @@ Certificate — ClusterIssuer, RoleBinding — ClusterRole. Модуль поз�
 
   - управление кастомными ресурсами Project и ProjectTemplate;
   - валидация кастомных ресурсов Project и ProjectTemplate;
-  - валидация стандартного ресурса Namespace если в параметрах модуля `multitenancy-manager` задано [`.spec.settings.allowNamespacesWithoutProjects=false`](/modules/multitenancy-manager/configuration.html#parameters-allownamespaceswithoutprojects);
   - создание ресурсов, указанных в кастомном ресурсе ProjectTemplate, на основе параметров, заданных в Project;
   - управление механизмом грантов для кластерных ресурсов при помощи следующих кастомных ресурсов:
     [`GrantableClusterResourceDefinition`](/modules/multitenancy-manager/cr.html#grantableclusterresourcedefinition),
