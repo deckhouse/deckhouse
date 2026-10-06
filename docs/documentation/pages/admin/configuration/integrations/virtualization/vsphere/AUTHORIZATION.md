@@ -27,6 +27,7 @@ The following prerequisites must be met for Deckhouse Platform to work correctly
   1. Cluster:
      - All ESXi hosts in use must be added to the Cluster.
      - A tag from the category specified in the [`zoneTagCategory`](/modules/cloud-provider-vsphere/configuration.html#parameters-zonetagcategory) parameter must be assigned to the Cluster (default: `k8s-zone`). This tag defines the zone.
+     - DRS must be enabled in the Cluster. The platform does not pick a specific host when creating a virtual machine, so vSphere chooses the host.
   1. Folder for the virtual machines being created:
      - This parameter is optional.
      - By default, the root virtual machine folder is used.
@@ -225,14 +226,14 @@ govc tags.create -d "Kubernetes Zone Test 2" -c k8s-zone test-zone-2
 Attach the "region" tag to Datacenter:
 
 ```shell
-govc tags.attach -c k8s-region test-region /<DatacenterName>
+govc tags.attach -c k8s-region test-region /<DATACENTER_NAME>
 ```
 
 Attach "zone" tags to the Cluster objects:
 
 ```shell
-govc tags.attach -c k8s-zone test-zone-1 /<DatacenterName>/host/<ClusterName1>
-govc tags.attach -c k8s-zone test-zone-2 /<DatacenterName>/host/<ClusterName2>
+govc tags.attach -c k8s-zone test-zone-1 /<DATACENTER_NAME>/host/<CLUSTER_NAME_1>
+govc tags.attach -c k8s-zone test-zone-2 /<DATACENTER_NAME>/host/<CLUSTER_NAME_2>
 ```
 
 #### Datastore configuration with govc
@@ -244,11 +245,11 @@ For dynamic PersistentVolume provisioning, a Datastore must be available on **ea
 Assign the "region" and "zone" tags to the Datastore objects to automatically create a StorageClass in the Kubernetes cluster:
 
 ```shell
-govc tags.attach -c k8s-region test-region /<DatacenterName>/datastore/<DatastoreName1>
-govc tags.attach -c k8s-zone test-zone-1 /<DatacenterName>/datastore/<DatastoreName1>
+govc tags.attach -c k8s-region test-region /<DATACENTER_NAME>/datastore/<DATASTORE_NAME_1>
+govc tags.attach -c k8s-zone test-zone-1 /<DATACENTER_NAME>/datastore/<DATASTORE_NAME_1>
 
-govc tags.attach -c k8s-region test-region /<DatacenterName>/datastore/<DatastoreName2>
-govc tags.attach -c k8s-zone test-zone-2 /<DatacenterName>/datastore/<DatastoreName2>
+govc tags.attach -c k8s-region test-region /<DATACENTER_NAME>/datastore/<DATASTORE_NAME_2>
+govc tags.attach -c k8s-zone test-zone-2 /<DATACENTER_NAME>/datastore/<DATASTORE_NAME_2>
 ```
 
 #### Creating and assigning a role with govc

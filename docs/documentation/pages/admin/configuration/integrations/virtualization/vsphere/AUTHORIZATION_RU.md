@@ -28,6 +28,7 @@ lang: ru
   1. Cluster:
      - В Cluster должны быть добавлены все используемые ESXi.
      - На Cluster должен быть назначен тег из категории, указанной в параметре [zoneTagCategory](/modules/cloud-provider-vsphere/configuration.html#parameters-zonetagcategory) (по умолчанию — `k8s-zone`). Этот тег определяет зону.
+     - В Cluster должен быть включён DRS. Платформа не указывает конкретный хост при создании виртуальной машины, поэтому хост выбирает vSphere.
   1. Folder для создаваемых виртуальных машин:
      - Параметр опционален.
      - По умолчанию используется корневой каталог виртуальных машин.
@@ -234,14 +235,14 @@ govc tags.create -d "Kubernetes Zone Test 2" -c k8s-zone test-zone-2
 Назначьте тег «региона» на Datacenter:
 
 ```shell
-govc tags.attach -c k8s-region test-region /<DatacenterName>
+govc tags.attach -c k8s-region test-region /<DATACENTER_NAME>
 ```
 
 Назначьте теги «зон» на объекты Cluster:
 
 ```shell
-govc tags.attach -c k8s-zone test-zone-1 /<DatacenterName>/host/<ClusterName1>
-govc tags.attach -c k8s-zone test-zone-2 /<DatacenterName>/host/<ClusterName2>
+govc tags.attach -c k8s-zone test-zone-1 /<DATACENTER_NAME>/host/<CLUSTER_NAME_1>
+govc tags.attach -c k8s-zone test-zone-2 /<DATACENTER_NAME>/host/<CLUSTER_NAME_2>
 ```
 
 #### Настройка Datastore с использованием govc
@@ -253,11 +254,11 @@ govc tags.attach -c k8s-zone test-zone-2 /<DatacenterName>/host/<ClusterName2>
 Для автоматического создания StorageClass в кластере Kubernetes назначьте созданные ранее теги «региона» и «зоны» на объекты Datastore:
 
 ```shell
-govc tags.attach -c k8s-region test-region /<DatacenterName>/datastore/<DatastoreName1>
-govc tags.attach -c k8s-zone test-zone-1 /<DatacenterName>/datastore/<DatastoreName1>
+govc tags.attach -c k8s-region test-region /<DATACENTER_NAME>/datastore/<DATASTORE_NAME_1>
+govc tags.attach -c k8s-zone test-zone-1 /<DATACENTER_NAME>/datastore/<DATASTORE_NAME_1>
 
-govc tags.attach -c k8s-region test-region /<DatacenterName>/datastore/<DatastoreName2>
-govc tags.attach -c k8s-zone test-zone-2 /<DatacenterName>/datastore/<DatastoreName2>
+govc tags.attach -c k8s-region test-region /<DATACENTER_NAME>/datastore/<DATASTORE_NAME_2>
+govc tags.attach -c k8s-zone test-zone-2 /<DATACENTER_NAME>/datastore/<DATASTORE_NAME_2>
 ```
 
 #### Создание и назначение роли с использованием govc
