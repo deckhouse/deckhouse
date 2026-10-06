@@ -68,13 +68,6 @@ spec:
           imagePullPolicy: 'IfNotPresent'
           args:
             - --allow-orphan-namespaces={{ .Values.multitenancyManager.allowNamespacesWithoutProjects }}
-          env:
-            - name: HA_MODE
-{{- if (include "helm_lib_ha_enabled" .) }}
-              value: "true"
-{{- else }}
-              value: "false"
-{{- end }}
           ports:
             - containerPort: 9090
               name: healthz

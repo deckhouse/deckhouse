@@ -19,7 +19,6 @@ package main
 import (
 	"flag"
 	"fmt"
-	"os"
 	"time"
 
 	"github.com/go-logr/logr"
@@ -64,8 +63,20 @@ var (
 )
 
 const (
-	haModeEnv      = "HA_MODE"
 	controllerName = "multitenancy-manager"
+
+	// Leader election is always on: even a single-replica Deployment has two pods during a rolling
+	// update, and two writers of the same Helm releases would each upgrade them. Every version of the
+	// controller contends for the same Lease (controllerName in helmNamespace), so an outgoing and an
+	// incoming pod never reconcile at the same time. The webhooks keep serving on every replica; only
+	// the controllers wait for the lease.
+	//
+	// The lease is renewed against the API server, and controller-runtime exits the process when a
+	// renewal misses RenewDeadline. With the defaults (15 s lease, 10 s renew) every short API-server
+	// absence would restart the pod and throw away a warm cache; these give it a minute to come back.
+	leaseDuration = 60 * time.Second
+	renewDeadline = 40 * time.Second
+	retryPeriod   = 8 * time.Second
 )
 
 func main() {
@@ -160,24 +171,7 @@ func setupRuntimeManager(logger logr.Logger) (ctrl.Manager, error) {
 		}
 	}
 
-	opts := manager.Options{
-		LeaderElection:          false,
-		Scheme:                  scheme,
-		GracefulShutdownTimeout: ptr.To(10 * time.Second),
-		HealthProbeBindAddress:  ":9090",
-		WebhookServer:           webhook.NewServer(webhook.Options{CertDir: "/certs"}),
-		Metrics: metrics.Options{
-			BindAddress: "0",
-		},
-	}
-
-	if os.Getenv(haModeEnv) == "true" {
-		opts.LeaderElection = true
-		opts.LeaderElectionID = controllerName
-		opts.LeaderElectionNamespace = helmNamespace
-	}
-
-	runtimeManager, err := ctrl.NewManager(ctrl.GetConfigOrDie(), opts)
+	runtimeManager, err := ctrl.NewManager(ctrl.GetConfigOrDie(), managerOptions(scheme))
 	if err != nil {
 		logger.Error(err, "unable to create runtime manager")
 		return nil, err
@@ -194,4 +188,27 @@ func setupRuntimeManager(logger logr.Logger) (ctrl.Manager, error) {
 		return nil, err
 	}
 	return runtimeManager, nil
+}
+
+// managerOptions returns the options of the runtime manager. They are the same for any number of
+// replicas, so a single replica takes the lease as well.
+func managerOptions(scheme *runtime.Scheme) manager.Options {
+	return manager.Options{
+		LeaderElection:          true,
+		LeaderElectionID:        controllerName,
+		LeaderElectionNamespace: helmNamespace,
+		// A pod that is shutting down hands the lease over once its controllers have stopped, so the
+		// next pod takes over within retryPeriod instead of waiting for the lease to expire.
+		LeaderElectionReleaseOnCancel: true,
+		LeaseDuration:                 ptr.To(leaseDuration),
+		RenewDeadline:                 ptr.To(renewDeadline),
+		RetryPeriod:                   ptr.To(retryPeriod),
+		Scheme:                        scheme,
+		GracefulShutdownTimeout:       ptr.To(10 * time.Second),
+		HealthProbeBindAddress:        ":9090",
+		WebhookServer:                 webhook.NewServer(webhook.Options{CertDir: "/certs"}),
+		Metrics: metrics.Options{
+			BindAddress: "0",
+		},
+	}
 }
