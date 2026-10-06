@@ -243,7 +243,7 @@ func (v *validator) Handle(ctx context.Context, req admission.Request) admission
 			project.Name, ref, strings.Join(naming.ModuleOwnedLabelsIn(set), "; ")))
 	}
 	if len(kept) > 0 {
-		return admission.Allowed("").WithWarnings(warnings...).WithWarnings(fmt.Sprintf(
+		warnings = append(warnings, fmt.Sprintf(
 			"the parameter '%s' of the '%s' project sets namespace labels the module owns, and the project does not apply them: %s; remove them from the parameter",
 			ref, project.Name, strings.Join(naming.ModuleOwnedLabelsIn(kept), "; ")))
 	}

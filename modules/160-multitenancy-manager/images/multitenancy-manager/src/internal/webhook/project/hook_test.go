@@ -489,6 +489,21 @@ func TestHandle_ModuleOwnedNamespaceLabels(t *testing.T) {
 		assert.Contains(t, resp.Result.Message, "security.deckhouse.io/pod-policy (set it through spec.podSecurityStandard)")
 	})
 
+	// The warning of a kept label joins the list of the earlier checks: an edit that also drops the
+	// project label the controller stamped gets both warnings, the one about the dropped project label
+	// first.
+	t.Run("an edit that keeps a label the project had and removes the project label", func(t *testing.T) {
+		old := withLabels(privileged)
+		old.Labels[v1alpha3.ResourceLabelProject] = "foo"
+		resp := v.Handle(ctx, updateRequest(t, "alice", old, withLabels(privilegedAndTeam)))
+		require.True(t, resp.Allowed, "%v", resp.Result)
+		assert.Equal(t, []string{
+			`the projects.deckhouse.io/project label of the "foo" project is set by the multitenancy-manager controller, which puts it back`,
+			"the parameter 'namespace.labels' of the 'foo' project sets namespace labels the module owns, and the project does not apply them: " +
+				"security.deckhouse.io/pod-policy (set it through spec.podSecurityStandard); remove them from the parameter",
+		}, resp.Warnings)
+	})
+
 	tests := []struct {
 		name     string
 		user     string
