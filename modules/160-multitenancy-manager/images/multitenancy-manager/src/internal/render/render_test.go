@@ -318,6 +318,82 @@ func withAdditionalProperties(schema v1alpha2.ParametersSchema, value any) v1alp
 	return v1alpha2.ParametersSchema{OpenAPIV3Schema: root}
 }
 
+// TestManifestsPodSecurityStandard pins how a podSecurityStandard parameter reaches the namespace:
+// a profile name is rendered as the lower-case label value admission-policy-engine matches, and an
+// empty value leaves the label out, even over a schema default, so the cluster default policy
+// applies. Adoption of a namespace without the label relies on the empty value.
+func TestManifestsPodSecurityStandard(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name     string
+		params   map[string]any
+		expected string
+		isSet    bool
+	}{
+		{name: "schema default", params: nil, expected: "baseline", isSet: true},
+		{name: "restricted", params: map[string]any{"podSecurityProfile": v1alpha2.PodSecurityStandardRestricted}, expected: "restricted", isSet: true},
+		{name: "privileged", params: map[string]any{"podSecurityProfile": v1alpha2.PodSecurityStandardPrivileged}, expected: "privileged", isSet: true},
+		{name: "empty value wins over the default", params: map[string]any{"podSecurityProfile": ""}, isSet: false},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			tmpl := &v1alpha2.ProjectTemplate{
+				Spec: v1alpha2.ProjectTemplateSpec{
+					PodSecurityStandard: v1alpha2.FromParamRef[string]("podSecurityProfile"),
+					ParametersSchema: v1alpha2.ParametersSchema{
+						OpenAPIV3Schema: map[string]any{
+							"type": "object",
+							"properties": map[string]any{
+								"podSecurityProfile": map[string]any{"type": "string", "default": v1alpha2.PodSecurityStandardBaseline},
+							},
+						},
+					},
+				},
+			}
+			project := &v1alpha3.Project{
+				ObjectMeta: metav1.ObjectMeta{Name: "proj"},
+				Spec:       v1alpha3.ProjectSpec{Parameters: tt.params},
+			}
+
+			out, err := Manifests(tmpl, project)
+			require.NoError(t, err)
+
+			raw, isSet := namespaceLabels(t, out)["security.deckhouse.io/pod-policy"]
+			value, _ := raw.(string)
+			require.Equal(t, tt.isSet, isSet)
+			require.Equal(t, tt.expected, value)
+		})
+	}
+}
+
+// namespaceLabels returns the labels of the Namespace in a multi-document render.
+func namespaceLabels(t *testing.T, manifests string) map[string]any {
+	t.Helper()
+
+	for _, doc := range strings.Split(manifests, "---\n") {
+		if strings.TrimSpace(doc) == "" {
+			continue
+		}
+		var obj map[string]any
+		require.NoError(t, yaml.Unmarshal([]byte(doc), &obj))
+		if obj["kind"] != "Namespace" {
+			continue
+		}
+		md, _ := obj["metadata"].(map[string]any)
+		labels, _ := md["labels"].(map[string]any)
+
+		return labels
+	}
+
+	t.Fatal("the render must contain the project namespace")
+
+	return nil
+}
+
 // TestManifestsDedicatedPlacementBeatsMirroredAnnotation: adoption mirrors the placement annotations
 // a namespace already had into the namespace parameter, so a template that declares nodeSelector or
 // tolerations of its own must still win. Otherwise moving such a project onto a template with

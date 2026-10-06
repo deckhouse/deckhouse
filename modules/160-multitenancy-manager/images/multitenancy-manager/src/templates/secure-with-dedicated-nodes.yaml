@@ -76,12 +76,15 @@ spec:
             - Privileged — Unrestricted policy. Provides the widest possible permission level;
             - Baseline — Minimally restrictive policy which prevents known privilege escalations. Allows for the default (minimally specified) Pod configuration;
             - Restricted — Heavily restricted policy. Follows the most current Pod hardening best practices.
+
+            An empty string sets no profile. The project does not put the `security.deckhouse.io/pod-policy` label on its namespaces, and the cluster default policy applies to them.
           type: string
           default: Baseline
           enum:
             - Baseline
             - Restricted
             - Privileged
+            - ""
         extendedMonitoringEnabled:
           description: |
             Enable extended monitoring for the project.

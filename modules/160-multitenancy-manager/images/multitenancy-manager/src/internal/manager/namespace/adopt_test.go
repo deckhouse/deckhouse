@@ -17,12 +17,24 @@ limitations under the License.
 package namespace
 
 import (
+	"encoding/json"
+	"os"
+	"path/filepath"
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/util/strategicpatch"
+	"sigs.k8s.io/yaml"
 
+	"controller/apis/deckhouse.io/v1alpha2"
 	"controller/apis/deckhouse.io/v1alpha3"
 	"controller/internal/naming"
+	"controller/internal/render"
+	"controller/internal/validate"
 )
 
 func TestTemplateFor(t *testing.T) {
@@ -91,13 +103,24 @@ func TestParametersFor(t *testing.T) {
 			},
 		},
 		{
-			name:     "default keeps the namespace as permissive as it is today",
+			name:     "default leaves a namespace without a pod policy on the cluster default",
 			labels:   map[string]string{labelExtendedMonitoring: ""},
 			template: TemplateDefault,
 			want: map[string]any{
 				"networkPolicy":             networkPolicyNotRestricted,
-				"podSecurityProfile":        podSecurityProfilePrivileged,
+				"podSecurityProfile":        podSecurityProfileClusterDefault,
 				"extendedMonitoringEnabled": true,
+				"requiredRequests":          false,
+			},
+		},
+		{
+			name:     "default leaves a pod policy it cannot render to the namespace",
+			labels:   map[string]string{labelPodPolicy: "Restricted"},
+			template: TemplateDefault,
+			want: map[string]any{
+				"networkPolicy":             networkPolicyNotRestricted,
+				"podSecurityProfile":        podSecurityProfileClusterDefault,
+				"extendedMonitoringEnabled": false,
 				"requiredRequests":          false,
 			},
 		},
@@ -145,18 +168,65 @@ func TestParametersFor(t *testing.T) {
 	}
 }
 
+// TestParametersFor_KeepsThePodPolicyOnBuiltinTemplates adopts a namespace end to end on the
+// built-in template adoption picks for it: the parameters must validate against that template, and
+// the rendered Namespace, applied the way the release applies it, must leave the pod-policy label
+// exactly as the namespace had it. A namespace without the label keeps none, so the cluster default
+// policy goes on applying to it.
+func TestParametersFor_KeepsThePodPolicyOnBuiltinTemplates(t *testing.T) {
+	tests := []struct {
+		name   string
+		labels map[string]string
+	}{
+		{name: "no pod policy", labels: map[string]string{labelExtendedMonitoring: ""}},
+		{name: "no pod policy on the secure template", labels: map[string]string{labelSecurityScanning: ""}},
+		{name: "baseline", labels: map[string]string{labelPodPolicy: "baseline"}},
+		{name: "restricted", labels: map[string]string{labelPodPolicy: "restricted"}},
+		{name: "privileged", labels: map[string]string{labelPodPolicy: "privileged"}},
+		{name: "capitalised profile name", labels: map[string]string{labelPodPolicy: "Restricted"}},
+		{name: "unknown value", labels: map[string]string{labelPodPolicy: "whatever"}},
+		{name: "empty value", labels: map[string]string{labelPodPolicy: ""}},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			live := namespace("foo", tt.labels, nil)
+			templateName := TemplateFor(live)
+			tmpl := builtinTemplate(t, templateName)
+			adopted := &v1alpha3.Project{
+				ObjectMeta: metav1.ObjectMeta{Name: live.Name},
+				Spec: v1alpha3.ProjectSpec{
+					ProjectTemplateName: templateName,
+					Parameters:          ParametersFor(live, templateName),
+				},
+			}
+			require.NoError(t, validate.Project(adopted, tmpl), "adoption parameters must validate against the built-in template")
+
+			manifests, err := render.Manifests(tmpl, adopted)
+			require.NoError(t, err)
+			got := applyAsRelease(t, live, renderedNamespace(t, manifests))
+
+			want, had := tt.labels[labelPodPolicy]
+			value, has := got.Labels[labelPodPolicy]
+			assert.Equal(t, had, has, "the pod-policy label must be present exactly when the namespace had it")
+			assert.Equal(t, want, value, "the pod-policy label must keep its value")
+		})
+	}
+}
+
 func TestPodSecurityProfile(t *testing.T) {
 	tests := []struct {
 		name  string
 		label string
 		want  string
 	}{
-		{name: "missing label falls back to the permissive profile", label: "", want: podSecurityProfilePrivileged},
-		{name: "unknown value falls back to the permissive profile", label: "whatever", want: podSecurityProfilePrivileged},
+		{name: "missing label stays on the cluster default", label: "", want: podSecurityProfileClusterDefault},
+		{name: "unknown value is left to the namespace", label: "whatever", want: podSecurityProfileClusterDefault},
+		{name: "capitalised profile name is left to the namespace", label: "Restricted", want: podSecurityProfileClusterDefault},
+		{name: "mixed case is left to the namespace", label: "ReStRiCtEd", want: podSecurityProfileClusterDefault},
 		{name: "baseline", label: "baseline", want: podSecurityProfileBaseline},
 		{name: "restricted", label: "restricted", want: podSecurityProfileRestricted},
 		{name: "privileged", label: "privileged", want: podSecurityProfilePrivileged},
-		{name: "value casing is ignored", label: "ReStRiCtEd", want: podSecurityProfileRestricted},
 	}
 
 	for _, tt := range tests {
@@ -250,4 +320,90 @@ func TestFilterUserMeta_KeepsPlacementAnnotations(t *testing.T) {
 		naming.TolerationsAnnotation:  `[{"key":"dedicated"}]`,
 		"team":                        "blue",
 	}, got)
+}
+
+// builtinTemplate reads the built-in template the controller installs under the given name.
+// Every built-in template that takes its Pod Security Standard from the podSecurityProfile parameter
+// accepts an empty profile, so that a project adopted with one can move to any of them.
+func TestBuiltinTemplatesTakeAnEmptyProfile(t *testing.T) {
+	files, err := filepath.Glob(filepath.Join("..", "..", "..", "templates", "*.yaml"))
+	require.NoError(t, err)
+	require.NotEmpty(t, files)
+
+	checked := 0
+	for _, file := range files {
+		name := strings.TrimSuffix(filepath.Base(file), ".yaml")
+		tmpl := builtinTemplate(t, name)
+		if tmpl.Spec.PodSecurityStandard.Ref() != "podSecurityProfile" {
+			continue
+		}
+		checked++
+		t.Run(name, func(t *testing.T) {
+			project := &v1alpha3.Project{ObjectMeta: metav1.ObjectMeta{Name: "team"}, Spec: v1alpha3.ProjectSpec{
+				ProjectTemplateName: name,
+				Parameters:          map[string]any{"podSecurityProfile": ""},
+			}}
+			require.NoError(t, validate.Project(project, tmpl))
+		})
+	}
+	assert.GreaterOrEqual(t, checked, 3, "default, secure and secure-with-dedicated-nodes take the parameter")
+}
+
+func builtinTemplate(t *testing.T, name string) *v1alpha2.ProjectTemplate {
+	t.Helper()
+
+	raw, err := os.ReadFile(filepath.Join("..", "..", "..", "templates", name+".yaml"))
+	require.NoError(t, err)
+
+	tmpl := new(v1alpha2.ProjectTemplate)
+	require.NoError(t, yaml.Unmarshal(raw, tmpl))
+
+	return tmpl
+}
+
+// renderedNamespace picks the Namespace out of a multi-document render.
+func renderedNamespace(t *testing.T, manifests string) *corev1.Namespace {
+	t.Helper()
+
+	for _, doc := range strings.Split(manifests, "---\n") {
+		var kind metav1.TypeMeta
+		require.NoError(t, yaml.Unmarshal([]byte(doc), &kind))
+		if kind.Kind != "Namespace" {
+			continue
+		}
+
+		ns := new(corev1.Namespace)
+		require.NoError(t, yaml.Unmarshal([]byte(doc), ns))
+
+		return ns
+	}
+
+	t.Fatal("the render must contain the project namespace")
+
+	return nil
+}
+
+// applyAsRelease applies the rendered Namespace onto the live one the way the Helm release does: a
+// three-way strategic merge whose last-applied state is the render itself when an existing object
+// is taken into the release, and the previous render on every upgrade after that. Either way a key
+// the render does not mention stays on the live object as it is.
+func applyAsRelease(t *testing.T, live, rendered *corev1.Namespace) *corev1.Namespace {
+	t.Helper()
+
+	target, err := json.Marshal(rendered)
+	require.NoError(t, err)
+	current, err := json.Marshal(live)
+	require.NoError(t, err)
+
+	meta, err := strategicpatch.NewPatchMetaFromStruct(corev1.Namespace{})
+	require.NoError(t, err)
+	patch, err := strategicpatch.CreateThreeWayMergePatch(target, target, current, meta, true)
+	require.NoError(t, err)
+	merged, err := strategicpatch.StrategicMergePatch(current, patch, corev1.Namespace{})
+	require.NoError(t, err)
+
+	out := new(corev1.Namespace)
+	require.NoError(t, json.Unmarshal(merged, out))
+
+	return out
 }

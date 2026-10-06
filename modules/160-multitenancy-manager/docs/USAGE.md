@@ -17,7 +17,7 @@ The following project templates are included in the Deckhouse Kubernetes Platfor
 
   Parameters (besides the ones listed for `simple`):
   - `networkPolicy` — `Isolated` (default) denies all traffic except traffic within the project namespaces, DNS, Prometheus metrics scraping and ingress-nginx; `NotRestricted` allows all traffic.
-  - `podSecurityProfile` — the [Pod Security Standards](https://kubernetes.io/docs/concepts/security/pod-security-standards/) profile for the project namespaces: `Baseline` (default) prevents known privilege escalations, `Restricted` applies the strictest hardening practices, `Privileged` restricts nothing.
+  - `podSecurityProfile` — the [Pod Security Standards](https://kubernetes.io/docs/concepts/security/pod-security-standards/) profile for the project namespaces: `Baseline` (default) prevents known privilege escalations, `Restricted` applies the strictest hardening practices, `Privileged` restricts nothing. An empty string sets no profile. The project puts no `security.deckhouse.io/pod-policy` label on its namespaces, and the [default policy](/modules/admission-policy-engine/configuration.html#parameters-podsecuritystandards-defaultpolicy) of the `admission-policy-engine` module applies to them.
   - `extendedMonitoringEnabled` (default `true`) — alerts on controller outages and restarts, 5xx errors in ingress-nginx and low free space on the project's persistent volumes.
   - `clusterLogDestinationName` — the name of the ClusterLogDestination to ship the project logs to. Left unset, the project logs are not shipped anywhere.
   - `requiredRequests` (default `true` in this template) — when true, workloads in the project must specify CPU and memory requests (a Deny-mode OperationPolicy). Adoption of an existing namespace seeds this to `false` so running workloads are not blocked.
@@ -258,6 +258,10 @@ A namespace created directly (for example, `d8 k create ns my-app`) becomes a pr
 
 System namespaces (`d8-*`, `kube-*`, `upmeter-*`, `default`, and anything labeled `heritage: deckhouse` or `heritage: upmeter`) are never adopted: they are listed on the virtual `deckhouse` project (except `default`, which stays on the virtual `default` project). There is no label that leaves a user namespace without a project. A namespace whose name is longer than 61 characters is also skipped: that is the Project name limit.
 
+On adoption, a namespace that gets the `default` or `secure` template because of its monitoring or scanning label, and has no `security.deckhouse.io/pod-policy` label, gets `podSecurityProfile: ""`. The project puts no such label on it, and the [default policy](/modules/admission-policy-engine/configuration.html#parameters-podsecuritystandards-defaultpolicy) of the `admission-policy-engine` module keeps applying to it. A namespace whose label has a value other than `baseline`, `restricted` or `privileged` gets `podSecurityProfile: ""` too, and the label stays on it as it is. A namespace with none of these labels gets the `simple` template, which sets no profile and has no `podSecurityProfile` parameter.
+
+To change the profile later, set `podSecurityProfile` in the project. For a project on `simple`, first move it to `default` with `networkPolicy: NotRestricted`, `requiredRequests: false` and `extendedMonitoringEnabled: false`, so that nothing else changes.
+
 A namespace that already belongs to another Helm release (its `meta.helm.sh/release-name` annotation names a release other than the project's) is not taken over: the project gets the `HelmOwnership` condition with the name of the foreign release and retries, and the namespace is left as it is. Remove the foreign release or its ownership annotations to let the project proceed.
 
 Existing RoleBinding and AuthorizationRule objects inside the namespace keep working after adoption. The namespace Admin is **not** copied into `.spec.administrators` and does **not** become `d8:project:admin`: that role additionally manages ProjectRoleBinding resources, which is a wider contract than in-namespace Admin. To make the team lead a project administrator, a platform operator adds them to `.spec.administrators` or creates a ProjectRoleBinding. Namespace Admin never had `update`/`patch`/`delete` on the Namespace object itself (`get`/`list`/`watch` only); after adoption the Namespace is also owned by Helm (`heritage: multitenancy-manager`).
@@ -396,7 +400,7 @@ Available fields (all optional; the complete reference is [in the ProjectTemplat
 
 | Field | What it configures |
 |-------|--------------------|
-| `podSecurityStandard` | Pod security profile: `Privileged`, `Baseline`, or `Restricted`. |
+| `podSecurityStandard` | Pod security profile: `Privileged`, `Baseline`, or `Restricted`. A parameter with an empty value sets no profile. |
 | `networkPolicy.mode` | Network isolation: `Isolated` (traffic is only allowed within the project and from the platform system components) or `NotRestricted`. |
 | `features.monitoring` | Extended monitoring of the project namespaces. |
 | `features.vulnerabilityScanning` | Scanning of container images for vulnerabilities. |

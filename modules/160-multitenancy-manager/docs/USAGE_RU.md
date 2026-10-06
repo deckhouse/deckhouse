@@ -17,7 +17,7 @@ title: "Модуль multitenancy-manager: примеры использован
 
   Параметры (кроме перечисленных для `simple`):
   - `networkPolicy` — `Isolated` (по умолчанию) запрещает весь трафик, кроме трафика внутри неймспейсов проекта, DNS, сбора метрик Prometheus и ingress-nginx; `NotRestricted` разрешает весь трафик.
-  - `podSecurityProfile` — профиль [Pod Security Standards](https://kubernetes.io/docs/concepts/security/pod-security-standards/) для неймспейсов проекта: `Baseline` (по умолчанию) запрещает известные способы повышения привилегий, `Restricted` применяет максимально строгие практики, `Privileged` не ограничивает ничего.
+  - `podSecurityProfile` — профиль [Pod Security Standards](https://kubernetes.io/docs/concepts/security/pod-security-standards/) для неймспейсов проекта: `Baseline` (по умолчанию) запрещает известные способы повышения привилегий, `Restricted` применяет максимально строгие практики, `Privileged` не ограничивает ничего. Пустая строка не задаёт профиль. Проект не ставит на свои неймспейсы лейбл `security.deckhouse.io/pod-policy`, и к ним применяется [политика по умолчанию](/modules/admission-policy-engine/configuration.html#parameters-podsecuritystandards-defaultpolicy) модуля `admission-policy-engine`.
   - `extendedMonitoringEnabled` (по умолчанию `true`) — алерты о недоступности и перезапусках контроллеров, ошибках 5xx в ingress-nginx и нехватке свободного места на persistent volume'ах проекта.
   - `clusterLogDestinationName` — имя ресурса ClusterLogDestination, в который отправлять логи проекта. Если не задан, логи проекта никуда не отправляются.
   - `requiredRequests` (в этом шаблоне по умолчанию `true`) — если `true`, у подов проекта должны быть заданы CPU и memory requests (OperationPolicy в режиме Deny). При adopt существующего неймспейса параметр выставляется в `false`, чтобы не блокировать уже работающие нагрузки.
@@ -258,6 +258,10 @@ d8 k get ns -l 'projects.deckhouse.io/project=my-project,!projects.deckhouse.io/
 
 Системные неймспейсы (`d8-*`, `kube-*`, `upmeter-*`, `default` и всё с лейблом `heritage: deckhouse` или `heritage: upmeter`) в проекты не превращаются: их учитывает виртуальный проект `deckhouse` (кроме `default`, он остаётся в виртуальном `default`). Лейбла, который оставляет пользовательский неймспейс без проекта, нет. Неймспейс длиннее 61 символа тоже пропускается: это лимит имени Project.
 
+При превращении в проект неймспейс, который из-за лейбла мониторинга или сканирования получает шаблон `default` или `secure` и у которого нет лейбла `security.deckhouse.io/pod-policy`, получает `podSecurityProfile: ""`. Проект не ставит на него этот лейбл, и к нему по-прежнему применяется [политика по умолчанию](/modules/admission-policy-engine/configuration.html#parameters-podsecuritystandards-defaultpolicy) модуля `admission-policy-engine`. Неймспейс, у которого значение лейбла отличается от `baseline`, `restricted` и `privileged`, тоже получает `podSecurityProfile: ""`, а сам лейбл остаётся на нём без изменений. Неймспейс без всех этих лейблов получает шаблон `simple`, который не задаёт профиль и не имеет параметра `podSecurityProfile`.
+
+Чтобы позже сменить профиль, задайте `podSecurityProfile` в проекте. Проект на шаблоне `simple` сначала переведите на `default` с `networkPolicy: NotRestricted`, `requiredRequests: false` и `extendedMonitoringEnabled: false`, чтобы больше ничего не изменилось.
+
 Неймспейс, который уже принадлежит другому Helm-релизу (его аннотация `meta.helm.sh/release-name` указывает не на релиз проекта), не перехватывается: проект получает условие `HelmOwnership` с именем чужого релиза и повторяет попытку, а неймспейс остаётся как есть. Чтобы проект продолжил работу, удалите чужой релиз или его аннотации владения.
 
 Уже существующие RoleBinding и AuthorizationRule внутри неймспейса после перехода в проект продолжают работать. Namespace Admin **не** копируется в `.spec.administrators` и **не** становится `d8:project:admin`: эта роль ещё управляет ProjectRoleBinding, а это шире, чем Admin внутри одного неймспейса. Чтобы руководитель команды стал администратором проекта, оператор платформы добавляет его в `.spec.administrators` или создаёт ProjectRoleBinding. У Namespace Admin и раньше не было `update`/`patch`/`delete` на сам объект Namespace (только `get`/`list`/`watch`); после перехода в проект Namespace ещё и принадлежит Helm (`heritage: multitenancy-manager`).
@@ -396,7 +400,7 @@ spec:
 
 | Поле | Что настраивает |
 |------|-----------------|
-| `podSecurityStandard` | Профиль безопасности подов: `Privileged`, `Baseline` или `Restricted`. |
+| `podSecurityStandard` | Профиль безопасности подов: `Privileged`, `Baseline` или `Restricted`. Параметр с пустым значением не задаёт профиль. |
 | `networkPolicy.mode` | Сетевая изоляция: `Isolated` (трафик разрешён только внутри проекта и от системных компонентов платформы) или `NotRestricted`. |
 | `features.monitoring` | Расширенный мониторинг неймспейсов проекта. |
 | `features.vulnerabilityScanning` | Сканирование образов контейнеров на уязвимости. |

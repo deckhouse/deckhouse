@@ -45,6 +45,10 @@ const (
 	podSecurityProfileBaseline   = "Baseline"
 	podSecurityProfileRestricted = "Restricted"
 	podSecurityProfilePrivileged = "Privileged"
+
+	// podSecurityProfileClusterDefault asks the template to render no pod-policy label at all, so
+	// the namespace stays under the cluster default policy.
+	podSecurityProfileClusterDefault = ""
 )
 
 // networkPolicyNotRestricted leaves the traffic open.
@@ -71,8 +75,8 @@ func TemplateFor(namespace *corev1.Namespace) string {
 //
 // The values are spelled out rather than left to the template defaults on purpose: the built-in
 // templates default networkPolicy to Isolated and podSecurityProfile to Baseline, so adopting an
-// existing namespace on the defaults would drop an isolating NetworkPolicy into it and tighten the
-// Pod Security Standard on workloads that run there today.
+// existing namespace on the defaults would drop an isolating NetworkPolicy into it and put the
+// workloads that run there today under a Pod Security Standard the namespace does not have.
 //
 // Only the keys the chosen template declares are emitted, so the result always validates against
 // its parametersSchema.
@@ -107,19 +111,22 @@ func ParametersFor(namespace *corev1.Namespace, template string) map[string]any 
 	return params
 }
 
-// podSecurityProfile maps the rendered pod-policy label back to the parameter value. A namespace
-// without the label is reported as Privileged: the templates always render the label, so the only
-// way to leave an adopted namespace as unrestricted as it is today is to ask for it explicitly. An
-// unrecognised value is treated the same way, because guessing a stricter profile could evict
-// running workloads.
+// podSecurityProfile maps the pod-policy label of a namespace to the parameter value that keeps the
+// label as it is. The templates render a profile as its lower-case name, so only the three
+// lower-case names map to a profile. Anything else, a missing label included, maps to the cluster
+// default: the template then renders no label, and the release leaves the one the namespace has,
+// if any, untouched. Mapping a missing label to a profile would move the namespace off the cluster
+// default policy, and mapping any other value would rewrite it into a different one.
 func podSecurityProfile(label string) string {
-	switch strings.ToLower(label) {
+	switch label {
 	case strings.ToLower(podSecurityProfileBaseline):
 		return podSecurityProfileBaseline
 	case strings.ToLower(podSecurityProfileRestricted):
 		return podSecurityProfileRestricted
-	default:
+	case strings.ToLower(podSecurityProfilePrivileged):
 		return podSecurityProfilePrivileged
+	default:
+		return podSecurityProfileClusterDefault
 	}
 }
 
