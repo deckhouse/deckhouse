@@ -1,0 +1,58 @@
+- name: d8.user-authz.rbacv2.legacy-capability-bindings
+  rules:
+  # A ClusterRoleBinding or RoleBinding outside the platform that names a capability of the
+  # experimental role model directly. The new role model renames the capabilities of the modules
+  # shipped with Deckhouse and of user-authz without compatibility aliases, so after the update the
+  # binding names a ClusterRole that no longer exists and grants nothing.
+  - alert: D8UserAuthzLegacyRBACv2CapabilityBindingFound
+    expr: |
+      max by (binding_kind, binding_name, namespace, role_name, replaced_by) (d8_rbacv2_legacy_capability_binding) > 0
+    for: 15m
+    labels:
+      severity_level: "7"
+      tier: cluster
+      d8_module: user-authz
+      d8_component: rbacv2
+    annotations:
+      plk_protocol_version: "1"
+      plk_markup_format: "markdown"
+      plk_create_group_if_not_exists__d8_user_authz_legacy_rbacv2_custom_roles: "D8UserAuthzLegacyRBACv2CustomRoles,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
+      plk_grouped_by__d8_user_authz_legacy_rbacv2_custom_roles: "D8UserAuthzLegacyRBACv2CustomRoles,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
+      summary: The {{ $labels.binding_kind }} `{{ $labels.binding_name }}` binds the capability `{{ $labels.role_name }}`, which the update renames without an alias.
+      description: |-
+        The {{ $labels.binding_kind }} `{{ $labels.binding_name }}`{{ if $labels.namespace }} in the `{{ $labels.namespace }}` namespace{{ end }} has no `heritage: deckhouse` label, and its `roleRef` field names the `{{ $labels.role_name }}` capability directly.
+
+        In the new role model, the capabilities of the modules shipped with Deckhouse and of the `user-authz` module get new names, and the old names get no compatibility aliases. This capability becomes `{{ $labels.replaced_by }}`. After the update, the `{{ $labels.role_name }}` ClusterRole no longer exists, and the binding stops granting the permissions of the capability.
+
+        The names change as follows:
+
+        - `d8:manage:permission:module:<MODULE>:<ACTION>` becomes `d8:system-capability:<MODULE>:<ACTION>`.
+        - `d8:use:capability:module:<MODULE>:<ACTION>` becomes `d8:namespace-capability:<MODULE>:<ACTION>`.
+        - `d8:manage:permission:subsystem:<SUBSYSTEM>:<ACTION>` becomes `d8:subsystem-capability:<SUBSYSTEM>:<ACTION>`, where the `kubernetes` subsystem becomes `cluster` and `networking` becomes `network`.
+        - `d8:use:capability:kubernetes:<ACTION>` becomes `d8:namespace-capability:kubernetes:<ACTION>`.
+
+        Capabilities are building blocks that roles aggregate, and the new role model refuses a ClusterRoleBinding to a capability. Before the update, create a custom role of the new scheme that aggregates the capability, and bind the subjects of this binding to it:
+
+        ```yaml
+        apiVersion: rbac.authorization.k8s.io/v1
+        kind: ClusterRole
+        metadata:
+          name: d8:custom:<SCOPE>:<NAME>
+          labels:
+            rbac.deckhouse.io/kind: custom-role
+            rbac.deckhouse.io/scope: <SCOPE>
+        aggregationRule:
+          clusterRoleSelectors:
+            - matchLabels:
+                rbac.deckhouse.io/kind: capability
+                rbac.deckhouse.io/capability: {{ $labels.replaced_by | reReplaceAll "^d8:" "" | reReplaceAll ":" "." }}
+        rules: []
+        ```
+
+        Replace `<SCOPE>` with `namespace` for a namespace capability and with `system` for the others, and bind a role of the `namespace` scope with a RoleBinding. The capability gets the `rbac.deckhouse.io/kind: capability` and `rbac.deckhouse.io/capability` labels with the update, so the role aggregates nothing until then and gets the permissions of the capability with it. The new role model does not let a user put `rbac.deckhouse.io/kind: capability` on a ClusterRole, so the selector takes the built-in capability only. After the update, check the permissions of the subjects with `d8 k auth can-i <VERB> <RESOURCE> --as=<USER_NAME>`, and then delete this binding.
+
+        A module installed from a module source renames its capabilities in a release of its own, and the bindings to them are not listed in this alert. The following command lists the bindings to the capabilities of the experimental role model, those of such modules included:
+
+        ```bash
+        d8 k get clusterrolebindings,rolebindings -A -o json | jq -r '.items[] | select(.metadata.labels.heritage != "deckhouse" and .roleRef.kind == "ClusterRole" and (.roleRef.name | test("^d8:(manage:permission|use:capability):"))) | "\(.kind) \(.metadata.namespace // "-") \(.metadata.name) -> \(.roleRef.name)"'
+        ```

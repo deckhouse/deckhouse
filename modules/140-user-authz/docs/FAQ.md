@@ -337,6 +337,8 @@ The names of the built-in capabilities will change as well (no aliases):
 
 * `d8:manage:permission:module:<module>:view|edit` → `d8:system-capability:<module>:view|edit`
 * `d8:use:capability:module:<module>:view|edit` → `d8:namespace-capability:<module>:view|edit`
+* `d8:manage:permission:subsystem:<subsystem>:manage_resources|view_resources` → `d8:subsystem-capability:<subsystem>:manage_resources|view_resources`, where the `kubernetes` subsystem becomes `cluster` and `networking` becomes `network`
+* `d8:use:capability:kubernetes:<name>` → `d8:namespace-capability:kubernetes:<name>`
 
 Aggregation selectors match labels, not names, so updating the selectors will be enough. Do not bind capabilities directly.
 

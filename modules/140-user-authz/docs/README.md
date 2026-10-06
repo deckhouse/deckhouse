@@ -154,6 +154,8 @@ The `d8:use:role:admin` role will map to `d8:namespace:admin` and, as a result, 
 
 Capabilities (the `d8:manage:permission:*` and `d8:use:capability:*` building-block roles) will be renamed **without** compatibility aliases, as they are meant to be aggregated into roles, not bound directly. If you have a RoleBinding or ClusterRoleBinding object pointing directly at such a capability, it will stop granting anything after the upgrade. Recreate the binding against the appropriate role (or a custom role aggregating the new capability).
 
+The `D8UserAuthzLegacyRBACv2CapabilityBindingFound` alert lists such bindings to the capabilities of the Deckhouse Platform modules, and names the new name of each capability. The [FAQ](faq.html#how-do-i-migrate-custom-roles-to-the-new-scheme-in-dp-178) lists how the names change. A module installed from a module source renames its capabilities in a release of its own.
+
 How to prepare for the migration:
 
 1. Find the bindings that use the current role names:

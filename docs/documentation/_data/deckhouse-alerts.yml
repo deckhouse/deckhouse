@@ -3156,6 +3156,52 @@ alerts:
         user-authn idTokenTTL is {{ $labels.id_token_ttl }}, which is too long.
       severity: "6"
       markupFormat: markdown
+    - name: D8UserAuthzLegacyRBACv2CapabilityBindingFound
+      sourceFile: modules/140-user-authz/monitoring/prometheus-rules/legacy-rbacv2-capability-bindings.yaml
+      moduleUrl: 140-user-authz
+      module: user-authz
+      edition: ce
+      description: |-
+        The {{ $labels.binding_kind }} `{{ $labels.binding_name }}`{{ if $labels.namespace }} in the `{{ $labels.namespace }}` namespace{{ end }} has no `heritage: deckhouse` label, and its `roleRef` field names the `{{ $labels.role_name }}` capability directly.
+
+        In the new role model, the capabilities of the modules shipped with Deckhouse and of the `user-authz` module get new names, and the old names get no compatibility aliases. This capability becomes `{{ $labels.replaced_by }}`. After the update, the `{{ $labels.role_name }}` ClusterRole no longer exists, and the binding stops granting the permissions of the capability.
+
+        The names change as follows:
+
+        - `d8:manage:permission:module:<MODULE>:<ACTION>` becomes `d8:system-capability:<MODULE>:<ACTION>`.
+        - `d8:use:capability:module:<MODULE>:<ACTION>` becomes `d8:namespace-capability:<MODULE>:<ACTION>`.
+        - `d8:manage:permission:subsystem:<SUBSYSTEM>:<ACTION>` becomes `d8:subsystem-capability:<SUBSYSTEM>:<ACTION>`, where the `kubernetes` subsystem becomes `cluster` and `networking` becomes `network`.
+        - `d8:use:capability:kubernetes:<ACTION>` becomes `d8:namespace-capability:kubernetes:<ACTION>`.
+
+        Capabilities are building blocks that roles aggregate, and the new role model refuses a ClusterRoleBinding to a capability. Before the update, create a custom role of the new scheme that aggregates the capability, and bind the subjects of this binding to it:
+
+        ```yaml
+        apiVersion: rbac.authorization.k8s.io/v1
+        kind: ClusterRole
+        metadata:
+          name: d8:custom:<SCOPE>:<NAME>
+          labels:
+            rbac.deckhouse.io/kind: custom-role
+            rbac.deckhouse.io/scope: <SCOPE>
+        aggregationRule:
+          clusterRoleSelectors:
+            - matchLabels:
+                rbac.deckhouse.io/kind: capability
+                rbac.deckhouse.io/capability: {{ $labels.replaced_by | reReplaceAll "^d8:" "" | reReplaceAll ":" "." }}
+        rules: []
+        ```
+
+        Replace `<SCOPE>` with `namespace` for a namespace capability and with `system` for the others, and bind a role of the `namespace` scope with a RoleBinding. The capability gets the `rbac.deckhouse.io/kind: capability` and `rbac.deckhouse.io/capability` labels with the update, so the role aggregates nothing until then and gets the permissions of the capability with it. The new role model does not let a user put `rbac.deckhouse.io/kind: capability` on a ClusterRole, so the selector takes the built-in capability only. After the update, check the permissions of the subjects with `d8 k auth can-i <VERB> <RESOURCE> --as=<USER_NAME>`, and then delete this binding.
+
+        A module installed from a module source renames its capabilities in a release of its own, and the bindings to them are not listed in this alert. The following command lists the bindings to the capabilities of the experimental role model, those of such modules included:
+
+        ```bash
+        d8 k get clusterrolebindings,rolebindings -A -o json | jq -r '.items[] | select(.metadata.labels.heritage != "deckhouse" and .roleRef.kind == "ClusterRole" and (.roleRef.name | test("^d8:(manage:permission|use:capability):"))) | "\(.kind) \(.metadata.namespace // "-") \(.metadata.name) -> \(.roleRef.name)"'
+        ```
+      summary: |
+        The {{ $labels.binding_kind }} {{ $labels.binding_name }} binds the capability {{ $labels.role_name }}, which the update renames without an alias.
+      severity: "7"
+      markupFormat: markdown
     - name: D8UserAuthzLegacyRBACv2CustomRoleFound
       sourceFile: modules/140-user-authz/monitoring/prometheus-rules/legacy-rbacv2-custom-roles.yaml
       moduleUrl: 140-user-authz

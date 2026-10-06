@@ -336,7 +336,9 @@ rules:
 Имена встроенных capabilities также изменятся (без псевдонимов):
 
 * `d8:manage:permission:module:<модуль>:view|edit` → `d8:system-capability:<модуль>:view|edit`;
-* `d8:use:capability:module:<модуль>:view|edit` → `d8:namespace-capability:<модуль>:view|edit`.
+* `d8:use:capability:module:<модуль>:view|edit` → `d8:namespace-capability:<модуль>:view|edit`;
+* `d8:manage:permission:subsystem:<подсистема>:manage_resources|view_resources` → `d8:subsystem-capability:<подсистема>:manage_resources|view_resources`, где подсистема `kubernetes` становится `cluster`, а `networking` становится `network`;
+* `d8:use:capability:kubernetes:<имя>` → `d8:namespace-capability:kubernetes:<имя>`.
 
 Селекторы агрегации работают по лейблам, а не по именам, поэтому при миграции достаточно обновить селекторы. Прямые привязки к capabilities использовать не следует.
 
