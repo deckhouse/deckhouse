@@ -944,6 +944,8 @@ spec:
 
 Where `members` is a list of members: `kind: User` with `name` = `User.metadata.name`, or a nested `kind: Group` with `name` = `Group.spec.name` (the name in the token, not `metadata.name`).
 
+Nested groups must not form a cycle. A change to a Group resource is rejected if after it a group becomes its own member, directly or through other groups. If the hierarchy already contains a cycle, changes that do not create a new one are accepted with a warning that shows the path of the cycle, where each group is a member of the previous one. To break the cycle, remove one of these groups from the members of the previous group.
+
 The group name is stored in the issued token without modification. It is indistinguishable from a group name received from an external authentication provider. Therefore, a Group resource cannot be created if its `spec.name` value matches a `Group` subject in an existing [AuthorizationRule](/modules/user-authz/cr.html#authorizationrule) or [ClusterAuthorizationRule](/modules/user-authz/cr.html#clusterauthorizationrule) resource. This prevents permissions from being unintentionally granted to members of a new group.
 
 If the match is intentional, use a different group name or add the `user-authz.deckhouse.io/allow-authorization-rule-collision: "true"` annotation to the Group resource.

@@ -14,7 +14,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import Optional, Self
+from collections import deque
+from typing import Optional
 
 from deckhouse import hook
 from dotmap import DotMap
@@ -84,24 +85,39 @@ def validate(ctx: DotMap) -> tuple[Optional[str], list[str]]:
 
 
 def validate_creation_or_update(ctx: DotMap) -> tuple[Optional[str], list[str]]:
-    obj_name = ctx.review.request.object.metadata.name
-    group_name = ctx.review.request.object.spec.name
+    request = ctx.review.request
+    obj_name = request.object.metadata.name
+    group_name = request.object.spec.name
     warnings = []
 
-    group_tree = GroupTree.from_binding_context(
-        target_group=ctx.review.request.object.spec,
-        all_groups=ctx.snapshots.groups
-    )
-    found_loop, loop_path = group_tree.detect_cycle()
-    if found_loop:
-        return (
-            f"Invalid group hierarchy: cycle detected! Path: groups.deckhouse.io({loop_path}). Groups must form a "
-            "tree without circular references."
-        ), warnings
-
+    # Checked before the cycles: the hierarchy is keyed by spec.name and would merge a duplicate with the stored group.
     if [obj.filterResult for obj in ctx.snapshots.groups if
         obj.filterResult.name != obj_name and obj.filterResult.groupName == group_name]:
         return f"groups.deckhouse.io \"{group_name}\" already exists", warnings
+
+    # The snapshot may already hold the written group; the review carries its versions before and after the write.
+    stored_groups = [(g.filterResult.groupName, g.filterResult.members) for g in ctx.snapshots.groups
+                     if g.filterResult.name != obj_name]
+    groups_before = list(stored_groups)
+    if request.operation == "UPDATE":
+        groups_before.append((request.oldObject.spec.name, request.oldObject.spec.members))
+    hierarchy_before = build_hierarchy(groups_before)
+    hierarchy = build_hierarchy(stored_groups + [(group_name, request.object.spec.members)])
+
+    created_cycle = find_created_cycle(hierarchy_before, hierarchy, group_name)
+    if created_cycle:
+        return (
+            f"Invalid group hierarchy: cycle detected! Path: groups.deckhouse.io({format_path(created_cycle)}). "
+            "Groups must form a tree without circular references."
+        ), warnings
+
+    existing_cycle = find_cycle(hierarchy, group_name)
+    if existing_cycle:
+        warnings.append(
+            f"Group hierarchy already has a cycle. Path: groups.deckhouse.io({format_path(existing_cycle)}). "
+            "Groups must form a tree without circular references. To break the cycle, remove one of these groups "
+            "from the members of the previous one."
+        )
 
     if group_name.startswith("system:"):
         return f"groups.deckhouse.io \"{group_name}\" must not start with the \"system:\" prefix", warnings
@@ -143,176 +159,111 @@ def validate_delete(ctx: DotMap) -> tuple[Optional[str], list[str]]:
     return None, warnings
 
 
-class Group:
+def build_hierarchy(groups: list[tuple[str, list[DotMap]]]) -> dict[str, list[str]]:
     """
-    Represents a single group node in a hierarchy.
+    Map each group to the groups among its members.
 
-    Attributes:
-        name (str): The name of the group.
-        subgroups (list[Group]): List of child groups.
+    Groups are keyed by spec.name: nested members, tokens and RBAC subjects use it, not metadata.name. A member that
+    names a group that does not exist is left out, since it cannot be part of a cycle.
+
+    Args:
+        groups: pairs of spec.name and spec.members.
+
+    Returns:
+        dict[str, list[str]]: nested group names by group name, in the order of the members.
     """
-    def __init__(self, name):
-        """
-        Initialize a Group instance.
-
-        Args:
-            name (str): The name of the group.
-        """
-        self.name = name
-        self.subgroups = []
-
-    def add_subgroup(self, group: Self):
-        """
-        Add a subgroup to this group.
-
-        Args:
-            group (Group): The child group to add.
-        """
-        self.subgroups.append(group)
+    hierarchy = {name: [] for name, _ in groups}
+    for name, members in groups:
+        for member in members or []:
+            if member.kind == "Group" and member.name in hierarchy and member.name not in hierarchy[name]:
+                hierarchy[name].append(member.name)
+    return hierarchy
 
 
-class GroupTree(list[Group]):
+def find_created_cycle(before: dict[str, list[str]], after: dict[str, list[str]], group_name: str) -> list[str]:
     """
-    Represents a forest of groups (one or more root nodes).
+    Find a cycle that a write creates.
 
-    Inherits from list[Group] to behave like a list of Group objects,
-    but also provides convenient methods for building and analyzing the hierarchy.
+    A write adds only memberships of the written group and, when its name is new, memberships that point at that
+    name. So every cycle the write creates passes through the written group and leaves it through one of its own
+    memberships: any of them when the name is new, otherwise one the group gains. The search looks for the shortest
+    way back to the written group from the nested groups of those memberships.
+
+    Args:
+        before: the hierarchy with the written group as it was, or without it on CREATE.
+        after: the hierarchy with the written group as it is written.
+        group_name: spec.name of the written group.
+
+    Returns:
+        list[str]: group names along the cycle, starting and ending with the written group, or an empty list.
     """
-    def __init__(self, groups: list[Group]):
-        """
-        Initialize a GroupTree from a list of Group objects.
+    children_before = before.get(group_name)
+    gained = [child for child in after[group_name] if children_before is None or child not in children_before]
+    path_back = find_path(after, gained, group_name)
+    return [group_name, *path_back] if path_back else []
 
-        Args:
-            groups (list[Group]): Initial groups to include in the forest.
-        """
-        super().__init__()
-        self.extend(groups)
 
-    @classmethod
-    def from_binding_context(cls, target_group: DotMap, all_groups: DotMap):
-        """
-        Build a GroupTree from a binding context (target group + all known groups).
+def find_path(hierarchy: dict[str, list[str]], sources: list[str], target: str) -> list[str]:
+    """
+    Find the shortest chain of nested groups that leads from any of the sources to target.
 
-        This method:
-            - Creates Group objects for each group in all_groups and the target_group.
-            - Links subgroups according to the 'members' field (only if kind == 'Group').
-            - Determines root nodes (groups that are not children of any other group).
-            - If no roots are found, returns a tree containing only the target group
-              (indicating a potential cycle in the graph).
+    Returns:
+        list[str]: group names from a source to target, both included, or an empty list.
+    """
+    previous = dict.fromkeys(sources)
+    queue = deque(previous)
+    while queue:
+        name = queue.popleft()
+        if name == target:
+            path = []
+            while name is not None:
+                path.append(name)
+                name = previous[name]
+            return path[::-1]
+        for child in hierarchy[name]:
+            if child not in previous:
+                previous[child] = name
+                queue.append(child)
+    return []
 
-        Args:
-            target_group (dotmap.DotMap): The group that is being targeted or reviewed.
-            all_groups (dotmap.DotMap): List of all available groups in the context.
 
-        Returns:
-            GroupTree: A GroupTree instance containing root groups.
-        """
-        # Nested members and the token/RBAC identity use spec.name (groupName), not metadata.name.
-        name_to_group = {g.filterResult.groupName: Group(g.filterResult.groupName) for g in all_groups}
-        name_to_group[target_group.name] = Group(target_group.name)
+def find_cycle(hierarchy: dict[str, list[str]], group_name: str) -> list[str]:
+    """
+    Find any cycle of the hierarchy.
 
-        # searching/adding all exists group's subgroups
-        for obj in all_groups:
-            group = name_to_group[obj.filterResult.groupName]
-            for member in obj.filterResult.members:
-                if member.kind == "Group" and member.name in name_to_group:
-                    group.add_subgroup(name_to_group[member.name])
+    The depth-first search starts at the written group, so a cycle among its nested groups is found first.
 
-        # searching/adding target group's subgroups
-        root_group = name_to_group[target_group.name]
-        for member in target_group.members:
-            if member.kind == "Group" and member.name in name_to_group:
-                root_group.add_subgroup(name_to_group[member.name])
+    Args:
+        hierarchy: nested group names by group name.
+        group_name: spec.name of the written group.
 
-        # looking for root nodes
-        all_children = {child.name for g in name_to_group.values() for child in g.subgroups}
-        # find root nodes: groups that are never listed as a child of another group
-        roots = [g for g in name_to_group.values() if g.name not in all_children]
+    Returns:
+        list[str]: group names along the cycle, the first one repeated at the end, or an empty list.
+    """
+    finished = set()
+    for root in [group_name, *(name for name in hierarchy if name != group_name)]:
+        if root in finished:
+            continue
+        path = [root]
+        on_path = {root}
+        children = [iter(hierarchy[root])]
+        while path:
+            child = next(children[-1], None)
+            if child is None:
+                children.pop()
+                on_path.remove(path[-1])
+                finished.add(path.pop())
+            elif child in on_path:
+                return [*path[path.index(child):], child]
+            elif child not in finished:
+                path.append(child)
+                on_path.add(child)
+                children.append(iter(hierarchy[child]))
+    return []
 
-        # DFS helper to collect all reachable groups starting from given roots
-        reachable = set()
-        def dfs(group):
-            if group.name in reachable:
-                return
-            reachable.add(group.name)
-            for sub in group.subgroups:
-                dfs(sub)
 
-        # Explore from all discovered roots
-        for r in roots:
-            dfs(r)
-
-        # Any groups that are not reachable from roots are assumed to be cyclic
-        cyclic_groups = [g for g in name_to_group.values() if g.name not in reachable]
-
-        if cyclic_groups:
-            # Add cyclic groups as separate "roots" so they can still be validated later
-            roots.extend(cyclic_groups)
-
-        # # Fallback: if no roots exist at all, return a tree with the target group only
-        if not roots:
-            return cls([root_group])
-
-        return cls(roots)
-
-    def detect_cycle(self) -> tuple[bool, str]:
-        """
-        Detect cycles in a forest (list of Group roots).
-
-        Returns:
-            tuple[bool, str]:
-                - bool: True if a cycle is detected, otherwise False
-                - str:  Path of the cycle as a string, e.g. `"A" -> "B" -> "C" -> "A"`
-
-        Algorithm:
-            - Performs a DFS traversal on each root in the forest.
-            - Uses `visited` to track fully explored nodes.
-            - Uses `stack` to track the current recursion path (active nodes).
-            - If a node appears in `stack` again, a cycle is detected.
-            - Builds a human-readable cycle path when a cycle is found.
-        """
-        visited = set()
-        stack = set()
-
-        def dfs(node: Group, path: list) -> tuple[bool, str]:
-            """
-            Depth-First Search helper for cycle detection.
-
-            Args:
-                node (Group): current node being traversed
-                path (list): the current traversal path
-
-            Returns:
-                tuple[bool, str]:
-                    - True and cycle path if a cycle is detected
-                    - False and empty string otherwise
-            """
-            if node in stack:
-                cycle_path = " -> ".join(f'"{g.name}"' for g in path + [node])
-                return True, cycle_path
-
-            if node in visited:
-                return False, ""
-
-            stack.add(node)
-            path.append(node)
-
-            for child in node.subgroups:
-                loop_found, loop_path = dfs(child, path)
-                if loop_found:
-                    return True, loop_path
-
-            path.pop()
-            stack.remove(node)
-            visited.add(node)
-            return False, ""
-
-        for root in self:
-            found, cycle = dfs(root, [])
-            if found:
-                return True, cycle
-
-        return False, ""
+def format_path(names: list[str]) -> str:
+    return " -> ".join(f'"{name}"' for name in names)
 
 
 if __name__ == "__main__":
