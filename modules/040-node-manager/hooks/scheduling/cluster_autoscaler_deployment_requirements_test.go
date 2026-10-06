@@ -144,4 +144,73 @@ nodeManager:
 			)))
 		})
 	})
+
+	Context("MCM NodeGroup with minPerZone == maxPerZone next to a scalable one", func() {
+		BeforeEach(func() {
+			f.ValuesSetFromYaml("nodeManager.internal.nodeGroups", []byte(`
+- name: system
+  nodeType: CloudEphemeral
+  engine: MCM
+  cloudInstances:
+    minPerZone: 1
+    maxPerZone: 2
+    zones:
+    - europe-west3-a
+- name: front
+  nodeType: CloudEphemeral
+  engine: MCM
+  cloudInstances:
+    minPerZone: 2
+    maxPerZone: 2
+    zones:
+    - europe-west3-a
+`))
+			f.BindingContexts.Set(f.GenerateBeforeHelmContext())
+			f.RunHook()
+		})
+
+		It("must pass both NodeGroups to --nodes", func() {
+			Expect(f).To(ExecuteSuccessfully())
+			Expect(f.ValuesGet("nodeManager.internal.deployAutoscalerMCM").String()).To(Equal("true"))
+			Expect(f.ValuesGet("nodeManager.internal.autoscalerMCMNodes").String()).To(MatchJSON(fmt.Sprintf(`[
+  "--nodes=1:2:d8-cloud-instance-manager.sandbox-system-%[1]s",
+  "--nodes=2:2:d8-cloud-instance-manager.sandbox-front-%[1]s"
+]`,
+				fmt.Sprintf("%x", sha256.Sum256([]byte("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaaeurope-west3-a")))[:8],
+			)))
+		})
+	})
+
+	Context("all NodeGroups have minPerZone == maxPerZone", func() {
+		BeforeEach(func() {
+			f.ValuesSetFromYaml("nodeManager.internal.nodeGroups", []byte(`
+- name: front
+  nodeType: CloudEphemeral
+  engine: MCM
+  cloudInstances:
+    minPerZone: 2
+    maxPerZone: 2
+    zones:
+    - europe-west3-a
+- name: worker
+  nodeType: CloudEphemeral
+  engine: CAPI
+  cloudInstances:
+    minPerZone: 1
+    maxPerZone: 1
+    zones:
+    - ru-central1-a
+`))
+			f.BindingContexts.Set(f.GenerateBeforeHelmContext())
+			f.RunHook()
+		})
+
+		It("must not deploy cluster-autoscaler", func() {
+			Expect(f).To(ExecuteSuccessfully())
+			Expect(f.ValuesGet("nodeManager.internal.deployAutoscalerMCM").Exists()).To(BeFalse())
+			Expect(f.ValuesGet("nodeManager.internal.autoscalerMCMNodes").Exists()).To(BeFalse())
+			Expect(f.ValuesGet("nodeManager.internal.deployAutoscaler").Exists()).To(BeFalse())
+			Expect(f.ValuesGet("nodeManager.internal.autoscalerNodes").Exists()).To(BeFalse())
+		})
+	})
 })

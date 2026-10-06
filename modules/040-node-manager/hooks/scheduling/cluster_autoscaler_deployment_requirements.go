@@ -75,9 +75,7 @@ func handleClusterAutoscalerDeploymentRequirements(_ context.Context, input *go_
 		if ng.CloudInstances.MinPerZone == nil || ng.CloudInstances.MaxPerZone == nil {
 			continue
 		}
-		if *ng.CloudInstances.MinPerZone == *ng.CloudInstances.MaxPerZone {
-			continue
-		}
+		scalable := *ng.CloudInstances.MinPerZone < *ng.CloudInstances.MaxPerZone
 
 		for _, zoneName := range ng.CloudInstances.Zones {
 			mdSuffix := fmt.Sprintf("%x", sha256.Sum256([]byte(fmt.Sprintf("%v%v", clusterUUID, zoneName))))[:8]
@@ -89,11 +87,19 @@ func handleClusterAutoscalerDeploymentRequirements(_ context.Context, input *go_
 
 			switch ng.Engine {
 			case ngv1.NodeGroupEngineMCM:
-				deployMCM = true
+				// A NodeGroup with minPerZone == maxPerZone is never scaled, but it still has to be in --nodes:
+				// the MCM provider of cluster-autoscaler < 1.35 fails the whole RunOnce on a node whose
+				// MachineDeployment is not in --nodes ("could not find NodeGroup for MachineDeployment ...
+				// in the managed nodeGroups"), and autoscaling stops for every NodeGroup. Such a NodeGroup
+				// only does not trigger the deployment. Fixed in gardener/autoscaler v1.35.0 (0c36fcdad, #420).
+				// TODO: skip it as for CAPI once the oldest cluster-autoscaler version in oss.yaml is 1.35.
+				deployMCM = deployMCM || scalable
 				mcmNodes = append(mcmNodes, arg)
 			case ngv1.NodeGroupEngineCAPI:
-				deployCAPI = true
-				capiNodes = append(capiNodes, arg)
+				if scalable {
+					deployCAPI = true
+					capiNodes = append(capiNodes, arg)
+				}
 			}
 		}
 	}
