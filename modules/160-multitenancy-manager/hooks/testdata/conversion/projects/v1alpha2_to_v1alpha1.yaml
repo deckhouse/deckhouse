@@ -1,0 +1,141 @@
+# Golden fixture of webhooks/conversion/projects, function v1alpha2_to_v1alpha1.
+# Each case is one ConversionReview: objects is request.objects as the apiserver sends it, converted is
+# the response.convertedObjects the hook has to answer with, in the same order.
+
+# The status is carried as it is; the apiserver prunes what the v1alpha1 schema does not describe.
+- name: renames the template reference and the parameters back
+  objects:
+    - apiVersion: deckhouse.io/v1alpha2
+      kind: Project
+      metadata:
+        name: backend
+        uid: 7d6f2a4e-1b1c-4c1e-9d3a-000000000001
+        resourceVersion: "1002"
+        generation: 4
+        labels:
+          team: backend
+      spec:
+        description: Backend services
+        projectTemplateName: default
+        parameters:
+          administrators:
+            - subject: Group
+              name: backend-admins
+          resourceQuota:
+            requests:
+              cpu: 5
+              memory: 5Gi
+          networkPolicy: Isolated
+      status:
+        state: Deployed
+        namespaces:
+          - backend
+        observedGeneration: 4
+        templateGeneration: 1
+  converted:
+    - apiVersion: deckhouse.io/v1alpha1
+      kind: Project
+      metadata:
+        name: backend
+        uid: 7d6f2a4e-1b1c-4c1e-9d3a-000000000001
+        resourceVersion: "1002"
+        generation: 4
+        labels:
+          team: backend
+      spec:
+        description: Backend services
+        projectTypeName: default
+        template:
+          administrators:
+            - subject: Group
+              name: backend-admins
+          resourceQuota:
+            requests:
+              cpu: 5
+              memory: 5Gi
+          networkPolicy: Isolated
+      status:
+        state: Deployed
+        namespaces:
+          - backend
+        observedGeneration: 4
+        templateGeneration: 1
+
+# jq takes an empty string and an empty object for true, so both are moved like any other value.
+- name: moves an empty template reference and empty parameters too
+  objects:
+    - apiVersion: deckhouse.io/v1alpha2
+      kind: Project
+      metadata:
+        name: empty
+      spec:
+        projectTemplateName: ""
+        parameters: {}
+  converted:
+    - apiVersion: deckhouse.io/v1alpha1
+      kind: Project
+      metadata:
+        name: empty
+      spec:
+        projectTypeName: ""
+        template: {}
+
+- name: changes only the version of a spec with neither field
+  objects:
+    - apiVersion: deckhouse.io/v1alpha2
+      kind: Project
+      metadata:
+        name: plain
+      spec:
+        description: No template
+  converted:
+    - apiVersion: deckhouse.io/v1alpha1
+      kind: Project
+      metadata:
+        name: plain
+      spec:
+        description: No template
+
+- name: does not conjure a missing spec
+  objects:
+    - apiVersion: deckhouse.io/v1alpha2
+      kind: Project
+      metadata:
+        name: bare
+  converted:
+    - apiVersion: deckhouse.io/v1alpha1
+      kind: Project
+      metadata:
+        name: bare
+
+- name: leaves an object at another version alone
+  objects:
+    - apiVersion: deckhouse.io/v1alpha2
+      kind: Project
+      metadata:
+        name: current
+      spec:
+        projectTemplateName: default
+    - apiVersion: deckhouse.io/v1alpha1
+      kind: Project
+      metadata:
+        name: old
+      spec:
+        projectTypeName: default
+        parameters:
+          stays: here
+  converted:
+    - apiVersion: deckhouse.io/v1alpha1
+      kind: Project
+      metadata:
+        name: current
+      spec:
+        projectTypeName: default
+    - apiVersion: deckhouse.io/v1alpha1
+      kind: Project
+      metadata:
+        name: old
+      spec:
+        projectTypeName: default
+        parameters:
+          stays: here
