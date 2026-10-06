@@ -1,0 +1,29 @@
+{{- /* Context: dict "page" .Page "tabs" <tabs from tab.html> "name" <tabs block name> */ -}}
+{{- $page := .page -}}
+{{- $tabs := .tabs -}}
+{{- $tabs_name := .name -}}
+{{- /* Classes of this tab set only: tab.js switches the tabs by them,
+       so switching an outer tab set does not hide the panels of a nested one. */ -}}
+{{- $btn_class := printf "tabs__btn_%s" $tabs_name -}}
+{{- $cont_class := printf "tabs__content_%s" $tabs_name -}}
+<div class="tabs-block">
+  <ul class="tabs__container tabs__container--title">
+  {{- range $i, $e := $tabs -}}
+    {{- $id := printf "%s_%d" $tabs_name $i -}}
+    {{- /* The selected tab is saved to sessionStorage under the tab set name and restored by tab.js on page load,
+           as in the Jekyll tabs plugin of the Deckhouse Platform documentation. */ -}}
+    {{- $store_val := anchorize $e.name | default (string $i) -}}
+    <li id="tab_{{ $id }}" href="javascript:void(0)" class="tabs__item tabs__item--title {{ $btn_class }}{{ if (eq $i 0) }} active{{ end }}"
+       data-store-key="{{ $tabs_name }}" data-store-val="{{ $store_val }}"
+       onclick="openTabAndSaveStatus(event, '{{ $btn_class }}', '{{ $cont_class }}', 'block_{{ $id }}', '{{ $tabs_name }}', '{{ $store_val }}');" >
+      {{- $e.name -}}
+    </li>
+  {{- end -}}
+  </ul>
+{{- range $i, $e := $tabs -}}
+{{- $id := printf "%s_%d" $tabs_name $i -}}
+<div id='block_{{ $id }}' class="tabs__container tabs__container--descr {{ $cont_class }}{{ if (eq $i 0) }} active{{ end }}">
+  {{ partial "tabs-nested.html" (dict "mode" "resolve" "html" ($e.content | $page.RenderString)) | safeHTML }}
+</div>
+{{- end -}}
+</div>

@@ -1,0 +1,27 @@
+{{- /*
+  Protects the HTML of a tabs block nested in a {{% tab %}} from the Markdown renderer.
+
+  Hugo inserts the output of a nested shortcode into the .Inner of a {{% tab %}} as is,
+  and the parent tabs shortcode renders that content with RenderString.
+  The multiline HTML of the nested block breaks the Markdown around it:
+  inside a list item, its lines with a smaller indent close the item and leave the <div> elements unclosed.
+
+  Modes:
+  - "wrap": returns the one-line placeholder (an HTML comment with the base64-encoded HTML)
+    if the block is nested directly in a tab, otherwise returns the HTML as is.
+  - "resolve": replaces the placeholders in the rendered tab content with the HTML.
+
+  Context: dict "mode" "wrap|resolve" "html" <string> ["shortcode" <the tabs shortcode context>]
+*/ -}}
+{{- $html := .html | string -}}
+{{- if eq .mode "wrap" -}}
+  {{- $sc := .shortcode -}}
+  {{- if and $sc.Parent (eq $sc.Parent.Name "tab") -}}
+    {{- $html = printf "<!--docs-nested-tabs:%s-->" (base64Encode $html) -}}
+  {{- end -}}
+{{- else if eq .mode "resolve" -}}
+  {{- range findRESubmatch `<!--docs-nested-tabs:([A-Za-z0-9+/=]+)-->` $html -}}
+    {{- $html = replace $html (index . 0) (index . 1 | base64Decode) -}}
+  {{- end -}}
+{{- end -}}
+{{- return $html -}}

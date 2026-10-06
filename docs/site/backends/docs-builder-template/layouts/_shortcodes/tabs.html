@@ -1,21 +1,7 @@
 {{- .Page.Store.Add "tabset-counter" 1 -}}
-{{- $tabs_name := .Get "name" | default (printf "%s-%d" (.Page.RelPermalink) (.Page.Store.Get "tabset-counter") ) | anchorize -}}
+{{- $tabs_name := .Get "name" | default (.Get 0) | default (printf "%s-%d" (.Page.RelPermalink) (.Page.Store.Get "tabset-counter") ) | anchorize -}}
 {{- $tabs := .Store.Get "tabs" -}}
 {{- if .Inner -}}{{- /* We don't use the inner content, but Hugo will complain if we don't reference it. */ -}}{{- end -}}
-<div class="tabs-block">
-  <ul class="tabs__container tabs__container--title">
-  {{- range $i, $e := $tabs -}}
-    {{- $id := printf "%s_%d" $tabs_name $i -}}
-    <li id="tab_{{ $id }}" href="javascript:void(0)" class="tabs__item tabs__item--title{{ if (eq $i 0) }} active{{ end }}"
-       onclick="openTabAndSaveStatus(event, 'tabs__item--title', 'tabs__container--descr', 'block_{{ $id }}');" >
-      {{- trim .name " " -}}
-    </li>
-  {{- end -}}
-  </ul>
-{{- range $i, $e := $tabs -}}
-{{- $id := printf "%s_%d" $tabs_name $i -}}
-<div id='block_{{ $id }}' class="tabs__container tabs__container--descr{{ if (eq $i 0) }} active{{ end }}">
-  {{ .content | $.Page.RenderString | safeHTML }}
-</div>
-{{- end -}}
-</div>
+{{- .Page.Store.Set "tabs-nested-reset" true -}}
+{{- $html := partial "tabs-block.html" (dict "page" .Page "tabs" $tabs "name" $tabs_name) -}}
+{{- partial "tabs-nested.html" (dict "mode" "wrap" "html" $html "shortcode" .) | safeHTML -}}
