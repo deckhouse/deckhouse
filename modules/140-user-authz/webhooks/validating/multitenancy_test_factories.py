@@ -277,7 +277,8 @@ def prepare_module_config_binding_context(
     "d8-user-authz-multitenancy-state" ConfigMap (rendered by templates/namespace.yaml) —
     it's used as a fallback when enableMultiTenancy is absent from both spec.settings and
     oldObject.spec.settings, e.g. to reflect a schema default (CSE) that was never
-    explicitly written to spec.settings.
+    explicitly written to spec.settings. None stands for a missing ConfigMap, for example
+    before the chart has rendered it.
     """
     cars = cars or []
     cars_snapshot = ','.join(car.toSnapshotObject() for car in cars)

@@ -138,6 +138,11 @@ Namespace-роль определяет права на доступ к namespac
 
 У ClusterAuthorizationRule поле `spec.accessLevel` задаёт уровень [упрощённой ролевой модели](#упрощённая-ролевая-модель): `User`, `PrivilegedUser`, `Editor`, `Admin`, `ClusterEditor`, `ClusterAdmin`, `SuperAdmin`. Менеджер подсистемы `security` может назначить любой из них, кроме `SuperAdmin`. Кластерную роль Kubernetes `cluster-admin` он тоже назначить не может. В гранулярной модели менеджер security назначает роли подсистемы `security` не выше `d8:subsystem:security:manager`.
 
+Запрашивающий, у которого есть все права во всём кластере, в этих проверках приравнивается к SuperAdmin и может назначить любую роль, в том числе `SuperAdmin` и `cluster-admin`. Например, такие права есть у субъекта кластерной роли Kubernetes `cluster-admin`, если роль выдана через ClusterRoleBinding или через ClusterAuthorizationRule без `namespaceSelector` и `limitNamespaces`. Если включён режим мультитенантности, такое правило должно ещё задавать `allowAccessToSystemNamespaces: true`, иначе оно не даёт доступа к системным неймспейсам.
+Права из ClusterAuthorizationRule с `namespaceSelector` или `limitNamespaces` в эту проверку не входят, даже если правило выдаёт `cluster-admin`. Любой непустой `limitNamespaces` намеренно считается ограничением, даже если его записи подходят под все неймспейсы, например `.*` вместе с `allowAccessToSystemNamespaces: true`. По `accessLevel` такое правило учитывается как обычно. Например, `accessLevel: SuperAdmin` даёт диапазон SuperAdmin независимо от ограничений неймспейсов в правиле.
+
+`limitNamespaces` и `namespaceSelector` ограничивают только доступ к ресурсам в неймспейсах. Субъект с уровнем доступа `ClusterAdmin` или `SuperAdmin` по-прежнему может создавать объекты ClusterRoleBinding и ClusterAuthorizationRule, поэтому эти поля не ограничивают то, что он может выдать на весь кластер. Выдавайте эти уровни только тем, кому можно иметь доступ ко всему кластеру. ClusterAuthorizationRule учитывается только через биндинги, которые для него создал `user-authz-controller`.
+
 В тексте отказа вебхука уровни `accessLevel` называются basic, чтобы не путать их с уровнями гранулярных ролей (`viewer` / `manager` / `superadmin`).
 
 Права модуля `user-authn` создать User или Group для этого недостаточны: они не раздают роли, которые уже висят на этом email.

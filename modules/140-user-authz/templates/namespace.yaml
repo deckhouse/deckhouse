@@ -15,17 +15,14 @@ kind: Namespace
 metadata:
   name: d8-{{ .Chart.Name }}
   {{- include "helm_lib_module_labels" (list . (fromYaml (include "labels" .))) | nindent 2 }}
-{{- if .Values.userAuthz.enableMultiTenancy }}
----
-{{- include "helm_lib_kube_rbac_proxy_ca_certificate" (list . (printf "d8-%s"  .Chart.Name)) }}
 ---
 # Mirrors userAuthz.enableMultiTenancy (already merged with the edition's config-schema
-# default) into a real Kubernetes object: the multitenancy.py validating webhook cannot
-# read module Values directly, only Kubernetes objects. Rendering it under this gate
-# means it only exists — and only ever needs to say "true" — exactly when MultiTenancy
-# is effectively enabled; its absence is read by the webhook as "disabled", and it's
-# created/removed in the same Helm apply as the rest of the multitenancy objects, with
-# no separate hook or bootstrap ordering to get wrong.
+# default) into a real Kubernetes object, because the multitenancy.py and
+# identity_privilege.py validating webhooks cannot read module Values, only Kubernetes
+# objects. It is rendered whether or not MultiTenancy is on and says "true" or "false",
+# so identity_privilege.py can tell "off" from a ConfigMap that is not there yet and
+# take the strict side for the latter. It changes in the same Helm apply as the rest of
+# the multitenancy objects, with no separate hook or bootstrap ordering to get wrong.
 apiVersion: v1
 kind: ConfigMap
 metadata:
@@ -33,5 +30,8 @@ metadata:
   namespace: d8-{{ .Chart.Name }}
   {{- include "helm_lib_module_labels" (list .) | nindent 2 }}
 data:
-  enableMultiTenancy: "true"
+  enableMultiTenancy: {{ if .Values.userAuthz.enableMultiTenancy }}"true"{{ else }}"false"{{ end }}
+{{- if .Values.userAuthz.enableMultiTenancy }}
+---
+{{- include "helm_lib_kube_rbac_proxy_ca_certificate" (list . (printf "d8-%s"  .Chart.Name)) }}
 {{- end }}

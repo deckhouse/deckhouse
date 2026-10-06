@@ -299,9 +299,10 @@ var _ = Describe("Module :: user-authz :: helm template ::", func() {
 			Expect(f.KubernetesResource("Deployment", "d8-user-authz", "permission-browser-apiserver").
 				Field("spec.template.spec.volumes").String()).NotTo(ContainSubstring("user-authz-webhook-config"))
 
-			// Mirrors enableMultiTenancy for the multitenancy.py validating webhook — rendered
-			// in the same block (and thus the same apply) as the namespace above.
+			// Mirrors enableMultiTenancy for the multitenancy.py and identity_privilege.py
+			// validating webhooks.
 			Expect(f.KubernetesResource("ConfigMap", "d8-user-authz", "d8-user-authz-multitenancy-state").Field("data.enableMultiTenancy").String()).To(Equal("true"))
+			Expect(f.KubernetesResource("ConfigMap", "d8-user-authz", "kube-rbac-proxy-ca.crt").Exists()).To(BeTrue())
 		})
 
 		It("Should configure user-authz-webhook to use local kube-apiserver endpoint", func() {
@@ -570,9 +571,15 @@ var _ = Describe("Module :: user-authz :: helm template ::", func() {
 			Expect(f.KubernetesResource("PodDisruptionBudget", "d8-user-authz", "user-authz-controller").Exists()).To(BeTrue())
 		})
 
-		It("Should not mirror the multitenancy state, so the webhook reads it as disabled", func() {
+		// The state ConfigMap says "false" rather than going missing, so identity_privilege.py
+		// can tell MultiTenancy off from a state it does not know yet.
+		It("Should mirror the multitenancy state as false", func() {
 			Expect(f.RenderError).ShouldNot(HaveOccurred())
-			Expect(f.KubernetesResource("ConfigMap", "d8-user-authz", "d8-user-authz-multitenancy-state").Exists()).To(BeFalse())
+			state := f.KubernetesResource("ConfigMap", "d8-user-authz", "d8-user-authz-multitenancy-state")
+			Expect(state.Exists()).To(BeTrue())
+			Expect(state.Field("data.enableMultiTenancy").String()).To(Equal("false"))
+			// The kube-rbac-proxy CA in the same template stays gated on MultiTenancy.
+			Expect(f.KubernetesResource("ConfigMap", "d8-user-authz", "kube-rbac-proxy-ca.crt").Exists()).To(BeFalse())
 		})
 	})
 

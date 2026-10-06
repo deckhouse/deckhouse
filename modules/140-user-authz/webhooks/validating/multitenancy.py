@@ -24,20 +24,21 @@
 # enableMultiTenancy defaults to true, and when the user has not set it
 # explicitly, the field is simply absent from ModuleConfig.spec.settings.
 #
-# templates/namespace.yaml bridges this gap: it renders a small
-# "d8-user-authz-multitenancy-state" ConfigMap behind a
-# `.Values.userAuthz.enableMultiTenancy` gate — the same defaults-merged
-# value. This hook reads that ConfigMap instead of ModuleConfig or the
-# Module CR.
+# templates/namespace.yaml bridges this gap. It renders a small
+# "d8-user-authz-multitenancy-state" ConfigMap whose enableMultiTenancy is
+# "true" or "false" after `.Values.userAuthz.enableMultiTenancy`, the same
+# defaults-merged value. This hook reads that ConfigMap instead of
+# ModuleConfig or the Module CR.
 #
 # NB: the ConfigMap is what carries the answer, not the namespace around it.
-# d8-user-authz itself is unconditional — user-authz-controller lives there
-# whether or not MultiTenancy is on — so its existence proves nothing. Only
-# the ConfigMap is gated, and it is simply absent when enableMultiTenancy is
-# false, which is exactly the value we want to assume in that case anyway.
-# is_multitenancy_enabled() below treats "no snapshot" the same as
-# "enableMultiTenancy: false", so this falls out for free, with no separate
-# hook or bootstrap-ordering window to worry about.
+# d8-user-authz itself is unconditional (user-authz-controller lives there
+# whether or not MultiTenancy is on), so its existence proves nothing. The
+# ConfigMap is rendered in both states too. is_multitenancy_enabled() below
+# reads anything but "true", a missing ConfigMap included, as disabled,
+# which is the strict side for this hook because it then refuses the
+# multitenancy fields. identity_privilege.py reads the same ConfigMap and
+# treats a missing one as unknown instead, because "disabled" is the
+# permissive side there.
 #
 # (Do not go back to reading status.lastAppliedConfiguration from a Module CR
 # here — deckhouse.io/v1alpha2 Module is not a real, served API version for

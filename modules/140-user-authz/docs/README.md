@@ -137,6 +137,11 @@ Connecting a DexProvider is measured the same way against the identities the pro
 
 The ClusterAuthorizationRule `spec.accessLevel` field is a [basic-model](#basic-role-based-model) level: `User`, `PrivilegedUser`, `Editor`, `Admin`, `ClusterEditor`, `ClusterAdmin`, `SuperAdmin`. A `security` subsystem manager can assign any of those except `SuperAdmin`. That manager also cannot assign the Kubernetes `cluster-admin` ClusterRole. Within the granular model the security manager assigns the `security` subsystem roles up to `d8:subsystem:security:manager`.
 
+A requester with every permission across the cluster counts as SuperAdmin in these checks and can assign any role, including `SuperAdmin` and `cluster-admin`. For example, a subject of the Kubernetes `cluster-admin` ClusterRole has such permissions if the role is granted by a ClusterRoleBinding or by a ClusterAuthorizationRule without `namespaceSelector` and `limitNamespaces`. If multitenancy mode is enabled, such a rule must also set `allowAccessToSystemNamespaces: true`, otherwise it does not reach the system namespaces.
+Permissions from a ClusterAuthorizationRule with `namespaceSelector` or `limitNamespaces` do not count toward this, even if the rule grants `cluster-admin`. Any non-empty `limitNamespaces` counts as a limit on purpose, even if its entries match every namespace, such as `.*` together with `allowAccessToSystemNamespaces: true`. Such a rule still counts through its `accessLevel`. For example, `accessLevel: SuperAdmin` gives the SuperAdmin range whatever the namespace limits of the rule.
+
+`limitNamespaces` and `namespaceSelector` restrict access to namespaced resources only. A subject with the `ClusterAdmin` or `SuperAdmin` access level can still create ClusterRoleBinding and ClusterAuthorizationRule objects, so these fields do not confine what it can grant across the cluster. Give these levels only to subjects that may hold access to the whole cluster. A ClusterAuthorizationRule counts only through the bindings that `user-authz-controller` has created for it.
+
 Webhook deny messages call the `accessLevel` values basic, so they are not confused with the granular role levels (`viewer` / `manager` / `superadmin`).
 
 Permission to create User and Group objects in the `user-authn` module is not enough: it does not grant the roles already attached to that email.
