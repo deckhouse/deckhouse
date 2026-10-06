@@ -94,7 +94,6 @@ editions:
   - registry-packages-proxy
   - sds-local-volume
   - secret-copier
-  - service-with-healthchecks
   - terraform-manager
   - upmeter
   - user-authn

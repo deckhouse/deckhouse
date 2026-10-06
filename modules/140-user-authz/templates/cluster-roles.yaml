@@ -139,6 +139,12 @@
   verbs:
   {{- include "user_authz_verbs" $mode }}
 - apiGroups:
+  - network.deckhouse.io
+  resources:
+  - servicewithhealthchecks
+  verbs:
+  {{- include "user_authz_verbs" $mode }}
+- apiGroups:
   - extensions
   - networking.k8s.io
   resources:
