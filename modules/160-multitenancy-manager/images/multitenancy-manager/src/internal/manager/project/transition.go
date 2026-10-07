@@ -158,6 +158,7 @@ func (m *Manager) Forget(project string) {
 	handoverPendingProjects.DeleteLabelValues(project)
 	keptObjectsProjects.DeleteLabelValues(project)
 	m.keptChecks.Delete(project)
+	m.manifestsApplied.Delete(project)
 }
 
 // beforeUpgrade prepares an upgrade of the project release for what it drops (see helm.BeforeUpgrade).

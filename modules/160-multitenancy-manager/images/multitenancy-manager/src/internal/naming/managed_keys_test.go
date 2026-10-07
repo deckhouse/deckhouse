@@ -21,6 +21,7 @@ import (
 	"path/filepath"
 	"regexp"
 	"slices"
+	"strings"
 	"testing"
 )
 
@@ -80,5 +81,59 @@ func TestManagedNamespaceKeysMatchThePolicy(t *testing.T) {
 		if !slices.Equal(annotations, wantAnnotations) {
 			t.Fatalf("managed annotations differ (copy %d):\n policy: %v\n go:     %v", i, annotations, wantAnnotations)
 		}
+	}
+}
+
+// TestReservedUserPrefixMatchesThePolicy: the reserved-users admission policy spells the prefix of the
+// users the controller acts as as a CEL literal, and the controller makes the names in Go; the two
+// must be the same, or the policy guards names the controller does not use.
+func TestReservedUserPrefixMatchesThePolicy(t *testing.T) {
+	path := filepath.Join("..", "..", "..", "..", "..", "templates", "validation.yaml")
+	raw, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatalf("read the admission policy template at %s: %v", path, err)
+	}
+
+	re := regexp.MustCompile(`- name: reservedPrefix\n\s+expression: '"([^"]*)"'`)
+	matches := re.FindAllStringSubmatch(string(raw), -1)
+	if len(matches) != 1 {
+		t.Fatalf("expected the reservedPrefix variable once in the policy, found %d", len(matches))
+	}
+	if matches[0][1] != ReservedUserPrefix {
+		t.Fatalf("the reserved user prefix differs:\n policy: %q\n go:     %q", matches[0][1], ReservedUserPrefix)
+	}
+	if user := ProjectUser("proj"); !strings.HasPrefix(user, ReservedUserPrefix) {
+		t.Fatalf("the user of a project %q is not under the reserved prefix %q", user, ReservedUserPrefix)
+	}
+
+	// The kept-objects policy lets the same users take a left object over, by the prefix as a literal.
+	exempt := regexp.MustCompile(`startsWith\("([^"]*)"\)`).FindAllStringSubmatch(string(raw), -1)
+	if len(exempt) != 1 {
+		t.Fatalf("expected the kept-objects policy to exempt the users by their prefix once, found %d", len(exempt))
+	}
+	if exempt[0][1] != ReservedUserPrefix {
+		t.Fatalf("the prefix the kept-objects policy exempts differs:\n policy: %q\n go:     %q", exempt[0][1], ReservedUserPrefix)
+	}
+}
+
+// TestReservedUserPrefixMatchesTheDictBindings: user-authz-controller leaves the users under the
+// prefix out of the d8:dict grants, as the reserved-users policy would refuse each of them. Its
+// literal has to be the prefix the controller uses, or the d8-manifests binding of every project
+// with manifests makes it fail on every reconcile.
+func TestReservedUserPrefixMatchesTheDictBindings(t *testing.T) {
+	path := filepath.Join("..", "..", "..", "..", "..", "..", "140-user-authz", "images", "user-authz-controller", "src",
+		"internal", "controller", "dictbindings", "reconciler.go")
+	raw, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatalf("read the dict bindings reconciler of user-authz at %s: %v", path, err)
+	}
+
+	re := regexp.MustCompile(`reservedSubjectPrefix = "([^"]*)"`)
+	matches := re.FindAllStringSubmatch(string(raw), -1)
+	if len(matches) != 1 {
+		t.Fatalf("expected reservedSubjectPrefix once in the reconciler, found %d", len(matches))
+	}
+	if matches[0][1] != ReservedUserPrefix {
+		t.Fatalf("the reserved user prefix differs:\n user-authz: %q\n go:         %q", matches[0][1], ReservedUserPrefix)
 	}
 }

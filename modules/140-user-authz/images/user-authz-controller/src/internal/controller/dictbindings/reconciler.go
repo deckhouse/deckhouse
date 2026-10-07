@@ -20,7 +20,8 @@ limitations under the License.
 // created by Deckhouse), from the RoleBindings multitenancy-manager fans out of ProjectRoleBinding
 // and ClusterProjectRoleBinding objects (roleRef d8:project:*), and from the RoleBindings the module
 // itself creates for the basic model's namespaced rules (roleRef user-authz:user|privileged-user|editor|admin). Each distinct subject
-// gets one ClusterRoleBinding d8:dict:*; bindings whose subject no longer holds any namespace role,
+// gets one ClusterRoleBinding d8:dict:*, except a user that multitenancy-manager acts as (see
+// reservedSubjectPrefix); bindings whose subject no longer holds any namespace role,
 // duplicates, bindings to the former dict role name d8:use:dict, and bindings that lost their
 // roleRef or subject are removed (roleRef is immutable, so a renamed role means a recreated
 // binding). The whole set is
@@ -86,6 +87,16 @@ const (
 	// (StorageClasses, ClusterIssuers) exactly as a namespace admin does, and the README promises
 	// them the same catalogue.
 	projectRolePrefix = "d8:project:"
+
+	// reservedSubjectPrefix starts the names of the users multitenancy-manager acts as, such as
+	// system:multitenancy-manager:project:<project>, the user it applies spec.manifests of a project
+	// template as. The d8-manifests ProjectRoleBinding fans out into RoleBindings that name such a
+	// user, and the d8-multitenancy-manager-reserved-users admission policy lets nobody but the
+	// multitenancy-manager controller bind it: a dict binding for it would be refused on every
+	// reconcile. The user applies objects and reads no dictionary, so it is left out.
+	// multitenancy-manager spells the prefix as naming.ReservedUserPrefix, and a test of it keeps the
+	// two the same.
+	reservedSubjectPrefix = "system:multitenancy-manager:"
 )
 
 // DictLabels mark the ClusterRoleBindings this reconciler owns.
@@ -198,6 +209,9 @@ func (r *Reconciler) Reconcile(ctx context.Context, _ reconcile.Request) (reconc
 			continue
 		}
 		for _, subject := range rb.Subjects {
+			if strings.HasPrefix(subject.Name, reservedSubjectPrefix) {
+				continue
+			}
 			if subject.Kind == rbacv1.ServiceAccountKind && subject.Namespace == "" {
 				subject.Namespace = rb.Namespace
 			}

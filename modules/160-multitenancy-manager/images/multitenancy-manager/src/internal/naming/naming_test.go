@@ -99,3 +99,9 @@ func TestIsGitOpsTrackingLabel(t *testing.T) {
 		}
 	}
 }
+
+func TestProjectUser(t *testing.T) {
+	if got := ProjectUser("proj"); got != "system:multitenancy-manager:project:proj" {
+		t.Fatalf("ProjectUser(proj) = %q", got)
+	}
+}

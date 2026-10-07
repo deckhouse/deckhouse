@@ -198,7 +198,8 @@ The role grants `get`, `list`, `watch` on the following resources:
 The `d8:dict` ClusterRoleBinding is created **automatically** whenever a RoleBinding references a
 `d8:namespace:*` or `d8:project:*` role (granular model) or a `user-authz:*` role (basic model). The
 RoleBindings that `multitenancy-manager` fans out from a ProjectRoleBinding or a ClusterProjectRoleBinding
-count as well, so the holders of project roles get the binding too. This means
+count as well, so the holders of project roles get the binding too. The `system:multitenancy-manager:*`
+users, which `multitenancy-manager` acts as, get none. This means
 project users can discover reference resources without any manual configuration. The binding appears with
 the RoleBinding and is removed when it is deleted. The binding is created and managed entirely by the
 `user-authz-controller` component of the module. You do not create it yourself.

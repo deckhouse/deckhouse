@@ -87,9 +87,10 @@
         - The project no longer manages them. A change of the template or of the project does not change them. When the project is deleted, the ones in its namespaces go with the namespaces, and the controller deletes the cluster-scoped ones that still carry the label.
         - They carry the `projects.deckhouse.io/kept-from-helm-template: "true"` label and the `helm.sh/resource-policy: keep` annotation, and they have lost the `heritage: multitenancy-manager` label. While they carry the label, only a requester who may make the same change to objects of their kind across the cluster may change or delete them, so the users of the project may not.
 
-        The project lists them in `.status.keptObjects` until each of them is deleted, loses the label, or is rendered by the template again. Decide for each object:
+        The project lists them in `.status.keptObjects` until each of them is deleted, loses the label, is rendered by the template again, or is taken over by the `manifests` of the template. Decide for each object:
 
         - If it is still needed, describe it in the template or in the project, for example with a ProjectRoleBinding in place of an AuthorizationRule or a RoleBinding, or with a limit in `.spec.quota`, and then delete the object. Or remove the label to hand it over to the project, whose users may then change and delete it.
+        - If it is in a namespace of the project, `manifests` of the template can take it over. Once `manifests` renders an object of the same kind, namespace and name, the controller applies it as the `system:multitenancy-manager:project:{{ $labels.project }}` user, removes the label and takes the object off the list. The object then has what `manifests` renders, and a field that the Helm text set and `manifests` leaves out is removed.
         - If it is not needed, delete it. An access it grants ends only when it is deleted.
         - If the template renders an object of the same kind and name again, the project release takes it over. The controller then removes the label, puts the `heritage: multitenancy-manager` label back and removes the `helm.sh/resource-policy: keep` annotation, unless the template sets it itself.
 

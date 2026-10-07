@@ -81,20 +81,23 @@ func TestEnqueueProjectForNamespace(t *testing.T) {
 	})
 }
 
-// The project quota and the administrators binding wake the project they carry the label of, and
-// another object of their kinds wakes nobody.
+// The project quota, the administrators binding and the binding of the user the manifests are applied
+// as wake the project they carry the label of, and another object of their kinds wakes nobody.
 func TestStandardFieldRequests(t *testing.T) {
 	label := map[string]string{v1alpha3.ResourceLabelProject: "team"}
+	bindings := []string{v1alpha3.ProjectAdministratorsBinding, v1alpha3.ProjectManifestsBinding}
 	binding := &v1alpha3.ProjectRoleBinding{ObjectMeta: metav1.ObjectMeta{Namespace: "team", Name: v1alpha3.ProjectAdministratorsBinding, Labels: label}}
-	assert.Equal(t, []string{"team"}, requestNames(standardFieldRequests(v1alpha3.ProjectAdministratorsBinding, binding)))
+	assert.Equal(t, []string{"team"}, requestNames(standardFieldRequests(binding, bindings...)))
+	manifests := &v1alpha3.ProjectRoleBinding{ObjectMeta: metav1.ObjectMeta{Namespace: "team", Name: v1alpha3.ProjectManifestsBinding, Labels: label}}
+	assert.Equal(t, []string{"team"}, requestNames(standardFieldRequests(manifests, bindings...)))
 
 	quota := &corev1.ResourceQuota{ObjectMeta: metav1.ObjectMeta{Namespace: "team", Name: v1alpha3.ProjectQuotaName, Labels: label}}
-	assert.Equal(t, []string{"team"}, requestNames(standardFieldRequests(v1alpha3.ProjectQuotaName, quota)))
+	assert.Equal(t, []string{"team"}, requestNames(standardFieldRequests(quota, v1alpha3.ProjectQuotaName)))
 
 	other := &v1alpha3.ProjectRoleBinding{ObjectMeta: metav1.ObjectMeta{Namespace: "team", Name: "developers", Labels: label}}
-	assert.Empty(t, standardFieldRequests(v1alpha3.ProjectAdministratorsBinding, other))
+	assert.Empty(t, standardFieldRequests(other, bindings...))
 	unlabelled := &corev1.ResourceQuota{ObjectMeta: metav1.ObjectMeta{Namespace: "team", Name: v1alpha3.ProjectQuotaName}}
-	assert.Empty(t, standardFieldRequests(v1alpha3.ProjectQuotaName, unlabelled))
+	assert.Empty(t, standardFieldRequests(unlabelled, v1alpha3.ProjectQuotaName))
 }
 
 func TestNamespaceWatchPredicate_DeleteAlways(t *testing.T) {

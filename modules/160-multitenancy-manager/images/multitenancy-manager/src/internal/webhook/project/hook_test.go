@@ -43,6 +43,7 @@ import (
 	"controller/apis/deckhouse.io/v1alpha3"
 	"controller/internal/helm"
 	projectmanager "controller/internal/manager/project"
+	"controller/internal/naming"
 	rolebindingwebhook "controller/internal/webhook/rolebinding"
 )
 
@@ -385,6 +386,54 @@ func TestValidateStandardFields(t *testing.T) {
 			administrators: []v1alpha3.Administrator{{Kind: "Group", Name: "alice\u2028x"}},
 			old:            &v1alpha3.Project{Spec: v1alpha3.ProjectSpec{Administrators: []v1alpha3.Administrator{{Kind: "User", Name: "alice\u2028x"}}}},
 			denied:         true,
+		},
+		{
+			// the controller acts as the users under the prefix, and an administrator of this project
+			// would hand the user of another one the rights of an administrator here
+			name:           "the user of another project as an administrator is denied",
+			administrators: []v1alpha3.Administrator{{Kind: "User", Name: naming.ProjectUser("victim")}},
+			denied:         true,
+		},
+		{
+			name:           "a group under the reserved prefix as an administrator is denied",
+			administrators: []v1alpha3.Administrator{{Kind: "Group", Name: naming.ReservedUserPrefix + "anything"}},
+			denied:         true,
+		},
+		{
+			name:           "a name that only starts like the reserved prefix",
+			administrators: []v1alpha3.Administrator{{Kind: "Group", Name: "system:multitenancy-manager-team"}},
+		},
+		{
+			name:           "an update that adds the user of another project is denied",
+			administrators: []v1alpha3.Administrator{{Kind: "User", Name: "bob"}, {Kind: "User", Name: naming.ProjectUser("victim")}},
+			old:            &v1alpha3.Project{Spec: v1alpha3.ProjectSpec{Administrators: []v1alpha3.Administrator{{Kind: "User", Name: "bob"}}}},
+			denied:         true,
+		},
+		{
+			name:           "the user of another project the stored project names passes with a warning",
+			administrators: []v1alpha3.Administrator{{Kind: "User", Name: naming.ProjectUser("victim")}},
+			old: &v1alpha3.Project{Spec: v1alpha3.ProjectSpec{
+				Administrators: []v1alpha3.Administrator{{Kind: "User", Name: naming.ProjectUser("victim")}},
+			}},
+			warned: true,
+		},
+		{
+			// a Helm text renders the parameter into the subjects of objects the controller applies
+			name:       "the user of another project in the administrators parameter is denied",
+			parameters: map[string]any{"administrators": []any{map[string]any{"subject": "User", "name": naming.ProjectUser("victim")}}},
+			denied:     true,
+		},
+		{
+			name:       "the user of another project in the administrators parameter the stored project has passes with a warning",
+			parameters: map[string]any{"administrators": []any{map[string]any{"subject": "User", "name": naming.ProjectUser("victim")}}},
+			old: &v1alpha3.Project{Spec: v1alpha3.ProjectSpec{Parameters: map[string]any{
+				"administrators": []any{map[string]any{"subject": "User", "name": naming.ProjectUser("victim")}},
+			}}},
+			warned: true,
+		},
+		{
+			name:       "other users in the administrators parameter",
+			parameters: map[string]any{"administrators": []any{map[string]any{"subject": "User", "name": "alice"}}},
 		},
 		{
 			name:           "a kept name does not let a bare memory value through",
@@ -1355,8 +1404,61 @@ func TestHandle_HelmRender(t *testing.T) {
 	})
 }
 
-// Only a resourcesTemplate is rehearsed through Helm. A chart that fails whatever it renders tells
-// the two apart: a project on a structured template passes, one on a Helm text is refused.
+// The manifests of a template are rehearsed like a Helm text: a text that does not render and a
+// parameter that becomes manifest structure are refused at admission.
+func TestHandle_ManifestsRender(t *testing.T) {
+	manifestsTemplate := func(name, manifests string) *v1alpha2.ProjectTemplate {
+		return &v1alpha2.ProjectTemplate{
+			ObjectMeta: metav1.ObjectMeta{Name: name},
+			Spec: v1alpha2.ProjectTemplateSpec{
+				ParametersSchema: v1alpha2.ParametersSchema{OpenAPIV3Schema: map[string]any{
+					"type": "object", "properties": map[string]any{"owner": map[string]any{"type": "string"}},
+				}},
+				Manifests: manifests,
+			},
+		}
+	}
+	v := newValidator(t,
+		manifestsTemplate("unquoted", "---\napiVersion: v1\nkind: ConfigMap\nmetadata:\n  name: owner\ndata:\n  owner: {{ .parameters.owner }}\n"),
+		manifestsTemplate("broken", "{{ .parameters.owner"),
+	)
+
+	create := func(t *testing.T, template, owner string) admission.Response {
+		t.Helper()
+		project := projectWithParameters(map[string]any{"owner": owner})
+		project.Name = "team"
+		project.Spec.ProjectTemplateName = template
+		raw, err := json.Marshal(project)
+		require.NoError(t, err)
+		return v.Handle(context.Background(), admission.Request{AdmissionRequest: admissionv1.AdmissionRequest{
+			Operation: admissionv1.Create,
+			UserInfo:  authnv1.UserInfo{Username: "alice"},
+			Object:    runtime.RawExtension{Raw: raw},
+		}})
+	}
+
+	t.Run("an ordinary parameter passes", func(t *testing.T) {
+		resp := create(t, "unquoted", "alice")
+		assert.True(t, resp.Allowed, resp.Result)
+	})
+
+	t.Run("a parameter that becomes an object is refused", func(t *testing.T) {
+		resp := create(t, "unquoted", "alice\n---\napiVersion: rbac.authorization.k8s.io/v1\nkind: RoleBinding\nmetadata:\n  name: escalation\n")
+		require.False(t, resp.Allowed)
+		assert.Contains(t, resp.Result.Message, "the manifests of the 'unquoted' project template")
+		assert.Contains(t, resp.Result.Message, helm.ErrParameterInjection.Error())
+	})
+
+	t.Run("a text that does not render is refused", func(t *testing.T) {
+		resp := create(t, "broken", "alice")
+		require.False(t, resp.Allowed)
+		assert.Contains(t, resp.Result.Message, "render chart")
+	})
+}
+
+// Only a resourcesTemplate and manifests are rehearsed through Helm. A chart that fails whatever it
+// renders tells them apart: a project on structured fields passes, one on a Helm text or on manifests
+// is refused.
 func TestHandle_HelmRenderOnlyForAHelmText(t *testing.T) {
 	chart := t.TempDir()
 	require.NoError(t, os.WriteFile(filepath.Join(chart, "rehearsed.yaml"), []byte(`{{ fail "rehearsed" }}`), 0o600))
@@ -1378,7 +1480,10 @@ func TestHandle_HelmRenderOnlyForAHelmText(t *testing.T) {
 			ResourcesTemplate: "---\napiVersion: v1\nkind: ConfigMap\nmetadata:\n  name: cm\n",
 		},
 	}
-	v := newValidator(t, structured, helmText)
+	manifests := structured.DeepCopy()
+	manifests.Name = "manifests"
+	manifests.Spec.Manifests = "---\napiVersion: v1\nkind: ConfigMap\nmetadata:\n  name: cm\n"
+	v := newValidator(t, structured, helmText, manifests)
 	v.helmClient = helmClient
 
 	create := func(t *testing.T, template string) admission.Response {
@@ -1399,6 +1504,10 @@ func TestHandle_HelmRenderOnlyForAHelmText(t *testing.T) {
 	assert.True(t, resp.Allowed, resp.Result)
 
 	resp = create(t, "helm")
+	require.False(t, resp.Allowed)
+	assert.Contains(t, resp.Result.Message, "rehearsed")
+
+	resp = create(t, "manifests")
 	require.False(t, resp.Allowed)
 	assert.Contains(t, resp.Result.Message, "rehearsed")
 }

@@ -20,6 +20,7 @@ import (
 	"context"
 	"fmt"
 	"reflect"
+	"slices"
 	"sync"
 	"time"
 
@@ -42,6 +43,7 @@ import (
 
 	"controller/apis/deckhouse.io/v1alpha3"
 	"controller/internal/helm"
+	"controller/internal/impersonate"
 	projectmanager "controller/internal/manager/project"
 	"controller/internal/startup"
 )
@@ -49,11 +51,13 @@ import (
 const controllerName = "d8-project-controller"
 
 func Register(runtimeManager manager.Manager, helmClient *helm.Client, logger logr.Logger, migration *startup.Migration) error {
+	// spec.manifests of a template is applied as the user of the project, not as the controller
+	manifestsClients := impersonate.NewClients(runtimeManager.GetConfig(), runtimeManager.GetScheme(), runtimeManager.GetRESTMapper())
 	r := &reconciler{
 		init:    new(sync.WaitGroup),
 		logger:  logger.WithName(controllerName),
 		client:  runtimeManager.GetClient(),
-		manager: projectmanager.New(runtimeManager.GetClient(), helmClient, logger),
+		manager: projectmanager.New(runtimeManager.GetClient(), helmClient, logger, projectmanager.WithManifestsClients(manifestsClients)),
 	}
 
 	r.init.Add(1)
@@ -95,22 +99,23 @@ func Register(runtimeManager manager.Manager, helmClient *helm.Client, logger lo
 		Watches(&corev1.Namespace{}, namespaceProjectHandler{},
 			builder.WithPredicates(namespaceWatchPredicate{})).
 		Watches(&corev1.ResourceQuota{}, standardFieldHandler(v1alpha3.ProjectQuotaName)).
-		// a handover of a Helm text release waits for the binding to be Ready
-		Watches(&v1alpha3.ProjectRoleBinding{}, standardFieldHandler(v1alpha3.ProjectAdministratorsBinding)).
+		// a handover of a Helm text release waits for the administrators binding to be Ready, and the
+		// manifests of a template wait for the binding of the user they are applied as
+		Watches(&v1alpha3.ProjectRoleBinding{}, standardFieldHandler(v1alpha3.ProjectAdministratorsBinding, v1alpha3.ProjectManifestsBinding)).
 		Complete(projectController)
 }
 
-// standardFieldHandler wakes the project of a standard-field object of the given name.
-func standardFieldHandler(name string) handler.EventHandler {
+// standardFieldHandler wakes the project of a controller-managed object of one of the given names.
+func standardFieldHandler(names ...string) handler.EventHandler {
 	return handler.EnqueueRequestsFromMapFunc(func(_ context.Context, object client.Object) []reconcile.Request {
-		return standardFieldRequests(name, object)
+		return standardFieldRequests(object, names...)
 	})
 }
 
-// standardFieldRequests is the request for the project an object of the given name belongs to by its
-// project label, and nothing for any other object.
-func standardFieldRequests(name string, object client.Object) []reconcile.Request {
-	if object.GetName() != name {
+// standardFieldRequests is the request for the project an object of one of the given names belongs to
+// by its project label, and nothing for any other object.
+func standardFieldRequests(object client.Object, names ...string) []reconcile.Request {
+	if !slices.Contains(names, object.GetName()) {
 		return nil
 	}
 	project, ok := object.GetLabels()[v1alpha3.ResourceLabelProject]

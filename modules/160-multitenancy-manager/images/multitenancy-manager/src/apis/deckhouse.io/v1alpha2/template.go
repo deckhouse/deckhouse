@@ -165,12 +165,21 @@ type ProjectTemplateSpec struct {
 	// ParametersSchema is the OpenAPI v3 schema validating Project.spec.parameters.
 	ParametersSchema ParametersSchema `json:"parametersSchema,omitempty"`
 
+	// Manifests is a template string, rendered as a ResourcesTemplate is, with the same values and the
+	// same checks of the parameters, into objects that the controller applies to the namespaces of a
+	// project next to what the structured fields render. It applies them as the user of the project,
+	// which has the d8:project:admin role there and nothing else, not with the rights of the
+	// controller (see internal/manager/project/manifests.go). v1alpha1 has no place for it.
+	Manifests string `json:"manifests,omitempty"`
+
 	// ResourcesTemplate is a Helm template string rendering the objects of a project, the form every
 	// template had in v1alpha1. A non-blank one is rendered through Helm, and the template webhook
 	// refuses it together with the fields above that render namespace objects (see ObjectFields);
-	// Resources and GrantPolicies apply either way.
+	// Resources and GrantPolicies apply either way. A template gets a new one through v1alpha1 only:
+	// the template webhook refuses a write through v1alpha2 that sets it where the stored template
+	// has none.
 	//
-	// Deprecated: describe templates with the structured fields.
+	// Deprecated: describe templates with the structured fields and Manifests.
 	//
 	// The yaml tag is required: the helm renderer maps the spec to values via structs.Map (yaml
 	// tag name), and helmlib reads .Values.projectTemplate.resourcesTemplate.
@@ -183,10 +192,16 @@ func (p *ProjectTemplateSpec) HasResourcesTemplate() bool {
 	return strings.TrimSpace(p.ResourcesTemplate) != ""
 }
 
+// HasManifests reports whether the template has objects in manifests for the controller to apply. A
+// blank text counts as none, as a blank resourcesTemplate does.
+func (p *ProjectTemplateSpec) HasManifests() bool {
+	return strings.TrimSpace(p.Manifests) != ""
+}
+
 // ObjectFields names the fields of the spec that are set and render an object into the project
-// namespaces. Title, description, parametersSchema, resourcesTemplate and the grant fields are not
-// among them: they describe the template or the cluster-resource availability, and a template that
-// sets only those renders the namespace and nothing else.
+// namespaces, manifests among them. Title, description, parametersSchema, resourcesTemplate and the
+// grant fields are not: they describe the template or the cluster-resource availability, and a
+// template that sets only those renders the namespace and nothing else.
 //
 // Every optional stanza is judged by its content, not by its presence: `networkPolicy: {}` is a
 // pointer to an empty mode, and the renderer produces nothing from it.
@@ -207,11 +222,13 @@ func (p *ProjectTemplateSpec) ObjectFields() []string {
 	add("allowedUIDs", !p.AllowedUIDs.IsZero())
 	add("allowedGIDs", !p.AllowedGIDs.IsZero())
 	add("runtimeAudit", p.RuntimeAudit != nil && !p.RuntimeAudit.Enabled.IsZero())
+	add("manifests", p.HasManifests())
 	return fields
 }
 
 // V1alpha2OnlyFields names the fields of the spec that are set and that ProjectTemplate v1alpha1 has
-// no place for: title, the grant fields and ObjectFields. A write through v1alpha1 erases them.
+// no place for: title, the grant fields and ObjectFields, manifests included. A write through
+// v1alpha1 erases them.
 func (p *ProjectTemplateSpec) V1alpha2OnlyFields() []string {
 	var fields []string
 	if p.Title != "" {

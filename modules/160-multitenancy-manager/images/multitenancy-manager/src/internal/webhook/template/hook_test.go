@@ -69,10 +69,19 @@ func createRequest(t *testing.T, tmpl *v1alpha2.ProjectTemplate) admission.Reque
 	raw, err := json.Marshal(tmpl)
 	require.NoError(t, err)
 	return admission.Request{AdmissionRequest: admissionv1.AdmissionRequest{
-		Operation: admissionv1.Create,
-		Object:    runtime.RawExtension{Raw: raw},
+		Operation:   admissionv1.Create,
+		Kind:        v1alpha2Kind,
+		RequestKind: v1alpha2Kind.DeepCopy(),
+		Object:      runtime.RawExtension{Raw: raw},
 	}}
 }
+
+// v1alpha2Kind is the kind the webhook gets every request as, and the kind of a request a client
+// makes through v1alpha2. A test of a request through v1alpha1 sets RequestKind to v1alpha1Kind.
+var (
+	v1alpha2Kind = metav1.GroupVersionKind{Group: "deckhouse.io", Version: "v1alpha2", Kind: v1alpha2.ProjectTemplateKind}
+	v1alpha1Kind = metav1.GroupVersionKind{Group: "deckhouse.io", Version: "v1alpha1", Kind: v1alpha2.ProjectTemplateKind}
+)
 
 func structuredTemplate(name string, grantPolicies ...string) *v1alpha2.ProjectTemplate {
 	return &v1alpha2.ProjectTemplate{
@@ -316,9 +325,11 @@ func updateRequest(t *testing.T, oldTmpl, newTmpl *v1alpha2.ProjectTemplate) adm
 	newRaw, err := json.Marshal(newTmpl)
 	require.NoError(t, err)
 	return admission.Request{AdmissionRequest: admissionv1.AdmissionRequest{
-		Operation: admissionv1.Update,
-		Object:    runtime.RawExtension{Raw: newRaw},
-		OldObject: runtime.RawExtension{Raw: oldRaw},
+		Operation:   admissionv1.Update,
+		Kind:        v1alpha2Kind,
+		RequestKind: v1alpha2Kind.DeepCopy(),
+		Object:      runtime.RawExtension{Raw: newRaw},
+		OldObject:   runtime.RawExtension{Raw: oldRaw},
 	}}
 }
 
@@ -602,24 +613,33 @@ func TestHandle_ResourcesTemplateWithStructuredFields(t *testing.T) {
 	both := helmTemplate("both")
 	both.Spec.PodSecurityStandard = v1alpha2.LiteralParam(v1alpha2.PodSecurityStandardBaseline)
 	both.Spec.NetworkPolicy = &v1alpha2.NetworkPolicySpec{Mode: v1alpha2.LiteralParam(v1alpha2.NetworkPolicyModeIsolated)}
-	resp := v.Handle(ctx, createRequest(t, both))
+	resp := v.Handle(ctx, updateRequest(t, helmTemplate("both"), both))
 	require.False(t, resp.Allowed)
 	assert.Contains(t, resp.Result.Message, "resourcesTemplate together with fields that render objects: podSecurityStandard, networkPolicy")
 
-	resp = v.Handle(ctx, updateRequest(t, helmTemplate("both"), both))
-	assert.False(t, resp.Allowed, "an update is refused the same way")
+	// a template with a Helm text is created through v1alpha1 alone, which has no structured fields
+	resp = v.Handle(ctx, createRequest(t, both))
+	require.False(t, resp.Allowed)
+	assert.Contains(t, resp.Result.Message, "cannot get a new resourcesTemplate", "a create through v1alpha2 is refused for the text alone")
+
+	// manifests renders objects too, and next to a Helm text it would go unused
+	withManifests := helmTemplate("manifests")
+	withManifests.Spec.Manifests = "---\napiVersion: v1\nkind: ConfigMap\nmetadata:\n  name: settings\n"
+	resp = v.Handle(ctx, updateRequest(t, helmTemplate("manifests"), withManifests))
+	require.False(t, resp.Allowed)
+	assert.Contains(t, resp.Result.Message, "resourcesTemplate together with fields that render objects: manifests")
 
 	withGrants := helmTemplate("grants")
 	withGrants.Spec.Title = "Grants"
 	withGrants.Spec.GrantPolicies = []string{"lib"}
 	withGrants.Spec.Resources = []grantsv1alpha1.GrantResource{{ResourceName: "storageclasses"}}
-	resp = v.Handle(ctx, createRequest(t, withGrants))
+	resp = v.Handle(ctx, updateRequest(t, helmTemplate("grants"), withGrants))
 	assert.True(t, resp.Allowed, resp.Result)
 
 	// an empty stanza renders nothing
 	emptyStanza := helmTemplate("empty-stanza")
 	emptyStanza.Spec.NetworkPolicy = &v1alpha2.NetworkPolicySpec{}
-	resp = v.Handle(ctx, createRequest(t, emptyStanza))
+	resp = v.Handle(ctx, updateRequest(t, helmTemplate("empty-stanza"), emptyStanza))
 	assert.True(t, resp.Allowed, resp.Result)
 }
 
@@ -643,11 +663,18 @@ func TestHandle_ResourcesTemplateRemoval(t *testing.T) {
 	assert.Contains(t, resp.Result.Message, "used in the 'proj' project")
 	assert.Contains(t, resp.Result.Message, "leaves every object of the Helm template that the new render lacks in place",
 		"a switch keeps what it drops")
+	assert.Contains(t, resp.Result.Message, "set the structured fields or manifests in the same request")
+	assert.Contains(t, resp.Result.Message, "until manifests renders it", "manifests takes over what a switch keeps")
 
 	rewritten := blank("used")
 	rewritten.Spec.PodSecurityStandard = v1alpha2.LiteralParam(v1alpha2.PodSecurityStandardBaseline)
 	resp = v.Handle(ctx, updateRequest(t, helmTemplate("used"), rewritten))
 	assert.True(t, resp.Allowed, resp.Result)
+
+	toManifests := blank("used")
+	toManifests.Spec.Manifests = "---\napiVersion: v1\nkind: ConfigMap\nmetadata:\n  name: cm\n"
+	resp = v.Handle(ctx, updateRequest(t, helmTemplate("used"), toManifests))
+	assert.True(t, resp.Allowed, "a rewrite with manifests in place of the Helm text passes: %v", resp.Result)
 
 	resp = v.Handle(ctx, updateRequest(t, helmTemplate("unused"), blank("unused")))
 	assert.True(t, resp.Allowed, resp.Result)
@@ -716,7 +743,10 @@ func TestHandle_V1alpha1Erasure(t *testing.T) {
 	grants.Spec.ResourcesTemplate = ""
 	grants.Spec.Resources = []grantsv1alpha1.GrantResource{{ResourceName: "storageclasses"}}
 	grants.Spec.GrantPolicies = []string{"lib"}
-	v := newValidator(t, structured, grants, helmTemplate("helm"), libraryPolicy("lib"))
+	manifests := helmTemplate("manifests")
+	manifests.Spec.ResourcesTemplate = ""
+	manifests.Spec.Manifests = "---\napiVersion: v1\nkind: ConfigMap\nmetadata:\n  name: cm\n"
+	v := newValidator(t, structured, grants, manifests, helmTemplate("helm"), libraryPolicy("lib"))
 
 	// what the API server hands the webhook for a request through v1alpha1: both objects as v1alpha1
 	// sees them, converted to v1alpha2
@@ -732,7 +762,7 @@ func TestHandle_V1alpha1Erasure(t *testing.T) {
 		changed(updated)
 
 		req := updateRequest(t, old, updated)
-		req.RequestKind = &metav1.GroupVersionKind{Group: "deckhouse.io", Version: "v1alpha1", Kind: v1alpha2.ProjectTemplateKind}
+		req.RequestKind = v1alpha1Kind.DeepCopy()
 		return req
 	}
 	addLabel := func(template *v1alpha2.ProjectTemplate) {
@@ -749,6 +779,12 @@ func TestHandle_V1alpha1Erasure(t *testing.T) {
 		resp := v.Handle(ctx, v1alpha1Request(t, "grants", addLabel))
 		require.False(t, resp.Allowed)
 		assert.Contains(t, resp.Result.Message, "cannot describe: resources, grantPolicies")
+	})
+
+	t.Run("a label through v1alpha1 on a template with manifests is refused", func(t *testing.T) {
+		resp := v.Handle(ctx, v1alpha1Request(t, "manifests", addLabel))
+		require.False(t, resp.Allowed)
+		assert.Contains(t, resp.Result.Message, "cannot describe: manifests")
 	})
 
 	t.Run("a Helm template is changed through v1alpha1", func(t *testing.T) {
@@ -777,16 +813,92 @@ func TestHandle_V1alpha1Erasure(t *testing.T) {
 	t.Run("a request through v1alpha2 carries the structured fields and passes", func(t *testing.T) {
 		updated := structured.DeepCopy()
 		addLabel(updated)
-		req := updateRequest(t, structured.DeepCopy(), updated)
-		req.RequestKind = &metav1.GroupVersionKind{Group: "deckhouse.io", Version: "v1alpha2", Kind: v1alpha2.ProjectTemplateKind}
-		resp := v.Handle(ctx, req)
+		resp := v.Handle(ctx, updateRequest(t, structured.DeepCopy(), updated))
 		assert.True(t, resp.Allowed, resp.Result)
 	})
 
 	// there is no stored template to read yet, and nothing to erase
 	t.Run("a template is created through v1alpha1", func(t *testing.T) {
 		req := createRequest(t, helmTemplate("new"))
-		req.RequestKind = &metav1.GroupVersionKind{Group: "deckhouse.io", Version: "v1alpha1", Kind: v1alpha2.ProjectTemplateKind}
+		req.RequestKind = v1alpha1Kind.DeepCopy()
+		resp := v.Handle(ctx, req)
+		assert.True(t, resp.Allowed, resp.Result)
+	})
+}
+
+// A template gets a new resourcesTemplate through v1alpha1 only. Through v1alpha2 a create with one
+// and an update that sets one where the stored template has none are refused, and the refusal says
+// where the objects go instead. A template that has one keeps it and can change it through either
+// version, and a blank one counts as none.
+func TestHandle_NewResourcesTemplateThroughV1alpha2(t *testing.T) {
+	ctx := context.Background()
+	blank := helmTemplate("blank")
+	blank.Spec.ResourcesTemplate = " \n"
+	blank.Spec.Description = "no text yet"
+	v := newValidator(t, helmTemplate("helm"), blank)
+
+	stored := func(t *testing.T, name string) *v1alpha2.ProjectTemplate {
+		t.Helper()
+		template := new(v1alpha2.ProjectTemplate)
+		require.NoError(t, v.reader.Get(ctx, client.ObjectKey{Name: name}, template))
+		return template
+	}
+	withText := func(template *v1alpha2.ProjectTemplate, text string) *v1alpha2.ProjectTemplate {
+		changed := template.DeepCopy()
+		changed.Spec.ResourcesTemplate = text
+		return changed
+	}
+	const text = "---\napiVersion: v1\nkind: Secret\nmetadata:\n  name: s\n"
+
+	t.Run("a create through v1alpha2 with a text is refused", func(t *testing.T) {
+		resp := v.Handle(ctx, createRequest(t, helmTemplate("new")))
+		require.False(t, resp.Allowed)
+		assert.Contains(t, resp.Result.Message, "the 'new' project template cannot get a new resourcesTemplate through deckhouse.io/v1alpha2")
+		assert.Contains(t, resp.Result.Message, "written through deckhouse.io/v1alpha1")
+		assert.Contains(t, resp.Result.Message, "the structured fields")
+		assert.Contains(t, resp.Result.Message, "manifests")
+		assert.Contains(t, resp.Result.Message,
+			"a template that still needs a Helm text is created through deckhouse.io/v1alpha1, and its title, resources or grantPolicies are added through deckhouse.io/v1alpha2 afterwards",
+			"the refusal names the two writes of a Helm-text template with fields of v1alpha2")
+	})
+
+	t.Run("a create through v1alpha2 with a blank text passes", func(t *testing.T) {
+		resp := v.Handle(ctx, createRequest(t, withText(helmTemplate("new"), " \n")))
+		assert.True(t, resp.Allowed, resp.Result)
+	})
+
+	t.Run("an update through v1alpha2 that sets a text where there was none is refused", func(t *testing.T) {
+		old := stored(t, "blank")
+		resp := v.Handle(ctx, updateRequest(t, old, withText(old, text)))
+		require.False(t, resp.Allowed)
+		assert.Contains(t, resp.Result.Message, "cannot get a new resourcesTemplate")
+	})
+
+	t.Run("an update through v1alpha2 changes the text a template has", func(t *testing.T) {
+		old := stored(t, "helm")
+		resp := v.Handle(ctx, updateRequest(t, old, withText(old, old.Spec.ResourcesTemplate+text)))
+		assert.True(t, resp.Allowed, resp.Result)
+	})
+
+	t.Run("an update through v1alpha2 that keeps the text passes", func(t *testing.T) {
+		old := stored(t, "helm")
+		labelled := old.DeepCopy()
+		labelled.Labels = map[string]string{"team": "platform"}
+		resp := v.Handle(ctx, updateRequest(t, old, labelled))
+		assert.True(t, resp.Allowed, resp.Result)
+	})
+
+	t.Run("a create through v1alpha1 with a text passes", func(t *testing.T) {
+		req := createRequest(t, helmTemplate("new"))
+		req.RequestKind = v1alpha1Kind.DeepCopy()
+		resp := v.Handle(ctx, req)
+		assert.True(t, resp.Allowed, resp.Result)
+	})
+
+	t.Run("an update through v1alpha1 that sets a text where there was none passes", func(t *testing.T) {
+		old := stored(t, "blank")
+		req := updateRequest(t, old, withText(old, text))
+		req.RequestKind = v1alpha1Kind.DeepCopy()
 		resp := v.Handle(ctx, req)
 		assert.True(t, resp.Allowed, resp.Result)
 	})

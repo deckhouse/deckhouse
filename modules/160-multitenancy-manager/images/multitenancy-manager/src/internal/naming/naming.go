@@ -166,3 +166,18 @@ func IsGitOpsTrackingLabel(key string) bool {
 		strings.HasPrefix(key, "helm.toolkit.fluxcd.io/") ||
 		strings.HasPrefix(key, "kapp.k14s.io/")
 }
+
+// ReservedUserPrefix starts the names of the users the controller acts as. The controller applies
+// spec.manifests of a project template as ProjectUser of the project, with the rights a binding it
+// makes grants that user, so a binding that anybody else makes for such a user would hand the
+// objects of a template rights the project does not grant. The
+// d8-multitenancy-manager-reserved-users admission policy in templates/validation.yaml refuses such
+// bindings to everyone but the controller, and user-authz-controller leaves the users under it out of
+// its d8:dict grants, which the policy would refuse. TestReservedUserPrefixMatchesThePolicy and
+// TestReservedUserPrefixMatchesTheDictBindings keep their literals and this one the same.
+const ReservedUserPrefix = "system:multitenancy-manager:"
+
+// ProjectUser is the user the controller applies spec.manifests of the template of the project as.
+func ProjectUser(project string) string {
+	return ReservedUserPrefix + "project:" + project
+}

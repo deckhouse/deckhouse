@@ -58,6 +58,16 @@ type fakeHelmClient struct {
 	// current is what CurrentRelease returns.
 	current      *helm.ProjectRelease
 	currentCalls int
+	// renderer renders spec.manifests of a template, as the controller does; without it there is
+	// nothing to render.
+	renderer *helm.Client
+}
+
+func (f *fakeHelmClient) RenderManifests(project *v1alpha3.Project, manifests string, parametersSchema map[string]any) (string, error) {
+	if f.renderer == nil {
+		return "", nil
+	}
+	return f.renderer.RenderManifests(project, manifests, parametersSchema)
 }
 
 func (f *fakeHelmClient) CurrentRelease(context.Context, string) (*helm.ProjectRelease, error) {

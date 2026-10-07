@@ -27,6 +27,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/webhook"
@@ -75,8 +76,13 @@ func (v *validator) Handle(ctx context.Context, req admission.Request) admission
 			return resp
 		}
 
-		// A template renders from its Helm text or from its structured fields, never from both: the
-		// renderer takes the text and leaves the fields unused, which nothing would tell the author.
+		if resp := newResourcesTemplate(req, template); !resp.Allowed {
+			return resp
+		}
+
+		// A template renders from its Helm text or from its structured fields and manifests, never from
+		// both: the renderer takes the text and leaves the fields unused, which nothing would tell the
+		// author.
 		if fields := template.Spec.ObjectFields(); template.Spec.HasResourcesTemplate() && len(fields) > 0 {
 			return admission.Denied(fmt.Sprintf(
 				"the '%s' project template sets resourcesTemplate together with fields that render objects: %s; "+
@@ -209,9 +215,7 @@ func (v *validator) Handle(ctx context.Context, req admission.Request) admission
 // shows, or this would judge a template the request does not replace; a changed one is refused as a
 // conflict, the answer clients retry on.
 func (v *validator) v1alpha1Erasure(ctx context.Context, req admission.Request, template *v1alpha2.ProjectTemplate) admission.Response {
-	throughV1alpha1 := req.RequestKind != nil &&
-		req.RequestKind.Group == v1alpha1.SchemeGroupVersion.Group && req.RequestKind.Version == v1alpha1.SchemeGroupVersion.Version
-	if req.Operation != admissionv1.Update || !throughV1alpha1 {
+	if req.Operation != admissionv1.Update || !throughVersion(req, v1alpha1.SchemeGroupVersion) {
 		return admission.Allowed("")
 	}
 
@@ -245,15 +249,57 @@ func (v *validator) v1alpha1Erasure(ctx context.Context, req admission.Request, 
 	return admission.Allowed("")
 }
 
+// throughVersion reports whether the request was made through the version of ProjectTemplate. The
+// admission rule lists v1alpha2 only, and with matchPolicy: Equivalent the API server delivers a
+// request through v1alpha1 converted to v1alpha2: Kind names the version the webhook gets, and
+// RequestKind the one the client used.
+func throughVersion(req admission.Request, version schema.GroupVersion) bool {
+	kind := req.RequestKind
+	if kind == nil {
+		kind = &req.Kind
+	}
+	return kind.Group == version.Group && kind.Version == version.Version
+}
+
+// newResourcesTemplate refuses a request through deckhouse.io/v1alpha2 that gives a template a
+// resourcesTemplate it did not have: a create with a non-blank one, and an update that sets one on a
+// template whose stored resourcesTemplate is blank. The field is deprecated and stays for the
+// templates written through deckhouse.io/v1alpha1, which work as before: their text can be edited
+// through either version, and a request through v1alpha1 may still set one. A Helm-text template with
+// fields of v1alpha2 alone, such as one a backup restore or a GitOps bootstrap applies as v1alpha2,
+// therefore takes two writes, which the refusal names. For a request through v1alpha2, oldObject is
+// the stored template read at v1alpha2, which has the field.
+func newResourcesTemplate(req admission.Request, template *v1alpha2.ProjectTemplate) admission.Response {
+	if !template.Spec.HasResourcesTemplate() || !throughVersion(req, v1alpha2.SchemeGroupVersion) {
+		return admission.Allowed("")
+	}
+	if req.Operation == admissionv1.Update {
+		old := new(v1alpha2.ProjectTemplate)
+		if err := yaml.Unmarshal(req.OldObject.Raw, old); err != nil {
+			return admission.Errored(http.StatusBadRequest, fmt.Errorf("decode the old project template: %w", err))
+		}
+		if old.Spec.HasResourcesTemplate() {
+			return admission.Allowed("")
+		}
+	}
+	return admission.Denied(fmt.Sprintf(
+		"the '%s' project template cannot get a new resourcesTemplate through %s: the field is deprecated and stays only "+
+			"for the templates written through %s, so describe the objects with the structured fields, and the ones "+
+			"no field describes with manifests; a template that still needs a Helm text is created through %s, "+
+			"and its title, resources or grantPolicies are added through %s afterwards",
+		template.Name, v1alpha2.SchemeGroupVersion, v1alpha1.SchemeGroupVersion, v1alpha1.SchemeGroupVersion, v1alpha2.SchemeGroupVersion))
+}
+
 // resourcesTemplateRemoval refuses an update that empties the resourcesTemplate of a template that
 // projects use and sets no field that renders objects in its place, such as a write-back by a client
 // that does not know the field. Every project of the template would then switch to a render of
 // little more than its namespace, and the project controller would leave every other object of the
 // text in place with nobody managing it (manager/project/transition.go). An update that rewrites the
-// template with structured fields in the same request is let through, and so is one of a template no
-// project uses. Such a rewrite, like moving the projects to a structured template, leaves in place
-// every object of the text that the new render lacks, except the rules and quotas the standard fields
-// replace, which the refusal says.
+// template with structured fields or manifests in the same request is let through, and so is one of a
+// template no project uses. Such a rewrite, like moving the projects to a structured template, leaves
+// in place every object of the text that the new render lacks, except the rules and quotas the
+// standard fields replace, until manifests takes it over (manager/project/manifests.go), which the
+// refusal says.
 func (v *validator) resourcesTemplateRemoval(ctx context.Context, req admission.Request, template *v1alpha2.ProjectTemplate) admission.Response {
 	if req.Operation != admissionv1.Update || template.Spec.HasResourcesTemplate() || len(template.Spec.ObjectFields()) > 0 {
 		return admission.Allowed("")
@@ -278,10 +324,10 @@ func (v *validator) resourcesTemplateRemoval(ctx context.Context, req admission.
 	return admission.Denied(fmt.Sprintf(
 		"the '%s' project template is used in the '%s' project, and without resourcesTemplate it sets no field that renders objects, "+
 			"so its projects would no longer manage the objects the Helm template rendered; "+
-			"set the structured fields in the same request or move the projects to another template first, "+
-			"and a switch to structured fields leaves every object of the Helm template that the new render lacks in place "+
+			"set the structured fields or manifests in the same request or move the projects to another template first, "+
+			"and a switch leaves every object of the Helm template that the new render lacks in place "+
 			"and lists it in status.keptObjects of the project, except the AuthorizationRule and ResourceQuota objects "+
-			"that the standard fields of the project replace",
+			"that the standard fields of the project replace, until manifests renders it under the same kind, namespace and name",
 		template.Name, user))
 }
 

@@ -47,6 +47,12 @@ const (
 	// because a replace of the Project (kubectl replace, Argo CD Replace=true) does not touch the
 	// status. ClearConditions keeps it, and the controller removes it once the kept objects are gone.
 	ProjectConditionHandoverPending = "HandoverPending"
+	// ProjectConditionManifestsApplied says whether the objects that spec.manifests of the template
+	// renders are applied, as the user of the project (see ProjectManifestsBinding). False says what
+	// they wait for, why the controller does not apply them, or which of them the API server refused
+	// and with what code, a 403 among them. A project whose template has no manifests and that has
+	// none to delete does not have it.
+	ProjectConditionManifestsApplied = "ManifestsApplied"
 
 	ProjectAnnotationRequireSync = "projects.deckhouse.io/require-sync"
 
@@ -71,6 +77,12 @@ const (
 	// cluster may change or delete it (templates/validation.yaml). A cluster-scoped one that still
 	// carries the label is deleted with the project.
 	ResourceLabelKeptFromHelmTemplate = "projects.deckhouse.io/kept-from-helm-template"
+	// ResourceLabelSource with the value ResourceSourceManifests marks an object that the controller
+	// applied from spec.manifests of the template of a project, next to the projects.deckhouse.io/project
+	// label. Such an object carries no heritage label: it is the user's of the project, who applied it,
+	// and the project lists it in status.manifestObjects.
+	ResourceLabelSource     = "projects.deckhouse.io/source"
+	ResourceSourceManifests = "manifests"
 
 	ResourceLabelHeritage        = "heritage"
 	ResourceHeritageMultitenancy = "multitenancy-manager"
@@ -102,6 +114,10 @@ const (
 	ProjectQuotaName              = "d8-project-quota"
 	ProjectAdministratorsBinding  = "d8-administrators"
 	ProjectAdministratorsRoleName = "d8:project:admin"
+	// ProjectManifestsBinding grants the user that the controller applies spec.manifests of the
+	// template as (naming.ProjectUser) the ProjectAdministratorsRoleName role in every namespace of
+	// the project, and nothing else grants that user anything.
+	ProjectManifestsBinding = "d8-manifests"
 )
 
 // Namespace kinds in the project status.
@@ -288,6 +304,12 @@ type ProjectStatus struct {
 	// once it is deleted, loses the label or is rendered by the release again.
 	KeptObjects []KeptObject `json:"keptObjects,omitempty"`
 
+	// ManifestObjects are the objects that the controller applied from spec.manifests of the template,
+	// as the user of the project. One that the template does not render any more is deleted and leaves
+	// the list; the list holds what was applied before an apply starts, so a reconcile that stops
+	// halfway leaves no applied object off it.
+	ManifestObjects []ManifestObject `json:"manifestObjects,omitempty"`
+
 	// Current state.
 	State string `json:"state,omitempty"`
 }
@@ -297,6 +319,14 @@ type KeptObject struct {
 	APIVersion string `json:"apiVersion"`
 	Kind       string `json:"kind"`
 	Namespace  string `json:"namespace,omitempty"`
+	Name       string `json:"name"`
+}
+
+// ManifestObject identifies an object in status.manifestObjects.
+type ManifestObject struct {
+	APIVersion string `json:"apiVersion"`
+	Kind       string `json:"kind"`
+	Namespace  string `json:"namespace"`
 	Name       string `json:"name"`
 }
 
@@ -368,6 +398,9 @@ func (p *ProjectStatus) DeepCopyInto(newObj *ProjectStatus) {
 	}
 	if p.KeptObjects != nil {
 		newObj.KeptObjects = slices.Clone(p.KeptObjects)
+	}
+	if p.ManifestObjects != nil {
+		newObj.ManifestObjects = slices.Clone(p.ManifestObjects)
 	}
 	if p.Usage != nil {
 		newObj.Usage = p.Usage.DeepCopy()

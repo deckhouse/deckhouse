@@ -34,6 +34,14 @@ func TestHasResourcesTemplate(t *testing.T) {
 	assert.True(t, (&ProjectTemplateSpec{ResourcesTemplate: "---\n"}).HasResourcesTemplate())
 }
 
+func TestHasManifests(t *testing.T) {
+	t.Parallel()
+
+	assert.False(t, (&ProjectTemplateSpec{}).HasManifests())
+	assert.False(t, (&ProjectTemplateSpec{Manifests: " \n\t"}).HasManifests(), "a blank text is none")
+	assert.True(t, (&ProjectTemplateSpec{Manifests: "---\n"}).HasManifests())
+}
+
 // Every field that renders an object is named, by its content rather than by its presence, and the
 // ones only v1alpha2 has add the title and the grant fields.
 func TestObjectFieldsAndV1alpha2OnlyFields(t *testing.T) {
@@ -56,12 +64,13 @@ func TestObjectFieldsAndV1alpha2OnlyFields(t *testing.T) {
 		"allowedGIDs": {"fromParam": "allowedGIDs"},
 		"runtimeAudit": {"enabled": true},
 		"parametersSchema": {"openAPIV3Schema": {"type": "object"}},
+		"manifests": "---\n",
 		"resourcesTemplate": "---\n"
 	}`), &every))
 
 	objectFields := []string{
 		"podSecurityStandard", "networkPolicy", "nodeSelector", "tolerations", "namespaceMetadata",
-		"features", "logShipping", "allowedUIDs", "allowedGIDs", "runtimeAudit",
+		"features", "logShipping", "allowedUIDs", "allowedGIDs", "runtimeAudit", "manifests",
 	}
 	assert.Equal(t, objectFields, every.ObjectFields())
 	assert.Equal(t, append([]string{"title", "resources", "grantPolicies"}, objectFields...), every.V1alpha2OnlyFields())
@@ -73,9 +82,10 @@ func TestObjectFieldsAndV1alpha2OnlyFields(t *testing.T) {
 		Features:          &FeaturesSpec{},
 		LogShipping:       &LogShippingSpec{},
 		RuntimeAudit:      &RuntimeAuditSpec{},
+		Manifests:         " \n",
 		ResourcesTemplate: "---\n",
 	}
-	assert.Empty(t, emptyStanzas.ObjectFields(), "an empty stanza renders nothing")
+	assert.Empty(t, emptyStanzas.ObjectFields(), "an empty stanza and blank manifests render nothing")
 	assert.Empty(t, emptyStanzas.V1alpha2OnlyFields())
 
 	grantsOnly := ProjectTemplateSpec{Resources: []grantsv1alpha1.GrantResource{{ResourceName: "storageclasses"}}}

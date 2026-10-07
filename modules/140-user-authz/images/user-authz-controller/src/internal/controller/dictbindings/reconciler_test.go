@@ -412,3 +412,24 @@ func TestReconcile_ProjectRoleHoldersGetDict(t *testing.T) {
 		t.Error("platform-ops still holds a project role and keeps d8:dict")
 	}
 }
+
+// The users multitenancy-manager acts as get no dictionary: the d8-manifests ProjectRoleBinding fans
+// out into RoleBindings that name such a user, and the admission policy of multitenancy-manager
+// refuses a binding of it by anybody but its controller, so a grant would fail on every reconcile.
+// The other subjects of the same binding keep theirs.
+func TestReconcile_LeavesOutTheUsersMultitenancyManagerActsAs(t *testing.T) {
+	t.Parallel()
+	fanout := map[string]string{"heritage": "multitenancy-manager", "projects.deckhouse.io/project": "team"}
+	c := reconcileWith(t,
+		roleBinding("team", "d8:prb:d8-manifests", "d8:project:admin", fanout, user("system:multitenancy-manager:project:team")),
+		roleBinding("team", "d8:prb:admins", "d8:project:admin", fanout, user("pat"), group("system:multitenancy-manager:anything")),
+	)
+
+	got := dictSubjects(t, c)
+	if len(got) != 1 {
+		t.Fatalf("dict subjects = %v, want only pat", got)
+	}
+	if _, ok := got["user:pat"]; !ok {
+		t.Errorf("pat must hold d8:dict, got %v", got)
+	}
+}

@@ -86,6 +86,19 @@ spec:
                         description: Неймспейс объекта, пустой для объекта уровня кластера.
                       name:
                         description: Имя объекта.
+                manifestObjects:
+                  description: |
+                    Объекты, которые контроллер применил из [`manifests`](cr.html#projecttemplate-v1alpha2-spec-manifests) шаблона проекта от имени пользователя `system:multitenancy-manager:project:<PROJECT_NAME>`. На них стоят лейбл `projects.deckhouse.io/project` с именем проекта и лейбл `projects.deckhouse.io/source: manifests`. Объект, который шаблон больше не создаёт, удаляется и исчезает из списка. Объект, с которого к этому времени сняли один из этих лейблов или неймспейс которого больше не принадлежит проекту, исчезает из списка и остаётся на месте.
+                  items:
+                    properties:
+                      apiVersion:
+                        description: Версия API объекта.
+                      kind:
+                        description: Тип объекта.
+                      namespace:
+                        description: Неймспейс объекта.
+                      name:
+                        description: Имя объекта.
                 state:
                   description: Короткое описание состояния проекта, например, Error, Deployed, и т.д.
     - name: v1alpha3
@@ -178,6 +191,19 @@ spec:
                         description: Тип объекта.
                       namespace:
                         description: Неймспейс объекта, пустой для объекта уровня кластера.
+                      name:
+                        description: Имя объекта.
+                manifestObjects:
+                  description: |
+                    Объекты, которые контроллер применил из [`manifests`](cr.html#projecttemplate-v1alpha2-spec-manifests) шаблона проекта от имени пользователя `system:multitenancy-manager:project:<PROJECT_NAME>`. На них стоят лейбл `projects.deckhouse.io/project` с именем проекта и лейбл `projects.deckhouse.io/source: manifests`. Объект, который шаблон больше не создаёт, удаляется и исчезает из списка. Объект, с которого к этому времени сняли один из этих лейблов или неймспейс которого больше не принадлежит проекту, исчезает из списка и остаётся на месте.
+                  items:
+                    properties:
+                      apiVersion:
+                        description: Версия API объекта.
+                      kind:
+                        description: Тип объекта.
+                      namespace:
+                        description: Неймспейс объекта.
                       name:
                         description: Имя объекта.
                 state:

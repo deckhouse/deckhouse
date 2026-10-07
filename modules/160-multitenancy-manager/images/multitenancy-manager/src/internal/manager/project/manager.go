@@ -55,6 +55,7 @@ type helmClient interface {
 	UpgradeManifests(ctx context.Context, project *v1alpha3.Project, manifests string, beforeUpgrade helm.BeforeUpgrade) (helm.ReleaseOutcome, error)
 	AnalyzeRendered(project *v1alpha3.Project, template *v1alpha1.ProjectTemplate) (helm.ReleaseOutcome, error)
 	AnalyzeManifests(project *v1alpha3.Project, manifests string) (helm.ReleaseOutcome, error)
+	RenderManifests(project *v1alpha3.Project, manifests string, parametersSchema map[string]any) (string, error)
 	CurrentRelease(ctx context.Context, projectName string) (*helm.ProjectRelease, error)
 	Delete(ctx context.Context, projectName string) error
 }
@@ -114,14 +115,23 @@ type Manager struct {
 	// keptChecks holds, per project name, when refreshKeptObjects last read the objects of its
 	// status.keptObjects.
 	keptChecks sync.Map
+	// manifestsClients hands out the client that applies spec.manifests of a template as the user of
+	// a project (see manifests.go); without it such a project is in Error.
+	manifestsClients ManifestsClients
+	// manifestsApplied holds, per project name, the appliedManifests of its last apply.
+	manifestsApplied sync.Map
 }
 
-func New(client client.Client, helmClient helmClient, logger logr.Logger) *Manager {
-	return &Manager{
+func New(client client.Client, helmClient helmClient, logger logr.Logger, opts ...Option) *Manager {
+	m := &Manager{
 		client:     client,
 		helmClient: helmClient,
 		logger:     logger.WithName("project-manager"),
 	}
+	for _, opt := range opts {
+		opt(m)
+	}
+	return m
 }
 
 func (m *Manager) Init(ctx context.Context, checker healthz.Checker, init *sync.WaitGroup, migration *startup.Migration) error {
@@ -248,6 +258,9 @@ func (m *Manager) Handle(ctx context.Context, project *v1alpha3.Project) (ctrl.R
 	}
 	project.SetConditionTrue(v1alpha3.ProjectConditionStandardFieldsApplied)
 
+	// the objects of spec.manifests of the template, applied as the user of the project
+	manifests, manifestsErr := m.reconcileManifests(ctx, project)
+
 	// refresh namespaces and quota usage in the status
 	if nsStatus, err := m.collectNamespaceStatus(ctx, project); err != nil {
 		m.logger.Error(err, "failed to collect the project namespaces", "project", project.Name)
@@ -267,7 +280,7 @@ func (m *Manager) Handle(ctx context.Context, project *v1alpha3.Project) (ctrl.R
 		leftRecheck = leftObjectsRecheck
 	}
 
-	if project.IsConditionFalse(v1alpha3.ProjectConditionTemplateRolesAllowed) {
+	if project.IsConditionFalse(v1alpha3.ProjectConditionTemplateRolesAllowed) || manifests.failed {
 		project.SetState(v1alpha3.ProjectStateError)
 	} else {
 		project.SetState(v1alpha3.ProjectStateDeployed)
@@ -282,12 +295,23 @@ func (m *Manager) Handle(ctx context.Context, project *v1alpha3.Project) (ctrl.R
 	if err != nil {
 		return ctrl.Result{}, fmt.Errorf("delete the objects kept from the Helm text release: %w", err)
 	}
-	if recheck == 0 || leftRecheck > 0 && leftRecheck < recheck {
-		recheck = leftRecheck
+	recheck = sooner(sooner(recheck, leftRecheck), manifests.recheck)
+
+	// a refusal of the API server is retried with the backoff of the controller, once the status says it
+	if manifestsErr != nil {
+		return ctrl.Result{}, fmt.Errorf("reconcile the manifests of the template: %w", manifestsErr)
 	}
 
 	m.logger.Info("the project reconciled", "project", project.Name, "template", project.Spec.ProjectTemplateName)
 	return ctrl.Result{RequeueAfter: recheck}, nil
+}
+
+// sooner is the shorter of two recheck intervals, where zero means none.
+func sooner(a, b time.Duration) time.Duration {
+	if a == 0 || b > 0 && b < a {
+		return b
+	}
+	return a
 }
 
 // failAndRequeue records a terminal-but-retriable template failure: it marks the project Errored, sets
@@ -523,6 +547,13 @@ func (m *Manager) Delete(ctx context.Context, project *v1alpha3.Project) (ctrl.R
 	// delete the auto-managed cluster-scoped standard-field objects (administrators binding)
 	if err := m.deleteStandardFields(ctx, project); err != nil {
 		m.logger.Error(err, "failed to delete the project standard fields", "project", project.Name)
+		return ctrl.Result{}, err
+	}
+
+	// the user that applied the manifests of the template loses its rights first; the objects it
+	// applied are in the namespaces of the project and go with them
+	if err := m.deleteManifestsBinding(ctx, project); err != nil {
+		m.logger.Error(err, "failed to delete the manifests binding", "project", project.Name)
 		return ctrl.Result{}, err
 	}
 

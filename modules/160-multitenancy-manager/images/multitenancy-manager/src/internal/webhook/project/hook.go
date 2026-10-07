@@ -284,15 +284,27 @@ func (v *validator) Handle(ctx context.Context, req admission.Request) admission
 	// parameters shows only in the render: a text that does not render, or a parameter that becomes
 	// manifest structure instead of a value, is refused here and not first when the release is
 	// applied. An object put into a namespace outside the project is moved to the main namespace,
-	// which is worth a warning, not a refusal. A structured template is not rehearsed: it renders
-	// from its fields and the resolved parameters, and both are validated on their own, the fields
-	// by the template webhook and the parameters just above.
+	// which is worth a warning, not a refusal. The structured fields are not rehearsed: they render
+	// from the resolved parameters, and both are validated on their own, the fields by the template
+	// webhook and the parameters just above.
 	if template.Spec.HasResourcesTemplate() {
 		if err = v.helmClient.ValidateRender(project, projectmanager.LegacyTemplate(template)); err != nil {
 			if !errors.Is(err, helm.ErrNamespaceOverride) {
 				return admission.Denied(fmt.Sprintf("The project '%s' is invalid: %v", project.Name, err))
 			}
 			warnings = append(warnings, err.Error())
+		}
+	}
+
+	// manifests is free-form text too, rendered with the same values and the same check of the
+	// parameters, so it is rehearsed the same way, and a text that does not render or a parameter that
+	// becomes structure is refused here rather than first in the ManifestsApplied condition. Whether
+	// the objects may be applied is the controller's to say: it depends on the namespaces of the
+	// project and on the kinds the cluster serves.
+	if template.Spec.HasManifests() {
+		_, err = v.helmClient.RenderManifests(project, template.Spec.Manifests, template.Spec.ParametersSchema.OpenAPIV3Schema)
+		if err != nil {
+			return admission.Denied(fmt.Sprintf("The project '%s' is invalid: the manifests of the '%s' project template: %v", project.Name, template.Name, err))
 		}
 	}
 
@@ -570,11 +582,15 @@ func validateStandardFields(
 		// in, and refusing it would refuse every later write of the project. The controller still
 		// refuses a render the name breaks.
 		unsafeName := strings.ContainsFunc(admin.Name, unicode.IsControl) || helm.ContainsLineBreak(admin.Name)
+		reserved := strings.HasPrefix(admin.Name, naming.ReservedUserPrefix)
 		if slices.Contains(stored.Administrators, admin) {
 			if unsafeName {
 				warnings = append(warnings, fmt.Sprintf(
 					"administrator name %q contains a control character or a line break; it is accepted because it did not change, but a new name must not contain one",
 					admin.Name))
+			}
+			if reserved {
+				warnings = append(warnings, reservedAdministratorWarning(admin.Name))
 			}
 			continue
 		}
@@ -587,6 +603,27 @@ func validateStandardFields(
 		if unsafeName {
 			return fmt.Sprintf("administrator name %q must not contain control characters or line breaks", admin.Name), nil
 		}
+		if reserved {
+			return reservedAdministratorDenial(admin.Name), nil
+		}
+	}
+
+	// The administrators parameter of the v1alpha2 layout reaches the subjects of the objects a Helm
+	// text renders, which the controller applies with its own rights, so a user under the reserved
+	// prefix is refused there too, and one the stored project already names passes with a warning.
+	var storedParameter []v1alpha3.Administrator
+	if old != nil {
+		storedParameter = helm.ParameterAdministrators(old.Spec.Parameters)
+	}
+	for _, admin := range helm.ParameterAdministrators(project.Spec.Parameters) {
+		if !strings.HasPrefix(admin.Name, naming.ReservedUserPrefix) {
+			continue
+		}
+		if slices.Contains(storedParameter, admin) {
+			warnings = append(warnings, reservedAdministratorWarning(admin.Name))
+			continue
+		}
+		return reservedAdministratorDenial(admin.Name), nil
 	}
 
 	denied, quotaWarnings := validateQuotaByteUnits(project.Spec.Quota, spellings, stored.Quota, v1alpha2Create)
@@ -594,6 +631,23 @@ func validateStandardFields(
 		return denied, nil
 	}
 	return "", append(warnings, quotaWarnings...)
+}
+
+// reservedAdministratorDenial refuses an administrator under naming.ReservedUserPrefix. The controller
+// acts as the users under it, and only the controller binds them: an administrator under it would get
+// the user of another project the rights of an administrator of this one.
+func reservedAdministratorDenial(name string) string {
+	return fmt.Sprintf("administrator name %q must not start with %s, which starts the names of the users the multitenancy-manager controller acts as",
+		name, naming.ReservedUserPrefix)
+}
+
+// reservedAdministratorWarning is the warning for an administrator under naming.ReservedUserPrefix that
+// the stored project already names.
+func reservedAdministratorWarning(name string) string {
+	return fmt.Sprintf(
+		"administrator name %q starts with %s, which starts the names of the users the multitenancy-manager controller acts as; "+
+			"it is accepted because it did not change, but a new name must not start with it, so remove it",
+		name, naming.ReservedUserPrefix)
 }
 
 // administratorsNextToParameter reports whether the project sets spec.administrators together with

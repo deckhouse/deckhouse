@@ -184,13 +184,20 @@ func TestProjectTemplateVersions(t *testing.T) {
 		resourcesTemplate := version.Schema.OpenAPIV3Schema.Properties["spec"].Properties["resourcesTemplate"]
 		assert.Equal(t, "string", resourcesTemplate.Type, "spec.resourcesTemplate of %s is a string", version.Name)
 	}
+
+	// manifests is a template string of v1alpha2 alone: v1alpha1 prunes it, and the template webhook
+	// refuses a write through v1alpha1 that would erase it.
+	manifests, ok := v1alpha2.Schema.OpenAPIV3Schema.Properties["spec"].Properties["manifests"]
+	require.True(t, ok, "v1alpha2 has spec.manifests")
+	assert.Equal(t, "string", manifests.Type, "spec.manifests of v1alpha2 is a string")
+	assert.NotContains(t, v1alpha1.Schema.OpenAPIV3Schema.Properties["spec"].Properties, "manifests", "v1alpha1 has no spec.manifests")
 }
 
 // TestProjectStatusSurvivesAWriteThroughV1alpha2: a write of a Project through v1alpha2, as Commander,
 // a GitOps repository or the console makes it, keeps the stored status as v1alpha2 reads it, and the
 // API server prunes from it what v1alpha2 does not declare. The status the controller keeps across
 // reconciles has to survive that, or a project would lose the lists of the objects the controller
-// deletes or takes back later. Only the fields the controller rebuilds in every reconcile, or that
+// deletes or takes over later. Only the fields the controller rebuilds in every reconcile, or that
 // the conversion carries in another form, may be missing from v1alpha2.
 func TestProjectStatusSurvivesAWriteThroughV1alpha2(t *testing.T) {
 	crd := loadCRD(t, "projects.yaml")
@@ -213,7 +220,8 @@ func TestProjectStatusSurvivesAWriteThroughV1alpha2(t *testing.T) {
 		return map[string]any{"apiVersion": "v1", "kind": kind, "namespace": "proj", "name": name}
 	}
 	status := map[string]any{
-		"keptObjects": []any{object("LimitRange", "limits")},
+		"keptObjects":     []any{object("LimitRange", "limits")},
+		"manifestObjects": []any{object("ConfigMap", "settings")},
 	}
 	project := map[string]any{
 		"apiVersion": "deckhouse.io/v1alpha2",
@@ -225,6 +233,7 @@ func TestProjectStatusSurvivesAWriteThroughV1alpha2(t *testing.T) {
 	pruned := pruning.PruneWithOptions(project, full, true, structuralschema.UnknownFieldPathOptions{TrackUnknownFieldPaths: true})
 	assert.Empty(t, pruned, "v1alpha2 prunes nothing of the status the controller keeps")
 	assert.Equal(t, []any{object("LimitRange", "limits")}, status["keptObjects"])
+	assert.Equal(t, []any{object("ConfigMap", "settings")}, status["manifestObjects"])
 }
 
 func structuralOf(t *testing.T, crd *apiextensionsv1.CustomResourceDefinition, version string) *structuralschema.Structural {

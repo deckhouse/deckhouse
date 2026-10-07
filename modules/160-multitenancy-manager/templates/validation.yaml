@@ -148,6 +148,13 @@ spec:
       expression: '!(["system:nodes", "system:serviceaccounts:kube-system", "system:serviceaccounts:d8-system"].exists(e, (e in request.userInfo.groups)))'
     - name: 'exclude-users'
       expression: '!(["system:serviceaccount:d8-multitenancy-manager:multitenancy-manager", "system:sudouser", "system:apiserver", "system:kube-controller-manager", "system:kube-scheduler", "system:volume-scheduler", "dhctl", "observability"].exists(e, (e == request.userInfo.username)))'
+    # The manifests of a template take a left object over as the user of the project, which has rights
+    # in the project namespaces only. They hand the fields of the release over and apply the object
+    # while it still carries the label, and the controller takes the label off after that. The prefix is
+    # that of every user the controller acts as, which only the controller may bind, as the
+    # reserved-users policy below holds.
+    - name: 'exclude-manifests-users'
+      expression: '!request.userInfo.username.startsWith("system:multitenancy-manager:")'
   variables:
     # A patch reaches admission as UPDATE, and the API server authorizes it as patch. A requester
     # allowed to patch but not to update across the cluster is refused here, on the strict side.
@@ -242,5 +249,66 @@ metadata:
   {{- include "helm_lib_module_labels" (list . (dict "app" "multitenancy-manager") ) | nindent 2 }}
 spec:
   policyName: {{ $policyName }}-namespace-ownership
+  validationActions: [Deny, Audit]
+---
+# The controller applies spec.manifests of a ProjectTemplate as a user of each project,
+# system:multitenancy-manager:project:<project>, with the rights the d8-manifests ProjectRoleBinding
+# of the project grants that user and nothing else. A binding that anybody else makes for such a user
+# would hand the objects of a template the rights of that binding, wherever it is, so the users under
+# the prefix are bound by the controller alone. The Go side of the prefix is
+# naming.ReservedUserPrefix, and a test keeps the two the same.
+#
+# The policy looks at the subjects of the object a request writes, so an update that takes such a
+# subject out of a binding passes, and a delete is not matched at all. The garbage collector updates a
+# fanned-out binding whose owner goes without adding a subject, and is left alone: it runs as its own
+# service account, or as kube-controller-manager on a cluster without use-service-account-credentials.
+# Every other service account of kube-system is checked. system:sudouser is left alone too, as in the
+# other policies of the module, so that an administrator can still get past it deliberately, which the
+# audit log shows.
+apiVersion: {{ include "helm_lib_get_api_version_by_kind" (list . "ValidatingAdmissionPolicy") }}
+kind: ValidatingAdmissionPolicy
+metadata:
+  name: {{ $policyName }}-reserved-users
+  {{- include "helm_lib_module_labels" (list . (dict "app" "multitenancy-manager") ) | nindent 2 }}
+spec:
+  failurePolicy: Fail
+  matchConstraints:
+    resourceRules:
+      - apiGroups:   ["rbac.authorization.k8s.io"]
+        apiVersions: ["*"]
+        operations:  ["CREATE", "UPDATE"]
+        resources:   ["rolebindings", "clusterrolebindings"]
+      - apiGroups:   ["deckhouse.io"]
+        apiVersions: ["*"]
+        operations:  ["CREATE", "UPDATE"]
+        resources:   ["projectrolebindings", "clusterprojectrolebindings", "authorizationrules", "clusterauthorizationrules"]
+  matchConditions:
+    - name: 'exclude-the-controller'
+      expression: 'request.userInfo.username != "system:serviceaccount:d8-multitenancy-manager:multitenancy-manager"'
+    - name: 'exclude-the-garbage-collector'
+      expression: '!(request.userInfo.username in ["system:serviceaccount:kube-system:generic-garbage-collector", "system:kube-controller-manager"])'
+    - name: 'exclude-sudouser'
+      expression: 'request.userInfo.username != "system:sudouser"'
+  variables:
+    # RBAC bindings carry their subjects at the top, the bindings and rules of Deckhouse in spec.
+    - name: subjects
+      expression: 'request.kind.group == "rbac.authorization.k8s.io" ? (has(object.subjects) ? object.subjects : []) : (has(object.spec) && has(object.spec.subjects) ? object.spec.subjects : [])'
+    - name: reservedPrefix
+      expression: '"system:multitenancy-manager:"'
+    - name: reserved
+      expression: 'variables.subjects.filter(s, has(s.name) && s.name.startsWith(variables.reservedPrefix)).map(s, s.name)'
+  validations:
+    - expression: 'size(variables.reserved) == 0'
+      reason: Forbidden
+      message: 'Only the multitenancy-manager controller binds the users whose names start with system:multitenancy-manager:, the users it acts as.'
+      messageExpression: '''The '' + variables.reserved[0] + '' subject is a user that the multitenancy-manager controller acts as, and only the controller binds the users whose names start with '' + variables.reservedPrefix'
+---
+apiVersion: {{ include "helm_lib_get_api_version_by_kind" (list . "ValidatingAdmissionPolicyBinding") }}
+kind: ValidatingAdmissionPolicyBinding
+metadata:
+  name: {{ $policyName }}-reserved-users
+  {{- include "helm_lib_module_labels" (list . (dict "app" "multitenancy-manager") ) | nindent 2 }}
+spec:
+  policyName: {{ $policyName }}-reserved-users
   validationActions: [Deny, Audit]
 {{- end }}
