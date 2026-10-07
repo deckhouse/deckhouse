@@ -17,6 +17,10 @@ positive:
       - { "key": "dedicated.deckhouse.io","operator": "Equal","value": "cert-manager" }
       - { "key": "dedicated.deckhouse.io","operator": "Equal","value": "system" }
 
+  # high availability mode
+  - highAvailability: true
+  - highAvailability: false
+
   # cloudflare settings
   - cloudflareGlobalAPIKey: "key"
     cloudflareEmail: "example@example.com"
@@ -62,6 +66,7 @@ positive:
 
 negative:
   configValues:
+  - highAvailability: "must be boolean, not string"
   - nodeSelector: ["must be object, not array"]
   - tolerations: "must array of object, not string"
   - tolerations: ["must array of object, not array of strings"]

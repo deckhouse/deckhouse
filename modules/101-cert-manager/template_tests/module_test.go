@@ -92,6 +92,22 @@ discovery:
   extensionAPIServerAuthenticationRequestheaderClientCA: string
 `
 
+const globalValuesMultiMaster = `
+highAvailability: false
+enabledModules: ["vertical-pod-autoscaler"]
+modules:
+  placement: {}
+discovery:
+  kubernetesVersion: "1.19.5"
+  clusterMasterCount: 3
+  clusterUUID: f49dd1c3-a63a-4565-a06c-625e35587eab
+  clusterVersion: 1.15.4
+  d8SpecificNodeCountByRole:
+    system: 1
+    master: 3
+  extensionAPIServerAuthenticationRequestheaderClientCA: string
+`
+
 const certManager = `
 enableCAInjector: true
 internal:
@@ -476,6 +492,57 @@ podAntiAffinity:
         app: cert-manager
     topologyKey: kubernetes.io/hostname
 `))
+		})
+	})
+
+	Context("Module highAvailability enabled with global HA disabled", func() {
+		BeforeEach(func() {
+			f.ValuesSetFromYaml("global", globalValuesMultiMaster)
+			f.ValuesSet("global.modulesImages", GetModulesImages())
+			f.ValuesSetFromYaml("certManager", yandexDNS)
+			f.ValuesSet("certManager.highAvailability", true)
+			f.HelmRender()
+		})
+
+		It("Module value must override the global one", func() {
+			Expect(f.RenderError).ShouldNot(HaveOccurred())
+
+			for name, replicas := range map[string]int{
+				"cert-manager":       2,
+				"cainjector":         3,
+				"webhook":            3,
+				"yandex-dns-webhook": 2,
+			} {
+				deployment := f.KubernetesResource("Deployment", "d8-cert-manager", name)
+				pdb := f.KubernetesResource("PodDisruptionBudget", "d8-cert-manager", name)
+
+				Expect(deployment.Field("spec.replicas").Int()).To(BeEquivalentTo(replicas), name)
+				Expect(deployment.Field("spec.template.spec.affinity.podAntiAffinity").Exists()).To(BeTrue(), name)
+				Expect(pdb.Field("spec.minAvailable").Int()).To(BeEquivalentTo(1), name)
+			}
+		})
+	})
+
+	Context("Module highAvailability disabled with global HA enabled", func() {
+		BeforeEach(func() {
+			f.ValuesSetFromYaml("global", globalValuesManagedHa)
+			f.ValuesSet("global.modulesImages", GetModulesImages())
+			f.ValuesSetFromYaml("certManager", yandexDNS)
+			f.ValuesSet("certManager.highAvailability", false)
+			f.HelmRender()
+		})
+
+		It("Module value must override the global one", func() {
+			Expect(f.RenderError).ShouldNot(HaveOccurred())
+
+			for _, name := range []string{"cert-manager", "cainjector", "webhook", "yandex-dns-webhook"} {
+				deployment := f.KubernetesResource("Deployment", "d8-cert-manager", name)
+				pdb := f.KubernetesResource("PodDisruptionBudget", "d8-cert-manager", name)
+
+				Expect(deployment.Field("spec.replicas").Int()).To(BeEquivalentTo(1), name)
+				Expect(deployment.Field("spec.template.spec.affinity").Exists()).To(BeFalse(), name)
+				Expect(pdb.Field("spec.minAvailable").Int()).To(BeEquivalentTo(0), name)
+			}
 		})
 	})
 
