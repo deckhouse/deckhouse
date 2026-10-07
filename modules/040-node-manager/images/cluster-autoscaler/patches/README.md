@@ -10,26 +10,32 @@ cluster-autoscaler logic, so the fix is a pure `go.mod`/`go.sum` bump — the
 gardener source tag is not changed. The patch covers `go.mod` and `go.sum` in
 both the main `cluster-autoscaler` module and its nested `apis` module.
 
-All active patches pin `google.golang.org/grpc v1.82.1`. `cel-go` is bumped to
+All active patches pin `google.golang.org/grpc v1.83.2`, `golang.org/x/crypto v0.57.0`
+and the OpenTelemetry trace SDK and OTLP trace exporters at `v1.45.0`
+(CVE-2026-81870). `cel-go` is bumped to
 `v0.30.0` on 1.33+ (GO-2026-6094); on 1.31/1.32 it stays at the gardener
 upstream version because apiserver 0.31/0.32 is incompatible with cel-go >=
 v0.29 (`TwoVarComprehensions` API). For 1.32 that finding is covered by
 `known_vulnerabilities.vex`.
 
-- 1.31 (CSE still builds this image from gardener `v1.31.1`): `x/net v0.56.0`,
-  `x/text v0.39.0`, `x/crypto v0.53.0`, `x/sys v0.46.0` (the CVE floor was
-  `crypto v0.52.0` / `sys v0.44.0`, but those exact pins conflict with
-  `net@v0.56.0` and `text@v0.39.0`), `azidentity v1.6.0`, `jwt/v4 v4.5.2`,
+- 1.31 (CSE still builds this image from gardener `v1.31.1`): `x/net v0.58.0`,
+  `x/text v0.42.0`, `x/crypto v0.57.0`, `x/sys v0.48.0`, `azidentity v1.6.0`, `jwt/v4 v4.5.2`,
   `runc v1.2.9`, `k8s.io/kubernetes v1.31.6` with staging require+replace
   synced to `v0.31.6`. There is no 1.31.x fix for CVE-2025-13281; that finding
   is documented in `known_vulnerabilities.vex`.
-- 1.32–1.34: `x/net v0.56.0`, `x/text v0.39.0`, `x/crypto v0.53.0`,
-  `x/sys v0.46.0`, plus Kubernetes staging bumps with require+replace sync
+- 1.32–1.34: `x/net v0.58.0`, `x/text v0.42.0`, `x/crypto v0.57.0`,
+  `x/sys v0.48.0`, plus Kubernetes staging bumps with require+replace sync
   (`v1.32.10` / `v1.33.6` / `v1.34.2`). 1.32 also pins `azidentity v1.6.0`,
   `jwt/v4 v4.5.2` and `runc v1.2.9`.
 - 1.35 (also used for the 1.36 image): `k8s.io/kubernetes v1.35.8` (staging
-  synced to `v0.35.8`), `x/mod v0.40.0` (CVE-2026-56864/56865), which pulls
-  `x/net v0.58.0`, `x/text v0.41.0`, `x/crypto v0.55.0`, `x/sys v0.47.0`.
+  synced to `v0.35.8`), `x/mod v0.41.0` (CVE-2026-56864/56865), `x/net v0.58.0`,
+  `x/text v0.42.0`, `x/crypto v0.57.0`, `x/sys v0.48.0`.
+
+On 1.31–1.33 `go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc`
+is pinned with a `replace` (`v0.53.0` on 1.31/1.32, `v0.58.0` on 1.33):
+`google.golang.org/api` v0.264.0 requires `v0.61.0`, which removed
+`UnaryClientInterceptor`, still called by `k8s.io/apiserver` and
+`k8s.io/cri-client` up to 0.33.
 
 The runc CVEs (CVE-2024-45310, CVE-2025-31133, CVE-2025-52565,
 CVE-2025-52881) only ever affected the **1.31** image: there `k8s.io/mount-utils`

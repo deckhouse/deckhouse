@@ -10,12 +10,19 @@ staging modules), not in cluster-autoscaler logic, so the fix is a pure
 
 Applied to both `cluster-autoscaler/go.mod` and `cluster-autoscaler/apis/go.mod`:
 
-- `go` directive: `1.24.0` (+ `toolchain go1.24.5`) -> `1.25.0`
-- `google.golang.org/grpc`: `v1.68.1` -> `v1.82.1`
-- `golang.org/x/net`: `v0.38.0` -> `v0.56.0` (HTML parser / HTTP2 / idna CVEs)
-- `golang.org/x/text`: `v0.23.0` -> `v0.39.0` (Unicode processing CVEs)
-- `golang.org/x/sys`: `v0.31.0` -> `v0.46.0`
-- `golang.org/x/crypto`: `v0.36.0` -> `v0.53.0` (x/crypto/ssh CVEs)
+- `go` directive: `1.24.0` (+ `toolchain go1.24.5`) -> `1.26.0`
+- `google.golang.org/grpc`: `v1.68.1` -> `v1.83.2` (CVE-2026-84303, CVE-2026-84304, CVE-2026-84445)
+- `go.opentelemetry.io/otel/exporters/otlp/otlptrace`, `.../otlptrace/otlptracegrpc`
+  and `go.opentelemetry.io/otel/sdk`: -> `v1.45.0` (CVE-2026-81870 / GO-2026-6505);
+  `otel`, `otel/metric` and `otel/trace` follow to `v1.45.0`
+- `go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc`:
+  `replace` to `v0.58.0`. `google.golang.org/api` (pulled to `v0.264.0` by the
+  bumps above) requires `v0.61.0`, which removed `UnaryClientInterceptor`, still
+  called by `k8s.io/apiserver` and `k8s.io/cri-client` of this minor
+- `golang.org/x/net`: `v0.38.0` -> `v0.58.0` (HTML parser / HTTP2 / idna CVEs)
+- `golang.org/x/text`: `v0.23.0` -> `v0.42.0` (Unicode processing CVEs)
+- `golang.org/x/sys`: `v0.31.0` -> `v0.48.0`
+- `golang.org/x/crypto`: `v0.36.0` -> `v0.57.0` (x/crypto/ssh CVEs)
 - `github.com/google/cel-go`: `v0.23.2` -> `v0.30.0` (GO-2026-6094 / GHSA-gcjh-h69q-9w9g)
 - `k8s.io/kubernetes`: `v1.33.0` -> `v1.33.6`, and all `k8s.io/*` staging
   modules (require + replace) synced to `v0.33.6` (kube-controller-manager
@@ -27,14 +34,18 @@ To recreate this patch, check out the clean tag and re-apply the bumps:
 git clone <SOURCE_REPO>/gardener/autoscaler.git
 cd autoscaler && git checkout v1.33.1
 cd cluster-autoscaler
-go get google.golang.org/grpc@v1.82.1 \
+go get google.golang.org/grpc@v1.83.2 \
+  go.opentelemetry.io/otel/sdk@v1.45.0 \
+  go.opentelemetry.io/otel/exporters/otlp/otlptrace@v1.45.0 \
+  go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc@v1.45.0 \
   github.com/google/cel-go@v0.30.0 \
-  golang.org/x/crypto@v0.53.0 \
-  golang.org/x/net@v0.56.0 \
-  golang.org/x/sys@v0.46.0 \
-  golang.org/x/text@v0.39.0
+  golang.org/x/crypto@v0.57.0 \
+  golang.org/x/net@v0.58.0 \
+  golang.org/x/sys@v0.48.0 \
+  golang.org/x/text@v0.42.0
 go get k8s.io/kubernetes@v1.33.6
 # sync every k8s.io/* require and replace directive to v0.33.6
+go mod edit -replace=go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc=go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc@v0.58.0
 cd apis
 go get google.golang.org/grpc@v1.82.1 \
   golang.org/x/net@v0.56.0 \
