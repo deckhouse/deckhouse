@@ -73,6 +73,32 @@ webhooks:
         namespace: d8-multitenancy-manager
         port: 9443
         path: /validate/v1alpha3/projects
+  # Deleting a project deletes its namespaces, so the requester must be allowed to delete each of
+  # them. The check is a webhook of its own with the same exclusions as the one above, since a DELETE
+  # carries no project to validate.
+  - name: project-deletes.multitenancy-webhook.deckhouse.io
+    rules:
+      - apiGroups:
+          - deckhouse.io
+        apiVersions:
+          - v1alpha3
+        resources:
+          - projects
+        operations:
+          - DELETE
+        scope: Cluster
+    admissionReviewVersions:
+      - v1
+    matchPolicy: Equivalent
+    {{- $excludeSystemWriters | nindent 4 }}
+    sideEffects: None
+    clientConfig:
+      caBundle: {{ .Values.multitenancyManager.internal.admissionWebhookCert.ca | b64enc }}
+      service:
+        name: multitenancy-manager
+        namespace: d8-multitenancy-manager
+        port: 9443
+        path: /validate/v1alpha3/projects/delete
   - name: projectrolebindings.multitenancy-webhook.deckhouse.io
     rules:
       - apiGroups:

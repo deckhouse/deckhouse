@@ -28,6 +28,7 @@ import (
 	"github.com/stretchr/testify/require"
 	admissionv1 "k8s.io/api/admission/v1"
 	authnv1 "k8s.io/api/authentication/v1"
+	authorizationv1 "k8s.io/api/authorization/v1"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -455,17 +456,23 @@ func TestHasByteUnitSuffix(t *testing.T) {
 
 func newValidator(t *testing.T, objs ...client.Object) *validator {
 	t.Helper()
+	// the chart the controller ships, so a test renders what the webhook renders in the cluster
+	helmClient, err := helm.NewRenderOnly("../../../helmlib", logr.Discard())
+	require.NoError(t, err)
+	return &validator{client: newClientBuilder(t, objs...).Build(), helmClient: helmClient}
+}
+
+func newClientBuilder(t *testing.T, objs ...client.Object) *fake.ClientBuilder {
+	t.Helper()
 	scheme := runtime.NewScheme()
-	for _, add := range []func(*runtime.Scheme) error{corev1.AddToScheme, v1alpha2.AddToScheme, v1alpha3.AddToScheme} {
+	for _, add := range []func(*runtime.Scheme) error{
+		corev1.AddToScheme, authorizationv1.AddToScheme, v1alpha2.AddToScheme, v1alpha3.AddToScheme,
+	} {
 		if err := add(scheme); err != nil {
 			t.Fatal(err)
 		}
 	}
-	c := fake.NewClientBuilder().WithScheme(scheme).WithObjects(objs...).Build()
-	// the chart the controller ships, so a test renders what the webhook renders in the cluster
-	helmClient, err := helm.NewRenderOnly("../../../helmlib", logr.Discard())
-	require.NoError(t, err)
-	return &validator{client: c, helmClient: helmClient}
+	return fake.NewClientBuilder().WithScheme(scheme).WithObjects(objs...)
 }
 
 // The template is read at v1alpha2, and projected onto the legacy shape only for the Helm render. A

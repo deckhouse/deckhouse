@@ -140,6 +140,8 @@ func main() {
 
 	// register project webhook
 	projectwebhook.Register(runtimeManager, helmClient)
+	// register the webhook that lets a project go only with the right to delete its namespaces
+	projectwebhook.RegisterDelete(runtimeManager)
 
 	// register template webhook
 	templatewebhook.Register(runtimeManager, serviceAccount)

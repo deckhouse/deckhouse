@@ -218,7 +218,16 @@ func (r *Reconciler) ensureNamespace(ctx context.Context, pns *v1alpha3.ProjectN
 	existing := &corev1.Namespace{}
 	switch err := r.Get(ctx, types.NamespacedName{Name: name}, existing); {
 	case err == nil:
-		if owner := existing.Labels[v1alpha3.ResourceLabelProject]; owner != "" && owner != project {
+		// The namespaces this controller creates carry the project label from the start, and nobody
+		// else may set it (the namespace-ownership ValidatingAdmissionPolicy). A namespace without the
+		// label was created by someone else once the name was free, for example after the
+		// ProjectNamespace was admitted, and is left alone. Taking it into the project would hand it
+		// to the project and let deleting the ProjectNamespace delete it.
+		owner := existing.Labels[v1alpha3.ResourceLabelProject]
+		if owner == "" {
+			return fmt.Errorf("namespace %q already exists and is not owned by project %q", name, project)
+		}
+		if owner != project {
 			return fmt.Errorf("namespace %q already exists and is owned by project %q", name, owner)
 		}
 	case !k8serrors.IsNotFound(err):

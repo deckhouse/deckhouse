@@ -204,6 +204,8 @@ The rules for working with ProjectNamespace:
 - The resulting name `<project name>-<spec.name>` cannot be longer than 63 characters (the Kubernetes limit on namespace names).
 - A ProjectNamespace can only be created in the main namespace of a project — it cannot be "nested" into an additional namespace or a foreign project. If a namespace with that name already exists and belongs to another project, the request is rejected.
 - Deleting a ProjectNamespace resource deletes its namespace. Deleting the project deletes all of its namespaces.
+- A namespace with the resulting name that is not a namespace of this project is never taken into it, even when it appears after the ProjectNamespace was created. The ProjectNamespace then does not become ready, and deleting it leaves the namespace as it is.
+- A project can be deleted only by a user allowed to delete each of its namespaces (the `delete` verb on `namespaces`): the main namespace and every namespace labeled `projects.deckhouse.io/project: <project name>`. Otherwise the request is refused, and the refusal names the namespace the user may not delete. A namespace that does not exist is not checked. The identities the Project webhook skips (see [Who bypasses admission](#who-bypasses-admission)) delete projects without this check.
 
 ### What applies to the additional namespaces
 
@@ -264,7 +266,7 @@ A namespace created directly (for example, `d8 k create ns my-app`) becomes a pr
 
 - the template is picked from what the namespace already carries: `secure` if it has the `security-scanning.deckhouse.io/enabled` label, `default` if it has `security.deckhouse.io/pod-policy` or `extended-monitoring.deckhouse.io/enabled`, and `simple` otherwise;
 - the project parameters are filled in from the current state of the namespace, so nothing inside it changes: the network policy stays unrestricted and the Pod Security Standard keeps the value the namespace already had;
-- from then on the project is the source of truth and is edited like any other project. Deleting the namespace no longer deletes the project — the project recreates the namespace. To remove the environment, delete the Project: `d8 k delete project <name>` removes the namespace with it and, like `kubectl delete ns` did, returns only once the namespace is gone.
+- from then on the project is the source of truth and is edited like any other project. Deleting the namespace no longer deletes the project — the project recreates the namespace. To remove the environment, delete the Project: `d8 k delete project <name>` removes the namespace with it and, like `kubectl delete ns` did, returns only once the namespace is gone. Only a user allowed to delete the namespace can delete its Project, see [Additional project namespaces](#additional-project-namespaces).
 
 System namespaces (`d8-*`, `kube-*`, `upmeter-*`, `default`, and anything labeled `heritage: deckhouse` or `heritage: upmeter`) are never adopted: they are listed on the virtual `deckhouse` project (except `default`, which stays on the virtual `default` project). There is no label that leaves a user namespace without a project. A namespace whose name is longer than 61 characters is also skipped: that is the Project name limit.
 

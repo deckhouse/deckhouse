@@ -59,6 +59,14 @@ func (v *validator) Handle(ctx context.Context, req admission.Request) admission
 		return admission.Errored(http.StatusBadRequest, err)
 	}
 
+	// A ProjectNamespace that is being deleted waits only for the controller to remove its finalizer,
+	// which is an update, and it creates no namespace any more. The checks below would refuse that
+	// update while a namespace of someone else has the resulting name, which the controller leaves
+	// alone, and the object would never go away, nor would the main namespace it lives in.
+	if !pns.DeletionTimestamp.IsZero() {
+		return admission.Allowed("")
+	}
+
 	// The object must live in the main namespace of an existing, non-virtual project. The main
 	// namespace equals the project name, so a ProjectNamespace created in an additional namespace
 	// (whose name never matches a Project name) is rejected here too - no recursion.
