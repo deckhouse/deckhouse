@@ -459,6 +459,42 @@ var _ = Describe("Module :: admissionPolicyEngine :: helm template ::", func() {
 			}
 		})
 
+		It("Deletes the resources serving the webhooks only after the webhook configurations", func() {
+			// Disabling the module uninstalls the release. A webhook with failurePolicy: Fail that
+			// outlives Gatekeeper rejects the deletion of the constraints and roles it intercepts,
+			// and the uninstall never finishes. Each dependency must name a configuration that is
+			// rendered, otherwise nelm silently drops it.
+			for _, res := range []struct{ kind, namespace, name string }{
+				{"Namespace", "", nsName},
+				{"Deployment", nsName, "gatekeeper-controller-manager"},
+				{"Service", nsName, "gatekeeper-webhook-service"},
+				{"Secret", nsName, "gatekeeper-webhook-server-cert"},
+				{"RoleBinding", nsName, "gatekeeper-manager"},
+				{"ClusterRoleBinding", "", "d8:admission-policy-engine:gatekeeper"},
+				{"ClusterRoleBinding", "", "d8:admission-policy-engine:admissionregistration"},
+			} {
+				obj := f.KubernetesResource(res.kind, res.namespace, res.name)
+				id := res.kind + "/" + res.name
+				Expect(obj.Exists()).To(BeTrue(), id)
+
+				dependsOn := []string{}
+				for key, value := range obj.Field("metadata.annotations").Map() {
+					if !strings.HasPrefix(key, "werf.io/delete-dependency-") {
+						continue
+					}
+					properties := map[string]string{}
+					for _, property := range strings.Split(value.String(), ",") {
+						k, v, _ := strings.Cut(property, "=")
+						properties[k] = v
+					}
+					Expect(properties["state"]).To(Equal("absent"), id)
+					Expect(f.KubernetesGlobalResource(properties["kind"], properties["name"]).Exists()).To(BeTrue(), id)
+					dependsOn = append(dependsOn, properties["kind"])
+				}
+				Expect(dependsOn).To(ConsistOf("ValidatingWebhookConfiguration", "MutatingWebhookConfiguration"), id)
+			}
+		})
+
 		It("Renders MutatingWebhookConfiguration that skips system namespaces", func() {
 			mw := f.KubernetesGlobalResource("MutatingWebhookConfiguration", "d8-admission-policy-engine-config")
 			Expect(mw.Exists()).To(BeTrue())

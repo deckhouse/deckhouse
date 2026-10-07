@@ -528,3 +528,19 @@ spec:
         kinds: [Job, CronJob]
   {{- end }}
 {{- end }}
+
+{{/*
+  webhook_delete_dependencies outputs the nelm annotations that hold back the deletion of a resource
+  the webhooks depend on until both webhook configurations of the module are gone.
+  Disabling the module uninstalls its release, and nelm deletes the resources in parallel. If the
+  Gatekeeper pods leave first, the webhooks with `failurePolicy: Fail` reject every request they
+  intercept, the deletion of the constraints and roles among them, and the uninstall never finishes.
+  The bindings of the Gatekeeper service account are held back too: without them Gatekeeper cannot
+  read an object missing from its cache, and a webhook with `failurePolicy: Fail` rejects the request.
+  A dependency on a webhook configuration the release does not contain is ignored.
+  Usage: include "webhook_delete_dependencies" . — indents with 4 spaces for metadata.annotations.
+*/}}
+{{- define "webhook_delete_dependencies" }}
+    werf.io/delete-dependency-validating-webhook: state=absent,kind=ValidatingWebhookConfiguration,name=d8-admission-policy-engine-config
+    werf.io/delete-dependency-mutating-webhook: state=absent,kind=MutatingWebhookConfiguration,name=d8-admission-policy-engine-config
+{{- end }}
