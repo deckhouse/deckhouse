@@ -62,6 +62,17 @@ func (c RegistryFromMasterCheck) Run(ctx context.Context) (string, error) {
 	registryURL := registryV2URL(c.MetaConfig)
 	endpoint := registryURL.String()
 
+	// In Local mode the registry is the bundle dhctl serves on this machine (127.0.0.1), and the
+	// master reaches it through the SSH reverse tunnel the bootstrap opens after these checks. Asked
+	// from the master now, it answers nothing — HTTP 000 on every installation from a bundle
+	// (e2e-registry `bundle`, 2026-10-06) — about a registry registry-reachable has already reached
+	// from here, and that the master will reach the moment it needs to.
+	if c.MetaConfig.Registry.IsLocal() {
+		return "", preflight.NotApplicable(
+			"the images come from the bundle dhctl serves at %s, which the master reaches through "+
+				"the SSH tunnel the bootstrap opens later", address)
+	}
+
 	// A node that is configured to reach the registry through a proxy is not expected to reach it
 	// directly, and this probe goes direct. Asking anyway made the check demand egress the cluster
 	// was never going to have: on a static cluster behind 192.168.199.254:8888 it reported HTTP 000

@@ -444,3 +444,61 @@ func TestStaleStorageSurvivesAnUnwalkableDirectory(t *testing.T) {
 
 	assert.Zero(t, loop.staleStorage(&registryv1alpha1.RegistryNodeSpec{Cache: false}))
 }
+
+// A node whose layout has not been compiled yet reads "no such object" and runs on the layout it
+// was installed with. Its client works — the API server answered — and must be kept: dropping it
+// every few passes rebuilt a client for nothing and warned about an API server that was fine.
+func TestOnceKeepsAClientTheAPIAnswersWithNoLayout(t *testing.T) {
+	working := newClient(t)
+	loop := newLoop(t, working)
+	seed := filepath.Join(t.TempDir(), "bootstrap-layout.json")
+	content, err := json.Marshal(nodeLayout().Spec)
+	require.NoError(t, err)
+	require.NoError(t, os.WriteFile(seed, content, 0o600))
+	loop.Source.Bootstrap = &layout.Bootstrap{Path: seed}
+
+	connects := 0
+	loop.Connect = func() (client.Client, error) {
+		connects++
+		return newClient(t), nil
+	}
+
+	ctx := context.Background()
+	for range 2 * reconnectAfter {
+		require.NoError(t, loop.once(ctx))
+	}
+	assert.Zero(t, connects)
+	assert.Same(t, working, loop.Source.Client)
+}
+
+// A client is built once, against one API endpoint. When that endpoint goes away — a drained or
+// replaced master — the agent used to stay on its cached layout for as long as the node ran.
+// After a few passes that do not reach the API it now drops the client, and the next pass
+// builds a new one (against the next endpoint, see nodeconfig.Identity.Attempt).
+func TestOnceReconnectsWhenTheAPIKeepsFailing(t *testing.T) {
+	loop := newLoop(t, newClient(t, nodeLayout()))
+	ctx := context.Background()
+	require.NoError(t, loop.once(ctx))
+
+	replacement := newClient(t, nodeLayout())
+	connects := 0
+	loop.Connect = func() (client.Client, error) {
+		connects++
+		return replacement, nil
+	}
+	loop.Source.Client = failingClient(t)
+	loop.Publisher = &status.Publisher{Client: failingClient(t), Node: "worker-1"}
+
+	for range reconnectAfter - 1 {
+		require.NoError(t, loop.once(ctx))
+	}
+	assert.Zero(t, connects, "a few failing passes are an API server restart, not a reason to reconnect")
+
+	require.NoError(t, loop.once(ctx))
+	assert.Nil(t, loop.Source.Client, "the failing client is dropped")
+
+	require.NoError(t, loop.once(ctx))
+	assert.Equal(t, 1, connects, "and the next pass builds a new one")
+	assert.Same(t, replacement, loop.Source.Client)
+	assert.Same(t, replacement, loop.Publisher.Client, "the status is written with the new client too")
+}

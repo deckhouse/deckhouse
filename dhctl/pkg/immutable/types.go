@@ -62,6 +62,7 @@ type nodeSpec struct {
 	InternalNetworkCIDRs []string      `json:"internalNetworkCIDRs,omitempty"`
 	UpdatePolicy         updatePolicy  `json:"updatePolicy,omitempty"`
 	Registry             *registrySpec `json:"registry,omitempty"`
+	StaticPods           []staticPod   `json:"staticPods,omitempty"`
 	// StatusToken is the bearer the node's maintenance server asks for on
 	// /status. Minted per document: it authorises reading progress, nothing else.
 	StatusToken string `json:"statusToken,omitempty"`
@@ -217,6 +218,16 @@ type resourceReservation struct {
 type containerRuntime struct {
 	SandboxImage           string `json:"sandboxImage,omitempty"`
 	MaxConcurrentDownloads *int   `json:"maxConcurrentDownloads,omitempty"`
+	// RegistryOwner says who writes containerd's registry.d: nodelet (the default,
+	// from spec.registry) or "agent", a static pod in spec.staticPods.
+	RegistryOwner string `json:"registryOwner,omitempty"`
+}
+
+// staticPod is a manifest the node writes for kubelet to run outside the
+// scheduler. Name is the manifest file name and the list key.
+type staticPod struct {
+	Name     string `json:"name"`
+	Manifest string `json:"manifest"`
 }
 
 type updatePolicy struct {

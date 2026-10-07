@@ -18,6 +18,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/client"
 )
@@ -43,5 +44,53 @@ func TestGetPKI(t *testing.T) {
 		require.NoError(t, err)
 
 		require.NotNil(t, pki.CA)
+	})
+}
+
+func TestEnsureInitSecret(t *testing.T) {
+	t.Run("creates the secret GetPKI reads, and the namespace it lives in", func(t *testing.T) {
+		ctx := t.Context()
+		kubeClient := client.NewFakeKubernetesClient()
+
+		require.NoError(t, EnsureInitSecret(ctx, kubeClient, false))
+
+		_, err := kubeClient.CoreV1().Namespaces().Get(ctx, secretsNamespace, metav1.GetOptions{})
+		require.NoError(t, err)
+
+		secret, err := kubeClient.CoreV1().Secrets(secretsNamespace).Get(ctx, initSecretName, metav1.GetOptions{})
+		require.NoError(t, err)
+		require.NotContains(t, secret.Annotations, initSecretAppliedAnnotation)
+
+		pki, err := GetPKI(ctx, kubeClient)
+		require.NoError(t, err)
+		require.NotEmpty(t, pki.CA.Cert)
+		require.NotEmpty(t, pki.ROUser.Password)
+		require.NotEmpty(t, pki.RWUser.Password)
+	})
+
+	t.Run("keeps a secret that is already there", func(t *testing.T) {
+		ctx := t.Context()
+		kubeClient := client.NewFakeKubernetesClient()
+
+		require.NoError(t, createInitSecret(ctx, kubeClient))
+		before, err := GetPKI(ctx, kubeClient)
+		require.NoError(t, err)
+
+		require.NoError(t, EnsureInitSecret(ctx, kubeClient, false))
+
+		after, err := GetPKI(ctx, kubeClient)
+		require.NoError(t, err)
+		require.Equal(t, before, after)
+	})
+
+	t.Run("marks the secret as applied on a bundle bootstrap", func(t *testing.T) {
+		ctx := t.Context()
+		kubeClient := client.NewFakeKubernetesClient()
+
+		require.NoError(t, EnsureInitSecret(ctx, kubeClient, true))
+
+		secret, err := kubeClient.CoreV1().Secrets(secretsNamespace).Get(ctx, initSecretName, metav1.GetOptions{})
+		require.NoError(t, err)
+		require.Contains(t, secret.Annotations, initSecretAppliedAnnotation)
 	})
 }

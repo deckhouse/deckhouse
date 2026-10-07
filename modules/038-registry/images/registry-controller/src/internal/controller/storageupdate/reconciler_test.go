@@ -18,6 +18,7 @@ package storageupdate
 
 import (
 	"context"
+	"slices"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -367,4 +368,162 @@ func TestAnIncompleteCacheIsUpdatedLikeAComplete(t *testing.T) {
 		assert.True(t, deleted(t, c, StorageName+"-1") || deleted(t, c, StorageName+"-2"),
 			"complete=%v: a follower is replaced whether or not the cache holds its set", complete)
 	}
+}
+
+// TestAReplicaThatCannotStartOnTheOldRevisionIsReplacedAtOnce is the one case where waiting for
+// readiness waits forever: the old revision is what keeps the replica from starting.
+//
+// Measured on an Engine cluster on 2026-10-02: the first render ran before the master NodeGroup
+// existed, so the store was created under /opt, which is read-only there. The pod sat in
+// ContainerCreating on "mkdir /opt/deckhouse/registry: read-only file system", and the corrected
+// revision never reached it, because nothing may move while a replica is not serving.
+func TestAReplicaThatCannotStartOnTheOldRevisionIsReplacedAtOnce(t *testing.T) {
+	t.Run("the only replica, the leader, with nothing else to pull from", func(t *testing.T) {
+		r, c := newReconciler(t,
+			storageSet(1, newRevision),
+			replica(0, "master-0", oldRevision, false),
+			lease("master-0"),
+			airGappedStorage(),
+		)
+
+		reconcile(t, r)
+
+		// Every gate a serving replica goes through is about what it would stop serving, and this
+		// one serves nothing.
+		assert.True(t, deleted(t, c, StorageName+"-0"))
+	})
+
+	t.Run("beside replicas that serve", func(t *testing.T) {
+		r, c := newReconciler(t,
+			storageSet(2, newRevision),
+			replica(0, "master-0", oldRevision, true),
+			replica(1, "master-1", oldRevision, false),
+			lease("master-0"),
+			storageWithUpstream("registry.deckhouse.io"),
+		)
+
+		reconcile(t, r)
+
+		assert.True(t, deleted(t, c, StorageName+"-1"), "the replica that serves nothing goes first")
+		assert.False(t, deleted(t, c, StorageName+"-0"), "and the one that serves stays, one at a time")
+	})
+
+	// A replica that has served and is failing its readiness probe for a moment — one second
+	// timeout, three tries — will serve again. Deleting it past the gates is the deletion they
+	// exist to refuse: here the only replica of an air-gapped cache, which would not come back.
+	t.Run("not a replica that has run and is only failing its probe", func(t *testing.T) {
+		blipping := replica(0, "master-0", oldRevision, false)
+		started := true
+		blipping.Status.ContainerStatuses = []corev1.ContainerStatus{{
+			Name:    "distribution",
+			Started: &started,
+			State:   corev1.ContainerState{Running: &corev1.ContainerStateRunning{}},
+		}}
+		r, c := newReconciler(t,
+			storageSet(1, newRevision),
+			blipping,
+			lease("master-0"),
+			airGappedStorage(),
+		)
+
+		reconcile(t, r)
+
+		assert.False(t, deleted(t, c, StorageName+"-0"))
+	})
+
+	// One that has run and crashes on the old revision serves nothing and will not on that
+	// revision, so it goes like one that never started — rather than until someone deletes it by
+	// hand, with the revision that may fix it held back meanwhile.
+	t.Run("a replica crash-looping on the old revision", func(t *testing.T) {
+		looping := replica(0, "master-0", oldRevision, false)
+		looping.Status.ContainerStatuses = []corev1.ContainerStatus{{
+			Name:                 "distribution",
+			RestartCount:         7,
+			State:                corev1.ContainerState{Waiting: &corev1.ContainerStateWaiting{Reason: "CrashLoopBackOff"}},
+			LastTerminationState: corev1.ContainerState{Terminated: &corev1.ContainerStateTerminated{ExitCode: 1}},
+		}}
+		r, c := newReconciler(t,
+			storageSet(1, newRevision),
+			looping,
+			lease("master-0"),
+			airGappedStorage(),
+		)
+
+		reconcile(t, r)
+
+		assert.True(t, deleted(t, c, StorageName+"-0"))
+	})
+}
+
+// airGappedWith is an air-gapped cache whose replicas report how much of the set they hold.
+func airGappedWith(fullNodes ...string) *registryv1alpha1.RegistryStorage {
+	storage := airGappedStorage()
+	for _, node := range []string{"master-0", "master-1", "master-2"} {
+		storage.Status.Replicas = append(storage.Status.Replicas, registryv1alpha1.StorageReplicaStatus{
+			Node: node, Full: slices.Contains(fullNodes, node),
+		})
+	}
+	return storage
+}
+
+// TestOnlyTheLeaderServesTheNodes is the rule the agents follow: they pull from the leader and from
+// nothing else in the cache, so a follower being up says nothing about whether the nodes can pull.
+//
+// Measured on the `scenarios` unit on 2026-10-05: in air-gap the leader was replaced with two
+// followers behind it that were still copying, the update had nothing that could serve, and every
+// agent answered 502 — the store's own replicas in ImagePullBackOff on their own image.
+func TestOnlyTheLeaderServesTheNodes(t *testing.T) {
+	t.Run("in air-gap the leader stays while no follower holds the whole set", func(t *testing.T) {
+		r, c := newReconciler(t,
+			storageSet(3, newRevision),
+			replica(0, "master-0", oldRevision, true),
+			replica(1, "master-1", newRevision, true),
+			replica(2, "master-2", newRevision, true),
+			lease("master-0"),
+			airGappedWith(), // nobody full
+		)
+
+		reconcile(t, r)
+
+		assert.False(t, deleted(t, c, StorageName+"-0"),
+			"a follower still copying would lead with images missing, and nothing else serves")
+	})
+
+	t.Run("in air-gap the leader goes once a follower holds the whole set", func(t *testing.T) {
+		r, c := newReconciler(t,
+			storageSet(3, newRevision),
+			replica(0, "master-0", oldRevision, true),
+			replica(1, "master-1", newRevision, true),
+			replica(2, "master-2", newRevision, true),
+			lease("master-0"),
+			airGappedWith("master-2"),
+		)
+
+		reconcile(t, r)
+
+		assert.True(t, deleted(t, c, StorageName+"-0"), "the full follower takes the lease over")
+	})
+}
+
+// TestAReplicaOnItsWayOutIsNotServing: a pod being deleted still reads Ready until its containers
+// stop, and counted as serving it would authorise a second replacement right after the first.
+// replicas() leaves such a pod out, so the set looks one short and nothing else is replaced.
+func TestAReplicaOnItsWayOutIsNotServing(t *testing.T) {
+	going := replica(1, "master-1", oldRevision, true)
+	now := metav1.Now()
+	going.DeletionTimestamp = &now
+	going.Finalizers = []string{"test.example.com/hold"} // the fake client keeps it while finalized
+
+	r, c := newReconciler(t,
+		storageSet(3, newRevision),
+		replica(0, "master-0", oldRevision, true),
+		going,
+		replica(2, "master-2", oldRevision, true),
+		lease("master-2"),
+		storageWithUpstream("registry.deckhouse.io"),
+	)
+
+	reconcile(t, r)
+
+	assert.False(t, deleted(t, c, StorageName+"-0"), "one at a time: the previous replacement has not finished")
 }

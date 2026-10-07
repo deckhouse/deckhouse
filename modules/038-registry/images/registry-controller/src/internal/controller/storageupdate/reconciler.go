@@ -150,6 +150,23 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 			"have", len(pods), "want", desiredReplicas(storage))
 		return ctrl.Result{RequeueAfter: settleInterval}, nil
 	}
+
+	// A replica left behind on the old revision that has never run goes first, and past every
+	// gate below. Those gates protect what serves — one replica away at a time, the leader last, never
+	// during a transfer, never with nothing else to pull from — and this one serves nothing, so
+	// replacing it takes nothing away. Waiting for it to become ready instead waits forever when
+	// the old revision is what keeps it from starting: on an Engine cluster the first render runs
+	// before the master NodeGroup exists, so the store is created under /opt, which is read-only
+	// there, and the corrected revision never reached the pod.
+	if next := staleNotReady(pods, target); next != nil {
+		log.Info("replacing a cache replica that is not serving on an out-of-date revision",
+			"pod", next.Name, "node", next.Spec.NodeName, "revision", target)
+		if err := r.Client.Delete(ctx, next); err != nil && !apierrors.IsNotFound(err) {
+			return ctrl.Result{}, fmt.Errorf("deleting %s: %w", next.Name, err)
+		}
+		return ctrl.Result{RequeueAfter: settleInterval}, nil
+	}
+
 	if notReady := notReadyNames(pods); len(notReady) > 0 {
 		log.V(1).Info("waiting for the replicas to serve before replacing any", "notReady", notReady)
 		return ctrl.Result{RequeueAfter: settleInterval}, nil
@@ -180,21 +197,24 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 
 	// And something has to be able to serve images while this replica is away, because what it
 	// pulls when it comes back is its own new image.
-	source, err := r.imageSourceWhile(ctx, next, pods)
+	source, err := r.imageSourceWhile(ctx, next, pods, leader)
 	if err != nil {
 		return ctrl.Result{}, err
 	}
 	if source == "" {
-		// Refused, not deferred: on a cluster with one replica and no upstream this will never
-		// become possible on its own, and saying so is the only useful thing to do. The way
-		// forward is `d8 mirror pull` then `d8 mirror push`, which puts the images in the
+		// Refused, and retried on a human timescale. Two cases end here, and both are air-gap: one
+		// replica and no upstream, which never becomes possible on its own, and the leader with no
+		// follower holding the whole set yet, which does once one has copied it. The way forward
+		// for the first is `d8 mirror pull` then `d8 mirror push`, which puts the images in the
 		// cluster before anything is taken down.
-		log.Info("refusing to replace the only replica of an air-gapped cache: nothing else could serve its new image",
-			"pod", next.Name, "revision", target)
+		log.Info("refusing to replace a replica of an air-gapped cache: nothing else could serve the nodes while it is away",
+			"pod", next.Name, "revision", target, "leader", leader)
 		if r.Recorder != nil {
 			r.Recorder.Eventf(storage, corev1.EventTypeWarning, "UpdateBlocked",
-				"Not replacing %s: with one replica and no upstream nothing can serve its new image. "+
-					"Bring the images into the cluster first (d8 mirror pull, then d8 mirror push).", next.Name)
+				"Not replacing %s: without an upstream nothing else can serve the nodes while it is away — "+
+					"the agents pull from the leader only, and no other replica holds the whole set to take it "+
+					"over. With one replica, bring the images into the cluster first (d8 mirror pull, then "+
+					"d8 mirror push).", next.Name)
 		}
 		return ctrl.Result{RequeueAfter: blockedInterval}, nil
 	}
@@ -249,19 +269,23 @@ func (r *Reconciler) leaderNode(ctx context.Context) string {
 
 // imageSourceWhile names what can serve images while a replica is away, or empty when nothing can.
 //
-// Two things qualify, and they are the two the node layout actually contains: another replica of
-// the cache, which is a mirror of this one on every node, and the upstream, which every node keeps
-// as a fallback for exactly this reason. The name is returned rather than a bool so the decision
-// appears in the log next to the replacement it authorized.
+// The agents pull from the leader and from nothing else in the cache, so a replica serves the nodes
+// only while it leads. That decides what may stand in for the one going:
+//
+//   - a follower goes: the leader keeps serving, so its replica has to be up;
+//   - the leader goes: the lease moves to another replica and the agents follow it, so that replica
+//     has to be up and to hold the whole set — a follower still copying would lead with images
+//     missing.
+//
+// And the upstream, which every node keeps as a fallback, stands in for either. It used to be any
+// other ready replica, as if every replica served every node: in air-gap that let the leader go
+// with only incomplete followers behind it, and nothing at all could serve while it came back.
+//
+// The name is returned rather than a bool so the decision appears in the log next to the
+// replacement it authorized.
 func (r *Reconciler) imageSourceWhile(
-	ctx context.Context, going *corev1.Pod, pods []*corev1.Pod,
+	ctx context.Context, going *corev1.Pod, pods []*corev1.Pod, leaderNode string,
 ) (string, error) {
-	for _, pod := range pods {
-		if pod.Name != going.Name && podReady(pod) {
-			return "replica " + pod.Name, nil
-		}
-	}
-
 	storage := &registryv1alpha1.RegistryStorage{}
 	key := types.NamespacedName{Name: registryv1alpha1.SingletonName}
 	if err := r.Client.Get(ctx, key, storage); err != nil {
@@ -270,6 +294,29 @@ func (r *Reconciler) imageSourceWhile(
 		}
 		return "", fmt.Errorf("reading RegistryStorage: %w", err)
 	}
+
+	full := map[string]bool{}
+	for _, replica := range storage.Status.Replicas {
+		full[replica.Node] = replica.Full && replica.Error == ""
+	}
+
+	goingLeads := leaderNode != "" && going.Spec.NodeName == leaderNode
+	for _, pod := range pods {
+		if pod.Name == going.Name || !podReady(pod) {
+			continue
+		}
+		switch {
+		case goingLeads && full[pod.Spec.NodeName]:
+			return "replica " + pod.Name + ", which holds the whole set and takes the lease over", nil
+		case !goingLeads && leaderNode != "" && pod.Spec.NodeName == leaderNode:
+			return "the leader's replica " + pod.Name, nil
+		case !goingLeads && leaderNode == "":
+			// No known leader: nothing says which replica the agents are pointed at, so any
+			// serving one is the best answer there is — as before.
+			return "replica " + pod.Name, nil
+		}
+	}
+
 	if storage.Spec.Upstream != nil {
 		return "upstream " + storage.Spec.Upstream.Host, nil
 	}
@@ -323,6 +370,63 @@ func chooseNext(stale []*corev1.Pod, leaderNode string) *corev1.Pod {
 		return leader
 	}
 	return nil
+}
+
+// staleNotReady is the first replica on another revision than target that cannot serve on it —
+// it has never run, or it is crash-looping — or nil.
+//
+// Not merely not ready. A replica that has served and is failing its readiness probe for a
+// moment — a probe has a one second timeout and three tries — is a replica that will serve
+// again, and deleting it past the gates is exactly the deletion they exist to refuse: in air-gap
+// with one replica, the one that would have come back. Only a replica that cannot serve on the
+// revision it has takes nothing away by going:
+//
+//   - one that has never started a container, which is the case this bypass was made for: a
+//     store created under a path its node cannot mount never starts at all;
+//   - one whose container is in CrashLoopBackOff: it serves nothing, and on that revision it will
+//     not start serving, so waiting for it waited until someone deleted the pod by hand — while
+//     the revision that may well fix it was the very thing held back. Its data is on the node and
+//     stays there: the StatefulSet puts the replacement on the same node, over the same hostPath.
+func staleNotReady(pods []*corev1.Pod, target string) *corev1.Pod {
+	for _, pod := range podsOnOtherRevision(pods, target) {
+		if !podReady(pod) && (neverRan(pod) || crashLooping(pod)) {
+			return pod
+		}
+	}
+	return nil
+}
+
+// crashLooping reports that a container of the pod is waiting out a crash-loop back-off.
+func crashLooping(pod *corev1.Pod) bool {
+	for _, statuses := range [][]corev1.ContainerStatus{
+		pod.Status.InitContainerStatuses, pod.Status.ContainerStatuses,
+	} {
+		for i := range statuses {
+			if waiting := statuses[i].State.Waiting; waiting != nil && waiting.Reason == "CrashLoopBackOff" {
+				return true
+			}
+		}
+	}
+	return false
+}
+
+// neverRan reports that no container of the pod has ever started: none is running, none has
+// terminated, and none has restarted.
+func neverRan(pod *corev1.Pod) bool {
+	for _, statuses := range [][]corev1.ContainerStatus{
+		pod.Status.InitContainerStatuses, pod.Status.ContainerStatuses,
+	} {
+		for i := range statuses {
+			status := &statuses[i]
+			if status.RestartCount > 0 ||
+				status.State.Running != nil || status.State.Terminated != nil ||
+				status.LastTerminationState.Terminated != nil ||
+				(status.Started != nil && *status.Started) {
+				return false
+			}
+		}
+	}
+	return true
 }
 
 func podReady(pod *corev1.Pod) bool {

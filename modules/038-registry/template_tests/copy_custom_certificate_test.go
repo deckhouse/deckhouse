@@ -35,6 +35,8 @@ discovery:
   d8SpecificNodeCountByRole:
     system: 1
     master: 1
+  apiVersions:
+  - deckhouse.io/v1alpha1/NodeStaticPodRequest
 `
 const customCertificateModeIngressEnable = `
 https:

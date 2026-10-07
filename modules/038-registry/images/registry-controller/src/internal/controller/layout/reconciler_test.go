@@ -140,6 +140,7 @@ func newReconcilerWithProber(
 
 	r := &Reconciler{Prober: prober}
 	r.InjectClient(fakeClient)
+	r.InjectAPIReader(fakeClient)
 	return r, fakeClient, prober
 }
 
@@ -625,6 +626,71 @@ func TestReconcileSwitchesAfterAGoodProbe(t *testing.T) {
 	assert.Equal(t, "registry.internal.example.com", getConfig(t, c).Status.EffectiveUpstream.Host)
 }
 
+// TestReconcileFirstProbeFailureIsNotRecorded is a fresh cluster whose first probe fails. It runs
+// on the configured upstream regardless (layout.Inputs.NothingApplied), but the record of what is
+// in effect is written by a passing probe only: written now, the next pass would find the upstream
+// unchanged, skip the probe and report it Probed.
+func TestReconcileFirstProbeFailureIsNotRecorded(t *testing.T) {
+	cfg := registryConfig(registryv1alpha1.RegistryConfigSpec{
+		Mode:    registryv1alpha1.ModeManaged,
+		Primary: registryv1alpha1.PrimarySource{Upstream: upstream("registry.deckhouse.io")},
+		Storage: registryv1alpha1.StorageConfig{Cache: true, Source: source()},
+	})
+	prober := &stubProber{err: &probe.Failure{Kind: probe.FailureAuth, Message: "denied"}}
+	r, c, _ := newReconcilerWithProber(t, prober, cfg, accessSecret(), node("master-0"))
+
+	for range 2 {
+		runReconcile(t, r)
+
+		require.NotNil(t, getStorage(t, c).Spec.Upstream, "the store keeps the upstream the cluster was installed from")
+		assert.Equal(t, "registry.deckhouse.io", getStorage(t, c).Spec.Upstream.Host)
+		assert.Nil(t, getConfig(t, c).Status.EffectiveUpstream, "an upstream that failed its probe is not recorded")
+
+		valid := apimeta.FindStatusCondition(getConfig(t, c).Status.Conditions, registryv1alpha1.ConditionUpstreamValid)
+		require.NotNil(t, valid)
+		assert.Equal(t, metav1.ConditionFalse, valid.Status)
+	}
+	assert.Len(t, prober.probed, 2, "with nothing recorded the probe is asked again")
+
+	prober.err = nil
+	runReconcile(t, r)
+
+	require.NotNil(t, getConfig(t, c).Status.EffectiveUpstream)
+	assert.Equal(t, "registry.deckhouse.io", getConfig(t, c).Status.EffectiveUpstream.Host)
+	valid := apimeta.FindStatusCondition(getConfig(t, c).Status.Conditions, registryv1alpha1.ConditionUpstreamValid)
+	require.NotNil(t, valid)
+	assert.Equal(t, metav1.ConditionTrue, valid.Status)
+	assert.Equal(t, registryv1alpha1.ReasonProbed, valid.Reason)
+}
+
+// TestReconcileAirGapStaysOnAFailingUpstream configures an upstream with a typo on an air-gapped
+// cluster. Nothing is recorded as in effect there either, and that must not read as a cluster on
+// its first configuration: the store and the nodes stay without an upstream.
+func TestReconcileAirGapStaysOnAFailingUpstream(t *testing.T) {
+	cfg := registryConfig(registryv1alpha1.RegistryConfigSpec{
+		Mode:    registryv1alpha1.ModeManaged,
+		Storage: registryv1alpha1.StorageConfig{Cache: true, Source: source()},
+	})
+	prober := &stubProber{err: &probe.Failure{Kind: probe.FailureUnreachable, Message: "no such host"}}
+	r, c, _ := newReconcilerWithProber(t, prober, cfg, accessSecret(), node("master-0"))
+	runReconcile(t, r)
+	require.Nil(t, getStorage(t, c).Spec.Upstream, "air-gapped to begin with")
+
+	ctx := context.Background()
+	live := getConfig(t, c)
+	live.Spec.Primary.Upstream = upstream("registry.typo.example.com")
+	live.Generation = 2
+	require.NoError(t, c.Update(ctx, live))
+	runReconcile(t, r)
+
+	assert.Equal(t, []string{"registry.typo.example.com"}, prober.probed)
+	assert.Nil(t, getStorage(t, c).Spec.Upstream, "the store must not start filling from an upstream that failed")
+	assert.Nil(t, getConfig(t, c).Status.EffectiveUpstream)
+	backends := listNodes(t, c)["master-0"].Spec.Backends
+	require.Len(t, backends, 1)
+	assert.Equal(t, registryv1alpha1.BackendStorage, backends[0].Name)
+}
+
 // TestReconcileAirGapIsNotProbed keeps the two gates apart: going air-gap is gated
 // on cache completeness, not on probing an upstream that is being removed.
 func TestReconcileAirGapIsNotProbed(t *testing.T) {
@@ -955,7 +1021,8 @@ func TestTheControllerDoesNotConcludeFromASupersededReport(t *testing.T) {
 	// And now the controller summarises, from the read it already had. The summary is asked for
 	// directly: a whole reconciliation from a stale cache stops earlier, on the spec, and would
 	// prove nothing about the write under test.
-	err := r.patchStorageStatus(ctx, stale)
+	nothing := int32(0)
+	err := r.patchStorageStatus(ctx, stale, &nothing)
 
 	storage := getStorage(t, c)
 	assert.False(t, storage.Status.SafeToDropUpstream,

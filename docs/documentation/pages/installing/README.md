@@ -664,7 +664,6 @@ Configuration checks (the `PreInfraPreflights` phase):
 - `--preflight-skip-check=immutable-kubeconfig-out`: Skip the check that the admin kubeconfig has a destination.
 - `--preflight-skip-check=immutable-machines-availability`: Skip the check that the machines named with `--master-host` answer.
 - `--preflight-skip-check=immutable-post-bootstrap-script`: Skip the check that no post-bootstrap script is requested.
-- `--preflight-skip-check=immutable-registry-mode`: Skip the check that the registry runs in Unmanaged mode.
 - `--preflight-skip-check=immutable-signature-mode`: Skip the check that the control-plane signature mode is off.
 - `--preflight-skip-check=immutable-supported-provider`: Skip the check that the platform is supported for an immutable master.
 

@@ -51,6 +51,19 @@ rules:
   - apiGroups: [""]
     resources: ["events"]
     verbs: ["create", "patch"]
+  # What still names the upstream, counted before the cluster is let go of it: a reference
+  # naming the upstream has no route once it is gone. List only, read past the cache and only
+  # while the cache is full and an upstream is still held — no informer is started over these. See
+  # internal/controller/layout/references.go.
+  - apiGroups: [""]
+    resources: ["pods", "namespaces"]
+    verbs: ["list"]
+  - apiGroups: ["apps"]
+    resources: ["deployments", "daemonsets", "statefulsets"]
+    verbs: ["list"]
+  - apiGroups: ["batch"]
+    resources: ["cronjobs"]
+    verbs: ["list"]
 
 ---
 kind: ClusterRoleBinding

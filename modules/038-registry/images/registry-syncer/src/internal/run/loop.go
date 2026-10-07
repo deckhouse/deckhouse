@@ -20,6 +20,7 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
+	"net"
 	"strings"
 	"sync"
 	"sync/atomic"
@@ -153,6 +154,13 @@ type Loop struct {
 	// watch: the loop has to re-apply the configuration and re-report anyway, and a
 	// missed event would otherwise leave the replica silently stale.
 	Interval time.Duration
+
+	// StartupGrace is how long after the process starts a registry of its own that does not answer
+	// yet is waited for rather than reported. Two minutes when unset. See storeStarting.
+	StartupGrace time.Duration
+
+	// started is when Run began, and the zero time — which is long ago — outside it.
+	started time.Time
 }
 
 // surveyStore reads the store, at most once a minute.
@@ -535,6 +543,7 @@ func (l *Loop) Run(ctx context.Context) error {
 	ticker := time.NewTicker(interval)
 	defer ticker.Stop()
 
+	l.started = time.Now()
 	for {
 		if err := l.once(ctx); err != nil {
 			// Never fatal. A replica that exits on an error stops serving images, which
@@ -572,6 +581,10 @@ func (l *Loop) once(ctx context.Context) error {
 		return fmt.Errorf("applying the registry configuration: %w", err)
 	} else if changed {
 		l.Log.Info("the registry configuration changed and the process was restarted")
+	}
+
+	if l.storeStarting(ctx) {
+		return nil
 	}
 
 	isLeader := l.Leadership.IsLeader()
@@ -1212,6 +1225,42 @@ func (l *Loop) copier(
 		// without layers, and the registry reports those as present.
 		StoreDir: l.dataDir(),
 	}, nil
+}
+
+// storeStarting reports that this replica's own registry does not answer yet while the process is
+// still young enough for that to be its start, so the pass is skipped instead of reporting it.
+//
+// The syncer and the registry start together, and the registry needs a moment — longer when the
+// syncer has just written its configuration — before it listens. A pass in that moment reads the
+// declared set through this very store, gets "connection refused", and publishes it: the storage
+// goes Failed and safeToDropUpstream false on every start of the pod, until the next clean pass
+// clears it. Measured on an Engine cluster on 2026-10-02, at the first start and again after an
+// update replaced the replica.
+//
+// Skipping keeps the previous report, which is the truer one during a restart: the store's data is
+// on the node and outlives the pod. Bounded, because a registry that never comes up is a failure,
+// and past the grace it is reported as one exactly as before.
+func (l *Loop) storeStarting(ctx context.Context) bool {
+	if l.LocalAddress == "" {
+		return false
+	}
+	grace := l.StartupGrace
+	if grace <= 0 {
+		grace = 2 * time.Minute
+	}
+	if time.Since(l.started) >= grace {
+		return false
+	}
+
+	dialer := net.Dialer{Timeout: 3 * time.Second}
+	conn, err := dialer.DialContext(ctx, "tcp", l.LocalAddress)
+	if err == nil {
+		_ = conn.Close()
+		return false
+	}
+	l.Log.Info("this replica's registry does not answer yet; the pass waits for it instead of reporting its start as a failure",
+		"address", l.LocalAddress, "error", err.Error())
+	return true
 }
 
 func (l *Loop) localRegistry() (fill.Registry, error) {

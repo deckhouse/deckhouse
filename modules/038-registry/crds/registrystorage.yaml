@@ -195,7 +195,7 @@ spec:
                     path:
                       type: string
                       description: |
-                        The path on the node. A module constant, not user input.
+                        Path on the node. Set by the module, not by the user: `/var/lib/deckhouse/registry` when the master NodeGroup has `systemType: Immutable`, `/opt/deckhouse/registry` otherwise.
                       x-doc-example: '/opt/deckhouse/registry'
                     size:
                       type: string
@@ -289,9 +289,22 @@ spec:
                 safeToDropUpstream:
                   type: boolean
                   description: |
-                    Whether the **leader** holds the expected set, which is the gate for going air-gap.
+                    Whether the **leader** holds the expected set and nothing on the platform still names the upstream, which together are the gate for going air-gap.
 
                     Deliberately the leader alone and not every replica: followers are filled ahead of time and in parallel, so waiting for all of them would delay the transition without adding safety.
+
+                    A full cache does not make up for a remaining reference: an image reference that names the upstream by its own name is not answered by the cache once the upstream is gone. For details, see `upstreamReferences`.
+                upstreamReferences:
+                  type: integer
+                  format: int32
+                  description: |
+                    Number of objects in platform namespaces whose images still reference the upstream the storage is holding.
+
+                    Each object is counted separately: Deployment, DaemonSet, StatefulSet and CronJob templates, pods not started yet, pods that would pull again on their next start, and replicas of the storage itself, which cannot pull their own image from the storage once the upstream is gone. A Deployment in the middle of a rollout adds one for its template and one for each such pod.
+
+                    Only the `kube-system` and `d8-*` namespaces are counted. Workloads in other namespaces whose images reference the upstream address do not hold the transition, and once the upstream is removed they have nowhere to pull from. Move them onto the in-cluster address before removing the upstream.
+
+                    Counted while the leader is full and the upstream is still held. If the field is absent, the count was not taken, and `safeToDropUpstream` is `false`, as with a nonzero count.
                 allReplicasFull:
                   type: boolean
                   description: |

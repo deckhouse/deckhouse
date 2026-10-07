@@ -189,6 +189,9 @@ func buildNodeConfig(ctx context.Context, in nodeConfigInput) (*nodeConfig, erro
 	}
 
 	applyJoinToSpec(&spec, in.Join)
+	if err := applyRegistryAgent(&spec, in.MetaConfig); err != nil {
+		return nil, err
+	}
 
 	dhlog.FromContext(ctx).DebugContext(ctx, fmt.Sprintf(
 		"Built nodeConfig for %s: Kubernetes %s, %d system extensions, join=%t",
@@ -329,6 +332,18 @@ func nodeRegistry(metaConfig *config.MetaConfig) (*registrySpec, error) {
 				"which the machine cannot reach — it pulls its system extensions and control-plane images itself. Use %q or %q",
 			constant.ModeLocal, constant.BundleAddressWithPort, constant.ModeDirect, constant.ModeUnmanaged)
 	}
+
+	// A registry module that owns the pull path is no longer refused here, and the reason the
+	// refusal existed is gone rather than merely outweighed. It read: the agent that serves the
+	// pull path is placed by a bashible step, and such a node runs none. On an Engine node the
+	// agent now ships INSIDE the containerd system extension — imported and pinned by the unit's
+	// ExecStartPost, beside pause — and the static pod that runs it is in this very document
+	// (applyRegistryAgent), so nothing about it needs a bashible step or the installer's packages
+	// proxy. Once the module runs, its NodeStaticPodRequest carries the same pod.
+	//
+	// spec.registry is the upstream below either way: with the agent it is the layout the agent
+	// routes by until the API server answers. So an immutable master installs from `mc/registry`
+	// exactly as a bashible one does.
 
 	// Direct and Unmanaged describe the same upstream in RemoteData, and the upstream is
 	// what a booting node needs: the in-cluster proxy Direct mode adds serves nodes that

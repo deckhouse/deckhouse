@@ -92,6 +92,11 @@ token:
   expiration: 900
   certificate: "/pki/token.crt"
   key: "/pki/token.key"
+  # Upstream distribution v3 trusts keys by RFC 7638 JWK thumbprint, and docker_auth signs with
+  # libtrust's legacy key ID by default: the same key under a name the registry cannot find, so every
+  # pull came back 401 with "token signed by untrusted key". As the store's own token service does
+  # (templates/v2/storage/pki-secret.yaml).
+  disable_legacy_key_id: true
 
 users:
   {{ .registry.bootstrap.init.ro_user.name | quote }}:
@@ -140,36 +145,76 @@ http:
     certificate: "/pki/distribution.crt"
     key: "/pki/distribution.key"
 
-{{- with .registry.bootstrap.proxy }}
-proxy:
-  remoteurl: "{{ .scheme }}://{{ .host }}"
-  {{- if .username }}
-  username: {{ .username | quote }}
-  password: {{ .password | quote }}
-  {{- end }}
-  remotepathonly: {{ .path | quote }}
-  localpathalias: "/system/deckhouse"
-  {{- with .ca }}
-  ca: "/pki/upstream-registry-ca.crt"
-  {{- end }}
-  {{- with .ttl }}
-  ttl: {{ . | quote }}
-  {{- end }}
-{{- end }}
-
 auth:
   token:
-    realm: https://${discovered_node_ip}:5051/auth
+    realm: https://${discovered_node_ip}:5001/auth/token
     service: Deckhouse registry
     issuer: Registry server
     rootcertbundle: "/pki/token.crt"
     autoredirect: true
+    autoredirectpath: /auth/token
     proxy:
       url: https://127.0.0.1:5051/auth
       ca: "/pki/ca.crt"
 EOF
 
+# The registry image is a wrapper around upstream distribution (modules/038-registry/images/
+# docker-distribution/wrapper), and `serve` reads a second file of its own beside the one above: the
+# prefix the cluster pulls by, the upstream a miss goes to, the token service, the reserve the store
+# keeps free. Without it the process exits at once with "reading /config/deckhouse.yaml", which is
+# what broke every Proxy and Local bootstrap once the image stopped being the patched fork. Rendered
+# the way registry-syncer renders it for the store (RenderWrapper), so the two cannot drift apart.
+#
+# The reserve is the syncer's formula over the filesystem the data lives on: the registry refuses to
+# start without one, because without it the store writes until the node has no space left.
+store_capacity="$(df -B1 --output=size "${data_path}" | tail -n 1 | tr -d ' ')"
+if [[ -z "${store_capacity}" || "${store_capacity}" -le 0 ]]; then
+  bb-log-error "cannot read the size of the filesystem under ${data_path}"
+  exit 1
+fi
+store_tenth=$(( store_capacity / 10 ))
+store_reserve=$(( (store_tenth < 40 * 1024 ** 3 ? store_tenth : 40 * 1024 ** 3) + (store_tenth < 20 * 1024 ** 3 ? store_tenth : 20 * 1024 ** 3) ))
+
+# Composed in parts so that the upstream's credentials pass through a QUOTED heredoc: the shell
+# expands nothing in it, so a backtick or a backslash in a password reaches the file as written.
+# The parts around it carry the paths and the reserve, which do need expanding.
+{
+cat << EOF
+scope: system/deckhouse
+EOF
+{{- with .registry.bootstrap.proxy }}
+{{- /* No ttl: the wrapper's cache keeps what it fetched and never expires it, as the store's does. */}}
+cat << 'EOF'
+upstream:
+  address: {{ .host | quote }}
+  scheme: {{ .scheme | quote }}
+  path: {{ .path | quote }}
+  {{- if .username }}
+  username: {{ .username | quote }}
+  password: {{ .password | quote }}
+  {{- end }}
+EOF
+{{- if .ca }}
+cat << EOF
+  ca: "/pki/upstream-registry-ca.crt"
+EOF
+{{- end }}
+{{- end }}
+cat << EOF
+authProxy:
+  url: https://127.0.0.1:5051/auth
+  ca: "/pki/ca.crt"
+store:
+  reserve: ${store_reserve}
+EOF
+} | bb-sync-file "${distribution_path}/deckhouse.yaml" -
+
 # Prepare static pod manifest
+# The registry reads two files, and the pod has to restart when either changes. The configuration
+# hash below covers what the files are rendered from on the cluster side, but the wrapper's file
+# also carries the reserve, which comes from this node's disk; so the files themselves are hashed.
+config_files_hash="$(cat "${distribution_path}/config.yaml" "${distribution_path}/deckhouse.yaml" | sha256sum | cut -d' ' -f1)"
+
 bb-sync-file "${static_pod_tmp_file}" - << EOF
 apiVersion: v1
 kind: Pod
@@ -184,6 +229,7 @@ metadata:
     type: node-services
   annotations:
     registry.deckhouse.io/config-hash: {{ .registry.bootstrap | toYaml | sha256sum }}
+    registry.deckhouse.io/config-files-hash: ${config_files_hash}
   name: registry-nodeservices
   namespace: d8-system
 spec:
@@ -203,6 +249,8 @@ spec:
       readOnlyRootFilesystem: true
     args:
       - serve
+      - --deckhouse-config
+      - /config/deckhouse.yaml
       - /config/config.yaml
 {{- with .registry.bootstrap.proxy }}
     env:

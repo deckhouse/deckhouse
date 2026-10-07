@@ -277,6 +277,19 @@ import:
   includePaths:
   - pause.tar
   before: install
+# The registry agent, for pause's reason and one of its own. On an Engine node
+# containerd's registry.d is under /run and the agent is what writes it, so between
+# every boot and the agent's first pass the runtime has no registry configured at all —
+# an agent that had to be pulled would be a node that never pulls anything again. It
+# ships with the extension rather than being asked for per cluster because the
+# alternative, an extension the registry module requests, is fetched through
+# registry-packages-proxy, which reaches the registry through this very agent.
+- image: {{ $.ModuleName }}/registry-agent-artifact
+  add: /
+  to: /sysext/opt/deckhouse/images
+  includePaths:
+  - registry-agent.tar
+  before: install
 {{- include "engine sysext sign imports" $ }}
 git:
 - add: /{{ $.ModulePath }}modules/007-{{ $.ModuleName }}/images/{{ $.ImageName }}/sysext

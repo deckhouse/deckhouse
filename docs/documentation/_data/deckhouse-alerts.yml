@@ -3651,17 +3651,30 @@ alerts:
       edition: ce
       description: |-
         The configuration has no upstream, so the cluster is meant to be air-gapped, and the
-        module is still holding the previous upstream because the cache is not complete
-        enough to stand alone.
+        module is still holding the previous upstream: either the cache is not complete
+        enough to stand alone, or workloads in the platform namespaces (`kube-system` and
+        `d8-*`) still reference the upstream and would have nowhere to pull from without it.
+        Workloads in other namespaces are not counted and do not hold the transition.
 
         This is the safe outcome and the cluster is pulling images normally. It is also the
         one transition in this module that could cut every node off from images, which is
         why it waits rather than proceeds — and why a wait this long is worth looking at:
-        nothing about it resolves on its own if the cache has stopped filling.
+        nothing about it resolves on its own if the cache has stopped filling, or if a
+        rollout onto the in-cluster address is stuck.
+
+        Check the cache and the current count of references to the upstream
+        (`upstreamReferences`):
 
         ```
-        d8 k get registrystorage registry -o jsonpath='{.status}' | jq '{phase,fill,safeToDropUpstream,leader}'
+        d8 k get registrystorage registry -o jsonpath='{.status}' | jq '{phase,fill,safeToDropUpstream,upstreamReferences,leader}'
         d8 k get registryconfig registry -o jsonpath='{.status.effectiveUpstream}' | jq
+        ```
+
+        The `registry-controller` log names up to five of the referencing objects each time
+        the count changes. To see the last such line:
+
+        ```
+        d8 k -n d8-system logs -l app=registry-controller -c registry-controller --prefix --tail=-1 | grep 'still names the upstream' | tail -1
         ```
       summary: |
         The registry upstream cannot be removed yet.
@@ -4006,10 +4019,27 @@ alerts:
         one direction that hurts. What it will not do is keep it quietly, which is what this
         alert is.
 
-        Nothing is wrong and nothing needs doing urgently. To reclaim the space:
+        Nothing is wrong and nothing needs doing urgently. To reclaim the space, remove the
+        directory the store kept its blobs in: `/var/lib/deckhouse/registry` on a node of a
+        NodeGroup with `systemType: Immutable`, `/opt/deckhouse/registry` on other nodes.
+        With the cache off there is no RegistryStorage left to ask, so the command below
+        looks at both.
+
+        Open a root shell on the node over SSH. A node of a NodeGroup with
+        `systemType: Immutable` has no SSH: start a debug pod on it and switch to the node's
+        root filesystem:
 
         ```
-        ssh {{ $labels.node }} 'du -sh /opt/deckhouse/registry && sudo rm -rf /opt/deckhouse/registry'
+        d8 k debug node/{{ $labels.node }} -it --image=ubuntu
+        chroot /host
+        ```
+
+        Then remove the data:
+
+        ```
+        for dir in /opt/deckhouse/registry /var/lib/deckhouse/registry; do
+          [ -d "$dir" ] && du -sh "$dir" && rm -rf "$dir"
+        done
         ```
 
         Twenty-four hours, so that turning the cache off and on again in one working session

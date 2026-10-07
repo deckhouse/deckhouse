@@ -101,6 +101,12 @@ spec:
           control that did not exist.
         */}}
         - --logging-format=json
+        {{- /*
+          The same path the store's hostPath mounts, so that what an operator is told in
+          RegistryStorage is the directory that actually holds the blobs. Decided by the
+          hook, because it differs on a node whose root filesystem is read-only.
+        */}}
+        - --store-path={{ ((.Values.registry.internal).v2).storePath | default "/opt/deckhouse/registry" }}
         env:
         - name: POD_NAMESPACE
           valueFrom:

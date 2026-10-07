@@ -54,7 +54,6 @@ var legacyPreflightSkipAliases = map[string]string{
 // TestUnskippableChecksMatchTheSuites in pkg/preflight/suites.
 var unskippablePreflightChecks = map[string]string{
 	"immutable-supported-provider": "an immutable master is only implemented for some platforms. Remove it from --preflight-skip-check.",
-	"immutable-registry-mode":      "an immutable master pulls from the registry directly, and the other registry modes are not implemented. Remove it from --preflight-skip-check.",
 }
 
 // retiredPreflightChecks are names that no longer name a check, mapped to what became of them.

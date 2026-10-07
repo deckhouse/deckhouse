@@ -106,9 +106,31 @@ func init() {
 	register.RegisterController(ControllerName, &registryv1alpha1.RegistryConfig{}, &Reconciler{})
 }
 
+// InjectStorePath satisfies register.NeedsStorePath.
+func (r *Reconciler) InjectStorePath(path string) { r.StorePath = path }
+
+// InjectAPIReader satisfies register.NeedsAPIReader.
+func (r *Reconciler) InjectAPIReader(reader client.Reader) { r.Reader = reader }
+
 // Reconciler compiles the configuration into the per-node and storage layout.
 type Reconciler struct {
 	register.Base
+
+	// StorePath is where the store keeps its blobs on a node, as the module mounts it.
+	// Injected, because a node with a read-only root filesystem has nowhere to put them
+	// under /opt and only the module knows which kind of node this cluster's store runs
+	// on. See register.NeedsStorePath.
+	StorePath string
+
+	// Reader reads past the cache, for the cluster-wide count of what still names the upstream.
+	// See countUpstreamReferences. Unset, the count is not taken, which withholds the air-gap.
+	Reader client.Reader
+
+	// references keeps the last count for the reconciliations that follow it closely.
+	references upstreamReferenceCounter
+
+	// now is the clock the count is aged by. Left unset it is the real one.
+	now func() time.Time
 
 	// Prober verifies a changed primary upstream before the cluster is switched
 	// over to it. Injectable so the reconciliation is testable without a registry;
@@ -234,7 +256,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 	if err := r.applyAuthSecret(ctx, desired.Credentials); err != nil {
 		return ctrl.Result{}, fmt.Errorf("applying the resolved auth Secret: %w", err)
 	}
-	if err := r.applyStorage(ctx, desired.Storage); err != nil {
+	if err := r.applyStorage(ctx, desired.Storage, inputs.UpstreamReferences); err != nil {
 		return ctrl.Result{}, fmt.Errorf("applying RegistryStorage: %w", err)
 	}
 	if desired.Storage != nil {
@@ -257,8 +279,16 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 	// The digest of the credentials that went into the Secret alongside this upstream, so
 	// the record says which credentials are in effect without being able to disclose them.
 	heldAuth := desired.Credentials[constant.AuthKeyUpstream]
+	recorded, recordedDigest := desired.HeldUpstream, heldAuth.AuthDigest()
+	if probeFailure != nil {
+		// Only a probe that passed changes the record. The record is what unchangedUpstream
+		// compares with to skip the next probe, so writing an upstream that just failed — which
+		// a fresh cluster runs on regardless, see layout.Inputs.NothingApplied — would turn one
+		// failure into "Probed" on the following pass and never probe it again.
+		recorded, recordedDigest = cfg.Status.EffectiveUpstream, cfg.Status.EffectiveUpstreamAuthDigest
+	}
 	if err := r.patchConfigStatus(
-		ctx, cfg, desired.HeldUpstream, heldAuth.AuthDigest(), probeFailure,
+		ctx, cfg, recorded, recordedDigest, probeFailure,
 	); err != nil {
 		return ctrl.Result{}, fmt.Errorf("patching status of RegistryConfig: %w", err)
 	}
@@ -284,6 +314,11 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 		// Retry: the upstream may be down rather than wrong, and the operator should
 		// not have to touch anything for a recovered registry to be picked up.
 		return ctrl.Result{RequeueAfter: probeRetryInterval}, nil
+	}
+	if cfg.Spec.Primary.Upstream == nil && desired.HeldUpstream != nil && inputs.LeaderFull {
+		// Held only on what still names the upstream, and nothing watched here changes when a
+		// rollout elsewhere finishes. Asked again rather than left to the next unrelated event.
+		return ctrl.Result{RequeueAfter: referenceScanInterval}, nil
 	}
 	return ctrl.Result{}, nil
 }
@@ -519,7 +554,8 @@ func (r *Reconciler) collectInputs(
 	ctx context.Context, cfg *registryv1alpha1.RegistryConfig,
 ) (layout.Inputs, error) {
 	inputs := layout.Inputs{
-		Config: cfg.Spec,
+		Config:    cfg.Spec,
+		StorePath: r.StorePath,
 		// The controller's own record of what is in effect. Taken from the status
 		// rather than from RegistryStorage.spec so that the hold works identically
 		// with the cache off, where no storage object exists to remember anything.
@@ -550,7 +586,10 @@ func (r *Reconciler) collectInputs(
 			// the truth in that case.
 			inputs.AppliedUpstream = storage.Spec.Upstream
 		}
-	case !apierrors.IsNotFound(err):
+		inputs.UpstreamReferences = r.upstreamReferences(ctx, cfg, inputs.AppliedUpstream, inputs.LeaderFull)
+	case apierrors.IsNotFound(err):
+		inputs.NothingApplied = cfg.Status.EffectiveUpstream == nil
+	default:
 		return inputs, fmt.Errorf("reading RegistryStorage: %w", err)
 	}
 
@@ -778,7 +817,9 @@ func (r *Reconciler) applyAuthSecret(
 // The per-replica entries in the status are NOT touched: each syncer owns its
 // own, and reports what it actually wrote. Only the cluster-wide summary is
 // derived here, because no single replica can know whether the others are done.
-func (r *Reconciler) applyStorage(ctx context.Context, spec *registryv1alpha1.RegistryStorageSpec) error {
+func (r *Reconciler) applyStorage(
+	ctx context.Context, spec *registryv1alpha1.RegistryStorageSpec, upstreamReferences *int32,
+) error {
 	storage := &registryv1alpha1.RegistryStorage{
 		ObjectMeta: metav1.ObjectMeta{Name: registryv1alpha1.SingletonName},
 	}
@@ -800,11 +841,11 @@ func (r *Reconciler) applyStorage(ctx context.Context, spec *registryv1alpha1.Re
 		return err
 	}
 
-	return r.patchStorageStatus(ctx, storage)
+	return r.patchStorageStatus(ctx, storage, upstreamReferences)
 }
 
 func (r *Reconciler) patchStorageStatus(
-	ctx context.Context, storage *registryv1alpha1.RegistryStorage,
+	ctx context.Context, storage *registryv1alpha1.RegistryStorage, upstreamReferences *int32,
 ) error {
 	// Under an optimistic lock, because this write is a CONCLUSION drawn from what the replicas
 	// reported, and the replicas report into this same object while the controller reads it from a
@@ -817,7 +858,9 @@ func (r *Reconciler) patchStorageStatus(
 	// the cluster actually holds, and agrees with it.
 	patch := client.MergeFromWithOptions(storage.DeepCopy(), client.MergeFromWithOptimisticLock{})
 
-	aggregate := layout.Aggregate(&storage.Spec, storage.Status.Replicas, r.storageLeaseHolder(ctx))
+	aggregate := layout.Aggregate(
+		&storage.Spec, storage.Status.Replicas, r.storageLeaseHolder(ctx), upstreamReferences,
+	)
 	aggregate.ObservedGeneration = storage.Generation
 	// Conditions are merged rather than replaced, so an entry another writer owns
 	// is not dropped.

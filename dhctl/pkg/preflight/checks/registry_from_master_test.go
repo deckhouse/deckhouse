@@ -23,6 +23,8 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
+	registry_mocks "github.com/deckhouse/deckhouse/dhctl/pkg/config/registrymocks"
 	preflight "github.com/deckhouse/deckhouse/dhctl/pkg/preflight"
 )
 
@@ -160,4 +162,18 @@ func TestRegistryFromMasterStepsAsideForTheProxy(t *testing.T) {
 		require.Error(t, err)
 		assert.NotContains(t, err.Error(), "registry-access-through-proxy")
 	})
+}
+
+// An installation from a bundle takes its images from a registry dhctl serves on its own machine, and
+// the master reaches it only through the tunnel the bootstrap opens after the preflight checks. Asked
+// from the master before that, it answered HTTP 000 and stopped every bundle installation.
+func TestRegistryFromMasterStepsAsideForTheBundle(t *testing.T) {
+	check := RegistryFromMasterCheck{MetaConfig: &config.MetaConfig{
+		Registry: registry_mocks.ConfigBuilder(registry_mocks.WithModeLocal()),
+	}}
+
+	_, err := check.Run(t.Context())
+
+	require.ErrorIs(t, err, preflight.ErrNotApplicable)
+	assert.Contains(t, err.Error(), "tunnel")
 }

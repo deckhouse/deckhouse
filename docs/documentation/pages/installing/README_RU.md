@@ -678,7 +678,6 @@ dhctl bootstrap \
 - `--preflight-skip-check=immutable-kubeconfig-out` — пропуск проверки того, что для admin kubeconfig задан путь сохранения;
 - `--preflight-skip-check=immutable-machines-availability` — пропуск проверки доступности машин, указанных в `--master-host`;
 - `--preflight-skip-check=immutable-post-bootstrap-script` — пропуск проверки отсутствия post-bootstrap-скрипта;
-- `--preflight-skip-check=immutable-registry-mode` — пропуск проверки режима Unmanaged у хранилища образов;
 - `--preflight-skip-check=immutable-signature-mode` — пропуск проверки отключенного режима подписи control plane;
 - `--preflight-skip-check=immutable-supported-provider` — пропуск проверки поддержки платформы для immutable master-узла.
 

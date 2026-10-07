@@ -74,6 +74,21 @@ type (
 	NeedsRecorder interface{ InjectRecorder(record.EventRecorder) }
 	NeedsSetup    interface{ Setup(mgr ctrl.Manager) error }
 
+	// NeedsStorePath receives where the store keeps its blobs on a node.
+	//
+	// Injected rather than a constant because the answer differs by node kind — a node
+	// with a read-only root filesystem has nowhere to put them under /opt — and the
+	// module is what decides it, once, for the store's hostPath and for this.
+	NeedsStorePath interface{ InjectStorePath(string) }
+
+	// NeedsAPIReader receives a reader that goes to the API server rather than the cache.
+	//
+	// For reads the cache cannot serve: it is confined to the module's namespace for the
+	// workload kinds (see cacheOptions in main), and a cluster-wide read through it would
+	// either be refused or start an informer over every pod in the cluster to answer a
+	// question asked only now and then.
+	NeedsAPIReader interface{ InjectAPIReader(client.Reader) }
+
 	// NeedsForPredicates lets a reconciler filter events of its primary object.
 	NeedsForPredicates interface{ ForPredicates() []predicate.Predicate }
 
@@ -105,7 +120,9 @@ func RegisterController(name string, obj client.Object, r Reconciler) {
 // disabled names a controller to leave out. This exists for incident response:
 // a reconciler that is misbehaving on a live cluster can be switched off
 // without rolling back the whole image.
-func SetupAll(mgr ctrl.Manager, c client.Client, disabled []string, maxConcurrentReconciles int) error {
+func SetupAll(
+	mgr ctrl.Manager, c client.Client, disabled []string, maxConcurrentReconciles int, storePath string,
+) error {
 	setupLog := ctrl.Log.WithName("setup")
 
 	for _, name := range disabled {
@@ -121,7 +138,7 @@ func SetupAll(mgr ctrl.Manager, c client.Client, disabled []string, maxConcurren
 			continue
 		}
 
-		if err := setupController(mgr, c, e.name, e.obj, e.reconciler, maxConcurrentReconciles); err != nil {
+		if err := setupController(mgr, c, e.name, e.obj, e.reconciler, maxConcurrentReconciles, storePath); err != nil {
 			return fmt.Errorf("setting up controller %s: %w", e.name, err)
 		}
 		setupLog.Info("controller enabled", "controller", e.name)
@@ -139,7 +156,8 @@ func registeredNames() string {
 }
 
 func setupController(
-	mgr ctrl.Manager, c client.Client, name string, obj client.Object, r Reconciler, maxConcurrentReconciles int,
+	mgr ctrl.Manager, c client.Client, name string, obj client.Object, r Reconciler,
+	maxConcurrentReconciles int, storePath string,
 ) error {
 	if maxConcurrentReconciles < 1 {
 		maxConcurrentReconciles = 1
@@ -150,6 +168,12 @@ func setupController(
 	}
 	if v, ok := r.(NeedsRecorder); ok {
 		v.InjectRecorder(mgr.GetEventRecorderFor(name))
+	}
+	if v, ok := r.(NeedsStorePath); ok {
+		v.InjectStorePath(storePath)
+	}
+	if v, ok := r.(NeedsAPIReader); ok {
+		v.InjectAPIReader(mgr.GetAPIReader())
 	}
 	if v, ok := r.(NeedsSetup); ok {
 		if err := v.Setup(mgr); err != nil {

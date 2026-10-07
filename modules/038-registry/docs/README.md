@@ -25,7 +25,7 @@ The module can run in one of the following modes (selected with the [`mode`](con
   - [`primary.upstream`](configuration.html#parameters-primary-upstream) — the registry images are pulled from. If not set, the cluster is considered air-gapped: the only source becomes the in-cluster cache, filled with the `d8 mirror push` command.
   - [`storage.cache`](configuration.html#parameters-storage-cache) — controls the in-cluster cache on the control-plane nodes. If set, a registry is deployed on the control-plane nodes. All nodes pull images from it, with the upstream staying a fallback path while the cache is being filled.
 
-  Turning the cache on or off, changing the registry, changing credentials — each of these is an ordinary reconfiguration, possible at any time and in any order. Exactly one change has a condition attached: when the [upstream](configuration.html#parameters-primary-upstream) is removed to go air-gapped, the module waits until the in-cluster cache holds the whole expected image set — only then do images stop being pulled from the registry set in `primary.upstream`. While this is in progress, the [`D8RegistryAirGapTransitionHeld`](faq.html#what-do-the-registry-alerts-mean) alert fires. If the switch to the in-cluster cache happened right after the upstream was removed, every node could be left with nowhere to pull images from.
+  Turning the cache on or off, changing the registry, changing credentials — each of these is an ordinary reconfiguration, possible at any time and in any order. Exactly one change has a condition attached: when the [upstream](configuration.html#parameters-primary-upstream) is removed to go air-gapped, the module waits until the in-cluster cache holds the whole expected image set and no workload in the `kube-system` and `d8-*` namespaces references the upstream any more — only then do images stop being pulled from the registry set in `primary.upstream`. Workloads in other namespaces are not counted: move the ones whose images reference the upstream address onto the in-cluster address before removing the upstream. While this is in progress, the [`D8RegistryAirGapTransitionHeld`](faq.html#what-do-the-registry-alerts-mean) alert fires. If the switch to the in-cluster cache happened right after the upstream was removed, every node could be left with nowhere to pull images from.
 
   The cache reclaims its own disk space. Nothing else ever removes data from it — every release adds a slice of the repository — so a nightly sweep removes the slices of releases the cluster has already passed through, keeping the deployed release and the one before it. One replica goes read-only while this runs, which is why the sweep defaults to a nighttime hour. For details, see the [`storage.garbageCollection`](configuration.html#parameters-storage-garbagecollection) parameter and the FAQ section [The cache keeps growing. What reclaims it](faq.html#the-cache-keeps-growing-what-reclaims-it).
 
@@ -78,7 +78,7 @@ An unconfigured registry is proxied untouched, along with whatever credentials t
 
 #### The in-cluster cache
 
-With [`storage.cache`](configuration.html#parameters-storage-cache) enabled, a registry runs on each control-plane node. It stores blobs (the files an image is made of) in the `/opt/deckhouse/registry` directory. One control-plane node holds the lease and fills from the upstream; the others replicate data from the leading replica (the one holding the lease) ahead of time, so losing the leader does not mean filling from scratch. For details on how the leading replica is chosen, see [Leader election](#leader-election).
+With [`storage.cache`](configuration.html#parameters-storage-cache) enabled, a registry runs on each control-plane node. It stores blobs (the files an image is made of) in the cache directory: `/var/lib/deckhouse/registry` when the master NodeGroup has `systemType: Immutable`, `/opt/deckhouse/registry` otherwise. One control-plane node holds the lease and fills from the upstream; the others replicate data from the leading replica (the one holding the lease) ahead of time, so losing the leader does not mean filling from scratch. For details on how the leading replica is chosen, see [Leader election](#leader-election).
 
 Agents reach a replica by the node's address, not by the service name `registry.d8-system.svc:5001`.
 `registry.d8-system.svc:5001` is what every image reference in the cluster is built from, and what a request is matched against. But the agent runs in the host's network namespace, where the cluster DNS name does not resolve.
@@ -103,7 +103,7 @@ and what the controller fetches follow — with no registry address for the
 controller written down anywhere, and so none that could be left pointing at the old one.
 
 {% alert level="warning" %}
-Use a separate disk for the cache (`/opt/deckhouse/registry`) and for etcd data. Sharing one
+Use a separate disk for the cache directory and for etcd data. Sharing one
 disk degrades etcd while the cache is being filled.
 {% endalert %}
 

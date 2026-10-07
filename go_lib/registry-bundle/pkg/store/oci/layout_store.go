@@ -57,6 +57,7 @@ func NewLayoutStore(fsys fs.FS) (*LayoutStore, error) {
 		return nil, fmt.Errorf("index.json: %w", err)
 	}
 
+	contentStore := NewContentStore(client)
 	for _, desc := range index.Manifests {
 		short := types.ShortDescriptor{}
 		short.FromDescriptor(desc)
@@ -65,13 +66,56 @@ func NewLayoutStore(fsys fs.FS) (*LayoutStore, error) {
 		if tag := types.GetTagFromAnnotation(desc); tag != "" {
 			tags.Set(desc.Digest, tag)
 		}
+
+		// Reading local files, which nothing cancels.
+		if err := registerIndexChildren(context.Background(), contentStore, manifests, short, 0); err != nil {
+			return nil, fmt.Errorf("manifest %q: %w", desc.Digest, err)
+		}
 	}
 
 	return &LayoutStore{
-		ContentStore: NewContentStore(client),
+		ContentStore: contentStore,
 		tags:         tags,
 		manifests:    manifests,
 	}, nil
+}
+
+// registerIndexChildren makes the manifests an image index points at resolvable by digest.
+//
+// index.json names an image index by its tag, and a client pulling that tag reads the index, picks the
+// child for its platform and asks for it BY DIGEST. Only index.json was registered, so that second
+// request found nothing. Children absent from the layout are left out: ValidateLayout has already
+// decided which absences are acceptable.
+func registerIndexChildren(
+	ctx context.Context, contentStore *ContentStore, manifests *Manifests, desc types.ShortDescriptor, depth int,
+) error {
+	if !types.IsManifestList(desc.MediaType) {
+		return nil
+	}
+	if depth >= maxIndexDepth {
+		return fmt.Errorf("image indexes nested deeper than %d", maxIndexDepth)
+	}
+
+	children, err := types.ManifestListSuccessors(fetchAll(ctx, contentStore), desc)
+	if err != nil {
+		return fmt.Errorf("children of index %q: %w", desc.Digest, err)
+	}
+	for _, child := range children {
+		ok, _, err := contentStore.Exists(ctx, child.Digest)
+		if err != nil {
+			return fmt.Errorf("child %q: %w", child.Digest, err)
+		}
+		if !ok {
+			continue
+		}
+		short := types.ShortDescriptor{}
+		short.FromDescriptor(child)
+		manifests.Set(child.Digest, short)
+		if err := registerIndexChildren(ctx, contentStore, manifests, short, depth+1); err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 // Resolve implements [store.Store].
@@ -123,6 +167,7 @@ func (s *LayoutStore) HasTags() bool {
 
 // ValidateLayout checks oci-layout version, reads index.json, and ensures every blob
 // reachable from each index manifest (via [store.ManifestSuccessors]) exists under fsys.
+// An image index is followed into the manifests it lists; see validateDescriptor.
 func ValidateLayout(ctx context.Context, fsys fs.FS) error {
 	client := NewContentClient(fsys)
 	contentStore := NewContentStore(client)
@@ -142,8 +187,75 @@ func ValidateLayout(ctx context.Context, fsys fs.FS) error {
 	}
 
 	for _, manifest := range index.Manifests {
-		if err := validateManifest(ctx, manifest, contentStore); err != nil {
+		if err := validateDescriptor(ctx, manifest, contentStore, 0); err != nil {
 			return fmt.Errorf("manifest %q: %w", manifest.Digest, err)
+		}
+	}
+	return ctx.Err()
+}
+
+const (
+	// maxIndexDepth bounds how deeply image indexes may nest. One level is what a multi-platform image
+	// is; the bound exists so that an index naming itself ends in an error rather than a stack overflow.
+	maxIndexDepth = 4
+
+	// referenceTypeAnnotation and attestationManifest mark the provenance manifest buildx attaches to an
+	// image index beside the platform images.
+	referenceTypeAnnotation = "vnd.docker.reference.type"
+	attestationManifest     = "attestation-manifest"
+)
+
+// validateDescriptor checks one entry of a layout: a manifest and every blob it references, or an image
+// index and every manifest it lists.
+//
+// An image index is a legitimate top-level entry, and the bundle has one: `d8 mirror pull` copies the d8
+// CLI image (`deckhouse-cli`) as it is published, and since it is built with buildx that is an index of
+// one platform image and one attestation manifest. Refused as an "invalid media type", every installation
+// from a bundle stopped before it began (`process deckhouse-cli.tar: ... invalid media type
+// "application/vnd.oci.image.index.v1+json"`, e2e-registry `bundle` and `dhctl-airgap`, 2026-10-05).
+//
+// Every platform image an index lists has to be present and complete — that is what a pull of it reads.
+// The one absence tolerated is an attestation manifest: it describes how the image was built, no runtime
+// pulls it, and a mirror that leaves it behind still serves the image whole.
+func validateDescriptor(ctx context.Context, desc ociv1.Descriptor, contentStore *ContentStore, depth int) error {
+	if types.IsManifestList(desc.MediaType) {
+		return validateIndex(ctx, desc, contentStore, depth)
+	}
+	return validateManifest(ctx, desc, contentStore)
+}
+
+func validateIndex(ctx context.Context, desc ociv1.Descriptor, contentStore *ContentStore, depth int) error {
+	if depth >= maxIndexDepth {
+		return fmt.Errorf("image indexes nested deeper than %d", maxIndexDepth)
+	}
+
+	ok, _, err := contentStore.Exists(ctx, desc.Digest)
+	if err != nil {
+		return fmt.Errorf("index %q: %w", desc.Digest, err)
+	}
+	if !ok {
+		return fmt.Errorf("index %q: %w", desc.Digest, errs.ErrBlobNotFound)
+	}
+
+	shortDesc := types.ShortDescriptor{}
+	shortDesc.FromDescriptor(desc)
+	children, err := types.ManifestListSuccessors(fetchAll(ctx, contentStore), shortDesc)
+	if err != nil {
+		return fmt.Errorf("index %q: %w", desc.Digest, err)
+	}
+
+	for _, child := range children {
+		if child.Annotations[referenceTypeAnnotation] == attestationManifest {
+			present, _, err := contentStore.Exists(ctx, child.Digest)
+			if err != nil {
+				return fmt.Errorf("attestation %q: %w", child.Digest, err)
+			}
+			if !present {
+				continue
+			}
+		}
+		if err := validateDescriptor(ctx, child, contentStore, depth+1); err != nil {
+			return fmt.Errorf("in index %q: %w", desc.Digest, err)
 		}
 	}
 	return ctx.Err()

@@ -66,6 +66,12 @@ type Inputs struct {
 	// Config is the resolved configuration, already validated.
 	Config registryv1alpha1.RegistryConfigSpec
 
+	// StorePath is where the store keeps its blobs on a node, as the module mounts it.
+	// Reported in the storage spec so that an operator reclaiming the disk is told the
+	// directory that actually holds it; empty falls back to the bashible node's path,
+	// which is where every cluster predating the second one keeps them.
+	StorePath string
+
 	// AppliedUpstream is the upstream currently in effect, as recorded in
 	// RegistryConfig.status.effectiveUpstream.
 	//
@@ -93,16 +99,32 @@ type Inputs struct {
 	PersistedCredentials map[string]registryv1alpha1.Auth
 
 	// UpstreamProbeFailed reports that the configured upstream did not pass its
-	// preflight probe, so the cluster must stay on AppliedUpstream.
+	// preflight probe, so the cluster must stay on AppliedUpstream — unless NothingApplied.
 	//
 	// Separated from the probe itself so that this package stays a pure function:
 	// the decision is testable without a network, and the probe is testable without
 	// a layout.
 	UpstreamProbeFailed bool
 
+	// NothingApplied reports that this module has never laid anything out here: RegistryConfig
+	// records no effective upstream and no RegistryStorage exists. That is a cluster on its
+	// first configuration, and nothing else is: an air-gapped cluster has a nil AppliedUpstream
+	// too, but it got there through a storage it still has.
+	//
+	// It is what a failed probe is judged against. A probe holds the cluster on what it has; a
+	// cluster that has nothing has the configured upstream — the one it was installed from, which
+	// every node is already pulling through — and holding "the previous one" there handed the
+	// nodes an empty store as their only backend.
+	NothingApplied bool
+
 	// LeaderFull reports whether the storage leader holds the whole expected set.
 	// It gates the air-gap transition.
 	LeaderFull bool
+
+	// UpstreamReferences is how many platform workloads still name the upstream in effect, or
+	// nil when they were not counted. The other half of the air-gap gate, and nil withholds it:
+	// see SafeToDropUpstream.
+	UpstreamReferences *int32
 
 	// Nodes are the names of the cluster nodes that need an agent layout.
 	Nodes []string
@@ -120,6 +142,19 @@ type Inputs struct {
 	// declared those hours safe for disruption, and collecting is a small disruption of
 	// exactly that kind.
 	MaintenanceWindows []MaintenanceWindow
+}
+
+// storePathOf is where this cluster's store keeps its blobs, with the bashible node's
+// path as the fallback.
+//
+// A fallback rather than a requirement, because this is reported rather than acted on: a
+// controller that refused to compile a layout over a missing informational field would
+// take the cluster's pull path down over a directory name.
+func storePathOf(in Inputs) string {
+	if in.StorePath == "" {
+		return constant.StorePath
+	}
+	return in.StorePath
 }
 
 // Desired is the layout to converge on.
@@ -182,8 +217,20 @@ func compute(in Inputs) Desired {
 	//
 	//   - the new one failed its preflight probe, so switching would break pulls;
 	//   - the configuration asks for air-gap, but the cache cannot stand alone yet.
+	//
+	// A failed probe holds everywhere except on a cluster this module has not configured yet
+	// (Inputs.NothingApplied). There the configured upstream is the one the cluster was
+	// installed from — every node is already pulling through it. Holding "the previous one"
+	// meant holding nothing: the nodes were handed the store alone, an empty one with no
+	// upstream to fill it, which is air-gap with an empty cache. Nor does the probe recover
+	// from that by itself: early in a bootstrap it fails on the cluster's DNS not being up yet,
+	// and with every pull going to an empty store the DNS image is never pulled.
+	//
+	// Not judged by a nil AppliedUpstream: an air-gapped cluster has that too, and an upstream
+	// that fails its probe must not take it out of air-gap.
 	effectiveUpstream := desiredUpstream
-	if in.UpstreamProbeFailed || effectiveUpstream == nil {
+	probeHolds := in.UpstreamProbeFailed && !in.NothingApplied
+	if probeHolds || effectiveUpstream == nil {
 		// Held, so it arrives without credentials: see Inputs.PersistedCredentials.
 		effectiveUpstream = withPersistedAuth(in.AppliedUpstream, in.PersistedCredentials)
 	}
@@ -218,9 +265,12 @@ func compute(in Inputs) Desired {
 	// idempotent reconfiguration; this one is gated on the LEADER being complete,
 	// deliberately not on every replica: followers are filled ahead of time and in
 	// parallel, so waiting for all of them would delay the transition without
-	// making it safer.
+	// making it safer — and on nothing on the platform still naming the upstream,
+	// which a full cache cannot stand in for. SafeToDropUpstream reports the same
+	// two halves in status.safeToDropUpstream, so the field cannot claim what is
+	// refused here.
 	wantAirGap := desiredUpstream == nil
-	dropUpstream := wantAirGap && in.LeaderFull
+	dropUpstream := wantAirGap && in.LeaderFull && referencesClear(effectiveUpstream, in.UpstreamReferences)
 
 	heldUpstream := effectiveUpstream
 	if dropUpstream {
@@ -231,7 +281,7 @@ func compute(in Inputs) Desired {
 		Upstream: heldUpstream,
 		Source:   in.Config.Storage.Source,
 		Store: registryv1alpha1.StorageStore{
-			Path: constant.StorePath,
+			Path: storePathOf(in),
 			Size: in.Config.Storage.Size,
 		},
 		// The authenticated write endpoint is published on every managed cluster.

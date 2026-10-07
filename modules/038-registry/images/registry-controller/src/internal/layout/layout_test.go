@@ -22,6 +22,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"k8s.io/utils/ptr"
 
 	registryv1alpha1 "github.com/deckhouse/deckhouse/go_lib/registry/apis/deckhouse.io/v1alpha1"
 	constant "github.com/deckhouse/deckhouse/go_lib/registry/const"
@@ -234,13 +235,32 @@ func TestComputeAirGapWaitsForTheLeader(t *testing.T) {
 		assert.Nil(t, got.Nodes["master-0"].Backends[1].Endpoint.Auth)
 	})
 
+	t.Run("the leader is full but the platform still names the upstream", func(t *testing.T) {
+		for name, references := range map[string]*int32{"three references": ptr.To[int32](3), "no count": nil} {
+			got := Compute(Inputs{
+				Config:             config,
+				AppliedUpstream:    applied,
+				LeaderFull:         true,
+				UpstreamReferences: references,
+				Nodes:              []string{"master-0"},
+				StorageAccess:      testAccess(),
+			})
+
+			assert.Falsef(t, got.DropUpstream, "%s: a reference to the upstream has no route without it", name)
+			require.NotNilf(t, got.HeldUpstream, "%s", name)
+			assert.Lenf(t, got.Nodes["master-0"].Backends, 2, "%s: the nodes keep their fallback", name)
+			assert.Falsef(t, got.Storage.NeedSync, "%s: and there is nothing left to fill", name)
+		}
+	})
+
 	t.Run("the leader is full", func(t *testing.T) {
 		got := Compute(Inputs{
-			Config:          config,
-			AppliedUpstream: applied,
-			LeaderFull:      true,
-			Nodes:           []string{"master-0", "worker-1"},
-			StorageAccess:   testAccess(),
+			Config:             config,
+			AppliedUpstream:    applied,
+			LeaderFull:         true,
+			UpstreamReferences: ptr.To[int32](0),
+			Nodes:              []string{"master-0", "worker-1"},
+			StorageAccess:      testAccess(),
 		})
 
 		assert.True(t, got.DropUpstream, "the cache is complete, so this is the moment of the transition")
@@ -334,8 +354,69 @@ func TestComputeHoldsLastKnownGoodOnAFailedProbe(t *testing.T) {
 }
 
 // TestComputeFirstUpstreamFailingItsProbe covers the case with nothing to fall back
-// on: a fresh cluster configured with an upstream that does not work.
+// on: a fresh cluster whose first probe fails.
+//
+// The configured upstream stays. It is the one the cluster was installed from, so a
+// failure this early says more about the cluster than about the upstream — the pod
+// network's DNS, which the probe resolves through, is often not up yet. Holding
+// "nothing" instead handed every node an empty store as its only backend: no pull could
+// succeed, the DNS image included, so the probe never passed and the cluster stood
+// there air-gapped with an empty cache. The condition on RegistryConfig still reports
+// the failure.
 func TestComputeFirstUpstreamFailingItsProbe(t *testing.T) {
+	configured := testUpstream("registry.deckhouse.io")
+
+	t.Run("cache", func(t *testing.T) {
+		got := Compute(Inputs{
+			Config: registryv1alpha1.RegistryConfigSpec{
+				Mode:    registryv1alpha1.ModeManaged,
+				Primary: registryv1alpha1.PrimarySource{Upstream: configured},
+				Storage: registryv1alpha1.StorageConfig{Cache: true, Source: testSource()},
+			},
+			AppliedUpstream:     nil,
+			UpstreamProbeFailed: true,
+			NothingApplied:      true,
+			Nodes:               []string{"master-0"},
+			StorageAccess:       testAccess(),
+		})
+
+		require.NotNil(t, got.Storage)
+		require.NotNil(t, got.Storage.Upstream, "the store must keep something to fill itself from")
+		assert.Equal(t, "registry.deckhouse.io", got.Storage.Upstream.Endpoint.Host)
+		assert.True(t, got.Storage.NeedSync)
+		assert.False(t, got.DropUpstream)
+		require.NotNil(t, got.HeldUpstream)
+
+		node := got.Nodes["master-0"]
+		require.Len(t, node.Backends, 2, "the store first, the upstream behind it")
+		assert.Equal(t, registryv1alpha1.BackendStorage, node.Backends[0].Name)
+		assert.Equal(t, "registry.deckhouse.io", node.Backends[1].Endpoint.Host)
+	})
+
+	t.Run("no cache", func(t *testing.T) {
+		got := Compute(Inputs{
+			Config: registryv1alpha1.RegistryConfigSpec{
+				Mode:    registryv1alpha1.ModeManaged,
+				Primary: registryv1alpha1.PrimarySource{Upstream: configured},
+				Storage: registryv1alpha1.StorageConfig{Cache: false},
+			},
+			AppliedUpstream:     nil,
+			UpstreamProbeFailed: true,
+			NothingApplied:      true,
+			Nodes:               []string{"worker-1"},
+		})
+
+		node := got.Nodes["worker-1"]
+		require.Len(t, node.Backends, 1, "a node with no backend at all cannot pull anything")
+		assert.Equal(t, "registry.deckhouse.io", node.Backends[0].Endpoint.Host)
+	})
+}
+
+// TestComputeAirGapHoldsAgainstAFailingUpstream is the other cluster with a nil AppliedUpstream:
+// one that is air-gapped. An upstream configured there and failing its probe must leave it where
+// it is — on its store, with nothing to fall back to that does not work — rather than be taken
+// for a cluster on its first configuration and switched onto the upstream that just failed.
+func TestComputeAirGapHoldsAgainstAFailingUpstream(t *testing.T) {
 	got := Compute(Inputs{
 		Config: registryv1alpha1.RegistryConfigSpec{
 			Mode:    registryv1alpha1.ModeManaged,
@@ -344,17 +425,18 @@ func TestComputeFirstUpstreamFailingItsProbe(t *testing.T) {
 		},
 		AppliedUpstream:     nil,
 		UpstreamProbeFailed: true,
+		NothingApplied:      false,
+		LeaderFull:          true,
 		Nodes:               []string{"master-0"},
 		StorageAccess:       testAccess(),
 	})
 
-	// Nothing good to hold, so nothing is used. Honest and inert: the condition on
-	// RegistryConfig is what tells the operator why, rather than a layout that
-	// looks configured and silently fails on every pull.
 	require.NotNil(t, got.Storage)
-	assert.Nil(t, got.Storage.Upstream)
-	assert.False(t, got.DropUpstream)
-	assert.Len(t, got.Nodes["master-0"].Backends, 1)
+	assert.Nil(t, got.Storage.Upstream, "the store must not start filling from the upstream that failed")
+	assert.Nil(t, got.HeldUpstream)
+	node := got.Nodes["master-0"]
+	require.Len(t, node.Backends, 1, "the store alone, as before the typo")
+	assert.Equal(t, registryv1alpha1.BackendStorage, node.Backends[0].Name)
 }
 
 // TestComputeAirGapFromScratch covers a cluster that never had an upstream: there

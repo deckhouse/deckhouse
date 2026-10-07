@@ -40,6 +40,7 @@ import (
 	metricsserver "sigs.k8s.io/controller-runtime/pkg/metrics/server"
 
 	registryv1alpha1 "github.com/deckhouse/deckhouse/go_lib/registry/apis/deckhouse.io/v1alpha1"
+	constant "github.com/deckhouse/deckhouse/go_lib/registry/const"
 
 	"github.com/deckhouse/registry-controller/internal/register"
 	_ "github.com/deckhouse/registry-controller/internal/register/controllers"
@@ -146,6 +147,7 @@ func main() {
 		probeAddr               string
 		disabledControllers     string
 		maxConcurrentReconciles int
+		storePath               string
 	)
 
 	flag.StringVar(&metricsAddr, "metrics-bind-address", "127.0.0.1:4281",
@@ -158,6 +160,10 @@ func main() {
 			"can be switched off without rolling back the image.")
 	flag.IntVar(&maxConcurrentReconciles, "max-concurrent-reconciles", 5,
 		"Maximum number of concurrent reconciles per controller.")
+	flag.StringVar(&storePath, "store-path", constant.StorePath,
+		"Where the store keeps its blobs on a node. Reported in RegistryStorage so an operator "+
+			"knows which directory holds them; the module passes the one it mounts, which differs "+
+			"on a node whose root filesystem is read-only.")
 
 	logs.AddGoFlags(flag.CommandLine)
 	flag.Parse()
@@ -176,7 +182,9 @@ func main() {
 		os.Exit(1)
 	}
 
-	if err := register.SetupAll(mgr, mgr.GetClient(), splitList(disabledControllers), maxConcurrentReconciles); err != nil {
+	if err := register.SetupAll(
+		mgr, mgr.GetClient(), splitList(disabledControllers), maxConcurrentReconciles, storePath,
+	); err != nil {
 		setupLog.Error(err, "unable to set up controllers")
 		os.Exit(1)
 	}

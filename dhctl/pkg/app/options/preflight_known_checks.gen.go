@@ -21,7 +21,6 @@ var generatedPreflightChecks = []string{
 	"immutable-kubeconfig-out",
 	"immutable-machines-availability",
 	"immutable-post-bootstrap-script",
-	"immutable-registry-mode",
 	"immutable-signature-mode",
 	"immutable-supported-provider",
 	"instance-class-provider",

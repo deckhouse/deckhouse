@@ -101,7 +101,7 @@ func (b *ClusterBootstrapper) printCollectedKubeconfig(ctx context.Context, bctx
 // rest; preflight has a non-skippable class now (Check.CannotBeSkipped), but this still runs
 // earlier than any preflight phase does, which is what a decision about how the first node is
 // created needs. The non-skippable class is for the guards that genuinely belong in a suite —
-// immutable-supported-provider and immutable-registry-mode.
+// immutable-supported-provider among them.
 func (b *ClusterBootstrapper) detectImmutableMaster(ctx context.Context, bctx *bootstrapContext) error {
 	immutableMaster, err := immutable.IsImmutableMaster(ctx, bctx.metaConfig)
 	if err != nil {

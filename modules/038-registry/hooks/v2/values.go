@@ -58,6 +58,15 @@ type Values struct {
 	// one place.
 	StorageAddresses []string `json:"storageAddresses,omitempty"`
 
+	// StorePath is where the store keeps its blobs on the nodes it runs on.
+	//
+	// A value rather than a constant because a node with a read-only root filesystem has
+	// nowhere to put them under /opt. Three things have to agree on it — the store's own
+	// hostPath, the path the controller reports in RegistryStorage so an operator knows
+	// which directory to reclaim, and the one the node agent measures — so it is decided
+	// once, here. See storePath in hook.go.
+	StorePath string `json:"storePath,omitempty"`
+
 	// RegistryConfig is the resolved primary configuration the RegistryConfig
 	// resource is rendered from.
 	RegistryConfig *RegistryConfig `json:"registryConfig,omitempty"`

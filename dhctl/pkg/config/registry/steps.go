@@ -37,6 +37,10 @@ const (
 	stateSecretName  = "registry-state"
 	initSecretName   = "registry-init"
 
+	// initSecretAppliedAnnotation is the previous implementation's mark of a consumed init secret,
+	// read for presence by modules/038-registry/hooks/orchestrator/init-secret.
+	initSecretAppliedAnnotation = "registry.deckhouse.io/is-applied"
+
 	conditionTypeReady = "Ready"
 )
 

@@ -319,10 +319,12 @@ miss otherwise.
   upstream — and this is what blocks a transition to air-gap.
 
 `D8RegistryAirGapTransitionHeld`
-: The upstream was removed from the configuration, but the module keeps using it, because the
-  cache cannot serve the cluster alone yet. This is the safe outcome: dropping the upstream
-  with an incomplete cache would leave the nodes with nowhere to pull from. The alert does not
-  resolve on its own if the cache has stopped filling.
+: The upstream was removed from the configuration, but the module keeps using it: either the
+  cache cannot serve the cluster alone yet, or workloads in the `kube-system` and `d8-*`
+  namespaces still reference the upstream (`upstreamReferences` in the RegistryStorage status).
+  This is the safe outcome: dropping the upstream at that point would leave the nodes with
+  nowhere to pull from. The alert does not resolve on its own if the cache has stopped filling
+  or a rollout onto the in-cluster address is stuck.
 
 `D8RegistryUpstreamProbeFailing`
 : A change to the primary upstream was rejected, and the cluster keeps using the last working
@@ -360,7 +362,7 @@ miss otherwise.
 
 ## How do I remove leftover cache data from a node?
 
-When the cache is turned off, the data under `/opt/deckhouse/registry` is intentionally kept:
+When the cache is turned off, the data in the cache directory is intentionally kept:
 if the cache is turned back on, it refills from what is already on disk instead of downloading
 everything again — over a slow link that saves hours. Deleting the data automatically would
 make turning the cache off irreversible, so the module leaves the decision to you: the agent
@@ -374,11 +376,25 @@ d8 k get registrynodes -o custom-columns=\
 NODE:.metadata.name,STALE:.status.staleStorageDataBytes
 ```
 
-If you are not going to turn the cache back on, remove the directory on the node:
+If you are not going to turn the cache back on, remove the cache directory on the node:
+`/var/lib/deckhouse/registry` on a node of a NodeGroup with `systemType: Immutable`,
+`/opt/deckhouse/registry` on other nodes. To do this, follow these steps:
 
-```bash
-ssh <NODE> 'du -sh /opt/deckhouse/registry && sudo rm -rf /opt/deckhouse/registry'
-```
+1. Open a root shell on the node over SSH. A node of a NodeGroup with `systemType: Immutable` has
+   no SSH: start a debug pod on it and switch to the node's root filesystem:
+
+   ```bash
+   d8 k debug node/<NODE> -it --image=<IMAGE>
+   chroot /host
+   ```
+
+1. Remove the data. The command checks both directories:
+
+   ```bash
+   for dir in /opt/deckhouse/registry /var/lib/deckhouse/registry; do
+     [ -d "$dir" ] && du -sh "$dir" && rm -rf "$dir"
+   done
+   ```
 
 ## The cache keeps growing. What reclaims it?
 

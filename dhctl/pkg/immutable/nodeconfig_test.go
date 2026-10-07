@@ -248,6 +248,77 @@ func TestNodeConfigRefusesTheInstallersOwnBundleRegistry(t *testing.T) {
 	require.ErrorContains(t, err, string(constant.ModeUnmanaged), "what to bootstrap with instead")
 }
 
+// A cluster whose registry ModuleConfig names an upstream and asks for a cache is
+// resolved by BundleBootstrapInputs.Resolve into Direct plus WithAgent, so this is the
+// ordinary shape of an Engine cluster installed from `mc/registry` — not an exotic one.
+//
+// The node is installed with the agent on it, as a bashible node is. The `deckhouse-registry`
+// secret names the in-cluster address, which only the agent serves, and the module's
+// NodeStaticPodRequest cannot bring the agent to the first master: the module is deployed by
+// the very Deckhouse that cannot pull its image without one. Measured on 2026-10-02: without
+// this the deckhouse pod sat in ImagePullBackOff on "lookup registry.d8-system.svc on
+// 8.8.8.8:53: no such host".
+//
+// spec.registry stays the upstream: it is what the agent routes by until the API answers.
+func TestNodeConfigCarriesTheAgentWhenTheAgentOwnsTheRuntime(t *testing.T) {
+	const agentDigest = "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+	metaConfig := testMetaConfig(t)
+	metaConfig.Registry.Settings.Mode = constant.ModeDirect
+	metaConfig.Registry.AgentOwnsRuntime = true
+	metaConfig.Images[registryDigestsKey] = map[string]any{registryAgentImage: agentDigest}
+
+	nodeConfig, err := buildNodeConfig(t.Context(), nodeConfigInput{
+		NodeName:   "example-master-0",
+		MetaConfig: metaConfig,
+	})
+
+	require.NoError(t, err, "an agent-owned pull path is how an Engine cluster installs from mc/registry")
+	require.Equal(t, "dev-registry.deckhouse.io", nodeConfig.Spec.Registry.Address,
+		"the agent's seed is the upstream the node names")
+	require.Equal(t, registryOwnerAgent, nodeConfig.Spec.ContainerRuntime.RegistryOwner)
+	require.Len(t, nodeConfig.Spec.StaticPods, 1)
+	require.Equal(t, registryAgentStaticPodName, nodeConfig.Spec.StaticPods[0].Name,
+		"node-controller recognises the agent by this name and keeps registry.d with it")
+	require.Contains(t, nodeConfig.Spec.StaticPods[0].Manifest, "image: deckhouse.local/images:registry-agent",
+		"the image the containerd extension imports, which needs no registry to start")
+	require.Contains(t, nodeConfig.Spec.StaticPods[0].Manifest,
+		`registry.deckhouse.io/agent-image-digest: "`+agentDigest+`"`,
+		"the tag is the same in every release, so the digest is what makes a new agent start")
+	require.NotContains(t, nodeConfig.Spec.StaticPods[0].Manifest, registryAgentDigestPlaceholder)
+}
+
+// An installer without the agent's digest cannot write a manifest that would ever change, so
+// it refuses rather than install an agent that no release could replace.
+func TestNodeConfigRefusesTheAgentWithoutItsDigest(t *testing.T) {
+	metaConfig := testMetaConfig(t)
+	metaConfig.Registry.Settings.Mode = constant.ModeDirect
+	metaConfig.Registry.AgentOwnsRuntime = true
+	delete(metaConfig.Images, registryDigestsKey)
+
+	_, err := buildNodeConfig(t.Context(), nodeConfigInput{
+		NodeName:   "example-master-0",
+		MetaConfig: metaConfig,
+	})
+
+	require.Error(t, err)
+}
+
+// Without the agent nothing changes hands: nodelet writes registry.d from spec.registry.
+func TestNodeConfigCarriesNoAgentByDefault(t *testing.T) {
+	metaConfig := testMetaConfig(t)
+	metaConfig.Registry.Settings.Mode = constant.ModeDirect
+
+	nodeConfig, err := buildNodeConfig(t.Context(), nodeConfigInput{
+		NodeName:   "example-master-0",
+		MetaConfig: metaConfig,
+	})
+
+	require.NoError(t, err)
+	require.Empty(t, nodeConfig.Spec.StaticPods)
+	require.Empty(t, nodeConfig.Spec.ContainerRuntime.RegistryOwner)
+}
+
+// Direct on its own is how every immutable master is installed.
 // Direct carries the same upstream as Unmanaged, and a config parsed from a
 // cluster resolves to it: refusing Local must not take Direct with it.
 func TestNodeConfigTakesTheUpstreamOfADirectRegistry(t *testing.T) {

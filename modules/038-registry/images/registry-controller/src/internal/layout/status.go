@@ -40,15 +40,22 @@ import (
 // keeps its last claim while the lease has moved on. Read by array order, two such claims can
 // make `status.Leader` name a replica that no longer exists while `LeaderFull` answers from the
 // other — and LeaderFull is what authorizes dropping the upstream.
+//
+// `upstreamReferences` is the count of platform workloads still naming the held upstream, or nil
+// when it was not taken. See SafeToDropUpstream.
 func Aggregate(
 	spec *registryv1alpha1.RegistryStorageSpec,
 	replicas []registryv1alpha1.StorageReplicaStatus,
 	leaseHolder string,
+	upstreamReferences *int32,
 ) registryv1alpha1.RegistryStorageStatus {
 	status := registryv1alpha1.RegistryStorageStatus{
 		// The cache is the only source of images exactly when no upstream is left.
 		Authoritative: spec.Upstream == nil,
 		Replicas:      replicas,
+	}
+	if spec.Upstream != nil {
+		status.UpstreamReferences = upstreamReferences
 	}
 
 	if len(replicas) == 0 {
@@ -87,7 +94,7 @@ func Aggregate(
 	status.Leader = leader.Node
 	// Reported through the very same predicate the transition is gated on, so the
 	// field cannot claim "safe" while the controller refuses to act on it.
-	status.SafeToDropUpstream = LeaderFull(replicas, leaseHolder)
+	status.SafeToDropUpstream = SafeToDropUpstream(spec, replicas, leaseHolder, upstreamReferences)
 
 	// Progress out of whatever denominator is known, and there are two.
 	//
@@ -149,6 +156,41 @@ func fillDenominator(spec *registryv1alpha1.RegistryStorageSpec, leader *registr
 func LeaderFull(replicas []registryv1alpha1.StorageReplicaStatus, leaseHolder string) bool {
 	leader := leaseHolderReport(replicas, leaseHolder)
 	return leader != nil && leader.Full && leader.Error == ""
+}
+
+// SafeToDropUpstream is the whole gate for going air-gap: the leader holds the expected set, and
+// nothing on the platform still names the upstream being held.
+//
+// The second half exists because completeness is about blobs and an image reference is about a
+// name. The cache answers the in-cluster address; a reference naming the upstream by its own name
+// has, once the upstream is gone, no route on the node at all — the runtime falls through to the
+// upstream directly and gets refused. Measured on the `scenarios` unit on 2026-10-05: the upstream
+// was dropped 70 seconds after the platform began moving onto the in-cluster address, a superseded
+// monitoring pod restarted its containers, the kubelet re-verified the pull it had made with the
+// previous credentials, and the pod never started again — while the replacement could not be
+// scheduled beside it.
+//
+// No count is no permission: nil means the references could not be counted, and an unknown is
+// not evidence that there is nothing to count. Once the upstream is already gone there is nothing
+// left to name, so the count is not asked for.
+func SafeToDropUpstream(
+	spec *registryv1alpha1.RegistryStorageSpec,
+	replicas []registryv1alpha1.StorageReplicaStatus,
+	leaseHolder string,
+	upstreamReferences *int32,
+) bool {
+	if spec == nil {
+		return false
+	}
+	return LeaderFull(replicas, leaseHolder) && referencesClear(spec.Upstream, upstreamReferences)
+}
+
+// referencesClear is the second half of the gate, shared by the status and the transition.
+func referencesClear(upstream *registryv1alpha1.Upstream, references *int32) bool {
+	if upstream == nil {
+		return true
+	}
+	return references != nil && *references == 0
 }
 
 // LeaderAddress is where the leading replica answers, or "" when there is no usable leader.

@@ -17,9 +17,12 @@ limitations under the License.
 package v2
 
 import (
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+
+	registry_const "github.com/deckhouse/deckhouse/go_lib/registry/const"
 )
 
 // TestThePersistedPKIIsFoundWhereverItStillIs is about not reissuing a certificate authority.
@@ -68,4 +71,47 @@ func TestThePersistedPKIIsFoundWhereverItStillIs(t *testing.T) {
 			assert.Equal(t, testCase.want, string(preferredPKIState(testCase.found)))
 		})
 	}
+}
+
+// TestStorePathFollowsTheMasterGroup: where the store keeps its blobs is a property of the
+// node it runs on, not of the configuration.
+//
+// Both directions are a silent failure, and they are not symmetric. On an Engine cluster
+// /opt is read-only, so the wrong answer is a store that cannot start — loudly, in the
+// pod. On a bashible cluster the wrong answer is a store pointed at an empty directory
+// beside the one holding every image the cluster already has: nothing fails, the cache
+// simply refetches the lot, and the blobs it had keep the disk.
+func TestStorePathFollowsTheMasterGroup(t *testing.T) {
+	cases := []struct {
+		name       string
+		systemType string
+		want       string
+	}{{
+		// A group predating the field carries no systemType, and that absence is bashible.
+		name:       "a group that names no system type",
+		systemType: "",
+		want:       registry_const.StorePath,
+	}, {
+		name:       "a bashible master group",
+		systemType: "Mutable",
+		want:       registry_const.StorePath,
+	}, {
+		name:       "an Engine master group",
+		systemType: systemTypeImmutable,
+		want:       registry_const.StorePathImmutable,
+	}}
+
+	for _, testCase := range cases {
+		t.Run(testCase.name, func(t *testing.T) {
+			assert.Equal(t, testCase.want, storePathFor(testCase.systemType))
+		})
+	}
+}
+
+// The two paths must differ, and the Engine one must not be under /opt: that is the whole
+// reason the second constant exists.
+func TestTheImmutableStorePathIsNotUnderOpt(t *testing.T) {
+	assert.NotEqual(t, registry_const.StorePath, registry_const.StorePathImmutable)
+	assert.False(t, strings.HasPrefix(registry_const.StorePathImmutable, "/opt/"),
+		"a read-only root filesystem has nowhere to put blobs under /opt")
 }

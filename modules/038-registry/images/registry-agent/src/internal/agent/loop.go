@@ -104,6 +104,10 @@ type Loop struct {
 	// sees half of one.
 	current atomic.Pointer[registryv1alpha1.RegistryNodeSpec]
 
+	// apiMisses counts consecutive passes that had a client and still did not read the layout
+	// from the API server. See reconnect.
+	apiMisses int
+
 	// staleBytes is the last measurement of the cache data left on this node, and when
 	// it was taken.
 	staleBytes atomic.Int64
@@ -165,6 +169,41 @@ func (l *Loop) connect() {
 	}
 }
 
+// reconnectAfter is how many passes in a row a client may fail before it is dropped and built
+// again. Three passes, a minute and a half at the default interval: longer than an API server
+// restart, short enough that an agent pinned to a master that is gone moves on.
+const reconnectAfter = 3
+
+// reconnect drops a client that keeps failing, so that the next pass builds a new one.
+//
+// Failing means the API server did not answer (layout.Snapshot.Answered), not that the layout
+// came from somewhere else: a node whose layout has not been compiled yet runs on its bootstrap
+// layout through a client that works, and dropping that one every few passes only produced a
+// warning about an API server that was answering all along.
+//
+// A client is built once, against one endpoint, and nothing else ever replaces it. An agent
+// whose endpoint went away — a drained or replaced master — therefore stayed on the layout it
+// had cached for as long as the node ran, with the rest of the control plane up. Dropping it
+// is all it takes: connect builds the next one from the node's config as it is now, against the
+// next endpoint (Identity.Attempt).
+func (l *Loop) reconnect(answered bool) {
+	if l.Connect == nil || l.Source.Client == nil || answered {
+		l.apiMisses = 0
+		return
+	}
+	l.apiMisses++
+	if l.apiMisses < reconnectAfter {
+		return
+	}
+	l.apiMisses = 0
+	l.Log.Warn("the API server has not answered for several passes; reconnecting through the next endpoint",
+		"passes", reconnectAfter)
+	l.Source.Client = nil
+	if l.Publisher != nil {
+		l.Publisher.Client = nil
+	}
+}
+
 func (l *Loop) once(ctx context.Context) error {
 	l.connect()
 
@@ -176,6 +215,7 @@ func (l *Loop) once(ctx context.Context) error {
 
 	snapshot, err := l.Source.Get(ctx)
 	if err != nil {
+		l.reconnect(false)
 		l.report(ctx, status.State{
 			ProxyListening: l.serving(),
 			Error:          err.Error(),
@@ -184,6 +224,9 @@ func (l *Loop) once(ctx context.Context) error {
 	}
 
 	if snapshot == nil {
+		// The API server said so, which is an answer.
+		l.reconnect(true)
+
 		// Not a managed node, or the layout was removed. What the agent owns in the
 		// runtime configuration goes away with it; anything an administrator wrote stays.
 		l.current.Store(nil)
@@ -200,6 +243,7 @@ func (l *Loop) once(ctx context.Context) error {
 	}
 
 	spec, origin := snapshot.Spec, snapshot.Origin
+	l.reconnect(snapshot.Answered)
 
 	// The proxy is given the new layout BEFORE the runtime is pointed at it. The other
 	// order would leave a window where the runtime sends requests the proxy cannot yet

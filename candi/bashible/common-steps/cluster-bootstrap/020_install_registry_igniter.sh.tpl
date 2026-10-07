@@ -216,6 +216,11 @@ token:
   expiration: 900
   certificate: "${pki_path}/token.crt"
   key: "${pki_path}/token.key"
+  # Upstream distribution v3 trusts keys by RFC 7638 JWK thumbprint, and docker_auth signs with
+  # libtrust's legacy key ID by default: the same key under a name the registry cannot find, so every
+  # pull came back 401 with "token signed by untrusted key". As the store's own token service does
+  # (templates/v2/storage/pki-secret.yaml).
+  disable_legacy_key_id: true
 
 users:
   {{ .registry.bootstrap.init.ro_user.name | quote }}:
@@ -264,34 +269,69 @@ http:
     certificate: "${pki_path}/distribution.crt"
     key: "${pki_path}/distribution.key"
 
-{{- with .registry.bootstrap.proxy }}
-proxy:
-  remoteurl: "{{ .scheme }}://{{ .host }}"
-  {{- if .username }}
-  username: {{ .username | quote }}
-  password: {{ .password | quote }}
-  {{- end }}
-  remotepathonly: {{ .path | quote }}
-  localpathalias: "/system/deckhouse"
-  {{- with .ca }}
-  ca: "${pki_path}/upstream-registry-ca.crt"
-  {{- end }}
-  {{- with .ttl }}
-  ttl: {{ . | quote }}
-  {{- end }}
-{{- end }}
-
 auth:
   token:
-    realm: https://${discovered_node_ip}:5051/auth
+    realm: https://${discovered_node_ip}:5001/auth/token
     service: Deckhouse registry
     issuer: Registry server
     rootcertbundle: "${pki_path}/token.crt"
     autoredirect: true
+    autoredirectpath: /auth/token
     proxy:
       url: https://127.0.0.1:5051/auth
       ca: "${pki_path}/ca.crt"
 EOF
+
+# The registry image is a wrapper around upstream distribution (modules/038-registry/images/
+# docker-distribution/wrapper), and `serve` reads a second file of its own beside the one above: the
+# prefix the cluster pulls by, the upstream a miss goes to, the token service, the reserve the store
+# keeps free. Without it the process exits at once with "reading /config/deckhouse.yaml", which is
+# what broke every Proxy and Local bootstrap once the image stopped being the patched fork. Rendered
+# the way registry-syncer renders it for the store (RenderWrapper), so the two cannot drift apart.
+#
+# The reserve is the syncer's formula over the filesystem the data lives on: the registry refuses to
+# start without one, because without it the store writes until the node has no space left.
+store_capacity="$(df -B1 --output=size "${data_path}" | tail -n 1 | tr -d ' ')"
+if [[ -z "${store_capacity}" || "${store_capacity}" -le 0 ]]; then
+  bb-log-error "cannot read the size of the filesystem under ${data_path}"
+  exit 1
+fi
+store_tenth=$(( store_capacity / 10 ))
+store_reserve=$(( (store_tenth < 40 * 1024 ** 3 ? store_tenth : 40 * 1024 ** 3) + (store_tenth < 20 * 1024 ** 3 ? store_tenth : 20 * 1024 ** 3) ))
+
+# Composed in parts so that the upstream's credentials pass through a QUOTED heredoc: the shell
+# expands nothing in it, so a backtick or a backslash in a password reaches the file as written.
+# The parts around it carry the paths and the reserve, which do need expanding.
+{
+cat << EOF
+scope: system/deckhouse
+EOF
+{{- with .registry.bootstrap.proxy }}
+{{- /* No ttl: the wrapper's cache keeps what it fetched and never expires it, as the store's does. */}}
+cat << 'EOF'
+upstream:
+  address: {{ .host | quote }}
+  scheme: {{ .scheme | quote }}
+  path: {{ .path | quote }}
+  {{- if .username }}
+  username: {{ .username | quote }}
+  password: {{ .password | quote }}
+  {{- end }}
+EOF
+{{- if .ca }}
+cat << EOF
+  ca: "${pki_path}/upstream-registry-ca.crt"
+EOF
+{{- end }}
+{{- end }}
+cat << EOF
+authProxy:
+  url: https://127.0.0.1:5051/auth
+  ca: "${pki_path}/ca.crt"
+store:
+  reserve: ${store_reserve}
+EOF
+} | bb-sync-file "${distribution_path}/deckhouse.yaml" -
 
 # Prepare start script
 bb-sync-file "${igniter_start_sh}" - << EOF
@@ -371,7 +411,7 @@ if ! liveness_probe "https://127.0.0.1:5051" "${pki_path}/ca.crt"; then
 fi
 
 echo "Starting registry distribution"
-if ! start_and_wait "${log_path}/distribution.log" /opt/deckhouse/bin/ign-registry serve "${distribution_path}/config.yaml"; then
+if ! start_and_wait "${log_path}/distribution.log" /opt/deckhouse/bin/ign-registry serve --deckhouse-config "${distribution_path}/deckhouse.yaml" "${distribution_path}/config.yaml"; then
     echo "ERROR: registry distribution failed to start, see ${log_path}/distribution.log"
     exit 1
 fi

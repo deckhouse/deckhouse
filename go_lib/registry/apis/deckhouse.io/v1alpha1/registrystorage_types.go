@@ -140,10 +140,14 @@ type RegistryStorageStatus struct {
 	// +optional
 	Fill *FillProgress `json:"fill,omitempty"`
 
-	// SafeToDropUpstream means the LEADER holds the expected set, which is the
-	// gate for going air-gap. Deliberately the leader alone and not every
-	// replica: followers are filled ahead of time and in parallel, so waiting
-	// for all of them would delay the transition without adding safety.
+	// SafeToDropUpstream means the LEADER holds the expected set AND nothing on the platform
+	// still names the upstream, which together are the gate for going air-gap. Deliberately
+	// the leader alone and not every replica: followers are filled ahead of time and in
+	// parallel, so waiting for all of them would delay the transition without adding safety.
+	//
+	// The second half is UpstreamReferences, and a full cache does not make up for it: an
+	// image reference that names the upstream by its own name is not answered by the cache
+	// once the upstream is gone, however many of its blobs the cache holds.
 	//
 	// Serialized even when false, which is why it carries no `omitempty`: on a
 	// bool that option erases the answer instead of shortening it, and "no, it is
@@ -152,6 +156,16 @@ type RegistryStorageStatus struct {
 	// question "can this cluster go air-gap yet" then has no visible answer at
 	// all, only a missing one.
 	SafeToDropUpstream bool `json:"safeToDropUpstream"`
+
+	// UpstreamReferences is how many platform workloads still name the upstream the storage
+	// is holding, counted while the leader is full and the upstream is still held — the one
+	// state in which the count decides anything.
+	//
+	// Absent means not counted, and that withholds SafeToDropUpstream exactly as a nonzero
+	// count does: a count that could not be taken is no evidence that there is nothing to
+	// count.
+	// +optional
+	UpstreamReferences *int32 `json:"upstreamReferences,omitempty"`
 
 	// AllReplicasFull means every replica holds the expected set, so losing the
 	// leader costs nothing.

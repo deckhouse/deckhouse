@@ -52,6 +52,12 @@ type Snapshot struct {
 	Spec       *registryv1alpha1.RegistryNodeSpec
 	Generation int64
 	Origin     Origin
+
+	// Answered reports that the API server answered this read, whatever the layout's origin.
+	// A node whose layout has not been compiled yet runs on its bootstrap layout with an API
+	// server that is perfectly reachable: it said "no such object". Only an unanswered read
+	// says anything about the client, which is what the agent's reconnect is about.
+	Answered bool
 }
 
 // Source produces the node layout, preferring the API and falling back to disk.
@@ -141,7 +147,7 @@ func (s *Source) Get(ctx context.Context) (*Snapshot, error) {
 			s.Log.Error("cannot store the layout for use without the API server",
 				"error", saveErr.Error())
 		}
-		return &Snapshot{Spec: stored.Spec, Generation: stored.Generation, Origin: OriginAPI}, nil
+		return &Snapshot{Spec: stored.Spec, Generation: stored.Generation, Origin: OriginAPI, Answered: true}, nil
 
 	case isNotFound(err):
 		// Two situations look identical from here, and the cache is what tells them
@@ -156,7 +162,11 @@ func (s *Source) Get(ctx context.Context) (*Snapshot, error) {
 		if cacheErr != nil || stored != nil {
 			return nil, nil
 		}
-		return s.fromBootstrap()
+		snapshot, bootstrapErr := s.fromBootstrap()
+		if snapshot != nil {
+			snapshot.Answered = true
+		}
+		return snapshot, bootstrapErr
 	}
 
 	return s.withoutTheAPI(err)

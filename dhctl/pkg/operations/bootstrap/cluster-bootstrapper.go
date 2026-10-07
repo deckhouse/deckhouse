@@ -39,6 +39,7 @@ import (
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app/options"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
+	registry_config "github.com/deckhouse/deckhouse/dhctl/pkg/config/registry"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/global"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/immutable"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructure"
@@ -1417,6 +1418,14 @@ func (b *ClusterBootstrapper) bootstrapDeckhouse(ctx context.Context, bctx *boot
 	}
 
 	b.PhasedExecutionContext.CompleteSubPhase(ctx, phases.InstallDeckhouseSubPhaseConnect)
+
+	// An immutable master runs no bashible, so the step that uploads the registry PKI on every
+	// other cluster never runs, and the installation below reads that secret back.
+	if bctx.immutable != nil {
+		if err := registry_config.EnsureInitSecret(ctx, kubeCl, bctx.metaConfig.Registry.BundleBootstrap); err != nil {
+			return err
+		}
+	}
 
 	installParams := InstallDeckhouseParams{
 		BeforeDeckhouseTask: func() error {

@@ -20,7 +20,6 @@ import (
 	"fmt"
 	"strings"
 
-	constant "github.com/deckhouse/deckhouse/go_lib/registry/const"
 	dhlog "github.com/deckhouse/lib-dhctl/pkg/logger"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app/options"
@@ -35,7 +34,6 @@ import (
 // bootstrap path makes that the classic bashible path does not.
 const (
 	ImmutableInstallerImagesCheckName      preflight.CheckName = "immutable-installer-images"
-	ImmutableRegistryModeCheckName         preflight.CheckName = "immutable-registry-mode"
 	ImmutablePostBootstrapScriptCheckName  preflight.CheckName = "immutable-post-bootstrap-script"
 	ImmutableSignatureModeCheckName        preflight.CheckName = "immutable-signature-mode"
 	ImmutableKubeconfigOutCheckName        preflight.CheckName = "immutable-kubeconfig-out"
@@ -67,36 +65,6 @@ func ImmutableInstallerImages(metaConfig *config.MetaConfig) preflight.Check {
 			}
 			_, err := immutable.ResolveControlPlaneImages(ctx, metaConfig)
 			return err
-		}),
-	}
-}
-
-// ImmutableRegistryMode rejects the registry modes an immutable master cannot
-// use: it pulls from the registry directly, with no in-cluster proxy to route
-// through while it is still bringing the cluster up.
-//
-// Not skippable: this is not a check that might be wrong about the cluster, it is the shape of
-// the bootstrap dhctl is about to run. Skipping it does not let the run proceed — it lets it
-// proceed into a state the immutable path has no code for.
-func ImmutableRegistryMode(metaConfig *config.MetaConfig) preflight.Check {
-	return preflight.Check{
-		Name:            ImmutableRegistryModeCheckName,
-		Retry:           preflight.NoRetry,
-		Cacheable:       true,
-		CannotBeSkipped: true,
-		CannotBeSkippedReason: "an immutable master pulls from the registry directly, and the other " +
-			"registry modes are not implemented",
-		Description: "the registry runs in Unmanaged mode",
-		Phase:       preflight.PhasePreInfra,
-		Run: preflight.Detailless(func(_ context.Context) error {
-			mode := metaConfig.Registry.Settings.Mode
-			if mode != constant.ModeUnmanaged {
-				return fmt.Errorf(
-					"an immutable master supports registry mode %q only, got %q. Set the registry mode to Unmanaged",
-					constant.ModeUnmanaged, mode,
-				)
-			}
-			return nil
 		}),
 	}
 }
@@ -155,7 +123,7 @@ func ImmutableKubeconfigKept(bootstrapOpts *options.BootstrapOptions, globalOpts
 // actually been tried on. The limit is temporary and lifts once the remaining
 // clouds are tested.
 //
-// Not skippable, for the same reason as ImmutableRegistryMode: the answer is about what dhctl
+// Not skippable, for the same reason as ImmutableSupportedProvider: the answer is about what dhctl
 // supports, not about the operator's cluster, and there is nothing behind the flag to reach.
 func ImmutableSupportedProvider(metaConfig *config.MetaConfig) preflight.Check {
 	return preflight.Check{

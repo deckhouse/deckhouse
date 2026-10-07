@@ -58,6 +58,14 @@ const (
 
 	switchSnapName      = "v2-switch"
 	legacyStateSnapName = "legacy-state"
+	nodeGroupSnapName   = "node-groups"
+
+	// systemTypeImmutable is the NodeGroup whose nodes an on-node agent configures from a
+	// NodeConfig. bashible never runs on one, which is the whole of what this gate needs to
+	// know about it. Spelled out rather than imported from node-manager for the reason
+	// `modeDirect` is: it is a string read out of another module's resource, and the field
+	// names are the contract.
+	systemTypeImmutable = "Immutable"
 
 	blockedMetric      = "d8_registry_migration_pending"
 	blockedMetricGroup = "d8_registry_migration"
@@ -124,10 +132,30 @@ var _ = sdk.RegisterFunc(
 				},
 				FilterFunc: filterModuleConfig,
 			},
+			{
+				// Every NodeGroup, for the one question that can retire the legacy state
+				// entirely: is there a node in this cluster bashible could still be
+				// configuring. See gate.EngineOnly.
+				Name:       nodeGroupSnapName,
+				ApiVersion: "deckhouse.io/v1",
+				Kind:       "NodeGroup",
+				FilterFunc: filterNodeGroupSystemType,
+			},
 		},
 	},
 	handleSwitch,
 )
+
+// filterNodeGroupSystemType keeps one field of a NodeGroup: what configures its nodes.
+// Absent on every group predating the field, and that absence is the answer "bashible" —
+// which is why it is carried as the empty string rather than dropped.
+func filterNodeGroupSystemType(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
+	systemType, _, err := unstructured.NestedString(obj.Object, "spec", "systemType")
+	if err != nil {
+		return nil, fmt.Errorf("reading spec.systemType of NodeGroup %q: %w", obj.GetName(), err)
+	}
+	return systemType, nil
+}
 
 func filterSwitchSecret(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
 	// Only its existence matters. Nothing reads what is inside it, and giving it
@@ -212,6 +240,29 @@ type gate struct {
 	// `mode: Managed` together with a source of images. It is what makes taking over from
 	// `Direct` safe, and it is deliberately not consulted for any other mode.
 	ModuleConfigured bool
+
+	// EngineOnly reports that every NodeGroup in the cluster names `systemType: Immutable`,
+	// so no node here is configured by bashible.
+	//
+	// It settles the handover on its own, because the legacy implementation has exactly one
+	// way to reach a node and that is a bashible step. On such a cluster it has configured
+	// nothing, owns no pull path and has nothing to let go of — whatever its state secret
+	// says about itself describes objects in the cluster, not writers on the nodes.
+	//
+	// Without this the gate is not merely cautious here, it is stuck: every refusal below
+	// tells the operator to bring the legacy implementation to `Unmanaged` first, and the
+	// transitions that would do that are themselves bashible steps. So a `Direct` or `Proxy`
+	// state recorded on a cluster whose nodes are all Immutable never clears, the switch
+	// never happens, and with it the module never renders its controller — which is what
+	// compiles a RegistryUpstream into anything at all.
+	//
+	// Deliberately all rather than any. A cluster holding one bashible group still has nodes
+	// the legacy implementation can write to, and there the handover is the real thing.
+	//
+	// Asked once in practice: the switch it allows writes the marker secret AlreadySwitched
+	// reads, so a bashible group added later finds the question already answered — which is
+	// the wanted answer, since by then this implementation is the one configuring it.
+	EngineOnly bool
 }
 
 // decide answers whether the current implementation is active, and if not, why.
@@ -229,6 +280,13 @@ type gate struct {
 func (g gate) decide() (bool, string) {
 	if g.AlreadySwitched {
 		// The question this gate asks is about a moment that has passed.
+		return true, ""
+	}
+
+	if g.EngineOnly {
+		// No node here has a bashible writer, so there is no second writer to wait for —
+		// including when the state below cannot be read at all, which on any other cluster
+		// is the one case worth refusing over.
 		return true, ""
 	}
 
@@ -309,6 +367,15 @@ func readGate(input *go_hook.HookInput) gate {
 		return result
 	}
 
+	if groups, err := helpers.SnapshotToList[string](input, nodeGroupSnapName); err == nil {
+		result.EngineOnly = engineOnly(groups)
+	} else {
+		// A group that could not be converted leaves the field false, which asks the handover
+		// in full — the same answer a bashible cluster gets, and the safe one to be wrong with.
+		input.Logger.Warn("cannot read the node groups; the registry handover is decided without them",
+			"error", err.Error())
+	}
+
 	state, err := helpers.SnapshotToSingle[legacyState](input, legacyStateSnapName)
 	switch {
 	case err == nil:
@@ -327,4 +394,20 @@ func readGate(input *go_hook.HookInput) gate {
 	}
 
 	return result
+}
+
+// engineOnly answers whether bashible has a node to configure anywhere in this cluster.
+//
+// An empty list is not an answer: a cluster always has at least the master group, so having
+// none means the groups have not been read rather than that there are none.
+func engineOnly(systemTypes []string) bool {
+	if len(systemTypes) == 0 {
+		return false
+	}
+	for _, systemType := range systemTypes {
+		if systemType != systemTypeImmutable {
+			return false
+		}
+	}
+	return true
 }

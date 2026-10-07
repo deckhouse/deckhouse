@@ -122,13 +122,31 @@ To move a cluster to air-gap, follow these steps:
    ```
 
 The upstream is not removed from the nodes the moment you remove it from the configuration. It
-is removed once the cache leader holds the whole expected set — this is the one transition that
-could otherwise leave every node with nowhere to pull from, so it waits, and says so. To check the status of the transition, use the following commands:
+is removed once the cache leader holds the whole expected set and nothing in the platform
+namespaces (`kube-system` and `d8-*`) still references the upstream — this is the one transition
+that could otherwise leave every node with nowhere to pull from, so it waits, and says so.
 
-Check whether the cache leader holds the whole expected set of images:
+{% alert level="warning" %}
+Workloads in other namespaces are not counted. If the images of your own workloads reference the
+upstream address, move them onto the in-cluster address before removing the upstream: once it is
+removed, they have nowhere to pull from.
+{% endalert %}
+
+To check the status of the transition, use the following commands:
+
+Check whether the cache leader holds the whole expected set of images, and how many platform
+workloads still name the upstream (`upstreamReferences`):
 
 ```bash
-d8 k get registrystorage registry -o jsonpath='{.status}' | jq '{safeToDropUpstream,fill}'
+d8 k get registrystorage registry -o jsonpath='{.status}' | jq '{safeToDropUpstream,fill,upstreamReferences}'
+```
+
+A nonzero `upstreamReferences` means that a rollout of platform workloads onto the in-cluster
+address has not finished. The `registry-controller` log names up to five of the referencing
+objects each time the count changes. To see the last such line, run:
+
+```bash
+d8 k -n d8-system logs -l app=registry-controller -c registry-controller --prefix --tail=-1 | grep 'still names the upstream' | tail -1
 ```
 
 Get the value of `effectiveUpstream`:

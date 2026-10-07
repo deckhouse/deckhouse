@@ -467,6 +467,11 @@ func (in *RegistryStorageStatus) DeepCopyInto(out *RegistryStorageStatus) {
 		*out = new(FillProgress)
 		**out = **in
 	}
+	if in.UpstreamReferences != nil {
+		in, out := &in.UpstreamReferences, &out.UpstreamReferences
+		*out = new(int32)
+		**out = **in
+	}
 	if in.Replicas != nil {
 		in, out := &in.Replicas, &out.Replicas
 		*out = make([]StorageReplicaStatus, len(*in))

@@ -25,6 +25,7 @@ import (
 	"io"
 	"log"
 	"log/slog"
+	"net"
 	"net/http/httptest"
 	"net/url"
 	"os"
@@ -1224,6 +1225,61 @@ func TestTheFillWritesToTheNonProxyingInstance(t *testing.T) {
 	// And nothing was written through the serving one, which would have swallowed the layers.
 	assert.False(t, holdsDigest(t, serving, "system/deckhouse", one),
 		"a fill through the pull-through cache uploads no layers, so it must not go there")
+}
+
+// closedAddress is an address nothing listens on: taken and released at once.
+func closedAddress(t *testing.T) string {
+	t.Helper()
+	listener, err := net.Listen("tcp", "127.0.0.1:0")
+	require.NoError(t, err)
+	address := listener.Addr().String()
+	require.NoError(t, listener.Close())
+	return address
+}
+
+// TestOnceWaitsForItsOwnRegistryToStart is the start of every store pod.
+//
+// The syncer and the registry start together, and a pass that runs before the registry listens
+// reads the declared set through it and gets "connection refused". Published, that turned the
+// storage Failed and safeToDropUpstream false on every start of the pod, until the next clean pass
+// — on an Engine cluster at the first start and again after an update replaced the replica.
+func TestOnceWaitsForItsOwnRegistryToStart(t *testing.T) {
+	follower := func(t *testing.T) (*Loop, client.Client) {
+		loop, c, _ := newLoop(t, false, storageWith(registryv1alpha1.RegistryStorageSpec{
+			Upstream: &registryv1alpha1.Upstream{
+				Endpoint: registryv1alpha1.Endpoint{
+					Scheme: registryv1alpha1.SchemeHTTP, Host: "upstream.invalid", Path: "/deckhouse/ee",
+				},
+			},
+			Source:   &registryv1alpha1.StorageSource{ExpectedDigests: 1},
+			NeedSync: true,
+		}), deployedRelease("v1.70.1"))
+		loop.LocalAddress = closedAddress(t)
+		loop.WriteAddress = loop.LocalAddress
+		loop.DataDir = t.TempDir()
+		return loop, c
+	}
+
+	t.Run("just started: the pass waits and reports nothing", func(t *testing.T) {
+		loop, c := follower(t)
+		loop.started = time.Now()
+
+		require.NoError(t, loop.once(context.Background()))
+
+		storage := &registryv1alpha1.RegistryStorage{}
+		require.NoError(t, c.Get(context.Background(),
+			types.NamespacedName{Name: registryv1alpha1.SingletonName}, storage))
+		assert.Empty(t, storage.Status.Replicas, "a store still starting is not a failed store")
+	})
+
+	t.Run("past the grace: a registry that never came up is a failure", func(t *testing.T) {
+		loop, c := follower(t)
+		loop.started = time.Now().Add(-3 * time.Minute)
+
+		require.NoError(t, loop.once(context.Background()))
+
+		assert.NotEmpty(t, replicaOf(t, c, "master-0").Error)
+	})
 }
 
 // TestTheStoreIsReportedWhileAPassRuns: a fill over a slow link is one pass of an hour, and the

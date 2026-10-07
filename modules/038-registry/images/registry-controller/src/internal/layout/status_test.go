@@ -256,7 +256,10 @@ func TestAggregate(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got := Aggregate(tt.spec, tt.replicas, tt.holder)
+			// Nothing names the upstream here, so the table is about the leader alone; the
+			// other half of the gate is TestSafeToDropUpstreamWaitsForTheReferences.
+			nothing := int32(0)
+			got := Aggregate(tt.spec, tt.replicas, tt.holder, &nothing)
 
 			assert.Equal(t, tt.wantPhase, got.Phase)
 			assert.Equal(t, tt.wantLeader, got.Leader)
@@ -268,7 +271,7 @@ func TestAggregate(t *testing.T) {
 }
 
 func TestAggregateFillProgress(t *testing.T) {
-	got := Aggregate(passThroughSpec(), []registryv1alpha1.StorageReplicaStatus{leader("master-0", false, 312)}, "master-0")
+	got := Aggregate(passThroughSpec(), []registryv1alpha1.StorageReplicaStatus{leader("master-0", false, 312)}, "master-0", nil)
 
 	require.NotNil(t, got.Fill)
 	assert.EqualValues(t, 312, got.Fill.Filled)
@@ -281,7 +284,7 @@ func TestAggregateFillProgress(t *testing.T) {
 	fromLeader := Aggregate(
 		&registryv1alpha1.RegistryStorageSpec{Upstream: testUpstream("registry.deckhouse.io")},
 		[]registryv1alpha1.StorageReplicaStatus{withDeclared(leader("master-0", false, 312), 400)},
-		"master-0",
+		"master-0", nil,
 	)
 	require.NotNil(t, fromLeader.Fill)
 	assert.EqualValues(t, 312, fromLeader.Fill.Filled)
@@ -289,7 +292,7 @@ func TestAggregateFillProgress(t *testing.T) {
 
 	// The declaration wins while there is one: a transition gated on a stated number has to show
 	// progress against that number, not against one the cluster computed about itself.
-	declared := Aggregate(passThroughSpec(), []registryv1alpha1.StorageReplicaStatus{withDeclared(leader("master-0", false, 312), 400)}, "master-0")
+	declared := Aggregate(passThroughSpec(), []registryv1alpha1.StorageReplicaStatus{withDeclared(leader("master-0", false, 312), 400)}, "master-0", nil)
 	require.NotNil(t, declared.Fill)
 	assert.EqualValues(t, 459, declared.Fill.Total)
 
@@ -298,9 +301,64 @@ func TestAggregateFillProgress(t *testing.T) {
 	noDenominator := Aggregate(
 		&registryv1alpha1.RegistryStorageSpec{Upstream: testUpstream("registry.deckhouse.io")},
 		[]registryv1alpha1.StorageReplicaStatus{leader("master-0", false, 312)},
-		"master-0",
+		"master-0", nil,
 	)
 	assert.Nil(t, noDenominator.Fill)
+}
+
+// A full leader is half of the gate. The other half is that nothing on the platform still names
+// the upstream: such a reference has no route once the upstream is gone, whatever the cache holds.
+// Measured on the `scenarios` unit on 2026-10-05, where the upstream went 70 seconds after the
+// platform began moving off it and a pod that restarted in between never started again.
+func TestSafeToDropUpstreamWaitsForTheReferences(t *testing.T) {
+	full := []registryv1alpha1.StorageReplicaStatus{leader("master-0", true, 459)}
+	count := func(n int32) *int32 { return &n }
+
+	tests := []struct {
+		name       string
+		spec       *registryv1alpha1.RegistryStorageSpec
+		replicas   []registryv1alpha1.StorageReplicaStatus
+		references *int32
+		want       bool
+	}{
+		{
+			name: "a full leader and nothing naming the upstream", spec: passThroughSpec(),
+			replicas: full, references: count(0), want: true,
+		},
+		{
+			name: "a full leader while the platform still names the upstream", spec: passThroughSpec(),
+			replicas: full, references: count(3), want: false,
+		},
+		{
+			// The count failed, or was never taken. No count is no permission.
+			name: "a full leader and no count at all", spec: passThroughSpec(),
+			replicas: full, references: nil, want: false,
+		},
+		{
+			name: "nothing naming the upstream does not make up for an incomplete leader", spec: passThroughSpec(),
+			replicas:   []registryv1alpha1.StorageReplicaStatus{leader("master-0", false, 312)},
+			references: count(0), want: false,
+		},
+		{
+			// Already air-gapped: there is no upstream left for anything to name.
+			name: "no upstream left to count against", spec: airGapSpec(),
+			replicas: full, references: nil, want: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			assert.Equal(t, tt.want, SafeToDropUpstream(tt.spec, tt.replicas, "master-0", tt.references))
+
+			got := Aggregate(tt.spec, tt.replicas, "master-0", tt.references)
+			assert.Equal(t, tt.want, got.SafeToDropUpstream, "the status reports the same gate")
+			if tt.spec.Upstream == nil {
+				assert.Nil(t, got.UpstreamReferences, "with no upstream there is no count to report")
+			} else {
+				assert.Equal(t, tt.references, got.UpstreamReferences)
+			}
+		})
+	}
 }
 
 func withDeclared(replica registryv1alpha1.StorageReplicaStatus, declared int32) registryv1alpha1.StorageReplicaStatus {

@@ -40,7 +40,6 @@ func NewImmutableSuite(deps ImmutableDeps) preflight.Suite {
 	return preflight.NewSuite(
 		checks.ImmutableSupportedProvider(deps.MetaConfig),
 		checks.ImmutableInstallerImages(deps.MetaConfig),
-		checks.ImmutableRegistryMode(deps.MetaConfig),
 		checks.ImmutableSignatureMode(deps.MetaConfig, deps.GlobalOpts),
 		checks.ImmutablePostBootstrapScript(deps.BootstrapOpts),
 		checks.ImmutableKubeconfigOut(deps.BootstrapOpts, deps.CommanderMode),
