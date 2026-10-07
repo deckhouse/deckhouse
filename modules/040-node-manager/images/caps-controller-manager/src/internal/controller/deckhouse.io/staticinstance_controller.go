@@ -32,7 +32,12 @@ import (
 	"sigs.k8s.io/cluster-api/util/conditions"
 	"sigs.k8s.io/cluster-api/util/patch"
 	ctrl "sigs.k8s.io/controller-runtime"
+	"sigs.k8s.io/controller-runtime/pkg/builder"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	ctrlevent "sigs.k8s.io/controller-runtime/pkg/event"
+	"sigs.k8s.io/controller-runtime/pkg/handler"
+	"sigs.k8s.io/controller-runtime/pkg/predicate"
+	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
 	deckhousev1 "caps-controller-manager/api/deckhouse.io/v1alpha2"
 	infrav1 "caps-controller-manager/api/infrastructure/v1alpha1"
@@ -126,6 +131,20 @@ func (r *StaticInstanceReconciler) reconcileNormal(ctx context.Context, staticIn
 			resErr = errors.Join(resErr, fmt.Errorf("failed to patch staticInstance: %w", err))
 		}
 	}()
+
+	if staticMachine == nil && staticInstance.Status.MachineRef != nil {
+		logger.Info("Referenced StaticMachine no longer exists, returning StaticInstance to the pool",
+			"phase", staticInstance.GetPhase(), "machineRef", staticInstance.Status.MachineRef.Name)
+
+		r.Recorder.SendWarningEvent(staticInstance, "", "StaticInstanceOrphaned",
+			fmt.Sprintf("Referenced StaticMachine %q no longer exists; StaticInstance was returned to Pending from %q and is available for bootstrapping again. "+
+				"Nothing was cleaned up on the host %s, so make sure it is clean before the instance is picked up",
+				staticInstance.Status.MachineRef.Name, staticInstance.GetPhase(), staticInstance.Spec.Address))
+
+		staticInstance.ToPending()
+
+		return ctrl.Result{}, nil
+	}
 
 	credentials := &deckhousev1.SSHCredentials{}
 	if err := r.Get(ctx, client.ObjectKey{Name: staticInstance.Spec.CredentialsRef.Name}, credentials); err != nil {
@@ -247,9 +266,45 @@ func patchStaticInstance(ctx context.Context, patchHelper *patch.Helper, staticI
 	return patchHelper.Patch(ctx, staticInstance, options...)
 }
 
+func (r *StaticInstanceReconciler) staticMachineToStaticInstanceMapFunc() handler.MapFunc {
+	return func(ctx context.Context, object client.Object) []reconcile.Request {
+		staticMachine, ok := object.(*infrav1.StaticMachine)
+		if !ok || staticMachine.UID == "" {
+			return nil
+		}
+
+		instances := &deckhousev1.StaticInstanceList{}
+		uidSelector := fields.OneTermEqualSelector("status.machineRef.uid", string(staticMachine.UID))
+		if err := r.List(ctx, instances, client.MatchingFieldsSelector{Selector: uidSelector}); err != nil {
+			ctrl.LoggerFrom(ctx).Error(err, "failed to list StaticInstances bound to StaticMachine",
+				"staticMachineUID", string(staticMachine.UID))
+			return nil
+		}
+
+		requests := make([]reconcile.Request, 0, len(instances.Items))
+		for _, instance := range instances.Items {
+			requests = append(requests, reconcile.Request{
+				NamespacedName: client.ObjectKey{Name: instance.Name},
+			})
+		}
+
+		return requests
+	}
+}
+
 // SetupWithManager sets up the controller with the Manager.
 func (r *StaticInstanceReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&deckhousev1.StaticInstance{}).
+		Watches(
+			&infrav1.StaticMachine{},
+			handler.EnqueueRequestsFromMapFunc(r.staticMachineToStaticInstanceMapFunc()),
+			builder.WithPredicates(predicate.Funcs{
+				CreateFunc:  func(ctrlevent.CreateEvent) bool { return false },
+				UpdateFunc:  func(ctrlevent.UpdateEvent) bool { return false },
+				DeleteFunc:  func(ctrlevent.DeleteEvent) bool { return true },
+				GenericFunc: func(ctrlevent.GenericEvent) bool { return false },
+			}),
+		).
 		Complete(r)
 }
