@@ -8,6 +8,10 @@ search: kubernetes conformance, cncf conformance, sonobuoy, e2e-тесты, juni
 
 Deckhouse Platform тестируется на соответствие набору Kubernetes conformance-тестов программы CNCF Certified Kubernetes Conformance Program. Для каждой указанной ниже минорной версии Kubernetes тесты запускаются с помощью Sonobuoy в режиме `certified-conformance`.
 
+{% alert level="info" %}
+Приведённые ниже результаты conformance-тестов актуальны только при выключенном модуле `multitenancy-manager`.
+{% endalert %}
+
 ## Результаты тестирования
 
 {% assign conformance_results = site.data.kubernetes_conformance.results %}
