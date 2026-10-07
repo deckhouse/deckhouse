@@ -42,7 +42,9 @@ import (
 	"controller/internal/helm"
 	projectmanager "controller/internal/manager/project"
 	"controller/internal/naming"
+	"controller/internal/rolebinding"
 	"controller/internal/validate"
+	projectnamespacewebhook "controller/internal/webhook/projectnamespace"
 	rolebindingwebhook "controller/internal/webhook/rolebinding"
 )
 
@@ -72,13 +74,31 @@ func ownLabelChange(old, project *v1alpha3.Project) (string, []string) {
 }
 
 func Register(runtimeManager manager.Manager, helmClient *helm.Client) {
-	hook := &webhook.Admission{Handler: &validator{client: runtimeManager.GetClient(), helmClient: helmClient}}
+	hook := &webhook.Admission{Handler: &validator{
+		client:     runtimeManager.GetClient(),
+		helmClient: helmClient,
+		reader:     runtimeManager.GetAPIReader(),
+	}}
 	runtimeManager.GetWebhookServer().Register("/validate/v1alpha3/projects", hook)
 }
 
 type validator struct {
 	client     client.Client
 	helmClient *helm.Client
+	// reader is the direct API reader for the role bindings that still name the ServiceAccounts of
+	// the project's namespace, whose informers the cache would start inside the request on a replica
+	// that is not the leader, and for the ProjectNamespaces that claim the project's name, which the
+	// cache may not have seen yet.
+	reader client.Reader
+}
+
+// apiReader is the reader for the role bindings and the ProjectNamespace claims: the direct API reader
+// when the validator has one, which the webhook server always gives it, and the client otherwise.
+func (v *validator) apiReader() client.Reader {
+	if v.reader != nil {
+		return v.reader
+	}
+	return v.client
 }
 
 func (v *validator) Handle(ctx context.Context, req admission.Request) admission.Response {
@@ -161,28 +181,41 @@ func (v *validator) Handle(ctx context.Context, req admission.Request) admission
 			return admission.Errored(http.StatusInternalServerError, err)
 		}
 
-		// prefix collisions: the "<project>-*" name space is reserved for the additional namespaces
-		// of an existing project, so neither "foo-bar" (when "foo" exists) nor "foo" (when "foo-bar"
-		// exists) may be created.
+		// A ProjectNamespace claims "<its project>-<spec.name>" as soon as it is created, and its
+		// namespace appears only when the controller gets to it. A project under that name would take
+		// the namespace from the ProjectNamespace, so the claim counts as the namespace itself. The
+		// claims are read from the API server: a ProjectNamespace created just before the project, as
+		// a GitOps sync applies both, may not be in the cache yet.
+		claim, err := projectnamespacewebhook.Claiming(ctx, v.apiReader(), project.Name)
+		if err != nil {
+			return admission.Errored(http.StatusInternalServerError, err)
+		}
+		if claim != nil {
+			return admission.Denied(fmt.Sprintf("The '%s' project cannot be created, the '%s' ProjectNamespace of the '%s' project claims a namespace with its name",
+				project.Name, claim.Name, claim.Namespace))
+		}
+
+		// A binding of another project, or a cluster-wide one, can still name the ServiceAccounts of a
+		// namespace under this name that is gone, and the project would hand them to its creator. The
+		// controller adopts only namespaces that exist already, so its creates are not checked.
+		if !privileged {
+			reason, err := rolebinding.ServiceAccountGrantConflict(ctx, v.apiReader(), project.Name, project.Name)
+			if err != nil {
+				return admission.Errored(http.StatusInternalServerError, err)
+			}
+			if reason != "" {
+				return admission.Denied(fmt.Sprintf("The '%s' project cannot be created, %s", project.Name, reason))
+			}
+		}
+
+		// Only the names ProjectNamespaces claim are reserved. Any other "<project>-*" name is a
+		// project of its own, which reads like an additional namespace of that project and is not
+		// one; the warning says so while the author can still choose a ProjectNamespace instead.
 		projects := new(v1alpha3.ProjectList)
 		if err := v.client.List(ctx, projects); err != nil {
 			return admission.Errored(http.StatusInternalServerError, err)
 		}
-		for _, existing := range projects.Items {
-			if existing.Name == project.Name {
-				continue
-			}
-			if strings.HasPrefix(project.Name, existing.Name+"-") {
-				return admission.Denied(fmt.Sprintf(
-					"project name %q conflicts with project %q: %q-* names are reserved for additional namespaces of project %q",
-					project.Name, existing.Name, existing.Name, existing.Name))
-			}
-			if strings.HasPrefix(existing.Name, project.Name+"-") {
-				return admission.Denied(fmt.Sprintf(
-					"project name %q conflicts with project %q: %q-* names are reserved for additional namespaces of project %q",
-					project.Name, existing.Name, project.Name, project.Name))
-			}
-		}
+		warnings = append(warnings, nameWarnings(project.Name, projects.Items)...)
 	}
 
 	// validate the standard fields (cheap checks before the OpenAPI validation); an update is

@@ -35,12 +35,14 @@ import (
 
 // Register installs the ProjectRoleBinding validating webhook.
 func Register(runtimeManager manager.Manager) {
-	hook := &webhook.Admission{Handler: &validator{client: runtimeManager.GetClient()}}
+	hook := &webhook.Admission{Handler: &validator{client: runtimeManager.GetClient(), reader: runtimeManager.GetAPIReader()}}
 	runtimeManager.GetWebhookServer().Register("/validate/v1alpha3/projectrolebindings", hook)
 }
 
 type validator struct {
 	client client.Client
+	// reader is the direct API reader for the ServiceAccount membership of the subjects.
+	reader client.Reader
 }
 
 func (v *validator) Handle(ctx context.Context, req admission.Request) admission.Response {
@@ -53,8 +55,9 @@ func (v *validator) Handle(ctx context.Context, req admission.Request) admission
 		return admission.Errored(http.StatusBadRequest, err)
 	}
 
-	// The old object is read for its labels alone, and only where it exists: an UPDATE that strips
-	// the managed-by marking must not thereby escape it.
+	// The old object is read for its labels and subjects, and only where it exists: an UPDATE that
+	// strips the managed-by marking must not thereby escape it, and a subject the stored binding
+	// already has is not checked for project membership again.
 	old := new(v1alpha3.ProjectRoleBinding)
 	if req.Operation == admissionv1.Update {
 		if err := yaml.Unmarshal(req.OldObject.Raw, old); err != nil {
@@ -89,7 +92,10 @@ func (v *validator) Handle(ctx context.Context, req admission.Request) admission
 		RoleRefKind: prb.Spec.RoleRef.Kind,
 		RoleRefName: prb.Spec.RoleRef.Name,
 		Subjects:    prb.Spec.Subjects,
+		OldSubjects: old.Spec.Subjects,
+		Name:        prb.Name,
 		Namespace:   req.Namespace,
+		Reader:      v.reader,
 		ManagedBy:   rolebindingwebhook.ResolveManagedBy(req.Operation, prb.Labels, old.Labels),
 	})
 }

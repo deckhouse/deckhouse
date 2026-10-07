@@ -30,6 +30,7 @@ import (
 	authnv1 "k8s.io/api/authentication/v1"
 	authorizationv1 "k8s.io/api/authorization/v1"
 	corev1 "k8s.io/api/core/v1"
+	rbacv1 "k8s.io/api/rbac/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -769,9 +770,10 @@ func TestHandle_CreateOverExistingNamespace(t *testing.T) {
 	assert.Contains(t, resp.Result.Message, "a namespace with its name exists")
 }
 
-// The two name rules the webhook enforces on create: the platform prefixes are reserved, and the
-// "<project>-*" name space belongs to the additional namespaces of an existing project in both
-// directions. The checks existed; these are the tests the design promised for them.
+// The name rules the webhook enforces on create. The platform prefixes are reserved. Of the
+// "<project>-*" names only the ones a ProjectNamespace has claimed are taken: any other such name is
+// a separate project, and the webhook lets it through with a warning that says so, because it reads
+// like an additional namespace of the other project and is not one.
 func TestHandle_ProjectNameValidation(t *testing.T) {
 	createReq := func(t *testing.T, name string) admission.Request {
 		t.Helper()
@@ -784,6 +786,9 @@ func TestHandle_ProjectNameValidation(t *testing.T) {
 			Object:    runtime.RawExtension{Raw: raw},
 		}}
 	}
+	project := func(name string) *v1alpha3.Project {
+		return &v1alpha3.Project{ObjectMeta: metav1.ObjectMeta{Name: name}}
+	}
 
 	t.Run("platform prefixes are reserved", func(t *testing.T) {
 		v := newValidator(t)
@@ -794,25 +799,161 @@ func TestHandle_ProjectNameValidation(t *testing.T) {
 		}
 	})
 
-	t.Run("a name under an existing project's additional-namespace space is refused", func(t *testing.T) {
-		existing := &v1alpha3.Project{ObjectMeta: metav1.ObjectMeta{Name: "foo"}}
-		v := newValidator(t, existing)
+	t.Run("a name under an existing project's name is a separate project, with a warning", func(t *testing.T) {
+		v := newValidator(t, project("foo"))
+		resp := v.Handle(context.Background(), createReq(t, "foo-bar"))
+		require.True(t, resp.Allowed, resp.Result)
+		require.Len(t, resp.Warnings, 1)
+		assert.Contains(t, resp.Warnings[0], `Project "foo-bar" is not an additional namespace of project "foo"`)
+		assert.Contains(t, resp.Warnings[0], `create a ProjectNamespace in the "foo" namespace`)
+	})
+
+	t.Run("every project whose name the new one extends is named", func(t *testing.T) {
+		v := newValidator(t, project("foo-bar"), project("foo"))
+		resp := v.Handle(context.Background(), createReq(t, "foo-bar-baz"))
+		require.True(t, resp.Allowed, resp.Result)
+		require.Len(t, resp.Warnings, 2)
+		assert.Contains(t, resp.Warnings[0], `additional namespace of project "foo"`)
+		assert.Contains(t, resp.Warnings[1], `additional namespace of project "foo-bar"`)
+	})
+
+	t.Run("the warning comes with a project on a template as well", func(t *testing.T) {
+		template := &v1alpha2.ProjectTemplate{
+			ObjectMeta: metav1.ObjectMeta{Name: "team"},
+			Spec: v1alpha2.ProjectTemplateSpec{
+				ParametersSchema: v1alpha2.ParametersSchema{OpenAPIV3Schema: map[string]any{"type": "object"}},
+			},
+		}
+		v := newValidator(t, project("foo"), template)
+		created := project("foo-bar")
+		created.Spec.ProjectTemplateName = "team"
+		raw, err := json.Marshal(created)
+		require.NoError(t, err)
+		resp := v.Handle(context.Background(), admission.Request{AdmissionRequest: admissionv1.AdmissionRequest{
+			Operation: admissionv1.Create,
+			UserInfo:  authnv1.UserInfo{Username: "alice"},
+			Object:    runtime.RawExtension{Raw: raw},
+		}})
+		require.True(t, resp.Allowed, resp.Result)
+		require.Len(t, resp.Warnings, 1)
+		assert.Contains(t, resp.Warnings[0], `additional namespace of project "foo"`)
+	})
+
+	t.Run("a name that existing projects extend is allowed, with a warning naming them", func(t *testing.T) {
+		v := newValidator(t, project("foo-qux"), project("foo-bar"))
+		resp := v.Handle(context.Background(), createReq(t, "foo"))
+		require.True(t, resp.Allowed, resp.Result)
+		require.Len(t, resp.Warnings, 1)
+		assert.Contains(t, resp.Warnings[0], `named like additional namespaces of project "foo" are separate projects: "foo-bar", "foo-qux"`)
+	})
+
+	t.Run("a virtual project has no additional namespaces to be confused with", func(t *testing.T) {
+		virtual := project(projectmanager.DefaultProjectName)
+		virtual.Labels = map[string]string{v1alpha3.ProjectLabelVirtualProject: "true"}
+		v := newValidator(t, virtual)
+		resp := v.Handle(context.Background(), createReq(t, projectmanager.DefaultProjectName+"-apps"))
+		assert.True(t, resp.Allowed, resp.Result)
+		assert.Empty(t, resp.Warnings)
+	})
+
+	t.Run("a name a ProjectNamespace has claimed is refused", func(t *testing.T) {
+		// The ProjectNamespace claims "foo-bar" the moment it is created; the namespace appears only
+		// when the controller gets to it, so there is no namespace to find yet.
+		claim := &v1alpha3.ProjectNamespace{
+			ObjectMeta: metav1.ObjectMeta{Name: "cache", Namespace: "foo"},
+			Spec:       v1alpha3.ProjectNamespaceSpec{Name: "bar"},
+		}
+		v := newValidator(t, project("foo"), claim)
 		resp := v.Handle(context.Background(), createReq(t, "foo-bar"))
 		assert.False(t, resp.Allowed)
-		assert.Contains(t, resp.Result.Message, `project name "foo-bar" conflicts with project "foo"`)
+		assert.Contains(t, resp.Result.Message, "the 'cache' ProjectNamespace of the 'foo' project claims a namespace with its name")
 	})
 
-	t.Run("a name whose additional-namespace space already holds a project is refused", func(t *testing.T) {
-		existing := &v1alpha3.Project{ObjectMeta: metav1.ObjectMeta{Name: "foo-bar"}}
-		v := newValidator(t, existing)
-		resp := v.Handle(context.Background(), createReq(t, "foo"))
+	t.Run("a claim the cache has not seen yet is read from the API server", func(t *testing.T) {
+		// A GitOps sync applies a ProjectNamespace and a Project under its resulting name one after
+		// the other, so the claim may reach the API server before the cache of the webhook.
+		claim := &v1alpha3.ProjectNamespace{
+			ObjectMeta: metav1.ObjectMeta{Name: "cache", Namespace: "foo"},
+			Spec:       v1alpha3.ProjectNamespaceSpec{Name: "bar"},
+		}
+		cached := newValidator(t, project("foo"))
+		live := newValidator(t, project("foo"), claim)
+		v := &validator{client: cached.client, reader: live.client}
+		resp := v.Handle(context.Background(), createReq(t, "foo-bar"))
 		assert.False(t, resp.Allowed)
-		assert.Contains(t, resp.Result.Message, `project name "foo" conflicts with project "foo-bar"`)
+		assert.Contains(t, resp.Result.Message, "the 'cache' ProjectNamespace of the 'foo' project claims a namespace with its name")
 	})
 
-	t.Run("an unrelated name is allowed beside both", func(t *testing.T) {
-		v := newValidator(t, &v1alpha3.Project{ObjectMeta: metav1.ObjectMeta{Name: "foo"}})
+	t.Run("an unrelated name is allowed beside both, without a warning", func(t *testing.T) {
+		v := newValidator(t, project("foo"))
 		resp := v.Handle(context.Background(), createReq(t, "foobar"))
+		assert.True(t, resp.Allowed, resp.Result)
+		assert.Empty(t, resp.Warnings)
+	})
+}
+
+// A binding can still name the ServiceAccounts of a namespace that is gone, a deleted additional
+// namespace for one. A project under that name would hand them to its creator, so the name is refused
+// until the subjects are removed, and the refusal names neither the binding nor its project.
+func TestHandle_NameAStoredBindingGrantsTo(t *testing.T) {
+	createReq := func(t *testing.T, user, name string) admission.Request {
+		t.Helper()
+		raw, err := json.Marshal(&v1alpha3.Project{ObjectMeta: metav1.ObjectMeta{Name: name}})
+		require.NoError(t, err)
+		return admission.Request{AdmissionRequest: admissionv1.AdmissionRequest{
+			Operation: admissionv1.Create,
+			UserInfo:  authnv1.UserInfo{Username: user},
+			Object:    runtime.RawExtension{Raw: raw},
+		}}
+	}
+	serviceAccount := func(namespace string) rbacv1.Subject {
+		return rbacv1.Subject{Kind: rbacv1.ServiceAccountKind, Name: "deployer", Namespace: namespace}
+	}
+	projectBinding := func(namespace string, subject rbacv1.Subject) *v1alpha3.ProjectRoleBinding {
+		return &v1alpha3.ProjectRoleBinding{
+			ObjectMeta: metav1.ObjectMeta{Name: "leaky", Namespace: namespace},
+			Spec:       v1alpha3.ProjectRoleBindingSpec{Subjects: []rbacv1.Subject{subject}},
+		}
+	}
+	clusterBinding := &v1alpha3.ClusterProjectRoleBinding{
+		ObjectMeta: metav1.ObjectMeta{Name: "leaky"},
+		Spec:       v1alpha3.ClusterProjectRoleBindingSpec{Subjects: []rbacv1.Subject{serviceAccount("tools-ci")}},
+	}
+	foo := &v1alpha3.Project{ObjectMeta: metav1.ObjectMeta{Name: "foo"}}
+
+	t.Run("a binding of the project the name extends", func(t *testing.T) {
+		v := newValidator(t, foo, projectBinding("foo", serviceAccount("foo-extra")))
+		resp := v.Handle(context.Background(), createReq(t, "bob", "foo-extra"))
+		assert.False(t, resp.Allowed)
+		assert.Equal(t, "The 'foo-extra' project cannot be created, a ProjectRoleBinding of another project still grants rights to "+
+			"ServiceAccounts of a namespace with this name. These subjects have to be removed from that binding first", resp.Result.Message)
+	})
+
+	t.Run("a cluster-wide binding", func(t *testing.T) {
+		v := newValidator(t, clusterBinding)
+		resp := v.Handle(context.Background(), createReq(t, "bob", "tools-ci"))
+		assert.False(t, resp.Allowed)
+		assert.Contains(t, resp.Result.Message, "The 'tools-ci' project cannot be created, a ClusterProjectRoleBinding still grants rights to ServiceAccounts of a namespace with this name")
+		assert.NotContains(t, resp.Result.Message, "leaky")
+	})
+
+	t.Run("the group of the service accounts of the namespace", func(t *testing.T) {
+		v := newValidator(t, foo, projectBinding("foo", rbacv1.Subject{Kind: rbacv1.GroupKind, Name: "system:serviceaccounts:foo-extra"}))
+		resp := v.Handle(context.Background(), createReq(t, "bob", "foo-extra"))
+		assert.False(t, resp.Allowed)
+	})
+
+	t.Run("bindings of other namespaces leave the name free", func(t *testing.T) {
+		v := newValidator(t, foo, clusterBinding, projectBinding("foo", serviceAccount("foo-queue")))
+		resp := v.Handle(context.Background(), createReq(t, "bob", "foo-extra"))
+		assert.True(t, resp.Allowed, resp.Result)
+		require.Len(t, resp.Warnings, 1, "the name still reads like an additional namespace of foo")
+	})
+
+	// The controller adopts a namespace that exists already, so there is no name left to protect.
+	t.Run("the controller adopting a namespace", func(t *testing.T) {
+		v := newValidator(t, &corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: "tools-ci"}}, clusterBinding)
+		resp := v.Handle(context.Background(), createReq(t, rolebindingwebhook.ControllerServiceAccount, "tools-ci"))
 		assert.True(t, resp.Allowed, resp.Result)
 	})
 }

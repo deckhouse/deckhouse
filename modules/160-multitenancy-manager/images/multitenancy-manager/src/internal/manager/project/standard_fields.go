@@ -30,6 +30,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 
 	"controller/apis/deckhouse.io/v1alpha3"
+	rolebinding "controller/internal/rolebinding"
 )
 
 func standardFieldLabels(project string) map[string]string {
@@ -88,13 +89,13 @@ func (m *Manager) reconcileAdministrators(ctx context.Context, project *v1alpha3
 		return nil
 	}
 
+	// The webhook and the fan-out tell this binding by its name and managed-by label (see
+	// rolebinding.IsAdministratorsBinding), and the fan-out finds the administrators among its subjects
+	// by rolebinding.AdministratorSubject, so that it carries the ones naming ServiceAccounts of any
+	// namespace.
 	subjects := make([]rbacv1.Subject, 0, len(project.Spec.Administrators))
 	for _, admin := range project.Spec.Administrators {
-		subjects = append(subjects, rbacv1.Subject{
-			APIGroup: rbacv1.GroupName,
-			Kind:     admin.Kind,
-			Name:     admin.Name,
-		})
+		subjects = append(subjects, rolebinding.AdministratorSubject(admin))
 	}
 
 	_, err := controllerutil.CreateOrUpdate(ctx, m.client, binding, func() error {

@@ -43,6 +43,10 @@ const (
 
 	ProjectRoleBindingConditionReady        = "Ready"
 	ClusterProjectRoleBindingConditionReady = "Ready"
+	// ProjectRoleBindingConditionSubjectsBound is False while the fan-out leaves subjects out of the
+	// RoleBindings because the ServiceAccounts they name are not in a namespace of the project. The
+	// message lists them. Ready stays True meanwhile, as the binding works for the other subjects.
+	ProjectRoleBindingConditionSubjectsBound = "SubjectsBound"
 )
 
 // RoleRef references the ClusterRole granted by a (Cluster)ProjectRoleBinding.

@@ -6006,6 +6006,39 @@ alerts:
         Pods of several revisions of the multitenancy-manager controller have run side by side for more than 15 minutes.
       severity: "6"
       markupFormat: markdown
+    - name: MultitenancyManagerProjectNamedLikeAdditionalNamespace
+      sourceFile: modules/160-multitenancy-manager/monitoring/prometheus-rules/project-names.yaml
+      moduleUrl: 160-multitenancy-manager
+      module: multitenancy-manager
+      edition: ce
+      description: |-
+        The name of project `{{ $labels.project }}` is the name of project `{{ $labels.prefix_project }}`, a dash and a suffix. Additional namespaces of a project are named this way (`<project>-<spec.name>` of a ProjectNamespace), but `{{ $labels.project }}` is not one of them. It is a separate project with a namespace of its own. The administrators, quota, bindings and template of project `{{ $labels.prefix_project }}` do not apply to it.
+
+        Such a pair appears when both namespaces existed before they became projects, or when a project is created under such a name. Nothing is broken, but the names read as one project to anyone who looks at them.
+
+        If the two projects are meant to be separate, nothing has to change in the cluster. The alert keeps firing for as long as both projects exist, so silence it for this pair in Alertmanager.
+
+        If `{{ $labels.project }}` is meant to be an additional namespace of project `{{ $labels.prefix_project }}`, recreate it as one. A namespace cannot move between projects in place. Deleting the project deletes its namespace with everything in it.
+
+        1. Make sure that everything running in the `{{ $labels.project }}` namespace can be deployed again, or move it elsewhere first.
+        1. Find the ClusterProjectRoleBinding objects that name the ServiceAccounts of the `{{ $labels.project }}` namespace. While a cluster-wide binding names them, the ProjectNamespace in step 4 is refused, so remove these subjects from the bindings first and add them back once the namespace is there again:
+
+           ```bash
+           d8 k get clusterprojectrolebindings -o json | jq -r --arg ns {{ $labels.project }} '.items[] | select(any(.spec.subjects[]?; (.kind == "ServiceAccount" and .namespace == $ns) or (.kind == "User" and (.name | startswith("system:serviceaccount:" + $ns + ":"))) or (.kind == "Group" and .name == "system:serviceaccounts:" + $ns))) | .metadata.name'
+           ```
+
+        1. Delete the project. The command returns once the namespace is gone:
+
+           ```bash
+           d8 k delete project {{ $labels.project }}
+           ```
+
+        1. Create a [ProjectNamespace](https://deckhouse.io/modules/multitenancy-manager/usage.html#additional-project-namespaces) in the `{{ $labels.prefix_project }}` namespace, with `spec.name` set to the part of the name after `{{ $labels.prefix_project }}-`. The controller creates the `{{ $labels.project }}` namespace again, as an additional namespace of project `{{ $labels.prefix_project }}`.
+        1. Deploy the workloads into the namespace.
+      summary: |
+        Project {{ $labels.project }} is named like an additional namespace of project {{ $labels.prefix_project }}.
+      severity: "8"
+      markupFormat: markdown
     - name: NATInstanceWithDeprecatedAvailabilityZone
       sourceFile: modules/030-cloud-provider-yandex/monitoring/prometheus-rules/deprecated_availability_zone.yaml
       moduleUrl: 030-cloud-provider-yandex

@@ -1,7 +1,9 @@
 {{- if (.Values.global.enabledModules | has "operator-prometheus") }}
 ---
 # The controller serves d8_cluster_objects_grant_violated, the series behind the
-# ClusterResourceGrantPolicyViolation alert and the "Cluster Resource Grant Violations" dashboard.
+# ClusterResourceGrantPolicyViolation alert and the "Cluster Resource Grant Violations" dashboard,
+# and d8_multitenancy_project_named_like_additional_namespace, the series behind the
+# MultitenancyManagerProjectNamedLikeAdditionalNamespace alert.
 apiVersion: monitoring.coreos.com/v1
 kind: PodMonitor
 metadata:

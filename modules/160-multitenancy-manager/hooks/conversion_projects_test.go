@@ -274,6 +274,16 @@ func TestProjectLiftGivesBack(t *testing.T) {
 			parameters: map[string]any{"administrators": []any{map[string]any{"subject": "ServiceAccount", "name": "ci"}}},
 		},
 		{
+			// The User and the Group RBAC matches to ServiceAccounts are administrators like any other,
+			// whatever namespace they name, and the controller binds them as such.
+			name: "the user and the group of ServiceAccounts",
+			parameters: map[string]any{"administrators": []any{
+				map[string]any{"subject": "User", "name": "system:serviceaccount:ci:runner"},
+				map[string]any{"subject": "Group", "name": "system:serviceaccounts:ci"},
+			}},
+			lifted: []string{"administrators"},
+		},
+		{
 			name:       "a name with a line break",
 			parameters: map[string]any{"administrators": []any{map[string]any{"subject": "User", "name": "alice\nkind: Group"}}},
 		},

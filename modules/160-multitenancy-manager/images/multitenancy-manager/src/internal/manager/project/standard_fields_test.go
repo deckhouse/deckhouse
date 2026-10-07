@@ -22,6 +22,7 @@ import (
 
 	"github.com/go-logr/logr"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -33,6 +34,7 @@ import (
 
 	"controller/apis/deckhouse.io/v1alpha2"
 	"controller/apis/deckhouse.io/v1alpha3"
+	rolebinding "controller/internal/rolebinding"
 )
 
 func newManager(t *testing.T, objs ...client.Object) (*Manager, client.Client) {
@@ -92,6 +94,29 @@ func TestReconcileAdministrators(t *testing.T) {
 	assert.NoError(t, m.reconcileAdministrators(context.Background(), project))
 	err := c.Get(context.Background(), client.ObjectKey{Namespace: "proj", Name: v1alpha3.ProjectAdministratorsBinding}, prb)
 	assert.True(t, apierrors.IsNotFound(err))
+}
+
+// The upgrade lifts administrators that name the ServiceAccounts of another namespace into
+// spec.administrators. The binding the controller writes for them is the one the ProjectRoleBinding
+// webhook and the fan-out recognise as the controller's, and it names each administrator the way the
+// fan-out matches them, or the administrators would lose the rights.
+func TestReconcileAdministrators_TheBindingOfTheController(t *testing.T) {
+	m, c := newManager(t)
+	project := &v1alpha3.Project{ObjectMeta: metav1.ObjectMeta{Name: "proj"}}
+	project.Spec.Administrators = []v1alpha3.Administrator{
+		{Kind: "User", Name: "system:serviceaccount:ci:runner"},
+		{Kind: "Group", Name: "system:serviceaccounts:ci"},
+	}
+
+	require.NoError(t, m.reconcileAdministrators(context.Background(), project))
+
+	prb := &v1alpha3.ProjectRoleBinding{}
+	require.NoError(t, c.Get(context.Background(), client.ObjectKey{Namespace: "proj", Name: v1alpha3.ProjectAdministratorsBinding}, prb))
+	assert.True(t, rolebinding.IsAdministratorsBinding(prb.Name, prb.Labels[v1alpha3.ResourceLabelManagedBy]))
+	assert.Equal(t, []rbacv1.Subject{
+		{APIGroup: rbacv1.GroupName, Kind: rbacv1.UserKind, Name: "system:serviceaccount:ci:runner"},
+		{APIGroup: rbacv1.GroupName, Kind: rbacv1.GroupKind, Name: "system:serviceaccounts:ci"},
+	}, prb.Spec.Subjects)
 }
 
 func TestCollectNamespaceStatus(t *testing.T) {

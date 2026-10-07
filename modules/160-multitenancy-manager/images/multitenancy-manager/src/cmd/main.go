@@ -49,6 +49,7 @@ import (
 	templatecontroller "controller/internal/controller/template"
 	grantcontrollers "controller/internal/controllers"
 	clusterprojectrolebindingcontroller "controller/internal/controllers/clusterprojectrolebinding"
+	projectnamescontroller "controller/internal/controllers/projectnames"
 	projectnamespacecontroller "controller/internal/controllers/projectnamespace"
 	projectrolebindingcontroller "controller/internal/controllers/projectrolebinding"
 	templategrantscontroller "controller/internal/controllers/templategrants"
@@ -224,7 +225,10 @@ func main() {
 	grantableclusterresourcedefinitionwebhook.Register(runtimeManager, jsonpathFactory, grantsMapper)
 
 	// register the project role binding reconcilers
-	if err = (&projectrolebindingcontroller.Reconciler{Client: runtimeManager.GetClient()}).SetupWithManager(runtimeManager); err != nil {
+	if err = (&projectrolebindingcontroller.Reconciler{
+		Client:   runtimeManager.GetClient(),
+		Recorder: runtimeManager.GetEventRecorderFor(controllerName),
+	}).SetupWithManager(runtimeManager); err != nil {
 		fatal(logger, err, "set up project role binding reconciler")
 	}
 	if err = (&clusterprojectrolebindingcontroller.Reconciler{Client: runtimeManager.GetClient()}).SetupWithManager(runtimeManager); err != nil {
@@ -237,6 +241,14 @@ func main() {
 		Recorder: runtimeManager.GetEventRecorderFor(controllerName),
 	}).SetupWithManager(runtimeManager); err != nil {
 		fatal(logger, err, "set up project namespace reconciler")
+	}
+
+	// register the reconciler that reports projects named like additional namespaces of other projects
+	if err = (&projectnamescontroller.Reconciler{
+		Client:   runtimeManager.GetClient(),
+		Recorder: runtimeManager.GetEventRecorderFor(controllerName),
+	}).SetupWithManager(runtimeManager); err != nil {
+		fatal(logger, err, "set up project names reconciler")
 	}
 
 	// register the project role binding webhooks
@@ -300,7 +312,8 @@ func setupRuntimeManager(logger logr.Logger) (ctrl.Manager, error) {
 		GracefulShutdownTimeout:       ptr.To(10 * time.Second),
 		HealthProbeBindAddress:        ":9090",
 		WebhookServer:                 webhook.NewServer(webhook.Options{CertDir: "/certs"}),
-		// The grant-violation series (d8_cluster_objects_grant_violated) is served from here; the
+		// The grant-violation series (d8_cluster_objects_grant_violated) and the project-name pairs
+		// (d8_multitenancy_project_named_like_additional_namespace) are served from here; the
 		// PodMonitor of the module scrapes this port.
 		Metrics: metrics.Options{
 			// Loopback only: the series name projects and the objects inside them, so the endpoint is

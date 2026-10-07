@@ -25,6 +25,7 @@ import (
 	"github.com/stretchr/testify/require"
 	admissionv1 "k8s.io/api/admission/v1"
 	authnv1 "k8s.io/api/authentication/v1"
+	corev1 "k8s.io/api/core/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -39,7 +40,7 @@ import (
 func newValidator(t *testing.T, objs ...client.Object) *validator {
 	t.Helper()
 	scheme := runtime.NewScheme()
-	for _, add := range []func(*runtime.Scheme) error{rbacv1.AddToScheme, v1alpha3.AddToScheme} {
+	for _, add := range []func(*runtime.Scheme) error{rbacv1.AddToScheme, corev1.AddToScheme, v1alpha3.AddToScheme} {
 		require.NoError(t, add(scheme))
 	}
 	c := fake.NewClientBuilder().WithScheme(scheme).WithObjects(objs...).Build()
@@ -131,6 +132,63 @@ func TestHandle_AllowsFinalizerRemovalDuringProjectTeardown(t *testing.T) {
 	v := newValidator(t)
 	resp := v.Handle(context.Background(), updateRequest(t, "ghost", rolebinding.ControllerServiceAccount, binding("d8:project:viewer")))
 	assert.True(t, resp.Allowed)
+}
+
+// The subjects of the stored binding are handed to the shared validator on UPDATE, so a
+// ServiceAccount it already has is not refused again, as the controller's finalizer updates carry it.
+// The handler passes on the warning that the ServiceAccount gets no rights from the binding.
+func TestHandle_KeepsTheStoredServiceAccountSubjectsOnUpdate(t *testing.T) {
+	t.Parallel()
+	prb := binding("d8:project:viewer")
+	prb.Spec.Subjects = []rbacv1.Subject{{Kind: rbacv1.ServiceAccountKind, Name: "deployer", Namespace: "team-other"}}
+	v := newValidator(t, realProject("team"))
+
+	resp := v.Handle(context.Background(), createRequest(t, "team", rolebinding.ControllerServiceAccount, prb))
+	assert.False(t, resp.Allowed)
+	assert.Contains(t, resp.Result.Message, `must belong to project "team"`)
+
+	resp = v.Handle(context.Background(), updateRequest(t, "team", rolebinding.ControllerServiceAccount, prb))
+	assert.True(t, resp.Allowed, resp.Result)
+	assert.Contains(t, resp.Warnings, `ServiceAccount team-other/deployer is no longer in a namespace of project "team" and gets no rights from this binding`)
+}
+
+// The administrators binding as the controller writes it from spec.administrators passes, though one
+// of them names the ServiceAccounts of another project: the handler gives the shared validator the
+// name of the binding. The same object from Deckhouse is held to the project, and a user may not
+// write a binding the controller manages at all.
+func TestHandle_AdministratorsBindingOfTheController(t *testing.T) {
+	t.Parallel()
+	administrators := &v1alpha3.ProjectRoleBinding{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      v1alpha3.ProjectAdministratorsBinding,
+			Namespace: "team",
+			Labels: map[string]string{
+				v1alpha3.ResourceLabelHeritage:  v1alpha3.ResourceHeritageMultitenancy,
+				v1alpha3.ResourceLabelProject:   "team",
+				v1alpha3.ResourceLabelManagedBy: v1alpha3.ManagedByController,
+			},
+		},
+		Spec: v1alpha3.ProjectRoleBindingSpec{
+			Subjects: []rbacv1.Subject{
+				{APIGroup: rbacv1.GroupName, Kind: rbacv1.UserKind, Name: "system:serviceaccount:ci:runner"},
+				{APIGroup: rbacv1.GroupName, Kind: rbacv1.UserKind, Name: "alice@example.com"},
+			},
+			RoleRef: v1alpha3.RoleRef{Kind: "ClusterRole", Name: v1alpha3.ProjectAdministratorsRoleName},
+		},
+	}
+	ci := &corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: "ci", Labels: map[string]string{v1alpha3.ResourceLabelProject: "ci"}}}
+	v := newValidator(t, realProject("team"), ci)
+
+	resp := v.Handle(context.Background(), createRequest(t, "team", rolebinding.ControllerServiceAccount, administrators))
+	assert.True(t, resp.Allowed, resp.Result)
+
+	resp = v.Handle(context.Background(), createRequest(t, "team", rolebinding.DeckhouseServiceAccount, administrators))
+	assert.False(t, resp.Allowed)
+	assert.Contains(t, resp.Result.Message, `names ServiceAccounts of namespace "ci", which must belong to project "team"`)
+
+	resp = v.Handle(context.Background(), createRequest(t, "team", "alice@example.com", administrators))
+	assert.False(t, resp.Allowed)
+	assert.Contains(t, resp.Result.Message, "is managed by the controller")
 }
 
 func TestHandle_RejectsCreateInNonMainNamespaceForUser(t *testing.T) {
