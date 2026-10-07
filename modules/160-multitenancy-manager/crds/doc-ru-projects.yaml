@@ -111,6 +111,7 @@ spec:
                     Ключи и значения соответствуют формату `ResourceQuota.spec.hard`, например `requests.cpu: "100"`.
                     Для memory и storage нужна явная единица измерения (например `requests.memory: 2Gi`);
                     голые числа интерпретируются как байты, поэтому admission webhook отклоняет голое число, кроме 0.
+                    Обновление, которое оставляет такое значение прежним, принимается с предупреждением, как и создание через `deckhouse.io/v1alpha2`, в котором такое значение приходит из `parameters.resourceQuota`.
 
                     Нельзя задавать вместе с `parameters.resourceQuota`.
                 parameters:

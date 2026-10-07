@@ -237,6 +237,7 @@ spec:
                     Keys and values follow the `ResourceQuota.spec.hard` format, for example `requests.cpu: "100"`.
                     Memory and storage quantities must include an explicit unit suffix (for example `requests.memory: 2Gi`);
                     bare numbers are interpreted as bytes, so the admission webhook rejects a bare number other than 0.
+                    An update that leaves such a value as it was is accepted with a warning, and so is a create through `deckhouse.io/v1alpha2`, where such a value comes from `parameters.resourceQuota`.
 
                     Cannot be set together with `parameters.resourceQuota`.
                   type: object

@@ -19,12 +19,17 @@ package validate
 import (
 	"errors"
 	"fmt"
+	"maps"
+	"slices"
+	"strconv"
 	"strings"
 
 	"github.com/go-jose/go-jose/v4/json"
 	"github.com/go-openapi/spec"
 	"github.com/go-openapi/strfmt"
 	"github.com/go-openapi/validate"
+	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/resource"
 
 	"controller/apis/deckhouse.io/v1alpha2"
 	"controller/apis/deckhouse.io/v1alpha3"
@@ -38,16 +43,140 @@ func ProjectTemplate(template *v1alpha2.ProjectTemplate) error {
 	return nil
 }
 
+// Project validates the project parameters against the parametersSchema of its template.
 func Project(project *v1alpha3.Project, template *v1alpha2.ProjectTemplate) error {
 	templateOpenAPI, err := LoadSchema(template.Spec.ParametersSchema.OpenAPIV3Schema)
 	if err != nil {
 		return fmt.Errorf("load open api schema from the '%s' project template spec: %w", template.Name, err)
 	}
 
-	if err = validate.AgainstSchema(transform(templateOpenAPI), project.Spec.Parameters, strfmt.Default); err != nil {
+	parameters := parametersToValidate(project, templateOpenAPI)
+	if err = validate.AgainstSchema(transform(templateOpenAPI), parameters, strfmt.Default); err != nil {
 		return fmt.Errorf("the '%s' project is not met the OpenAPI schema for the '%s' project template: %w", project.Name, template.Name, err)
 	}
 
+	return nil
+}
+
+// The parameters under which a parametersSchema written for the v1alpha2 Project layout declares
+// what are now the spec.administrators and spec.quota standard fields.
+const (
+	administratorsParameter = "administrators"
+	resourceQuotaParameter  = "resourceQuota"
+)
+
+// parametersToValidate returns the project parameters as the template schema sees them. The
+// v1alpha2 -> v1alpha3 conversion moves administrators and resourceQuota out of spec.parameters of
+// every project, while a schema copied from the default template of that layout still declares and
+// requires both. When the schema declares one of them, it is put back from its standard field the
+// way the v1alpha3 -> v1alpha2 conversion does, so the project validates as it did in that layout;
+// a schema that does not declare it never gets it. A standard field that is empty is gone after the
+// first write of the Project (the fields are omitempty), so a required one the parameters do not
+// hold either is put back in its empty form. The project is left as it is: the renderer reads its
+// parameters without the two.
+func parametersToValidate(project *v1alpha3.Project, schema *spec.Schema) map[string]any {
+	_, declaresAdministrators := schema.Properties[administratorsParameter]
+	quotaSchema, declaresQuota := schema.Properties[resourceQuotaParameter]
+	_, givenAdministrators := project.Spec.Parameters[administratorsParameter]
+	_, givenQuota := project.Spec.Parameters[resourceQuotaParameter]
+
+	takesAdministrators := declaresAdministrators &&
+		(project.Spec.Administrators != nil || !givenAdministrators && slices.Contains(schema.Required, administratorsParameter))
+	takesQuota := declaresQuota &&
+		(project.Spec.Quota != nil || !givenQuota && slices.Contains(schema.Required, resourceQuotaParameter))
+	if !takesAdministrators && !takesQuota {
+		return project.Spec.Parameters
+	}
+
+	parameters := make(map[string]any, len(project.Spec.Parameters)+2)
+	maps.Copy(parameters, project.Spec.Parameters)
+	if takesAdministrators {
+		parameters[administratorsParameter] = legacyAdministrators(project.Spec.Administrators)
+	}
+	if takesQuota {
+		parameters[resourceQuotaParameter] = legacyResourceQuota(project.Spec.Quota, &quotaSchema)
+	}
+
+	return parameters
+}
+
+// legacyAdministrators lays the administrators out as the administrators parameter held them.
+func legacyAdministrators(administrators []v1alpha3.Administrator) []any {
+	result := make([]any, 0, len(administrators))
+	for _, administrator := range administrators {
+		result = append(result, map[string]any{"subject": administrator.Kind, "name": administrator.Name})
+	}
+	return result
+}
+
+// legacyResourceQuota lays a quota out as the resourceQuota parameter held it. Only a "requests." or
+// "limits." prefix is nesting, and the rest of the key is kept whole ("requests.nvidia.com/gpu" is
+// requests["nvidia.com/gpu"]); every other key stays flat. A flat "requests" or "limits" gives way
+// to the nested form whatever the order of the keys, as in the conversion. schema is the
+// resourceQuota schema and decides how each value is written (see legacyQuotaValue).
+func legacyResourceQuota(quota corev1.ResourceList, schema *spec.Schema) map[string]any {
+	result := make(map[string]any, len(quota))
+	for name, quantity := range quota {
+		group, resourceName, isNested := strings.Cut(string(name), ".")
+		if isNested && (group == "requests" || group == "limits") {
+			values, isObject := result[group].(map[string]any)
+			if !isObject {
+				values = map[string]any{}
+				result[group] = values
+			}
+			values[resourceName] = legacyQuotaValue(quantity, propertySchema(propertySchema(schema, group), resourceName))
+			continue
+		}
+
+		if _, isObject := result[string(name)].(map[string]any); !isObject {
+			result[string(name)] = legacyQuotaValue(quantity, propertySchema(schema, string(name)))
+		}
+	}
+	return result
+}
+
+// legacyQuotaValue writes a quantity in a form the schema of its parameter takes. The typed quota no
+// longer says how the parameter held it: a whole number may have been a JSON number or digits in a
+// string, and anything else a string such as 1500m or 2Gi. So the forms are tried in the order the
+// conversion writes them, and the first one the schema takes is used; with none, the first form is
+// what fails. The canonical string alone would not do: the canonical form of 1000 is 1k, which a
+// schema with the pattern ^[0-9]+m?$ refuses. A property the schema does not describe gets the
+// canonical string.
+func legacyQuotaValue(quantity resource.Quantity, schema *spec.Schema) any {
+	if schema == nil {
+		return quantity.String()
+	}
+	forms := quotaValueForms(quantity)
+	for _, form := range forms {
+		if validate.AgainstSchema(schema, form, strfmt.Default) == nil {
+			return form
+		}
+	}
+	return forms[0]
+}
+
+// quotaValueForms lists the JSON forms the resourceQuota parameter may have held a quantity in: a
+// whole number as a JSON number, as digits in a string and as its canonical string; anything else as
+// its canonical string and as a JSON number.
+func quotaValueForms(quantity resource.Quantity) []any {
+	if value, ok := quantity.AsInt64(); ok {
+		return []any{value, strconv.FormatInt(value, 10), quantity.String()}
+	}
+	return []any{quantity.String(), quantity.AsApproximateFloat64()}
+}
+
+// propertySchema returns the schema of a property: the declared one, or the additionalProperties
+// schema of a map. It is nil when the parent is nil or says nothing about the property.
+func propertySchema(parent *spec.Schema, name string) *spec.Schema {
+	if parent == nil {
+		return nil
+	}
+	if property, ok := parent.Properties[name]; ok {
+		return &property
+	}
+	if parent.AdditionalProperties != nil {
+		return parent.AdditionalProperties.Schema
+	}
 	return nil
 }
 

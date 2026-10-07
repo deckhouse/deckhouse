@@ -18,7 +18,9 @@ package project
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
+	"maps"
 	"net/http"
 	"regexp"
 	"slices"
@@ -28,7 +30,6 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/equality"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
-	"k8s.io/apimachinery/pkg/api/resource"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/webhook"
@@ -177,10 +178,18 @@ func (v *validator) Handle(ctx context.Context, req admission.Request) admission
 		}
 	}
 
-	// validate the standard fields (cheap checks before the OpenAPI validation)
-	if denied := validateStandardFields(project, storedProject(req)); denied != "" {
+	// validate the standard fields (cheap checks before the OpenAPI validation); an update is
+	// checked against the project it replaces
+	spellings, err := quotaSpellings(req.Object.Raw)
+	if err != nil {
+		return admission.Errored(http.StatusBadRequest, err)
+	}
+	v1alpha2Create := req.Operation == admissionv1.Create && writtenThroughV1alpha2(req)
+	denied, quotaWarnings := validateStandardFields(project, spellings, storedProject(req), v1alpha2Create)
+	if denied != "" {
 		return admission.Denied(denied)
 	}
+	warnings = append(warnings, quotaWarnings...)
 
 	if req.Operation == admissionv1.Update {
 		// pass triggered projects
@@ -271,9 +280,17 @@ func namespaceLabels(project *v1alpha3.Project, template *v1alpha2.ProjectTempla
 	return labels, template.Spec.NamespaceMetadata.Labels.Ref()
 }
 
-// byteQuantityUnitRE matches a Kubernetes Quantity that carries an explicit byte-scale unit.
-// Milli/micro/nano suffixes (m/u/n) and bare numbers are intentionally excluded: for memory and
-// storage a bare "5" is 5 bytes, which is almost always a mistake.
+// writtenThroughV1alpha2 reports whether the request writes the project as deckhouse.io/v1alpha2. The
+// webhook gets every request at v1alpha3 (matchPolicy: Equivalent), and RequestKind names the version
+// the client wrote.
+func writtenThroughV1alpha2(req admission.Request) bool {
+	return req.RequestKind != nil &&
+		req.RequestKind.Group == v1alpha2.SchemeGroupVersion.Group && req.RequestKind.Version == v1alpha2.SchemeGroupVersion.Version
+}
+
+// byteQuantityUnitRE matches a Kubernetes Quantity written with an explicit byte-scale unit.
+// Milli/micro/nano suffixes (m/u/n), exponents (1e3, 1E6) and bare numbers are intentionally
+// excluded: for memory and storage a bare "5" is 5 bytes, which is almost always a mistake.
 var byteQuantityUnitRE = regexp.MustCompile(`(Ki|Mi|Gi|Ti|Pi|Ei|[kMGTPE])$`)
 
 // storedProject returns the project an update replaces, and nil for any other operation. A stored
@@ -290,12 +307,45 @@ func storedProject(req admission.Request) *v1alpha3.Project {
 	return old
 }
 
+// quotaSpellings returns the spec.quota values of a raw Project as the request writes them, read the
+// way Quantity reads them: the text of a JSON string without the spaces around it, and the literal
+// of a JSON number, which never ends in a unit. The parsed Quantity keeps only its canonical form,
+// and in it a bare 1000 reads 1k.
+func quotaSpellings(raw []byte) (map[corev1.ResourceName]string, error) {
+	var object struct {
+		Spec struct {
+			Quota map[corev1.ResourceName]json.RawMessage `json:"quota"`
+		} `json:"spec"`
+	}
+	if err := json.Unmarshal(raw, &object); err != nil {
+		return nil, fmt.Errorf("read spec.quota: %w", err)
+	}
+
+	spellings := make(map[corev1.ResourceName]string, len(object.Spec.Quota))
+	for name, value := range object.Spec.Quota {
+		var text string
+		if json.Unmarshal(value, &text) != nil {
+			text = string(value) // a JSON number
+		}
+		spellings[name] = strings.TrimSpace(text)
+	}
+	return spellings, nil
+}
+
 // validateStandardFields performs cheap validation of the Project standard fields. It returns a
-// non-empty denial message when the project is invalid. old is the stored project of an update and
-// nil otherwise. An update is checked only for what it changes: the up-conversion lifts into the
-// standard fields what an older release accepted, a memory quota without a unit for one, and such a
-// project has to stay editable.
-func validateStandardFields(project, old *v1alpha3.Project) string {
+// non-empty denial message when the project is invalid, and the warnings for a valid one.
+// spellings are the quota values as the request writes them (see quotaSpellings). old is the stored
+// project of an update and nil otherwise. An update is checked only for what it changes: the
+// up-conversion lifts into the standard fields what an older release accepted, a memory quota without
+// a unit for one, and such a project has to stay editable. v1alpha2Create is true for a create through
+// deckhouse.io/v1alpha2, the version the manifests of that release are written in, and it lets a quota
+// value without a unit through as well (see validateQuotaByteUnits).
+func validateStandardFields(
+	project *v1alpha3.Project,
+	spellings map[corev1.ResourceName]string,
+	old *v1alpha3.Project,
+	v1alpha2Create bool,
+) (string, []string) {
 	// The v1alpha2 version of a project holds a standard field in the parameter it is lifted from, so
 	// it has room for only one of the two: the down-conversion writes the field over the parameter,
 	// and a v1alpha2 client that writes the project back loses the parameter. The up-conversion never
@@ -308,7 +358,7 @@ func validateStandardFields(project, old *v1alpha3.Project) string {
 			equality.Semantic.DeepEqual(old.Spec.Administrators, project.Spec.Administrators) &&
 			sameParameter(old, project, "administrators")
 		if !kept {
-			return standardFieldAndParameter("administrators", "administrators")
+			return standardFieldAndParameter("administrators", "administrators"), nil
 		}
 	}
 	if quotaNextToParameter(project) {
@@ -316,7 +366,7 @@ func validateStandardFields(project, old *v1alpha3.Project) string {
 			equality.Semantic.DeepEqual(old.Spec.Quota, project.Spec.Quota) &&
 			sameParameter(old, project, "resourceQuota")
 		if !kept {
-			return standardFieldAndParameter("quota", "resourceQuota")
+			return standardFieldAndParameter("quota", "resourceQuota"), nil
 		}
 	}
 
@@ -329,16 +379,13 @@ func validateStandardFields(project, old *v1alpha3.Project) string {
 			continue
 		}
 		if admin.Kind != "User" && admin.Kind != "Group" {
-			return fmt.Sprintf("administrator %q has invalid kind %q: must be User or Group", admin.Name, admin.Kind)
+			return fmt.Sprintf("administrator %q has invalid kind %q: must be User or Group", admin.Name, admin.Kind), nil
 		}
 		if admin.Name == "" {
-			return "administrator name must not be empty"
+			return "administrator name must not be empty", nil
 		}
 	}
-	if msg := validateQuotaByteUnits(project.Spec.Quota, stored.Quota); msg != "" {
-		return msg
-	}
-	return ""
+	return validateQuotaByteUnits(project.Spec.Quota, spellings, stored.Quota, v1alpha2Create)
 }
 
 // administratorsNextToParameter reports whether the project sets spec.administrators together with
@@ -381,29 +428,62 @@ func resourceNameRequiresByteUnit(name corev1.ResourceName) bool {
 	return strings.HasSuffix(s, "memory") || strings.HasSuffix(s, "storage")
 }
 
-func hasByteUnitSuffix(q resource.Quantity) bool {
-	return byteQuantityUnitRE.MatchString(q.String())
+// hasByteUnitSuffix reports whether a quantity is written with a byte-scale unit. It takes the
+// spelling, not the parsed Quantity: the canonical form of a bare 1000 is 1k and of a bare 5000000
+// is 5M, both of which end in a unit.
+func hasByteUnitSuffix(spelling string) bool {
+	return byteQuantityUnitRE.MatchString(spelling)
 }
 
-// validateQuotaByteUnits refuses a memory or storage quantity without a byte unit. 0 reads the same in
-// every unit and passes, and so does a quantity equal to the one the stored quota holds under the key.
-func validateQuotaByteUnits(quota, stored corev1.ResourceList) string {
-	for name, quantity := range quota {
+// validateQuotaByteUnits refuses a memory or storage quota value written without a byte-scale unit.
+// 0 reads the same in every unit and passes. A value equal to the one the stored quota of an update
+// holds under the same key is let through with a warning instead: the v1alpha2 -> v1alpha3
+// conversion carries the bare numbers of the resourceQuota parameter over into spec.quota, and
+// refusing them would refuse every later write of such a project, a re-apply of the unchanged
+// manifest included. A create through deckhouse.io/v1alpha2 (v1alpha2Create) gets the same warning
+// for any such value. The resourceQuota parameter took bare numbers, and a restore from a backup or a
+// GitOps tool that creates the project again writes the manifest as it was.
+func validateQuotaByteUnits(
+	quota corev1.ResourceList,
+	spellings map[corev1.ResourceName]string,
+	stored corev1.ResourceList,
+	v1alpha2Create bool,
+) (string, []string) {
+	var warnings []string
+	for _, name := range slices.Sorted(maps.Keys(quota)) {
+		quantity := quota[name]
 		if !resourceNameRequiresByteUnit(name) || quantity.IsZero() {
 			continue
 		}
+		if hasByteUnitSuffix(spellings[name]) {
+			continue
+		}
+
 		if previous, found := stored[name]; found && previous.Cmp(quantity) == 0 {
+			warnings = append(warnings, fmt.Sprintf(
+				"%s is %s without a unit suffix, which is interpreted as bytes; it is accepted because it did not change, but a new value must include a unit suffix, e.g. 2Gi",
+				name,
+				spellings[name],
+			))
 			continue
 		}
-		if hasByteUnitSuffix(quantity) {
+		if v1alpha2Create {
+			warnings = append(warnings, fmt.Sprintf(
+				"%s is %s without a unit suffix, which is interpreted as bytes; it is accepted because the project is created through %s, "+
+					"whose resourceQuota parameter took such a value, but a new value must include a unit suffix, e.g. 2Gi",
+				name,
+				spellings[name],
+				v1alpha2.SchemeGroupVersion,
+			))
 			continue
 		}
+
 		return fmt.Sprintf(
 			"%s must include a unit suffix, e.g. 2Gi (bare numbers are interpreted as bytes)",
 			name,
-		)
+		), nil
 	}
-	return ""
+	return "", warnings
 }
 
 // projectTemplateByName reads the template at v1alpha2, the served version. Asking for v1alpha1 --

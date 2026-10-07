@@ -32,6 +32,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
+	"sigs.k8s.io/yaml"
 
 	"controller/apis/deckhouse.io/v1alpha2"
 	"controller/apis/deckhouse.io/v1alpha3"
@@ -52,251 +53,342 @@ func TestValidateStandardFields(t *testing.T) {
 	}
 
 	cases := []struct {
-		name    string
-		project *v1alpha3.Project
+		name           string
+		administrators []v1alpha3.Administrator
+		// quota is spec.quota as the request writes it: a Go string is a JSON string, a Go int a
+		// JSON number.
+		quota      map[string]any
+		parameters map[string]any
 		// old is the stored project of an update; nil checks the project as a create.
-		old    *v1alpha3.Project
-		denied bool
+		old *v1alpha3.Project
+		// v1alpha2Create checks the project as a create through deckhouse.io/v1alpha2.
+		v1alpha2Create bool
+		denied         bool
+		warned         bool
 	}{
 		{
-			name:    "empty is valid",
-			project: &v1alpha3.Project{},
+			name: "empty is valid",
 		},
 		{
-			name: "valid administrators and quota",
-			project: &v1alpha3.Project{Spec: v1alpha3.ProjectSpec{
-				Administrators: []v1alpha3.Administrator{{Kind: "User", Name: "alice"}, {Kind: "Group", Name: "team"}},
-				Quota: corev1.ResourceList{
-					"requests.cpu":    resource.MustParse("2"),
-					"requests.memory": resource.MustParse("1Gi"),
-					"limits.memory":   resource.MustParse("512Mi"),
-					"pods":            resource.MustParse("10"),
-				},
-			}},
+			name:           "valid administrators and quota",
+			administrators: []v1alpha3.Administrator{{Kind: "User", Name: "alice"}, {Kind: "Group", Name: "team"}},
+			quota: map[string]any{
+				"requests.cpu":    "2",
+				"requests.memory": "1Gi",
+				"limits.memory":   "512Mi",
+				"pods":            "10",
+			},
 		},
 		{
 			name: "cpu and pods may be bare numbers",
-			project: &v1alpha3.Project{Spec: v1alpha3.ProjectSpec{
-				Quota: corev1.ResourceList{
-					"requests.cpu": resource.MustParse("5"),
-					"limits.cpu":   resource.MustParse("500m"),
-					"pods":         resource.MustParse("10"),
-				},
-			}},
+			quota: map[string]any{
+				"requests.cpu": 5,
+				"limits.cpu":   "500m",
+				"pods":         "10",
+			},
 		},
 		{
-			name: "memory with decimal SI unit is allowed",
-			project: &v1alpha3.Project{Spec: v1alpha3.ProjectSpec{
-				Quota: corev1.ResourceList{"requests.memory": resource.MustParse("1G")},
-			}},
+			name:  "memory with decimal SI unit is allowed",
+			quota: map[string]any{"requests.memory": "1G"},
 		},
 		{
-			name: "bare memory is denied",
-			project: &v1alpha3.Project{Spec: v1alpha3.ProjectSpec{
-				Quota: corev1.ResourceList{"requests.memory": resource.MustParse("5")},
-			}},
+			name:   "bare memory is denied",
+			quota:  map[string]any{"requests.memory": "5"},
 			denied: true,
 		},
 		{
-			name: "bare storage is denied",
-			project: &v1alpha3.Project{Spec: v1alpha3.ProjectSpec{
-				Quota: corev1.ResourceList{"requests.storage": resource.MustParse("5")},
-			}},
+			name:   "bare storage is denied",
+			quota:  map[string]any{"requests.storage": "5"},
 			denied: true,
 		},
 		{
-			name: "ephemeral-storage without unit is denied",
-			project: &v1alpha3.Project{Spec: v1alpha3.ProjectSpec{
-				Quota: corev1.ResourceList{"requests.ephemeral-storage": resource.MustParse("100")},
-			}},
+			name:   "ephemeral-storage without unit is denied",
+			quota:  map[string]any{"requests.ephemeral-storage": "100"},
 			denied: true,
 		},
 		{
-			name: "memory milli suffix is denied",
-			project: &v1alpha3.Project{Spec: v1alpha3.ProjectSpec{
-				Quota: corev1.ResourceList{"limits.memory": resource.MustParse("1000m")},
-			}},
+			name:   "memory milli suffix is denied",
+			quota:  map[string]any{"limits.memory": "1000m"},
 			denied: true,
 		},
 		{
-			name: "a zero memory or storage needs no unit",
-			project: &v1alpha3.Project{Spec: v1alpha3.ProjectSpec{
-				Quota: corev1.ResourceList{"requests.storage": resource.MustParse("0"), "limits.memory": resource.MustParse("0")},
-			}},
+			// the canonical form of 1000000 is 1M, which ends in a unit
+			name:   "a bare multiple of a power of 1000 is denied",
+			quota:  map[string]any{"requests.memory": "1000000"},
+			denied: true,
 		},
 		{
-			name:    "bare memory the stored project already holds",
-			project: &v1alpha3.Project{Spec: v1alpha3.ProjectSpec{Description: "edited", Quota: bareMemory}},
-			old:     &v1alpha3.Project{Spec: v1alpha3.ProjectSpec{Quota: bareMemory}},
+			name:   "a bare JSON number is denied",
+			quota:  map[string]any{"requests.storage": 1000000},
+			denied: true,
 		},
 		{
-			name: "bare memory the stored project holds in another spelling",
-			project: &v1alpha3.Project{Spec: v1alpha3.ProjectSpec{
-				Quota: corev1.ResourceList{"requests.memory": resource.MustParse("1073741824000m")},
-			}},
-			old: &v1alpha3.Project{Spec: v1alpha3.ProjectSpec{Quota: bareMemory}},
+			name:  "a zero memory or storage needs no unit",
+			quota: map[string]any{"requests.storage": "0", "limits.memory": 0},
+		},
+		{
+			name:   "bare memory the stored project already holds",
+			quota:  map[string]any{"requests.memory": "1073741824"},
+			old:    &v1alpha3.Project{Spec: v1alpha3.ProjectSpec{Quota: bareMemory}},
+			warned: true,
+		},
+		{
+			name:   "bare memory the stored project holds in another spelling",
+			quota:  map[string]any{"requests.memory": "1073741824000m"},
+			old:    &v1alpha3.Project{Spec: v1alpha3.ProjectSpec{Quota: bareMemory}},
+			warned: true,
 		},
 		{
 			name: "bare memory next to a key the update changes",
-			project: &v1alpha3.Project{Spec: v1alpha3.ProjectSpec{Quota: corev1.ResourceList{
-				"requests.memory": resource.MustParse("1073741824"),
-				"requests.cpu":    resource.MustParse("4"),
-			}}},
-			old: &v1alpha3.Project{Spec: v1alpha3.ProjectSpec{Quota: bareMemory}},
+			quota: map[string]any{
+				"requests.memory": 1073741824,
+				"requests.cpu":    "4",
+			},
+			old:    &v1alpha3.Project{Spec: v1alpha3.ProjectSpec{Quota: bareMemory}},
+			warned: true,
 		},
 		{
-			name: "bare memory an update sets",
-			project: &v1alpha3.Project{Spec: v1alpha3.ProjectSpec{
-				Quota: corev1.ResourceList{"requests.memory": resource.MustParse("2147483648")},
-			}},
+			name:   "bare memory an update sets",
+			quota:  map[string]any{"requests.memory": "2147483648"},
 			old:    &v1alpha3.Project{Spec: v1alpha3.ProjectSpec{Quota: bareMemory}},
 			denied: true,
 		},
 		{
 			name: "bare storage an update adds",
-			project: &v1alpha3.Project{Spec: v1alpha3.ProjectSpec{Quota: corev1.ResourceList{
-				"requests.memory":  resource.MustParse("1073741824"),
-				"requests.storage": resource.MustParse("10"),
-			}}},
+			quota: map[string]any{
+				"requests.memory":  "1073741824",
+				"requests.storage": "10",
+			},
 			old:    &v1alpha3.Project{Spec: v1alpha3.ProjectSpec{Quota: bareMemory}},
 			denied: true,
 		},
 		{
-			name: "hugepages count may be bare",
-			project: &v1alpha3.Project{Spec: v1alpha3.ProjectSpec{
-				Quota: corev1.ResourceList{"requests.hugepages-2Mi": resource.MustParse("5")},
-			}},
+			// a manifest of the previous release, created again from a backup or by a GitOps tool
+			name: "bare memory and storage of a create through v1alpha2 pass with a warning",
+			quota: map[string]any{
+				"requests.memory":  5368709120,
+				"requests.storage": "10737418240",
+			},
+			v1alpha2Create: true,
+			warned:         true,
 		},
 		{
-			name: "invalid administrator kind",
-			project: &v1alpha3.Project{Spec: v1alpha3.ProjectSpec{
-				Administrators: []v1alpha3.Administrator{{Kind: "ServiceAccount", Name: "robot"}},
-			}},
-			denied: true,
+			name:           "a unit a create through v1alpha2 writes needs no warning",
+			quota:          map[string]any{"requests.memory": "5Gi"},
+			v1alpha2Create: true,
 		},
 		{
-			name: "empty administrator name",
-			project: &v1alpha3.Project{Spec: v1alpha3.ProjectSpec{
-				Administrators: []v1alpha3.Administrator{{Kind: "User", Name: ""}},
-			}},
-			denied: true,
+			name:  "hugepages count may be bare",
+			quota: map[string]any{"requests.hugepages-2Mi": "5"},
 		},
 		{
-			name: "an administrator the stored project already has",
-			project: &v1alpha3.Project{Spec: v1alpha3.ProjectSpec{
-				Administrators: append([]v1alpha3.Administrator{{Kind: "User", Name: "alice"}}, stale...),
-			}},
-			old: &v1alpha3.Project{Spec: v1alpha3.ProjectSpec{Administrators: stale}},
+			// the conversion carries bare numbers of the resourceQuota parameter over into spec.quota
+			name: "bare memory and storage kept unchanged by an update pass with a warning",
+			quota: map[string]any{
+				"requests.memory":  "5368709120",
+				"requests.storage": 10737418240,
+			},
+			old: &v1alpha3.Project{Spec: v1alpha3.ProjectSpec{Quota: corev1.ResourceList{
+				"requests.memory":  resource.MustParse("5368709120"),
+				"requests.storage": resource.MustParse("10737418240"),
+			}}},
+			warned: true,
 		},
 		{
-			name: "an invalid administrator an update adds",
-			project: &v1alpha3.Project{Spec: v1alpha3.ProjectSpec{
-				Administrators: append([]v1alpha3.Administrator{{Kind: "Robot", Name: "r2"}}, stale...),
+			name:  "a bare multiple of a power of 1000 kept unchanged by an update passes with a warning",
+			quota: map[string]any{"requests.memory": 1000},
+			old: &v1alpha3.Project{Spec: v1alpha3.ProjectSpec{
+				Quota: corev1.ResourceList{"requests.memory": resource.MustParse("1000")},
 			}},
-			old:    &v1alpha3.Project{Spec: v1alpha3.ProjectSpec{Administrators: stale}},
-			denied: true,
+			warned: true,
 		},
 		{
-			name: "administrators next to the parameter they replace",
-			project: &v1alpha3.Project{Spec: v1alpha3.ProjectSpec{
-				Administrators: []v1alpha3.Administrator{{Kind: "User", Name: "alice"}},
-				Parameters:     map[string]any{"administrators": []any{"bob"}},
-			}},
-			denied: true,
-		},
-		{
-			name: "an empty administrators list next to the parameter",
-			project: &v1alpha3.Project{Spec: v1alpha3.ProjectSpec{
-				Administrators: []v1alpha3.Administrator{},
-				Parameters:     map[string]any{"administrators": []any{map[string]any{"subject": "User", "name": "bob"}}},
+			name:  "bare memory changed by an update is denied",
+			quota: map[string]any{"limits.memory": "6"},
+			old: &v1alpha3.Project{Spec: v1alpha3.ProjectSpec{
+				Quota: corev1.ResourceList{"limits.memory": resource.MustParse("5")},
 			}},
 			denied: true,
 		},
 		{
-			name: "quota next to the parameter it replaces",
-			project: &v1alpha3.Project{Spec: v1alpha3.ProjectSpec{
-				Quota:      corev1.ResourceList{"pods": resource.MustParse("10")},
-				Parameters: map[string]any{"resourceQuota": map[string]any{"pods": "1", "scopes": []any{"BestEffort"}}},
+			name: "bare memory added by an update is denied",
+			quota: map[string]any{
+				"requests.cpu":    "1",
+				"requests.memory": "5",
+			},
+			old: &v1alpha3.Project{Spec: v1alpha3.ProjectSpec{
+				Quota: corev1.ResourceList{"requests.cpu": resource.MustParse("1")},
 			}},
 			denied: true,
 		},
 		{
-			name: "an empty quota next to the parameter",
-			project: &v1alpha3.Project{Spec: v1alpha3.ProjectSpec{
-				Quota:      corev1.ResourceList{},
-				Parameters: map[string]any{"resourceQuota": "10Gi"},
+			name:  "bare memory lowered by an update is denied",
+			quota: map[string]any{"limits.memory": "4294967296"},
+			old: &v1alpha3.Project{Spec: v1alpha3.ProjectSpec{
+				Quota: corev1.ResourceList{"limits.memory": resource.MustParse("5368709120")},
 			}},
 			denied: true,
 		},
 		{
-			name:    "administrators next to the parameter as the stored project has them",
-			project: &v1alpha3.Project{Spec: *bothAdministrators.DeepCopy()},
-			old:     &v1alpha3.Project{Spec: *bothAdministrators.DeepCopy()},
-		},
-		{
-			name:    "a quota next to the parameter as the stored project has them",
-			project: &v1alpha3.Project{Spec: *bothQuotas.DeepCopy()},
-			old:     &v1alpha3.Project{Spec: *bothQuotas.DeepCopy()},
-		},
-		{
-			name: "administrators an update changes next to the parameter",
-			project: &v1alpha3.Project{Spec: v1alpha3.ProjectSpec{
-				Administrators: []v1alpha3.Administrator{{Kind: "User", Name: "carol"}},
-				Parameters:     bothAdministrators.DeepCopy().Parameters,
+			// 0 reads the same in every unit, so it needs none even under a key the stored quota lacks
+			name:  "a bare zero added by an update needs no unit",
+			quota: map[string]any{"requests.memory": "0"},
+			old: &v1alpha3.Project{Spec: v1alpha3.ProjectSpec{
+				Quota: corev1.ResourceList{"requests.cpu": resource.MustParse("1")},
 			}},
-			old:    &v1alpha3.Project{Spec: *bothAdministrators.DeepCopy()},
-			denied: true,
 		},
 		{
-			name: "a parameter an update changes next to the quota",
-			project: &v1alpha3.Project{Spec: v1alpha3.ProjectSpec{
-				Quota:      bothQuotas.DeepCopy().Quota,
-				Parameters: map[string]any{"resourceQuota": "20Gi"},
-			}},
-			old:    &v1alpha3.Project{Spec: *bothQuotas.DeepCopy()},
-			denied: true,
+			name:           "invalid administrator kind",
+			administrators: []v1alpha3.Administrator{{Kind: "ServiceAccount", Name: "robot"}},
+			denied:         true,
+		},
+		{
+			name:           "empty administrator name",
+			administrators: []v1alpha3.Administrator{{Kind: "User", Name: ""}},
+			denied:         true,
+		},
+		{
+			name:           "an administrator the stored project already has",
+			administrators: append([]v1alpha3.Administrator{{Kind: "User", Name: "alice"}}, stale...),
+			old:            &v1alpha3.Project{Spec: v1alpha3.ProjectSpec{Administrators: stale}},
+		},
+		{
+			name:           "an invalid administrator an update adds",
+			administrators: append([]v1alpha3.Administrator{{Kind: "Robot", Name: "r2"}}, stale...),
+			old:            &v1alpha3.Project{Spec: v1alpha3.ProjectSpec{Administrators: stale}},
+			denied:         true,
+		},
+		{
+			name:           "administrators next to the parameter they replace",
+			administrators: []v1alpha3.Administrator{{Kind: "User", Name: "alice"}},
+			parameters:     map[string]any{"administrators": []any{"bob"}},
+			denied:         true,
+		},
+		{
+			name:           "an empty administrators list next to the parameter",
+			administrators: []v1alpha3.Administrator{},
+			parameters:     map[string]any{"administrators": []any{map[string]any{"subject": "User", "name": "bob"}}},
+			denied:         true,
+		},
+		{
+			name:       "quota next to the parameter it replaces",
+			quota:      map[string]any{"pods": "10"},
+			parameters: map[string]any{"resourceQuota": map[string]any{"pods": "1", "scopes": []any{"BestEffort"}}},
+			denied:     true,
+		},
+		{
+			name:       "an empty quota next to the parameter",
+			quota:      map[string]any{},
+			parameters: map[string]any{"resourceQuota": "10Gi"},
+			denied:     true,
+		},
+		{
+			name:           "administrators next to the parameter as the stored project has them",
+			administrators: bothAdministrators.Administrators,
+			parameters:     bothAdministrators.Parameters,
+			old:            &v1alpha3.Project{Spec: *bothAdministrators.DeepCopy()},
+		},
+		{
+			name:       "a quota next to the parameter as the stored project has them",
+			quota:      map[string]any{"pods": "10"},
+			parameters: bothQuotas.Parameters,
+			old:        &v1alpha3.Project{Spec: *bothQuotas.DeepCopy()},
+		},
+		{
+			name:           "administrators an update changes next to the parameter",
+			administrators: []v1alpha3.Administrator{{Kind: "User", Name: "carol"}},
+			parameters:     bothAdministrators.Parameters,
+			old:            &v1alpha3.Project{Spec: *bothAdministrators.DeepCopy()},
+			denied:         true,
+		},
+		{
+			name:       "a parameter an update changes next to the quota",
+			quota:      map[string]any{"pods": "10"},
+			parameters: map[string]any{"resourceQuota": "20Gi"},
+			old:        &v1alpha3.Project{Spec: *bothQuotas.DeepCopy()},
+			denied:     true,
 		},
 		{
 			// nil and an empty list compare equal, and only one of them is set
-			name: "an empty administrators list an update adds next to the parameter",
-			project: &v1alpha3.Project{Spec: v1alpha3.ProjectSpec{
-				Administrators: []v1alpha3.Administrator{},
-				Parameters:     map[string]any{"administrators": []any{"bob"}},
-			}},
-			old:    &v1alpha3.Project{Spec: v1alpha3.ProjectSpec{Parameters: map[string]any{"administrators": []any{"bob"}}}},
-			denied: true,
+			name:           "an empty administrators list an update adds next to the parameter",
+			administrators: []v1alpha3.Administrator{},
+			parameters:     map[string]any{"administrators": []any{"bob"}},
+			old:            &v1alpha3.Project{Spec: v1alpha3.ProjectSpec{Parameters: map[string]any{"administrators": []any{"bob"}}}},
+			denied:         true,
 		},
 		{
-			name: "standard fields next to null parameters",
-			project: &v1alpha3.Project{Spec: v1alpha3.ProjectSpec{
-				Administrators: []v1alpha3.Administrator{{Kind: "User", Name: "alice"}},
-				Quota:          corev1.ResourceList{"pods": resource.MustParse("10")},
-				Parameters:     map[string]any{"administrators": nil, "resourceQuota": nil},
-			}},
+			name:           "standard fields next to null parameters",
+			administrators: []v1alpha3.Administrator{{Kind: "User", Name: "alice"}},
+			quota:          map[string]any{"pods": "10"},
+			parameters:     map[string]any{"administrators": nil, "resourceQuota": nil},
 		},
 		{
-			name: "parameters without standard fields",
-			project: &v1alpha3.Project{Spec: v1alpha3.ProjectSpec{
-				Parameters: map[string]any{"administrators": []any{"bob"}, "resourceQuota": "10Gi"},
-			}},
+			name:       "parameters without standard fields",
+			parameters: map[string]any{"administrators": []any{"bob"}, "resourceQuota": "10Gi"},
 		},
 		{
-			name: "administrators next to a quota left in the parameters",
-			project: &v1alpha3.Project{Spec: v1alpha3.ProjectSpec{
-				Administrators: []v1alpha3.Administrator{{Kind: "User", Name: "alice"}},
-				Parameters:     map[string]any{"resourceQuota": "10Gi"},
-			}},
+			name:           "administrators next to a quota left in the parameters",
+			administrators: []v1alpha3.Administrator{{Kind: "User", Name: "alice"}},
+			parameters:     map[string]any{"resourceQuota": "10Gi"},
 		},
 	}
 
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
-			msg := validateStandardFields(tc.project, tc.old)
+			raw, err := json.Marshal(map[string]any{"spec": map[string]any{
+				"administrators": tc.administrators,
+				"quota":          tc.quota,
+				"parameters":     tc.parameters,
+			}})
+			require.NoError(t, err)
+			project := new(v1alpha3.Project)
+			require.NoError(t, yaml.Unmarshal(raw, project))
+			spellings, err := quotaSpellings(raw)
+			require.NoError(t, err)
+
+			msg, warnings := validateStandardFields(project, spellings, tc.old, tc.v1alpha2Create)
 			if tc.denied {
 				assert.NotEmpty(t, msg)
 			} else {
 				assert.Empty(t, msg)
 			}
+			if tc.warned {
+				assert.NotEmpty(t, warnings)
+			} else {
+				assert.Empty(t, warnings)
+			}
+		})
+	}
+}
+
+// The unit rule reads a quota value as the request writes it. The parsed Quantity would not do: its
+// canonical form of a bare 1000 is 1k and of a bare 5000000 is 5M, and both end in a unit.
+func TestHasByteUnitSuffix(t *testing.T) {
+	cases := []struct {
+		name    string
+		value   string // the JSON of a spec.quota value
+		hasUnit bool
+	}{
+		{name: "a string of digits", value: `"1000"`},
+		{name: "a string of digits that reads 5M in canonical form", value: `"5000000"`},
+		{name: "a lowercase exponent", value: `"1e3"`},
+		{name: "an uppercase exponent", value: `"1E6"`},
+		{name: "a string of digits that is no multiple of 1000", value: `"2048"`},
+		{name: "a JSON number", value: `1000`},
+		{name: "a JSON number that is no multiple of 1000", value: `2048`},
+		{name: "a decimal kilo", value: `"1k"`, hasUnit: true},
+		{name: "a binary kilo", value: `"1Ki"`, hasUnit: true},
+		{name: "a decimal mega", value: `"5M"`, hasUnit: true},
+		{name: "a binary mega", value: `"512Mi"`, hasUnit: true},
+		{name: "a fraction of a binary giga", value: `"1.5Gi"`, hasUnit: true},
+		{name: "a unit with spaces around it, which Quantity trims", value: `" 5Gi "`, hasUnit: true},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			spellings, err := quotaSpellings([]byte(`{"spec":{"quota":{"requests.memory":` + tc.value + `}}}`))
+			require.NoError(t, err)
+			assert.Equal(t, tc.hasUnit, hasByteUnitSuffix(spellings["requests.memory"]))
 		})
 	}
 }
@@ -422,6 +514,8 @@ func TestHandle_UpdateKeepsWhatTheStoredProjectHolds(t *testing.T) {
 
 	resp := v.Handle(ctx, updateRequest(t, "alice", old, edited))
 	assert.True(t, resp.Allowed, resp.Result)
+	require.Len(t, resp.Warnings, 1)
+	assert.Contains(t, resp.Warnings[0], "requests.memory is 1073741824 without a unit suffix")
 
 	changed := edited.DeepCopy()
 	changed.Spec.Quota["requests.memory"] = resource.MustParse("2147483648")
@@ -434,6 +528,150 @@ func TestHandle_UpdateKeepsWhatTheStoredProjectHolds(t *testing.T) {
 	resp = v.Handle(ctx, undecodable)
 	assert.False(t, resp.Allowed)
 	assert.Contains(t, resp.Result.Message, "requests.memory must include a unit suffix")
+}
+
+// A project written with administrators and resourceQuota in its parameters, on a template whose
+// schema requires both, comes out of the conversion with the two in its standard fields and with
+// the bare byte counts it was written with. Writing it back unchanged, as a GitOps re-apply does,
+// has to pass; a new bare byte count does not.
+func TestHandle_UpdateOfAProjectFromTheParametersLayout(t *testing.T) {
+	const schema = `
+type: object
+required: [administrators, resourceQuota]
+properties:
+  administrators:
+    type: array
+    items:
+      type: object
+      required: [subject, name]
+      properties:
+        subject: {type: string, enum: [User, Group]}
+        name: {type: string, minLength: 1}
+  resourceQuota:
+    type: object
+    properties:
+      requests:
+        type: object
+        properties:
+          memory:
+            oneOf:
+              - {type: number}
+              - {type: string}
+`
+	openAPI := map[string]any{}
+	require.NoError(t, yaml.Unmarshal([]byte(schema), &openAPI))
+	template := &v1alpha2.ProjectTemplate{
+		ObjectMeta: metav1.ObjectMeta{Name: "custom"},
+		Spec:       v1alpha2.ProjectTemplateSpec{ParametersSchema: v1alpha2.ParametersSchema{OpenAPIV3Schema: openAPI}},
+	}
+	old := &v1alpha3.Project{
+		ObjectMeta: metav1.ObjectMeta{Name: "team"},
+		Spec: v1alpha3.ProjectSpec{
+			ProjectTemplateName: "custom",
+			Administrators:      []v1alpha3.Administrator{{Kind: "User", Name: "alice"}},
+			Quota:               corev1.ResourceList{"requests.memory": resource.MustParse("5368709120")},
+		},
+	}
+	v := newValidator(t, template)
+
+	t.Run("the unchanged project passes with a warning", func(t *testing.T) {
+		resp := v.Handle(context.Background(), updateRequest(t, "alice", old, old.DeepCopy()))
+		assert.True(t, resp.Allowed, resp.Result)
+		assert.NotEmpty(t, resp.Warnings)
+	})
+
+	t.Run("a new bare byte count is denied", func(t *testing.T) {
+		updated := old.DeepCopy()
+		updated.Spec.Quota["requests.memory"] = resource.MustParse("6442450944")
+		resp := v.Handle(context.Background(), updateRequest(t, "alice", old, updated))
+		assert.False(t, resp.Allowed)
+		assert.Contains(t, resp.Result.Message, "requests.memory must include a unit suffix")
+	})
+
+	t.Run("a byte count with a unit passes without a warning", func(t *testing.T) {
+		updated := old.DeepCopy()
+		updated.Spec.Quota["requests.memory"] = resource.MustParse("6Gi")
+		resp := v.Handle(context.Background(), updateRequest(t, "alice", old, updated))
+		assert.True(t, resp.Allowed, resp.Result)
+		assert.Empty(t, resp.Warnings)
+	})
+}
+
+// The unit rule reads spec.quota as the request writes it, a JSON number or a string, and not as
+// the parsed Quantity prints it: there a bare 1000000 reads 1M and a bare 1000 reads 1k. A request
+// that writes such a value anew is refused, and one that leaves it as it was passes with a warning
+// that names the value as written. A bare 0 reads the same in every unit and needs none.
+func TestHandle_BareByteQuotaAsWritten(t *testing.T) {
+	request := func(operation admissionv1.Operation, old, updated string) admission.Request {
+		req := admission.Request{AdmissionRequest: admissionv1.AdmissionRequest{
+			Operation: operation,
+			UserInfo:  authnv1.UserInfo{Username: "alice"},
+			Object:    runtime.RawExtension{Raw: []byte(updated)},
+		}}
+		if old != "" {
+			req.OldObject = runtime.RawExtension{Raw: []byte(old)}
+		}
+		return req
+	}
+	project := func(memory string) string {
+		return `{"metadata":{"name":"team"},"spec":{"quota":{"requests.memory":` + memory + `}}}`
+	}
+	v := newValidator(t)
+
+	for _, memory := range []string{`1000000`, `"1000000"`} {
+		t.Run("a new bare "+memory+" is refused", func(t *testing.T) {
+			resp := v.Handle(context.Background(), request(admissionv1.Create, "", project(memory)))
+			assert.False(t, resp.Allowed)
+			assert.Contains(t, resp.Result.Message, "requests.memory must include a unit suffix")
+
+			resp = v.Handle(context.Background(), request(admissionv1.Update, project(`"1Gi"`), project(memory)))
+			assert.False(t, resp.Allowed)
+			assert.Contains(t, resp.Result.Message, "requests.memory must include a unit suffix")
+		})
+	}
+
+	t.Run("an unchanged bare 1000 passes with a warning", func(t *testing.T) {
+		resp := v.Handle(context.Background(), request(admissionv1.Update, project(`1000`), project(`1000`)))
+		assert.True(t, resp.Allowed, resp.Result)
+		require.Len(t, resp.Warnings, 1)
+		assert.Contains(t, resp.Warnings[0], "requests.memory is 1000 without a unit suffix")
+	})
+
+	t.Run("a unit passes without a warning", func(t *testing.T) {
+		resp := v.Handle(context.Background(), request(admissionv1.Update, project(`1000`), project(`"1k"`)))
+		assert.True(t, resp.Allowed, resp.Result)
+		assert.Empty(t, resp.Warnings)
+	})
+
+	for _, memory := range []string{`0`, `"0"`} {
+		t.Run("a new bare "+memory+" passes without a warning", func(t *testing.T) {
+			resp := v.Handle(context.Background(), request(admissionv1.Create, "", project(memory)))
+			assert.True(t, resp.Allowed, resp.Result)
+			assert.Empty(t, resp.Warnings)
+		})
+	}
+
+	// The resourceQuota parameter of a v1alpha2 project took bare numbers, and the conversion lifts
+	// them into spec.quota as they are. A create through v1alpha2, as a restore from a backup or a
+	// GitOps tool that creates the project again writes it, passes with a warning. An update through
+	// v1alpha2 that sets a new one does not.
+	throughV1alpha2 := func(req admission.Request) admission.Request {
+		req.RequestKind = &metav1.GroupVersionKind{Group: "deckhouse.io", Version: "v1alpha2", Kind: "Project"}
+		return req
+	}
+	for _, memory := range []string{`1000000`, `"1000000"`} {
+		t.Run("a bare "+memory+" a create through v1alpha2 writes passes with a warning", func(t *testing.T) {
+			resp := v.Handle(context.Background(), throughV1alpha2(request(admissionv1.Create, "", project(memory))))
+			assert.True(t, resp.Allowed, resp.Result)
+			require.Len(t, resp.Warnings, 1)
+			assert.Contains(t, resp.Warnings[0], "requests.memory is 1000000 without a unit suffix")
+			assert.Contains(t, resp.Warnings[0], "created through deckhouse.io/v1alpha2")
+
+			resp = v.Handle(context.Background(), throughV1alpha2(request(admissionv1.Update, project(`"1Gi"`), project(memory))))
+			assert.False(t, resp.Allowed)
+			assert.Contains(t, resp.Result.Message, "requests.memory must include a unit suffix")
+		})
+	}
 }
 
 func TestHandle_CreateOverExistingNamespace(t *testing.T) {

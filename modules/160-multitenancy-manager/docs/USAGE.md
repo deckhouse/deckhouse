@@ -318,7 +318,7 @@ Note that changing the template may cause a resource conflict. If the template c
 Project administrators and resource quotas are no longer part of the project template parameters — they are first-class fields of the [Project](cr.html#project) resource and work with any template (including `simple`):
 
 - `.spec.administrators` — a list of subjects (`kind: User` or `kind: Group` and `name`) that receive administrative access to the project. The controller manages this access as an auto-generated [ProjectRoleBinding](cr.html#projectrolebinding) in the project namespace.
-- `.spec.quota` — a map of [ResourceQuota](https://kubernetes.io/docs/concepts/policy/resource-quotas/) hard limits (for example, `requests.cpu`, `limits.memory`). The controller maintains a `ResourceQuota` in the project namespace and reports current usage in `.status.usage`. For `memory` and `storage`, a unit suffix is required (for example `2Gi`). Numbers without a unit mean bytes, and all of them except 0 are rejected. An update is checked only for the values it changes, so a project that already holds such a number stays editable.
+- `.spec.quota` — a map of [ResourceQuota](https://kubernetes.io/docs/concepts/policy/resource-quotas/) hard limits (for example, `requests.cpu`, `limits.memory`). The controller maintains a `ResourceQuota` in the project namespace and reports current usage in `.status.usage`. For `memory` and `storage`, a unit suffix is required (for example `2Gi`). Numbers without a unit mean bytes, and all of them except 0 are rejected. An update that leaves such a value as it was is accepted with a warning, so a project whose quota came from bare numbers in `parameters.resourceQuota` stays editable and can still be applied unchanged. A create through `deckhouse.io/v1alpha2` with such numbers in `parameters.resourceQuota` is accepted with a warning as well, so such a manifest can create the project again, for example from a backup.
 
 ```yaml
 apiVersion: deckhouse.io/v1alpha3
@@ -481,6 +481,8 @@ spec:
   parameters:
     securityProfile: Restricted
 ```
+
+A template whose `parametersSchema` still declares the `administrators` and `resourceQuota` parameters keeps accepting projects. The project parameters are validated against such a schema together with `.spec.administrators` and `.spec.quota`, laid out again as `parameters.administrators` and `parameters.resourceQuota` the way the conversion webhook lays them out for `v1alpha2`. A quota value is checked in the form the schema takes, for example `1000` rather than `1k`. A required field that the project leaves empty is checked in its empty form (`[]` for the administrators, `{}` for the quota). The template does not receive these values as parameters when it is rendered.
 
 The `fromParam` references are validated when the template is created: a reference to an undeclared parameter or to a parameter of an incompatible type (for example, a string parameter for a boolean field) is rejected.
 
