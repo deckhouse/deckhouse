@@ -5982,7 +5982,7 @@ alerts:
       module: multitenancy-manager
       edition: ce
       description: |-
-        ProjectTemplate `{{ $labels.template }}` describes the objects of its projects with a Helm text in `resourcesTemplate`, and its projects are rendered from that text. They keep working as before. This form of a template is deprecated, and `resourcesTemplate` goes away in a future release, so move the template to structured fields and `manifests` before then.
+        ProjectTemplate `{{ $labels.template }}` describes the objects of its projects with a Helm text in `resourcesTemplate`, and its projects are rendered from that text. They keep working as before. This form of a template is deprecated, and `resourcesTemplate` goes away in a future release, so move the template to structured fields and `manifests` before then. [Moving a template from a Helm text](https://deckhouse.io/modules/multitenancy-manager/usage.html#moving-a-template-from-a-helm-text) describes the move step by step.
 
         The built-in templates `default`, `secure` and `secure-with-dedicated-nodes` were Helm texts in earlier releases. They are structured now and keep the parameters of their texts, except `administrators` and `resourceQuota`, so they show how a text maps to the fields. A field takes the value of a parameter with `{fromParam: <PARAMETER_NAME>}`, and the projects keep their parameters. What a text renders moves as follows.
 
