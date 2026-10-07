@@ -20,3 +20,13 @@ report `<none>`). This requires watching ReplicaSets, so the descheduler
 `result` is a bounded enum (`success`, `error`, `blocked`) and `reason` is a
 normalized value (e.g. `node_limit_reached`, `too_many_requests`); arbitrary
 error text is never used as a label value.
+
+## 003-go-mod.patch
+
+This patch bumps the OpenTelemetry trace SDK and OTLP trace exporters
+(`go.opentelemetry.io/otel/sdk`, `go.opentelemetry.io/otel/exporters/otlp/otlptrace`,
+`.../otlptrace/otlptracegrpc`) from v1.44.0 to v1.45.0 in `go.mod` and `go.sum` to
+remediate CVE-2026-81870 (GO-2026-6505, exporter configuration leaked into
+Info-level logs, affected range `[1.5.0, 1.45.0)`). descheduler v0.37.0 has no
+upstream release with the fix yet. `otel`, `otel/metric` and `otel/trace` follow to
+v1.45.0, `go.opentelemetry.io/proto/otlp` to v1.11.0.
