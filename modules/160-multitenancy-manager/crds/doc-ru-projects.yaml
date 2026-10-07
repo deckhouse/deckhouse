@@ -96,6 +96,8 @@ spec:
                     Пользователи и группы, получающие административный доступ к проекту.
 
                     Контроллер создаёт один управляемый `ProjectRoleBinding/d8-administrators` с ролью `d8:project:admin` на все записи. Для User имя — kube username (`User.spec.email`); для Group — `Group.spec.name`.
+
+                    Нельзя задавать вместе с `parameters.administrators`.
                   items:
                     properties:
                       kind:
@@ -108,7 +110,9 @@ spec:
 
                     Ключи и значения соответствуют формату `ResourceQuota.spec.hard`, например `requests.cpu: "100"`.
                     Для memory и storage нужна явная единица измерения (например `requests.memory: 2Gi`);
-                    голые числа интерпретируются как байты и отклоняются admission webhook.
+                    голые числа интерпретируются как байты, поэтому admission webhook отклоняет голое число, кроме 0.
+
+                    Нельзя задавать вместе с `parameters.resourceQuota`.
                 parameters:
                   description: |
                     Значения, передаваемые в [шаблон ресурсов](cr.html#projecttemplate-v1alpha1-spec-resourcestemplate) при создании проекта.

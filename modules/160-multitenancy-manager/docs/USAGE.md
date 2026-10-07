@@ -89,7 +89,10 @@ To create a project, follow these steps:
    {% endraw %}
 
    {% alert level="info" %}
-   The Project API is served as `deckhouse.io/v1alpha3`. `v1alpha2` manifests keep working: a conversion webhook lifts `parameters.administrators` and `parameters.resourceQuota` into the `.spec.administrators` and `.spec.quota` standard fields automatically. The `deckhouse.io/v1alpha1` version is no longer served: the API server refuses a manifest with `apiVersion: deckhouse.io/v1alpha1`, so change its `apiVersion` to `deckhouse.io/v1alpha3` and move `parameters.administrators` and `parameters.resourceQuota` into the standard fields before applying it.
+   The Project API is served as `deckhouse.io/v1alpha3`. `v1alpha2` manifests keep working: a conversion webhook lifts `parameters.administrators` and `parameters.resourceQuota` into the `.spec.administrators` and `.spec.quota` standard fields automatically. If one administrator does not fit `.spec.administrators` (for example, it has `accessLevel`), the whole list stays in `parameters` and `.spec.administrators` is not filled. The same holds for a quota with anything other than quantities (for example, `scopes`), for a quota with the number `0` anywhere in it, and for an empty list or quota. A template that checks a value with `with` skips the number `0` and sets no limit, while in `.spec.quota` it would be a hard limit of zero. The string `"0"` is lifted into `.spec.quota` as such a limit. A `v1alpha2` client reads a `0` from `.spec.quota` as the string `"0"`.
+   A project cannot set `.spec.administrators` together with `parameters.administrators`, or `.spec.quota` together with `parameters.resourceQuota`.
+
+   The `deckhouse.io/v1alpha1` version is no longer served: the API server refuses a manifest with `apiVersion: deckhouse.io/v1alpha1`, so change its `apiVersion` to `deckhouse.io/v1alpha3` and move `parameters.administrators` and `parameters.resourceQuota` into the standard fields before applying it.
    {% endalert %}
 
    {% raw %}
@@ -315,7 +318,7 @@ Note that changing the template may cause a resource conflict. If the template c
 Project administrators and resource quotas are no longer part of the project template parameters — they are first-class fields of the [Project](cr.html#project) resource and work with any template (including `simple`):
 
 - `.spec.administrators` — a list of subjects (`kind: User` or `kind: Group` and `name`) that receive administrative access to the project. The controller manages this access as an auto-generated [ProjectRoleBinding](cr.html#projectrolebinding) in the project namespace.
-- `.spec.quota` — a map of [ResourceQuota](https://kubernetes.io/docs/concepts/policy/resource-quotas/) hard limits (for example, `requests.cpu`, `limits.memory`). The controller maintains a `ResourceQuota` in the project namespace and reports current usage in `.status.usage`. For `memory` and `storage`, a unit suffix is required (for example `2Gi`). Numbers without a unit mean bytes and are rejected.
+- `.spec.quota` — a map of [ResourceQuota](https://kubernetes.io/docs/concepts/policy/resource-quotas/) hard limits (for example, `requests.cpu`, `limits.memory`). The controller maintains a `ResourceQuota` in the project namespace and reports current usage in `.status.usage`. For `memory` and `storage`, a unit suffix is required (for example `2Gi`). Numbers without a unit mean bytes, and all of them except 0 are rejected. An update is checked only for the values it changes, so a project that already holds such a number stays editable.
 
 ```yaml
 apiVersion: deckhouse.io/v1alpha3

@@ -40,10 +40,23 @@ import (
 )
 
 func TestValidateStandardFields(t *testing.T) {
+	bareMemory := corev1.ResourceList{"requests.memory": resource.MustParse("1073741824")}
+	stale := []v1alpha3.Administrator{{Kind: "ServiceAccount", Name: "robot"}}
+	bothAdministrators := v1alpha3.ProjectSpec{
+		Administrators: []v1alpha3.Administrator{{Kind: "User", Name: "alice"}},
+		Parameters:     map[string]any{"administrators": []any{"bob"}},
+	}
+	bothQuotas := v1alpha3.ProjectSpec{
+		Quota:      corev1.ResourceList{"pods": resource.MustParse("10")},
+		Parameters: map[string]any{"resourceQuota": "10Gi"},
+	}
+
 	cases := []struct {
 		name    string
 		project *v1alpha3.Project
-		denied  bool
+		// old is the stored project of an update; nil checks the project as a create.
+		old    *v1alpha3.Project
+		denied bool
 	}{
 		{
 			name:    "empty is valid",
@@ -106,6 +119,49 @@ func TestValidateStandardFields(t *testing.T) {
 			denied: true,
 		},
 		{
+			name: "a zero memory or storage needs no unit",
+			project: &v1alpha3.Project{Spec: v1alpha3.ProjectSpec{
+				Quota: corev1.ResourceList{"requests.storage": resource.MustParse("0"), "limits.memory": resource.MustParse("0")},
+			}},
+		},
+		{
+			name:    "bare memory the stored project already holds",
+			project: &v1alpha3.Project{Spec: v1alpha3.ProjectSpec{Description: "edited", Quota: bareMemory}},
+			old:     &v1alpha3.Project{Spec: v1alpha3.ProjectSpec{Quota: bareMemory}},
+		},
+		{
+			name: "bare memory the stored project holds in another spelling",
+			project: &v1alpha3.Project{Spec: v1alpha3.ProjectSpec{
+				Quota: corev1.ResourceList{"requests.memory": resource.MustParse("1073741824000m")},
+			}},
+			old: &v1alpha3.Project{Spec: v1alpha3.ProjectSpec{Quota: bareMemory}},
+		},
+		{
+			name: "bare memory next to a key the update changes",
+			project: &v1alpha3.Project{Spec: v1alpha3.ProjectSpec{Quota: corev1.ResourceList{
+				"requests.memory": resource.MustParse("1073741824"),
+				"requests.cpu":    resource.MustParse("4"),
+			}}},
+			old: &v1alpha3.Project{Spec: v1alpha3.ProjectSpec{Quota: bareMemory}},
+		},
+		{
+			name: "bare memory an update sets",
+			project: &v1alpha3.Project{Spec: v1alpha3.ProjectSpec{
+				Quota: corev1.ResourceList{"requests.memory": resource.MustParse("2147483648")},
+			}},
+			old:    &v1alpha3.Project{Spec: v1alpha3.ProjectSpec{Quota: bareMemory}},
+			denied: true,
+		},
+		{
+			name: "bare storage an update adds",
+			project: &v1alpha3.Project{Spec: v1alpha3.ProjectSpec{Quota: corev1.ResourceList{
+				"requests.memory":  resource.MustParse("1073741824"),
+				"requests.storage": resource.MustParse("10"),
+			}}},
+			old:    &v1alpha3.Project{Spec: v1alpha3.ProjectSpec{Quota: bareMemory}},
+			denied: true,
+		},
+		{
 			name: "hugepages count may be bare",
 			project: &v1alpha3.Project{Spec: v1alpha3.ProjectSpec{
 				Quota: corev1.ResourceList{"requests.hugepages-2Mi": resource.MustParse("5")},
@@ -125,11 +181,117 @@ func TestValidateStandardFields(t *testing.T) {
 			}},
 			denied: true,
 		},
+		{
+			name: "an administrator the stored project already has",
+			project: &v1alpha3.Project{Spec: v1alpha3.ProjectSpec{
+				Administrators: append([]v1alpha3.Administrator{{Kind: "User", Name: "alice"}}, stale...),
+			}},
+			old: &v1alpha3.Project{Spec: v1alpha3.ProjectSpec{Administrators: stale}},
+		},
+		{
+			name: "an invalid administrator an update adds",
+			project: &v1alpha3.Project{Spec: v1alpha3.ProjectSpec{
+				Administrators: append([]v1alpha3.Administrator{{Kind: "Robot", Name: "r2"}}, stale...),
+			}},
+			old:    &v1alpha3.Project{Spec: v1alpha3.ProjectSpec{Administrators: stale}},
+			denied: true,
+		},
+		{
+			name: "administrators next to the parameter they replace",
+			project: &v1alpha3.Project{Spec: v1alpha3.ProjectSpec{
+				Administrators: []v1alpha3.Administrator{{Kind: "User", Name: "alice"}},
+				Parameters:     map[string]any{"administrators": []any{"bob"}},
+			}},
+			denied: true,
+		},
+		{
+			name: "an empty administrators list next to the parameter",
+			project: &v1alpha3.Project{Spec: v1alpha3.ProjectSpec{
+				Administrators: []v1alpha3.Administrator{},
+				Parameters:     map[string]any{"administrators": []any{map[string]any{"subject": "User", "name": "bob"}}},
+			}},
+			denied: true,
+		},
+		{
+			name: "quota next to the parameter it replaces",
+			project: &v1alpha3.Project{Spec: v1alpha3.ProjectSpec{
+				Quota:      corev1.ResourceList{"pods": resource.MustParse("10")},
+				Parameters: map[string]any{"resourceQuota": map[string]any{"pods": "1", "scopes": []any{"BestEffort"}}},
+			}},
+			denied: true,
+		},
+		{
+			name: "an empty quota next to the parameter",
+			project: &v1alpha3.Project{Spec: v1alpha3.ProjectSpec{
+				Quota:      corev1.ResourceList{},
+				Parameters: map[string]any{"resourceQuota": "10Gi"},
+			}},
+			denied: true,
+		},
+		{
+			name:    "administrators next to the parameter as the stored project has them",
+			project: &v1alpha3.Project{Spec: *bothAdministrators.DeepCopy()},
+			old:     &v1alpha3.Project{Spec: *bothAdministrators.DeepCopy()},
+		},
+		{
+			name:    "a quota next to the parameter as the stored project has them",
+			project: &v1alpha3.Project{Spec: *bothQuotas.DeepCopy()},
+			old:     &v1alpha3.Project{Spec: *bothQuotas.DeepCopy()},
+		},
+		{
+			name: "administrators an update changes next to the parameter",
+			project: &v1alpha3.Project{Spec: v1alpha3.ProjectSpec{
+				Administrators: []v1alpha3.Administrator{{Kind: "User", Name: "carol"}},
+				Parameters:     bothAdministrators.DeepCopy().Parameters,
+			}},
+			old:    &v1alpha3.Project{Spec: *bothAdministrators.DeepCopy()},
+			denied: true,
+		},
+		{
+			name: "a parameter an update changes next to the quota",
+			project: &v1alpha3.Project{Spec: v1alpha3.ProjectSpec{
+				Quota:      bothQuotas.DeepCopy().Quota,
+				Parameters: map[string]any{"resourceQuota": "20Gi"},
+			}},
+			old:    &v1alpha3.Project{Spec: *bothQuotas.DeepCopy()},
+			denied: true,
+		},
+		{
+			// nil and an empty list compare equal, and only one of them is set
+			name: "an empty administrators list an update adds next to the parameter",
+			project: &v1alpha3.Project{Spec: v1alpha3.ProjectSpec{
+				Administrators: []v1alpha3.Administrator{},
+				Parameters:     map[string]any{"administrators": []any{"bob"}},
+			}},
+			old:    &v1alpha3.Project{Spec: v1alpha3.ProjectSpec{Parameters: map[string]any{"administrators": []any{"bob"}}}},
+			denied: true,
+		},
+		{
+			name: "standard fields next to null parameters",
+			project: &v1alpha3.Project{Spec: v1alpha3.ProjectSpec{
+				Administrators: []v1alpha3.Administrator{{Kind: "User", Name: "alice"}},
+				Quota:          corev1.ResourceList{"pods": resource.MustParse("10")},
+				Parameters:     map[string]any{"administrators": nil, "resourceQuota": nil},
+			}},
+		},
+		{
+			name: "parameters without standard fields",
+			project: &v1alpha3.Project{Spec: v1alpha3.ProjectSpec{
+				Parameters: map[string]any{"administrators": []any{"bob"}, "resourceQuota": "10Gi"},
+			}},
+		},
+		{
+			name: "administrators next to a quota left in the parameters",
+			project: &v1alpha3.Project{Spec: v1alpha3.ProjectSpec{
+				Administrators: []v1alpha3.Administrator{{Kind: "User", Name: "alice"}},
+				Parameters:     map[string]any{"resourceQuota": "10Gi"},
+			}},
+		},
 	}
 
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
-			msg := validateStandardFields(tc.project)
+			msg := validateStandardFields(tc.project, tc.old)
 			if tc.denied {
 				assert.NotEmpty(t, msg)
 			} else {
@@ -210,6 +372,68 @@ func TestHandle_ProjectSpecIsUserEditable(t *testing.T) {
 
 	resp := v.Handle(ctx, updateRequest(t, "alice", old, updated))
 	assert.True(t, resp.Allowed)
+}
+
+// The down-conversion writes a standard field over the parameter it was lifted from, so a v1alpha3
+// client that sets both is refused on create and on update, before the template is even looked up.
+func TestHandle_StandardFieldNextToItsParameter(t *testing.T) {
+	v := newValidator(t)
+	ctx := context.Background()
+
+	old := projectWithParameters(map[string]any{"administrators": []any{"bob"}})
+	updated := old.DeepCopy()
+	updated.Spec.Administrators = []v1alpha3.Administrator{{Kind: "User", Name: "alice"}}
+
+	resp := v.Handle(ctx, updateRequest(t, "alice", old, updated))
+	assert.False(t, resp.Allowed)
+	assert.Contains(t, resp.Result.Message, "spec.administrators and spec.parameters.administrators cannot both be set")
+
+	created := projectWithParameters(map[string]any{"resourceQuota": map[string]any{"requests": map[string]any{"cpu": "1"}}})
+	created.Spec.Quota = corev1.ResourceList{"requests.cpu": resource.MustParse("1")}
+	raw, err := json.Marshal(created)
+	require.NoError(t, err)
+	resp = v.Handle(ctx, admission.Request{AdmissionRequest: admissionv1.AdmissionRequest{
+		Operation: admissionv1.Create,
+		UserInfo:  authnv1.UserInfo{Username: "alice"},
+		Object:    runtime.RawExtension{Raw: raw},
+	}})
+	assert.False(t, resp.Allowed)
+	assert.Contains(t, resp.Result.Message, "spec.quota and spec.parameters.resourceQuota cannot both be set")
+
+	// the parameter alone is allowed
+	resp = v.Handle(ctx, updateRequest(t, "alice", old, old))
+	assert.True(t, resp.Allowed, resp.Result)
+}
+
+// The up-conversion lifts what an older release accepted, such as a memory quota without a unit, into
+// the standard fields. An update of anything else has to go through, and only what an update changes
+// is checked. A stored project that does not decode leaves the update to be checked in full. A user's
+// update decodes the stored project earlier, for the checks of the project's own labels, so the case
+// is one of the controller.
+func TestHandle_UpdateKeepsWhatTheStoredProjectHolds(t *testing.T) {
+	v := newValidator(t)
+	ctx := context.Background()
+
+	old := projectWithParameters(map[string]any{"networkPolicy": "Isolated"})
+	old.Spec.Quota = corev1.ResourceList{"requests.memory": resource.MustParse("1073741824")}
+	edited := old.DeepCopy()
+	edited.Spec.Description = "edited"
+	edited.Labels = map[string]string{"team": "backend"}
+
+	resp := v.Handle(ctx, updateRequest(t, "alice", old, edited))
+	assert.True(t, resp.Allowed, resp.Result)
+
+	changed := edited.DeepCopy()
+	changed.Spec.Quota["requests.memory"] = resource.MustParse("2147483648")
+	resp = v.Handle(ctx, updateRequest(t, "alice", old, changed))
+	assert.False(t, resp.Allowed)
+	assert.Contains(t, resp.Result.Message, "requests.memory must include a unit suffix")
+
+	undecodable := updateRequest(t, rolebindingwebhook.ControllerServiceAccount, old, edited)
+	undecodable.OldObject.Raw = []byte(`{"metadata":{"name":"foo"},"spec":{"quota":{"requests.memory":"lots"}}}`)
+	resp = v.Handle(ctx, undecodable)
+	assert.False(t, resp.Allowed)
+	assert.Contains(t, resp.Result.Message, "requests.memory must include a unit suffix")
 }
 
 func TestHandle_CreateOverExistingNamespace(t *testing.T) {

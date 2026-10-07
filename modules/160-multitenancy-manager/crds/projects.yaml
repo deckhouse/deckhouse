@@ -206,6 +206,8 @@ spec:
                     Users and groups that get administrative access to the project.
 
                     The controller creates one managed `ProjectRoleBinding/d8-administrators` granting `d8:project:admin` to all entries. User name is the kube username (`User.spec.email`); Group name is `Group.spec.name`.
+
+                    Cannot be set together with `parameters.administrators`.
                   type: array
                   items:
                     type: object
@@ -234,7 +236,9 @@ spec:
 
                     Keys and values follow the `ResourceQuota.spec.hard` format, for example `requests.cpu: "100"`.
                     Memory and storage quantities must include an explicit unit suffix (for example `requests.memory: 2Gi`);
-                    bare numbers are interpreted as bytes and are rejected by the admission webhook.
+                    bare numbers are interpreted as bytes, so the admission webhook rejects a bare number other than 0.
+
+                    Cannot be set together with `parameters.resourceQuota`.
                   type: object
                   additionalProperties:
                     anyOf:

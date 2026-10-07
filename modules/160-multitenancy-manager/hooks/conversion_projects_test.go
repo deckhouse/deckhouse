@@ -18,17 +18,21 @@ package hooks
 
 import (
 	"bytes"
+	"crypto/sha256"
+	"encoding/hex"
 	"encoding/json"
 	"os"
 	"os/exec"
 	"path/filepath"
 	"reflect"
+	"regexp"
 	"strings"
 	"testing"
 
 	"github.com/itchyny/gojq"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	corev1 "k8s.io/api/core/v1"
 	"sigs.k8s.io/yaml"
 )
 
@@ -39,6 +43,12 @@ const (
 	conversionHook         = "../webhooks/conversion/projects"
 	templateConversionHook = "../webhooks/conversion/projecttemplates"
 )
+
+// conversionHookSHA256 is the SHA-256 of the projects hook. The hook and this file also ship ahead in
+// the previous release branch, so that its webhook-handler pods answer Project conversions while an
+// upgrade rolls out, and both branches pin the same digest. Neither copy of the hook changes without
+// this constant, and a change to it here is a change the other branch has to take as well.
+const conversionHookSHA256 = "70b50e01b65c06b2bb4d881bdb7abdd7c51b9719b940e054933a690372928e0c"
 
 // conversionFixtures holds the golden fixtures of the conversion hooks, a directory per hook and a file
 // per conversion path. The fixtures describe the hooks, not this test, so any copy of the hooks can be
@@ -64,6 +74,18 @@ func TestProjectConversionGolden(t *testing.T) {
 			testConversionGolden(t, conversionHook, filepath.Join(conversionFixtures, "projects", path+".yaml"))
 		})
 	}
+}
+
+// The projects hook is the one the previous release branch carries, byte for byte.
+func TestProjectConversionHookDigest(t *testing.T) {
+	t.Parallel()
+
+	raw, err := os.ReadFile(conversionHook)
+	require.NoError(t, err)
+
+	sum := sha256.Sum256(raw)
+	assert.Equal(t, conversionHookSHA256, hex.EncodeToString(sum[:]),
+		"the projects hook changed: update conversionHookSHA256 and carry the hook to the release branch that ships it ahead")
 }
 
 // A project version round-trip has to return the object it started from. The two conversions are
@@ -109,9 +131,11 @@ func TestProjectQuotaRoundTrip(t *testing.T) {
 			want:  map[string]any{"requests.cpu": "1"},
 		},
 		{
-			name:  "an empty quota",
-			quota: map[string]any{},
-			want:  map[string]any{},
+			// The number 0 goes down as the string "0", the only 0 the up-conversion lifts. Given back as a
+			// number, it would leave the whole quota in the parameters and spec.quota empty.
+			name:  "the number 0",
+			quota: map[string]any{"requests.cpu": 0, "requests.memory": "4Gi", "services.loadbalancers": 0},
+			want:  map[string]any{"requests.cpu": "0", "requests.memory": "4Gi", "services.loadbalancers": "0"},
 		},
 	}
 
@@ -153,39 +177,298 @@ func TestProjectQuotaRoundTrip(t *testing.T) {
 	}
 }
 
-// The v1alpha2 layout has nowhere to put a nested object that is not requests/limits, so the
-// up-conversion drops it. That is a deliberate loss, and this is where it is written down.
-func TestProjectQuotaDropsNestedObjects(t *testing.T) {
+// The up-conversion lifts a parameter into a standard field only if v1alpha3 can hold it and the
+// down-conversion gives it back as it was, apart from a fraction, which comes back as a string. Every
+// shape here, whether it is lifted or left in the parameters, has to come back from v1alpha3 as the
+// client wrote it, with every jq engine, and what reaches the standard fields has to read the way the
+// controller and the schema read it.
+func TestProjectLiftGivesBack(t *testing.T) {
 	t.Parallel()
 
-	project := map[string]any{
-		"apiVersion": "deckhouse.io/v1alpha2",
-		"kind":       "Project",
-		"metadata":   map[string]any{"name": "test"},
-		"spec": map[string]any{
-			"parameters": map[string]any{
+	admin := map[string]any{"subject": "User", "name": "alice@example.com"}
+	group := map[string]any{"subject": "Group", "name": "backend-admins"}
+	both := []string{"administrators", "quota"}
+
+	tests := []struct {
+		name       string
+		parameters map[string]any
+		// lifted lists the standard fields the up-conversion fills.
+		lifted []string
+		// back is the parameters after the round trip; nil means the same as parameters.
+		back map[string]any
+	}{
+		{
+			name: "the shape of the default template",
+			parameters: map[string]any{
+				"administrators": []any{admin, group},
 				"resourceQuota": map[string]any{
-					"requests": map[string]any{"cpu": "1"},
-					"nested":   map[string]any{"any": "thing"},
-					"listed":   []any{"a"},
+					"requests": map[string]any{"cpu": 5, "memory": "5Gi", "storage": "1Gi"},
+					"limits":   map[string]any{"cpu": "500m", "memory": "5Gi"},
 				},
+				"networkPolicy": "Isolated",
 			},
+			lifted: both,
+		},
+		{
+			name: "flat keys and a dotted resource name next to the nesting",
+			parameters: map[string]any{"resourceQuota": map[string]any{
+				"requests":               map[string]any{"nvidia.com/gpu": 2},
+				"pods":                   "10",
+				"count/deployments.apps": "5",
+				"services.loadbalancers": 1,
+			}},
+			lifted: []string{"quota"},
+		},
+		{
+			// spec.quota holds an integer or a string, so a fraction can only be lifted as a string.
+			name: "a fraction",
+			parameters: map[string]any{"resourceQuota": map[string]any{
+				"requests": map[string]any{"cpu": 0.5, "memory": "512Mi"},
+				"limits":   map[string]any{"cpu": 1},
+			}},
+			lifted: []string{"quota"},
+			back: map[string]any{"resourceQuota": map[string]any{
+				"requests": map[string]any{"cpu": "0.5", "memory": "512Mi"},
+				"limits":   map[string]any{"cpu": 1},
+			}},
+		},
+		{
+			name:       "a bare requests key",
+			parameters: map[string]any{"resourceQuota": map[string]any{"requests": "5", "limits": "7"}},
+			lifted:     []string{"quota"},
+		},
+		{
+			// The controller drops an empty standard field when it writes the project back, and the
+			// v1alpha2 view would lose the parameter with it.
+			name:       "an empty list and an empty quota",
+			parameters: map[string]any{"administrators": []any{}, "resourceQuota": map[string]any{}},
+		},
+		{
+			name:       "an empty requests next to a flat key",
+			parameters: map[string]any{"resourceQuota": map[string]any{"requests": map[string]any{}, "pods": 3}},
+		},
+		{
+			name: "an empty limits next to requests",
+			parameters: map[string]any{"resourceQuota": map[string]any{
+				"requests": map[string]any{"cpu": "1"},
+				"limits":   map[string]any{},
+			}},
+		},
+		{
+			name:       "names instead of subjects",
+			parameters: map[string]any{"administrators": []any{"alice@example.com"}},
+		},
+		{
+			name:       "one subject instead of a list",
+			parameters: map[string]any{"administrators": admin},
+		},
+		{
+			name: "an item with an access level",
+			parameters: map[string]any{"administrators": []any{
+				admin,
+				map[string]any{"subject": "Group", "name": "developers", "accessLevel": "Editor"},
+			}},
+		},
+		{
+			name:       "a ServiceAccount subject",
+			parameters: map[string]any{"administrators": []any{map[string]any{"subject": "ServiceAccount", "name": "ci"}}},
+		},
+		{
+			name:       "a name with a line break",
+			parameters: map[string]any{"administrators": []any{map[string]any{"subject": "User", "name": "alice\nkind: Group"}}},
+		},
+		{
+			name:       "an empty name",
+			parameters: map[string]any{"administrators": []any{map[string]any{"subject": "User", "name": ""}}},
+		},
+		{
+			name:       "a quota given as a string",
+			parameters: map[string]any{"resourceQuota": "10Gi"},
+		},
+		{
+			name: "a nested quota object",
+			parameters: map[string]any{"resourceQuota": map[string]any{
+				"requests": map[string]any{"cpu": "1"},
+				"services": map[string]any{"loadbalancers": 2},
+			}},
+		},
+		{
+			name: "scopes",
+			parameters: map[string]any{"resourceQuota": map[string]any{
+				"requests": map[string]any{"cpu": "1"},
+				"scopes":   []any{"BestEffort"},
+			}},
+		},
+		{
+			name: "a flat key next to the nesting it collides with",
+			parameters: map[string]any{"resourceQuota": map[string]any{
+				"requests":     map[string]any{"cpu": "1"},
+				"requests.cpu": "2",
+			}},
+		},
+		{
+			name:       "a flat key that would come back nested",
+			parameters: map[string]any{"resourceQuota": map[string]any{"limits.memory": "1Gi"}},
+		},
+		{
+			name:       "a value that is no quantity",
+			parameters: map[string]any{"resourceQuota": map[string]any{"requests": map[string]any{"cpu": "lots"}}},
+		},
+		{
+			name:       "a quantity with a trailing newline",
+			parameters: map[string]any{"resourceQuota": map[string]any{"requests": map[string]any{"cpu": "1\n"}}},
+		},
+		{
+			name:       "an exponent longer than three digits",
+			parameters: map[string]any{"resourceQuota": map[string]any{"limits": map[string]any{"cpu": "1e-1000"}}},
+		},
+		{
+			// The templates of the previous release took the number 0 for no limit, and spec.quota
+			// would make it a hard one.
+			name: "the number 0",
+			parameters: map[string]any{"resourceQuota": map[string]any{
+				"requests": map[string]any{"cpu": 0, "memory": "5Gi"},
+				"pods":     10,
+			}},
+		},
+		{
+			name:       "the number 0 as a flat key",
+			parameters: map[string]any{"resourceQuota": map[string]any{"services.loadbalancers": 0}},
+		},
+		{
+			name: "the string 0",
+			parameters: map[string]any{"resourceQuota": map[string]any{
+				"requests": map[string]any{"cpu": "0"},
+				"limits":   map[string]any{"memory": "0"},
+			}},
+			lifted: []string{"quota"},
+		},
+		{
+			name:       "a quantity of 64 characters",
+			parameters: map[string]any{"resourceQuota": map[string]any{"pods": "1" + strings.Repeat("0", 63)}},
+			lifted:     []string{"quota"},
+		},
+		{
+			// The canonical form of a long mantissa takes time quadratic in its length, and the
+			// controller computes it each time it writes the project.
+			name:       "a quantity longer than 64 characters",
+			parameters: map[string]any{"resourceQuota": map[string]any{"pods": "1" + strings.Repeat("0", 64)}},
+		},
+		{
+			name: "administrators lifted next to a quota left behind",
+			parameters: map[string]any{
+				"administrators": []any{admin},
+				"resourceQuota":  map[string]any{"requests": map[string]any{"cpu": "1"}, "scopes": []any{"BestEffort"}},
+			},
+			lifted: []string{"administrators"},
 		},
 	}
 
-	quota, ok := specField(convert(t, "v1alpha2_to_v1alpha3", project), "quota").(map[string]any)
-	if !ok {
-		t.Fatal("the up-conversion produced no quota")
+	for _, engine := range jqEngines(t) {
+		for _, tt := range tests {
+			t.Run(engine.name+"/"+tt.name, func(t *testing.T) {
+				t.Parallel()
+
+				project := map[string]any{
+					"apiVersion": "deckhouse.io/v1alpha2",
+					"kind":       "Project",
+					"metadata":   map[string]any{"name": "test"},
+					"spec":       map[string]any{"projectTemplateName": "custom", "parameters": tt.parameters},
+				}
+
+				up := runConversion(t, engine, conversionHook, "v1alpha2_to_v1alpha3", []any{project})
+				spec, ok := up[0].(map[string]any)["spec"].(map[string]any)
+				require.True(t, ok, "the up-conversion produced no spec: %v", up[0])
+
+				var lifted []string
+				for _, field := range []string{"administrators", "quota"} {
+					if _, found := spec[field]; found {
+						lifted = append(lifted, field)
+					}
+				}
+				assert.Equal(t, tt.lifted, lifted, "the standard fields the up-conversion filled")
+				assertStandardFieldsRead(t, spec)
+
+				down := runConversion(t, engine, conversionHook, "v1alpha3_to_v1alpha2", up)
+				if tt.back != nil {
+					project["spec"] = map[string]any{"projectTemplateName": "custom", "parameters": tt.back}
+				}
+				want, err := json.Marshal(project)
+				require.NoError(t, err)
+				got, err := json.Marshal(down[0])
+				require.NoError(t, err)
+				assert.JSONEq(t, string(want), string(got), "the round trip through v1alpha3")
+			})
+		}
+	}
+}
+
+// administratorName is the pattern of spec.administrators[].name in the v1alpha3 schema of
+// crds/projects.yaml. It is spelled out rather than read from there because the conversion and its
+// fixtures also ship ahead in a release whose schema has no v1alpha3.
+var administratorName = regexp.MustCompile(`^[^\x00-\x1f\x7f]+$`)
+
+// assertStandardFieldsRead checks that the standard fields of a converted project read the way the
+// controller reads them: spec.quota is decoded as a ResourceList, so one value that is no quantity
+// fails the read of every project, and an administrator is a User or Group with a name the schema
+// accepts.
+func assertStandardFieldsRead(t *testing.T, spec map[string]any) {
+	t.Helper()
+
+	if quota, found := spec["quota"]; found {
+		raw, err := json.Marshal(quota)
+		require.NoError(t, err)
+		var hard corev1.ResourceList
+		assert.NoError(t, json.Unmarshal(raw, &hard), "spec.quota %s does not read as quantities", raw)
 	}
 
-	if _, dropped := quota["nested"]; dropped {
-		t.Error("a nested object reached spec.quota, which is a map of strings")
+	if administrators, found := spec["administrators"]; found {
+		raw, err := json.Marshal(administrators)
+		require.NoError(t, err)
+
+		decoder := json.NewDecoder(bytes.NewReader(raw))
+		decoder.DisallowUnknownFields()
+		var subjects []struct {
+			Kind string `json:"kind"`
+			Name string `json:"name"`
+		}
+		require.NoError(t, decoder.Decode(&subjects), "spec.administrators %s", raw)
+
+		for _, subject := range subjects {
+			assert.Contains(t, []string{"User", "Group"}, subject.Kind, "the kind of %q", subject.Name)
+			assert.Regexp(t, administratorName, subject.Name, "the name of a %s", subject.Kind)
+		}
 	}
-	if _, dropped := quota["listed"]; dropped {
-		t.Error("a list reached spec.quota, which is a map of strings")
+}
+
+// jqPattern matches the string literal a jq regex builtin takes as its pattern.
+var jqPattern = regexp.MustCompile(`\b(?:test|match|capture|scan|splits|sub|gsub)\(\s*("(?:[^"\\]|\\.)*")`)
+
+// The unit test image has no jq binary, so in CI the programs run on gojq alone, whose patterns are
+// RE2 and whose $ is the end of the text. The $ of jq is Oniguruma's and also matches before a
+// trailing newline, which would let "1\n" through as a quantity. Every pattern of the projects hook
+// is therefore anchored with \A and \z, and that is checked here without an engine to show it.
+func TestProjectConversionPatternsAreAnchored(t *testing.T) {
+	t.Parallel()
+
+	functions := []string{"v1alpha1_to_v1alpha2", "v1alpha2_to_v1alpha1", "v1alpha2_to_v1alpha3", "v1alpha3_to_v1alpha2"}
+
+	var patterns []string
+	for _, function := range functions {
+		for _, match := range jqPattern.FindAllStringSubmatch(jqProgram(t, conversionHook, function), -1) {
+			// A jq string literal without interpolation is a JSON string.
+			var pattern string
+			require.NoError(t, json.Unmarshal([]byte(match[1]), &pattern), "the pattern %s of %s", match[1], function)
+			patterns = append(patterns, pattern)
+		}
 	}
-	if quota["requests.cpu"] != "1" {
-		t.Errorf("the nesting next to it was lost: %v", quota)
+	require.NotEmpty(t, patterns, "the projects hook hands no pattern to test()")
+
+	for _, pattern := range patterns {
+		anchored := strings.HasPrefix(pattern, `\A`) && strings.HasSuffix(pattern, `\z`)
+		assert.True(t, anchored, "%q is not anchored with \\A and \\z", pattern)
+		assert.NotContains(t, pattern, "$", "the $ of jq matches before a trailing newline")
+		assert.NotContains(t, pattern, "^", "an anchor of %q is not \\A", pattern)
 	}
 }
 
@@ -360,7 +643,8 @@ var gojqEngine = jqEngine{name: "gojq", run: runGojq}
 // jqEngines lists the engines the fixtures are checked with. The hook runs jq in the cluster, and the
 // jq binary is used whenever it is on PATH, because gojq is not the same language in every corner: its
 // \s is the ASCII class of RE2, where the \s of jq is the Unicode class of Oniguruma. The fixtures hold
-// only inputs the two agree on.
+// only inputs the two agree on. The unit test image has no jq, so the anchors on which the two would
+// disagree are pinned by TestProjectConversionPatternsAreAnchored, which needs no engine.
 func jqEngines(t *testing.T) []jqEngine {
 	t.Helper()
 

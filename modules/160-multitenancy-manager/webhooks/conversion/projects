@@ -90,9 +90,35 @@ EOF
 #   parameters.administrators[].subject -> administrators[].kind
 #   parameters.resourceQuota.{requests,limits}.* -> quota."requests.*"/"limits.*"
 #   parameters.resourceQuota.<other>       -> quota."<other>"
+# A value is lifted only if v1alpha3 can hold it and v1alpha3_to_v1alpha2 gives it back as it was,
+# apart from a fraction, which comes back as a string (see quota_value below).
+# Anything else stays in spec.parameters untouched, where a template still reads it, and the project
+# gets no standard field for it. Lifting every shape failed the whole review on one project with a
+# string where an item or a quota was expected, and with it every read of the projects at v1alpha3;
+# it also made an item with an accessLevel an administrator, dropped scopes and nested quota objects,
+# and put strings that are no quantity into a field the controller decodes as quantities.
+#   administrators: a non-empty list whose items hold exactly a subject, User or Group, and a name, a
+#     string of at least one character and no control character (the pattern of the v1alpha3 schema).
+#   resourceQuota: a non-empty object whose requests/limits, when they are objects, are non-empty and
+#     hold quantities, and whose other values are quantities under a key that does not start with
+#     "requests." or "limits.". Such a key comes back nested, and next to a nested one it collides
+#     with it. An empty requests or limits puts no key into spec.quota and does not come back.
+#   One item or value that does not fit keeps the whole list or quota in spec.parameters.
+#   An empty list or quota stays there too: the controller writes the project back as soon as it
+#     reconciles it, which drops an empty standard field and with it the parameter from the v1alpha2
+#     view, while an empty one grants and limits nothing anyway.
+#   So does a quota that holds the number 0 anywhere, at the top or under requests/limits. The
+#     templates of the previous release test each value with "with", which takes the number 0 for no
+#     value, so it rendered no key and set no limit, while in spec.quota it is a hard limit of 0, and
+#     one on requests.cpu refuses every pod. The string "0" rendered a key and is lifted.
+# A quantity is a number or a string in a subset of the syntax ParseQuantity reads. \A and \z anchor
+# the pattern because the $ of jq also matches before a trailing newline. The exponent has at most
+# three digits and the string at most 64 characters: a longer exponent can keep ParseQuantity busy
+# for seconds, and a longer mantissa the canonical form the controller computes each time it writes
+# the project, which it does on every reconcile.
+# A null administrators or resourceQuota says nothing and is dropped.
 # spec.quota is a flat ResourceQuota.spec.hard map, so it also holds keys that have no requests/limits
-# nesting ("pods", "count/deployments.apps"). Those are carried over verbatim; nested objects are
-# skipped because they have no flat representation.
+# nesting ("pods", "count/deployments.apps"). Those are carried over verbatim.
 # Only an object under requests/limits is nesting. A scalar there is a quota key that happens to be
 # spelled "requests" (nothing in the schema forbids one), and it is carried over flat like any other
 # — expanding it would feed a string to to_entries and fail the conversion of the whole object.
@@ -102,13 +128,22 @@ EOF
 # wrote and leave kubectl apply with a diff it can never settle.
 function __on_conversion::v1alpha2_to_v1alpha3() {
   if converted=$(context::jq -rc 'def quota_value: if (type == "number") and (. == floor) then . else tostring end;
+  def quantity: (type == "number") or ((type == "string") and (length <= 64) and test("\\A[+-]?([0-9]+(\\.[0-9]*)?|\\.[0-9]+)([KMGTPE]i|[numkMGTPE]|[eE][+-]?[0-9]{1,3})?\\z"));
+  def liftable_administrators: (type == "array") and (length > 0) and all(.[];
+    (type == "object") and (keys == ["name", "subject"]) and (.subject == "User" or .subject == "Group")
+    and ((.name | type) == "string") and (.name != "") and all(.name | explode[]; . > 31 and . != 127));
+  def liftable_value: quantity and (((type == "number") and (. == 0)) | not);
+  def liftable_quota: (type == "object") and (length > 0) and all(to_entries[];
+    if (.key == "requests" or .key == "limits") and ((.value | type) == "object") then ((.value | length) > 0) and all(.value[]; liftable_value)
+    else (.value | liftable_value) and ((.key | startswith("requests.") or startswith("limits.")) | not) end);
   .review.request.objects//[] | map(
      if .apiVersion == "deckhouse.io/v1alpha2" then
        .apiVersion = "deckhouse.io/v1alpha3" |
-       (if (.spec.administrators | not) and (.spec.parameters.administrators) then
-          .spec.administrators = (.spec.parameters.administrators | map({kind: .subject, name: .name}))
+       (if (.spec.administrators | not) and (.spec.parameters.administrators | liftable_administrators) then
+          .spec.administrators = (.spec.parameters.administrators | map({kind: .subject, name: .name})) |
+          del(.spec.parameters.administrators)
         else . end) |
-       (if (.spec.quota | not) and (.spec.parameters.resourceQuota) then
+       (if (.spec.quota | not) and (.spec.parameters.resourceQuota | liftable_quota) then
           .spec.parameters.resourceQuota as $rq |
           .spec.quota = (
             (if (($rq.requests | type) == "object") then ($rq.requests | to_entries | map({key: ("requests." + .key), value: (.value | quota_value)})) else [] end)
@@ -117,9 +152,13 @@ function __on_conversion::v1alpha2_to_v1alpha3() {
                    | map(select(((.value | type) != "object") and ((.value | type) != "array")))
                    | map({key: .key, value: (.value | quota_value)}))
             | from_entries
-          )
+          ) |
+          del(.spec.parameters.resourceQuota)
         else . end) |
-       (if .spec.parameters then del(.spec.parameters.administrators) | del(.spec.parameters.resourceQuota) else . end) |
+       (if (.spec.parameters | type) == "object" then
+          (if .spec.parameters.administrators == null then del(.spec.parameters.administrators) else . end) |
+          (if .spec.parameters.resourceQuota == null then del(.spec.parameters.resourceQuota) else . end)
+        else . end) |
        (if (((.status // {}).namespaces) | type) == "array" then
           .metadata.name as $main |
           .status.namespaces = (.status.namespaces | map(
@@ -139,10 +178,12 @@ EOF
 }
 
 # v1alpha3 -> v1alpha2 pushes administrators and quota back into spec.parameters so that older
-# clients reading v1alpha2 keep seeing the legacy layout. status.namespaces is a list of names in
-# v1alpha2 and a list of {name, kind} objects in v1alpha3; it is converted in both directions so a
-# view at either version validates against its own schema (the kind on the way up is Main for the
-# namespace named after the project and Additional for the rest).
+# clients reading v1alpha2 keep seeing the legacy layout. v1alpha2 has one place for a standard field
+# and the parameter it is lifted from, so a standard field takes the place of that parameter; a
+# parameter the up-conversion left in place has no standard field beside it and comes back as it is.
+# status.namespaces is a list of names in v1alpha2 and a list of {name, kind} objects in v1alpha3; it
+# is converted in both directions so a view at either version validates against its own schema (the
+# kind on the way up is Main for the namespace named after the project and Additional for the rest).
 # Only a "requests."/"limits." prefix means nesting; the remainder of the key is kept intact so that
 # "requests.nvidia.com/gpu" lands under requests as "nvidia.com/gpu". Every other key ("pods",
 # "count/deployments.apps") stays flat next to requests/limits instead of being dropped or split at an
@@ -151,8 +192,13 @@ EOF
 # A quota holding both "requests" and "requests.cpu" cannot be expressed here at all: v1alpha2 has one
 # key for the two. The nested form wins whatever the order of the keys, because the alternative is a
 # result that depends on it.
+# The number 0 goes back as the string "0". The templates of the previous release skip the number 0
+# with "with" and set no limit, so only the string keeps the hard limit of 0 that spec.quota holds,
+# and only the string is lifted again on the way up. Without it a client that reads the project at
+# v1alpha2 and writes it back would leave the whole quota in spec.parameters.
 function __on_conversion::v1alpha3_to_v1alpha2() {
-  if converted=$(context::jq -rc '.review.request.objects//[] | map(
+  if converted=$(context::jq -rc 'def zero_as_string: if (type == "number") and (. == 0) then "0" else . end;
+  .review.request.objects//[] | map(
      if .apiVersion == "deckhouse.io/v1alpha3" then
        .apiVersion = "deckhouse.io/v1alpha2" |
        (if .spec.administrators then
@@ -164,9 +210,9 @@ function __on_conversion::v1alpha3_to_v1alpha2() {
               {};
               ($e.key | split(".")) as $p |
               if ($p | length) > 1 and ($p[0] == "requests" or $p[0] == "limits") then
-                .[$p[0]] = ((if ((.[$p[0]] | type) == "object") then .[$p[0]] else {} end) + {($p[1:] | join(".")): $e.value})
+                .[$p[0]] = ((if ((.[$p[0]] | type) == "object") then .[$p[0]] else {} end) + {($p[1:] | join(".")): ($e.value | zero_as_string)})
               else
-                (if ((.[$e.key] | type) == "object") then . else .[$e.key] = $e.value end)
+                (if ((.[$e.key] | type) == "object") then . else .[$e.key] = ($e.value | zero_as_string) end)
               end
             )
           )})

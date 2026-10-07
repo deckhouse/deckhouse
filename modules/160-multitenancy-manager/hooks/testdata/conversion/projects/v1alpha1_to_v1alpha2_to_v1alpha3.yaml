@@ -98,3 +98,35 @@
         namespaces:
           - name: newer
             kind: Main
+
+- name: keeps what it cannot lift in the parameters of a project stored as v1alpha1
+  objects:
+    - apiVersion: deckhouse.io/v1alpha1
+      kind: Project
+      metadata:
+        name: odd
+      spec:
+        projectTypeName: custom
+        template:
+          administrators:
+            - alice@example.com
+          resourceQuota:
+            requests:
+              cpu: 1
+            scopes:
+              - BestEffort
+  converted:
+    - apiVersion: deckhouse.io/v1alpha3
+      kind: Project
+      metadata:
+        name: odd
+      spec:
+        projectTemplateName: custom
+        parameters:
+          administrators:
+            - alice@example.com
+          resourceQuota:
+            requests:
+              cpu: 1
+            scopes:
+              - BestEffort

@@ -21,10 +21,12 @@ import (
 	"fmt"
 	"net/http"
 	"regexp"
+	"slices"
 	"strings"
 
 	admissionv1 "k8s.io/api/admission/v1"
 	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/equality"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/resource"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -176,7 +178,7 @@ func (v *validator) Handle(ctx context.Context, req admission.Request) admission
 	}
 
 	// validate the standard fields (cheap checks before the OpenAPI validation)
-	if denied := validateStandardFields(project); denied != "" {
+	if denied := validateStandardFields(project, storedProject(req)); denied != "" {
 		return admission.Denied(denied)
 	}
 
@@ -274,10 +276,58 @@ func namespaceLabels(project *v1alpha3.Project, template *v1alpha2.ProjectTempla
 // storage a bare "5" is 5 bytes, which is almost always a mistake.
 var byteQuantityUnitRE = regexp.MustCompile(`(Ki|Mi|Gi|Ti|Pi|Ei|[kMGTPE])$`)
 
+// storedProject returns the project an update replaces, and nil for any other operation. A stored
+// project that does not decode counts as none, so the update is checked in full: it may be the one
+// that repairs the project.
+func storedProject(req admission.Request) *v1alpha3.Project {
+	if req.Operation != admissionv1.Update || len(req.OldObject.Raw) == 0 {
+		return nil
+	}
+	old := new(v1alpha3.Project)
+	if err := yaml.Unmarshal(req.OldObject.Raw, old); err != nil {
+		return nil
+	}
+	return old
+}
+
 // validateStandardFields performs cheap validation of the Project standard fields. It returns a
-// non-empty denial message when the project is invalid.
-func validateStandardFields(project *v1alpha3.Project) string {
+// non-empty denial message when the project is invalid. old is the stored project of an update and
+// nil otherwise. An update is checked only for what it changes: the up-conversion lifts into the
+// standard fields what an older release accepted, a memory quota without a unit for one, and such a
+// project has to stay editable.
+func validateStandardFields(project, old *v1alpha3.Project) string {
+	// The v1alpha2 version of a project holds a standard field in the parameter it is lifted from, so
+	// it has room for only one of the two: the down-conversion writes the field over the parameter,
+	// and a v1alpha2 client that writes the project back loses the parameter. The up-conversion never
+	// fills both, so they meet only when a v1alpha3 client sets them together. An empty list or map
+	// counts as set, since the down-conversion writes it over the parameter as well. An update that
+	// leaves both as the stored project has them is let through, so that a project stored with both,
+	// by a writer this webhook skips or before it refused them, stays editable until one of them goes.
+	if administratorsNextToParameter(project) {
+		kept := administratorsNextToParameter(old) &&
+			equality.Semantic.DeepEqual(old.Spec.Administrators, project.Spec.Administrators) &&
+			sameParameter(old, project, "administrators")
+		if !kept {
+			return standardFieldAndParameter("administrators", "administrators")
+		}
+	}
+	if quotaNextToParameter(project) {
+		kept := quotaNextToParameter(old) &&
+			equality.Semantic.DeepEqual(old.Spec.Quota, project.Spec.Quota) &&
+			sameParameter(old, project, "resourceQuota")
+		if !kept {
+			return standardFieldAndParameter("quota", "resourceQuota")
+		}
+	}
+
+	var stored v1alpha3.ProjectSpec
+	if old != nil {
+		stored = old.Spec
+	}
 	for _, admin := range project.Spec.Administrators {
+		if slices.Contains(stored.Administrators, admin) {
+			continue
+		}
 		if admin.Kind != "User" && admin.Kind != "Group" {
 			return fmt.Sprintf("administrator %q has invalid kind %q: must be User or Group", admin.Name, admin.Kind)
 		}
@@ -285,10 +335,39 @@ func validateStandardFields(project *v1alpha3.Project) string {
 			return "administrator name must not be empty"
 		}
 	}
-	if msg := validateQuotaByteUnits(project.Spec.Quota); msg != "" {
+	if msg := validateQuotaByteUnits(project.Spec.Quota, stored.Quota); msg != "" {
 		return msg
 	}
 	return ""
+}
+
+// administratorsNextToParameter reports whether the project sets spec.administrators together with
+// the parameter it is lifted from.
+func administratorsNextToParameter(project *v1alpha3.Project) bool {
+	return project != nil && project.Spec.Administrators != nil && hasParameter(project, "administrators")
+}
+
+// quotaNextToParameter reports whether the project sets spec.quota together with the parameter it is
+// lifted from.
+func quotaNextToParameter(project *v1alpha3.Project) bool {
+	return project != nil && project.Spec.Quota != nil && hasParameter(project, "resourceQuota")
+}
+
+// sameParameter reports whether the two projects hold the same value under the parameter name.
+func sameParameter(old, project *v1alpha3.Project, name string) bool {
+	return equality.Semantic.DeepEqual(old.Spec.Parameters[name], project.Spec.Parameters[name])
+}
+
+// hasParameter reports whether the project parameters hold a value under the name. A null says
+// nothing, and the down-conversion loses nothing by writing over it.
+func hasParameter(project *v1alpha3.Project, name string) bool {
+	value, found := project.Spec.Parameters[name]
+	return found && value != nil
+}
+
+func standardFieldAndParameter(field, parameter string) string {
+	return fmt.Sprintf("spec.%s and spec.parameters.%s cannot both be set, because the v1alpha2 version of the project has room for only one of them",
+		field, parameter)
 }
 
 // resourceNameRequiresByteUnit reports whether a ResourceQuota hard key is a memory/storage
@@ -306,9 +385,14 @@ func hasByteUnitSuffix(q resource.Quantity) bool {
 	return byteQuantityUnitRE.MatchString(q.String())
 }
 
-func validateQuotaByteUnits(quota corev1.ResourceList) string {
+// validateQuotaByteUnits refuses a memory or storage quantity without a byte unit. 0 reads the same in
+// every unit and passes, and so does a quantity equal to the one the stored quota holds under the key.
+func validateQuotaByteUnits(quota, stored corev1.ResourceList) string {
 	for name, quantity := range quota {
-		if !resourceNameRequiresByteUnit(name) {
+		if !resourceNameRequiresByteUnit(name) || quantity.IsZero() {
+			continue
+		}
+		if previous, found := stored[name]; found && previous.Cmp(quantity) == 0 {
 			continue
 		}
 		if hasByteUnitSuffix(quantity) {

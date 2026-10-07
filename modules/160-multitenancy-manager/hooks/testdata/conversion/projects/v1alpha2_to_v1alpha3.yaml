@@ -129,7 +129,7 @@
           limits.cpu: 1
         parameters: {}
 
-- name: carries flat quota keys over and drops nested objects and lists
+- name: carries flat quota keys over next to the nesting
   objects:
     - apiVersion: deckhouse.io/v1alpha2
       kind: Project
@@ -141,12 +141,10 @@
           resourceQuota:
             requests:
               cpu: "1"
+              nvidia.com/gpu: 2
             pods: 20
             count/deployments.apps: "5"
-            nested:
-              any: thing
-            listed:
-              - a
+            services.loadbalancers: "2"
   converted:
     - apiVersion: deckhouse.io/v1alpha3
       kind: Project
@@ -156,8 +154,51 @@
         projectTemplateName: custom
         quota:
           requests.cpu: "1"
+          requests.nvidia.com/gpu: 2
           pods: 20
           count/deployments.apps: "5"
+          services.loadbalancers: "2"
+        parameters: {}
+
+# A quantity is whatever ParseQuantity reads, in the spelling the client chose.
+- name: lifts every spelling of a quantity as it is
+  objects:
+    - apiVersion: deckhouse.io/v1alpha2
+      kind: Project
+      metadata:
+        name: spellings
+      spec:
+        projectTemplateName: custom
+        parameters:
+          resourceQuota:
+            requests:
+              cpu: "+.5"
+              memory: 1.5Gi
+              storage: 2T
+              ephemeral-storage: 5.Ki
+            limits:
+              cpu: "-1"
+              memory: 100u
+            pods: "1e3"
+            count/configmaps: "1E+2"
+            count/secrets: "1000000000000000000000000000000000000000000000000000000000000000"
+  converted:
+    - apiVersion: deckhouse.io/v1alpha3
+      kind: Project
+      metadata:
+        name: spellings
+      spec:
+        projectTemplateName: custom
+        quota:
+          requests.cpu: "+.5"
+          requests.memory: 1.5Gi
+          requests.storage: 2T
+          requests.ephemeral-storage: 5.Ki
+          limits.cpu: "-1"
+          limits.memory: 100u
+          pods: "1e3"
+          count/configmaps: "1E+2"
+          count/secrets: "1000000000000000000000000000000000000000000000000000000000000000"
         parameters: {}
 
 - name: takes a scalar requests for a key and not for nesting
@@ -184,7 +225,11 @@
           limits: "7"
         parameters: {}
 
-- name: lifts an empty administrators list and an empty quota as they are
+# The controller writes the project back as soon as it reconciles it, and that write drops an empty
+# standard field, which would take the parameter out of the v1alpha2 view of the project. An empty
+# list or quota grants and limits nothing, so it stays in the parameters. So does an empty requests
+# or limits, which would put no key into spec.quota and not come back.
+- name: leaves an empty administrators list or quota in the parameters
   objects:
     - apiVersion: deckhouse.io/v1alpha2
       kind: Project
@@ -195,6 +240,27 @@
         parameters:
           administrators: []
           resourceQuota: {}
+    - apiVersion: deckhouse.io/v1alpha2
+      kind: Project
+      metadata:
+        name: requests
+      spec:
+        projectTemplateName: custom
+        parameters:
+          resourceQuota:
+            requests: {}
+            pods: 3
+    - apiVersion: deckhouse.io/v1alpha2
+      kind: Project
+      metadata:
+        name: limits
+      spec:
+        projectTemplateName: custom
+        parameters:
+          resourceQuota:
+            requests:
+              cpu: "1"
+            limits: {}
   converted:
     - apiVersion: deckhouse.io/v1alpha3
       kind: Project
@@ -202,9 +268,981 @@
         name: empty
       spec:
         projectTemplateName: custom
-        administrators: []
-        quota: {}
+        parameters:
+          administrators: []
+          resourceQuota: {}
+    - apiVersion: deckhouse.io/v1alpha3
+      kind: Project
+      metadata:
+        name: requests
+      spec:
+        projectTemplateName: custom
+        parameters:
+          resourceQuota:
+            requests: {}
+            pods: 3
+    - apiVersion: deckhouse.io/v1alpha3
+      kind: Project
+      metadata:
+        name: limits
+      spec:
+        projectTemplateName: custom
+        parameters:
+          resourceQuota:
+            requests:
+              cpu: "1"
+            limits: {}
+
+# What the up-conversion cannot give back, or v1alpha3 cannot hold, stays in the parameters as the
+# client wrote it. A template still reads it there, and the project gets no standard field for it. A
+# string where an item was expected used to fail the whole review.
+- name: leaves administrators that are no list of subjects in the parameters
+  objects:
+    - apiVersion: deckhouse.io/v1alpha2
+      kind: Project
+      metadata:
+        name: names
+      spec:
+        projectTemplateName: custom
+        parameters:
+          administrators:
+            - alice@example.com
+            - bob@example.com
+    - apiVersion: deckhouse.io/v1alpha2
+      kind: Project
+      metadata:
+        name: single
+      spec:
+        projectTemplateName: custom
+        parameters:
+          administrators:
+            subject: User
+            name: alice@example.com
+    - apiVersion: deckhouse.io/v1alpha2
+      kind: Project
+      metadata:
+        name: mixed
+      spec:
+        projectTemplateName: custom
+        parameters:
+          administrators:
+            - subject: User
+              name: alice@example.com
+            - bob@example.com
+    - apiVersion: deckhouse.io/v1alpha2
+      kind: Project
+      metadata:
+        name: unset
+      spec:
+        projectTemplateName: custom
+        parameters:
+          administrators: false
+  converted:
+    - apiVersion: deckhouse.io/v1alpha3
+      kind: Project
+      metadata:
+        name: names
+      spec:
+        projectTemplateName: custom
+        parameters:
+          administrators:
+            - alice@example.com
+            - bob@example.com
+    - apiVersion: deckhouse.io/v1alpha3
+      kind: Project
+      metadata:
+        name: single
+      spec:
+        projectTemplateName: custom
+        parameters:
+          administrators:
+            subject: User
+            name: alice@example.com
+    - apiVersion: deckhouse.io/v1alpha3
+      kind: Project
+      metadata:
+        name: mixed
+      spec:
+        projectTemplateName: custom
+        parameters:
+          administrators:
+            - subject: User
+              name: alice@example.com
+            - bob@example.com
+    - apiVersion: deckhouse.io/v1alpha3
+      kind: Project
+      metadata:
+        name: unset
+      spec:
+        projectTemplateName: custom
+        parameters:
+          administrators: false
+
+# An Editor lifted into spec.administrators would be granted d8:project:admin.
+- name: leaves an item with an access level in the parameters
+  objects:
+    - apiVersion: deckhouse.io/v1alpha2
+      kind: Project
+      metadata:
+        name: editors
+      spec:
+        projectTemplateName: custom
+        parameters:
+          administrators:
+            - subject: User
+              name: alice@example.com
+            - subject: Group
+              name: developers
+              accessLevel: Editor
+  converted:
+    - apiVersion: deckhouse.io/v1alpha3
+      kind: Project
+      metadata:
+        name: editors
+      spec:
+        projectTemplateName: custom
+        parameters:
+          administrators:
+            - subject: User
+              name: alice@example.com
+            - subject: Group
+              name: developers
+              accessLevel: Editor
+
+- name: leaves an item with another subject or other keys in the parameters
+  objects:
+    - apiVersion: deckhouse.io/v1alpha2
+      kind: Project
+      metadata:
+        name: robot
+      spec:
+        projectTemplateName: custom
+        parameters:
+          administrators:
+            - subject: ServiceAccount
+              name: ci
+    - apiVersion: deckhouse.io/v1alpha2
+      kind: Project
+      metadata:
+        name: lowercase
+      spec:
+        projectTemplateName: custom
+        parameters:
+          administrators:
+            - subject: user
+              name: alice@example.com
+    - apiVersion: deckhouse.io/v1alpha2
+      kind: Project
+      metadata:
+        name: extra
+      spec:
+        projectTemplateName: custom
+        parameters:
+          administrators:
+            - subject: User
+              name: alice@example.com
+              namespace: team
+    - apiVersion: deckhouse.io/v1alpha2
+      kind: Project
+      metadata:
+        name: nameless
+      spec:
+        projectTemplateName: custom
+        parameters:
+          administrators:
+            - subject: User
+    - apiVersion: deckhouse.io/v1alpha2
+      kind: Project
+      metadata:
+        name: nothing
+      spec:
+        projectTemplateName: custom
+        parameters:
+          administrators:
+            - null
+  converted:
+    - apiVersion: deckhouse.io/v1alpha3
+      kind: Project
+      metadata:
+        name: robot
+      spec:
+        projectTemplateName: custom
+        parameters:
+          administrators:
+            - subject: ServiceAccount
+              name: ci
+    - apiVersion: deckhouse.io/v1alpha3
+      kind: Project
+      metadata:
+        name: lowercase
+      spec:
+        projectTemplateName: custom
+        parameters:
+          administrators:
+            - subject: user
+              name: alice@example.com
+    - apiVersion: deckhouse.io/v1alpha3
+      kind: Project
+      metadata:
+        name: extra
+      spec:
+        projectTemplateName: custom
+        parameters:
+          administrators:
+            - subject: User
+              name: alice@example.com
+              namespace: team
+    - apiVersion: deckhouse.io/v1alpha3
+      kind: Project
+      metadata:
+        name: nameless
+      spec:
+        projectTemplateName: custom
+        parameters:
+          administrators:
+            - subject: User
+    - apiVersion: deckhouse.io/v1alpha3
+      kind: Project
+      metadata:
+        name: nothing
+      spec:
+        projectTemplateName: custom
+        parameters:
+          administrators:
+            - null
+
+# spec.administrators[].name is a string of at least one character and no control character.
+- name: leaves a name the v1alpha3 schema refuses in the parameters
+  objects:
+    - apiVersion: deckhouse.io/v1alpha2
+      kind: Project
+      metadata:
+        name: empty
+      spec:
+        projectTemplateName: custom
+        parameters:
+          administrators:
+            - subject: User
+              name: ""
+    - apiVersion: deckhouse.io/v1alpha2
+      kind: Project
+      metadata:
+        name: number
+      spec:
+        projectTemplateName: custom
+        parameters:
+          administrators:
+            - subject: User
+              name: 5
+    - apiVersion: deckhouse.io/v1alpha2
+      kind: Project
+      metadata:
+        name: newline
+      spec:
+        projectTemplateName: custom
+        parameters:
+          administrators:
+            - subject: User
+              name: "alice\nkind: Group"
+    - apiVersion: deckhouse.io/v1alpha2
+      kind: Project
+      metadata:
+        name: tab
+      spec:
+        projectTemplateName: custom
+        parameters:
+          administrators:
+            - subject: User
+              name: "alice\tbob"
+    - apiVersion: deckhouse.io/v1alpha2
+      kind: Project
+      metadata:
+        name: delete
+      spec:
+        projectTemplateName: custom
+        parameters:
+          administrators:
+            - subject: User
+              name: "alice\u007F"
+  converted:
+    - apiVersion: deckhouse.io/v1alpha3
+      kind: Project
+      metadata:
+        name: empty
+      spec:
+        projectTemplateName: custom
+        parameters:
+          administrators:
+            - subject: User
+              name: ""
+    - apiVersion: deckhouse.io/v1alpha3
+      kind: Project
+      metadata:
+        name: number
+      spec:
+        projectTemplateName: custom
+        parameters:
+          administrators:
+            - subject: User
+              name: 5
+    - apiVersion: deckhouse.io/v1alpha3
+      kind: Project
+      metadata:
+        name: newline
+      spec:
+        projectTemplateName: custom
+        parameters:
+          administrators:
+            - subject: User
+              name: "alice\nkind: Group"
+    - apiVersion: deckhouse.io/v1alpha3
+      kind: Project
+      metadata:
+        name: tab
+      spec:
+        projectTemplateName: custom
+        parameters:
+          administrators:
+            - subject: User
+              name: "alice\tbob"
+    - apiVersion: deckhouse.io/v1alpha3
+      kind: Project
+      metadata:
+        name: delete
+      spec:
+        projectTemplateName: custom
+        parameters:
+          administrators:
+            - subject: User
+              name: "alice\u007F"
+
+# The schema refuses C0 and DEL only. Whatever else a name holds is for admission to judge, and the
+# conversion has to give back whatever storage holds.
+- name: lifts a name the v1alpha3 schema accepts
+  objects:
+    - apiVersion: deckhouse.io/v1alpha2
+      kind: Project
+      metadata:
+        name: unicode
+      spec:
+        projectTemplateName: custom
+        parameters:
+          administrators:
+            - subject: User
+              name: "\u0430\u043B\u0438\u0441\u0430@\u043F\u0440\u0438\u043C\u0435\u0440.\u0440\u0444"
+            - subject: Group
+              name: "a\u00A0b\u0085c\u2028d"
+  converted:
+    - apiVersion: deckhouse.io/v1alpha3
+      kind: Project
+      metadata:
+        name: unicode
+      spec:
+        projectTemplateName: custom
+        administrators:
+          - kind: User
+            name: "\u0430\u043B\u0438\u0441\u0430@\u043F\u0440\u0438\u043C\u0435\u0440.\u0440\u0444"
+          - kind: Group
+            name: "a\u00A0b\u0085c\u2028d"
         parameters: {}
+
+# The whole review used to fail on these.
+- name: leaves a quota that is no object in the parameters
+  objects:
+    - apiVersion: deckhouse.io/v1alpha2
+      kind: Project
+      metadata:
+        name: string
+      spec:
+        projectTemplateName: custom
+        parameters:
+          resourceQuota: 10Gi
+    - apiVersion: deckhouse.io/v1alpha2
+      kind: Project
+      metadata:
+        name: list
+      spec:
+        projectTemplateName: custom
+        parameters:
+          resourceQuota:
+            - requests:
+                cpu: 1
+    - apiVersion: deckhouse.io/v1alpha2
+      kind: Project
+      metadata:
+        name: unset
+      spec:
+        projectTemplateName: custom
+        parameters:
+          resourceQuota: false
+  converted:
+    - apiVersion: deckhouse.io/v1alpha3
+      kind: Project
+      metadata:
+        name: string
+      spec:
+        projectTemplateName: custom
+        parameters:
+          resourceQuota: 10Gi
+    - apiVersion: deckhouse.io/v1alpha3
+      kind: Project
+      metadata:
+        name: list
+      spec:
+        projectTemplateName: custom
+        parameters:
+          resourceQuota:
+            - requests:
+                cpu: 1
+    - apiVersion: deckhouse.io/v1alpha3
+      kind: Project
+      metadata:
+        name: unset
+      spec:
+        projectTemplateName: custom
+        parameters:
+          resourceQuota: false
+
+# A ResourceQuota.spec.hard map has no place for them. The up-conversion used to drop them, scopes
+# that narrow the quota included, or stringify them into a quantity that no one can read.
+- name: leaves a quota with a nested object or a list in the parameters
+  objects:
+    - apiVersion: deckhouse.io/v1alpha2
+      kind: Project
+      metadata:
+        name: services
+      spec:
+        projectTemplateName: custom
+        parameters:
+          resourceQuota:
+            requests:
+              cpu: 1
+            services:
+              loadbalancers: 2
+    - apiVersion: deckhouse.io/v1alpha2
+      kind: Project
+      metadata:
+        name: scopes
+      spec:
+        projectTemplateName: custom
+        parameters:
+          resourceQuota:
+            requests:
+              cpu: 1
+            scopes:
+              - BestEffort
+    - apiVersion: deckhouse.io/v1alpha2
+      kind: Project
+      metadata:
+        name: selector
+      spec:
+        projectTemplateName: custom
+        parameters:
+          resourceQuota:
+            requests:
+              cpu: 1
+            scopeSelector:
+              matchExpressions:
+                - scopeName: PriorityClass
+                  operator: In
+                  values:
+                    - high
+    - apiVersion: deckhouse.io/v1alpha2
+      kind: Project
+      metadata:
+        name: range
+      spec:
+        projectTemplateName: custom
+        parameters:
+          resourceQuota:
+            requests:
+              cpu:
+                min: 1
+                max: 4
+  converted:
+    - apiVersion: deckhouse.io/v1alpha3
+      kind: Project
+      metadata:
+        name: services
+      spec:
+        projectTemplateName: custom
+        parameters:
+          resourceQuota:
+            requests:
+              cpu: 1
+            services:
+              loadbalancers: 2
+    - apiVersion: deckhouse.io/v1alpha3
+      kind: Project
+      metadata:
+        name: scopes
+      spec:
+        projectTemplateName: custom
+        parameters:
+          resourceQuota:
+            requests:
+              cpu: 1
+            scopes:
+              - BestEffort
+    - apiVersion: deckhouse.io/v1alpha3
+      kind: Project
+      metadata:
+        name: selector
+      spec:
+        projectTemplateName: custom
+        parameters:
+          resourceQuota:
+            requests:
+              cpu: 1
+            scopeSelector:
+              matchExpressions:
+                - scopeName: PriorityClass
+                  operator: In
+                  values:
+                    - high
+    - apiVersion: deckhouse.io/v1alpha3
+      kind: Project
+      metadata:
+        name: range
+      spec:
+        projectTemplateName: custom
+        parameters:
+          resourceQuota:
+            requests:
+              cpu:
+                min: 1
+                max: 4
+
+# "requests.cpu" next to requests.cpu is the same quota key twice, and the flat one used to win.
+# Alone it comes back nested, and a client that writes it back then sets both.
+- name: leaves a flat key that would come back nested in the parameters
+  objects:
+    - apiVersion: deckhouse.io/v1alpha2
+      kind: Project
+      metadata:
+        name: collision
+      spec:
+        projectTemplateName: custom
+        parameters:
+          resourceQuota:
+            requests:
+              cpu: "1"
+            requests.cpu: "2"
+    - apiVersion: deckhouse.io/v1alpha2
+      kind: Project
+      metadata:
+        name: flat
+      spec:
+        projectTemplateName: custom
+        parameters:
+          resourceQuota:
+            requests:
+              cpu: "1"
+            limits.memory: 1Gi
+  converted:
+    - apiVersion: deckhouse.io/v1alpha3
+      kind: Project
+      metadata:
+        name: collision
+      spec:
+        projectTemplateName: custom
+        parameters:
+          resourceQuota:
+            requests:
+              cpu: "1"
+            requests.cpu: "2"
+    - apiVersion: deckhouse.io/v1alpha3
+      kind: Project
+      metadata:
+        name: flat
+      spec:
+        projectTemplateName: custom
+        parameters:
+          resourceQuota:
+            requests:
+              cpu: "1"
+            limits.memory: 1Gi
+
+# spec.quota is decoded as quantities, and one value that does not parse fails the read of every
+# project. The $ of jq matches before a trailing newline, so the pattern is anchored with \A and \z.
+# The exponent and the length are bounded so that no spelling keeps ParseQuantity, or the canonical
+# form of the quantity, busy.
+- name: leaves a value that is no quantity in the parameters
+  objects:
+    - apiVersion: deckhouse.io/v1alpha2
+      kind: Project
+      metadata:
+        name: word
+      spec:
+        projectTemplateName: custom
+        parameters:
+          resourceQuota:
+            requests:
+              cpu: lots
+    - apiVersion: deckhouse.io/v1alpha2
+      kind: Project
+      metadata:
+        name: boolean
+      spec:
+        projectTemplateName: custom
+        parameters:
+          resourceQuota:
+            pods: true
+    - apiVersion: deckhouse.io/v1alpha2
+      kind: Project
+      metadata:
+        name: nothing
+      spec:
+        projectTemplateName: custom
+        parameters:
+          resourceQuota:
+            requests:
+              cpu: null
+    - apiVersion: deckhouse.io/v1alpha2
+      kind: Project
+      metadata:
+        name: newline
+      spec:
+        projectTemplateName: custom
+        parameters:
+          resourceQuota:
+            requests:
+              cpu: "1\n"
+    - apiVersion: deckhouse.io/v1alpha2
+      kind: Project
+      metadata:
+        name: suffix
+      spec:
+        projectTemplateName: custom
+        parameters:
+          resourceQuota:
+            requests:
+              memory: 1K
+    - apiVersion: deckhouse.io/v1alpha2
+      kind: Project
+      metadata:
+        name: exponent
+      spec:
+        projectTemplateName: custom
+        parameters:
+          resourceQuota:
+            limits:
+              cpu: "1e-1000"
+    - apiVersion: deckhouse.io/v1alpha2
+      kind: Project
+      metadata:
+        name: long
+      spec:
+        projectTemplateName: custom
+        parameters:
+          resourceQuota:
+            pods: "10000000000000000000000000000000000000000000000000000000000000000"
+  converted:
+    - apiVersion: deckhouse.io/v1alpha3
+      kind: Project
+      metadata:
+        name: word
+      spec:
+        projectTemplateName: custom
+        parameters:
+          resourceQuota:
+            requests:
+              cpu: lots
+    - apiVersion: deckhouse.io/v1alpha3
+      kind: Project
+      metadata:
+        name: boolean
+      spec:
+        projectTemplateName: custom
+        parameters:
+          resourceQuota:
+            pods: true
+    - apiVersion: deckhouse.io/v1alpha3
+      kind: Project
+      metadata:
+        name: nothing
+      spec:
+        projectTemplateName: custom
+        parameters:
+          resourceQuota:
+            requests:
+              cpu: null
+    - apiVersion: deckhouse.io/v1alpha3
+      kind: Project
+      metadata:
+        name: newline
+      spec:
+        projectTemplateName: custom
+        parameters:
+          resourceQuota:
+            requests:
+              cpu: "1\n"
+    - apiVersion: deckhouse.io/v1alpha3
+      kind: Project
+      metadata:
+        name: suffix
+      spec:
+        projectTemplateName: custom
+        parameters:
+          resourceQuota:
+            requests:
+              memory: 1K
+    - apiVersion: deckhouse.io/v1alpha3
+      kind: Project
+      metadata:
+        name: exponent
+      spec:
+        projectTemplateName: custom
+        parameters:
+          resourceQuota:
+            limits:
+              cpu: "1e-1000"
+    - apiVersion: deckhouse.io/v1alpha3
+      kind: Project
+      metadata:
+        name: long
+      spec:
+        projectTemplateName: custom
+        parameters:
+          resourceQuota:
+            pods: "10000000000000000000000000000000000000000000000000000000000000000"
+
+# The templates of the previous release test each quota value with "with", which takes the number 0
+# for no value, so it rendered no key and set no limit. In spec.quota it is a hard limit of 0, and one
+# on requests.cpu refuses every pod, so a quota with the number 0 anywhere stays in the parameters.
+- name: leaves a quota with the number 0 in the parameters
+  objects:
+    - apiVersion: deckhouse.io/v1alpha2
+      kind: Project
+      metadata:
+        name: requests
+      spec:
+        projectTemplateName: default
+        parameters:
+          administrators:
+            - subject: User
+              name: alice@example.com
+          resourceQuota:
+            requests:
+              cpu: 0
+              memory: 5Gi
+            limits:
+              memory: 5Gi
+    - apiVersion: deckhouse.io/v1alpha2
+      kind: Project
+      metadata:
+        name: limits
+      spec:
+        projectTemplateName: default
+        parameters:
+          resourceQuota:
+            requests:
+              cpu: "1"
+            limits:
+              cpu: 0
+    - apiVersion: deckhouse.io/v1alpha2
+      kind: Project
+      metadata:
+        name: flat
+      spec:
+        projectTemplateName: custom
+        parameters:
+          resourceQuota:
+            pods: 10
+            services.loadbalancers: 0
+  converted:
+    - apiVersion: deckhouse.io/v1alpha3
+      kind: Project
+      metadata:
+        name: requests
+      spec:
+        projectTemplateName: default
+        administrators:
+          - kind: User
+            name: alice@example.com
+        parameters:
+          resourceQuota:
+            requests:
+              cpu: 0
+              memory: 5Gi
+            limits:
+              memory: 5Gi
+    - apiVersion: deckhouse.io/v1alpha3
+      kind: Project
+      metadata:
+        name: limits
+      spec:
+        projectTemplateName: default
+        parameters:
+          resourceQuota:
+            requests:
+              cpu: "1"
+            limits:
+              cpu: 0
+    - apiVersion: deckhouse.io/v1alpha3
+      kind: Project
+      metadata:
+        name: flat
+      spec:
+        projectTemplateName: custom
+        parameters:
+          resourceQuota:
+            pods: 10
+            services.loadbalancers: 0
+
+# The string "0" is no empty value for "with", so the templates rendered it as a hard limit of 0, the
+# limit spec.quota sets.
+- name: lifts the string 0 as a hard limit
+  objects:
+    - apiVersion: deckhouse.io/v1alpha2
+      kind: Project
+      metadata:
+        name: zero
+      spec:
+        projectTemplateName: default
+        parameters:
+          resourceQuota:
+            requests:
+              cpu: "0"
+              memory: 5Gi
+            limits:
+              memory: "0"
+            services.loadbalancers: "0"
+  converted:
+    - apiVersion: deckhouse.io/v1alpha3
+      kind: Project
+      metadata:
+        name: zero
+      spec:
+        projectTemplateName: default
+        quota:
+          requests.cpu: "0"
+          requests.memory: 5Gi
+          limits.memory: "0"
+          services.loadbalancers: "0"
+        parameters: {}
+
+- name: lifts one field and leaves the other
+  objects:
+    - apiVersion: deckhouse.io/v1alpha2
+      kind: Project
+      metadata:
+        name: admins
+      spec:
+        projectTemplateName: custom
+        parameters:
+          administrators:
+            - subject: User
+              name: alice@example.com
+          resourceQuota: 10Gi
+          networkPolicy: Isolated
+    - apiVersion: deckhouse.io/v1alpha2
+      kind: Project
+      metadata:
+        name: quota
+      spec:
+        projectTemplateName: custom
+        parameters:
+          administrators:
+            - alice@example.com
+          resourceQuota:
+            requests:
+              cpu: 1
+  converted:
+    - apiVersion: deckhouse.io/v1alpha3
+      kind: Project
+      metadata:
+        name: admins
+      spec:
+        projectTemplateName: custom
+        administrators:
+          - kind: User
+            name: alice@example.com
+        parameters:
+          resourceQuota: 10Gi
+          networkPolicy: Isolated
+    - apiVersion: deckhouse.io/v1alpha3
+      kind: Project
+      metadata:
+        name: quota
+      spec:
+        projectTemplateName: custom
+        quota:
+          requests.cpu: 1
+        parameters:
+          administrators:
+            - alice@example.com
+
+- name: converts every project of a review when one of them cannot be lifted
+  objects:
+    - apiVersion: deckhouse.io/v1alpha2
+      kind: Project
+      metadata:
+        name: odd
+      spec:
+        projectTemplateName: custom
+        parameters:
+          administrators:
+            - alice@example.com
+          resourceQuota: 10Gi
+    - apiVersion: deckhouse.io/v1alpha2
+      kind: Project
+      metadata:
+        name: backend
+      spec:
+        projectTemplateName: default
+        parameters:
+          administrators:
+            - subject: User
+              name: alice@example.com
+          resourceQuota:
+            requests:
+              cpu: 1
+  converted:
+    - apiVersion: deckhouse.io/v1alpha3
+      kind: Project
+      metadata:
+        name: odd
+      spec:
+        projectTemplateName: custom
+        parameters:
+          administrators:
+            - alice@example.com
+          resourceQuota: 10Gi
+    - apiVersion: deckhouse.io/v1alpha3
+      kind: Project
+      metadata:
+        name: backend
+      spec:
+        projectTemplateName: default
+        administrators:
+          - kind: User
+            name: alice@example.com
+        quota:
+          requests.cpu: 1
+        parameters: {}
+
+- name: drops a null administrators and resourceQuota
+  objects:
+    - apiVersion: deckhouse.io/v1alpha2
+      kind: Project
+      metadata:
+        name: nulls
+      spec:
+        projectTemplateName: custom
+        parameters:
+          administrators: null
+          resourceQuota: null
+          networkPolicy: Isolated
+  converted:
+    - apiVersion: deckhouse.io/v1alpha3
+      kind: Project
+      metadata:
+        name: nulls
+      spec:
+        projectTemplateName: custom
+        parameters:
+          networkPolicy: Isolated
 
 - name: leaves namespaces already in the new shape alone
   objects:

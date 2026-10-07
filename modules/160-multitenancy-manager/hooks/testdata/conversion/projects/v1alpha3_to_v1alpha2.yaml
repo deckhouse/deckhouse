@@ -110,6 +110,39 @@
             count/deployments.apps: "5"
             services.loadbalancers: 2
 
+# The templates of the previous release skip the number 0 with "with", while in spec.quota it is a hard
+# limit. The string "0" keeps that limit at v1alpha2 and is lifted again on the way up.
+- name: gives the number 0 back as the string 0
+  objects:
+    - apiVersion: deckhouse.io/v1alpha3
+      kind: Project
+      metadata:
+        name: zero
+      spec:
+        projectTemplateName: default
+        quota:
+          requests.cpu: 0
+          requests.memory: 4Gi
+          limits.memory: "0"
+          services.loadbalancers: 0
+          pods: 10
+  converted:
+    - apiVersion: deckhouse.io/v1alpha2
+      kind: Project
+      metadata:
+        name: zero
+      spec:
+        projectTemplateName: default
+        parameters:
+          resourceQuota:
+            requests:
+              cpu: "0"
+              memory: 4Gi
+            limits:
+              memory: "0"
+            services.loadbalancers: "0"
+            pods: 10
+
 # v1alpha2 has one key for a bare requests and the nesting under it; the nested form wins.
 - name: gives a bare requests key up to the nested form
   objects:
@@ -136,6 +169,8 @@
               cpu: "1"
             limits: "7"
 
+# v1alpha2 has one place for a standard field and the parameter it is lifted from. A project that sets
+# both still converts, with the standard field in the place of the parameter.
 - name: lets administrators and quota replace the same keys in the parameters
   objects:
     - apiVersion: deckhouse.io/v1alpha3
@@ -169,6 +204,42 @@
               name: alice@example.com
           resourceQuota:
             pods: "10"
+          networkPolicy: Isolated
+
+# Nothing beside them in the standard fields, so they come back as the client wrote them and the
+# round trip leaves them alone.
+- name: gives back the parameters the up-conversion left in place
+  objects:
+    - apiVersion: deckhouse.io/v1alpha3
+      kind: Project
+      metadata:
+        name: odd
+      spec:
+        projectTemplateName: custom
+        parameters:
+          administrators:
+            - alice@example.com
+          resourceQuota:
+            requests:
+              cpu: 1
+            scopes:
+              - BestEffort
+          networkPolicy: Isolated
+  converted:
+    - apiVersion: deckhouse.io/v1alpha2
+      kind: Project
+      metadata:
+        name: odd
+      spec:
+        projectTemplateName: custom
+        parameters:
+          administrators:
+            - alice@example.com
+          resourceQuota:
+            requests:
+              cpu: 1
+            scopes:
+              - BestEffort
           networkPolicy: Isolated
 
 - name: pushes an empty administrators list and an empty quota as they are

@@ -89,7 +89,10 @@ d8 k get projecttemplates <ИМЯ_ШАБЛОНА_ПРОЕКТА> -o yaml
    {% endraw %}
 
    {% alert level="info" %}
-   API ресурса Project обслуживается как `deckhouse.io/v1alpha3`. Манифесты `v1alpha2` продолжают работать: вебхук конвертации автоматически переносит `parameters.administrators` и `parameters.resourceQuota` в стандартные поля `.spec.administrators` и `.spec.quota`. Версия `deckhouse.io/v1alpha1` больше не обслуживается: API-сервер отклоняет манифест с `apiVersion: deckhouse.io/v1alpha1`, поэтому перед применением замените `apiVersion` на `deckhouse.io/v1alpha3` и перенесите `parameters.administrators` и `parameters.resourceQuota` в стандартные поля.
+   API ресурса Project обслуживается как `deckhouse.io/v1alpha3`. Манифесты `v1alpha2` продолжают работать: вебхук конвертации автоматически переносит `parameters.administrators` и `parameters.resourceQuota` в стандартные поля `.spec.administrators` и `.spec.quota`. Если хотя бы один администратор не помещается в `.spec.administrators` (например, у него задан `accessLevel`), весь список остаётся в `parameters`, и `.spec.administrators` не заполняется. То же относится к квоте, в которой есть что-то, кроме значений ресурсов (например, `scopes`), к квоте, в которой где-либо есть число `0`, а также к пустому списку или пустой квоте. Шаблон, который проверяет значение через `with`, пропускает число `0` и не задаёт лимит, а в `.spec.quota` это был бы жёсткий лимит, равный нулю. Строка `"0"` переносится в `.spec.quota` как такой лимит. Клиент `v1alpha2` читает `0` из `.spec.quota` как строку `"0"`.
+   Проект не может задавать `.spec.administrators` вместе с `parameters.administrators` или `.spec.quota` вместе с `parameters.resourceQuota`.
+
+   Версия `deckhouse.io/v1alpha1` больше не обслуживается: API-сервер отклоняет манифест с `apiVersion: deckhouse.io/v1alpha1`, поэтому перед применением замените `apiVersion` на `deckhouse.io/v1alpha3` и перенесите `parameters.administrators` и `parameters.resourceQuota` в стандартные поля.
    {% endalert %}
 
    {% raw %}
@@ -315,7 +318,7 @@ d8 k get ns -l 'projects.deckhouse.io/project=my-project,!projects.deckhouse.io/
 Администраторы проекта и квоты ресурсов больше не являются параметрами шаблона — это поля верхнего уровня ресурса [Project](cr.html#project), работающие с любым шаблоном (включая `simple`):
 
 - `.spec.administrators` — список субъектов (`kind: User` или `kind: Group` и `name`), получающих административный доступ к проекту. Контроллер реализует этот доступ через автоматически создаваемый [ProjectRoleBinding](cr.html#projectrolebinding) в неймспейсе проекта.
-- `.spec.quota` — набор жёстких лимитов [ResourceQuota](https://kubernetes.io/docs/concepts/policy/resource-quotas/) (например, `requests.cpu`, `limits.memory`). Контроллер поддерживает `ResourceQuota` в неймспейсе проекта и сообщает текущее потребление в `.status.usage`. Для `memory` и `storage` должна быть указана единица измерения (например `2Gi`). Числа без единицы измерения означают байты и отклоняются.
+- `.spec.quota` — набор жёстких лимитов [ResourceQuota](https://kubernetes.io/docs/concepts/policy/resource-quotas/) (например, `requests.cpu`, `limits.memory`). Контроллер поддерживает `ResourceQuota` в неймспейсе проекта и сообщает текущее потребление в `.status.usage`. Для `memory` и `storage` должна быть указана единица измерения (например `2Gi`). Числа без единицы измерения означают байты, и все они, кроме 0, отклоняются. При обновлении проверяются только изменённые значения, поэтому проект, в котором уже есть такое число, можно редактировать.
 
 ```yaml
 apiVersion: deckhouse.io/v1alpha3
