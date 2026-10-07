@@ -22,6 +22,7 @@ import (
 
 	"github.com/go-logr/logr"
 	"go.uber.org/zap/zapcore"
+	appsv1 "k8s.io/api/apps/v1"
 	authorizationv1 "k8s.io/api/authorization/v1"
 	corev1 "k8s.io/api/core/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
@@ -91,6 +92,15 @@ const (
 	leaseDuration = 60 * time.Second
 	renewDeadline = 40 * time.Second
 	retryPeriod   = 8 * time.Second
+
+	// podNameEnv names this pod; the Deployment sets it from the downward API.
+	podNameEnv = "POD_NAME"
+
+	// The controllers wait for the pods of the other revisions of the Deployment to finish, checking
+	// every previousPodsInterval. The wait is bounded by previousPodsTimeout, so a pod stuck
+	// terminating on a lost node does not keep them down for good.
+	previousPodsInterval = 5 * time.Second
+	previousPodsTimeout  = 10 * time.Minute
 )
 
 func main() {
@@ -104,6 +114,25 @@ func main() {
 	runtimeManager, err := setupRuntimeManager(logger)
 	if err != nil {
 		fatal(logger, err, "set up runtime manager")
+	}
+
+	// Hold the controllers and the Init runnables registered below until no pod of another revision
+	// of the Deployment is left. The lease keeps apart only the pods that take it; a pod of a
+	// revision that does not would keep writing the Helm releases of the projects next to this one.
+	// The hold starts once this replica holds the lease, while the webhooks already serve. The
+	// Deployment runs in the namespace of the Helm release storage and of the lease.
+	previousPods := &startup.PreviousPods{
+		Reader:    runtimeManager.GetAPIReader(),
+		Recorder:  runtimeManager.GetEventRecorderFor(controllerName),
+		Logger:    logger.WithName("previous-pods"),
+		Namespace: helmNamespace,
+		Name:      os.Getenv(podNameEnv),
+		Selector:  map[string]string{"app": controllerName},
+		Interval:  previousPodsInterval,
+		Timeout:   previousPodsTimeout,
+	}
+	if runtimeManager, err = startup.HoldControllers(runtimeManager, previousPods.Wait); err != nil {
+		fatal(logger, err, "hold the controllers")
 	}
 
 	// initialize helm client
@@ -228,13 +257,17 @@ func fatal(logger logr.Logger, err error, msg string) {
 	os.Exit(1)
 }
 
-func setupRuntimeManager(logger logr.Logger) (ctrl.Manager, error) {
+// newScheme is the scheme of the manager and of every client it hands out, the uncached API reader
+// included. A typed object of a kind it lacks cannot be read at all, so every kind the controller
+// reads has to be here: apps/v1 for the ReplicaSets the startup wait (startup.PreviousPods) lists.
+func newScheme() (*runtime.Scheme, error) {
 	addToScheme := []func(s *runtime.Scheme) error{
 		v1alpha1.AddToScheme,
 		deckhousev1alpha2.AddToScheme,
 		v1alpha3.AddToScheme,
 		grantsv1alpha1.AddToScheme, grantsv1alpha2.AddToScheme,
 		corev1.AddToScheme,
+		appsv1.AddToScheme,
 		rbacv1.AddToScheme,
 		authorizationv1.AddToScheme,
 	}
@@ -242,9 +275,17 @@ func setupRuntimeManager(logger logr.Logger) (ctrl.Manager, error) {
 	scheme := runtime.NewScheme()
 	for _, add := range addToScheme {
 		if err := add(scheme); err != nil {
-			logger.Error(err, "failed to add scheme to runtime manager")
 			return nil, err
 		}
+	}
+	return scheme, nil
+}
+
+func setupRuntimeManager(logger logr.Logger) (ctrl.Manager, error) {
+	scheme, err := newScheme()
+	if err != nil {
+		logger.Error(err, "failed to add scheme to runtime manager")
+		return nil, err
 	}
 
 	opts := manager.Options{

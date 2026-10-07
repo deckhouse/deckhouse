@@ -5946,6 +5946,66 @@ alerts:
         A new release for module {{ $labels.module }} is awaiting manual approval.
       severity: "6"
       markupFormat: markdown
+    - name: MultitenancyManagerPreviousRevisionStillRunning
+      sourceFile: modules/160-multitenancy-manager/monitoring/prometheus-rules/controller-revisions.yaml
+      moduleUrl: 160-multitenancy-manager
+      module: multitenancy-manager
+      edition: ce
+      description: |-
+        Pods of {{ $value }} revisions of the `multitenancy-manager` Deployment in the `d8-multitenancy-manager` namespace have been pending or running side by side for more than 15 minutes.
+
+        A new controller pod first takes the leader election lease, then holds its controllers until the pods of the older revisions finish, for 10 minutes at most, and then starts them anyway. A pod deleted more than 10 minutes ago no longer holds the start. While the old pod takes the same lease, only one of the two pods writes the Helm releases of the projects, and the alert means that the rollout is stuck: the new pod is pending or not ready, or the old pod is stuck terminating on a lost node. Only an old pod of a revision that runs without leader election writes the releases next to the new one. Then each of them overwrites the release the other one rendered, and objects in the namespaces of the projects may be deleted and created again.
+
+        Steps to troubleshoot:
+
+        1. List the controller pods with their revisions and nodes:
+
+           ```bash
+           d8 k -n d8-multitenancy-manager get pods -L pod-template-hash -o wide
+           ```
+
+        1. Find out whether the new pod has started its controllers:
+
+           ```bash
+           d8 k -n d8-multitenancy-manager logs <NEW_POD_NAME> -c multitenancy-manager | grep 'other revisions'
+           ```
+
+           - `hold the controllers until the pods of other revisions finish` means that the new pod holds the lease and waits.
+           - `no pods of other revisions to wait for` means that it has started its controllers at once, because the old pods had finished or were deleted more than 10 minutes ago.
+           - `the pods of other revisions finished` means that it has started its controllers after waiting, because the old pods finished or were deleted more than 10 minutes ago.
+           - `the pods of other revisions did not finish in time, starting the controllers anyway` means that it has started its controllers after 10 minutes of waiting.
+
+           Without any of these lines, the new pod waits for the lease that the old pod holds. When the wait ends after 10 minutes, the new pod also writes a Warning event with the reason `PreviousRevisionStillRunning`, and the message of the event names the old pods. An event is kept for an hour by default:
+
+           ```bash
+           d8 k -n d8-multitenancy-manager get events --field-selector reason=PreviousRevisionStillRunning
+           ```
+
+        1. Check the node of the old pod, shown in the `NODE` column:
+
+           ```bash
+           d8 k get node <NODE_NAME>
+           ```
+
+        1. Act on what you see:
+
+           - The old pod is `Running`, not terminating, and the new pod is not ready. The Deployment removes the old pods only after the new ones are ready, and deleting an old pod does not help, since its ReplicaSet creates it again. Find out why the new pod is not ready:
+
+             ```bash
+             d8 k -n d8-multitenancy-manager describe pod <NEW_POD_NAME>
+             ```
+
+           - The old pod is `Terminating` on a node that is `NotReady`. Such a pod stays until its node comes back or the Node object is deleted. If the node is lost for good, delete the Node object, and its pods are deleted with it. If you know the machine of the node is powered off, you can force-delete the old pod instead:
+
+             ```bash
+             d8 k -n d8-multitenancy-manager delete pod <OLD_POD_NAME> --force --grace-period=0
+             ```
+
+             Do not force-delete a pod whose containers may still run. The pod disappears from the API, while its process keeps writing the Helm releases.
+      summary: |
+        Pods of several revisions of the multitenancy-manager controller have run side by side for more than 15 minutes.
+      severity: "6"
+      markupFormat: markdown
     - name: NATInstanceWithDeprecatedAvailabilityZone
       sourceFile: modules/030-cloud-provider-yandex/monitoring/prometheus-rules/deprecated_availability_zone.yaml
       moduleUrl: 030-cloud-provider-yandex
