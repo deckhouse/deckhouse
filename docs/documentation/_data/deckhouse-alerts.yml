@@ -5976,6 +5976,62 @@ alerts:
         A new release for module {{ $labels.module }} is awaiting manual approval.
       severity: "6"
       markupFormat: markdown
+    - name: MultitenancyManagerHelmProjectTemplate
+      sourceFile: modules/160-multitenancy-manager/monitoring/prometheus-rules/project-templates.yaml
+      moduleUrl: 160-multitenancy-manager
+      module: multitenancy-manager
+      edition: ce
+      description: |-
+        ProjectTemplate `{{ $labels.template }}` describes the objects of its projects with a Helm text in `resourcesTemplate`, and its projects are rendered from that text. They keep working as before. This form of a template is deprecated, and `resourcesTemplate` goes away in a future release, so move the template to structured fields before then.
+
+        The built-in templates `default`, `secure` and `secure-with-dedicated-nodes` were Helm texts in earlier releases. They are structured now and keep the parameters of their texts, except `administrators` and `resourceQuota`, so they show how a text maps to the fields. A field takes the value of a parameter with `{fromParam: <PARAMETER_NAME>}`, and the projects keep their parameters. What a text renders moves as follows.
+
+        - The `security.deckhouse.io/pod-policy` label of the namespace, which the built-in texts set from the `podSecurityProfile` parameter, goes to `podSecurityStandard`.
+        - The NetworkPolicy objects of the `networkPolicy` parameter go to `networkPolicy.mode`.
+        - The `extended-monitoring.deckhouse.io/enabled` and `security-scanning.deckhouse.io/enabled` labels of the `extendedMonitoringEnabled` and `securityScanningEnabled` parameters go to `features.monitoring` and `features.vulnerabilityScanning`.
+        - The PodLoggingConfig of the `clusterLogDestinationName` parameter goes to `logShipping.clusterDestinationRef`.
+        - The SecurityPolicy of the `allowedUIDs` and `allowedGIDs` parameters goes to `allowedUIDs` and `allowedGIDs`, and the FalcoAuditRules of the `runtimeAuditEnabled` parameter goes to `runtimeAudit.enabled`.
+        - Other labels and annotations of the namespace go to `namespaceMetadata`, and the placement on dedicated nodes goes to `nodeSelector` and `tolerations`.
+        - The AuthorizationRule objects of the `administrators` parameter and the `all-pods` quota of the `resourceQuota` parameter go to `.spec.administrators` and `.spec.quota` of each Project, not to the template.
+        - The `required-requests-*` OperationPolicy of the built-in texts, which refuses pods without CPU and memory requests, goes to the `requiredRequests` parameter. If the text rendered it, declare `requiredRequests` in `parametersSchema` with `type: boolean` and `default: true` to keep it. If the text did not, declare it with `default: false`, and the policy stays off.
+        - Other objects of the text, such as workloads, RoleBinding or LimitRange objects in the namespaces of the project and cluster-scoped objects, have no structured field yet. A switch leaves them in place for the projects that have them, but a new project of the template does not get them, so a template that needs them keeps `resourcesTemplate` until a field covers them.
+
+        Once the template has structured fields in place of `resourcesTemplate`, the AuthorizationRule and ResourceQuota objects that `.spec.administrators` and `.spec.quota` replace are deleted after these fields work, and an AuthorizationRule that names nobody from `.spec.administrators` any more is deleted at once. Every other object of the text that the structured fields do not render under the same kind and name is left in place, and the `MultitenancyManagerProjectKeepsHelmTemplateObjects` alert names the project. The administrators then have the `d8:project:admin` role in place of the `Admin` access level, and the two roles do not grant the same permissions. See [Switching a project from a Helm text](https://deckhouse.io/modules/multitenancy-manager/usage.html#switching-a-project-from-a-helm-text).
+
+        Steps:
+
+        1. Read the template and compare it with the built-in template it was copied from, if any:
+
+           ```bash
+           d8 k get projecttemplate {{ $labels.template }} -o yaml
+           d8 k get projecttemplate default -o yaml
+           ```
+
+        1. List the projects of the template. A template that no project uses can be deleted, and the alert goes with it:
+
+           ```bash
+           d8 k get projects -l projects.deckhouse.io/project-template={{ $labels.template }}
+           ```
+
+        1. Find the projects of the template that still set `administrators` or `resourceQuota` in `.spec.parameters`:
+
+           ```bash
+           d8 k get projects -l projects.deckhouse.io/project-template={{ $labels.template }} -o json | jq -r '.items[] | select((.spec.parameters // {}) | has("administrators") or has("resourceQuota")) | .metadata.name'
+           ```
+
+           These values get no standard fields and are not handed over, so move them to `.spec.administrators` and `.spec.quota` first, and only as far as they mean the same there. `.spec.administrators` gives users and groups the `d8:project:admin` role, so an administrator with another access level or another kind of subject needs a ProjectRoleBinding of its own. `.spec.quota` enforces every limit it holds, `0` included, so leave out a limit that the text did not render, such as a `0` that it skipped.
+
+        1. If the structured fields cover what the projects need, write the template as `deckhouse.io/v1alpha2` with these fields and without `resourcesTemplate`, in one change, where the template is applied from, for example in Git or in CI. A template that projects use cannot lose `resourcesTemplate` without structured fields in its place, and once it has fields that `deckhouse.io/v1alpha1` cannot describe, a write of it through `deckhouse.io/v1alpha1` is refused. If the template is an unchanged copy of a built-in template, you can instead move its projects to that template in `.spec.projectTemplateName` and then delete the copy.
+
+        1. Check each project after the switch. Its `HandoverPending` condition is removed once the replaced objects are deleted, and `.status.keptObjects` lists the objects left in place:
+
+           ```bash
+           d8 k get project <PROJECT_NAME> -o jsonpath='{range .status.conditions[*]}{.type}={.status}: {.message}{"\n"}{end}{range .status.keptObjects[*]}{.kind} {.namespace}/{.name}{"\n"}{end}'
+           ```
+      summary: |
+        ProjectTemplate {{ $labels.template }} still renders its projects from a Helm text in resourcesTemplate.
+      severity: "9"
+      markupFormat: markdown
     - name: MultitenancyManagerPreviousRevisionStillRunning
       sourceFile: modules/160-multitenancy-manager/monitoring/prometheus-rules/controller-revisions.yaml
       moduleUrl: 160-multitenancy-manager
