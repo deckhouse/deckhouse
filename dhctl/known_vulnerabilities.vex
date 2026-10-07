@@ -93,34 +93,6 @@
     },
     {
       "vulnerability": {
-        "name": "CVE-2026-81872"
-      },
-      "products": [
-        {
-          "@id": "pkg:golang/go.opentelemetry.io/otel/sdk/log"
-        }
-      ],
-      "status": "not_affected",
-      "justification": "vulnerable_code_cannot_be_controlled_by_adversary",
-      "impact_statement": "Уязвимость CVE-2026-81872 проявляется в BatchingProcessor пакета otel/sdk/log, когда управляемый злоумышленником поток логов переполняет асинхронный буфер экспортера при заблокированном экспорте. В dhctl телеметрия выключена по умолчанию и включается только переменной окружения DHCTL_TRACE, которая не задаётся по умолчанию в сборочной конфигурации образа dhctl. При включённой телеметрии в OTLP уходит зеркало собственного отладочного лога dhctl (pkg/telemetry/logexport.go), то есть поток записей порождает сам процесс установки, а не обращения внешних клиентов, как в уязвимом сценарии. dhctl выполняется как CLI-процесс под управлением оператора и не обслуживает внешние запросы, поэтому злоумышленник не может задать темп эмиссии логов, необходимый для перегрузки буфера.",
-      "timestamp": "2026-10-01T00:00:00Z"
-    },
-    {
-      "vulnerability": {
-        "name": "CVE-2026-81871"
-      },
-      "products": [
-        {
-          "@id": "pkg:golang/go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploggrpc"
-        }
-      ],
-      "status": "not_affected",
-      "justification": "vulnerable_code_cannot_be_controlled_by_adversary",
-      "impact_statement": "Уязвимость CVE-2026-81871 приводит к тому, что экспортер otlploggrpc игнорирует TLS-настройки, заданные переменными окружения OTEL_EXPORTER_OTLP_CERTIFICATE и OTEL_EXPORTER_OTLP_LOGS_CERTIFICATE, и использует системные корневые сертификаты. Экспортер создаётся единственным местом в коде (pkg/telemetry/exporters.go) и только при одновременно заданных DHCTL_TRACE, OTEL_EXPORTER_OTLP_ENDPOINT и OTEL_EXPORTER_OTLP_PROTOCOL со значением, содержащим grpc; без OTEL_EXPORTER_OTLP_ENDPOINT используется локальный файловый экспортер, без grpc в протоколе — otlploghttp. Ни одна из этих переменных не задаётся по умолчанию в сборочной конфигурации образа dhctl, поэтому в поставке уязвимый код не выполняется.",
-      "timestamp": "2026-10-01T00:00:00Z"
-    },
-    {
-      "vulnerability": {
         "name": "GO-2026-5932"
       },
       "products": [
