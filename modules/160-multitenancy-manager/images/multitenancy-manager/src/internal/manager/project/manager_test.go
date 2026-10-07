@@ -50,11 +50,13 @@ type fakeHelmClient struct {
 	applyResult    helm.ReleaseOutcome // returned by Upgrade/UpgradeManifests
 	analyzeResult  helm.ReleaseOutcome // returned by Analyze{Manifests,Rendered}
 	analyzeCalls   int
+	seenManifests  string
 	upgradeCalls   int
 }
 
-func (f *fakeHelmClient) UpgradeManifests(_ context.Context, project *v1alpha3.Project, _ string) (helm.ReleaseOutcome, error) {
+func (f *fakeHelmClient) UpgradeManifests(_ context.Context, project *v1alpha3.Project, manifests string) (helm.ReleaseOutcome, error) {
 	f.upgradeCalls++
+	f.seenManifests = manifests
 	f.seenNamespaces = append([]v1alpha3.NamespaceStatus(nil), project.Status.Namespaces...)
 	return f.applyResult, nil
 }
@@ -131,6 +133,78 @@ func disabledRole(name string) *rbacv1.ClusterRole {
 			Annotations: map[string]string{rolebinding.AnnotationDisabledForProjects: "true"},
 		},
 	}
+}
+
+// TestHandleTemplateRendersOntoTheLiveNamespace: the release is rendered onto the project namespace
+// as it is in the cluster, so a feature label the namespace already carries keeps its value, and a
+// project whose namespace does not exist yet still renders.
+func TestHandleTemplateRendersOntoTheLiveNamespace(t *testing.T) {
+	tmpl := &v1alpha2.ProjectTemplate{
+		ObjectMeta: metav1.ObjectMeta{Name: "tmpl"},
+		Spec: v1alpha2.ProjectTemplateSpec{
+			Features: &v1alpha2.FeaturesSpec{Monitoring: v1alpha2.LiteralParam(true)},
+		},
+	}
+	newProject := func() *v1alpha3.Project {
+		return &v1alpha3.Project{
+			ObjectMeta: metav1.ObjectMeta{Name: "proj"},
+			Spec:       v1alpha3.ProjectSpec{ProjectTemplateName: "tmpl"},
+		}
+	}
+
+	t.Run("the namespace carries the label", func(t *testing.T) {
+		live := &corev1.Namespace{ObjectMeta: metav1.ObjectMeta{
+			Name:   "proj",
+			Labels: map[string]string{"extended-monitoring.deckhouse.io/enabled": "true"},
+		}}
+		project := newProject()
+		m, _ := newManager(t, tmpl.DeepCopy(), project, live)
+		fh := &fakeHelmClient{}
+		m.helmClient = fh
+
+		done, err := m.handleTemplate(context.Background(), project)
+		require.NoError(t, err)
+		require.False(t, done)
+		assert.Contains(t, fh.seenManifests, `extended-monitoring.deckhouse.io/enabled: "true"`)
+	})
+
+	t.Run("there is no namespace yet", func(t *testing.T) {
+		project := newProject()
+		m, _ := newManager(t, tmpl.DeepCopy(), project)
+		fh := &fakeHelmClient{}
+		m.helmClient = fh
+
+		done, err := m.handleTemplate(context.Background(), project)
+		require.NoError(t, err)
+		require.False(t, done)
+		assert.Contains(t, fh.seenManifests, `extended-monitoring.deckhouse.io/enabled: ""`)
+	})
+
+	t.Run("the namespace cannot be read", func(t *testing.T) {
+		project := newProject()
+		scheme := runtime.NewScheme()
+		require.NoError(t, corev1.AddToScheme(scheme))
+		require.NoError(t, v1alpha2.AddToScheme(scheme))
+		require.NoError(t, v1alpha3.AddToScheme(scheme))
+		c := fake.NewClientBuilder().WithScheme(scheme).WithObjects(tmpl.DeepCopy(), project).
+			WithStatusSubresource(&v1alpha3.Project{}).
+			WithInterceptorFuncs(interceptor.Funcs{
+				Get: func(ctx context.Context, c client.WithWatch, key client.ObjectKey, obj client.Object, opts ...client.GetOption) error {
+					if _, ok := obj.(*corev1.Namespace); ok {
+						return errors.New("namespace get failed")
+					}
+					return c.Get(ctx, key, obj, opts...)
+				},
+			}).Build()
+		fh := &fakeHelmClient{}
+		m := New(c, fh, logr.Discard())
+
+		done, err := m.handleTemplate(context.Background(), project)
+		require.ErrorContains(t, err, "namespace get failed")
+		assert.True(t, done)
+		assert.Equal(t, 0, fh.upgradeCalls, "a render without the live namespace could rewrite its labels")
+		assert.True(t, project.IsConditionFalse(v1alpha3.ProjectConditionProjectResourcesUpgraded))
+	})
 }
 
 func conditionByType(project *v1alpha3.Project, condName string) *v1alpha3.Condition {

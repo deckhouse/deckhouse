@@ -226,13 +226,15 @@ The following stays in the **main** namespace only:
 
 - The project quota (the `ResourceQuota` from [`.spec.quota`](cr.html#project-v1alpha3-spec-quota))
 - The annotations from the template's `namespaceMetadata`
-- The labels set on the main namespace by hand
+- The labels and annotations set on the main namespace directly or by a GitOps tool, including the ones the namespace had before it [became a project](#creating-a-project-automatically-for-a-namespace), other than the pod security, monitoring and scanning labels above
 - The GitOps tracking labels (`app.kubernetes.io/instance`, `argocd.argoproj.io/*`, `kustomize.toolkit.fluxcd.io/*`, `helm.toolkit.fluxcd.io/*`, `kapp.k14s.io/*`), even when the template sets them
 - The node placement annotations (from the template's `nodeSelector` and `tolerations` fields)
 
 GitOps tracking labels are not inherited because a GitOps tool would treat an additional namespace that carries them as its own and could delete it. The module recognizes only the keys listed above. A custom tracking key that the template sets, for example the one configured with `application.instanceLabelKey` in Argo CD, is inherited.
 
-When a namespace [becomes a project automatically](#creating-a-project-automatically-for-a-namespace), its own labels go into the `namespace.labels` parameter of the project. The built-in templates put this parameter into `namespaceMetadata.labels`, so these labels become labels of the project template and are inherited. If such a namespace carries a tracking label of a GitOps tool not listed above, remove the label from `spec.parameters.namespace.labels` of the Project before you create additional namespaces. The next render also removes the label from the main namespace. Set it back on the main namespace by hand or let the GitOps tool restore it. A label set by hand is not inherited.
+When a namespace [becomes a project automatically](#creating-a-project-automatically-for-a-namespace), its own labels and annotations stay on it and are not copied into the Project, so the additional namespaces of the project do not inherit them. The pod security, monitoring and scanning labels are the exception. Adoption turns them into parameters of the project, and they are inherited as on any project. To put another label of such a namespace on the additional namespaces too, declare it in `spec.parameters.namespace.labels` of the Project, or set it on each additional namespace directly.
+
+The built-in templates of adopted projects are rewritten by the controller, so a label added to their `namespaceMetadata.labels` does not stay there. A [grant policy](#managing-access-to-cluster-wide-resources) whose `namespaceSelector` matches such a label does not cover the new additional namespaces until the label is declared in the Project. To cover the whole project, select it with `projectSelector`.
 
 ### Labels of the project namespaces
 
@@ -244,6 +246,7 @@ When a namespace [becomes a project automatically](#creating-a-project-automatic
 | `heritage: multitenancy-manager` | ✓ | ✓ | The namespace is managed by the project controller: its `spec`, finalizers and the labels listed in this table are changed through the Project; other labels and annotations may be changed directly |
 | `security.deckhouse.io/pod-policy`, `extended-monitoring.deckhouse.io/enabled`, `security-scanning.deckhouse.io/enabled` | ✓ | ✓ (inherited) | Policies and features from the project template |
 | Labels from the template's `namespaceMetadata.labels` | ✓ | ✓ (inherited) | Labels of the project template. They are listed in the `projects.deckhouse.io/template-labels` annotation of the namespace and changed through the Project or its ProjectTemplate |
+| Any other label set on a namespace directly or by a GitOps tool, including the labels a namespace had before it became a project | — | — | Not set by the module. The project release neither reverts nor restores it, and the additional namespaces do not inherit it |
 
 The common `projects.deckhouse.io/project` label makes it possible to select the project namespaces with a plain `get ns`:
 
@@ -275,6 +278,8 @@ A namespace created directly (for example, `d8 k create ns my-app`) becomes a pr
 
 Every such namespace becomes a project of its own, whatever its name. Of the namespaces `app` and `app-staging`, `app-staging` becomes a separate project and not an additional namespace of `app`. The controller creates the project, so no admission warning reaches the author of the namespace. Instead, the controller sends the `NamedLikeAdditionalNamespace` Warning event on the new project and on the namespace. The events of cluster-scoped objects are kept in the `default` namespace, so reading them needs access to the events there: `d8 k -n default get events --field-selector reason=NamedLikeAdditionalNamespace`. The [`MultitenancyManagerProjectNamedLikeAdditionalNamespace`](/products/kubernetes-platform/documentation/v1/reference/alerts.html#multitenancy-manager-multitenancymanagerprojectnamedlikeadditionalnamespace) alert lists such pairs, see [Project naming rules](#project-naming-rules).
 
+Every such namespace becomes a project of its own, whatever its name. Of the namespaces `app` and `app-staging`, `app-staging` becomes a separate project and not an additional namespace of `app`. The controller creates the project, so no admission warning reaches the author of the namespace. Instead, the controller sends the `NamedLikeAdditionalNamespace` Warning event on the new project and on the namespace. The events of cluster-scoped objects are kept in the `default` namespace, so reading them needs access to the events there: `d8 k -n default get events --field-selector reason=NamedLikeAdditionalNamespace`. The [`MultitenancyManagerProjectNamedLikeAdditionalNamespace`](/products/kubernetes-platform/documentation/v1/reference/alerts.html#multitenancy-manager-multitenancymanagerprojectnamedlikeadditionalnamespace) alert lists such pairs, see [Project naming rules](#project-naming-rules).
+
 System namespaces (`d8-*`, `kube-*`, `upmeter-*`, `default`, and anything labeled `heritage: deckhouse` or `heritage: upmeter`) are never adopted: they are listed on the virtual `deckhouse` project (except `default`, which stays on the virtual `default` project). There is no label that leaves a user namespace without a project. A namespace whose name is longer than 61 characters is also skipped: that is the Project name limit.
 
 On adoption, a namespace that gets the `default` or `secure` template because of its monitoring or scanning label, and has no `security.deckhouse.io/pod-policy` label, gets `podSecurityProfile: ""`. The project puts no such label on it, and the [default policy](/modules/admission-policy-engine/configuration.html#parameters-podsecuritystandards-defaultpolicy) of the `admission-policy-engine` module keeps applying to it. A namespace whose label has a value other than `baseline`, `restricted` or `privileged` gets `podSecurityProfile: ""` too, and the label stays on it as it is. A namespace with none of these labels gets the `simple` template, which sets no profile and has no `podSecurityProfile` parameter.
@@ -286,6 +291,16 @@ A namespace that already belongs to another Helm release (its `meta.helm.sh/rele
 Existing RoleBinding and AuthorizationRule objects inside the namespace keep working after adoption. The namespace Admin is **not** copied into `.spec.administrators` and does **not** become `d8:project:admin`: that role additionally manages ProjectRoleBinding resources, which is a wider contract than in-namespace Admin. To make the team lead a project administrator, a platform operator adds them to `.spec.administrators` or creates a ProjectRoleBinding. Namespace Admin never had `update`/`patch`/`delete` on the Namespace object itself (`get`/`list`/`watch` only); after adoption the Namespace is also owned by Helm (`heritage: multitenancy-manager`).
 
 The labels and annotations the module sets — `heritage`, `projects.deckhouse.io/*`, `security.deckhouse.io/pod-policy`, `extended-monitoring.deckhouse.io/enabled`, `security-scanning.deckhouse.io/enabled`, `app.kubernetes.io/managed-by`, `meta.helm.sh/*`, the node-selector and tolerations annotations — are changed through the Project and its template; any other label or annotation (`istio-injection`, a Pod Security label, a GitOps tracking annotation) can still be set directly on the Namespace by anyone whose RBAC allows it, and the controller does not touch it. The `spec` and finalizers of the Namespace, and its deletion, stay with the controller.
+
+This includes the labels and annotations the namespace had before it became a project.
+Adoption does not copy them into the project, so the project release does not own them,
+and the controller neither reverts a change to one of them nor brings one back once it is removed.
+They stay on the main namespace, and the [additional namespaces](#what-applies-to-the-additional-namespaces) of the project do not inherit them.
+Where such a label is needed on an additional namespace too, declare it in `spec.parameters.namespace.labels` of the Project or set it on that namespace directly.
+
+The node-selector and tolerations annotations are the exception.
+They belong to the module, so adoption copies them into the `namespace.annotations` parameter of the project, where they are changed or removed.
+The pod security, monitoring and scanning labels are turned into parameters of the project, and the additional namespaces inherit them. The `extended-monitoring.deckhouse.io/enabled` and `security-scanning.deckhouse.io/enabled` labels keep the value `"true"` if the namespace had it. Any other value, `"false"` included, is replaced with an empty one, because adoption turns the feature on whenever the namespace carries the label, whatever its value.
 
 The `projects.deckhouse.io/project` label itself is set only by the controller: a namespace created by hand with that label is refused, so a namespace cannot be made to look owned by a project it does not belong to.
 

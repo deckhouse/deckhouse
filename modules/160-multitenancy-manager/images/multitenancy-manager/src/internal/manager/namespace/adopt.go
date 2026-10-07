@@ -78,12 +78,18 @@ func TemplateFor(namespace *corev1.Namespace) string {
 // existing namespace on the defaults would drop an isolating NetworkPolicy into it and put the
 // workloads that run there today under a Pod Security Standard the namespace does not have.
 //
+// The labels and annotations of the namespace itself are left out. The release renders only what
+// the Project declares, and the three-way merge Helm applies it with never touches a key that no
+// render mentioned, so a label such as istio.io/rev or a GitOps tracking key stays with whoever set
+// it: nothing reverts a later change to it or brings it back once removed. The placement
+// annotations are the one exception, see placementAnnotations.
+//
 // Only the keys the chosen template declares are emitted, so the result always validates against
 // its parametersSchema.
 func ParametersFor(namespace *corev1.Namespace, template string) map[string]any {
 	params := make(map[string]any, 5)
-	if meta := namespaceMeta(namespace); meta != nil {
-		params["namespace"] = meta
+	if annotations := placementAnnotations(namespace); len(annotations) > 0 {
+		params["namespace"] = map[string]any{"annotations": annotations}
 	}
 
 	if template == TemplateSimple {
@@ -130,92 +136,20 @@ func podSecurityProfile(label string) string {
 	}
 }
 
-// namespaceMeta mirrors the user-defined labels and annotations of the namespace into the shape the
-// templates expect under the namespace parameter. It returns nil when there is nothing to mirror.
-func namespaceMeta(namespace *corev1.Namespace) map[string]any {
-	labels := filterUserMeta(namespace.GetLabels())
-	annotations := filterUserMeta(namespace.GetAnnotations())
-
-	meta := make(map[string]any, 2)
-	if len(labels) > 0 {
-		meta["labels"] = toAnyMap(labels)
-	}
-	if len(annotations) > 0 {
-		meta["annotations"] = toAnyMap(annotations)
-	}
-	if len(meta) == 0 {
-		return nil
-	}
-	return meta
-}
-
-// managedMetaExact are platform-owned keys that must match in full ("heritage" among them: a
-// HasPrefix match would also strip user keys such as heritageSomething). It is the list the
-// protective admission policy enforces on the namespace, minus the scheduler annotations.
-//
-// Those two are the exception on purpose. The policy owns them, so a user cannot edit them on the
-// namespace, and they are rendered from spec.nodeSelector/spec.tolerations of a template -- but
-// adoption only ever picks simple, default or secure, and none of those declares either field. Were
-// they dropped here as well, an adopted namespace would keep its placement annotations (the Helm
-// three-way merge leaves them) in no one's desired state, with no way left to change or remove
-// them. Mirroring them into the namespace parameter puts them back under the Project, which is
-// where every other owned key is changed from.
-var managedMetaExact = func() []string {
-	out := append([]string{}, naming.ManagedNamespaceLabels...)
-	for _, key := range naming.ManagedNamespaceAnnotations {
-		if key == naming.NodeSelectorAnnotation || key == naming.TolerationsAnnotation {
-			continue
+// placementAnnotations returns the scheduler annotations of the namespace in the shape the
+// namespace.annotations parameter takes. They are the only metadata of its own a namespace brings
+// into its project, on purpose: the protective admission policy owns them on a project namespace,
+// so nobody can change them there, and they are rendered from spec.nodeSelector and
+// spec.tolerations of a template, which none of the templates adoption picks (simple, default,
+// secure) declares. Left out, they would stay on the namespace in no one's desired state, with no
+// way left to change or remove them; carried, they are changed through the Project like every other
+// key the module owns.
+func placementAnnotations(namespace *corev1.Namespace) map[string]any {
+	out := make(map[string]any, 2)
+	for _, key := range []string{naming.NodeSelectorAnnotation, naming.TolerationsAnnotation} {
+		if value, ok := namespace.GetAnnotations()[key]; ok {
+			out[key] = value
 		}
-		out = append(out, key)
-	}
-	return out
-}()
-
-// managedMetaPrefixes are platform-owned key prefixes that are never mirrored into project
-// parameters. The controller applies them itself, and the three template-rendered labels are
-// already represented by their own parameters.
-var managedMetaPrefixes = []string{
-	"projects.deckhouse.io/",
-	"multitenancy.deckhouse.io/",
-	"meta.helm.sh/",
-	"kubectl.kubernetes.io/",
-}
-
-func filterUserMeta(in map[string]string) map[string]string {
-	if len(in) == 0 {
-		return nil
-	}
-	out := make(map[string]string, len(in))
-	for k, v := range in {
-		if isManagedMeta(k) {
-			continue
-		}
-		out[k] = v
-	}
-	if len(out) == 0 {
-		return nil
-	}
-	return out
-}
-
-func isManagedMeta(key string) bool {
-	for _, exact := range managedMetaExact {
-		if key == exact {
-			return true
-		}
-	}
-	for _, prefix := range managedMetaPrefixes {
-		if strings.HasPrefix(key, prefix) {
-			return true
-		}
-	}
-	return false
-}
-
-func toAnyMap(in map[string]string) map[string]any {
-	out := make(map[string]any, len(in))
-	for k, v := range in {
-		out[k] = v
 	}
 	return out
 }

@@ -42,14 +42,28 @@ import (
 )
 
 // Manifests renders the structured (v1alpha2) ProjectTemplate into a multi-document YAML of the
-// per-namespace objects for the given project, resolving every fromParam leaf.
+// per-namespace objects for the given project, resolving every fromParam leaf. It renders the project
+// as if its namespace did not exist yet; see ManifestsOnto.
 func Manifests(tmpl *v1alpha2.ProjectTemplate, project *v1alpha3.Project) (string, error) {
+	return ManifestsOnto(tmpl, project, nil)
+}
+
+// ManifestsOnto renders like Manifests onto the main namespace of the project as it is in the
+// cluster, given by its labels (nil when there is no namespace yet). The only thing the live labels
+// change is the value of a feature label the template turns on, which the render keeps when the
+// namespace already has it as "true" (see renderer.featureLabel).
+func ManifestsOnto(tmpl *v1alpha2.ProjectTemplate, project *v1alpha3.Project, liveLabels map[string]string) (string, error) {
 	params, err := effectiveParams(tmpl, project)
 	if err != nil {
 		return "", err
 	}
 
-	r := &renderer{name: project.Name, namespaces: projectNamespaces(project), params: params}
+	r := &renderer{
+		name:       project.Name,
+		namespaces: projectNamespaces(project),
+		params:     params,
+		liveLabels: liveLabels,
+	}
 	docs, err := r.build(&tmpl.Spec)
 	if err != nil {
 		return "", err
@@ -91,6 +105,9 @@ type renderer struct {
 	// main Namespace object are rendered once and reach additional namespaces via label selectors.
 	namespaces []string
 	params     map[string]any
+	// liveLabels are the labels of the main namespace as it is in the cluster, nil when it does not
+	// exist yet.
+	liveLabels map[string]string
 }
 
 func (r *renderer) build(spec *v1alpha2.ProjectTemplateSpec) ([]map[string]any, error) {
@@ -163,12 +180,12 @@ func (r *renderer) namespace(spec *v1alpha2.ProjectTemplateSpec) (map[string]any
 		if mon, ok, err := spec.Features.Monitoring.Resolve(r.params); err != nil {
 			return nil, fmt.Errorf("resolve features.monitoring: %w", err)
 		} else if ok && mon {
-			labels["extended-monitoring.deckhouse.io/enabled"] = ""
+			labels["extended-monitoring.deckhouse.io/enabled"] = r.featureLabel("extended-monitoring.deckhouse.io/enabled")
 		}
 		if vs, ok, err := spec.Features.VulnerabilityScanning.Resolve(r.params); err != nil {
 			return nil, fmt.Errorf("resolve features.vulnerabilityScanning: %w", err)
 		} else if ok && vs {
-			labels["security-scanning.deckhouse.io/enabled"] = ""
+			labels["security-scanning.deckhouse.io/enabled"] = r.featureLabel("security-scanning.deckhouse.io/enabled")
 		}
 	}
 
@@ -247,6 +264,24 @@ func (r *renderer) namespace(spec *v1alpha2.ProjectTemplateSpec) (map[string]any
 		"kind":       "Namespace",
 		"metadata":   metadata,
 	}, nil
+}
+
+// featureLabel returns the value a feature label is rendered with once the template turns the
+// feature on, which is "true" when the namespace already has that value and "" otherwise. The label
+// is a switch by its presence (adoption reads it that way, see namespace.TemplateFor), and the
+// Deckhouse documentation spells it both "" and "true", so a namespace the module takes over may
+// carry either, set by an administrator or declared by a GitOps tool. Keeping the value in these two
+// spellings leaves the namespace as it is instead of rewriting a label its owner can no longer set
+// back: the protective admission policy gives the label to the module on a project namespace.
+//
+// Any other value, "false" included, is rendered as "". Adoption reads such a label as the feature
+// turned on, and keeping the value would leave a consumer that reads it with the feature off on a
+// project that has it on, for good, since the owner cannot change the label.
+func (r *renderer) featureLabel(key string) string {
+	if r.liveLabels[key] == "true" {
+		return "true"
+	}
+	return ""
 }
 
 // networkPolicies renders the isolated NetworkPolicy into EVERY namespace of the project (main +

@@ -502,3 +502,171 @@ func TestManifestsTemplateLabelsAlwaysPresent(t *testing.T) {
 	_, annotations := renderedNamespace(t, out)
 	require.Equal(t, "{}", annotations[naming.TemplateLabelsAnnotation])
 }
+
+// TestManifestsOntoKeepsTheValueOfAFeatureLabel: a feature label is on by its presence, and
+// Deckhouse documents both "" and "true" for it, so a namespace the module takes over can carry
+// either, set by a GitOps tool or by hand. The render keeps "true" instead of rewriting it to "",
+// renders "" when the namespace has none or any other value ("false" included, which adoption reads
+// as on), and drops the label when the feature is off, whatever the namespace carries.
+func TestManifestsOntoKeepsTheValueOfAFeatureLabel(t *testing.T) {
+	t.Parallel()
+
+	const (
+		monitoring = "extended-monitoring.deckhouse.io/enabled"
+		scanning   = "security-scanning.deckhouse.io/enabled"
+	)
+
+	tests := []struct {
+		name     string
+		enabled  bool
+		live     map[string]string
+		expected map[string]string
+	}{
+		{
+			name:     "the namespace declares true",
+			enabled:  true,
+			live:     map[string]string{monitoring: "true", scanning: "true"},
+			expected: map[string]string{monitoring: "true", scanning: "true"},
+		},
+		{
+			name:     "the namespace declares an empty value",
+			enabled:  true,
+			live:     map[string]string{monitoring: "", scanning: ""},
+			expected: map[string]string{monitoring: "", scanning: ""},
+		},
+		{
+			name:     "the namespace declares false",
+			enabled:  true,
+			live:     map[string]string{monitoring: "false", scanning: "false"},
+			expected: map[string]string{monitoring: "", scanning: ""},
+		},
+		{
+			name:     "the namespace declares another value",
+			enabled:  true,
+			live:     map[string]string{monitoring: "enabled", scanning: "True"},
+			expected: map[string]string{monitoring: "", scanning: ""},
+		},
+		{
+			name:     "each label keeps its own value",
+			enabled:  true,
+			live:     map[string]string{monitoring: "true", scanning: "false"},
+			expected: map[string]string{monitoring: "true", scanning: ""},
+		},
+		{
+			name:     "the namespace does not carry the labels",
+			enabled:  true,
+			live:     map[string]string{"team": "blue"},
+			expected: map[string]string{monitoring: "", scanning: ""},
+		},
+		{
+			name:     "there is no namespace yet",
+			enabled:  true,
+			live:     nil,
+			expected: map[string]string{monitoring: "", scanning: ""},
+		},
+		{
+			name:     "the features are off",
+			enabled:  false,
+			live:     map[string]string{monitoring: "true", scanning: "true"},
+			expected: map[string]string{},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			tmpl := &v1alpha2.ProjectTemplate{
+				Spec: v1alpha2.ProjectTemplateSpec{
+					Features: &v1alpha2.FeaturesSpec{
+						Monitoring:            v1alpha2.LiteralParam(tt.enabled),
+						VulnerabilityScanning: v1alpha2.LiteralParam(tt.enabled),
+					},
+				},
+			}
+			project := &v1alpha3.Project{ObjectMeta: metav1.ObjectMeta{Name: "proj"}}
+
+			out, err := ManifestsOnto(tmpl, project, tt.live)
+			require.NoError(t, err)
+
+			labels := renderedNamespaceLabels(t, out)
+			got := map[string]string{}
+			for _, key := range []string{monitoring, scanning} {
+				if value, ok := labels[key]; ok {
+					got[key] = value
+				}
+			}
+			require.Equal(t, tt.expected, got)
+		})
+	}
+}
+
+// TestManifestsRendersTheNamespaceParameter: the labels and annotations a project declares in its
+// parameters are rendered on its namespace, and nothing else of the namespace is. Adoption used to
+// mirror the labels of a namespace into these parameters; a project adopted that way keeps them
+// rendered, so the upgrade does not delete them from the namespace it holds them on.
+func TestManifestsRendersTheNamespaceParameter(t *testing.T) {
+	t.Parallel()
+
+	tmpl := &v1alpha2.ProjectTemplate{
+		Spec: v1alpha2.ProjectTemplateSpec{
+			NamespaceMetadata: &v1alpha2.NamespaceMetadata{
+				Labels:      v1alpha2.FromParamRef[map[string]string]("namespace.labels"),
+				Annotations: v1alpha2.FromParamRef[map[string]string]("namespace.annotations"),
+			},
+			ParametersSchema: v1alpha2.ParametersSchema{OpenAPIV3Schema: map[string]any{
+				"type": "object",
+				"properties": map[string]any{"namespace": map[string]any{
+					"type":    "object",
+					"default": map[string]any{},
+					"properties": map[string]any{
+						"labels":      map[string]any{"type": "object", "additionalProperties": map[string]any{"type": "string"}},
+						"annotations": map[string]any{"type": "object", "additionalProperties": map[string]any{"type": "string"}},
+					},
+				}},
+			}},
+		},
+	}
+	project := &v1alpha3.Project{
+		ObjectMeta: metav1.ObjectMeta{Name: "proj"},
+		Spec: v1alpha3.ProjectSpec{Parameters: map[string]any{"namespace": map[string]any{
+			"labels":      map[string]any{"team": "blue"},
+			"annotations": map[string]any{"owner": "alice"},
+		}}},
+	}
+
+	out, err := ManifestsOnto(tmpl, project, map[string]string{"team": "blue", "istio.io/rev": "stable"})
+	require.NoError(t, err)
+
+	require.Equal(t, map[string]string{"team": "blue"}, renderedNamespaceLabels(t, out))
+	require.Contains(t, out, "owner: alice")
+}
+
+// renderedNamespaceLabels returns the labels of the Namespace in a multi-document render.
+func renderedNamespaceLabels(t *testing.T, manifests string) map[string]string {
+	t.Helper()
+
+	for _, doc := range strings.Split(manifests, "---\n") {
+		if strings.TrimSpace(doc) == "" {
+			continue
+		}
+		var obj struct {
+			Kind     string `json:"kind"`
+			Metadata struct {
+				Labels map[string]string `json:"labels"`
+			} `json:"metadata"`
+		}
+		require.NoError(t, yaml.Unmarshal([]byte(doc), &obj))
+		if obj.Kind != "Namespace" {
+			continue
+		}
+		if obj.Metadata.Labels == nil {
+			return map[string]string{}
+		}
+		return obj.Metadata.Labels
+	}
+
+	t.Fatal("the render must contain the project namespace")
+
+	return nil
+}

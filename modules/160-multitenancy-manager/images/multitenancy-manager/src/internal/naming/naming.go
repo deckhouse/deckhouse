@@ -155,8 +155,8 @@ func SplitModuleOwnedLabels(labels, previous map[string]string) (map[string]stri
 }
 
 // IsGitOpsTrackingLabel reports whether the label key is one a GitOps tool uses to recognise the
-// objects it manages. Such a label may reach the main namespace (adoption mirrors what a namespace
-// already had), but it is not inherited by the additional namespaces: the tool would take them for
+// objects it manages. Such a label may reach the main namespace (a GitOps tool puts it there, or the
+// template sets it), but it is not inherited by the additional namespaces: the tool would take them for
 // its own and could prune them. The list covers the default keys of Argo CD, Flux and kapp; a custom
 // tracking key (Argo CD application.instanceLabelKey) is not known here and is inherited.
 func IsGitOpsTrackingLabel(key string) bool {

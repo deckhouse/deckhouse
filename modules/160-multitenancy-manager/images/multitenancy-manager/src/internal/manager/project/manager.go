@@ -332,11 +332,20 @@ func (m *Manager) handleTemplate(ctx context.Context, project *v1alpha3.Project)
 
 // upgradeResources installs/upgrades the project release and returns the binding roleRefs the template
 // renders (for the TemplateRolesAllowed check). A schema-based template is rendered natively from its
-// structured fields and applied via UpgradeManifests; a template that still carries a resourcesTemplate
-// string is rendered through the legacy helm engine.
+// structured fields onto the project namespace as it is in the cluster and applied via UpgradeManifests;
+// a template that still carries a resourcesTemplate string is rendered through the legacy helm engine.
 func (m *Manager) upgradeResources(ctx context.Context, project *v1alpha3.Project, template *v1alpha2.ProjectTemplate) ([]helm.BindingRoleRef, error) {
 	if isStructured(template) {
-		manifests, err := render.Manifests(template, project)
+		liveLabels := map[string]string{}
+		namespace := new(corev1.Namespace)
+		switch err := m.client.Get(ctx, client.ObjectKey{Name: project.Name}, namespace); {
+		case err == nil:
+			liveLabels = namespace.Labels
+		case !apierrors.IsNotFound(err):
+			return nil, fmt.Errorf("get the '%s' namespace: %w", project.Name, err)
+		}
+
+		manifests, err := render.ManifestsOnto(template, project, liveLabels)
 		if err != nil {
 			return nil, fmt.Errorf("render the project template: %w", err)
 		}

@@ -139,8 +139,7 @@ func TestReconcile_AdoptsOrphanNamespace(t *testing.T) {
 	created := new(v1alpha3.Project)
 	require.NoError(t, r.client.Get(context.Background(), client.ObjectKey{Name: "team-a"}, created))
 	assert.Equal(t, namespacemanager.TemplateSimple, created.Spec.ProjectTemplateName)
-	nsParams := created.Spec.Parameters["namespace"].(map[string]any)
-	assert.Equal(t, map[string]any{"env": "prod"}, nsParams["labels"])
+	assert.NotContains(t, created.Spec.Parameters, "namespace", "the labels of the namespace stay its own")
 }
 
 func TestReconcile_SkipsNamespaceOwnedByProject(t *testing.T) {

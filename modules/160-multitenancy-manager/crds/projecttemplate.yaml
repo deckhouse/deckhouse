@@ -281,7 +281,7 @@ spec:
 
                         GitOps tracking labels (`app.kubernetes.io/instance`, `argocd.argoproj.io/*`, `kustomize.toolkit.fluxcd.io/*`, `helm.toolkit.fluxcd.io/*`, `kapp.k14s.io/*`) are set on the main namespace only. A custom tracking key is inherited like any other label.
 
-                        When a namespace becomes a project automatically, its labels reach this field through the `namespace.labels` parameter of the built-in templates and are inherited too.
+                        When a namespace becomes a project automatically, its own labels are not copied into the Project and do not reach this field. A label declared in `spec.parameters.namespace.labels` of the Project reaches it through the built-in templates and is inherited.
                       x-kubernetes-preserve-unknown-fields: true
                     annotations:
                       description: |

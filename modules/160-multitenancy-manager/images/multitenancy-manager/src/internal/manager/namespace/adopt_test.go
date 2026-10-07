@@ -91,16 +91,11 @@ func TestParametersFor(t *testing.T) {
 			want:     nil,
 		},
 		{
-			name:        "simple mirrors user metadata only",
-			labels:      map[string]string{"team": "blue", v1alpha3.ResourceLabelProject: "foo"},
-			annotations: map[string]string{"owner": "alice"},
+			name:        "simple leaves the labels and annotations of the namespace out",
+			labels:      map[string]string{"team": "blue", "istio.io/rev": "stable", v1alpha3.ResourceLabelProject: "foo"},
+			annotations: map[string]string{"owner": "alice", "argocd.argoproj.io/tracking-id": "apps:/Namespace:/foo"},
 			template:    TemplateSimple,
-			want: map[string]any{
-				"namespace": map[string]any{
-					"labels":      map[string]any{"team": "blue"},
-					"annotations": map[string]any{"owner": "alice"},
-				},
-			},
+			want:        nil,
 		},
 		{
 			name:     "default leaves a namespace without a pod policy on the cluster default",
@@ -156,6 +151,42 @@ func TestParametersFor(t *testing.T) {
 				"podSecurityProfile":        podSecurityProfileBaseline,
 				"extendedMonitoringEnabled": true,
 				"requiredRequests":          false,
+			},
+		},
+		{
+			name: "default leaves the labels and annotations of the namespace out",
+			labels: map[string]string{
+				labelPodPolicy:          "baseline",
+				labelExtendedMonitoring: "true",
+				"team":                  "blue",
+				"istio.io/rev":          "stable",
+			},
+			annotations: map[string]string{"owner": "alice"},
+			template:    TemplateDefault,
+			want: map[string]any{
+				"networkPolicy":             networkPolicyNotRestricted,
+				"podSecurityProfile":        podSecurityProfileBaseline,
+				"extendedMonitoringEnabled": true,
+				"requiredRequests":          false,
+			},
+		},
+		{
+			name:   "placement annotations are carried into the namespace parameter",
+			labels: map[string]string{"team": "blue"},
+			annotations: map[string]string{
+				naming.NodeSelectorAnnotation: "disk=ssd",
+				naming.TolerationsAnnotation:  `[{"key":"dedicated"}]`,
+				"meta.helm.sh/release-name":   "foo",
+				"owner":                       "alice",
+			},
+			template: TemplateSimple,
+			want: map[string]any{
+				"namespace": map[string]any{
+					"annotations": map[string]any{
+						naming.NodeSelectorAnnotation: "disk=ssd",
+						naming.TolerationsAnnotation:  `[{"key":"dedicated"}]`,
+					},
+				},
 			},
 		},
 	}
@@ -236,39 +267,6 @@ func TestPodSecurityProfile(t *testing.T) {
 	}
 }
 
-func TestFilterUserMeta(t *testing.T) {
-	got := filterUserMeta(map[string]string{
-		"team":                         "blue",
-		"heritageSomething":            "keep",
-		v1alpha3.ResourceLabelProject:  "foo",
-		v1alpha3.ResourceLabelHeritage: v1alpha3.ResourceHeritageMultitenancy,
-		"kubernetes.io/metadata.name":  "foo",
-		"meta.helm.sh/release-name":    "foo",
-		labelPodPolicy:                 "baseline",
-		labelExtendedMonitoring:        "",
-		labelSecurityScanning:          "",
-	})
-	assert.Equal(t, map[string]string{"team": "blue", "heritageSomething": "keep"}, got)
-}
-
-// Adoption never mirrors a label the Project webhook refuses in namespaceMetadata.labels, so a user
-// can edit an adopted project without first cleaning its parameters.
-func TestFilterUserMeta_DropsEveryModuleOwnedLabel(t *testing.T) {
-	labels := map[string]string{"team": "a", "projects.deckhouse.io/anything": "x", "multitenancy.deckhouse.io/anything": "x"}
-	for _, key := range naming.ManagedNamespaceLabels {
-		labels[key] = "x"
-	}
-
-	kept := filterUserMeta(labels)
-	assert.Empty(t, naming.ModuleOwnedLabelsIn(kept))
-	assert.Equal(t, map[string]string{"team": "a"}, kept)
-}
-
-func TestFilterUserMeta_NilWhenNothingLeft(t *testing.T) {
-	assert.Nil(t, filterUserMeta(map[string]string{v1alpha3.ResourceLabelProject: "foo"}))
-	assert.Nil(t, filterUserMeta(nil))
-}
-
 func TestNeedsTemplate(t *testing.T) {
 	tests := []struct {
 		name    string
@@ -316,23 +314,199 @@ func TestNeedsTemplate(t *testing.T) {
 	}
 }
 
-// TestFilterUserMeta_KeepsPlacementAnnotations: the module owns the scheduler annotations on a
-// project namespace, so a user cannot edit them there; they are rendered from the template's
-// nodeSelector/tolerations, and adoption never picks a template that declares either. Dropping them
-// on adoption would leave an adopted namespace pinned to nodes with no way to change it, so they are
-// mirrored into the namespace parameter and stay editable through the Project.
-func TestFilterUserMeta_KeepsPlacementAnnotations(t *testing.T) {
-	got := filterUserMeta(map[string]string{
-		naming.NodeSelectorAnnotation: "disk=ssd",
-		naming.TolerationsAnnotation:  `[{"key":"dedicated"}]`,
-		"meta.helm.sh/release-name":   "foo",
-		"team":                        "blue",
-	})
-	assert.Equal(t, map[string]string{
-		naming.NodeSelectorAnnotation: "disk=ssd",
-		naming.TolerationsAnnotation:  `[{"key":"dedicated"}]`,
-		"team":                        "blue",
-	}, got)
+// TestParametersFor_LeavesTheOwnMetadataOfTheNamespaceAlone adopts a namespace end to end on the
+// built-in template adoption picks for it. The parameters must validate against that template, and
+// the rendered Namespace must declare none of the labels and annotations the namespace has of its
+// own, so the release, applied the way Helm applies it, leaves them to whoever set them: the first
+// install keeps them, and an upgrade after a direct change neither reverts nor restores them. The
+// placement annotations are declared, because only the Project can change them, and a feature label
+// keeps the value the namespace had.
+func TestParametersFor_LeavesTheOwnMetadataOfTheNamespaceAlone(t *testing.T) {
+	tests := []struct {
+		name        string
+		labels      map[string]string
+		annotations map[string]string
+	}{
+		{
+			name:        "simple",
+			labels:      map[string]string{"team": "blue", "istio.io/rev": "stable", "app.kubernetes.io/instance": "apps"},
+			annotations: map[string]string{"argocd.argoproj.io/tracking-id": "apps:/Namespace:/foo", "owner": "alice"},
+		},
+		{
+			name:        "simple with placement annotations",
+			labels:      map[string]string{"team": "blue", "istio.io/rev": "stable"},
+			annotations: map[string]string{naming.NodeSelectorAnnotation: "disk=ssd", "owner": "alice"},
+		},
+		{
+			name:   "default with monitoring declared as true",
+			labels: map[string]string{labelPodPolicy: "baseline", labelExtendedMonitoring: "true", "team": "blue", "istio.io/rev": "stable"},
+		},
+		{
+			name: "secure with scanning declared as true",
+			labels: map[string]string{
+				labelPodPolicy:          "restricted",
+				labelExtendedMonitoring: "",
+				labelSecurityScanning:   "true",
+				"team":                  "blue",
+				"istio.io/rev":          "stable",
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			live := namespace("foo", tt.labels, tt.annotations)
+			templateName := TemplateFor(live)
+			tmpl := readBuiltinTemplate(t, templateName)
+			adopted := &v1alpha3.Project{
+				ObjectMeta: metav1.ObjectMeta{Name: live.Name},
+				Spec: v1alpha3.ProjectSpec{
+					ProjectTemplateName: templateName,
+					Parameters:          ParametersFor(live, templateName),
+				},
+			}
+			require.NoError(t, validate.Project(adopted, tmpl), "adoption parameters must validate against the built-in template")
+
+			manifests, err := render.ManifestsOnto(tmpl, adopted, live.Labels)
+			require.NoError(t, err)
+			rendered := namespaceIn(t, manifests)
+
+			assert.NotContains(t, rendered.Labels, "team")
+			assert.NotContains(t, rendered.Labels, "istio.io/rev")
+			assert.NotContains(t, rendered.Labels, "app.kubernetes.io/instance")
+			assert.NotContains(t, rendered.Annotations, "owner")
+			assert.NotContains(t, rendered.Annotations, "argocd.argoproj.io/tracking-id")
+			if value, ok := tt.annotations[naming.NodeSelectorAnnotation]; ok {
+				assert.Equal(t, value, rendered.Annotations[naming.NodeSelectorAnnotation],
+					"the placement annotation is declared by the project")
+			}
+
+			installed := applyRelease(t, rendered, rendered, live)
+			assert.Equal(t, tt.labels, keysOf(installed.Labels, tt.labels), "the first install changes no label the namespace had")
+			assert.Equal(t, tt.annotations, keysOf(installed.Annotations, tt.annotations), "the first install changes no annotation the namespace had")
+
+			// A direct change after adoption: the owner of the labels moves on.
+			installed.Labels["team"] = "red"
+			delete(installed.Labels, "istio.io/rev")
+			upgraded := applyRelease(t, rendered, rendered, installed)
+			assert.Equal(t, "red", upgraded.Labels["team"], "an upgrade must not revert a label the project does not declare")
+			assert.NotContains(t, upgraded.Labels, "istio.io/rev", "an upgrade must not restore a label the project does not declare")
+		})
+	}
+}
+
+// TestParametersFor_KeepsWhatAnEarlierAdoptionMirrored: a project adopted before adoption stopped
+// mirroring carries the labels and annotations of its namespace in the namespace parameter, and its
+// release holds them. Nothing rewrites the parameters of such a project, so the next render still
+// declares those keys and the upgrade leaves them on the namespace. Re-deriving the parameters would
+// drop the keys from the render, and the three-way merge would delete them from the namespace.
+func TestParametersFor_KeepsWhatAnEarlierAdoptionMirrored(t *testing.T) {
+	live := namespace("foo", map[string]string{"team": "blue", "istio.io/rev": "stable"}, map[string]string{"owner": "alice"})
+	tmpl := readBuiltinTemplate(t, TemplateSimple)
+	mirrored := &v1alpha3.Project{
+		ObjectMeta: metav1.ObjectMeta{Name: live.Name},
+		Spec: v1alpha3.ProjectSpec{
+			ProjectTemplateName: TemplateSimple,
+			Parameters: map[string]any{"namespace": map[string]any{
+				"labels":      map[string]any{"team": "blue", "istio.io/rev": "stable"},
+				"annotations": map[string]any{"owner": "alice"},
+			}},
+		},
+	}
+
+	manifests, err := render.ManifestsOnto(tmpl, mirrored, live.Labels)
+	require.NoError(t, err)
+	previous := namespaceIn(t, manifests)
+	require.Equal(t, "blue", previous.Labels["team"], "the release of such a project holds the mirrored labels")
+
+	upgraded := applyRelease(t, previous, previous, live)
+	assert.Equal(t, "blue", upgraded.Labels["team"])
+	assert.Equal(t, "stable", upgraded.Labels["istio.io/rev"])
+	assert.Equal(t, "alice", upgraded.Annotations["owner"])
+
+	rederived := mirrored.DeepCopy()
+	rederived.Spec.Parameters = ParametersFor(live, TemplateSimple)
+	manifests, err = render.ManifestsOnto(tmpl, rederived, live.Labels)
+	require.NoError(t, err)
+	stripped := applyRelease(t, previous, namespaceIn(t, manifests), live)
+	assert.NotContains(t, stripped.Labels, "team", "re-derived parameters would strip what the release held")
+}
+
+// readBuiltinTemplate reads the built-in template the controller installs under the given name.
+func readBuiltinTemplate(t *testing.T, name string) *v1alpha2.ProjectTemplate {
+	t.Helper()
+
+	raw, err := os.ReadFile(filepath.Join("..", "..", "..", "templates", name+".yaml"))
+	require.NoError(t, err)
+
+	tmpl := new(v1alpha2.ProjectTemplate)
+	require.NoError(t, yaml.Unmarshal(raw, tmpl))
+
+	return tmpl
+}
+
+// namespaceIn picks the Namespace out of a multi-document render.
+func namespaceIn(t *testing.T, manifests string) *corev1.Namespace {
+	t.Helper()
+
+	for _, doc := range strings.Split(manifests, "---\n") {
+		var kind metav1.TypeMeta
+		require.NoError(t, yaml.Unmarshal([]byte(doc), &kind))
+		if kind.Kind != "Namespace" {
+			continue
+		}
+
+		ns := new(corev1.Namespace)
+		require.NoError(t, yaml.Unmarshal([]byte(doc), ns))
+
+		return ns
+	}
+
+	t.Fatal("the render must contain the project namespace")
+
+	return nil
+}
+
+// applyRelease applies a rendered Namespace onto the live one the way the Helm release does: a
+// three-way strategic merge from the last applied state to the render. The last applied state is
+// the render itself when the release takes an existing object over, and the previous render on
+// every upgrade after that (helm.sh/helm/v3 pkg/kube/client.go, createPatch).
+func applyRelease(t *testing.T, lastApplied, rendered, live *corev1.Namespace) *corev1.Namespace {
+	t.Helper()
+
+	original, err := json.Marshal(lastApplied)
+	require.NoError(t, err)
+	modified, err := json.Marshal(rendered)
+	require.NoError(t, err)
+	current, err := json.Marshal(live)
+	require.NoError(t, err)
+
+	meta, err := strategicpatch.NewPatchMetaFromStruct(corev1.Namespace{})
+	require.NoError(t, err)
+	patch, err := strategicpatch.CreateThreeWayMergePatch(original, modified, current, meta, true)
+	require.NoError(t, err)
+	merged, err := strategicpatch.StrategicMergePatch(current, patch, corev1.Namespace{})
+	require.NoError(t, err)
+
+	out := new(corev1.Namespace)
+	require.NoError(t, json.Unmarshal(merged, out))
+
+	return out
+}
+
+// keysOf returns the entries of got under the keys of want, so a comparison ignores what the
+// release added.
+func keysOf(got, want map[string]string) map[string]string {
+	if want == nil {
+		return nil
+	}
+	out := make(map[string]string, len(want))
+	for key := range want {
+		if value, ok := got[key]; ok {
+			out[key] = value
+		}
+	}
+	return out
 }
 
 // builtinTemplate reads the built-in template the controller installs under the given name.

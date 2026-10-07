@@ -131,10 +131,8 @@ func TestAdopt_CreatesFullProject(t *testing.T) {
 	assert.Equal(t, TemplateSimple, got.Spec.ProjectTemplateName)
 	assert.NotContains(t, got.Labels, v1alpha3.ProjectLabelManagedByNamespace)
 
-	nsParams, ok := got.Spec.Parameters["namespace"].(map[string]any)
-	require.True(t, ok)
-	assert.Equal(t, map[string]any{"team": "blue"}, nsParams["labels"])
-	assert.Equal(t, map[string]any{"note": "hi"}, nsParams["annotations"])
+	// the labels and annotations of the namespace stay its own: the project does not declare them.
+	assert.NotContains(t, got.Spec.Parameters, "namespace")
 
 	// the namespace is handed over to helm so the project release can own an object it did not create.
 	updated := new(corev1.Namespace)
@@ -274,6 +272,35 @@ func TestMigrate_LeavesMigratedProjectAlone(t *testing.T) {
 	require.NoError(t, c.Get(context.Background(), client.ObjectKey{Name: "foo"}, got))
 	assert.Equal(t, TemplateSecure, got.Spec.ProjectTemplateName)
 	assert.Equal(t, podSecurityProfileRestricted, got.Spec.Parameters["podSecurityProfile"])
+}
+
+// TestMigrate_KeepsWhatAnEarlierAdoptionMirrored: a project adopted before adoption stopped
+// mirroring declares the labels of its namespace in the namespace parameter, and its release holds
+// them. Migration must leave such a project as it is; re-deriving its parameters would make the next
+// upgrade delete those labels from the namespace.
+func TestMigrate_KeepsWhatAnEarlierAdoptionMirrored(t *testing.T) {
+	ns := namespace("foo", map[string]string{"team": "blue", labelExtendedMonitoring: ""}, map[string]string{"owner": "alice"})
+	adopted := project("foo", nil, TemplateDefault)
+	mirrored := map[string]any{
+		"namespace": map[string]any{
+			"labels":      map[string]any{"team": "blue"},
+			"annotations": map[string]any{"owner": "alice"},
+		},
+		"networkPolicy":             networkPolicyNotRestricted,
+		"podSecurityProfile":        podSecurityProfilePrivileged,
+		"extendedMonitoringEnabled": true,
+		"requiredRequests":          false,
+	}
+	adopted.Spec.Parameters = mirrored
+	m, c := newManager(t, ns, adopted)
+
+	require.NoError(t, m.Migrate(context.Background()))
+	_, err := m.Adopt(context.Background(), ns)
+	require.NoError(t, err)
+
+	got := new(v1alpha3.Project)
+	require.NoError(t, c.Get(context.Background(), client.ObjectKey{Name: "foo"}, got))
+	assert.Equal(t, mirrored, got.Spec.Parameters)
 }
 
 func TestMigrate_Idempotent(t *testing.T) {
