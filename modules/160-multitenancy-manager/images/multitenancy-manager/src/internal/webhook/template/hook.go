@@ -34,6 +34,7 @@ import (
 	"sigs.k8s.io/yaml"
 
 	grantsv1alpha2 "controller/api/v1alpha2"
+	"controller/apis/deckhouse.io/v1alpha1"
 	"controller/apis/deckhouse.io/v1alpha2"
 	"controller/apis/deckhouse.io/v1alpha3"
 	"controller/internal/controllers/templategrants"
@@ -59,14 +60,32 @@ type validator struct {
 }
 
 // Handle validates a ProjectTemplate. The admission rule lists v1alpha2 only; matchPolicy:
-// Equivalent up-converts a served older version to v1alpha2 before delivery. v1alpha1 is
-// unserved. The handler path is registered as /validate/v1alpha1/templates for historical reasons.
+// Equivalent up-converts a request through the served v1alpha1 to v1alpha2 before delivery, and
+// RequestKind still names v1alpha1 (see v1alpha1Erasure). The handler path is registered as
+// /validate/v1alpha1/templates for historical reasons.
 func (v *validator) Handle(ctx context.Context, req admission.Request) admission.Response {
 	var warnings []string
 	template := new(v1alpha2.ProjectTemplate)
 	if req.Operation == admissionv1.Create || req.Operation == admissionv1.Update {
 		if err := yaml.Unmarshal(req.Object.Raw, template); err != nil {
 			return admission.Errored(http.StatusBadRequest, err)
+		}
+
+		if resp := v.v1alpha1Erasure(ctx, req, template); !resp.Allowed {
+			return resp
+		}
+
+		// A template renders from its Helm text or from its structured fields, never from both: the
+		// renderer takes the text and leaves the fields unused, which nothing would tell the author.
+		if fields := template.Spec.ObjectFields(); template.Spec.HasResourcesTemplate() && len(fields) > 0 {
+			return admission.Denied(fmt.Sprintf(
+				"the '%s' project template sets resourcesTemplate together with fields that render objects: %s; "+
+					"a template renders from one of the two, so remove the other",
+				template.Name, strings.Join(fields, ", ")))
+		}
+
+		if resp := v.resourcesTemplateRemoval(ctx, req, template); !resp.Allowed {
+			return resp
 		}
 
 		// cannot create/update a template with an invalid parameters schema
@@ -116,11 +135,6 @@ func (v *validator) Handle(ctx context.Context, req admission.Request) admission
 			}
 		}
 
-		// the legacy-Helm mark may not be dropped while the template still renders nothing
-		if resp := legacyMarkRemoval(req, template); !resp.Allowed {
-			return resp
-		}
-
 		// the inline grant entries must satisfy the same selector rules the ClusterResourceGrantPolicy
 		// schema enforces, or the managed policy this template materializes is refused at admission
 		// and the reconciler retries it forever
@@ -145,12 +159,12 @@ func (v *validator) Handle(ctx context.Context, req admission.Request) admission
 		}
 
 		// cannot delete template if it is used
-		projects := new(v1alpha3.ProjectList)
-		if err := v.client.List(ctx, projects, client.MatchingLabels{v1alpha3.ResourceLabelTemplate: template.Name}); err != nil {
+		user, err := v.projectUsing(ctx, template.Name)
+		if err != nil {
 			return admission.Errored(http.StatusInternalServerError, err)
 		}
-		if len(projects.Items) > 0 {
-			msg := fmt.Sprintf("The '%s' project template cannot be deleted, it is used in the '%s' project", template.Name, projects.Items[0].Name)
+		if user != "" {
+			msg := fmt.Sprintf("The '%s' project template cannot be deleted, it is used in the '%s' project", template.Name, user)
 			return admission.Denied(msg)
 		}
 
@@ -184,6 +198,106 @@ func (v *validator) Handle(ctx context.Context, req admission.Request) admission
 	return admission.Allowed("").WithWarnings(warnings...)
 }
 
+// v1alpha1Erasure refuses an update through deckhouse.io/v1alpha1 of a template that has fields
+// v1alpha1 cannot describe. Such a request carries none of them, and the API server writes what it
+// carries, so they would be gone from storage: every update counts, a label-only patch included,
+// since a patch is applied to the template as read through v1alpha1.
+//
+// oldObject cannot tell: the API server reads the stored template through v1alpha1 for such a
+// request, which prunes those fields, and only then converts it to v1alpha2 for this webhook. So the
+// stored template is read here at v1alpha2, past the cache. It has to be the version oldObject
+// shows, or this would judge a template the request does not replace; a changed one is refused as a
+// conflict, the answer clients retry on.
+func (v *validator) v1alpha1Erasure(ctx context.Context, req admission.Request, template *v1alpha2.ProjectTemplate) admission.Response {
+	throughV1alpha1 := req.RequestKind != nil &&
+		req.RequestKind.Group == v1alpha1.SchemeGroupVersion.Group && req.RequestKind.Version == v1alpha1.SchemeGroupVersion.Version
+	if req.Operation != admissionv1.Update || !throughV1alpha1 {
+		return admission.Allowed("")
+	}
+
+	old := new(v1alpha2.ProjectTemplate)
+	if err := yaml.Unmarshal(req.OldObject.Raw, old); err != nil {
+		return admission.Errored(http.StatusBadRequest, fmt.Errorf("decode the old project template: %w", err))
+	}
+
+	stored := new(v1alpha2.ProjectTemplate)
+	if err := v.reader.Get(ctx, client.ObjectKey{Name: template.Name}, stored); err != nil {
+		return admission.Errored(http.StatusInternalServerError, fmt.Errorf("get the '%s' project template: %w", template.Name, err))
+	}
+	if stored.ResourceVersion != old.ResourceVersion {
+		return admission.Response{AdmissionResponse: admissionv1.AdmissionResponse{
+			Allowed: false,
+			Result: &metav1.Status{
+				Code:   http.StatusConflict,
+				Reason: metav1.StatusReasonConflict,
+				Message: fmt.Sprintf("the '%s' project template changed while this request through %s was checked; retry the request",
+					template.Name, v1alpha1.SchemeGroupVersion),
+			},
+		}}
+	}
+
+	if fields := stored.Spec.V1alpha2OnlyFields(); len(fields) > 0 {
+		return admission.Denied(fmt.Sprintf(
+			"the '%s' project template has fields that %s cannot describe: %s; a request through %s would erase them, "+
+				"so change the template through %s",
+			template.Name, v1alpha1.SchemeGroupVersion, strings.Join(fields, ", "), v1alpha1.SchemeGroupVersion, v1alpha2.SchemeGroupVersion))
+	}
+	return admission.Allowed("")
+}
+
+// resourcesTemplateRemoval refuses an update that empties the resourcesTemplate of a template that
+// projects use and sets no field that renders objects in its place. Every project of the template
+// would then render its namespace alone, and Helm would delete every object the text rendered. An
+// update that rewrites the template with structured fields in the same request is let through, and
+// so is one of a template no project uses. Such a rewrite, like moving the projects to another
+// template, still deletes every object of the text that the new render lacks, which the refusal says.
+func (v *validator) resourcesTemplateRemoval(ctx context.Context, req admission.Request, template *v1alpha2.ProjectTemplate) admission.Response {
+	if req.Operation != admissionv1.Update || template.Spec.HasResourcesTemplate() || len(template.Spec.ObjectFields()) > 0 {
+		return admission.Allowed("")
+	}
+
+	old := new(v1alpha2.ProjectTemplate)
+	if err := yaml.Unmarshal(req.OldObject.Raw, old); err != nil {
+		return admission.Errored(http.StatusBadRequest, fmt.Errorf("decode the old project template: %w", err))
+	}
+	if !old.Spec.HasResourcesTemplate() {
+		return admission.Allowed("")
+	}
+
+	user, err := v.projectUsing(ctx, template.Name)
+	if err != nil {
+		return admission.Errored(http.StatusInternalServerError, err)
+	}
+	if user == "" {
+		return admission.Allowed("")
+	}
+
+	return admission.Denied(fmt.Sprintf(
+		"the '%s' project template is used in the '%s' project, and without resourcesTemplate it sets no field that renders objects, "+
+			"so its projects would keep only their namespaces and lose every object the Helm template rendered; "+
+			"set the structured fields in the same request or move the projects to another template first, "+
+			"and either way the objects the Helm template rendered are deleted except the ones the new render has under the same kind and name",
+		template.Name, user))
+}
+
+// projectUsing returns the name of a project that uses the template, or "" when none does. A project
+// uses it when its spec names the template or its template label does. The controller sets the label
+// after the project is written, so a project created on the template or moved to it a moment ago
+// carries only the spec, and one moved away from it a moment ago still renders from it with only the
+// label. The list is read from the API server, so a project the cache has not seen yet counts too.
+func (v *validator) projectUsing(ctx context.Context, template string) (string, error) {
+	projects := new(v1alpha3.ProjectList)
+	if err := v.reader.List(ctx, projects); err != nil {
+		return "", fmt.Errorf("list the projects: %w", err)
+	}
+	for _, project := range projects.Items {
+		if project.Spec.ProjectTemplateName == template || project.Labels[v1alpha3.ResourceLabelTemplate] == template {
+			return project.Name, nil
+		}
+	}
+	return "", nil
+}
+
 // previousNamespaceLabels returns the literal namespaceMetadata.labels of the template an update
 // replaces: empty on create, or when the old template took them from a parameter.
 func previousNamespaceLabels(req admission.Request) (map[string]string, error) {
@@ -201,36 +315,6 @@ func previousNamespaceLabels(req admission.Request) (map[string]string, error) {
 		return labels, nil
 	}
 	return map[string]string{}, nil
-}
-
-// legacyMarkRemoval refuses an update that takes the legacy-Helm mark off a template that still
-// renders nothing.
-//
-// The mark is the only thing standing between such a template and a Helm upgrade that prunes
-// everything the old Helm string produced, and the condition message asks the administrator to
-// "rewrite the template with structured fields and remove the annotation" -- two steps, in an order
-// nothing enforced. Doing the removal first persists a structurally empty template with no mark, and
-// the next reconcile renders a lone Namespace over the existing release. One request that both
-// rewrites and unmarks is accepted, which is what kubectl edit and kubectl apply send.
-func legacyMarkRemoval(req admission.Request, template *v1alpha2.ProjectTemplate) admission.Response {
-	if req.Operation != admissionv1.Update {
-		return admission.Allowed("")
-	}
-	old := new(v1alpha2.ProjectTemplate)
-	if err := yaml.Unmarshal(req.OldObject.Raw, old); err != nil {
-		return admission.Errored(http.StatusBadRequest, err)
-	}
-	if old.Annotations[v1alpha2.TemplateAnnotationLegacyHelm] != "true" {
-		return admission.Allowed("")
-	}
-	if template.Annotations[v1alpha2.TemplateAnnotationLegacyHelm] == "true" || template.Spec.RendersObjects() {
-		return admission.Allowed("")
-	}
-	return admission.Denied(fmt.Sprintf(
-		"The '%s' project template still has no structured fields, so removing the %q annotation would render its projects "+
-			"as a bare namespace and delete every object the Helm template used to produce. Rewrite the template and remove "+
-			"the annotation in one request, or move the projects to another template first.",
-		template.Name, v1alpha2.TemplateAnnotationLegacyHelm))
 }
 
 // validateInlineGrantSelectors applies the ClusterResourceGrantPolicy selector rules to the inline

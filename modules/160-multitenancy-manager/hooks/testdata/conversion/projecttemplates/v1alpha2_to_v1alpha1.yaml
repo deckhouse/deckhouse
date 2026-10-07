@@ -12,8 +12,7 @@
         name: structured
         resourceVersion: "2002"
         annotations:
-          projects.deckhouse.io/legacy-helm-template: "true"
-          projects.deckhouse.io/legacy-helm-template-body: "kind: Namespace\n"
+          example.com/owner: platform-team
       spec:
         title: Structured
         description: Structured fields only
@@ -32,8 +31,7 @@
         name: structured
         resourceVersion: "2002"
         annotations:
-          projects.deckhouse.io/legacy-helm-template: "true"
-          projects.deckhouse.io/legacy-helm-template-body: "kind: Namespace\n"
+          example.com/owner: platform-team
       spec:
         title: Structured
         description: Structured fields only
@@ -46,6 +44,30 @@
         resourcesTemplate: ""
       status:
         ready: true
+
+- name: keeps the resourcesTemplate of a helm template
+  objects:
+    - apiVersion: deckhouse.io/v1alpha2
+      kind: ProjectTemplate
+      metadata:
+        name: custom
+      spec:
+        description: A copy of the default template
+        parametersSchema:
+          openAPIV3Schema:
+            type: object
+        resourcesTemplate: "\n  # café — naïve ☃\n---\nkind: Namespace\n  \n"
+  converted:
+    - apiVersion: deckhouse.io/v1alpha1
+      kind: ProjectTemplate
+      metadata:
+        name: custom
+      spec:
+        description: A copy of the default template
+        parametersSchema:
+          openAPIV3Schema:
+            type: object
+        resourcesTemplate: "\n  # café — naïve ☃\n---\nkind: Namespace\n  \n"
 
 - name: backfills an empty parameters schema
   objects:
@@ -84,7 +106,8 @@
         parametersSchema:
           openAPIV3Schema: {}
 
-# v1alpha1 requires both fields, and the apiserver validates what a conversion returns.
+# v1alpha1 requires both fields, and a client that writes the template back through v1alpha1 is
+# validated against its schema.
 - name: gives a template without a spec the one v1alpha1 requires
   objects:
     - apiVersion: deckhouse.io/v1alpha2

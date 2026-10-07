@@ -19,8 +19,11 @@ package project
 import (
 	"context"
 	"encoding/json"
+	"os"
+	"path/filepath"
 	"testing"
 
+	"github.com/go-logr/logr"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	admissionv1 "k8s.io/api/admission/v1"
@@ -36,6 +39,7 @@ import (
 
 	"controller/apis/deckhouse.io/v1alpha2"
 	"controller/apis/deckhouse.io/v1alpha3"
+	"controller/internal/helm"
 	projectmanager "controller/internal/manager/project"
 	rolebindingwebhook "controller/internal/webhook/rolebinding"
 )
@@ -331,6 +335,62 @@ func TestValidateStandardFields(t *testing.T) {
 			administrators: []v1alpha3.Administrator{{Kind: "User", Name: "alice"}},
 			parameters:     map[string]any{"resourceQuota": "10Gi"},
 		},
+		{
+			name:           "a line separator in an administrator name",
+			administrators: []v1alpha3.Administrator{{Kind: "User", Name: "alice\u2028x"}},
+			denied:         true,
+		},
+		{
+			name:           "a paragraph separator in an administrator name",
+			administrators: []v1alpha3.Administrator{{Kind: "Group", Name: "team\u2029x"}},
+			denied:         true,
+		},
+		{
+			name:           "a next line character in an administrator name",
+			administrators: []v1alpha3.Administrator{{Kind: "User", Name: "alice\u0085x"}},
+			denied:         true,
+		},
+		{
+			name:           "a C1 control in an administrator name",
+			administrators: []v1alpha3.Administrator{{Kind: "User", Name: "alice\u0080x"}},
+			denied:         true,
+		},
+		{
+			name:           "a control sequence introducer in an administrator name",
+			administrators: []v1alpha3.Administrator{{Kind: "Group", Name: "team\u009bx"}},
+			denied:         true,
+		},
+		{
+			name:           "a no-break space in an administrator name",
+			administrators: []v1alpha3.Administrator{{Kind: "User", Name: "alice\u00a0x"}},
+		},
+		{
+			// the conversion lifts a name the schema of a v1alpha2 template let in
+			name:           "a line separator in a name an update keeps passes with a warning",
+			administrators: []v1alpha3.Administrator{{Kind: "User", Name: "bob"}, {Kind: "User", Name: "alice\u2028x"}},
+			old:            &v1alpha3.Project{Spec: v1alpha3.ProjectSpec{Administrators: []v1alpha3.Administrator{{Kind: "User", Name: "alice\u2028x"}}}},
+			warned:         true,
+		},
+		{
+			name:           "a line separator in a name an update adds is denied",
+			administrators: []v1alpha3.Administrator{{Kind: "User", Name: "bob"}, {Kind: "User", Name: "alice\u2028x"}},
+			old:            &v1alpha3.Project{Spec: v1alpha3.ProjectSpec{Administrators: []v1alpha3.Administrator{{Kind: "User", Name: "bob"}}}},
+			denied:         true,
+		},
+		{
+			// the stored project has the name, but not this administrator
+			name:           "a line separator in a name an update moves to another kind is denied",
+			administrators: []v1alpha3.Administrator{{Kind: "Group", Name: "alice\u2028x"}},
+			old:            &v1alpha3.Project{Spec: v1alpha3.ProjectSpec{Administrators: []v1alpha3.Administrator{{Kind: "User", Name: "alice\u2028x"}}}},
+			denied:         true,
+		},
+		{
+			name:           "a kept name does not let a bare memory value through",
+			administrators: []v1alpha3.Administrator{{Kind: "User", Name: "alice\u2028x"}},
+			quota:          map[string]any{"requests.memory": "5"},
+			old:            &v1alpha3.Project{Spec: v1alpha3.ProjectSpec{Administrators: []v1alpha3.Administrator{{Kind: "User", Name: "alice\u2028x"}}}},
+			denied:         true,
+		},
 	}
 
 	for _, tc := range cases {
@@ -342,7 +402,7 @@ func TestValidateStandardFields(t *testing.T) {
 			}})
 			require.NoError(t, err)
 			project := new(v1alpha3.Project)
-			require.NoError(t, yaml.Unmarshal(raw, project))
+			require.NoError(t, json.Unmarshal(raw, project))
 			spellings, err := quotaSpellings(raw)
 			require.NoError(t, err)
 
@@ -402,12 +462,14 @@ func newValidator(t *testing.T, objs ...client.Object) *validator {
 		}
 	}
 	c := fake.NewClientBuilder().WithScheme(scheme).WithObjects(objs...).Build()
-	return &validator{client: c}
+	// the chart the controller ships, so a test renders what the webhook renders in the cluster
+	helmClient, err := helm.NewRenderOnly("../../../helmlib", logr.Discard())
+	require.NoError(t, err)
+	return &validator{client: c, helmClient: helmClient}
 }
 
-// The template is read at the version the API serves, and only projected onto the legacy shape
-// afterwards. Reading it at v1alpha1 worked only while that version was served -- the apiserver
-// converted the stored object on every call -- and the day it stopped being served, every project
+// The template is read at v1alpha2, and projected onto the legacy shape only for the Helm render. A
+// read at v1alpha1 loses the structured fields, and while that version was not served every project
 // write was denied with "no matches for kind ProjectTemplate in version deckhouse.io/v1alpha1".
 func TestProjectTemplateByName(t *testing.T) {
 	schema := map[string]any{"type": "object"}
@@ -423,7 +485,7 @@ func TestProjectTemplateByName(t *testing.T) {
 
 	template, err := v.projectTemplateByName(context.Background(), "simple")
 	require.NoError(t, err)
-	require.NotNil(t, template, "the template was not found at the served version")
+	require.NotNil(t, template, "the template was not found at the storage version")
 	assert.Equal(t, "a template", template.Spec.Description)
 	assert.Equal(t, schema, template.Spec.ParametersSchema.OpenAPIV3Schema)
 
@@ -1080,6 +1142,422 @@ func TestHandle_ModuleOwnedNamespaceLabels(t *testing.T) {
 			require.Len(t, resp.Warnings, 1)
 			assert.Contains(t, resp.Warnings[0], "the project does not apply them")
 			assert.Contains(t, resp.Warnings[0], tt.warns)
+		})
+	}
+}
+
+// The webhook renders a resourcesTemplate before it lets a project on: a text that does not render
+// and a parameter that becomes manifest structure are refused at admission, and an object put into a
+// namespace outside the project passes with a warning, since the post-renderer moves it to the main
+// namespace.
+func TestHandle_HelmRender(t *testing.T) {
+	helmTemplate := func(name, resources string) *v1alpha2.ProjectTemplate {
+		return &v1alpha2.ProjectTemplate{
+			ObjectMeta: metav1.ObjectMeta{Name: name},
+			Spec: v1alpha2.ProjectTemplateSpec{
+				ParametersSchema: v1alpha2.ParametersSchema{OpenAPIV3Schema: map[string]any{
+					"type": "object", "properties": map[string]any{"owner": map[string]any{"type": "string"}},
+				}},
+				ResourcesTemplate: resources,
+			},
+		}
+	}
+	v := newValidator(t,
+		helmTemplate("unquoted", "---\napiVersion: v1\nkind: ConfigMap\nmetadata:\n  name: owner\ndata:\n  owner: {{ .parameters.owner }}\n"),
+		helmTemplate("broken", "{{ .parameters.owner"),
+		helmTemplate("elsewhere", "---\napiVersion: v1\nkind: ConfigMap\nmetadata:\n  name: owner\n  namespace: kube-system\n"),
+	)
+
+	create := func(t *testing.T, template, owner string) admission.Response {
+		t.Helper()
+		project := projectWithParameters(map[string]any{"owner": owner})
+		project.Name = "team"
+		project.Spec.ProjectTemplateName = template
+		raw, err := json.Marshal(project)
+		require.NoError(t, err)
+		return v.Handle(context.Background(), admission.Request{AdmissionRequest: admissionv1.AdmissionRequest{
+			Operation: admissionv1.Create,
+			UserInfo:  authnv1.UserInfo{Username: "alice"},
+			Object:    runtime.RawExtension{Raw: raw},
+		}})
+	}
+
+	t.Run("an ordinary parameter passes", func(t *testing.T) {
+		resp := create(t, "unquoted", "alice")
+		assert.True(t, resp.Allowed, resp.Result)
+		assert.Empty(t, resp.Warnings)
+	})
+
+	t.Run("a parameter that becomes an object is refused", func(t *testing.T) {
+		resp := create(t, "unquoted", "alice\n---\napiVersion: rbac.authorization.k8s.io/v1\nkind: ClusterRoleBinding\nmetadata:\n  name: escalation\n")
+		require.False(t, resp.Allowed)
+		assert.Contains(t, resp.Result.Message, helm.ErrParameterInjection.Error())
+	})
+
+	t.Run("a text that does not render is refused", func(t *testing.T) {
+		resp := create(t, "broken", "alice")
+		require.False(t, resp.Allowed)
+		assert.Contains(t, resp.Result.Message, "render chart")
+	})
+
+	t.Run("an object in a foreign namespace passes with a warning", func(t *testing.T) {
+		resp := create(t, "elsewhere", "alice")
+		assert.True(t, resp.Allowed, resp.Result)
+		assert.Contains(t, resp.Warnings, helm.ErrNamespaceOverride.Error())
+	})
+}
+
+// Only a resourcesTemplate is rehearsed through Helm. A chart that fails whatever it renders tells
+// the two apart: a project on a structured template passes, one on a Helm text is refused.
+func TestHandle_HelmRenderOnlyForAHelmText(t *testing.T) {
+	chart := t.TempDir()
+	require.NoError(t, os.WriteFile(filepath.Join(chart, "rehearsed.yaml"), []byte(`{{ fail "rehearsed" }}`), 0o600))
+	helmClient, err := helm.NewRenderOnly(chart, logr.Discard())
+	require.NoError(t, err)
+
+	schema := v1alpha2.ParametersSchema{OpenAPIV3Schema: map[string]any{"type": "object"}}
+	structured := &v1alpha2.ProjectTemplate{
+		ObjectMeta: metav1.ObjectMeta{Name: "structured"},
+		Spec: v1alpha2.ProjectTemplateSpec{
+			ParametersSchema:    schema,
+			PodSecurityStandard: v1alpha2.LiteralParam(v1alpha2.PodSecurityStandardBaseline),
+		},
+	}
+	helmText := &v1alpha2.ProjectTemplate{
+		ObjectMeta: metav1.ObjectMeta{Name: "helm"},
+		Spec: v1alpha2.ProjectTemplateSpec{
+			ParametersSchema:  schema,
+			ResourcesTemplate: "---\napiVersion: v1\nkind: ConfigMap\nmetadata:\n  name: cm\n",
+		},
+	}
+	v := newValidator(t, structured, helmText)
+	v.helmClient = helmClient
+
+	create := func(t *testing.T, template string) admission.Response {
+		t.Helper()
+		project := projectWithParameters(nil)
+		project.Name = "team"
+		project.Spec.ProjectTemplateName = template
+		raw, err := json.Marshal(project)
+		require.NoError(t, err)
+		return v.Handle(context.Background(), admission.Request{AdmissionRequest: admissionv1.AdmissionRequest{
+			Operation: admissionv1.Create,
+			UserInfo:  authnv1.UserInfo{Username: "alice"},
+			Object:    runtime.RawExtension{Raw: raw},
+		}})
+	}
+
+	resp := create(t, "structured")
+	assert.True(t, resp.Allowed, resp.Result)
+
+	resp = create(t, "helm")
+	require.False(t, resp.Allowed)
+	assert.Contains(t, resp.Result.Message, "rehearsed")
+}
+
+// The request is read as JSON, so an administrator name keeps an unescaped U+0085 that a YAML
+// decoder would fold into a space, and the check sees it. A name with a line break or a C1 control is
+// refused unless the update keeps it.
+func TestHandle_ControlCharacterInAnAdministratorName(t *testing.T) {
+	v := newValidator(t)
+
+	for _, name := range []string{"alice\u0085x", "alice\u2028x", "alice\u2029x", "alice\u0080x", "alice\u009bx"} {
+		raw, err := json.Marshal(&v1alpha3.Project{
+			ObjectMeta: metav1.ObjectMeta{Name: "team"},
+			Spec:       v1alpha3.ProjectSpec{Administrators: []v1alpha3.Administrator{{Kind: "User", Name: name}}},
+		})
+		require.NoError(t, err)
+
+		resp := v.Handle(context.Background(), admission.Request{AdmissionRequest: admissionv1.AdmissionRequest{
+			Operation: admissionv1.Create,
+			UserInfo:  authnv1.UserInfo{Username: "alice"},
+			Object:    runtime.RawExtension{Raw: raw},
+		}})
+		require.False(t, resp.Allowed, "%q", name)
+		assert.Contains(t, resp.Result.Message, "must not contain control characters or line breaks")
+
+		// an update that keeps the name passes with a warning
+		resp = v.Handle(context.Background(), admission.Request{AdmissionRequest: admissionv1.AdmissionRequest{
+			Operation: admissionv1.Update,
+			UserInfo:  authnv1.UserInfo{Username: "alice"},
+			Object:    runtime.RawExtension{Raw: raw},
+			OldObject: runtime.RawExtension{Raw: raw},
+		}})
+		require.True(t, resp.Allowed, "%q: %v", name, resp.Result)
+		assert.NotEmpty(t, resp.Warnings, "%q", name)
+	}
+}
+
+// The v1alpha2 -> v1alpha3 conversion leaves administrators or resourceQuota in spec.parameters when it
+// cannot give them back as they were, and the built-in templates declare neither any more, so there
+// the two grant no access and set no quota. A project that holds them, as e2e-bidef-zero and
+// e2e-bidef-noadm of the upgrade e2e test do on the built-in default template, can be written as it
+// is, edited and moved to another built-in template that keeps the value, with a warning, and so can
+// a project moved there from a template that declares the two. A value that grants or limits nothing
+// passes on create too, with a warning. Any other new or changed value is refused and pointed to the
+// standard field, and a request through v1alpha2, which has only the parameters, is told the shape
+// the conversion lifts. Another parameter the schema does not declare is still refused, and a
+// template that declares the two still checks them.
+func TestHandle_WhatTheConversionLeavesInTheParameters(t *testing.T) {
+	builtin := func(file string) *v1alpha2.ProjectTemplate {
+		t.Helper()
+		raw, err := os.ReadFile(filepath.Join("..", "..", "..", "templates", file))
+		require.NoError(t, err)
+		template := new(v1alpha2.ProjectTemplate)
+		require.NoError(t, yaml.Unmarshal(raw, template))
+		return template
+	}
+	const declaring = `
+type: object
+properties:
+  administrators:
+    type: array
+    minItems: 1
+    items:
+      type: object
+      properties:
+        subject: {type: string, enum: [User, Group]}
+        name: {type: string}
+  resourceQuota:
+    type: object
+    properties:
+      requests: {type: object, properties: {cpu: {type: string}, memory: {type: string}}}
+`
+	openAPI := map[string]any{}
+	require.NoError(t, yaml.Unmarshal([]byte(declaring), &openAPI))
+	declares := &v1alpha2.ProjectTemplate{
+		ObjectMeta: metav1.ObjectMeta{Name: "declares"},
+		Spec: v1alpha2.ProjectTemplateSpec{
+			ParametersSchema:    v1alpha2.ParametersSchema{OpenAPIV3Schema: openAPI},
+			PodSecurityStandard: v1alpha2.LiteralParam(v1alpha2.PodSecurityStandardBaseline),
+		},
+	}
+	v := newValidator(t, builtin("default.yaml"), builtin("secure.yaml"), declares)
+	ctx := context.Background()
+
+	onDefault := func(parameters map[string]any) *v1alpha3.Project {
+		return &v1alpha3.Project{
+			ObjectMeta: metav1.ObjectMeta{Name: "team"},
+			Spec:       v1alpha3.ProjectSpec{ProjectTemplateName: "default", Parameters: parameters},
+		}
+	}
+	// through names the version a request is written in, as the API server reports it to a webhook
+	// with matchPolicy: Equivalent
+	through := func(req admission.Request, version string) admission.Request {
+		req.RequestKind = &metav1.GroupVersionKind{Group: "deckhouse.io", Version: version, Kind: "Project"}
+		return req
+	}
+	create := func(t *testing.T, project *v1alpha3.Project, version string) admission.Response {
+		t.Helper()
+		raw, err := json.Marshal(project)
+		require.NoError(t, err)
+		return v.Handle(ctx, through(admission.Request{AdmissionRequest: admissionv1.AdmissionRequest{
+			Operation: admissionv1.Create,
+			UserInfo:  authnv1.UserInfo{Username: "alice"},
+			Object:    runtime.RawExtension{Raw: raw},
+		}}, version))
+	}
+	update := func(t *testing.T, user string, old, updated *v1alpha3.Project, version string) admission.Response {
+		t.Helper()
+		return v.Handle(ctx, through(updateRequest(t, user, old, updated), version))
+	}
+	const shapeOfAdministrators = "which a deckhouse.io/v1alpha2 manifest sets through this parameter when it is a non-empty list whose items hold only a subject, User or Group, and a name that is not empty and has no ASCII control character"
+	const shapeOfQuota = `which a deckhouse.io/v1alpha2 manifest sets through this parameter when it is a non-empty object whose top-level keys do not start with "requests." or "limits.", whose requests and limits, if they are objects, are not empty, and whose other values and the values under requests and limits are quantities such as 2, 500m or 1Gi other than the number 0, which set no limit; leave such a limit out to keep it unset, since the string "0" is a hard limit of zero`
+
+	t.Run("a value that grants or limits nothing passes with a warning", func(t *testing.T) {
+		tests := []struct {
+			name      string
+			parameter string
+			value     any
+		}{
+			{name: "an empty administrators list", parameter: "administrators", value: []any{}},
+			{name: "null administrators", parameter: "administrators", value: nil},
+			{name: "an empty quota", parameter: "resourceQuota", value: map[string]any{}},
+			{name: "a null quota", parameter: "resourceQuota", value: nil},
+			{
+				name:      "a quota of the number 0, nulls and empty requests",
+				parameter: "resourceQuota",
+				value: map[string]any{
+					"pods":     float64(0),
+					"requests": map[string]any{},
+					"limits":   map[string]any{"cpu": float64(0), "memory": nil},
+				},
+			},
+		}
+		for _, tt := range tests {
+			t.Run(tt.name, func(t *testing.T) {
+				resp := create(t, onDefault(map[string]any{tt.parameter: tt.value}), "v1alpha3")
+				require.True(t, resp.Allowed, resp.Result)
+				require.Len(t, resp.Warnings, 1)
+				assert.Equal(t, "the parameter '"+tt.parameter+"' of the 'team' project has no effect on the 'default' project template, whose parametersSchema does not declare it; remove it from the parameters",
+					resp.Warnings[0])
+			})
+		}
+	})
+
+	t.Run("a new value that would grant or limit something is refused", func(t *testing.T) {
+		tests := []struct {
+			name      string
+			version   string
+			parameter string
+			value     any
+			expected  string
+		}{
+			{
+				// a later write through v1alpha2 would lift it into spec.administrators
+				name:      "administrators a v1alpha3 client puts into the parameters",
+				version:   "v1alpha3",
+				parameter: "administrators",
+				value:     []any{map[string]any{"subject": "User", "name": "alice"}},
+				expected:  "grants no access; set spec.administrators instead",
+			},
+			{
+				name:      "administrators with an access level written through v1alpha2",
+				version:   "v1alpha2",
+				parameter: "administrators",
+				value:     []any{map[string]any{"subject": "User", "name": "alice", "accessLevel": "Admin"}},
+				expected:  "grants no access; set spec.administrators instead, " + shapeOfAdministrators,
+			},
+			{
+				// the quota 1.77 limited the memory of
+				name:      "a quota with the number 0 written through v1alpha2",
+				version:   "v1alpha2",
+				parameter: "resourceQuota",
+				value:     map[string]any{"requests": map[string]any{"cpu": float64(0), "memory": "2Gi"}},
+				expected:  "sets no quota; set spec.quota instead, " + shapeOfQuota,
+			},
+			{
+				// a later write through v1alpha2 would lift it into spec.quota as a limit of zero
+				name:      "a quota of the string 0 a v1alpha3 client puts into the parameters",
+				version:   "v1alpha3",
+				parameter: "resourceQuota",
+				value:     map[string]any{"requests": map[string]any{"cpu": "0"}},
+				expected:  "sets no quota; set spec.quota instead",
+			},
+		}
+		for _, tt := range tests {
+			t.Run(tt.name, func(t *testing.T) {
+				resp := create(t, onDefault(map[string]any{tt.parameter: tt.value}), tt.version)
+				require.False(t, resp.Allowed)
+				assert.Equal(t,
+					"The project 'team' is invalid: the parameter '"+tt.parameter+"' has no effect on the 'default' project template, whose parametersSchema does not declare it, and "+tt.expected,
+					resp.Result.Message)
+			})
+		}
+	})
+
+	t.Run("a template that declares the two takes them without a warning", func(t *testing.T) {
+		project := onDefault(map[string]any{
+			"administrators": []any{map[string]any{"subject": "User", "name": "alice"}},
+			"resourceQuota":  map[string]any{"requests": map[string]any{"cpu": "1"}},
+		})
+		project.Spec.ProjectTemplateName = "declares"
+		resp := create(t, project, "v1alpha3")
+		assert.True(t, resp.Allowed, resp.Result)
+		assert.Empty(t, resp.Warnings)
+	})
+
+	stored := []struct {
+		name    string
+		project *v1alpha3.Project
+		// parameter is the one the conversion left in the parameters, and changed another value of it
+		parameter string
+		changed   any
+		// kept is the end of the warning for an update that keeps the value, after the template
+		kept string
+		// keptThroughV1alpha2 is that end for an update through v1alpha2
+		keptThroughV1alpha2 string
+		// refused is a part of the denial on a move to the template that declares the two
+		refused string
+	}{
+		{
+			name: "e2e-bidef-zero, a quota with the number 0",
+			project: func() *v1alpha3.Project {
+				project := onDefault(map[string]any{
+					"resourceQuota": map[string]any{"requests": map[string]any{"cpu": float64(0), "memory": "2Gi"}},
+				})
+				project.Spec.Administrators = []v1alpha3.Administrator{{Kind: "User", Name: "alice@example.com"}}
+				return project
+			}(),
+			parameter:           "resourceQuota",
+			changed:             map[string]any{"requests": map[string]any{"cpu": float64(0), "memory": "3Gi"}},
+			kept:                ", and sets no quota; it is accepted because it did not change, and spec.quota is the place for a quota",
+			keptThroughV1alpha2: ", and sets no quota; it is accepted because it did not change, and spec.quota is the place for a quota, " + shapeOfQuota,
+			refused:             "resourceQuota.requests.cpu in body must be of type string",
+		},
+		{
+			name: "e2e-bidef-noadm, an empty administrators list",
+			project: func() *v1alpha3.Project {
+				project := onDefault(map[string]any{"administrators": []any{}})
+				project.Spec.Quota = corev1.ResourceList{"requests.cpu": resource.MustParse("1")}
+				return project
+			}(),
+			parameter:           "administrators",
+			changed:             []any{map[string]any{"subject": "User", "name": "bob"}},
+			kept:                "; remove it from the parameters",
+			keptThroughV1alpha2: "; remove it from the parameters",
+			refused:             "administrators in body should have at least 1 items",
+		},
+		{
+			name: "administrators with an access level",
+			project: onDefault(map[string]any{
+				"administrators": []any{map[string]any{"subject": "User", "name": "alice", "accessLevel": "Admin"}},
+			}),
+			parameter:           "administrators",
+			changed:             []any{map[string]any{"subject": "User", "name": "bob", "accessLevel": "Admin"}},
+			kept:                ", and grants no access; it is accepted because it did not change, and spec.administrators is the place for administrators",
+			keptThroughV1alpha2: ", and grants no access; it is accepted because it did not change, and spec.administrators is the place for administrators, " + shapeOfAdministrators,
+			refused:             "administrators.accessLevel in body is a forbidden property",
+		},
+	}
+	for _, tt := range stored {
+		t.Run(tt.name, func(t *testing.T) {
+			warned := func(t *testing.T, resp admission.Response, template, end string) {
+				t.Helper()
+				require.True(t, resp.Allowed, resp.Result)
+				require.Len(t, resp.Warnings, 1)
+				assert.Equal(t, "the parameter '"+tt.parameter+"' of the 'team' project has no effect on the '"+template+"' project template, whose parametersSchema does not declare it"+end,
+					resp.Warnings[0])
+			}
+
+			warned(t, update(t, "alice", tt.project, tt.project.DeepCopy(), "v1alpha3"), "default", tt.kept)
+
+			edited := tt.project.DeepCopy()
+			edited.Spec.Description = "edited"
+			edited.Spec.Parameters["networkPolicy"] = "NotRestricted"
+			warned(t, update(t, "alice", tt.project, edited, "v1alpha2"), "default", tt.keptThroughV1alpha2)
+
+			moved := tt.project.DeepCopy()
+			moved.Spec.ProjectTemplateName = "secure"
+			warned(t, update(t, "alice", tt.project, moved, "v1alpha3"), "secure", tt.kept)
+
+			// the value is kept whatever template the stored project is on, one that declares the two
+			// included
+			fromDeclaring := tt.project.DeepCopy()
+			fromDeclaring.Spec.ProjectTemplateName = "declares"
+			warned(t, update(t, "alice", fromDeclaring, tt.project.DeepCopy(), "v1alpha3"), "default", tt.kept)
+
+			changed := tt.project.DeepCopy()
+			changed.Spec.Parameters[tt.parameter] = tt.changed
+			resp := update(t, "alice", tt.project, changed, "v1alpha3")
+			assert.False(t, resp.Allowed, "changed")
+			assert.Contains(t, resp.Result.Message, "the parameter '"+tt.parameter+"' has no effect on the 'default' project template")
+
+			// the controller, which the webhook configuration leaves out anyway, is not checked
+			resp = update(t, rolebindingwebhook.ControllerServiceAccount, tt.project, changed, "v1alpha3")
+			assert.True(t, resp.Allowed, "changed by the controller: %v", resp.Result)
+			assert.Empty(t, resp.Warnings)
+
+			undeclared := tt.project.DeepCopy()
+			undeclared.Spec.Parameters["owner"] = "alice"
+			resp = update(t, "alice", tt.project, undeclared, "v1alpha3")
+			assert.False(t, resp.Allowed, "another undeclared parameter")
+			assert.Contains(t, resp.Result.Message, "owner in body is a forbidden property")
+
+			moved.Spec.ProjectTemplateName = "declares"
+			resp = update(t, "alice", tt.project, moved, "v1alpha3")
+			assert.False(t, resp.Allowed, "moved to a template that declares the two")
+			assert.Contains(t, resp.Result.Message, tt.refused)
 		})
 	}
 }

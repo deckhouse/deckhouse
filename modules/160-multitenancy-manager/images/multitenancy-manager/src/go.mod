@@ -19,6 +19,7 @@ require (
 )
 
 require (
+	github.com/fatih/structs v1.1.0
 	github.com/prometheus/client_golang v1.23.2
 	github.com/prometheus/client_model v0.6.2
 	github.com/theory/jsonpath v0.12.0

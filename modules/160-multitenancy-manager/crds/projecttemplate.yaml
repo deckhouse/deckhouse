@@ -17,15 +17,15 @@ spec:
   scope: Cluster
   versions:
     - name: v1alpha1
-      # Not served, like Project v1alpha1. The version cannot represent the structured fields
-      # (resources, grantPolicies, podSecurityStandard and the rest), so a client reading a template
-      # through it and writing it back would erase them from storage. Keeping it served demanded
-      # carrying the structured spec across the round trip in an annotation, which put the whole spec
-      # into the v1alpha1 view of metadata, grew without bound, and resurrected a stale copy whenever
-      # one survived a write through v1alpha2.
-      served: false
+      # Served and deprecated. Templates written as v1alpha1 Helm strings, by hand or by the tools
+      # that generate them, keep being written at this version, and the Helm text survives the trip
+      # to storage because v1alpha2 carries resourcesTemplate too. The structured fields (resources,
+      # grantPolicies, podSecurityStandard and the rest) exist in v1alpha2 only, and a write through
+      # v1alpha1 would erase them, so the template webhook refuses one to a template that has them.
+      served: true
       storage: false
       deprecated: true
+      deprecationWarning: deckhouse.io/v1alpha1 ProjectTemplate is deprecated; use deckhouse.io/v1alpha2, which carries resourcesTemplate as well as the structured fields that v1alpha1 cannot describe
       subresources:
         status: {}
       additionalPrinterColumns:
@@ -122,6 +122,9 @@ spec:
             cluster-resource availability fields (`resources`, `grantPolicies`) are materialized into
             [ClusterResourceGrantPolicy](cr.html#clusterresourcegrantpolicy) objects bound to the
             projects of this template; the remaining fields are rendered into per-namespace objects.
+
+            Instead of the fields that render objects, a template can carry a Helm template in
+            `resourcesTemplate`. This form is deprecated.
           type: object
           properties:
             spec:
@@ -339,6 +342,18 @@ spec:
                         x-kubernetes-preserve-unknown-fields: true
                       description: |
                         OpenAPI specification used to check the validity of the parameters passed when creating a new project.
+                resourcesTemplate:
+                  description: |
+                    A template in the [`go template`](https://pkg.go.dev/text/template) format with the [`helm` functions](https://helm.sh/docs/chart_template_guide/function_list/) that renders the objects of a project.
+
+                    The field is deprecated. Describe new templates with the structured fields.
+
+                    When the field is not empty, the template is rendered from it. It cannot be set together with the fields that render objects into the project namespaces (`podSecurityStandard`, `networkPolicy`, `namespaceMetadata` and the others), while `resources` and `grantPolicies` apply in either case. A template that projects use keeps a non-empty `resourcesTemplate` until a change sets such fields in its place. Such a change deletes the objects the Helm text rendered, except those the new fields render under the same kind and name, and so does moving a project to another template.
+
+                    The template gets the project name in `{{ .projectName }}`, the template name in `{{ .projectTemplateName }}` and the [project parameters](cr.html#project-v1alpha3-spec-parameters) completed with the defaults of `parametersSchema` in `{{ .parameters }}`. When `parametersSchema` declares the `administrators` and `resourceQuota` parameters, they hold the [administrators](cr.html#project-v1alpha3-spec-administrators) and the [quota](cr.html#project-v1alpha3-spec-quota) of the project, laid out as in a `deckhouse.io/v1alpha2` Project. A project whose parameters turn into objects or keys of the rendered manifests instead of values is refused, so quote every substitution.
+
+                    An object without `metadata.namespace` or in a namespace outside the project is created in the main namespace of the project. The labels the template puts on the main namespace, except the ones the module manages and the GitOps tracking labels, are listed in its `projects.deckhouse.io/template-labels` annotation and are set on the additional namespaces too.
+                  type: string
             status:
               type: object
               properties:

@@ -18,6 +18,9 @@ package validate
 
 import (
 	"encoding/json"
+	"maps"
+	"os"
+	"path/filepath"
 	"testing"
 
 	"github.com/go-openapi/spec"
@@ -31,6 +34,7 @@ import (
 
 	"controller/apis/deckhouse.io/v1alpha2"
 	"controller/apis/deckhouse.io/v1alpha3"
+	"controller/internal/testutil"
 )
 
 // schemaWithParameterFields is the parametersSchema of the default template from the time the
@@ -177,6 +181,31 @@ properties:
 			spec: v1alpha3.ProjectSpec{Quota: corev1.ResourceList{"requests.cpu": resource.MustParse("2")}},
 		},
 		{
+			// the typed quota spells 2000m as 2 and 2048Mi as 2Gi, which the patterns refuse
+			name: "a quota value takes the unit its schema pins",
+			schema: `
+type: object
+required: [resourceQuota]
+properties:
+  resourceQuota:
+    type: object
+    properties:
+      requests:
+        type: object
+        properties:
+          cpu: {type: string, pattern: "^[0-9]+m$"}
+          memory: {type: string, pattern: "^[0-9]+Mi$"}
+      limits:
+        type: object
+        properties:
+          memory: {type: string, pattern: "^[0-9]+Ki$"}`,
+			spec: v1alpha3.ProjectSpec{Quota: corev1.ResourceList{
+				"requests.cpu":    resource.MustParse("2000m"),
+				"requests.memory": resource.MustParse("2048Mi"),
+				"limits.memory":   resource.MustParse("4Gi"),
+			}},
+		},
+		{
 			name:   "a quota given as a parameter is kept when the standard field is empty",
 			schema: schemaWithParameterFields,
 			spec: v1alpha3.ProjectSpec{
@@ -215,6 +244,15 @@ properties:
 			},
 		},
 		{
+			name:   "an additionalProperties schema that cannot hold the parameter fields does not get them",
+			schema: "{type: object, properties: {owner: {type: string}}, additionalProperties: {type: string}}",
+			spec: v1alpha3.ProjectSpec{
+				Administrators: []v1alpha3.Administrator{{Kind: "User", Name: "alice"}},
+				Quota:          corev1.ResourceList{"requests.cpu": resource.MustParse("1")},
+				Parameters:     map[string]any{"owner": "alice", "team": "platform"},
+			},
+		},
+		{
 			name: "only the declared parameter field is taken",
 			schema: `
 type: object
@@ -248,6 +286,76 @@ properties:
 				},
 			},
 		},
+		{
+			// the conversion lifts no quota that holds the number 0
+			name:   "a quota left in the parameters is not checked by a schema that does not declare it",
+			schema: "{type: object, properties: {networkPolicy: {type: string}}}",
+			spec: v1alpha3.ProjectSpec{
+				Administrators: []v1alpha3.Administrator{{Kind: "User", Name: "alice"}},
+				Parameters: map[string]any{
+					"networkPolicy": "Isolated",
+					"resourceQuota": map[string]any{"requests": map[string]any{"cpu": float64(0), "memory": "2Gi"}},
+				},
+			},
+		},
+		{
+			// the conversion lifts no empty administrators list
+			name:   "administrators left in the parameters are not checked by a schema that does not declare them",
+			schema: "{type: object, properties: {networkPolicy: {type: string}}}",
+			spec: v1alpha3.ProjectSpec{
+				Quota:      corev1.ResourceList{"requests.cpu": resource.MustParse("1")},
+				Parameters: map[string]any{"administrators": []any{}},
+			},
+		},
+		{
+			name:   "additionalProperties false at the top declares neither of the two",
+			schema: "{type: object, additionalProperties: false, properties: {networkPolicy: {type: string}}}",
+			spec: v1alpha3.ProjectSpec{
+				Parameters: map[string]any{
+					"administrators": []any{},
+					"resourceQuota":  map[string]any{"requests": map[string]any{"cpu": float64(0)}},
+				},
+			},
+		},
+		{
+			name:   "another parameter the schema does not declare is still refused",
+			schema: "{type: object, properties: {networkPolicy: {type: string}}}",
+			spec: v1alpha3.ProjectSpec{
+				Parameters: map[string]any{"administrators": []any{}, "owner": "alice"},
+			},
+			expectedErr: "owner in body is a forbidden property",
+		},
+		{
+			// the conversion lifts no quota value that is not a quantity
+			name:   "a quota left in the parameters is checked by a schema that declares it",
+			schema: schemaWithParameterFields,
+			spec: v1alpha3.ProjectSpec{
+				Administrators: []v1alpha3.Administrator{{Kind: "User", Name: "alice"}},
+				Parameters: map[string]any{
+					"resourceQuota": map[string]any{"requests": map[string]any{"cpu": "lots"}},
+				},
+			},
+			expectedErr: "resourceQuota.requests.cpu in body should match",
+		},
+		{
+			name:   "administrators left in the parameters are checked by a schema that declares them",
+			schema: schemaWithParameterFields,
+			spec: v1alpha3.ProjectSpec{
+				Quota: corev1.ResourceList{"requests.cpu": resource.MustParse("1")},
+				Parameters: map[string]any{
+					"administrators": []any{map[string]any{"subject": "ServiceAccount", "name": "robot"}},
+				},
+			},
+			expectedErr: "administrators.subject in body should be one of [User Group]",
+		},
+		{
+			name:   "administrators left in the parameters are checked by an additionalProperties schema at the top",
+			schema: "{type: object, additionalProperties: {type: string}}",
+			spec: v1alpha3.ProjectSpec{
+				Parameters: map[string]any{"administrators": []any{}},
+			},
+			expectedErr: "administrators in body must be of type string",
+		},
 	}
 
 	for _, tt := range tests {
@@ -266,6 +374,287 @@ properties:
 			}
 			// the renderer reads the same parameters, so validation must leave them as they are
 			assert.Equal(t, parameters, project.Spec.Parameters)
+		})
+	}
+}
+
+// The built-in templates of the previous release declared administrators and resourceQuota, and the
+// ones of this release declare neither. A project written on one of them in the v1alpha2 layout keeps
+// in spec.parameters whatever of the two the v1alpha2 -> v1alpha3 conversion cannot give back as it
+// was, and it has to validate after the update. The parameters are what the conversion makes of the
+// projects e2e-bidef-zero and e2e-bidef-noadm of the upgrade e2e test.
+func TestProject_BuiltinTemplatesTakeWhatTheConversionLeaves(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name string
+		spec v1alpha3.ProjectSpec
+	}{
+		{
+			name: "a quota with the number 0",
+			spec: v1alpha3.ProjectSpec{
+				Administrators: []v1alpha3.Administrator{{Kind: "User", Name: "alice@example.com"}},
+				Parameters: map[string]any{
+					"networkPolicy": "Isolated",
+					"resourceQuota": map[string]any{"requests": map[string]any{"cpu": float64(0), "memory": "2Gi"}},
+				},
+			},
+		},
+		{
+			name: "an empty administrators list",
+			spec: v1alpha3.ProjectSpec{
+				Quota:      corev1.ResourceList{"requests.cpu": resource.MustParse("1")},
+				Parameters: map[string]any{"administrators": []any{}},
+			},
+		},
+	}
+
+	for _, file := range []string{"default.yaml", "secure.yaml", "secure-with-dedicated-nodes.yaml"} {
+		raw, err := os.ReadFile(filepath.Join("..", "..", "templates", file))
+		require.NoError(t, err)
+		template := new(v1alpha2.ProjectTemplate)
+		require.NoError(t, yaml.Unmarshal(raw, template))
+
+		for _, tt := range tests {
+			t.Run(file+"/"+tt.name, func(t *testing.T) {
+				t.Parallel()
+
+				project := &v1alpha3.Project{ObjectMeta: metav1.ObjectMeta{Name: "team"}, Spec: *tt.spec.DeepCopy()}
+				project.Spec.ProjectTemplateName = template.Name
+				require.NoError(t, Project(project, template.DeepCopy()))
+				assert.Equal(t, tt.spec.Parameters, project.Spec.Parameters, "validation leaves the parameters as they are")
+			})
+		}
+	}
+}
+
+// loadSchema loads a parametersSchema written as YAML.
+func loadSchema(t *testing.T, schema string) *spec.Schema {
+	t.Helper()
+	loaded, err := LoadSchema(templateWithSchema(t, schema).Spec.ParametersSchema.OpenAPIV3Schema)
+	require.NoError(t, err)
+	return loaded
+}
+
+// A schema declares a parameter by name or through an additionalProperties at the top that takes its
+// value, and only a declared one is put back from its standard field.
+func TestV1alpha2Parameters(t *testing.T) {
+	t.Parallel()
+
+	project := &v1alpha3.Project{
+		ObjectMeta: metav1.ObjectMeta{Name: "team"},
+		Spec: v1alpha3.ProjectSpec{
+			Administrators: []v1alpha3.Administrator{{Kind: "User", Name: "alice"}},
+			Quota:          corev1.ResourceList{"requests.cpu": resource.MustParse("2")},
+			Parameters:     map[string]any{"networkPolicy": "Isolated"},
+		},
+	}
+	both := map[string]any{
+		"networkPolicy":  "Isolated",
+		"administrators": []any{map[string]any{"subject": "User", "name": "alice"}},
+		"resourceQuota":  map[string]any{"requests": map[string]any{"cpu": "2"}},
+	}
+
+	tests := []struct {
+		name     string
+		schema   string
+		expected map[string]any
+	}{
+		{
+			name:     "declared by name",
+			schema:   "{type: object, properties: {administrators: {type: array}, resourceQuota: {type: object}}}",
+			expected: both,
+		},
+		{
+			name:     "taken through additionalProperties at the top",
+			schema:   "{type: object, additionalProperties: true}",
+			expected: both,
+		},
+		{
+			name:     "taken through an additionalProperties schema at the top",
+			schema:   "{type: object, additionalProperties: {x-kubernetes-preserve-unknown-fields: true}}",
+			expected: both,
+		},
+		{
+			name:     "refused through additionalProperties at the top",
+			schema:   "{type: object, additionalProperties: false, properties: {networkPolicy: {type: string}}}",
+			expected: project.Spec.Parameters,
+		},
+		{
+			// a v1alpha2 project on that template could hold neither
+			name:     "not taken by an additionalProperties schema at the top",
+			schema:   "{type: object, additionalProperties: {type: string}}",
+			expected: project.Spec.Parameters,
+		},
+		{
+			name:   "only the one an additionalProperties schema at the top takes",
+			schema: "{type: object, additionalProperties: {type: object}}",
+			expected: map[string]any{
+				"networkPolicy": "Isolated",
+				"resourceQuota": map[string]any{"requests": map[string]any{"cpu": "2"}},
+			},
+		},
+		{
+			name:     "not declared",
+			schema:   "{type: object, properties: {networkPolicy: {type: string}}}",
+			expected: project.Spec.Parameters,
+		},
+		{
+			name:   "a cpu count in the unit the schema pins",
+			schema: "{type: object, properties: {resourceQuota: {type: object, properties: {requests: {type: object, properties: {cpu: {type: string, pattern: '^[0-9]+m$'}}}}}}}",
+			expected: map[string]any{
+				"networkPolicy": "Isolated",
+				"resourceQuota": map[string]any{"requests": map[string]any{"cpu": "2000m"}},
+			},
+		},
+		{
+			// the cpu count is a JSON number for a schema that takes no string
+			name:   "one declared by name",
+			schema: "{type: object, properties: {resourceQuota: {type: object, properties: {requests: {type: object, properties: {cpu: {type: integer}}}}}}}",
+			expected: map[string]any{
+				"networkPolicy": "Isolated",
+				"resourceQuota": map[string]any{"requests": map[string]any{"cpu": int64(2)}},
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			assert.Equal(t, tt.expected, V1alpha2Parameters(project, loadSchema(t, tt.schema)))
+		})
+	}
+
+	assert.Equal(t, project.Spec.Parameters, V1alpha2Parameters(project, nil), "a schema that did not load")
+}
+
+// V1alpha2Parameters is the Go copy of what the v1alpha3 -> v1alpha2 conversion of
+// webhooks/conversion/projects gives a v1alpha2 reader, and a Helm text renders from it. The hooks
+// test TestProjectDownConversionParameters runs that conversion over the projects of a golden fixture
+// with every jq engine, this runs the copy over their specs, and both compare with the parameters the
+// fixture converts them to. The schemas here declare the two parameters without requiring them. A
+// required one the project leaves empty is put back in its empty form, which the conversion does not
+// do (see TestProject), so the schema of the default template of that layout, which requires both, is
+// used only for the specs that have both standard fields.
+func TestV1alpha2ParametersFollowTheConversion(t *testing.T) {
+	t.Parallel()
+
+	fixture := testutil.ModuleFile(t, "hooks/testdata/conversion/projects/parameters/v1alpha3_to_v1alpha2.yaml")
+	raw, err := os.ReadFile(fixture)
+	require.NoError(t, err)
+
+	// A case of the fixture is one ConversionReview of the hook.
+	var cases []struct {
+		Name      string           `json:"name"`
+		Objects   []map[string]any `json:"objects"`
+		Converted []map[string]any `json:"converted"`
+	}
+	require.NoError(t, yaml.UnmarshalStrict(raw, &cases))
+	require.NotEmpty(t, cases)
+
+	const quotaValue = "{anyOf: [{type: integer}, {type: string}]}"
+	schemas := map[string]string{
+		"declared by name": `
+type: object
+properties:
+  administrators:
+    type: array
+    items: {type: object, properties: {subject: {type: string}, name: {type: string}}}
+  resourceQuota:
+    type: object
+    additionalProperties: ` + quotaValue + `
+    properties:
+      requests: {type: object, additionalProperties: ` + quotaValue + `}
+      limits: {type: object, additionalProperties: ` + quotaValue + `}
+  networkPolicy: {type: string}`,
+		"taken through additionalProperties at the top": "{type: object, additionalProperties: true}",
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.Name, func(t *testing.T) {
+			t.Parallel()
+			require.Len(t, tc.Converted, len(tc.Objects), "a converted object per object")
+
+			for i, object := range tc.Objects {
+				stored, err := json.Marshal(object["spec"])
+				require.NoError(t, err)
+				project := &v1alpha3.Project{ObjectMeta: metav1.ObjectMeta{Name: "team"}}
+				require.NoError(t, json.Unmarshal(stored, &project.Spec))
+				written, err := json.Marshal(project.Spec)
+				require.NoError(t, err)
+				require.JSONEq(t, string(stored), string(written), "the spec is not what a typed write stores")
+
+				converted, _ := tc.Converted[i]["spec"].(map[string]any)
+				want, err := json.Marshal(converted["parameters"])
+				require.NoError(t, err)
+
+				checked := maps.Clone(schemas)
+				if project.Spec.Administrators != nil && project.Spec.Quota != nil {
+					checked["of the default template of that layout"] = schemaWithParameterFields
+				}
+				for name, schema := range checked {
+					got, err := json.Marshal(V1alpha2Parameters(project, loadSchema(t, schema)))
+					require.NoError(t, err)
+					assert.JSONEq(t, string(want), string(got), name)
+				}
+			}
+		})
+	}
+}
+
+// A schema leaves administrators or resourceQuota undeclared when it neither names it nor has a
+// top-level additionalProperties other than false. An additionalProperties schema declares both
+// whatever it takes, and validation then checks them against it. A null counts as held.
+func TestUndeclaredLeftovers(t *testing.T) {
+	t.Parallel()
+
+	both := map[string]any{"administrators": []any{}, "resourceQuota": nil, "networkPolicy": "Isolated"}
+	tests := []struct {
+		name       string
+		schema     string
+		parameters map[string]any
+		expected   []string
+	}{
+		{
+			name:       "a schema that names neither",
+			schema:     "{type: object, properties: {networkPolicy: {type: string}}}",
+			parameters: both,
+			expected:   []string{"administrators", "resourceQuota"},
+		},
+		{
+			name:       "additionalProperties false at the top",
+			schema:     "{type: object, additionalProperties: false, properties: {networkPolicy: {type: string}}}",
+			parameters: both,
+			expected:   []string{"administrators", "resourceQuota"},
+		},
+		{
+			name:       "a schema that names one",
+			schema:     "{type: object, properties: {resourceQuota: {type: object}}}",
+			parameters: both,
+			expected:   []string{"administrators"},
+		},
+		{
+			name:       "an additionalProperties schema at the top that takes neither",
+			schema:     "{type: object, additionalProperties: {type: string}}",
+			parameters: both,
+		},
+		{
+			name:       "additionalProperties true at the top",
+			schema:     "{type: object, additionalProperties: true}",
+			parameters: both,
+		},
+		{
+			name:       "parameters that hold neither",
+			schema:     "{type: object, properties: {networkPolicy: {type: string}}}",
+			parameters: map[string]any{"networkPolicy": "Isolated"},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			assert.Equal(t, tt.expected, UndeclaredLeftovers(tt.parameters, loadSchema(t, tt.schema)))
 		})
 	}
 }
@@ -326,6 +715,40 @@ func TestLegacyResourceQuota(t *testing.T) {
 			for range 64 {
 				assert.Equal(t, tt.expected, legacyResourceQuota(tt.quota, nil))
 			}
+		})
+	}
+}
+
+// A quantity is tried in its canonical spelling first, then as a number and in every whole spelling
+// with a unit, since the parameter may have held any of them and a schema may take only one.
+func TestQuotaValueForms(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		quantity string
+		expected []any
+	}{
+		{quantity: "2", expected: []any{"2", int64(2), "2000m"}},
+		{quantity: "2000m", expected: []any{"2", int64(2), "2000m"}},
+		{quantity: "1500m", expected: []any{"1500m", 1.5}},
+		{quantity: "2000", expected: []any{"2k", int64(2000), "2000", "2000000m"}},
+		{quantity: "1Ki", expected: []any{"1Ki", int64(1024), "1024", "1024000m"}},
+		{
+			quantity: "2048Mi",
+			expected: []any{"2Gi", int64(2147483648), "2147483648", "2147483648000m", "2048Mi", "2097152Ki"},
+		},
+		{
+			quantity: "1Ei",
+			expected: []any{"1Ei", int64(1 << 60), "1152921504606846976", "1024Pi", "1048576Ti", "1073741824Gi", "1099511627776Mi", "1125899906842624Ki"},
+		},
+		{quantity: "3G", expected: []any{"3G", int64(3e9), "3000000000", "3000000000000m", "3000M", "3000000k"}},
+		{quantity: "0", expected: []any{"0", int64(0), "0m"}},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.quantity, func(t *testing.T) {
+			t.Parallel()
+			assert.Equal(t, tt.expected, quotaValueForms(resource.MustParse(tt.quantity)))
 		})
 	}
 }

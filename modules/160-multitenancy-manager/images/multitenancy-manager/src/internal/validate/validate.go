@@ -20,6 +20,7 @@ import (
 	"errors"
 	"fmt"
 	"maps"
+	"math"
 	"slices"
 	"strconv"
 	"strings"
@@ -43,14 +44,16 @@ func ProjectTemplate(template *v1alpha2.ProjectTemplate) error {
 	return nil
 }
 
-// Project validates the project parameters against the parametersSchema of its template.
+// Project validates the project parameters against the parametersSchema of its template, as a v1alpha2
+// reader of the project sees them (see V1alpha2Parameters), without an administrators or resourceQuota
+// parameter the schema does not declare (see withoutUndeclaredLeftovers).
 func Project(project *v1alpha3.Project, template *v1alpha2.ProjectTemplate) error {
 	templateOpenAPI, err := LoadSchema(template.Spec.ParametersSchema.OpenAPIV3Schema)
 	if err != nil {
 		return fmt.Errorf("load open api schema from the '%s' project template spec: %w", template.Name, err)
 	}
 
-	parameters := parametersToValidate(project, templateOpenAPI)
+	parameters := withoutUndeclaredLeftovers(V1alpha2Parameters(project, templateOpenAPI), templateOpenAPI)
 	if err = validate.AgainstSchema(transform(templateOpenAPI), parameters, strfmt.Default); err != nil {
 		return fmt.Errorf("the '%s' project is not met the OpenAPI schema for the '%s' project template: %w", project.Name, template.Name, err)
 	}
@@ -65,39 +68,128 @@ const (
 	resourceQuotaParameter  = "resourceQuota"
 )
 
-// parametersToValidate returns the project parameters as the template schema sees them. The
-// v1alpha2 -> v1alpha3 conversion moves administrators and resourceQuota out of spec.parameters of
-// every project, while a schema copied from the default template of that layout still declares and
-// requires both. When the schema declares one of them, it is put back from its standard field the
-// way the v1alpha3 -> v1alpha2 conversion does, so the project validates as it did in that layout;
-// a schema that does not declare it never gets it. A standard field that is empty is gone after the
-// first write of the Project (the fields are omitempty), so a required one the parameters do not
-// hold either is put back in its empty form. The project is left as it is: the renderer reads its
-// parameters without the two.
-func parametersToValidate(project *v1alpha3.Project, schema *spec.Schema) map[string]any {
-	_, declaresAdministrators := schema.Properties[administratorsParameter]
-	quotaSchema, declaresQuota := schema.Properties[resourceQuotaParameter]
+// V1alpha2Parameters returns the project parameters as the template schema sees them, which is how a
+// v1alpha2 reader of the project sees them. The v1alpha2 -> v1alpha3 conversion moves administrators
+// and resourceQuota out of spec.parameters of every project, while a schema copied from the default
+// template of that layout still declares and requires both, and a Helm text of that layout reads both
+// from .parameters. When the schema declares one of them, it is put back from its standard field the
+// way the v1alpha3 -> v1alpha2 conversion does, so the project validates and renders as it did in that
+// layout; a schema that does not declare it never gets it. Validation, the Helm render and the render
+// rehearsal of the Project webhook all take the parameters from here.
+//
+// A schema declares a parameter by naming it in its properties, or by taking every parameter it does
+// not name through additionalProperties at the top, which MergeDefaults passes on to the text as well
+// (see declaredValue). A standard field that is empty is gone after the first write of the Project
+// (the fields are omitempty), so a required one the parameters do not hold either is put back in its
+// empty form. The project is left as it is.
+func V1alpha2Parameters(project *v1alpha3.Project, schema *spec.Schema) map[string]any {
+	if schema == nil {
+		return project.Spec.Parameters
+	}
 	_, givenAdministrators := project.Spec.Parameters[administratorsParameter]
 	_, givenQuota := project.Spec.Parameters[resourceQuotaParameter]
 
-	takesAdministrators := declaresAdministrators &&
-		(project.Spec.Administrators != nil || !givenAdministrators && slices.Contains(schema.Required, administratorsParameter))
-	takesQuota := declaresQuota &&
-		(project.Spec.Quota != nil || !givenQuota && slices.Contains(schema.Required, resourceQuotaParameter))
-	if !takesAdministrators && !takesQuota {
+	restored := make(map[string]any, 2)
+	if project.Spec.Administrators != nil || !givenAdministrators && slices.Contains(schema.Required, administratorsParameter) {
+		value, declared := declaredValue(schema, administratorsParameter, func(*spec.Schema) any {
+			return legacyAdministrators(project.Spec.Administrators)
+		})
+		if declared {
+			restored[administratorsParameter] = value
+		}
+	}
+	if project.Spec.Quota != nil || !givenQuota && slices.Contains(schema.Required, resourceQuotaParameter) {
+		value, declared := declaredValue(schema, resourceQuotaParameter, func(quotaSchema *spec.Schema) any {
+			return legacyResourceQuota(project.Spec.Quota, quotaSchema)
+		})
+		if declared {
+			restored[resourceQuotaParameter] = value
+		}
+	}
+	if len(restored) == 0 {
 		return project.Spec.Parameters
 	}
 
-	parameters := make(map[string]any, len(project.Spec.Parameters)+2)
+	parameters := make(map[string]any, len(project.Spec.Parameters)+len(restored))
 	maps.Copy(parameters, project.Spec.Parameters)
-	if takesAdministrators {
-		parameters[administratorsParameter] = legacyAdministrators(project.Spec.Administrators)
-	}
-	if takesQuota {
-		parameters[resourceQuotaParameter] = legacyResourceQuota(project.Spec.Quota, &quotaSchema)
+	maps.Copy(parameters, restored)
+	return parameters
+}
+
+// withoutUndeclaredLeftovers returns the parameters validation checks: the given ones without the
+// administrators and resourceQuota parameters of UndeclaredLeftovers. transform closes the top of the
+// schema, so such a leftover failed the project as a forbidden property, and the controller neither
+// rendered it nor applied its standard fields. A declared one is checked as any other parameter, and
+// so is every other key: one the schema does not declare is still refused. Only validation leaves the
+// two out. The render starts from the parameters of V1alpha2Parameters, leftovers included, as the
+// previous release started from the project parameters. The given parameters are not changed.
+func withoutUndeclaredLeftovers(parameters map[string]any, schema *spec.Schema) map[string]any {
+	undeclared := UndeclaredLeftovers(parameters, schema)
+	if len(undeclared) == 0 {
+		return parameters
 	}
 
-	return parameters
+	checked := maps.Clone(parameters)
+	for _, name := range undeclared {
+		delete(checked, name)
+	}
+	return checked
+}
+
+// UndeclaredLeftovers returns the administrators and resourceQuota parameters, in that order, that
+// the parameters hold, a null included, and the schema does not declare (see declares). The
+// v1alpha2 -> v1alpha3 conversion lifts the two into spec.administrators and spec.quota only in a
+// shape it can give back as it was, and leaves any other in spec.parameters, an empty administrators
+// list or a quota with the number 0 among them. A project of the v1alpha2 layout holds them there for
+// a template that declared them, the built-in templates of the previous release included, and the
+// built-in templates declare neither any more. On a template that does not declare them they grant
+// no access and set no quota, which only the standard fields do. Validation leaves them out (see
+// withoutUndeclaredLeftovers) so that such a project keeps reconciling, and the Project webhook
+// decides which of them a write may bring in.
+func UndeclaredLeftovers(parameters map[string]any, schema *spec.Schema) []string {
+	var undeclared []string
+	for _, name := range []string{administratorsParameter, resourceQuotaParameter} {
+		if _, given := parameters[name]; given && !declares(schema, name) {
+			undeclared = append(undeclared, name)
+		}
+	}
+	return undeclared
+}
+
+// declares reports whether the schema has a place for a top-level parameter of that name: a property
+// of that name, or an additionalProperties at the top other than false. For an additionalProperties
+// schema at the top this is wider than declaredValue: declares takes the parameter whatever its
+// value, so a leftover is checked against that schema and refused when the schema does not take it,
+// while declaredValue puts a standard field back only in a value the schema takes. Where declares
+// reports false, so does declaredValue, and the parameter is never put back from its standard field.
+func declares(schema *spec.Schema, name string) bool {
+	if _, ok := schema.Properties[name]; ok {
+		return true
+	}
+	additional := schema.AdditionalProperties
+	return additional != nil && (additional.Allows || additional.Schema != nil)
+}
+
+// declaredValue lays a standard field out as the top-level parameter name held it, with layOut, which
+// gets the schema of that parameter (nil when nothing describes it), and reports whether the schema
+// declares the parameter for that value. A property of that name declares it whatever it holds, as
+// the schema of the parameter. additionalProperties at the top declares it only for a value it takes:
+// a v1alpha2 project on that template could not have held another, so its text never got one, and
+// adding it would fail the validation of every project that sets the standard field.
+// additionalProperties: false declares nothing.
+func declaredValue(schema *spec.Schema, name string, layOut func(*spec.Schema) any) (any, bool) {
+	if property, ok := schema.Properties[name]; ok {
+		return layOut(&property), true
+	}
+	additional := schema.AdditionalProperties
+	if additional == nil || !additional.Allows && additional.Schema == nil {
+		return nil, false
+	}
+	value := layOut(additional.Schema)
+	if additional.Schema == nil {
+		return value, true
+	}
+	return value, validate.AgainstSchema(additional.Schema, value, strfmt.Default) == nil
 }
 
 // legacyAdministrators lays the administrators out as the administrators parameter held them.
@@ -137,11 +229,10 @@ func legacyResourceQuota(quota corev1.ResourceList, schema *spec.Schema) map[str
 
 // legacyQuotaValue writes a quantity in a form the schema of its parameter takes. The typed quota no
 // longer says how the parameter held it: a whole number may have been a JSON number or digits in a
-// string, and anything else a string such as 1500m or 2Gi. So the forms are tried in the order the
-// conversion writes them, and the first one the schema takes is used; with none, the first form is
-// what fails. The canonical string alone would not do: the canonical form of 1000 is 1k, which a
-// schema with the pattern ^[0-9]+m?$ refuses. A property the schema does not describe gets the
-// canonical string.
+// string, and anything else a string such as 1500m or 2Gi. So the forms of quotaValueForms are tried
+// in turn, and the first one the schema takes is used; with none, the canonical string is what fails.
+// The canonical string alone would not do: the canonical form of 1000 is 1k, which a schema with the
+// pattern ^[0-9]+m?$ refuses. A property the schema does not describe gets the canonical string.
 func legacyQuotaValue(quantity resource.Quantity, schema *spec.Schema) any {
 	if schema == nil {
 		return quantity.String()
@@ -155,14 +246,56 @@ func legacyQuotaValue(quantity resource.Quantity, schema *spec.Schema) any {
 	return forms[0]
 }
 
-// quotaValueForms lists the JSON forms the resourceQuota parameter may have held a quantity in: a
-// whole number as a JSON number, as digits in a string and as its canonical string; anything else as
-// its canonical string and as a JSON number.
+// quotaValueForms lists the JSON forms the resourceQuota parameter may have held a quantity in, the
+// canonical string first: that is what a v1alpha2 reader of the project gets from the conversion once
+// the controller has written the project, since a typed write stores every quota value that way. A
+// whole number follows as a JSON number, as digits in a string and then spelled with a unit (see
+// unitSpellings), anything else as a JSON number. A quantity is whole when its integer value is the
+// same quantity. AsInt64 would not tell: the quantity read from 2000m is kept in millis, which it
+// does not convert.
 func quotaValueForms(quantity resource.Quantity) []any {
-	if value, ok := quantity.AsInt64(); ok {
-		return []any{value, strconv.FormatInt(value, 10), quantity.String()}
+	canonical := quantity.String()
+	value := quantity.Value()
+	if resource.NewQuantity(value, quantity.Format).Cmp(quantity) != 0 {
+		return []any{canonical, quantity.AsApproximateFloat64()}
 	}
-	return []any{quantity.String(), quantity.AsApproximateFloat64()}
+	forms := []any{canonical, value}
+	if digits := strconv.FormatInt(value, 10); digits != canonical {
+		forms = append(forms, digits)
+	}
+	for _, spelling := range unitSpellings(value) {
+		if spelling != canonical {
+			forms = append(forms, spelling)
+		}
+	}
+	return forms
+}
+
+// quotaUnits are the suffixes a whole quantity can be spelled with and the number each stands for,
+// the binary ones and then the decimal ones, the larger first.
+var quotaUnits = []struct {
+	suffix string
+	size   int64
+}{
+	{"Ei", 1 << 60}, {"Pi", 1 << 50}, {"Ti", 1 << 40}, {"Gi", 1 << 30}, {"Mi", 1 << 20}, {"Ki", 1 << 10},
+	{"E", 1e18}, {"P", 1e15}, {"T", 1e12}, {"G", 1e9}, {"M", 1e6}, {"k", 1e3},
+}
+
+// unitSpellings spells a whole quantity with a unit: in millis, and with every suffix that divides
+// it. The typed quota keeps only the canonical spelling, 2000m reads 2 and 2048Mi reads 2Gi, and a
+// schema that pins a unit, such as the pattern ^[0-9]+Mi$, takes neither, while the parameter it
+// validated held one of these. A spelling with a fraction, such as 1.5Gi, is not among them.
+func unitSpellings(value int64) []string {
+	var spellings []string
+	if value >= math.MinInt64/1000 && value <= math.MaxInt64/1000 {
+		spellings = append(spellings, strconv.FormatInt(value*1000, 10)+"m")
+	}
+	for _, unit := range quotaUnits {
+		if value != 0 && value%unit.size == 0 {
+			spellings = append(spellings, strconv.FormatInt(value/unit.size, 10)+unit.suffix)
+		}
+	}
+	return spellings
 }
 
 // propertySchema returns the schema of a property: the declared one, or the additionalProperties

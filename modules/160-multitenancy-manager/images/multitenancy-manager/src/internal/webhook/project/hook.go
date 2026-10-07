@@ -19,12 +19,14 @@ package project
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"maps"
 	"net/http"
 	"regexp"
 	"slices"
 	"strings"
+	"unicode"
 
 	admissionv1 "k8s.io/api/admission/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -34,10 +36,10 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/webhook"
 	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
-	"sigs.k8s.io/yaml"
 
 	"controller/apis/deckhouse.io/v1alpha2"
 	"controller/apis/deckhouse.io/v1alpha3"
+	"controller/internal/helm"
 	projectmanager "controller/internal/manager/project"
 	"controller/internal/naming"
 	"controller/internal/validate"
@@ -69,18 +71,23 @@ func ownLabelChange(old, project *v1alpha3.Project) (string, []string) {
 	return "", warnings
 }
 
-func Register(runtimeManager manager.Manager) {
-	hook := &webhook.Admission{Handler: &validator{client: runtimeManager.GetClient()}}
+func Register(runtimeManager manager.Manager, helmClient *helm.Client) {
+	hook := &webhook.Admission{Handler: &validator{client: runtimeManager.GetClient(), helmClient: helmClient}}
 	runtimeManager.GetWebhookServer().Register("/validate/v1alpha3/projects", hook)
 }
 
 type validator struct {
-	client client.Client
+	client     client.Client
+	helmClient *helm.Client
 }
 
 func (v *validator) Handle(ctx context.Context, req admission.Request) admission.Response {
+	// The request carries JSON, and it is read as JSON. A YAML decoder reads a JSON document too,
+	// but the one sigs.k8s.io/yaml uses folds an unescaped U+0085 in a string into a space, and the
+	// API server escapes U+2028 and U+2029 only: an administrator name would pass the line-break
+	// check below and be stored with its U+0085.
 	project := new(v1alpha3.Project)
-	if err := yaml.Unmarshal(req.Object.Raw, project); err != nil {
+	if err := json.Unmarshal(req.Object.Raw, project); err != nil {
 		return admission.Errored(http.StatusBadRequest, err)
 	}
 
@@ -119,7 +126,7 @@ func (v *validator) Handle(ctx context.Context, req admission.Request) admission
 	var old *v1alpha3.Project
 	if req.Operation == admissionv1.Update && !privileged {
 		old = new(v1alpha3.Project)
-		if err := yaml.Unmarshal(req.OldObject.Raw, old); err != nil {
+		if err := json.Unmarshal(req.OldObject.Raw, old); err != nil {
 			return admission.Errored(http.StatusBadRequest, err)
 		}
 		reason, labelWarnings := ownLabelChange(old, project)
@@ -185,11 +192,11 @@ func (v *validator) Handle(ctx context.Context, req admission.Request) admission
 		return admission.Errored(http.StatusBadRequest, err)
 	}
 	v1alpha2Create := req.Operation == admissionv1.Create && writtenThroughV1alpha2(req)
-	denied, quotaWarnings := validateStandardFields(project, spellings, storedProject(req), v1alpha2Create)
+	denied, standardFieldWarnings := validateStandardFields(project, spellings, storedProject(req), v1alpha2Create)
 	if denied != "" {
 		return admission.Denied(denied)
 	}
-	warnings = append(warnings, quotaWarnings...)
+	warnings = append(warnings, standardFieldWarnings...)
 
 	if req.Operation == admissionv1.Update {
 		// pass triggered projects
@@ -223,12 +230,37 @@ func (v *validator) Handle(ctx context.Context, req admission.Request) admission
 		return admission.Allowed("").WithWarnings(warnings...).WithWarnings("The project template not found")
 	}
 
-	// validate the project parameters against the template schema. The render itself is not
-	// rehearsed here: a structured template renders from its fields and the resolved parameters,
-	// and both are validated on their own -- the fields by the template webhook, the parameters
-	// just above.
+	// validate the project parameters against the template schema
 	if err = validate.Project(project, template); err != nil {
 		return admission.Denied(fmt.Sprintf("The project '%s' is invalid: %v", project.Name, err))
+	}
+
+	// validate.Project leaves out an administrators or resourceQuota parameter the template schema
+	// does not declare, so that a project the conversion left one in keeps reconciling. Which of them
+	// a write may bring in is decided here. The controller and Deckhouse never set one, and their
+	// writes are not checked.
+	if !privileged {
+		denied, leftoverWarnings := undeclaredLeftovers(project, old, template, writtenThroughV1alpha2(req))
+		if denied != "" {
+			return admission.Denied(fmt.Sprintf("The project '%s' is invalid: %s", project.Name, denied))
+		}
+		warnings = append(warnings, leftoverWarnings...)
+	}
+
+	// Rehearse the Helm render of a resourcesTemplate. It is free-form text, and what it makes of the
+	// parameters shows only in the render: a text that does not render, or a parameter that becomes
+	// manifest structure instead of a value, is refused here and not first when the release is
+	// applied. An object put into a namespace outside the project is moved to the main namespace,
+	// which is worth a warning, not a refusal. A structured template is not rehearsed: it renders
+	// from its fields and the resolved parameters, and both are validated on their own, the fields
+	// by the template webhook and the parameters just above.
+	if template.Spec.HasResourcesTemplate() {
+		if err = v.helmClient.ValidateRender(project, projectmanager.LegacyTemplate(template)); err != nil {
+			if !errors.Is(err, helm.ErrNamespaceOverride) {
+				return admission.Denied(fmt.Sprintf("The project '%s' is invalid: %v", project.Name, err))
+			}
+			warnings = append(warnings, err.Error())
+		}
 	}
 
 	// The namespace labels the template takes from the parameters (the built-in templates wire
@@ -288,6 +320,126 @@ func writtenThroughV1alpha2(req admission.Request) bool {
 		req.RequestKind.Group == v1alpha2.SchemeGroupVersion.Group && req.RequestKind.Version == v1alpha2.SchemeGroupVersion.Version
 }
 
+// leftover describes the administrators or the resourceQuota parameter for the messages of
+// undeclaredLeftovers.
+type leftover struct {
+	// effect says what the parameter does not do on a template that does not declare it
+	effect string
+	// field is the standard field that does it, and holds what
+	field, holds string
+	// lifted is the shape the v1alpha2 -> v1alpha3 conversion lifts into the field, in the words of
+	// liftable_administrators and liftable_quota of webhooks/conversion/projects
+	lifted string
+}
+
+var leftovers = map[string]leftover{
+	"administrators": {
+		effect: "grants no access",
+		field:  "spec.administrators",
+		holds:  "administrators",
+		lifted: "a non-empty list whose items hold only a subject, User or Group, and a name that is not empty and has no ASCII control character",
+	},
+	"resourceQuota": {
+		effect: "sets no quota",
+		field:  "spec.quota",
+		holds:  "a quota",
+		lifted: `a non-empty object whose top-level keys do not start with "requests." or "limits.", ` +
+			`whose requests and limits, if they are objects, are not empty, ` +
+			`and whose other values and the values under requests and limits are quantities such as 2, 500m or 1Gi other than the number 0, ` +
+			`which set no limit; leave such a limit out to keep it unset, since the string "0" is a hard limit of zero`,
+	},
+}
+
+// undeclaredLeftovers checks the administrators and resourceQuota parameters that the parametersSchema
+// of the template does not declare (see validate.UndeclaredLeftovers). There they grant no access and
+// set no quota. It returns a non-empty denial message for a value the write may not bring in, and the
+// warnings for the others. old is the stored project of an update and nil otherwise.
+//
+// A value that grants or limits nothing passes with a warning (see grantsOrLimitsNothing). So does a
+// value an update keeps as the stored project holds it, on a move to another template as well: the
+// conversion leaves such values in projects of the previous release, whose built-in templates
+// declared the two, and refusing them would refuse every later write of the project, a re-apply of
+// the unchanged manifest included. The value is kept whatever template the stored project is on, so
+// a move from a template that declares the parameter, where the value could grant access or set a
+// quota, keeps it with a warning as well. Any other value is refused. The writer meant it to grant or
+// limit something, and it would not, while a value a v1alpha3 client puts there in a shape the
+// conversion lifts would take effect on the next write through v1alpha2. A write through v1alpha2 has
+// only the parameters, so its messages say which shape the conversion lifts into the standard field.
+func undeclaredLeftovers(
+	project, old *v1alpha3.Project,
+	template *v1alpha2.ProjectTemplate,
+	throughV1alpha2 bool,
+) (string, []string) {
+	schema, err := validate.LoadSchema(template.Spec.ParametersSchema.OpenAPIV3Schema)
+	if err != nil {
+		return "", nil // validate.Project refuses a template whose schema does not load
+	}
+
+	var warnings []string
+	for _, name := range validate.UndeclaredLeftovers(project.Spec.Parameters, schema) {
+		described := leftovers[name]
+		noEffect := fmt.Sprintf("has no effect on the '%s' project template, whose parametersSchema does not declare it", template.Name)
+		var lifted string
+		if throughV1alpha2 {
+			lifted = fmt.Sprintf(", which a deckhouse.io/v1alpha2 manifest sets through this parameter when it is %s", described.lifted)
+		}
+
+		switch {
+		case grantsOrLimitsNothing(name, project.Spec.Parameters[name]):
+			warnings = append(warnings, fmt.Sprintf("the parameter '%s' of the '%s' project %s; remove it from the parameters", name, project.Name, noEffect))
+		case old != nil && sameParameter(old, project, name):
+			warnings = append(warnings, fmt.Sprintf(
+				"the parameter '%s' of the '%s' project %s, and %s; it is accepted because it did not change, and %s is the place for %s%s",
+				name, project.Name, noEffect, described.effect, described.field, described.holds, lifted))
+		default:
+			return fmt.Sprintf("the parameter '%s' %s, and %s; set %s instead%s",
+				name, noEffect, described.effect, described.field, lifted), nil
+		}
+	}
+	return "", warnings
+}
+
+// grantsOrLimitsNothing reports whether a value of the administrators or resourceQuota parameter
+// grants or limits nothing: administrators that are null or an empty list, or a quota that is null or
+// holds no value but nulls and the number 0, at the top or under requests and limits. The templates
+// of the previous release skipped the number 0 with "with", and the conversion lifts no quota that
+// holds it, so it never becomes a limit. The string "0" is not among these: in a quota the conversion
+// lifts, it becomes a hard limit of zero in spec.quota. The request is read with encoding/json, which
+// gives a JSON number as a float64.
+func grantsOrLimitsNothing(name string, value any) bool {
+	if value == nil {
+		return true
+	}
+	if name == "administrators" {
+		list, isList := value.([]any)
+		return isList && len(list) == 0
+	}
+
+	quota, isObject := value.(map[string]any)
+	if !isObject {
+		return false
+	}
+	limitsNothing := func(quantity any) bool {
+		number, isNumber := quantity.(float64)
+		return quantity == nil || isNumber && number == 0
+	}
+	for key, entry := range quota {
+		nested, isObject := entry.(map[string]any)
+		if isNesting := isObject && (key == "requests" || key == "limits"); !isNesting {
+			if !limitsNothing(entry) {
+				return false
+			}
+			continue
+		}
+		for _, quantity := range nested {
+			if !limitsNothing(quantity) {
+				return false
+			}
+		}
+	}
+	return true
+}
+
 // byteQuantityUnitRE matches a Kubernetes Quantity written with an explicit byte-scale unit.
 // Milli/micro/nano suffixes (m/u/n), exponents (1e3, 1E6) and bare numbers are intentionally
 // excluded: for memory and storage a bare "5" is 5 bytes, which is almost always a mistake.
@@ -301,7 +453,7 @@ func storedProject(req admission.Request) *v1alpha3.Project {
 		return nil
 	}
 	old := new(v1alpha3.Project)
-	if err := yaml.Unmarshal(req.OldObject.Raw, old); err != nil {
+	if err := json.Unmarshal(req.OldObject.Raw, old); err != nil {
 		return nil
 	}
 	return old
@@ -374,8 +526,23 @@ func validateStandardFields(
 	if old != nil {
 		stored = old.Spec
 	}
+	var warnings []string
 	for _, admin := range project.Spec.Administrators {
+		// The CRD pattern refuses C0 controls and DEL only. The C1 controls have no meaning in a
+		// subject name either, and YAML ends a scalar on U+0085, U+2028 and U+2029: a Helm template
+		// whose schema declares the administrators parameter gets the name there (see
+		// validate.V1alpha2Parameters) and may substitute it unquoted. An administrator the stored
+		// project already has passes with a warning, as a kept quota value does: the conversion lifts
+		// the administrators parameter of a v1alpha2 project, whose schema may have let such a name
+		// in, and refusing it would refuse every later write of the project. The controller still
+		// refuses a render the name breaks.
+		unsafeName := strings.ContainsFunc(admin.Name, unicode.IsControl) || helm.ContainsLineBreak(admin.Name)
 		if slices.Contains(stored.Administrators, admin) {
+			if unsafeName {
+				warnings = append(warnings, fmt.Sprintf(
+					"administrator name %q contains a control character or a line break; it is accepted because it did not change, but a new name must not contain one",
+					admin.Name))
+			}
 			continue
 		}
 		if admin.Kind != "User" && admin.Kind != "Group" {
@@ -384,8 +551,16 @@ func validateStandardFields(
 		if admin.Name == "" {
 			return "administrator name must not be empty", nil
 		}
+		if unsafeName {
+			return fmt.Sprintf("administrator name %q must not contain control characters or line breaks", admin.Name), nil
+		}
 	}
-	return validateQuotaByteUnits(project.Spec.Quota, spellings, stored.Quota, v1alpha2Create)
+
+	denied, quotaWarnings := validateQuotaByteUnits(project.Spec.Quota, spellings, stored.Quota, v1alpha2Create)
+	if denied != "" {
+		return denied, nil
+	}
+	return "", append(warnings, quotaWarnings...)
 }
 
 // administratorsNextToParameter reports whether the project sets spec.administrators together with
@@ -486,10 +661,10 @@ func validateQuotaByteUnits(
 	return "", warnings
 }
 
-// projectTemplateByName reads the template at v1alpha2, the served version. Asking for v1alpha1 --
-// which this did -- worked only while that version was served: the apiserver converted the stored
-// object on every call, and once v1alpha1 stopped being served the lookup began failing with "no
-// matches for kind ProjectTemplate in version deckhouse.io/v1alpha1", which denied every project write.
+// projectTemplateByName reads the template at v1alpha2, the storage version and the one that has every
+// field. Asking for v1alpha1, which this once did, prunes the structured fields, and while v1alpha1
+// was not served the lookup failed with "no matches for kind ProjectTemplate in version
+// deckhouse.io/v1alpha1", which denied every project write.
 func (v *validator) projectTemplateByName(ctx context.Context, name string) (*v1alpha2.ProjectTemplate, error) {
 	template := new(v1alpha2.ProjectTemplate)
 	if err := v.client.Get(ctx, client.ObjectKey{Name: name}, template); err != nil {

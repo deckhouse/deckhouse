@@ -149,10 +149,12 @@ webhooks:
       - apiGroups:
           - deckhouse.io
         # Only the full-fidelity storage version is listed. With matchPolicy: Equivalent the apiserver
-        # losslessly up-converts a v1alpha1 request to v1alpha2 before delivery, so the handler always
-        # receives the structured fields (grantPolicies, fromParam, podSecurityStandard, ...). Listing
-        # v1alpha1 here would let the apiserver deliver the lossy v1alpha1 view, stripping those fields
-        # and silently bypassing the structured validations.
+        # up-converts a v1alpha1 request to v1alpha2 before delivery, so the handler always receives
+        # the v1alpha2 shape (grantPolicies, fromParam, podSecurityStandard, ...). Listing v1alpha1
+        # here would let the apiserver deliver the lossy v1alpha1 view and silently bypass the
+        # structured validations. A v1alpha1 request still carries none of those fields, and its
+        # oldObject is read through v1alpha1 too, so the handler reads the stored template itself to
+        # see what such a write would erase (requestKind names the version of the request).
         apiVersions:
           - v1alpha2
         resources:

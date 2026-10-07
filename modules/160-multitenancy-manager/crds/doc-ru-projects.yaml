@@ -103,7 +103,7 @@ spec:
                       kind:
                         description: Тип субъекта.
                       name:
-                        description: Имя субъекта. Для User — kube username (`User.spec.email`). Для Group — `Group.spec.name` (имя в токене), не `metadata.name`.
+                        description: Имя субъекта. Для User — kube username (`User.spec.email`). Для Group — `Group.spec.name` (имя в токене), не `metadata.name`. Имя не может содержать управляющие символы и переводы строк. Обновление, которое оставляет такое имя прежним, принимается с предупреждением.
                 quota:
                   description: |
                     Квота ресурсов проекта, применяемая как `ResourceQuota` с именем `d8-project-quota` в пространстве имён проекта.

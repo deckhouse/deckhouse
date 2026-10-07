@@ -35,12 +35,8 @@ const (
 	ProjectConditionProjectValidated         = "Validated"
 	ProjectConditionProjectResourcesUpgraded = "ResourcesUpgraded"
 	ProjectConditionStandardFieldsApplied    = "StandardFieldsApplied"
+	ProjectConditionTemplateRolesAllowed     = "TemplateRolesAllowed"
 	ProjectConditionHelmOwnership            = "HelmOwnership"
-	// ProjectConditionProjectTemplateUsable is False while the project's template carries the
-	// legacy-helm-template mark: the template was a Helm string in v1alpha1, the string is gone, and
-	// rendering the empty structured shape would delete the objects that string produced. Named so
-	// that True means healthy, like every other condition here.
-	ProjectConditionProjectTemplateUsable = "ProjectTemplateUsable"
 	// ProjectConditionNamespaceDeleted is False on a deleting project while its namespace is still
 	// terminating; the message says for how long and what the namespace reports as remaining, so
 	// that "kubectl describe project" tells what the deletion is waiting for.
@@ -58,6 +54,9 @@ const (
 
 	ResourceLabelProject  = "projects.deckhouse.io/project"
 	ResourceLabelTemplate = "projects.deckhouse.io/project-template"
+
+	ResourceLabelSkipHeritage = "projects.deckhouse.io/skip-heritage-label"
+	ResourceLabelUnmanaged    = "projects.deckhouse.io/unmanaged"
 
 	ResourceLabelHeritage        = "heritage"
 	ResourceHeritageMultitenancy = "multitenancy-manager"

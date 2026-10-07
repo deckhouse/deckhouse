@@ -1,0 +1,58 @@
+# A text that renders an AuthorizationRule per entry of a parameter of its own, next to a quota from
+# the resourceQuota parameter of the v1alpha2 Project layout.
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: ProjectTemplate
+metadata:
+  name: roles-from-a-parameter
+spec:
+  parametersSchema:
+    openAPIV3Schema:
+      type: object
+      properties:
+        roleBindings:
+          type: array
+          items:
+            type: object
+            properties:
+              name: {type: string}
+              accessLevel: {type: string}
+              subjects:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    kind: {type: string}
+                    name: {type: string}
+        resourceQuota:
+          type: object
+          properties:
+            requests:
+              type: object
+              additionalProperties:
+                anyOf: [{type: integer}, {type: string}]
+  resourcesTemplate: |
+    {{- range $binding := .parameters.roleBindings }}
+    ---
+    apiVersion: deckhouse.io/v1alpha1
+    kind: AuthorizationRule
+    metadata:
+      name: {{ $binding.name | quote }}
+    spec:
+      accessLevel: {{ $binding.accessLevel | quote }}
+      subjects:
+      {{- range $binding.subjects }}
+        - kind: {{ .kind | quote }}
+          name: {{ .name | quote }}
+      {{- end }}
+    {{- end }}
+    ---
+    apiVersion: v1
+    kind: ResourceQuota
+    metadata:
+      name: all-pods
+    spec:
+      hard:
+      {{- range $name, $value := .parameters.resourceQuota.requests }}
+        requests.{{ $name }}: {{ $value | quote }}
+      {{- end }}

@@ -58,6 +58,8 @@ func TestNativeRender(t *testing.T) {
 		t.Run(c.caseDir, func(t *testing.T) {
 			tmpl, err := read[v1alpha2.ProjectTemplate](filepath.Join("../../templates", c.tmplFile))
 			require.NoError(t, err)
+			require.Empty(t, tmpl.Spec.ResourcesTemplate, "built-in templates must be structured, not helm strings")
+
 			base := filepath.Join("./testdata", c.caseDir)
 			project, err := read[v1alpha3.Project](filepath.Join(base, "project.yaml"))
 			require.NoError(t, err)
@@ -65,7 +67,7 @@ func TestNativeRender(t *testing.T) {
 			manifests, err := renderpkg.Manifests(tmpl, project)
 			require.NoError(t, err)
 
-			post := newPostRenderer(project, nil, ctrl.Log.WithName("test"))
+			post := newPostRenderer(project, nil, ctrl.Log.WithName("test"), true)
 			post.manifests = manifests
 			out, err := post.Run(bytes.NewBuffer(nil))
 			require.NoError(t, err)

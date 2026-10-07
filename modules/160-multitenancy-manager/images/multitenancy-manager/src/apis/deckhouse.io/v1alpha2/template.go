@@ -17,6 +17,8 @@ limitations under the License.
 package v1alpha2
 
 import (
+	"strings"
+
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -27,19 +29,6 @@ import (
 const (
 	ProjectTemplateKind     = "ProjectTemplate"
 	ProjectTemplateResource = "projecttemplates"
-
-	// TemplateAnnotationLegacyHelm marks a template that was stored as v1alpha1 with a non-empty Helm
-	// resourcesTemplate. The conversion webhook sets it while dropping the Helm string, which v1alpha2
-	// cannot carry: without the mark the template would read as a structured template with nothing in
-	// it, and rendering that over the existing Helm release would delete every object the Helm string
-	// used to produce. The controller refuses to render the projects of a marked template until the
-	// template is rewritten with structured fields and the annotation is removed.
-	TemplateAnnotationLegacyHelm = "projects.deckhouse.io/legacy-helm-template"
-
-	// TemplateAnnotationLegacyHelmBody carries the Helm resourcesTemplate the conversion dropped, so
-	// the administrator asked to rewrite the template can read what it used to render. It is absent
-	// when the string did not fit into an annotation; see the conversion hook.
-	TemplateAnnotationLegacyHelmBody = "projects.deckhouse.io/legacy-helm-template-body"
 )
 
 // Pod Security Standard profiles, mirroring the legacy parameters.podSecurityProfile values.
@@ -118,11 +107,10 @@ func (p *ProjectTemplate) DeepCopyInto(newObj *ProjectTemplate) {
 	p.Status.DeepCopyInto(&newObj.Status)
 }
 
-// ProjectTemplateSpec describes a project template as a set of structured, declarative fields.
-// The cluster-resource availability fields (Resources, GrantPolicies) are materialized into
+// ProjectTemplateSpec describes a project template as a set of structured, declarative fields. The
+// cluster-resource availability fields (Resources, GrantPolicies) are materialized into
 // ClusterResourceGrantPolicy objects; the remaining fields are rendered into per-namespace objects
-// when a Project references the template. The Helm resourcesTemplate of v1alpha1 has no place here:
-// a v1alpha1 template that carried one comes up marked with TemplateAnnotationLegacyHelm instead.
+// when a Project references the template, unless the template carries a Helm ResourcesTemplate.
 type ProjectTemplateSpec struct {
 	// Title is a short human-readable name of the template.
 	Title string `json:"title,omitempty"`
@@ -176,38 +164,66 @@ type ProjectTemplateSpec struct {
 
 	// ParametersSchema is the OpenAPI v3 schema validating Project.spec.parameters.
 	ParametersSchema ParametersSchema `json:"parametersSchema,omitempty"`
+
+	// ResourcesTemplate is a Helm template string rendering the objects of a project, the form every
+	// template had in v1alpha1. A non-blank one is rendered through Helm, and the template webhook
+	// refuses it together with the fields above that render namespace objects (see ObjectFields);
+	// Resources and GrantPolicies apply either way.
+	//
+	// Deprecated: describe templates with the structured fields.
+	//
+	// The yaml tag is required: the helm renderer maps the spec to values via structs.Map (yaml
+	// tag name), and helmlib reads .Values.projectTemplate.resourcesTemplate.
+	ResourcesTemplate string `json:"resourcesTemplate,omitempty" yaml:"resourcesTemplate,omitempty"`
 }
 
-// RendersObjects reports whether the spec declares at least one field that renders an object into
-// the project namespaces. Title, description, parametersSchema and the grant fields are excluded:
-// they configure the template or the cluster-resource availability, and a template carrying only
-// those renders the namespace and nothing else.
-//
-// It answers one question: would applying this template to a project that already has a release
-// delete everything in it. The legacy-Helm mark exists for exactly that case, and dropping the mark
-// while this is false is what the template webhook refuses.
+// HasResourcesTemplate reports whether the template renders its objects from a Helm resourcesTemplate.
+// A blank one counts as none: such a template renders from its structured fields.
+func (p *ProjectTemplateSpec) HasResourcesTemplate() bool {
+	return strings.TrimSpace(p.ResourcesTemplate) != ""
+}
+
+// ObjectFields names the fields of the spec that are set and render an object into the project
+// namespaces. Title, description, parametersSchema, resourcesTemplate and the grant fields are not
+// among them: they describe the template or the cluster-resource availability, and a template that
+// sets only those renders the namespace and nothing else.
 //
 // Every optional stanza is judged by its content, not by its presence: `networkPolicy: {}` is a
-// pointer to an empty mode, and the renderer produces nothing from it, so counting it as rendering
-// would let a half-finished rewrite through the very guard this feeds.
-func (p *ProjectTemplateSpec) RendersObjects() bool {
-	if !p.PodSecurityStandard.IsZero() || !p.NodeSelector.IsZero() || !p.Tolerations.IsZero() ||
-		!p.AllowedUIDs.IsZero() || !p.AllowedGIDs.IsZero() {
-		return true
+// pointer to an empty mode, and the renderer produces nothing from it.
+func (p *ProjectTemplateSpec) ObjectFields() []string {
+	var fields []string
+	add := func(field string, isSet bool) {
+		if isSet {
+			fields = append(fields, field)
+		}
 	}
-	if p.NetworkPolicy != nil && !p.NetworkPolicy.Mode.IsZero() {
-		return true
+	add("podSecurityStandard", !p.PodSecurityStandard.IsZero())
+	add("networkPolicy", p.NetworkPolicy != nil && !p.NetworkPolicy.Mode.IsZero())
+	add("nodeSelector", !p.NodeSelector.IsZero())
+	add("tolerations", !p.Tolerations.IsZero())
+	add("namespaceMetadata", p.NamespaceMetadata != nil && (!p.NamespaceMetadata.Labels.IsZero() || !p.NamespaceMetadata.Annotations.IsZero()))
+	add("features", p.Features != nil && (!p.Features.Monitoring.IsZero() || !p.Features.VulnerabilityScanning.IsZero()))
+	add("logShipping", p.LogShipping != nil && !p.LogShipping.ClusterDestinationRef.IsZero())
+	add("allowedUIDs", !p.AllowedUIDs.IsZero())
+	add("allowedGIDs", !p.AllowedGIDs.IsZero())
+	add("runtimeAudit", p.RuntimeAudit != nil && !p.RuntimeAudit.Enabled.IsZero())
+	return fields
+}
+
+// V1alpha2OnlyFields names the fields of the spec that are set and that ProjectTemplate v1alpha1 has
+// no place for: title, the grant fields and ObjectFields. A write through v1alpha1 erases them.
+func (p *ProjectTemplateSpec) V1alpha2OnlyFields() []string {
+	var fields []string
+	if p.Title != "" {
+		fields = append(fields, "title")
 	}
-	if p.NamespaceMetadata != nil && (!p.NamespaceMetadata.Labels.IsZero() || !p.NamespaceMetadata.Annotations.IsZero()) {
-		return true
+	if len(p.Resources) > 0 {
+		fields = append(fields, "resources")
 	}
-	if p.Features != nil && (!p.Features.Monitoring.IsZero() || !p.Features.VulnerabilityScanning.IsZero()) {
-		return true
+	if len(p.GrantPolicies) > 0 {
+		fields = append(fields, "grantPolicies")
 	}
-	if p.LogShipping != nil && !p.LogShipping.ClusterDestinationRef.IsZero() {
-		return true
-	}
-	return p.RuntimeAudit != nil && !p.RuntimeAudit.Enabled.IsZero()
+	return append(fields, p.ObjectFields()...)
 }
 
 // ParamRef pairs a structured field path (for diagnostics) with the parameter it references.

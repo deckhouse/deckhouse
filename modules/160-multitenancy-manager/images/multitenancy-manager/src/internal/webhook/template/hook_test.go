@@ -19,6 +19,7 @@ package template
 import (
 	"context"
 	"encoding/json"
+	"net/http"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -321,97 +322,6 @@ func updateRequest(t *testing.T, oldTmpl, newTmpl *v1alpha2.ProjectTemplate) adm
 	}}
 }
 
-func markedEmptyTemplate(name string) *v1alpha2.ProjectTemplate {
-	return &v1alpha2.ProjectTemplate{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:        name,
-			Annotations: map[string]string{v1alpha2.TemplateAnnotationLegacyHelm: "true"},
-		},
-	}
-}
-
-// TestHandle_LegacyMarkRemoval: taking the mark off a template that renders nothing is the two-step
-// order the condition message invites, and it costs the projects every object their Helm template
-// produced. Only the request that also rewrites the template is accepted.
-func TestHandle_LegacyMarkRemoval(t *testing.T) {
-	ctx := context.Background()
-	v := newValidator(t)
-
-	t.Run("removing the mark alone is refused", func(t *testing.T) {
-		unmarked := markedEmptyTemplate("legacy")
-		unmarked.Annotations = nil
-		resp := v.Handle(ctx, updateRequest(t, markedEmptyTemplate("legacy"), unmarked))
-		assert.False(t, resp.Allowed)
-		assert.Contains(t, resp.Result.Message, "delete every object")
-	})
-
-	t.Run("rewriting and unmarking in one request is allowed", func(t *testing.T) {
-		rewritten := structuredTemplate("legacy")
-		resp := v.Handle(ctx, updateRequest(t, markedEmptyTemplate("legacy"), rewritten))
-		assert.True(t, resp.Allowed, resp.Result)
-	})
-
-	t.Run("editing a marked template without touching the mark is allowed", func(t *testing.T) {
-		edited := markedEmptyTemplate("legacy")
-		edited.Spec.Description = "parked, waiting for a rewrite"
-		resp := v.Handle(ctx, updateRequest(t, markedEmptyTemplate("legacy"), edited))
-		assert.True(t, resp.Allowed, resp.Result)
-	})
-
-	t.Run("a template that never carried the mark is untouched by the guard", func(t *testing.T) {
-		resp := v.Handle(ctx, updateRequest(t, &v1alpha2.ProjectTemplate{ObjectMeta: metav1.ObjectMeta{Name: "plain"}},
-			&v1alpha2.ProjectTemplate{ObjectMeta: metav1.ObjectMeta{Name: "plain"}}))
-		assert.True(t, resp.Allowed, resp.Result)
-	})
-}
-
-// TestHandle_LegacyMarkRemoval_EmptyStanzas: an optional stanza with nothing in it renders nothing,
-// so it must not pass for a rewrite. Otherwise `networkPolicy: {}` plus an unmark in one request --
-// the shape the guard is built to accept -- still leaves the projects with a bare namespace.
-func TestHandle_LegacyMarkRemoval_EmptyStanzas(t *testing.T) {
-	ctx := context.Background()
-	v := newValidator(t)
-
-	empty := func(mutate func(*v1alpha2.ProjectTemplateSpec)) *v1alpha2.ProjectTemplate {
-		tmpl := &v1alpha2.ProjectTemplate{ObjectMeta: metav1.ObjectMeta{Name: "legacy"}}
-		mutate(&tmpl.Spec)
-		return tmpl
-	}
-
-	for name, mutate := range map[string]func(*v1alpha2.ProjectTemplateSpec){
-		"networkPolicy":     func(s *v1alpha2.ProjectTemplateSpec) { s.NetworkPolicy = &v1alpha2.NetworkPolicySpec{} },
-		"namespaceMetadata": func(s *v1alpha2.ProjectTemplateSpec) { s.NamespaceMetadata = &v1alpha2.NamespaceMetadata{} },
-		"features":          func(s *v1alpha2.ProjectTemplateSpec) { s.Features = &v1alpha2.FeaturesSpec{} },
-		"logShipping":       func(s *v1alpha2.ProjectTemplateSpec) { s.LogShipping = &v1alpha2.LogShippingSpec{} },
-		"runtimeAudit":      func(s *v1alpha2.ProjectTemplateSpec) { s.RuntimeAudit = &v1alpha2.RuntimeAuditSpec{} },
-	} {
-		t.Run("an empty "+name+" stanza does not count as a rewrite", func(t *testing.T) {
-			resp := v.Handle(ctx, updateRequest(t, markedEmptyTemplate("legacy"), empty(mutate)))
-			assert.False(t, resp.Allowed)
-			assert.Contains(t, resp.Result.Message, "delete every object")
-		})
-	}
-
-	t.Run("a stanza with a value counts", func(t *testing.T) {
-		filled := empty(func(s *v1alpha2.ProjectTemplateSpec) {
-			s.NetworkPolicy = &v1alpha2.NetworkPolicySpec{Mode: v1alpha2.LiteralParam(v1alpha2.NetworkPolicyModeIsolated)}
-		})
-		resp := v.Handle(ctx, updateRequest(t, markedEmptyTemplate("legacy"), filled))
-		assert.True(t, resp.Allowed, resp.Result)
-	})
-
-	t.Run("a fromParam reference counts", func(t *testing.T) {
-		ref := empty(func(s *v1alpha2.ProjectTemplateSpec) {
-			s.NetworkPolicy = &v1alpha2.NetworkPolicySpec{Mode: v1alpha2.FromParamRef[string]("mode")}
-			s.ParametersSchema = v1alpha2.ParametersSchema{OpenAPIV3Schema: map[string]any{
-				"type": "object", "properties": map[string]any{"mode": map[string]any{"type": "string"}},
-			}}
-		})
-		resp := v.Handle(ctx, updateRequest(t, markedEmptyTemplate("legacy"), ref))
-		assert.True(t, resp.Allowed, resp.Result)
-	})
-}
-
 // TestHandle_LiteralValidation pins the fixed-set fields: a literal outside the set is refused with
 // the set spelled out, a reference is left to the parameters-schema check, and the built-in values
 // pass. A typo here used to be accepted and rendered into nothing.
@@ -674,4 +584,209 @@ func TestHandle_DeleteTemplateLeftoverNamespace(t *testing.T) {
 	}})
 	require.False(t, resp.Allowed)
 	assert.Contains(t, resp.Result.Message, "the project is gone; delete the namespace first")
+}
+
+func helmTemplate(name string) *v1alpha2.ProjectTemplate {
+	return &v1alpha2.ProjectTemplate{
+		ObjectMeta: metav1.ObjectMeta{Name: name},
+		Spec:       v1alpha2.ProjectTemplateSpec{ResourcesTemplate: "---\napiVersion: v1\nkind: ConfigMap\nmetadata:\n  name: cm\n"},
+	}
+}
+
+// A template renders from its Helm text or from its structured fields. The fields that render no
+// object -- the grants, the title -- go with either.
+func TestHandle_ResourcesTemplateWithStructuredFields(t *testing.T) {
+	ctx := context.Background()
+	v := newValidator(t, libraryPolicy("lib"))
+
+	both := helmTemplate("both")
+	both.Spec.PodSecurityStandard = v1alpha2.LiteralParam(v1alpha2.PodSecurityStandardBaseline)
+	both.Spec.NetworkPolicy = &v1alpha2.NetworkPolicySpec{Mode: v1alpha2.LiteralParam(v1alpha2.NetworkPolicyModeIsolated)}
+	resp := v.Handle(ctx, createRequest(t, both))
+	require.False(t, resp.Allowed)
+	assert.Contains(t, resp.Result.Message, "resourcesTemplate together with fields that render objects: podSecurityStandard, networkPolicy")
+
+	resp = v.Handle(ctx, updateRequest(t, helmTemplate("both"), both))
+	assert.False(t, resp.Allowed, "an update is refused the same way")
+
+	withGrants := helmTemplate("grants")
+	withGrants.Spec.Title = "Grants"
+	withGrants.Spec.GrantPolicies = []string{"lib"}
+	withGrants.Spec.Resources = []grantsv1alpha1.GrantResource{{ResourceName: "storageclasses"}}
+	resp = v.Handle(ctx, createRequest(t, withGrants))
+	assert.True(t, resp.Allowed, resp.Result)
+
+	// an empty stanza renders nothing
+	emptyStanza := helmTemplate("empty-stanza")
+	emptyStanza.Spec.NetworkPolicy = &v1alpha2.NetworkPolicySpec{}
+	resp = v.Handle(ctx, createRequest(t, emptyStanza))
+	assert.True(t, resp.Allowed, resp.Result)
+}
+
+// Emptying the resourcesTemplate of a template that projects use would leave each of them its
+// namespace alone, and Helm would delete what the text rendered. Setting structured fields in the
+// same request is let through, and so is a template nobody uses.
+func TestHandle_ResourcesTemplateRemoval(t *testing.T) {
+	ctx := context.Background()
+	project := &v1alpha3.Project{
+		ObjectMeta: metav1.ObjectMeta{Name: "proj", Labels: map[string]string{v1alpha3.ResourceLabelTemplate: "used"}},
+	}
+	v := newValidator(t, project)
+	blank := func(name string) *v1alpha2.ProjectTemplate {
+		template := helmTemplate(name)
+		template.Spec.ResourcesTemplate = " \n"
+		return template
+	}
+
+	resp := v.Handle(ctx, updateRequest(t, helmTemplate("used"), blank("used")))
+	require.False(t, resp.Allowed)
+	assert.Contains(t, resp.Result.Message, "used in the 'proj' project")
+	assert.Contains(t, resp.Result.Message, "either way the objects the Helm template rendered are deleted", "the ways out prune as well")
+
+	rewritten := blank("used")
+	rewritten.Spec.PodSecurityStandard = v1alpha2.LiteralParam(v1alpha2.PodSecurityStandardBaseline)
+	resp = v.Handle(ctx, updateRequest(t, helmTemplate("used"), rewritten))
+	assert.True(t, resp.Allowed, resp.Result)
+
+	resp = v.Handle(ctx, updateRequest(t, helmTemplate("unused"), blank("unused")))
+	assert.True(t, resp.Allowed, resp.Result)
+
+	resp = v.Handle(ctx, updateRequest(t, blank("used"), blank("used")))
+	assert.True(t, resp.Allowed, "a template that had no Helm text loses nothing")
+}
+
+// TestHandle_TemplateUseBeforeTheLabel: the controller labels a project with its template after the
+// project is written, and the cache may not have the project yet. A project that names the template
+// in its spec, read from the API server, holds the template against emptying its resourcesTemplate
+// and against a delete, and so does one whose label still names it after a move.
+func TestHandle_TemplateUseBeforeTheLabel(t *testing.T) {
+	ctx := context.Background()
+	scheme := runtime.NewScheme()
+	require.NoError(t, v1alpha2.AddToScheme(scheme))
+	require.NoError(t, v1alpha3.AddToScheme(scheme))
+	require.NoError(t, corev1.AddToScheme(scheme))
+	created := &v1alpha3.Project{
+		ObjectMeta: metav1.ObjectMeta{Name: "just-created"},
+		Spec:       v1alpha3.ProjectSpec{ProjectTemplateName: "used"},
+	}
+	movedAway := &v1alpha3.Project{
+		ObjectMeta: metav1.ObjectMeta{Name: "moved-away", Labels: map[string]string{v1alpha3.ResourceLabelTemplate: "left"}},
+		Spec:       v1alpha3.ProjectSpec{ProjectTemplateName: "other"},
+	}
+	v := &validator{
+		client: fake.NewClientBuilder().WithScheme(scheme).Build(),
+		reader: fake.NewClientBuilder().WithScheme(scheme).WithObjects(created, movedAway).Build(),
+	}
+	blank := func(name string) *v1alpha2.ProjectTemplate {
+		template := helmTemplate(name)
+		template.Spec.ResourcesTemplate = ""
+		return template
+	}
+	deleteRequest := func(t *testing.T, template *v1alpha2.ProjectTemplate) admission.Request {
+		t.Helper()
+		old, err := json.Marshal(template)
+		require.NoError(t, err)
+		return admission.Request{AdmissionRequest: admissionv1.AdmissionRequest{Operation: admissionv1.Delete, OldObject: runtime.RawExtension{Raw: old}}}
+	}
+
+	for name, project := range map[string]string{"used": "just-created", "left": "moved-away"} {
+		resp := v.Handle(ctx, updateRequest(t, helmTemplate(name), blank(name)))
+		require.False(t, resp.Allowed, name)
+		assert.Contains(t, resp.Result.Message, "used in the '"+project+"' project")
+
+		resp = v.Handle(ctx, deleteRequest(t, helmTemplate(name)))
+		require.False(t, resp.Allowed, name)
+		assert.Contains(t, resp.Result.Message, "it is used in the '"+project+"' project")
+	}
+
+	resp := v.Handle(ctx, deleteRequest(t, helmTemplate("unused")))
+	assert.True(t, resp.Allowed, resp.Result)
+}
+
+// A request through v1alpha1 carries none of the fields only v1alpha2 has, and its oldObject is read
+// through v1alpha1 as well, so it shows none either. The webhook reads the stored template at
+// v1alpha2 and refuses the request when there is something it would erase.
+func TestHandle_V1alpha1Erasure(t *testing.T) {
+	ctx := context.Background()
+
+	structured := structuredTemplate("structured")
+	structured.Spec.Title = "Structured"
+	grants := helmTemplate("grants")
+	grants.Spec.ResourcesTemplate = ""
+	grants.Spec.Resources = []grantsv1alpha1.GrantResource{{ResourceName: "storageclasses"}}
+	grants.Spec.GrantPolicies = []string{"lib"}
+	v := newValidator(t, structured, grants, helmTemplate("helm"), libraryPolicy("lib"))
+
+	// what the API server hands the webhook for a request through v1alpha1: both objects as v1alpha1
+	// sees them, converted to v1alpha2
+	v1alpha1Request := func(t *testing.T, name string, changed func(*v1alpha2.ProjectTemplate)) admission.Request {
+		t.Helper()
+		stored := new(v1alpha2.ProjectTemplate)
+		require.NoError(t, v.reader.Get(ctx, client.ObjectKey{Name: name}, stored))
+		old := &v1alpha2.ProjectTemplate{ObjectMeta: *stored.ObjectMeta.DeepCopy()}
+		old.Spec.Description = stored.Spec.Description
+		old.Spec.ParametersSchema = stored.Spec.ParametersSchema
+		old.Spec.ResourcesTemplate = stored.Spec.ResourcesTemplate
+		updated := old.DeepCopy()
+		changed(updated)
+
+		req := updateRequest(t, old, updated)
+		req.RequestKind = &metav1.GroupVersionKind{Group: "deckhouse.io", Version: "v1alpha1", Kind: v1alpha2.ProjectTemplateKind}
+		return req
+	}
+	addLabel := func(template *v1alpha2.ProjectTemplate) {
+		template.Labels = map[string]string{"team": "platform"}
+	}
+
+	t.Run("a label through v1alpha1 on a template with structured fields is refused", func(t *testing.T) {
+		resp := v.Handle(ctx, v1alpha1Request(t, "structured", addLabel))
+		require.False(t, resp.Allowed)
+		assert.Contains(t, resp.Result.Message, "fields that deckhouse.io/v1alpha1 cannot describe: title, podSecurityStandard")
+	})
+
+	t.Run("a label through v1alpha1 on a template with grants only is refused", func(t *testing.T) {
+		resp := v.Handle(ctx, v1alpha1Request(t, "grants", addLabel))
+		require.False(t, resp.Allowed)
+		assert.Contains(t, resp.Result.Message, "cannot describe: resources, grantPolicies")
+	})
+
+	t.Run("a Helm template is changed through v1alpha1", func(t *testing.T) {
+		resp := v.Handle(ctx, v1alpha1Request(t, "helm", func(template *v1alpha2.ProjectTemplate) {
+			template.Spec.ResourcesTemplate += "---\napiVersion: v1\nkind: Secret\nmetadata:\n  name: s\n"
+		}))
+		assert.True(t, resp.Allowed, resp.Result)
+	})
+
+	t.Run("a template that changed since oldObject is refused for a retry", func(t *testing.T) {
+		req := v1alpha1Request(t, "helm", addLabel)
+		old := new(v1alpha2.ProjectTemplate)
+		require.NoError(t, json.Unmarshal(req.OldObject.Raw, old))
+		old.ResourceVersion = "1"
+		raw, err := json.Marshal(old)
+		require.NoError(t, err)
+		req.OldObject.Raw = raw
+
+		resp := v.Handle(ctx, req)
+		require.False(t, resp.Allowed)
+		assert.Contains(t, resp.Result.Message, "retry the request")
+		assert.EqualValues(t, http.StatusConflict, resp.Result.Code, "a conflict is what clients retry on")
+		assert.Equal(t, metav1.StatusReasonConflict, resp.Result.Reason)
+	})
+
+	t.Run("a request through v1alpha2 carries the structured fields and passes", func(t *testing.T) {
+		updated := structured.DeepCopy()
+		addLabel(updated)
+		req := updateRequest(t, structured.DeepCopy(), updated)
+		req.RequestKind = &metav1.GroupVersionKind{Group: "deckhouse.io", Version: "v1alpha2", Kind: v1alpha2.ProjectTemplateKind}
+		resp := v.Handle(ctx, req)
+		assert.True(t, resp.Allowed, resp.Result)
+	})
+
+	// there is no stored template to read yet, and nothing to erase
+	t.Run("a template is created through v1alpha1", func(t *testing.T) {
+		req := createRequest(t, helmTemplate("new"))
+		req.RequestKind = &metav1.GroupVersionKind{Group: "deckhouse.io", Version: "v1alpha1", Kind: v1alpha2.ProjectTemplateKind}
+		resp := v.Handle(ctx, req)
+		assert.True(t, resp.Allowed, resp.Result)
+	})
 }

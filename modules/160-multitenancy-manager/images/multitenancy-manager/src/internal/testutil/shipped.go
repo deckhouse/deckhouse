@@ -31,26 +31,33 @@ import (
 	"sigs.k8s.io/yaml"
 )
 
-// shippedTemplate is the module's templates/cluster-objects-controller/grantable-resources.yaml, found by
-// walking up from the test's working directory (its package directory), so the result does not depend
-// on where the calling test lives, nor on build flags such as -trimpath.
-func shippedTemplate(t *testing.T) string {
+// ModuleFile returns the path of a file of the module given relative to the module directory, such as
+// templates/cluster-objects-controller/grantable-resources.yaml, found by walking up from the test's
+// working directory (its package directory), so the result does not depend on where the calling test
+// lives, nor on build flags such as -trimpath.
+func ModuleFile(t *testing.T, name string) string {
 	t.Helper()
 	dir, err := os.Getwd()
 	if err != nil {
 		t.Fatal(err)
 	}
 	for {
-		path := filepath.Join(dir, "templates", "cluster-objects-controller", "grantable-resources.yaml")
+		path := filepath.Join(dir, filepath.FromSlash(name))
 		if _, err := os.Stat(path); err == nil {
 			return path
 		}
 		parent := filepath.Dir(dir)
 		if parent == dir {
-			t.Fatal("templates/cluster-objects-controller/grantable-resources.yaml not found above the working directory")
+			t.Fatalf("%s not found above the working directory", name)
 		}
 		dir = parent
 	}
+}
+
+// shippedTemplate is the module's templates/cluster-objects-controller/grantable-resources.yaml.
+func shippedTemplate(t *testing.T) string {
+	t.Helper()
+	return ModuleFile(t, "templates/cluster-objects-controller/grantable-resources.yaml")
 }
 
 // RenderShipped renders the grant objects the module ships with the real Helm engine -- a stub for the

@@ -1,0 +1,303 @@
+# Golden fixture of webhooks/conversion/projects, function v1alpha3_to_v1alpha2, for projects as the
+# controller writes them back. Each case is one ConversionReview. objects is request.objects as the
+# apiserver sends it, converted is the response.convertedObjects the hook has to answer with, in the
+# same order.
+#
+# A Helm resourcesTemplate of the v1alpha2 layout renders from the spec.parameters a v1alpha2 reader
+# gets, and the controller computes them in Go (validate.V1alpha2Parameters) rather than through the
+# conversion. Two tests hold the two to this file. conversion_projects_parameters_test.go runs the
+# conversion over every case with every jq engine, and the validate tests of the controller run the
+# Go copy over the spec of every object and compare it with the parameters the object converts to.
+#
+# Every spec is what storage holds once the controller has written the project back, so every quota
+# value is spelled as its canonical string, and the controller test checks that. The file has a
+# directory of its own, since every file of the projects directory is a conversion path of the hook.
+
+- name: administrators and a quota
+  objects:
+    - apiVersion: deckhouse.io/v1alpha3
+      kind: Project
+      metadata:
+        name: team
+      spec:
+        projectTemplateName: default
+        administrators:
+          - kind: User
+            name: alice@example.com
+          - kind: Group
+            name: team
+        quota:
+          requests.cpu: "2"
+          requests.memory: 4Gi
+          requests.storage: 10Gi
+          limits.cpu: "4"
+          limits.memory: 8Gi
+        parameters:
+          networkPolicy: Isolated
+  converted:
+    - apiVersion: deckhouse.io/v1alpha2
+      kind: Project
+      metadata:
+        name: team
+      spec:
+        projectTemplateName: default
+        parameters:
+          networkPolicy: Isolated
+          administrators:
+            - subject: User
+              name: alice@example.com
+            - subject: Group
+              name: team
+          resourceQuota:
+            requests:
+              cpu: "2"
+              memory: 4Gi
+              storage: 10Gi
+            limits:
+              cpu: "4"
+              memory: 8Gi
+
+- name: a fraction in its canonical form
+  objects:
+    - apiVersion: deckhouse.io/v1alpha3
+      kind: Project
+      metadata:
+        name: team
+      spec:
+        quota:
+          limits.cpu: 500m
+  converted:
+    - apiVersion: deckhouse.io/v1alpha2
+      kind: Project
+      metadata:
+        name: team
+      spec:
+        parameters:
+          resourceQuota:
+            limits:
+              cpu: 500m
+
+- name: a zero
+  objects:
+    - apiVersion: deckhouse.io/v1alpha3
+      kind: Project
+      metadata:
+        name: team
+      spec:
+        quota:
+          requests.cpu: "0"
+          limits.memory: "0"
+  converted:
+    - apiVersion: deckhouse.io/v1alpha2
+      kind: Project
+      metadata:
+        name: team
+      spec:
+        parameters:
+          resourceQuota:
+            requests:
+              cpu: "0"
+            limits:
+              memory: "0"
+
+- name: a resource name that contains a dot
+  objects:
+    - apiVersion: deckhouse.io/v1alpha3
+      kind: Project
+      metadata:
+        name: team
+      spec:
+        quota:
+          requests.nvidia.com/gpu: "2"
+  converted:
+    - apiVersion: deckhouse.io/v1alpha2
+      kind: Project
+      metadata:
+        name: team
+      spec:
+        parameters:
+          resourceQuota:
+            requests:
+              nvidia.com/gpu: "2"
+
+- name: keys with no nesting
+  objects:
+    - apiVersion: deckhouse.io/v1alpha3
+      kind: Project
+      metadata:
+        name: team
+      spec:
+        quota:
+          pods: "10"
+          count/deployments.apps: "5"
+          services.loadbalancers: "2"
+  converted:
+    - apiVersion: deckhouse.io/v1alpha2
+      kind: Project
+      metadata:
+        name: team
+      spec:
+        parameters:
+          resourceQuota:
+            pods: "10"
+            count/deployments.apps: "5"
+            services.loadbalancers: "2"
+
+- name: a bare requests key next to a nested one
+  objects:
+    - apiVersion: deckhouse.io/v1alpha3
+      kind: Project
+      metadata:
+        name: team
+      spec:
+        quota:
+          requests: "5"
+          requests.cpu: "1"
+  converted:
+    - apiVersion: deckhouse.io/v1alpha2
+      kind: Project
+      metadata:
+        name: team
+      spec:
+        parameters:
+          resourceQuota:
+            requests:
+              cpu: "1"
+
+- name: bare requests and limits keys
+  objects:
+    - apiVersion: deckhouse.io/v1alpha3
+      kind: Project
+      metadata:
+        name: team
+      spec:
+        quota:
+          requests: "5"
+          limits: "7"
+  converted:
+    - apiVersion: deckhouse.io/v1alpha2
+      kind: Project
+      metadata:
+        name: team
+      spec:
+        parameters:
+          resourceQuota:
+            requests: "5"
+            limits: "7"
+
+- name: standard fields over the parameters of the same name
+  objects:
+    - apiVersion: deckhouse.io/v1alpha3
+      kind: Project
+      metadata:
+        name: team
+      spec:
+        administrators:
+          - kind: User
+            name: alice@example.com
+        quota:
+          pods: "10"
+        parameters:
+          administrators:
+            - subject: User
+              name: bob@example.com
+          resourceQuota:
+            pods: 3
+  converted:
+    - apiVersion: deckhouse.io/v1alpha2
+      kind: Project
+      metadata:
+        name: team
+      spec:
+        parameters:
+          administrators:
+            - subject: User
+              name: alice@example.com
+          resourceQuota:
+            pods: "10"
+
+- name: parameters of the same name without standard fields
+  objects:
+    - apiVersion: deckhouse.io/v1alpha3
+      kind: Project
+      metadata:
+        name: team
+      spec:
+        parameters:
+          administrators:
+            - subject: User
+              name: bob@example.com
+          resourceQuota:
+            requests:
+              cpu: 1
+  converted:
+    - apiVersion: deckhouse.io/v1alpha2
+      kind: Project
+      metadata:
+        name: team
+      spec:
+        parameters:
+          administrators:
+            - subject: User
+              name: bob@example.com
+          resourceQuota:
+            requests:
+              cpu: 1
+
+- name: administrators without parameters
+  objects:
+    - apiVersion: deckhouse.io/v1alpha3
+      kind: Project
+      metadata:
+        name: team
+      spec:
+        administrators:
+          - kind: Group
+            name: team
+  converted:
+    - apiVersion: deckhouse.io/v1alpha2
+      kind: Project
+      metadata:
+        name: team
+      spec:
+        parameters:
+          administrators:
+            - subject: Group
+              name: team
+
+- name: no parameters and no standard fields
+  objects:
+    - apiVersion: deckhouse.io/v1alpha3
+      kind: Project
+      metadata:
+        name: team
+      spec:
+        projectTemplateName: default
+  converted:
+    - apiVersion: deckhouse.io/v1alpha2
+      kind: Project
+      metadata:
+        name: team
+      spec:
+        projectTemplateName: default
+
+- name: an administrator name with a line separator
+  objects:
+    - apiVersion: deckhouse.io/v1alpha3
+      kind: Project
+      metadata:
+        name: team
+      spec:
+        administrators:
+          - kind: User
+            name: "alice\u2028x"
+  converted:
+    - apiVersion: deckhouse.io/v1alpha2
+      kind: Project
+      metadata:
+        name: team
+      spec:
+        parameters:
+          administrators:
+            - subject: User
+              name: "alice\u2028x"

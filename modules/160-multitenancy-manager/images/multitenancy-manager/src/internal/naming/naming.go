@@ -85,7 +85,8 @@ const (
 )
 
 // TemplateLabelsAnnotation lists, as a JSON object, the labels a project template puts on the
-// namespaces of a project through namespaceMetadata.labels. The renderer writes it on the main
+// namespaces of a project: through namespaceMetadata.labels, or, for a Helm resourcesTemplate, on
+// the main namespace it renders. The renderer or the Helm post-renderer writes it on the main
 // namespace, always, empty when there are none; the ProjectNamespace controller copies those labels
 // to every additional namespace and writes the same annotation there as the record of what it set.
 const TemplateLabelsAnnotation = "projects.deckhouse.io/template-labels"

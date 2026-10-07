@@ -222,13 +222,15 @@ spec:
                           - User
                           - Group
                       name:
-                        description: Subject name. For User — kube username (`User.spec.email`). For Group — `Group.spec.name` (token name), not `metadata.name`.
+                        description: Subject name. For User — kube username (`User.spec.email`). For Group — `Group.spec.name` (token name), not `metadata.name`. The name cannot contain control characters or line breaks. An update that keeps such a name as it was is accepted with a warning.
                         type: string
                         minLength: 1
                         # The name ends up in a RoleBinding subject and, for a project rendered from
                         # a legacy resourcesTemplate, inside a manifest. A control character has no
                         # meaning in a subject name and a line break there would end the value it is
-                        # written into, so the whole class is refused at the door.
+                        # written into, so the whole class is refused at the door. The Project
+                        # webhook refuses the C1 controls and U+2028 and U+2029 as well, since YAML
+                        # also ends a value on U+0085, U+2028 and U+2029.
                         pattern: '^[^\x00-\x1f\x7f]+$'
                 quota:
                   description: |

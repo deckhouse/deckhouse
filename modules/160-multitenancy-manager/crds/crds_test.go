@@ -149,6 +149,40 @@ func TestCRDsPassAPIServerValidation(t *testing.T) {
 	}
 }
 
+// TestProjectTemplateVersions pins the versions of ProjectTemplate. v1alpha1 stays served, so the
+// clients that write their Helm templates at that version keep working, and deprecated, so each of
+// them gets a warning. v1alpha2 is stored and carries resourcesTemplate, so a template written as
+// v1alpha1 keeps its Helm text. Flipping one of these is caught here and not first in a cluster.
+func TestProjectTemplateVersions(t *testing.T) {
+	crd := loadCRD(t, "projecttemplate.yaml")
+
+	versions := make(map[string]apiextensionsv1.CustomResourceDefinitionVersion, len(crd.Spec.Versions))
+	for _, version := range crd.Spec.Versions {
+		versions[version.Name] = version
+	}
+	require.Len(t, versions, 2)
+
+	v1alpha1, ok := versions["v1alpha1"]
+	require.True(t, ok, "v1alpha1 is defined")
+	assert.True(t, v1alpha1.Served, "v1alpha1 is served")
+	assert.False(t, v1alpha1.Storage, "v1alpha1 is not stored")
+	assert.True(t, v1alpha1.Deprecated, "v1alpha1 is deprecated")
+	require.NotNil(t, v1alpha1.DeprecationWarning)
+	assert.NotEmpty(t, *v1alpha1.DeprecationWarning)
+
+	v1alpha2, ok := versions["v1alpha2"]
+	require.True(t, ok, "v1alpha2 is defined")
+	assert.True(t, v1alpha2.Served, "v1alpha2 is served")
+	assert.True(t, v1alpha2.Storage, "v1alpha2 is stored")
+	assert.False(t, v1alpha2.Deprecated, "v1alpha2 is not deprecated")
+
+	for _, version := range []apiextensionsv1.CustomResourceDefinitionVersion{v1alpha1, v1alpha2} {
+		require.NotNil(t, version.Schema, "version %s has a schema", version.Name)
+		resourcesTemplate := version.Schema.OpenAPIV3Schema.Properties["spec"].Properties["resourcesTemplate"]
+		assert.Equal(t, "string", resourcesTemplate.Type, "spec.resourcesTemplate of %s is a string", version.Name)
+	}
+}
+
 func structuralOf(t *testing.T, crd *apiextensionsv1.CustomResourceDefinition, version string) *structuralschema.Structural {
 	t.Helper()
 
