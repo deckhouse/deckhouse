@@ -23,10 +23,18 @@ error text is never used as a label value.
 
 ## 003-go-mod.patch
 
-This patch bumps `golang.org/x/crypto` to v0.52.0, `golang.org/x/net` to v0.55.0
-and `golang.org/x/sys` to v0.45.0 (pulling in `x/term` v0.43.0, `x/text` v0.37.0,
-`x/mod` v0.35.0 and `x/tools` v0.44.0 as transitive requirements) in `go.mod` and
-`go.sum` to remediate CVEs in these libraries.
+This patch bumps `golang.org/x/crypto` to v0.57.0, `golang.org/x/net` to v0.58.0,
+`golang.org/x/sys` to v0.48.0 and `google.golang.org/grpc` to v1.83.2 (pulling in
+`x/term` v0.46.0, `x/text` v0.42.0, `x/mod` v0.41.0 and `x/tools` v0.49.0 as
+transitive requirements) in `go.mod` and `go.sum` to remediate CVEs in these
+libraries.
+
+It also bumps the OpenTelemetry trace SDK and OTLP trace exporters
+(`go.opentelemetry.io/otel/sdk`, `go.opentelemetry.io/otel/exporters/otlp/otlptrace`,
+`.../otlptrace/otlptracegrpc`) to v1.45.0 to remediate CVE-2026-81870
+(GO-2026-6505, exporter configuration leaked into Info-level logs, affected range
+`[1.5.0, 1.45.0)`). `otel`, `otel/metric` and `otel/trace` follow to v1.45.0,
+`go.opentelemetry.io/proto/otlp` to v1.11.0.
 
 It also bumps `github.com/google/cel-go` to v0.29.0 to remediate GHSA-gcjh-h69q-9w9g
 (`ext.NativeTypes(ParseStructTag("json"))` exposes fields tagged `json:"-"`, affected
