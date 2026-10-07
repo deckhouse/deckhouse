@@ -624,8 +624,8 @@ func TestHandle_ResourcesTemplateWithStructuredFields(t *testing.T) {
 }
 
 // Emptying the resourcesTemplate of a template that projects use would leave each of them its
-// namespace alone, and Helm would delete what the text rendered. Setting structured fields in the
-// same request is let through, and so is a template nobody uses.
+// namespace alone and nobody managing what the text rendered. Setting structured fields in the same
+// request is let through, and so is a template nobody uses.
 func TestHandle_ResourcesTemplateRemoval(t *testing.T) {
 	ctx := context.Background()
 	project := &v1alpha3.Project{
@@ -641,7 +641,8 @@ func TestHandle_ResourcesTemplateRemoval(t *testing.T) {
 	resp := v.Handle(ctx, updateRequest(t, helmTemplate("used"), blank("used")))
 	require.False(t, resp.Allowed)
 	assert.Contains(t, resp.Result.Message, "used in the 'proj' project")
-	assert.Contains(t, resp.Result.Message, "either way the objects the Helm template rendered are deleted", "the ways out prune as well")
+	assert.Contains(t, resp.Result.Message, "leaves every object of the Helm template that the new render lacks in place",
+		"a switch keeps what it drops")
 
 	rewritten := blank("used")
 	rewritten.Spec.PodSecurityStandard = v1alpha2.LiteralParam(v1alpha2.PodSecurityStandardBaseline)

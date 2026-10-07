@@ -312,9 +312,11 @@ func setupRuntimeManager(logger logr.Logger) (ctrl.Manager, error) {
 		GracefulShutdownTimeout:       ptr.To(10 * time.Second),
 		HealthProbeBindAddress:        ":9090",
 		WebhookServer:                 webhook.NewServer(webhook.Options{CertDir: "/certs"}),
-		// The grant-violation series (d8_cluster_objects_grant_violated) and the project-name pairs
-		// (d8_multitenancy_project_named_like_additional_namespace) are served from here; the
-		// PodMonitor of the module scrapes this port.
+		// The grant-violation series (d8_cluster_objects_grant_violated), the project-name pairs
+		// (d8_multitenancy_project_named_like_additional_namespace), the handovers that have not
+		// finished (d8_multitenancy_project_handover_pending) and the objects left from Helm text
+		// releases (d8_multitenancy_project_kept_objects) are served from here; the PodMonitor of the
+		// module scrapes this port.
 		Metrics: metrics.Options{
 			// Loopback only: the series name projects and the objects inside them, so the endpoint is
 			// published through the kube-rbac-proxy sidecar, which authorizes every scrape.

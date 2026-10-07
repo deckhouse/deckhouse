@@ -27,8 +27,10 @@ package crds_test
 import (
 	"context"
 	"encoding/json"
+	"maps"
 	"os"
 	"path/filepath"
+	"slices"
 	"strings"
 	"testing"
 
@@ -39,6 +41,7 @@ import (
 	crdvalidation "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/validation"
 	structuralschema "k8s.io/apiextensions-apiserver/pkg/apiserver/schema"
 	structuralcel "k8s.io/apiextensions-apiserver/pkg/apiserver/schema/cel"
+	"k8s.io/apiextensions-apiserver/pkg/apiserver/schema/pruning"
 	"k8s.io/apimachinery/pkg/util/validation/field"
 	"k8s.io/apimachinery/pkg/util/yaml"
 	celconfig "k8s.io/apiserver/pkg/apis/cel"
@@ -181,6 +184,47 @@ func TestProjectTemplateVersions(t *testing.T) {
 		resourcesTemplate := version.Schema.OpenAPIV3Schema.Properties["spec"].Properties["resourcesTemplate"]
 		assert.Equal(t, "string", resourcesTemplate.Type, "spec.resourcesTemplate of %s is a string", version.Name)
 	}
+}
+
+// TestProjectStatusSurvivesAWriteThroughV1alpha2: a write of a Project through v1alpha2, as Commander,
+// a GitOps repository or the console makes it, keeps the stored status as v1alpha2 reads it, and the
+// API server prunes from it what v1alpha2 does not declare. The status the controller keeps across
+// reconciles has to survive that, or a project would lose the lists of the objects the controller
+// deletes or takes back later. Only the fields the controller rebuilds in every reconcile, or that
+// the conversion carries in another form, may be missing from v1alpha2.
+func TestProjectStatusSurvivesAWriteThroughV1alpha2(t *testing.T) {
+	crd := loadCRD(t, "projects.yaml")
+	v1alpha2 := structuralOf(t, crd, "v1alpha2").Properties["status"]
+	v1alpha3 := structuralOf(t, crd, "v1alpha3").Properties["status"]
+
+	rebuilt := map[string]string{
+		"namespaces": "the conversion turns the names of v1alpha2 into the objects of v1alpha3",
+		"usage":      "the controller counts the usage of the quota in every reconcile",
+	}
+	declared := slices.Sorted(maps.Keys(v1alpha2.Properties))
+	for name := range v1alpha3.Properties {
+		if _, ok := rebuilt[name]; ok {
+			continue
+		}
+		assert.Contains(t, declared, name, "status.%s of v1alpha3 is declared in v1alpha2 too", name)
+	}
+
+	object := func(kind, name string) map[string]any {
+		return map[string]any{"apiVersion": "v1", "kind": kind, "namespace": "proj", "name": name}
+	}
+	status := map[string]any{
+		"keptObjects": []any{object("LimitRange", "limits")},
+	}
+	project := map[string]any{
+		"apiVersion": "deckhouse.io/v1alpha2",
+		"kind":       "Project",
+		"metadata":   map[string]any{"name": "proj"},
+		"status":     status,
+	}
+	full := structuralOf(t, crd, "v1alpha2")
+	pruned := pruning.PruneWithOptions(project, full, true, structuralschema.UnknownFieldPathOptions{TrackUnknownFieldPaths: true})
+	assert.Empty(t, pruned, "v1alpha2 prunes nothing of the status the controller keeps")
+	assert.Equal(t, []any{object("LimitRange", "limits")}, status["keptObjects"])
 }
 
 func structuralOf(t *testing.T, crd *apiextensionsv1.CustomResourceDefinition, version string) *structuralschema.Structural {

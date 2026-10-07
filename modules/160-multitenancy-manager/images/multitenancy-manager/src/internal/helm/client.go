@@ -166,8 +166,9 @@ type ReleaseOutcome struct {
 }
 
 // Upgrade renders a legacy resourcesTemplate (helm-string) template and installs/upgrades the project
-// release from it.
-func (c *Client) Upgrade(ctx context.Context, project *v1alpha3.Project, template *v1alpha1.ProjectTemplate) (ReleaseOutcome, error) {
+// release from it. beforeUpgrade, if given, runs where the upgrade is about to replace a deployed
+// revision (see release).
+func (c *Client) Upgrade(ctx context.Context, project *v1alpha3.Project, template *v1alpha1.ProjectTemplate, beforeUpgrade BeforeUpgrade) (ReleaseOutcome, error) {
 	values := buildValues(project, template, templateParameters(project, template))
 
 	// Repeated here rather than left to admission: the release is applied with cluster-admin, and a
@@ -179,7 +180,13 @@ func (c *Client) Upgrade(ctx context.Context, project *v1alpha3.Project, templat
 		return c.ensureParametersStayValues(project, template)
 	}
 
-	return c.release(ctx, project, buildChart(c.templates, project.Name), values, helmTextHash(c.templates, values), "", beforeApply)
+	return c.release(ctx, project, releaseSource{
+		chart:         buildChart(c.templates, project.Name),
+		values:        values,
+		hash:          helmTextHash(c.templates, values),
+		beforeApply:   beforeApply,
+		beforeUpgrade: beforeUpgrade,
+	})
 }
 
 // UpgradeManifests installs/upgrades the project release from manifests rendered natively from a
@@ -187,22 +194,42 @@ func (c *Client) Upgrade(ctx context.Context, project *v1alpha3.Project, templat
 // objects are supplied to the post-renderer, so no user data passes through the Helm template engine
 // while Helm still drives the release lifecycle (install/upgrade/prune/history). The hash is taken
 // over the rendered manifests so a structural or parameter change re-applies the release.
-func (c *Client) UpgradeManifests(ctx context.Context, project *v1alpha3.Project, manifests string) (ReleaseOutcome, error) {
+// beforeUpgrade, if given, runs where the upgrade is about to replace a deployed revision (see
+// release).
+func (c *Client) UpgradeManifests(ctx context.Context, project *v1alpha3.Project, manifests string, beforeUpgrade BeforeUpgrade) (ReleaseOutcome, error) {
 	// No injection check on this path: the parameters never reach a template engine here -- the
 	// objects are built from the schema and handed to the post-renderer as they are.
-	return c.release(ctx, project, buildEmptyChart(project.Name), map[string]any{}, hashString(manifests), manifests, nil)
+	return c.release(ctx, project, releaseSource{
+		chart:         buildEmptyChart(project.Name),
+		values:        map[string]any{},
+		hash:          hashString(manifests),
+		manifests:     manifests,
+		beforeUpgrade: beforeUpgrade,
+	})
+}
+
+// releaseSource is what a release is rendered from and what runs before it is applied.
+type releaseSource struct {
+	chart  *chart.Chart
+	values map[string]any
+	hash   string
+	// manifests is empty for the legacy helm-string path and set to the natively rendered objects
+	// for the schema-based path.
+	manifests string
+	// beforeApply, if given, runs only where a release is about to be applied -- not on a reconcile
+	// that finds nothing to do. A check that refuses a project belongs there: an unchanged release
+	// applies nothing, so running it anyway could only break a project that already reconciled.
+	beforeApply func() error
+	// beforeUpgrade, if given, runs after beforeApply where an upgrade is about to replace a
+	// deployed revision, with what the upgrade does to it.
+	beforeUpgrade BeforeUpgrade
 }
 
 // release runs the shared install/upgrade machinery: discovery, history lookup, up-to-date short
-// circuit, pending-release rollback and the post-renderer. manifestsOverride is empty for the legacy
-// helm-string path and set to the natively rendered objects for the schema-based path. On an
-// up-to-date release it short-circuits WITHOUT post-rendering and returns Applied=false, so the caller
-// must analyze the manifests to recover RoleRefs.
-//
-// beforeApply, if given, runs only where a release is about to be applied -- not on a reconcile that
-// finds nothing to do. A check that refuses a project belongs there: an unchanged release applies
-// nothing, so running it anyway could only break a project that already reconciled.
-func (c *Client) release(ctx context.Context, project *v1alpha3.Project, ch *chart.Chart, values map[string]any, hash, manifestsOverride string, beforeApply func() error) (ReleaseOutcome, error) {
+// circuit, pending-release rollback and the post-renderer. On an up-to-date release it short-circuits
+// WITHOUT post-rendering and returns Applied=false, so the caller must analyze the manifests to
+// recover RoleRefs.
+func (c *Client) release(ctx context.Context, project *v1alpha3.Project, source releaseSource) (ReleaseOutcome, error) {
 	if c.conf == nil {
 		return ReleaseOutcome{}, errRenderOnly
 	}
@@ -225,23 +252,23 @@ func (c *Client) release(ctx context.Context, project *v1alpha3.Project, ch *cha
 			isFirstInstall = true
 			c.logger.Info("the release not found, install it", "release", rel, "namespace", project.Name)
 
-			if beforeApply != nil {
-				if err = beforeApply(); err != nil {
+			if source.beforeApply != nil {
+				if err = source.beforeApply(); err != nil {
 					return ReleaseOutcome{}, err
 				}
 			}
 
 			post := newPostRenderer(project, versions, c.logger, isFirstInstall)
-			post.manifests = manifestsOverride
+			post.manifests = source.manifests
 			install := action.NewInstall(c.conf)
 			install.ReleaseName = rel
 			install.Timeout = c.opts.Timeout
 			install.UseReleaseName = true
 			install.Labels = map[string]string{
-				v1alpha3.ReleaseLabelHashsum: hash,
+				v1alpha3.ReleaseLabelHashsum: source.hash,
 			}
 			install.PostRenderer = post
-			if _, err = install.RunWithContext(ctx, ch, values); err != nil {
+			if _, err = install.RunWithContext(ctx, source.chart, source.values); err != nil {
 				return ReleaseOutcome{}, fmt.Errorf("install the release: %w", err)
 			}
 			c.logger.Info("the release installed", "release", rel, "namespace", project.Name)
@@ -252,41 +279,98 @@ func (c *Client) release(ctx context.Context, project *v1alpha3.Project, ch *cha
 
 	releaseutil.Reverse(releases, releaseutil.SortByRevision)
 	if releaseHash, ok := releases[0].Labels[v1alpha3.ReleaseLabelHashsum]; ok {
-		if releaseHash == hash && releases[0].Info.Status == release.StatusDeployed {
+		if releaseHash == source.hash && releases[0].Info.Status == release.StatusDeployed {
 			c.logger.Info("the release is up to date", "release", rel, "namespace", project.Name)
 			return ReleaseOutcome{Applied: false}, nil
 		}
 	}
 
-	if beforeApply != nil {
-		if err = beforeApply(); err != nil {
+	if source.beforeApply != nil {
+		if err = source.beforeApply(); err != nil {
 			return ReleaseOutcome{}, err
 		}
 	}
 
+	// A pending revision is rolled back before beforeUpgrade runs, and the history is read again, so
+	// beforeUpgrade sees the revision the upgrade replaces: the rollback deploys the latest revision
+	// that is not pending, which may be a failed one newer than the deployed one, and a rollback
+	// re-adds what that revision holds. Helm adopts a live object only on an upgrade, so the rollback
+	// of a pending switch fails while the cluster holds an object the switch kept or left: the failed
+	// rollback is recorded as a failed revision, and the next reconcile upgrades from the deployed one.
 	if releases[0].Info.Status.IsPending() {
 		if err = c.rollbackLatestRelease(releases); err != nil {
 			return ReleaseOutcome{}, fmt.Errorf("rollback latest release: %w", err)
 		}
+		if releases, err = c.history(rel); err != nil {
+			return ReleaseOutcome{}, err
+		}
+	}
+
+	if deployed := deployedRevision(releases); source.beforeUpgrade != nil && deployed != nil {
+		change, err := c.releaseChange(project, deployed, source.chart, source.values, source.manifests, versions)
+		if err != nil {
+			return ReleaseOutcome{}, fmt.Errorf("read what the upgrade changes: %w", err)
+		}
+		if err = source.beforeUpgrade(ctx, change); err != nil {
+			return ReleaseOutcome{}, err
+		}
 	}
 
 	post := newPostRenderer(project, versions, c.logger, isFirstInstall)
-	post.manifests = manifestsOverride
+	post.manifests = source.manifests
 	upgrade := action.NewUpgrade(c.conf)
 	upgrade.Install = true
 	upgrade.MaxHistory = int(c.opts.HistoryMax)
 	upgrade.Timeout = c.opts.Timeout
 	upgrade.Labels = map[string]string{
-		v1alpha3.ReleaseLabelHashsum: hash,
+		v1alpha3.ReleaseLabelHashsum: source.hash,
 	}
 	upgrade.PostRenderer = post
 
-	if _, err = upgrade.RunWithContext(ctx, rel, ch, values); err != nil {
+	if _, err = upgrade.RunWithContext(ctx, rel, source.chart, source.values); err != nil {
 		return ReleaseOutcome{}, fmt.Errorf("upgrade the release: %w", err)
 	}
 
 	c.logger.Info("the release upgraded", "release", rel, "namespace", project.Name)
 	return ReleaseOutcome{RoleRefs: post.referencedRoles, Applied: true}, nil
+}
+
+// CurrentRelease reads the deployed revision of the release of the project, the one the next
+// upgrade replaces (see deployedRevision), or nil when there is none. The Helm history API accepts no
+// context, so ctx is honoured by not starting a read that is already cancelled; the read itself is a
+// single, bounded API call.
+func (c *Client) CurrentRelease(ctx context.Context, projectName string) (*ProjectRelease, error) {
+	if c.conf == nil {
+		return nil, errRenderOnly
+	}
+
+	rel := ReleaseName(projectName)
+	if err := ctx.Err(); err != nil {
+		return nil, fmt.Errorf("retrieve history for the '%s' release: %w", rel, err)
+	}
+	releases, err := c.history(rel)
+	if err != nil {
+		return nil, err
+	}
+	deployed := deployedRevision(releases)
+	if deployed == nil {
+		return nil, nil
+	}
+	return newProjectRelease(deployed)
+}
+
+// history reads the revisions of the release newest first, none when there is no release. Like
+// action.History, it accepts no context; the read is a single, bounded API call.
+func (c *Client) history(rel string) ([]*release.Release, error) {
+	releases, err := action.NewHistory(c.conf).Run(rel)
+	if err != nil {
+		if errors.Is(err, driver.ErrReleaseNotFound) {
+			return nil, nil
+		}
+		return nil, fmt.Errorf("retrieve history for the '%s' release: %w", rel, err)
+	}
+	releaseutil.Reverse(releases, releaseutil.SortByRevision)
+	return releases, nil
 }
 
 // discoverAPI returns api versions, they will be used in the post renderer. The discovery client API
@@ -366,7 +450,7 @@ func buildEmptyChart(releaseName string) *chart.Chart {
 		},
 		Templates: []*chart.File{
 			{
-				Name: "templates/manifests.yaml",
+				Name: nativeChartTemplate,
 				Data: []byte("# rendered natively by the controller; see internal/render\n"),
 			},
 		},
@@ -540,11 +624,15 @@ func (c *Client) ValidateRender(project *v1alpha3.Project, template *v1alpha1.Pr
 // renderTemplate renders a legacy resourcesTemplate template from parameters (see buildValues) without
 // touching the cluster.
 func (c *Client) renderTemplate(project *v1alpha3.Project, template *v1alpha1.ProjectTemplate, parameters map[string]any) (string, error) {
-	ch := buildChart(c.templates, project.Name)
+	return renderChart(buildChart(c.templates, project.Name), buildValues(project, template, parameters), project.Name)
+}
 
-	values, err := chartutil.ToRenderValues(ch, buildValues(project, template, parameters), chartutil.ReleaseOptions{
-		Name:      ReleaseName(project.Name),
-		Namespace: project.Name,
+// renderChart renders the chart of a project release with the values, the way the upgrade renders it
+// before the post-renderer.
+func renderChart(ch *chart.Chart, chartValues map[string]any, projectName string) (string, error) {
+	values, err := chartutil.ToRenderValues(ch, chartValues, chartutil.ReleaseOptions{
+		Name:      ReleaseName(projectName),
+		Namespace: projectName,
 	}, nil)
 	if err != nil {
 		return "", fmt.Errorf("render values: %w", err)

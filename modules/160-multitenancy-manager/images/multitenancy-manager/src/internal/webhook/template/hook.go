@@ -246,11 +246,14 @@ func (v *validator) v1alpha1Erasure(ctx context.Context, req admission.Request, 
 }
 
 // resourcesTemplateRemoval refuses an update that empties the resourcesTemplate of a template that
-// projects use and sets no field that renders objects in its place. Every project of the template
-// would then render its namespace alone, and Helm would delete every object the text rendered. An
-// update that rewrites the template with structured fields in the same request is let through, and
-// so is one of a template no project uses. Such a rewrite, like moving the projects to another
-// template, still deletes every object of the text that the new render lacks, which the refusal says.
+// projects use and sets no field that renders objects in its place, such as a write-back by a client
+// that does not know the field. Every project of the template would then switch to a render of
+// little more than its namespace, and the project controller would leave every other object of the
+// text in place with nobody managing it (manager/project/transition.go). An update that rewrites the
+// template with structured fields in the same request is let through, and so is one of a template no
+// project uses. Such a rewrite, like moving the projects to a structured template, leaves in place
+// every object of the text that the new render lacks, except the rules and quotas the standard fields
+// replace, which the refusal says.
 func (v *validator) resourcesTemplateRemoval(ctx context.Context, req admission.Request, template *v1alpha2.ProjectTemplate) admission.Response {
 	if req.Operation != admissionv1.Update || template.Spec.HasResourcesTemplate() || len(template.Spec.ObjectFields()) > 0 {
 		return admission.Allowed("")
@@ -274,9 +277,11 @@ func (v *validator) resourcesTemplateRemoval(ctx context.Context, req admission.
 
 	return admission.Denied(fmt.Sprintf(
 		"the '%s' project template is used in the '%s' project, and without resourcesTemplate it sets no field that renders objects, "+
-			"so its projects would keep only their namespaces and lose every object the Helm template rendered; "+
+			"so its projects would no longer manage the objects the Helm template rendered; "+
 			"set the structured fields in the same request or move the projects to another template first, "+
-			"and either way the objects the Helm template rendered are deleted except the ones the new render has under the same kind and name",
+			"and a switch to structured fields leaves every object of the Helm template that the new render lacks in place "+
+			"and lists it in status.keptObjects of the project, except the AuthorizationRule and ResourceQuota objects "+
+			"that the standard fields of the project replace",
 		template.Name, user))
 }
 

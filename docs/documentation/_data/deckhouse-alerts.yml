@@ -6036,6 +6036,109 @@ alerts:
         Pods of several revisions of the multitenancy-manager controller have run side by side for more than 15 minutes.
       severity: "6"
       markupFormat: markdown
+    - name: MultitenancyManagerProjectHandoverStuck
+      sourceFile: modules/160-multitenancy-manager/monitoring/prometheus-rules/project-handover.yaml
+      moduleUrl: 160-multitenancy-manager
+      module: multitenancy-manager
+      edition: ce
+      description: |-
+        An upgrade of the release of project `{{ $labels.project }}` dropped AuthorizationRule or ResourceQuota objects that the Helm text of its template had rendered for the administrators and the quota of the project. These are the AuthorizationRule objects with the `Admin` access level of the administrators and a quota such as `all-pods` whose every limit `.spec.quota` sets. That happens when a template switches from `resourcesTemplate` to structured fields, when a project moves to such a template, or when the text no longer renders these objects. The controller kept them through the upgrade, so that the administrators never lost access and the namespace never lost its quota, and deletes them once the standard fields of the project replace them. The handover began more than 30 minutes ago and has not finished.
+
+        Until it does, the kept AuthorizationRule objects keep granting the `Admin` access level, the `user-authz:admin` role, next to the `d8:project:admin` role of the `d8-administrators` ProjectRoleBinding. The kept quotas keep applying next to the `d8-project-quota` ResourceQuota, and the tighter of them wins.
+
+        The kept objects are deleted by a reconcile of the project that succeeds once all of the following hold, and not earlier than 2 minutes after `d8-administrators` became `Ready` and after the handover began:
+
+        - the `d8-administrators` ProjectRoleBinding names the administrators from `.spec.administrators` and is `Ready` for its current generation, when a kept AuthorizationRule names one of them;
+        - the `d8:project:admin` ClusterRole has its aggregated rules, when a kept AuthorizationRule names one of the administrators;
+        - the `d8-project-quota` ResourceQuota has the limits from `.spec.quota` and is calculated, that is, its `status.hard` matches its `spec.hard`, when a kept quota has limits.
+
+        A kept AuthorizationRule that names nobody from `.spec.administrators` any more is deleted at once, and a subject removed from `.spec.administrators` is removed at once from a kept AuthorizationRule that names other administrators too. A reconcile that cannot find the template, validate the project against it, upgrade the release or apply the standard fields stops before the deletion, and the kept objects stay. A template that grants a role forbidden in projects puts the project in the `Error` state too, but it does not stop the deletion.
+
+        The `HandoverPending` condition of the project says what the controller waits for.
+
+        Steps to troubleshoot:
+
+        1. Read what the controller waits for, and the state and the other conditions of the project:
+
+           ```bash
+           d8 k get project {{ $labels.project }} -o jsonpath='{.status.state}{"\n"}{range .status.conditions[*]}{.type}={.status}: {.message}{"\n"}{end}'
+           ```
+
+        1. Check the administrators binding. Its `status.observedGeneration` must match `metadata.generation`, and its `Ready` condition must be `True`:
+
+           ```bash
+           d8 k -n {{ $labels.project }} get projectrolebinding d8-administrators -o yaml
+           ```
+
+           If the binding lags behind, the controller could not create its RoleBinding in some namespace of the project. The logs of the controller name the namespace and the error:
+
+           ```bash
+           d8 k -n d8-multitenancy-manager logs -l app=multitenancy-manager -c multitenancy-manager --tail=-1 --prefix | grep d8-administrators
+           ```
+
+        1. Check that the `d8:project:admin` ClusterRole has rules. The aggregation controller of kube-controller-manager fills them:
+
+           ```bash
+           d8 k get clusterrole d8:project:admin -o jsonpath='{.rules}'
+           ```
+
+        1. Check the project quota and the events in the namespace of the project:
+
+           ```bash
+           d8 k -n {{ $labels.project }} get resourcequota d8-project-quota -o yaml
+           d8 k -n {{ $labels.project }} get events --sort-by=.lastTimestamp
+           ```
+
+           A quota whose `status.hard` stays empty is not processed by the resource quota controller of kube-controller-manager.
+
+        1. Fix what the checks show, for example a RoleBinding that an admission policy refuses in one of the namespaces of the project, a kube-controller-manager that does not process the quota, or the condition that stops the reconcile of the project. The controller checks again whenever `d8-administrators` or `d8-project-quota` changes, and at least every minute, and deletes the kept objects once the conditions hold.
+      summary: |
+        Project {{ $labels.project }} still keeps the AuthorizationRule and ResourceQuota objects its standard fields replace.
+      severity: "6"
+      markupFormat: markdown
+    - name: MultitenancyManagerProjectKeepsHelmTemplateObjects
+      sourceFile: modules/160-multitenancy-manager/monitoring/prometheus-rules/project-handover.yaml
+      moduleUrl: 160-multitenancy-manager
+      module: multitenancy-manager
+      edition: ce
+      description: |-
+        The release of project `{{ $labels.project }}` no longer holds {{ $value }} objects that the Helm text of a `resourcesTemplate` had rendered, because the project switched to structured fields, or because `.spec.quota` stopped covering a quota kept for a handover. Examples are AuthorizationRule or RoleBinding objects, quotas, network policies, workloads or their volumes. Instead of deleting them, the controller left them in place:
+
+        - They keep working as before. The rules and the bindings keep granting access, the quotas keep applying, and the workloads keep running.
+        - The project no longer manages them. A change of the template or of the project does not change them. When the project is deleted, the ones in its namespaces go with the namespaces, and the controller deletes the cluster-scoped ones that still carry the label.
+        - They carry the `projects.deckhouse.io/kept-from-helm-template: "true"` label and the `helm.sh/resource-policy: keep` annotation, and they have lost the `heritage: multitenancy-manager` label. While they carry the label, only a requester who may make the same change to objects of their kind across the cluster may change or delete them, so the users of the project may not.
+
+        The project lists them in `.status.keptObjects` until each of them is deleted, loses the label, or is rendered by the template again. Decide for each object:
+
+        - If it is still needed, describe it in the template or in the project, for example with a ProjectRoleBinding in place of an AuthorizationRule or a RoleBinding, or with a limit in `.spec.quota`, and then delete the object. Or remove the label to hand it over to the project, whose users may then change and delete it.
+        - If it is not needed, delete it. An access it grants ends only when it is deleted.
+        - If the template renders an object of the same kind and name again, the project release takes it over. The controller then removes the label, puts the `heritage: multitenancy-manager` label back and removes the `helm.sh/resource-policy: keep` annotation, unless the template sets it itself.
+
+        Steps:
+
+        1. List the objects:
+
+           ```bash
+           d8 k get project {{ $labels.project }} -o jsonpath='{range .status.keptObjects[*]}{.kind} {.namespace}/{.name}{"\n"}{end}'
+           ```
+
+        1. Keep an object as your own:
+
+           ```bash
+           d8 k -n <NAMESPACE> label <KIND> <NAME> projects.deckhouse.io/kept-from-helm-template-
+           ```
+
+        1. Delete an object:
+
+           ```bash
+           d8 k -n <NAMESPACE> delete <KIND> <NAME>
+           ```
+
+        The controller looks at the list every 10 minutes, and at a reconcile of the project at most once a minute.
+      summary: |
+        Project {{ $labels.project }} has {{ $value }} objects left from the Helm text of its template.
+      severity: "7"
+      markupFormat: markdown
     - name: MultitenancyManagerProjectNamedLikeAdditionalNamespace
       sourceFile: modules/160-multitenancy-manager/monitoring/prometheus-rules/project-names.yaml
       moduleUrl: 160-multitenancy-manager

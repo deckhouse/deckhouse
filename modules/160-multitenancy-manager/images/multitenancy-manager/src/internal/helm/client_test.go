@@ -816,7 +816,7 @@ func TestNewRenderOnly(t *testing.T) {
 	require.NoError(t, err)
 	assert.Contains(t, manifests, "kind: Namespace")
 
-	_, err = client.UpgradeManifests(context.Background(), project, manifests)
+	_, err = client.UpgradeManifests(context.Background(), project, manifests, nil)
 	require.ErrorIs(t, err, errRenderOnly)
 	require.ErrorIs(t, client.Delete(context.Background(), project.Name), errRenderOnly)
 

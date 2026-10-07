@@ -119,6 +119,59 @@ spec:
       matchLabels:
         heritage: multitenancy-manager
 ---
+# The objects a switch of a project from a Helm text leaves in place (status.keptObjects) lose the
+# heritage label, so the policy above no longer holds them, and the project no longer manages them.
+# They may still be what keeps the project in bounds, such as a NetworkPolicy, a LimitRange or a
+# quota the text rendered, so the users of the project must not be the ones to change them. While an
+# object carries the kept-from-helm-template label, only a requester who may make the same change to
+# its kind across the cluster may change or delete it. A cluster administrator may, a holder of a role
+# in the project namespaces may not. Removing the label is such a change too, and it hands the object
+# over to the project. CREATE is matched so that nobody else puts the label on an object either.
+apiVersion: {{ include "helm_lib_get_api_version_by_kind" (list . "ValidatingAdmissionPolicy") }}
+kind: ValidatingAdmissionPolicy
+metadata:
+  name: {{ $policyName }}-kept-objects
+  {{- include "helm_lib_module_labels" (list . (dict "app" "multitenancy-manager") ) | nindent 2 }}
+spec:
+  failurePolicy: Fail
+  matchConstraints:
+    resourceRules:
+      - apiGroups:   ["*"]
+        apiVersions: ["*"]
+        operations:  ["CREATE", "UPDATE", "DELETE"]
+        resources:   ["*"]
+        scope: "*"
+  # The cluster components of the policy above, and the controller, which leaves the objects, takes
+  # them back and deletes the cluster-scoped ones with the project.
+  matchConditions:
+    - name: 'exclude-groups'
+      expression: '!(["system:nodes", "system:serviceaccounts:kube-system", "system:serviceaccounts:d8-system"].exists(e, (e in request.userInfo.groups)))'
+    - name: 'exclude-users'
+      expression: '!(["system:serviceaccount:d8-multitenancy-manager:multitenancy-manager", "system:sudouser", "system:apiserver", "system:kube-controller-manager", "system:kube-scheduler", "system:volume-scheduler", "dhctl", "observability"].exists(e, (e == request.userInfo.username)))'
+  variables:
+    # A patch reaches admission as UPDATE, and the API server authorizes it as patch. A requester
+    # allowed to patch but not to update across the cluster is refused here, on the strict side.
+    - name: verb
+      expression: 'request.operation == "CREATE" ? "create" : (request.operation == "DELETE" ? "delete" : "update")'
+  validations:
+    # Without a namespace the check asks about every namespace, which a RoleBinding does not grant.
+    - expression: 'authorizer.group(request.resource.group).resource(request.resource.resource).check(variables.verb).allowed()'
+      reason: Forbidden
+      messageExpression: '''This object was left in place when its project moved off a Helm text. Only a requester who may '' + variables.verb + '' '' + request.resource.resource + '' across the cluster may change it, and a cluster administrator hands it over to the project by removing the projects.deckhouse.io/kept-from-helm-template label.'''
+---
+apiVersion: {{ include "helm_lib_get_api_version_by_kind" (list . "ValidatingAdmissionPolicyBinding") }}
+kind: ValidatingAdmissionPolicyBinding
+metadata:
+  name: {{ $policyName }}-kept-objects
+  {{- include "helm_lib_module_labels" (list . (dict "app" "multitenancy-manager") ) | nindent 2 }}
+spec:
+  policyName: {{ $policyName }}-kept-objects
+  validationActions: [Deny, Audit]
+  matchResources:
+    objectSelector:
+      matchLabels:
+        projects.deckhouse.io/kept-from-helm-template: "true"
+---
 # The projects.deckhouse.io/project label on a Namespace is the ownership mark the controller reads
 # to decide whose namespace it is. Only the controller (and Deckhouse itself, which installs the
 # module) may put it there or change it: a namespace created by hand with the label of a project

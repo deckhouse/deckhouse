@@ -19,13 +19,18 @@ package project
 import (
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"helm.sh/helm/v3/pkg/releaseutil"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"sigs.k8s.io/yaml"
 
 	"controller/apis/deckhouse.io/v1alpha2"
+	"controller/apis/deckhouse.io/v1alpha3"
+	"controller/internal/helm"
 )
 
 // The built-in templates are v1alpha2 documents wiring every per-project knob to a fromParam leaf while
@@ -81,6 +86,70 @@ func TestBuiltinTemplatesAreStructured(t *testing.T) {
 			required, ok := props["requiredRequests"].(map[string]any)
 			require.True(t, ok)
 			assert.Equal(t, true, required["default"])
+		})
+	}
+}
+
+// helmTemplateFixtures holds, per built-in template, a project as its former Helm text rendered it
+// (project.yaml), what that text rendered (resources.yaml) and the project the conversion makes of it
+// (converted.yaml). TestNativeRenderSelectsWhatTheHelmTemplateSelected in the helm package shows that
+// the structured built-in renders everything else under the same names.
+const helmTemplateFixtures = "../../helm/testdata/helm_template"
+
+// When a built-in template becomes structured, the upgrade of a release its former Helm text rendered
+// drops the AuthorizationRule of every administrator and the all-pods quota, and the standard fields
+// of the converted project replace exactly these: the handover keeps them until d8-administrators and
+// d8-project-quota work. Nothing else of the render is replaced.
+func TestBuiltinHelmTextsAreHandedOver(t *testing.T) {
+	for _, template := range []string{"default", "secure", "secure-with-dedicated-nodes"} {
+		t.Run(template, func(t *testing.T) {
+			base := filepath.Join(helmTemplateFixtures, template)
+			raw, err := os.ReadFile(filepath.Join(base, "converted.yaml"))
+			require.NoError(t, err)
+			project := new(v1alpha3.Project)
+			require.NoError(t, yaml.Unmarshal(raw, project))
+			raw, err = os.ReadFile(filepath.Join(base, "project.yaml"))
+			require.NoError(t, err)
+			rendered := new(struct {
+				Spec struct {
+					Parameters map[string]any `json:"parameters"`
+				} `json:"spec"`
+			})
+			require.NoError(t, yaml.Unmarshal(raw, rendered))
+			deployed := &helm.ProjectRelease{HelmText: true, Administrators: helm.ParameterAdministrators(rendered.Spec.Parameters)}
+			require.NotEmpty(t, deployed.Administrators)
+			administrators := handoverAdministrators(project, deployed)
+
+			raw, err = os.ReadFile(filepath.Join(base, "resources.yaml"))
+			require.NoError(t, err)
+			replaced := map[string]bool{}
+			for _, doc := range releaseutil.SplitManifests(string(raw)) {
+				live := new(unstructured.Unstructured)
+				require.NoError(t, yaml.Unmarshal([]byte(doc), &live.Object))
+				if live.GetKind() == "" {
+					continue
+				}
+				// Helm records the release on every object it applies.
+				annotations := live.GetAnnotations()
+				if annotations == nil {
+					annotations = map[string]string{}
+				}
+				annotations[helm.ResourceAnnotationReleaseName] = helm.ReleaseName(project.Name)
+				live.SetAnnotations(annotations)
+				key := keyOf(releaseObjectOf(live), project.Name)
+				replaced[live.GetKind()+"/"+live.GetName()] = replacedByStandardFields(project, key, live, administrators)
+			}
+
+			rules := 0
+			for name, ok := range replaced {
+				kind, _, _ := strings.Cut(name, "/")
+				if kind == "AuthorizationRule" {
+					rules++
+				}
+				assert.Equal(t, kind == "AuthorizationRule" || name == "ResourceQuota/all-pods", ok, name)
+			}
+			assert.Equal(t, len(project.Spec.Administrators), rules, "a rule per administrator")
+			assert.Contains(t, replaced, "ResourceQuota/all-pods")
 		})
 	}
 }

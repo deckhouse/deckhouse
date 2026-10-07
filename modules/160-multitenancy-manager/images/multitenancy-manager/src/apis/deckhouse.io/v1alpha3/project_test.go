@@ -47,6 +47,27 @@ func TestNamespaceStatusUnmarshal_BackwardCompat(t *testing.T) {
 	assert.JSONEq(t, `[{"name":"foo","kind":"Main"},{"name":"foo-bar","kind":"Additional"}]`, string(out))
 }
 
+// A reconcile starts from no conditions, except the record of a handover that has not finished:
+// that one goes only when the handover does.
+func TestProject_ClearConditionsKeepsTheHandover(t *testing.T) {
+	project := new(Project)
+	project.SetConditionTrue(ProjectConditionProjectValidated)
+	SetCondition(&project.Status.Conditions, ProjectConditionHandoverPending, corev1.ConditionTrue, "waiting")
+	project.SetConditionFalse(ProjectConditionStandardFieldsApplied, "failed")
+
+	project.ClearConditions()
+	assert.Len(t, project.Status.Conditions, 1)
+	assert.True(t, project.IsConditionTrue(ProjectConditionHandoverPending))
+	assert.Equal(t, "waiting", project.Status.Conditions[0].Message)
+
+	assert.True(t, RemoveCondition(&project.Status.Conditions, ProjectConditionHandoverPending))
+	assert.False(t, RemoveCondition(&project.Status.Conditions, ProjectConditionHandoverPending), "nothing left to remove")
+	assert.False(t, project.IsConditionTrue(ProjectConditionHandoverPending))
+	project.ClearConditions()
+	assert.NotNil(t, project.Status.Conditions, "an empty list, not a missing one")
+	assert.Empty(t, project.Status.Conditions)
+}
+
 // TestSetCondition pins the shared condition semantics used by the PRB/CPRB/ProjectNamespace
 // reconcilers: a no-op call reports "unchanged" and rewrites nothing, a message change does not move
 // LastTransitionTime, and a status transition does.

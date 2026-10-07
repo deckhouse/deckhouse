@@ -52,17 +52,37 @@ type fakeHelmClient struct {
 	analyzeCalls   int
 	seenManifests  string
 	upgradeCalls   int
+	// change, when set, is what an upgrade does to the deployed release: Upgrade and UpgradeManifests
+	// hand it to their BeforeUpgrade and return its error.
+	change *helm.ReleaseChange
+	// current is what CurrentRelease returns.
+	current      *helm.ProjectRelease
+	currentCalls int
 }
 
-func (f *fakeHelmClient) UpgradeManifests(_ context.Context, project *v1alpha3.Project, manifests string) (helm.ReleaseOutcome, error) {
+func (f *fakeHelmClient) CurrentRelease(context.Context, string) (*helm.ProjectRelease, error) {
+	f.currentCalls++
+	return f.current, nil
+}
+
+func (f *fakeHelmClient) UpgradeManifests(ctx context.Context, project *v1alpha3.Project, manifests string, beforeUpgrade helm.BeforeUpgrade) (helm.ReleaseOutcome, error) {
 	f.upgradeCalls++
 	f.seenManifests = manifests
 	f.seenNamespaces = append([]v1alpha3.NamespaceStatus(nil), project.Status.Namespaces...)
-	return f.applyResult, nil
+	return f.upgrade(ctx, beforeUpgrade)
 }
 
-func (f *fakeHelmClient) Upgrade(context.Context, *v1alpha3.Project, *v1alpha1.ProjectTemplate) (helm.ReleaseOutcome, error) {
+func (f *fakeHelmClient) Upgrade(ctx context.Context, _ *v1alpha3.Project, _ *v1alpha1.ProjectTemplate, beforeUpgrade helm.BeforeUpgrade) (helm.ReleaseOutcome, error) {
 	f.upgradeCalls++
+	return f.upgrade(ctx, beforeUpgrade)
+}
+
+func (f *fakeHelmClient) upgrade(ctx context.Context, beforeUpgrade helm.BeforeUpgrade) (helm.ReleaseOutcome, error) {
+	if f.change != nil && beforeUpgrade != nil {
+		if err := beforeUpgrade(ctx, *f.change); err != nil {
+			return helm.ReleaseOutcome{}, err
+		}
+	}
 	return f.applyResult, nil
 }
 

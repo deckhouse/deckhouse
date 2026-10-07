@@ -51,10 +51,11 @@ import (
 // interface rather than the concrete client lets Handle/upgradeResources be unit-tested with a fake
 // (the concrete *helm.Client satisfies it).
 type helmClient interface {
-	Upgrade(ctx context.Context, project *v1alpha3.Project, template *v1alpha1.ProjectTemplate) (helm.ReleaseOutcome, error)
-	UpgradeManifests(ctx context.Context, project *v1alpha3.Project, manifests string) (helm.ReleaseOutcome, error)
+	Upgrade(ctx context.Context, project *v1alpha3.Project, template *v1alpha1.ProjectTemplate, beforeUpgrade helm.BeforeUpgrade) (helm.ReleaseOutcome, error)
+	UpgradeManifests(ctx context.Context, project *v1alpha3.Project, manifests string, beforeUpgrade helm.BeforeUpgrade) (helm.ReleaseOutcome, error)
 	AnalyzeRendered(project *v1alpha3.Project, template *v1alpha1.ProjectTemplate) (helm.ReleaseOutcome, error)
 	AnalyzeManifests(project *v1alpha3.Project, manifests string) (helm.ReleaseOutcome, error)
+	CurrentRelease(ctx context.Context, projectName string) (*helm.ProjectRelease, error)
 	Delete(ctx context.Context, projectName string) error
 }
 
@@ -110,6 +111,9 @@ type Manager struct {
 	client     client.Client
 	helmClient helmClient
 	logger     logr.Logger
+	// keptChecks holds, per project name, when refreshKeptObjects last read the objects of its
+	// status.keptObjects.
+	keptChecks sync.Map
 }
 
 func New(client client.Client, helmClient helmClient, logger logr.Logger) *Manager {
@@ -160,6 +164,10 @@ func (m *Manager) Init(ctx context.Context, checker healthz.Checker, init *sync.
 
 // Handle ensures project`s resources
 func (m *Manager) Handle(ctx context.Context, project *v1alpha3.Project) (ctrl.Result, error) {
+	// The series of a handover and of the objects left from a Helm text release follow the status as
+	// read, before any step that can stop the reconcile, so they outlive a restart.
+	m.publishSeries(project)
+
 	if namespacemanager.IsLeftoverWrap(project) {
 		deleted, err := namespacemanager.New(m.client, m.logger).CompleteLeftover(ctx, project)
 		if err != nil {
@@ -207,6 +215,7 @@ func (m *Manager) Handle(ctx context.Context, project *v1alpha3.Project) (ctrl.R
 		return ctrl.Result{}, err
 	}
 
+	// ClearConditions keeps HandoverPending, the record of a handover that has not finished.
 	project.ClearConditions()
 	project.SetObservedGeneration(project.Generation)
 
@@ -251,6 +260,13 @@ func (m *Manager) Handle(ctx context.Context, project *v1alpha3.Project) (ctrl.R
 		project.Status.Usage = usage
 	}
 
+	// the objects left from a Helm text release stay listed until they are deleted or unlabelled
+	leftRecheck, err := m.refreshKeptObjects(ctx, project)
+	if err != nil {
+		m.logger.Error(err, "failed to check the objects left from the Helm text release", "project", project.Name)
+		leftRecheck = leftObjectsRecheck
+	}
+
 	if project.IsConditionFalse(v1alpha3.ProjectConditionTemplateRolesAllowed) {
 		project.SetState(v1alpha3.ProjectStateError)
 	} else {
@@ -261,8 +277,17 @@ func (m *Manager) Handle(ctx context.Context, project *v1alpha3.Project) (ctrl.R
 		return ctrl.Result{}, err
 	}
 
+	// what a handover kept from a Helm text release goes once the standard fields work
+	recheck, err := m.deleteKeptObjects(ctx, project)
+	if err != nil {
+		return ctrl.Result{}, fmt.Errorf("delete the objects kept from the Helm text release: %w", err)
+	}
+	if recheck == 0 || leftRecheck > 0 && leftRecheck < recheck {
+		recheck = leftRecheck
+	}
+
 	m.logger.Info("the project reconciled", "project", project.Name, "template", project.Spec.ProjectTemplateName)
-	return ctrl.Result{}, nil
+	return ctrl.Result{RequeueAfter: recheck}, nil
 }
 
 // failAndRequeue records a terminal-but-retriable template failure: it marks the project Errored, sets
@@ -334,6 +359,7 @@ func (m *Manager) handleTemplate(ctx context.Context, project *v1alpha3.Project)
 // renders (for the TemplateRolesAllowed check). A schema-based template is rendered natively from its
 // structured fields onto the project namespace as it is in the cluster and applied via UpgradeManifests;
 // a template that still carries a resourcesTemplate string is rendered through the legacy helm engine.
+// Either way an upgrade is prepared for what it drops from the deployed revision first (see transition.go).
 func (m *Manager) upgradeResources(ctx context.Context, project *v1alpha3.Project, template *v1alpha2.ProjectTemplate) ([]helm.BindingRoleRef, error) {
 	if isStructured(template) {
 		liveLabels := map[string]string{}
@@ -349,7 +375,7 @@ func (m *Manager) upgradeResources(ctx context.Context, project *v1alpha3.Projec
 		if err != nil {
 			return nil, fmt.Errorf("render the project template: %w", err)
 		}
-		outcome, err := m.helmClient.UpgradeManifests(ctx, project, manifests)
+		outcome, err := m.helmClient.UpgradeManifests(ctx, project, manifests, m.beforeUpgrade(project))
 		if err != nil {
 			return nil, err
 		}
@@ -368,7 +394,7 @@ func (m *Manager) upgradeResources(ctx context.Context, project *v1alpha3.Projec
 	}
 
 	legacy := LegacyTemplate(template)
-	outcome, err := m.helmClient.Upgrade(ctx, project, legacy)
+	outcome, err := m.helmClient.Upgrade(ctx, project, legacy, m.beforeUpgrade(project))
 	if err != nil {
 		return nil, err
 	}
@@ -492,9 +518,17 @@ func (m *Manager) refreshVirtualProjects(ctx context.Context) error {
 
 // Delete deletes project`s resources
 func (m *Manager) Delete(ctx context.Context, project *v1alpha3.Project) (ctrl.Result, error) {
+	m.Forget(project.Name)
+
 	// delete the auto-managed cluster-scoped standard-field objects (administrators binding)
 	if err := m.deleteStandardFields(ctx, project); err != nil {
 		m.logger.Error(err, "failed to delete the project standard fields", "project", project.Name)
+		return ctrl.Result{}, err
+	}
+
+	// the cluster-scoped objects a switch left go with the project; the others go with its namespaces
+	if err := m.deleteLeftClusterObjects(ctx, project); err != nil {
+		m.logger.Error(err, "failed to delete the cluster-scoped objects left from the Helm text release", "project", project.Name)
 		return ctrl.Result{}, err
 	}
 

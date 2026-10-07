@@ -94,17 +94,30 @@ func Register(runtimeManager manager.Manager, helmClient *helm.Client, logger lo
 		))).
 		Watches(&corev1.Namespace{}, namespaceProjectHandler{},
 			builder.WithPredicates(namespaceWatchPredicate{})).
-		Watches(&corev1.ResourceQuota{}, handler.EnqueueRequestsFromMapFunc(func(ctx context.Context, object client.Object) []reconcile.Request {
-			if object.GetName() != v1alpha3.ProjectQuotaName {
-				return nil
-			}
-			project, ok := object.GetLabels()[v1alpha3.ResourceLabelProject]
-			if !ok {
-				return nil
-			}
-			return []reconcile.Request{{NamespacedName: client.ObjectKey{Name: project}}}
-		})).
+		Watches(&corev1.ResourceQuota{}, standardFieldHandler(v1alpha3.ProjectQuotaName)).
+		// a handover of a Helm text release waits for the binding to be Ready
+		Watches(&v1alpha3.ProjectRoleBinding{}, standardFieldHandler(v1alpha3.ProjectAdministratorsBinding)).
 		Complete(projectController)
+}
+
+// standardFieldHandler wakes the project of a standard-field object of the given name.
+func standardFieldHandler(name string) handler.EventHandler {
+	return handler.EnqueueRequestsFromMapFunc(func(_ context.Context, object client.Object) []reconcile.Request {
+		return standardFieldRequests(name, object)
+	})
+}
+
+// standardFieldRequests is the request for the project an object of the given name belongs to by its
+// project label, and nothing for any other object.
+func standardFieldRequests(name string, object client.Object) []reconcile.Request {
+	if object.GetName() != name {
+		return nil
+	}
+	project, ok := object.GetLabels()[v1alpha3.ResourceLabelProject]
+	if !ok {
+		return nil
+	}
+	return []reconcile.Request{{NamespacedName: client.ObjectKey{Name: project}}}
 }
 
 // namespaceProjectHandler wakes the owning real project and the virtual project
@@ -220,6 +233,7 @@ func (r *reconciler) Reconcile(ctx context.Context, req reconcile.Request) (reco
 	if err := r.client.Get(ctx, req.NamespacedName, project); err != nil {
 		if apierrors.IsNotFound(err) {
 			r.logger.Info("the project not found", "project", req.Name)
+			r.manager.Forget(req.Name)
 			return reconcile.Result{}, nil
 		}
 		r.logger.Error(err, "failed to get the project", "project", req.Name)

@@ -151,11 +151,14 @@ d8 k get project my-project -o jsonpath='{range .status.conditions[*]}{.type}={.
 | `StandardFieldsApplied` | The [standard fields](#standard-project-fields) (quota or administrators) could not be applied. |
 | `TemplateRolesAllowed` | The template creates a binding to a role [forbidden for granting in projects](#granting-access-within-a-project) — the project switches to `Error`, the role is named in `message`. |
 
+The `HandoverPending` condition is read the other way round. It is `True` while AuthorizationRule and ResourceQuota objects kept from a Helm text wait for the standard fields that replace them, and it is removed once they are deleted (see [Switching a project from a Helm text](#switching-a-project-from-a-helm-text)).
+
 Other useful status fields:
 
 - `.status.namespaces` — all namespaces of the project with their kind (`Main`/`Additional`);
 - `.status.usage` — the current quota usage (populated when `.spec.quota` is set);
-- `.status.resources` — the state of the individual resources created from the template.
+- `.status.resources` — the state of the individual resources created from the template;
+- `.status.keptObjects` — the objects of a Helm text that were [left in place](#switching-a-project-from-a-helm-text) instead of being deleted.
 
 ### Service objects of a project
 
@@ -545,8 +548,39 @@ The following rules apply to template operations:
 
 - A template cannot be deleted while at least one project uses it or a project namespace is still rendered from it. After a project switches to another template, the old template stays until the new one has rendered.
 - A change to a template is automatically applied to all projects created from it.
-- Instead of structured fields, a template can describe its objects with a Helm text in [`resourcesTemplate`](cr.html#projecttemplate-v1alpha2-spec-resourcestemplate). Such a template is rendered through Helm with the project name (`.projectName`), the template name (`.projectTemplateName`) and the project parameters (`.parameters`), and `resourcesTemplate` cannot be set together with the fields that render namespace objects. A template that projects use keeps a non-empty `resourcesTemplate` until a change sets such fields in its place. Such a change deletes the objects the Helm text rendered, except those the new fields render under the same kind and name, and so does moving a project to another template. A project whose parameters turn into objects or keys of the rendered manifests instead of values is refused, so quote every substitution. This form is deprecated. Describe new templates with structured fields.
+- Instead of structured fields, a template can describe its objects with a Helm text in [`resourcesTemplate`](cr.html#projecttemplate-v1alpha2-spec-resourcestemplate). Such a template is rendered through Helm with the project name (`.projectName`), the template name (`.projectTemplateName`) and the project parameters (`.parameters`), and `resourcesTemplate` cannot be set together with the fields that render namespace objects. A template that projects use keeps a non-empty `resourcesTemplate` until a change sets such fields in its place. What such a change, or a move of a project to another template, does with the objects the Helm text rendered is described in [Switching a project from a Helm text](#switching-a-project-from-a-helm-text). A project whose parameters turn into objects or keys of the rendered manifests instead of values is refused, so quote every substitution. This form is deprecated. Describe new templates with structured fields.
 - The `deckhouse.io/v1alpha1` version of ProjectTemplate is served and deprecated, and the API server returns a warning on every request through it. It has the `description`, `parametersSchema` and `resourcesTemplate` fields, and `deckhouse.io/v1alpha2` keeps all three, so a template written as `v1alpha1` reads back unchanged. A change through `v1alpha1` to a template that has fields `v1alpha1` cannot describe, such as `title`, `grantPolicies` or `podSecurityStandard`, is refused, because it would erase them. Change such a template through `deckhouse.io/v1alpha2`.
+
+### Switching a project from a Helm text
+
+A project release rendered from a Helm text in `resourcesTemplate` holds whatever the text rendered. The project switches to structured fields when its template gets structured fields in place of `resourcesTemplate`, when the project moves to a structured template, and when a built-in template that was a Helm text is rewritten with structured fields. The release then holds only what the structured fields render. An object of the Helm text that the structured fields render under the same kind and name stays in the release and is updated in place. The other objects of the Helm text are handled as follows, and of them only an AuthorizationRule that names nobody from `.spec.administrators` any more is deleted at once.
+
+The AuthorizationRule and ResourceQuota objects that the [standard fields](#standard-project-fields) replace go through a handover, so the administrators never lose access and the namespace never loses its quota. These are the AuthorizationRule objects the release created that grant the `Admin` access level and nothing else to users and groups who are all administrators of the project, and the ResourceQuota objects of the main namespace without scopes whose every limit `.spec.quota` sets to the same value or a lower one. The handover goes in this order.
+
+1. The Project gets the `HandoverPending` condition set to `True`. Then the objects get the `helm.sh/resource-policy: keep` annotation and the `projects.deckhouse.io/kept-by-handover: "true"` annotation, so the release upgrade does not delete them.
+1. The `d8-administrators` ProjectRoleBinding and the `d8-project-quota` ResourceQuota are created before the release is upgraded.
+1. The kept objects are deleted once `d8-administrators` names the administrators from `.spec.administrators` and is `Ready` for its current `metadata.generation`, the `d8:project:admin` ClusterRole has its aggregated rules, and `d8-project-quota` has the limits from `.spec.quota` and is calculated, and not earlier than 2 minutes after `d8-administrators` became `Ready` and after the handover began. Until then the administrators hold both roles, and the tighter of the quotas applies. The `HandoverPending` condition says what the handover waits for, and it is removed once the kept objects are deleted.
+
+A kept AuthorizationRule that names nobody from `.spec.administrators` any more grants only what was revoked, and it is deleted at once. A subject removed from `.spec.administrators` is removed at once from a kept AuthorizationRule that names other administrators too. A kept quota that `.spec.quota` no longer covers when the handover finishes, because a limit in `.spec.quota` was raised above it or removed, is left in place like the objects below. The `HandoverPending` condition is kept in the status of the Project, so a replace of the Project (for example, `kubectl replace` or Argo CD with the `Replace=true` option) does not lose it. If the kept objects are still there after 30 minutes, the `MultitenancyManagerProjectHandoverStuck` alert names the project and says what to check.
+
+Every other object of the Helm text that the structured fields do not render is left in place instead of being deleted. Examples are AuthorizationRule objects of other subjects or of another access level, such as the ones a text renders for roles from its own parameters, a quota that `.spec.quota` does not cover, RoleBinding objects, network policies, and workloads with their volumes.
+
+- Such an object keeps working as before. A rule or a binding keeps granting access, a quota keeps applying, a workload keeps running.
+- The project no longer manages it. The object gets the `helm.sh/resource-policy: keep` annotation and the `projects.deckhouse.io/kept-from-helm-template: "true"` label, and it loses the `heritage: multitenancy-manager` label. While it carries the label, only a requester who may make the same change to objects of its kind across the cluster may change or delete it, for example a cluster administrator. The users of the project may not, so a network policy or a quota of the text keeps holding them. The protection does not cover the `scale` and `status` subresources: whoever may scale objects of the kind or change their status in the namespace may still do so for a kept object, which matters only for a kept workload.
+- The Project lists it in `.status.keptObjects`, and the `MultitenancyManagerProjectKeepsHelmTemplateObjects` alert names the project. An object leaves the list once it is deleted or the label is removed from it. When the template renders an object of the same kind and name again, the project release takes the object over. The controller then removes the label, puts the `heritage: multitenancy-manager` label back and removes the `helm.sh/resource-policy: keep` annotation, unless the template sets it itself.
+- When the project is deleted, the object goes with it. An object in a namespace of the project goes with the namespace, and the controller deletes a cluster-scoped object that still carries the label.
+
+Describe what is still needed in the template or in the project, for example with a ProjectRoleBinding or with a limit in `.spec.quota`, and delete the left object, or remove the label to hand the object over to the project, after which the users of the project may change and delete it as well. A cluster-scoped object without the label also stays when the project is deleted. An access that a left object grants ends only when the object is deleted. To list the left objects of a project, use the command:
+
+```shell
+d8 k get project <PROJECT_NAME> -o jsonpath='{range .status.keptObjects[*]}{.kind} {.namespace}/{.name}{"\n"}{end}'
+```
+
+An edit of a Helm text, and a move of a project to another template with a Helm text, delete the objects the new text does not render, except the AuthorizationRule and ResourceQuota objects that the standard fields replace. These go through the same handover.
+
+Administrators and a quota that are still set in `.spec.parameters`, because they could not be moved to `.spec.administrators` and `.spec.quota`, get no standard fields. Their AuthorizationRule objects and their quota are not handed over, and a switch leaves them in place. Move such values to the standard fields before the switch.
+
+After the handover the administrators have the `d8:project:admin` role in place of the `Admin` access level. The two roles do not grant the same permissions. In particular, the access that custom ClusterRoles with the `user-authz.deckhouse.io/access-level` annotation added to the `Admin` access level is not part of `d8:project:admin`. To grant such access, create a [custom role](/modules/user-authz/faq.html#creating-a-custom-namespace-or-project-role) and bind it with a ProjectRoleBinding.
 
 ## Creating your own project template
 

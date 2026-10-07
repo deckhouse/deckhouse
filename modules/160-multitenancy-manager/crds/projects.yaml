@@ -158,6 +158,29 @@ spec:
                       lastProbeTime:
                         format: date-time
                         type: string
+                # The controller writes keptObjects at v1alpha3, and this version declares it too. A write
+                # of the project through v1alpha2 keeps the stored status as v1alpha2 reads it, and the API
+                # server prunes what this version does not declare, so the project would lose the list of
+                # the objects that the controller later deletes or takes back.
+                keptObjects:
+                  description: |
+                    Objects of a project release rendered from the Helm text of a `resourcesTemplate` that were left in place instead of being deleted, when the project switched to structured fields or when `.spec.quota` stopped covering a quota kept for a handover. The release no longer manages them, and they carry the `projects.deckhouse.io/kept-from-helm-template: "true"` label, under which only a requester who may make the same change across the cluster may change or delete them. An object leaves the list once it is deleted, the label is removed from it or the release renders it again. When the project is deleted, the cluster-scoped ones that still carry the label are deleted with it.
+                  type: array
+                  items:
+                    type: object
+                    properties:
+                      apiVersion:
+                        description: API version of the object.
+                        type: string
+                      kind:
+                        description: Kind of the object.
+                        type: string
+                      namespace:
+                        description: Namespace of the object, empty for a cluster-scoped one.
+                        type: string
+                      name:
+                        description: Name of the object.
+                        type: string
                 state:
                   description: Brief description of the project status, such as Error, Deploying, Deployed, etc.
                   type: string
@@ -317,6 +340,25 @@ spec:
                         type: string
                       lastProbeTime:
                         format: date-time
+                        type: string
+                keptObjects:
+                  description: |
+                    Objects of a project release rendered from the Helm text of a `resourcesTemplate` that were left in place instead of being deleted, when the project switched to structured fields or when `.spec.quota` stopped covering a quota kept for a handover. The release no longer manages them, and they carry the `projects.deckhouse.io/kept-from-helm-template: "true"` label, under which only a requester who may make the same change across the cluster may change or delete them. An object leaves the list once it is deleted, the label is removed from it or the release renders it again. When the project is deleted, the cluster-scoped ones that still carry the label are deleted with it.
+                  type: array
+                  items:
+                    type: object
+                    properties:
+                      apiVersion:
+                        description: API version of the object.
+                        type: string
+                      kind:
+                        description: Kind of the object.
+                        type: string
+                      namespace:
+                        description: Namespace of the object, empty for a cluster-scoped one.
+                        type: string
+                      name:
+                        description: Name of the object.
                         type: string
                 state:
                   description: Brief description of the project status, such as Error, Deploying, Deployed, etc.

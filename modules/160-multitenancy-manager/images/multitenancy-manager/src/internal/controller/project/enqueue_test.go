@@ -81,6 +81,22 @@ func TestEnqueueProjectForNamespace(t *testing.T) {
 	})
 }
 
+// The project quota and the administrators binding wake the project they carry the label of, and
+// another object of their kinds wakes nobody.
+func TestStandardFieldRequests(t *testing.T) {
+	label := map[string]string{v1alpha3.ResourceLabelProject: "team"}
+	binding := &v1alpha3.ProjectRoleBinding{ObjectMeta: metav1.ObjectMeta{Namespace: "team", Name: v1alpha3.ProjectAdministratorsBinding, Labels: label}}
+	assert.Equal(t, []string{"team"}, requestNames(standardFieldRequests(v1alpha3.ProjectAdministratorsBinding, binding)))
+
+	quota := &corev1.ResourceQuota{ObjectMeta: metav1.ObjectMeta{Namespace: "team", Name: v1alpha3.ProjectQuotaName, Labels: label}}
+	assert.Equal(t, []string{"team"}, requestNames(standardFieldRequests(v1alpha3.ProjectQuotaName, quota)))
+
+	other := &v1alpha3.ProjectRoleBinding{ObjectMeta: metav1.ObjectMeta{Namespace: "team", Name: "developers", Labels: label}}
+	assert.Empty(t, standardFieldRequests(v1alpha3.ProjectAdministratorsBinding, other))
+	unlabelled := &corev1.ResourceQuota{ObjectMeta: metav1.ObjectMeta{Namespace: "team", Name: v1alpha3.ProjectQuotaName}}
+	assert.Empty(t, standardFieldRequests(v1alpha3.ProjectQuotaName, unlabelled))
+}
+
 func TestNamespaceWatchPredicate_DeleteAlways(t *testing.T) {
 	p := namespaceWatchPredicate{}
 	assert.True(t, p.Delete(event.DeleteEvent{Object: &corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: "t-lvlns"}}}))

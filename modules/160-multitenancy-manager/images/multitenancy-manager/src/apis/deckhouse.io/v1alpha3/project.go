@@ -41,6 +41,12 @@ const (
 	// terminating; the message says for how long and what the namespace reports as remaining, so
 	// that "kubectl describe project" tells what the deletion is waiting for.
 	ProjectConditionNamespaceDeleted = "NamespaceDeleted"
+	// ProjectConditionHandoverPending is True while AuthorizationRule and ResourceQuota objects that a
+	// handover kept from a release rendered from a Helm text wait for the standard fields that replace
+	// them; the message says what they wait for. It is the record of the handover, kept in the status
+	// because a replace of the Project (kubectl replace, Argo CD Replace=true) does not touch the
+	// status. ClearConditions keeps it, and the controller removes it once the kept objects are gone.
+	ProjectConditionHandoverPending = "HandoverPending"
 
 	ProjectAnnotationRequireSync = "projects.deckhouse.io/require-sync"
 
@@ -57,6 +63,14 @@ const (
 
 	ResourceLabelSkipHeritage = "projects.deckhouse.io/skip-heritage-label"
 	ResourceLabelUnmanaged    = "projects.deckhouse.io/unmanaged"
+	// ResourceLabelKeptFromHelmTemplate marks an object of a project release rendered from a Helm
+	// text that was left in place instead of being deleted: a switch of the project to structured
+	// fields dropped it, or spec.quota stopped covering a quota kept for a handover. The release no
+	// longer manages it; the project lists it in status.keptObjects until it is deleted or loses the
+	// label, and while it carries the label only a requester who may make the same change across the
+	// cluster may change or delete it (templates/validation.yaml). A cluster-scoped one that still
+	// carries the label is deleted with the project.
+	ResourceLabelKeptFromHelmTemplate = "projects.deckhouse.io/kept-from-helm-template"
 
 	ResourceLabelHeritage        = "heritage"
 	ResourceHeritageMultitenancy = "multitenancy-manager"
@@ -269,8 +283,21 @@ type ProjectStatus struct {
 	// Project conditions
 	Conditions []Condition `json:"conditions,omitempty"`
 
+	// KeptObjects are the objects of a release rendered from a Helm text that were left in place, no
+	// longer managed by the release (see ResourceLabelKeptFromHelmTemplate). An object leaves the list
+	// once it is deleted, loses the label or is rendered by the release again.
+	KeptObjects []KeptObject `json:"keptObjects,omitempty"`
+
 	// Current state.
 	State string `json:"state,omitempty"`
+}
+
+// KeptObject identifies an object in status.keptObjects.
+type KeptObject struct {
+	APIVersion string `json:"apiVersion"`
+	Kind       string `json:"kind"`
+	Namespace  string `json:"namespace,omitempty"`
+	Name       string `json:"name"`
 }
 
 // IsVirtual reports whether the project is a virtual one: it inventories namespaces and has no
@@ -339,6 +366,9 @@ func (p *ProjectStatus) DeepCopyInto(newObj *ProjectStatus) {
 		*out = make([]NamespaceStatus, len(*in))
 		copy(*out, *in)
 	}
+	if p.KeptObjects != nil {
+		newObj.KeptObjects = slices.Clone(p.KeptObjects)
+	}
 	if p.Usage != nil {
 		newObj.Usage = p.Usage.DeepCopy()
 	}
@@ -388,8 +418,33 @@ type Condition struct {
 	LastTransitionTime metav1.Time `json:"lastTransitionTime,omitempty"`
 }
 
+// ClearConditions drops the conditions a reconcile sets anew. HandoverPending stays: it records a
+// handover that spans reconciles, and only the step that finishes the handover removes it.
 func (p *Project) ClearConditions() {
-	p.Status.Conditions = []Condition{}
+	kept := []Condition{}
+	for _, cond := range p.Status.Conditions {
+		if cond.Type == ProjectConditionHandoverPending {
+			kept = append(kept, cond)
+		}
+	}
+	p.Status.Conditions = kept
+}
+
+// IsConditionTrue reports whether the named condition is present and set to True.
+func (p *Project) IsConditionTrue(condName string) bool {
+	for _, cond := range p.Status.Conditions {
+		if cond.Type == condName {
+			return cond.Status == corev1.ConditionTrue
+		}
+	}
+	return false
+}
+
+// RemoveCondition drops the named condition from the list and reports whether it was there.
+func RemoveCondition(conditions *[]Condition, condType string) bool {
+	before := len(*conditions)
+	*conditions = slices.DeleteFunc(*conditions, func(cond Condition) bool { return cond.Type == condType })
+	return len(*conditions) != before
 }
 
 // IsConditionFalse reports whether the named condition is present and set to False.
