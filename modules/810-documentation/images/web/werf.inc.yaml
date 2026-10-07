@@ -23,7 +23,6 @@ import:
   before: setup
   excludePaths:
   - '*/gs/'
-  - '*/guides/'
   - search-index.json
   - '*/sitemap*.xml'
   - '*/robots.txt'

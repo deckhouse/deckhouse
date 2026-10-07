@@ -190,6 +190,15 @@ common:
   search_placeholder_text_filter:
     en: Enter a&nbsp;name
     ru: Введите название
+  guides_description:
+    en: Helping you achieve a goal or solve a problem with Deckhouse Platform.
+    ru: Помогут решить задачу или достичь нужной цели с помощью Deckhouse Platform.
+  show_details:
+    en: Show details...
+    ru: Показать подробности...
+  hide_details:
+    en: Hide details
+    ru: Скрыть подробности
   search_placeholder_text_404:
     en: Search Documentation
     ru: Поиск по документации

@@ -1,0 +1,41 @@
+@startuml
+
+!theme bluegray
+skinparam DefaultFontSize 16
+skinparam handwritten false
+skinparam ArrowFontStyle italic
+skinparam DefaultTextAlignment center
+skinparam PartitionFontColor grey
+skinparam backgroundColor transparent
+
+
+if (\nПоддерживается\nзаказ\nбалансировщиков?\n) then (Да)
+partition OpenStack-облако, Yandex, VK, Selectel, AWS, GCP, Azure... {
+  split
+    :inlet **LoadBalancer**;
+     kill
+  split again
+    :inlet **LoadBalancerWithProxyProtocol**;
+    kill
+  end split
+  }
+else (Нет)
+partition Bare metal, облако на vSphere...{
+  split
+    ->Вариант 1;
+    :Добавьте несколько\nА-записей в DNS;
+  split again
+    ->Вариант 2;
+    :Используйте внешний балансировщик
+    (Cloudflare, Qrator, MetalLB (для bare metal)...);
+  end split
+  split
+     :inlet **HostPort**;
+     kill
+  split again
+    :inlet **HostPortWithProxyProtocol**;
+    kill
+  end split
+  }
+endif
+@enduml

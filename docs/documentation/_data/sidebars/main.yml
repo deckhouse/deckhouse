@@ -1475,8 +1475,51 @@ entries:
     - title:
         en: Guides
         ru: Руководства
-      external_url: /products/kubernetes-platform/guides/
-      target: _self
+      folders:
+        - title:
+            en: Overview
+            ru: Обзор
+          url: /guides/
+        - title:
+            en: Going to Production
+            ru: Подготовка к production
+          url: /guides/production.html
+        - title:
+            en: Hardware requirements for bare-metal cluster
+            ru: Требования к кластеру на bare metal
+          url: /guides/hardware-requirements.html
+        - title:
+            en: Updating DP in air-gapped environment
+            ru: Обновление DP в закрытом окружении
+          url: /guides/airgapped-update.html
+        - title:
+            en: Disk layout and size
+            ru: Разметка и объём дисков
+          url: /guides/fs-requirements.html
+        - title:
+            en: Installing DP in a private environment
+            ru: Установка DP в закрытом окружении
+          url: /guides/private-environment.html
+        - title:
+            en: Switching CNI in the cluster
+            ru: Переключение CNI в кластере
+          url: /guides/cni-migration.html
+        - title:
+            en: Planning for a high pod count on a node
+            ru: Планирование большого количества подов на узле
+          url: /guides/high-pod-density.html
+        - title:
+            en: Installing DP in an existing Talos cluster
+            ru: Установка DP в существующий Talos-кластер
+          url: /guides/talos-existing-cluster.html
+        - title:
+            en: Going to production with virtualization
+            ru: Подготовка виртуализации к production
+          url: /guides/virt-production.html
+        - title:
+            en: Migrating VMs from VMware to DP
+            ru: Перенос ВМ из VMware в DP
+          url: /guides/virt-migrating-from-vmware.html
 # ------------- Architecture -------------
     - title:
         en: Architecture

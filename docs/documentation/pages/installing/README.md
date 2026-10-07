@@ -13,9 +13,9 @@ relatedLinks:
   - title: "Integration with IaaS providers"
     url: ../admin/integrations/integrations-overview.html
   - title: "Installing DP in a private environment"
-    url: /products/kubernetes-platform/guides/private-environment.html
+    url: ../guides/private-environment.html
   - title: "Going to Production"
-    url: /products/kubernetes-platform/guides/production.html 
+    url: ../guides/production.html 
 ---
 
 {% alert %}
@@ -42,9 +42,9 @@ You can install DP in the following ways::
 
 To estimate the resources required for Deckhouse Platform installation, refer to the following guides:
 
-- [Bare-metal cluster sizing guide](/products/kubernetes-platform/guides/hardware-requirements.html)
-- [Disk layout and sizing guide](/products/kubernetes-platform/guides/fs-requirements.html)
-- [Production preparation guide](/products/kubernetes-platform/guides/production.html)
+- [Bare-metal cluster sizing guide](../guides/hardware-requirements.html)
+- [Disk layout and sizing guide](../guides/fs-requirements.html)
+- [Production preparation guide](../guides/production.html)
 
 Before installation, ensure the following:
 
@@ -603,7 +603,7 @@ List of checks performed by the installer before starting Deckhouse Platform ins
    - Only one `--ssh-host` parameter is specified. For static cluster configuration, only one IP address can be provided for configuring the first master node.
    - SSH connection is possible using the specified authentication data.
    - SSH tunneling to the master node server (or VM) is possible.
-   - The server (VM) selected for the master node installation must meet the [minimum system requirements](/products/kubernetes-platform/guides/hardware-requirements.html):
+   - The server (VM) selected for the master node installation must meet the [minimum system requirements](../guides/hardware-requirements.html):
      - At least 4 CPU cores.
      - At least 8 GB of RAM.
      - At least 50 GB of disk space with 400+ IOPS performance.
@@ -849,7 +849,7 @@ Sometimes taints are configured on every cluster node, which is how an administr
 <div id="installing-deckhouse-kubernetes-platform-from-an-external-registry"></div>
 
 {% alert level="info" %}
-For more details on installing and updating DP in an air-gapped environment, see the [“Installing DP in an air-gapped environment”](/products/kubernetes-platform/guides/private-environment.html) and [“Updating DP in an air-gapped environment”](/products/kubernetes-platform/guides/airgapped-update.html) guides.
+For more details on installing and updating DP in an air-gapped environment, see the [“Installing DP in an air-gapped environment”](../guides/private-environment.html) and [“Updating DP in an air-gapped environment”](../guides/airgapped-update.html) guides.
 {% endalert %}
 
 ### Installing from an external (third-party) registry

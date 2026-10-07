@@ -330,7 +330,7 @@ spec:
 1. Создайте [ресурс MetalLoadBalancerClass](/modules/metallb/cr.html#metalloadbalancerclass):
 
    {% alert level="info" %}
-   MetalLB-балансировщики должны размещаться на тех же узлах, что и Ingress-контроллеры. В [типовых сценариях развёртывания](/products/kubernetes-platform/guides/hardware-requirements.html#сценарии-развёртывания) для этой цели используются frontend-узлы.
+   MetalLB-балансировщики должны размещаться на тех же узлах, что и Ingress-контроллеры. В [типовых сценариях развёртывания](../../../../../guides/hardware-requirements.html#сценарии-развёртывания) для этой цели используются frontend-узлы.
 
   Чтобы разместить Ingress-контроллеры и MetalLB-балансировщики на frontend-узлах, укажите в `nodeSelector` лейбл `node-role.deckhouse.io/frontend: ""`.
    {% endalert %}

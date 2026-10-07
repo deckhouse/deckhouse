@@ -1,0 +1,26 @@
+---
+layout: default
+---
+<!--#include virtual="/includes/banner.html" -->
+<div class="container">
+  {%- include nav-breadcrumbs_tile.html %}
+  <div class="layout-sidebar layout-sidebar__tile">
+    <div class="layout-sidebar__sidebar layout-sidebar__sidebar--tile">
+      {%- include filter.html %}
+    </div>
+    <div class="layout-sidebar__content layout-sidebar__content--tile">
+      <div class="selected__filters">
+        <div class="selected__filters--list"></div>
+      </div>
+      <h1 class="tile__title">{{ page.title }}</h1>
+      {{ content }}
+    {% unless site.mode == 'module' %}
+      {%- if page.feedback != false %}
+      <!--noindex-->
+      <!--#include virtual="/includes/feedback.html" -->
+      <!--/noindex-->
+      {%- endif %}
+    {% endunless %}
+    </div>
+  </div>
+</div>

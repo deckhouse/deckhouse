@@ -14,9 +14,9 @@ relatedLinks:
   - title: "Интеграция с инфраструктурой"
     url: ../admin/integrations/integrations-overview.html
   - title: "Установка DP в закрытом окружении"
-    url: /products/kubernetes-platform/guides/private-environment.html
+    url: ../guides/private-environment.html
   - title: "Подготовка к Production"
-    url: /products/kubernetes-platform/guides/production.html   
+    url: ../guides/production.html   
 ---
 
 {% alert %}
@@ -54,9 +54,9 @@ relatedLinks:
 
 Для оценки ресурсов, необходимых для установки Deckhouse Platform, вы можете ознакомиться со следующими руководствами:
 
-- [Руководство по подбору ресурсов для кластера на bare metal](/products/kubernetes-platform/guides/hardware-requirements.html)
-- [Руководство по разметке и объему дисков](/products/kubernetes-platform/guides/fs-requirements.html)
-- [Руководство по подготовке к production](/products/kubernetes-platform/guides/production.html)
+- [Руководство по подбору ресурсов для кластера на bare metal](../guides/hardware-requirements.html)
+- [Руководство по разметке и объему дисков](../guides/fs-requirements.html)
+- [Руководство по подготовке к production](../guides/production.html)
 
 Перед установкой убедитесь в следующем:
 
@@ -616,7 +616,7 @@ dhctl bootstrap \
    - Указан только один параметр `--ssh-host`. Для статической конфигурации кластера можно задать только один IP-адрес для настройки первого master-узла.
    - Должна быть возможность подключения по SSH с использованием указанных данных аутентификации.
    - Должна быть возможность установки SSH-туннеля до сервера (или виртуальной машины) master-узла.
-   - Сервер (ВМ), выбранный для установки master-узла, должен соответствовать [минимальным системным требованиям](/products/kubernetes-platform/guides/hardware-requirements.html):
+   - Сервер (ВМ), выбранный для установки master-узла, должен соответствовать [минимальным системным требованиям](../guides/hardware-requirements.html):
      - не менее 4 CPU;
      - не менее 8 ГБ RAM;
      - не менее 50 ГБ диска с производительностью 400+ IOPS;
@@ -863,7 +863,7 @@ virtualization   900      deckhouse   Ready   True      True
 <div id="установка-deckhouse-kubernetes-platform-из-стороннего-registry"></div>
 
 {% alert level="info" %}
-Подробнее с установкой и обновлением DP в закрытом окружении можно ознакомиться в руководствах [«Установка DP в закрытом окружении»](/products/kubernetes-platform/guides/private-environment.html) и [«Обновление DP в закрытом окружении»](/products/kubernetes-platform/guides/airgapped-update.html).
+Подробнее с установкой и обновлением DP в закрытом окружении можно ознакомиться в руководствах [«Установка DP в закрытом окружении»](../guides/private-environment.html) и [«Обновление DP в закрытом окружении»](../guides/airgapped-update.html).
 {% endalert %}
 
 ### Установка из стороннего хранилища образов контейнеров
