@@ -46,7 +46,6 @@ A [Kyverno Chainsaw](https://kyverno.github.io/chainsaw/) e2e test that validate
 | `../common/manifests/deployment-scale-from-zero.yaml` | 3-replica Deployment with anti-affinity; tolerates only `worker-100` |
 | `../common/asserts/assert-dvp-instanceclass.yaml`     | Asserts `DVPInstanceClass worker` exists                             |
 | `../common/asserts/assert-ca-exists.yaml`             | Asserts CA deployment is ready                                       |
-| `../common/asserts/assert-deployment-ready.yaml`      | Asserts 3 ready replicas                                             |
 | `../common/asserts/assert-no-worker-50-nodes.yaml`    | Error-assert: no nodes for `e2e-worker-50`                           |
 
 ## How Priority Expander Works

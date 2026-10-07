@@ -10,30 +10,31 @@ A [Kyverno Chainsaw](https://kyverno.github.io/chainsaw/) e2e test that validate
 
 - Deckhouse cluster on Yandex Cloud
 - Cluster Autoscaler with Priority Expander enabled
-- CA container args contain `mcm`
+- Test NodeGroups are created with `node.deckhouse.io/use-mcm: "true"`, so they run on MCM even when Yandex NodeGroups default to CAPI. Their CA is the Deployment with `--cloud-provider=mcm` (`cluster-autoscaler`, or `cluster-autoscaler-mcm` next to a CAPI one); the test finds it after creating the NodeGroups
 - Existing `YandexInstanceClass` named `worker`
 - Chainsaw CLI, `kubectl`, and `jq` installed. See `../../README.md` for instructions.
 
 ## Test Steps
 
-| Step | Name                                       | Description                                                               |
-| ---- | ------------------------------------------ | ------------------------------------------------------------------------- |
-| 1    | `assert-cluster-autoscaler-exists`         | Asserts CA deployment is ready (cleanup waits for test nodes removal)     |
-| 2    | `assert-ca-uses-mcm-provider`              | Verifies CA args contain `mcm`                                            |
-| 3    | `assert-yandexinstanceclass-worker-exists` | Asserts `YandexInstanceClass worker` exists                               |
-| 4    | `cleanup-leftover-resources`               | Deletes leftover NodeGroups and instance classes                          |
-| 5    | `restart-cluster-autoscaler`               | Rollout restart and wait for readiness                                    |
-| 6    | `wait-for-ca-initialization`               | Sleep 15s                                                                 |
-| 7    | `create-e2e-worker-small-instanceclass`    | Clones `worker` → `e2e-worker-small` (working IC)                         |
-| 8    | `create-broken-yandexinstanceclass`        | Clones `worker` → `e2e-worker-broken` with `imageID: fd8INVALID000000000` |
-| 9    | `apply-nodegroup-100-broken`               | Applies `e2e-worker-100` referencing broken IC (priority 100)             |
-| 10   | `apply-nodegroup-50`                       | Applies `e2e-worker-50` referencing working IC (priority 50)              |
-| 11   | `apply-deployment`                         | Applies shared Deployment (tolerates both taints)                         |
-| 12   | `wait-for-deckhouse-processing`            | Sleep 30s                                                                 |
-| 13   | `assert-ca-selects-priority-100`           | Polls logs for initial selection of `e2e-worker-100` (up to 5 min)        |
-| 14   | `wait-for-ca-backoff-and-fallback`         | Polls logs for backoff + fallback (up to **60 min**, `--since=90m`)       |
-| 15   | `assert-pods-running`                      | Asserts 3 ready replicas                                                  |
-| 16   | `assert-pods-on-worker-50-nodes`           | Verifies all pods are on `e2e-worker-50` nodes                            |
+| Step | Name                                       | Description                                                                                             |
+| ---- | ------------------------------------------ | ------------------------------------------------------------------------------------------------------- |
+| 1    | `assert-yandexinstanceclass-worker-exists` | Asserts `YandexInstanceClass worker` exists (cleanup waits for test nodes removal)                      |
+| 2    | `cleanup-leftover-resources`               | Deletes leftover NodeGroups and instance classes                                                        |
+| 3    | `create-e2e-worker-small-instanceclass`    | Clones `worker` → `e2e-worker-small` (working IC)                                                       |
+| 4    | `create-broken-yandexinstanceclass`        | Clones `worker` → `e2e-worker-broken` with `imageID: fd8INVALID000000000`                               |
+| 5    | `apply-nodegroup-100-broken`               | Applies `e2e-worker-100` referencing broken IC (priority 100, `use-mcm`) in the zone of a `worker` node |
+| 6    | `apply-nodegroup-50`                       | Applies `e2e-worker-50` referencing working IC (priority 50, `use-mcm`) in the same zone                |
+| 7    | `assert-mcm-cluster-autoscaler-ready`      | Waits for the CA Deployment with `--cloud-provider=mcm` to list the test NodeGroups and roll out        |
+| 8    | `restart-cluster-autoscaler`               | Rollout restart of that Deployment and wait for readiness                                               |
+| 9    | `wait-for-ca-initialization`               | Sleep 15s for CA initialization                                                                         |
+| 10   | `apply-deployment`                         | Applies shared Deployment (tolerates both taints)                                                       |
+| 11   | `wait-for-deckhouse-processing`            | Sleep 30s                                                                                               |
+| 12   | `assert-ca-selects-priority-100`           | Polls logs for initial selection of `e2e-worker-100` (up to 5 min)                                      |
+| 13   | `wait-for-ca-backoff-and-fallback`         | Polls logs for backoff + fallback (up to **60 min**, `--since=90m`)                                     |
+| 14   | `assert-pods-running`                      | Asserts 3 ready replicas                                                                                |
+| 15   | `assert-pods-on-worker-50-nodes`           | Verifies all pods are on `e2e-worker-50` nodes                                                          |
+
+**Note:** The CA Deployment is looked up by `--cloud-provider=mcm`: `cluster-autoscaler` on a cluster with only MCM NodeGroups, `cluster-autoscaler-mcm` when the provider also runs CAPI NodeGroups.
 
 **Cleanup:** All test NodeGroups, instance classes, and Deployment are deleted via step cleanup blocks.
 

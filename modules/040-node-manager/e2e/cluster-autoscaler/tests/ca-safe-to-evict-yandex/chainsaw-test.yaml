@@ -7,14 +7,15 @@ spec:
     Verifies that cluster-autoscaler correctly handles the safe-to-evict annotation
     on a Yandex Cloud (MCM) cluster. Scales up a node from zero, creates a standalone
     pod with safe-to-evict: "true", removes the workload, and asserts that scale-down
-    proceeds (the standalone pod does not block it).
+    proceeds (the standalone pod does not block it). The pod prefers the test node but
+    fits on another node too: CA removes a node only if it can reschedule every pod on it.
   concurrent: false
   steps:
-    - name: assert-cluster-autoscaler-exists
+    - name: assert-yandexinstanceclass-worker-exists
       try:
-        - description: Check cluster-autoscaler deployment has ready replicas
+        - description: Assert YandexInstanceClass worker resource exists
           assert:
-            file: ../common/asserts/assert-ca-exists.yaml
+            file: ../common/asserts/assert-yandex-instanceclass.yaml
       cleanup:
         - description: Wait until all test nodes are removed (runs last in cleanup chain)
           script:
@@ -32,25 +33,19 @@ spec:
               exit 1
             check:
               ($error == null): true
-
-    - name: assert-ca-uses-mcm-provider
-      try:
-        - description: Check CA container args contain 'mcm'
+        - description: Delete the Project that multitenancy-manager made of the test namespace
           script:
-            timeout: 30s
+            timeout: 5m
             content: |
-              set -eu
-              CA_ARGS=$(kubectl get deployment cluster-autoscaler -n d8-cloud-instance-manager \
-                -o jsonpath='{.spec.template.spec.containers[0].args}')
-              echo "$CA_ARGS" | grep -q "mcm"
+              set -u
+              # With multitenancy-manager the test namespace becomes a Project and cannot be deleted
+              # directly, which fails chainsaw's own namespace cleanup. Deleting the Project removes the
+              # namespace. Without the module there is no Project and nothing to do.
+              if kubectl get projects.deckhouse.io "$NAMESPACE" >/dev/null 2>&1; then
+                kubectl delete projects.deckhouse.io "$NAMESPACE" --wait=true --timeout=4m
+              fi
             check:
               ($error == null): true
-
-    - name: assert-yandexinstanceclass-worker-exists
-      try:
-        - description: Assert YandexInstanceClass worker resource exists
-          assert:
-            file: ../common/asserts/assert-yandex-instanceclass.yaml
 
     - name: cleanup-leftover-resources
       try:
@@ -75,24 +70,6 @@ spec:
               apiVersion: v1
               kind: Pod
               name: e2e-blocking-pod
-
-    - name: restart-cluster-autoscaler
-      try:
-        - description: Rollout restart and wait for readiness
-          script:
-            timeout: 180s
-            content: |
-              set -eu
-              kubectl rollout restart deployment cluster-autoscaler -n d8-cloud-instance-manager
-              kubectl rollout status deployment cluster-autoscaler -n d8-cloud-instance-manager --timeout=120s
-            check:
-              ($error == null): true
-
-    - name: wait-for-ca-initialization
-      try:
-        - description: Sleep 15s for CA initialization
-          sleep:
-            duration: 15s
 
     - name: create-e2e-worker-small-instanceclass
       try:
@@ -131,6 +108,58 @@ spec:
               kind: NodeGroup
               name: e2e-safe-to-evict
 
+    - name: assert-mcm-cluster-autoscaler-ready
+      try:
+        - description: Wait for the cluster-autoscaler Deployment with the mcm provider to serve the test NodeGroups
+          script:
+            timeout: 360s
+            content: |
+              set -eu
+              # The test NodeGroups carry node.deckhouse.io/use-mcm. On a provider that also supports
+              # CAPI (Deckhouse 1.77+), Deckhouse runs them in a separate cluster-autoscaler-mcm
+              # Deployment; on older releases the only cluster-autoscaler runs with mcm.
+              for i in $(seq 1 60); do
+                CA_DEPLOY=$(kubectl get deployments -n d8-cloud-instance-manager -o json | \
+                  jq -r '[.items[] | select([.spec.template.spec.containers[].args[]?] | index("--cloud-provider=mcm"))][0].metadata.name // empty')
+                if [ -n "$CA_DEPLOY" ]; then
+                  CA_ARGS=$(kubectl get deployment "$CA_DEPLOY" -n d8-cloud-instance-manager \
+                    -o jsonpath='{.spec.template.spec.containers[0].args}')
+                  if echo "$CA_ARGS" | grep -qE "[.-]e2e-safe-to-evict-"; then
+                    kubectl rollout status deployment "$CA_DEPLOY" -n d8-cloud-instance-manager --timeout=120s
+                    echo "cluster-autoscaler with the mcm provider: $CA_DEPLOY"
+                    exit 0
+                  fi
+                fi
+                sleep 5
+              done
+              echo "No cluster-autoscaler Deployment with --cloud-provider=mcm serves the test NodeGroups"
+              kubectl get deployments -n d8-cloud-instance-manager
+              # Deckhouse 1.77+ reports the engine of each NodeGroup; the test groups must be MCM.
+              kubectl get nodegroups -o custom-columns='NAME:.metadata.name,ENGINE:.status.engine' || true
+              exit 1
+            check:
+              ($error == null): true
+
+    - name: restart-cluster-autoscaler
+      try:
+        - description: Rollout restart the mcm cluster-autoscaler and wait for readiness
+          script:
+            timeout: 180s
+            content: |
+              set -eu
+              CA_DEPLOY=$(kubectl get deployments -n d8-cloud-instance-manager -o json | \
+                jq -r '[.items[] | select([.spec.template.spec.containers[].args[]?] | index("--cloud-provider=mcm"))][0].metadata.name // empty')
+              kubectl rollout restart deployment "$CA_DEPLOY" -n d8-cloud-instance-manager
+              kubectl rollout status deployment "$CA_DEPLOY" -n d8-cloud-instance-manager --timeout=120s
+            check:
+              ($error == null): true
+
+    - name: wait-for-ca-initialization
+      try:
+        - description: Sleep 15s for CA initialization
+          sleep:
+            duration: 15s
+
     - name: apply-deployment
       try:
         - description: Apply Deployment to trigger scale-up
@@ -152,9 +181,27 @@ spec:
 
     - name: assert-pods-running
       try:
-        - description: Assert Deployment has 1 ready replica (node scaled up)
-          assert:
-            file: ../common/asserts/assert-deployment-ready-1.yaml
+        - description: Wait until Deployment e2e-nginx has 1 ready replica
+          script:
+            timeout: 16m
+            content: |
+              set -u
+              # Poll with kubectl instead of a chainsaw assert: an assert stops at the first failed API
+              # request, so a single transient error would end a wait that lasts minutes.
+              READY=0
+              for i in $(seq 1 180); do
+                READY=$(kubectl get deployment e2e-nginx -n "$NAMESPACE" \
+                  -o jsonpath='{.status.readyReplicas}' 2>/dev/null || true)
+                if [ "${READY:-0}" -ge 1 ]; then
+                  exit 0
+                fi
+                sleep 5
+              done
+              echo "Deployment e2e-nginx has ${READY:-0}/1 ready replica after 15 minutes"
+              kubectl get pods -n "$NAMESPACE" -o wide || true
+              exit 1
+            check:
+              ($error == null): true
       catch:
         - description: Collect test namespace events on failure
           events: {}
@@ -164,7 +211,7 @@ spec:
         - description: Collect CA logs on failure
           podLogs:
             namespace: d8-cloud-instance-manager
-            selector: app=cluster-autoscaler
+            selector: app in (cluster-autoscaler, cluster-autoscaler-mcm)
 
     - name: apply-blocking-pod
       try:
@@ -197,6 +244,40 @@ spec:
               done
               echo "Timed out waiting for blocking pod to be Running"
               exit 1
+            check:
+              ($error == null): true
+        - description: Assert blocking pod runs on the test node
+          script:
+            timeout: 30s
+            content: |
+              set -eu
+              NODE=$(kubectl get pod -n "$NAMESPACE" e2e-blocking-pod -o jsonpath='{.spec.nodeName}')
+              if [ "$(kubectl get node "$NODE" -o jsonpath='{.metadata.labels.app}')" != "e2e-autoscaler-test" ]; then
+                echo "Blocking pod runs on $NODE, not on the test node"
+                exit 1
+              fi
+            check:
+              ($error == null): true
+        - description: Assert a node outside the test NodeGroup can host the blocking pod
+          script:
+            timeout: 30s
+            content: |
+              set -eu
+              # CA removes the test node only if its scale-down simulation can place the pod elsewhere:
+              # look for a Ready, schedulable non-test node whose taints the pod tolerates.
+              HOSTS=$(kubectl get nodes -o json | jq -r '[.items[]
+                | select(.metadata.labels.app != "e2e-autoscaler-test")
+                | select(.spec.unschedulable != true)
+                | select(any(.status.conditions[]?; .type == "Ready" and .status == "True"))
+                | select(all(.spec.taints[]?; .effect == "PreferNoSchedule"
+                    or (.key == "dedicated" and .value == "safe-to-evict" and .effect == "NoExecute")))
+                | .metadata.name] | join(" ")')
+              if [ -z "$HOSTS" ]; then
+                echo "No node outside the test NodeGroup can host the blocking pod, so CA cannot remove the test node"
+                kubectl get nodes -o custom-columns=NAME:.metadata.name,UNSCHEDULABLE:.spec.unschedulable,TAINTS:.spec.taints
+                exit 1
+              fi
+              echo "Nodes that can host the blocking pod after scale-down: $HOSTS"
             check:
               ($error == null): true
 
@@ -232,7 +313,7 @@ spec:
         - description: Collect CA logs on failure
           podLogs:
             namespace: d8-cloud-instance-manager
-            selector: app=cluster-autoscaler
+            selector: app in (cluster-autoscaler, cluster-autoscaler-mcm)
         - description: Show remaining nodes
           script:
             timeout: 30s

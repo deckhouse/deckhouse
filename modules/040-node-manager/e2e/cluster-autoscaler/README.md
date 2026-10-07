@@ -79,16 +79,26 @@ kubectl cluster-info
 
 **Yandex scenarios (`*-yandex`):**
 
-- Yandex Cloud with MCM
+- Yandex Cloud
 - Existing `YandexInstanceClass` named `worker`
-- CA container args contain `mcm`
+- The test NodeGroups carry `node.deckhouse.io/use-mcm: "true"`, so they run on MCM even when Yandex NodeGroups default to CAPI. Their CA is the Deployment with `--cloud-provider=mcm`: `cluster-autoscaler` when the cluster has only MCM NodeGroups, `cluster-autoscaler-mcm` next to the CAPI one otherwise. The tests look it up after creating the NodeGroups.
 
 **Resources and cost:**
 
 - Tests create NodeGroups `e2e-worker-100`, `e2e-worker-50`, and/or other `e2e-*` groups, clone instance classes, and deploy `e2e-nginx` (3 replicas with anti-affinity → up to 3 new VMs).
-- Tests restart `cluster-autoscaler`.
+- Tests restart `cluster-autoscaler` (Yandex scenarios: the Deployment with `--cloud-provider=mcm`).
 - Scale-from-zero scenarios typically take tens of minutes; fallback scenarios up to 30–60 minutes (Yandex longer).
 - Cleanup removes test resources; nodes labeled `app=e2e-autoscaler-test` are polled for up to ~10 minutes (timeout logs a warning, does not fail the test).
+- Waits that last minutes (`e2e-nginx` readiness) poll with `kubectl` in a script instead of a chainsaw `assert`: an `assert` stops at the first failed API request and reports only the last mismatch, so a single transient API error used to end a 15-minute wait within seconds.
+- With the `multitenancy-manager` module the test namespace becomes a Project that cannot be deleted directly. The last step cleanup deletes that Project (and with it the namespace), so chainsaw's own namespace cleanup passes; without the module there is no Project and nothing to do.
+
+**Deckhouse and Kubernetes versions:**
+
+The tests rely only on version-independent signals, so the same scenarios run on older and newer releases:
+
+- The mcm cluster-autoscaler is found by its `--cloud-provider=mcm` argument, not by name: before Deckhouse 1.77 Yandex runs only MCM and that is `cluster-autoscaler`; from 1.77 a cluster with CAPI NodeGroups runs `cluster-autoscaler-mcm` next to it.
+- `node.deckhouse.io/use-mcm` is ignored by releases without the CAPI migration, and `NodeGroup.status.engine` (1.77+) is only printed for diagnostics, never asserted.
+- Zones come from node labels, not from a hard-coded list.
 
 ## Directory Structure
 
@@ -120,8 +130,9 @@ Per-scenario details (steps, manifests, expected outcomes): `tests/<name>/<name>
 
 **DVP vs Yandex differences (scale-from-zero / fallback):**
 
-- DVP: create instance class → restart CA; read logs from `cluster-autoscaler` container only
-- Yandex: restart CA before creating cloned instance class; read logs with `--all-containers --since=10m` (fallback: `--since=90m`, up to 60 min wait)
+- DVP: create instance class and NodeGroups → restart CA; read logs from `cluster-autoscaler` container only
+- Yandex: create instance class and NodeGroups → wait for the CA Deployment with `--cloud-provider=mcm` to list them → restart it; read logs with `--all-containers --since=10m` (fallback: `--since=90m`, up to 60 min wait)
+- Priority fallback (both providers): both NodeGroups are created in one zone, the zone of a `worker` node (`topology.kubernetes.io/zone`; no pinning if nodes do not carry the label). CA sees one node group per zone, and with several zones the broken group's zones time out one after another and are never all backed off at once, so the fallback could outlast the test.
 
 ## Running Tests
 
@@ -234,6 +245,7 @@ kubectl get nodes -l app=e2e-autoscaler-test
 | -------------------------------------- | ------------------------------------------------------------ |
 | CA deployment missing                  | No `CloudEphemeral` NodeGroup with `minPerZone < maxPerZone` |
 | Assert on `worker` InstanceClass fails | Base `worker` NodeGroup or instance class does not exist     |
-| `grep clusterapi` / `grep mcm` fails   | Wrong scenario for your cloud provider                       |
+| `grep clusterapi` fails                | Wrong scenario for your cloud provider                       |
+| No CA Deployment with `mcm` (Yandex)   | `use-mcm` NodeGroup not rendered yet, or provider lacks MCM  |
 | Timeout waiting for priority logs      | Slow cloud, quotas, or MCM/CAPI errors                       |
 | Fallback timeout                       | Long backoff; Yandex scenarios allow up to 1 hour            |

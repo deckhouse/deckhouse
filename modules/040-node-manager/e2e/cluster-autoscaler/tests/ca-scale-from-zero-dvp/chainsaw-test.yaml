@@ -31,6 +31,19 @@ spec:
               exit 1
             check:
               ($error == null): true
+        - description: Delete the Project that multitenancy-manager made of the test namespace
+          script:
+            timeout: 5m
+            content: |
+              set -u
+              # With multitenancy-manager the test namespace becomes a Project and cannot be deleted
+              # directly, which fails chainsaw's own namespace cleanup. Deleting the Project removes the
+              # namespace. Without the module there is no Project and nothing to do.
+              if kubectl get projects.deckhouse.io "$NAMESPACE" >/dev/null 2>&1; then
+                kubectl delete projects.deckhouse.io "$NAMESPACE" --wait=true --timeout=4m
+              fi
+            check:
+              ($error == null): true
 
     - name: cleanup-leftover-resources
       try:
@@ -206,9 +219,27 @@ spec:
 
     - name: assert-pods-running
       try:
-        - description: Assert Deployment has 3 ready replicas
-          assert:
-            file: ../common/asserts/assert-deployment-ready.yaml
+        - description: Wait until Deployment e2e-nginx has 3 ready replicas
+          script:
+            timeout: 16m
+            content: |
+              set -u
+              # Poll with kubectl instead of a chainsaw assert: an assert stops at the first failed API
+              # request, so a single transient error would end a wait that lasts minutes.
+              READY=0
+              for i in $(seq 1 180); do
+                READY=$(kubectl get deployment e2e-nginx -n "$NAMESPACE" \
+                  -o jsonpath='{.status.readyReplicas}' 2>/dev/null || true)
+                if [ "${READY:-0}" -ge 3 ]; then
+                  exit 0
+                fi
+                sleep 5
+              done
+              echo "Deployment e2e-nginx has ${READY:-0}/3 ready replicas after 15 minutes"
+              kubectl get pods -n "$NAMESPACE" -o wide || true
+              exit 1
+            check:
+              ($error == null): true
       catch:
         - description: Collect test namespace events on failure
           events: {}

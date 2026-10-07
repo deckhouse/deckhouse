@@ -16,24 +16,24 @@ A [Kyverno Chainsaw](https://kyverno.github.io/chainsaw/) e2e test that validate
 
 ## Test Steps
 
-| Step | Name                                    | Description                                                                                       |
-| ---- | --------------------------------------- | ------------------------------------------------------------------------------------------------- |
-| 1    | `assert-dvpinstanceclass-worker-exists` | Asserts `DVPInstanceClass worker` exists (cleanup waits for test nodes removal)                   |
-| 2    | `cleanup-leftover-resources`            | Deletes leftover NodeGroups and instance classes                                                  |
-| 3    | `create-e2e-worker-small-instanceclass` | Clones `worker` → `e2e-worker-small` (working IC)                                                 |
-| 4    | `create-broken-dvpinstanceclass`        | Clones `worker` → `e2e-worker-broken` with `virtualMachineClassName: DOES-NOT-EXIST`              |
-| 5    | `apply-nodegroup-100-broken`            | Applies `e2e-worker-100` referencing broken IC (priority 100)                                     |
-| 6    | `apply-nodegroup-50`                    | Applies `e2e-worker-50` referencing working IC (priority 50)                                      |
-| 7    | `assert-cluster-autoscaler-exists`      | Asserts CA deployment is ready                                                                    |
-| 8    | `assert-ca-uses-clusterapi-provider`    | Verifies CA args contain `clusterapi`                                                             |
-| 9    | `restart-cluster-autoscaler`            | Rollout restart and wait for readiness                                                            |
-| 10   | `wait-for-ca-initialization`            | Sleep 15s                                                                                         |
-| 11   | `apply-deployment`                      | Applies shared Deployment (tolerates both `worker-100` and `worker-50` taints)                    |
-| 12   | `wait-for-deckhouse-processing`         | Sleep 30s                                                                                         |
-| 13   | `assert-ca-selects-priority-100`        | Polls logs for initial selection of `e2e-worker-100` (up to 5 min)                                |
-| 14   | `wait-for-ca-backoff-and-fallback`      | Polls logs for `e2e-worker-100.*not ready for scaleup` AND `e2e-worker-50.*chosen` (up to 30 min) |
-| 15   | `assert-pods-running`                   | Asserts 3 ready replicas                                                                          |
-| 16   | `assert-pods-on-worker-50-nodes`        | Verifies all pods are on `e2e-worker-50` nodes                                                    |
+| Step | Name                                    | Description                                                                                                                                       |
+| ---- | --------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 1    | `assert-dvpinstanceclass-worker-exists` | Asserts `DVPInstanceClass worker` exists (cleanup waits for test nodes removal)                                                                   |
+| 2    | `cleanup-leftover-resources`            | Deletes leftover NodeGroups and instance classes                                                                                                  |
+| 3    | `create-e2e-worker-small-instanceclass` | Clones `worker` → `e2e-worker-small` (working IC)                                                                                                 |
+| 4    | `create-broken-dvpinstanceclass`        | Clones `worker` → `e2e-worker-broken` with `virtualMachineClassName: DOES-NOT-EXIST`                                                              |
+| 5    | `apply-nodegroup-100-broken`            | Applies `e2e-worker-100` referencing broken IC (priority 100); pinned to the zone of a `worker` node if nodes carry `topology.kubernetes.io/zone` |
+| 6    | `apply-nodegroup-50`                    | Applies `e2e-worker-50` referencing working IC (priority 50) in the same zone                                                                     |
+| 7    | `assert-cluster-autoscaler-exists`      | Asserts CA deployment is ready                                                                                                                    |
+| 8    | `assert-ca-uses-clusterapi-provider`    | Verifies CA args contain `clusterapi`                                                                                                             |
+| 9    | `restart-cluster-autoscaler`            | Rollout restart and wait for readiness                                                                                                            |
+| 10   | `wait-for-ca-initialization`            | Sleep 15s                                                                                                                                         |
+| 11   | `apply-deployment`                      | Applies shared Deployment (tolerates both `worker-100` and `worker-50` taints)                                                                    |
+| 12   | `wait-for-deckhouse-processing`         | Sleep 30s                                                                                                                                         |
+| 13   | `assert-ca-selects-priority-100`        | Polls logs for initial selection of `e2e-worker-100` (up to 5 min)                                                                                |
+| 14   | `wait-for-ca-backoff-and-fallback`      | Polls logs for `e2e-worker-100.*not ready for scaleup` AND `e2e-worker-50.*chosen` (up to 30 min)                                                 |
+| 15   | `assert-pods-running`                   | Asserts 3 ready replicas                                                                                                                          |
+| 16   | `assert-pods-on-worker-50-nodes`        | Verifies all pods are on `e2e-worker-50` nodes                                                                                                    |
 
 **Cleanup:** All test NodeGroups, instance classes, and Deployment are deleted via step cleanup blocks.
 

@@ -49,7 +49,6 @@ Before the fix, the `serializeLabels` function only included labels from `spec.n
 | `chainsaw-test.yaml`                                      | Chainsaw test definition                                                            |
 | `../common/manifests/nodegroup-infra-dvp.yaml`            | NodeGroup without `node.deckhouse.io/group` in template labels                      |
 | `../common/manifests/deployment-node-label-selector.yaml` | 3-replica Deployment with `nodeSelector: node.deckhouse.io/group: e2e-worker-infra` |
-| `../common/asserts/assert-deployment-ready.yaml`          | Asserts 3 ready replicas                                                            |
 
 ## Key Verification (Step 9)
 

@@ -10,31 +10,30 @@ A [Kyverno Chainsaw](https://kyverno.github.io/chainsaw/) e2e test that validate
 
 - Deckhouse cluster on Yandex Cloud with CloudEphemeral NodeGroups
 - Cluster Autoscaler deployment ready in `d8-cloud-instance-manager`
-- CA container args contain `mcm` (Machine Controller Manager)
+- Test NodeGroups are created with `node.deckhouse.io/use-mcm: "true"`, so they run on MCM even when Yandex NodeGroups default to CAPI. Their CA is the Deployment with `--cloud-provider=mcm` (`cluster-autoscaler`, or `cluster-autoscaler-mcm` next to a CAPI one); the test finds it after creating the NodeGroups
 - Existing `YandexInstanceClass` named `worker`
 - Chainsaw CLI, `kubectl`, and `jq` installed. See `../../README.md` for instructions.
 
 ## Test Steps
 
-| Step | Name                                       | Description                                                                     |
-| ---- | ------------------------------------------ | ------------------------------------------------------------------------------- |
-| 1    | `assert-cluster-autoscaler-exists`         | Asserts CA deployment has ready replicas (cleanup waits for test nodes removal) |
-| 2    | `assert-ca-uses-mcm-provider`              | Verifies CA args contain `mcm`                                                  |
-| 3    | `assert-yandexinstanceclass-worker-exists` | Asserts `YandexInstanceClass worker` exists                                     |
-| 4    | `cleanup-leftover-resources`               | Deletes leftover NodeGroups and instance class from previous runs               |
-| 5    | `restart-cluster-autoscaler`               | Rollout restart and wait for CA readiness                                       |
-| 6    | `wait-for-ca-initialization`               | Sleep 15s for CA initialization                                                 |
-| 7    | `create-e2e-worker-small-instanceclass`    | Clones `worker` → `e2e-worker-small` (2 cores, 4Gi RAM, 30GB disk)              |
-| 8    | `apply-nodegroup-100`                      | Applies NodeGroup `e2e-worker-100` (priority 100, minPerZone: 0)                |
-| 9    | `apply-nodegroup-50`                       | Applies NodeGroup `e2e-worker-50` (priority 50, minPerZone: 0)                  |
-| 10   | `apply-deployment`                         | Applies `e2e-nginx` Deployment (tolerates only `worker-100` taint)              |
-| 11   | `wait-for-deckhouse-processing`            | Sleep 30s for Deckhouse reconciliation                                          |
-| 12   | `assert-ca-selects-priority-100`           | Polls CA logs (`--all-containers --since=10m`) for priority selection           |
-| 13   | `assert-pods-running`                      | Asserts Deployment has 3 ready replicas                                         |
-| 14   | `assert-pods-on-worker-100-nodes`          | Verifies all pods are on `e2e-worker-100` nodes                                 |
-| 15   | `assert-worker-50-has-no-nodes`            | Asserts no nodes exist for `e2e-worker-50`                                      |
+| Step | Name                                       | Description                                                                                      |
+| ---- | ------------------------------------------ | ------------------------------------------------------------------------------------------------ |
+| 1    | `assert-yandexinstanceclass-worker-exists` | Asserts `YandexInstanceClass worker` exists (cleanup waits for test nodes removal)               |
+| 2    | `cleanup-leftover-resources`               | Deletes leftover NodeGroups and instance class from previous runs                                |
+| 3    | `create-e2e-worker-small-instanceclass`    | Clones `worker` → `e2e-worker-small` (2 cores, 4Gi RAM, 30GB disk)                               |
+| 4    | `apply-nodegroup-100`                      | Applies NodeGroup `e2e-worker-100` (priority 100, minPerZone: 0, `use-mcm`)                      |
+| 5    | `apply-nodegroup-50`                       | Applies NodeGroup `e2e-worker-50` (priority 50, minPerZone: 0, `use-mcm`)                        |
+| 6    | `assert-mcm-cluster-autoscaler-ready`      | Waits for the CA Deployment with `--cloud-provider=mcm` to list the test NodeGroups and roll out |
+| 7    | `restart-cluster-autoscaler`               | Rollout restart of that Deployment and wait for readiness                                        |
+| 8    | `wait-for-ca-initialization`               | Sleep 15s for CA initialization                                                                  |
+| 9    | `apply-deployment`                         | Applies `e2e-nginx` Deployment (tolerates only `worker-100` taint)                               |
+| 10   | `wait-for-deckhouse-processing`            | Sleep 30s for Deckhouse reconciliation                                                           |
+| 11   | `assert-ca-selects-priority-100`           | Polls CA logs (`--all-containers --since=10m`) for priority selection                            |
+| 12   | `assert-pods-running`                      | Asserts Deployment has 3 ready replicas                                                          |
+| 13   | `assert-pods-on-worker-100-nodes`          | Verifies all pods are on `e2e-worker-100` nodes                                                  |
+| 14   | `assert-worker-50-has-no-nodes`            | Asserts no nodes exist for `e2e-worker-50`                                                       |
 
-**Note:** Unlike the DVP variant, this test restarts CA before creating the instance class, and reads logs from all containers.
+**Note:** The CA Deployment is looked up by `--cloud-provider=mcm`: `cluster-autoscaler` on a cluster with only MCM NodeGroups, `cluster-autoscaler-mcm` when the provider also runs CAPI NodeGroups.
 
 **Cleanup:** NodeGroups, instance class, and Deployment are deleted via step cleanup blocks.
 
@@ -48,7 +47,6 @@ A [Kyverno Chainsaw](https://kyverno.github.io/chainsaw/) e2e test that validate
 | `../common/manifests/deployment-scale-from-zero.yaml` | 3-replica Deployment with anti-affinity; tolerates only `worker-100` |
 | `../common/asserts/assert-yandex-instanceclass.yaml`  | Asserts `YandexInstanceClass worker` exists                          |
 | `../common/asserts/assert-ca-exists.yaml`             | Asserts CA deployment is ready                                       |
-| `../common/asserts/assert-deployment-ready.yaml`      | Asserts 3 ready replicas                                             |
 | `../common/asserts/assert-no-worker-50-nodes.yaml`    | Error-assert: no nodes for `e2e-worker-50`                           |
 
 ## Differences from DVP Variant

@@ -2,6 +2,9 @@ apiVersion: deckhouse.io/v1
 kind: NodeGroup
 metadata:
   name: e2e-worker-100
+  annotations:
+    # Run the group on MCM even where the provider also supports CAPI.
+    node.deckhouse.io/use-mcm: "true"
 spec:
   cloudInstances:
     priority: 100

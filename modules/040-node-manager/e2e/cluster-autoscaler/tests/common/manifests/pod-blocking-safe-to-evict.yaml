@@ -12,8 +12,18 @@ spec:
         requests:
           cpu: 10m
           memory: 16Mi
-  nodeSelector:
-    app: e2e-autoscaler-test
+  affinity:
+    nodeAffinity:
+      # Preferred, not required: CA removes the test node only if its scale-down simulation
+      # can place the pod on another node, so the pod must also fit outside the test NodeGroup.
+      preferredDuringSchedulingIgnoredDuringExecution:
+        - weight: 100
+          preference:
+            matchExpressions:
+              - key: app
+                operator: In
+                values:
+                  - e2e-autoscaler-test
   tolerations:
     - key: dedicated
       operator: Equal
