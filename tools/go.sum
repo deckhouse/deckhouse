@@ -214,12 +214,12 @@ github.com/fatih/structtag v1.2.0 h1:/OdNE99OxoI/PqaW/SuSK9uxxT3f/tcSZgon/ssNSx4
 github.com/fatih/structtag v1.2.0/go.mod h1:mBJUNpUnHmRKrKlQQlmCrh5PuhftFbNv8Ys4/aAZl94=
 github.com/felixge/httpsnoop v1.1.0 h1:3YtUj32ZZkqZtt3sZZsClsymw/QDuVfpNhoA31zeORc=
 github.com/felixge/httpsnoop v1.1.0/go.mod h1:Zqxgdd+1Rkcz8euOqdr7lqgCRJztwr5hp9vDSi5UZCE=
-github.com/flant/addon-operator v1.25.0 h1:4qVba0nirBRV2UkFo3/lbagArGLLewc8zHSrNfEspgE=
-github.com/flant/addon-operator v1.25.0/go.mod h1:w3BJC3UQjbQugjlRkAM/9zi5QurtoHKkxr//IjUotds=
+github.com/flant/addon-operator v1.25.1 h1:2eQGZrdLTFsBux/px99Sqpv7Tm/Q2eGq5+tTtcCiERc=
+github.com/flant/addon-operator v1.25.1/go.mod h1:20k9o5DrhS9JDTTTVxrBu7MeupQ5r7RwEWbzv0Ly84A=
 github.com/flant/kube-client v1.10.0 h1:PcS+44RhssIL2t2XrZ+Qxq8u3lMgVxfMbHl+O5a9sPM=
 github.com/flant/kube-client v1.10.0/go.mod h1:KOaTG+1iLMIGToSczxtzbACBDVdWPK5UqMqyWjd0nsQ=
-github.com/flant/shell-operator v1.21.0 h1:YXbBnM8+8tLIFikMxwz1Akrsoa8/bSe6qai11n3bKoY=
-github.com/flant/shell-operator v1.21.0/go.mod h1:ltvOhcQudLxF+oH2W+RadASOHvIPmKTZgWFbeF+R8Wk=
+github.com/flant/shell-operator v1.21.1 h1:K+24jRVZUCbQ0cDExtnuXOMfuhmXVTaGUEp5RbinwTs=
+github.com/flant/shell-operator v1.21.1/go.mod h1:gN17ggpQs62W7olXj0APE9wOv+WDNeigLX55mV6LueQ=
 github.com/frankban/quicktest v1.14.6 h1:7Xjx+VpznH+oBnejlPUj8oUpdxnVs4f8XU8WnHkI4W8=
 github.com/frankban/quicktest v1.14.6/go.mod h1:4ptaffx2x8+WTWXmUCuVU6aPUX1/Mz7zb5vbUoiM6w0=
 github.com/fsnotify/fsnotify v1.4.7/go.mod h1:jwhsz4b93w/PPRr/qN1Yymfu8t87LnFCMoQvtojpjFo=
