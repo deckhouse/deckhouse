@@ -10,15 +10,21 @@ cluster-autoscaler logic, so the fix is a pure `go.mod`/`go.sum` bump — the
 gardener source tag is not changed. The patch covers `go.mod` and `go.sum` in
 both the main `cluster-autoscaler` module and its nested `apis` module.
 
-All active patches pin `google.golang.org/grpc v1.82.1` and bump `cel-go` to
-`v0.30.0` (GO-2026-6094).
+All active patches pin `google.golang.org/grpc v1.83.2`, `golang.org/x/crypto v0.57.0`
+and the OpenTelemetry trace SDK and OTLP trace exporters at `v1.45.0`
+(CVE-2026-81870), and bump `cel-go` to `v0.30.0` (GO-2026-6094).
 
-- 1.33–1.34: `x/net v0.56.0`, `x/text v0.39.0`, `x/crypto v0.53.0`,
-  `x/sys v0.46.0`, plus Kubernetes staging bumps with require+replace sync
+- 1.33–1.34: `x/net v0.58.0`, `x/text v0.42.0`, `x/crypto v0.57.0`,
+  `x/sys v0.48.0`, plus Kubernetes staging bumps with require+replace sync
   (`v1.33.6` / `v1.34.2`).
 - 1.35 (also used for the 1.36 and 1.37 images): `k8s.io/kubernetes v1.35.8` (staging
-  synced to `v0.35.8`), `x/mod v0.40.0` (CVE-2026-56864/56865), which pulls
-  `x/net v0.58.0`, `x/text v0.41.0`, `x/crypto v0.55.0`, `x/sys v0.47.0`.
+  synced to `v0.35.8`), `x/mod v0.41.0` (CVE-2026-56864/56865), `x/net v0.58.0`,
+  `x/text v0.42.0`, `x/crypto v0.57.0`, `x/sys v0.48.0`.
+
+On 1.33 `go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc`
+is pinned with a `replace` to `v0.58.0`: `google.golang.org/api` v0.264.0 requires
+`v0.61.0`, which removed `UnaryClientInterceptor`, still called by
+`k8s.io/apiserver` and `k8s.io/cri-client` 0.33.
 
 None of the images built from this branch link `runc` into the binary, so the
 runc CVEs (CVE-2024-45310, CVE-2025-31133, CVE-2025-52565, CVE-2025-52881) are
