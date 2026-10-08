@@ -1,0 +1,232 @@
+admission-policy-engine:
+  features:
+    - summary: Report the availability of the module components with alerts.
+      pull_request: https://fox.flant.com/deckhouse/deckhouse/-/merge_requests/384
+  fixes:
+    - summary: Fixed Gatekeeper policies for `kubectl exec` and `kubectl attach` being skipped in user
+        namespaces.
+      pull_request: https://fox.flant.com/deckhouse/deckhouse/-/merge_requests/463
+      impact: >-
+        Exec and attach requests in user namespaces reach Gatekeeper again, as in Deckhouse 1.73 and 1.74.
+
+        Every constraint that matches them is evaluated again, including a constraint without `match.kinds`
+
+        or with `kinds: ["*"]` whose policy does not check `input.review.operation`.
+
+        Before updating, check that such constraints do not deny `kubectl exec` and `kubectl attach`
+
+        for users who need them.
+    - summary: >-
+        Disabling the module deletes the webhook configurations before Gatekeeper, so the uninstall no
+        longer blocks `exec` and the Deckhouse queue.
+      pull_request: https://fox.flant.com/deckhouse/deckhouse/-/merge_requests/510
+candi:
+  fixes:
+    - summary: >-
+        Restored the lost `kubelet-disable-k-panic-check` patch for k8s 1.35 and 1.36, so kubelet no longer
+        enforces `kernel.panic=10` on these versions.
+      pull_request: https://fox.flant.com/deckhouse/deckhouse/-/merge_requests/426
+cert-manager:
+  features:
+    - summary: >-
+        Add the `highAvailability` parameter to control the HA mode of the module independently of the
+        global setting.
+      pull_request: https://fox.flant.com/deckhouse/deckhouse/-/merge_requests/504
+cloud-provider-dvp:
+  fixes:
+    - summary: >-
+        The CSI driver reports a volume as detached from a node only after the disk is released by the
+        node virtual machine, so with virtualization that keeps the VM listed on the disk until it is
+        released, the volume is not attached to two nodes at once.
+      pull_request: https://fox.flant.com/deckhouse/deckhouse/-/merge_requests/344
+    - summary: >-
+        The CSI driver reports the volume limit of a node, so the scheduler does not place more volumes
+        on a node than its virtual machine can attach.
+      pull_request: https://fox.flant.com/deckhouse/deckhouse/-/merge_requests/344
+    - summary: Stop infinite check/converge loop caused by the DVP controller annotation on the cloud-init
+        Secret.
+      pull_request: https://fox.flant.com/deckhouse/deckhouse/-/merge_requests/430
+cloud-provider-vsphere:
+  fixes:
+    - summary: Fixed master node creation when the datastore is set as a path with parent folders.
+      pull_request: https://fox.flant.com/deckhouse/deckhouse/-/merge_requests/361
+common:
+  fixes:
+    - summary: >-
+        Fixed a `kube-apiserver` panic on JSON Patch requests whose `add`/`replace` of the whole document
+        or `test` operation lacks the `value` field; such requests are now rejected with a validation
+        error.
+      pull_request: https://fox.flant.com/deckhouse/deckhouse/-/merge_requests/324
+control-plane-manager:
+  fixes:
+    - summary: Keep `resource.k8s.io/v1beta1` enabled in `kube-apiserver` 1.34.
+      pull_request: https://fox.flant.com/deckhouse/deckhouse/-/merge_requests/415
+deckhouse:
+  fixes:
+    - summary: Fixed CVEs in d8 CLI dependencies by updating d8 to v0.33.25.
+      pull_request: https://fox.flant.com/deckhouse/deckhouse/-/merge_requests/471
+deckhouse-controller:
+  features:
+    - summary: >-
+        Added the update settings of applications: the `spec.update` field of an Application and the global
+        `applications.update` parameter. Deckhouse merges them with the update settings of the `deckhouse`
+        module but doesn't apply them to application updates yet.
+      pull_request: https://fox.flant.com/deckhouse/deckhouse/-/merge_requests/347
+  fixes:
+    - summary: >-
+        Deleting an Application now also deletes objects with the `werf.io/ownership: anyone` or `werf.io/resource-policy`
+        annotation, such as Jobs deployed only on install, if the package lists their kinds in `orphanResources`.
+        Only `helm.sh/resource-policy: keep` protects an object.
+      pull_request: https://fox.flant.com/deckhouse/deckhouse/-/merge_requests/347
+descheduler:
+  fixes:
+    - summary: Fixed CVE-2026-81870 in descheduler by bumping OpenTelemetry Go modules to v1.45.0.
+      pull_request: https://fox.flant.com/deckhouse/deckhouse/-/merge_requests/488
+dhctl:
+  fixes:
+    - summary: Preserve existing SSH keys when switching to the temporary converge user.
+      pull_request: https://fox.flant.com/deckhouse/deckhouse/-/merge_requests/380
+    - summary: >-
+        Destroy and abort of a static cluster now fail instead of reporting success when a control-plane
+        node was not cleaned because of an SSH error or cleanup timeout.
+      pull_request: https://fox.flant.com/deckhouse/deckhouse/-/merge_requests/333
+docs:
+  fixes:
+    - summary: Correct typo in managed-rabbit key in modules library.
+      pull_request: https://fox.flant.com/deckhouse/deckhouse/-/merge_requests/360
+    - summary: Improve documentation clarity and fix typos.
+      pull_request: https://fox.flant.com/deckhouse/deckhouse/-/merge_requests/392
+    - summary: >-
+        Fixed tab switching on pages with several tab sets of the same name and opening hidden tabs by
+        an anchor link.
+      pull_request: https://fox.flant.com/deckhouse/deckhouse/-/merge_requests/400
+    - summary: Enhance tab activation logic in the documentation.
+      pull_request: https://fox.flant.com/deckhouse/deckhouse/-/merge_requests/405
+    - summary: Enhance tab shortcode functionality.
+      pull_request: https://fox.flant.com/deckhouse/deckhouse/-/merge_requests/462
+helm_lib:
+  fixes:
+    - summary: >-
+        Size the resources of a module whose `resourcesManagement` names a fractional quantity, instead
+        of rendering a zero limit.
+      pull_request: https://fox.flant.com/deckhouse/deckhouse/-/merge_requests/66
+      impact: >-
+        Bumping `deckhouse_lib_helm` from `1.72.11` to `1.72.24` also drops the `drbd.linbit.com` taint
+
+        tolerations from `helm_lib_tolerations`, so pods rendered through it no longer tolerate
+
+        `lost-quorum`, `force-io-error` and `ignore-fail-over`, and aligns the VPA `maxAllowed` memory
+        to
+
+        the recommender's 64Mi quantum.
+multitenancy-manager:
+  features:
+    - summary: >-
+        A new alert warns about a user project template named `simple`, which the built-in template of
+        the same name overwrites after the update.
+      pull_request: https://fox.flant.com/deckhouse/deckhouse/-/merge_requests/239
+  fixes:
+    - summary: >-
+        Disabling the module now removes the cluster-objects grant webhooks, which used to stay behind
+        and block writes in project namespaces.
+      pull_request: https://fox.flant.com/deckhouse/deckhouse/-/merge_requests/345
+      impact: >-
+        The grant webhooks are now removed together with the module. On a cluster where `multitenancy-manager`
+        is already disabled at the update, the `cluster-objects-grants-defaulting` and `cluster-objects-grants-validator`
+        webhook configurations left by earlier versions stay, and writes to grantable resources in project
+        namespaces (for example, removing a PVC finalizer) keep failing with `service "multitenancy-manager"
+        not found`. Delete them by hand:
+
+        `d8 k delete mutatingwebhookconfiguration cluster-objects-grants-defaulting`
+
+        `d8 k delete validatingwebhookconfiguration cluster-objects-grants-validator`
+
+        Nothing has to be done on clusters where the module is enabled.
+    - summary: >-
+        The controller takes its leader lease with any number of replicas, so a rollout of a single-replica
+        installation no longer has two pods upgrading project Helm releases at once.
+      pull_request: https://fox.flant.com/deckhouse/deckhouse/-/merge_requests/215
+      impact: >-
+        In single-replica installations a new controller pod reconciles projects only after the previous
+        pod has stopped and released the lease. If the previous pod is lost without a shutdown, for example
+        together with its node, the new pod starts reconciling projects 60 to about 78 seconds after it
+        starts.
+    - summary: >-
+        The Project conversions of the next release are registered in advance, so reads and writes of
+        projects keep working while webhook-handler is updated in HA mode.
+      pull_request: https://fox.flant.com/deckhouse/deckhouse/-/merge_requests/214
+node-manager:
+  fixes:
+    - summary: >-
+        Fixed cluster-autoscaler using node group names without the cluster prefix after a Deckhouse restart,
+        which stopped autoscaling and triggered the `D8ClusterAutoscalerTooManyErrors` alert.
+      pull_request: https://fox.flant.com/deckhouse/deckhouse/-/merge_requests/351
+    - summary: >-
+        Fixed cluster-autoscaler stopping autoscaling of all node groups and restarting every two hours
+        when an MCM node group has `minPerZone` equal to `maxPerZone`.
+      pull_request: https://fox.flant.com/deckhouse/deckhouse/-/merge_requests/464
+    - summary: >-
+        Fixed CVEs in cluster-autoscaler Go dependencies (OpenTelemetry, and grpc and x/crypto for Kubernetes
+        1.31).
+      pull_request: https://fox.flant.com/deckhouse/deckhouse/-/merge_requests/487
+registrypackages:
+  fixes:
+    - summary: Fixed CVEs in crictl 1.31.
+      pull_request: https://fox.flant.com/deckhouse/deckhouse/-/merge_requests/386
+user-authn:
+  fixes:
+    - summary: >-
+        The `idTokenTTL` description and the `D8UserAuthnIDTokenTTLTooLong` alert say that a value of
+        6 hours or more is replaced with `5h59m` by the next settings version, and what lowering it does
+        to DexAuthenticator sessions and issued ID tokens.
+      pull_request: https://fox.flant.com/deckhouse/deckhouse/-/merge_requests/218
+user-authz:
+  features:
+    - summary: >-
+        The new `D8UserAuthzLegacyRBACv2CapabilityBindingFound` alert lists the bindings to built-in capabilities
+        that the next minor release renames without aliases, and names the new name of each capability.
+      pull_request: https://fox.flant.com/deckhouse/deckhouse/-/merge_requests/396
+    - summary: >-
+        The new `D8UserAuthzLegacyRBACv2CustomCapabilityFound` alert lists custom capabilities that extend
+        the namespace roles only through labels the next role scheme does not select.
+      pull_request: https://fox.flant.com/deckhouse/deckhouse/-/merge_requests/240
+    - summary: >-
+        New `D8UserAuthzLimitNamespacesEntryNeedsRewrite` and `D8UserAuthzLimitNamespacesEntryInvalid`
+        alerts report ClusterAuthorizationRule `limitNamespaces` entries that are anchored only in part
+        or are not valid regular expressions.
+      pull_request: https://fox.flant.com/deckhouse/deckhouse/-/merge_requests/240
+  fixes:
+    - summary: >-
+        The authorization webhook no longer restarts while the API server is unreachable, which could
+        deadlock the control plane on bootstrap or an API server restart with multitenancy enabled.
+      pull_request: https://fox.flant.com/deckhouse/deckhouse/-/merge_requests/342
+    - summary: a `kube-apiserver` health probes no longer fail when `authz-webhook` is unavailable.
+      pull_request: https://fox.flant.com/deckhouse/deckhouse/-/merge_requests/412
+    - summary: >-
+        The identity-assign check treats an identity with every permission across the cluster, such as
+        a subject of `cluster-admin` bound by a ClusterRoleBinding, as SuperAdmin.
+      pull_request: https://fox.flant.com/deckhouse/deckhouse/-/merge_requests/217
+      impact: >-
+        Such identities can write ClusterAuthorizationRules, Users and Groups that carry `SuperAdmin`
+        or `cluster-admin`. A ClusterAuthorizationRule gives this right only without `namespaceSelector`
+        and `limitNamespaces` and, with multi-tenancy on, only with `allowAccessToSystemNamespaces: true`,
+        even if it grants `cluster-admin`.
+    - summary: >-
+        The RBACv2 roles d8:manage:* and d8:use:role:* keep the rights of the modules that have already
+        switched to the capability labels of the next release while the upgrade to it is in progress.
+      pull_request: https://fox.flant.com/deckhouse/deckhouse/-/merge_requests/372
+    - summary: >-
+        The authorization webhook keeps applying ClusterAuthorizationRules when a `limitNamespaces` entry
+        is not a valid regular expression; the entry is left out, and its rule covers fewer namespaces.
+      pull_request: https://fox.flant.com/deckhouse/deckhouse/-/merge_requests/245
+      impact: >-
+        Before, such an entry stopped the webhook from reloading the rules, so subjects of rules added
+        later, and every subject after a restart of the webhook, were not limited to their namespaces.
+        Subjects of a rule whose only entry is invalid now get no namespace through the entries of that
+        rule.
+    - summary: >-
+        The `D8UserAuthzLegacyRBACv2CustomRoleFound` alert lists every custom role that selects capabilities
+        by the `rbac.deckhouse.io/kind: manage|use` label or by the aggregation label of a lineage the
+        next role model does not collect, or that loses its RoleBindings in the namespaces of the modules,
+        and the FAQ describes how to prepare such a role before the update without losing access.
+      pull_request: https://fox.flant.com/deckhouse/deckhouse/-/merge_requests/240
