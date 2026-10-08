@@ -35,6 +35,8 @@ kind: Deployment
 metadata:
   name: gatekeeper-controller-manager
   namespace: d8-admission-policy-engine
+  annotations:
+    {{- include "webhook_delete_dependencies" . }}
   {{- include "helm_lib_module_labels" (list . (dict "app" "gatekeeper" "control-plane" "controller-manager" "gatekeeper.sh/operation" "webhook" "gatekeeper.sh/system" "yes")) | nindent 2 }}
 spec:
   {{- include "helm_lib_deployment_strategy_and_replicas_for_ha" . | nindent 2 }}

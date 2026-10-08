@@ -222,6 +222,8 @@ metadata:
   {{- include "helm_lib_module_labels" (list . (dict "gatekeeper.sh/system" "yes" "app" "gatekeeper")) | nindent 2 }}
   name: gatekeeper-manager
   namespace: d8-admission-policy-engine
+  annotations:
+    {{- include "webhook_delete_dependencies" . }}
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: Role
@@ -236,6 +238,8 @@ kind: ClusterRoleBinding
 metadata:
   {{- include "helm_lib_module_labels" (list . (dict "gatekeeper.sh/system" "yes" "app" "gatekeeper")) | nindent 2 }}
   name: "d8:admission-policy-engine:gatekeeper"
+  annotations:
+    {{- include "webhook_delete_dependencies" . }}
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: ClusterRole
@@ -285,6 +289,8 @@ kind: ClusterRoleBinding
 metadata:
   {{- include "helm_lib_module_labels" (list . (dict "gatekeeper.sh/system" "yes" "app" "gatekeeper")) | nindent 2 }}
   name: "d8:admission-policy-engine:admissionregistration"
+  annotations:
+    {{- include "webhook_delete_dependencies" . }}
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: ClusterRole
