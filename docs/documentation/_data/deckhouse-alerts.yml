@@ -2958,7 +2958,7 @@ alerts:
       edition: ce
       description: |
         Node {{ $labels.node }} in NodeGroup {{ $labels.node_group }} does not support containerd v2.
-        Starting from Kubernetes 1.37, containerd v1.y [will no longer be supported](https://kubernetes.io/docs/setup/production-environment/container-runtimes/#systemd-cgroup-driver).
+        Starting from Kubernetes 1.38, containerd v1.y [will no longer be supported](https://kubernetes.io/docs/setup/production-environment/container-runtimes/#systemd-cgroup-driver).
         Please check the requirements for containerd v2 and schedule your migration plan.
 
         The exact reason is listed in the `node.deckhouse.io/containerd-v2-err` annotation on the node.
