@@ -154,28 +154,31 @@ spec:
               import data.lib.common.is_controller
               import data.lib.range.is_in_any_range
 
-              violation contains {"msg": msg} if {
+              # get_*_violation return {"msg", "details"}. The details carry the same data the
+              # message prints and must never be more granular than it: these are functions,
+              # so two different outputs for the same arguments are a runtime conflict.
+              violation contains {"msg": v.msg, "details": v.details} if {
                 not input.review.operation == "DELETE"
                 fields := ["runAsUser", "runAsGroup", "supplementalGroups", "fsGroup"]
                 field := fields[_]
                 container := input_containers[_]
-                msg := get_type_violation(field, container)
+                v := get_type_violation(field, container)
               }
 
-              get_type_violation(field, container) := msg if {
+              get_type_violation(field, container) := v if {
                 field == "runAsUser"
                 params := input.parameters[field]
-                msg := get_user_violation(params, container)
+                v := get_user_violation(params, container)
               }
 
-              get_type_violation(field, container) := msg if {
+              get_type_violation(field, container) := v if {
                 field != "runAsUser"
                 params := input.parameters[field]
-                msg := get_group_violation(field, params, container)
+                v := get_group_violation(field, params, container)
               }
 
               # RunAsUser
-              get_user_violation(params, container) := msg if {
+              get_user_violation(params, container) := v if {
                 rule := params.rule
                 provided_user := get_field_value("runAsUser", container, pod_spec)
                 not accept_users(rule, provided_user)
@@ -188,9 +191,10 @@ spec:
                 not allow_user_by_spe(rule, provided_user, run_as_non_root, spe)
                 spe_ctx := run_as_user_spe_ctx(spe, provided_user, params)
                 msg := build_user_violation_message(container.name, actual_value, allowed_by_policy, spe_ctx)
+                v := {"msg": msg, "details": user_violation_details(container, provided_user, params, spe)}
               }
 
-              get_user_violation(params, container) := msg if {
+              get_user_violation(params, container) := v if {
                 not get_field_value("runAsUser", container, pod_spec)
                 params.rule == "MustRunAs"
                 # Absent on a controller: a mutator may still set it before the
@@ -206,9 +210,10 @@ spec:
                 spe := resolve_spe_for_container(container, labels, namespace)
                 spe_ctx := run_as_user_spe_ctx(spe, "not set", params)
                 msg := build_user_violation_message(container.name, actual_value, allowed_by_policy, spe_ctx)
+                v := {"msg": msg, "details": user_violation_details(container, null, params, spe)}
               }
 
-              get_user_violation(params, container) := msg if {
+              get_user_violation(params, container) := v if {
                 params.rule == "MustRunAsNonRoot"
                 not get_field_value("runAsUser", container, pod_spec)
                 not get_field_value("runAsNonRoot", container, pod_spec)
@@ -216,13 +221,22 @@ spec:
                 # before the Pod is created, so do not deny the controller here.
                 not controller_absent_run_as_user(container)
                 allowed_by_policy := sprintf("Allowed runAsUser: %v", [params])
-                actual_value := "Actual runAsUser: not set, runAsNonRoot: not set"
+                # Setting runAsNonRoot: true clears this violation too, so the message and the
+                # details carry its value as well: false when set so, null ("not set") when absent.
+                run_as_non_root := get_field_value_or_default("runAsNonRoot", container, pod_spec, null)
+                actual_value := sprintf("Actual runAsUser: not set, runAsNonRoot: %v", [value_or_not_set(run_as_non_root)])
                 labels := object_labels
                 namespace := object_namespace
                 spe := resolve_spe_for_container(container, labels, namespace)
                 spe_ctx := run_as_user_spe_ctx(spe, "not set", params)
                 msg := build_user_violation_message(container.name, actual_value, allowed_by_policy, spe_ctx)
+                details := object.union(user_violation_details(container, null, params, spe), {"runAsNonRoot": run_as_non_root})
+                v := {"msg": msg, "details": details}
               }
+
+              value_or_not_set(null) := "not set"
+
+              value_or_not_set(value) := value if value != null
 
               build_user_violation_message(container_name, actual_value, allowed_by_policy, "") := msg if {
                 msg := sprintf("Container %v is attempting to run as disallowed user. | %v | %v", [container_name, actual_value, allowed_by_policy])
@@ -242,6 +256,30 @@ spec:
                 out := sprintf("forbidden: %v; policy allows: %v; SPE allows runAsUser: %v; SPE allows runAsNonRoot: %v", [actual, params, spe_user, spe_non_root])
               } else := "" if {
                 true
+              }
+
+              # `actual: null` stands for "not set" in the message.
+              user_violation_details(container, actual, params, spe) := out if {
+                user_path := ["spec", "securityContext", "runAsUser", "allowedValues"]
+                non_root_path := ["spec", "securityContext", "runAsNonRoot", "allowedValue"]
+                has_run_as_user_spe_ctx(spe, user_path, non_root_path)
+                out := {
+                  "container": container.name,
+                  "field": "runAsUser",
+                  "actual": actual,
+                  "policy_allowed": params,
+                  "spe_applied": true,
+                  "spe_allowed": {
+                    "runAsUser": allowed_values_or_empty(spe, user_path),
+                    "runAsNonRoot": allowed_values_or_empty(spe, non_root_path),
+                  },
+                }
+              } else := {
+                "container": container.name,
+                "field": "runAsUser",
+                "actual": actual,
+                "policy_allowed": params,
+                "spe_applied": false,
               }
 
               has_run_as_user_spe_ctx(spe, user_path, _) if {
@@ -281,7 +319,7 @@ spec:
               }
 
               # Group Options
-              get_group_violation(field, params, container) := msg if {
+              get_group_violation(field, params, container) := v if {
                 rule := params.rule
                 provided_value := get_field_value(field, container, pod_spec)
                 not is_array(provided_value)
@@ -289,10 +327,11 @@ spec:
                 allowed_by_policy := sprintf("Allowed %v: %v", [field, params])
                 actual_value := sprintf("Actual %v: %v", [field, provided_value])
                 msg := sprintf("Container %v is attempting to run as disallowed %v. | %v | %v", [container.name, field, actual_value, allowed_by_policy])
+                v := {"msg": msg, "details": group_violation_details(container, field, provided_value, params)}
               }
 
               # SupplementalGroups is array value
-              get_group_violation(field, params, container) := msg if {
+              get_group_violation(field, params, container) := v if {
                 rule := params.rule
                 array_value := get_field_value(field, container, pod_spec)
                 is_array(array_value)
@@ -301,9 +340,10 @@ spec:
                 allowed_by_policy := sprintf("Allowed %v: %v", [field, params])
                 actual_value := sprintf("Actual %v: %v", [field, array_value])
                 msg := sprintf("Container %v is attempting to run as disallowed %v. | %v | %v", [container.name, field, actual_value, allowed_by_policy])
+                v := {"msg": msg, "details": group_violation_details(container, field, array_value, params)}
               }
 
-              get_group_violation(field, params, container) := msg if {
+              get_group_violation(field, params, container) := v if {
                 not get_field_value(field, container, pod_spec)
                 params.rule == "MustRunAs"
                 # Absent on a controller: a mutator may still set it before the
@@ -312,6 +352,15 @@ spec:
                 allowed_by_policy := sprintf("Allowed %v: %v", [field, params])
                 actual_value := sprintf("Actual %v: not set", [field])
                 msg := sprintf("Container %v is attempting to run as disallowed %v. | %v | %v", [container.name, field, actual_value, allowed_by_policy])
+                v := {"msg": msg, "details": group_violation_details(container, field, null, params)}
+              }
+
+              group_violation_details(container, field, actual, params) := {
+                "container": container.name,
+                "field": field,
+                "actual": actual,
+                "policy_allowed": params,
+                "spe_applied": false,
               }
 
               accept_value("RunAsAny", _, _) := true

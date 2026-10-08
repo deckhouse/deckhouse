@@ -33,7 +33,10 @@
 1. Include the library in your constraint template `libs` section.
 2. Import the needed functions.
 3. Call the library function with your parameters.
-4. Check the result and emit violation if not allowed.
+4. Check the result and emit violation if not allowed. Put `result.detail` into the violation `details`
+   (adding `container` when a container is checked, and a concrete `field` where the lib uses a generic one),
+   so that tools reading the violation get the data behind `msg`. Pod Security Standards templates are
+   required to do so: `template_tests/policies_test.go` fails on a PSS violation with empty `details`.
 
 ## Testing
 

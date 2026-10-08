@@ -79,7 +79,7 @@ spec:
               import data.lib.common.review_kind
 
               # Disallow top-level custom SELinux options
-              violation contains {"msg": msg, "details": {}} if {
+              violation contains {"msg": msg, "details": object.union(result.detail, {"field": "seLinuxOptions"})} if {
                 not input.review.operation == "DELETE"
                 has_field(pod_spec.securityContext, "seLinuxOptions")
                 labels := object_labels
@@ -96,7 +96,7 @@ spec:
               }
 
               # Disallow container-level custom SELinux options
-              violation contains {"msg": msg, "details": {}} if {
+              violation contains {"msg": msg, "details": object.union(result.detail, {"container": c.name, "field": "seLinuxOptions"})} if {
                 not input.review.operation == "DELETE"
                 c := input_security_context[_]
                 has_field(c.securityContext, "seLinuxOptions")

@@ -63,7 +63,7 @@ spec:
               import data.lib.message.violation_message
               import data.lib.common.review_kind
 
-              violation contains {"msg": msg, "details": {}} if {
+              violation contains {"msg": msg, "details": result.detail} if {
                 not input.review.operation == "DELETE"
                 volume := pod_spec.volumes[_]
                 has_field(volume, "hostPath")

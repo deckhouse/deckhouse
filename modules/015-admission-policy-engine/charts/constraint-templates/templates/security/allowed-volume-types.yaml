@@ -58,7 +58,7 @@ spec:
               import data.lib.exception.resolve_spe_from_labels
               import data.lib.common.review_kind
 
-              violation contains {"msg": msg, "details": {}} if {
+              violation contains {"msg": msg, "details": object.union(result.detail, {"field": "volumes"})} if {
                 not input.review.operation == "DELETE"
                 obj := input.review.object
                 volume_fields := {x | pod_spec.volumes[_][x]; x != "name"}

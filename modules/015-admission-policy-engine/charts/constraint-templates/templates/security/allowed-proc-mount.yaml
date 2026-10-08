@@ -65,7 +65,7 @@ spec:
               import data.lib.common.object_namespace
               import data.lib.message.violation_message
  
-              violation contains {"msg": msg, "details": {}} if {
+              violation contains {"msg": msg, "details": object.union(result.detail, {"container": c.name})} if {
                 not input.review.operation == "DELETE"
                 c := input_containers[_]
                 allowed_proc_mount := get_allowed_proc_mount(input)

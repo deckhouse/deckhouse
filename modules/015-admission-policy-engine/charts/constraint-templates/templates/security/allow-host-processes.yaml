@@ -61,7 +61,7 @@ spec:
               import data.lib.exception.resolve_spe_from_labels
               import data.lib.message.violation_message
 
-              violation contains {"msg": msg, "details": {}} if {
+              violation contains {"msg": msg, "details": detail} if {
                 not input.review.operation == "DELETE"
                 obj := input.review.object
                 labels := object_labels
@@ -101,7 +101,7 @@ spec:
                 msg := violation_message(reason, obj.metadata.name, detail)
               }
 
-              violation contains {"msg": msg, "details": {}} if {
+              violation contains {"msg": msg, "details": detail} if {
                 not input.review.operation == "DELETE"
                 obj := input.review.object
                 labels := object_labels

@@ -64,7 +64,7 @@ spec:
               import data.lib.common.object_namespace
               import data.lib.message.violation_message
 
-              violation contains {"msg": msg, "details": {}} if {
+              violation contains {"msg": msg, "details": object.union(result.detail, {"container": container.name})} if {
                 not input.review.operation == "DELETE"
                 container := input_containers[_]
                 result := check_container_subset(
@@ -81,7 +81,7 @@ spec:
                 msg := violation_message("container has a disallowed capability", sprintf("container: %v", [container.name]), result.detail)
               }
 
-              violation contains {"msg": msg, "details": {}} if {
+              violation contains {"msg": msg, "details": object.union(result.detail, {"container": container.name})} if {
                 not input.review.operation == "DELETE"
                 container := input_containers[_]
                 result := check_container_superset(

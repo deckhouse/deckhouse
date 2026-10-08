@@ -67,7 +67,7 @@ spec:
               import data.lib.exception.resolve_spe_from_labels
               import data.lib.common.review_kind
 
-              violation contains {"msg": msg, "details": {}} if {
+              violation contains {"msg": msg, "details": object.union(result.detail, {"field": "sysctls"})} if {
                   not input.review.operation == "DELETE"
                   sysctl := pod_spec.securityContext.sysctls[_].name
                   labels := object_labels

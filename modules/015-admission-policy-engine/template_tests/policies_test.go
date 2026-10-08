@@ -22,6 +22,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"reflect"
 	"regexp"
 	"runtime"
 	"sort"
@@ -102,8 +103,16 @@ admissionPolicyEngine:
 			Expect(err).NotTo(HaveOccurred())
 			Expect(constraintDirs).NotTo(BeEmpty(), "no constraint test cases found under %s", constraintsRoot)
 
+			pssKinds := make(map[string]bool)
+			for _, kind := range append(getBaselineConstraintNames(), getRestrictedConstraintNames()...) {
+				pssKinds[kind] = true
+			}
+			seenPSSKinds := make(map[string]bool)
+			seenPinned := make(map[string]bool)
+
 			failedConstraints := make([]string, 0)
 			failedGatorTests := make([]string, 0)
+			missingDetails := make([]string, 0)
 			for _, constraintDir := range constraintDirs {
 				relConstraintDir, relErr := filepath.Rel(modRoot, constraintDir)
 				if relErr != nil {
@@ -120,6 +129,10 @@ admissionPolicyEngine:
 				if generateErr != nil {
 					failedConstraints = append(failedConstraints, fmt.Sprintf("%s (generate)", relConstraintDir))
 					continue
+				}
+
+				for _, problem := range pssDetailsProblems(gatorPath, renderedDir, pssKinds, seenPSSKinds, seenPinned) {
+					missingDetails = append(missingDetails, fmt.Sprintf("%s: %s", relConstraintDir, problem))
 				}
 
 				gatorCLI := exec.Command(gatorPath, "verify", "-v", "./rendered")
@@ -158,6 +171,19 @@ admissionPolicyEngine:
 				}
 				Fail(strings.Join(sections, "\n"))
 			}
+
+			for kind := range pssKinds {
+				if !seenPSSKinds[kind] {
+					missingDetails = append(missingDetails, fmt.Sprintf("%s: no violating test case produced a violation", kind))
+				}
+			}
+			for key := range pinnedPSSDetails {
+				if !seenPinned[key] {
+					missingDetails = append(missingDetails, fmt.Sprintf("%s: pinned case not found in the rendered suites", key))
+				}
+			}
+			sort.Strings(missingDetails)
+			Expect(missingDetails).To(BeEmpty(), "Pod Security Standards violations must carry details")
 		})
 
 		It("Coverage checks", func() {
@@ -705,6 +731,179 @@ func collectConstraintTestCaseDirs(constraintsRoot string) ([]string, error) {
 
 	sort.Strings(dirs)
 	return dirs, nil
+}
+
+// pinnedPSSDetails holds the exact details expected for selected cases, keyed by
+// "<suite directory>/<case name>": `gator verify` compares only msg, so without these the
+// shape of details would not be checked at all. Each case is run alone, with its own inventory.
+var pinnedPSSDetails = map[string]string{
+	// hostNetwork and every disallowed port, sorted; port 80 is both hostPort and containerPort
+	// and is listed once, as hostPort; containerPorts count only because of hostNetwork.
+	"allow-host-network/disallowed-hostnetwork-true-reports-hostnetwork-and-all-ports": `[{
+		"hostNetwork": {"field": "hostNetwork", "actual": true, "policy_allowed": false, "spe_applied": false},
+		"ports": [
+			{"port": 53, "protocol": "UDP", "source": "containerPort", "field": "hostPorts", "actual": "port 53/UDP", "policy_allowed": [], "spe_applied": false, "spe_allowed": []},
+			{"port": 80, "protocol": "TCP", "source": "hostPort", "field": "hostPorts", "actual": "port 80/TCP", "policy_allowed": [], "spe_applied": false, "spe_allowed": []},
+			{"port": 443, "protocol": "TCP", "source": "containerPort", "field": "hostPorts", "actual": "port 443/TCP", "policy_allowed": [], "spe_applied": false, "spe_allowed": []},
+			{"port": 6379, "protocol": "TCP", "source": "containerPort", "field": "hostPorts", "actual": "port 6379/TCP", "policy_allowed": [], "spe_applied": false, "spe_allowed": []}
+		]
+	}]`,
+	// No hostNetwork key when hostNetwork is fine.
+	"allow-host-network/disallowed-no-hostnetwork-reports-all-host-ports": `[{
+		"ports": [
+			{"port": 80, "protocol": "TCP", "source": "hostPort", "field": "hostPorts", "actual": "port 80/TCP", "policy_allowed": [], "spe_applied": false, "spe_allowed": []},
+			{"port": 443, "protocol": "TCP", "source": "hostPort", "field": "hostPorts", "actual": "port 443/TCP", "policy_allowed": [], "spe_applied": false, "spe_allowed": []},
+			{"port": 6379, "protocol": "TCP", "source": "hostPort", "field": "hostPorts", "actual": "port 6379/TCP", "policy_allowed": [], "spe_applied": false, "spe_allowed": []}
+		]
+	}]`,
+	// Only the ports the exception does not cover.
+	"allow-host-network/disallowed-by-exception-reports-uncovered-ports-only": `[{
+		"ports": [
+			{"port": 5000, "protocol": "UDP", "source": "containerPort", "field": "hostPorts", "actual": "port 5000/UDP", "policy_allowed": [], "spe_applied": true, "spe_allowed": [{"port": 25000, "protocol": "TCP"}, {"port": 5000, "protocol": "TCP"}]},
+			{"port": 5001, "protocol": "TCP", "source": "containerPort", "field": "hostPorts", "actual": "port 5001/TCP", "policy_allowed": [], "spe_applied": true, "spe_allowed": [{"port": 25000, "protocol": "TCP"}, {"port": 5000, "protocol": "TCP"}]}
+		]
+	}]`,
+	// An exception with an empty hostPorts list is still applied.
+	"allow-host-network/disallowed-exception-allows-false-constraint-allows-true": `[{
+		"hostNetwork": {"field": "hostNetwork", "actual": true, "policy_allowed": true, "spe_applied": true, "spe_allowed": false},
+		"ports": [
+			{"port": 5000, "protocol": "TCP", "source": "hostPort", "field": "hostPorts", "actual": "port 5000/TCP", "policy_allowed": [], "spe_applied": true, "spe_allowed": []}
+		]
+	}]`,
+	// MustRunAsNonRoot with neither field set: details carry runAsNonRoot as well.
+	"allowed-users/010-disallowed-no-securitycontext": `[{
+		"container": "nginx", "field": "runAsUser", "actual": null, "runAsNonRoot": null,
+		"policy_allowed": {"rule": "MustRunAsNonRoot"}, "spe_applied": false
+	}]`,
+	"allowed-users/011-disallowed-runasnonroot-false-container": `[{
+		"container": "nginx", "field": "runAsUser", "actual": null, "runAsNonRoot": false,
+		"policy_allowed": {"rule": "MustRunAsNonRoot"}, "spe_applied": false
+	}]`,
+}
+
+type gatorResult struct {
+	Msg      string `json:"msg"`
+	Metadata struct {
+		Details map[string]interface{} `json:"details"`
+	} `json:"metadata"`
+	Constraint struct {
+		Kind string `json:"kind"`
+	} `json:"constraint"`
+}
+
+// gatorTest runs `gator test` on the given rendered files and returns the violations.
+func gatorTest(gatorPath, renderedDir string, files []string) ([]gatorResult, error) {
+	args := []string{"test", "-o", "json"}
+	added := make(map[string]bool)
+	for _, f := range files {
+		if !added[f] {
+			added[f] = true
+			args = append(args, "-f", f)
+		}
+	}
+	cmd := exec.Command(gatorPath, args...)
+	cmd.Dir = renderedDir
+	// gator exits non-zero whenever it finds violations, so only the output is checked.
+	out, _ := cmd.Output()
+	var results []gatorResult
+	if err := json.Unmarshal(out, &results); err != nil {
+		return nil, fmt.Errorf("cannot parse gator output: %w", err)
+	}
+	return results, nil
+}
+
+// pssDetailsProblems runs the violating cases of a rendered gator suite through `gator test`
+// and returns every Pod Security Standards violation that has empty details, and every
+// pinned case (pinnedPSSDetails) whose details differ from the expected ones.
+// The cases of a block are evaluated in one run for the emptiness check: it does not depend
+// on which other objects are in the inventory.
+func pssDetailsProblems(gatorPath, renderedDir string, pssKinds, seen, seenPinned map[string]bool) []string {
+	raw, err := os.ReadFile(filepath.Join(renderedDir, "test_suite.yaml"))
+	if err != nil {
+		return []string{err.Error()}
+	}
+	var suite struct {
+		Tests []struct {
+			Name       string `yaml:"name"`
+			Template   string `yaml:"template"`
+			Constraint string `yaml:"constraint"`
+			Cases      []struct {
+				Name       string   `yaml:"name"`
+				Object     string   `yaml:"object"`
+				Inventory  []string `yaml:"inventory"`
+				Assertions []struct {
+					Violations string `yaml:"violations"`
+				} `yaml:"assertions"`
+			} `yaml:"cases"`
+		} `yaml:"tests"`
+	}
+	if err := yaml.Unmarshal(raw, &suite); err != nil {
+		return []string{err.Error()}
+	}
+
+	suiteDir := filepath.Base(filepath.Dir(renderedDir))
+	problems := make([]string, 0)
+	for _, block := range suite.Tests {
+		files := []string{block.Template, block.Constraint}
+		for _, c := range block.Cases {
+			caseFiles := append([]string{block.Template, block.Constraint, c.Object}, c.Inventory...)
+			if want, ok := pinnedPSSDetails[suiteDir+"/"+c.Name]; ok {
+				seenPinned[suiteDir+"/"+c.Name] = true
+				if problem := pinnedDetailsProblem(gatorPath, renderedDir, caseFiles, want); problem != "" {
+					problems = append(problems, fmt.Sprintf("%s/%s: %s", block.Name, c.Name, problem))
+				}
+			}
+			if len(c.Assertions) == 0 || c.Assertions[0].Violations != "yes" {
+				continue
+			}
+			files = append(files, caseFiles[2:]...)
+		}
+		if len(files) == 2 {
+			continue
+		}
+
+		results, err := gatorTest(gatorPath, renderedDir, files)
+		if err != nil {
+			problems = append(problems, fmt.Sprintf("%s: %v", block.Name, err))
+			continue
+		}
+		for _, r := range results {
+			if !pssKinds[r.Constraint.Kind] {
+				continue
+			}
+			seen[r.Constraint.Kind] = true
+			if len(r.Metadata.Details) == 0 {
+				problems = append(problems, fmt.Sprintf("%s: %s", block.Name, r.Msg))
+			}
+		}
+	}
+	return problems
+}
+
+// pinnedDetailsProblem runs one case and compares the details of its violations with want,
+// a JSON array in violation order; it returns "" when they match.
+func pinnedDetailsProblem(gatorPath, renderedDir string, files []string, want string) string {
+	results, err := gatorTest(gatorPath, renderedDir, files)
+	if err != nil {
+		return err.Error()
+	}
+	sort.Slice(results, func(i, j int) bool { return results[i].Msg < results[j].Msg })
+	got := make([]interface{}, 0, len(results))
+	for _, r := range results {
+		got = append(got, r.Metadata.Details)
+	}
+	// Both sides go through JSON so that numbers and nested values compare the same way.
+	gotJSON, _ := json.Marshal(got)
+	var gotValue, wantValue interface{}
+	_ = json.Unmarshal(gotJSON, &gotValue)
+	if err := json.Unmarshal([]byte(want), &wantValue); err != nil {
+		return fmt.Sprintf("invalid expected details: %v", err)
+	}
+	if !reflect.DeepEqual(gotValue, wantValue) {
+		wantJSON, _ := json.Marshal(wantValue)
+		return fmt.Sprintf("details differ:\n  got:  %s\n  want: %s", gotJSON, wantJSON)
+	}
+	return ""
 }
 
 func extractFailedGatorTestsFromOutput(output string) []string {

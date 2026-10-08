@@ -82,7 +82,7 @@ spec:
                 "Localhost": ["localhost", "localhost/*"],
               }
 
-              violation contains {"msg": msg, "details": {}} if {
+              violation contains {"msg": msg, "details": object.union(result.detail, {"container": container.name, "field": "appArmorProfile"})} if {
                 not input.review.operation == "DELETE"
                 container := input_containers[_]
                 sources := [

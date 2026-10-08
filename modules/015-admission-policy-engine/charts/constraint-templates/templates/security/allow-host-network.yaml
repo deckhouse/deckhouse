@@ -76,22 +76,61 @@ spec:
               import data.lib.exception.resolve_spe_from_labels
               import data.lib.common.review_kind
 
-              violation contains {"msg": msg, "details": {}} if {
+              # One violation per object, whatever it breaks, so the number of deny messages does
+              # not depend on how many ports a pod opens. The message lists hostNetwork and every
+              # disallowed port; `details` carries the same data:
+              #   hostNetwork: {field, actual, policy_allowed, spe_applied[, spe_allowed]}, only
+              #                when hostNetwork itself is not allowed;
+              #   ports:       [{port, protocol, source, field, actual, policy_allowed, spe_applied,
+              #                spe_allowed}], every disallowed port sorted by port and protocol,
+              #                always present (empty when the ports are fine). `source` is
+              #                `hostPort`, or `containerPort` for a port that binds on the node
+              #                only because the pod uses the host network. `policy_allowed` is the
+              #                ranges actually applied: once an exception names hostPorts
+              #                (`spe_applied: true`) the policy ranges are not consulted, so it is [].
+              violation contains {"msg": msg, "details": details} if {
                 not input.review.operation == "DELETE"
-                obj := input.review.object
-                allow_host_network := object.get(input.parameters, "allowHostNetwork", false)
-                labels := object_labels
-                namespace := object_namespace
-                spe := resolve_spe_from_labels(labels, namespace)
-                bool_result := host_network_result(obj, allow_host_network, spe)
-                host_network := object.get(pod_spec, "hostNetwork", false)
-                ports := collect_ports(host_network)
+                host_network := [r.detail |
+                  r := host_network_result(input.review.object, object.get(input.parameters, "allowHostNetwork", false), pod_exception)
+                  not r.allowed
+                ]
+                ports_summary := [object.union(disallowed_ports[0], {"actual": concat(", ", [p.actual | p := disallowed_ports[_]])}) |
+                  count(disallowed_ports) > 0
+                ]
+                parts := array.concat(host_network, ports_summary)
+                count(parts) > 0
+                msg := violation_message_of_parts(parts)
+                details := object.union({"ports": disallowed_ports}, {"hostNetwork": d | d := host_network[_]})
+              }
+
+              # Every part is printed the way violation_message prints a single detail.
+              violation_message_of_parts(parts) := msg if {
+                reason := "The hostNetwork or hostPort are not allowed"
+                context := sprintf("%v: %v", [review_kind, input.review.object.metadata.name])
+                prefix := sprintf("%v, %v | ", [reason, context])
+                segments := [trim_prefix(violation_message(reason, context, d), prefix) | d := parts[_]]
+                msg := concat("", [prefix, concat(" | ", segments)])
+              }
+
+              pod_exception := resolve_spe_from_labels(object_labels, object_namespace)
+
+              # Host ports are checked independently of hostNetwork, so a pod that uses the host
+              # network does not hide its disallowed ports. Each port is checked on its own to
+              # report all of them, not just the first; a port repeated across containers is
+              # reported once.
+              disallowed_ports := [entry[2] | entry := sort(disallowed_port_set)[_]]
+
+              disallowed_port_set contains [port.port, port.protocol, entry] if {
+                port := collect_ports(object.get(pod_spec, "hostNetwork", false))[_]
                 spe_ports_path := ["spec", "network", "hostPorts"]
-                spe_ports_applied := path_value_resolved(spe, spe_ports_path)
-                spe_ports := allowed_values_or_empty(spe, spe_ports_path)
-                range_result := host_port_result(ports, spe_ports_applied, spe_ports)
-                failed := failed_result(bool_result, range_result)
-                msg := violation_message("The hostNetwork or hostPort are not allowed", sprintf("%v: %v", [review_kind, obj.metadata.name]), failed.detail)
+                spe_ports_applied := path_value_resolved(pod_exception, spe_ports_path)
+                spe_ports := allowed_values_or_empty(pod_exception, spe_ports_path)
+                checked := host_port_result([port], spe_ports_applied, spe_ports)
+                not checked.allowed
+                # The lib counts an exception as applied only when it lists ports, but one that names
+                # hostPorts decides on its own even when nothing valid is left in the list: the
+                # policy ranges are then not consulted at all, and `policy_allowed` stays [] to say so.
+                entry := object.union(checked.detail, {"port": port.port, "protocol": port.protocol, "source": port.source, "spe_applied": spe_ports_applied})
               }
 
               # Where an exception is in force it decides whether the host network may be used,
@@ -164,38 +203,22 @@ spec:
                 }
               }
 
-              failed_result(bool_result, _) := bool_result if {
-                not bool_result.allowed
-              }
-
-              failed_result(bool_result, range_result) := range_result if {
-                bool_result.allowed
-                not range_result.allowed
-              }
-
-              collect_ports(host_network) := ports if {
+              # Under hostNetwork every containerPort binds on the node as well, so it is checked
+              # as a host port. A containerPort that some container also declares as a hostPort is
+              # left to that hostPort, so each port has one source.
+              collect_ports(host_network) := array.concat(host_ports, container_ports) if {
                 host_ports := [
-                  {"port": p.hostPort, "protocol": object.get(p, "protocol", "TCP")} |
+                  {"port": p.hostPort, "protocol": object.get(p, "protocol", "TCP"), "source": "hostPort"} |
                   p := input_containers[_].ports[_]
                   object.get(p, "hostPort", null) != null
                 ]
-                container_ports := [
-                  {"port": p.containerPort, "protocol": object.get(p, "protocol", "TCP")} |
+                container_ports := [port |
+                  host_network
                   p := input_containers[_].ports[_]
                   object.get(p, "containerPort", null) != null
+                  port := {"port": p.containerPort, "protocol": object.get(p, "protocol", "TCP"), "source": "containerPort"}
+                  not object.union(port, {"source": "hostPort"}) in host_ports
                 ]
-                host_network
-                ports := array.concat(host_ports, container_ports)
-              }
-
-              collect_ports(host_network) := ports if {
-                host_ports := [
-                  {"port": p.hostPort, "protocol": object.get(p, "protocol", "TCP")} |
-                  p := input_containers[_].ports[_]
-                  object.get(p, "hostPort", null) != null
-                ]
-                not host_network
-                ports := host_ports
               }
 
               # `allowedHostPorts` is optional, and omitting it places no restriction on host ports,
