@@ -6,7 +6,7 @@ permalink: en/admin/configuration/registry/third-party.html
 {% alert level="warning" %}
 This page applies only to Managed Kubernetes clusters. Registry management through the `registry` module is not available in these clusters.
 
-For clusters fully managed by Deckhouse Platform (DP), registry settings are configured in the [registry](/modules/deckhouse/configuration.html#parameters-registry) section of the `deckhouse` module configuration. For an example, see ["Managing the registry in DP-managed clusters"](managing-interaction.html).
+For clusters fully managed by Deckhouse Platform (DP), registry settings are configured using the [`registry`](/modules/registry/) module (or, in clusters still running its previous implementation, in the [`registry`](/modules/deckhouse/configuration.html#parameters-registry) section of the `deckhouse` module configuration). For configuration examples and descriptions of the implementations, see ["Managing the registry in DP-managed clusters"](managing-interaction.html).
 
 The information on this page applies to clusters that use containerd v1 or containerd v2 as their primary container runtime. However, containerd v2 is the current standard for DP. If you need to migrate to containerd v2, refer to the section ["Migrating container runtime to containerd v2"](../platform-scaling/node/migrating.html) to verify availability and perform the migration.
 {% endalert %}
