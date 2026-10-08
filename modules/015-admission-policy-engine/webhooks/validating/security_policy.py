@@ -1,6 +1,3 @@
-#!/usr/bin/python3
-from typing import Optional
-
 # Copyright 2024 Flant JSC
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -15,67 +12,17 @@ from typing import Optional
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from deckhouse import hook
+# The operator template imports these as well; they make the file importable by the tests.
+from typing import Optional
 from dotmap import DotMap
 
-config = """
-configVersion: v1
-kubernetes:
-  - name: policies
-    apiVersion: deckhouse.io/v1alpha1
-    kind: SecurityPolicy
-    queue: "securitypolicies"
-    group: main
-    executeHookOnEvent: []
-    executeHookOnSynchronization: false
-    keepFullObjectsInMemory: false
-    jqFilter: |
-      {
-        "name": .metadata.name,
-        "references": [.spec.policies.verifyImageSignatures[]?.reference]
-      }
-kubernetesValidating:
-- name: securitypolicies.deckhouse.io
-  group: main
-  rules:
-  - apiGroups:   ["deckhouse.io"]
-    apiVersions: ["*"]
-    operations:  ["CREATE", "UPDATE"]
-    resources:   ["securitypolicies"]
-    scope:       "Cluster"
-"""
 
-
-def main(ctx: hook.Context):
-    try:
-        # DotMap is a dict with dot notation
-        binding_context = DotMap(ctx.binding_context)
-        validate(binding_context, ctx.output.validations)
-    except Exception as e:
-        ctx.output.validations.error(str(e))
-
-
-def validate(ctx: DotMap, output: hook.ValidationsCollector):
-    operation = ctx.review.request.operation
-    if operation == "CREATE" or operation == "UPDATE":
-        validate_creation_or_update(ctx, output)
-    elif operation == "DELETE":
-        validate_delete(ctx, output)
-    else:
-        raise Exception(f"Unknown operation {ctx.operation}")
-
-
-def validate_creation_or_update(ctx: DotMap, output: hook.ValidationsCollector):
+def validate(ctx: DotMap) -> tuple[Optional[str], bool]:
     error = check_verify_image_signatures(ctx)
     if error is not None:
-        output.deny(error)
-        return
+        return error, False
 
-    output.allow()
-
-
-def validate_delete(ctx: DotMap, output: hook.ValidationsCollector):
-    return
+    return None, True
 
 
 # check that all image references don't have intersection, it's required by ratify
@@ -104,7 +51,3 @@ def check_verify_image_signatures(ctx: DotMap) -> Optional[str]:
                     return f"ImageReference \"{ref}\" has intersection in the SecurityPolicy \"{exobj.name}\""
 
     return None
-
-
-if __name__ == "__main__":
-    hook.run(main, config=config)

@@ -1,5 +1,3 @@
-#!/usr/bin/python3
-
 # Copyright 2025 Flant JSC
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -13,6 +11,10 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+
+# The operator template imports these as well; they make the file importable by the tests.
+from typing import Optional
+from dotmap import DotMap
 
 
 # This hook checks the MultiTenancy flag for the user-authz module.
@@ -63,73 +65,9 @@
 #   spec.settings, e.g. an unrelated ModuleConfig edit), we fall back to the ConfigMap-mirrored
 #   effective value instead of treating it as "disabled".
 
-
-from deckhouse import hook
-from dotmap import DotMap
-
 SEPARATOR = "; "
 MULTITENANCY_STATE_SNAPSHOT_NAME = "d8-user-authz-multitenancy-state"
 CLUSTER_AUTH_RULES_SNAPSHOT_NAME = "d8-user-authz-cars"
-CONFIG = f"""
-configVersion: v1
-kubernetesValidating:
-- name: d8-user-authz-car-multitenancy-related-options.deckhouse.io
-  includeSnapshotsFrom: ["{MULTITENANCY_STATE_SNAPSHOT_NAME}"]
-  rules:
-  - apiGroups:   ["deckhouse.io"]
-    apiVersions: ["*"]
-    operations:  ["CREATE", "UPDATE"]
-    resources:   ["clusterauthorizationrules"]
-    scope:       "Cluster"
-- name: d8-user-authz-module-multitenancy-related-options.deckhouse.io
-  includeSnapshotsFrom: ["{CLUSTER_AUTH_RULES_SNAPSHOT_NAME}", "{MULTITENANCY_STATE_SNAPSHOT_NAME}"]
-  matchConditions:
-  - name: "only-user-authz-module"
-    expression: 'request.name == "user-authz"'
-  rules:
-  - apiGroups: ["deckhouse.io"]
-    apiVersions: ["*"]
-    resources: ["moduleconfigs"]
-    operations: ["CREATE", "UPDATE"]
-    scope:       "Cluster"
-
-kubernetes:
-- name: {MULTITENANCY_STATE_SNAPSHOT_NAME}
-  apiVersion: v1
-  kind: ConfigMap
-  executeHookOnEvent: []
-  executeHookOnSynchronization: true
-  keepFullObjectsInMemory: false
-  jqFilter: |
-    {{
-      "enableMultiTenancy": (.data.enableMultiTenancy == "true")
-    }}
-  namespace:
-    nameSelector:
-      matchNames:
-      - d8-user-authz
-  nameSelector:
-    matchNames:
-    - d8-user-authz-multitenancy-state
-- name: {CLUSTER_AUTH_RULES_SNAPSHOT_NAME}
-  apiVersion: deckhouse.io/v1alpha1
-  kind: ClusterAuthorizationRule
-  keepFullObjectsInMemory: true
-  executeHookOnEvent: []
-  executeHookOnSynchronization: false
-"""
-
-
-def main(ctx: hook.Context):
-    try:
-        binding_context = DotMap(ctx.binding_context)
-        error_messages, warnings = validate(binding_context)
-        if error_messages:
-            ctx.output.validations.deny(SEPARATOR.join(error_messages))
-        else:
-            ctx.output.validations.allow(*warnings)
-    except Exception as e:
-        ctx.output.validations.error(str(e))
 
 
 def is_multitenancy_enabled(ctx: DotMap) -> bool:
@@ -137,7 +75,19 @@ def is_multitenancy_enabled(ctx: DotMap) -> bool:
     return len(snapshot) != 0 and snapshot[0].filterResult.enableMultiTenancy is True
 
 
-def validate(ctx: DotMap) -> tuple[list[str], list[str]]:
+def _decision(errors: list, warnings: list) -> tuple[Optional[str], bool]:
+    if errors:
+        return SEPARATOR.join(errors), False
+    # The template takes a single warning string.
+    return SEPARATOR.join(warnings), True
+
+
+def validate(ctx: DotMap) -> tuple[Optional[str], bool]:
+    error_messages, warnings = _validate(ctx)
+    return _decision(error_messages, warnings)
+
+
+def _validate(ctx: DotMap) -> tuple[list[str], list[str]]:
     req = ctx.review.request
     kind = req.kind.kind.lower()
 
@@ -178,8 +128,10 @@ def validate(ctx: DotMap) -> tuple[list[str], list[str]]:
             return [], []
 
         errors, warnings = [], []
+        # The snapshot carries the jqFilter result, not the object: the name and the restricted
+        # fields of the rule, which is all validate_car_multitenancy_related_fields reads.
         for cluster_authorization_rule in ctx.snapshots.get(CLUSTER_AUTH_RULES_SNAPSHOT_NAME, []):
-            error_messages, warning_messages = validate_car_multitenancy_related_fields(cluster_authorization_rule.object)
+            error_messages, warning_messages = validate_car_multitenancy_related_fields(cluster_authorization_rule.filterResult)
             if warning_messages:
               warnings.append(SEPARATOR.join(warning_messages))
             if error_messages:
@@ -188,7 +140,6 @@ def validate(ctx: DotMap) -> tuple[list[str], list[str]]:
         return errors, []
 
     return [], []
-
 
 MULTITENANCY_RESTRICTED_FIELDS = {
     'allowAccessToSystemNamespaces': "allowAccessToSystemNamespaces flag",
@@ -403,7 +354,3 @@ def validate_car_multitenancy_related_fields(obj: DotMap) -> tuple[list[str], li
             )
 
     return errors, []
-
-
-if __name__ == "__main__":
-    hook.run(main, config=CONFIG)

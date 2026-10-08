@@ -14,17 +14,16 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import json
-import shutil
-import subprocess
 import unittest
 
 import identity_assign as assign
-import identity_privilege
-import yaml
+import validation_webhook_test_helper
 from deckhouse import hook, tests
 from dotmap import DotMap
 from identity_assign_test import STAR, STAR_ALL, CAR_EDIT, USERS_EDIT
+
+# The ValidationWebhook renders the kernel and the check into one hook.
+identity_privilege = validation_webhook_test_helper.load("identity_assign.py", "identity_privilege.py")
 
 
 HELPDESK = "eve@corp"
@@ -942,7 +941,6 @@ class TestIdentityAssignHook(unittest.TestCase):
         tests.assert_validation_allowed(self, out, None)
 
 
-
 # --- DexProvider gate: spec.md M1/M2 (specs/002-dexprovider-identity-gate) ---
 
 AUTHN_EDIT = "authn@corp"
@@ -1162,185 +1160,6 @@ class TestDexProviderGate(unittest.TestCase):
     def test_superadmin_widens_anything(self):
         self.allowed(dex_ctx("UPDATE", P4_TRAP, old_spec=P4_CLEAN, username=SUPERADMIN))
         self.allowed(dex_ctx("UPDATE", P1, old_spec=P4_CLEAN, username=SUPERADMIN))
-
-
-class TestIdentityAssignConfigContract(unittest.TestCase):
-    @classmethod
-    def setUpClass(cls):
-        cls.config = yaml.safe_load(identity_privilege.CONFIG)
-        cls.validating = cls.config["kubernetesValidating"][0]
-
-    def test_wave2_resources(self):
-        resources = []
-        for rule in self.validating["rules"]:
-            resources.extend(rule["resources"])
-        self.assertEqual(sorted(set(resources)), [
-            "clusterauthorizationrules", "clusterroles", "dexproviders",
-            "groups", "useroperations", "users",
-        ])
-
-    def test_useroperations_are_create_only(self):
-        ops = []
-        for rule in self.validating["rules"]:
-            if "useroperations" in rule["resources"]:
-                ops.extend(rule["operations"])
-        self.assertEqual(sorted(set(ops)), ["CREATE"])
-
-    def test_car_operations_include_delete(self):
-        car_ops = []
-        for rule in self.validating["rules"]:
-            if "clusterauthorizationrules" in rule["resources"]:
-                car_ops.extend(rule["operations"])
-        self.assertEqual(sorted(set(car_ops)), ["CREATE", "DELETE", "UPDATE"])
-
-    def test_snapshots_include_crb_and_clusterroles(self):
-        kinds = [b["kind"] for b in self.config["kubernetes"]]
-        self.assertEqual(kinds, [
-            "ClusterAuthorizationRule", "AuthorizationRule",
-            "ClusterRoleBinding", "ClusterProjectRoleBinding", "ProjectRoleBinding", "ClusterRole",
-            "User", "Group", "ConfigMap",
-        ])
-
-    def test_every_snapshot_is_included(self):
-        names = [b["name"] for b in self.config["kubernetes"]]
-        self.assertEqual(sorted(self.validating["includeSnapshotsFrom"]), sorted(names))
-
-    def test_multitenancy_state_snapshot_reads_the_state_config_map(self):
-        state = [b for b in self.config["kubernetes"] if b["name"] == assign.MT_STATE_SNAP][0]
-        self.assertEqual(state["namespace"]["nameSelector"]["matchNames"], ["d8-user-authz"])
-        self.assertEqual(state["nameSelector"]["matchNames"], ["d8-user-authz-multitenancy-state"])
-
-    def test_car_snapshot_reads_the_version_with_namespace_selector(self):
-        # v1alpha1 has no namespaceSelector, and the apiserver prunes it from objects read in v1alpha1.
-        car = [b for b in self.config["kubernetes"] if b["name"] == assign.CAR_SNAP]
-        self.assertEqual(car[0]["apiVersion"], "deckhouse.io/v1")
-
-
-@unittest.skipUnless(shutil.which("jq"), "jq is required to execute the hook's jqFilter programs")
-class TestAssignSnapshotJQFilters(unittest.TestCase):
-    @classmethod
-    def setUpClass(cls):
-        config = yaml.safe_load(identity_privilege.CONFIG)
-        cls.filters = {b["name"]: b["jqFilter"] for b in config["kubernetes"]}
-
-    def run_filter(self, snapshot_name, obj):
-        result = subprocess.run(
-            ["jq", "-c", self.filters[snapshot_name]],
-            input=json.dumps(obj), capture_output=True, text=True, check=False,
-        )
-        self.assertEqual(result.returncode, 0, result.stderr)
-        return json.loads(result.stdout)
-
-    def test_car_filter_keeps_level_roles_and_subjects(self):
-        out = self.run_filter(assign.CAR_SNAP, {
-            "metadata": {"name": "admin-rule"},
-            "spec": {
-                "accessLevel": "SuperAdmin",
-                "additionalRoles": [{"name": "cluster-admin"}],
-                "subjects": [
-                    {"kind": "Group", "name": "g"},
-                    {"kind": "ServiceAccount", "name": "sa", "namespace": "ns"},
-                    {"kind": "User", "name": "u@x"},
-                ],
-            },
-        })
-        self.assertEqual(out["additionalRoles"], ["cluster-admin"])
-        self.assertEqual(out["saSubjects"], ["ns:sa"])
-        self.assertIsNone(out["namespaceSelector"])
-        self.assertEqual(out["limitNamespaces"], [])
-
-    def test_car_filter_keeps_namespace_limits(self):
-        selector = {"labelSelector": {"matchLabels": {"team": "apps"}}}
-        out = self.run_filter(assign.CAR_SNAP, {
-            "metadata": {"name": "limited"},
-            "spec": {
-                "accessLevel": "User",
-                "namespaceSelector": selector,
-                "limitNamespaces": ["app-.*"],
-                "subjects": [{"kind": "User", "name": "u@x"}],
-            },
-        })
-        self.assertEqual(out["namespaceSelector"], selector)
-        self.assertEqual(out["limitNamespaces"], ["app-.*"])
-        self.assertTrue(assign.car_is_namespace_limited(out, multitenancy=True))
-
-    def test_car_filter_reads_allow_access_to_system_namespaces(self):
-        for spec, expected in (({}, False), ({"allowAccessToSystemNamespaces": False}, False),
-                               ({"allowAccessToSystemNamespaces": True}, True)):
-            with self.subTest(spec=spec):
-                out = self.run_filter(assign.CAR_SNAP, {"metadata": {"name": "r"}, "spec": spec})
-                self.assertIs(out["allowAccessToSystemNamespaces"], expected)
-
-    def test_multitenancy_state_filter(self):
-        for data, expected in (({"enableMultiTenancy": "true"}, True), ({"enableMultiTenancy": "false"}, False),
-                               ({"enableMultiTenancy": "yes"}, None), ({}, None)):
-            with self.subTest(data=data):
-                out = self.run_filter(assign.MT_STATE_SNAP, {"metadata": {"name": "s"}, "data": data})
-                self.assertEqual(out, {"enableMultiTenancy": expected})
-
-    def test_crb_filter(self):
-        out = self.run_filter(assign.CRB_SNAP, {
-            "metadata": {"name": "b"},
-            "roleRef": {"name": "d8:manage:security:manager"},
-            "subjects": [{"kind": "User", "name": "sec@corp"}],
-        })
-        self.assertEqual(out["role"], "d8:manage:security:manager")
-        self.assertEqual(out["userSubjects"], ["sec@corp"])
-
-    def test_project_binding_filters_read_spec(self):
-        for snap in (assign.CPRB_SNAP, assign.PRB_SNAP):
-            out = self.run_filter(snap, {
-                "metadata": {"name": "team-admins", "namespace": "team"},
-                "spec": {
-                    "roleRef": {"kind": "ClusterRole", "name": "d8:project:admin"},
-                    "subjects": [
-                        {"kind": "User", "name": "padmin@corp"},
-                        {"kind": "Group", "name": "team-leads"},
-                        {"kind": "ServiceAccount", "name": "deployer", "namespace": "ci"},
-                    ],
-                },
-            })
-            self.assertEqual(out["role"], "d8:project:admin", snap)
-            self.assertEqual(out["namespace"], "team", snap)
-            self.assertEqual(out["userSubjects"], ["padmin@corp"], snap)
-            self.assertEqual(out["groupSubjects"], ["team-leads"], snap)
-            self.assertEqual(out["saSubjects"], ["ci:deployer"], snap)
-
-    def test_clusterrole_filter_keeps_can_assign_labels(self):
-        out = self.run_filter(assign.CROLE_SNAP, {
-            "metadata": {
-                "name": "d8:manage:security:manager",
-                "labels": {
-                    "user-authz.deckhouse.io/can-assign-basic-max": "ClusterAdmin",
-                    "user-authz.deckhouse.io/can-assign-max-level": "admin",
-                },
-            },
-            "rules": CAR_EDIT,
-        })
-        self.assertEqual(out["labels"]["can-assign-basic-max"], "ClusterAdmin")
-        self.assertEqual(out["rules"], CAR_EDIT)
-
-    def test_user_filter(self):
-        out = self.run_filter(assign.USER_SNAP, {
-            "metadata": {"name": "admin"},
-            "spec": {"email": "admin@deckhouse.io", "groups": ["legacy"]},
-        })
-        self.assertEqual(out["email"], "admin@deckhouse.io")
-        self.assertEqual(out["groups"], ["legacy"])
-
-    def test_group_filter(self):
-        out = self.run_filter(assign.GROUP_SNAP, {
-            "metadata": {"name": "g1"},
-            "spec": {"name": "superadmins", "members": [
-                {"kind": "User", "name": "admin"},
-                {"kind": "Group", "name": "other"},
-            ]},
-        })
-        self.assertEqual(out["name"], "superadmins")
-        self.assertEqual(out["members"], [
-            {"kind": "User", "name": "admin"},
-            {"kind": "Group", "name": "other"},
-        ])
 
 
 if __name__ == "__main__":

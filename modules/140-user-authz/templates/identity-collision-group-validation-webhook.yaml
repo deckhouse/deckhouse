@@ -1,0 +1,69 @@
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: ValidationWebhook
+metadata:
+  name: user-authz-identity-collision-group
+  {{- include "helm_lib_module_labels" (list . (dict "app" "webhook-handler")) | nindent 2 }}
+validationObject:
+  name: d8-user-authz-group-authorization-rule-collision.deckhouse.io
+  # One condition per identity in EXEMPT_USERS / EXEMPT_GROUPS of webhooks/validating/identity_collision.py,
+  # in the form the admission documentation guarantees: a CEL expression that fails to compile
+  # invalidates the whole ValidatingWebhookConfiguration. The template tests keep the list in step
+  # with the hook.
+  matchConditions:
+  - expression: ("system:apiserver" != request.userInfo.username)
+    name: exclude-kube-apiserver
+  - expression: ("system:sudouser" != request.userInfo.username)
+    name: exclude-sudouser
+  - expression: ("system:kube-controller-manager" != request.userInfo.username)
+    name: exclude-kube-controller-manager
+  - expression: ("system:kube-scheduler" != request.userInfo.username)
+    name: exclude-kube-scheduler
+  - expression: ("system:volume-scheduler" != request.userInfo.username)
+    name: exclude-volume-scheduler
+  - expression: ("dhctl" != request.userInfo.username)
+    name: exclude-dhctl
+  - expression: ("observability" != request.userInfo.username)
+    name: exclude-observability
+  - expression: ("system:serviceaccount:d8-system:deckhouse" != request.userInfo.username)
+    name: exclude-deckhouse
+  - expression: ("system:serviceaccount:d8-commander:cluster-manager" != request.userInfo.username)
+    name: exclude-commander-cluster-manager
+  - expression: '!("system:masters" in request.userInfo.groups)'
+    name: exclude-system-masters
+  - expression: '!("system:serviceaccounts:kube-system" in request.userInfo.groups)'
+    name: exclude-kube-system-serviceaccounts
+  - expression: '!("system:serviceaccounts:d8-system" in request.userInfo.groups)'
+    name: exclude-d8-system-serviceaccounts
+  rules:
+  - apiGroups:   ["deckhouse.io"]
+    apiVersions: ["*"]
+    operations:  ["CREATE", "UPDATE", "DELETE"]
+    resources:   ["groups"]
+    scope:       "Cluster"
+context:
+  - name: d8-user-authz-collision-cluster-authorization-rules
+    kubernetes:
+      apiVersion: deckhouse.io/v1alpha1
+      kind: ClusterAuthorizationRule
+      jqFilter: |
+        {
+          "name": .metadata.name,
+          "groupSubjects": [.spec.subjects[]? | select(.kind == "Group") | .name],
+          "userSubjects": [.spec.subjects[]? | select(.kind == "User") | .name]
+        }
+  - name: d8-user-authz-collision-authorization-rules
+    kubernetes:
+      apiVersion: deckhouse.io/v1alpha1
+      kind: AuthorizationRule
+      jqFilter: |
+        {
+          "name": .metadata.name,
+          "namespace": .metadata.namespace,
+          "groupSubjects": [.spec.subjects[]? | select(.kind == "Group") | .name],
+          "userSubjects": [.spec.subjects[]? | select(.kind == "User") | .name]
+        }
+handler:
+  # The code of the hook is webhooks/validating/identity_collision.py, where its unit tests import it.
+  python: |
+    {{- (required "webhooks/validating/identity_collision.py is missing" (.Files.Get "webhooks/validating/identity_collision.py")) | nindent 4 }}

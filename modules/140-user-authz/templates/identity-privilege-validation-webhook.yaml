@@ -1,0 +1,194 @@
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: ValidationWebhook
+metadata:
+  name: user-authz-identity-privilege
+  {{- include "helm_lib_module_labels" (list . (dict "app" "webhook-handler")) | nindent 2 }}
+validationObject:
+  name: d8-user-authz-identity-assign.deckhouse.io
+  matchConditions:
+  - expression: ("system:apiserver" != request.userInfo.username)
+    name: exclude-kube-apiserver
+  - expression: ("system:sudouser" != request.userInfo.username)
+    name: exclude-sudouser
+  - expression: ("system:kube-controller-manager" != request.userInfo.username)
+    name: exclude-kube-controller-manager
+  - expression: ("system:kube-scheduler" != request.userInfo.username)
+    name: exclude-kube-scheduler
+  - expression: ("system:volume-scheduler" != request.userInfo.username)
+    name: exclude-volume-scheduler
+  - expression: ("dhctl" != request.userInfo.username)
+    name: exclude-dhctl
+  - expression: ("observability" != request.userInfo.username)
+    name: exclude-observability
+  - expression: ("system:serviceaccount:d8-system:deckhouse" != request.userInfo.username)
+    name: exclude-deckhouse
+  - expression: ("system:serviceaccount:kube-system:clusterrole-aggregation-controller" != request.userInfo.username)
+    name: exclude-aggregation-controller
+  - expression: '!("system:masters" in request.userInfo.groups)'
+    name: exclude-system-masters
+  - expression: '!("system:serviceaccounts:kube-system" in request.userInfo.groups)'
+    name: exclude-kube-system-sas
+  rules:
+  - apiGroups:   ["deckhouse.io"]
+    apiVersions: ["*"]
+    operations:  ["CREATE", "UPDATE", "DELETE"]
+    resources:   ["users"]
+    scope:       "Cluster"
+  - apiGroups:   ["deckhouse.io"]
+    apiVersions: ["*"]
+    operations:  ["CREATE", "UPDATE", "DELETE"]
+    resources:   ["groups"]
+    scope:       "Cluster"
+  - apiGroups:   ["deckhouse.io"]
+    apiVersions: ["*"]
+    operations:  ["CREATE", "UPDATE", "DELETE"]
+    resources:   ["clusterauthorizationrules"]
+    scope:       "Cluster"
+  - apiGroups:   ["deckhouse.io"]
+    apiVersions: ["*"]
+    operations:  ["CREATE"]
+    resources:   ["useroperations"]
+    scope:       "Cluster"
+  - apiGroups:   ["deckhouse.io"]
+    apiVersions: ["*"]
+    operations:  ["CREATE", "UPDATE"]
+    resources:   ["dexproviders"]
+    scope:       "Cluster"
+  - apiGroups:   ["rbac.authorization.k8s.io"]
+    apiVersions: ["*"]
+    operations:  ["CREATE", "UPDATE"]
+    resources:   ["clusterroles"]
+    scope:       "Cluster"
+context:
+  # The jqFilter programs build "<namespace>:<name>" without the \( interpolation: webhook-operator
+  # renders them into a plain Python string, where a backslash is an escape sequence.
+  - name: d8-user-authz-assign-cluster-authorization-rules
+    kubernetes:
+      # ClusterAuthorizationRule is read in v1: v1alpha1 has no namespaceSelector,
+      # and the apiserver drops that field from objects served in v1alpha1.
+      apiVersion: deckhouse.io/v1
+      kind: ClusterAuthorizationRule
+      jqFilter: |
+        {
+          "name": .metadata.name,
+          "accessLevel": (.spec.accessLevel // ""),
+          "additionalRoles": [.spec.additionalRoles[]? | .name],
+          "namespaceSelector": (.spec.namespaceSelector // null),
+          "limitNamespaces": [.spec.limitNamespaces[]?],
+          "allowAccessToSystemNamespaces": (.spec.allowAccessToSystemNamespaces == true),
+          "groupSubjects": [.spec.subjects[]? | select(.kind == "Group") | .name],
+          "userSubjects": [.spec.subjects[]? | select(.kind == "User") | .name],
+          "saSubjects": [.spec.subjects[]? | select(.kind == "ServiceAccount") | ((.namespace | tostring) + ":" + (.name | tostring))]
+        }
+  - name: d8-user-authz-assign-authorization-rules
+    kubernetes:
+      apiVersion: deckhouse.io/v1alpha1
+      kind: AuthorizationRule
+      jqFilter: |
+        {
+          "name": .metadata.name,
+          "namespace": .metadata.namespace,
+          "accessLevel": (.spec.accessLevel // ""),
+          "additionalRoles": [.spec.additionalRoles[]? | .name],
+          "groupSubjects": [.spec.subjects[]? | select(.kind == "Group") | .name],
+          "userSubjects": [.spec.subjects[]? | select(.kind == "User") | .name],
+          "saSubjects": [.spec.subjects[]? | select(.kind == "ServiceAccount") | ((.namespace | tostring) + ":" + (.name | tostring))]
+        }
+  - name: d8-user-authz-assign-cluster-role-bindings
+    kubernetes:
+      apiVersion: rbac.authorization.k8s.io/v1
+      kind: ClusterRoleBinding
+      jqFilter: |
+        {
+          "name": .metadata.name,
+          "role": .roleRef.name,
+          "groupSubjects": [.subjects[]? | select(.kind == "Group") | .name],
+          "userSubjects": [.subjects[]? | select(.kind == "User") | .name],
+          "saSubjects": [.subjects[]? | select(.kind == "ServiceAccount") | ((.namespace | tostring) + ":" + (.name | tostring))]
+        }
+  - name: d8-user-authz-assign-cluster-project-role-bindings
+    kubernetes:
+      apiVersion: deckhouse.io/v1alpha3
+      kind: ClusterProjectRoleBinding
+      jqFilter: |
+        {
+          "name": .metadata.name,
+          "namespace": (.metadata.namespace // ""),
+          "role": .spec.roleRef.name,
+          "groupSubjects": [.spec.subjects[]? | select(.kind == "Group") | .name],
+          "userSubjects": [.spec.subjects[]? | select(.kind == "User") | .name],
+          "saSubjects": [.spec.subjects[]? | select(.kind == "ServiceAccount") | ((.namespace | tostring) + ":" + (.name | tostring))]
+        }
+  - name: d8-user-authz-assign-project-role-bindings
+    kubernetes:
+      apiVersion: deckhouse.io/v1alpha3
+      kind: ProjectRoleBinding
+      jqFilter: |
+        {
+          "name": .metadata.name,
+          "namespace": (.metadata.namespace // ""),
+          "role": .spec.roleRef.name,
+          "groupSubjects": [.spec.subjects[]? | select(.kind == "Group") | .name],
+          "userSubjects": [.spec.subjects[]? | select(.kind == "User") | .name],
+          "saSubjects": [.spec.subjects[]? | select(.kind == "ServiceAccount") | ((.namespace | tostring) + ":" + (.name | tostring))]
+        }
+  - name: d8-user-authz-assign-cluster-roles
+    kubernetes:
+      apiVersion: rbac.authorization.k8s.io/v1
+      kind: ClusterRole
+      jqFilter: |
+        {
+          "name": .metadata.name,
+          "rules": (.rules // []),
+          "accessLevel": (.metadata.annotations["user-authz.deckhouse.io/access-level"] // ""),
+          "labels": {
+            "heritage": (.metadata.labels["heritage"] // ""),
+            "can-assign-basic-max": (.metadata.labels["user-authz.deckhouse.io/can-assign-basic-max"] // ""),
+            "can-assign-scope": (.metadata.labels["user-authz.deckhouse.io/can-assign-scope"] // ""),
+            "can-assign-subsystem": (.metadata.labels["user-authz.deckhouse.io/can-assign-subsystem"] // ""),
+            "can-assign-max-level": (.metadata.labels["user-authz.deckhouse.io/can-assign-max-level"] // ""),
+            "scope": (.metadata.labels["rbac.deckhouse.io/scope"] // ""),
+            "subsystem": (.metadata.labels["rbac.deckhouse.io/subsystem"] // "")
+          }
+        }
+  - name: d8-user-authz-assign-users
+    kubernetes:
+      apiVersion: deckhouse.io/v1
+      kind: User
+      jqFilter: |
+        {
+          "name": .metadata.name,
+          "email": (.spec.email // ""),
+          "groups": [.spec.groups[]? | select(type == "string")]
+        }
+  - name: d8-user-authz-assign-groups
+    kubernetes:
+      apiVersion: deckhouse.io/v1alpha1
+      kind: Group
+      jqFilter: |
+        {
+          "name": (.spec.name // .metadata.name),
+          "members": [.spec.members[]? | select(.kind == "User" or .kind == "Group") | {kind, name}]
+        }
+  - name: d8-user-authz-assign-multitenancy-state
+    kubernetes:
+      apiVersion: v1
+      kind: ConfigMap
+      namespace:
+        nameSelector:
+          matchNames:
+          - d8-user-authz
+      nameSelector:
+        matchNames:
+        - d8-user-authz-multitenancy-state
+      jqFilter: |
+        {"enableMultiTenancy": (if .data.enableMultiTenancy == "true" then true
+          elif .data.enableMultiTenancy == "false" then false else null end)}
+handler:
+  # The code of the hook is webhooks/validating/identity_assign.py, the can-assign kernel, followed
+  # by webhooks/validating/identity_privilege.py. The unit tests import them from there.
+  {{- $kernel := required "webhooks/validating/identity_assign.py is missing" (.Files.Get "webhooks/validating/identity_assign.py") }}
+  {{- $check := required "webhooks/validating/identity_privilege.py is missing" (.Files.Get "webhooks/validating/identity_privilege.py") }}
+  python: |
+    {{- printf "%s\n%s" $kernel $check | nindent 4 }}

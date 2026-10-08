@@ -1,0 +1,40 @@
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: ValidationWebhook
+metadata:
+  name: user-authn-group
+  {{- include "helm_lib_module_labels" (list . (dict "app" "webhook-handler")) | nindent 2 }}
+validationObject:
+  name: groups-unique.deckhouse.io
+  group: main
+  rules:
+  - apiGroups:   ["deckhouse.io"]
+    apiVersions: ["*"]
+    operations:  ["CREATE", "UPDATE", "DELETE"]
+    resources:   ["groups"]
+    scope:       "Cluster"
+context:
+  - name: groups
+    kubernetes:
+      apiVersion: deckhouse.io/v1alpha1
+      kind: Group
+      queue: "groups"
+      jqFilter: |
+        {
+          "name": .metadata.name,
+          "groupName": .spec.name,
+          "members": .spec.members
+        }
+  - name: users
+    kubernetes:
+      apiVersion: deckhouse.io/v1
+      kind: User
+      queue: "users"
+      jqFilter: |
+        {
+          "userName": .metadata.name
+        }
+handler:
+  # The code of the hook is webhooks/validating/group.py, where its unit tests import it.
+  python: |
+    {{- (required "webhooks/validating/group.py is missing" (.Files.Get "webhooks/validating/group.py")) | nindent 4 }}

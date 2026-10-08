@@ -1,5 +1,3 @@
-#!/usr/bin/python3
-
 # Copyright 2026 Flant JSC
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -13,6 +11,10 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+
+# The operator template imports these as well; they make the file importable by the tests.
+from typing import Optional
+from dotmap import DotMap
 
 
 # This hook guards the authorization rules owned by this module against a local identity silently
@@ -51,9 +53,6 @@
 
 from typing import Any, Callable, NamedTuple, Optional
 
-from deckhouse import hook
-from dotmap import DotMap
-
 CLUSTER_RULES_SNAPSHOT_NAME = "d8-user-authz-collision-cluster-authorization-rules"
 NAMESPACED_RULES_SNAPSHOT_NAME = "d8-user-authz-collision-authorization-rules"
 
@@ -78,87 +77,6 @@ EXEMPT_GROUPS = frozenset({
     "system:serviceaccounts:kube-system",
     "system:serviceaccounts:d8-system",
 })
-
-# One condition per identity, in the form the admission documentation guarantees: a CEL expression
-# that fails to compile invalidates the whole ValidatingWebhookConfiguration. Kept in step with
-# EXEMPT_USERS / EXEMPT_GROUPS above by the config contract test.
-MATCH_CONDITIONS = """
-  - expression: ("system:apiserver" != request.userInfo.username)
-    name: exclude-kube-apiserver
-  - expression: ("system:sudouser" != request.userInfo.username)
-    name: exclude-sudouser
-  - expression: ("system:kube-controller-manager" != request.userInfo.username)
-    name: exclude-kube-controller-manager
-  - expression: ("system:kube-scheduler" != request.userInfo.username)
-    name: exclude-kube-scheduler
-  - expression: ("system:volume-scheduler" != request.userInfo.username)
-    name: exclude-volume-scheduler
-  - expression: ("dhctl" != request.userInfo.username)
-    name: exclude-dhctl
-  - expression: ("observability" != request.userInfo.username)
-    name: exclude-observability
-  - expression: ("system:serviceaccount:d8-system:deckhouse" != request.userInfo.username)
-    name: exclude-deckhouse
-  - expression: ("system:serviceaccount:d8-commander:cluster-manager" != request.userInfo.username)
-    name: exclude-commander-cluster-manager
-  - expression: '!("system:masters" in request.userInfo.groups)'
-    name: exclude-system-masters
-  - expression: '!("system:serviceaccounts:kube-system" in request.userInfo.groups)'
-    name: exclude-kube-system-serviceaccounts
-  - expression: '!("system:serviceaccounts:d8-system" in request.userInfo.groups)'
-    name: exclude-d8-system-serviceaccounts
-""".strip("\n")
-
-CONFIG = f"""
-configVersion: v1
-kubernetesValidating:
-- name: d8-user-authz-group-authorization-rule-collision.deckhouse.io
-  includeSnapshotsFrom: ["{CLUSTER_RULES_SNAPSHOT_NAME}", "{NAMESPACED_RULES_SNAPSHOT_NAME}"]
-  matchConditions:
-{MATCH_CONDITIONS}
-  rules:
-  - apiGroups:   ["deckhouse.io"]
-    apiVersions: ["*"]
-    operations:  ["CREATE", "UPDATE", "DELETE"]
-    resources:   ["groups"]
-    scope:       "Cluster"
-- name: d8-user-authz-user-authorization-rule-collision.deckhouse.io
-  includeSnapshotsFrom: ["{CLUSTER_RULES_SNAPSHOT_NAME}", "{NAMESPACED_RULES_SNAPSHOT_NAME}"]
-  matchConditions:
-{MATCH_CONDITIONS}
-  rules:
-  - apiGroups:   ["deckhouse.io"]
-    apiVersions: ["*"]
-    operations:  ["CREATE", "UPDATE", "DELETE"]
-    resources:   ["users"]
-    scope:       "Cluster"
-kubernetes:
-- name: {CLUSTER_RULES_SNAPSHOT_NAME}
-  apiVersion: deckhouse.io/v1alpha1
-  kind: ClusterAuthorizationRule
-  executeHookOnEvent: []
-  executeHookOnSynchronization: false
-  keepFullObjectsInMemory: false
-  jqFilter: |
-    {{
-      "name": .metadata.name,
-      "groupSubjects": [.spec.subjects[]? | select(.kind == "Group") | .name],
-      "userSubjects": [.spec.subjects[]? | select(.kind == "User") | .name]
-    }}
-- name: {NAMESPACED_RULES_SNAPSHOT_NAME}
-  apiVersion: deckhouse.io/v1alpha1
-  kind: AuthorizationRule
-  executeHookOnEvent: []
-  executeHookOnSynchronization: false
-  keepFullObjectsInMemory: false
-  jqFilter: |
-    {{
-      "name": .metadata.name,
-      "namespace": .metadata.namespace,
-      "groupSubjects": [.spec.subjects[]? | select(.kind == "Group") | .name],
-      "userSubjects": [.spec.subjects[]? | select(.kind == "User") | .name]
-    }}
-"""
 
 # Acknowledges that a collision with an authorization rule is intentional. The prefix is
 # user-authz because the constraint and its enforcement belong to this module: with user-authz
@@ -186,7 +104,6 @@ class IdentityKind(NamedTuple):
     def field_path(self) -> str:
         return f".spec.{self.spec_field}"
 
-
 # Group.spec.name reaches the "groups" claim byte for byte: nothing between the Group object and
 # the Password object Dex serves normalises it (user-authn-controller internal/controller/user
 # groups.go / password.go), so the comparison is exact in both directions.
@@ -202,19 +119,6 @@ IDENTITY_KINDS = {
 }
 
 
-def main(ctx: hook.Context):
-    try:
-        # DotMap is a dict with dot notation
-        binding_context = DotMap(ctx.binding_context)
-        errmsg, warnings = validate(binding_context)
-        if errmsg is None:
-            ctx.output.validations.allow(*warnings)
-        else:
-            ctx.output.validations.deny(errmsg)
-    except Exception as e:
-        ctx.output.validations.error(str(e))
-
-
 def is_exempt(user_info: Any) -> bool:
     """Whether the requester is one of the platform identities the check does not apply to."""
     info = user_info.toDict() if hasattr(user_info, "toDict") else (user_info or {})
@@ -224,22 +128,30 @@ def is_exempt(user_info: Any) -> bool:
     return any(isinstance(g, str) and g in EXEMPT_GROUPS for g in groups)
 
 
-def validate(ctx: DotMap) -> tuple[Optional[str], list[str]]:
+def validate(ctx: DotMap) -> tuple[Optional[str], bool]:
     req = ctx.review.request
     if is_exempt(req.userInfo):
-        return None, []
+        return None, True
 
     identity = IDENTITY_KINDS.get(req.kind.kind.lower())
     if identity is None:
-        return None, []
+        return None, True
 
     if req.operation == "DELETE":
-        return warn_rule_outlives_identity(ctx, identity,
-                                           spec_value(req.oldObject, identity.spec_field))
+        message, warnings = warn_rule_outlives_identity(
+            ctx, identity, spec_value(req.oldObject, identity.spec_field))
+    else:
+        message, warnings = validate_identity(
+            ctx, identity,
+            name=spec_value(req.object, identity.spec_field),
+            old_name=spec_value(req.oldObject, identity.spec_field),
+        )
 
-    return validate_identity(ctx, identity,
-                             name=spec_value(req.object, identity.spec_field),
-                             old_name=spec_value(req.oldObject, identity.spec_field))
+    if message is not None:
+        return message, False
+    # The template takes a single warning string, and the API server refuses a warning with a line
+    # break in it.
+    return "; ".join(warnings), True
 
 
 def spec_value(obj: Optional[DotMap], field: str):
@@ -351,7 +263,3 @@ def granting_rule_for(ctx: DotMap, identity: IdentityKind, name: str) -> Optiona
 
 def is_collision_acknowledged(obj: DotMap) -> bool:
     return obj.metadata.annotations.get(COLLISION_ANNOTATION, "").lower() == "true"
-
-
-if __name__ == "__main__":
-    hook.run(main, config=CONFIG)

@@ -12,6 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import json
 from typing import Optional
 
 def prepare_car_binding_context(
@@ -182,60 +183,14 @@ class CAR:
         self.include_multitenancy_related_fields = include_multitenancy_related_fields
 
     def toSnapshotObject(self) -> str:
-        return f"""
-        {{
-          "object": {{
-            "apiVersion": "deckhouse.io/v1alpha1",
-            "kind": "ClusterAuthorizationRule",
-            "metadata": {{
-              "annotations": {{}},
-              "creationTimestamp": "2025-07-29T14:39:41Z",
-              "generation": 6,
-              "managedFields": [
-                {{
-                  "apiVersion": "deckhouse.io/v1",
-                  "fieldsType": "FieldsV1",
-                  "fieldsV1": {{
-                    "f:metadata": {{
-                      "f:annotations": {{
-                        ".": {{}},
-                        "f:kubectl.kubernetes.io/last-applied-configuration": {{}}
-                      }}
-                    }},
-                    "f:spec": {{
-                      ".": {{}},
-                      "f:accessLevel": {{}},
-                      "f:allowScale": {{}},
-                      "f:portForwarding": {{}},
-                      "f:subjects": {{}}
-                    }}
-                  }},
-                  "manager": "kubectl-client-side-apply",
-                  "operation": "Update",
-                  "time": "2025-07-29T18:13:49Z"
-                }}
-              ],
-              "name": "{self.name}",
-              "resourceVersion": "663739",
-              "uid": "a95cbb12-8685-4dbf-a8ca-92c922617976"
-            }},
-            "spec": {{
-              "accessLevel": "PrivilegedUser",
-              "allowScale": true,
-              "portForwarding": true,
-              {'''"allowAccessToSystemNamespaces": true,
-              "limitNamespaces": ["production-*"],
-              "namespaceSelector": {"matchLabels": {"env": "prod"}},''' if self.include_multitenancy_related_fields else ""
-              }
-              "subjects": [
-                {{
-                  "kind": "User",
-                  "name": "{self.name}"
-                }}
-              ]
-            }}
-          }}
-        }}"""
+        # The jqFilter result of the d8-user-authz-cars binding: the name and the restricted fields.
+        restricted = {
+            "allowAccessToSystemNamespaces": True,
+            "limitNamespaces": ["production-*"],
+            "namespaceSelector": {"matchLabels": {"env": "prod"}},
+        } if self.include_multitenancy_related_fields else {}
+        return json.dumps({"filterResult": {"metadata": {"name": self.name}, "spec": restricted}})
+
 
 def build_three_mixed_multitenancy_related_and_not_related_cars() -> list[CAR]:
     """

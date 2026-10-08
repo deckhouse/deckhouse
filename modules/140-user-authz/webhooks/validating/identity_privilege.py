@@ -1,5 +1,3 @@
-#!/usr/bin/python3
-
 # Copyright 2026 Flant JSC
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -20,101 +18,15 @@
 # on ClusterRole.
 # Kernel is identity_assign.py.
 
+import sys
 from typing import Any, List, Optional
 
-from deckhouse import hook
 from dotmap import DotMap
 
-import identity_assign as assign
-
-MATCH_CONDITIONS = """
-  matchConditions:
-  - expression: ("system:apiserver" != request.userInfo.username)
-    name: exclude-kube-apiserver
-  - expression: ("system:sudouser" != request.userInfo.username)
-    name: exclude-sudouser
-  - expression: ("system:kube-controller-manager" != request.userInfo.username)
-    name: exclude-kube-controller-manager
-  - expression: ("system:kube-scheduler" != request.userInfo.username)
-    name: exclude-kube-scheduler
-  - expression: ("system:volume-scheduler" != request.userInfo.username)
-    name: exclude-volume-scheduler
-  - expression: ("dhctl" != request.userInfo.username)
-    name: exclude-dhctl
-  - expression: ("observability" != request.userInfo.username)
-    name: exclude-observability
-  - expression: ("system:serviceaccount:d8-system:deckhouse" != request.userInfo.username)
-    name: exclude-deckhouse
-  - expression: ("system:serviceaccount:kube-system:clusterrole-aggregation-controller" != request.userInfo.username)
-    name: exclude-aggregation-controller
-  - expression: '!("system:masters" in request.userInfo.groups)'
-    name: exclude-system-masters
-  - expression: '!("system:serviceaccounts:kube-system" in request.userInfo.groups)'
-    name: exclude-kube-system-sas
-"""
-
-CONFIG = f"""
-configVersion: v1
-kubernetesValidating:
-- name: d8-user-authz-identity-assign.deckhouse.io
-  includeSnapshotsFrom:
-    - "{assign.CAR_SNAP}"
-    - "{assign.AR_SNAP}"
-    - "{assign.CRB_SNAP}"
-    - "{assign.CPRB_SNAP}"
-    - "{assign.PRB_SNAP}"
-    - "{assign.CROLE_SNAP}"
-    - "{assign.USER_SNAP}"
-    - "{assign.GROUP_SNAP}"
-    - "{assign.MT_STATE_SNAP}"
-{MATCH_CONDITIONS}
-  rules:
-  - apiGroups:   ["deckhouse.io"]
-    apiVersions: ["*"]
-    operations:  ["CREATE", "UPDATE", "DELETE"]
-    resources:   ["users"]
-    scope:       "Cluster"
-  - apiGroups:   ["deckhouse.io"]
-    apiVersions: ["*"]
-    operations:  ["CREATE", "UPDATE", "DELETE"]
-    resources:   ["groups"]
-    scope:       "Cluster"
-  - apiGroups:   ["deckhouse.io"]
-    apiVersions: ["*"]
-    operations:  ["CREATE", "UPDATE", "DELETE"]
-    resources:   ["clusterauthorizationrules"]
-    scope:       "Cluster"
-  - apiGroups:   ["deckhouse.io"]
-    apiVersions: ["*"]
-    operations:  ["CREATE"]
-    resources:   ["useroperations"]
-    scope:       "Cluster"
-  - apiGroups:   ["deckhouse.io"]
-    apiVersions: ["*"]
-    operations:  ["CREATE", "UPDATE"]
-    resources:   ["dexproviders"]
-    scope:       "Cluster"
-  - apiGroups:   ["rbac.authorization.k8s.io"]
-    apiVersions: ["*"]
-    operations:  ["CREATE", "UPDATE"]
-    resources:   ["clusterroles"]
-    scope:       "Cluster"
-kubernetes:
-{assign.kubernetes_snapshots()}
-"""
-
-
-def main(ctx: hook.Context):
-    try:
-        binding_context = DotMap(ctx.binding_context)
-        errmsg = validate(binding_context)
-        if errmsg:
-            ctx.output.validations.deny(errmsg)
-        else:
-            ctx.output.validations.allow()
-    except Exception as e:
-        ctx.output.validations.error(str(e))
-
+# The ValidationWebhook renders identity_assign.py and this file into one hook, so the kernel's
+# names are defined in this very module. `assign` keeps them under the prefix they have when the
+# kernel is a module of its own.
+assign = sys.modules[__name__]
 
 def _spec(obj: Any) -> dict:
     if not obj:
@@ -137,7 +49,7 @@ def _spec_groups(spec: dict) -> List[str]:
     return [g for g in assign._list(spec.get("groups")) if isinstance(g, str) and g]
 
 
-def validate(ctx: DotMap) -> Optional[str]:
+def validation_error(ctx: DotMap) -> Optional[str]:
     req = ctx.review.request
     if assign.is_exempt(req.userInfo):
         return None
@@ -330,5 +242,10 @@ def validate_dexprovider(req, snapshots, actor: List[str], catalog: dict,
     return assign.deny_dex_message(_meta_name(req.object) or "obj", leftover, rng)
 
 
-if __name__ == "__main__":
-    hook.run(main, config=CONFIG)
+# The template calls validate(ctx) and expects a (message, allowed) pair. The checks above answer
+# with a deny message or None.
+def validate(ctx: DotMap) -> tuple[Optional[str], bool]:
+    message = validation_error(ctx)
+    if message:
+        return message, False
+    return None, True

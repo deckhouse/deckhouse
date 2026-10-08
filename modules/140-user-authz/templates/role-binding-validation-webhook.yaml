@@ -1,0 +1,26 @@
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: ValidationWebhook
+metadata:
+  name: user-authz-role-binding
+  {{- include "helm_lib_module_labels" (list . (dict "app" "webhook-handler")) | nindent 2 }}
+validationObject:
+  name: role-validating.deckhouse.io
+  group: main
+  matchConditions:
+  - expression: ("system:apiserver" != request.userInfo.username)
+    name: exclude-kube-apiserver
+  - expression: ("system:serviceaccount:d8-system:deckhouse" != request.userInfo.username)
+    name: exclude-deckhouse
+  - expression: ("system:serviceaccount:d8-user-authz:controller" != request.userInfo.username)
+    name: exclude-user-authz-controller
+  rules:
+  - apiGroups:   ["rbac.authorization.k8s.io"]
+    apiVersions: ["*"]
+    operations:  ["CREATE"]
+    resources:   ["clusterrolebindings"]
+    scope:       "Cluster"
+handler:
+  # The code of the hook is webhooks/validating/role_binding.py, where its unit tests import it.
+  python: |
+    {{- (required "webhooks/validating/role_binding.py is missing" (.Files.Get "webhooks/validating/role_binding.py")) | nindent 4 }}

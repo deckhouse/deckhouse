@@ -1,0 +1,52 @@
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: ValidationWebhook
+metadata:
+  name: user-authz-multitenancy-moduleconfig
+  {{- include "helm_lib_module_labels" (list . (dict "app" "webhook-handler")) | nindent 2 }}
+validationObject:
+  name: d8-user-authz-module-multitenancy-related-options.deckhouse.io
+  matchConditions:
+  - name: "only-user-authz-module"
+    expression: 'request.name == "user-authz"'
+  rules:
+  - apiGroups: ["deckhouse.io"]
+    apiVersions: ["*"]
+    resources: ["moduleconfigs"]
+    operations: ["CREATE", "UPDATE"]
+    scope:       "Cluster"
+context:
+  - name: d8-user-authz-multitenancy-state
+    kubernetes:
+      apiVersion: v1
+      kind: ConfigMap
+      jqFilter: |
+        {
+          "enableMultiTenancy": (.data.enableMultiTenancy == "true")
+        }
+      namespace:
+        nameSelector:
+          matchNames:
+          - d8-user-authz
+      nameSelector:
+        matchNames:
+        - d8-user-authz-multitenancy-state
+  - name: d8-user-authz-cars
+    kubernetes:
+      # ClusterAuthorizationRule is read in v1: v1alpha1 has no namespaceSelector,
+      # and the apiserver drops that field from objects served in v1alpha1.
+      apiVersion: deckhouse.io/v1
+      kind: ClusterAuthorizationRule
+      # The name and the restricted fields are enough for the check, so the snapshot keeps them
+      # instead of the whole object. A field is kept even when its value is null: the check looks
+      # for the key.
+      jqFilter: |
+        {
+          "metadata": {"name": .metadata.name},
+          "spec": ((.spec // {}) | with_entries(select(.key == "allowAccessToSystemNamespaces"
+            or .key == "limitNamespaces" or .key == "namespaceSelector")))
+        }
+handler:
+  # The code of the hook is webhooks/validating/multitenancy.py, where its unit tests import it.
+  python: |
+    {{- (required "webhooks/validating/multitenancy.py is missing" (.Files.Get "webhooks/validating/multitenancy.py")) | nindent 4 }}

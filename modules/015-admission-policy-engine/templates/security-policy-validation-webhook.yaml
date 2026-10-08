@@ -1,0 +1,30 @@
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: ValidationWebhook
+metadata:
+  name: admission-policy-engine-security-policy
+  {{- include "helm_lib_module_labels" (list . (dict "app" "webhook-handler")) | nindent 2 }}
+validationObject:
+  name: securitypolicies.deckhouse.io
+  group: main
+  rules:
+  - apiGroups:   ["deckhouse.io"]
+    apiVersions: ["*"]
+    operations:  ["CREATE", "UPDATE"]
+    resources:   ["securitypolicies"]
+    scope:       "Cluster"
+context:
+  - name: policies
+    kubernetes:
+      apiVersion: deckhouse.io/v1alpha1
+      kind: SecurityPolicy
+      queue: "securitypolicies"
+      jqFilter: |
+        {
+          "name": .metadata.name,
+          "references": [.spec.policies.verifyImageSignatures[]?.reference]
+        }
+handler:
+  # The code of the hook is webhooks/validating/security_policy.py, where its unit tests import it.
+  python: |
+    {{- (required "webhooks/validating/security_policy.py is missing" (.Files.Get "webhooks/validating/security_policy.py")) | nindent 4 }}

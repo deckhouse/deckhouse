@@ -21,7 +21,10 @@ from typing import Optional
 from deckhouse import hook, tests
 from dotmap import DotMap
 
-from group import main
+import validation_webhook_test_helper
+
+# The hook lives in a ValidationWebhook manifest; the harness assembles it the way webhook-operator does.
+main = validation_webhook_test_helper.load("group.py").main
 
 
 def _prepare_validation_binding_context(binding_context_json, new_spec: dict, snapshots: dict) -> DotMap:

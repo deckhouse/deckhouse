@@ -1,0 +1,26 @@
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: ValidationWebhook
+metadata:
+  name: user-authz-rbacv2-cluster-roles
+  {{- include "helm_lib_module_labels" (list . (dict "app" "webhook-handler")) | nindent 2 }}
+validationObject:
+  name: rbacv2-cluster-roles.deckhouse.io
+  group: main
+  matchConditions:
+  - expression: ("system:apiserver" != request.userInfo.username)
+    name: exclude-kube-apiserver
+  - expression: ("system:serviceaccount:d8-system:deckhouse" != request.userInfo.username)
+    name: exclude-deckhouse
+  - expression: ("system:serviceaccount:kube-system:clusterrole-aggregation-controller" != request.userInfo.username)
+    name: exclude-aggregation-controller
+  rules:
+  - apiGroups:   ["rbac.authorization.k8s.io"]
+    apiVersions: ["*"]
+    operations:  ["CREATE", "UPDATE"]
+    resources:   ["clusterroles"]
+    scope:       "Cluster"
+handler:
+  # The code of the hook is webhooks/validating/cluster_roles.py, where its unit tests import it.
+  python: |
+    {{- (required "webhooks/validating/cluster_roles.py is missing" (.Files.Get "webhooks/validating/cluster_roles.py")) | nindent 4 }}

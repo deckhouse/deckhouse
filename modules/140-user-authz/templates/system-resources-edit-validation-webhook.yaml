@@ -1,0 +1,69 @@
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: ValidationWebhook
+metadata:
+  name: user-authz-system-resources-edit
+  {{- include "helm_lib_module_labels" (list . (dict "app" "webhook-handler")) | nindent 2 }}
+validationObject:
+  name: rbacv2-system-resource-edit.deckhouse.io
+  group: main
+  # The same bypass as BYPASS_GROUPS and PRIVILEGED_USERS of webhooks/validating/system_resources.py,
+  # expressed for the apiserver instead of the hook body. Both webhooks are fail-closed, and the exec
+  # one matches CONNECT on every pod in the cluster: the target pod's marker lives on the Pod, while the
+  # reviewed object is a PodExecOptions, so no CEL expression can pre-filter it the way
+  # `only-marked-objects` filters the edit webhook. With the bypass evaluated only inside the hook, an
+  # unavailable webhook-handler would block exec cluster-wide, including exec into the webhook-handler
+  # pod needed to diagnose it. The hook keeps its own check: matchConditions are a pre-filter, not the
+  # authority. One condition per identity, in the plain form the Kubernetes admission documentation
+  # guarantees: a CEL expression that fails to compile invalidates the whole
+  # ValidatingWebhookConfiguration. The template tests keep the list in step with the hook.
+  matchConditions:
+  - name: exclude-kube-apiserver
+    expression: '"system:apiserver" != request.userInfo.username'
+  - name: exclude-deckhouse
+    expression: '"system:serviceaccount:d8-system:deckhouse" != request.userInfo.username'
+  - name: exclude-aggregation-controller
+    expression: '"system:serviceaccount:kube-system:clusterrole-aggregation-controller" != request.userInfo.username'
+  - name: exclude-multitenancy-manager
+    expression: '"system:serviceaccount:d8-multitenancy-manager:multitenancy-manager" != request.userInfo.username'
+  - name: exclude-group-kubeadm-cluster-admins
+    expression: '!("kubeadm:cluster-admins" in request.userInfo.groups)'
+  - name: exclude-group-superadmins
+    expression: '!("superadmins" in request.userInfo.groups)'
+  - name: exclude-group-system-masters
+    expression: '!("system:masters" in request.userInfo.groups)'
+  - name: exclude-group-system-nodes
+    expression: '!("system:nodes" in request.userInfo.groups)'
+  - name: exclude-group-system-serviceaccounts-d8-system
+    expression: '!("system:serviceaccounts:d8-system" in request.userInfo.groups)'
+  - name: exclude-group-system-serviceaccounts-kube-system
+    expression: '!("system:serviceaccounts:kube-system" in request.userInfo.groups)'
+  - name: exclude-group-system-sudousers
+    expression: '!("system:sudousers" in request.userInfo.groups)'
+  # Only forward requests for objects that actually carry the markings, so the (intentionally broad)
+  # rule below does not put every namespaced UPDATE/DELETE through the hook. Guarded with has()/in to
+  # never error (which would otherwise fail the request under a Fail matchConditions policy).
+  - name: only-marked-objects
+    # In admission matchConditions the reviewed objects are TOP-LEVEL CEL variables `object`/`oldObject`
+    # (the `request` variable is the AdmissionRequest metadata and has NO `.object`/`.oldObject`). Using
+    # `request.object` makes the expression fail CEL compilation, which invalidates the WHOLE
+    # ValidatingWebhookConfiguration and crash-loops the webhook-handler (fail-closed → every webhook on
+    # the handler stops). `object` is null on DELETE / CONNECT; `oldObject` is null on CREATE — guarded.
+    expression: >-
+      (object != null && has(object.metadata.labels) && (
+        ('deckhouse.io/system-resource' in object.metadata.labels && object.metadata.labels['deckhouse.io/system-resource'] == 'true')
+        || ('heritage' in object.metadata.labels && object.metadata.labels['heritage'] == 'multitenancy-manager')
+      )) || (oldObject != null && has(oldObject.metadata.labels) && (
+        ('deckhouse.io/system-resource' in oldObject.metadata.labels && oldObject.metadata.labels['deckhouse.io/system-resource'] == 'true')
+        || ('heritage' in oldObject.metadata.labels && oldObject.metadata.labels['heritage'] == 'multitenancy-manager')
+      ))
+  rules:
+  - apiGroups:   ["*"]
+    apiVersions: ["*"]
+    operations:  ["UPDATE", "DELETE"]
+    resources:   ["*"]
+    scope:       "Namespaced"
+handler:
+  # The code of the hook is webhooks/validating/system_resources.py, where its unit tests import it.
+  python: |
+    {{- (required "webhooks/validating/system_resources.py is missing" (.Files.Get "webhooks/validating/system_resources.py")) | nindent 4 }}

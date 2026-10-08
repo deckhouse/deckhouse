@@ -1,0 +1,31 @@
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: ValidationWebhook
+metadata:
+  name: user-authz-rbacv2-role-escalation
+  {{- include "helm_lib_module_labels" (list . (dict "app" "webhook-handler")) | nindent 2 }}
+validationObject:
+  name: rbacv2-role-escalation.deckhouse.io
+  group: main
+  # The last two conditions mirror the BYPASS_GROUPS set in the handler; keep the two in sync.
+  matchConditions:
+  - expression: ("system:apiserver" != request.userInfo.username)
+    name: exclude-kube-apiserver
+  - expression: ("system:serviceaccount:d8-system:deckhouse" != request.userInfo.username)
+    name: exclude-deckhouse
+  - expression: ("system:serviceaccount:kube-system:clusterrole-aggregation-controller" != request.userInfo.username)
+    name: exclude-aggregation-controller
+  - name: exclude-group-kubeadm-cluster-admins
+    expression: '!("kubeadm:cluster-admins" in request.userInfo.groups)'
+  - name: exclude-group-system-masters
+    expression: '!("system:masters" in request.userInfo.groups)'
+  rules:
+  - apiGroups:   ["rbac.authorization.k8s.io"]
+    apiVersions: ["*"]
+    operations:  ["CREATE", "UPDATE"]
+    resources:   ["roles", "clusterroles"]
+    scope:       "*"
+handler:
+  # The code of the hook is webhooks/validating/role_escalation.py, where its unit tests import it.
+  python: |
+    {{- (required "webhooks/validating/role_escalation.py is missing" (.Files.Get "webhooks/validating/role_escalation.py")) | nindent 4 }}

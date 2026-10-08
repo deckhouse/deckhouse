@@ -1,5 +1,3 @@
-#!/usr/bin/python3
-
 # Copyright 2026 Flant JSC
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -13,6 +11,10 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+
+# The operator template imports these as well; they make the file importable by the tests.
+from typing import Optional
+from dotmap import DotMap
 
 
 # ClusterRoleBinding guard for RBAC v2.
@@ -41,11 +43,6 @@
 # earlier snapshot-driven variant failed OPEN whenever the shell-operator snapshot was empty. roleRef
 # is immutable on a (Cluster)RoleBinding, so validating CREATE is sufficient — an accepted binding can
 # never later mutate its roleRef into a forbidden one.
-
-from typing import Optional
-
-from deckhouse import hook
-from dotmap import DotMap
 
 # Scoped built-in roles (and their custom variants) that must be granted in a bounded scope, never
 # cluster-wide. Matched as name prefixes on a ClusterRole roleRef.
@@ -81,38 +78,6 @@ PRIVILEGED_USERS = {
     "system:serviceaccount:d8-user-authz:controller",
 }
 
-CONFIG = """
-configVersion: v1
-kubernetesValidating:
-- name: role-validating.deckhouse.io
-  group: main
-  matchConditions:
-  - expression: ("system:apiserver" != request.userInfo.username)
-    name: exclude-kube-apiserver
-  - expression: ("system:serviceaccount:d8-system:deckhouse" != request.userInfo.username)
-    name: exclude-deckhouse
-  - expression: ("system:serviceaccount:d8-user-authz:controller" != request.userInfo.username)
-    name: exclude-user-authz-controller
-  rules:
-  - apiGroups:   ["rbac.authorization.k8s.io"]
-    apiVersions: ["*"]
-    operations:  ["CREATE"]
-    resources:   ["clusterrolebindings"]
-    scope:       "Cluster"
-"""
-
-
-def main(ctx: hook.Context):
-    try:
-        binding_context = DotMap(ctx.binding_context)
-        error_message = validate(binding_context)
-        if error_message:
-            ctx.output.validations.deny(error_message)
-        else:
-            ctx.output.validations.allow()
-    except Exception as e:
-        ctx.output.validations.error(str(e))
-
 
 def forbidden_reason(role_name: str) -> Optional[str]:
     """Returns why a ClusterRole may not be bound cluster-wide, or None when the binding is allowed."""
@@ -124,10 +89,10 @@ def forbidden_reason(role_name: str) -> Optional[str]:
     return None
 
 
-def validate(ctx: DotMap) -> Optional[str]:
+def validate(ctx: DotMap) -> tuple[Optional[str], bool]:
     request = ctx.review.request
     if request.userInfo.username in PRIVILEGED_USERS:
-        return None
+        return None, True
 
     obj = request.object
     if hasattr(obj, "toDict"):
@@ -135,19 +100,15 @@ def validate(ctx: DotMap) -> Optional[str]:
 
     role_ref = obj.get("roleRef") or {}
     if role_ref.get("kind") != "ClusterRole":
-        return None
+        return None, True
 
     role_name = role_ref.get("name") or ""
     kind = forbidden_reason(role_name)
     if kind is None:
-        return None
+        return None, True
 
     return (
         f"ClusterRole '{role_name}' is a {kind} and cannot be granted through a ClusterRoleBinding "
         "(it would apply in every namespace). Use a RoleBinding to grant it in a namespace, or a "
         "ProjectRoleBinding/ClusterProjectRoleBinding to grant it across a project."
-    )
-
-
-if __name__ == "__main__":
-    hook.run(main, config=CONFIG)
+    ), False

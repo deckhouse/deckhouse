@@ -17,11 +17,13 @@
 import json
 import typing
 
-from identity_collision import (
-    CLUSTER_RULES_SNAPSHOT_NAME,
-    NAMESPACED_RULES_SNAPSHOT_NAME,
-    COLLISION_ANNOTATION,
-)
+import validation_webhook_test_helper
+
+# Both identity-collision ValidationWebhooks, for Group and for User, run this code.
+identity_collision = validation_webhook_test_helper.load("identity_collision.py")
+CLUSTER_RULES_SNAPSHOT_NAME = identity_collision.CLUSTER_RULES_SNAPSHOT_NAME
+NAMESPACED_RULES_SNAPSHOT_NAME = identity_collision.NAMESPACED_RULES_SNAPSHOT_NAME
+COLLISION_ANNOTATION = identity_collision.COLLISION_ANNOTATION
 
 # The rules every scenario is validated against. "privileged" identities are subjects of a
 # ClusterAuthorizationRule, "team-*" ones of a namespaced AuthorizationRule.
@@ -173,37 +175,3 @@ def prepare_user_binding_context(email: str, operation: str = "CREATE",
         acknowledged=acknowledged, with_rules=with_rules,
         cluster_rule_user_subjects=cluster_rule_user_subjects, user_info=user_info,
     )
-
-
-def prepare_cluster_authorization_rule(subjects: typing.Optional[list]) -> dict:
-    """
-    A ClusterAuthorizationRule object as the API server stores it, to feed a jqFilter.
-
-    subjects=None omits `spec.subjects` entirely, which is what the `[]?` guard in both filters
-    exists for.
-    """
-    spec = {"accessLevel": "Editor"}
-    if subjects is not None:
-        spec["subjects"] = subjects
-
-    return {
-        "apiVersion": "deckhouse.io/v1alpha1",
-        "kind": "ClusterAuthorizationRule",
-        "metadata": {"name": "admin-rule"},
-        "spec": spec,
-    }
-
-
-def prepare_authorization_rule(subjects: typing.Optional[list]) -> dict:
-    """A namespaced AuthorizationRule object, to feed a jqFilter."""
-    rule = prepare_cluster_authorization_rule(subjects)
-    rule["kind"] = "AuthorizationRule"
-    rule["metadata"] = {"name": "team-rule", "namespace": "team-a"}
-    return rule
-
-
-MIXED_KIND_SUBJECTS = [
-    {"kind": "Group", "name": CLUSTER_RULE_GROUP_SUBJECT},
-    {"kind": "ServiceAccount", "name": "builder", "namespace": "ci"},
-    {"kind": "User", "name": CLUSTER_RULE_USER_SUBJECT},
-]

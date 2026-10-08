@@ -1,5 +1,3 @@
-#!/usr/bin/python3
-
 # Copyright 2024 Flant JSC
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -15,66 +13,13 @@
 # limitations under the License.
 
 from collections import deque
-from typing import Optional
 
-from deckhouse import hook
+# The operator template imports these as well; they make the file importable by the tests.
+from typing import Optional
 from dotmap import DotMap
 
-config = """
-configVersion: v1
-kubernetes:
-  - name: groups
-    apiVersion: deckhouse.io/v1alpha1
-    kind: Group
-    queue: "groups"
-    group: main
-    executeHookOnEvent: []
-    executeHookOnSynchronization: false
-    keepFullObjectsInMemory: false
-    jqFilter: |
-      {
-        "name": .metadata.name,
-        "groupName": .spec.name,
-        "members": .spec.members
-      }
-  - name: users
-    apiVersion: deckhouse.io/v1
-    kind: User
-    queue: "users"
-    group: main
-    executeHookOnEvent: []
-    executeHookOnSynchronization: false
-    keepFullObjectsInMemory: false
-    jqFilter: |
-      {
-        "userName": .metadata.name
-      }
-kubernetesValidating:
-- name: groups-unique.deckhouse.io
-  group: main
-  rules:
-  - apiGroups:   ["deckhouse.io"]
-    apiVersions: ["*"]
-    operations:  ["CREATE", "UPDATE", "DELETE"]
-    resources:   ["groups"]
-    scope:       "Cluster"
-"""
 
-
-def main(ctx: hook.Context):
-    try:
-        # DotMap is a dict with dot notation
-        binding_context = DotMap(ctx.binding_context)
-        errmsg, warnings = validate(binding_context)
-        if errmsg is None:
-            ctx.output.validations.allow(*warnings)
-        else:
-            ctx.output.validations.deny(errmsg)
-    except Exception as e:
-        ctx.output.validations.error(str(e))
-
-
-def validate(ctx: DotMap) -> tuple[Optional[str], list[str]]:
+def validation_result(ctx: DotMap) -> tuple[Optional[str], list[str]]:
     operation = ctx.review.request.operation
     if operation == "CREATE" or operation == "UPDATE":
         return validate_creation_or_update(ctx)
@@ -266,5 +211,14 @@ def format_path(names: list[str]) -> str:
     return " -> ".join(f'"{name}"' for name in names)
 
 
-if __name__ == "__main__":
-    hook.run(main, config=config)
+# The template calls validate(ctx) and expects a (message, allowed) pair with at most one warning
+# string. The check above keeps its original shape and answers (errmsg, warnings), so several
+# warnings are joined into one: the API server refuses a warning with a line break in it.
+WARNING_SEPARATOR = "; "
+
+
+def validate(ctx: DotMap) -> tuple[Optional[str], bool]:
+    errmsg, warnings = validation_result(ctx)
+    if errmsg is not None:
+        return errmsg, False
+    return WARNING_SEPARATOR.join(warnings), True

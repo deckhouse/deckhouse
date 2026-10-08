@@ -1,5 +1,3 @@
-#!/usr/bin/python3
-
 # Copyright 2026 Flant JSC
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -14,6 +12,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+# The operator template imports these as well; they make the file importable by the tests.
+from typing import Optional
+from dotmap import DotMap
+
 
 # Validates RBAC v2 framework objects (ClusterRoles):
 #   - the "d8:" name prefix is reserved for Deckhouse, users may only create "d8:custom:*" objects;
@@ -24,10 +26,7 @@
 #     the namespace/project lineages (privilege escalation across scopes).
 
 import re
-from typing import Optional
 
-from deckhouse import hook
-from dotmap import DotMap
 
 KIND_LABEL = "rbac.deckhouse.io/kind"
 # Marks a ClusterRole as bindable inside a project: the grant registry for cluster roles excludes
@@ -67,38 +66,6 @@ SYSTEM_LINEAGES = {
     "security",
     "storage",
 }
-
-CONFIG = """
-configVersion: v1
-kubernetesValidating:
-- name: rbacv2-cluster-roles.deckhouse.io
-  group: main
-  matchConditions:
-  - expression: ("system:apiserver" != request.userInfo.username)
-    name: exclude-kube-apiserver
-  - expression: ("system:serviceaccount:d8-system:deckhouse" != request.userInfo.username)
-    name: exclude-deckhouse
-  - expression: ("system:serviceaccount:kube-system:clusterrole-aggregation-controller" != request.userInfo.username)
-    name: exclude-aggregation-controller
-  rules:
-  - apiGroups:   ["rbac.authorization.k8s.io"]
-    apiVersions: ["*"]
-    operations:  ["CREATE", "UPDATE"]
-    resources:   ["clusterroles"]
-    scope:       "Cluster"
-"""
-
-
-def main(ctx: hook.Context):
-    try:
-        binding_context = DotMap(ctx.binding_context)
-        error_message = validate(binding_context)
-        if error_message:
-            ctx.output.validations.deny(error_message)
-        else:
-            ctx.output.validations.allow()
-    except Exception as e:
-        ctx.output.validations.error(str(e))
 
 
 def _as_dict(obj) -> dict:
@@ -236,7 +203,7 @@ def _aggregates_only_tenant_capabilities(selectors) -> bool:
     return True
 
 
-def validate(ctx: DotMap) -> Optional[str]:
+def validation_error(ctx: DotMap) -> Optional[str]:
     request = ctx.review.request
     obj = _as_dict(request.object)
 
@@ -376,6 +343,8 @@ def validate(ctx: DotMap) -> Optional[str]:
 
     return None
 
-
-if __name__ == "__main__":
-    hook.run(main, config=CONFIG)
+# The template calls validate(ctx) and expects a (message, allowed) pair, while the check above keeps
+# its original shape and returns the reason or None.
+def validate(ctx: DotMap) -> tuple[Optional[str], bool]:
+    message = validation_error(ctx)
+    return (message, False) if message else (None, True)

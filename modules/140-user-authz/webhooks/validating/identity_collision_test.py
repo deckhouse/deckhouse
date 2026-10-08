@@ -15,16 +15,14 @@
 # limitations under the License.
 
 import json
-import shutil
-import subprocess
 import unittest
 
-import identity_collision
 import identity_collision_test_factories as factories
-import yaml
-from identity_collision import COLLISION_ANNOTATION
 from deckhouse import hook, tests
 from dotmap import DotMap
+
+identity_collision = factories.identity_collision
+COLLISION_ANNOTATION = identity_collision.COLLISION_ANNOTATION
 
 
 class TestIdentityCollisionWithAuthorizationRules(unittest.TestCase):
@@ -304,89 +302,17 @@ class TestPlatformIdentitiesAreExempt(unittest.TestCase):
             user_info={"username": "helpdesk@example.com", "groups": ["system:authenticated"]}))
         self.assertFalse(out.validations.data[0]["allowed"])
 
-    def test_match_conditions_mirror_the_in_hook_list(self):
-        config = yaml.safe_load(identity_collision.CONFIG)
-        for webhook in config["kubernetesValidating"]:
-            conditions = {c["name"]: c["expression"] for c in webhook["matchConditions"]}
-            self.assertEqual(len(conditions), len(webhook["matchConditions"]), "duplicate names")
-            joined = " ".join(conditions.values())
-            for user in identity_collision.EXEMPT_USERS:
-                self.assertIn(f'("{user}" != request.userInfo.username)', joined, user)
-            for group in identity_collision.EXEMPT_GROUPS:
-                self.assertIn(f'!("{group}" in request.userInfo.groups)', joined, group)
-            self.assertEqual(len(conditions),
-                             len(identity_collision.EXEMPT_USERS) + len(identity_collision.EXEMPT_GROUPS))
 
-
-@unittest.skipUnless(shutil.which("jq"), "jq is required to execute the hook's jqFilter programs")
-class TestSnapshotJQFilters(unittest.TestCase):
-    """
-    Run the jqFilter programs from CONFIG the way shell-operator would.
-
-    The binding contexts above carry a hand-built filterResult, so without this the filters
-    themselves are never executed and a change to either of them would go unnoticed.
-    """
-
-    @classmethod
-    def setUpClass(cls):
-        config = yaml.safe_load(identity_collision.CONFIG)
-        cls.filters = {b["name"]: b["jqFilter"] for b in config["kubernetes"]}
-
-    def run_filter(self, snapshot_name: str, obj: dict) -> dict:
-        result = subprocess.run(
-            ["jq", "-c", self.filters[snapshot_name]],
-            input=json.dumps(obj), capture_output=True, text=True, check=False,
-        )
-        self.assertEqual(result.returncode, 0, result.stderr)
-        return json.loads(result.stdout)
-
-    def test_config_declares_both_snapshots(self):
-        self.assertEqual(
-            sorted(self.filters),
-            sorted([identity_collision.CLUSTER_RULES_SNAPSHOT_NAME,
-                    identity_collision.NAMESPACED_RULES_SNAPSHOT_NAME]))
-
-    def test_cluster_rule_filter_keeps_only_group_and_user_subjects(self):
-        out = self.run_filter(
-            identity_collision.CLUSTER_RULES_SNAPSHOT_NAME,
-            factories.prepare_cluster_authorization_rule(factories.MIXED_KIND_SUBJECTS))
-        self.assertEqual(out, {
-            "name": "admin-rule",
-            "groupSubjects": [factories.CLUSTER_RULE_GROUP_SUBJECT],
-            "userSubjects": [factories.CLUSTER_RULE_USER_SUBJECT],
-        })
-
-    def test_namespaced_rule_filter_keeps_only_group_and_user_subjects(self):
-        out = self.run_filter(
-            identity_collision.NAMESPACED_RULES_SNAPSHOT_NAME,
-            factories.prepare_authorization_rule(factories.MIXED_KIND_SUBJECTS))
-        self.assertEqual(out, {
-            "name": "team-rule",
-            "namespace": "team-a",
-            "groupSubjects": [factories.CLUSTER_RULE_GROUP_SUBJECT],
-            "userSubjects": [factories.CLUSTER_RULE_USER_SUBJECT],
-        })
-
-    def test_filters_tolerate_a_rule_without_subjects(self):
-        """The `[]?` guard: `.spec.subjects[]` on a missing key would abort the whole filter."""
-        for snapshot_name, rule in [
-            (identity_collision.CLUSTER_RULES_SNAPSHOT_NAME,
-             factories.prepare_cluster_authorization_rule(None)),
-            (identity_collision.NAMESPACED_RULES_SNAPSHOT_NAME,
-             factories.prepare_authorization_rule(None)),
-        ]:
-            with self.subTest(snapshot_name):
-                out = self.run_filter(snapshot_name, rule)
-                self.assertEqual(out["groupSubjects"], [])
-                self.assertEqual(out["userSubjects"], [])
-
-    def test_filter_output_feeds_the_lookup(self):
-        """The filter output is what granting_rule_for indexes, so wire the two together."""
-        filter_result = self.run_filter(
-            identity_collision.CLUSTER_RULES_SNAPSHOT_NAME,
-            factories.prepare_cluster_authorization_rule(factories.MIXED_KIND_SUBJECTS))
+class TestRuleSnapshotLookup(unittest.TestCase):
+    def test_filter_result_feeds_the_lookup(self):
+        """The filter result is what granting_rule_for indexes. The template tests of the module run
+        the filter and check that it produces this shape."""
         ctx = DotMap({"snapshots": {
-            identity_collision.CLUSTER_RULES_SNAPSHOT_NAME: [{"filterResult": filter_result}],
+            identity_collision.CLUSTER_RULES_SNAPSHOT_NAME: [{"filterResult": {
+                "name": "admin-rule",
+                "groupSubjects": [factories.CLUSTER_RULE_GROUP_SUBJECT],
+                "userSubjects": [factories.CLUSTER_RULE_USER_SUBJECT],
+            }}],
             identity_collision.NAMESPACED_RULES_SNAPSHOT_NAME: [],
         }})
 
@@ -398,7 +324,6 @@ class TestSnapshotJQFilters(unittest.TestCase):
         self.assertIsNone(
             identity_collision.granting_rule_for(
                 ctx, identity_collision.IDENTITY_KINDS["user"], "builder"))
-
 
 if __name__ == '__main__':
     unittest.main()

@@ -14,12 +14,16 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import unittest
 import json
-import multitenancy
+import unittest
+
 import multitenancy_test_factories as factories
+import validation_webhook_test_helper
 from deckhouse import hook, tests
 from dotmap import DotMap
+
+# Both multitenancy ValidationWebhooks, for ClusterAuthorizationRule and for ModuleConfig, run this code.
+multitenancy = validation_webhook_test_helper.load("multitenancy.py")
 
 
 class TestLimitNamespacesPatternValidation(unittest.TestCase):
@@ -355,6 +359,44 @@ class TestMultiTenancyValidationForCarsAndModuleConfig(unittest.TestCase):
         ]:
             with self.subTest(scenario):
                 tests.assert_validation_allowed(self, self.run_hook(ctx_json), None)
+
+
+class _FilteredCAR:
+    """A d8-user-authz-cars snapshot item: the name and the restricted fields of the rule.
+
+    That is the shape the binding's jqFilter builds; the template tests of the module run the filter.
+    """
+
+    def __init__(self, name: str, **spec):
+        self.filter_result = {"metadata": {"name": name}, "spec": spec}
+
+    def toSnapshotObject(self) -> str:
+        return json.dumps({"filterResult": self.filter_result})
+
+
+class TestModuleConfigReadsTheRestrictedFieldsOfTheRules(unittest.TestCase):
+    def disable_multitenancy(self, *cars: _FilteredCAR):
+        ctx = factories.prepare_module_config_binding_context(False, list(cars))
+        return hook.testrun(multitenancy.main, [DotMap(json.loads(ctx))])
+
+    def test_each_restricted_field_alone_refuses_disabling(self):
+        for field, value in [
+            ("allowAccessToSystemNamespaces", True),
+            ("limitNamespaces", ["team-.*"]),
+            ("namespaceSelector", {"matchLabels": {"team": "a"}}),
+            ("namespaceSelector", None),
+        ]:
+            with self.subTest(field=field, value=value):
+                out = self.disable_multitenancy(_FilteredCAR("restricted", **{field: value}))
+                tests.assert_validation_deny(
+                    self, out,
+                    f"You must enable userAuthz.enableMultiTenancy to use the "
+                    f"{multitenancy.MULTITENANCY_RESTRICTED_FIELDS[field]} in ClusterAuthorizationRule 'restricted'",
+                )
+
+    def test_rule_without_restricted_fields_allows_disabling(self):
+        out = self.disable_multitenancy(_FilteredCAR("plain"))
+        tests.assert_validation_allowed(self, out, None)
 
 
 if __name__ == '__main__':

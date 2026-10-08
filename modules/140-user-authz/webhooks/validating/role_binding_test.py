@@ -16,9 +16,11 @@
 
 import unittest
 
-import role_binding
+import validation_webhook_test_helper
 from deckhouse import hook, tests
 from dotmap import DotMap
+
+role_binding = validation_webhook_test_helper.load("role_binding.py")
 
 
 def binding_context(role_name, role_kind="ClusterRole", username="alice@example.com", operation="CREATE"):

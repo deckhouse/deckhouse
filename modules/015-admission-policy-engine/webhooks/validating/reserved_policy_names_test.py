@@ -20,8 +20,11 @@ import unittest
 from deckhouse import hook, tests
 from dotmap import DotMap
 
-import reserved_policy_names as reserved
-from reserved_policy_names import main
+import validation_webhook_test_helper
+
+# The hook lives in a ValidationWebhook manifest; the harness assembles it the way webhook-operator does.
+reserved = validation_webhook_test_helper.load("reserved_policy_names.py")
+main = reserved.main
 
 
 def _binding_context(name: str) -> DotMap:

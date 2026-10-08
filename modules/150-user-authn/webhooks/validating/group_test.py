@@ -18,7 +18,10 @@ import unittest
 import json
 import typing
 
-from group import main
+import validation_webhook_test_helper
+
+# The hook lives in a ValidationWebhook manifest; the harness assembles it the way webhook-operator does.
+main = validation_webhook_test_helper.load("group.py").main
 from deckhouse import hook, tests
 from dotmap import DotMap
 
@@ -573,10 +576,8 @@ class TestGroupValidationWebhook(unittest.TestCase):
             "name": "candi-admins"
         })
         out = hook.testrun(main, [ctx])
-        tests.assert_validation_allowed(self, out, (
-            'groups.deckhouse.io "none-exists-2" not exist',
-            'users.deckhouse.io "not-exists" not exist'
-        ))
+        # The ValidationWebhook template takes one warning string, so the warnings are joined.
+        tests.assert_validation_allowed(self, out, 'groups.deckhouse.io "none-exists-2" not exist; users.deckhouse.io "not-exists" not exist')
 
     def test_should_create_group(self):
         ctx = _prepare_create_binding_context({
@@ -610,10 +611,8 @@ class TestGroupValidationWebhook(unittest.TestCase):
             "name": "new-group"
         })
         out = hook.testrun(main, [ctx])
-        tests.assert_validation_allowed(self, out, (
-            'groups.deckhouse.io "none-exists-2" not exist',
-            'users.deckhouse.io "not-exists" not exist'
-        ))
+        # The ValidationWebhook template takes one warning string, so the warnings are joined.
+        tests.assert_validation_allowed(self, out, 'groups.deckhouse.io "none-exists-2" not exist; users.deckhouse.io "not-exists" not exist')
 
     def test_create_should_fail_with_already_exist_group(self):
         ctx = _prepare_create_binding_context({
@@ -666,10 +665,8 @@ class TestGroupValidationWebhook(unittest.TestCase):
             "name": "new"
         }, True)
         out = hook.testrun(main, [ctx])
-        tests.assert_validation_allowed(self, out, (
-            'groups.deckhouse.io "candi-admins" contains groups.deckhouse.io "new"',
-            'groups.deckhouse.io "crowd-ro" contains groups.deckhouse.io "new"'
-        ))
+        # The ValidationWebhook template takes one warning string, so the warnings are joined.
+        tests.assert_validation_allowed(self, out, 'groups.deckhouse.io "candi-admins" contains groups.deckhouse.io "new"; groups.deckhouse.io "crowd-ro" contains groups.deckhouse.io "new"')
 
 if __name__ == '__main__':
     unittest.main()

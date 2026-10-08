@@ -1,5 +1,3 @@
-#!/usr/bin/python3
-
 # Copyright 2026 Flant JSC
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -13,6 +11,10 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+
+# The operator template imports these as well; they make the file importable by the tests.
+from typing import Optional
+from dotmap import DotMap
 
 
 # Anti-escalation guard for namespaced Role and ClusterRole objects (RBAC v2).
@@ -32,10 +34,6 @@
 # controller, which are excluded via matchConditions). Ordinary namespaced RBAC (configmaps,
 # secrets, the user's own workloads) is untouched.
 
-from typing import Optional
-
-from deckhouse import hook
-from dotmap import DotMap
 
 PROTECTED_GROUP = "deckhouse.io"
 # Project-management resources whose mutation confers project-level powers. projectnamespaces
@@ -73,46 +71,6 @@ def is_platform_owned_clusterrole(kind: str, name: str) -> bool:
     return kind == "ClusterRole" and name.startswith("d8:") and not name.startswith("d8:custom:")
 
 
-_EXCLUDE_BYPASS_GROUPS = "\n".join(
-    f"""  - name: exclude-group-{group.replace(":", "-")}
-    expression: '!("{group}" in request.userInfo.groups)'"""
-    for group in sorted(BYPASS_GROUPS)
-)
-
-CONFIG = f"""
-configVersion: v1
-kubernetesValidating:
-- name: rbacv2-role-escalation.deckhouse.io
-  group: main
-  matchConditions:
-  - expression: ("system:apiserver" != request.userInfo.username)
-    name: exclude-kube-apiserver
-  - expression: ("system:serviceaccount:d8-system:deckhouse" != request.userInfo.username)
-    name: exclude-deckhouse
-  - expression: ("system:serviceaccount:kube-system:clusterrole-aggregation-controller" != request.userInfo.username)
-    name: exclude-aggregation-controller
-{_EXCLUDE_BYPASS_GROUPS}
-  rules:
-  - apiGroups:   ["rbac.authorization.k8s.io"]
-    apiVersions: ["*"]
-    operations:  ["CREATE", "UPDATE"]
-    resources:   ["roles", "clusterroles"]
-    scope:       "*"
-"""
-
-
-def main(ctx: hook.Context):
-    try:
-        binding_context = DotMap(ctx.binding_context)
-        error_message = validate(binding_context)
-        if error_message:
-            ctx.output.validations.deny(error_message)
-        else:
-            ctx.output.validations.allow()
-    except Exception as e:
-        ctx.output.validations.error(str(e))
-
-
 def rule_grants_protected(rule: dict) -> bool:
     groups = set(rule.get("apiGroups") or [])
     # subresources (e.g. projectrolebindings/status) escalate just as well; match on the base name.
@@ -125,7 +83,7 @@ def rule_grants_protected(rule: dict) -> bool:
     return group_match and resource_match and verb_match
 
 
-def validate(ctx: DotMap) -> Optional[str]:
+def validation_error(ctx: DotMap) -> Optional[str]:
     user_info = ctx.review.request.userInfo
     if hasattr(user_info, "toDict"):
         user_info = user_info.toDict()
@@ -158,6 +116,8 @@ def validate(ctx: DotMap) -> Optional[str]:
 
     return None
 
-
-if __name__ == "__main__":
-    hook.run(main, config=CONFIG)
+# The template calls validate(ctx) and expects a (message, allowed) pair, while the check above keeps
+# its original shape and returns the reason or None.
+def validate(ctx: DotMap) -> tuple[Optional[str], bool]:
+    message = validation_error(ctx)
+    return (message, False) if message else (None, True)

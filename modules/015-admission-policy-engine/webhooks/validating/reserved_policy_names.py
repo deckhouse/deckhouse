@@ -1,5 +1,3 @@
-#!/usr/bin/python3
-
 # Copyright 2026 Flant JSC
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -14,15 +12,15 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+# The operator template imports these as well; they make the file importable by the tests.
+from typing import Optional
+from dotmap import DotMap
+
+
 # A policy that spans both user and system namespaces is rendered as several Gatekeeper
 # constraints, because a constraint carries a single enforcementAction. The extra constraints
 # are named by prefixing the policy name, so a policy that claims one of those prefixes would
 # render a constraint under a name another policy already owns and break the release.
-
-from typing import Optional
-
-from deckhouse import hook
-from dotmap import DotMap
 
 RESERVED_NAME_PREFIXES = (
     "d8-system-default-",
@@ -35,37 +33,15 @@ RESERVED_NAME_PREFIXES = (
 # admitted and the release breaks at the next converge instead.
 MAX_NAME_LENGTH = 253 - max(len(prefix) for prefix in RESERVED_NAME_PREFIXES)
 
-config = """
-configVersion: v1
-kubernetesValidating:
-- name: reserved-policy-names.deckhouse.io
-  group: main
-  rules:
-  - apiGroups:   ["deckhouse.io"]
-    apiVersions: ["*"]
-    operations:  ["CREATE", "UPDATE"]
-    resources:   ["securitypolicies", "operationpolicies"]
-    scope:       "Cluster"
-"""
 
-
-def main(ctx: hook.Context):
-    try:
-        binding_context = DotMap(ctx.binding_context)
-        validate(binding_context, ctx.output.validations)
-    except Exception as e:
-        ctx.output.validations.error(str(e))
-
-
-def validate(ctx: DotMap, output: hook.ValidationsCollector):
+def validate(ctx: DotMap) -> tuple[Optional[str], bool]:
     name = ctx.review.request.object.metadata.name
     for check in (check_reserved_name, check_name_length):
         error = check(name)
         if error is not None:
-            output.deny(error)
-            return
+            return error, False
 
-    output.allow()
+    return None, True
 
 
 def check_reserved_name(name: str) -> Optional[str]:
@@ -89,7 +65,3 @@ def check_name_length(name: str) -> Optional[str]:
         )
 
     return None
-
-
-if __name__ == "__main__":
-    hook.run(main, config=config)

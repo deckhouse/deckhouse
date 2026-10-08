@@ -1,5 +1,3 @@
-#!/usr/bin/python3
-
 # Copyright 2026 Flant JSC
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -13,6 +11,9 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+
+# The operator template imports these as well; they make the file importable by the tests.
+from dotmap import DotMap
 
 
 # Superadmin: protect system resources placed inside user/project namespaces (RBAC v2).
@@ -68,9 +69,6 @@ import json
 import subprocess
 from typing import Optional
 
-from deckhouse import hook
-from dotmap import DotMap
-
 # Marker LABEL (a label, not an annotation). The edit webhook filters on it via matchConditions.
 # The exec path cannot use matchConditions (the admission object is PodExecOptions, not the Pod),
 # so it reads that one pod live with kubectl. Modules mark their in-namespace system objects with
@@ -118,7 +116,8 @@ PRIVILEGED_USERS = {
     "system:serviceaccount:d8-multitenancy-manager:multitenancy-manager",
 }
 
-# Groups whose members skip this webhook entirely, both here and in the matchConditions below:
+# Groups whose members skip this webhook entirely, both here and in the matchConditions of the
+# system-resources ValidationWebhooks:
 # cluster administrators (super-admin.conf / system:masters, plus the administrator groups
 # conventionally mapped through the authentication provider) and cluster components, which must keep
 # break-glass access and must be able to reconcile and garbage-collect objects. The cluster-component
@@ -144,26 +143,6 @@ BYPASS_GROUPS = {
 BINDING_EDIT = "rbacv2-system-resource-edit.deckhouse.io"
 BINDING_EXEC = "rbacv2-system-resource-exec.deckhouse.io"
 
-# The same bypass as BYPASS_GROUPS, expressed for the apiserver instead of the hook body. Both
-# webhooks are fail-closed, and the exec one matches CONNECT on every pod in the cluster: the target
-# pod's marker lives on the Pod, while the reviewed object is a PodExecOptions, so no CEL expression
-# can pre-filter it the way `only-marked-objects` filters the edit webhook. With the bypass evaluated
-# only inside the hook, an unavailable webhook-handler would block exec cluster-wide — including exec
-# into the webhook-handler pod needed to diagnose it. Evaluating it in matchConditions keeps
-# break-glass access (system:masters) and the kubelet working regardless of handler health, and keeps
-# node and system traffic off the handler entirely. The hook keeps its own check: matchConditions are
-# a pre-filter, not the authority.
-# One condition per group rather than a single exists() over a list literal: the plain `in` membership
-# test is the form the Kubernetes admission documentation guarantees, and a CEL expression that fails
-# to compile invalidates the whole ValidatingWebhookConfiguration (see the `only-marked-objects` note
-# below). The apiserver always populates userInfo.groups for both authenticated and anonymous
-# requests, so the access needs no guard.
-_EXCLUDE_BYPASS_GROUPS = "\n".join(
-    f"""  - name: exclude-group-{group.replace(":", "-")}
-    expression: '!("{group}" in request.userInfo.groups)'"""
-    for group in sorted(BYPASS_GROUPS)
-)
-
 # Superadmin status and the exec target pod are resolved with on-demand LIVE reads — no informers and
 # no snapshots. The protected events are rare (a non-superadmin editing a system-labeled object, or
 # exec into a system pod), so a live read per event is cheap, keeps the webhook-handler free of any
@@ -183,79 +162,6 @@ _EXCLUDE_BYPASS_GROUPS = "\n".join(
 # (cluster)rolebindings and get on pods.
 _KUBECTL = "kubectl"
 _API_TIMEOUT_SECONDS = 10
-
-CONFIG = f"""
-configVersion: v1
-kubernetesValidating:
-- name: {BINDING_EDIT}
-  group: main
-  matchConditions:
-  - name: exclude-kube-apiserver
-    expression: '"system:apiserver" != request.userInfo.username'
-  - name: exclude-deckhouse
-    expression: '"system:serviceaccount:d8-system:deckhouse" != request.userInfo.username'
-  - name: exclude-aggregation-controller
-    expression: '"system:serviceaccount:kube-system:clusterrole-aggregation-controller" != request.userInfo.username'
-  - name: exclude-multitenancy-manager
-    expression: '"system:serviceaccount:d8-multitenancy-manager:multitenancy-manager" != request.userInfo.username'
-{_EXCLUDE_BYPASS_GROUPS}
-  # Only forward requests for objects that actually carry the markings, so the (intentionally broad)
-  # rule below does not put every namespaced UPDATE/DELETE through the hook. Guarded with has()/in to
-  # never error (which would otherwise fail the request under a Fail matchConditions policy).
-  - name: only-marked-objects
-    # In admission matchConditions the reviewed objects are TOP-LEVEL CEL variables `object`/`oldObject`
-    # (the `request` variable is the AdmissionRequest metadata and has NO `.object`/`.oldObject`). Using
-    # `request.object` makes the expression fail CEL compilation, which invalidates the WHOLE
-    # ValidatingWebhookConfiguration and crash-loops the webhook-handler (fail-closed → every webhook on
-    # the handler stops). `object` is null on DELETE / CONNECT; `oldObject` is null on CREATE — guarded.
-    expression: >-
-      (object != null && has(object.metadata.labels) && (
-        ('{SYSTEM_RESOURCE_LABEL}' in object.metadata.labels && object.metadata.labels['{SYSTEM_RESOURCE_LABEL}'] == '{SYSTEM_RESOURCE_VALUE}')
-        || ('{HERITAGE_LABEL}' in object.metadata.labels && object.metadata.labels['{HERITAGE_LABEL}'] == '{HERITAGE_MULTITENANCY}')
-      )) || (oldObject != null && has(oldObject.metadata.labels) && (
-        ('{SYSTEM_RESOURCE_LABEL}' in oldObject.metadata.labels && oldObject.metadata.labels['{SYSTEM_RESOURCE_LABEL}'] == '{SYSTEM_RESOURCE_VALUE}')
-        || ('{HERITAGE_LABEL}' in oldObject.metadata.labels && oldObject.metadata.labels['{HERITAGE_LABEL}'] == '{HERITAGE_MULTITENANCY}')
-      ))
-  rules:
-  - apiGroups:   ["*"]
-    apiVersions: ["*"]
-    operations:  ["UPDATE", "DELETE"]
-    resources:   ["*"]
-    scope:       "Namespaced"
-- name: {BINDING_EXEC}
-  group: main
-  # The same four identities the edit binding excludes: PRIVILEGED_USERS in the hook body already
-  # let them through, but a webhook-handler that is down or slow must not stand between a cluster
-  # component and a system pod, and only a matchCondition guarantees that.
-  matchConditions:
-  - name: exclude-kube-apiserver
-    expression: '"system:apiserver" != request.userInfo.username'
-  - name: exclude-deckhouse
-    expression: '"system:serviceaccount:d8-system:deckhouse" != request.userInfo.username'
-  - name: exclude-aggregation-controller
-    expression: '"system:serviceaccount:kube-system:clusterrole-aggregation-controller" != request.userInfo.username'
-  - name: exclude-multitenancy-manager
-    expression: '"system:serviceaccount:d8-multitenancy-manager:multitenancy-manager" != request.userInfo.username'
-{_EXCLUDE_BYPASS_GROUPS}
-  rules:
-  - apiGroups:   [""]
-    apiVersions: ["*"]
-    operations:  ["CONNECT"]
-    resources:   ["pods/exec", "pods/attach", "pods/portforward"]
-    scope:       "Namespaced"
-"""
-
-
-def main(ctx: hook.Context):
-    try:
-        binding_context = DotMap(ctx.binding_context)
-        error_message = validate(binding_context)
-        if error_message:
-            ctx.output.validations.deny(error_message)
-        else:
-            ctx.output.validations.allow()
-    except Exception as e:
-        ctx.output.validations.error(str(e))
 
 
 def _to_dict(obj) -> dict:
@@ -302,7 +208,6 @@ def _kubectl_get(resource: str, name: str = "", namespace: str = "") -> Optional
             return None
         raise RuntimeError(f"kubectl get {' '.join(cmd[2:])} failed: {stderr}")
     return json.loads(proc.stdout)
-
 
 # Field and record separators for the projection below. Control characters, because a subject name
 # is arbitrary text and a delimiter it could contain would silently corrupt the answer.
@@ -421,19 +326,23 @@ def is_system_pod(namespace: str, name: str) -> bool:
     return labels.get(SYSTEM_RESOURCE_LABEL) == SYSTEM_RESOURCE_VALUE
 
 
-def validate(ctx: DotMap) -> Optional[str]:
+def validate(ctx: DotMap) -> tuple[Optional[str], bool]:
     request = ctx.review.request
     username = request.userInfo.username
     groups = set(_to_list(request.userInfo.groups))
 
     # System components and cluster-admins bypass all protections.
     if username in PRIVILEGED_USERS or (groups & BYPASS_GROUPS):
-        return None
+        return None, True
 
     binding = ctx.binding
     if binding == BINDING_EXEC:
-        return validate_exec(request, username, groups)
-    return validate_edit(request, username, groups)
+        message = validate_exec(request, username, groups)
+    else:
+        message = validate_edit(request, username, groups)
+    if message:
+        return message, False
+    return None, True
 
 
 def validate_edit(request: DotMap, username: str, groups: set) -> Optional[str]:
@@ -499,7 +408,3 @@ def validate_exec(request: DotMap, username: str, groups: set) -> Optional[str]:
         f'{action} into it is allowed only for a superadmin of this namespace or project, '
         f"a system superadmin or a cluster administrator ({PRIVILEGED_ROLES_HINT})."
     )
-
-
-if __name__ == "__main__":
-    hook.run(main, config=CONFIG)

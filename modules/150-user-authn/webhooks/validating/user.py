@@ -1,5 +1,3 @@
-#!/usr/bin/python3
-
 # Copyright 2024 Flant JSC
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -14,72 +12,22 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from deckhouse import hook
+# The operator template imports these as well; they make the file importable by the tests.
+from typing import Optional
 from dotmap import DotMap
 
-config = """
-configVersion: v1
-kubernetes:
-  - name: users
-    apiVersion: deckhouse.io/v1
-    kind: User
-    queue: "users"
-    group: main
-    executeHookOnEvent: []
-    executeHookOnSynchronization: false
-    keepFullObjectsInMemory: false
-    jqFilter: |
-      {
-        "name": .metadata.name,
-        "userID": .spec.userID,
-        "email": .spec.email,
-        "groups": .spec.groups
-      }
-  - name: groups
-    apiVersion: deckhouse.io/v1alpha1
-    kind: Group
-    queue: "groups"
-    group: main
-    executeHookOnEvent: []
-    executeHookOnSynchronization: false
-    keepFullObjectsInMemory: false
-    jqFilter: |
-      {
-        "name": .metadata.name,
-        "members": .spec.members
-      }
-kubernetesValidating:
-- name: users-unique.deckhouse.io
-  group: main
-  rules:
-  - apiGroups:   ["deckhouse.io"]
-    apiVersions: ["*"]
-    operations:  ["CREATE", "UPDATE", "DELETE"]
-    resources:   ["users"]
-    scope:       "Cluster"
-"""
 
-
-def main(ctx: hook.Context):
-    try:
-        # DotMap is a dict with dot notation
-        binding_context = DotMap(ctx.binding_context)
-        validate(binding_context, ctx.output.validations)
-    except Exception as e:
-        ctx.output.validations.error(str(e))
-
-
-def validate(ctx: DotMap, output: hook.ValidationsCollector):
+def validate(ctx: DotMap) -> tuple:
     operation = ctx.review.request.operation
     if operation == "CREATE" or operation == "UPDATE":
-        validate_creation_or_update(ctx, output)
+        return validate_creation_or_update(ctx)
     elif operation == "DELETE":
-        validate_delete(ctx, output)
+        return validate_delete(ctx)
     else:
         raise Exception(f"Unknown operation {ctx.operation}")
 
 
-def validate_creation_or_update(ctx: DotMap, output: hook.ValidationsCollector):
+def validate_creation_or_update(ctx: DotMap) -> tuple:
     operation = ctx.review.request.operation
     user_name = ctx.review.request.object.metadata.name
     user_id = ctx.review.request.object.spec.userID
@@ -91,7 +39,7 @@ def validate_creation_or_update(ctx: DotMap, output: hook.ValidationsCollector):
     old_email = None
     email_changed = False
     old_has_upper = False
-    
+
     if operation == "UPDATE" and ctx.review.request.oldObject is not None:
         old_email = ctx.review.request.oldObject.spec.email
         email_changed = old_email is not None and old_email != email
@@ -100,58 +48,49 @@ def validate_creation_or_update(ctx: DotMap, output: hook.ValidationsCollector):
     # Case-insensitive email uniqueness check
     if operation == "CREATE" or (operation == "UPDATE" and email_changed):
         user_with_the_same_email = [
-            obj.filterResult for obj in ctx.snapshots.users 
+            obj.filterResult for obj in ctx.snapshots.users
             if obj.filterResult.name != user_name and obj.filterResult.email and obj.filterResult.email.lower() == email.lower()
         ]
         if user_with_the_same_email:
-            output.deny(f"users.deckhouse.io \"{user_name}\", user \"{user_with_the_same_email[0].name}\" is already using email \"{user_with_the_same_email[0].email}\" (case-insensitive match)")
-            return
+            return f"users.deckhouse.io \"{user_name}\", user \"{user_with_the_same_email[0].name}\" is already using email \"{user_with_the_same_email[0].email}\" (case-insensitive match)", False
 
     # CREATE: forbid uppercase emails
     if operation == "CREATE" and has_upper:
-        output.deny(f"users.deckhouse.io \"{user_name}\", \".spec.email\" must be lowercase. Use \"{email.lower()}\" instead")
-        return
+        return f"users.deckhouse.io \"{user_name}\", \".spec.email\" must be lowercase. Use \"{email.lower()}\" instead", False
 
     # UPDATE: forbid changing lowercase email to uppercase
     # Exception: if the old email already contained uppercase, allow updates to preserve backward compatibility
     if operation == "UPDATE" and email_changed and has_upper and not old_has_upper:
-        output.deny(f"users.deckhouse.io \"{user_name}\", changing \".spec.email\" to contain uppercase is forbidden; use lowercase")
-        return
+        return f"users.deckhouse.io \"{user_name}\", changing \".spec.email\" to contain uppercase is forbidden; use lowercase", False
 
     # Legacy updates: if old email had uppercase, allow updates; warn if the resulting email still has uppercase
     if operation == "UPDATE" and old_has_upper:
         if has_upper:
-            output.allow("\".spec.email\" contains uppercase; Dex lowercases emails. Consider migrating to lowercase.")
-            return
+            return "\".spec.email\" contains uppercase; Dex lowercases emails. Consider migrating to lowercase.", True
 
     # Original email uniqueness check (exact match) - keep for backward compatibility
     user_with_the_same_email = [obj.filterResult for obj in ctx.snapshots.users if obj.filterResult.name != user_name and obj.filterResult.email == email]
     if user_with_the_same_email:
-        output.deny(f"users.deckhouse.io \"{user_name}\", user \"{user_with_the_same_email[0].name}\" is already using email \"{email}\"")
-        return
+        return f"users.deckhouse.io \"{user_name}\", user \"{user_with_the_same_email[0].name}\" is already using email \"{email}\"", False
 
     if operation == "CREATE" and groups:
-        output.deny("\".spec.groups\" is deprecated, use the \"Group\" object.")
-        return
+        return "\".spec.groups\" is deprecated, use the \"Group\" object.", False
 
     if operation == "UPDATE" and groups:
         snapshot_user = next((user.filterResult for user in ctx.snapshots.users if user.filterResult.name == user_name), None)
         if snapshot_user and set(snapshot_user.groups) - set(groups):
-            output.deny("\".spec.groups\" is deprecated, modification is forbidden, only removal of all elements is allowed")
-            return
+            return "\".spec.groups\" is deprecated, modification is forbidden, only removal of all elements is allowed", False
 
     if email.startswith("system:"):
-        output.deny(f"users.deckhouse.io \"{user_name}\", \".spec.email\" must not start with the \"system:\" prefix")
-        return
+        return f"users.deckhouse.io \"{user_name}\", \".spec.email\" must not start with the \"system:\" prefix", False
 
     if user_id:
-        output.allow("\".spec.userID\" is deprecated and shouldn't be set manually (if set, its value is ignored)")
-        return
+        return "\".spec.userID\" is deprecated and shouldn't be set manually (if set, its value is ignored)", True
 
-    output.allow()
+    return None, True
 
 
-def validate_delete(ctx: DotMap, output: hook.ValidationsCollector):
+def validate_delete(ctx: DotMap) -> tuple:
     user_name = ctx.review.request.oldObject.metadata.name
     warnings = []
 
@@ -160,8 +99,6 @@ def validate_delete(ctx: DotMap, output: hook.ValidationsCollector):
             if member.kind == "User" and member.name == user_name:
                 warnings.append(f"groups.deckhouse.io \"{group.filterResult.name}\" contains users.deckhouse.io \"{user_name}\"")
 
-    output.allow(*warnings)
-
-
-if __name__ == "__main__":
-    hook.run(main, config=config)
+    # The template takes a single warning string, and the API server refuses a warning with a
+    # line break in it, so one warning per group is joined into one line.
+    return "; ".join(warnings), True

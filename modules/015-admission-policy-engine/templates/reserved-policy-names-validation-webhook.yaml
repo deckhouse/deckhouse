@@ -1,0 +1,19 @@
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: ValidationWebhook
+metadata:
+  name: admission-policy-engine-reserved-policy-names
+  {{- include "helm_lib_module_labels" (list . (dict "app" "webhook-handler")) | nindent 2 }}
+validationObject:
+  name: reserved-policy-names.deckhouse.io
+  group: main
+  rules:
+  - apiGroups:   ["deckhouse.io"]
+    apiVersions: ["*"]
+    operations:  ["CREATE", "UPDATE"]
+    resources:   ["securitypolicies", "operationpolicies"]
+    scope:       "Cluster"
+handler:
+  # The code of the hook is webhooks/validating/reserved_policy_names.py, where its unit tests import it.
+  python: |
+    {{- (required "webhooks/validating/reserved_policy_names.py is missing" (.Files.Get "webhooks/validating/reserved_policy_names.py")) | nindent 4 }}
