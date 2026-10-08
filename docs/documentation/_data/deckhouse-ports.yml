@@ -555,21 +555,11 @@ groups:
     description:
       en: "`virtualization` `virt-handler` console server"
       ru: "Сервер консоли `virt-handler` модуля `virtualization`"
-  - ports: "4105"
-    protocol: TCP
-    description:
-      en: "`virtualization` `vm-route-forge` liveness and readiness probes"
-      ru: "Порты liveness и readiness проб `vm-route-forge` модуля `virtualization`"
   - ports: "4106"
     protocol: TCP
     description:
       en: "`virtualization` `vm-route-forge` pprof in debug mode"
       ru: "Порт pprof компонента `vm-route-forge` модуля `virtualization` в debug-режиме"
-  - ports: "4107"
-    protocol: TCP
-    description:
-      en: "`virtualization` `virtualization-dra` gRPC liveness and readiness probes"
-      ru: "Порты gRPC liveness и readiness проб `virtualization-dra` модуля `virtualization`"
 
 - group: ExternalToMaster
   description:
