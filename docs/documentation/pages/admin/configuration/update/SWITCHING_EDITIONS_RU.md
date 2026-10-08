@@ -261,16 +261,27 @@ spec:
   content: |
     {{- if eq .cri "ContainerdV2" }}
     command -v containerd &>/dev/null || exit 0
-    containerd --help 2>/dev/null | grep -q -- '--integrity-check-interval' || exit 0
+    marker="/var/lib/containerd/.cntrd-integrity-migrated"
+    [ -f "$marker" ] && exit 0
+
+    help_rc=0
+    help_output="$(containerd --help)" || help_rc=$?
+    if [ "$help_rc" -ne 0 ] || [ -z "$help_output" ]; then
+      bb-log-error "'containerd --help' produced no usable output (exit code $help_rc), refusing to continue"
+      exit 1
+    fi
+    [[ "$help_output" == *'--integrity-check-interval'* ]] || exit 0
 
     snapshots="/var/lib/containerd/io.containerd.snapshotter.v1.erofs/snapshots"
-    [ -d "$snapshots" ] || exit 0
     stale=""
     for layer in "$snapshots"/*/layer.erofs; do
       [ -e "$layer" ] || continue
       [ -e "${layer}.verity" ] || { stale=yes; break; }
     done
-    [ -n "$stale" ] || exit 0
+    if [ -z "$stale" ]; then
+      [ -d /var/lib/containerd ] && touch "$marker"
+      exit 0
+    fi
 
     bb-log-info "Stale erofs layers without verity found, containerd state wipe is required"
     bb-deckhouse-get-disruptive-update-approval
@@ -281,7 +292,7 @@ spec:
     systemctl stop kubelet.service
     crictl ps -q | xargs -r crictl stop -t 0 && crictl ps -a -q | xargs -r crictl rm -f
     systemctl stop containerd-deckhouse.service
-    for i in $(mount | grep /var/lib/containerd | cut -d " " -f3); do umount $i; done
+    for i in $(mount | grep -E '/var/lib/containerd/[^[:space:]]+' | cut -d " " -f3); do umount $i; done
     if [ -d /var/lib/containerd/io.containerd.snapshotter.v1.erofs ]; then
       chattr -i /var/lib/containerd/io.containerd.snapshotter.v1.erofs/snapshots/*/layer.erofs
     fi
@@ -290,6 +301,7 @@ spec:
     bb-flag-set need-local-images-import
     bb-flag-set kubelet-need-restart
     bb-flag-set reboot
+    touch "$marker"
 
     if systemctl start containerd-deckhouse.service; then
       bb-flag-unset containerd-need-restart
