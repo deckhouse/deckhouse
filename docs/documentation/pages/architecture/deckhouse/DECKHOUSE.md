@@ -91,7 +91,7 @@ The module consists of the following components:
 
    The component watches [ConversionWebhook](/modules/deckhouse/latest/cr.html#conversionwebhook) and [ValidationWebhook](/modules/deckhouse/latest/cr.html#validationwebhook) custom resources and, based on them, generates hook Python files for [shell-operator](https://github.com/flant/shell-operator) from templates. When `kube-apiserver` sends resource validation or conversion requests, shell-operator runs the required hook and returns the processing result.
 
-1. **Cni-migration-manager** (Deployment): An optional component running on control plane nodes, consisting of a single **manager** container. The component manages the network plugin (CNI) switching process in the DP cluster and records the current state in the CNIMigration custom resource. Migration to Flannel, Simple bridge, and Cilium is supported. For details on switching CNI in the cluster, refer to the [corresponding guide](/products/kubernetes-platform/guides/cni-migration.html).
+1. **Cni-migration-manager** (Deployment): An optional component running on control plane nodes, consisting of a single **manager** container. The component manages the network plugin (CNI) switching process in the DP cluster and records the current state in the CNIMigration custom resource. Migration to Flannel, Simple bridge, and Cilium is supported. For details on switching CNI in the cluster, refer to the [corresponding guide](../../guides/cni-migration.html).
 
    {% alert level="info" %}
    The component is created by the `detect-cni-migration` global hook when the CNIMigration custom resource exists. The CNIMigration resource is created manually by an administrator or by running the `d8 network cni-migration switch --to-cni <target cni>` command.

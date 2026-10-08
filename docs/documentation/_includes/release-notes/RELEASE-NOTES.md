@@ -176,7 +176,7 @@
 
   - Added ICMP (ping) support via ExternalIP for LoadBalancer services with MetalLB.
 
-- Added support for [switching between supported CNI plugins](https://deckhouse.io/products/kubernetes-platform/guides/cni-migration.html) in DP clusters.
+- Added support for [switching between supported CNI plugins](guides/cni-migration.html) in DP clusters.
 
 - In the `node-local-dns` module, added [`disableIPv6`](https://deckhouse.io/modules/node-local-dns/v1.76/configuration.html#parameters-disableipv6) parameter to disable IPv6 DNS resolution.
 

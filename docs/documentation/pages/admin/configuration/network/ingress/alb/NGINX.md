@@ -347,7 +347,7 @@ Available in DP Enterprise Edition and DP Ultimate only.
 1. Create a [MetalLoadBalancerClass](/modules/metallb/cr.html#metalloadbalancerclass) resource:
 
    {% alert level="info" %}
-   MetalLB balancers should be placed on the same nodes as Ingress controllers. In [typical deployment scenarios](/products/kubernetes-platform/guides/hardware-requirements.html#deployment-scenarios), frontend nodes are used for this purpose. To deploy Ingress controllers and MetalLB load balancers on frontend nodes, set the label `node-role.deckhouse.io/frontend: ""` in `nodeSelector`.
+   MetalLB balancers should be placed on the same nodes as Ingress controllers. In [typical deployment scenarios](../../../../../guides/hardware-requirements.html#deployment-scenarios), frontend nodes are used for this purpose. To deploy Ingress controllers and MetalLB load balancers on frontend nodes, set the label `node-role.deckhouse.io/frontend: ""` in `nodeSelector`.
    {% endalert %}
 
    ```yaml
