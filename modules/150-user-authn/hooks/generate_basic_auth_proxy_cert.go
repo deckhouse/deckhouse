@@ -46,6 +46,15 @@ import (
 const (
 	proxyJobNS   = "d8-system"
 	proxyJobName = "proxy-cert-generate-job"
+
+	// The generator signs the CSR with the front-proxy CA. Only these two files are mounted,
+	// the rest of /etc/kubernetes/pki holds the cluster CA and other signing keys.
+	frontProxyCACertPath = "/etc/kubernetes/pki/front-proxy-ca.crt"
+	frontProxyCAKeyPath  = "/etc/kubernetes/pki/front-proxy-ca.key"
+
+	securityPolicyExceptionLabel = "security.deckhouse.io/security-policy-exception"
+	// Must match the SecurityPolicyException in templates/basic-auth-proxy/security-policy-exception.yaml.
+	proxyJobSecurityPolicyExceptionName = "user-authn-proxy-cert-generate-job"
 )
 
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
@@ -302,12 +311,24 @@ func generateJob(registry, digest, csrb64 string) *batchv1.Job {
 		Spec: batchv1.JobSpec{
 			BackoffLimit: ptr.To(int32(1)),
 			Template: corev1.PodTemplateSpec{
+				ObjectMeta: v1.ObjectMeta{
+					Labels: map[string]string{
+						securityPolicyExceptionLabel: proxyJobSecurityPolicyExceptionName,
+					},
+				},
 				Spec: corev1.PodSpec{
 					SecurityContext: &corev1.PodSecurityContext{
-						// we have to run this container as root as a hostPath volume's permissions can't be altered on mounting and we need to read from /etc/kubernetes/pki
-						RunAsUser: ptr.To(int64(0)),
+						// The front-proxy CA key on the host is readable by root only.
+						RunAsUser:    ptr.To(int64(0)),
+						RunAsGroup:   ptr.To(int64(0)),
+						RunAsNonRoot: ptr.To(false),
+						SeccompProfile: &corev1.SeccompProfile{
+							Type: corev1.SeccompProfileTypeRuntimeDefault,
+						},
 					},
-					ImagePullSecrets: []corev1.LocalObjectReference{{Name: "deckhouse-registry"}},
+					// The generator only signs the CSR and never calls the API server.
+					AutomountServiceAccountToken: ptr.To(false),
+					ImagePullSecrets:             []corev1.LocalObjectReference{{Name: "deckhouse-registry"}},
 					Containers: []corev1.Container{
 						{
 							Name:  "generator",
@@ -319,21 +340,23 @@ func generateJob(registry, digest, csrb64 string) *batchv1.Job {
 									Value: csrb64,
 								},
 							},
+							SecurityContext: &corev1.SecurityContext{
+								AllowPrivilegeEscalation: ptr.To(false),
+								ReadOnlyRootFilesystem:   ptr.To(true),
+								Capabilities: &corev1.Capabilities{
+									Drop: []corev1.Capability{"ALL"},
+								},
+							},
 							VolumeMounts: []corev1.VolumeMount{
 								{
-									Name:      "etc",
+									Name:      "front-proxy-ca-crt",
 									ReadOnly:  true,
-									MountPath: "/etc",
+									MountPath: frontProxyCACertPath,
 								},
 								{
-									Name:      "var",
+									Name:      "front-proxy-ca-key",
 									ReadOnly:  true,
-									MountPath: "/var",
-								},
-								{
-									Name:      "mnt",
-									ReadOnly:  true,
-									MountPath: "/mnt",
+									MountPath: frontProxyCAKeyPath,
 								},
 							},
 						},
@@ -341,31 +364,24 @@ func generateJob(registry, digest, csrb64 string) *batchv1.Job {
 					RestartPolicy: corev1.RestartPolicyNever,
 					Volumes: []corev1.Volume{
 						{
-							Name: "etc",
+							Name: "front-proxy-ca-crt",
 							VolumeSource: corev1.VolumeSource{
 								HostPath: &corev1.HostPathVolumeSource{
-									Path: "/etc",
+									Path: frontProxyCACertPath,
+									Type: ptr.To(corev1.HostPathFile),
 								},
 							},
 						},
 						{
-							Name: "mnt",
+							Name: "front-proxy-ca-key",
 							VolumeSource: corev1.VolumeSource{
 								HostPath: &corev1.HostPathVolumeSource{
-									Path: "/mnt",
-								},
-							},
-						},
-						{
-							Name: "var",
-							VolumeSource: corev1.VolumeSource{
-								HostPath: &corev1.HostPathVolumeSource{
-									Path: "/var",
+									Path: frontProxyCAKeyPath,
+									Type: ptr.To(corev1.HostPathFile),
 								},
 							},
 						},
 					},
-					HostPID: true,
 					NodeSelector: map[string]string{
 						"node-role.kubernetes.io/control-plane": "",
 					},

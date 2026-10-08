@@ -163,5 +163,71 @@ var _ = Describe("Module :: user-authn :: helm template :: basic auth proxy", fu
 			Expect(args).To(ContainElement("--oidc-get-user-info=false"))
 			Expect(args).To(ContainElement("--oidc-basic-auth-unsupported=false"))
 		})
+
+		It("Should not render the SecurityPolicyException without its API", func() {
+			Expect(hec.RenderError).ToNot(HaveOccurred())
+			Expect(hec.KubernetesResource("SecurityPolicyException", "d8-system", "user-authn-proxy-cert-generate-job").Exists()).To(BeFalse())
+		})
 	})
+
+	Context("With an OIDC provider and the SecurityPolicyException API", func() {
+		BeforeEach(func() {
+			hec.ValuesSetFromYaml("global.discovery.apiVersions", `["deckhouse.io/v1alpha1/SecurityPolicyException"]`)
+			hec.ValuesSetFromYaml("userAuthn.internal.providers", oidcProvider)
+			hec.HelmRender()
+		})
+
+		It("Should allow the proxy-cert-generate-job Job only root and the read-only front-proxy CA files", func() {
+			Expect(hec.RenderError).ToNot(HaveOccurred())
+
+			// The name matches the label that hooks/generate_basic_auth_proxy_cert.go sets on the Job pod.
+			spe := hec.KubernetesResource("SecurityPolicyException", "d8-system", "user-authn-proxy-cert-generate-job")
+			Expect(spe.Exists()).To(BeTrue())
+			Expect(spe.Field("spec.securityContext.runAsUser.allowedValues").String()).To(MatchJSON(`[0]`))
+			// MustRunAsNonRoot is excepted only when both runAsUser and runAsNonRoot are allowed.
+			Expect(spe.Field("spec.securityContext.runAsNonRoot").Exists()).To(BeTrue())
+			Expect(spe.Field("spec.securityContext.runAsNonRoot.allowedValue").Bool()).To(BeFalse())
+			Expect(spe.Field("spec.volumes.types.allowedValues").String()).To(MatchJSON(`["hostPath"]`))
+			Expect(spe.Field("spec.volumes.hostPath.allowedValues.#.path").String()).To(MatchJSON(`["/etc/kubernetes/pki/front-proxy-ca.crt","/etc/kubernetes/pki/front-proxy-ca.key"]`))
+			Expect(spe.Field("spec.volumes.hostPath.allowedValues.#.readOnly").String()).To(MatchJSON(`[true,true]`))
+			Expect(spe.Field("spec.network").Exists()).To(BeFalse())
+		})
+	})
+
+	// The hook creates the Job before Helm runs, so the exception must already exist
+	// when basic authentication is turned on.
+	speRenderedCases := []struct {
+		name      string
+		providers string
+		publish   bool
+	}{
+		{"without providers", `[]`, true},
+		{"with basic auth disabled for the provider", `
+- id: oidcID
+  displayName: oidcName
+  type: OIDC
+  oidc:
+    enableBasicAuth: false
+    issuer: https://example.com
+    clientID: clientID
+    clientSecret: secret
+`, true},
+		{"with publishAPI disabled", oidcProvider, false},
+	}
+
+	for _, c := range speRenderedCases {
+		Context("Basic auth is not used "+c.name, func() {
+			BeforeEach(func() {
+				hec.ValuesSetFromYaml("global.discovery.apiVersions", `["deckhouse.io/v1alpha1/SecurityPolicyException"]`)
+				hec.ValuesSet("userAuthn.internal.publishAPI.enabled", c.publish)
+				hec.ValuesSetFromYaml("userAuthn.internal.providers", c.providers)
+				hec.HelmRender()
+			})
+
+			It("Should still render the SecurityPolicyException", func() {
+				Expect(hec.RenderError).ToNot(HaveOccurred())
+				Expect(hec.KubernetesResource("SecurityPolicyException", "d8-system", "user-authn-proxy-cert-generate-job").Exists()).To(BeTrue())
+			})
+		})
+	}
 })

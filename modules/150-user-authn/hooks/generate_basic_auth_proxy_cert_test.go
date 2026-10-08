@@ -19,6 +19,8 @@ package hooks
 import (
 	"context"
 	"fmt"
+	"maps"
+	"slices"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -66,6 +68,41 @@ var _ = Describe("User Authn hooks :: generate basic auth proxy ::", func() {
 			Expect(job.Spec.Template.Spec.Containers).To(HaveLen(1))
 			Expect(job.Spec.Template.Spec.Containers[0].Image).To(ContainSubstring("@"))
 			Expect(job.Spec.Template.Spec.Containers[0].Image).To(Equal(registry + "@" + digest))
+		})
+
+		It("Should generate job that needs only the exception for root and the front-proxy CA files", func() {
+			job := generateJob("registry.example.com", "sha256:test", "dGVzdAo=")
+			podSpec := job.Spec.Template.Spec
+
+			Expect(job.Spec.Template.Labels).To(HaveKeyWithValue(securityPolicyExceptionLabel, proxyJobSecurityPolicyExceptionName))
+			Expect(podSpec.HostPID).To(BeFalse())
+			Expect(*podSpec.SecurityContext.RunAsUser).To(BeEquivalentTo(0))
+			Expect(*podSpec.SecurityContext.RunAsNonRoot).To(BeFalse())
+			Expect(*podSpec.AutomountServiceAccountToken).To(BeFalse())
+			Expect(podSpec.SecurityContext.SeccompProfile.Type).To(Equal(corev1.SeccompProfileTypeRuntimeDefault))
+
+			// Only the front-proxy CA files, not the whole /etc/kubernetes/pki with the cluster CA key.
+			frontProxyCAFiles := []string{"/etc/kubernetes/pki/front-proxy-ca.crt", "/etc/kubernetes/pki/front-proxy-ca.key"}
+			hostPaths := map[string]string{}
+			for _, volume := range podSpec.Volumes {
+				Expect(volume.HostPath).ToNot(BeNil(), "volume %s", volume.Name)
+				Expect(*volume.HostPath.Type).To(Equal(corev1.HostPathFile), "volume %s", volume.Name)
+				hostPaths[volume.Name] = volume.HostPath.Path
+			}
+			Expect(hostPaths).To(HaveLen(2))
+			Expect(slices.Collect(maps.Values(hostPaths))).To(ConsistOf(frontProxyCAFiles))
+
+			container := podSpec.Containers[0]
+			Expect(container.VolumeMounts).To(HaveLen(2))
+			for _, mount := range container.VolumeMounts {
+				// The generator reads the front-proxy CA from fixed paths, the same as on the host.
+				Expect(mount.MountPath).To(Equal(hostPaths[mount.Name]))
+				// The exception matches a hostPath only when its readOnly equals the mount's.
+				Expect(mount.ReadOnly).To(BeTrue())
+			}
+			Expect(*container.SecurityContext.AllowPrivilegeEscalation).To(BeFalse())
+			Expect(*container.SecurityContext.ReadOnlyRootFilesystem).To(BeTrue())
+			Expect(container.SecurityContext.Capabilities.Drop).To(ConsistOf(corev1.Capability("ALL")))
 		})
 	})
 
