@@ -81,7 +81,7 @@ func CloudProviderGetter(params CloudProviderGetterParams) infrastructure.CloudP
 			}
 
 			additionalParams := params.getAdditionalParams()
-			diParams, err := params.getFSDIParams(ctx)
+			diParams, err := params.getFSDIParams(ctx, metaConfig.ProviderBundleDir)
 			if err != nil {
 				return nil, err
 			}

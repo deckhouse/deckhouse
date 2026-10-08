@@ -493,7 +493,7 @@ func TestRepoHintClassifiesRegistryFailure(t *testing.T) {
 	}
 }
 
-// recordingClient notes which tag each repository was asked for and can fail every request.
+// recordingClient records the tag and the reads of each repository and can fail every request.
 // pkg/registry/fake stores images but records no requests, and half of these tests assert on the
 // request itself - that the release image was NOT fetched when an override pins the tag.
 //
@@ -502,24 +502,41 @@ func TestRepoHintClassifiesRegistryFailure(t *testing.T) {
 type recordingClient struct {
 	registry.Client
 
-	path string
-	tags map[string]string
-	err  error
+	path  string
+	stand *moduleStand
 }
 
 func (c *recordingClient) WithSegment(segments ...string) registry.Client {
 	return &recordingClient{
 		Client: c.Client.WithSegment(segments...),
 		path:   path.Join(append([]string{c.path}, segments...)...),
-		tags:   c.tags,
-		err:    c.err,
+		stand:  c.stand,
 	}
 }
 
+// GetDigest is how the chain asks which image a tag names, so the tag is recorded here.
+func (c *recordingClient) GetDigest(ctx context.Context, tag string) (*crv1.Hash, error) {
+	c.stand.tags[c.path] = tag
+	if c.stand.err != nil {
+		return nil, c.stand.err
+	}
+
+	hash, err := c.Client.GetDigest(ctx, tag)
+	if c.stand.afterDigest != nil {
+		c.stand.afterDigest()
+	}
+
+	return hash, err
+}
+
 func (c *recordingClient) GetImage(ctx context.Context, tag string, opts ...registry.ImageGetOption) (registry.Image, error) {
-	c.tags[c.path] = tag
-	if c.err != nil {
-		return nil, c.err
+	// A read by digest follows a recorded tag request and must not overwrite it.
+	if !strings.HasPrefix(tag, "sha256:") {
+		c.stand.tags[c.path] = tag
+	}
+	c.stand.reads[c.path]++
+	if c.stand.err != nil {
+		return nil, c.stand.err
 	}
 
 	return c.Client.GetImage(ctx, tag, opts...)
@@ -531,8 +548,11 @@ func (c *recordingClient) GetImage(ctx context.Context, tag string, opts ...regi
 type moduleStand struct {
 	reg   *fake.Registry
 	tags  map[string]string
+	reads map[string]int
 	confs map[string]*image.RegistryConfig
 	err   error
+	// afterDigest runs after a digest request was answered, before the answer is used.
+	afterDigest func()
 }
 
 // newModuleStand takes any full repository path and serves the registry its host names.
@@ -542,6 +562,7 @@ func newModuleStand(repo string) *moduleStand {
 	return &moduleStand{
 		reg:   fake.NewRegistry(host),
 		tags:  map[string]string{},
+		reads: map[string]int{},
 		confs: map[string]*image.RegistryConfig{},
 	}
 }
@@ -555,7 +576,7 @@ func (s *moduleStand) addImage(t *testing.T, repo, tag string, files map[string]
 	return s
 }
 
-// failing makes every image fetch answer err, for the cases a stocked registry cannot express.
+// failing makes every image request answer err, for the cases a stocked registry cannot express.
 func (s *moduleStand) failing(err error) *moduleStand {
 	s.err = err
 
@@ -577,7 +598,7 @@ func stubModuleCatalog(t *testing.T, stand *moduleStand) {
 			cli = cli.WithSegment(strings.Split(rest, "/")...)
 		}
 
-		rec := registry.Client(&recordingClient{Client: cli, path: repo, tags: stand.tags, err: stand.err})
+		rec := registry.Client(&recordingClient{Client: cli, path: repo, stand: stand})
 
 		return module.NewCatalog(service.NewBasicService(module.CatalogServiceName, rec, log.Default()))
 	}
@@ -618,7 +639,7 @@ func testModuleOptions(t *testing.T, shipped ...string) *options.GlobalOptions {
 		require.NoError(t, os.MkdirAll(filepath.Join(dir, "030-"+CloudProviderModuleName(provider)), 0o755))
 	}
 
-	return &options.GlobalOptions{ModulesDir: dir}
+	return &options.GlobalOptions{ModulesDir: dir, DownloadDir: t.TempDir()}
 }
 
 const testBundleDigest = "sha256:0000000000000000000000000000000000000000000000000000000000000bbb"
@@ -844,6 +865,176 @@ spec:
 	require.Equal(t, "mr1", reg.tags[moduleRepo])
 	require.NotContains(t, reg.tags, moduleRepo+"/release", "the release image must not be requested")
 	require.Equal(t, moduleRepo+"@"+testBundleDigest, ref.Image, "an override is enough on its own to mark the module external")
+}
+
+const testDVPPullOverrideDoc = `
+apiVersion: deckhouse.io/v1alpha2
+kind: ModulePullOverride
+metadata:
+  name: cloud-provider-dvp
+spec:
+  imageTag: mr1
+`
+
+// Reading a module image costs its whole layer. An image digest already seen answers from disk,
+// and a tag that was pushed over is a new digest, so it is read again on the very same call.
+func TestResolveModuleProviderBundleReadsTheModuleImageOncePerDigest(t *testing.T) {
+	const moduleRepo = "r.example.com/test/modules/cloud-provider-dvp"
+	const pushedOver = "sha256:0000000000000000000000000000000000000000000000000000000000000ccc"
+
+	reg := newModuleStand(moduleRepo).
+		addImage(t, moduleRepo, "mr1", map[string]string{
+			"images_digests.json": `{"terraformManager": "` + testBundleDigest + `"}`,
+		})
+	stubModuleCatalog(t, reg)
+
+	globalOptions := testModuleOptions(t)
+	lookup := configModuleDocs([]string{ensureRegistryMCDoc, testDVPPullOverrideDoc})
+
+	for range 2 {
+		ref, err := resolveModuleProviderBundle(t.Context(), "dvp", lookup, globalOptions)
+		require.NoError(t, err)
+		require.Equal(t, testBundleDigest, ref.Digest)
+	}
+	require.Equal(t, 1, reg.reads[moduleRepo], "an image digest already seen must not be read again")
+
+	reg.addImage(t, moduleRepo, "mr1", map[string]string{
+		"images_digests.json": `{"terraformManager": "` + pushedOver + `"}`,
+	})
+
+	ref, err := resolveModuleProviderBundle(t.Context(), "dvp", lookup, globalOptions)
+	require.NoError(t, err)
+	require.Equal(t, pushedOver, ref.Digest)
+	require.Equal(t, 2, reg.reads[moduleRepo])
+}
+
+// The tag is pushed over between the digest request and the read. What is recorded under the
+// first digest must be the bundle of the first image, or a later run would trust a wrong answer.
+func TestResolveModuleProviderBundleReadsTheImageItAskedAbout(t *testing.T) {
+	const moduleRepo = "r.example.com/test/modules/cloud-provider-dvp"
+	const pushedOver = "sha256:0000000000000000000000000000000000000000000000000000000000000ddd"
+
+	reg := newModuleStand(moduleRepo).
+		addImage(t, moduleRepo, "mr1", map[string]string{
+			"images_digests.json": `{"terraformManager": "` + testBundleDigest + `"}`,
+		})
+	stubModuleCatalog(t, reg)
+
+	pushed := false
+	reg.afterDigest = func() {
+		if pushed {
+			return
+		}
+		pushed = true
+		reg.addImage(t, moduleRepo, "mr1", map[string]string{
+			"images_digests.json": `{"terraformManager": "` + pushedOver + `"}`,
+		})
+	}
+
+	ref, err := resolveModuleProviderBundle(t.Context(), "dvp",
+		configModuleDocs([]string{ensureRegistryMCDoc, testDVPPullOverrideDoc}), testModuleOptions(t))
+	require.NoError(t, err)
+	require.Equal(t, testBundleDigest, ref.Digest)
+}
+
+// A record that is empty or not a digest is no record: handed on as one it would fail far from
+// here, on every run. The image is read again and the record rewritten.
+func TestResolveModuleProviderBundleRewritesAnUnusableRecord(t *testing.T) {
+	const moduleRepo = "r.example.com/test/modules/cloud-provider-dvp"
+
+	for name, record := range map[string][]byte{
+		"empty":        nil,
+		"not a digest": []byte("not-a-digest"),
+	} {
+		t.Run(name, func(t *testing.T) {
+			reg := newModuleStand(moduleRepo).
+				addImage(t, moduleRepo, "mr1", map[string]string{
+					"images_digests.json": `{"terraformManager": "` + testBundleDigest + `"}`,
+				})
+			stubModuleCatalog(t, reg)
+
+			globalOptions := testModuleOptions(t)
+			lookup := configModuleDocs([]string{ensureRegistryMCDoc, testDVPPullOverrideDoc})
+
+			_, err := resolveModuleProviderBundle(t.Context(), "dvp", lookup, globalOptions)
+			require.NoError(t, err)
+
+			records, err := filepath.Glob(filepath.Join(globalOptions.DownloadDir, "cloud-provider-dvp@*", providerBundleDigestFile))
+			require.NoError(t, err)
+			require.Len(t, records, 1)
+			require.NoError(t, os.WriteFile(records[0], record, 0o644))
+
+			ref, err := resolveModuleProviderBundle(t.Context(), "dvp", lookup, globalOptions)
+			require.NoError(t, err)
+			require.Equal(t, testBundleDigest, ref.Digest)
+			require.Equal(t, 2, reg.reads[moduleRepo])
+
+			rewritten, err := os.ReadFile(records[0])
+			require.NoError(t, err)
+			require.Equal(t, testBundleDigest, string(rewritten))
+		})
+	}
+}
+
+// Nothing serialises the readers and writers of one record, so a reader may open it in the middle
+// of a rewrite. It must find the whole record then, not an empty or a partial one.
+func TestRecordBundleDigestIsNeverSeenHalfWritten(t *testing.T) {
+	dir := t.TempDir()
+	require.NoError(t, recordBundleDigest(dir, testBundleDigest))
+
+	done := make(chan struct{})
+	go func() {
+		defer close(done)
+		for range 2000 {
+			if err := recordBundleDigest(dir, testBundleDigest); err != nil {
+				t.Errorf("rewrite the record: %v", err)
+				return
+			}
+		}
+	}()
+
+	misses := 0
+	for {
+		select {
+		case <-done:
+			require.Zero(t, misses, "a reader found no whole record while it was being rewritten")
+			return
+		default:
+		}
+		if digest, recorded := recordedBundleDigest(t.Context(), dir); !recorded || digest != testBundleDigest {
+			misses++
+		}
+	}
+}
+
+// The record only saves a read. A download dir this user cannot write, left by root or mounted
+// read-only, must not fail a resolve whose answer the registry already gave.
+func TestResolveModuleProviderBundleWithAReadOnlyDownloadDir(t *testing.T) {
+	if os.Geteuid() == 0 {
+		t.Skip("root writes into a read-only directory")
+	}
+
+	const moduleRepo = "r.example.com/test/modules/cloud-provider-dvp"
+
+	reg := newModuleStand(moduleRepo).
+		addImage(t, moduleRepo, "mr1", map[string]string{
+			"images_digests.json": `{"terraformManager": "` + testBundleDigest + `"}`,
+		})
+	stubModuleCatalog(t, reg)
+
+	globalOptions := testModuleOptions(t)
+	require.NoError(t, os.Chmod(globalOptions.DownloadDir, 0o555))
+	t.Cleanup(func() {
+		if err := os.Chmod(globalOptions.DownloadDir, 0o755); err != nil {
+			t.Errorf("make download dir writable again: %v", err)
+		}
+	})
+
+	ref, err := resolveModuleProviderBundle(t.Context(), "dvp",
+		configModuleDocs([]string{ensureRegistryMCDoc, testDVPPullOverrideDoc}), globalOptions)
+	require.NoError(t, err)
+	require.Equal(t, testBundleDigest, ref.Digest)
+	require.Equal(t, 1, reg.reads[moduleRepo])
 }
 
 // "deckhouse" is the ModuleSource helm creates inside the cluster; it cannot be in config.yml,

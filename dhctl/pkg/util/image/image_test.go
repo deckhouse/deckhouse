@@ -15,12 +15,16 @@
 package image
 
 import (
+	"archive/tar"
+	"bytes"
+	"compress/gzip"
 	"context"
+	"io"
+	"log"
 	"net"
 	"net/http"
 	"net/http/httptest"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"strings"
 	"sync/atomic"
@@ -28,7 +32,13 @@ import (
 
 	"github.com/google/go-containerregistry/pkg/authn"
 	"github.com/google/go-containerregistry/pkg/name"
+	"github.com/google/go-containerregistry/pkg/registry"
+	"github.com/google/go-containerregistry/pkg/v1/empty"
+	"github.com/google/go-containerregistry/pkg/v1/mutate"
 	"github.com/google/go-containerregistry/pkg/v1/remote"
+	"github.com/google/go-containerregistry/pkg/v1/static"
+	"github.com/google/go-containerregistry/pkg/v1/types"
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
@@ -323,211 +333,6 @@ func TestGetRegistries(t *testing.T) {
 	require.Contains(t, registries, "registry.io")
 }
 
-func TestHashFileSHA256(t *testing.T) {
-	testDir := filepath.Join(os.TempDir(), "dhctltests")
-	err := os.MkdirAll(testDir, 0755)
-	require.NoError(t, err)
-
-	testFile, err := os.CreateTemp(testDir, "testfile")
-	require.NoError(t, err)
-	testFile.WriteString("Hello world")
-
-	t.Cleanup(func() {
-		os.RemoveAll(testDir)
-	})
-	cmd := exec.Command("sha256sum", testFile.Name())
-	res, err := cmd.Output()
-	require.NoError(t, err)
-	parts := strings.Split(string(res), " ")
-	shaFromCmd := (parts[0])
-
-	t.Run("Equality of SHA256", func(t *testing.T) {
-		shaFromFunc, err := hashFileSHA256(testFile.Name())
-		require.NoError(t, err)
-		require.Equal(t, shaFromFunc, shaFromCmd)
-	})
-
-	t.Run("Non-existent file", func(t *testing.T) {
-		_, err := hashFileSHA256("/path/to/nowhere")
-		require.Error(t, err)
-		require.Contains(t, err.Error(), "no such file")
-	})
-}
-
-func TestGetHash(t *testing.T) {
-	testDir := filepath.Join(os.TempDir(), "dhctltests")
-	err := os.MkdirAll(testDir, 0755)
-	require.NoError(t, err)
-
-	t.Cleanup(func() {
-		os.RemoveAll(testDir)
-	})
-
-	t.Run("getHash tests", func(t *testing.T) {
-		cases := []struct {
-			title         string
-			directory     string
-			content       string
-			expectedKey   string
-			expectedValue string
-			wantErr       bool
-			err           string
-		}{
-			{
-				title:         "Success",
-				directory:     testDir,
-				content:       "{\"some\":\"456d9c3120dd76b1b6ab00be58ee665abf792bcdf1da49b713246d61c261f05c\"}",
-				expectedKey:   "some",
-				expectedValue: "456d9c3120dd76b1b6ab00be58ee665abf792bcdf1da49b713246d61c261f05c",
-				wantErr:       false,
-			},
-			{
-				title:         "No entries, empty return, success",
-				directory:     testDir,
-				content:       "{\"some\":\"456d9c3120dd76b1b6ab00be58ee665abf792bcdf1da49b713246d61c261f05c\"}",
-				expectedKey:   "nonexistant",
-				expectedValue: "",
-				wantErr:       false,
-			},
-			{
-				title:     "Invalid JSON, failure",
-				directory: testDir,
-				content:   "Just a string, not JSON",
-				wantErr:   true,
-				err:       "unmarshalling json: invalid character 'J' looking for beginning of value",
-			},
-		}
-
-		for _, c := range cases {
-			t.Run(c.title, func(t *testing.T) {
-				testFile, err := os.Create(filepath.Join(c.directory, "images_hashs.json"))
-				require.NoError(t, err)
-				testFile.WriteString(c.content)
-				hash, err := getHash(c.expectedKey, c.directory)
-				if !c.wantErr {
-					require.NoError(t, err)
-					require.Equal(t, c.expectedValue, hash)
-				} else {
-					require.Error(t, err)
-					if c.err != "" {
-						require.Equal(t, c.err, err.Error())
-					}
-				}
-
-			})
-		}
-	})
-
-	t.Run("non-existant images_hashs.json", func(t *testing.T) {
-		newTestDir := filepath.Join(os.TempDir(), "dhctltests2")
-		err := os.MkdirAll(testDir, 0755)
-		require.NoError(t, err)
-
-		t.Cleanup(func() {
-			os.RemoveAll(newTestDir)
-		})
-		_, err = getHash("some", newTestDir)
-		require.Error(t, err)
-		require.Contains(t, err.Error(), "cannot open file")
-	})
-
-}
-
-func TestSaveHash(t *testing.T) {
-	testDir := filepath.Join(os.TempDir(), "dhctltests")
-	err := os.MkdirAll(testDir, 0755)
-	require.NoError(t, err)
-
-	testDir2 := filepath.Join(os.TempDir(), "dhctltests2")
-	err = os.MkdirAll(testDir2, 0755)
-	require.NoError(t, err)
-
-	testDir3 := filepath.Join(os.TempDir(), "dhctltests3")
-	err = os.MkdirAll(testDir3, 0755)
-	require.NoError(t, err)
-
-	testFile, err := os.Create(filepath.Join(testDir, "images_hashs.json"))
-	require.NoError(t, err)
-	testFile.WriteString("{\"some\":\"456d9c3120dd76b1b6ab00be58ee665abf792bcdf1da49b713246d61c261f05c\"}")
-
-	testFile3, err := os.Create(filepath.Join(testDir3, "images_hashs.json"))
-	require.NoError(t, err)
-	testFile3.WriteString("Just invalid JSON")
-
-	t.Cleanup(func() {
-		os.RemoveAll(testDir)
-		os.RemoveAll(testDir2)
-		os.RemoveAll(testDir3)
-	})
-
-	t.Run("saveHash tests", func(t *testing.T) {
-		cases := []struct {
-			title     string
-			directory string
-			key       string
-			value     string
-			wantErr   bool
-			err       string
-		}{
-			{
-				title:     "Same value, success",
-				directory: testDir,
-				key:       "some",
-				value:     "456d9c3120dd76b1b6ab00be58ee665abf792bcdf1da49b713246d61c261f05c",
-				wantErr:   false,
-			},
-			{
-				title:     "Another value, success",
-				directory: testDir,
-				key:       "some",
-				value:     "f8815c340a1ed5b7ff06c14d99723e9d675236ac86b426fcfd7bd4c1df18b050",
-				wantErr:   false,
-			},
-			{
-				title:     "images_hashs.json doesn't exists, success",
-				directory: testDir2,
-				key:       "some",
-				value:     "456d9c3120dd76b1b6ab00be58ee665abf792bcdf1da49b713246d61c261f05c",
-				wantErr:   false,
-			},
-			{
-				title:     "Invalid JSON",
-				directory: testDir3,
-				key:       "some",
-				value:     "456d9c3120dd76b1b6ab00be58ee665abf792bcdf1da49b713246d61c261f05c",
-				wantErr:   true,
-				err:       "unmarshalling json: invalid character 'J' looking for beginning of value",
-			},
-		}
-
-		for _, c := range cases {
-			t.Run(c.title, func(t *testing.T) {
-
-				err = saveHash(c.key, c.value, c.directory)
-				if !c.wantErr {
-					require.NoError(t, err)
-					hash, err := getHash(c.key, c.directory)
-					require.NoError(t, err)
-					require.Equal(t, c.value, hash)
-
-					// put another key, the old one must exists after
-					err = saveHash("aaa", "bbbbbbbb", c.directory)
-					require.NoError(t, err)
-					hash, err = getHash(c.key, c.directory)
-					require.NoError(t, err)
-					require.Equal(t, c.value, hash)
-				} else {
-					require.Error(t, err)
-					if c.err != "" {
-						require.Equal(t, c.err, err.Error())
-					}
-				}
-
-			})
-		}
-	})
-}
-
 func TestDownloadAndUnpackImage(t *testing.T) {
 	testDir := filepath.Join(os.TempDir(), "dhctltests")
 	err := os.MkdirAll(testDir, 0755)
@@ -581,17 +386,6 @@ CRl8TSg922cXTLVt8Q==
 				wantErr: false,
 			},
 			{
-				title:     "Cache hit, success",
-				directory: testDir,
-				rc:        RegistryConfig{scheme: "HTTPS", registry: "registry.deckhouse.io"},
-				// registry.deckhouse.io/deckhouse/ce/release-channel:v1.75.4
-				image: "registry.deckhouse.io/deckhouse/ce/release-channel@sha256:abd4aac6059e1c4fc456b4ce6a81994d06fb87d321bdcb9dd31a81ed04e206cb",
-				prepareFunc: func() error {
-					return os.RemoveAll(filepath.Join(testDir, "usr"))
-				},
-				wantErr: false,
-			},
-			{
 				title:     "Invalid image reference, failure",
 				directory: testDir,
 				rc:        RegistryConfig{scheme: "HTTPS", registry: "registry.deckhouse.io"},
@@ -605,17 +399,16 @@ CRl8TSg922cXTLVt8Q==
 				rc:        RegistryConfig{scheme: "HTTPS", registry: "registry.deckhouse.io"},
 				image:     "registry.deckhouse.io/deckhouse/ce/release-channel:v0.0.1",
 				wantErr:   true,
-				err:       "getting manifest descriptor for",
+				err:       "pulling image",
 			},
 			// should be fixed later
 			{
 				title:     "Wrong CA, failure",
 				directory: testDir,
 				rc:        RegistryConfig{scheme: "HTTPS", registry: "registry.deckhouse.io", ca: "-----BEGIN CERTIFICATE-----"},
-				// wrong image to not hit cache, this would cause an error in CA first
-				image:   "registry.deckhouse.io/deckhouse/ce/release-channel@sha256:abd4aac6059e1c4fc456b4ce6a81994d06fb87d321bdcb9dd31a81ed04e206bc",
-				wantErr: true,
-				err:     "invalid cert in CA PEM",
+				image:     "registry.deckhouse.io/deckhouse/ce/release-channel@sha256:abd4aac6059e1c4fc456b4ce6a81994d06fb87d321bdcb9dd31a81ed04e206bc",
+				wantErr:   true,
+				err:       "invalid cert in CA PEM",
 			},
 			{
 				title:     "With docker ca, success",
@@ -627,24 +420,6 @@ CRl8TSg922cXTLVt8Q==
 				},
 				wantErr: false,
 			},
-			{
-				title:     "Cannot pull image, failure",
-				directory: testDir,
-				rc:        RegistryConfig{scheme: "HTTPS", registry: "registry.deckhouse.io"},
-				// docker.io/library/nginx:stable-alpine
-				image: "registry.deckhouse.io/deckhouse/ce/release-channel@sha256:abd4aac6059e1c4fc456b4ce6a81994d06fb87d321bdcb9dd31a81ed04e206cb",
-				prepareFunc: func() error {
-					cacheDir := filepath.Join(testDir, "cache")
-					if err = os.MkdirAll(cacheDir, 0o755); err != nil {
-						return err
-					}
-					hashPath := filepath.Join(cacheDir, "images_hashs.json")
-					_ = os.Remove(hashPath)
-					return os.WriteFile(hashPath, []byte("Wrong JSON"), 0o644)
-				},
-				wantErr: true,
-				err:     "saving checksum to file: unmarshalling json: invalid character",
-			},
 		}
 
 		for _, c := range cases {
@@ -655,71 +430,7 @@ CRl8TSg922cXTLVt8Q==
 					require.NoError(t, err)
 				}
 
-				err := DownloadAndUnpackImage(ctx, c.image, c.directory, filepath.Join(c.directory, "cache"), c.rc, false)
-				if !c.wantErr {
-					require.NoError(t, err)
-					require.DirExists(t, filepath.Join(c.directory, "cache"))
-				} else {
-					require.Error(t, err)
-					require.Contains(t, err.Error(), c.err)
-				}
-
-			})
-		}
-	})
-}
-
-func TestRestoreImageFromTarGz(t *testing.T) {
-	testDir := filepath.Join(os.TempDir(), "dhctltests")
-	err := os.MkdirAll(testDir, 0755)
-	require.NoError(t, err)
-
-	t.Cleanup(func() {
-		os.RemoveAll(testDir)
-	})
-
-	err = DownloadAndUnpackImage(t.Context(), "registry.deckhouse.io/deckhouse/ce/release-channel:v1.75.4", testDir, filepath.Join(testDir, "cache"), RegistryConfig{scheme: "HTTPS", registry: "registry.deckhouse.io"}, false)
-	require.NoError(t, err)
-	// pullImage now stores tarballs under the image's tag/identifier (so
-	// tryToRestoreLocalImage can find them again on the next run). The
-	// previous expectation of a sha256 digest filename was an artifact of
-	// the image-cache key mismatch fixed in image.go:pullImage.
-	cachePath := filepath.Join(testDir, "v1.75.4")
-	require.FileExists(t, cachePath)
-
-	t.Run("restoreImageFromTarGz tests", func(t *testing.T) {
-		cases := []struct {
-			title       string
-			path        string
-			prepareFunc func() error
-			wantErr     bool
-			err         string
-		}{
-			{
-				title:   "Success",
-				path:    cachePath,
-				wantErr: false,
-			},
-			{
-				title: "Unparsable tarball, failure",
-				path:  cachePath,
-				prepareFunc: func() error {
-					_ = os.Remove(cachePath)
-					_, err := os.Create(cachePath)
-					return err
-				},
-				wantErr: true,
-				err:     "parsing tarball",
-			},
-		}
-
-		for _, c := range cases {
-			t.Run(c.title, func(t *testing.T) {
-				if c.prepareFunc != nil {
-					err = c.prepareFunc()
-					require.NoError(t, err)
-				}
-				_, err := restoreImageFromTarGz(c.path, nil)
+				err := DownloadAndUnpackImage(ctx, c.image, c.directory, c.rc, false)
 				if !c.wantErr {
 					require.NoError(t, err)
 				} else {
@@ -732,84 +443,65 @@ func TestRestoreImageFromTarGz(t *testing.T) {
 	})
 }
 
-func TestPullImage(t *testing.T) {
-	testDir := filepath.Join(os.TempDir(), "dhctltests")
-	err := os.MkdirAll(testDir, 0755)
+// The registry stream checks a layer's digest only at EOF, and tar stops reading at its end
+// marker. A layer altered after it (here the gzip size trailer) must still be refused.
+func TestDownloadAndUnpackImageRejectsTamperedLayer(t *testing.T) {
+	var tarBuf bytes.Buffer
+	tw := tar.NewWriter(&tarBuf)
+	require.NoError(t, tw.WriteHeader(&tar.Header{Name: "payload", Mode: 0o644, Size: 5, Typeflag: tar.TypeReg}))
+	_, err := tw.Write([]byte("hello"))
+	require.NoError(t, err)
+	require.NoError(t, tw.Close())
+
+	var gzBuf bytes.Buffer
+	gw := gzip.NewWriter(&gzBuf)
+	_, err = gw.Write(tarBuf.Bytes())
+	require.NoError(t, err)
+	require.NoError(t, gw.Close())
+	blob := gzBuf.Bytes()
+
+	layer := static.NewLayer(blob, types.DockerLayer)
+	img, err := mutate.AppendLayers(empty.Image, layer)
+	require.NoError(t, err)
+	layerDigest, err := layer.Digest()
+	require.NoError(t, err)
+	imgDigest, err := img.Digest()
 	require.NoError(t, err)
 
-	t.Cleanup(func() {
-		os.RemoveAll(testDir)
-	})
+	tampered := append([]byte(nil), blob...)
+	tampered[len(tampered)-1] ^= 0xff
 
-	t.Run("pullImage tests", func(t *testing.T) {
-		cases := []struct {
-			title       string
-			imgRef      string
-			rc          *RegistryConfig
-			destDir     string
-			prepareFunc func() error
-			wantErr     bool
-			err         string
-		}{
-			{
-				title:   "Success",
-				imgRef:  "registry.deckhouse.io/deckhouse/ce/release-channel:v1.75.4",
-				rc:      &RegistryConfig{scheme: "HTTPS", registry: "registry.deckhouse.io"},
-				destDir: testDir,
-				wantErr: false,
-			},
-			{
-				title:   "Unaccessible image, failure",
-				imgRef:  "registry.deckhouse.io/deckhouse/ce/release-channel:v0.0.1",
-				rc:      &RegistryConfig{scheme: "HTTPS", registry: "registry.deckhouse.io"},
-				destDir: testDir,
-				wantErr: true,
-				err:     "pulling image",
-			},
-			{
-				title:   "Wrong images_hash.json, failure",
-				imgRef:  "registry.deckhouse.io/deckhouse/ce/release-channel:v1.75.4",
-				rc:      &RegistryConfig{scheme: "HTTPS", registry: "docker.io"},
-				destDir: testDir,
-				prepareFunc: func() error {
-					if err = os.RemoveAll(filepath.Join(testDir, "v1.75.4")); err != nil {
-						return err
-					}
-					cacheDir := filepath.Join(testDir, "cache")
-					if err = os.MkdirAll(cacheDir, 0o755); err != nil {
-						return err
-					}
-					hashPath := filepath.Join(cacheDir, "images_hashs.json")
-					_ = os.Remove(hashPath)
-					return os.WriteFile(hashPath, []byte("Wrong JSON"), 0o644)
-				},
-				wantErr: true,
-				err:     "saving checksum to file: unmarshalling json: invalid character",
-			},
+	reg := registry.New(registry.Logger(log.New(io.Discard, "", 0)))
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.Method == http.MethodGet && strings.HasSuffix(r.URL.Path, "/blobs/"+layerDigest.String()) {
+			w.Header().Set("Docker-Content-Digest", layerDigest.String())
+			_, err := w.Write(tampered)
+			assert.NoError(t, err)
+			return
 		}
+		reg.ServeHTTP(w, r)
+	}))
+	t.Cleanup(srv.Close)
+	host := strings.TrimPrefix(srv.URL, "http://")
 
-		for _, c := range cases {
-			t.Run(c.title, func(t *testing.T) {
-				if c.prepareFunc != nil {
-					err = c.prepareFunc()
-					require.NoError(t, err)
-				}
-				ref, err := name.ParseReference(c.imgRef)
-				require.NoError(t, err)
-				opts, err := getOptsFromRegistryConfig(t.Context(), ref, c.rc)
-				require.NoError(t, err)
+	tag, err := name.NewTag(host+"/test/img:v1", name.Insecure)
+	require.NoError(t, err)
+	require.NoError(t, remote.Write(tag, img))
 
-				_, err = pullImage(t.Context(), ref, opts, ref.Identifier(), c.destDir, filepath.Join(c.destDir, "cache"), false)
-				if !c.wantErr {
-					require.NoError(t, err)
-				} else {
-					require.Error(t, err)
-					require.Contains(t, err.Error(), c.err)
-				}
+	err = DownloadAndUnpackImage(t.Context(), host+"/test/img@"+imgDigest.String(), t.TempDir(), RegistryConfig{scheme: "HTTP", registry: host}, false)
+	require.ErrorContains(t, err, "checksum")
 
-			})
-		}
-	})
+	root := t.TempDir()
+	_, err = EnsureUnpacked(t.Context(), UnpackRequest{
+		Root:   root,
+		Name:   "candi",
+		Digest: imgDigest.String(),
+		Registry: func(context.Context) (*RegistryConfig, error) {
+			return NewRegistryConfig("HTTP", host+"/test/img", "", "", "")
+		},
+	}, EnsureUnpackedOptions{})
+	require.ErrorContains(t, err, "checksum")
+	require.Empty(t, unpackRootEntries(t, root), "a tampered image must not become visible")
 }
 
 // ggcr forgives HTTP for localhost and RFC1918, so the host must look public.
@@ -834,8 +526,7 @@ func TestDownloadAndUnpackImage_Scheme(t *testing.T) {
 
 			// the stub has no blobs; what matters is which leg was used
 			err := DownloadAndUnpackImage(t.Context(), testSchemeHost+"/deckhouse/ee:v1",
-				destDir, filepath.Join(destDir, "cache"),
-				RegistryConfig{scheme: tt.scheme, registry: testSchemeHost, ca: tt.ca}, false)
+				destDir, RegistryConfig{scheme: tt.scheme, registry: testSchemeHost, ca: tt.ca}, false)
 
 			if tt.wantErrLike != "" {
 				require.ErrorContains(t, err, tt.wantErrLike)

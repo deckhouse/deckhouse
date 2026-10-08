@@ -18,6 +18,8 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
+
+	"github.com/deckhouse/deckhouse/dhctl/pkg/tests"
 )
 
 func TestSetPathsModuleConfigCRDPath(t *testing.T) {
@@ -33,4 +35,29 @@ func TestDefaultModuleConfigCRDPath(t *testing.T) {
 
 func TestConvergerSkipsModuleConfigCRDPath(t *testing.T) {
 	require.Contains(t, ConvergerPodsSpiCheckPaths, DefaultModuleConfigCRDPath)
+}
+
+const testCandiDigest = "sha256:3333333333333333333333333333333333333333333333333333333333333333"
+
+// The package directory holds no install tree, so candi has to be downloaded, and the paths must
+// point at the directory of exactly the candi digest this installer names.
+func TestResolveAndApplyPathsRootsAtTheCandiDigest(t *testing.T) {
+	tests.StubImagesDigests(t, `{"common": {"candi": "`+testCandiDigest+`"}}`)
+
+	opts := &GlobalOptions{DownloadDir: "/tmp/dl"}
+	ResolveAndApplyPaths(opts)
+
+	require.True(t, opts.EnsureCandiAvailable)
+	require.Equal(t, "/tmp/dl/candi@"+testCandiDigest+"/deckhouse", opts.DeckhouseDir)
+	require.Equal(t, "/tmp/dl/candi@"+testCandiDigest+"/deckhouse/candi", opts.CandiDir)
+}
+
+// Without a candi digest nothing can be unpacked, and the paths stay where they were.
+func TestResolveAndApplyPathsWithoutCandiDigest(t *testing.T) {
+	tests.StubImagesDigests(t, `{"something": {"app": "sha256:x"}}`)
+
+	opts := &GlobalOptions{DownloadDir: "/tmp/dl"}
+	ResolveAndApplyPaths(opts)
+
+	require.Equal(t, "/tmp/dl/deckhouse", opts.DeckhouseDir)
 }

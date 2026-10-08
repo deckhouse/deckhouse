@@ -19,9 +19,7 @@ import (
 	"bytes"
 	"compress/gzip"
 	"context"
-	"crypto/sha256"
 	"encoding/base64"
-	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -33,15 +31,10 @@ import (
 	"github.com/google/go-containerregistry/pkg/authn"
 	"github.com/google/go-containerregistry/pkg/name"
 	v1 "github.com/google/go-containerregistry/pkg/v1"
-	"github.com/google/go-containerregistry/pkg/v1/cache"
 	"github.com/google/go-containerregistry/pkg/v1/remote"
-	"github.com/google/go-containerregistry/pkg/v1/tarball"
 	"github.com/vbauerster/mpb/v8"
 	"github.com/vbauerster/mpb/v8/decor"
 	otattribute "go.opentelemetry.io/otel/attribute"
-	ottrace "go.opentelemetry.io/otel/trace"
-
-	dhlog "github.com/deckhouse/lib-dhctl/pkg/logger"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/telemetry"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/input"
@@ -190,177 +183,6 @@ func authFromRegistry(cfg *RegistryConfig, registry string) (authn.Authenticator
 	return authn.Anonymous, nil
 }
 
-func hashFileSHA256(filePath string) (string, error) {
-	file, err := os.Open(filePath)
-	if err != nil {
-		return "", fmt.Errorf("failed to open file: %w", err)
-	}
-	defer func() {
-		if cerr := file.Close(); cerr != nil && err == nil {
-			err = fmt.Errorf("failed to close file: %w", cerr)
-		}
-	}()
-
-	hash := sha256.New()
-
-	if _, err := io.Copy(hash, file); err != nil {
-		return "", fmt.Errorf("failed to copy file content to hash: %w", err)
-	}
-
-	hashInBytes := hash.Sum(nil)
-	hashString := hex.EncodeToString(hashInBytes)
-
-	return hashString, nil
-}
-
-func getHash(digest, cacheDir string) (string, error) {
-	path := filepath.Join(cacheDir, "images_hashs.json")
-	data, err := os.ReadFile(path)
-	if err != nil {
-		return "", fmt.Errorf("cannot open file %s: %w", path, err)
-	}
-	var hashs map[string]any
-	err = json.Unmarshal(data, &hashs)
-	if err != nil {
-		return "", fmt.Errorf("unmarshalling json: %w", err)
-	}
-	hash, ok := hashs[digest]
-	if ok {
-		return hash.(string), nil
-	}
-
-	return "", nil
-}
-
-func saveHash(digest, hash, cacheDir string) error {
-	path := filepath.Join(cacheDir, "images_hashs.json")
-	data, err := os.ReadFile(path)
-	hashs := make(map[string]string)
-	if err != nil {
-		if err1 := os.RemoveAll(path); err1 != nil {
-			return err1
-		}
-		hashs[digest] = hash
-		bytes, err1 := json.Marshal(hashs)
-		if err1 != nil {
-			return err1
-		}
-		if err1 = os.WriteFile(path, bytes, 0o644); err1 != nil {
-			return err1
-		}
-		return nil
-	}
-
-	if err = json.Unmarshal(data, &hashs); err != nil {
-		return fmt.Errorf("unmarshalling json: %w", err)
-	}
-
-	hashs[digest] = hash
-	bytes, err := json.Marshal(hashs)
-	if err != nil {
-		return err
-	}
-	if err = os.WriteFile(path, bytes, 0o644); err != nil {
-		return err
-	}
-
-	return nil
-}
-
-// pullImage caches the tarball and checksum under imgName (the key
-// tryToRestoreLocalImage reads); pass a digest for content-addressed caching.
-func pullImage(ctx context.Context, ref name.Reference, opts []remote.Option, imgName, dstPath, cacheDir string, showProgress bool) (v1.Image, error) {
-	if err := os.MkdirAll(cacheDir, 0o755); err != nil {
-		return nil, fmt.Errorf("could not create cache directory %s: %w\n", cacheDir, err)
-	}
-	if err := os.MkdirAll(dstPath, 0o755); err != nil {
-		return nil, fmt.Errorf("create destination directory %s: %w", dstPath, err)
-	}
-	layersCache := cache.NewFilesystemCache(cacheDir)
-	img, err := remote.Image(ref, opts...)
-	if err != nil {
-		return img, fmt.Errorf("pulling image: %w", err)
-	}
-	cached := cache.Image(img, layersCache)
-
-	checksum, err := saveImageAsTarGz(ctx, ref.String(), filepath.Join(dstPath, imgName), cached, showProgress)
-	if err != nil {
-		return cached, fmt.Errorf("saving tar.gz: %w", err)
-	}
-
-	dhlog.FromContext(ctx).DebugContext(ctx, fmt.Sprintf("checksum: %s", checksum))
-	if err = saveHash(imgName, checksum, cacheDir); err != nil {
-		return cached, fmt.Errorf("saving checksum to file: %w", err)
-	}
-
-	return cached, nil
-}
-
-func getEstimatedTarSize(img v1.Image) (int64, error) {
-	manifest, err := img.Manifest()
-	if err != nil {
-		return 0, err
-	}
-
-	var total int64
-	for _, l := range manifest.Layers {
-		total += l.Size
-	}
-
-	total += manifest.Config.Size
-	return total, nil
-}
-
-func saveImageAsTarGz(_ context.Context, imageRef string, outPath string, img v1.Image, showProgress bool) (string, error) {
-	ref, err := name.ParseReference(imageRef)
-	if err != nil {
-		return "", fmt.Errorf("parsing image reference %q: %w", imageRef, err)
-	}
-
-	var bar *mpb.Bar
-	var p *mpb.Progress
-	needToShow := input.IsTerminal() && showProgress
-	if needToShow {
-		total, err := getEstimatedTarSize(img)
-		if err != nil {
-			return "", fmt.Errorf("getting image size %q: %w", imageRef, err)
-		}
-
-		p = mpb.New(mpb.WithWidth(64))
-		bar = p.New(total,
-			mpb.BarStyle(),
-			mpb.PrependDecorators(
-				decor.Name("downloading image", decor.WC{C: decor.DindentRight | decor.DextraSpace}),
-				decor.OnComplete(decor.AverageETA(decor.ET_STYLE_GO), "done"),
-			),
-			mpb.AppendDecorators(decor.Percentage()),
-		)
-	}
-
-	tmpTar, err := os.Create(outPath)
-	if err != nil {
-		return "", fmt.Errorf("creating tar file: %w", err)
-	}
-
-	hasher := sha256.New()
-	multiWriter := io.MultiWriter(tmpTar, hasher)
-	proxyWriter := multiWriter
-	if needToShow {
-		proxyWriter = bar.ProxyWriter(multiWriter)
-	}
-	if err := tarball.Write(ref, img, proxyWriter); err != nil {
-		tmpTar.Close()
-		return "", fmt.Errorf("writing tarball: %w", err)
-	}
-	tmpTar.Close()
-	if needToShow {
-		p.Wait()
-	}
-	checksum := hex.EncodeToString(hasher.Sum(nil))
-
-	return checksum, nil
-}
-
 func getOptsFromRegistryConfig(ctx context.Context, ref name.Reference, cfg *RegistryConfig) ([]remote.Option, error) {
 	var opts []remote.Option
 	registry := ref.Context().RegistryStr()
@@ -380,7 +202,8 @@ func getOptsFromRegistryConfig(ctx context.Context, ref name.Reference, cfg *Reg
 	return opts, nil
 }
 
-func DownloadAndUnpackImage(ctx context.Context, imageRef, destDir, cacheDir string, regConfig RegistryConfig, showProgress bool) error {
+// DownloadAndUnpackImage pulls imageRef and unpacks its layers into destDir.
+func DownloadAndUnpackImage(ctx context.Context, imageRef, destDir string, regConfig RegistryConfig, showProgress bool) error {
 	ctx, span := telemetry.StartSpan(ctx, "image.DownloadAndUnpack")
 	defer span.End()
 	span.SetAttributes(
@@ -393,37 +216,20 @@ func DownloadAndUnpackImage(ctx context.Context, imageRef, destDir, cacheDir str
 		return fmt.Errorf("parsing image reference %q: %w", imageRef, err)
 	}
 
-	imgName := ref.Identifier()
-	img, err := tryToRestoreLocalImage(imgName, destDir, cacheDir)
-	if err == nil {
-		span.AddEvent("image.restored_from_cache")
-		return extractImage(img, destDir)
-	}
-	dhlog.FromContext(ctx).DebugContext(ctx, fmt.Sprintf("Could not use local image. Reason: %s", err.Error()))
-	span.AddEvent("image.cache_miss", ottrace.WithAttributes(otattribute.String("reason", err.Error())))
-
 	opts, err := getOptsFromRegistryConfig(ctx, ref, &regConfig)
 	if err != nil {
 		return err
 	}
 
-	desc, err := remote.Get(ref, opts...)
-	if err != nil {
-		return fmt.Errorf("getting manifest descriptor for %q: %w", ref.String(), err)
-	}
-	dhlog.FromContext(ctx).DebugContext(ctx, fmt.Sprintf("hash: %s", desc.Digest.String()))
-	span.SetAttributes(otattribute.String("image.digest", desc.Digest.String()))
-
-	img, err = pullImage(ctx, ref, opts, imgName, destDir, cacheDir, showProgress)
+	img, err := remote.Image(ref, opts...)
 	if err != nil {
 		return fmt.Errorf("pulling image %s: %w", imageRef, err)
 	}
-	span.AddEvent("image.pulled")
 
-	return extractImage(img, destDir)
+	return extractImage(img, destDir, showProgress)
 }
 
-func extractImage(img v1.Image, destDir string) error {
+func extractImage(img v1.Image, destDir string, showProgress bool) error {
 	if err := os.MkdirAll(destDir, 0755); err != nil {
 		return fmt.Errorf("creating destination directory %q: %w", destDir, err)
 	}
@@ -433,31 +239,87 @@ func extractImage(img v1.Image, destDir string) error {
 		return fmt.Errorf("getting layers: %w", err)
 	}
 
-	for _, layer := range layers {
-		err = extractLayer(layer, destDir)
+	var (
+		progress *mpb.Progress
+		bar      *mpb.Bar
+	)
+	if input.IsTerminal() && showProgress {
+		total, err := compressedSize(layers)
 		if err != nil {
+			return err
+		}
+
+		progress = mpb.New(mpb.WithWidth(64))
+		bar = progress.New(total,
+			mpb.BarStyle(),
+			mpb.PrependDecorators(
+				decor.Name("downloading image", decor.WC{C: decor.DindentRight | decor.DextraSpace}),
+				decor.OnComplete(decor.AverageETA(decor.ET_STYLE_GO), "done"),
+			),
+			mpb.AppendDecorators(decor.Percentage()),
+		)
+	}
+
+	for _, layer := range layers {
+		if err := extractLayer(layer, destDir, bar); err != nil {
+			if bar != nil {
+				bar.Abort(true)
+				progress.Wait()
+			}
 			return fmt.Errorf("extracting layer: %w", err)
 		}
+	}
+
+	if bar != nil {
+		bar.SetTotal(-1, true)
+		progress.Wait()
 	}
 
 	return os.RemoveAll(filepath.Join(destDir, ".werf"))
 }
 
-func extractLayer(layer v1.Layer, destDir string) error {
+func compressedSize(layers []v1.Layer) (int64, error) {
+	var total int64
+	for _, layer := range layers {
+		size, err := layer.Size()
+		if err != nil {
+			return 0, fmt.Errorf("getting layer size: %w", err)
+		}
+		total += size
+	}
+
+	return total, nil
+}
+
+// extractLayer reads through bar when one is given, so progress follows the download.
+func extractLayer(layer v1.Layer, destDir string, bar *mpb.Bar) error {
 	rc, err := layer.Compressed()
 	if err != nil {
 		return fmt.Errorf("opening compressed layer: %w", err)
 	}
 	defer rc.Close()
 
+	var reader io.Reader = rc
+	if bar != nil {
+		reader = bar.ProxyReader(rc)
+	}
+
 	peek := make([]byte, 2)
-	if _, err := io.ReadFull(rc, peek); err != nil {
+	if _, err := io.ReadFull(reader, peek); err != nil {
 		return fmt.Errorf("reading layer header: %w", err)
 	}
 
-	combined := io.MultiReader(bytes.NewReader(peek), rc)
+	combined := io.MultiReader(bytes.NewReader(peek), reader)
+	if err := processLayer(combined, peek, destDir); err != nil {
+		return err
+	}
 
-	return processLayer(combined, peek, destDir)
+	// The registry stream checks the layer digest only at EOF, and tar stops at its end marker.
+	if _, err := io.Copy(io.Discard, reader); err != nil {
+		return fmt.Errorf("verify layer digest: %w", err)
+	}
+
+	return nil
 }
 
 func processLayer(r io.Reader, peek []byte, destDir string) error {
@@ -521,41 +383,4 @@ func processLayer(r io.Reader, peek []byte, destDir string) error {
 		}
 	}
 	return nil
-}
-
-func tryToRestoreLocalImage(imgName, destDir, cacheDir string) (v1.Image, error) {
-	filename := filepath.Join(destDir, imgName)
-	f, err := os.OpenFile(filename, os.O_RDONLY, 0644)
-	if err != nil {
-		return nil, err
-	}
-
-	if err := f.Close(); err != nil {
-		return nil, fmt.Errorf("could not close file %s: %w", filename, err)
-	}
-
-	fileChecksum, err := hashFileSHA256(filename)
-	if err != nil {
-		return nil, fmt.Errorf("could not calculate file checksum %s: %w", filename, err)
-	}
-
-	storedChecksum, err := getHash(imgName, cacheDir)
-	if err != nil {
-		return nil, fmt.Errorf("could not get checksum %s from file: %w", filename, err)
-	}
-
-	if fileChecksum != storedChecksum {
-		return nil, fmt.Errorf("stored checksum must be the same as file checksum")
-	}
-
-	return restoreImageFromTarGz(filename, nil)
-}
-
-func restoreImageFromTarGz(path string, tag *name.Tag) (v1.Image, error) {
-	img, err := tarball.ImageFromPath(path, tag)
-	if err != nil {
-		return nil, fmt.Errorf("parsing tarball: %w", err)
-	}
-
-	return img, nil
 }

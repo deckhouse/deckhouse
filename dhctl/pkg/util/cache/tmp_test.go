@@ -24,12 +24,14 @@ import (
 	"sort"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/google/uuid"
 	"github.com/name212/govalue"
 	"github.com/stretchr/testify/require"
 	"k8s.io/utils/pointer"
 
+	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider/providerdir"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/stringsutil"
 	dhlogger "github.com/deckhouse/lib-dhctl/pkg/logger"
 )
@@ -835,25 +837,58 @@ func TestKeepProviderBundleDirs(t *testing.T) {
 	require.NoDirExists(t, junkDir)
 }
 
-func TestKeepProviderAlias(t *testing.T) {
+// Another process sharing the download dir unpacks into a staging dir beside the digest dir and
+// locks it with lock files there. Removing them would let a half-written dir be moved into place.
+func TestCleanupKeepsWhatLiveProcessesWriteBesideDigestDirs(t *testing.T) {
+	tmpDir := t.TempDir()
+	digestDir := filepath.Join(tmpDir, "candi@sha256:"+strings.Repeat("a", 64))
+	testMkDir(t, digestDir)
+
+	fresh := digestDir + ".partial-123"
+	testMkDir(t, filepath.Join(fresh, "deckhouse"))
+
+	stale := digestDir + ".partial-456"
+	testMkDir(t, filepath.Join(stale, "deckhouse"))
+	old := time.Now().Add(-2 * providerdir.StagingDirMaxAge)
+	require.NoError(t, os.Chtimes(stale, old, old))
+
+	locks := []string{digestDir + ".lock.0", digestDir + ".lock.1"}
+	for _, lock := range locks {
+		require.NoError(t, os.WriteFile(lock, nil, 0o644))
+	}
+
+	NewTmpCleaner(ClearTmpParams{TmpDir: tmpDir, DefaultTmpDir: tmpDir}).Cleanup()
+
+	require.DirExists(t, digestDir)
+	require.DirExists(t, filepath.Join(fresh, "deckhouse"))
+	require.NoDirExists(t, stale)
+	for _, lock := range locks {
+		require.FileExists(t, lock)
+	}
+}
+
+func TestIsProviderBundleDirMatchesDigestDirNames(t *testing.T) {
+	tmpDir := t.TempDir()
+	digest := "sha256:" + strings.Repeat("a", 64)
+
+	for _, name := range []string{"candi", "opentofu", "terraform", "dvp", "cloud-provider-dvp"} {
+		require.True(t, isProviderBundleDir(tmpDir, providerdir.DigestDir(tmpDir, name, digest)), name)
+	}
+}
+
+// The alias is not written any more. One left by an older dhctl is ordinary tmp content.
+func TestCleanupRemovesProviderAliasOfAnOlderDhctl(t *testing.T) {
 	tmpDir := t.TempDir()
 
 	bundle := filepath.Join(tmpDir, "dvp@sha256:"+strings.Repeat("a", 64))
 	testMkDir(t, bundle)
+	require.NoError(t, os.WriteFile(filepath.Join(bundle, "validator"), []byte("bin"), 0o755))
 	alias := filepath.Join(tmpDir, "dvp")
 	require.NoError(t, os.Symlink(bundle, alias))
 
-	// Nothing on disk says which digest this one points at, so the run that
-	// cannot resolve it reaches the bundle through the alias alone.
-	dangling := filepath.Join(tmpDir, "yandex")
-	require.NoError(t, os.Symlink(filepath.Join(tmpDir, "yandex@sha256:"+strings.Repeat("b", 64)), dangling))
-
 	NewTmpCleaner(ClearTmpParams{TmpDir: tmpDir, DefaultTmpDir: tmpDir}).Cleanup()
 
-	target, err := os.Readlink(alias)
-	require.NoError(t, err)
-	require.Equal(t, bundle, target)
-
-	_, err = os.Lstat(dangling)
-	require.Error(t, err, "an alias leading nowhere must not be kept")
+	require.FileExists(t, filepath.Join(bundle, "validator"))
+	_, err := os.Lstat(alias)
+	require.True(t, os.IsNotExist(err), "the alias must be removed")
 }

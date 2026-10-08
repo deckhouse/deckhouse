@@ -18,6 +18,8 @@ import (
 	"context"
 	"fmt"
 
+	dhlog "github.com/deckhouse/lib-dhctl/pkg/logger"
+
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app/options"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider"
@@ -66,7 +68,15 @@ func (s *KubeTerraStateLoader) PopulateMetaConfig(ctx context.Context, globalOpt
 		if err := s.stateCache.LoadStruct(ctx, "cluster-config", &metaConfig); err != nil {
 			return nil, err
 		}
-		return metaConfig, nil
+
+		usable, err := config.RestoreProviderBundle(ctx, metaConfig, globalOptions)
+		if err != nil {
+			return nil, err
+		}
+		if usable {
+			return metaConfig, nil
+		}
+		dhlog.FromContext(ctx).WarnContext(ctx, "The cached cluster configuration predates provider bundle tracking, reading it from the cluster instead")
 	}
 
 	kubeCl, err := s.kubeProvider.KubeClientCtx(ctx)

@@ -22,11 +22,10 @@ import (
 	"path/filepath"
 	"strings"
 
-	"golang.org/x/sync/singleflight"
 	"sigs.k8s.io/yaml"
 
-	validatev1 "github.com/deckhouse/deckhouse/go_lib/dhctl-provider-protocol/api/validate/v1"
 	dhlog "github.com/deckhouse/lib-dhctl/pkg/logger"
+	libdhctlyaml "github.com/deckhouse/lib-dhctl/pkg/yaml"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app/options"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config/digests"
@@ -34,7 +33,6 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/actions/registrydata"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/client"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/image"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/util/input"
 )
 
 // KubeClientGetter lazily provides a kube client for the target cluster: which module build a
@@ -46,8 +44,6 @@ type KubeClientGetter func(ctx context.Context) (*client.KubernetesClient, error
 type bundleRegistryGetter func(ctx context.Context) (*image.RegistryConfig, error)
 
 var (
-	ensureProviderGroup singleflight.Group
-
 	// Prefers the module chain, falls back to this installer's embedded digests. globalOptions
 	// travels along because providerIsExternal reads the modules directory, whose path is not
 	// fixed: ResolveAndApplyPaths roots it at the working directory, or under DownloadDir.
@@ -60,13 +56,14 @@ var (
 			return ref, nil
 		}
 
-		digest, err := digests.GetImage(sectionForProvider(provider), terraformManagerImageName)
+		digest, err := digests.GetImage(digests.ProviderImagesSection(provider), digests.TerraformManagerImage)
 		if err != nil {
 			return providerBundleRef{}, fmt.Errorf("get terraform-manager image digest for provider %s: %w", provider, err)
 		}
 		return providerBundleRef{Digest: digest}, nil
 	}
 
+	// Replaces the registry pull in tests.
 	downloadProviderBundle = image.DownloadAndUnpackImage
 )
 
@@ -89,22 +86,22 @@ func IsInternalCloudProviderBundle(provider string, globalOptions *options.Globa
 	return err == nil
 }
 
-// EnsureProviderBundleFromConfig downloads the external provider bundle and loads its
-// schemas so the provider becomes validatable in this process. No-op for
-// static clusters and providers whose schemas are bundled in candi. Empty
-// provider is extracted from docs; docs also supply registry access (default
-// public registry otherwise). Concurrent same-provider calls share one download.
-func EnsureProviderBundleFromConfig(ctx context.Context, provider string, docs []string, globalOptions *options.GlobalOptions) error {
+// ensureProviderBundleFromConfig downloads the external provider bundle named by the
+// ClusterConfiguration in docs and loads its schemas. No-op for static clusters and providers
+// whose schemas are bundled in candi. Docs also supply registry access (default public registry otherwise).
+func ensureProviderBundleFromConfig(ctx context.Context, docs []string, globalOptions *options.GlobalOptions) (string, error) {
 	globalOptions = withDownloadDir(globalOptions)
 
-	provider, err := cloudProviderNameOrFromDocs(provider, docs)
+	provider, err := cloudProviderNameFromDocs(docs)
 	if err != nil {
-		return err
+		// Both callers parse the same documents next, and that parse reports this one with the rest.
+		dhlog.FromContext(ctx).DebugContext(ctx, fmt.Sprintf("Skip provider bundle, a document is unreadable: %v", err))
+		return "", nil
 	}
 
 	// Is static cluster
 	if provider == "" {
-		return nil
+		return "", nil
 	}
 
 	// Read before the early return below: an explicitly pinned provider module must reach the
@@ -112,105 +109,76 @@ func EnsureProviderBundleFromConfig(ctx context.Context, provider string, docs [
 	// install the pinned build while validating against another build's schemas.
 	md, err := ParseModuleDocs(docs)
 	if err != nil {
-		return err
+		return "", err
 	}
 
 	if IsInternalCloudProviderBundle(provider, globalOptions) && !md.providerModulePinned(CloudProviderModuleName(provider)) {
-		return nil
+		return "", nil
 	}
 
 	// Update external provider
-	return updateProviderBundle(ctx, provider, configModuleDocs(docs), docsBundleRegistry(provider, docs), globalOptions, true)
+	dir, _, err := updateProviderBundle(ctx, provider, configModuleDocs(docs), docsBundleRegistry(provider, docs), globalOptions)
+	return dir, err
 }
 
 // EnsureProviderBundleFromCluster downloads and unpacks the external provider's OCI bundle using the
-// registry read from the target cluster. Commander operations receive no registry_config, so the
-// bundle registry is unknown from the request and the cluster is the only source of truth.
-func EnsureProviderBundleFromCluster(ctx context.Context, kubeClient KubeClientGetter, clusterConfigData string, globalOptions *options.GlobalOptions, operation string) error {
+// registry read from the target cluster and returns its directory and digest. Commander operations
+// receive no registry_config, so the cluster is the only source of truth for the bundle registry.
+func EnsureProviderBundleFromCluster(ctx context.Context, kubeClient KubeClientGetter, clusterConfigData string, globalOptions *options.GlobalOptions) (string, string, error) {
 	globalOptions = withDownloadDir(globalOptions)
 
-	provider, err := cloudProviderNameOrFromDocs(
-		"",
-		input.YAMLSplitRegexp.Split(strings.TrimSpace(clusterConfigData), -1),
-	)
+	provider, err := cloudProviderNameFromDocs(libdhctlyaml.SplitYAML(clusterConfigData))
 	if err != nil {
-		return err
+		return "", "", err
 	}
 
 	// Is static cluster
 	if provider == "" {
-		return nil
+		return "", "", nil
 	}
 
 	// Is internal provider
 	if IsInternalCloudProviderBundle(provider, globalOptions) {
-		return nil
+		return "", "", nil
 	}
 
 	lookup := clusterModuleDocs(kubeClient, provider, globalOptions.KubeInCluster)
-	return updateProviderBundle(ctx, provider, lookup, clusterBundleRegistry(kubeClient), globalOptions, operationRequiresFreshBundle(operation))
+	return updateProviderBundle(ctx, provider, lookup, clusterBundleRegistry(kubeClient), globalOptions)
 }
 
-// providerSchemasAvailable reports whether this process can already read the provider's own
-// configuration: the schemas ship in candi, were loaded earlier, or sit in a bundle delivered under
-// the alias — the last case is loaded into the store on the way.
-func providerSchemasAvailable(provider string, globalOptions *options.GlobalOptions) (bool, error) {
-	if IsInternalCloudProviderBundle(provider, globalOptions) {
+// UseUnpackedProviderBundle makes the bundle of the given digest usable in this process without
+// asking anyone which bundle the cluster needs. The digest comes from the state of that cluster.
+func UseUnpackedProviderBundle(ctx context.Context, clusterConfigData, digest string, globalOptions *options.GlobalOptions) (string, error) {
+	globalOptions = withDownloadDir(globalOptions)
+
+	provider, err := cloudProviderNameFromDocs(libdhctlyaml.SplitYAML(clusterConfigData))
+	if err != nil {
+		return "", fmt.Errorf("read provider from cluster configuration: %w", err)
+	}
+	if provider == "" || digest == "" {
+		return "", fmt.Errorf("use unpacked provider bundle: provider and digest are required, got %q and %q", provider, digest)
+	}
+
+	dir := providerdir.DigestDir(globalOptions.DownloadDir, provider, digest)
+	if err := loadBundleSchemas(provider, digest, dir, globalOptions); err != nil {
+		return "", err
+	}
+
+	return dir, nil
+}
+
+// RestoreProviderBundle makes the bundle a MetaConfig from the state cache was built with usable
+// in this process. False means that MetaConfig cannot be used as is: it names an external
+// provider but was saved by a dhctl that recorded no bundle.
+func RestoreProviderBundle(ctx context.Context, m *MetaConfig, globalOptions *options.GlobalOptions) (bool, error) {
+	if m.ProviderBundleDir != "" {
+		if err := loadBundleSchemas(m.ProviderName, providerdir.DigestFromDir(m.ProviderBundleDir), m.ProviderBundleDir, globalOptions); err != nil {
+			return false, fmt.Errorf("restore provider bundle from the state cache: %w", err)
+		}
 		return true, nil
 	}
 
-	store := NewSchemaStore(globalOptions)
-	if store.HasProviderSchemas(provider) {
-		return true, nil
-	}
-
-	dir, digest, ok := deliveredBundle(provider, globalOptions)
-	if !ok {
-		return false, nil
-	}
-	if err := store.LoadProviderDir(provider, digest, dir); err != nil {
-		return false, err
-	}
-	return store.HasProviderSchemas(provider), nil
-}
-
-// ensureProviderSchemas makes the provider's configuration readable, downloading the bundle only
-// when nothing has been delivered yet. Without the schemas the provider's own ClusterConfiguration
-// document is silently kept as an unrelated resource, so a bundle that never arrives is an error.
-func ensureProviderSchemas(ctx context.Context, provider string, docs []string, globalOptions *options.GlobalOptions) error {
-	available, err := providerSchemasAvailable(provider, globalOptions)
-	if err != nil {
-		return err
-	}
-	if available {
-		return nil
-	}
-
-	if err := EnsureProviderBundleFromConfig(ctx, provider, docs, globalOptions); err != nil {
-		return err
-	}
-
-	available, err = providerSchemasAvailable(provider, globalOptions)
-	if err != nil {
-		return err
-	}
-	if !available {
-		return fmt.Errorf("provider bundle for %q carries no schemas to read its configuration with: %s",
-			provider, providerdir.ProviderDir(globalOptions.DownloadDir, provider))
-	}
-	return nil
-}
-
-// operationRequiresFreshBundle reports whether the operation must fail rather than go on with the
-// bundle already on disk. Only destroy may go on: interrupted halfway with cluster access gone, it
-// needs that bundle to clean up the resources it would otherwise orphan.
-func operationRequiresFreshBundle(operation string) bool {
-	switch validatev1.Operation(operation) {
-	case validatev1.OperationDestroy:
-		return false
-	default:
-		return true
-	}
+	return IsInternalCloudProviderBundle(m.ProviderName, globalOptions), nil
 }
 
 // docsBundleRegistry derives the registry from the configuration documents.
@@ -250,192 +218,98 @@ func clusterBundleRegistry(kubeClient KubeClientGetter) bundleRegistryGetter {
 	}
 }
 
-// updateProviderBundle resolves which bundle the provider needs and unpacks it unless that digest
-// is already in place. Every step that can leave the provider without a fresh bundle falls back to
-// the one already downloaded.
+// updateProviderBundle resolves which bundle the provider needs, unpacks it unless that digest is
+// already on disk, loads its schemas and returns its directory and digest.
 func updateProviderBundle(
 	ctx context.Context,
 	provider string,
 	lookup providerModuleLookup,
 	registry bundleRegistryGetter,
 	globalOptions *options.GlobalOptions,
-	required bool,
-) error {
+) (string, string, error) {
 	ref, err := resolveProviderBundleRef(ctx, provider, lookup, globalOptions)
 	if err != nil {
-		if required {
-			return err
-		}
-		return fallBackToDeliveredBundle(ctx, provider, "digest resolution", err, globalOptions)
+		return "", "", err
 	}
 
-	if bundleReadyAtDigest(provider, ref.Digest, globalOptions) {
-		return nil
+	dir, err := unpackProviderBundle(ctx, provider, ref, registry, globalOptions)
+	if err != nil {
+		return "", "", err
 	}
 
-	_, err, _ = ensureProviderGroup.Do(provider+"@"+ref.Digest, func() (interface{}, error) {
-		if bundleReadyAtDigest(provider, ref.Digest, globalOptions) {
-			return nil, nil
-		}
-		if err := unpackProviderBundle(ctx, provider, ref, registry, globalOptions); err != nil {
-			return nil, err
-		}
-		// Validate and load from the real digest dir before activating it. The old alias must remain
-		// usable until the replacement is known to carry readable provider schemas.
-		digestDir := providerdir.ProviderDigestDir(globalOptions.DownloadDir, provider, ref.Digest)
-		if _, err := os.Stat(providerdir.SchemaPath(digestDir)); err != nil {
-			_ = os.RemoveAll(digestDir)
-			return nil, fmt.Errorf("provider bundle %s carries no cluster configuration schema: %w", digestDir, err)
-		}
-		if err := NewSchemaStore(globalOptions).LoadProviderDir(provider, ref.Digest, digestDir); err != nil {
-			_ = os.RemoveAll(digestDir)
-			return nil, err
-		}
-		return nil, switchProviderSymlink(providerdir.ProviderDir(globalOptions.DownloadDir, provider), digestDir)
+	return dir, ref.Digest, nil
+}
+
+func unpackProviderBundle(ctx context.Context, provider string, ref providerBundleRef, registry bundleRegistryGetter, globalOptions *options.GlobalOptions) (string, error) {
+	dir, err := image.EnsureUnpacked(ctx, image.UnpackRequest{
+		Root:   globalOptions.DownloadDir,
+		Name:   provider,
+		Digest: ref.Digest,
+		Registry: func(ctx context.Context) (*image.RegistryConfig, error) {
+			// The bundle lives in the ModuleSource's registry, not the one resolved for deckhouse.
+			if ref.Registry != nil {
+				return ref.Registry, nil
+			}
+			return registry(ctx)
+		},
+	}, image.EnsureUnpackedOptions{
+		// The module chain knows the repository. The in-tree path pins the flat images repo.
+		Image:        ref.Image,
+		ShowProgress: globalOptions.ShowProgress,
+		Download: func(ctx context.Context, imageRef, destDir string, registryConfig image.RegistryConfig, showProgress bool) error {
+			if err := downloadProviderBundle(ctx, imageRef, destDir, registryConfig, showProgress); err != nil {
+				// Runs before every preflight check, so this message is all the operator gets.
+				return fmt.Errorf("%w\n"+
+					"It carries the provider schemas and the validator, so the configuration cannot be checked without it. "+
+					"Make that reference reachable with the registry credentials from the configuration, "+
+					"or unpack the bundle into %s yourself before dhctl starts.",
+					err, providerdir.DigestDir(globalOptions.DownloadDir, provider, ref.Digest))
+			}
+			return nil
+		},
+		Prepare: func(_ context.Context, stagingDir, finalDir string) error {
+			// Named by the final dir too: the staging dir is removed before anyone reads this.
+			if err := checkBundleSchema(stagingDir); err != nil {
+				return fmt.Errorf("check provider bundle %s: %w", finalDir, err)
+			}
+			return nil
+		},
 	})
 	if err != nil {
-		if required {
-			return err
-		}
-		return fallBackToDeliveredBundle(ctx, provider, "download", err, globalOptions)
-	}
-	return nil
-}
-
-func unpackProviderBundle(ctx context.Context, provider string, ref providerBundleRef, registry bundleRegistryGetter, globalOptions *options.GlobalOptions) error {
-	digest := ref.Digest
-	digestDir := providerdir.ProviderDigestDir(globalOptions.DownloadDir, provider, digest)
-	if _, err := os.Stat(digestDir); err != nil {
-		// Asked for here and not earlier: a digest already unpacked needs no registry at all, and
-		// reading one costs a call to the target cluster.
-		conf := ref.Registry
-		if conf == nil {
-			if conf, err = registry(ctx); err != nil {
-				return fmt.Errorf("registry data to download provider bundle for %q: %w", provider, err)
-			}
-		}
-
-		// The module chain knows the repository; the in-tree path pins the flat images repo.
-		imgName := ref.Image
-		if imgName == "" {
-			imgName = conf.GetRegistry() + "@" + digest
-		}
-		dhlog.FromContext(ctx).DebugContext(ctx, fmt.Sprintf("Downloading provider bundle for %s", provider))
-		// Download into a temp dir and rename into place on success: the image
-		// puller creates the destination before writing, so a failed or killed
-		// download would otherwise leave a partial digestDir whose bare
-		// existence short-circuits the re-download above (and the tmp cleaner
-		// deliberately keeps bundle dirs), permanently poisoning the cache. An
-		// orphaned .partial dir does not match the cleaner's bundle-dir pattern
-		// and is swept on the next run.
-		partialDir := digestDir + ".partial"
-		if err := os.RemoveAll(partialDir); err != nil {
-			return fmt.Errorf("clean partial provider bundle dir %s: %w", partialDir, err)
-		}
-		if err := downloadProviderBundle(ctx, imgName, partialDir, globalOptions.DownloadCacheDir, *conf, globalOptions.ShowProgress); err != nil {
-			_ = os.RemoveAll(partialDir)
-			// Runs before every preflight check, so this message is all the operator gets.
-			return fmt.Errorf("download provider bundle for %q from %s: %w\n"+
-				"It carries the provider schemas and the validator, so the configuration cannot be checked without it. "+
-				"Make that reference reachable with the registry credentials from the configuration, "+
-				"or unpack the bundle into %s yourself before dhctl starts.",
-				provider, imgName, err, providerdir.ProviderDir(globalOptions.DownloadDir, provider))
-		}
-		// The image puller leaves the downloaded tarball next to the unpacked
-		// tree. The digest-pinned directory itself is the cache (its presence
-		// short-circuits the download above), so the tarball only duplicates
-		// the bundle on disk — drop it.
-		_ = os.Remove(filepath.Join(partialDir, digest))
-		if err := os.Rename(partialDir, digestDir); err != nil {
-			return fmt.Errorf("move provider bundle into place %s: %w", digestDir, err)
-		}
-	}
-	return nil
-}
-
-// fallBackToDeliveredBundle keeps the operation running on the bundle this download dir already
-// holds after stage failed with cause. Without a usable bundle there is nothing to fall back to and
-// cause is returned untouched.
-func fallBackToDeliveredBundle(
-	ctx context.Context,
-	provider, stage string,
-	cause error,
-	globalOptions *options.GlobalOptions,
-) error {
-	dir, digest, ok := deliveredBundle(provider, globalOptions)
-	if !ok {
-		return cause
+		return "", fmt.Errorf("unpack provider bundle for %q: %w", provider, err)
 	}
 
-	dhlog.FromContext(ctx).WarnContext(ctx, fmt.Sprintf(
-		"Provider bundle update for %q failed at %s: %v. Using the bundle already downloaded at %s.",
-		provider, stage, cause, dir,
-	))
-
-	if err := NewSchemaStore(globalOptions).LoadProviderDir(provider, digest, dir); err != nil {
-		return errors.Join(cause, fmt.Errorf("load provider bundle %s: %w", dir, err))
-	}
-	return nil
-}
-
-// bundleReadyAtDigest reports that this process already validates the provider against digest and
-// that the default alias leads to that very bundle. Everything looked up later — the validator
-// binary, the opentofu plugin — follows that alias, so schemas from one digest next to an alias
-// pointing at another is not ready.
-func bundleReadyAtDigest(provider, digest string, globalOptions *options.GlobalOptions) bool {
-	if !NewSchemaStore(globalOptions).ProviderSchemasLoaded(provider, digest) {
-		return false
-	}
-
-	_, delivered, ok := deliveredBundle(provider, globalOptions)
-	return ok && delivered == digest
-}
-
-// deliveredBundle reports the usable bundle under the provider's default alias — its directory and
-// its digest. Usable means the alias resolves to a digest dir and that dir carries the schema dhctl
-// validates against.
-func deliveredBundle(provider string, globalOptions *options.GlobalOptions) (string, string, bool) {
-	dir, digest, ok := providerdir.Delivered(globalOptions.DownloadDir, provider)
-	if !ok {
-		return "", "", false
-	}
-	if _, err := os.Stat(providerdir.SchemaPath(dir)); err != nil {
-		return "", "", false
-	}
-	return dir, digest, true
-}
-
-// switchProviderSymlink atomically points linkPath at target. A pre-symlink
-// layout may have left a real directory at linkPath — it is replaced.
-func switchProviderSymlink(linkPath, target string) error {
-	if info, err := os.Lstat(linkPath); err == nil && info.Mode()&os.ModeSymlink == 0 {
-		if err := os.RemoveAll(linkPath); err != nil {
-			return fmt.Errorf("remove legacy provider dir %s: %w", linkPath, err)
-		}
-	}
-	tmp := linkPath + ".tmp"
-	_ = os.Remove(tmp)
-	if err := os.Symlink(target, tmp); err != nil {
-		return fmt.Errorf("create provider symlink: %w", err)
-	}
-	if err := os.Rename(tmp, linkPath); err != nil {
-		return fmt.Errorf("activate provider symlink: %w", err)
-	}
-	return nil
-}
-
-// Configuration and reference helpers.
-func cloudProviderNameOrFromDocs(provider string, docs []string) (string, error) {
-	if provider != "" {
-		return strings.ToLower(provider), nil
-	}
-
-	provider, err := cloudProviderNameFromDocs(docs)
-	if err != nil {
+	if err := loadBundleSchemas(provider, ref.Digest, dir, globalOptions); err != nil {
 		return "", err
 	}
 
-	return strings.ToLower(provider), nil
+	return dir, nil
+}
+
+// loadBundleSchemas loads the schemas of an unpacked bundle into this process.
+func loadBundleSchemas(provider, digest, dir string, globalOptions *options.GlobalOptions) error {
+	if _, err := os.Stat(dir); errors.Is(err, os.ErrNotExist) {
+		return fmt.Errorf("provider bundle %s is missing: %w", dir, err)
+	}
+	if err := checkBundleSchema(dir); err != nil {
+		return err
+	}
+
+	if err := NewSchemaStore(globalOptions).LoadProviderDir(provider, digest, dir); err != nil {
+		return fmt.Errorf("load schemas of provider bundle %s: %w", dir, err)
+	}
+	return nil
+}
+
+// errBundleWithoutSchema marks a bundle that was pulled but has nothing to validate against, so no
+// registry access would help.
+var errBundleWithoutSchema = errors.New("provider bundle has no cluster configuration schema")
+
+func checkBundleSchema(dir string) error {
+	if _, err := os.Stat(providerdir.SchemaPath(dir)); err != nil {
+		return fmt.Errorf("check cluster configuration schema in %s: %w: %w", dir, errBundleWithoutSchema, err)
+	}
+	return nil
 }
 
 func cloudProviderNameFromDocs(docs []string) (string, error) {
@@ -458,9 +332,4 @@ func cloudProviderNameFromDocs(docs []string) (string, error) {
 		}
 	}
 	return "", nil
-}
-
-// The images_digests.json section a provider's images live under.
-func sectionForProvider(provider string) string {
-	return "cloudProvider" + strings.ToUpper(provider[:1]) + provider[1:]
 }

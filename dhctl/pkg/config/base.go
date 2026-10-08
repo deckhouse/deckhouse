@@ -32,10 +32,12 @@ import (
 	"github.com/deckhouse/deckhouse/go_lib/registry/models/moduleconfig"
 	dhlog "github.com/deckhouse/lib-dhctl/pkg/logger"
 	"github.com/deckhouse/lib-dhctl/pkg/retry"
+	libdhctlyaml "github.com/deckhouse/lib-dhctl/pkg/yaml"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app/options"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config/digests"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config/registry"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider/providerdir"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/actions/registrydata"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/client"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/fs"
@@ -79,30 +81,9 @@ func LoadConfigFromFile(
 		}
 	}
 
-	if err := EnsureProviderBundleFromConfig(ctx, "", docs, globalOptions); err != nil {
-		return nil, err
-	}
-
-	// Resolved before ParseConfig: an external provider's unpacked bundle lives
-	// under <DownloadRootDir>/<provider>/.
-	downloadRootDir := withDownloadDir(globalOptions).DownloadDir
-	downloadCacheDir := globalOptions.DownloadCacheDir
-	if downloadCacheDir == "" {
-		downloadCacheDir = filepath.Join(downloadRootDir, "cache")
-	}
-	opts = append(opts, ValidateOptionDownloadRootDir(downloadRootDir))
-
 	metaConfig, err := ParseConfig(ctx, fs.RevealWildcardPaths(paths), validatorProvider, globalOptions, opts...)
 	if err != nil {
 		return nil, err
-	}
-
-	metaConfig.DownloadRootDir = downloadRootDir
-	metaConfig.DownloadCacheDir = downloadCacheDir
-	if globalOptions.DeckhouseDir != "" {
-		metaConfig.VersionFilePath = filepath.Join(globalOptions.DeckhouseDir, "version")
-	} else {
-		metaConfig.VersionFilePath = filepath.Join(options.DefaultDeckhouseDir, "version")
 	}
 
 	metaConfig.ShowProgress = globalOptions.ShowProgress
@@ -151,6 +132,8 @@ func ParseConfig(
 	globalOptions *options.GlobalOptions,
 	opts ...ValidateOption,
 ) (*MetaConfig, error) {
+	globalOptions = withDownloadDir(globalOptions)
+
 	content := ""
 	for _, path := range paths {
 		if strings.Contains(path, "*") {
@@ -165,6 +148,12 @@ func ParseConfig(
 		content = content + "\n\n---\n\n" + string(fileContent)
 	}
 
+	bundleDir, err := ensureProviderBundleFromConfig(ctx, libdhctlyaml.SplitYAML(content), globalOptions)
+	if err != nil {
+		return nil, fmt.Errorf("prepare provider bundle: %w", err)
+	}
+	opts = append(opts, ValidateOptionProviderBundleDir(bundleDir), ValidateOptionDownloadRootDir(globalOptions.DownloadDir))
+
 	// Every problem in the file, not the first one. This is the path an operator takes with a
 	// config they wrote: three mistakes in it used to cost three runs, each finding one — and on
 	// a cloud cluster a run that gets past this creates infrastructure.
@@ -173,7 +162,17 @@ func ParseConfig(
 	// since the option is idempotent.
 	opts = append(opts, ValidateOptionCollectAllErrors(true))
 
-	return ParseConfigFromData(ctx, content, validatorProvider, globalOptions, opts...)
+	metaConfig, err := ParseConfigFromData(ctx, content, validatorProvider, globalOptions, opts...)
+	if err != nil {
+		return metaConfig, err
+	}
+
+	metaConfig.VersionFilePath = filepath.Join(options.DefaultDeckhouseDir, "version")
+	if globalOptions.DeckhouseDir != "" {
+		metaConfig.VersionFilePath = filepath.Join(globalOptions.DeckhouseDir, "version")
+	}
+
+	return metaConfig, nil
 }
 
 func ParseConfigFromCluster(
@@ -262,8 +261,7 @@ func clusterRegistryData(kubeCl *client.KubernetesClient, inCluster bool) func(c
 func parseConfigFromCluster(ctx context.Context, kubeCl *client.KubernetesClient, validatorProvider MetaConfigValidatorProvider, globalOptions *options.GlobalOptions, operation string) (*MetaConfig, error) {
 	metaConfig := &MetaConfig{Operation: operation}
 
-	// panic mitigation + ensure the provider-bundle download dir and the schema
-	// lookup agree on one location even when DownloadDir was left empty.
+	// Non-nil, and with a dir to unpack the provider bundle into even when DownloadDir was left empty.
 	globalOptions = withDownloadDir(globalOptions)
 
 	clusterConfig, err := readClusterConfigFromCluster(ctx, kubeCl)
@@ -295,32 +293,34 @@ func parseConfigFromCluster(ctx context.Context, kubeCl *client.KubernetesClient
 			return conf, err
 		}
 
-		if err := updateProviderBundle(
+		bundleDir, _, err := updateProviderBundle(
 			ctx,
 			cloudProvider,
 			lookup,
 			registry,
 			globalOptions,
-			operationRequiresFreshBundle(operation),
-		); err != nil {
+		)
+		if err != nil {
 			return nil, fmt.Errorf("prepare provider bundle: %w", err)
 		}
+		metaConfig.ProviderBundleDir = bundleDir
 	}
 
 	// The lazy provider-plugin and terraform-manager pulls read these off DeckhouseConfig long after
 	// this parse, so a cloud cluster needs them whether or not anything was downloaded above.
 	if clusterConfig.Type == CloudClusterType {
 		conf, dockerCfg, err := registryData(ctx)
-		if err == nil {
-			metaConfig.DeckhouseConfig.RegistryDockerCfg = dockerCfg
-			metaConfig.DeckhouseConfig.ImagesRepo = conf.GetRegistry()
-			metaConfig.DeckhouseConfig.RegistryCA = conf.GetCA()
-			metaConfig.DeckhouseConfig.RegistryScheme = conf.GetScheme()
+		if err != nil {
+			return nil, fmt.Errorf("read registry data from cluster: %w", err)
 		}
+
+		metaConfig.DeckhouseConfig.RegistryDockerCfg = dockerCfg
+		metaConfig.DeckhouseConfig.ImagesRepo = conf.GetRegistry()
+		metaConfig.DeckhouseConfig.RegistryCA = conf.GetCA()
+		metaConfig.DeckhouseConfig.RegistryScheme = conf.GetScheme()
 	}
 
 	metaConfig.DownloadRootDir = globalOptions.DownloadDir
-	metaConfig.DownloadCacheDir = globalOptions.DownloadCacheDir
 	metaConfig.VersionFilePath = filepath.Join(globalOptions.DeckhouseDir, "version")
 	metaConfig.ShowProgress = globalOptions.ShowProgress
 
@@ -591,6 +591,9 @@ deckhouse: {}
 	if options.downloadRootDir != "" {
 		metaConfig.DownloadRootDir = options.downloadRootDir
 	}
+	if options.providerBundleDir != "" {
+		metaConfig.ProviderBundleDir = options.providerBundleDir
+	}
 	for _, mc := range options.clusterModuleConfigs {
 		if metaConfig.FindModuleConfig(mc.GetName()) == nil {
 			metaConfig.ModuleConfigs = append(metaConfig.ModuleConfigs, mc)
@@ -600,16 +603,9 @@ deckhouse: {}
 	return metaConfig.Prepare(ctx, validatorProvider)
 }
 
-// ParseConfigFromDataEnsureProvider behaves like ParseConfigFromData but first
-// ensures the external provider bundle is downloaded and unpacked (so its
-// OpenAPI schemas are available) and points the parse at the download dir. Use
-// it on cold server pods (check/converge/destroy/detach) where the bundle is
-// not pre-baked in the install image.
-//
-// registryConfig carries registry access only (an InitConfiguration and/or a
-// deckhouse ModuleConfig document). It feeds bundle resolution together with
-// configData but is NOT parsed/validated as part of the cluster config, so a
-// registry-only ModuleConfig (without spec.enabled) does not fail validation.
+// ParseConfigFromDataEnsureProvider is ParseConfigFromData that first prepares the provider bundle
+// configData names, unless a bundle dir is passed in with ValidateOptionProviderBundleDir. Registry
+// access found in configData is copied onto DeckhouseConfig for the lazy provider downloads.
 func ParseConfigFromDataEnsureProvider(
 	ctx context.Context,
 	configData string,
@@ -621,12 +617,13 @@ func ParseConfigFromDataEnsureProvider(
 
 	docs := input.YAMLSplitRegexp.Split(strings.TrimSpace(configData), -1)
 
-	provider, err := cloudProviderNameOrFromDocs("", docs)
-	if err != nil {
-		return nil, err
-	}
-	if err := ensureProviderSchemas(ctx, provider, docs, globalOptions); err != nil {
-		return nil, err
+	// Whoever delivered the bundle chose the build. This parse prepares one only when none was handed in.
+	if applyOptions(opts...).providerBundleDir == "" {
+		bundleDir, err := ensureProviderBundleFromConfig(ctx, docs, globalOptions)
+		if err != nil {
+			return nil, fmt.Errorf("prepare provider bundle: %w", err)
+		}
+		opts = append(opts, ValidateOptionProviderBundleDir(bundleDir))
 	}
 
 	opts = append(opts, ValidateOptionDownloadRootDir(globalOptions.DownloadDir))
@@ -635,12 +632,6 @@ func ParseConfigFromDataEnsureProvider(
 	if err != nil {
 		return nil, err
 	}
-
-	// The lazy provider-plugin / terraform-manager image pull needs a cache dir;
-	// ParseConfigFromData leaves DownloadCacheDir empty on the commander data
-	// path. withDownloadDir above guarantees a non-empty value. DownloadRootDir
-	// is already set by ParseConfigFromData via ValidateOptionDownloadRootDir.
-	metaConfig.DownloadCacheDir = globalOptions.DownloadCacheDir
 
 	// Lazy provider-plugin / terraform-manager downloads read registry creds
 	// from DeckhouseConfig. When configData itself carries an InitConfiguration
@@ -689,27 +680,20 @@ func applyRegistryToDeckhouseConfig(metaConfig *MetaConfig, docs []string) error
 	return nil
 }
 
-// withDownloadDir returns globalOptions guaranteed non-nil and with a non-empty
-// DownloadDir and DownloadCacheDir (falling back to the default tmp dir and its
-// "cache" subdir). It copies when it must change so the shared server
-// GlobalOptions is never mutated. The provider-bundle download reads both dirs
-// (the cache dir feeds the image puller's mkdir), so normalizing them in one
-// place keeps every caller pointed at the same location.
+// withDownloadDir returns globalOptions guaranteed non-nil and with a non-empty DownloadDir
+// (falling back to the default tmp dir). It copies when it must change so the shared server
+// GlobalOptions is never mutated.
 func withDownloadDir(globalOptions *options.GlobalOptions) *options.GlobalOptions {
 	if globalOptions == nil {
-		dir := options.DefaultTmpDir()
-		return &options.GlobalOptions{DownloadDir: dir, DownloadCacheDir: filepath.Join(dir, "cache")}
+		return &options.GlobalOptions{DownloadDir: options.DefaultTmpDir()}
 	}
-	if globalOptions.DownloadDir != "" && globalOptions.DownloadCacheDir != "" {
+	if globalOptions.DownloadDir != "" {
 		return globalOptions
 	}
+
 	cp := *globalOptions
-	if cp.DownloadDir == "" {
-		cp.DownloadDir = options.DefaultTmpDir()
-	}
-	if cp.DownloadCacheDir == "" {
-		cp.DownloadCacheDir = filepath.Join(cp.DownloadDir, "cache")
-	}
+	cp.DownloadDir = options.DefaultTmpDir()
+
 	return &cp
 }
 
@@ -852,21 +836,35 @@ func RegistryConfigProvider(docs []string) (*registry.ConfigProvider, error) {
 	return registry.NewConfigProvider(initConfig, deckhouseSettings, opts...), nil
 }
 
+// downloadCandi replaces the registry pull in tests.
+var downloadCandi image.DownloadFunc
+
 func prepareCandiDir(ctx context.Context, conf *image.RegistryConfig, globalOptions *options.GlobalOptions) error {
-	candiImage, err := digests.GetImage("common", "candi")
+	digest, err := digests.GetImage(digests.CandiSection, digests.CandiImage)
 	if err != nil {
-		return err
+		return fmt.Errorf("get candi image digest: %w", err)
 	}
 
-	imgName := conf.GetRegistry() + "@" + candiImage
-
-	if err = image.DownloadAndUnpackImage(ctx, imgName, globalOptions.DownloadDir, globalOptions.DownloadCacheDir, *conf, globalOptions.ShowProgress); err != nil {
-		return err
+	// The paths are rooted before the download. A mismatch would leave candi where nothing reads it.
+	want := filepath.Join(providerdir.DigestDir(globalOptions.DownloadDir, digests.CandiImage, digest), "deckhouse")
+	if globalOptions.DeckhouseDir != want {
+		return fmt.Errorf("candi is unpacked into %s, but the install paths are rooted at %s: resolve the paths again after changing the download dir", want, globalOptions.DeckhouseDir)
 	}
 
-	err = image.PrepareFiles(ctx, filepath.Join(globalOptions.DownloadDir, "deckhouse"))
+	_, err = image.EnsureUnpacked(ctx, image.UnpackRequest{
+		Root:     globalOptions.DownloadDir,
+		Name:     digests.CandiImage,
+		Digest:   digest,
+		Registry: func(context.Context) (*image.RegistryConfig, error) { return conf, nil },
+	}, image.EnsureUnpackedOptions{
+		Download:     downloadCandi,
+		ShowProgress: globalOptions.ShowProgress,
+		Prepare: func(ctx context.Context, stagingDir, finalDir string) error {
+			return image.PrepareFiles(ctx, filepath.Join(stagingDir, "deckhouse"), filepath.Join(finalDir, "deckhouse"))
+		},
+	})
 	if err != nil {
-		return err
+		return fmt.Errorf("unpack candi image: %w", err)
 	}
 
 	return os.MkdirAll(filepath.Join(globalOptions.DownloadDir, "plugins"), 0o755)

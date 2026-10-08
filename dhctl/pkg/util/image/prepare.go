@@ -25,16 +25,19 @@ import (
 	dhlog "github.com/deckhouse/lib-dhctl/pkg/logger"
 )
 
-func PrepareFiles(ctx context.Context, path string) error {
-	pathStat, err := os.Stat(path)
+// PrepareFiles rewrites the bashible path in the templates under dir to where they are read from
+// once dir is moved to finalDir. It must run once per unpack: the path it writes contains the
+// very pattern it looks for.
+func PrepareFiles(ctx context.Context, dir, finalDir string) error {
+	pathStat, err := os.Stat(dir)
 	if err != nil {
 		return err
 	}
 	if !pathStat.IsDir() {
-		return fmt.Errorf("%s isn't a directory", path)
+		return fmt.Errorf("%s isn't a directory", dir)
 	}
 
-	bashiblePath := filepath.Join(path, "candi", "bashible")
+	bashiblePath := filepath.Join(finalDir, "candi", "bashible")
 
 	walkFunc := func(fullPath string, info os.FileInfo, err error) error {
 		if info == nil {
@@ -62,7 +65,7 @@ func PrepareFiles(ctx context.Context, path string) error {
 		return nil
 	}
 
-	err = filepath.Walk(path, walkFunc)
+	err = filepath.Walk(dir, walkFunc)
 	if err != nil {
 		return err
 	}

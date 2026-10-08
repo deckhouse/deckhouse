@@ -52,48 +52,25 @@ func init() {
 	os.Exit(runStubValidator(os.Args[1:]))
 }
 
-// stubBundleDigest pins the stub bundle to a digest of this test process, so two packages sharing
+// StubBundleDigest pins the stub bundle to a digest of this test process, so two packages sharing
 // options.DefaultTmpDir() do not write into each other's bundle.
-func stubBundleDigest() string {
+func StubBundleDigest() string {
 	return fmt.Sprintf("sha256:%064x", os.Getpid())
 }
 
-// StubDeliveredProviderBundle lays provider's bundle out under downloadDir the way a real run
-// leaves it — a digest-pinned directory holding the schema and the validator, with the default
-// alias pointing at it — so dhctl takes it for delivered without a registry pull. Providers whose
-// validator ships externally (e.g. yandex) need that binary; the schema is the real one, taken
-// from RequireProviderCandiDir, i.e. from the provider module when the candi bundle is not baked
-// into the image, so callers keep validating against the actual OpenAPI spec.
-// The stub validator reports no violation at all, so anything that finds it passes every
-// preflight check. Some callers have to place it under options.DefaultTmpDir(), the very
-// directory a real dhctl run reads, because the code under test resolves the download dir
-// itself. Leaving it behind would make the next real bootstrap or converge on this machine
-// silently skip provider validation, so every artefact this helper creates is removed again
-// through t.Cleanup, innermost first, and pre-existing paths are left untouched — an alias
-// another test put there is moved aside and moved back rather than overwritten.
-func StubDeliveredProviderBundle(t *testing.T, downloadDir, provider string) {
+// StubDeliveredProviderBundle unpacks a fake bundle of provider into downloadDir: the provider's real
+// schema and a validator that accepts everything, under the digest this installer's stubbed digests
+// name. It returns the bundle dir; what it creates is removed through t.Cleanup.
+func StubDeliveredProviderBundle(t *testing.T, downloadDir, provider string) string {
 	t.Helper()
 	require.NoError(t, os.MkdirAll(downloadDir, 0o755))
-
-	lockFile, err := os.OpenFile(filepath.Join(downloadDir, ".provider-bundle-test.lock"), os.O_CREATE|os.O_RDWR, 0o600)
-	require.NoError(t, err)
-	require.NoError(t, syscall.Flock(int(lockFile.Fd()), syscall.LOCK_EX))
-	t.Cleanup(func() {
-		if err := syscall.Flock(int(lockFile.Fd()), syscall.LOCK_UN); err != nil {
-			t.Errorf("unlock stub provider bundle: %v", err)
-		}
-		if err := lockFile.Close(); err != nil {
-			t.Errorf("close stub provider bundle lock: %v", err)
-		}
-	})
 
 	provider = strings.ToLower(provider)
 
 	candiDir := RequireProviderCandiDir(t, provider)
 
-	digestDir := providerdir.ProviderDigestDir(downloadDir, provider, stubBundleDigest())
+	digestDir := providerdir.DigestDir(downloadDir, provider, StubBundleDigest())
 	openapiDir := filepath.Join(digestDir, "openapi")
-	aliasPath := providerdir.ProviderDir(downloadDir, provider)
 
 	// Remember which directories already existed: only the ones this helper creates may be
 	// removed afterwards, and only once they are empty again.
@@ -109,31 +86,13 @@ func StubDeliveredProviderBundle(t *testing.T, downloadDir, provider string) {
 	schemaPath := filepath.Join(openapiDir, "cluster_configuration.yaml")
 	validatorPath := filepath.Join(digestDir, "validator")
 
-	// Another test may have left an alias of its own in a shared download dir; it is moved aside
-	// for the duration rather than overwritten, so whatever it pointed at is still there after.
-	backupPath := fmt.Sprintf("%s.dhctl-test-backup-%d", aliasPath, os.Getpid())
-	_, aliasErr := os.Lstat(aliasPath)
-	aliasExisted := aliasErr == nil
-	if aliasExisted {
-		require.NoError(t, os.Rename(aliasPath, backupPath))
-	}
-	require.NoError(t, os.Symlink(digestDir, aliasPath))
-
 	t.Cleanup(func() {
-		// Files first, then the alias, then the directories this helper created, deepest
-		// last-created first. os.Remove on a directory only succeeds while it is empty, so a
-		// directory another test still populates survives.
+		// Files first, then the directories this helper created, deepest last-created first.
+		// os.Remove on a directory only succeeds while it is empty, so a directory another test
+		// still populates survives.
 		for _, path := range []string{validatorPath, schemaPath} {
 			if err := os.Remove(path); err != nil && !os.IsNotExist(err) {
 				t.Errorf("cleanup stub provider bundle: remove %s: %v", path, err)
-			}
-		}
-		if err := os.Remove(aliasPath); err != nil && !os.IsNotExist(err) {
-			t.Errorf("cleanup stub provider bundle: remove %s: %v", aliasPath, err)
-		}
-		if aliasExisted {
-			if err := os.Rename(backupPath, aliasPath); err != nil {
-				t.Errorf("cleanup stub provider bundle: restore %s: %v", aliasPath, err)
 			}
 		}
 		for i := len(createdDirs) - 1; i >= 0; i-- {
@@ -161,16 +120,20 @@ func StubDeliveredProviderBundle(t *testing.T, downloadDir, provider string) {
 	require.NoError(t, os.WriteFile(validatorPath, []byte(validatorScript), 0o755))
 
 	stubEmbeddedBundleDigest(t, provider)
+
+	return digestDir
 }
 
 // stubEmbeddedBundleDigest points this installer's embedded digests at the bundle laid out above,
-// so a caller that resolves the reference finds the directory already unpacked and needs neither a
-// registry nor the fallback to get at it.
+// so a caller that resolves the reference finds the directory already unpacked and needs no registry.
 func stubEmbeddedBundleDigest(t *testing.T, provider string) {
 	t.Helper()
-	section := "cloudProvider" + strings.ToUpper(provider[:1]) + provider[1:]
-	content := fmt.Sprintf(`{%q: {"terraformManager": %q}}`, section, stubBundleDigest())
+	StubImagesDigests(t, fmt.Sprintf(`{%q: {"terraformManager": %q}}`, digests.ProviderImagesSection(provider), StubBundleDigest()))
+}
 
+// StubImagesDigests replaces this installer's images digests with content for the rest of the test.
+func StubImagesDigests(t *testing.T, content string) {
+	t.Helper()
 	path := filepath.Join(t.TempDir(), "images_digests.json")
 	require.NoError(t, os.WriteFile(path, []byte(content), 0o644))
 	t.Setenv(digests.ImagesDigestsFileEnv, path)

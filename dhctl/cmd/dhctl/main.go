@@ -313,9 +313,11 @@ func main() {
 
 	// Runs after flags are parsed, before any command action: mirror the
 	// in-cluster kube flag into GlobalOptions so config parsing can pick the
-	// reachable registry (in-cluster mirror vs upstream) accordingly.
+	// reachable registry (in-cluster mirror vs upstream) accordingly, and root
+	// the install paths at the --download-dir that was actually given.
 	kpApp.PreAction(func(_ *kingpin.ParseContext) error {
 		opts.Global.KubeInCluster = opts.Kube.InCluster
+		options.ResolveAndApplyPaths(&opts.Global)
 		return nil
 	})
 

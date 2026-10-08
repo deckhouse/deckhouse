@@ -16,6 +16,7 @@ package options
 
 import (
 	"errors"
+	"fmt"
 	"io"
 	"os"
 	"path/filepath"
@@ -23,6 +24,9 @@ import (
 	"strings"
 
 	otattribute "go.opentelemetry.io/otel/attribute"
+
+	"github.com/deckhouse/deckhouse/dhctl/pkg/config/digests"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider/providerdir"
 )
 
 const (
@@ -50,10 +54,11 @@ type GlobalOptions struct {
 	DebugLogFilePath       string
 	ProgressFilePath       string
 	DownloadDir            string
-	DownloadCacheDir       string
-	ConfigPaths            []string
-	SanityCheck            bool
-	ShowProgress           bool
+	// Ignored: kept only so that --download-cache-dir is still accepted.
+	DownloadCacheDir string
+	ConfigPaths      []string
+	SanityCheck      bool
+	ShowProgress     bool
 
 	// directory vars, moved from global and config
 	DhctlPath              string
@@ -84,7 +89,6 @@ func (o GlobalOptions) ToSpanAttributes() []otattribute.KeyValue {
 		otattribute.String("global.debugLogFilePath", o.DebugLogFilePath),
 		otattribute.String("global.progressFilePath", o.ProgressFilePath),
 		otattribute.String("global.downloadDir", o.DownloadDir),
-		otattribute.String("global.downloadCacheDir", o.DownloadCacheDir),
 		otattribute.StringSlice("global.configPaths", o.ConfigPaths),
 	}
 }
@@ -95,12 +99,11 @@ func (o GlobalOptions) ToSpanAttributes() []otattribute.KeyValue {
 // the same IsDebug behavior the previous package init() used to set.
 func NewGlobalOptions() GlobalOptions {
 	o := GlobalOptions{
-		TmpDir:           DefaultTmpDir(),
-		LoggerType:       "pretty",
-		IsDebug:          os.Getenv("DHCTL_DEBUG") == "yes",
-		DownloadDir:      DefaultTmpDir(),
-		DownloadCacheDir: filepath.Join(DefaultTmpDir(), "cache"),
-		ConfigPaths:      make([]string, 0),
+		TmpDir:      DefaultTmpDir(),
+		LoggerType:  "pretty",
+		IsDebug:     os.Getenv("DHCTL_DEBUG") == "yes",
+		DownloadDir: DefaultTmpDir(),
+		ConfigPaths: make([]string, 0),
 	}
 
 	ResolveAndApplyPaths(&o)
@@ -243,8 +246,8 @@ func CheckDirs(skip ...string) bool {
 	return true
 }
 
-// ResolveAndApplyPaths roots the install-tree paths at pwd when the tree is
-// present there, otherwise at opts.DownloadDir with EnsureCandiAvailable set.
+// ResolveAndApplyPaths roots the install-tree paths at pwd when the tree is present there,
+// otherwise at the candi image directory under opts.DownloadDir with EnsureCandiAvailable set.
 // skip lists directories that may legitimately be absent.
 func ResolveAndApplyPaths(opts *GlobalOptions, skip ...string) {
 	rootPath, err := os.Getwd()
@@ -253,9 +256,23 @@ func ResolveAndApplyPaths(opts *GlobalOptions, skip ...string) {
 	}
 	opts.EnsureCandiAvailable = !CheckDirs(skip...)
 	if opts.EnsureCandiAvailable {
-		rootPath = opts.DownloadDir
+		rootPath, err = CandiRoot(opts.DownloadDir)
+		// Without a candi digest nothing can be unpacked at all, and the download itself reports that.
+		if err != nil {
+			rootPath = opts.DownloadDir
+		}
 	}
 	SetPaths(rootPath, opts)
+}
+
+// CandiRoot is where the candi image of this installer is unpacked under downloadDir.
+func CandiRoot(downloadDir string) (string, error) {
+	digest, err := digests.GetImage(digests.CandiSection, digests.CandiImage)
+	if err != nil {
+		return "", fmt.Errorf("get candi image digest: %w", err)
+	}
+
+	return providerdir.DigestDir(downloadDir, digests.CandiImage, digest), nil
 }
 
 func SetPaths(root string, o *GlobalOptions) {

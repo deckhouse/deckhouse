@@ -70,6 +70,39 @@ spec:
 	}
 }
 
+// The provider bundle step reads the documents before the parse does. A document it cannot read is
+// one more problem for the parse to report, not a reason to stop at the first one.
+func TestParseConfigReportsEveryUnreadableDocument(t *testing.T) {
+	path := writeConfig(t, `
+apiVersion: deckhouse.io/v1
+kind: InitConfiguration
+deckhouse: {imagesRepo: [unclosed
+---
+apiVersion: deckhouse.io/v1
+kind: StaticClusterConfiguration
+internalNetworkCIDRs: []
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleConfig
+---
+apiVersion: deckhouse.io/v1
+kind: ClusterConfiguration
+clusterType: Static
+podSubnetCIDR: 10.111.0.0/16
+serviceSubnetCIDR: 10.222.0.0/16
+kubernetesVersion: "1.33"
+clusterDomain: cluster.local
+`)
+
+	_, err := ParseConfig(t.Context(), []string{path}, DummyValidatorProvider(), &options.New().Global)
+
+	var validationErr *ValidationError
+	require.ErrorAs(t, err, &validationErr)
+	require.Len(t, validationErr.Errors, 2, "both documents must be reported, got:\n%s", err)
+	require.ErrorContains(t, err, "Config document unmarshal failed")
+	require.ErrorContains(t, err, "missing '---' separator")
+	require.NotContains(t, err.Error(), "prepare provider bundle")
+}
+
 // TestParseConfigPrintsTheDocumentOnce: it used to be printed twice — once raw by the validator
 // and once with line numbers by the caller — so a three-document config produced screens of YAML
 // with the one useful copy somewhere in the middle.

@@ -47,7 +47,7 @@ func CreateLinkIfNotExists(ctx context.Context, source string, check CheckLinkSo
 		}
 	}
 
-	if !os.IsNotExist(err) {
+	if err != nil && !os.IsNotExist(err) {
 		return fmt.Errorf("Cannot read link %s: %w", destination, err)
 	}
 

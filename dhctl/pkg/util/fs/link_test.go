@@ -12,23 +12,28 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package providerdir
+package fs
 
 import (
+	"os"
+	"path/filepath"
 	"testing"
 
 	"github.com/stretchr/testify/require"
 )
 
-func TestDigestDir(t *testing.T) {
-	require.Equal(t, "/tmp/dl/dvp@sha256:abc", DigestDir("/tmp/dl", "DVP", "sha256:abc"))
-}
+// Link sources carry the image digest, so a new digest relinks a destination that already exists.
+func TestCreateLinkIfNotExistsRelinksToANewSource(t *testing.T) {
+	dir := t.TempDir()
+	oldSource := filepath.Join(dir, "old")
+	newSource := filepath.Join(dir, "new")
+	destination := filepath.Join(dir, "link")
+	require.NoError(t, os.Symlink(oldSource, destination))
 
-func TestValidatorPath(t *testing.T) {
-	require.Equal(t, "/tmp/dl/dvp@sha256:abc/validator", ValidatorPath("/tmp/dl/dvp@sha256:abc"))
-}
+	err := CreateLinkIfNotExists(t.Context(), newSource, func(string) error { return nil }, destination)
+	require.NoError(t, err)
 
-func TestDigestFromDir(t *testing.T) {
-	require.Equal(t, "sha256:abc", DigestFromDir("/tmp/dl/dvp@sha256:abc"))
-	require.Empty(t, DigestFromDir("/tmp/dl/dvp"))
+	link, err := os.Readlink(destination)
+	require.NoError(t, err)
+	require.Equal(t, newSource, link)
 }

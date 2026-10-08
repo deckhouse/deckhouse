@@ -70,6 +70,7 @@ type validateOptions struct {
 	skipSchemaValidation bool
 	operation            string
 	downloadRootDir      string
+	providerBundleDir    string
 	clusterModuleConfigs []*ModuleConfig
 }
 
@@ -141,6 +142,12 @@ func ValidateOptionDownloadRootDir(dir string) ValidateOption {
 	}
 }
 
+func ValidateOptionProviderBundleDir(dir string) ValidateOption {
+	return func(o *validateOptions) {
+		o.providerBundleDir = dir
+	}
+}
+
 // ValidateOptionModuleConfigsFromCluster adds ModuleConfigs read from the cluster to a parse of request
 // documents. A ModuleConfig with the same name among the documents wins.
 func ValidateOptionModuleConfigsFromCluster(mcs []*ModuleConfig) ValidateOption {
@@ -149,43 +156,27 @@ func ValidateOptionModuleConfigsFromCluster(mcs []*ModuleConfig) ValidateOption 
 	}
 }
 
-func NewSchemaStore(globalOptions *options.GlobalOptions, paths ...string) *SchemaStore {
-	// fallback to default value
+// schemaStorePaths lists where the store reads schemas from at creation. A provider bundle is
+// not among them: its schemas are loaded when that bundle is prepared, by LoadProviderDir.
+func schemaStorePaths(globalOptions *options.GlobalOptions, paths ...string) []string {
 	candiDir := options.DefaultCandiDir
 	if globalOptions != nil && globalOptions.CandiDir != "" {
 		candiDir = globalOptions.CandiDir
 	}
 	paths = append([]string{candiDir}, paths...)
 
-	// External provider images unpack into <DownloadDir>/<provider>@<digest>/
-	// with a <DownloadDir>/<provider> symlink pointing at the current digest.
-	// Scan only the real digest dirs: symlinks are skipped (their targets are
-	// listed directly), as are the bundled "deckhouse" tree and the image cache.
-	if globalOptions != nil && globalOptions.DownloadDir != "" {
-		entries, err := os.ReadDir(globalOptions.DownloadDir)
-		if err != nil && !os.IsNotExist(err) {
-			dhlog.FromContext(context.Background()).WarnContext(context.Background(), fmt.Sprintf("read download dir %s: %v", globalOptions.DownloadDir, err))
-		}
-		for _, e := range entries {
-			if !e.IsDir() || e.Type()&os.ModeSymlink != 0 {
-				continue
-			}
-			if e.Name() == "deckhouse" || e.Name() == "cache" {
-				continue
-			}
-			paths = append(paths, filepath.Join(globalOptions.DownloadDir, e.Name()))
-		}
-	}
-
 	pathsStr := strings.TrimSpace(os.Getenv("DHCTL_CLI_ADDITIONAL_SCHEMAS_PATHS"))
 	if pathsStr != "" {
-		pathsNoTrimmed := strings.SplitSeq(pathsStr, ",")
-		for p := range pathsNoTrimmed {
+		for p := range strings.SplitSeq(pathsStr, ",") {
 			paths = append(paths, strings.TrimSpace(p))
 		}
 	}
 
-	return newOnceSchemaStore(globalOptions, paths)
+	return paths
+}
+
+func NewSchemaStore(globalOptions *options.GlobalOptions, paths ...string) *SchemaStore {
+	return newOnceSchemaStore(globalOptions, schemaStorePaths(globalOptions, paths...))
 }
 
 func newOnceSchemaStore(globalOptions *options.GlobalOptions, schemasDir []string) *SchemaStore {
@@ -556,14 +547,6 @@ func (s *SchemaStore) ProviderSchemasLoaded(provider, digest string) bool {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
 	return digest != "" && s.providerDigests[provider] == digest
-}
-
-// HasProviderSchemas reports whether any schemas for the provider were loaded
-// via LoadProviderDir into this store, regardless of digest.
-func (s *SchemaStore) HasProviderSchemas(provider string) bool {
-	s.mu.RLock()
-	defer s.mu.RUnlock()
-	return len(s.providerIndexes[provider]) > 0
 }
 
 // LoadProviderDir loads provider schemas from dir (an unpacked bundle root)

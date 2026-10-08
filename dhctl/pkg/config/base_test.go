@@ -16,9 +16,11 @@ package config
 
 import (
 	"context"
+	"io/fs"
 	"os"
 	"path/filepath"
 	"strings"
+	"sync/atomic"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -488,10 +490,7 @@ func TestParseConfigFromCluster(t *testing.T) {
 	// download dir to a per-test directory the framework removes afterwards.
 	downloadDir := t.TempDir()
 	globalOptions := func() *options.GlobalOptions {
-		return &options.GlobalOptions{
-			DownloadDir:      downloadDir,
-			DownloadCacheDir: filepath.Join(downloadDir, "cache"),
-		}
+		return &options.GlobalOptions{DownloadDir: downloadDir}
 	}
 
 	doParseFromClusterNoError := func(t *testing.T, tst *testParseConfigFromCluster) *MetaConfig {
@@ -717,7 +716,7 @@ internalNetworkCIDRs:
 		t.Cleanup(func() { resolveProviderBundleRef = origDigest })
 
 		origDownload := downloadProviderBundle
-		downloadProviderBundle = func(_ context.Context, _, dest, _ string, _ image.RegistryConfig, _ bool) error {
+		downloadProviderBundle = func(_ context.Context, _, dest string, _ image.RegistryConfig, _ bool) error {
 			schema, err := os.ReadFile(filepath.Join(yandexCandiDir, "openapi", "cluster_configuration.yaml"))
 			if err != nil {
 				return err
@@ -731,12 +730,11 @@ internalNetworkCIDRs:
 
 		writeDeliveredYandexBundle := func(t *testing.T, downloadDir, digest string) {
 			t.Helper()
-			digestDir := providerdir.ProviderDigestDir(downloadDir, "yandex", digest)
+			digestDir := providerdir.DigestDir(downloadDir, "yandex", digest)
 			schema, err := os.ReadFile(filepath.Join(yandexCandiDir, "openapi", "cluster_configuration.yaml"))
 			require.NoError(t, err)
 			require.NoError(t, os.MkdirAll(filepath.Join(digestDir, "openapi"), 0o755))
 			require.NoError(t, os.WriteFile(providerdir.SchemaPath(digestDir), schema, 0o644))
-			require.NoError(t, os.Symlink(digestDir, providerdir.ProviderDir(downloadDir, "yandex")))
 		}
 
 		clusterGenericConfig := `
@@ -927,32 +925,18 @@ provider:
 			require.NotEmpty(t, metaConfig.DeckhouseConfig.ImagesRepo)
 		})
 
-		t.Run("destroy falls back to delivered bundle when registry data is invalid", func(t *testing.T) {
+		t.Run("the bundle dir of the resolved digest travels with the MetaConfig", func(t *testing.T) {
 			tst := createTestParseConfigFromCluster(t, testParams)
 			testCreateCloudProviderModuleConfig(t, tst.kubeCl, "yandex")
 
-			secret, err := tst.kubeCl.CoreV1().Secrets("d8-system").Get(t.Context(), "deckhouse-registry", metav1.GetOptions{})
-			require.NoError(t, err)
-			secret.Data[".dockerconfigjson"] = []byte("not-json")
-			_, err = tst.kubeCl.CoreV1().Secrets("d8-system").Update(t.Context(), secret, metav1.UpdateOptions{})
-			require.NoError(t, err)
-
-			origDigest := resolveProviderBundleRef
-			resolveProviderBundleRef = func(context.Context, string, providerModuleLookup, *options.GlobalOptions) (providerBundleRef, error) {
-				return providerBundleRef{Digest: "sha256:registry-unreachable-new"}, nil
-			}
-			t.Cleanup(func() { resolveProviderBundleRef = origDigest })
-
 			opts := globalOptions()
-			opts.DownloadDir = t.TempDir()
-			opts.DownloadCacheDir = filepath.Join(opts.DownloadDir, "cache")
-			writeDeliveredYandexBundle(t, opts.DownloadDir, "sha256:registry-unreachable-old")
-
-			_, err = parseConfigFromCluster(t.Context(), tst.kubeCl, tst.validatorProvider, opts, "destroy")
+			opts.EnsureCandiAvailable = false
+			metaConfig, err := parseConfigFromCluster(t.Context(), tst.kubeCl, tst.validatorProvider, opts, "")
 			require.NoError(t, err)
+			require.Equal(t, providerdir.DigestDir(opts.DownloadDir, "yandex", "sha256:test-yandex-digest"), metaConfig.ProviderBundleDir)
 		})
 
-		t.Run("destroy keeps a ready bundle when registry data is invalid", func(t *testing.T) {
+		t.Run("a registry secret that cannot be read fails every operation, destroy included", func(t *testing.T) {
 			const digest = "sha256:registry-unreachable-ready"
 
 			tst := createTestParseConfigFromCluster(t, testParams)
@@ -972,14 +956,12 @@ provider:
 
 			opts := globalOptions()
 			opts.DownloadDir = t.TempDir()
-			opts.DownloadCacheDir = filepath.Join(opts.DownloadDir, "cache")
 			writeDeliveredYandexBundle(t, opts.DownloadDir, digest)
-			dir, _, ok := deliveredBundle("yandex", opts)
-			require.True(t, ok)
-			require.NoError(t, NewSchemaStore(opts).LoadProviderDir("yandex", digest, dir))
 
-			_, err = parseConfigFromCluster(t.Context(), tst.kubeCl, tst.validatorProvider, opts, "destroy")
-			require.NoError(t, err)
+			for _, operation := range []string{"converge", "destroy"} {
+				_, err = parseConfigFromCluster(t.Context(), tst.kubeCl, tst.validatorProvider, opts, operation)
+				require.ErrorContains(t, err, "read registry data from cluster", operation)
+			}
 		})
 	})
 }
@@ -1582,4 +1564,195 @@ func TestApplyRegistryToDeckhouseConfigKeepsExisting(t *testing.T) {
 	metaConfig.DeckhouseConfig.RegistryDockerCfg = "preset"
 	require.NoError(t, applyRegistryToDeckhouseConfig(metaConfig, []string{ensureRegistryMCDoc}))
 	require.Equal(t, "preset", metaConfig.DeckhouseConfig.RegistryDockerCfg, "must not clobber dockercfg already supplied by configData")
+}
+
+// candi left in the download dir by another dhctl version must not be read by this one, and the
+// templates of the candi it does unpack must name the directory they end up in.
+func TestPrepareCandiDirUnpacksTheCandiOfThisInstaller(t *testing.T) {
+	const digest = "sha256:4444444444444444444444444444444444444444444444444444444444444444"
+
+	stubEmbeddedDigests(t, `{"common": {"candi": "`+digest+`"}}`)
+
+	downloadDir := t.TempDir()
+	oldMarker := filepath.Join(downloadDir, "deckhouse", "candi", "marker")
+	require.NoError(t, os.MkdirAll(filepath.Dir(oldMarker), 0o755))
+	require.NoError(t, os.WriteFile(oldMarker, []byte("old"), 0o644))
+
+	var downloads atomic.Int32
+	orig := downloadCandi
+	downloadCandi = func(_ context.Context, _, dir string, _ image.RegistryConfig, _ bool) error {
+		downloads.Add(1)
+		bashible := filepath.Join(dir, "deckhouse", "candi", "bashible")
+		if err := os.MkdirAll(bashible, 0o755); err != nil {
+			return err
+		}
+		if err := os.WriteFile(filepath.Join(dir, "deckhouse", "candi", "marker"), []byte("new"), 0o644); err != nil {
+			return err
+		}
+		return os.WriteFile(filepath.Join(bashible, "step.sh.tpl"), []byte("source deckhouse/candi/bashible/lib.sh\n"), 0o644)
+	}
+	t.Cleanup(func() { downloadCandi = orig })
+
+	globalOptions := &options.GlobalOptions{DownloadDir: downloadDir}
+	options.ResolveAndApplyPaths(globalOptions)
+
+	conf, err := image.NewRegistryConfig("HTTPS", "r.example.com/test", "u", "p", "")
+	require.NoError(t, err)
+
+	require.NoError(t, prepareCandiDir(t.Context(), conf, globalOptions))
+	require.NoError(t, prepareCandiDir(t.Context(), conf, globalOptions))
+	require.Equal(t, int32(1), downloads.Load(), "an unpacked candi digest is not downloaded again")
+
+	marker, err := os.ReadFile(filepath.Join(globalOptions.CandiDir, "marker"))
+	require.NoError(t, err)
+	require.Equal(t, "new", string(marker))
+
+	tpl, err := os.ReadFile(filepath.Join(globalOptions.CandiDir, "bashible", "step.sh.tpl"))
+	require.NoError(t, err)
+	require.Equal(t, "source "+filepath.Join(globalOptions.CandiDir, "bashible")+"/lib.sh\n", string(tpl))
+}
+
+func TestLoadInstallerVersionFallsBackToTheUnpackedCandi(t *testing.T) {
+	const digest = "sha256:5555555555555555555555555555555555555555555555555555555555555555"
+
+	stubEmbeddedDigests(t, `{"common": {"candi": "`+digest+`"}}`)
+
+	downloadDir := t.TempDir()
+	versionFile := filepath.Join(downloadDir, "candi@"+digest, "deckhouse", "version")
+	require.NoError(t, os.MkdirAll(filepath.Dir(versionFile), 0o755))
+	require.NoError(t, os.WriteFile(versionFile, []byte("v1.77.0\n"), 0o644))
+
+	m := &MetaConfig{VersionFilePath: filepath.Join(t.TempDir(), "absent"), DownloadRootDir: downloadDir}
+	require.NoError(t, m.LoadInstallerVersion())
+	require.Equal(t, "v1.77.0", m.InstallerVersion)
+}
+
+// Paths rooted anywhere but the candi digest directory are refused before anything is pulled.
+func TestPrepareCandiDirRefusesMisrootedPathsBeforeDownload(t *testing.T) {
+	const digest = "sha256:6666666666666666666666666666666666666666666666666666666666666666"
+
+	stubEmbeddedDigests(t, `{"common": {"candi": "`+digest+`"}}`)
+
+	var downloads atomic.Int32
+	orig := downloadCandi
+	downloadCandi = func(_ context.Context, _, dir string, _ image.RegistryConfig, _ bool) error {
+		downloads.Add(1)
+		return os.MkdirAll(filepath.Join(dir, "deckhouse"), 0o755)
+	}
+	t.Cleanup(func() { downloadCandi = orig })
+
+	downloadDir := t.TempDir()
+	globalOptions := &options.GlobalOptions{DownloadDir: downloadDir}
+	options.SetPaths(downloadDir, globalOptions)
+
+	conf, err := image.NewRegistryConfig("HTTPS", "r.example.com/test", "u", "p", "")
+	require.NoError(t, err)
+
+	err = prepareCandiDir(t.Context(), conf, globalOptions)
+	require.ErrorContains(t, err, "but the install paths are rooted at "+filepath.Join(downloadDir, "deckhouse")+": resolve the paths again after changing the download dir")
+	require.Equal(t, int32(0), downloads.Load())
+}
+
+// ParseConfig is the whole parse of "bootstrap-phase install-deckhouse" and "deckhouse
+// create-deployment", and both read the installer version off the MetaConfig it returns.
+func TestParseConfigLocatesTheInstallerVersion(t *testing.T) {
+	deckhouseDir := t.TempDir()
+	require.NoError(t, os.WriteFile(filepath.Join(deckhouseDir, "version"), []byte("v1.77.0\n"), 0o644))
+
+	path := writeConfig(t, `
+apiVersion: deckhouse.io/v1
+kind: ClusterConfiguration
+clusterType: Static
+podSubnetCIDR: 10.111.0.0/16
+serviceSubnetCIDR: 10.222.0.0/16
+kubernetesVersion: "1.33"
+clusterDomain: cluster.local
+`)
+
+	metaConfig, err := ParseConfig(t.Context(), []string{path}, DummyValidatorProvider(), &options.GlobalOptions{DeckhouseDir: deckhouseDir})
+	require.NoError(t, err)
+
+	require.NoError(t, metaConfig.LoadInstallerVersion())
+	require.Equal(t, "v1.77.0", metaConfig.InstallerVersion)
+	require.Equal(t, options.DefaultTmpDir(), metaConfig.DownloadRootDir)
+}
+
+// Without a candi digest there is no fallback path to name: the error carries the cause of each read.
+func TestLoadInstallerVersionErrorCarriesEachRead(t *testing.T) {
+	stubEmbeddedDigests(t, `{"something": {"app": "sha256:x"}}`)
+
+	absent := filepath.Join(t.TempDir(), "absent")
+	m := &MetaConfig{VersionFilePath: absent, DownloadRootDir: t.TempDir()}
+
+	err := m.LoadInstallerVersion()
+	require.ErrorIs(t, err, fs.ErrNotExist)
+	require.EqualError(t, err, "read installer version: open "+absent+": no such file or directory\n"+
+		"get candi image digest: Image digests section 'common' not found or empty")
+}
+
+const yandexCompleteConfig = `
+apiVersion: deckhouse.io/v1
+kind: ClusterConfiguration
+clusterType: Cloud
+cloud:
+  provider: Yandex
+  prefix: "test"
+kubernetesVersion: "1.33"
+podSubnetCIDR: 10.222.0.0/16
+serviceSubnetCIDR: 10.111.0.0/16
+encryptionAlgorithm: RSA-2048
+defaultCRI: Containerd
+clusterDomain: cluster.local
+podSubnetNodeCIDRPrefix: "24"
+---
+apiVersion: deckhouse.io/v1
+kind: InitConfiguration
+deckhouse:
+  imagesRepo: test
+  # {"auths": { "test": {}}}
+  registryDockerCfg: eyJhdXRocyI6IHsgInRlc3QiOiB7fX19
+---
+apiVersion: deckhouse.io/v1
+kind: YandexClusterConfiguration
+layout: WithoutNAT
+masterNodeGroup:
+  replicas: 1
+  instanceClass:
+    etcdDiskSizeGb: 10
+    platform: standard-v2
+    cores: 4
+    memory: 8192
+    imageID: imageId
+    externalIPAddresses:
+      - Auto
+sshPublicKey: ssh-rsa AAAAB3NzaC
+nodeNetworkCIDR: 10.100.0.0/21
+provider:
+  cloudID: cloudId
+  folderID: folderId
+  serviceAccountJSON: "{}"
+`
+
+// Every consumer of the bundle (validator, cni-bootstrap, layouts, plugin) reads it off the MetaConfig.
+func TestParseConfigHandsTheDeliveredBundleDirToTheMetaConfig(t *testing.T) {
+	downloadDir := t.TempDir()
+	bundleDir := tests.StubDeliveredProviderBundle(t, downloadDir, "yandex")
+
+	path := filepath.Join(t.TempDir(), "config.yml")
+	require.NoError(t, os.WriteFile(path, []byte(yandexCompleteConfig), 0o644))
+
+	metaConfig, err := ParseConfig(t.Context(), []string{path}, DummyValidatorProvider(), &options.GlobalOptions{DownloadDir: downloadDir})
+	require.NoError(t, err)
+	require.Equal(t, bundleDir, metaConfig.ProviderBundleDir)
+}
+
+// The stdin path of "config parse cluster-configuration" hands no bundle dir in, so the parse
+// prepares the bundle itself.
+func TestParseConfigFromDataEnsureProviderHandsTheBundleDirToTheMetaConfig(t *testing.T) {
+	downloadDir := t.TempDir()
+	bundleDir := tests.StubDeliveredProviderBundle(t, downloadDir, "yandex")
+
+	metaConfig, err := ParseConfigFromDataEnsureProvider(t.Context(), yandexCompleteConfig, DummyValidatorProvider(), &options.GlobalOptions{DownloadDir: downloadDir})
+	require.NoError(t, err)
+	require.Equal(t, bundleDir, metaConfig.ProviderBundleDir)
 }

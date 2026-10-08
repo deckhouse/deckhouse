@@ -21,7 +21,20 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app/options"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider/providerdir"
 )
+
+// The download dir holds bundles of other digests and of other clusters. Schemas come into the
+// store only through an explicit bundle preparation, never by scanning that directory.
+func TestSchemaStorePathsDoNotIncludeTheDownloadDir(t *testing.T) {
+	candiDir := t.TempDir()
+	downloadDir := t.TempDir()
+	writeTestProviderSchema(t, providerdir.DigestDir(downloadDir, "ensscan", "sha256:stale"), "EnsScanConfiguration")
+	t.Setenv("DHCTL_CLI_ADDITIONAL_SCHEMAS_PATHS", "")
+
+	paths := schemaStorePaths(&options.GlobalOptions{CandiDir: candiDir, DownloadDir: downloadDir})
+	require.Equal(t, []string{candiDir}, paths)
+}
 
 func TestVersionBackwardCompatibility(t *testing.T) {
 	newStore := newSchemaStore(&options.New().Global, []string{"/tmp"})

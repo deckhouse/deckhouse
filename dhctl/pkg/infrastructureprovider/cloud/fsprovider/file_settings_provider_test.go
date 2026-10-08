@@ -150,11 +150,11 @@ func TestProviderSettingsLoadedAndStoreInCache(t *testing.T) {
 // modules/030-cloud-provider-dvp/images/terraform-manager/werf.inc.yaml), not a
 // hand-written copy: the real file carries no `terraform:` key, and a fixture
 // that invents one hides that the loader rejects it.
-func TestBundleSettingsMergedFromDownloadDir(t *testing.T) {
+func TestBundleSettingsForDVPComeFromModuleFiles(t *testing.T) {
 	downloadDir := t.TempDir()
-	installProviderBundle(t, downloadDir, "dvp", "030-cloud-provider-dvp")
+	bundleDir := installProviderBundle(t, downloadDir, "dvp@sha256:current", "030-cloud-provider-dvp")
 
-	store, err := loadOrGetStore(t.Context(), writeCandiVersions(t), downloadDir)
+	store, err := loadOrGetStore(t.Context(), writeCandiVersions(t), bundleDir)
 	require.NoError(t, err)
 
 	set, ok := store["dvp"]
@@ -179,13 +179,13 @@ func TestBundleDeliveredAfterFirstBuildIsPickedUp(t *testing.T) {
 	candiFile := writeCandiVersions(t)
 	downloadDir := t.TempDir()
 
-	before, err := loadOrGetStore(t.Context(), candiFile, downloadDir)
+	before, err := loadOrGetStore(t.Context(), candiFile, "")
 	require.NoError(t, err)
 	require.NotContains(t, before, "dvp", "bundle not delivered yet")
 
-	installProviderBundle(t, downloadDir, "dvp", "030-cloud-provider-dvp")
+	bundleDir := installProviderBundle(t, downloadDir, "dvp@sha256:current", "030-cloud-provider-dvp")
 
-	after, err := loadOrGetStore(t.Context(), candiFile, downloadDir)
+	after, err := loadOrGetStore(t.Context(), candiFile, bundleDir)
 	require.NoError(t, err)
 	require.Contains(t, after, "dvp", "store must reflect a bundle delivered after the first build")
 }
@@ -223,13 +223,14 @@ vcd:
 	return path
 }
 
-// installProviderBundle lays out an unpacked bundle from the files the provider
-// module ships, so the test breaks whenever the shipped artifact stops loading.
-func installProviderBundle(t *testing.T, downloadDir, dirName, moduleDir string) {
+// installProviderBundle lays the settings of a provider module out the way its unpacked bundle
+// carries them and returns the bundle directory.
+func installProviderBundle(t *testing.T, downloadDir, dirName, moduleDir string) string {
 	t.Helper()
 
 	moduleCandi := filepath.Join("..", "..", "..", "..", "..", "modules", moduleDir, "candi")
-	tm := filepath.Join(downloadDir, dirName, "terraform-manager")
+	bundleDir := filepath.Join(downloadDir, dirName)
+	tm := filepath.Join(bundleDir, "terraform-manager")
 	require.NoError(t, os.MkdirAll(tm, 0o755))
 
 	for _, name := range []string{versionFile, planRulesFilename} {
@@ -237,17 +238,19 @@ func installProviderBundle(t *testing.T, downloadDir, dirName, moduleDir string)
 		require.NoError(t, err)
 		require.NoError(t, os.WriteFile(filepath.Join(tm, name), data, 0o644))
 	}
+
+	return bundleDir
 }
 
 // Yandex settings come from its bundle now that candi carries no yandex entry.
 // The fixture is what werf packs from the module, so this breaks if the module
-// stops shipping either half of the pair (a bundle without plan_rules.yml is
-// dropped whole by attachBundlePlanRules).
+// stops shipping either half of the pair (a bundle without plan_rules.yml fails
+// in attachBundlePlanRules).
 func TestBundleSettingsForYandexComeFromModuleFiles(t *testing.T) {
 	downloadDir := t.TempDir()
-	installProviderBundle(t, downloadDir, yandex.ProviderName, "030-cloud-provider-yandex")
+	bundleDir := installProviderBundle(t, downloadDir, yandex.ProviderName+"@sha256:current", "030-cloud-provider-yandex")
 
-	store, err := loadOrGetStore(t.Context(), writeCandiVersions(t), downloadDir)
+	store, err := loadOrGetStore(t.Context(), writeCandiVersions(t), bundleDir)
 	require.NoError(t, err)
 
 	set, ok := store[yandex.ProviderName]
@@ -262,11 +265,9 @@ func TestBundleSettingsForYandexComeFromModuleFiles(t *testing.T) {
 	require.Nil(t, rule.FieldEquals, "a yandex_compute_instance change is always a VM change")
 }
 
-// Only the canonical <provider> symlink is read: the digest dir it points at is
-// also on disk (as are digest dirs of previously delivered versions and, mid
-// unpack, an incomplete *.partial tree), and picking one of those would make the
-// effective settings depend on directory ordering.
-func TestBundleSettingsSkipDigestAndPartialDirs(t *testing.T) {
+// Only the bundle of the operation is read: digest dirs of other builds and, mid
+// unpack, an incomplete *.partial tree lie beside it in the same download dir.
+func TestBundleSettingsComeOnlyFromTheGivenBundle(t *testing.T) {
 	downloadDir := t.TempDir()
 	writeBundle := func(dir, cloudName string) {
 		tm := filepath.Join(downloadDir, dir, "terraform-manager")
@@ -291,9 +292,8 @@ kubernetes:
 	writeBundle("dvp@sha256:current", "DVP")
 	writeBundle("dvp@sha256:stale", "STALEDVP")
 	writeBundle("dvp@sha256:broken.partial", "PARTIALDVP")
-	require.NoError(t, os.Symlink("dvp@sha256:current", filepath.Join(downloadDir, "dvp")))
 
-	store, err := loadOrGetStore(t.Context(), writeCandiVersions(t), downloadDir)
+	store, err := loadOrGetStore(t.Context(), writeCandiVersions(t), filepath.Join(downloadDir, "dvp@sha256:current"))
 	require.NoError(t, err)
 
 	require.Contains(t, store, "dvp")
@@ -301,31 +301,104 @@ kubernetes:
 	require.NotContains(t, store, "partialdvp")
 }
 
-// In-tree providers unpack their terraform-manager bundle into the same
-// download dir, and their fragment describes only themselves — no plan_rules,
-// and only the one tool version they use. Those bundles must be ignored: candi
-// already carries the provider, and treating them as external once broke every
-// provider at once.
-func TestBundleSettingsIgnoreInTreeAndBrokenBundles(t *testing.T) {
-	downloadDir := t.TempDir()
+// The bundle is the build the cluster runs, so a fragment dhctl cannot use is an error naming it. An
+// in-tree provider's terraform-manager image carries only its own fragment, without plan_rules.yml:
+// candi knows that provider, so the fragment is dropped and candi's settings stay.
+func TestBundleSettingsFragments(t *testing.T) {
+	writeFile := func(t *testing.T, bundleDir, name, content string) {
+		t.Helper()
+		tm := filepath.Join(bundleDir, terraformManagerDir)
+		require.NoError(t, os.MkdirAll(tm, 0o755))
+		require.NoError(t, os.WriteFile(filepath.Join(tm, name), []byte(content), 0o644))
+	}
 
-	inTree := filepath.Join(downloadDir, "aws", "terraform-manager")
-	require.NoError(t, os.MkdirAll(inTree, 0o755))
-	awsFragment, err := os.ReadFile(filepath.Join("..", "..", "..", "..", "..", "modules", "030-cloud-provider-aws", "candi", versionFile))
+	tests := []struct {
+		name    string
+		write   func(t *testing.T, bundleDir string)
+		wantErr string
+	}{
+		{
+			name:  "fragment of a provider candi knows",
+			write: writeAWSFragment,
+		},
+		{
+			name: "unparsable fragment",
+			write: func(t *testing.T, bundleDir string) {
+				writeFile(t, bundleDir, versionFile, "not yaml: [{")
+			},
+			wantErr: "parse tool versions",
+		},
+		{
+			// Two providers are malformed even when candi knows one of them and would drop it.
+			name: "two providers, one of them known to candi",
+			write: func(t *testing.T, bundleDir string) {
+				writeFile(t, bundleDir, versionFile, `aws:
+  namespace: hashicorp
+  cloudName: AWS
+  type: aws
+  version: "5.83.1"
+  artifact: terraform-provider-aws
+  artifactBinary: terraform-provider-aws
+  destinationBinary: terraform-provider-aws
+  vmResourceType: aws_instance
+  useOpentofu: false
+kubernetes:
+  namespace: hashicorp
+  cloudName: DVP
+  type: kubernetes
+  version: "2.38.0"
+  artifact: terraform-provider-kubernetes
+  artifactBinary: terraform-provider-kubernetes
+  destinationBinary: terraform-provider-kubernetes
+  vmResourceType: kubernetes_manifest
+  useOpentofu: true
+`)
+				writeFile(t, bundleDir, planRulesFilename, "vmResource:\n  type: kubernetes_manifest\n")
+			},
+			wantErr: "must describe exactly one provider, got 2",
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			bundleDir := filepath.Join(t.TempDir(), "bundle")
+			tc.write(t, bundleDir)
+
+			store, err := loadOrGetStore(t.Context(), writeCandiVersions(t), bundleDir)
+			if tc.wantErr != "" {
+				require.ErrorContains(t, err, filepath.Join(bundleDir, terraformManagerDir, versionFile))
+				require.ErrorContains(t, err, tc.wantErr)
+				return
+			}
+
+			require.NoError(t, err)
+			require.Equal(t, []string{"4.62.0"}, store["aws"].Versions(), "candi stays authoritative for in-tree providers")
+		})
+	}
+}
+
+// A complete bundle under a name candi does not know may still describe a provider candi ships.
+// candi's settings for that provider stay.
+func TestBundleSettingsNeverReplaceACandiProvider(t *testing.T) {
+	bundleDir := filepath.Join(t.TempDir(), "ensother@sha256:x")
+	writeAWSFragment(t, bundleDir)
+	planRules := filepath.Join(bundleDir, "terraform-manager", planRulesFilename)
+	require.NoError(t, os.WriteFile(planRules, []byte("vmResource:\n  type: aws_instance\n"), 0o644))
+
+	store, err := loadOrGetStore(t.Context(), writeCandiVersions(t), bundleDir)
 	require.NoError(t, err)
-	require.NoError(t, os.WriteFile(filepath.Join(inTree, versionFile), awsFragment, 0o644))
+	require.Equal(t, []string{"4.62.0"}, store["aws"].Versions(), "the fragment ships 5.83.1, candi 4.62.0")
+}
 
-	broken := filepath.Join(downloadDir, "brokenprovider", "terraform-manager")
-	require.NoError(t, os.MkdirAll(broken, 0o755))
-	require.NoError(t, os.WriteFile(filepath.Join(broken, versionFile), []byte("not yaml: [{"), 0o644))
+// writeAWSFragment puts the terraform_versions.yml the aws module ships into a bundle dir.
+func writeAWSFragment(t *testing.T, bundleDir string) {
+	t.Helper()
 
-	installProviderBundle(t, downloadDir, "dvp", "030-cloud-provider-dvp")
-
-	store, err := loadOrGetStore(t.Context(), writeCandiVersions(t), downloadDir)
-	require.NoError(t, err, "one unusable bundle must not take down the whole store")
-	require.Contains(t, store, "aws", "candi stays authoritative for in-tree providers")
-	require.Contains(t, store, "dvp")
-	require.NotContains(t, store, "brokenprovider")
+	tm := filepath.Join(bundleDir, "terraform-manager")
+	require.NoError(t, os.MkdirAll(tm, 0o755))
+	fragment, err := os.ReadFile(filepath.Join("..", "..", "..", "..", "..", "modules", "030-cloud-provider-aws", "candi", versionFile))
+	require.NoError(t, err)
+	require.NoError(t, os.WriteFile(filepath.Join(tm, versionFile), fragment, 0o644))
 }
 
 // loadProvidersForTest keeps the tests focused on the providers a versions file

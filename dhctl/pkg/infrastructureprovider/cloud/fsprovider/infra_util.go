@@ -16,12 +16,11 @@ package fsprovider
 
 import (
 	"context"
+	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
 	"sync"
-
-	"github.com/name212/govalue"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config/digests"
@@ -35,10 +34,18 @@ var (
 	opentofuImageName  = "baseOpentofu"
 )
 
+const (
+	terraformManagerDir = "terraform-manager"
+	// baseTerraform and baseOpentofu live in this section too.
+	installerToolsSection = "terraformManager"
+)
+
 type InfrastructureUtilProvider struct {
 	m sync.Mutex
 
 	binariesDir string
+	// download replaces the registry pull in tests.
+	download image.DownloadFunc
 }
 
 func newInfrastructureUtilProvider(binariesDir string) *InfrastructureUtilProvider {
@@ -65,18 +72,36 @@ func (p *InfrastructureUtilProvider) setupBinary(ctx context.Context, conf *conf
 	}
 
 	// Edition-wide binaries, not provider ones: no provider module publishes them.
-	downloaded := filepath.Join(conf.DownloadRootDir, binaryName)
-	if _, err := os.Stat(downloaded); err != nil {
-		if err := downloadImage(ctx, conf, imageName, "terraformManager", conf.ShowProgress); err != nil {
-			return err
-		}
+	dir, err := ensureInstallerImage(ctx, conf, binaryName, installerToolsSection, imageName, p.download)
+	if err != nil {
+		return err
 	}
 
-	return fsutils.CreateLinkIfNotExists(ctx, downloaded, checkIsExecFile, destination)
+	return fsutils.CreateLinkIfNotExists(ctx, filepath.Join(dir, binaryName), checkIsExecFile, destination)
 }
 
-// imageSource is where to pull an installer-side image from: the registry to talk to and the prefix
-// its images are named by.
+// ensureInstallerImage unpacks the image this installer's digests name and returns its directory.
+// The digest is read on every call: an in-cluster dhctl takes it from a file that changes under it.
+func ensureInstallerImage(ctx context.Context, conf *config.MetaConfig, dirName, section, imageName string, download image.DownloadFunc) (string, error) {
+	digest, err := digests.GetImage(section, imageName)
+	if err != nil {
+		return "", fmt.Errorf("get %s image digest from section %s: %w", imageName, section, err)
+	}
+
+	return image.EnsureUnpacked(ctx, image.UnpackRequest{
+		Root:   conf.DownloadRootDir,
+		Name:   dirName,
+		Digest: digest,
+		Registry: func(context.Context) (*image.RegistryConfig, error) {
+			return imageSource(conf)
+		},
+	}, image.EnsureUnpackedOptions{
+		Download:     download,
+		ShowProgress: conf.ShowProgress,
+	})
+}
+
+// imageSource is the registry to pull an installer-side image from.
 //
 // Two sources, and which one applies is decided by whether the legacy field says anything at all.
 // `MetaConfig.DeckhouseConfig` is a struct value rather than a pointer, so the nil check this used to
@@ -90,11 +115,11 @@ func (p *InfrastructureUtilProvider) setupBinary(ctx context.Context, conf *conf
 // address anybody typed. `conf.Registry` is the resolved registry for every mode, so reaching for it
 // is the general answer rather than a special case — the legacy field simply keeps precedence
 // wherever it does state a registry.
-func imageSource(conf *config.MetaConfig) (*image.RegistryConfig, string, error) {
+func imageSource(conf *config.MetaConfig) (*image.RegistryConfig, error) {
 	if dc := conf.DeckhouseConfig; dc.RegistryDockerCfg != "" && dc.ImagesRepo != "" {
 		cfg, err := image.DecodeDockerConfig(dc.RegistryDockerCfg)
 		if err != nil {
-			return nil, "", err
+			return nil, err
 		}
 		scheme := "HTTPS"
 		if upper := strings.ToUpper(dc.RegistryScheme); upper == "HTTP" || upper == "HTTPS" {
@@ -106,30 +131,11 @@ func imageSource(conf *config.MetaConfig) (*image.RegistryConfig, string, error)
 			// private CA fails here with x509 unless the CA is carried over by hand.
 			regConfig.SetCA(dc.RegistryCA)
 		}
-		return regConfig, dc.ImagesRepo + "@", err
+		return regConfig, err
 	}
 
 	remote := conf.Registry.Settings.RemoteData
 	regConfig, err := image.NewRegistryConfig(
 		string(remote.Scheme), remote.ImagesRepo, remote.Username, remote.Password, remote.CA)
-	return regConfig, remote.ImagesRepo + "@", err
-}
-
-func downloadImage(ctx context.Context, conf *config.MetaConfig, name, section string, showProgress bool) error {
-	regConfig, imageName, err := imageSource(conf)
-
-	if govalue.IsNil(conf.ShowProgress) {
-		conf.ShowProgress = false
-	}
-
-	if err != nil {
-		return err
-	}
-	tfImage, err := digests.GetImage(section, name)
-	if err != nil {
-		return err
-	}
-	imageName += tfImage
-
-	return image.DownloadAndUnpackImage(ctx, imageName, conf.DownloadRootDir, conf.DownloadCacheDir, *regConfig, showProgress)
+	return regConfig, err
 }

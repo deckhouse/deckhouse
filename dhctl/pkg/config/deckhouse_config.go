@@ -71,10 +71,9 @@ type DeckhouseInstaller struct {
 
 	InstallerVersion string
 
-	// VersionFilePath is the absolute path to the deckhouse version file
-	// embedded in the installer image. DownloadDir is the directory where
-	// the deckhouse image is unpacked (a fallback location for the version
-	// file). Both are required for GetImageTag(forceVersionTag=true).
+	// VersionFilePath is the deckhouse version file embedded in the installer image. DownloadDir
+	// holds the unpacked candi image, whose <DownloadDir>/candi@<digest>/deckhouse/version is the
+	// fallback. Both are required for GetImageTag(forceVersionTag=true).
 	VersionFilePath string
 	DownloadDir     string
 
@@ -126,14 +125,12 @@ func (c *DeckhouseInstaller) GetRemoteImage(ctx context.Context, forceVersionTag
 	return fmt.Sprintf("%s:%s", c.Registry.Settings.ToModel().RemoteImagesRepo, tag), nil
 }
 
-// ReadVersionTagFromInstallerContainer reads the installer image version tag.
-// versionFile is the absolute path to the embedded version file; downloadDir
-// is the directory where the deckhouse image is unpacked (used as a fallback
-// location for the version file).
+// ReadVersionTagFromInstallerContainer reads the installer image version tag from versionFile,
+// falling back to <downloadDir>/candi@<digest>/deckhouse/version of the unpacked candi image.
 func ReadVersionTagFromInstallerContainer(ctx context.Context, versionFile, downloadDir string) (string, bool) {
 	rawFile, err := os.ReadFile(versionFile)
 	if err != nil {
-		rawFile, err = os.ReadFile(filepath.Join(downloadDir, "deckhouse", "version"))
+		rawFile, err = readUnpackedCandiVersion(downloadDir)
 		if err != nil {
 			dhlog.FromContext(ctx).WarnContext(ctx, strings.TrimRight(fmt.Sprintf(
 				"Could not read %s: %v\nWill fall back to installation from release channel or dev branch.",
@@ -149,6 +146,22 @@ func ReadVersionTagFromInstallerContainer(ctx context.Context, versionFile, down
 	}
 
 	return tag, true
+}
+
+// readUnpackedCandiVersion reads the version file of the candi image this installer unpacks under
+// downloadDir.
+func readUnpackedCandiVersion(downloadDir string) ([]byte, error) {
+	candiRoot, err := options.CandiRoot(downloadDir)
+	if err != nil {
+		return nil, err
+	}
+
+	content, err := os.ReadFile(filepath.Join(candiRoot, "deckhouse", "version"))
+	if err != nil {
+		return nil, fmt.Errorf("read unpacked candi version: %w", err)
+	}
+
+	return content, nil
 }
 
 func PrepareDeckhouseInstallConfig(ctx context.Context, metaConfig *MetaConfig, globalOptions *options.GlobalOptions) (*DeckhouseInstaller, error) {

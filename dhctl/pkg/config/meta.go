@@ -18,11 +18,11 @@ import (
 	"context"
 	"encoding/base64"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"maps"
 	"net"
 	"os"
-	"path/filepath"
 	"sort"
 	"strconv"
 	"strings"
@@ -81,8 +81,10 @@ type MetaConfig struct {
 	ResourceManagementTimeout string                  `json:"resourceManagementTimeout,omitempty"`
 	ClusterMasterEndpoints    []ClusterMasterEndpoint `json:"-"`
 	DownloadRootDir           string                  `json:"-"`
-	DownloadCacheDir          string                  `json:"-"`
-	ShowProgress              bool                    `json:"-"`
+	// ProviderBundleDir is the unpacked bundle of the external provider this configuration was
+	// parsed with. Empty for a static cluster and for a provider whose schemas ship in candi.
+	ProviderBundleDir string `json:"-"`
+	ShowProgress      bool   `json:"-"`
 
 	// VersionFilePath is the absolute path to the deckhouse version file
 	// embedded in the installer image. Required by LoadInstallerVersion and
@@ -115,7 +117,7 @@ const (
 )
 
 func validateProviderConfig(ctx context.Context, validatorProvider MetaConfigValidatorProvider, m *MetaConfig) (*MetaConfig, error) {
-	validate := validatorProvider(ctx, m.ProviderName, m.DownloadRootDir)
+	validate := validatorProvider(ctx, m.ProviderName, m.ProviderBundleDir)
 	if validate == nil {
 		return m, nil
 	}
@@ -1351,12 +1353,11 @@ func (m *MetaConfig) deckhouseImageTag(ctx context.Context) string {
 func (m *MetaConfig) LoadInstallerVersion() error {
 	rawFile, err := os.ReadFile(m.VersionFilePath)
 	if err != nil {
-		// fallback to the unpacked deckhouse image location
-		fallbackPath := filepath.Join(m.DownloadRootDir, "deckhouse", "version")
-		rawFile, err = os.ReadFile(fallbackPath)
-		if err != nil {
-			return fmt.Errorf("could not read both %s and %s: %w", m.VersionFilePath, fallbackPath, err)
+		fallback, fallbackErr := readUnpackedCandiVersion(m.DownloadRootDir)
+		if fallbackErr != nil {
+			return fmt.Errorf("read installer version: %w", errors.Join(err, fallbackErr))
 		}
+		rawFile = fallback
 	}
 
 	m.InstallerVersion = strings.TrimSpace(string(rawFile))

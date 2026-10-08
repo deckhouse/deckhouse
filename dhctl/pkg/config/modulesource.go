@@ -18,10 +18,13 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"os"
 	"path"
+	"path/filepath"
 	"strings"
 	"time"
 
+	crv1 "github.com/google/go-containerregistry/pkg/v1"
 	"github.com/iancoleman/strcase"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
@@ -36,14 +39,14 @@ import (
 	dhlog "github.com/deckhouse/lib-dhctl/pkg/logger"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app/options"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/config/digests"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider/providerdir"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/image"
 )
 
 const (
 	ModuleSourceKind       = "ModuleSource"
 	ModulePullOverrideKind = "ModulePullOverride"
-
-	terraformManagerImageName = "terraformManager"
 
 	// The controller's built-in update policy, applied when no ModuleUpdatePolicy exists.
 	defaultModuleReleaseChannel = "stable"
@@ -303,8 +306,7 @@ func configModuleDocs(docs []string) providerModuleLookup {
 
 // Walks the module chain: release image gives the version, module image gives images_digests.json,
 // its terraformManager entry gives the bundle. A zero ref means the provider is not external. An
-// error never falls back to the embedded digests — the installer's build is not the one this
-// cluster runs; the caller falls back to the bundle this cluster already delivered instead.
+// error never falls back to the embedded digests: the installer's build is not the one this cluster runs.
 func resolveModuleProviderBundle(ctx context.Context, provider string, lookup providerModuleLookup, globalOptions *options.GlobalOptions) (providerBundleRef, error) {
 	if lookup == nil {
 		return providerBundleRef{}, nil
@@ -334,26 +336,98 @@ func resolveModuleProviderBundle(ctx context.Context, provider string, lookup pr
 		return providerBundleRef{}, err
 	}
 
-	bundle, err := svc.Fetch(ctx, moduleTag)
+	digest, err := moduleBundleDigest(ctx, svc, moduleName, moduleRepo, moduleTag, globalOptions)
 	if err != nil {
-		return providerBundleRef{}, fmt.Errorf("read images digests of %s:%s: %w", moduleRepo, moduleTag, err)
+		return providerBundleRef{}, err
 	}
 
 	// Nothing else records which build the bundle came from, and properties.version only
 	// refreshes on a deckhouse restart, so converge can legitimately resolve the previous one.
 	dhlog.FromContext(ctx).InfoContext(ctx, fmt.Sprintf("Provider bundle resolved from module %s:%s", moduleRepo, moduleTag))
 
-	// A module image ships a flat images_digests.json, so the module selector stays empty.
-	digest, _ := bundle.Digests().Lookup("", terraformManagerImageName)
-	if digest == "" {
-		return providerBundleRef{}, fmt.Errorf("module %s:%s ships no %q image digest, so there is no provider bundle to unpack", moduleRepo, moduleTag, terraformManagerImageName)
-	}
-
 	return providerBundleRef{
 		Image:    moduleRepo + "@" + digest,
 		Digest:   digest,
 		Registry: conf,
 	}, nil
+}
+
+const providerBundleDigestFile = "provider-bundle-digest"
+
+// moduleBundleDigest reads which bundle the module image at tag names. The image itself is read
+// only the first time its digest is seen: the answer is kept beside the unpacked images, keyed by
+// the image digest, so a tag that was pushed over is read again.
+func moduleBundleDigest(ctx context.Context, svc *module.Service, moduleName, moduleRepo, tag string, globalOptions *options.GlobalOptions) (string, error) {
+	imageDigest, err := svc.GetDigest(ctx, tag)
+	if err != nil {
+		return "", fmt.Errorf("get digest of %s:%s: %w", moduleRepo, tag, err)
+	}
+
+	downloadDir := withDownloadDir(globalOptions).DownloadDir
+	dir := providerdir.DigestDir(downloadDir, moduleName, imageDigest.String())
+
+	if digest, recorded := recordedBundleDigest(ctx, dir); recorded {
+		return digest, nil
+	}
+
+	// By digest, not by tag: the tag may have been pushed over since the digest request.
+	bundle, err := svc.Fetch(ctx, imageDigest.String())
+	if err != nil {
+		return "", fmt.Errorf("read images digests of %s:%s: %w", moduleRepo, tag, err)
+	}
+
+	// A module image ships a flat images_digests.json, so the module selector stays empty.
+	digest, _ := bundle.Digests().Lookup("", digests.TerraformManagerImage)
+	if digest == "" {
+		return "", fmt.Errorf("module %s:%s ships no %q image digest, so there is no provider bundle to unpack", moduleRepo, tag, digests.TerraformManagerImage)
+	}
+
+	if err := recordBundleDigest(dir, digest); err != nil {
+		dhlog.FromContext(ctx).WarnContext(ctx, fmt.Sprintf("Record provider bundle digest of %s:%s: %v", moduleRepo, tag, err))
+	}
+
+	return digest, nil
+}
+
+// recordedBundleDigest reads the record. One that is missing, unreadable or not a digest is no record.
+func recordedBundleDigest(ctx context.Context, dir string) (string, bool) {
+	path := filepath.Join(dir, providerBundleDigestFile)
+	recorded, err := os.ReadFile(path)
+	if err != nil {
+		return "", false
+	}
+
+	digest := strings.TrimSpace(string(recorded))
+	if _, err := crv1.NewHash(digest); err != nil {
+		dhlog.FromContext(ctx).DebugContext(ctx, fmt.Sprintf("Ignore provider bundle digest record %s: %v", path, err))
+		return "", false
+	}
+
+	return digest, true
+}
+
+// recordBundleDigest writes the record aside and renames it into place, so a reader running at the
+// same time finds the whole record or none.
+func recordBundleDigest(dir, digest string) error {
+	if err := os.MkdirAll(dir, 0o755); err != nil {
+		return fmt.Errorf("create provider bundle digest record dir %s: %w", dir, err)
+	}
+
+	tmp, err := os.CreateTemp(dir, providerBundleDigestFile+".*")
+	if err != nil {
+		return fmt.Errorf("create provider bundle digest record: %w", err)
+	}
+	if _, err := tmp.WriteString(digest); err != nil {
+		return errors.Join(fmt.Errorf("write provider bundle digest record: %w", err), tmp.Close(), os.Remove(tmp.Name()))
+	}
+	if err := tmp.Close(); err != nil {
+		return errors.Join(fmt.Errorf("close provider bundle digest record: %w", err), os.Remove(tmp.Name()))
+	}
+	if err := os.Rename(tmp.Name(), filepath.Join(dir, providerBundleDigestFile)); err != nil {
+		return errors.Join(fmt.Errorf("move provider bundle digest record into place: %w", err), os.Remove(tmp.Name()))
+	}
+
+	return nil
 }
 
 // Which image of the module to read. The controller pulls exactly <repo>/<module>:<imageTag> for

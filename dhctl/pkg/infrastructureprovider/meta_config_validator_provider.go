@@ -56,7 +56,7 @@ func MetaConfigValidatorProvider() config.MetaConfigValidatorProvider {
 	return selectValidator
 }
 
-func selectValidator(ctx context.Context, provider, downloadRootDir string) config.ProviderValidateFunc {
+func selectValidator(ctx context.Context, provider, bundleDir string) config.ProviderValidateFunc {
 	switch provider {
 	case "":
 		// static cluster
@@ -64,7 +64,7 @@ func selectValidator(ctx context.Context, provider, downloadRootDir string) conf
 	case vcd.ProviderName:
 		return vcd.NewMetaConfigValidator(true).Validate
 	default:
-		if binaryPath := findExternalValidatorBinary(downloadRootDir, provider); binaryPath != "" {
+		if binaryPath := findExternalValidatorBinary(bundleDir); binaryPath != "" {
 			return func(ctx context.Context, input config.ProviderInput) error {
 				return external.Validate(ctx, binaryPath, input)
 			}
@@ -78,24 +78,27 @@ func selectValidator(ctx context.Context, provider, downloadRootDir string) conf
 		// Hard-fail instead of silently skipping the provider's own
 		// pre-bootstrap checks: a broken bundle must not reach the
 		// infrastructure.
-		err := fmt.Errorf("external validator for provider %q not found: provider plugins directory was not configured", provider)
-		if downloadRootDir != "" {
-			err = fmt.Errorf("external validator for provider %q not found at %q: ensure the provider OCI bundle is unpacked and contains the validator binary", provider, providerdir.ValidatorPath(downloadRootDir, provider))
+		err := fmt.Errorf("external validator for provider %q not found: the provider bundle was not prepared", provider)
+		if bundleDir != "" {
+			err = fmt.Errorf("external validator for provider %q not found at %q: ensure the provider OCI bundle is unpacked and contains the validator binary", provider, providerdir.ValidatorPath(bundleDir))
 		}
 		dhlog.FromContext(ctx).ErrorContext(ctx, err.Error())
 		return func(context.Context, config.ProviderInput) error { return err }
 	}
 }
 
-func findExternalValidatorBinary(pluginsDir, providerName string) string {
-	if pluginsDir == "" {
+func findExternalValidatorBinary(bundleDir string) string {
+	if bundleDir == "" {
 		return ""
 	}
-	path := providerdir.ValidatorPath(pluginsDir, providerName)
+	path := providerdir.ValidatorPath(bundleDir)
 	info, err := os.Stat(path)
-	if err != nil || info.IsDir() || info.Mode()&0o111 == 0 {
-		// A non-executable file is not a usable validator; treat it as missing
-		// so the caller surfaces the proper missing-validator diagnostic.
+	if err != nil {
+		return ""
+	}
+	// A non-executable file is not a usable validator; treat it as missing
+	// so the caller surfaces the proper missing-validator diagnostic.
+	if info.IsDir() || info.Mode()&0o111 == 0 {
 		return ""
 	}
 	return path

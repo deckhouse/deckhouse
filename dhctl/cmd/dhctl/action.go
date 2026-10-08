@@ -297,10 +297,9 @@ func (i *actionIniter) checkAndAcquireTmpLock(c *kingpin.ParseContext, tmpDir st
 
 func (i *actionIniter) initTmpDirCleaner(c *kingpin.ParseContext, tmpDir string) onShutdownFunc {
 	clearTmpParams := cache.ClearTmpParams{
-		IsDebug:          i.params.isDebug,
-		DefaultTmpDir:    options.DefaultTmpDir(),
-		DownloadCacheDir: i.opts.Global.DownloadCacheDir,
-		TmpDir:           tmpDir,
+		IsDebug:       i.params.isDebug,
+		DefaultTmpDir: options.DefaultTmpDir(),
+		TmpDir:        tmpDir,
 	}
 
 	// _server is special command for running action eg bootstrap as standalone process

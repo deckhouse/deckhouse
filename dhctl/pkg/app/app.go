@@ -56,7 +56,8 @@ func GlobalFlags(cmd *kingpin.Application, o *options.GlobalOptions) {
 		Envar(configEnvName("DOWNLOAD_DIR")).
 		Default(o.DownloadDir).
 		StringVar(&o.DownloadDir)
-	cmd.Flag("download-cache-dir", "Set the directory for the downloaded image layers cache.").
+	cmd.Flag("download-cache-dir", "Deprecated and ignored: images are kept unpacked by digest under --download-dir.").
+		Hidden().
 		Envar(configEnvName("DOWNLOAD_CACHE_DIR")).
 		Default(o.DownloadCacheDir).
 		StringVar(&o.DownloadCacheDir)
@@ -64,8 +65,6 @@ func GlobalFlags(cmd *kingpin.Application, o *options.GlobalOptions) {
 		Default("false").
 		Short('v').
 		BoolVar(&o.ShowProgress)
-
-	options.ResolveAndApplyPaths(o)
 }
 
 // DefineConfigFlags registers --config (required).

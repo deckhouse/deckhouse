@@ -29,7 +29,6 @@ import (
 	dhlog "github.com/deckhouse/lib-dhctl/pkg/logger"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app/options"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider/providerdir"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/input"
 )
 
@@ -55,14 +54,11 @@ func cniBootstrapPath(m *MetaConfig, globalOptions *options.GlobalOptions) strin
 	if _, err := os.Stat(path); err == nil {
 		return path
 	}
-	downloadRoot := m.DownloadRootDir
-	if downloadRoot == "" && globalOptions != nil {
-		downloadRoot = globalOptions.DownloadDir
-	}
-	if downloadRoot == "" {
+	if m.ProviderBundleDir == "" {
 		return path
 	}
-	return filepath.Join(providerdir.ProviderDir(downloadRoot, m.ProviderName), cniBootstrapFileName)
+
+	return filepath.Join(m.ProviderBundleDir, cniBootstrapFileName)
 }
 
 // sigs.k8s.io/yaml parses by converting YAML to JSON and unmarshalling with

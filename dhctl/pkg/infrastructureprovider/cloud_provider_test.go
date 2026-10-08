@@ -39,6 +39,7 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider/cloud/fsprovider"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider/cloud/gcp"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider/cloud/yandex"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider/providerdir"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/tests"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/fs"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/stringsutil"
@@ -50,6 +51,8 @@ const (
 
 	gcpTestLayout    = "without-nat"
 	gcpPluginVersion = "4.85.0"
+
+	yandexTestBundleDigest = "sha256:test"
 
 	modulesRootDir      = "modules"
 	layoutsRootDir      = "layouts"
@@ -84,7 +87,8 @@ func getTestFSDIParams(t *testing.T, logger *slog.Logger) *fsprovider.DIParams {
 		BinariesDir:       "/dhctl-tests/bin",
 		CloudProviderDir:  cloudProvidersDir,
 		PluginsDir:        "/dhctl-tests/plugins",
-		DownloadDir:       downloadDir,
+		// Yandex is the one external provider here; candi carries gcp.
+		ProviderBundleDir: providerdir.DigestDir(downloadDir, yandex.ProviderName, yandexTestBundleDigest),
 	}
 }
 
@@ -190,6 +194,39 @@ func TestCloudProviderGetForStatic(t *testing.T) {
 	require.IsType(t, &infrastructure.DummyCloudProvider{}, provider, "provider should be a DummyCloudProvider for static cluster")
 	// do not cache providers for static
 	assertProvidersCacheIsEmpty(t, params.ProvidersCache)
+}
+
+// An external provider's settings exist only in its bundle, so the cloud provider of a cluster is
+// built from the bundle its MetaConfig was parsed with.
+func TestCloudProviderGetReadsTheBundleOfTheMetaConfig(t *testing.T) {
+	candiVersions := filepath.Join(t.TempDir(), "terraform_versions.yml")
+	require.NoError(t, os.WriteFile(candiVersions, []byte("opentofu: 1.12.0\nterraform: 0.14.8\n"), 0o644))
+
+	bundleDir := filepath.Join(t.TempDir(), "dvp@sha256:aaa")
+	tm := filepath.Join(bundleDir, "terraform-manager")
+	require.NoError(t, os.MkdirAll(tm, 0o755))
+	for _, name := range []string{"terraform_versions.yml", "plan_rules.yml"} {
+		data, err := os.ReadFile(filepath.Join("..", "..", "..", "modules", "030-cloud-provider-dvp", "candi", name))
+		require.NoError(t, err)
+		require.NoError(t, os.WriteFile(filepath.Join(tm, name), data, 0o644))
+	}
+
+	getter := CloudProviderGetter(CloudProviderGetterParams{
+		TmpDir:         t.TempDir(),
+		ProvidersCache: newCloudProvidersMapCache(),
+		GlobalOptions: &options.GlobalOptions{
+			InfrastructureVersions: candiVersions,
+			DhctlPath:              t.TempDir(),
+			CandiDir:               t.TempDir(),
+			DownloadDir:            t.TempDir(),
+		},
+	})
+
+	cfg := &config.MetaConfig{ProviderName: "dvp", ClusterPrefix: "test", Layout: "standard", ProviderBundleDir: bundleDir}
+	cfg.UUID = "2b0c6d3e-9f1a-4c57-8e2d-7a4b5c6d7e8f"
+
+	_, err := getter(t.Context(), cfg)
+	require.NoError(t, err)
 }
 
 func TestCloudProviderGet(t *testing.T) {
@@ -944,8 +981,8 @@ func TestTofuApplyWithCreatingWorkerFilesInRoot(t *testing.T) {
 // each one is checked and linked separately, both on a developer machine (where
 // nothing is materialised) and in CI (where only external providers are absent).
 //
-// Returns the download dir to use as DIParams.DownloadDir: it holds a bundle-like
-// tree for the providers candi has no terraform_versions.yml entry for.
+// Returns the download dir the bundle-like tree for the providers candi has no
+// terraform_versions.yml entry for is laid out under.
 func prepareLocalRun(t *testing.T, logger *slog.Logger) string {
 	stat, err := os.Stat(cloudProvidersDir)
 	switch {
@@ -1035,29 +1072,23 @@ func linkProviderCandiEntry(t *testing.T, logger *slog.Logger, source, dest stri
 	})
 }
 
-// prepareProviderBundleSettings fakes the part of an unpacked provider bundle the
-// settings store reads: <downloadDir>/<provider>/terraform-manager/{terraform_versions.yml,plan_rules.yml}.
-// External providers (yandex) carry no entry in candi's terraform_versions.yml, so
-// without this their settings — plugin version, useOpentofu — would be unknown.
-// plan_rules.yml is mandatory for a bundle: attachBundlePlanRules drops the whole
-// bundle when it is missing. Providers candi already knows (gcp) are skipped by
-// mergeBundleSettings anyway.
+// prepareProviderBundleSettings lays out the settings half of yandex's bundle, which candi lacks,
+// at the dir getTestFSDIParams hands over. Nothing is laid out when the module lacks either file.
 func prepareProviderBundleSettings(t *testing.T) string {
 	t.Helper()
 
 	downloadDir := t.TempDir()
-	for moduleName, moduleDir := range cloudProviderModules {
-		versions := filepath.Join(moduleDir, "terraform_versions.yml")
-		planRules := filepath.Join(moduleDir, "plan_rules.yml")
-		if !isFileForTest(versions) || !isFileForTest(planRules) {
-			continue
-		}
-
-		bundleDir := filepath.Join(downloadDir, moduleName, "terraform-manager")
-		require.NoError(t, os.MkdirAll(bundleDir, 0o755))
-		require.NoError(t, os.Symlink(versions, filepath.Join(bundleDir, "terraform_versions.yml")))
-		require.NoError(t, os.Symlink(planRules, filepath.Join(bundleDir, "plan_rules.yml")))
+	moduleDir := cloudProviderModules[yandex.ProviderName]
+	versions := filepath.Join(moduleDir, "terraform_versions.yml")
+	planRules := filepath.Join(moduleDir, "plan_rules.yml")
+	if !isFileForTest(versions) || !isFileForTest(planRules) {
+		return downloadDir
 	}
+
+	tm := filepath.Join(providerdir.DigestDir(downloadDir, yandex.ProviderName, yandexTestBundleDigest), "terraform-manager")
+	require.NoError(t, os.MkdirAll(tm, 0o755))
+	require.NoError(t, os.Symlink(versions, filepath.Join(tm, "terraform_versions.yml")))
+	require.NoError(t, os.Symlink(planRules, filepath.Join(tm, "plan_rules.yml")))
 
 	return downloadDir
 }

@@ -61,7 +61,7 @@ func (p *CloudProviderGetterParams) getProvidersCache(ctx context.Context) Cloud
 	return providersCache
 }
 
-func (p *CloudProviderGetterParams) getFSDIParams(ctx context.Context) (*fsprovider.DIParams, error) {
+func (p *CloudProviderGetterParams) getFSDIParams(ctx context.Context, providerBundleDir string) (*fsprovider.DIParams, error) {
 	if p.FSDIParams != nil {
 		dhlog.FromContext(ctx).DebugContext(ctx, fmt.Sprintf("Using custom FSDIParams: %+v", p.FSDIParams))
 		return p.FSDIParams, nil
@@ -82,7 +82,7 @@ func (p *CloudProviderGetterParams) getFSDIParams(ctx context.Context) (*fsprovi
 		BinariesDir:       filepath.Join(dhctlPath, "bin"),
 		CloudProviderDir:  filepath.Join(p.GlobalOptions.CandiDir, "cloud-providers"),
 		PluginsDir:        filepath.Join(dhctlPath, "plugins"),
-		DownloadDir:       p.GlobalOptions.DownloadDir,
+		ProviderBundleDir: providerBundleDir,
 	}
 
 	if _, err := os.Stat(diDefaultParams.BinariesDir); err != nil {

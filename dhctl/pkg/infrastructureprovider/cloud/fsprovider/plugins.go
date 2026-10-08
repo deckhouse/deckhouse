@@ -16,15 +16,18 @@ package fsprovider
 
 import (
 	"context"
+	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
 	"sync"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/config/digests"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider/cloud"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider/cloud/fsproviderpath"
 	fsutils "github.com/deckhouse/deckhouse/dhctl/pkg/util/fs"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/util/image"
 )
 
 var versionFile = "terraform_versions.yml"
@@ -33,6 +36,8 @@ type pluginsProvider struct {
 	m sync.Mutex
 
 	pluginsDir string
+	// download replaces the registry pull in tests.
+	download image.DownloadFunc
 }
 
 func newPluginsProvider(pluginsDir string) *pluginsProvider {
@@ -46,45 +51,28 @@ func (p *pluginsProvider) DownloadPlugin(ctx context.Context, params cloud.Infra
 	defer p.m.Unlock()
 
 	source := fsproviderpath.GetPluginDir(p.pluginsDir, params.Settings, params.Version.Version, params.Version.Arch)
-	_, err := os.Stat(source)
-	if err == nil {
+	if _, err := os.Stat(source); err == nil {
 		return fsutils.CreateLinkIfNotExists(ctx, source, checkIsExecFile, destination)
 	}
 
 	cloudName := strings.ToLower(params.Settings.CloudName())
-	sectionName := "cloudProvider" + strings.ToUpper(cloudName[:1]) + cloudName[1:]
+	binary := params.Settings.DestinationBinary()
 
-	// Fast-path: if the fallback source binary is already present under DownloadRootDir
-	// (e.g. preserved across `wipe-state` or pre-injected for dev iteration), skip the
-	// terraform-manager image download entirely. Saves ~10-15s per bootstrap and lets
-	// us iterate with a custom-patched provider binary without dhctl clobbering it.
-	//
-	// downloadImage unpacks the terraform-manager image into DownloadRootDir, so its
-	// binary and terraform_versions.yml land in <DownloadRootDir>/terraform-manager.
-	// The fast-path and the download-fallback must read from that same directory.
-	terraformManagerDir := filepath.Join(conf.DownloadRootDir, "terraform-manager")
-	source = filepath.Join(terraformManagerDir, params.Settings.DestinationBinary())
-	if _, statErr := os.Stat(source); statErr == nil {
+	// An external or pinned provider's plugin ships inside its bundle, which the configuration parse
+	// unpacked. That bundle is the build to run, so the installer's own image is no substitute.
+	if conf.ProviderBundleDir != "" {
+		source = filepath.Join(conf.ProviderBundleDir, terraformManagerDir, binary)
+		if _, err := os.Stat(source); err != nil {
+			return fmt.Errorf("find infrastructure plugin in provider bundle %s: %w", conf.ProviderBundleDir, err)
+		}
 		return fsutils.CreateLinkIfNotExists(ctx, source, checkIsExecFile, destination)
 	}
 
-	// External provider bundle: the plugin ships inside the OCI bundle that
-	// EnsureProviderBundle unpacked under <DownloadRootDir>/<provider>/. Using
-	// it avoids the lazy terraform-manager pull entirely, so converge does not
-	// need registry credentials on the MetaConfig at all.
-	bundleTerraformManagerDir := filepath.Join(conf.DownloadRootDir, cloudName, "terraform-manager")
-	source = filepath.Join(bundleTerraformManagerDir, params.Settings.DestinationBinary())
-	if _, statErr := os.Stat(source); statErr == nil {
-		return fsutils.CreateLinkIfNotExists(ctx, source, checkIsExecFile, destination)
-	}
-
-	// Nothing on disk means in-tree by construction: an external provider's bundle is resolved
-	// and unpacked before any configuration is parsed, so the branch above would have found it.
-	if err = downloadImage(ctx, conf, "terraformManager", sectionName, conf.ShowProgress); err != nil {
+	// No bundle means in-tree: its terraform-manager image is named by this installer's digests.
+	dir, err := ensureInstallerImage(ctx, conf, cloudName, digests.ProviderImagesSection(cloudName), digests.TerraformManagerImage, p.download)
+	if err != nil {
 		return err
 	}
 
-	source = filepath.Join(terraformManagerDir, params.Settings.DestinationBinary())
-
-	return fsutils.CreateLinkIfNotExists(ctx, source, checkIsExecFile, destination)
+	return fsutils.CreateLinkIfNotExists(ctx, filepath.Join(dir, terraformManagerDir, binary), checkIsExecFile, destination)
 }

@@ -111,6 +111,8 @@ provider:
 	baseInfraKey    = "base-infrastructure"
 	// Commander destroy keeps the cluster settings ModuleConfigs for a retry without API.
 	clusterSettingsModuleConfigsKey = "cluster-settings-module-configs"
+	// Commander records the provider bundle digest for a destroy retry without API or registry.
+	providerBundleDigestKey = "provider-bundle-digest"
 
 	bastionHost = "127.0.0.1"
 	bastionUser = "notexistsb"
@@ -949,6 +951,7 @@ func (ts *baseTest) assertFileKeysInCacheAfterLoad(t *testing.T) {
 		nodeStateKey,
 		nodeBackupStateKey,
 		clusterSettingsModuleConfigsKey,
+		providerBundleDigestKey,
 	}
 
 	require.Len(t, stateKeys, len(expectedKeys), "state cache should contain keys")

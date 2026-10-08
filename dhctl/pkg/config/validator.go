@@ -39,10 +39,9 @@ type ProviderInput struct {
 type ProviderValidateFunc func(ctx context.Context, input ProviderInput) error
 
 // MetaConfigValidatorProvider selects the validate function for the given
-// provider; nil means the provider has nothing to check. downloadRootDir is
-// where provider bundles are unpacked; an external provider's validator binary
-// is looked up there.
-type MetaConfigValidatorProvider func(ctx context.Context, provider, downloadRootDir string) ProviderValidateFunc
+// provider; nil means the provider has nothing to check. bundleDir is the
+// unpacked bundle of an external provider; its validator binary is looked up there.
+type MetaConfigValidatorProvider func(ctx context.Context, provider, bundleDir string) ProviderValidateFunc
 
 // DummyValidatorProvider validates nothing. Use it where provider validation is
 // deliberately out of scope (static clusters, config parses that only need the

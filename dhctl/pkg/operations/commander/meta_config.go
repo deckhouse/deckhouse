@@ -16,10 +16,12 @@ package commander
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"strings"
 	"time"
 
+	dhlog "github.com/deckhouse/lib-dhctl/pkg/logger"
 	"github.com/deckhouse/lib-dhctl/pkg/retry"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app/options"
@@ -28,14 +30,14 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/state"
 )
 
-const clusterSettingsModuleConfigsCacheKey = "cluster-settings-module-configs"
+const (
+	clusterSettingsModuleConfigsCacheKey = "cluster-settings-module-configs"
+	providerBundleDigestCacheKey         = "provider-bundle-digest"
+)
 
-// ParseMetaConfig parses commander-mode config. operation
-// (infrastructureprovider.DhctlOperation*) reaches the provider validator,
-// which skips bootstrap-only checks on other operations. globalOptions carries
-// the server's download dir, so the external provider bundle is unpacked into
-// the same directory the provider settings are later read from; passing nil
-// would unpack it into the default dir and break a non-default --download-dir.
+// ParseMetaConfig parses commander-mode config for operation, which reaches the provider validator.
+// The bundle the cluster runs is unpacked under globalOptions.DownloadDir first and its directory
+// travels with the MetaConfig; destroy falls back to the bundle recorded in the state.
 func ParseMetaConfig(ctx context.Context, stateCache state.Cache, params *CommanderModeParams, operation infrastructureprovider.DhctlOperation, kubeClient config.KubeClientGetter, globalOptions *options.GlobalOptions) (*config.MetaConfig, error) {
 	clusterUUIDBytes, err := stateCache.Load(ctx, "uuid")
 	if err != nil {
@@ -46,11 +48,13 @@ func ParseMetaConfig(ctx context.Context, stateCache state.Cache, params *Comman
 		return nil, fmt.Errorf("error loading cluster uuid from state cache: uuid is empty")
 	}
 
-	// Commander does not send registry access in the request; read it from the
-	// target cluster and deliver the external provider bundle before parsing, so
-	// the parse below finds it on disk and skips the registry-less download.
+	// Commander does not send registry access in the request: the bundle is delivered with the
+	// registry of the target cluster, and the parse below gets its directory instead of resolving
+	// one with no registry access.
+	bundleDir := ""
 	if kubeClient != nil {
-		if err := config.EnsureProviderBundleFromCluster(ctx, kubeClient, string(params.ClusterConfigurationData), globalOptions, operation); err != nil {
+		bundleDir, err = ensureProviderBundle(ctx, stateCache, kubeClient, params, globalOptions, operation)
+		if err != nil {
 			return nil, fmt.Errorf("ensure provider bundle from cluster: %w", err)
 		}
 	}
@@ -85,6 +89,7 @@ func ParseMetaConfig(ctx context.Context, stateCache state.Cache, params *Comman
 		config.ValidateOptionValidateExtensions(true),
 		config.ValidateOptionOperation(operation),
 		config.ValidateOptionModuleConfigsFromCluster(moduleConfigs),
+		config.ValidateOptionProviderBundleDir(bundleDir),
 	)
 	if err != nil {
 		return nil, fmt.Errorf("unable to parse config: %w", err)
@@ -101,6 +106,63 @@ func ParseMetaConfig(ctx context.Context, stateCache state.Cache, params *Comman
 	}
 
 	return metaConfig, nil
+}
+
+// ensureProviderBundle delivers the bundle the cluster runs and records its digest in the state.
+// Destroy retried with the cluster or the registry gone goes on with the recorded one.
+func ensureProviderBundle(
+	ctx context.Context,
+	stateCache state.Cache,
+	kubeClient config.KubeClientGetter,
+	params *CommanderModeParams,
+	globalOptions *options.GlobalOptions,
+	operation infrastructureprovider.DhctlOperation,
+) (string, error) {
+	clusterConfig := string(params.ClusterConfigurationData)
+
+	bundleDir, digest, err := config.EnsureProviderBundleFromCluster(ctx, kubeClient, clusterConfig, globalOptions)
+	if err != nil {
+		if operation != infrastructureprovider.DhctlOperationDestroy {
+			return "", err
+		}
+		return recordedProviderBundle(ctx, stateCache, clusterConfig, globalOptions, err)
+	}
+	if bundleDir == "" {
+		return "", nil
+	}
+
+	if err := stateCache.Save(ctx, providerBundleDigestCacheKey, []byte(digest)); err != nil {
+		return "", fmt.Errorf("save provider bundle digest to state cache: %w", err)
+	}
+
+	return bundleDir, nil
+}
+
+// recordedProviderBundle returns cause unless the state names a bundle that is on this machine.
+func recordedProviderBundle(ctx context.Context, stateCache state.Cache, clusterConfig string, globalOptions *options.GlobalOptions, cause error) (string, error) {
+	recorded, err := stateCache.InCache(ctx, providerBundleDigestCacheKey)
+	if err != nil {
+		return "", errors.Join(cause, fmt.Errorf("check provider bundle digest in state cache: %w", err))
+	}
+	if !recorded {
+		return "", cause
+	}
+
+	digest, err := stateCache.Load(ctx, providerBundleDigestCacheKey)
+	if err != nil {
+		return "", errors.Join(cause, fmt.Errorf("load provider bundle digest from state cache: %w", err))
+	}
+
+	bundleDir, err := config.UseUnpackedProviderBundle(ctx, clusterConfig, string(digest), globalOptions)
+	if err != nil {
+		return "", errors.Join(cause, fmt.Errorf("use provider bundle recorded in state cache: %w", err))
+	}
+
+	dhlog.FromContext(ctx).WarnContext(ctx, fmt.Sprintf(
+		"Provider bundle update failed: %v. Using the bundle recorded in the state at %s.", cause, bundleDir,
+	))
+
+	return bundleDir, nil
 }
 
 func cachedClusterSettingsModuleConfigs(ctx context.Context, stateCache state.Cache) ([]*config.ModuleConfig, bool, error) {

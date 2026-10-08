@@ -25,6 +25,7 @@ import (
 	"sort"
 	"strings"
 	"sync"
+	"time"
 
 	"github.com/name212/govalue"
 
@@ -57,27 +58,40 @@ func isProviderBundleDir(tmpDir, fullPath string) bool {
 	return providerBundleDirRe.MatchString(filepath.Base(fullPath))
 }
 
-// isProviderAlias reports whether fullPath is a provider's default alias right
-// under tmpDir, leading to a digest-pinned bundle kept beside it. A run that
-// cannot resolve the digest reaches its bundle only through this symlink, so
-// deleting it leaves the kept directory unreachable.
-func isProviderAlias(tmpDir, fullPath string) bool {
-	provider := filepath.Base(fullPath)
-	if providerdir.ProviderDir(tmpDir, provider) != fullPath {
+// isFreshStagingDir reports whether fullPath is a <digest-dir>.partial-N staging dir right under
+// tmpDir that another process may still be unpacking into.
+func isFreshStagingDir(tmpDir, fullPath string, info os.FileInfo) bool {
+	suffix, ok := digestDirSibling(tmpDir, fullPath)
+	if !ok || !strings.HasPrefix(suffix, "partial-") {
 		return false
 	}
+	return time.Since(info.ModTime()) < providerdir.StagingDirMaxAge
+}
 
-	dir, _, ok := providerdir.Delivered(tmpDir, provider)
-	return ok && providerBundleDirRe.MatchString(filepath.Base(dir))
+// isDigestDirLock reports whether fullPath is a <digest-dir>.lock.N file right under tmpDir.
+func isDigestDirLock(tmpDir, fullPath string) bool {
+	suffix, ok := digestDirSibling(tmpDir, fullPath)
+	return ok && strings.HasPrefix(suffix, "lock.")
+}
+
+// digestDirSibling returns what follows the digest dir name of fullPath, a dir name without dots.
+func digestDirSibling(tmpDir, fullPath string) (string, bool) {
+	if filepath.Dir(fullPath) != tmpDir {
+		return "", false
+	}
+	digestDir, suffix, found := strings.Cut(filepath.Base(fullPath), ".")
+	if !found || !providerBundleDirRe.MatchString(digestDir) {
+		return "", false
+	}
+	return suffix, true
 }
 
 type ClearTmpParams struct {
 	IsDebug         bool
 	RemoveTombStone bool
 
-	TmpDir           string
-	DefaultTmpDir    string
-	DownloadCacheDir string
+	TmpDir        string
+	DefaultTmpDir string
 }
 
 type TmpCleaner interface {
@@ -206,7 +220,6 @@ func (r *regularTmpCleaner) Cleanup() {
 	skipDirs := []string{
 		tmpDir,
 		r.params.DefaultTmpDir,
-		r.params.DownloadCacheDir,
 	}
 
 	err := filepath.Walk(tmpDir, func(fullPath string, info os.FileInfo, err error) error {
@@ -241,11 +254,17 @@ func (r *regularTmpCleaner) Cleanup() {
 				return filepath.SkipDir
 			}
 
+			// Another process sharing the download dir may still be unpacking there.
+			if isFreshStagingDir(tmpDir, fullPath, info) {
+				keepFiles = append(keepFiles, fullPath)
+				return filepath.SkipDir
+			}
+
 			dirsForDeletion = append(dirsForDeletion, fullPath)
 			return nil
 		}
 
-		if isProviderAlias(tmpDir, fullPath) {
+		if isDigestDirLock(tmpDir, fullPath) {
 			keepFiles = append(keepFiles, fullPath)
 			return nil
 		}
@@ -263,12 +282,6 @@ func (r *regularTmpCleaner) Cleanup() {
 		}
 
 		if isTraceFile(fullPath) {
-			keepFiles = append(keepFiles, fullPath)
-			return nil
-		}
-
-		// keep download layers cache
-		if r.params.DownloadCacheDir != "" && strings.Contains(fullPath, r.params.DownloadCacheDir) {
 			keepFiles = append(keepFiles, fullPath)
 			return nil
 		}

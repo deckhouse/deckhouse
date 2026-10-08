@@ -29,10 +29,9 @@ type DIParams struct {
 	BinariesDir       string
 	CloudProviderDir  string
 	PluginsDir        string
-	// DownloadDir is the root for OCI-unpacked provider trees (e.g. external
-	// cloud providers like DVP) — used as a fallback when modules/specs are not
-	// present under CloudProviderDir (bundled candi). May be empty.
-	DownloadDir string
+	// ProviderBundleDir is the unpacked bundle of the external provider the cluster runs.
+	// Layouts, modules and provider settings missing from candi are read from it. May be empty.
+	ProviderBundleDir string
 }
 
 func isDir(dir, errPrefix string) error {
@@ -42,18 +41,6 @@ func isDir(dir, errPrefix string) error {
 
 	if !fs.IsDirExists(dir) {
 		return fmt.Errorf("%s dir '%s' is empty or does not exist", errPrefix, dir)
-	}
-
-	return nil
-}
-
-func isNotRootDir(dir, errPrefix string) error {
-	if path.Clean(dir) == "/" {
-		return fmt.Errorf("%s dir '%s' should not be /", errPrefix, dir)
-	}
-
-	if err := isDir(dir, errPrefix); err != nil {
-		return err
 	}
 
 	return nil
@@ -89,26 +76,10 @@ func GetDi(ctx context.Context, params *DIParams) (*cloud.ProviderDI, error) {
 		return nil, err
 	}
 
-	// External providers ship no bundled candi/plugins in the image (e.g. the
-	// terraform-manager pods): modules and the terraform plugin are unpacked
-	// under DownloadDir at runtime, and both providers below fall back there.
-	// So when DownloadDir is set, these directories may legitimately be absent.
-	if err := isNotRootDir(params.CloudProviderDir, "CloudProviderDir"); err != nil {
-		if params.DownloadDir == "" {
-			return nil, err
-		}
-	}
-
-	if err := isDir(params.PluginsDir, "PluginsDir"); err != nil {
-		if params.DownloadDir == "" {
-			return nil, err
-		}
-	}
-
 	return &cloud.ProviderDI{
-		SettingsProvider:    newSettingsProvider(ctx, params.InfraVersionsFile, params.DownloadDir, loadOrGetStore),
+		SettingsProvider:    newSettingsProvider(ctx, params.InfraVersionsFile, params.ProviderBundleDir, loadOrGetStore),
 		InfraUtilProvider:   newInfrastructureUtilProvider(params.BinariesDir),
 		InfraPluginProvider: newPluginsProvider(params.PluginsDir),
-		ModulesProvider:     newModulesProvider(params.CloudProviderDir, params.DownloadDir),
+		ModulesProvider:     newModulesProvider(params.CloudProviderDir, params.ProviderBundleDir),
 	}, nil
 }

@@ -17,9 +17,24 @@ package digests
 import (
 	"encoding/json"
 	"fmt"
+	"strings"
 )
 
 type ImagesDigests = map[string]map[string]any
+
+// The candi image of this installer. Its name is also the name of the directory it is unpacked into.
+const (
+	CandiSection = "common"
+	CandiImage   = "candi"
+)
+
+// TerraformManagerImage is the provider bundle image, in a provider's section and in a module image.
+const TerraformManagerImage = "terraformManager"
+
+// ProviderImagesSection is the section a provider's images live under.
+func ProviderImagesSection(provider string) string {
+	return "cloudProvider" + strings.ToUpper(provider[:1]) + provider[1:]
+}
 
 func GetAllDigests() (ImagesDigests, error) {
 	content, err := imagesDigestsContent()

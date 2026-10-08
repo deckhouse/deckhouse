@@ -28,7 +28,6 @@ import (
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider/cloud"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider/cloud/fsproviderpath"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider/providerdir"
 )
 
 const (
@@ -39,17 +38,15 @@ type modulesProvider struct {
 	m sync.Mutex
 
 	cloudProviderDir string
-	// downloadRootDir is the root for OCI-unpacked provider trees. When a
-	// provider's modules aren't bundled under cloudProviderDir, copyDir falls
-	// back to <downloadRootDir>/<provider>/<dir>. May be empty for setups
-	// where every provider ships in the bundle.
-	downloadRootDir string
+	// providerBundleDir is the unpacked bundle of an external provider. copyDir falls back to it
+	// when the provider's modules are not under cloudProviderDir. May be empty.
+	providerBundleDir string
 }
 
-func newModulesProvider(cloudProviderDir, downloadRootDir string) *modulesProvider {
+func newModulesProvider(cloudProviderDir, providerBundleDir string) *modulesProvider {
 	return &modulesProvider{
-		cloudProviderDir: cloudProviderDir,
-		downloadRootDir:  downloadRootDir,
+		cloudProviderDir:  cloudProviderDir,
+		providerBundleDir: providerBundleDir,
 	}
 }
 
@@ -92,26 +89,27 @@ func (p *modulesProvider) copyDir(ctx context.Context, dir string, params cloud.
 	destinationDir := path.Join(destination, dir)
 
 	stat, err := os.Stat(sourceDir)
+	// Fall back to the unpacked provider bundle ({layouts,terraform-modules} at its root).
+	if os.IsNotExist(err) && p.providerBundleDir != "" {
+		candiDir := sourceDir
+		sourceDir = path.Join(p.providerBundleDir, dir)
+		stat, err = os.Stat(sourceDir)
+		if err != nil && !os.IsNotExist(err) {
+			return fmt.Errorf("read %s of the provider bundle: %w", dir, err)
+		}
+		if os.IsNotExist(err) {
+			err = fmt.Errorf("find %s of provider %s in %s or %s: %w", dir, cloudName, candiDir, sourceDir, fs.ErrNotExist)
+		}
+	}
+	if errors.Is(err, fs.ErrNotExist) {
+		if dir == infraModulesDir {
+			dhlog.FromContext(ctx).DebugContext(ctx, fmt.Sprintf("Copying cloud-providers modules (dir %s) from %s to %s skipped. Not found", dir, sourceDir, destinationDir))
+			return nil
+		}
+		return err
+	}
 	if err != nil {
-		if !os.IsNotExist(err) {
-			return err
-		}
-		// Fall back to OCI-unpacked provider tree (external provider images
-		// extract into <downloadRootDir>/<provider>/{layouts,terraform-modules}).
-		if p.downloadRootDir != "" {
-			fallback := path.Join(providerdir.ProviderDir(p.downloadRootDir, cloudName), dir)
-			if fbStat, fbErr := os.Stat(fallback); fbErr == nil {
-				sourceDir = fallback
-				stat = fbStat
-			}
-		}
-		if stat == nil {
-			if dir == infraModulesDir {
-				dhlog.FromContext(ctx).DebugContext(ctx, fmt.Sprintf("Copying cloud-providers modules (dir %s) from %s to %s skipped. Not found", dir, sourceDir, destinationDir))
-				return nil
-			}
-			return err
-		}
+		return err
 	}
 
 	if !stat.IsDir() {

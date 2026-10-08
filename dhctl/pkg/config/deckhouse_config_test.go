@@ -17,6 +17,8 @@ limitations under the License.
 package config
 
 import (
+	"os"
+	"path/filepath"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -519,4 +521,19 @@ spec:
 			require.Equal(t, tt.expect, installConfig.HasProviderModuleConfig())
 		})
 	}
+}
+
+func TestReadVersionTagFallsBackToTheUnpackedCandi(t *testing.T) {
+	const digest = "sha256:7777777777777777777777777777777777777777777777777777777777777777"
+
+	stubEmbeddedDigests(t, `{"common": {"candi": "`+digest+`"}}`)
+
+	downloadDir := t.TempDir()
+	versionFile := filepath.Join(downloadDir, "candi@"+digest, "deckhouse", "version")
+	require.NoError(t, os.MkdirAll(filepath.Dir(versionFile), 0o755))
+	require.NoError(t, os.WriteFile(versionFile, []byte("v1.77.0\n"), 0o644))
+
+	tag, ok := ReadVersionTagFromInstallerContainer(t.Context(), filepath.Join(t.TempDir(), "absent"), downloadDir)
+	require.True(t, ok)
+	require.Equal(t, "v1.77.0", tag)
 }

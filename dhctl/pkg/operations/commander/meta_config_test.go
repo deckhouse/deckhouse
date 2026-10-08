@@ -26,7 +26,9 @@ import (
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app/options"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/config/digests"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider/providerdir"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/client"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/tests"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/cache"
@@ -100,7 +102,7 @@ func yandexBundleOptions(t *testing.T) *options.GlobalOptions {
 	t.Helper()
 	downloadDir := t.TempDir()
 	tests.StubDeliveredProviderBundle(t, downloadDir, "yandex")
-	return &options.GlobalOptions{DownloadDir: downloadDir, DownloadCacheDir: filepath.Join(downloadDir, "cache")}
+	return &options.GlobalOptions{DownloadDir: downloadDir}
 }
 
 func noAPIGetter(context.Context) (*client.KubernetesClient, error) {
@@ -126,6 +128,8 @@ func TestParseMetaConfig_DestroyReadsModuleConfigsFromClusterAndCachesThem(t *te
 
 	first, err := ParseMetaConfig(ctx, stateCache, params, infrastructureprovider.DhctlOperationDestroy, getterFor(kubeCl), globalOptions)
 	require.NoError(t, err)
+	require.Equal(t, providerdir.DigestDir(globalOptions.DownloadDir, "yandex", tests.StubBundleDigest()), first.ProviderBundleDir,
+		"the bundle the cluster runs travels with the MetaConfig")
 	require.Equal(t, "mcprefix", first.ClusterPrefix)
 	require.Equal(t, "10.11.0.0/16", first.Network().PodSubnetCIDR)
 	require.Equal(t, "10.22.0.0/16", first.Network().ServiceSubnetCIDR)
@@ -134,10 +138,94 @@ func TestParseMetaConfig_DestroyReadsModuleConfigsFromClusterAndCachesThem(t *te
 	require.NoError(t, err)
 	require.Equal(t, "1.33", clusterConfigMap["kubernetesVersion"])
 
+	// The retry runs on the bundle already delivered. An installer that names no bundle of its own
+	// proves the parse did not resolve one again.
+	t.Setenv(digests.ImagesDigestsFileEnv, filepath.Join(t.TempDir(), "no-digests.json"))
 	second, err := ParseMetaConfig(ctx, stateCache, params, infrastructureprovider.DhctlOperationDestroy, noAPIGetter, globalOptions)
 	require.NoError(t, err)
 	require.Equal(t, "mcprefix", second.ClusterPrefix)
 	require.Equal(t, "10.11.0.0/16", second.Network().PodSubnetCIDR)
+}
+
+// With the cluster gone, destroy goes on with the bundle whose digest an earlier run recorded in
+// the state of this very cluster, not with whatever bundle was delivered here last.
+func TestParseMetaConfig_DestroyUsesTheBundleRecordedInTheState(t *testing.T) {
+	ctx := t.Context()
+	globalOptions := yandexBundleOptions(t)
+	kubeCl := client.NewFakeKubernetesClient()
+	seedModuleConfig(t, kubeCl, "global", 2, map[string]interface{}{"prefix": "mcprefix"})
+	stateCache := newStateWithUUID(t)
+	params := NewCommanderModeParams([]byte(clusterConfigNoPrefixYAML), []byte(yandexProviderConfigYAML))
+
+	first, err := ParseMetaConfig(ctx, stateCache, params, infrastructureprovider.DhctlOperationDestroy, getterFor(kubeCl), globalOptions)
+	require.NoError(t, err)
+
+	recorded, err := stateCache.Load(ctx, providerBundleDigestCacheKey)
+	require.NoError(t, err)
+	require.Equal(t, providerdir.DigestFromDir(first.ProviderBundleDir), string(recorded))
+
+	second, err := ParseMetaConfig(ctx, stateCache, params, infrastructureprovider.DhctlOperationDestroy, noAPIGetter, globalOptions)
+	require.NoError(t, err)
+	require.Equal(t, first.ProviderBundleDir, second.ProviderBundleDir)
+}
+
+// A recorded bundle that is not on this machine cannot stand in, and the operator needs both reasons.
+func TestParseMetaConfig_RecordedBundleNotOnThisMachineKeepsTheOriginalError(t *testing.T) {
+	globalOptions := yandexBundleOptions(t)
+	stateCache := newStateWithUUID(t)
+	const elsewhere = "sha256:0000000000000000000000000000000000000000000000000000000000000eee"
+	require.NoError(t, stateCache.Save(t.Context(), providerBundleDigestCacheKey, []byte(elsewhere)))
+	params := NewCommanderModeParams([]byte(clusterConfigNoPrefixYAML), []byte(yandexProviderConfigYAML))
+
+	_, err := ParseMetaConfig(t.Context(), stateCache, params, infrastructureprovider.DhctlOperationDestroy, noAPIGetter, globalOptions)
+	require.ErrorContains(t, err, "kubernetes API is unreachable")
+	require.ErrorContains(t, err, "use provider bundle recorded in state cache")
+	require.ErrorContains(t, err, providerdir.DigestDir(globalOptions.DownloadDir, "yandex", elsewhere))
+}
+
+// Destroy goes on with the digest recorded here, and the run that records it is usually a converge
+// or a check (which parses as a converge) long before the destroy.
+func TestParseMetaConfig_ConvergeRecordsTheBundleDigest(t *testing.T) {
+	ctx := t.Context()
+	globalOptions := yandexBundleOptions(t)
+	kubeCl := client.NewFakeKubernetesClient()
+	seedModuleConfig(t, kubeCl, "global", 2, map[string]interface{}{"prefix": "mcprefix"})
+	stateCache := newStateWithUUID(t)
+	params := NewCommanderModeParams([]byte(clusterConfigNoPrefixYAML), []byte(yandexProviderConfigYAML))
+
+	mc, err := ParseMetaConfig(ctx, stateCache, params, infrastructureprovider.DhctlOperationConverge, getterFor(kubeCl), globalOptions)
+	require.NoError(t, err)
+
+	recorded, err := stateCache.Load(ctx, providerBundleDigestCacheKey)
+	require.NoError(t, err)
+	require.Equal(t, tests.StubBundleDigest(), string(recorded))
+	require.Equal(t, providerdir.DigestFromDir(mc.ProviderBundleDir), string(recorded))
+}
+
+func TestParseMetaConfig_NoRecordedBundleMeansTheOriginalError(t *testing.T) {
+	globalOptions := yandexBundleOptions(t)
+	params := NewCommanderModeParams([]byte(clusterConfigNoPrefixYAML), []byte(yandexProviderConfigYAML))
+
+	_, err := ParseMetaConfig(t.Context(), newStateWithUUID(t), params, infrastructureprovider.DhctlOperationDestroy, noAPIGetter, globalOptions)
+	require.ErrorContains(t, err, "kubernetes API is unreachable")
+	require.ErrorContains(t, err, "ensure provider bundle from cluster", "the ModuleConfigs read fails the same way, so pin the step")
+}
+
+// Only destroy may go on with a recorded bundle. Converge with a stale bundle would change the cluster.
+func TestParseMetaConfig_ConvergeNeverUsesTheRecordedBundle(t *testing.T) {
+	ctx := t.Context()
+	globalOptions := yandexBundleOptions(t)
+	kubeCl := client.NewFakeKubernetesClient()
+	seedModuleConfig(t, kubeCl, "global", 2, map[string]interface{}{"prefix": "mcprefix"})
+	stateCache := newStateWithUUID(t)
+	params := NewCommanderModeParams([]byte(clusterConfigNoPrefixYAML), []byte(yandexProviderConfigYAML))
+
+	_, err := ParseMetaConfig(ctx, stateCache, params, infrastructureprovider.DhctlOperationDestroy, getterFor(kubeCl), globalOptions)
+	require.NoError(t, err)
+
+	_, err = ParseMetaConfig(ctx, stateCache, params, infrastructureprovider.DhctlOperationConverge, noAPIGetter, globalOptions)
+	require.ErrorContains(t, err, "kubernetes API is unreachable")
+	require.ErrorContains(t, err, "ensure provider bundle from cluster", "the ModuleConfigs read fails the same way, so pin the step")
 }
 
 // A cluster without the ModuleConfigs is cached as such, so the retry keeps the ClusterConfiguration prefix.

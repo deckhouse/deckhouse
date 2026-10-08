@@ -40,7 +40,7 @@ const (
 
 type (
 	settingsStore map[string]*settings.Simple
-	loader        func(ctx context.Context, infraVersionsFile, downloadDir string) (settingsStore, error)
+	loader        func(ctx context.Context, infraVersionsFile, bundleDir string) (settingsStore, error)
 )
 
 type SettingsProvider struct {
@@ -55,22 +55,18 @@ var (
 	candiStoreCache = make(map[string]versionsFile)
 )
 
-// loadOrGetStore builds the provider settings store: the providers from the
-// candi versions file plus those an external bundle delivers into downloadDir.
-//
-// Only the candi file is cached — it is fixed for the process. The bundles are
-// merged fresh on every call: a long-lived process (dhctl-server, converge
-// exporter) can have a bundle delivered after the first store was built, and a
-// whole-store cache would keep returning the pre-bundle map, leaving the
-// provider unavailable until restart.
-func loadOrGetStore(ctx context.Context, infraVersionsFile, downloadDir string) (settingsStore, error) {
+// loadOrGetStore builds the provider settings store: candi's providers plus the one whose bundle is
+// unpacked in bundleDir. Only the candi file is cached; the bundle is merged on every call.
+func loadOrGetStore(ctx context.Context, infraVersionsFile, bundleDir string) (settingsStore, error) {
 	candi, err := loadCandiVersions(ctx, infraVersionsFile)
 	if err != nil {
 		return nil, err
 	}
 
 	store := maps.Clone(candi.providers)
-	mergeBundleSettings(ctx, store, downloadDir, candi.tools)
+	if err := mergeBundleSettings(ctx, store, bundleDir, candi.tools); err != nil {
+		return nil, err
+	}
 
 	return store, nil
 }
@@ -95,8 +91,8 @@ func loadCandiVersions(ctx context.Context, infraVersionsFile string) (versionsF
 	return candi, nil
 }
 
-func newSettingsProvider(ctx context.Context, infraVersionsFile, downloadDir string, loader loader) *SettingsProvider {
-	store, err := loader(ctx, infraVersionsFile, downloadDir)
+func newSettingsProvider(ctx context.Context, infraVersionsFile, bundleDir string, loader loader) *SettingsProvider {
+	store, err := loader(ctx, infraVersionsFile, bundleDir)
 	if err != nil {
 		return &SettingsProvider{
 			initError: err,
@@ -224,12 +220,8 @@ func parseProvider(entry json.RawMessage, tools toolVersions) (*settings.Simple,
 // attachBundlePlanRules folds a bundle's plan_rules.yml into its single
 // provider's settings. The rules (which manifest a VM change touches) live next
 // to the bundle's terraform_versions.yml, and every external bundle must carry
-// them; a bundle describing more than one provider is malformed.
+// them.
 func attachBundlePlanRules(filename string, providers settingsStore) error {
-	if len(providers) != 1 {
-		return fmt.Errorf("provider bundle %s must describe exactly one provider, got %d", filename, len(providers))
-	}
-
 	planRule, err := loadPlanRules(filename)
 	if err != nil {
 		return err
@@ -248,57 +240,37 @@ func attachBundlePlanRules(filename string, providers settingsStore) error {
 	return nil
 }
 
-// mergeBundleSettings adds the settings of providers that the candi image does
-// not ship — today only external ones like DVP, whose terraform_versions.yml
-// and plan_rules.yml travel inside its OCI bundle. They are read where the
-// bundle keeps them: copying them into the shared candi dir does not survive,
-// because the next run extracts the candi image over that same file.
-//
-// A provider already known from candi keeps those settings: in-tree providers
-// unpack a terraform-manager bundle into the very same download dir, and their
-// fragment describes only themselves. A bundle that fails to parse is skipped
-// with a warning rather than failing every other provider along with it.
-func mergeBundleSettings(ctx context.Context, store settingsStore, downloadDir string, inherited toolVersions) {
-	if downloadDir == "" {
-		return
+// mergeBundleSettings adds the settings of the provider whose bundle is unpacked in bundleDir when
+// the candi image does not ship it, like DVP. A provider candi knows keeps its candi settings.
+func mergeBundleSettings(ctx context.Context, store settingsStore, bundleDir string, inherited toolVersions) error {
+	if bundleDir == "" {
+		return nil
 	}
 
-	matches, err := filepath.Glob(filepath.Join(downloadDir, "*", "terraform-manager", versionFile))
+	filename := filepath.Join(bundleDir, terraformManagerDir, versionFile)
+
+	bundle, err := loadVersionsFile(ctx, filename, inherited)
 	if err != nil {
-		dhlog.FromContext(ctx).WarnContext(ctx, fmt.Sprintf("Cannot look up provider bundle versions files in %s: %v", downloadDir, err))
-		return
+		return fmt.Errorf("load provider bundle settings: %w", err)
+	}
+	if len(bundle.providers) != 1 {
+		return fmt.Errorf("provider bundle %s must describe exactly one provider, got %d", filename, len(bundle.providers))
 	}
 
-	for _, match := range matches {
-		// A bundle is unpacked into <provider>@<digest> (and, while unpacking,
-		// <provider>@<digest>.partial) with a plain <provider> symlink pointing
-		// at the current one. Read through that symlink only: the digest dirs of
-		// previously delivered versions may still be around, and an unfinished
-		// one holds an incomplete tree.
-		provider := filepath.Base(filepath.Dir(filepath.Dir(match)))
-		if strings.Contains(provider, "@") {
-			continue
-		}
-		if _, known := store[provider]; known {
-			continue
-		}
-
-		bundle, err := loadVersionsFile(ctx, match, inherited)
-		if err != nil {
-			dhlog.FromContext(ctx).WarnContext(ctx, fmt.Sprintf("Skipping provider bundle settings %s: %v", match, err))
-			continue
-		}
-		if err := attachBundlePlanRules(match, bundle.providers); err != nil {
-			dhlog.FromContext(ctx).WarnContext(ctx, fmt.Sprintf("Skipping provider bundle settings %s: %v", match, err))
-			continue
-		}
-
-		for cloudName, set := range bundle.providers {
-			if _, known := store[cloudName]; known {
-				continue
-			}
-			dhlog.FromContext(ctx).DebugContext(ctx, fmt.Sprintf("Provider settings for %s taken from bundle %s", cloudName, match))
-			store[cloudName] = set
-		}
+	maps.DeleteFunc(bundle.providers, func(cloudName string, _ *settings.Simple) bool {
+		_, known := store[cloudName]
+		return known
+	})
+	if len(bundle.providers) == 0 {
+		return nil
 	}
+
+	if err := attachBundlePlanRules(filename, bundle.providers); err != nil {
+		return fmt.Errorf("load provider bundle settings: %w", err)
+	}
+
+	dhlog.FromContext(ctx).DebugContext(ctx, fmt.Sprintf("Provider settings taken from bundle %s", filename))
+	maps.Copy(store, bundle.providers)
+
+	return nil
 }

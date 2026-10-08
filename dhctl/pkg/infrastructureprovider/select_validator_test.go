@@ -16,6 +16,8 @@ package infrastructureprovider
 
 import (
 	"context"
+	"os"
+	"path/filepath"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -43,7 +45,7 @@ func TestSelectValidatorExternalMissingValidator(t *testing.T) {
 	isInternalCloudProviderBundle = func(string) bool { return false }
 	t.Cleanup(func() { isInternalCloudProviderBundle = orig })
 
-	validate := selectValidator(context.Background(), "dvp", t.TempDir())
+	validate := selectValidator(context.Background(), "dvp", filepath.Join(t.TempDir(), "dvp@sha256:missing"))
 	err := validate(context.Background(), config.ProviderInput{})
 	require.ErrorContains(t, err, "external validator for provider \"dvp\" not found")
 }
@@ -56,7 +58,7 @@ func TestSelectValidatorYandexRequiresExternalBinary(t *testing.T) {
 	isInternalCloudProviderBundle = func(string) bool { return false }
 	t.Cleanup(func() { isInternalCloudProviderBundle = orig })
 
-	validate := selectValidator(context.Background(), "yandex", t.TempDir())
+	validate := selectValidator(context.Background(), "yandex", filepath.Join(t.TempDir(), "yandex@sha256:missing"))
 	require.NotNil(t, validate)
 
 	err := validate(context.Background(), config.ProviderInput{
@@ -71,13 +73,28 @@ func TestSelectValidatorYandexUsesDeliveredBinary(t *testing.T) {
 	isInternalCloudProviderBundle = func(string) bool { return false }
 	t.Cleanup(func() { isInternalCloudProviderBundle = orig })
 
-	downloadDir := t.TempDir()
-	tests.StubDeliveredProviderBundle(t, downloadDir, "yandex")
+	bundleDir := tests.StubDeliveredProviderBundle(t, t.TempDir(), "yandex")
 
-	validate := selectValidator(context.Background(), "yandex", downloadDir)
+	validate := selectValidator(context.Background(), "yandex", bundleDir)
 	require.NotNil(t, validate)
 	require.NoError(t, validate(context.Background(), config.ProviderInput{
 		ProviderName: "yandex",
 		Operation:    DhctlOperationBootstrap,
 	}))
+}
+
+// A configuration parsed without a prepared bundle reports that, rather than being checked by the
+// validator an older dhctl's alias leads to.
+func TestValidationWithoutABundleIgnoresTheAliasOfAnOlderDhctl(t *testing.T) {
+	orig := isInternalCloudProviderBundle
+	isInternalCloudProviderBundle = func(string) bool { return false }
+	t.Cleanup(func() { isInternalCloudProviderBundle = orig })
+
+	downloadDir := t.TempDir()
+	bundleDir := tests.StubDeliveredProviderBundle(t, downloadDir, "yandex")
+	require.NoError(t, os.Symlink(bundleDir, filepath.Join(downloadDir, "yandex")))
+
+	m := &config.MetaConfig{ProviderName: "yandex", DownloadRootDir: downloadDir}
+	_, err := m.Prepare(t.Context(), MetaConfigValidatorProvider())
+	require.ErrorContains(t, err, `external validator for provider "yandex" not found: the provider bundle was not prepared`)
 }

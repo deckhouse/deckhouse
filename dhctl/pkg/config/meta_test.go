@@ -811,7 +811,6 @@ func boolPtr(v bool) *bool { return &v }
 func TestMetaConfig_DeepCopy_PreservesValidateInputs(t *testing.T) {
 	src := &MetaConfig{
 		DownloadRootDir:  "/tmp/dl",
-		DownloadCacheDir: "/tmp/cache",
 		VersionFilePath:  "/tmp/v.yaml",
 		ResourcesYAML:    "kind: X\n",
 		ModuleConfigs:    []*ModuleConfig{{Spec: ModuleConfigSpec{Settings: SettingsValues{"k": "v"}}}},
@@ -825,7 +824,6 @@ func TestMetaConfig_DeepCopy_PreservesValidateInputs(t *testing.T) {
 	cp := src.DeepCopy()
 
 	require.Equal(t, src.DownloadRootDir, cp.DownloadRootDir)
-	require.Equal(t, src.DownloadCacheDir, cp.DownloadCacheDir)
 	require.Equal(t, src.VersionFilePath, cp.VersionFilePath)
 	require.Equal(t, src.ResourcesYAML, cp.ResourcesYAML)
 	require.Equal(t, src.InstallerVersion, cp.InstallerVersion)
