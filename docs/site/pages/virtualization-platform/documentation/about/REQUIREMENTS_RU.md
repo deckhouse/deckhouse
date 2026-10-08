@@ -33,7 +33,7 @@ lang: ru
 
 ## Требования к программному и аппаратному обеспечению
 
-Требования к аппаратному обеспечению для Deckhouse Virtualization Platform соответствуют требованиям [Deckhouse Kubernetes Platform](/products/kubernetes-platform/guides/production.html#требования-к-ресурсам). Дополнительно на хостах, где планируется запуск виртуальных машин, должна поддерживаться аппаратная виртуализация CPU.
+Требования к аппаратному обеспечению для Deckhouse Virtualization Platform соответствуют требованиям [Deckhouse Kubernetes Platform](/products/kubernetes-platform/documentation/v1/guides/production.html#требования-к-ресурсам). Дополнительно на хостах, где планируется запуск виртуальных машин, должна поддерживаться аппаратная виртуализация CPU.
 
 Поддерживаемые операционные системы для узлов кластера перечислены в разделе [Поддерживаемые версии K8s и ОС](/products/kubernetes-platform/documentation/v1/reference/supported_versions.html#linux).
 

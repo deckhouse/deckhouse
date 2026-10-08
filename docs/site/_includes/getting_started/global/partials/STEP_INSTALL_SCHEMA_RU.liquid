@@ -68,7 +68,7 @@
 Установка в закрытом окружении в целом аналогична установке [на bare metal](../bm/step2.html). Отличие только в некоторых дополнительных параметрах настройки.
 
 {% alert level="info" %}
-Подробнее с установкой и обновлением DP в закрытом окружении можно ознакомиться в руководствах [«Установка DP в закрытом окружении»](/products/kubernetes-platform/guides/private-environment.html) и [«Обновление DP в закрытом окружении»](/products/kubernetes-platform/guides/airgapped-update.html).
+Подробнее с установкой и обновлением DP в закрытом окружении можно ознакомиться в руководствах [«Установка DP в закрытом окружении»](/products/kubernetes-platform/documentation/v1/guides/private-environment.html) и [«Обновление DP в закрытом окружении»](/products/kubernetes-platform/documentation/v1/guides/airgapped-update.html).
 {% endalert %}
 
 Схема развертывания Deckhouse Platform в закрытом окружении:<br />
@@ -196,6 +196,6 @@
 {% if page.platform_type == "baremetal" or page.platform_type == "baremetal" or page.platform_type == "cloud" %}
 {% alert level="warning" %}
 В рекомендациях выше приведены минимальные {% if page.platform_type == "cloud" %}суммарные{% endif %} ресурсы, необходимые для начального развёртывания кластера с одним master-узлом и одним worker-узлом.
-Такой конфигурации достаточно для ознакомительных целей, но для production-окружений она не подходит. Ознакомьтесь с [рекомендациями по подготовке к production](/products/kubernetes-platform/guides/production.html), [рекомендациями по разметке и объёму дисков](/products/kubernetes-platform/guides/fs-requirements.html) и [инструкцией по выбору типов и количества узлов кластера](/products/kubernetes-platform/guides/hardware-requirements.html), а также ресурсов для них, в зависимости от ваших требований к эксплуатации будущего кластера.
+Такой конфигурации достаточно для ознакомительных целей, но для production-окружений она не подходит. Ознакомьтесь с [рекомендациями по подготовке к production](/products/kubernetes-platform/documentation/v1/guides/production.html), [рекомендациями по разметке и объёму дисков](/products/kubernetes-platform/documentation/v1/guides/fs-requirements.html) и [инструкцией по выбору типов и количества узлов кластера](/products/kubernetes-platform/documentation/v1/guides/hardware-requirements.html), а также ресурсов для них, в зависимости от ваших требований к эксплуатации будущего кластера.
 {% endalert %}
 {%- endif %}

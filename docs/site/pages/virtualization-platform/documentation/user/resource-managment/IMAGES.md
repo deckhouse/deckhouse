@@ -43,7 +43,7 @@ The following preinstalled image formats are supported:
 - vdi
 
 {% alert level="info" %}
-When migrating VMs from VMware, see the [migration guide](/products/virtualization-platform/guides/migrating-vms-from-vmware-to-dvp.html).
+When migrating VMs from VMware, see the [migration guide](/products/kubernetes-platform/documentation/v1/guides/virt-migrating-from-vmware.html).
 Disks from vSphere usually require guest OS preparation (for example, via virt-v2v).
 Importing a VMDK without preparation often causes problems when starting the VM.
 {% endalert %}

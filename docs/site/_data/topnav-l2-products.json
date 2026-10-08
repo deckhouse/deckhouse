@@ -44,7 +44,7 @@
           "id": 6091,
           "parent_id": 6079,
           "title": "Guides",
-          "url": "/products/kubernetes-platform/guides/",
+          "url": "/products/kubernetes-platform/documentation/v1/guides/",
           "target": "",
           "rel": ""
         }
@@ -86,7 +86,7 @@
           "id": 6094,
           "parent_id": 6082,
           "title": "Going to Production",
-          "url": "/products/virtualization-platform/guides/production.html",
+          "url": "/products/kubernetes-platform/documentation/v1/guides/virt-production.html",
           "target": "",
           "rel": ""
         }
@@ -500,7 +500,7 @@
           "id": 5394,
           "parent_id": 5349,
           "title": "Руководства",
-          "url": "/products/kubernetes-platform/guides/",
+          "url": "/products/kubernetes-platform/documentation/v1/guides/",
           "target": "",
           "rel": ""
         }
@@ -558,7 +558,7 @@
           "id": 11964,
           "parent_id": 5352,
           "title": "Руководства",
-          "url": "/products/virtualization-platform/guides/",
+          "url": "/products/kubernetes-platform/documentation/v1/guides/",
           "target": "",
           "rel": ""
         }

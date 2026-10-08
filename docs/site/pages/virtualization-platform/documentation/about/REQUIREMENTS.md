@@ -32,7 +32,7 @@ The choice of platform architecture is described in detail in the [Architecture 
 
 ## Hardware and software requirements
 
-The hardware requirements of Deckhouse Virtualization Platform match those of [Deckhouse Kubernetes Platform](/products/kubernetes-platform/guides/production.html#resource-requirements). Additionally, hardware CPU virtualization must be supported on hosts intended to run virtual machines.
+The hardware requirements of Deckhouse Virtualization Platform match those of [Deckhouse Kubernetes Platform](/products/kubernetes-platform/documentation/v1/guides/production.html#resource-requirements). Additionally, hardware CPU virtualization must be supported on hosts intended to run virtual machines.
 
 Supported operating systems for cluster nodes are listed in the [Supported K8s & OS versions](/products/kubernetes-platform/documentation/v1/reference/supported_versions.html#linux) section.
 

@@ -226,9 +226,6 @@ common:
   search_placeholder_text:
     en: Search...
     ru: Поиск...
-  search_placeholder_text_guides:
-    en: Search for guides...
-    ru: Поиск руководств...
   search_placeholder_text_filter:
     en: Enter a&nbsp;name
     ru: Введите название
@@ -361,18 +358,6 @@ common:
   show_more:
     en: Show more
     ru: Показать ещё
-  show_details:
-    en: Show details...
-    ru: Показать подробности...
-  hide_details:
-    en: Hide details
-    ru: Скрыть подробности
-  guides_description:
-    en: Helping you achieve a goal or solve a problem with Deckhouse Platform.
-    ru: Помогут решить задачу или достичь нужной цели с помощью Deckhouse Platform.
-  breadcrumbs_link_guides:
-    en: All guides
-    ru: Все руководства
   additional_property_name:
     en: item (key) name
     ru: имя параметра (ключ объекта)

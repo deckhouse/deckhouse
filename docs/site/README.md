@@ -207,13 +207,11 @@ The Deckhouse website consists of the following parts:
 - **Non-versioned documentation**. Includes the following sections:
 
   - `/products/kubernetes-platform/gs/`
-  - `/products/kubernetes-platform/guides/`
   - `/assets/`
   - `/images/`
   - `/presentations/`
   - `/products/virtualization-platform/documentation/`
   - `/products/virtualization-platform/gs/`
-  - `/products/virtualization-platform/guides/`
   - `/products/virtualization-platform/reference/`
   
   The content is generated using Jekyll from the `docs/site` directory.
@@ -948,17 +946,13 @@ Documentation PDFs are produced in two independent ways:
 
 ### Exporting a page in the browser
 
-Browser PDF export is currently enabled only for pages in `pages/guides`. The default configuration sets `allowPDFDownload: true` for these pages, which displays a localized **Download page as PDF** button.
-
-The export can be enabled explicitly on another page by adding the following front matter:
+Browser PDF export is disabled by default. To enable it on a page and display a localized **Download page as PDF** button, add the following front matter:
 
 ```yaml
 allowPDFDownload: true
 ```
 
-Set `allowPDFDownload: false` on a guide page to disable the button.
-
-The button is rendered by `_includes/pdf-download-button.html` in the `guide`, `page`, and `sidebar-guides` layouts. When the setting is disabled, the button and the PDF export script are not added to the page.
+The button is rendered by `_includes/pdf-download-button.html` in the `page` layout. When the setting is disabled, the button and the PDF export script are not added to the page.
 
 The export runs entirely in the browser:
 

@@ -23,7 +23,7 @@ Follow the [virtual machine creation guide](/products/virtualization-platform/do
 <div class="cards-item__text" markdown="1">
 Prepare your cluster to receive traffic.
 
-Use the [production readiness checklist](/products/virtualization-platform/guides/production.html) to make sure you haven't forgotten anything.
+Use the [production readiness checklist](/products/kubernetes-platform/documentation/v1/guides/virt-production.html) to make sure you haven't forgotten anything.
 </div>
 </div>
 

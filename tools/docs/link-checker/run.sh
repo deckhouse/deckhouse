@@ -80,10 +80,10 @@ rsync -a ${_TMPDIR}/dkp-documentation/ru/ ${_TMPDIR}/site_ru/products/kubernetes
 rsync -a ${_TMPDIR}/dkp-documentation/{assets,images} ${_TMPDIR}/site_en/products/kubernetes-platform/documentation
 rsync -a ${_TMPDIR}/dkp-documentation/{assets,images} ${_TMPDIR}/site_ru/products/kubernetes-platform/documentation
 
-echo "Moving DKP guides and GS files..."
+echo "Moving DKP GS files..."
 
-mv  ${_TMPDIR}/site_ru/{gs,guides} ${_TMPDIR}/site_ru/products/kubernetes-platform
-mv  ${_TMPDIR}/site_en/{gs,guides} ${_TMPDIR}/site_en/products/kubernetes-platform
+mv  ${_TMPDIR}/site_ru/gs ${_TMPDIR}/site_ru/products/kubernetes-platform
+mv  ${_TMPDIR}/site_en/gs ${_TMPDIR}/site_en/products/kubernetes-platform
 
 echo "Moving DVP files..."
 

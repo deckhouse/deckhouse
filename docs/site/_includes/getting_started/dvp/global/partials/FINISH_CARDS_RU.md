@@ -23,7 +23,7 @@
 <div class="cards-item__text" markdown="1">
 Подготовьте ваш кластер к приёму трафика.
 
-Воспользуйтесь [чек-листом подготовки к production](/products/virtualization-platform/guides/production.html), чтобы убедиться, что вы ничего не забыли.
+Воспользуйтесь [чек-листом подготовки к production](/products/kubernetes-platform/documentation/v1/guides/virt-production.html), чтобы убедиться, что вы ничего не забыли.
 </div>
 </div>
 

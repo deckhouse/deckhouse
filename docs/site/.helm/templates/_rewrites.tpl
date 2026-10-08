@@ -15,10 +15,14 @@ rewrite ^(.*)/documentation(/(v[0-9]+|v[0-9]+\.[0-9]+|latest))?/installing/confi
 rewrite ^/documentation/(.*)$ /products/kubernetes-platform/documentation/$1 permanent;
 rewrite ^/products/kubernetes-platform/documentation/(?<doc_path>(?!v[0-9]+/|v[0-9]+\.[0-9]+/|v[0-9]+\.[0-9]+-cse|latest/).*)$ /products/kubernetes-platform/documentation/v1/$doc_path redirect;
 rewrite ^/gs/(.*)$ /products/kubernetes-platform/gs/$1 permanent;
-rewrite ^/guides/(.*)$ /products/kubernetes-platform/guides/$1 permanent;
+rewrite ^/guides/(.*)$ /products/kubernetes-platform/documentation/v1/guides/$1 permanent;
 rewrite ^/products/kubernetes-platform/documentation$ /products/kubernetes-platform/documentation/ permanent;
 rewrite ^/products/kubernetes-platform/gs$ /products/kubernetes-platform/gs/ permanent;
-rewrite ^/products/kubernetes-platform/guides$ /products/kubernetes-platform/guides/ permanent;
+rewrite ^/products/kubernetes-platform/guides/?$ /products/kubernetes-platform/documentation/v1/guides/ permanent;
+rewrite ^/products/kubernetes-platform/guides/(.*)$ /products/kubernetes-platform/documentation/v1/guides/$1 permanent;
+rewrite ^/products/virtualization-platform/guides/production\.html$ /products/kubernetes-platform/documentation/v1/guides/virt-production.html permanent;
+rewrite ^/products/virtualization-platform/guides/migrating-vms-from-vmware-to-dvp\.html$ /products/kubernetes-platform/documentation/v1/guides/virt-migrating-from-vmware.html permanent;
+rewrite ^/products/virtualization-platform/guides(/.*)?$ /products/kubernetes-platform/documentation/v1/guides/ permanent;
 rewrite ^/products/kubernetes-platform/platform/(.*)$ /products/kubernetes-platform/documentation/v1/$1 redirect;
 rewrite ^/products/kubernetes-platform/modules/(.*)$ /modules/$1 redirect;
 rewrite ^/products/kubernetes-platform/documentation/v1/modules/(.*)$ /modules/$1 redirect;

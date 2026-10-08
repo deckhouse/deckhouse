@@ -15,7 +15,7 @@
 </div>
 
 {% alert level="info" %}
-Конфигурации тестового стенда достаточно для ознакомительных целей, но она не подходит для production-окружений. Ознакомьтесь с [рекомендациями по подготовке к production](/products/virtualization-platform/guides/production.html) и [рекомендуемыми архитектурными решениями](/products/virtualization-platform/documentation/about/architecture-options.html). Эти рекомендации помогут правильно выбрать типы и количество узлов кластера в зависимости от ваших требований к эксплуатации.
+Конфигурации тестового стенда достаточно для ознакомительных целей, но она не подходит для production-окружений. Ознакомьтесь с [рекомендациями по подготовке к production](/products/kubernetes-platform/documentation/v1/guides/virt-production.html) и [рекомендуемыми архитектурными решениями](/products/virtualization-platform/documentation/about/architecture-options.html). Эти рекомендации помогут правильно выбрать типы и количество узлов кластера в зависимости от ваших требований к эксплуатации.
 
 Выбрав желаемую архитектуру, обратитесь к разделу [«Установка платформы»](/products/virtualization-platform/documentation/admin/install/steps/prepare.html) для получения подробных инструкций по установке платформы в production-окружении.
 {% endalert %}

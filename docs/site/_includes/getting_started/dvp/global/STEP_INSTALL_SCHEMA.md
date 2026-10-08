@@ -15,7 +15,7 @@ The diagram below shows the architecture of the lab setup for this guide:
 </div>
 
 {% alert level="info" %}
-This lab configuration is suitable for evaluation only, not for production. Read the [production readiness guide](/products/virtualization-platform/guides/production.html) and [recommended architecture options](/products/virtualization-platform/documentation/about/architecture-options.html) to choose node types and counts for your operational needs.
+This lab configuration is suitable for evaluation only, not for production. Read the [production readiness guide](/products/kubernetes-platform/documentation/v1/guides/virt-production.html) and [recommended architecture options](/products/virtualization-platform/documentation/about/architecture-options.html) to choose node types and counts for your operational needs.
 
 When you have chosen an architecture, use [Platform installation](/products/virtualization-platform/documentation/admin/install/steps/prepare.html) for detailed production installation steps.
 {% endalert %}

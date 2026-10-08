@@ -67,7 +67,7 @@ Web service name: {% include getting_started/global/partials/dns-template-title.
 <div class="cards-item__text" markdown="1">
 Prepare your cluster to receive traffic.
 
-Use the [production readiness checklist](/products/kubernetes-platform/guides/production.html) to make sure you haven't forgotten anything.
+Use the [production readiness checklist](/products/kubernetes-platform/documentation/v1/guides/production.html) to make sure you haven't forgotten anything.
 </div>
 </div>
 {%- endif %}

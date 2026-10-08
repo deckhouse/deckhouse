@@ -125,15 +125,6 @@ defaults:
       # Maximum number of related links to display
       relatedLinksMax: 0
   - scope:
-      path: "pages/guides"
-      type: "pages"
-    values:
-      toc_in_sidebar: true
-      toc: false
-      layout: guide
-      searchBageEnabled: false
-      allowPDFDownload: true
-  - scope:
       path: "pages/code"
     values:
       toc_in_sidebar: false
@@ -160,14 +151,6 @@ defaults:
       searchable: true
       product_code: virtualization-platform
       sitemap_include: true
-  - scope:
-      path: "pages/virtualization-platform/guides"
-      type: "pages"
-    values:
-      toc_in_sidebar: true
-      toc: false
-      sitemap_include: false
-      layout: guide
   - scope:
       path: "pages/stronghold"
     values:
