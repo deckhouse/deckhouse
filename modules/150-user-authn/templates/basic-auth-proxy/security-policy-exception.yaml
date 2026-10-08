@@ -1,0 +1,44 @@
+{{- /* The Job is created by hooks/generate_basic_auth_proxy_cert.go, its name must match the label set there. */}}
+{{- /* Rendered regardless of basic authentication: the hook creates the Job before Helm runs, */}}
+{{- /* so the exception has to exist before basic authentication is turned on. */}}
+{{- if or (.Values.global.discovery.apiVersions | has "deckhouse.io/v1alpha1/SecurityPolicyException") (.Capabilities.APIVersions.Has "deckhouse.io/v1alpha1/SecurityPolicyException") }}
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: SecurityPolicyException
+metadata:
+  name: user-authn-proxy-cert-generate-job
+  namespace: d8-system
+  {{- include "helm_lib_module_labels" (list . (dict "app" "basic-auth-proxy")) | nindent 2 }}
+spec:
+  securityContext:
+    runAsNonRoot:
+      allowedValue: false
+      metadata:
+        description: |
+          The proxy-cert-generate-job Job signs the basic-auth-proxy client certificate
+          with the front-proxy CA. The CA key on the control plane node is readable by root only.
+    runAsUser:
+      allowedValues:
+        - 0
+      metadata:
+        description: |
+          UID 0 is required to read the front-proxy CA key on the host.
+  volumes:
+    types:
+      allowedValues:
+        - hostPath
+      metadata:
+        description: |
+          The front-proxy CA exists only on the control plane node,
+          so it cannot be delivered to the pod by another volume type.
+    hostPath:
+      allowedValues:
+        - path: /etc/kubernetes/pki/front-proxy-ca.crt
+          readOnly: true
+          metadata:
+            description: Front-proxy CA certificate, mounted read-only.
+        - path: /etc/kubernetes/pki/front-proxy-ca.key
+          readOnly: true
+          metadata:
+            description: Front-proxy CA key, mounted read-only.
+{{- end }}
