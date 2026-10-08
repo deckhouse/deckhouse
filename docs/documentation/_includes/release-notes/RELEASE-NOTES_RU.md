@@ -528,7 +528,7 @@
 
   - Добавлена поддержка ответов на ICMP-запросы (`ping`) по ExternalIP для сервисов с `type: LoadBalancer` при использовании MetalLB.
 
-- Реализован [механизм переключения между поддерживаемыми CNI-плагинами](https://deckhouse.ru/products/kubernetes-platform/guides/cni-migration.html) в кластере DP.
+- Реализован [механизм переключения между поддерживаемыми CNI-плагинами](guides/cni-migration.html) в кластере DP.
 
 - В модуле `node-local-dns` добавлена возможность отключения резолвинга DNS-запросов по IPv6 с помощью [параметра `disableIPv6`](https://deckhouse.ru/modules/node-local-dns/v1.76/configuration.html#parameters-disableipv6).
 

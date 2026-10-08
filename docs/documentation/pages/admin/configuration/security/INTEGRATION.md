@@ -236,7 +236,7 @@ To ensure DP functions correctly with KESL installed, follow these steps:
 
 1. Make sure node resources meet the requirements of:
 
-   - [DP](/products/kubernetes-platform/guides/production.html#resource-requirements)
+   - [DP](../../../guides/production.html#resource-requirements)
    - [KESL](https://support.kaspersky.com/KES4Linux/12.1.0/en-US/197642.htm)
 
 1. For performance optimization, follow the [official Kaspersky recommendations](https://support.kaspersky.com/KES4Linux/12.1.0/en-US/206054.htm).
