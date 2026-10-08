@@ -34,6 +34,7 @@
  - All control plane components will be restarted.
  - All the `ingress-nginx` module Pods will be restarted.
  - Applying this change restarts control-plane components.
+ - Before, such an entry stopped the webhook from reloading the rules, so subjects of rules added later, and every subject after a restart of the webhook, were not limited to their namespaces. Subjects of a rule whose only entry is invalid now get no namespace through the entries of that rule.
  - CAPI NodeGroups whose MachineDeployment was stuck on an old MachineTemplate are rolled to the current InstanceClass after the update, within maxSurgePerZone/maxUnavailablePerZone. Groups already on the current template are not touched.
  - Cilium agent pods are restarted to apply the fixes.
  - Cloud provider configuration for DKP clusters deployed in DVP needs to be migrated from ProviderClusterConfiguration to ModuleConfig settings. For migration instructions, refer to "Cluster and Infrastructure" in the DKP FAQ.
@@ -65,6 +66,11 @@
     The `user-authz.deckhouse.io/access-level` label is now set automatically on annotated ClusterRoles.
     In audit logs, access granted through annotated ClusterRoles is attributed to `user-authz:<level>:custom` instead of the individual ClusterRole.
  - Endpoints for pods in a terminal phase (Failed/Succeeded) are no longer published. In DVP clusters this prevents traffic from being routed to a VirtualMachine IP that has been reused by another pod. Pods being deleted are now published with the serving and terminating conditions, which enables the graceful shutdown flow for consumers. Pod readiness is derived from the PodReady condition, and stale probe results are reset when a pod becomes not ready, is recreated, or changes its IP.
+ - Exec and attach requests in user namespaces reach Gatekeeper again, as in Deckhouse 1.73 and 1.74.
+    Every constraint that matches them is evaluated again, including a constraint without `match.kinds`
+    or with `kinds: ["*"]` whose policy does not check `input.review.operation`.
+    Before updating, check that such constraints do not deny `kubectl exec` and `kubectl attach`
+    for users who need them.
  - Fixes recreation of all CloudEphemeral nodes on upgrade to 1.76.9. The MachineDeployment
     replica count was dropped and the MachineDeployment was scaled to zero.
  - If your cluster was previously upgraded to DKP 1.76.0 from a version earlier than 1.76 and was not patched, `kubectl logs` and `kubectl exec` may fail cluster-wide for all users. Apply the manual workaround from the [PR description](https://github.com/deckhouse/deckhouse/pull/20877) before upgrading.
@@ -168,6 +174,10 @@
     the updated requests.
  - The cilium-hubble components (hubble-ui, hubble-relay) will restart after the update.
  - The cni-cilium components (cilium agent, operator) will restart after the update.
+ - The grant webhooks are now removed together with the module. On a cluster where `multitenancy-manager` is already disabled at the update, the `cluster-objects-grants-defaulting` and `cluster-objects-grants-validator` webhook configurations left by earlier versions stay, and writes to grantable resources in project namespaces (for example, removing a PVC finalizer) keep failing with `service "multitenancy-manager" not found`. Delete them by hand:
+    `d8 k delete mutatingwebhookconfiguration cluster-objects-grants-defaulting`
+    `d8 k delete validatingwebhookconfiguration cluster-objects-grants-validator`
+    Nothing has to be done on clusters where the module is enabled.
  - The minimum supported version of Kubernetes is now 1.32. All control plane components will be restarted.
  - The node-local-dns DaemonSet pods will restart after the update.
  - This release fixes an issue where transient cluster DNS failures could cause the user-authz-webhook to restart, temporarily denying all Kubernetes API requests until DNS recovered.
@@ -212,6 +222,7 @@
  - **[admission-policy-engine]** Added the `PodSecurityStandardsDefaultPolicyNotSet` alert that fires when the `install-data` ConfigMap is missing and the default PSS policy must be set explicitly in the ModuleConfig. [#23269](https://github.com/deckhouse/deckhouse/pull/23269)
  - **[admission-policy-engine]** Grant kubeadm:cluster-admins group granular full access to module CRDs via dedicated ClusterRole d8:admission-policy-engine:admin-kubeconfig. [#19420](https://github.com/deckhouse/deckhouse/pull/19420)
  - **[admission-policy-engine]** Refactored constraints and tests and added support for container-level SecurityPolicyException. [#18668](https://github.com/deckhouse/deckhouse/pull/18668)
+ - **[admission-policy-engine]** Report the availability of the module components with alerts. [#384](https://fox.flant.com/deckhouse/deckhouse/-/merge_requests/384)
  - **[admission-policy-engine]** The `PodSecurityStandardsDefaultPolicyNotSet` alert now fires when `podSecurityStandards.defaultPolicy` isn't set and the `Privileged` policy is derived from the bootstrap version. The update to Deckhouse 1.78 is blocked until the policy is set explicitly. [#83](https://fox.flant.com/deckhouse/deckhouse/-/merge_requests/83)
     Deckhouse 1.78 makes `Baseline` the default PSS policy for all clusters.
     On clusters bootstrapped with a Deckhouse version lower than v1.55 or with an unknown bootstrap version, the `PodSecurityStandardsDefaultPolicyNotSet` alert fires, and the update to 1.78 is blocked until `settings.podSecurityStandards.defaultPolicy` is set explicitly in the `admission-policy-engine` ModuleConfig.
@@ -223,6 +234,7 @@
  - **[candi]** Added x-kubernetes-sensitive-data masking for sensitive fields. [#19634](https://github.com/deckhouse/deckhouse/pull/19634)
  - **[candi]** Base images updated to v3 [#23037](https://github.com/deckhouse/deckhouse/pull/23037)
  - **[candi]** Migrated node-manager (candi) builds to the unified builder with package manager and Go toolchain. [#19882](https://github.com/deckhouse/deckhouse/pull/19882)
+ - **[cert-manager]** Add the `highAvailability` parameter to control the HA mode of the module independently of the global setting. [#504](https://fox.flant.com/deckhouse/deckhouse/-/merge_requests/504)
  - **[cert-manager]** Auto-enable cainjector when cluster resources require cert-manager CA injection annotations. [#19850](https://github.com/deckhouse/deckhouse/pull/19850)
  - **[cilium-hubble]** Added authorization to the Cilium Hubble UI. [#18895](https://github.com/deckhouse/deckhouse/pull/18895)
  - **[cilium-hubble]** Fixed securityContext and added a SecurityPolicyException. [#21545](https://github.com/deckhouse/deckhouse/pull/21545)
@@ -371,6 +383,7 @@
  - **[metallb]** Added RBACv1 roles (User and ClusterAdmin) for MetalLoadBalancerClass resource. [#19627](https://github.com/deckhouse/deckhouse/pull/19627)
  - **[metallb]** Refactored BGP configuration to use dedicated CRDs (MetalLoadBalancerPool, MetalLoadBalancerBGPPeer, MetalLoadBalancerConfiguration) instead of ModuleConfig. [#18660](https://github.com/deckhouse/deckhouse/pull/18660)
     In the `metallb` module, BGP configuration was migrated from ModuleConfig to dedicated custom resources. Existing configuration is migrated automatically during the update. Before editing the generated resources, disable further migration by updating the ModuleConfig version. Afterwards, remove the obsolete BGP settings from the ModuleConfig. See the module documentation for details.
+ - **[multitenancy-manager]** A new alert warns about a user project template named `simple`, which the built-in template of the same name overwrites after the update. [#239](https://fox.flant.com/deckhouse/deckhouse/-/merge_requests/239)
  - **[multitenancy-manager]** Cluster resource grants — control which cluster-scoped resources a project may use, set per-project defaults, and cap usage with object quotas. [#20520](https://github.com/deckhouse/deckhouse/pull/20520)
  - **[multitenancy-manager]** Cluster resource grants — split governed-resource definitions from validation/defaulting reference paths so any module can register a path; object quota delegated to Kubernetes ResourceQuota. [#20611](https://github.com/deckhouse/deckhouse/pull/20611)
  - **[multitenancy-manager]** Grant kubeadm:cluster-admins group granular full access to module CRDs via dedicated ClusterRole d8:multitenancy-manager:admin-kubeconfig. [#19420](https://github.com/deckhouse/deckhouse/pull/19420)
@@ -404,6 +417,9 @@
  - **[user-authz]** Added alert and DKP 1.78 release requirement for custom roles of the legacy experimental RBACv2 scheme. [#21381](https://github.com/deckhouse/deckhouse/pull/21381)
     Custom roles of the legacy experimental RBACv2 scheme must be migrated to the new `d8:custom:*` scheme before upgrading to DKP 1.78. The `D8UserAuthzLegacyRBACv2CustomRoleFound` alert identifies affected roles. Refer to the `user-authz` module FAQ for migration instructions.
  - **[user-authz]** Grant kubeadm:cluster-admins group granular full access to module CRDs via dedicated ClusterRole d8:user-authz:admin-kubeconfig. [#19420](https://github.com/deckhouse/deckhouse/pull/19420)
+ - **[user-authz]** New `D8UserAuthzLimitNamespacesEntryNeedsRewrite` and `D8UserAuthzLimitNamespacesEntryInvalid` alerts report ClusterAuthorizationRule `limitNamespaces` entries that are anchored only in part or are not valid regular expressions. [#240](https://fox.flant.com/deckhouse/deckhouse/-/merge_requests/240)
+ - **[user-authz]** The new `D8UserAuthzLegacyRBACv2CapabilityBindingFound` alert lists the bindings to built-in capabilities that the next minor release renames without aliases, and names the new name of each capability. [#396](https://fox.flant.com/deckhouse/deckhouse/-/merge_requests/396)
+ - **[user-authz]** The new `D8UserAuthzLegacyRBACv2CustomCapabilityFound` alert lists custom capabilities that extend the namespace roles only through labels the next role scheme does not select. [#240](https://fox.flant.com/deckhouse/deckhouse/-/merge_requests/240)
  - **[vertical-pod-autoscaler]** Upgrade Vertical Pod Autoscaler to v1.7.0. [#21387](https://github.com/deckhouse/deckhouse/pull/21387)
     Vertical Pod Autoscaler components will be restarted.
 
@@ -427,7 +443,14 @@
  - **[admission-policy-engine]** Bumped ratify to 1.4.1 and fixed DMT allowing multiple oss.yaml files. [#20797](https://github.com/deckhouse/deckhouse/pull/20797)
  - **[admission-policy-engine]** Changed the default PSS policy to Baseline for unrecognized Deckhouse versions. [#19663](https://github.com/deckhouse/deckhouse/pull/19663)
  - **[admission-policy-engine]** Changed the label for container SecurityPolicyExceptions. [#20678](https://github.com/deckhouse/deckhouse/pull/20678)
+ - **[admission-policy-engine]** Disabling the module deletes the webhook configurations before Gatekeeper, so the uninstall no longer blocks `exec` and the Deckhouse queue. [#510](https://fox.flant.com/deckhouse/deckhouse/-/merge_requests/510)
  - **[admission-policy-engine]** Fixed CVEs in the `gatekeeper` and `ratify` images. [#23321](https://github.com/deckhouse/deckhouse/pull/23321)
+ - **[admission-policy-engine]** Fixed Gatekeeper policies for `kubectl exec` and `kubectl attach` being skipped in user namespaces. [#463](https://fox.flant.com/deckhouse/deckhouse/-/merge_requests/463)
+    Exec and attach requests in user namespaces reach Gatekeeper again, as in Deckhouse 1.73 and 1.74.
+    Every constraint that matches them is evaluated again, including a constraint without `match.kinds`
+    or with `kinds: ["*"]` whose policy does not check `input.review.operation`.
+    Before updating, check that such constraints do not deny `kubectl exec` and `kubectl attach`
+    for users who need them.
  - **[admission-policy-engine]** Fixed the constraint-template check for the AssignImage CRD. [#20782](https://github.com/deckhouse/deckhouse/pull/20782)
  - **[admission-policy-engine]** Fixed the default Pod Security Standards (PSS) policy being switched to `Baseline` without notice when the bootstrap version in the `d8-system/install-data` ConfigMap is empty or invalid. Such clusters now get the `Privileged` policy. [#83](https://fox.flant.com/deckhouse/deckhouse/-/merge_requests/83)
     Clusters whose `d8-system/install-data` ConfigMap holds an empty or invalid version and whose `podSecurityStandards.defaultPolicy` isn't set were switched to the `Baseline` default PSS policy in 1.77.
@@ -494,7 +517,10 @@
  - **[cloud-provider-dvp]** Made cloud-init secrets immutable to prevent post-bootstrap data mutation. [#20930](https://github.com/deckhouse/deckhouse/pull/20930)
  - **[cloud-provider-dvp]** Made the DVP CSI driver wait for VirtualDisk readiness in CreateVolume so provisioning errors are propagated instead of marking the PV as Bound. [#20566](https://github.com/deckhouse/deckhouse/pull/20566)
  - **[cloud-provider-dvp]** Restored correct service-lb-controller enablement in cloud-provider-dvp. [#20177](https://github.com/deckhouse/deckhouse/pull/20177)
+ - **[cloud-provider-dvp]** Stop infinite check/converge loop caused by the DVP controller annotation on the cloud-init Secret. [#430](https://fox.flant.com/deckhouse/deckhouse/-/merge_requests/430)
  - **[cloud-provider-dvp]** Stopped setting empty `dvp.deckhouse.io/cluster-uuid` and `dvp.deckhouse.io/hostname` labels. [#21110](https://github.com/deckhouse/deckhouse/pull/21110)
+ - **[cloud-provider-dvp]** The CSI driver reports a volume as detached from a node only after the disk is released by the node virtual machine, so with virtualization that keeps the VM listed on the disk until it is released, the volume is not attached to two nodes at once. [#344](https://fox.flant.com/deckhouse/deckhouse/-/merge_requests/344)
+ - **[cloud-provider-dvp]** The CSI driver reports the volume limit of a node, so the scheduler does not place more volumes on a node than its virtual machine can attach. [#344](https://fox.flant.com/deckhouse/deckhouse/-/merge_requests/344)
  - **[cloud-provider-dvp]** Treated a missing VMBDA as success on disk detach. [#21266](https://github.com/deckhouse/deckhouse/pull/21266)
  - **[cloud-provider-dvp]** add labels to cloudinit secrets in the terraform [#20321](https://github.com/deckhouse/deckhouse/pull/20321)
  - **[cloud-provider-dvp]** fix CSI vmBDA retry loop that caused x1580 retries and blocked new PVC mounts on static→dynamic node migration [#20145](https://github.com/deckhouse/deckhouse/pull/20145)
@@ -527,6 +553,7 @@
  - **[cloud-provider-vcd]** Fixes infra-controller-manager pods scheduling on the same node in HA mode. [#20752](https://github.com/deckhouse/deckhouse/pull/20752)
  - **[cloud-provider-vsphere]** Bumped Go module dependencies to fix known CVEs in terraform-manager, cloud-data-discoverer. [#20780](https://github.com/deckhouse/deckhouse/pull/20780)
  - **[cloud-provider-vsphere]** Bumped helm_lib with liveness probe parameters for the CSI controller. [#19694](https://github.com/deckhouse/deckhouse/pull/19694)
+ - **[cloud-provider-vsphere]** Fixed master node creation when the datastore is set as a path with parent folders. [#361](https://fox.flant.com/deckhouse/deckhouse/-/merge_requests/361)
  - **[cloud-provider-vsphere]** Upgraded CSI plugin versions and fixed CVEs in cloud-provider-vsphere. [#18159](https://github.com/deckhouse/deckhouse/pull/18159)
  - **[cloud-provider-vsphere]** fix missing default StorageClass annotation when a DatastoreCluster entry sorts before all Datastore entries [#21111](https://github.com/deckhouse/deckhouse/pull/21111)
  - **[cloud-provider-vsphere]** normalizes new paths and makes bashible resolve existing paths case-insensitively [#19653](https://github.com/deckhouse/deckhouse/pull/19653)
@@ -584,6 +611,7 @@
     The `log-shipper` Pods will be restarted.
  - **[common]** Fixed IngressNginxController HPA CPU metric calculation to use per-pod CPU and smoother averaging in `ingress-nginx`. [#20426](https://github.com/deckhouse/deckhouse/pull/20426)
     HPA for LoadBalancer-based IngressNginxController may scale more accurately under real load and react less noisily due to the metric window change from 1m to 3m.
+ - **[common]** Fixed a `kube-apiserver` panic on JSON Patch requests whose `add`/`replace` of the whole document or `test` operation lacks the `value` field; such requests are now rejected with a validation error. [#324](https://fox.flant.com/deckhouse/deckhouse/-/merge_requests/324)
  - **[common]** Fixed a kubelet panic when decreasing a container memory limit in place while pod-level memory usage stats are unavailable. [#22623](https://github.com/deckhouse/deckhouse/pull/22623)
  - **[common]** Fixed a nil pointer panic in `upmeter` on shutdown when server initialization is incomplete. [#19554](https://github.com/deckhouse/deckhouse/pull/19554)
  - **[common]** Fixed activating modsecurity CRS rules when the Ingress NGINX Controller is running with IsolatedProcess validation. [#20155](https://github.com/deckhouse/deckhouse/pull/20155)
@@ -634,6 +662,7 @@
  - **[control-plane-manager]** Fixed the publishAPI migration for clusters with legacy user-authn v1 settings. [#19921](https://github.com/deckhouse/deckhouse/pull/19921)
  - **[control-plane-manager]** Improved recovery and convergence of interrupted etcd member joins. [#21467](https://github.com/deckhouse/deckhouse/pull/21467)
     New and recreated control-plane nodes now retry partially completed etcd joins and learner promotion automatically. Existing healthy etcd members are unaffected.
+ - **[control-plane-manager]** Keep `resource.k8s.io/v1beta1` enabled in `kube-apiserver` 1.34. [#415](https://fox.flant.com/deckhouse/deckhouse/-/merge_requests/415)
  - **[control-plane-manager]** Removed upmeter from the AUDIT-RULES file. [#21169](https://github.com/deckhouse/deckhouse/pull/21169)
     go generation tests
  - **[control-plane-manager]** Skip rebind of ClusterRoleBinding/kubeadm:cluster-admins until the cluster is fully bootstrapped; harden the reconciliation hook. Fixes "cannot change roleRef" on fresh clusters. [#19667](https://github.com/deckhouse/deckhouse/pull/19667)
@@ -642,6 +671,7 @@
  - **[csi-vsphere]** Migrated storage policy support  from the `cloud-provider-vsphere` module. [#19965](https://github.com/deckhouse/deckhouse/pull/19965)
  - **[csi-vsphere]** resolve vsphere-syncer image from module config instead of 000-common [#22451](https://github.com/deckhouse/deckhouse/pull/22451)
  - **[deckhouse-controller]** A module that conditionally depends on another is no longer disabled when an incompatible version of that dependency is enabled; the enable is rejected instead. [#20334](https://github.com/deckhouse/deckhouse/pull/20334)
+ - **[deckhouse-controller]** Deleting an Application now also deletes objects with the `werf.io/ownership: anyone` or `werf.io/resource-policy` annotation, such as Jobs deployed only on install, if the package lists their kinds in `orphanResources`. Only `helm.sh/resource-policy: keep` protects an object. [#347](https://fox.flant.com/deckhouse/deckhouse/-/merge_requests/347)
  - **[deckhouse-controller]** Do not commit the package repository registry checksum when no application could be annotated, which left them all on stale registry settings. [#23126](https://github.com/deckhouse/deckhouse/pull/23126)
  - **[deckhouse-controller]** Fixed ModuleConfig validation. [#21257](https://github.com/deckhouse/deckhouse/pull/21257)
  - **[deckhouse-controller]** Fixed a SIGSEGV on a nil HookController when module hook registration is retried after a transient failure. [#21201](https://github.com/deckhouse/deckhouse/pull/21201)
@@ -695,6 +725,7 @@
  - **[dhctl]** Apply all deckhouse prerequisites (registry pull secret, RBAC, cluster-configuration secrets, d8-cluster-uuid, ...) before the deckhouse Deployment during bootstrap, so the controller never starts ahead of resources it and its hooks read. [#21132](https://github.com/deckhouse/deckhouse/pull/21132)
  - **[dhctl]** Bootstrap creates the CloudPermanent nodes and the additional masters for providers configured through ModuleConfig. [#21951](https://github.com/deckhouse/deckhouse/pull/21951)
  - **[dhctl]** Bound the registry packages proxy to an OS-assigned local port to avoid collisions during parallel bootstrap. [#21042](https://github.com/deckhouse/deckhouse/pull/21042)
+ - **[dhctl]** Destroy and abort of a static cluster now fail instead of reporting success when a control-plane node was not cleaned because of an SSH error or cleanup timeout. [#333](https://fox.flant.com/deckhouse/deckhouse/-/merge_requests/333)
  - **[dhctl]** Fix dhctl converge-migration interactive run. [#19923](https://github.com/deckhouse/deckhouse/pull/19923)
  - **[dhctl]** Fix panic in in-cluster converge-migration run of dhctl. [#19823](https://github.com/deckhouse/deckhouse/pull/19823)
  - **[dhctl]** Fix static preflights for dhctl run outside an install container. [#19809](https://github.com/deckhouse/deckhouse/pull/19809)
@@ -718,6 +749,7 @@
  - **[dhctl]** Omitted an error return when the static config is missing. [#20405](https://github.com/deckhouse/deckhouse/pull/20405)
  - **[dhctl]** Preflight checks are no longer re-run on every dhctl-server restart when the cluster config is unchanged. [#21108](https://github.com/deckhouse/deckhouse/pull/21108)
  - **[dhctl]** Prepared the control-plane template config for migration from ClusterConfiguration to ModuleConfig. [#19826](https://github.com/deckhouse/deckhouse/pull/19826)
+ - **[dhctl]** Preserve existing SSH keys when switching to the temporary converge user. [#380](https://fox.flant.com/deckhouse/deckhouse/-/merge_requests/380)
  - **[dhctl]** Pull the external provider bundle from the upstream registry when dhctl runs outside the cluster, so manual converge/destroy no longer fails on the unreachable in-cluster registry mirror. [#21509](https://github.com/deckhouse/deckhouse/pull/21509)
  - **[dhctl]** Read external provider settings from its own bundle, so check and converge no longer fail on a download directory reused after bootstrap. [#21396](https://github.com/deckhouse/deckhouse/pull/21396)
  - **[dhctl]** Refuse to create the legacy provider Secret when editing the config of a ModuleConfig-driven cluster. [#21396](https://github.com/deckhouse/deckhouse/pull/21396)
@@ -727,6 +759,11 @@
  - **[docs]** Add info about kernel requirement for containerdv2 migration. [#19437](https://github.com/deckhouse/deckhouse/pull/19437)
  - **[docs]** Change security events docs [#20993](https://github.com/deckhouse/deckhouse/pull/20993)
  - **[documentation]** Fix a memory leak in the documentation builder so memory is released between builds; add CPU/memory limits and an opt-in profiling endpoint. [#21934](https://github.com/deckhouse/deckhouse/pull/21934)
+ - **[helm_lib]** Size the resources of a module whose `resourcesManagement` names a fractional quantity, instead of rendering a zero limit. [#66](https://fox.flant.com/deckhouse/deckhouse/-/merge_requests/66)
+    Bumping `deckhouse_lib_helm` from `1.72.11` to `1.72.24` also drops the `drbd.linbit.com` taint
+    tolerations from `helm_lib_tolerations`, so pods rendered through it no longer tolerate
+    `lost-quorum`, `force-io-error` and `ignore-fail-over`, and aligns the VPA `maxAllowed` memory to
+    the recommender's 64Mi quantum.
  - **[istio]** Add missing tools to proxyv2 images so the application-aware proxy termination hook works correctly. [#22040](https://github.com/deckhouse/deckhouse/pull/22040)
  - **[istio]** Added CARGO_PROXY to ztunnel image build [#20042](https://github.com/deckhouse/deckhouse/pull/20042)
  - **[istio]** Aligned CNI templates with upstream and fixed Istio 1.25 compatibility. [#20332](https://github.com/deckhouse/deckhouse/pull/20332)
@@ -779,12 +816,20 @@
     or into YAML, which is refused when the project is created, edited, or reconciled with a change to
     apply. The module's admission policy now also matches CREATE, so objects labelled
     `heritage: multitenancy-manager` can only be created by the module itself.
+ - **[multitenancy-manager]** Disabling the module now removes the cluster-objects grant webhooks, which used to stay behind and block writes in project namespaces. [#345](https://fox.flant.com/deckhouse/deckhouse/-/merge_requests/345)
+    The grant webhooks are now removed together with the module. On a cluster where `multitenancy-manager` is already disabled at the update, the `cluster-objects-grants-defaulting` and `cluster-objects-grants-validator` webhook configurations left by earlier versions stay, and writes to grantable resources in project namespaces (for example, removing a PVC finalizer) keep failing with `service "multitenancy-manager" not found`. Delete them by hand:
+    `d8 k delete mutatingwebhookconfiguration cluster-objects-grants-defaulting`
+    `d8 k delete validatingwebhookconfiguration cluster-objects-grants-validator`
+    Nothing has to be done on clusters where the module is enabled.
  - **[multitenancy-manager]** Fixed vulnerabilities in the `multitenancy-manager` image. [#23361](https://github.com/deckhouse/deckhouse/pull/23361)
  - **[multitenancy-manager]** Grant and project admission webhooks no longer deadlock the Deckhouse queue when the multitenancy-manager backend denies, is slow, or is unreachable. [#20700](https://github.com/deckhouse/deckhouse/pull/20700)
  - **[multitenancy-manager]** Harden authn/authz validations and quote digit-only Project administrator names. [#22083](https://github.com/deckhouse/deckhouse/pull/22083)
     Existing ModuleConfigs with idTokenTTL >= 6h raise D8UserAuthnIDTokenTTLTooLong until lowered.
     User.spec.password patches after create are rejected; reset via UserOperation or d8 iam user reset-password.
  - **[multitenancy-manager]** Refresh grant webhook CA bundles after the admission certificate is rotated. [#22822](https://github.com/deckhouse/deckhouse/pull/22822)
+ - **[multitenancy-manager]** The Project conversions of the next release are registered in advance, so reads and writes of projects keep working while webhook-handler is updated in HA mode. [#214](https://fox.flant.com/deckhouse/deckhouse/-/merge_requests/214)
+ - **[multitenancy-manager]** The controller takes its leader lease with any number of replicas, so a rollout of a single-replica installation no longer has two pods upgrading project Helm releases at once. [#215](https://fox.flant.com/deckhouse/deckhouse/-/merge_requests/215)
+    In single-replica installations a new controller pod reconciles projects only after the previous pod has stopped and released the lease. If the previous pod is lost without a shutdown, for example together with its node, the new pod starts reconciling projects 60 to about 78 seconds after it starts.
  - **[multitenancy-manager]** The module manager role no longer grants authoring of project templates. [#22331](https://github.com/deckhouse/deckhouse/pull/22331)
     `d8:manage:permission:module:multitenancy-manager:edit` no longer grants write access to
     `projecttemplates`. A `ProjectTemplate` renders into a release applied by a ServiceAccount bound
@@ -828,6 +873,8 @@
  - **[node-manager]** Fixed cluster-autoscaler alert rules for MCM mode. [#20866](https://github.com/deckhouse/deckhouse/pull/20866)
  - **[node-manager]** Fixed cluster-autoscaler scale-from-zero node label verification. [#20948](https://github.com/deckhouse/deckhouse/pull/20948)
     low
+ - **[node-manager]** Fixed cluster-autoscaler stopping autoscaling of all node groups and restarting every two hours when an MCM node group has `minPerZone` equal to `maxPerZone`. [#464](https://fox.flant.com/deckhouse/deckhouse/-/merge_requests/464)
+ - **[node-manager]** Fixed cluster-autoscaler using node group names without the cluster prefix after a Deckhouse restart, which stopped autoscaling and triggered the `D8ClusterAutoscalerTooManyErrors` alert. [#351](https://fox.flant.com/deckhouse/deckhouse/-/merge_requests/351)
  - **[node-manager]** Fixed the convert static cluster configuration hook. [#21345](https://github.com/deckhouse/deckhouse/pull/21345)
  - **[node-manager]** Fixed the keep-policy hook failing when the CAPI conversion webhook is unavailable. [#20990](https://github.com/deckhouse/deckhouse/pull/20990)
  - **[node-manager]** Hide the CAPS SSH key and sudo password in SSHCredentials from users without the `sshcredentials/sensitive` subresource. [#22632](https://github.com/deckhouse/deckhouse/pull/22632)
@@ -979,6 +1026,7 @@
     `spec.oidc.scopes` items are now validated against `^\S+$` in both served versions of DexProvider. A scope containing whitespace could never work, because OAuth2 passes scopes as a space-delimited list, but it was previously admitted and silently broke authentication. Stored objects are not invalidated, however a DexProvider holding such a value is rejected on its next write until the value is corrected, which also affects a GitOps flow that reapplies the object unchanged.
  - **[user-authn]** Remove list access to Dex password and offline-session storage from the user-authn read-only and cluster-admin roles. [#22364](https://github.com/deckhouse/deckhouse/pull/22364)
     Subjects holding only the user-authn view role or the legacy ClusterAdmin user-authn role can no longer list `passwords.dex.coreos.com` or `offlinesessionses.dex.coreos.com`. Use `User` objects for user inventory instead.
+ - **[user-authn]** The `idTokenTTL` description and the `D8UserAuthnIDTokenTTLTooLong` alert say that a value of 6 hours or more is replaced with `5h59m` by the next settings version, and what lowering it does to DexAuthenticator sessions and issued ID tokens. [#218](https://fox.flant.com/deckhouse/deckhouse/-/merge_requests/218)
  - **[user-authn]** The legacy publish API certificate hook no longer deletes TLS secrets in d8-user-authn on deckhouse restart. [#22269](https://github.com/deckhouse/deckhouse/pull/22269)
  - **[user-authn]** The policy gating the allow-access-to-kubernetes annotation no longer applies to platform components, and proves authority with a create permission on the dexclients/allow-access-to-kubernetes and dexauthenticators/allow-access-to-kubernetes subresources instead of write access to the user-authn ModuleConfig. [#22390](https://github.com/deckhouse/deckhouse/pull/22390)
     Setting the annotation no longer requires write access to the user-authn ModuleConfig. Module administrators are unaffected, as their roles already carry the new permission, and so are the platform's own components in `d8-system` and `kube-system`. Any other subject that sets the annotation, a cluster provisioner in particular, has to be granted `create` on the subresource, which for a single namespace is:
@@ -1040,8 +1088,16 @@
     `d8:manage:infrastructure:viewer` or any role aggregating them lose access to the kubelet API through
     `/api/v1/nodes/<node>/proxy/...`. `nodes` themselves stay readable. Automation that relied on reaching
     the kubelet API with one of these roles must be granted a dedicated role explicitly.
+ - **[user-authz]** The RBACv2 roles d8:manage:* and d8:use:role:* keep the rights of the modules that have already switched to the capability labels of the next release while the upgrade to it is in progress. [#372](https://fox.flant.com/deckhouse/deckhouse/-/merge_requests/372)
+ - **[user-authz]** The `D8UserAuthzLegacyRBACv2CustomRoleFound` alert lists every custom role that selects capabilities by the `rbac.deckhouse.io/kind: manage|use` label or by the aggregation label of a lineage the next role model does not collect, or that loses its RoleBindings in the namespaces of the modules, and the FAQ describes how to prepare such a role before the update without losing access. [#240](https://fox.flant.com/deckhouse/deckhouse/-/merge_requests/240)
+ - **[user-authz]** The authorization webhook keeps applying ClusterAuthorizationRules when a `limitNamespaces` entry is not a valid regular expression; the entry is left out, and its rule covers fewer namespaces. [#245](https://fox.flant.com/deckhouse/deckhouse/-/merge_requests/245)
+    Before, such an entry stopped the webhook from reloading the rules, so subjects of rules added later, and every subject after a restart of the webhook, were not limited to their namespaces. Subjects of a rule whose only entry is invalid now get no namespace through the entries of that rule.
+ - **[user-authz]** The authorization webhook no longer restarts while the API server is unreachable, which could deadlock the control plane on bootstrap or an API server restart with multitenancy enabled. [#342](https://fox.flant.com/deckhouse/deckhouse/-/merge_requests/342)
+ - **[user-authz]** The identity-assign check treats an identity with every permission across the cluster, such as a subject of `cluster-admin` bound by a ClusterRoleBinding, as SuperAdmin. [#217](https://fox.flant.com/deckhouse/deckhouse/-/merge_requests/217)
+    Such identities can write ClusterAuthorizationRules, Users and Groups that carry `SuperAdmin` or `cluster-admin`. A ClusterAuthorizationRule gives this right only without `namespaceSelector` and `limitNamespaces` and, with multi-tenancy on, only with `allowAccessToSystemNamespaces: true`, even if it grants `cluster-admin`.
  - **[user-authz]** User-authz-webhook now uses the node-local kube-apiserver endpoint for its discovery cache and liveness check, instead of resolving the `kubernetes.default` DNS name. [#21066](https://github.com/deckhouse/deckhouse/pull/21066)
     This release fixes an issue where transient cluster DNS failures could cause the user-authz-webhook to restart, temporarily denying all Kubernetes API requests until DNS recovered.
+ - **[user-authz]** a `kube-apiserver` health probes no longer fail when `authz-webhook` is unavailable. [#412](https://fox.flant.com/deckhouse/deckhouse/-/merge_requests/412)
  - **[user-authz]** fix cve [#21986](https://github.com/deckhouse/deckhouse/pull/21986)
  - **[vertical-pod-autoscaler]** Reduce VPA memory recommendation rounding from 64Mi to 16Mi and round CPU recommendations up to 10m. [#22525](https://github.com/deckhouse/deckhouse/pull/22525)
     The `vpa-recommender` pod is restarted and recommendations are recalculated with the new granularity.
