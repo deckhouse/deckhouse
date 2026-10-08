@@ -13,9 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-mkdir -p /opt/deckhouse/bin
-mkdir -p /opt/deckhouse/lib
+mkdir -p /opt/deckhouse/bin /opt/deckhouse/lib
 
-cp -f dump.erofs /opt/deckhouse/bin
-cp -f fsck.erofs /opt/deckhouse/bin
-cp -f mkfs.erofs /opt/deckhouse/bin
+cp -pr opt/deckhouse/bin/* /opt/deckhouse/bin
+cp -pr opt/deckhouse/lib/* /opt/deckhouse/lib

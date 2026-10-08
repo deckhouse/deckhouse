@@ -32,22 +32,6 @@
   includePaths:
   - deckhouse-controller
   - caps-deckhouse-controller
-- from: {{ index $.Images "libs/ncurses" }}
-  add: /usr/share/terminfo
-  to: /usr/share/terminfo
-  before: install
-- from: {{ index $.Images "tools/jq" }}
-  add: /usr/bin/jq
-  to: /usr/bin/jq
-  after: setup
-- from: {{ index $.Images "tools/erofs-utils" }}
-  add: /usr/bin/mkfs.erofs
-  to: /usr/bin/mkfs.erofs
-  after: setup
-- from: {{ index $.Images "tools/cryptsetup" }}
-  add: /usr/sbin/veritysetup
-  to: /usr/sbin/veritysetup
-  after: setup
 - image: version-map-artifact
   add: /version_map_{{ $context.Env }}.yml
   to: /deckhouse/candi/version_map.yml

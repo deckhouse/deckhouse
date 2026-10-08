@@ -15,3 +15,4 @@
 
 set -Eeo pipefail
 rm -f /opt/deckhouse/bin/*.erofs
+rm -f /opt/deckhouse/lib/liblz4.so.* /opt/deckhouse/lib/libzstd.so.* /opt/deckhouse/lib/libuuid.so.*

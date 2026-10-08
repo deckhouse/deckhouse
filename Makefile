@@ -460,7 +460,8 @@ BASE_LIMIT_KEYS := REGISTRY_PATH \
                 builder/golang-1.25 \
                 builder/golang-1.26 \
                 builder/golang-1.27 \
-                builder/golang
+                builder/golang \
+                builder/src
 
 .PHONY: update-container-factory
 update-container-factory: ## Download container-factory digests and update candi/alt_base_images.yml
@@ -474,17 +475,19 @@ update-container-factory: ## Download container-factory digests and update candi
 	cd candi; \
 	URL="https://fox.flant.com/api/v4/projects/deckhouse%2Fcontainer-base%2Fbase-images/packages/generic/base_images/$$ver/base_images.yml"; \
 	curl --fail -sSL "$$URL" -o .alt_base_images.full.yml; \
+	cp -f alt_base_images.yml .alt_base_images.prev.yml; \
 	{ \
 	  echo "# version=$$ver"; \
 	  for key in $(BASE_LIMIT_KEYS); do \
 	    line=$$(grep -F "$${key}:" .alt_base_images.full.yml | head -n1); \
 	    case "$$key" in \
 	      base/distroless) line=$$(printf '%s\n' "$$line" | sed 's#^base/distroless:#base/distroless-fin:#');; \
+	      builder/src) line=$$(grep -F "$${key}:" .alt_base_images.prev.yml | head -n1);; \
 	    esac; \
 	    echo "$$line"; \
 	  done; \
 	} > alt_base_images.yml; \
-	rm -f .alt_base_images.full.yml; \
+	rm -f .alt_base_images.full.yml .alt_base_images.prev.yml; \
 	cd ..; \
 	$(MAKE) render-workflow; \
 	echo "Updated candi/alt_base_images.yml to version $$ver"

@@ -1,14 +1,12 @@
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}
-from: {{ index $.Images "builder/scratch" }}
+from: scratch
 import:
 - image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
   add: /
   to: /
   includePaths:
-  - dump.erofs
-  - fsck.erofs
-  - mkfs.erofs
+  - opt/deckhouse
   - install
   - uninstall
   before: setup
@@ -22,7 +20,7 @@ imageSpec:
     removeEnv: ["/.*/"]
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
-from: {{ index $.Images "builder/alpine" }}
+from: {{ index $.Images "builder/distroless" }}
 final: false
 git:
 - add: /{{ $.ModulePath }}modules/007-{{ $.ModuleName }}/images/{{ $.ImageName }}/scripts
@@ -30,13 +28,19 @@ git:
   stageDependencies:
     setup:
     - '**/*'
-import:
-- from: {{ index $.Images "tools/erofs-utils" }}
-  add: /usr/bin
-  to: /
-  includePaths:
-  - '*.erofs'
-  before: setup
 shell:
+  beforeInstall:
+  - pm install erofs-utils patchelf file findutils -n
   setup:
-  - chmod +x /dump.erofs /fsck.erofs /mkfs.erofs /install /uninstall
+  - mkdir -p /opt/deckhouse/bin /opt/deckhouse/lib
+  - cp -p /usr/bin/dump.erofs /usr/bin/fsck.erofs /usr/bin/mkfs.erofs /opt/deckhouse/bin
+  - cp -a /usr/lib/liblz4.so.* /usr/lib/libzstd.so.* /usr/lib/libuuid.so.* /usr/lib/libc.so.6 /usr/lib/ld-linux-x86-64.so.2 /opt/deckhouse/lib
+  - |
+    for i in $(find /opt/deckhouse/bin -type f); do
+      if file $i | grep -q "ELF"; then
+        patchelf --set-interpreter /opt/deckhouse/lib/ld-linux-x86-64.so.2 $i
+        patchelf --set-rpath /opt/deckhouse/lib $i
+      fi
+    done
+  - chown -R 0:0 /opt/deckhouse
+  - chmod +x /install /uninstall
