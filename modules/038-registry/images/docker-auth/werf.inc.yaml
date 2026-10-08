@@ -1,4 +1,5 @@
-{{- $version := "v1.14.0-deckhouse.10"}}
+{{- $version := "flant-1.0.0"}}
+{{- $repo := "deckhouse/cluster-and-infrastructure/fork/docker-auth.git" }}
 ---
 image: "{{ $.ModuleName }}/{{ $.ImageName }}-src-artifact"
 fromImage: common/src-artifact
@@ -10,14 +11,14 @@ git:
       install:
         - '**/*'
 secrets:
-  - id: SOURCE_REPO
-    value: "{{ $.SOURCE_REPO }}"
+  - id: CI_JOB_TOKEN
+    env: CI_JOB_TOKEN
 shell:
   install:
     - mkdir -m 1777 /src/tmp
     - chmod +x /src/scripts/*
     - git config --global advice.detachedHead false
-    - git clone --depth 1 --single-branch --branch {{ $version }} $(cat /run/secrets/SOURCE_REPO)/deckhouse/3p-docker_auth.git /src/docker_auth
+    - git clone --depth 1 --single-branch --branch {{ $version }} https://gitlab-ci-token:$(cat /run/secrets/CI_JOB_TOKEN)@fox.flant.com/{{ $repo }} /src/docker_auth
     - rm -rf /src/docker_auth/.git
 ---
 image: "{{ $.ModuleName }}/{{ $.ImageName }}-artifact"

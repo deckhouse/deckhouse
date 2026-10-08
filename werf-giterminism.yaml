@@ -21,6 +21,7 @@ config:
     allowUncommittedFiles: ["tools/build_includes/*"]
   secrets:
     allowEnvVariables:
+      - CI_JOB_TOKEN
       - REGISTRY_USER
       - REGISTRY_PASSWORD
       - VAULT_ADDR
