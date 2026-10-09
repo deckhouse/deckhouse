@@ -1,14 +1,70 @@
+{{- $shellOperatorVersion := "v1.20.6" }}
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}
-fromImage: common/shell-operator
+from: {{ index $.Images "base/distroless" }}
 import:
-- from: {{ index $.Images "tools/yq" }}
-  add: /usr/bin/yq
-  to: /usr/bin/yq
+{{- /*
+  The tools this image runs on used to come one by one from candi/base_images.yml —
+  tools/bash, tools/jq, tools/sed, tools/grep, tools/gawk, tools/findutils,
+  tools/semver, tools/yq, and tools/coreutils with a hundred and eight paths listed by
+  hand. They now come from container-factory in one artifact, and since pm builds all nine
+  of them statically there is no loader and no library to carry.
+
+  tini is not among them: it was the entrypoint of the base image this one inherited, and
+  nothing has run it since entrypoint.sh started exec'ing webhook-operator directly.
+
+  Of coreutils only the file and text tools are taken, which is what keeps the layer from
+  trebling: pm builds it static against glibc rather than musl, so all 103 binaries come
+  to 116 MB where the 38 kept are 31.
+*/}}
+{{- /*
+  werf empties the destination before an import, and /usr/bin used to be written by two of
+  them: this artifact and python3 from the wheel artifact, both at the install stage. The
+  tools import is applied last and took python3 out, so every .py hook died on exec — the
+  kernel reports a missing shebang interpreter as "fork/exec ...: no such file or
+  directory" on a file that is plainly there. Listing the files through includePaths did
+  not change it: usr/bin/* is still read as the directory.
+
+  So /usr/bin has one source now. The python binaries are staged into the tools artifact
+  and come in with everything else; the wheel import below keeps the runtime, the libraries
+  and the loader, which live in directories nothing else writes.
+*/}}
+- image: {{ .ModuleName }}/{{ .ImageName }}-tools-artifact
+  add: /relocate/bin
+  to: /bin
   before: install
-- from: {{ index $.Images "tools/semver" }}
-  add: /usr/bin/semver
-  to: /usr/bin/semver
+- image: {{ .ModuleName }}/{{ .ImageName }}-tools-artifact
+  add: /relocate/usr/bin
+  to: /usr/bin
+  before: install
+{{- /*
+  Only the hook frameworks are taken from the shell-operator checkout. The binary used to
+  come with them, and so did the Go build that produced it, but nothing runs it: the line
+  that did — exec /usr/bin/tini -- /shell-operator — is commented out in entrypoint.sh,
+  which ends on exec /webhook-operator, and webhook-operator links shell-operator as a Go
+  library rather than executing it. That commented line was the only mention of either
+  path in the tree.
+
+  shell_lib.sh and frameworks stay: shell_lib/hook.sh overrides
+  frameworks/shell/hook.sh#hook::run and PYTHONPATH points at /frameworks/python.
+*/}}
+- image: {{ .ModuleName }}/{{ .ImageName }}-shell-operator-src-artifact
+  add: /src/shell_lib.sh
+  to: /shell_lib.sh
+  owner: "64535"
+  group: "64535"
+  before: setup
+- image: {{ .ModuleName }}/{{ .ImageName }}-shell-operator-src-artifact
+  add: /src/frameworks
+  to: /frameworks
+  owner: "64535"
+  group: "64535"
+  before: setup
+{{- $k8sVersion := index (index .k8sVersions 0) "kubectl" }}
+{{- $image_version := printf "%s.%d" $k8sVersion (index $.CandiVersionMap "k8s" $k8sVersion "patch") | replace "." "-" }}
+- image: common/kubernetes-artifact-{{ $image_version }}
+  add: /src/_output/bin/kubectl
+  to: /usr/bin/kubectl
   before: setup
 - image: common/promtool-artifact
   add: /promtool
@@ -28,7 +84,6 @@ import:
   before: install
   includePaths:
   - lib/ld-musl-x86_64*
-  - usr/bin/python3*
   - usr/lib/python3*
   - usr/lib/lib*.so*
   excludePaths:
@@ -175,3 +230,106 @@ git:
   stageDependencies:
     install:
     - '**/*'
+---
+{{- /*
+  Everything the image needs besides its own binaries, in one artifact. pm builds all ten
+  statically, so what lands in /relocate is binaries and nothing else — no loader, no
+  libraries, no second runtime next to the musl python this image also carries.
+
+*/}}
+image: {{ .ModuleName }}/{{ .ImageName }}-tools-artifact
+final: false
+from: {{ index $.Images "builder/distroless" }}
+{{- /*
+  The python binaries pass through here on their way to the final image, so that its
+  /usr/bin is written by exactly one import. Only the binaries: the runtime under
+  /usr/lib/python3.12, the shared libraries and the musl loader go straight there, each
+  into a directory this artifact does not touch.
+*/}}
+import:
+- image: {{ .ModuleName }}/{{ .ImageName }}-wheel-artifact
+  add: /usr/bin
+  to: /python-bin
+  includePaths:
+  - python3*
+  before: install
+shell:
+  beforeInstall:
+  # -n, because without it pm consults the builder's own package index and skips whatever
+  # is already installed there.
+  - pm install -n bash findutils gawk grep sed jq yq semver -d /src
+  # coreutils goes to a tree of its own because only part of it is wanted; see below.
+  - pm install -n coreutils -d /coreutils
+  install:
+  - mkdir -p /relocate/bin /relocate/usr/bin
+  - cp -pr /src/usr/bin/. /relocate/usr/bin/
+  - mv /relocate/usr/bin/bash /relocate/bin/bash
+  {{- /*
+    Only the file and text tools the hooks reach for, not all 103 of coreutils. pm builds
+    it static against glibc, so every binary carries its own runtime: the whole package is
+    116 MB and the checksum family alone — cksum and the five sha*sum — is 40 MB of that.
+    Nothing here computes a digest in a shell hook.
+
+    What the hooks do use was read off the sources: cat, cut, base64, tr, date, id, seq,
+    sleep, cp and expr in the shell hooks and shell_lib, and nothing at all from the
+    python ones, which only shell out to kubectl. The rest of this list is the ordinary
+    file toolbox, kept because shell-operator's own hook framework is upstream and not
+    visible from here.
+  */}}
+  - |
+    set -eu
+    for b in base64 basename cat chmod chown cp cut date df dirname du env expr head id \
+             ln ls mkdir mktemp mv printf pwd readlink realpath rm rmdir seq sleep sort \
+             stat tail tee timeout touch tr truncate uniq wc whoami; do
+      if [ ! -f "/coreutils/usr/bin/$b" ]; then
+        echo "FATAL: coreutils no longer ships $b" >&2
+        exit 1
+      fi
+      cp -p "/coreutils/usr/bin/$b" /relocate/usr/bin/
+    done
+  # sh is the shell the hook frameworks are run with. The link is relative so that it
+  # resolves inside the artifact: werf drops a symlink it cannot follow.
+  - ln -sf bash /relocate/bin/sh
+  - |
+    set -eu
+    # Nothing here may be dynamic: this image has no glibc, and a binary needing one would
+    # fail the first time a hook called it rather than now.
+    pm install file findutils patchelf
+    for f in $(find /relocate -type f); do
+      if ! file "$f" | grep -q ELF; then
+        continue
+      fi
+      if patchelf --print-interpreter "$f" >/dev/null 2>&1; then
+        echo "FATAL: $f is dynamically linked and this image ships no loader" >&2
+        exit 1
+      fi
+    done
+    echo "tools-artifact: $(find /relocate -type f | wc -l) static binaries"
+  - chown -R 64535:64535 /relocate
+  {{- /*
+    After the check and after the chown: python3 is the one dynamic binary in here, and the
+    wheel import used to leave it owned by root.
+  */}}
+  - |
+    set -eu
+    cp -a /python-bin/. /relocate/usr/bin/
+    for b in python3 python3.12; do
+      if [ ! -e "/relocate/usr/bin/$b" ] && [ ! -L "/relocate/usr/bin/$b" ]; then
+        echo "FATAL: the wheel artifact no longer ships $b" >&2
+        exit 1
+      fi
+    done
+---
+{{- /*
+  Moved here from modules/000-common/images/shell-operator, which had this one importer.
+*/}}
+image: {{ .ModuleName }}/{{ .ImageName }}-shell-operator-src-artifact
+final: false
+from: {{ index $.Images "builder/src" }}
+secrets:
+- id: SOURCE_REPO
+  value: {{ .SOURCE_REPO }}
+shell:
+  install:
+  - git clone --branch {{ $shellOperatorVersion }} --depth 1 $(cat /run/secrets/SOURCE_REPO)/flant/shell-operator.git /src
+  - rm -r /src/.git

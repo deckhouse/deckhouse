@@ -15,8 +15,6 @@ base/ruby-bundler-v3_4_9: "sha256:ca49d8791f944c5452316c02d90abd574a896c1af6fc5a
 base/ruby: "sha256:11b07f962e4b136de4a18d1bacce5c4281143bd07f7395b789f945e81183d7ed" # from: base/distroless
 base/ruby-v3_4_9: "sha256:11b07f962e4b136de4a18d1bacce5c4281143bd07f7395b789f945e81183d7ed" # from: base/distroless
 base/scratch: "sha256:cfac1c6b53f9365ee59ffe94c90211253f2a85ece372a6a9dfad61f4e0ab0bea" # from: builder/scratch
-base/shell-operator: "sha256:560e0c22c81c9866864e9913bd3d79f98d91162fd9e7d29c7b3e4c4ee81c8aaf" # from: builder/scratch
-base/shell-operator-v1.16.4: "sha256:560e0c22c81c9866864e9913bd3d79f98d91162fd9e7d29c7b3e4c4ee81c8aaf" # from: builder/scratch
 builder/alpine-3.21: "sha256:924f440a8693883b9317f3fe5ab34431f711c08dcc9f61ac4ac4dd3cca4ff3f5" # from: alpine:3.21.5
 builder/alpine-3.22: "sha256:2ffd38fd342a64e79ed28cf52d71216bf119b28d96b9871184acfea672a7acc8" # from: alpine:3.22.2
 builder/alpine: "sha256:2ffd38fd342a64e79ed28cf52d71216bf119b28d96b9871184acfea672a7acc8" # from: alpine:3.22.2
@@ -324,8 +322,6 @@ tools/sed: "sha256:03139bab0878f523e1d8256faea9d63f31325efa65f4330de19a91cc18032
 tools/sed-v4.9: "sha256:03139bab0878f523e1d8256faea9d63f31325efa65f4330de19a91cc18032b8c" # from: builder/scratch
 tools/semver-3.4.0: "sha256:1820728a5bc6d57ec962b075461a679034d965ad7521a11fcf73dec29d85e739" # from: builder/scratch
 tools/semver: "sha256:1820728a5bc6d57ec962b075461a679034d965ad7521a11fcf73dec29d85e739" # from: builder/scratch
-tools/shell-operator: "sha256:4e508b74924a55b370c69cc95569dc6600f17cc7925231bc078649fca0ae594e" # from: builder/scratch
-tools/shell-operator-v1.16.4: "sha256:4e508b74924a55b370c69cc95569dc6600f17cc7925231bc078649fca0ae594e" # from: builder/scratch
 tools/ssh: "sha256:d64928f6ccbb36f78583b7d61a5c47fa8f2feaf9488e5559263e05099a70dfe7" # from: builder/scratch
 tools/ssh-V_10_0_P2: "sha256:bda3529b6d8cc063ababc3448e7c1da25df98c40fae98d03b96ae0a2b8e7a3b2" # from: builder/scratch
 tools/ssh-V_10_3_P1: "sha256:d64928f6ccbb36f78583b7d61a5c47fa8f2feaf9488e5559263e05099a70dfe7" # from: builder/scratch
