@@ -73,9 +73,11 @@ mount:
 secrets:
 - id: GOPROXY
   value: {{ .GOPROXY }}
+{{ include "secret for private go modules" . }}
 shell:
   install:
   - pm install minget
+  {{- include "auth for private go modules" . | nindent 2 }}
   - cd /dhctl
 {{- if $context.includeImagesDigests }}
   - cp /images_digests.json pkg/config/digests/images_digests.json

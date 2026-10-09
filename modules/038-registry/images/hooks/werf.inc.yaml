@@ -23,12 +23,16 @@ git:
     stageDependencies:
       install:
         - Taskfile.fuzz.yml
+mount:
+{{ include "mount points for golang builds" . }}
 secrets:
   - id: GOPROXY
     value: {{ $.GOPROXY }}
+  {{- include "secret for private go modules" . | nindent 2 }}
 shell:
   install:
     - cd /src
+    {{- include "auth for private go modules" . | nindent 4 }}
     - GOPROXY=$(cat /run/secrets/GOPROXY) go mod download
     - rm -rf test/e2e tests/e2e tests/ginkgo
     - chmod -R a+rwX /src /fuzz/gomod

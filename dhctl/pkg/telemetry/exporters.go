@@ -21,7 +21,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/090809/oteljsonl"
+	"fox.flant.com/deckhouse/cluster-and-infrastructure/libs/oteljsonl"
 	"go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploggrpc"
 	"go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploghttp"
 	"go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetricgrpc"
