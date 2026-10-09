@@ -1,0 +1,73 @@
+diff --git a/cluster-autoscaler/simulator/cluster.go b/cluster-autoscaler/simulator/cluster.go
+index 8b88b5a..12ef015 100644
+--- a/cluster-autoscaler/simulator/cluster.go
++++ b/cluster-autoscaler/simulator/cluster.go
+@@ -208,6 +208,14 @@ func (r *RemovalSimulator) findPlaceFor(removedNode string, pods []*apiv1.Pod, n
+ 
+ 	newpods := make([]*apiv1.Pod, 0, len(pods))
+ 	for _, podptr := range pods {
++		if podptr == nil {
++			klog.Warningf("findPlaceFor: skipping nil pod in list for node %s", removedNode)
++			continue
++		}
++		controllerRef := drain.ControllerRef(podptr)
++		if controllerRef != nil && controllerRef.Kind == "DaemonSet" && controllerRef.APIVersion == "apps.kruise.io/v1alpha1" {
++			continue
++		}
+ 		newpod := *podptr
+ 		newpod.Spec.NodeName = ""
+ 		newpods = append(newpods, &newpod)
+diff --git a/cluster-autoscaler/simulator/drainability/rules/pdb/rule.go b/cluster-autoscaler/simulator/drainability/rules/pdb/rule.go
+index 63d92b2..d85f6c0 100644
+--- a/cluster-autoscaler/simulator/drainability/rules/pdb/rule.go
++++ b/cluster-autoscaler/simulator/drainability/rules/pdb/rule.go
+@@ -40,9 +40,20 @@ func (r *Rule) Name() string {
+ 
+ // Drainable decides how to handle pods with pdbs on node drain.
+ func (Rule) Drainable(drainCtx *drainability.DrainContext, pod *apiv1.Pod, _ *framework.NodeInfo) drainability.Status {
++	kruiseAds := false
++	controllerRef := drain.ControllerRef(pod)
++	if controllerRef != nil && controllerRef.APIVersion == "apps.kruise.io/v1alpha1" && controllerRef.Kind == "DaemonSet" {
++		kruiseAds = true
++	}
+ 	for _, pdb := range drainCtx.RemainingPdbTracker.MatchingPdbs(pod) {
+-		if pdb.Status.DisruptionsAllowed < 1 {
+-			return drainability.NewBlockedStatus(drain.NotEnoughPdb, fmt.Errorf("not enough pod disruption budget to move %s/%s", pod.Namespace, pod.Name))
++		if kruiseAds {
++			if pdb.Status.CurrentHealthy <= 1 {
++				return drainability.NewBlockedStatus(drain.NotEnoughPdb, fmt.Errorf("not enough healthy pods to move %s/%s", pod.Namespace, pod.Name))
++			}
++		} else {
++			if pdb.Status.DisruptionsAllowed < 1 {
++				return drainability.NewBlockedStatus(drain.NotEnoughPdb, fmt.Errorf("not enough pod disruption budget to move %s/%s", pod.Namespace, pod.Name))
++			}
+ 		}
+ 	}
+ 	return drainability.NewUndefinedStatus()
+diff --git a/cluster-autoscaler/simulator/drainability/rules/replicated/rule.go b/cluster-autoscaler/simulator/drainability/rules/replicated/rule.go
+index 4fed15c..7a16dd7 100644
+--- a/cluster-autoscaler/simulator/drainability/rules/replicated/rule.go
++++ b/cluster-autoscaler/simulator/drainability/rules/replicated/rule.go
+@@ -49,7 +49,7 @@ func (r *Rule) Drainable(drainCtx *drainability.DrainContext, pod *apiv1.Pod, _
+ 
+ 	if r.skipNodesWithCustomControllerPods {
+ 		// TODO(vadasambar): remove this when we get rid of skipNodesWithCustomControllerPods
+-		replicated = replicated && replicatedKind[controllerRef.Kind]
++		replicated = replicated && (replicatedKind[controllerRef.Kind] || (controllerRef.Kind == "DaemonSet" && controllerRef.APIVersion == "apps.kruise.io/v1alpha1"))
+ 	}
+ 
+ 	if !replicated {
+diff --git a/cluster-autoscaler/utils/pod/pod.go b/cluster-autoscaler/utils/pod/pod.go
+index 439d964..024777b 100644
+--- a/cluster-autoscaler/utils/pod/pod.go
++++ b/cluster-autoscaler/utils/pod/pod.go
+@@ -36,6 +36,9 @@ const (
+ func IsDaemonSetPod(pod *apiv1.Pod) bool {
+ 	controllerRef := metav1.GetControllerOf(pod)
+ 	if controllerRef != nil && controllerRef.Kind == "DaemonSet" {
++		if controllerRef.APIVersion == "apps.kruise.io/v1alpha1" {
++			return false
++		}
+ 		return true
+ 	}
+ 

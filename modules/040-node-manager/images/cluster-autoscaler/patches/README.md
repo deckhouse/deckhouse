@@ -17,9 +17,12 @@ and the OpenTelemetry trace SDK and OTLP trace exporters at `v1.45.0`
 - 1.33–1.34: `x/net v0.58.0`, `x/text v0.42.0`, `x/crypto v0.57.0`,
   `x/sys v0.48.0`, plus Kubernetes staging bumps with require+replace sync
   (`v1.33.6` / `v1.34.2`).
-- 1.35 (also used for the 1.36 and 1.37 images): `k8s.io/kubernetes v1.35.8` (staging
+- 1.35: `k8s.io/kubernetes v1.35.8` (staging
   synced to `v0.35.8`), `x/mod v0.41.0` (CVE-2026-56864/56865), `x/net v0.58.0`,
   `x/text v0.42.0`, `x/crypto v0.57.0`, `x/sys v0.48.0`.
+- 1.36 (also used for the 1.37 image): `x/mod v0.41.0`, `x/net v0.58.0`,
+  `x/text v0.42.0`, `x/crypto v0.57.0`, `x/sys v0.48.0`; `k8s.io/kubernetes`
+  stays at the tag's `v1.36.2`.
 
 On 1.33 `go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc`
 is pinned with a `replace` to `v0.58.0`: `google.golang.org/api` v0.264.0 requires
@@ -44,8 +47,17 @@ Because the patch is generated against a specific gardener tag, it must be
 recreated from a clean checkout of that tag; applying a patch made from a
 different base fails in CI with `patch does not apply`. Per-version target
 versions and the exact recreate commands are documented in each
-`<k8s-minor>/README.md`. Note that the `1.35/` patch is also used for the
-1.36 and 1.37 images (`werf.inc.yaml` clamps `$maxVersion = "1.35"`).
+`<k8s-minor>/README.md`. The Kubernetes minor -> gardener tag mapping lives in
+`modules/040-node-manager/oss.yaml`, and `werf.inc.yaml` picks the patch
+directory by the gardener tag's minor, so the `1.36/` patches are also used
+for the 1.37 image.
+
+## mcm build tag (1.36+)
+
+Since `v1.36.0` gardener registers the mcm provider only under the `mcm` build
+tag (`cloudprovider/router/router_mcm.go`), so `werf.inc.yaml` adds
+`-tags mcm` for 1.36 and newer. Older tags list mcm in `builder_all.go` and
+are built without tags.
 
 ## Scale from zero
 
@@ -89,3 +101,5 @@ This patch adds two guards in GetUpcomingNodes() to skip counting upcoming nodes
 - The node group is in backoff state
 
 This breaks the deadlock: pods remain unschedulable, ScaleUp() is invoked, and the priority expander can fall back to a working lower-priority node group.
+
+The patch exists only for 1.33–1.35: upstream `v1.36.0` has the same two guards in `GetUpcomingNodes()`.

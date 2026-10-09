@@ -11,6 +11,11 @@
     {{- range $path, $_ := $.Files.Glob (printf "%s/patches/%s/*.patch" $patches $patch_version) }}
       {{- $patch = true }}
     {{- end }}
+    {{- /* Since v1.36 gardener registers the mcm provider only under the "mcm" build tag (cloudprovider/router); clusterapi still comes from router_all.go. */ -}}
+    {{- $buildTags := "" }}
+    {{- if semverCompare ">=1.36" $clusterAutoscalerVersion }}
+      {{- $buildTags = "-tags mcm " }}
+    {{- end }}
 
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-{{ $image_version }}-src-artifact
@@ -57,7 +62,7 @@ shell:
   - cd /src
   - export GOOS=linux GOARCH=amd64 CGO_ENABLED=0
   - GOPROXY=$(cat /run/secrets/GOPROXY) go mod download
-  - go build -ldflags='-s -w -extldflags "-static"' -o cluster-autoscaler
+  - go build {{ $buildTags }}-ldflags='-s -w -extldflags "-static"' -o cluster-autoscaler
   - echo "{{ trimPrefix "v" $clusterAutoscalerVersion }}-flant" > VERSION
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-{{ $image_version }}
