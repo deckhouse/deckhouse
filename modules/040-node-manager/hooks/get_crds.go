@@ -32,6 +32,7 @@ import (
 	"github.com/flant/addon-operator/sdk"
 	"github.com/flant/shell-operator/pkg/kube/object_patch"
 	"github.com/flant/shell-operator/pkg/kube_events_manager/types"
+	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/labels"
@@ -444,7 +445,8 @@ func getCRDsHandler(_ context.Context, input *go_hook.HookInput) error {
 							slog.String("node_group", nodeGroup.Name),
 							slog.String("instance_class_kind", nodeGroupInstanceClassKind), log.Err(err))
 					} else {
-						ngForValues["nodeCapacity"] = nodeCapacity
+						ngForValues["nodeCapacity"] = newNodeCapacityForValues(nodeCapacity,
+							capacity.CalculateBootDisk(nodeGroupInstanceClassKind, instanceClassSpec, instanceTypeCatalog))
 					}
 				}
 			}
@@ -599,6 +601,27 @@ func getCRDsHandler(_ context.Context, input *go_hook.HookInput) error {
 
 	input.Values.Set("nodeManager.internal.nodeGroups", finalNodeGroups)
 	return nil
+}
+
+// nodeCapacityForValues is nodeCapacity as it has always been published, plus the boot disk the
+// CAPI ephemeral-disk annotation is built from. The fields repeat v1alpha1.InstanceType one by
+// one, in its order, so a group without a boot disk publishes exactly what it did before.
+// bashible-apiserver leaves nodeCapacity out of configurationChecksum, so the new key re-runs
+// nothing on the nodes.
+type nodeCapacityForValues struct {
+	Name     string             `json:"name"`
+	CPU      resource.Quantity  `json:"cpu"`
+	Memory   resource.Quantity  `json:"memory"`
+	RootDisk resource.Quantity  `json:"rootDisk"`
+	BootDisk *resource.Quantity `json:"bootDisk,omitempty"`
+}
+
+func newNodeCapacityForValues(it *v1alpha1.InstanceType, bootDisk resource.Quantity) nodeCapacityForValues {
+	out := nodeCapacityForValues{Name: it.Name, CPU: it.CPU, Memory: it.Memory, RootDisk: it.RootDisk}
+	if !bootDisk.IsZero() {
+		out.BootDisk = &bootDisk
+	}
+	return out
 }
 
 func nodeGroupForValues(nodeGroupSpec *ngv1.NodeGroupSpec) map[string]interface{} {

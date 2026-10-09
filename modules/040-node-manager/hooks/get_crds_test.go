@@ -1354,6 +1354,51 @@ spec:
 				CPU:    resource.MustParse("4"),
 				Memory: resource.MustParse("8Gi"),
 			})
+			// No disk size in the class: nothing for the CAPI ephemeral-disk annotation, and the
+			// published nodeCapacity keeps exactly the keys it always had.
+			Expect(f.ValuesGet("nodeManager.internal.nodeGroups.0.nodeCapacity.bootDisk").Exists()).To(BeFalse())
+		})
+	})
+
+	Context("ScaleFromZero: with a boot disk", func() {
+		BeforeEach(func() {
+			f.BindingContexts.Set(f.KubeStateSet(`
+---
+apiVersion: deckhouse.io/v1
+kind: NodeGroup
+metadata:
+  name: test
+spec:
+  nodeType: CloudEphemeral
+  cloudInstances:
+    minPerZone: 0
+    maxPerZone: 3
+    classReference:
+      kind: D8TestInstanceClass
+      name: cap
+    zones: [a,b]
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: D8TestInstanceClass
+metadata:
+  name: cap
+spec:
+  type: test
+  rootDiskSize: 30
+  capacity:
+    cpu: 4
+    memory: 8Gi
+`))
+			f.RunHook()
+		})
+
+		It("publishes the boot disk next to the capacity, rootDisk unchanged", func() {
+			Expect(f).To(ExecuteSuccessfully())
+			assertNodeCapacity(f, v1alpha1.InstanceType{
+				CPU:    resource.MustParse("4"),
+				Memory: resource.MustParse("8Gi"),
+			})
+			Expect(f.ValuesGet("nodeManager.internal.nodeGroups.0.nodeCapacity.bootDisk").String()).To(Equal("30Gi"))
 		})
 	})
 

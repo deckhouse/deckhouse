@@ -160,8 +160,14 @@ func (aic *gcpInstanceClass) ExtractCapacity(catalog *InstanceTypesCatalog) (*v1
 }
 
 type yandexInstanceClass struct {
-	Cores  int `json:"cores"`
-	Memory int `json:"memory"`
+	Cores      int `json:"cores"`
+	Memory     int `json:"memory"`
+	DiskSizeGB int `json:"diskSizeGB"`
+}
+
+// 50 is cloud-provider-yandex's machine template default.
+func (yic yandexInstanceClass) BootDisk(_ *InstanceTypesCatalog) resource.Quantity {
+	return diskGiB(yic.DiskSizeGB, 50)
 }
 
 func (yic yandexInstanceClass) ExtractCapacity(_ *InstanceTypesCatalog) (*v1alpha1.InstanceType, error) {
@@ -187,6 +193,13 @@ func (yic yandexInstanceClass) ExtractCapacity(_ *InstanceTypesCatalog) (*v1alph
 type openStackInstanceClass struct {
 	Capacity   *Capacity `json:"capacity,omitempty"`
 	FlavorName string    `json:"flavorName,omitempty"`
+	// RootDiskSize is unset when the machine boots from the flavor's disk, which the catalog
+	// carries as the type's RootDisk.
+	RootDiskSize int `json:"rootDiskSize,omitempty"`
+}
+
+func (aic *openStackInstanceClass) BootDisk(catalog *InstanceTypesCatalog) resource.Quantity {
+	return catalogBootDisk(catalog, aic, diskGiB(aic.RootDiskSize, 0))
 }
 
 func (aic *openStackInstanceClass) GetCapacity() *Capacity {
@@ -203,6 +216,12 @@ func (aic *openStackInstanceClass) ExtractCapacity(catalog *InstanceTypesCatalog
 
 type vcdInstanceClass struct {
 	SizingPolicy string `json:"sizingPolicy,omitempty"`
+	// RootDiskSizeGb is defaulted to 20 by the VCDInstanceClass CRD.
+	RootDiskSizeGb int `json:"rootDiskSizeGb,omitempty"`
+}
+
+func (aic *vcdInstanceClass) BootDisk(catalog *InstanceTypesCatalog) resource.Quantity {
+	return catalogBootDisk(catalog, aic, diskGiB(aic.RootDiskSizeGb, 0))
 }
 
 func (aic *vcdInstanceClass) GetCapacity() *Capacity {
@@ -218,8 +237,14 @@ func (aic *vcdInstanceClass) ExtractCapacity(catalog *InstanceTypesCatalog) (*v1
 }
 
 type zvirtInstanceClass struct {
-	Cores  int `json:"cores"`
-	Memory int `json:"memory"`
+	Cores          int `json:"cores"`
+	Memory         int `json:"memory"`
+	RootDiskSizeGb int `json:"rootDiskSizeGb"`
+}
+
+// 20 is the ZvirtMachineTemplate CRD default (cloud-provider-zvirt crds/external).
+func (zic zvirtInstanceClass) BootDisk(_ *InstanceTypesCatalog) resource.Quantity {
+	return diskGiB(zic.RootDiskSizeGb, 20)
 }
 
 func (zic zvirtInstanceClass) ExtractCapacity(_ *InstanceTypesCatalog) (*v1alpha1.InstanceType, error) {
@@ -243,8 +268,14 @@ func (zic zvirtInstanceClass) ExtractCapacity(_ *InstanceTypesCatalog) (*v1alpha
 }
 
 type dynamixInstanceClass struct {
-	Cores  int `json:"cores"`
-	Memory int `json:"memory"`
+	Cores          int `json:"cores"`
+	Memory         int `json:"memory"`
+	RootDiskSizeGb int `json:"rootDiskSizeGb"`
+}
+
+// 30 is the DynamixMachineTemplate CRD default (cloud-provider-dynamix crds/external).
+func (d dynamixInstanceClass) BootDisk(_ *InstanceTypesCatalog) resource.Quantity {
+	return diskGiB(d.RootDiskSizeGb, 30)
 }
 
 func (d dynamixInstanceClass) ExtractCapacity(_ *InstanceTypesCatalog) (*v1alpha1.InstanceType, error) {
@@ -268,7 +299,13 @@ func (d dynamixInstanceClass) ExtractCapacity(_ *InstanceTypesCatalog) (*v1alpha
 }
 
 type huaweiCloudInstanceClass struct {
-	FlavorName string `json:"flavorName,omitempty"`
+	FlavorName   string `json:"flavorName,omitempty"`
+	RootDiskSize int    `json:"rootDiskSize,omitempty"`
+}
+
+// 30 is the HuaweiCloudMachineTemplate CRD default (cloud-provider-huaweicloud crds/external).
+func (c *huaweiCloudInstanceClass) BootDisk(catalog *InstanceTypesCatalog) resource.Quantity {
+	return catalogBootDisk(catalog, c, diskGiB(c.RootDiskSize, 30))
 }
 
 func (c *huaweiCloudInstanceClass) GetCapacity() *Capacity {
@@ -284,6 +321,11 @@ func (c *huaweiCloudInstanceClass) ExtractCapacity(catalog *InstanceTypesCatalog
 }
 
 type dvpInstanceClass struct {
+	// RootDisk.Size is required by the DVPInstanceClass CRD.
+	RootDisk struct {
+		Size string `json:"size"`
+	} `json:"rootDisk"`
+
 	VirtualMachine struct {
 		CPU struct {
 			Cores int `json:"cores"`
@@ -315,9 +357,23 @@ func (d dvpInstanceClass) ExtractCapacity(_ *InstanceTypesCatalog) (*v1alpha1.In
 	}, nil
 }
 
+// The disk only feeds the ephemeral-disk annotation, so an unparsable size leaves it unknown.
+func (d dvpInstanceClass) BootDisk(_ *InstanceTypesCatalog) resource.Quantity {
+	size, err := resource.ParseQuantity(d.RootDisk.Size)
+	if err != nil {
+		return resource.Quantity{}
+	}
+	return size
+}
+
 type testInstanceClass struct {
-	Capacity *Capacity `json:"capacity,omitempty"`
-	Type     string    `json:"type,omitempty"`
+	Capacity     *Capacity `json:"capacity,omitempty"`
+	Type         string    `json:"type,omitempty"`
+	RootDiskSize int       `json:"rootDiskSize,omitempty"`
+}
+
+func (aic *testInstanceClass) BootDisk(_ *InstanceTypesCatalog) resource.Quantity {
+	return diskGiB(aic.RootDiskSize, 0)
 }
 
 func (aic *testInstanceClass) GetCapacity() *Capacity {
@@ -342,8 +398,41 @@ type capacityExtractor interface {
 	ExtractCapacity(catalog *InstanceTypesCatalog) (*v1alpha1.InstanceType, error)
 }
 
+// bootDiskExtractor is implemented by the InstanceClasses of the CAPI providers.
+type bootDiskExtractor interface {
+	BootDisk(catalog *InstanceTypesCatalog) resource.Quantity
+}
+
 // CalculateNodeTemplateCapacity calculates capacity of the node based on InstanceClass and it's spec
 func CalculateNodeTemplateCapacity(instanceClassName string, instanceClassSpec interface{}, catalog *InstanceTypesCatalog) (*v1alpha1.InstanceType, error) {
+	extractor, err := decodeInstanceClass(instanceClassName, instanceClassSpec)
+	if err != nil {
+		return nil, err
+	}
+	return extractor.ExtractCapacity(catalog)
+}
+
+// CalculateBootDisk returns the size of the disk a machine of the InstanceClass boots from, as the
+// provider creates it, and zero when it is unknown. It feeds the CAPI ephemeral-disk annotation.
+// The result is normalized, so a size the InstanceClass spells in any quantity form fits the
+// nodeCapacity schema.
+func CalculateBootDisk(instanceClassName string, instanceClassSpec interface{}, catalog *InstanceTypesCatalog) resource.Quantity {
+	extractor, err := decodeInstanceClass(instanceClassName, instanceClassSpec)
+	if err != nil {
+		return resource.Quantity{}
+	}
+	bd, ok := extractor.(bootDiskExtractor)
+	if !ok {
+		return resource.Quantity{}
+	}
+	size := bd.BootDisk(catalog)
+	if size.Value() <= 0 {
+		return resource.Quantity{}
+	}
+	return *resource.NewQuantity(size.Value(), resource.BinarySI)
+}
+
+func decodeInstanceClass(instanceClassName string, instanceClassSpec interface{}) (capacityExtractor, error) {
 	var extractor capacityExtractor
 
 	switch instanceClassName {
@@ -401,10 +490,29 @@ func CalculateNodeTemplateCapacity(instanceClassName string, instanceClassSpec i
 	// unless we don't have structs for InstanceClasses this is the easiest way to get fields from abstract spec
 	// trying to use type assertion is much uglier, don't try to use it
 	data, _ := json.Marshal(instanceClassSpec)
-	err := json.Unmarshal(data, extractor)
-	if err != nil {
+	if err := json.Unmarshal(data, extractor); err != nil {
 		return nil, err
 	}
+	return extractor, nil
+}
 
-	return extractor.ExtractCapacity(catalog)
+// diskGiB returns a disk of sizeGiB, or of defaultGiB when the InstanceClass leaves the size
+// unset. defaultGiB is the size the provider creates the disk with in that case, and 0 when
+// it cannot be known.
+func diskGiB(sizeGiB, defaultGiB int) resource.Quantity {
+	if sizeGiB <= 0 {
+		sizeGiB = defaultGiB
+	}
+	return *resource.NewQuantity(int64(sizeGiB)<<30, resource.BinarySI)
+}
+
+// catalogBootDisk is the size the InstanceClass names, otherwise the catalog's disk of its type.
+func catalogBootDisk(catalog *InstanceTypesCatalog, ic instanceClass, size resource.Quantity) resource.Quantity {
+	if !size.IsZero() {
+		return size
+	}
+	if it, err := catalog.Get(ic); err == nil {
+		return it.RootDisk
+	}
+	return resource.Quantity{}
 }

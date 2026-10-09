@@ -2040,6 +2040,9 @@ ccc: ddd
 			Expect(md.Exists()).To(BeTrue())
 
 			annotations := md.Field("metadata.annotations").Map()
+			for key := range annotations {
+				Expect(key).ToNot(ContainSubstring("disk"), "MCM annotations carry no disk")
+			}
 			if present {
 				Expect(annotations["cluster-autoscaler.kubernetes.io/scale-from-zero"].String()).To(Equal("true"))
 				Expect(annotations["cluster-autoscaler.kubernetes.io/node-cpu"].String()).To(Equal("2"))
@@ -2053,7 +2056,9 @@ ccc: ddd
 
 		BeforeEach(func() {
 			f.ValuesSetFromYaml("nodeManager", nodeManagerConfigValues+nodeManagerAWS)
-			f.ValuesSetFromYaml("nodeManager.internal.nodeGroups.0.nodeCapacity", `{cpu: "2", memory: "2Gi"}`)
+			// bootDisk is for the CAPI ephemeral-disk annotation only; the MCM template's disk comes
+			// from the autoscaler patch.
+			f.ValuesSetFromYaml("nodeManager.internal.nodeGroups.0.nodeCapacity", `{cpu: "2", memory: "2Gi", bootDisk: "30Gi"}`)
 			setBashibleAPIServerTLSValues(f)
 		})
 
@@ -2078,6 +2083,42 @@ ccc: ddd
 			It("does not annotate the MachineDeployment", func() {
 				Expect(f.RenderError).ShouldNot(HaveOccurred())
 				assertAnnotations(false)
+			})
+		})
+	})
+
+	// node-controller reads the CAPI capacity annotations from this ConfigMap; bootDisk feeds
+	// capacity.cluster-autoscaler.kubernetes.io/ephemeral-disk and is published only when known.
+	Context("CAPI node capacity ConfigMap", func() {
+		BeforeEach(func() {
+			f.ValuesSetFromYaml("nodeManager", nodeManagerConfigValues+nodeManagerAWS)
+			setBashibleAPIServerTLSValues(f)
+		})
+
+		Context("with a boot disk", func() {
+			BeforeEach(func() {
+				f.ValuesSetFromYaml("nodeManager.internal.nodeGroups.0.nodeCapacity", `{cpu: "2", memory: "2Gi", rootDisk: "0", bootDisk: "30Gi"}`)
+				f.HelmRender()
+			})
+
+			It("publishes it next to cpu and memory", func() {
+				Expect(f.RenderError).ShouldNot(HaveOccurred())
+				cm := f.KubernetesResource("ConfigMap", "d8-cloud-instance-manager", "d8-node-manager-capi-node-capacity")
+				Expect(cm.Exists()).To(BeTrue())
+				Expect(cm.Field("data.worker").String()).To(MatchYAML(`{cpu: "2", memory: "2Gi", bootDisk: "30Gi"}`))
+			})
+		})
+
+		Context("without a boot disk", func() {
+			BeforeEach(func() {
+				f.ValuesSetFromYaml("nodeManager.internal.nodeGroups.0.nodeCapacity", `{cpu: "2", memory: "2Gi", rootDisk: "0"}`)
+				f.HelmRender()
+			})
+
+			It("publishes cpu and memory only", func() {
+				Expect(f.RenderError).ShouldNot(HaveOccurred())
+				cm := f.KubernetesResource("ConfigMap", "d8-cloud-instance-manager", "d8-node-manager-capi-node-capacity")
+				Expect(cm.Field("data.worker").String()).To(MatchYAML(`{cpu: "2", memory: "2Gi"}`))
 			})
 		})
 	})

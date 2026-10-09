@@ -5,6 +5,7 @@
   capacity.cluster-autoscaler.kubernetes.io/{cpu,memory} from $ng.nodeCapacity.
   CAPI MachineDeployments are now rendered by node-controller, which does not
   see module values, so publish the already-calculated capacities here.
+  bootDisk feeds capacity.cluster-autoscaler.kubernetes.io/ephemeral-disk.
 */ -}}
 apiVersion: v1
 kind: ConfigMap
@@ -20,6 +21,9 @@ data:
   {{ $ng.name }}: |
     cpu: {{ $ng.nodeCapacity.cpu | quote }}
     memory: {{ $ng.nodeCapacity.memory | quote }}
+      {{- if $ng.nodeCapacity.bootDisk }}
+    bootDisk: {{ $ng.nodeCapacity.bootDisk | quote }}
+      {{- end }}
     {{- end }}
   {{- end }}
   {{- if not $capacityPublished }}

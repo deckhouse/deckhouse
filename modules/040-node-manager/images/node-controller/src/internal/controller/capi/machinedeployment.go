@@ -27,6 +27,7 @@ import (
 
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
+	"k8s.io/apimachinery/pkg/api/resource"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/runtime/schema"
@@ -280,7 +281,7 @@ func (r *MachineDeploymentReconciler) reconcileCloudMDs(ctx context.Context, ng 
 		infraAPIGroup = infraAPIGroup[:idx]
 	}
 
-	capacityCPU, capacityMemory := r.readNodeCapacity(ctx, ng.Name)
+	nodeCapacity := r.readNodeCapacity(ctx, ng.Name)
 
 	for _, zone := range zones {
 		mdHash := sha256Hash(clusterUUID + zone)
@@ -307,7 +308,7 @@ func (r *MachineDeploymentReconciler) reconcileCloudMDs(ctx context.Context, ng 
 		if serializedTaints != "" {
 			annotations["capacity.cluster-autoscaler.kubernetes.io/taints"] = serializedTaints
 		}
-		setCapacityAnnotations(annotations, capacityCPU, capacityMemory)
+		setCapacityAnnotations(annotations, nodeCapacity, ng.Spec.Kubelet)
 
 		commonLabels := map[string]interface{}{
 			"heritage":   "deckhouse",
@@ -626,6 +627,9 @@ func applyMachineDeploymentSpecPatch(spec map[string]interface{}, rawPatch strin
 type nodeCapacityValues struct {
 	CPU    string `json:"cpu" yaml:"cpu"`
 	Memory string `json:"memory" yaml:"memory"`
+	// BootDisk is the size of the disk the machine boots from, as the provider creates it; empty
+	// when get_crds cannot know it.
+	BootDisk string `json:"bootDisk,omitempty" yaml:"bootDisk,omitempty"`
 }
 
 // readNodeCapacity loads CPU/memory previously calculated by get_crds and published
@@ -633,34 +637,108 @@ type nodeCapacityValues struct {
 // that can hold a machine, not only for the scale-from-zero ones: the autoscaler needs a template
 // NodeInfo for every group it discovers, and a discovered group with neither a registered Node nor
 // a template makes ResourcesLeft fail cluster-wide with "No node info for: <group>".
-func (r *MachineDeploymentReconciler) readNodeCapacity(ctx context.Context, ngName string) (string, string) {
+func (r *MachineDeploymentReconciler) readNodeCapacity(ctx context.Context, ngName string) nodeCapacityValues {
 	cm := &corev1.ConfigMap{}
 	if err := r.APIReader.Get(ctx, types.NamespacedName{
 		Name: nodeCapacityConfigMapName, Namespace: common.MachineNamespace,
 	}, cm); err != nil {
-		return "", ""
+		return nodeCapacityValues{}
 	}
 	raw, ok := cm.Data[ngName]
 	if !ok || strings.TrimSpace(raw) == "" {
-		return "", ""
+		return nodeCapacityValues{}
 	}
 	var capacity nodeCapacityValues
 	if err := sigsyaml.Unmarshal([]byte(raw), &capacity); err != nil {
 		log.FromContext(ctx).Error(err, "failed to unmarshal node capacity", "nodeGroup", ngName)
-		return "", ""
+		return nodeCapacityValues{}
 	}
-	return capacity.CPU, capacity.Memory
+	return capacity
 }
 
 // setCapacityAnnotations advertises the node template the autoscaler's clusterapi provider builds
 // its NodeInfo from. Not scale-from-zero only — see readNodeCapacity.
-func setCapacityAnnotations(annotations map[string]interface{}, cpu, memory string) {
-	if cpu != "" {
-		annotations["capacity.cluster-autoscaler.kubernetes.io/cpu"] = cpu
+func setCapacityAnnotations(annotations map[string]interface{}, capacity nodeCapacityValues, kubelet *deckhousev1.KubeletSpec) {
+	if capacity.CPU != "" {
+		annotations["capacity.cluster-autoscaler.kubernetes.io/cpu"] = capacity.CPU
 	}
-	if memory != "" {
-		annotations["capacity.cluster-autoscaler.kubernetes.io/memory"] = memory
+	if capacity.Memory != "" {
+		annotations["capacity.cluster-autoscaler.kubernetes.io/memory"] = capacity.Memory
 	}
+	// Without it the template node has no ephemeral-storage at all: a pod requesting any fails
+	// NodeResourcesFit there, and the DaemonSet pods the autoscaler adds to the template drive its
+	// free ephemeral-storage negative, which makes --balance-similar-node-groups treat identical
+	// zones as dissimilar and put a whole scale-up into one of them.
+	if capacity.BootDisk == "" {
+		return
+	}
+	bootDisk, err := resource.ParseQuantity(capacity.BootDisk)
+	if err != nil {
+		return
+	}
+	if storage, ok := templateEphemeralStorage(bootDisk, kubelet); ok {
+		annotations["capacity.cluster-autoscaler.kubernetes.io/ephemeral-disk"] = storage.String()
+	}
+}
+
+// The kubelet ephemeral-storage deductions candi/bashible/common-steps/all/064_configure_kubelet.sh.tpl
+// configures on a node.
+const (
+	evictionHardNodefsPercent   = 5
+	evictionHardNodefsMaxG      = 20                 // maxAvailableReservedSpace
+	autoSystemReservedEphemeral = 1 << 30            // 1Gi
+	gigabyte                    = 1000 * 1000 * 1000 // the script's "G"
+	kibibytesPerScriptGigabyte  = 1000 * 1000        // df reports KiB, the script divides by 1e6
+	mebibyte                    = 1 << 20
+)
+
+// templateEphemeralStorage is the ephemeral-storage the autoscaler's template node offers for a
+// boot disk of the given size, and false when the size is unknown.
+//
+// The clusterapi provider puts the annotation into both capacity and allocatable and subtracts
+// nothing, so the kubelet's own deductions are taken off here: evictionHard nodefs.available (5%
+// of the filesystem, or 20G once 5% is above that) and systemReserved ephemeral-storage. Two
+// approximations remain: the filesystem is a little smaller than the disk, so the template
+// overestimates the node slightly, and a kubelet.rootDir on a separate volume is not the boot
+// disk at all, which node-controller cannot see.
+func templateEphemeralStorage(bootDisk resource.Quantity, kubelet *deckhousev1.KubeletSpec) (resource.Quantity, bool) {
+	disk := bootDisk.Value()
+	if disk <= 0 {
+		return resource.Quantity{}, false
+	}
+	// The script's integer arithmetic, so the cap starts at the same disk size it does.
+	evictionHard := disk * evictionHardNodefsPercent / 100
+	if disk/1024/kibibytesPerScriptGigabyte*evictionHardNodefsPercent/100 > evictionHardNodefsMaxG {
+		evictionHard = evictionHardNodefsMaxG * gigabyte
+	}
+	// Rounded down to MiB, so the annotation reads as a size (28160Mi) rather than a byte count.
+	allocatable := (disk - evictionHard - systemReservedEphemeralStorage(kubelet)) / mebibyte * mebibyte
+	if allocatable <= 0 {
+		return resource.Quantity{}, false
+	}
+	return *resource.NewQuantity(allocatable, resource.BinarySI), true
+}
+
+// systemReservedEphemeralStorage is kubelet's systemReserved ephemeral-storage for the group's
+// resourceReservation: 1Gi in Auto mode, the configured value in Static mode, none in Off.
+func systemReservedEphemeralStorage(kubelet *deckhousev1.KubeletSpec) int64 {
+	var reservation *deckhousev1.ResourceReservationSpec
+	if kubelet != nil {
+		reservation = kubelet.ResourceReservation
+	}
+	// Auto is the NodeGroup CRD default, so an object read from the API server always names a
+	// mode; nil only reaches here from a NodeGroup built in code.
+	if reservation == nil || reservation.Mode == "" || reservation.Mode == "Auto" {
+		return autoSystemReservedEphemeral
+	}
+	if reservation.Mode != "Static" || reservation.Static == nil || reservation.Static.EphemeralStorage == nil {
+		return 0
+	}
+	reserved, err := resource.ParseQuantity(reservation.Static.EphemeralStorage.String())
+	if err != nil {
+		return 0
+	}
+	return reserved.Value()
 }
 
 func substitutePatchVariables(raw string, vars map[string]string) string {

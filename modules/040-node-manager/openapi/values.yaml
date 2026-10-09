@@ -435,6 +435,13 @@ properties:
                     - type: string
                       pattern: '^[0-9]+(\.[0-9]+)?(E|P|T|G|M|k|Ei|Pi|Ti|Gi|Mi|Ki)?$'
                     - type: number
+                bootDisk:
+                  # The disk the machine boots from, for the CAPI ephemeral-disk annotation. Not node
+                  # configuration: bashible-apiserver leaves nodeCapacity out of the checksum.
+                  oneOf:
+                    - type: string
+                      pattern: '^[0-9]+(\.[0-9]+)?(E|P|T|G|M|k|Ei|Pi|Ti|Gi|Mi|Ki)?$'
+                    - type: number
             nodeTemplate:
               # This is a copy from NodeGroup object. We trust that hook will not change it.
               type: object

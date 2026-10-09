@@ -27,6 +27,7 @@ import (
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
+	"k8s.io/apimachinery/pkg/util/intstr"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 
 	deckhousev1 "github.com/deckhouse/node-controller/api/deckhouse.io/v1"
@@ -198,11 +199,13 @@ func TestSerializeNodeGroupTaints(t *testing.T) {
 
 func TestSetCapacityAnnotations(t *testing.T) {
 	annotations := map[string]interface{}{}
-	setCapacityAnnotations(annotations, "4", "8Gi")
+	setCapacityAnnotations(annotations, nodeCapacityValues{CPU: "4", Memory: "8Gi", BootDisk: "30Gi"}, nil)
 
 	for key, want := range map[string]string{
 		"capacity.cluster-autoscaler.kubernetes.io/cpu":    "4",
 		"capacity.cluster-autoscaler.kubernetes.io/memory": "8Gi",
+		// 30Gi less evictionHard nodefs.available (5%) and Auto's systemReserved (1Gi).
+		"capacity.cluster-autoscaler.kubernetes.io/ephemeral-disk": "28160Mi",
 	} {
 		got, ok := annotations[key].(string)
 		if !ok || got != want {
@@ -213,9 +216,92 @@ func TestSetCapacityAnnotations(t *testing.T) {
 		}
 	}
 
-	setCapacityAnnotations(annotations, "", "")
+	setCapacityAnnotations(annotations, nodeCapacityValues{}, nil)
 	if got := annotations["capacity.cluster-autoscaler.kubernetes.io/cpu"]; got != "4" {
 		t.Fatalf("empty cpu overwrote existing annotation: %v", got)
+	}
+}
+
+// A boot disk get_crds does not know (an OpenStack class with explicit capacity and no
+// rootDiskSize) leaves the annotation out instead of advertising a zero-sized one.
+func TestSetCapacityAnnotationsWithoutBootDisk(t *testing.T) {
+	for _, bootDisk := range []string{"", "0", "not-a-quantity"} {
+		annotations := map[string]interface{}{}
+		setCapacityAnnotations(annotations, nodeCapacityValues{CPU: "4", Memory: "8Gi", BootDisk: bootDisk}, nil)
+		if got, ok := annotations["capacity.cluster-autoscaler.kubernetes.io/ephemeral-disk"]; ok {
+			t.Fatalf("bootDisk %q: ephemeral-disk = %v, want absent", bootDisk, got)
+		}
+	}
+}
+
+// The clusterapi provider advertises the annotation as both capacity and allocatable, so it must
+// carry what the kubelet configured by 064_configure_kubelet.sh.tpl leaves to pods.
+func TestTemplateEphemeralStorage(t *testing.T) {
+	reservation := func(mode string, ephemeralStorage *intstr.IntOrString) *deckhousev1.KubeletSpec {
+		spec := &deckhousev1.ResourceReservationSpec{Mode: mode}
+		if mode == "Static" {
+			spec.Static = &deckhousev1.StaticResourceReservation{EphemeralStorage: ephemeralStorage}
+		}
+		return &deckhousev1.KubeletSpec{ResourceReservation: spec}
+	}
+
+	cases := []struct {
+		name     string
+		bootDisk string
+		kubelet  *deckhousev1.KubeletSpec
+		want     string
+	}{
+		{"unknown disk", "0", nil, ""},
+		{"no kubelet settings means the CRD default, Auto", "30Gi", nil, "28160Mi"},
+		{"Auto", "30Gi", reservation("Auto", nil), "28160Mi"},
+		{"Off reserves nothing", "30Gi", reservation("Off", nil), "29184Mi"},
+		{"Static with ephemeralStorage", "30Gi", reservation("Static", ptr(intstr.FromString("5Gi"))), "24064Mi"},
+		{"Static without ephemeralStorage", "30Gi", reservation("Static", nil), "29184Mi"},
+		{"the 20G cap starts where the script's does", "390Gi", nil, "378368Mi"},
+		{"eviction threshold is capped at 20G", "1000Gi", nil, "1003902Mi"},
+		{"nothing left", "1Gi", nil, ""},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			got, ok := templateEphemeralStorage(resource.MustParse(tc.bootDisk), tc.kubelet)
+			if tc.want == "" {
+				if ok {
+					t.Fatalf("got %s, want no annotation", got.String())
+				}
+				return
+			}
+			if !ok || got.String() != tc.want {
+				t.Fatalf("got %s (ok=%v), want %s", got.String(), ok, tc.want)
+			}
+		})
+	}
+}
+
+// get_crds publishes the boot disk next to cpu and memory; a ConfigMap rendered by an older
+// release has no bootDisk and must keep yielding cpu and memory.
+func TestReadNodeCapacity(t *testing.T) {
+	scheme := runtime.NewScheme()
+	if err := corev1.AddToScheme(scheme); err != nil {
+		t.Fatalf("add corev1 scheme: %v", err)
+	}
+	capacities := &corev1.ConfigMap{
+		ObjectMeta: metav1.ObjectMeta{Name: nodeCapacityConfigMapName, Namespace: common.MachineNamespace},
+		Data: map[string]string{
+			"worker": "cpu: \"4\"\nmemory: \"8Gi\"\nbootDisk: \"30Gi\"\n",
+			"legacy": "cpu: \"2\"\nmemory: \"4Gi\"\n",
+		},
+	}
+	cl := fakeclient.NewClientBuilder().WithScheme(scheme).WithRuntimeObjects(capacities).Build()
+	r := &MachineDeploymentReconciler{BaseWithReader: BaseWithReader{APIReader: cl}}
+
+	if got := r.readNodeCapacity(context.Background(), "worker"); got != (nodeCapacityValues{CPU: "4", Memory: "8Gi", BootDisk: "30Gi"}) {
+		t.Fatalf("worker: got %+v", got)
+	}
+	if got := r.readNodeCapacity(context.Background(), "legacy"); got != (nodeCapacityValues{CPU: "2", Memory: "4Gi"}) {
+		t.Fatalf("legacy: got %+v", got)
+	}
+	if got := r.readNodeCapacity(context.Background(), "absent"); got != (nodeCapacityValues{}) {
+		t.Fatalf("absent: got %+v", got)
 	}
 }
 

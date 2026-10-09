@@ -360,3 +360,65 @@ spec:
     virtualMachineClassName: amd-epyc-gen-3
 `
 )
+
+// The boot disk feeds the CAPI ephemeral-disk annotation. A size the InstanceClass leaves unset
+// is the one the provider creates the disk with: its default, or for a catalog type the catalog's
+// disk. The capacity itself, rootDisk included, must not change.
+func TestBootDisk(t *testing.T) {
+	catalog := []v1alpha1.InstanceType{
+		// The openstack discoverer publishes the flavor's disk.
+		{Name: "m1.large", CPU: resource.MustParse("4"), Memory: resource.MustParse("8Gi"), RootDisk: resource.MustParse("20Gi")},
+		{Name: "s7n.xlarge.2", CPU: resource.MustParse("4"), Memory: resource.MustParse("8Gi"), RootDisk: resource.MustParse("0")},
+		{Name: "vcd-4-8", CPU: resource.MustParse("4"), Memory: resource.MustParse("8Gi"), RootDisk: resource.MustParse("0Gi")},
+		{Name: "t3a.xlarge", CPU: resource.MustParse("4"), Memory: resource.MustParse("16Gi"), RootDisk: resource.MustParse("0")},
+	}
+
+	cases := []struct {
+		name string
+		kind string
+		spec string
+		want string
+	}{
+		{"yandex set", "YandexInstanceClass", `{cores: 4, memory: 8192, diskSizeGB: 100}`, "100Gi"},
+		{"yandex template default", "YandexInstanceClass", `{cores: 4, memory: 8192}`, "50Gi"},
+		{"openstack root volume", "OpenStackInstanceClass", `{flavorName: m1.large, rootDiskSize: 30}`, "30Gi"},
+		{"openstack flavor disk", "OpenStackInstanceClass", `{flavorName: m1.large}`, "20Gi"},
+		{"openstack explicit capacity without a disk", "OpenStackInstanceClass",
+			`{flavorName: custom, capacity: {cpu: 4, memory: 16Gi}}`, "0"},
+		{"vcd set", "VCDInstanceClass", `{sizingPolicy: vcd-4-8, rootDiskSizeGb: 40}`, "40Gi"},
+		{"vcd unset, defaulted by the CRD in a cluster", "VCDInstanceClass", `{sizingPolicy: vcd-4-8}`, "0"},
+		{"zvirt set", "ZvirtInstanceClass", `{cores: 4, memory: 8192, rootDiskSizeGb: 50}`, "50Gi"},
+		{"zvirt machine template default", "ZvirtInstanceClass", `{cores: 4, memory: 8192}`, "20Gi"},
+		{"dynamix set", "DynamixInstanceClass", `{cores: 4, memory: 8192, rootDiskSizeGb: 50}`, "50Gi"},
+		{"dynamix machine template default", "DynamixInstanceClass", `{cores: 4, memory: 8192}`, "30Gi"},
+		{"huaweicloud set", "HuaweiCloudInstanceClass", `{flavorName: s7n.xlarge.2, rootDiskSize: 50}`, "50Gi"},
+		{"huaweicloud machine template default", "HuaweiCloudInstanceClass", `{flavorName: s7n.xlarge.2}`, "30Gi"},
+		{"dvp", "DVPInstanceClass", `{rootDisk: {size: 30Gi}, virtualMachine: {cpu: {cores: 4}, memory: {size: 8Gi}}}`, "30Gi"},
+		// Any quantity form the DVPInstanceClass pattern takes comes out in the nodeCapacity one.
+		{"dvp decimal size is normalized", "DVPInstanceClass", `{rootDisk: {size: "32212254720"}, virtualMachine: {cpu: {cores: 4}, memory: {size: 8Gi}}}`, "30Gi"},
+		{"dvp without a disk", "DVPInstanceClass", `{virtualMachine: {cpu: {cores: 4}, memory: {size: 8Gi}}}`, "0"},
+		{"dvp unparsable disk", "DVPInstanceClass", `{rootDisk: {size: thirty}, virtualMachine: {cpu: {cores: 4}, memory: {size: 8Gi}}}`, "0"},
+		// MCM only, no CAPI: nothing reads a boot disk there.
+		{"aws", "AWSInstanceClass", `{instanceType: t3a.xlarge}`, "0"},
+		{"unknown kind", "AcmeInstanceClass", `{}`, "0"},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+			var spec map[string]interface{}
+			require.NoError(t, yaml.Unmarshal([]byte(tc.spec), &spec))
+			got := CalculateBootDisk(tc.kind, spec, NewInstanceTypesCatalog(catalog))
+			assert.Equal(t, tc.want, got.String())
+		})
+	}
+
+	t.Run("the capacity is unchanged", func(t *testing.T) {
+		t.Parallel()
+		var spec map[string]interface{}
+		require.NoError(t, yaml.Unmarshal([]byte(`{flavorName: m1.large, rootDiskSize: 30}`), &spec))
+		capac, err := CalculateNodeTemplateCapacity("OpenStackInstanceClass", spec, NewInstanceTypesCatalog(catalog))
+		require.NoError(t, err)
+		assert.Equal(t, "20Gi", capac.RootDisk.String(), "nodeCapacity.rootDisk keeps the catalog's value")
+	})
+}
