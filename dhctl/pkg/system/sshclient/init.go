@@ -145,6 +145,10 @@ type ClientOptions struct {
 }
 
 func NewInitClientFromFlags(ctx context.Context, askPassword bool) (node.SSHClient, error) {
+	if len(app.SSHHosts) == 0 {
+		return nil, nil
+	}
+
 	switch {
 	case app.SSHLegacyMode:
 		// if set --ssh-legacy-mode
