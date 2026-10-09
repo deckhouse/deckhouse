@@ -233,3 +233,14 @@ The shared check lives in a new package, `k8s.io/apiserver/pkg/util/jsonpatch`. 
 `add` and `replace` operations with a non-empty path and no `value` are deliberately left as they are: the library treats the missing value as `null` there. RFC 6902 requires `value`, but rejecting such patches would break existing clients.
 
 The patch is carried on 1.33 (`016`), 1.34 (`017`), 1.35 (`016`) and 1.36 (`015`).
+
+### limit-field-manager-validation-errors.patch
+
+Bounds the errors `ValidateFieldManager` (`k8s.io/apimachinery/pkg/apis/meta/v1/validation`) returns for an invalid field manager:
+
+- a value longer than 128 bytes gets a single `FieldValueTooLong` error, and its characters are not checked;
+- a shorter value gets an error for the first non-printable character only.
+
+Before the patch, every non-printable character produced its own `FieldValueInvalid` error, and each of these errors carried the whole value. A long `fieldManager` query parameter of a create, update or patch request, or a long `managedFields[].manager` in an object, made kube-apiserver build an error list that grows quadratically with the value length and join it into the `422` message. Such a request took seconds of CPU and a lot of memory, and the response was huge. Now the `422` response contains a single cause. Valid values are not affected.
+
+The patch is carried on 1.33 (`017`), 1.34 (`018`), 1.35 (`017`), 1.36 (`016`) and 1.37 (`017`).
