@@ -2,7 +2,7 @@ version: v2
 
 # InstanceClass fields whose change requires recreating the machines. The list is carried over
 # from the v1 instance-class.checksum one to one, including the fields that do not appear in the
-# template below (preemptible, additionalLabels, networkType): under v1 they changed the checksum
+# template below (additionalLabels, networkType): under v1 they changed the checksum
 # and therefore rolled the machines, and this migration must not change that.
 rolloutFields:
   - platformID
@@ -32,6 +32,9 @@ template: |
       spec:
         zoneID: {{ .zone | quote }}
         platformID: {{ get .instanceClass "platformID" | default "standard-v3" | quote }}
+        {{- if get .instanceClass "preemptible" }}
+        preemptible: true
+        {{- end }}
         resources:
           cores: {{ .instanceClass.cores | int }}
           coreFraction: {{ get .instanceClass "coreFraction" | default 100 | int }}
