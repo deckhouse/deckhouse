@@ -1,0 +1,66 @@
+diff --git a/staging/src/k8s.io/apimachinery/pkg/apis/meta/v1/validation/validation.go b/staging/src/k8s.io/apimachinery/pkg/apis/meta/v1/validation/validation.go
+index 4dedec4b3fc..3fb174a58ed 100644
+--- a/staging/src/k8s.io/apimachinery/pkg/apis/meta/v1/validation/validation.go
++++ b/staging/src/k8s.io/apimachinery/pkg/apis/meta/v1/validation/validation.go
+@@ -216,12 +216,15 @@ func ValidateFieldManager(fieldManager string, fldPath *field.Path) field.ErrorL
+ 	// considered as not set and is defaulted by the rest of the process
+ 	// (unless apply is used, in which case it is required).
+ 	if len(fieldManager) > FieldManagerMaxLength {
+-		allErrs = append(allErrs, field.TooLong(fldPath, "" /*unused*/, FieldManagerMaxLength))
++		// Do not check the characters of an oversized value: every invalid
++		// character would produce an error carrying the whole value.
++		return append(allErrs, field.TooLong(fldPath, "" /*unused*/, FieldManagerMaxLength))
+ 	}
+-	// Verify that all characters are printable.
++	// Verify that all characters are printable. Report only the first invalid
++	// character to keep the error list bounded.
+ 	for i, r := range fieldManager {
+ 		if !unicode.IsPrint(r) {
+-			allErrs = append(allErrs, field.Invalid(fldPath, fieldManager, fmt.Sprintf("invalid character %#U (at position %d)", r, i)))
++			return append(allErrs, field.Invalid(fldPath, fieldManager, fmt.Sprintf("invalid character %#U (at position %d)", r, i)))
+ 		}
+ 	}
+ 
+diff --git a/staging/src/k8s.io/apimachinery/pkg/apis/meta/v1/validation/validation_test.go b/staging/src/k8s.io/apimachinery/pkg/apis/meta/v1/validation/validation_test.go
+index 5bb363d3a68..c23042fff56 100644
+--- a/staging/src/k8s.io/apimachinery/pkg/apis/meta/v1/validation/validation_test.go
++++ b/staging/src/k8s.io/apimachinery/pkg/apis/meta/v1/validation/validation_test.go
+@@ -343,6 +343,38 @@ func TestValidateFieldManagerInvalid(t *testing.T) {
+ 	}
+ }
+ 
++func TestValidateFieldManagerSingleError(t *testing.T) {
++	tests := map[string]struct {
++		fieldManager string
++		expectedType field.ErrorType
++	}{
++		"too long with invalid characters": {
++			fieldManager: strings.Repeat("\x01", 1<<20),
++			expectedType: field.ErrorTypeTooLong,
++		},
++		"too long with valid characters": {
++			fieldManager: strings.Repeat("f", FieldManagerMaxLength+1),
++			expectedType: field.ErrorTypeTooLong,
++		},
++		"max length of invalid characters": {
++			fieldManager: strings.Repeat("\x01", FieldManagerMaxLength),
++			expectedType: field.ErrorTypeInvalid,
++		},
++	}
++
++	for name, test := range tests {
++		t.Run(name, func(t *testing.T) {
++			errs := ValidateFieldManager(test.fieldManager, field.NewPath("fieldManager"))
++			if len(errs) != 1 {
++				t.Fatalf("expected exactly one error, got %d", len(errs))
++			}
++			if errs[0].Type != test.expectedType {
++				t.Errorf("expected error type %q, got %q", test.expectedType, errs[0].Type)
++			}
++		})
++	}
++}
++
+ func TestValidateManagedFieldsInvalid(t *testing.T) {
+ 	tests := []metav1.ManagedFieldsEntry{{
+ 		Operation:  metav1.ManagedFieldsOperationUpdate,
