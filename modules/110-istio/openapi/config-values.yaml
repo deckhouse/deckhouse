@@ -5,13 +5,13 @@ properties:
     type: string
     enum: ["1.25", "1.27", "1.29"]
     description: Specific version of Istio control-plane which handles unspecific versions of data plane (namespaces with `istio-injection=enabled` label, not `istio.io/rev=`).
-    examples: ["1.27"]
+    x-examples: ["1.29"]
     default: "1.27"
   additionalVersions:
     type: array
     description: |
       Additional versions of Istio control plane to install. You can use specific namespace labels (`istio.io/rev=`) to switch between installed revisions.
-    examples:
+    x-examples:
     - ["1.25"]
     default: []
     items:
@@ -48,7 +48,6 @@ properties:
 
           Federation covers sidecar-mode workloads only. Ambient-mode workloads cannot take part in it. See [ambient mesh limitations](./#ambient-mesh-limitations).
         default: false
-        x-examples: [true]
   multicluster:
     type: object
     x-doc-d8Editions:
