@@ -380,7 +380,7 @@ func (c *BashibleContext) update(src string) {
 		klog.Warning("Context was saved without checksums. Bashible context hasn't been upgraded")
 		var errStr strings.Builder
 		for bundle, err := range checksumErrors {
-			_, _ = errStr.WriteString(fmt.Sprintf("\t%s: %s\n", bundle, err))
+			fmt.Fprintf(&errStr, "\t%s: %s\n", bundle, err)
 		}
 		klog.Warningf("bundles checksums have errors:\n%s", errStr.String())
 		_ = os.WriteFile("/tmp/context.error", []byte(errStr.String()), 0644)
