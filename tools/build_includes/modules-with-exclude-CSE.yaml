@@ -9,6 +9,9 @@
     - hooks/**/*.go
     - hooks/*.go
     - hooks/**/testdata
+    - webhooks/**/*_test*.py
+    - webhooks/**/*_test.go
+    - webhooks/**/testdata
     - apis
     - requirements
     - hack
@@ -30,6 +33,9 @@
     - hooks/**/*.go
     - hooks/*.go
     - hooks/**/testdata
+    - webhooks/**/*_test*.py
+    - webhooks/**/*_test.go
+    - webhooks/**/testdata
     - apis
     - requirements
     - hack
@@ -51,6 +57,9 @@
     - hooks/**/*.go
     - hooks/*.go
     - hooks/**/testdata
+    - webhooks/**/*_test*.py
+    - webhooks/**/*_test.go
+    - webhooks/**/testdata
     - apis
     - requirements
     - hack
@@ -72,6 +81,9 @@
     - hooks/**/*.go
     - hooks/*.go
     - hooks/**/testdata
+    - webhooks/**/*_test*.py
+    - webhooks/**/*_test.go
+    - webhooks/**/testdata
     - apis
     - requirements
     - hack
@@ -93,6 +105,9 @@
     - hooks/**/*.go
     - hooks/*.go
     - hooks/**/testdata
+    - webhooks/**/*_test*.py
+    - webhooks/**/*_test.go
+    - webhooks/**/testdata
     - apis
     - requirements
     - hack
@@ -114,6 +129,9 @@
     - hooks/**/*.go
     - hooks/*.go
     - hooks/**/testdata
+    - webhooks/**/*_test*.py
+    - webhooks/**/*_test.go
+    - webhooks/**/testdata
     - apis
     - requirements
     - hack
@@ -135,6 +153,9 @@
     - hooks/**/*.go
     - hooks/*.go
     - hooks/**/testdata
+    - webhooks/**/*_test*.py
+    - webhooks/**/*_test.go
+    - webhooks/**/testdata
     - apis
     - requirements
     - hack
@@ -156,6 +177,9 @@
     - hooks/**/*.go
     - hooks/*.go
     - hooks/**/testdata
+    - webhooks/**/*_test*.py
+    - webhooks/**/*_test.go
+    - webhooks/**/testdata
     - apis
     - requirements
     - hack
@@ -177,6 +201,9 @@
     - hooks/**/*.go
     - hooks/*.go
     - hooks/**/testdata
+    - webhooks/**/*_test*.py
+    - webhooks/**/*_test.go
+    - webhooks/**/testdata
     - apis
     - requirements
     - hack
@@ -198,6 +225,9 @@
     - hooks/**/*.go
     - hooks/*.go
     - hooks/**/testdata
+    - webhooks/**/*_test*.py
+    - webhooks/**/*_test.go
+    - webhooks/**/testdata
     - apis
     - requirements
     - hack
@@ -219,6 +249,9 @@
     - hooks/**/*.go
     - hooks/*.go
     - hooks/**/testdata
+    - webhooks/**/*_test*.py
+    - webhooks/**/*_test.go
+    - webhooks/**/testdata
     - apis
     - requirements
     - hack
@@ -240,6 +273,9 @@
     - hooks/**/*.go
     - hooks/*.go
     - hooks/**/testdata
+    - webhooks/**/*_test*.py
+    - webhooks/**/*_test.go
+    - webhooks/**/testdata
     - apis
     - requirements
     - hack
@@ -261,6 +297,9 @@
     - hooks/**/*.go
     - hooks/*.go
     - hooks/**/testdata
+    - webhooks/**/*_test*.py
+    - webhooks/**/*_test.go
+    - webhooks/**/testdata
     - apis
     - requirements
     - hack
@@ -282,6 +321,9 @@
     - hooks/**/*.go
     - hooks/*.go
     - hooks/**/testdata
+    - webhooks/**/*_test*.py
+    - webhooks/**/*_test.go
+    - webhooks/**/testdata
     - apis
     - requirements
     - hack
@@ -303,6 +345,9 @@
     - hooks/**/*.go
     - hooks/*.go
     - hooks/**/testdata
+    - webhooks/**/*_test*.py
+    - webhooks/**/*_test.go
+    - webhooks/**/testdata
     - apis
     - requirements
     - hack
@@ -324,6 +369,9 @@
     - hooks/**/*.go
     - hooks/*.go
     - hooks/**/testdata
+    - webhooks/**/*_test*.py
+    - webhooks/**/*_test.go
+    - webhooks/**/testdata
     - apis
     - requirements
     - hack
@@ -345,6 +393,9 @@
     - hooks/**/*.go
     - hooks/*.go
     - hooks/**/testdata
+    - webhooks/**/*_test*.py
+    - webhooks/**/*_test.go
+    - webhooks/**/testdata
     - apis
     - requirements
     - hack
@@ -366,6 +417,9 @@
     - hooks/**/*.go
     - hooks/*.go
     - hooks/**/testdata
+    - webhooks/**/*_test*.py
+    - webhooks/**/*_test.go
+    - webhooks/**/testdata
     - apis
     - requirements
     - hack
@@ -387,6 +441,9 @@
     - hooks/**/*.go
     - hooks/*.go
     - hooks/**/testdata
+    - webhooks/**/*_test*.py
+    - webhooks/**/*_test.go
+    - webhooks/**/testdata
     - apis
     - requirements
     - hack
@@ -408,6 +465,9 @@
     - hooks/**/*.go
     - hooks/*.go
     - hooks/**/testdata
+    - webhooks/**/*_test*.py
+    - webhooks/**/*_test.go
+    - webhooks/**/testdata
     - apis
     - requirements
     - hack
@@ -429,6 +489,9 @@
     - hooks/**/*.go
     - hooks/*.go
     - hooks/**/testdata
+    - webhooks/**/*_test*.py
+    - webhooks/**/*_test.go
+    - webhooks/**/testdata
     - apis
     - requirements
     - hack
@@ -450,6 +513,9 @@
     - hooks/**/*.go
     - hooks/*.go
     - hooks/**/testdata
+    - webhooks/**/*_test*.py
+    - webhooks/**/*_test.go
+    - webhooks/**/testdata
     - apis
     - requirements
     - hack
@@ -471,6 +537,9 @@
     - hooks/**/*.go
     - hooks/*.go
     - hooks/**/testdata
+    - webhooks/**/*_test*.py
+    - webhooks/**/*_test.go
+    - webhooks/**/testdata
     - apis
     - requirements
     - hack
@@ -492,6 +561,9 @@
     - hooks/**/*.go
     - hooks/*.go
     - hooks/**/testdata
+    - webhooks/**/*_test*.py
+    - webhooks/**/*_test.go
+    - webhooks/**/testdata
     - apis
     - requirements
     - hack
@@ -513,6 +585,9 @@
     - hooks/**/*.go
     - hooks/*.go
     - hooks/**/testdata
+    - webhooks/**/*_test*.py
+    - webhooks/**/*_test.go
+    - webhooks/**/testdata
     - apis
     - requirements
     - hack
@@ -534,6 +609,9 @@
     - hooks/**/*.go
     - hooks/*.go
     - hooks/**/testdata
+    - webhooks/**/*_test*.py
+    - webhooks/**/*_test.go
+    - webhooks/**/testdata
     - apis
     - requirements
     - hack
@@ -560,6 +638,9 @@
     - hooks/**/*.go
     - hooks/*.go
     - hooks/**/testdata
+    - webhooks/**/*_test*.py
+    - webhooks/**/*_test.go
+    - webhooks/**/testdata
     - apis
     - requirements
     - hack
@@ -581,6 +662,9 @@
     - hooks/**/*.go
     - hooks/*.go
     - hooks/**/testdata
+    - webhooks/**/*_test*.py
+    - webhooks/**/*_test.go
+    - webhooks/**/testdata
     - apis
     - requirements
     - hack
@@ -602,6 +686,9 @@
     - hooks/**/*.go
     - hooks/*.go
     - hooks/**/testdata
+    - webhooks/**/*_test*.py
+    - webhooks/**/*_test.go
+    - webhooks/**/testdata
     - apis
     - requirements
     - hack
@@ -623,6 +710,9 @@
     - hooks/**/*.go
     - hooks/*.go
     - hooks/**/testdata
+    - webhooks/**/*_test*.py
+    - webhooks/**/*_test.go
+    - webhooks/**/testdata
     - apis
     - requirements
     - hack
@@ -644,6 +734,9 @@
     - hooks/**/*.go
     - hooks/*.go
     - hooks/**/testdata
+    - webhooks/**/*_test*.py
+    - webhooks/**/*_test.go
+    - webhooks/**/testdata
     - apis
     - requirements
     - hack
@@ -665,6 +758,9 @@
     - hooks/**/*.go
     - hooks/*.go
     - hooks/**/testdata
+    - webhooks/**/*_test*.py
+    - webhooks/**/*_test.go
+    - webhooks/**/testdata
     - apis
     - requirements
     - hack
@@ -706,6 +802,9 @@
     - hooks/**/*.go
     - hooks/*.go
     - hooks/**/testdata
+    - webhooks/**/*_test*.py
+    - webhooks/**/*_test.go
+    - webhooks/**/testdata
     - apis
     - requirements
     - hack
@@ -727,6 +826,9 @@
     - hooks/**/*.go
     - hooks/*.go
     - hooks/**/testdata
+    - webhooks/**/*_test*.py
+    - webhooks/**/*_test.go
+    - webhooks/**/testdata
     - apis
     - requirements
     - hack
@@ -748,6 +850,9 @@
     - hooks/**/*.go
     - hooks/*.go
     - hooks/**/testdata
+    - webhooks/**/*_test*.py
+    - webhooks/**/*_test.go
+    - webhooks/**/testdata
     - apis
     - requirements
     - hack
@@ -769,6 +874,9 @@
     - hooks/**/*.go
     - hooks/*.go
     - hooks/**/testdata
+    - webhooks/**/*_test*.py
+    - webhooks/**/*_test.go
+    - webhooks/**/testdata
     - apis
     - requirements
     - hack
@@ -795,6 +903,9 @@
     - hooks/**/*.go
     - hooks/*.go
     - hooks/**/testdata
+    - webhooks/**/*_test*.py
+    - webhooks/**/*_test.go
+    - webhooks/**/testdata
     - apis
     - requirements
     - hack
@@ -821,6 +932,9 @@
     - hooks/**/*.go
     - hooks/*.go
     - hooks/**/testdata
+    - webhooks/**/*_test*.py
+    - webhooks/**/*_test.go
+    - webhooks/**/testdata
     - apis
     - requirements
     - hack
@@ -852,6 +966,9 @@
     - hooks/**/*.go
     - hooks/*.go
     - hooks/**/testdata
+    - webhooks/**/*_test*.py
+    - webhooks/**/*_test.go
+    - webhooks/**/testdata
     - apis
     - requirements
     - hack
@@ -873,6 +990,9 @@
     - hooks/**/*.go
     - hooks/*.go
     - hooks/**/testdata
+    - webhooks/**/*_test*.py
+    - webhooks/**/*_test.go
+    - webhooks/**/testdata
     - apis
     - requirements
     - hack
@@ -894,6 +1014,9 @@
     - hooks/**/*.go
     - hooks/*.go
     - hooks/**/testdata
+    - webhooks/**/*_test*.py
+    - webhooks/**/*_test.go
+    - webhooks/**/testdata
     - apis
     - requirements
     - hack
@@ -915,6 +1038,9 @@
     - hooks/**/*.go
     - hooks/*.go
     - hooks/**/testdata
+    - webhooks/**/*_test*.py
+    - webhooks/**/*_test.go
+    - webhooks/**/testdata
     - apis
     - requirements
     - hack
@@ -936,6 +1062,9 @@
     - hooks/**/*.go
     - hooks/*.go
     - hooks/**/testdata
+    - webhooks/**/*_test*.py
+    - webhooks/**/*_test.go
+    - webhooks/**/testdata
     - apis
     - requirements
     - hack
@@ -957,6 +1086,9 @@
     - hooks/**/*.go
     - hooks/*.go
     - hooks/**/testdata
+    - webhooks/**/*_test*.py
+    - webhooks/**/*_test.go
+    - webhooks/**/testdata
     - apis
     - requirements
     - hack
@@ -978,6 +1110,9 @@
     - hooks/**/*.go
     - hooks/*.go
     - hooks/**/testdata
+    - webhooks/**/*_test*.py
+    - webhooks/**/*_test.go
+    - webhooks/**/testdata
     - apis
     - requirements
     - hack
@@ -1074,6 +1209,9 @@
     - hooks/**/*.go
     - hooks/*.go
     - hooks/**/testdata
+    - webhooks/**/*_test*.py
+    - webhooks/**/*_test.go
+    - webhooks/**/testdata
     - apis
     - requirements
     - hack
@@ -1095,6 +1233,9 @@
     - hooks/**/*.go
     - hooks/*.go
     - hooks/**/testdata
+    - webhooks/**/*_test*.py
+    - webhooks/**/*_test.go
+    - webhooks/**/testdata
     - apis
     - requirements
     - hack
@@ -1146,6 +1287,9 @@
     - hooks/**/*.go
     - hooks/*.go
     - hooks/**/testdata
+    - webhooks/**/*_test*.py
+    - webhooks/**/*_test.go
+    - webhooks/**/testdata
     - apis
     - requirements
     - hack
@@ -1182,6 +1326,9 @@
     - hooks/**/*.go
     - hooks/*.go
     - hooks/**/testdata
+    - webhooks/**/*_test*.py
+    - webhooks/**/*_test.go
+    - webhooks/**/testdata
     - apis
     - requirements
     - hack
@@ -1203,6 +1350,9 @@
     - hooks/**/*.go
     - hooks/*.go
     - hooks/**/testdata
+    - webhooks/**/*_test*.py
+    - webhooks/**/*_test.go
+    - webhooks/**/testdata
     - apis
     - requirements
     - hack
@@ -1224,6 +1374,9 @@
     - hooks/**/*.go
     - hooks/*.go
     - hooks/**/testdata
+    - webhooks/**/*_test*.py
+    - webhooks/**/*_test.go
+    - webhooks/**/testdata
     - apis
     - requirements
     - hack
@@ -1245,6 +1398,9 @@
     - hooks/**/*.go
     - hooks/*.go
     - hooks/**/testdata
+    - webhooks/**/*_test*.py
+    - webhooks/**/*_test.go
+    - webhooks/**/testdata
     - apis
     - requirements
     - hack
@@ -1266,6 +1422,9 @@
     - hooks/**/*.go
     - hooks/*.go
     - hooks/**/testdata
+    - webhooks/**/*_test*.py
+    - webhooks/**/*_test.go
+    - webhooks/**/testdata
     - apis
     - requirements
     - hack
@@ -1287,6 +1446,9 @@
     - hooks/**/*.go
     - hooks/*.go
     - hooks/**/testdata
+    - webhooks/**/*_test*.py
+    - webhooks/**/*_test.go
+    - webhooks/**/testdata
     - apis
     - requirements
     - hack
@@ -1323,6 +1485,9 @@
     - hooks/**/*.go
     - hooks/*.go
     - hooks/**/testdata
+    - webhooks/**/*_test*.py
+    - webhooks/**/*_test.go
+    - webhooks/**/testdata
     - apis
     - requirements
     - hack

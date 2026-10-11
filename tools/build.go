@@ -75,6 +75,11 @@ var defaultModulesExcludes = []string{
 	"hooks/**/*.go",
 	"hooks/*.go",
 	"hooks/**/testdata",
+	// Tests of the admission and conversion webhooks. webhook-handler, which runs these hooks,
+	// excludes them on its own; templates read webhooks/ files by name, never the tests.
+	"webhooks/**/*_test*.py",
+	"webhooks/**/*_test.go",
+	"webhooks/**/testdata",
 	"apis",
 	"requirements",
 	"hack",
