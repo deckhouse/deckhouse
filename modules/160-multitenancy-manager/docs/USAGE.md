@@ -1,7 +1,6 @@
 ---
 title: "The multitenancy-manager module: usage examples"
 ---
-{% raw %}
 
 ## Default project templates
 
@@ -108,13 +107,9 @@ You can create a new project for a namespace. To do this, add the `projects.deck
 
 You can change the template of the created project to the existing one.
 
-{% endraw %}
-
 {% alert level="warning" %}
 Note that changing the template may cause a resource conflict. If the template chart contains resources that are already present in the namespace, you will not be able to apply the template.
 {% endalert %}
-
-{% raw %}
 
 ## Creating your own project template
 
@@ -149,8 +144,6 @@ To create your own template:
    ```shell
    d8 k get projecttemplates <NEW_TEMPLATE_NAME>
    ```
-
-{% endraw %}
 
 ## Using labels to manage resources
 
@@ -328,8 +321,6 @@ To do this, custom resources are used:
 - `ClusterResourceGrant` (namespaced) — the per-project object-quota pool (limits on object count and
   on measured quantities such as requested storage); its status reports current usage.
 
-{% raw %}
-
 ```yaml
 ---
 apiVersion: multitenancy.deckhouse.io/v1alpha1
@@ -373,8 +364,6 @@ spec:
         matchLabels:
           shared: "true"
 ```
-
-{% endraw %}
 
 Enforcement notes:
 
