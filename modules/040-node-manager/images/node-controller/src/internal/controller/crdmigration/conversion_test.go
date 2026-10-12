@@ -26,7 +26,7 @@ import (
 // The list decides which CRDs get a conversion webhook stamped on them; a CAPI CRD landing in it
 // would point cluster-api's own conversion at the node-controller service.
 func TestConversionCRDNames(t *testing.T) {
-	require.Equal(t, []string{"nodegroups.deckhouse.io", "instances.deckhouse.io"}, conversionCRDNames)
+	require.Equal(t, []string{"nodegroups.deckhouse.io", "instances.deckhouse.io", "nodeusers.deckhouse.io"}, conversionCRDNames)
 }
 
 func TestIsConversionWebhookCurrent(t *testing.T) {

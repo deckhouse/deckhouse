@@ -44,10 +44,11 @@ const (
 var conversionCRDNames = []string{
 	"nodegroups.deckhouse.io",
 	"instances.deckhouse.io",
+	"nodeusers.deckhouse.io",
 }
 
 func EnsureCRDs(ctx context.Context, c client.Client) error {
-	// 1. Patch conversion webhook on deckhouse CRDs (nodegroups, instances).
+	// 1. Patch conversion webhook on deckhouse CRDs (nodegroups, instances, nodeusers).
 	// This must happen first to unblock API server — the old conversion-webhook-handler
 	// may not support new API versions served by updated CRDs.
 	if err := ensureConversionWebhooks(ctx, c); err != nil {

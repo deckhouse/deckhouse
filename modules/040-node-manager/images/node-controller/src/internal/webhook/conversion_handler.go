@@ -47,7 +47,7 @@ type ProviderNodeGroup struct {
 	Name string `json:"name" yaml:"name"`
 }
 
-// ConversionHandler handles conversion requests for NodeGroup and Instance
+// ConversionHandler handles conversion requests for NodeGroup, Instance and NodeUser
 // resources with access to cluster state.
 //
 // This is needed because the standard conversion.Hub/Convertible interfaces
@@ -79,6 +79,7 @@ type kindConverter func(c *conversionContext) ([]byte, error)
 var kindConverters = map[string]kindConverter{
 	"Instance":  convertInstance,
 	"NodeGroup": convertNodeGroup,
+	"NodeUser":  convertNodeUser,
 }
 
 func convertInstance(c *conversionContext) ([]byte, error) {
