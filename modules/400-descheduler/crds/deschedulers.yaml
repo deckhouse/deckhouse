@@ -512,7 +512,7 @@ spec:
                   x-kubernetes-list-type: set
                   x-doc-examples:
                     - - local-path
-                      - ceph-rbd
+                      - local-storage-class
                 strategies:
                   type: object
                   description: Settings of strategies for the Descheduler instances.
