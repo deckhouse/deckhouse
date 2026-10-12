@@ -104,10 +104,6 @@ admissionPolicyEngine:
 		}
 	})
 
-	It("Should keep the wrapper of the python test helper in sync with the operator template", func() {
-		Expect(validationwebhook.TestHelperMatchesTemplate(moduleDir)).To(Succeed())
-	})
-
 	Context("security-policy", func() {
 		policy := func(name string, references ...string) map[string]interface{} {
 			signatures := make([]interface{}, 0, len(references))

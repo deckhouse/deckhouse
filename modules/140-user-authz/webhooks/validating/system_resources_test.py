@@ -17,12 +17,13 @@
 import unittest
 from unittest import mock
 
-import validation_webhook_test_helper
+from pathlib import Path
+from deckhouse.tests import load_validation_webhook
 from deckhouse import hook, tests
 from dotmap import DotMap
 
 # Both system-resources ValidationWebhooks, edit and exec, run this code; it dispatches on ctx.binding.
-system_resources = validation_webhook_test_helper.load("system_resources.py")
+system_resources = load_validation_webhook(Path(__file__).parent / "system_resources.py")
 
 NS = "team-a"
 USER = "alice@example.com"

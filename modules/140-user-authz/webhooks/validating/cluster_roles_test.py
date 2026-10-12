@@ -16,12 +16,13 @@
 
 import unittest
 
-import validation_webhook_test_helper
+from pathlib import Path
+from deckhouse.tests import load_validation_webhook
 from deckhouse import hook, tests
 from dotmap import DotMap
 
 # The hook lives in a ValidationWebhook manifest; the harness assembles it the way webhook-operator does.
-cluster_roles = validation_webhook_test_helper.load("cluster_roles.py")
+cluster_roles = load_validation_webhook(Path(__file__).parent / "cluster_roles.py")
 
 
 def binding_context(name, labels=None, rules=None, selector_labels=None, annotations=None):

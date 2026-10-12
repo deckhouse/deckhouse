@@ -16,12 +16,13 @@
 
 import unittest
 
-import validation_webhook_test_helper
+from pathlib import Path
+from deckhouse.tests import load_validation_webhook
 from deckhouse import hook, tests
 from dotmap import DotMap
 
 # The hook lives in a ValidationWebhook manifest; the harness assembles it the way webhook-operator does.
-role_escalation = validation_webhook_test_helper.load("role_escalation.py")
+role_escalation = load_validation_webhook(Path(__file__).parent / "role_escalation.py")
 
 
 def binding_context(kind, name, rules, username="namespace-admin", namespace=None, operation="CREATE"):

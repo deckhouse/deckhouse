@@ -17,10 +17,11 @@
 import json
 import typing
 
-import validation_webhook_test_helper
+from pathlib import Path
+from deckhouse.tests import load_validation_webhook
 
 # Both identity-collision ValidationWebhooks, for Group and for User, run this code.
-identity_collision = validation_webhook_test_helper.load("identity_collision.py")
+identity_collision = load_validation_webhook(Path(__file__).parent / "identity_collision.py")
 CLUSTER_RULES_SNAPSHOT_NAME = identity_collision.CLUSTER_RULES_SNAPSHOT_NAME
 NAMESPACED_RULES_SNAPSHOT_NAME = identity_collision.NAMESPACED_RULES_SNAPSHOT_NAME
 COLLISION_ANNOTATION = identity_collision.COLLISION_ANNOTATION

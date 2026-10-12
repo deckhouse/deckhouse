@@ -17,13 +17,14 @@
 import unittest
 
 import identity_assign as assign
-import validation_webhook_test_helper
+from pathlib import Path
+from deckhouse.tests import load_validation_webhook
 from deckhouse import hook, tests
 from dotmap import DotMap
 from identity_assign_test import STAR, STAR_ALL, CAR_EDIT, USERS_EDIT
 
 # The ValidationWebhook renders the kernel and the check into one hook.
-identity_privilege = validation_webhook_test_helper.load("identity_assign.py", "identity_privilege.py")
+identity_privilege = load_validation_webhook(Path(__file__).parent / "identity_assign.py", Path(__file__).parent / "identity_privilege.py")
 
 
 HELPDESK = "eve@corp"

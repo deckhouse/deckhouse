@@ -17,10 +17,11 @@
 import unittest
 import json
 
-import validation_webhook_test_helper
+from pathlib import Path
+from deckhouse.tests import load_validation_webhook
 
 # The hook lives in a ValidationWebhook manifest; the harness assembles it the way webhook-operator does.
-main = validation_webhook_test_helper.load("user.py").main
+main = load_validation_webhook(Path(__file__).parent / "user.py").main
 from deckhouse import hook, tests
 from dotmap import DotMap
 

@@ -19,9 +19,10 @@ import unittest
 from deckhouse import hook, tests
 from dotmap import DotMap
 
-import validation_webhook_test_helper
+from pathlib import Path
+from deckhouse.tests import load_validation_webhook
 
-security_policy = validation_webhook_test_helper.load("security_policy.py")
+security_policy = load_validation_webhook(Path(__file__).parent / "security_policy.py")
 
 
 def _policy(name: str, references: list) -> dict:

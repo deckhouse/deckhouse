@@ -97,7 +97,4 @@ modules:
 		}
 	})
 
-	It("Should keep the wrapper of the python test helper in sync with the operator template", func() {
-		Expect(validationwebhook.TestHelperMatchesTemplate(moduleDir)).To(Succeed())
-	})
 })

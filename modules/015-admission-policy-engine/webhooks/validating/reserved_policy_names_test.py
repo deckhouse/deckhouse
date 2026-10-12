@@ -20,10 +20,11 @@ import unittest
 from deckhouse import hook, tests
 from dotmap import DotMap
 
-import validation_webhook_test_helper
+from pathlib import Path
+from deckhouse.tests import load_validation_webhook
 
 # The hook lives in a ValidationWebhook manifest; the harness assembles it the way webhook-operator does.
-reserved = validation_webhook_test_helper.load("reserved_policy_names.py")
+reserved = load_validation_webhook(Path(__file__).parent / "reserved_policy_names.py")
 main = reserved.main
 
 

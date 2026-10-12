@@ -1,7 +1,7 @@
 #!/usr/bin/python3
 from typing import Optional
 
-from deckhouse import hook
+from deckhouse import hook, validations
 from dotmap import DotMap
 
 config = """
@@ -78,19 +78,8 @@ kubernetes:
 """
 
 def main(ctx: hook.Context):
-    try:
-        # DotMap is a dict with dot notation
-        binding_context = DotMap(ctx.binding_context)
-        message, allowed = validate(binding_context)
-        if allowed:
-            if message:
-                ctx.output.validations.allow(message)  # warning
-            else:
-                ctx.output.validations.allow()
-        else:
-            ctx.output.validations.deny(message)
-    except Exception as e:
-        ctx.output.validations.error(str(e))
+    # validate gets the binding context as a DotMap, a dict with dot notation.
+    validations.handle(ctx, validate)
 
 import re
 

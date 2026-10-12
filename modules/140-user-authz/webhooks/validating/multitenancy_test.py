@@ -18,12 +18,13 @@ import json
 import unittest
 
 import multitenancy_test_factories as factories
-import validation_webhook_test_helper
+from pathlib import Path
+from deckhouse.tests import load_validation_webhook
 from deckhouse import hook, tests
 from dotmap import DotMap
 
 # Both multitenancy ValidationWebhooks, for ClusterAuthorizationRule and for ModuleConfig, run this code.
-multitenancy = validation_webhook_test_helper.load("multitenancy.py")
+multitenancy = load_validation_webhook(Path(__file__).parent / "multitenancy.py")
 
 
 class TestLimitNamespacesPatternValidation(unittest.TestCase):
