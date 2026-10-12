@@ -1310,23 +1310,20 @@ a.comparison-table__module-proprietaryOkmeter::after {
         margin-left: 0;
     }
 
-    & > .resources__prop_name > .plus-icon,
-    & > .resources__prop_name > .minus-icon {
+    /* Top-level rows are always expanded: show the "expanded" icon, hide the "collapsed" one.
+       Rows without .top-level-toggleable are not clickable (see cursor: auto above and customscripts.js). */
+    & > .resources__prop_name > .plus-icon {
         display: none;
+    }
+
+    & > .resources__prop_name > .minus-icon {
+        display: inline-block;
     }
 }
 
-/* Top-level CRD status block: use default expand/collapse visuals. */
+/* Top-level CRD spec/status blocks: collapsible with default expand/collapse visuals. */
 .docs ul.resources > li.top-level-toggleable > .resources__prop_wrap > .resources__prop_name {
     cursor: pointer;
-}
-
-.docs ul.resources > li.top-level-toggleable > .resources__prop_wrap > .resources__prop_name > .plus-icon {
-    display: none;
-}
-
-.docs ul.resources > li.top-level-toggleable > .resources__prop_wrap > .resources__prop_name > .minus-icon {
-    display: inline-block;
 }
 
 .docs ul.resources > li.top-level-toggleable.closed > .resources__prop_wrap > .resources__prop_name > .plus-icon {
