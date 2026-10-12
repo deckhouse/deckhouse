@@ -246,7 +246,7 @@ func (m *Manager) Handle(ctx context.Context, project *v1alpha3.Project) (ctrl.R
 	}
 
 	// reconcile standard fields (administrators, quota) regardless of the template
-	m.logger.Info("reconcile the project standard fields", "project", project.Name)
+	m.logger.V(1).Info("reconcile the project standard fields", "project", project.Name)
 	if err := m.reconcileStandardFields(ctx, project); err != nil {
 		m.logger.Error(err, "failed to reconcile the project standard fields", "project", project.Name)
 		project.SetState(v1alpha3.ProjectStateError)
@@ -331,7 +331,7 @@ func (m *Manager) failAndRequeue(ctx context.Context, project *v1alpha3.Project,
 // validating the project against it and upgrading the helm release. The bool return value reports
 // whether reconciliation must stop (an error already updated the status and the caller should return).
 func (m *Manager) handleTemplate(ctx context.Context, project *v1alpha3.Project) (bool, error) {
-	m.logger.Info("get the project template for project", "project", project.Name, "template", project.Spec.ProjectTemplateName)
+	m.logger.V(1).Info("get the project template for project", "project", project.Name, "template", project.Spec.ProjectTemplateName)
 	projectTemplate, err := m.projectTemplateByName(ctx, project.Spec.ProjectTemplateName)
 	if err != nil {
 		return m.failAndRequeue(ctx, project, v1alpha3.ProjectConditionProjectTemplateFound,
@@ -351,7 +351,7 @@ func (m *Manager) handleTemplate(ctx context.Context, project *v1alpha3.Project)
 	project.SetConditionTrue(v1alpha3.ProjectConditionProjectTemplateFound)
 	project.SetTemplateGeneration(projectTemplate.Generation)
 
-	m.logger.Info("validate the project spec", "project", project.Name, "template", projectTemplate.Name)
+	m.logger.V(1).Info("validate the project spec", "project", project.Name, "template", projectTemplate.Name)
 	if err = validate.Project(project, projectTemplate); err != nil {
 		m.logger.Error(err, "failed to validate the project spec", "project", project.Name, "template", projectTemplate.Name)
 		project.SetState(v1alpha3.ProjectStateError)
@@ -364,7 +364,7 @@ func (m *Manager) handleTemplate(ctx context.Context, project *v1alpha3.Project)
 
 	project.SetConditionTrue(v1alpha3.ProjectConditionProjectValidated)
 
-	m.logger.Info("upgrade resources for the project", "project", project.Name, "template", projectTemplate.Name)
+	m.logger.V(1).Info("upgrade resources for the project", "project", project.Name, "template", projectTemplate.Name)
 	refs, err := m.upgradeResources(ctx, project, projectTemplate)
 	if err != nil {
 		return m.failAndRequeue(ctx, project, v1alpha3.ProjectConditionProjectResourcesUpgraded,
@@ -523,7 +523,7 @@ func (m *Manager) HandleVirtual(ctx context.Context, project *v1alpha3.Project) 
 		return ctrl.Result{}, err
 	}
 
-	m.logger.Info("the virtual project reconciled", "project", project.Name)
+	m.logger.V(1).Info("the virtual project reconciled", "project", project.Name)
 	return ctrl.Result{}, nil
 }
 

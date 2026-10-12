@@ -19,6 +19,7 @@ package helm
 import (
 	"bytes"
 	"context"
+	"encoding/json"
 	"fmt"
 	"maps"
 	"os"
@@ -31,6 +32,7 @@ import (
 	"github.com/google/go-cmp/cmp/cmpopts"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"go.uber.org/zap/zapcore"
 	"helm.sh/helm/v3/pkg/chartutil"
 	"helm.sh/helm/v3/pkg/engine"
 	"helm.sh/helm/v3/pkg/releaseutil"
@@ -38,6 +40,7 @@ import (
 	"k8s.io/apimachinery/pkg/api/resource"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	ctrl "sigs.k8s.io/controller-runtime"
+	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 	"sigs.k8s.io/yaml"
 
 	"controller/apis/deckhouse.io/v1alpha1"
@@ -852,4 +855,34 @@ func TestReleaseName(t *testing.T) {
 	// Distinct long names map to distinct release names (the suffix hashes the full name).
 	other := "t-" + strings.Repeat("y", 59)
 	assert.NotEqual(t, ReleaseName(long), ReleaseName(other))
+}
+
+// Helm passes its debug output and the errors it swallows through the same log function, so the errors
+// and warnings must not go to the debug level with the rest.
+func TestDebugLogKeepsHelmProblemsVisible(t *testing.T) {
+	var out bytes.Buffer
+	c := &Client{logger: zap.New(zap.WriteTo(&out), zap.Level(zapcore.InfoLevel))}
+
+	c.DebugLog("getting history for release %s", "alpha")
+	c.DebugLog("%s: Jobs active: %d, jobs failed: %d, jobs succeeded: %d", "alpha-hook", 1, 0, 0)
+	c.DebugLog("uninstall: Failed to delete release: %s", "[boom]")
+	c.DebugLog("failed to record the release: %s", "conflict")
+	c.DebugLog("warning: %s", "upgrade left something behind")
+	c.DebugLog("WARNING: The Kubernetes server has an orphaned API service. Server reports: %s", "x")
+
+	levels := map[string]string{}
+	for line := range strings.Lines(out.String()) {
+		var entry struct {
+			Level string `json:"level"`
+			Msg   string `json:"msg"`
+		}
+		require.NoError(t, json.Unmarshal([]byte(line), &entry))
+		levels[entry.Msg] = entry.Level
+	}
+	assert.Equal(t, map[string]string{
+		"uninstall: Failed to delete release: [boom]":                                   "error",
+		"failed to record the release: conflict":                                        "error",
+		"warning: upgrade left something behind":                                        "info",
+		"WARNING: The Kubernetes server has an orphaned API service. Server reports: x": "info",
+	}, levels)
 }

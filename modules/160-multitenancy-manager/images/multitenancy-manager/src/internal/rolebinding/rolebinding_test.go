@@ -167,7 +167,9 @@ func TestPruneServiceRoleBindings(t *testing.T) {
 	c := newClient(t, keep, stale, foreign)
 
 	selector := map[string]string{v1alpha3.ResourceLabelOwnedByPRB: "viewers", v1alpha3.ResourceLabelProject: "proj"}
-	require.NoError(t, PruneServiceRoleBindings(context.Background(), c, selector, map[string]struct{}{"proj": {}}))
+	pruned, err := PruneServiceRoleBindings(context.Background(), c, selector, map[string]struct{}{"proj": {}})
+	require.NoError(t, err)
+	assert.Equal(t, 1, pruned, "only the binding outside the target namespaces is deleted")
 
 	assert.NoError(t, c.Get(context.Background(), client.ObjectKey{Namespace: "proj", Name: PRBServiceName("viewers")}, &rbacv1.RoleBinding{}),
 		"a binding in a target namespace must be kept")

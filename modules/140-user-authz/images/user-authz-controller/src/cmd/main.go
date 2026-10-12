@@ -30,6 +30,7 @@ import (
 	rbacv1 "k8s.io/api/rbac/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
+	"k8s.io/klog/v2"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/cache"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -73,7 +74,7 @@ const (
 )
 
 func main() {
-	ctrl.SetLogger(zap.New(zap.Level(logLevel(os.Getenv(logLevelEnv))), zap.StacktraceLevel(zapcore.PanicLevel)))
+	setupLogging()
 	logger := ctrl.Log.WithName(controllerName)
 
 	ctx := ctrl.SetupSignalHandler()
@@ -220,6 +221,16 @@ func logLevel(name string) zapcore.Level {
 		return zapcore.InfoLevel
 	}
 	return level
+}
+
+// setupLogging makes one JSON logger, at the level named by LOG_LEVEL, the logger of controller-runtime
+// and of klog, which client-go uses for leader election, so that every line is JSON with a named level.
+func setupLogging(opts ...zap.Opts) logr.Logger {
+	opts = append([]zap.Opts{zap.Level(logLevel(os.Getenv(logLevelEnv))), zap.StacktraceLevel(zapcore.PanicLevel)}, opts...)
+	logger := zap.New(opts...)
+	ctrl.SetLogger(logger)
+	klog.SetLogger(logger)
+	return logger
 }
 
 // envInt reads a positive integer from the environment, falling back to def (and saying so) when

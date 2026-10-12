@@ -198,21 +198,27 @@ func UpsertServiceRoleBinding(ctx context.Context, c client.Client, params Upser
 }
 
 // PruneServiceRoleBindings deletes the service RoleBindings matching selector whose namespace is not
-// in keep. A nil keep deletes every match, which is what cleanup needs.
-func PruneServiceRoleBindings(ctx context.Context, c client.Client, selector map[string]string, keep map[string]struct{}) error {
+// in keep, and returns how many it deleted. A nil keep deletes every match, which is what cleanup needs.
+func PruneServiceRoleBindings(ctx context.Context, c client.Client, selector map[string]string, keep map[string]struct{}) (int, error) {
 	list := &rbacv1.RoleBindingList{}
 	if err := c.List(ctx, list, client.MatchingLabels(selector)); err != nil {
-		return fmt.Errorf("list service RoleBindings: %w", err)
+		return 0, fmt.Errorf("list service RoleBindings: %w", err)
 	}
+	pruned := 0
 	for i := range list.Items {
 		if _, ok := keep[list.Items[i].Namespace]; ok {
 			continue
 		}
-		if err := c.Delete(ctx, &list.Items[i]); err != nil && !k8serrors.IsNotFound(err) {
-			return fmt.Errorf("delete stale RoleBinding %s/%s: %w", list.Items[i].Namespace, list.Items[i].Name, err)
+		err := c.Delete(ctx, &list.Items[i])
+		switch {
+		case k8serrors.IsNotFound(err):
+		case err != nil:
+			return pruned, fmt.Errorf("delete stale RoleBinding %s/%s: %w", list.Items[i].Namespace, list.Items[i].Name, err)
+		default:
+			pruned++
 		}
 	}
-	return nil
+	return pruned, nil
 }
 
 // NamespaceSet returns the namespaces of the project as a set, for membership tests and pruning.

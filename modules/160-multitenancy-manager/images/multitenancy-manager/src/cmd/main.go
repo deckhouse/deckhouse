@@ -30,10 +30,10 @@ import (
 	"k8s.io/client-go/discovery"
 	"k8s.io/client-go/discovery/cached/memory"
 	"k8s.io/client-go/restmapper"
+	"k8s.io/klog/v2"
 	"k8s.io/utils/ptr"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/healthz"
-	ctrllog "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	metrics "sigs.k8s.io/controller-runtime/pkg/metrics/server"
@@ -102,12 +102,17 @@ const (
 	// terminating on a lost node does not keep them down for good.
 	previousPodsInterval = 5 * time.Second
 	previousPodsTimeout  = 10 * time.Minute
+
+	// logLevelEnv selects the zap level (debug, info, warn, error); the default is info, as in
+	// user-authz-controller.
+	logLevelEnv     = "LOG_LEVEL"
+	defaultLogLevel = "info"
 )
 
 func main() {
 	// setup logger
 	logger := ctrl.Log.WithName(controllerName)
-	ctrllog.SetLogger(zap.New(zap.Level(zapcore.Level(-4)), zap.StacktraceLevel(zapcore.PanicLevel)))
+	setupLogging()
 
 	logger.Info("start multitenancy-manager")
 
@@ -341,4 +346,27 @@ func setupRuntimeManager(logger logr.Logger) (ctrl.Manager, error) {
 		return nil, err
 	}
 	return runtimeManager, nil
+}
+
+// logLevel parses a zap level name, falling back to info. Only the named zap levels are accepted, so
+// the V(n) messages of controller-runtime below debug are dropped rather than logged as Level(-n).
+func logLevel(name string) zapcore.Level {
+	if name == "" {
+		name = defaultLogLevel
+	}
+	var level zapcore.Level
+	if err := level.UnmarshalText([]byte(name)); err != nil {
+		return zapcore.InfoLevel
+	}
+	return level
+}
+
+// setupLogging makes one JSON logger, at the level named by LOG_LEVEL, the logger of controller-runtime
+// and of klog, which client-go uses for leader election, so that every line is JSON with a named level.
+func setupLogging(opts ...zap.Opts) logr.Logger {
+	opts = append([]zap.Opts{zap.Level(logLevel(os.Getenv(logLevelEnv))), zap.StacktraceLevel(zapcore.PanicLevel)}, opts...)
+	logger := zap.New(opts...)
+	ctrl.SetLogger(logger)
+	klog.SetLogger(logger)
+	return logger
 }

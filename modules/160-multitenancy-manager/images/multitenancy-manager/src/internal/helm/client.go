@@ -151,8 +151,21 @@ func (c *Client) initActionConfig(namespace string) error {
 	return c.conf.Init(kubeConfig, namespace, helmDriver, c.DebugLog)
 }
 
+// DebugLog passes the log of Helm to the controller log. Helm writes there its debug output and also the
+// errors and warnings it does not return, such as a release it failed to store or to delete. A line that
+// says something failed to happen ("failed to") is an error, a line with a warning stays at info, and the
+// rest goes to the debug level, the progress of hook Jobs ("jobs failed: 0") among it.
 func (c *Client) DebugLog(format string, args ...any) {
-	c.logger.Info(fmt.Sprintf(format, args...))
+	msg := fmt.Sprintf(format, args...)
+	lower := strings.ToLower(msg)
+	switch {
+	case strings.Contains(lower, "failed to"):
+		c.logger.Error(nil, msg)
+	case strings.Contains(lower, "warning"):
+		c.logger.Info(msg)
+	default:
+		c.logger.V(1).Info(msg)
+	}
 }
 
 // ReleaseOutcome reports the result of a release attempt (or a standalone manifest analysis). RoleRefs
@@ -280,7 +293,7 @@ func (c *Client) release(ctx context.Context, project *v1alpha3.Project, source 
 	releaseutil.Reverse(releases, releaseutil.SortByRevision)
 	if releaseHash, ok := releases[0].Labels[v1alpha3.ReleaseLabelHashsum]; ok {
 		if releaseHash == source.hash && releases[0].Info.Status == release.StatusDeployed {
-			c.logger.Info("the release is up to date", "release", rel, "namespace", project.Name)
+			c.logger.V(1).Info("the release is up to date", "release", rel, "namespace", project.Name)
 			return ReleaseOutcome{Applied: false}, nil
 		}
 	}

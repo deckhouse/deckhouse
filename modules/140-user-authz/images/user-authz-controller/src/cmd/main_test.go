@@ -17,17 +17,23 @@ limitations under the License.
 package main
 
 import (
+	"bytes"
 	"context"
+	"encoding/json"
 	"errors"
+	"maps"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 	"time"
 
 	"github.com/go-logr/logr"
 	"go.uber.org/zap/zapcore"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/klog/v2"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 )
 
@@ -180,4 +186,49 @@ func (f stubReaderFunc) Get(context.Context, client.ObjectKey, client.Object, ..
 }
 func (f stubReaderFunc) List(ctx context.Context, _ client.ObjectList, _ ...client.ListOption) error {
 	return f(ctx)
+}
+
+// Every line of controller-runtime and of klog is JSON with a named level: with debug, V(1) is a debug
+// message and deeper levels are dropped; with the default, both are.
+func TestSetupLogging(t *testing.T) {
+	for name, tc := range map[string]struct {
+		level     string
+		wantDebug bool
+	}{
+		"default": {level: "", wantDebug: false},
+		"debug":   {level: "debug", wantDebug: true},
+	} {
+		t.Run(name, func(t *testing.T) {
+			t.Setenv(logLevelEnv, tc.level)
+			var out bytes.Buffer
+			logger := setupLogging(zap.WriteTo(&out))
+			t.Cleanup(klog.ClearLogger)
+
+			logger.Info("info message")
+			logger.V(1).Info("v1 message")
+			logger.V(2).Info("v2 message")
+			logger.V(4).Info("v4 message")
+			klog.InfoS("klog info message")
+			klog.ErrorS(errors.New("lease conflict"), "klog error message")
+
+			got := map[string]string{}
+			for line := range strings.Lines(out.String()) {
+				var entry struct {
+					Level string `json:"level"`
+					Msg   string `json:"msg"`
+				}
+				if err := json.Unmarshal([]byte(line), &entry); err != nil {
+					t.Fatalf("not a JSON line %q: %v", line, err)
+				}
+				got[entry.Msg] = entry.Level
+			}
+			want := map[string]string{"info message": "info", "klog info message": "info", "klog error message": "error"}
+			if tc.wantDebug {
+				want["v1 message"] = "debug"
+			}
+			if !maps.Equal(got, want) {
+				t.Fatalf("levels = %v, want %v", got, want)
+			}
+		})
+	}
 }

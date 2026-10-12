@@ -18,11 +18,13 @@ package clusterprojectrolebinding
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"k8s.io/client-go/util/flowcontrol"
 	"testing"
 	"time"
 
+	"github.com/go-logr/logr/funcr"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
@@ -34,6 +36,7 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
+	ctrllog "sigs.k8s.io/controller-runtime/pkg/log"
 
 	"controller/apis/deckhouse.io/v1alpha3"
 	"controller/internal/rolebinding"
@@ -263,6 +266,50 @@ func TestReconcile_StatusUnchangedNoWrite(t *testing.T) {
 
 	assert.Equal(t, first.ResourceVersion, second.ResourceVersion,
 		"an unchanged reconcile must not rewrite the status and re-enqueue the object")
+}
+
+// summaryLevel reconciles the CPRB and returns the verbosity of its summary message, -1 when there is
+// none.
+func summaryLevel(t *testing.T, r *Reconciler, name string) int {
+	t.Helper()
+	level := -1
+	logger := funcr.NewJSON(func(obj string) {
+		var entry struct {
+			Level int    `json:"level"`
+			Msg   string `json:"msg"`
+		}
+		require.NoError(t, json.Unmarshal([]byte(obj), &entry))
+		if entry.Msg == "the cluster project role binding reconciled" {
+			level = entry.Level
+		}
+	}, funcr.Options{Verbosity: 1})
+	ctx := ctrllog.IntoContext(context.Background(), logger)
+	_, err := r.Reconcile(ctx, ctrl.Request{NamespacedName: types.NamespacedName{Name: name}})
+	require.NoError(t, err)
+	return level
+}
+
+// The summary of a pass that writes a role binding is an info message, the summary of a resync that
+// changes nothing is a debug one.
+func TestReconcile_ResyncSummaryIsDebug(t *testing.T) {
+	t.Parallel()
+	r, _ := newReconciler(t, cprb("global-viewer", "d8:project:viewer"), project("alpha", false, "alpha"))
+
+	assert.Equal(t, 0, summaryLevel(t, r, "global-viewer"), "the pass that creates the role binding")
+	assert.Equal(t, 1, summaryLevel(t, r, "global-viewer"), "the resync that changes nothing")
+}
+
+// A pass that only deletes a role binding, such as one of a namespace the project no longer has, changes
+// neither the status nor the written bindings, and its summary is still an info message.
+func TestReconcile_PruneSummaryIsInfo(t *testing.T) {
+	t.Parallel()
+	stale := serviceRoleBinding("global-viewer", "gone", "d8:project:viewer")
+	r, c := newReconciler(t, cprb("global-viewer", "d8:project:viewer"), project("alpha", false, "alpha"))
+	require.Equal(t, 0, summaryLevel(t, r, "global-viewer"), "the pass that creates the role binding")
+
+	require.NoError(t, c.Create(context.Background(), stale))
+	assert.Equal(t, 0, summaryLevel(t, r, "global-viewer"), "the pass that prunes the stale role binding")
+	assert.Equal(t, 1, summaryLevel(t, r, "global-viewer"), "the resync after it")
 }
 
 // countingLimiter records how many tokens the fan-out asked for.

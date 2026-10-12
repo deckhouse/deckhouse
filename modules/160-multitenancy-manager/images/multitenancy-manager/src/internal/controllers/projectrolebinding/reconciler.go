@@ -238,10 +238,11 @@ func (r *Reconciler) pruneRoleBindings(ctx context.Context, name, project string
 	for _, ns := range target {
 		keep[ns] = struct{}{}
 	}
-	return rolebinding.PruneServiceRoleBindings(ctx, r.Client, map[string]string{
+	_, err := rolebinding.PruneServiceRoleBindings(ctx, r.Client, map[string]string{
 		v1alpha3.ResourceLabelOwnedByPRB: name,
 		v1alpha3.ResourceLabelProject:    project,
 	}, keep)
+	return err
 }
 
 // cleanup removes every service RoleBinding fanned out by the named PRB within its project.

@@ -233,11 +233,11 @@ func (r *reconciler) Reconcile(ctx context.Context, req reconcile.Request) (reco
 	// wait for init
 	r.init.Wait()
 
-	r.logger.Info("reconcile the project", "project", req.Name)
+	r.logger.V(1).Info("reconcile the project", "project", req.Name)
 	project := new(v1alpha3.Project)
 	if err := r.client.Get(ctx, req.NamespacedName, project); err != nil {
 		if apierrors.IsNotFound(err) {
-			r.logger.Info("the project not found", "project", req.Name)
+			r.logger.V(1).Info("the project not found", "project", req.Name)
 			r.manager.Forget(req.Name)
 			return reconcile.Result{}, nil
 		}
@@ -247,7 +247,7 @@ func (r *reconciler) Reconcile(ctx context.Context, req reconcile.Request) (reco
 
 	// handle virtual projects
 	if project.Spec.ProjectTemplateName == projectmanager.VirtualTemplate {
-		r.logger.Info("handle the virtual project", "project", req.Name)
+		r.logger.V(1).Info("handle the virtual project", "project", req.Name)
 		return r.manager.HandleVirtual(ctx, project)
 	}
 
@@ -258,7 +258,7 @@ func (r *reconciler) Reconcile(ctx context.Context, req reconcile.Request) (reco
 	}
 
 	// ensure the project
-	r.logger.Info("ensure the project", "project", project.Name)
+	r.logger.V(1).Info("ensure the project", "project", project.Name)
 	return r.manager.Handle(ctx, project)
 }
 

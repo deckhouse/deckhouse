@@ -169,6 +169,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 	started := time.Now()
 	defer func() { fanOutDuration.Observe(time.Since(started).Seconds()) }()
 	var errs []error
+	written := 0
 	for ns, project := range target {
 		wrote, err := r.upsertRoleBinding(ctx, cprb, ns, project)
 		if err != nil {
@@ -178,12 +179,14 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 		if !wrote {
 			continue
 		}
+		written++
 		if err := r.wait(ctx); err != nil {
 			return ctrl.Result{}, fmt.Errorf("fan-out rate limiter: %w", err)
 		}
 	}
 
-	if err := r.pruneRoleBindings(ctx, cprb.Name, target); err != nil {
+	pruned, err := r.pruneRoleBindings(ctx, cprb.Name, target)
+	if err != nil {
 		errs = append(errs, err)
 	}
 
@@ -212,7 +215,14 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 		}
 	}
 
-	log.Info("the cluster project role binding reconciled", "namespaces", len(target), "projects", boundProjects)
+	// A pass that wrote and deleted no role binding and left the status as it was changed nothing; it
+	// goes to the debug level so that resyncs do not fill the log.
+	summary := log
+	if written == 0 && pruned == 0 && !changed {
+		summary = log.V(1)
+	}
+	summary.Info("the cluster project role binding reconciled",
+		"namespaces", len(target), "projects", boundProjects, "written", written, "pruned", pruned)
 	return ctrl.Result{}, nil
 }
 
@@ -229,7 +239,7 @@ func (r *Reconciler) upsertRoleBinding(ctx context.Context, cprb *v1alpha3.Clust
 	}, nil)
 }
 
-func (r *Reconciler) pruneRoleBindings(ctx context.Context, name string, target map[string]string) error {
+func (r *Reconciler) pruneRoleBindings(ctx context.Context, name string, target map[string]string) (int, error) {
 	keep := make(map[string]struct{}, len(target))
 	for ns := range target {
 		keep[ns] = struct{}{}
@@ -240,7 +250,8 @@ func (r *Reconciler) pruneRoleBindings(ctx context.Context, name string, target 
 }
 
 func (r *Reconciler) cleanup(ctx context.Context, name string) error {
-	return r.pruneRoleBindings(ctx, name, nil)
+	_, err := r.pruneRoleBindings(ctx, name, nil)
+	return err
 }
 
 // SetupWithManager wires the reconciler and its watches. The fan-out is sequential
