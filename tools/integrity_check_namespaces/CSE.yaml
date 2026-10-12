@@ -11,7 +11,6 @@ additionalNamespaces:
   - d8-csi-nfs
   - d8-csi-scsi-generic
   - d8-csi-yadro-tatlin-unified
-  - d8-gpu
   - d8-ingress-nginx
   - d8-log-shipper
   - d8-monitoring
