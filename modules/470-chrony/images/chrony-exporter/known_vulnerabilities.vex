@@ -1,0 +1,23 @@
+{
+  "@context": "https://openvex.dev/ns/v0.2.0",
+  "@id": "https://openvex.dev/docs/public/vex-793e524a4fcf18f62031bc8b70337539ae6d4885966e07b254fd2def4e02f304",
+  "author": "Deckhouse <contact@deckhouse.io>",
+  "version": 1,
+  "statements": [
+    {
+      "vulnerability": {
+        "name": "GO-2026-5932"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/golang.org/x/crypto"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "GO-2026-5932 относится к пакету golang.org/x/crypto/openpgp. Пакет не поддерживается, исправленной версии нет. Бинарник chrony_exporter не импортирует golang.org/x/crypto/openpgp. Модуль golang.org/x/crypto попадает в сборку через github.com/prometheus/exporter-toolkit/web. Этот пакет проверяет пароли basic auth через golang.org/x/crypto/bcrypt. Из golang.org/x/crypto в сборку входят только bcrypt и blowfish. go list -deps по пакету chrony_exporter не находит openpgp в графе импортов.",
+      "timestamp": "2026-10-09T07:52:30.000000000Z"
+    }
+  ],
+  "timestamp": "2026-10-09T07:52:30.000000000Z"
+}

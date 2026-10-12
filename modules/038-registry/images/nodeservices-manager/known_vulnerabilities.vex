@@ -1,0 +1,23 @@
+{
+  "@context": "https://openvex.dev/ns/v0.2.0",
+  "@id": "https://openvex.dev/docs/public/vex-c736a3d8f273714663762a28ac2f559646afcde797db9f41b38efe7e5166d7a9",
+  "author": "Deckhouse <contact@deckhouse.io>",
+  "version": 1,
+  "statements": [
+    {
+      "vulnerability": {
+        "name": "GO-2026-5932"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/golang.org/x/crypto"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "GO-2026-5932 относится к пакету golang.org/x/crypto/openpgp. Пакет больше не поддерживается, исправленной версии нет. Бинарник /manager собирается из пакета cmd/staticpod. По данным go list -deps он не импортирует golang.org/x/crypto/openpgp. Из модуля golang.org/x/crypto в бинарник входят только bcrypt, blowfish, cryptobyte, cryptobyte/asn1, ed25519, ocsp, pkcs12 и pkcs12/internal/rc2. Все они приходят через пакет go_lib/registry/pki. Сам pki использует bcrypt, остальные пакеты подтягивают cfssl и его зависимости certificate-transparency-go, zcrypto и zlint. Пакета openpgp в бинарнике нет, поэтому уязвимый код не выполняется.",
+      "timestamp": "2026-10-09T07:53:07.000000000Z"
+    }
+  ],
+  "timestamp": "2026-10-09T07:53:07.000000000Z"
+}

@@ -107,3 +107,5 @@ imageSpec:
       FUZZ_WORKDIR: /src/docker_auth/auth_server
       FUZZ_PACKAGES: "./server"
       CGO_ENABLED: "0"
+---
+{{- include "vex mitigation" (list $ (printf "%s/%s" $.ModuleName $.ImageName)) }}

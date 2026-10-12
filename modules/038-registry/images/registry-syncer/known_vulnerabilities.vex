@@ -1,0 +1,23 @@
+{
+  "@context": "https://openvex.dev/ns/v0.2.0",
+  "@id": "https://openvex.dev/docs/public/vex-31b30aafeedd0748489e78fa1a86c9dd24952c3839923a882e676db166db0db4",
+  "author": "Deckhouse <contact@deckhouse.io>",
+  "version": 1,
+  "statements": [
+    {
+      "vulnerability": {
+        "name": "GO-2026-5932"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/golang.org/x/crypto"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "GO-2026-5932 относится к пакету golang.org/x/crypto/openpgp. Пакет не поддерживается, исправленной версии нет. В образе два Go-бинарника. /registry-syncer не использует модуль golang.org/x/crypto. /registry импортируется из образа docker-distribution и собран из каталога wrapper. Из модуля golang.org/x/crypto в него входят только пакеты acme и acme/autocert. Их импортирует пакет github.com/distribution/distribution/v3/registry для сертификатов Let's Encrypt. go list -deps не находит openpgp в графе импортов ни одного из бинарников.",
+      "timestamp": "2026-10-09T12:00:00Z"
+    }
+  ],
+  "timestamp": "2026-10-09T12:00:00Z"
+}

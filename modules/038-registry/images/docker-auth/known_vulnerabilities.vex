@@ -1,0 +1,23 @@
+{
+  "@context": "https://openvex.dev/ns/v0.2.0",
+  "@id": "https://openvex.dev/docs/public/vex-0bd90447d241ce49d7b8d0e1b6c0b2b9bb249f89d9d8b4d6702966370ac8c0c2",
+  "author": "Deckhouse <contact@deckhouse.io>",
+  "version": 1,
+  "statements": [
+    {
+      "vulnerability": {
+        "name": "GO-2026-5932"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/golang.org/x/crypto"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "GO-2026-5932 относится к пакету golang.org/x/crypto/openpgp. Пакет больше не поддерживается, исправленной версии нет. Бинарник /auth_server собирается из корневого пакета auth_server форка docker_auth. По данным go list -deps он не импортирует golang.org/x/crypto/openpgp. Из модуля golang.org/x/crypto в бинарник входят только bcrypt и blowfish. bcrypt нужен пакету authn для проверки паролей статических пользователей, blowfish подтягивает сам bcrypt. Пакета openpgp в бинарнике нет, поэтому уязвимый код не выполняется.",
+      "timestamp": "2026-10-09T07:53:07.000000000Z"
+    }
+  ],
+  "timestamp": "2026-10-09T07:53:07.000000000Z"
+}

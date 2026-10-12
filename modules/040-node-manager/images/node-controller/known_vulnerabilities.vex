@@ -1,0 +1,37 @@
+{
+  "@context": "https://openvex.dev/ns/v0.2.0",
+  "@id": "https://openvex.dev/docs/public/vex-e2e310fdd2e565a1db081b7296b8c81c24f5f51f11c856d6201a543d7431fedb",
+  "author": "Deckhouse <contact@deckhouse.io>",
+  "version": 1,
+  "statements": [
+    {
+      "vulnerability": {
+        "name": "GO-2026-5932"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/golang.org/x/crypto"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "GO-2026-5932 относится к пакету golang.org/x/crypto/openpgp. Пакет не поддерживается, исправленной версии нет. Бинарник node-controller собирается из cmd/main.go и не импортирует golang.org/x/crypto/openpgp. Из модуля golang.org/x/crypto в сборку входят bcrypt, blowfish, scrypt, pbkdf2, hkdf, cryptobyte, cryptobyte/asn1, nacl/secretbox и внутренние пакеты salsa20/salsa, internal/alias и internal/poly1305. bcrypt и scrypt подтягивает github.com/Masterminds/sprig/v3, остальные пакеты приходят из k8s.io/apiserver. go list -deps не находит openpgp в графе импортов.",
+      "timestamp": "2026-10-09T12:00:00Z"
+    },
+    {
+      "vulnerability": {
+        "name": "GHSA-gcjh-h69q-9w9g"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/github.com/google/cel-go@v0.26.0"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "Уязвимость находится в функции NativeTypes пакета github.com/google/cel-go/ext. С опцией ParseStructTag(\"json\") она регистрирует поля с тегом json:\"-\" под именем \"-\", и CEL-выражение может их прочитать. Пакет ext попадает в бинарник node-controller через k8s.io/apiserver/pkg/cel/environment. Ни один пакет в сборке не вызывает NativeTypes и ParseStructTag. Поиск по исходникам всех пакетов из go list -deps находит только их определения в cel-go.",
+      "timestamp": "2026-10-09T12:00:00Z"
+    }
+  ],
+  "timestamp": "2026-10-09T12:00:00Z"
+}

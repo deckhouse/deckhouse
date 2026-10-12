@@ -118,3 +118,5 @@ imageSpec:
       FUZZ_WORKDIR: /src/distribution
       FUZZ_PACKAGES: ". ./registry ./registry/handlers ./registry/proxy"
       CGO_ENABLED: "0"
+---
+{{- include "vex mitigation" (list $ (printf "%s/%s" $.ModuleName $.ImageName)) }}

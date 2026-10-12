@@ -1,0 +1,23 @@
+{
+  "@context": "https://openvex.dev/ns/v0.2.0",
+  "@id": "https://openvex.dev/docs/public/vex-6c5294aacc4f2f9a20d727786a266e6c4f40e1840170cbfea8301e34c1be072e",
+  "author": "Deckhouse <contact@deckhouse.io>",
+  "version": 1,
+  "statements": [
+    {
+      "vulnerability": {
+        "name": "GO-2026-5932"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/golang.org/x/crypto"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "GO-2026-5932 относится к пакету golang.org/x/crypto/openpgp. Пакет помечен как unmaintained, исправленной версии нет. Бинарник registry не импортирует golang.org/x/crypto/openpgp. Из модуля golang.org/x/crypto в сборку попадают только пакеты acme и acme/autocert. Их импортирует пакет github.com/distribution/distribution/v3/registry для сертификатов Let's Encrypt. Обёртка в каталоге wrapper не импортирует golang.org/x/crypto напрямую. Вывод go list -deps для linux/amd64 содержит 600 пакетов, openpgp среди них нет. Уязвимый код в сборку не попадает и не выполняется.",
+      "timestamp": "2026-10-09T07:48:14Z"
+    }
+  ],
+  "timestamp": "2026-10-09T07:48:14Z"
+}

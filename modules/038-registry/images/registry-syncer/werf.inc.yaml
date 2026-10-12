@@ -82,3 +82,5 @@ import:
 imageSpec:
   config:
     entrypoint: ["/registry-syncer"]
+---
+{{- include "vex mitigation" (list $ (printf "%s/%s" $.ModuleName $.ImageName)) }}

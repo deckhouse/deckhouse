@@ -1,0 +1,36 @@
+diff --git a/go.mod b/go.mod
+index 01c2c66..3115ddc 100644
+--- a/go.mod
++++ b/go.mod
+@@ -1,6 +1,6 @@
+ module github.com/superq/chrony_exporter
+ 
+-go 1.25.0
++go 1.26.0
+ 
+ require (
+ 	github.com/alecthomas/kingpin/v2 v2.4.0
+@@ -26,7 +26,7 @@ require (
+ 	github.com/prometheus/procfs v0.21.1 // indirect
+ 	github.com/xhit/go-str2duration/v2 v2.1.0 // indirect
+ 	go.yaml.in/yaml/v2 v2.4.4 // indirect
+-	golang.org/x/crypto v0.55.0 // indirect
++	golang.org/x/crypto v0.56.0 // indirect
+ 	golang.org/x/net v0.57.0 // indirect
+ 	golang.org/x/oauth2 v0.36.0 // indirect
+ 	golang.org/x/sync v0.22.0 // indirect
+diff --git a/go.sum b/go.sum
+index c2f200a..95843c6 100644
+--- a/go.sum
++++ b/go.sum
+@@ -61,8 +61,8 @@ go.uber.org/goleak v1.3.0 h1:2K3zAYmnTNqV73imy9J1T3WC+gmCePx2hEGkimedGto=
+ go.uber.org/goleak v1.3.0/go.mod h1:CoHD4mav9JJNrW/WLlf7HGZPjdw8EucARQHekz1X6bE=
+ go.yaml.in/yaml/v2 v2.4.4 h1:tuyd0P+2Ont/d6e2rl3be67goVK4R6deVxCUX5vyPaQ=
+ go.yaml.in/yaml/v2 v2.4.4/go.mod h1:gMZqIpDtDqOfM0uNfy0SkpRhvUryYH0Z6wdMYcacYXQ=
+-golang.org/x/crypto v0.55.0 h1:+KWHjbgOaAQ66dh/YlkZKHlz9ZUlq61AFirAR9ntP8M=
+-golang.org/x/crypto v0.55.0/go.mod h1:uq0V9dE/fzQuJtbnL+2EhWOE63vo164FY8xqEnV9xis=
++golang.org/x/crypto v0.56.0 h1:GUh5Ii4J5jtcseSMiRqr1jXCNHoxjeV9Fmekc2oLy6Y=
++golang.org/x/crypto v0.56.0/go.mod h1:OMW5y6CY9l38uPLmxU6l6pwcXp1obtLo3e6gT7gQR2I=
+ golang.org/x/net v0.57.0 h1:K5+3DljvIuDG9/Jv9rvyMywYNFCQ9RSUY6OOTTkT+tE=
+ golang.org/x/net v0.57.0/go.mod h1:KpXc8iv+r3XplLAG/f7Jsf9RPszJzdR0f58q9vGOuEU=
+ golang.org/x/oauth2 v0.36.0 h1:peZ/1z27fi9hUOFCAZaHyrpWG5lwe0RJEEEeH0ThlIs=
