@@ -777,7 +777,7 @@ decimalNumber: RU.86432418.00001-01 90 04-1
   </tr>
   </tbody>
   </table>
-  
+
 #### 4.1.3. Требования к обеспечению сетевого взаимодействия узлов кластера
 
 Таблица 2 - Требования к обеспечению сетевого взаимодействия узлов кластера
@@ -997,7 +997,7 @@ decimalNumber: RU.86432418.00001-01 90 04-1
 - SSH-доступ к узлам кластера. Подготовленные пользователь, публичный ключ и приватный ключ используются в ресурсе `SSHCredentials` файла конфигурации (п. 4.5.1) и в команде запуска установки (п. 4.5.2).
 - TLS-сертификаты и ключи для HTTPS-доступа к registry и выпуска сертификатов сервисов DKP CSE. Подготовленные значения используются в `deckhouse.registryCA`, секрете `internal-ca-key-pair` и `ClusterIssuer` в файле конфигурации установки (п. 4.4.1).
 - Хранилище образов контейнеров DKP CSE (container registry), путь к загруженным образам и данные аутентификации. Эти значения используются в ресурсе `InitConfiguration` (п. 4.3.1) и при запуске контейнера установщика (п. 4.4.2).
-  
+
   {{< alert level="info" >}}
   Поддерживаются только сертифицированные хранилища образов CSE. Добавление сторонних хранилищ не допускается.
   {{< /alert >}}
@@ -1582,7 +1582,7 @@ deckhouse:
  # Укажите параметр, если registry использует самоподписанный сертификат.
  registryCA: |
    -----BEGIN CERTIFICATE-----
-  
+
    -----END CERTIFICATE-----
 ---
 apiVersion: deckhouse.io/v1
@@ -1600,7 +1600,7 @@ clusterDomain: cluster.local
 clusterType: Static
 defaultCRI: ContainerdV2
 # При использовании Containerd v1 режим контроля подписи Enforce
-# применяется только после предварительного включения режима Migrate и проведения 
+# применяется только после предварительного включения режима Migrate и проведения
 # миграций (п. 4.16).
 ---
 apiVersion: deckhouse.io/v1
@@ -1641,7 +1641,7 @@ spec:
    apiserver:
      signature: Enforce
 # При использовании Containerd v1 режим контроля подписи Enforce
-# применяется только после предварительного включения режима Migrate и проведения 
+# применяется только после предварительного включения режима Migrate и проведения
 # миргаций
 # (см. раздел 4.16).
      encryptionEnabled: true
@@ -1916,7 +1916,7 @@ metadata:
  name: local-path
 spec:
  # В зависимости от конфигурации ОС путь может быть изменён.
- path: "/opt/local-path-provisioner" 
+ path: "/opt/local-path-provisioner"
  reclaimPolicy: Delete
 ---
 apiVersion: deckhouse.io/v1
@@ -3670,7 +3670,7 @@ metadata:
   name: ldap
 spec:
   displayName: LDAP
-  type: LDAP 
+  type: LDAP
   ldap:
     bindDN: cn=admin,dc=novalocal
     bindPW: passw0rd
@@ -4178,7 +4178,7 @@ DKP CSE предоставляет возможность администрат
    SOURCESNAPSHOTCONTENT
 
    RESTORESIZE
-   2Gi  
+   2Gi
 
    SNAPSHOTCLASS
    sds-local-volume-snapshot-class
@@ -4602,7 +4602,7 @@ spec:
     dvcr:
       storage:
         persistentVolumeClaim:
-          size: 50G          
+          size: 50G
           storageClassName: sds-replicated-thin-r1 #Ваш существующий storageClass
         type: PersistentVolumeClaim
     virtualMachineCIDRs:
@@ -5514,7 +5514,7 @@ d8 mirror pull \
   --license="${LICENSE_KEY}" \
   --gost-digest \
   --deckhouse-tag="v1.73" \
-  --no-modules \ 
+  --no-modules \
   --no-platform
 ```
 
@@ -5669,7 +5669,7 @@ spec:
 - `settings.denyVulnerableImages.allowedSeverityLevels` — массив строк
 
   Уровни серьёзности уязвимостей, наличие которых не приводит к блокировке образа.
-  
+
   Допустимые значения: Unknown, Low, Medium, High, Critical.
 
 - `settings.denyVulnerableImages.registrySecrets` — массив объектов
@@ -5712,7 +5712,7 @@ spec:
 - `settings.insecureRegistries` массив строк
 
   Список реестров контейнеров, для которых разрешено использовать HTTP или HTTPS без проверки TLS-сертификата.
-  
+
   Параметр применяется при сканировании рабочих нагрузок, проверке denyVulnerableImages и сканировании реестров, настроенных с помощью RegistryScanTarget.
 
   По умолчанию: []
@@ -6009,7 +6009,7 @@ d8 backup loki --help
 - d8-csi-scsi-generic;
 - d8-csi-yadro-tatlin-unified;
 - d8-descheduler;
-- d8-gpu;
+- d8-nvidia-gpu;
 - d8-ingress-nginx;
 - d8-istio;
 - d8-local-path-provisioner;
