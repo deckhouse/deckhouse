@@ -16,6 +16,7 @@
 
 from deckhouse import hook
 from dotmap import DotMap
+import stderr_level
 
 config = """
 configVersion: v1
@@ -164,4 +165,5 @@ def validate_delete(ctx: DotMap, output: hook.ValidationsCollector):
 
 
 if __name__ == "__main__":
+    stderr_level.warn_stderr()
     hook.run(main, config=config)

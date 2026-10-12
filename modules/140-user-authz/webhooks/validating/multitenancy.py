@@ -63,6 +63,7 @@
 
 from deckhouse import hook
 from dotmap import DotMap
+import stderr_level
 
 SEPARATOR = "; "
 MULTITENANCY_STATE_SNAPSHOT_NAME = "d8-user-authz-multitenancy-state"
@@ -201,4 +202,5 @@ def validate_car_multitenancy_related_fields(obj: DotMap) -> tuple[list[str], li
 
 
 if __name__ == "__main__":
+    stderr_level.warn_stderr()
     hook.run(main, config=CONFIG)

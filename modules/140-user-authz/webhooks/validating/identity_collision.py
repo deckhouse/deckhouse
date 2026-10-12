@@ -53,6 +53,7 @@ from typing import Any, Callable, NamedTuple, Optional
 
 from deckhouse import hook
 from dotmap import DotMap
+import stderr_level
 
 CLUSTER_RULES_SNAPSHOT_NAME = "d8-user-authz-collision-cluster-authorization-rules"
 NAMESPACED_RULES_SNAPSHOT_NAME = "d8-user-authz-collision-authorization-rules"
@@ -354,4 +355,5 @@ def is_collision_acknowledged(obj: DotMap) -> bool:
 
 
 if __name__ == "__main__":
+    stderr_level.warn_stderr()
     hook.run(main, config=CONFIG)

@@ -79,7 +79,7 @@ function __main__() {
       if [[ "$domain" != "null" && "$ingressClass" != "null" && "$fieldPath" != "null" ]]; then
         domains_to_check+=("$domain"$'\t'"$ingressClass"$'\t'"$fieldPath")
       fi
-    done < <(context::jq -r '.review.request.object.spec.applications | to_entries[]? | "\(.value.domain)\t\(.value.ingressClassName)\t.spec.applications[\(.key)].domain"')
+    done < <(context::jq -r '(.review.request.object.spec.applications // []) | to_entries[]? | "\(.value.domain)\t\(.value.ingressClassName)\t.spec.applications[\(.key)].domain"')
   else
 
     main_domain=$(context::jq -r '.review.request.object.spec.applicationDomain')
@@ -91,7 +91,7 @@ function __main__() {
       if [[ "$domain" != "null" && "$ingressClass" != "null" && "$fieldPath" != "null" ]]; then
         domains_to_check+=("$domain"$'\t'"$ingressClass"$'\t'"$fieldPath")
       fi
-    done < <(context::jq -r '.review.request.object.spec.additionalApplications | to_entries[]? | "\(.value.domain)\t\(.value.ingressClassName)\t.spec.additionalApplications[\(.key)].domain"')
+    done < <(context::jq -r '(.review.request.object.spec.additionalApplications // []) | to_entries[]? | "\(.value.domain)\t\(.value.ingressClassName)\t.spec.additionalApplications[\(.key)].domain"')
   fi
   
 
@@ -128,5 +128,9 @@ function __main__() {
   
   jq -n '{allowed:true}' > "$VALIDATING_RESPONSE_PATH"
 }
+
+# shell-operator logs every plain-text line of a hook at info, stderr included; a JSON line carries
+# its own level, so the errors of jq and the other tools the webhook runs go out as warnings.
+exec 3>&2 2> >(jq -R -c '{level: "warn", msg: .}' >&3)
 
 hook::run "$@"

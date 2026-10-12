@@ -24,6 +24,7 @@ from deckhouse import hook
 from dotmap import DotMap
 
 import identity_assign as assign
+import stderr_level
 
 MATCH_CONDITIONS = """
   matchConditions:
@@ -227,4 +228,5 @@ def validate_clusterrole(req) -> Optional[str]:
 
 
 if __name__ == "__main__":
+    stderr_level.warn_stderr()
     hook.run(main, config=CONFIG)

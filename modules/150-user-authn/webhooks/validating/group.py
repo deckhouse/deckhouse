@@ -18,6 +18,7 @@ from typing import Optional, Self
 
 from deckhouse import hook
 from dotmap import DotMap
+import stderr_level
 
 config = """
 configVersion: v1
@@ -315,4 +316,5 @@ class GroupTree(list[Group]):
 
 
 if __name__ == "__main__":
+    stderr_level.warn_stderr()
     hook.run(main, config=config)
