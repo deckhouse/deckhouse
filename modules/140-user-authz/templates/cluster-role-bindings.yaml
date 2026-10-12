@@ -13,7 +13,7 @@
 {{- define "rbac.namespace" }}
   {{- $kind := index . 0}}
   {{- if eq $kind "RoleBinding" }}
-namespace: {{ index . 1 }}
+namespace: {{ index . 1 | quote }}
   {{- end }}
 {{- end }}
 

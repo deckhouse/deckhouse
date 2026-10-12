@@ -25,6 +25,7 @@ import (
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+	"github.com/tidwall/gjson"
 
 	. "github.com/deckhouse/deckhouse/testing/helm"
 )
@@ -734,5 +735,32 @@ var _ = Describe("Module :: user-authz :: helm template ::", func() {
 			Expect(rules).NotTo(ContainSubstring("nodes/stats"))
 		})
 	})
+
+	// YAML reads such a namespace as a number, a boolean or null unless it is quoted.
+	for _, ns := range []string{"123", "true", "null"} {
+		Context("With an AuthorizationRule in the namespace "+ns, func() {
+			BeforeEach(func() {
+				f.ValuesSetFromYaml("userAuthz.internal.authRuleCrds", `---
+- name: digits
+  namespace: "`+ns+`"
+  spec:
+    accessLevel: Editor
+    subjects:
+      - kind: User
+        name: digits@example.com
+`)
+				f.HelmRender()
+			})
+
+			It("Should render the RoleBinding with the namespace as a string", func() {
+				Expect(f.RenderError).ShouldNot(HaveOccurred())
+
+				rb := f.KubernetesResource("RoleBinding", ns, "user-authz:digits:editor")
+				Expect(rb.Exists()).To(BeTrue())
+				Expect(rb.Field("metadata.namespace").Type).To(Equal(gjson.String))
+				Expect(rb.Field("metadata.namespace").String()).To(Equal(ns))
+			})
+		})
+	}
 
 })
