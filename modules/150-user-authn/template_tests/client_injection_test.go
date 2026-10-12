@@ -22,6 +22,7 @@ import (
 	"github.com/flant/kube-client/manifest/releaseutil"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+	"github.com/tidwall/gjson"
 
 	. "github.com/deckhouse/deckhouse/testing/helm"
 )
@@ -124,6 +125,34 @@ var _ = Describe("Module :: user-authn :: helm template :: DexClient value injec
 				Expect(legacy.Field("id").String()).To(Equal("dex-client-tenant:tenant-ns"))
 				Expect(legacy.Field("name").String()).To(Equal("dex-client-tenant:tenant-ns"))
 				Expect(legacy.Field("secret").String()).To(Equal("clientSecretValue"))
+			})
+		})
+	}
+
+	// YAML reads such a namespace as a number or a boolean unless it is quoted.
+	for _, ns := range []string{"123", "true"} {
+		Context("With a DexClient in the namespace "+ns, func() {
+			BeforeEach(func() {
+				hec.ValuesSetFromYaml("userAuthn.internal.dexClientCRDs", `
+- id: dex-client-tenant@`+ns+`
+  encodedID: "m5zgcztbnzq4x4u44scceizf"
+  name: tenant
+  namespace: "`+ns+`"
+  spec: {}
+  legacyID: dex-client-tenant:`+ns+`
+  legacyEncodedID: "m5zgcztbnzq4x4u44scceizfxxx"
+  clientSecret: clientSecretValue
+`)
+				hec.HelmRender()
+			})
+
+			It("Should render the Secret of the client with the namespace as a string", func() {
+				Expect(hec.RenderError).ToNot(HaveOccurred())
+
+				secret := hec.KubernetesResource("Secret", ns, "dex-client-tenant")
+				Expect(secret.Exists()).To(BeTrue())
+				Expect(secret.Field("metadata.namespace").Type).To(Equal(gjson.String))
+				Expect(secret.Field("metadata.namespace").String()).To(Equal(ns))
 			})
 		})
 	}
