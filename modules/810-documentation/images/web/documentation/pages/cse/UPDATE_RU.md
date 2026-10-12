@@ -1,8 +1,9 @@
 ---
-title: "Руководство по обновлению Deckhouse Kubernetes Platform Certified Security Edition"
+title: "Руководство по обновлению Deckhouse Platform Certified Security Edition"
 permalink: ru/update.html
 search: обновление, обновление платформы, обновление версии, upgrade, апгрейд, переход на новую версию, миграция, требования к узлам, системные требования, поддерживаемые ОС, РЕД ОС, Astra Linux, Альт, Московская серверная операционная система, действия перед обновлением, подготовка к обновлению, контроль целостности, включение контроля целостности, signature, Migrate, Enforce, containerd, ContainerdV2, cgroups, cgroups v2, erofs, cilium, etcd, etcd member, проверка успешности обновления, проблемы при обновлении, ЗПС, замкнутая программная среда, astra-digsig-control
 searchBoost: 2
+description: Руководство по обновлению Deckhouse Platform Certified Security Edition (DP CSE), подготовка к обновлению, проверка узлов кластера и действия после обновления.
 lang: ru
 ---
 
@@ -12,7 +13,12 @@ lang: ru
 }
 </style>
 
-В данном руководстве описан процесс обновления ПО «Deckhouse Kubernetes Platform Certified Security Edition» (далее — DKP CSE) [с версии v1.67.4 до v1.73.4](#обновление-dkp-cse-с-версии-1674-на-версию-1734) и [с версии v1.73.x до v1.73.4](#обновление-dkp-cse-с-версии-173x-на-версию-1734).
+Руководство описывает обновление Deckhouse Platform Certified Security Edition (DP CSE) [с версии v1.73.6 до v1.77.0](#обновление-dp-cse-с-версии-1736-на-версию-1770).
+
+Если в кластере установлена более ранняя версия, сначала обновите DP CSE до v1.73.6:
+
+- [с версии v1.67.4 до v1.73.6](#обновление-dp-cse-с-версии-1674-на-версию-1736);
+- [с версии v1.73.x до v1.73.6](#обновление-dp-cse-с-версии-173x-на-версию-1736).
 {% raw %}
 
 ## Минимальные требования к узлам кластера для обновления
@@ -26,89 +32,378 @@ lang: ru
 
 Требования к программной части:
 
-- ОС РЕД ОС (не ниже 7.3);
-- ОС Astra Linux Special Edition (не ниже 1.7);
-- ОС Альт не ниже 8 СП (релиз не ниже 10);
+- РЕД ОС (не ниже 7.3);
+- Astra Linux Special Edition (не ниже 1.7);
+- Альт (не ниже 8 СП, релиз не ниже 10);
 - Московская серверная операционная система (не ниже 15.5).
 
-## С какой версии DKP CSE возможно обновление
+В DP CSE v1.77.0 все узлы используют среду выполнения контейнеров containerd v2. Перед обновлением до v1.77.0 убедитесь, что каждый узел кластера соответствует требованиям containerd v2:
 
-Обновление версии DKP CSE на v1.73.4 возможно с версии v1.67.4 и с версии v1.73.x (любая патч-версия).
+- поддержка cgroups v2;
+- ядро Linux версии 5.8 и новее, кроме версий 6.12.0–6.12.28 и 6.14.0–6.14.6 (уязвимость CVE-2025-37999 в EROFS);
+- systemd версии 244 и новее;
+- поддержка модуля ядра `erofs`;
+- отсутствие пользовательских конфигураций в `/etc/containerd/conf.d`.
 
-## Обновление DKP CSE с версии 1.67.4 на версию 1.73.4
+Как проверить узел, описано в разделе [«Обновление версии containerd»](#обновление-версии-containerd).
+
+## С какой версии можно обновить DP CSE
+
+DP CSE можно обновить до v1.77.0 только с последней доступной патч-версии DP CSE v1.73.x.
+
+## Обновление DP CSE с версии 1.73.6 на версию 1.77.0
+
+### Изменения, которые нужно учесть перед обновлением
+
+- Минимальная поддерживаемая версия Kubernetes — 1.31. В параметре `kubernetesVersion` ClusterConfiguration допустимы значения `"1.31"`, `"1.34"` и `Automatic`. Значение `Automatic` соответствует версии 1.34.
+- Среда выполнения контейнеров containerd v1 больше не поддерживается. DP CSE не установит релиз v1.77.0, пока containerd v1 используется на узлах, в группах узлов (`spec.cri.type: Containerd`) или в параметре `defaultCRI` ClusterConfiguration.
+- Модуль `gost-integrity-controller` удалён. DP CSE не установит релиз v1.77.0, пока этот модуль включён.
+- Модули `loki`, `log-shipper`, `prometheus`, `ingress-nginx`, `runtime-audit-engine`, `operator-trivy`, `virtualization`, `console` и другие поставляются как внешние модули через ModuleSource `deckhouse`. DP CSE не установит релиз v1.77.0, пока включённые модули из этого списка недоступны в ModuleSource `deckhouse`. Образы этих модулей загружаются в хранилище образов контейнеров вместе с образами DP CSE.
+- Параметры `denyVulnerableImages` перенесены из модуля `admission-policy-engine` в модуль `operator-trivy`. В модуле `operator-trivy` запрет на запуск контейнеров из уязвимых образов по умолчанию выключен. Если секция `denyVulnerableImages` осталась в ModuleConfig `admission-policy-engine`, срабатывает алерт `VulnerableImagesDenialConfigNotMigrated`.
+- Доступ к хранилищу образов контейнеров настраивается параметром `settings.registry` ModuleConfig `deckhouse`. Секция `deckhouse` в InitConfiguration устарела.
+- Публикация API Kubernetes настраивается параметром `settings.apiserver.publishAPI` ModuleConfig `control-plane-manager`. Параметр `publishAPI` модуля `user-authn` устарел.
+- Параметр `earlyOomEnabled` модуля `node-manager` удалён.
+- Параметр `apiserver.signature` модуля `control-plane-manager` по умолчанию имеет значение `Migrate`. Значение, заданное в ModuleConfig явно, сохраняется.
+- Политики модуля `admission-policy-engine` проверяют контейнеры, которые добавляются через субресурс `pods/ephemeralcontainers` (команда `d8 k debug`). В неймспейсах со строгими политиками отладочные контейнеры с правами root не запустятся.
+- При включённом параметре `enableMultiTenancy` модуля `user-authz` итоговые права пользователя — объединение прав из ClusterAuthorizationRule (в разрешённых неймспейсах), AuthorizationRule, RoleBinding и ClusterRoleBinding.
+- Нельзя создать или переименовать Group или User так, чтобы `Group.spec.name` или `User.spec.email` совпал с субъектом существующего AuthorizationRule или ClusterAuthorizationRule.
+- Создавать, изменять и удалять SecurityPolicyException может только пользователь с уровнем доступа `ClusterAdmin`.
+- Если API Kubernetes опубликован с включённой basic-аутентификацией (`enableBasicAuth`) в DexProvider, DP CSE отбрасывает группы, имена которых начинаются с `system:`.
+- Аннотация `allow-access-to-kubernetes` у DexClient и DexAuthenticator учитывается, только если её значение — логическое `true`. DP CSE заново генерирует клиентский секрет DexAuthenticator с этой аннотацией. Поэтому пользователям связанных приложений может потребоваться войти повторно.
+- Во время обновления перезапускаются компоненты control plane и модулей `cni-cilium`, `ingress-nginx`, `node-local-dns`, `kube-dns`, `metallb`, `vertical-pod-autoscaler` и других.
 
 ### Действия перед обновлением
 
-1. При наличии в кластере узлов с ОС Astra Linux ознакомьтесь с разделом [«Особенности обновления в Astra Linux»](#особенности-обновления-в-astra-linux).
+1. Если в кластере есть узлы с Astra Linux, выполните действия из раздела [«Особенности обновления в Astra Linux»](#особенности-обновления-в-astra-linux).
 
-1. Загрузите предоставленное вам обновление в ваше хранилище образов контейнеров DKP CSE.
-
-   Скопируйте файлы поставки с USB-флеш накопителя или DVD-диска на компьютер, с которого есть доступ до хранилища образа контейнеров.
-
-   Также вы можете скопировать образы из публичного хранилища образов контейнеров следующей командой:
+1. Убедитесь, что в кластере установлена последняя патч-версия DP CSE v1.73.x (v1.73.6 на момент написания инструкции):
 
    ```bash
-   d8 mirror pull \
-   ${PACKAGE_DIR_PATH} \
-   --source="registry-cse.deckhouse.ru/deckhouse/cse" \
-   --license="${LICENSE_KEY}" \
-   --gost-digest \
-   --deckhouse-tag="v1.73.4"
-   --include-module=stronghold
+   d8 k get deckhouserelease
    ```
 
-   Здесь:
-   - `${PACKAGE_DIR_PATH}` — директория для скаченных образов
-   - `${LICENSE_KEY}` — лицензионный ключ для доступа в публичное хранилище образов контейнеров DKP CSE.
+   Объект DeckhouseRelease `v1.73.6` должен находиться в фазе `Deployed`. Если установлена более ранняя версия, сначала [обновите DP CSE до последней патч-версии](#обновление-dp-cse-с-версии-173x-на-версию-1736).
 
-   С помощью команды `d8 tools gostsum` получите контрольную сумму файлов архива образов и сравните полученные результаты соответственно с содержимым файлов с суффиксом .gostsum (они должны совпадать).
+1. Убедитесь, что в кластере нет алертов, кроме `SecurityEventsDetected`.
 
-   Загрузите данные в хранилище образов контейнеров, выполнив следующую команду (измените путь к файлу архива или директории образов):
-
-   ```bash
-   d8 mirror push <PATH> <REGISTRY_URL>/<REGISTRY_PATH> \
-     --registry-login=<USERNAME> --registry-password=<PASSWORD>
-   ```
-
-   Здесь:
-   - `<PATH>` — директория поставки, содержащая архивы с образами поставки DKP CSE;
-   - `<REGISTRY_URL>` — адрес хранилища образов контейнеров в локальной сети;
-   - `<REGISTRY_PATH>` — путь в хранилище образов контейнеров, в который будут загружаться образы DKP CSE. В примерах ниже будет использоваться путь /deckhouse/cse;
-   - `<USERNAME>` — имя пользователя для авторизации в хранилище образов контейнеров;
-   - `<PASSWORD>` — пароль пользователя для авторизации в хранилище образов контейнеров.
-
-1. Перед обновлением убедитесь в отсутствии в кластере алертов, кроме `D8DeckhouseIsNotOnReleaseChannel`.
-
-1. Убедитесь, что в очередях DKP CSE нет ошибок.
+1. Убедитесь, что в очередях DP CSE нет ошибок:
 
    ```bash
    d8 system queue list
    ```
 
-   Пример вывода команды пустых очередей без ошибок:
+   Пример вывода, когда очереди пусты и ошибок нет:
 
-   ```bash
+   ```console
    Summary:
    - 'main' queue: empty.
    - 103 other queues (0 active, 103 empty): 0 tasks.
    - no tasks to handle.
    ```
 
-1. При наличии NodeGroupConfiguration `sysctl-tune-fstec` добавьте аннотации и лейбл.
+1. Убедитесь, что на всех узлах используется containerd v2.
 
-   Проверка наличия NodeGroupConfiguration:
+   1. Проверьте версию среды выполнения контейнеров на узлах:
+
+      ```bash
+      d8 k get nodes -o custom-columns=NAME:.metadata.name,CRI:.status.nodeInfo.containerRuntimeVersion
+      ```
+
+      Для всех узлов в столбце `CRI` должна быть указана версия `containerd://2.x`.
+
+   1. Проверьте параметр `defaultCRI` в ClusterConfiguration:
+
+      ```bash
+      d8 k -n kube-system get secret d8-cluster-configuration -o jsonpath='{.data.cluster-configuration\.yaml}' | base64 -d | grep defaultCRI
+      ```
+
+      Параметр должен иметь значение `ContainerdV2` или `NotManaged`.
+
+   1. Проверьте параметр `spec.cri.type` групп узлов:
+
+      ```bash
+      d8 k get ng -o custom-columns=NAME:.metadata.name,CRI:.spec.cri.type
+      ```
+
+      Ни у одной группы узлов не должно быть значения `Containerd`.
+
+   Если хотя бы одна проверка не пройдена, переведите узлы на containerd v2 по инструкции из раздела [«Обновление версии containerd»](#обновление-версии-containerd). Дождитесь, пока обновятся все узлы.
+
+1. Убедитесь, что модуль `gost-integrity-controller` выключен:
+
+   ```bash
+   d8 k get module gost-integrity-controller
+   ```
+
+   Если в столбце `ENABLED` указано `True`, выключите модуль:
+
+   ```bash
+   d8 system module disable gost-integrity-controller
+   ```
+
+1. Откройте ClusterConfiguration и проверьте параметр `kubernetesVersion`:
+
+   ```bash
+   d8 system edit cluster-configuration
+   ```
+
+   - Если параметр `kubernetesVersion` имеет значение `"1.29"` или `"1.30"`, установите значение `"1.31"`. Дождитесь, пока Kubernetes обновится на всех узлах и очереди DP CSE опустеют.
+   - Если параметр `kubernetesVersion` имеет значение `"1.31"` или `Automatic`, ничего не меняйте.
+
+   Проверьте версию Kubernetes на узлах:
+
+   ```bash
+   d8 k get no -o custom-columns=NAME:.metadata.name,VERSION:.status.nodeInfo.kubeletVersion
+   ```
+
+   На всех узлах должна быть версия не ниже `v1.31`.
+
+1. Проверьте канал и режим обновлений в ModuleConfig `deckhouse`:
+
+   ```bash
+   d8 k edit mc deckhouse
+   ```
+
+   Убедитесь, что задан канал обновлений `LTS` (`spec.settings.releaseChannel: LTS`). Обновление возможно только на этом канале.
+
+   В параметре `spec.settings.update.mode` задайте режим обновлений:
+
+   - `AutoPatch` — автоматическое обновление патч-версий. Обновление минорной версии (например, с v1.73.6 на v1.77.0) требует подтверждения. Значение по умолчанию.
+   - `Auto` — автоматическое обновление патч-версий и минорных версий с учётом окон обновлений (`spec.settings.update.windows`).
+   - `Manual` — обновление любой версии требует подтверждения.
+
+   Пример ModuleConfig `deckhouse` с каналом обновлений `LTS` и режимом `AutoPatch`:
+
+   ```yaml
+   apiVersion: deckhouse.io/v1alpha1
+   kind: ModuleConfig
+   metadata:
+     name: deckhouse
+   spec:
+     enabled: true
+     settings:
+       bundle: Default
+       logLevel: Info
+       releaseChannel: LTS
+       update:
+         mode: AutoPatch
+     version: 1
+   ```
+
+1. Загрузите обновление в хранилище образов контейнеров DP CSE.
+
+   Скопируйте файлы поставки на компьютер, с которого есть доступ к хранилищу образов контейнеров в локальной сети. Файлы поставки можно взять из публичного хранилища образов контейнеров DP CSE, с USB-флеш-накопителя или с DVD-диска.
+
+   Чтобы скопировать образы из публичного хранилища образов контейнеров DP CSE, выполните команду:
+
+   ```bash
+   d8 mirror pull <ПУТЬ_К_ДИРЕКТОРИИ_ПАКЕТА> --source="registry-cse.deckhouse.ru/deckhouse/cse" --license="<ЛИЦЕНЗИОННЫЙ_КЛЮЧ>" --gost-digest --deckhouse-tag="v1.77.0"
+   ```
+
+   Не добавляйте в команду флаг `--include-module`. С этим флагом команда загружает только перечисленные в нём модули. Модули, которые нужны для работы кластера, не попадут в поставку.
+
+   Здесь:
+
+   - `<ПУТЬ_К_ДИРЕКТОРИИ_ПАКЕТА>` — директория для скачанных образов;
+   - `<ЛИЦЕНЗИОННЫЙ_КЛЮЧ>` — лицензионный ключ для доступа к публичному хранилищу образов контейнеров DP CSE.
+
+   Команда загружает образы DP CSE и его модулей.
+
+   Получите контрольные суммы файлов архива образов командой `d8 tools gostsum`. Сравните их с содержимым файлов с суффиксом `.gostsum`. Значения должны совпадать.
+
+   Загрузите образы в хранилище образов контейнеров:
+
+   ```bash
+   d8 mirror push <ПУТЬ_К_ДИРЕКТОРИИ_ПАКЕТА> <АДРЕС_ХРАНИЛИЩА>/<ПУТЬ_В_ХРАНИЛИЩЕ> --registry-login=<ИМЯ_ПОЛЬЗОВАТЕЛЯ> --registry-password=<ПАРОЛЬ>
+   ```
+
+   Здесь:
+
+   - `<ПУТЬ_К_ДИРЕКТОРИИ_ПАКЕТА>` — директория поставки с архивами образов DP CSE;
+   - `<АДРЕС_ХРАНИЛИЩА>` — адрес хранилища образов контейнеров в локальной сети;
+   - `<ПУТЬ_В_ХРАНИЛИЩЕ>` — путь к образам DP CSE в хранилище образов контейнеров, например `/deckhouse/cse`;
+   - `<ИМЯ_ПОЛЬЗОВАТЕЛЯ>` — имя пользователя для авторизации в хранилище образов контейнеров;
+   - `<ПАРОЛЬ>` — пароль пользователя для авторизации в хранилище образов контейнеров.
+
+1. Убедитесь, что модули DP CSE доступны в ModuleSource `deckhouse`:
+
+   ```bash
+   d8 k get ms deckhouse -o jsonpath='{range .status.availableModules[*]}{.name}{"\t"}{.error}{"\n"}{end}'
+   ```
+
+   В списке должны быть все модули, включённые в кластере. Второй столбец (ошибки) должен быть пустым. ModuleSource синхронизируется с хранилищем образов контейнеров не сразу: это может занять несколько минут.
+
+### Обновление версии DP CSE
+
+1. Убедитесь, что в кластере появился объект DeckhouseRelease `v1.77.0`:
+
+   ```bash
+   d8 k get deckhouserelease
+   ```
+
+   Пример вывода с релизом `v1.77.0`, ожидающим установки:
+
+   <!-- markdownlint-disable MD031 -->
+   ```console
+   NAME      PHASE        TRANSITIONTIME   MESSAGE
+   v1.73.6   Deployed     12d
+   v1.77.0   Pending      2m
+   ```
+   {: .nowrap-default }
+   <!-- markdownlint-enable MD031 -->
+
+   Если в столбце `MESSAGE` указано невыполненное требование релиза, выполните это требование. Например, переведите узлы на containerd v2, выключите модуль `gost-integrity-controller` или дождитесь появления модулей в ModuleSource `deckhouse`.
+
+1. Если задан режим обновлений `AutoPatch` или `Manual`, подтвердите обновление:
+
+   ```bash
+   d8 k patch deckhouserelease v1.77.0 --type=merge -p '{"approved":true}'
+   ```
+
+   Если заданы окна обновлений, обновление начнётся в ближайшее окно.
+
+1. Дождитесь, пока очереди DP CSE опустеют и все узлы кластера обновятся:
+
+   ```bash
+   d8 system queue list
+   d8 k get ng
+   ```
+
+   Для каждой группы узлов значения в столбцах `UPTODATE`, `NODES` и `READY` должны совпадать.
+
+1. Если появится алерт `NodeRequiresDisruptionApprovalForUpdate`, выполните инструкцию из алерта.
+
+### Действия после обновления
+
+1. Включите запрет на запуск контейнеров из уязвимых образов в модуле `operator-trivy`.
+
+   1. Получите ModuleConfig `admission-policy-engine`:
+
+      ```bash
+      d8 k get mc admission-policy-engine -o yaml
+      ```
+
+      Если в выводе есть секция `spec.settings.denyVulnerableImages`, запишите её значения. Затем удалите эту секцию:
+
+      ```bash
+      d8 k patch mc admission-policy-engine --type json -p='[{"op": "remove", "path": "/spec/settings/denyVulnerableImages"}]'
+      ```
+
+   1. Добавьте секцию `denyVulnerableImages` в ModuleConfig `operator-trivy`:
+
+      ```bash
+      d8 k edit mc operator-trivy
+      ```
+
+      Пример ModuleConfig `operator-trivy` с включённым запретом:
+
+      ```yaml
+      apiVersion: deckhouse.io/v1alpha1
+      kind: ModuleConfig
+      metadata:
+        name: operator-trivy
+      spec:
+        enabled: true
+        settings:
+          denyVulnerableImages:
+            enabled: true
+        version: 2
+      ```
+
+      Если в удалённой секции были заданы параметры `allowedSeverityLevels` или `registrySecrets`, добавьте их с теми же значениями в секцию `denyVulnerableImages` ModuleConfig `operator-trivy`.
+
+1. Переведите управление версией Kubernetes в автоматический режим:
+
+   ```bash
+   d8 system edit cluster-configuration
+   ```
+
+   Установите для параметра `kubernetesVersion` значение `Automatic`. Дождитесь, пока Kubernetes на всех узлах обновится до версии 1.34.
+
+   - Узлы из групп, у которых параметр `spec.disruptions.approvalMode` равен `Auto`, обновятся автоматически.
+   - Для узлов из групп, у которых параметр `spec.disruptions.approvalMode` равен `Manual`, появится алерт `NodeRequiresDisruptionApprovalForUpdate`. Чтобы обновить такие узлы, выполните инструкцию из алерта.
+
+   Проверьте версию Kubernetes на узлах:
+
+   ```bash
+   d8 k get no -o custom-columns=NAME:.metadata.name,VERSION:.status.nodeInfo.kubeletVersion
+   ```
+
+   На всех узлах должна быть версия `v1.34`.
+
+1. Если API Kubernetes опубликован с помощью параметра `publishAPI` модуля `user-authn`, перенесите настройки в параметр `settings.apiserver.publishAPI` ModuleConfig `control-plane-manager`.
+
+1. [Проверьте, что обновление прошло успешно.](#как-понять-что-обновление-прошло-успешно)
+
+## Обновление DP CSE с версии 1.67.4 на версию 1.73.6
+
+### Действия перед обновлением
+
+1. Если в кластере есть узлы с Astra Linux, выполните действия из раздела [«Особенности обновления в Astra Linux»](#особенности-обновления-в-astra-linux).
+
+1. Загрузите обновление в хранилище образов контейнеров DP CSE.
+
+   Скопируйте файлы поставки на компьютер, с которого есть доступ к хранилищу образов контейнеров в локальной сети. Файлы поставки можно взять из публичного хранилища образов контейнеров DP CSE, с USB-флеш-накопителя или с DVD-диска.
+
+   Чтобы скопировать образы из публичного хранилища образов контейнеров DP CSE, выполните команду:
+
+   ```bash
+   d8 mirror pull <ПУТЬ_К_ДИРЕКТОРИИ_ПАКЕТА> --source="registry-cse.deckhouse.ru/deckhouse/cse" --license="<ЛИЦЕНЗИОННЫЙ_КЛЮЧ>" --gost-digest --deckhouse-tag="v1.73.6" --include-module=stronghold
+   ```
+
+   Здесь:
+
+   - `<ПУТЬ_К_ДИРЕКТОРИИ_ПАКЕТА>` — директория для скачанных образов;
+   - `<ЛИЦЕНЗИОННЫЙ_КЛЮЧ>` — лицензионный ключ для доступа к публичному хранилищу образов контейнеров DP CSE.
+
+   Получите контрольные суммы файлов архива образов командой `d8 tools gostsum`. Сравните их с содержимым файлов с суффиксом `.gostsum`. Значения должны совпадать.
+
+   Загрузите образы в хранилище образов контейнеров:
+
+   ```bash
+   d8 mirror push <ПУТЬ_К_ДИРЕКТОРИИ_ПАКЕТА> <АДРЕС_ХРАНИЛИЩА>/<ПУТЬ_В_ХРАНИЛИЩЕ> --registry-login=<ИМЯ_ПОЛЬЗОВАТЕЛЯ> --registry-password=<ПАРОЛЬ>
+   ```
+
+   Здесь:
+
+   - `<ПУТЬ_К_ДИРЕКТОРИИ_ПАКЕТА>` — директория поставки с архивами образов DP CSE;
+   - `<АДРЕС_ХРАНИЛИЩА>` — адрес хранилища образов контейнеров в локальной сети;
+   - `<ПУТЬ_В_ХРАНИЛИЩЕ>` — путь к образам DP CSE в хранилище образов контейнеров, например `/deckhouse/cse`;
+   - `<ИМЯ_ПОЛЬЗОВАТЕЛЯ>` — имя пользователя для авторизации в хранилище образов контейнеров;
+   - `<ПАРОЛЬ>` — пароль пользователя для авторизации в хранилище образов контейнеров.
+
+1. Убедитесь, что в кластере нет алертов, кроме `D8DeckhouseIsNotOnReleaseChannel`.
+
+1. Убедитесь, что в очередях DP CSE нет ошибок:
+
+   ```bash
+   d8 system queue list
+   ```
+
+   Пример вывода, когда очереди пусты и ошибок нет:
+
+   ```console
+   Summary:
+   - 'main' queue: empty.
+   - 103 other queues (0 active, 103 empty): 0 tasks.
+   - no tasks to handle.
+   ```
+
+1. Если в кластере есть NodeGroupConfiguration `sysctl-tune-fstec`, добавьте к нему аннотации и лейбл.
+
+   Проверьте, есть ли в кластере NodeGroupConfiguration `sysctl-tune-fstec`:
 
    ```bash
    d8 k get ngc | grep sysctl-tune-fstec
    ```
 
-   Пример вывода:
+   Пример вывода, если NodeGroupConfiguration есть в кластере:
 
-   ```bash
+   ```console
    sysctl-tune-fstec          100      ["*"]        ["*"]
    ```
 
-   Команды для добавления аннотаций и лейбла:
+   Если вывод пустой, пропустите этот шаг. Если NodeGroupConfiguration есть в кластере, добавьте аннотации и лейбл:
 
    ```bash
    d8 k annotate ngc sysctl-tune-fstec meta.helm.sh/release-namespace=d8-system
@@ -116,40 +411,62 @@ lang: ru
    d8 k label ngc sysctl-tune-fstec app.kubernetes.io/managed-by=Helm
    ```
 
-1. Если вы используете `local-path-provisioner` в качестве драйвера хранилища для ваших StatefulSet или модулей платформы:
+1. Если модуль `loki` включён, увеличьте размер его хранилища данных до 50 ГБ. Это нужно, только если хранилище данных модуля `loki` использует драйвер `local-path-provisioner`, `csi-nfs`, `sds-local-volume` или `csi-ceph`.
 
-   В случае, если включен модуль `loki`, потребуется совершить ряд действий для корректного обновления платформы.
-
-   1. Проверьте состояние модуля `loki`, выполнив команду:
+   1. Проверьте, включён ли модуль `loki`:
 
       ```bash
       d8 k get module | grep loki
       ```
 
-      1. В случае выключенного модуля пример вывода будет следующим:
+      Пример вывода для выключенного модуля:
 
-         ```bash
-         loki           462      Embedded   Downloaded   False     False
-         ```
+      ```console
+      loki           462      Embedded   Downloaded   False     False
+      ```
 
-         Дальнейших действий с модулем `loki` не требуется.
+      Пример вывода для включённого модуля:
 
-      2. В случае включенного модуля пример вывода будет следующим:
+      ```console
+      loki           462      Embedded   Ready        True      True
+      ```
 
-         ```bash
-         loki           462      Embedded   Ready        True      True
-         ```
+      Если модуль `loki` выключен, пропустите остальные шаги этого пункта.
 
-   1. Убедитесь, что в хранилище достаточно свободного дискового пространства для расширения хранилища данных модуля `loki` (не менее 50 ГБ).
+   1. Определите драйвер хранилища данных модуля `loki`. Для этого получите провизионер StorageClass, который использует PVC модуля `loki`:
 
-   1. Измените размер PVC для loki:
+      ```bash
+      d8 k get sc $(d8 k -n d8-monitoring get pvc storage-loki-0 -o jsonpath='{.spec.storageClassName}') -o jsonpath='{.provisioner}{"\n"}'
+      ```
+
+      Пример вывода:
+
+      ```console
+      deckhouse.io/localpath
+      ```
+
+      Найдите драйвер по провизионеру:
+
+      | Провизионер | Драйвер хранилища |
+      | --- | --- |
+      | `deckhouse.io/<ИМЯ_LOCALPATHPROVISIONER>` | `local-path-provisioner` |
+      | `nfs.csi.k8s.io` | `csi-nfs` |
+      | `local.csi.storage.deckhouse.io` | `sds-local-volume` |
+      | `rbd.csi.ceph.com` или `cephfs.csi.ceph.com` | `csi-ceph` |
+
+      Здесь `<ИМЯ_LOCALPATHPROVISIONER>` — имя ресурса LocalPathProvisioner, например `localpath`.
+
+      Если провизионера нет в таблице, пропустите остальные шаги этого пункта.
+
+   1. Убедитесь, что в хранилище есть не менее 50 ГБ свободного места для расширения хранилища данных модуля `loki`.
+
+   1. Измените размер PVC модуля `loki`:
 
       ```bash
       d8 k -n d8-monitoring edit pvc storage-loki-0
       ```
 
-      Установите значение параметра `spec.resources.requests.storage: 50Gi`,
-      как в примере:
+      Установите параметр `spec.resources.requests.storage: 50Gi`, как в примере:
 
       ```yaml
       # ...
@@ -162,9 +479,11 @@ lang: ru
       # ...
       ```
 
-   1. Измените размер PV, используемый модулем loki:
+   1. Этот шаг выполняйте **только** для драйвера `local-path-provisioner`. Для `csi-nfs`, `sds-local-volume` и `csi-ceph` **пропустите его:** драйвер сам изменит размер PV после изменения PVC.
 
-      1. Получите имя PV для изменения, выполнив команду:
+      Измените размер PV, который использует модуль `loki`:
+
+      1. Получите имя PV:
 
          ```bash
          d8 k get pv | grep loki
@@ -172,21 +491,21 @@ lang: ru
 
          Пример вывода:
 
-         ```bash
+         ```console
          pvc-09ea47fe-b87a-4bc7-985b-fe2c319c11cd   2Gi        RWO            Delete           Bound    d8-monitoring/storage-loki-0          localpath           <unset>                          3m40s
          ```
 
-         PV должен находиться в пространстве имён `d8-monitoring`.
-         В данном случае название PV для изменения будет `pvc-09ea47fe-b87a-4bc7-985b-fe2c319c11cd`.
+         Выберите строку с `d8-monitoring/storage-loki-0`. Имя PV указано в первом столбце. В этом примере имя PV — `pvc-09ea47fe-b87a-4bc7-985b-fe2c319c11cd`.
 
-      2. Измените размер PV с именем, полученным из предыдущей команды, выполнив команду:
+      1. Измените размер PV:
 
          ```bash
-         d8 k edit pv pvc-09ea47fe-b87a-4bc7-985b-fe2c319c11cd
+         d8 k edit pv <ИМЯ_PV>
          ```
 
-         Установите значение параметра `spec.capacity.storage: 50Gi`,
-         как в примере:
+         Здесь `<ИМЯ_PV>` — имя PV, полученное на предыдущем шаге.
+
+         Установите параметр `spec.capacity.storage: 50Gi`, как в примере:
 
          ```yaml
          # ...
@@ -199,134 +518,28 @@ lang: ru
          # ...
          ```
 
-   1. Убедитесь, что PV для модуля loki имеет новый размер, выполнив команду:
+   1. Убедитесь, что размер PV модуля `loki` изменился:
 
       ```bash
       d8 k get pv | grep loki
       ```
 
-      Пример вывода:
+      Во втором столбце (`CAPACITY`) должно быть указано `50Gi`. Пример вывода:
 
-      ```bash
+      <!-- markdownlint-disable MD031 -->
+      ```console
       pvc-09ea47fe-b87a-4bc7-985b-fe2c319c11cd   50Gi       RWO            Delete           Bound    d8-monitoring/storage-loki-0          localpath           <unset>                          11m
       ```
-
-   1. Удалите StatefulSet `loki`, выполнив команду:
-
-      ```bash
-      d8 k --as=system:serviceaccount:d8-system:deckhouse -n d8-monitoring delete sts loki
-      ```
-
-      Для проверки успешного завершения удаления выполните команду:
-
-      ```bash
-      d8 k -n d8-monitoring get po | grep loki
-      ```
-
-      Вывод команды должен быть пустым.
-
-   1. Добавьте в ModuleConfig `loki` параметр `spec.settings.diskSizeGigabytes: 50`, выполнив команду:
-  
-      ```bash
-      d8 k edit mc loki
-      ```
-
-      Пример конфигурации:
-
-      ```yaml
-      # ...
-      spec:
-        enabled: true
-        settings:
-          diskSizeGigabytes: 50
-          retentionPeriodHours: 24
-          storageClass: localpath
-        version: 1
-      # ...
-      ```
-
-   1. Дождитесь перехода пода loki в состояние `Running`.
-
-      Выполните команду:
-
-      ```bash
-      d8 k -n d8-monitoring get po | grep loki
-      ```
-
-      Пример успешного вывода:
-
-      ```bash
-      loki-0                   2/2     Running   0             5m28s
-      ```
-
-1. Если вы используете `csi-nfs` в качестве драйвера хранилища для ваших StatefulSet или модулей платформы:
-
-   В случае, если включен модуль `loki`, потребуется совершить ряд действий для корректного обновления платформы.
-
-   1. Проверьте состояние модуля `loki`, выполнив команду:
-
-      ```bash
-      d8 k get module | grep loki
-      ```
-
-      1. В случае выключенного модуля пример вывода будет следующим:
-
-         ```bash
-         loki           462      Embedded   Downloaded   False     False
-         ```
-
-         Дальнейших действий с модулем `loki` не требуется.
-
-      2. В случае включенного модуля пример вывода будет следующим:
-
-         ```bash
-         loki           462      Embedded   Ready        True      True
-         ```
-
-   1. Убедитесь, что в хранилище достаточно свободного дискового пространства для расширения хранилища данных модуля `loki` (не менее 50 ГБ).
-
-   1. Измените размер PVC для loki:
-
-      ```bash
-      d8 k -n d8-monitoring edit pvc storage-loki-0
-      ```
-
-      Установите значение параметра `spec.resources.requests.storage: 50Gi`,
-      как в примере:
-
-      ```yaml
-      # ...
-      spec:
-        accessModes:
-        - ReadWriteOnce
-        resources:
-          requests:
-            storage: 50Gi
-      # ...
-      ```
-
-   1. Убедитесь, что PV для модуля loki имеет новый размер, выполнив команду:
-
-      ```bash
-      d8 k get pv | grep loki
-      ```
-
-      Пример вывода:
-
-      <!-- markdownlint-disable MD031 -->
-      ```bash
-      pvc-4898b2a1-c432-472d-9d90-46d117838f39   50Gi       RWO            Delete           Bound    d8-monitoring/storage-loki-0          nfs-storage-class   <unset>                          23m
-      ```
       {: .nowrap-default }
       <!-- markdownlint-enable MD031 -->
 
-   1. Удалите StatefulSet `loki`, выполнив команду:
+   1. Удалите StatefulSet `loki`:
 
       ```bash
       d8 k --as=system:serviceaccount:d8-system:deckhouse -n d8-monitoring delete sts loki
       ```
 
-      Для проверки успешного завершения удаления выполните команду:
+      Убедитесь, что поды `loki` удалены:
 
       ```bash
       d8 k -n d8-monitoring get po | grep loki
@@ -334,13 +547,13 @@ lang: ru
 
       Вывод команды должен быть пустым.
 
-   1. Добавьте в ModuleConfig `loki` параметр `spec.settings.diskSizeGigabytes: 50`, выполнив команду:
-  
+   1. Добавьте в ModuleConfig `loki` параметр `spec.settings.diskSizeGigabytes: 50`:
+
       ```bash
       d8 k edit mc loki
       ```
 
-      Пример конфигурации:
+      Пример ModuleConfig `loki` с новым размером диска:
 
       ```yaml
       # ...
@@ -348,270 +561,51 @@ lang: ru
         enabled: true
         settings:
           diskSizeGigabytes: 50
-          retentionPeriodHours: 24
-          storageClass: nfs-storage-class
+          # ...
         version: 1
       # ...
       ```
 
-   1. Дождитесь перехода пода loki в состояние `Running`.
-
-      Выполните команду:
+   1. Дождитесь, пока под `loki` перейдёт в состояние `Running`:
 
       ```bash
       d8 k -n d8-monitoring get po | grep loki
       ```
 
-      Пример успешного вывода:
+      Пример вывода с запущенным подом:
 
-      ```bash
+      ```console
       loki-0                   2/2     Running   0             5m28s
       ```
 
-1. Если вы используете `sds-local-volume` в качестве драйвера хранилища для ваших StatefulSet или модулей платформы:
+1. Переведите управление версией Kubernetes в ручной режим.
 
-   В случае, если включен модуль `loki`, потребуется совершить ряд действий для корректного обновления платформы.
-
-   1. Проверьте состояние модуля `loki`, выполнив команду:
-
-      ```bash
-      d8 k get module | grep loki
-      ```
-
-      1. В случае выключенного модуля пример вывода будет следующим:
-
-         ```bash
-         loki           462      Embedded   Downloaded   False     False
-         ```
-
-         Дальнейших действий с модулем `loki` не требуется.
-
-      2. В случае включенного модуля пример вывода будет следующим:
-
-         ```bash
-         loki           462      Embedded   Ready        True      True
-         ```
-
-   1. Убедитесь, что в хранилище достаточно свободного дискового пространства для расширения хранилища данных модуля `loki` (не менее 50 ГБ).
-
-   1. Измените размер PVC для loki:
-
-      ```bash
-      d8 k -n d8-monitoring edit pvc storage-loki-0
-      ```
-
-      Установите значение параметра `spec.resources.requests.storage: 50Gi`,
-      как в примере:
-
-      ```yaml
-      spec:
-        accessModes:
-        - ReadWriteOnce
-        resources:
-          requests:
-            storage: 50Gi
-      ```
-
-   1. Убедитесь, что PV для модуля loki имеет новый размер, выполнив команду:
-
-      ```bash
-      d8 k get pv | grep loki
-      ```
-
-      Пример вывода:
-
-      <!-- markdownlint-disable MD031 -->
-      ```bash
-      pvc-ca0676ce-4ad2-41c6-bab4-6fc034e98ef2   50Gi       RWO            Delete           Bound    d8-monitoring/storage-loki-0          local-storage-class   <unset>                          23m
-      ```
-      {: .nowrap-default }
-      <!-- markdownlint-enable MD031 -->
-
-   1. Удалите StatefulSet `loki`, выполнив команду:
-
-      ```bash
-      d8 k --as=system:serviceaccount:d8-system:deckhouse -n d8-monitoring delete sts loki
-      ```
-
-      Для проверки успешного завершения удаления выполните команду:
-
-      ```bash
-      d8 k -n d8-monitoring get po | grep loki
-      ```
-
-      Вывод команды должен быть пустым.
-
-   1. Добавьте в ModuleConfig `loki` параметр `spec.settings.diskSizeGigabytes: 50`, выполнив команду:
-  
-      ```bash
-      d8 k edit mc loki
-      ```
-
-      Пример конфигурации:
-
-      ```yaml
-      # ...
-      spec:
-        enabled: true
-        settings:
-          diskSizeGigabytes: 50
-          retentionPeriodHours: 24
-          storageClass: local-storage-class
-        version: 1
-      # ...
-      ```
-
-   1. Дождитесь перехода пода loki в состояние `Running`.
-
-      Выполните команду:
-
-      ```bash
-      d8 k -n d8-monitoring get po | grep loki
-      ```
-
-      Пример успешного вывода:
-
-      ```bash
-      loki-0                   2/2     Running   0             5m28s
-      ```
-
-1. Если вы используете `csi-ceph` в качестве драйвера хранилища для ваших StatefulSet или модулей платформы:
-
-   В случае, если включен модуль `loki`, потребуется совершить ряд действий для корректного обновления платформы.
-
-   1. Проверьте состояние модуля `loki`, выполнив команду:
-
-      ```bash
-      d8 k get module | grep loki
-      ```
-
-      1. В случае выключенного модуля пример вывода будет следующим:
-
-         ```bash
-         loki           462      Embedded   Downloaded   False     False
-         ```
-
-         Дальнейших действий с модулем `loki` не требуется.
-
-      2. В случае включенного модуля пример вывода будет следующим:
-
-         ```bash
-         loki           462      Embedded   Ready        True      True
-         ```
-
-   1. Убедитесь, что в хранилище достаточно свободного дискового пространства для расширения хранилища данных модуля `loki` (не менее 50 ГБ).
-
-   1. Измените размер PVC для loki:
-
-      ```bash
-      d8 k -n d8-monitoring edit pvc storage-loki-0
-      ```
-
-      Установите значение параметра `spec.resources.requests.storage: 50Gi`,
-      как в примере:
-
-      ```yaml
-      spec:
-        accessModes:
-        - ReadWriteOnce
-        resources:
-          requests:
-            storage: 50Gi
-      ```
-
-   1. Убедитесь, что PV для модуля `loki` имеет новый размер, выполнив команду:
-
-      ```bash
-      d8 k get pv | grep loki
-      ```
-
-      Пример вывода:
-
-      <!-- markdownlint-disable MD031 -->
-      ```bash
-      pvc-86c93d6a-57be-4871-a15b-101c282a0019   50Gi       RWO            Delete           Bound    d8-monitoring/storage-loki-0          ceph-rbd-sc         <unset>                          3m2s
-      ```
-      {: .nowrap-default }
-      <!-- markdownlint-enable MD031 -->
-
-   1. Удалите StatefulSet `loki`, выполнив команду:
-
-      ```bash
-      d8 k --as=system:serviceaccount:d8-system:deckhouse -n d8-monitoring delete sts loki
-      ```
-
-      Для проверки успешного завершения удаления выполните команду:
-
-      ```bash
-      d8 k -n d8-monitoring get po | grep loki
-      ```
-
-      Вывод команды должен быть пустым.
-
-   1. Добавьте в ModuleConfig `loki` параметр `spec.settings.diskSizeGigabytes: 50`, выполнив команду:
-  
-      ```bash
-      d8 k edit mc loki
-      ```
-
-      Пример конфигурации:
-
-      ```yaml
-      # ...
-      spec:
-        enabled: true
-        settings:
-          diskSizeGigabytes: 50
-          retentionPeriodHours: 24
-          storageClass: ceph-rbd-sc
-        version: 1
-      # ...
-      ```
-
-   1. Дождитесь перехода пода loki в состояние `Running`.
-
-      Выполните команду:
-
-      ```bash
-      d8 k -n d8-monitoring get po | grep loki
-      ```
-
-      Пример успешного вывода:
-
-      ```bash
-      loki-0                   2/2     Running   0             5m28s
-      ```
-
-1. Переведите обновления версии Kubernetes в кластере в ручной режим.
-
-   1. Проверьте версию Kubernetes внутри ресурса `ClusterConfiguration`, выполнив команду:
+   1. Проверьте версию Kubernetes в ClusterConfiguration:
 
       ```bash
       d8 system edit cluster-configuration
       ```
 
-      - В случае, если значение параметра `kubernetesVersion:` равно `"1.29"`, действий не требуется.
+      - Если параметр `kubernetesVersion` имеет значение `"1.29"`, ничего не меняйте.
+      - Если параметр `kubernetesVersion` имеет значение `"1.27"`, установите значение `"1.29"`. Дождитесь, пока Kubernetes обновится на всех узлах и очереди DP CSE опустеют.
+      - Если параметр `kubernetesVersion` имеет значение `Automatic`, установите значение `"1.29"`.
 
-      - В случае, если значение параметра `kubernetesVersion:` равно `"1.27"`, установите значение параметра `kubernetesVersion:` равным `"1.29"` и дождитесь обновления версии Kubernetes на всех узлах и разбора очередей DKP CSE.
-
-      - В случае, если значение параметра `kubernetesVersion:` равно `Automatic`, установите значение параметра `kubernetesVersion:` равным `"1.29"`.
-
-   1. Проверка очередей DKP CSE:
+   1. Убедитесь, что очереди DP CSE пусты:
 
       ```bash
       d8 system queue list
       ```
 
-      Пример вывода команды пустых очередей без ошибок:
+      Пример вывода, когда очереди пусты и ошибок нет:
 
-      ```bash
+      ```console
       Summary:
       - 'main' queue: empty.
       - 103 other queues (0 active, 103 empty): 0 tasks.
       - no tasks to handle.
       ```
 
-   1. Проверка статуса обновления всех узлов в кластере:
+   1. Убедитесь, что все узлы кластера обновлены:
 
       ```bash
       d8 k get ng
@@ -620,7 +614,7 @@ lang: ru
       Пример вывода команды с успешно обновлёнными узлами:
 
       <!-- markdownlint-disable MD031 -->
-      ```bash
+      ```console
       NAME     TYPE     READY   NODES   UPTODATE   INSTANCES   DESIRED   MIN   MAX   STANDBY   STATUS   AGE   SYNCED
       master   Static   3       3       3                                                               34h   True
       system   Static   2       2       2                                                               34h   True
@@ -629,55 +623,57 @@ lang: ru
       {: .nowrap-default }
       <!-- markdownlint-enable MD031 -->
 
-      Количество узлов `UPTODATE` должно быть равно количеству `NODES` и `READY`.
+      Для каждой группы узлов значения в столбцах `UPTODATE`, `NODES` и `READY` должны совпадать.
 
-1. Убедитесь в отсутствии релизного канала в ModuleConfig `deckhouse`.
+1. Убедитесь, что в ModuleConfig `deckhouse` не задан канал обновлений.
 
-   1. Проверка актуального ModuleConfig:
+   Получите ModuleConfig `deckhouse`:
 
-      ```bash
-      d8 k get mc deckhouse -o yaml
-      ```
+   ```bash
+   d8 k get mc deckhouse -o yaml
+   ```
 
-      Пример вывода:
+   Пример вывода, когда канал обновлений не задан:
 
-      ```yaml
-      apiVersion: deckhouse.io/v1alpha1
-      kind: ModuleConfig
-      metadata:
-        creationTimestamp: "<some-timestamp>"
-        finalizers:
-        - modules.deckhouse.io/module-config
-        generation: 1
-        name: deckhouse
-        resourceVersion: "<some-version>"
-        uid: <some-uid>
-      spec:
-        enabled: true
-        settings:
-          bundle: Default
-          logLevel: Info
-        version: 1
-      status:
-        message: ""
-        version: "1"
-      ```
+   ```console
+   apiVersion: deckhouse.io/v1alpha1
+   kind: ModuleConfig
+   metadata:
+     creationTimestamp: "<ВРЕМЯ_СОЗДАНИЯ>"
+     finalizers:
+     - modules.deckhouse.io/module-config
+     generation: 1
+     name: deckhouse
+     resourceVersion: "<ВЕРСИЯ_ОБЪЕКТА>"
+     uid: <UID_ОБЪЕКТА>
+   spec:
+     enabled: true
+     settings:
+       bundle: Default
+       logLevel: Info
+     version: 1
+   status:
+     message: ""
+     version: "1"
+   ```
 
-      При наличии поля `spec.settings.releaseChannel` удалите его, выполнив команду:
+   Здесь `<ВРЕМЯ_СОЗДАНИЯ>`, `<ВЕРСИЯ_ОБЪЕКТА>` и `<UID_ОБЪЕКТА>` — значения, которые зависят от кластера.
 
-      ```bash
-      d8 k patch mc deckhouse --type='merge' -p='{"spec":{"settings":{"releaseChannel": null}}}'
-      ```
+   Если задан параметр `spec.settings.releaseChannel`, удалите его:
 
-      Результат выполнения команды:
+   ```bash
+   d8 k patch mc deckhouse --type='merge' -p='{"spec":{"settings":{"releaseChannel": null}}}'
+   ```
 
-      ```bash
-      moduleconfig.deckhouse.io/deckhouse patched
-      ```
+   Пример вывода команды:
 
-### Обновление версии платформы
+   ```console
+   moduleconfig.deckhouse.io/deckhouse patched
+   ```
 
-1. Примените NodeGroupConfiguration `bashible-migrations-002.sh` следующего вида:
+### Обновление версии DP CSE
+
+1. Примените NodeGroupConfiguration `bashible-migrations-002.sh`. Этот NodeGroupConfiguration перезапускает службу `bashible` на узлах, где нет функции `bb-d8-node-name`:
 
    ```yaml
    apiVersion: deckhouse.io/v1alpha1
@@ -698,30 +694,35 @@ lang: ru
      weight: 002
    ```
 
-1. Поменяйте образ в Deployment `deckhouse`.
+1. Замените образ в Deployment `deckhouse`:
 
    ```bash
-   d8 k --as=system:serviceaccount:d8-system:deckhouse set image deployment -n d8-system deckhouse deckhouse=<your-cse-registry>/deckhouse/cse:v1.73.4
+   d8 k --as=system:serviceaccount:d8-system:deckhouse set image deployment -n d8-system deckhouse deckhouse=<АДРЕС_ХРАНИЛИЩА>/<ПУТЬ_В_ХРАНИЛИЩЕ>:v1.73.6
    ```
 
-1. Дождитесь разбора очередей DKP CSE и полного обновления всех узлов в кластере.
+   Здесь:
 
-   1. Проверка очередей DKP CSE:
+   - `<АДРЕС_ХРАНИЛИЩА>` — адрес хранилища образов контейнеров в локальной сети;
+   - `<ПУТЬ_В_ХРАНИЛИЩЕ>` — путь к образам DP CSE в хранилище образов контейнеров, например `/deckhouse/cse`.
+
+1. Дождитесь, пока очереди DP CSE опустеют и все узлы кластера обновятся.
+
+   1. Убедитесь, что очереди DP CSE пусты:
 
       ```bash
       d8 system queue list
       ```
 
-      Пример вывода команды пустых очередей без ошибок:
+      Пример вывода, когда очереди пусты и ошибок нет:
 
-      ```bash
+      ```console
       Summary:
       - 'main' queue: empty.
       - 103 other queues (0 active, 103 empty): 0 tasks.
       - no tasks to handle.
       ```
 
-   1. Проверка статуса обновления всех узлов в кластере:
+   1. Убедитесь, что все узлы кластера обновлены:
 
       ```bash
       d8 k get ng
@@ -730,7 +731,7 @@ lang: ru
       Пример вывода команды с успешно обновлёнными узлами:
 
       <!-- markdownlint-disable MD031 -->
-      ```bash
+      ```console
       NAME     TYPE     READY   NODES   UPTODATE   INSTANCES   DESIRED   MIN   MAX   STANDBY   STATUS   AGE   SYNCED
       master   Static   3       3       3                                                               34h   True
       system   Static   2       2       2                                                               34h   True
@@ -739,43 +740,41 @@ lang: ru
       {: .nowrap-default }
       <!-- markdownlint-enable MD031 -->
 
-      Количество узлов `UPTODATE` должно быть равно количеству `NODES` и `READY`.
+      Для каждой группы узлов значения в столбцах `UPTODATE`, `NODES` и `READY` должны совпадать.
 
-1. Обращайте внимание на появление алертов вида `NodeRequiresDisruptionApprovalForUpdate`. В случае возникновения следуйте инструкции в алерте.
+1. Если появится алерт `NodeRequiresDisruptionApprovalForUpdate`, выполните инструкцию из алерта.
 
-1. Обновите версию `control-plane-manager`, изменив поле `spec.version` в ModuleConfig `control-plane-manager` с **1** на **2**.
+1. В ModuleConfig `control-plane-manager` измените значение параметра `spec.version` с `1` на `2`:
 
    ```bash
    d8 k edit mc control-plane-manager
    ```
 
-   Пример ModuleConfig с валидной версией:
+   Пример ModuleConfig `control-plane-manager` с версией `2`:
 
    ```yaml
    apiVersion: deckhouse.io/v1alpha1
    kind: ModuleConfig
    metadata:
+     name: control-plane-manager
    spec:
      settings:
-     # ...
+       # ...
      version: 2
    ```
 
-1. Обновите версию Kubernetes до 1.31.
-
-   Выполните команду:
+1. Обновите версию Kubernetes. Откройте ClusterConfiguration на редактирование:
 
    ```bash
    d8 system edit cluster-configuration
    ```
 
-   В ресурсе `ClusterConfiguration` измените версию Kubernetes на `Automatic`, дождитесь обновления версии Kubernetes на всех узлах.
+   Установите для параметра `kubernetesVersion` значение `Automatic`. Дождитесь, пока Kubernetes обновится на всех узлах.
 
-   - Узлы с политикой применения деструктивных изменений `Auto` будут обновлены в автоматическом режиме;
+   - Узлы из групп, у которых параметр `spec.disruptions.approvalMode` равен `Auto`, обновятся автоматически.
+   - Для узлов из групп, у которых параметр `spec.disruptions.approvalMode` равен `Manual`, появится алерт `NodeRequiresDisruptionApprovalForUpdate`. Чтобы обновить такие узлы, выполните инструкцию из алерта.
 
-   - Узлы с политикой применения деструктивных изменений `Manual` потребуют ручного применения изменений, о чем будет свидетельствовать алерт вида `NodeRequiresDisruptionApprovalForUpdate`. Для применения изменений следуйте инструкции в алерте.
-
-   Команда для получения версии Kubernetes на узлах:
+   Проверьте версию Kubernetes на узлах:
 
    ```bash
    d8 k get no -o custom-columns=NAME:.metadata.name,VERSION:.status.nodeInfo.kubeletVersion
@@ -783,7 +782,7 @@ lang: ru
 
    Пример вывода:
 
-   ```bash
+   ```console
    NAME                                         VERSION
    example-cse-master-0.ru-central1.internal   v1.31.13
    example-cse-master-1.ru-central1.internal   v1.31.13
@@ -795,7 +794,7 @@ lang: ru
    example-cse-worker-2.ru-central1.internal   v1.31.13
    ```
 
-   Проверка статуса обновления узлов в каждой группе:
+   Убедитесь, что все узлы кластера обновлены:
 
    ```bash
    d8 k get ng
@@ -804,7 +803,7 @@ lang: ru
    Пример вывода команды с успешно обновлёнными узлами:
 
    <!-- markdownlint-disable MD031 -->
-   ```bash
+   ```console
    NAME     TYPE     READY   NODES   UPTODATE   INSTANCES   DESIRED   MIN   MAX   STANDBY   STATUS   AGE   SYNCED
    master   Static   3       3       3                                                               34h   True
    system   Static   2       2       2                                                               34h   True
@@ -813,7 +812,7 @@ lang: ru
    {: .nowrap-default }
    <!-- markdownlint-enable MD031 -->
 
-   Количество узлов `UPTODATE` должно быть равно количеству `NODES` и `READY`.
+   Для каждой группы узлов значения в столбцах `UPTODATE`, `NODES` и `READY` должны совпадать.
 
 1. Удалите NodeGroupConfiguration `bashible-migrations-002.sh`:
 
@@ -821,17 +820,15 @@ lang: ru
    d8 k delete ngc bashible-migrations-002.sh
    ```
 
-1. Установите канал обновлений в ModuleConfig `deckhouse`.
-
-   Выполните команду:
+1. Задайте канал обновлений в ModuleConfig `deckhouse`. Откройте ModuleConfig на редактирование:
 
    ```bash
    d8 k edit mc deckhouse
    ```
 
-   В открывшемся окне установите параметр `spec.settings.releaseChannel: LTS`.
+   Установите параметр `spec.settings.releaseChannel: LTS`.
 
-   Пример ModuleConfig с заданным параметром:
+   Пример ModuleConfig `deckhouse` с каналом обновлений `LTS`:
 
    ```yaml
    apiVersion: deckhouse.io/v1alpha1
@@ -851,171 +848,181 @@ lang: ru
 
 ### Включение контроля целостности
 
-1. Миграция данных etcd для включения контроля целостности.
+Чтобы включить контроль целостности, выполните миграцию данных etcd:
 
-   1. Переведите режим работы контроля целостности на **Migrate**.
+1. Переведите контроль целостности в режим `Migrate`. Для этого в ModuleConfig `control-plane-manager` установите для параметра `settings.apiserver.signature` значение `Migrate`:
 
-      Пример ModuleConfig `control-plane-manager` с режимом `Migrate`:
+   ```bash
+   d8 k edit mc control-plane-manager
+   ```
 
-      ```yaml
-      apiVersion: deckhouse.io/v1alpha1
-      kind: ModuleConfig
-      metadata:
-        name: control-plane-manager
-      spec:
-        settings:
-          apiserver:
-            signature: Migrate
-      # ...
-      ```
+   Пример ModuleConfig `control-plane-manager` с режимом `Migrate`:
 
-   1. Дождитесь очистки очередей DKP CSE.
+   ```yaml
+   apiVersion: deckhouse.io/v1alpha1
+   kind: ModuleConfig
+   metadata:
+     name: control-plane-manager
+   spec:
+     settings:
+       apiserver:
+         signature: Migrate
+   # ...
+   ```
 
-      ```bash
-      d8 system queue list
-      ```
+1. Дождитесь, пока очереди DP CSE опустеют:
 
-      Пример вывода команды пустых очередей без ошибок:
+   ```bash
+   d8 system queue list
+   ```
 
-      ```bash
-      Summary:
-      - 'main' queue: empty.
-      - 103 other queues (0 active, 103 empty): 0 tasks.
-      - no tasks to handle.
-      ```
+   Пример вывода, когда очереди пусты и ошибок нет:
 
-   1. Осуществите миграцию данных.
+   ```console
+   Summary:
+   - 'main' queue: empty.
+   - 103 other queues (0 active, 103 empty): 0 tasks.
+   - no tasks to handle.
+   ```
 
-      Миграция производится с помощью утилиты `d8`. Для этого в утилиту добавлена команда `sig-migrate,` расположенная в разделе `tools`.
+1. Выполните миграцию данных.
 
-      Команда `sig-migrate` формирует список всех ресурсов Kubernetes, а также поочередно добавляет к ним аннотацию `d8-migration=<timestamp>`, и затем удаляет аннотации с префиксом `d8-migration-`.
+   Миграцию выполняет команда `d8 tools sig-migrate`. Команда составляет список всех объектов Kubernetes и по очереди добавляет к ним аннотацию `d8-migration=<ВРЕМЕННАЯ_МЕТКА>`. Затем команда удаляет аннотации с префиксом `d8-migration-`. Здесь `<ВРЕМЕННАЯ_МЕТКА>` — временная метка, которую устанавливает команда.
 
-      Запустите утилиту от пользователя root с master-узла кластера со следующими аргументами:
+   Время миграции зависит от размера кластера и нагрузки на него.
 
-      ```bash
-      d8 tools sig-migrate
-      ```
+   {% endraw %}
+   {% alert level="warning" %}
+   Если пропадёт сетевое соединение или завершится SSH-сессия, миграция прервётся. Запускайте миграцию в терминальном мультиплексоре `screen` или `tmux`.
+   {% endalert %}
+   {% raw %}
 
-      **Внимание! Продолжительность процедуры миграции зависит от размера и нагруженности кластера. В случае сбоя связности или отключения SSH-сессии процедура будет прервана. Для длительных миграций или случаев, когда перезапуск миграции нежелателен, рекомендуется запуск в эмуляторе терминала по типу screen или tmux. В случае отсутствия данных утилит на master-узле необходима их установка.**
+   Если на master-узле нет утилит `screen` и `tmux`, установите одну из них.
 
-      По окончании выполнения, если на какие-либо объекты не удалось установить аннотацию, команда автоматически выведет предупреждающее сообщение со следующей информацией:
+   Запустите миграцию от имени пользователя root на master-узле кластера:
 
-      - Количество объектов, для которых не удалось произвести миграцию;
-      - Пути к файлам с логами ошибок;
-      - Инструкции по расследованию и запуску повторной попытки.
+   ```bash
+   d8 tools sig-migrate
+   ```
 
-      Пример вывода при успешном завершении миграции:
+   Если команде не удалось добавить аннотацию хотя бы к одному объекту, после миграции она выводит предупреждение. В предупреждении указаны:
 
-      ```console
-      Retrying failed annotations from previous runs...
-      Loaded 3 objects for retry from /tmp/failed_annotations.txt.
-      Progress: [100%] Annotating: Kind=nodegroups, Namespace=clusterwide, Name=system
-      ```
+   - количество объектов, которые не удалось мигрировать;
+   - пути к файлам с логами ошибок;
+   - как найти причину ошибок и повторно запустить миграцию.
 
-      Пример вывода при наличии ошибок:
+   Пример вывода при успешном завершении миграции:
 
-      ```console
-      ⚠️ Migration completed with 5 failed object(s).
+   ```console
+   Retrying failed annotations from previous runs...
+   Loaded 3 objects for retry from /tmp/failed_annotations.txt.
+   Progress: [100%] Annotating: Kind=nodegroups, Namespace=clusterwide, Name=system
+   ```
 
-      Some objects could not be annotated. Please check the error details:
+   Пример вывода с ошибками:
 
-      - Error log file: `/tmp/failed_errors.txt`
-      - Failed objects list: `/tmp/failed_annotations.txt`
+   ```console
+   ⚠️ Migration completed with 5 failed object(s).
 
-      To investigate the issues:
-      1. Review the error log file to understand why objects failed
-      2. Check permissions and resource availability
-      3. Retry migration for failed objects only using:
+   Some objects could not be annotated. Please check the error details:
 
-         d8 tools sig-migrate --retry
-      ```
+   - Error log file: `/tmp/failed_errors.txt`
+   - Failed objects list: `/tmp/failed_annotations.txt`
 
-      При получении ошибки, запустите миграцию повторно (с флагом `--retry`):
+   To investigate the issues:
+   1. Review the error log file to understand why objects failed
+   2. Check permissions and resource availability
+   3. Retry migration for failed objects only using:
 
-      ```bash
       d8 tools sig-migrate --retry
-      ```
+   ```
 
-      Повторять процедуру миграции следует до тех пор, пока утилита не сообщит, что больше нет объектов, для которых не удалось установить необходимые аннотации. А также до прекращения алерта `D8SignatureErrorsDetected`.
+   Если миграция завершилась с ошибками, запустите её повторно с флагом `--retry`:
 
-      Если повторный запуск миграции не проходит с третьего раза, выполните следующую команду:
+   ```bash
+   d8 tools sig-migrate --retry
+   ```
 
-      ```bash
-      sed -i '/nodegroups/s/v1alpha[^|]*/v1/g' /tmp/failed_annotations.txt
-      ```
+   Повторяйте команду `d8 tools sig-migrate --retry`, пока не выполнятся оба условия:
 
-      И повторите миграцию:
+   - команда не сообщает об объектах с ошибками;
+   - алерт `D8SignatureErrorsDetected` не срабатывает.
 
-      ```bash
-      d8 tools sig-migrate --retry
-      ```
+   Если после трёх повторных запусков ошибки остаются, замените в файле `/tmp/failed_annotations.txt` версию API объектов NodeGroup на `v1`:
 
-      Так как для успешной миграции требуется изменения каждого хранимого ресурса в кластере, то процесс миграции может нарушить любой объект который не может быть изменен из-за сбоя работы кластера. В этом случае для успешного завершения миграции потребуется предварительно устранить причину, по который объект стал не возможен для редактирования.
-      В случае систематического получения ошибки миграции обратитесь в техническую поддержку.
+   ```bash
+   sed -i '/nodegroups/s/v1alpha[^|]*/v1/g' /tmp/failed_annotations.txt
+   ```
 
-   1. Переведите режим работы контроля целостности на **Enforce**.
+   Затем повторите миграцию:
 
-      Пример ModuleConfig `control-plane-manager` с режимом `Enforce`:
+   ```bash
+   d8 tools sig-migrate --retry
+   ```
 
-      ```yaml
-      apiVersion: deckhouse.io/v1alpha1
-      kind: ModuleConfig
-      metadata:
-        name: control-plane-manager
-      spec:
-        settings:
-          apiserver:
-            signature: Enforce
-      # ...
-      ```
+   Миграция изменяет каждый объект в кластере. Если из-за сбоя в кластере какой-либо объект нельзя изменить, миграция не завершится. В этом случае устраните причину, по которой объект нельзя изменить, и повторите миграцию.
 
-   1. Дождитесь очистки очередей DKP CSE:
+   Если ошибки миграции повторяются, обратитесь в техническую поддержку.
 
-      ```bash
-      d8 system queue list
-      ```
+1. Переведите контроль целостности в режим `Enforce`. Для этого в ModuleConfig `control-plane-manager` установите для параметра `settings.apiserver.signature` значение `Enforce`:
 
-      Пример вывода команды пустых очередей без ошибок:
+   ```bash
+   d8 k edit mc control-plane-manager
+   ```
 
-      ```bash
-      Summary:
-      - 'main' queue: empty.
-      - 103 other queues (0 active, 103 empty): 0 tasks.
-      - no tasks to handle.
-      ```
+   Пример ModuleConfig `control-plane-manager` с режимом `Enforce`:
+
+   ```yaml
+   apiVersion: deckhouse.io/v1alpha1
+   kind: ModuleConfig
+   metadata:
+     name: control-plane-manager
+   spec:
+     settings:
+       apiserver:
+         signature: Enforce
+   # ...
+   ```
+
+1. Дождитесь, пока очереди DP CSE опустеют:
+
+   ```bash
+   d8 system queue list
+   ```
+
+   Пример вывода, когда очереди пусты и ошибок нет:
+
+   ```console
+   Summary:
+   - 'main' queue: empty.
+   - 103 other queues (0 active, 103 empty): 0 tasks.
+   - no tasks to handle.
+   ```
 
 ### Обновление версии containerd
 
-Начиная с версии 1.73 ПО «Deckhouse Kubernetes Platform Certified Security Edition» (DKP CSE) доступна возможность использовать среду исполнения контейнеров обновлённой версии — containerd v2. Containerd v2 можно использовать как основную среду исполнения контейнеров на уровне всего кластера или для отдельных групп узлов. Использование containerd v2 обеспечивает более гибкое управление ресурсами и лучшую безопасность за счёт cgroups v2 и контроля целостности системных компонентов.
+В DP CSE v1.77.0 containerd v1 не поддерживается. Перед обновлением до v1.77.0 переведите все узлы кластера на containerd v2. В DP CSE v1.73.6 containerd v2 можно включить для всего кластера или для отдельных групп узлов.
 
-Требования к узлам для миграции на containerd v2:
+Требования к узлам для перехода на containerd v2:
 
-- поддержка CgroupsV2;
-- ядро Linux версии 5.8 и новее;
+- поддержка cgroups v2;
+- ядро Linux версии 5.8 и новее, кроме версий 6.12.0–6.12.28 и 6.14.0–6.14.6 (уязвимость CVE-2025-37999 в EROFS);
 - systemd версии 244 и новее;
-- поддержка модуля ядра erofs;
-- отсутствие кастомных конфигураций в `/etc/containerd/conf.d`.
+- поддержка модуля ядра `erofs`;
+- отсутствие пользовательских конфигураций в `/etc/containerd/conf.d`.
 
-Также DKP CSE выполняет дополнительную проверку используемой версии ядра Linux на наличие известных уязвимостей. При обнаружении уязвимой версии ядра использование containerd v2 на узле запрещается, даже если все остальные требования выполнены.
+DP CSE проверяет, есть ли в версии ядра Linux известные уязвимости. Если версия ядра уязвима, DP CSE не разрешает использовать containerd v2 на узле, даже если остальные требования выполнены. Уязвимость устранена в версиях ядра 6.12.29 и 6.14.7 и в более новых версиях этих веток. Уязвимые версии ядра могут быть, например, в РЕД ОС.
 
-Например, в РЕД ОС могут использоваться версии ядра Linux из приведённых ниже диапазонов, которые приводят к автоматическому ограничению использования containerd v2:
+Если узел не соответствует хотя бы одному из требований, DP CSE добавляет на узел лейбл `node.deckhouse.io/containerd-v2-unsupported`. Если на узле есть пользовательские конфигурации в `/etc/containerd/conf.d`, DP CSE добавляет на узел лейбл `node.deckhouse.io/containerd-config=custom`.
 
-- ядра ветки 6.12.x с версиями 6.12.0–6.12.28 включительно.
-  Исправление доступно начиная с версии 6.12.29;
-
-- ядра ветки 6.14.x с версиями 6.14.0–6.14.6 включительно.
-  Исправление доступно начиная с версии 6.14.7.
-
-При несоответствии любому из требований для миграции, DKP CSE добавляет на узел лейбл `node.deckhouse.io/containerd-v2-unsupported`. Если на узле есть кастомные конфигурации в `/etc/containerd/conf.d`, на него добавляется лейбл `node.deckhouse.io/containerd-config=custom`.
-
-При наличии одного из этих лейблов смена параметра `spec.cri.type` для группы узлов будет недоступна. Узлы, которые не подходят под условия миграции, можно посмотреть с помощью следующих команд:
+Если на узле есть один из этих лейблов, изменить параметр `spec.cri.type` его группы узлов нельзя. Получите список узлов, которые не соответствуют требованиям:
 
 ```bash
 d8 k get node -l node.deckhouse.io/containerd-v2-unsupported
 d8 k get node -l node.deckhouse.io/containerd-config=custom
 ```
 
-Также администратор может проверить конкретный узел на соответствие требованиям с помощью команд:
+Чтобы проверить отдельный узел на соответствие требованиям, выполните на нём команды:
 
 ```bash
 uname -r | cut -d- -f1
@@ -1025,62 +1032,71 @@ modprobe -qn erofs && echo "TRUE" || echo "FALSE"
 ls -l /etc/containerd/conf.d
 ```
 
-Включение containerd v2 возможно двумя способами:
+Узел соответствует требованиям, если команды вывели следующие результаты:
 
-1. Для всего кластера.
+- `uname -r` — версия 5.8 или новее, кроме 6.12.0–6.12.28 и 6.14.0–6.14.6;
+- `stat` — `cgroup2fs`;
+- `systemctl --version` — 244 или больше;
+- `modprobe` — `TRUE`;
+- `ls -l` — директория пуста или не существует.
 
-   Для включения containerd v2 для всего кластера укажите значение `ContainerdV2` в параметре `defaultCRI` ресурса `ClusterConfiguration`. Это значение будет применяться ко всем NodeGroup, в которых явно не указан `spec.cri.type`.
+Включите containerd v2 одним из способов:
 
-   ```bash
-   d8 system edit cluster-configuration
-   ```
+- Для всего кластера.
 
-   Пример конфигурации:
+  Укажите значение `ContainerdV2` в параметре `defaultCRI` ClusterConfiguration. Это значение применяется ко всем NodeGroup, в которых явно не задан параметр `spec.cri.type`.
 
-   ```yaml
-   apiVersion: deckhouse.io/v1
-   kind: ClusterConfiguration
-   # ...
-   defaultCRI: ContainerdV2
-   # ...
-   ```
+  Откройте ClusterConfiguration на редактирование:
 
-1. Для конкретной группы узлов.
+  ```bash
+  d8 system edit cluster-configuration
+  ```
 
-   Для включения containerd v2 для конкретной группы узлов укажите `ContainerdV2` в параметре `spec.cri.type` в объекте `NodeGroup`.
+  Пример ClusterConfiguration с containerd v2 по умолчанию:
 
-   Рассмотрим на примере группы узлов `worker`.
+  ```yaml
+  apiVersion: deckhouse.io/v1
+  kind: ClusterConfiguration
+  # ...
+  defaultCRI: ContainerdV2
+  # ...
+  ```
 
-   ```bash
-   d8 k edit ng worker
-   ```
+- Для конкретной группы узлов.
 
-   Пример конфигурации:
+  Укажите значение `ContainerdV2` в параметре `spec.cri.type` NodeGroup.
 
-   ```yaml
-   apiVersion: deckhouse.io/v1
-   kind: NodeGroup
-   metadata:
-     name: worker
-   spec:
-     cri:
-       type: ContainerdV2
-   # ...
-   ```
+  Например, чтобы включить containerd v2 для группы узлов `worker`, откройте NodeGroup `worker` на редактирование:
 
-При переходе на containerd v2 DKP CSE начнет поочерёдное обновление узлов. Обновление узла приводит к прерыванию работы размещенной на нем нагрузки (деструктивное изменение, disruptive-обновление). На процесс обновления узла влияют параметры применения деструктивных изменений группы узлов (`spec.disruptions.approvalMode` NodeGroup):
+  ```bash
+  d8 k edit ng worker
+  ```
 
-- Узлы с политикой применения деструктивных изменений `Auto` будут обновлены в автоматическом режиме
+  Пример NodeGroup `worker` с containerd v2:
 
-- Узлы с политикой применения деструктивных изменений `Manual` потребуют ручного применения изменений, о чем будет свидетельствовать алерт вида `NodeRequiresDisruptionApprovalForUpdate`. Для применения изменений следуйте инструкции в алерте
+  ```yaml
+  apiVersion: deckhouse.io/v1
+  kind: NodeGroup
+  metadata:
+    name: worker
+  spec:
+    cri:
+      type: ContainerdV2
+  # ...
+  ```
 
-### Возможные проблемы и пути их решения
+После перехода на containerd v2 DP CSE обновляет узлы по очереди. Обновление узла прерывает работу нагрузки на этом узле. Такое изменение называется деструктивным. Как обновится узел, зависит от параметра `spec.disruptions.approvalMode` его группы узлов (NodeGroup):
 
-#### Обновление cilium
+- Узлы из групп, у которых параметр `spec.disruptions.approvalMode` равен `Auto`, обновятся автоматически.
+- Для узлов из групп, у которых параметр `spec.disruptions.approvalMode` равен `Manual`, появится алерт `NodeRequiresDisruptionApprovalForUpdate`. Чтобы обновить такие узлы, выполните инструкцию из алерта.
 
-В рамках обновления версии платформы v1.67.4 → v1.73.4 происходит обновление Cilium 1.14 → 1.17.
+### Возможные проблемы и их решение
 
-В случае, если обновление застряло (поды `safe-agent-updater` в пространстве имён `d8-cni-cilium` находятся в состоянии `Init:4/5` на одном узле дольше 20 минут), выясните, для каких узлов DKP CSE запрашивает подтверждение на применение деструктивных изменений:
+#### Обновление Cilium
+
+При обновлении DP CSE с версии v1.67.4 на v1.73.x Cilium обновляется с версии 1.14 на 1.17.
+
+Обновление Cilium зависло, если поды `safe-agent-updater` в неймспейсе `d8-cni-cilium` находятся в состоянии `Init:4/5` на одном узле дольше 20 минут. В этом случае получите список узлов, для которых DP CSE ждёт подтверждения деструктивных изменений:
 
 ```bash
 d8 k get nodes -o json | jq '.items[] | select(.metadata.annotations."update.node.deckhouse.io/approved"=="") | .metadata.name' -r
@@ -1088,31 +1104,39 @@ d8 k get nodes -o json | jq '.items[] | select(.metadata.annotations."update.nod
 
 Пример вывода:
 
-```bash
+```console
 example-cse-master-0.ru-central1.internal
 example-cse-system-0.ru-central1.internal
 ```
 
-Затем, удалите под `safe-agent-updater` на этих узлах.
+Удалите поды `safe-agent-updater` на этих узлах.
 
-Если в группе узлов установлен параметр `spec.disruptions.approvalMode=Auto`, то начнется поочередное обновление версии cilium на узлах с выполнением операций Cordon и Drain. Если в группе узлов установлен параметр `spec.disruptions.approvalMode=Manual`, то потребуется установить аннотацию `d8 k annotate node <NODE> update.node.deckhouse.io/disruption-approved=` на узел.
+Если у группы узлов параметр `spec.disruptions.approvalMode` равен `Auto`, DP CSE по очереди обновит Cilium на узлах. Во время обновления DP CSE выполняет cordon и drain каждого узла.
 
-#### Потеря одного etcd member во время миграции версии etcd с 3.5.17 на 3.6.1
+Если у группы узлов параметр `spec.disruptions.approvalMode` равен `Manual`, добавьте каждому узлу из списка аннотацию `update.node.deckhouse.io/disruption-approved=`:
 
-В рамках обновления DKP CSE происходит апгрейд etcd с версии 3.5.17 на 3.6.1, что в некоторых случаях приводит к `CrashLoopBackOff` у одного из подов `d8-control-plane-manager`. Это происходит из-за того, что иногда member etcd после обновления остаётся в статусе unstarted и, как следствие, удаляется из кворума.
+```bash
+d8 k annotate node <ИМЯ_УЗЛА> update.node.deckhouse.io/disruption-approved=
+```
 
-Если в процессе обновления один из подов `etcd-<nodename>` в пространстве имён `kube-system` переходит в состояние `CrashLoopBackOff` и в кворуме etcd уже нет участника с именем этого control-plane-узла, то нужно добавить узел etcd заново.
+Здесь `<ИМЯ_УЗЛА>` — имя узла из списка.
 
-Просмотр участников кворума etcd:
+#### Потеря одного участника etcd при обновлении etcd с версии 3.5.17 на 3.6.1
+
+Во время обновления DP CSE etcd обновляется с версии 3.5.17 до 3.6.1. После обновления участник etcd иногда остаётся в статусе `unstarted` и поэтому удаляется из кворума. Тогда один из подов `d8-control-plane-manager` переходит в состояние `CrashLoopBackOff`.
+
+Признак проблемы: под `etcd-<ИМЯ_УЗЛА>` в неймспейсе `kube-system` перешёл в состояние `CrashLoopBackOff`. Здесь `<ИМЯ_УЗЛА>` — имя master-узла.
+
+Проверьте, есть ли этот master-узел в кворуме etcd. Получите список участников кворума etcd:
 
 ```bash
 d8 k -n kube-system exec -ti $(d8 k -n kube-system get pod -l component=etcd,tier=control-plane -o name | head -n1) -- etcdctl --cacert /etc/kubernetes/pki/etcd/ca.crt --cert /etc/kubernetes/pki/etcd/ca.crt --key /etc/kubernetes/pki/etcd/ca.key --endpoints https://127.0.0.1:2379/ member list -w table
 ```
 
-Пример вывода с пропавшим участником кворума в кластере с 3 control-plane-узлами:
+Пример вывода для кластера с тремя master-узлами, в котором одного участника нет в кворуме:
 
 <!-- markdownlint-disable MD031 -->
-```bash
+```console
 +------------------+---------+-------------------------------------------+---------------------------+--------------------------+-------------+
 |        ID        | STATUS  |                    NAME                   |        PEER ADDRS         |       CLIENT ADDRS        | IS LEARNER |
 +------------------+---------+-------------------------------------------+---------------------------+---------------------------+------------+
@@ -1123,33 +1147,37 @@ d8 k -n kube-system exec -ti $(d8 k -n kube-system get pod -l component=etcd,tie
 {: .nowrap-default }
 <!-- markdownlint-enable MD031 -->
 
-Для решения этой проблемы выполните следующие действия на проблемном control-plane-узле:
+Если участника с именем этого master-узла нет в списке, восстановите участника etcd. Выполните на этом master-узле следующие действия:
 
-1. Перенесите папку с данными etcd `/var/lib/etcd`:
+1. Переместите директорию с данными etcd `/var/lib/etcd` в `/tmp`:
 
    ```bash
    mv /var/lib/etcd /tmp
    ```
 
-1. Перенесите манифест статического пода etcd `/etc/kubernetes/manifests/etcd.yaml`:
+1. Переместите манифест статического пода etcd `/etc/kubernetes/manifests/etcd.yaml` в `/tmp`:
 
    ```bash
    mv /etc/kubernetes/manifests/etcd.yaml /tmp
    ```
 
-1. Перезапустите под `d8-control-plane-manager` на проблемном control-plane-узле.
+1. Перезапустите под `d8-control-plane-manager` на этом master-узле.
 
    1. Получите имя пода:
 
       ```bash
-      d8 k -n kube-system get po -owide | grep control-plane | grep <node-name>
+      d8 k -n kube-system get po -owide | grep control-plane | grep <ИМЯ_УЗЛА>
       ```
 
-   1. Удалите под, имя которого было получено в предыдущем шаге:
-  
+      Здесь `<ИМЯ_УЗЛА>` — имя master-узла, который нужно восстановить.
+
+   1. Удалите под:
+
       ```bash
-      d8 k -n kube-system delete po <pod-name>
+      d8 k -n kube-system delete po <ИМЯ_ПОДА>
       ```
+
+      Здесь `<ИМЯ_ПОДА>` — имя пода `d8-control-plane-manager` из вывода предыдущей команды.
 
 1. Убедитесь, что кворум etcd восстановлен:
 
@@ -1157,52 +1185,51 @@ d8 k -n kube-system exec -ti $(d8 k -n kube-system get pod -l component=etcd,tie
    d8 k -n kube-system exec -ti $(d8 k -n kube-system get pod -l component=etcd,tier=control-plane -o name | head -n1) -- etcdctl --cacert /etc/kubernetes/pki/etcd/ca.crt --cert /etc/kubernetes/pki/etcd/ca.crt --key /etc/kubernetes/pki/etcd/ca.key --endpoints https://127.0.0.1:2379/ member list -w table
    ```
 
-   Целевое состояние — количество участников etcd равно количеству control-plane-узлов.
+   Количество участников etcd должно быть равно количеству master-узлов.
 
-   Пример вывода для 3 control-plane-узлов:
+   Пример вывода для кластера с тремя master-узлами:
 
    <!-- markdownlint-disable MD031 -->
-   ```console   +------------------+---------+-------------------------------------------+---------------------------+--------------------------+-------------+
-      |        ID        | STATUS  |                    NAME                   |        PEER ADDRS         |       CLIENT ADDRS        | IS LEARNER |
-      +------------------+---------+-------------------------------------------+---------------------------+---------------------------+------------+
-      | 898edf6255f45679 | started | example-cse-master-1.ru-central1.internal | https://10.241.32.23:2380 | https://10.241.32.23:2379 |      false |
-      | 988286c43353ca92 | started | example-cse-master-0.ru-central1.internal | https://10.241.32.6:2380  | https://10.241.32.6:2379  |      false |
-      | bb3fcfe1f7464434 | started | example-cse-master-2.ru-central1.internal | https://10.241.32.21:2380 | https://10.241.32.21:2379 |      false |
-      +------------------+---------+-------------------------------------------+---------------------------+---------------------------+------------+
-      ```
+   ```console
+   +------------------+---------+-------------------------------------------+---------------------------+--------------------------+-------------+
+   |        ID        | STATUS  |                    NAME                   |        PEER ADDRS         |       CLIENT ADDRS        | IS LEARNER |
+   +------------------+---------+-------------------------------------------+---------------------------+---------------------------+------------+
+   | 898edf6255f45679 | started | example-cse-master-1.ru-central1.internal | https://10.241.32.23:2380 | https://10.241.32.23:2379 |      false |
+   | 988286c43353ca92 | started | example-cse-master-0.ru-central1.internal | https://10.241.32.6:2380  | https://10.241.32.6:2379  |      false |
+   | bb3fcfe1f7464434 | started | example-cse-master-2.ru-central1.internal | https://10.241.32.21:2380 | https://10.241.32.21:2379 |      false |
+   +------------------+---------+-------------------------------------------+---------------------------+---------------------------+------------+
+   ```
    {: .nowrap-default }
    <!-- markdownlint-enable MD031 -->
 
-## Обновление DKP CSE с версии 1.73.x на версию 1.73.4
+## Обновление DP CSE с версии 1.73.x на версию 1.73.6
 
 ### Действия перед обновлением
 
-1. Перед обновлением убедитесь в отсутствии в кластере алертов, кроме `SecurityEventsDetected`.
+1. Убедитесь, что в кластере нет алертов, кроме `SecurityEventsDetected`.
 
-1. Убедитесь, что в очередях DKP CSE нет ошибок.
+1. Убедитесь, что в очередях DP CSE нет ошибок:
 
    ```bash
    d8 system queue list
    ```
 
-   Пример вывода команды пустых очередей без ошибок:
+   Пример вывода, когда очереди пусты и ошибок нет:
 
-   ```bash
+   ```console
    Summary:
    - 'main' queue: empty.
    - 103 other queues (0 active, 103 empty): 0 tasks.
    - no tasks to handle.
    ```
 
-1. Установите желаемый режим обновлений в ModuleConfig `deckhouse` — заполните секцию параметров `spec.settings.update`.
-
-   Выполните следующую команду для редактирования ModuleConfig `deckhouse`:
+1. Задайте параметры обновления в секции `spec.settings.update` ModuleConfig `deckhouse`. Откройте ModuleConfig `deckhouse` на редактирование:
 
    ```bash
    d8 k edit mc deckhouse
    ```
 
-   Пример вывода команды:
+   Пример секции `spec.settings.update` с окнами обновлений по вторникам и субботам с 8:00 до 15:00:
 
    ```yaml
    # ...
@@ -1218,64 +1245,46 @@ d8 k -n kube-system exec -ti $(d8 k -n kube-system get pod -l component=etcd,tie
    # ...
    ```
 
-   Также вы можете заполнить параметр `spec.settings.update.mode` для выбора режима обновлений версии DKP CSE.
+   Режим обновлений DP CSE задаёт параметр `spec.settings.update.mode`. Режим работает, только если задан канал обновлений. Допустимые значения:
 
-   Режим обновления DKP CSE на выбранном канале обновлений:
+   - `AutoPatch` — автоматическое обновление патч-версий. Обновление минорной версии (например, с `v1.69.*` на `v1.70.x`) требует подтверждения. Если заданы окна обновлений, патч-версии (например, с v1.70.1 на v1.70.2) обновляются в эти окна. Значение по умолчанию.
+   - `Auto` — автоматическое обновление всех версий: минорных (например, с `v1.69.*` на `v1.70.x`) и патч-версий (например, с v1.70.1 на v1.70.2). Если заданы окна обновлений, версии обновляются в эти окна. Если окна не заданы, версии обновляются сразу после появления на канале обновлений.
+   - `Manual` — ручное обновление всех версий. Обновление каждой минорной и патч-версии требует подтверждения.
 
-   - `AutoPatch` — автоматический режим обновления для патч-версий.
+   Чтобы подтвердить обновление, установите параметр `approved: true` в DeckhouseRelease той версии, до которой обновляется DP CSE.
 
-      Для обновления минорной версии (например, с v1.69.*на v1.70.*) необходимо подтверждение.
+### Обновление версии DP CSE
 
-      Обновление патч-версии (например, с v1.70.1 на v1.70.2) применяется с учетом окон обновлений, если они заданы.
+1. Если в кластере есть узлы с Astra Linux, выполните действия из раздела [«Особенности обновления в Astra Linux»](#особенности-обновления-в-astra-linux).
 
-   - `Auto` — автоматический режим обновления для всех версий.
+1. Загрузите обновление в хранилище образов контейнеров DP CSE. Для этого выполните шаг «Загрузите обновление в хранилище образов контейнеров DP CSE» из подраздела «Действия перед обновлением» раздела [«Обновление DP CSE с версии 1.67.4 на версию 1.73.6»](#обновление-dp-cse-с-версии-1674-на-версию-1736):
 
-      Обновления минорной версии (например, с v1.69.*на v1.70.*) и патч-версии (например, с v1.70.1 на v1.70.2) применяются с учетом заданных окон обновлений, либо, если окна обновлений не заданы, по мере появления обновлений на соответствующем канале обновлений.
+   - скопируйте образы командой `d8 mirror pull`;
+   - проверьте контрольные суммы командой `d8 tools gostsum`;
+   - загрузите образы в хранилище образов контейнеров командой `d8 mirror push`.
 
-   - `Manual` — ручной режим обновления для всех версий.
-
-      Для обновления и минорной, и патч-версии необходимо подтверждение.
-
-   Для подтверждения обновления версии установите поле `approved` в `true` в соответствующем объекте `DeckhouseRelease`.
-
-   Выбранный режим обновления применяется **только** при установленном канале обновлений.
-
-   По умолчанию: `AutoPatch`
-
-   Допустимые значения: `AutoPatch`, `Auto`, `Manual`
-
-### Обновление версии платформы
-
-1. При наличии в кластере узлов с ОС Astra Linux ознакомьтесь с разделом [«Особенности обновления в Astra Linux»](#особенности-обновления-в-astra-linux).
-
-1. Загрузите предоставленное вам обновление в ваше хранилище образов контейнеров DKP CSE.
-
-1. Обновление произойдет в соответствии с выставленными окнами и режимом обновлений.
+1. Дождитесь обновления. DP CSE обновится с учётом заданных режима и окон обновлений.
 
 1. [Проверьте, что обновление прошло успешно.](#как-понять-что-обновление-прошло-успешно)
 
 ## Как понять, что обновление прошло успешно
 
-1. В очередях DKP CSE нет заданий.
-
-   Для проверки выполните команду:
+1. Убедитесь, что очереди DP CSE пусты:
 
    ```bash
-   d8 system queue list 
+   d8 system queue list
    ```
 
-   Пример вывода команды пустых очередей без ошибок:
+   Пример вывода, когда очереди пусты и ошибок нет:
 
-   ```bash
+   ```console
    Summary:
    - 'main' queue: empty.
    - 103 other queues (0 active, 103 empty): 0 tasks.
    - no tasks to handle.
    ```
 
-1. Все узлы в кластере обновлены.
-
-   Для проверки выполните команду:
+1. Убедитесь, что все узлы в кластере обновлены:
 
    ```bash
    d8 k get ng
@@ -1284,7 +1293,7 @@ d8 k -n kube-system exec -ti $(d8 k -n kube-system get pod -l component=etcd,tie
    Пример вывода команды с успешно обновлёнными узлами:
 
    <!-- markdownlint-disable MD031 -->
-   ```bash
+   ```console
    NAME     TYPE     READY   NODES   UPTODATE   INSTANCES   DESIRED   MIN   MAX   STANDBY   STATUS   AGE   SYNCED
    master   Static   3       3       3                                                               34h   True
    system   Static   2       2       2                                                               34h   True
@@ -1293,61 +1302,57 @@ d8 k -n kube-system exec -ti $(d8 k -n kube-system get pod -l component=etcd,tie
    {: .nowrap-default }
    <!-- markdownlint-enable MD031 -->
 
-   Количество узлов `UPTODATE` должно быть равно количеству `NODES` и `READY`.
+   Для каждой группы узлов значения в столбцах `UPTODATE`, `NODES` и `READY` должны совпадать.
 
-1. Объект DeckhouseRelease `v1.73.4` перешел в фазу `Deployed`.
-
-   Для проверки выполните команду:
+1. Убедитесь, что DeckhouseRelease целевой версии перешёл в фазу `Deployed`:
 
    ```bash
    d8 k get deckhouserelease
    ```
 
-   Пример вывода:
+   Пример вывода после обновления до v1.77.0:
 
    <!-- markdownlint-disable MD031 -->
-   ```bash
+   ```console
    NAME      PHASE         TRANSITIONTIME   MESSAGE
-   v1.73.0   Superseded    4d23h
-   v1.73.1   Superseded    3d1h
-   v1.73.2   Superseded    2d1h
-   v1.73.3   Superseded    1d6h
-   v1.73.4   Deployed      1h
+   v1.73.6   Superseded    1d6h
+   v1.77.0   Deployed      1h
    ```
    {: .nowrap-default }
    <!-- markdownlint-enable MD031 -->
 
-1. В веб-интерфейсе кластера отображается редакция платформы, новая версия платформы и релизный канал.
+1. Убедитесь, что в веб-интерфейсе DP CSE отображаются редакция DP CSE, новая версия DP CSE и канал обновлений.
 
    <!-- Пример корректного отображения:  -->
-   <!-- TODO: добавить скриншот -->
 
 ## Особенности обновления в Astra Linux
 
-Если в Astra Linux включен режим замкнутой программной среды (ЗПС), то **перед обновлением** его нужно отключить **на всех узлах кластера**.
+Перед обновлением отключите режим замкнутой программной среды (ЗПС) на всех узлах с Astra Linux, где он включён.
 
-Для проверки, включён ли режим ЗПС, выполните на узле следующие команды:
+Чтобы проверить, включён ли режим ЗПС, выполните на узле команды:
 
 ```bash
 astra-digsig-control is-enabled
 cat /sys/digsig/elf_mode
 ```
 
-Для ручного отключения режима ЗПС, выполните на узле следующие команды:
+Отключите режим ЗПС одним из способов:
 
-```bash
-sed -i '/^DIGSIG_ELF_MODE=/d' /etc/digsig/digsig_initramfs.conf && echo 'DIGSIG_ELF_MODE=0' | tee -a /etc/digsig/digsig_initramfs.conf
-update-initramfs -u -k all
-systemctl reboot
-```
+- Вручную. Выполните на узле команды:
 
-В качестве альтернативного варианта для отключения режима ЗПС можно использовать утилиту `astra-digsig-control`:
+  ```bash
+  sed -i '/^DIGSIG_ELF_MODE=/d' /etc/digsig/digsig_initramfs.conf && echo 'DIGSIG_ELF_MODE=0' | tee -a /etc/digsig/digsig_initramfs.conf
+  update-initramfs -u -k all
+  systemctl reboot
+  ```
 
-```bash
-astra-digsig-control disable
-```
+- Утилитой `astra-digsig-control`. Выполните на узле команду:
 
-**После завершения обновления** DKP CSE, создайте следующий NodeGroupConfiguration, для автоматического включения режима ЗПС на узлах кластера с Astra Linux:
+  ```bash
+  astra-digsig-control disable
+  ```
+
+**После обновления DP CSE** создайте NodeGroupConfiguration `astra-zps.sh`. Этот NodeGroupConfiguration включает режим ЗПС на узлах кластера с Astra Linux:
 
 ```yaml
 apiVersion: deckhouse.io/v1alpha1
@@ -1356,24 +1361,10 @@ metadata:
   name: astra-zps.sh
 spec:
   weight: 98
-  # Здесь вы можете указать конкретные группы узлов кластера (имена NodeGroup)
+  # Чтобы включить режим ЗПС только на части узлов, укажите имена NodeGroup.
   nodeGroups: [ "*" ]
   bundles: [ "astra" ]
   content: |
-    # Copyright 2025 Flant JSC
-    #
-    # Licensed under the Apache License, Version 2.0 (the "License");
-    # you may not use this file except in compliance with the License.
-    # You may obtain a copy of the License at
-    #
-    #     http://www.apache.org/licenses/LICENSE-2.0
-    #
-    # Unless required by applicable law or agreed to in writing, software
-    # distributed under the License is distributed on an "AS IS" BASIS,
-    # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-    # See the License for the specific language governing permissions and
-    # limitations under the License.
-
     modeswitch="$(astra-modeswitch get 2>/dev/null)"
     case "$modeswitch" in
       0|1|2) ;;
@@ -1439,10 +1430,11 @@ spec:
     sync_digsig_conf
 ```
 
-После создания NodeGroupConfiguration `astra-zps.sh` на узлах кластера будут выполнены следующие действия:
-- Проверка загрузки модуля `digsig_verif` в ОС узла.
-- Добавление публичных ключей, используемых для валидации бинарных файлов компонентов DKP CSE.
-- Включение проверки подписи бинарных файлов.
-- Обновление образов initramfs для всех установленных ядер в системе.
-- Перезагрузка узла.
+NodeGroupConfiguration `astra-zps.sh` выполняет на узлах кластера с Astra Linux следующие действия:
+
+- проверяет, загружен ли модуль `digsig_verif` в ОС узла;
+- добавляет публичные ключи для проверки подписи бинарных файлов компонентов DP CSE;
+- включает проверку подписи бинарных файлов;
+- обновляет образы initramfs для всех установленных в системе ядер;
+- перезагружает узел.
 {% endraw %}
