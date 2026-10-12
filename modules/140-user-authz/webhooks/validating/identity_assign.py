@@ -64,6 +64,14 @@ BASIC_LEVEL_ROLE = {
     "SuperAdmin": "user-authz:super-admin",
 }
 
+# The aggregated ClusterRole of the custom roles of each level (templates/cluster-roles-custom-aggregated.yaml).
+# Every ClusterAuthorizationRule below SuperAdmin binds it next to user-authz:<level>, so it stands for
+# that level: assigning a level assigns its custom extension too, the way car_target_roles counts a rule
+# by its accessLevel alone.
+CUSTOM_LEVEL_ROLE = {
+    role + ":custom": level for level, role in BASIC_LEVEL_ROLE.items() if level != "SuperAdmin"
+}
+
 BASIC_ORDER = {
     "User": 10,
     "PrivilegedUser": 20,
@@ -922,6 +930,8 @@ def basic_level_of(name: str, entry: Optional[CatalogEntry]) -> Optional[str]:
     for level, role in BASIC_LEVEL_ROLE.items():
         if name == role:
             return level
+    if name in CUSTOM_LEVEL_ROLE:
+        return CUSTOM_LEVEL_ROLE[name]
     if entry.access_level in BASIC_ORDER and is_platform_range_role(name):
         return entry.access_level
     return None

@@ -772,6 +772,44 @@ class TestTargetOwnership(unittest.TestCase):
         self.assertIsNone(assign.basic_level_of("d8:x", entry("d8:x", access_level="User", heritage=False)))
         self.assertEqual(assign.basic_level_of("d8:x", entry("d8:x", access_level="User")), "User")
 
+    def test_custom_aggregate_stands_for_its_level(self):
+        # Every ClusterAuthorizationRule below SuperAdmin also binds user-authz:<level>:custom.
+        self.assertEqual(assign.basic_level_of("user-authz:editor:custom", entry("user-authz:editor:custom")), "Editor")
+        self.assertEqual(assign.basic_level_of("user-authz:privileged-user:custom",
+                                               entry("user-authz:privileged-user:custom")), "PrivilegedUser")
+        self.assertEqual(assign.basic_level_of("user-authz:cluster-admin:custom",
+                                               entry("user-authz:cluster-admin:custom")), "ClusterAdmin")
+        self.assertIsNone(assign.basic_level_of("user-authz:editor:custom",
+                                                entry("user-authz:editor:custom", heritage=False)))
+        self.assertIsNone(assign.basic_level_of("user-authz:super-admin:custom",
+                                                entry("user-authz:super-admin:custom")))
+
+    def test_range_assigner_reaches_the_custom_aggregate_of_a_rule(self):
+        # The identity a DexProvider or a UserOperation targets carries both bindings of its rule.
+        manager = "d8:subsystem:security:manager"
+        targets = ["user-authz:editor", "user-authz:editor:custom"]
+        for rules in ([], [{"apiGroups": ["example.io"], "resources": ["widgets"], "verbs": ["get"]}]):
+            with self.subTest(rules=rules):
+                cat = default_catalog()
+                cat["user-authz:editor"] = entry("user-authz:editor")
+                cat["user-authz:editor:custom"] = entry("user-authz:editor:custom", rules=rules)
+                self.assertIsNone(assign.can_assign([manager], targets, cat))
+
+    def test_custom_aggregate_above_the_range_is_leftover(self):
+        cat = default_catalog()
+        cat["d8:x:editor-assigner"] = entry("d8:x:editor-assigner", labels={"can-assign-basic-max": "Editor"})
+        cat["user-authz:admin:custom"] = entry("user-authz:admin:custom")
+        cat["user-authz:editor:custom"] = entry("user-authz:editor:custom")
+        self.assertEqual(assign.can_assign(["d8:x:editor-assigner"], ["user-authz:admin:custom"], cat),
+                         ["user-authz:admin:custom"])
+        self.assertIsNone(assign.can_assign(["d8:x:editor-assigner"], ["user-authz:editor:custom"], cat))
+
+    def test_forged_custom_aggregate_is_leftover(self):
+        cat = default_catalog()
+        cat["user-authz:editor:custom"] = entry("user-authz:editor:custom", heritage=False)
+        self.assertEqual(assign.can_assign(["d8:subsystem:security:manager"], ["user-authz:editor:custom"], cat),
+                         ["user-authz:editor:custom"])
+
 
 # --- DexProvider: identity space -> targets (specs/002-dexprovider-identity-gate) ---
 
