@@ -289,3 +289,9 @@ You can find the cluster prefix by running the following command:
 kubectl -n kube-system get secret d8-cluster-configuration -o json | jq -r '.data."cluster-configuration.yaml"' \
   | base64 -d | grep prefix
 ```
+
+## Preemptible nodes
+
+Preemptible virtual machines in Google Cloud are called preemptible instances. To make a node group order them, set the [`preemptible`](/modules/cloud-provider-gcp/cr.html#gcpinstanceclass-v1-spec-preemptible) parameter of the GCPInstanceClass resource to `true`.
+
+How to create such nodes and how they behave is described in ["How to create preemptible nodes in GCP?"](/modules/cloud-provider-gcp/faq.html#how-to-create-preemptible-nodes-in-gcp).

@@ -138,6 +138,51 @@ title: "Cloud provider — AWS: FAQ"
 
 1. Добавьте `ecr:GetAuthorizationToken` [в additionalRolePolicies](cluster_configuration.html#awsclusterconfiguration-additionalrolepolicies).
 
+## Как создать прерываемые узлы в AWS?
+
+Прерываемые виртуальные машины в AWS называются spot-инстансами. Чтобы группа узлов заказывала их, установите параметр [`spot`](cr.html#awsinstanceclass-v1-spec-spot) ресурса AWSInstanceClass в `true`.
+
+Пример:
+
+```yaml
+apiVersion: deckhouse.io/v1
+kind: AWSInstanceClass
+metadata:
+  name: worker-spot
+spec:
+  instanceType: m5.large
+  diskSizeGb: 30
+  spot: true
+---
+apiVersion: deckhouse.io/v1
+kind: NodeGroup
+metadata:
+  name: worker-spot
+spec:
+  nodeType: CloudEphemeral
+  cloudInstances:
+    classReference:
+      kind: AWSInstanceClass
+      name: worker-spot
+    minPerZone: 2
+    maxPerZone: 4
+    zones:
+      - eu-central-1a
+```
+
+Получив от AWS уведомление о предстоящем [прерывании](https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/spot-interruptions.html) инстанса, Deckhouse Platform устанавливает на узел taint `aws-node-termination-handler/spot-itn`, выполняет drain узла и удаляет его. Взамен группа заказывает новый узел, пока их количество не достигнет значения параметра [`minPerZone`](/modules/node-manager/cr.html#nodegroup-v1-spec-cloudinstances-minperzone).
+
+### Ограничения прерываемых узлов в AWS
+
+Учитывайте следующие ограничения:
+
+- Параметр `spot` действует только для групп узлов типа CloudEphemeral, потому что AWSInstanceClass применяется только к ним.
+- Времени между уведомлением о прерывании и остановкой инстанса может не хватить на drain узла. Размещайте на прерываемых узлах только ту нагрузку, которая переносит внезапную потерю узла.
+
+{% alert level="warning" %}
+Изменение параметра [`spot`](cr.html#awsinstanceclass-v1-spec-spot) в существующем AWSInstanceClass приводит к пересозданию всех узлов соответствующей группы.
+{% endalert %}
+
 ## Что делать, если переключение на заказ узлов в менее приоритетных группах занимает много времени?
 
 Если переключение на заказ узлов в менее приоритетных группах занимает много времени (например, когда для групп узлов со spot-инстансами установлен наивысший приоритет и при недоступности таких инстансов заказ узлов из других групп происходит очень долго), воспользуйтесь [инструкцией](/products/kubernetes-platform/documentation/v1/faq.html#что-делать-если-переключение-на-заказ-узлов-в-менее-приоритетных).

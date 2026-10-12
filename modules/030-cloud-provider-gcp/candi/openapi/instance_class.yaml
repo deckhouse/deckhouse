@@ -73,7 +73,12 @@ spec:
                   x-doc-required: false
                   type: string
                 preemptible:
-                  description: Should instances be preemptible.
+                  description: |
+                    Order preemptible virtual machines (preemptible instances).
+
+                    Google Cloud can interrupt such a machine at any time.
+
+                    For more information about preemptible virtual machines, see the [provider documentation](https://cloud.google.com/compute/docs/instances/preemptible).
                   type: boolean
                   x-doc-default: false
                 diskType:

@@ -75,8 +75,14 @@ spec:
                   x-doc-examples: [ami-040a1551f9c9d11ad]
                   type: string
                 spot:
-                  description: Whether to create Spot Instances with minimum hourly price with which Instances will run.
+                  description: |
+                    Order preemptible virtual machines (Spot Instances).
+
+                    AWS can interrupt such a machine at any time.
+
+                    For more information about preemptible virtual machines, see the [provider documentation](https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/using-spot-instances.html).
                   type: boolean
+                  x-doc-default: false
                 diskType:
                   description: Instance EBS disk type.
                   x-doc-examples: ["gp2"]

@@ -42,7 +42,11 @@ spec:
                     Список поддерживаемых Deckhouse ОС и их версий можно найти в [документации Deckhouse](https://deckhouse.ru/products/kubernetes-platform/documentation/v1/supported_versions.html) (учитывайте используемую версию Deckhouse).
                 preemptible:
                   description: |
-                    Необходимость заказа preemptible-инстансов (прерываемых виртуальных машин).
+                    Заказ прерываемых виртуальных машин (preemptible-инстансов).
+
+                    Google Cloud может прервать работу такой машины в любой момент.
+
+                    Подробнее о прерываемых виртуальных машинах можно узнать в [документации провайдера](https://cloud.google.com/compute/docs/instances/preemptible).
                 diskType:
                   description: |
                     Тип созданного диска.
