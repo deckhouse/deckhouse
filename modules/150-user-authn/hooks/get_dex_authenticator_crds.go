@@ -220,7 +220,15 @@ func getDexAuthenticator(_ context.Context, input *go_hook.HookInput) error {
 			return fmt.Errorf("cannot convert dex authenticaor: failed to iterate over 'authenticators' snapshot: %w", err)
 		}
 
-		existedCredentials, ok := credentialsByID[fmt.Sprintf("dex-authenticator-%s", dexAuthenticator.ID)]
+		// The template names the credentials Secret after the truncated name when the full one is longer
+		// than 63 characters, so look the Secret up under that name first. The full name still finds a
+		// Secret written before names were truncated.
+		fullSecretName := fmt.Sprintf("dex-authenticator-%s", dexAuthenticator.Name)
+		safeSecretName, secretTruncated, secretHash := SafeDNS1123Name(fullSecretName)
+		existedCredentials, ok := credentialsByID[safeSecretName+"@"+dexAuthenticator.Namespace]
+		if !ok {
+			existedCredentials, ok = credentialsByID[fullSecretName+"@"+dexAuthenticator.Namespace]
+		}
 		if !ok {
 			existedCredentials = Credentials{
 				AppDexSecret: pwgen.AlphaNum(20),
@@ -267,10 +275,6 @@ func getDexAuthenticator(_ context.Context, input *go_hook.HookInput) error {
 		// Compute safe base resource name
 		full := fmt.Sprintf("%s-dex-authenticator", dexAuthenticator.Name)
 		safeName, truncated, hash5 := SafeDNS1123Name(full)
-
-		// Compute safe secret name
-		fullSecretName := fmt.Sprintf("dex-authenticator-%s", dexAuthenticator.Name)
-		safeSecretName, secretTruncated, secretHash := SafeDNS1123Name(fullSecretName)
 
 		ingressNames := make(map[string]map[string]interface{})
 		signOutIngressNames := make(map[string]map[string]interface{})

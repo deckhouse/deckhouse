@@ -540,3 +540,59 @@ var _ = Describe("safeDNS1123Name", func() {
 		Expect(h1).To(Equal(h2))
 	})
 })
+
+// A DexAuthenticator whose credentials Secret name, dex-authenticator-<name>, is longer than 63
+// characters gets a truncated Secret name. The hook must still find that Secret, or it generates new
+// credentials on every run and logs out every user of the authenticator.
+var _ = Describe("User Authn hooks :: get dex authenticator crds :: long names ::", func() {
+	f := HookExecutionConfigInit(`{"userAuthn":{"internal": {}}}`, "")
+	f.RegisterCRD("deckhouse.io", "v2alpha1", "DexAuthenticator", true)
+
+	const name = "a-dex-authenticator-with-a-name-long-enough-to-truncate"
+	secretName, truncated, _ := SafeDNS1123Name("dex-authenticator-" + name)
+
+	authenticator := `
+---
+apiVersion: deckhouse.io/v2alpha1
+kind: DexAuthenticator
+metadata:
+  name: ` + name + `
+  namespace: test
+spec:
+  applications:
+  - domain: test
+    ingressClassName: "nginx"
+`
+	credentials := func(secret string) string {
+		return fmt.Sprintf(`
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: %s
+  namespace: test
+  labels:
+    app: dex-authenticator
+    name: credentials
+data:
+  client-secret: dGVzdA== # gitleaks:allow
+  cookie-secret: dGVzdE5leHR0ZXN0TmV4dHRlc3ROZXh0 # gitleaks:allow
+`, secret)
+	}
+
+	It("Has a name that the template truncates", func() {
+		Expect(truncated).To(BeTrue())
+	})
+
+	DescribeTable("Keeps the credentials stored in the Secret",
+		func(secret string) {
+			f.BindingContexts.Set(f.KubeStateSet(credentials(secret) + authenticator))
+			f.RunHook()
+			Expect(f).To(ExecuteSuccessfully())
+			Expect(f.ValuesGet("userAuthn.internal.dexAuthenticatorCRDs.0.credentials.appDexSecret").String()).To(Equal("test"))
+			Expect(f.ValuesGet("userAuthn.internal.dexAuthenticatorCRDs.0.credentials.cookieSecret").String()).To(Equal("testNexttestNexttestNext"))
+		},
+		Entry("under the truncated name the template writes", secretName),
+		Entry("under the full name of a Secret written before names were truncated", "dex-authenticator-"+name),
+	)
+})
