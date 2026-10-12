@@ -1,7 +1,6 @@
 ---
 title: "Модуль multitenancy-manager: примеры использования"
 ---
-{% raw %}
 
 ## Шаблоны для проектов доступные по умолчанию
 
@@ -86,16 +85,12 @@ d8 k get projecttemplates <ИМЯ_ШАБЛОНА_ПРОЕКТА> -o yaml
        extendedMonitoringEnabled: true
    ```
 
-   {% endraw %}
-
    {% alert level="info" %}
    API ресурса Project обслуживается как `deckhouse.io/v1alpha3`. Манифесты `v1alpha2` продолжают работать: вебхук конвертации автоматически переносит `parameters.administrators` и `parameters.resourceQuota` в стандартные поля `.spec.administrators` и `.spec.quota`. Если хотя бы один администратор не помещается в `.spec.administrators` (например, у него задан `accessLevel`), весь список остаётся в `parameters`, и `.spec.administrators` не заполняется. То же относится к квоте, в которой есть что-то, кроме значений ресурсов (например, `scopes`), к квоте, в которой где-либо есть число `0`, а также к пустому списку или пустой квоте. Шаблон, который проверяет значение через `with`, пропускает число `0` и не задаёт лимит, а в `.spec.quota` это был бы жёсткий лимит, равный нулю. Строка `"0"` переносится в `.spec.quota` как такой лимит. Клиент `v1alpha2` читает `0` из `.spec.quota` как строку `"0"`.
    Проект не может задавать `.spec.administrators` вместе с `parameters.administrators` или `.spec.quota` вместе с `parameters.resourceQuota`.
 
    Версия `deckhouse.io/v1alpha1` больше не обслуживается: API-сервер отклоняет манифест с `apiVersion: deckhouse.io/v1alpha1`, поэтому перед применением замените `apiVersion` на `deckhouse.io/v1alpha3` и перенесите `parameters.administrators` и `parameters.resourceQuota` в стандартные поля.
    {% endalert %}
-
-   {% raw %}
 
 1. Для проверки статуса проекта выполните команду:
 
@@ -333,13 +328,9 @@ d8 k get ns -l 'projects.deckhouse.io/project=my-project,!projects.deckhouse.io/
 
 Шаблон созданного проекта можно изменить на существующий.
 
-{% endraw %}
-
 {% alert level="warning" %}
 Обратите внимание, что при смене шаблона может возникнуть конфликт ресурсов: если в чарте шаблона прописаны ресурсы, которые уже присутствуют в пространстве имён, то применить шаблон не получится.
 {% endalert %}
-
-{% raw %}
 
 ## Стандартные поля проекта
 
@@ -365,13 +356,9 @@ spec:
     limits.memory: 10Gi
 ```
 
-{% endraw %}
-
 {% alert level="warning" %}
 Helm-шаблон в `resourcesTemplate`, который создаёт ResourceQuota или AuthorizationRule, продолжает их создавать рядом с ResourceQuota и ProjectRoleBinding, которые создают стандартные поля. Под в таком проекте должен укладываться в каждую ResourceQuota своего неймспейса, а доступ, который выдают такие AuthorizationRule, добавляется к доступу из стандартных полей.
 {% endalert %}
-
-{% raw %}
 
 ## Предоставление доступа внутри проекта
 
@@ -596,6 +583,8 @@ RoleBinding, ClusterRoleBinding, ProjectRoleBinding, ClusterProjectRoleBinding, 
 
 Следующий шаблон задаёт профиль безопасности подов и сетевую изоляцию структурированными полями и создаёт в `manifests` два объекта, LimitRange с лимитами по умолчанию из параметров проекта и ConfigMap с именами проекта и его шаблона:
 
+{% raw %}
+
 ```yaml
 apiVersion: deckhouse.io/v1alpha2
 kind: ProjectTemplate
@@ -635,6 +624,8 @@ spec:
       project: {{ .projectName | quote }}
       template: {{ .projectTemplateName | quote }}
 ```
+
+{% endraw %}
 
 Когда условие `ManifestsApplied` равно `True`, в основном неймспейсе каждого проекта этого шаблона есть LimitRange `container-defaults` и ConfigMap `project-info`.
 Чтобы проверить условие и вывести применённые объекты, используйте команды:
@@ -693,6 +684,8 @@ d8 k get project <PROJECT_NAME> -o jsonpath='{range .status.manifestObjects[*]}{
 
 Например, следующий Helm-текст задаёт профиль безопасности подов из параметра и создаёт LimitRange в основном неймспейсе каждого проекта:
 
+{% raw %}
+
 ```yaml
 apiVersion: deckhouse.io/v1alpha1
 kind: ProjectTemplate
@@ -727,6 +720,8 @@ spec:
             cpu: 500m
             memory: 512Mi
 ```
+
+{% endraw %}
 
 В структурированной форме профиль переносится в `podSecurityStandard`, а LimitRange в `manifests`.
 Текст не рендерил OperationPolicy `required-requests-*`, поэтому шаблон объявляет параметр `requiredRequests` с `default: false`:
@@ -845,8 +840,6 @@ d8 k get project <PROJECT_NAME> -o jsonpath='{range .status.keptObjects[*]}{.kin
    ```shell
    d8 k get projecttemplates <ИМЯ_НОВОГО_ШАБЛОНА>
    ```
-
-{% endraw %}
 
 ## Использование лейблов для управления ресурсами
 
@@ -1065,8 +1058,6 @@ data:
 
 Чтобы разрешить проектам использовать только StorageClass с именами `fast-ssd` и `standard`, а `fast-ssd` использовать по умолчанию, создайте следующий [ресурс ClusterResourceGrantPolicy](cr.html#clusterresourcegrantpolicy):
 
-{% raw %}
-
 ```yaml
 apiVersion: multitenancy.deckhouse.io/v1alpha2
 kind: ClusterResourceGrantPolicy
@@ -1084,8 +1075,6 @@ spec:
         - standard
 ```
 
-{% endraw %}
-
 При создании PersistentVolumeClaim без значения `spec.storageClassName` в это поле автоматически подставляется `fast-ssd`. Если указан StorageClass, которого нет в списке разрешённых, создание PersistentVolumeClaim отклоняется.
 
 Для StorageClass используется режим подстановки значения по умолчанию [`Coerce`](cr.html#grantableclusterresourcereference-v1alpha1-spec-fieldpaths-defaulting). Если встроенный admission-контроллер Kubernetes уже подставил в `spec.storageClassName` класс по умолчанию, недоступный проекту, значение заменяется на `fast-ssd`, а создание PersistentVolumeClaim не отклоняется. О замене сообщается предупреждением (admission warning) в ответе на запрос, поэтому в выводе `d8 k` видны и исходное значение, и подставленное.
@@ -1099,8 +1088,6 @@ d8 k get available storageclasses -n <PROJECT_NAME> -o yaml
 #### Ограничение ClusterIssuer для проекта
 
 Чтобы разрешить проектам использовать только ClusterIssuer с именами `letsencrypt-prod` и `vault-issuer`, а `letsencrypt-prod` использовать по умолчанию, создайте следующий [ресурс ClusterResourceGrantPolicy](cr.html#clusterresourcegrantpolicy):
-
-{% raw %}
 
 ```yaml
 apiVersion: multitenancy.deckhouse.io/v1alpha2
@@ -1118,8 +1105,6 @@ spec:
         - letsencrypt-prod
         - vault-issuer
 ```
-
-{% endraw %}
 
 Политика применяется к ClusterIssuer, указанному одним из следующих способов:
 
@@ -1140,8 +1125,6 @@ spec:
 
 Чтобы разрешить проектам команды `payments` использовать дополнительные ClusterRole, создайте следующий [ресурс ClusterResourceGrantPolicy](cr.html#clusterresourcegrantpolicy):
 
-{% raw %}
-
 ```yaml
 apiVersion: multitenancy.deckhouse.io/v1alpha2
 kind: ClusterResourceGrantPolicy
@@ -1159,8 +1142,6 @@ spec:
         matchLabels:
           shared: "true"
 ```
-
-{% endraw %}
 
 Политика дополнительно разрешает использовать:
 
@@ -1181,8 +1162,6 @@ d8 k get clusterresourcegrantpolicy extra-roles -o jsonpath='{.status.conditions
 
 Чтобы разрешить проектам использовать только LoadBalancerClass со значениями `internal-lb` и `edge-lb`, а `internal-lb` использовать по умолчанию, создайте следующий [ресурс ClusterResourceGrantPolicy](cr.html#clusterresourcegrantpolicy):
 
-{% raw %}
-
 ```yaml
 apiVersion: multitenancy.deckhouse.io/v1alpha2
 kind: ClusterResourceGrantPolicy
@@ -1200,8 +1179,6 @@ spec:
         - edge-lb
 ```
 
-{% endraw %}
-
 В отличие от StorageClass, ClusterIssuer и ClusterRole, ресурс LoadBalancerClass не является отдельным ресурсом Kubernetes. Политика определяет допустимые значения поля `.spec.loadBalancerClass` для сервисов типа `LoadBalancer`.
 
 При создании Service типа `LoadBalancer` без значения `.spec.loadBalancerClass` в это поле автоматически подставляется `internal-lb`. Если указано значение, которого нет в списке разрешённых, создание Service отклоняется.
@@ -1213,8 +1190,6 @@ spec:
 Чтобы разрешить определённым проектам использовать все ресурсы выбранного типа без явного перечисления, установите [`availabilityDefault: All`](cr.html#clusterresourcegrantpolicy-v1alpha2-spec-resources-availabilitydefault).
 
 Следующая политика разрешает всем проектам с лейблом `environment: sandbox` использовать любые StorageClass:
-
-{% raw %}
 
 ```yaml
 apiVersion: multitenancy.deckhouse.io/v1alpha2
@@ -1230,8 +1205,6 @@ spec:
       availabilityDefault: All
 ```
 
-{% endraw %}
-
 Обычно для управления доступом достаточно явно указывать разрешённые ресурсы с помощью [`allowed`](cr.html#clusterresourcegrantpolicy-v1alpha2-spec-resources-allowed) или [`allowedSelector`](cr.html#clusterresourcegrantpolicy-v1alpha2-spec-resources-allowedselector). Используйте параметр `availabilityDefault: All`, если выбранным проектам необходимо предоставить доступ ко всем ресурсам указанного типа.
 
 #### Запрет отдельных ресурсов
@@ -1239,8 +1212,6 @@ spec:
 Чтобы запретить проектам использовать отдельные ресурсы, оставив остальные доступными, используйте параметр [`denied`](cr.html#clusterresourcegrantpolicy-v1alpha2-spec-resources-denied) или [`deniedSelector`](cr.html#clusterresourcegrantpolicy-v1alpha2-spec-resources-deniedselector).
 
 Следующая политика запрещает проектам с лейблом `environment: dev` использовать StorageClass с именами `expensive-nvme` и `archived-hdd`:
-
-{% raw %}
 
 ```yaml
 apiVersion: multitenancy.deckhouse.io/v1alpha2
@@ -1258,8 +1229,6 @@ spec:
         - archived-hdd
 ```
 
-{% endraw %}
-
 Запрет имеет приоритет над разрешением. Если ресурс соответствует одновременно `denied` или `deniedSelector` и `allowed` или `allowedSelector`, он считается недоступным.
 
 #### Управление доступом с помощью label-селекторов
@@ -1267,8 +1236,6 @@ spec:
 Чтобы управлять доступом к ресурсам без перечисления их имён, используйте параметры [`allowedSelector`](cr.html#clusterresourcegrantpolicy-v1alpha2-spec-resources-allowedselector) и [`deniedSelector`](cr.html#clusterresourcegrantpolicy-v1alpha2-spec-resources-deniedselector). Селекторы позволяют разрешать или запрещать ресурсы на основе их лейблов.
 
 Следующая политика разрешает проектам с лейблом `tier: shared` использовать StorageClass с лейблом `shared: "true"`, за исключением StorageClass с лейблом `deprecated: "true"`:
-
-{% raw %}
 
 ```yaml
 apiVersion: multitenancy.deckhouse.io/v1alpha2
@@ -1288,8 +1255,6 @@ spec:
         matchLabels:
           deprecated: "true"
 ```
-
-{% endraw %}
 
 #### Выдача кластерных ресурсов через шаблон проекта
 
@@ -1415,8 +1380,6 @@ resource <RESOURCE_NAME> is not available to project <PROJECT_NAME>
 
 Например, чтобы настроить проверку StorageClass, указанного в поле `.spec.storageClassName` ресурса PostgresDatabase, добавьте в Helm-чарт модуля следующий ресурс:
 
-{% raw %}
-
 ```yaml
 apiVersion: multitenancy.deckhouse.io/v1alpha1
 kind: GrantableClusterResourceReference
@@ -1436,13 +1399,9 @@ spec:
       defaulting: Coerce
 ```
 
-{% endraw %}
-
 В этом примере `storageclasses` — имя существующего GrantableClusterResourceDefinition, а `Coerce` позволяет при создании PostgresDatabase подставить доступный проекту StorageClass по умолчанию, если значение отсутствует или недоступно проекту.
 
 Если ресурсы из `rule` хранят ссылку по разным путям, ограничьте элементы `fieldPaths` конкретными ресурсами с помощью параметра `resources`. Например, Job и CronJob хранят имя PriorityClass по разным путям. В этом случае, когда PriorityClass зарегистрирован как `priorityclasses`, воспользуйтесь следующим примером:
-
-{% raw %}
 
 ```yaml
 apiVersion: multitenancy.deckhouse.io/v1alpha1
@@ -1465,8 +1424,6 @@ spec:
       path: $.spec.jobTemplate.spec.template.spec.priorityClassName
 ```
 
-{% endraw %}
-
 Для каждого объекта используется самый специфичный из подходящих элементов `fieldPaths`: элемент, ограниченный `resources`, приоритетнее элементов, ограниченных только `apiGroups` или `apiVersions`, и элемента без ограничений, который применяется ко всем остальным ресурсам из `rule`. `*` в `resources` не ограничивает элемент: это то же самое, что не указывать параметр.
 
 Описание параметров GrantableClusterResourceReference, режимов подстановки значений по умолчанию, условий `match` и настройки ресурсов с несколькими API-версиями приведено [в описании ресурса](cr.html#grantableclusterresourcereference).
@@ -1479,8 +1436,6 @@ spec:
 1. Создайте один или несколько ресурсов [GrantableClusterResourceReference](cr.html#grantableclusterresourcereference), чтобы определить поля, в которых используются ссылки на него.
 
    Например, чтобы зарегистрировать ресурс MyClusterResource, добавьте в Helm-чарт модуля следующий ресурс:
-
-   {% raw %}
 
    ```yaml
    apiVersion: multitenancy.deckhouse.io/v1alpha1
@@ -1502,8 +1457,6 @@ spec:
              operator: Exists
    ```
 
-   {% endraw %}
-
    В этом примере зарегистрированные ресурсы по умолчанию доступны проектам. Ресурсы с меткой `my.example.com/internal` исключаются из доступных.
 
    В `grantedResource` можно указать только cluster-scoped-ресурс. Определение namespaced-ресурса (например, Secret) отклоняется при создании и изменении. Если такое определение всё же сохранено, оно не обрабатывается: ни один проект не получает его AvailableClusterResource, а условие `GrantedResourceValid` равно `False` (подробнее, в разделе [«Проверка состояния регистрации ресурса»](#проверка-состояния-регистрации-ресурса)). Ресурс, CRD которого ещё не установлена, принимается: его область видимости проверяется, когда ресурс начинает обслуживаться.
@@ -1517,8 +1470,6 @@ spec:
 Пользователи проекта видят доступные cluster-wide-ресурсы в AvailableClusterResource (подробнее, в разделе [«Просмотр доступных cluster-wide-ресурсов»](#просмотр-доступных-cluster-wide-ресурсов)), но обычно не могут читать сами ресурсы. Чтобы им было проще выбрать, перечислите выводимые поля в [`spec.catalogFields`](cr.html#grantableclusterresourcedefinition-v1alpha1-spec-catalogfields) GrantableClusterResourceDefinition. Контроллер копирует значения этих полей из каждого доступного ресурса в `status.available[].fields` AvailableClusterResource.
 
 Пример:
-
-{% raw %}
 
 ```yaml
 apiVersion: multitenancy.deckhouse.io/v1alpha1
@@ -1535,8 +1486,6 @@ spec:
     - name: region
       path: $.metadata.labels['my.example.com/region']
 ```
-
-{% endraw %}
 
 Правила:
 

@@ -1,7 +1,6 @@
 ---
 title: "The multitenancy-manager module: usage examples"
 ---
-{% raw %}
 
 ## Default project templates
 
@@ -86,16 +85,12 @@ To create a project, follow these steps:
        extendedMonitoringEnabled: true
    ```
 
-   {% endraw %}
-
    {% alert level="info" %}
    The Project API is served as `deckhouse.io/v1alpha3`. `v1alpha2` manifests keep working: a conversion webhook lifts `parameters.administrators` and `parameters.resourceQuota` into the `.spec.administrators` and `.spec.quota` standard fields automatically. If one administrator does not fit `.spec.administrators` (for example, it has `accessLevel`), the whole list stays in `parameters` and `.spec.administrators` is not filled. The same holds for a quota with anything other than quantities (for example, `scopes`), for a quota with the number `0` anywhere in it, and for an empty list or quota. A template that checks a value with `with` skips the number `0` and sets no limit, while in `.spec.quota` it would be a hard limit of zero. The string `"0"` is lifted into `.spec.quota` as such a limit. A `v1alpha2` client reads a `0` from `.spec.quota` as the string `"0"`.
    A project cannot set `.spec.administrators` together with `parameters.administrators`, or `.spec.quota` together with `parameters.resourceQuota`.
 
    The `deckhouse.io/v1alpha1` version is no longer served: the API server refuses a manifest with `apiVersion: deckhouse.io/v1alpha1`, so change its `apiVersion` to `deckhouse.io/v1alpha3` and move `parameters.administrators` and `parameters.resourceQuota` into the standard fields before applying it.
    {% endalert %}
-
-   {% raw %}
 
 1. To check the status of the project, execute the command:
 
@@ -333,13 +328,9 @@ For example:
 
 You can change the template of the created project to the existing one.
 
-{% endraw %}
-
 {% alert level="warning" %}
 Note that changing the template may cause a resource conflict. If the template chart contains resources that are already present in the namespace, you will not be able to apply the template.
 {% endalert %}
-
-{% raw %}
 
 ## Standard project fields
 
@@ -365,13 +356,9 @@ spec:
     limits.memory: 10Gi
 ```
 
-{% endraw %}
-
 {% alert level="warning" %}
 A Helm `resourcesTemplate` that renders a ResourceQuota or an AuthorizationRule keeps rendering it, next to the ResourceQuota and the ProjectRoleBinding that the standard fields create. A pod in such a project has to fit every ResourceQuota of its namespace, and the access such AuthorizationRules grant adds to the access of the standard fields.
 {% endalert %}
-
-{% raw %}
 
 ## Granting access within a project
 
@@ -596,6 +583,8 @@ For the same reason a project cannot name such a user or group among its adminis
 
 The following template sets the pod security profile and the network isolation with structured fields and creates two objects in `manifests`, a LimitRange with the default limits from the project parameters and a ConfigMap with the names of the project and of its template:
 
+{% raw %}
+
 ```yaml
 apiVersion: deckhouse.io/v1alpha2
 kind: ProjectTemplate
@@ -635,6 +624,8 @@ spec:
       project: {{ .projectName | quote }}
       template: {{ .projectTemplateName | quote }}
 ```
+
+{% endraw %}
 
 Once the `ManifestsApplied` condition is `True`, the main namespace of every project of the template has the `container-defaults` LimitRange and the `project-info` ConfigMap.
 To check the condition and to list the applied objects, use the commands:
@@ -693,6 +684,8 @@ The following table shows where the objects of such a text go:
 
 For example, the following Helm text sets the pod security profile from a parameter and creates a LimitRange in the main namespace of each project:
 
+{% raw %}
+
 ```yaml
 apiVersion: deckhouse.io/v1alpha1
 kind: ProjectTemplate
@@ -727,6 +720,8 @@ spec:
             cpu: 500m
             memory: 512Mi
 ```
+
+{% endraw %}
 
 In the structured form, the profile goes to `podSecurityStandard` and the LimitRange goes to `manifests`.
 The text did not render the `required-requests-*` OperationPolicy, so the template declares the `requiredRequests` parameter with `default: false`:
@@ -845,8 +840,6 @@ To create your own template:
    ```shell
    d8 k get projecttemplates <NEW_TEMPLATE_NAME>
    ```
-
-{% endraw %}
 
 ## Using labels to manage resources
 
@@ -1059,8 +1052,6 @@ Because the labels of a Project and of its namespaces take part in the match, th
 
 To allow projects to use only the `fast-ssd` and `standard` StorageClasses and use `fast-ssd` by default, create the following [ClusterResourceGrantPolicy](cr.html#clusterresourcegrantpolicy):
 
-{% raw %}
-
 ```yaml
 apiVersion: multitenancy.deckhouse.io/v1alpha2
 kind: ClusterResourceGrantPolicy
@@ -1078,8 +1069,6 @@ spec:
         - standard
 ```
 
-{% endraw %}
-
 When a PersistentVolumeClaim is created without a value in `spec.storageClassName`, `fast-ssd` is automatically assigned to this field. If a StorageClass that is not in the allowed list is specified, the PersistentVolumeClaim is rejected.
 
 StorageClass uses the [`Coerce`](cr.html#grantableclusterresourcereference-v1alpha1-spec-fieldpaths-defaulting) default assignment mode. If the built-in Kubernetes admission controller has already assigned a default class to `spec.storageClassName` that is unavailable to the project, the value is replaced with `fast-ssd` instead of rejecting the PersistentVolumeClaim. The replacement is reported as an admission warning in the response to the request, so the `d8 k` output shows both the original value and the substituted one.
@@ -1093,8 +1082,6 @@ d8 k get available storageclasses -n <PROJECT_NAME> -o yaml
 #### Restricting ClusterIssuer for a project
 
 To allow projects to use only the `letsencrypt-prod` and `vault-issuer` ClusterIssuers and use `letsencrypt-prod` by default, create the following [ClusterResourceGrantPolicy](cr.html#clusterresourcegrantpolicy):
-
-{% raw %}
 
 ```yaml
 apiVersion: multitenancy.deckhouse.io/v1alpha2
@@ -1112,8 +1099,6 @@ spec:
         - letsencrypt-prod
         - vault-issuer
 ```
-
-{% endraw %}
 
 The policy applies to a ClusterIssuer specified in either of the following ways:
 
@@ -1134,8 +1119,6 @@ By default, only ClusterRoles with the `rbac.deckhouse.io/delegatable` label can
 
 To allow projects belonging to the `payments` team to use additional ClusterRoles, create the following [ClusterResourceGrantPolicy](cr.html#clusterresourcegrantpolicy):
 
-{% raw %}
-
 ```yaml
 apiVersion: multitenancy.deckhouse.io/v1alpha2
 kind: ClusterResourceGrantPolicy
@@ -1153,8 +1136,6 @@ spec:
         matchLabels:
           shared: "true"
 ```
-
-{% endraw %}
 
 The policy additionally allows the following ClusterRoles:
 
@@ -1175,8 +1156,6 @@ When a RoleBinding is created or modified, the ClusterRole specified in it is ch
 
 To allow projects to use only the `internal-lb` and `edge-lb` LoadBalancerClass values and use `internal-lb` by default, create the following [ClusterResourceGrantPolicy](cr.html#clusterresourcegrantpolicy):
 
-{% raw %}
-
 ```yaml
 apiVersion: multitenancy.deckhouse.io/v1alpha2
 kind: ClusterResourceGrantPolicy
@@ -1194,8 +1173,6 @@ spec:
         - edge-lb
 ```
 
-{% endraw %}
-
 Unlike StorageClass, ClusterIssuer, and ClusterRole, LoadBalancerClass is not a separate Kubernetes resource. The policy defines the allowed values of the `.spec.loadBalancerClass` field for Services of the `LoadBalancer` type.
 
 When a Service of the `LoadBalancer` type is created without a value in `.spec.loadBalancerClass`, `internal-lb` is automatically assigned to this field. If a value that is not in the allowed list is specified, the Service is rejected.
@@ -1207,8 +1184,6 @@ The policy does not apply to Services of other types.
 To allow specific projects to use all resources of a selected type without listing them explicitly, set [`availabilityDefault: All`](cr.html#clusterresourcegrantpolicy-v1alpha2-spec-resources-availabilitydefault).
 
 The following policy allows all projects with the `environment: sandbox` label to use any StorageClass:
-
-{% raw %}
 
 ```yaml
 apiVersion: multitenancy.deckhouse.io/v1alpha2
@@ -1224,8 +1199,6 @@ spec:
       availabilityDefault: All
 ```
 
-{% endraw %}
-
 Usually, explicitly specifying allowed resources using [`allowed`](cr.html#clusterresourcegrantpolicy-v1alpha2-spec-resources-allowed) or [`allowedSelector`](cr.html#clusterresourcegrantpolicy-v1alpha2-spec-resources-allowedselector) is sufficient for access management. Use `availabilityDefault: All` when the selected projects need access to all resources of the specified type.
 
 #### Denying individual resources
@@ -1233,8 +1206,6 @@ Usually, explicitly specifying allowed resources using [`allowed`](cr.html#clust
 To prevent projects from using individual resources while keeping the others available, use [`denied`](cr.html#clusterresourcegrantpolicy-v1alpha2-spec-resources-denied) or [`deniedSelector`](cr.html#clusterresourcegrantpolicy-v1alpha2-spec-resources-deniedselector).
 
 The following policy prevents projects with the `environment: dev` label from using the `expensive-nvme` and `archived-hdd` StorageClasses:
-
-{% raw %}
 
 ```yaml
 apiVersion: multitenancy.deckhouse.io/v1alpha2
@@ -1252,8 +1223,6 @@ spec:
         - archived-hdd
 ```
 
-{% endraw %}
-
 Deny rules take precedence over allow rules. If a resource matches both `denied` or `deniedSelector` and `allowed` or `allowedSelector`, it is considered unavailable.
 
 #### Managing access using label selectors
@@ -1261,8 +1230,6 @@ Deny rules take precedence over allow rules. If a resource matches both `denied`
 To manage access to resources without listing their names, use [`allowedSelector`](cr.html#clusterresourcegrantpolicy-v1alpha2-spec-resources-allowedselector) and [`deniedSelector`](cr.html#clusterresourcegrantpolicy-v1alpha2-spec-resources-deniedselector). Selectors allow or deny resources based on their labels.
 
 The following policy allows projects with the `tier: shared` label to use StorageClasses with the `shared: "true"` label, except for StorageClasses with the `deprecated: "true"` label:
-
-{% raw %}
 
 ```yaml
 apiVersion: multitenancy.deckhouse.io/v1alpha2
@@ -1282,8 +1249,6 @@ spec:
         matchLabels:
           deprecated: "true"
 ```
-
-{% endraw %}
 
 #### Granting cluster-scoped resources through a project template
 
@@ -1408,8 +1373,6 @@ If a module resource contains a field that references a cluster-wide resource al
 
 For example, to configure validation of the StorageClass specified in the `.spec.storageClassName` field of a PostgresDatabase resource, add the following resource to the module's Helm chart:
 
-{% raw %}
-
 ```yaml
 apiVersion: multitenancy.deckhouse.io/v1alpha1
 kind: GrantableClusterResourceReference
@@ -1429,13 +1392,9 @@ spec:
       defaulting: Coerce
 ```
 
-{% endraw %}
-
 In this example, `storageclasses` is the name of an existing GrantableClusterResourceDefinition, while `Coerce` allows the default StorageClass available to the project to be assigned when a PostgresDatabase is created if the value is missing or unavailable to the project.
 
 If the resources listed in `rule` store the reference at different paths, limit `fieldPaths` items to specific resources using the `resources` parameter. For example, a Job and a CronJob store the PriorityClass name at different paths. In this case, when PriorityClass is registered as `priorityclasses`, use the following example:
-
-{% raw %}
 
 ```yaml
 apiVersion: multitenancy.deckhouse.io/v1alpha1
@@ -1458,8 +1417,6 @@ spec:
       path: $.spec.jobTemplate.spec.template.spec.priorityClassName
 ```
 
-{% endraw %}
-
 For each object, the most specific of the matching `fieldPaths` items is used: an item limited by `resources` takes precedence over items limited only by `apiGroups` or `apiVersions` and over an item without limits, which applies to all other resources from `rule`. `*` in `resources` does not limit the item: it has the same effect as omitting the parameter.
 
 For descriptions of GrantableClusterResourceReference parameters, default assignment modes, `match` conditions, and configuration for resources with multiple API versions, refer to the [resource description](cr.html#grantableclusterresourcereference).
@@ -1472,8 +1429,6 @@ To add access management for a new cluster-wide resource:
 1. Create one or more [GrantableClusterResourceReference](cr.html#grantableclusterresourcereference) resources to define the fields that reference it.
 
    For example, to register the MyClusterResource resource, add the following resource to the module's Helm chart:
-
-   {% raw %}
 
    ```yaml
    apiVersion: multitenancy.deckhouse.io/v1alpha1
@@ -1495,8 +1450,6 @@ To add access management for a new cluster-wide resource:
              operator: Exists
    ```
 
-   {% endraw %}
-
    In this example, the registered resources are available to projects by default. Resources with the `my.example.com/internal` label are excluded from the available resources.
 
    Only a cluster-scoped resource can be specified in `grantedResource`. A definition of a namespaced resource (for example, Secret) is refused when it is created or updated. If such a definition is stored anyway, it is not processed: no project gets its AvailableClusterResource, and the `GrantedResourceValid` condition is `False` (read more in section ["Checking resource registration status"](#checking-resource-registration-status)). A resource whose CRD is not installed yet is accepted: its scope is checked once the resource is served.
@@ -1510,8 +1463,6 @@ To add access management for a new cluster-wide resource:
 Project users see the available cluster-wide resources in AvailableClusterResource (read more in section ["Viewing available cluster-wide resources"](#viewing-available-cluster-wide-resources)), but usually cannot read the resources themselves. To help them choose, list the fields to show in [`spec.catalogFields`](cr.html#grantableclusterresourcedefinition-v1alpha1-spec-catalogfields) of the GrantableClusterResourceDefinition. The controller copies the values of these fields from every available resource into `status.available[].fields` of AvailableClusterResource.
 
 For example:
-
-{% raw %}
 
 ```yaml
 apiVersion: multitenancy.deckhouse.io/v1alpha1
@@ -1528,8 +1479,6 @@ spec:
     - name: region
       path: $.metadata.labels['my.example.com/region']
 ```
-
-{% endraw %}
 
 Rules:
 
