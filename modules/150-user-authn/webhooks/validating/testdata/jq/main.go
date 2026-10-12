@@ -19,8 +19,8 @@ limitations under the License.
 // a dependency, so TestMain builds this and puts it on PATH rather than adding a package to the
 // image. It lives under testdata so that it is built only by those tests.
 //
-// It implements only what those hooks use — -r, -n, --arg, a program operand and input from a file
-// or stdin — and refuses anything else instead of quietly behaving differently from jq.
+// It implements only what those hooks use — -r, -R, -n, -c, --arg, a program operand and input from a
+// file or stdin — and refuses anything else instead of quietly behaving differently from jq.
 package main
 
 import (
@@ -43,19 +43,23 @@ func main() {
 
 func run(args []string, stdin io.Reader, stdout io.Writer) error {
 	var (
-		raw, nullInput bool
-		names          []string
-		values         []any
-		program        string
-		files          []string
+		raw, rawInput, nullInput, compact bool
+		names                             []string
+		values                            []any
+		program                           string
+		files                             []string
 	)
 
 	for i := 0; i < len(args); i++ {
 		switch arg := args[i]; {
 		case arg == "-r" || arg == "--raw-output":
 			raw = true
+		case arg == "-R" || arg == "--raw-input":
+			rawInput = true
 		case arg == "-n" || arg == "--null-input":
 			nullInput = true
+		case arg == "-c" || arg == "--compact-output":
+			compact = true
 		case arg == "--arg":
 			if i+2 >= len(args) {
 				return fmt.Errorf("--arg needs a name and a value")
@@ -86,14 +90,20 @@ func run(args []string, stdin io.Reader, stdout io.Writer) error {
 	}
 
 	inputs := []any{nil}
-	if !nullInput {
+	switch {
+	case nullInput:
+	case rawInput:
+		if inputs, err = readLines(files, stdin); err != nil {
+			return err
+		}
+	default:
 		if inputs, err = readInputs(files, stdin); err != nil {
 			return err
 		}
 	}
 
 	for _, input := range inputs {
-		if err := emit(code.Run(input, values...), raw, stdout); err != nil {
+		if err := emit(code.Run(input, values...), raw, compact, stdout); err != nil {
 			return err
 		}
 	}
@@ -104,19 +114,12 @@ func run(args []string, stdin io.Reader, stdout io.Writer) error {
 // readInputs decodes the stream of JSON values jq accepts, not a single document: the hooks pipe
 // several objects into jq at once.
 func readInputs(files []string, stdin io.Reader) ([]any, error) {
-	var readers []io.Reader
-	for _, name := range files {
-		content, err := os.ReadFile(name)
-		if err != nil {
-			return nil, fmt.Errorf("reading %s: %w", name, err)
-		}
-		readers = append(readers, strings.NewReader(string(content)))
-	}
-	if len(readers) == 0 {
-		readers = append(readers, stdin)
+	input, err := inputReader(files, stdin)
+	if err != nil {
+		return nil, err
 	}
 
-	decoder := json.NewDecoder(io.MultiReader(readers...))
+	decoder := json.NewDecoder(input)
 	var inputs []any
 	for {
 		var value any
@@ -130,7 +133,42 @@ func readInputs(files []string, stdin io.Reader) ([]any, error) {
 	}
 }
 
-func emit(iter gojq.Iter, raw bool, stdout io.Writer) error {
+// readLines gives every line of the input as a string, as jq -R does, the last one also when no newline
+// ends it.
+func readLines(files []string, stdin io.Reader) ([]any, error) {
+	input, err := inputReader(files, stdin)
+	if err != nil {
+		return nil, err
+	}
+	content, err := io.ReadAll(input)
+	if err != nil {
+		return nil, fmt.Errorf("reading input: %w", err)
+	}
+
+	lines := []any{}
+	for line := range strings.Lines(string(content)) {
+		lines = append(lines, strings.TrimSuffix(line, "\n"))
+	}
+	return lines, nil
+}
+
+// inputReader reads the files in order, or stdin when no file is given.
+func inputReader(files []string, stdin io.Reader) (io.Reader, error) {
+	if len(files) == 0 {
+		return stdin, nil
+	}
+	readers := make([]io.Reader, 0, len(files))
+	for _, name := range files {
+		content, err := os.ReadFile(name)
+		if err != nil {
+			return nil, fmt.Errorf("reading %s: %w", name, err)
+		}
+		readers = append(readers, strings.NewReader(string(content)))
+	}
+	return io.MultiReader(readers...), nil
+}
+
+func emit(iter gojq.Iter, raw, compact bool, stdout io.Writer) error {
 	for {
 		result, ok := iter.Next()
 		if !ok {
@@ -146,6 +184,9 @@ func emit(iter gojq.Iter, raw bool, stdout io.Writer) error {
 			continue
 		}
 		encoded, err := json.MarshalIndent(result, "", "  ")
+		if compact {
+			encoded, err = json.Marshal(result)
+		}
 		if err != nil {
 			return err
 		}

@@ -184,3 +184,33 @@ func snapshot(t *testing.T, object map[string]any) map[string]any {
 
 	return map[string]any{"filterResult": filtered}
 }
+
+// shell-operator logs a plain-text line of a hook at info, so the hook sends its stderr through jq as
+// JSON warnings, one per line, the last line too when no newline ends it.
+func TestHookStderrIsLoggedAsWarnings(t *testing.T) {
+	script, err := os.ReadFile(validatingHook)
+	require.NoError(t, err)
+	var redirect string
+	for line := range strings.Lines(string(script)) {
+		if strings.HasPrefix(line, "exec 3>&2 2>") {
+			redirect = line
+		}
+	}
+	require.NotEmpty(t, redirect, "the hook no longer sends its stderr through jq")
+
+	cmd := exec.Command("bash", "-c", redirect+`echo "jq: error: null cannot be iterated" >&2; printf 'no newline' >&2`)
+	var stderr strings.Builder
+	cmd.Stderr = &stderr
+	require.NoError(t, cmd.Run())
+
+	var got []map[string]string
+	for line := range strings.Lines(stderr.String()) {
+		var entry map[string]string
+		require.NoErrorf(t, json.Unmarshal([]byte(line), &entry), "not a JSON line: %q", line)
+		got = append(got, entry)
+	}
+	require.Equal(t, []map[string]string{
+		{"level": "warn", "msg": "jq: error: null cannot be iterated"},
+		{"level": "warn", "msg": "no newline"},
+	}, got)
+}

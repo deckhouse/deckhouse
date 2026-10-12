@@ -48,7 +48,7 @@ const (
 // the previous release branch, so that its webhook-handler pods answer Project conversions while an
 // upgrade rolls out, and both branches pin the same digest. Neither copy of the hook changes without
 // this constant, and a change to it here is a change the other branch has to take as well.
-const conversionHookSHA256 = "70b50e01b65c06b2bb4d881bdb7abdd7c51b9719b940e054933a690372928e0c"
+const conversionHookSHA256 = "ba8f4c038323649db04ce5ac487a1904740da5f7e1639a7425688c140eeb46f1"
 
 // conversionFixtures holds the golden fixtures of the conversion hooks, a directory per hook and a file
 // per conversion path. The fixtures describe the hooks, not this test, so any copy of the hooks can be

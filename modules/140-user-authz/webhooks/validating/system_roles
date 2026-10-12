@@ -103,4 +103,8 @@ function __main__() {
   deny_request "$clusterRoleName"
 }
 
+# shell-operator logs every plain-text line of a hook at info, stderr included; a JSON line carries
+# its own level, so the errors of jq and the other tools the webhook runs go out as warnings.
+exec 3>&2 2> >(jq -R -c '{level: "warn", msg: .}' >&3)
+
 hook::run "$@"
