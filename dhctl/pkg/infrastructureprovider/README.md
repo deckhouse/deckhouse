@@ -38,7 +38,8 @@ provider's entry there does not change whether its bundle is fetched.
 | `ParseConfig` → `ensureProviderBundleFromConfig` | `config parse cluster-configuration --file`, the install-deckhouse bootstrap phase, `deckhouse create-deployment` | same |
 | `ParseConfigFromDataEnsureProvider` → `ensureProviderBundleFromConfig` | commander parse that is handed no bundle directory | same |
 | `commander.ParseMetaConfig` → `EnsureProviderBundleFromCluster` | commander check/converge/destroy | **upstream registry read from the target cluster** (registry-config) |
-| `parseConfigFromCluster` → `updateProviderBundle` | parse from the cluster (`ParseConfigFromCluster`, `ParseConfigInCluster`) | `GetRegistryDataPreferUpstream`: the upstream registry outside the cluster, the cluster's registry inside it |
+| `parseConfigFromCluster` → `prepareClusterProviderBundle` → `updateProviderBundle` | parse from the cluster (`ParseConfigFromCluster`, `ParseConfigInCluster`) | `GetRegistryDataPreferUpstream`: the upstream registry outside the cluster, the cluster's registry inside it |
+| `PrepareProviderBundle` → `prepareClusterProviderBundle` → `updateProviderBundle` | `config edit provider-cluster-configuration` | same |
 
 All of them end in `updateProviderBundle` → `unpackProviderBundle` → `loadBundleSchemas`
 (`pkg/config/provider_bundle.go`). A bundle resolved through the module chain (below) is pulled

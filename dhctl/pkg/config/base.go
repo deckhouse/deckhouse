@@ -258,6 +258,39 @@ func clusterRegistryData(kubeCl *client.KubernetesClient, inCluster bool) func(c
 	}
 }
 
+// prepareClusterProviderBundle delivers the bundle of the external provider the cluster runs and loads
+// its schemas, returning its directory: "" for a static cluster and for a provider whose schemas ship
+// in candi. The registry is read only when the bundle has to be downloaded, so a bundle already on
+// this machine needs none.
+func prepareClusterProviderBundle(
+	ctx context.Context,
+	kubeCl *client.KubernetesClient,
+	provider string,
+	registryData func(ctx context.Context) (*image.RegistryConfig, string, error),
+	globalOptions *options.GlobalOptions,
+) (string, error) {
+	if IsInternalCloudProviderBundle(provider, globalOptions) {
+		return "", nil
+	}
+
+	lookup := clusterModuleDocs(
+		func(context.Context) (*client.KubernetesClient, error) { return kubeCl, nil },
+		provider,
+		globalOptions.KubeInCluster,
+	)
+
+	registry := func(ctx context.Context) (*image.RegistryConfig, error) {
+		conf, _, err := registryData(ctx)
+		return conf, err
+	}
+
+	bundleDir, _, err := updateProviderBundle(ctx, provider, lookup, registry, globalOptions)
+	if err != nil {
+		return "", fmt.Errorf("prepare provider bundle: %w", err)
+	}
+	return bundleDir, nil
+}
+
 func parseConfigFromCluster(ctx context.Context, kubeCl *client.KubernetesClient, validatorProvider MetaConfigValidatorProvider, globalOptions *options.GlobalOptions, operation string) (*MetaConfig, error) {
 	metaConfig := &MetaConfig{Operation: operation}
 
@@ -281,30 +314,11 @@ func parseConfigFromCluster(ctx context.Context, kubeCl *client.KubernetesClient
 		}
 	}
 
-	if !IsInternalCloudProviderBundle(cloudProvider, globalOptions) {
-		lookup := clusterModuleDocs(
-			func(context.Context) (*client.KubernetesClient, error) { return kubeCl, nil },
-			cloudProvider,
-			globalOptions.KubeInCluster,
-		)
-
-		registry := func(ctx context.Context) (*image.RegistryConfig, error) {
-			conf, _, err := registryData(ctx)
-			return conf, err
-		}
-
-		bundleDir, _, err := updateProviderBundle(
-			ctx,
-			cloudProvider,
-			lookup,
-			registry,
-			globalOptions,
-		)
-		if err != nil {
-			return nil, fmt.Errorf("prepare provider bundle: %w", err)
-		}
-		metaConfig.ProviderBundleDir = bundleDir
+	bundleDir, err := prepareClusterProviderBundle(ctx, kubeCl, cloudProvider, registryData, globalOptions)
+	if err != nil {
+		return nil, err
 	}
+	metaConfig.ProviderBundleDir = bundleDir
 
 	// The lazy provider-plugin and terraform-manager pulls read these off DeckhouseConfig long after
 	// this parse, so a cloud cluster needs them whether or not anything was downloaded above.
@@ -887,6 +901,30 @@ func PrepareCandiDir(ctx context.Context, kubeCl *client.KubernetesClient, globa
 	}
 
 	return prepareCandiDir(ctx, conf, globalOptions)
+}
+
+// PrepareProviderBundle loads the schemas of the external provider the cluster runs into this
+// process, unpacking its bundle first unless it is already on disk. Nothing else does it for a
+// command that validates a provider document without parsing the whole configuration — `config
+// edit provider-cluster-configuration` — and the schema store reads only candi by itself. Called
+// after PrepareCandiDir: the schema store is built once per process, by the first call that needs it.
+func PrepareProviderBundle(ctx context.Context, kubeCl *client.KubernetesClient, globalOptions *options.GlobalOptions) error {
+	// test only
+	if globalOptions == nil {
+		return nil
+	}
+
+	clusterConfig, err := readClusterConfigFromCluster(ctx, kubeCl)
+	if err != nil {
+		return fmt.Errorf("read cluster configuration: %w", err)
+	}
+
+	_, err = prepareClusterProviderBundle(
+		ctx, kubeCl, clusterConfig.Provider,
+		clusterRegistryData(kubeCl, globalOptions.KubeInCluster),
+		withDownloadDir(globalOptions),
+	)
+	return err
 }
 
 func GetRPPSignCheck() bool {

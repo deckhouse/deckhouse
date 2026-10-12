@@ -93,6 +93,13 @@ func SecretEdit(
 	if err != nil {
 		return err
 	}
+	// The provider document is validated against the schemas of the provider's bundle, which the
+	// schema store does not read by itself.
+	if secret == dh_config.LegacyProviderClusterConfigSecret {
+		if err := dh_config.PrepareProviderBundle(ctx, kubeCl, globalOptions); err != nil {
+			return err
+		}
+	}
 	tomb.WithoutInterruptions(func() { modifiedData, err = abstractEditing(ctx, configData, globalOptions, editOpts) })
 	if err != nil {
 		return err

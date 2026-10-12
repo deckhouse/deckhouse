@@ -805,3 +805,43 @@ func requireMissingBundleError(t *testing.T, err error, dir string) {
 	require.NotContains(t, err.Error(), "no cluster configuration schema")
 	require.NotContains(t, err.Error(), "delete the state cache")
 }
+
+// `config edit provider-cluster-configuration` validates the provider document by itself, without
+// parsing the configuration, so nothing else would load the bundle's schemas for it. Air-gapped, the
+// bundle bootstrap left behind is all there is: it is loaded as it lies, and the registry is not read.
+func TestPrepareProviderBundleLoadsTheUnpackedBundleWithoutTheRegistry(t *testing.T) {
+	const (
+		provider = "prepedit"
+		digest   = "sha256:prepedit"
+	)
+
+	globalOptions := ensureTestGlobalOptions(t)
+	writeUnpackedBundle(t, globalOptions.DownloadDir, provider, digest, "PrepEditConfiguration")
+
+	stubProviderDigest(t, digest, nil)
+	var downloads atomic.Int32
+	stubProviderDownload(t, "PrepEditConfiguration", 0, &downloads)
+
+	// No deckhouse-registry: reading the registry would fail the call.
+	kubeCl := client.NewFakeKubernetesClient()
+	testCreateKubeSystemSecret(t, kubeCl, clusterConfigSecretName, map[string][]byte{
+		"cluster-configuration.yaml": []byte(ensureClusterConfigDoc(provider)),
+	})
+
+	require.NoError(t, PrepareProviderBundle(context.Background(), kubeCl, globalOptions))
+	require.True(t, NewSchemaStore(globalOptions).ProviderSchemasLoaded(provider, digest))
+	require.Zero(t, downloads.Load(), "the bundle was already unpacked")
+}
+
+func TestPrepareProviderBundleStaticNoop(t *testing.T) {
+	var digestCalls atomic.Int32
+	stubProviderDigest(t, "sha256:unused", &digestCalls)
+
+	kubeCl := client.NewFakeKubernetesClient()
+	testCreateKubeSystemSecret(t, kubeCl, clusterConfigSecretName, map[string][]byte{
+		"cluster-configuration.yaml": []byte("apiVersion: deckhouse.io/v1\nkind: ClusterConfiguration\nclusterType: Static\n"),
+	})
+
+	require.NoError(t, PrepareProviderBundle(context.Background(), kubeCl, ensureTestGlobalOptions(t)))
+	require.Zero(t, digestCalls.Load(), "a static cluster has no provider bundle")
+}
