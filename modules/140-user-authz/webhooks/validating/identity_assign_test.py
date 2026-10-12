@@ -358,6 +358,39 @@ def open_car(*, allow_system=True, **kwargs):
                   allow_system=allow_system, **kwargs)
 
 
+class TestCustomAggregate(unittest.TestCase):
+    """Every ClusterAuthorizationRule below SuperAdmin also binds user-authz:<level>:custom."""
+
+    def test_custom_aggregate_stands_for_its_level(self):
+        self.assertEqual(assign.basic_level_of("user-authz:editor:custom", entry("user-authz:editor:custom")), "Editor")
+        self.assertEqual(assign.basic_level_of("user-authz:privileged-user:custom",
+                                               entry("user-authz:privileged-user:custom")), "PrivilegedUser")
+        self.assertEqual(assign.basic_level_of("user-authz:cluster-admin:custom",
+                                               entry("user-authz:cluster-admin:custom")), "ClusterAdmin")
+        self.assertIsNone(assign.basic_level_of("user-authz:super-admin:custom",
+                                                entry("user-authz:super-admin:custom")))
+
+    def test_range_assigner_reaches_the_custom_aggregate_of_a_rule(self):
+        # The identity a DexProvider or a UserOperation targets carries both bindings of its rule.
+        manager = "d8:manage:security:manager"
+        targets = ["user-authz:editor", "user-authz:editor:custom"]
+        for rules in ([], [{"apiGroups": ["example.io"], "resources": ["widgets"], "verbs": ["get"]}]):
+            with self.subTest(rules=rules):
+                cat = default_catalog()
+                cat["user-authz:editor"] = entry("user-authz:editor")
+                cat["user-authz:editor:custom"] = entry("user-authz:editor:custom", rules=rules)
+                self.assertIsNone(assign.can_assign([manager], targets, cat))
+
+    def test_custom_aggregate_above_the_range_is_leftover(self):
+        cat = default_catalog()
+        cat["user-authz:editor"] = entry("user-authz:editor", labels={"can-assign-basic-max": "Editor"})
+        cat["user-authz:admin:custom"] = entry("user-authz:admin:custom", rules=STAR)
+        cat["user-authz:editor:custom"] = entry("user-authz:editor:custom", rules=STAR)
+        self.assertEqual(assign.can_assign(["user-authz:editor"], ["user-authz:admin:custom"], cat),
+                         ["user-authz:admin:custom"])
+        self.assertIsNone(assign.can_assign(["user-authz:editor"], ["user-authz:editor:custom"], cat))
+
+
 class TestFullAccess(unittest.TestCase):
     def full_access(self, snaps, info=None, cat=None):
         return assign.actor_has_full_access(info or GITOPS_INFO, snaps, cat or default_catalog())
