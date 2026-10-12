@@ -99,6 +99,14 @@ category: Test
 stage: Preview
 type: Application
 version: "1.0.0"
+versionCompatibilityRules:
+  upgrade:
+    step:
+      minor: 2
+  downgrade:
+    step:
+      patches: -1
+      major: -5
 `
 
 func (suite *ControllerTestSuite) TestReconcile() {

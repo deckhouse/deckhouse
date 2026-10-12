@@ -42,6 +42,17 @@ status:
         en: EN disable message
         ru: RU disable message
     stage: GA
+    versionCompatibilityRules:
+      downgrade:
+        step:
+          major: 0
+          minor: 0
+          patches: -1
+      upgrade:
+        step:
+          major: 0
+          minor: 2
+          patches: -1
   packageSchemas:
     settingsSchema:
       openAPIV3Schema:

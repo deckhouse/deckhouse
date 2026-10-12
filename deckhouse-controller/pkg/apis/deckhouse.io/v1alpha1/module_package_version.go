@@ -186,6 +186,7 @@ type ModulePackageVersionStatusMetadata struct {
 	Changelog *PackageChangelog `json:"changelog,omitempty"`
 
 	// Version compatibility rules for upgrades and downgrades.
+	// +kubebuilder:default={}
 	// +optional
 	Compatibility *PackageVersionCompatibilityRules `json:"versionCompatibilityRules,omitempty"`
 }

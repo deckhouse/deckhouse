@@ -31,7 +31,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/yaml"
 
-	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/dto"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/registry"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/openapi"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
@@ -297,37 +296,9 @@ func (r *reconciler) setMetadataLoadedConditionFalse(apv *v1alpha1.ApplicationPa
 	})
 }
 
-// disableOptionsToCR projects parsed disable protection onto the CR shape. It returns nil
-// when no disable protection is configured, so an empty block is not surfaced on every
-// package version.
-func disableOptionsToCR(opts dto.DisableOptions) *v1alpha1.PackageDisableOptions {
-	messages := disableMessagesToCR(opts)
-	if !opts.Confirmation && messages == nil {
-		return nil
-	}
-
-	return &v1alpha1.PackageDisableOptions{
-		Confirmation: opts.Confirmation,
-		Messages:     messages,
-	}
-}
-
-// disableMessagesToCR projects the localized confirmation messages, returning nil when
-// neither translation is set.
-func disableMessagesToCR(opts dto.DisableOptions) *v1alpha1.PackageDisableMessages {
-	if opts.Messages.Ru == "" && opts.Messages.En == "" {
-		return nil
-	}
-
-	return &v1alpha1.PackageDisableMessages{
-		Ru: opts.Messages.Ru,
-		En: opts.Messages.En,
-	}
-}
-
 // setPackageMetadata projects parsed package metadata onto the ApplicationPackageVersion
 // status. It overwrites Status.PackageMetadata with the stage, localized descriptions,
-// runtime requirements, and changelog extracted from the package image, then delegates
+// runtime requirements, version compatibility rules, and changelog extracted from the package image, then delegates
 // to setPackageSchema for the settings and values OpenAPI schemas. A nil meta is a
 // no-op, so callers may invoke this unconditionally after a best-effort parse.
 func (r *reconciler) setPackageMetadata(apv *v1alpha1.ApplicationPackageVersion, meta *packageMetadata) error {
@@ -335,19 +306,10 @@ func (r *reconciler) setPackageMetadata(apv *v1alpha1.ApplicationPackageVersion,
 		return nil
 	}
 
-	apv.Status.PackageMetadata = &v1alpha1.ApplicationPackageVersionStatusMetadata{
-		Stage: meta.definition.Stage,
-		Description: &v1alpha1.PackageDescription{
-			Ru: meta.definition.Descriptions.Ru,
-			En: meta.definition.Descriptions.En,
-		},
-		DisableOptions: disableOptionsToCR(meta.definition.DisableOptions),
-		Requirements:   requirementsToCR(meta.definition.Requirements),
-		Licensing:      licensingToCR(meta.definition.Licensing),
-		Changelog: &v1alpha1.PackageChangelog{
-			Features: meta.changelog.Features,
-			Fixes:    meta.changelog.Fixes,
-		},
+	apv.Status.PackageMetadata = meta.definition.ConvertToStatusMetadata()
+	apv.Status.PackageMetadata.Changelog = &v1alpha1.PackageChangelog{
+		Features: meta.changelog.Features,
+		Fixes:    meta.changelog.Fixes,
 	}
 
 	if err := setPackageSchema(apv, schemaTypeSettings, meta.rawSettingsSchema); err != nil {
@@ -399,104 +361,4 @@ func setPackageSchema(apv *v1alpha1.ApplicationPackageVersion, schemaType int, r
 	}
 
 	return nil
-}
-
-// requirementsToCR projects parsed package requirements onto the v1alpha1
-// PackageRequirements CR shape. Returns nil when no requirements are configured
-// so the status field omits cleanly via omitempty.
-func requirementsToCR(r dto.Requirements) *v1alpha1.PackageRequirements {
-	kubernetes := versionConstraintToCR(r.Kubernetes.Constraint)
-	deckhouse := versionConstraintToCR(r.Deckhouse.Constraint)
-	modulesCR := modulesRequirementsToCR(r.Modules)
-
-	if kubernetes == nil && deckhouse == nil && modulesCR == nil {
-		return nil
-	}
-
-	return &v1alpha1.PackageRequirements{
-		Kubernetes: kubernetes,
-		Deckhouse:  deckhouse,
-		Modules:    modulesCR,
-	}
-}
-
-// licensingToCR projects dto.Licensing onto the v1alpha1 PackageLicensing CR shape.
-func licensingToCR(l dto.Licensing) *v1alpha1.PackageLicensing {
-	if len(l.Editions) == 0 {
-		return nil
-	}
-
-	editions := make(map[string]v1alpha1.PackageEditionLicense, len(l.Editions))
-	for name, e := range l.Editions {
-		editions[name] = v1alpha1.PackageEditionLicense{Available: e.Available}
-	}
-
-	return &v1alpha1.PackageLicensing{Editions: editions}
-}
-
-// versionConstraintToCR wraps a raw semver constraint string into the v1alpha1
-// VersionConstraint CR shape, returning nil when the string is empty.
-func versionConstraintToCR(raw string) *v1alpha1.VersionConstraint {
-	if len(raw) == 0 {
-		return nil
-	}
-
-	return &v1alpha1.VersionConstraint{Constraint: raw}
-}
-
-// modulesRequirementsToCR projects dto.ModulesRequirements onto the v1alpha1
-// PackageModulesRequirements CR shape, returning nil when mandatory, conditional,
-// anyOf, and noneOf are all empty.
-func modulesRequirementsToCR(mr dto.ModulesRequirements) *v1alpha1.PackageModulesRequirements {
-	if len(mr.Mandatory) == 0 && len(mr.Conditional) == 0 && len(mr.AnyOf) == 0 && len(mr.NoneOf) == 0 {
-		return nil
-	}
-
-	return &v1alpha1.PackageModulesRequirements{
-		Mandatory:   moduleDependenciesToCR(mr.Mandatory),
-		Conditional: moduleDependenciesToCR(mr.Conditional),
-		AnyOf:       moduleGroupsToCR(mr.AnyOf),
-		NoneOf:      moduleGroupsToCR(mr.NoneOf),
-	}
-}
-
-// moduleDependenciesToCR projects a slice of dto.ModuleDependency onto the
-// v1alpha1 PackageModuleDependency CR slice. Returns nil for empty input so
-// the parent CR omitempty fields render cleanly.
-func moduleDependenciesToCR(deps []dto.ModuleDependency) []v1alpha1.PackageModuleDependency {
-	if len(deps) == 0 {
-		return nil
-	}
-
-	out := make([]v1alpha1.PackageModuleDependency, 0, len(deps))
-	for _, dep := range deps {
-		out = append(out, v1alpha1.PackageModuleDependency{
-			Name:       dep.Name,
-			Constraint: dep.Constraint,
-		})
-	}
-
-	return out
-}
-
-// moduleGroupsToCR projects a slice of dto.ModuleGroup onto the v1alpha1
-// PackageModuleGroup CR slice. Used for both anyOf and noneOf — the shape is
-// identical at the CR layer; the bucket semantics live on the field they're
-// attached to. Returns nil for empty input so the parent CR omitempty field
-// renders cleanly.
-func moduleGroupsToCR(groups []dto.ModuleGroup) []v1alpha1.PackageModuleGroup {
-	if len(groups) == 0 {
-		return nil
-	}
-
-	out := make([]v1alpha1.PackageModuleGroup, 0, len(groups))
-	for _, g := range groups {
-		out = append(out, v1alpha1.PackageModuleGroup{
-			Name:        g.Name,
-			Description: g.Description,
-			Modules:     moduleDependenciesToCR(g.Modules),
-		})
-	}
-
-	return out
 }

@@ -23,7 +23,6 @@ import (
 
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
-	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/client-go/util/workqueue"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -32,7 +31,6 @@ import (
 	ctrlmanager "sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 
-	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/app"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/apps"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/resourcerequests"
 	packageruntime "github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/runtime"
@@ -72,7 +70,7 @@ func RegisterController(
 	logger *log.Logger,
 ) error {
 	r := &reconciler{
-		preflightInit:        synced,
+		init:                 synced,
 		client:               runtime.GetClient(),
 		manager:              manager,
 		moduleManager:        moduleManager,
@@ -80,13 +78,6 @@ func RegisterController(
 		applicationsSettings: applicationsSettings,
 		status:               status.NewService(runtime.GetClient(), manager.GetStatus, logger),
 		logger:               logger.Named(controllerName),
-	}
-
-	if !app.ModuleV2Enabled() {
-		r.preflightInit.Add(1)
-		if err := runtime.Add(ctrlmanager.RunnableFunc(r.preflight)); err != nil {
-			return fmt.Errorf("add preflight: %w", err)
-		}
 	}
 
 	if err := runtime.Add(ctrlmanager.RunnableFunc(func(ctx context.Context) error {
@@ -109,7 +100,7 @@ func RegisterController(
 
 // reconciler reconciles Application objects.
 type reconciler struct {
-	preflightInit        *sync.WaitGroup
+	init                 *sync.WaitGroup
 	client               client.Client
 	manager              packageManager
 	status               *status.Service
@@ -134,54 +125,10 @@ type packageManager interface {
 	Cleanup(ctx context.Context, preserve []packageruntime.PreservePackage)
 }
 
-// preflight waits for the module manager and drops runtime state no Application claims.
-func (r *reconciler) preflight(ctx context.Context) error {
-	defer r.preflightInit.Done()
-
-	// wait until module manager init
-	r.logger.Debug("wait until module manager is inited")
-	if err := wait.PollUntilContextCancel(ctx, 2*time.Second, true, func(_ context.Context) (bool, error) {
-		return r.moduleManager.AreModulesInited(), nil
-	}); err != nil {
-		return fmt.Errorf("init module manager: %w", err)
-	}
-
-	appsList := new(v1alpha1.ApplicationList)
-	if err := r.client.List(ctx, appsList); err != nil {
-		return fmt.Errorf("list applications: %w", err)
-	}
-
-	preserve := make([]packageruntime.PreservePackage, 0, len(appsList.Items))
-	for _, app := range appsList.Items {
-		// An application already being deleted is not preserved. The runtime forgets its teardown
-		// across a restart, so handleDelete would find nothing left to tear down and release the
-		// finalizer; this cleanup is the last owner of the release, and skipping it here is what
-		// makes that answer true.
-		if !app.DeletionTimestamp.IsZero() {
-			continue
-		}
-
-		preserve = append(preserve, packageruntime.PreservePackage{
-			PackageName: app.Spec.PackageName,
-			Repository:  app.Spec.PackageRepositoryName,
-			Version:     app.Spec.PackageVersion,
-
-			ReleaseName:      apps.BuildName(app.Namespace, app.Name),
-			ReleaseNamespace: app.Namespace,
-		})
-	}
-
-	r.manager.Cleanup(ctx, preserve)
-
-	r.logger.Debug("controller is ready")
-
-	return nil
-}
-
 // Reconcile dispatches the application to the delete or the create/update handler.
 func (r *reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 	// wait for init
-	r.preflightInit.Wait()
+	r.init.Wait()
 
 	logger := r.logger.With(slog.String("namespace", req.Namespace), slog.String("name", req.Name))
 
@@ -213,7 +160,7 @@ func (r *reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 	if err := r.handleCreateOrUpdate(ctx, app); err != nil {
 		logger.Warn("failed to handle application", log.Err(err))
 
-		return ctrl.Result{RequeueAfter: defaultRequeueAfter}, nil
+		return ctrl.Result{}, err
 	}
 
 	return ctrl.Result{}, nil
@@ -243,8 +190,8 @@ func (r *reconciler) handleCreateOrUpdate(ctx context.Context, app *v1alpha1.App
 		original = app.DeepCopy()
 	}
 
-	pkg := new(v1alpha1.ApplicationPackage)
-	if err := r.client.Get(ctx, client.ObjectKey{Name: app.Spec.PackageName}, pkg); err != nil {
+	ap := new(v1alpha1.ApplicationPackage)
+	if err := r.client.Get(ctx, client.ObjectKey{Name: app.Spec.PackageName}, ap); err != nil {
 		logger.Debug("application package not found", slog.String("package", app.Spec.PackageName), log.Err(err))
 
 		return fmt.Errorf("get application package '%s': %w", app.Spec.PackageName, err)
@@ -274,7 +221,7 @@ func (r *reconciler) handleCreateOrUpdate(ctx context.Context, app *v1alpha1.App
 		return fmt.Errorf("get package repository '%s': %w", app.Spec.PackageRepositoryName, err)
 	}
 
-	if err := r.relink(ctx, app, pkg, apv); err != nil {
+	if err := r.relink(ctx, app, ap, apv); err != nil {
 		logger.Error("failed to relink the application", log.Err(err))
 		return err
 	}
@@ -297,7 +244,7 @@ func (r *reconciler) handleCreateOrUpdate(ctx context.Context, app *v1alpha1.App
 	// nor the version can disappear from under a running application.
 	ctrlutils.ReplaceOwnerReferences(app,
 		ctrlutils.OwnerReference(v1alpha1.ApplicationPackageVersionGVK, apv.Name, apv.UID),
-		ctrlutils.OwnerReference(v1alpha1.ApplicationPackageGVK, pkg.Name, pkg.UID),
+		ctrlutils.OwnerReference(v1alpha1.ApplicationPackageGVK, ap.Name, ap.UID),
 	)
 	delete(app.Annotations, v1alpha1.PackageAnnotationRegistrySpecChanged)
 

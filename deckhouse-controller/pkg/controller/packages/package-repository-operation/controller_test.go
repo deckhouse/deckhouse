@@ -579,6 +579,42 @@ func (suite *ControllerTestSuite) TestReconcile() {
 		assert.ElementsMatch(suite.T(), []string{"v1.0.0", "v1.0.1", "v1.0.2", "v1.1.0", "v1.1.1", "v2.0.0"}, got)
 	})
 
+	suite.Run("incremental scan finds versions that sort lexically below the watermark", func() {
+		// v0.0.7 is processed. As strings v0.0.10 and v0.0.11 sort before it, so a registry
+		// honouring last=v0.0.7 returns nothing; the scan must still offer both.
+		reg := fakeRegistry.NewRegistry(registryHost)
+		reg.MustAddImage("", "test-package", fakeRegistry.NewImageBuilder().MustBuild())
+		appImg := applicationVersionImage().MustBuild()
+		for _, v := range []string{"v0.0.5", "v0.0.6", "v0.0.7", "v0.0.10", "v0.0.11"} {
+			reg.MustAddImage("test-package/version", v, appImg)
+		}
+
+		psm := createFakePSM(newInternalClient(reg))
+
+		suite.setupController("incremental-scan-double-digit-patch.yaml", withPackageServiceManager(psm))
+		operation := suite.getPackageRepositoryOperation("deckhouse-scan-1571326380")
+
+		err := repeat(func() error {
+			_, err := suite.ctr.Reconcile(ctx, ctrl.Request{
+				NamespacedName: k8stypes.NamespacedName{Name: operation.Name},
+			})
+
+			return err
+		})
+
+		require.NoError(suite.T(), err)
+
+		var versions v1alpha1.ApplicationPackageVersionList
+		require.NoError(suite.T(), suite.Client().List(ctx, &versions))
+
+		got := make([]string, 0, len(versions.Items))
+		for _, item := range versions.Items {
+			got = append(got, item.Spec.PackageVersion)
+		}
+
+		assert.ElementsMatch(suite.T(), []string{"v0.0.7", "v0.0.10", "v0.0.11"}, got)
+	})
+
 	suite.Run("incremental scan with no new versions keeps package in repository status", func() {
 		// Regression: pre-existing ApplicationPackageVersion v1.0.0 already processed
 		// (Status.PackageMetadata set). Registry still has only v1.0.0, so the incremental

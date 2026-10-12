@@ -30,6 +30,17 @@ status:
         en: EN disable message
         ru: RU disable message
     stage: Preview
+    versionCompatibilityRules:
+      downgrade:
+        step:
+          major: -1
+          minor: 0
+          patches: -1
+      upgrade:
+        step:
+          major: 0
+          minor: 2
+          patches: -1
 ---
 apiVersion: deckhouse.io/v1alpha1
 kind: PackageRepository

@@ -416,70 +416,79 @@ spec:
                     - General Availability
                     - Deprecated
                   versionCompatibilityRules:
+                    default: {}
                     description: Version compatibility rules for upgrades and downgrades.
                     properties:
                       downgrade:
+                        default:
+                          step:
+                            major: 0
+                            minor: 0
+                            patches: -1
                         description: Compatibility rules for downgrading from this
                           version.
                         properties:
-                          allowSkipMajor:
-                            description: How many major versions can be skipped.
-                            format: int32
-                            minimum: 0
-                            type: integer
-                          allowSkipMinor:
-                            description: How many minor versions can be skipped.
-                            format: int32
-                            minimum: 0
-                            type: integer
-                          allowSkipPatches:
-                            description: How many patch versions can be skipped.
-                            format: int32
-                            minimum: 0
-                            type: integer
-                          from:
-                            description: Starting version range for compatibility.
-                            type: string
-                          maxRollback:
-                            description: Maximum number of versions that can be rolled
-                              back.
-                            format: int32
-                            minimum: 0
-                            type: integer
-                          to:
-                            description: Ending version range for compatibility.
-                            type: string
+                          step:
+                            description: Step defines the compatibility rule for this
+                              direction.
+                            properties:
+                              major:
+                                description: How many major versions can be skipped;
+                                  -1 is unlimited, 0 forbids the change. Defaults
+                                  to 0.
+                                format: int32
+                                minimum: -1
+                                type: integer
+                              minor:
+                                description: How many minor versions can be skipped;
+                                  -1 is unlimited, 0 forbids the change. Defaults
+                                  to 1 on upgrade, 0 on downgrade.
+                                format: int32
+                                minimum: -1
+                                type: integer
+                              patches:
+                                description: How many patch versions can be skipped;
+                                  -1 is unlimited, 0 forbids the change. Defaults
+                                  to -1.
+                                format: int32
+                                minimum: -1
+                                type: integer
+                            type: object
                         type: object
                       upgrade:
+                        default:
+                          step:
+                            major: 0
+                            minor: 1
+                            patches: -1
                         description: Compatibility rules for upgrading to this version.
                         properties:
-                          allowSkipMajor:
-                            description: How many major versions can be skipped.
-                            format: int32
-                            minimum: 0
-                            type: integer
-                          allowSkipMinor:
-                            description: How many minor versions can be skipped.
-                            format: int32
-                            minimum: 0
-                            type: integer
-                          allowSkipPatches:
-                            description: How many patch versions can be skipped.
-                            format: int32
-                            minimum: 0
-                            type: integer
-                          from:
-                            description: Starting version range for compatibility.
-                            type: string
-                          maxRollback:
-                            description: Maximum number of versions that can be rolled
-                              back.
-                            format: int32
-                            minimum: 0
-                            type: integer
-                          to:
-                            description: Ending version range for compatibility.
-                            type: string
+                          step:
+                            description: Step defines the compatibility rule for this
+                              direction.
+                            properties:
+                              major:
+                                description: How many major versions can be skipped;
+                                  -1 is unlimited, 0 forbids the change. Defaults
+                                  to 0.
+                                format: int32
+                                minimum: -1
+                                type: integer
+                              minor:
+                                description: How many minor versions can be skipped;
+                                  -1 is unlimited, 0 forbids the change. Defaults
+                                  to 1 on upgrade, 0 on downgrade.
+                                format: int32
+                                minimum: -1
+                                type: integer
+                              patches:
+                                description: How many patch versions can be skipped;
+                                  -1 is unlimited, 0 forbids the change. Defaults
+                                  to -1.
+                                format: int32
+                                minimum: -1
+                                type: integer
+                            type: object
                         type: object
                     type: object
                   weight:

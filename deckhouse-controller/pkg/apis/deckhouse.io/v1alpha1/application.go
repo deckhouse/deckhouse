@@ -90,11 +90,6 @@ type ApplicationSpec struct {
 	// +crd-enricher:deckhouse:documentation:examples=v1.0.0
 	PackageVersion string `json:"packageVersion"`
 
-	// Release channel for the application package.
-	// +optional
-	// +crd-enricher:deckhouse:documentation:examples=stable
-	ReleaseChannel string `json:"releaseChannel,omitempty"`
-
 	// Update settings of the application: the update mode, update windows, and blocking the update on alerts.
 	//
 	// If the parameter is omitted, the application uses the global [`applications.update`](global.html#parameters-applications-update) settings. If those are not set either, it uses the Deckhouse update settings: the [`update`](/modules/deckhouse/configuration.html#parameters-update) parameter of the `deckhouse` module.
@@ -331,14 +326,11 @@ type ApplicationStatusURL struct {
 	Description string `json:"description,omitempty"`
 }
 
+// ApplicationStatusVersion is the installed version; an object, so status stored by earlier releases still decodes.
 type ApplicationStatusVersion struct {
 	// Semantic version of the installed application.
 	// +optional
 	Version string `json:"version,omitempty"`
-
-	// Release channel from which the version was installed.
-	// +optional
-	Channel string `json:"channel,omitempty"`
 }
 
 // +kubebuilder:object:root=true

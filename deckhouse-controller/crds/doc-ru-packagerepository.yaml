@@ -96,9 +96,6 @@ spec:
                 packagesCount:
                   description: |
                     Общее количество пакетов в этом репозитории.
-                partialScanAvailable:
-                  description: |
-                    Указывает, поддерживает ли хранилище образов пагинацию при получении списка тегов.
                 phase:
                   description: |
                     Текущая фаза репозитория.

@@ -131,6 +131,13 @@ disable:
 stage: GA
 type: Module
 version: "1.0.0"
+versionCompatibilityRules:
+  upgrade:
+    step:
+      minor: 2
+  downgrade:
+    step:
+      patches: -1
 `
 
 func (suite *ControllerTestSuite) TestReconcile() {

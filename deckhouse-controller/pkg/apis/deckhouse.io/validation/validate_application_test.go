@@ -29,6 +29,7 @@ import (
 	admissionv1 "k8s.io/api/admission/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/schedule"
@@ -119,7 +120,7 @@ func (s *applicationValidationHandlerSuite) TestSettingsAreValidatedByManagerFor
 
 // TestSettingsAreValidatedOnlyByAPVWhileVersionChanges verifies stale manager schemas are skipped.
 func (s *applicationValidationHandlerSuite) TestSettingsAreValidatedOnlyByAPVWhileVersionChanges() {
-	app := newApplication("repo", "pkg", "v2.0.0")
+	app := newApplication("repo", "pkg", "v1.1.0")
 	app.Status.CurrentVersion = &v1alpha1.ApplicationStatusVersion{Version: "v1.0.0"}
 	manager := &fakePackageManager{
 		validateResult: settingscheck.Result{Valid: false, Message: "settings rejected by the loaded schema"},
@@ -130,6 +131,30 @@ func (s *applicationValidationHandlerSuite) TestSettingsAreValidatedOnlyByAPVWhi
 	s.True(response.Allowed)
 	s.False(manager.validateCalled)
 	s.True(manager.checkCalled)
+}
+
+// TestMissingAPVMetadataUsesDefaults verifies admission without optional metadata.
+func (s *applicationValidationHandlerSuite) TestMissingAPVMetadataUsesDefaults() {
+	for _, operation := range []string{"CREATE", "UPDATE"} {
+		s.Run(operation, func() {
+			app := newApplication("repo", "pkg", "1.1.0")
+			var oldApp *v1alpha1.Application
+			if operation == "UPDATE" {
+				app.Status.CurrentVersion = &v1alpha1.ApplicationStatusVersion{Version: "1.0.0"}
+				oldApp = newApplication("repo", "pkg", "1.0.0")
+			}
+
+			apv := newAPV("repo-pkg-1.1.0", false, nil)
+			s.Require().Nil(apv.Status.PackageMetadata)
+			manager := new(fakePackageManager)
+
+			response := s.submit(operation, app, oldApp, apv, manager)
+
+			s.True(response.Allowed)
+			s.True(manager.checkCalled)
+			s.Equal(schedule.Constraints{Order: schedule.FunctionalOrder}, manager.gotConstraints)
+		})
+	}
 }
 
 // validate submits an Application update to the admission handler.
@@ -288,14 +313,103 @@ func TestValidateAppAgainstApv(t *testing.T) {
 		return &v1alpha1.PackageRequirements{Modules: m}
 	}
 
+	// compatAPV publishes the parser's defaults with downgrades of any patch allowed.
+	compatAPV := func() *v1alpha1.ApplicationPackageVersion {
+		apv := newAPV(apvName, false, nil)
+		apv.Status.PackageMetadata = &v1alpha1.ApplicationPackageVersionStatusMetadata{
+			Compatibility: &v1alpha1.PackageVersionCompatibilityRules{
+				Upgrade: &v1alpha1.PackageVersionCompatibilityRule{Step: v1alpha1.PackageVersionCompatibilityRuleStep{
+					Patches: ptr.To[int32](-1), Minor: ptr.To[int32](1), Major: ptr.To[int32](0),
+				}},
+				Downgrade: &v1alpha1.PackageVersionCompatibilityRule{Step: v1alpha1.PackageVersionCompatibilityRuleStep{
+					Patches: ptr.To[int32](-1), Minor: ptr.To[int32](0), Major: ptr.To[int32](0),
+				}},
+			},
+		}
+
+		return apv
+	}
+
+	// previousAPV publishes the previous version with the given downgrade limits; upgrade is left to the defaults.
+	previousAPV := func(previous string, patches, minor int32) *v1alpha1.ApplicationPackageVersion {
+		apv := newAPV(v1alpha1.MakeApplicationPackageVersionName(repo, pkg, previous), false, nil)
+		apv.Status.PackageMetadata = &v1alpha1.ApplicationPackageVersionStatusMetadata{
+			Compatibility: &v1alpha1.PackageVersionCompatibilityRules{
+				Downgrade: &v1alpha1.PackageVersionCompatibilityRule{Step: v1alpha1.PackageVersionCompatibilityRuleStep{
+					Patches: ptr.To(patches), Minor: ptr.To(minor), Major: ptr.To[int32](0),
+				}},
+			},
+		}
+
+		return apv
+	}
+
 	tests := []struct {
-		name        string
-		apv         *v1alpha1.ApplicationPackageVersion
-		checkErr    error
-		wantErr     bool
-		wantErrText string
-		wantCheck   bool
+		name           string
+		apv            *v1alpha1.ApplicationPackageVersion
+		previousAPV    *v1alpha1.ApplicationPackageVersion
+		currentVersion string
+		oldVersion     string
+		checkErr       error
+		wantErr        bool
+		wantErrText    string
+		wantCheck      bool
 	}{
+		{
+			name:        "incompatible version change is rejected",
+			apv:         compatAPV(),
+			oldVersion:  "0.9.0",
+			wantErr:     true,
+			wantErrText: "incompatible version: current=0.9.0 target=1.0.0",
+		},
+		{
+			name:           "incompatible pair is not rechecked while the version is unchanged",
+			apv:            compatAPV(),
+			currentVersion: "0.9.0",
+			oldVersion:     version,
+			wantCheck:      true,
+		},
+		{
+			name:       "allowed downgrade delegates to the manager",
+			apv:        compatAPV(),
+			oldVersion: "1.0.3",
+			wantCheck:  true,
+		},
+		{
+			name:        "downgrade follows the previous version's rules over the target's",
+			apv:         compatAPV(),
+			previousAPV: previousAPV("1.1.0", -1, 1),
+			oldVersion:  "1.1.0",
+			wantCheck:   true,
+		},
+		{
+			name:        "previous version forbidding a patch downgrade rejects it",
+			apv:         compatAPV(),
+			previousAPV: previousAPV("1.0.3", 0, 0),
+			oldVersion:  "1.0.3",
+			wantErr:     true,
+			wantErrText: "incompatible version: current=1.0.3 target=1.0.0",
+		},
+		{
+			name:        "vanished previous version takes the downgrade defaults",
+			apv:         compatAPV(),
+			oldVersion:  "1.1.0",
+			wantErr:     true,
+			wantErrText: "incompatible version: current=1.1.0 target=1.0.0",
+		},
+		{
+			name:           "downgrade is gated by the previous spec while the status lags behind",
+			apv:            compatAPV(),
+			currentVersion: version,
+			oldVersion:     "1.1.0",
+			wantErr:        true,
+			wantErrText:    "incompatible version: current=1.1.0 target=1.0.0",
+		},
+		{
+			name:      "version is not checked on create",
+			apv:       compatAPV(),
+			wantCheck: true,
+		},
 		{
 			name:        "apv not found",
 			apv:         nil,
@@ -443,11 +557,23 @@ func TestValidateAppAgainstApv(t *testing.T) {
 				objs = append(objs, tt.apv)
 			}
 
+			if tt.previousAPV != nil {
+				objs = append(objs, tt.previousAPV)
+			}
+
 			cli := newFakeClient(t, objs...)
 			manager := &fakePackageManager{checkErr: tt.checkErr}
 			app := newApplication(repo, pkg, version)
+			if tt.currentVersion != "" {
+				app.Status.CurrentVersion = &v1alpha1.ApplicationStatusVersion{Version: tt.currentVersion}
+			}
 
-			err := validateAppAgainstApv(context.Background(), cli, manager, app, nil)
+			var oldApp *v1alpha1.Application
+			if tt.oldVersion != "" {
+				oldApp = newApplication(repo, pkg, tt.oldVersion)
+			}
+
+			err := validateAppAgainstApv(context.Background(), cli, manager, app, oldApp)
 
 			if tt.wantErr {
 				require.Error(t, err)

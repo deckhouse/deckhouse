@@ -101,11 +101,6 @@ spec:
                 type: string
                 x-doc-examples:
                 - v1.0.0
-              releaseChannel:
-                description: Release channel for the application package.
-                type: string
-                x-doc-examples:
-                - stable
               resourceRequests:
                 description: |-
                   Resource footprint of the workloads the application deploys: how many
@@ -438,9 +433,6 @@ spec:
               currentVersion:
                 description: Information about the currently installed version.
                 properties:
-                  channel:
-                    description: Release channel from which the version was installed.
-                    type: string
                   version:
                     description: Semantic version of the installed application.
                     type: string

@@ -453,19 +453,16 @@ func parseMissingVersion(tag string, labels map[string]string) *semver.Version {
 	return v
 }
 
-// listTagsFromVersion asks the registry for the tags after lastVersion and re-filters them locally,
-// since the registry is free to ignore the hint.
+// listTagsFromVersion returns the semver tags newer than lastVersion. It lists every tag: the
+// registry's last= cursor is lexical, so v0.0.10 sorts before v0.0.7 and would be skipped.
 func (s *OperationService) listTagsFromVersion(ctx context.Context, packageName string, lastVersion string) ([]*semver.Version, error) {
-	// List all tags from the registry and filter those that are greater than lastVersion
-	// WARNING! it works only if your registry supports tag listing with filtering by last version
-	rawTags, err := s.svc.Package(packageName).Versions().ListTags(ctx, regClient.WithTagsLast(lastVersion))
+	rawTags, err := s.svc.Package(packageName).Versions().ListTags(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("list tags: %w", err)
 	}
 
 	allTags := extractOnlySemverTags(rawTags)
 
-	// Filter tags to only include versions after lastVersion
 	lastVer, err := semver.NewVersion(lastVersion)
 	if err != nil {
 		// If we can't parse last version, return all tags
@@ -474,7 +471,6 @@ func (s *OperationService) listTagsFromVersion(ctx context.Context, packageName 
 
 	var newTags []*semver.Version
 	for _, tag := range allTags {
-		// Only include tags that are newer than lastVersion
 		if tag.GreaterThan(lastVer) {
 			newTags = append(newTags, tag)
 		}

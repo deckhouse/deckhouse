@@ -217,10 +217,6 @@ spec:
               packagesCount:
                 description: Total number of packages in this repository.
                 type: integer
-              partialScanAvailable:
-                description: Indicates whether the container registry supports pagination
-                  when listing tags.
-                type: boolean
               phase:
                 description: Current phase of the repository.
                 type: string

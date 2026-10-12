@@ -19,6 +19,7 @@ import (
 	"slices"
 
 	"github.com/Masterminds/semver/v3"
+	"k8s.io/utils/ptr"
 
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/apps"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/modules"
@@ -52,6 +53,8 @@ type Definition struct {
 	Requirements   Requirements   `yaml:"requirements" json:"requirements"`
 	Licensing      Licensing      `yaml:"licensing" json:"licensing"`
 	DisableOptions DisableOptions `yaml:"disable" json:"disable"`
+
+	Compatibility VersionCompatibilityRules `yaml:"versionCompatibilityRules,omitempty" json:"versionCompatibilityRules,omitempty"`
 }
 
 // ApplicationDefinition extends Definition for application packages.
@@ -147,6 +150,24 @@ type DisableOptions struct {
 type DisableMessages struct {
 	Ru string `json:"ru,omitempty" yaml:"ru,omitempty"`
 	En string `json:"en,omitempty" yaml:"en,omitempty"`
+}
+
+// VersionCompatibilityRules bounds which versions may upgrade to or downgrade from this one.
+type VersionCompatibilityRules struct {
+	Upgrade   *VersionCompatibilityRule `json:"upgrade,omitempty" yaml:"upgrade,omitempty"`
+	Downgrade *VersionCompatibilityRule `json:"downgrade,omitempty" yaml:"downgrade,omitempty"`
+}
+
+// VersionCompatibilityRule is one direction's compatibility step.
+type VersionCompatibilityRule struct {
+	Step VersionCompatibilityStep `json:"step,omitempty" yaml:"step,omitempty"`
+}
+
+// VersionCompatibilityStep holds the per-axis skip limits; compatibilityToCR fills nil limits with the direction's default.
+type VersionCompatibilityStep struct {
+	Patches *int32 `json:"patches,omitempty" yaml:"patches,omitempty"`
+	Minor   *int32 `json:"minor,omitempty" yaml:"minor,omitempty"`
+	Major   *int32 `json:"major,omitempty" yaml:"major,omitempty"`
 }
 
 // Convert converts application definition to application domain model.
@@ -286,13 +307,25 @@ func (d *ModuleDefinition) Convert() (modules.Definition, error) {
 	}, nil
 }
 
+// ConvertToStatusMetadata projects the parsed definition onto the APV status metadata; the changelog is left to the caller.
+func (d *ApplicationDefinition) ConvertToStatusMetadata() *v1alpha1.ApplicationPackageVersionStatusMetadata {
+	return &v1alpha1.ApplicationPackageVersionStatusMetadata{
+		Stage:          d.Stage,
+		Description:    descriptionToCR(d.Descriptions),
+		DisableOptions: disableOptionsToCR(d.DisableOptions),
+		Requirements:   requirementsToCR(d.Requirements),
+		Licensing:      licensingToCR(d.Licensing),
+		Compatibility:  compatibilityToCR(d.Compatibility),
+	}
+}
+
 // ConvertToStatusMetadata projects the parsed definition onto the MPV status
 // metadata. The projection has two writers - the module-package-version
 // controller fills draft versions from the package repository, the startup
 // version sync fills embedded versions from the image disk - and both must
 // produce identical metadata for the same definition. Only fields present on
 // ModuleDefinition are surfaced; the remaining module-only status fields
-// (category, version-compatibility) are not populated here.
+// (category) are not populated here.
 func (d *ModuleDefinition) ConvertToStatusMetadata() *v1alpha1.ModulePackageVersionStatusMetadata {
 	return &v1alpha1.ModulePackageVersionStatusMetadata{
 		Stage:          d.Stage,
@@ -303,6 +336,7 @@ func (d *ModuleDefinition) ConvertToStatusMetadata() *v1alpha1.ModulePackageVers
 		DisableOptions: disableOptionsToCR(d.DisableOptions),
 		Licensing:      licensingToCR(d.Licensing),
 		Requirements:   requirementsToCR(d.Requirements),
+		Compatibility:  compatibilityToCR(d.Compatibility),
 	}
 }
 
@@ -560,6 +594,56 @@ func licensingToCR(l Licensing) *v1alpha1.PackageLicensing {
 	}
 
 	return &v1alpha1.PackageLicensing{Editions: editions}
+}
+
+// compatibilityToCR projects the version compatibility rules onto the CR shape with every
+// unset limit filled, so the status always shows the effective limits.
+func compatibilityToCR(c VersionCompatibilityRules) *v1alpha1.PackageVersionCompatibilityRules {
+	return &v1alpha1.PackageVersionCompatibilityRules{
+		Upgrade:   upgradeCompatibilityRuleToCR(c.Upgrade),
+		Downgrade: downgradeCompatibilityRuleToCR(c.Downgrade),
+	}
+}
+
+// upgradeCompatibilityRuleToCR projects the upgrade direction's rule, taking def for a missing rule or limit.
+func upgradeCompatibilityRuleToCR(r *VersionCompatibilityRule) *v1alpha1.PackageVersionCompatibilityRule {
+	var step VersionCompatibilityStep
+	if r != nil {
+		step = r.Step
+	}
+
+	return &v1alpha1.PackageVersionCompatibilityRule{
+		Step: v1alpha1.PackageVersionCompatibilityRuleStep{
+			Patches: limitOrDefault(step.Patches, v1alpha1.DefaultUpgradePatches),
+			Minor:   limitOrDefault(step.Minor, v1alpha1.DefaultUpgradeMinor),
+			Major:   limitOrDefault(step.Major, v1alpha1.DefaultUpgradeMajor),
+		},
+	}
+}
+
+// downgradeCompatibilityRuleToCR projects the downgrade direction's rule, taking def for a missing rule or limit.
+func downgradeCompatibilityRuleToCR(r *VersionCompatibilityRule) *v1alpha1.PackageVersionCompatibilityRule {
+	var step VersionCompatibilityStep
+	if r != nil {
+		step = r.Step
+	}
+
+	return &v1alpha1.PackageVersionCompatibilityRule{
+		Step: v1alpha1.PackageVersionCompatibilityRuleStep{
+			Patches: limitOrDefault(step.Patches, v1alpha1.DefaultDowngradePatches),
+			Minor:   limitOrDefault(step.Minor, v1alpha1.DefaultDowngradeMinor),
+			Major:   limitOrDefault(step.Major, v1alpha1.DefaultDowngradeMajor),
+		},
+	}
+}
+
+// limitOrDefault returns a fresh copy of limit, or of def when unset; any negative limit becomes -1, the only unlimited value the CRD accepts.
+func limitOrDefault(limit *int32, def int32) *int32 {
+	if limit != nil {
+		return ptr.To(max(*limit, -1))
+	}
+
+	return ptr.To(def)
 }
 
 // versionConstraintToCR wraps a raw semver constraint string into the v1alpha1

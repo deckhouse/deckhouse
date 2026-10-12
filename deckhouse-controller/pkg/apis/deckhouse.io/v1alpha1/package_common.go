@@ -19,6 +19,8 @@ package v1alpha1
 import (
 	"maps"
 
+	"github.com/Masterminds/semver/v3"
+
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/openapi"
 )
 
@@ -315,44 +317,117 @@ type PackageChangelog struct {
 	Fixes []string `json:"fixes,omitempty"`
 }
 
-// PackageVersionCompatibilityRules bounds which versions may upgrade or downgrade to this one.
+// Default compatibility limits, applied to every unset limit; -1 is unlimited, 0 forbids the change.
+const (
+	// DefaultUpgradePatches allows an upgrade across any number of patches.
+	DefaultUpgradePatches int32 = -1
+	// DefaultUpgradeMinor allows an upgrade to the next minor only.
+	DefaultUpgradeMinor int32 = 1
+	// DefaultUpgradeMajor forbids an upgrade to another major.
+	DefaultUpgradeMajor int32 = 0
+	// DefaultDowngradePatches allows a downgrade across any number of patches.
+	DefaultDowngradePatches int32 = -1
+	// DefaultDowngradeMinor forbids a minor downgrade.
+	DefaultDowngradeMinor int32 = 0
+	// DefaultDowngradeMajor forbids a major downgrade.
+	DefaultDowngradeMajor int32 = 0
+)
+
+// PackageVersionCompatibilityRules bounds which versions may upgrade to or downgrade from this one.
 type PackageVersionCompatibilityRules struct {
 	// Compatibility rules for upgrading to this version.
+	// +kubebuilder:default={step:{patches:-1,minor:1,major:0}}
 	// +optional
 	Upgrade *PackageVersionCompatibilityRule `json:"upgrade,omitempty"`
 
 	// Compatibility rules for downgrading from this version.
+	// +kubebuilder:default={step:{patches:-1,minor:0,major:0}}
 	// +optional
 	Downgrade *PackageVersionCompatibilityRule `json:"downgrade,omitempty"`
 }
 
 // PackageVersionCompatibilityRule is one direction's version range and skip allowances.
 type PackageVersionCompatibilityRule struct {
-	// Starting version range for compatibility.
+	// Step defines the compatibility rule for this direction.
 	// +optional
-	From string `json:"from,omitempty"`
+	Step PackageVersionCompatibilityRuleStep `json:"step,omitempty"`
+}
 
-	// Ending version range for compatibility.
+// PackageVersionCompatibilityRuleStep is a single step in a compatibility rule.
+type PackageVersionCompatibilityRuleStep struct {
+	// How many patch versions can be skipped; -1 is unlimited, 0 forbids the change. Defaults to -1.
 	// +optional
-	To string `json:"to,omitempty"`
+	// +kubebuilder:validation:Minimum=-1
+	Patches *int32 `json:"patches,omitempty"`
 
-	// How many patch versions can be skipped.
+	// How many minor versions can be skipped; -1 is unlimited, 0 forbids the change. Defaults to 1 on upgrade, 0 on downgrade.
 	// +optional
-	// +kubebuilder:validation:Minimum=0
-	AllowSkipPatches int32 `json:"allowSkipPatches,omitempty"`
+	// +kubebuilder:validation:Minimum=-1
+	Minor *int32 `json:"minor,omitempty"`
 
-	// How many minor versions can be skipped.
+	// How many major versions can be skipped; -1 is unlimited, 0 forbids the change. Defaults to 0.
 	// +optional
-	// +kubebuilder:validation:Minimum=0
-	AllowSkipMinor int32 `json:"allowSkipMinor,omitempty"`
+	// +kubebuilder:validation:Minimum=-1
+	Major *int32 `json:"major,omitempty"`
+}
 
-	// How many major versions can be skipped.
-	// +optional
-	// +kubebuilder:validation:Minimum=0
-	AllowSkipMajor int32 `json:"allowSkipMajor,omitempty"`
+// IsCompatible reports whether from may move to to; pass the target's rules for an upgrade, the source's for a downgrade.
+// A missing rule or limit takes the direction's default, the same the package parser fills; unparsable versions are incompatible.
+func (r *PackageVersionCompatibilityRules) IsCompatible(from, to string) bool {
+	fromVer, err := semver.NewVersion(from)
+	if err != nil {
+		return false
+	}
 
-	// Maximum number of versions that can be rolled back.
-	// +optional
-	// +kubebuilder:validation:Minimum=0
-	MaxRollback int32 `json:"maxRollback,omitempty"`
+	toVer, err := semver.NewVersion(to)
+	if err != nil {
+		return false
+	}
+
+	if toVer.Equal(fromVer) {
+		return true
+	}
+
+	upgrade := toVer.GreaterThan(fromVer)
+
+	var rule *PackageVersionCompatibilityRule
+	if r != nil {
+		rule = r.Downgrade
+		if upgrade {
+			rule = r.Upgrade
+		}
+	}
+
+	var step PackageVersionCompatibilityRuleStep
+	if rule != nil {
+		step = rule.Step
+	}
+
+	patches, minor, major := DefaultDowngradePatches, DefaultDowngradeMinor, DefaultDowngradeMajor
+	if upgrade {
+		patches, minor, major = DefaultUpgradePatches, DefaultUpgradeMinor, DefaultUpgradeMajor
+	}
+
+	switch {
+	case fromVer.Major() != toVer.Major():
+		return withinLimit(fromVer.Major(), toVer.Major(), limitOr(step.Major, major))
+	case fromVer.Minor() != toVer.Minor():
+		return withinLimit(fromVer.Minor(), toVer.Minor(), limitOr(step.Minor, minor))
+	default:
+		return withinLimit(fromVer.Patch(), toVer.Patch(), limitOr(step.Patches, patches))
+	}
+}
+
+// limitOr returns the limit, or def when it is unset.
+func limitOr(limit *int32, def int32) int32 {
+	if limit == nil {
+		return def
+	}
+
+	return *limit
+}
+
+// withinLimit reports whether the distance between a and b fits limit; a negative limit means unlimited.
+func withinLimit(a, b uint64, limit int32) bool {
+	return limit < 0 || max(a, b)-min(a, b) <= uint64(limit)
 }

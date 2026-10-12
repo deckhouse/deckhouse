@@ -41,9 +41,6 @@ spec:
                 packageVersion:
                   description: |
                     Версия пакета приложения для установки.
-                releaseChannel:
-                  description: |
-                    Канал обновлений пакета приложения.
                 resourceRequests:
                   description: |
                     Ресурсный профиль нагрузок, которые разворачивает приложение: сколько реплик
@@ -217,9 +214,6 @@ spec:
                   description: |
                     Информация о текущей установленной версии.
                   properties:
-                    channel:
-                      description: |
-                        Канал обновлений, из которого установлена версия.
                     version:
                       description: |
                         Версия установленного приложения в формате SemVer.

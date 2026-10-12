@@ -228,7 +228,7 @@ spec:
     subresources:
       status: {}
   - additionalPrinterColumns:
-    - jsonPath: .spec.packageVersion
+    - jsonPath: .status.currentVersion.version
       name: Version
       type: string
     - jsonPath: .spec.packageRepositoryName

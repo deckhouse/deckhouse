@@ -31,6 +31,7 @@ import (
 	kwhhttp "github.com/slok/kubewebhook/v2/pkg/http"
 	kwhmodel "github.com/slok/kubewebhook/v2/pkg/model"
 	kwhvalidating "github.com/slok/kubewebhook/v2/pkg/webhook/validating"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
@@ -128,28 +129,35 @@ func applicationValidationHandler(cli client.Client, manager packageManager) htt
 // settings are malformed or whose cluster requirements are not satisfied.
 func validateAppAgainstApv(ctx context.Context, cli client.Client, manager packageManager, app, oldApp *v1alpha1.Application) error {
 	// Build the deterministic APV name from the Application's spec fields (repo, package, version).
-	name := v1alpha1.MakeApplicationPackageVersionName(app.Spec.PackageRepositoryName, app.Spec.PackageName, app.Spec.PackageVersion)
+	apvName := v1alpha1.MakeApplicationPackageVersionName(app.Spec.PackageRepositoryName, app.Spec.PackageName, app.Spec.PackageVersion)
 
 	// Fetch the corresponding ApplicationPackageVersion to read its metadata requirements.
 	apv := new(v1alpha1.ApplicationPackageVersion)
-	if err := cli.Get(ctx, client.ObjectKey{Name: name}, apv); err != nil {
+	if err := cli.Get(ctx, client.ObjectKey{Name: apvName}, apv); err != nil {
 		return fmt.Errorf("get application package version: %w", err)
 	}
 
 	if apv.IsDraft() {
-		return fmt.Errorf("application package version '%s' is draft", name)
+		return fmt.Errorf("application package version '%s' is draft", apvName)
 	}
 
 	if err := validateAppSettings(apv, app, oldApp); err != nil {
 		return fmt.Errorf("validate settings: %w", err)
 	}
 
-	var reqs *v1alpha1.PackageRequirements
-	if apv.Status.PackageMetadata != nil {
-		reqs = apv.Status.PackageMetadata.Requirements
+	metadata := apv.Status.PackageMetadata
+	if metadata == nil {
+		metadata = new(v1alpha1.ApplicationPackageVersionStatusMetadata)
 	}
 
-	constraints, err := buildPackageConstraints(reqs)
+	// Only a spec version change is gated, so the controller's own patches never trip it; nothing is installed on create.
+	if oldApp != nil && oldApp.Spec.PackageVersion != app.Spec.PackageVersion {
+		if err := checkVersionCompatibility(ctx, cli, app, oldApp.Spec.PackageVersion, metadata.Compatibility); err != nil {
+			return err
+		}
+	}
+
+	constraints, err := buildPackageConstraints(metadata.Requirements)
 	if err != nil {
 		return err
 	}
@@ -158,6 +166,60 @@ func validateAppAgainstApv(ctx context.Context, cli client.Client, manager packa
 	// actual cluster state and rejects on dependency cycles. The name is the
 	// scheduler-side identifier (namespace.name) used by the cycle simulation.
 	return manager.CheckConstraints(apps.BuildName(app.Namespace, app.Name), constraints)
+}
+
+// checkVersionCompatibility gates a change from the previous spec version: an upgrade by the target's rules, a downgrade by the previous one's.
+func checkVersionCompatibility(ctx context.Context, cli client.Client, app *v1alpha1.Application, current string, target *v1alpha1.PackageVersionCompatibilityRules) error {
+	wanted := app.Spec.PackageVersion
+
+	rules := target
+	if isDowngrade(current, wanted) {
+		var err error
+		if rules, err = previousCompatibility(ctx, cli, app, current); err != nil {
+			return err
+		}
+	}
+
+	if !rules.IsCompatible(current, wanted) {
+		return fmt.Errorf("incompatible version: current=%s target=%s", current, wanted)
+	}
+
+	return nil
+}
+
+// isDowngrade reports whether to is lower than from; unparsable versions are not a downgrade, IsCompatible rejects them.
+func isDowngrade(from, to string) bool {
+	fromVer, err := semver.NewVersion(from)
+	if err != nil {
+		return false
+	}
+
+	toVer, err := semver.NewVersion(to)
+	if err != nil {
+		return false
+	}
+
+	return toVer.LessThan(fromVer)
+}
+
+// previousCompatibility reads the previous version's rules; a vanished version yields nil, so the defaults apply.
+func previousCompatibility(ctx context.Context, cli client.Client, app *v1alpha1.Application, previous string) (*v1alpha1.PackageVersionCompatibilityRules, error) {
+	name := v1alpha1.MakeApplicationPackageVersionName(app.Spec.PackageRepositoryName, app.Spec.PackageName, previous)
+
+	apv := new(v1alpha1.ApplicationPackageVersion)
+	if err := cli.Get(ctx, client.ObjectKey{Name: name}, apv); err != nil {
+		if apierrors.IsNotFound(err) {
+			return nil, nil
+		}
+
+		return nil, fmt.Errorf("get previous application package version: %w", err)
+	}
+
+	if apv.Status.PackageMetadata == nil {
+		return nil, nil
+	}
+
+	return apv.Status.PackageMetadata.Compatibility, nil
 }
 
 // buildPackageConstraints parses a package version's requirements into scheduler constraints; nil requirements yield none.
