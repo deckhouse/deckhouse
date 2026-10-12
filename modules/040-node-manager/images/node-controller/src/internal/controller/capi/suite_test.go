@@ -58,7 +58,8 @@ var (
 // TestCAPIMachineDeploymentControllerEnvtest runs the MachineDeployment reconciler inside a
 // manager against a real apiserver with the production cache scoping for core types, so the
 // ConfigMap watch is exercised end to end. The other capi controllers are disabled: their
-// CRDs (Cluster, MachineHealthCheck, DeckhouseControlPlane) are not part of this suite.
+// CRDs (Cluster, DeckhouseControlPlane) are not part of this suite. The MachineHealthCheck CRD
+// is installed only so specs can call the cloud MHC apply directly.
 func TestCAPIMachineDeploymentControllerEnvtest(t *testing.T) {
 	if !testenv.AssetsAvailable() {
 		t.Skip("envtest assets not found; run `make envtest` (or set KUBEBUILDER_ASSETS) to run the integration suite")
@@ -77,7 +78,7 @@ var _ = BeforeSuite(func() {
 	Expect(deckhousev1.AddToScheme(scheme)).To(Succeed())
 	Expect(capiv1beta2.AddToScheme(scheme)).To(Succeed())
 
-	By("bootstrapping the envtest environment with the NodeGroup, MCM and MachineDeployment CRDs")
+	By("bootstrapping the envtest environment with the NodeGroup, MCM, MachineDeployment and MachineHealthCheck CRDs")
 	var err error
 	testEnv, cfg, k8sClient, err = testenv.Start(
 		scheme,
@@ -85,6 +86,7 @@ var _ = BeforeSuite(func() {
 			testenv.WithNodeGroupCRDFile(),
 			testenv.WithMCMCRDFile(),
 			testenv.WithMachineDeploymentCRDFile(),
+			testenv.WithController(testenv.MachineHealthCheckCRDFile),
 		)...,
 	)
 	Expect(err).NotTo(HaveOccurred())

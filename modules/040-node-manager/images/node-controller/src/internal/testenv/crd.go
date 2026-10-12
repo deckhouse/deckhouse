@@ -27,8 +27,9 @@ type (
 )
 
 const (
-	MachineCRDFile           ControllerCRDFile = "machine.yaml"
-	MachineDeploymentCRDFile ControllerCRDFile = "machine-deployment.yaml"
+	MachineCRDFile            ControllerCRDFile = "machine.yaml"
+	MachineDeploymentCRDFile  ControllerCRDFile = "machine-deployment.yaml"
+	MachineHealthCheckCRDFile ControllerCRDFile = "machine-health-check.yaml"
 
 	NodeGroupCRDFile NodeManagerCRDFile = "node_group.yaml"
 	MCMCRDFile       NodeManagerCRDFile = "mcm.yaml"

@@ -94,17 +94,26 @@ to `calculateReplicas(current, min, max)` only when it differs
 | | |
 |---|---|
 | **Primary** | `Secret` `d8-node-manager-cloud-provider` (kube-system) |
-| **Watches** | that Secret (event filter) + all NodeGroups (any NodeGroup change re-enqueues the Secret request) |
+| **Watches** | that Secret (event filter) + all NodeGroups (a NodeGroup generation change re-enqueues the Secret request) |
 | **Reads** | the cloud-provider Secret, `d8-cluster-configuration` (cluster network) |
 | **Output** | top-level CAPI `Cluster` + `MachineHealthCheck` |
 
-Ensures the `Cluster` and `MachineHealthCheck` objects exist. Uses `Create`-if-not-exists
-(never overwrites a running cluster).
+Ensures the `Cluster` and `MachineHealthCheck` objects exist. Both `Cluster` objects and the
+static `MachineHealthCheck` use `Create`-if-not-exists (never overwrites a running cluster).
+The cloud `MachineHealthCheck` is applied with server-side apply (field owner `node-controller`,
+forced ownership): existing clusters already have it, created by the former `Create` or by Helm
+in 1.76, and must get spec changes too. There is no periodic requeue: the reconciler runs on
+node-controller start, on cloud-provider Secret changes and on NodeGroup generation changes.
 
 - **ensureCloudCluster:** when `capiClusterName`/`capiClusterKind` are set, creates a
   `Cluster` (infrastructureRef from the secret, controlPlaneRef → `{name}-control-plane`
-  `DeckhouseControlPlane`) and a `MachineHealthCheck` (`{name}-machine-health-check`,
-  nodeStartup 1200s, Ready=Unknown/False timeout 300s).
+  `DeckhouseControlPlane`) and applies a `MachineHealthCheck` (`{name}-machine-health-check`):
+  nodeStartup 1200s, Ready=Unknown 300s, Ready=False 600s, and
+  `remediation.triggerIf.unhealthyLessThanOrEqualTo: 50%`. nodeStartup stops applying once the
+  Node exists, and a node registers before CNI and bashible finish, so the Ready=False timeout
+  also covers bootstrap. The 50% limit keeps a cluster-wide outage from deleting every CAPI
+  machine at once; CAPI rounds it down over all machines of the cluster and counts machines
+  without a node or with a pending timer as unhealthy.
 - **ensureStaticCluster:** when at least one NodeGroup has `staticInstances`, creates a
   `Cluster` named `static` (infrastructureRef → `StaticCluster`, controlPlaneRef →
   `static-control-plane`) and `static-machine-health-check`

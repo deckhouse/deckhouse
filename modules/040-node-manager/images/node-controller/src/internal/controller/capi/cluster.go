@@ -156,13 +156,40 @@ func (r *ClusterReconciler) ensureCloudCluster(ctx context.Context, clusterConfi
 		return fmt.Errorf("create Cluster: %w", err)
 	}
 
-	mhc := &unstructured.Unstructured{Object: map[string]interface{}{
+	if err := r.applyCloudMachineHealthCheck(ctx, clusterName, commonLabels); err != nil {
+		return err
+	}
+
+	logger.V(1).Info("ensured cloud CAPI cluster resources", "cluster", clusterName)
+	return nil
+}
+
+// Cloud MachineHealthCheck timeouts. nodeStartupTimeout stops applying once the Machine has a
+// Node, and a node registers before CNI and bashible finish, so Ready=False also covers a
+// bootstrapping node. With 5 minutes, MHC deleted machines that were still pulling images, and
+// their replacements started over forever. 10 minutes doubles the room for bootstrap and matches
+// the MCM default healthTimeout, so a node that was Ready and then went NotReady is not kept
+// longer than on MCM. Ready=Unknown (the kubelet stopped reporting, a dead node) stays at 5 minutes.
+//
+// cloudMaxUnhealthy limits remediation: without spec.remediation.triggerIf CAPI remediates every
+// unhealthy machine, so a cluster-wide outage would delete all CAPI machines at once. CAPI counts
+// machines without a node or with a pending timer as unhealthy and rounds the percentage down
+// over all machines of the cluster (1 → 0, 2 → 1, 4 → 2, 10 → 5).
+const (
+	cloudNodeStartupTimeoutSeconds  = int64(1200)
+	cloudNodeNotReadyTimeoutSeconds = int64(600)
+	cloudNodeUnknownTimeoutSeconds  = int64(300)
+	cloudMaxUnhealthy               = "50%"
+)
+
+func cloudMachineHealthCheck(clusterName string, labels map[string]interface{}) *unstructured.Unstructured {
+	return &unstructured.Unstructured{Object: map[string]interface{}{
 		"apiVersion": "cluster.x-k8s.io/v1beta2",
 		"kind":       "MachineHealthCheck",
 		"metadata": map[string]interface{}{
 			"name":      clusterName + "-machine-health-check",
 			"namespace": capiNamespace,
-			"labels":    commonLabels,
+			"labels":    labels,
 		},
 		"spec": map[string]interface{}{
 			"clusterName": clusterName,
@@ -172,20 +199,33 @@ func (r *ClusterReconciler) ensureCloudCluster(ctx context.Context, clusterConfi
 				},
 			},
 			"checks": map[string]interface{}{
-				"nodeStartupTimeoutSeconds": int64(1200),
+				"nodeStartupTimeoutSeconds": cloudNodeStartupTimeoutSeconds,
 				"unhealthyNodeConditions": []interface{}{
-					map[string]interface{}{"type": "Ready", "status": "Unknown", "timeoutSeconds": int64(300)},
-					map[string]interface{}{"type": "Ready", "status": "False", "timeoutSeconds": int64(300)},
+					map[string]interface{}{"type": "Ready", "status": "Unknown", "timeoutSeconds": cloudNodeUnknownTimeoutSeconds},
+					map[string]interface{}{"type": "Ready", "status": "False", "timeoutSeconds": cloudNodeNotReadyTimeoutSeconds},
+				},
+			},
+			"remediation": map[string]interface{}{
+				"triggerIf": map[string]interface{}{
+					"unhealthyLessThanOrEqualTo": cloudMaxUnhealthy,
 				},
 			},
 		},
 	}}
+}
 
-	if err := r.createIfNotExists(ctx, mhc); err != nil {
-		return fmt.Errorf("create MachineHealthCheck: %w", err)
+// applyCloudMachineHealthCheck uses server-side apply, not createIfNotExists: existing clusters
+// already have this MHC, created by node-controller's former Create or by Helm in 1.76 (kept by
+// the set_keep_policy_on_capi_resources hook), and Create would never update them.
+func (r *ClusterReconciler) applyCloudMachineHealthCheck(
+	ctx context.Context,
+	clusterName string,
+	labels map[string]interface{},
+) error {
+	mhc := cloudMachineHealthCheck(clusterName, labels)
+	if err := r.Client.Patch(ctx, mhc, client.Apply, client.FieldOwner("node-controller"), client.ForceOwnership); err != nil {
+		return fmt.Errorf("apply MachineHealthCheck: %w", err)
 	}
-
-	logger.V(1).Info("ensured cloud CAPI cluster resources", "cluster", clusterName)
 	return nil
 }
 
