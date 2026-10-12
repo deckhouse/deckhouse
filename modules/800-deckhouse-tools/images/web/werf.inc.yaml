@@ -59,10 +59,6 @@ import:
     add: /src/deckhouse-cli
     to: /src
     before: install
-  - image: common/task-artifact
-    add: /task
-    to: /usr/local/bin/task
-    before: install
 mount:
 {{ include "mount points for golang builds" . }}
 secrets:
@@ -72,7 +68,7 @@ secrets:
   value: {{ .DECKHOUSE_PRIVATE_REPO }}
 shell:
   beforeInstall:
-    - pm install git ssh-static make coreutils findutils file jq pkgconf gnu-glibc-devel btrfs-progs-devel
+    - pm install git ssh-static make coreutils findutils file jq pkgconf gnu-glibc-devel btrfs-progs-devel task
   install:
     - export GOPROXY=$(cat /run/secrets/GOPROXY)
     - export PRIVATE_REPO=$(cat /run/secrets/DECKHOUSE_PRIVATE_REPO)
