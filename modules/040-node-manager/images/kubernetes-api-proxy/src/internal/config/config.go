@@ -32,13 +32,15 @@ type Config struct {
 	ListenAddress string
 	ListenPort    int
 
-	DialTimeout     time.Duration
-	KeepAlivePeriod time.Duration
-	TCPUserTimeout  time.Duration
+	DialTimeout      time.Duration
+	FirstByteTimeout time.Duration
+	KeepAlivePeriod  time.Duration
+	TCPUserTimeout   time.Duration
 
 	HealthInterval time.Duration
 	HealthTimeout  time.Duration
 	HealthJitter   float64
+	StallTimeout   time.Duration
 
 	ProxyHealthListen string
 
@@ -81,11 +83,13 @@ func Parse() Config {
 	listenPort := flag.Int("listen-port", getenvIntDefault("LISTEN_PORT", 6445), "Port to bind the load balancer to")
 
 	dialTimeout := flag.Duration("dial-timeout", 5*time.Second, "Dial timeout for connections to upstreams")
+	firstByteTimeout := flag.Duration("first-byte-timeout", 3*time.Second, "Floor of the per-upstream wait for the first byte on a new upstream connection before retrying another upstream; 0 disables the wait")
 	keepAlivePeriod := flag.Duration("keepalive-period", 1*time.Second, "TCP keepalive period for connections")
 	tcpUserTimeout := flag.Duration("tcp-user-timeout", 5*time.Second, "TCP_USER_TIMEOUT for connections (Linux only)")
 	healthInterval := flag.Duration("health-interval", 1*time.Second, "Upstream healthcheck interval")
-	healthTimeout := flag.Duration("health-timeout", 100*time.Millisecond, "Upstream healthcheck timeout")
+	healthTimeout := flag.Duration("health-timeout", 500*time.Millisecond, "Upstream healthcheck timeout")
 	healthJitter := flag.Float64("health-jitter", 0.2, "Jitter factor for healthcheck interval (0..1 recommended)")
+	stallTimeout := flag.Duration("stall-timeout", 3*time.Second, "Close client connections pinned to an apiserver whose /readyz gave no answer for this long while another apiserver has served 200 for twice as long; 0 disables")
 	proxyHealthListen := flag.String("health-listen", getenvDefault("HEALTH_LISTEN", "127.0.0.1:4300"), "address for HTTP health endpoints (e.g., :8080)")
 	logLevel := flag.String("log-level", getenvDefault("LOG_LEVEL", "info"), "Log level: debug|info|warn|error")
 
@@ -107,11 +111,13 @@ func Parse() Config {
 	cfg.LogLevel = *logLevel
 
 	cfg.DialTimeout = *dialTimeout
+	cfg.FirstByteTimeout = *firstByteTimeout
 	cfg.KeepAlivePeriod = *keepAlivePeriod
 	cfg.TCPUserTimeout = *tcpUserTimeout
 	cfg.HealthInterval = *healthInterval
 	cfg.HealthTimeout = *healthTimeout
 	cfg.HealthJitter = *healthJitter
+	cfg.StallTimeout = *stallTimeout
 	cfg.ProxyHealthListen = *proxyHealthListen
 
 	cfg.DiscoverPeriod = *discoverPeriod

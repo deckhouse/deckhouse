@@ -16,14 +16,49 @@ limitations under the License.
 
 package upstream
 
+import "time"
+
 type node struct {
-	backend *Upstream
-	score   float64
-	tier    Tier
+	backend   *Upstream
+	score     float64
+	tier      Tier
+	heldUntil time.Time
+	missing   int
+	lastKind  probeKind
+	penalized bool
+	downed    bool
+	warm      bool
+	unsettled bool
+
+	answeredAt time.Time
+	readySince time.Time
+	stalling   bool
+	evictions  int
+}
+
+func (n node) lastProbe() string {
+	if n.lastKind == 0 {
+		return ""
+	}
+
+	return n.lastKind.String()
+}
+
+func (n node) witnesses(start, now time.Time, window time.Duration) bool {
+	return n.missing == 0 && !n.warm && n.score >= 0 && !now.Before(n.heldUntil) &&
+		!n.readySince.IsZero() && now.Sub(n.readySince) >= window && !n.answeredAt.Before(start)
 }
 
 type ExportNode struct {
-	Upstream string  `json:"upstream"`
-	Score    float64 `json:"score"`
-	Tier     Tier    `json:"tier"`
+	Upstream      string  `json:"upstream"`
+	Score         float64 `json:"score"`
+	Tier          Tier    `json:"tier"`
+	EffectiveTier Tier    `json:"effectiveTier"`
+	Missing       int     `json:"missing"`
+	LastProbe     string  `json:"lastProbe"`
+	Warm          bool    `json:"warm"`
+	Downed        bool    `json:"downed"`
+	Held          bool    `json:"held"`
+	Stalling      bool    `json:"stalling"`
+	Evictions     int     `json:"evictions"`
 }

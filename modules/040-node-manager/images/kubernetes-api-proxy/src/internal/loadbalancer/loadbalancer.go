@@ -25,6 +25,7 @@ import (
 
 	"github.com/deckhouse/deckhouse/pkg/log"
 
+	"kubernetes-api-proxy/internal/firstbyte"
 	"kubernetes-api-proxy/internal/upstream"
 )
 
@@ -41,9 +42,10 @@ type Balancer struct {
 	MainUpstreamList     *upstream.List
 	FallbackUpstreamList *upstream.FallbackList
 
-	DialTimeout     time.Duration
-	KeepAlivePeriod time.Duration
-	TCPUserTimeout  time.Duration
+	DialTimeout      time.Duration
+	FirstByteTimeout time.Duration
+	KeepAlivePeriod  time.Duration
+	TCPUserTimeout   time.Duration
 }
 
 // IsHealthy reports whether at least one upstream is currently available
@@ -53,16 +55,7 @@ func (b *Balancer) IsHealthy() (bool, error) {
 		return false, nil
 	}
 
-	_, err := b.MainUpstreamList.Pick()
-	if err != nil {
-		if errors.Is(err, upstream.ErrNoUpstreams) {
-			return false, nil
-		}
-
-		return false, err
-	}
-
-	return true, nil
+	return b.MainUpstreamList.Healthy(), nil
 }
 
 func (b *Balancer) ExportNodes() ([]upstream.ExportNode, error) {
@@ -79,21 +72,22 @@ func (b *Balancer) ExportNodes() ([]upstream.ExportNode, error) {
 // Background health checks run automatically and only healthy upstreams are
 // picked for proxying. Call before Start.
 func (b *Balancer) ServeRoute(ipPort string) error {
+	if b.FirstByteTimeout < 0 || b.DialTimeout < 0 || b.KeepAlivePeriod < 0 || b.TCPUserTimeout < 0 {
+		return errors.New("timeouts must not be negative")
+	}
+
 	if b.Logger != nil {
 		b.Logger.Debug("adding route",
 			slog.String("route", ipPort),
 		)
 	}
 
-	b.Proxy.AddRoute(ipPort, &lbTarget{
-		list:            b.MainUpstreamList,
-		fallbackList:    b.FallbackUpstreamList,
-		logger:          b.Logger,
-		route:           ipPort,
-		dialTimeout:     b.DialTimeout,
-		keepAlivePeriod: b.KeepAlivePeriod,
-		tcpUserTimeout:  b.TCPUserTimeout,
-	})
+	t := b.newTarget(ipPort)
+	if b.MainUpstreamList != nil {
+		b.MainUpstreamList.OnStall(t.closeConnsTo)
+	}
+
+	b.Proxy.AddRoute(ipPort, t)
 
 	if b.Logger != nil {
 		b.Logger.Debug("route added",
@@ -102,6 +96,31 @@ func (b *Balancer) ServeRoute(ipPort string) error {
 	}
 
 	return nil
+}
+
+func (b *Balancer) newTarget(route string) *lbTarget {
+	t := &lbTarget{
+		fallbackList:    b.FallbackUpstreamList,
+		logger:          b.Logger,
+		route:           route,
+		dialTimeout:     b.DialTimeout,
+		keepAlivePeriod: b.KeepAlivePeriod,
+		tcpUserTimeout:  b.TCPUserTimeout,
+	}
+
+	if b.MainUpstreamList != nil {
+		t.list = b.MainUpstreamList
+	}
+
+	if b.Logger == nil {
+		t.logger = log.NewNop()
+	}
+
+	if b.FirstByteTimeout > 0 {
+		t.firstByte = firstbyte.New(b.FirstByteTimeout)
+	}
+
+	return t
 }
 
 // Close shuts down the proxy listeners and stops health checks.

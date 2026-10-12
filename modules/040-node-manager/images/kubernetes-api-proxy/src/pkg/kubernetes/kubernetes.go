@@ -44,6 +44,22 @@ func BuildGetter(
 	return getClusterConfigViaInCluster
 }
 
+func BuildProbeConfigGetter(cfg config.Config) ClusterConfigGetter {
+	if !cfg.AsStaticPod {
+		return getClusterConfigViaInCluster
+	}
+
+	return func() (*rest.Config, error) {
+		return &rest.Config{
+			TLSClientConfig: rest.TLSClientConfig{
+				CAFile:   caFile,
+				CertFile: certFile,
+				KeyFile:  keyFile,
+			},
+		}, nil
+	}
+}
+
 func buildClusterConfigFromFile(
 	apiserversUpstreamsList ListPicker,
 ) ClusterConfigGetter {

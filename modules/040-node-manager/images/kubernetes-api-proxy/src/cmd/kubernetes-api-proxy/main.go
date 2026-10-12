@@ -35,6 +35,7 @@ import (
 	"kubernetes-api-proxy/internal/config"
 	uopts "kubernetes-api-proxy/internal/upstream"
 	"kubernetes-api-proxy/pkg/kubernetes"
+	"kubernetes-api-proxy/pkg/utils"
 )
 
 func main() {
@@ -64,19 +65,30 @@ func main() {
 		os.Exit(1)
 	}
 
-	configGetter := kubernetes.BuildGetter(cfg, fallbackList)
-
-	mainUpstreamList, err := configureMainUpstreamList(cfg, logger, configGetter)
+	mainUpstreamList, err := configureMainUpstreamList(cfg, logger)
 	if err != nil {
 		logger.Error("failed to configure upstream list", slog.String("error", err.Error()))
 		os.Exit(1)
 	}
+
+	probeConfig := kubernetes.BuildProbeConfigGetter(cfg)
+
+	// Seed the main list with the fallback upstreams before the port opens. Until the
+	// first discovery round a connection would otherwise go through the fallback list:
+	// no dial retry, no first-byte retry, and it is never closed when its apiserver
+	// stalls. kubelet, kube-controller-manager and kube-scheduler reconnect exactly then,
+	// after every proxy restart, and keep that connection for hours. Seeded upstreams
+	// wait for their first 200 like discovered ones; discovery replaces the set.
+	mainUpstreamList.Reconcile(utils.Map(fallbackList.ListFullAddresses(), func(addr string) *uopts.Upstream {
+		return uopts.NewUpstream(addr, probeConfig)
+	}))
 
 	lb, err := apilb.NewLoadBalancer(
 		cfg.ListenAddress,
 		cfg.ListenPort,
 		logger,
 		apilb.WithDialTimeout(cfg.DialTimeout),
+		apilb.WithFirstByteTimeout(cfg.FirstByteTimeout),
 		apilb.WithKeepAlivePeriod(cfg.KeepAlivePeriod),
 		apilb.WithTCPUserTimeout(cfg.TCPUserTimeout),
 		apilb.WithMainUpstreamList(mainUpstreamList),
@@ -105,7 +117,7 @@ func main() {
 
 	logger.Info("apiserver-lb started", slog.String("listen", lb.Endpoint()))
 
-	go app.StartDiscovery(ctx, cfg, logger, mainUpstreamList, fallbackList)
+	go app.StartDiscovery(ctx, cfg, logger, mainUpstreamList, fallbackList, probeConfig)
 
 	sigCh := make(chan os.Signal, 2)
 	signal.Notify(sigCh, syscall.SIGINT, syscall.SIGTERM)
@@ -130,24 +142,19 @@ func main() {
 func configureMainUpstreamList(
 	cfg config.Config,
 	logger *log.Logger,
-	kubernetesConfigGetter kubernetes.ClusterConfigGetter,
 ) (*uopts.List, error) {
 	listOptions := []uopts.ListOption{
 		uopts.WithHealthcheckInterval(cfg.HealthInterval),
 		uopts.WithHealthcheckTimeout(cfg.HealthTimeout),
-		uopts.WithKubernetesConfigGetter(kubernetesConfigGetter),
+		uopts.WithDownHold(cfg.DialTimeout),
+		uopts.WithStallTimeout(cfg.StallTimeout),
 		uopts.WithLogger(logger),
 	}
 	if cfg.HealthJitter > 0 {
 		listOptions = append(listOptions, uopts.WithHealthCheckJitter(cfg.HealthJitter))
 	}
 
-	mainUpstreamList, err := uopts.NewList([]*uopts.Upstream{}, listOptions...)
-	if err != nil {
-		return nil, err
-	}
-
-	return mainUpstreamList, nil
+	return uopts.NewList([]*uopts.Upstream{}, listOptions...)
 }
 
 func configureFallbackList(

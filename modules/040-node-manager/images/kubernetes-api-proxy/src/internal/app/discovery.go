@@ -55,11 +55,12 @@ func StartDiscovery(
 	logger *log.Logger,
 	mainList *upstream.List,
 	fallbackList *upstream.FallbackList,
+	probeConfig kutils.ClusterConfigGetter,
 ) {
 	ticker := time.NewTicker(cfg.DiscoverPeriod)
 	defer ticker.Stop()
 
-	if err := discovery(ctx, logger, kutils.BuildGetter(cfg, fallbackList), mainList); err != nil {
+	if err := discovery(ctx, logger, kutils.BuildGetter(cfg, fallbackList), probeConfig, mainList); err != nil {
 		logger.Error("initial discovery failed", slog.String("error", err.Error()))
 	}
 
@@ -69,7 +70,7 @@ func StartDiscovery(
 		case <-ctx.Done():
 			return
 		case <-ticker.C:
-			if err := discovery(ctx, logger, kutils.BuildGetter(cfg, fallbackList), mainList); err != nil {
+			if err := discovery(ctx, logger, kutils.BuildGetter(cfg, fallbackList), probeConfig, mainList); err != nil {
 				logger.Error("discovery failed", slog.String("error", err.Error()))
 			} else {
 				fallbackListReconcileCounter++
@@ -93,6 +94,7 @@ func discovery(
 	ctx context.Context,
 	logger *log.Logger,
 	clusterConfigGetter func() (*rest.Config, error),
+	probeConfig kutils.ClusterConfigGetter,
 	mainList *upstream.List,
 ) error {
 	clusterConfig, err := clusterConfigGetter()
@@ -129,10 +131,9 @@ func discovery(
 	}
 
 	mainList.Reconcile(
-		utils.Map(
-			addrs,
-			upstream.NewUpstream,
-		),
+		utils.Map(addrs, func(addr string) *upstream.Upstream {
+			return upstream.NewUpstream(addr, probeConfig)
+		}),
 	)
 
 	return nil

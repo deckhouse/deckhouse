@@ -22,6 +22,42 @@ bb-set-proxy
   {{- $kubernetes_api_proxy_image = "deckhouse.local/images:kubernetes-api-proxy" }}
 {{- end }}
 
+{{- if or ( eq .cri "Containerd") ( eq .cri "ContainerdV2") }}
+# The static pod refers to a local tag that step 034 re-imports in place, so a new
+# image leaves the manifest unchanged and kubelet keeps running the old container.
+# Removing the container makes kubelet start a new one in the same pod from the
+# current tag within ~2.5s. A manifest change replaces the whole pod instead and
+# keeps 127.0.0.1:6445 closed for ~12s, longer than the 10s leader election renew
+# deadline of kube-controller-manager and kube-scheduler.
+restart_kubernetes_api_proxy_on_stale_image() {
+  if ! command -v crictl >/dev/null 2>&1; then
+    bb-log-warning "crictl is not available, cannot check the kubernetes-api-proxy image"
+    return 0
+  fi
+
+  local want have id
+  want="$(crictl inspecti -o go-template --template '{{ "{{.status.id}}{{range .status.repoDigests}} {{.}}{{end}}" }}' {{ $kubernetes_api_proxy_image }})"
+  if [[ "${want}" != sha256:* ]]; then
+    bb-log-warning "Unexpected image refs '${want}' for {{ $kubernetes_api_proxy_image }}, skipping the kubernetes-api-proxy restart"
+    return 0
+  fi
+
+  for id in $(crictl ps --name '^kubernetes-api-proxy$' -q); do
+    have="$(crictl inspect -o go-template --template '{{ "{{.status.imageRef}}" }}' "${id}")"
+    if [[ "${have}" != *sha256:* ]]; then
+      bb-log-warning "Unexpected image ref '${have}' in container ${id}, skipping the kubernetes-api-proxy restart"
+      continue
+    fi
+    if [[ " ${want} " != *" ${have} "* ]]; then
+      bb-log-info "kubernetes-api-proxy container ${id} runs ${have}, restarting it on ${want%% *}"
+      crictl rm -f "${id}"
+    fi
+  done
+}
+
+kubernetes_api_proxy_manifest_before="$(sha256sum /etc/kubernetes/manifests/kubernetes-api-proxy.yaml 2>/dev/null || true)"
+{{- end }}
+
 bb-sync-file /etc/kubernetes/manifests/kubernetes-api-proxy.yaml - << EOF
 apiVersion: v1
 kind: Pod
@@ -70,7 +106,7 @@ spec:
         - "--listen-address=127.0.0.1"
         - "--listen-port=6445"
         - "--health-listen=127.0.0.1:6480"
-        - "--log-level=debug"
+        - "--log-level=info"
         - "--as-static-pod=true"
         - "--fallback-file=/var/run/kubernetes.io/kubernetes-api-proxy/upstreams.json"
       ports:
@@ -110,5 +146,11 @@ spec:
           mountPath: /var/run/kubernetes.io/kubernetes-api-proxy/upstreams.json
           readOnly: false
 EOF
+{{- if or ( eq .cri "Containerd") ( eq .cri "ContainerdV2") }}
+
+if [[ "$(sha256sum /etc/kubernetes/manifests/kubernetes-api-proxy.yaml)" == "${kubernetes_api_proxy_manifest_before}" ]]; then
+  restart_kubernetes_api_proxy_on_stale_image
+fi
+{{- end }}
 
 bb-unset-proxy

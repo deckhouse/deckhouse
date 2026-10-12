@@ -103,7 +103,7 @@ func (fw *fileWatcher) triggerChangedOutside() {
 
 	upstreams := make([]*Upstream, 0, len(upstreamRecords))
 	for _, record := range upstreamRecords {
-		upstreams = append(upstreams, NewUpstream(record))
+		upstreams = append(upstreams, NewUpstream(record, nil))
 	}
 
 	fw.onChange(upstreams)

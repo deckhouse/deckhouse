@@ -30,7 +30,7 @@ func WithUpstreamsFromArgs(upstreamsFromArgs []string) FallbackListOption {
 	return func(l *FallbackList) error {
 		upstreams := make([]*Upstream, 0, len(upstreamsFromArgs))
 		for _, upstream := range upstreamsFromArgs {
-			upstreams = append(upstreams, NewUpstream(upstream))
+			upstreams = append(upstreams, NewUpstream(upstream, nil))
 		}
 
 		for _, upstream := range upstreams {
@@ -98,6 +98,8 @@ func NewFallbackList(
 // Start starts the fallback list processing
 func (fb *FallbackList) Start(ctx context.Context) error {
 	if fb.watcher != nil {
+		// Read the file before returning: the main list is seeded from it before the port opens.
+		fb.watcher.triggerChangedOutside()
 		go fb.watcher.Start(ctx)
 	}
 
@@ -112,21 +114,14 @@ func (fb *FallbackList) Shutdown() {
 }
 
 func (fb *FallbackList) Reconcile(newList []*Upstream, triggerWrite bool) {
-	fb.mu.Lock()
-	defer fb.mu.Unlock()
-
-	if newList == nil {
-		newList = []*Upstream{}
-	}
-
 	newNodes := make([]node, 0, len(newList))
 	for _, upstream := range newList {
-		newNodes = append(newNodes, node{
-			backend: upstream,
-			score:   initialScore,
-			tier:    fb.initTier,
-		})
+		newNodes = append(newNodes, node{backend: upstream, score: initialScore})
 	}
+
+	fb.mu.Lock()
+	fb.nodes = newNodes
+	fb.mu.Unlock()
 
 	if fb.logger != nil {
 		fb.logger.Debug(
@@ -135,31 +130,19 @@ func (fb *FallbackList) Reconcile(newList []*Upstream, triggerWrite bool) {
 		)
 	}
 
-	fb.nodes = newNodes
-
-	if fb.watcher != nil {
-		if !triggerWrite {
-			return
-		}
-
-		if fb.logger != nil {
-			fb.logger.Debug("fallback list: trigger file watcher to write")
-		}
-
-		fb.watcher.triggerChangedInside(newList)
+	if fb.watcher == nil || !triggerWrite {
+		return
 	}
+
+	if fb.logger != nil {
+		fb.logger.Debug("fallback list: trigger file watcher to write")
+	}
+
+	fb.watcher.triggerChangedInside(newList)
 }
 
 func (fb *FallbackList) UpdateFromList(list *List) {
-	list.mu.RLock()
-	nodes := list.nodes
-	list.mu.RUnlock()
-
-	upstreams := make([]*Upstream, 0, len(nodes))
-	for _, node := range nodes {
-		upstreams = append(upstreams, node.backend)
-	}
-
+	upstreams := list.backends()
 	if len(upstreams) == 0 {
 		return
 	}
@@ -168,8 +151,9 @@ func (fb *FallbackList) UpdateFromList(list *List) {
 }
 
 func (fb *FallbackList) Pick() (*Upstream, error) {
-	fb.mu.RLock()
-	defer fb.mu.RUnlock()
+	// Pick advances the round-robin cursor, so it needs the write lock.
+	fb.mu.Lock()
+	defer fb.mu.Unlock()
 
 	if len(fb.nodes) == 0 {
 		return nil, fmt.Errorf("no upstreams available")

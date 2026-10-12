@@ -50,6 +50,15 @@ func WithDialTimeout(timeout time.Duration) LoadBalancerOption {
 	}
 }
 
+// WithFirstByteTimeout sets the floor of the per-upstream wait for the first
+// byte after the client's first byte on a new upstream connection, before the
+// proxy retries another upstream. Zero turns the wait off.
+func WithFirstByteTimeout(timeout time.Duration) LoadBalancerOption {
+	return func(lb *LoadBalancer) {
+		lb.lb.FirstByteTimeout = timeout
+	}
+}
+
 // WithKeepAlivePeriod sets the TCP keepalive period for both client and
 // upstream connections.
 func WithKeepAlivePeriod(period time.Duration) LoadBalancerOption {
