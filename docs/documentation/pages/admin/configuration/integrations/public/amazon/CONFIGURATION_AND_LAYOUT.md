@@ -300,3 +300,9 @@ Compatibility with other parameters:
 
 - If `existingVPCID` is specified, do not specify [`vpcNetworkCIDR`](/modules/cloud-provider-aws/cluster_configuration.html#awsclusterconfiguration-vpcnetworkcidr) as they are mutually exclusive.
 - The [`nodeNetworkCIDR`](/modules/cloud-provider-aws/cluster_configuration.html#awsclusterconfiguration-nodenetworkcidr) parameter can (and should) be specified. It must be a subset of the existing VPC.
+
+## Preemptible nodes
+
+Preemptible virtual machines in AWS are called Spot Instances. To make a node group order them, set the [`spot`](/modules/cloud-provider-aws/cr.html#awsinstanceclass-v1-spec-spot) parameter of the AWSInstanceClass resource to `true`.
+
+How to create such nodes and how they behave is described in ["How to create preemptible nodes in AWS?"](/modules/cloud-provider-aws/faq.html#how-to-create-preemptible-nodes-in-aws).

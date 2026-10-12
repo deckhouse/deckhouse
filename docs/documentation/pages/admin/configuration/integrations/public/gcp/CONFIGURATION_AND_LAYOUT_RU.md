@@ -285,3 +285,9 @@ d8 k get mc global -o jsonpath='{.spec.settings.prefix}{"\n"}'
 d8 k -n kube-system get secret d8-cluster-configuration -o json | jq -r '.data."cluster-configuration.yaml"' \
   | base64 -d | grep prefix
 ```
+
+## Прерываемые узлы
+
+Прерываемые виртуальные машины в Google Cloud называются preemptible-инстансами. Чтобы группа узлов заказывала их, установите параметр [`preemptible`](/modules/cloud-provider-gcp/cr.html#gcpinstanceclass-v1-spec-preemptible) ресурса GCPInstanceClass в `true`.
+
+Порядок создания таких узлов и особенности их работы описаны в разделе [«Как создать прерываемые узлы в GCP?»](/modules/cloud-provider-gcp/faq.html#как-создать-прерываемые-узлы-в-gcp).

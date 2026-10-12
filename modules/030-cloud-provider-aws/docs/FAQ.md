@@ -139,6 +139,51 @@ The progress of the process can be observed in events using the command `d8 k de
 
 1. Add `ecr:GetAuthorizationToken` to [additionalRolePolicies](cluster_configuration.html#awsclusterconfiguration-additionalrolepolicies).
 
+## How to create preemptible nodes in AWS?
+
+Preemptible virtual machines in AWS are called Spot Instances. To make a node group order them, set the [`spot`](cr.html#awsinstanceclass-v1-spec-spot) parameter of the AWSInstanceClass resource to `true`.
+
+Example:
+
+```yaml
+apiVersion: deckhouse.io/v1
+kind: AWSInstanceClass
+metadata:
+  name: worker-spot
+spec:
+  instanceType: m5.large
+  diskSizeGb: 30
+  spot: true
+---
+apiVersion: deckhouse.io/v1
+kind: NodeGroup
+metadata:
+  name: worker-spot
+spec:
+  nodeType: CloudEphemeral
+  cloudInstances:
+    classReference:
+      kind: AWSInstanceClass
+      name: worker-spot
+    minPerZone: 2
+    maxPerZone: 4
+    zones:
+      - eu-central-1a
+```
+
+Once AWS sends a notice about an upcoming instance [interruption](https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/spot-interruptions.html), Deckhouse Platform applies the `aws-node-termination-handler/spot-itn` taint to the node, drains it, and deletes it. The group then orders a new node until the node count reaches the [`minPerZone`](/modules/node-manager/cr.html#nodegroup-v1-spec-cloudinstances-minperzone) parameter value.
+
+### Limitations of preemptible nodes in AWS
+
+Consider the following limitations:
+
+- The `spot` parameter applies only to CloudEphemeral node groups, because AWSInstanceClass applies only to them.
+- The time between the interruption notice and the instance shutdown may be too short to drain the node. Place only the workload that tolerates a sudden node loss on preemptible nodes.
+
+{% alert level="warning" %}
+Changing the [`spot`](cr.html#awsinstanceclass-v1-spec-spot) parameter in an existing AWSInstanceClass causes all nodes of the corresponding group to be recreated.
+{% endalert %}
+
 ## What to do if switching to nodes in lower-priority groups takes a long time?
 
 If switching to nodes in lower-priority groups takes a long time (for example, when node groups with spot instances are set to the highest priority and, if such instances are unavailable, switching to nodes from other groups takes a very long time), follow the [instructions](/products/kubernetes-platform/documentation/v1/faq.html#what-to-do-if-it-takes-a-long-time-to-switch-to-custom-nodes-in).

@@ -288,3 +288,9 @@ IPv4 CIDR у обоих VPC должен различаться.
 
 - Если указан `existingVPCID`, не указывайте [`vpcNetworkCIDR`](/modules/cloud-provider-aws/cluster_configuration.html#awsclusterconfiguration-vpcnetworkcidr) — это взаимоисключающие параметры.
 - [Параметр `nodeNetworkCIDR`](/modules/cloud-provider-aws/cluster_configuration.html#awsclusterconfiguration-nodenetworkcidr) можно (и желательно) указывать — он будет вложен в существующий VPC.
+
+## Прерываемые узлы
+
+Прерываемые виртуальные машины в AWS называются spot-инстансами. Чтобы группа узлов заказывала их, установите параметр [`spot`](/modules/cloud-provider-aws/cr.html#awsinstanceclass-v1-spec-spot) ресурса AWSInstanceClass в `true`.
+
+Порядок создания таких узлов и особенности их работы описаны в разделе [«Как создать прерываемые узлы в AWS?»](/modules/cloud-provider-aws/faq.html#как-создать-прерываемые-узлы-в-aws).
