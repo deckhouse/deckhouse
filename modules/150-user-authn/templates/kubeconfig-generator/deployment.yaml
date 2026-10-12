@@ -64,7 +64,7 @@ spec:
             path: config.yaml
       {{- if .Values.userAuthn.internal.discoveredDexClusterIP }}
       hostAliases:
-        - ip: {{ .Values.userAuthn.internal.discoveredDexClusterIP }}
+        - ip: {{ .Values.userAuthn.internal.discoveredDexClusterIP | quote }}
           hostnames:
             - {{ include "helm_lib_module_public_domain" (list . "dex") }}
       {{- end }}

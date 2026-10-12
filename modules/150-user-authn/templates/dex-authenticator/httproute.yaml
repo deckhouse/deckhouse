@@ -27,13 +27,13 @@ metadata:
   annotations:
     alb.network.deckhouse.io/backend-tls-settings: '{"mode": "SIMPLE", "insecureSkipVerify": true}'
   {{- if and (include "helm_lib_module_https_route_tls_enabled" $context) $app.gatewayAPI.httpRouteCertificateSecretName }}
-    alb.network.deckhouse.io/tls-secrets: {{ $crd.namespace }}/{{ $app.gatewayAPI.httpRouteCertificateSecretName }}
+    alb.network.deckhouse.io/tls-secrets: "{{ $crd.namespace }}/{{ $app.gatewayAPI.httpRouteCertificateSecretName }}"
   {{- end }}
   {{- if $app.whitelistSourceRanges }}
     alb.network.deckhouse.io/whitelist-source-range: {{ $app.whitelistSourceRanges | join "," }}
   {{- end }}
   name: {{ $routeName }}
-  namespace: {{ $crd.namespace }}
+  namespace: {{ $crd.namespace | quote }}
   {{- $labels := dict "app" "dex-authenticator" "deckhouse.io/dex-authenticator-for" $crd.name }}
   {{- if $ingTruncated }}
   {{- $_ := set $labels "deckhouse.io/name-truncated" "true" }}
@@ -50,7 +50,7 @@ spec:
     {{- if $app.gatewayAPI.httpRouteListenerSetNamespace }}
     namespace: {{ $app.gatewayAPI.httpRouteListenerSetNamespace }}
     {{- else }}
-    namespace: {{ $crd.namespace }}
+    namespace: {{ $crd.namespace | quote }}
     {{- end }}
   {{- if $app.gatewayAPI.httpRouteListenerSetSectionName }}
     sectionName: {{ $app.gatewayAPI.httpRouteListenerSetSectionName }}

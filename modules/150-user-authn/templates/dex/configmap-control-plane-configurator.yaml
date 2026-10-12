@@ -12,7 +12,7 @@ data:
   {{ .Values.userAuthn.internal.dexTLS.ca | nindent 4 }}
 {{- end }}
 {{- if .Values.userAuthn.internal.discoveredDexClusterIP }}
-  oidcIssuerAddress: {{ .Values.userAuthn.internal.discoveredDexClusterIP | nindent 4 }}
+  oidcIssuerAddress: {{ .Values.userAuthn.internal.discoveredDexClusterIP | quote }}
 {{- end }}
 {{- if include "is_basic_auth_enabled" . }}
   enableBasicAuth: "true"
