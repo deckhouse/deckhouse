@@ -86,7 +86,7 @@ Details: [docs/controller-capi.md](docs/controller-capi.md).
 | Controller | Watches | What it does |
 |---|---|---|
 | `capi-machine-deployment` | NodeGroup | Renders the MachineDeployments of a NodeGroup: CAPI ones per zone, or MCM MachineClass + MachineDeployment when the group runs on MCM. Cleans them up when the NodeGroup is deleted. |
-| `capi-cluster-resources` | Secret `d8-node-manager-cloud-provider` | Creates the cluster-level CAPI `Cluster` and its `MachineHealthCheck`. |
+| `capi-cluster-resources` | Secret `d8-node-manager-cloud-provider` | Creates the cluster-level CAPI `Cluster` and applies its `MachineHealthCheck`. |
 | `capi-control-plane` | DeckhouseControlPlane | Marks the externally managed control plane ready so CAPI proceeds. |
 | `capi-api-version` | MachineDeployment (CAPI) | Backfills the infrastructure `apiGroup` on objects created under the older v1beta1 contract. |
 | `capi-finalizer-cleanup` | Cluster (CAPI) | Removes the `deckhouse.io/capi-controller-manager` finalizer so a deleted Cluster is not stuck. |

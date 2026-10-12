@@ -6,6 +6,8 @@ A [Kyverno Chainsaw](https://kyverno.github.io/chainsaw/) e2e test that validate
 
 **What it does:** Scales up a node from zero via a Deployment, then creates a standalone pod annotated as safe-to-evict. The pod prefers the test node but can also run on another node. After deleting the Deployment (making the node underutilized), verifies that CA scales down and removes the node despite the standalone pod still running on it.
 
+The test also checks the cloud MachineHealthCheck: before anything is created, that it has the checks which tolerate a bootstrapping node and the remediation limit; after the scale-up, that it replaced no test machine. See [MachineHealthCheck checks](../../README.md#machinehealthcheck-checks-dvp-scenarios).
+
 ## Prerequisites
 
 - Deckhouse cluster with DVP / CAPI cloud provider
@@ -17,24 +19,26 @@ A [Kyverno Chainsaw](https://kyverno.github.io/chainsaw/) e2e test that validate
 
 ## Test Steps
 
-| Step | Name                                    | Description                                                                                 |
-| ---- | --------------------------------------- | ------------------------------------------------------------------------------------------- |
-| 1    | `assert-dvpinstanceclass-worker-exists` | Asserts `DVPInstanceClass worker` exists (cleanup waits for test nodes removal)             |
-| 2    | `cleanup-leftover-resources`            | Deletes leftover NodeGroup, IC, and blocking pod                                            |
-| 3    | `create-e2e-worker-small-instanceclass` | Clones `worker` → `e2e-worker-small`                                                        |
-| 4    | `apply-nodegroup`                       | Applies NodeGroup `e2e-safe-to-evict` (minPerZone: 0)                                       |
-| 5    | `assert-cluster-autoscaler-exists`      | Asserts CA deployment is ready                                                              |
-| 6    | `assert-ca-uses-clusterapi-provider`    | Verifies CA args contain `clusterapi`                                                       |
-| 7    | `restart-cluster-autoscaler`            | Rollout restart and wait for readiness                                                      |
-| 8    | `wait-for-ca-initialization`            | Sleep 15s                                                                                   |
-| 9    | `apply-deployment`                      | Applies 1-replica Deployment to trigger scale-up                                            |
-| 10   | `wait-for-deckhouse-processing`         | Sleep 30s                                                                                   |
-| 11   | `assert-pods-running`                   | Asserts Deployment has 1 ready replica (node scaled up)                                     |
-| 12   | `apply-blocking-pod`                    | Creates standalone pod with `safe-to-evict: "true"` and preferred affinity to the test node |
-| 13   | `wait-for-blocking-pod-running`         | Waits for the pod to run on the test node; checks that a node outside the group can host it |
-| 14   | `delete-deployment-trigger-scale-down`  | Deletes Deployment to make node underutilized                                               |
-| 15   | `assert-scale-down-completes`           | Polls until no nodes with `app=e2e-autoscaler-test` (up to 20 min)                          |
-| 16   | `assert-no-test-nodes`                  | Error-assert: confirms zero test nodes remain                                               |
+| Step | Name                                         | Description                                                                                 |
+| ---- | -------------------------------------------- | ------------------------------------------------------------------------------------------- |
+| 1    | `assert-dvpinstanceclass-worker-exists`      | Asserts `DVPInstanceClass worker` exists (cleanup waits for test nodes removal)             |
+| 2    | `assert-cloud-machine-health-check`          | Polls up to 6 min for the fixed cloud MachineHealthCheck (Ready=False 600s, 50% limit)     |
+| 3    | `cleanup-leftover-resources`                 | Deletes leftover NodeGroup, IC, and blocking pod                                            |
+| 4    | `create-e2e-worker-small-instanceclass`      | Clones `worker` → `e2e-worker-small`                                                        |
+| 5    | `apply-nodegroup`                            | Applies NodeGroup `e2e-safe-to-evict` (minPerZone: 0)                                       |
+| 6    | `assert-cluster-autoscaler-exists`           | Asserts CA deployment is ready                                                              |
+| 7    | `assert-ca-uses-clusterapi-provider`         | Verifies CA args contain `clusterapi`                                                       |
+| 8    | `restart-cluster-autoscaler`                 | Rollout restart and wait for readiness                                                      |
+| 9    | `wait-for-ca-initialization`                 | Sleep 15s                                                                                   |
+| 10   | `apply-deployment`                           | Applies 1-replica Deployment to trigger scale-up                                            |
+| 11   | `wait-for-deckhouse-processing`              | Sleep 30s                                                                                   |
+| 12   | `assert-pods-running`                        | Asserts Deployment has 1 ready replica (node scaled up)                                     |
+| 13   | `assert-no-machine-health-check-remediation` | Asserts MachineHealthCheck marked no test machine unhealthy during the test                 |
+| 14   | `apply-blocking-pod`                         | Creates standalone pod with `safe-to-evict: "true"` and preferred affinity to the test node |
+| 15   | `wait-for-blocking-pod-running`              | Waits for the pod to run on the test node; checks that a node outside the group can host it |
+| 16   | `delete-deployment-trigger-scale-down`       | Deletes Deployment to make node underutilized                                               |
+| 17   | `assert-scale-down-completes`                | Polls until no nodes with `app=e2e-autoscaler-test` (up to 20 min)                          |
+| 18   | `assert-no-test-nodes`                       | Error-assert: confirms zero test nodes remain                                               |
 
 **Note:** Normally, standalone pods (without a controller) block CA scale-down. The `safe-to-evict: "true"` annotation tells CA the pod can be evicted during scale-down, provided another node can take it.
 
@@ -42,13 +46,15 @@ A [Kyverno Chainsaw](https://kyverno.github.io/chainsaw/) e2e test that validate
 
 ## Files
 
-| File                                                   | Purpose                                                                             |
-| ------------------------------------------------------ | ----------------------------------------------------------------------------------- |
-| `chainsaw-test.yaml`                                   | Chainsaw test definition                                                            |
-| `../common/manifests/nodegroup-safe-to-evict-dvp.yaml` | Single NodeGroup `e2e-safe-to-evict` with taint `dedicated=safe-to-evict`           |
-| `../common/manifests/deployment-safe-to-evict.yaml`    | 1-replica Deployment to trigger initial scale-up                                    |
-| `../common/manifests/pod-blocking-safe-to-evict.yaml`  | Standalone pod with `safe-to-evict: "true"` and preferred affinity to the test node |
-| `../common/asserts/assert-no-test-nodes.yaml`          | Error-assert: no test nodes                                                         |
+| File                                                                       | Purpose                                                                             |
+| -------------------------------------------------------------------------- | ----------------------------------------------------------------------------------- |
+| `chainsaw-test.yaml`                                                       | Chainsaw test definition                                                            |
+| `../common/manifests/nodegroup-safe-to-evict-dvp.yaml`                     | Single NodeGroup `e2e-safe-to-evict` with taint `dedicated=safe-to-evict`           |
+| `../common/manifests/deployment-safe-to-evict.yaml`                        | 1-replica Deployment to trigger initial scale-up                                    |
+| `../common/manifests/pod-blocking-safe-to-evict.yaml`                      | Standalone pod with `safe-to-evict: "true"` and preferred affinity to the test node |
+| `../common/asserts/assert-no-test-nodes.yaml`                              | Error-assert: no test nodes                                                         |
+| `../common/step-templates/assert-cloud-machine-health-check.yaml`          | Step template: cloud MachineHealthCheck checks and remediation limit                |
+| `../common/step-templates/assert-no-machine-health-check-remediation.yaml` | Step template: no test machine marked unhealthy by MachineHealthCheck               |
 
 ## How Safe-to-Evict Works
 
@@ -70,12 +76,20 @@ task ca-safe-to-evict-dvp:run
 
 ## Pass/Fail Criteria
 
-- **Pass:** Node is scaled up (1 pod running), then removed within 20 minutes after Deployment deletion, despite standalone pod presence
-- **Fail:** Scale-up fails, blocking pod not Running on the test node, no node outside the test NodeGroup can host it, or node still present after 20 minutes
+- **Pass:** Node is scaled up (1 pod running), then removed within 20 minutes after Deployment deletion, despite standalone pod presence; the cloud MachineHealthCheck has the fixed checks, and MachineHealthCheck replaced no test machine
+- **Fail:** Scale-up fails, blocking pod not Running on the test node, no node outside the test NodeGroup can host it, node still present after 20 minutes, the cloud MachineHealthCheck has the old checks, or MachineHealthCheck marked a test machine unhealthy
 
 ## Troubleshooting
 
-### Scale-down timeout (step 15)
+### Cloud MachineHealthCheck has the old checks (step 2)
+
+node-controller did not apply the fixed cloud MachineHealthCheck; the step prints its spec and field managers. See [MachineHealthCheck checks](../../README.md#machinehealthcheck-checks-dvp-scenarios).
+
+### MachineHealthCheck replaced a test machine (step 13)
+
+MachineHealthCheck marked a machine of the test NodeGroups unhealthy while it was bootstrapping; the step prints the events and the MachineHealthCheck status. See [MachineHealthCheck checks](../../README.md#machinehealthcheck-checks-dvp-scenarios).
+
+### Scale-down timeout (step 17)
 
 Check if CA recognizes the safe-to-evict annotation:
 
@@ -88,7 +102,7 @@ kubectl get nodes -l app=e2e-autoscaler-test -o wide
 
 `can reschedule only 0 out of 1 pods` means that no other node can take the blocking pod. Check the taints, cordons, and free capacity of nodes outside the test NodeGroup.
 
-### Node not scaling up (step 11)
+### Node not scaling up (step 12)
 
 Verify NodeGroup `e2e-safe-to-evict` was created and CA detected pending pods:
 
@@ -101,7 +115,7 @@ kubectl get pods -n $NAMESPACE -o wide
 
 Check taint toleration — the pod must tolerate `dedicated=safe-to-evict:NoExecute`.
 
-### Blocking pod not on the test node (step 13)
+### Blocking pod not on the test node (step 15)
 
 The node affinity is only preferred, so other scheduler scores can outweigh it. Check where the pod landed:
 
@@ -109,6 +123,6 @@ The node affinity is only preferred, so other scheduler scores can outweigh it. 
 kubectl get pod -n $NAMESPACE e2e-blocking-pod -o wide
 ```
 
-### No node can host the blocking pod (step 13)
+### No node can host the blocking pod (step 15)
 
 All nodes outside the test NodeGroup are NotReady, cordoned, or have `NoSchedule`/`NoExecute` taints that the pod does not tolerate. CA would keep the test node. Add an untainted worker node or run the test on another cluster.

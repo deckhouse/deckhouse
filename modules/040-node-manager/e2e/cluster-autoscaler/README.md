@@ -99,6 +99,7 @@ The tests rely only on version-independent signals, so the same scenarios run on
 - The mcm cluster-autoscaler is found by its `--cloud-provider=mcm` argument, not by name: before Deckhouse 1.77 Yandex runs only MCM and that is `cluster-autoscaler`; from 1.77 a cluster with CAPI NodeGroups runs `cluster-autoscaler-mcm` next to it.
 - `node.deckhouse.io/use-mcm` is ignored by releases without the CAPI migration, and `NodeGroup.status.engine` (1.77+) is only printed for diagnostics, never asserted.
 - Zones come from node labels, not from a hard-coded list.
+- The exception is `assert-cloud-machine-health-check` in the DVP scenarios: it asserts the fixed MachineHealthCheck spec, so it fails on a release that predates the fix. That is what it is for.
 
 ## Directory Structure
 
@@ -108,6 +109,7 @@ cluster-autoscaler/
 ├── chainsaw-config.yaml       # shared timeouts and execution settings
 └── tests/
     ├── common/manifests/      # shared e2e-nginx Deployment
+    ├── common/step-templates/ # shared steps: the MachineHealthCheck checks of the DVP scenarios
     ├── ca-scale-from-zero-*/
     ├── ca-priority-fallback-*/
     ├── ca-safe-to-evict-*/
@@ -133,6 +135,20 @@ Per-scenario details (steps, manifests, expected outcomes): `tests/<name>/<name>
 - DVP: create instance class and NodeGroups → restart CA; read logs from `cluster-autoscaler` container only
 - Yandex: create instance class and NodeGroups → wait for the CA Deployment with `--cloud-provider=mcm` to list them → restart it; read logs with `--all-containers --since=10m` (fallback: `--since=90m`, up to 60 min wait)
 - Priority fallback (both providers): both NodeGroups are created in one zone, the zone of a `worker` node (`topology.kubernetes.io/zone`; no pinning if nodes do not carry the label). CA sees one node group per zone, and with several zones the broken group's zones time out one after another and are never all backed off at once, so the fallback could outlast the test.
+
+## MachineHealthCheck checks (DVP scenarios)
+
+`ca-scale-from-zero-dvp`, `ca-scale-from-zero-node-label-dvp` and `ca-safe-to-evict-dvp` scale CAPI machines up from zero, so they also check the cloud MachineHealthCheck that node-controller manages in `d8-cloud-instance-manager` (every one whose `spec.clusterName` is not `static`). Both steps are step templates in `tests/common/step-templates/`:
+
+- `assert-cloud-machine-health-check` runs before anything is created. It polls for up to 6 minutes (node-controller applies the object on start and every 5 minutes) until the MachineHealthCheck has Ready=False 600s, Ready=Unknown 300s, `nodeStartupTimeoutSeconds: 1200` and `remediation.triggerIf.unhealthyLessThanOrEqualTo: "50%"`, and prints its spec and field managers otherwise. A node registers before CNI and bashible finish, so with Ready=False at 300s MachineHealthCheck deleted machines still pulling images and the scale-up never finished. A cluster upgraded from an older release keeps the object it had, so the step catches a cluster where the update did not reach it.
+- `assert-no-machine-health-check-remediation` runs once the workload is Ready. It fails on a `MachineMarkedUnhealthy` event in `d8-cloud-instance-manager` for a machine of the test NodeGroups (CAPI names a machine after its MachineDeployment, `[<prefix>-]<NodeGroup>-<zone hash>`) newer than the test namespace, and prints the events and the MachineHealthCheck status. Before the fix such a remediation surfaced only as the 16-minute timeout of `assert-pods-running`.
+
+Manual checks:
+
+```bash
+kubectl get machinehealthchecks.v1beta2.cluster.x-k8s.io -n d8-cloud-instance-manager -o yaml
+kubectl get events -n d8-cloud-instance-manager --field-selector reason=MachineMarkedUnhealthy
+```
 
 ## Running Tests
 
@@ -241,11 +257,13 @@ kubectl get nodes -l app=e2e-autoscaler-test
 
 ## Troubleshooting
 
-| Symptom                                | Likely cause                                                 |
-| -------------------------------------- | ------------------------------------------------------------ |
-| CA deployment missing                  | No `CloudEphemeral` NodeGroup with `minPerZone < maxPerZone` |
-| Assert on `worker` InstanceClass fails | Base `worker` NodeGroup or instance class does not exist     |
-| `grep clusterapi` fails                | Wrong scenario for your cloud provider                       |
-| No CA Deployment with `mcm` (Yandex)   | `use-mcm` NodeGroup not rendered yet, or provider lacks MCM  |
-| Timeout waiting for priority logs      | Slow cloud, quotas, or MCM/CAPI errors                       |
-| Fallback timeout                       | Long backoff; Yandex scenarios allow up to 1 hour            |
+| Symptom                                            | Likely cause                                                                                           |
+| -------------------------------------------------- | ------------------------------------------------------------------------------------------------------ |
+| CA deployment missing                              | No `CloudEphemeral` NodeGroup with `minPerZone < maxPerZone`                                           |
+| Assert on `worker` InstanceClass fails             | Base `worker` NodeGroup or instance class does not exist                                               |
+| `grep clusterapi` fails                            | Wrong scenario for your cloud provider                                                                 |
+| No CA Deployment with `mcm` (Yandex)               | `use-mcm` NodeGroup not rendered yet, or provider lacks MCM                                            |
+| Timeout waiting for priority logs                  | Slow cloud, quotas, or MCM/CAPI errors                                                                 |
+| Fallback timeout                                   | Long backoff; Yandex scenarios allow up to 1 hour                                                      |
+| `assert-cloud-machine-health-check` fails          | node-controller did not apply the fixed MachineHealthCheck: old release, or an apply error in its logs |
+| `assert-no-machine-health-check-remediation` fails | MachineHealthCheck replaced a bootstrapping test machine; check its checks and the events              |

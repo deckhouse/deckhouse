@@ -1,0 +1,42 @@
+apiVersion: chainsaw.kyverno.io/v1alpha1
+kind: StepTemplate
+metadata:
+  name: assert-cloud-machine-health-check
+spec:
+  try:
+    - description: Assert the cloud MachineHealthCheck tolerates a bootstrapping node and limits remediation
+      script:
+        timeout: 7m
+        content: |
+          set -u
+          # Up to 1.77 the cloud MachineHealthCheck was created once (by Helm, later by node-controller)
+          # and never updated, so a cluster upgraded from there keeps Ready=False at 5 minutes, which
+          # deleted machines still pulling images on bootstrap, and no remediation limit. This catches
+          # a cluster where the fixed spec did not reach the existing object. node-controller applies
+          # it on start and every 5 minutes, so a just-restarted cluster gets 6 minutes to catch up.
+          # The static MachineHealthCheck (clusterName static) has checks of its own.
+          MHC_JSON='{}'
+          for i in $(seq 1 36); do
+            MHC_JSON=$(kubectl get machinehealthchecks.v1beta2.cluster.x-k8s.io -n d8-cloud-instance-manager \
+              -o json 2>/dev/null || echo '{}')
+            if echo "$MHC_JSON" | jq -e '
+              [.items[]? | select(.spec.clusterName != "static")] as $mhcs
+              | ($mhcs | length) > 0 and all($mhcs[];
+                  .spec.checks.nodeStartupTimeoutSeconds == 1200
+                  and ([.spec.checks.unhealthyNodeConditions[]?
+                    | select(.type == "Ready" and .status == "False") | .timeoutSeconds] == [600])
+                  and ([.spec.checks.unhealthyNodeConditions[]?
+                    | select(.type == "Ready" and .status == "Unknown") | .timeoutSeconds] == [300])
+                  and .spec.remediation.triggerIf.unhealthyLessThanOrEqualTo == "50%")
+            ' >/dev/null 2>&1; then
+              exit 0
+            fi
+            sleep 10
+          done
+          echo "The cloud MachineHealthCheck does not have Ready=False 600s, Ready=Unknown 300s,"
+          echo "nodeStartupTimeoutSeconds 1200 and remediation.triggerIf.unhealthyLessThanOrEqualTo 50% after 6 minutes:"
+          echo "$MHC_JSON" | jq '.items[]? | select(.spec.clusterName != "static")
+            | {name: .metadata.name, managers: [.metadata.managedFields[]? | "\(.manager)/\(.operation)"], spec: .spec}' || true
+          exit 1
+        check:
+          ($error == null): true

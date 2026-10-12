@@ -113,8 +113,13 @@ Replica math is unchanged (`calculateReplicas(current, min, max)`). Replaces the
 | **Reads** | the registration Secret named by the request (cloud branch), all NodeGroups (static branch), `d8-cluster-configuration` (cluster network) |
 | **Output** | top-level CAPI `Cluster` + `MachineHealthCheck` |
 
-Ensures the `Cluster` and `MachineHealthCheck` objects exist. Uses `Create`-if-not-exists
-(never overwrites a running cluster).
+Ensures the `Cluster` and `MachineHealthCheck` objects exist. The `Cluster` objects and the
+static `MachineHealthCheck` use `Create`-if-not-exists (never overwrites a running cluster). The
+cloud `MachineHealthCheck` is applied with server-side apply (field manager `node-controller`,
+`ForceOwnership`): clusters upgraded from older releases already have it — created by Helm up to
+1.76 or by node-controller's `Create` since 1.77 — with the old checks, and `Create` would never
+update them. The periodic repair (`clusterRepairInterval`, 5 min) reverts manual edits of the
+fields it sets.
 
 The two Clusters are keyed by different objects, so the request name decides the branch —
 `cloudprovider.IsRegistrationSecretKey` tells them apart. A provider-less cluster has no
@@ -133,16 +138,22 @@ Reconcile(req)
 - **ensureCloudCluster:** reads the registration the request was keyed by (missing or no longer
   a registration → no-op). When `capiClusterName`/`capiClusterKind` are set, creates a
   `Cluster` (infrastructureRef from the secret, controlPlaneRef → `{name}-control-plane`
-  `DeckhouseControlPlane`) and a `MachineHealthCheck` (`{name}-machine-health-check`,
-  nodeStartup 1200s, Ready=Unknown/False timeout 300s).
+  `DeckhouseControlPlane`) and applies a `MachineHealthCheck` (`{name}-machine-health-check`):
+  nodeStartup 1200s, Ready=Unknown 300s, Ready=False 600s, remediation only while at most 50%
+  of the cluster's machines are unhealthy (`remediation.triggerIf.unhealthyLessThanOrEqualTo`).
+  nodeStartup stops applying once the Node registers, and a node registers before CNI and
+  bashible finish, so Ready=False also times a bootstrapping node: at 300s it deleted machines
+  still pulling images. Without the limit an outage that takes every node NotReady would delete
+  every CAPI machine at once. CAPI counts machines without a node or with a pending timer as
+  unhealthy and rounds the percentage down over all machines of the cluster (1 → 0, 2 → 1, 4 → 2).
 - **ensureStaticCluster:** when at least one NodeGroup has `staticInstances`, creates a
   `Cluster` named `static` (infrastructureRef → `StaticCluster`, controlPlaneRef →
   `static-control-plane`) and `static-machine-health-check`
   (Ready=Unknown timeout 2147483647s — effectively never).
 
 Both copies of one registration (the bare name and the per-provider one) carry the label, so a
-single-provider cluster ensures its cloud Cluster twice. `createIfNotExists` makes the second
-pass a no-op.
+single-provider cluster ensures its cloud Cluster twice. `createIfNotExists` and the idempotent
+apply make the second pass a no-op.
 
 Cluster network (`pods`/`services`/`serviceDomain`) comes from `d8-cluster-configuration`.
 

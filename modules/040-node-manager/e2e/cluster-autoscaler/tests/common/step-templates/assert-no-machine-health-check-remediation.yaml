@@ -1,0 +1,40 @@
+apiVersion: chainsaw.kyverno.io/v1alpha1
+kind: StepTemplate
+metadata:
+  name: assert-no-machine-health-check-remediation
+spec:
+  # nodeGroups: space-separated names of the test NodeGroups whose machines are checked.
+  try:
+    - description: Assert MachineHealthCheck marked no machine of the test NodeGroups unhealthy
+      script:
+        timeout: 60s
+        env:
+          - name: NODE_GROUPS
+            value: ($nodeGroups)
+        content: |
+          set -eu
+          # Before the fix MachineHealthCheck deleted machines whose Node was still Ready=False (CNI not
+          # up yet) after 5 minutes, their replacements started over, and the scale-up surfaced only as
+          # the 16-minute timeout of assert-pods-running. A remediation the scale-up survived is a
+          # failure too. CAPI names a Machine <MachineDeployment>-<random>-<random>, and the
+          # MachineDeployment of a NodeGroup is [<prefix>-]<NodeGroup>-<zone hash>. Only events newer
+          # than the test namespace count, so the ones earlier runs left behind do not.
+          SINCE=$(kubectl get namespace "$NAMESPACE" -o jsonpath='{.metadata.creationTimestamp}')
+          EVENTS=$(kubectl get events -n d8-cloud-instance-manager \
+            --field-selector reason=MachineMarkedUnhealthy,involvedObject.kind=Machine -o json)
+          MATCHED=$(echo "$EVENTS" | jq --arg since "$SINCE" --arg groups "$NODE_GROUPS" '
+            ($groups | split(" ") | map(select(. != ""))) as $ngs
+            | [.items[]
+              | select(((.lastTimestamp // .eventTime // .metadata.creationTimestamp) | sub("\\.[0-9]+"; "")) >= $since)
+              | select(.involvedObject.name as $machine | any($ngs[]; . as $ng | $machine | test("(^|-)" + $ng + "-")))]')
+          if [ "$(echo "$MATCHED" | jq 'length')" -eq 0 ]; then
+            exit 0
+          fi
+          echo "MachineHealthCheck marked machines of $NODE_GROUPS unhealthy since $SINCE:"
+          echo "$MATCHED" | jq -r '.[] | "\(.lastTimestamp // .eventTime) \(.involvedObject.name) (x\(.count // 1)): \(.message)"'
+          echo "Cloud MachineHealthCheck status:"
+          kubectl get machinehealthchecks.v1beta2.cluster.x-k8s.io -n d8-cloud-instance-manager -o json \
+            | jq '.items[] | select(.spec.clusterName != "static") | {name: .metadata.name, status: .status}' || true
+          exit 1
+        check:
+          ($error == null): true

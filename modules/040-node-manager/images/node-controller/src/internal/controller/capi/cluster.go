@@ -322,13 +322,49 @@ func (r *ClusterReconciler) ensureCommonCloudClusterResources(
 		ensureErrors = append(ensureErrors, fmt.Errorf("create Cluster: %w", err))
 	}
 
-	mhc := &unstructured.Unstructured{Object: map[string]interface{}{
+	// Applied rather than created: every existing cluster already has this MachineHealthCheck,
+	// created by node-controller's former Create (1.77+) or by Helm (up to 1.76, kept by the
+	// keep-policy hook), and Create would never bring its checks up to date. The periodic repair
+	// also reverts manual edits of the fields set here.
+	if err := r.applyClusterObject(ctx, cloudMachineHealthCheck(clusterName, commonLabels)); err != nil {
+		ensureErrors = append(ensureErrors, fmt.Errorf("apply MachineHealthCheck: %w", err))
+	}
+
+	result := errors.Join(ensureErrors...)
+	if result == nil {
+		logger.V(1).Info("ensured common cloud CAPI cluster resources", "cluster", clusterName)
+	}
+	return result
+}
+
+// The checks of the cloud MachineHealthCheck. nodeStartupTimeout stops applying once the
+// Machine has a Node, and a node registers before CNI and bashible finish, so Ready=False also
+// covers a bootstrapping node. At 5 minutes it deleted machines that were still pulling images,
+// and their replacements started over, so they were recreated forever. 10 minutes doubles the
+// room for bootstrap and matches the MCM default healthTimeout, so a node that was Ready and
+// then went NotReady is not kept longer than on MCM. Ready=Unknown means the kubelet stopped
+// reporting, a dead node, and stays at 5 minutes.
+//
+// The limit: without remediation.triggerIf CAPI remediates every unhealthy machine, so an
+// outage that takes every node NotReady or Unknown (a broken CNI, an apiserver partition) would
+// delete all CAPI machines of the cluster at once — the selector covers every CAPI NodeGroup.
+// CAPI counts machines without a node or with a pending timer as unhealthy and rounds the
+// percentage down over all machines of the cluster: 1 machine → 0, 2 → 1, 4 → 2, 10 → 5.
+const (
+	cloudNodeStartupTimeoutSeconds  = int64(1200)
+	cloudNodeNotReadyTimeoutSeconds = int64(600)
+	cloudNodeUnknownTimeoutSeconds  = int64(300)
+	cloudMaxUnhealthy               = "50%"
+)
+
+func cloudMachineHealthCheck(clusterName string, labels map[string]interface{}) *unstructured.Unstructured {
+	return &unstructured.Unstructured{Object: map[string]interface{}{
 		"apiVersion": "cluster.x-k8s.io/v1beta2",
 		"kind":       "MachineHealthCheck",
 		"metadata": map[string]interface{}{
 			"name":      clusterName + "-machine-health-check",
 			"namespace": capiNamespace,
-			"labels":    commonLabels,
+			"labels":    labels,
 		},
 		"spec": map[string]interface{}{
 			"clusterName": clusterName,
@@ -338,24 +374,19 @@ func (r *ClusterReconciler) ensureCommonCloudClusterResources(
 				},
 			},
 			"checks": map[string]interface{}{
-				"nodeStartupTimeoutSeconds": int64(1200),
+				"nodeStartupTimeoutSeconds": cloudNodeStartupTimeoutSeconds,
 				"unhealthyNodeConditions": []interface{}{
-					map[string]interface{}{"type": "Ready", "status": "Unknown", "timeoutSeconds": int64(300)},
-					map[string]interface{}{"type": "Ready", "status": "False", "timeoutSeconds": int64(300)},
+					map[string]interface{}{"type": "Ready", "status": "Unknown", "timeoutSeconds": cloudNodeUnknownTimeoutSeconds},
+					map[string]interface{}{"type": "Ready", "status": "False", "timeoutSeconds": cloudNodeNotReadyTimeoutSeconds},
+				},
+			},
+			"remediation": map[string]interface{}{
+				"triggerIf": map[string]interface{}{
+					"unhealthyLessThanOrEqualTo": cloudMaxUnhealthy,
 				},
 			},
 		},
 	}}
-
-	if err := r.createIfNotExists(ctx, mhc); err != nil {
-		ensureErrors = append(ensureErrors, fmt.Errorf("create MachineHealthCheck: %w", err))
-	}
-
-	result := errors.Join(ensureErrors...)
-	if result == nil {
-		logger.V(1).Info("ensured common cloud CAPI cluster resources", "cluster", clusterName)
-	}
-	return result
 }
 
 func renderProviderCredentials(

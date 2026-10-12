@@ -154,8 +154,9 @@ func CacheOptions() (cache.Options, client.Options) {
 			newUnstructured("machine.sapcloud.io", "v1alpha1", "MachineDeployment"): machineNS,
 			newUnstructured("cluster.x-k8s.io", "v1beta2", "MachineDeployment"):     machineNS,
 			newUnstructured("cluster.x-k8s.io", "v1beta2", "Cluster"):               machineNS,
-			// No MachineHealthCheck entry: the controller only creates it and never reads it
-			// back, so an informer would never even start. Add a scope here if that changes.
+			// No MachineHealthCheck entry: the controller applies the cloud one with server-side
+			// apply and creates the static one, and the apply reads the live object through the
+			// APIReader, so an informer would never even start. Add a scope here if that changes.
 			newUnstructured("infrastructure.cluster.x-k8s.io", "v1alpha1", "DeckhouseControlPlane"): machineNS,
 			// Unfiltered on purpose: field selectors have no OR, and this binary now reads two
 			// ModuleConfig objects by name — "global" (cluster prefix) and "control-plane-manager"

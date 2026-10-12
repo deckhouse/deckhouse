@@ -16,6 +16,9 @@ spec:
     This test creates a NodeGroup WITHOUT node.deckhouse.io/group in nodeTemplate.labels,
     deploys a pod with nodeSelector: node.deckhouse.io/group: <ng-name>, and verifies
     that CA correctly triggers scale-up.
+
+    It also asserts that the cloud MachineHealthCheck tolerates a bootstrapping node and limits
+    remediation, and that it replaced no test machine during the scale-up.
   concurrent: false
   steps:
     - name: assert-dvpinstanceclass-worker-exists
@@ -53,6 +56,12 @@ spec:
               fi
             check:
               ($error == null): true
+
+    - name: assert-cloud-machine-health-check
+      # Before anything is created: a cluster whose MachineHealthCheck still has the old checks would
+      # delete the test machines while they bootstrap.
+      use:
+        template: ../common/step-templates/assert-cloud-machine-health-check.yaml
 
     - name: cleanup-leftover-resources
       try:
@@ -280,6 +289,15 @@ spec:
           podLogs:
             namespace: d8-cloud-instance-manager
             selector: app=cluster-autoscaler
+
+    - name: assert-no-machine-health-check-remediation
+      # The scale-up finished; it must have finished without MachineHealthCheck replacing a machine.
+      use:
+        template: ../common/step-templates/assert-no-machine-health-check-remediation.yaml
+        with:
+          bindings:
+            - name: nodeGroups
+              value: e2e-worker-infra
 
     - name: assert-pods-on-infra-nodes
       try:
