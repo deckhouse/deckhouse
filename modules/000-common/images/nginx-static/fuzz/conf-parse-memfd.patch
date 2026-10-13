@@ -1,0 +1,48 @@
+--- a/fuzz/conf_parse_fuzzer.c
++++ b/fuzz/conf_parse_fuzzer.c
+@@ -153,8 +153,11 @@
+         abort();
+     }
+
+-    ngx_snprintf((u_char *) ngx_fuzz_conf_path, sizeof(ngx_fuzz_conf_path),
+-                 "%s/nginx.conf%Z", ngx_fuzz_dir);
++    /* Keep a private, empty prefix for includes without leaving directories
++     * behind when an input crashes or times out. */
++    if (rmdir(ngx_fuzz_dir) != 0) {
++        abort();
++    }
+
+     /*
+      * A relative `include` resolves under the prefix, so point it at the
+@@ -343,19 +346,24 @@
+
+     ngx_fuzz_init();
+
+-    fd = open(ngx_fuzz_conf_path, O_WRONLY | O_CREAT | O_TRUNC, 0600);
++    /* Linux fuzz images use an anonymous file: the kernel releases it even
++     * after an abort or SIGKILL, and Nginx still reads through its real parser. */
++    fd = memfd_create("nginx-conf-fuzz", MFD_CLOEXEC);
+     if (fd < 0) {
+         abort();
+     }
+
+     written = size ? write(fd, data, size) : 0;
++
++    if (written < 0 || (size_t) written != size) {
++        close(fd);
++        abort();
++    }
++
++    ngx_snprintf((u_char *) ngx_fuzz_conf_path, sizeof(ngx_fuzz_conf_path),
++                 "/proc/self/fd/%d%Z", fd);
++    ngx_fuzz_parse(ngx_fuzz_conf_path);
+     close(fd);
+-
+-    if (written < 0 || (size_t) written != size) {
+-        abort();
+-    }
+-
+-    ngx_fuzz_parse(ngx_fuzz_conf_path);
+
+     return 0;
+ }

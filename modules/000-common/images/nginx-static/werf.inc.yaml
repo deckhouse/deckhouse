@@ -48,3 +48,45 @@ import:
   add: /opt/nginx-static
   to: /opt/nginx-static
   before: setup
+
+---
+# The registry proxy uses this Nginx fork; its harnesses live on deckhouse-fuzzing.
+image: {{ $.ModuleName }}/{{ $.ImageName }}-fuzz
+from: registry.flant.com/deckhouse/ssdlc/ci-images/fuzz-afl:34fdc16d905326c2fd7097363059baa398c9a1c0
+fromLatest: true
+final: false
+git:
+  - url: {{ $.SOURCE_REPO }}/nginx/nginx.git
+    branch: deckhouse-fuzzing
+    add: /
+    to: /src/nginx
+    stageDependencies:
+      install:
+        - '**/*'
+  - add: /{{ $.ModulePath }}modules/{{ $.ModulePriority }}-{{ $.ModuleName }}/images/{{ $.ImageName }}/fuzz
+    to: /src/nginx/fuzz-platform
+    stageDependencies:
+      install:
+        - '**/*'
+shell:
+  install:
+    - cd /src/nginx
+    - bash fuzz-platform/build.sh
+    - cp fuzz-platform/Taskfile.yml Taskfile.yml
+    - chmod -R a+rwX /src/nginx /out/fuzz
+imageSpec:
+  config:
+    workingDir: /src/nginx
+    labels:
+      io.deckhouse.fuzz.engine: afl
+    env:
+      FUZZ_ENGINE: afl
+      # One callback per fork child isolates Nginx module globals between inputs.
+      AFL_FUZZER_LOOPCOUNT: "1"
+      FUZZ_WORKDIR: /src/nginx
+      FUZZ_SEED_DIR: /src/nginx/fuzz/corpus
+      # LSan matches the ngx_init_setproctitle suppression by function name.
+      ASAN_OPTIONS: abort_on_error=1:detect_leaks=1:symbolize=1:allocator_may_return_null=1
+      ASAN_SYMBOLIZER_PATH: /usr/bin/llvm-symbolizer
+      LSAN_OPTIONS: suppressions=/src/nginx/fuzz/lsan.supp
+      UBSAN_OPTIONS: halt_on_error=1:abort_on_error=1:print_stacktrace=1

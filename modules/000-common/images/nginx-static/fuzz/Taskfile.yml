@@ -1,0 +1,76 @@
+# Copyright 2026 Flant JSC
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+version: "3"
+
+tasks:
+  fuzz:list:
+    silent: true
+    cmds:
+      - ls -1 /out/fuzz/bin
+
+  fuzz:run:
+    cmds:
+      - |
+        set -eu
+        test "${FUZZ_TARGET:?}" = nginx_conf_parse
+        # afl-fuzz requires unsymbolized sanitizer options for its own process;
+        # the target needs symbolization for the function-name LSan suppression.
+        target_env="${AFL_TARGET_ENV:+$AFL_TARGET_ENV }ASAN_OPTIONS='${ASAN_OPTIONS:?}' LSAN_OPTIONS='${LSAN_OPTIONS:?}'"
+        env -u ASAN_OPTIONS -u LSAN_OPTIONS \
+          AFL_TARGET_ENV="$target_env" AFL_FUZZER_LOOPCOUNT=1 \
+          afl-fuzz -m none -t 5000+ -x fuzz/nginx.dict \
+          -S "${FUZZ_WORKER_NAME:?}" \
+          -i "${FUZZ_INPUT_DIR:?}" -o "${FUZZ_OUTPUT_DIR:?}" \
+          -- "/out/fuzz/bin/$FUZZ_TARGET" @@
+
+  fuzz:minimize:
+    cmds:
+      - |
+        set -eu
+        test "${FUZZ_TARGET:?}" = nginx_conf_parse
+        AFL_FUZZER_LOOPCOUNT=1 afl-cmin -m none -t 5000 \
+          -i "${FUZZ_INPUT_DIR:?}" -o "${FUZZ_OUTPUT_DIR:?}" \
+          -- "/out/fuzz/bin/$FUZZ_TARGET" @@
+
+  fuzz:replay:
+    silent: true
+    cmds:
+      - bash fuzz-platform/replay.sh
+
+  fuzz:casr:
+    cmds:
+      - |
+        set -eu
+        test "${FUZZ_TARGET:?}" = nginx_conf_parse
+        AFL_FUZZER_LOOPCOUNT=1 casr-afl -i "${FUZZ_INPUT_DIR:?}" -o "${FUZZ_OUTPUT_DIR:?}" \
+          -- "/out/fuzz/bin/$FUZZ_TARGET" @@
+
+  fuzz:coverage:
+    cmds:
+      - |
+        set -eu
+        test "${FUZZ_TARGET:?}" = nginx_conf_parse
+        cov="/out/fuzz/coverage/bin/$FUZZ_TARGET"
+        report_dir="${FUZZ_COVERAGE_REPORT_DIR:?}"
+        mkdir -p "$report_dir"
+        # Avoid libFuzzer re-executing the callback for leak checks; LSan still
+        # checks leaks on process exit through ASAN_OPTIONS=detect_leaks=1.
+        cov-analysis report -d "${FUZZ_CORPUS_DIR:?}" -e "$cov -runs=1 -detect_leaks=0 @@" \
+          --binary "$cov" --layout flat -o "$report_dir" \
+          -t "${COVERAGE_WORKERS:-1}"
+
+  fuzz:stream:
+    cmds:
+      - sh fuzz/stream-run.sh {{.CLI_ARGS}}

@@ -149,7 +149,7 @@ track the current `deckhouse` branch through werf's remote Git mappings.
 These sources are separate
 from the production builds: distribution now uses a local v3 wrapper, and the
 docker-auth release tag does not yet include the harnesses.
-All eight images use the pinned `fuzz-go` base image and download
+All eight Go images use the pinned `fuzz-go` base image and download
 Go dependencies during the build. Werf tracks source changes in both forks as
 dependencies of the `install` stage. The hooks and library images add their
 sources directly from this repository through Git mappings. The other four
@@ -158,15 +158,50 @@ All are intermediate images (`final: false`). Regular CI builds use
 `WERF_FINAL_IMAGES_ONLY=true` and exclude them because no final image depends
 on them. The fuzz build selects the `-fuzz` images with `--final-images-only=false`.
 
-Each image contains `Taskfile.yml` in its Go module directory and sets
+Each Go image contains `Taskfile.yml` in its Go module directory and sets
 `FUZZ_PACKAGES` to the packages with harnesses. The tasks `fuzz:list`, `fuzz:run`,
 `fuzz:coverage` and `fuzz:replay` use the same interface as `user-authn`.
 The distribution image selects `. ./registry ./registry/handlers ./registry/proxy`;
-docker-auth selects `./server` from its `auth_server` Go module. The nginx harnesses
-are not included.
+docker-auth selects `./server` from its `auth_server` Go module.
+
+`common/nginx-static-fuzz` builds the same Nginx fork as the production base of
+`registry/registry-proxy`, using the `deckhouse-fuzzing` branch of the
+`nginx/nginx` mirror. It uses the pinned `fuzz-afl` base and builds
+`nginx_conf_parse` in `/out/fuzz/bin` and its LLVM coverage variant in
+`/out/fuzz/coverage/bin`. The AFL target uses the stock AFL++ driver,
+automatically linked by `afl-clang-fast` for `-fsanitize=fuzzer`.
+`AFL_FUZZER_LOOPCOUNT=1` limits each fork child to one callback, isolating Nginx
+module globals between inputs. The coverage target uses LLVM's stock libFuzzer
+driver and executes each file in a separate process.
+The image patches the harness to keep the input configuration in an anonymous
+Linux `memfd`, which the kernel releases even after a crash or timeout. The
+private include prefix is removed immediately after initialization; per-input
+configuration files and directories do not accumulate on disk.
+`fuzz:run` passes ASan/LSan options to Nginx through `AFL_TARGET_ENV` and removes
+these variables from the `afl-fuzz` process. This satisfies AFL's startup checks
+while keeping sanitizer checks and LSan suppression symbolization in the target.
+`Taskfile.yml` in `/src/nginx` provides `fuzz:list`, `fuzz:run`, `fuzz:minimize`,
+`fuzz:replay`, `fuzz:casr` and `fuzz:coverage`. `fuzz:replay` runs one
+`afl-showmap -Z` forkserver for the non-empty inputs in the flat corpus
+supplied in `FUZZ_INPUT_DIR` (or `FUZZ_CORPUS_DIR`). Both directory mode and
+the AFL++ 5.03c driver skip zero-byte files. Each empty seed is therefore replayed
+separately by `/out/fuzz/replay/bin/nginx_conf_parse`: the same AFL-instrumented
+Nginx objects linked with LLVM's stock libFuzzer driver. It executes the empty
+input once, with libFuzzer's crash signal handlers disabled so `afl-showmap`
+observes crashes directly. `-detect_leaks=0` disables libFuzzer's extra callback
+for leak checks in replay and coverage; LeakSanitizer remains enabled at process
+exit through `ASAN_OPTIONS=detect_leaks=1`. Every input's map is preserved in
+`FUZZ_ARTIFACT_DIR/maps` for the shared replay to validate. Missing or empty
+maps, crashes and timeouts fail the task even when the last input succeeds.
+The fork's seeds in `/src/nginx/fuzz/corpus` are the default for local replay;
+without `FUZZ_ARTIFACT_DIR`, maps are kept in a new directory under `/tmp`. `task fuzz:stream` runs the fork's existing client and
+upstream direction checks against a real Nginx; these are not separate AFL
+targets. This image is also intermediate (`final: false`) and discovered by
+its `-fuzz` suffix.
 The `build_fuzz` job discovers all images by their `-fuzz` suffix, builds and
 publishes them, and produces the replay matrix. The separate `replay_fuzz` jobs
-restore the S3 corpus and replay every discovered target with `go test -run`.
+restore the S3 corpus and replay Go targets with `go test -run` and AFL targets
+with `task fuzz:replay`.
 S3 credentials are only needed for replay and build report publication.
 See [Fuzz build and corpus replay](../../../../.github/ci_development.md#fuzz-build-and-corpus-replay)
 for the shared GitLab CI templates and corpus replay flow.

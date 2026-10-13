@@ -152,7 +152,7 @@ Harness'ы 3, 4, 5 и 8 из плана модели угроз требуют �
 Эти исходники отделены от production-сборок:
 distribution теперь использует локальную обёртку над v3, а релизный тег
 docker-auth ещё не содержит harness'ов.
-Все восемь образов используют закреплённый базовый образ `fuzz-go`
+Все восемь Go-образов используют закреплённый базовый образ `fuzz-go`
 и загружают Go-зависимости при сборке. Werf учитывает изменения исходников
 обоих форков в зависимостях стадии `install`. Образы hooks и library получают
 исходники напрямую из этого репозитория через Git-секции. Остальные четыре
@@ -162,14 +162,54 @@ docker-auth ещё не содержит harness'ов.
 от них не зависят. Fuzz-сборка выбирает образы с суффиксом `-fuzz`
 через `--final-images-only=false`.
 
-В каждом образе `Taskfile.yml` находится в каталоге соответствующего Go-модуля,
+В каждом Go-образе `Taskfile.yml` находится в каталоге соответствующего Go-модуля,
 а `FUZZ_PACKAGES` содержит пакеты с harness'ами. Задачи `fuzz:list`, `fuzz:run`,
 `fuzz:coverage` и `fuzz:replay` используют тот же интерфейс, что и `user-authn`.
 Для distribution выбраны пакеты `. ./registry ./registry/handlers ./registry/proxy`,
-для docker-auth — `./server` из Go-модуля `auth_server`. Harness'ы nginx в сборку не входят.
+для docker-auth — `./server` из Go-модуля `auth_server`.
+
+Образ `common/nginx-static-fuzz` собирает исходники того же Nginx, что и
+production-база `registry/registry-proxy`, из ветки `deckhouse-fuzzing`
+зеркала `nginx/nginx`. Он использует закреплённую базу `fuzz-afl` и собирает
+`nginx_conf_parse` в `/out/fuzz/bin` и его LLVM coverage-вариант в
+`/out/fuzz/coverage/bin`. AFL-цель использует штатный драйвер AFL++:
+`afl-clang-fast` автоматически подключает его при линковке с `-fsanitize=fuzzer`.
+`AFL_FUZZER_LOOPCOUNT=1` ограничивает каждый дочерний процесс forkserver одним
+вызовом harness, изолируя глобальное состояние модулей Nginx между входами.
+Coverage-цель использует штатный LLVM libFuzzer и запускает каждый файл
+в отдельном процессе.
+При сборке образа harness получает patch: конфигурация хранится в анонимном
+Linux `memfd`, который ядро освобождает даже после падения или таймаута.
+Приватный каталог для относительных include удаляется сразу после инициализации;
+конфигурационные файлы и каталоги не накапливаются на диске между входами.
+`fuzz:run` передаёт настройки ASan/LSan самому Nginx через `AFL_TARGET_ENV`
+и убирает эти переменные у процесса `afl-fuzz`. Так выполняются проверки AFL
+при старте, а sanitizer-проверки и символизация LSan suppression у цели сохраняются.
+`Taskfile.yml` в `/src/nginx` предоставляет `fuzz:list`, `fuzz:run`,
+`fuzz:minimize`, `fuzz:replay`, `fuzz:casr` и `fuzz:coverage`.
+`fuzz:replay` запускает один forkserver `afl-showmap -Z` для непустых входов
+плоского корпуса из `FUZZ_INPUT_DIR` (или `FUZZ_CORPUS_DIR`). И режим каталога,
+и драйвер AFL++ 5.03c пропускают файлы нулевой длины. Поэтому каждый пустой seed
+проверяется отдельно через `/out/fuzz/replay/bin/nginx_conf_parse`: те же
+AFL-инструментированные объекты Nginx со штатным драйвером LLVM libFuzzer.
+Он обрабатывает пустой вход один раз; обработчики сигналов libFuzzer отключены,
+чтобы `afl-showmap` видел аварийное завершение напрямую. Флаг `-detect_leaks=0`
+отключает повторный вызов harness для проверки утечек в libFuzzer при replay
+и сборе coverage. Сам LeakSanitizer остаётся включённым при выходе процесса
+через `ASAN_OPTIONS=detect_leaks=1`. Карты всех входов сохраняются
+в `FUZZ_ARTIFACT_DIR/maps` для проверки общим replay. Отсутствующая или пустая
+карта, аварийное завершение и таймаут завершают task ошибкой, даже если последний
+вход успешен.
+Встроенные seeds в `/src/nginx/fuzz/corpus` используются по умолчанию для
+локального replay. Без `FUZZ_ARTIFACT_DIR` карты сохраняются в новом каталоге
+под `/tmp`. `task fuzz:stream` запускает имеющиеся
+в форке проверки клиентского и upstream-направлений против реального Nginx;
+эти проверки не являются отдельными AFL-целями.
+Образ также промежуточный (`final: false`) и обнаруживается по суффиксу `-fuzz`.
 Задача `build_fuzz` находит все образы по суффиксу `-fuzz`, собирает и публикует их,
 затем формирует матрицу replay. Отдельные задачи `replay_fuzz` восстанавливают
-корпус из S3 и выполняют replay каждой найденной цели через `go test -run`.
+корпус из S3 и выполняют replay Go-целей через `go test -run`, а AFL-целей
+через `task fuzz:replay`.
 Доступ к S3 нужен только для replay и публикации отчёта о сборке.
 Общие шаблоны GitLab CI и схема replay описаны
 в разделе [Fuzz build and corpus replay](../../../../.github/ci_development.md#fuzz-build-and-corpus-replay).
