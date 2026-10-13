@@ -663,8 +663,15 @@ func containsToken(root, token string) (bool, error) {
 }
 
 // GetConversionWebhooks returns the conversion webhooks for the given package.
+// It renders only the templates that mention the kind (plus helpers), and falls
+// back to the full chart if that reduced render fails.
 func (s *Service) GetConversionWebhooks(ctx context.Context, namespace string, pkg Package) ([]manifest.Manifest, error) {
-	rendered, err := s.Render(ctx, namespace, pkg)
+	rendered, err := s.renderConversionWebhookChart(ctx, namespace, pkg)
+	if err != nil && !errors.Is(err, ErrPackageNotHelm) {
+		s.logger.Warn("render conversion webhooks chart, fallback to full render", slog.String("name", pkg.GetName()), log.Err(err))
+
+		rendered, err = s.Render(ctx, namespace, pkg)
+	}
 	if err != nil {
 		if errors.Is(err, ErrPackageNotHelm) {
 			return nil, nil
@@ -685,6 +692,165 @@ func (s *Service) GetConversionWebhooks(ctx context.Context, namespace string, p
 	}
 
 	return webhooks, nil
+}
+
+// renderConversionWebhookChart builds a reduced chart with the package's
+// conversion webhook templates in a temporary directory and renders it.
+func (s *Service) renderConversionWebhookChart(ctx context.Context, namespace string, pkg Package) (string, error) {
+	isHelm, err := s.isHelmChart(pkg.GetPath())
+	if err != nil {
+		return "", fmt.Errorf("check helm chart: %w", err)
+	}
+
+	if !isHelm {
+		return "", ErrPackageNotHelm
+	}
+
+	templates, err := conversionWebhookTemplates(pkg.GetPath())
+	if err != nil {
+		return "", fmt.Errorf("find conversion webhook templates: %w", err)
+	}
+
+	chartDir, err := os.MkdirTemp(s.tmpDir, pkg.GetName()+".conversion-webhooks-")
+	if err != nil {
+		return "", fmt.Errorf("create chart dir: %w", err)
+	}
+	defer os.RemoveAll(chartDir)
+
+	if err = buildConversionWebhookChart(pkg.GetPath(), chartDir, templates); err != nil {
+		return "", fmt.Errorf("build chart: %w", err)
+	}
+
+	valuesPath, err := s.createTmpValuesFile(pkg.GetName(), pkg.GetValues())
+	if err != nil {
+		return "", fmt.Errorf("create temp values file: %w", err)
+	}
+	defer os.Remove(valuesPath)
+
+	return s.client.Render(ctx, namespace, pkg.GetName(), nelm.InstallOptions{
+		Path:        chartDir,
+		ValuesPaths: []string{valuesPath},
+		RootValues:  pkg.GetRuntimeValues(),
+		ResourcesLabels: map[string]string{
+			health.LabelKey: pkg.GetName(),
+		},
+	})
+}
+
+// conversionWebhookTemplates returns paths, relative to path/templates, of the
+// chart files that mention a ConversionWebhook, plus every "_" helper they may
+// include (helpers render nothing on their own). A missing templates dir yields none.
+func conversionWebhookTemplates(path string) ([]string, error) {
+	root := filepath.Join(path, templatesDir)
+	needle := []byte(conversionWebhookKind)
+
+	var found []string
+
+	err := filepath.WalkDir(root, func(path string, entry fs.DirEntry, err error) error {
+		if err != nil {
+			return err
+		}
+
+		if entry.IsDir() {
+			return nil
+		}
+
+		if !strings.HasPrefix(entry.Name(), "_") {
+			if !slices.Contains(chartFileExtensions, filepath.Ext(path)) {
+				return nil
+			}
+
+			data, err := os.ReadFile(path)
+			if err != nil {
+				return err
+			}
+
+			if !bytes.Contains(data, needle) {
+				return nil
+			}
+		}
+
+		rel, err := filepath.Rel(root, path)
+		if err != nil {
+			return err
+		}
+
+		found = append(found, rel)
+
+		return nil
+	})
+	if err != nil && !errors.Is(err, fs.ErrNotExist) {
+		return nil, err
+	}
+
+	return found, nil
+}
+
+// buildConversionWebhookChart mirrors into dst the parts of the package chart
+// needed to render the given templates: charts/ (library charts like helm_lib)
+// and the templates themselves. Directories are created for real and files are
+// symlinked, so loaders that do not follow directory symlinks see the whole tree.
+func buildConversionWebhookChart(path, dst string, templates []string) error {
+	if err := mirrorTree(filepath.Join(path, chartsDir), filepath.Join(dst, chartsDir)); err != nil && !errors.Is(err, fs.ErrNotExist) {
+		return fmt.Errorf("mirror charts: %w", err)
+	}
+
+	for _, file := range templates {
+		if err := linkFile(filepath.Join(path, templatesDir, file), filepath.Join(dst, templatesDir, file)); err != nil {
+			return fmt.Errorf("link template '%s': %w", file, err)
+		}
+	}
+
+	return nil
+}
+
+// mirrorTree recreates the src directory tree in dst following symlinks, and
+// links every regular file to its resolved source.
+func mirrorTree(src, dst string) error {
+	info, err := os.Stat(src)
+	if err != nil {
+		return err
+	}
+
+	if !info.IsDir() {
+		return linkFile(src, dst)
+	}
+
+	if err = os.MkdirAll(dst, 0o755); err != nil {
+		return err
+	}
+
+	entries, err := os.ReadDir(src)
+	if err != nil {
+		return err
+	}
+
+	for _, entry := range entries {
+		if err = mirrorTree(filepath.Join(src, entry.Name()), filepath.Join(dst, entry.Name())); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+// linkFile symlinks dst to the resolved src, creating parent directories of dst.
+func linkFile(src, dst string) error {
+	resolved, err := filepath.EvalSymlinks(src)
+	if err != nil {
+		return err
+	}
+
+	resolved, err = filepath.Abs(resolved)
+	if err != nil {
+		return err
+	}
+
+	if err = os.MkdirAll(filepath.Dir(dst), 0o755); err != nil {
+		return err
+	}
+
+	return os.Symlink(resolved, dst)
 }
 
 // Cleanup uninstalls releases owned by this service (carrying the managed-by
