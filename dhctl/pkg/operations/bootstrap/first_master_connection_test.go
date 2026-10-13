@@ -17,9 +17,8 @@ package bootstrap
 import (
 	"testing"
 
+	sshconfig "fox.flant.com/deckhouse/cluster-and-infrastructure/libs/lib-connection/pkg/ssh/config"
 	"github.com/stretchr/testify/assert"
-
-	sshconfig "github.com/deckhouse/lib-connection/pkg/ssh/config"
 )
 
 // TestMasterConnectionString: this line is printed for the operator's convenience, and printing it

@@ -23,6 +23,8 @@ import (
 	"sync"
 	"time"
 
+	dhlog "fox.flant.com/deckhouse/cluster-and-infrastructure/libs/lib-dhctl/pkg/logger"
+	"fox.flant.com/deckhouse/cluster-and-infrastructure/libs/lib-dhctl/pkg/retry"
 	"github.com/google/uuid"
 	"golang.org/x/sync/errgroup"
 	appsv1 "k8s.io/api/apps/v1"
@@ -33,8 +35,6 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 
 	registry_const "github.com/deckhouse/deckhouse/go_lib/registry/const"
-	dhlog "github.com/deckhouse/lib-dhctl/pkg/logger"
-	"github.com/deckhouse/lib-dhctl/pkg/retry"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config/registry"

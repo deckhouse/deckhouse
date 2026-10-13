@@ -22,11 +22,10 @@ import (
 	"strings"
 	"time"
 
+	sshconfig "fox.flant.com/deckhouse/cluster-and-infrastructure/libs/lib-connection/pkg/ssh/config"
 	"github.com/cenkalti/backoff/v4"
 	"golang.org/x/crypto/ssh"
 	"golang.org/x/crypto/ssh/agent"
-
-	sshconfig "github.com/deckhouse/lib-connection/pkg/ssh/config"
 
 	preflight "github.com/deckhouse/deckhouse/dhctl/pkg/preflight"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/providerinitializer"

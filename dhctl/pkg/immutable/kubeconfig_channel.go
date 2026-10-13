@@ -20,11 +20,10 @@ import (
 	"net/url"
 	"strconv"
 
+	"fox.flant.com/deckhouse/cluster-and-infrastructure/libs/lib-connection/pkg/settings"
+	sshconfig "fox.flant.com/deckhouse/cluster-and-infrastructure/libs/lib-connection/pkg/ssh/config"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
-
-	"github.com/deckhouse/lib-connection/pkg/settings"
-	sshconfig "github.com/deckhouse/lib-connection/pkg/ssh/config"
 )
 
 // defaultAPIServerPort is what an https URL without one means.

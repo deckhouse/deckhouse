@@ -21,9 +21,8 @@ import (
 	"strings"
 	"testing"
 
+	dhlog "fox.flant.com/deckhouse/cluster-and-infrastructure/libs/lib-dhctl/pkg/logger"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-
-	dhlog "github.com/deckhouse/lib-dhctl/pkg/logger"
 )
 
 // TestWarnAboutKubernetesVersion covers the two things the schema enum cannot say: that a version

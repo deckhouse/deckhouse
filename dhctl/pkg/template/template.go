@@ -20,7 +20,7 @@ import (
 	"os"
 	"strings"
 
-	dhlog "github.com/deckhouse/lib-dhctl/pkg/logger"
+	dhlog "fox.flant.com/deckhouse/cluster-and-infrastructure/libs/lib-dhctl/pkg/logger"
 )
 
 func RenderAndSaveTemplate(ctx context.Context, outFileName, templatePath string, data map[string]any) (string, error) {

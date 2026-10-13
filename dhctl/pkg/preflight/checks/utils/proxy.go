@@ -26,9 +26,8 @@ import (
 	"strings"
 	"time"
 
+	libcon "fox.flant.com/deckhouse/cluster-and-infrastructure/libs/lib-connection/pkg"
 	"golang.org/x/net/http/httpproxy"
-
-	libcon "github.com/deckhouse/lib-connection/pkg"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 )

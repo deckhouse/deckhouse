@@ -19,13 +19,11 @@ import (
 	"context"
 	"testing"
 
+	dhlog "fox.flant.com/deckhouse/cluster-and-infrastructure/libs/lib-dhctl/pkg/logger"
+	"github.com/stretchr/testify/require"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
-
-	"github.com/stretchr/testify/require"
-
-	dhlog "github.com/deckhouse/lib-dhctl/pkg/logger"
 )
 
 func alreadyExists() error {
@@ -53,7 +51,9 @@ func TestUpdateFailureSaysWhatFailed(t *testing.T) {
 		Name:       `Secret "d8-cluster-uuid"`,
 		Manifest:   func() any { return &metav1.ObjectMeta{} },
 		CreateFunc: func(context.Context, any) error { return alreadyExists() },
-		UpdateFunc: func(context.Context, any) error { return apierrors.NewConflict(schema.GroupResource{Resource: "secrets"}, "d8-cluster-uuid", nil) },
+		UpdateFunc: func(context.Context, any) error {
+			return apierrors.NewConflict(schema.GroupResource{Resource: "secrets"}, "d8-cluster-uuid", nil)
+		},
 	}
 
 	err := task.CreateOrUpdate(ctx)

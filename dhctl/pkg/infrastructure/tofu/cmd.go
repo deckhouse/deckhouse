@@ -23,7 +23,7 @@ import (
 	"strings"
 	"syscall"
 
-	dhlog "github.com/deckhouse/lib-dhctl/pkg/logger"
+	dhlog "fox.flant.com/deckhouse/cluster-and-infrastructure/libs/lib-dhctl/pkg/logger"
 
 	infraexec "github.com/deckhouse/deckhouse/dhctl/pkg/infrastructure/exec"
 )

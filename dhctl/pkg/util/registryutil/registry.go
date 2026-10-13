@@ -22,10 +22,10 @@ import (
 	"net/http"
 	"strings"
 
+	dhlog "fox.flant.com/deckhouse/cluster-and-infrastructure/libs/lib-dhctl/pkg/logger"
 	"github.com/google/go-containerregistry/pkg/name"
 
 	constant "github.com/deckhouse/deckhouse/go_lib/registry/const"
-	dhlog "github.com/deckhouse/lib-dhctl/pkg/logger"
 )
 
 func NewRegistryClient(ctx context.Context, scheme, ca string) (*http.Client, error) {

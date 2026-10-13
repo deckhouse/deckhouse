@@ -23,12 +23,11 @@ import (
 	"testing"
 	"time"
 
+	libcon "fox.flant.com/deckhouse/cluster-and-infrastructure/libs/lib-connection/pkg"
+	sshconfig "fox.flant.com/deckhouse/cluster-and-infrastructure/libs/lib-connection/pkg/ssh/config"
+	"fox.flant.com/deckhouse/cluster-and-infrastructure/libs/lib-dhctl/pkg/retry"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-
-	libcon "github.com/deckhouse/lib-connection/pkg"
-	sshconfig "github.com/deckhouse/lib-connection/pkg/ssh/config"
-	"github.com/deckhouse/lib-dhctl/pkg/retry"
 
 	preflight "github.com/deckhouse/deckhouse/dhctl/pkg/preflight"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/providerinitializer"

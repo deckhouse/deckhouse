@@ -17,8 +17,8 @@ package bootstrap
 import (
 	"strings"
 
-	libdhctlyaml "github.com/deckhouse/lib-dhctl/pkg/yaml"
-	yamlvalidation "github.com/deckhouse/lib-dhctl/pkg/yaml/validation"
+	libdhctlyaml "fox.flant.com/deckhouse/cluster-and-infrastructure/libs/lib-dhctl/pkg/yaml"
+	yamlvalidation "fox.flant.com/deckhouse/cluster-and-infrastructure/libs/lib-dhctl/pkg/yaml/validation"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/immutable"
 )

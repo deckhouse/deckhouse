@@ -18,12 +18,12 @@ import (
 	"fmt"
 	"strings"
 
+	libdhctlyaml "fox.flant.com/deckhouse/cluster-and-infrastructure/libs/lib-dhctl/pkg/yaml"
+	yamlvalidation "fox.flant.com/deckhouse/cluster-and-infrastructure/libs/lib-dhctl/pkg/yaml/validation"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"sigs.k8s.io/yaml"
 
 	validatev1 "github.com/deckhouse/deckhouse/go_lib/dhctl-provider-protocol/api/validate/v1"
-	libdhctlyaml "github.com/deckhouse/lib-dhctl/pkg/yaml"
-	yamlvalidation "github.com/deckhouse/lib-dhctl/pkg/yaml/validation"
 )
 
 const (

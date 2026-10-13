@@ -17,9 +17,8 @@ package providerinitializer
 import (
 	"testing"
 
+	"fox.flant.com/deckhouse/cluster-and-infrastructure/libs/lib-connection/pkg/kube"
 	"github.com/stretchr/testify/require"
-
-	"github.com/deckhouse/lib-connection/pkg/kube"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app/options"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/kubeerrors"

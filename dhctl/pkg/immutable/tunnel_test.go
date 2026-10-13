@@ -23,10 +23,9 @@ import (
 	"testing"
 	"time"
 
+	"fox.flant.com/deckhouse/cluster-and-infrastructure/libs/lib-connection/pkg/settings"
+	sshconfig "fox.flant.com/deckhouse/cluster-and-infrastructure/libs/lib-connection/pkg/ssh/config"
 	"github.com/stretchr/testify/require"
-
-	"github.com/deckhouse/lib-connection/pkg/settings"
-	sshconfig "github.com/deckhouse/lib-connection/pkg/ssh/config"
 )
 
 // A wait rebuilds this channel on every attempt, and the provider prints three

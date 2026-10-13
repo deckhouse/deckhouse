@@ -21,9 +21,8 @@ import (
 	"strings"
 	"sync"
 
+	dhlog "fox.flant.com/deckhouse/cluster-and-infrastructure/libs/lib-dhctl/pkg/logger"
 	"github.com/name212/govalue"
-
-	dhlog "github.com/deckhouse/lib-dhctl/pkg/logger"
 
 	dstate "github.com/deckhouse/deckhouse/dhctl/pkg/state"
 )

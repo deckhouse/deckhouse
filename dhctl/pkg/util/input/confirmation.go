@@ -21,9 +21,8 @@ import (
 	"os"
 	"strings"
 
+	logger "fox.flant.com/deckhouse/cluster-and-infrastructure/libs/lib-dhctl/pkg/logger"
 	terminal "golang.org/x/term"
-
-	logger "github.com/deckhouse/lib-dhctl/pkg/logger"
 )
 
 type Confirmation struct {

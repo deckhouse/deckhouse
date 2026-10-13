@@ -24,9 +24,8 @@ import (
 	"testing"
 	"time"
 
+	dhlog "fox.flant.com/deckhouse/cluster-and-infrastructure/libs/lib-dhctl/pkg/logger"
 	"github.com/stretchr/testify/require"
-
-	dhlog "github.com/deckhouse/lib-dhctl/pkg/logger"
 )
 
 const lockHelperPathEnv = "DHCTL_TEST_LOCK_HELPER_PATH"

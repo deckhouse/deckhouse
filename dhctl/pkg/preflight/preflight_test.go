@@ -25,9 +25,8 @@ import (
 	"testing"
 	"time"
 
+	dhlog "fox.flant.com/deckhouse/cluster-and-infrastructure/libs/lib-dhctl/pkg/logger"
 	"github.com/cenkalti/backoff/v4"
-
-	dhlog "github.com/deckhouse/lib-dhctl/pkg/logger"
 )
 
 // testContext returns a context carrying a logger that writes everything into buf, so a test can

@@ -19,7 +19,7 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/deckhouse/lib-connection/pkg/ssh"
+	"fox.flant.com/deckhouse/cluster-and-infrastructure/libs/lib-connection/pkg/ssh"
 
 	preflight "github.com/deckhouse/deckhouse/dhctl/pkg/preflight"
 )

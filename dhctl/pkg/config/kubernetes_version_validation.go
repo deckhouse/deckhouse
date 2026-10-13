@@ -18,8 +18,9 @@ import (
 	"context"
 	"fmt"
 
+	dhlog "fox.flant.com/deckhouse/cluster-and-infrastructure/libs/lib-dhctl/pkg/logger"
+
 	validatev1 "github.com/deckhouse/deckhouse/go_lib/dhctl-provider-protocol/api/validate/v1"
-	dhlog "github.com/deckhouse/lib-dhctl/pkg/logger"
 )
 
 // endOfLifeStatus is what candi/version_map.yml marks a Kubernetes version with once it is out of

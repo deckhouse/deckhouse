@@ -19,7 +19,7 @@ import (
 	"strings"
 	"testing"
 
-	sshconfig "github.com/deckhouse/lib-connection/pkg/ssh/config"
+	sshconfig "fox.flant.com/deckhouse/cluster-and-infrastructure/libs/lib-connection/pkg/ssh/config"
 )
 
 // The line has to be usable as printed: an operator copies it, and a wrong

@@ -18,7 +18,7 @@ import (
 	"context"
 	"fmt"
 
-	dhlog "github.com/deckhouse/lib-dhctl/pkg/logger"
+	dhlog "fox.flant.com/deckhouse/cluster-and-infrastructure/libs/lib-dhctl/pkg/logger"
 )
 
 // validateClusterDocuments rejects the combinations of documents that do not describe a cluster

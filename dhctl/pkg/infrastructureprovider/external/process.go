@@ -26,8 +26,9 @@ import (
 	"syscall"
 	"time"
 
+	dhlog "fox.flant.com/deckhouse/cluster-and-infrastructure/libs/lib-dhctl/pkg/logger"
+
 	"github.com/deckhouse/deckhouse/go_lib/dhctl-provider-protocol/server"
-	dhlog "github.com/deckhouse/lib-dhctl/pkg/logger"
 )
 
 const (

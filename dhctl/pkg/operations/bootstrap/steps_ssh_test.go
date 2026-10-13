@@ -17,7 +17,7 @@ package bootstrap
 import (
 	"testing"
 
-	"github.com/deckhouse/lib-connection/pkg/ssh/session"
+	"fox.flant.com/deckhouse/cluster-and-infrastructure/libs/lib-connection/pkg/ssh/session"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )

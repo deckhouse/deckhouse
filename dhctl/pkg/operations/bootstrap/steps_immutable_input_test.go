@@ -17,9 +17,8 @@ package bootstrap
 import (
 	"testing"
 
+	libdhctlyaml "fox.flant.com/deckhouse/cluster-and-infrastructure/libs/lib-dhctl/pkg/yaml"
 	"github.com/stretchr/testify/require"
-
-	libdhctlyaml "github.com/deckhouse/lib-dhctl/pkg/yaml"
 )
 
 func TestSplitNodeCustomizationsTakesOnlyNodeConfigs(t *testing.T) {

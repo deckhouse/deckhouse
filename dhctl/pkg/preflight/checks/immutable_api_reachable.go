@@ -20,7 +20,7 @@ import (
 	"net"
 	"time"
 
-	dhlog "github.com/deckhouse/lib-dhctl/pkg/logger"
+	dhlog "fox.flant.com/deckhouse/cluster-and-infrastructure/libs/lib-dhctl/pkg/logger"
 
 	preflight "github.com/deckhouse/deckhouse/dhctl/pkg/preflight"
 )

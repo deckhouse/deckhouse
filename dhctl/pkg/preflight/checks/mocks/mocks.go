@@ -18,9 +18,8 @@ import (
 	"context"
 	"time"
 
+	libcon "fox.flant.com/deckhouse/cluster-and-infrastructure/libs/lib-connection/pkg"
 	"github.com/stretchr/testify/mock"
-
-	libcon "github.com/deckhouse/lib-connection/pkg"
 )
 
 type MockNodeInterface struct {

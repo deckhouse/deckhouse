@@ -16,20 +16,19 @@ package cache
 
 import (
 	"fmt"
+	"log/slog"
 	"os"
 	"path"
 	"path/filepath"
 	"slices"
 	"testing"
 
-	"log/slog"
-
+	dhlog "fox.flant.com/deckhouse/cluster-and-infrastructure/libs/lib-dhctl/pkg/logger"
 	"github.com/name212/govalue"
 	"github.com/stretchr/testify/require"
 	"k8s.io/utils/pointer"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/fs"
-	dhlog "github.com/deckhouse/lib-dhctl/pkg/logger"
 )
 
 var testTmpDirLockCheckDir = path.Join(os.TempDir(), "dhctl-check-lock-tmp")

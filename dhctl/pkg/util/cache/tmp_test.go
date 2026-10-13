@@ -26,6 +26,7 @@ import (
 	"testing"
 	"time"
 
+	dhlogger "fox.flant.com/deckhouse/cluster-and-infrastructure/libs/lib-dhctl/pkg/logger"
 	"github.com/google/uuid"
 	"github.com/name212/govalue"
 	"github.com/stretchr/testify/require"
@@ -33,7 +34,6 @@ import (
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider/providerdir"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/stringsutil"
-	dhlogger "github.com/deckhouse/lib-dhctl/pkg/logger"
 )
 
 // captureSlog installs a buffer-backed slog logger as the process default so

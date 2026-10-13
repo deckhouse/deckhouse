@@ -23,8 +23,8 @@ import (
 	"strconv"
 	"strings"
 
-	sshconfig "github.com/deckhouse/lib-connection/pkg/ssh/config"
-	dhlog "github.com/deckhouse/lib-dhctl/pkg/logger"
+	sshconfig "fox.flant.com/deckhouse/cluster-and-infrastructure/libs/lib-connection/pkg/ssh/config"
+	dhlog "fox.flant.com/deckhouse/cluster-and-infrastructure/libs/lib-dhctl/pkg/logger"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/immutable"
 )

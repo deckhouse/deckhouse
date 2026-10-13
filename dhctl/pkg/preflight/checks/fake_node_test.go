@@ -20,7 +20,7 @@ import (
 	"strings"
 	"time"
 
-	libcon "github.com/deckhouse/lib-connection/pkg"
+	libcon "fox.flant.com/deckhouse/cluster-and-infrastructure/libs/lib-connection/pkg"
 )
 
 // A node described by what its commands answer.

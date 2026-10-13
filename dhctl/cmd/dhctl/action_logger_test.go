@@ -21,7 +21,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/deckhouse/lib-dhctl/pkg/logger"
+	"fox.flant.com/deckhouse/cluster-and-infrastructure/libs/lib-dhctl/pkg/logger"
 )
 
 // TestRootWritesFileAndTTY pins that the debug-log pointer reaches the terminal as well as the

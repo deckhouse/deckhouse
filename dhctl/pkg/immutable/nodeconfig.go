@@ -22,10 +22,10 @@ import (
 	"fmt"
 	"strconv"
 
+	dhlog "fox.flant.com/deckhouse/cluster-and-infrastructure/libs/lib-dhctl/pkg/logger"
 	"k8s.io/utils/ptr"
 
 	constant "github.com/deckhouse/deckhouse/go_lib/registry/const"
-	dhlog "github.com/deckhouse/lib-dhctl/pkg/logger"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/global"

@@ -22,7 +22,7 @@ import (
 	"strconv"
 	"strings"
 
-	dhlog "github.com/deckhouse/lib-dhctl/pkg/logger"
+	dhlog "fox.flant.com/deckhouse/cluster-and-infrastructure/libs/lib-dhctl/pkg/logger"
 )
 
 // validateClusterNetworking rejects the address-space mistakes that can be decided from the

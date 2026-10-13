@@ -17,7 +17,7 @@ package checks
 import (
 	"context"
 
-	libcon "github.com/deckhouse/lib-connection/pkg"
+	libcon "fox.flant.com/deckhouse/cluster-and-infrastructure/libs/lib-connection/pkg"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app/options"
 	preflight "github.com/deckhouse/deckhouse/dhctl/pkg/preflight"

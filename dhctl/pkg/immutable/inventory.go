@@ -26,10 +26,9 @@ import (
 	"strconv"
 	"strings"
 
+	dhlog "fox.flant.com/deckhouse/cluster-and-infrastructure/libs/lib-dhctl/pkg/logger"
 	"k8s.io/apimachinery/pkg/api/resource"
 	"sigs.k8s.io/yaml"
-
-	dhlog "github.com/deckhouse/lib-dhctl/pkg/logger"
 )
 
 // inventoryPath is where a machine waiting for its configuration answers with

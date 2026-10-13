@@ -19,7 +19,7 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/deckhouse/lib-connection/pkg/ssh/session"
+	"fox.flant.com/deckhouse/cluster-and-infrastructure/libs/lib-connection/pkg/ssh/session"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/state"
 )

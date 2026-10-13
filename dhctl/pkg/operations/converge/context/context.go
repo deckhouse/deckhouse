@@ -20,7 +20,7 @@ import (
 	"sync"
 	"time"
 
-	libcon "github.com/deckhouse/lib-connection/pkg"
+	libcon "fox.flant.com/deckhouse/cluster-and-infrastructure/libs/lib-connection/pkg"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app/options"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"

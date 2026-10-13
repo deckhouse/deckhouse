@@ -17,9 +17,8 @@ package bootstrap
 import (
 	"testing"
 
+	sshconfig "fox.flant.com/deckhouse/cluster-and-infrastructure/libs/lib-connection/pkg/ssh/config"
 	"github.com/stretchr/testify/require"
-
-	sshconfig "github.com/deckhouse/lib-connection/pkg/ssh/config"
 )
 
 func intPtr(i int) *int { return &i }

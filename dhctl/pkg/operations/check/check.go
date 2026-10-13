@@ -21,11 +21,10 @@ import (
 	"reflect"
 	"sort"
 
+	dhlog "fox.flant.com/deckhouse/cluster-and-infrastructure/libs/lib-dhctl/pkg/logger"
 	multierror "github.com/hashicorp/go-multierror"
 	"github.com/mitchellh/copystructure"
 	"sigs.k8s.io/yaml"
-
-	dhlog "github.com/deckhouse/lib-dhctl/pkg/logger"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app/options"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"

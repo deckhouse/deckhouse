@@ -18,9 +18,8 @@ import (
 	"context"
 	"fmt"
 
+	dhlog "fox.flant.com/deckhouse/cluster-and-infrastructure/libs/lib-dhctl/pkg/logger"
 	"github.com/fsnotify/fsnotify"
-
-	dhlog "github.com/deckhouse/lib-dhctl/pkg/logger"
 )
 
 func StartFileWatcher(ctx context.Context, path string, fsEventHanlder func(event fsnotify.Event), done chan struct{}) (*fsnotify.Watcher, error) {

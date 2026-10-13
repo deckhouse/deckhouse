@@ -21,9 +21,8 @@ import (
 	"strings"
 	"time"
 
+	dhlog "fox.flant.com/deckhouse/cluster-and-infrastructure/libs/lib-dhctl/pkg/logger"
 	"github.com/cenkalti/backoff/v4"
-
-	dhlog "github.com/deckhouse/lib-dhctl/pkg/logger"
 )
 
 // skippedByFlagReason is the DisabledReason of a check the user turned off, as opposed to one

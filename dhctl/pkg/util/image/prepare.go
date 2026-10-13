@@ -22,7 +22,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	dhlog "github.com/deckhouse/lib-dhctl/pkg/logger"
+	dhlog "fox.flant.com/deckhouse/cluster-and-infrastructure/libs/lib-dhctl/pkg/logger"
 )
 
 // PrepareFiles rewrites the bashible path in the templates under dir to where they are read from

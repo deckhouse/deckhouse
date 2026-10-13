@@ -23,8 +23,8 @@ import (
 	"slices"
 	"time"
 
-	dhlog "github.com/deckhouse/lib-dhctl/pkg/logger"
-	libretry "github.com/deckhouse/lib-dhctl/pkg/retry"
+	dhlog "fox.flant.com/deckhouse/cluster-and-infrastructure/libs/lib-dhctl/pkg/logger"
+	libretry "fox.flant.com/deckhouse/cluster-and-infrastructure/libs/lib-dhctl/pkg/retry"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/immutable"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/state"

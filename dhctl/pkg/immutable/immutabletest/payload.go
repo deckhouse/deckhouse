@@ -19,10 +19,9 @@ package immutabletest
 import (
 	"testing"
 
+	libretry "fox.flant.com/deckhouse/cluster-and-infrastructure/libs/lib-dhctl/pkg/retry"
 	"github.com/stretchr/testify/require"
 	"sigs.k8s.io/yaml"
-
-	libretry "github.com/deckhouse/lib-dhctl/pkg/retry"
 )
 
 // NoRetryCollapse restores the real retry loop: the test environment collapses it
