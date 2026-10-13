@@ -15,6 +15,9 @@
   {%- if hasRequirements and site.data.i18n.features['requirements_for_alert'][page.lang] %}
   <br>{{ site.data.i18n.features['requirements_for_alert'][page.lang] }}
   {%- endif %}
+  {%- if stage == "Experimental" and site.data.i18n.features['experimental_enable_note'][page.lang] %}
+  <p>{{ site.data.i18n.features['experimental_enable_note'][page.lang] }}</p>
+  {%- endif %}
   {% endcapture %}
   {%- if stage == "Experimental" or stage == "Preview" %}
 {% alert level="warning" %}
