@@ -173,6 +173,8 @@ module_available_extensions_with_limitations_prefix: Included with limitations i
 module_available_extensions_without_limitations_prefix: Included without limitations in extensions
 module_has_restions_short: with limitations
 module_alert_experimental: Experimental
+module_alert_experimental_enable_note: |
+  Before enabling the module, you need to allow the use of experimental modules in the `deckhouse` ModuleConfig. To do this, set the [allowExperimentalModules](/modules/deckhouse/configuration.html#parameters-allowexperimentalmodules) parameter to `true`.
 module_alert_preview: Preview
 module_alert_general_availability: Generally available version
 module_alert_deprecated: Deprecated

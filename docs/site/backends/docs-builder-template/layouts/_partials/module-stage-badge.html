@@ -43,6 +43,9 @@
     {{- if $hasRequirementsSection }}
       {{- $content = printf "%s\n\n%s" $content (T "requirements_for_alert") }}
     {{- end }}
+    {{- if eq $moduleStage "Experimental" }}
+      {{- $content = printf "%s\n\n%s" $content (T "module_alert_experimental_enable_note") }}
+    {{- end }}
     {{- partial "alert" ( dict "level" $alertLevel "content" $content ) }}
   {{- end }}
 {{- end }}
