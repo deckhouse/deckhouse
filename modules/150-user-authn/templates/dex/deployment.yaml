@@ -74,9 +74,6 @@ spec:
       {{- /* Mount Kerberos materials per LDAP provider, if configured */}}
       {{- range $p := .Values.userAuthn.internal.providers }}
       {{- if and (eq $p.type "LDAP") ($p.ldap) ($p.ldap.kerberos) ($p.ldap.kerberos.enabled) }}
-      {{- if not $p.ldap.kerberos.keytabSecretName }}
-        {{- fail (printf "DexProvider %s: ldap.kerberos.enabled=true but ldap.kerberos.keytabSecretName is missing" $p.id) }}
-      {{- end }}
       {{- if $p.ldap.kerberos.keytabSecretName }}
       - name: {{ printf "kerberos-keytab-%s" $p.id | trunc 63 | trimSuffix "-" | quote }}
         secret:
@@ -144,9 +141,6 @@ spec:
         {{- /* Mount Kerberos materials per LDAP provider, if configured */}}
         {{- range $p := .Values.userAuthn.internal.providers }}
         {{- if and (eq $p.type "LDAP") ($p.ldap) ($p.ldap.kerberos) ($p.ldap.kerberos.enabled) }}
-        {{- if not $p.ldap.kerberos.keytabSecretName }}
-          {{- fail (printf "DexProvider %s: ldap.kerberos.enabled=true but ldap.kerberos.keytabSecretName is missing" $p.id) }}
-        {{- end }}
         {{- if $p.ldap.kerberos.keytabSecretName }}
         - name: {{ printf "kerberos-keytab-%s" $p.id | trunc 63 | trimSuffix "-" | quote }}
           mountPath: {{ printf "/etc/dex/kerberos/%s" $p.id | quote }}

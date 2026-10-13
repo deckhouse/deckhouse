@@ -142,10 +142,6 @@ fields when it decides who may write the provider. Rendered right after the conn
   {{- if $context.Values.userAuthn.internal.providers }}
   connectors:
     {{- range $provider := $context.Values.userAuthn.internal.providers }}
-      {{- /* Validate Kerberos configuration for LDAP providers */}}
-      {{- if and (eq $provider.type "LDAP") ($provider.ldap) ($provider.ldap.kerberos) ($provider.ldap.kerberos.enabled) (not $provider.ldap.kerberos.keytabSecretName) }}
-        {{- fail (printf "DexProvider %s: ldap.kerberos.enabled=true but ldap.kerberos.keytabSecretName is missing" $provider.id) }}
-      {{- end }}
       {{- if eq $provider.type "Github" }}
     - type: github
       id: {{ $provider.id | quote }}
@@ -246,8 +242,14 @@ fields when it decides who may write the provider. Rendered right after the conn
         {{- end }}
         usernamePrompt: {{ $provider.ldap.usernamePrompt | default "LDAP username" | quote }}
         {{- if $provider.ldap.kerberos }}
+        {{- /* Kerberos without a keytab stays off for this provider instead of failing the whole render. The CRD
+               rejects such an object on save, so only objects stored before that rule get here. */}}
+        {{- $kerberosEnabled := false }}
+        {{- if and $provider.ldap.kerberos.enabled $provider.ldap.kerberos.keytabSecretName }}
+          {{- $kerberosEnabled = true }}
+        {{- end }}
         kerberos:
-          enabled: {{ $provider.ldap.kerberos.enabled | default false }}
+          enabled: {{ $kerberosEnabled }}
           {{- if $provider.ldap.kerberos.expectedRealm }}
           expectedRealm: {{ $provider.ldap.kerberos.expectedRealm | quote }}
           {{- end }}

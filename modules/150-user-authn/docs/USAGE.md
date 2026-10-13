@@ -410,6 +410,8 @@ Notes:
 
 - The Secret `dex-kerberos-keytab` must exist in the `d8-user-authn` namespace and have a data key named exactly `krb5.keytab`.
 - A single Dex Pod can serve multiple LDAP+Kerberos providers. Each provider mounts its own keytab; a shared `krb5.conf` is not required (Dex validates tickets offline using the keytab).
+- A DexProvider with `enabled: true` must have `keytabSecretName` set, otherwise the object is rejected when saved. To turn Kerberos off and keep its settings, set `enabled: false`.
+
 To configure authentication, create a read-only user (service account) in LDAP.
 
 Specify the generated user path and password in the `bindDN` and `bindPW` fields of the [DexProvider](cr.html#dexprovider) custom resource.  Enter the password into the `bindPW` in plain-text format (unencrypted). Strategies involving the passing of hashed passwords are not supported.

@@ -377,6 +377,8 @@ spec:
                         keytabSecretName:
                           description: |
                             Имя секрета в неймспейсе `d8-user-authn`, содержащего ключ `krb5.keytab`, который монтируется в под Dex.
+
+                            Обязательно, если `enabled` равен `true`.
                         krb5ConfConfigMapName:
                           description: |
                             Необязательное имя ConfigMap с ключом `krb5.conf` для монтирования в `/etc/krb5.conf` (обычно не требуется для офлайн‑проверки билетов).

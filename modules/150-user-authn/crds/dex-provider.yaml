@@ -569,6 +569,9 @@ spec:
                       type: object
                       description: |
                         Optional Kerberos (SPNEGO) SSO settings for LDAP.
+                      x-kubernetes-validations:
+                        - rule: "!has(self.enabled) || !self.enabled || (has(self.keytabSecretName) && self.keytabSecretName != '')"
+                          message: "spec.ldap.kerberos.keytabSecretName is required when spec.ldap.kerberos.enabled is true: Dex needs the keytab to validate Kerberos tickets."
                       properties:
                         enabled:
                           type: boolean
@@ -589,7 +592,10 @@ spec:
                             If `true`, in the absence of/incorrect `Authorization: Negotiate` header, a login/password form will be displayed instead of a 401 response with `WWW-Authenticate: Negotiate`.
                         keytabSecretName:
                           type: string
-                          description: Name of Secret containing key 'krb5.keytab' to mount for Dex.
+                          description: |
+                            Name of the Secret in the `d8-user-authn` namespace containing the `krb5.keytab` key to mount for Dex.
+
+                            Required when `enabled` is `true`.
                         krb5ConfConfigMapName:
                           type: string
                           description: Optional ConfigMap name containing key 'krb5.conf' to mount at /etc/krb5.conf.
