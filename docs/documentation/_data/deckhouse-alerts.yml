@@ -4759,7 +4759,7 @@ alerts:
       description: |-
         Deckhouse has detected unavailable replicas in the `user-authz-controller` deployment in the `d8-user-authz` namespace.
 
-        While this alert is active, changes to ClusterAuthorizationRule and AuthorizationRule objects are not applied to their ClusterRoleBindings and RoleBindings, and `d8:use:dict` grants and manage-role projections are not updated. Existing bindings keep working.
+        While this alert is active, changes to ClusterAuthorizationRule and AuthorizationRule objects are not applied to their ClusterRoleBindings and RoleBindings, and the `d8:dict` bindings and the RoleBindings of system and subsystem roles in module namespaces are not updated. Existing bindings keep working.
 
         Check deployment and pod states:
 
@@ -4835,12 +4835,12 @@ alerts:
       description: |-
         The `{{ $labels.binding_kind }}` `{{ $labels.binding_name }}`{{ if $labels.namespace }} in namespace `{{ $labels.namespace }}`{{ end }} references the deprecated RBACv2 ClusterRole `{{ $labels.role_name }}`.
 
-        The RBACv2 role model was renamed: `d8:manage:<subsystem|all>:<level>` became `d8:system:*` / `d8:subsystem:*:*`, and `d8:use:role:<level>` became `d8:namespace:<level>`. This name still works via a compatibility alias kept for ONE release and will be removed in the next one — after that this binding will grant nothing. The release that removes the aliases is held back by the `deprecatedRBACv2BindingsCount` release requirement until this binding is recreated on the new name.
+        The RBACv2 role model was renamed: `d8:manage:<subsystem|all>:<level>` became `d8:system:*` / `d8:subsystem:*:*`, and `d8:use:role:<level>` became `d8:namespace:<level>`. This name still works via a compatibility alias kept for one release and will be removed in the next one — after that this binding will grant nothing. The release that removes the aliases is held back by the `deprecatedRBACv2BindingsCount` release requirement until this binding is recreated on the new name.
 
         Migrate the binding to the new role name. Because `roleRef` is immutable, delete and recreate the binding pointing at the new role:
         ```bash
         d8 k get {{ $labels.binding_kind | toLower }} {{ $labels.binding_name }}{{ if $labels.namespace }} -n {{ $labels.namespace }}{{ end }} -o yaml
-        # recreate it with roleRef.name set to the new role (d8:system:*, d8:subsystem:*, or d8:namespace:*)
+        # Recreate it with roleRef.name set to the new role (d8:system:*, d8:subsystem:*, or d8:namespace:*).
         ```
 
         A ClusterRoleBinding to a deprecated `d8:manage:*` name keeps its cluster-scoped rights, but no longer receives the RoleBindings that used to project it into the module namespaces (`d8-cloud-provider-*`, `d8-monitoring` and the rest): the ones created by the previous release are removed. Reading logs, describing pods and `exec` inside those namespaces come back when the binding is recreated on the new role name.
@@ -4971,7 +4971,7 @@ alerts:
         d8 k -n d8-system logs deploy/deckhouse | grep '"module":"user-authz"'
         ```
 
-        If the cluster has just been updated to the release that moved the bindings to the controller, one slow pass is expected and does not raise this alert by itself; if it fires anyway, the pass is being retried. It is proportional to the number of bindings and can exceed the timeout on clusters with more than 5000 of them; the module FAQ describes what to do in that case.
+        If the cluster has just been updated to the release that moved the bindings to the controller, one slow pass is expected and does not raise this alert by itself; if it fires anyway, the pass is being retried. It is proportional to the number of bindings and can exceed the timeout on clusters with more than 5000 of them; the [module FAQ](https://deckhouse.io/modules/user-authz/faq.html#what-happens-to-the-bindings-when-the-cluster-is-updated-to-the-release-with-the-controller) describes what to do in that case.
       summary: |
         The user-authz module release repeatedly takes more than 5 minutes.
       severity: "6"
@@ -5004,7 +5004,7 @@ alerts:
       module: user-authz
       edition: ce
       description: |-
-        The `ClusterAuthorizationRule` `{{ $labels.name }}` sets `{{ $labels.options }}`, but `userAuthz.enableMultiTenancy` is off, so the authorization webhook that enforces those options is not deployed.
+        The `ClusterAuthorizationRule` `{{ $labels.name }}` sets `{{ $labels.options }}`, but the [`enableMultiTenancy`](https://deckhouse.io/modules/user-authz/configuration.html#parameters-enablemultitenancy) setting of the `user-authz` module is off, so the authorization webhook that enforces those options is not deployed.
 
         The rule is not partially applied. It is applied without its limits: the subjects named in it hold its access level in **every** namespace of the cluster, the system ones included.
 
@@ -5044,7 +5044,7 @@ alerts:
       module: user-authz
       edition: ce
       description: |-
-        `{{ $value }}` ClusterAuthorizationRules set `limitNamespaces`, `namespaceSelector` or `allowAccessToSystemNamespaces` while `userAuthz.enableMultiTenancy` is off. `D8UserAuthzRuleNeedsMultiTenancy` names the first 50 of them; this alert accounts for the rest.
+        `{{ $value }}` ClusterAuthorizationRules set `limitNamespaces`, `namespaceSelector` or `allowAccessToSystemNamespaces` while the [`enableMultiTenancy`](https://deckhouse.io/modules/user-authz/configuration.html#parameters-enablemultitenancy) setting of the `user-authz` module is off. `D8UserAuthzRuleNeedsMultiTenancy` names the first 50 of them; this alert accounts for the rest.
 
         None of those rules is partially applied: the subjects named in each of them hold its access level in **every** namespace of the cluster, the system ones included.
 
@@ -5075,7 +5075,7 @@ alerts:
         d8 k -n d8-user-authz logs -l app=user-authz-webhook -c webhook --tail=100 | grep -i 'list/watch'
         ```
 
-        A growing `user_authz_webhook_rules_watch_errors_total` on one instance points at its watch; a `user_authz_webhook_rules_directory_updated_timestamp_seconds` that has stopped moving points at rules that are no longer updated. Deleting the lagging Pod is the last resort: the DaemonSet recreates it, and on a cluster with a single master node every request in the cluster is denied while the Pod restarts.
+        A growing `user_authz_webhook_rules_watch_errors_total` on one instance points at its watch; a `user_authz_webhook_rules_directory_updated_timestamp_seconds` that has stopped moving points at rules that are no longer updated. Deleting the lagging Pod is the last resort: the DaemonSet recreates it, and on a cluster with a single master node every request that the authorization webhook has to answer is denied while the Pod restarts. Control plane components, kubelets, and the ServiceAccounts of the `kube-system` and `d8-*` namespaces keep working, because the webhook does not check them.
       summary: |
         The masters disagree about the multi-tenancy rules.
       severity: "6"

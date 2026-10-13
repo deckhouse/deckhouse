@@ -6,16 +6,30 @@ spec:
           description: |
             Cluster-wide-ресурс для управления настройками RBAC и авторизацией.
 
-            > Ресурс `ClusterAuthorizationRule` используется [в текущей ролевой модели](./#текущая-ролевая-модель) и не используется в экспериментальной ролевой модели.
+            > Ресурс ClusterAuthorizationRule относится к [упрощённой ролевой модели](./#упрощённая-ролевая-модель). Его права суммируются с правами [гранулярной модели](./#гранулярная-ролевая-модель).
           properties:
             status:
               description: |
                 Наблюдаемое состояние правила, поддерживается user-authz-controller.
               properties:
                 conditions:
+                  items:
+                    properties:
+                      type:
+                        description: Тип условия. Контроллер устанавливает `Ready`.
+                      status:
+                        description: Статус условия.
+                      reason:
+                        description: Причина статуса — `BindingsApplied`, `InvalidSpec` или `ApplyError`.
+                      message:
+                        description: Подробности статуса.
+                      observedGeneration:
+                        description: Поколение правила, к которому относится условие.
+                      lastTransitionTime:
+                        description: Время последнего изменения статуса условия.
                   description: |
                     Условия правила. `Ready=True` — все биндинги правила применены; `Ready=False` с причиной
-                    `InvalidSpec` — правило нельзя отрендерить, биндинги не менялись.
+                    `InvalidSpec` — правило нельзя отрендерить, биндинги не менялись; с причиной `ApplyError` — API-сервер отклонил запись (в сообщении указаны биндинг и ошибка).
                 bindings:
                   description: |
                     Число биндингов, созданных для правила.
@@ -27,86 +41,107 @@ spec:
                 accessLevel:
                   description: |
                     Уровень доступа:
-                    * `User` — позволяет получать информацию обо всех объектах (включая доступ к журналам подов), но не позволяет заходить в контейнеры, читать Secret'ы и выполнять port-forward;
-                    * `PrivilegedUser` — то же самое, что и `User`, но позволяет заходить в контейнеры, читать Secret'ы, а также удалять поды (что обеспечивает возможность перезагрузки);
+                    * `User` — позволяет получать информацию обо всех объектах (включая доступ к журналам подов), но не позволяет заходить в контейнеры, читать секреты и выполнять port-forward;
+                    * `PrivilegedUser` — то же самое, что и `User`, но позволяет заходить в контейнеры, читать секреты, а также удалять поды (что обеспечивает возможность перезагрузки);
                     * `Editor` — то же самое, что и `PrivilegedUser`, но предоставляет возможность создавать, изменять и удалять все объекты, которые обычно нужны для прикладных задач;
-                    * `Admin` — то же самое, что и `Editor`, но позволяет удалять служебные объекты (производные ресурсы, например `ReplicaSet`, `certmanager.k8s.io/challenges` и `certmanager.k8s.io/orders`);
-                    * `ClusterEditor` — то же самое, что и `Editor`, но позволяет управлять ограниченным набором cluster-wide-объектов, которые могут понадобиться для прикладных задач (`ClusterXXXMetric`, `KeepalivedInstance`, `DaemonSet` и т. д). Роль для работы оператора кластера;
-                    * `ClusterAdmin` — то же самое, что и `ClusterEditor` + `Admin`, но позволяет управлять служебными cluster-wide-объектами (производные ресурсы, например `MachineSets`, `Machines`, `OpenstackInstanceClasses` и т. п., а также `ClusterAuthorizationRule`, `ClusterRoleBindings` и `ClusterRole`). Роль для работы администратора кластера.
+                    * `Admin` — то же самое, что и `Editor`, но позволяет создавать и изменять поды, выпускать токены ServiceAccount'ов (`serviceaccounts/token`), управлять объектами `Role`, `RoleBinding` и `AuthorizationRule` и удалять служебные объекты (например, `ReplicaSet`, challenges и orders группы `acme.cert-manager.io`);
+                    * `ClusterEditor` — то же самое, что и `Editor`, но позволяет управлять ограниченным набором cluster-wide-объектов для прикладных задач (`DaemonSet`, `StorageClass`, `CustomResourceDefinition`, `GatewayClass` и объекты, которые модули добавляют на этот уровень, например `KeepalivedInstance`). Роль для работы оператора кластера;
+                    * `ClusterAdmin` — то же самое, что и `ClusterEditor` + `Admin`, но позволяет управлять служебными cluster-wide-объектами (неймспейсы, квоты, `NetworkPolicy`, подресурсы узлов для proxy, `ClusterAuthorizationRule`, `ClusterRole` и `ClusterRoleBinding`). Роль для работы администратора кластера.
 
-                      **Важно!** Так как `ClusterAdmin` уполномочен редактировать `ClusterRoleBindings`, он может сам себе расширить полномочия;
+                      **Внимание.** `ClusterAdmin` может создавать объекты ClusterAuthorizationRule с уровнем не выше `ClusterAdmin` и объекты ClusterRoleBinding только на роли, права которых у него уже есть.
                     * `SuperAdmin` — разрешены любые действия с любыми объектами, при этом ограничения `limitNamespaces` (см. ниже) продолжат работать.
                 portForwarding:
                   description: |
                     Разрешить/запретить выполнять `port-forward`.
                 allowScale:
                   description: |
-                    Разрешить/запретить масштабировать (выполнять scale) Deployment'ы и StatefulSet'ы.
+                    Разрешить/запретить масштабировать (выполнять scale) объекты Deployment и StatefulSet.
                 allowAccessToSystemNamespaces:
                   description: |
-                    Разрешить пользователю доступ в служебные namespace (`["kube-.*", "d8-.*", "loghouse", "default"]`).
+                    Разрешить пользователю доступ в системные неймспейсы (`kube-*`, `d8-*`, `default`, `antiopa`, `loghouse`).
 
-                    **Доступно только** с включенным параметром [enableMultiTenancy](configuration.html#parameters-enablemultitenancy).
+                    Требует параметра [enableMultiTenancy](configuration.html#parameters-enablemultitenancy). Пока он выключен, правило с этим полем отклоняется, а правило, в котором поле уже задано, применяется без ограничений по неймспейсам — во всех неймспейсах кластера.
+
+                    Ограничения правила по неймспейсам применяет вебхук авторизации, поэтому они не действуют на субъекты, которые вебхук не проверяет: компоненты control plane, kubelet и ServiceAccount'ы неймспейса `kube-system` и неймспейсов, имена которых начинаются с `d8-`. Для них уровень доступа правила действует во всех неймспейсах.
+
+                    Параметр устарел, используйте вместо него параметр [namespaceSelector](cr.html#clusterauthorizationrule-v1-spec-namespaceselector) (версия `v1` ресурса).
                 limitNamespaces:
                   description: |
-                    Список разрешенных namespace в формате регулярных выражений.
+                    Список разрешённых неймспейсов в формате регулярных выражений.
+
+                    Каждый шаблон должен совпадать с именем неймспейса целиком: `team` не подходит для `team-2`. Шаблон, который не является корректным регулярным выражением RE2, отклоняется при записи правила. Если проверка его не распознала, шаблон игнорируется, правило открывает меньше неймспейсов и срабатывает алерт `D8UserAuthzWebhookRulesQuarantined`.
 
                     Политика:
                     * Если список указан, разрешаем доступ только по нему.
-                    * Если список не указан, считаем, что разрешено все, кроме системных namespace (см. `spec.allowAccessToSystemNamespaces` ниже).
+                    * Если список не указан, считаем, что разрешено всё, кроме системных неймспейсов (см. поле `allowAccessToSystemNamespaces`).
 
-                    **Доступно только** с включенным параметром [enableMultiTenancy](configuration.html#parameters-enablemultitenancy).
+                    Требует параметра [enableMultiTenancy](configuration.html#parameters-enablemultitenancy). Пока он выключен, правило с этим полем отклоняется, а правило, в котором поле уже задано, применяется без ограничений по неймспейсам — во всех неймспейсах кластера.
 
-                    Параметр устарел, используйте вместо него параметр [namespaceSelector](cr.html#clusterauthorizationrule-v1-spec-namespaceselector) (версия `v1` custom resource'а).
+                    Ограничения правила по неймспейсам применяет вебхук авторизации, поэтому они не действуют на субъекты, которые вебхук не проверяет: компоненты control plane, kubelet и ServiceAccount'ы неймспейса `kube-system` и неймспейсов, имена которых начинаются с `d8-`. Для них уровень доступа правила действует во всех неймспейсах.
+
+                    Параметр устарел, используйте вместо него параметр [namespaceSelector](cr.html#clusterauthorizationrule-v1-spec-namespaceselector) (версия `v1` ресурса).
                 subjects:
                   description: |
-                    Пользователи и/или группы, которым необходимо предоставить права.
+                    Пользователи, группы и ServiceAccount'ы, которым выдаётся уровень доступа.
 
-                    [Спецификация...](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.27/#subject-v1-rbac-authorization-k8s-io)
+                    [Описание в API Kubernetes](https://kubernetes.io/docs/reference/kubernetes-api/authorization-resources/role-binding-v1/#RoleBinding)
 
-                    При использовании совместно с модулем [user-authn](https://deckhouse.ru/modules/user-authn/) обратите внимание на следующие нюансы:
+                    При использовании совместно с модулем [user-authn](/modules/user-authn/) обратите внимание на следующие нюансы:
                     - Для выдачи прав конкретному пользователю в качестве имени необходимо указывать его `email`.
-                    - При указании группы убедитесь, что необходимые группы допускаются к получению от провайдера, то есть указаны в соответствующем custom resource [DexProvider](https://deckhouse.ru/modules/user-authn/cr.html#dexprovider).
+                    - При указании группы убедитесь, что необходимые группы допускаются к получению от провайдера, то есть указаны в соответствующем кастомном ресурсе [DexProvider](/modules/user-authn/cr.html#dexprovider).
                   items:
                     properties:
                       kind:
                         description: 'Тип ресурса.'
                       name:
                         description: 'Имя ресурса.'
-                        example: 'some-group-name'
                       namespace:
-                        description: 'Namespace для ServiceAccount.'
+                        description: "Неймспейс ServiceAccount. Ограничения правила по неймспейсам не действуют на ServiceAccount'ы неймспейса `kube-system` и неймспейсов, имена которых начинаются с `d8-`: их вебхук авторизации не проверяет."
                 additionalRoles:
                   description: |
                     Дополнительные роли, которые необходимо выдать для заданных `subjects`.
 
-                    Параметр сделан на крайний случай, вместо него категорически рекомендуется использовать параметр `accessLevel`.
+                    Вместо него используйте параметр `accessLevel`: этот параметр — для исключительных случаев.
                   items:
                     properties:
                       apiGroup:
-                        description: "apiGroup для пользователей."
+                        description: "API-группа роли. Поддерживается только `rbac.authorization.k8s.io`."
                       kind:
                         description: 'Kind роли.'
                       name:
                         description: 'Название роли.'
     - name: v1
-      served: true
-      storage: false
       schema:
         openAPIV3Schema:
           description: |
-            Управляет настройками RBAC и авторизацией по namespace.
+            Управляет настройками RBAC и авторизацией по неймспейсам.
 
             Настройки определяют, какой уровень доступа назначен пользователю и/или группе.
+
+            > Ресурс ClusterAuthorizationRule относится к [упрощённой ролевой модели](./#упрощённая-ролевая-модель). Его права суммируются с правами [гранулярной модели](./#гранулярная-ролевая-модель).
           properties:
             status:
               description: |
                 Наблюдаемое состояние правила, поддерживается user-authz-controller.
               properties:
                 conditions:
+                  items:
+                    properties:
+                      type:
+                        description: Тип условия. Контроллер устанавливает `Ready`.
+                      status:
+                        description: Статус условия.
+                      reason:
+                        description: Причина статуса — `BindingsApplied`, `InvalidSpec` или `ApplyError`.
+                      message:
+                        description: Подробности статуса.
+                      observedGeneration:
+                        description: Поколение правила, к которому относится условие.
+                      lastTransitionTime:
+                        description: Время последнего изменения статуса условия.
                   description: |
                     Условия правила. `Ready=True` — все биндинги правила применены; `Ready=False` с причиной
-                    `InvalidSpec` — правило нельзя отрендерить, биндинги не менялись.
+                    `InvalidSpec` — правило нельзя отрендерить, биндинги не менялись; с причиной `ApplyError` — API-сервер отклонил запись (в сообщении указаны биндинг и ошибка).
                 bindings:
                   description: |
                     Число биндингов, созданных для правила.
@@ -118,50 +153,57 @@ spec:
                 accessLevel:
                   description: |
                     Уровень доступа:
-                    * `User` — позволяет получать информацию обо всех объектах (включая доступ к журналам подов), но не позволяет заходить в контейнеры, читать Secret'ы и выполнять port-forward;
-                    * `PrivilegedUser` — то же самое, что и `User`, но позволяет заходить в контейнеры, читать Secret'ы, а также удалять поды (что обеспечивает возможность перезагрузки);
+                    * `User` — позволяет получать информацию обо всех объектах (включая доступ к журналам подов), но не позволяет заходить в контейнеры, читать секреты и выполнять port-forward;
+                    * `PrivilegedUser` — то же самое, что и `User`, но позволяет заходить в контейнеры, читать секреты, а также удалять поды (что обеспечивает возможность перезагрузки);
                     * `Editor` — то же самое, что и `PrivilegedUser`, но предоставляет возможность создавать, изменять и удалять все объекты, которые обычно нужны для прикладных задач;
-                    * `Admin` — то же самое, что и `Editor`, но позволяет удалять служебные объекты (производные ресурсы, например `ReplicaSet`, `certmanager.k8s.io/challenges` и `certmanager.k8s.io/orders`);
-                    * `ClusterEditor` — то же самое, что и `Editor`, но позволяет управлять ограниченным набором cluster-wide-объектов, которые могут понадобиться для прикладных задач (`ClusterXXXMetric`, `KeepalivedInstance`, `DaemonSet` и т. д). Роль для работы оператора кластера;
-                    * `ClusterAdmin` — то же самое, что и `ClusterEditor` + `Admin`, но позволяет управлять служебными cluster-wide-объектами (производные ресурсы, например `MachineSets`, `Machines`, `OpenstackInstanceClasses` и т. п., а также `ClusterAuthorizationRule`, `ClusterRoleBindings` и `ClusterRole`). Роль для работы администратора кластера.
+                    * `Admin` — то же самое, что и `Editor`, но позволяет создавать и изменять поды, выпускать токены ServiceAccount'ов (`serviceaccounts/token`), управлять объектами `Role`, `RoleBinding` и `AuthorizationRule` и удалять служебные объекты (например, `ReplicaSet`, challenges и orders группы `acme.cert-manager.io`);
+                    * `ClusterEditor` — то же самое, что и `Editor`, но позволяет управлять ограниченным набором cluster-wide-объектов для прикладных задач (`DaemonSet`, `StorageClass`, `CustomResourceDefinition`, `GatewayClass` и объекты, которые модули добавляют на этот уровень, например `KeepalivedInstance`). Роль для работы оператора кластера;
+                    * `ClusterAdmin` — то же самое, что и `ClusterEditor` + `Admin`, но позволяет управлять служебными cluster-wide-объектами (неймспейсы, квоты, `NetworkPolicy`, подресурсы узлов для proxy, `ClusterAuthorizationRule`, `ClusterRole` и `ClusterRoleBinding`). Роль для работы администратора кластера.
 
-                      **Важно!** Так как `ClusterAdmin` уполномочен редактировать `ClusterRoleBindings`, он может сам себе расширить полномочия;
+                      **Внимание.** `ClusterAdmin` может создавать объекты ClusterAuthorizationRule с уровнем не выше `ClusterAdmin` и объекты ClusterRoleBinding только на роли, права которых у него уже есть.
                     * `SuperAdmin` — разрешены любые действия с любыми объектами, при этом ограничения `namespaceSelector` и `limitNamespaces` (см. ниже) продолжат работать.
                 portForwarding:
                   description: |
                     Разрешить/запретить выполнять `port-forward`.
                 allowScale:
                   description: |
-                    Разрешить/запретить масштабировать (выполнять scale) Deployment'ы и StatefulSet'ы.
+                    Разрешить/запретить масштабировать (выполнять scale) объекты Deployment и StatefulSet.
                 allowAccessToSystemNamespaces:
                   description: |
-                    Разрешить пользователю доступ в служебные namespace (`["kube-.*", "d8-.*", "loghouse", "default"]`).
+                    Разрешить пользователю доступ в системные неймспейсы (`kube-*`, `d8-*`, `default`, `antiopa`, `loghouse`).
 
-                    **Доступно только** с включенным параметром [enableMultiTenancy](configuration.html#parameters-enablemultitenancy).
+                    Требует параметра [enableMultiTenancy](configuration.html#parameters-enablemultitenancy). Пока он выключен, правило с этим полем отклоняется, а правило, в котором поле уже задано, применяется без ограничений по неймспейсам — во всех неймспейсах кластера.
+
+                    Ограничения правила по неймспейсам применяет вебхук авторизации, поэтому они не действуют на субъекты, которые вебхук не проверяет: компоненты control plane, kubelet и ServiceAccount'ы неймспейса `kube-system` и неймспейсов, имена которых начинаются с `d8-`. Для них уровень доступа правила действует во всех неймспейсах.
+
+                    Параметр устарел, используйте вместо него параметр [namespaceSelector](#clusterauthorizationrule-v1-spec-namespaceselector).
                 namespaceSelector:
                   description: |
-                    Определяет доступные пространства имен на основе значений, указанных в параметре `namespaceSelector.labelSelector`.
+                    Определяет доступные неймспейсы на основе значений, указанных в параметре `namespaceSelector.labelSelector`.
 
-                    Если параметр `namespaceSelector` указан, значения параметров `limitNamespaces` и `allowAccessToSystemNamespaces` **игнорируются**. Таким образом, будут доступны либо все пространства имен с лейблами, подпадающими под указанные в параметре `namespaceSelector.labelSelector` условия (включая системные пространства имен), либо все пространства имен (включая системные), если указан параметр `namespaceSelector.matchAny`.
+                    Если параметр `namespaceSelector` указан, значения параметров `limitNamespaces` и `allowAccessToSystemNamespaces` **игнорируются**. Таким образом, будут доступны либо все неймспейсы с лейблами, подпадающими под указанные в параметре `namespaceSelector.labelSelector` условия (включая системные неймспейсы), либо все неймспейсы (включая системные), если указан параметр `namespaceSelector.matchAny`.
 
-                    Если параметр `namespaceSelector` не указан, набор доступных пространств имен определяется значением параметров `limitNamespaces` и `allowAccessToSystemNamespaces`. Если не указан ни один из параметров `namespaceSelector`, `limitNamespaces` и `allowAccessToSystemNamespaces`, будут доступны все пространства имен, за исключением системных (`kube-*`, `d8-*`, `loghouse`, `default`).
+                    Если параметр `namespaceSelector` не указан, набор доступных неймспейсов определяется значением параметров `limitNamespaces` и `allowAccessToSystemNamespaces`. Если не указан ни один из параметров `namespaceSelector`, `limitNamespaces` и `allowAccessToSystemNamespaces`, будут доступны все неймспейсы, за исключением системных (`kube-*`, `d8-*`, `default`, `antiopa`, `loghouse`).
 
-                    **Доступно только** с включенным параметром [enableMultiTenancy](configuration.html#parameters-enablemultitenancy).
+                    Требует параметра [enableMultiTenancy](configuration.html#parameters-enablemultitenancy). Пока он выключен, правило с этим полем отклоняется, а правило, в котором поле уже задано, применяется без ограничений по неймспейсам — во всех неймспейсах кластера.
+
+                    Ограничения правила по неймспейсам применяет вебхук авторизации, поэтому они не действуют на субъекты, которые вебхук не проверяет: компоненты control plane, kubelet и ServiceAccount'ы неймспейса `kube-system` и неймспейсов, имена которых начинаются с `d8-`. Для них уровень доступа правила действует во всех неймспейсах.
                   properties:
                     matchAny:
                       description: |
-                        Разрешает доступ ко всем пространствам имен в кластере, включая системные.
+                        Разрешает доступ ко всем неймспейсам в кластере, включая системные.
 
                         Не может использоваться совместно с параметром `labelSelector`.
 
-                        Так как с помощью параметра `labelSelector` можно предоставить доступ только к определенному перечню пространств имен, параметр `matchAny` необходим в случаях, когда нужно предоставить доступ ко всем пространствам имен.
+                        Так как с помощью параметра `labelSelector` можно предоставить доступ только к определённому перечню неймспейсов, параметр `matchAny` необходим в случаях, когда нужно предоставить доступ ко всем неймспейсам.
                     labelSelector:
                       description: |
-                        Фильтр по лейблам пространств имен.
+                        Фильтр по лейблам неймспейсов.
 
                         Не может использоваться совместно с параметром `matchAny`.
 
                         Если указаны одновременно `matchExpressions` и `matchLabels`, учитываются оба фильтра (AND).
+                        Если указано несколько условий `matchExpressions`, должны выполняться все.
                       properties:
                         matchExpressions:
                           description: Список фильтров на основе выражений.
@@ -174,45 +216,48 @@ spec:
                               values:
                                 description: Значение лейбла.
                         matchLabels:
-                          description: Фильтр на основе совпадения/несовпадения лейблов.
+                          description: Набор лейблов, которые должны быть у неймспейса.
                 limitNamespaces:
                   description: |
-                    Список разрешенных namespace в формате регулярных выражений.
+                    Список разрешённых неймспейсов в формате регулярных выражений.
+
+                    Каждый шаблон должен совпадать с именем неймспейса целиком: `team` не подходит для `team-2`. Шаблон, который не является корректным регулярным выражением RE2, отклоняется при записи правила. Если проверка его не распознала, шаблон игнорируется, правило открывает меньше неймспейсов и срабатывает алерт `D8UserAuthzWebhookRulesQuarantined`.
 
                     Политика:
                     * Если список указан, разрешаем доступ только по нему.
-                    * Если список не указан, считаем, что разрешено все, кроме системных namespace (см. `spec.allowAccessToSystemNamespaces` ниже).
+                    * Если список не указан, считаем, что разрешено всё, кроме системных неймспейсов (см. поле `allowAccessToSystemNamespaces`).
 
-                    **Доступно только** с включенным параметром [enableMultiTenancy](configuration.html#parameters-enablemultitenancy).
+                    Требует параметра [enableMultiTenancy](configuration.html#parameters-enablemultitenancy). Пока он выключен, правило с этим полем отклоняется, а правило, в котором поле уже задано, применяется без ограничений по неймспейсам — во всех неймспейсах кластера.
 
-                    Параметр устарел, используйте вместо него параметр [namespaceSelector](cr.html#clusterauthorizationrule-v1-spec-namespaceselector).
+                    Ограничения правила по неймспейсам применяет вебхук авторизации, поэтому они не действуют на субъекты, которые вебхук не проверяет: компоненты control plane, kubelet и ServiceAccount'ы неймспейса `kube-system` и неймспейсов, имена которых начинаются с `d8-`. Для них уровень доступа правила действует во всех неймспейсах.
+
+                    Параметр устарел, используйте вместо него параметр [namespaceSelector](#clusterauthorizationrule-v1-spec-namespaceselector).
                 subjects:
                   description: |
-                    Пользователи и/или группы, которым необходимо предоставить права.
+                    Пользователи, группы и ServiceAccount'ы, которым выдаётся уровень доступа.
 
-                    [Спецификация...](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.27/#subject-v1-rbac-authorization-k8s-io)
+                    [Описание в API Kubernetes](https://kubernetes.io/docs/reference/kubernetes-api/authorization-resources/role-binding-v1/#RoleBinding)
 
-                    При использовании совместно с модулем [user-authn](https://deckhouse.ru/modules/user-authn/) обратите внимание на следующие нюансы:
+                    При использовании совместно с модулем [user-authn](/modules/user-authn/) обратите внимание на следующие нюансы:
                     - Для выдачи прав конкретному пользователю в качестве имени необходимо указывать его `email`.
-                    - При указании группы убедитесь, что необходимые группы допускаются к получению от провайдера, то есть указаны в соответствующем custom resource [DexProvider](https://deckhouse.ru/modules/user-authn/cr.html#dexprovider).
+                    - При указании группы убедитесь, что необходимые группы допускаются к получению от провайдера, то есть указаны в соответствующем кастомном ресурсе [DexProvider](/modules/user-authn/cr.html#dexprovider).
                   items:
                     properties:
                       kind:
                         description: 'Тип ресурса.'
                       name:
                         description: 'Имя ресурса.'
-                        example: 'some-group-name'
                       namespace:
-                        description: 'Namespace для ServiceAccount.'
+                        description: "Неймспейс ServiceAccount. Ограничения правила по неймспейсам не действуют на ServiceAccount'ы неймспейса `kube-system` и неймспейсов, имена которых начинаются с `d8-`: их вебхук авторизации не проверяет."
                 additionalRoles:
                   description: |
                     Дополнительные роли, которые необходимо выдать для заданных `subjects`.
 
-                    Параметр сделан на крайний случай, вместо него категорически рекомендуется использовать параметр `accessLevel`.
+                    Вместо него используйте параметр `accessLevel`: этот параметр — для исключительных случаев.
                   items:
                     properties:
                       apiGroup:
-                        description: "apiGroup для пользователей."
+                        description: "API-группа роли. Поддерживается только `rbac.authorization.k8s.io`."
                       kind:
                         description: 'Kind роли.'
                       name:

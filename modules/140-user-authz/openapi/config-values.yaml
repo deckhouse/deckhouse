@@ -17,7 +17,7 @@ properties:
     description: |
       Enable namespace-based authorization (multi-tenancy mode).
 
-      All the `kube-apiserver` settings required for namespace-based authorization are performed automatically by the [control-plane-manager](https://deckhouse.io/modules/control-plane-manager/) module ([more details](https://deckhouse.io/modules/user-authz/usage.html#configuring-kube-apiserver-for-multi-tenancy-mode)).
+      When enabled, the module deploys the authorization webhook on the master nodes and Permission Browser. They enforce the `namespaceSelector`, `limitNamespaces`, and `allowAccessToSystemNamespaces` fields of ClusterAuthorizationRule and serve WhoCan, SubjectAccessReport, and the filtered list of namespaces. The `kube-apiserver` settings are applied automatically by the [control-plane-manager](/modules/control-plane-manager/) module, see [Configuring kube-apiserver for multi-tenancy mode](usage.html#configuring-kube-apiserver-for-multi-tenancy-mode).
     x-doc-default: false
     x-examples: [true, false]
   controlPlaneConfigurator:

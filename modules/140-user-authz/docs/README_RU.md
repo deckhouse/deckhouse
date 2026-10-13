@@ -21,7 +21,7 @@ description: "Авторизация и управление доступом п
 В отличие [от упрощённой ролевой модели](#упрощённая-ролевая-модель) DP, гранулярная ролевая модель не использует ресурсы ClusterAuthorizationRule и AuthorizationRule. Права доступа настраиваются стандартным для RBAC Kubernetes способом: с помощью создания ресурсов RoleBinding или ClusterRoleBinding, с указанием в них одной из подготовленных модулем `user-authz` ролей. Для доступа сразу ко всем неймспейсам проекта дополнительно используются ресурсы [ProjectRoleBinding](/modules/multitenancy-manager/cr.html#projectrolebinding) и [ClusterProjectRoleBinding](/modules/multitenancy-manager/cr.html#clusterprojectrolebinding) модуля `multitenancy-manager`.
 
 {% alert level="info" %}
-Выдавать доступ можно не только вручную через YAML-манифесты: в [веб-интерфейсе Deckhouse Kubernetes Platform](/products/kubernetes-platform/documentation/latest/user/web/ui.html) есть мастер выдачи доступа. Он проводит по шагам (кому выдать доступ → где → с каким уровнем), сам выбирает правильный вид привязки (RoleBinding, ClusterRoleBinding, ProjectRoleBinding или ClusterProjectRoleBinding) и позволяет собрать собственную роль из готовых блоков без написания YAML.
+Выдавать доступ можно не только вручную через YAML-манифесты: в [веб-интерфейсе Deckhouse](/products/kubernetes-platform/documentation/v1/user/web/ui.html) есть мастер выдачи доступа. Он проводит по шагам (кому выдать доступ → где → с каким уровнем), сам выбирает правильный вид привязки (RoleBinding, ClusterRoleBinding, ProjectRoleBinding или ClusterProjectRoleBinding) и позволяет собрать собственную роль из готовых блоков без написания YAML.
 {% endalert %}
 
 Модуль создаёт специальные агрегированные кластерные роли (ClusterRole). Используя эти роли в RoleBinding или ClusterRoleBinding можно решать следующие задачи:
@@ -40,7 +40,7 @@ description: "Авторизация и управление доступом п
 | Область | Формат имени роли | Для кого | Каким ресурсом назначается |
 |---------|-------------------|----------|-----------------|
 | Неймспейс | `d8:namespace:<уровень>` | Пользователи приложений (разработчики) | RoleBinding в конкретном неймспейсе. |
-| Проект | `d8:project:<уровень>` | Команды, работающие с [проектами](/modules/multitenancy-manager/) | Только [ProjectRoleBinding](/modules/multitenancy-manager/cr.html#projectrolebinding) или [ClusterProjectRoleBinding](/modules/multitenancy-manager/cr.html#clusterprojectrolebinding). |
+| Проект | `d8:project:<уровень>` | Команды, работающие с [проектами](/modules/multitenancy-manager/) | [ProjectRoleBinding](/modules/multitenancy-manager/cr.html#projectrolebinding) или [ClusterProjectRoleBinding](/modules/multitenancy-manager/cr.html#clusterprojectrolebinding) — на весь проект, RoleBinding — на один неймспейс проекта. |
 | Подсистема | `d8:subsystem:<подсистема>:<уровень>` | Администраторы части платформы | ClusterRoleBinding. |
 | Вся платформа | `d8:system:<уровень>` | Администраторы платформы | ClusterRoleBinding. |
 
@@ -61,25 +61,25 @@ description: "Авторизация и управление доступом п
 
 ### Совместное использование ClusterAuthorizationRule, AuthorizationRule и RBAC
 
-Если в кластере включён режим мультитенантности (параметр [`enableMultiTenancy: true`](/modules/user-authz/configuration.html#parameters-enablemultitenancy)), итоговые права пользователя представляют собой объединение прав, полученных из всех следующих источников:
+Если в кластере включён режим мультитенантности (параметр [`enableMultiTenancy: true`](configuration.html#parameters-enablemultitenancy)), итоговые права пользователя представляют собой объединение прав, полученных из всех следующих источников:
 
-- **права из ClusterAuthorizationRule** — применяются только внутри неймспейсов, разрешённых параметрами `limitNamespaces` или `namespaceSelector`;
+- **права из ClusterAuthorizationRule** — применяются только внутри неймспейсов, разрешённых параметром `namespaceSelector` (или устаревшим параметром `limitNamespaces`);
 - **права из AuthorizationRule** — применяются внутри неймспейса, в котором создан ресурс AuthorizationRule;
 - **права из обычных RoleBinding** — применяются внутри неймспейса, в котором создан ресурс RoleBinding;
 - **права из обычных ClusterRoleBinding**, не созданных модулем `user-authz` — применяются во всём кластере.
 
 Ограничения по неймспейсам, заданные в ClusterAuthorizationRule, распространяются только на права, выданные этим ClusterAuthorizationRule. Они не отменяют права, выданные через RoleBinding, ClusterRoleBinding или AuthorizationRule в других неймспейсах. При этом права, предоставляемые ClusterAuthorizationRule, на эти неймспейсы не распространяются.
 
-Например, если у пользователя есть ClusterAuthorizationRule с уровнем доступа `accessLevel: Editor`, ограниченный неймспейсом `ns-a`, а также RoleBinding с ролью `view` в неймспейсе `ns-b`, то он получит права уровня `Editor` в неймспейсе `ns-a` и права только на чтение в неймспейсе `ns-b`. Права, предоставленные через RoleBinding, не ограничиваются ClusterAuthorizationRule, а уровень доступа `Editor`, заданный ClusterAuthorizationRule, не распространяется на неймспейс `ns-b`.
+Ограничения по неймспейсам применяет вебхук авторизации, поэтому они не действуют на идентичности, которые вебхук не проверяет: компоненты control plane, kubelet и ServiceAccount'ы неймспейса `kube-system` и неймспейсов, имена которых начинаются с `d8-`. ClusterAuthorizationRule, в котором указан такой ServiceAccount (напрямую или через группу, например `system:serviceaccounts`), даёт его уровень доступа во всех неймспейсах. Создавайте ServiceAccount'ы внешних систем в обычных неймспейсах.
 
-Начиная с DP 1.76.5, RoleBinding и ClusterAuthorizationRule можно использовать совместно для одного пользователя. В более ранних версиях DP вебхук модуля `user-authz` отклонял все запросы в неймспейсы, не указанные в ClusterAuthorizationRule пользователя, даже при наличии соответствующих ресурсов RoleBinding.
+Например, если у пользователя есть ClusterAuthorizationRule с уровнем доступа `accessLevel: Editor`, ограниченный неймспейсом `ns-a`, а также RoleBinding с ролью `view` в неймспейсе `ns-b`, то он получит права уровня `Editor` в неймспейсе `ns-a` и права только на чтение в неймспейсе `ns-b`. Права, предоставленные через RoleBinding, не ограничиваются ClusterAuthorizationRule, а уровень доступа `Editor`, заданный ClusterAuthorizationRule, не распространяется на неймспейс `ns-b`.
 
 <div style="height: 0;" id="use-роли"></div>
 
 ### Namespace-роли
 
 {% alert level="warning" %}
-Namespace-роль можно использовать только в ресурсе RoleBinding.
+Namespace-роль нельзя назначить через ClusterRoleBinding. Используйте RoleBinding в неймспейсе либо ProjectRoleBinding или ClusterProjectRoleBinding для всех неймспейсов проекта.
 {% endalert %}
 
 Namespace-роли предназначены для назначения прав пользователю **в конкретном неймспейсе**. Под пользователями понимаются, например, разработчики, которые используют настроенный администратором кластер для развёртывания своих приложений. Таким пользователям не нужно управлять модулями DP или кластером, но им нужно иметь возможность, например, создавать свои Ingress-ресурсы, настраивать аутентификацию приложений и сбор логов с приложений.
@@ -98,21 +98,22 @@ Namespace-роль определяет права на доступ к namespac
 
 #### Автоматический доступ к справочным cluster-wide-ресурсам
 
-Работа в неймспейсе требует чтения некоторых cluster-wide-«справочников»: например, чтобы указать в манифесте `storageClassName` или `ingressClassName`, нужно видеть список StorageClass'ов и IngressClass'ов. Поэтому каждый субъект, получивший RoleBinding на любую роль `d8:namespace:*`, автоматически получает и доступ на чтение таких справочных ресурсов (StorageClass, IngressClass, PriorityClass, RuntimeClass, VolumeSnapshotClass, ClusterLogDestination и т. п.).
+Работа в неймспейсе требует чтения некоторых cluster-wide-«справочников»: например, чтобы указать в манифесте `storageClassName` или `ingressClassName`, нужно видеть список StorageClass'ов и IngressClass'ов. Поэтому каждый субъект, получивший RoleBinding на любую роль `d8:namespace:*` или `d8:project:*`, автоматически получает и доступ на чтение таких справочных ресурсов (StorageClass, IngressClass, PriorityClass, RuntimeClass, VolumeSnapshotClass, ClusterLogDestination и т. п.).
 
-Технически это выглядит как автоматически создаваемый ClusterRoleBinding на роль `d8:dict` с лейблом `rbac.deckhouse.io/dict: "true"`. Такие объекты управляются платформой: они появляются при выдаче первой namespace-привязки субъекту и удаляются, когда у субъекта не остаётся ни одной, — редактировать их вручную не нужно.
+Технически это выглядит как автоматически создаваемый ClusterRoleBinding на роль `d8:dict` с лейблом `rbac.deckhouse.io/dict: "true"`. Такие объекты управляются платформой: они появляются, когда субъект получает первый такой RoleBinding, и удаляются, когда у субъекта не остаётся ни одного, — редактировать их вручную не нужно.
 
 ### Проектные роли
 
 {% alert level="warning" %}
-Проектную роль нельзя назначить через ClusterRoleBinding — попытка будет отклонена. Для назначения роли на весь проект используйте [ProjectRoleBinding](../multitenancy-manager/cr.html#projectrolebinding) или [ClusterProjectRoleBinding](../multitenancy-manager/cr.html#clusterprojectrolebinding). Допускается также обычный RoleBinding в одном из неймспейсов проекта — тогда роль действует только в нём.
+Проектную роль нельзя назначить через ClusterRoleBinding — попытка будет отклонена. Для назначения роли на весь проект используйте [ProjectRoleBinding](/modules/multitenancy-manager/cr.html#projectrolebinding) или [ClusterProjectRoleBinding](/modules/multitenancy-manager/cr.html#clusterprojectrolebinding). Допускается также обычный RoleBinding в одном из неймспейсов проекта — тогда роль действует только в нём.
 {% endalert %}
 
-Проектные роли (`d8:project:<уровень>`) предназначены для работы с [проектами](../multitenancy-manager/) — изолированными окружениями, которые могут включать несколько неймспейсов. Уровни те же, что у namespace-ролей: `viewer`, `user`, `manager`, `admin`, `superadmin`.
+Проектные роли (`d8:project:<уровень>`) предназначены для работы с [проектами](/modules/multitenancy-manager/) — изолированными окружениями, которые могут включать несколько неймспейсов. Уровни те же, что у namespace-ролей: `viewer`, `user`, `manager`, `admin`, `superadmin`.
 
 Каждая проектная роль включает все права namespace-роли того же уровня и дополнительно даёт права на управление самим проектом:
 
-- `d8:project:viewer` — права `d8:namespace:viewer` плюс просмотр ресурсов [ProjectNamespace](../multitenancy-manager/cr.html#projectnamespace) и [ProjectRoleBinding](../multitenancy-manager/cr.html#projectrolebinding) проекта;
+- `d8:project:viewer` — права `d8:namespace:viewer` плюс просмотр ресурсов [ProjectNamespace](/modules/multitenancy-manager/cr.html#projectnamespace) и [ProjectRoleBinding](/modules/multitenancy-manager/cr.html#projectrolebinding) проекта;
+- `d8:project:user` — права `d8:namespace:user` плюс просмотр ресурсов ProjectNamespace и ProjectRoleBinding проекта;
 - `d8:project:manager` — права `d8:namespace:manager` плюс управление дополнительными неймспейсами проекта (ресурсы ProjectNamespace);
 - `d8:project:admin` — права `d8:namespace:admin` плюс управление доступом к проекту (ресурсы ProjectRoleBinding) и право привязывать встроенные роли `d8:project:*` и `d8:namespace:*` (кроме уровня `superadmin`) другим пользователям в рамках проекта;
 - `d8:project:superadmin` — аналогично соотношению `d8:namespace:superadmin` и `d8:namespace:admin`.
@@ -128,24 +129,7 @@ Namespace-роль определяет права на доступ к namespac
 
 Они определяют доступ только к системным неймспейсам (начинающимся с `d8-` или `kube-`), и только к тем из них, в которых работают модули соответствующей подсистемы роли.
 
-Системная или подсистемная роль сама по себе не даёт права раздавать доступ другим людям.
-
-Создать User или Group, которых ещё нет среди субъектов грантов, можно как обычный объект.
-
-Создать User на email, на котором грант уже есть, записать или удалить ClusterAuthorizationRule либо сбросить такую идентичность через UserOperation — это раздача ролей. Запрос пройдёт, только если у запрашивающего уже есть покрывающие права или ему явно разрешено назначать эти роли.
-
-Подключение DexProvider проверяется так же, но относительно идентичностей, которые провайдер способен утвердить: [`spec.allowedIdentities`](/modules/user-authn/cr.html#dexprovider-v1-spec-allowedidentities) (email, домены email, группы) и собственные фильтры групп провайдера ограничивают это множество, и учитываются только роли, уже выданные внутри него. Провайдер без ограничителя по email способен утвердить любой адрес, включая те, accessLevel у которых `SuperAdmin`, поэтому его запись требует `SuperAdmin`. Базовая аутентификация провайдера OIDC или Crowd идёт мимо Dex и его ограничителей, поэтому такой провайдер считается провайдером без ограничителя по email, а OIDC-провайдер — ещё и без ограничителя по группам; у Crowd-провайдера ось групп ограничивает только `crowd.groups`. Подробности и список изменений, проходящих без проверки, — в документации модуля user-authn.
-
-У ClusterAuthorizationRule поле `spec.accessLevel` задаёт уровень [упрощённой ролевой модели](#упрощённая-ролевая-модель): `User`, `PrivilegedUser`, `Editor`, `Admin`, `ClusterEditor`, `ClusterAdmin`, `SuperAdmin`. Менеджер подсистемы `security` может назначить любой из них, кроме `SuperAdmin`. Кластерную роль Kubernetes `cluster-admin` он тоже назначить не может. В гранулярной модели менеджер security назначает роли подсистемы `security` не выше `d8:subsystem:security:manager`.
-
-Запрашивающий, у которого есть все права во всём кластере, в этих проверках приравнивается к SuperAdmin и может назначить любую роль, в том числе `SuperAdmin` и `cluster-admin`. Например, такие права есть у субъекта кластерной роли Kubernetes `cluster-admin`, если роль выдана через ClusterRoleBinding или через ClusterAuthorizationRule без `namespaceSelector` и `limitNamespaces`. Если включён режим мультитенантности, такое правило должно ещё задавать `allowAccessToSystemNamespaces: true`, иначе оно не даёт доступа к системным неймспейсам.
-Права из ClusterAuthorizationRule с `namespaceSelector` или `limitNamespaces` в эту проверку не входят, даже если правило выдаёт `cluster-admin`. Любой непустой `limitNamespaces` намеренно считается ограничением, даже если его записи подходят под все неймспейсы, например `.*` вместе с `allowAccessToSystemNamespaces: true`. По `accessLevel` такое правило учитывается как обычно. Например, `accessLevel: SuperAdmin` даёт диапазон SuperAdmin независимо от ограничений неймспейсов в правиле.
-
-`limitNamespaces` и `namespaceSelector` ограничивают только доступ к ресурсам в неймспейсах. Субъект с уровнем доступа `ClusterAdmin` или `SuperAdmin` по-прежнему может создавать объекты ClusterRoleBinding и ClusterAuthorizationRule, поэтому эти поля не ограничивают то, что он может выдать на весь кластер. Выдавайте эти уровни только тем, кому можно иметь доступ ко всему кластеру. ClusterAuthorizationRule учитывается только через биндинги, которые для него создал `user-authz-controller`.
-
-В тексте отказа вебхука уровни `accessLevel` называются basic, чтобы не путать их с уровнями гранулярных ролей (`viewer` / `manager` / `superadmin`).
-
-Права модуля `user-authn` создать User или Group для этого недостаточны: они не раздают роли, которые уже висят на этом email.
+Можно ли с такой ролью раздавать доступ другим людям, описано в разделе [«Кто может назначать роли»](#кто-может-назначать-роли).
 {% endalert %}
 
 Системные (`d8:system:*`) и подсистемные (`d8:subsystem:*`) роли предназначены для назначения прав на управление всей платформой или её частью ([подсистемой](#подсистемы-ролевой-модели)), но не самими приложениями пользователей. С помощью подсистемной роли можно, например, дать возможность администратору безопасности управлять модулями, ответственными за функции безопасности кластера. Тогда администратор безопасности сможет настраивать аутентификацию, авторизацию, политики безопасности и т. п., но не сможет управлять остальными функциями кластера (например, настройками сети и мониторинга) и изменять настройки в пространстве имён приложений пользователей.
@@ -161,7 +145,7 @@ Namespace-роль определяет права на доступ к namespac
 - к cluster-wide-ресурсам Kubernetes;
 - к управлению модулями DP (ресурсы ModuleConfig) в рамках [подсистемы](#подсистемы-ролевой-модели) роли, или всеми модулями DP для роли `d8:system:*`;
 - к управлению cluster-wide-ресурсами модулей DP в рамках [подсистемы](#подсистемы-ролевой-модели) роли или всеми ресурсами модулей DP для роли `d8:system:*`;
-- к системным неймспейсам (начинающимся с `d8-` или `kube-`), в которых работают модули [подсистемы](#подсистемы-ролевой-модели) роли, или ко всем системным неймспейсам для роли `d8:system:*`.
+- к неймспейсам модулей [подсистемы](#подсистемы-ролевой-модели) роли или всех модулей DP для роли `d8:system:*`.
   
 Формат названия системной роли — `d8:system:<ACCESS_LEVEL>`, подсистемной — `d8:subsystem:<SUBSYSTEM>:<ACCESS_LEVEL>`, где:
 
@@ -170,15 +154,36 @@ Namespace-роль определяет права на доступ к namespac
 
   Примеры ролей:
   
-  - `d8:system:viewer` — доступ на просмотр конфигурации всех модулей DP (ресурсы ModuleConfig), их cluster-wide-ресурсов, их namespaced-ресурсов и стандартных объектов Kubernetes (кроме секретов и ресурсов RBAC) во всех системных неймспейсах (начинающихся с `d8-` или `kube-`);
-  - `d8:system:manager` — аналогично роли `d8:system:viewer`, только доступ на уровне `admin`, т. е. просмотр/создание/изменение/удаление конфигурации всех модулей DP (ресурсы ModuleConfig), их cluster-wide-ресурсов, их namespaced-ресурсов и стандартных объектов Kubernetes во всех системных неймспейсах (начинающихся с `d8-` или `kube-`);
+  - `d8:system:viewer` — доступ на просмотр конфигурации всех модулей DP (ресурсы ModuleConfig), их cluster-wide-ресурсов, их namespaced-ресурсов и стандартных объектов Kubernetes (кроме секретов и ресурсов RBAC) в неймспейсах всех модулей DP;
+  - `d8:system:manager` — аналогично роли `d8:system:viewer`, только доступ на уровне `admin`, т. е. просмотр/создание/изменение/удаление конфигурации всех модулей DP (ресурсы ModuleConfig), их cluster-wide-ресурсов, их namespaced-ресурсов и стандартных объектов Kubernetes в неймспейсах всех модулей DP;
   - `d8:subsystem:observability:viewer` — доступ на просмотр конфигурации модулей DP (ресурсы ModuleConfig) из подсистемы `observability`, их cluster-wide-ресурсов, их namespaced-ресурсов и стандартных объектов Kubernetes (кроме секретов и ресурсов RBAC) в системных неймспейсах `d8-log-shipper`, `d8-monitoring`, `d8-okmeter`, `d8-operator-prometheus`, `d8-upmeter`, `kube-prometheus-pushgateway`.
 
 Модуль предоставляет три уровня доступа для системных и подсистемных ролей:
 
 - `viewer` — позволяет просматривать стандартные ресурсы Kubernetes, конфигурацию модулей (ресурсы ModuleConfig), cluster-wide-ресурсы модулей и namespaced-ресурсы модулей в неймспейсе модуля;
 - `manager` — дополнительно к уровню `viewer` позволяет управлять стандартными ресурсами Kubernetes, конфигурацией модулей (ресурсы ModuleConfig), cluster-wide-ресурсами модулей и namespaced-ресурсами модулей в неймспейсе модуля;
-- `superadmin` — дополнительно к уровню `manager` позволяет управлять системными ресурсами модулей подсистемы;
+- `superadmin` — дополнительно к уровню `manager` позволяет управлять системными ресурсами модулей подсистемы.
+
+### Кто может назначать роли
+
+Системная или подсистемная роль сама по себе не даёт права раздавать доступ другим людям.
+
+Создать User или Group, которых ещё нет среди субъектов грантов, можно как обычный объект.
+
+Создать User на email, на котором грант уже есть, записать или удалить ClusterAuthorizationRule либо сбросить такую идентичность через UserOperation — это раздача ролей. Запрос пройдёт, только если у запрашивающего уже есть покрывающие права или ему явно разрешено назначать эти роли.
+
+Подключение DexProvider проверяется так же, но относительно идентичностей, которые провайдер способен утвердить: [`spec.allowedIdentities`](/modules/user-authn/cr.html#dexprovider-v1-spec-allowedidentities) (email, домены email, группы) и собственные фильтры групп провайдера ограничивают это множество, и учитываются только роли, уже выданные внутри него. Провайдер без ограничителя по email способен утвердить любой адрес, включая те, accessLevel у которых `SuperAdmin`, поэтому его запись требует `SuperAdmin`. Базовая аутентификация провайдера OIDC или Crowd идёт мимо Dex и его ограничителей, поэтому такой провайдер считается провайдером без ограничителя по email, а OIDC-провайдер — ещё и без ограничителя по группам; у Crowd-провайдера ось групп ограничивает только `crowd.groups`. Подробности и список изменений, проходящих без проверки, — в документации модуля user-authn.
+
+У ClusterAuthorizationRule поле `spec.accessLevel` задаёт уровень [упрощённой ролевой модели](#упрощённая-ролевая-модель): `User`, `PrivilegedUser`, `Editor`, `Admin`, `ClusterEditor`, `ClusterAdmin`, `SuperAdmin`. Менеджер подсистемы `security` может назначить любой из них, кроме `SuperAdmin`. Кластерную роль Kubernetes `cluster-admin` он тоже назначить не может. В гранулярной модели менеджер security назначает роли подсистемы `security` не выше `d8:subsystem:security:manager`.
+
+Запрашивающий, у которого есть все права во всём кластере, в этих проверках приравнивается к SuperAdmin и может назначить любую роль, в том числе `SuperAdmin` и `cluster-admin`. Например, такие права есть у субъекта кластерной роли Kubernetes `cluster-admin`, если роль выдана через ClusterRoleBinding или через ClusterAuthorizationRule без `namespaceSelector` и `limitNamespaces`. Если включён режим мультитенантности, такое правило даёт доступ к системным неймспейсам только с `namespaceSelector.matchAny: true` (или устаревшим `allowAccessToSystemNamespaces: true`).
+Права из ClusterAuthorizationRule с `namespaceSelector` или `limitNamespaces` в эту проверку не входят, даже если правило выдаёт `cluster-admin`. Любой непустой `limitNamespaces` намеренно считается ограничением, даже если его записи подходят под все неймспейсы, например `.*` вместе с `allowAccessToSystemNamespaces: true`. По `accessLevel` такое правило учитывается как обычно. Например, `accessLevel: SuperAdmin` даёт диапазон SuperAdmin независимо от ограничений неймспейсов в правиле.
+
+`limitNamespaces` и `namespaceSelector` ограничивают только доступ к ресурсам в неймспейсах. Субъект с уровнем доступа `ClusterAdmin` или `SuperAdmin` по-прежнему может создавать объекты ClusterRoleBinding и ClusterAuthorizationRule, поэтому эти поля не ограничивают то, что он может выдать на весь кластер. Выдавайте эти уровни только тем, кому можно иметь доступ ко всему кластеру. ClusterAuthorizationRule учитывается только через биндинги, которые для него создал `user-authz-controller`.
+
+В тексте отказа вебхука уровни `accessLevel` называются basic, чтобы не путать их с уровнями гранулярных ролей (`viewer` / `manager` / `superadmin`).
+
+Прав модуля `user-authn` на создание User или Group для этого недостаточно: они не дают ролей, уже выданных на этот email.
 
 ### Глобальные справочники ресурсов
 
@@ -198,16 +203,14 @@ Namespace-роль определяет права на доступ к namespac
 - `clusterlogdestinations` (deckhouse.io);
 - `customresourcedefinitions` (apiextensions.k8s.io) — только `get`, `list`.
 
-#### Автоматическая привязка
+#### Автоматический биндинг
 
-ClusterRoleBinding для `d8:dict` создаётся **автоматически**, когда RoleBinding ссылается на роль
-`d8:namespace:*` или `d8:project:*` (гранулярная модель) или на роль `user-authz:*` (упрощённая модель).
-RoleBinding, которые `multitenancy-manager` создаёт из ProjectRoleBinding и ClusterProjectRoleBinding,
-тоже учитываются, поэтому привязку получают и держатели проектных ролей. Пользователи
-`system:multitenancy-manager:*`, от имени которых действует `multitenancy-manager`, привязку не получают. Это
-означает, что пользователи проекта могут просматривать справочные ресурсы без какой-либо ручной
-настройки. Привязка появляется вместе с RoleBinding и удаляется при его удалении. Привязку создаёт и
-управляет ею исключительно компонент `user-authz-controller` модуля. Самостоятельно её создавать не нужно.
+`user-authz-controller` поддерживает один ClusterRoleBinding на `d8:dict` для каждого субъекта, у которого есть один из следующих RoleBinding:
+
+- RoleBinding на роль `d8:namespace:*` или `d8:project:*`, включая RoleBinding, которые `multitenancy-manager` создаёт из ProjectRoleBinding и ClusterProjectRoleBinding;
+- RoleBinding, который модуль создаёт для AuthorizationRule (уровни `User`, `PrivilegedUser`, `Editor` и `Admin`).
+
+Пользователи `system:multitenancy-manager:*`, от имени которых действует `multitenancy-manager`, биндинг не получают. Поэтому пользователи проекта могут просматривать справочные ресурсы без какой-либо ручной настройки. Биндинг удаляется, когда у субъекта не остаётся ни одного такого RoleBinding. Создавать его вручную не нужно.
 
 {% alert level="info" %}
 Роль `d8:dict` независима от механизма управления доступом к cluster-wide-ресурсам `multitenancy-manager`: она предоставляет права **только на чтение**
@@ -227,7 +230,7 @@ RoleBinding, которые `multitenancy-manager` создаёт из ProjectRo
 
 Область действия роли зависит от того, к какой подсистеме она принадлежит:
 
-- Область действия ролей `d8:system:*` — все системные (начинающиеся с `d8-` или `kube-`) неймспейсы кластера.
+- Область действия ролей `d8:system:*` — неймспейсы всех включённых модулей DP, то есть неймспейсы, указанные в лейбле `rbac.deckhouse.io/namespace` их capabilities.
 - Область действия ролей подсистем — неймспейсы, в которых работают модули подсистемы (подробнее — в таблице состава подсистем), а также все cluster-wide объекты модулей подсистемы.
 
 Таблица состава подсистем ролевой модели.
@@ -243,9 +246,9 @@ RoleBinding, которые `multitenancy-manager` создаёт из ProjectRo
 Такое устройство даёт два практических следствия:
 
 - Модули DP расширяют роли автоматически: при включении модуля его capabilities добавляются в соответствующие встроенные роли, при выключении — удаляются. Список прав роли всегда соответствует набору включённых модулей.
-- Вы можете собирать собственные роли из готовых capabilities, не описывая RBAC-правила вручную. Как это сделать описано [в FAQ](faq.html#как-расширить-роли-или-создать-новую).
+- Вы можете собирать собственные роли из готовых capabilities, не описывая RBAC-правила вручную. Как это сделать описано [в FAQ](faq.html#как-расширить-роль-или-создать-новую).
 
-Имена встроенных ролей и capabilities начинаются с префикса `d8:`. Это пространство имён зарезервировано: создать собственную ClusterRole с именем `d8:*` нельзя — исключение составляет только префикс `d8:custom:*`, выделенный для пользовательских ролей и capabilities. Лейблы `rbac.deckhouse.io/kind: role` и `rbac.deckhouse.io/kind: capability` также зарезервированы за встроенными объектами — для собственных используйте `custom-role` и `custom-capability`.
+Имена встроенных ролей и capabilities начинаются с префикса `d8:`. Префикс `d8:` зарезервирован: создать собственную ClusterRole с именем `d8:*` нельзя — исключение составляет только префикс `d8:custom:*`, выделенный для пользовательских ролей и capabilities. Лейблы `rbac.deckhouse.io/kind: role` и `rbac.deckhouse.io/kind: capability` также зарезервированы за встроенными объектами — для собственных используйте `custom-role` и `custom-capability`.
 
 ### Справочник лейблов и аннотаций ролей
 
@@ -253,15 +256,15 @@ RoleBinding, которые `multitenancy-manager` создаёт из ProjectRo
 
 | Лейбл | Где встречается | Назначение |
 |-------|-----------------|------------|
-| `rbac.deckhouse.io/kind` | Все объекты ролевой модели | Тип объекта: `role` или `capability` — встроенные (зарезервированы), `custom-role` или `custom-capability` — пользовательские. Объекты без этого лейбла ролевой моделью не обрабатываются. |
+| `rbac.deckhouse.io/kind` | Все объекты ролевой модели | Тип объекта: `role` или `capability` — встроенные (зарезервированы), `custom-role` или `custom-capability` — пользовательские. Объект без этого лейбла отклоняется, если на нём есть лейбл агрегации области платформы. |
 | `rbac.deckhouse.io/scope` | Роли и capabilities | Область действия: `namespace`, `project`, `subsystem`, `system`. |
 | `rbac.deckhouse.io/subsystem` | Подсистемные объекты | Имя подсистемы (например, `networking`) — только при `scope: subsystem`. |
 | `rbac.deckhouse.io/aggregate-to-<область>-as: <уровень>` | Capabilities и роли младших уровней | Правило агрегации: включает объект в роль указанной области и уровня. `<область>` — `system`, `namespace`, `project` или имя подсистемы; `<уровень>` — `viewer`, `user`, `manager`, `admin`, `superadmin`. Именно эти лейблы указываются в селекторах `aggregationRule`. |
 | `rbac.deckhouse.io/capability` | Capabilities | Глобально уникальное имя capability (например, `namespace-capability.kubernetes.view_logs`) — по нему capability адресно включается в [собственную роль](faq.html#создание-собственной-namespace--или-проектной-роли). |
 | `rbac.deckhouse.io/use-role: <уровень>` | Системные и подсистемные роли | Какой уровень namespace-роли автоматически выдаётся обладателю этой роли в системных неймспейсах её подсистемы. У встроенных ролей: `viewer` → `viewer`, `manager` → `admin`, `superadmin` → `superadmin`. Выдача выполняется автоматически создаваемыми RoleBinding (лейбл `rbac.deckhouse.io/automated: "true"`). |
-| `rbac.deckhouse.io/namespace: <неймспейс>` | Capabilities | Дополнительный неймспейс, в котором обладателям системной/подсистемной роли будет автоматически создан RoleBinding ([пример в FAQ](faq.html#расширение-подсистемных-ролей-с-добавлением-нового-пространства-имён)). |
-| `rbac.deckhouse.io/delegatable: "true"` | Роли `d8:namespace:*`, `d8:project:*` и пользовательские | Роль можно указывать в RoleBinding [внутри неймспейсов проектов](../multitenancy-manager/usage.html#какие-роли-доступны-в-rolebinding-внутри-проекта). Добавляйте лейбл на собственные роли, которые должны быть доступны в проектах. |
-| `rbac.deckhouse.io/deprecated: "true"` | [Устаревшие роли-псевдонимы](#устаревшие-имена-ролей) | Роль устарела и будет удалена; переведите привязки на новую роль. |
+| `rbac.deckhouse.io/namespace: <неймспейс>` | Capabilities | Неймспейс, в котором обладатели системной или подсистемной роли, агрегирующей эту capability, получают автоматически созданный RoleBinding ([пример в FAQ](faq.html#расширение-подсистемных-ролей-с-добавлением-нового-неймспейса)). |
+| `rbac.deckhouse.io/delegatable: "true"` | Роли `d8:namespace:*`, `d8:project:*` и пользовательские | Роль можно указывать в RoleBinding [внутри неймспейсов проектов](/modules/multitenancy-manager/usage.html#роли-доступные-в-rolebinding-внутри-проекта). Добавляйте лейбл на собственные роли, которые должны быть доступны в проектах. |
+| `rbac.deckhouse.io/deprecated: "true"` | [Устаревшие роли-псевдонимы](#устаревшие-имена-ролей) | Роль устарела и будет удалена; переведите биндинги на новую роль. |
 | `module` | Встроенные объекты | Имя модуля DP, которому принадлежит объект. Удобен для выборки в селекторах агрегации (например, все capabilities одного модуля). |
 | `heritage: deckhouse` | Встроенные объекты | Признак объекта платформы. Устанавливать на собственные объекты нельзя. |
 
@@ -272,8 +275,8 @@ RoleBinding, которые `multitenancy-manager` создаёт из ProjectRo
 | `ru.meta.deckhouse.io/title`, `ru.meta.deckhouse.io/description` | Платформа | [Отображаемые название и описание](#отображаемые-названия-ролей) на русском. |
 | `en.meta.deckhouse.io/title`, `en.meta.deckhouse.io/description` | Платформа | Отображаемые название и описание на английском. |
 | `custom.meta.deckhouse.io/title`, `custom.meta.deckhouse.io/description` | Администратор | Переопределение отображаемого названия/описания; единственное разрешённое изменение встроенных ролей. |
-| `rbac.deckhouse.io/bindable-only-via` | Платформа | Список видов привязок, которыми можно назначить роль (у проектных ролей — `ProjectRoleBinding,ClusterProjectRoleBinding`). |
-| `rbac.deckhouse.io/disabled-for-direct-use-in-projects: "true"` | Администратор | Запрещает выдавать роль в проектах: существующие привязки продолжают работать, новые не создаются ([подробнее](../multitenancy-manager/usage.html#предоставление-доступа-внутри-проекта)). |
+| `rbac.deckhouse.io/bindable-only-via` | Платформа | Виды биндингов, для которых предназначена роль (у проектных ролей — `ProjectRoleBinding,ClusterProjectRoleBinding`). Носит справочный характер: платформа его не проверяет. |
+| `rbac.deckhouse.io/disabled-for-direct-use-in-projects: "true"` | Администратор | Запрещает выдавать роль в проектах: существующие биндинги продолжают работать, новые не создаются ([подробнее](/modules/multitenancy-manager/usage.html#предоставление-доступа-внутри-проекта)). |
 | `rbac.deckhouse.io/deprecated-replaced-by` | Платформа | На устаревших ролях-псевдонимах: имя роли, на которую нужно перейти. |
 
 ### Ограничения уровня admin и права superadmin
@@ -289,7 +292,7 @@ RoleBinding, которые `multitenancy-manager` создаёт из ProjectRo
 - **Изменение и удаление системных ресурсов в пользовательских неймспейсах.** Некоторые компоненты платформы размещают свои объекты (например, поды Dex-аутентификатора или поды и диски виртуальных машин) прямо в неймспейсах приложений. Такие объекты помечены лейблом `deckhouse.io/system-resource: "true"`. Изменять и удалять их может только `superadmin`. Для остальных пользователей эти операции отклоняются на уровне API-сервера с пояснением.
 - **Подключение к системным подам** — `kubectl exec`, `kubectl attach` и `kubectl port-forward` в под с лейблом `deckhouse.io/system-resource: "true"` доступны только `superadmin`. Это защищает от чтения чужих секретов и вмешательства в работу платформенных компонентов изнутри их подов.
 
-Авторам модулей: маркер — это **лейбл** `deckhouse.io/system-resource: "true"` на самом объекте, а не аннотация. Для изменения и удаления объекты для защиты отбираются на стороне API-сервера, в `matchConditions` admission-конфигурации, а они читают лейблы; для `exec`, `attach` и `port-forward` объектом admission является сам запрос подключения, а не под, поэтому вебхук читает под — и снова его лейблы. В обоих случаях объект, помеченный аннотацией, не будет замечен и останется открыт — без какого-либо сообщения об этом. Поставьте лейбл на каждый объект, который ваш модуль размещает в пользовательских неймспейсах (поды, сервисы, PVC, секреты, кастомные ресурсы), — и менять его смогут только `superadmin` и администраторы кластера, а `exec`, `attach` и `port-forward` в его поды будут доступны только им.
+Авторам модулей: как пометить объекты, которые модуль размещает в пользовательских неймспейсах, описано в [FAQ](faq.html#как-защитить-объекты-которые-модуль-размещает-в-пользовательских-неймспейсах).
 
 Перечисленные выше ограничения не действуют на администраторов кластера. Администратором кластера считается тот, кому выдана стандартная роль Kubernetes `cluster-admin` или роль `user-authz:super-admin` из прежней ролевой модели (её получают субъекты ClusterAuthorizationRule с уровнем доступа `SuperAdmin`), а также участники групп `system:masters`, `kubeadm:cluster-admins`, `superadmins` и `system:sudousers`. Способ выдачи роли значения не имеет: для этого можно использовать и ClusterRoleBinding, и RoleBinding в нужном неймспейсе. У таких пользователей и так есть полные права на кластер, поэтому за ними сохраняется аварийный доступ.
 
@@ -305,8 +308,12 @@ RoleBinding, которые `multitenancy-manager` создаёт из ProjectRo
 - **Нельзя выдать ограниченную по области роль на весь кластер.** ClusterRoleBinding на роли `d8:namespace:*`, `d8:project:*` (и их `d8:custom:*`-варианты) отклоняется — иначе роль, рассчитанная на один неймспейс или проект, действовала бы во всех неймспейсах сразу. Используйте RoleBinding в нужном неймспейсе либо ProjectRoleBinding/ClusterProjectRoleBinding для проекта. ClusterRoleBinding допустим только для системных и подсистемных ролей, так как они кластерные.
 - **Нельзя выдать capability на весь кластер.** ClusterRoleBinding на любую capability (`d8:*-capability:*`, включая пользовательские) отклоняется: capability — «строительный блок» для ролей, а не самостоятельная роль. В отдельном неймспейсе привязать capability через RoleBinding можно.
 - **Нельзя получить управление проектами через собственную роль.** Создание Role или ClusterRole, дающей права на изменение ресурсов управления проектами (`projects`, `projecttemplates`, `projectrolebindings`, `clusterprojectrolebindings`, `projectnamespaces`), отклоняется. Эти права дают только встроенные роли `d8:project:*`. Без этой защиты администратор неймспейса мог бы создать роль с правом создавать ProjectRoleBinding и выдать себе доступ ко всему проекту. Роли только на чтение этих ресурсов разрешены.
-- **Нельзя смешивать пользовательскую и административную области в одной роли.** Собственная роль не может одновременно агрегировать capabilities областей `namespace`/`project` и областей `system`/`subsystem` — это исключает создание «супер-роли», объединяющей доступ к приложениям и к платформе.
-- **Собственные роли не могут содержать прямых RBAC-правил** — только агрегировать capabilities. Права описываются в отдельных пользовательских capabilities, что делает состав любой роли прозрачным. Подробнее — [в FAQ](faq.html#как-расширить-роли-или-создать-новую).
+- **Namespace- или проектная роль не может включать capabilities платформы.** Собственная роль с `scope: namespace`, `scope: project` или без области не может выбирать capabilities систем и подсистем по лейблу `rbac.deckhouse.io/capability`, а также область `system` или подсистемы по лейблу `rbac.deckhouse.io/aggregate-to-<область>-as`. Ни одна собственная роль не может совмещать capabilities областей `namespace`/`project` и областей `system`/`subsystem` — это исключает создание «супер-роли», объединяющей доступ к приложениям и к платформе.
+- **Собственная capability содержит правила и не может иметь `aggregationRule`.**
+- **Имя должно соответствовать области**: `d8:custom:namespace:<имя>`, `d8:custom:project:<имя>`, `d8:custom:system:<имя>`, `d8:custom:<подсистема>:<имя>`, а для capability — `d8:custom:<область>-capability:<имя>`.
+- **Лейбл `rbac.deckhouse.io/aggregate-to-<область>-as` области платформы может нести только собственная capability.**
+- **Лейбл `rbac.deckhouse.io/delegatable: "true"` допускается только на роли, которая агрегирует только capabilities неймспейса и проекта.**
+- **Собственные роли не могут содержать прямых RBAC-правил** — только агрегировать capabilities. Права описываются в отдельных пользовательских capabilities, что делает состав любой роли прозрачным. Подробнее — [в FAQ](faq.html#как-расширить-роль-или-создать-новую).
 
 ### Отображаемые названия ролей
 
@@ -315,13 +322,12 @@ RoleBinding, которые `multitenancy-manager` создаёт из ProjectRo
 - `ru.meta.deckhouse.io/title`, `ru.meta.deckhouse.io/description` — на русском;
 - `en.meta.deckhouse.io/title`, `en.meta.deckhouse.io/description` — на английском.
 
-Эти аннотации использует, например, веб-интерфейс Deckhouse Console при отображении списка ролей.
+Эти аннотации использует, например, веб-интерфейс Deckhouse при отображении списка ролей.
 
 Если стандартное название не подходит (например, вы хотите называть роли в терминах, принятых в компании), добавьте на роль аннотации `custom.meta.deckhouse.io/title` и `custom.meta.deckhouse.io/description` — интерфейс покажет их вместо стандартных. Пример:
 
 ```shell
-d8 k annotate clusterrole d8:namespace:admin \
-  custom.meta.deckhouse.io/title='Администратор команды'
+d8 k annotate clusterrole d8:namespace:admin custom.meta.deckhouse.io/title='Администратор команды'
 ```
 
 Это единственное разрешённое изменение встроенных ролей: изменение их правил, агрегации или лейблов отклоняется.
@@ -342,12 +348,12 @@ d8 k annotate clusterrole d8:namespace:admin \
 | `d8:use:role:<уровень>:kubernetes` | `d8:namespace:<уровень>` (полная namespace-роль, не kubernetes-only) |
 
 {% alert level="warning" %}
-Устаревшая роль `d8:use:role:admin` соответствует роли `d8:namespace:admin` и, как и она, [больше не даёт](#ограничения-уровня-admin-и-права-superadmin) права выпускать токены ServiceAccount'ов и impersonate — теперь для этого нужен уровень `superadmin`.
+Устаревшая роль `d8:use:role:admin` соответствует роли `d8:namespace:admin` и, как и она, [больше не даёт](#ограничения-уровня-admin-и-права-superadmin) права выпускать токены ServiceAccount'ов и выполнять запросы от имени ServiceAccount'ов — теперь для этого нужен уровень `superadmin`.
 {% endalert %}
 
 Пока в кластере остаются привязки к устаревшим именам, срабатывают алерты `D8UserAuthzDeprecatedRBACv2RoleInUse` (привязка к роли-псевдониму) и `D8UserAuthzDeprecatedRBACv2CapabilityInUse` (привязка к устаревшей capability, которая больше не даёт прав). Релиз, который удаляет псевдонимы, несёт требование релиза `deprecatedRBACv2BindingsCount`: обновление остаётся в ожидании, а список привязок выводится в статусе `DeckhouseRelease`, пока каждая привязка к роли-псевдониму не пересоздана на новое имя роли. Привязка к устаревшей capability релиз не держит: удаление псевдонимов для неё ничего не меняет.
 
-Модуль, который переименовывает собственную роль, сохраняет старое имя тем же способом: ClusterRole с лейблом `rbac.deckhouse.io/deprecated` в `templates/rbacv2-compat/` модуля, новое имя — в аннотации `rbac.deckhouse.io/deprecated-replaced-by`. Привязка к такому псевдониму вызывает алерт `D8UserAuthzDeprecatedRBACv2ModuleRoleInUse` с новым именем роли и релиз Deckhouse не держит: псевдоним удаляет сам модуль в своём релизе. Аннотация обязательна (псевдоним без неё игнорируется), а имя псевдонима может быть любым именем `d8:`, кроме семейств ролей самой платформы (`d8:system:`, `d8:subsystem:`, `d8:namespace:`, `d8:project:`, `d8:custom:`, `d8:dict`).
+Модуль, который переименовывает собственную роль, сохраняет старое имя тем же способом: ClusterRole с лейблом `rbac.deckhouse.io/deprecated` в `templates/rbacv2-compat/` модуля, новое имя — в аннотации `rbac.deckhouse.io/deprecated-replaced-by`. Привязка к такому псевдониму вызывает алерт `D8UserAuthzDeprecatedRBACv2ModuleRoleInUse` с новым именем роли и релиз Deckhouse не держит: псевдоним удаляет сам модуль в своём релизе. Аннотация обязательна (псевдоним без неё игнорируется), а имя псевдонима может быть любым именем `d8:`, кроме семейств ролей самой платформы (`d8:system:`, `d8:subsystem:`, `d8:namespace:`, `d8:project:`, `d8:custom:`, `d8:dict`), зарезервированных префиксов `d8:binding:` и `d8:prb:` и прежних имён платформы `d8:manage:` и `d8:use:`.
 
 Переведите существующие RoleBinding и ClusterRoleBinding на новые имена ролей. Найти привязки, использующие устаревшие имена, можно с помощью команды:
 
@@ -362,29 +368,29 @@ d8 k get clusterrolebindings,rolebindings -A -o json \
 
 Особенности:
 
-- Модуль реализует role-based-подсистему сквозной авторизации, расширяя функционал стандартного механизма RBAC.
-- Настройка прав доступа происходит с помощью [ресурсов](cr.html).
+- Права доступа настраиваются кастомными ресурсами ClusterAuthorizationRule и AuthorizationRule ([описание](cr.html)) поверх RBAC Kubernetes.
 - Управление доступом к инструментам масштабирования (параметр `allowScale` ресурса [ClusterAuthorizationRule](cr.html#clusterauthorizationrule-v1-spec-allowscale) или [AuthorizationRule](cr.html#authorizationrule-v1alpha1-spec-allowscale)).
 - Управление доступом к форвардингу портов (параметр `portForwarding` ресурса [ClusterAuthorizationRule](cr.html#clusterauthorizationrule-v1-spec-portforwarding) или [AuthorizationRule](cr.html#authorizationrule-v1alpha1-spec-portforwarding)).
-- Управление списком разрешённых пространств имён в формате labelSelector (параметр `namespaceSelector` ресурса [ClusterAuthorizationRule](cr.html#clusterauthorizationrule-v1-spec-namespaceselector)).
+- Управление списком разрешённых неймспейсов в формате labelSelector (параметр `namespaceSelector` ресурса [ClusterAuthorizationRule](cr.html#clusterauthorizationrule-v1-spec-namespaceselector)).
+- Ограничение по неймспейсам (режим мультитенантности, `namespaceSelector`, `limitNamespaces`) доступно в редакциях BE, SE, SE+, EE и CSE.
 
-В модуле, кроме использования RBAC, можно использовать удобный набор высокоуровневых ролей:
+В модуле, кроме RBAC, можно использовать набор высокоуровневых ролей:
 
 - `User` — позволяет получать информацию обо всех объектах (включая доступ к журналам подов), но не позволяет заходить в контейнеры, читать секреты и выполнять port-forward;
 - `PrivilegedUser` — то же самое, что и `User`, но позволяет заходить в контейнеры, читать секреты, а также удалять поды (что обеспечивает возможность перезагрузки);
 - `Editor` — то же самое, что и `PrivilegedUser`, но предоставляет возможность создавать, изменять и удалять все объекты, которые обычно нужны для прикладных задач;
-- `Admin` — то же самое, что и `Editor`, но позволяет удалять служебные объекты (производные ресурсы, например ReplicaSet, `certmanager.k8s.io/challenges` и `certmanager.k8s.io/orders`);
-- `ClusterEditor` — то же самое, что и `Editor`, но позволяет управлять ограниченным набором cluster-wide-объектов, которые могут понадобиться для прикладных задач (ClusterXXXMetric, KeepalivedInstance, DaemonSet и т. д). Роль для работы оператора кластера;
-- `ClusterAdmin` — то же самое, что и `ClusterEditor` + `Admin`, но позволяет управлять служебными cluster-wide-объектами (производные ресурсы, например MachineSets, Machines, OpenstackInstanceClasses и т. п., а также ClusterAuthorizationRule, ClusterRoleBindings и ClusterRole). Роль для работы администратора кластера. **Важно**, что `ClusterAdmin`, поскольку он уполномочен редактировать ClusterRoleBindings, может **сам себе расширить полномочия**;
+- `Admin` — то же самое, что и `Editor`, но позволяет создавать и изменять поды, выпускать токены ServiceAccount'ов (`serviceaccounts/token`), управлять объектами Role, RoleBinding и AuthorizationRule и удалять служебные объекты (например, ReplicaSet, challenges и orders группы `acme.cert-manager.io`);
+- `ClusterEditor` — то же самое, что и `Editor`, но позволяет управлять ограниченным набором cluster-wide-объектов для прикладных задач (DaemonSet, StorageClass, CustomResourceDefinition, GatewayClass и объекты, которые модули добавляют на этот уровень, например KeepalivedInstance). Роль для работы оператора кластера;
+- `ClusterAdmin` — то же самое, что и `ClusterEditor` + `Admin`, но позволяет управлять служебными cluster-wide-объектами (неймспейсы, квоты, NetworkPolicy, подресурсы узлов для proxy, ClusterAuthorizationRule, ClusterRole и ClusterRoleBinding). Роль для работы администратора кластера. **Внимание.** `ClusterAdmin` может создавать объекты ClusterAuthorizationRule с уровнем не выше `ClusterAdmin` и объекты ClusterRoleBinding только на роли, права которых у него уже есть;
 - `SuperAdmin` — разрешены любые действия с любыми объектами, при этом ограничения `namespaceSelector` и `limitNamespaces` продолжат работать.
 
 {% alert level="warning" %}
-Режим multi-tenancy (авторизация по пространству имён) в данный момент реализован по временной схеме и **не гарантирует безопасность!**
+Режим мультитенантности ограничивает доступ только к ресурсам в неймспейсах. Субъекты с уровнем доступа `ClusterAdmin` или `SuperAdmin` по-прежнему могут создавать кластерные биндинги. Вебхук авторизации не проверяет компоненты control plane, kubelet и ServiceAccount'ы неймспейса `kube-system` и неймспейсов, имена которых начинаются с `d8-`, поэтому ограничения по неймспейсам к ним не применяются.
 {% endalert %}
 
-В случае, если в [ClusterAuthorizationRule](cr.html#clusterauthorizationrule)-ресурсе используется `namespaceSelector`, параметры `limitNamespaces` и `allowAccessToSystemNamespace` не учитываются.
+Если в ресурсе [ClusterAuthorizationRule](cr.html#clusterauthorizationrule) задан `namespaceSelector`, устаревшие параметры `limitNamespaces` и `allowAccessToSystemNamespaces` не учитываются.
 
-Если вебхук авторизации станет недоступен, запросы будут **запрещаться**, а не разрешаться: вебхук стоит перед RBAC и настроен с `failurePolicy: Deny`, поэтому запрос, на который он не смог ответить, до RBAC не доходит. Исключение — идентичности, перечисленные в `matchConditions` ресурса AuthorizationConfiguration: компоненты control plane, kubelet'ы и сервисные аккаунты неймспейсов `kube-system` и `d8-*` webhook не проходят, поэтому кластер продолжает работать, а Deckhouse может восстановить вебхук.
+В режиме мультитенантности, если вебхук авторизации станет недоступен, запросы будут **запрещаться**, а не разрешаться: вебхук стоит перед RBAC и настроен с `failurePolicy: Deny`, поэтому запрос, на который он не смог ответить, до RBAC не доходит. Исключение — идентичности, перечисленные в `matchConditions` ресурса AuthorizationConfiguration: компоненты control plane, kubelet, ServiceAccount'ы неймспейсов `kube-system` и `d8-*`, а также анонимные проверки работоспособности kube-apiserver (`/livez`, `/readyz`, `/healthz`) вебхук не проверяет, поэтому кластер продолжает работать, а Deckhouse может восстановить вебхук.
 
 ### Список доступа для каждой роли модуля по умолчанию
 
@@ -828,9 +834,9 @@ write:
 
 {: #get_rules .anchored}
 
-Вы можете получить дополнительный список правил доступа для роли модуля из кластера ([существующие пользовательские правила](usage.html#настройка-прав-высокоуровневых-ролей) и нестандартные правила из других модулей Deckhouse):
+Вы можете получить дополнительный список правил доступа для роли модуля из кластера ([правила, добавленные администратором](usage.html#настройка-прав-высокоуровневых-ролей), и нестандартные правила других модулей Deckhouse):
 
 ```bash
 D8_ROLE_NAME=Editor
-kubectl get clusterrole -A -o jsonpath="{range .items[?(@.metadata.annotations.user-authz\.deckhouse\.io/access-level=='$D8_ROLE_NAME')]}{.rules}{'\n'}{end}" | jq -s add
+d8 k get clusterrole -o jsonpath="{range .items[?(@.metadata.annotations.user-authz\.deckhouse\.io/access-level=='$D8_ROLE_NAME')]}{.rules}{'\n'}{end}" | jq -s add
 ```

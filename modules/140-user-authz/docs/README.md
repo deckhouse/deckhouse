@@ -11,7 +11,7 @@ The module implements two role-based models: the [granular](#granular-role-based
 The models are not resource-compatible — automatic conversion is impossible — but they [can be used at the same time](faq.html#can-the-basic-and-the-granular-role-based-models-be-used-at-the-same-time): the permissions of both models are summed up.
 {% endalert %}
 
-The bindings that grant users the access levels of ClusterAuthorizationRule and AuthorizationRule are reconciled by the `user-authz-controller` component: it watches the rules and keeps their ClusterRoleBindings and RoleBindings in sync, and reports the result in the `status` of each rule (`kubectl get clusterauthorizationrules` shows the `READY` and `BINDINGS` columns). A rule with an unsupported `accessLevel` gets `Ready=False` with the `InvalidSpec` reason instead of breaking the module.
+The bindings that grant users the access levels of ClusterAuthorizationRule and AuthorizationRule are reconciled by the `user-authz-controller` component: it watches the rules and keeps their ClusterRoleBindings and RoleBindings in sync, and reports the result in the `status` of each rule (`d8 k get clusterauthorizationrules` shows the `READY` and `BINDINGS` columns). A rule with an unsupported `accessLevel` gets `Ready=False` with the `InvalidSpec` reason instead of breaking the module. The controller exports metrics on the rules it sees, the bindings they need, the bindings that exist, and the drift between them. The module ships alerts on controller unavailability, persistent drift, and rules whose bindings are not applied (for details, see the [FAQ](faq.html#how-do-i-check-that-the-controller-keeps-the-bindings-in-sync)).
 
 <div style="height: 0;" id="the-new-role-based-model"></div>
 <div style="height: 0;" id="experimental-role-based-model"></div>
@@ -21,7 +21,7 @@ The bindings that grant users the access levels of ClusterAuthorizationRule and 
 Unlike the [basic DP role-based model](#basic-role-based-model), the granular role-based one does not use ClusterAuthorizationRule and AuthorizationRule resources. Access rights are configured in the standard Kubernetes RBAC way: by creating RoleBinding or ClusterRoleBinding resources and specifying one of the roles prepared by the `user-authz` module in them. To grant access to all namespaces of a project at once, use the [ProjectRoleBinding](/modules/multitenancy-manager/cr.html#projectrolebinding) and [ClusterProjectRoleBinding](/modules/multitenancy-manager/cr.html#clusterprojectrolebinding) resources of the `multitenancy-manager` module.
 
 {% alert level="info" %}
-Access does not have to be granted by hand-writing YAML manifests: the [Deckhouse Kubernetes Platform web interface](/products/kubernetes-platform/documentation/latest/user/web/ui.html) provides an access grant wizard. It walks you through the steps (who gets access → where → at which level), picks the right binding kind itself (RoleBinding, ClusterRoleBinding, ProjectRoleBinding, or ClusterProjectRoleBinding), and lets you assemble a custom role from ready-made building blocks without writing YAML.
+Access does not have to be granted by hand-writing YAML manifests: the [Deckhouse web UI](/products/kubernetes-platform/documentation/v1/user/web/ui.html) provides an access grant wizard. It walks you through the steps (who gets access → where → at which level), picks the right binding kind itself (RoleBinding, ClusterRoleBinding, ProjectRoleBinding, or ClusterProjectRoleBinding), and lets you assemble a custom role from ready-made building blocks without writing YAML.
 {% endalert %}
 
 The module creates special aggregated cluster roles (ClusterRole). By using these roles in RoleBinding or ClusterRoleBinding, you can do the following:
@@ -40,7 +40,7 @@ Every role operates in one of four scopes. The scope defines *where* the granted
 | Scope | Role name format | Intended for | Which resource is used to assign the role |
 |-------|------------------|--------------|-------------------------------------------|
 | Namespace | `d8:namespace:<level>` | Application users (developers) | RoleBinding in a specific namespace. |
-| Project | `d8:project:<level>` | Teams working with [projects](/modules/multitenancy-manager/) | Only [ProjectRoleBinding](/modules/multitenancy-manager/cr.html#projectrolebinding) or [ClusterProjectRoleBinding](/modules/multitenancy-manager/cr.html#clusterprojectrolebinding). |
+| Project | `d8:project:<level>` | Teams working with [projects](/modules/multitenancy-manager/) | [ProjectRoleBinding](/modules/multitenancy-manager/cr.html#projectrolebinding) or [ClusterProjectRoleBinding](/modules/multitenancy-manager/cr.html#clusterprojectrolebinding) for the whole project, RoleBinding for one namespace of the project. |
 | Subsystem | `d8:subsystem:<subsystem>:<level>` | Administrators of a part of the platform | ClusterRoleBinding. |
 | Whole platform | `d8:system:<level>` | Platform administrators | ClusterRoleBinding. |
 
@@ -61,25 +61,25 @@ Access levels form a hierarchy with a cumulative principle: each next level inhe
 
 ### Using ClusterAuthorizationRule and AuthorizationRule together with RBAC
 
-If multitenancy mode is enabled in the cluster (via [`enableMultiTenancy: true`](/modules/user-authz/configuration.html#parameters-enablemultitenancy)), the effective permissions of a user are the combination of all permissions granted by the following sources:
+If multitenancy mode is enabled in the cluster (via [`enableMultiTenancy: true`](configuration.html#parameters-enablemultitenancy)), the effective permissions of a user are the combination of all permissions granted by the following sources:
 
-- **Permissions granted by ClusterAuthorizationRule**: Applied only inside the namespaces allowed by its `limitNamespaces` or `namespaceSelector` parameters.
+- **Permissions granted by ClusterAuthorizationRule**: Applied only inside the namespaces allowed by its `namespaceSelector` parameter (or the deprecated `limitNamespaces` parameter).
 - **Permissions granted by AuthorizationRule**: Applied inside the namespace the AuthorizationRule is created in.
 - **Permissions granted by ordinary RoleBinding**: Applied inside the namespace the RoleBinding is created in.
 - **Permissions granted by ordinary ClusterRoleBinding** that aren't generated by the `user-authz` module: Applied cluster-wide.
 
 The namespace restrictions set in a ClusterAuthorizationRule apply only to the permissions granted by that ClusterAuthorizationRule. They do not cancel permissions granted via RoleBinding, ClusterRoleBinding, or AuthorizationRule in other namespaces. Likewise, the permissions granted by ClusterAuthorizationRule do not extend to those namespaces.
 
-For example, if a user has a ClusterAuthorizationRule with `accessLevel: Editor` limited to the `ns-a` namespace and a RoleBinding with the `view` role in the `ns-b` namespace, they get the `Editor` permissions in the `ns-a` namespace and read-only permissions in the `ns-b` namespace. Permissions granted by the RoleBinding aren't restricted by the ClusterAuthorizationRule, and the `Editor` level set in the ClusterAuthorizationRule doesn't apply to the `ns-b` namespace.
+The namespace restrictions are enforced by the authorization webhook, so they do not apply to the identities that the webhook does not check: control plane components, kubelets, and the ServiceAccounts of `kube-system` and of the namespaces whose names start with `d8-`. A ClusterAuthorizationRule that names such a ServiceAccount, directly or through a group such as `system:serviceaccounts`, grants its access level in every namespace. Create the ServiceAccounts of external systems in ordinary namespaces.
 
-Starting with DP 1.76.5, RoleBinding and ClusterAuthorizationRule can be used together for the same user. In older DP versions, the `user-authz` module's webhook rejected all requests to namespaces not listed in the user's ClusterAuthorizationRule, even if the user had the corresponding RoleBindings.
+For example, if a user has a ClusterAuthorizationRule with `accessLevel: Editor` limited to the `ns-a` namespace and a RoleBinding with the `view` role in the `ns-b` namespace, they get the `Editor` permissions in the `ns-a` namespace and read-only permissions in the `ns-b` namespace. Permissions granted by the RoleBinding aren't restricted by the ClusterAuthorizationRule, and the `Editor` level set in the ClusterAuthorizationRule doesn't apply to the `ns-b` namespace.
 
 <div style="height: 0;" id="use-roles"></div>
 
 ### Namespace roles
 
 {% alert level="warning" %}
-The namespace role can only be used in the RoleBinding resource.
+A namespace role cannot be assigned through a ClusterRoleBinding. Use a RoleBinding in a namespace, or a ProjectRoleBinding or ClusterProjectRoleBinding for all namespaces of a project.
 {% endalert %}
 
 Namespace roles are intended to assign rights to a user **in a specific namespace**. Users refer to, for example, developers who use a cluster configured by an administrator to deploy their applications. Such users don't need to manage DP modules or a cluster, but they need to be able to, for example, create their Ingress resources, configure application authentication, and collect logs from applications.
@@ -97,21 +97,22 @@ The detailed split of permissions between `admin` and `superadmin` is described 
 
 #### Automatic access to cluster-wide catalog resources
 
-Working in a namespace requires reading some cluster-wide "catalogs": for example, to set `storageClassName` or `ingressClassName` in a manifest, one needs to see the list of StorageClasses and IngressClasses. Therefore, every subject that receives a RoleBinding to any `d8:namespace:*` role automatically also gets read access to such catalog resources (StorageClass, IngressClass, PriorityClass, RuntimeClass, VolumeSnapshotClass, ClusterLogDestination, etc.).
+Working in a namespace requires reading some cluster-wide "catalogs": for example, to set `storageClassName` or `ingressClassName` in a manifest, one needs to see the list of StorageClasses and IngressClasses. Therefore, every subject that receives a RoleBinding to any `d8:namespace:*` or `d8:project:*` role automatically also gets read access to such catalog resources (StorageClass, IngressClass, PriorityClass, RuntimeClass, VolumeSnapshotClass, ClusterLogDestination, etc.).
 
 Technically this appears as an automatically created ClusterRoleBinding to the `d8:dict` role labelled `rbac.deckhouse.io/dict: "true"`. These objects are managed by the platform: they appear when the subject gets its first namespace binding and are removed when the subject has none left — no manual editing is needed.
 
 ### Project roles
 
 {% alert level="warning" %}
-A project role cannot be assigned via ClusterRoleBinding — such an attempt is rejected. To assign a role across a whole project, use [ProjectRoleBinding](../multitenancy-manager/cr.html#projectrolebinding) or [ClusterProjectRoleBinding](../multitenancy-manager/cr.html#clusterprojectrolebinding). A plain RoleBinding in one of the project namespaces is also allowed — the role then applies in that namespace only.
+A project role cannot be assigned via ClusterRoleBinding — such an attempt is rejected. To assign a role across a whole project, use [ProjectRoleBinding](/modules/multitenancy-manager/cr.html#projectrolebinding) or [ClusterProjectRoleBinding](/modules/multitenancy-manager/cr.html#clusterprojectrolebinding). A plain RoleBinding in one of the project namespaces is also allowed — the role then applies in that namespace only.
 {% endalert %}
 
-Project roles (`d8:project:<level>`) are intended for working with [projects](../multitenancy-manager/) — isolated environments that may span several namespaces. The levels are the same as for namespace roles: `viewer`, `user`, `manager`, `admin`, `superadmin`.
+Project roles (`d8:project:<level>`) are intended for working with [projects](/modules/multitenancy-manager/) — isolated environments that may span several namespaces. The levels are the same as for namespace roles: `viewer`, `user`, `manager`, `admin`, `superadmin`.
 
 Each project role includes all permissions of the namespace role of the same level and additionally grants permissions to manage the project itself:
 
-- `d8:project:viewer` — the permissions of `d8:namespace:viewer` plus viewing the project's [ProjectNamespace](../multitenancy-manager/cr.html#projectnamespace) and [ProjectRoleBinding](../multitenancy-manager/cr.html#projectrolebinding) resources;
+- `d8:project:viewer` — the permissions of `d8:namespace:viewer` plus viewing the project's [ProjectNamespace](/modules/multitenancy-manager/cr.html#projectnamespace) and [ProjectRoleBinding](/modules/multitenancy-manager/cr.html#projectrolebinding) resources;
+- `d8:project:user` — the permissions of `d8:namespace:user` plus viewing the project's ProjectNamespace and ProjectRoleBinding resources;
 - `d8:project:manager` — the permissions of `d8:namespace:manager` plus managing the project's additional namespaces (ProjectNamespace resources);
 - `d8:project:admin` — the permissions of `d8:namespace:admin` plus managing access to the project (ProjectRoleBinding resources) and the right to bind the built-in `d8:project:*` and `d8:namespace:*` roles (except the `superadmin` level) to other users within the project;
 - `d8:project:superadmin` — analogous to the relation between `d8:namespace:superadmin` and `d8:namespace:admin`.
@@ -127,24 +128,7 @@ The system and subsystem roles do not grant access to the namespace of user appl
 
 They grant access only to system namespaces (starting with `d8-` or `kube-`), and only to those system namespaces where the modules of the corresponding role subsystem are running.
 
-A system or subsystem role does not, by itself, let you grant access to other people.
-
-Creating a User or Group that is not already a grant subject is ordinary object creation.
-
-Creating a User for an email that already carries a grant, writing or deleting a ClusterAuthorizationRule, or resetting that identity through UserOperation, is granting roles. The request is admitted only if the requester already has covering permissions or is explicitly allowed to assign those roles.
-
-Connecting a DexProvider is measured the same way against the identities the provider can assert: [`spec.allowedIdentities`](/modules/user-authn/cr.html#dexprovider-v1-spec-allowedidentities) (emails, email domains, groups) and the provider's own group filters bound that set, and only the roles already granted inside it count. A provider without an email limit can assert every email, including the ones that hold SuperAdmin, so writing it requires SuperAdmin. Basic Authentication of an OIDC or a Crowd provider bypasses Dex and its limits, so such a provider counts as one without an email limit, and an OIDC one also without a group limit; a Crowd provider keeps only `crowd.groups` on the group axis. Details and the list of changes admitted without a check are in the user-authn module documentation.
-
-The ClusterAuthorizationRule `spec.accessLevel` field is a [basic-model](#basic-role-based-model) level: `User`, `PrivilegedUser`, `Editor`, `Admin`, `ClusterEditor`, `ClusterAdmin`, `SuperAdmin`. A `security` subsystem manager can assign any of those except `SuperAdmin`. That manager also cannot assign the Kubernetes `cluster-admin` ClusterRole. Within the granular model the security manager assigns the `security` subsystem roles up to `d8:subsystem:security:manager`.
-
-A requester with every permission across the cluster counts as SuperAdmin in these checks and can assign any role, including `SuperAdmin` and `cluster-admin`. For example, a subject of the Kubernetes `cluster-admin` ClusterRole has such permissions if the role is granted by a ClusterRoleBinding or by a ClusterAuthorizationRule without `namespaceSelector` and `limitNamespaces`. If multitenancy mode is enabled, such a rule must also set `allowAccessToSystemNamespaces: true`, otherwise it does not reach the system namespaces.
-Permissions from a ClusterAuthorizationRule with `namespaceSelector` or `limitNamespaces` do not count toward this, even if the rule grants `cluster-admin`. Any non-empty `limitNamespaces` counts as a limit on purpose, even if its entries match every namespace, such as `.*` together with `allowAccessToSystemNamespaces: true`. Such a rule still counts through its `accessLevel`. For example, `accessLevel: SuperAdmin` gives the SuperAdmin range whatever the namespace limits of the rule.
-
-`limitNamespaces` and `namespaceSelector` restrict access to namespaced resources only. A subject with the `ClusterAdmin` or `SuperAdmin` access level can still create ClusterRoleBinding and ClusterAuthorizationRule objects, so these fields do not confine what it can grant across the cluster. Give these levels only to subjects that may hold access to the whole cluster. A ClusterAuthorizationRule counts only through the bindings that `user-authz-controller` has created for it.
-
-Webhook deny messages call the `accessLevel` values basic, so they are not confused with the granular role levels (`viewer` / `manager` / `superadmin`).
-
-Permission to create User and Group objects in the `user-authn` module is not enough: it does not grant the roles already attached to that email.
+Whether a role lets you grant access to other people is described in [Who can assign roles](#who-can-assign-roles).
 {% endalert %}
 
 System and subsystem roles are intended for assigning rights to manage the entire platform or a part of it (the [subsystem](#subsystems-of-the-role-based-model)), but not the users applications themselves. The subsystem role, for example, can allow a security administrator to manage security modules (responsible for the security functions of the cluster). Thus, the security administrator will be able to configure authentication, authorization, security policies, etc., but will not be able to manage other cluster functions (such as network and monitoring settings) or change settings in the namespaces of users applications.
@@ -159,21 +143,42 @@ The system/subsystem role defines access rights:
 - to cluster-wide Kubernetes resources;
 - to manage DP modules (ModuleConfig resource) within the [subsystem](#subsystems-of-the-role-based-model) of the role, or to all DP modules for the role `d8:system:*`;
 - to manage cluster-wide resources of DP modules within the [subsystem](#subsystems-of-the-role-based-model) of the role, or to all resources of DP modules for the role `d8:system:*`;
-- to system namespaces (starting with `d8-` or `kube-`) in which the modules of the [subsystem](#subsystems-of-the-role-based-model) of the role operate, or to all system namespaces for the role `d8:system:*`.
+- to the namespaces of the modules of the role's [subsystem](#subsystems-of-the-role-based-model), or of all DP modules for the role `d8:system:*`.
 
 The role name format is `d8:system:<ACCESS_LEVEL>` for the system roles and `d8:subsystem:<SUBSYSTEM>:<ACCESS_LEVEL>` for the subsystem roles, where:
 - `SUBSYSTEM` is the role's [subsystem](#subsystems-of-the-role-based-model);
 - `ACCESS_LEVEL` is the access level.
 
   Examples:
-  - `d8:system:viewer` — access to view the configuration of all DP modules (ModuleConfig resource), their cluster-wide resources, their namespaced resources, and standard Kubernetes objects (except Secrets and RBAC resources) in all system namespaces (starting with `d8-` or `kube-`);
-  - `d8:system:manager` — similar to the role `d8:system:viewer`, but with admin-level access, i.e., view/create/modify/delete the configuration of all DP modules (ModuleConfig resource), their cluster-wide resources, their namespaced resources, and standard Kubernetes objects in all system namespaces (starting with `d8-` or `kube-`);
+  - `d8:system:viewer` — access to view the configuration of all DP modules (ModuleConfig resource), their cluster-wide resources, their namespaced resources, and standard Kubernetes objects (except Secrets and RBAC resources) in the namespaces of all DP modules;
+  - `d8:system:manager` — similar to the role `d8:system:viewer`, but with admin-level access, i.e., view/create/modify/delete the configuration of all DP modules (ModuleConfig resource), their cluster-wide resources, their namespaced resources, and standard Kubernetes objects in the namespaces of all DP modules;
   - `d8:subsystem:observability:viewer` — access to view the configuration of DP modules (ModuleConfig resource) from the `observability` area, their cluster-wide resources, their namespaced resources, and standard Kubernetes objects (except secrets and RBAC resources) in the system namespaces `d8-log-shipper`, `d8-monitoring`, `d8-okmeter`, `d8-operator-prometheus`, `d8-upmeter`, `kube-prometheus-pushgateway`.
 
 The module provides three access levels for system and subsystem roles:
 - `viewer` — allows viewing standard Kubernetes resources, the configuration of modules (ModuleConfig resources), cluster-wide resources of modules, and namespaced resources of modules in the module namespace;
 - `manager` — in addition to the level `viewer` it allows managing standard Kubernetes resources, the configuration of modules (ModuleConfig resources), cluster-wide resources of modules, and namespaced resources of modules in the module namespace;
 - `superadmin` — in addition to the level `manager` it allows managing system resources of the subsystem modules.
+
+### Who can assign roles
+
+A system or subsystem role does not, by itself, let you grant access to other people.
+
+Creating a User or Group that is not already a grant subject is ordinary object creation.
+
+Creating a User for an email that already carries a grant, writing or deleting a ClusterAuthorizationRule, or resetting that identity through UserOperation, is granting roles. The request is admitted only if the requester already has covering permissions or is explicitly allowed to assign those roles.
+
+Connecting a DexProvider is measured the same way against the identities the provider can assert: [`spec.allowedIdentities`](/modules/user-authn/cr.html#dexprovider-v1-spec-allowedidentities) (emails, email domains, groups) and the provider's own group filters bound that set, and only the roles already granted inside it count. A provider without an email limit can assert every email, including the ones that hold SuperAdmin, so writing it requires SuperAdmin. Basic Authentication of an OIDC or a Crowd provider bypasses Dex and its limits, so such a provider counts as one without an email limit, and an OIDC one also without a group limit; a Crowd provider keeps only `crowd.groups` on the group axis. Details and the list of changes admitted without a check are in the user-authn module documentation.
+
+The ClusterAuthorizationRule `spec.accessLevel` field is a [basic-model](#basic-role-based-model) level: `User`, `PrivilegedUser`, `Editor`, `Admin`, `ClusterEditor`, `ClusterAdmin`, `SuperAdmin`. A `security` subsystem manager can assign any of those except `SuperAdmin`. That manager also cannot assign the Kubernetes `cluster-admin` ClusterRole. Within the granular model the security manager assigns the `security` subsystem roles up to `d8:subsystem:security:manager`.
+
+A requester with every permission across the cluster counts as SuperAdmin in these checks and can assign any role, including `SuperAdmin` and `cluster-admin`. For example, a subject of the Kubernetes `cluster-admin` ClusterRole has such permissions if the role is granted by a ClusterRoleBinding or by a ClusterAuthorizationRule without `namespaceSelector` and `limitNamespaces`. If multitenancy mode is enabled, such a rule reaches the system namespaces only with `namespaceSelector.matchAny: true` (or the deprecated `allowAccessToSystemNamespaces: true`).
+Permissions from a ClusterAuthorizationRule with `namespaceSelector` or `limitNamespaces` do not count toward this, even if the rule grants `cluster-admin`. Any non-empty `limitNamespaces` counts as a limit on purpose, even if its entries match every namespace, such as `.*` together with `allowAccessToSystemNamespaces: true`. Such a rule still counts through its `accessLevel`. For example, `accessLevel: SuperAdmin` gives the SuperAdmin range whatever the namespace limits of the rule.
+
+`limitNamespaces` and `namespaceSelector` restrict access to namespaced resources only. A subject with the `ClusterAdmin` or `SuperAdmin` access level can still create ClusterRoleBinding and ClusterAuthorizationRule objects, so these fields do not confine what it can grant across the cluster. Give these levels only to subjects that may hold access to the whole cluster. A ClusterAuthorizationRule counts only through the bindings that `user-authz-controller` has created for it.
+
+Webhook deny messages call the `accessLevel` values basic, so they are not confused with the granular role levels (`viewer` / `manager` / `superadmin`).
+
+Permission to create User and Group objects in the `user-authn` module is not enough: it does not grant the roles already attached to that email.
 
 ### Global resource dictionaries
 
@@ -195,14 +200,12 @@ The role grants `get`, `list`, `watch` on the following resources:
 
 #### Automatic binding
 
-The `d8:dict` ClusterRoleBinding is created **automatically** whenever a RoleBinding references a
-`d8:namespace:*` or `d8:project:*` role (granular model) or a `user-authz:*` role (basic model). The
-RoleBindings that `multitenancy-manager` fans out from a ProjectRoleBinding or a ClusterProjectRoleBinding
-count as well, so the holders of project roles get the binding too. The `system:multitenancy-manager:*`
-users, which `multitenancy-manager` acts as, get none. This means
-project users can discover reference resources without any manual configuration. The binding appears with
-the RoleBinding and is removed when it is deleted. The binding is created and managed entirely by the
-`user-authz-controller` component of the module. You do not create it yourself.
+`user-authz-controller` keeps one ClusterRoleBinding to `d8:dict` for every subject that holds one of the following RoleBindings:
+
+- a RoleBinding to a `d8:namespace:*` or `d8:project:*` role, including the RoleBindings that `multitenancy-manager` creates from a ProjectRoleBinding or a ClusterProjectRoleBinding;
+- a RoleBinding that the module creates for an AuthorizationRule (the `User`, `PrivilegedUser`, `Editor`, and `Admin` levels).
+
+The `system:multitenancy-manager:*` users, which `multitenancy-manager` acts as, get none. This means that project users can discover reference resources without any manual configuration. The binding is removed when the subject has no such RoleBinding left. You do not create it yourself.
 
 {% alert level="info" %}
 The `d8:dict` role is independent of the `multitenancy-manager` cluster-wide resource access management mechanism: it only gives
@@ -221,7 +224,7 @@ For example, for the `networking` subsystem, there are the following subsystem r
 
 The scope of a role depends on which subsystem it belongs to:
 
-- The scope of the `d8:system:*` roles is all system namespaces (starting with `d8-` or `kube-`) in the cluster.
+- The scope of the `d8:system:*` roles is the namespaces of all enabled DP modules, that is, the namespaces that their capabilities name in the `rbac.deckhouse.io/namespace` label.
 - The scope of subsystem roles includes the namespaces in which the subsystem’s modules operate (see the subsystem composition table), as well as all cluster-wide objects of the subsystem’s modules.
 
 Role-based model subsystems composition table.
@@ -247,14 +250,14 @@ Labels the role model uses on ClusterRole objects:
 
 | Label | Found on | Purpose |
 |-------|----------|---------|
-| `rbac.deckhouse.io/kind` | All role model objects | Object type: `role` or `capability` — built-in (reserved), `custom-role` or `custom-capability` — user-defined. Objects without this label are not processed by the role model. |
+| `rbac.deckhouse.io/kind` | All role model objects | Object type: `role` or `capability` — built-in (reserved), `custom-role` or `custom-capability` — user-defined. An object without this label is refused if it carries the aggregation label of a platform scope. |
 | `rbac.deckhouse.io/scope` | Roles and capabilities | Scope: `namespace`, `project`, `subsystem`, `system`. |
 | `rbac.deckhouse.io/subsystem` | Subsystem objects | The subsystem name (for example, `networking`) — only with `scope: subsystem`. |
 | `rbac.deckhouse.io/aggregate-to-<scope>-as: <level>` | Capabilities and lower-level roles | The aggregation rule: includes the object into the role of the given scope and level. `<scope>` is `system`, `namespace`, `project`, or a subsystem name; `<level>` is `viewer`, `user`, `manager`, `admin`, `superadmin`. These are exactly the labels referenced by `aggregationRule` selectors. |
 | `rbac.deckhouse.io/capability` | Capabilities | The globally unique name of the capability (for example, `namespace-capability.kubernetes.view_logs`) — used to include the capability into a [custom role](faq.html#creating-a-custom-namespace-or-project-role) selectively. |
 | `rbac.deckhouse.io/use-role: <level>` | System and subsystem roles | Which namespace-role level the holder of this role automatically gets in the system namespaces of its subsystem. On the built-in roles: `viewer` → `viewer`, `manager` → `admin`, `superadmin` → `superadmin`. The access is granted by automatically created RoleBinding objects (labelled `rbac.deckhouse.io/automated: "true"`). |
-| `rbac.deckhouse.io/namespace: <namespace>` | Capabilities | An extra namespace where a RoleBinding is automatically created for the holders of a system/subsystem role ([an example in the FAQ](faq.html#extending-subsystem-roles-and-adding-a-new-namespace)). |
-| `rbac.deckhouse.io/delegatable: "true"` | The `d8:namespace:*`, `d8:project:*`, and user-defined roles | The role may be referenced by a RoleBinding [inside project namespaces](../multitenancy-manager/usage.html#which-roles-are-available-in-a-rolebinding-inside-a-project). Add this label to your custom roles that should be available in projects. |
+| `rbac.deckhouse.io/namespace: <namespace>` | Capabilities | The namespace in which the holders of a system or subsystem role that aggregates this capability get an automatically created RoleBinding ([an example in the FAQ](faq.html#extending-subsystem-roles-and-adding-a-new-namespace)). |
+| `rbac.deckhouse.io/delegatable: "true"` | The `d8:namespace:*`, `d8:project:*`, and user-defined roles | The role may be referenced by a RoleBinding [inside project namespaces](/modules/multitenancy-manager/usage.html#roles-available-in-a-rolebinding-inside-a-project). Add this label to your custom roles that should be available in projects. |
 | `rbac.deckhouse.io/deprecated: "true"` | [Deprecated alias roles](#deprecated-role-names) | The role is deprecated and will be removed; migrate the bindings to the new role. |
 | `module` | Built-in objects | The name of the DP module the object belongs to. Convenient for aggregation selectors (for example, all capabilities of one module). |
 | `heritage: deckhouse` | Built-in objects | Marks a platform object. Must not be set on your own objects. |
@@ -266,8 +269,8 @@ Annotations on ClusterRole objects:
 | `ru.meta.deckhouse.io/title`, `ru.meta.deckhouse.io/description` | Platform | The [display title and description](#display-names-of-roles) in Russian. |
 | `en.meta.deckhouse.io/title`, `en.meta.deckhouse.io/description` | Platform | The display title and description in English. |
 | `custom.meta.deckhouse.io/title`, `custom.meta.deckhouse.io/description` | Administrator | Overrides the display title/description; the only allowed modification of built-in roles. |
-| `rbac.deckhouse.io/bindable-only-via` | Platform | The list of binding kinds the role can be assigned with (on project roles — `ProjectRoleBinding,ClusterProjectRoleBinding`). |
-| `rbac.deckhouse.io/disabled-for-direct-use-in-projects: "true"` | Administrator | Forbids granting the role in projects: existing bindings keep working, new ones cannot be created ([details](../multitenancy-manager/usage.html#granting-access-within-a-project)). |
+| `rbac.deckhouse.io/bindable-only-via` | Platform | The binding kinds the role is intended for (on project roles — `ProjectRoleBinding,ClusterProjectRoleBinding`). It is informational: the platform does not check it. |
+| `rbac.deckhouse.io/disabled-for-direct-use-in-projects: "true"` | Administrator | Forbids granting the role in projects: existing bindings keep working, new ones cannot be created ([details](/modules/multitenancy-manager/usage.html#granting-access-within-a-project)). |
 | `rbac.deckhouse.io/deprecated-replaced-by` | Platform | On deprecated alias roles: the name of the role to migrate to. |
 
 ### Admin level restrictions and superadmin rights
@@ -283,7 +286,7 @@ What is forbidden at the `admin` level and allowed only at the `superadmin` leve
 - **Modifying and deleting system resources in user namespaces.** Some platform components place their objects (for example, Dex authenticator pods, or pods and disks of virtual machines) directly in application namespaces. Such objects carry the `deckhouse.io/system-resource: "true"` label. Only `superadmin` may modify or delete them; for everyone else these operations are rejected at the API server level with an explanation.
 - **Connecting to system pods** — `kubectl exec`, `kubectl attach`, and `kubectl port-forward` into a pod labelled `deckhouse.io/system-resource: "true"` are available to `superadmin` only. This protects against reading foreign secrets and interfering with platform components from inside their pods.
 
-For module authors: the marker is a **label**, `deckhouse.io/system-resource: "true"`, on the object itself — not an annotation. For edits and deletes the objects to protect are selected on the API server side, in the admission `matchConditions`, and those read labels; for `exec`, `attach` and `port-forward` the admission object is the connect request rather than the pod, so the webhook reads the pod itself — its labels again. Either way an object marked with an annotation is not seen and stays open, with nothing to say so. Put the label on every namespaced object your module places into user namespaces (pods, services, PVCs, secrets, custom resources): it then becomes writable by `superadmin` and cluster administrators only, and its pods reachable by `exec`, `attach` and `port-forward` only for them.
+Module authors: how to mark the objects that a module places in user namespaces is described in the [FAQ](faq.html#how-do-i-protect-objects-that-my-module-places-in-user-namespaces).
 
 The restrictions above do not apply to cluster administrators. A cluster administrator is anyone granted the standard Kubernetes `cluster-admin` role or the `user-authz:super-admin` role of the previous role model (which the subjects of a ClusterAuthorizationRule with the `SuperAdmin` access level receive), as well as members of the `system:masters`, `kubeadm:cluster-admins`, `superadmins`, and `system:sudousers` groups. How the role was granted does not matter: both a ClusterRoleBinding and a RoleBinding in the namespace in question work. Such users already hold full rights over the cluster, so they keep their break-glass access.
 
@@ -299,7 +302,11 @@ The role model is protected by a set of checks at the API server level. They req
 - **A scoped role cannot be granted cluster-wide.** A ClusterRoleBinding to the `d8:namespace:*` or `d8:project:*` roles (and their `d8:custom:*` variants) is rejected — otherwise a role designed for one namespace or project would apply in every namespace at once. Use a RoleBinding in the desired namespace, or ProjectRoleBinding/ClusterProjectRoleBinding for a project. A ClusterRoleBinding is only allowed for system and subsystem roles — those are cluster-scoped by nature.
 - **A capability cannot be granted cluster-wide.** A ClusterRoleBinding to any capability (`d8:*-capability:*`, including custom ones) is rejected: a capability is a building block for roles, not a standalone role. Binding a capability via a RoleBinding in a single namespace is allowed.
 - **Project management cannot be obtained through a custom role.** Creating a Role or ClusterRole that grants permissions to modify project management resources (`projects`, `projecttemplates`, `projectrolebindings`, `clusterprojectrolebindings`, `projectnamespaces`) is rejected. These permissions are granted only by the built-in `d8:project:*` roles. Without this protection, a namespace administrator could create a role with the right to create ProjectRoleBinding objects and grant themselves access to the whole project. Read-only roles on these resources are allowed.
-- **User-facing and administrative scopes cannot be mixed in one role.** A custom role cannot simultaneously aggregate capabilities of the `namespace`/`project` scopes and of the `system`/`subsystem` scopes — this rules out a "super-role" combining access to applications and to the platform.
+- **A namespace or project role cannot include platform capabilities.** A custom role with `scope: namespace`, `scope: project`, or no scope may not select system or subsystem capabilities by the `rbac.deckhouse.io/capability` label, nor the `system` or a subsystem scope by the `rbac.deckhouse.io/aggregate-to-<scope>-as` label. No custom role may combine the capabilities of the `namespace`/`project` scopes with those of the `system`/`subsystem` scopes — this rules out a "super-role" combining access to applications and to the platform.
+- **A custom capability carries rules and cannot have an `aggregationRule`.**
+- **The name must match the scope**: `d8:custom:namespace:<name>`, `d8:custom:project:<name>`, `d8:custom:system:<name>`, `d8:custom:<subsystem>:<name>`, and `d8:custom:<scope>-capability:<name>` for a capability.
+- **Only a custom capability may carry an `rbac.deckhouse.io/aggregate-to-<scope>-as` label of a platform scope.**
+- **The `rbac.deckhouse.io/delegatable: "true"` label is accepted only on a role that aggregates only namespace and project capabilities.**
 - **Custom roles cannot contain direct RBAC rules** — they may only aggregate capabilities. Permissions are described in separate custom capabilities, which keeps the contents of any role transparent. See [the FAQ](faq.html#how-do-i-extend-a-role-or-create-a-new-one) for details.
 
 ### Display names of roles
@@ -309,13 +316,12 @@ Every built-in role and capability carries a localized title and description in 
 - `ru.meta.deckhouse.io/title`, `ru.meta.deckhouse.io/description` — in Russian;
 - `en.meta.deckhouse.io/title`, `en.meta.deckhouse.io/description` — in English.
 
-These annotations are used, for example, by the Deckhouse Console web interface when displaying the list of roles.
+These annotations are used, for example, by the Deckhouse web UI when displaying the list of roles.
 
 If the standard title does not fit (for example, you want to name roles in your company's terms), add the `custom.meta.deckhouse.io/title` and `custom.meta.deckhouse.io/description` annotations to the role — the interface will show them instead of the standard ones. Example:
 
 ```shell
-d8 k annotate clusterrole d8:namespace:admin \
-  custom.meta.deckhouse.io/title='Team administrator'
+d8 k annotate clusterrole d8:namespace:admin custom.meta.deckhouse.io/title='Team administrator'
 ```
 
 This is the only allowed modification of built-in roles: changing their rules, aggregation, or labels is rejected.
@@ -341,7 +347,7 @@ The deprecated `d8:use:role:admin` role maps to `d8:namespace:admin` and, just l
 
 As long as bindings to the deprecated names remain in the cluster, the `D8UserAuthzDeprecatedRBACv2RoleInUse` (a binding to an alias role) and `D8UserAuthzDeprecatedRBACv2CapabilityInUse` (a binding to a deprecated capability that no longer grants access) alerts fire. The release that removes the aliases carries the `deprecatedRBACv2BindingsCount` release requirement: the upgrade stays pending, with the offending bindings listed in the `DeckhouseRelease` status, until every binding to an alias role is recreated on a new role name. A binding to a deprecated capability does not hold the release: removing the aliases changes nothing for it.
 
-A module that renames a role of its own keeps the old name the same way: a ClusterRole labelled `rbac.deckhouse.io/deprecated` in the module's `templates/rbacv2-compat/`, with the new name in the `rbac.deckhouse.io/deprecated-replaced-by` annotation. A binding to such an alias raises `D8UserAuthzDeprecatedRBACv2ModuleRoleInUse`, which names the new role, and does not hold the Deckhouse release: the module removes the alias in a release of its own. The annotation is required (an alias without it is ignored), and the alias may have any `d8:` name except the platform's own role families (`d8:system:`, `d8:subsystem:`, `d8:namespace:`, `d8:project:`, `d8:custom:`, `d8:dict`).
+A module that renames a role of its own keeps the old name the same way: a ClusterRole labelled `rbac.deckhouse.io/deprecated` in the module's `templates/rbacv2-compat/`, with the new name in the `rbac.deckhouse.io/deprecated-replaced-by` annotation. A binding to such an alias raises `D8UserAuthzDeprecatedRBACv2ModuleRoleInUse`, which names the new role, and does not hold the Deckhouse release: the module removes the alias in a release of its own. The annotation is required (an alias without it is ignored), and the alias may have any `d8:` name except the platform's own role families (`d8:system:`, `d8:subsystem:`, `d8:namespace:`, `d8:project:`, `d8:custom:`, `d8:dict`), the reserved prefixes `d8:binding:` and `d8:prb:`, and the previous platform names `d8:manage:` and `d8:use:`.
 
 Migrate your existing RoleBinding and ClusterRoleBinding objects to the new role names. You can find bindings that still use the deprecated names with the command:
 
@@ -356,27 +362,28 @@ d8 k get clusterrolebindings,rolebindings -A -o json \
 ## Basic role-based model
 
 Features:
-- Manages user and group access control using Kubernetes RBAC;
-- Manages access to scaling tools (the `allowScale` parameter of the [ClusterAuthorizationRule](cr.html#clusterauthorizationrule-v1-spec-allowscale) or [AuthorizationRule](cr.html#authorizationrule-v1alpha1-spec-allowscale) Custom Resource);
-- Manages access to port forwarding (the `portForwarding` parameter of the [ClusterAuthorizationRule](cr.html#clusterauthorizationrule-v1-spec-portforwarding) or [AuthorizationRule](cr.html#authorizationrule-v1alpha1-spec-portforwarding) Custom Resource);
-- Manages the list of allowed namespaces with a labelSelector (the `namespaceSelector` parameter of the [ClusterAuthorizationRule](cr.html#clusterauthorizationrule-v1-spec-namespaceselector) Custom Resource);
+- Access is configured with the ClusterAuthorizationRule and AuthorizationRule [custom resources](cr.html), on top of Kubernetes RBAC;
+- Manages access to scaling tools (the `allowScale` parameter of the [ClusterAuthorizationRule](cr.html#clusterauthorizationrule-v1-spec-allowscale) or [AuthorizationRule](cr.html#authorizationrule-v1alpha1-spec-allowscale) custom resource);
+- Manages access to port forwarding (the `portForwarding` parameter of the [ClusterAuthorizationRule](cr.html#clusterauthorizationrule-v1-spec-portforwarding) or [AuthorizationRule](cr.html#authorizationrule-v1alpha1-spec-portforwarding) custom resource);
+- Manages the list of allowed namespaces with a labelSelector (the `namespaceSelector` parameter of the [ClusterAuthorizationRule](cr.html#clusterauthorizationrule-v1-spec-namespaceselector) custom resource);
+- Namespace restrictions (multi-tenancy mode, `namespaceSelector`, `limitNamespaces`) are available in the BE, SE, SE+, EE, and CSE editions.
 
 In addition to the RBAC, you can use a set of high-level roles in the module:
 - `User` — has access to information about all objects (including viewing pod logs) but cannot exec into containers, read secrets, and perform port-forwarding;
 - `PrivilegedUser` — the same as `User` + can exec into containers, read secrets, and delete pods (and thus, restart them);
-- `Editor` — is the same as `PrivilegedUser` + can create and edit all objects that are usually required for application tasks.
-- `Admin` — the same as `Editor` + can delete service objects (auxiliary resources such as ReplicaSet, `certmanager.k8s.io/challenges` and `certmanager.k8s.io/orders`);
-- `ClusterEditor` — the same as `Editor` + can manage a limited set of `cluster-wide` objects that can be used in application tasks (ClusterXXXMetric, KeepalivedInstance, DaemonSet, etc.). This role is best suited for cluster operators.
-- `ClusterAdmin` — the same as both `ClusterEditor` and `Admin` + can manage `cluster-wide` service objects (e.g.,  MachineSets, Machines, OpenstackInstanceClasses..., as well as ClusterAuthorizationRule, ClusterRoleBindings and ClusterRole). This role is best suited for cluster administrators. **Note** that since `ClusterAdmin` can edit ClusterRoleBindings, he can **broaden his privileges within the cluster**;
+- `Editor` — the same as `PrivilegedUser` + can create, edit, and delete the objects that are usually required for application tasks;
+- `Admin` — the same as `Editor` + can create and modify pods, create ServiceAccount tokens (`serviceaccounts/token`), manage Role, RoleBinding, and AuthorizationRule objects, and delete auxiliary objects (for example, ReplicaSet and the challenges and orders of the `acme.cert-manager.io` group);
+- `ClusterEditor` — the same as `Editor` + can manage a limited set of cluster-wide objects used in application tasks (DaemonSet, StorageClass, CustomResourceDefinition, GatewayClass, and the objects that modules add at this level, for example, KeepalivedInstance). This role is best suited for cluster operators.
+- `ClusterAdmin` — the same as both `ClusterEditor` and `Admin` + can manage cluster-wide service objects (namespaces, quotas, NetworkPolicy, the proxy subresources of nodes, ClusterAuthorizationRule, ClusterRole, and ClusterRoleBinding). This role is best suited for cluster administrators. **Warning.** `ClusterAdmin` can create ClusterAuthorizationRule objects only up to the `ClusterAdmin` level, and ClusterRoleBinding objects only to roles whose permissions it already holds;
 - `SuperAdmin` — can perform any actions with any objects (note that `namespaceSelector` and `limitNamespaces` restrictions remain valid).
 
 {% alert level="warning" %}
-Currently, the multi-tenancy mode (namespace-based authorization) is implemented according to a temporary scheme and **isn't guaranteed to be entirely safe and secure**!
+Multi-tenancy mode restricts access to namespaced resources only. Subjects with the `ClusterAdmin` or `SuperAdmin` access level can still create cluster-wide bindings. The authorization webhook does not check control plane components, kubelets, and the ServiceAccounts of `kube-system` and of the namespaces whose names start with `d8-`, so the namespace restrictions do not apply to them.
 {% endalert %}
 
-If a [ClusterAuthorizationRule](cr.html#clusterauthorizationrule) Custom Resource contains the `namespaceSelector` field, neither `limitNamespaces` nor `allowAccessToSystemNamespaces`are taken into consideration.
+If a [ClusterAuthorizationRule](cr.html#clusterauthorizationrule) custom resource contains the `namespaceSelector` field, the deprecated `limitNamespaces` and `allowAccessToSystemNamespaces` fields are not taken into consideration.
 
-If the authorization webhook becomes unavailable, requests are **denied**, not allowed: the webhook runs before RBAC and is configured with `failurePolicy: Deny`, so a request it cannot answer does not reach RBAC. The exception is the identities listed in `matchConditions` of the AuthorizationConfiguration: control-plane components, kubelets, and the service accounts of the `kube-system` and `d8-*` namespaces bypass the webhook, so the cluster keeps running and Deckhouse can restore the webhook.
+In multi-tenancy mode, if the authorization webhook becomes unavailable, requests are **denied**, not allowed: the webhook runs before RBAC and is configured with `failurePolicy: Deny`, so a request it cannot answer does not reach RBAC. The exception is the identities listed in `matchConditions` of the AuthorizationConfiguration: control plane components, kubelets, the ServiceAccounts of the `kube-system` and `d8-*` namespaces, and anonymous kube-apiserver health probes (`/livez`, `/readyz`, `/healthz`) bypass the webhook, so the cluster keeps running and Deckhouse can restore the webhook.
 
 ### Default access list for each role
 
@@ -820,9 +827,9 @@ write:
 
 {: #get_rules .anchored}
 
-You can get additional list of access rules for module role from cluster ([existing user defined rules](usage.html#customizing-rights-of-high-level-roles) and non-default rules from other deckhouse modules):
+You can get additional list of access rules for module role from cluster ([rules added by the administrator](usage.html#customizing-rights-of-high-level-roles) and non-default rules of other Deckhouse modules):
 
 ```bash
 D8_ROLE_NAME=Editor
-kubectl get clusterrole -A -o jsonpath="{range .items[?(@.metadata.annotations.user-authz\.deckhouse\.io/access-level=='$D8_ROLE_NAME')]}{.rules}{'\n'}{end}" | jq -s add
+d8 k get clusterrole -o jsonpath="{range .items[?(@.metadata.annotations.user-authz\.deckhouse\.io/access-level=='$D8_ROLE_NAME')]}{.rules}{'\n'}{end}" | jq -s add
 ```

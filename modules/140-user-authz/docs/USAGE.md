@@ -1,16 +1,17 @@
 ---
 title: "The user-authz module: usage"
+description: "Examples of granting access with the roles and objects of the user-authz module: administrators, namespaces, projects, ClusterAuthorizationRule, ServiceAccounts, and client certificates."
 ---
 
 ## Example of assigning rights to a cluster administrator
 
 {% alert level="info" %}
-The example uses the [granular role-based](./#granular-role-based-model).
+The example uses the [granular role-based model](./#granular-role-based-model).
 {% endalert %}
 
 To grant access to a cluster administrator, use the role `d8:system:manager` in ClusterRoleBinding.
 
-Example of assigning rights to a cluster administrator (User `jane`):
+Example of assigning rights to a cluster administrator (User `jane.doe@example.com`):
 
 ```yaml
 apiVersion: rbac.authorization.k8s.io/v1
@@ -28,7 +29,7 @@ roleRef:
 ```
 
 {% offtopic title="The rights that the user will get" %}
-The rights that the user will get will be limited to namespaces starting with `d8-` or `kube-`.
+The user gets access to cluster-wide resources, to the configuration of DP modules, and to the namespaces of the enabled DP modules. The user gets no access to the namespaces of user applications.
 
 The user will be able to:
 - View, modify, delete, and create Kubernetes resources and DP modules;
@@ -43,12 +44,12 @@ The user will be able to:
 ## Example of assigning rights to a network administrator
 
 {% alert level="info" %}
-The example uses the [granular role-based](./#granular-role-based-model).
+The example uses the [granular role-based model](./#granular-role-based-model).
 {% endalert %}
 
 To grant a network administrator access to manage the network subsystem of the cluster, use the role `d8:subsystem:networking:manager` in ClusterRoleBinding.
 
-Example of assigning rights to a network administrator (User `jane`):
+Example of assigning rights to a network administrator (User `jane.doe@example.com`):
 
 ```yaml
 apiVersion: rbac.authorization.k8s.io/v1
@@ -157,7 +158,7 @@ The user will be able to:
 ## Example of assigning administrative rights to a user within a namespace
 
 {% alert level="info" %}
-The example uses the [granular role-based](./#granular-role-based-model).
+The example uses the [granular role-based model](./#granular-role-based-model).
 {% endalert %}
 
 To assign rights to a user to manage application resources within a namespace (including some namespaced DP module resources such as DexAuthenticator), use the role `d8:namespace:admin` in a RoleBinding in the corresponding namespace. Cluster-wide module configuration is not included.
@@ -215,7 +216,7 @@ In the `myapp` namespace, the user will be able to:
 - View, edit, delete, and create the following DP module resources:
   - `DexAuthenticator`
   - `DexClient`
-  - `PodLogginConfig`
+  - `PodLoggingConfig`
 - Execute the following commands for pods and services:
   - `kubectl attach`
   - `kubectl exec`
@@ -228,7 +229,7 @@ The user will **not** get the operations reserved for the `superadmin` level (se
 ## An example of assigning rights across all namespaces of a project
 
 {% alert level="info" %}
-The example uses the [granular role-based model](./#granular-role-based-model) and the [multitenancy-manager](../multitenancy-manager/) module.
+The example uses the [granular role-based model](./#granular-role-based-model) and the [multitenancy-manager](/modules/multitenancy-manager/) module.
 {% endalert %}
 
 If the namespaces are grouped into a [project](/modules/multitenancy-manager/), a role can be granted for the whole project at once — it will automatically apply in all of its namespaces, including those created later. To do that, use a [ProjectRoleBinding](/modules/multitenancy-manager/cr.html#projectrolebinding) in the main namespace of the project instead of RoleBinding:
@@ -248,9 +249,13 @@ spec:
     name: d8:project:user
 ```
 
-For more details on role bindings in projects, see [the multitenancy-manager module documentation](../multitenancy-manager/usage.html#granting-access-within-a-project).
+For more details on role bindings in projects, see [the multitenancy-manager module documentation](/modules/multitenancy-manager/usage.html#granting-access-within-a-project).
 
-## An example of `ClusterAuthorizationRule`
+## An example of a ClusterAuthorizationRule
+
+{% alert level="info" %}
+The example uses the [basic role-based model](./#basic-role-based-model).
+{% endalert %}
 
 ```yaml
 apiVersion: deckhouse.io/v1
@@ -263,13 +268,11 @@ spec:
     name: some@example.com
   - kind: ServiceAccount
     name: gitlab-runner-deploy
-    namespace: d8-service-accounts
+    namespace: ci
   - kind: Group
     name: some-group-name
   accessLevel: PrivilegedUser
   portForwarding: true
-  # This option is only available if the enableMultiTenancy parameter is set.
-  allowAccessToSystemNamespaces: false
   # This option is only available if the enableMultiTenancy parameter is set.
   namespaceSelector:
     labelSelector:
@@ -289,13 +292,19 @@ If the match is intentional, for example, if the ClusterAuthorizationRule has be
 
 Deleting a ClusterAuthorizationRule uses the same can-assign check as creating or updating it. You can remove a grant only if you could assign those roles. An update is checked against both the previous and the new grants, so lowering `SuperAdmin` to `User` still requires being able to assign `SuperAdmin`.
 
-Write an email for the `User` subject in lowercase. It's recorded to the token in lowercase so a subject spelled `Admin@Example.com` won't match `admin@example.com`. A `Group`-type subject names are matched exactly, since group names are not lowercased anywhere.
+Write an email for the `User` subject in lowercase. It's recorded to the token in lowercase so a subject spelled `Admin@Example.com` won't match `admin@example.com`. Names of `Group` subjects are matched exactly, because group names are not lowercased anywhere.
 
 This restriction is applied when a User or Group is created and when its `spec.email` or `spec.name` is changed. Deleting a User or Group whose name a rule still grants privileges to is allowed with a warning: the name stays granted, and recreating the object restores the privileges. The restriction doesn't prevent adding existing users or groups to a ClusterAuthorizationRule or AuthorizationRule. If a matching User or Group already exists, it receives the privileges immediately after it's added to the rule.
 
 ## Managing permissions via CLI
 
-The [`d8 iam access`](/products/kubernetes-platform/documentation/v1/cli/d8/reference/#d8-iam-access) command provides a convenient way to manage authorization rules without writing YAML manifests. It creates and deletes [ClusterAuthorizationRule](cr.html#clusterauthorizationrule) and [AuthorizationRule](cr.html#authorizationrule) resources.
+{% alert level="info" %}
+The `d8 iam access` command uses the [basic role-based model](./#basic-role-based-model).
+{% endalert %}
+
+The [`d8 iam access`](/products/kubernetes-platform/documentation/v1/cli/d8/reference/#d8-iam-access) command provides a convenient way to manage authorization rules without writing YAML manifests. `d8 iam access grant` creates [ClusterAuthorizationRule](cr.html#clusterauthorizationrule) and [AuthorizationRule](cr.html#authorizationrule) objects, and `d8 iam access revoke` deletes only the objects created by `grant`.
+
+The command works with the basic role-based model, and with users and groups only. Grant roles of the [granular model](./#granular-role-based-model) with RoleBinding and ClusterRoleBinding objects. Give access to a ServiceAccount with a manifest, see [Creating a ServiceAccount for a machine and granting it access](#creating-a-serviceaccount-for-a-machine-and-granting-it-access). The `d8 iam get user` and `d8 iam list users` commands count only ClusterAuthorizationRule and AuthorizationRule objects. To see all the access of a subject, use [SubjectAccessReport](faq.html#how-do-i-find-out-what-a-specific-user-group-or-serviceaccount-is-allowed-to-do).
 
 Available access levels: `User`, `PrivilegedUser`, `Editor`, `Admin`, `ClusterEditor`, `ClusterAdmin`, `SuperAdmin`.
 
@@ -331,6 +340,8 @@ Grant a role to group members by a namespace label selector:
 d8 iam access grant group admins --access-level Editor --scope labels=team=platform,tier=prod
 ```
 
+`--scope cluster` leaves out the system namespaces only in [multi-tenancy mode](configuration.html#parameters-enablemultitenancy); without it, the rule grants its access level in every namespace, system ones included. `--scope labels=...` and `--scope all-namespaces` need multi-tenancy mode: without it, the rule is refused. A rule created with `-n` is an AuthorizationRule and applies only in its namespace.
+
 Grant a role to group members with additional capabilities:
 
 ```shell
@@ -346,14 +357,16 @@ d8 iam access grant user anton --access-level Admin -n dev --dry-run -o yaml
 Revoke a user's permissions in a namespace:
 
 ```shell
-d8 iam access revoke user anton -n dev
+d8 iam access revoke user anton --access-level Admin -n dev
 ```
 
 Revoke a user's cluster-wide permissions:
 
 ```shell
-d8 iam access revoke user anton --scope cluster
+d8 iam access revoke user anton --access-level ClusterAdmin --scope cluster
 ```
+
+The access level and the scope must match the original grant.
 
 List all access rules in the cluster:
 
@@ -361,10 +374,11 @@ List all access rules in the cluster:
 d8 iam list rules
 ```
 
-Show detailed information about a specific rule:
+Show detailed information about a specific rule. Name a ClusterAuthorizationRule as `CAR/<NAME>` and an AuthorizationRule as `AR/<NAMESPACE>/<NAME>`:
 
 ```shell
-d8 iam get rule <name>
+d8 iam get rule CAR/<NAME>
+d8 iam get rule AR/<NAMESPACE>/<NAME>
 ```
 
 ## Example of granting access to all namespaces
@@ -377,7 +391,7 @@ In [multi-tenancy](configuration.html#parameters-enablemultitenancy) mode (`user
 
 Configuration options:
 
-- **Allow access to all namespaces, including system namespaces** (`kube-*`, `d8-*`, `loghouse`, `default`, etc.). To allow access to all namespaces, including system namespaces,  set `spec.namespaceSelector.matchAny: true`. If the `namespaceSelector` parameter is specified, the `limitNamespaces` and `allowAccessToSystemNamespaces` values are **ignored**.
+- **Allow access to all namespaces, including system namespaces** (`kube-*`, `d8-*`, `default`, `antiopa`, `loghouse`). To allow access to all namespaces, including system namespaces,  set `spec.namespaceSelector.matchAny: true`. If the `namespaceSelector` parameter is specified, the values of the deprecated `limitNamespaces` and `allowAccessToSystemNamespaces` parameters are **ignored**.
 
   Example:
 
@@ -395,18 +409,20 @@ Configuration options:
       matchAny: true
   ```
 
-- **Allow access to all namespaces except system namespaces**. To grant a user access to all namespaces except system namespaces, do not specify `namespaceSelector`, `limitNamespaces`, or `allowAccessToSystemNamespaces` when creating a ClusterAuthorizationRule. For a list of system namespaces, see the [CR field description](cr.html#clusterauthorizationrule-v1-spec-namespaceselector).
+- **Allow access to all namespaces except system namespaces**. To grant a user access to all namespaces except system namespaces, do not specify `namespaceSelector` or the deprecated `limitNamespaces` and `allowAccessToSystemNamespaces` parameters when creating a ClusterAuthorizationRule. For a list of system namespaces, see the [CR field description](cr.html#clusterauthorizationrule-v1-spec-namespaceselector).
 
-> The `SuperAdmin` access level **does not lift** the namespace restrictions specified in the `namespaceSelector` and `limitNamespaces` parameters. If you need to grant access to all namespaces, specify the scope explicitly, including via [`namespaceSelector.matchAny`](cr.html#clusterauthorizationrule-v1-spec-namespaceselector).
+{% alert level="info" %}
+The `SuperAdmin` access level **does not lift** the namespace restrictions specified in the `namespaceSelector` and `limitNamespaces` parameters. If you need to grant access to all namespaces, specify the scope explicitly, including via [`namespaceSelector.matchAny`](cr.html#clusterauthorizationrule-v1-spec-namespaceselector).
+{% endalert %}
 
-If several `ClusterAuthorizationRule` resources match the same subject, the allowed namespaces are **combined**; the effective `accessLevel` is the **most powerful** among all matching rules. For details, refer to the [FAQ](faq.html#what-if-there-are-two-clusterauthorizationrules-matching-to-a-single-user).
+If several `ClusterAuthorizationRule` resources match the same subject, the allowed namespaces are **combined**; the effective `accessLevel` is the **most powerful** among all matching rules. For details, refer to the [FAQ](faq.html#what-if-there-are-two-clusterauthorizationrules-matching-a-single-user).
 
 {% alert level="warning" %}
-Namespace restrictions from ClusterAuthorizationRule are enforced by the authorization webhook chain. If the webhook is unavailable, these restrictions **do not apply** until the webhook is reachable again. For more information, see the [module description](./#basic-role-based-model).
+Namespace restrictions from ClusterAuthorizationRule are enforced by the authorization webhook. The API server calls it before RBAC with `failurePolicy: Deny`, so if the webhook is unavailable, the requests it has to answer are **denied**. The webhook does not check control plane components, kubelets, and the ServiceAccounts of the `kube-system` namespace and of the namespaces whose names start with `d8-`. Namespace restrictions do not apply to them. For details, see the [module description](./#basic-role-based-model).
 {% endalert %}
 
 {% offtopic title="Granular role-based model" %}
-`d8:namespace:*` roles must be bound with RoleBinding in a **specific** namespace — use one RoleBinding per namespace (or automate the process). `d8:system:*` / `d8:subsystem:*` roles do not cover namespaces for user workloads; they only apply to system namespaces (`d8-*`, `kube-*`) within the subsystem.
+In the granular model, bind `d8:namespace:*` roles with a RoleBinding in each namespace, or use a [ProjectRoleBinding](/modules/multitenancy-manager/cr.html#projectrolebinding) to cover every namespace of a project. `d8:system:*` / `d8:subsystem:*` roles do not cover namespaces for user workloads; they only apply to system namespaces (`d8-*`, `kube-*`) within the subsystem.
 {% endofftopic %}
 
 ## Creating a user
@@ -415,30 +431,39 @@ There are two types of users in Kubernetes:
 
 * Service accounts managed by Kubernetes via the API;
 * Regular users and groups managed by some external tool that the cluster administrator configures. There are many authentication mechanisms and, accordingly, many ways to create users. Currently, two authentication methods are supported:
-  * Via the `user-authn` module. The module supports the following external providers and authentication protocols: GitHub, GitLab, Atlassian Crowd, BitBucket Cloud, Crowd, LDAP, OIDC. More details — in the documentation of the [`user-authn`](/modules/user-authn/) module.
+  * Via the `user-authn` module. The module supports the following external providers and authentication protocols: GitHub, GitLab, Bitbucket Cloud, Atlassian Crowd, LDAP, OIDC, SAML, and local users (the [User](/modules/user-authn/cr.html#user) object). More details — in the documentation of the [`user-authn`](/modules/user-authn/) module.
   * Via the [certificates](#how-to-create-a-user-using-a-client-certificate).
 
-When issuing the authentication certificate, you need to specify the name (`CN=<name>`), the required number of groups (`O=<group>`), and sign it using the root CA of the cluster. It is this mechanism that authenticates you in the cluster when, for example, you use kubectl on a bastion node.
+When issuing the authentication certificate, you need to specify the name (`CN=<name>`), the required number of groups (`O=<group>`), and sign it using the root CA of the cluster. It is this mechanism that authenticates you in the cluster when, for example, you use kubectl on a master node.
 
 ### Creating a ServiceAccount for a machine and granting it access
 
+{% alert level="info" %}
+The example uses the [basic role-based model](./#basic-role-based-model).
+{% endalert %}
+
 You may need to create a ServiceAccount with access to the Kubernetes API when, for example, an application is deployed using a CI system.
 
-1. Create a ServiceAccount, e.g., in the `d8-service-accounts` namespace:
+1. Create a namespace for CI, for example `ci`, and a ServiceAccount in it:
 
    ```shell
    d8 k create -f - <<EOF
    apiVersion: v1
+   kind: Namespace
+   metadata:
+     name: ci
+   ---
+   apiVersion: v1
    kind: ServiceAccount
    metadata:
      name: gitlab-runner-deploy
-     namespace: d8-service-accounts
+     namespace: ci
    ---
    apiVersion: v1
    kind: Secret
    metadata:
      name: gitlab-runner-deploy-token
-     namespace: d8-service-accounts
+     namespace: ci
      annotations:
        kubernetes.io/service-account.name: gitlab-runner-deploy
    type: kubernetes.io/service-account-token
@@ -457,14 +482,16 @@ You may need to create a ServiceAccount with access to the Kubernetes API when, 
      subjects:
      - kind: ServiceAccount
        name: gitlab-runner-deploy
-       namespace: d8-service-accounts
-     accessLevel: SuperAdmin
-     # This option is only available if the enableMultiTenancy parameter is set.
-     allowAccessToSystemNamespaces: true      
+       namespace: ci
+     accessLevel: Editor
    EOF
    ```
 
-   If multitenancy is enabled in the Deckhouse configuration (via the [`enableMultiTenancy`](configuration.html#parameters-enablemultitenancy) parameter), configure the namespaces the ServiceAccount has access to (via the [`namespaceSelector`](cr.html#clusterauthorizationrule-v1-spec-namespaceselector) parameter).
+   If multi-tenancy mode is enabled (the [`enableMultiTenancy`](configuration.html#parameters-enablemultitenancy) parameter), limit the namespaces the ServiceAccount has access to with the [`namespaceSelector`](cr.html#clusterauthorizationrule-v1-spec-namespaceselector) parameter.
+
+   {% alert level="warning" %}
+   Do not create ServiceAccounts for external systems in `kube-system` or in namespaces whose names start with `d8-`. The authorization webhook does not check the ServiceAccounts of these namespaces, so the namespace limits of a ClusterAuthorizationRule (`namespaceSelector`, `limitNamespaces`, `allowAccessToSystemNamespaces`) do not apply to them. Their access level applies in every namespace of the cluster, including system namespaces.
+   {% endalert %}
 
 1. Set the variable values (they will be used later) by running the following commands (**insert your own values**):
 
@@ -490,22 +517,22 @@ You may need to create a ServiceAccount with access to the Kubernetes API when, 
 
         ```shell
         d8 k config set-cluster $CLUSTER_NAME --embed-certs=true \
-          --server=https://$(d8 k get ep kubernetes -o json | jq -rc '.subsets[0] | "\(.addresses[0].ip):\(.ports[0].port)"') \
+          --server=https://$(d8 k get endpointslices -l kubernetes.io/service-name=kubernetes -o json | jq -rc '.items[0] | "\(.endpoints[0].addresses[0]):\(.ports[0].port)"') \
           --certificate-authority=/tmp/ca.crt \
           --kubeconfig=$FILE_NAME
         ```
 
    * If there is no direct access to the API server, use one of the following options:
       * enable access to the API-server over the Ingress controller (the [apiserver.publishAPI](/modules/control-plane-manager/configuration.html#parameters-apiserver-publishapi) parameter of the `control-plane-manager` module) and specify the addresses from which requests originate (the [whitelistSourceRanges](/modules/control-plane-manager/configuration.html#parameters-apiserver-publishapi-ingress-whitelistsourceranges) parameter);
-      * specify addresses from which requests will originate in a separate Ingress controller (the [acceptRequestsFrom](../ingress-nginx/cr.html#ingressnginxcontroller-v1-spec-acceptrequestsfrom) parameter).
+      * specify addresses from which requests will originate in a separate Ingress controller (the [acceptRequestsFrom](/modules/ingress-nginx/cr.html#ingressnginxcontroller-v1-spec-acceptrequestsfrom) parameter).
 
    * If a non-public CA is used:
 
-     1. Get the CA certificate from the Secret with the certificate that is used for the `api.%s` domain:
+     1. Get the CA certificate from the Secret of the `kubernetes-api` Ingress in the `kube-system` namespace. It is the certificate of the `api.%s` domain:
 
         ```shell
-        d8 k -n d8-user-authn get secrets -o json \
-          $(d8 k -n d8-user-authn get ing kubernetes-api -o jsonpath="{.spec.tls[0].secretName}") \
+        d8 k -n kube-system get secrets -o json \
+          $(d8 k -n kube-system get ing kubernetes-api -o jsonpath="{.spec.tls[0].secretName}") \
           | jq -rc '.data."ca.crt" // .data."tls.crt"' \
           | base64 -d > /tmp/ca.crt
         ```
@@ -514,7 +541,7 @@ You may need to create a ServiceAccount with access to the Kubernetes API when, 
 
         ```shell
         d8 k config set-cluster $CLUSTER_NAME --embed-certs=true \
-          --server=https://$(d8 k -n d8-user-authn get ing kubernetes-api -ojson | jq '.spec.rules[].host' -r) \
+          --server=https://$(d8 k -n kube-system get ing kubernetes-api -ojson | jq '.spec.rules[].host' -r) \
           --certificate-authority=/tmp/ca.crt \
           --kubeconfig=$FILE_NAME
         ```
@@ -523,15 +550,27 @@ You may need to create a ServiceAccount with access to the Kubernetes API when, 
 
      ```shell
      d8 k config set-cluster $CLUSTER_NAME \
-       --server=https://$(d8 k -n d8-user-authn get ing kubernetes-api -ojson | jq '.spec.rules[].host' -r) \
+       --server=https://$(d8 k -n kube-system get ing kubernetes-api -ojson | jq '.spec.rules[].host' -r) \
        --kubeconfig=$FILE_NAME
+     ```
+
+   * If the API server is published through Gateway API, the cluster has the `kubernetes-api` HTTPRoute in the `kube-system` namespace instead of the Ingress. Take the host from it instead of `.spec.rules[].host` in the commands above:
+
+     ```shell
+     d8 k -n kube-system get httproute kubernetes-api -o jsonpath='{.spec.hostnames[0]}'
+     ```
+
+     Take the name of the Secret with the CA certificate from the `control-plane-manager` ListenerSet instead of `.spec.tls[0].secretName`:
+
+     ```shell
+     d8 k -n kube-system get listenerset control-plane-manager -o jsonpath='{.spec.listeners[?(@.name=="api")].tls.certificateRefs[0].name}'
      ```
 
 1. Generate the `user` section using the token from the Secret's ServiceAccount in the kubectl configuration file:
 
    ```shell
    d8 k config set-credentials $USER_NAME \
-     --token=$(d8 k -n d8-service-accounts get secret gitlab-runner-deploy-token -o json |jq -r '.data["token"]' | base64 -d) \
+     --token=$(d8 k -n ci get secret gitlab-runner-deploy-token -o json |jq -r '.data["token"]' | base64 -d) \
      --kubeconfig=$FILE_NAME
    ```
 
@@ -552,7 +591,7 @@ You may need to create a ServiceAccount with access to the Kubernetes API when, 
 ### How to create a user using a client certificate
 
 {% alert level="info" %}
-This method is recommended for system needs (authentication of kubelets, control plane components, etc.). If you need to create a "normal" user (e.g. with console access, `kubectl`, etc.), use [kubeconfig generation](../user-authn/faq.html#how-to-generate-a-kubeconfig-and-access-kubernetes-api).
+This method is recommended for system needs (authentication of kubelets, control plane components, etc.). If you need to create a "normal" user (e.g. with console access, `kubectl`, etc.), use [kubeconfig generation](/modules/user-authn/faq.html#how-to-generate-a-kubeconfig-and-access-kubernetes-api).
 {% endalert %}
 
 To create a user with a client certificate, you can use either [OpenSSL](#creating-a-user-using-a-certificate-issued-via-openssl) or the [Kubernetes API (via the CertificateSigningRequest object)](#creating-a-user-by-issuing-a-certificate-via-the-kubernetes-api).
@@ -579,7 +618,7 @@ The features of this method are:
 
 To create a user using a client certificate issued through OpenSSL, follow these steps:
 
-1. Get the cluster’s root certificate (`ca.crt` and `ca.key`).
+1. Make sure you have access to a master node. The cluster CA files `ca.crt` and `ca.key` are in `/etc/kubernetes/pki/` on it.
 1. Generate the user key:
 
     ```shell
@@ -649,15 +688,17 @@ To create a user using a client certificate issued through the Kubernetes API, f
 
 1. Create a manifest for the CertificateSigningRequest object and save it to a file (`csr.yaml` in this example):
 
-    > In the `request` field, specify the contents of the CSR created in the previous step, encoded in Base64.
+    {% alert level="info" %}
+    In the `request` field, replace `<CSR_BASE64>` with the contents of `myuser.csr` encoded in Base64 without line breaks, for example, the output of `base64 < myuser.csr | tr -d '\n'`.
+    {% endalert %}
 
     ```yaml
     apiVersion: certificates.k8s.io/v1
     kind: CertificateSigningRequest
     metadata:
-    name: demo-client-cert
+      name: demo-client-cert
     spec:
-      request: # CSR in Base64
+      request: <CSR_BASE64>
       signerName: "kubernetes.io/kube-apiserver-client"
       expirationSeconds: 7200
       usages:
@@ -679,7 +720,7 @@ To create a user using a client certificate issued through the Kubernetes API, f
 
     If the certificate is issued, it will have the value `Approved,Issued` in the `CONDITION` column. Example output:
 
-    ```shell
+    ```console
     NAME               AGE     SIGNERNAME                            REQUESTOR          REQUESTEDDURATION   CONDITION
     demo-client-cert   8m24s   kubernetes.io/kube-apiserver-client   kubernetes-admin   120m                Approved,Issued
     ```
@@ -692,7 +733,7 @@ To create a user using a client certificate issued through the Kubernetes API, f
 
     Then, confirm that the certificate has been successfully approved.
 
-1. Extract the encoded certificate from the CSR named `demo-client-cert`, decode it from Base64 and save it to the file (`myuser.crt` in this example) created in step 2:
+1. Extract the encoded certificate from the CSR named `demo-client-cert`, decode it from Base64 and save it to a file (`myuser.crt` in this example):
 
     ```shell
     d8 k get csr demo-client-cert -ojsonpath="{.status.certificate}" | base64 -d > myuser.crt
@@ -726,7 +767,11 @@ EOF
 
 #### Granting access to the created user
 
-To grant access to the created user, create a `ClusterAuthorizationRule'.
+{% alert level="info" %}
+The example uses the [basic role-based model](./#basic-role-based-model).
+{% endalert %}
+
+To grant access to the created user, create a ClusterAuthorizationRule.
 
 Example of a `ClusterAuthorizationRule`:
 
@@ -749,26 +794,12 @@ The multi-tenancy mode, which allows you to restrict access to namespaces, is en
 
 Working in multi-tenancy mode requires enabling the [Webhook authorization plugin](https://kubernetes.io/docs/reference/access-authn-authz/webhook/) and configuring a `kube-apiserver.` All actions necessary for the multi-tenancy mode are performed **automatically** by the [control-plane-manager](/modules/control-plane-manager/) module; no additional steps are required.
 
+Multi-tenancy mode is available in the editions listed in the [parameter description](configuration.html#parameters-enablemultitenancy). The API server is configured automatically while the [`controlPlaneConfigurator.enabled`](configuration.html#parameters-controlplaneconfigurator-enabled) parameter is `true`.
+
 Changes to the `kube-apiserver` manifest that will occur after enabling multi-tenancy mode:
 
-* The authorization chain will be configured using the structured authorization configuration (`--authorization-config=/etc/kubernetes/deckhouse/extra-files/authorization-config.yaml`) with `Node`, `Webhook`, and `RBAC` authorizers;
-* The `kubeconfig` for the authorization webhook will be created at `/etc/kubernetes/deckhouse/extra-files/webhook-config.yaml`;
-* The `volumeMounts` parameter will be added:
-
-  ```yaml
-  - name: authorization-webhook-config
-    mountPath: /etc/kubernetes/authorization-webhook-config.yaml
-    readOnly: true
-  ```
-
-* The `volumes` parameter will be added:
-
-  ```yaml
-  - name: authorization-webhook-config
-    hostPath:
-      path: /etc/kubernetes/authorization-webhook-config.yaml
-      type: FileOrCreate
-  ```
+* The `--authorization-mode=Node,RBAC` flag is replaced with the structured authorization configuration (`--authorization-config=/etc/kubernetes/deckhouse/extra-files/authorization-config.yaml`) with the `Node`, `Webhook`, and `RBAC` authorizers;
+* The `kubeconfig` for the authorization webhook will be created at `/etc/kubernetes/deckhouse/extra-files/webhook-config.yaml`. Both files are in the `/etc/kubernetes/deckhouse/extra-files` directory, which is already mounted into `kube-apiserver`.
 
 ## How do I check that a user has access?
 
@@ -778,7 +809,9 @@ Execute the command below with the following parameters:
 * `user` - the name of the user;
 * `groups` - user groups;
 
-> You can use Dex logs to find out groups and a username if this module is used together with the `user-authn` module (`d8 k -n d8-user-authn logs -l app=dex`); logs available only if the user is authorized.
+{% alert level="info" %}
+If this module is used together with the `user-authn` module, you can find the groups and the username of a user in the Dex logs (`d8 k -n d8-user-authn logs -l app=dex`). The logs have them only after the user has signed in.
+{% endalert %}
 
 ```shell
 cat  <<EOF | 2>&1 d8 k  create --raw  /apis/authorization.k8s.io/v1/subjectaccessreviews -f - | jq .status
@@ -787,14 +820,14 @@ cat  <<EOF | 2>&1 d8 k  create --raw  /apis/authorization.k8s.io/v1/subjectacces
   "kind": "SubjectAccessReview",
   "spec": {
     "resourceAttributes": {
-      "namespace": "",
+      "namespace": "dev",
       "verb": "watch",
       "version": "v1",
       "resource": "pods"
     },
-    "user": "system:kube-controller-manager",
+    "user": "user@example.com",
     "groups": [
-      "Admins"
+      "developers"
     ]
   }
 }
@@ -806,11 +839,11 @@ You will see if access is allowed and what role is used:
 ```json
 {
   "allowed": true,
-  "reason": "RBAC: allowed by ClusterRoleBinding \"system:kube-controller-manager\" of ClusterRole \"system:kube-controller-manager\" to User \"system:kube-controller-manager\""
+  "reason": "RBAC: allowed by RoleBinding \"<BINDING_NAME>/dev\" of ClusterRole \"<ROLE_NAME>\" to User \"user@example.com\""
 }
 ```
 
-If the **multitenancy** mode is enabled in your cluster, you need to perform another check to be sure that the user has access to the namespace:
+The answer of the API server already includes the decision of the authorization webhook. To see the answer of the webhook alone, run the following command as root on a master node:
 
 ```shell
 cat  <<EOF | 2>&1 d8 k --kubeconfig /etc/kubernetes/deckhouse/extra-files/webhook-config.yaml create --raw / -f - | jq .status
@@ -819,14 +852,14 @@ cat  <<EOF | 2>&1 d8 k --kubeconfig /etc/kubernetes/deckhouse/extra-files/webhoo
   "kind": "SubjectAccessReview",
   "spec": {
     "resourceAttributes": {
-      "namespace": "",
+      "namespace": "dev",
       "verb": "watch",
       "version": "v1",
       "resource": "pods"
     },
-    "user": "system:kube-controller-manager",
+    "user": "user@example.com",
     "groups": [
-      "Admins"
+      "developers"
     ]
   }
 }
@@ -845,7 +878,7 @@ The `allowed: false` message means that the webhook doesn't block access. In cas
 {
   "allowed": false,
   "denied": true,
-  "reason": "making cluster scoped requests for namespaced resources are not allowed"
+  "reason": "either you have no access to the namespace or the namespace does not exist"
 }
 ```
 
@@ -854,6 +887,8 @@ The `allowed: false` message means that the webhook doesn't block access. In cas
 If you want to grant more privileges to a specific [high-level role](./#basic-role-based-model), you only need to create a ClusterRole with the `user-authz.deckhouse.io/access-level: <AccessLevel>` annotation.
 
 The module automatically sets the `user-authz.deckhouse.io/access-level` label on such ClusterRoles and includes their rules in the aggregated ClusterRole `user-authz:<access-level>:custom`. The label is internal: the module keeps it equal to the annotation and removes it when the annotation is absent, so there is no need to set it by hand. In audit logs, access granted through an annotated ClusterRole is attributed to that aggregated role.
+
+The annotation accepts `User`, `PrivilegedUser`, `Editor`, `Admin`, `ClusterEditor`, and `ClusterAdmin`. Other values, including `SuperAdmin`, are ignored. In the name of the aggregated role, the level is written in kebab case, for example, `user-authz:cluster-editor:custom`. The rules of a level are also included in the aggregated roles of every higher level.
 
 An example:
 

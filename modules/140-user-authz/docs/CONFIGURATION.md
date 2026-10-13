@@ -2,10 +2,12 @@
 title: "The user-authz module: configuration"
 ---
 
-> **Caution!** We strongly do not recommend creating Pods and ReplicaSets – these objects are secondary and should be created by other controllers. Access to creating and modifying Pods and ReplicaSets is disabled.
->
-> **Caution!** Currently, the multi-tenancy mode (namespace-based authorization) is implemented according to a temporary scheme and **isn't guaranteed to be entirely safe and secure**! The `allowAccessToSystemNamespaces`, `namespaceSelector` and `limitNamespaces` options in the custom resource will no longer be applied if the authorization system's webhook is unavailable for some reason. As a result, users will have access to all namespaces. After the webhook availability is restored, the options will become relevant again.
+{% alert level="warning" %}
+Do not create Pods and ReplicaSets directly: these objects are secondary and should be created by controllers (Deployment, StatefulSet, Job, and others). The `User`, `PrivilegedUser`, `Editor`, and `ClusterEditor` access levels cannot create or modify Pods, and no access level below `SuperAdmin` can create or modify ReplicaSets.
+{% endalert %}
 
-All access rights are configured using [Custom Resources](cr.html).
+In multi-tenancy mode, the `allowAccessToSystemNamespaces`, `namespaceSelector`, and `limitNamespaces` fields of ClusterAuthorizationRule are enforced by the authorization webhook. If the webhook is unavailable, the requests it has to answer are **denied**. The webhook does not check control plane components, kubelets, and the ServiceAccounts of `kube-system` and of the namespaces whose names start with `d8-`. For details, see [Basic role-based model](./#basic-role-based-model).
+
+Access rights are configured with the roles of the [granular model](./#granular-role-based-model) in RoleBinding and ClusterRoleBinding objects, or with the [custom resources](cr.html) of the basic model.
 
 <!-- SCHEMA -->

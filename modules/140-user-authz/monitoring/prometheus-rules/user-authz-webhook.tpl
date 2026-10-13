@@ -126,7 +126,7 @@
         d8 k -n d8-user-authz logs -l app=user-authz-webhook -c webhook --tail=100 | grep -i 'list/watch'
         ```
 
-        A growing `user_authz_webhook_rules_watch_errors_total` on one instance points at its watch; a `user_authz_webhook_rules_directory_updated_timestamp_seconds` that has stopped moving points at rules that are no longer updated. Deleting the lagging Pod is the last resort: the DaemonSet recreates it, and on a cluster with a single master node every request in the cluster is denied while the Pod restarts.
+        A growing `user_authz_webhook_rules_watch_errors_total` on one instance points at its watch; a `user_authz_webhook_rules_directory_updated_timestamp_seconds` that has stopped moving points at rules that are no longer updated. Deleting the lagging Pod is the last resort: the DaemonSet recreates it, and on a cluster with a single master node every request that the authorization webhook has to answer is denied while the Pod restarts. Control plane components, kubelets, and the ServiceAccounts of the `kube-system` and `d8-*` namespaces keep working, because the webhook does not check them.
 
   - alert: D8UserAuthzRulePropagationLag
     expr: |

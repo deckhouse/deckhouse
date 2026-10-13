@@ -39,7 +39,7 @@ spec:
           description: |
             Manages RBAC and authorization settings within a particular namespace.
 
-            > The `AuthorizationRule` resource is used in the [current role-based model](./#current-role-based-model) and isn't used in the experimental role model.
+            > The AuthorizationRule resource belongs to the [basic role-based model](./#basic-role-based-model). Its permissions add up with those of the [granular model](./#granular-role-based-model).
           required:
           - spec
           properties:
@@ -59,19 +59,25 @@ spec:
                     properties:
                       type:
                         type: string
+                        description: Condition type. The controller sets `Ready`.
                       status:
                         type: string
                         enum: ["True", "False", "Unknown"]
+                        description: Condition status.
                       reason:
                         type: string
+                        description: Reason of the status, `BindingsApplied`, `InvalidSpec` or `ApplyError`.
                       message:
                         type: string
+                        description: Details of the status.
                       observedGeneration:
                         type: integer
                         format: int64
+                        description: Generation of the rule that the condition refers to.
                       lastTransitionTime:
                         type: string
                         format: date-time
+                        description: Time of the last change of the condition status.
                 bindings:
                   type: integer
                   format: int32
@@ -93,8 +99,8 @@ spec:
                     Access level:
                     * `User` — has access to information about all objects (including viewing pod logs) but cannot exec into containers, read secrets, and perform port-forwarding;
                     * `PrivilegedUser` — the same as `User` + can exec into containers, read secrets, and delete pods (and thus, restart them);
-                    * `Editor` — is the same as `PrivilegedUser` + can create and edit all objects that are usually required for application tasks;
-                    * `Admin` — the same as `Editor` + can delete service objects (auxiliary resources such as `ReplicaSet`, `certmanager.k8s.io/challenges` and `certmanager.k8s.io/orders`);
+                    * `Editor` — the same as `PrivilegedUser` + can create, edit, and delete the objects that are usually required for application tasks;
+                    * `Admin` — the same as `Editor` + can create and modify pods, create ServiceAccount tokens (`serviceaccounts/token`), manage `Role`, `RoleBinding`, and `AuthorizationRule` objects, and delete auxiliary objects (for example, `ReplicaSet` and the challenges and orders of the `acme.cert-manager.io` group).
 
                   enum: [User,PrivilegedUser,Editor,Admin]
                   x-doc-examples: ['PrivilegedUser']
@@ -111,13 +117,13 @@ spec:
                 subjects:
                   type: array
                   description: |
-                    Users and/or groups to grant privileges.
+                    Users, groups, and ServiceAccounts to grant the access level to.
 
-                    [Kubernetes API reference...](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.23/#subject-v1-rbac-authorization-k8s-io)
+                    [Kubernetes API reference](https://kubernetes.io/docs/reference/kubernetes-api/authorization-resources/role-binding-v1/#RoleBinding)
 
-                    Pay attention to the following nuances if this module is used together with the [user-authn](https://deckhouse.io/modules/user-authn/) module:
+                    Pay attention to the following nuances if this module is used together with the [user-authn](/modules/user-authn/) module:
                     - Use the user's `email` as the username to grant privileges to the specific user;
-                    - When specifying a group, make sure that the necessary groups are allowed to be received from the provider, i.e., they are defined in the corresponding custom resource [DexProvider](https://deckhouse.io/modules/user-authn/cr.html#dexprovider).
+                    - When specifying a group, make sure that the necessary groups are allowed to be received from the provider, i.e., they are defined in the corresponding custom resource [DexProvider](/modules/user-authn/cr.html#dexprovider).
                   items:
                     type: object
                     required:

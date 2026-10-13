@@ -37,7 +37,7 @@
         d8 k -n d8-system logs deploy/deckhouse | grep '"module":"user-authz"'
         ```
 
-        If the cluster has just been updated to the release that moved the bindings to the controller, one slow pass is expected and does not raise this alert by itself; if it fires anyway, the pass is being retried. It is proportional to the number of bindings and can exceed the timeout on clusters with more than 5000 of them; the module FAQ describes what to do in that case.
+        If the cluster has just been updated to the release that moved the bindings to the controller, one slow pass is expected and does not raise this alert by itself; if it fires anyway, the pass is being retried. It is proportional to the number of bindings and can exceed the timeout on clusters with more than 5000 of them; the [module FAQ](https://deckhouse.io/modules/user-authz/faq.html#what-happens-to-the-bindings-when-the-cluster-is-updated-to-the-release-with-the-controller) describes what to do in that case.
 
   - alert: D8UserAuthzRenderSlow
     expr: |

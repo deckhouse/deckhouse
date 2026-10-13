@@ -1,5 +1,6 @@
 ---
 title: "The user-authz module: FAQ"
+description: "Answers to common questions about user-authz: limiting access, combining the role models, custom roles, migrating to the new label scheme, and troubleshooting the controller and the authorization webhook."
 ---
 
 ## How do I create a user?
@@ -10,9 +11,9 @@ title: "The user-authz module: FAQ"
 
 ## How do I limit user rights to specific namespaces?
 
-To limit a user's rights to specific namespaces in the granular role-based model, use RoleBinding with the [namespace role](./#namespace-roles) that has the appropriate level of access. [Example](usage.html#example-of-assigning-administrative-rights-to-a-user-within-a-namespace).
+To limit a user's rights to specific namespaces in the granular role-based model, use RoleBinding with the [namespace role](./#namespace-roles) that has the appropriate level of access. See the [example of assigning administrative rights to a user within a namespace](usage.html#example-of-assigning-administrative-rights-to-a-user-within-a-namespace).
 
-In the basic role-based model, use the `namespaceSelector` or `limitNamespaces` (deprecated) parameters in the [ClusterAuthorizationRule](cr.html#clusterauthorizationrule) CR.
+In the basic role-based model, use the `namespaceSelector` or `limitNamespaces` (deprecated) parameters in the [ClusterAuthorizationRule](cr.html#clusterauthorizationrule) CR. These parameters require the [`enableMultiTenancy`](configuration.html#parameters-enablemultitenancy) parameter: while it is disabled, a ClusterAuthorizationRule with them is refused. A rule that already has them is applied without the limits, see [Why is a rule reported as needing multi-tenancy?](#why-is-a-rule-reported-as-needing-multi-tenancy)
 
 ## What if there are two ClusterAuthorizationRules matching a single user?
 
@@ -66,7 +67,7 @@ If there is a rule without the `namespaceSelector` option and `limitNamespaces` 
 
 ## Can the basic and the granular role-based models be used at the same time?
 
-Yes. Both models ultimately boil down to the standard Kubernetes RBAC mechanism, and RBAC is a permissive model: permissions from all sources are **summed up**. If an action is allowed by at least one source — a ClusterAuthorizationRule, an AuthorizationRule, a RoleBinding to an primary-model role, or a ProjectRoleBinding — it will be allowed. Nothing needs to be "switched over": you can keep the existing ClusterAuthorizationRule objects and gradually add primary-model role bindings.
+Yes. Both models ultimately boil down to the standard Kubernetes RBAC mechanism, and RBAC is a permissive model: permissions from all sources are **summed up**. If an action is allowed by at least one source — a ClusterAuthorizationRule, an AuthorizationRule, a RoleBinding to a granular-model role, or a ProjectRoleBinding — it will be allowed. Nothing needs to be "switched over": you can keep the existing ClusterAuthorizationRule objects and gradually add granular-model role bindings.
 
 This holds in the multitenancy mode ([`enableMultiTenancy`](configuration.html#parameters-enablemultitenancy)) as well, with one rule about levels. The namespace restriction of a ClusterAuthorizationRule (`limitNamespaces` or `namespaceSelector`) limits the permissions of that rule only: in a namespace outside the list the user keeps whatever a RoleBinding, an AuthorizationRule or a ProjectRoleBinding grants there, at the level of that binding — the `accessLevel` of the ClusterAuthorizationRule does not leak into it. A namespace where the user has no source at all stays denied. See [the module description](./#using-clusterauthorizationrule-and-authorizationrule-together-with-rbac) for the full set of sources and an example.
 
@@ -76,7 +77,7 @@ There is no single-object counterpart of the basic model's `ClusterAdmin` and `S
 
 Approximate level mapping:
 
-| Legacy model role | Primary model equivalent |
+| Basic model role | Granular model equivalent |
 |--------------------|-------------------------------|
 | `User` | `d8:namespace:viewer` (via RoleBinding or ProjectRoleBinding). |
 | `PrivilegedUser` | `d8:namespace:user`. |
@@ -122,13 +123,19 @@ For `SuperAdmin`, replace the roles with `d8:system:superadmin` and `d8:project:
 Specifics:
 
 - With the `multitenancy-manager` module enabled, [every user namespace is a project](/modules/multitenancy-manager/#automatic-project-creation-for-namespaces), so the "system role + ClusterProjectRoleBinding" pair covers both the platform and all user namespaces. Only the `default` namespace is not covered — it is neither a project nor a system namespace.
-- You cannot create a custom "all permissions" role (`apiGroups: ["*"], resources: ["*"], verbs: ["*"]`): such a role gives, among other things, project management permissions and is rejected by the [built-in protections](./#built-in-protections-of-the-role-model). If you need truly unrestricted access to the whole API (outside the platform role model), use a ClusterRoleBinding to the built-in Kubernetes `cluster-admin` role — only someone who already has such permissions can assign it.
+- You cannot create a custom "all permissions" role (`apiGroups: ["*"], resources: ["*"], verbs: ["*"]`): such a role gives, among other things, project management permissions and is rejected by the [built-in protections](./#built-in-protection-mechanisms-of-the-role-model). If you need truly unrestricted access to the whole API (outside the platform role model), use a ClusterRoleBinding to the built-in Kubernetes `cluster-admin` role — only someone who already has such permissions can assign it.
 
 ## How do I grant a user access to the resources of one module only?
 
 A typical request: a user in a namespace should only work with the resources of one module (for example, only with virtual machines) without seeing the other resources (Pod, Deployment, etc.).
 
-Every DP module ships separate capabilities for its resources, so such access is granted without writing RBAC rules. Assemble a [custom role](#creating-a-custom-namespace-or-project-role) that aggregates only the capabilities of the desired module (a selector by the `module` label):
+Every DP module ships separate capabilities for its resources, so such access is granted without writing RBAC rules. Assemble a [custom role](#creating-a-custom-namespace-or-project-role) that aggregates only the capabilities of the desired module. Select each capability by its `rbac.deckhouse.io/capability` label: a role with the `rbac.deckhouse.io/delegatable: "true"` label may select capabilities only by this label or by the `rbac.deckhouse.io/aggregate-to-namespace-as` and `rbac.deckhouse.io/aggregate-to-project-as` labels, and a selector by `module` or by any other label is refused. To list the capabilities of the module, run:
+
+```shell
+d8 k get clusterroles -l rbac.deckhouse.io/kind=capability,module=virtualization,rbac.deckhouse.io/scope=namespace -o custom-columns='NAME:.metadata.name,CAPABILITY:.metadata.labels.rbac\.deckhouse\.io/capability'
+```
+
+An example of the role, where `<ACTION>` is to be replaced with the values from the list:
 
 ```yaml
 apiVersion: rbac.authorization.k8s.io/v1
@@ -142,39 +149,21 @@ metadata:
 aggregationRule:
   clusterRoleSelectors:
     - matchLabels:
-        rbac.deckhouse.io/kind: capability
-        rbac.deckhouse.io/scope: namespace
-        module: virtualization
+        rbac.deckhouse.io/capability: namespace-capability.virtualization.<ACTION>
+    - matchLabels:
+        rbac.deckhouse.io/capability: namespace-capability.virtualization.<ACTION>
 rules: []
 ```
 
 Grant the role via a RoleBinding in the desired namespace or via a [ProjectRoleBinding](/modules/multitenancy-manager/cr.html#projectrolebinding) across the whole project. The user will get access only to the module's resources — the standard Kubernetes resources will not be visible to them.
 
-Outside of projects the same can be done by binding the module capability directly, without creating a role:
-
-```yaml
-apiVersion: rbac.authorization.k8s.io/v1
-kind: RoleBinding
-metadata:
-  name: virtualization-view
-  namespace: my-namespace
-subjects:
-  - kind: User
-    name: user@example.com
-    apiGroup: rbac.authorization.k8s.io
-roleRef:
-  kind: ClusterRole
-  name: d8:namespace-capability:virtualization:view
-  apiGroup: rbac.authorization.k8s.io
-```
-
 {% alert level="info" %}
-Inside **project** namespaces a plain RoleBinding may only reference roles [available to the project](/modules/multitenancy-manager/usage.html#which-roles-are-available-in-a-rolebinding-inside-a-project) — capabilities are not among them by default, so for projects use the custom-role variant (the `rbac.deckhouse.io/delegatable: "true"` label in the example above is exactly what makes it available) or a ProjectRoleBinding.
+Do not bind the capability of the module directly. Inside **project** namespaces a plain RoleBinding may only reference roles [available to the project](/modules/multitenancy-manager/usage.html#roles-available-in-a-rolebinding-inside-a-project), and capabilities are not among them by default. The custom role above has the `rbac.deckhouse.io/delegatable: "true"` label, which makes it available there, so the same role works in every namespace.
 {% endalert %}
 
 ## What happens to the bindings when the cluster is updated to the release with the controller?
 
-Nothing is recreated and access is not interrupted. The `user-authz-controller` component adopts the bindings that the Helm chart used to render: the same objects with the same names, with an `ownerReference` to the rule added.
+Nothing is recreated and access is not interrupted. In DP 1.78, the `user-authz-controller` component adopts the bindings that the Helm chart used to render: the same objects with the same names, with an `ownerReference` to the rule added.
 
 Plan for the release that performs the migration: it processes every existing binding once, so it takes longer than usual. Subsequent releases are not affected.
 
@@ -211,9 +200,11 @@ d8 k -n d8-system set env deploy/deckhouse USE_NELM=false
 
 If the migration cannot prepare every binding, the release does not start and the bindings stay as they were.
 
+After the migration, the release no longer grows with the number of rules. The `D8UserAuthzReleaseSlow` alert fires when applying the module release repeatedly takes more than 5 minutes, and `D8UserAuthzRenderSlow` fires when rendering its templates repeatedly takes more than 30 seconds. Both point at the API server or at a Deckhouse Pod short of CPU rather than at the rules.
+
 ## How do I check that the controller keeps the bindings in sync?
 
-The `user-authz-controller` component reconciles the `ClusterRoleBinding` and `RoleBinding` objects of every ClusterAuthorizationRule and AuthorizationRule, the `d8:use:dict` grants of the experimental role model, and the projections of manage-role bindings into namespaced use `RoleBinding` objects. Three sources tell whether it is healthy.
+The `user-authz-controller` component reconciles the ClusterRoleBinding and RoleBinding objects of every ClusterAuthorizationRule and AuthorizationRule, the `d8:dict` ClusterRoleBindings of the granular model, and the RoleBinding objects that give the subjects of system and subsystem roles the namespace role named by `rbac.deckhouse.io/use-role` in module namespaces. Its state is shown by the object status, the metrics, and the alerts.
 
 **Object status.** Every rule carries a `Ready` condition and the number of its bindings:
 
@@ -278,12 +269,17 @@ Example output:
 | `d8_user_authz_bindings_apply_total{kind,op,result}` | Write operations issued by the controller (`op`: `create`, `update`, `delete`; `result`: `success`, `error`) |
 | `d8_user_authz_authorization_rules_invalid{kind,reason}` | Rules whose `Ready` condition is `False`, by kind and reason |
 | `d8_user_authz_authorization_rule_invalid{kind,name,rule_namespace,reason}` | `1` for every such rule (at most 50 rules are named; the aggregate above is always complete) |
+| `controller_runtime_reconcile_total`, `controller_runtime_reconcile_errors_total`, `controller_runtime_reconcile_time_seconds` | Standard controller-runtime metrics per reconciler (`controller` label: `clusterauthorizationrule-bindings`, `authorizationrule-bindings`, `dict-bindings`, `manage-bindings`) |
+
+Deckhouse exports the following metrics of the module hooks:
+
+| Metric | Description |
+|---|---|
 | `d8_user_authz_custom_cluster_roles{level}` | Custom `ClusterRole` objects (annotated with `user-authz.deckhouse.io/access-level`) per access level |
 | `d8_user_authz_custom_aggregation_missing{level}` | `1` when the aggregated ClusterRole `user-authz:<level>:custom` has no rules although custom roles it must aggregate exist |
 | `d8_user_authz_bindings_keep_stamped_total`, `d8_user_authz_keep_stamp_duration_seconds` | Work of the migration hook that protects chart-rendered bindings from being pruned by the release: objects stamped and the duration of its last run |
-| `controller_runtime_reconcile_total`, `controller_runtime_reconcile_errors_total`, `controller_runtime_reconcile_time_seconds` | Standard controller-runtime metrics per reconciler (`controller` label: `clusterauthorizationrule-bindings`, `authorizationrule-bindings`, `dict-bindings`, `manage-bindings`) |
 
-**Alerts** (in the `d8_user_authz` Prometheus rules):
+**Alerts.** The module ships the following alerts for the controller:
 
 - `D8UserAuthzControllerUnavailable` and `D8UserAuthzControllerTargetDown` when the controller has unavailable replicas or is not scraped for 5 minutes.
 - `D8UserAuthzControllerReconcileErrorsHigh` on a sustained reconcile error rate.
@@ -325,9 +321,9 @@ Example output:
 2026/09/11 10:00:01 rules source: directory rebuilt from 12 rules (18 subjects, 0 quarantined) in 4.2ms
 ```
 
-The `rules source: directory rebuilt from N rules` line shows the informer has listed the rules and how many it holds; `quarantined` counts the rules whose `limitNamespaces` patterns did not compile.
+The `rules source: directory rebuilt from N rules` line shows the informer has listed the rules and how many it holds; `quarantined` counts the rules the instance could not fully use: a `limitNamespaces` pattern or a `namespaceSelector` that does not compile, or a rule that cannot be read.
 
-An instance that has not read the rules yet is not ready and answers authorization requests with an error instead of a denial. In the seconds between a rule being created and the webhook observing it, the subjects of that rule are denied access to all namespaces.
+An instance that has not read the rules yet is not ready and answers authorization requests with an error instead of a denial. In the seconds between a rule being created and the webhook observing it, the subjects of that rule that no observed rule covers yet are denied access to all namespaces. A subject that another rule already covers keeps the scope of that rule.
 
 The webhook exposes metrics through a `kube-rbac-proxy` sidecar; the PodMonitor `user-authz-webhook` collects them, and the `operator-prometheus` module must be enabled. There is one series per master node.
 
@@ -376,6 +372,8 @@ During those seconds the namespace limits do not apply to that resource: the web
 ## Why is a rule reported as needing multi-tenancy?
 
 The `limitNamespaces`, `namespaceSelector` and `allowAccessToSystemNamespaces` options are enforced by the authorization webhook, which is deployed only when [`enableMultiTenancy`](configuration.html#parameters-enablemultitenancy) is enabled. A rule that uses these options while multi-tenancy is disabled is applied without them: the subjects named in the rule hold its access level in **every** namespace of the cluster, including the system ones.
+
+While multi-tenancy is disabled, the `d8-user-authz-car-multitenancy-related-options.deckhouse.io` admission webhook refuses a ClusterAuthorizationRule with any of these options, even `allowAccessToSystemNamespaces: false`. It also refuses disabling `enableMultiTenancy` while a rule uses them. So a rule reaches this state only if it was written before these checks applied, for example before an update. Any change to such a rule must also remove the options.
 
 Only options that ask for a limit are counted. A rule with `allowAccessToSystemNamespaces: false`, or with an empty `limitNamespaces` list, is not reported.
 
@@ -438,7 +436,7 @@ rules: []
 
 The labels for the new role listed at the top suggest that:
 
-- The hook will use this namespace role when creating RoleBinding in the module namespaces:
+- `user-authz-controller` will use this namespace role when creating RoleBinding objects in the module namespaces:
 
   ```yaml
   rbac.deckhouse.io/use-role: admin
@@ -450,7 +448,9 @@ The labels for the new role listed at the top suggest that:
   rbac.deckhouse.io/kind: custom-role
   ```
 
-  > Note that this label is mandatory.
+  {% alert level="info" %}
+  This label is mandatory.
+  {% endalert %}
 
 - The role is a subsystem one, and it shall be handled accordingly:
 
@@ -551,7 +551,7 @@ The capability will add its permissions to the subsystem role. so that holders o
 
 Notes:
 
-* Custom capabilities must be named with the `d8:custom:` prefix; the rest of the name is not restricted, but we recommend following the same pattern for the sake of readability.
+* Name a custom capability `d8:custom:<SCOPE>-capability:<NAME>`, where `<SCOPE>` is the value of its `rbac.deckhouse.io/scope` label. A name that disagrees with the label is rejected.
 
 ### Extending the existing subsystem roles
 
@@ -585,13 +585,13 @@ This way, the new capability will extend the `d8:subsystem:deckhouse:manager` ro
 
 ### Extending subsystem roles and adding a new namespace
 
-If you need to add a new namespace (to create a namespace role binding in it by the hook), you only need to add one label:
+If you need to add a new namespace (so that `user-authz-controller` creates a namespace role binding in it), you only need to add one label:
 
 ```yaml
 "rbac.deckhouse.io/namespace": namespace
 ```
 
-This label instructs the hook to create a RoleBinding with the namespace role in this namespace:
+This label instructs `user-authz-controller` to create a RoleBinding with the namespace role in this namespace:
 
  ```yaml
  apiVersion: rbac.authorization.k8s.io/v1
@@ -615,9 +615,9 @@ This label instructs the hook to create a RoleBinding with the namespace role in
    - watch
  ```
 
-The hook watches ClusterRoleBinding objects and, when a binding is created, analyzes all system and subsystem roles to find the aggregated capabilities via the aggregation rule. It then reads the namespace from the `rbac.deckhouse.io/namespace` label and creates a RoleBinding with the namespace role in that namespace.
+`user-authz-controller` watches ClusterRoleBinding objects and, when a binding is created, analyzes all system and subsystem roles to find the aggregated capabilities via the aggregation rule. It then reads the namespace from the `rbac.deckhouse.io/namespace` label and creates a RoleBinding with the namespace role in that namespace.
 
-The hook watches only objects with the `rbac.deckhouse.io/scope: system` or `subsystem` label. A capability without that label still contributes its rules to the role through aggregation, but its `rbac.deckhouse.io/namespace` label is never read, and no RoleBinding appears in the namespace.
+`user-authz-controller` watches only objects with the `rbac.deckhouse.io/scope: system` or `subsystem` label. A capability without that label still contributes its rules to the role through aggregation, but its `rbac.deckhouse.io/namespace` label is never read, and no RoleBinding appears in the namespace.
 
 ### Extending the existing namespace roles
 
@@ -648,7 +648,7 @@ This capability will be added to the `d8:namespace:user` role.
 
 ### Creating a custom namespace or project role
 
-Sometimes the built-in hierarchy of levels does not fit: for example, you need a "developer" role — full view of the namespace plus reading logs, but without the right to change quotas or RBAC. Such a role is assembled from ready-made capabilities, without writing RBAC rules by hand.
+Sometimes the built-in hierarchy of levels does not fit: for example, you need a "developer" role — full view of the namespace plus terminal access to pods (`exec`, `attach`), but without the right to change quotas or RBAC. Such a role is assembled from ready-made capabilities, without writing RBAC rules by hand.
 
 The rules for custom roles:
 
@@ -683,32 +683,34 @@ aggregationRule:
 rules: []
 ```
 
-If no existing capability grants the permissions you need, create your own (a `custom-capability` may contain rules) and add a selector by its `rbac.deckhouse.io/capability` label to the role's `aggregationRule` (in the example below — `matchLabels: {rbac.deckhouse.io/capability: "custom.logs-reader"}`):
+If no existing capability grants the permissions you need, create your own (a `custom-capability` may contain rules) and add a selector by its `rbac.deckhouse.io/capability` label to the role's `aggregationRule` (in the example below — `matchLabels: {rbac.deckhouse.io/capability: "custom.namespace-capability.port-forward"}`). The label value of a custom capability is `custom.<SCOPE>-capability.<NAME>`, and a role bindable in a project may select only the `namespace-capability` and `project-capability` scopes:
 
 ```yaml
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
 metadata:
-  name: d8:custom:namespace-capability:logs-reader
+  name: d8:custom:namespace-capability:port-forward
   labels:
     rbac.deckhouse.io/kind: custom-capability
-    rbac.deckhouse.io/capability: "custom.logs-reader"
+    rbac.deckhouse.io/scope: namespace
+    rbac.deckhouse.io/capability: "custom.namespace-capability.port-forward"
 rules:
   - apiGroups: [""]
-    resources: ["pods/log"]
-    verbs: ["get", "list"]
+    resources: ["pods/portforward"]
+    verbs: ["create"]
 ```
 
 To get a list of all available capabilities and their unique names, use the command:
 
 ```shell
-d8 k get clusterroles -l rbac.deckhouse.io/kind=capability \
-  -o custom-columns='NAME:.metadata.name,CAPABILITY:.metadata.labels.rbac\.deckhouse\.io/capability'
+d8 k get clusterroles -l rbac.deckhouse.io/kind=capability -o custom-columns='NAME:.metadata.name,CAPABILITY:.metadata.labels.rbac\.deckhouse\.io/capability'
 ```
 
 The created role is assigned exactly like a built-in one: via a RoleBinding in a namespace or via a [ProjectRoleBinding](/modules/multitenancy-manager/cr.html#projectrolebinding) across a whole project (for project roles, use `rbac.deckhouse.io/scope: project` and aggregate `aggregate-to-project-as`). A RoleBinding in a project namespace requires the `delegatable` label on the role; a ProjectRoleBinding does not (it has its own prefix allow-list). The role cannot be assigned via a ClusterRoleBinding — just like the built-in roles of these scopes.
 
-> You can also assemble such a role without YAML — with the access grant wizard in the Deckhouse Console web interface: it shows the available capabilities, builds a role out of them, and immediately creates the required binding.
+{% alert level="info" %}
+You can also assemble such a role without YAML — with the access grant wizard in the Deckhouse web UI: it shows the available capabilities, builds a role out of them, and immediately creates the required binding.
+{% endalert %}
 
 <div style="height: 0;" id="how-do-i-migrate-custom-roles-to-the-new-scheme-in-dp-178"></div>
 <div style="height: 0;" id="how-do-i-migrate-custom-roles-to-the-new-scheme-in-dkp-178"></div>
@@ -794,7 +796,7 @@ The names of the built-in capabilities changed as well (no aliases):
 * `d8:manage:permission:module:<module>:view|edit` → `d8:system-capability:<module>:view|edit`
 * `d8:use:capability:module:<module>:view|edit` → `d8:namespace-capability:<module>:view|edit`
 
-Aggregation selectors match labels, not names. Do not bind capabilities directly.
+Aggregation selectors match labels, not names. Bind roles, not capabilities.
 
 ### Repairing a role
 
@@ -1122,7 +1124,7 @@ Annotations on ClusterRole objects (the old scheme did not use annotations):
 A capability is a regular ClusterRole object with rules that is automatically included into the chosen role via an aggregation label. In the new scheme, a custom capability is created as follows:
 
 1. Decide which role you want to extend: a namespace role, a subsystem role, the system role, or your own custom role.
-1. Create a ClusterRole with the `d8:custom:` name prefix (for readability — `d8:custom:capability:<name>:<resource>:<action>`), the `rbac.deckhouse.io/kind: custom-capability` label, and the aggregation label of the target role:
+1. Create a ClusterRole named `d8:custom:<SCOPE>-capability:<NAME>` with the `rbac.deckhouse.io/kind: custom-capability` label, the `rbac.deckhouse.io/scope: <SCOPE>` label, and the aggregation label of the target role:
    - `rbac.deckhouse.io/aggregate-to-namespace-as: <viewer|user|manager|admin|superadmin>`: Into the `d8:namespace:<level>` namespace role.
    - `rbac.deckhouse.io/aggregate-to-<subsystem>-as: <viewer|manager|superadmin>`: Into the `d8:subsystem:<subsystem>:<level>` subsystem role.
    - `rbac.deckhouse.io/aggregate-to-system-as: <viewer|manager|superadmin>`: Into the `d8:system:<level>` system role.
@@ -1138,9 +1140,7 @@ For configuration examples, refer to the ["Custom role before and after"](#custo
 The permissions of built-in roles cannot be changed, but their display title and description can — for example, so that the interface shows them in your company's terms. Add the `custom.meta.deckhouse.io/title` and `custom.meta.deckhouse.io/description` annotations to the role:
 
 ```shell
-d8 k annotate clusterrole d8:namespace:admin \
-  custom.meta.deckhouse.io/title='Team administrator' \
-  custom.meta.deckhouse.io/description='Manages resources and access in the team namespace'
+d8 k annotate clusterrole d8:namespace:admin custom.meta.deckhouse.io/title='Team administrator' custom.meta.deckhouse.io/description='Manages resources and access in the team namespace'
 ```
 
 This is the only modification allowed for objects with the `d8:` prefix (except `d8:custom:*`): an attempt to change the rules, aggregation, or labels of a built-in role is rejected.
@@ -1203,6 +1203,8 @@ The right to build a report about **another** subject is granted by the `d8:user
 
 With the multitenancy mode enabled ([`enableMultiTenancy`](configuration.html#parameters-enablemultitenancy)), the namespace list is filtered automatically: the `d8 k get namespaces` command returns to a user only the namespaces they have access to — via any of the mechanisms (role bindings, ProjectRoleBinding/ClusterProjectRoleBinding, ClusterAuthorizationRule/AuthorizationRule). A user does not see foreign namespaces and cannot learn about their existence from the list.
 
+If the `console` module older than 1.44.0 is enabled, the list is not filtered: the access levels of ClusterAuthorizationRule and AuthorizationRule and the namespace roles keep the permission to list every namespace.
+
 The same list is served by the read-only `accessiblenamespaces` resource — any authenticated user can query it **for themselves**:
 
 ```shell
@@ -1210,3 +1212,9 @@ d8 k get accessiblenamespaces
 ```
 
 This is convenient for scripts and interfaces: there is no need to iterate over namespaces checking access to each one.
+
+## How do I protect objects that my module places in user namespaces?
+
+The marker is a **label**, `deckhouse.io/system-resource: "true"`, on the object itself — not an annotation. For edits and deletes the objects to protect are selected on the API server side, in the admission `matchConditions`, and those read labels; for `exec`, `attach` and `port-forward` the admission object is the connect request rather than the pod, so the webhook reads the pod itself — its labels again. Either way an object marked with an annotation is not seen and stays open, with nothing to say so. Put the label on every namespaced object your module places into user namespaces (pods, services, PVCs, secrets, custom resources): it then becomes writable by `superadmin` and cluster administrators only, and its pods reachable by `exec`, `attach` and `port-forward` only for them.
+
+For what the label restricts, see [Admin level restrictions and superadmin rights](./#admin-level-restrictions-and-superadmin-rights).

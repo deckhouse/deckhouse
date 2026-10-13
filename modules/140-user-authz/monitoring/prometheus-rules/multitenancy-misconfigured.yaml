@@ -16,7 +16,7 @@
       plk_grouped_by__d8_user_authz_misconfigured: "D8UserAuthzMisconfigured,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
       summary: A ClusterAuthorizationRule asks for namespace limits that nothing enforces.
       description: |-
-        The `ClusterAuthorizationRule` `{{ $labels.name }}` sets `{{ $labels.options }}`, but `userAuthz.enableMultiTenancy` is off, so the authorization webhook that enforces those options is not deployed.
+        The `ClusterAuthorizationRule` `{{ $labels.name }}` sets `{{ $labels.options }}`, but the [`enableMultiTenancy`](https://deckhouse.io/modules/user-authz/configuration.html#parameters-enablemultitenancy) setting of the `user-authz` module is off, so the authorization webhook that enforces those options is not deployed.
 
         The rule is not partially applied. It is applied without its limits: the subjects named in it hold its access level in **every** namespace of the cluster, the system ones included.
 
@@ -43,7 +43,7 @@
       plk_grouped_by__d8_user_authz_misconfigured: "D8UserAuthzMisconfigured,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
       summary: More ClusterAuthorizationRules ask for namespace limits than the per-rule alert names.
       description: |-
-        `{{ $value }}` ClusterAuthorizationRules set `limitNamespaces`, `namespaceSelector` or `allowAccessToSystemNamespaces` while `userAuthz.enableMultiTenancy` is off. `D8UserAuthzRuleNeedsMultiTenancy` names the first 50 of them; this alert accounts for the rest.
+        `{{ $value }}` ClusterAuthorizationRules set `limitNamespaces`, `namespaceSelector` or `allowAccessToSystemNamespaces` while the [`enableMultiTenancy`](https://deckhouse.io/modules/user-authz/configuration.html#parameters-enablemultitenancy) setting of the `user-authz` module is off. `D8UserAuthzRuleNeedsMultiTenancy` names the first 50 of them; this alert accounts for the rest.
 
         None of those rules is partially applied: the subjects named in each of them hold its access level in **every** namespace of the cluster, the system ones included.
 

@@ -28,7 +28,7 @@
       description: |-
         Deckhouse has detected unavailable replicas in the `user-authz-controller` deployment in the `d8-user-authz` namespace.
 
-        While this alert is active, changes to ClusterAuthorizationRule and AuthorizationRule objects are not applied to their ClusterRoleBindings and RoleBindings, and `d8:use:dict` grants and manage-role projections are not updated. Existing bindings keep working.
+        While this alert is active, changes to ClusterAuthorizationRule and AuthorizationRule objects are not applied to their ClusterRoleBindings and RoleBindings, and the `d8:dict` bindings and the RoleBindings of system and subsystem roles in module namespaces are not updated. Existing bindings keep working.
 
         Check deployment and pod states:
 

@@ -20,12 +20,12 @@
       description: |-
         The `{{ $labels.binding_kind }}` `{{ $labels.binding_name }}`{{ if $labels.namespace }} in namespace `{{ $labels.namespace }}`{{ end }} references the deprecated RBACv2 ClusterRole `{{ $labels.role_name }}`.
 
-        The RBACv2 role model was renamed: `d8:manage:<subsystem|all>:<level>` became `d8:system:*` / `d8:subsystem:*:*`, and `d8:use:role:<level>` became `d8:namespace:<level>`. This name still works via a compatibility alias kept for ONE release and will be removed in the next one — after that this binding will grant nothing. The release that removes the aliases is held back by the `deprecatedRBACv2BindingsCount` release requirement until this binding is recreated on the new name.
+        The RBACv2 role model was renamed: `d8:manage:<subsystem|all>:<level>` became `d8:system:*` / `d8:subsystem:*:*`, and `d8:use:role:<level>` became `d8:namespace:<level>`. This name still works via a compatibility alias kept for one release and will be removed in the next one — after that this binding will grant nothing. The release that removes the aliases is held back by the `deprecatedRBACv2BindingsCount` release requirement until this binding is recreated on the new name.
 
         Migrate the binding to the new role name. Because `roleRef` is immutable, delete and recreate the binding pointing at the new role:
         ```bash
         d8 k get {{ $labels.binding_kind | toLower }} {{ $labels.binding_name }}{{ if $labels.namespace }} -n {{ $labels.namespace }}{{ end }} -o yaml
-        # recreate it with roleRef.name set to the new role (d8:system:*, d8:subsystem:*, or d8:namespace:*)
+        # Recreate it with roleRef.name set to the new role (d8:system:*, d8:subsystem:*, or d8:namespace:*).
         ```
 
         A ClusterRoleBinding to a deprecated `d8:manage:*` name keeps its cluster-scoped rights, but no longer receives the RoleBindings that used to project it into the module namespaces (`d8-cloud-provider-*`, `d8-monitoring` and the rest): the ones created by the previous release are removed. Reading logs, describing pods and `exec` inside those namespaces come back when the binding is recreated on the new role name.
