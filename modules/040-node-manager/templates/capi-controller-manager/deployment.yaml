@@ -100,7 +100,7 @@ spec:
         - --feature-gates=MachinePool=true,ClusterTopology=false,RuntimeSDK=false
         - --health-addr=127.0.0.1:9442
         - --webhook-port=4200
-        - -v=3
+        - -v=1
         livenessProbe:
           httpGet:
             path: /healthz

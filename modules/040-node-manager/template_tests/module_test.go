@@ -1621,6 +1621,7 @@ var _ = Describe("Module :: node-manager :: helm template ::", func() {
 			Expect(capiDeploy.Exists()).To(BeTrue())
 			Expect(capiDeploy.Field("spec.template.spec.containers.0.resources.requests.cpu").String()).To(Equal("10m"))
 			Expect(capiDeploy.Field("spec.template.spec.containers.0.resources.requests.memory").String()).To(Equal("50Mi"))
+			Expect(capiDeploy.Field("spec.template.spec.containers.0.args").AsStringSlice()).To(ContainElement("-v=1"))
 
 			capiVPA := f.KubernetesResource("VerticalPodAutoscaler", "d8-cloud-instance-manager", "capi-controller-manager")
 			Expect(capiVPA.Exists()).To(BeTrue())
