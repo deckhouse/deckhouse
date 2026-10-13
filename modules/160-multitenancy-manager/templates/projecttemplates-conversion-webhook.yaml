@@ -1,0 +1,19 @@
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: ConversionWebhook
+metadata:
+  # webhook-operator takes the name for the name of the CRD and derives the API group from it.
+  name: projecttemplates.deckhouse.io
+  {{- include "helm_lib_module_labels" (list . (dict "app" "webhook-handler")) | nindent 2 }}
+# The methods of every conversion are in the file the first handler embeds, where its unit tests
+# load it. webhook-operator pastes the handlers of all conversions into one class, so the file is the
+# handler of the first conversion and the others carry none.
+conversions:
+  - from: v1alpha1
+    to: v1alpha2
+    handler:
+      python: |
+        {{- (required "webhooks/conversion/projecttemplates.py is missing" (.Files.Get "webhooks/conversion/projecttemplates.py")) | nindent 8 }}
+  - from: v1alpha2
+    to: v1alpha1
+    handler: {}

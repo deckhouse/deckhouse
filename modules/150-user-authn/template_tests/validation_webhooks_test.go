@@ -17,8 +17,11 @@ limitations under the License.
 package template_tests
 
 import (
+	"os"
 	"path/filepath"
+	"regexp"
 	"runtime"
+	"strings"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -30,8 +33,9 @@ import (
 
 // The ValidationWebhooks of the module and the files of webhooks/validating their handler is made of.
 var userAuthnValidationWebhooks = map[string][]string{
-	"user-authn-group": {"webhooks/validating/group.py"},
-	"user-authn-user":  {"webhooks/validating/user.py"},
+	"user-authn-dex-authenticator": {"webhooks/validating/dex_authenticator_validation.py"},
+	"user-authn-group":             {"webhooks/validating/group.py"},
+	"user-authn-user":              {"webhooks/validating/user.py"},
 }
 
 var _ = Describe("Module :: user-authn :: helm template :: validation webhooks", func() {
@@ -97,4 +101,34 @@ modules:
 		}
 	})
 
+	Context("dex-authenticator", func() {
+		const webhook = "user-authn-dex-authenticator"
+
+		It("Should validate creates and updates of DexAuthenticators of every version", func() {
+			Expect(f.RenderError).ShouldNot(HaveOccurred())
+
+			object := resource(webhook)
+			Expect(object.Field("validationObject.name").String()).To(Equal("dexauthenticators-unique.deckhouse.io"))
+			Expect(object.Field("validationObject.rules").String()).To(MatchJSON(`[{
+				"apiGroups": ["deckhouse.io"], "apiVersions": ["v1", "v1alpha1", "v2alpha1"],
+				"operations": ["CREATE", "UPDATE"], "resources": ["dexauthenticators"], "scope": "Namespaced"}]`))
+		})
+
+		It("Should read the existing DexAuthenticators through v1 with the jqFilter the python tests run", func() {
+			Expect(f.RenderError).ShouldNot(HaveOccurred())
+
+			contexts := resource(webhook).Field("context").Array()
+			Expect(contexts).To(HaveLen(1))
+			Expect(contexts[0].Get("name").String()).To(Equal("dexauthenticators"))
+			Expect(contexts[0].Get("kubernetes.apiVersion").String()).To(Equal("deckhouse.io/v1"))
+			Expect(contexts[0].Get("kubernetes.kind").String()).To(Equal("DexAuthenticator"))
+
+			// dex_authenticator_validation_test.py builds the snapshots with a copy of the jqFilter.
+			test, err := os.ReadFile(filepath.Join(moduleDir, "webhooks/validating/dex_authenticator_validation_test.py"))
+			Expect(err).ShouldNot(HaveOccurred())
+			copied := regexp.MustCompile(`(?s)\nJQ_FILTER = '''(.*?)'''`).FindSubmatch(test)
+			Expect(copied).NotTo(BeNil())
+			Expect(strings.TrimSpace(contexts[0].Get("kubernetes.jqFilter").String())).To(Equal(strings.TrimSpace(string(copied[1]))))
+		})
+	})
 })

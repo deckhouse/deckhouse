@@ -20,18 +20,15 @@ import (
 	"context"
 	"encoding/json"
 	"os"
-	"path/filepath"
 	"strings"
 	"testing"
 
-	"github.com/itchyny/gojq"
 	"github.com/stretchr/testify/require"
 	apiextensions "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions"
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	structuralschema "k8s.io/apiextensions-apiserver/pkg/apiserver/schema"
 	structuralcel "k8s.io/apiextensions-apiserver/pkg/apiserver/schema/cel"
 	"k8s.io/apiextensions-apiserver/pkg/apiserver/schema/defaulting"
-	"k8s.io/apiextensions-apiserver/pkg/apiserver/schema/pruning"
 	"k8s.io/apiextensions-apiserver/pkg/apiserver/validation"
 	"k8s.io/apimachinery/pkg/util/validation/field"
 	celconfig "k8s.io/apiserver/pkg/apis/cel"
@@ -149,102 +146,5 @@ func TestDexAuthenticatorRoutingSchema(t *testing.T) {
 				})
 			}
 		}
-	}
-}
-
-// A conversion function is one jq program wrapped in shell plumbing, so the program runs here
-// directly. That keeps the conversion tests free of an external jq, and mirrors how the projects
-// hook of multitenancy-manager is tested.
-func convertAuthenticator(t *testing.T, object map[string]any, from, to string) map[string]any {
-	t.Helper()
-	query, err := gojq.Parse(conversionProgram(t, "__on_conversion::"+from+"_to_"+to))
-	require.NoError(t, err)
-
-	review := map[string]any{"review": map[string]any{"request": map[string]any{"objects": []any{object}}}}
-	result, ok := query.Run(review).Next()
-	require.True(t, ok, "%s to %s produced nothing", from, to)
-	if failure, isErr := result.(error); isErr {
-		t.Fatalf("converting %s to %s: %v", from, to, failure)
-	}
-
-	converted, ok := result.([]any)
-	require.True(t, ok, "%s to %s produced %v", from, to, result)
-	require.Len(t, converted, 1)
-
-	return converted[0].(map[string]any)
-}
-
-// conversionProgram lifts the jq source of one conversion function out of the shell hook. The
-// programs are single-quoted bash strings, which cannot contain a single quote, so the quotes
-// delimit them unambiguously.
-func conversionProgram(t *testing.T, function string) string {
-	t.Helper()
-	hook, err := os.ReadFile(filepath.Join("..", "webhooks", "conversion", "dex-authenticator"))
-	require.NoError(t, err)
-
-	body := string(hook)
-	start := strings.Index(body, "function "+function+"()")
-	require.GreaterOrEqual(t, start, 0, "the hook has no %s", function)
-
-	body = body[start:]
-	open := strings.Index(body, "'")
-	require.GreaterOrEqual(t, open, 0, "%s runs no jq program", function)
-
-	body = body[open+1:]
-	end := strings.Index(body, "'")
-	require.GreaterOrEqual(t, end, 0, "the jq program of %s is not closed", function)
-
-	return body[:end]
-}
-
-func TestDexAuthenticatorConversionPreservesRouting(t *testing.T) {
-	schemas := authenticatorSchemas(t)
-	for _, fixture := range []string{
-		`[{"domain":"app.example.com","ingressClassName":"nginx"}]`,
-		`[{"domain":"app.example.com","gatewayAPI":{"httpRouteListenerSetName":"app"}}]`,
-		`[{"domain":"app.example.com","gatewayAPI":{"httpRouteListenerSetName":"app","httpRouteListenerSetNamespace":"gateway","httpRouteListenerSetSectionName":"https"},"signOutURL":"/logout"},{"domain":"second.example.com","gatewayAPI":{"httpRouteListenerSetName":"second","httpRouteListenerSetNamespace":"gateway","httpRouteListenerSetSectionName":"https"},"signOutURL":"/bye","whitelistSourceRanges":["192.0.2.0/24"]}]`,
-		`[{"domain":"app.example.com","ingressClassName":"nginx","gatewayAPI":{"httpRouteListenerSetName":"app"}},{"domain":"second.example.com","gatewayAPI":{"httpRouteListenerSetName":"second"}},{"domain":"third.example.com","ingressClassName":"nginx"}]`,
-	} {
-		t.Run(fixture, func(t *testing.T) {
-			var apps []any
-			require.NoError(t, json.Unmarshal([]byte(fixture), &apps))
-			object := authenticatorObject("v2alpha1", apps)
-			stored := convertAuthenticator(t, object, "v2alpha1", "v1")
-			first := apps[0].(map[string]any)
-			storedSpec := stored["spec"].(map[string]any)
-			_, hasClass := first["ingressClassName"]
-			_, storedClass := storedSpec["applicationIngressClassName"]
-			require.Equal(t, hasClass, storedClass)
-			_, hasGateway := first["gatewayAPI"]
-			_, storedGateway := storedSpec["gatewayAPI"]
-			require.Equal(t, hasGateway, storedGateway)
-			structural, err := structuralschema.NewStructural(schemas["v1"])
-			require.NoError(t, err)
-			pruning.Prune(stored, structural, true)
-			validateAuthenticator(t, schemas["v1"], stored, true)
-			legacy := convertAuthenticator(t, stored, "v1", "v1alpha1")
-			validateAuthenticator(t, schemas["v1alpha1"], legacy, true)
-			stored = convertAuthenticator(t, legacy, "v1alpha1", "v1")
-			restored := convertAuthenticator(t, stored, "v1", "v2alpha1")
-			validateAuthenticator(t, schemas["v2alpha1"], restored, true)
-			require.Equal(t, apps, restored["spec"].(map[string]any)["applications"])
-		})
-	}
-}
-
-// Older converters emitted a gatewayAPI object full of nulls even for Ingress-only applications.
-func TestDexAuthenticatorLegacyEmptyGateway(t *testing.T) {
-	schemas := authenticatorSchemas(t)
-	for _, gateway := range []any{nil, map[string]any{}, map[string]any{
-		"applicationHTTPRouteListenerSetName":        nil,
-		"applicationHTTPRouteListenerSetNamespace":   nil,
-		"applicationHTTPRouteListenerSetSectionName": nil,
-	}} {
-		object := authenticatorObject("v1", nil)
-		object["spec"] = map[string]any{"applicationDomain": "app.example.com", "applicationIngressClassName": "nginx", "gatewayAPI": gateway}
-		converted := convertAuthenticator(t, object, "v1", "v2alpha1")
-		apps := converted["spec"].(map[string]any)["applications"].([]any)
-		require.NotContains(t, apps[0], "gatewayAPI")
-		validateAuthenticator(t, schemas["v2alpha1"], converted, true)
 	}
 }

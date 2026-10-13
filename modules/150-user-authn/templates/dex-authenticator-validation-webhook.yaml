@@ -1,0 +1,52 @@
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: ValidationWebhook
+metadata:
+  name: user-authn-dex-authenticator
+  {{- include "helm_lib_module_labels" (list . (dict "app" "webhook-handler")) | nindent 2 }}
+validationObject:
+  name: dexauthenticators-unique.deckhouse.io
+  group: main
+  rules:
+  - apiGroups:   ["deckhouse.io"]
+    apiVersions: ["v1", "v1alpha1", "v2alpha1"]
+    operations:  ["CREATE", "UPDATE"]
+    resources:   ["dexauthenticators"]
+    scope:       "Namespaced"
+context:
+  # The existing DexAuthenticators, read through v1 whatever version their authors used.
+  # webhooks/validating/dex_authenticator_validation_test.py keeps a copy of the jqFilter.
+  - name: dexauthenticators
+    kubernetes:
+      apiVersion: deckhouse.io/v1
+      kind: DexAuthenticator
+      queue: "dexauthenticators-list"
+      jqFilter: |
+        .metadata.namespace as $namespace |
+        {
+          "name": .metadata.name,
+          "namespace": .metadata.namespace,
+          "applicationDomain": .spec.applicationDomain,
+          "ingressClass": .spec.applicationIngressClassName,
+          "additionalDomains": [
+            .spec.additionalApplications[]? | [.domain, .ingressClassName]
+          ],
+          "gatewayDomains": ([
+            {
+              "domain": .spec.applicationDomain,
+              "listenerSetName": .spec.gatewayAPI.applicationHTTPRouteListenerSetName,
+              "listenerSetNamespace": (.spec.gatewayAPI.applicationHTTPRouteListenerSetNamespace // $namespace),
+              "sectionName": (.spec.gatewayAPI.applicationHTTPRouteListenerSetSectionName // "")
+            },
+            (.spec.additionalApplications[]? | {
+              "domain": .domain,
+              "listenerSetName": .gatewayAPI.httpRouteListenerSetName,
+              "listenerSetNamespace": (.gatewayAPI.httpRouteListenerSetNamespace // $namespace),
+              "sectionName": (.gatewayAPI.httpRouteListenerSetSectionName // "")
+            })
+          ] | map(select(.listenerSetName != null)))
+        }
+handler:
+  # The code of the hook is webhooks/validating/dex_authenticator_validation.py, where its unit tests import it.
+  python: |
+    {{- (required "webhooks/validating/dex_authenticator_validation.py is missing" (.Files.Get "webhooks/validating/dex_authenticator_validation.py")) | nindent 4 }}

@@ -1,0 +1,36 @@
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: ValidationWebhook
+metadata:
+  name: user-authz-system-roles
+  {{- include "helm_lib_module_labels" (list . (dict "app" "webhook-handler")) | nindent 2 }}
+validationObject:
+  name: system-roles.deckhouse.io
+  group: main
+  labelSelector:
+    matchLabels:
+      heritage: deckhouse
+  # Now that UPDATE is covered, the identities that legitimately rewrite a marked role would reach
+  # the handler on every change -- clusterrole-aggregation-controller rewrites .rules on every
+  # aggregated platform role. Filtering them at the API server keeps that traffic off the handler
+  # and keeps them working while it is unavailable, which matters under failurePolicy: Fail. The
+  # check in webhooks/validating/system_roles.py stays as the authority; these are only a pre-filter.
+  # One condition per identity, in the form the admission documentation guarantees: a CEL
+  # expression that fails to compile invalidates the whole ValidatingWebhookConfiguration.
+  matchConditions:
+  - expression: ("system:apiserver" != request.userInfo.username)
+    name: exclude-kube-apiserver
+  - expression: ("system:serviceaccount:d8-system:deckhouse" != request.userInfo.username)
+    name: exclude-deckhouse
+  - expression: ("system:serviceaccount:kube-system:clusterrole-aggregation-controller" != request.userInfo.username)
+    name: exclude-aggregation-controller
+  rules:
+  - apiGroups:   ["rbac.authorization.k8s.io"]
+    apiVersions: ["*"]
+    operations:  ["CREATE", "UPDATE"]
+    resources:   ["clusterroles"]
+    scope:       "Cluster"
+handler:
+  # The code of the hook is webhooks/validating/system_roles.py, where its unit tests import it.
+  python: |
+    {{- (required "webhooks/validating/system_roles.py is missing" (.Files.Get "webhooks/validating/system_roles.py")) | nindent 4 }}

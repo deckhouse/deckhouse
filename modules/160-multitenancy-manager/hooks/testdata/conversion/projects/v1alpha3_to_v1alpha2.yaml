@@ -1,4 +1,4 @@
-# Golden fixture of webhooks/conversion/projects, function v1alpha3_to_v1alpha2.
+# Golden fixture of webhooks/conversion/projects.py, function v1alpha3_to_v1alpha2.
 # Each case is one ConversionReview: objects is request.objects as the apiserver sends it, converted is
 # the response.convertedObjects the hook has to answer with, in the same order.
 

@@ -1,12 +1,12 @@
-# Golden fixture of webhooks/conversion/projects, function v1alpha3_to_v1alpha2, for projects as the
+# Golden fixture of webhooks/conversion/projects.py, function v1alpha3_to_v1alpha2, for projects as the
 # controller writes them back. Each case is one ConversionReview. objects is request.objects as the
 # apiserver sends it, converted is the response.convertedObjects the hook has to answer with, in the
 # same order.
 #
 # A Helm resourcesTemplate of the v1alpha2 layout renders from the spec.parameters a v1alpha2 reader
 # gets, and the controller computes them in Go (validate.V1alpha2Parameters) rather than through the
-# conversion. Two tests hold the two to this file. conversion_projects_parameters_test.go runs the
-# conversion over every case with every jq engine, and the validate tests of the controller run the
+# conversion. Two tests hold the two to this file. webhooks/conversion/projects_test.py runs the
+# conversion over every case, and the validate tests of the controller run the
 # Go copy over the spec of every object and compare it with the parameters the object converts to.
 #
 # Every spec is what storage holds once the controller has written the project back, so every quota

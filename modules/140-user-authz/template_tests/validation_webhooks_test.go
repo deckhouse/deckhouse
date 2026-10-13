@@ -34,16 +34,18 @@ import (
 // The ValidationWebhooks of the module and the files of webhooks/validating their handler is made
 // of, in the order the chart joins them.
 var userAuthzValidationWebhooks = map[string][]string{
-	"user-authz-identity-collision-group":  {"webhooks/validating/identity_collision.py"},
-	"user-authz-identity-collision-user":   {"webhooks/validating/identity_collision.py"},
-	"user-authz-identity-privilege":        {"webhooks/validating/identity_assign.py", "webhooks/validating/identity_privilege.py"},
-	"user-authz-multitenancy-car":          {"webhooks/validating/multitenancy.py"},
-	"user-authz-multitenancy-moduleconfig": {"webhooks/validating/multitenancy.py"},
-	"user-authz-rbacv2-cluster-roles":      {"webhooks/validating/cluster_roles.py"},
-	"user-authz-rbacv2-role-escalation":    {"webhooks/validating/role_escalation.py"},
-	"user-authz-role-binding":              {"webhooks/validating/role_binding.py"},
-	"user-authz-system-resources-edit":     {"webhooks/validating/system_resources.py"},
-	"user-authz-system-resources-exec":     {"webhooks/validating/system_resources.py"},
+	"user-authz-cluster-authorization-rule": {"webhooks/validating/cluster_authorization_rule.py"},
+	"user-authz-identity-collision-group":   {"webhooks/validating/identity_collision.py"},
+	"user-authz-identity-collision-user":    {"webhooks/validating/identity_collision.py"},
+	"user-authz-identity-privilege":         {"webhooks/validating/identity_assign.py", "webhooks/validating/identity_privilege.py"},
+	"user-authz-multitenancy-car":           {"webhooks/validating/multitenancy.py"},
+	"user-authz-multitenancy-moduleconfig":  {"webhooks/validating/multitenancy.py"},
+	"user-authz-rbacv2-cluster-roles":       {"webhooks/validating/cluster_roles.py"},
+	"user-authz-rbacv2-role-escalation":     {"webhooks/validating/role_escalation.py"},
+	"user-authz-role-binding":               {"webhooks/validating/role_binding.py"},
+	"user-authz-system-resources-edit":      {"webhooks/validating/system_resources.py"},
+	"user-authz-system-resources-exec":      {"webhooks/validating/system_resources.py"},
+	"user-authz-system-roles":               {"webhooks/validating/system_roles.py"},
 }
 
 var _ = Describe("Module :: user-authz :: helm template :: validation webhooks", func() {
@@ -551,6 +553,43 @@ var _ = Describe("Module :: user-authz :: helm template :: validation webhooks",
 				To(Equal(pythonConstant(moduleDir, "webhooks/validating/system_resources.py", "BINDING_EDIT")))
 			Expect(resource("user-authz-system-resources-exec").Field("validationObject.name").String()).
 				To(Equal(pythonConstant(moduleDir, "webhooks/validating/system_resources.py", "BINDING_EXEC")))
+		})
+	})
+
+	Context("cluster-authorization-rule", func() {
+		It("Should validate creates and updates of ClusterAuthorizationRules", func() {
+			Expect(f.RenderError).ShouldNot(HaveOccurred())
+
+			object := resource("user-authz-cluster-authorization-rule")
+			Expect(object.Field("validationObject.name").String()).To(Equal("cluster-authorization-rules.deckhouse.io"))
+			Expect(object.Field("validationObject.rules").String()).To(MatchJSON(`[{
+				"apiGroups": ["deckhouse.io"], "apiVersions": ["*"], "operations": ["CREATE", "UPDATE"],
+				"resources": ["clusterauthorizationrules"], "scope": "Cluster"}]`))
+			Expect(object.Field("context").Exists()).To(BeFalse())
+		})
+	})
+
+	Context("system-roles", func() {
+		It("Should validate creates and updates of the ClusterRoles marked as installed by the platform", func() {
+			Expect(f.RenderError).ShouldNot(HaveOccurred())
+
+			object := resource("user-authz-system-roles")
+			Expect(object.Field("validationObject.name").String()).To(Equal("system-roles.deckhouse.io"))
+			Expect(object.Field("validationObject.labelSelector").String()).To(MatchJSON(`{"matchLabels": {"heritage": "deckhouse"}}`))
+			Expect(object.Field("validationObject.rules").String()).To(MatchJSON(`[{
+				"apiGroups": ["rbac.authorization.k8s.io"], "apiVersions": ["*"], "operations": ["CREATE", "UPDATE"],
+				"resources": ["clusterroles"], "scope": "Cluster"}]`))
+			Expect(object.Field("context").Exists()).To(BeFalse())
+		})
+
+		It("Should let the identities that rewrite marked roles bypass the webhook", func() {
+			Expect(f.RenderError).ShouldNot(HaveOccurred())
+
+			Expect(matchConditions("user-authz-system-roles")).To(Equal(map[string]string{
+				"exclude-kube-apiserver":         `("system:apiserver" != request.userInfo.username)`,
+				"exclude-deckhouse":              fmt.Sprintf(`("%s" != request.userInfo.username)`, pythonConstant(moduleDir, "webhooks/validating/system_roles.py", "DECKHOUSE_SA")),
+				"exclude-aggregation-controller": `("system:serviceaccount:kube-system:clusterrole-aggregation-controller" != request.userInfo.username)`,
+			}))
 		})
 	})
 })

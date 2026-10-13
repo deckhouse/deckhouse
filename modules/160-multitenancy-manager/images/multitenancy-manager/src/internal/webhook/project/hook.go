@@ -373,7 +373,7 @@ type leftover struct {
 	// field is the standard field that does it, and holds what
 	field, holds string
 	// lifted is the shape the v1alpha2 -> v1alpha3 conversion lifts into the field, in the words of
-	// liftable_administrators and liftable_quota of webhooks/conversion/projects
+	// _is_liftable_administrators and _is_liftable_quota of webhooks/conversion/projects.py
 	lifted string
 }
 

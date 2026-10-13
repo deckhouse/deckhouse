@@ -281,7 +281,7 @@ namespace when every selector it sets matches: `projectSelector` the labels of t
 `namespaceSelector` the labels of the namespace, so a label on the Project selects all its namespaces
 (`internal/resolve.PolicyMatches`, shared by the webhooks, the catalog reconciler and the violation
 recount). A policy with neither selector is a library policy. The `v1alpha1` `projectSelector` is the
-`v1alpha2` `namespaceSelector` (conversion hook `webhooks/conversion/clusterresourcegrantpolicies`).
+`v1alpha2` `namespaceSelector` (conversion hook `webhooks/conversion/clusterresourcegrantpolicies.py`).
 Per resource (`resourceName`), the policy sets `allowed` / `allowedSelector` / `denied` / `deniedSelector` /
 `default` / `availabilityDefault`. A non-empty allow-list or an `allowedSelector` infers a `None` baseline; empty `allowed: []` does not.
 

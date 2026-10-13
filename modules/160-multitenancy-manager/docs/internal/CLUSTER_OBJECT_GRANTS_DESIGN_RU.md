@@ -251,7 +251,7 @@ Per-проект allow-list и дефолт. В `v1alpha2` (версия хра�
 неймспейса, так что лейбл на Project выбирает все его неймспейсы (`internal/resolve.PolicyMatches`,
 общий для вебхуков, catalog reconciler и пересчёта нарушений). Политика без обоих селекторов —
 библиотечная. `projectSelector` версии `v1alpha1` — это `namespaceSelector` версии `v1alpha2` (хук
-конверсии `webhooks/conversion/clusterresourcegrantpolicies`). Для каждого ресурса (`resourceName`)
+конверсии `webhooks/conversion/clusterresourcegrantpolicies.py`). Для каждого ресурса (`resourceName`)
 политика задаёт `allowed`/`allowedSelector`/`denied`/`deniedSelector`/`default`/
 `availabilityDefault`. Непустой allow-лист или `allowedSelector` подразумевает базу `None`; пустой `allowed: []` — нет.
 

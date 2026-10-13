@@ -529,10 +529,10 @@ func TestV1alpha2Parameters(t *testing.T) {
 }
 
 // V1alpha2Parameters is the Go copy of what the v1alpha3 -> v1alpha2 conversion of
-// webhooks/conversion/projects gives a v1alpha2 reader, and a Helm text renders from it. The hooks
-// test TestProjectDownConversionParameters runs that conversion over the projects of a golden fixture
-// with every jq engine, this runs the copy over their specs, and both compare with the parameters the
-// fixture converts them to. The schemas here declare the two parameters without requiring them. A
+// webhooks/conversion/projects.py gives a v1alpha2 reader, and a Helm text renders from it.
+// webhooks/conversion/projects_test.py runs that conversion over the projects of a golden fixture,
+// this runs the copy over their specs, and both compare with the parameters the fixture converts them
+// to. The schemas here declare the two parameters without requiring them. A
 // required one the project leaves empty is put back in its empty form, which the conversion does not
 // do (see TestProject), so the schema of the default template of that layout, which requires both, is
 // used only for the specs that have both standard fields.
@@ -660,7 +660,7 @@ func TestUndeclaredLeftovers(t *testing.T) {
 }
 
 // legacyResourceQuota undoes what the v1alpha2 -> v1alpha3 conversion does to resourceQuota, the
-// way webhooks/conversion/projects does it on the way back.
+// way webhooks/conversion/projects.py does it on the way back.
 func TestLegacyResourceQuota(t *testing.T) {
 	t.Parallel()
 

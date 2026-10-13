@@ -1,4 +1,4 @@
-# Golden fixture of webhooks/conversion/projects, the chain v1alpha1_to_v1alpha2 then v1alpha2_to_v1alpha3
+# Golden fixture of webhooks/conversion/projects.py, the chain v1alpha1_to_v1alpha2 then v1alpha2_to_v1alpha3
 # that shell-operator runs for a project still stored as v1alpha1 and read at v1alpha3.
 # Each case is one ConversionReview: objects is request.objects as the apiserver sends it, converted is
 # the response.convertedObjects the hook has to answer with, in the same order.
