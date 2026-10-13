@@ -330,6 +330,44 @@ alerts:
         Orphaned EgressGatewayPolicy with an irrelevant EgressGateway name has been found.
       severity: "4"
       markupFormat: markdown
+    - name: CNICiliumPolicyWithRequiresFieldsFound
+      sourceFile: modules/021-cni-cilium/monitoring/prometheus-rules/deprecated-policy-fields.yaml
+      moduleUrl: 021-cni-cilium
+      module: cni-cilium
+      edition: ce
+      description: |
+        The {{ $labels.kind }} `{{ $labels.name }}`{{ if $labels.namespace }} in the `{{ $labels.namespace }}` namespace{{ end }} uses the `fromRequires` or `toRequires` fields.
+
+        Cilium 1.19 and later doesn't support these fields. The Cilium agent of these versions can't read such policies and fails on all nodes. Deckhouse won't deploy a release with such a Cilium version until all these policies are rewritten.
+
+        To resolve this issue, rewrite each `fromRequires` constraint as an `ingressDeny` rule with an inverted selector. Don't move the selector into the deny rule as is: this inverts the policy. A deny rule wins over allow rules of any policy, so it keeps the original scope: `fromRequires` applied to all policies selecting the endpoint.
+
+        For example, `fromRequires` with `matchLabels: {env: prod}` becomes:
+
+        ```yaml
+        ingressDeny:
+        - fromEndpoints:
+          - matchExpressions:
+            - {key: env, operator: NotIn, values: [prod]}
+        {{- if $labels.namespace }}
+          - matchExpressions:
+            - {key: k8s:io.kubernetes.pod.namespace, operator: Exists}
+            - {key: k8s:io.kubernetes.pod.namespace, operator: NotIn, values: [{{ $labels.namespace }}]}
+        {{- end }}
+        ```
+
+        - Add a separate `NotIn` selector for each label of the constraint.
+        {{- if $labels.namespace }}
+        - Keep the second selector: in a CiliumNetworkPolicy, `fromRequires` also implied the policy namespace, so sources from other namespaces were rejected. The `Exists` condition is required, otherwise the rule also blocks the host, the world, and other sources without a namespace.
+        {{- end }}
+        - Rewrite `toRequires` the same way, as an `egressDeny` rule with `toEndpoints`.
+        - Add the deny rule first, check the traffic, and only then remove `fromRequires` and `toRequires`.
+
+        To list all affected policies, use the `d8_cni_cilium_policy_with_requires_fields == 1` expression in Prometheus.
+      summary: |
+        The {{ $labels.kind }} {{ if $labels.namespace }}{{ $labels.namespace }}/{{ end }}{{ $labels.name }} uses the fromRequires or toRequires fields.
+      severity: "4"
+      markupFormat: markdown
     - name: D8AdmissionPolicyEngineAuditUnavailable
       sourceFile: modules/015-admission-policy-engine/monitoring/prometheus-rules/availability.yaml
       moduleUrl: 015-admission-policy-engine
