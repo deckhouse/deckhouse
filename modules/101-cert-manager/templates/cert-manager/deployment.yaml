@@ -68,6 +68,9 @@ spec:
           - --v=1
           - --cluster-resource-namespace=$(POD_NAMESPACE)
           - --leader-election-namespace=$(POD_NAMESPACE)
+          # A standby or a restarted pod checks the lease every 5 seconds instead of 15, so the controller
+          # resumes work sooner after the leader stops.
+          - --leader-election-retry-period=5s
           - --feature-gates={{ join "," $featureGates }} # TODO: Remove ACMEHTTP01IngressPathTypeExact after update ingress-nginx up to v1.13.2+ and v1.12.6+
           - "--acme-http01-solver-image={{ include "helm_lib_module_image" (list . "certManagerAcmeSolver") }}"
           {{- if $.Values.certManager.maxConcurrentChallenges }}
@@ -103,6 +106,16 @@ spec:
             - containerPort: 9403
               name: http-healthz
               protocol: TCP
+          # The health endpoint starts only after the controller has reached the API server, and patch 003
+          # waits for the API server for up to five minutes. Liveness checks start after this probe passes.
+          startupProbe:
+            httpGet:
+              port: http-healthz
+              path: /livez
+              scheme: HTTP
+            periodSeconds: 10
+            timeoutSeconds: 5
+            failureThreshold: 33
           livenessProbe:
             httpGet:
               port: http-healthz
