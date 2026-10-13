@@ -31,8 +31,7 @@
         Audit all LDAP DexProvider objects:
 
         ```bash
-        kubectl get dexproviders.deckhouse.io -o yaml \
-          | yq '.items[] | select(.spec.type=="LDAP") | {name: .metadata.name, ldap: .spec.ldap | pick(["insecureNoSSL","startTLS","insecureSkipVerify","rootCAData"])}'
+        d8 k get dexproviders.deckhouse.io -o yaml | yq '.items[] | select(.spec.type=="LDAP") | {name: .metadata.name, ldap: .spec.ldap | pick(["insecureNoSSL","startTLS","insecureSkipVerify","rootCAData"])}'
         ```
 
   - alert: D8UserAuthnIDTokenTTLTooLong

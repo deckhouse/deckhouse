@@ -41,7 +41,10 @@ spec:
                 enabled:
                   type: boolean
                   default: true
-                  description: When false, this provider is ignored by Dex config renderer.
+                  description: |
+                    Whether the provider is enabled.
+
+                    A disabled provider is not shown on the sign-in page, and users cannot sign in through it. The DexProvider and its settings are kept.
                 type:
                   type: string
                   description: 'Type of authentication provider.'
@@ -60,11 +63,18 @@ spec:
                     intersection refuses the sign-in). Each list is optional; an omitted or empty list does not limit
                     that attribute.
 
+                    Dex also checks the limits at every refresh-token request and at Basic Authentication of an LDAP
+                    provider. It revokes a refresh token outside the limits, and the user has to sign in again. For a
+                    Crowd or OIDC provider, basic-auth-proxy checks the credentials with the provider directly, so the
+                    limits do not apply to Basic Authentication.
+
                     The limits also decide who may create or change the provider. A provider that can assert an
                     email or a group that already carries roles in the cluster may be written only by a requester
                     who is allowed to assign those roles. Without an email limit the provider can assert any email,
                     including the ones that hold `SuperAdmin`, so writing it requires `SuperAdmin`. With limits on both
-                    attributes only the roles granted to the listed identities count.
+                    attributes only the roles granted to the listed identities count. A Crowd or OIDC provider with
+                    `enableBasicAuth: true` counts as a provider without an email limit, because Basic Authentication
+                    bypasses the limits.
                   properties:
                     emails:
                       type: array
@@ -117,8 +127,6 @@ spec:
                          - ['acme:Site Reliability Engineers'] for 'name'
                          - ['acme:site-reliability-engineers'] for 'slug'
                          - ['acme:Site Reliability Engineers', 'acme:site-reliability-engineers'] for 'both'
-
-                        'name' will be used by default.
                     useLoginAsID:
                       type: boolean
                       description: |
@@ -224,7 +232,7 @@ spec:
                       description: |
                         Optional parameter to include team groups.
 
-                        If enabled, the groups claim of Dex id_token will looks like this:
+                        If enabled, the groups claim of Dex id_token will look like this:
                         ```yaml
                         ["my_team", "my_team/administrators", "my_team/members"]
                         ```
@@ -244,7 +252,7 @@ spec:
                       type: string
                       x-doc-examples: ['https://crowd.example.com/crowd']
                       description: |
-                        Base part of Attlassian Crowd URL.
+                        Base part of Atlassian Crowd URL.
                     groups:
                       type: array
                       description: |
@@ -262,12 +270,13 @@ spec:
                     enableBasicAuth:
                       type: boolean
                       description: |
-                        Enables basic authorization for the Kubernetes API server.
+                        Enables Basic Authentication to the Kubernetes API server with the Crowd user's username and password.
 
-                        The username and password of the user from the application created in Crowd are used as credentials for basic authorization (you can enable it only if there is just one provider of the OIDC/Crowd type).
-                        Works **only** if the `publishAPI` is enabled.
+                        Works only when the [`apiserver.publishAPI`](/modules/control-plane-manager/configuration.html#parameters-apiserver-publishapi) parameter of the `control-plane-manager` module is enabled. Only one DexProvider in the cluster can have `enableBasicAuth` enabled.
 
-                        Authorization and group data obtained from an IdP are stored in the cache for 10 seconds.
+                        Basic Authentication bypasses `spec.allowedIdentities`. Therefore only a `SuperAdmin` can create a provider with this parameter enabled or enable the parameter in an existing provider.
+
+                        A successful check is cached together with the user's groups for 2 minutes, and a failed check for 10 seconds. A user whose access is revoked in the identity provider can use the Kubernetes API until the cached result expires.
                 oidc: &oidc
                   type: object
                   required: ['clientID', 'clientSecret', 'issuer']
@@ -302,7 +311,7 @@ spec:
                       description: |
                         Request additional info about the authenticated user.
 
-                        Learn more [here](https://openid.net/specs/openid-connect-core-1_0.html#UserInfo)...
+                        See [UserInfo endpoint](https://openid.net/specs/openid-connect-core-1_0.html#UserInfo).
                       default: false
                     userIDKey:
                       type: string
@@ -392,12 +401,13 @@ spec:
                     enableBasicAuth:
                       type: boolean
                       description: |
-                        Enables basic authorization for the Kubernetes API server.
+                        Enables Basic Authentication to the Kubernetes API server with the OIDC user's username and password.
 
-                        The username and password of the user from the application created in OIDC are used as credentials for basic authorization (you can enable it only if there is just one provider of the OIDC/Crowd type).
-                        Works **only** if the [publishAPI](https://deckhouse.io/modules/user-authn/configuration.html#parameters-publishapi) parameter is enabled.
+                        Works only when the [`apiserver.publishAPI`](/modules/control-plane-manager/configuration.html#parameters-apiserver-publishapi) parameter of the `control-plane-manager` module is enabled. Only one DexProvider in the cluster can have `enableBasicAuth` enabled.
 
-                        Authorization and group data obtained from an IdP are stored in the cache for 10 seconds.
+                        Basic Authentication bypasses `spec.allowedIdentities`. Therefore only a `SuperAdmin` can create a provider with this parameter enabled or enable the parameter in an existing provider.
+
+                        A successful check is cached together with the user's groups for 2 minutes, and a failed check for 10 seconds. A user whose access is revoked in the identity provider can use the Kubernetes API until the cached result expires.
                 ldap: &ldap
                   type: object
                   required: ['host', 'userSearch']
@@ -425,7 +435,6 @@ spec:
                       description: |
                         Following field is required if the LDAP host is not using TLS (port 389).
                         This option inherently leaks passwords to anyone on the same network as Dex.
-                        Equals to false by default.
 
                         Mutually exclusive with `startTLS`, `insecureSkipVerify`, and `rootCAData`: when `insecureNoSSL` is true, TLS is disabled and those settings have no effect.
                     startTLS:
@@ -476,9 +485,7 @@ spec:
                       type: string
                       x-doc-examples: ['password']
                       description: |
-                        Password for read-only service account.
-                        Please note that if the bind password contains a `$`, it has to be saved in an
-                        environment variable which should be given as the value to `bindPW`.
+                        Password of the service account set in `bindDN`.
                     userSearch:
                       type: object
                       required: ['baseDN', 'username', 'idAttr', 'emailAttr']
@@ -556,15 +563,11 @@ spec:
                     enableBasicAuth:
                       type: boolean
                       description: |
-                        Enables Basic Authentication for access to the Kubernetes API server.
+                        Enables Basic Authentication to the Kubernetes API server with the LDAP user's username and password.
 
-                        The credentials are the Crowd user's username and password (from the application configured for this provider).
+                        Works only when the [`apiserver.publishAPI`](/modules/control-plane-manager/configuration.html#parameters-apiserver-publishapi) parameter of the `control-plane-manager` module is enabled. Only one DexProvider in the cluster can have `enableBasicAuth` enabled.
 
-                        Limitations:
-                        - works only when [`publishAPI`](configuration.html#parameters-publishapi) is enabled;
-                        - can be enabled for only one OIDC or Crowd provider in the cluster.
-
-                        Authentication data and group membership obtained from the IdP are cached for 10 seconds.
+                        A successful check is cached together with the user's groups for 2 minutes, and a failed check for 10 seconds. A user whose access is revoked in the identity provider can use the Kubernetes API until the cached result expires.
                     kerberos:
                       type: object
                       description: |
@@ -598,10 +601,10 @@ spec:
                             Required when `enabled` is `true`.
                         krb5ConfConfigMapName:
                           type: string
-                          description: Optional ConfigMap name containing key 'krb5.conf' to mount at /etc/krb5.conf.
+                          description: Not used. Dex validates Kerberos tickets with the keytab only, and the module does not mount this ConfigMap.
                         krb5ConfSecretName:
                           type: string
-                          description: Optional Secret name containing key 'krb5.conf' to mount at /etc/krb5.conf.
+                          description: Not used. Dex validates Kerberos tickets with the keytab only, and the module does not mount this Secret.
                 saml: &saml
                   type: object
                   description: |
@@ -627,13 +630,15 @@ spec:
                     entityIssuer:
                       type: string
                       description: |
-                        Issuer value expected in the SAML response.
+                        Issuer value that Dex sends in the SAML AuthnRequest (the entity ID of Dex as a service provider). Dex also expects this value in the audience of the SAML assertion.
 
-                        Defaults to the callback URL.
+                        If not set, the request carries no Issuer, and Dex expects the callback URL in the audience.
                     ssoIssuer:
                       type: string
                       description: |
                         Issuer value expected in the SAML response from the IdP.
+
+                        If not set, the Issuer of the response is not checked.
                     redirectURI:
                       type: string
                       description: |
@@ -761,7 +766,10 @@ spec:
                 enabled:
                   type: boolean
                   default: true
-                  description: When false, this provider is ignored by Dex config renderer.
+                  description: |
+                    Whether the provider is enabled.
+
+                    A disabled provider is not shown on the sign-in page, and users cannot sign in through it. The DexProvider and its settings are kept.
                 type:
                   type: string
                   description: 'Type of authentication provider.'
@@ -780,11 +788,18 @@ spec:
                     intersection refuses the sign-in). Each list is optional; an omitted or empty list does not limit
                     that attribute.
 
+                    Dex also checks the limits at every refresh-token request and at Basic Authentication of an LDAP
+                    provider. It revokes a refresh token outside the limits, and the user has to sign in again. For a
+                    Crowd or OIDC provider, basic-auth-proxy checks the credentials with the provider directly, so the
+                    limits do not apply to Basic Authentication.
+
                     The limits also decide who may create or change the provider. A provider that can assert an
                     email or a group that already carries roles in the cluster may be written only by a requester
                     who is allowed to assign those roles. Without an email limit the provider can assert any email,
                     including the ones that hold `SuperAdmin`, so writing it requires `SuperAdmin`. With limits on both
-                    attributes only the roles granted to the listed identities count.
+                    attributes only the roles granted to the listed identities count. A Crowd or OIDC provider with
+                    `enableBasicAuth: true` counts as a provider without an email limit, because Basic Authentication
+                    bypasses the limits.
                   properties:
                     emails:
                       type: array
@@ -837,8 +852,6 @@ spec:
                          - ['acme:Site Reliability Engineers'] for 'Name'
                          - ['acme:site-reliability-engineers'] for 'Slug'
                          - ['acme:Site Reliability Engineers', 'acme:site-reliability-engineers'] for 'Both'
-
-                        'name' will be used by default.
                     useLoginAsID:
                       type: boolean
                       description: |

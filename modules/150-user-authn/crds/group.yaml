@@ -46,7 +46,6 @@ spec:
                   description: List of group members.
                   items:
                     type: object
-                    description:
                     required:
                       - kind
                       - name
@@ -62,6 +61,7 @@ spec:
                         description: For kind User — User.metadata.name. For kind Group — the nested Group.spec.name (the name that appears in tokens), not metadata.name.
                 status:
                   type: object
+                  x-doc-skip: true
                   required: []
                   properties:
                     errors:

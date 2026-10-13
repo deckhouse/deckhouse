@@ -12,6 +12,15 @@
       plk_protocol_version: "1"
       plk_markup_format: "markdown"
       summary: Prometheus is unable to scrape Dex metrics.
+      description: |-
+        Prometheus cannot scrape any Dex pod in the `d8-user-authn` namespace. Users may be unable to sign in.
+
+        Check the Dex pods and their logs:
+
+        ```bash
+        d8 k -n d8-user-authn get pods -l app=dex
+        d8 k -n d8-user-authn logs deploy/dex
+        ```
 
 - name: d8.dex.authrequests-quota
   rules:
@@ -68,9 +77,9 @@
            d8 k get authrequests.dex.coreos.com -n d8-user-authn
            ```
 
-        2. Review Dex configuration for AuthRequest TTL settings.
+        2. AuthRequest objects expire after 10 minutes. A growing count usually means that a client or a bot repeatedly starts sign-ins. Find the source in the Dex logs.
 
-        3. Consider temporarily increasing the ResourceQuota limit if needed.
+        3. Consider temporarily increasing the ResourceQuota limit if needed. The module restores the quota on its next run.
 
   - alert: D8DexAuthRequestsQuotaExhausted
     expr: |
@@ -125,11 +134,15 @@
            d8 k delete authrequests.dex.coreos.com --all -n d8-user-authn
            ```
 
+           Deleting AuthRequest objects interrupts sign-ins that are in progress.
+
         2. Temporarily increase the ResourceQuota limit:
            ```bash
            d8 k patch resourcequota authrequest-quota -n d8-user-authn --type='json' -p='[{"op": "replace", "path": "/spec/hard/count\/authrequests.dex.coreos.com", "value": "20000"}]'
            ```
 
+           The module restores the quota on its next run.
+
         3. Investigate why Dex is not cleaning up AuthRequest objects automatically.
 
-        4. Review Dex configuration for AuthRequest TTL settings.
+        4. AuthRequest objects expire after 10 minutes. A growing count usually means that a client or a bot repeatedly starts sign-ins. Find the source in the Dex logs.

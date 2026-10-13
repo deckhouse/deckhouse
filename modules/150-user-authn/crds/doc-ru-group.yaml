@@ -12,7 +12,6 @@ spec:
                 name:
                   description: Уникальное имя группы, которое попадает в claim `groups` токена и в RBAC-субъекты. Это не `metadata.name`.
                 members:
-                  type: array
                   description: Список членов группы.
                   items:
                     properties:

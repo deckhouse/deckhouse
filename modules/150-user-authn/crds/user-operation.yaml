@@ -60,7 +60,7 @@ spec:
                     Indicates who initiated the operation. Possible values:
  
                     * `admin`: By an administrator.
-                    * `system`: Automatically by the system.
+                    * `system`: Reserved. No component sets this value.
                     * `self`: By the user.
                 resetPassword:
                   type: object
@@ -80,7 +80,7 @@ spec:
                       description: |
                         Lock duration as a Go-style duration string (`30s`, `10m`, `1h`, `2h30m`, `7d`),
                         or `permanent` for an indefinite lock released only by `Unlock`.
-                        Days are expanded as `1d = 24h` by the hook before parsing.
+                        `1d` equals `24h`.
                       pattern: '^(permanent|([0-9]+(\.[0-9]+)?(s|m|h|d))+)$'
                       x-kubernetes-validations:
                         # Self-sufficient: re-asserts shape (so garbage like "permanent7d" or
@@ -134,8 +134,8 @@ spec:
           description: |
             Describes a single-use operation to be applied to a user (password reset, 2FA reset, lock/unlock).
 
-            A UserOperation is immutable — its specification cannot be changed after creation.
-            After creation, the hook processes the operation and writes the result to `status.phase`
+            A UserOperation runs once, and changes to its spec after creation are ignored.
+            The module processes the operation and writes the result to `status.phase`
             (`Succeeded` or `Failed`). Completed operations are automatically deleted after 24 hours.
             To perform a new action, create a new UserOperation.
 
@@ -216,7 +216,7 @@ spec:
                     Indicates who initiated the operation. Possible values:
     
                     * `admin`: By an administrator (e.g. via `d8 iam user` CLI or a manual UserOperation).
-                    * `system`: Automatically by the system (e.g. automatic lockout after exceeding `passwordPolicy.lockout.maxAttempts`).
+                    * `system`: Reserved. No component sets this value (Dex locks a user after failed sign-in attempts without creating a UserOperation).
                     * `self`: By the user (self-service password reset in the DP authentication interface).
                 resetPassword:
                   type: object
@@ -225,10 +225,7 @@ spec:
                     newPasswordHash:
                       type: string
                       description: |
-                        Bcrypt hash of the new password.
-
-                        Pass the raw bcrypt hash **without** Base64 encoding — the hook encodes it
-                        automatically before storing it in the User resource.
+                        Bcrypt hash of the new password, without Base64 encoding.
                 lock:
                   type: object
                   description: "Parameters for locking the user."
@@ -240,7 +237,7 @@ spec:
                       description: |
                         Lock duration as a Go-style duration string (`30s`, `10m`, `1h`, `2h30m`, `7d`),
                         or `permanent` for an indefinite lock released only by `Unlock`.
-                        Days are expanded as `1d = 24h` by the hook before parsing.
+                        `1d` equals `24h`.
                       pattern: '^(permanent|([0-9]+(\.[0-9]+)?(s|m|h|d))+)$'
                       x-kubernetes-validations:
                         # Self-sufficient: re-asserts shape (so garbage like "permanent7d" or

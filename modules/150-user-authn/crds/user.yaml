@@ -25,7 +25,7 @@ spec:
           description: |
             Contains information about the static user.
 
-            [Usage example...](usage.html#an-example-of-creating-a-static-user)
+            [Creating a user](usage.html#creating-a-user)
           required:
             - spec
           properties:
@@ -41,7 +41,7 @@ spec:
                   description: |
                     User email. Must be in lowercase.
 
-                    **Caution!** Note that if used together with the [user-authz](https://deckhouse.io/modules/user-authz/) module, you must specify an `email` to grant rights to the specific user as the user name in the [ClusterAuthorizationRule](https://deckhouse.io/modules/user-authz/cr.html#clusterauthorizationrule) CR.
+                    To grant this user access, use the `email` value as the `User` subject name in a RoleBinding or ClusterRoleBinding of the [granular role-based model](/modules/user-authz/#granular-role-based-model).
 
                     **Important!** Email addresses are case-insensitive for uniqueness validation. Dex automatically converts emails to lowercase during authentication. For new users, uppercase letters in email addresses are not allowed. Existing users with uppercase emails can be updated without changing the email field.
                   x-doc-examples: ['user@domain.com']
@@ -51,7 +51,7 @@ spec:
                   description: |
                     User password hash in plaintext or Base64 encoded.
 
-                    Use the following command to encode the password hash in Base64: `echo -n '<PASSWORD>' | htpasswd -BinC 10 "" | cut -d: -f2 | tr -d '\n' | base64 -w0; echo`. Alternatively, you can use an online service (such as https://bcrypt-generator.com/).
+                    Use the following command to encode the password hash in Base64: `echo -n '<PASSWORD>' | htpasswd -BinC 10 "" | cut -d: -f2 | tr -d '\n' | base64 -w0; echo`. You can also create the user with `d8 iam user create`, which computes the hash locally.
 
                     > **Caution.** If a password policy with complexity checking higher than `None` is used, the user will have to change a password set this way upon their first successful login.
 
@@ -89,10 +89,7 @@ spec:
                 expireAt:
                   type: string
                   description: |
-                    User account expiration date.
-                    * It is shown only of the `.spec.ttl` field is set.
-                    * The user account will be deleted at the specified date.
-                    * This parameter is synchronized every 5 minutes. There may be a time lag between the moment specified in this field and the moment of actual deletion of the user account.
+                    User account expiration time. Set only when `spec.ttl` is set. At this time the User is deleted and removed from all Groups.
                 groups:
                   type: array
                   description: |
@@ -160,7 +157,7 @@ spec:
           description: |
             Contains information about the static user.
 
-            [Usage example...](usage.html#an-example-of-creating-a-static-user)
+            [Creating a user](usage.html#creating-a-user)
           required:
             - spec
           properties:
@@ -176,7 +173,7 @@ spec:
                   description: |
                     User email. Must be in lowercase.
 
-                    **Caution!** Note that if used together with the [user-authz](https://deckhouse.io/modules/user-authz/) module, you must specify an `email` to grant rights to the specific user as the user name in the [ClusterAuthorizationRule](https://deckhouse.io/modules/user-authz/cr.html#clusterauthorizationrule) CR.
+                    To grant this user access, use the `email` value as the `User` subject name in a RoleBinding or ClusterRoleBinding of the [granular role-based model](/modules/user-authz/#granular-role-based-model).
 
                     **Important!** Email addresses are case-insensitive for uniqueness validation. Dex automatically converts emails to lowercase during authentication. For new users, uppercase letters in email addresses are not allowed. Existing users with uppercase emails can be updated without changing the email field.
                   x-doc-examples: ['user@domain.com']
@@ -186,7 +183,7 @@ spec:
                   description: |
                     User password hash in plaintext or Base64 encoded.
 
-                    Use the following command to encode the password hash in Base64: `echo -n '<PASSWORD>' | htpasswd -BinC 10 "" | cut -d: -f2 | tr -d '\n' | base64 -w0; echo`. Alternatively, you can use an online service (such as https://bcrypt-generator.com/).
+                    Use the following command to encode the password hash in Base64: `echo -n '<PASSWORD>' | htpasswd -BinC 10 "" | cut -d: -f2 | tr -d '\n' | base64 -w0; echo`. You can also create the user with `d8 iam user create`, which computes the hash locally.
 
                     > **Caution.** This field is immutable after the User is created. Changing the password via `kubectl edit` does not update Dex credentials and will be rejected. To reset the password, use the [UserOperation](#useroperation) resource (or `d8 iam user`).
                   x-doc-examples: ['JDJ5JDEwJGRNWGVGUVBkdUdYYVMyWDFPcGdZdk9HSy81LkdsNm5sdU9mUkhnNWlQdDhuSlh6SzhpeS5H']
@@ -223,10 +220,7 @@ spec:
                 expireAt:
                   type: string
                   description: |
-                    User account expiration date.
-                    * It is shown only of the `.spec.ttl` field is set.
-                    * The user account will be deleted at the specified date.
-                    * This parameter is synchronized every 5 minutes. There may be a time lag between the moment specified in this field and the moment of actual deletion of the user account.
+                    User account expiration time. Set only when `spec.ttl` is set. At this time the User is deleted and removed from all Groups.
                 groups:
                   type: array
                   description: |

@@ -267,7 +267,7 @@ spec:
                         description: |-
                           Defines the taint’s key this toleration is associated with (it matches any key if empty).
 
-                          If the key is omitted (emplty), then `operator` must be set to `Exists` (which means it matches any `value` and `key`).
+                          If the key is omitted (empty), then `operator` must be set to `Exists` (which means it matches any `value` and `key`).
                         type: string
                       operator:
                         description: |-
@@ -644,7 +644,7 @@ spec:
                         description: |-
                           Defines the taint’s key this toleration is associated with (it matches any key if empty).
 
-                          If the key is omitted (emplty), then `operator` must be set to `Exists` (which means it matches any `value` and `key`).
+                          If the key is omitted (empty), then `operator` must be set to `Exists` (which means it matches any `value` and `key`).
                         type: string
                       operator:
                         description: |-

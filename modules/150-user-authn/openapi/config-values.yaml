@@ -6,16 +6,14 @@ properties:
     x-doc-deprecated: true
     default: {}
     description: |
-      Settings for exposing the Kubernetes API server using Ingress or Gateway API.
-
-      > **Important.** Starting with version DP 1.77, use the [`apiserver.publishAPI`](/modules/control-plane-manager/configuration.html#parameters-apiserver-publishapi) parameter of the `control-plane-manager` module to publish the Kubernetes API server.
+      Obsolete. The module does not publish the Kubernetes API. The API is published with the [`apiserver.publishAPI`](/modules/control-plane-manager/configuration.html#parameters-apiserver-publishapi) parameter of the `control-plane-manager` module. Move existing settings there.
 
       For more information on how to expose the Kubernetes API, see [the `control-plane-manager` module documentation](/modules/control-plane-manager/#exposing-the-kubernetes-api).
     properties:
       enabled:
         type: boolean
         default: false
-        description: 'Setting it to `true` will create an Ingress resource in the `d8-user-authn` namespace in the cluster (it exposes the Kubernetes API).'
+        description: 'Obsolete. Does not create an Ingress.'
       ingressClass:
         type: string
         pattern: '^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$'
@@ -45,8 +43,6 @@ properties:
 
               In the `SelfSigned` mode, a CA-signed certificate will be issued for the Ingress resource.
 
-              Use the following command to get the certificate: `d8 k -n d8-user-authn get secrets kubernetes-api-ca-key-pair -oyaml`.
-
               In the `Global` mode, the policies specified in the `global.modules.https.mode` global parameter will be applied. Thus, if the global parameter has the `CertManager` mode set (with `letsencrypt` as the ClusterIssuer), then the Let's Encrypt certificate will be issued for the Ingress resource.
           global:
             type: object
@@ -63,7 +59,7 @@ properties:
       addKubeconfigGeneratorEntry:
         type: boolean
         default: true
-        description: 'Setting it to `false` will remove an entry in kubeconfig-generator.'
+        description: 'Obsolete. Use the [`apiserver.publishAPI.ingress.addKubeconfigGeneratorEntry`](/modules/control-plane-manager/configuration.html#parameters-apiserver-publishapi-ingress-addkubeconfiggeneratorentry) parameter of the `control-plane-manager` module.'
   kubeconfigGenerator:
     type: array
     description: |
@@ -81,13 +77,9 @@ properties:
         masterURI:
           type: string
           description: |
-            If you plan to use a TCP proxy, then you must configure a certificate on the API server's side for the TCP proxy address. Suppose your API servers use three different addresses (`192.168.0.10`, `192.168.0.11`, and `192.168.0.12`) while the client uses a TCP load balancer (say, `192.168.0.15`). In this case, you have to re-generate the API server certificates:
-            * edit `kubeadm-config`: `d8 k -n kube-system edit configmap kubeadm-config` and add `192.168.0.15` to `.apiServer.certSANs`;
-            * save the resulting config: `kubeadm config view > kubeadmconf.yaml`;
-            * delete old API server certificates: `mv /etc/kubernetes/pki/apiserver.* /tmp/`;
-            * reissue new certificates: `kubeadm init phase certs apiserver --config=kubeadmconf.yaml`;
-            * restart the API server's container: `docker ps -a | grep 'kube-apiserver' | grep -v pause| awk '{print $1}' | xargs docker restart`;
-            * repeat this step for all master nodes.
+            API server address that kubeconfig files generated for this access method point to, for example `https://192.168.0.15:6443`.
+
+            If clients reach the API server through a TCP proxy or a load balancer, add its address to the [`apiserver.certSANs`](/modules/control-plane-manager/configuration.html#parameters-apiserver-certsans) parameter of the `control-plane-manager` module.
         description:
           type: string
           description: |
@@ -101,6 +93,8 @@ properties:
   passwordPolicy:
     type: object
     default: null
+    description: |
+      Password policy for local users.
     properties:
       complexityLevel:
         type: string
@@ -203,12 +197,12 @@ properties:
               External (non-local) connector types the lockout additionally applies to.
 
               The built-in `Local` connector is always covered by the lockout policy when this section is configured.
-              Its state is stored in the Password resource and does not need to be opted in here.
+              Its state is stored in the Password object and does not need to be opted in here.
 
               For the listed external connectors, the failed-attempt counter and the lock state are tracked in the
-              OfflineSessions resource of the corresponding user (one object per `(user, connector)` pair).
+              OfflineSessions object of the corresponding user (one object per `(user, connector)` pair).
 
-              Manually unlocking a user is supported for every type via the UserOperation resource.
+              Manually unlocking a user is supported for every type via a UserOperation.
             uniqueItems: true
             items:
               type: string
@@ -228,9 +222,8 @@ properties:
       per-IP budget.
 
       Limits are tracked in memory in each Dex replica.
-      In HA setups, the effective per-IP
-      rate is multiplied by the number of replicas, which is fine as a brute-force backstop
-      and is complemented by the account-level lockout.
+      In HA setups, the effective per-IP rate is multiplied by the number of replicas.
+      Account lockout complements this limit.
     properties:
       enabled:
         type: boolean
@@ -267,13 +260,16 @@ properties:
     type: object
     default: {}
     required: [enabled]
+    description: |
+      Two-factor authentication for local users.
     properties:
       enabled:
         type: boolean
         default: false
         description: |
-          If set to `true`, the static users will be required to use two-factor authentication (2FA) when logging in.
-          This option is useful for enhancing security by requiring an additional verification step during the login process.
+          If set to `true`, the local users will be required to use two-factor authentication (2FA) when logging in.
+
+          When 2FA is enabled, Dex also shows the consent screen when users sign in.
       issuerName:
         type: string
         default: "Deckhouse"
@@ -306,6 +302,10 @@ properties:
 
       This setting controls how long user sessions can persist. After this period expires, users will need to re-authenticate, even if they have active refresh tokens.
 
+      A refresh token that is not used for 2190 hours (about 3 months) expires earlier.
+
+      The value must not be shorter than `idTokenTTL`.
+
       It is specified as a string containing the time unit in hours, minutes and seconds: 30m, 20s, 2h30m10s, 24h.
   highAvailability:
     type: boolean
@@ -313,7 +313,7 @@ properties:
     description: |
       Manually enable the high availability mode.
 
-      By default, Deckhouse automatically decides whether to enable the HA mode. Click [here](/products/kubernetes-platform/documentation/v1/reference/api/global.html#parameters) to learn more about the HA mode for modules.
+      By default, Deckhouse automatically decides whether to enable the HA mode. Learn more about the [high availability mode for modules](/products/kubernetes-platform/documentation/v1/reference/api/global.html#parameters).
   nodeSelector:
     type: object
     additionalProperties:
@@ -322,7 +322,7 @@ properties:
     description: |
       The same as in the Pods' `spec.nodeSelector` parameter in Kubernetes.
 
-      If the parameter is omitted or `false`, it will be determined [automatically](https://deckhouse.io/products/kubernetes-platform/documentation/v1/#advanced-scheduling).
+      If the parameter is omitted, it is determined [automatically](/products/kubernetes-platform/documentation/v1/#advanced-scheduling).
   tolerations:
     type: array
     items:
@@ -346,14 +346,14 @@ properties:
           value: "value1"
           effect: "NoSchedule"
     description: |
-      The same as in the Pods' `spec.tolerations` parameter in Kubernetes;
+      The same as in the Pods' `spec.tolerations` parameter in Kubernetes.
 
-      If the parameter is omitted or `false`, it will be determined [automatically](https://deckhouse.io/products/kubernetes-platform/documentation/v1/#advanced-scheduling).
+      If the parameter is omitted, it is determined [automatically](/products/kubernetes-platform/documentation/v1/#advanced-scheduling).
   ingressClass:
     type: string
     pattern: '^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$'
     description: |
-      The class of the Ingress controller that will be used for Dex/kubeconfig-generator.
+      The class of the Ingress controller that will be used for Dex.
 
       An optional parameter; by default, the `modules.ingressClass` global value is used.
   https:
@@ -366,7 +366,7 @@ properties:
         certManager:
           clusterIssuerName: letsencrypt
     description: |
-      What certificate type to use with Dex/kubeconfig-generator.
+      What certificate type to use with Dex.
 
       This parameter completely overrides the `global.modules.https` settings.
     properties:
@@ -375,10 +375,13 @@ properties:
         default: "Disabled"
         description: |
           The HTTPS usage mode:
-          - `CertManager` — Dex/kubeconfig-generator will use HTTPS and get a certificate from the ClusterIssuer defined in the `certManager.clusterIssuerName` parameter.
-          - `CustomCertificate` — Dex/kubeconfig-generator will use HTTPS using the certificate from the `d8-system` namespace.
-          - `Disabled` — Dex/kubeconfig-generator will work over HTTP only;
-          - `OnlyInURI` — Dex/kubeconfig-generator will work over HTTP (thinking that there is an external HTTPS load balancer in front that terminates HTTPS traffic). All the links in the `user-authn` will be generated using the HTTPS scheme. Load balancer should provide a redirect from HTTP to HTTPS.
+
+          - `CertManager`: Dex uses HTTPS and gets a certificate from the ClusterIssuer set in the `certManager.clusterIssuerName` parameter.
+          - `CustomCertificate`: Dex uses HTTPS with the certificate from the `d8-system` namespace.
+          - `Disabled`: The module is turned off, because it works only with HTTPS.
+          - `OnlyInURI`: Dex works over HTTP behind an external load balancer that terminates HTTPS. All `user-authn` links use the HTTPS scheme. The load balancer must redirect HTTP to HTTPS.
+
+          If you set the `https` section without `mode`, `Disabled` applies and the module is turned off.
         enum:
           - "Disabled"
           - "CertManager"
@@ -386,22 +389,24 @@ properties:
           - "OnlyInURI"
       certManager:
         type: object
+        description: Settings of the `CertManager` mode.
         properties:
           clusterIssuerName:
             type: string
             default: "letsencrypt"
             description: |
-              What ClusterIssuer to use for Dex/kubeconfig-generator.
+              What ClusterIssuer to use for Dex.
 
               Currently, `letsencrypt`, `letsencrypt-staging`, `selfsigned` are available. Also, you can define your own.
       customCertificate:
         type: object
         default: {}
+        description: Settings of the `CustomCertificate` mode.
         properties:
           secretName:
             type: string
             description: |
-              The name of the Secret in the `d8-system` namespace to use with Dex/kubeconfig-generator.
+              The name of the Secret in the `d8-system` namespace to use with Dex.
 
               This Secret must have the [kubernetes.io/tls](https://kubernetes.github.io/ingress-nginx/user-guide/tls/#tls-secrets) format.
             default: "false"

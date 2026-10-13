@@ -4,28 +4,8 @@ title: "The user-authn module: configuration"
 
 <!-- SCHEMA -->
 
-The creation of the [`DexAuthenticator`](cr.html#dexauthenticator) Custom Resource leads to the automatic deployment of [oauth2-proxy](https://github.com/oauth2-proxy/oauth2-proxy) to your application's namespace and connecting it to Dex.
+{% alert level="warning" %}
+The module works only with HTTPS, because OpenID Connect over HTTP is a serious security threat and the Kubernetes API server does not support OIDC over HTTP. With `https.mode` set to `Disabled`, the module is turned off.
+{% endalert %}
 
-**Caution!** Since using OpenID Connect over HTTP poses a significant threat to security (the fact that Kubernetes API server doesn't support OICD over HTTP confirms that), this module can only be installed if HTTPS is enabled (to do this, set the `https.mode` parameter to the value other than `Disabled` either at the cluster level or in the module).
-
-**Caution!** When this module is enabled, authentication in all web interfaces will be switched from HTTP Basic Auth to Dex (the latter, in turn, will use the external providers that you have defined). To configure kubectl, generate a kubeconfig in the [Deckhouse web UI](/products/kubernetes-platform/documentation/v1/user/web/ui.html) and copy the resulting commands to your console.
-
-**Caution!** The API server requires [additional configuration](faq.html#configuring-kube-apiserver) to use authentication for dashboard and kubectl. The [control-plane-manager](/modules/control-plane-manager/) module (enabled by default) automates this process.
-
-To set custom labels and annotations for `dex-authenticator` pods, use `spec.podMetadata`.
-
-Example (disable Istio sidecar injection):
-
-```yaml
-apiVersion: deckhouse.io/v1
-kind: DexAuthenticator
-metadata:
-  name: app-name
-  namespace: app-namespace
-spec:
-  applicationDomain: app-name.kube.my-domain.com
-  applicationIngressClassName: nginx
-  podMetadata:
-    annotations:
-      sidecar.istio.io/inject: "false"
-```
+Set `https.mode` to a value other than `Disabled` at the cluster level ([`modules.https.mode`](/products/kubernetes-platform/documentation/v1/reference/api/global.html#parameters-modules-https-mode)) or in the module. If you set the `https` section of the module, set `mode` in it too. Without `mode`, `Disabled` applies.

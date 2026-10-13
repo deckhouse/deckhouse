@@ -22,7 +22,7 @@ spec:
         openAPIV3Schema:
           type: object
           description: |
-            Allows applications that support DC authentication to interact with Dex.
+            Allows applications that support OIDC authentication to interact with Dex.
 
             After the `DexClient` object appears in the cluster:
             * Dex will register a client with a `dex-client-<NAME>@<NAMESPACE>` **clientID**, where `<NAME>` and `<NAMESPACE>` are `metadata.name` and `metadata.namespace` of the DexClient object, respectively.
@@ -69,7 +69,7 @@ spec:
                 redirectURIs:
                   type: array
                   description: |
-                    Array or urls that Dex can redirect to after successful authentication.
+                    Array of URLs that Dex can redirect to after successful authentication.
 
                     Values must not contain line breaks.
                   items:
@@ -90,10 +90,11 @@ spec:
                     pattern: '^[^\r\n]*$'
                 secretMetadata:
                   type: object
-                  description: 'A list of labels and an annotations that will be transferred to the metadata secrets of the DexClient resource.'
+                  description: 'Labels and annotations to add to the `dex-client-<NAME>` Secret.'
                   properties:
                     labels:
                       type: object
+                      description: 'Labels of the Secret.'
                       additionalProperties:
                         type: string
                         maxLength: 63
@@ -104,6 +105,7 @@ spec:
                           message: "Label key must match the pattern '^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*(/[a-z0-9]([-a-z0-9]*[a-z0-9])?)?$'"
                     annotations:
                       type: object
+                      description: 'Annotations of the Secret.'
                       additionalProperties:
                         type: string
     - name: v1

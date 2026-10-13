@@ -4,7 +4,7 @@ spec:
       schema: &schema
         openAPIV3Schema:
           description: |
-            Позволяет приложениям, поддерживающим DC-аутентификацию, взаимодействовать с Dex.
+            Позволяет приложениям, поддерживающим OIDC-аутентификацию, взаимодействовать с Dex.
 
             После появления в кластере объекта `DexClient`:
             * в Dex будет зарегистрирован клиент с идентификатором (**clientID**) `dex-client-<NAME>@<NAMESPACE>`, где `<NAME>` и `<NAMESPACE>` — `metadata.name` и `metadata.namespace` объекта DexClient соответственно;
@@ -47,9 +47,14 @@ spec:
 
                     [Подробнее...](https://developers.google.com/identity/protocols/CrossClientAuth)
                 secretMetadata:
-                    description: |
-                        Список лейблов и аннотаций, которые будут перенесены в метаданные секретов ресурса DexClient.
+                  description: |
+                    Лейблы и аннотации, которые добавляются в Secret `dex-client-<NAME>`.
+                  properties:
+                    labels:
+                      description: |
+                        Лейблы Secret.
+                    annotations:
+                      description: |
+                        Аннотации Secret.
     - name: v1
-      served: true
-      storage: false
       schema: *schema

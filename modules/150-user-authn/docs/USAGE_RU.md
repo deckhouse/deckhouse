@@ -1,10 +1,11 @@
 ---
 title: "Модуль user-authn: примеры конфигурации"
+description: "Примеры настройки провайдеров аутентификации, DexAuthenticator, DexClient, локальных пользователей, парольной политики и 2FA в модуле user-authn."
 ---
 
 ## Пример конфигурации модуля
 
-В примере представлена конфигурация модуля `user-authn` в Deckhouse Platform.
+В примере добавляется способ прямого доступа к API-серверу для kubeconfig, который пользователи генерируют в веб-интерфейсе Deckhouse.
 
 {% raw %}
 
@@ -14,18 +15,20 @@ kind: ModuleConfig
 metadata:
   name: user-authn
 spec:
-  version: 2
+  version: 3
   enabled: true
   settings:
     kubeconfigGenerator:
     - id: direct
-      masterURI: https://159.89.5.247:6443
+      masterURI: https://192.0.2.10:6443
       description: "Direct access to kubernetes API"
 ```
 
 {% endraw %}
 
 ## Примеры настройки провайдера
+
+В примерах ниже `<DEX_DOMAIN>` — домен Dex. Это значение [`publicDomainTemplate`](/products/kubernetes-platform/documentation/v1/reference/api/global.html#parameters-modules-publicdomaintemplate), в котором `%s` заменено на `dex`, например `dex.example.com`.
 
 ### Проверка подключения провайдера
 
@@ -37,7 +40,63 @@ spec:
 - эндпоинт Dex discovery внутри кластера доступен;
 - эндпоинт внешнего провайдера доступен.
 
-Для OIDC-провайдеров дополнительно читаются discovery-документ и JWKS. Для LDAP-провайдеров проверяется доступность TCP/TLS/StartTLS и, если включён Kerberos, наличие секрета с keytab. Проверка не выполняет полный сценарий входа и не валидирует пароль тестового пользователя.
+Для OIDC-провайдеров дополнительно читаются discovery-документ и JWKS. Для LDAP-провайдеров проверяется доступность TCP/TLS/StartTLS и, если включён Kerberos, наличие секрета с keytab. Также проверяется, что провайдер принимает учётные данные клиента или сервисной учётной записи (GitHub, GitLab, Bitbucket Cloud, Crowd, OIDC, bind в LDAP), и выводятся предупреждения об отключённой проверке TLS и о сертификатах, срок действия которых скоро истекает. Проверка не выполняет полный сценарий входа и не проверяет пароль тестового пользователя.
+
+Чтобы выполнить проверку без веб-интерфейса, создайте DexProviderCheck:
+
+```yaml
+apiVersion: deckhouse.io/v1
+kind: DexProviderCheck
+metadata:
+  name: check-github
+spec:
+  providerName: github
+```
+
+Затем посмотрите его статус:
+
+```shell
+d8 k get dexproviderchecks check-github -o yaml
+```
+
+### Ограничение идентичностей провайдера
+
+Пользователь, вошедший через DexProvider, получает email и группы, которые сообщает провайдер. Email служит именем пользователя в Kubernetes. Поэтому провайдер даёт своим пользователям все права, уже выданные в кластере этим email и группам.
+
+Чтобы ограничить их, используйте [`spec.allowedIdentities`](cr.html#dexprovider-v1-spec-allowedidentities). Списки `emails` и `emailDomains` ограничивают email, и для любого другого email Dex отказывает во входе. Список `groups` ограничивает группы. Dex оставляет в токене только перечисленные группы и отказывает во входе, если не осталось ни одной.
+
+Ограничения действуют для провайдера любого типа в дополнение к фильтрам групп этого типа (`oidc.allowedGroups`, `gitlab.groups`, `crowd.groups`, `bitbucketCloud.teams` без `includeTeamGroups`, `github.orgs[].teams` в каждой организации, `saml.allowedGroups` вместе с `filterGroups: true`). Имена групп сравниваются точно. Вложенность объектов Group список не расширяет, так как токен внешнего провайдера содержит только те группы, которые сообщил провайдер.
+
+Dex проверяет ограничения при входе, при каждом запросе с refresh-токеном и при базовой аутентификации в API-сервере через LDAP-провайдер. Refresh-токен, который не проходит ограничения, Dex отзывает. Поэтому сужение ограничений завершает текущие сессии исключённых пользователей, и им нужно войти заново. Для провайдеров Crowd и OIDC basic-auth-proxy проверяет учётные данные напрямую у провайдера, поэтому при базовой аутентификации ограничения не действуют.
+
+Те же ограничения определяют, кто может создать или изменить провайдер. Нужно иметь право назначать все роли, уже выданные email и группам, которые провайдер может сообщить. Провайдер без ограничения по email может сообщить email пользователя с ролью SuperAdmin, поэтому создать или изменить его может только SuperAdmin. Провайдер Crowd или OIDC с `enableBasicAuth: true` считается провайдером без ограничения по email, потому что базовая аутентификация через него выполняется в обход ограничений. Создать такой провайдер или включить `enableBasicAuth` в существующем может только SuperAdmin.
+
+Пример провайдера, ограниченного доменом email и группой:
+
+```yaml
+apiVersion: deckhouse.io/v1
+kind: DexProvider
+metadata:
+  name: contractors
+spec:
+  type: OIDC
+  displayName: Contractors
+  oidc:
+    issuer: https://idp.contractor.example
+    clientID: dex
+    clientSecret: secret
+  allowedIdentities:
+    emailDomains: [contractor.example]
+    groups: [contractors]
+```
+
+Без проверки выполняются: смена `clientSecret` или `bindPW`, изменение `displayName`, выключение провайдера, сужение ограничений, повторное применение того же манифеста и удаление провайдера. Любое другое изменение проверяется как подключение нового провайдера, в том числе включение выключенного провайдера.
+
+Если проверка не пройдена, в ошибке перечислены роли, которые провайдер мог бы получить, например:
+
+```text
+dexproviders.deckhouse.io "corp": the provider can assert identities that already carry roles [user-authz:super-admin]; the requester's can-assign range is basic<=ClusterAdmin and does not cover them. Narrow spec.allowedIdentities (emails, emailDomains, groups) or ask a SuperAdmin
+```
 
 ### GitHub
 
@@ -58,14 +117,11 @@ spec:
     clientSecret: plainstring
 ```
 
-В организации GitHub необходимо создать новое приложение.
+В организации GitHub зарегистрируйте OAuth-приложение. Для этого перейдите в `Settings` → `Developer settings` → `OAuth Apps` → `New OAuth App` и укажите в `Authorization callback URL` адрес `https://<DEX_DOMAIN>/callback`.
 
-Для этого выполните следующие шаги:
-* перейдите в `Settings` -> `Developer settings` -> `OAuth Aps` -> `Register a new OAuth application` и в качестве `Authorization callback URL` укажите адрес `https://dex.<modules.publicDomainTemplate>/callback`.
+Полученные `Client ID` и `Client Secret` укажите в [DexProvider](cr.html#dexprovider).
 
-Полученные `Client ID` и `Client Secret` укажите в Custom Resource [DexProvider](cr.html#dexprovider).
-
-Если организация GitHub находится под управлением клиента, перейдите в `Settings` -> `Applications` -> `Authorized OAuth Apps` -> `<name of created OAuth App>` и нажмите `Send Request` для подтверждения. Попросите клиента подтвердить запрос, который придет к нему на email.
+Если в организации ограничен доступ сторонних приложений, запросите одобрение в `Settings` → `Applications` → `Authorized OAuth Apps` → `<APPLICATION_NAME>` → `Send Request` и попросите владельца организации подтвердить запрос.
 
 ### GitLab
 
@@ -88,14 +144,15 @@ spec:
     - users
 ```
 
-В GitLab проекта необходимо создать новое приложение.
+В GitLab создайте новое приложение.
 
-Для этого выполните следующие шаги:
-* **self-hosted**: перейдите в `Admin area` -> `Application` -> `New application` и в качестве `Redirect URI (Callback URL)` укажите адрес `https://dex.<modules.publicDomainTemplate>/callback`, выберите scopes: `read_user`, `openid`;
-* **cloud GitLab.com**: под главной учетной записью проекта перейдите в `User Settings` -> `Application` -> `New application` и в качестве `Redirect URI (Callback URL)` укажите адрес `https://dex.<modules.publicDomainTemplate>/callback`, выберите scopes: `read_user`, `openid`;
-* (для GitLab версии 16 и выше) включить опцию `Trusted`/`Trusted applications are automatically authorized on GitLab OAuth flow` при создании приложения.
+Для этого:
 
-Полученные `Application ID` и `Secret` укажите в Custom Resource [DexProvider](cr.html#dexprovider).
+* **self-hosted** — перейдите в `Admin area` → `Application` → `New application`, укажите в `Redirect URI (Callback URL)` адрес `https://<DEX_DOMAIN>/callback` и в `Scopes` выберите `read_user` и `openid`;
+* **cloud GitLab.com** — под главной учётной записью проекта перейдите в `User Settings` → `Application` → `New application`, укажите в `Redirect URI (Callback URL)` адрес `https://<DEX_DOMAIN>/callback` и в `Scopes` выберите `read_user` и `openid`;
+* **GitLab 16 и выше** — при создании приложения включите опцию `Trusted`/`Trusted applications are automatically authorized on GitLab OAuth flow`.
+
+Полученные `Application ID` и `Secret` укажите в [DexProvider](cr.html#dexprovider).
 
 ### Atlassian Crowd
 
@@ -113,20 +170,16 @@ spec:
     baseURL: https://crowd.example.com/crowd
     clientID: plainstring
     clientSecret: plainstring
-    enableBasicAuth: true
     groups:
     - administrators
     - users
 ```
 
-В соответствующем проекте Atlassian Crowd необходимо создать новое `Generic`-приложение.
+В соответствующем проекте Atlassian Crowd создайте новое `Generic`-приложение. Для этого перейдите в `Applications` → `Add application`.
 
-Для этого выполните следующие шаги:
-* перейдите в `Applications` -> `Add application`.
+Полученные `Application Name` и `Password` укажите в [DexProvider](cr.html#dexprovider).
 
-Полученные `Application Name` и `Password` укажите в Custom Resource [DexProvider](cr.html#dexprovider).
-
-Группы CROWD укажите в lowercase-формате для Custom Resource `DexProvider`.
+Группы Crowd указывайте в DexProvider в нижнем регистре.
 
 ### Bitbucket Cloud
 
@@ -149,20 +202,15 @@ spec:
     - users
 ```
 
-Для настройки аутентификации необходимо в Bitbucket в меню команды создать нового OAuth consumer.
+В меню команды Bitbucket создайте новый OAuth consumer. Для этого перейдите в `Settings` → `OAuth consumers` → `New application`, укажите в `Callback URL` адрес `https://<DEX_DOMAIN>/callback` и разрешите доступ для `Account: Read` и `Workspace membership: Read`.
 
-Для этого выполните следующие шаги:
-* перейдите в `Settings` -> `OAuth consumers` -> `New application` и в качестве `Callback URL` укажите адрес `https://dex.<modules.publicDomainTemplate>/callback`, разрешите доступ для `Account: Read` и `Workspace membership: Read`.
-
-Полученные `Key` и `Secret` укажите в Custom Resource [DexProvider](cr.html#dexprovider).
+Полученные `Key` и `Secret` укажите в [DexProvider](cr.html#dexprovider).
 
 ### OIDC (OpenID Connect)
 
 Аутентификация через OIDC-провайдера требует регистрации клиента (или создания приложения). Сделайте это по документации вашего провайдера (например, [Okta](https://help.okta.com/en-us/Content/Topics/Apps/Apps_App_Integration_Wizard_OIDC.htm), [Keycloak](https://www.keycloak.org/docs/latest/server_admin/index.html#proc-creating-oidc-client_server_administration_guide), [Gluu](https://gluu.org/docs/gluu-server/4.4/admin-guide/openid-connect/#manual-client-registration) или [Blitz](https://docs.identityblitz.ru/latest/integration-guide/oidc-app-enrollment.html)).
 
-Полученные в ходе выполнения инструкции `clientID` и `clientSecret` укажите в Custom Resource [DexProvider](cr.html#dexprovider).
-
-Ниже можно ознакомиться с некоторыми примерами.
+Полученные `clientID` и `clientSecret` укажите в [DexProvider](cr.html#dexprovider).
 
 #### Keycloak
 
@@ -170,7 +218,7 @@ spec:
 
 * Создайте в разделе [Client scopes](https://www.keycloak.org/docs/latest/server_admin/#_client_scopes) `scope` с именем `groups`, и назначьте ему предопределённое сопоставление `groups` («Client scopes» → «Client scope details» → «Mappers» → «Add predefined mappers»).
 * В созданном ранее клиенте добавьте данный `scope` [во вкладке Client scopes](https://www.keycloak.org/docs/latest/server_admin/#_client_scopes_linking) («Clients → «Client details» → «Client Scopes» → «Add client scope»).
-* В полях «Valid redirect URIs», «Valid post logout redirect URIs» и «Web origins» [конфигурации клиента](https://www.keycloak.org/docs/latest/server_admin/#general-settings) укажите `https://dex.<publicDomainTemplate>/*`, где `publicDomainTemplate` – это [указанный](https://deckhouse.ru/products/kubernetes-platform/documentation/v1/reference/api/global.html#parameters-modules-publicdomaintemplate) шаблон DNS-имен кластера в модуле `global`.
+* В полях «Valid redirect URIs», «Valid post logout redirect URIs» и «Web origins» [конфигурации клиента](https://www.keycloak.org/docs/latest/server_admin/#general-settings) укажите `https://<DEX_DOMAIN>/*`.
 
 В примере представлены настройки провайдера для интеграции с Keycloak:
 
@@ -220,6 +268,10 @@ spec:
         - groups
   ```
 
+{% alert level="warning" %}
+При `insecureSkipEmailVerified: true` Dex принимает неподтверждённые email-адреса. Права выдаются по email, поэтому используйте этот параметр, только если провайдер не позволяет пользователям указывать произвольный email.
+{% endalert %}
+
 #### Okta
 
 В примере представлены настройки провайдера для интеграции с Okta:
@@ -236,13 +288,12 @@ spec:
     issuer: https://my-company.okta.com
     clientID: plainstring
     clientSecret: plainstring
-    insecureSkipEmailVerified: true
     getUserInfo: true
 ```
 
 #### Blitz Identity Provider
 
-На стороне провайдера Blitz Identity Provider при [регистрации приложения](https://docs.identityblitz.ru/latest/integration-guide/oidc-app-enrollment.html) необходимо указать URL для перенаправления пользователя после авторизации. При использовании `DexProvider` необходимо указать `https://dex.<publicDomainTemplate>/`, где `publicDomainTemplate` – [указанный](https://deckhouse.ru/products/kubernetes-platform/documentation/v1/reference/api/global.html#parameters-modules-publicdomaintemplate) в модуле `global` шаблон DNS-имен кластера.
+При [регистрации приложения](https://docs.identityblitz.ru/latest/integration-guide/oidc-app-enrollment.html) в Blitz Identity Provider укажите `https://<DEX_DOMAIN>/callback` в качестве URL для перенаправления пользователя после авторизации.
 
 В примере представлены настройки провайдера для интеграции с Blitz Identity Provider:
 
@@ -261,7 +312,6 @@ spec:
     clientID: clientID
     clientSecret: clientSecret
     getUserInfo: true
-    insecureSkipEmailVerified: true # Установить true, если нет необходимости в проверке email пользователя
     insecureSkipVerify: false
     issuer: https://yourdomain.idblitz.ru/blitz
     promptType: consent 
@@ -310,10 +360,13 @@ spec:
   displayName: Active Directory
   ldap:
     host: ad.example.com:636
-    insecureSkipVerify: true
+    rootCAData: |
+      -----BEGIN CERTIFICATE-----
+      MIIFaDC...
+      -----END CERTIFICATE-----
 
-    bindDN: cn=Administrator,cn=users,dc=example,dc=com
-    bindPW: admin0!
+    bindDN: cn=dex-readonly,cn=users,dc=example,dc=com
+    bindPW: <PASSWORD>
 
     usernamePrompt: Email Address
 
@@ -336,15 +389,19 @@ spec:
       nameAttr: cn
 ```
 
+Для настройки аутентификации создайте в LDAP сервисную учётную запись с правами только на чтение. Укажите её DN и пароль в параметрах `bindDN` и `bindPW` объекта [DexProvider](cr.html#dexprovider). Пароль в `bindPW` указывается в открытом виде. Хешированные пароли не поддерживаются.
+
+Если в LDAP разрешено анонимное чтение, `bindDN` и `bindPW` можно не указывать.
+
 #### Настройка базовой аутентификации
 
 Чтобы включить доступ к Kubernetes API с использованием базовой аутентификации (Basic Authentication) по учетным записям LDAP:
 
 1. Убедитесь, что в конфигурации модуля `control-plane-manager` включен параметр [`apiserver.publishAPI`](/modules/control-plane-manager/configuration.html#parameters-apiserver-publishapi).
-1. Установите параметр [`enableBasicAuth: true`](/modules/user-authn/cr.html#dexprovider-v1-spec-oidc-enablebasicauth) в ресурсе DexProvider для LDAP.
+1. Установите [`enableBasicAuth: true`](cr.html#dexprovider-v1-spec-ldap-enablebasicauth) в DexProvider типа LDAP.
 
 {% alert level="info" %}
-В кластере может быть только один провайдер аутентификации с включенным параметром [`enableBasicAuth`](/modules/user-authn/cr.html#dexprovider-v1-spec-oidc-enablebasicauth).
+В кластере может быть только один провайдер аутентификации с включённым параметром [`enableBasicAuth`](cr.html#dexprovider-v1-spec-ldap-enablebasicauth).
 {% endalert %}
 
 После настройки пользователи смогут обращаться к Kubernetes API с помощью `kubectl`, используя свой логин и пароль в LDAP.
@@ -389,8 +446,8 @@ spec:
   displayName: Active Directory
   ldap:
     host: ad.example.com:636
-    bindDN: cn=Administrator,cn=users,dc=example,dc=com
-    bindPW: admin0!
+    bindDN: cn=dex-readonly,cn=users,dc=example,dc=com
+    bindPW: <PASSWORD>
     userSearch:
       baseDN: cn=Users,dc=example,dc=com
       username: sAMAccountName
@@ -407,7 +464,7 @@ spec:
       enabled: true
       keytabSecretName: dex-kerberos-keytab   # Секрет в неймспейсе `d8-user-authn` с ключом 'krb5.keytab'.
       expectedRealm: EXAMPLE.COM              # Опционально, проверка realm (без учёта регистра).
-      usernameFromPrincipal: sAMAccountName   # localpart|sAMAccountName|userPrincipalName
+      usernameFromPrincipal: SAMAccountName   # Localpart|SAMAccountName|UserPrincipalName
       fallbackToPassword: false               # По умолчанию false; если true — при отсутствии/ошибке заголовка `Authorization: Negotiate` будет показана форма ввода логина/пароля.
 ```
 
@@ -416,10 +473,6 @@ spec:
 * Секрет `dex-kerberos-keytab` должен находиться в неймспейсе `d8-user-authn` и содержать ключ `krb5.keytab`.
 * Один под Dex может обслуживать несколько LDAP+Kerberos провайдеров. У каждого — свой keytab. `krb5.conf` не требуется (Dex проверяет билеты офлайн по keytab).
 * В DexProvider с `enabled: true` должен быть указан `keytabSecretName`, иначе объект не сохранится. Чтобы выключить Kerberos и оставить его настройки, укажите `enabled: false`.
-
-Для настройки аутентификации заведите в LDAP read-only-пользователя (service account).
-Полученные путь до пользователя и пароль укажите в параметрах `bindDN` и `bindPW` кастомного ресурса [DexProvider](cr.html#dexprovider). В параметре `bindPW` укажите пароль в открытом виде (plain text). Стратегии с передачей хешированных паролей не предусмотрены.
-Если в LDAP настроен анонимный доступ на чтение, настройки можно не указывать.
 
 ### SAML
 
@@ -450,8 +503,8 @@ spec:
 Для настройки SAML Identity Provider:
 
 1. Зарегистрируйте Dex как Service Provider (SP) у вашего провайдера идентификации со следующими параметрами:
-   - **ACS URL (Assertion Consumer Service)**: `https://dex.<modules.publicDomainTemplate>/callback`
-   - **Entity ID**: `https://dex.<modules.publicDomainTemplate>/callback`
+   - **ACS URL (Assertion Consumer Service)**: `https://<DEX_DOMAIN>/callback`
+   - **Entity ID**: `https://<DEX_DOMAIN>/callback`
    - **Формат идентификатора имени**: `persistent` или `emailAddress`
 
 1. Настройте сопоставление атрибутов в провайдере идентификации для отправки атрибутов `email`, `name` (имя пользователя) и `groups` в SAML assertion.
@@ -459,13 +512,13 @@ spec:
 1. Экспортируйте сертификат подписи провайдера идентификации и укажите его в поле `rootCAData` ресурса DexProvider.
 
 {% alert level="info" %}
-SAML не поддерживает refresh tokens нативно. Dex кеширует identity пользователя из первичного SAML assertion и возвращает её при последующих запросах refresh. Время жизни сессии контролируется настройками `expiry.refreshTokens` в конфигурации модуля `user-authn`.
+SAML не поддерживает refresh-токены. Dex кеширует данные пользователя из первого SAML-утверждения (assertion) и возвращает их при последующих запросах с refresh-токеном. Время жизни сессии ограничивается параметром модуля [`refreshTokenAbsoluteLifetime`](configuration.html#parameters-refreshtokenabsolutelifetime).
 {% endalert %}
 
 ## Настройка OAuth2-клиента в Dex для подключения приложения
 
-Этот вариант настройки подходит приложениям, которые имеют возможность использовать OAuth2-аутентификацию самостоятельно, без помощи `oauth2-proxy`.
-Чтобы позволить подобным приложениям взаимодействовать с Dex, используется Custom Resource [`DexClient`](cr.html#dexclient).
+Этот вариант настройки подходит приложениям, которые могут выполнять OAuth2-аутентификацию самостоятельно, без OAuth2-прокси.
+Чтобы такие приложения могли работать с Dex, используется [DexClient](cr.html#dexclient).
 
 {% raw %}
 
@@ -537,9 +590,9 @@ spec:
 Аннотация регистрирует клиента в качестве доверенного (trusted peer) для привилегированного OAuth2-клиента `kubernetes`, что позволяет ему запрашивать ID-токены, предназначенные для API-сервера. В таком токене имя пользователя определяется значением claim `email`, а группы — значением claim `groups`. В результате приложение обращается к API-серверу от имени прошедшего аутентификацию пользователя и с предоставленными ему правами.
 
 {% alert level="warning" %}
-Предоставляемый таким образом доступ действует на уровне всего кластера, хотя DexClient и DexAuthenticator являются namespaced-ресурсами. По этой причине добавить аннотацию или изменить её значение на `"true"` может только субъект с правами на изменение конфигурации модуля `user-authn` — например, пользователь с ролью `d8:system-capability:user-authn:edit`. Прав на создание ресурсов DexClient или DexAuthenticator в отдельном неймспейсе недостаточно.
+Предоставляемый таким образом доступ действует на уровне всего кластера, хотя DexClient и DexAuthenticator являются namespaced-объектами. По этой причине добавить аннотацию или изменить её значение на `"true"` может только субъект, которому разрешено действие `create` для субресурса `dexclients/allow-access-to-kubernetes` (для DexClient) или `dexauthenticators/allow-access-to-kubernetes` (для DexAuthenticator) в неймспейсе объекта. Это право входит в роль `d8:system-capability:user-authn:edit` и в уровень доступа `ClusterAdmin`. Чтобы выдать право в одном неймспейсе, создайте Role с действием `create` для этих субресурсов и привяжите её через RoleBinding в этом неймспейсе. Прав на создание объектов DexClient или DexAuthenticator недостаточно.
 
-Добавление аннотации ограничено независимо от указанного значения, включая `"false"`. Это необходимо для совместимости с версиями DP до 1.78, в которых доступ предоставляется при наличии аннотации независимо от её значения. Если доступ к API-серверу Kubernetes не требуется, не добавляйте аннотацию.
+Добавление аннотации ограничено независимо от указанного значения, включая `"false"`. Это необходимо для совместимости с версиями DP до 1.77, в которых доступ предоставляется при наличии аннотации независимо от её значения. Если доступ к API-серверу Kubernetes не требуется, не добавляйте аннотацию.
 
 Ограничение не распространяется на ресурсы, у которых аннотация уже установлена. Пользователь с правами на изменение такого ресурса может продолжать изменять его, в том числе удалить аннотацию или изменить значение так, чтобы доступ был отключён.
 {% endalert %}
@@ -547,7 +600,7 @@ spec:
 ## Локальная аутентификация
 
 Локальная аутентификация обеспечивает проверку и управление доступом пользователей с возможностью настройки парольной политики, поддержкой двухфакторной аутентификации (2FA) и управлением группами.  
-Реализация соответствует требованиям безопасности ФСТЭК и рекомендациям OWASP, обеспечивая надёжную защиту доступа к кластеру и приложениям без необходимости интеграции с внешними системами аутентификации.
+В параметрах модуля можно настроить сложность паролей, историю паролей, ротацию паролей, блокировку после неудачных попыток входа и ограничение частоты неудачных попыток с одного IP-адреса. Внешняя система аутентификации не требуется.
 
 ### Создание пользователя
 
@@ -613,8 +666,6 @@ echo -n '3xAmpl3Pa$$wo#d' | htpasswd -BinC 10 "" | cut -d: -f2 | tr -d '\n' | ba
 * `apache2-htpasswd` — для ALT Linux.
 {% endalert %}
 
-Также можно воспользоваться [онлайн-сервисом](https://bcrypt-generator.com/).
-
 Обратите внимание, что в приведенном примере указан [`ttl`](cr.html#user-v1-spec-ttl).
 
 {% raw %}
@@ -665,46 +716,19 @@ d8 iam user delete anton --keep-memberships
 
 ### Операции над локальным пользователем
 
-Операции сброса пароля, сброса 2FA и блокировки выполняются через ресурс [UserOperation](cr.html#useroperation). В поле `initiatorType` указывается, кто инициировал операцию: администратор (`admin`), система (`system`) или сам пользователь (`self`).
+Операции сброса пароля, сброса 2FA и блокировки выполняются через ресурс [UserOperation](cr.html#useroperation). В поле `initiatorType` указывается, кто инициировал операцию: администратор (`admin`) или сам пользователь (`self`).
 
-> **Важно.** Не меняйте `User.spec.password` после создания User (`kubectl edit` / прямой patch). Это поле нельзя изменить, и оно не обновляет учётные данные в Dex. Сбрасывайте пароль только через UserOperation (или `d8 iam user reset-password`).
+{% alert level="warning" %}
+Не меняйте `User.spec.password` после создания User (например, с помощью `d8 k edit`). Это поле нельзя изменить, и оно не обновляет учётные данные в Dex. Сбрасывайте пароль через UserOperation или `d8 iam user reset-password`.
+{% endalert %}
 
 #### Административные операции
 
 Для административных действий над локальными пользователями используйте команды `d8 iam user`. Они создают ресурс UserOperation с `initiatorType: admin`, дожидаются выполнения операции и выводят результат.
 
-Удалить, пересоздать или выполнить UserOperation (`ResetPassword`, `Reset2FA`, `Lock`, `Unlock`) над локальным пользователем, чей email или членство в группе уже несёт грант, можно только если вы можете назначить эти роли (покрывающие права или явный диапазон can-assign). `initiatorType: self` эту проверку не обходит.
+Удалить или пересоздать локального пользователя либо выполнить над ним UserOperation (`ResetPassword`, `Reset2FA`, `Lock`, `Unlock`) можно, только если вы можете назначить все роли, уже выданные email или группам пользователя (покрывающие права или явный диапазон can-assign). `initiatorType: self` эту проверку не обходит. То же правило действует для объектов DexProvider. Подробнее — [в разделе «Ограничение идентичностей провайдера»](#ограничение-идентичностей-провайдера).
 
-Подключить DexProvider — то же назначение. Провайдер утверждает email и набор групп, а имя пользователя в Kubernetes — это и есть email, поэтому провайдер дотягивается до всех грантов, имеющихся у идентичностей, которые он способен утвердить. Что он способен утвердить, ограничивается по двум осям блоком `spec.allowedIdentities`: `emails` и `emailDomains` ограничивают email, `groups` — claim групп. Фильтры групп, специфичные для типа провайдера, тоже учитываются (`oidc.allowedGroups`, `gitlab.groups`, `crowd.groups`, `bitbucketCloud.teams` без `includeTeamGroups`, `github.orgs[].teams` у каждой организации, `saml.allowedGroups` вместе с `filterGroups: true`). Ось без ограничителя открыта и дотягивается до всех грантов субъектов этого вида.
-
-`SuperAdmin` в каждом кластере выдан пользователю (User), поэтому провайдер без ограничителя по email способен утвердить этот email, и создать его или подключить заново может только `SuperAdmin`. При ограничителях по обеим осям учитываются только роли, уже выданные перечисленным идентичностям: `ClusterAdmin` или менеджер подсистемы `security` подключает провайдер для `@contractor.example` и группы `contractors` без `SuperAdmin`, если ни у одной из этих идентичностей ещё нет роли, которую он не может назначить. Имена групп сравниваются точно; вхождение объекта Group в другие объекты Group список не расширяет: токен внешнего провайдера несёт только те группы, которые провайдер утвердил.
-
-```yaml
-apiVersion: deckhouse.io/v1
-kind: DexProvider
-metadata:
-  name: contractors
-spec:
-  type: OIDC
-  displayName: Contractors
-  oidc:
-    issuer: https://idp.contractor.example
-    clientID: dex
-    clientSecret: secret
-  allowedIdentities:
-    emailDomains: [contractor.example]
-    groups: [contractors]
-```
-
-Dex применяет те же ограничители при входе: пользователю, чей email не входит в `emails` и `emailDomains`, отказывается во входе, claim групп сужается до пересечения со списком `groups`, пустое пересечение — отказ. Оба ограничителя действуют для любого типа провайдера поверх фильтров, специфичных для типа провайдера.
-
-Базовая аутентификация в API-сервере через провайдер OIDC или Crowd (`enableBasicAuth: true`) идёт мимо Dex: basic-auth-proxy проверяет пароль у самого провайдера, имя пользователя — это введённый логин, а `allowedIdentities` не действует. Поэтому такой провайдер проверяется с открытыми обеими осями, только у Crowd ось групп ограничивает `crowd.groups`, а включение `enableBasicAuth` проверяется как новое подключение. Базовая аутентификация через LDAP-провайдер идёт через Dex и сохраняет ограничители.
-
-Ротация `clientSecret` или `bindPW`, смена `displayName`, выключение провайдера, сужение ограничителей и повторное применение того же манифеста проходят без проверки. Любое другое изменение проверяется как новое подключение провайдера в его новом виде: адрес провайдера идентичности, маппинг claim или атрибутов, параметры проверки подписи и email, расширение ограничителей, а также включение выключенного провайдера (выключение — способ изолировать подозрительный провайдер, и его отмена не бесплатна). Удаление провайдера не проверяется.
-
-Отказ называет роли, до которых провайдер мог бы дотянуться, и диапазон запрашивающего, например: `dexproviders.deckhouse.io "corp": the provider can assert identities that already carry roles [user-authz:super-admin]; the requester's can-assign range is basic<=ClusterAdmin and does not cover them. Narrow spec.allowedIdentities (emails, emailDomains, groups) or ask a SuperAdmin`.
-
-При выполнении операций `ResetPassword`, `Reset2FA` и `Lock` удаляются объекты Dex OfflineSessions и RefreshToken, принадлежащие пользователю. Это завершает активные offline-сессии пользователя и требует повторной аутентификации.
+После сброса пароля администратором операцией `ResetPassword` пользователь один раз входит с этим паролем. Затем Dex просит пользователя задать новый пароль, соответствующий парольной политике.
 
 Пример интерактивного сброса пароля:
 
@@ -742,6 +766,8 @@ d8 iam user reset2fa admin
 d8 iam user lock admin 30m
 ```
 
+Команда `d8 iam user lock` блокирует локального пользователя и принимает длительность в секундах, минутах или часах, например `30s`, `10m` или `1h`. Чтобы заблокировать пользователя на несколько дней (`lock.for: 7d`) или бессрочно (`lock.for: permanent`), создайте UserOperation, как описано [в разделе «Ручное создание UserOperation»](#ручное-создание-useroperation).
+
 Разблокировка пользователя:
 
 ```shell
@@ -762,7 +788,7 @@ d8 iam user unlock admin
 
 Когда CLI `d8 iam user` недоступен (например, в CI/CD, GitOps или скриптах автоматизации), ресурс [UserOperation](cr.html#useroperation) можно создать напрямую. Используйте `apiVersion: deckhouse.io/v1` и укажите `initiatorType: admin`.
 
-Пример — сброс пароля локального пользователя (в `newPasswordHash` указывается bcrypt-хеш без кодирования в Base64; хук кодирует его автоматически):
+Пример — сброс пароля локального пользователя (в `newPasswordHash` указывается bcrypt-хеш без кодирования в Base64; модуль кодирует его автоматически):
 
 ```yaml
 apiVersion: deckhouse.io/v1
@@ -837,6 +863,8 @@ spec:
 
 Для пользователей, аутентифицируемых через внешние провайдеры (LDAP, Atlassian Crowd), вместо `spec.user` используется поле [`spec.target`](cr.html#useroperation-v1-spec-target). Для внешних пользователей поддерживаются только операции `Lock` и `Unlock`.
 
+Блокировка действует только на вход через провайдер, указанный в `connectorID`. Локальный пользователь или пользователь другого провайдера с тем же email не блокируется. Операция завершается ошибкой, если пользователь ещё ни разу не входил через этот провайдер.
+
 Пример — блокировка внешнего пользователя по `connectorID` + email на 30 минут:
 
 ```yaml
@@ -858,13 +886,13 @@ spec:
 
 Использование объекта UserOperation имеет следующие особенности:
 
-- UserOperation — **одноразовый** объект: после создания хук обрабатывает его и записывает результат в `status.phase` (`Succeeded` или `Failed`).
+- UserOperation — **одноразовый** объект. После создания модуль обрабатывает его и записывает результат в `status.phase` (`Succeeded` или `Failed`).
 - Завершённые операции **автоматически удаляются** через 24 часа.
-- UserOperation — **неизменяем**: после создания спецификация не изменяется.
+- UserOperation выполняется один раз. Изменения спецификации после создания игнорируются.
 - Для нового действия нужно создать новый UserOperation.
 
 {% alert level="warning" %}
-Операции `ResetPassword`, `Reset2FA` и `Lock` завершают все активные сессии пользователя (удаляют объекты Dex OfflineSessions и RefreshToken). Пользователь будет вынужден пройти повторную аутентификацию.
+Для локального пользователя операции `ResetPassword`, `Reset2FA` и `Lock` удаляют его объекты Dex OfflineSessions и RefreshToken, и пользователю нужно войти заново. Операция `Lock` для внешнего пользователя (`spec.target`) запрещает вход и обновление токенов до окончания блокировки.
 {% endalert %}
 
 #### Проверка статуса операции
@@ -889,11 +917,19 @@ spec:
    d8 k get useroperation <имя> -o jsonpath='{.status.phase}'
    ```
 
-#### Автоматические операции системы
+#### Просмотр состояния учётной записи
 
-Система автоматически создаёт UserOperation с `initiatorType: system` в следующем случае:
+Для каждого локального пользователя и каждого пользователя, входившего через внешний провайдер, модуль ведёт объект [UserAccount](cr.html#useraccount). В нём видно, заблокирована ли учётная запись, до какого времени и сколько неудачных попыток входа учтено. Не создавайте и не изменяйте объекты UserAccount.
 
-- Автоблокировка пользователя при превышении количества неудачных попыток входа, заданного в [`passwordPolicy.lockout.maxAttempts`](configuration.html#parameters-passwordpolicy-lockout-maxattempts). Блокировка длится [`lockout.lockDuration`](configuration.html#parameters-passwordpolicy-lockout-lockduration), после чего пользователь разблокируется автоматически. Администратор может также разблокировать пользователя вручную командой `d8 iam user unlock` или создав UserOperation с типом `Unlock`.
+Чтобы посмотреть учётные записи, выполните:
+
+```shell
+d8 k get useraccounts
+```
+
+#### Автоматическая блокировка
+
+Если число неудачных попыток входа превышает [`passwordPolicy.lockout.maxAttempts`](configuration.html#parameters-passwordpolicy-lockout-maxattempts), Dex блокирует пользователя на время [`lockout.lockDuration`](configuration.html#parameters-passwordpolicy-lockout-lockduration), после чего снимает блокировку автоматически. Для пользователей LDAP и Crowd это работает, только если тип провайдера указан в [`lockout.applyToConnectors`](configuration.html#parameters-passwordpolicy-lockout-applytoconnectors). UserOperation для такой блокировки Dex не создаёт. Чтобы разблокировать пользователя раньше, выполните `d8 iam user unlock` или создайте UserOperation с типом `Unlock`.
 
 ### Добавление пользователя в группу
 
@@ -967,17 +1003,17 @@ spec:
 
 ### Просмотр пользователей и групп
 
-Для просмотра пользователей, групп и их эффективных прав (группы, гранты, уровень доступа) используйте команды [`d8 iam get`](/products/kubernetes-platform/documentation/v1/cli/d8/reference/#d8-iam-get) и [`d8 iam list`](/products/kubernetes-platform/documentation/v1/cli/d8/reference/#d8-iam-list).
+Для просмотра пользователей, групп и их прав (группы, выданные права, уровень доступа) используйте команды [`d8 iam get`](/products/kubernetes-platform/documentation/v1/cli/d8/reference/#d8-iam-get) и [`d8 iam list`](/products/kubernetes-platform/documentation/v1/cli/d8/reference/#d8-iam-list).
 
 Примеры:
 
-Список всех пользователей с effective access
+Список всех пользователей с их правами:
 
 ```shell
 d8 iam list users
 ```
 
-Детали для конкретного пользователя (группы, гранты, уровень доступа):
+Детали для конкретного пользователя (группы, выданные права, уровень доступа):
 
 ```shell
 d8 iam get user anton
@@ -989,7 +1025,7 @@ d8 iam get user anton
 d8 iam list groups
 ```
 
-Детали для конкретной группы (участники, гранты):
+Детали для конкретной группы (участники, выданные права):
 
 ```shell
 d8 iam get group admins
@@ -1007,7 +1043,7 @@ kind: ModuleConfig
 metadata:
   name: user-authn
 spec:
-  version: 2
+  version: 3
   enabled: true
   settings:
     passwordPolicy:
@@ -1035,8 +1071,11 @@ spec:
 * `lockout` — настройки блокировки при превышении лимита неудачных попыток входа:
   * `lockout.maxAttempts` — лимит неудачных попыток;
   * `lockout.lockDuration` — длительность блокировки пользователя;
+  * `lockout.applyToConnectors` — типы внешних провайдеров, на пользователей которых также распространяется блокировка: `LDAP`, `Crowd`. На локальных пользователей блокировка распространяется всегда;
 * `rotation` — настройки ротации паролей:
   * `rotation.interval` — период обязательной смены пароля.
+
+Чтобы ограничить число неудачных попыток входа с одного IP-адреса, используйте параметр [`rateLimit`](configuration.html#parameters-ratelimit).
 
 Пример с пользовательскими правилами сложности:
 
@@ -1048,7 +1087,7 @@ kind: ModuleConfig
 metadata:
   name: user-authn
 spec:
-  version: 2
+  version: 3
   enabled: true
   settings:
     passwordPolicy:
@@ -1076,7 +1115,7 @@ kind: ModuleConfig
 metadata:
   name: user-authn
 spec:
-  version: 2
+  version: 3
   enabled: true
   settings:
     staticUsers2FA:
@@ -1097,4 +1136,4 @@ spec:
 
 ### Выдача прав пользователю или группе
 
-Для настройки прав доступа используются параметры кастомного ресурса [ClusterAuthorizationRule](/modules/user-authz/cr.html#clusterauthorizationrule).
+Чтобы выдать права пользователю или группе, привяжите одну из ролей модуля `user-authz` через RoleBinding или ClusterRoleBinding, указав в качестве субъекта email пользователя или имя группы. Подробнее — [в описании гранулярной ролевой модели](/modules/user-authz/#гранулярная-ролевая-модель).

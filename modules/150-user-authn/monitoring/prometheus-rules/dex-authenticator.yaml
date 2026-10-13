@@ -20,8 +20,8 @@
         A namespace does not finish terminating while something in it holds a finalizer, and the authenticator is usually that something. Check what keeps the namespace:
 
         ```bash
-        kubectl get namespace {{ $labels.namespace }} -o jsonpath='{.status.conditions}'
-        kubectl -n {{ $labels.namespace }} get dexauthenticator {{ $labels.name }} -o jsonpath='{.metadata.finalizers}'
+        d8 k get namespace {{ $labels.namespace }} -o jsonpath='{.status.conditions}'
+        d8 k -n {{ $labels.namespace }} get dexauthenticator {{ $labels.name }} -o jsonpath='{.metadata.finalizers}'
         ```
 
         Let the deletion finish: remove the finalizer that holds the authenticator, or delete the object that owns it. The authenticator is deleted with its namespace; to keep it, recreate it in a live namespace. The alert resolves once the authenticator is gone.

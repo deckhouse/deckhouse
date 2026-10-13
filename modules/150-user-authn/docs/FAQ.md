@@ -6,9 +6,9 @@ title: "The user-authn module: FAQ"
 
 To enable Dex authentication for your application, follow these steps:
 
-1. Create a [DexAuthenticator](/modules/user-authn/cr.html#dexauthenticator) custom resource.
+1. Create a [DexAuthenticator](cr.html#dexauthenticator).
 
-   When you create a [DexAuthenticator](/modules/user-authn/cr.html#dexauthenticator) in a cluster, an instance of [oauth2-proxy](https://github.com/oauth2-proxy/oauth2-proxy) is created and connected to Dex. The Deployment, Service, Ingress, and Secret objects will be created in the specified namespace.
+   When you create a [DexAuthenticator](cr.html#dexauthenticator) in a cluster, an instance of [oauth2-proxy](https://github.com/oauth2-proxy/oauth2-proxy) is created and connected to Dex. A Deployment, a Service and a Secret are created in the specified namespace, plus an Ingress if `applicationIngressClassName` is set and an HTTPRoute if `gatewayAPI` is set.
 
    Example of the DexAuthenticator custom resource:
 
@@ -26,7 +26,7 @@ To enable Dex authentication for your application, follow these steps:
      applicationDomain: "app-name.kube.my-domain.com"
      # A parameter that determines whether to send the `Authorization: Bearer` header to the application.
      # This one is useful in combination with auth_request in NGINX.
-     # If sendAuthorizationHeader is set to true, add the Authorization header to to nginx.ingress.kubernetes.io/auth-response-headers annotation of the application's Ingress.
+     # If sendAuthorizationHeader is true, add Authorization to the nginx.ingress.kubernetes.io/auth-response-headers annotation of the application's Ingress or to the alb.network.deckhouse.io/auth-response-headers annotation of its HTTPRoute.
      sendAuthorizationHeader: false
      # The name of the Secret containing the SSL certificate.
      applicationIngressCertificateSecretName: "ingress-tls"
@@ -42,6 +42,15 @@ To enable Dex authentication for your application, follow these steps:
      whitelistSourceRanges:
      - 1.1.1.1/32
      - 192.168.0.0/24
+   ```
+
+   To add labels and annotations to the `dex-authenticator` pods, for example to disable Istio sidecar injection, use [`spec.podMetadata`](cr.html#dexauthenticator-v1-spec-podmetadata):
+
+   ```yaml
+   spec:
+     podMetadata:
+       annotations:
+         sidecar.istio.io/inject: "false"
    ```
 
 1. Connect your application to Dex.
@@ -118,7 +127,7 @@ An application that specifies only `gatewayAPI` gets no Ingress. If Gateway API 
 {% endtabs %}
 
 {% alert level="warning" %}
-When setting `sendAuthorizationHeader: true`, list all necessary headers in the Ingress (or in the HTTPRoute, if the [`alb`](/modules/alb/) module is used) in the corresponding annotation, since the `Authorization` header is not transmitted by default:
+When setting `sendAuthorizationHeader: true`, list all necessary headers in the Ingress (or in the HTTPRoute, if the [`alb`](/modules/alb/) module is used) in the corresponding annotation, since the `Authorization` header is not transmitted by default.
 
 For details on what is passed in the `Authorization` header and how to specify it in the annotation, see [How to pass the user's login and groups to an application](#how-to-pass-the-users-login-and-groups-to-an-application).
 {% endalert %}
@@ -129,7 +138,7 @@ The application Ingress must have TLS configured. DexAuthenticator does not supp
 
 ### Setting up CIDR-based restrictions
 
-DexAuthenticator does not have a built-in system for managing authentication based on user IP address. Instead, you can use Ingress resource annotations:
+To allow authentication only from specific networks, list them in [`whitelistSourceRanges`](cr.html#dexauthenticator-v1-spec-whitelistsourceranges). The limit applies to the `/dex-authenticator` endpoints. To restrict access to the application itself, or to let some networks in without authentication, use the annotations of the application's Ingress:
 
 * To restrict access by IP and keep Dex authentication, add the annotation with a comma-separated list of allowed CIDRs:
 
@@ -166,7 +175,7 @@ In this case, the application receives the `Authorization: Bearer <id_token>` he
 
 Regardless of how the application is published, this header is not passed to the application automatically. It must be explicitly listed in the annotation of the resource through which the application is published. Choose the relevant option depending on how the application is published:
 
-{% tabs puplications %}
+{% tabs publications %}
 {% tab "Through an Ingress resource" %}
 
 If the application is published through an Ingress resource (for details, see the [`ingress-nginx`](/modules/ingress-nginx/) module documentation), when setting `sendAuthorizationHeader: true`, you need to:
@@ -239,36 +248,16 @@ When parsing the token in your application, keep in mind the following:
 - Use the `email` field to identify the user. The `sub` field is opaque (it is not predictable and cannot be used as a meaningful user identifier outside the context of a specific system), and `preferred_username` is empty for static users (external authentication providers may populate it).
 - The `name` field contains the object's name (from the `metadata.name` field of the [User](cr.html#user) object), not the user's display name.
 - The `aud` field contains the authenticator client identifier (`<name>-<namespace>-dex-authenticator`), not your application's own OIDC client identifier. An application that validates `aud` against its own `client_id` will reject such a token.
-- Verify the signature using the JWKS endpoint `https://dex.<modules.publicDomainTemplate>/keys`.
+- Verify the signature with the JWKS endpoint `https://<DEX_DOMAIN>/keys`, where `<DEX_DOMAIN>` is the [`publicDomainTemplate`](/products/kubernetes-platform/documentation/v1/reference/api/global.html#parameters-modules-publicdomaintemplate) value with `%s` replaced by `dex`.
 - The token's lifetime is defined by the [`idTokenTTL`](configuration.html#parameters-idtokenttl) parameter (10 minutes by default). DexAuthenticator refreshes the token on its own, so the application always gets a current one.
 
 If the application supports OIDC on its own, use the [DexClient](cr.html#dexclient) resource instead of DexAuthenticator: the application will request the required scope itself and get a `refresh_token` in addition to the `id_token`.
-
-DexAuthenticator does not have a built-in system for managing authentication based on user IP address. Instead, you can use Ingress resource annotations:
-
-* To restrict access by IP and keep Dex authentication, add the annotation with a comma-separated list of allowed CIDRs:
-
-  ```yaml
-  nginx.ingress.kubernetes.io/whitelist-source-range: 192.168.0.0/32,1.1.1.1
-  ```
-
-* To allow access without Dex authentication for users from specified networks while requiring authentication for others, add the annotation:
-
-  ```yaml
-  nginx.ingress.kubernetes.io/satisfy: "any"
-  ```
 
 ## Authentication flow with DexAuthenticator
 
 ![Authentication flow with DexAuthenticator](images/dex_login.svg)
 
-{% alert level="warning" %}
-DexAuthenticator only works with HTTPS. It does not support Ingress resources configured for HTTP only.
-
-Authentication cookies are set with the `Secure` attribute, which means they are only sent over encrypted HTTPS connections.
-
-Make sure your application Ingress has TLS configured before integrating with DexAuthenticator.
-{% endalert %}
+DexAuthenticator sets its cookies with the `Secure` attribute, so they are sent only over HTTPS.
 
 1. Dex redirects the user to the provider's login page in most cases and waits for the user to be redirected back to the `/callback` URL. However, some providers like LDAP or Atlassian Crowd do not support this flow. The user must enter credentials in the Dex login form instead, and Dex will validate them by making a request to the provider's API.
 
@@ -284,33 +273,21 @@ To generate a kubeconfig, refer to the [«How to generate a kubeconfig to access
 
 ### Configuring kube-apiserver
 
-Using the [`control-plane-manager`](/modules/control-plane-manager/) module, DP automatically configures `kube-apiserver` with the following flags so that OIDC authentication works in the cluster.
-
-{% offtopic title="kube-apiserver arguments that will be configured" %}
-
-* `--oidc-client-id=kubernetes`
-* `--oidc-groups-claim=groups`
-* `--oidc-issuer-url=https://dex.%addonsPublicDomainTemplate%/`
-* `--oidc-username-claim=email`
-
-When self-signed certificates are used for Dex, one more argument is added and the CA file is mounted in the `apiserver` pod:
-
-* `--oidc-ca-file=/etc/kubernetes/oidc-ca.crt`
-{% endofftopic %}
+Using the [`control-plane-manager`](/modules/control-plane-manager/) module, DP passes `kube-apiserver` an AuthenticationConfiguration with a JWT authenticator for Dex: issuer `https://<DEX_DOMAIN>/` (where `<DEX_DOMAIN>` is the `publicDomainTemplate` value with `%s` replaced by `dex`), audience `kubernetes`, the username from the `email` claim and the groups from the `groups` claim. If [`controlPlaneConfigurator.dexCAMode`](configuration.html#parameters-controlplaneconfigurator-dexcamode) provides a CA, it is embedded in the configuration. Usernames and groups that start with `system:` are rejected.
 
 ### The flow of accessing Kubernetes API with generated kubeconfig
 
 ![Interaction scheme when accessing Kubernetes API using generated kubeconfig](images/kubeconfig_dex.svg)
 
-1. Before `kube-apiserver` starts, it must request the OIDC provider's configuration endpoint (Dex in our case) to get the issuer and JWKS endpoint settings.
+1. `kube-apiserver` reads the Dex configuration (issuer and JWKS endpoint). In Kubernetes 1.30 and later, it reads it through the Dex Service inside the cluster.
 
-1. Kubeconfig generator stores the ID token and refresh token in the `kubeconfig` file.
+1. The kubeconfig generated in the Deckhouse web UI contains the ID token and the refresh token.
 
 1. After receiving a request with an ID token, `kube-apiserver` verifies that the token is signed by the provider configured in step 1 using keys from the JWKS endpoint. It then compares the token's `iss` and `aud` claim values with the configuration.
 
 ## How to rotate the secret of the kubernetes OAuth2 client?
 
-The secret of the privileged `kubernetes` OAuth2 client is stored in the `kubernetes-dex-client-app-secret` Secret of the `d8-user-authn` namespace. The same value is used by the `kubeconfig-generator`, `kubeconfig-publish-api` and `kubeconfig-<slug>` OAuth2 clients, and is passed to basic-auth-proxy as `--ldap-client-secret`.
+The secret of the privileged `kubernetes` OAuth2 client is stored in the `kubernetes-dex-client-app-secret` Secret of the `d8-user-authn` namespace. The same value is used by the `kubeconfig-generator`, `kubeconfig-generator-<index>`, `kubeconfig-publish-api` and `kubeconfig-<slug>` OAuth2 clients, and by basic-auth-proxy when basic authentication is enabled for an LDAP provider.
 
 Deleting the Secret does not rotate the value: while it is still present in the module's values, the owning hook renders the very same one back.
 
@@ -336,11 +313,11 @@ To rotate the secret, do the following:
    d8 k -n d8-user-authn get secret kubernetes-dex-client-app-secret -o jsonpath='{.data.secret}'
    ```
 
-   If it did not, repeat the steps 2 and 3. The module may have restored the previous before DP was restarted.
+   If it did not, repeat the steps 2 and 3. The module may have restored the previous value before DP was restarted.
 
-One the secret has been rotated, the configuration of components that use it will be updated automatically and the corresponding pods will be restarted.
+Once the secret has been rotated, the configuration of components that use it will be updated automatically and the corresponding pods will be restarted.
 
-Kubeconfig files downloaded from the kubeconfig generator earlier carry the old client secret and stop refreshing tokens. Download these files again. ID tokens issued before the rotation keep working until they expire, which is configured via [`settings.idTokenTTL`](configuration.html#parameters-idtokenttl) (10 minutes by default).
+Kubeconfig files generated in the Deckhouse web UI before the rotation carry the old client secret and stop refreshing tokens. Generate them again. ID tokens issued before the rotation keep working until they expire, which is configured via [`settings.idTokenTTL`](configuration.html#parameters-idtokenttl) (10 minutes by default).
 
 ## How to enable Kerberos (SPNEGO) SSO for LDAP?
 
@@ -348,7 +325,7 @@ If clients run in a corporate SSO environment (browser trusts the Dex host), Dex
 
 Enabling Kerberos (SPNEGO) SSO for LDAP:
 
-1. In AD/KDC, create/provision an SPN `HTTP/<dex-fqdn>` for a service account and generate a `keytab`.
+1. In AD/KDC, create/provision an SPN `HTTP/<DEX_FQDN>` for a service account and generate a `keytab`.
 1. In the cluster, create a Secret in the `d8-user-authn` namespace with the `krb5.keytab` data key.
 1. In the LDAP DexProvider resource, enable [`spec.ldap.kerberos`](/modules/user-authn/cr.html#dexprovider-v1-spec-ldap-kerberos):
    - `enabled: true`
@@ -362,44 +339,66 @@ Dex will mount the `keytab` automatically and start accepting SPNEGO. A server�
 Use the `control-plane-manager` module settings:
 
 1. Enable the [`apiserver.publishAPI`](/modules/control-plane-manager/configuration.html#parameters-apiserver-publishapi) parameter in the `control-plane-manager` module configuration.
-1. Create a [DexProvider](/modules/user-authn/cr.html#dexprovider) resource of type `LDAP` and set [`enableBasicAuth: true`](/modules/user-authn/cr.html#dexprovider-v1-spec-oidc-enablebasicauth).
-1. Configure [RBAC](/modules/user-authz/cr.html#clusterauthorizationrule) for groups obtained from LDAP.
+1. Create a [DexProvider](cr.html#dexprovider) of type `LDAP` and set [`enableBasicAuth: true`](cr.html#dexprovider-v1-spec-ldap-enablebasicauth).
+1. Grant the LDAP groups access with a RoleBinding or ClusterRoleBinding of the [granular role-based model](/modules/user-authz/#granular-role-based-model).
 1. Provide users with a kubeconfig configured for Basic Authentication (LDAP username and password).
 
 {% alert level="warning" %}
-Only one authentication provider in the cluster can have [`enableBasicAuth`](/modules/user-authn/cr.html#dexprovider-v1-spec-oidc-enablebasicauth) enabled.
+Only one authentication provider in the cluster can have [`enableBasicAuth`](cr.html#dexprovider-v1-spec-ldap-enablebasicauth) enabled.
 {% endalert %}
 
 A detailed example is described in the [Usage](/modules/user-authn/usage.html#configuring-basic-authentication) section.
 
 ## How is Dex protected against credential brute-forcing?
 
-Each user is allowed no more than 20 login attempts. After the limit is exhausted, one additional attempt is added every 6 seconds.
+Dex limits failed sign-in attempts per client IP address on the password endpoints. Configure the limit with the [`rateLimit`](configuration.html#parameters-ratelimit) parameter. It is turned off by default.
+
+Dex also locks an account after failed sign-in attempts. Configure the lockout with the [`passwordPolicy.lockout`](configuration.html#parameters-passwordpolicy-lockout) parameter. It applies to local users, and to LDAP and Crowd users if their types are listed in [`applyToConnectors`](configuration.html#parameters-passwordpolicy-lockout-applytoconnectors).
+
+## How to find out why a sign-in was refused?
+
+Dex logs every sign-in in JSON. A refusal caused by the user is logged at the `WARN` level with the `reason` field:
+
+* `invalid_credentials`: The login or the password is wrong.
+* `invalid_totp`: The 2FA code is wrong.
+* `not_in_allowed_groups`: The user is not in the allowed groups.
+* `not_allowed`: The user is not on an allow-list. The `rule` field names the list.
+* `account_locked`: The user is locked.
+
+The line also contains `connector_id`, `client_id` and the known user attributes, such as `username` and `email`. A group refusal also contains `user_groups` and `allowed_groups`. A failure of Dex or of the provider is logged at the `ERROR` level.
+
+To find the refusals in the Dex logs, run:
+
+```shell
+d8 k -n d8-user-authn logs -l app=dex -c dex --tail=-1 | grep '"reason"'
+```
 
 ## A UserOperation is in the Failed status — what should I do?
 
-Check the `status.message` field of the UserOperation resource for the error description:
+Check the `status.message` field of the UserOperation for the error description:
 
 ```shell
 d8 k get useroperation <name> -o jsonpath='{.status.message}'
 ```
 
-Fix the cause (for example, an invalid password hash or a non-existent user), then create a new UserOperation. A UserOperation is immutable — its specification cannot be updated after creation.
+Fix the cause (for example, an invalid password hash or a non-existent user), then create a new UserOperation. A UserOperation runs once, and changes to its spec after creation are ignored.
 
 ## How do I unlock a user?
 
 Use the command:
 
 ```shell
-d8 iam user unlock <username>
+d8 iam user unlock <USERNAME>
 ```
 
-Alternatively, create a new UserOperation resource with `type: Unlock`. Note that `ResetPassword`, `Reset2FA`, and `Lock` operations terminate all active sessions of the user.
+The command unlocks a local user. To unlock a user of an LDAP or Crowd provider, create a UserOperation with `type: Unlock` and [`spec.target`](cr.html#useroperation-v1-spec-target) as described in [Operations on external users](usage.html#operations-on-external-users-ldapcrowd). A UserOperation with `spec.user` unlocks a local user as well. For a local user, the `ResetPassword`, `Reset2FA` and `Lock` operations also end all active sessions.
 
 ## A user was locked automatically — why?
 
-The number of failed login attempts exceeded [`passwordPolicy.lockout.maxAttempts`](configuration.html#parameters-passwordpolicy-lockout-maxattempts). The user is locked for the duration specified in [`passwordPolicy.lockout.lockDuration`](configuration.html#parameters-passwordpolicy-lockout-lockduration) and is unlocked automatically afterwards. An administrator can also unlock the user manually with `d8 iam user unlock <username>` or by creating a UserOperation with `type: Unlock`.
+The number of failed login attempts exceeded [`passwordPolicy.lockout.maxAttempts`](configuration.html#parameters-passwordpolicy-lockout-maxattempts). The user is locked for the duration specified in [`passwordPolicy.lockout.lockDuration`](configuration.html#parameters-passwordpolicy-lockout-lockduration) and is unlocked automatically afterwards. Local users are always covered. LDAP and Crowd users are locked only if their type is listed in [`passwordPolicy.lockout.applyToConnectors`](configuration.html#parameters-passwordpolicy-lockout-applytoconnectors). Dex stores the lock itself and does not create a UserOperation. An administrator can also unlock the user manually with `d8 iam user unlock <USERNAME>` (local users) or by creating a UserOperation with `type: Unlock` (with `spec.user` for local users, with `spec.target` for LDAP and Crowd users).
+
+The `Locked` and `LockedUntil` columns of `d8 k get useraccounts` show whether a user is locked and until when. The module keeps a [UserAccount](cr.html#useraccount) object for each local user and for each user who has signed in through an external provider.
 
 ## Can I cancel a UserOperation?
 
-No. A UserOperation is a single-use, immutable object. To reverse its effect, create an opposite operation — for example, create a UserOperation with `type: Unlock` after a `Lock` operation.
+No. A UserOperation runs once. To reverse its effect, create an opposite operation, for example a UserOperation with `type: Unlock` after a `Lock` operation.
