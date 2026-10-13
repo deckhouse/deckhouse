@@ -150,8 +150,8 @@ kubectl delete moduleconfig admission-policy-engine
 ```
 
 The constraints re-render within about 15 seconds, and deleting the ModuleConfig restores the previous state.
-Leave `defaultPolicy` out of the ModuleConfig on purpose: the `detect_pss_default_policy` hook derives it
-whenever configuration does not set it, so omitting it keeps the cluster on the policy it already had.
+Leave `defaultPolicy` out of the ModuleConfig on purpose: without the ModuleConfig the cluster runs the
+default `Baseline` policy, and omitting the parameter keeps it.
 
 Always confirm the restore. Check that the ModuleConfig is gone, that every constraint matches Deployment
 again, and that no constraint reports an error.

@@ -33,6 +33,7 @@ import (
 	_ "github.com/deckhouse/deckhouse/modules/002-deckhouse/hooks/lib/sharedgateway"
 	_ "github.com/deckhouse/deckhouse/modules/002-deckhouse/hooks/migrate"
 	_ "github.com/deckhouse/deckhouse/modules/015-admission-policy-engine/hooks"
+	_ "github.com/deckhouse/deckhouse/modules/015-admission-policy-engine/requirements"
 	_ "github.com/deckhouse/deckhouse/modules/021-cni-cilium/hooks"
 	_ "github.com/deckhouse/deckhouse/modules/021-cni-cilium/requirements"
 	_ "github.com/deckhouse/deckhouse/modules/030-cloud-provider-aws/hooks"

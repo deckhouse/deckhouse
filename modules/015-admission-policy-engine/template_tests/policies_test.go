@@ -297,8 +297,8 @@ admissionPolicyEngine:
 		enforcementActions    []string
 		constraintNamePattern string
 	}{
-		{"Default configuration: Privileged/Deny/deny", "Privileged", "Deny", []string{"deny"}, "d8-pod-security-%s-deny-default"},
-		{"Baseline/Deny/deny", "Baseline", "Deny", []string{"deny"}, "d8-pod-security-%s-deny-default"},
+		{"Privileged/Deny/deny", "Privileged", "Deny", []string{"deny"}, "d8-pod-security-%s-deny-default"},
+		{"Default configuration: Baseline/Deny/deny", "Baseline", "Deny", []string{"deny"}, "d8-pod-security-%s-deny-default"},
 		{"Restricted/Deny/deny", "Restricted", "Deny", []string{"deny"}, "d8-pod-security-%s-deny-default"},
 		{"Privileged/Warn/warn", "Privileged", "Warn", []string{"warn"}, "d8-pod-security-%s-warn-default"},
 		{"Baseline/Warn/warn", "Baseline", "Warn", []string{"warn"}, "d8-pod-security-%s-warn-default"},

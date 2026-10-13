@@ -41,9 +41,13 @@ var _ = Describe("Module :: admissionPolicyEngine :: helm template :: system nam
 		for _, action := range enforcementActions {
 			actions += fmt.Sprintf("\n        - %s", action)
 		}
+		// An empty defaultPolicy leaves the parameter out, as a ModuleConfig that does not set it does.
+		defaultPolicyLine := ""
+		if defaultPolicy != "" {
+			defaultPolicyLine = "\n  defaultPolicy: " + defaultPolicy
+		}
 		f.ValuesSetFromYaml("admissionPolicyEngine", fmt.Sprintf(`
-podSecurityStandards:
-  defaultPolicy: %s
+podSecurityStandards:%s
   enforcementAction: %s
 internal:
   bootstrapped: true
@@ -60,7 +64,7 @@ internal:
     key: test-key
   trackedConstraintResources: []
   trackedMutateResources: []
-`, defaultPolicy, enforcementAction, actions))
+`, defaultPolicyLine, enforcementAction, actions))
 		f.ValuesSetFromYaml("global", globalValues)
 		f.ValuesSet("global.modulesImages", GetModulesImages())
 		f.HelmRender()
@@ -179,6 +183,28 @@ internal:
 			}
 		})
 
+	})
+
+	Context("With the default policy left unset", func() {
+		BeforeEach(func() {
+			renderWith("", "Deny", "deny")
+		})
+
+		It("Enforces the baseline standard in every non-system namespace not labeled privileged", func() {
+			constraint := f.KubernetesGlobalResource("D8HostNetwork", "d8-pod-security-baseline-deny-default")
+			Expect(constraint.Exists()).To(BeTrue())
+			Expect(constraint.Field("spec.match.namespaceSelector.matchExpressions").String()).To(MatchJSON(
+				`[{"key":"heritage","operator":"NotIn","values":["deckhouse"]},
+				  {"key":"security.deckhouse.io/pod-policy","operator":"NotIn","values":["privileged"]}]`))
+		})
+
+		It("Enforces the restricted standard only in namespaces labeled restricted", func() {
+			constraint := f.KubernetesGlobalResource("D8AllowedUsers", "d8-pod-security-restricted-deny-default")
+			Expect(constraint.Exists()).To(BeTrue())
+			Expect(constraint.Field("spec.match.namespaceSelector.matchExpressions").String()).To(MatchJSON(
+				`[{"key":"heritage","operator":"NotIn","values":["deckhouse"]},
+				  {"key":"security.deckhouse.io/pod-policy","operator":"In","values":["restricted"]}]`))
+		})
 	})
 
 	Context("With a default policy that reaches non-system namespaces", func() {

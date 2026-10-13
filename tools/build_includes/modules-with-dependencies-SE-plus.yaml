@@ -23,6 +23,14 @@
   stageDependencies:
     install:
         - '**/*'
+- add: /modules/015-admission-policy-engine/requirements
+  to: /deckhouse/modules/015-admission-policy-engine/requirements
+  excludePaths:
+    - '**/*_test.go'
+    - '**/*.sh'
+  stageDependencies:
+    install:
+        - '**/*'
 - add: /modules/021-cni-cilium/hooks
   to: /deckhouse/modules/021-cni-cilium/hooks
   excludePaths:

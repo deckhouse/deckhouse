@@ -317,7 +317,7 @@ has(request.namespace) && (request.namespace.startsWith("d8-") || request.namesp
   {{- $policyCRDName := index . 2 }}
   {{- $policyAction := index . 3 }}
   {{- $parameters := index . 4 }}
-  {{- $defaultPolicy := ($context.Values.admissionPolicyEngine.podSecurityStandards.defaultPolicy | default "privileged" | lower) }}
+  {{- $defaultPolicy := ($context.Values.admissionPolicyEngine.podSecurityStandards.defaultPolicy | default "baseline" | lower) }}
   {{/* System namespaces are governed by their own settings, not by defaultPolicy/enforcementAction. */}}
   {{- $systemAction := include "system_namespaces_action" . | trim | lower }}
 
@@ -448,8 +448,8 @@ spec:
   standard and only warned about the stronger.
 
   The workloads this reaches carry a SecurityPolicyException wherever they need one, and
-  `defaultPolicy: Baseline` has been the default since v1.55, so most clusters already enforce both
-  standards in these namespaces.
+  `defaultPolicy: Baseline` is the default, so most clusters already enforce both standards in these
+  namespaces.
 */}}
 {{/* #### TODO: Remove after full migration to securityPolicyExceptions in all modules */}}
 ---

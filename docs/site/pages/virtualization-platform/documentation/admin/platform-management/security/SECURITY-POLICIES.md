@@ -1,17 +1,18 @@
 ---
 title: Security policies
 permalink: en/virtualization-platform/documentation/admin/platform-management/security/policies.html
+description: "Configuring security policies in Deckhouse Platform using Gatekeeper and Pod Security Standards."
 ---
 
-Deckhouse Virtualization Platform (DVP) lets you manage application security in the cluster using a set of policies
+Deckhouse Platform (DP) lets you manage application security in the cluster using a set of policies
 that follow the [Kubernetes Pod Security Standards](https://kubernetes.io/docs/concepts/security/pod-security-standards/) model
-and can be extended with DVP's built-in mechanisms.
+and can be extended with DP's built-in mechanisms.
 
-DVP implements security policies using [Gatekeeper](https://open-policy-agent.github.io/gatekeeper/website/docs/).
+DP implements security policies using [Gatekeeper](https://open-policy-agent.github.io/gatekeeper/website/docs/).
 
 ## Applying Pod Security Standards
 
-DVP supports three security policy levels:
+DP supports three security policy levels:
 
 - `privileged`: An unrestricted policy with the broadest possible permissions.
 - `baseline`: A minimally restrictive policy that prevents the most well-known and common privilege escalation techniques.
@@ -20,13 +21,22 @@ DVP supports three security policy levels:
 
 ### Default policy
 
-The default policy is determined as follows:
+The default policy is `baseline`.
+It applies to non-system namespaces without the `security.deckhouse.io/pod-policy` label.
 
-- In DVP versions prior to v1.55, the default policy is `privileged`.
-- Starting from DVP v1.55, the default policy is `baseline`.
+{% alert level="warning" %}
+In DP versions prior to v1.78, the `privileged` policy was applied by default in clusters bootstrapped with DP prior to v1.55
+or when the bootstrap version could not be determined.
+Starting from DP v1.78, the default policy is `baseline` regardless of the cluster bootstrap version.
 
-{% alert level="info" %}
-When upgrading DVP to v1.55 or later, the default policy will not change automatically.
+If the [`enforcementAction`](/modules/admission-policy-engine/configuration.html#parameters-podsecuritystandards-enforcementaction) parameter is set to `Deny`,
+pods that do not comply with the `baseline` policy are denied when recreated.
+Updates of such clusters to DP v1.78 are blocked until the default policy is set explicitly.
+
+If the `admission-policy-engine` module is disabled, the update is not blocked.
+After the module is enabled, the `baseline` policy is applied.
+
+To keep the `privileged` policy, set it explicitly in the [`settings.podSecurityStandards.defaultPolicy`](/modules/admission-policy-engine/configuration.html#parameters-podsecuritystandards-defaultpolicy) parameter.
 {% endalert %}
 
 ### Assigning a policy
@@ -48,10 +58,10 @@ Allowed policy enforcement modes:
 
 - `deny`: Blocks actions from being executed.
 - `dryrun`: Does not affect execution and used for debugging.
-  Event information can be viewed in Deckhouse Console or with `d8 k`.
+  Event information can be viewed in the Deckhouse web UI or with `d8 k`.
 - `warn`: Works like `dryrun` but also displays a warning with the reason the action would have been denied in `deny` mode.
 
-By default, Pod Security Standards policies in DVP are enforced in `deny` mode.
+By default, Pod Security Standards policies in DP are enforced in `deny` mode.
 In this mode, application Pods that do not comply with the policies cannot be run in the cluster.
 
 As with policy assignment, enforcement mode can be set:
@@ -73,7 +83,7 @@ The platform also labels the namespaces it creates with `heritage: deckhouse`. A
 
 Every namespace named `d8-*` or `kube-*` is checked against the `restricted` standard.
 The `security.deckhouse.io/pod-policy` label and the [`settings.podSecurityStandards.defaultPolicy`](/modules/admission-policy-engine/configuration.html#parameters-podsecuritystandards-defaultpolicy) parameter do not apply there.
-A violation is recorded in the audit and shown in the web interface Deckhouse Platform, and the workload still starts.
+A violation is recorded in the audit and shown in the Deckhouse web UI, and the workload still starts.
 The exception is a namespace whose module has hardened it: there the standards are enforced and a violating workload is denied.
 
 These checks cannot be tuned from outside the platform.
@@ -84,7 +94,7 @@ OperationPolicy and SecurityPolicy resources also apply to system namespaces in 
 A policy with `enforcementAction: Deny` blocks workloads in application namespaces and only reports violations in a system namespace.
 No label of the namespace changes that: a module that hardens its own namespace raises the Pod Security Standards there, which has no effect on a policy written for application workloads.
 
-A denying policy that reaches system namespaces is therefore rendered as two Gatekeeper constraints, both visible in the audit and in Deckhouse Console:
+A denying policy that reaches system namespaces is therefore rendered as two Gatekeeper constraints, both visible in the audit and in the Deckhouse web UI:
 
 - The policy's own name: For application namespaces, with the action the policy asks for.
 - `d8-system-default-<policy>`: For system namespaces, in `warn` mode.
@@ -113,7 +123,7 @@ To extend a policy:
 1. Create a validation template using `ConstraintTemplate`.
 1. Apply the template to the `baseline` or `restricted` policy.
 
-Example template for validating the container image repository address:
+Example template for validating the container registry address:
 
 ```yaml
 apiVersion: templates.gatekeeper.sh/v1
@@ -173,7 +183,7 @@ spec:
       - "mycompany.registry.com"
 ```
 
-In this example, the repository address in the `image` field of all Pods in namespaces
+In this example, the image address in the `image` field of all Pods in namespaces
 labeled `security.deckhouse.io/pod-policy: restricted` is checked.
 If the `image` address of a created Pod does not start with `mycompany.registry.com`, the Pod will not be created.
 
@@ -186,10 +196,10 @@ Helpful resources for creating extended policies:
 
 ## Operational policies
 
-DVP provides a mechanism for creating operational policies using [OperationPolicy](/modules/admission-policy-engine/cr.html#operationpolicy).
-Operational policies define requirements for cluster objects such as allowed repositories, required resources, probes, and more.
+DP provides a mechanism for creating operational policies using [OperationPolicy](/modules/admission-policy-engine/cr.html#operationpolicy).
+Operational policies define requirements for cluster objects. These include allowed container registries, required resources, probes, and more.
 
-The DVP development team recommends applying the following minimal operational policy:
+The DP development team recommends applying the following minimal operational policy:
 
 ```yaml
 apiVersion: deckhouse.io/v1alpha1
@@ -470,12 +480,12 @@ For more on modifying Kubernetes resources using mutation policies, refer to the
 ## Image signature verification
 
 {% alert level="warning" %}
-Available in DVP Enterprise Edition only.
+Available in the following DP editions: EE, Ultimate.
 
 Cosign versions up to v2 are supported. Versions v3 and above are not supported.
 {% endalert %}
 
-DVP supports container image signature verification using [Cosign](https://docs.sigstore.dev/cosign/key_management/signing_with_self-managed_keys/).  
+DP supports container image signature verification using [Cosign](https://docs.sigstore.dev/cosign/key_management/signing_with_self-managed_keys/).  
 Container image signature verification allows you to ensure their integrity (that the image has not been modified since its creation) and authenticity (that the image was created by a trusted source). You can enable container image signature verification in the cluster using the [policies.verifyImageSignatures](/modules/admission-policy-engine/cr.html#securitypolicy-v1alpha1-spec-policies-verifyimagesignatures) parameter in SecurityPolicy.  
 
 Images are signed by creating a special tag in the container registry that contains the image signature.  
@@ -508,9 +518,9 @@ To sign an image with Cosign, do the following:
    ```
 
    Here:
-   - `<REGISTRY_IMAGE_PATH>` is the path to the image that needs to be specified at startup, for example: registry.private.com/labs/application/image:latest.
+   - `<REGISTRY_IMAGE_PATH>` is the path to the image that needs to be specified at startup, for example, `registry.private.io/labs/application/image:latest`.
 
-To enable container image signature verification in a DVP cluster:
+To enable container image signature verification in a DP cluster:
 
 1. Use the [`policies.verifyImageSignatures`](/modules/admission-policy-engine/cr.html#securitypolicy-v1alpha1-spec-policies-verifyimagesignatures)
    parameter in SecurityPolicy and specify the generated public key.
@@ -545,9 +555,9 @@ To enable container image signature verification in a DVP cluster:
            reference: registry.private.ru/labs/application/*
    ```
 
-   The label name specified in `match.namespaceSelector.labelSelector.matchLabels` can be any name. It only needs to match between the policy selector and the corresponding namespace.
+   The label name specified in `match.namespaceSelector.labelSelector.matchLabels` can be any name. The label in the policy selector must match the label on the corresponding namespace.
 
-   More details about selector usage are available in the [documentation](/modules/admission-policy-engine/faq.html#how-to-configure-policy-selectors).
+   For more information, see [Configuring policy selectors](/modules/admission-policy-engine/faq.html#how-to-configure-policy-selectors).
 
 1. Create an [OperationPolicy](/modules/admission-policy-engine/cr.html#operationpolicy) that restricts running pods from third-party registries:
 
@@ -565,12 +575,12 @@ To enable container image signature verification in a DVP cluster:
              example-operation-policy/enabled: "true"
      policies:
        allowedRepos:
-       - registry.private.ru
+       - registry.private.io
    ```
 
-   The label name specified in `match.namespaceSelector.labelSelector.matchLabels` can be any name. It only needs to match between the policy selector and the corresponding namespace.
+   The label name specified in `match.namespaceSelector.labelSelector.matchLabels` can be any name. The label in the policy selector must match the label on the corresponding namespace.
 
-   More details about selector usage are available in the [documentation](/modules/admission-policy-engine/faq.html#how-to-configure-policy-selectors).
+   For more information, see [Configuring policy selectors](/modules/admission-policy-engine/faq.html#how-to-configure-policy-selectors).
 
 1. Add a label to the namespace where signature verification should be enabled (specify your namespace):
 
@@ -602,7 +612,7 @@ Example error output when creating a pod with an image that fails signature veri
 
 ## Using alternative security policy management tools
 
-If you use an alternative solution for security policy management in a DVP cluster
+If you use an alternative solution for security policy management in a DP cluster
 (for example, [Kyverno](https://kyverno.io/docs/introduction/)), configure exceptions for the following namespaces:
 
 - `kube-system`
