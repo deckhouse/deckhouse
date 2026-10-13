@@ -690,6 +690,53 @@ resources:
 			})
 		})
 
+		Context("graceful shutdown", func() {
+			renderedAPIServerPod := func() corev1.Pod {
+				Expect(f.RenderError).ShouldNot(HaveOccurred())
+				s := f.KubernetesResource("Secret", "kube-system", "d8-control-plane-manager-config")
+				Expect(s.Exists()).To(BeTrue())
+
+				kubeApiserver, err := base64.StdEncoding.DecodeString(s.Field("data.kube-apiserver\\.yaml\\.tpl").String())
+				Expect(err).ShouldNot(HaveOccurred())
+
+				var pod corev1.Pod
+				Expect(yaml.Unmarshal(kubeApiserver, &pod)).To(Succeed())
+				return pod
+			}
+
+			Context("multi-master control plane", func() {
+				BeforeEach(func() {
+					f.ValuesSet("global.discovery.clusterControlPlaneIsHighlyAvailable", true)
+					f.HelmRender()
+				})
+
+				It("drains traffic before kube-apiserver stops", func() {
+					pod := renderedAPIServerPod()
+					Expect(pod.Spec.Containers[0].Command).To(ContainElements(
+						"--shutdown-delay-duration=15s",
+						"--shutdown-send-retry-after=true",
+					))
+					Expect(pod.Spec.TerminationGracePeriodSeconds).NotTo(BeNil())
+					Expect(*pod.Spec.TerminationGracePeriodSeconds).To(BeEquivalentTo(80))
+				})
+			})
+
+			Context("single master", func() {
+				BeforeEach(func() {
+					f.ValuesSet("global.discovery.clusterControlPlaneIsHighlyAvailable", false)
+					f.HelmRender()
+				})
+
+				It("stops kube-apiserver without a shutdown delay", func() {
+					pod := renderedAPIServerPod()
+					for _, arg := range pod.Spec.Containers[0].Command {
+						Expect(arg).NotTo(HavePrefix("--shutdown-"))
+					}
+					Expect(pod.Spec.TerminationGracePeriodSeconds).To(BeNil())
+				})
+			})
+		})
+
 		Context("only apiserver.serviceAccount.issuer", func() {
 			BeforeEach(func() {
 				f.ValuesSetFromYaml("controlPlaneManager", moduleValuesOnlyIssuer)

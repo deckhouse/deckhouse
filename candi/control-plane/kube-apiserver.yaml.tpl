@@ -101,10 +101,16 @@ spec:
   # Bootstrap-only: cpm rewrites this manifest once during initial install and
   # the default 30s grace would burn most of a minute waiting for the old
   # kube-apiserver to drain (no real in-flight work on a fresh master anyway).
-  # Runtime restarts keep the static-pod default 30s so production drains
-  # in-flight requests gracefully.
+  # Runtime restarts on a single master keep the static-pod default 30s.
 */}}
   terminationGracePeriodSeconds: 1
+{{- else if .apiserver.gracefulShutdown }}
+{{- /*
+  # Multi-master only: --shutdown-delay-duration (15s) + draining in-flight
+  # requests up to --request-timeout (60s) + 2s server shutdown = 77s, so
+  # kubelet does not kill kube-apiserver mid-drain.
+*/}}
+  terminationGracePeriodSeconds: 80
 {{- end }}
 {{- if .apiserver.oidcIssuerAddress }}
   {{- if .apiserver.oidcIssuerURL }}
@@ -199,6 +205,18 @@ spec:
 {{- end }}
     - --profiling=false
     - --request-timeout=60s
+{{- if and .apiserver.gracefulShutdown (ne .runType "ClusterBootstrap") }}
+{{- /*
+  # Multi-master only. On SIGTERM kube-apiserver turns /readyz red and removes
+  # itself from the kubernetes Service endpoints at once, then keeps serving for
+  # the delay: kubernetes-api-proxy needs 3.2-6s to see the red /readyz, Service
+  # routing a few seconds more. Then it answers new requests with 429 and
+  # Retry-After until in-flight requests drain. On a single master the delay
+  # would only extend the time the Service has no endpoints.
+*/}}
+    - --shutdown-delay-duration=15s
+    - --shutdown-send-retry-after=true
+{{- end }}
     - --tls-cipher-suites=TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256,TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256,TLS_ECDHE_ECDSA_WITH_CHACHA20_POLY1305,TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384,TLS_ECDHE_RSA_WITH_CHACHA20_POLY1305,TLS_ECDHE_ECDSA_WITH_AES_256_GCM_SHA384,TLS_ECDHE_ECDSA_WITH_CHACHA20_POLY1305_SHA256,TLS_ECDHE_RSA_WITH_CHACHA20_POLY1305_SHA256
     - --authentication-config=/etc/kubernetes/deckhouse/extra-files/authentication-config.yaml
 {{- if .apiserver.serviceAccount }}

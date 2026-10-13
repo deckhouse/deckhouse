@@ -125,6 +125,12 @@ fi
 
 shutdownGracePeriod="115"
 shutdownGracePeriodCriticalPods="15"
+shutdownGracePeriodNodeCriticalPods="5"
+{{- if eq .nodeGroup.name "master" }}
+# kube-apiserver keeps serving for --shutdown-delay-duration (15s) after SIGTERM and exits
+# in 17-20s; etcd exits together with it. With 5s a node shutdown kills both mid-drain.
+shutdownGracePeriodNodeCriticalPods="25"
+{{- end }}
 
 if [[ -f /var/lib/bashible/cloud-provider-variables ]]; then
   source /var/lib/bashible/cloud-provider-variables
@@ -412,7 +418,7 @@ containerLogMaxFiles: {{ .nodeGroup.kubelet.containerLogMaxFiles | default 4 }}
 allowedUnsafeSysctls:  ["net.*"]
 shutdownGracePeriodByPodPriority:
 - priority: 2000000999
-  shutdownGracePeriodSeconds: 5
+  shutdownGracePeriodSeconds: ${shutdownGracePeriodNodeCriticalPods}
 - priority: 1999999999
   shutdownGracePeriodSeconds: ${shutdownGracePeriodCriticalPods}
 - priority: 0

@@ -64,6 +64,9 @@ memory: 10Mi
 {{- if hasKey .Values.controlPlaneManager.internal "etcdServers" }}
   {{- $_ := set $tpl_context.apiserver "etcdServers" .Values.controlPlaneManager.internal.etcdServers }}
 {{- end }}
+{{- if .Values.global.discovery.clusterControlPlaneIsHighlyAvailable }}
+  {{- $_ := set $tpl_context.apiserver "gracefulShutdown" true }}
+{{- end }}
 {{- if hasKey .Values.controlPlaneManager "apiserver" }}
   {{- if .Values.controlPlaneManager.apiserver.bindToWildcard }}
     {{ $_ := set $tpl_context.apiserver "bindToWildcard" true }}
