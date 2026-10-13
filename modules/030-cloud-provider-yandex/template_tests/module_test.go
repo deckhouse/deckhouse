@@ -28,6 +28,8 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
+	"path/filepath"
+	"runtime"
 	"testing"
 
 	. "github.com/onsi/ginkgo"
@@ -35,6 +37,7 @@ import (
 
 	. "github.com/deckhouse/deckhouse/testing/helm"
 	"github.com/deckhouse/deckhouse/testing/library/object_store"
+	"github.com/deckhouse/deckhouse/testing/webhooks/validationwebhook"
 )
 
 func Test(t *testing.T) {
@@ -585,6 +588,32 @@ storageclass.kubernetes.io/is-default-class: "true"
 			cddFolderID, found := envValue(cddDeployment, "YC_FOLDER_ID")
 			Expect(found).To(BeTrue())
 			Expect(cddFolderID).To(Equal("myfoldid"))
+		})
+	})
+
+	Context("ConversionWebhook", func() {
+		_, thisFile, _, _ := runtime.Caller(0)
+		moduleDir := filepath.Join(filepath.Dir(thisFile), "..")
+
+		BeforeEach(func() {
+			f.HelmRender()
+		})
+
+		It("Should render the yandexinstanceclasses conversion from webhooks/conversion", func() {
+			Expect(f.RenderError).ShouldNot(HaveOccurred())
+
+			webhook := f.KubernetesGlobalResource("ConversionWebhook", "yandexinstanceclasses.deckhouse.io")
+			Expect(webhook.Exists()).To(BeTrue())
+			conversions := webhook.Field("conversions").Array()
+			Expect(conversions).To(HaveLen(2))
+			for i, step := range [][2]string{{"v1alpha1", "v1"}, {"v1", "v1alpha1"}} {
+				Expect(conversions[i].Get("from").String()).To(Equal(step[0]))
+				Expect(conversions[i].Get("to").String()).To(Equal(step[1]))
+			}
+			// The first step carries the methods of both; webhook-operator pastes all handlers into one class.
+			Expect(validationwebhook.HandlerMatchesFiles(moduleDir, conversions[0].Get("handler.python").String(),
+				"webhooks/conversion/yandex_instance_class.py")).To(Succeed())
+			Expect(conversions[1].Get("handler.python").String()).To(BeEmpty())
 		})
 	})
 

@@ -1,0 +1,17 @@
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: ConversionWebhook
+metadata:
+  name: yandexinstanceclasses.deckhouse.io
+  {{- include "helm_lib_module_labels" (list . (dict "app" "webhook-handler")) | nindent 2 }}
+# The methods of both steps are in the file the first handler embeds, where its unit tests load it.
+# webhook-operator pastes the handlers of all steps into one class, so the second step carries none.
+conversions:
+  - from: v1alpha1
+    to: v1
+    handler:
+      python: |
+        {{- required "webhooks/conversion/yandex_instance_class.py is missing" (.Files.Get "webhooks/conversion/yandex_instance_class.py") | nindent 8 }}
+  - from: v1
+    to: v1alpha1
+    handler: {}
