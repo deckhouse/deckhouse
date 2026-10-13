@@ -201,6 +201,38 @@ func TestCandidateKeepsLeadingWhenEligibilityCannotBeRead(t *testing.T) {
 	assert.True(t, leading, "an unreachable API server cost the cluster its storage leader")
 }
 
+// TestCandidateStaysAsideWhenEligibilityCannotBeRead is the other half: a follower must not
+// read an unreachable API server as permission. The leader cannot renew through that API server
+// either, and a follower that entered then took the lease from a full leader the moment it ran
+// out — measured on a three-master cluster as one handover, minutes after every replica was full.
+func TestCandidateStaysAsideWhenEligibilityCannotBeRead(t *testing.T) {
+	var failing atomic.Bool
+	var asked atomic.Int32
+	election := newRecordingElection()
+	candidate := newCandidate(
+		func(context.Context) (bool, error) {
+			asked.Add(1)
+			if failing.Load() {
+				return false, errors.New("Get \"https://10.223.0.1:443/apis/deckhouse.io/v1alpha1/registrystorages/default\": context deadline exceeded")
+			}
+			return false, nil
+		},
+		election.elect)
+
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	go candidate.Run(ctx)
+
+	eventually(t, func() bool { return asked.Load() >= 2 }, "eligibility was never read")
+	failing.Store(true)
+	seen := asked.Load()
+	eventually(t, func() bool { return asked.Load() >= seen+3 }, "eligibility was not read again")
+
+	attempts, _ := election.state()
+	assert.Zero(t, attempts, "a follower entered the election because the API server did not answer")
+}
+
 // TestCandidateReentersAfterLosingTheLease: an election that ends on its own — a lease
 // that could not be renewed — must be stood for again rather than left.
 func TestCandidateReentersAfterLosingTheLease(t *testing.T) {

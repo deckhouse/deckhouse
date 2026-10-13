@@ -190,6 +190,23 @@ spec:
         # cannot share one either way.
         - name: registry-push
           containerPort: 5003
+        # Ready only once the registry has read its configuration and serves. The syncer writes that
+        # configuration into an emptyDir after the pod starts, so a fresh replica's registry exits on
+        # a missing file and restarts until it is there — and with no probe of its own the pod read as
+        # ready between those restarts. The controller replaces the next replica as soon as this one
+        # reads ready: measured on a three-master cluster, the leader was taken down while the replica
+        # just replaced was in a restart back-off, two of three out of service at once.
+        #
+        # The serving port itself, which the registry opens only from a configuration that loaded. On
+        # the node address, the probe's default here: that is where the registry listens, while the
+        # loopback :5001 is the node's registry agent and would answer for a registry that is down.
+        #
+        # Not the debug listener's /debug/health: upstream starts that listener from its `serve`
+        # command, which the wrapper does not run, so nothing listens on :5002 and a probe there
+        # never passes — every replica stayed unready.
+        readinessProbe:
+          tcpSocket:
+            port: 5001
         volumeMounts:
         - name: config
           mountPath: /config

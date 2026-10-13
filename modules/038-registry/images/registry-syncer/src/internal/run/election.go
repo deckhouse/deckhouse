@@ -115,9 +115,14 @@ func (c *Candidate) attempt(ctx context.Context) {
 
 // eligible asks the question and decides what an unanswerable one means.
 //
-// `holding` is what to assume when the answer cannot be had: a replica that is standing
-// stays standing, a replica that is leading keeps leading. In both cases the alternative
-// would be to change the cluster's arrangement on the strength of not knowing.
+// `holding` is what to assume when the answer cannot be had: a replica in the election stays
+// in it, and a replica standing aside stays aside. In both cases the alternative would be to
+// change the cluster's arrangement on the strength of not knowing.
+//
+// Standing aside matters as much as staying in. An API server that does not answer for half a
+// minute is also one the leader cannot renew through; a follower that read the silence as "go
+// ahead" was in the election by the time the lease ran out, and the lease went to whichever
+// replica asked first — a full leader replaced by another full replica, for nothing.
 func (c *Candidate) eligible(ctx context.Context, holding bool) bool {
 	if c.Eligible == nil {
 		return true
@@ -127,9 +132,9 @@ func (c *Candidate) eligible(ctx context.Context, holding bool) bool {
 	if err != nil {
 		if ctx.Err() == nil {
 			c.Log.Warn("cannot tell whether this replica should lead, keeping the current arrangement",
-				"error", err.Error(), "leading", holding)
+				"error", err.Error(), "standing", holding)
 		}
-		return true
+		return holding
 	}
 	return ok
 }

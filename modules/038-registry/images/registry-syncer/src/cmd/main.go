@@ -360,8 +360,14 @@ func serve(ctx context.Context, log *slog.Logger, opts options) error {
 					Identity: opts.nodeName,
 				},
 			},
-			LeaseDuration: 30 * time.Second,
-			RenewDeadline: 20 * time.Second,
+			// Long enough to renew through an API server that does not answer for half a minute.
+			// A renewal that misses RenewDeadline releases the lease, and every full replica is then
+			// equally entitled to it: on a three-master cluster an API stall of twenty-odd seconds,
+			// minutes after bootstrap, moved the lease off a full leader to another full replica.
+			// The cost is the failover after a leader dies, about a minute rather than half of one;
+			// the replicas keep serving images throughout, and only the filling waits.
+			LeaseDuration: 60 * time.Second,
+			RenewDeadline: 40 * time.Second,
 			RetryPeriod:   5 * time.Second,
 			// The replica keeps serving images after losing the lease; it only stops
 			// filling. Releasing on cancel hands the lease over promptly, which matters
