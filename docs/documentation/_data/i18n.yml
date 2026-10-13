@@ -552,6 +552,9 @@ features:
   experimental_long:
     en: Experimental version. The functionality may undergo significant changes. Compatibility with future versions is not guaranteed.
     ru: Экспериментальная версия. Функциональность может сильно измениться. Совместимость с будущими версиями не гарантируется.
+  experimental_enable_note:
+    en: "Before enabling the module, you need to allow the use of experimental modules in the `deckhouse` ModuleConfig. To do this, set the [allowExperimentalModules](/modules/deckhouse/configuration.html#parameters-allowexperimentalmodules) parameter to `true`."
+    ru: "Перед включением модуля необходимо разрешить использование экспериментальных модулей в ModuleConfig `deckhouse`. Для этого установите [параметр `allowExperimentalModules`](/modules/deckhouse/configuration.html#parameters-allowexperimentalmodules) в `true`."
   preview:
     en: Preview
     ru: Предварительная версия (preview)
