@@ -21,7 +21,7 @@ shell:
   - cp /src/amazon-ec2-utils/ebsnvme-id /ebsnvme-id
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-{{ $image_version }}
-from: {{ index $.Images "builder/scratch" }}
+from: scratch
 import:
 - image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
   add: /src/amazon-ec2-utils/ebsnvme-id

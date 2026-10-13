@@ -2,7 +2,7 @@
 {{- $image_version := $version | replace "." "-" }}
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-{{ $image_version }}
-from: {{ index $.Images "builder/scratch" }}
+from: scratch
 fromCacheVersion: "2025-06-24 13:00"
 import:
 - image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $image_version }}

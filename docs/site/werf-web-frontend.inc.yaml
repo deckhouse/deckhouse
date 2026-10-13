@@ -150,7 +150,7 @@ image: web-frontend
 {{- if or (eq $.Env "development") (eq $.Env "local") }}
 from: {{ index $.Images "builder/alpine" }}
 {{- else }}
-from: {{ index $.Images "base/scratch" }}
+from: scratch
 imageSpec:
   config:
     workingDir: "/app"

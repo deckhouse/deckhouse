@@ -12,7 +12,7 @@ The image itself is built in the module (registry/registry-agent); this only wra
 */}}
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}
-from: {{ index $.Images "builder/scratch" }}
+from: scratch
 import:
 - image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
   add: /

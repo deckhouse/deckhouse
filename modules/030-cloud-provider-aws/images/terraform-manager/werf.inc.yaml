@@ -1,7 +1,7 @@
 {{- $version := include "get_oss_version_by_id" (list "terraform-provider-aws" $) }}
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}
-from: {{ index $.Images "base/scratch" }}
+from: scratch
 git:
 - add: /{{ $.ModulePath }}modules/030-{{ $.ModuleName }}/candi
   to: /candi

@@ -18,7 +18,7 @@
 
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-sysext
-from: {{ index $.Images "builder/scratch" }}
+from: scratch
 import:
 - image: {{ $.ModuleName }}/{{ $.ImageName }}-sysext-artifact
   add: /out

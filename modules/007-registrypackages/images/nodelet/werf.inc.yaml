@@ -84,7 +84,7 @@ shell:
 {{- include "engine sysext sign" "nodelet" }}
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-sysext
-from: {{ index $.Images "builder/scratch" }}
+from: scratch
 import:
 - image: {{ $.ModuleName }}/{{ $.ImageName }}-sysext-artifact
   add: /out

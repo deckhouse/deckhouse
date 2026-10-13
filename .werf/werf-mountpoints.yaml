@@ -1,5 +1,5 @@
 image: werf-mountpoints
-from: {{ index .Images "builder/scratch" }}
+from: scratch
 final: false
 git:
 - add: /tools/mounts/mountdir

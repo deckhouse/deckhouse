@@ -40,7 +40,7 @@ shell:
   - chmod 0755 /out/usr/bin/istioctl
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}
-from: {{ index $.Images "base/distroless-fin" }}
+from: {{ index $.Images "base/distroless" }}
 import:
 - image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
   add: /out

@@ -1,7 +1,7 @@
 {{- $version := "08.04.25" }}
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}
-from: {{ index $.Images "builder/scratch" }}
+from: scratch
 import:
 - image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
   add: /

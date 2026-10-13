@@ -18,7 +18,7 @@ shell:
   - cd /src
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}
-from: {{ index $.Images "builder/scratch" }}
+from: scratch
 import:
 - image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
   add: /

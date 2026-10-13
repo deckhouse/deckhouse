@@ -481,7 +481,6 @@ update-container-factory: ## Download container-factory digests and update candi
 	  for key in $(BASE_LIMIT_KEYS); do \
 	    line=$$(grep -F "$${key}:" .alt_base_images.full.yml | head -n1); \
 	    case "$$key" in \
-	      base/distroless) line=$$(printf '%s\n' "$$line" | sed 's#^base/distroless:#base/distroless-fin:#');; \
 	      builder/src) line=$$(grep -F "$${key}:" .alt_base_images.prev.yml | head -n1);; \
 	    esac; \
 	    echo "$$line"; \

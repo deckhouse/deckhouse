@@ -11,7 +11,7 @@ shell:
   - rm -rf /out/usr/lib/python3*/site-packages/pip* /out/usr/bin/pip3*
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}
-from: {{ index $.Images "base/distroless-fin" }}
+from: {{ index $.Images "base/distroless" }}
 import:
 - image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
   add: /out

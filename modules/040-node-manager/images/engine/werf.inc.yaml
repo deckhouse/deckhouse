@@ -29,7 +29,7 @@ from: dev-registry.deckhouse.io/container-factory/engine:{{ $version }}
 # efi.img is deliberately left behind: an update replaces the root, not the ESP,
 # and nothing in this repository reads it.
 image: {{ $.ModuleName }}/{{ $.ImageName }}
-from: {{ index $.Images "builder/scratch" }}
+from: scratch
 import:
 - image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
   add: /

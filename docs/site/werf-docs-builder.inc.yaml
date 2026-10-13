@@ -3,7 +3,7 @@ image: {{ .ModuleName }}/{{ .ImageName }}
 {{ if eq .ModuleName "documentation" }}
 fromImage: common/distroless
 {{ else }}
-from: {{ index $.Images "builder/scratch" }}
+from: scratch
 {{ end }}
 import:
 - image: {{ .ModuleName }}/{{ .ImageName }}-artifact

@@ -1,6 +1,6 @@
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}
-from: {{ index $.Images "base/distroless-fin" }}
+from: {{ index $.Images "base/distroless" }}
 import:
 {{- include "image mount points" . }}
 - image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact

@@ -1,6 +1,6 @@
 ---
 image: dev/install-standalone
-from: {{ index $.Images "builder/scratch" }}
+from: scratch
 import:
 - image: dhctl
   add: /dhctl/bin/dhctl

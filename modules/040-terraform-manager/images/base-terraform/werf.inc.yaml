@@ -1,7 +1,7 @@
 {{- if ne $.Env "CSE" }}
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}
-from: {{ index $.Images "base/scratch" }}
+from: scratch
 import:
 - image: terraform
   add: /terraform/terraform

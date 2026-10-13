@@ -50,7 +50,7 @@ git:
 
 ---
 image: release-channel-version
-from: {{ index $.Images "builder/scratch" }}
+from: scratch
 import:
 - image: release-channel-version-prebuild
   add: /

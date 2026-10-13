@@ -24,7 +24,7 @@ image: web-router
 imageSpec:
   config:
     workingDir: "/app"
-from: {{ index $.Images "base/scratch" }}
+from: scratch
 import:
   - image: web-router-artifact
     add: /go/src/app/server

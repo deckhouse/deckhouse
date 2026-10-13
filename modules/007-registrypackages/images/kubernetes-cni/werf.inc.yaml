@@ -34,7 +34,7 @@ shell:
   - rm -rf .git
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-{{ $image_version }}
-from: {{ index $.Images "builder/scratch" }}
+from: scratch
 import:
 - image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $image_version }}
   add: /
@@ -105,7 +105,7 @@ shell:
 
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-sysext-{{ $image_version }}
-from: {{ index $.Images "builder/scratch" }}
+from: scratch
 import:
 - image: {{ $.ModuleName }}/{{ $.ImageName }}-sysext-artifact-{{ $image_version }}
   add: /out
