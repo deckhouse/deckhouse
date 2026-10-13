@@ -24,11 +24,50 @@ import (
 	"github.com/Masterminds/semver/v3"
 
 	"github.com/deckhouse/deckhouse/go_lib/dependency/requirements"
+	"github.com/deckhouse/deckhouse/modules/021-cni-cilium/hooks"
 )
 
 func init() {
 	requirements.RegisterCheck("nodesMinimalLinuxKernelVersion", checkMinimalKernelVersionFunc)
 	requirements.RegisterCheck("cniConfigurationSettled", checkCNIConfigurationSettledFunc)
+	requirements.RegisterCheck("ciliumReadyForUpgradeTo", checkCiliumReadyForUpgradeToFunc)
+}
+
+// Cilium agent 1.19 and later crashes on CNP/CCNP with non-empty fromRequires/toRequires.
+var ciliumRequiresFieldsRemovedVersion = semver.MustParse("1.19")
+
+func checkCiliumReadyForUpgradeToFunc(requirementValue string, getter requirements.ValueGetter) (bool, error) {
+	if requirementValue == "" {
+		return true, nil
+	}
+
+	targetVersion, err := semver.NewVersion(requirementValue)
+	if err != nil {
+		return false, fmt.Errorf("unable to parse target Cilium version (%s): %w", requirementValue, err)
+	}
+
+	if targetVersion.LessThan(ciliumRequiresFieldsRemovedVersion) {
+		return true, nil
+	}
+
+	rawCount, found := getter.Get(hooks.PoliciesWithRequiresRequirementKey)
+	if !found {
+		return true, nil
+	}
+
+	count, ok := rawCount.(int)
+	if !ok {
+		return false, fmt.Errorf("invalid type for policies with requires count: %T", rawCount)
+	}
+
+	if count > 0 {
+		return false, fmt.Errorf(
+			"%d CiliumNetworkPolicy/CiliumClusterwideNetworkPolicy objects use the fromRequires or toRequires fields, which are not supported by Cilium %s; see ClusterAlerts for details",
+			count, requirementValue,
+		)
+	}
+
+	return true, nil
 }
 
 func checkCNIConfigurationSettledFunc(_ string, getter requirements.ValueGetter) (bool, error) {

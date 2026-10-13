@@ -23,6 +23,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/deckhouse/deckhouse/go_lib/dependency/requirements"
+	"github.com/deckhouse/deckhouse/modules/021-cni-cilium/hooks"
 )
 
 func TestKubernetesVersionRequirement(t *testing.T) {
@@ -62,6 +63,48 @@ func TestLinuxKernelVersionRequirement(t *testing.T) {
 		requirements.SaveValue("currentMinimalLinuxKernelVersion", "5.2.0-90-generic")
 
 		ok, err := requirements.CheckRequirement("nodesMinimalLinuxKernelVersion", "5.8.0")
+		assert.False(t, ok)
+		require.Error(t, err)
+	})
+}
+
+func TestCiliumReadyForUpgradeToRequirement(t *testing.T) {
+	t.Run("SUCCESS: No policies with requires", func(t *testing.T) {
+		requirements.SaveValue(hooks.PoliciesWithRequiresRequirementKey, 0)
+
+		ok, err := requirements.CheckRequirement("ciliumReadyForUpgradeTo", "1.20")
+		assert.True(t, ok)
+		require.NoError(t, err)
+	})
+
+	t.Run("SUCCESS: Check is not requested by the release", func(t *testing.T) {
+		requirements.SaveValue(hooks.PoliciesWithRequiresRequirementKey, 2)
+
+		ok, err := requirements.CheckRequirement("ciliumReadyForUpgradeTo", "")
+		assert.True(t, ok)
+		require.NoError(t, err)
+	})
+
+	t.Run("SUCCESS: Target version still supports requires", func(t *testing.T) {
+		requirements.SaveValue(hooks.PoliciesWithRequiresRequirementKey, 2)
+
+		ok, err := requirements.CheckRequirement("ciliumReadyForUpgradeTo", "1.18")
+		assert.True(t, ok)
+		require.NoError(t, err)
+	})
+
+	t.Run("FAIL: Policies with requires exist", func(t *testing.T) {
+		requirements.SaveValue(hooks.PoliciesWithRequiresRequirementKey, 2)
+
+		ok, err := requirements.CheckRequirement("ciliumReadyForUpgradeTo", "1.20")
+		assert.False(t, ok)
+		require.Error(t, err)
+	})
+
+	t.Run("FAIL: Invalid target version", func(t *testing.T) {
+		requirements.SaveValue(hooks.PoliciesWithRequiresRequirementKey, 0)
+
+		ok, err := requirements.CheckRequirement("ciliumReadyForUpgradeTo", "true")
 		assert.False(t, ok)
 		require.Error(t, err)
 	})

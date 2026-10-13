@@ -34,6 +34,7 @@ requirements:
   "istioMinimalVersion": "1.25" # modules/110-istio/requirements/check.go
   "unmetCloudConditions": "true" # modules/040-node-manager/requirements/check.go
   "nodesMinimalLinuxKernelVersion": "5.8.0" # modules/021-cni-cilium/requirements/check.go
+  # "ciliumReadyForUpgradeTo": "1.20" # modules/021-cni-cilium/requirements/check.go; uncomment in the release that upgrades Cilium to 1.19 or later (CNP/CCNP with fromRequires/toRequires break the new agent)
   # This is the release that removes the previous registry implementation, so it must not install on
   # a cluster still running it: such a cluster would lose the code that configures the container
   # runtime on its nodes, in a release that itself has to be pulled through that configuration.
