@@ -11,6 +11,7 @@ Features of the `cloud-provider-dvp` module:
 - Provisioning disks via the DVP CSI driver (`csi.dvp.deckhouse.io`) so that PersistentVolumes can be requested from the cluster.
 - Provisioning base infrastructure and CloudPermanent nodes using the [Terraform/OpenTofu provider](/products/kubernetes-platform/documentation/v1/architecture/cluster-and-infrastructure/cloud-providers/cloud-provider-dvp.html#module-interactions) `terraform-provider-kubernetes`.
 - Provisioning CloudEphemeral nodes via Cluster API (CAPI). Virtual machine parameters are set in the [DVPInstanceClass](/modules/cloud-provider-dvp/cr.html#dvpinstanceclass) resource.
+- Creating [load balancers](/products/kubernetes-platform/documentation/v1/admin/integrations/virtualization/dvp/services.html#load-balancers) for Service objects of the `LoadBalancer` type. The balancer is created in the parent cluster.
 - Registering with [`node-manager`](/modules/node-manager/) so that [DVPInstanceClass](/modules/cloud-provider-dvp/cr.html#dvpinstanceclass) can be used when describing a [NodeGroup](/modules/node-manager/cr.html#nodegroup).
 - Enabling CNI for new clusters automatically. By default, [`cni-cilium`](/modules/cni-cilium/) is used.
 
@@ -18,5 +19,5 @@ Features of the `cloud-provider-dvp` module:
 If the cluster was installed with the [DVPClusterConfiguration](/modules/cloud-provider-dvp/cluster_configuration.html#dvpclusterconfiguration) schema, migrate to configuration via ModuleConfig.
 Until the migration is complete, the `D8CloudProviderDVPMigrationPending` alert may fire and Deckhouse updates may be blocked.
 
-See [How to migrate a cloud provider to ModuleConfig](/products/kubernetes-platform/documentation/v1/faq.html#how-to-migrate-a-cloud-provider-to-moduleconfig).
+The migration procedure is described in ["How to migrate a cloud provider to ModuleConfig"](/products/kubernetes-platform/documentation/v1/faq.html#how-to-migrate-a-cloud-provider-to-moduleconfig-based-configurat).
 {% endalert %}
