@@ -37,6 +37,8 @@ spec:
             **Warning.** DexAuthenticator only works with HTTPS. The application Ingress must have TLS configured.
 
             **Warning.** After restarting a pod with an OAuth2-Proxy, the current Access Token and ID Token will be queried (using the refresh token) and stored in a Redis memory.
+
+            The name of a DexAuthenticator must be a DNS-1035 label of at most 63 characters: it starts with a lowercase letter and contains only lowercase letters, digits and hyphens. The name is a part of the name of its Service and a label value of the objects it creates.
           x-doc-examples:
             - apiVersion: deckhouse.io/v1
               kind: DexAuthenticator
@@ -72,6 +74,17 @@ spec:
                 gatewayAPI:
                   applicationHTTPRouteListenerSetName: app-listeners
           properties:
+            metadata:
+              type: object
+              properties:
+                name:
+                  type: string
+                  # The name is a part of the name of the Service of the authenticator and a label value of its
+                  # objects. The rules sit on the field, so an object created before them can still be updated.
+                  maxLength: 63
+                  x-kubernetes-validations:
+                    - rule: "self.matches('^[a-z]([-a-z0-9]*[a-z0-9])?$')"
+                      message: 'The DexAuthenticator name must start with a letter and contain only lowercase letters, digits and hyphens, because it is a part of the Service name.'
             spec:
               type: object
               required:
@@ -433,6 +446,17 @@ spec:
           required:
             - spec
           properties:
+            metadata:
+              type: object
+              properties:
+                name:
+                  type: string
+                  # The name is a part of the name of the Service of the authenticator and a label value of its
+                  # objects. The rules sit on the field, so an object created before them can still be updated.
+                  maxLength: 63
+                  x-kubernetes-validations:
+                    - rule: "self.matches('^[a-z]([-a-z0-9]*[a-z0-9])?$')"
+                      message: 'The DexAuthenticator name must start with a letter and contain only lowercase letters, digits and hyphens, because it is a part of the Service name.'
             spec:
               type: object
               required:

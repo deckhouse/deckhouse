@@ -28,10 +28,12 @@ import (
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	structuralschema "k8s.io/apiextensions-apiserver/pkg/apiserver/schema"
 	structuralcel "k8s.io/apiextensions-apiserver/pkg/apiserver/schema/cel"
+	"k8s.io/apiextensions-apiserver/pkg/apiserver/schema/cel/model"
 	"k8s.io/apiextensions-apiserver/pkg/apiserver/schema/defaulting"
 	"k8s.io/apiextensions-apiserver/pkg/apiserver/validation"
 	"k8s.io/apimachinery/pkg/util/validation/field"
 	celconfig "k8s.io/apiserver/pkg/apis/cel"
+	"k8s.io/apiserver/pkg/cel/common"
 	"sigs.k8s.io/yaml"
 )
 
@@ -83,6 +85,22 @@ func validateAuthenticator(t *testing.T, schema *apiextensions.JSONSchemaProps, 
 		require.NotEmpty(t, errors)
 	}
 	return errors
+}
+
+// validateAuthenticatorUpdate validates an update the way the API server does, with ratcheting: a value
+// the old object already had passes a rule it breaks, as long as the update leaves it as it was.
+func validateAuthenticatorUpdate(t *testing.T, schema *apiextensions.JSONSchemaProps, object, old map[string]any) field.ErrorList {
+	t.Helper()
+	structural, err := structuralschema.NewStructural(schema)
+	require.NoError(t, err)
+	validator, _, err := validation.NewSchemaValidator(schema)
+	require.NoError(t, err)
+	correlated := common.NewCorrelatedObject(object, old, &model.Structural{Structural: structural})
+	errors := validation.ValidateCustomResourceUpdate(nil, object, old, validator, validation.WithRatcheting(correlated))
+	celValidator := structuralcel.NewValidator(structural, true, celconfig.PerCallLimit)
+	celErrors, _ := celValidator.Validate(context.Background(), nil, structural, object, old, celconfig.RuntimeCELCostBudget,
+		structuralcel.WithRatcheting(correlated))
+	return append(errors, celErrors...)
 }
 
 func TestDexAuthenticatorRoutingSchema(t *testing.T) {
@@ -147,4 +165,54 @@ func TestDexAuthenticatorRoutingSchema(t *testing.T) {
 			}
 		}
 	}
+}
+
+// The name of a DexAuthenticator is a label value of its objects and a part of the name of its Service,
+// so it has to be a DNS-1035 label: a name the apiserver refuses there would fail the whole release.
+func TestDexAuthenticatorNameIsADNSLabel(t *testing.T) {
+	names := map[string]bool{
+		"app":                   true,
+		"a1":                    true,
+		"my-app":                true,
+		strings.Repeat("a", 63): true,
+		"1app":                  false,
+		"123":                   false,
+		"0x1":                   false,
+		"my.app":                false,
+		strings.Repeat("a", 64): false,
+	}
+	for version, schema := range authenticatorSchemas(t) {
+		for name, valid := range names {
+			t.Run(version+"/"+name, func(t *testing.T) {
+				validateAuthenticator(t, schema, namedAuthenticator(version, name, "app.example.com"), valid)
+			})
+		}
+	}
+}
+
+// An authenticator created before the name rules, with a name they refuse, can still be updated: the
+// rules sit on metadata.name, which an update does not change, so the API server ratchets them.
+func TestDexAuthenticatorNameRulesRatchet(t *testing.T) {
+	for version, schema := range authenticatorSchemas(t) {
+		for _, name := range []string{"1app", "my.app", strings.Repeat("a", 64)} {
+			t.Run(version+"/"+name, func(t *testing.T) {
+				old := namedAuthenticator(version, name, "app.example.com")
+				updated := namedAuthenticator(version, name, "other.example.com")
+				require.Empty(t, validateAuthenticatorUpdate(t, schema, updated, old))
+			})
+		}
+	}
+}
+
+// namedAuthenticator is a valid authenticator of the version with the name and the application domain.
+func namedAuthenticator(version, name, domain string) map[string]any {
+	var object map[string]any
+	if version == "v2alpha1" {
+		object = authenticatorObject(version, []any{map[string]any{"domain": domain, "ingressClassName": "nginx"}})
+	} else {
+		object = authenticatorObject(version, nil)
+		object["spec"] = map[string]any{"applicationDomain": domain, "applicationIngressClassName": "nginx"}
+	}
+	object["metadata"].(map[string]any)["name"] = name
+	return object
 }
