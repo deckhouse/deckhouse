@@ -1923,6 +1923,10 @@ entries:
                 ru: Модуль sdn
               url: /architecture/network/sdn.html
             - title:
+                en: Service-with-healthchecks module
+                ru: Модуль service-with-healthchecks
+              url: /architecture/network/service-with-healthchecks.html
+            - title:
                 en: DNS modules
                 ru: Модули управления DNS
               url: /architecture/network/dns-modules.html
