@@ -162,6 +162,39 @@ var _ = Describe("Module :: user-authz :: helm template ::", func() {
 		f.ValuesSet("userAuthz.controlPlaneConfigurator.enabled", true)
 	})
 
+	Context("With enabledMultiTenancy and highAvailability", func() {
+		BeforeEach(func() {
+			f.ValuesSetFromYaml("global.enabledModules", `["operator-prometheus", "operator-prometheus-crd", "prometheus"]`)
+			f.ValuesSetFromYaml("global.discovery.apiVersions", `["deckhouse.io/v1alpha1/SecurityPolicyException"]`)
+			f.ValuesSet("global.highAvailability", true)
+			f.ValuesSet("userAuthz.enableMultiTenancy", true)
+			f.HelmRender()
+		})
+
+		It("Should keep permission-browser serving for 5 seconds after SIGTERM", func() {
+			Expect(f.RenderError).ShouldNot(HaveOccurred())
+			deployment := f.KubernetesResource("Deployment", "d8-user-authz", "permission-browser-apiserver")
+			Expect(deployment.Field(`spec.template.spec.containers.#(name=="apiserver").lifecycle.preStop.sleep.seconds`).Int()).To(BeEquivalentTo(5))
+		})
+
+		// In HA the aggregated API server keeps two replicas and rolls them one at a time with no
+		// surge, as before; the existing budget (maxUnavailable 1) keeps one of them through
+		// voluntary disruptions.
+		It("Should keep two permission-browser replicas and one always available", func() {
+			Expect(f.RenderError).ShouldNot(HaveOccurred())
+
+			deployment := f.KubernetesResource("Deployment", "d8-user-authz", "permission-browser-apiserver")
+			Expect(deployment.Exists()).To(BeTrue())
+			Expect(deployment.Field("spec.replicas").Int()).To(BeEquivalentTo(2))
+			Expect(deployment.Field("spec.strategy.rollingUpdate.maxSurge").Int()).To(BeEquivalentTo(0))
+			Expect(deployment.Field("spec.strategy.rollingUpdate.maxUnavailable").Int()).To(BeEquivalentTo(1))
+
+			pdb := f.KubernetesResource("PodDisruptionBudget", "d8-user-authz", "permission-browser-apiserver")
+			Expect(pdb.Exists()).To(BeTrue())
+			Expect(pdb.Field("spec.maxUnavailable").Int()).To(BeEquivalentTo(1))
+		})
+	})
+
 	Context("With custom resources (incl. limitNamespaces), enabledMultiTenancy and controlPlaneConfigurator", func() {
 		BeforeEach(func() {
 			f.ValuesSetFromYaml("global.enabledModules", `["operator-prometheus", "operator-prometheus-crd"]`)

@@ -120,6 +120,12 @@ spec:
         - name: https
           containerPort: 5556
           protocol: TCP
+        # Keep serving while the endpoint removal reaches kube-proxy, ingress-nginx and the API servers;
+        # the server closes its listener on SIGTERM.
+        lifecycle:
+          preStop:
+            sleep:
+              seconds: 5
         livenessProbe:
           httpGet:
             path: /healthz/live

@@ -169,6 +169,12 @@ spec:
           valueFrom:
             fieldRef:
               fieldPath: status.podIP
+        # Keep serving while the endpoint removal reaches kube-proxy, ingress-nginx and the API servers;
+        # the server closes its listener on SIGTERM.
+        lifecycle:
+          preStop:
+            sleep:
+              seconds: 5
         livenessProbe:
           failureThreshold: 3
           httpGet:

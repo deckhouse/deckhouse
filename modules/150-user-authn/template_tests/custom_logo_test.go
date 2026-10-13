@@ -50,6 +50,12 @@ modules:
 			f.HelmRender()
 		})
 
+		It("dex keeps serving for 5 seconds after SIGTERM", func() {
+			Expect(f.RenderError).ShouldNot(HaveOccurred())
+			dex := f.KubernetesResource("Deployment", "d8-user-authn", "dex")
+			Expect(dex.Field(`spec.template.spec.containers.#(name=="dex").lifecycle.preStop.sleep.seconds`).Int()).To(BeEquivalentTo(5))
+		})
+
 		It("Deployment must not have volume and volumeMount", func() {
 			Expect(f.RenderError).ShouldNot(HaveOccurred())
 

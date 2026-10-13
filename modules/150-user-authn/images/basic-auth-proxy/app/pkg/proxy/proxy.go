@@ -24,6 +24,7 @@ import (
 	"crypto/tls"
 	"crypto/x509"
 	"encoding/binary"
+	"errors"
 	"fmt"
 	"net"
 	"net/http"
@@ -222,7 +223,9 @@ func (h *Handler) Run(ctx context.Context) error {
 		Addr:              h.ListenAddress,
 		Handler:           mux,
 		ReadHeaderTimeout: 10 * time.Second,
-		BaseContext:       func(net.Listener) context.Context { return ctx },
+		// Requests do not inherit the signal context: SIGTERM would cancel the requests in flight,
+		// including streams such as `kubectl logs -f`, before Shutdown could let them finish.
+		BaseContext: func(net.Listener) context.Context { return context.Background() },
 	}
 
 	serverErrCh := make(chan error, 1)
@@ -240,7 +243,16 @@ func (h *Handler) Run(ctx context.Context) error {
 	case <-ctx.Done():
 		shutdownCtx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
 		defer cancel()
-		if err := server.Shutdown(shutdownCtx); err != nil {
+		err := server.Shutdown(shutdownCtx)
+		if errors.Is(err, context.DeadlineExceeded) {
+			// Long-lived streams such as `kubectl logs -f` or a watch outlive any deadline, and
+			// upgraded connections (exec, port-forward, attach) are hijacked and not tracked by
+			// Shutdown at all. Cutting them off on exit is the expected end of a rollout, not a failure.
+			h.logger.Warningf("shutdown deadline exceeded, closing the remaining connections")
+			_ = server.Close()
+			return nil
+		}
+		if err != nil {
 			return fmt.Errorf("shutdown: %w", err)
 		}
 		return nil

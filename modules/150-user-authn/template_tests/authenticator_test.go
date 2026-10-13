@@ -169,6 +169,25 @@ var _ = Describe("Module :: user-authn :: helm template :: dex authenticator", f
 `)
 			hec.HelmRender()
 		})
+		It("keeps authenticators ready during a dex outage and drains them on SIGTERM", func() {
+			Expect(hec.RenderError).ShouldNot(HaveOccurred())
+
+			authenticator := hec.KubernetesResource("Deployment", "d8-test", "test-dex-authenticator")
+			Expect(authenticator.Exists()).To(BeTrue())
+			container := authenticator.Field(`spec.template.spec.containers.#(name=="dex-authenticator")`)
+			Expect(container.Get("readinessProbe").String()).To(MatchYAML(`
+httpGet:
+  port: 8443
+  scheme: HTTPS
+  path: /ready
+initialDelaySeconds: 5
+periodSeconds: 5
+`))
+			Expect(container.Get("lifecycle.preStop.sleep.seconds").Int()).To(BeEquivalentTo(5))
+			// The session store outlives the authenticator.
+			redis := authenticator.Field(`spec.template.spec.containers.#(name=="redis")`)
+			Expect(redis.Get("lifecycle.preStop.sleep.seconds").Int()).To(BeNumerically(">", container.Get("lifecycle.preStop.sleep.seconds").Int()))
+		})
 		It("Should create desired objects", func() {
 			svc := hec.KubernetesResource("Service", "d8-test", "test-dex-authenticator")
 			Expect(svc.Exists()).To(BeTrue())
