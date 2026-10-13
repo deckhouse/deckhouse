@@ -435,7 +435,7 @@ d8 k -n d8-system create secret generic deckhouse-registry \
    --from-literal="path"=/deckhouse/cse \
    --from-literal="scheme"=https \
    --type=kubernetes.io/dockerconfigjson \
-   --dry-run=client -o yaml | d8 k -n d8-system exec -i svc/deckhouse-leader -c deckhouse -- d8 k replace -f -
+   --dry-run=client -o yaml | d8 k -n d8-system exec -i svc/deckhouse-leader -c deckhouse -- kubectl replace -f -
 ```
 
 {% endcapture %}
@@ -601,7 +601,7 @@ d8 k delete pod cse-image
 {% capture cse_set_deckhouse_images %}
 
 ```shell
-d8 k -n d8-system set image deployment/deckhouse \
+d8 k --as=system:sudouser -n d8-system set image deployment/deckhouse \
 <!REMOVE_FOR_CSE_1_58>
 init-downloaded-modules=registry-cse.deckhouse.ru/deckhouse/cse@$CSE_DECKHOUSE_INIT_CONTAINER \
 <!/REMOVE_FOR_CSE_1_58>
@@ -1251,6 +1251,10 @@ deckhouse=registry-cse.deckhouse.ru/deckhouse/cse:$DECKHOUSE_VERSION
    DECKHOUSE_VERSION=v1.73.3
    ```
 
+1. Удалите поле `releaseChannel` в moduleConfig `deckhouse`:
+
+   {{ disable_release_channel_cse | regex_replace: "^", "   " }}
+
 1. Выполните команду для указания данных аутентификации в хранилище образов:
 
    {{
@@ -1339,6 +1343,10 @@ deckhouse=registry-cse.deckhouse.ru/deckhouse/cse:$DECKHOUSE_VERSION
    ```
 
    Удаляйте его сразу после завершения миграции всех узлов. Оставленный в кластере ресурс продолжает проверять состояние containerd при каждом запуске bashible и может повторно запросить disruptive-обновление узла (аннотация `update.node.deckhouse.io/disruption-required`), то есть очистку состояния containerd с перезагрузкой.
+
+1. Установите `releaseChannel` в moduleConfig `deckhouse`:
+
+   {{ enable_release_channel_cse | regex_replace: "^", "   " }}
 
 {% endtab %}
 
