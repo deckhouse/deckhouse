@@ -1,35 +1,12 @@
 spec:
   versions:
-    - name: v1alpha1
-      schema:
-        openAPIV3Schema:
-          description: ""
-          properties:
-            spec:
-              description: ""
-              properties:
-                description:
-                  description: |
-                    Произвольное описание назначения проекта. Укажите пустую строку, если описание не требуется.
-                projectTypeName:
-                  description: |
-                    Имя ресурса ProjectType, который определяет, какие ресурсы будут созданы в проекте.
-                template:
-                  description: |
-                    Значения, передаваемые в [шаблон ресурсов](cr.html#projecttemplate-v1alpha1-spec-resourcestemplate) при создании проекта.
-                    Перед созданием, значения согласовываются со [схемой](cr.html#projecttemplate-v1alpha1-spec-parametersschema-openapiv3schema) входных параметров шаблона ресурсов.
-            status:
-              description: ""
-              properties:
-                message:
-                  description: Сообщение, указывающее на причину появления текущего статуса.
-                state:
-                  description: Короткое описание состояния проекта, например, Ready, Error, Pending, и т.д.
-                sync:
-                  description: Указывает на то, что параметры проекта были успешно применены после создания или изменения.
     - name: v1alpha2
       schema:
         openAPIV3Schema:
+          description: |
+            Описывает проект — изолированное окружение для приложений.
+
+            Проект состоит из основного неймспейса с именем проекта, дополнительных неймспейсов ([ProjectNamespace](#projectnamespace)), если они есть, а также настроек, политик и объектов, которые описывает его шаблон [ProjectTemplate](#projecttemplate). См. [Создание проекта](usage.html#создание-проекта).
           properties:
             spec:
               properties:
@@ -38,41 +15,48 @@ spec:
                     Произвольное описание назначения проекта. Укажите пустую строку, если описание не требуется.
                 projectTemplateName:
                   description: |
-                    Имя ресурса [ProjectTemplate](cr.html#projecttemplate), который определяет, какие ресурсы будут созданы в проекте.
+                    Имя [ProjectTemplate](cr.html#projecttemplate), по которому создаётся проект.
 
-                    Необязательное. Если не указано, используется шаблон `simple`: он создаёт только неймспейс проекта.
+                    Шаблон `simple` создаёт только неймспейс проекта.
                 parameters:
                   description: |
-                    Значения, передаваемые в [шаблон ресурсов](cr.html#projecttemplate-v1alpha1-spec-resourcestemplate) при создании проекта.
+                    Значения параметров, которые шаблон объявляет в [`parametersSchema`](cr.html#projecttemplate-v1alpha2-spec-parametersschema).
 
-                    Перед созданием, значения согласовываются со [схемой](cr.html#projecttemplate-v1alpha1-spec-parametersschema-openapiv3schema) входных параметров шаблона ресурсов.
+                    Структурированные поля шаблона получают их через `{fromParam: <NAME>}`. `manifests` и `resourcesTemplate` получают их в `{{ .parameters }}`, дополненными значениями по умолчанию из `parametersSchema`. Значения проверяются по `parametersSchema.openAPIV3Schema` шаблона при создании и изменении проекта.
             status:
               properties:
                 namespaces:
-                  description: Используемые пространства имен.
+                  description: Неймспейсы проекта.
                 observedGeneration:
-                  description: Последний generation проекта.
+                  description: Последнее поколение проекта, обработанное контроллером.
                 templateGeneration:
-                  description: Последний generation шаблона.
+                  description: Поколение шаблона, по которому проект был отрендерен последним.
                 resources:
-                  description: Список срендеренных и пропущенных ресурсов.
+                  description: Список отрендеренных и пропущенных ресурсов.
+                  additionalProperties:
+                    additionalProperties:
+                      properties:
+                        installed:
+                          description: Указывает, что ресурсы успешно отрендерены.
+                        names:
+                          description: Список имён ресурсов.
                 conditions:
-                  type: array
+                  description: |
+                    Текущее состояние проекта.
+
+                    Типы условий описаны в разделе [«Статус и диагностика проекта»](usage.html#статус-и-диагностика-проекта).
                   items:
-                    type: object
                     properties:
                       type:
-                        type: string
+                        description: Тип условия.
                       status:
-                        type: string
+                        description: "Состояние условия: `True`, `False` или `Unknown`."
                       message:
-                        type: string
+                        description: Сообщение с подробностями о состоянии условия.
                       lastTransitionTime:
-                        format: date-time
-                        type: string
+                        description: Время последнего изменения условия.
                       lastProbeTime:
-                        format: date-time
-                        type: string
+                        description: Время последней проверки условия.
                 keptObjects:
                   description: |
                     Объекты релиза проекта, отрендеренные из Helm-текста `resourcesTemplate`, которые остались на месте вместо удаления, когда проект перешёл на структурированные поля или когда `.spec.quota` перестало покрывать квоту, сохранённую на время передачи. Релиз ими больше не управляет, на них стоит лейбл `projects.deckhouse.io/kept-from-helm-template: "true"`, и пока он стоит, менять и удалять их может только тот, кто может сделать то же во всём кластере. Объект исчезает из списка, когда его удаляют, снимают с него этот лейбл или релиз снова его рендерит. Когда проект удаляют, объекты уровня кластера, на которых ещё стоит этот лейбл, удаляются вместе с ним.
@@ -100,10 +84,14 @@ spec:
                       name:
                         description: Имя объекта.
                 state:
-                  description: Короткое описание состояния проекта, например, Error, Deployed, и т.д.
+                  description: "Состояние проекта: `Deployed` или `Error`. Подробности приведены в условиях и их сообщениях."
     - name: v1alpha3
       schema:
         openAPIV3Schema:
+          description: |
+            Описывает проект — изолированное окружение для приложений.
+
+            Проект состоит из основного неймспейса с именем проекта, дополнительных неймспейсов ([ProjectNamespace](#projectnamespace)), если они есть, а также настроек, политик и объектов, которые описывает его шаблон [ProjectTemplate](#projecttemplate). См. [Создание проекта](usage.html#создание-проекта).
           properties:
             spec:
               properties:
@@ -114,14 +102,14 @@ spec:
                     Укажите пустую строку, если описание не требуется.
                 projectTemplateName:
                   description: |
-                    Имя ресурса [ProjectTemplate](cr.html#projecttemplate), который определяет, какие ресурсы будут созданы в проекте.
+                    Имя [ProjectTemplate](cr.html#projecttemplate), по которому создаётся проект.
 
-                    Необязательное. Если не указано, используется шаблон `simple`: он создаёт только неймспейс проекта.
+                    Шаблон `simple` создаёт только неймспейс проекта.
                 administrators:
                   description: |
                     Пользователи и группы, получающие административный доступ к проекту.
 
-                    Контроллер создаёт один управляемый `ProjectRoleBinding/d8-administrators` с ролью `d8:project:admin` на все записи. Для User имя — kube username (`User.spec.email`); для Group — `Group.spec.name`.
+                    Контроллер выдаёт им роль `d8:project:admin` через ProjectRoleBinding `d8-administrators`. Для `User` имя — это имя пользователя (`User.spec.email`), для `Group` — `Group.spec.name`.
 
                     Нельзя задавать вместе с `parameters.administrators`.
                   items:
@@ -129,22 +117,22 @@ spec:
                       kind:
                         description: Тип субъекта.
                       name:
-                        description: Имя субъекта. Для User — kube username (`User.spec.email`). Для Group — `Group.spec.name` (имя в токене), не `metadata.name`. Имя не может содержать управляющие символы и переводы строк и не может начинаться с `system:multitenancy-manager:`, префикса пользователей, от имени которых действует контроллер. Обновление, которое оставляет такое имя прежним, принимается с предупреждением.
+                        description: Имя субъекта. Для `User` — имя пользователя (`User.spec.email`). Для `Group` — `Group.spec.name` (имя в токене), а не `metadata.name`. Имя не может содержать управляющие символы и переводы строк и не может начинаться с `system:multitenancy-manager:`, префикса пользователей, от имени которых действует контроллер. Обновление, которое оставляет такое имя прежним, принимается с предупреждением.
                 quota:
                   description: |
-                    Квота ресурсов проекта, применяемая как `ResourceQuota` с именем `d8-project-quota` в пространстве имён проекта.
+                    Квота ресурсов проекта, которая применяется как ResourceQuota `d8-project-quota` в основном неймспейсе проекта.
 
                     Ключи и значения соответствуют формату `ResourceQuota.spec.hard`, например `requests.cpu: "100"`.
                     Для memory и storage нужна явная единица измерения (например `requests.memory: 2Gi`);
-                    голые числа интерпретируются как байты, поэтому admission webhook отклоняет голое число, кроме 0.
+                    числа без единицы измерения интерпретируются как байты, поэтому вебхук отклоняет такое число, кроме 0.
                     Обновление, которое оставляет такое значение прежним, принимается с предупреждением, как и создание через `deckhouse.io/v1alpha2`, в котором такое значение приходит из `parameters.resourceQuota`.
 
                     Нельзя задавать вместе с `parameters.resourceQuota`.
                 parameters:
                   description: |
-                    Значения, передаваемые в [шаблон ресурсов](cr.html#projecttemplate-v1alpha1-spec-resourcestemplate) при создании проекта.
+                    Значения параметров, которые шаблон объявляет в [`parametersSchema`](cr.html#projecttemplate-v1alpha2-spec-parametersschema).
 
-                    Перед созданием значения согласовываются со [схемой](cr.html#projecttemplate-v1alpha1-spec-parametersschema-openapiv3schema) входных параметров шаблона ресурсов.
+                    Структурированные поля шаблона получают их через `{fromParam: <NAME>}`. `manifests` и `resourcesTemplate` получают их в `{{ .parameters }}`, дополненными значениями по умолчанию из `parametersSchema`. Значения проверяются по `parametersSchema.openAPIV3Schema` шаблона при создании и изменении проекта.
             status:
               properties:
                 namespaces:
@@ -158,28 +146,35 @@ spec:
                 usage:
                   description: Текущее использование квоты проекта.
                 observedGeneration:
-                  description: Последний generation проекта.
+                  description: Последнее поколение проекта, обработанное контроллером.
                 templateGeneration:
-                  description: Последний generation шаблона.
+                  description: Поколение шаблона, по которому проект был отрендерен последним.
                 resources:
                   description: Список отрендеренных и пропущенных ресурсов.
+                  additionalProperties:
+                    additionalProperties:
+                      properties:
+                        installed:
+                          description: Указывает, что ресурсы успешно отрендерены.
+                        names:
+                          description: Список имён ресурсов.
                 conditions:
-                  type: array
+                  description: |
+                    Текущее состояние проекта.
+
+                    Типы условий описаны в разделе [«Статус и диагностика проекта»](usage.html#статус-и-диагностика-проекта).
                   items:
-                    type: object
                     properties:
                       type:
-                        type: string
+                        description: Тип условия.
                       status:
-                        type: string
+                        description: "Состояние условия: `True`, `False` или `Unknown`."
                       message:
-                        type: string
+                        description: Сообщение с подробностями о состоянии условия.
                       lastTransitionTime:
-                        format: date-time
-                        type: string
+                        description: Время последнего изменения условия.
                       lastProbeTime:
-                        format: date-time
-                        type: string
+                        description: Время последней проверки условия.
                 keptObjects:
                   description: |
                     Объекты релиза проекта, отрендеренные из Helm-текста `resourcesTemplate`, которые остались на месте вместо удаления, когда проект перешёл на структурированные поля или когда `.spec.quota` перестало покрывать квоту, сохранённую на время передачи. Релиз ими больше не управляет, на них стоит лейбл `projects.deckhouse.io/kept-from-helm-template: "true"`, и пока он стоит, менять и удалять их может только тот, кто может сделать то же во всём кластере. Объект исчезает из списка, когда его удаляют, снимают с него этот лейбл или релиз снова его рендерит. Когда проект удаляют, объекты уровня кластера, на которых ещё стоит этот лейбл, удаляются вместе с ним.
@@ -207,4 +202,4 @@ spec:
                       name:
                         description: Имя объекта.
                 state:
-                  description: Короткое описание состояния проекта, например, Error, Deployed, и т.д.
+                  description: "Состояние проекта: `Deployed` или `Error`. Подробности приведены в условиях и их сообщениях."

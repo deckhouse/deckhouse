@@ -1,5 +1,6 @@
 ---
 title: "The multitenancy-manager module: FAQ"
+description: "Answers to common questions about access of projects to cluster-wide resources in the multitenancy-manager module."
 ---
 
 ## Managing access to cluster-wide resources
@@ -38,9 +39,9 @@ You can view the resulting list of cluster-wide resources available to a specifi
 d8 k get available -n <PROJECT_NAME>
 ```
 
-### What happens to existing objects after access is restricted?
+### What happens to existing objects when access is restricted?
 
-Existing objects continue to use their previously configured values. When an object is updated, only new values are checked, so changing an access policy does not disrupt existing objects.
+Existing objects continue to use their previously configured values. When an object is updated, only new values are checked, so changing an access policy does not disrupt existing objects. The same holds when access management is enabled on an existing cluster: existing objects do not need to be changed before access policies are created.
 
 If an existing object needs to use a different cluster-wide resource, explicitly change the corresponding field to a value available to the project.
 
@@ -64,7 +65,7 @@ For a configuration example, refer to ["Denying individual resources"](usage.htm
 
 If no ClusterResourceGrantPolicy is configured for a resource, its availability is determined by its registration. The resource is available to all projects if [`defaultAvailability: All`](cr.html#grantableclusterresourcedefinition-v1alpha1-spec-defaultavailability) (the default value) is set in GrantableClusterResourceDefinition and the resource does not match the [`excluded`](cr.html#grantableclusterresourcedefinition-v1alpha1-spec-excluded) filters.
 
-For example, the `clusterroles` definition provided by DP excludes all ClusterRoles without the `rbac.deckhouse.io/delegatable` label. Therefore, such roles are unavailable in RoleBinding even when no policies are configured.
+For example, the `clusterroles` definition provided by DP excludes every ClusterRole without the `rbac.deckhouse.io/delegatable: "true"` label. Therefore, such roles are unavailable in RoleBinding even when no policies are configured.
 
 To restrict access, create a [ClusterResourceGrantPolicy](cr.html#clusterresourcegrantpolicy) and specify the projects and the cluster-wide resources available to them.
 
@@ -79,7 +80,7 @@ Check the following:
    d8 k get ns -l projects.deckhouse.io/project=<PROJECT_NAME> --show-labels
    ```
 
-   In a `v1alpha1` manifest, `spec.projectSelector` is what `v1alpha2` calls `spec.namespaceSelector`. Also check the conditions in the policy status. The `SelectorsValid` condition is `False` when a selector is invalid. The `NewNamespacesCovered` condition is `False` when a restriction does not cover a new additional namespace of the project.
+   In a `v1alpha1` manifest, `spec.projectSelector` is what `v1alpha2` calls `spec.namespaceSelector`. Also check the conditions in the policy status. The `SelectorsValid` condition is `False` when a selector is invalid. The `NewNamespacesCovered` condition is `False` when a restriction does not cover a new additional namespace of the project. The `AllowedEffective` condition is `False` when the GrantableClusterResourceDefinition excludes a name listed in `allowed`, for example a ClusterRole without the `rbac.deckhouse.io/delegatable: "true"` label. The message names it (see [Restricting ClusterRoles for a project](usage.html#restricting-clusterroles-for-a-project)).
 
 1. **Resources available to the project**. Check whether AvailableClusterResource reflects the expected policy settings:
 
@@ -105,16 +106,4 @@ After the module is disabled, cluster-wide resource availability checks and auto
 
 Fields that use the `x-deckhouse-grantable-resource` extension in DP application settings are no longer checked either.
 
-The `d8:use:dict` role in the `user-authz` module continues to work.
-
-### What happens when access management is enabled on an existing cluster?
-
-Existing objects continue to use their previously configured values. Access checks apply to new objects and, when existing objects are updated, only to new values.
-
-Therefore, existing objects do not need to be modified before access policies are created.
-
-### What happens to objects created before access was restricted?
-
-Such objects continue to use their previously configured values. New objects and new values in the fields of existing objects are checked against the current access policies.
-
-If an existing object uses a cluster-wide resource that is no longer available to the project, the [`ClusterResourceGrantPolicyViolation`](/products/kubernetes-platform/documentation/v1/reference/alerts.html#multitenancy-manager-clusterresourcegrantpolicyviolation) alert is triggered.
+The `d8:dict` role of the `user-authz` module continues to work.

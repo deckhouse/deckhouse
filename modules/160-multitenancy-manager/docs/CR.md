@@ -1,5 +1,5 @@
 ---
-title: "The multitenancy-manager module: Custom Resources"
+title: "The multitenancy-manager module: custom resources"
 ---
 
 <!-- SCHEMA -->

@@ -12,8 +12,8 @@ properties:
 
   highAvailability:
     type: boolean
-    x-examples: [true]
+    x-examples: [true, false]
     description: |
-      Manually enable the high availability mode.
+      Whether the module runs in the high availability mode.
 
-      By default, Deckhouse automatically decides whether to enable the HA mode. Click [here](/products/kubernetes-platform/documentation/v1/reference/api/global.html#parameters) to learn more about the HA mode for modules.
+      If not set, the mode is chosen automatically, as described for the [global `highAvailability` parameter](/products/kubernetes-platform/documentation/v1/reference/api/global.html#parameters).

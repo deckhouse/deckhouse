@@ -34,7 +34,7 @@ spec:
         openAPIV3Schema:
           type: object
           description: |
-            ProjectNamespace orders an additional namespace inside a project.
+            Describes an additional namespace of a project.
 
             It must be created in the project's main namespace (the namespace whose name equals the project name).
             The controller creates a namespace named `<project>-<spec.name>`, labels it with the project ownership
@@ -52,6 +52,8 @@ spec:
                   description: |
                     Suffix of the resulting namespace. The created namespace is `<project>-<name>`, where
                     `<project>` is the main namespace this object lives in.
+
+                    The resulting name `<project>-<name>` must be no longer than 63 characters.
                   type: string
                   minLength: 1
                   maxLength: 61
@@ -60,6 +62,7 @@ spec:
                     - rule: "self == oldSelf"
                       message: "spec.name is immutable."
                 features:
+                  x-doc-skip: true
                   description: |
                     Optional subset of the project features to enable for the namespace. Carried through as-is:
                     the Project resource does not model features yet, so the "subset of project features"
@@ -75,21 +78,28 @@ spec:
                     The namespace the controller created for this ProjectNamespace.
                   type: string
                 observedGeneration:
+                  description: Last generation of the object processed by the controller.
                   type: integer
                 conditions:
+                  description: Current state of the object.
                   type: array
                   items:
                     type: object
                     properties:
                       type:
+                        description: Condition type.
                         type: string
                       status:
+                        description: "Condition state: `True`, `False` or `Unknown`."
                         type: string
                       message:
+                        description: Message with details of the condition state.
                         type: string
                       lastTransitionTime:
+                        description: Time when the condition last changed.
                         format: date-time
                         type: string
                       lastProbeTime:
+                        description: Time of the last check of the condition.
                         format: date-time
                         type: string

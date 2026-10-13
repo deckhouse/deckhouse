@@ -6,7 +6,7 @@ spec:
           description: |
             Описывает шаблон проекта.
 
-            На этот ресурс ссылается другой пользовательский ресурс — [Project](cr.html#project).
+            На этот ресурс ссылается кастомный ресурс [Project](cr.html#project).
 
             Версия устарела. Шаблон создаётся через `deckhouse.io/v1alpha2`, а создание через `deckhouse.io/v1alpha1` отклоняется. Шаблоны, созданные через `deckhouse.io/v1alpha1` раньше, читаются, меняются и удаляются через эту версию, как и прежде.
           properties:
@@ -17,13 +17,13 @@ spec:
                     Произвольное описание назначения шаблона. Укажите пустую строку, если описание не требуется.
                 parametersSchema:
                   description: |
-                    Одна из схем параметров для валидации параметров проекта.
+                    Схема параметров проекта.
 
-                    На данный момент поддерживается только схема OpenAPI v3.
+                    Поддерживается только `openAPIV3Schema`.
                   properties:
                     openAPIV3Schema:
                       description: |
-                        Спецификация OpenAPI для [параметров шаблона](#project-v1alpha2-spec-parameters).
+                        Спецификация OpenAPI для [параметров](cr.html#project-v1alpha3-spec-parameters).
 
                         Используется для проверки правильности параметров, передаваемых при создании нового проекта.
                 resourcesTemplate:
@@ -32,28 +32,27 @@ spec:
 
                     Шаблоны полностью совместимы со всеми [функциями `helm`](https://helm.sh/docs/chart_template_guide/function_list/).
 
-                    Узнайте больше о [создании изолированной среды...](usage.html#создание-проекта)
+                    Подробнее — [в разделе «Перевод шаблона с Helm-текста»](usage.html#перевод-шаблона-с-helm-текста).
 
                     В шаблонах доступны следующие параметры:
                     - `{{ .projectName }}` — имя `Project`, для которого рендерится шаблон.
                     - `{{ .projectTemplateName }}` — имя `ProjectTemplate`.
-                    - `{{ .parameters }}` — словарь пользовательских значений, описанных в параметре [.spec.parametersSchema](cr.html#projecttemplate-v1alpha1-spec-parametersschema) и определенных в параметре [.spec.parameters](cr.html#project-v1alpha2-spec-parameters).
+                    - `{{ .parameters }}` — словарь пользовательских значений, описанных в параметре [.spec.parametersSchema](cr.html#projecttemplate-v1alpha1-spec-parametersschema) и определённых в параметре [.spec.parameters](cr.html#project-v1alpha3-spec-parameters).
 
-                    > **Примечание!** Указание полей `.metadata.namespace` для объектов является необязательным,
-                    > так как в это поле автоматически устанавливается значение с именем созданного проекта.
+                    `.metadata.namespace` объекта указывать необязательно: объект без него создаётся в основном неймспейсе проекта.
             status:
               properties:
                 message:
                   description: Сообщение, указывающее на причину появления текущего статуса.
                 ready:
-                  description: Готовность шаблона к использованию. Указывает на то, что шаблон успешно прошел проверку.
+                  description: Готовность шаблона к использованию. Указывает на то, что шаблон успешно прошёл проверку.
     - name: v1alpha2
       schema:
         openAPIV3Schema:
           description: |
             Описывает шаблон проекта как набор структурированных декларативных полей.
 
-            На этот ресурс ссылается другой пользовательский ресурс — [Project](cr.html#project). Поля доступности кластерных ресурсов (`resources`, `grantPolicies`) материализуются в объекты [ClusterResourceGrantPolicy](cr.html#clusterresourcegrantpolicy), привязанные к проектам этого шаблона; остальные поля рендерятся в объекты внутри неймспейсов.
+            На этот ресурс ссылается кастомный ресурс [Project](cr.html#project). Поля `resources` и `grantPolicies` превращаются в объекты [ClusterResourceGrantPolicy](cr.html#clusterresourcegrantpolicy), которые применяются к проектам этого шаблона. Остальные поля превращаются в объекты в неймспейсах проектов.
 
             Объекты, которые не описывает ни одно структурированное поле, создаются из `manifests`. Вместо полей, которые рендерят объекты, шаблон, созданный через `deckhouse.io/v1alpha1`, может содержать Helm-шаблон в `resourcesTemplate`. Такая форма устарела, и ни один шаблон не может получить новое `resourcesTemplate`.
           properties:
@@ -68,27 +67,83 @@ spec:
                     Укажите пустую строку, если описание не требуется.
                 resources:
                   description: |
-                    Встроенные правила выдачи кластерных ресурсов.
-                    
-                    Контроллер материализует их в управляемый ClusterResourceGrantPolicy, привязанный к проектам этого шаблона.
+                    Правила доступа к cluster-wide-ресурсам для проектов шаблона.
+
+                    Контроллер превращает их в ClusterResourceGrantPolicy `template-<TEMPLATE_NAME>-inline`, которая применяется к неймспейсам проектов этого шаблона.
                   items:
                     description: |
-                      Одна запись allow-листа/дефолта для ресурса, ссылающаяся на GrantableClusterResourceDefinition.
+                      Настройки доступа к одному типу cluster-wide-ресурсов.
                     properties:
                       resourceName:
-                        description: Имя GrantableClusterResourceDefinition, которую настраивает эта запись.
+                        description: Имя GrantableClusterResourceDefinition, который регистрирует тип cluster-wide-ресурсов.
                       allowed:
-                        description: Явный список выданных имён объектов (объединяется с allowedSelector).
+                        description: |
+                          Список имён cluster-wide-ресурсов, доступных проектам.
+
+                          Объединяется с ресурсами, выбранными с помощью `allowedSelector`.
                       allowedSelector:
-                        description: Выдаёт все объекты выданного ресурса, чьи метки совпадают (объединяется с allowed).
+                        description: |
+                          Селектор лейблов cluster-wide-ресурсов, доступных проектам.
+
+                          Объединяется с ресурсами из `allowed`. Применяется только к cluster-wide-ресурсам, которые представлены объектами Kubernetes.
+                        properties:
+                          matchLabels:
+                            description: |
+                              Набор лейблов cluster-wide-ресурсов.
+
+                              Должны совпадать все указанные лейблы.
+                          matchExpressions:
+                            description: |
+                              Список выражений селектора лейблов.
+
+                              Должны выполняться все выражения.
+                            items:
+                              properties:
+                                key:
+                                  description: Ключ лейбла, к которому применяется выражение.
+                                operator:
+                                  description: Оператор, задающий отношение между ключом и набором значений.
+                                values:
+                                  description: Список значений лейбла.
                       denied:
-                        description: Имена объектов, явно исключённые для подходящих проектов (перекрывает allowed).
+                        description: |
+                          Список имён cluster-wide-ресурсов, недоступных проектам.
+
+                          Запрещающие правила имеют приоритет над `allowed` и `allowedSelector`.
                       deniedSelector:
-                        description: Исключает выданные объекты, чьи метки совпадают (перекрывает allowed/allowedSelector).
+                        description: |
+                          Селектор лейблов cluster-wide-ресурсов, недоступных проектам.
+
+                          Запрещающие правила имеют приоритет над `allowed` и `allowedSelector`.
+                        properties:
+                          matchLabels:
+                            description: |
+                              Набор лейблов cluster-wide-ресурсов.
+
+                              Должны совпадать все указанные лейблы.
+                          matchExpressions:
+                            description: |
+                              Список выражений селектора лейблов.
+
+                              Должны выполняться все выражения.
+                            items:
+                              properties:
+                                key:
+                                  description: Ключ лейбла, к которому применяется выражение.
+                                operator:
+                                  description: Оператор, задающий отношение между ключом и набором значений.
+                                values:
+                                  description: Список значений лейбла.
                       default:
-                        description: Имя дефолта для проекта (перекрывает defaultFrom регистрации).
+                        description: |
+                          Имя cluster-wide-ресурса, который проекты используют по умолчанию.
+
+                          Переопределяет значение, определённое с помощью `defaultFrom` в GrantableClusterResourceDefinition.
                       availabilityDefault:
-                        description: Перекрывает defaultAvailability ресурса (All/None) для подходящих проектов.
+                        description: |
+                          Доступность cluster-wide-ресурсов этого типа, которые не указаны в `allowed`, `allowedSelector`, `denied` и `deniedSelector`.
+
+                          Переопределяет `defaultAvailability` в GrantableClusterResourceDefinition. Если задан `allowed` или `allowedSelector`, а это поле не задано, остальные ресурсы этого типа проектам недоступны.
                 grantPolicies:
                   description: |
                     Ссылки на библиотечные объекты ClusterResourceGrantPolicy (созданные без `projectSelector` и `namespaceSelector`).
@@ -98,35 +153,39 @@ spec:
                   description: |
                     Профиль Pod Security Standard, применяемый к неймспейсам проекта.
 
-                    Возможные значения:
-
-                    - Privileged — неограниченная политика.
-                    - Baseline — минимально ограничивающая политика, предотвращающая известные эскалации привилегий.
-                    - Restricted — сильно ограниченная политика, актуальные практики hardening подов.
+                    - `Privileged` — политика без ограничений.
+                    - `Baseline` — минимально ограничивающая политика, которая предотвращает известные способы повышения привилегий.
+                    - `Restricted` — строго ограничивающая политика, которая следует современным практикам защиты подов.
 
                     Литеральная строка (`Privileged`/`Baseline`/`Restricted`) или ссылка на параметр
                     `{fromParam: "<name>"}`, указывающая на свойство `parametersSchema`. Литерал вне трёх значений
-                    и ссылка на необъявленный или не того типа параметр отклоняются admission webhook (поле в схеме нетипизировано, поэтому CEL-правила не несёт).
+                    и ссылку на необъявленный параметр или параметр другого типа вебхук отклоняет.
                 networkPolicy:
-                  description: Сетевая изоляция неймспейсов проекта по умолчанию.
+                  description: Сетевая изоляция неймспейсов проекта.
                   properties:
                     mode:
                       description: |
-                        - Isolated — по умолчанию запрещать весь трафик, кроме внутрипроектного, DNS, сбора метрик Prometheus и ingress-nginx.
-                        - NotRestricted — по умолчанию разрешать весь трафик.
+                        Режим сетевой изоляции неймспейсов проекта.
+
+                        - `Isolated` — в каждом неймспейсе проекта создаётся NetworkPolicy `isolated`. Она разрешает входящий трафик только из неймспейсов проекта, от Prometheus, контроллера ingress-nginx и агента service-with-healthchecks, а исходящий — только в неймспейсы проекта и к DNS в `kube-system`.
+                        - `NotRestricted` — NetworkPolicy не создаётся.
+
+                        Если поле не задано, NetworkPolicy тоже не создаётся.
 
                         Литеральная строка (`Isolated`/`NotRestricted`) или ссылка на параметр `{fromParam: "<name>"}`.
-                        Литерал вне двух значений отклоняется admission webhook.
+                        Литерал вне двух значений вебхук отклоняет.
                 nodeSelector:
                   description: |
-                    Ограничивает поды проекта узлами с указанными метками. Литеральная карта меток или ссылка на параметр `{fromParam: "<name>"}`.
+                    Селектор узлов для подов основного неймспейса проекта. Литеральная карта лейблов или ссылка на параметр `{fromParam: "<name>"}`.
+
+                    Задаётся аннотацией `scheduler.alpha.kubernetes.io/node-selector` основного неймспейса и объединяется с селектором узлов каждого пода в нём. Под с конфликтующим селектором отклоняется. Дополнительные неймспейсы проекта его не получают.
                 tolerations:
                   description: |
-                    Tolerations по умолчанию, применяемые к подам проекта.
-                    
-                    Литеральный список tolerations или ссылка на параметр `{fromParam: "<name>"}`.
+                    Tolerations по умолчанию для подов основного неймспейса проекта.
+
+                    Литеральный список tolerations или ссылка на параметр `{fromParam: "<name>"}`. Задаются аннотацией `scheduler.alpha.kubernetes.io/defaultTolerations` основного неймспейса. Дополнительные неймспейсы проекта их не получают.
                 namespaceMetadata:
-                  description: Дополнительные метки и аннотации для неймспейсов проекта.
+                  description: Дополнительные лейблы и аннотации для неймспейсов проекта.
                   properties:
                     labels:
                       description: |
@@ -184,11 +243,13 @@ spec:
                         Литеральное булево значение или ссылка на параметр `{fromParam: "<name>"}`.
                 parametersSchema:
                   description: |
-                    Схема OpenAPI v3 для валидации [параметров](#project-v1alpha2-spec-parameters) проекта.
+                    Схема OpenAPI v3 для [параметров](cr.html#project-v1alpha3-spec-parameters) проекта.
+
+                    Булев параметр `requiredRequests`, объявленный здесь, читается по имени: если для проекта он равен `true`, поды во всех неймспейсах проекта должны задавать запросы CPU и памяти (OperationPolicy в режиме `Deny`).
                   properties:
                     openAPIV3Schema:
                       description: |
-                        Спецификация OpenAPI, используемая для проверки правильности параметров, передаваемых при создании нового проекта.
+                        Спецификация OpenAPI, по которой проверяются параметры проекта при его создании и изменении.
                 manifests:
                   description: |
                     Шаблон в формате [`go template`](https://pkg.go.dev/text/template) с [функциями `helm`](https://helm.sh/docs/chart_template_guide/function_list/), который создаёт объекты в неймспейсах проекта рядом с объектами из структурированных полей.
@@ -222,4 +283,4 @@ spec:
                 message:
                   description: Сообщение, указывающее на причину появления текущего статуса.
                 ready:
-                  description: Готовность шаблона к использованию. Указывает на то, что шаблон успешно прошел проверку.
+                  description: Готовность шаблона к использованию. Указывает на то, что шаблон успешно прошёл проверку.

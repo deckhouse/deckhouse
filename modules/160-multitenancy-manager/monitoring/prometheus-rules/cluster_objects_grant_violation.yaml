@@ -8,8 +8,17 @@
     annotations:
       plk_markup_format: "markdown"
       plk_protocol_version: "1"
-      summary: One or more resources not allowed by ClusterResourceGrantPolicy are in use.
+      summary: Objects in namespace `{{ $labels.project }}` use cluster-wide resources that are not available to its project.
       description: |
-          One or more resources that are not allowed by ClusterResourceGrantPolicy are in use within this cluster's projects.
+          Objects in namespace `{{ $labels.project }}` reference cluster-wide resources (for example, a StorageClass or a ClusterRole) that the current ClusterResourceGrantPolicy objects do not make available to the project of this namespace. The `project` label of the metric holds the namespace, not the project name. Such an object was created before the policy changed. It keeps working, and when it is updated, only new values are checked.
 
-          Check the "Security > Cluster Resource Grant Violations" dashboard for detailed overview of violating objects.
+          Steps to troubleshoot:
+
+          1. Find the objects, their fields and the resources on the "Security" → "Cluster Resource Grant Violations" Grafana dashboard, or in the `d8_cluster_objects_grant_violated{project="{{ $labels.project }}"}` metric (labels `violating_object_name`, `violating_field`, `violating_resource` and `grant`).
+          1. Check which resources are available to the project:
+
+             ```shell
+             d8 k get available <RESOURCE_NAME> -n {{ $labels.project }} -o yaml
+             ```
+
+          1. Make the resource available to the project in a ClusterResourceGrantPolicy, or change the field of the object to an available value.

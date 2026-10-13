@@ -34,6 +34,7 @@ spec:
           type: object
           properties:
             spec:
+              x-doc-skip: true
               type: object
               properties:
                 description:
@@ -52,6 +53,7 @@ spec:
                     Before creation, the values are validated against the [schema](cr.html#projecttemplate-v1alpha1-spec-parametersschema-openapiv3schema) of the template's input parameters.
                   type: object
             status:
+              x-doc-skip: true
               type: object
               properties:
                 message:
@@ -85,6 +87,10 @@ spec:
       schema:
         openAPIV3Schema:
           type: object
+          description: |
+            Describes a project: an isolated environment for applications.
+
+            A project consists of the main namespace named after the project, the additional namespaces ([ProjectNamespace](#projectnamespace)), if any, and the settings, policies and objects that its [ProjectTemplate](#projecttemplate) describes. See [Creating a project](usage.html#creating-a-project).
           x-kubernetes-validations:
             - rule: 'size(self.metadata.name) <= 61'
               message: "Project name must be no longer than 61 characters: it is used as the project namespace name, which Kubernetes limits to 63 characters (the Helm release name is derived independently and stays within Helm's own limit)."
@@ -98,18 +104,18 @@ spec:
                   type: string
                 projectTemplateName:
                   description: |
-                    The name of the [ProjectTemplate](cr.html#projecttemplate) resource that defines which resources will be created in the project.
+                    Name of the [ProjectTemplate](cr.html#projecttemplate) the project is created from.
 
-                    Optional. If omitted, the `simple` template is used: it creates the project namespace and nothing else.
+                    The `simple` template creates only the project namespace.
                   type: string
                   default: simple
                 parameters:
                   additionalProperties:
                     x-kubernetes-preserve-unknown-fields: true
                   description: |
-                    Parameters passed to the [resources template](cr.html#projecttemplate-v1alpha1-spec-resourcestemplate) when creating the project.
+                    Values of the parameters that the template declares in [`parametersSchema`](cr.html#projecttemplate-v1alpha2-spec-parametersschema).
 
-                    Before creation, the values are validated against the [schema](cr.html#projecttemplate-v1alpha1-spec-parametersschema-openapiv3schema) of the template's input parameters.
+                    The structured fields of the template take them through `{fromParam: <NAME>}`. `manifests` and `resourcesTemplate` get them in `{{ .parameters }}`, completed with the defaults of `parametersSchema`. The values are validated against `parametersSchema.openAPIV3Schema` of the template when the project is created or changed.
                   type: object
             status:
               type: object
@@ -120,10 +126,10 @@ spec:
                   items:
                     type: string
                 observedGeneration:
-                  description: The last observed project`s generation
+                  description: Last generation of the project processed by the controller.
                   type: integer
                 templateGeneration:
-                  description: The last observed template`s generation
+                  description: Generation of the template the project was last rendered from.
                   type: integer
                 resources:
                   description: Rendered and skipped resources.
@@ -142,20 +148,29 @@ spec:
                           items:
                             type: string
                 conditions:
+                  description: |
+                    Current state of the project.
+
+                    The condition types are described in [Project status and diagnostics](usage.html#project-status-and-diagnostics).
                   type: array
                   items:
                     type: object
                     properties:
                       type:
+                        description: Condition type.
                         type: string
                       status:
+                        description: "Condition state: `True`, `False` or `Unknown`."
                         type: string
                       message:
+                        description: Message with details of the condition state.
                         type: string
                       lastTransitionTime:
+                        description: Time when the condition last changed.
                         format: date-time
                         type: string
                       lastProbeTime:
+                        description: Time of the last check of the condition.
                         format: date-time
                         type: string
                 # The controller writes keptObjects and manifestObjects at v1alpha3, and this version
@@ -202,7 +217,7 @@ spec:
                         description: Name of the object.
                         type: string
                 state:
-                  description: Brief description of the project status, such as Error, Deploying, Deployed, etc.
+                  description: "State of the project: `Deployed` or `Error`. The conditions and their messages give the details."
                   type: string
     - name: v1alpha3
       served: true
@@ -226,6 +241,10 @@ spec:
       schema:
         openAPIV3Schema:
           type: object
+          description: |
+            Describes a project: an isolated environment for applications.
+
+            A project consists of the main namespace named after the project, the additional namespaces ([ProjectNamespace](#projectnamespace)), if any, and the settings, policies and objects that its [ProjectTemplate](#projecttemplate) describes. See [Creating a project](usage.html#creating-a-project).
           x-kubernetes-validations:
             - rule: 'size(self.metadata.name) <= 61'
               message: "Project name must be no longer than 61 characters: it is used as the project namespace name, which Kubernetes limits to 63 characters (the Helm release name is derived independently and stays within Helm's own limit)."
@@ -239,16 +258,16 @@ spec:
                   type: string
                 projectTemplateName:
                   description: |
-                    The name of the [ProjectTemplate](cr.html#projecttemplate) resource that defines which resources will be created in the project.
+                    Name of the [ProjectTemplate](cr.html#projecttemplate) the project is created from.
 
-                    Optional. If omitted, the `simple` template is used: it creates the project namespace and nothing else.
+                    The `simple` template creates only the project namespace.
                   type: string
                   default: simple
                 administrators:
                   description: |
                     Users and groups that get administrative access to the project.
 
-                    The controller creates one managed `ProjectRoleBinding/d8-administrators` granting `d8:project:admin` to all entries. User name is the kube username (`User.spec.email`); Group name is `Group.spec.name`.
+                    The controller grants them the `d8:project:admin` role through the `d8-administrators` ProjectRoleBinding. For `User`, the name is the user name (`User.spec.email`); for `Group`, it is `Group.spec.name`.
 
                     Cannot be set together with `parameters.administrators`.
                   type: array
@@ -265,7 +284,7 @@ spec:
                           - User
                           - Group
                       name:
-                        description: Subject name. For User — kube username (`User.spec.email`). For Group — `Group.spec.name` (token name), not `metadata.name`. The name cannot contain control characters or line breaks and cannot start with `system:multitenancy-manager:`, the prefix of the users that the controller acts as. An update that keeps such a name as it was is accepted with a warning.
+                        description: Subject name. For `User`, the user name (`User.spec.email`). For `Group`, `Group.spec.name` (the name in the token), not `metadata.name`. The name cannot contain control characters or line breaks and cannot start with `system:multitenancy-manager:`, the prefix of the users that the controller acts as. An update that keeps such a name as it was is accepted with a warning.
                         type: string
                         minLength: 1
                         # The name ends up in a RoleBinding subject and, for a project rendered from
@@ -277,7 +296,7 @@ spec:
                         pattern: '^[^\x00-\x1f\x7f]+$'
                 quota:
                   description: |
-                    Resource quota of the project, applied as a `ResourceQuota` named `d8-project-quota` in the project namespace.
+                    Resource quota of the project, applied as the `d8-project-quota` ResourceQuota in the main namespace of the project.
 
                     Keys and values follow the `ResourceQuota.spec.hard` format, for example `requests.cpu: "100"`.
                     Memory and storage quantities must include an explicit unit suffix (for example `requests.memory: 2Gi`);
@@ -295,9 +314,9 @@ spec:
                   additionalProperties:
                     x-kubernetes-preserve-unknown-fields: true
                   description: |
-                    Parameters passed to the [resources template](cr.html#projecttemplate-v1alpha1-spec-resourcestemplate) when creating the project.
+                    Values of the parameters that the template declares in [`parametersSchema`](cr.html#projecttemplate-v1alpha2-spec-parametersschema).
 
-                    Before creation, the values are validated against the [schema](cr.html#projecttemplate-v1alpha1-spec-parametersschema-openapiv3schema) of the template's input parameters.
+                    The structured fields of the template take them through `{fromParam: <NAME>}`. `manifests` and `resourcesTemplate` get them in `{{ .parameters }}`, completed with the defaults of `parametersSchema`. The values are validated against `parametersSchema.openAPIV3Schema` of the template when the project is created or changed.
                   type: object
             status:
               type: object
@@ -323,10 +342,10 @@ spec:
                       - type: string
                     x-kubernetes-int-or-string: true
                 observedGeneration:
-                  description: The last observed project`s generation
+                  description: Last generation of the project processed by the controller.
                   type: integer
                 templateGeneration:
-                  description: The last observed template`s generation
+                  description: Generation of the template the project was last rendered from.
                   type: integer
                 resources:
                   description: Rendered and skipped resources.
@@ -345,20 +364,29 @@ spec:
                           items:
                             type: string
                 conditions:
+                  description: |
+                    Current state of the project.
+
+                    The condition types are described in [Project status and diagnostics](usage.html#project-status-and-diagnostics).
                   type: array
                   items:
                     type: object
                     properties:
                       type:
+                        description: Condition type.
                         type: string
                       status:
+                        description: "Condition state: `True`, `False` or `Unknown`."
                         type: string
                       message:
+                        description: Message with details of the condition state.
                         type: string
                       lastTransitionTime:
+                        description: Time when the condition last changed.
                         format: date-time
                         type: string
                       lastProbeTime:
+                        description: Time of the last check of the condition.
                         format: date-time
                         type: string
                 keptObjects:
@@ -400,5 +428,5 @@ spec:
                         description: Name of the object.
                         type: string
                 state:
-                  description: Brief description of the project status, such as Error, Deploying, Deployed, etc.
+                  description: "State of the project: `Deployed` or `Error`. The conditions and their messages give the details."
                   type: string

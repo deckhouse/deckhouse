@@ -62,16 +62,16 @@ spec:
                   type: object
                   required: ["openAPIV3Schema"]
                   description: |
-                    One of parameters schema to validate parameters of a project.
+                    Schema of the project parameters.
 
-                    For now only OpenAPI v3 schema is supported.
+                    Only `openAPIV3Schema` is supported.
                   properties:
                     openAPIV3Schema:
                       type: object
                       additionalProperties:
                         x-kubernetes-preserve-unknown-fields: true
                       description: |
-                        OpenAPI specification for [parameters](#project-v1alpha2-spec-parameters).
+                        OpenAPI specification for [parameters](cr.html#project-v1alpha3-spec-parameters).
 
                         This is used to check the validity of the parameters that are passed when creating a new project.
                 resourcesTemplate:
@@ -80,15 +80,14 @@ spec:
 
                     Templates are fully compatible with all [`helm` functions](https://helm.sh/docs/chart_template_guide/function_list/).
 
-                    Read more about [creating an isolated Environment...](usage.html#creating-a-project)
+                    See [Moving a template from a Helm text](usage.html#moving-a-template-from-a-helm-text).
 
                     The following parameters are available in templates:
                     - `{{ .projectName }}` — the name of the `Project` for which the template is being rendered.
                     - `{{ .projectTemplateName }}` — the name of the `ProjectTemplate`.
-                    - `{{ .parameters }}` — a dictionary of custom values, described in the [.spec.parametersSchema](cr.html#projecttemplate-v1alpha1-spec-parametersschema) and defined in the [.spec.parameters](cr.html#project-v1alpha2-spec-parameters).
+                    - `{{ .parameters }}` — a dictionary of custom values, described in the [.spec.parametersSchema](cr.html#projecttemplate-v1alpha1-spec-parametersschema) and defined in the [.spec.parameters](cr.html#project-v1alpha3-spec-parameters).
 
-                    > **Note!** Specifying `.metadata.namespace` fields for objects is optional,
-                    > as this field is automatically set with the name of the created project.
+                    `.metadata.namespace` of an object is optional: an object without it is created in the main namespace of the project.
                   type: string
               type: object
             status:
@@ -125,9 +124,9 @@ spec:
             Describes the project template as a set of structured, declarative fields.
 
             This resource is referenced by the [Project](cr.html#project) custom resource. The
-            cluster-resource availability fields (`resources`, `grantPolicies`) are materialized into
-            [ClusterResourceGrantPolicy](cr.html#clusterresourcegrantpolicy) objects bound to the
-            projects of this template; the remaining fields are rendered into per-namespace objects.
+            `resources` and `grantPolicies` fields become [ClusterResourceGrantPolicy](cr.html#clusterresourcegrantpolicy)
+            objects that apply to the projects of this template. The other fields become objects in the
+            namespaces of the projects.
 
             Objects that no structured field describes are rendered from `manifests`. Instead of the
             fields that render objects, a template created through `deckhouse.io/v1alpha1` can carry a
@@ -147,34 +146,49 @@ spec:
                   type: string
                 resources:
                   description: |
-                    Inline cluster-resource grants. The controller materializes them into a managed
-                    `ClusterResourceGrantPolicy` bound to projects of this template.
+                    Rules of access to cluster-wide resources for the projects of the template.
+
+                    The controller turns them into the `template-<TEMPLATE_NAME>-inline` ClusterResourceGrantPolicy, which applies to the namespaces of the projects of this template.
                   type: array
                   items:
                     description: |
-                      One per-resource allow-list/default entry, referencing a GrantableClusterResourceDefinition.
+                      Access settings for one type of cluster-wide resource.
                     type: object
                     required:
                       - resourceName
                     properties:
                       resourceName:
-                        description: Name of the GrantableClusterResourceDefinition this entry configures.
+                        description: Name of the GrantableClusterResourceDefinition that registers the type of cluster-wide resource.
                         type: string
                       allowed:
-                        description: Explicit list of granted object names (union with allowedSelector).
+                        description: |
+                          List of names of cluster-wide resources available to the projects.
+
+                          Combined with the resources selected with `allowedSelector`.
                         type: array
                         items:
                           type: string
                       allowedSelector:
-                        description: Grants every object of the granted resource whose labels match (union with allowed).
+                        description: |
+                          Label selector of cluster-wide resources available to the projects.
+
+                          Combined with the resources listed in `allowed`. Applies only to cluster-wide resources represented by Kubernetes objects.
                         type: object
                         x-kubernetes-map-type: atomic
                         properties:
                           matchLabels:
+                            description: |
+                              Set of labels of cluster-wide resources.
+
+                              All specified labels must match.
                             type: object
                             additionalProperties:
                               type: string
                           matchExpressions:
+                            description: |
+                              List of label selector expressions.
+
+                              All expressions must match.
                             type: array
                             x-kubernetes-list-type: atomic
                             items:
@@ -184,29 +198,46 @@ spec:
                                 - operator
                               properties:
                                 key:
+                                  description: Label key to which the expression applies.
                                   type: string
                                 operator:
+                                  description: Operator that defines the relationship between the key and the set of values.
                                   type: string
                                 values:
+                                  description: List of label values.
                                   type: array
                                   x-kubernetes-list-type: atomic
                                   items:
                                     type: string
                       denied:
-                        description: Object names explicitly excluded for matched projects (overrides allowed).
+                        description: |
+                          List of names of cluster-wide resources unavailable to the projects.
+
+                          Deny rules take precedence over `allowed` and `allowedSelector`.
                         type: array
                         items:
                           type: string
                       deniedSelector:
-                        description: Excludes granted objects whose labels match (overrides allowed/allowedSelector).
+                        description: |
+                          Label selector of cluster-wide resources unavailable to the projects.
+
+                          Deny rules take precedence over `allowed` and `allowedSelector`.
                         type: object
                         x-kubernetes-map-type: atomic
                         properties:
                           matchLabels:
+                            description: |
+                              Set of labels of cluster-wide resources.
+
+                              All specified labels must match.
                             type: object
                             additionalProperties:
                               type: string
                           matchExpressions:
+                            description: |
+                              List of label selector expressions.
+
+                              All expressions must match.
                             type: array
                             x-kubernetes-list-type: atomic
                             items:
@@ -216,19 +247,28 @@ spec:
                                 - operator
                               properties:
                                 key:
+                                  description: Label key to which the expression applies.
                                   type: string
                                 operator:
+                                  description: Operator that defines the relationship between the key and the set of values.
                                   type: string
                                 values:
+                                  description: List of label values.
                                   type: array
                                   x-kubernetes-list-type: atomic
                                   items:
                                     type: string
                       default:
-                        description: Per-project default name (overrides the registration's defaultFrom).
+                        description: |
+                          Name of the cluster-wide resource used by default in the projects.
+
+                          Overrides the value determined with `defaultFrom` in the GrantableClusterResourceDefinition.
                         type: string
                       availabilityDefault:
-                        description: Overrides the resource's defaultAvailability (All/None) for matched projects.
+                        description: |
+                          Availability of the cluster-wide resources of this type that `allowed`, `allowedSelector`, `denied` and `deniedSelector` do not name.
+
+                          Overrides `defaultAvailability` of the GrantableClusterResourceDefinition. If `allowed` or `allowedSelector` is set and this field is not, all other resources of this type are unavailable to the projects.
                         type: string
                         enum:
                           - All
@@ -244,36 +284,44 @@ spec:
                 podSecurityStandard:
                   description: |
                     Pod Security Standard profile applied to the project namespaces.
-                    - Privileged — unrestricted policy.
-                    - Baseline — minimally restrictive policy preventing known privilege escalations.
-                    - Restricted — heavily restricted, current Pod hardening best practices.
+
+                    - `Privileged`: Unrestricted policy.
+                    - `Baseline`: Minimally restrictive policy that prevents known privilege escalations.
+                    - `Restricted`: Heavily restricted policy that follows current pod hardening best practices.
 
                     A literal string (`Privileged`/`Baseline`/`Restricted`) or a parameter reference
-                    `{fromParam: "<name>"}` pointing at a `parametersSchema` property. A literal outside
-                    the three values and a reference to an undeclared or mistyped parameter are refused by
-                    the admission webhook (the field is untyped in the schema, so it carries no CEL rule).
+                    `{fromParam: "<name>"}` pointing at a `parametersSchema` property. The webhook refuses a literal outside
+                    the three values and a reference to an undeclared or mistyped parameter.
                   x-kubernetes-preserve-unknown-fields: true
                 networkPolicy:
-                  description: Default network isolation of the project namespaces.
+                  description: Network isolation of the project namespaces.
                   type: object
                   properties:
                     mode:
                       description: |
-                        - Isolated — deny all traffic by default except in-project, DNS, Prometheus scraping and ingress-nginx.
-                        - NotRestricted — allow all traffic by default.
+                        Network isolation mode of the project namespaces.
+
+                        - `Isolated`: Every namespace of the project gets the `isolated` NetworkPolicy. It allows incoming traffic only from the project namespaces, Prometheus, the ingress-nginx controller and the service-with-healthchecks agent, and outgoing traffic only to the project namespaces and to DNS in `kube-system`.
+                        - `NotRestricted`: No NetworkPolicy is created.
+
+                        If the field is not set, no NetworkPolicy is created either.
 
                         A literal string (`Isolated`/`NotRestricted`) or a parameter reference `{fromParam: "<name>"}`.
-                        A literal outside the two values is refused by the admission webhook.
+                        The webhook refuses a literal outside the two values.
                       x-kubernetes-preserve-unknown-fields: true
                 nodeSelector:
                   description: |
-                    Restricts the project pods to nodes matching these labels. A literal label map or a
+                    Node selector of the pods in the main namespace of the project. A literal label map or a
                     parameter reference `{fromParam: "<name>"}`.
+
+                    It is set as the `scheduler.alpha.kubernetes.io/node-selector` annotation of the main namespace and is merged into the node selector of every pod there. A pod whose selector conflicts with it is rejected. The additional namespaces of the project do not get it.
                   x-kubernetes-preserve-unknown-fields: true
                 tolerations:
                   description: |
-                    Default tolerations applied to the project pods. A literal list of tolerations or a
+                    Default tolerations of the pods in the main namespace of the project. A literal list of tolerations or a
                     parameter reference `{fromParam: "<name>"}`.
+
+                    They are set as the `scheduler.alpha.kubernetes.io/defaultTolerations` annotation of the main namespace. The additional namespaces of the project do not get them.
                   x-kubernetes-preserve-unknown-fields: true
                 namespaceMetadata:
                   description: Extra labels and annotations for the project namespaces.
@@ -342,14 +390,16 @@ spec:
                   type: object
                   required: ["openAPIV3Schema"]
                   description: |
-                    OpenAPI v3 schema validating the [parameters](#project-v1alpha2-spec-parameters) of a project.
+                    OpenAPI v3 schema of the [parameters](cr.html#project-v1alpha3-spec-parameters) of a project.
+
+                    A boolean `requiredRequests` parameter declared here is read by name: when it is `true` for a project, the pods in every namespace of the project must have CPU and memory requests (an OperationPolicy in the `Deny` mode).
                   properties:
                     openAPIV3Schema:
                       type: object
                       additionalProperties:
                         x-kubernetes-preserve-unknown-fields: true
                       description: |
-                        OpenAPI specification used to check the validity of the parameters passed when creating a new project.
+                        OpenAPI specification that the parameters of a project are validated against when the project is created or changed.
                 manifests:
                   description: |
                     A template in the [`go template`](https://pkg.go.dev/text/template) format with the [`helm` functions](https://helm.sh/docs/chart_template_guide/function_list/) that renders objects into the namespaces of a project, next to the objects that the structured fields render.

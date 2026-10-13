@@ -4,41 +4,39 @@ title: "The multitenancy-manager module: usage examples"
 
 ## Default project templates
 
-The following project templates are included in the Deckhouse Kubernetes Platform. They are cumulative: each one includes the capabilities of the previous one and adds its own. Parameter values are set in the `.spec.parameters` field of a Project:
+Deckhouse Platform (DP) includes the following project templates. They are cumulative: each one includes the capabilities of the previous one and adds its own. Parameter values are set in the `.spec.parameters` field of a Project:
 
-- `simple` — a minimal template that creates only the project namespace. Use it when you only need an isolated namespace managed as a project and configure access and limits through the [standard fields](#standard-project-fields) and [project role bindings](#granting-access-within-a-project).
+- `simple`: Minimal template that creates only the project namespace. Use it when you only need an isolated namespace managed as a project and configure access and limits through the [standard fields](#standard-project-fields) and [project role bindings](#granting-access-within-a-project).
 
   Parameters:
-  - `namespace.labels` and `namespace.annotations` — extra labels and annotations for the project namespace.
-  - `requiredRequests` (default `false`) — when true, workloads in the project must specify CPU and memory requests (a Deny-mode OperationPolicy). This template creates the namespace and nothing else, so it is off by default.
+  - `namespace.labels` and `namespace.annotations`: Extra labels and annotations for the project namespace.
+  - `requiredRequests` (default `false`): When `true`, the pods in the project must specify CPU and memory requests (an OperationPolicy in the `Deny` mode).
 
-- `default` — a template that covers basic project use cases. On top of the namespace, it sets up network isolation, a pod security profile, extended monitoring and log shipping.
+- `default`: Template that covers basic project use cases. On top of the namespace, it sets up network isolation, a pod security profile, extended monitoring and log shipping.
 
   Parameters (besides the ones listed for `simple`):
-  - `networkPolicy` — `Isolated` (default) denies all traffic except traffic within the project namespaces, DNS, Prometheus metrics scraping and ingress-nginx; `NotRestricted` allows all traffic.
-  - `podSecurityProfile` — the [Pod Security Standards](https://kubernetes.io/docs/concepts/security/pod-security-standards/) profile for the project namespaces: `Baseline` (default) prevents known privilege escalations, `Restricted` applies the strictest hardening practices, `Privileged` restricts nothing. An empty string sets no profile. The project puts no `security.deckhouse.io/pod-policy` label on its namespaces, and the [default policy](/modules/admission-policy-engine/configuration.html#parameters-podsecuritystandards-defaultpolicy) of the `admission-policy-engine` module applies to them.
-  - `extendedMonitoringEnabled` (default `true`) — alerts on controller outages and restarts, 5xx errors in ingress-nginx and low free space on the project's persistent volumes.
-  - `clusterLogDestinationName` — the name of the ClusterLogDestination to ship the project logs to. Left unset, the project logs are not shipped anywhere.
-  - `requiredRequests` (default `true` in this template) — when true, workloads in the project must specify CPU and memory requests (a Deny-mode OperationPolicy). Adoption of an existing namespace seeds this to `false` so running workloads are not blocked.
+  - `networkPolicy`: `Isolated` (default) allows incoming traffic only from the project namespaces, Prometheus, the ingress-nginx controller and the service-with-healthchecks agent, and outgoing traffic only to the project namespaces and to DNS in `kube-system`. `NotRestricted` allows all traffic.
+  - `podSecurityProfile`: The [Pod Security Standards](https://kubernetes.io/docs/concepts/security/pod-security-standards/) profile for the project namespaces: `Baseline` (default) prevents known privilege escalations, `Restricted` applies the strictest hardening practices, `Privileged` restricts nothing. An empty string sets no profile. The project puts no `security.deckhouse.io/pod-policy` label on its namespaces, and the [default policy](/modules/admission-policy-engine/configuration.html#parameters-podsecuritystandards-defaultpolicy) of the `admission-policy-engine` module applies to them.
+  - `extendedMonitoringEnabled` (default `true`): Alerts on controller outages and restarts, 5xx errors in ingress-nginx and low free space on the project's persistent volumes.
+  - `clusterLogDestinationName`: The name of the ClusterLogDestination to ship the project logs to. Left unset, the project logs are not shipped anywhere.
+  - `requiredRequests` (default `true` in this template): When `true`, the pods in the project must specify CPU and memory requests (an OperationPolicy in the `Deny` mode). When an existing namespace becomes a project, the parameter is set to `false`, so running workloads are not blocked.
 
-- `secure` — includes all the capabilities of the `default` template, and additionally restricts the users and groups inside containers, audits their calls to the kernel and scans images for vulnerabilities.
+- `secure`: Includes all the capabilities of the `default` template, and additionally restricts the users and groups inside containers, audits their calls to the kernel and scans images for vulnerabilities.
 
   Parameters (besides the ones listed for `default`):
-  - `allowedUIDs` and `allowedGIDs` — the ranges (`min`, `max`) of IDs permitted for users and groups inside the project containers. See [Security Context](https://kubernetes.io/docs/tasks/configure-pod-container/security-context/#set-the-security-context-for-a-pod).
-  - `runtimeAuditEnabled` (default `false`) — audit rules that catch calls to the kernel and find malicious activity. They work only if the UID/GID ranges are set.
-  - `securityScanningEnabled` (default `true`) — periodic scanning of the launched images for known vulnerabilities (CVE) with Trivy, every 24 hours.
+  - `allowedUIDs` and `allowedGIDs`: The ranges (`min`, `max`) of IDs permitted for users and groups inside the project containers. See [Security Context](https://kubernetes.io/docs/tasks/configure-pod-container/security-context/#set-the-security-context-for-a-pod).
+  - `runtimeAuditEnabled` (default `false`): Audit rules that catch calls to the kernel and find malicious activity. They work only if the UID/GID ranges are set.
+  - `securityScanningEnabled` (default `true`): Periodic scanning of the launched images for known vulnerabilities (CVE) with Trivy, every 24 hours.
 
-- `secure-with-dedicated-nodes` — includes all the capabilities of the `secure` template, and additionally places the project on dedicated nodes.
+- `secure-with-dedicated-nodes`: Includes all the capabilities of the `secure` template, and additionally places the pods of the main namespace of the project on dedicated nodes.
 
-  Parameters (besides the ones listed for `secure`), at least one of the two must be set:
-  - `dedicatedNodes.nodeSelector` — the node selector of the project. The node selector of a created pod is **substituted** with this value.
-  - `dedicatedNodes.defaultTolerations` — tolerations in the format of the pod's `spec.tolerations`. They are **added** to the created pods of the project.
+  Parameters (besides the ones listed for `secure`). If `dedicatedNodes` is set, at least one of its two fields must be set. Without `dedicatedNodes`, the pods are not placed on dedicated nodes:
+  - `dedicatedNodes.nodeSelector`: The node selector of the main namespace. It is merged into the node selector of every pod there, and a pod whose selector conflicts with it is rejected.
+  - `dedicatedNodes.defaultTolerations`: Tolerations in the format of the pod's `spec.tolerations`. They are **added** to the pods created in the main namespace.
 
-The `default`, `secure`, and `secure-with-dedicated-nodes` templates are described in the [structured form](#structured-templates) (`deckhouse.io/v1alpha2`); the `simple` template is a minimal structured template that creates only the namespace and sets its labels and annotations from the project parameters.
+The `default`, `secure`, and `secure-with-dedicated-nodes` templates are described in the [structured form](#structured-templates) (`deckhouse.io/v1alpha2`). The `simple` template is a minimal structured template that creates the namespace, sets its labels and annotations from the project parameters and, with `requiredRequests: true`, creates the OperationPolicy.
 
-For the exact set of parameters, read the template installed in your cluster -- it matches your version of the platform:
-
-To view the parameter schema of the template, use the command:
+The exact set of parameters is in the template installed in the cluster. To view the parameter schema of a template, use the command:
 
 ```shell
 d8 k get projecttemplates <PROJECT_TEMPLATE_NAME> -o jsonpath='{.spec.parametersSchema.openAPIV3Schema}' | jq
@@ -54,11 +52,11 @@ d8 k get projecttemplates <PROJECT_TEMPLATE_NAME> -o yaml
 
 To create a project, follow these steps:
 
-1. Create the [Project](cr.html#project) resource by specifying the name of the project template in [.spec.projectTemplateName](cr.html#project-v1alpha3-spec-projecttemplatename) field.
-1. Set the [standard fields](#standard-project-fields) — [.spec.administrators](cr.html#project-v1alpha3-spec-administrators) and [.spec.quota](cr.html#project-v1alpha3-spec-quota) — that are now managed directly by the Project resource regardless of the template.
+1. Create a [Project](cr.html#project), specifying the name of the project template in [.spec.projectTemplateName](cr.html#project-v1alpha3-spec-projecttemplatename) field.
+1. Set the [standard fields](#standard-project-fields) [.spec.administrators](cr.html#project-v1alpha3-spec-administrators) and [.spec.quota](cr.html#project-v1alpha3-spec-quota). They work with any template.
 1. In the [.spec.parameters](cr.html#project-v1alpha3-spec-parameters) field of the Project resource, specify the parameter values suitable for the ProjectTemplate [.spec.parametersSchema.openAPIV3Schema](cr.html#projecttemplate-v1alpha2-spec-parametersschema-openapiv3schema).
 
-   Example of creating a project using the [Project](cr.html#project) resource from the `default` [ProjectTemplate](cr.html#projecttemplate):
+   Example of a Project created from the `default` [ProjectTemplate](cr.html#projecttemplate):
 
    ```yaml
    apiVersion: deckhouse.io/v1alpha3
@@ -85,12 +83,7 @@ To create a project, follow these steps:
        extendedMonitoringEnabled: true
    ```
 
-   {% alert level="info" %}
-   The Project API is served as `deckhouse.io/v1alpha3`. `v1alpha2` manifests keep working: a conversion webhook lifts `parameters.administrators` and `parameters.resourceQuota` into the `.spec.administrators` and `.spec.quota` standard fields automatically. If one administrator does not fit `.spec.administrators` (for example, it has `accessLevel`), the whole list stays in `parameters` and `.spec.administrators` is not filled. The same holds for a quota with anything other than quantities (for example, `scopes`), for a quota with the number `0` anywhere in it, and for an empty list or quota. A template that checks a value with `with` skips the number `0` and sets no limit, while in `.spec.quota` it would be a hard limit of zero. The string `"0"` is lifted into `.spec.quota` as such a limit. A `v1alpha2` client reads a `0` from `.spec.quota` as the string `"0"`.
-   A project cannot set `.spec.administrators` together with `parameters.administrators`, or `.spec.quota` together with `parameters.resourceQuota`.
-
-   The `deckhouse.io/v1alpha1` version is no longer served: the API server refuses a manifest with `apiVersion: deckhouse.io/v1alpha1`, so change its `apiVersion` to `deckhouse.io/v1alpha3` and move `parameters.administrators` and `parameters.resourceQuota` into the standard fields before applying it.
-   {% endalert %}
+   The Project API versions are described in [Project API versions](#project-api-versions).
 
 1. To check the status of the project, execute the command:
 
@@ -100,9 +93,16 @@ To create a project, follow these steps:
 
    A successfully created project should be in the `Deployed` state. If the state equals `Error`, add the `-o yaml` argument to the command (e.g., `d8 k get projects my-project -o yaml`) to get more detailed information about the error.
 
+### Project API versions
+
+The Project API is served as `deckhouse.io/v1alpha3`. `v1alpha2` manifests keep working: a conversion webhook lifts `parameters.administrators` and `parameters.resourceQuota` into the `.spec.administrators` and `.spec.quota` standard fields automatically. If one administrator does not fit `.spec.administrators` (for example, it has `accessLevel`), the whole list stays in `parameters` and `.spec.administrators` is not filled. The same holds for a quota with anything other than quantities (for example, `scopes`), for a quota with the number `0` anywhere in it, and for an empty list or quota. A template that checks a value with `with` skips the number `0` and sets no limit, while in `.spec.quota` it would be a hard limit of zero. The string `"0"` is lifted into `.spec.quota` as such a limit. A `v1alpha2` client reads a `0` from `.spec.quota` as the string `"0"`.
+A project cannot set `.spec.administrators` together with `parameters.administrators`, or `.spec.quota` together with `parameters.resourceQuota`.
+
+The `deckhouse.io/v1alpha1` version is no longer served, and the API server refuses a manifest with `apiVersion: deckhouse.io/v1alpha1`. Before applying such a manifest, change `apiVersion` to `deckhouse.io/v1alpha3`, rename `spec.projectTypeName` to `spec.projectTemplateName` (a ProjectTemplate with that name must exist) and `spec.template` to `spec.parameters`, and move `administrators` and `resourceQuota` from the parameters to `.spec.administrators` and `.spec.quota`.
+
 ### Creating a project without specifying a template
 
-The `projectTemplateName` field is optional: when omitted, the `simple` template is used. Such a project consists only of the namespace and the [standard fields](#standard-project-fields) (administrators, quota) — no template policies are created in it. This is convenient when no settings are needed or they are managed by other means:
+The `projectTemplateName` field is optional: when omitted, the `simple` template is used. Such a project consists only of the namespace and the [standard fields](#standard-project-fields) (administrators, quota) — no template policies are created in it. Use it when the namespace needs no template settings or they are managed by other means:
 
 ```yaml
 apiVersion: deckhouse.io/v1alpha3
@@ -123,10 +123,11 @@ A template can be assigned later by setting it in `.spec.projectTemplateName`.
 
 The project name is also the name of its main namespace, so the following rules are checked when a project is created:
 
-- the name cannot start with `d8-` or `kube-` — these prefixes are reserved for system namespaces;
-- the name cannot be longer than 61 characters;
-- the name cannot be the name of an existing namespace, or of a namespace that a [ProjectNamespace](#additional-project-namespaces) has claimed. The resulting name `<project>-<spec.name>` is taken from the moment the ProjectNamespace is created, before the controller creates the namespace. A namespace that belongs to no project becomes a project [automatically](#creating-a-project-automatically-for-a-namespace).
-- the name cannot be the name of a namespace whose ServiceAccounts are still named among the subjects of a [ClusterProjectRoleBinding](cr.html#clusterprojectrolebinding), or of a [ProjectRoleBinding](cr.html#projectrolebinding) of a project that the name extends with a dash and a suffix (`foo` for `foo-extra`). Such subjects are often left from a deleted additional namespace, and without this rule the ServiceAccounts of the new project would get the rights of that binding. Remove these subjects from the binding first. The refusal does not name the binding.
+- The name cannot start with `d8-` or `kube-`: these prefixes are reserved for system namespaces.
+- The name cannot be `default` or `deckhouse`: these names belong to the [virtual projects](#virtual-projects).
+- The name cannot be longer than 61 characters.
+- The name cannot be the name of an existing namespace, or of a namespace that a [ProjectNamespace](#additional-project-namespaces) has claimed. The resulting name `<project>-<spec.name>` is taken from the moment the ProjectNamespace is created, before the controller creates the namespace. A namespace that belongs to no project becomes a project [automatically](#creating-a-project-automatically-for-a-namespace).
+- The name cannot be the name of a namespace whose ServiceAccounts are still named among the subjects of a [ClusterProjectRoleBinding](cr.html#clusterprojectrolebinding), or of a [ProjectRoleBinding](cr.html#projectrolebinding) of a project that the name extends with a dash and a suffix (`foo` for `foo-extra`). Such subjects are often left from a deleted additional namespace, and without this rule the ServiceAccounts of the new project would get the rights of that binding. Remove these subjects from the binding first. The refusal does not name the binding.
 
 A project can be named after another project with a dash and a suffix (`foo-bar` beside `foo`). It is a separate project with a namespace of its own, not an additional namespace of `foo`, and the template, administrators, quota and bindings of `foo` do not apply to it. The webhook allows such a project with a warning, and the controller sends the `NamedLikeAdditionalNamespace` Warning event on the new project. The [`MultitenancyManagerProjectNamedLikeAdditionalNamespace`](/products/kubernetes-platform/documentation/v1/reference/alerts.html#multitenancy-manager-multitenancymanagerprojectnamedlikeadditionalnamespace) alert lists every such pair of projects, including the ones made from namespaces that existed before. To add a namespace to a project, create a [ProjectNamespace](#additional-project-namespaces).
 
@@ -146,16 +147,18 @@ d8 k get project my-project -o jsonpath='{range .status.conditions[*]}{.type}={.
 | `StandardFieldsApplied` | The [standard fields](#standard-project-fields) (quota or administrators) could not be applied. |
 | `TemplateRolesAllowed` | The template creates a binding to a role [forbidden for granting in projects](#granting-access-within-a-project) — the project switches to `Error`, the role is named in `message`. |
 | `ManifestsApplied` | The objects of the template's [`manifests`](#describing-other-objects-in-manifests) are not applied. The `message` says what they wait for, why none of them is applied, which existing objects they leave alone, or which objects the API server refused, with the code of each refusal (for example, `403 Forbidden`). |
+| `HelmOwnership` | The namespace of the project belongs to another Helm release. The `message` names the release (see [Creating a project automatically for a namespace](#creating-a-project-automatically-for-a-namespace)). |
+| `NamespaceDeleted` | The project is being deleted, and its namespace is still terminating. The `message` says since when and what remains in it. |
 
 The `HandoverPending` condition is read the other way round. It is `True` while AuthorizationRule and ResourceQuota objects kept from a Helm text wait for the standard fields that replace them, and it is removed once they are deleted (see [Switching a project from a Helm text](#switching-a-project-from-a-helm-text)).
 
 Other useful status fields:
 
-- `.status.namespaces` — all namespaces of the project with their kind (`Main`/`Additional`);
-- `.status.usage` — the current quota usage (populated when `.spec.quota` is set);
-- `.status.resources` — the state of the individual resources created from the template;
-- `.status.keptObjects` — the objects of a Helm text that were [left in place](#switching-a-project-from-a-helm-text) instead of being deleted;
-- `.status.manifestObjects` — the objects applied from [`manifests`](#describing-other-objects-in-manifests) of the template.
+- `.status.namespaces`: All namespaces of the project with their kind (`Main` or `Additional`).
+- `.status.usage`: Current quota usage, filled in when `.spec.quota` is set.
+- `.status.resources`: State of the individual objects created from the template.
+- `.status.keptObjects`: Objects of a Helm text that were [left in place](#switching-a-project-from-a-helm-text) instead of being deleted.
+- `.status.manifestObjects`: Objects applied from [`manifests`](#describing-other-objects-in-manifests) of the template.
 
 ### Service objects of a project
 
@@ -184,7 +187,7 @@ Virtual projects exist for completeness: with them, every namespace of the clust
 
 ## Additional project namespaces
 
-If an application needs several namespaces (for example, a separate one for a cache or queues), add them to the project with the [ProjectNamespace](cr.html#projectnamespace) resource. The resource is created **in the main namespace of the project**; the resulting namespace is named `<project name>-<spec.name>`:
+If an application needs several namespaces (for example, a separate one for a cache or queues), add them to the project with the [ProjectNamespace](cr.html#projectnamespace) resource. A ProjectNamespace is created **in the main namespace of the project**; the resulting namespace is named `<project name>-<spec.name>`:
 
 ```yaml
 apiVersion: deckhouse.io/v1alpha3
@@ -204,12 +207,12 @@ d8 k get project my-project -o jsonpath='{.status.namespaces}'
 
 The rules for working with ProjectNamespace:
 
-- The `spec.name` field is immutable: to rename a namespace, delete the resource and create a new one.
+- The `spec.name` field is immutable: to rename a namespace, delete the ProjectNamespace and create a new one.
 - The resulting name `<project name>-<spec.name>` cannot be longer than 63 characters (the Kubernetes limit on namespace names).
 - A ProjectNamespace can only be created in the main namespace of a project. It cannot be "nested" into an additional namespace or a foreign project.
 - The resulting name must be free. The request is rejected when a namespace with that name exists and is not a namespace of this project, when a project has that name, or when another ProjectNamespace already claims it (the ProjectNamespace `a-backend` of project `team` and the ProjectNamespace `backend` of project `team-a` both claim `team-a-backend`).
 - The request is also rejected when the ServiceAccounts of a namespace with the resulting name are still named among the subjects of a ClusterProjectRoleBinding, or of a ProjectRoleBinding of another project that the resulting name extends with a dash and a suffix (`team` for `team-a-backend` of project `team-a`). Remove these subjects from the binding first. A ProjectRoleBinding of the same project is no obstacle, and the ServiceAccounts it names get the rights back once the namespace is created again.
-- Deleting a ProjectNamespace resource deletes its namespace. Deleting the project deletes all of its namespaces.
+- Deleting a ProjectNamespace deletes its namespace. Deleting the project deletes all of its namespaces.
 - A namespace with the resulting name that is not a namespace of this project is never taken into it, even when it appears after the ProjectNamespace was created. The ProjectNamespace then does not become ready, and deleting it leaves the namespace as it is.
 - A project can be deleted only by a user allowed to delete each of its namespaces (the `delete` verb on `namespaces`): the main namespace and every namespace labeled `projects.deckhouse.io/project: <project name>`. Otherwise the request is refused, and the refusal names the namespace the user may not delete. A namespace that does not exist is not checked. The identities the Project webhook skips (see [Who bypasses admission](#who-bypasses-admission)) delete projects without this check.
 
@@ -249,9 +252,7 @@ The built-in templates of adopted projects are rewritten by the controller, so a
 | Labels from the template's `namespaceMetadata.labels` | ✓ | ✓ (inherited) | Labels of the project template. They are listed in the `projects.deckhouse.io/template-labels` annotation of the namespace and changed through the Project or its ProjectTemplate |
 | Any other label set on a namespace directly or by a GitOps tool, including the labels a namespace had before it became a project | — | — | Not set by the module. The project release neither reverts nor restores it, and the additional namespaces do not inherit it |
 
-The common `projects.deckhouse.io/project` label makes it possible to select the project namespaces with a plain `get ns`:
-
-To get all namespaces of the project (main + additional):
+The common `projects.deckhouse.io/project` label makes it possible to select the project namespaces with a plain `get ns`. To get all namespaces of the project (main and additional), use the command:
 
 ```shell
 d8 k get ns -l projects.deckhouse.io/project=my-project
@@ -275,7 +276,9 @@ A namespace created directly (for example, `d8 k create ns my-app`) becomes a pr
 
 - the template is picked from what the namespace already carries: `secure` if it has the `security-scanning.deckhouse.io/enabled` label, `default` if it has `security.deckhouse.io/pod-policy` or `extended-monitoring.deckhouse.io/enabled`, and `simple` otherwise;
 - the project parameters are filled in from the current state of the namespace, so nothing inside it changes: the network policy stays unrestricted and the Pod Security Standard keeps the value the namespace already had;
-- from then on the project is the source of truth and is edited like any other project. Deleting the namespace no longer deletes the project — the project recreates the namespace. To remove the environment, delete the Project: `d8 k delete project <name>` removes the namespace with it and, like `kubectl delete ns` did, returns only once the namespace is gone. Only a user allowed to delete the namespace can delete its Project, see [Additional project namespaces](#additional-project-namespaces).
+- from then on the project is the source of truth and is edited like any other project. The namespace of the project cannot be deleted directly: the request is refused with the `Manual modification is forbidden` message. To remove the environment, delete the Project: `d8 k delete project <NAME>` deletes the namespace with it and returns once the namespace is gone. Only a user allowed to delete the namespace can delete its Project (see [Additional project namespaces](#additional-project-namespaces)).
+
+Users can create a namespace directly only while the [`allowNamespacesWithoutProjects`](configuration.html#parameters-allownamespaceswithoutprojects) parameter is `true` (the default). With `false`, only cluster administrators (`system:masters`, `system:sudouser`), Deckhouse, the module controller and system components create namespaces directly (see [Who bypasses admission](#who-bypasses-admission)). Other users create a Project or a ProjectNamespace instead.
 
 Every such namespace becomes a project of its own, whatever its name. Of the namespaces `app` and `app-staging`, `app-staging` becomes a separate project and not an additional namespace of `app`. The controller creates the project, so no admission warning reaches the author of the namespace. Instead, the controller sends the `NamedLikeAdditionalNamespace` Warning event on the new project and on the namespace. The events of cluster-scoped objects are kept in the `default` namespace, so reading them needs access to the events there: `d8 k -n default get events --field-selector reason=NamedLikeAdditionalNamespace`. The [`MultitenancyManagerProjectNamedLikeAdditionalNamespace`](/products/kubernetes-platform/documentation/v1/reference/alerts.html#multitenancy-manager-multitenancymanagerprojectnamedlikeadditionalnamespace) alert lists such pairs, see [Project naming rules](#project-naming-rules).
 
@@ -287,7 +290,7 @@ To change the profile later, set `podSecurityProfile` in the project. For a proj
 
 A namespace that already belongs to another Helm release (its `meta.helm.sh/release-name` annotation names a release other than the project's) is not taken over: the project gets the `HelmOwnership` condition with the name of the foreign release and retries, and the namespace is left as it is. Remove the foreign release or its ownership annotations to let the project proceed.
 
-Existing RoleBinding and AuthorizationRule objects inside the namespace keep working after adoption. The namespace Admin is **not** copied into `.spec.administrators` and does **not** become `d8:project:admin`: that role additionally manages ProjectRoleBinding resources, which is a wider contract than in-namespace Admin. To make the team lead a project administrator, a platform operator adds them to `.spec.administrators` or creates a ProjectRoleBinding. Namespace Admin never had `update`/`patch`/`delete` on the Namespace object itself (`get`/`list`/`watch` only); after adoption the Namespace is also owned by Helm (`heritage: multitenancy-manager`).
+Existing RoleBinding and AuthorizationRule objects inside the namespace keep working after adoption. The namespace Admin is **not** copied into `.spec.administrators` and does **not** become `d8:project:admin`: that role additionally manages ProjectRoleBinding resources, which is a wider contract than in-namespace Admin. To make the team lead a project administrator, a platform operator adds them to `.spec.administrators` or creates a ProjectRoleBinding. The namespace Admin role allows only `get`, `list` and `watch` on the Namespace object.
 
 The labels and annotations the module sets — `heritage`, `projects.deckhouse.io/*`, `security.deckhouse.io/pod-policy`, `extended-monitoring.deckhouse.io/enabled`, `security-scanning.deckhouse.io/enabled`, `app.kubernetes.io/managed-by`, `meta.helm.sh/*`, the node-selector and tolerations annotations — are changed through the Project and its template; any other label or annotation (`istio-injection`, a Pod Security label, a GitOps tracking annotation) can still be set directly on the Namespace by anyone whose RBAC allows it, and the controller does not touch it. The `spec` and finalizers of the Namespace, and its deletion, stay with the controller.
 
@@ -319,22 +322,22 @@ For example:
 
    A new project corresponding to the namespace will appear in the project list:
 
-   ```shell
+   ```console
    NAME        STATE      PROJECT TEMPLATE   DESCRIPTION                                            AGE
    deckhouse   Deployed   virtual            This is a virtual project                              181d
    default     Deployed   virtual            This is a virtual project                              181d
    test        Deployed   simple                                                                    1m
    ```
 
-You can change the template of the created project to the existing one.
+To change the template of such a project, set another template in `.spec.projectTemplateName`.
 
 {% alert level="warning" %}
-Note that changing the template may cause a resource conflict. If the template chart contains resources that are already present in the namespace, you will not be able to apply the template.
+If the namespace already has an object of the same kind and name as one that the new template creates, for example the `isolated` NetworkPolicy, the project switches to `Error`, and the `ResourcesUpgraded` condition names the object. Delete or rename the object first.
 {% endalert %}
 
 ## Standard project fields
 
-Project administrators and resource quotas are no longer part of the project template parameters — they are first-class fields of the [Project](cr.html#project) resource and work with any template (including `simple`):
+Project administrators and the resource quota are set in fields of the [Project](cr.html#project) and work with any template (including `simple`):
 
 - `.spec.administrators` — a list of subjects (`kind: User` or `kind: Group` and `name`) that receive administrative access to the project. The controller manages this access as an auto-generated [ProjectRoleBinding](cr.html#projectrolebinding) in the project namespace. A name cannot contain control characters or line breaks and cannot start with `system:multitenancy-manager:`, the prefix of the users that the controller [acts as](#describing-other-objects-in-manifests). An update that keeps such a name as it was is accepted with a warning.
 - `.spec.quota` — a map of [ResourceQuota](https://kubernetes.io/docs/concepts/policy/resource-quotas/) hard limits (for example, `requests.cpu`, `limits.memory`). The controller maintains a `ResourceQuota` in the project namespace and reports current usage in `.status.usage`. For `memory` and `storage`, a unit suffix is required (for example `2Gi`). Numbers without a unit mean bytes, and all of them except 0 are rejected. An update that leaves such a value as it was is accepted with a warning, so a project whose quota came from bare numbers in `parameters.resourceQuota` stays editable and can still be applied unchanged. A create through `deckhouse.io/v1alpha2` with such numbers in `parameters.resourceQuota` is accepted with a warning as well, so such a manifest can create the project again, for example from a backup.
@@ -367,7 +370,7 @@ To grant access to project namespaces for users beyond the project administrator
 - [ProjectRoleBinding](cr.html#projectrolebinding) (namespaced, short name `prb`) — grants a role within a **single** project. It must be created in the project's main namespace (the namespace whose name equals the project name). The controller creates a RoleBinding in every namespace of that project.
 - [ClusterProjectRoleBinding](cr.html#clusterprojectrolebinding) (cluster-scoped, short name `cprb`) — grants a role across **all** non-virtual projects. The controller creates a RoleBinding in every namespace of every project and reports the number of bound projects in `.status.boundProjects`.
 
-`roleRef` must reference a `ClusterRole` whose name starts with one of the allowed prefixes (`d8:project:`, `d8:namespace:`, `d8:project-capability:`, `d8:namespace-capability:`, `d8:custom:`). See [the user-authz module documentation](../user-authz/) for the description of the roles.
+`roleRef` must reference a ClusterRole whose name starts with one of the allowed prefixes (`d8:project:`, `d8:namespace:`, `d8:project-capability:`, `d8:namespace-capability:`, `d8:custom:`). The roles are described in the [`user-authz` module documentation](/modules/user-authz/).
 
 The following checks apply when bindings are created:
 
@@ -389,19 +392,7 @@ The `d8-administrators` binding created by the controller from the [`.spec.admin
 
 The ServiceAccount rule above does not apply to this binding. An administrator given as the `User` `system:serviceaccount:<namespace>:<name>` or the `Group` `system:serviceaccounts:<namespace>` gets the rights in every namespace of the project, whichever project that namespace belongs to, because only those allowed to change the Project set its administrators. Remove such an administrator from the project before its namespace is deleted, as the ServiceAccounts of a namespace created later under the same name would get these rights.
 
-### Roles available in a RoleBinding inside a project
-
-Besides the project bindings, a plain RoleBinding can also be used inside a project namespace — the role then applies in that single namespace only. However, in projects the set of roles available to a plain RoleBinding is restricted: only cluster roles carrying the `rbac.deckhouse.io/delegatable: "true"` label are allowed. Among the built-in ones these are the `d8:namespace:*` and `d8:project:*` roles, as well as the access-level roles of the basic role model (`user-authz:user`, `user-authz:privileged-user`, `user-authz:editor`, `user-authz:admin`).
-
-A RoleBinding to any other cluster role (for example, `cluster-admin`, system roles, or capabilities) is rejected in a project with the message `references "<role>" which is not available to project`. This protects the project isolation from being bypassed by binding to an overly broad role.
-
-To use a [custom role](/modules/user-authz/faq.html#creating-a-custom-namespace-or-project-role) in projects, add the `rbac.deckhouse.io/delegatable: "true"` label to it:
-
-```shell
-d8 k label clusterrole d8:custom:namespace:developer rbac.deckhouse.io/delegatable=true
-```
-
-The restriction applies in the namespaces of every project, including the ones adopted from a standalone namespace.
+The following bindings give the `viewer@example.com` user the `d8:project:viewer` role in every namespace of `my-project`, and the `platform` group the same role in every project except the virtual ones:
 
 ```yaml
 ---
@@ -431,9 +422,23 @@ spec:
     name: d8:project:viewer
 ```
 
+### Roles available in a RoleBinding inside a project
+
+Besides the project bindings, a plain RoleBinding can also be used inside a project namespace — the role then applies in that single namespace only. However, in projects the set of roles available to a plain RoleBinding is restricted: only cluster roles carrying the `rbac.deckhouse.io/delegatable: "true"` label are allowed. Among the built-in ones these are the `d8:namespace:*` and `d8:project:*` roles, as well as the access-level roles of the basic role model (`user-authz:user`, `user-authz:privileged-user`, `user-authz:editor`, `user-authz:admin`).
+
+A RoleBinding to any other cluster role (for example, `cluster-admin`, system roles, or capabilities) is rejected in a project with the message `references "<role>" which is not available to project`. This protects the project isolation from being bypassed by binding to an overly broad role.
+
+To use a [custom role](/modules/user-authz/faq.html#creating-a-custom-namespace-or-project-role) in projects, add the `rbac.deckhouse.io/delegatable: "true"` label to it:
+
+```shell
+d8 k label clusterrole d8:custom:namespace:developer rbac.deckhouse.io/delegatable=true
+```
+
+The restriction applies in the namespaces of every project, including the ones adopted from a standalone namespace.
+
 ## Structured templates
 
-Starting with the `deckhouse.io/v1alpha2` API version, a project template is described by **structured fields** instead of a text Helm template. You declaratively specify which settings the project namespaces get. The controller itself creates the corresponding objects (network policies, security policies, log collection settings, etc.) from these fields in every namespace of the project and keeps them up to date. Other objects of the project namespaces are described in [`manifests`](#describing-other-objects-in-manifests).
+A `deckhouse.io/v1alpha2` project template is described by **structured fields**. You declaratively specify which settings the project namespaces get. The controller itself creates the corresponding objects (network policies, security policies, log collection settings, etc.) from these fields in every namespace of the project and keeps them up to date. Other objects of the project namespaces are described in [`manifests`](#describing-other-objects-in-manifests).
 
 Available fields (all optional; the complete reference is [in the ProjectTemplate resource description](cr.html#projecttemplate)):
 
@@ -444,11 +449,11 @@ Available fields (all optional; the complete reference is [in the ProjectTemplat
 | `features.monitoring` | Extended monitoring of the project namespaces. |
 | `features.vulnerabilityScanning` | Scanning of container images for vulnerabilities. |
 | `logShipping.clusterDestinationRef` | Collecting the logs of the project pods into the given destination (`ClusterLogDestination`). |
-| `nodeSelector`, `tolerations` | Placing the project pods on dedicated nodes. |
+| `nodeSelector`, `tolerations` | Placing the pods of the main namespace on dedicated nodes. |
 | `allowedUIDs`, `allowedGIDs` | The allowed UID/GID ranges of the project containers. |
 | `runtimeAudit.enabled` | Auditing the project processes' access to the Linux kernel. |
 | `namespaceMetadata.labels`, `namespaceMetadata.annotations` | Extra labels and annotations of the project namespaces. The labels the module manages cannot be set here. A template or a Project that sets one is refused. One that already has such a label can still be changed while it keeps the label as it is. The label is not applied, and the response warns about it. |
-| `resources`, `grantPolicies` | [Granting cluster-scoped resources through a project template](#granting-cluster-scoped-resources-through-a-project-template). |
+| `resources`, `grantPolicies` | [Granting cluster-wide resources through a project template](#granting-cluster-wide-resources-through-a-project-template). |
 | `manifests` | Other objects in the project namespaces, applied with the rights of a project administrator. See [Describing other objects in manifests](#describing-other-objects-in-manifests). |
 | `parametersSchema.openAPIV3Schema` | The schema of parameters set when creating a project. |
 
@@ -472,7 +477,7 @@ spec:
 
 ### Template parametrization
 
-Twelve fields of the template can be turned into a parameter: `podSecurityStandard`, `networkPolicy.mode`, `features.monitoring`, `features.vulnerabilityScanning`, `logShipping.clusterDestinationRef`, `nodeSelector`, `tolerations`, `allowedUIDs`, `allowedGIDs`, `runtimeAudit.enabled`, `namespaceMetadata.labels` and `namespaceMetadata.annotations`. Instead of a concrete value, specify `{fromParam: <parameter name>}` and declare the parameter in `parametersSchema`. The value does not have to be a scalar: a map (`nodeSelector`, `namespaceMetadata.labels`), a list (`tolerations`) or an object (`allowedUIDs`) works just as well. The other fields — `title`, `description`, `resources`, `grantPolicies` and `parametersSchema` itself — take literal values only. Each project then sets its own value in `.spec.parameters`; if the value is not set, the `default` from the schema is used.
+The following fields of the template can take a parameter: `podSecurityStandard`, `networkPolicy.mode`, `features.monitoring`, `features.vulnerabilityScanning`, `logShipping.clusterDestinationRef`, `nodeSelector`, `tolerations`, `allowedUIDs`, `allowedGIDs`, `runtimeAudit.enabled`, `namespaceMetadata.labels` and `namespaceMetadata.annotations`. Instead of a concrete value, specify `{fromParam: <parameter name>}` and declare the parameter in `parametersSchema`. The value does not have to be a scalar: a map (`nodeSelector`, `namespaceMetadata.labels`), a list (`tolerations`) or an object (`allowedUIDs`) works just as well. The other fields — `title`, `description`, `resources`, `grantPolicies` and `parametersSchema` itself — take literal values only. Each project then sets its own value in `.spec.parameters`; if the value is not set, the `default` from the schema is used.
 
 ```yaml
 apiVersion: deckhouse.io/v1alpha2
@@ -518,7 +523,7 @@ A Helm `resourcesTemplate` and [`manifests`](#describing-other-objects-in-manife
 A schema that neither names the `administrators` and `resourceQuota` parameters nor takes unnamed parameters through `additionalProperties` does not declare them, and the schemas of the built-in templates do not declare them either. On a template with such a schema, these parameters grant no access and set no quota. A project that holds them, for example an empty list or a quota with the number `0` that the conversion webhook leaves in `parameters`, keeps working and can be edited.
 An update that keeps such a value as it was, including on a move to another template that does not declare them either, is accepted with a warning, and so are an empty list and a quota with no value other than the number `0`. Any other new or changed value is rejected. Set the administrators in `.spec.administrators` and the quota in `.spec.quota` instead. In a `v1alpha2` manifest, write them in a form that the conversion webhook lifts into these fields. Any other parameter that the schema does not declare is still rejected.
 
-The `fromParam` references are validated when the template is created: a reference to an undeclared parameter or to a parameter of an incompatible type (for example, a string parameter for a boolean field) is rejected.
+The `fromParam` references are checked when a template is created or changed: a reference to an undeclared parameter or to a parameter of an incompatible type (for example, a string parameter for a boolean field) is rejected.
 
 A declared parameter is type-checked even where the schema allows undeclared keys with `additionalProperties` or `x-kubernetes-preserve-unknown-fields`. A reference to an undeclared key is accepted only in such places, and the type of such a key is not checked.
 
@@ -652,7 +657,7 @@ The following limitations apply:
 - The `projects.deckhouse.io/skip-heritage-label` and `projects.deckhouse.io/unmanaged` labels of a Helm text have no effect on the objects of `manifests`.
 
 `manifests` does not create cluster-scoped objects.
-To give the projects of a template access to cluster-scoped resources, use [`resources` and `grantPolicies`](#granting-cluster-scoped-resources-through-a-project-template).
+To give the projects of a template access to cluster-wide resources, use [`resources` and `grantPolicies`](#granting-cluster-wide-resources-through-a-project-template).
 A cluster administrator creates other cluster-scoped objects outside the template.
 
 ### Moving a template from a Helm text
@@ -662,8 +667,7 @@ A template with a Helm text in `resourcesTemplate` keeps working, but this form 
 The `MultitenancyManagerHelmProjectTemplate` alert names every such template, except the built-in ones.
 Nothing in the cluster rewrites such a template, so move it to structured fields and `manifests` where it is applied from, for example in Git or in CI.
 
-The built-in templates `default`, `secure` and `secure-with-dedicated-nodes` were Helm texts in earlier releases.
-They are structured now and keep the parameters of their texts, except `administrators` and `resourceQuota`.
+The built-in templates `default`, `secure` and `secure-with-dedicated-nodes` are structured and accept the same parameters as their Helm texts did, except `administrators` and `resourceQuota`, so they show how a text maps to the fields.
 A field takes the value of a parameter with `{fromParam: <PARAMETER_NAME>}`, so the projects keep their parameters.
 The following table shows where the objects of such a text go:
 
@@ -683,9 +687,9 @@ The following table shows where the objects of such a text go:
 | The `all-pods` ResourceQuota of the `resourceQuota` parameter | [`.spec.quota`](cr.html#project-v1alpha3-spec-quota) of each Project |
 | The `required-requests-*` OperationPolicy, which refuses pods without CPU and memory requests | The `requiredRequests` parameter, declared with `type: boolean` and `default: true` to keep the policy or with `default: false` to leave it off |
 | Any other object in the namespaces of the project, such as a workload, a ConfigMap, a RoleBinding, a LimitRange or an AuthorizationRule of another access level | [`manifests`](#describing-other-objects-in-manifests) |
-| A cluster-scoped object | No replacement in a template. Access to cluster-scoped resources is set with [`resources` and `grantPolicies`](#granting-cluster-scoped-resources-through-a-project-template) |
+| A cluster-scoped object | No replacement in a template. Access to cluster-wide resources is set with [`resources` and `grantPolicies`](#granting-cluster-wide-resources-through-a-project-template) |
 
-For example, the following Helm text sets the pod security profile from a parameter and creates a LimitRange in the main namespace of each project:
+For example, an existing template `team` has the following Helm text, which sets the pod security profile from a parameter and creates a LimitRange in the main namespace of each project. Such a template cannot be created again, so the manifest only shows the starting point:
 
 {% raw %}
 
@@ -791,7 +795,7 @@ To move a template that projects use, follow these steps:
 
 A project release rendered from a Helm text in `resourcesTemplate` holds whatever the text rendered. The project switches to structured fields when its template gets structured fields or `manifests` in place of `resourcesTemplate`, when the project moves to a structured template, and when a built-in template that was a Helm text is rewritten with structured fields. The release then holds only what the structured fields render. An object of the Helm text that the structured fields render under the same kind and name stays in the release and is updated in place. The other objects of the Helm text are handled as follows, and of them only an AuthorizationRule that names nobody from `.spec.administrators` any more is deleted at once.
 
-The AuthorizationRule and ResourceQuota objects that the [standard fields](#standard-project-fields) replace go through a handover, so the administrators never lose access and the namespace never loses its quota. These are the AuthorizationRule objects the release created that grant the `Admin` access level and nothing else to users and groups who are all administrators of the project, and the ResourceQuota objects of the main namespace without scopes whose every limit `.spec.quota` sets to the same value or a lower one. The handover goes in this order.
+The AuthorizationRule and ResourceQuota objects that the [standard fields](#standard-project-fields) replace go through a handover, so the administrators never lose access and the namespace never loses its quota. These are the AuthorizationRule objects the release created that grant the `Admin` access level and nothing else to users and groups who are all administrators of the project, and the ResourceQuota objects of the main namespace without scopes whose every limit `.spec.quota` sets to the same value or a lower one. The handover goes in the following order:
 
 1. The Project gets the `HandoverPending` condition set to `True`. Then the objects get the `helm.sh/resource-policy: keep` annotation and the `projects.deckhouse.io/kept-by-handover: "true"` annotation, so the release upgrade does not delete them.
 1. The `d8-administrators` ProjectRoleBinding and the `d8-project-quota` ResourceQuota are created before the release is upgraded.
@@ -832,6 +836,7 @@ To create your own template:
 
 1. Edit the `my-project-template.yaml` file and adjust the [structured fields](#structured-templates), the objects in [`manifests`](#describing-other-objects-in-manifests) and the input parameters schema to your needs.
 1. Change the template name in the `.metadata.name` field.
+1. Remove the `heritage` label, the `metadata.resourceVersion`, `metadata.uid`, `metadata.creationTimestamp`, `metadata.generation` and `metadata.managedFields` fields and the `status` section from the file.
 1. Apply your new template with the command:
 
    ```shell
@@ -844,17 +849,14 @@ To create your own template:
    d8 k get projecttemplates <NEW_TEMPLATE_NAME>
    ```
 
-## Using labels to manage resources
+## Labels for the objects of a Helm text
 
-When creating resources in `ProjectTemplate`, you can use special labels to control how the `multitenancy-manager` processes these resources.
+The following labels change how the module handles the objects of a Helm text in `resourcesTemplate`. Only existing templates have such a text, because no template can get a new `resourcesTemplate`. The objects of [`manifests`](#describing-other-objects-in-manifests) never get the `heritage: multitenancy-manager` label, and the module does not read these labels on them.
 
-These labels work for the objects of a Helm text in `resourcesTemplate`. The objects of [`manifests`](#describing-other-objects-in-manifests) never get the `heritage: multitenancy-manager` label, and the module does not read these labels on them.
+### Skipping the heritage label
 
-### Skipping creation of the `heritage: multitenancy-manager` label
-
-By default, all resources created from `ProjectTemplate` receive the label `heritage: multitenancy-manager`.  
-This label prohibits changes to resources by users or any other controller except `multitenancy-manager`.  
-If you need to allow resource modification (for example, for compatibility with other systems, or if implementing your own control over the created objects), add the label `projects.deckhouse.io/skip-heritage-label` to the resource.
+By default, every object of the Helm text gets the `heritage: multitenancy-manager` label. With this label, only the identities listed in [Who bypasses admission](#who-bypasses-admission) can change the object.
+To allow changes to the object (for example, for compatibility with other systems, or to control the created objects yourself), add the `projects.deckhouse.io/skip-heritage-label` label to it.
 
 Example:
 
@@ -876,11 +878,11 @@ data:
 
 {% endraw %}
 
-In this case, the resource will receive the labels `projects.deckhouse.io/project` and `projects.deckhouse.io/project-template`, but will not receive the label `heritage: multitenancy-manager`.
+In this case, the object gets the `projects.deckhouse.io/project` and `projects.deckhouse.io/project-template` labels, but not the `heritage: multitenancy-manager` label.
 
-### Excluding resources from management by multitenancy-manager
+### Excluding objects from management
 
-If you need to exclude a resource from management by `multitenancy-manager` (for example, if the resource should be managed manually or by another controller), add the label `projects.deckhouse.io/unmanaged` to the resource.
+To exclude an object from management by the module (for example, when it is managed manually or by another controller), add the `projects.deckhouse.io/unmanaged` label to it.
 
 Example:
 
@@ -902,33 +904,33 @@ data:
 
 {% endraw %}
 
-Resources with the label `projects.deckhouse.io/unmanaged`:
+Objects with the `projects.deckhouse.io/unmanaged` label:
 
-- Will be created **only once** when the project is created;
-- **Will not be updated** with subsequent template changes or updates;
-- Will not be monitored in the project's status;
-- Will receive the labels `projects.deckhouse.io/project` and `projects.deckhouse.io/project-template` but **will not receive** the label `heritage: multitenancy-manager`.
+- are created **only once**, when the project release is first installed, so an object added to the template later is not created in existing projects;
+- **are not updated** when the template changes;
+- are not tracked in the project status;
+- get the `projects.deckhouse.io/project` and `projects.deckhouse.io/project-template` labels, but **not** the `heritage: multitenancy-manager` label;
+- get the `helm.sh/resource-policy: keep` annotation, so the project release does not delete them.
 
 {% alert level="warning" %}
-Once a resource is marked as `unmanaged`, it will be created on initial installation but not updated when the `ProjectTemplate` is changed.  
-After creation, the resource becomes fully independent and must be managed manually.
+After it is created, an `unmanaged` object does not depend on the template and must be managed manually.
 {% endalert %}
 
 ## Implementing validation of object changes with a custom label
 
-The `multitenancy-manager` module uses `ValidatingAdmissionPolicy` to protect resources labeled `heritage: multitenancy-manager` from manual changes.  
-You can implement similar validation for resources with any label.
+The `multitenancy-manager` module uses a ValidatingAdmissionPolicy to protect objects labeled `heritage: multitenancy-manager` from manual changes.
+You can implement similar validation for objects with any label.
 
 ### How validation works in multitenancy-manager
 
-Validation occurs for objects labeled `heritage: multitenancy-manager`.  
+Validation occurs for objects labeled `heritage: multitenancy-manager`.
 The following components are used for this:
 
-1. `ValidatingAdmissionPolicy`: Defines validation rules:
+1. ValidatingAdmissionPolicy: Defines validation rules:
    - Operations: `CREATE`, `UPDATE` and `DELETE`. `system:masters` is not exempt.
    - Check: only the module's controller and the identities this policy lets through (see [Who bypasses admission](#who-bypasses-admission)) may change such an object. For a project namespace, an update that changes only labels and annotations outside the keys the module owns is allowed as well (see [Creating a project automatically for a namespace](#creating-a-project-automatically-for-a-namespace)).
    - Applies to all resources and API groups.
-1. `ValidatingAdmissionPolicyBinding`: Defines which objects the validation applies to:
+1. ValidatingAdmissionPolicyBinding: Defines which objects the validation applies to:
    - Uses `namespaceSelector` and `objectSelector` to select resources by the label `heritage: multitenancy-manager`.
 
 ### Who bypasses admission
@@ -936,16 +938,18 @@ The following components are used for this:
 The webhooks and policies of the module have different exclusion lists:
 
 - The **Project and ProjectTemplate webhooks** skip requests from platform components — the API server (`system:apiserver`), the service accounts of Deckhouse (`d8-system:deckhouse`), of this module (`d8-multitenancy-manager:multitenancy-manager`) and of `user-authz` (`d8-user-authz:controller`), every service account of the `d8-system`, `kube-system` and `d8-user-authz` namespaces, kubelets (`system:nodes`) — and from the `system:sudouser` identity. Everyone else is validated, `system:masters` included.
-- The **ProjectRoleBinding, ProjectNamespace and ClusterProjectRoleBinding webhooks** skip nobody: nothing in the platform renders these objects, so no release can deadlock on them, and every request is validated. Inside them only the controller and Deckhouse service accounts are privileged; `system:sudouser` and `system:masters` are ordinary users there.
-- The **`ValidatingAdmissionPolicy`** above lets through this module's controller; the users `system:apiserver`, `system:kube-controller-manager`, `system:kube-scheduler`, `system:volume-scheduler`, `dhctl`, `observability` and `system:sudouser`; the groups `system:nodes`, `system:serviceaccounts:kube-system` and `system:serviceaccounts:d8-system` (not `d8-user-authz`); and a rollout restart of a project workload. Everyone else is refused, `system:masters` included.
-- The **`ValidatingAdmissionPolicy` that reserves the users the controller acts as** (the names that start with `system:multitenancy-manager:`, see [Describing other objects in manifests](#describing-other-objects-in-manifests)) lets through this module's controller, the garbage collector, which runs as `system:serviceaccount:kube-system:generic-garbage-collector` or as `system:kube-controller-manager`, and `system:sudouser`. Everyone else who names such a user or group in a binding is refused, the other service accounts of `kube-system` and `system:masters` included.
+- The **ProjectRoleBinding, ProjectNamespace and ClusterProjectRoleBinding webhooks** skip nobody and validate every request. Inside them only the controller and Deckhouse service accounts are privileged; `system:sudouser` and `system:masters` are ordinary users there.
+- The **ValidatingAdmissionPolicy** above lets through this module's controller; the users `system:apiserver`, `system:kube-controller-manager`, `system:kube-scheduler`, `system:volume-scheduler`, `dhctl`, `observability` and `system:sudouser`; the groups `system:nodes`, `system:serviceaccounts:kube-system` and `system:serviceaccounts:d8-system` (not `d8-user-authz`); and a rollout restart of a project workload. Everyone else is refused, `system:masters` included.
+- The **ValidatingAdmissionPolicy that reserves the users the controller acts as** (the names that start with `system:multitenancy-manager:`, see [Describing other objects in manifests](#describing-other-objects-in-manifests)) lets through this module's controller, the garbage collector, which runs as `system:serviceaccount:kube-system:generic-garbage-collector` or as `system:kube-controller-manager`, and `system:sudouser`. Everyone else who names such a user or group in a binding is refused, the other service accounts of `kube-system` and `system:masters` included.
 - The **`d8-multitenancy-manager-namespace-creation` ValidatingAdmissionPolicy** checks namespace creation and is in force only while [`allowNamespacesWithoutProjects`](configuration.html#parameters-allownamespaceswithoutprojects) is `false`. It lets through the API server (`system:apiserver`), the service accounts of Deckhouse (`d8-system:deckhouse`), of this module (`d8-multitenancy-manager:multitenancy-manager`) and of the `upmeter` agent (`d8-upmeter:upmeter-agent`), every service account of the `d8-system` and `kube-system` namespaces, the groups `system:masters` and `system:nodes`, and `system:sudouser`. Unlike the lists above, it includes `system:masters`, so cluster administrators still create namespaces directly. Everyone else can create only the `default` namespace.
 - The **`d8-multitenancy-manager-manifests` ValidatingAdmissionPolicy** checks only the users that the controller applies `manifests` as, whose names start with `system:multitenancy-manager:project:`, and refuses them to create an AuthorizationRule of the `Admin` access level, to raise one to this level or to add subjects to one of this level. Nobody else is checked by it.
 - The **`d8-multitenancy-manager-v1alpha1-template-create` ValidatingAdmissionPolicy** refuses every create of a ProjectTemplate through `deckhouse.io/v1alpha1` and lets nobody through, `system:sudouser`, `system:masters` and the platform components included. The refusal of a new `resourcesTemplate` through `deckhouse.io/v1alpha2` belongs to the ProjectTemplate webhook, so the requesters that the webhook skips, `system:sudouser` among them, can still create a template with a Helm text that way.
+- The **`d8-multitenancy-manager-namespace-ownership` ValidatingAdmissionPolicy** keeps the `projects.deckhouse.io/project` label and the labels and annotations that the module sets on a project namespace. It lets through only this module's controller and `d8-system:deckhouse`. Everyone else is refused, `system:sudouser` and `system:masters` included.
+- The **`d8-multitenancy-manager-kept-objects` ValidatingAdmissionPolicy** guards the objects listed in `.status.keptObjects` of a project. It lets through this module's controller, the users whose names start with `system:multitenancy-manager:`, `system:sudouser` and the system users and groups of the policy that guards the `heritage: multitenancy-manager` objects. Anyone else may change such an object only with the right to make the same change across the cluster.
 
-The webhooks that guard grantable cluster resources in project namespaces (`/is-granted`, `/defaults`, `/protect`, see [Managing access to cluster-wide resources](#managing-access-to-cluster-wide-resources)) keep `system:masters` on their exclusion list next to the platform components: they intercept every write of such a resource, a far larger surface for a deadlock.
+The `/is-granted` and `/defaults` webhooks, which check writes of objects that reference cluster-wide resources in project namespaces (see [Managing access to cluster-wide resources](#managing-access-to-cluster-wide-resources)), skip `system:masters` together with the platform components. The `/protect` webhook keeps AvailableClusterResource read-only. It lets through the controller, the platform components and `system:masters`.
 
-An administrator who has to get past the Project or ProjectTemplate webhook, the policy that guards the `heritage: multitenancy-manager` objects, or the policy that reserves the users the controller acts as, does it deliberately as `system:sudouser`, for example with `d8 k --as system:sudouser …`, and the bypass is then visible in the audit log. There is no such door for ProjectRoleBinding, ProjectNamespace and ClusterProjectRoleBinding, or for a create of a ProjectTemplate through `deckhouse.io/v1alpha1`.
+An administrator who has to get past the Project or ProjectTemplate webhook, the policy that guards the `heritage: multitenancy-manager` objects, or the policy that reserves the users the controller acts as, does it deliberately as `system:sudouser`, for example with `d8 k --as system:sudouser …`, and the bypass is then visible in the audit log. There is no such door for ProjectRoleBinding, ProjectNamespace and ClusterProjectRoleBinding, for a create of a ProjectTemplate through `deckhouse.io/v1alpha1`, or for the namespace labels and annotations that the `d8-multitenancy-manager-namespace-ownership` policy keeps.
 
 ### Creating your own validation
 
@@ -967,11 +971,21 @@ To implement validation for resources with a different label (for example, `heri
            operations:  ["CREATE", "UPDATE", "DELETE"]
            resources:   ["*"]
            scope: "*"
+     matchConditions:
+       # Let the cluster components through, as the policy of the module does.
+       - name: exclude-system-groups
+         expression: '!(["system:nodes", "system:serviceaccounts:kube-system", "system:serviceaccounts:d8-system"].exists(e, (e in request.userInfo.groups)))'
+       - name: exclude-system-users
+         expression: '!(["system:apiserver", "system:kube-controller-manager", "system:kube-scheduler"].exists(e, (e == request.userInfo.username)))'
+     variables:
+       # A DELETE request carries no object, only oldObject.
+       - name: subject
+         expression: 'object == null ? oldObject : object'
      validations:
-       - expression: 'request.userInfo.username == "system:serviceaccount:my-namespace:my-service-account"' # Replace with your service account
+       - expression: 'request.userInfo.username == "system:serviceaccount:my-namespace:my-service-account"' # Replace with your ServiceAccount.
          reason: Forbidden
-         messageExpression: 'object.kind == ''Namespace'' ? ''This resource is managed by '' + object.metadata.name + '' system. Manual modification is forbidden.''
-           : ''This resource is managed by '' + object.metadata.namespace + '' system. Manual modification is forbidden.'''
+         messageExpression: 'variables.subject.kind == ''Namespace'' ? ''This resource is managed by '' + variables.subject.metadata.name + '' system. Manual modification is forbidden.''
+           : ''This resource is managed by '' + variables.subject.metadata.namespace + '' system. Manual modification is forbidden.'''
    ---
    apiVersion: admissionregistration.k8s.io/v1
    kind: ValidatingAdmissionPolicyBinding
@@ -981,9 +995,6 @@ To implement validation for resources with a different label (for example, `heri
      policyName: my-custom-label-validation
      validationActions: [Deny, Audit]
      matchResources:
-       namespaceSelector:
-         matchLabels:
-           heritage: my-custom-label
        objectSelector:
          matchLabels:
            heritage: my-custom-label
@@ -992,11 +1003,10 @@ To implement validation for resources with a different label (for example, `heri
 1. Configure the validation parameters:
 
    - `policyName`: Unique policy name (must match in Policy and Binding).
-   - `request.userInfo.username`: The name of the service account allowed to change resources (replace with your service account).
+   - `request.userInfo.username`: The name of the ServiceAccount allowed to change objects (replace with your ServiceAccount).
    - `heritage: my-custom-label`: The value of the `heritage` label for your resources (replace with your value). The use of the values `multitenancy-manager`, `deckhouse` is prohibited.
-   - `failurePolicy: Fail`: Policy on validation failure.
-     - `Fail`: Reject the request on validation failure.
-     - `Ignore`: Ignore validation errors.
+   - `failurePolicy`: What happens when the policy cannot be evaluated, for example when an expression fails: `Fail` rejects the request, `Ignore` admits it. A validation that returns `false` rejects the request with the `Deny` action in any case.
+   - `matchConditions`: Requests that the policy does not check. Keep the cluster components in this list, otherwise the policy blocks the deletion of namespaces and the garbage collection of the labeled objects.
    - `validationActions`: Validation actions:
      - `Deny`: Deny unauthorized operations.
      - `Audit`: Record operations in the audit log.
@@ -1074,9 +1084,7 @@ spec:
         - standard
 ```
 
-When a PersistentVolumeClaim is created without a value in `spec.storageClassName`, `fast-ssd` is automatically assigned to this field. If a StorageClass that is not in the allowed list is specified, the PersistentVolumeClaim is rejected.
-
-StorageClass uses the [`Coerce`](cr.html#grantableclusterresourcereference-v1alpha1-spec-fieldpaths-defaulting) default assignment mode. If the built-in Kubernetes admission controller has already assigned a default class to `spec.storageClassName` that is unavailable to the project, the value is replaced with `fast-ssd` instead of rejecting the PersistentVolumeClaim. The replacement is reported as an admission warning in the response to the request, so the `d8 k` output shows both the original value and the substituted one.
+When a PersistentVolumeClaim is created without a value in `spec.storageClassName`, `fast-ssd` is automatically assigned to this field. If a StorageClass that is not in the allowed list is specified, it is replaced with `fast-ssd`, because StorageClass uses the [`Coerce`](cr.html#grantableclusterresourcereference-v1alpha1-spec-fieldpaths-defaulting) default assignment mode. This also covers a class that the built-in Kubernetes admission controller has filled in. The replacement is reported as an admission warning in the response to the request, so the `d8 k` output shows both the original value and the substituted one. If the project has no default StorageClass, such a PersistentVolumeClaim is rejected.
 
 To check which StorageClasses are available to the project, run the following command:
 
@@ -1118,11 +1126,11 @@ No default value is assigned to the `cert-manager.io/cluster-issuer` annotation.
 Access management for ClusterIssuer is available only when the [`cert-manager`](/modules/cert-manager/) module is enabled.
 {% endalert %}
 
-#### Granting access to additional ClusterRoles
+#### Restricting ClusterRoles for a project
 
-By default, only ClusterRoles with the `rbac.deckhouse.io/delegatable` label can be used in RoleBinding.
+By default, a RoleBinding in a project namespace can reference every ClusterRole with the `rbac.deckhouse.io/delegatable: "true"` label, and no other ClusterRole. A policy cannot make a ClusterRole without this label available. To use such a ClusterRole in projects, add the label to it (see [Roles available in a RoleBinding inside a project](#roles-available-in-a-rolebinding-inside-a-project)).
 
-To allow projects belonging to the `payments` team to use additional ClusterRoles, create the following [ClusterResourceGrantPolicy](cr.html#clusterresourcegrantpolicy):
+To allow the projects of the `payments` team to use only the `my-custom-role` ClusterRole and the ClusterRoles with the `shared: "true"` label, create the following [ClusterResourceGrantPolicy](cr.html#clusterresourcegrantpolicy):
 
 ```yaml
 apiVersion: multitenancy.deckhouse.io/v1alpha2
@@ -1142,12 +1150,7 @@ spec:
           shared: "true"
 ```
 
-The policy additionally allows the following ClusterRoles:
-
-- The ClusterRole named `my-custom-role`
-- ClusterRoles matching the `shared: "true"` selector
-
-ClusterRoles with the `rbac.deckhouse.io/delegatable` label remain available.
+In RoleBindings of these projects, only these ClusterRoles can be used, and only the ones with the `rbac.deckhouse.io/delegatable: "true"` label. The other delegatable ClusterRoles, such as `d8:project:*` and `d8:namespace:*`, become unavailable in them, including the RoleBindings that the [`manifests`](#describing-other-objects-in-manifests) of the template create. So list in the policy every role that these projects bind. ProjectRoleBinding and ClusterProjectRoleBinding are not affected, because the controller creates their RoleBindings.
 
 The `rbac.deckhouse.io/delegatable: "true"` label is required on every ClusterRole the policy names: the `clusterroles` registration excludes roles without it from all projects, and an exclusion takes precedence over `allowed` and `allowedSelector`. A policy entry that names a role without the label grants nothing. The controller reports this in the `AllowedEffective` condition of the ClusterResourceGrantPolicy status, with the role name in the message:
 
@@ -1204,6 +1207,8 @@ spec:
       availabilityDefault: All
 ```
 
+The registered resources are available to all projects by default, so `availabilityDefault: All` changes something only where another policy restricts the resource. There it overrides the `allowed` and `allowedSelector` lists of every policy that applies to the project, the policies of its template included. `denied`, `deniedSelector` and the `excluded` filters of the registration still apply.
+
 Usually, explicitly specifying allowed resources using [`allowed`](cr.html#clusterresourcegrantpolicy-v1alpha2-spec-resources-allowed) or [`allowedSelector`](cr.html#clusterresourcegrantpolicy-v1alpha2-spec-resources-allowedselector) is sufficient for access management. Use `availabilityDefault: All` when the selected projects need access to all resources of the specified type.
 
 #### Denying individual resources
@@ -1255,12 +1260,14 @@ spec:
           deprecated: "true"
 ```
 
-#### Granting cluster-scoped resources through a project template
+#### Granting cluster-wide resources through a project template
 
-The availability rules for cluster-scoped resources can be set directly in a [structured template](#structured-templates) — they then automatically apply to all projects created from that template:
+The availability rules for cluster-wide resources can be set directly in a [structured template](#structured-templates) — they then automatically apply to all projects created from that template:
 
-- `spec.resources` — the rules "inside" the template: the same format as `resources` in a ClusterResourceGrantPolicy (resource name, `allowed`/`allowedSelector`, `default`);
-- `spec.grantPolicies` — a list of names of **library** ClusterResourceGrantPolicy objects. A library policy describes a reusable set of rules and sets neither `projectSelector` nor `namespaceSelector`, because the referencing template determines which projects it applies to. This way, for example, a "corporate StorageClasses" policy can be maintained by one administrator and used by several templates.
+- `spec.resources`: Rules inside the template, in the same format as `resources` in a ClusterResourceGrantPolicy (resource name, `allowed`/`allowedSelector`, `default`).
+- `spec.grantPolicies`: List of names of **library** ClusterResourceGrantPolicy objects. A library policy describes a reusable set of rules and sets neither `projectSelector` nor `namespaceSelector`, because the referencing template determines which projects it applies to. This way, for example, a "corporate StorageClasses" policy can be maintained by one administrator and used by several templates.
+
+The following template restricts StorageClass for its projects and connects a library policy:
 
 ```yaml
 apiVersion: deckhouse.io/v1alpha2
@@ -1277,7 +1284,7 @@ spec:
     - corporate-issuers
 ```
 
-For each source, the controller creates a service policy named `template-<template>-<source>` (for `spec.resources` — `template-<template>-inline`); the `inline` name is reserved for library policies. A reference to a non-existent policy or to a policy with either selector is rejected when the template is created. A service policy selects the namespaces of the template's projects with `namespaceSelector` by their `projects.deckhouse.io/project-template` label. The label is set when the template renders, so after a project switches to another template, the rules of the old template apply until the new one has rendered.
+For each source, the controller creates a service policy named `template-<template>-<source>` (for `spec.resources` — `template-<template>-inline`). A template that references a policy named `inline` is rejected, and so is a template whose service policy names would match those of another template. A reference to a non-existent policy or to a policy with either selector is rejected when the template is created or updated. A service policy selects the namespaces of the template's projects with `namespaceSelector` by their `projects.deckhouse.io/project-template` label. The label is set when the template renders, so after a project switches to another template, the rules of the old template apply until the new one has rendered.
 
 ### For project users
 
@@ -1309,7 +1316,7 @@ d8 k get available storageclasses -n <PROJECT_NAME> -o yaml
 
 Example output (abridged):
 
-```yaml
+```text
 status:
   grantedResourceKind: StorageClass
   default: fast-ssd
@@ -1335,10 +1342,10 @@ An AvailableClusterResource exists as long as the corresponding GrantableCluster
 
 #### Rejection due to an unavailable cluster-wide resource
 
-If the specified cluster-wide resource is unavailable to the project when an object is created or modified, the operation is rejected with the following message:
+If the cluster-wide resource is not available to the project when an object is created, or when an update sets a new value, the request is rejected with the following message:
 
 ```text
-resource <RESOURCE_NAME> is not available to project <PROJECT_NAME>
+[multitenancy] <KIND> "<OBJECT_NAME>" references "<RESOURCE_NAME>" which is not available to project "<PROJECT_NAME>". Ask the cluster administrator to grant it.
 ```
 
 In this case, check the available resources using AvailableClusterResource. Use a resource from the list of available resources or ask the cluster administrator to grant access to the required resource.
@@ -1351,24 +1358,16 @@ For example, if `fast-ssd` is configured as the default StorageClass, the `fast-
 
 You can specify a value explicitly by selecting any resource available to the project from the corresponding AvailableClusterResource.
 
-#### Cases when a project may have no default
+#### Projects without a default value
 
-AvailableClusterResource reports the project default in `status.default`, and flags it among the
-names in `status.available` with `default: true`. Both may be absent, which is a normal state rather
-than an error — a resource can be granted without any name being the one to fall back on. It happens
-in four cases:
+AvailableClusterResource reports the project default in `status.default` and marks it among the names in `status.available` with `default: true`. Both are absent in the following cases:
 
-- the grant policy sets no `default` and the registration has no `defaultFrom`;
-- the resource is value-backed (granted as a list of values rather than as objects of the cluster),
-  and `defaultFrom` does not apply to it;
-- `defaultFrom` is set, but the number of objects carrying that annotation is not exactly one:
-  a default by annotation is defined only when a single object claims it;
-- a default is set but the project may not use it — for example, the cluster-wide default
-  StorageClass is not among the names granted to this project. It is deliberately dropped, so that
-  the defaulting webhook never fills in a value the validating webhook would reject a moment later.
+- the grant policy sets no `default`, and the registration has no `defaultFrom`;
+- the resource is granted as a list of values rather than as objects of the cluster, and `defaultFrom` does not apply to it;
+- `defaultFrom` is set, but not exactly one object has the annotation set to `true`;
+- a default is set, but the project may not use it, for example the default StorageClass of the cluster is not among the names granted to the project.
 
-The practical effect of the last one is that the field stays empty and the object is created (or
-denied) by the usual rules, instead of being denied over a name the project's user never chose.
+Then the field stays empty, and the object is created or rejected by the usual rules.
 
 ### For module developers
 
@@ -1376,7 +1375,7 @@ denied) by the usual rules, instead of being denied over a name the project's us
 
 If a module resource contains a field that references a cluster-wide resource already registered using [GrantableClusterResourceDefinition](cr.html#grantableclusterresourcedefinition), create a [GrantableClusterResourceReference](cr.html#grantableclusterresourcereference). It defines which resources and fields use the cluster-wide resource and allows you to configure availability checks and automatic default value assignment.
 
-For example, to configure validation of the StorageClass specified in the `.spec.storageClassName` field of a PostgresDatabase resource, add the following resource to the module's Helm chart:
+For example, to configure validation of the StorageClass specified in the `.spec.storageClassName` field of a PostgresDatabase resource, add the following object to the module's Helm chart:
 
 ```yaml
 apiVersion: multitenancy.deckhouse.io/v1alpha1
@@ -1431,9 +1430,9 @@ For descriptions of GrantableClusterResourceReference parameters, default assign
 To add access management for a new cluster-wide resource:
 
 1. Create a [GrantableClusterResourceDefinition](cr.html#grantableclusterresourcedefinition) to register the cluster-wide resource with the access management mechanism.
-1. Create one or more [GrantableClusterResourceReference](cr.html#grantableclusterresourcereference) resources to define the fields that reference it.
+1. Create one or more [GrantableClusterResourceReference](cr.html#grantableclusterresourcereference) objects to define the fields that reference it.
 
-   For example, to register the MyClusterResource resource, add the following resource to the module's Helm chart:
+   For example, to register the MyClusterResource resource, add the following object to the module's Helm chart:
 
    ```yaml
    apiVersion: multitenancy.deckhouse.io/v1alpha1
@@ -1513,7 +1512,7 @@ You can check the status of GrantableClusterResourceDefinition and its associate
 
 - [`GrantableClusterResourceDefinition.status.references`](cr.html#grantableclusterresourcedefinition-v1alpha1-status-references): Contains a list of associated GrantableClusterResourceReference resources and information about the resources to which they apply.
 - [`GrantableClusterResourceReference.status.bound`](cr.html#grantableclusterresourcereference-v1alpha1-status-bound): Indicates whether the corresponding GrantableClusterResourceDefinition was found.
-- `GrantableClusterResourceReference.status.conditions[Bound]`: Contains the binding status: `Resolved` if the definition was found, or `UnknownResource` if it is missing. The `UnknownResource` status can indicate an incorrect GrantableClusterResourceDefinition name or a missing registration.
+- `GrantableClusterResourceReference.status.conditions[Bound]`: `True` with the reason `Resolved` if the definition was found, `False` with the reason `UnknownResource` if it is missing. `UnknownResource` can indicate an incorrect GrantableClusterResourceDefinition name or a missing registration.
 - `GrantableClusterResourceReference.status.conditions[FieldPathsValid]`: Whether `spec.fieldPaths` pass the checks applied when the object is created or updated (reasons `Valid`, `InvalidFieldPaths`; the message lists all problems). `False` means the object was stored bypassing these checks; the invalid paths are skipped during availability checks.
 - `GrantableClusterResourceDefinition.status.conditions[GrantedResourceValid]`: Whether `spec.grantedResource` can be processed. `True` with the reason `ClusterScoped` for a cluster-scoped resource or `ValueBacked` for a definition without `grantedResource`; `False` with the reason `Namespaced` for a namespaced resource, which is not processed; `Unknown` with the reason `KindNotServed` while the resource is not served (for example, its CRD is not installed yet) or `MappingFailed` if its scope could not be determined.
 - `GrantableClusterResourceDefinition.status.conditions[CatalogFieldsValid]`: Whether `spec.catalogFields` pass the checks applied when the object is created or updated (reasons `Valid`, `InvalidCatalogFields`; the message lists all problems). A definition without `catalogFields` has the condition `True`. Values left out for their size are reported by `CatalogFieldsSkipped` events (read more in section ["Showing resource fields to projects"](#showing-resource-fields-to-projects)).

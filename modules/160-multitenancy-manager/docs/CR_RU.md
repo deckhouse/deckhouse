@@ -1,5 +1,5 @@
 ---
-title: "Модуль multitenancy-manager: Custom Resources"
+title: "Модуль multitenancy-manager: кастомные ресурсы"
 ---
 
 <!-- SCHEMA -->

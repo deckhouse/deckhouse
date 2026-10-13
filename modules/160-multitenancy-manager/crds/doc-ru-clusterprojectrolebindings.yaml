@@ -4,19 +4,54 @@ spec:
       schema:
         openAPIV3Schema:
           description: |
-            ClusterProjectRoleBinding выдаёт роль субъектам во всех неймспейсах всех проектов кластера.
+            ClusterProjectRoleBinding выдаёт роль субъектам во всех неймспейсах всех проектов кластера, кроме виртуальных проектов `deckhouse` и `default`.
           properties:
             spec:
               properties:
                 subjects:
                   description: |
-                    Субъекты (пользователи, группы или сервисные аккаунты), которым выдаётся роль.
+                    Субъекты (пользователи, группы или ServiceAccount), которым выдаётся роль.
+                  items:
+                    properties:
+                      kind:
+                        description: Тип субъекта.
+                      name:
+                        description: |
+                          Имя субъекта: для `User` — имя пользователя (`User.spec.email`), для `Group` — `Group.spec.name`, для `ServiceAccount` — имя ServiceAccount.
+                      namespace:
+                        description: |
+                          Неймспейс ServiceAccount.
+
+                          Если не указан, привязка относится к ServiceAccount с этим именем в каждом неймспейсе каждого проекта.
+                      apiGroup:
+                        description: "API-группа субъекта: `rbac.authorization.k8s.io` для `User` и `Group`, пустая для `ServiceAccount`."
                 roleRef:
                   description: |
                     Ссылка на выдаваемую ClusterRole.
                     
                     Допустимые префиксы: `d8:project:*`, `d8:namespace:*`, `d8:project-capability:*`, `d8:namespace-capability:*`, `d8:custom:*`.
+                  properties:
+                    kind:
+                      description: Тип выдаваемой роли.
+                    name:
+                      description: Имя выдаваемой ClusterRole.
             status:
               properties:
+                observedGeneration:
+                  description: Последнее поколение объекта, обработанное контроллером.
+                conditions:
+                  description: Текущее состояние объекта.
+                  items:
+                    properties:
+                      type:
+                        description: Тип условия.
+                      status:
+                        description: "Состояние условия: `True`, `False` или `Unknown`."
+                      message:
+                        description: Сообщение с подробностями о состоянии условия.
+                      lastTransitionTime:
+                        description: Время последнего изменения условия.
+                      lastProbeTime:
+                        description: Время последней проверки условия.
                 boundProjects:
                   description: Количество проектов, к которым в данный момент применена привязка.

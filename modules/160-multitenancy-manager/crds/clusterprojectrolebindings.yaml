@@ -37,7 +37,7 @@ spec:
         openAPIV3Schema:
           type: object
           description: |
-            ClusterProjectRoleBinding grants a role to subjects across all namespaces of all projects in the cluster.
+            ClusterProjectRoleBinding grants a role to subjects across all namespaces of all projects in the cluster, except the virtual projects `deckhouse` and `default`.
           required:
             - spec
           properties:
@@ -62,17 +62,25 @@ spec:
                       - name
                     properties:
                       kind:
+                        description: Kind of the subject.
                         type: string
                         enum:
                           - User
                           - Group
                           - ServiceAccount
                       name:
+                        description: |
+                          Name of the subject: the user name (`User.spec.email`) for `User`, `Group.spec.name` for `Group`, the ServiceAccount name for `ServiceAccount`.
                         type: string
                         minLength: 1
                       namespace:
+                        description: |
+                          Namespace of the ServiceAccount.
+
+                          If omitted, the binding names the ServiceAccount with this name in each namespace of every project.
                         type: string
                       apiGroup:
+                        description: "API group of the subject: `rbac.authorization.k8s.io` for `User` and `Group`, empty for `ServiceAccount`."
                         type: string
                 roleRef:
                   description: |
@@ -83,34 +91,43 @@ spec:
                     - name
                   properties:
                     kind:
+                      description: Kind of the granted role.
                       type: string
                       enum:
                         - ClusterRole
                     name:
+                      description: Name of the granted ClusterRole.
                       type: string
                       minLength: 1
             status:
               type: object
               properties:
                 observedGeneration:
+                  description: Last generation of the object processed by the controller.
                   type: integer
                 boundProjects:
                   description: Number of projects the binding is currently applied to.
                   type: integer
                 conditions:
+                  description: Current state of the object.
                   type: array
                   items:
                     type: object
                     properties:
                       type:
+                        description: Condition type.
                         type: string
                       status:
+                        description: "Condition state: `True`, `False` or `Unknown`."
                         type: string
                       message:
+                        description: Message with details of the condition state.
                         type: string
                       lastTransitionTime:
+                        description: Time when the condition last changed.
                         format: date-time
                         type: string
                       lastProbeTime:
+                        description: Time of the last check of the condition.
                         format: date-time
                         type: string

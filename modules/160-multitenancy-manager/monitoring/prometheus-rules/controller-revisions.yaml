@@ -25,7 +25,7 @@
       description: |-
         Pods of {{ $value }} revisions of the `multitenancy-manager` Deployment in the `d8-multitenancy-manager` namespace have been pending or running side by side for more than 15 minutes.
 
-        A new controller pod first takes the leader election lease, then holds its controllers until the pods of the older revisions finish, for 10 minutes at most, and then starts them anyway. A pod deleted more than 10 minutes ago no longer holds the start. While the old pod takes the same lease, only one of the two pods writes the Helm releases of the projects, and the alert means that the rollout is stuck: the new pod is pending or not ready, or the old pod is stuck terminating on a lost node. Only an old pod of a revision that runs without leader election writes the releases next to the new one. Then each of them overwrites the release the other one rendered, and objects in the namespaces of the projects may be deleted and created again.
+        The rollout of the controller is stuck: the new pod is pending or not ready, or an old pod is stuck terminating on a lost node. The new pod waits for the pods of older revisions for 10 minutes at most and then starts its controllers anyway. If an old pod of a revision that runs without leader election is still running, both pods write the Helm releases of the projects, and objects in the project namespaces may be deleted and created again.
 
         Steps to troubleshoot:
 

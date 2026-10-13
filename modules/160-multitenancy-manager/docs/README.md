@@ -1,40 +1,22 @@
 ---
 title: "Module multitenancy-manager"
 search: multitenancy
-description: Multitenancy and Projects in Kubernetes. The multitenancy-manager module in Deckhouse allows creating projects for various development teams with the ability to subsequently deploy applications in them.
+description: Creating isolated projects for development teams from project templates.
 ---
-## Description
-
 The module enables the creation of projects in a Kubernetes cluster. **Project** is an isolated environment where applications can be deployed.
 
-## Why is this needed?
+## Main features
 
-The standard `Namespace` resource, used for logical resource separation in Kubernetes, does not provide necessary functionalities, hence it is not an isolated environment:
-* [Resource consumption by pods](https://kubernetes.io/docs/concepts/policy/resource-quotas/) is not limited by default;
-* [Network communication](https://kubernetes.io/docs/concepts/services-networking/network-policies/) with other pods works by default from any point in the cluster;
-* Unrestricted access to node resources: address space, network space, mounted host directories.
-
-The configuration capabilities of `Namespace` do not fully meet modern development requirements. By default, the following features are not included for `Namespace`:
-* Log collection;
-* Audit;
-* Vulnerability scanning.
-
-The functionality of projects allows addressing these issues.
+- Creating projects from project templates. A template sets the pod security profile, network isolation, log collection, node placement and other policies of the project namespaces.
+- Several namespaces in one project. The template settings and the access granted to the project apply to all of them.
+- Access to the whole project through `.spec.administrators`, ProjectRoleBinding and ClusterProjectRoleBinding.
+- A resource quota for each project.
+- A project for every namespace: a namespace created directly becomes a project automatically.
+- Control over which cluster-wide resources, such as StorageClass or ClusterIssuer, projects can use.
 
 {% alert level="warning" %}
-The [`secret-copier`](../secret-copier/) module cannot be used together with `multitenancy-manager` module.
+The [secret-copier](/modules/secret-copier/) module cannot be used together with the `multitenancy-manager` module: it copies Secrets into every namespace, project namespaces included.
 {% endalert %}
-
-## Advantages of the module
-
-For platform administrators:
-* **Consistency**: Administrators can create projects using the same template, ensuring consistency and simplifying management.
-* **Security**: Projects provide isolation of resources and access policies between different projects, supporting a secure multitenant environment.
-* **Resource Consumption**: Administrators can easily set quotas on resources and limitations for each project, preventing excessive resource usage.
-
-For platform users:
-* **Quick Start**: Developers can request projects created from ready-made templates from administrators, allowing for a quick start to developing a new application.
-* **Isolation**: Each project provides an isolated environment where developers can deploy and test their applications without impacting other projects.
 
 ## Project composition
 
@@ -45,7 +27,9 @@ A project includes:
 * **Standard fields** — the list of administrators ([`.spec.administrators`](./cr.html#project-v1alpha3-spec-administrators)) and resource quotas ([`.spec.quota`](./cr.html#project-v1alpha3-spec-quota)), managed by the [Project](./cr.html#project) resource itself independently of the template.
 * **Resources from the template** (optional) — policies and settings described in a [ProjectTemplate](./cr.html#projecttemplate) and created by the controller in the project namespaces, and the objects of its `manifests`, applied with the rights of a project administrator.
 
-## Internal Logic
+## How the module works
+
+This section describes how the module creates projects, adds namespaces to them, grants access and turns existing namespaces into projects.
 
 ### Creating a project
 
@@ -55,17 +39,19 @@ To create projects, the following [Custom Resources](https://kubernetes.io/docs/
 
 When creating a [Project](./cr.html#project) resource from a specific [ProjectTemplate](./cr.html#projecttemplate), the following happens:
 1. The [parameters](./cr.html#project-v1alpha3-spec-parameters) passed are validated against the OpenAPI specification (the [`parametersSchema.openAPIV3Schema`](./cr.html#projecttemplate-v1alpha2-spec-parametersschema-openapiv3schema) field of [ProjectTemplate](./cr.html#projecttemplate));
-1. A `Namespace` is created with a name matching the name of [Project](./cr.html#project);
+1. A namespace is created with the name of the [Project](./cr.html#project);
 1. The project resources are created from the template:
    * in modern templates (`deckhouse.io/v1alpha2`) the settings, such as the pod security profile, network isolation, log collection and node placement, are described by [structured fields](usage.html#structured-templates). The controller itself creates the corresponding objects in every namespace of the project. Other objects go to [`manifests`](usage.html#describing-other-objects-in-manifests) and are applied with the rights of a project administrator;
    * a template with a Helm `resourcesTemplate` is rendered through Helm. This form is deprecated, and so is the `deckhouse.io/v1alpha1` version of ProjectTemplate, which has no other form ([see details](usage.html#template-checks)). No template can get a new `resourcesTemplate`, a template is created through `deckhouse.io/v1alpha2` only, and the field goes away in a future release, so [move such a template](usage.html#moving-a-template-from-a-helm-text) to structured fields and `manifests`;
 1. The standard fields of the project are applied independently of the template: [`.spec.quota`](./cr.html#project-v1alpha3-spec-quota) is reconciled into a `ResourceQuota`, and [`.spec.administrators`](./cr.html#project-v1alpha3-spec-administrators) into an auto-managed [ProjectRoleBinding](./cr.html#projectrolebinding).
 
-The Project API is served as `deckhouse.io/v1alpha3`. A conversion webhook keeps `v1alpha2` manifests working by lifting `parameters.administrators` and `parameters.resourceQuota` into the standard fields; `v1alpha1` is no longer served. If one administrator does not fit the standard field (for example, it has `accessLevel`), the whole list stays in `parameters`. The same holds for a quota with anything other than quantities (for example, `scopes`) or with the number `0`, and for an empty list or quota. The string `"0"` is lifted into `.spec.quota`. The `projectTemplateName` field is optional: when omitted, the `simple` template is used, which only creates the project namespace.
+The Project API is served as `deckhouse.io/v1alpha3`. `v1alpha2` manifests keep working through a conversion webhook, and `v1alpha1` is no longer served (see [Project API versions](usage.html#project-api-versions)). The `projectTemplateName` field is optional: when omitted, the `simple` template is used, which only creates the project namespace.
 
 Project names are validated on creation. Names longer than 61 characters, names with the system prefixes `d8-` and `kube-`, names of existing namespaces or of namespaces that a ProjectNamespace has claimed, and names of namespaces whose ServiceAccounts a cluster-wide binding or a binding of another project still names are not allowed. A project `foo-bar` beside a project `foo` is allowed, but it is a separate project and not an additional namespace of `foo`. The webhook warns about it, and an alert lists such pairs ([see details](usage.html#project-naming-rules)).
 
-> **Attention!** When changing the project template, all created projects will be updated according to the new template.
+{% alert level="warning" %}
+A change of a project template applies to every project created from it.
+{% endalert %}
 
 ### Multiple namespaces in a project
 
@@ -86,9 +72,9 @@ User access to a project is managed at the level of the whole project rather tha
 
 * The subjects listed in [`.spec.administrators`](./cr.html#project-v1alpha3-spec-administrators) automatically get the project administrator role (`d8:project:admin`).
 * The [ProjectRoleBinding](./cr.html#projectrolebinding) resource grants a role in all namespaces of one project.
-* The [ClusterProjectRoleBinding](./cr.html#clusterprojectrolebinding) resource grants a role in all projects of the cluster at once — convenient, for example, for a monitoring team.
+* A [ClusterProjectRoleBinding](./cr.html#clusterprojectrolebinding) grants a role in all projects of the cluster at once, except the virtual ones.
 
-The bindings use the project and namespace roles of the DP role model (`d8:project:*`, `d8:namespace:*`, and their custom variants). For details on the roles, see [the user-authz module documentation](/modules/user-authz/). See [the usage examples](usage.html#granting-access-within-a-project) for details on the bindings.
+A ProjectRoleBinding or ClusterProjectRoleBinding can grant only ClusterRoles named `d8:project:*`, `d8:namespace:*`, `d8:project-capability:*`, `d8:namespace-capability:*` or `d8:custom:*`. For details on the roles, see [the user-authz module documentation](/modules/user-authz/). See [the usage examples](usage.html#granting-access-within-a-project) for details on the bindings.
 
 ### Automatic project creation for namespaces
 
@@ -96,19 +82,18 @@ Users can still create namespaces directly (`d8 k create namespace`), unless the
 
 * the template is picked from what the namespace already carries — `secure` if it has vulnerability scanning enabled, `default` if it has a Pod Security Standard or extended monitoring, and `simple` (namespace only) otherwise;
 * the project parameters are filled in from the current state of the namespace, so adopting it changes nothing inside;
-* from then on the project is the source of truth and is edited like any other: deleting the namespace makes the project recreate it.
+* from then on the project is the source of truth and is edited like any other. The namespace cannot be deleted directly: to remove the environment, delete the Project, and its namespace is deleted with it.
 
 System namespaces (`d8-*`, `kube-*`, `upmeter-*`, `default`, and anything labeled `heritage: deckhouse` or `heritage: upmeter`) are never adopted: they are listed on the virtual `deckhouse` project (except `default`). There is no label that leaves a user namespace without a project. A namespace whose name is longer than 61 characters is also skipped: that is the Project name limit.
 
 ### Isolating a project
 
-The project is based on the `Namespace` resource mechanism. Namespaces group pods, services, secrets, and other objects but do not provide complete isolation. The project functionality enhances namespaces by offering additional tools to improve control and security levels. To manage project isolation, Kubernetes features can be leveraged, such as:
+A namespace alone does not isolate a project. The project adds the following:
 
-- Access control resources (`ProjectRoleBinding` / `ClusterProjectRoleBinding` / `Project.spec.administrators`) — grant roles across the project or its namespaces. A plain `RoleBinding` in one namespace is also allowed for `delegatable` roles.
-- Resource quotas (`ResourceQuota`) — set limits on resource usage, such as CPU time, RAM, and object counts within a `Namespace`. These quotas help prevent excessive load and maintain control over applications within the project.
-- Network connectivity control resources  (`NetworkPolicy`) — control incoming and outgoing network traffic within a `Namespace`. Configure allowed connections between pods to enhance security and manage network interactions effectively.
-
-These tools can be combined to configure the project according to the requirements of your application.
+- Access to the whole project through [`.spec.administrators`](./cr.html#project-v1alpha3-spec-administrators), ProjectRoleBinding and ClusterProjectRoleBinding. A plain RoleBinding in one namespace is allowed for delegatable roles.
+- A resource limit through [`.spec.quota`](./cr.html#project-v1alpha3-spec-quota), applied as the `d8-project-quota` ResourceQuota in the main namespace.
+- Network isolation through the [`networkPolicy.mode: Isolated`](./cr.html#projecttemplate-v1alpha2-spec-networkpolicy-mode) field of the template.
+- The pod security profile through the [`podSecurityStandard`](./cr.html#projecttemplate-v1alpha2-spec-podsecuritystandard) field of the template.
 
 ## Managing access to cluster-wide resources
 
@@ -120,11 +105,13 @@ This mechanism works independently of RBAC. RBAC determines *who can create and 
 
 The following resources are used to manage access to cluster-wide resources:
 
-* [GrantableClusterResourceDefinition](./cr.html#grantableclusterresourcedefinition) registers a type of cluster-wide resource whose access can be managed. These resources are provided by DP or module developers.
+* [GrantableClusterResourceDefinition](./cr.html#grantableclusterresourcedefinition) registers a type of cluster-wide resource whose access can be managed. These resources are provided by Deckhouse Platform (DP) or by module developers.
 * [GrantableClusterResourceReference](./cr.html#grantableclusterresourcereference) defines where a registered cluster-wide resource is used, for example, which resource field contains a reference to it. These resources are provided by modules.
 * [ClusterResourceGrantPolicy](./cr.html#clusterresourcegrantpolicy) defines access rules. Using labels, a cluster administrator selects the projects to which the policy applies and defines the allowed and denied resources, as well as the resource used by default.
-* Based on the policy, the controller creates an [AvailableClusterResource](./cr.html#availableclusterresource) in the namespace of each matching project. This resource contains the list of cluster-wide resources available to the project and is read-only.
+* In every namespace of every project, the controller keeps an [AvailableClusterResource](./cr.html#availableclusterresource) for each GrantableClusterResourceDefinition. It lists the cluster-wide resources available to the project under the policies that apply and is read-only.
 * When an object is created or modified, webhooks check whether it is allowed to use the specified cluster-wide resource. When an object is created, the resource configured as the project default can also be inserted automatically.
+
+The webhooks reject requests while the module controller is unavailable. Until it is back, objects of the registered kinds (for example, PersistentVolumeClaim, Service or RoleBinding) cannot be created or changed in project namespaces, except by the platform components and members of the `system:masters` group. To keep the controller available, enable [`highAvailability`](configuration.html#parameters-highavailability).
 
 <script src="/assets/js/mermaid.min.js"></script>
 <script>mermaid.initialize({ startOnLoad: true });</script>
@@ -155,12 +142,12 @@ The mechanism determines cluster-wide resource availability and default values b
 If multiple rules apply to a cluster-wide resource, its availability is determined in the following order:
 
 1. The [`excluded`](./cr.html#grantableclusterresourcedefinition-v1alpha1-spec-excluded) value in GrantableClusterResourceDefinition: the resource is unavailable regardless of policy settings.
-2. The [`denied`](./cr.html#clusterresourcegrantpolicy-v1alpha2-spec-resources-denied) and [`deniedSelector`](./cr.html#clusterresourcegrantpolicy-v1alpha2-spec-resources-deniedselector) values in the corresponding ClusterResourceGrantPolicy entry.
-3. The [`allowed`](./cr.html#clusterresourcegrantpolicy-v1alpha2-spec-resources-allowed) and [`allowedSelector`](./cr.html#clusterresourcegrantpolicy-v1alpha2-spec-resources-allowedselector) values in the corresponding ClusterResourceGrantPolicy entry.
-4. The [`availabilityDefault`](./cr.html#clusterresourcegrantpolicy-v1alpha2-spec-resources-availabilitydefault) value in the corresponding ClusterResourceGrantPolicy entry.
-5. The [`defaultAvailability`](./cr.html#grantableclusterresourcedefinition-v1alpha1-spec-defaultavailability) value in GrantableClusterResourceDefinition.
+1. The [`denied`](./cr.html#clusterresourcegrantpolicy-v1alpha2-spec-resources-denied) and [`deniedSelector`](./cr.html#clusterresourcegrantpolicy-v1alpha2-spec-resources-deniedselector) values in the corresponding ClusterResourceGrantPolicy entry.
+1. The [`allowed`](./cr.html#clusterresourcegrantpolicy-v1alpha2-spec-resources-allowed) and [`allowedSelector`](./cr.html#clusterresourcegrantpolicy-v1alpha2-spec-resources-allowedselector) values in the corresponding ClusterResourceGrantPolicy entry.
+1. The [`availabilityDefault`](./cr.html#clusterresourcegrantpolicy-v1alpha2-spec-resources-availabilitydefault) value in the ClusterResourceGrantPolicy entries that apply to the project. If an entry sets `allowed` or `allowedSelector` without `availabilityDefault`, every resource not on its lists is unavailable. If one applicable entry sets `All`, it wins over `None` in the others.
+1. The [`defaultAvailability`](./cr.html#grantableclusterresourcedefinition-v1alpha1-spec-defaultavailability) value in GrantableClusterResourceDefinition.
 
-The first matching rule applies.
+The first matching step decides. Steps 2–4 combine the entries of all ClusterResourceGrantPolicy objects that apply to the project, including the service policies of its template.
 
 #### Assigning default values
 
@@ -184,7 +171,7 @@ This allows existing objects to continue operating after access to cluster-wide 
 
 #### System requests
 
-Requests from system service accounts, such as DP's own controllers, are not subject to cluster-wide resource access checks. This allows platform system components to use the resources they require regardless of project policies.
+Requests from platform components and from members of the `system:masters` group are not checked. The platform components are the API server, the ServiceAccounts of Deckhouse, of this module and of the `user-authz` module, all ServiceAccounts of the `d8-system`, `kube-system` and `d8-user-authz` namespaces, and kubelets. To test a policy, send the request as a project user, for example with `d8 k --as <USER_NAME>`.
 
 ### Monitoring access policy violations
 
@@ -205,7 +192,7 @@ DP registers the following cluster-wide resources:
 | `clusterissuers` | ClusterIssuer (cert-manager.io) | Certificate `.spec.issuerRef.name`; Ingress: `cert-manager.io/cluster-issuer` annotation | `FillEmpty` or `None` |
 | `clusterroles` | ClusterRole (rbac.authorization.k8s.io) | RoleBinding `.roleRef.name` | `None` |
 
-The `clusterroles` registration excludes all ClusterRole objects without the `rbac.deckhouse.io/delegatable` label. By default, only the namespace and project roles of the granular model (`d8:namespace:*`, `d8:project:*`) and the `user-authz:*` roles of the basic model are available in RoleBinding.
+The `clusterroles` registration excludes every ClusterRole without the `rbac.deckhouse.io/delegatable: "true"` label. By default, a RoleBinding in a project can reference the `d8:namespace:*` and `d8:project:*` roles, the deprecated `d8:use:role:*` aliases, and the `user-authz:user`, `user-authz:privileged-user`, `user-authz:editor` and `user-authz:admin` roles of the basic model.
 
 The `clusterissuers` definition is registered only when the `cert-manager` module is enabled.
 
