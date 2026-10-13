@@ -40,9 +40,10 @@
 - The vSphere, Huawei Cloud, OpenStack, and VCD providers have been migrated from Terraform to OpenTofu.
   The migration is performed automatically and requires no manual actions.
 
-- The Yandex Cloud and OpenStack providers have been migrated from MCM to Cluster API.
-  Existing clusters continue to use the legacy MCM-based mode and therefore continue to operate without changes.
-  In new clusters, ephemeral nodes are managed through Cluster API by default.
+- The Yandex Cloud and OpenStack providers have been migrated from Machine Controller Manager (MCM) to Cluster API (CAPI).
+  The management engine is chosen per CloudEphemeral node group. Groups that already exist keep running on MCM,
+  and new groups are created on CAPI by default, so a single cluster can contain groups of both kinds.
+  To move an existing group, refer to ["How to migrate node groups to Cluster API (CAPI)"](https://deckhouse.io/products/kubernetes-platform/documentation/v1.77/faq.html#how-to-migrate-node-groups-to-cluster-api-capi).
 
 - The following modules are now loaded from external sources
   and are developed on an independent release cycle (no manual migration actions are required):
@@ -264,8 +265,8 @@
 
 - The OpenStack and Yandex Cloud providers now use Cluster API,
   the industry-standard framework for machine management in Kubernetes.
-  To ensure a smooth transition, the legacy MCM-based mode remains supported:
-  existing clusters continue to operate without changes, while new clusters can use CAPI.
+  To ensure a smooth transition, the legacy mode based on Machine Controller Manager (MCM) remains supported.
+  Existing node groups keep running on MCM, while new ones are created on Cluster API.
 
 - Improved virtual machine deletion handling in the [`cloud-provider-huaweicloud`](https://deckhouse.io/modules/cloud-provider-huaweicloud/v1.77/) module,
   increasing resource cleanup reliability and preventing false deletion errors.
