@@ -11,6 +11,7 @@ description: "Интеграция Deckhouse Platform с платформой в
 - Заказ дисков через CSI-драйвер DVP (`csi.dvp.deckhouse.io`), чтобы из кластера можно было заказывать PersistentVolume.
 - Заказ базовой инфраструктуры и CloudPermanent-узлов с помощью [Terraform/OpenTofu-провайдера](/products/kubernetes-platform/documentation/v1/architecture/cluster-and-infrastructure/cloud-providers/cloud-provider-dvp.html#взаимодействия-модуля) `terraform-provider-kubernetes`.
 - Заказ CloudEphemeral-узлов через Cluster API (CAPI). Параметры виртуальных машин задаются в ресурсе [DVPInstanceClass](/modules/cloud-provider-dvp/cr.html#dvpinstanceclass).
+- Создание [балансировщиков нагрузки](/products/kubernetes-platform/documentation/v1/admin/integrations/virtualization/dvp/services.html#балансировщики-нагрузки) для объектов Service с типом `LoadBalancer`. Балансировщик создаётся в родительском кластере.
 - Регистрация в модуле [`node-manager`](/modules/node-manager/), чтобы [DVPInstanceClass](/modules/cloud-provider-dvp/cr.html#dvpinstanceclass) можно было указывать при описании [NodeGroup](/modules/node-manager/cr.html#nodegroup).
 - Автоматическое включение CNI для новых кластеров. По умолчанию используется [`cni-cilium`](/modules/cni-cilium/).
 
@@ -18,5 +19,5 @@ description: "Интеграция Deckhouse Platform с платформой в
 Если кластер был установлен со схемой [DVPClusterConfiguration](/modules/cloud-provider-dvp/cluster_configuration.html#dvpclusterconfiguration), необходима миграция на конфигурацию через ModuleConfig.
 Пока миграция не выполнена, может срабатывать алерт `D8CloudProviderDVPMigrationPending`, а обновление Deckhouse — блокироваться.
 
-Инструкция: [Как мигрировать облачный провайдер на конфигурацию через ModuleConfig](/products/kubernetes-platform/documentation/v1/faq.html#как-мигрировать-облачный-провайдер-на-конфигурацию-через-modulec).
+Порядок миграции описан в разделе [«Как мигрировать облачный провайдер на конфигурацию через ModuleConfig»](/products/kubernetes-platform/documentation/v1/faq.html#как-мигрировать-облачный-провайдер-на-конфигурацию-через-modulec).
 {% endalert %}
