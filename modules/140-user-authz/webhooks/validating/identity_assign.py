@@ -611,7 +611,9 @@ def target_group_roles(snapshots: Any, group_name: str) -> List[str]:
 # axis without a limiter is open: every grant on a human subject of that kind
 # is reachable. Group nesting from Group objects is not applied: the platform
 # expands it for local Users only, an external token carries exactly the
-# groups the IdP asserted (research R8).
+# groups the IdP asserted (research R8). Basic auth of an OIDC or a Crowd
+# provider does not pass through dex, so it is measured without the limiters
+# dex applies, see _dex_basic_auth_bypass.
 
 DEX_ALLOWED_IDENTITIES = "allowedIdentities"
 
@@ -654,9 +656,32 @@ def _dex_assertable(subject: str) -> bool:
     return isinstance(subject, str) and bool(subject) and not subject.startswith("system:")
 
 
+def _dex_basic_auth_bypass(spec: dict) -> Optional[str]:
+    """"OIDC" or "Crowd" when basic auth of the provider bypasses dex, else None.
+
+    basic-auth-proxy checks the password of such a provider with the provider
+    itself and passes the login it was given as the user, with the groups the
+    provider returns: every group of the OIDC userinfo answer, and for Crowd
+    only crowd.groups when that is set. allowedIdentities and the OIDC group
+    filter do not apply on that path. Basic auth of an LDAP provider goes
+    through dex and keeps its limits. The type and the block are matched the
+    way the basic-auth-proxy template matches them; publishAPI is not read,
+    since it can be turned on later without touching the provider.
+    """
+    kind = spec.get("type")
+    block = {"OIDC": "oidc", "Crowd": "crowd"}.get(kind)
+    if block and bool(_dict(spec.get(block)).get("enableBasicAuth")):
+        return kind
+    return None
+
+
 def dex_email_filter(spec: Any) -> Optional[Tuple[frozenset, frozenset]]:
     """(emails, domains), lowercase, or None when the email axis is open."""
-    block = _dict(_dict(spec).get(DEX_ALLOWED_IDENTITIES))
+    spec = _dict(spec)
+    if _dex_basic_auth_bypass(spec):
+        # basic auth passes any login the provider accepts
+        return None
+    block = _dict(spec.get(DEX_ALLOWED_IDENTITIES))
     emails = frozenset(_clean_strings(block.get("emails"), lower=True))
     domains = frozenset(_clean_strings(block.get("emailDomains"), lower=True))
     if not emails and not domains:
@@ -707,6 +732,12 @@ def _connector_group_filter(spec: dict) -> Optional[frozenset]:
 def dex_group_filter(spec: Any) -> Optional[frozenset]:
     """Group names dex narrows the claim to, or None when the group axis is open."""
     spec = _dict(spec)
+    bypass = _dex_basic_auth_bypass(spec)
+    if bypass == "OIDC":
+        return None
+    if bypass == "Crowd":
+        # a Crowd basic auth login keeps only crowd.groups, whatever allowedIdentities says
+        return _connector_group_filter(spec)
     universal = _clean_strings(_dict(spec.get(DEX_ALLOWED_IDENTITIES)).get("groups"), lower=False)
     connector = _connector_group_filter(spec)
     if universal and connector is not None:

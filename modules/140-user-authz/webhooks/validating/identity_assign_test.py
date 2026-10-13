@@ -936,6 +936,53 @@ class TestDexIdentityFilters(unittest.TestCase):
         self.assertEqual(assign.dex_group_filter(spec), frozenset({"ops"}))
 
 
+def crowd(**extra):
+    spec = {"type": "Crowd", "displayName": "crowd",
+            "crowd": {"baseURL": "https://crowd", "clientID": "a", "clientSecret": "s"}}
+    for k, v in extra.items():
+        if k == "allowedIdentities":
+            spec["allowedIdentities"] = v
+        else:
+            spec["crowd"][k] = v
+    return spec
+
+
+class TestDexBasicAuthFilters(unittest.TestCase):
+    # basic-auth-proxy checks an OIDC or a Crowd password with the provider itself:
+    # dex and its allowedIdentities are not on that path (card 71728749).
+    CLOSED = {"emails": ["alice@corp"], "groups": ["devs"]}
+
+    def test_oidc_basic_auth_opens_both_axes(self):
+        spec = oidc(enableBasicAuth=True, allowedGroups=["devs"], allowedIdentities=self.CLOSED)
+        self.assertIsNone(assign.dex_email_filter(spec))
+        self.assertIsNone(assign.dex_group_filter(spec))
+
+    def test_oidc_without_basic_auth_keeps_its_limits(self):
+        spec = oidc(enableBasicAuth=False, allowedGroups=["devs"], allowedIdentities=self.CLOSED)
+        self.assertIsNotNone(assign.dex_email_filter(spec))
+        self.assertEqual(assign.dex_group_filter(spec), frozenset({"devs"}))
+
+    def test_crowd_basic_auth_keeps_only_crowd_groups(self):
+        spec = crowd(enableBasicAuth=True, groups=["devs", "ops"], allowedIdentities=self.CLOSED)
+        self.assertIsNone(assign.dex_email_filter(spec))
+        self.assertEqual(assign.dex_group_filter(spec), frozenset({"devs", "ops"}))
+
+    def test_crowd_basic_auth_without_crowd_groups_opens_the_group_axis(self):
+        self.assertIsNone(assign.dex_group_filter(crowd(enableBasicAuth=True, allowedIdentities=self.CLOSED)))
+
+    def test_ldap_basic_auth_goes_through_dex(self):
+        spec = {"type": "LDAP", "ldap": {"host": "x", "enableBasicAuth": True},
+                "allowedIdentities": self.CLOSED}
+        self.assertEqual(assign.dex_email_filter(spec), (frozenset({"alice@corp"}), frozenset()))
+        self.assertEqual(assign.dex_group_filter(spec), frozenset({"devs"}))
+
+    def test_flag_of_another_connector_is_ignored(self):
+        # the basic-auth-proxy template reads enableBasicAuth of the block of the type only
+        spec = {"type": "LDAP", "ldap": {"host": "x"}, "oidc": {"enableBasicAuth": True},
+                "allowedIdentities": self.CLOSED}
+        self.assertIsNotNone(assign.dex_email_filter(spec))
+
+
 class TestDexTargetRoles(unittest.TestCase):
     def test_open_provider_targets_every_human_grant(self):
         targets = assign.dex_target_roles({"type": "LDAP", "ldap": {"host": "x"}}, dex_snaps())
@@ -1000,6 +1047,23 @@ class TestDexTargetRoles(unittest.TestCase):
             allowedIdentities={"emailDomains": ["nobody.example"], "groups": ["gate-trap"]}),
             dex_snaps())
         self.assertEqual(targets, ["user-authz:super-admin"])
+
+    def test_oidc_basic_auth_reaches_every_human_grant(self):
+        closed = {"emailDomains": ["nobody.example"], "groups": ["none"]}
+        self.assertEqual(assign.dex_target_roles(oidc(allowedIdentities=closed), dex_snaps()), [])
+        targets = assign.dex_target_roles(oidc(enableBasicAuth=True, allowedIdentities=closed), dex_snaps())
+        self.assertIn("user-authz:super-admin", targets)
+        self.assertIn("user-authz:cluster-admin", targets)
+        self.assertIn("d8:manage:security:viewer", targets)
+        self.assertNotIn("cluster-admin", targets)
+
+    def test_crowd_basic_auth_reaches_user_grants_and_crowd_groups(self):
+        closed = {"emailDomains": ["nobody.example"], "groups": ["none"]}
+        targets = assign.dex_target_roles(crowd(enableBasicAuth=True, groups=["devs"], allowedIdentities=closed),
+                                          dex_snaps())
+        self.assertIn("user-authz:cluster-admin", targets)
+        self.assertIn("d8:manage:security:viewer", targets)
+        self.assertNotIn("cluster-admin", targets)
 
     def test_parent_group_grant_is_not_inherited_by_idp_groups(self):
         # research R8: Group nesting is applied to local Users only; a token from an

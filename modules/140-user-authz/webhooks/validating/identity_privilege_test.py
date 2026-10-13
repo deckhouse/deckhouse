@@ -1045,6 +1045,16 @@ class TestDexProviderGate(unittest.TestCase):
     def test_clusteradmin_cannot_create_closed_provider_reaching_superadmin_group(self):
         self.denied(dex_ctx("CREATE", P4_TRAP, username=CLUSTER_ADMIN), "user-authz:super-admin")
 
+    def test_clusteradmin_cannot_create_closed_provider_with_basic_auth(self):
+        # basic auth of an OIDC provider bypasses dex and its allowedIdentities (card 71728749)
+        form = dex_oidc(enableBasicAuth=True, allowedIdentities=P4_CLEAN["allowedIdentities"])
+        self.denied(dex_ctx("CREATE", form, username=CLUSTER_ADMIN), "user-authz:super-admin")
+        self.allowed(dex_ctx("CREATE", form, username=SUPERADMIN))
+
+    def test_clusteradmin_cannot_enable_basic_auth_on_closed_provider(self):
+        form = dex_oidc(enableBasicAuth=True, allowedIdentities=P4_CLEAN["allowedIdentities"])
+        self.denied(dex_ctx("UPDATE", form, old_spec=P4_CLEAN, username=CLUSTER_ADMIN), "user-authz:super-admin")
+
     def test_security_manager_matches_clusteradmin(self):
         self.denied(dex_ctx("CREATE", P1, username=SECURITY))
         self.allowed(dex_ctx("CREATE", P4_CLEAN, username=SECURITY))
