@@ -56,6 +56,7 @@ const (
 	chartFile    = "Chart.yaml" // Helm chart metadata file
 	templatesDir = "templates"  // Helm templates directory
 	chartsDir    = "charts"     // Helm subcharts directory
+	webhooksDir  = "webhooks"   // webhook handlers read by templates via .Files.Get
 
 	// conversionWebhookKind is the token a chart must mention to render a
 	// ConversionWebhook; charts that never mention it are skipped without a render.
@@ -787,12 +788,15 @@ func conversionWebhookTemplates(path string) ([]string, error) {
 }
 
 // buildConversionWebhookChart mirrors into dst the parts of the package chart
-// needed to render the given templates: charts/ (library charts like helm_lib)
-// and the templates themselves. Directories are created for real and files are
-// symlinked, so loaders that do not follow directory symlinks see the whole tree.
+// needed to render the given templates: charts/ (library charts like helm_lib),
+// webhooks/ (handlers read via .Files.Get) and the templates themselves. Directories
+// are created for real and files are symlinked, so loaders that do not follow
+// directory symlinks see the whole tree.
 func buildConversionWebhookChart(path, dst string, templates []string) error {
-	if err := mirrorTree(filepath.Join(path, chartsDir), filepath.Join(dst, chartsDir)); err != nil && !errors.Is(err, fs.ErrNotExist) {
-		return fmt.Errorf("mirror charts: %w", err)
+	for _, dir := range []string{chartsDir, webhooksDir} {
+		if err := mirrorTree(filepath.Join(path, dir), filepath.Join(dst, dir)); err != nil && !errors.Is(err, fs.ErrNotExist) {
+			return fmt.Errorf("mirror %s: %w", dir, err)
+		}
 	}
 
 	for _, file := range templates {
