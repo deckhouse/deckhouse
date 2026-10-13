@@ -16,6 +16,25 @@ The change is a backport of upstream commit
 [127488f](https://github.com/cert-manager/cert-manager/commit/127488f59fb627c0653f0cb1f94b213021629ea2)
 and affects the test only.
 
+### 003-gateway_discovery_retry.patch
+
+Retries the Gateway API discovery at controller startup instead of exiting on the first error.
+Upstream exits when the API server does not answer the discovery request, so a controller that starts
+during an API server outage goes into `CrashLoopBackOff` and, once the API server is back, waits for
+the kubelet back-off of up to five minutes.
+The patch retries transient errors with a back-off of up to 10 seconds for at most five minutes.
+The retries stop as soon as the controller receives a shutdown signal, so a pod deleted while it waits
+exits at once instead of waiting for `SIGKILL`.
+A `NotFound` answer is retried for one minute: a kube-apiserver that has just started answers `NotFound`
+for a served CRD group until its discovery controller catches up, while a lasting `NotFound` means the
+Gateway API CRDs are absent and still fails.
+Unit tests cover the transient errors, a transient `NotFound` and a lasting one.
+
+The check runs only when the module passes `--enable-gateway-api=true`, that is, when the cluster
+serves the Gateway API CRDs; without them the patch changes nothing.
+The health endpoint of the controller starts after this check, so the Deployment carries a startup
+probe long enough for the whole retry period.
+
 ### 999-fix-cve.patch
 
 Fix CVEs:

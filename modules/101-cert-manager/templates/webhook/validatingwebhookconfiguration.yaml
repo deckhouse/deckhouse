@@ -3,7 +3,14 @@ kind: ValidatingWebhookConfiguration
 metadata:
   name: cert-manager-webhook
   annotations:
+    {{- /*
+      During a CA rotation the bundle trusts both the previous and the new CA, and it has to reach the
+      API server before the webhook pods switch certificates, so the configuration must not wait for
+      the rollout of the webhook Deployment.
+    */}}
+    {{- if not .Values.certManager.internal.webhookCert.caRotationInProgress }}
     werf.io/deploy-dependency-deployment: state=ready,kind=Deployment,name=webhook,namespace=d8-cert-manager
+    {{- end }}
     werf.io/deploy-dependency-service: state=present,kind=Service,name=cert-manager-webhook,namespace=d8-cert-manager
   {{- include "helm_lib_module_labels" (list . (dict "app" "webhook")) | nindent 2 }}
 webhooks:
@@ -39,7 +46,7 @@ webhooks:
     failurePolicy: Fail
     sideEffects: None
     clientConfig:
-      caBundle: {{ .Values.certManager.internal.webhookCert.ca | b64enc }}
+      caBundle: {{ .Values.certManager.internal.webhookCert.caBundle | default .Values.certManager.internal.webhookCert.ca | b64enc }}
       service:
         name: cert-manager-webhook
         namespace: d8-cert-manager

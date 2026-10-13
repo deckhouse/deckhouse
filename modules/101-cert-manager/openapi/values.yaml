@@ -37,6 +37,16 @@ properties:
           ca:
             type: string
             x-examples: [ "YjY0ZW5jX3N0cmluZwo=" ]
+          caBundle:
+            type: string
+            description: |
+              CA certificates the webhook configurations trust, in PEM.
+              The current CA and, while the webhook rolls out a new CA, the previous one.
+          caRotationInProgress:
+            type: boolean
+            default: false
+            description: |
+              The webhook rolls out a new CA and the previous CA is still trusted.
 
       email:
         type: string

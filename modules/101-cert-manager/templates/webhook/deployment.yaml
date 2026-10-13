@@ -35,7 +35,20 @@ metadata:
   namespace: d8-cert-manager
   {{- include "helm_lib_module_labels" (list . (dict "app" "webhook")) | nindent 2 }}
 spec:
-  {{- include "helm_lib_deployment_on_master_strategy_and_replicas_for_ha" . | nindent 2 }}
+  replicas: {{ include "cert_manager.webhook_replicas" . }}
+  # A new pod starts before an old one stops. The anti-affinity is scoped to the revision, so the new pod
+  # fits next to an old one on a master.
+  # In HA mode one old pod may stop at once: pods created by a previous release carry an anti-affinity
+  # without the revision scope and keep a surge pod off their masters, so a rollout with
+  # maxUnavailable 0 would never finish. All replicas but one keep serving meanwhile. HA mode with a
+  # single master has one replica, which therefore stops before its successor is ready, as before.
+  # Without HA mode the single replica has no anti-affinity and is replaced only after its successor
+  # is ready.
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: {{ include "helm_lib_is_ha_to_value" (list . 1 0) }}
   revisionHistoryLimit: 2
   selector:
     matchLabels:
@@ -45,13 +58,17 @@ spec:
       annotations:
         checksum/extension-apiserver-authentication: {{ .Values.global.discovery.extensionAPIServerAuthenticationRequestheaderClientCA | sha256sum }}
         checksum/certificate: {{ include (print .Template.BasePath "/webhook/secret-tls.yaml") . | sha256sum }}
+        # checksum/certificate already restarts the pods on a new CA; this one exists for the
+        # webhook_ca_bundle hook, which compares it with the CA in values to tell when no pod serves a
+        # certificate of the previous CA. Keep the expression in sync with caChecksum() of the hook.
+        checksum/ca: {{ .Values.certManager.internal.webhookCert.ca | sha256sum }}
       labels:
         app: webhook
     spec:
       serviceAccountName: webhook
       automountServiceAccountToken: true
       {{- include "helm_lib_priority_class" (tuple . "system-cluster-critical") | nindent 6 }}
-      {{- include "helm_lib_pod_anti_affinity_for_ha" (list . (dict "app" "webhook")) | nindent 6 }}
+      {{- include "helm_lib_pod_anti_affinity_for_ha" (list . (dict "app" "webhook") (dict "revisionScoped" true)) | nindent 6 }}
       {{- include "helm_lib_node_selector" (tuple . "master") | nindent 6 }}
       {{- include "helm_lib_tolerations" (tuple . "any-node" "with-uninitialized") | nindent 6 }}
       {{- include "helm_lib_module_pod_security_context_run_as_user_nobody" . | nindent 6 }}
@@ -66,6 +83,13 @@ spec:
         - --secure-port=6443
         - --tls-cert-file=/certs/tls.crt
         - --tls-private-key-file=/certs/tls.key
+        lifecycle:
+          # Keep serving while the endpoint removal reaches every API server and its connections to this
+          # pod stop carrying new reviews; the server closes its listener on SIGTERM. With 5 seconds a
+          # test cluster still failed single reviews with EOF exactly when the delay ended.
+          preStop:
+            sleep:
+              seconds: 10
         ports:
         - name: webhook
           containerPort: 6443

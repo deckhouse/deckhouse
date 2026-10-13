@@ -21,3 +21,22 @@
     {{- end -}}
   {{- end -}}
 {{- end -}}
+
+{{- /*
+  cert_manager.webhook_replicas returns the replica count of the webhook: one per master in HA mode,
+  as helm_lib_deployment_on_master_strategy_and_replicas_for_ha does, and one otherwise. The strategy
+  is set by the Deployment itself, because the webhook surges instead of stopping replicas first.
+*/ -}}
+{{- define "cert_manager.webhook_replicas" -}}
+  {{- if (include "helm_lib_ha_enabled" .) -}}
+    {{- if gt (index .Values.global.discovery "clusterMasterCount" | int) 0 -}}
+      {{- index .Values.global.discovery "clusterMasterCount" -}}
+    {{- else if gt (index .Values.global.discovery.d8SpecificNodeCountByRole "master" | int) 0 -}}
+      {{- index .Values.global.discovery.d8SpecificNodeCountByRole "master" -}}
+    {{- else -}}
+      2
+    {{- end -}}
+  {{- else -}}
+    1
+  {{- end -}}
+{{- end -}}

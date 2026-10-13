@@ -1,0 +1,211 @@
+diff --git a/pkg/controller/context.go b/pkg/controller/context.go
+index a507da6..6634cc4 100644
+--- a/pkg/controller/context.go
++++ b/pkg/controller/context.go
+@@ -31,6 +31,7 @@ import (
+ 	"k8s.io/apimachinery/pkg/runtime"
+ 	"k8s.io/apimachinery/pkg/selection"
+ 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
++	"k8s.io/client-go/discovery"
+ 	"k8s.io/client-go/kubernetes"
+ 	kscheme "k8s.io/client-go/kubernetes/scheme"
+ 	clientv1 "k8s.io/client-go/kubernetes/typed/core/v1"
+@@ -282,7 +283,7 @@ func NewContextFactory(ctx context.Context, opts ContextOptions) (*ContextFactor
+ 		restConfig.RateLimiter = flowcontrol.NewTokenBucketRateLimiter(restConfig.QPS, restConfig.Burst)
+ 	}
+ 
+-	clients, err := buildClients(restConfig, opts)
++	clients, err := buildClients(ctx, restConfig, opts)
+ 	if err != nil {
+ 		return nil, err
+ 	}
+@@ -345,7 +346,7 @@ func (c *ContextFactory) Build(component ...string) (*Context, error) {
+ 	utilruntime.Must(cmscheme.AddToScheme(scheme))
+ 	utilruntime.Must(gwscheme.AddToScheme(scheme))
+ 
+-	clients, err := buildClients(restConfig, c.ctx.ContextOptions)
++	clients, err := buildClients(c.ctx.RootContext, restConfig, c.ctx.ContextOptions)
+ 	if err != nil {
+ 		return nil, err
+ 	}
+@@ -381,9 +382,55 @@ type contextClients struct {
+ 	gatewayAvailable   bool
+ }
+ 
++// discoveryRetryTimeout bounds how long the controller waits for the API server at startup before it
++// exits. It matches the longest back-off of kubelet, so waiting in the process is never slower than a
++// restart.
++const discoveryRetryTimeout = 5 * time.Minute
++
++// discoveryNotFoundGrace is how long a NotFound answer is retried. A kube-apiserver that has just
++// started answers NotFound for a served CRD group until its discovery controller has caught up with the
++// CRD informer, so a NotFound right after an API server restart is transient; a NotFound that lasts
++// longer means the Gateway API CRDs are really absent.
++const discoveryNotFoundGrace = time.Minute
++
++// discoveryMaxRetryDelay caps the back-off between discovery retries.
++const discoveryMaxRetryDelay = 10 * time.Second
++
++// serverResourcesWithRetry retries discovery while the API server is unreachable or failing, so that
++// a controller started during an API server outage starts as soon as the API server returns instead
++// of exiting and waiting for the growing CrashLoopBackOff delay. The retries stop as soon as ctx is
++// cancelled, so a controller that is shut down while it waits exits at once.
++func serverResourcesWithRetry(ctx context.Context, d discovery.DiscoveryInterface, groupVersion string) (*metav1.APIResourceList, error) {
++	return retryServerResources(ctx, d, groupVersion, discoveryRetryTimeout, discoveryNotFoundGrace, time.Second)
++}
++
++func retryServerResources(ctx context.Context, d discovery.DiscoveryInterface, groupVersion string, timeout, notFoundGrace, delay time.Duration) (*metav1.APIResourceList, error) {
++	start := time.Now()
++	deadline := start.Add(timeout)
++	for {
++		resources, err := d.ServerResourcesForGroupVersion(groupVersion)
++		if err == nil {
++			return resources, nil
++		}
++		if apierrors.IsNotFound(err) && time.Since(start)+delay > notFoundGrace {
++			return resources, err
++		}
++		if time.Now().Add(delay).After(deadline) {
++			return resources, err
++		}
++		logf.Log.Error(err, "Gateway API discovery failed, retrying", "groupVersion", groupVersion, "retryIn", delay)
++		select {
++		case <-ctx.Done():
++			return resources, context.Cause(ctx)
++		case <-time.After(delay):
++		}
++		delay = min(delay*2, discoveryMaxRetryDelay)
++	}
++}
++
+ // buildClients builds all required clients for the context using the given
+ // REST config.
+-func buildClients(restConfig *rest.Config, opts ContextOptions) (contextClients, error) {
++func buildClients(ctx context.Context, restConfig *rest.Config, opts ContextOptions) (contextClients, error) {
+ 	httpClient, err := rest.HTTPClientFor(restConfig)
+ 	if err != nil {
+ 		return contextClients{}, fmt.Errorf("error creating HTTP client: %w", err)
+@@ -412,8 +459,7 @@ func buildClients(restConfig *rest.Config, opts ContextOptions) (contextClients,
+ 	if utilfeature.DefaultFeatureGate.Enabled(feature.ExperimentalGatewayAPISupport) && opts.EnableGatewayAPI {
+ 		// Check if the gateway API CRDs are available. If they are not found
+ 		// return an error which will cause cert-manager to crashloopbackoff.
+-		d := kubeClient.Discovery()
+-		resources, err := d.ServerResourcesForGroupVersion(gwapi.GroupVersion.String())
++		resources, err := serverResourcesWithRetry(ctx, kubeClient.Discovery(), gwapi.GroupVersion.String())
+ 		GatewayAPINotAvailable := "the Gateway API CRDs do not seem to be present, but " + feature.ExperimentalGatewayAPISupport +
+ 			" is set to true. Please install the gateway-api CRDs."
+ 		GatewayAPIListenerSetsNotAvailable := "the Gateway API ListenerSet CRD do not seem to be present, but " + feature.ListenerSets +
+diff --git a/pkg/controller/context_discovery_retry_test.go b/pkg/controller/context_discovery_retry_test.go
+new file mode 100644
+index 0000000..f241430
+--- /dev/null
++++ b/pkg/controller/context_discovery_retry_test.go
+@@ -0,0 +1,108 @@
++/*
++Copyright 2026 The cert-manager Authors.
++
++Licensed under the Apache License, Version 2.0 (the "License");
++you may not use this file except in compliance with the License.
++You may obtain a copy of the License at
++
++    http://www.apache.org/licenses/LICENSE-2.0
++
++Unless required by applicable law or agreed to in writing, software
++distributed under the License is distributed on an "AS IS" BASIS,
++WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
++See the License for the specific language governing permissions and
++limitations under the License.
++*/
++
++package controller
++
++import (
++	"context"
++	"errors"
++	"testing"
++	"time"
++
++	apierrors "k8s.io/apimachinery/pkg/api/errors"
++	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
++	"k8s.io/apimachinery/pkg/runtime"
++	"k8s.io/apimachinery/pkg/runtime/schema"
++	fakediscovery "k8s.io/client-go/discovery/fake"
++	k8stesting "k8s.io/client-go/testing"
++)
++
++func newFakeDiscovery(failures int, failWith error) (*fakediscovery.FakeDiscovery, *int) {
++	calls := 0
++	fake := &k8stesting.Fake{}
++	fake.Resources = []*metav1.APIResourceList{{
++		GroupVersion: "gateway.networking.k8s.io/v1",
++		APIResources: []metav1.APIResource{{Name: "gateways", Kind: "Gateway"}},
++	}}
++	fake.AddReactor("get", "resource", func(k8stesting.Action) (bool, runtime.Object, error) {
++		calls++
++		if calls <= failures {
++			return true, nil, failWith
++		}
++		return false, nil, nil
++	})
++	return &fakediscovery.FakeDiscovery{Fake: fake}, &calls
++}
++
++func TestServerResourcesWithRetryWaitsForAPIServer(t *testing.T) {
++	d, calls := newFakeDiscovery(2, errors.New("dial tcp 10.0.0.1:443: connect: connection refused"))
++
++	resources, err := retryServerResources(context.Background(), d, "gateway.networking.k8s.io/v1", time.Minute, time.Minute, time.Millisecond)
++	if err != nil {
++		t.Fatalf("expected success after transient errors, got %v", err)
++	}
++	if len(resources.APIResources) != 1 {
++		t.Fatalf("expected the Gateway resource, got %v", resources.APIResources)
++	}
++	if *calls != 3 {
++		t.Fatalf("expected 3 discovery calls, got %d", *calls)
++	}
++}
++
++// A NotFound right after an API server restart is transient and is retried.
++func TestServerResourcesWithRetryRetriesTransientNotFound(t *testing.T) {
++	notFound := apierrors.NewNotFound(schema.GroupResource{Group: "gateway.networking.k8s.io"}, "v1")
++	d, calls := newFakeDiscovery(2, notFound)
++
++	if _, err := retryServerResources(context.Background(), d, "gateway.networking.k8s.io/v1", time.Minute, time.Minute, time.Millisecond); err != nil {
++		t.Fatalf("expected success after a transient NotFound, got %v", err)
++	}
++	if *calls != 3 {
++		t.Fatalf("expected 3 discovery calls, got %d", *calls)
++	}
++}
++
++// A NotFound that outlasts the grace period means the CRDs are absent and is returned.
++func TestServerResourcesWithRetryReturnsLastingNotFound(t *testing.T) {
++	notFound := apierrors.NewNotFound(schema.GroupResource{Group: "gateway.networking.k8s.io"}, "v1")
++	d, _ := newFakeDiscovery(1000, notFound)
++
++	start := time.Now()
++	_, err := retryServerResources(context.Background(), d, "gateway.networking.k8s.io/v1", time.Minute, 20*time.Millisecond, time.Millisecond)
++	if !apierrors.IsNotFound(err) {
++		t.Fatalf("expected NotFound, got %v", err)
++	}
++	if time.Since(start) > 5*time.Second {
++		t.Fatalf("NotFound was retried past its grace period")
++	}
++}
++
++// A shutdown while the API server is unreachable stops the retries at once.
++func TestServerResourcesWithRetryStopsOnShutdown(t *testing.T) {
++	d, _ := newFakeDiscovery(1000, errors.New("dial tcp 10.0.0.1:443: connect: connection refused"))
++
++	ctx, cancel := context.WithCancel(context.Background())
++	time.AfterFunc(20*time.Millisecond, cancel)
++
++	start := time.Now()
++	_, err := retryServerResources(ctx, d, "gateway.networking.k8s.io/v1", time.Minute, time.Minute, 10*time.Millisecond)
++	if !errors.Is(err, context.Canceled) {
++		t.Fatalf("expected context.Canceled, got %v", err)
++	}
++	if time.Since(start) > 5*time.Second {
++		t.Fatalf("the retries did not stop on shutdown")
++	}
++}
