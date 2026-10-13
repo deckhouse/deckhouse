@@ -237,6 +237,51 @@ For example, to issue certificates for all Deckhouse components, specify the `Cl
     version: 1
   ```
 
+## How does cert-manager work behind a proxy server?
+
+`cert-manager` uses the cluster-wide proxy server
+set in the [proxy](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#clusterconfiguration-proxy) parameter
+of the ClusterConfiguration resource.
+The proxy settings are passed to the `cert-manager` controller.
+Requests to the ACME server, to HashiCorp Vault and to the HTTP APIs of DNS providers go through the proxy server.
+
+The following requests go directly:
+
+- requests to the cluster domain, to the pod and service subnets;
+- requests of the controller to service names in the `<SERVICE>.<NAMESPACE>.svc` form;
+- requests to the addresses listed in `noProxy`.
+
+Node addresses and short service names, such as `<SERVICE>.<NAMESPACE>`, are not on this list.
+To reach an issuer inside the cluster directly, address it by the full `<SERVICE>.<NAMESPACE>.svc` name.
+To reach an issuer in the internal network directly, add its address to `noProxy`.
+Keep in mind that `noProxy` also applies to the other cluster components and to the nodes.
+
+Before the `DNS-01` verification, the controller checks the TXT record over the DNS protocol,
+which a proxy server does not carry.
+If the cluster has no direct access to external DNS servers,
+set DNS over HTTPS in the [recursiveSettings](./configuration.html#parameters-recursivesettings) parameter:
+
+```yaml
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleConfig
+metadata:
+  name: cert-manager
+spec:
+  version: 1
+  settings:
+    recursiveSettings:
+      nameservers: ["https://1.1.1.1/dns-query"]
+      useOnlyRecursive: true
+```
+
+With `useOnlyRecursive: true`, the controller sends the checks only to the listed servers,
+and DNS over HTTPS requests go through the proxy server.
+A DNS server of the internal network that resolves external names works as well: specify it in the `IP:port` form.
+
+Before the `HTTP-01` verification, the controller also requests the verification URL of the domain
+through the proxy server.
+If the proxy server cannot reach the public address of the cluster, add the domain to `noProxy`.
+
 ## How to secure `cert-manager` credentials?
 
 If you don't want to store credentials in the Deckhouse configuration (security reasons, for example), feel free to create

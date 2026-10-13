@@ -65,6 +65,217 @@ index d64f9cd..1e9379d 100644
  	return
  }
  
+diff --git a/internal/controller/certificates/policies/checks.go b/internal/controller/certificates/policies/checks.go
+index 02d6fa9..b85ced2 100644
+--- a/internal/controller/certificates/policies/checks.go
++++ b/internal/controller/certificates/policies/checks.go
+@@ -691,6 +691,18 @@ func SecretAdditionalOutputFormatsManagedFieldsMismatch(fieldManager string) Fun
+ 	}
+ }
+ 
++// effectiveOwnerRef returns whether the Certificate expects its owner reference
++// on the Secret, and the setting that decided it for the violation message. The
++// spec.certificateOwnerRef field of the Certificate overrides the
++// --enable-certificate-owner-ref flag, the same way SecretsManager.UpdateData
++// applies it.
++func effectiveOwnerRef(crt *cmapi.Certificate, ownerRefEnabled bool) (bool, string) {
++	if crt.Spec.CertificateOwnerRef != nil {
++		return *crt.Spec.CertificateOwnerRef, fmt.Sprintf("spec.certificateOwnerRef=%t", *crt.Spec.CertificateOwnerRef)
++	}
++	return ownerRefEnabled, fmt.Sprintf("--enable-certificate-owner-ref=%t", ownerRefEnabled)
++}
++
+ // SecretOwnerReferenceManagedFieldMismatch validates that the Secret has an
+ // owner reference to the Certificate if enabled. Returns true (violation) if:
+ // * the Secret doesn't have an owner reference and is expecting one
+@@ -699,6 +711,8 @@ func SecretAdditionalOutputFormatsManagedFieldsMismatch(fieldManager string) Fun
+ // non re-triable error.
+ func SecretOwnerReferenceManagedFieldMismatch(ownerRefEnabled bool, fieldManager string) Func {
+ 	return func(input Input) (string, string, bool) {
++		ownerRefEnabled, ownerRefSetting := effectiveOwnerRef(input.Certificate, ownerRefEnabled)
++
+ 		var hasOwnerRefManagedField bool
+ 		// Determine whether the Secret has the Certificate as an owner reference
+ 		// which is owned by the field manager.
+@@ -725,7 +739,7 @@ func SecretOwnerReferenceManagedFieldMismatch(ownerRefEnabled bool, fieldManager
+ 		// reference being enabled.
+ 		if ownerRefEnabled != hasOwnerRefManagedField {
+ 			return SecretOwnerRefMismatch,
+-				fmt.Sprintf("unexpected managed Secret Owner Reference field on Secret --enable-certificate-owner-ref=%t", ownerRefEnabled), true
++				fmt.Sprintf("unexpected managed Secret Owner Reference field on Secret %s", ownerRefSetting), true
+ 		}
+ 
+ 		return "", "", false
+@@ -737,6 +751,8 @@ func SecretOwnerReferenceManagedFieldMismatch(ownerRefEnabled bool, fieldManager
+ // * owner reference is enabled, but the reference has an incorrect value
+ func SecretOwnerReferenceMismatch(ownerRefEnabled bool) Func {
+ 	return func(input Input) (string, string, bool) {
++		ownerRefEnabled, ownerRefSetting := effectiveOwnerRef(input.Certificate, ownerRefEnabled)
++
+ 		// If the Owner Reference is not enabled, we don't need to check the value
+ 		// and can exit early.
+ 		if !ownerRefEnabled {
+@@ -764,7 +780,7 @@ func SecretOwnerReferenceMismatch(ownerRefEnabled bool) Func {
+ 		// doesn't match the expected value, return violation.
+ 		if !hasOwnerRefMatchingCertificate {
+ 			return SecretOwnerRefMismatch,
+-				fmt.Sprintf("unexpected Secret Owner Reference value on Secret --enable-certificate-owner-ref=%t", ownerRefEnabled), true
++				fmt.Sprintf("unexpected Secret Owner Reference value on Secret %s", ownerRefSetting), true
+ 		}
+ 
+ 		return "", "", false
+diff --git a/internal/controller/certificates/policies/checks_test.go b/internal/controller/certificates/policies/checks_test.go
+index 75c709b..f536dbb 100644
+--- a/internal/controller/certificates/policies/checks_test.go
++++ b/internal/controller/certificates/policies/checks_test.go
+@@ -1829,6 +1829,8 @@ func Test_SecretOwnerReferenceManagedFieldMismatch(t *testing.T) {
+ 	crt := gen.Certificate("test-certificate",
+ 		gen.SetCertificateUID("uid-123"),
+ 	)
++	crtOwnerRefTrue := gen.CertificateFrom(crt, gen.SetCertificateOwnerRef(true))
++	crtOwnerRefFalse := gen.CertificateFrom(crt, gen.SetCertificateOwnerRef(false))
+ 
+ 	tests := map[string]struct {
+ 		input           Input
+@@ -1991,6 +1993,70 @@ func Test_SecretOwnerReferenceManagedFieldMismatch(t *testing.T) {
+ 			expMessage:      "unexpected managed Secret Owner Reference field on Secret --enable-certificate-owner-ref=true",
+ 			expViolation:    true,
+ 		},
++		"certificateOwnerRef=true overrides ownerReferenceEnabled=false, secret managed field owner reference for same UID should return false": {
++			input: Input{
++				Certificate: crtOwnerRefTrue,
++				Secret: &corev1.Secret{
++					ObjectMeta: metav1.ObjectMeta{
++						ManagedFields: []metav1.ManagedFieldsEntry{
++							{Manager: "cert-manager-test", FieldsV1: &metav1.FieldsV1{
++								Raw: []byte(`
++								{"f:metadata": {
++								"f:ownerReferences": {
++								"k:{\"uid\":\"uid-123\"}": {}
++							}}}`),
++							}},
++						},
++					},
++				},
++			},
++			ownerRefEnabled: false,
++			expReason:       "",
++			expMessage:      "",
++			expViolation:    false,
++		},
++		"certificateOwnerRef=true overrides ownerReferenceEnabled=false, no secret managed field owner reference should return true": {
++			input: Input{
++				Certificate: crtOwnerRefTrue,
++				Secret:      &corev1.Secret{},
++			},
++			ownerRefEnabled: false,
++			expReason:       "SecretOwnerRefMismatch",
++			expMessage:      "unexpected managed Secret Owner Reference field on Secret spec.certificateOwnerRef=true",
++			expViolation:    true,
++		},
++		"certificateOwnerRef=false overrides ownerReferenceEnabled=true, no secret managed field owner reference should return false": {
++			input: Input{
++				Certificate: crtOwnerRefFalse,
++				Secret:      &corev1.Secret{},
++			},
++			ownerRefEnabled: true,
++			expReason:       "",
++			expMessage:      "",
++			expViolation:    false,
++		},
++		"certificateOwnerRef=false overrides ownerReferenceEnabled=true, secret managed field owner reference for same UID should return true": {
++			input: Input{
++				Certificate: crtOwnerRefFalse,
++				Secret: &corev1.Secret{
++					ObjectMeta: metav1.ObjectMeta{
++						ManagedFields: []metav1.ManagedFieldsEntry{
++							{Manager: "cert-manager-test", FieldsV1: &metav1.FieldsV1{
++								Raw: []byte(`
++								{"f:metadata": {
++								"f:ownerReferences": {
++								"k:{\"uid\":\"uid-123\"}": {}
++							}}}`),
++							}},
++						},
++					},
++				},
++			},
++			ownerRefEnabled: true,
++			expReason:       "SecretOwnerRefMismatch",
++			expMessage:      "unexpected managed Secret Owner Reference field on Secret spec.certificateOwnerRef=false",
++			expViolation:    true,
++		},
+ 	}
+ 
+ 	for name, test := range tests {
+@@ -2007,6 +2073,8 @@ func Test_SecretOwnerReferenceMismatch(t *testing.T) {
+ 	crt := gen.Certificate("test-certificate",
+ 		gen.SetCertificateUID("uid-123"),
+ 	)
++	crtOwnerRefTrue := gen.CertificateFrom(crt, gen.SetCertificateOwnerRef(true))
++	crtOwnerRefFalse := gen.CertificateFrom(crt, gen.SetCertificateOwnerRef(false))
+ 
+ 	tests := map[string]struct {
+ 		input           Input
+@@ -2247,6 +2315,58 @@ func Test_SecretOwnerReferenceMismatch(t *testing.T) {
+ 			expMessage:      "unexpected Secret Owner Reference value on Secret --enable-certificate-owner-ref=true",
+ 			expViolation:    true,
+ 		},
++		"certificateOwnerRef=true overrides ownerReferenceEnabled=false, no secret owner reference should return true": {
++			input: Input{
++				Certificate: crtOwnerRefTrue,
++				Secret:      &corev1.Secret{},
++			},
++			ownerRefEnabled: false,
++			expReason:       "SecretOwnerRefMismatch",
++			expMessage:      "unexpected Secret Owner Reference value on Secret spec.certificateOwnerRef=true",
++			expViolation:    true,
++		},
++		"certificateOwnerRef=true overrides ownerReferenceEnabled=false, secret has expected owner reference should return false": {
++			input: Input{
++				Certificate: crtOwnerRefTrue,
++				Secret: &corev1.Secret{
++					ObjectMeta: metav1.ObjectMeta{
++						OwnerReferences: []metav1.OwnerReference{
++							{APIVersion: "cert-manager.io/v1", Kind: "Certificate", Name: "test-certificate", UID: types.UID("uid-123"), Controller: ptr.To(true), BlockOwnerDeletion: ptr.To(true)},
++						},
++					},
++				},
++			},
++			ownerRefEnabled: false,
++			expReason:       "",
++			expMessage:      "",
++			expViolation:    false,
++		},
++		"certificateOwnerRef=false overrides ownerReferenceEnabled=true, secret has owner reference should return false": {
++			input: Input{
++				Certificate: crtOwnerRefFalse,
++				Secret: &corev1.Secret{
++					ObjectMeta: metav1.ObjectMeta{
++						OwnerReferences: []metav1.OwnerReference{
++							{APIVersion: "cert-manager.io/v1", Kind: "Certificate", Name: "test-certificate", UID: types.UID("uid-123"), Controller: ptr.To(true), BlockOwnerDeletion: ptr.To(true)},
++						},
++					},
++				},
++			},
++			ownerRefEnabled: true,
++			expReason:       "",
++			expMessage:      "",
++			expViolation:    false,
++		},
++		"certificateOwnerRef=false overrides ownerReferenceEnabled=true, no secret owner reference should return false": {
++			input: Input{
++				Certificate: crtOwnerRefFalse,
++				Secret:      &corev1.Secret{},
++			},
++			ownerRefEnabled: true,
++			expReason:       "",
++			expMessage:      "",
++			expViolation:    false,
++		},
+ 	}
+ 
+ 	for name, test := range tests {
 diff --git a/pkg/apis/certmanager/v1/types_certificate.go b/pkg/apis/certmanager/v1/types_certificate.go
 index 80e6415..7a6f480 100644
 --- a/pkg/apis/certmanager/v1/types_certificate.go
@@ -332,6 +543,83 @@ index 06ca3eb..ac58f31 100644
  		"if secret does exist, update existing Secret and add annotations set in secretTemplate": {
  			certificateOptions: controllerpkg.CertificateOptions{EnableOwnerRef: false},
  			certificate:        baseCertWithSecretTemplate,
+diff --git a/pkg/controller/certificates/issuing/secret_manager_test.go b/pkg/controller/certificates/issuing/secret_manager_test.go
+index 9944a0a..64e74a6 100644
+--- a/pkg/controller/certificates/issuing/secret_manager_test.go
++++ b/pkg/controller/certificates/issuing/secret_manager_test.go
+@@ -609,6 +609,72 @@ func Test_ensureSecretData(t *testing.T) {
+ 			},
+ 			expectedAction: false,
+ 		},
++		"certificateOwnerRef=true overrides enabledOwnerRef=false, if Secret has owner reference to Certificate owned by field manager, expect no action": {
++			enableOwnerRef: false,
++			cert: &cmapi.Certificate{
++				ObjectMeta: metav1.ObjectMeta{Namespace: "test-namespace", Name: "test-name", UID: types.UID("uid-123")},
++				Spec:       cmapi.CertificateSpec{SecretName: "test-secret", CertificateOwnerRef: ptr.To(true)},
++			},
++			secret: &corev1.Secret{
++				ObjectMeta: metav1.ObjectMeta{Namespace: "test-namespace", Name: "test-secret",
++					Labels: map[string]string{cmapi.PartOfCertManagerControllerLabelKey: "true"},
++					OwnerReferences: []metav1.OwnerReference{
++						{APIVersion: "cert-manager.io/v1", Kind: "Certificate", Name: "test-name", UID: types.UID("uid-123"), Controller: ptr.To(true), BlockOwnerDeletion: ptr.To(true)},
++					},
++					ManagedFields: []metav1.ManagedFieldsEntry{
++						{Manager: fieldManager, FieldsV1: &metav1.FieldsV1{
++							Raw: []byte(`
++							{"f:metadata": {
++								"f:labels": {
++									"f:controller.cert-manager.io/fao": {}
++								},
++								"f:annotations": {
++									"f:cert-manager.io/common-name": {},
++									"f:cert-manager.io/alt-names": {},
++									"f:cert-manager.io/ip-sans": {},
++									"f:cert-manager.io/uri-sans": {}
++								},
++								"f:ownerReferences": {
++									"k:{\"uid\":\"uid-123\"}": {}
++								}
++							}}`),
++						}},
++					},
++				},
++				Data: map[string][]byte{"tls.crt": cert, "tls.key": pk, "key.der": pkDER},
++			},
++			expectedAction: false,
++		},
++		"certificateOwnerRef=false overrides enabledOwnerRef=true, if Secret has no owner reference to Certificate, expect no action": {
++			enableOwnerRef: true,
++			cert: &cmapi.Certificate{
++				ObjectMeta: metav1.ObjectMeta{Namespace: "test-namespace", Name: "test-name", UID: types.UID("uid-123")},
++				Spec:       cmapi.CertificateSpec{SecretName: "test-secret", CertificateOwnerRef: ptr.To(false)},
++			},
++			secret: &corev1.Secret{
++				ObjectMeta: metav1.ObjectMeta{Namespace: "test-namespace", Name: "test-secret",
++					Labels: map[string]string{cmapi.PartOfCertManagerControllerLabelKey: "true"},
++					ManagedFields: []metav1.ManagedFieldsEntry{
++						{Manager: fieldManager, FieldsV1: &metav1.FieldsV1{
++							Raw: []byte(`
++							{"f:metadata": {
++								"f:labels": {
++									"f:controller.cert-manager.io/fao": {}
++								},
++								"f:annotations": {
++									"f:cert-manager.io/common-name": {},
++									"f:cert-manager.io/alt-names": {},
++									"f:cert-manager.io/ip-sans": {},
++									"f:cert-manager.io/uri-sans": {}
++								}
++							}}`),
++						}},
++					},
++				},
++				Data: map[string][]byte{"tls.crt": cert, "tls.key": pk, "key.der": pkDER},
++			},
++			expectedAction: false,
++		},
+ 		"refresh secrets when keystore is not defined and the secret has keystore/truststore fields": {
+ 			enableOwnerRef: true,
+ 			cert: &cmapi.Certificate{
 diff --git a/test/unit/gen/certificate.go b/test/unit/gen/certificate.go
 index 149857c..1fa6a13 100644
 --- a/test/unit/gen/certificate.go
