@@ -107,7 +107,8 @@ func TestReservedUserPrefixMatchesThePolicy(t *testing.T) {
 	}
 
 	// The kept-objects policy lets the same users take a left object over, by the prefix as a literal.
-	exempt := regexp.MustCompile(`startsWith\("([^"]*)"\)`).FindAllStringSubmatch(string(raw), -1)
+	exempt := regexp.MustCompile(`- name: 'exclude-manifests-users'\n\s+expression: '!request\.userInfo\.username\.startsWith\("([^"]*)"\)'`).
+		FindAllStringSubmatch(string(raw), -1)
 	if len(exempt) != 1 {
 		t.Fatalf("expected the kept-objects policy to exempt the users by their prefix once, found %d", len(exempt))
 	}

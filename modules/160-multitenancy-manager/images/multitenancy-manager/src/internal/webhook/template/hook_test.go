@@ -617,10 +617,10 @@ func TestHandle_ResourcesTemplateWithStructuredFields(t *testing.T) {
 	require.False(t, resp.Allowed)
 	assert.Contains(t, resp.Result.Message, "resourcesTemplate together with fields that render objects: podSecurityStandard, networkPolicy")
 
-	// a template with a Helm text is created through v1alpha1 alone, which has no structured fields
+	// no template is created with a Helm text, with the fields or without them
 	resp = v.Handle(ctx, createRequest(t, both))
 	require.False(t, resp.Allowed)
-	assert.Contains(t, resp.Result.Message, "cannot get a new resourcesTemplate", "a create through v1alpha2 is refused for the text alone")
+	assert.Contains(t, resp.Result.Message, "cannot get a new resourcesTemplate", "a create is refused for the text alone")
 
 	// manifests renders objects too, and next to a Helm text it would go unused
 	withManifests := helmTemplate("manifests")
@@ -817,20 +817,25 @@ func TestHandle_V1alpha1Erasure(t *testing.T) {
 		assert.True(t, resp.Allowed, resp.Result)
 	})
 
-	// there is no stored template to read yet, and nothing to erase
+	// There is no stored template to read yet, and nothing to erase. The API server refuses such a
+	// create through the d8-multitenancy-manager-v1alpha1-template-create admission policy before the
+	// webhook sees it; the webhook alone lets it through.
 	t.Run("a template is created through v1alpha1", func(t *testing.T) {
-		req := createRequest(t, helmTemplate("new"))
+		req := createRequest(t, &v1alpha2.ProjectTemplate{
+			ObjectMeta: metav1.ObjectMeta{Name: "new"},
+			Spec:       v1alpha2.ProjectTemplateSpec{Description: "no text"},
+		})
 		req.RequestKind = v1alpha1Kind.DeepCopy()
 		resp := v.Handle(ctx, req)
 		assert.True(t, resp.Allowed, resp.Result)
 	})
 }
 
-// A template gets a new resourcesTemplate through v1alpha1 only. Through v1alpha2 a create with one
-// and an update that sets one where the stored template has none are refused, and the refusal says
-// where the objects go instead. A template that has one keeps it and can change it through either
-// version, and a blank one counts as none.
-func TestHandle_NewResourcesTemplateThroughV1alpha2(t *testing.T) {
+// No template gets a new resourcesTemplate. A create with one and an update that sets one where the
+// stored template has none are refused through either version, and the refusal says where the
+// objects go instead. A template that has one keeps it and can change it through either version, and
+// a blank one counts as none.
+func TestHandle_NewResourcesTemplate(t *testing.T) {
 	ctx := context.Background()
 	blank := helmTemplate("blank")
 	blank.Spec.ResourcesTemplate = " \n"
@@ -853,13 +858,9 @@ func TestHandle_NewResourcesTemplateThroughV1alpha2(t *testing.T) {
 	t.Run("a create through v1alpha2 with a text is refused", func(t *testing.T) {
 		resp := v.Handle(ctx, createRequest(t, helmTemplate("new")))
 		require.False(t, resp.Allowed)
-		assert.Contains(t, resp.Result.Message, "the 'new' project template cannot get a new resourcesTemplate through deckhouse.io/v1alpha2")
-		assert.Contains(t, resp.Result.Message, "written through deckhouse.io/v1alpha1")
-		assert.Contains(t, resp.Result.Message, "the structured fields")
-		assert.Contains(t, resp.Result.Message, "manifests")
-		assert.Contains(t, resp.Result.Message,
-			"a template that still needs a Helm text is created through deckhouse.io/v1alpha1, and its title, resources or grantPolicies are added through deckhouse.io/v1alpha2 afterwards",
-			"the refusal names the two writes of a Helm-text template with fields of v1alpha2")
+		assert.Equal(t, "the 'new' project template cannot get a new resourcesTemplate: the field is deprecated and stays only for the "+
+			"templates that have one, so describe the objects with the structured fields, and the ones no field describes with manifests",
+			resp.Result.Message)
 	})
 
 	t.Run("a create through v1alpha2 with a blank text passes", func(t *testing.T) {
@@ -888,18 +889,114 @@ func TestHandle_NewResourcesTemplateThroughV1alpha2(t *testing.T) {
 		assert.True(t, resp.Allowed, resp.Result)
 	})
 
-	t.Run("a create through v1alpha1 with a text passes", func(t *testing.T) {
+	t.Run("a create through v1alpha1 with a text is refused", func(t *testing.T) {
 		req := createRequest(t, helmTemplate("new"))
 		req.RequestKind = v1alpha1Kind.DeepCopy()
 		resp := v.Handle(ctx, req)
-		assert.True(t, resp.Allowed, resp.Result)
+		require.False(t, resp.Allowed)
+		assert.Contains(t, resp.Result.Message, "cannot get a new resourcesTemplate")
 	})
 
-	t.Run("an update through v1alpha1 that sets a text where there was none passes", func(t *testing.T) {
+	t.Run("an update through v1alpha1 that sets a text where there was none is refused", func(t *testing.T) {
 		old := stored(t, "blank")
 		req := updateRequest(t, old, withText(old, text))
 		req.RequestKind = v1alpha1Kind.DeepCopy()
 		resp := v.Handle(ctx, req)
+		require.False(t, resp.Allowed)
+		assert.Contains(t, resp.Result.Message, "cannot get a new resourcesTemplate")
+	})
+
+	t.Run("an update through v1alpha1 changes the text a template has", func(t *testing.T) {
+		old := stored(t, "helm")
+		req := updateRequest(t, old, withText(old, old.Spec.ResourcesTemplate+text))
+		req.RequestKind = v1alpha1Kind.DeepCopy()
+		resp := v.Handle(ctx, req)
 		assert.True(t, resp.Allowed, resp.Result)
+	})
+}
+
+// An AuthorizationRule of the Admin level in manifests is refused to the user of the projects, which
+// shows only in the projects. The author of the template is warned when manifests that describe an
+// AuthorizationRule are written: on a create, and on an update that changes them.
+func TestHandle_ManifestsAuthorizationRule(t *testing.T) {
+	ctx := context.Background()
+	const warning = "the manifests of the 'rules' project template describe an AuthorizationRule: " +
+		"the system:multitenancy-manager:project:<PROJECT_NAME> user that they are applied as may create one of the User, " +
+		"PrivilegedUser or Editor level, and the API server refuses one of the Admin level or an update that raises one to it, " +
+		"so a project whose manifests render such a rule switches to Error; " +
+		"set the administrators of a project in .spec.administrators of the Project"
+	const configMap = "apiVersion: v1\nkind: ConfigMap\nmetadata:\n  name: info\n"
+	withManifests := func(manifests string) *v1alpha2.ProjectTemplate {
+		return &v1alpha2.ProjectTemplate{
+			ObjectMeta: metav1.ObjectMeta{Name: "rules"},
+			Spec:       v1alpha2.ProjectTemplateSpec{Manifests: manifests},
+		}
+	}
+	v := newValidator(t)
+
+	creates := []struct {
+		name      string
+		manifests string
+		warns     bool
+	}{
+		{
+			name:      "a rule in YAML",
+			manifests: configMap + "---\napiVersion: deckhouse.io/v1alpha1\nkind: AuthorizationRule\nmetadata:\n  name: admins\nspec:\n  accessLevel: Admin\n",
+			warns:     true,
+		},
+		{
+			name:      "a rule of a level the parameters give",
+			manifests: "apiVersion: deckhouse.io/v1alpha1\nkind: 'AuthorizationRule'\nspec:\n  accessLevel: {{ .parameters.level | quote }}\n",
+			warns:     true,
+		},
+		{
+			name:      "a rule in JSON",
+			manifests: `{"apiVersion": "deckhouse.io/v1alpha1", "kind": "AuthorizationRule", "metadata": {"name": "editors"}}`,
+			warns:     true,
+		},
+		{
+			name:      "a ClusterAuthorizationRule",
+			manifests: "apiVersion: deckhouse.io/v1\nkind: ClusterAuthorizationRule\nmetadata:\n  name: admins\n",
+		},
+		{
+			name:      "a kind of the same name in another group",
+			manifests: "apiVersion: example.com/v1\nkind: AuthorizationRule\nmetadata:\n  name: admins\n",
+		},
+		{
+			name:      "a ProjectRoleBinding",
+			manifests: "apiVersion: deckhouse.io/v1alpha3\nkind: ProjectRoleBinding\nmetadata:\n  name: admins\n",
+		},
+	}
+	for _, tt := range creates {
+		t.Run("a create with "+tt.name, func(t *testing.T) {
+			resp := v.Handle(ctx, createRequest(t, withManifests(tt.manifests)))
+			require.True(t, resp.Allowed, resp.Result)
+			if tt.warns {
+				assert.Equal(t, []string{warning}, resp.Warnings)
+				return
+			}
+			assert.Empty(t, resp.Warnings)
+		})
+	}
+
+	const rule = "---\napiVersion: deckhouse.io/v1alpha1\nkind: AuthorizationRule\nmetadata:\n  name: editors\nspec:\n  accessLevel: Editor\n"
+	t.Run("an update that adds a rule", func(t *testing.T) {
+		resp := v.Handle(ctx, updateRequest(t, withManifests(configMap), withManifests(configMap+rule)))
+		require.True(t, resp.Allowed, resp.Result)
+		assert.Equal(t, []string{warning}, resp.Warnings)
+	})
+
+	t.Run("an update that changes manifests with a rule", func(t *testing.T) {
+		resp := v.Handle(ctx, updateRequest(t, withManifests(configMap+rule), withManifests(rule)))
+		require.True(t, resp.Allowed, resp.Result)
+		assert.Equal(t, []string{warning}, resp.Warnings)
+	})
+
+	t.Run("an update that leaves manifests as they are", func(t *testing.T) {
+		updated := withManifests(configMap + rule)
+		updated.Spec.Description = "changed"
+		resp := v.Handle(ctx, updateRequest(t, withManifests(configMap+rule), updated))
+		require.True(t, resp.Allowed, resp.Result)
+		assert.Empty(t, resp.Warnings)
 	})
 }

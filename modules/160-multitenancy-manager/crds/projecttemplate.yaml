@@ -17,13 +17,15 @@ spec:
   scope: Cluster
   versions:
     - name: v1alpha1
-      # Served and deprecated. Templates written as v1alpha1 Helm strings, by hand or by the tools
+      # Served and deprecated. Templates created as v1alpha1 Helm strings, by hand or by the tools
       # that generate them, keep being written at this version, and the Helm text survives the trip
-      # to storage because v1alpha2 carries resourcesTemplate too. A new Helm text comes through this
-      # version alone, as the template webhook refuses a write through v1alpha2 that sets one where
-      # the stored template has none. The structured fields (resources, grantPolicies,
-      # podSecurityStandard, manifests and the rest) exist in v1alpha2 only, and a write through
-      # v1alpha1 would erase them, so the template webhook refuses one to a template that has them.
+      # to storage because v1alpha2 carries resourcesTemplate too. A template is created through
+      # v1alpha2 only: the d8-multitenancy-manager-v1alpha1-template-create admission policy refuses
+      # a create through this version, and the template webhook refuses a write through either
+      # version that sets a Helm text where the stored template has none. The structured fields
+      # (resources, grantPolicies, podSecurityStandard, manifests and the rest) exist in v1alpha2
+      # only, and a write through v1alpha1 would erase them, so the template webhook refuses one to a
+      # template that has them.
       served: true
       storage: false
       deprecated: true
@@ -46,6 +48,8 @@ spec:
             Describes the project template.
 
             This resource is referenced by the [Project](cr.html#project) custom resource.
+
+            The version is deprecated. A template is created through `deckhouse.io/v1alpha2`, and a create through `deckhouse.io/v1alpha1` is refused. The templates created through `deckhouse.io/v1alpha1` earlier are read, changed and deleted through it as before.
           properties:
             spec:
               required: ["parametersSchema", "resourcesTemplate"]
@@ -126,8 +130,9 @@ spec:
             projects of this template; the remaining fields are rendered into per-namespace objects.
 
             Objects that no structured field describes are rendered from `manifests`. Instead of the
-            fields that render objects, a template written through `deckhouse.io/v1alpha1` can carry a
-            Helm template in `resourcesTemplate`. This form is deprecated.
+            fields that render objects, a template created through `deckhouse.io/v1alpha1` can carry a
+            Helm template in `resourcesTemplate`. This form is deprecated, and no template can get a
+            new `resourcesTemplate`.
           type: object
           properties:
             spec:
@@ -351,7 +356,7 @@ spec:
 
                     The template gets the project name in `{{ .projectName }}`, the template name in `{{ .projectTemplateName }}` and the [project parameters](cr.html#project-v1alpha3-spec-parameters) completed with the defaults of `parametersSchema` in `{{ .parameters }}`, the same values as `resourcesTemplate`. A project whose parameters turn into objects or keys of the rendered manifests instead of values is refused, so quote every substitution.
 
-                    The controller applies the objects with server-side apply as the `system:multitenancy-manager:project:<PROJECT_NAME>` user, and the `d8-manifests` ProjectRoleBinding of the project grants this user the `d8:project:admin` role. So an object gets only what this role allows in the namespaces of the project, not the rights of the controller. The objects are applied once the binding is Ready, and the `ManifestsApplied` condition of the project says whether they are applied and names the objects that the API server refused with the code of each refusal, such as 403.
+                    The controller applies the objects with server-side apply as the `system:multitenancy-manager:project:<PROJECT_NAME>` user, and the `d8-manifests` ProjectRoleBinding of the project grants this user the `d8:project:admin` role. So an object gets only what this role allows in the namespaces of the project, not the rights of the controller. An AuthorizationRule of the `Admin` access level is refused when the manifests create it or raise an existing one to this level, although the role allows it. The administrators of a project are set in [`.spec.administrators`](cr.html#project-v1alpha3-spec-administrators) of the Project. The objects are applied once the binding is Ready, and the `ManifestsApplied` condition of the project says whether they are applied and names the objects that the API server refused with the code of each refusal, such as 403.
 
                     An object without `metadata.namespace` is created in the main namespace of the project, and a namespace that an object names has to be a namespace of the project. A cluster-scoped object, an object in a namespace outside the project and an object with the `heritage: multitenancy-manager` or `heritage: deckhouse` label are refused. The objects get the `projects.deckhouse.io/project` label with the project name and the `projects.deckhouse.io/source: manifests` label, and `.status.manifestObjects` of the project lists them. An object that the template does not render any more is deleted.
 
@@ -365,7 +370,7 @@ spec:
                   description: |
                     A template in the [`go template`](https://pkg.go.dev/text/template) format with the [`helm` functions](https://helm.sh/docs/chart_template_guide/function_list/) that renders the objects of a project.
 
-                    The field is deprecated and is kept for the templates written through `deckhouse.io/v1alpha1`. Describe new templates with the structured fields and `manifests`. A write through `deckhouse.io/v1alpha2` cannot give a template a new `resourcesTemplate`, so a create with a non-empty one and an update that sets one on a template that has none are refused. A template that has one keeps it, and it can be changed through either version while `deckhouse.io/v1alpha1` can describe the whole template. A template that still needs a Helm text is created through `deckhouse.io/v1alpha1`, and its `title`, `resources` or `grantPolicies` are added through `deckhouse.io/v1alpha2` afterwards. From then on, such a template is written through `deckhouse.io/v1alpha2` only. The field leaves `deckhouse.io/v1alpha2` together with `deckhouse.io/v1alpha1` in a future release. See [Moving a template from a Helm text](usage.html#moving-a-template-from-a-helm-text).
+                    The field is deprecated and is kept for the templates created through `deckhouse.io/v1alpha1`. Describe new templates with the structured fields and `manifests`. No template can get a new `resourcesTemplate` through either version: a create with a non-empty one and an update that sets one on a template that has none are refused, and a create through `deckhouse.io/v1alpha1` is refused as a whole. A template that has one keeps it, and it can be changed through either version while `deckhouse.io/v1alpha1` can describe the whole template. So a template with a Helm text cannot be created again, for example from a backup or from Git; move it to the structured fields and `manifests` first. The field leaves `deckhouse.io/v1alpha2` together with `deckhouse.io/v1alpha1` in a future release. See [Moving a template from a Helm text](usage.html#moving-a-template-from-a-helm-text).
 
                     When the field is not empty, the template is rendered from it. It cannot be set together with the fields that render objects into the project namespaces (`podSecurityStandard`, `networkPolicy`, `namespaceMetadata`, `manifests` and the others), while `resources` and `grantPolicies` apply in either case. A template that projects use keeps a non-empty `resourcesTemplate` until a change sets such fields or `manifests` in its place.
 

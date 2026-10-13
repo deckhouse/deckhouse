@@ -32,6 +32,8 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/equality"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	"k8s.io/apimachinery/pkg/api/meta"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/webhook"
@@ -301,10 +303,22 @@ func (v *validator) Handle(ctx context.Context, req admission.Request) admission
 	// becomes structure is refused here rather than first in the ManifestsApplied condition. Whether
 	// the objects may be applied is the controller's to say: it depends on the namespaces of the
 	// project and on the kinds the cluster serves.
+	//
+	// The API server refuses some objects to the user the objects are applied as, such as an
+	// AuthorizationRule of the Admin level (the d8-multitenancy-manager-manifests admission policy).
+	// The other objects are applied all the same, so the project is not refused for them, but its
+	// author learns of them here rather than first from the ManifestsApplied condition.
 	if template.Spec.HasManifests() {
-		_, err = v.helmClient.RenderManifests(project, template.Spec.Manifests, template.Spec.ParametersSchema.OpenAPIV3Schema)
+		var rendered string
+		rendered, err = v.helmClient.RenderManifests(project, template.Spec.Manifests, template.Spec.ParametersSchema.OpenAPIV3Schema)
 		if err != nil {
 			return admission.Denied(fmt.Sprintf("The project '%s' is invalid: the manifests of the '%s' project template: %v", project.Name, template.Name, err))
+		}
+		if refused := v.refusedToApply(ctx, project, rendered); len(refused) > 0 {
+			warnings = append(warnings, fmt.Sprintf(
+				"the manifests of the '%s' project template render objects that the API server refuses to apply as the %s user, "+
+					"so the '%s' project switches to Error until the template leaves them out: %s",
+				template.Name, naming.ProjectUser(project.Name), project.Name, strings.Join(refused, "; ")))
 		}
 	}
 
@@ -337,6 +351,34 @@ func (v *validator) Handle(ctx context.Context, req admission.Request) admission
 	}
 
 	return admission.Allowed("").WithWarnings(warnings...)
+}
+
+// refusedToApply names the objects of a render of the manifests that the API server refuses to apply
+// as the user of the project. The apply of an object that exists is an update, which the policy
+// refuses only when it makes a refused object out of the live one, such as an AuthorizationRule that
+// the render raises to the Admin level. So each object is read past the cache, whether the manifests
+// applied it before, a switch from a Helm text left it or it belongs to the Helm release the project is
+// moving off, as the status of the project lists an object before its apply and does not tell. A
+// read that fails leaves the object named, since a warning too many does less harm than one too few,
+// except for a kind the API server does not serve, such as AuthorizationRule while user-authz is
+// disabled: no admission policy refuses an object of such a kind, and the ManifestsApplied condition
+// tells what keeps it from being applied.
+func (v *validator) refusedToApply(ctx context.Context, project *v1alpha3.Project, rendered string) []string {
+	refusedObjects := projectmanager.RefusedManifestObjects(project, rendered)
+	named := make([]string, 0, len(refusedObjects))
+	for _, refused := range refusedObjects {
+		live := new(unstructured.Unstructured)
+		live.SetGroupVersionKind(refused.Object.GroupVersionKind())
+		err := v.apiReader().Get(ctx, client.ObjectKeyFromObject(refused.Object), live)
+		switch {
+		case err == nil && !refused.RefusesUpdateOf(live):
+			continue
+		case meta.IsNoMatchError(err):
+			continue
+		}
+		named = append(named, refused.String())
+	}
+	return named
 }
 
 // namespaceLabels resolves namespaceMetadata.labels of the template against the project parameters,

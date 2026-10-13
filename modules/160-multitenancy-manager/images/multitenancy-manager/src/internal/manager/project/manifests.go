@@ -72,6 +72,11 @@ import (
 //     policies of those labels refuse a write by anybody else than the controller or Deckhouse, and
 //     the refusal says so better than a 403 would. Every object gets the projects.deckhouse.io/project
 //     label and projects.deckhouse.io/source: manifests.
+//   - Some objects that d8:project:admin allows are still not for a template to write, an
+//     AuthorizationRule of the Admin level among them (refusedManifestKinds). The
+//     d8-multitenancy-manager-manifests admission policy refuses to create them as the user, or to
+//     make one out of an object that exists, so the API server refuses such an object as it refuses
+//     one the role does not allow, and the Project webhook warns of it.
 //   - An object that exists already is written only when it is the project's: status.manifestObjects
 //     lists it, a switch from a Helm text left it, or it has the labels of the manifests of the
 //     project. Any other one is left alone and named in the condition, since the apply would
@@ -375,13 +380,35 @@ func (m *Manager) manifestsFailed(project *v1alpha3.Project, message string) man
 // cluster applies. It returns a manifestsRefusedError for an object it does not apply, and a NoMatch
 // error for a kind the API server does not serve.
 func (m *Manager) manifestObjects(project *v1alpha3.Project, rendered string) ([]*unstructured.Unstructured, error) {
+	namespaces := rolebinding.ProjectNamespaceNames(project)
+	seen := make(map[releaseKey]struct{})
+	var objects []*unstructured.Unstructured
+	err := eachManifestObject(rendered, func(object *unstructured.Unstructured) error {
+		if err := m.pinManifestObject(project, namespaces, object); err != nil {
+			return err
+		}
+		key := keyOf(releaseObjectOf(object), project.Name)
+		if _, ok := seen[key]; ok {
+			return manifestsRefusedError{reason: fmt.Sprintf("they hold the %s '%s/%s' twice", object.GetKind(), object.GetNamespace(), object.GetName())}
+		}
+		seen[key] = struct{}{}
+		objects = append(objects, object)
+		return nil
+	})
+	if err != nil {
+		return nil, err
+	}
+	return objects, nil
+}
+
+// eachManifestObject calls visit for every object of a render of the manifests, in the order the
+// render has them, List objects unwrapped, and stops at the first error visit returns. It returns a
+// manifestsRefusedError for a document that is not an object.
+func eachManifestObject(rendered string, visit func(object *unstructured.Unstructured) error) error {
 	documents := releaseutil.SplitManifests(rendered)
 	names := slices.Collect(maps.Keys(documents))
 	sort.Sort(releaseutil.BySplitManifestsOrder(names))
 
-	namespaces := rolebinding.ProjectNamespaceNames(project)
-	seen := make(map[releaseKey]struct{})
-	var objects []*unstructured.Unstructured
 	var add func(object *unstructured.Unstructured) error
 	add = func(object *unstructured.Unstructured) error {
 		if object.IsList() {
@@ -393,22 +420,13 @@ func (m *Manager) manifestObjects(project *v1alpha3.Project, rendered string) ([
 				return add(nested)
 			})
 		}
-		if err := m.pinManifestObject(project, namespaces, object); err != nil {
-			return err
-		}
-		key := keyOf(releaseObjectOf(object), project.Name)
-		if _, ok := seen[key]; ok {
-			return manifestsRefusedError{reason: fmt.Sprintf("they hold the %s '%s/%s' twice", object.GetKind(), object.GetNamespace(), object.GetName())}
-		}
-		seen[key] = struct{}{}
-		objects = append(objects, object)
-		return nil
+		return visit(object)
 	}
 
 	for _, name := range names {
 		var fields map[string]any
 		if err := yaml.Unmarshal([]byte(documents[name]), &fields); err != nil {
-			return nil, manifestsRefusedError{reason: fmt.Sprintf("a rendered object is not valid YAML: %v", err)}
+			return manifestsRefusedError{reason: fmt.Sprintf("a rendered object is not valid YAML: %v", err)}
 		}
 		// a document of comments alone
 		if len(fields) == 0 {
@@ -416,13 +434,13 @@ func (m *Manager) manifestObjects(project *v1alpha3.Project, rendered string) ([
 		}
 		object := new(unstructured.Unstructured)
 		if err := yaml.Unmarshal([]byte(documents[name]), object); err != nil || object.GetAPIVersion() == "" {
-			return nil, manifestsRefusedError{reason: "a rendered object has no apiVersion or kind"}
+			return manifestsRefusedError{reason: "a rendered object has no apiVersion or kind"}
 		}
 		if err := add(object); err != nil {
-			return nil, err
+			return err
 		}
 	}
-	return objects, nil
+	return nil
 }
 
 // serverFields are the fields of an object that a server sets and an apply cannot.

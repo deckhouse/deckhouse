@@ -175,9 +175,9 @@ type ProjectTemplateSpec struct {
 	// ResourcesTemplate is a Helm template string rendering the objects of a project, the form every
 	// template had in v1alpha1. A non-blank one is rendered through Helm, and the template webhook
 	// refuses it together with the fields above that render namespace objects (see ObjectFields);
-	// Resources and GrantPolicies apply either way. A template gets a new one through v1alpha1 only:
-	// the template webhook refuses a write through v1alpha2 that sets it where the stored template
-	// has none.
+	// Resources and GrantPolicies apply either way. No template gets a new one: the template webhook
+	// refuses a write through either version that sets it where the stored template has none, and the
+	// API server refuses a create through v1alpha1.
 	//
 	// Deprecated: describe templates with the structured fields and Manifests.
 	//

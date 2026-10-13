@@ -19,8 +19,10 @@ package project
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"os"
 	"path/filepath"
+	"slices"
 	"testing"
 
 	"github.com/go-logr/logr"
@@ -31,11 +33,15 @@ import (
 	authorizationv1 "k8s.io/api/authorization/v1"
 	corev1 "k8s.io/api/core/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
+	"k8s.io/apimachinery/pkg/api/meta"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
+	"sigs.k8s.io/controller-runtime/pkg/client/interceptor"
 	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
 	"sigs.k8s.io/yaml"
 
@@ -1453,6 +1459,169 @@ func TestHandle_ManifestsRender(t *testing.T) {
 		resp := create(t, "broken", "alice")
 		require.False(t, resp.Allowed)
 		assert.Contains(t, resp.Result.Message, "render chart")
+	})
+}
+
+// An object that the API server refuses to the user of the project, such as an AuthorizationRule of
+// the Admin level, does not refuse the project, whose other objects are applied, but the project is
+// admitted with a warning that names each such object.
+func TestHandle_ManifestsRefusedKinds(t *testing.T) {
+	ruleKind := schema.GroupVersionKind{Group: "deckhouse.io", Version: "v1alpha1", Kind: "AuthorizationRule"}
+	manifestsTemplate := func(name, manifests string) *v1alpha2.ProjectTemplate {
+		return &v1alpha2.ProjectTemplate{
+			ObjectMeta: metav1.ObjectMeta{Name: name},
+			Spec:       v1alpha2.ProjectTemplateSpec{Manifests: manifests},
+		}
+	}
+	rule := func(name, level string) string {
+		return "---\napiVersion: deckhouse.io/v1alpha1\nkind: AuthorizationRule\nmetadata:\n  name: " + name + "\n" +
+			"spec:\n  accessLevel: " + level + "\n  subjects:\n  - kind: User\n    name: alice\n"
+	}
+	const configMap = "---\napiVersion: v1\nkind: ConfigMap\nmetadata:\n  name: info\n"
+	rules := configMap + rule("admins", "Admin") +
+		"---\napiVersion: v1\nkind: List\nitems:\n" +
+		"- apiVersion: deckhouse.io/v1alpha1\n  kind: AuthorizationRule\n  metadata:\n    name: editors\n    namespace: team-dev\n  spec:\n    accessLevel: Editor\n" +
+		"- apiVersion: deckhouse.io/v1alpha1\n  kind: AuthorizationRule\n  metadata:\n    name: dev-admins\n    namespace: team-dev\n  spec:\n    accessLevel: Admin\n"
+	templates := []client.Object{
+		manifestsTemplate("rules", rules),
+		manifestsTemplate("levels", configMap+rule("users", "User")+rule("privileged", "PrivilegedUser")+rule("editors", "Editor")),
+		manifestsTemplate("plain", configMap),
+	}
+	const (
+		lead = "the manifests of the 'rules' project template render objects that the API server refuses to apply " +
+			"as the system:multitenancy-manager:project:team user, so the 'team' project switches to Error until the template leaves them out: "
+		refusal  = " of the Admin level, set the administrators of the project in .spec.administrators of the Project"
+		admins   = "AuthorizationRule team/admins" + refusal
+		devAdmin = "AuthorizationRule team-dev/dev-admins" + refusal
+	)
+	v := newValidator(t, templates...)
+
+	// existing is a rule that is there already in the main namespace of the project, under the name
+	// of the Admin rule of the render, for the users it names.
+	existing := func(level string, users ...string) *unstructured.Unstructured {
+		object := new(unstructured.Unstructured)
+		object.SetGroupVersionKind(ruleKind)
+		object.SetNamespace("team")
+		object.SetName("admins")
+		subjects := make([]any, 0, len(users))
+		for _, user := range users {
+			subjects = append(subjects, map[string]any{"kind": "User", "name": user})
+		}
+		object.Object["spec"] = map[string]any{"accessLevel": level, "subjects": subjects}
+		return object
+	}
+	// withRules is a validator whose cluster serves AuthorizationRule and holds the objects.
+	withRules := func(t *testing.T, objects ...client.Object) *validator {
+		t.Helper()
+		mapper := meta.NewDefaultRESTMapper(nil)
+		mapper.Add(ruleKind, meta.RESTScopeNamespace)
+		return &validator{
+			client:     newClientBuilder(t, append(slices.Clone(templates), objects...)...).WithRESTMapper(mapper).Build(),
+			helmClient: v.helmClient,
+		}
+	}
+	// failingRuleReads is a validator whose reads of an AuthorizationRule fail with err.
+	failingRuleReads := func(t *testing.T, err error) *validator {
+		t.Helper()
+		get := func(ctx context.Context, c client.WithWatch, key client.ObjectKey, obj client.Object, opts ...client.GetOption) error {
+			if obj.GetObjectKind().GroupVersionKind() == ruleKind {
+				return err
+			}
+			return c.Get(ctx, key, obj, opts...)
+		}
+		return &validator{
+			client:     newClientBuilder(t, templates...).WithInterceptorFuncs(interceptor.Funcs{Get: get}).Build(),
+			helmClient: v.helmClient,
+		}
+	}
+	write := func(t *testing.T, v *validator, template string, status []v1alpha3.ManifestObject) admission.Response {
+		t.Helper()
+		project := projectWithParameters(map[string]any{})
+		project.Name = "team"
+		project.Spec.ProjectTemplateName = template
+		project.Status.ManifestObjects = status
+		raw, err := json.Marshal(project)
+		require.NoError(t, err)
+		operation := admissionv1.Create
+		var old runtime.RawExtension
+		if status != nil {
+			operation, old = admissionv1.Update, runtime.RawExtension{Raw: raw}
+		}
+		return v.Handle(context.Background(), admission.Request{AdmissionRequest: admissionv1.AdmissionRequest{
+			Operation: operation,
+			UserInfo:  authnv1.UserInfo{Username: "alice"},
+			Object:    runtime.RawExtension{Raw: raw},
+			OldObject: old,
+		}})
+	}
+
+	t.Run("an Admin rule passes with a warning that names every such rule", func(t *testing.T) {
+		resp := write(t, v, "rules", nil)
+		require.True(t, resp.Allowed, resp.Result)
+		require.Len(t, resp.Warnings, 1)
+		assert.Equal(t, lead+admins+"; "+devAdmin, resp.Warnings[0])
+	})
+
+	t.Run("rules of the other levels pass without a warning", func(t *testing.T) {
+		resp := write(t, v, "levels", nil)
+		require.True(t, resp.Allowed, resp.Result)
+		assert.Empty(t, resp.Warnings)
+	})
+
+	t.Run("manifests without a rule pass without a warning", func(t *testing.T) {
+		resp := write(t, v, "plain", nil)
+		require.True(t, resp.Allowed, resp.Result)
+		assert.Empty(t, resp.Warnings)
+	})
+
+	// A rule that exists outside the status, such as one of the Helm release the project moves off,
+	// is updated by the takeover, and the webhook reads it past the cache.
+	t.Run("an Admin rule that exists already is not named", func(t *testing.T) {
+		resp := write(t, withRules(t, existing("Admin", "alice", "bob")), "rules", nil)
+		require.True(t, resp.Allowed, resp.Result)
+		require.Len(t, resp.Warnings, 1)
+		assert.Equal(t, lead+devAdmin, resp.Warnings[0], "the update keeps the rule Admin for fewer subjects, which the policy lets through")
+	})
+
+	t.Run("an Admin rule that the render gives a new subject is named", func(t *testing.T) {
+		resp := write(t, withRules(t, existing("Admin", "bob")), "rules", nil)
+		require.True(t, resp.Allowed, resp.Result)
+		require.Len(t, resp.Warnings, 1)
+		assert.Equal(t, lead+admins+"; "+devAdmin, resp.Warnings[0], "the policy refuses an update that adds a subject to an Admin rule")
+	})
+
+	t.Run("a rule that the render raises to Admin is named", func(t *testing.T) {
+		resp := write(t, withRules(t, existing("Editor")), "rules", nil)
+		require.True(t, resp.Allowed, resp.Result)
+		require.Len(t, resp.Warnings, 1)
+		assert.Equal(t, lead+admins+"; "+devAdmin, resp.Warnings[0], "the policy refuses an update that raises a rule to Admin")
+	})
+
+	// The status lists an object before its apply, so it does not tell a rule that exists from a
+	// refused one; a rule that the status lists and that is not there is named.
+	t.Run("a rule the status lists but that does not exist is named", func(t *testing.T) {
+		resp := write(t, v, "rules", []v1alpha3.ManifestObject{
+			{APIVersion: "deckhouse.io/v1alpha1", Kind: "AuthorizationRule", Namespace: "team", Name: "admins"},
+		})
+		require.True(t, resp.Allowed, resp.Result)
+		require.Len(t, resp.Warnings, 1)
+		assert.Equal(t, lead+admins+"; "+devAdmin, resp.Warnings[0])
+	})
+
+	// With user-authz disabled the kind is not served: no admission policy refuses the rule, and the
+	// ManifestsApplied condition names what keeps the objects from being applied.
+	t.Run("a rule of a kind the API server does not serve is not named", func(t *testing.T) {
+		noMatch := &meta.NoKindMatchError{GroupKind: ruleKind.GroupKind(), SearchedVersions: []string{ruleKind.Version}}
+		resp := write(t, failingRuleReads(t, noMatch), "rules", nil)
+		require.True(t, resp.Allowed, resp.Result)
+		assert.Empty(t, resp.Warnings)
+	})
+
+	t.Run("a rule whose read fails otherwise is named", func(t *testing.T) {
+		resp := write(t, failingRuleReads(t, errors.New("connection refused")), "rules", nil)
+		require.True(t, resp.Allowed, resp.Result)
+		require.Len(t, resp.Warnings, 1)
+		assert.Equal(t, lead+admins+"; "+devAdmin, resp.Warnings[0], "a warning too many does less harm than one too few")
 	})
 }
 

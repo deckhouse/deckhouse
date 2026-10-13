@@ -21,6 +21,7 @@ import (
 	"encoding/json"
 	"os"
 	"path/filepath"
+	"strconv"
 	"strings"
 
 	celgo "github.com/google/cel-go/cel"
@@ -46,8 +47,10 @@ import (
 )
 
 const (
-	reservedUsersPolicyName = "d8-multitenancy-manager-reserved-users"
-	keptObjectsPolicyName   = "d8-multitenancy-manager-kept-objects"
+	reservedUsersPolicyName      = "d8-multitenancy-manager-reserved-users"
+	keptObjectsPolicyName        = "d8-multitenancy-manager-kept-objects"
+	manifestsPolicyName          = "d8-multitenancy-manager-manifests"
+	v1alpha1TemplateCreatePolicy = "d8-multitenancy-manager-v1alpha1-template-create"
 
 	controllerServiceAccount = "system:serviceaccount:d8-multitenancy-manager:multitenancy-manager"
 	garbageCollector         = "system:serviceaccount:kube-system:generic-garbage-collector"
@@ -249,6 +252,141 @@ var _ = Describe("Module :: multitenancy-manager :: helm template :: kept object
 	})
 })
 
+var _ = Describe("Module :: multitenancy-manager :: helm template :: manifests policy", func() {
+	hec := SetupHelmConfig("")
+
+	BeforeEach(func() {
+		renderPolicies(hec)
+	})
+
+	It("renders the policy and its binding for creates and updates of the refused kinds", func() {
+		Expect(hec.RenderError).ShouldNot(HaveOccurred())
+
+		policy := hec.KubernetesGlobalResource("ValidatingAdmissionPolicy", manifestsPolicyName)
+		Expect(policy.Exists()).To(BeTrue())
+		Expect(policy.Field("spec.failurePolicy").String()).To(Equal("Fail"))
+		Expect(policy.Field("spec.matchConstraints.resourceRules").String()).To(MatchJSON(
+			`[{"apiGroups":["deckhouse.io"],"apiVersions":["*"],"operations":["CREATE","UPDATE"],"resources":["authorizationrules"]}]`))
+
+		binding := hec.KubernetesGlobalResource("ValidatingAdmissionPolicyBinding", manifestsPolicyName)
+		Expect(binding.Exists()).To(BeTrue())
+		Expect(binding.Field("spec.policyName").String()).To(Equal(manifestsPolicyName))
+		Expect(binding.Field("spec.validationActions").String()).To(MatchJSON(`["Deny","Audit"]`))
+		Expect(binding.Field("spec.matchResources").Exists()).To(BeFalse(), "the binding matches every object of the kinds")
+	})
+
+	It("refuses an AuthorizationRule of the Admin level to the users the manifests are applied as", func() {
+		policy := compileRenderedPolicy(hec.KubernetesGlobalResource("ValidatingAdmissionPolicy", manifestsPolicyName).ToYaml())
+
+		cases := []struct {
+			name      string
+			operation admission.Operation
+			username  string
+			level     string
+			// oldLevel is the access level of the stored rule of an update; "-" stands for a rule
+			// without a spec.
+			oldLevel string
+			// subjects and oldSubjects are the users the rule and the stored rule name; bob when empty.
+			subjects, oldSubjects []string
+			allowed               bool
+		}{
+			{name: "the manifests create an Admin rule", username: projectUser, level: "Admin"},
+			{name: "the manifests of another project create an Admin rule", username: "system:multitenancy-manager:project:other", level: "Admin"},
+			{name: "the manifests raise an Editor rule to Admin", operation: admission.Update, username: projectUser, level: "Admin", oldLevel: "Editor"},
+			{name: "the manifests raise a rule without a level to Admin", operation: admission.Update, username: projectUser, level: "Admin"},
+			{name: "the manifests raise a rule without a spec to Admin", operation: admission.Update, username: projectUser, level: "Admin", oldLevel: "-"},
+
+			{name: "the manifests create a User rule", username: projectUser, level: "User", allowed: true},
+			{name: "the manifests create a PrivilegedUser rule", username: projectUser, level: "PrivilegedUser", allowed: true},
+			{name: "the manifests create an Editor rule", username: projectUser, level: "Editor", allowed: true},
+			{name: "the manifests create a rule without a level", username: projectUser, allowed: true},
+			{name: "the manifests update an Admin rule that stays Admin", operation: admission.Update, username: projectUser,
+				level: "Admin", oldLevel: "Admin", allowed: true},
+			{name: "the manifests add a subject to an Admin rule", operation: admission.Update, username: projectUser,
+				level: "Admin", oldLevel: "Admin", subjects: []string{"bob", "eve"}},
+			{name: "the manifests replace the subject of an Admin rule", operation: admission.Update, username: projectUser,
+				level: "Admin", oldLevel: "Admin", subjects: []string{"eve"}},
+			{name: "the manifests drop a subject of an Admin rule", operation: admission.Update, username: projectUser,
+				level: "Admin", oldLevel: "Admin", oldSubjects: []string{"bob", "eve"}, allowed: true},
+			{name: "the manifests lower an Admin rule to Editor", operation: admission.Update, username: projectUser,
+				level: "Editor", oldLevel: "Admin", allowed: true},
+			{name: "the manifests update an Editor rule", operation: admission.Update, username: projectUser,
+				level: "Editor", oldLevel: "Editor", allowed: true},
+
+			{name: "a project administrator creates an Admin rule", username: projectAdministrator, level: "Admin", allowed: true},
+			{name: "a project administrator raises a rule to Admin", operation: admission.Update, username: projectAdministrator,
+				level: "Admin", oldLevel: "Editor", allowed: true},
+			{name: "the controller creates an Admin rule", username: controllerServiceAccount, level: "Admin", allowed: true},
+			{name: "another user under the reserved prefix creates an Admin rule", username: "system:multitenancy-manager:other",
+				level: "Admin", allowed: true},
+		}
+		for _, tc := range cases {
+			operation := tc.operation
+			if operation == "" {
+				operation = admission.Create
+			}
+			allowed, message, err := policy.admit(ruleAttributes(operation, tc.username, tc.level, tc.oldLevel, tc.subjects, tc.oldSubjects), nil)
+			Expect(err).ToNot(HaveOccurred(), tc.name)
+			Expect(allowed).To(Equal(tc.allowed), tc.name)
+			if !allowed {
+				Expect(message).To(Equal("The manifests of a project template do not create an AuthorizationRule of the Admin level, "+
+					"raise one to it or add subjects to one. Set the administrators of the project in .spec.administrators of the Project."), tc.name)
+			}
+		}
+	})
+
+	// The API server sends only the matched kinds; the expression keeps the others out all the same.
+	It("lets the manifests create an object of another kind", func() {
+		policy := compileRenderedPolicy(hec.KubernetesGlobalResource("ValidatingAdmissionPolicy", manifestsPolicyName).ToYaml())
+		configMap := bindingKind{
+			gvr:        schema.GroupVersionResource{Version: "v1", Resource: "configmaps"},
+			gvk:        schema.GroupVersionKind{Version: "v1", Kind: "ConfigMap"},
+			namespaced: true,
+		}
+		allowed, _, err := policy.validate(configMap, admission.Create, projectUser, nil, nil)
+		Expect(err).ToNot(HaveOccurred())
+		Expect(allowed).To(BeTrue())
+	})
+})
+
+var _ = Describe("Module :: multitenancy-manager :: helm template :: v1alpha1 template create policy", func() {
+	hec := SetupHelmConfig("")
+
+	BeforeEach(func() {
+		renderPolicies(hec)
+	})
+
+	It("refuses every create of a ProjectTemplate through deckhouse.io/v1alpha1 and nothing else", func() {
+		Expect(hec.RenderError).ShouldNot(HaveOccurred())
+
+		policy := hec.KubernetesGlobalResource("ValidatingAdmissionPolicy", v1alpha1TemplateCreatePolicy)
+		Expect(policy.Exists()).To(BeTrue())
+		Expect(policy.Field("spec.failurePolicy").String()).To(Equal("Fail"))
+		// With Equivalent, the API server would match a request through v1alpha2 as well.
+		Expect(policy.Field("spec.matchConstraints.matchPolicy").String()).To(Equal("Exact"))
+		Expect(policy.Field("spec.matchConstraints.resourceRules").String()).To(MatchJSON(
+			`[{"apiGroups":["deckhouse.io"],"apiVersions":["v1alpha1"],"operations":["CREATE"],"resources":["projecttemplates"]}]`))
+		Expect(policy.Field("spec.matchConditions").Exists()).To(BeFalse(), "nobody is exempt")
+
+		binding := hec.KubernetesGlobalResource("ValidatingAdmissionPolicyBinding", v1alpha1TemplateCreatePolicy)
+		Expect(binding.Exists()).To(BeTrue())
+		Expect(binding.Field("spec.policyName").String()).To(Equal(v1alpha1TemplateCreatePolicy))
+		Expect(binding.Field("spec.validationActions").String()).To(MatchJSON(`["Deny","Audit"]`))
+
+		compiled := compileRenderedPolicy(policy.ToYaml())
+		template := bindingKind{
+			gvr: schema.GroupVersionResource{Group: "deckhouse.io", Version: "v1alpha1", Resource: "projecttemplates"},
+			gvk: schema.GroupVersionKind{Group: "deckhouse.io", Version: "v1alpha1", Kind: "ProjectTemplate"},
+		}
+		for _, username := range []string{"admin@example.com", "system:sudouser", controllerServiceAccount, "system:serviceaccount:d8-system:deckhouse"} {
+			allowed, message, err := compiled.validate(template, admission.Create, username, nil, nil)
+			Expect(err).ToNot(HaveOccurred(), username)
+			Expect(allowed).To(BeFalse(), username)
+			Expect(message).To(HavePrefix("A ProjectTemplate is created through deckhouse.io/v1alpha2."), username)
+		}
+	})
+})
+
 // keptObjectUpdate is an update of a NetworkPolicy that a switch of the proj project from a Helm text
 // left in the project namespace.
 func keptObjectUpdate(username string) admission.Attributes {
@@ -264,6 +402,41 @@ func keptObjectUpdate(username string) admission.Attributes {
 	}
 	return admission.NewAttributesRecord(kept(), kept(), gvk, "proj", "deny-all", gvr, "", admission.Update, nil, false,
 		&user.DefaultInfo{Name: username, Groups: groupsOf(username)})
+}
+
+// ruleAttributes is a write of an AuthorizationRule of the level in the main namespace of the proj
+// project. An update replaces a stored rule of oldLevel, where "-" stands for a rule without a spec.
+// An empty level leaves spec.accessLevel out.
+func ruleAttributes(operation admission.Operation, username, level, oldLevel string, subjects, oldSubjects []string) admission.Attributes {
+	rule := func(level string, names []string) *unstructured.Unstructured {
+		object := new(unstructured.Unstructured)
+		object.SetGroupVersionKind(authorizationRule.gvk)
+		object.SetNamespace("proj")
+		object.SetName("rule")
+		if level == "-" {
+			return object
+		}
+		if len(names) == 0 {
+			names = []string{"bob"}
+		}
+		ruleSubjects := make([]any, 0, len(names))
+		for _, name := range names {
+			ruleSubjects = append(ruleSubjects, userSubject(name))
+		}
+		spec := map[string]any{"subjects": ruleSubjects}
+		if level != "" {
+			spec["accessLevel"] = level
+		}
+		object.Object["spec"] = spec
+		return object
+	}
+	// The old object stays a nil interface on create: a typed nil pointer counts as present.
+	var oldObject runtime.Object
+	if operation == admission.Update {
+		oldObject = rule(oldLevel, oldSubjects)
+	}
+	return admission.NewAttributesRecord(rule(level, subjects), oldObject, authorizationRule.gvk, "proj", "rule", authorizationRule.gvr, "",
+		operation, nil, false, &user.DefaultInfo{Name: username, Groups: groupsOf(username)})
 }
 
 func userSubject(name string) map[string]any {
@@ -315,9 +488,14 @@ func compileRenderedPolicy(renderedPolicy string) compiledPolicy {
 			"validation %q should compile", validation.Expression)
 		validations = append(validations, condition)
 
+		// A validation without a messageExpression is refused with its static message, which a CEL
+		// string literal stands for here.
 		message := stringExpression{expression: validation.MessageExpression}
+		if message.expression == "" {
+			message.expression = strconv.Quote(validation.Message)
+		}
 		Expect(compiler.CompileCELExpression(message, messageVars, environment.NewExpressions).Error).To(BeNil(),
-			"message expression %q should compile", validation.MessageExpression)
+			"message expression %q should compile", message.expression)
 		messages = append(messages, message)
 	}
 

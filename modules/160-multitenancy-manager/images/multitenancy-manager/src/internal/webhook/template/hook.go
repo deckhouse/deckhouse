@@ -20,6 +20,7 @@ import (
 	"context"
 	"fmt"
 	"net/http"
+	"regexp"
 	"slices"
 	"strings"
 
@@ -114,6 +115,14 @@ func (v *validator) Handle(ctx context.Context, req admission.Request) admission
 		// project reported Deployed
 		if err := validateLiterals(template); err != nil {
 			return admission.Denied(fmt.Sprintf("the '%s' project template %v", template.Name, err))
+		}
+
+		warning, err := manifestsAuthorizationRule(req, template)
+		if err != nil {
+			return admission.Errored(http.StatusBadRequest, err)
+		}
+		if warning != "" {
+			warnings = append(warnings, warning)
 		}
 
 		// namespaceMetadata.labels cannot carry a label the module owns: the renderer drops it, and the
@@ -261,16 +270,16 @@ func throughVersion(req admission.Request, version schema.GroupVersion) bool {
 	return kind.Group == version.Group && kind.Version == version.Version
 }
 
-// newResourcesTemplate refuses a request through deckhouse.io/v1alpha2 that gives a template a
-// resourcesTemplate it did not have: a create with a non-blank one, and an update that sets one on a
-// template whose stored resourcesTemplate is blank. The field is deprecated and stays for the
-// templates written through deckhouse.io/v1alpha1, which work as before: their text can be edited
-// through either version, and a request through v1alpha1 may still set one. A Helm-text template with
-// fields of v1alpha2 alone, such as one a backup restore or a GitOps bootstrap applies as v1alpha2,
-// therefore takes two writes, which the refusal names. For a request through v1alpha2, oldObject is
-// the stored template read at v1alpha2, which has the field.
+// newResourcesTemplate refuses a request that gives a template a resourcesTemplate it did not have,
+// through either version: a create with a non-blank one, and an update that sets one on a template
+// whose stored resourcesTemplate is blank. The field is deprecated and stays for the templates that
+// have one, which work as before: their text can be changed through either version. A create through
+// deckhouse.io/v1alpha1 is refused before this check, by the
+// d8-multitenancy-manager-v1alpha1-template-create admission policy, so a template with a Helm text
+// cannot be created at all, a backup restore or a GitOps bootstrap included. For an update, oldObject
+// is the stored template, which has the field in both versions.
 func newResourcesTemplate(req admission.Request, template *v1alpha2.ProjectTemplate) admission.Response {
-	if !template.Spec.HasResourcesTemplate() || !throughVersion(req, v1alpha2.SchemeGroupVersion) {
+	if !template.Spec.HasResourcesTemplate() {
 		return admission.Allowed("")
 	}
 	if req.Operation == admissionv1.Update {
@@ -283,11 +292,43 @@ func newResourcesTemplate(req admission.Request, template *v1alpha2.ProjectTempl
 		}
 	}
 	return admission.Denied(fmt.Sprintf(
-		"the '%s' project template cannot get a new resourcesTemplate through %s: the field is deprecated and stays only "+
-			"for the templates written through %s, so describe the objects with the structured fields, and the ones "+
-			"no field describes with manifests; a template that still needs a Helm text is created through %s, "+
-			"and its title, resources or grantPolicies are added through %s afterwards",
-		template.Name, v1alpha2.SchemeGroupVersion, v1alpha1.SchemeGroupVersion, v1alpha1.SchemeGroupVersion, v1alpha2.SchemeGroupVersion))
+		"the '%s' project template cannot get a new resourcesTemplate: the field is deprecated and stays only for the "+
+			"templates that have one, so describe the objects with the structured fields, and the ones no field "+
+			"describes with manifests",
+		template.Name))
+}
+
+// authorizationRuleKind finds the kind of an AuthorizationRule in a text of manifests, in YAML or in
+// JSON, and not the kind of a ClusterAuthorizationRule.
+var authorizationRuleKind = regexp.MustCompile(`\bkind["']?\s*:\s*["']?AuthorizationRule\b`)
+
+// manifestsAuthorizationRule warns the author of a template whose manifests describe an
+// AuthorizationRule, on a create and on an update that changes manifests. The user that the manifests
+// of a project are applied as may create one of the User, PrivilegedUser and Editor levels, and the
+// d8-multitenancy-manager-manifests admission policy refuses one of the Admin level, which shows only
+// in the projects of the template, as they switch to Error. The text is a template that renders for
+// a project only, so the check is a guess from the text: a kind or a level that the template computes
+// goes unseen here, and the Project webhook names what the render of each project holds.
+func manifestsAuthorizationRule(req admission.Request, template *v1alpha2.ProjectTemplate) (string, error) {
+	manifests := template.Spec.Manifests
+	if !strings.Contains(manifests, "deckhouse.io/") || !authorizationRuleKind.MatchString(manifests) {
+		return "", nil
+	}
+	if req.Operation == admissionv1.Update {
+		old := new(v1alpha2.ProjectTemplate)
+		if err := yaml.Unmarshal(req.OldObject.Raw, old); err != nil {
+			return "", fmt.Errorf("decode the old project template: %w", err)
+		}
+		if old.Spec.Manifests == manifests {
+			return "", nil
+		}
+	}
+	return fmt.Sprintf(
+		"the manifests of the '%s' project template describe an AuthorizationRule: the %s user that they are applied as "+
+			"may create one of the User, PrivilegedUser or Editor level, and the API server refuses one of the Admin level "+
+			"or an update that raises one to it, so a project whose manifests render such a rule switches to Error; "+
+			"set the administrators of a project in .spec.administrators of the Project",
+		template.Name, naming.ProjectUser("<PROJECT_NAME>")), nil
 }
 
 // resourcesTemplateRemoval refuses an update that empties the resourcesTemplate of a template that

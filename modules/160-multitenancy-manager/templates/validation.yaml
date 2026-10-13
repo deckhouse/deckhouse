@@ -311,4 +311,103 @@ metadata:
 spec:
   policyName: {{ $policyName }}-reserved-users
   validationActions: [Deny, Audit]
+---
+# The controller applies spec.manifests of a ProjectTemplate as system:multitenancy-manager:project:<project>
+# (naming.ProjectUser), which holds d8:project:admin in the namespaces of the project. Some objects
+# that role allows are still not for a template to write, and this policy refuses them to that user.
+# Each such kind is a rule under resourceRules and a validation that says which of its objects are
+# refused and why: to refuse another kind, add both; to let more of a kind through, add the case to its
+# expression. The Go side of the list is refusedManifestKinds in internal/manager/project, whose
+# predicates mirror the expressions and which the Project webhook warns of, and a test keeps the kinds
+# and the operations of the two the same.
+#
+# CREATE and UPDATE are matched. An expression refuses an update only when it makes a refused object
+# out of one that was not, so that an object cannot be created as allowed and then changed into a
+# refused one. An update of an object that is refused already passes, such as one that a switch from
+# a Helm text left in place and that the manifests take over. A refused apply puts every project of
+# the template in Error, so refusing such updates would stop the projects that already run as soon as
+# a case is added here.
+apiVersion: {{ include "helm_lib_get_api_version_by_kind" (list . "ValidatingAdmissionPolicy") }}
+kind: ValidatingAdmissionPolicy
+metadata:
+  name: {{ $policyName }}-manifests
+  {{- include "helm_lib_module_labels" (list . (dict "app" "multitenancy-manager") ) | nindent 2 }}
+spec:
+  failurePolicy: Fail
+  matchConstraints:
+    resourceRules:
+      - apiGroups:   ["deckhouse.io"]
+        apiVersions: ["*"]
+        operations:  ["CREATE", "UPDATE"]
+        resources:   ["authorizationrules"]
+  matchConditions:
+    - name: 'the-users-of-the-manifests'
+      expression: 'request.userInfo.username.startsWith("system:multitenancy-manager:project:")'
+  variables:
+    - name: resource
+      expression: 'request.resource.group + "/" + request.resource.resource'
+  validations:
+    # An AuthorizationRule grants an access level of the basic role model of user-authz. The manifests
+    # may grant User, PrivilegedUser and Editor with one, but not Admin: the administrators of a project
+    # are set in .spec.administrators of the Project, which binds them to d8:project:admin. An update
+    # that raises a rule to Admin is refused as its create would be, and one of a rule that is Admin
+    # already passes while its subjects stay the same or fewer: adding one would make a new
+    # administrator. The kind prunes a subject to kind, name and namespace, so subjects compare whole.
+    # The schema of the kind requires spec, not spec.accessLevel; a presence test on the null oldObject
+    # of a create is false, not an error, and the operation is tested first all the same.
+    - expression: 'variables.resource != "deckhouse.io/authorizationrules"
+          || !has(object.spec) || !has(object.spec.accessLevel) || object.spec.accessLevel != "Admin"
+          || (request.operation == "UPDATE" && has(oldObject.spec) && has(oldObject.spec.accessLevel)
+          && oldObject.spec.accessLevel == "Admin" && (!has(object.spec.subjects)
+          || (has(oldObject.spec.subjects) && object.spec.subjects.all(s, s in oldObject.spec.subjects))))'
+      reason: Forbidden
+      message: 'The manifests of a project template do not create an AuthorizationRule of the Admin level, raise one to it or add subjects to one. Set the administrators of the project in .spec.administrators of the Project.'
+---
+apiVersion: {{ include "helm_lib_get_api_version_by_kind" (list . "ValidatingAdmissionPolicyBinding") }}
+kind: ValidatingAdmissionPolicyBinding
+metadata:
+  name: {{ $policyName }}-manifests
+  {{- include "helm_lib_module_labels" (list . (dict "app" "multitenancy-manager") ) | nindent 2 }}
+spec:
+  policyName: {{ $policyName }}-manifests
+  validationActions: [Deny, Audit]
+---
+# ProjectTemplate deckhouse.io/v1alpha1 is deprecated, and it is served for the templates created
+# through it: they are still read, changed and deleted through it. A new template is created through
+# deckhouse.io/v1alpha2, which cannot give a template a new resourcesTemplate (the template webhook
+# refuses it), so no new template renders from a Helm text, short of the requesters the template
+# webhook skips, system:sudouser among them. A backup restore or a GitOps bootstrap of a template with
+# a Helm text is refused through either version; the template has to move to the structured fields and
+# manifests first. Nobody is exempt here: the controller and Deckhouse write templates through
+# deckhouse.io/v1alpha2.
+#
+# matchPolicy: Exact keeps the requests through deckhouse.io/v1alpha2 out. With Equivalent, the API
+# server would match them as well, as requests for the same resource.
+apiVersion: {{ include "helm_lib_get_api_version_by_kind" (list . "ValidatingAdmissionPolicy") }}
+kind: ValidatingAdmissionPolicy
+metadata:
+  name: {{ $policyName }}-v1alpha1-template-create
+  {{- include "helm_lib_module_labels" (list . (dict "app" "multitenancy-manager") ) | nindent 2 }}
+spec:
+  failurePolicy: Fail
+  matchConstraints:
+    matchPolicy: Exact
+    resourceRules:
+      - apiGroups:   ["deckhouse.io"]
+        apiVersions: ["v1alpha1"]
+        operations:  ["CREATE"]
+        resources:   ["projecttemplates"]
+  validations:
+    - expression: 'false'
+      reason: Forbidden
+      message: 'A ProjectTemplate is created through deckhouse.io/v1alpha2. deckhouse.io/v1alpha1 is deprecated and serves only the templates created through it. Describe the objects of a new template with the structured fields and manifests of deckhouse.io/v1alpha2.'
+---
+apiVersion: {{ include "helm_lib_get_api_version_by_kind" (list . "ValidatingAdmissionPolicyBinding") }}
+kind: ValidatingAdmissionPolicyBinding
+metadata:
+  name: {{ $policyName }}-v1alpha1-template-create
+  {{- include "helm_lib_module_labels" (list . (dict "app" "multitenancy-manager") ) | nindent 2 }}
+spec:
+  policyName: {{ $policyName }}-v1alpha1-template-create
+  validationActions: [Deny, Audit]
 {{- end }}
