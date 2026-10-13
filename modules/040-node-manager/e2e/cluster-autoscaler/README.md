@@ -4,7 +4,7 @@ End-to-end tests for **Cluster Autoscaler** behavior in the `node-manager` modul
 
 ## Overview
 
-These tests validate scale-from-zero, Priority Expander selection and fallback, safe-to-evict scale-down, and node label selector matching on DVP (Cluster API) and Yandex Cloud (MCM) clusters.
+These tests validate scale-from-zero, Priority Expander selection and fallback, safe-to-evict scale-down, node label selector matching, ephemeral-storage requests and zone balancing on DVP (Cluster API) and Yandex Cloud (MCM and Cluster API) clusters.
 
 The root `Taskfile.yaml` includes each scenario as a separate Task include. Shared workload manifests live in `tests/common/manifests/deployment.yaml`: three `pause` replicas with `nodeSelector: app=e2e-autoscaler-test`, strict pod anti-affinity per node, and tolerations for `dedicated=worker-100` and `dedicated=worker-50` taints so pods land only on the intended test NodeGroups.
 
@@ -81,6 +81,7 @@ kubectl cluster-info
 
 - Yandex Cloud
 - Existing `YandexInstanceClass` named `worker`
+- `ca-zone-balancing-yandex` is the exception to the MCM note below: its NodeGroup runs on CAPI (Deckhouse 1.77+) and spans every zone, so it needs at least two zones and uses the CA Deployment with `--cloud-provider=clusterapi`.
 - The test NodeGroups carry `node.deckhouse.io/use-mcm: "true"`, so they run on MCM even when Yandex NodeGroups default to CAPI. Their CA is the Deployment with `--cloud-provider=mcm`: `cluster-autoscaler` when the cluster has only MCM NodeGroups, `cluster-autoscaler-mcm` next to the CAPI one otherwise. The tests look it up after creating the NodeGroups.
 
 **Resources and cost:**
@@ -113,7 +114,9 @@ cluster-autoscaler/
     ├── ca-scale-from-zero-*/
     ├── ca-priority-fallback-*/
     ├── ca-safe-to-evict-*/
-    └── ca-scale-from-zero-node-label-dvp/
+    ├── ca-scale-from-zero-node-label-dvp/
+    ├── ca-scale-from-zero-ephemeral-storage-dvp/
+    └── ca-zone-balancing-yandex/
 ```
 
 Per-scenario details (steps, manifests, expected outcomes): `tests/<name>/<name>.md`.
@@ -129,6 +132,8 @@ Per-scenario details (steps, manifests, expected outcomes): `tests/<name>/<name>
 | `task ca-safe-to-evict-dvp:run`              | clusterapi | Scale-down with `safe-to-evict: "true"` annotation on a standalone pod | Node removed after Deployment deleted                     |
 | `task ca-safe-to-evict-yandex:run`           | mcm        | Same safe-to-evict scale-down for Yandex                               | Node removed after Deployment deleted                     |
 | `task ca-scale-from-zero-node-label-dvp:run` | clusterapi | Scale-from-zero with `nodeSelector` on `node.deckhouse.io/group`       | CA matches system labels in capacity annotation           |
+| `task ca-scale-from-zero-ephemeral-storage-dvp:run` | clusterapi | Scale-from-zero for a pod requesting `ephemeral-storage` | MachineDeployment has `ephemeral-disk`; pod on `e2e-worker-ephemeral` |
+| `task ca-zone-balancing-yandex:run`          | clusterapi | Scale-from-zero of a multi-zone CAPI NodeGroup is split across zones   | Nodes of `e2e-worker-zones` in more than one zone         |
 
 **DVP vs Yandex differences (scale-from-zero / fallback):**
 
@@ -192,6 +197,8 @@ task ca-priority-fallback-yandex:run
 task ca-safe-to-evict-dvp:run
 task ca-safe-to-evict-yandex:run
 task ca-scale-from-zero-node-label-dvp:run
+task ca-scale-from-zero-ephemeral-storage-dvp:run
+task ca-zone-balancing-yandex:run
 ```
 
 ### Run all scenarios

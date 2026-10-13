@@ -20,8 +20,10 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"k8s.io/apimachinery/pkg/api/resource"
 
 	v1 "github.com/deckhouse/node-controller/api/deckhouse.io/v1"
+	"github.com/deckhouse/node-controller/internal/capacity"
 )
 
 func TestResolvedNodeGroup_SpecPassthrough(t *testing.T) {
@@ -115,6 +117,31 @@ func TestResolvedNodeGroup_CloudProcessed(t *testing.T) {
 	assert.Equal(t, map[string]interface{}{"cpu": "4", "memory": "8Gi", "name": "", "rootDisk": "0"},
 		nodeGroupValues["nodeCapacity"], "nodeCapacity embedded as nested structure")
 	assert.Equal(t, map[string]interface{}{"flavorName": "m1.large"}, nodeGroupValues["instanceClass"])
+}
+
+// The extractors resolve the boot disk for the CAPI ephemeral-disk annotation, but the element is
+// hashed into every node's configurationChecksum: it keeps carrying rootDisk as it always has (the
+// catalog's flavor disk for openstack, "0" for most) and never the boot disk.
+func TestResolvedNodeGroup_BootDiskIsNotPublished(t *testing.T) {
+	nodeGroupValues := resolvedMap(ResolveInput{
+		Name:           "cloud",
+		NodeType:       v1.NodeTypeCloudEphemeral,
+		Spec:           specFrom(map[string]interface{}{"nodeType": "CloudEphemeral"}),
+		CloudProcessed: true,
+	}, Result{
+		Engine:  "CAPI",
+		CRIType: "Containerd",
+		Zones:   []string{"a"},
+		NodeCapacity: &capacity.InstanceType{
+			CPU:      resource.MustParse("4"),
+			Memory:   resource.MustParse("8Gi"),
+			RootDisk: resource.MustParse("20Gi"),
+			BootDisk: resource.MustParse("30Gi"),
+		},
+	})
+
+	assert.Equal(t, map[string]interface{}{"cpu": "4", "memory": "8Gi", "name": "", "rootDisk": "20Gi"},
+		nodeGroupValues["nodeCapacity"])
 }
 
 func TestResolvedNodeGroup_CloudNotProcessed(t *testing.T) {

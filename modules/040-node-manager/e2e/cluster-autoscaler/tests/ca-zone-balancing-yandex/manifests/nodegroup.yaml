@@ -1,0 +1,22 @@
+apiVersion: deckhouse.io/v1
+kind: NodeGroup
+metadata:
+  # No node.deckhouse.io/use-mcm: the group runs on CAPI, the Yandex default, which is what the
+  # ephemeral-disk annotation is written for. No zones either: the group spans every zone.
+  name: e2e-worker-zones
+spec:
+  cloudInstances:
+    classReference:
+      kind: YandexInstanceClass
+      name: e2e-worker-zones
+    # Room for the whole scale-up in one zone, so only balancing spreads it.
+    maxPerZone: 3
+    minPerZone: 0
+  nodeType: CloudEphemeral
+  nodeTemplate:
+    labels:
+      app: e2e-autoscaler-test
+    taints:
+      - key: dedicated
+        value: "zones"
+        effect: NoExecute

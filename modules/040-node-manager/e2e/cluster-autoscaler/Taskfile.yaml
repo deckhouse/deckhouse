@@ -22,6 +22,12 @@ includes:
   ca-scale-from-zero-node-label-dvp:
     taskfile: ./tests/ca-scale-from-zero-node-label-dvp/Taskfile.yml
     dir: ./tests/ca-scale-from-zero-node-label-dvp
+  ca-scale-from-zero-ephemeral-storage-dvp:
+    taskfile: ./tests/ca-scale-from-zero-ephemeral-storage-dvp/Taskfile.yml
+    dir: ./tests/ca-scale-from-zero-ephemeral-storage-dvp
+  ca-zone-balancing-yandex:
+    taskfile: ./tests/ca-zone-balancing-yandex/Taskfile.yml
+    dir: ./tests/ca-zone-balancing-yandex
 
 tasks:
   run:
@@ -34,6 +40,8 @@ tasks:
       - task: ca-safe-to-evict-dvp:run
       - task: ca-safe-to-evict-yandex:run
       - task: ca-scale-from-zero-node-label-dvp:run
+      - task: ca-scale-from-zero-ephemeral-storage-dvp:run
+      - task: ca-zone-balancing-yandex:run
 
   dry-run:
     desc: Dry-Run all cluster autoscaler e2e tests
@@ -45,3 +53,5 @@ tasks:
       - task: ca-safe-to-evict-dvp:dry-run
       - task: ca-safe-to-evict-yandex:dry-run
       - task: ca-scale-from-zero-node-label-dvp:dry-run
+      - task: ca-scale-from-zero-ephemeral-storage-dvp:dry-run
+      - task: ca-zone-balancing-yandex:dry-run

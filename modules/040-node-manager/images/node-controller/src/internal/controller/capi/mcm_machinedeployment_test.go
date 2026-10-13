@@ -118,7 +118,13 @@ func TestBuildMCMMachineDeployment_Defaults(t *testing.T) {
 
 func TestBuildMCMMachineDeployment_ScaleFromZero(t *testing.T) {
 	resolved := resolvedFromSpecJSON(t, `{}`)
-	resolved.NodeCapacity = &capacity.InstanceType{CPU: resource.MustParse("4"), Memory: resource.MustParse("8Gi")}
+	// The boot disk is resolved for every provider now; the MCM template takes its disk from the
+	// autoscaler patch (003), so it must not reach the MCM annotations.
+	resolved.NodeCapacity = &capacity.InstanceType{
+		CPU:      resource.MustParse("4"),
+		Memory:   resource.MustParse("8Gi"),
+		BootDisk: resource.MustParse("30Gi"),
+	}
 	md := buildMCMMachineDeployment(mcmMachineDeploymentInput{
 		resolved: resolved,
 		ngName:   "worker",
@@ -134,6 +140,9 @@ func TestBuildMCMMachineDeployment_ScaleFromZero(t *testing.T) {
 	assert.Equal(t, "4", ann["cluster-autoscaler.kubernetes.io/node-cpu"])
 	assert.Equal(t, "8Gi", ann["cluster-autoscaler.kubernetes.io/node-memory"])
 	assert.Equal(t, "eu-west-1a", ann["cluster-autoscaler.kubernetes.io/node-zone"])
+	for key := range ann {
+		assert.NotContains(t, key, "disk", "MCM annotations carry no disk")
+	}
 }
 
 // TestBuildMCMMachineDeployment_QuickShutdown covers the 5m/9 drain tier.

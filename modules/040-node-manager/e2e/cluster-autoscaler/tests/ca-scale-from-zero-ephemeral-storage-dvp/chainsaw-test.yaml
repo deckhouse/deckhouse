@@ -1,0 +1,299 @@
+apiVersion: chainsaw.kyverno.io/v1alpha1
+kind: Test
+metadata:
+  name: ca-scale-from-zero-ephemeral-storage-dvp
+spec:
+  description: |
+    Verifies that a pod requesting ephemeral-storage scales a CAPI NodeGroup up from zero
+    on a DVP cluster.
+
+    With no node in a MachineDeployment, the clusterapi provider of CA builds the template
+    node from the capacity.cluster-autoscaler.kubernetes.io annotations of that
+    MachineDeployment and puts them into capacity and allocatable as they are. Before the
+    fix node-controller wrote no ephemeral-disk annotation, so the template had no
+    ephemeral-storage: a pod requesting any failed NodeResourcesFit there
+    ("Insufficient ephemeral-storage") and the group was never scaled up.
+
+    The test clones the worker DVPInstanceClass with a 20Gi root disk, creates a NodeGroup
+    with minPerZone 0, restarts CA so it has no node info cached for the group, checks the
+    ephemeral-disk annotation, and deploys a pod requesting 1Gi of ephemeral-storage.
+  concurrent: false
+  steps:
+    - name: assert-dvpinstanceclass-worker-exists
+      try:
+        - description: Assert DVPInstanceClass worker resource exists
+          assert:
+            file: ../common/asserts/assert-dvp-instanceclass.yaml
+      cleanup:
+        - description: Wait until all test nodes are removed (runs last in cleanup chain)
+          script:
+            timeout: 15m
+            content: |
+              set -eu
+              for i in $(seq 1 90); do
+                NODES=$(kubectl get nodes -l app=e2e-autoscaler-test --no-headers 2>/dev/null | wc -l | tr -d ' ')
+                if [ "$NODES" -eq 0 ]; then
+                  exit 0
+                fi
+                sleep 10
+              done
+              echo "Timed out waiting for test nodes removal"
+              exit 1
+            check:
+              ($error == null): true
+        - description: Delete the Project that multitenancy-manager made of the test namespace
+          script:
+            timeout: 5m
+            content: |
+              set -u
+              # With multitenancy-manager the test namespace becomes a Project and cannot be deleted
+              # directly, which fails chainsaw's own namespace cleanup. Deleting the Project removes the
+              # namespace. Without the module there is no Project and nothing to do.
+              if kubectl get projects.deckhouse.io "$NAMESPACE" >/dev/null 2>&1; then
+                kubectl delete projects.deckhouse.io "$NAMESPACE" --wait=true --timeout=4m
+              fi
+            check:
+              ($error == null): true
+
+    - name: cleanup-leftover-resources
+      try:
+        - description: Delete leftover NodeGroup e2e-worker-ephemeral
+          continueOnError: true
+          delete:
+            ref:
+              apiVersion: deckhouse.io/v1
+              kind: NodeGroup
+              name: e2e-worker-ephemeral
+        - description: Delete leftover DVPInstanceClass e2e-worker-ephemeral
+          continueOnError: true
+          delete:
+            ref:
+              apiVersion: deckhouse.io/v1alpha1
+              kind: DVPInstanceClass
+              name: e2e-worker-ephemeral
+
+    - name: create-e2e-worker-ephemeral-instanceclass
+      try:
+        - description: Clone DVPInstanceClass 'worker' as 'e2e-worker-ephemeral' with a 20Gi root disk
+          script:
+            timeout: 60s
+            content: |
+              set -eu
+              kubectl get dvpinstanceclass worker -o json | \
+                jq '{
+                  apiVersion: .apiVersion,
+                  kind: .kind,
+                  metadata: { name: "e2e-worker-ephemeral" },
+                  spec: (.spec |
+                    .virtualMachine.cpu.cores = 2 |
+                    .virtualMachine.cpu.coreFraction = "20%" |
+                    .virtualMachine.memory.size = "4Gi" |
+                    .rootDisk.size = "20Gi"
+                  )
+                }' | kubectl apply -f -
+            check:
+              ($error == null): true
+      cleanup:
+        - description: Delete DVPInstanceClass e2e-worker-ephemeral
+          delete:
+            ref:
+              apiVersion: deckhouse.io/v1alpha1
+              kind: DVPInstanceClass
+              name: e2e-worker-ephemeral
+
+    - name: apply-nodegroup
+      try:
+        - description: Apply NodeGroup e2e-worker-ephemeral (minPerZone 0)
+          apply:
+            file: manifests/nodegroup.yaml
+      cleanup:
+        - description: Delete NodeGroup e2e-worker-ephemeral
+          delete:
+            ref:
+              apiVersion: deckhouse.io/v1
+              kind: NodeGroup
+              name: e2e-worker-ephemeral
+
+    - name: assert-cluster-autoscaler-exists
+      try:
+        - description: Check cluster-autoscaler deployment has ready replicas
+          assert:
+            file: ../common/asserts/assert-ca-exists.yaml
+
+    - name: assert-ca-uses-clusterapi-provider
+      try:
+        - description: Check CA container args contain 'clusterapi'
+          script:
+            timeout: 30s
+            content: |
+              set -eu
+              CA_ARGS=$(kubectl get deployment cluster-autoscaler -n d8-cloud-instance-manager \
+                -o jsonpath='{.spec.template.spec.containers[0].args}')
+              echo "$CA_ARGS" | grep -q "clusterapi"
+            check:
+              ($error == null): true
+
+    - name: verify-machine-deployment-ephemeral-disk-annotation
+      try:
+        - description: Check the MachineDeployment advertises the root disk as ephemeral-disk
+          script:
+            timeout: 300s
+            content: |
+              set -eu
+              # 20Gi less kubelet's evictionHard nodefs.available (5%) and the 1Gi systemReserved of
+              # resourceReservation.mode Auto, which is the NodeGroup default: 20Gi - 1Gi - 1Gi.
+              EXPECTED=18Gi
+              for i in $(seq 1 30); do
+                MD_NAME=$(kubectl get machinedeployments.cluster.x-k8s.io -n d8-cloud-instance-manager \
+                  -l node-group=e2e-worker-ephemeral --no-headers \
+                  -o custom-columns=':metadata.name' 2>/dev/null | head -1)
+                if [ -n "$MD_NAME" ]; then
+                  DISK_ANN=$(kubectl get machinedeployments.cluster.x-k8s.io -n d8-cloud-instance-manager \
+                    "$MD_NAME" -o json 2>/dev/null | \
+                    jq -r '.metadata.annotations["capacity.cluster-autoscaler.kubernetes.io/ephemeral-disk"] // ""')
+                  if [ "$DISK_ANN" = "$EXPECTED" ]; then
+                    echo "MachineDeployment $MD_NAME has ephemeral-disk=$DISK_ANN"
+                    exit 0
+                  fi
+                  echo "MachineDeployment $MD_NAME has ephemeral-disk='$DISK_ANN', want $EXPECTED"
+                fi
+                sleep 10
+              done
+              echo "Timed out: the MachineDeployment has no expected ephemeral-disk annotation"
+              exit 1
+            check:
+              ($error == null): true
+      catch:
+        - description: Show MachineDeployment details
+          script:
+            timeout: 30s
+            content: |
+              kubectl get machinedeployments.cluster.x-k8s.io -n d8-cloud-instance-manager \
+                -l node-group=e2e-worker-ephemeral -o yaml 2>/dev/null || true
+
+    - name: restart-cluster-autoscaler
+      try:
+        - description: Rollout restart so CA builds the group's template node from the annotations
+          script:
+            timeout: 180s
+            content: |
+              set -eu
+              # CA keeps the template node of a group it has seen a node of in memory; a fresh process
+              # has to build it from the MachineDeployment annotations, which is what is under test.
+              kubectl rollout restart deployment cluster-autoscaler -n d8-cloud-instance-manager
+              kubectl rollout status deployment cluster-autoscaler -n d8-cloud-instance-manager --timeout=120s
+            check:
+              ($error == null): true
+
+    - name: wait-for-ca-initialization
+      try:
+        - description: Sleep 15s for CA initialization
+          sleep:
+            duration: 15s
+
+    - name: apply-deployment
+      try:
+        - description: Apply Deployment e2e-nginx requesting 1Gi of ephemeral-storage
+          apply:
+            file: manifests/deployment.yaml
+      cleanup:
+        - description: Delete e2e-nginx Deployment
+          delete:
+            ref:
+              apiVersion: apps/v1
+              kind: Deployment
+              name: e2e-nginx
+
+    - name: assert-ca-scales-group-up
+      try:
+        - description: Wait until CA scales the MachineDeployment of e2e-worker-ephemeral up from zero
+          script:
+            timeout: 330s
+            content: |
+              set -u
+              # spec.replicas of the MachineDeployment is what CA sets on scale-up. The template-node
+              # rejection is checked on every round so the old behaviour fails fast with its cause.
+              for i in $(seq 1 60); do
+                MD_NAME=$(kubectl get machinedeployments.cluster.x-k8s.io -n d8-cloud-instance-manager \
+                  -l node-group=e2e-worker-ephemeral --no-headers \
+                  -o custom-columns=':metadata.name' 2>/dev/null | head -1)
+                REPLICAS=$(kubectl get machinedeployments.cluster.x-k8s.io -n d8-cloud-instance-manager \
+                  "$MD_NAME" -o jsonpath='{.spec.replicas}' 2>/dev/null || true)
+                if [ "${REPLICAS:-0}" -ge 1 ]; then
+                  echo "CA scaled MachineDeployment $MD_NAME up to $REPLICAS"
+                  exit 0
+                fi
+                REJECTED=$(kubectl logs -n d8-cloud-instance-manager deployment/cluster-autoscaler \
+                  -c cluster-autoscaler --since=10m 2>/dev/null | \
+                  grep "e2e-worker-ephemeral" | grep "Insufficient ephemeral-storage" | tail -1 || true)
+                if [ -n "$REJECTED" ]; then
+                  echo "CA rejected the template node of e2e-worker-ephemeral:"
+                  echo "$REJECTED"
+                  echo "The MachineDeployment's ephemeral-disk annotation is missing or too small"
+                  exit 1
+                fi
+                sleep 5
+              done
+              echo "Timed out waiting for CA to scale e2e-worker-ephemeral up from zero"
+              exit 1
+            check:
+              ($error == null): true
+      catch:
+        - description: Collect CA logs on failure
+          podLogs:
+            namespace: d8-cloud-instance-manager
+            selector: app=cluster-autoscaler
+
+    - name: assert-pod-running
+      try:
+        - description: Wait until Deployment e2e-nginx has 1 ready replica
+          script:
+            timeout: 16m
+            content: |
+              set -u
+              # Poll with kubectl instead of a chainsaw assert: an assert stops at the first failed API
+              # request, so a single transient error would end a wait that lasts minutes.
+              READY=0
+              for i in $(seq 1 180); do
+                READY=$(kubectl get deployment e2e-nginx -n "$NAMESPACE" \
+                  -o jsonpath='{.status.readyReplicas}' 2>/dev/null || true)
+                if [ "${READY:-0}" -ge 1 ]; then
+                  exit 0
+                fi
+                sleep 5
+              done
+              echo "Deployment e2e-nginx has ${READY:-0}/1 ready replicas after 15 minutes"
+              kubectl get pods -n "$NAMESPACE" -o wide || true
+              exit 1
+            check:
+              ($error == null): true
+      catch:
+        - description: Collect test namespace events on failure
+          events: {}
+        - description: Collect d8-cloud-instance-manager events on failure
+          events:
+            namespace: d8-cloud-instance-manager
+        - description: Collect CA logs on failure
+          podLogs:
+            namespace: d8-cloud-instance-manager
+            selector: app=cluster-autoscaler
+
+    - name: assert-pod-on-ephemeral-node
+      try:
+        - description: Check the pod runs on a node of e2e-worker-ephemeral
+          script:
+            timeout: 90s
+            content: |
+              set -eu
+              NODE=$(kubectl get pods -n "$NAMESPACE" -l app=e2e-nginx -o jsonpath='{.items[0].spec.nodeName}')
+              NG=$(kubectl get node "$NODE" -o jsonpath='{.metadata.labels.node\.deckhouse\.io/group}')
+              if [ "$NG" != "e2e-worker-ephemeral" ]; then
+                echo "Node $NODE belongs to $NG, expected e2e-worker-ephemeral"
+                exit 1
+              fi
+              # For the record: the template overestimates the node a little, because the
+              # filesystem is smaller than the disk.
+              ALLOCATABLE=$(kubectl get node "$NODE" -o jsonpath='{.status.allocatable.ephemeral-storage}')
+              echo "Pod runs on $NODE; node allocatable ephemeral-storage: $ALLOCATABLE, template: 18Gi"
+            check:
+              ($error == null): true

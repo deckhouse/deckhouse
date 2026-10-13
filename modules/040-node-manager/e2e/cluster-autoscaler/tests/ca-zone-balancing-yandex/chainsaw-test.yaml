@@ -1,0 +1,278 @@
+apiVersion: chainsaw.kyverno.io/v1alpha1
+kind: Test
+metadata:
+  name: ca-zone-balancing-yandex
+spec:
+  description: |
+    Verifies that CA spreads a scale-up from zero of a multi-zone CAPI NodeGroup across zones
+    on Yandex Cloud (--balance-similar-node-groups).
+
+    Each zone of a CAPI NodeGroup is a MachineDeployment, and with no nodes CA compares their
+    template nodes built from the MachineDeployment annotations. Before node-controller wrote
+    the ephemeral-disk annotation the templates had no ephemeral-storage, the DaemonSet pods
+    CA adds to them drove their free ephemeral-storage negative, and two equal negative values
+    fail CA's tolerance check ("free resources not within tolerance"). The zones counted as
+    dissimilar and the whole scale-up went into one of them: 0->3 in one zone instead of one
+    node per zone.
+
+    The test needs a cluster whose Yandex NodeGroups run on CAPI (Deckhouse 1.77+) and at
+    least two zones. It also covers the pods' ephemeral-storage request on scale-from-zero.
+  concurrent: false
+  steps:
+    - name: assert-yandexinstanceclass-worker-exists
+      try:
+        - description: Assert YandexInstanceClass worker resource exists
+          assert:
+            file: ../common/asserts/assert-yandex-instanceclass.yaml
+      cleanup:
+        - description: Wait until all test nodes are removed (runs last in cleanup chain)
+          script:
+            timeout: 15m
+            content: |
+              set -eu
+              for i in $(seq 1 90); do
+                NODES=$(kubectl get nodes -l app=e2e-autoscaler-test --no-headers 2>/dev/null | wc -l | tr -d ' ')
+                if [ "$NODES" -eq 0 ]; then
+                  exit 0
+                fi
+                sleep 10
+              done
+              echo "Timed out waiting for test nodes removal"
+              exit 1
+            check:
+              ($error == null): true
+        - description: Delete the Project that multitenancy-manager made of the test namespace
+          script:
+            timeout: 5m
+            content: |
+              set -u
+              # With multitenancy-manager the test namespace becomes a Project and cannot be deleted
+              # directly, which fails chainsaw's own namespace cleanup. Deleting the Project removes the
+              # namespace. Without the module there is no Project and nothing to do.
+              if kubectl get projects.deckhouse.io "$NAMESPACE" >/dev/null 2>&1; then
+                kubectl delete projects.deckhouse.io "$NAMESPACE" --wait=true --timeout=4m
+              fi
+            check:
+              ($error == null): true
+
+    - name: cleanup-leftover-resources
+      try:
+        - description: Delete leftover NodeGroup e2e-worker-zones
+          continueOnError: true
+          delete:
+            ref:
+              apiVersion: deckhouse.io/v1
+              kind: NodeGroup
+              name: e2e-worker-zones
+        - description: Delete leftover YandexInstanceClass e2e-worker-zones
+          continueOnError: true
+          delete:
+            ref:
+              apiVersion: deckhouse.io/v1alpha1
+              kind: YandexInstanceClass
+              name: e2e-worker-zones
+
+    - name: create-e2e-worker-zones-instanceclass
+      try:
+        - description: Clone YandexInstanceClass 'worker' as 'e2e-worker-zones' with reduced specs
+          script:
+            timeout: 60s
+            content: |
+              set -eu
+              kubectl get yandexinstanceclass worker -o json | \
+                jq '{
+                  apiVersion: .apiVersion,
+                  kind: .kind,
+                  metadata: { name: "e2e-worker-zones" },
+                  spec: (.spec | .cores = 2 | .memory = 4096 | .diskSizeGB = 30)
+                }' | kubectl apply -f -
+            check:
+              ($error == null): true
+      cleanup:
+        - description: Delete YandexInstanceClass e2e-worker-zones
+          delete:
+            ref:
+              apiVersion: deckhouse.io/v1alpha1
+              kind: YandexInstanceClass
+              name: e2e-worker-zones
+
+    - name: apply-nodegroup
+      try:
+        - description: Apply NodeGroup e2e-worker-zones (CAPI, every zone, minPerZone 0)
+          apply:
+            file: manifests/nodegroup.yaml
+      cleanup:
+        - description: Delete NodeGroup e2e-worker-zones
+          delete:
+            ref:
+              apiVersion: deckhouse.io/v1
+              kind: NodeGroup
+              name: e2e-worker-zones
+
+    - name: verify-machine-deployments
+      try:
+        - description: Check there is a MachineDeployment per zone, each advertising ephemeral-disk
+          script:
+            timeout: 300s
+            content: |
+              set -u
+              # 30Gi less kubelet's evictionHard nodefs.available (5%) and the 1Gi systemReserved of
+              # resourceReservation.mode Auto, the NodeGroup default.
+              EXPECTED=28160Mi
+              for i in $(seq 1 30); do
+                MDS=$(kubectl get machinedeployments.cluster.x-k8s.io -n d8-cloud-instance-manager \
+                  -l node-group=e2e-worker-zones -o json 2>/dev/null || echo '{"items":[]}')
+                COUNT=$(echo "$MDS" | jq '.items | length')
+                ANNOTATED=$(echo "$MDS" | jq --arg want "$EXPECTED" \
+                  '[.items[] | select(.metadata.annotations["capacity.cluster-autoscaler.kubernetes.io/ephemeral-disk"] == $want)] | length')
+                if [ "$COUNT" -ge 2 ] && [ "$ANNOTATED" -eq "$COUNT" ]; then
+                  echo "$COUNT MachineDeployments, all with ephemeral-disk=$EXPECTED"
+                  exit 0
+                fi
+                echo "MachineDeployments: $COUNT, with ephemeral-disk=$EXPECTED: $ANNOTATED"
+                sleep 10
+              done
+              echo "Need at least two zonal MachineDeployments with the ephemeral-disk annotation"
+              echo "(the test is meaningless in a single-zone cluster, or the group is not on CAPI)"
+              exit 1
+            check:
+              ($error == null): true
+      catch:
+        - description: Show MachineDeployments and the NodeGroup engine
+          script:
+            timeout: 30s
+            content: |
+              kubectl get nodegroup e2e-worker-zones -o jsonpath='{.status.engine}{"\n"}' 2>/dev/null || true
+              kubectl get machinedeployments.cluster.x-k8s.io -n d8-cloud-instance-manager \
+                -l node-group=e2e-worker-zones -o yaml 2>/dev/null || true
+
+    - name: restart-cluster-autoscaler
+      try:
+        - description: Find the clusterapi cluster-autoscaler and restart it
+          script:
+            timeout: 180s
+            content: |
+              set -eu
+              # A fresh process has no template node cached for the group and builds one per zone from
+              # the MachineDeployment annotations, which is what is under test.
+              CA_DEPLOY=$(kubectl get deployments -n d8-cloud-instance-manager -o json | \
+                jq -r '[.items[] | select([.spec.template.spec.containers[].args[]?] | index("--cloud-provider=clusterapi"))][0].metadata.name // empty')
+              if [ -z "$CA_DEPLOY" ]; then
+                echo "No cluster-autoscaler Deployment with --cloud-provider=clusterapi"
+                exit 1
+              fi
+              kubectl rollout restart deployment "$CA_DEPLOY" -n d8-cloud-instance-manager
+              kubectl rollout status deployment "$CA_DEPLOY" -n d8-cloud-instance-manager --timeout=120s
+              echo "cluster-autoscaler with the clusterapi provider: $CA_DEPLOY"
+            check:
+              ($error == null): true
+
+    - name: wait-for-ca-initialization
+      try:
+        - description: Sleep 15s for CA initialization
+          sleep:
+            duration: 15s
+
+    - name: apply-deployment
+      try:
+        - description: Apply Deployment e2e-nginx (3 replicas, one per node, 1Gi ephemeral-storage each)
+          apply:
+            file: manifests/deployment.yaml
+      cleanup:
+        - description: Delete e2e-nginx Deployment
+          delete:
+            ref:
+              apiVersion: apps/v1
+              kind: Deployment
+              name: e2e-nginx
+
+    - name: assert-scale-up-spread-across-zones
+      try:
+        - description: Wait for the scale-up and check it went into more than one zone
+          script:
+            timeout: 330s
+            content: |
+              set -u
+              # CA writes the whole plan into spec.replicas of the zonal MachineDeployments at once, so
+              # once three replicas are requested their distribution is CA's balancing decision.
+              for i in $(seq 1 60); do
+                MDS=$(kubectl get machinedeployments.cluster.x-k8s.io -n d8-cloud-instance-manager \
+                  -l node-group=e2e-worker-zones -o json 2>/dev/null || echo '{"items":[]}')
+                TOTAL=$(echo "$MDS" | jq '[.items[].spec.replicas // 0] | add // 0')
+                if [ "$TOTAL" -ge 3 ]; then
+                  echo "$MDS" | jq -r '.items[] | "\(.metadata.name) replicas=\(.spec.replicas // 0)"'
+                  USED=$(echo "$MDS" | jq '[.items[] | select((.spec.replicas // 0) > 0)] | length')
+                  if [ "$USED" -ge 2 ]; then
+                    echo "The scale-up went into $USED zones"
+                    exit 0
+                  fi
+                  echo "The whole scale-up went into one zone: CA did not treat the zones as similar"
+                  exit 1
+                fi
+                sleep 5
+              done
+              echo "Timed out waiting for CA to request three nodes for e2e-worker-zones"
+              exit 1
+            check:
+              ($error == null): true
+      catch:
+        - description: Show CA balancing decisions
+          script:
+            timeout: 60s
+            content: |
+              CA_DEPLOY=$(kubectl get deployments -n d8-cloud-instance-manager -o json | \
+                jq -r '[.items[] | select([.spec.template.spec.containers[].args[]?] | index("--cloud-provider=clusterapi"))][0].metadata.name // empty')
+              kubectl logs -n d8-cloud-instance-manager "deployment/$CA_DEPLOY" -c cluster-autoscaler --since=15m 2>/dev/null | \
+                grep -E "Splitting scale-up|not similar|Final scale-up plan|Insufficient ephemeral-storage" | tail -20 || true
+
+    - name: assert-pods-running
+      try:
+        - description: Wait until Deployment e2e-nginx has 3 ready replicas
+          script:
+            timeout: 21m
+            content: |
+              set -u
+              # Poll with kubectl instead of a chainsaw assert: an assert stops at the first failed API
+              # request, so a single transient error would end a wait that lasts minutes.
+              READY=0
+              for i in $(seq 1 240); do
+                READY=$(kubectl get deployment e2e-nginx -n "$NAMESPACE" \
+                  -o jsonpath='{.status.readyReplicas}' 2>/dev/null || true)
+                if [ "${READY:-0}" -ge 3 ]; then
+                  exit 0
+                fi
+                sleep 5
+              done
+              echo "Deployment e2e-nginx has ${READY:-0}/3 ready replicas after 20 minutes"
+              kubectl get pods -n "$NAMESPACE" -o wide || true
+              exit 1
+            check:
+              ($error == null): true
+      catch:
+        - description: Collect test namespace events on failure
+          events: {}
+        - description: Collect d8-cloud-instance-manager events on failure
+          events:
+            namespace: d8-cloud-instance-manager
+
+    - name: assert-pods-in-several-zones
+      try:
+        - description: Check the pods run in more than one zone
+          script:
+            timeout: 90s
+            content: |
+              set -eu
+              ZONES=""
+              for NODE in $(kubectl get pods -n "$NAMESPACE" -l app=e2e-nginx -o jsonpath='{.items[*].spec.nodeName}'); do
+                ZONE=$(kubectl get node "$NODE" -o jsonpath='{.metadata.labels.topology\.kubernetes\.io/zone}')
+                echo "$NODE: $ZONE"
+                ZONES="$ZONES $ZONE"
+              done
+              DISTINCT=$(echo $ZONES | tr ' ' '\n' | sort -u | grep -c . || true)
+              if [ "$DISTINCT" -lt 2 ]; then
+                echo "All pods run in one zone"
+                exit 1
+              fi
+              echo "Pods run in $DISTINCT zones"
+            check:
+              ($error == null): true

@@ -23,6 +23,7 @@ import (
 	"strings"
 
 	"k8s.io/apimachinery/pkg/api/errors"
+	"k8s.io/apimachinery/pkg/api/resource"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
@@ -75,6 +76,13 @@ func buildCAPIMachineDeployment(in capiMDInput) *unstructured.Unstructured {
 	if nodeCapacity := in.resolved.TemplateCapacity; nodeCapacity != nil {
 		annotations["capacity.cluster-autoscaler.kubernetes.io/cpu"] = nodeCapacity.CPU.String()
 		annotations["capacity.cluster-autoscaler.kubernetes.io/memory"] = nodeCapacity.Memory.String()
+		// Without it the template node has no ephemeral-storage at all: a pod requesting any fails
+		// NodeResourcesFit there, and the DaemonSet pods the autoscaler adds to the template drive
+		// its free ephemeral-storage negative, which makes --balance-similar-node-groups treat
+		// identical zones as dissimilar and put a whole scale-up into one of them.
+		if storage, ok := templateEphemeralStorage(nodeCapacity.BootDisk, in.ng.Spec.Kubelet); ok {
+			annotations["capacity.cluster-autoscaler.kubernetes.io/ephemeral-disk"] = storage.String()
+		}
 	}
 
 	// Separate instances on purpose: the provider spec patch is deep-merged into spec below,
@@ -145,6 +153,66 @@ func buildCAPIMachineDeployment(in capiMDInput) *unstructured.Unstructured {
 			},
 		},
 	}}
+}
+
+// The kubelet ephemeral-storage deductions candi/bashible/common-steps/all/064_configure_kubelet.sh.tpl
+// configures on a node.
+const (
+	evictionHardNodefsPercent   = 5
+	evictionHardNodefsMaxG      = 20                 // maxAvailableReservedSpace
+	autoSystemReservedEphemeral = 1 << 30            // 1Gi
+	gigabyte                    = 1000 * 1000 * 1000 // the script's "G"
+	kibibytesPerScriptGigabyte  = 1000 * 1000        // df reports KiB, the script divides by 1e6
+	mebibyte                    = 1 << 20
+)
+
+// templateEphemeralStorage is the ephemeral-storage the autoscaler's template node offers for a
+// boot disk of the given size, and false when the size is unknown.
+//
+// The clusterapi provider puts the annotation into both capacity and allocatable and subtracts
+// nothing, so the kubelet's own deductions are taken off here: evictionHard nodefs.available (5%
+// of the filesystem, or 20G once 5% is above that) and systemReserved ephemeral-storage. Two
+// approximations remain: the filesystem is a little smaller than the disk, so the template
+// overestimates the node slightly, and a kubelet.rootDir on a separate volume is not the boot
+// disk at all, which node-controller cannot see.
+func templateEphemeralStorage(bootDisk resource.Quantity, kubelet *deckhousev1.KubeletSpec) (resource.Quantity, bool) {
+	disk := bootDisk.Value()
+	if disk <= 0 {
+		return resource.Quantity{}, false
+	}
+	// The script's integer arithmetic, so the cap starts at the same disk size it does.
+	evictionHard := disk * evictionHardNodefsPercent / 100
+	if disk/1024/kibibytesPerScriptGigabyte*evictionHardNodefsPercent/100 > evictionHardNodefsMaxG {
+		evictionHard = evictionHardNodefsMaxG * gigabyte
+	}
+	// Rounded down to MiB, so the annotation reads as a size (28160Mi) rather than a byte count.
+	allocatable := (disk - evictionHard - systemReservedEphemeralStorage(kubelet)) / mebibyte * mebibyte
+	if allocatable <= 0 {
+		return resource.Quantity{}, false
+	}
+	return *resource.NewQuantity(allocatable, resource.BinarySI), true
+}
+
+// systemReservedEphemeralStorage is kubelet's systemReserved ephemeral-storage for the group's
+// resourceReservation: 1Gi in Auto mode, the configured value in Static mode, none in Off.
+func systemReservedEphemeralStorage(kubelet *deckhousev1.KubeletSpec) int64 {
+	var reservation *deckhousev1.ResourceReservationSpec
+	if kubelet != nil {
+		reservation = kubelet.ResourceReservation
+	}
+	// Auto is the NodeGroup CRD default, so an object read from the API server always names a
+	// mode; nil only reaches here from a NodeGroup built in code.
+	if reservation == nil || reservation.Mode == "" || reservation.Mode == "Auto" {
+		return autoSystemReservedEphemeral
+	}
+	if reservation.Mode != "Static" || reservation.Static == nil || reservation.Static.EphemeralStorage == nil {
+		return 0
+	}
+	reserved, err := resource.ParseQuantity(reservation.Static.EphemeralStorage.String())
+	if err != nil {
+		return 0
+	}
+	return reserved.Value()
 }
 
 // existingCAPIMachineDeployment carries the parts of an already-created MachineDeployment that

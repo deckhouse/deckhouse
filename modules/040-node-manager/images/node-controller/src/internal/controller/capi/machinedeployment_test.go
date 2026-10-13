@@ -22,6 +22,7 @@ import (
 
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
+	"k8s.io/apimachinery/pkg/util/intstr"
 
 	deckhousev1 "github.com/deckhouse/node-controller/api/deckhouse.io/v1"
 	"github.com/deckhouse/node-controller/internal/capacity"
@@ -202,7 +203,11 @@ func TestBuildCAPIMachineDeploymentCapacityAnnotations(t *testing.T) {
 	ng := &deckhousev1.NodeGroup{}
 	ng.Name = "worker"
 	resolved := derived_status.ResolvedNodeGroup{
-		TemplateCapacity: &capacity.InstanceType{CPU: resource.MustParse("4"), Memory: resource.MustParse("8Gi")},
+		TemplateCapacity: &capacity.InstanceType{
+			CPU:      resource.MustParse("4"),
+			Memory:   resource.MustParse("8Gi"),
+			BootDisk: resource.MustParse("30Gi"),
+		},
 	}
 
 	// minReplicas 1: a group that never scales from zero must still be annotated, otherwise the
@@ -214,6 +219,8 @@ func TestBuildCAPIMachineDeploymentCapacityAnnotations(t *testing.T) {
 	for key, want := range map[string]string{
 		"capacity.cluster-autoscaler.kubernetes.io/cpu":    "4",
 		"capacity.cluster-autoscaler.kubernetes.io/memory": "8Gi",
+		// 30Gi less evictionHard nodefs.available (5%) and Auto's systemReserved (1Gi).
+		"capacity.cluster-autoscaler.kubernetes.io/ephemeral-disk": "28160Mi",
 	} {
 		got, ok := annotations[key].(string)
 		if !ok || got != want {
@@ -225,13 +232,85 @@ func TestBuildCAPIMachineDeploymentCapacityAnnotations(t *testing.T) {
 	}
 }
 
+// A boot disk node-controller does not know (an OpenStack class with explicit capacity and no
+// rootDiskSize) leaves the annotation out instead of advertising a zero-sized one: the autoscaler
+// treats the two the same, and an absent key keeps the MachineDeployment as it was.
+func TestBuildCAPIMachineDeploymentWithoutBootDisk(t *testing.T) {
+	ng := &deckhousev1.NodeGroup{}
+	ng.Name = "worker"
+	resolved := derived_status.ResolvedNodeGroup{
+		TemplateCapacity: &capacity.InstanceType{
+			CPU:      resource.MustParse("4"),
+			Memory:   resource.MustParse("8Gi"),
+			BootDisk: resource.MustParse("0"),
+		},
+	}
+
+	md := buildCAPIMachineDeployment(capiMDInput{ng: ng, resolved: resolved})
+	annotations := md.Object["metadata"].(map[string]interface{})["annotations"].(map[string]interface{})
+
+	if got, ok := annotations["capacity.cluster-autoscaler.kubernetes.io/ephemeral-disk"]; ok {
+		t.Fatalf("ephemeral-disk = %v, want absent", got)
+	}
+	if got := annotations["capacity.cluster-autoscaler.kubernetes.io/cpu"]; got != "4" {
+		t.Fatalf("cpu = %v, want 4", got)
+	}
+}
+
+// The clusterapi provider advertises the annotation as both capacity and allocatable, so it must
+// carry what the kubelet configured by 064_configure_kubelet.sh.tpl leaves to pods.
+func TestTemplateEphemeralStorage(t *testing.T) {
+	reservation := func(mode string, ephemeralStorage *intstr.IntOrString) *deckhousev1.KubeletSpec {
+		spec := &deckhousev1.ResourceReservationSpec{Mode: mode}
+		if mode == "Static" {
+			spec.Static = &deckhousev1.StaticResourceReservation{EphemeralStorage: ephemeralStorage}
+		}
+		return &deckhousev1.KubeletSpec{ResourceReservation: spec}
+	}
+
+	cases := []struct {
+		name     string
+		rootDisk string
+		kubelet  *deckhousev1.KubeletSpec
+		want     string
+	}{
+		{"unknown disk", "0", nil, ""},
+		{"no kubelet settings means the CRD default, Auto", "30Gi", nil, "28160Mi"},
+		{"Auto", "30Gi", reservation("Auto", nil), "28160Mi"},
+		{"Off reserves nothing", "30Gi", reservation("Off", nil), "29184Mi"},
+		{"Static with ephemeralStorage", "30Gi", reservation("Static", ptr(intstr.FromString("5Gi"))), "24064Mi"},
+		{"Static without ephemeralStorage", "30Gi", reservation("Static", nil), "29184Mi"},
+		{"the 20G cap starts where the script's does", "390Gi", nil, "378368Mi"},
+		{"eviction threshold is capped at 20G", "1000Gi", nil, "1003902Mi"},
+		{"nothing left", "1Gi", nil, ""},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			got, ok := templateEphemeralStorage(resource.MustParse(tc.rootDisk), tc.kubelet)
+			if tc.want == "" {
+				if ok {
+					t.Fatalf("got %s, want no annotation", got.String())
+				}
+				return
+			}
+			if !ok || got.String() != tc.want {
+				t.Fatalf("got %s (ok=%v), want %s", got.String(), ok, tc.want)
+			}
+		})
+	}
+}
+
 // NodeCapacity is the scale-from-zero value published into the NodeGroup element; it must not be
 // what the annotations are read from, or fixed-size groups lose them again.
 func TestBuildCAPIMachineDeploymentIgnoresNodeCapacity(t *testing.T) {
 	ng := &deckhousev1.NodeGroup{}
 	ng.Name = "worker"
 	resolved := derived_status.ResolvedNodeGroup{
-		NodeCapacity: &capacity.InstanceType{CPU: resource.MustParse("4"), Memory: resource.MustParse("8Gi")},
+		NodeCapacity: &capacity.InstanceType{
+			CPU:      resource.MustParse("4"),
+			Memory:   resource.MustParse("8Gi"),
+			BootDisk: resource.MustParse("30Gi"),
+		},
 	}
 
 	md := buildCAPIMachineDeployment(capiMDInput{ng: ng, resolved: resolved})
@@ -240,6 +319,7 @@ func TestBuildCAPIMachineDeploymentIgnoresNodeCapacity(t *testing.T) {
 	for _, key := range []string{
 		"capacity.cluster-autoscaler.kubernetes.io/cpu",
 		"capacity.cluster-autoscaler.kubernetes.io/memory",
+		"capacity.cluster-autoscaler.kubernetes.io/ephemeral-disk",
 	} {
 		if got, ok := annotations[key]; ok {
 			t.Fatalf("annotation %q = %v, want absent", key, got)

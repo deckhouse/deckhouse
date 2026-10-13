@@ -17,6 +17,7 @@ limitations under the License.
 package capacity
 
 import (
+	"encoding/json"
 	"strconv"
 	"testing"
 
@@ -226,6 +227,90 @@ func TestCapacityExtractor(t *testing.T) {
 		catalog := NewInstanceTypesCatalog(make([]InstanceType, 0))
 		_, err = CalculateNodeTemplateCapacity(instanceClass["kind"].(string), instanceClass["spec"], catalog)
 		assert.Error(t, err)
+	})
+}
+
+// The boot disk feeds the CAPI ephemeral-disk annotation. A size the InstanceClass leaves unset
+// is the one the provider creates the disk with: its default, or for a catalog type the catalog's
+// disk. RootDisk is published in the NodeGroup element and must keep the value it always had.
+func TestBootDisk(t *testing.T) {
+	catalog := []InstanceType{
+		// The openstack discoverer publishes the flavor's disk.
+		{Name: "m1.large", CPU: resource.MustParse("4"), Memory: resource.MustParse("8Gi"), RootDisk: resource.MustParse("20Gi")},
+		{Name: "s7n.xlarge.2", CPU: resource.MustParse("4"), Memory: resource.MustParse("8Gi"), RootDisk: resource.MustParse("0")},
+		{Name: "vcd-4-8", CPU: resource.MustParse("4"), Memory: resource.MustParse("8Gi"), RootDisk: resource.MustParse("0Gi")},
+		{Name: "t3a.xlarge", CPU: resource.MustParse("4"), Memory: resource.MustParse("16Gi"), RootDisk: resource.MustParse("0")},
+	}
+
+	cases := []struct {
+		name         string
+		kind         string
+		spec         string
+		wantBootDisk string
+		wantRootDisk string
+	}{
+		{"vsphere set", "VsphereInstanceClass", `{numCPUs: 4, memory: 8192, rootDiskSize: 30}`, "30Gi", "0"},
+		{"vsphere template default", "VsphereInstanceClass", `{numCPUs: 4, memory: 8192}`, "20Gi", "0"},
+		{"yandex set", "YandexInstanceClass", `{cores: 4, memory: 8192, diskSizeGB: 100}`, "100Gi", "0"},
+		{"yandex template default", "YandexInstanceClass", `{cores: 4, memory: 8192}`, "50Gi", "0"},
+		{"openstack root volume", "OpenStackInstanceClass", `{flavorName: m1.large, rootDiskSize: 30}`, "30Gi", "20Gi"},
+		{"openstack flavor disk", "OpenStackInstanceClass", `{flavorName: m1.large}`, "20Gi", "20Gi"},
+		{"openstack explicit capacity", "OpenStackInstanceClass",
+			`{flavorName: custom, rootDiskSize: 40, capacity: {cpu: 4, memory: 16Gi}}`, "40Gi", "0"},
+		{"openstack explicit capacity without a disk", "OpenStackInstanceClass",
+			`{flavorName: custom, capacity: {cpu: 4, memory: 16Gi}}`, "0", "0"},
+		{"vcd set", "VCDInstanceClass", `{sizingPolicy: vcd-4-8, rootDiskSizeGb: 40}`, "40Gi", "0"},
+		{"vcd unset, defaulted by the CRD in a cluster", "VCDInstanceClass", `{sizingPolicy: vcd-4-8}`, "0", "0"},
+		{"zvirt set", "ZvirtInstanceClass", `{cores: 4, memory: 8192, rootDiskSizeGb: 50}`, "50Gi", "0"},
+		{"zvirt machine template default", "ZvirtInstanceClass", `{cores: 4, memory: 8192}`, "20Gi", "0"},
+		{"dynamix set", "DynamixInstanceClass", `{cores: 4, memory: 8192, rootDiskSizeGb: 50}`, "50Gi", "0"},
+		{"dynamix machine template default", "DynamixInstanceClass", `{cores: 4, memory: 8192}`, "30Gi", "0"},
+		{"huaweicloud set", "HuaweiCloudInstanceClass", `{flavorName: s7n.xlarge.2, rootDiskSize: 50}`, "50Gi", "0"},
+		{"huaweicloud machine template default", "HuaweiCloudInstanceClass", `{flavorName: s7n.xlarge.2}`, "30Gi", "0"},
+		{"dvp", "DVPInstanceClass",
+			`{rootDisk: {size: 30Gi}, virtualMachine: {cpu: {cores: 4}, memory: {size: 8Gi}}}`, "30Gi", "0"},
+		{"dvp without a disk", "DVPInstanceClass",
+			`{virtualMachine: {cpu: {cores: 4}, memory: {size: 8Gi}}}`, "0", "0"},
+		{"dvp unparsable disk keeps cpu and memory", "DVPInstanceClass",
+			`{rootDisk: {size: thirty}, virtualMachine: {cpu: {cores: 4}, memory: {size: 8Gi}}}`, "0", "0"},
+		// MCM only: the boot disk is not resolved, nothing reads it there.
+		{"aws", "AWSInstanceClass", `{instanceType: t3a.xlarge}`, "0", "0"},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+			var spec map[string]interface{}
+			require.NoError(t, yaml.Unmarshal([]byte(tc.spec), &spec))
+			capac, err := CalculateNodeTemplateCapacity(tc.kind, spec, NewInstanceTypesCatalog(catalog))
+			require.NoError(t, err)
+			assert.Equal(t, tc.wantBootDisk, capac.BootDisk.String())
+			assert.Equal(t, tc.wantRootDisk, capac.RootDisk.String(), "the published rootDisk must not change")
+			assert.Equal(t, "4", capac.CPU.String(), "the disk must not disturb the CPU")
+		})
+	}
+
+	t.Run("the catalog entry is not modified", func(t *testing.T) {
+		t.Parallel()
+		c := NewInstanceTypesCatalog(catalog)
+		var spec map[string]interface{}
+		require.NoError(t, yaml.Unmarshal([]byte(`{flavorName: m1.large, rootDiskSize: 30}`), &spec))
+		_, err := CalculateNodeTemplateCapacity("OpenStackInstanceClass", spec, c)
+		require.NoError(t, err)
+		entry := c.Types["m1.large"]
+		assert.Equal(t, "20Gi", entry.RootDisk.String())
+		assert.True(t, entry.BootDisk.IsZero())
+	})
+
+	// The NodeGroup element is the JSON form of InstanceType; the boot disk must not reach it.
+	t.Run("the boot disk is not serialized", func(t *testing.T) {
+		t.Parallel()
+		data, err := json.Marshal(InstanceType{
+			CPU: resource.MustParse("4"), Memory: resource.MustParse("8Gi"),
+			RootDisk: resource.MustParse("0"), BootDisk: resource.MustParse("30Gi"),
+		})
+		require.NoError(t, err)
+		assert.JSONEq(t, `{"name":"","cpu":"4","memory":"8Gi","rootDisk":"0"}`, string(data))
 	})
 }
 

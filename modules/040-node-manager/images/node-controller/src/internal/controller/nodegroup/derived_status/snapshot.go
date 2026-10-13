@@ -54,8 +54,9 @@ type Snapshot struct {
 
 	// TemplateCapacity is the same calculation as Capacity, kept for every NodeGroup that can hold
 	// a machine instead of for scale-from-zero only. It feeds the MachineDeployment's
-	// capacity.cluster-autoscaler.kubernetes.io/{cpu,memory} annotations and is deliberately never
-	// published into the NodeGroup element — see the comment at its assignment below.
+	// capacity.cluster-autoscaler.kubernetes.io/{cpu,memory,ephemeral-disk} annotations and is
+	// deliberately never published into the NodeGroup element — see the comment at its assignment
+	// below.
 	TemplateCapacity *capacity.InstanceType
 
 	// CapacityErr is the outcome of the single capacity calculation: check #3 needs the error and

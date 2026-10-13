@@ -192,6 +192,7 @@ func TestBuildSnapshot_TemplateCapacityIsResolvedAboveZeroMinButNotPublished(t *
 			require.NotNil(t, snap.TemplateCapacity, "the MachineDeployment annotations have no other source")
 			require.Equal(t, "4", snap.TemplateCapacity.CPU.String())
 			require.Equal(t, "8Gi", snap.TemplateCapacity.Memory.String())
+			require.Equal(t, "30Gi", snap.TemplateCapacity.BootDisk.String(), "the ephemeral-disk annotation is built from it")
 
 			result, err := Derive(t.Context(), ng, snap)
 			require.NoError(t, err)
@@ -207,6 +208,8 @@ func TestBuildSnapshot_TemplateCapacityIsResolvedAboveZeroMinButNotPublished(t *
 			if tc.wantPublished {
 				require.NotNil(t, snap.Capacity)
 				require.Contains(t, element, "nodeCapacity", "scale-from-zero has always published it")
+				require.Equal(t, "0", element["nodeCapacity"].(map[string]interface{})["rootDisk"],
+					"a dvp class has always published rootDisk \"0\"; the boot disk would re-run bashible on every node")
 			} else {
 				require.Nil(t, snap.Capacity, "only scale-from-zero publishes the value")
 				require.Nil(t, result.NodeCapacity)
@@ -231,6 +234,7 @@ func newDVPTestService(t *testing.T, className string, cores int64, memory strin
 
 	ic := &unstructured.Unstructured{Object: map[string]interface{}{
 		"spec": map[string]interface{}{
+			"rootDisk": map[string]interface{}{"size": "30Gi"},
 			"virtualMachine": map[string]interface{}{
 				"cpu":    map[string]interface{}{"cores": cores},
 				"memory": map[string]interface{}{"size": memory},

@@ -30,10 +30,41 @@ var (
 )
 
 type InstanceType struct {
-	Name     string            `json:"name"`
-	CPU      resource.Quantity `json:"cpu"`
-	Memory   resource.Quantity `json:"memory"`
+	Name   string            `json:"name"`
+	CPU    resource.Quantity `json:"cpu"`
+	Memory resource.Quantity `json:"memory"`
+	// RootDisk is the catalog's disk of the instance type, and 0 for a type resolved from the
+	// InstanceClass fields. It is published in the NodeGroup element as nodeCapacity.rootDisk,
+	// which bashible-apiserver hashes into every node's configurationChecksum, so it keeps exactly
+	// the value it has always had. The disk the machine really gets is BootDisk.
 	RootDisk resource.Quantity `json:"rootDisk"`
+	// BootDisk is the size of the disk the machine boots from, as the provider creates it, and
+	// zero when it is unknown. It feeds the CAPI ephemeral-disk annotation and is never serialized,
+	// see RootDisk.
+	BootDisk resource.Quantity `json:"-"`
+}
+
+// diskGiB returns a disk of sizeGiB, or of defaultGiB when the InstanceClass leaves the size
+// unset. defaultGiB is the size the provider creates the disk with in that case, and 0 when
+// node-controller cannot know it.
+func diskGiB(sizeGiB, defaultGiB int) resource.Quantity {
+	if sizeGiB <= 0 {
+		sizeGiB = defaultGiB
+	}
+	return *resource.NewQuantity(int64(sizeGiB)<<30, resource.BinarySI)
+}
+
+// withBootDisk sets the boot disk of an instance type resolved from the catalog or from
+// spec.capacity: the size the InstanceClass names, otherwise the catalog's disk of the type.
+func withBootDisk(it *InstanceType, err error, size resource.Quantity) (*InstanceType, error) {
+	if err != nil {
+		return it, err
+	}
+	if size.IsZero() {
+		size = it.RootDisk
+	}
+	it.BootDisk = size
+	return it, nil
 }
 
 type InstanceTypesCatalog struct {
@@ -105,8 +136,9 @@ func (c *Capacity) ToInstanceType() *InstanceType {
 }
 
 type vsphereInstanceClass struct {
-	CPU    int `json:"numCPUs"`
-	Memory int `json:"memory"`
+	CPU          int `json:"numCPUs"`
+	Memory       int `json:"memory"`
+	RootDiskSize int `json:"rootDiskSize"`
 }
 
 func (vic vsphereInstanceClass) ExtractCapacity(_ *InstanceTypesCatalog) (*InstanceType, error) {
@@ -126,6 +158,8 @@ func (vic vsphereInstanceClass) ExtractCapacity(_ *InstanceTypesCatalog) (*Insta
 		CPU:      cpuRes,
 		Memory:   memRes,
 		RootDisk: resource.MustParse("0"),
+		// 20 is cloud-provider-vsphere capi/template.yaml's default.
+		BootDisk: diskGiB(vic.RootDiskSize, 20),
 	}, nil
 }
 
@@ -181,8 +215,9 @@ func (aic *gcpInstanceClass) ExtractCapacity(catalog *InstanceTypesCatalog) (*In
 }
 
 type yandexInstanceClass struct {
-	Cores  int `json:"cores"`
-	Memory int `json:"memory"`
+	Cores      int `json:"cores"`
+	Memory     int `json:"memory"`
+	DiskSizeGB int `json:"diskSizeGB"`
 }
 
 func (yic yandexInstanceClass) ExtractCapacity(_ *InstanceTypesCatalog) (*InstanceType, error) {
@@ -202,12 +237,17 @@ func (yic yandexInstanceClass) ExtractCapacity(_ *InstanceTypesCatalog) (*Instan
 		CPU:      cpuRes,
 		Memory:   memRes,
 		RootDisk: resource.MustParse("0"),
+		// 50 is cloud-provider-yandex capi/template.yaml's default.
+		BootDisk: diskGiB(yic.DiskSizeGB, 50),
 	}, nil
 }
 
 type openStackInstanceClass struct {
 	Capacity   *Capacity `json:"capacity,omitempty"`
 	FlavorName string    `json:"flavorName,omitempty"`
+	// RootDiskSize is unset when the machine boots from the flavor's disk, which the catalog
+	// carries as the type's RootDisk.
+	RootDiskSize int `json:"rootDiskSize,omitempty"`
 }
 
 func (aic *openStackInstanceClass) GetCapacity() *Capacity {
@@ -219,11 +259,14 @@ func (aic *openStackInstanceClass) GetType() string {
 }
 
 func (aic *openStackInstanceClass) ExtractCapacity(catalog *InstanceTypesCatalog) (*InstanceType, error) {
-	return catalog.Get(aic)
+	it, err := catalog.Get(aic)
+	return withBootDisk(it, err, diskGiB(aic.RootDiskSize, 0))
 }
 
 type vcdInstanceClass struct {
 	SizingPolicy string `json:"sizingPolicy,omitempty"`
+	// RootDiskSizeGb is defaulted to 20 by the VCDInstanceClass CRD.
+	RootDiskSizeGb int `json:"rootDiskSizeGb,omitempty"`
 }
 
 func (aic *vcdInstanceClass) GetCapacity() *Capacity {
@@ -235,12 +278,14 @@ func (aic *vcdInstanceClass) GetType() string {
 }
 
 func (aic *vcdInstanceClass) ExtractCapacity(catalog *InstanceTypesCatalog) (*InstanceType, error) {
-	return catalog.Get(aic)
+	it, err := catalog.Get(aic)
+	return withBootDisk(it, err, diskGiB(aic.RootDiskSizeGb, 0))
 }
 
 type zvirtInstanceClass struct {
-	Cores  int `json:"cores"`
-	Memory int `json:"memory"`
+	Cores          int `json:"cores"`
+	Memory         int `json:"memory"`
+	RootDiskSizeGb int `json:"rootDiskSizeGb"`
 }
 
 func (zic zvirtInstanceClass) ExtractCapacity(_ *InstanceTypesCatalog) (*InstanceType, error) {
@@ -260,12 +305,15 @@ func (zic zvirtInstanceClass) ExtractCapacity(_ *InstanceTypesCatalog) (*Instanc
 		CPU:      cpuRes,
 		Memory:   memRes,
 		RootDisk: resource.MustParse("0"),
+		// 20 is the ZvirtMachineTemplate CRD default (cloud-provider-zvirt crds/external).
+		BootDisk: diskGiB(zic.RootDiskSizeGb, 20),
 	}, nil
 }
 
 type dynamixInstanceClass struct {
-	Cores  int `json:"cores"`
-	Memory int `json:"memory"`
+	Cores          int `json:"cores"`
+	Memory         int `json:"memory"`
+	RootDiskSizeGb int `json:"rootDiskSizeGb"`
 }
 
 func (d dynamixInstanceClass) ExtractCapacity(_ *InstanceTypesCatalog) (*InstanceType, error) {
@@ -285,11 +333,14 @@ func (d dynamixInstanceClass) ExtractCapacity(_ *InstanceTypesCatalog) (*Instanc
 		CPU:      cpuRes,
 		Memory:   memRes,
 		RootDisk: resource.MustParse("0"),
+		// 30 is the DynamixMachineTemplate CRD default (cloud-provider-dynamix crds/external).
+		BootDisk: diskGiB(d.RootDiskSizeGb, 30),
 	}, nil
 }
 
 type huaweiCloudInstanceClass struct {
-	FlavorName string `json:"flavorName,omitempty"`
+	FlavorName   string `json:"flavorName,omitempty"`
+	RootDiskSize int    `json:"rootDiskSize,omitempty"`
 }
 
 func (c *huaweiCloudInstanceClass) GetCapacity() *Capacity {
@@ -301,10 +352,17 @@ func (c *huaweiCloudInstanceClass) GetType() string {
 }
 
 func (c *huaweiCloudInstanceClass) ExtractCapacity(catalog *InstanceTypesCatalog) (*InstanceType, error) {
-	return catalog.Get(c)
+	it, err := catalog.Get(c)
+	// 30 is the HuaweiCloudMachineTemplate CRD default (cloud-provider-huaweicloud crds/external).
+	return withBootDisk(it, err, diskGiB(c.RootDiskSize, 30))
 }
 
 type dvpInstanceClass struct {
+	// RootDisk.Size is required by the DVPInstanceClass CRD.
+	RootDisk struct {
+		Size string `json:"size"`
+	} `json:"rootDisk"`
+
 	VirtualMachine struct {
 		CPU struct {
 			Cores int `json:"cores"`
@@ -329,10 +387,18 @@ func (d dvpInstanceClass) ExtractCapacity(_ *InstanceTypesCatalog) (*InstanceTyp
 		return nil, err
 	}
 
+	// The disk only feeds the ephemeral-disk annotation, so an unparsable size leaves it unknown
+	// instead of failing the CPU and memory the template cannot do without.
+	diskRes, err := resource.ParseQuantity(d.RootDisk.Size)
+	if err != nil {
+		diskRes = resource.MustParse("0")
+	}
+
 	return &InstanceType{
 		CPU:      cpuRes,
 		Memory:   memRes,
 		RootDisk: resource.MustParse("0"),
+		BootDisk: diskRes,
 	}, nil
 }
 

@@ -42,11 +42,15 @@ import (
 var _ = Describe("CAPI MachineDeployment rendering", func() {
 	const icName = "ubuntu"
 
-	newInstanceClass := func() *unstructured.Unstructured {
+	// diskIcName carries a root disk; icName does not, which is how a class whose disk size
+	// node-controller cannot know looks to it.
+	const diskIcName = "ubuntu-disk"
+
+	newInstanceClassNamed := func(name string) *unstructured.Unstructured {
 		ic := &unstructured.Unstructured{}
 		ic.SetAPIVersion("deckhouse.io/v1alpha1")
 		ic.SetKind("DVPInstanceClass")
-		ic.SetName(icName)
+		ic.SetName(name)
 		Expect(unstructured.SetNestedMap(ic.Object, map[string]interface{}{
 			"cpu": map[string]interface{}{
 				"cores":        int64(4),
@@ -54,8 +58,12 @@ var _ = Describe("CAPI MachineDeployment rendering", func() {
 			},
 			"memory": map[string]interface{}{"size": "8Gi"},
 		}, "spec", "virtualMachine")).To(Succeed())
+		if name == diskIcName {
+			Expect(unstructured.SetNestedField(ic.Object, "30Gi", "spec", "rootDisk", "size")).To(Succeed())
+		}
 		return ic
 	}
+	newInstanceClass := func() *unstructured.Unstructured { return newInstanceClassNamed(icName) }
 
 	newNodeGroup := func(name string) *deckhousev1.NodeGroup {
 		ng := &deckhousev1.NodeGroup{}
@@ -132,6 +140,31 @@ var _ = Describe("CAPI MachineDeployment rendering", func() {
 		}, 20*time.Second, 250*time.Millisecond).Should(SatisfyAll(
 			HaveKeyWithValue("capacity.cluster-autoscaler.kubernetes.io/cpu", "4"),
 			HaveKeyWithValue("capacity.cluster-autoscaler.kubernetes.io/memory", "8Gi"),
+			Not(HaveKey("capacity.cluster-autoscaler.kubernetes.io/ephemeral-disk")),
+		))
+	})
+
+	// Without it the template node has no ephemeral-storage: a pod requesting any never scales the
+	// group up from zero, and identical zones stop counting as similar for balancing.
+	It("publishes the root disk as ephemeral-disk for scale-from-zero", func() {
+		Expect(client.IgnoreAlreadyExists(k8sClient.Create(suiteCtx, newInstanceClassNamed(diskIcName)))).To(Succeed())
+
+		ng := newNodeGroup(testenv.UniqueName("cap-disk"))
+		ng.Spec.CloudInstances.ClassReference.Name = diskIcName
+		ng.Spec.CloudInstances.MinPerZone = 0
+		Expect(k8sClient.Create(suiteCtx, ng)).To(Succeed())
+		DeferCleanup(func() { _ = k8sClient.Delete(suiteCtx, ng) })
+
+		Eventually(func(g Gomega) map[string]string {
+			mdList := &capiv1beta2.MachineDeploymentList{}
+			g.Expect(k8sClient.List(suiteCtx, mdList, client.InNamespace(common.MachineNamespace),
+				client.MatchingLabels{"node-group": ng.Name})).To(Succeed())
+			g.Expect(mdList.Items).To(HaveLen(1))
+			return mdList.Items[0].Annotations
+		}, 20*time.Second, 250*time.Millisecond).Should(SatisfyAll(
+			HaveKeyWithValue("capacity.cluster-autoscaler.kubernetes.io/cpu", "4"),
+			// 30Gi less evictionHard nodefs.available (5%) and Auto's systemReserved (1Gi).
+			HaveKeyWithValue("capacity.cluster-autoscaler.kubernetes.io/ephemeral-disk", "28160Mi"),
 		))
 	})
 
