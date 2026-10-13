@@ -222,14 +222,23 @@ spec:
         - name: tls
           mountPath: "/opt/dex-authenticator/tls"
           readOnly: true
+        # Readiness checks the authenticator and its session store, not dex. A check of dex took every
+        # authenticator out of its Service during a dex outage, and every protected application answered
+        # 500, including users whose sessions need no dex call. /ready of oauth2-proxy also fails when
+        # the Redis sidecar is gone.
         readinessProbe:
-          exec:
-            command:
-            - /usr/local/bin/url-exec-prober
-            - https://dex.d8-user-authn/.well-known/openid-configuration
+          httpGet:
+            port: 8443
+            scheme: HTTPS
+            path: /ready
           initialDelaySeconds: 5
           periodSeconds: 5
-          failureThreshold: 5
+        # Keep serving while the endpoint removal reaches kube-proxy, ingress-nginx and the API servers;
+        # the server closes its listener on SIGTERM.
+        lifecycle:
+          preStop:
+            sleep:
+              seconds: 5
         livenessProbe:
           httpGet:
             port: 8443
@@ -267,6 +276,12 @@ spec:
           - "no"
           - "--bind"
           - "127.0.0.1"
+        # The session store has to outlive the authenticator, which keeps serving for 5 seconds after
+        # SIGTERM; without Redis it would clear the sessions of the requests it still gets.
+        lifecycle:
+          preStop:
+            sleep:
+              seconds: 7
         resources:
           requests:
             {{- include "helm_lib_module_ephemeral_storage_only_logs" . | nindent 12 }}

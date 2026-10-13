@@ -135,6 +135,12 @@ var _ = Describe("Module :: user-authn :: helm template :: dex-config", func() {
 			Expect(usersExist).NotTo(BeEmpty())
 			Expect(config).To(ContainSubstring("enablePasswordDB: true"))
 		})
+
+		It("user-api keeps serving for 5 seconds after SIGTERM", func() {
+			userAPI := hec.KubernetesResource("Deployment", "d8-user-authn", "user-api")
+			Expect(userAPI.Exists()).To(BeTrue())
+			Expect(userAPI.Field(`spec.template.spec.containers.#(name=="user-api").lifecycle.preStop.sleep.seconds`).Int()).To(BeEquivalentTo(5))
+		})
 	})
 
 	Context("With Users and providers", func() {

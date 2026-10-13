@@ -136,7 +136,8 @@ func run(cfg *Config) error {
 		return fmt.Errorf("server error: %w", err)
 	case sig := <-sigCh:
 		slog.Info("Received signal, shutting down", "signal", sig)
-		shutdownCtx, shutdownCancel := context.WithTimeout(context.Background(), 30*time.Second)
+		// 20 seconds plus the 5-second preStop delay fit into the default 30-second grace period.
+		shutdownCtx, shutdownCancel := context.WithTimeout(context.Background(), 20*time.Second)
 		defer shutdownCancel()
 		if err := server.Shutdown(shutdownCtx); err != nil {
 			return fmt.Errorf("shutdown error: %w", err)

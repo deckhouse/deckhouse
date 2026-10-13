@@ -154,6 +154,12 @@ var _ = Describe("Module :: user-authn :: helm template :: basic auth proxy", fu
 			hec.HelmRender()
 		})
 
+		It("Should keep serving for 5 seconds after SIGTERM", func() {
+			Expect(hec.RenderError).ToNot(HaveOccurred())
+			proxy := hec.KubernetesResource("Deployment", "d8-user-authn", "basic-auth-proxy")
+			Expect(proxy.Field(`spec.template.spec.containers.#(name=="proxy").lifecycle.preStop.sleep.seconds`).Int()).To(BeEquivalentTo(5))
+		})
+
 		It("Should render boolean arguments as unquoted scalars", func() {
 			Expect(hec.RenderError).ToNot(HaveOccurred())
 

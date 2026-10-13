@@ -96,6 +96,12 @@ var _ = Describe("Module :: user-authz :: helm template ::", func() {
 			f.HelmRender()
 		})
 
+		It("Should keep permission-browser serving for 5 seconds after SIGTERM", func() {
+			Expect(f.RenderError).ShouldNot(HaveOccurred())
+			deployment := f.KubernetesResource("Deployment", "d8-user-authz", "permission-browser-apiserver")
+			Expect(deployment.Field(`spec.template.spec.containers.#(name=="apiserver").lifecycle.preStop.sleep.seconds`).Int()).To(BeEquivalentTo(5))
+		})
+
 		// In HA the aggregated API server keeps two replicas and rolls them one at a time with no
 		// surge, as before; the existing budget (maxUnavailable 1) keeps one of them through
 		// voluntary disruptions.
