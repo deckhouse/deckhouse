@@ -131,6 +131,7 @@ func providerFixtures() []providerFixture {
 				"sshKey":                      "ssh-ed25519 AAAA",
 				"nodeNetworkCIDR":             "10.222.0.0/16",
 				"shouldAssignPublicIPAddress": false,
+				"labels":                      map[string]any{"env": "test"},
 			},
 			instanceClass: map[string]any{
 				"platformID":            "standard-v3",
@@ -145,8 +146,8 @@ func providerFixtures() []providerFixture {
 				"assignPublicIPAddress": true,
 				"additionalSubnets":     []any{"e9badd1"},
 				"preemptible":           false,
-				"additionalLabels":      map[string]any{"env": "test"},
-				"networkType":           "Standard",
+				"additionalLabels":      map[string]any{"class": "test"},
+				"networkType":           "SoftwareAccelerated",
 			},
 			// The one yandex divergence is value-specific, not field-specific, so it cannot be
 			// expressed here — see TestYandexDefaultDiskSizeDivergence.

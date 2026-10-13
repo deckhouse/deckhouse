@@ -1,0 +1,80 @@
+diff --git a/internal/pkg/cloud/services/compute/reconcile.go b/internal/pkg/cloud/services/compute/reconcile.go
+--- a/internal/pkg/cloud/services/compute/reconcile.go
++++ b/internal/pkg/cloud/services/compute/reconcile.go
+@@ -3,6 +3,7 @@
+ import (
+ 	"context"
+ 	"fmt"
++	"slices"
+ 
+ 	infrav1 "github.com/yandex-cloud/cluster-api-provider-yandex/api/v1alpha1"
+ 	yandex "github.com/yandex-cloud/cluster-api-provider-yandex/internal/pkg/client"
+@@ -68,7 +69,7 @@
+ 	instanceState := infrav1.InstanceStatus(vm.GetStatus().String())
+ 	setMachineCondition(s.scope.YandexMachine, string(infrav1.ConditionStatusNotfound), string(infrav1.ConditionStatusRunning), "Compute instance exists", metav1.ConditionFalse)
+ 	if instanceState == infrav1.InstanceStatusRunning {
+-		instanceAddress, err := s.getInstanceAddress(vm)
++		instanceAddress, err := s.getInstanceAddress(ctx, vm)
+ 		if err != nil {
+ 			setMachineCondition(s.scope.YandexMachine, string(infrav1.ConditionStatusRunning), infrav1.ConditionStatusError, err.Error(), metav1.ConditionFalse)
+ 			return err
+@@ -154,23 +155,51 @@
+ 	return client.ComputeCreate(ctx, request)
+ }
+ 
+-// getInstanceAddress returns the internal IP address of the instance.
+-func (s *Service) getInstanceAddress(instance *yandex_compute.Instance) ([]corev1.NodeAddress, error) {
++// getInstanceAddress returns the internal IP addresses of the instance.
++// The address of the primary interface (index 0) always goes first: control plane
++// load balancer registration takes addresses[0] together with NetworkInterfaces[0].SubnetID.
++func (s *Service) getInstanceAddress(ctx context.Context, instance *yandex_compute.Instance) ([]corev1.NodeAddress, error) {
++	logger := log.FromContext(ctx)
+ 	intfList := instance.GetNetworkInterfaces()
+-	// TODO: MVP support only one interface with IPv4 Address.
+-	if len(intfList) != 1 {
+-		return nil, fmt.Errorf("only one interface supported")
++	if len(intfList) == 0 {
++		return nil, fmt.Errorf("compute instance has no network interfaces")
++	}
++
++	primary := slices.IndexFunc(intfList, func(intf *yandex_compute.NetworkInterface) bool {
++		return intf.GetIndex() == "0"
++	})
++	if primary < 0 {
++		primary = 0
+ 	}
+ 
+-	address := intfList[0].GetPrimaryV4Address().GetAddress()
++	address := intfList[primary].GetPrimaryV4Address().GetAddress()
+ 	if address == "" {
+ 		return nil, fmt.Errorf("only IPv4 address supported")
+ 	}
+ 
+-	return []corev1.NodeAddress{{
++	addresses := []corev1.NodeAddress{{
+ 		Type:    corev1.NodeInternalIP,
+ 		Address: address,
+-	}}, nil
++	}}
++
++	for i, intf := range intfList {
++		if i == primary {
++			continue
++		}
++		// Additional interfaces without an IPv4 address are skipped: only the primary one is mandatory.
++		intfAddress := intf.GetPrimaryV4Address().GetAddress()
++		if intfAddress == "" {
++			logger.Info("skipping additional network interface without IPv4 address",
++				"instance id", instance.GetId(), "interface index", intf.GetIndex(), "subnet id", intf.GetSubnetId())
++			continue
++		}
++		addresses = append(addresses, corev1.NodeAddress{
++			Type:    corev1.NodeInternalIP,
++			Address: intfAddress,
++		})
++	}
++
++	return addresses, nil
+ }
+ 
+ // registerControlPlane adds controlplane instance address to controlplane loadbalancer target group.

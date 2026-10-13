@@ -1,9 +1,9 @@
 version: v2
 
 # InstanceClass fields whose change requires recreating the machines. The list is carried over
-# from the v1 instance-class.checksum one to one, including the fields that do not appear in the
-# template below (preemptible, additionalLabels, networkType): under v1 they changed the checksum
-# and therefore rolled the machines, and this migration must not change that.
+# from the v1 instance-class.checksum one to one, including preemptible, which does not appear in
+# the template below: under v1 it changed the checksum and therefore rolled the machines, and this
+# migration must not change that.
 rolloutFields:
   - platformID
   - cores
@@ -46,6 +46,23 @@ template: |
             hasPublicIP: {{- if hasKey .instanceClass "assignPublicIPAddress" }} {{ .instanceClass.assignPublicIPAddress }}{{- else }} {{ .provider.shouldAssignPublicIPAddress }}{{- end }}
   {{- range (get .instanceClass "additionalSubnets" | default list) }}
           - subnetID: {{ . | quote }}
+  {{- end }}
+  {{- $networkTypes := dict "Standard" "STANDARD" "SoftwareAccelerated" "SOFTWARE_ACCELERATED" }}
+  {{- with get $networkTypes (get .instanceClass "networkType" | toString) }}
+        networkType: {{ . | quote }}
+  {{- end }}
+  {{- $labels := dict }}
+  {{- with get .provider "labels" }}
+    {{- $labels = merge $labels . }}
+  {{- end }}
+  {{- with get .instanceClass "additionalLabels" }}
+    {{- $labels = mergeOverwrite $labels . }}
+  {{- end }}
+  {{- with $labels }}
+        labels:
+    {{- range $k, $v := . }}
+          {{ $k | trunc 63 | quote }}: {{ $v | toString | trunc 63 | quote }}
+    {{- end }}
   {{- end }}
         metadata:
           ssh-keys: 'user:{{ .provider.sshKey }}'
