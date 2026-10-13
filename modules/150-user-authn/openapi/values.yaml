@@ -101,6 +101,9 @@ properties:
       dexTLS:
         type: object
         default: {}
+        x-required-for-helm:
+          - crt
+          - key
         x-examples:
         - ca: test
           crt: test

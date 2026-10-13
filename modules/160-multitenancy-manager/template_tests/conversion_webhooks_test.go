@@ -17,10 +17,14 @@ limitations under the License.
 package template_tests
 
 import (
+	"cmp"
+	"maps"
 	"path/filepath"
 	"runtime"
+	"slices"
 
 	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/ginkgo/extensions/table"
 	. "github.com/onsi/gomega"
 
 	. "github.com/deckhouse/deckhouse/testing/helm"
@@ -74,5 +78,71 @@ var _ = Describe("Module :: multitenancy-manager :: helm template :: conversion 
 			Expect(conversionwebhook.HandlerMatchesFile(moduleDir, expected.file, conversions)).To(Succeed(), name)
 		}
 	})
+
+})
+
+// The values a converge renders the chart with ahead of the release: global.modules.https, the module
+// config, and the internal values the hooks left on their previous run, if any.
+type valuesAheadOfRelease struct {
+	https    string
+	config   string
+	internal string
+}
+
+// A converge applies the ConversionWebhooks of the module ahead of its release (the ModuleEnsureHooks
+// task of addon-operator). It renders the whole chart with the values the module has before its hooks
+// run, and does not check them against openapi/values.yaml: on the first converge after a Deckhouse
+// start, the openapi defaults and the config with no internal values; on a later one, the config with
+// the internal values the hooks derived from the previous config. A failed render stops the main
+// queue, and the converge with it.
+var _ = Describe("Module :: multitenancy-manager :: helm template :: conversion webhooks :: before the hooks fill the internal values", func() {
+	f := SetupHelmConfig(``)
+
+	_, thisFile, _, _ := runtime.Caller(0)
+	moduleDir := filepath.Join(filepath.Dir(thisFile), "..")
+
+	DescribeTable("Should render the chart and its ConversionWebhooks",
+		func(values valuesAheadOfRelease) {
+			f.ValuesSet("global.modulesImages", GetModulesImages())
+			f.ValuesSetFromYaml("global.enabledModules", `["cert-manager", "vertical-pod-autoscaler"]`)
+			f.ValuesSetFromYaml("global.discovery.d8SpecificNodeCountByRole", `{}`)
+			f.ValuesSet("global.internal.modules.kubeRBACProxyCA.cert", "test")
+			f.ValuesSet("global.internal.modules.kubeRBACProxyCA.key", "test")
+			f.ValuesSetFromYaml("global.modules.https", values.https)
+			f.ValuesSetFromYaml("multitenancyManager", cmp.Or(values.config, `{}`))
+			if values.internal != "" {
+				f.ValuesSetFromYaml("multitenancyManager.internal", values.internal)
+			}
+			f.ApplyOpenAPIDefaults()
+
+			names, err := conversionwebhook.RenderAheadOfRelease(f, moduleDir, "multitenancyManager")
+			Expect(err).ShouldNot(HaveOccurred())
+			Expect(names).To(ConsistOf(slices.Collect(maps.Keys(multitenancyConversionWebhooks))))
+		},
+		Entry("with the openapi defaults", valuesAheadOfRelease{
+			https: `{mode: Disabled}`,
+		}),
+		Entry("with https CertManager in the global settings", valuesAheadOfRelease{
+			https: `{mode: CertManager, certManager: {clusterIssuerName: letsencrypt}}`,
+		}),
+		Entry("with https CustomCertificate in the global settings", valuesAheadOfRelease{
+			https: `{mode: CustomCertificate, customCertificate: {secretName: custom-certificate}}`,
+		}),
+		Entry("with allowNamespacesWithoutProjects disabled", valuesAheadOfRelease{
+			https:  `{mode: CertManager, certManager: {clusterIssuerName: letsencrypt}}`,
+			config: `{allowNamespacesWithoutProjects: false}`,
+		}),
+		Entry("with highAvailability", valuesAheadOfRelease{
+			https:  `{mode: CertManager, certManager: {clusterIssuerName: letsencrypt}}`,
+			config: `{highAvailability: true}`,
+		}),
+		Entry("with the internal values of the previous run of the hooks", valuesAheadOfRelease{
+			https: `{mode: CertManager, certManager: {clusterIssuerName: letsencrypt}}`,
+			internal: `
+admissionWebhookCert: {ca: plainstring, crt: plainstring, key: plainstring}
+grantWebhookRules: [{apiGroup: rbac.authorization.k8s.io, resource: rolebindings}]
+`,
+		}),
+	)
 
 })
