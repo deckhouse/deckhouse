@@ -55,6 +55,8 @@ spec:
             На этот ресурс ссылается кастомный ресурс [Project](cr.html#project). Поля `resources` и `grantPolicies` превращаются в объекты [ClusterResourceGrantPolicy](cr.html#clusterresourcegrantpolicy), которые применяются к проектам этого шаблона. Остальные поля превращаются в объекты в неймспейсах проектов.
 
             Объекты, которые не описывает ни одно структурированное поле, создаются из `manifests`. Вместо полей, которые рендерят объекты, шаблон, созданный через `deckhouse.io/v1alpha1`, может содержать Helm-шаблон в `resourcesTemplate`. Такая форма устарела, и ни один шаблон не может получить новое `resourcesTemplate`.
+
+            Имя `virtual` зарезервировано за шаблоном [виртуальных проектов](usage.html#виртуальные-проекты) `default` и `deckhouse`: создать ProjectTemplate с этим именем нельзя.
           properties:
             spec:
               properties:

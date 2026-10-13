@@ -40,6 +40,7 @@ import (
 	"controller/apis/deckhouse.io/v1alpha2"
 	"controller/apis/deckhouse.io/v1alpha3"
 	"controller/internal/controllers/templategrants"
+	projectmanager "controller/internal/manager/project"
 	"controller/internal/naming"
 	"controller/internal/validate"
 )
@@ -71,6 +72,22 @@ func (v *validator) Handle(ctx context.Context, req admission.Request) admission
 	if req.Operation == admissionv1.Create || req.Operation == admissionv1.Update {
 		if err := yaml.Unmarshal(req.Object.Raw, template); err != nil {
 			return admission.Errored(http.StatusBadRequest, err)
+		}
+
+		// The virtual projects default and deckhouse name the "virtual" template, which is not an
+		// object: the project controller handles them without one. A template under that name would
+		// render nothing, and the virtual projects would keep it from being deleted. It is refused on
+		// create. One created before this check is let through on update with a warning, so it is not
+		// locked, and it can be deleted (see projectUsing).
+		if template.Name == v1alpha3.VirtualProjectTemplateName {
+			if req.Operation == admissionv1.Create {
+				return admission.Denied(fmt.Sprintf(
+					"the '%s' project template name is reserved for the virtual projects '%s' and '%s'; choose another name",
+					template.Name, projectmanager.DefaultProjectName, projectmanager.DeckhouseProjectName))
+			}
+			warnings = append(warnings, fmt.Sprintf(
+				"the '%s' project template name is reserved for the virtual projects '%s' and '%s', and no project renders from this template; delete it",
+				template.Name, projectmanager.DefaultProjectName, projectmanager.DeckhouseProjectName))
 		}
 
 		if resp := v.v1alpha1Erasure(ctx, req, template); !resp.Allowed {
@@ -377,12 +394,19 @@ func (v *validator) resourcesTemplateRemoval(ctx context.Context, req admission.
 // after the project is written, so a project created on the template or moved to it a moment ago
 // carries only the spec, and one moved away from it a moment ago still renders from it with only the
 // label. The list is read from the API server, so a project the cache has not seen yet counts too.
+// A virtual project does not count: it names the "virtual" template, but never renders from a
+// template object, so a template created under that name can be deleted. It is told by its template
+// name, as the controller routes it, not by the virtual-project label, which any editor of a
+// project can set on one that renders from a template.
 func (v *validator) projectUsing(ctx context.Context, template string) (string, error) {
 	projects := new(v1alpha3.ProjectList)
 	if err := v.reader.List(ctx, projects); err != nil {
 		return "", fmt.Errorf("list the projects: %w", err)
 	}
 	for _, project := range projects.Items {
+		if project.Spec.ProjectTemplateName == v1alpha3.VirtualProjectTemplateName {
+			continue
+		}
 		if project.Spec.ProjectTemplateName == template || project.Labels[v1alpha3.ResourceLabelTemplate] == template {
 			return project.Name, nil
 		}

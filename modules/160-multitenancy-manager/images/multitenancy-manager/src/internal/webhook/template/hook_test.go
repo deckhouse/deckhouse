@@ -315,6 +315,113 @@ func TestHandle_DeleteInUseTemplate(t *testing.T) {
 	assert.Contains(t, resp.Result.Message, "cannot be deleted")
 }
 
+// The "virtual" template name belongs to the virtual projects default and deckhouse, which render
+// from no template object. A template under that name is refused on create through either version;
+// one created before the check is let through on update with a warning.
+func TestHandle_ReservedVirtualTemplateName(t *testing.T) {
+	ctx := context.Background()
+	v := newValidator(t)
+
+	throughV1alpha1 := func(t *testing.T, tmpl *v1alpha2.ProjectTemplate) admission.Request {
+		t.Helper()
+		req := createRequest(t, tmpl)
+		req.RequestKind = v1alpha1Kind.DeepCopy()
+		return req
+	}
+	tests := []struct {
+		name        string
+		request     func(t *testing.T) admission.Request
+		allowed     bool
+		message     string
+		withWarning bool
+	}{
+		{
+			name:    "create through v1alpha2",
+			request: func(t *testing.T) admission.Request { return createRequest(t, structuredTemplate("virtual")) },
+			message: "the 'virtual' project template name is reserved for the virtual projects 'default' and 'deckhouse'",
+		},
+		{
+			name:    "create through v1alpha1",
+			request: func(t *testing.T) admission.Request { return throughV1alpha1(t, structuredTemplate("virtual")) },
+			message: "the 'virtual' project template name is reserved",
+		},
+		{
+			name:    "create of a name that only starts with virtual",
+			request: func(t *testing.T) admission.Request { return createRequest(t, structuredTemplate("virtual-machines")) },
+			allowed: true,
+		},
+		{
+			name: "update of a template created before the check",
+			request: func(t *testing.T) admission.Request {
+				changed := structuredTemplate("virtual")
+				changed.Spec.Description = "changed"
+				return updateRequest(t, structuredTemplate("virtual"), changed)
+			},
+			allowed:     true,
+			withWarning: true,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			resp := v.Handle(ctx, tt.request(t))
+			if !tt.allowed {
+				require.False(t, resp.Allowed)
+				assert.Contains(t, resp.Result.Message, tt.message)
+				return
+			}
+			require.True(t, resp.Allowed, resp.Result)
+			if tt.withWarning {
+				require.Len(t, resp.Warnings, 1)
+				assert.Contains(t, resp.Warnings[0], "no project renders from this template; delete it")
+			} else {
+				assert.Empty(t, resp.Warnings)
+			}
+		})
+	}
+}
+
+// The virtual projects name the "virtual" template but render from no template object, so they do
+// not keep a template created under that name from being deleted. A user project still does, even
+// with the virtual-project label set on it: the controller renders it from its template all the same.
+func TestHandle_DeleteVirtualTemplate(t *testing.T) {
+	ctx := context.Background()
+	virtualProject := func(name string) *v1alpha3.Project {
+		return &v1alpha3.Project{
+			ObjectMeta: metav1.ObjectMeta{Name: name, Labels: map[string]string{
+				v1alpha3.ProjectLabelVirtualProject: "true",
+				v1alpha3.ResourceLabelProject:       name,
+			}},
+			Spec: v1alpha3.ProjectSpec{ProjectTemplateName: v1alpha3.VirtualProjectTemplateName},
+		}
+	}
+	userProject := &v1alpha3.Project{
+		ObjectMeta: metav1.ObjectMeta{Name: "proj"},
+		Spec:       v1alpha3.ProjectSpec{ProjectTemplateName: "tmpl"},
+	}
+	labeledProject := &v1alpha3.Project{
+		ObjectMeta: metav1.ObjectMeta{Name: "labeled", Labels: map[string]string{v1alpha3.ProjectLabelVirtualProject: "true"}},
+		Spec:       v1alpha3.ProjectSpec{ProjectTemplateName: "labeled-tmpl"},
+	}
+	v := newValidator(t, virtualProject("default"), virtualProject("deckhouse"), userProject, labeledProject)
+	deleteRequest := func(t *testing.T, name string) admission.Request {
+		t.Helper()
+		old, err := json.Marshal(structuredTemplate(name))
+		require.NoError(t, err)
+		return admission.Request{AdmissionRequest: admissionv1.AdmissionRequest{Operation: admissionv1.Delete, OldObject: runtime.RawExtension{Raw: old}}}
+	}
+
+	resp := v.Handle(ctx, deleteRequest(t, v1alpha3.VirtualProjectTemplateName))
+	assert.True(t, resp.Allowed, resp.Result)
+
+	resp = v.Handle(ctx, deleteRequest(t, "tmpl"))
+	require.False(t, resp.Allowed)
+	assert.Contains(t, resp.Result.Message, "it is used in the 'proj' project")
+
+	resp = v.Handle(ctx, deleteRequest(t, "labeled-tmpl"))
+	require.False(t, resp.Allowed)
+	assert.Contains(t, resp.Result.Message, "it is used in the 'labeled' project")
+}
+
 func updateRequest(t *testing.T, oldTmpl, newTmpl *v1alpha2.ProjectTemplate) admission.Request {
 	t.Helper()
 	for _, tmpl := range []*v1alpha2.ProjectTemplate{oldTmpl, newTmpl} {

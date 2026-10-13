@@ -132,6 +132,8 @@ spec:
             fields that render objects, a template created through `deckhouse.io/v1alpha1` can carry a
             Helm template in `resourcesTemplate`. This form is deprecated, and no template can get a
             new `resourcesTemplate`.
+
+            The `virtual` name is reserved for the template of the [virtual projects](usage.html#virtual-projects) `default` and `deckhouse`: a ProjectTemplate with this name cannot be created.
           type: object
           properties:
             spec:

@@ -185,6 +185,8 @@ Virtual-project status is rebuilt from the live namespace list: a deleted namesp
 
 Virtual projects exist for completeness: with them, every namespace of the cluster belongs to some project. They cannot be managed: they are not editable, [ProjectNamespace](cr.html#projectnamespace) and [ProjectRoleBinding](cr.html#projectrolebinding) resources cannot be created in them, and [ClusterProjectRoleBinding](cr.html#clusterprojectrolebinding) does not extend to them. Their project template, `virtual`, is reserved for them: a user project with `projectTemplateName: virtual` is refused by the webhook, since such a project would get no namespace of its own. No ClusterResourceGrantPolicy applies to their namespaces either, even one whose selectors match a virtual Project, because the [cluster resource availability rules](#managing-access-to-cluster-wide-resources) apply only in namespaces with the `projects.deckhouse.io/project` label, and the namespaces of virtual projects do not carry it.
 
+No ProjectTemplate object named `virtual` exists, and the webhook refuses to create one. A template with this name that is already in the cluster is not used by any project and can be deleted.
+
 ## Additional project namespaces
 
 If an application needs several namespaces (for example, a separate one for a cache or queues), add them to the project with the [ProjectNamespace](cr.html#projectnamespace) resource. A ProjectNamespace is created **in the main namespace of the project**; the resulting namespace is named `<project name>-<spec.name>`:
