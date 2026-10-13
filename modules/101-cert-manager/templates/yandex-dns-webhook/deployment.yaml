@@ -68,6 +68,7 @@ spec:
         env:
         - name: GROUP_NAME
           value: acme.cloud.yandex.com
+        {{- include "helm_lib_envs_for_proxy" . | nindent 8 }}
         ports:
         - name: https
           containerPort: 6443

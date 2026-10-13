@@ -694,6 +694,109 @@ internal:
 		})
 	})
 
+	Context("Cluster-wide proxy", func() {
+		BeforeEach(func() {
+			f.ValuesSetFromYaml("global", globalValuesManagedHa)
+			f.ValuesSetFromYaml("global.clusterConfiguration", `
+apiVersion: deckhouse.io/v1
+kind: ClusterConfiguration
+clusterType: Static
+kubernetesVersion: "Automatic"
+podSubnetNodeCIDRPrefix: "24"
+clusterDomain: cluster.local
+podSubnetCIDR: 10.111.0.0/16
+serviceSubnetCIDR: 10.222.0.0/16
+proxy:
+  httpProxy: http://proxy.example.com:3128
+  httpsProxy: https://proxy.example.com:3129
+  noProxy: ["example.org"]
+`)
+			f.ValuesSet("global.modulesImages", GetModulesImages())
+			f.ValuesSetFromYaml("certManager", yandexDNS)
+			f.HelmRender()
+		})
+
+		It("passes the proxy settings to the containers that reach external APIs", func() {
+			Expect(f.RenderError).ShouldNot(HaveOccurred())
+
+			const noProxy = "127.0.0.1,169.254.169.254,registry.d8-system.svc,cluster.local,10.111.0.0/16,10.222.0.0/16,example.org"
+
+			for _, target := range []struct{ deployment, container, noProxy string }{
+				// The controller reaches issuers inside the cluster by their service names.
+				{"cert-manager", "cert-manager", noProxy + ",.svc"},
+				{"yandex-dns-webhook", "yandex-dns-webhook", noProxy},
+			} {
+				deployment := f.KubernetesResource("Deployment", "d8-cert-manager", target.deployment)
+				Expect(deployment.Exists()).To(BeTrue())
+
+				env := containerEnv(deployment, target.container)
+				Expect(env).To(HaveKeyWithValue("HTTP_PROXY", "http://proxy.example.com:3128"), target.container)
+				Expect(env).To(HaveKeyWithValue("http_proxy", "http://proxy.example.com:3128"), target.container)
+				Expect(env).To(HaveKeyWithValue("HTTPS_PROXY", "https://proxy.example.com:3129"), target.container)
+				Expect(env).To(HaveKeyWithValue("https_proxy", "https://proxy.example.com:3129"), target.container)
+				Expect(env).To(HaveKeyWithValue("NO_PROXY", target.noProxy), target.container)
+				Expect(env).To(HaveKeyWithValue("no_proxy", target.noProxy), target.container)
+			}
+
+			// The rest of the components talk only to the API server and keep their environment.
+			for _, target := range []struct{ deployment, container string }{
+				{"cert-manager", "kube-rbac-proxy"},
+				{"cainjector", "cainjector"},
+				{"webhook", "webhook"},
+			} {
+				deployment := f.KubernetesResource("Deployment", "d8-cert-manager", target.deployment)
+				Expect(deployment.Exists()).To(BeTrue(), target.deployment)
+				env := containerEnv(deployment, target.container)
+				for _, name := range proxyEnvNames {
+					Expect(env).NotTo(HaveKey(name), target.container)
+				}
+			}
+		})
+	})
+
+	for _, clusterConfiguration := range []struct{ name, values string }{
+		{"without ClusterConfiguration", ""},
+		{"with ClusterConfiguration without a proxy", `
+apiVersion: deckhouse.io/v1
+kind: ClusterConfiguration
+clusterType: Static
+kubernetesVersion: "Automatic"
+podSubnetNodeCIDRPrefix: "24"
+clusterDomain: cluster.local
+podSubnetCIDR: 10.111.0.0/16
+serviceSubnetCIDR: 10.222.0.0/16
+`},
+	} {
+		Context("Without a cluster-wide proxy, "+clusterConfiguration.name, func() {
+			BeforeEach(func() {
+				f.ValuesSetFromYaml("global", globalValuesManagedHa)
+				if clusterConfiguration.values != "" {
+					f.ValuesSetFromYaml("global.clusterConfiguration", clusterConfiguration.values)
+				}
+				f.ValuesSet("global.modulesImages", GetModulesImages())
+				f.ValuesSetFromYaml("certManager", yandexDNS)
+				f.HelmRender()
+			})
+
+			It("does not add proxy variables", func() {
+				Expect(f.RenderError).ShouldNot(HaveOccurred())
+
+				for _, target := range []struct{ deployment, container, env string }{
+					{"cert-manager", "cert-manager", "POD_NAMESPACE"},
+					{"yandex-dns-webhook", "yandex-dns-webhook", "GROUP_NAME"},
+				} {
+					deployment := f.KubernetesResource("Deployment", "d8-cert-manager", target.deployment)
+					Expect(deployment.Exists()).To(BeTrue(), target.deployment)
+					env := containerEnv(deployment, target.container)
+					Expect(env).To(HaveKey(target.env), target.container)
+					for _, name := range proxyEnvNames {
+						Expect(env).NotTo(HaveKey(name), target.container)
+					}
+				}
+			})
+		})
+	}
+
 	Context("<DisableLetsencrypt>", func() {
 		BeforeEach(func() {
 			f.ValuesSetFromYaml("global", globalValuesManagedHa)
@@ -1000,6 +1103,26 @@ namespace: d8-ingress-gateway
 		})
 	})
 })
+
+// proxyEnvNames lists the variables helm_lib_envs_for_proxy renders.
+var proxyEnvNames = []string{"HTTP_PROXY", "http_proxy", "HTTPS_PROXY", "https_proxy", "NO_PROXY", "no_proxy"}
+
+// containerEnv maps the names of the container's environment variables to their literal values.
+func containerEnv(deployment object_store.KubeObject, container string) map[string]string {
+	env := map[string]string{}
+
+	for _, c := range deployment.Field("spec.template.spec.containers").Array() {
+		if c.Get("name").String() != container {
+			continue
+		}
+
+		for _, e := range c.Get("env").Array() {
+			env[e.Get("name").String()] = e.Get("value").String()
+		}
+	}
+
+	return env
+}
 
 // verbsOn collects the verbs every rule of the role grants on the resource, whatever the order of
 // the rules.

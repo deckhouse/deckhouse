@@ -8,6 +8,11 @@ https://github.com/cert-manager/cert-manager/pull/5158
 The patch also adds the `gen.SetCertificateOwnerRef` test helper
 and unit tests that check how `CertificateOwnerRef` overrides the `--enable-certificate-owner-ref` flag.
 
+The post-issuance policy checks `SecretOwnerReferenceMismatch` and `SecretOwnerReferenceManagedFieldMismatch`
+take the same effective value: `CertificateOwnerRef` when it is set, otherwise the flag.
+Without this, a certificate whose `CertificateOwnerRef` differs from the flag triggers a Secret update on every reconcile,
+and an owner reference requested in `CertificateOwnerRef` reaches an existing Secret only on the next issuance.
+
 ### 002-solver_test_ipv6_host.patch
 
 Encloses the IPv6 host in square brackets in the request URL of the `TestSolver` HTTP-01 solver test.
