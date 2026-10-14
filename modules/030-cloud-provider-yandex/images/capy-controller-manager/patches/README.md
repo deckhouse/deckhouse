@@ -37,3 +37,35 @@ only carries the runtime and API changes required by the Deckhouse CAPY fork.
 
 Bumps `google.golang.org/grpc` to `v1.79.3` and the dependency set required by
 that version to fix CVE-2026-33186.
+
+## 005-support-multiple-network-interfaces.patch
+
+Lifts the upstream single network interface limitation when reporting
+`YandexMachine.status.addresses`. Upstream fails reconciliation with
+`only one interface supported` for any VM with more than one interface, so
+`YandexInstanceClass.spec.additionalSubnets` left the machine never provisioned.
+
+The patch reports the internal IPv4 address of every interface. The primary
+interface (index `0`) always goes first, since control plane load balancer
+registration takes `addresses[0]` together with the subnet of
+`spec.networkInterfaces[0]`. An IPv4 address is required only on the primary
+interface; additional interfaces without one are skipped and logged with the
+instance ID, interface index and subnet ID.
+
+## 006-support-network-type.patch
+
+Adds `YandexMachine.spec.networkType` and passes it to the instance create
+request as `networkSettings.type`. Supported values are `STANDARD` and
+`SOFTWARE_ACCELERATED`; `HARDWARE_ACCELERATED` is left out because the compute
+API reserves it for future use. When the field is omitted, no network settings
+are sent and the cloud default (`STANDARD`) applies. An unsupported value is
+rejected by the `YandexMachine` and `YandexMachineTemplate` validating webhooks
+and by the controller before the instance is created.
+
+## 007-support-additional-labels.patch
+
+Adds `YandexMachine.spec.labels` and merges them into the instance labels on top
+of the ones CAPY sets itself (`yandex.cloud/managed-by`, `yandex.cloud/folder-id`,
+`yandex.cloud/capy-*`). A label whose key collides with a CAPY label is ignored
+and logged with a `WARNING:` message, so a user label can never change how CAPY
+identifies its instances. Labels are applied on instance creation only.

@@ -1,0 +1,111 @@
+diff --git a/api/v1alpha1/yandexmachine_types.go b/api/v1alpha1/yandexmachine_types.go
+--- a/api/v1alpha1/yandexmachine_types.go
++++ b/api/v1alpha1/yandexmachine_types.go
+@@ -41,6 +41,11 @@
+ 	// +optional
+ 	Metadata map[string]string `json:"metadata,omitempty"`
+ 
++	// Labels contains additional labels for the YandexCloud VM. They are merged with the labels
++	// set by the provider; a label whose key collides with a provider label is ignored.
++	// +optional
++	Labels map[string]string `json:"labels,omitempty"`
++
+ 	// ZoneID is the identifier of YandexCloud availability zone.
+ 	// +optional
+ 	// +kubebuilder:default=ru-central1-d
+diff --git a/api/v1alpha1/zz_generated.deepcopy.go b/api/v1alpha1/zz_generated.deepcopy.go
+--- a/api/v1alpha1/zz_generated.deepcopy.go
++++ b/api/v1alpha1/zz_generated.deepcopy.go
+@@ -515,6 +515,13 @@
+ 			(*out)[key] = val
+ 		}
+ 	}
++	if in.Labels != nil {
++		in, out := &in.Labels, &out.Labels
++		*out = make(map[string]string, len(*in))
++		for key, val := range *in {
++			(*out)[key] = val
++		}
++	}
+ 	if in.ZoneID != nil {
+ 		in, out := &in.ZoneID, &out.ZoneID
+ 		*out = new(string)
+diff --git a/internal/pkg/cloud/scope/labels.go b/internal/pkg/cloud/scope/labels.go
+--- a/internal/pkg/cloud/scope/labels.go
++++ b/internal/pkg/cloud/scope/labels.go
+@@ -1,12 +1,14 @@
+ package scope
+ 
+ import (
++	"context"
+ 	//nolint:gosec // not for security purpose
+ 	"crypto/md5"
+ 	"encoding/hex"
+ 	"strings"
+ 
+ 	clusterv1 "sigs.k8s.io/cluster-api/api/core/v1beta2"
++	"sigs.k8s.io/controller-runtime/pkg/log"
+ )
+ 
+ // labels mostly used in Yandex analytics to differentiate VMs created by CAPI
+@@ -31,7 +33,9 @@
+ )
+ 
+ // getMachineLabels prepares labels for machine in current scope.
+-func (m *MachineScope) getMachineLabels() map[string]string {
++// Labels from the YandexMachine spec are added on top of the provider ones, except those that
++// would override a provider label: they are ignored and logged.
++func (m *MachineScope) getMachineLabels(ctx context.Context) map[string]string {
+ 	labels := map[string]string{
+ 		managedByLabel:              capyControllerManagerName,
+ 		yaAnalyticsClusterNameLabel: m.YandexMachine.Labels[clusterv1.ClusterNameLabel],
+@@ -59,6 +63,16 @@
+ 			deploymentName,
+ 		)
+ 
++	logger := log.FromContext(ctx)
++	// Spec label keys are unique, so a key already present here can only be a provider label.
++	for key, value := range m.YandexMachine.Spec.Labels {
++		if _, ok := labels[key]; ok {
++			logger.Info("WARNING: ignoring YandexMachine label that overrides a provider label", "label", key)
++			continue
++		}
++		labels[key] = value
++	}
++
+ 	return labels
+ }
+ 
+diff --git a/internal/pkg/cloud/scope/machine.go b/internal/pkg/cloud/scope/machine.go
+--- a/internal/pkg/cloud/scope/machine.go
++++ b/internal/pkg/cloud/scope/machine.go
+@@ -188,7 +188,7 @@
+ }
+ 
+ // GetInstanceReq returns YandexCloud compute instance creation request.
+-func (m *MachineScope) GetInstanceReq() (*compute.CreateInstanceRequest, error) {
++func (m *MachineScope) GetInstanceReq(ctx context.Context) (*compute.CreateInstanceRequest, error) {
+ 	bootstrapData, err := m.GetBootstrapData()
+ 	if err != nil {
+ 		return nil, err
+@@ -251,7 +251,7 @@
+ 		ZoneId:        *m.YandexMachine.Spec.ZoneID,
+ 		PlatformId:    *m.YandexMachine.Spec.PlatformID,
+ 		Metadata:      metadata,
+-		Labels:        m.getMachineLabels(),
++		Labels:        m.getMachineLabels(ctx),
+ 		Hostname:      m.YandexMachine.GetName(),
+ 		ResourcesSpec: resourcesSpec,
+ 		BootDiskSpec: &compute.AttachedDiskSpec{
+diff --git a/internal/pkg/cloud/services/compute/reconcile.go b/internal/pkg/cloud/services/compute/reconcile.go
+--- a/internal/pkg/cloud/services/compute/reconcile.go
++++ b/internal/pkg/cloud/services/compute/reconcile.go
+@@ -148,7 +148,7 @@
+ 
+ // createComputeInstance creates a virtual machine from YandexCompute specification.
+ func (s *Service) createComputeInstance(ctx context.Context, client yandex.Client) (string, error) {
+-	request, err := s.scope.GetInstanceReq()
++	request, err := s.scope.GetInstanceReq(ctx)
+ 	if err != nil {
+ 		return "", err
+ 	}

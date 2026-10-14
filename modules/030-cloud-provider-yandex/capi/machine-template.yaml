@@ -27,6 +27,23 @@ spec:
 {{- range .nodeGroup.instanceClass.additionalSubnets }}
         - subnetID: {{ . | quote }}
 {{- end }}
+{{- $networkDict := dict "Standard" "STANDARD" "SoftwareAccelerated" "SOFTWARE_ACCELERATED" }}
+{{- with get $networkDict (.nodeGroup.instanceClass.networkType | toString) }}
+      networkType: {{ . | quote }}
+{{- end }}
+{{- $effectiveLabels := dict }}
+{{- if .Values.nodeManager.internal.cloudProvider.yandex.labels }}
+  {{- $effectiveLabels = merge $effectiveLabels .Values.nodeManager.internal.cloudProvider.yandex.labels }}
+{{- end }}
+{{- if hasKey .nodeGroup.instanceClass "additionalLabels" }}
+  {{- $effectiveLabels = mergeOverwrite $effectiveLabels .nodeGroup.instanceClass.additionalLabels }}
+{{- end }}
+{{- with $effectiveLabels }}
+      labels:
+  {{- range $k, $v := . }}
+        {{ $k | trunc 63 | quote }}: {{ $v | toString | trunc 63 | quote }}
+  {{- end }}
+{{- end }}
       metadata:
         ssh-keys: 'user:{{ .Values.nodeManager.internal.cloudProvider.yandex.sshKey }}'
         node-network-cidr: {{ .Values.nodeManager.internal.cloudProvider.yandex.nodeNetworkCIDR | quote }}
