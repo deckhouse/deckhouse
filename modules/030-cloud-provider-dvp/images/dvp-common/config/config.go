@@ -28,12 +28,14 @@ const (
 	envDVPKubernetesConfigBase64 = "DVP_KUBERNETES_CONFIG_BASE64"
 	envDVPNamespace              = "DVP_NAMESPACE"
 	envClusterUUID               = "CLUSTER_UUID"
+	envNetworkPolicy             = "DVP_NETWORK_POLICY"
 )
 
 type CloudConfig struct {
 	KubernetesConfigBase64 string `json:"kubernetes_config_base64"`
 	Namespace              string `json:"namespace"`
 	ClusterUUID            string `json:"cluster_uuid"`
+	NetworkPolicy          string `json:"network_policy"`
 }
 
 func NewCloudConfig() (*CloudConfig, error) {
@@ -52,6 +54,10 @@ func NewCloudConfig() (*CloudConfig, error) {
 
 	clusterUUID := os.Getenv(envClusterUUID)
 	cloudConfig.ClusterUUID = clusterUUID
+	cloudConfig.NetworkPolicy = os.Getenv(envNetworkPolicy)
+	if cloudConfig.NetworkPolicy == "" {
+		cloudConfig.NetworkPolicy = "Isolated"
+	}
 
 	return cloudConfig, nil
 }

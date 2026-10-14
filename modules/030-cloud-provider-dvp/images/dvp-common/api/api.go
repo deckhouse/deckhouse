@@ -21,6 +21,7 @@ import (
 	"errors"
 
 	corev1 "k8s.io/api/core/v1"
+	networkingv1 "k8s.io/api/networking/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/kubernetes"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -62,6 +63,9 @@ func NewDVPCloudAPI(config *config.CloudConfig) (*DVPCloudAPI, error) {
 
 	err = corev1.AddToScheme(scheme)
 	if err != nil {
+		return nil, err
+	}
+	if err = networkingv1.AddToScheme(scheme); err != nil {
 		return nil, err
 	}
 
