@@ -47,6 +47,14 @@ rules:
   - get
   - list
   - watch
+- apiGroups:
+  - network.deckhouse.io
+  resources:
+  - waypointinstances
+  verbs:
+  - get
+  - list
+  - watch
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
@@ -78,6 +86,16 @@ rules:
   - peerauthentications
   - authorizationpolicies
   - requestauthentications
+  verbs:
+  - create
+  - delete
+  - deletecollection
+  - patch
+  - update
+- apiGroups:
+  - network.deckhouse.io
+  resources:
+  - waypointinstances
   verbs:
   - create
   - delete
