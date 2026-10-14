@@ -1,6 +1,13 @@
 {{- define "schedulerConfig" }}
 apiVersion: kubescheduler.config.k8s.io/v1
 kind: KubeSchedulerConfiguration
+# kube-scheduler ignores the --profiling flag from the pod manifest as soon as --config is
+# passed, and the manifest passes --config for every runType except ClusterBootstrap. The
+# default here is "true", so profiling has to be turned off explicitly. Contention
+# profiling is spelled out because upstream enables it by default when profiling is on,
+# and it costs runtime.SetBlockProfileRate(1).
+enableProfiling: false
+enableContentionProfiling: false
 clientConnection:
   kubeconfig: /etc/kubernetes/scheduler.conf
 profiles:

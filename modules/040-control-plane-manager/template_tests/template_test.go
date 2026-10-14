@@ -1178,6 +1178,40 @@ resources:
 		})
 	})
 
+	Context("Scheduler config", func() {
+		BeforeEach(func() {
+			f.HelmRender()
+		})
+
+		// kube-scheduler ignores the --profiling flag from the pod manifest as soon as
+		// --config is passed, and profiling is enabled by default in the component config,
+		// so it has to be turned off there.
+		It("should disable profiling in the component config", func() {
+			Expect(f.RenderError).ShouldNot(HaveOccurred())
+
+			s := f.KubernetesResource("Secret", "kube-system", "d8-control-plane-manager-config")
+			Expect(s.Exists()).To(BeTrue())
+
+			confVal := s.Field("data.extra-file-scheduler-config\\.yaml")
+			Expect(confVal.Exists()).To(BeTrue())
+
+			data, err := base64.StdEncoding.DecodeString(confVal.String())
+			Expect(err).To(BeNil())
+
+			// Pointers, so that a field missing from the config fails the test instead of
+			// passing with the zero value: for kube-scheduler "absent" means "default true".
+			var conf struct {
+				EnableProfiling           *bool `json:"enableProfiling"`
+				EnableContentionProfiling *bool `json:"enableContentionProfiling"`
+			}
+			Expect(yaml.Unmarshal(data, &conf)).To(Succeed())
+			Expect(conf.EnableProfiling).NotTo(BeNil())
+			Expect(*conf.EnableProfiling).To(BeFalse())
+			Expect(conf.EnableContentionProfiling).NotTo(BeNil())
+			Expect(*conf.EnableContentionProfiling).To(BeFalse())
+		})
+	})
+
 	Context("webhook configuration in apiserver", func() {
 		const webhookTestValues = `
 internal:

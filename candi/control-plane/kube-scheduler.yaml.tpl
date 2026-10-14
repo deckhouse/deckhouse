@@ -67,6 +67,9 @@ spec:
     - --leader-elect-retry-period=2s
 {{- end }}
     - --leader-elect=true
+    {{- /* Takes effect only when --config below is not passed, that is during ClusterBootstrap:
+           with --config kube-scheduler ignores this deprecated flag. In a running cluster
+           profiling is disabled by enableProfiling in the schedulerConfig template. */}}
     - --profiling=false
     - --feature-gates={{ $schedulerFeatureGatesStr }}
     - --bind-address=127.0.0.1
