@@ -138,11 +138,6 @@
       "advanced_security"
     ]
   },
-  "service-with-healthchecks": {
-    "extensions": [
-      "advanced_networking"
-    ]
-  },
   "user-authn": {
     "extensions": [
       "billing"

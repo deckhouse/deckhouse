@@ -1081,6 +1081,37 @@
       "ssdlc"
     ]
   },
+  "service-with-healthchecks": {
+    "extensions": [
+      "advanced_networking"
+    ],
+    "editions": [
+      "ce",
+      "core",
+      "be",
+      "se",
+      "se-plus",
+      "ee"
+    ],
+    "editionsWithRestrictions": [
+      "ce",
+      "core",
+      "be",
+      "se",
+      "se-plus"
+    ],
+    "editionsWithRestrictionsComments": {
+      "all": {
+        "en": "Only TCP tests are available. You cannot create or modify HTTP or PostgreSQL tests.",
+        "ru": "Доступны только пробы TCP. Недоступно создание и изменение проб HTTP и PostgreSQL"
+      }
+    },
+    "tags": [
+      "network",
+      "balancing",
+      "ssdlc"
+    ]
+  },
   "snapshot-controller": {
     "extensions": [
       "advanced_storage",

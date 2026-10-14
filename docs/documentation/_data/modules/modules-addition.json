@@ -830,6 +830,31 @@
     "external": "true",
     "path": "/modules/secrets-store-integration/"
   },
+  "service-with-healthchecks": {
+    "editions": [
+      "ce",
+      "core",
+      "be",
+      "se",
+      "se-plus",
+      "ee"
+    ],
+    "editionsWithRestrictions": [
+      "ce",
+      "core",
+      "be",
+      "se",
+      "se-plus"
+    ],
+    "editionsWithRestrictionsComments": {
+      "all": {
+        "en": "Only TCP tests are available. You cannot create or modify HTTP or PostgreSQL tests.",
+        "ru": "Доступны только пробы TCP. Недоступно создание и изменение проб HTTP и PostgreSQL"
+      }
+    },
+    "external": "true",
+    "path": "/modules/service-with-healthchecks/"
+  },
   "state-snapshotter": {
     "editions": [
       "ce",
