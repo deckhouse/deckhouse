@@ -1,65 +1,46 @@
-{{- $lsblk_version := include "get_oss_version_by_id" (list "util-linux-lsblk" $ )  -}}
-{{- $image_version := $lsblk_version | replace "." "-" }}
 ---
-image: {{ $.ModuleName }}/{{ $.ImageName }}-{{ $image_version }}
+image: {{ $.ModuleName }}/{{ $.ImageName }}
 from: scratch
 import:
-- image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $image_version }}
+- image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
   add: /
   to: /
   includePaths:
-  - lsblk
+  - opt/deckhouse
   - install
   - uninstall
-  before: setup
+  before: install
 imageSpec:
   config:
-    labels: {"distro": "all", "version": "all", "lsblk": "{{ $lsblk_version }}" }
+    labels: { "distro": "all", "version": "all" }
     clearUser: true
     clearWorkingDir: true
     clearCmd: true
     clearEntrypoint: true
     removeEnv: ["/.*/"]
 ---
-image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact-{{ $image_version }}
+image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
 final: false
-fromImage: common/src-artifact
+from: {{ index $.Images "builder/distroless" }}
 git:
-- add: /{{ $.ModulePath }}/modules/007-{{ $.ModuleName }}/images/{{ $.ImageName }}/scripts
-  to: /src/scripts
+- add: /{{ $.ModulePath }}modules/{{ $.ModulePriority }}-{{ $.ModuleName }}/images/{{ $.ImageName }}/scripts
+  to: /
+  includePaths:
+  - install
+  - uninstall
   stageDependencies:
     install:
     - '**/*'
-secrets:
-- id: SOURCE_REPO
-  value: {{ .SOURCE_REPO }}
 shell:
+  beforeInstall:
+  - pm install file findutils patchelf
   install:
-  - git clone -b v{{ $lsblk_version }} --depth 1 $(cat /run/secrets/SOURCE_REPO)/util-linux/util-linux.git  /src/util-linux
-  - rm -rf /src/util-linux/.git
----
-image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $image_version }}
-from: {{ index $.Images "builder/golang-alpine" }}
-final: false
-mount:
-{{ include "mount points for golang builds" . }}
-import:
-- image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact-{{ $image_version }}
-  add: /src
-  to: /src
-  before: setup
-shell:
-  install:
-  {{- include "alpine packages proxy" . | nindent 2 }}
-  - apk add --no-cache make automake gettext-dev autoconf libtool flex bison clang binutils g++ linux-headers
-  setup:
-  - cd /src/util-linux
-  - export LDFLAGS="-Wl,-z,now -Wl,-z,relro -static -s"
-  - export CFLAGS="-fPIC -pie -fstack-protector-all -O2 -D_FORTIFY_SOURCE=2 -static -s"
-  - ./autogen.sh
-  - ./configure --enable-static --enable-static-programs=lsblk --disable-pylibmount --without-python --disable-liblastlog2
-  - make LDFLAGS="--static" lsblk && strip ./lsblk
-  - ldd ./lsblk || true
-  - mv ./lsblk /lsblk
-  - mv /src/scripts/* /
-  - chmod +x /lsblk /install /uninstall
+  # -n, because without it pm consults the builder's own package index and skips whatever
+  # is already installed there — glibc among it. The tree under /src would then come out
+  # without its loader and the package would ship nothing that starts on a node.
+  #
+  # lsblk comes from util-linux, which is also where growpart's fdisk and sfdisk come from.
+  - pm install -n util-linux -d /src
+  - mkdir -p /opt/deckhouse/bin /opt/deckhouse/lib
+  - cp -pr /src/usr/bin/lsblk /opt/deckhouse/bin
+  {{- include "relocate_and_verify" (dict "resolve" "/src" "smoke" (list "/opt/deckhouse/bin/lsblk --version")) | nindent 2 }}

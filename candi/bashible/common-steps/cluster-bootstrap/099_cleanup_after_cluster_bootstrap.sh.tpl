@@ -15,7 +15,7 @@
 rm -rf /var/lib/bashible/control-plane
 
 {{- if has (.registry).mode (list "Proxy" "Local") }}
-bb-package-remove module-registry-auth \
+rpp-get uninstall module-registry-auth \
                   module-registry-distribution \
                   module-registry-syncer \
                   cfssl

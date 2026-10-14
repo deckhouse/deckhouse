@@ -1,8 +1,6 @@
 ---
 {{- $istioVersion := include "get_oss_version_by_id" (list "istio-1-27" $ ) }}
 {{- $istioImageVersion := (printf "v%s" (replace "." "x" $istioVersion)) }} {{- /* 1.27.9 -> v1x27x9 */}}
-{{- $iptables_version := "1.8.9" }}
-{{- $iptables_image_version := $iptables_version | replace "." "-" }}
 ---
 # Based on https://github.com/istio/istio/blob/1.27.9/cni/deployments/kubernetes/Dockerfile.install-cni
 image: {{ .ModuleName }}/{{ .ImageName }}
@@ -24,12 +22,16 @@ import:
   add: /relocate
   to: /
   before: setup
-- image: registrypackages/iptables-artifact-{{ $iptables_image_version }}
+- image: registrypackages/iptables-artifact
   add: /
   to: /sbin
   includePaths:
   - xtables-legacy-multi
   - xtables-nft-multi
+  before: setup
+- image: registrypackages/iptables-artifact
+  add: /relocate/lib64
+  to: /lib64
   before: setup
 - image: common/iptables-wrapper
   add: /iptables-wrapper

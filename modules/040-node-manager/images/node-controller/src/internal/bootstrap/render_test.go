@@ -247,7 +247,7 @@ func baseInput(files *Files) Input {
 		},
 		ClusterUUID: "deadbeef-dead-beef-dead-beefdeadbeef",
 		Images: map[string]any{"registrypackages": map[string]any{
-			"jq171": "sha256:jq", "d8Curl891": "sha256:curl", "tailLog": "sha256:tail", "rppGet": "sha256:rpp",
+			"jq": "sha256:jq", "d8Curl": "sha256:curl", "tailLog": "sha256:tail", "rppGet": "sha256:rpp",
 			"ec2DescribeTagsV001Flant3": "sha256:ec2",
 		}},
 		PackagesProxy: map[string]any{"token": "mytoken"},

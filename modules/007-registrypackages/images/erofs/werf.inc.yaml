@@ -9,10 +9,10 @@ import:
   - opt/deckhouse
   - install
   - uninstall
-  before: setup
+  before: install
 imageSpec:
   config:
-    labels: {"distro": "all", "version": "all", "erofs": "1.8.10" }
+    labels: { "distro": "all", "version": "all" }
     clearUser: true
     clearWorkingDir: true
     clearCmd: true
@@ -20,27 +20,22 @@ imageSpec:
     removeEnv: ["/.*/"]
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
-from: {{ index $.Images "builder/distroless" }}
 final: false
+from: {{ index $.Images "builder/distroless" }}
 git:
-- add: /{{ $.ModulePath }}modules/007-{{ $.ModuleName }}/images/{{ $.ImageName }}/scripts
+- add: /{{ $.ModulePath }}modules/{{ $.ModulePriority }}-{{ $.ModuleName }}/images/{{ $.ImageName }}/scripts
   to: /
   stageDependencies:
-    setup:
+    install:
     - '**/*'
 shell:
   beforeInstall:
-  - pm install erofs-utils patchelf file findutils -n
-  setup:
+  - pm install file findutils patchelf
+  install:
+  # -n, because without it pm consults the builder's own package index and skips whatever
+  # is already installed there — glibc among it. The tree under /src would then come out
+  # without its loader and the package would ship nothing that starts on a node.
+  - pm install -n erofs-utils -d /src
   - mkdir -p /opt/deckhouse/bin /opt/deckhouse/lib
-  - cp -p /usr/bin/dump.erofs /usr/bin/fsck.erofs /usr/bin/mkfs.erofs /opt/deckhouse/bin
-  - cp -a /usr/lib/liblz4.so.* /usr/lib/libzstd.so.* /usr/lib/libuuid.so.* /usr/lib/libc.so.6 /usr/lib/ld-linux-x86-64.so.2 /opt/deckhouse/lib
-  - |
-    for i in $(find /opt/deckhouse/bin -type f); do
-      if file $i | grep -q "ELF"; then
-        patchelf --set-interpreter /opt/deckhouse/lib/ld-linux-x86-64.so.2 $i
-        patchelf --set-rpath /opt/deckhouse/lib $i
-      fi
-    done
-  - chown -R 0:0 /opt/deckhouse
-  - chmod +x /install /uninstall
+  - cp -pr /src/usr/bin/dump.erofs /src/usr/bin/fsck.erofs /src/usr/bin/mkfs.erofs /opt/deckhouse/bin
+  {{- include "relocate_and_verify" (dict "resolve" "/src" "smoke" (list "/opt/deckhouse/bin/mkfs.erofs -V" "/opt/deckhouse/bin/fsck.erofs -V" "/opt/deckhouse/bin/dump.erofs -V")) | nindent 2 }}

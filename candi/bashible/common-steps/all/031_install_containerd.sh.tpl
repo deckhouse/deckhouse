@@ -25,24 +25,11 @@ __sec() {
 
 bb-event-on 'bb-package-installed' 'post-install'
 
-# This handler triggered by 'bb-event-fire "bb-package-installed" "${PACKAGE}"'
-# All arguments (except the event name, i.e. 'bb-package-installed')
-# passed to the bb-event-fire() function are passed to the post-install() function.
-# This means that the post-install() function is called with an argument
-# containing the name of the installed package, which is used in the logic below.
-#
-# For example:
-# - 'post-install containerd'
-# - 'post-install crictl'
-
+# Still an event handler, because bb-dnf-install fires the same event and selinux-policy
+# below comes from dnf, not from rpp-get. What containerd used to do here now sits at its
+# own install, where the result file says plainly whether anything changed.
 post-install() {
   local PACKAGE="$1"
-
-  if [[ "${PACKAGE}" == "containerd" ]]; then
-    systemctl daemon-reload
-    systemctl enable containerd-deckhouse.service
-    bb-flag-set containerd-need-restart
-  fi
 
   if [[ "${PACKAGE}" == "selinux-policy" ]]; then
     bb-log-info "Setting reboot flag due to selinux-policy installation"
@@ -117,9 +104,10 @@ if bb-flag? cntrd-integrity-migration-required; then
   if ! bb-flag? cntrd-major-version-changed; then
     bb-flag-set cntrd-integrity-restore-kubelet
   fi
-  bb-package-install "pause:{{ $.images.registrypackages.pause }}"
-  bb-package-install "kubernetes-api-proxy:{{ $.images.registrypackages.kubernetesApiProxy }}"
-  bb-package-install "registry-proxy:{{ $.images.registrypackages.registryProxy }}"
+  rpp-get install \
+    "pause:{{ $.images.registrypackages.pause }}" \
+    "kubernetes-api-proxy:{{ $.images.registrypackages.kubernetesApiProxy }}" \
+    "registry-proxy:{{ $.images.registrypackages.registryProxy }}"
 fi
 {{- end }}
 
@@ -139,16 +127,26 @@ fi
 {{- $containerd := "containerd1736"}}
 {{- if eq .cri "ContainerdV2" }}
   {{- $containerd = "containerd229" }}
-bb-package-install "erofs:{{ .images.registrypackages.erofs }}" "cryptsetup:{{ .images.registrypackages.cryptsetup }}"
+rpp-get install "erofs:{{ .images.registrypackages.erofs }}" "cryptsetup:{{ .images.registrypackages.cryptsetup }}"
 {{- end }}
 
 # Block on the packages this step needs (prefetched by 001_prefetch_registry_packages).
-# If the prefetch never ran or timed out, bb-package-install below will fetch inline.
+# If the prefetch never ran or timed out, rpp-get below will fetch inline.
 bb-rpp-wait-fetched "containerd" "{{ index $.images.registrypackages $containerd }}" || true
 bb-rpp-wait-fetched "crictl" "{{ index .images.registrypackages (printf "crictl%s" (.kubernetesVersion | replace "." "")) | toString }}" || true
 bb-rpp-wait-fetched "toml-merge" "{{ .images.registrypackages.tomlMerge01 }}" || true
 __sec wait_prefetch
 
-bb-package-install "containerd:{{- index $.images.registrypackages $containerd }}" "crictl:{{ index .images.registrypackages (printf "crictl%s" (.kubernetesVersion | replace "." "")) | toString }}" "toml-merge:{{ .images.registrypackages.tomlMerge01 }}"
+containerd_result="$(mktemp)"
+rpp-get install --result "${containerd_result}" "containerd:{{- index $.images.registrypackages $containerd }}" "crictl:{{ index .images.registrypackages (printf "crictl%s" (.kubernetesVersion | replace "." "")) | toString }}" "toml-merge:{{ .images.registrypackages.tomlMerge01 }}"
+
+# --result lists only what rpp-get changed, so the unit is reloaded and the restart flag
+# raised on an actual containerd upgrade rather than on every bashible pass.
+if grep -q '^installed containerd$' "${containerd_result}"; then
+  systemctl daemon-reload
+  systemctl enable containerd-deckhouse.service
+  bb-flag-set containerd-need-restart
+fi
+rm -f "${containerd_result}"
 __sec pkg_install
 {{- end }}

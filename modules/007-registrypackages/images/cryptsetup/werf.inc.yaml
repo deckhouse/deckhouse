@@ -9,10 +9,10 @@ import:
   - opt/deckhouse
   - install
   - uninstall
-  before: setup
+  before: install
 imageSpec:
   config:
-    labels: {"distro": "all", "version": "all", "cryptsetup": "2.7.5" }
+    labels: { "distro": "all", "version": "all" }
     clearUser: true
     clearWorkingDir: true
     clearCmd: true
@@ -20,40 +20,24 @@ imageSpec:
     removeEnv: ["/.*/"]
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-artifact
-from: {{ index $.Images "builder/alpine" }}
+from: {{ index $.Images "builder/distroless" }}
 final: false
 git:
 - add: /{{ .ModulePath }}modules/{{ .ModulePriority }}-{{ .ModuleName }}/images/{{ .ImageName }}/scripts
   to: /
   stageDependencies:
-    setup:
+    install:
     - '**/*'
-import:
-- from: {{ index $.Images "tools/cryptsetup" }}
-  add: /
-  to: /src
-  includePaths:
-  - usr/lib
-  - usr/sbin
-  before: install
 shell:
   beforeInstall:
-  {{- include "alpine packages proxy" . | nindent 2 }}
-  - apk add --no-cache patchelf file findutils
-  setup:
-  - mkdir -p /opt/deckhouse/bin
-  - cp -pr /src/usr/sbin/* /opt/deckhouse/bin
-  - cp -pr /src/usr/lib /opt/deckhouse
-  - cd /opt/deckhouse/bin
-  - |
-    for i in $(find . -type f); do
-      if file $i | grep -q "ELF"; then
-        patchelf --set-interpreter /opt/deckhouse/lib/libc.so $i
-        patchelf --set-rpath /opt/deckhouse/lib $i
-      fi
-    done
-  - cd /opt/deckhouse/lib
-  - find . -type f -name "*.la" -exec rm -f \{} \;
-  - find . -type f -name "*.a" -exec rm -f \{} \;
-  - find . -type f -name "*.pc" -exec rm -f \{} \;
-  - chown -R 0:0 /opt/deckhouse
+  - pm install file findutils patchelf
+  install:
+  - pm install -n cryptsetup -d /src
+  - mkdir -p /opt/deckhouse/bin /opt/deckhouse/lib
+  - cp -pr /src/usr/sbin/integritysetup /opt/deckhouse/bin
+  - cp -pr /src/usr/sbin/veritysetup /opt/deckhouse/bin
+  - cp -pr /src/usr/sbin/cryptsetup /opt/deckhouse/bin
+  - cp -pr /src/usr/lib/*.so* /opt/deckhouse/lib
+  - cp -pr /src/usr/lib64/*.so* /opt/deckhouse/lib
+  - cp -pr /src/lib64/* /opt/deckhouse/lib
+  {{- include "relocate_and_verify" (dict "smoke" (list "/opt/deckhouse/bin/cryptsetup --version" "/opt/deckhouse/bin/veritysetup --version" "/opt/deckhouse/bin/integritysetup --version")) | nindent 2 }}

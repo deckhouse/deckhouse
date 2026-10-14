@@ -1,68 +1,44 @@
-{{- $version := include "get_oss_version_by_id" (list "curl" $ )  -}}
-{{- $image_version := $version | replace "." "-" }}
 ---
-image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact-{{ $image_version }}
-final: false
-fromImage: common/src-artifact
-git:
-- add: /{{ $.ModulePath }}/modules/007-{{ $.ModuleName }}/images/{{ $.ImageName }}/scripts
-  to: /src/scripts
-  stageDependencies:
-    install:
-    - '**/*'
-secrets:
-- id: SOURCE_REPO
-  value: {{ .SOURCE_REPO }}
-shell:
-  install:
-  - git clone --depth 1 --branch curl-{{ $version | replace "." "_"}} $(cat /run/secrets/SOURCE_REPO)/curl/curl.git /src/curl
-  - rm -rf /src/curl/.git
----
-image: {{ $.ModuleName }}/{{ $.ImageName }}-{{ $image_version }}
+image: {{ $.ModuleName }}/{{ $.ImageName }}
 from: scratch
 import:
-- image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $image_version }}
+- image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
   add: /
   to: /
   includePaths:
-  - d8-curl
+  - opt/deckhouse
   - install
   - uninstall
-  before: setup
+  before: install
 imageSpec:
   config:
-    labels: { "distro": "all", "version": "all", "curl": "{{ $version }}" }
+    labels: { "distro": "all", "version": "all" }
     clearUser: true
     clearWorkingDir: true
     clearCmd: true
     clearEntrypoint: true
     removeEnv: ["/.*/"]
 ---
-image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $image_version }}
+image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
 final: false
-from: {{ index $.Images "builder/alpine" }}
-import:
-- image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact-{{ $image_version }}
-  add: /src
-  to: /src
-  before: setup
+from: {{ index $.Images "builder/distroless" }}
 git:
-  - add: /{{ $.ModulePath }}modules/007-{{ $.ModuleName }}/images/{{ $.ImageName }}/scripts
-    to: /
-    stageDependencies:
-      setup:
-      - '**/*'
+- add: /{{ $.ModulePath }}modules/007-{{ $.ModuleName }}/images/{{ $.ImageName }}/scripts
+  to: /
+  stageDependencies:
+    install:
+    - '**/*'
 shell:
   beforeInstall:
-  {{- include "alpine packages proxy" . | nindent 2 }}
-  - apk add --no-cache make autoconf automake clang libtool gettext-dev binutils g++ openssl openssl-dev libssh2-dev libgcrypt ssl_client libssh2-static libcrypto3 openssl-libs-static zlib-static libgcc clang-libs gettext-libs
-  setup:
-  - export CC=clang
-  - cd /src/curl
-  - autoreconf -fi
-  - LDFLAGS="-static" PKG_CONFIG="pkg-config --static" ./configure --disable-shared --enable-static --disable-ldap --enable-ipv6 --enable-unix-sockets --with-ssl --with-libssh2
-  - make -j4 V=1 LDFLAGS="-static -all-static"
-  - strip src/curl
-  - mv src/curl /d8-curl
-  - mv /src/scripts/* /
-  - chmod +x /d8-curl /install /uninstall
+  - pm install file findutils patchelf
+  install:
+  # -n, because without it pm consults the builder's own package index and skips whatever
+  # is already installed there — glibc among it. The tree under /src then comes out without
+  # /src/lib64, so the package ships no loader at all and nothing in it starts on a node.
+  - pm install -n curl -d /src
+  - mkdir -p /opt/deckhouse/bin /opt/deckhouse/lib
+  - cp -pr /src/usr/bin/curl /opt/deckhouse/bin/d8-curl
+  - cp -pr /src/usr/lib64/*.so* /opt/deckhouse/lib
+  - cp -pr /src/usr/lib/*.so* /opt/deckhouse/lib
+  - cp -pr /src/lib64/*.so* /opt/deckhouse/lib
+  {{- include "relocate_and_verify" (dict "smoke" (list "/opt/deckhouse/bin/d8-curl --version")) | nindent 2 }}

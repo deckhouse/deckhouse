@@ -1,0 +1,203 @@
+{{- /*
+  relocate_and_verify repoints a hand-assembled node package at /opt/deckhouse/lib and
+  then proves, inside the builder, that what it assembled can actually run.
+
+  These packages are built by copying a handful of binaries and libraries out of a
+  distribution package and rewriting their interpreter and rpath. Nothing in that chain
+  notices when a base image moves a library between lib and lib64, renames a soname or
+  splits a package in two: the copy quietly brings less than it used to, the build still
+  succeeds, and the first sign of trouble is a node whose cryptsetup or curl will not
+  start — on a node, where nothing is left that could retry. The checks below are what
+  turn that into a failed build instead.
+
+  Run this after the last file has been copied into /opt/deckhouse. It is the only place
+  that may patchelf the tree, because it has to know which file is the loader.
+
+  The binaries are pointed at /opt/deckhouse/lib/ld.so, a short symlink to whatever loader
+  the package ships, and not at the loader's own name. patchelf can only write a new
+  interpreter in place while it is no longer than the one already there, and the rewrite
+  it does otherwise produces binaries that segfault with this version. The length is
+  checked below rather than left to whoever edits the path next.
+
+  Needs file, findutils and patchelf in the builder.
+
+  Parameters:
+    resolve - optional: the root the package was unpacked into, such as /src. When set,
+              the define works out which libraries the binaries in /opt/deckhouse/bin
+              actually need and copies those, instead of the werf.inc.yaml listing or
+              globbing them. With pm that is the difference between 9 libraries and 131:
+              pm resolves a package's whole dependency tree into the root and most of it
+              has nothing to do with the binaries being shipped.
+    smoke   - commands to run; each has to exit 0. Name the binaries by their
+              /opt/deckhouse/bin path, the same way a bashible step would.
+
+  Usage:
+    {{- include "relocate_and_verify" (dict "resolve" "/src" "smoke" (list "/opt/deckhouse/bin/mount.nfs -V")) | nindent 2 }}
+*/}}
+{{- define "relocate_and_verify" }}
+- |
+  set -eu
+{{- with .resolve }}
+
+  # Which libraries to ship is answered from the binaries themselves, by soname, and not
+  # by asking the loader to resolve them. The loader answers with whatever it can find,
+  # and in the builder that includes the builder's own copies: glibc's libc.so.6 comes
+  # back as /usr/lib64/libc.so.6 even with LD_LIBRARY_PATH pointing at the tree being
+  # packaged. A package built on that answer ships everything except libc and works in
+  # the builder, right up until it reaches a node.
+  copy_needed() {
+    local f="$1" soname src
+    for soname in $(patchelf --print-needed "$f" 2>/dev/null); do
+      if [ -e "/opt/deckhouse/lib/$soname" ]; then
+        continue
+      fi
+      src="$(find {{ . }} -name "$soname" -type f -o -name "$soname" -type l | head -1)"
+      if [ -z "$src" ]; then
+        echo "FATAL: $f needs $soname and {{ . }} does not have it" >&2
+        return 1
+      fi
+      cp -aL "$src" "/opt/deckhouse/lib/$soname"
+      added=1
+    done
+  }
+
+  # A library can need a second one, so this repeats until a pass adds nothing.
+  while :; do
+    added=0
+    for f in $(find /opt/deckhouse/bin /opt/deckhouse/lib -type f); do
+      if ! file "$f" | grep -q ELF; then
+        continue
+      fi
+      copy_needed "$f"
+    done
+    if [ "$added" -eq 0 ]; then
+      break
+    fi
+  done
+
+  # The loader is named in PT_INTERP rather than in NEEDED, so it is fetched by itself.
+  for f in $(find /opt/deckhouse/bin -type f); do
+    interp="$(patchelf --print-interpreter "$f" 2>/dev/null || true)"
+    if [ -n "$interp" ] && [ ! -e "/opt/deckhouse/lib/${interp##*/}" ]; then
+      cp -aL "{{ . }}/lib64/${interp##*/}" "/opt/deckhouse/lib/${interp##*/}"
+    fi
+  done
+{{- end }}
+
+  # A package can be all static — pm ships jq and yq that way — and then there is nothing
+  # to repoint and no loader to ship. Saying so here keeps one entry point for both kinds
+  # instead of letting the static ones skip the checks altogether.
+  dynamic=0
+  for f in $(find /opt/deckhouse/bin -type f); do
+    if patchelf --print-interpreter "$f" >/dev/null 2>&1; then
+      dynamic=1
+      break
+    fi
+  done
+
+  loader="$(find /opt/deckhouse/lib -maxdepth 1 -name 'ld-linux-*.so.*' 2>/dev/null | head -1)"
+  if [ "$dynamic" -eq 0 ]; then
+    echo "relocate_and_verify: every binary is static, nothing to relocate"
+  elif [ -z "$loader" ]; then
+    echo "FATAL: the package ships no loader under /opt/deckhouse/lib: nothing in it can start on a node" >&2
+    exit 1
+  fi
+
+  if [ "$dynamic" -eq 1 ]; then
+
+    # The binaries are pointed at a deliberately short alias rather than at the loader's own
+    # name. patchelf can only write a new interpreter in place while it is no longer than the
+    # one already there — /lib64/ld-linux-x86-64.so.2, 27 characters. Anything longer makes it
+    # relocate the program headers, and patchelf 0.19.1 gets that wrong on some binaries:
+    # nfs-utils' mount.nfs then segfaults before the loader prints a single LD_DEBUG line,
+    # while the very same binary with a shorter path runs. Measured on three lengths with
+    # everything else held equal: 26 characters works, 35 and 42 both crash.
+    #
+    # /opt/deckhouse/lib/ld.so is 24, so every binary keeps the headers it was built with.
+    interpreter=/opt/deckhouse/lib/ld.so
+    ln -sf "$(basename "$loader")" "$interpreter"
+
+    for f in $(find /opt/deckhouse/bin /opt/deckhouse/lib -type f 2>/dev/null); do
+      # The loader is deliberately skipped. patchelf on it yields a file that segfaults the
+      # moment anything tries to start, and every binary here names it as its interpreter,
+      # so the whole package would go out broken with nothing in the build to say so.
+      if [ "$f" = "$loader" ]; then
+        continue
+      fi
+      if ! file "$f" | grep -q ELF; then
+        continue
+      fi
+      # Only what we ship as a program gets an interpreter. glibc's libc.so.6 carries a
+      # PT_INTERP too, because it can be run to print its version, but it is never started
+      # that way here, and patching it only risks the rewrite described above.
+      case "$f" in
+        /opt/deckhouse/bin/*)
+          if current="$(patchelf --print-interpreter "$f" 2>/dev/null)"; then
+            # Enforced, not just documented: a longer path is the one way to get a binary
+            # that builds, passes --list and still segfaults on the node.
+            if [ "${#interpreter}" -gt "${#current}" ]; then
+              echo "FATAL: $f asks for $current (${#current} characters) and the package wants to point it at $interpreter (${#interpreter})." >&2
+              echo "FATAL: patchelf cannot write a longer interpreter in place and relocates the program headers instead, which 0.19.1 gets wrong — the binary then segfaults before the loader says anything. Keep the alias short." >&2
+              exit 1
+            fi
+            patchelf --set-interpreter "$interpreter" "$f"
+          fi
+          ;;
+      esac
+      # An error in the middle of this loop used to be swallowed by the loop's exit status.
+      patchelf --set-rpath /opt/deckhouse/lib "$f"
+    done
+  fi
+
+  chown -R 0:0 /opt/deckhouse
+- |
+  set -eu
+
+  loader="$(find /opt/deckhouse/lib -maxdepth 1 -name 'ld-linux-*.so.*' 2>/dev/null | head -1)"
+  rc=0
+  checked=0
+
+  # Every soname a shipped object asks for has to be shipped beside it. This is checked
+  # against /opt/deckhouse/lib alone, not by running the loader: in the builder the loader
+  # can satisfy a dependency from /usr/lib64 and report success for a package that has
+  # nothing of the sort on a node. That is exactly how growpart came out without libc.so.6
+  # and still passed.
+  #
+  # Only libraries are checked. Unresolved symbols are not an error: a dlopen plugin —
+  # nfs-utils ships its idmap backends that way — takes its symbols from the process that
+  # loads it and reports all of them missing when inspected alone.
+  for f in $(find /opt/deckhouse/bin /opt/deckhouse/lib -type f 2>/dev/null); do
+    if [ "$f" = "$loader" ]; then
+      continue
+    fi
+    if ! file "$f" | grep -q ELF; then
+      continue
+    fi
+    checked=$((checked + 1))
+
+    for soname in $(patchelf --print-needed "$f" 2>/dev/null); do
+      if [ ! -e "/opt/deckhouse/lib/$soname" ]; then
+        echo "FATAL: $f needs $soname, which this package does not ship" >&2
+        rc=1
+      fi
+    done
+  done
+
+  if [ "$checked" -eq 0 ]; then
+    echo "FATAL: no ELF objects under /opt/deckhouse: the package ships nothing that runs" >&2
+    rc=1
+  fi
+
+  if [ "$rc" -ne 0 ]; then
+    echo "FATAL: a base images update most likely moved or dropped a library; compare the copy list in this werf.inc.yaml with what pm now installs" >&2
+    exit 1
+  fi
+
+  echo "relocate_and_verify: $checked ELF objects, every library resolves"
+{{- range .smoke }}
+- |
+  set -eu
+  echo "relocate_and_verify: smoke {{ . }}"
+  {{ . }} >/dev/null
+{{- end }}
+{{- end }}

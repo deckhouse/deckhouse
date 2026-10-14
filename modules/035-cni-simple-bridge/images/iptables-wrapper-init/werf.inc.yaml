@@ -1,30 +1,25 @@
-{{- $iptables_version := "1.8.9" }}
-{{- $iptables_image_version := $iptables_version | replace "." "-" }}
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}
 fromImage: common/distroless
 import:
-- from: {{ index $.Images "tools/coreutils" }}
-  add: /
+- image: {{ .ModuleName }}/{{ .ImageName }}-pm-artifact
+  add: /relocate-pm
   to: /
-  before: setup
-  includePaths:
-  - usr/bin/rm
-  - usr/bin/cp
-- from: {{ index $.Images "tools/bash" }}
-  add: /usr/bin/bash
-  to: /bin/bash
   before: setup
 - image: common/iptables-wrapper
   add: /iptables-wrapper
   to: /iptables-wrapper
   before: setup
-- image: registrypackages/iptables-artifact-{{ $iptables_image_version }}
+- image: registrypackages/iptables-artifact
   add: /
   to: /_sbin
   includePaths:
   - xtables-legacy-multi
   - xtables-nft-multi
+  before: setup
+- image: registrypackages/iptables-artifact
+  add: /relocate/lib64
+  to: /lib64
   before: setup
 - image: {{ .ModuleName }}/{{ .ImageName }}-relocate-artifact
   add: /relocate
@@ -52,3 +47,8 @@ shell:
         done
       done
     done
+{{- include "pm_binaries_artifact" (dict
+      "Images" $.Images
+      "name" (printf "%s/%s-pm-artifact" $.ModuleName $.ImageName)
+      "packages" "bash coreutils"
+      "binaries" "/usr/bin/bash:/bin/bash /usr/bin/rm /usr/bin/cp") }}

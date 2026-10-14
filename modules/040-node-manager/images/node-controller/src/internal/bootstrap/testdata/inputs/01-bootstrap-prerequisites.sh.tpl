@@ -34,7 +34,7 @@ export PACKAGES_PROXY_ADDRESSES="{{ .clusterMasterRPPAddresses | join "," }}"
 bb-minget-install
 bb-rpp-get-install
 {{ with .images.registrypackages }}
-/opt/deckhouse/bin/rpp-get install "jq:{{ .jq171 }}" "curl:{{ .d8Curl891 }}" "tailLog:{{ .tailLog }}"
+/opt/deckhouse/bin/rpp-get install "jq:{{ .jq }}" "curl:{{ .d8Curl }}" "tailLog:{{ .tailLog }}"
 export PATH="/opt/deckhouse/bin:/usr/local/bin:$PATH"
 {{- end }}
 {{- if and (ne .nodeGroup.nodeType "Static") (.provider )}}

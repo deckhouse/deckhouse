@@ -55,7 +55,7 @@ drop_in_root="$(dirname "$(dirname "{{ .registry.agent.dropInFile }}")")"
 mkdir -p "${pki_path}" "${cache_path}" /etc/kubernetes/manifests "${drop_in_root}"
 chmod 0700 "${cache_path}"
 
-bb-package-install "cfssl:{{ .images.registrypackages.cfssl165 }}"
+rpp-get install "cfssl:{{ .images.registrypackages.cfssl171 }}"
 
 # The material the container runtime verifies the agent against.
 #

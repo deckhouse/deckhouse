@@ -87,14 +87,14 @@ if ! systemd-run \
     --collect \
     /bin/bash -c ". \"$env_file\" && exec /opt/deckhouse/bin/rpp-get fetch \
       \"d8:{{ .images.registrypackages.d8 }}\" \
-      \"yq:{{ .images.registrypackages.yq4536 }}\" \
-      \"curl:{{ .images.registrypackages.d8Curl891 }}\" \
-      \"e2fsprogs:{{ .images.registrypackages.e2fsprogs1472 }}\" \
-      \"iptables:{{ .images.registrypackages.iptables189 }}\" \
+      \"yq:{{ .images.registrypackages.yq }}\" \
+      \"curl:{{ .images.registrypackages.d8Curl }}\" \
+      \"e2fsprogs:{{ .images.registrypackages.e2fsprogs }}\" \
+      \"iptables:{{ .images.registrypackages.iptables }}\" \
       \"socat:{{ .images.registrypackages.socat1734 }}\" \
-      \"jq:{{ .images.registrypackages.jq171 }}\" \
-      \"nfs-mount:{{- .images.registrypackages.nfsMount282 }}\" \
-      \"lsblk:{{- index .images.registrypackages "lsblk2402" }}\" \
+      \"jq:{{ .images.registrypackages.jq }}\" \
+      \"nfs-mount:{{- .images.registrypackages.nfsMount }}\" \
+      \"lsblk:{{- index .images.registrypackages "lsblk" }}\" \
       \"which:{{ .images.registrypackages.which223 }}\" \
       \"growpart:{{ .images.registrypackages.growpart033 }}\" \
       \"virt-what:{{ .images.registrypackages.virtWhat125 }}\" \

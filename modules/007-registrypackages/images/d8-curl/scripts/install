@@ -14,5 +14,6 @@
 # limitations under the License.
 
 set -Eeo pipefail
-mkdir -p /opt/deckhouse/bin
-cp -f d8-curl /opt/deckhouse/bin
+mkdir -p /opt/deckhouse/bin /opt/deckhouse/lib
+cp -pr opt/deckhouse/bin/* /opt/deckhouse/bin
+cp -pr opt/deckhouse/lib/* /opt/deckhouse/lib

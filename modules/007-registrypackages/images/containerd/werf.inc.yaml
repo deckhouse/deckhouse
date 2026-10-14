@@ -1,6 +1,8 @@
-{{- $containerd_v1_version := "1.7.36" }}
-{{- $containerd_v2_version := "2.2.9" }}
-{{- $runc_version := "1.3.6" }}
+{{- $containerd_v1_version := include "get_oss_version_by_id_and_condition" (list "containerd" (dict "mainline" "v1") $) }}
+{{- $containerd_v2_version := include "get_oss_version_by_id_and_condition" (list "containerd" (dict "mainline" "v2") $) }}
+
+{{- $runc_version := include "get_oss_version_by_id" (list "runc" $ )  -}}
+
 {{- $containerd_versions := list $containerd_v2_version }}
 {{- if ne $.Env "CSE" }}
   {{- $containerd_versions = list $containerd_v1_version $containerd_v2_version }}
@@ -43,7 +45,7 @@ INTEGRITY_NAMESPACES="{{ $namespaces }}"
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-runc-src-artifact-{{ $runc_version }}
 final: false
-fromImage: common/src-artifact
+from: {{ index $.Images "builder/src" }}
 {{- if $runcHasPatch }}
 git:
 - add: /{{ $.ModulePath }}modules/007-{{ $.ModuleName }}/images/{{ $.ImageName }}/patches/runc
@@ -140,7 +142,7 @@ imageSpec:
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact-{{ $image_version }}
 final: false
-fromImage: common/src-artifact
+from: {{ index $.Images "builder/src" }}
 git:
 - add: /{{ $.ModulePath }}modules/007-{{ $.ModuleName }}/images/{{ $.ImageName }}/scripts
   to: /src/scripts
@@ -218,7 +220,7 @@ shell:
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-pidumount-src-artifact
 final: false
-fromImage: common/src-artifact
+from: {{ index $.Images "builder/src" }}
 git:
 - add: /{{ $.ModulePath }}modules/007-{{ $.ModuleName }}/images/{{ $.ImageName }}/pidumount/src
   to: /src

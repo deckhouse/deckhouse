@@ -190,7 +190,7 @@ func packagesProxyTokenSecret() *corev1.Secret {
 func imagesDigestsConfigMap() *corev1.ConfigMap {
 	return &corev1.ConfigMap{
 		ObjectMeta: metav1.ObjectMeta{Namespace: nodecommon.MachineNamespace, Name: bootstrap.ImagesDigestsConfigMapName},
-		Data: map[string]string{imagesDigestsKey: `{"registrypackages":{"jq171":"sha256:jq","d8Curl891":"sha256:curl",` +
+		Data: map[string]string{imagesDigestsKey: `{"registrypackages":{"jq":"sha256:jq","d8Curl":"sha256:curl",` +
 			`"tailLog":"sha256:tail","rppGet":"sha256:rpp"}}`},
 	}
 }

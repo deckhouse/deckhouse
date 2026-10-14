@@ -14,5 +14,8 @@
 # limitations under the License.
 
 set -Eeo pipefail
-mkdir -p /opt/deckhouse/bin
-cp -f yq /opt/deckhouse/bin
+mkdir -p /opt/deckhouse/bin /opt/deckhouse/lib
+cp -pr opt/deckhouse/bin/* /opt/deckhouse/bin
+if [ -d opt/deckhouse/lib ]; then
+  cp -pr opt/deckhouse/lib/* /opt/deckhouse/lib
+fi

@@ -29,6 +29,9 @@ ctr_import_image() {
 }
 
 
+# Called for each package rpp-get reports as installed, from the loop below. It used to be
+# hung on the 'bb-package-installed' event that bb-package-install fired; the result file
+# says the same thing without the indirection, and without the deprecated wrapper.
 post-install-import() {
   bb-log-info "Importing local images via ctr"
   local PACKAGE="$1"
@@ -54,7 +57,6 @@ post-install-import() {
   fi
 }
 
-bb-event-on 'bb-package-installed' 'post-install-import'
 
 __sec_start=$(date +%s.%N)
 __sec() {
@@ -74,17 +76,30 @@ bb-rpp-wait-fetched "registry-agent" "{{ $.images.registrypackages.registryAgent
 {{- end }}
 __sec wait_prefetch
 
-bb-package-install "pause:{{ $.images.registrypackages.pause }}"
-bb-package-install "kubernetes-api-proxy:{{ $.images.registrypackages.kubernetesApiProxy }}"
-bb-package-install "registry-proxy:{{ $.images.registrypackages.registryProxy }}"
+import_result="$(mktemp)"
 {{- if $.registry.agent }}
 # The node agent is what the container runtime asks about every registry, so it cannot be
 # pulled from a registry. It is imported here from a local archive, which is the whole
-# reason it ships as a registry package: the `bb-package-installed` event below runs the
-# import as part of the install, so a node that has just switched to the agent gets the
-# image in the same bashible pass that writes its static pod.
-bb-package-install "registry-agent:{{ $.images.registrypackages.registryAgent }}"
+# reason it ships as a registry package: the import below runs as part of the install, so a
+# node that has just switched to the agent gets the image in the same bashible pass that
+# writes its static pod.
 {{- end }}
+rpp-get install --result "${import_result}" \
+  "pause:{{ $.images.registrypackages.pause }}" \
+  "kubernetes-api-proxy:{{ $.images.registrypackages.kubernetesApiProxy }}" \
+  "registry-proxy:{{ $.images.registrypackages.registryProxy }}"{{ if $.registry.agent }} \
+  "registry-agent:{{ $.images.registrypackages.registryAgent }}"{{ end }}
+
+# rpp-get records "installed <name>" only for what it changed and "skipped <name>" for what
+# was already at the right digest, so an image that is already in containerd is not
+# imported again.
+while read -r action package; do
+  if [[ "${action}" != "installed" ]]; then
+    continue
+  fi
+  post-install-import "${package}"
+done < "${import_result}"
+rm -f "${import_result}"
 __sec pkg_install
 
 if bb-flag? need-local-images-import; then

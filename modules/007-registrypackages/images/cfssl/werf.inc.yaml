@@ -1,17 +1,12 @@
-{{- $version := "1.6.5" }}
+{{- $version := include "get_oss_version_by_id" (list "cfssl" $ )  -}}
 {{- $image_version := $version | replace "." "-" }}
 ---
 image: "{{ $.ModuleName }}/{{ $.ImageName }}-src-artifact-{{ $image_version }}"
-fromImage: common/src-artifact
+from: {{ index $.Images "builder/src" }}
 final: false
 git:
   - add: /{{ $.ModulePath }}modules/{{ $.ModulePriority }}-{{ $.ModuleName }}/images/{{ $.ImageName }}/scripts
     to: /src/scripts
-    stageDependencies:
-      install:
-        - '**/*'
-  - add: /{{ $.ModulePath }}modules/{{ $.ModulePriority }}-{{ $.ModuleName }}/images/{{ $.ImageName }}/patches
-    to: /patches
     stageDependencies:
       install:
         - '**/*'
@@ -20,11 +15,7 @@ secrets:
     value: "{{ $.SOURCE_REPO }}"
 shell:
   install:
-    - mkdir -m 1777 /src/tmp
-    - chmod +x /src/scripts/*
-    - git config --global advice.detachedHead false
     - git clone --depth 1 --single-branch --branch v{{ $version }} $(cat /run/secrets/SOURCE_REPO)/cloudflare/cfssl.git /src/cfssl
-    - cd /src/cfssl && git apply /patches/*.patch --verbose
     - rm -rf /src/cfssl/.git
 ---
 image: "{{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $image_version }}"
@@ -33,6 +24,7 @@ final: false
 import:
   - image: "{{ $.ModuleName }}/{{ $.ImageName }}-src-artifact-{{ $image_version }}"
     add: /src/cfssl
+    to: /src
     before: install
 mount:
 {{ include "mount points for golang builds" . }}
@@ -45,14 +37,14 @@ shell:
     - export GOOS=linux
     - export GOARCH=amd64
     - export CGO_ENABLED=0
-    - cd /src/cfssl
+    - cd /src
     - go mod vendor
     - make
     - chmod +x ./bin/*
     - mv ./bin/* /
 ---
 image: "{{ $.ModuleName }}/{{ $.ImageName }}-{{ $image_version }}"
-fromImage: common/distroless
+from: scratch
 import:
   - image: "{{ $.ModuleName }}/{{ $.ImageName }}-src-artifact-{{ $image_version }}"
     add: /src/scripts

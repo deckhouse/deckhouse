@@ -13,7 +13,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-mkdir -p /opt/deckhouse/bin
-cp -f growpart /opt/deckhouse/bin
-cp -f fdisk /opt/deckhouse/bin
-cp -f sfdisk /opt/deckhouse/bin
+mkdir -p /opt/deckhouse/bin /opt/deckhouse/lib
+cp -pr opt/deckhouse/bin/* /opt/deckhouse/bin
+cp -pr opt/deckhouse/lib/* /opt/deckhouse/lib

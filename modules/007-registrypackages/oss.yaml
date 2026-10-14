@@ -4,19 +4,34 @@
   logo: /images/logos/aws.svg
   license: MIT License
   id: amazon-ec2-utils
-  version: "2.2.0"
+  version: "2.3.0"
 - name: containerd
   link: https://github.com/containerd/containerd
   description: An open and reliable container runtime.
   logo: /images/logos/containerd.svg
   license: Apache License 2.0
+  id: containerd
+  versions:
+    - condition:
+        mainline: "v1"
+      version: "1.7.36"
+    - condition:
+        mainline: "v2"
+      version: "2.2.9"
+- name: cfssl
+  link: https://github.com/cloudflare/cfssl
+  description: An open and reliable container runtime.
+  logo:
+  license: BSD 2-Clause "Simplified" License
+  id: cfssl
+  version: "1.7.1"
 - name: runc
   link: https://github.com/opencontainers/runc
   description: OCI-compatible container runtime.
   logo: /images/logos/opencontainers.svg
   license: Apache License 2.0
   id: runc
-  version: "1.3.4"
+  version: "1.3.6"
 - name: curl
   link: https://github.com/curl/curl
   description: A command line tool and library for transferring data with URLs.

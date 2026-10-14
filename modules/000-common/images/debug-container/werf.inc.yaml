@@ -1,16 +1,18 @@
-{{- $iptables_version := "1.8.9" }}
-{{- $iptables_image_version := $iptables_version | replace "." "-" }}
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-binaries-artifact
 from: {{ index $.Images "builder/alpine" }}
 final: false
 import:
-- image: registrypackages/iptables-artifact-{{ $iptables_image_version }}
+- image: registrypackages/iptables-artifact
   add: /
   to: /usr/bin
   includePaths:
   - xtables-legacy-multi
   - xtables-nft-multi
+  before: install
+- image: registrypackages/iptables-artifact
+  add: /relocate/lib64
+  to: /lib64
   before: install
 shell:
   install:

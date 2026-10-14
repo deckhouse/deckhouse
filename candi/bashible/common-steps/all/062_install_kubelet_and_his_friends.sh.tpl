@@ -19,21 +19,19 @@
 # keeps downloading it in parallel with the rest of bashible. Wait + install happen
 # here, right before the first `d8` invocation below.
 bb-rpp-wait-fetched "d8" "{{ .images.registrypackages.d8 }}" || true
-bb-package-install "d8:{{ .images.registrypackages.d8 }}"
+rpp-get install "d8:{{ .images.registrypackages.d8 }}"
 
-bb-event-on 'bb-package-installed' 'post-install-kubelet'
+rpp-get install "kubernetes-cni:{{ index .images.registrypackages (printf "kubernetesCni%s" $kubernetesCniVersion) | toString }}"
 
-post-install-kubelet() {
-  local package="$1"
-
-  if [[ "${package}" == "kubelet" ]]; then
-    bb-flag-set kubelet-need-restart
-  fi
-}
-
-bb-package-install "kubernetes-cni:{{ index .images.registrypackages (printf "kubernetesCni%s" $kubernetesCniVersion) | toString }}"
-
-bb-package-install "kubelet:{{ index .images.registrypackages (printf "kubelet%s" $kubernetesVersion) | toString }}"
+# --result lists what rpp-get actually changed, one "<action> <package>" per line. Step 069
+# restarts kubelet when this flag is set, so reading the result rather than assuming an
+# install happened is what keeps an unchanged kubelet from being restarted on every pass.
+kubelet_result="$(mktemp)"
+rpp-get install --result "${kubelet_result}" "kubelet:{{ index .images.registrypackages (printf "kubelet%s" $kubernetesVersion) | toString }}"
+if grep -q '^installed kubelet$' "${kubelet_result}"; then
+  bb-flag-set kubelet-need-restart
+fi
+rm -f "${kubelet_result}"
 
 if grep -qF '# "\e[5~": history-search-backward' /etc/inputrc; then
   sed -i 's/\# \"\\e\[5~\": history-search-backward/\"\\e\[5~\": history-search-backward/' /etc/inputrc

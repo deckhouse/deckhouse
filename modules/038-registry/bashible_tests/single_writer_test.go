@@ -72,12 +72,12 @@ func nodeContext(t *testing.T, registry map[string]any) map[string]any {
 			"registrypackages": map[string]any{
 				"pause": "sha256:pause", "kubernetesApiProxy": "sha256:api-proxy",
 				"registryProxy": "sha256:proxy", "registryAgent": "sha256:agent",
-				"cfssl165": "sha256:cfssl", "d8": "sha256:d8", "yq4471": "x",
-				"d8Curl891": "x", "e2fsprogs1472": "x", "iptables189": "x", "socat1734": "x",
-				"jq171": "x", "nfsMount282": "x", "lsblk2402": "x", "which223": "x",
+				"cfssl171": "sha256:cfssl", "d8": "sha256:d8", "yq": "x",
+				"d8Curl": "x", "e2fsprogs": "x", "iptables": "x", "socat1734": "x",
+				"jq": "x", "nfsMount": "x", "lsblk": "x", "which223": "x",
 				"growpart033": "x", "virtWhat125": "x", "containerd1734": "x",
 				"kubernetesCni162": "x", "kubelet1315": "x", "crictl131": "x",
-				"tomlMerge01": "x", "d8CaUpdater200225": "x",
+				"tomlMerge01": "x", "d8CaUpdater": "x",
 			},
 		},
 	}
@@ -263,10 +263,10 @@ func TestTheAgentImageIsImportedLocally(t *testing.T) {
 
 	withAgent := render(t, step, agentRegistry())
 	require.Contains(t, withAgent, `ctr_import_image deckhouse.local/images:registry-agent "/opt/deckhouse/images/registry-agent.tar"`)
-	require.Contains(t, withAgent, `bb-package-install "registry-agent:sha256:agent"`)
+	require.Contains(t, withAgent, `"registry-agent:sha256:agent"`)
 
 	withoutAgent := render(t, step, legacyRegistry())
-	require.NotContains(t, withoutAgent, `bb-package-install "registry-agent:`,
+	require.NotContains(t, withoutAgent, `"registry-agent:`,
 		"every existing cluster would fetch a package it has no use for")
 }
 

@@ -1,65 +1,44 @@
-{{- $version := include "get_oss_version_by_id" (list "nvme-cli" $ )  -}}
-{{- $image_version := $version | replace "." "-" }}
 ---
-image: {{ .ModuleName }}/{{ .ImageName }}-{{ $image_version }}
+image: {{ $.ModuleName }}/{{ $.ImageName }}
 from: scratch
 import:
-- image: {{ .ModuleName }}/{{ .ImageName }}-artifact-{{ $image_version }}
-  add: /relocate
+- image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
+  add: /
   to: /
   includePaths:
-  - nvme
+  - opt/deckhouse
   - install
   - uninstall
-  before: setup
+  before: install
 imageSpec:
   config:
-    labels: {"distro": "all", "version": "all", "nvme-cli": "{{ $version }}" }
+    labels: { "distro": "all", "version": "all" }
     clearUser: true
     clearWorkingDir: true
     clearCmd: true
     clearEntrypoint: true
     removeEnv: ["/.*/"]
 ---
-image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact-{{ $image_version }}
+image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
 final: false
-fromImage: common/src-artifact
+from: {{ index $.Images "builder/distroless" }}
 git:
-- add: /{{ .ModulePath }}/modules/{{ .ModulePriority }}-{{ .ModuleName }}/images/{{ .ImageName }}/scripts
-  to: /src/scripts
+- add: /{{ $.ModulePath }}modules/{{ $.ModulePriority }}-{{ $.ModuleName }}/images/{{ $.ImageName }}/scripts
+  to: /
+  includePaths:
+  - install
+  - uninstall
   stageDependencies:
     install:
     - '**/*'
-secrets:
-- id: SOURCE_REPO
-  value: {{ .SOURCE_REPO }}
-shell:
-  install:
-  - mkdir -p ~/.ssh && echo "StrictHostKeyChecking accept-new" > ~/.ssh/config
-  - git clone -b v{{ $version }} --depth 1 $(cat /run/secrets/SOURCE_REPO)/linux-nvme/nvme-cli.git /src/nvme-cli
-  - git clone -b v1.11.1 --depth 1 $(cat /run/secrets/SOURCE_REPO)/linux-nvme/libnvme.git /src/nvme-cli/subprojects/libnvme
-  - rm -rf /src/nvme-cli/.git /src/nvme-cli/subprojects/libnvme/.git
----
-image: {{ .ModuleName }}/{{ .ImageName }}-artifact-{{ $image_version }}
-final: false
-from: {{ index $.Images "builder/alt" }}
-import:
-- image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact-{{ $image_version }}
-  add: /src
-  to: /src
-  before: install
 shell:
   beforeInstall:
-  {{- include "alt packages proxy" . | nindent 2 }}
-  - apt-get install -y build-essential meson glibc-devel-static
-  - find /var/lib/apt/lists/ /var/cache/apt/ -type f -delete
+  - pm install file findutils patchelf
   install:
-  - cd /src/nvme-cli
-  - |
-    meson .build --buildtype=release --default-library=static -Dc_link_args="-static" --wrap-mode=forcefallback \
-      -Dlibnvme:tests=false -Dlibnvme:keyutils=disabled -Djson-c=disabled -Dlibnvme:json-c=disabled \
-      -Dlibnvme:openssl=disabled -Dlibnvme:python=disabled -Ddocs=false
-  - ninja -C .build
-  - mkdir /relocate
-  - cp .build/nvme /relocate
-  - cp /src/scripts/* /relocate
+  # -n, because without it pm consults the builder's own package index and skips whatever
+  # is already installed there. nvme happens to be static today, but the flag is what keeps
+  # that from silently mattering if it ever stops being.
+  - pm install -n nvme-cli -d /src
+  - mkdir -p /opt/deckhouse/bin
+  - cp -pr /src/usr/sbin/nvme /opt/deckhouse/bin
+  {{- include "relocate_and_verify" (dict "resolve" "/src" "smoke" (list "/opt/deckhouse/bin/nvme version")) | nindent 2 }}

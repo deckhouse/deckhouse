@@ -1,11 +1,9 @@
-{{- $version := "2.8.2" }}
-{{- $image_version := $version | replace "." "-" }}
 ---
-image: {{ $.ModuleName }}/{{ $.ImageName }}-{{ $image_version }}
+image: {{ $.ModuleName }}/{{ $.ImageName }}
 from: scratch
 fromCacheVersion: "2025-06-24 13:00"
 import:
-- image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $image_version }}
+- image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
   add: /
   to: /
   includePaths:
@@ -15,24 +13,16 @@ import:
   before: install
 imageSpec:
   config:
-    labels: {"distro": "all", "version": "all", "nfs-utils": "{{ $version }}" }
+    labels: { "distro": "all", "version": "all" }
     clearUser: true
     clearWorkingDir: true
     clearCmd: true
     clearEntrypoint: true
     removeEnv: ["/.*/"]
 ---
-image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $image_version }}
+image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
 final: false
-from: {{ index $.Images "builder/alpine" }}
-import:
-- from: {{ index $.Images (printf "tools/nfs-utils-nfs-utils-%s" $image_version) }}
-  add: /
-  to: /src
-  includePaths:
-  - usr/lib
-  - sbin
-  before: install
+from: {{ index $.Images "builder/distroless" }}
 git:
 - add: /{{ $.ModulePath }}modules/{{ $.ModulePriority }}-{{ $.ModuleName }}/images/{{ $.ImageName }}/scripts
   to: /
@@ -41,21 +31,17 @@ git:
     - '**/*'
 shell:
   beforeInstall:
-  {{- include "alpine packages proxy" . | nindent 2 }}
-  - apk add --no-cache patchelf file findutils
+  - pm install file findutils patchelf
   install:
-  - mkdir -p /opt/deckhouse/bin
-  - cp -pr /src/sbin/* /opt/deckhouse/bin
-  - cp -pr /src/usr/lib /opt/deckhouse
-  - cd /opt/deckhouse/bin
-  - |
-    for i in $(find . -type f); do
-      if file $i | grep -q "ELF"; then
-        patchelf --set-interpreter /opt/deckhouse/lib/libc.so $i
-        patchelf --set-rpath /opt/deckhouse/lib $i
-      fi
-    done
-  - cd /opt/deckhouse/lib
-  - find . -type f -name "*.la" -exec rm -f \{} \;
-  - find . -type f -name "*.a" -exec rm -f \{} \;
-  - chown -R 0:0 /opt/deckhouse
+  # -n, because without it pm consults the builder's own package index and skips whatever
+  # is already installed there — glibc among it. The tree under /src would then come out
+  # without its loader and the package would ship nothing that starts on a node.
+  - pm install -n nfs-utils -d /src
+  - mkdir -p /opt/deckhouse/bin /opt/deckhouse/lib
+  # Only the four mount helpers. pm's sbin also carries key.dns_resolver and request-key,
+  # which belong to the kernel keyring plumbing and which the install script never links.
+  - cp -pr /src/sbin/mount.nfs /src/sbin/mount.nfs4 /src/sbin/umount.nfs /src/sbin/umount.nfs4 /opt/deckhouse/bin
+  # The idmap backends are opened with dlopen, so no resolution reaches them.
+  - cp -pr /src/usr/lib/libnfsidmap /opt/deckhouse/lib
+  - find /opt/deckhouse/lib -type f \( -name "*.la" -o -name "*.a" \) -delete
+  {{- include "relocate_and_verify" (dict "resolve" "/src" "smoke" (list "/opt/deckhouse/bin/mount.nfs -V" "/opt/deckhouse/bin/mount.nfs4 -V")) | nindent 2 }}

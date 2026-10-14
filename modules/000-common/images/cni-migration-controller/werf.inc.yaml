@@ -1,5 +1,3 @@
-{{- $iptables_version := "1.8.9" }}
-{{- $iptables_image_version := $iptables_version | replace "." "-" }}
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
 from: {{ index $.Images "builder/src" }}
@@ -22,12 +20,16 @@ import:
     add: /src
     to: /src
     before: install
-  - image: registrypackages/iptables-artifact-{{ $iptables_image_version }}
+  - image: registrypackages/iptables-artifact
     add: /
     to: /relocate/sbin
     includePaths:
       - xtables-legacy-multi
       - xtables-nft-multi
+    before: install
+  - image: registrypackages/iptables-artifact
+    add: /relocate/lib64
+    to: /lib64
     before: install
   - image: common/iptables-wrapper
     add: /iptables-wrapper

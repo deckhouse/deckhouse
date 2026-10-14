@@ -32,7 +32,7 @@ func TestInputTemplateContext(t *testing.T) {
 		APIServerEndpoints:     []string{"10.0.0.1:6443"},
 		ClusterMasterEndpoints: []map[string]any{{"address": "10.0.0.1", "kubeApiPort": int64(6443), "rppServerPort": int64(4219), "rppBootstrapServerPort": int64(4220)}},
 		ClusterUUID:            "uuid-1",
-		Images:                 map[string]any{"registrypackages": map[string]any{"jq171": "sha256:jq"}},
+		Images:                 map[string]any{"registrypackages": map[string]any{"jq": "sha256:jq"}},
 		PackagesProxy:          map[string]any{"token": "tok"},
 		MingetB64:              "bWluZ2V0",
 		Provider:               "yandex",

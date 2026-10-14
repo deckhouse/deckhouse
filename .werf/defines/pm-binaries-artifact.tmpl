@@ -1,0 +1,160 @@
+{{- /*
+  pm_binaries_artifact declares an artifact that installs packages with pm and stages the
+  binaries asked for, with every library behind them, ready to be imported into a
+  distroless image.
+
+  It replaces two older habits. One is importing a binary out of somebody else's artifact
+  — registrypackages/d8-curl was built for nodes, lays its files out under /opt/deckhouse,
+  and handed importers the binary alone, without one of the thirteen libraries it needs.
+  The other is pulling single-tool images out of candi/base_images.yml, which is the
+  system being retired; everything here comes from container-factory through pm instead.
+
+  No library is ever listed by hand. The loader resolves each binary against the freshly
+  installed tree, which is the same resolution it will do at runtime, so a tool that grows
+  or drops a dependency carries the change with it.
+
+  /lib64 gets the loader, /usr/lib64 gets every library. Those two are the entire
+  compiled-in search path of this loader ("ld-linux-x86-64.so.2 --help" prints them) and a
+  distroless image has no ld.so.cache to widen it — so pm's own split, which leaves part of
+  the set under usr/lib, does not survive the move. Verified against a FROM scratch image:
+  with pm's layout curl cannot find libcurl.so.4, with this one it runs.
+
+  Parameters:
+    Images   - the base images map
+    name     - the artifact's image name, unique within the module
+    packages - pm packages, space separated
+    binaries - what to stage, space separated, each "path" or "path:destination". The path
+               is where pm put it; the destination is where the final image wants it.
+    post     - optional extra shell commands, run after staging, one per line. For things
+               that belong next to the binaries but come from nowhere, such as symlinks.
+
+  Usage, next to the image that needs them:
+    {{- include "pm_binaries_artifact" (dict
+          "Images" $.Images
+          "name" (printf "%s/%s-pm-artifact" $.ModuleName $.ImageName)
+          "packages" "bash coreutils curl"
+          "binaries" "/usr/bin/curl /usr/bin/bash:/bin/bash /usr/bin/echo") }}
+
+  and in that image's import list:
+    - image: <the same name>
+      add: /relocate-pm
+      to: /
+      before: install
+
+  werf rejects two imports with the same "to", whatever their "before", so an image that
+  already imports a tree into / has to take this one path by path instead.
+*/}}
+{{- define "pm_binaries_artifact" }}
+---
+image: {{ .name }}
+final: false
+from: {{ index .Images "builder/distroless" }}
+shell:
+  beforeInstall:
+  # -n, because without it pm consults the builder's own package index and skips whatever
+  # is already installed there. The tree under /out would then come out without its loader
+  # and without the libraries the helpers below happen to share with the packages asked for.
+  - pm install -n {{ required "pm_binaries_artifact needs packages" .packages }} -d /out
+  - pm install coreutils gawk patchelf
+  install:
+  - |
+    set -eu
+
+    out=/relocate-pm
+    loader=/out/lib64/ld-linux-x86-64.so.2
+
+    mkdir -p "$out/lib64" "$out/usr/lib64"
+
+    # The loader is shipped only when something needs it. A set that is entirely static —
+    # pm builds bash, coreutils, grep and findutils that way — pulls no glibc at all, so
+    # /out has no lib64 to take one from and the package is complete without it.
+    if [ -e "$loader" ]; then
+      cp -aL "$loader" "$out/lib64/"
+    fi
+
+    stage_libraries() {
+      # --list prints the transitive set, one "soname => path" per line. LD_LIBRARY_PATH
+      # points the resolution at /out so it answers with the libraries just installed
+      # rather than the builder's own.
+      LD_LIBRARY_PATH=/out/usr/lib:/out/usr/lib64:/out/lib64 \
+        "$loader" --list "$1" \
+        | awk '{ for (i = 1; i <= NF; i++) if ($i ~ /^\/out\//) print $i }' \
+        | sort -u \
+        | while read -r lib; do
+            case "$(basename "$lib")" in
+              ld-linux*) continue ;;
+            esac
+            # -L, because a dangling symlink is dropped on import and the library it stood
+            # for would go missing without a word.
+            cp -aL "$lib" "$out/usr/lib64/$(basename "$lib")"
+          done
+    }
+
+    # pm ships bash, coreutils, grep and findutils statically linked and curl, ss and
+    # friends dynamically. A static binary has no interpreter, needs no library staged,
+    # and segfaults the loader if handed to it with --list — so the two are told apart
+    # once, here, instead of being discovered as an exit 139 later.
+    is_dynamic() { patchelf --print-interpreter "$1" >/dev/null 2>&1; }
+
+    staged=""
+    static=""
+    for spec in {{ required "pm_binaries_artifact needs binaries" .binaries }}; do
+      src="${spec%%:*}"
+      dst="${spec#*:}"
+      if [ "$dst" = "$spec" ]; then
+        dst="$src"
+      fi
+
+      if [ ! -f "/out$src" ]; then
+        echo "FATAL: pm did not install $src; a package was renamed or now puts it elsewhere" >&2
+        exit 1
+      fi
+
+      mkdir -p "$out$(dirname "$dst")"
+      # -L on the binary too: pm ships some of these as symlinks (sh -> bash), and a link
+      # whose target is not staged arrives broken or not at all.
+      cp -aL "/out$src" "$out$dst"
+      if is_dynamic "/out$src"; then
+        if [ ! -e "$loader" ]; then
+          echo "FATAL: $src is dynamic but $loader is absent; add libc to the package list" >&2
+          exit 1
+        fi
+        stage_libraries "/out$src"
+        staged="$staged $dst"
+      else
+        static="$static $dst"
+      fi
+    done
+
+    # Prove it here, in the builder, rather than let a half-copied tree reach an image
+    # where the first sign of trouble is a container that will not start.
+    rc=0
+    for dst in $staged; do
+      status=0
+      report="$("$out/lib64/ld-linux-x86-64.so.2" --library-path "$out/usr/lib64" --list "$out$dst" 2>&1)" || status=$?
+      if printf '%s\n' "$report" | grep -qE '=> not found|cannot open shared object file'; then
+        echo "FATAL: $dst needs libraries this artifact does not stage:" >&2
+        printf '%s\n' "$report" | grep -E '=> not found|cannot open shared object file' | sed 's/^/    /' >&2
+        rc=1
+      elif [ "$status" -ne 0 ]; then
+        echo "FATAL: $dst does not load (exit $status):" >&2
+        printf '%s\n' "$report" | sed 's/^/    /' >&2
+        rc=1
+      fi
+    done
+    if [ "$rc" -ne 0 ]; then
+      echo "FATAL: a container-factory update most likely moved or split a package" >&2
+      exit 1
+    fi
+
+    echo "pm_binaries_artifact: dynamic$staged"
+    echo "pm_binaries_artifact: static${static:- none}"
+    echo "pm_binaries_artifact: $(ls -1 "$out/usr/lib64" | wc -l) libraries"
+{{- with .post }}
+  - |
+    set -eu
+    out=/relocate-pm
+{{ . | trim | indent 4 }}
+{{- end }}
+  - chown -R 0:0 /relocate-pm
+{{- end }}

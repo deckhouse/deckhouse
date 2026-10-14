@@ -1,66 +1,43 @@
-{{- $version := include "get_oss_version_by_id" (list "e2fsprogs" $ )  -}}
-{{- $image_version := $version | replace "." "-" }}
 ---
-image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact-{{ $image_version }}
-final: false
-fromImage: common/src-artifact
-git:
-- add: /{{ .ModulePath }}/modules/{{ .ModulePriority }}-{{ .ModuleName }}/images/{{ .ImageName }}/scripts
-  to: /src/scripts
-  stageDependencies:
-    install:
-    - '**/*'
-secrets:
-- id: SOURCE_REPO
-  value: {{ .SOURCE_REPO }}
-shell:
-  install:
-  - git clone -b v{{ $version }} --depth 1 $(cat /run/secrets/SOURCE_REPO)/ext2/e2fsprogs.git /src/e2fsprogs
-  - rm -rf /src/e2fsprogs/.git
----
-image: {{ $.ModuleName }}/{{ $.ImageName }}-{{ $image_version }}
+image: {{ $.ModuleName }}/{{ $.ImageName }}
 from: scratch
 import:
-- image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $image_version }}
-  add: /src/scripts
+- image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
+  add: /
   to: /
   includePaths:
+  - opt/deckhouse
   - install
   - uninstall
-  before: setup
-- image: {{ .ModuleName }}/{{ .ImageName }}-artifact-{{ $image_version }}
-  add: /relocate/sbin
-  to: /
-  includePaths:
-  - mke2fs
-  - fsck
-  - resize2fs
-  before: setup
+  before: install
 imageSpec:
   config:
-    labels: { "distro": "all", "version": "all", "mke2fs": "{{ $version }}", "fsck": "{{ $version }}", "resize2fs": "{{ $version }}" }
+    labels: { "distro": "all", "version": "all" }
     clearUser: true
     clearWorkingDir: true
     clearCmd: true
     clearEntrypoint: true
     removeEnv: ["/.*/"]
 ---
-image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $image_version }}
+image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
 final: false
-from: {{ index $.Images "builder/alpine" }}
-import:
-- image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact-{{ $image_version }}
-  add: /src
-  to: /src
-  before: install
+from: {{ index $.Images "builder/distroless" }}
+git:
+- add: /{{ $.ModulePath }}modules/{{ $.ModulePriority }}-{{ $.ModuleName }}/images/{{ $.ImageName }}/scripts
+  to: /
+  stageDependencies:
+    install:
+    - '**/*'
 shell:
   beforeInstall:
-  {{- include "alpine packages proxy" . | nindent 2 }}
-  - apk add --no-cache make gettext-dev autoconf automake libtool flex bison clang binutils g++ linux-headers
-  setup:
-  - mkdir /relocate
-  - cd /src/e2fsprogs
-  - CFLAGS='-static' LDFLAGS="-static" ./configure
-  - make
-  - make DESTDIR=/relocate install
-  - make clean
+  - pm install file findutils patchelf
+  install:
+  # -n, because without it pm consults the builder's own package index and skips whatever
+  # is already installed there — glibc among it. The tree under /src would then come out
+  # without its loader and the package would ship nothing that starts on a node.
+  - pm install -n e2fsprogs -d /src
+  - mkdir -p /opt/deckhouse/bin /opt/deckhouse/lib
+  - cp -pr /src/usr/sbin/mke2fs /src/usr/sbin/fsck /src/usr/sbin/resize2fs /opt/deckhouse/bin
+  # resize2fs has no invocation that exits 0 — it answers -V, -h and --version alike with
+  # its usage and status 1 — so it is left to the library check, which loads it all the same.
+  {{- include "relocate_and_verify" (dict "resolve" "/src" "smoke" (list "/opt/deckhouse/bin/mke2fs -V" "/opt/deckhouse/bin/fsck -V")) | nindent 2 }}

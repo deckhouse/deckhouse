@@ -13,9 +13,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-mkdir -p /opt/deckhouse/bin
-cp -f xtables-legacy-multi /opt/deckhouse/bin
-cp -f xtables-nft-multi /opt/deckhouse/bin
+mkdir -p /opt/deckhouse/bin /opt/deckhouse/lib
+cp -pr opt/deckhouse/bin/* /opt/deckhouse/bin
+cp -pr opt/deckhouse/lib/* /opt/deckhouse/lib
 
 if [ -f /opt/deckhouse/bin/iptables ]; then
   # If iptables symlinks already exist, we don't update them.

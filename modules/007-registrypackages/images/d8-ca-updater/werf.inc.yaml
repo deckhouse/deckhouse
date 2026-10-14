@@ -1,10 +1,8 @@
-{{- $version := "20.02.25" }}
-{{- $image_version := $version | replace "." "-" }}
 ---
-image: {{ $.ModuleName }}/{{ $.ImageName }}-{{ $image_version }}
+image: {{ $.ModuleName }}/{{ $.ImageName }}
 from: scratch
 import:
-- image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $image_version }}
+- image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
   add: /
   to: /
   includePaths:
@@ -16,14 +14,14 @@ import:
   before: install
 imageSpec:
   config:
-    labels: {"distro": "all", "version": "all", "d8-ca-updater": "{{ $version }}" }
+    labels: { "distro": "all", "version": "all" }
     clearUser: true
     clearWorkingDir: true
     clearCmd: true
     clearEntrypoint: true
     removeEnv: ["/.*/"]
 ---
-image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $image_version }}
+image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
 final: false
 from: {{ index $.Images "builder/distroless" }}
 git:
@@ -32,21 +30,39 @@ git:
   stageDependencies:
     install:
     - '**/*'
-- add: /{{ $.ModulePath }}modules/{{ $.ModulePriority }}-{{ $.ModuleName }}/images/{{ $.ImageName }}/ca-certificates
-  to: /ca-certificates
-  stageDependencies:
-    install:
-    - '**/*'
 shell:
   beforeInstall:
   - pm install python@3.12 gnu-glibc gnu-gcc-lib gnu-glibc-locale perl python-wheel coreutils curl
   - pip3 install -f file:///wheels --no-index cryptography==44.0.1
   install:
-  - mv /mk-ca-bundle.pl /ca-certificates/mozilla
-  - cd /ca-certificates/mozilla
-  - perl mk-ca-bundle.pl -n
-  - mv ca-bundle.crt /ca-bundle.crt
-  - python3 certdata2pem.py
-  - mkdir /certs
-  - mv *.crt /certs/
+  - pm install -d /src -n ca-certificates
+  - cp -pr /src/etc/ssl/certs/ca-certificates.crt /ca-bundle.crt
+  # The bundle is split into one certificate per file because update-ca-certificates and
+  # c_rehash hash only the first certificate they find: a concatenated anchor would leave
+  # 123 of the 124 certificates without a hash symlink in /etc/ssl/certs, and anything
+  # resolving roots through the hashed directory rather than the bundle would miss them.
+  #
+  # The file name is the CKA_LABEL the bundle carries above each certificate, with the
+  # character substitutions certdata2pem.py used to make, so the names on a node do not
+  # change under it.
+  - mkdir -p /certs
+  - |
+    awk -v dir=/certs '
+      /^##/ { next }
+      !inc && /^=+$/ {
+        name = prev
+        gsub(/\//, "_", name); gsub(/ /, "_", name)
+        gsub(/\(/, "=", name); gsub(/\)/, "=", name); gsub(/,/, "_", name)
+        f = dir "/" name ".crt"
+        if (seen[f]++) f = dir "/" name "_2.crt"
+        next
+      }
+      /^-----BEGIN CERTIFICATE-----$/ { inc = 1 }
+      inc { print > f }
+      /^-----END CERTIFICATE-----$/ { inc = 0; close(f) }
+      { prev = $0 }
+    ' /ca-bundle.crt
+  # A silent parse failure would ship an empty trust store to every node, and the install
+  # script on the node has nothing left to compare against once it has wiped the old set.
+  - test "$(ls -1 /certs | wc -l)" -gt 100
   - chmod +x /d8-ca-updater /install /uninstall

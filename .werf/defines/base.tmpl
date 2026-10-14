@@ -75,14 +75,15 @@ shell:
   install:
   - python3 -m ensurepip
   - python3 -m pip install -f file:///wheels --no-index pyOpenSSL==24.3.0 cryptography==44.0.1 bcrypt==4.1.1
+{{- include "pm_binaries_artifact" (dict "Images" $.Images "name" "common-base-pm-artifact" "packages" "curl" "binaries" "/usr/bin/curl") }}
 ---
 image: common-base
 from: {{ index $.Images "base/distroless" }}
 import:
 {{ include "base components imports" (dict "Images" $context.Images "k8sVersions" $context.k8sVersions "CandiVersionMap" $context.CandiVersionMap ) }}
-- image: registrypackages/d8-curl-artifact-8-9-1
-  add: /d8-curl
-  to: /usr/bin/curl
+- image: common-base-pm-artifact
+  add: /relocate-pm
+  to: /
   before: install
 - image: common-base-artifact
   add: /

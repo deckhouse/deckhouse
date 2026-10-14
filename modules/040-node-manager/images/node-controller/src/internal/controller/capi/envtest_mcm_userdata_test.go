@@ -90,8 +90,8 @@ spec:
 		testenv.EnsureObject(suiteCtx, k8sClient, testenv.BootstrapTemplatesConfigMap())
 		testenv.EnsureObject(suiteCtx, k8sClient, &corev1.ConfigMap{
 			ObjectMeta: metav1.ObjectMeta{Namespace: digestsKey.Namespace, Name: digestsKey.Name},
-			Data: map[string]string{"images_digests.json": `{"registrypackages":{"jq171":"sha256:jq",` +
-				`"d8Curl891":"sha256:curl","tailLog":"sha256:tail","rppGet":"sha256:rpp"}}`},
+			Data: map[string]string{"images_digests.json": `{"registrypackages":{"jq":"sha256:jq",` +
+				`"d8Curl":"sha256:curl","tailLog":"sha256:tail","rppGet":"sha256:rpp"}}`},
 		})
 		// The app label is not decoration: the machine-namespace Secret informer selects on it
 		// (common/cache.go), so without it neither the read nor the watch sees this Secret.

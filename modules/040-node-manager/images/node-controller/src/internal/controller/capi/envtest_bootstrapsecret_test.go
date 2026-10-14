@@ -53,8 +53,8 @@ var _ = Describe("CAPI bootstrap secret", func() {
 		testenv.EnsureObject(suiteCtx, k8sClient, testenv.BootstrapTemplatesConfigMap())
 		testenv.EnsureObject(suiteCtx, k8sClient, &corev1.ConfigMap{
 			ObjectMeta: metav1.ObjectMeta{Namespace: common.MachineNamespace, Name: "bashible-apiserver-files"},
-			Data: map[string]string{"images_digests.json": `{"registrypackages":{"jq171":"sha256:jq",` +
-				`"d8Curl891":"sha256:curl","tailLog":"sha256:tail","rppGet":"sha256:rpp"}}`},
+			Data: map[string]string{"images_digests.json": `{"registrypackages":{"jq":"sha256:jq",` +
+				`"d8Curl":"sha256:curl","tailLog":"sha256:tail","rppGet":"sha256:rpp"}}`},
 		})
 
 		ic := &unstructured.Unstructured{}

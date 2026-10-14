@@ -35,18 +35,18 @@ __sec() {
 # step 062 (`d8 completion bash` is the first real use). The 001 prefetch keeps
 # downloading d8 in parallel, so by the time 062 runs the archive is on disk and
 # only the (still synchronous) unpack happens then.
-bb-rpp-wait-fetched "jq" "{{ .images.registrypackages.jq171 }}" || true
-bb-rpp-wait-fetched "yq" "{{ .images.registrypackages.yq4536 }}" || true
-bb-rpp-wait-fetched "curl" "{{ .images.registrypackages.d8Curl891 }}" || true
+bb-rpp-wait-fetched "jq" "{{ .images.registrypackages.jq }}" || true
+bb-rpp-wait-fetched "yq" "{{ .images.registrypackages.yq }}" || true
+bb-rpp-wait-fetched "curl" "{{ .images.registrypackages.d8Curl }}" || true
 bb-rpp-wait-fetched "which" "{{ .images.registrypackages.which223 }}" || true
 bb-rpp-wait-fetched "virt-what" "{{ .images.registrypackages.virtWhat125 }}" || true
 bb-rpp-wait-fetched "socat" "{{ .images.registrypackages.socat1734 }}" || true
-bb-rpp-wait-fetched "e2fsprogs" "{{ .images.registrypackages.e2fsprogs1472 }}" || true
-bb-rpp-wait-fetched "iptables" "{{ .images.registrypackages.iptables189 }}" || true
+bb-rpp-wait-fetched "e2fsprogs" "{{ .images.registrypackages.e2fsprogs }}" || true
+bb-rpp-wait-fetched "iptables" "{{ .images.registrypackages.iptables }}" || true
 bb-rpp-wait-fetched "growpart" "{{ .images.registrypackages.growpart033 }}" || true
-bb-rpp-wait-fetched "lsblk" "{{- index .images.registrypackages "lsblk2402" }}" || true
-bb-rpp-wait-fetched "nfs-mount" "{{- .images.registrypackages.nfsMount282 }}" || true
+bb-rpp-wait-fetched "lsblk" "{{- index .images.registrypackages "lsblk" }}" || true
+bb-rpp-wait-fetched "nfs-mount" "{{- .images.registrypackages.nfsMount }}" || true
 __sec wait_prefetch
 
-rpp-get install "jq:{{ .images.registrypackages.jq171 }}" "yq:{{ .images.registrypackages.yq4536 }}" "curl:{{ .images.registrypackages.d8Curl891 }}" "which:{{ .images.registrypackages.which223 }}" "virt-what:{{ .images.registrypackages.virtWhat125 }}" "socat:{{ .images.registrypackages.socat1734 }}" "e2fsprogs:{{ .images.registrypackages.e2fsprogs1472 }}" "iptables:{{ .images.registrypackages.iptables189 }}" "growpart:{{ .images.registrypackages.growpart033 }}" "lsblk:{{- index .images.registrypackages "lsblk2402" }}" "nfs-mount:{{- .images.registrypackages.nfsMount282 }}"
+rpp-get install "jq:{{ .images.registrypackages.jq }}" "yq:{{ .images.registrypackages.yq }}" "curl:{{ .images.registrypackages.d8Curl }}" "which:{{ .images.registrypackages.which223 }}" "virt-what:{{ .images.registrypackages.virtWhat125 }}" "socat:{{ .images.registrypackages.socat1734 }}" "e2fsprogs:{{ .images.registrypackages.e2fsprogs }}" "iptables:{{ .images.registrypackages.iptables }}" "growpart:{{ .images.registrypackages.growpart033 }}" "lsblk:{{- index .images.registrypackages "lsblk" }}" "nfs-mount:{{- .images.registrypackages.nfsMount }}"
 __sec rpp_install

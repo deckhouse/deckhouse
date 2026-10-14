@@ -13,21 +13,35 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-d8_share_ca_dir="/opt/deckhouse/share/ca-certificates/mozilla"
+d8_share_ca_dir="/opt/deckhouse/share/ca-certificates/root-certs"
+# The same certificates used to live in a directory named after Mozilla. The set has since
+# grown the Russian Trusted CAs, so the name moved with it. A node upgraded from a release
+# that used the old name still has its anchors symlinked into the system trust store, and
+# they point at files no later install rewrites: nothing but the sweep below would ever
+# drop them, and the node would keep trusting a set that is no longer maintained.
+legacy_ca_dir="/opt/deckhouse/share/ca-certificates/mozilla"
 
 set -Eeo pipefail
 
-if [ -d "$d8_share_ca_dir" ]; then
-  #Delete certificates from previous version
-  find "$d8_share_ca_dir" -name '*.crt' -exec rm -rf {} +
+# Remove the anchors an earlier install left in the system trust store, so a certificate
+# retired upstream stops being trusted here instead of lingering as a symlink nobody
+# rewrites. Matching is on the link target, so it only ever touches our own anchors.
+unlink_anchors() {
+  local dir="$1"
+  local anchors
 
-  if [ -d "/etc/pki/ca-trust/source/anchors" ]; then
-    find "/etc/pki/ca-trust/source/anchors" -type l -lname "$d8_share_ca_dir/*.crt" -exec rm -f {} + 
-  fi
-  if [ -d "/usr/local/share/ca-certificates" ]; then
-    find "/usr/local/share/ca-certificates" -type l -lname "$d8_share_ca_dir/*.crt" -exec rm -f {} + 
-  fi
-fi
+  for anchors in /etc/pki/ca-trust/source/anchors /usr/local/share/ca-certificates; do
+    [ -d "$anchors" ] || continue
+    find "$anchors" -type l -lname "$dir/*.crt" -exec rm -f {} +
+  done
+}
+
+for dir in "$d8_share_ca_dir" "$legacy_ca_dir"; do
+  [ -d "$dir" ] || continue
+  find "$dir" -name '*.crt' -exec rm -f {} +
+  unlink_anchors "$dir"
+done
+rm -rf "$legacy_ca_dir"
 
 mkdir -p /opt/deckhouse/bin "$d8_share_ca_dir"/ca-bundle
 cp -f d8-ca-updater /opt/deckhouse/bin

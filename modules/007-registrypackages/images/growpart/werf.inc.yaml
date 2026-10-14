@@ -1,25 +1,5 @@
 {{- $cloud_utils_version := include "get_oss_version_by_id" (list "cloud-utils" $ )  -}}
-{{- $growpart_version := include "get_oss_version_by_id" (list "util-linux-growpart" $ )  -}}
 {{- $image_version := $cloud_utils_version | replace "." "-" }}
----
-image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact-{{ $image_version }}
-final: false
-fromImage: common/src-artifact
-git:
-- add: /{{ $.ModulePath }}modules/007-{{ $.ModuleName }}/images/{{ $.ImageName }}/scripts
-  to: /src/scripts
-  stageDependencies:
-    install:
-    - '**/*'
-secrets:
-- id: SOURCE_REPO
-  value: {{ .SOURCE_REPO }}
-shell:
-  install:
-  - git clone -b v{{ $growpart_version }} --depth 1 $(cat /run/secrets/SOURCE_REPO)/util-linux/util-linux.git  /src/util-linux
-  - rm -rf /src/util-linux/.git
-  - git clone -b {{ $cloud_utils_version }} --depth 1 $(cat /run/secrets/SOURCE_REPO)/canonical/cloud-utils.git /src/cloud-utils
-  - rm -rf /src/cloud-utils/.git
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-{{ $image_version }}
 from: scratch
@@ -28,57 +8,62 @@ import:
   add: /
   to: /
   includePaths:
-  - growpart
+  - opt/deckhouse
   - install
   - uninstall
-  before: setup
-- image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-fdisk-{{ $image_version }}
-  add: /
-  to: /
-  includePaths:
-  - fdisk
-  - sfdisk
-  before: setup
+  before: install
 imageSpec:
   config:
-    labels: { "distro": "all", "version": "all", "growpart": "{{ $cloud_utils_version }}" }
+    labels: { "distro": "all", "version": "all" }
     clearUser: true
     clearWorkingDir: true
     clearCmd: true
     clearEntrypoint: true
     removeEnv: ["/.*/"]
 ---
-image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-fdisk-{{ $image_version }}
+{{- /*
+  Only cloud-utils is cloned. growpart is a shell script and container-factory has no
+  package for it, so this is the one piece that still comes from source; fdisk and sfdisk,
+  which used to mean building util-linux statically here, now come from pm.
+*/}}
+image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact-{{ $image_version }}
 final: false
-from: {{ index $.Images "builder/golang-alpine" }}
+from: {{ index $.Images "builder/src" }}
+secrets:
+- id: SOURCE_REPO
+  value: {{ .SOURCE_REPO }}
+shell:
+  install:
+  - git clone -b {{ $cloud_utils_version }} --depth 1 $(cat /run/secrets/SOURCE_REPO)/canonical/cloud-utils.git /src/cloud-utils
+  - rm -rf /src/cloud-utils/.git
+---
+image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $image_version }}
+final: false
+from: {{ index $.Images "builder/distroless" }}
+git:
+- add: /{{ $.ModulePath }}modules/{{ $.ModulePriority }}-{{ $.ModuleName }}/images/{{ $.ImageName }}/scripts
+  to: /
+  stageDependencies:
+    install:
+    - '**/*'
 import:
-- image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact-{{ $image_version }}
+- image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact-{{ $image_version }}
   add: /src
   to: /src
   before: install
 shell:
   beforeInstall:
-  {{- include "alpine packages proxy" . | nindent 2 }}
-  - apk add --no-cache make gettext-dev autoconf automake libtool flex bison clang binutils g++ linux-headers
-  setup:
-  - cd /src/util-linux
-  - export LDFLAGS="-Wl,-z,now -Wl,-z,relro -static -s"
-  - export CFLAGS="-fPIC -pie -fstack-protector-all -O2 -D_FORTIFY_SOURCE=2 -static -s"
-  - ./autogen.sh && ./configure --enable-static --enable-static-programs=fdisk,sfdisk --disable-pylibmount --without-python --disable-liblastlog2
-  - make fdisk.static sfdisk.static && strip ./fdisk.static && strip ./sfdisk.static
-  - mv ./fdisk.static /fdisk && mv ./sfdisk.static /sfdisk
-  - chmod +x /fdisk /sfdisk
----
-image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $image_version }}
-final: false
-from: {{ index $.Images "builder/alpine" }}
-import:
-- image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact-{{ $image_version }}
-  add: /src
-  to: /src
-  before: install
-shell:
-  setup:
-  - mv /src/cloud-utils/bin/growpart /growpart
-  - mv /src/scripts/* /
-  - chmod +x /growpart /install /uninstall
+  - pm install file findutils patchelf
+  install:
+  # -n, because without it pm consults the builder's own package index and skips whatever
+  # is already installed there — glibc among it. The tree under /pm would then come out
+  # without its loader and the package would ship nothing that starts on a node.
+  - pm install -n util-linux -d /pm
+  - mkdir -p /opt/deckhouse/bin /opt/deckhouse/lib
+  - cp -pr /pm/usr/sbin/fdisk /pm/usr/sbin/sfdisk /opt/deckhouse/bin
+  - cp -pr /src/cloud-utils/bin/growpart /opt/deckhouse/bin/growpart
+  - chmod +x /opt/deckhouse/bin/growpart
+  # growpart is a script, so the ELF checks below step over it and nothing else would
+  # notice if the clone stopped putting it there.
+  - test -x /opt/deckhouse/bin/growpart
+  {{- include "relocate_and_verify" (dict "resolve" "/pm" "smoke" (list "/opt/deckhouse/bin/fdisk -V" "/opt/deckhouse/bin/sfdisk -v")) | nindent 2 }}

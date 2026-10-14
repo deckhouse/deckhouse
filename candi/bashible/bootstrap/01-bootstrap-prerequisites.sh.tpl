@@ -39,7 +39,7 @@ bb-minget-install
 */}}
 bb-rpp-get-install{{ if ne .runType "ClusterBootstrap" }} 0{{ end }}
 {{ with .images.registrypackages }}
-/opt/deckhouse/bin/rpp-get install "jq:{{ .jq171 }}" "curl:{{ .d8Curl891 }}" "tailLog:{{ .tailLog }}"
+/opt/deckhouse/bin/rpp-get install "jq:{{ .jq }}" "curl:{{ .d8Curl }}" "tailLog:{{ .tailLog }}"
 export PATH="/opt/deckhouse/bin:/usr/local/bin:$PATH"
 {{- end }}
 {{- if and (ne .nodeGroup.nodeType "Static") ( .nodeGroup.cloudProviderType )}}

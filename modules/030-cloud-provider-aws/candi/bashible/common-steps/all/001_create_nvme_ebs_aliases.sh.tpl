@@ -25,7 +25,7 @@ volume_names="$(find /dev | grep -i 'nvme[0-21]n1$' || true)"
 
 if [ ! -z "${volume_names}" ]; then
   {{- with .images.registrypackages }}
-  bb-package-install "ebsnvme-id:{{ .amazonEc2Utils220 }}" "nvme-cli:{{ .nvmeCli211 }}"
+  rpp-get install "ebsnvme-id:{{ .amazonEc2Utils230 }}" "nvme-cli:{{ .nvmeCli }}"
   {{- end }}
 fi
 

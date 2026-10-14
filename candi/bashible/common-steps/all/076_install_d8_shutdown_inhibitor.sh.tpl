@@ -109,7 +109,7 @@ function inhibitor::install() {
 }
 
 function inhibitor::uninstall() {
-  bb-package-remove "{{ $inhibitorPkgName }}"
+  rpp-get uninstall "{{ $inhibitorPkgName }}"
 }
 
 

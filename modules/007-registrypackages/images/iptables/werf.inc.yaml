@@ -1,80 +1,100 @@
-{{/* Important! The iptables binaries from artifact are also used in other modules: kube-proxy, cni-simple-bridge, cni-cilium, cni-flannel, node-local-dns, ingress-nginx, openvpn, network-policy-engine and network-gateway. */}}
-{{- $iptables_version := include "get_oss_version_by_id" (list "iptables" $ )  -}}
-{{- $libmnl_version := include "get_oss_version_by_id" (list "libmnl" $ )  -}}
-{{- $libnftnl_version := include "get_oss_version_by_id" (list "libnftnl" $ )  -}}
-{{- $image_version := $iptables_version | replace "." "-" }}
+{{/*
+  Important! The xtables binaries from this artifact are also used by kube-proxy,
+  cni-simple-bridge, cni-cilium, cni-flannel, node-local-dns, istio, openvpn,
+  network-policy-engine, network-gateway, debug-container and cni-migration-controller.
+
+  Two layouts come out of the one artifact, because the two kinds of consumer need
+  different things:
+
+    /xtables-*-multi plus /relocate/lib64  — for images. The binaries stay where they
+      have always been, so every importer's includePaths keep working, and the libraries
+      sit in /lib64, the first directory the loader looks in. Nothing is patched: an image
+      takes them as they are.
+
+    /opt/deckhouse/{bin,lib}               — for nodes, repointed and checked by
+      relocate_and_verify the way every other node package is.
+
+  The image copies are taken before relocate_and_verify runs, since it rewrites the
+  interpreter and rpath of everything under /opt/deckhouse.
+*/}}
 ---
-image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact-{{ $image_version }}
-final: false
-fromImage: common/src-artifact
-git:
-- add: /{{ $.ModulePath }}modules/007-{{ $.ModuleName }}/images/{{ $.ImageName }}/scripts
-  to: /src/scripts
-  stageDependencies:
-    install:
-    - '**/*'
-secrets:
-- id: SOURCE_REPO
-  value: {{ .SOURCE_REPO }}
-shell:
-  install:
-  - git clone -b libmnl-{{ $libmnl_version }} --depth 1 $(cat /run/secrets/SOURCE_REPO)/netfilter/libmnl /src/libmnl
-  - rm -rf /src/libmnl/.git
-  - git clone -b libnftnl-{{ $libnftnl_version }} --depth 1  $(cat /run/secrets/SOURCE_REPO)/netfilter/libnftnl /src/libnftnl
-  - rm -rf /src/libnftnl/.git
-  - git clone -b v{{ $iptables_version }} --depth 1  $(cat /run/secrets/SOURCE_REPO)/netfilter/iptables /src/iptables
-  - rm -rf /src/iptables/.git
----
-image: {{ $.ModuleName }}/{{ $.ImageName }}-{{ $image_version }}
+image: {{ $.ModuleName }}/{{ $.ImageName }}
 from: scratch
 import:
-- image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $image_version }}
+- image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
   add: /
   to: /
   includePaths:
-  - xtables-legacy-multi
-  - xtables-nft-multi
+  - opt/deckhouse
   - install
   - uninstall
-  before: setup
+  before: install
 imageSpec:
   config:
-    labels: { "distro": "all", "version": "all", "iptables": "{{ $iptables_version }}" }
+    labels: { "distro": "all", "version": "all" }
     clearUser: true
     clearWorkingDir: true
     clearCmd: true
     clearEntrypoint: true
     removeEnv: ["/.*/"]
 ---
-image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $image_version }}
+image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
 final: false
-from: {{ index $.Images "builder/alpine" }}
-import:
-- image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact-{{ $image_version }}
-  add: /src
-  to: /src
-  before: install
-mount:
-{{ include "mount points for golang builds" . }}
+from: {{ index $.Images "builder/distroless" }}
+git:
+- add: /{{ $.ModulePath }}modules/{{ $.ModulePriority }}-{{ $.ModuleName }}/images/{{ $.ImageName }}/scripts
+  to: /
+  includePaths:
+  - install
+  - uninstall
+  stageDependencies:
+    install:
+    - '**/*'
 shell:
   beforeInstall:
-  {{- include "alpine packages proxy" . | nindent 2 }}
-  - apk add --no-cache make gettext-dev autoconf automake libtool clang g++ linux-headers bash pkgconf bzip2-dev libnl3 libc-dev libnl3-dev coreutils libuv utmps-libs glib-dev libmnl-static nghttp2-libs musl libbz2 gdbm pcre gcc perl-error zlib-dev libstdc++ ncurses-libs zlib file-dev linux-headers mpdecimal
-  setup:
-  - export PKG_CONFIG_PATH=/opt/deckhouse/bin/.libs/pkgconfig
-  - cd /src/libmnl
-  - ./autogen.sh
-  - ./configure --enable-static --libdir=/opt/deckhouse/bin/.libs
-  - make && make install
-  - cd /src/libnftnl
-  - ./autogen.sh
-  - ./configure --enable-static --libdir=/opt/deckhouse/bin/.libs
-  - make && make install
-  - cd /src/iptables
-  - ./autogen.sh
-  - ./configure --enable-static --disable-shared --libdir=/opt/deckhouse/bin/.libs
-  - make LDFLAGS='-all-static'
-  - strip ./iptables/xtables-legacy-multi && strip ./iptables/xtables-nft-multi
-  - mv ./iptables/xtables-legacy-multi /xtables-legacy-multi && mv ./iptables/xtables-nft-multi /xtables-nft-multi
-  - mv /src/scripts/* /
-  - chmod +x /xtables-legacy-multi /xtables-nft-multi /install /uninstall
+  - pm install file findutils patchelf
+  install:
+  # libc is asked for by name: the iptables package alone brings its own libraries but no
+  # glibc, and -n keeps pm from skipping what the builder already has.
+  - pm install -n iptables libc -d /src
+  - cp -pr /src/usr/bin/xtables-legacy-multi /src/usr/bin/xtables-nft-multi /
+  - mkdir -p /relocate/lib64
+  - cp -aL /src/lib64/ld-linux-x86-64.so.2 /relocate/lib64/
+  - |
+    set -eu
+
+    # Same walk relocate_and_verify does, against /src, but staging into the flat /lib64 an
+    # image wants rather than into /opt/deckhouse.
+    copy_needed() {
+      local f="$1" soname src
+      for soname in $(patchelf --print-needed "$f" 2>/dev/null); do
+        if [ -e "/relocate/lib64/$soname" ]; then
+          continue
+        fi
+        src="$(find /src -name "$soname" -type f -o -name "$soname" -type l | head -1)"
+        if [ -z "$src" ]; then
+          echo "FATAL: $f needs $soname and /src does not have it" >&2
+          exit 1
+        fi
+        cp -aL "$src" "/relocate/lib64/$soname"
+        added=1
+      done
+    }
+
+    while :; do
+      added=0
+      for f in /xtables-legacy-multi /xtables-nft-multi $(find /relocate/lib64 -type f); do
+        if ! file "$f" | grep -q ELF; then
+          continue
+        fi
+        copy_needed "$f"
+      done
+      if [ "$added" -eq 0 ]; then
+        break
+      fi
+    done
+
+    echo "iptables: $(ls -1 /relocate/lib64 | wc -l) libraries staged for image consumers"
+  - mkdir -p /opt/deckhouse/bin /opt/deckhouse/lib
+  - cp -pr /src/usr/bin/xtables-legacy-multi /src/usr/bin/xtables-nft-multi /opt/deckhouse/bin
+  {{- include "relocate_and_verify" (dict "resolve" "/src" "smoke" (list "/opt/deckhouse/bin/xtables-nft-multi iptables --version" "/opt/deckhouse/bin/xtables-legacy-multi iptables --version")) | nindent 2 }}

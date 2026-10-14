@@ -21,7 +21,7 @@
 # debian-based distros use /etc/ssl/certs/ca-certificates.crt, which is generated each time by 'update-ca-certificate' command. This command finds certificates in /usr/share/ca-certificates or /usr/local/share/ca-certificates directories and recreate  main ca-certificates.crt.
 set -Eeo pipefail
 
-CERT_SRC_DIR="/opt/deckhouse/share/ca-certificates/mozilla"
+CERT_SRC_DIR="/opt/deckhouse/share/ca-certificates/root-certs"
 REDHAT_CA_DIR=/etc/pki/ca-trust
 DEBIAN_CA_DIR=/usr/local/share/ca-certificates
 mkdir -p /etc/ssl/certs

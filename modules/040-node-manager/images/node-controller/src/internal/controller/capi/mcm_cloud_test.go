@@ -211,8 +211,8 @@ func machineClassSecretReconciler(t *testing.T, providerConfig []byte) *MachineD
 		},
 		&corev1.ConfigMap{
 			ObjectMeta: metav1.ObjectMeta{Namespace: common.MachineNamespace, Name: "bashible-apiserver-files"},
-			Data: map[string]string{"images_digests.json": `{"registrypackages":{"jq171":"sha256:jq",` +
-				`"d8Curl891":"sha256:curl","tailLog":"sha256:tail","rppGet":"sha256:rpp"}}`},
+			Data: map[string]string{"images_digests.json": `{"registrypackages":{"jq":"sha256:jq",` +
+				`"d8Curl":"sha256:curl","tailLog":"sha256:tail","rppGet":"sha256:rpp"}}`},
 		},
 		&discoveryv1.EndpointSlice{
 			ObjectMeta: metav1.ObjectMeta{Namespace: "default", Name: "kubernetes"},

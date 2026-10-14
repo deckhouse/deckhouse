@@ -14,9 +14,8 @@
 # limitations under the License.
 
 set -Eeo pipefail
-mkdir -p /opt/deckhouse/bin
-cp -f mke2fs /opt/deckhouse/bin
+mkdir -p /opt/deckhouse/bin /opt/deckhouse/lib
+cp -pr opt/deckhouse/bin/* /opt/deckhouse/bin
+cp -pr opt/deckhouse/lib/* /opt/deckhouse/lib
 ln -sf /opt/deckhouse/bin/mke2fs /opt/deckhouse/bin/mkfs.ext4
 ln -sf /opt/deckhouse/bin/mke2fs /opt/deckhouse/bin/mkfs.ext3
-cp -f fsck /opt/deckhouse/bin
-cp -f resize2fs /opt/deckhouse/bin

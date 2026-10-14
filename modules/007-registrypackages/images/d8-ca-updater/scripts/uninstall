@@ -13,16 +13,21 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-d8_share_ca_dir="/opt/deckhouse/share/ca-certificates/mozilla"
+d8_share_ca_dir="/opt/deckhouse/share/ca-certificates/root-certs"
+# Older releases staged the same certificates under this name; an upgraded node can still
+# have its anchors, so removal has to account for both.
+legacy_ca_dir="/opt/deckhouse/share/ca-certificates/mozilla"
 
 set -Eeo pipefail
 rm -f /opt/deckhouse/bin/d8-ca-updater
 
-if [ -d "/etc/pki/ca-trust/source/anchors" ]; then
-  find "/etc/pki/ca-trust/source/anchors" -type l -lname "$d8_share_ca_dir/*.crt" -exec rm -f {} + 
-fi
-if [ -d "/usr/local/share/ca-certificates" ]; then
-  find "/usr/local/share/ca-certificates" -type l -lname "$d8_share_ca_dir/*.crt" -exec rm -f {} + 
-fi
+for dir in "$d8_share_ca_dir" "$legacy_ca_dir"; do
+  for anchors in /etc/pki/ca-trust/source/anchors /usr/local/share/ca-certificates; do
+    [ -d "$anchors" ] || continue
+    find "$anchors" -type l -lname "$dir/*.crt" -exec rm -f {} +
+  done
+done
 
-rm -f $d8_share_ca_dir
+# -r, because these are directories: plain rm -f fails on them, and under `set -e` that
+# used to abort the uninstall right here and leave the staged certificates on the node.
+rm -rf "$d8_share_ca_dir" "$legacy_ca_dir"
