@@ -69,7 +69,7 @@ spec:
         - --logtostderr=true
         - --alsologtostderr=true
         - --register-webhook=false
-        - --v=4
+        - --v={{ include "vpa_verbosity" . }}
         env:
         - name: NAMESPACE
           valueFrom:

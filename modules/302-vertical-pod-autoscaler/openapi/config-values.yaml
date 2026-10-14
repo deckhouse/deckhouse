@@ -28,3 +28,19 @@ properties:
           format: int64
         value:
           type: string
+  logLevel:
+    type: string
+    enum: ["Trace", "Debug", "Info", "Warning", "Error"]
+    default: "Warning"
+    description: |
+      Logging level of the VPA components: recommender, updater, and admission-controller.
+
+      Each level includes the messages of the less detailed levels. Some informational messages and warnings, such as startup messages, are logged at any level.
+
+      Supported values:
+
+      - `Error`: Errors and important messages that VPA logs at the info level, such as failed evictions and failed in-place updates.
+      - `Warning`: Warnings, the component version at startup, and the pod evictions caused by node resource pressure that the recommender processes (default).
+      - `Info`: Actions on pods, such as evictions, in-place resource updates, and setting the resources of pods being created.
+      - `Debug`: The progress of each recommender cycle and detailed information on decisions for each pod and container, such as why a pod was not updated. Produces a very large volume of logs, so use it for troubleshooting only.
+      - `Trace`: Every request to the Kubernetes API. Use it only when `Debug` is not enough to find the problem.

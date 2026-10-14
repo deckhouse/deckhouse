@@ -88,7 +88,7 @@ spec:
         - --prometheus-cadvisor-job-name=kubelet
         - --container-pod-name-label=pod
         - --container-name-label=container
-        - --v=4
+        - --v={{ include "vpa_verbosity" . }}
         ports:
         - containerPort: 8942
           name: http-metrics

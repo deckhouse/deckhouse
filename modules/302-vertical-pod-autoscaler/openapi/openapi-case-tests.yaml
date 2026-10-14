@@ -1,7 +1,19 @@
 positive:
+  configValues:
+  - logLevel: "Trace"
+  - logLevel: "Debug"
+  - logLevel: "Info"
+  - logLevel: "Warning"
+  - logLevel: "Error"
   values:
   - internal:
       CACert: a
       CAKey: b
       serverCert: c
       serverKey: d
+negative:
+  configValues:
+  - logLevel: "warning"
+  - logLevel: "Warn"
+  - logLevel: "trace"
+  - logLevel: 4
