@@ -1,3 +1,8 @@
+# WARNING!
+# if you change this file please evaluate to change files
+# /modules/040-node-manager/openapi/values.yaml
+# /ee/be/modules/040-node-manager/openapi/values.yaml
+# /ee/cse/modules/040-node-manager/openapi/values.yaml
 x-extend:
   schema: config-values.yaml
 type: object
