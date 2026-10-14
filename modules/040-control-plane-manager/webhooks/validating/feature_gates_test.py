@@ -19,15 +19,20 @@ import json
 import base64
 import yaml
 
-import feature_gates_generated
-from feature_gates import (
-    main,
-    validate,
-    CLUSTER_CONFIG_SNAPSHOT_NAME,
-    CLUSTER_KUBERNETES_SNAPSHOT_NAME,
-)
+from pathlib import Path
+from deckhouse.tests import load_validation_webhook
 from deckhouse import hook, tests
 from dotmap import DotMap
+
+# The handler of the ValidationWebhook cpm-moduleconfig-feature-gates, joined as the template joins it.
+feature_gates = load_validation_webhook(
+    Path(__file__).parent / "feature_gates_generated.py",
+    Path(__file__).parent / "k8s_version_common.py",
+    Path(__file__).parent / "feature_gates.py",
+)
+main = feature_gates.main
+CLUSTER_CONFIG_SNAPSHOT_NAME = feature_gates.CLUSTER_CONFIG_SNAPSHOT_NAME
+CLUSTER_KUBERNETES_SNAPSHOT_NAME = feature_gates.CLUSTER_KUBERNETES_SNAPSHOT_NAME
 
 
 TEST_FEATURE_GATES_MAP = {
@@ -64,7 +69,7 @@ TEST_FEATURE_GATES_MAP = {
     },
 }
 
-feature_gates_generated.versions = TEST_FEATURE_GATES_MAP
+feature_gates.versions = TEST_FEATURE_GATES_MAP
 
 
 def _prepare_validation_binding_context(
@@ -157,8 +162,9 @@ def _prepare_validation_binding_context(
         
         encoded_default_version = base64.b64encode(default_version.encode('utf-8')).decode('utf-8')
         
+        # {"data": .data} of the Secret.
         secret_snapshot = [DotMap({
-            "object": {
+            "filterResult": {
                 "data": {
                     "cluster-configuration.yaml": encoded_config,
                     "deckhouseDefaultKubernetesVersion": encoded_default_version
@@ -172,8 +178,9 @@ def _prepare_validation_binding_context(
     # spec.automaticVersion of the cluster ConfigMap: what "Default" resolves to for the running
     # build. Absent snapshot means update-observer has not written the object yet.
     if cm_automatic_version is not None:
+        # {"data": {"spec": .data.spec}} of the ConfigMap.
         ctx.snapshots[CLUSTER_KUBERNETES_SNAPSHOT_NAME] = [DotMap({
-            "object": {
+            "filterResult": {
                 "data": {
                     "spec": yaml.dump({"automaticVersion": cm_automatic_version}),
                 }
@@ -345,6 +352,18 @@ class TestFeatureGatesValidationWebhook(unittest.TestCase):
             out,
             "'SomeProblematicFeature' is forbidden for Kubernetes version 1.33 and will not be applied",
         )
+
+    def test_validate_reports_every_warning_separately(self):
+        ctx = _prepare_validation_binding_context(
+            '1.33.0', ['SomeProblematicFeature', 'CPUManager', 'UnknownGate', 'AnotherUnknownGate'],
+        )
+        out = hook.testrun(main, [ctx])
+        tests.assert_validation_allowed(self, out, (
+            "'SomeProblematicFeature' is forbidden for Kubernetes version 1.33 and will not be applied",
+            "'UnknownGate' is unknown or enabled by default FeatureGate for Kubernetes version 1.33 and will not be applied",
+            "'AnotherUnknownGate' is unknown or enabled by default FeatureGate for Kubernetes version 1.33 and will not be applied",
+        ))
+
 
 if __name__ == '__main__':
     unittest.main()

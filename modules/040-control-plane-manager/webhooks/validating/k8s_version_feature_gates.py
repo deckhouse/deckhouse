@@ -1,5 +1,3 @@
-#!/usr/bin/python3
-
 # Copyright 2025 Flant JSC
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -14,129 +12,20 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import base64
+# handler.python of the ValidationWebhooks cpm-k8s-version-feature-gates (the d8-cluster-configuration
+# Secret) and cpm-k8s-version-feature-gates-mc (the ModuleConfig) in
+# templates/feature-gates-validation-webhooks.yaml; validate() tells the two apart by the kind of the
+# request. The operator template provides the imports and main; the ValidationWebhooks put
+# feature_gates_generated.py (is_deprecated, is_feature_gate_deprecated_up_to_version) and
+# k8s_version_common.py (the kubernetesVersion helpers) before this file.
+
 import logging
-import re
-import yaml
-from typing import Optional, List
-from deckhouse import hook
+from typing import List, Optional
+
 from dotmap import DotMap
 
-from feature_gates_generated import is_deprecated, is_feature_gate_deprecated_up_to_version
-
-from k8s_version_common import (
-    AUTOMATIC_VERSION,
-    CLUSTER_CONFIG_SNAPSHOT_NAME,
-    CLUSTER_KUBERNETES_SNAPSHOT_NAME,
-    DEFAULT_VERSION,
-    VERSION_RE,
-    get_cluster_configuration_secret_data,
-    get_deckhouse_default_version_from_configmap,
-    get_deckhouse_default_version_from_secret,
-    get_k8s_version_from_cluster_config,
-    is_cluster_configuration_pinned,
-    is_module_config_track_default,
-    usable_declared_version,
-)
-
+# The snapshot item is {"filterResult": {"spec": {"settings": .spec.settings}}}.
 MODULE_CONFIG_SNAPSHOT_NAME = "module-config-control-plane-manager"
-
-config = f"""
-configVersion: v1
-kubernetesValidating:
-- name: cpm-k8s-version-feature-gates.deckhouse.io
-  group: cpm-feature-gates-validation
-  includeSnapshotsFrom: ["{CLUSTER_CONFIG_SNAPSHOT_NAME}", "{MODULE_CONFIG_SNAPSHOT_NAME}", "{CLUSTER_KUBERNETES_SNAPSHOT_NAME}"]
-  namespace:
-    labelSelector:
-      matchLabels:
-        kubernetes.io/metadata.name: kube-system
-  labelSelector:
-    matchLabels:
-      name: d8-cluster-configuration
-  rules:
-  - apiGroups:   [""]
-    apiVersions: ["v1"]
-    operations:  ["UPDATE"]
-    resources:   ["secrets"]
-    scope:       "Namespaced"
-# kubernetesVersion can also be set directly on the ModuleConfig, without ever touching the
-# d8-cluster-configuration secret above — this binding covers that path.
-- name: cpm-k8s-version-feature-gates-mc.deckhouse.io
-  group: cpm-feature-gates-validation
-  includeSnapshotsFrom: ["{CLUSTER_CONFIG_SNAPSHOT_NAME}", "{CLUSTER_KUBERNETES_SNAPSHOT_NAME}"]
-  matchConditions:
-  - name: "only-control-plane-manager-module"
-    expression: 'request.name == "control-plane-manager"'
-  rules:
-  - apiGroups:   ["deckhouse.io"]
-    apiVersions: ["*"]
-    operations:  ["CREATE", "UPDATE"]
-    resources:   ["moduleconfigs"]
-    scope:       "Cluster"
-
-kubernetes:
-- name: {CLUSTER_CONFIG_SNAPSHOT_NAME}
-  apiVersion: v1
-  kind: Secret
-  group: cpm-version-validation
-  namespace:
-    nameSelector:
-      matchNames:
-      - kube-system
-  nameSelector:
-    matchNames:
-    - d8-cluster-configuration
-  executeHookOnEvent: []
-  executeHookOnSynchronization: true
-  keepFullObjectsInMemory: true
-
-- name: {MODULE_CONFIG_SNAPSHOT_NAME}
-  apiVersion: deckhouse.io/v1alpha1
-  kind: ModuleConfig
-  group: cpm-version-validation
-  nameSelector:
-    matchNames:
-    - control-plane-manager
-  executeHookOnEvent: []
-  executeHookOnSynchronization: true
-  keepFullObjectsInMemory: true
-
-# spec.automaticVersion of this ConfigMap is what "Default" resolves to for the running Deckhouse
-# build. It replaces deckhouseDefaultKubernetesVersion in the Secret above, which was only ever
-# raised and therefore kept answering with a default that no longer exists after a Deckhouse
-# downgrade. The Secret key stays as a fallback for the window before update-observer first writes
-# this object.
-- name: {CLUSTER_KUBERNETES_SNAPSHOT_NAME}
-  apiVersion: v1
-  kind: ConfigMap
-  group: cpm-version-validation
-  namespace:
-    nameSelector:
-      matchNames:
-      - kube-system
-  nameSelector:
-    matchNames:
-    - d8-cluster-kubernetes
-  executeHookOnEvent: []
-  executeHookOnSynchronization: true
-  keepFullObjectsInMemory: true
-"""
-
-
-def main(ctx: hook.Context):
-    try:
-        binding_context = DotMap(ctx.binding_context)
-        error = validate(binding_context)
-        if error:
-            ctx.output.validations.deny(error)
-        else:
-            ctx.output.validations.allow()
-    except Exception as e:
-        # deny(), not validations.error(): in deckhouse==0.4.11 error() uses the message as the dict
-        # *key*, so the response carries no "message" at all. This binding covers ModuleConfig, so a
-        # bug here blocks the very edit that would work around it.
-        ctx.output.validations.deny(f"internal error in the kubernetesVersion feature gates webhook: {e}")
 
 
 def get_module_config_settings(ctx: DotMap) -> dict:
@@ -145,10 +34,10 @@ def get_module_config_settings(ctx: DotMap) -> dict:
         return {}
     
     module_config = snapshot[0]
-    if not module_config or not hasattr(module_config, 'object'):
+    if not module_config or not hasattr(module_config, 'filterResult'):
         return {}
     
-    spec = module_config.object.get('spec', {})
+    spec = module_config.filterResult.get('spec', {})
     settings = spec.get('settings', {})
     return settings if isinstance(settings, dict) else {}
 
@@ -332,10 +221,23 @@ def validate_module_config_change(ctx: DotMap) -> Optional[str]:
     return build_deprecated_feature_gates_error(target_version, enabled_feature_gates)
 
 
-def validate(ctx: DotMap) -> Optional[str]:
+def validate(ctx: DotMap) -> tuple[Optional[str], bool]:
+    try:
+        error = validate_request(ctx)
+    except Exception as e:
+        # A denial, not validations.error() of the template's main: in deckhouse==0.4.11 error() uses
+        # the message as the dict *key*, so the response carries no "message" at all. This binding
+        # covers ModuleConfig, so a bug here blocks the very edit that would work around it.
+        return f"internal error in the kubernetesVersion feature gates webhook: {e}", False
+    if error:
+        return error, False
+    return None, True
+
+
+def validate_request(ctx: DotMap) -> Optional[str]:
     req = ctx.review.request
     # DotMap returns an empty DotMap for missing keys; calling .lower() on it raises
-    # AttributeError, which main() turns into deny — with failurePolicy:Fail that would
+    # AttributeError, which validate() turns into deny - with failurePolicy:Fail that would
     # lock ModuleConfig edits. Resolve kind defensively.
     kind = str(req.get('kind', {}).get('kind', '') or '').lower()
 
@@ -347,6 +249,3 @@ def validate(ctx: DotMap) -> Optional[str]:
 
     return None
 
-
-if __name__ == "__main__":
-    hook.run(main, config=config)

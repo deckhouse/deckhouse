@@ -1,5 +1,3 @@
-#!/usr/bin/env python3
-#
 # Copyright 2026 Flant JSC
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -16,18 +14,14 @@
 
 """Shared kubernetesVersion resolution helpers for the control-plane-manager admission webhooks.
 
-Both feature_gates.py and k8s_version_feature_gates.py have to answer the same question — what
-Kubernetes version does this cluster declare — and they used to answer it with verbatim copies of
+Both feature_gates.py and k8s_version_feature_gates.py have to answer the same question - what
+Kubernetes version does this cluster declare - and they used to answer it with verbatim copies of
 these helpers. Two copies of one resolution rule in one directory is the shape that drifts, and it
 already had: one copy trimmed where the other did not.
 
-Not a hook. This module carries no shell-operator config and is deliberately left non-executable,
-so shell-operator does not pick it up as one — the same arrangement as feature_gates_generated.py,
-which both webhooks already import from this directory.
-
-Deliberately imported by name rather than with a star import, again following
-feature_gates_generated.py: a reader of either webhook should be able to see where every symbol
-comes from without opening this file.
+Not a hook. The ValidationWebhooks in templates/feature-gates-validation-webhooks.yaml join
+feature_gates_generated.py, this file and the webhook file into one handler.python, so the webhook
+files use these names without importing them. Keep the names distinct from theirs.
 """
 
 import base64
@@ -38,7 +32,9 @@ from typing import Optional
 import yaml
 from dotmap import DotMap
 
-# Shared: the two webhooks bind the same objects and read the snapshots by name.
+# Shared: the two webhooks bind the same objects and read the snapshots by name. The snapshots carry
+# the jqFilter result only (a ValidationWebhook keeps no full objects): see the jqFilters in
+# templates/feature-gates-validation-webhooks.yaml.
 CLUSTER_CONFIG_SNAPSHOT_NAME = "d8-cluster-configuration"
 CLUSTER_KUBERNETES_SNAPSHOT_NAME = "d8-cluster-kubernetes"
 
@@ -87,16 +83,19 @@ def usable_declared_version(version, source: str) -> Optional[str]:
 
 
 def get_cluster_configuration_secret_data(ctx: DotMap):
-    """Return data of the d8-cluster-configuration Secret, or None when it is absent or empty."""
+    """Return data of the d8-cluster-configuration Secret, or None when it is absent or empty.
+
+    The snapshot item is {"filterResult": {"data": .data}}.
+    """
     snapshot = ctx.snapshots.get(CLUSTER_CONFIG_SNAPSHOT_NAME, [])
     if not snapshot or len(snapshot) == 0:
         return None
 
     secret = snapshot[0]
-    if not secret or not hasattr(secret, 'object'):
+    if not secret or not hasattr(secret, 'filterResult'):
         return None
 
-    return secret.object.data
+    return secret.filterResult.data
 
 
 def get_deckhouse_default_version_from_secret(secret_data) -> Optional[str]:
@@ -118,17 +117,18 @@ def get_deckhouse_default_version_from_secret(secret_data) -> Optional[str]:
 def get_deckhouse_default_version_from_configmap(ctx: DotMap) -> Optional[str]:
     """Read spec.automaticVersion from kube-system/d8-cluster-kubernetes.
 
-    Always describes the installed build. Missing means "not published yet".
+    Always describes the installed build. Missing means "not published yet". The snapshot item is
+    {"filterResult": {"data": {"spec": .data.spec}}}.
     """
     snapshot = ctx.snapshots.get(CLUSTER_KUBERNETES_SNAPSHOT_NAME, [])
     if not snapshot or len(snapshot) == 0:
         return None
 
     config_map = snapshot[0]
-    if not config_map or not hasattr(config_map, 'object'):
+    if not config_map or not hasattr(config_map, 'filterResult'):
         return None
 
-    raw_spec = config_map.object.get('data', {}).get('spec')
+    raw_spec = config_map.filterResult.get('data', {}).get('spec')
     if not raw_spec:
         return None
 

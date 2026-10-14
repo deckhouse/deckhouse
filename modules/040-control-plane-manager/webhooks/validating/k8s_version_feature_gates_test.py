@@ -19,18 +19,23 @@ import json
 import base64
 import yaml
 
-import feature_gates_generated
-from k8s_version_feature_gates import (
-    main,
-    validate,
-    get_enabled_feature_gates,
-    normalize_version,
-    CLUSTER_CONFIG_SNAPSHOT_NAME,
-    MODULE_CONFIG_SNAPSHOT_NAME,
-    CLUSTER_KUBERNETES_SNAPSHOT_NAME,
-)
+from pathlib import Path
+from deckhouse.tests import load_validation_webhook
 from deckhouse import hook, tests
 from dotmap import DotMap
+
+# The handler of the ValidationWebhooks cpm-k8s-version-feature-gates and
+# cpm-k8s-version-feature-gates-mc, joined as the template joins it.
+k8s_version_feature_gates = load_validation_webhook(
+    Path(__file__).parent / "feature_gates_generated.py",
+    Path(__file__).parent / "k8s_version_common.py",
+    Path(__file__).parent / "k8s_version_feature_gates.py",
+)
+main = k8s_version_feature_gates.main
+validate = k8s_version_feature_gates.validate
+CLUSTER_CONFIG_SNAPSHOT_NAME = k8s_version_feature_gates.CLUSTER_CONFIG_SNAPSHOT_NAME
+MODULE_CONFIG_SNAPSHOT_NAME = k8s_version_feature_gates.MODULE_CONFIG_SNAPSHOT_NAME
+CLUSTER_KUBERNETES_SNAPSHOT_NAME = k8s_version_feature_gates.CLUSTER_KUBERNETES_SNAPSHOT_NAME
 
 
 TEST_FEATURE_GATES_MAP = {
@@ -64,7 +69,7 @@ TEST_FEATURE_GATES_MAP = {
     },
 }
 
-feature_gates_generated.versions = TEST_FEATURE_GATES_MAP
+k8s_version_feature_gates.versions = TEST_FEATURE_GATES_MAP
 
 
 def _prepare_validation_binding_context(
@@ -175,13 +180,9 @@ def _prepare_validation_binding_context(
         # edit can move the effective version at all.
         if mc_kubernetes_version:
             settings["kubernetesVersion"] = mc_kubernetes_version
+        # {"spec": {"settings": .spec.settings}} of the ModuleConfig.
         module_config_snapshot = [DotMap({
-            "object": {
-                "apiVersion": "deckhouse.io/v1alpha1",
-                "kind": "ModuleConfig",
-                "metadata": {
-                    "name": "control-plane-manager"
-                },
+            "filterResult": {
                 "spec": {
                     "settings": settings
                 }
@@ -294,7 +295,18 @@ class TestK8sVersionFeatureGatesValidationWebhook(unittest.TestCase):
         # DotMap returns an empty DotMap for missing keys; .kind.kind.lower() would
         # AttributeError and lock ModuleConfig edits under failurePolicy:Fail.
         ctx = DotMap({"review": {"request": {}}})
-        self.assertIsNone(validate(ctx))
+        self.assertEqual(validate(ctx), (None, True))
+
+    def test_internal_error_is_a_denial_that_names_the_webhook(self):
+        # A ModuleConfig whose spec is not an object makes the check raise; the denial keeps the
+        # text of the module hook it replaced.
+        ctx = _prepare_mc_validation_binding_context(None, None)
+        ctx.review.request.object.spec = "not an object"
+        out = hook.testrun(main, [ctx])
+        tests.assert_validation_deny(
+            self, out,
+            "internal error in the kubernetesVersion feature gates webhook: 'str' object has no attribute 'get'",
+        )
 
 
 def _prepare_mc_validation_binding_context(
@@ -384,8 +396,9 @@ def _prepare_mc_validation_binding_context(
         encoded_config = base64.b64encode(cluster_config_yaml.encode('utf-8')).decode('utf-8')
         encoded_default_version = base64.b64encode(cc_default_version.encode('utf-8')).decode('utf-8')
 
+        # {"data": .data} of the Secret.
         secret_snapshot = [DotMap({
-            "object": {
+            "filterResult": {
                 "data": {
                     "cluster-configuration.yaml": encoded_config,
                     "deckhouseDefaultKubernetesVersion": encoded_default_version
@@ -397,8 +410,9 @@ def _prepare_mc_validation_binding_context(
         ctx.snapshots[CLUSTER_CONFIG_SNAPSHOT_NAME] = []
 
     if cm_automatic_version is not None:
+        # {"data": {"spec": .data.spec}} of the ConfigMap.
         ctx.snapshots[CLUSTER_KUBERNETES_SNAPSHOT_NAME] = [DotMap({
-            "object": {
+            "filterResult": {
                 "data": {
                     "spec": yaml.dump({"automaticVersion": cm_automatic_version}),
                 }

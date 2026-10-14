@@ -1,5 +1,3 @@
-#!/usr/bin/python3
-
 # Copyright 2025 Flant JSC
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -14,90 +12,14 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import base64
-import logging
-import re
-import yaml
-from typing import Optional, List
-from deckhouse import hook
+# handler.python of the ValidationWebhook cpm-moduleconfig-feature-gates in
+# templates/feature-gates-validation-webhooks.yaml. The operator template provides the imports and
+# main; the ValidationWebhook puts feature_gates_generated.py (is_forbidden, is_deprecated,
+# exists_in_component) and k8s_version_common.py (the kubernetesVersion helpers) before this file.
+
+from typing import List, Optional
+
 from dotmap import DotMap
-
-from feature_gates_generated import exists_in_component, is_forbidden, is_deprecated
-
-from k8s_version_common import (
-    AUTOMATIC_VERSION,
-    CLUSTER_CONFIG_SNAPSHOT_NAME,
-    CLUSTER_KUBERNETES_SNAPSHOT_NAME,
-    DEFAULT_VERSION,
-    VERSION_RE,
-    get_cluster_configuration_secret_data,
-    get_deckhouse_default_version_from_configmap,
-    get_deckhouse_default_version_from_secret,
-    get_k8s_version_from_cluster_config,
-    is_cluster_configuration_pinned,
-    is_module_config_track_default,
-    usable_declared_version,
-)
-
-config = f"""
-configVersion: v1
-kubernetesValidating:
-- name: cpm-moduleconfig-feature-gates.deckhouse.io
-  group: main
-  includeSnapshotsFrom: ["{CLUSTER_CONFIG_SNAPSHOT_NAME}", "{CLUSTER_KUBERNETES_SNAPSHOT_NAME}"]
-  matchConditions:
-  - name: "only-control-plane-manager-module"
-    expression: 'request.name == "control-plane-manager"'
-  rules:
-  - apiGroups:   ["deckhouse.io"]
-    apiVersions: ["*"]
-    operations:  ["CREATE", "UPDATE"]
-    resources:   ["moduleconfigs"]
-    scope:       "Cluster"
-
-kubernetes:
-- name: {CLUSTER_CONFIG_SNAPSHOT_NAME}
-  apiVersion: v1
-  kind: Secret
-  namespace:
-    nameSelector:
-      matchNames:
-      - kube-system
-  nameSelector:
-    matchNames:
-    - d8-cluster-configuration
-  executeHookOnEvent: []
-  executeHookOnSynchronization: true
-  keepFullObjectsInMemory: true
-
-# spec.automaticVersion of this ConfigMap is what "Default" resolves to for the running Deckhouse
-# build. It replaces deckhouseDefaultKubernetesVersion in the Secret above, which was only ever
-# raised and therefore kept answering with a default that no longer exists after a Deckhouse
-# downgrade. The Secret key stays as a fallback for the window before update-observer first writes
-# this object. Kept in step with the same snapshot in k8s_version_feature_gates.py.
-- name: {CLUSTER_KUBERNETES_SNAPSHOT_NAME}
-  apiVersion: v1
-  kind: ConfigMap
-  namespace:
-    nameSelector:
-      matchNames:
-      - kube-system
-  nameSelector:
-    matchNames:
-    - d8-cluster-kubernetes
-  executeHookOnEvent: []
-  executeHookOnSynchronization: true
-  keepFullObjectsInMemory: true
-"""
-
-
-def main(ctx: hook.Context):
-    try:
-        binding_context = DotMap(ctx.binding_context)
-        warnings = validate(binding_context)
-        ctx.output.validations.allow(*warnings)
-    except Exception as e:
-        ctx.output.validations.error(str(e))
 
 
 def get_k8s_version(ctx: DotMap) -> Optional[str]:
@@ -137,7 +59,12 @@ def get_k8s_version(ctx: DotMap) -> Optional[str]:
     return deckhouse_default()
 
 
-def validate(ctx: DotMap) -> List[str]:
+def validate(ctx: DotMap) -> tuple[List[str], bool]:
+    # Allowed always; each warning stays a separate warning of the admission response.
+    return collect_warnings(ctx), True
+
+
+def collect_warnings(ctx: DotMap) -> List[str]:
     req = ctx.review.request
     
     k8s_version = get_k8s_version(ctx)
@@ -175,6 +102,3 @@ def validate(ctx: DotMap) -> List[str]:
     
     return warnings
 
-
-if __name__ == "__main__":
-    hook.run(main, config=config)
