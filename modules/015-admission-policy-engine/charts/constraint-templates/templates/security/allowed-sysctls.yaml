@@ -69,11 +69,16 @@ spec:
 
               violation contains {"msg": msg, "details": object.union(result.detail, {"field": "sysctls"})} if {
                   not input.review.operation == "DELETE"
-                  sysctl := pod_spec.securityContext.sysctls[_].name
+                  pod_sysctl := pod_spec.securityContext.sysctls[_]
+                  sysctl := pod_sysctl.name
                   labels := object_labels
                   namespace := object_namespace
                   spe := resolve_spe_from_labels(labels, namespace)
-                  spe_allowed := allowed_values_or_empty(spe, ["spec", "securityContext", "sysctls", "allowedValues"])
+                  spe_entries := allowed_values_or_empty(spe, ["spec", "securityContext", "sysctls", "allowedValues"])
+                  # SecurityPolicyException lists sysctls as {name, value} objects. An entry
+                  # covers the sysctl by its name, and only with the same value when the
+                  # entry sets a non-empty one.
+                  spe_allowed := [entry.name | entry := spe_entries[_]; spe_entry_value_matches(entry, pod_sysctl)]
                   # Both fields are optional at the CR/values level (allowedSysctls and
                   # forbiddenSysctls are independently set). input.parameters.allowedSysctls
                   # (or .forbiddenSysctls) is *undefined*, not an empty array, when the key is
@@ -102,4 +107,14 @@ spec:
                   )
                   not result.allowed
                   msg := sprintf("The sysctl is not allowed, %v: %v. | %v", [review_kind, input.review.object.metadata.name, result.msg])
+              }
+
+              # An entry without a value and an entry with an empty value cover any value.
+              spe_entry_value_matches(entry, pod_sysctl) if {
+                  object.get(entry, "value", null) in {null, ""}
+              }
+
+              spe_entry_value_matches(entry, pod_sysctl) if {
+                  not object.get(entry, "value", null) in {null, ""}
+                  entry.value == object.get(pod_sysctl, "value", null)
               }

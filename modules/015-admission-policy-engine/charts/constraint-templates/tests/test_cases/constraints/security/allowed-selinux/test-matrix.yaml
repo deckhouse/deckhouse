@@ -199,6 +199,84 @@ spec:
               securityContext:
                 seLinuxOptions:
                   type: spc_t
+    # PSS baseline lets the level take any value and the type stay unset.
+    - name: allowed-level-only-securitycontext-container
+      violations: 'no'
+      assertionMessage: ''
+      fields:
+      - path: spec.containers[].securityContext.seLinuxOptions
+        scenario: positive
+      exception: ''
+      exceptionRef: ''
+      object:
+        base: admissionPod
+        merge:
+          metadata:
+            name: allowed-level-only-securitycontext-container
+          spec:
+            containers:
+            - image: nginx
+              name: nginx
+              securityContext:
+                seLinuxOptions:
+                  level: s0:c123,c456
+    - name: allowed-container-t-with-level-securitycontext-pod
+      violations: 'no'
+      assertionMessage: ''
+      fields:
+      - path: spec.securityContext.seLinuxOptions
+        scenario: positive
+      exception: ''
+      exceptionRef: ''
+      object:
+        base: admissionPod
+        merge:
+          metadata:
+            name: allowed-container-t-with-level-securitycontext-pod
+          spec:
+            securityContext:
+              seLinuxOptions:
+                type: container_t
+                level: s0:c123,c456
+    # PSS baseline forbids setting the user and the role.
+    - name: disallowed-user-securitycontext-container
+      violations: 'yes'
+      assertionMessage: ''
+      fields:
+      - path: spec.containers[].securityContext.seLinuxOptions
+        scenario: negative
+      exception: ''
+      exceptionRef: ''
+      object:
+        base: admissionPod
+        merge:
+          metadata:
+            name: disallowed-user-securitycontext-container
+          spec:
+            containers:
+            - image: nginx
+              name: nginx
+              securityContext:
+                seLinuxOptions:
+                  type: container_t
+                  user: system_u
+    - name: disallowed-role-securitycontext-pod
+      violations: 'yes'
+      assertionMessage: ''
+      fields:
+      - path: spec.securityContext.seLinuxOptions
+        scenario: negative
+      exception: ''
+      exceptionRef: ''
+      object:
+        base: admissionPod
+        merge:
+          metadata:
+            name: disallowed-role-securitycontext-pod
+          spec:
+            securityContext:
+              seLinuxOptions:
+                role: system_r
   - name: security-policy
     gatorBlock: security-policy
     defaultObjectBase: ''
@@ -532,6 +610,40 @@ spec:
                   role: customrole
                   type: customtype
                   user: customuser
+    # An exception for a type does not cover a user it does not list.
+    - name: disallowed-by-exception-unlisted-user
+      violations: 'yes'
+      assertionMessage: ''
+      fields:
+      - path: spec.securityContext.seLinuxOptions.allowedValues
+        scenario: speMismatch
+      exception: ''
+      exceptionRef: ''
+      inventory:
+      - base: securityPolicyException
+        merge:
+          metadata:
+            name: allow-spc-t
+          spec:
+            securityContext:
+              seLinuxOptions:
+                allowedValues:
+                - type: spc_t
+      object:
+        base: admissionPod
+        merge:
+          metadata:
+            labels:
+              security.deckhouse.io/security-policy-exception: allow-spc-t
+            name: disallowed-by-exception-unlisted-user
+          spec:
+            containers:
+            - image: nginx
+              name: nginx
+              securityContext:
+                seLinuxOptions:
+                  type: spc_t
+                  user: system_u
     - name: 037-disallowed-no-exception-label
       violations: 'yes'
       assertionMessage: ''
@@ -602,8 +714,7 @@ spec:
         merge:
           metadata:
             name: empty-spec
-          spec:
-            test: test
+          spec: {}
       object:
         base: admissionPod
         merge:

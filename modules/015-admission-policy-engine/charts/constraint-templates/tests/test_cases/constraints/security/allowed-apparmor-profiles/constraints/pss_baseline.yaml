@@ -23,7 +23,5 @@ spec:
             - restricted
   parameters:
     allowedProfiles:
-      - RuntimeDefault
-      - Localhost
-    allowedLocalhostFiles:
-      - "*"
+      - runtime/default
+      - localhost/*

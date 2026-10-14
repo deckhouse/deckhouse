@@ -277,8 +277,7 @@ spec:
               merge:
                 metadata:
                   name: empty-spec
-                spec:
-                  test: test
+                spec: {}
           object:
             base: admissionPod
             merge:
@@ -286,38 +285,6 @@ spec:
                 labels:
                   security.deckhouse.io/security-policy-exception: empty-spec
                 name: disallowed-by-exception-empty-spec
-              spec:
-                containers:
-                  - image: nginx
-                    name: nginx
-                    securityContext:
-                      privileged: true
-        - name: 026-allowed-by-exception-multi-value-second-matches
-          violations: "no"
-          assertionMessage: ""
-          fields:
-            - path: spec.securityContext.privileged.allowedValue
-              scenario: speMultiValue
-          exception: ""
-          exceptionRef: ""
-          inventory:
-            - base: securityPolicyException
-              merge:
-                metadata:
-                  name: allow-privileged-multi
-                spec:
-                  securityContext:
-                    privileged:
-                      allowedValue:
-                        - false
-                        - true
-          object:
-            base: admissionPod
-            merge:
-              metadata:
-                labels:
-                  security.deckhouse.io/security-policy-exception: allow-privileged-multi
-                name: allowed-by-exception-multi-value-second-matches
               spec:
                 containers:
                   - image: nginx

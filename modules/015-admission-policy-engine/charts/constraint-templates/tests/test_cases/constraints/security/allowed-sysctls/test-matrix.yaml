@@ -302,7 +302,7 @@ spec:
             securityContext:
               sysctls:
                 allowedValues:
-                - net.core.rmem_max
+                - name: net.core.rmem_max
       object:
         base: admissionPod
         merge:
@@ -315,6 +315,101 @@ spec:
               sysctls:
               - name: net.core.rmem_max
                 value: '16777216'
+    # An SPE entry with a value covers the sysctl only when the value matches.
+    - name: allowed-by-exception-sysctl-value-match
+      violations: 'no'
+      assertionMessage: ''
+      fields:
+      - path: spec.securityContext.sysctls.allowedValues
+        scenario: speMatch
+      exception: ''
+      exceptionRef: ''
+      inventory:
+      - base: securityPolicyException
+        merge:
+          metadata:
+            name: allow-net-core-rmem-max-value
+          spec:
+            securityContext:
+              sysctls:
+                allowedValues:
+                - name: net.core.rmem_max
+                  value: '16777216'
+      object:
+        base: admissionPod
+        merge:
+          metadata:
+            labels:
+              security.deckhouse.io/security-policy-exception: allow-net-core-rmem-max-value
+            name: allowed-by-exception-sysctl-value-match
+          spec:
+            securityContext:
+              sysctls:
+              - name: net.core.rmem_max
+                value: '16777216'
+    # An empty value means the same as no value: any value is covered.
+    - name: allowed-by-exception-sysctl-empty-value
+      violations: 'no'
+      assertionMessage: ''
+      fields:
+      - path: spec.securityContext.sysctls.allowedValues
+        scenario: speMatch
+      exception: ''
+      exceptionRef: ''
+      inventory:
+      - base: securityPolicyException
+        merge:
+          metadata:
+            name: allow-net-core-rmem-max-any-value
+          spec:
+            securityContext:
+              sysctls:
+                allowedValues:
+                - name: net.core.rmem_max
+                  value: ''
+      object:
+        base: admissionPod
+        merge:
+          metadata:
+            labels:
+              security.deckhouse.io/security-policy-exception: allow-net-core-rmem-max-any-value
+            name: allowed-by-exception-sysctl-empty-value
+          spec:
+            securityContext:
+              sysctls:
+              - name: net.core.rmem_max
+                value: '33554432'
+    - name: disallowed-by-exception-sysctl-value-mismatch
+      violations: 'yes'
+      assertionMessage: ''
+      fields:
+      - path: spec.securityContext.sysctls.allowedValues
+        scenario: speMismatch
+      exception: ''
+      exceptionRef: ''
+      inventory:
+      - base: securityPolicyException
+        merge:
+          metadata:
+            name: allow-net-core-rmem-max-value
+          spec:
+            securityContext:
+              sysctls:
+                allowedValues:
+                - name: net.core.rmem_max
+                  value: '16777216'
+      object:
+        base: admissionPod
+        merge:
+          metadata:
+            labels:
+              security.deckhouse.io/security-policy-exception: allow-net-core-rmem-max-value
+            name: disallowed-by-exception-sysctl-value-mismatch
+          spec:
+            securityContext:
+              sysctls:
+              - name: net.core.rmem_max
+                value: '33554432'
     - name: 024-026-allowed-by-exception-forbidden-sysctl
       violations: 'no'
       assertionMessage: ''
@@ -332,7 +427,7 @@ spec:
             securityContext:
               sysctls:
                 allowedValues:
-                - net.fake.sysctl
+                - name: net.fake.sysctl
       object:
         base: admissionPod
         merge:
@@ -362,7 +457,7 @@ spec:
             securityContext:
               sysctls:
                 allowedValues:
-                - net.core.rmem_max
+                - name: net.core.rmem_max
       object:
         base: admissionPod
         merge:
@@ -392,7 +487,7 @@ spec:
             securityContext:
               sysctls:
                 allowedValues:
-                - net.core.rmem_max
+                - name: net.core.rmem_max
       object:
         base: admissionPod
         merge:
@@ -440,7 +535,7 @@ spec:
             securityContext:
               sysctls:
                 allowedValues:
-                - net.core.rmem_max
+                - name: net.core.rmem_max
       object:
         base: admissionPod
         merge:
@@ -478,9 +573,9 @@ spec:
             securityContext:
               sysctls:
                 allowedValues:
-                - net.core.rmem_max
-                - kernel.msgmax
-                - net.core.wmem_max
+                - name: net.core.rmem_max
+                - name: kernel.msgmax
+                - name: net.core.wmem_max
       object:
         base: admissionPod
         merge:
@@ -512,7 +607,7 @@ spec:
             securityContext:
               sysctls:
                 allowedValues:
-                - net.core.rmem_max
+                - name: net.core.rmem_max
       object:
         base: admissionPod
         merge:
@@ -538,8 +633,7 @@ spec:
         merge:
           metadata:
             name: empty-spec
-          spec:
-            test: test
+          spec: {}
       object:
         base: admissionPod
         merge:
@@ -618,7 +712,7 @@ spec:
             securityContext:
               sysctls:
                 allowedValues:
-                - net.ipv4.ip_forward
+                - name: net.ipv4.ip_forward
       object:
         base: admissionDeployment
         merge:
@@ -658,7 +752,7 @@ spec:
             securityContext:
               sysctls:
                 allowedValues:
-                - net.ipv4.ip_forward
+                - name: net.ipv4.ip_forward
       object:
         base: admissionDeployment
         merge:

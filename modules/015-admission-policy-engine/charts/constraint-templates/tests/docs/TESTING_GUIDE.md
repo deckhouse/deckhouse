@@ -347,6 +347,8 @@ Key points for `SPE` cases:
 - The Pod must have the label `security.deckhouse.io/security-policy-exception: <exception-name>`
 - The exception name in the label must match the SPE `metadata.name`
 - `SPE` inventory uses `base: securityPolicyException` with a `merge` patch
+- `constraint_testgen generate` validates every `SPE` in the inventory against the CRD and fails on an object the API server would reject or on a field it would drop as undeclared
+- `constraints/pss_baseline.yaml` and `constraints/pss_restricted.yaml` carry the same `parameters` as the constraints the module renders; the `template_tests` Go test fails when they differ
 
 ### Real example (operation constraint — allowed-repos)
 

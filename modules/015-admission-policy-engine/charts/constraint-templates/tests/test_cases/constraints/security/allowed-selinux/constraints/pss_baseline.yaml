@@ -34,6 +34,7 @@ spec:
         - restricted
   parameters:
     allowedSELinuxOptions:
+    - type: ""
     - type: container_t
     - type: container_init_t
     - type: container_kvm_t

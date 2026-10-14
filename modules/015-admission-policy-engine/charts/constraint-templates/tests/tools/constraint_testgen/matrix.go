@@ -205,6 +205,10 @@ func generateFromMatrix(matrixPath, testsRoot string) error {
 		suite.Tests = append(suite.Tests, tb)
 	}
 
+	if err := validateSuiteSPEInventory(suite, baseDir, matrixDir); err != nil {
+		return err
+	}
+
 	buf := bytes.NewBufferString(generatedHeader)
 	enc := yaml.NewEncoder(buf)
 	enc.SetIndent(2)

@@ -85,17 +85,20 @@ spec:
               violation contains {"msg": msg, "details": object.union(result.detail, {"container": container.name, "field": "appArmorProfile"})} if {
                 not input.review.operation == "DELETE"
                 container := input_containers[_]
+                # The order follows the kubelet: the container field, then the container
+                # annotation, which static pods may still carry without the field, then the
+                # pod field.
                 sources := [
-                  {"type": "container_field", "path": ["securityContext", "appArmorProfile", "type"]},
+                  {"type": "container_field", "path": ["securityContext", "appArmorProfile"]},
                   {"type": "annotation", "key": sprintf("container.apparmor.security.beta.kubernetes.io/%v", [container.name])},
-                  {"type": "pod_field", "path": ["spec", "securityContext", "appArmorProfile", "type"]}
+                  {"type": "pod_field", "path": ["spec", "securityContext", "appArmorProfile"]}
                 ]
                 normalized_obj := {
                   "metadata": effective_metadata,
                   "spec": pod_spec,
                 }
                 raw_profile := resolve_from_sources(normalized_obj, container, sources)
-                profile := normalize(raw_profile, apparmor_translation)
+                profile := apparmor_profile(raw_profile)
                 labels := object_labels
                 exception := resolve_spe_for_container(container, labels, object_namespace)
                 spe_allowed := allowed_values_or_empty(exception, ["spec", "securityContext", "appArmorProfile", "allowedValues"])
@@ -104,4 +107,29 @@ spec:
                 result := check_value_with_glob(profile, allowed, spe_allowed_expanded)
                 not result.allowed
                 msg := violation_message("AppArmor profile is not allowed", sprintf("%v: %v, container: %v", [review_kind, input.review.object.metadata.name, container.name]), result.detail)
+              }
+
+              # An annotation holds the profile as a string: runtime/default, unconfined
+              # or localhost/<profile>.
+              apparmor_profile(raw) := normalize(raw, apparmor_translation) if {
+                is_string(raw)
+              }
+
+              # A securityContext field holds an object. A Localhost profile is matched
+              # as localhost/<localhostProfile>, the same value its annotation carries,
+              # so that a policy or an exception for a particular profile covers both forms.
+              apparmor_profile(raw) := sprintf("localhost/%v", [name]) if {
+                is_object(raw)
+                name := localhost_profile_name(raw)
+              }
+
+              apparmor_profile(raw) := normalize(object.get(raw, "type", null), apparmor_translation) if {
+                is_object(raw)
+                not localhost_profile_name(raw)
+              }
+
+              localhost_profile_name(raw) := name if {
+                raw.type == "Localhost"
+                name := object.get(raw, "localhostProfile", "")
+                name != ""
               }

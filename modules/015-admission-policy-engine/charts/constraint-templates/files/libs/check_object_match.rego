@@ -5,27 +5,32 @@
 #
 # Usage:
 # - check_partial_match_in_list(actual_obj, allowed_list, match_fields, spe_allowed_list)
-# match_fields is a list of keys to compare; empty string in a pattern field is a wildcard.
+# - check_partial_match_in_list_with_wildcards(actual_obj, allowed_list, match_fields, wildcard_fields, spe_allowed_list)
+# match_fields is a list of keys to compare. A field the object leaves unset or
+# empty always matches. A field the object sets must equal the same field of the
+# pattern, so a pattern does not allow a field it omits or leaves empty.
+# wildcard_fields lists the fields that a pattern leaving them unset or empty
+# allows with any value.
 # Returns: {"allowed": bool, "msg": string, "detail": object}
 # =============================================================================
 package lib.check_object_match
 
-import data.lib.object.partial_match
+check_partial_match_in_list(actual_obj, allowed_list, match_fields, spe_allowed_list) := check_partial_match_in_list_with_wildcards(actual_obj, allowed_list, match_fields, [], spe_allowed_list)
 
-check_partial_match_in_list(actual_obj, allowed_list, match_fields, spe_allowed_list) := result if {
-  allowed_list_match(actual_obj, allowed_list, match_fields)
+check_partial_match_in_list_with_wildcards(actual_obj, allowed_list, match_fields, wildcard_fields, spe_allowed_list) := result if {
+  list_match(actual_obj, allowed_list, match_fields, wildcard_fields)
   result := {"allowed": true, "msg": "", "detail": {}}
 }
 
-check_partial_match_in_list(actual_obj, allowed_list, match_fields, spe_allowed_list) := result if {
-  not allowed_list_match(actual_obj, allowed_list, match_fields)
-  spe_allowed_list_match(actual_obj, spe_allowed_list, match_fields)
+check_partial_match_in_list_with_wildcards(actual_obj, allowed_list, match_fields, wildcard_fields, spe_allowed_list) := result if {
+  not list_match(actual_obj, allowed_list, match_fields, wildcard_fields)
+  list_match(actual_obj, spe_allowed_list, match_fields, wildcard_fields)
   result := {"allowed": true, "msg": "", "detail": {}}
 }
 
-check_partial_match_in_list(actual_obj, allowed_list, match_fields, spe_allowed_list) := result if {
-  not allowed_list_match(actual_obj, allowed_list, match_fields)
-  not spe_allowed_list_match(actual_obj, spe_allowed_list, match_fields)
+check_partial_match_in_list_with_wildcards(actual_obj, allowed_list, match_fields, wildcard_fields, spe_allowed_list) := result if {
+  not list_match(actual_obj, allowed_list, match_fields, wildcard_fields)
+  not list_match(actual_obj, spe_allowed_list, match_fields, wildcard_fields)
   msg := sprintf("Object %v does not match allowed list %v", [actual_obj, allowed_list])
   result := {
     "allowed": false,
@@ -40,34 +45,23 @@ check_partial_match_in_list(actual_obj, allowed_list, match_fields, spe_allowed_
   }
 }
 
-allowed_list_match(actual_obj, allowed_list, match_fields) if {
-  allowed := allowed_list[_]
-  partial_match_with_empty_wildcards(allowed, actual_obj, match_fields)
-}
-
-spe_allowed_list_match(actual_obj, spe_allowed_list, match_fields) if {
-  allowed := spe_allowed_list[_]
-  partial_match_with_empty_wildcards(allowed, actual_obj, match_fields)
-}
-
-partial_match_with_empty_wildcards(pattern, obj, fields) if {
-  every f in fields {
-    field_matches(pattern, obj, f)
+list_match(actual_obj, patterns, match_fields, wildcard_fields) if {
+  pattern := patterns[_]
+  every f in match_fields {
+    field_matches(pattern, actual_obj, f, wildcard_fields)
   }
 }
 
-field_matches(pattern, obj, f) if {
-  not has_field(pattern, f)
+field_matches(pattern, obj, f, wildcard_fields) if {
+  object.get(obj, f, "") == ""
 }
 
-field_matches(pattern, obj, f) if {
-  pattern[f] == ""
+field_matches(pattern, obj, f, wildcard_fields) if {
+  object.get(obj, f, "") != ""
+  object.get(pattern, f, "") == obj[f]
 }
 
-field_matches(pattern, obj, f) if {
-  pattern[f] == obj[f]
-}
-
-has_field(obj, field) if {
-  object.get(obj, field, {"__missing__": true}) != {"__missing__": true}
+field_matches(pattern, obj, f, wildcard_fields) if {
+  f in wildcard_fields
+  object.get(pattern, f, "") == ""
 }

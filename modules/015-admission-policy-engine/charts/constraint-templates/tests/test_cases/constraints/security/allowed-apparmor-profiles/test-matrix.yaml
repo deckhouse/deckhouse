@@ -477,6 +477,104 @@ spec:
               securityContext:
                 appArmorProfile:
                   type: RuntimeDefault
+    # A Localhost profile set through securityContext is matched as
+    # localhost/<localhostProfile>, the same way as the annotation form.
+    - name: allowed-by-exception-localhost-profile-securitycontext
+      violations: 'no'
+      assertionMessage: ''
+      fields:
+      - path: spec.securityContext.appArmorProfile.allowedValues
+        scenario: speMatch
+      exception: ''
+      exceptionRef: ''
+      inventory:
+      - base: securityPolicyException
+        merge:
+          metadata:
+            name: allow-localhost-profile
+          spec:
+            securityContext:
+              appArmorProfile:
+                allowedValues:
+                - localhost/my-profile
+      object:
+        base: admissionPod
+        merge:
+          metadata:
+            labels:
+              security.deckhouse.io/security-policy-exception: allow-localhost-profile
+            name: allowed-by-exception-localhost-profile-securitycontext
+          spec:
+            containers:
+            - image: nginx
+              name: nginx
+              securityContext:
+                appArmorProfile:
+                  type: Localhost
+                  localhostProfile: my-profile
+    - name: allowed-by-exception-localhost-profile-pod-securitycontext
+      violations: 'no'
+      assertionMessage: ''
+      fields:
+      - path: spec.securityContext.appArmorProfile.allowedValues
+        scenario: speMatch
+      exception: ''
+      exceptionRef: ''
+      inventory:
+      - base: securityPolicyException
+        merge:
+          metadata:
+            name: allow-any-localhost-profile
+          spec:
+            securityContext:
+              appArmorProfile:
+                allowedValues:
+                - localhost/*
+      object:
+        base: admissionPod
+        merge:
+          metadata:
+            labels:
+              security.deckhouse.io/security-policy-exception: allow-any-localhost-profile
+            name: allowed-by-exception-localhost-profile-pod-securitycontext
+          spec:
+            securityContext:
+              appArmorProfile:
+                type: Localhost
+                localhostProfile: my-profile
+    - name: disallowed-by-exception-other-localhost-profile-securitycontext
+      violations: 'yes'
+      assertionMessage: ''
+      fields:
+      - path: spec.securityContext.appArmorProfile.allowedValues
+        scenario: speMismatch
+      exception: ''
+      exceptionRef: ''
+      inventory:
+      - base: securityPolicyException
+        merge:
+          metadata:
+            name: allow-localhost-profile
+          spec:
+            securityContext:
+              appArmorProfile:
+                allowedValues:
+                - localhost/my-profile
+      object:
+        base: admissionPod
+        merge:
+          metadata:
+            labels:
+              security.deckhouse.io/security-policy-exception: allow-localhost-profile
+            name: disallowed-by-exception-other-localhost-profile-securitycontext
+          spec:
+            containers:
+            - image: nginx
+              name: nginx
+              securityContext:
+                appArmorProfile:
+                  type: Localhost
+                  localhostProfile: other-profile
     - name: 015-025-disallowed-by-exception-profile-mismatch-restrictive
       violations: 'yes'
       assertionMessage: ''
@@ -583,8 +681,7 @@ spec:
         merge:
           metadata:
             name: empty-spec
-          spec:
-            test: test
+          spec: {}
       object:
         base: admissionPod
         merge:

@@ -347,6 +347,8 @@ cases:
 - Pod должен иметь лейбл `security.deckhouse.io/security-policy-exception: <имя-исключения>`
 - Имя исключения в лейбле должно совпадать с `metadata.name` SPE
 - SPE inventory использует `base: securityPolicyException` с патчем `merge`
+- `constraint_testgen generate` проверяет каждый SPE из inventory по схеме CRD и завершается ошибкой, если API-сервер отклонил бы объект или отбросил бы поле, не описанное в схеме
+- `constraints/pss_baseline.yaml` и `constraints/pss_restricted.yaml` содержат те же `parameters`, что и constraint, который рендерит модуль; Go-тест в `template_tests` завершается ошибкой, если они расходятся
 
 ### Реальный пример (операционный constraint — allowed-repos)
 

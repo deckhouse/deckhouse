@@ -10,7 +10,6 @@
 # =============================================================================
 package lib.check_path
 
-import data.lib.common.has_field
 import data.lib.path.path_matches
 
 check_hostpath_allowed(volume, allowed_paths, containers, spe_allowed_paths) := result if {
@@ -61,30 +60,30 @@ writeable_input_volume_mounts(volume_name, containers) if {
   not mount.readOnly
 }
 
+# An exception with readOnly: false, the CRD default, allows the path with any
+# mounts. An exception with readOnly: true allows it only when the volume is
+# read-only in every container.
 input_hostpath_allowed_exact(allowedPaths, volume, containers) if {
   allowedHostPath := allowedPaths[_]
   allowedHostPath.path == volume.hostPath.path
-  volume_mount_readonly_matches(allowedHostPath.readOnly, volume.name, containers)
+  volume_mount_readonly_allowed(object.get(allowedHostPath, "readOnly", false), volume.name, containers)
 }
 
-volume_mount_readonly_matches(expectedReadOnly, volume_name, containers) if {
-  actualReadOnly := get_volume_mount_readonly(volume_name, containers)
-  actualReadOnly == expectedReadOnly
+volume_mount_readonly_allowed(false, volume_name, containers)
+
+volume_mount_readonly_allowed(true, volume_name, containers) if {
+  get_volume_mount_readonly(volume_name, containers)
 }
 
-get_volume_mount_readonly(volume_name, containers) := readOnly if {
-  container := containers[_]
-  mount := container.volumeMounts[_]
-  mount.name == volume_name
-  has_field(mount, "readOnly")
-  readOnly := mount.readOnly
+# A volume is read-only only when every container mounts it read-only. A volume
+# mounted read-only in one container and writable in another is writable.
+get_volume_mount_readonly(volume_name, containers) := true if {
+  volume_mount_exists(volume_name, containers)
+  not writeable_input_volume_mounts(volume_name, containers)
 }
 
 get_volume_mount_readonly(volume_name, containers) := false if {
-  container := containers[_]
-  mount := container.volumeMounts[_]
-  mount.name == volume_name
-  not has_field(mount, "readOnly")
+  writeable_input_volume_mounts(volume_name, containers)
 }
 
 get_volume_mount_readonly(volume_name, containers) := false if {

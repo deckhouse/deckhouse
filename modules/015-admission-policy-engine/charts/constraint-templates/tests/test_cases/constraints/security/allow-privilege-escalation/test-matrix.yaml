@@ -335,8 +335,7 @@ spec:
               merge:
                 metadata:
                   name: empty-spec
-                spec:
-                  test: test
+                spec: {}
           object:
             base: admissionPod
             merge:

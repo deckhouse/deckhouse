@@ -508,6 +508,133 @@ spec:
             - hostPath:
                 path: /proc/etc
               name: proc-volume
+    # A volume mounted read-only in one container and writable in another is
+    # writable: an exception with readOnly: false covers it.
+    - name: allowed-by-exception-mixed-readonly-mounts-readwrite
+      violations: 'no'
+      assertionMessage: ''
+      fields:
+      - path: spec.volumes.hostPath.allowedValues
+        scenario: speMatch
+      exception: ''
+      exceptionRef: ''
+      inventory:
+      - base: securityPolicyException
+        merge:
+          metadata:
+            name: allow-proc-etc
+          spec:
+            volumes:
+              hostPath:
+                allowedValues:
+                - path: /proc/etc
+                  readOnly: false
+      object:
+        base: admissionPod
+        merge:
+          metadata:
+            labels:
+              security.deckhouse.io/security-policy-exception: allow-proc-etc
+            name: allowed-by-exception-mixed-readonly-mounts-readwrite
+          spec:
+            containers:
+            - image: nginx
+              name: nginx
+              volumeMounts:
+              - mountPath: /host-proc
+                name: proc-volume
+                readOnly: true
+            - image: nginx
+              name: writer
+              volumeMounts:
+              - mountPath: /host-proc
+                name: proc-volume
+            volumes:
+            - hostPath:
+                path: /proc/etc
+              name: proc-volume
+    # readOnly: false is the CRD default and allows the path with read-only mounts too.
+    - name: allowed-by-exception-default-readonly-covers-readonly-mounts
+      violations: 'no'
+      assertionMessage: ''
+      fields:
+      - path: spec.volumes.hostPath.allowedValues
+        scenario: speMatch
+      exception: ''
+      exceptionRef: ''
+      inventory:
+      - base: securityPolicyException
+        merge:
+          metadata:
+            name: allow-proc-etc-default
+          spec:
+            volumes:
+              hostPath:
+                allowedValues:
+                - path: /proc/etc
+      object:
+        base: admissionPod
+        merge:
+          metadata:
+            labels:
+              security.deckhouse.io/security-policy-exception: allow-proc-etc-default
+            name: allowed-by-exception-default-readonly-covers-readonly-mounts
+          spec:
+            containers:
+            - image: nginx
+              name: nginx
+              volumeMounts:
+              - mountPath: /host-proc
+                name: proc-volume
+                readOnly: true
+            volumes:
+            - hostPath:
+                path: /proc/etc
+              name: proc-volume
+    - name: disallowed-by-exception-mixed-readonly-mounts-readonly
+      violations: 'yes'
+      assertionMessage: ''
+      fields:
+      - path: spec.volumes.hostPath.allowedValues
+        scenario: speMismatch
+      exception: ''
+      exceptionRef: ''
+      inventory:
+      - base: securityPolicyException
+        merge:
+          metadata:
+            name: allow-proc-etc-ro
+          spec:
+            volumes:
+              hostPath:
+                allowedValues:
+                - path: /proc/etc
+                  readOnly: true
+      object:
+        base: admissionPod
+        merge:
+          metadata:
+            labels:
+              security.deckhouse.io/security-policy-exception: allow-proc-etc-ro
+            name: disallowed-by-exception-mixed-readonly-mounts-readonly
+          spec:
+            containers:
+            - image: nginx
+              name: nginx
+              volumeMounts:
+              - mountPath: /host-proc
+                name: proc-volume
+                readOnly: true
+            - image: nginx
+              name: writer
+              volumeMounts:
+              - mountPath: /host-proc
+                name: proc-volume
+                readOnly: false
+            volumes:
+            - hostPath:
+                path: /proc/etc
+              name: proc-volume
     - name: 016-022-disallowed-by-exception-path-mismatch
       violations: 'yes'
       assertionMessage: ''
@@ -546,6 +673,7 @@ spec:
             - hostPath:
                 path: /proc/other
               name: proc-volume
+    # An exception that allows the path read-only does not cover a writable mount.
     - name: 016-023-disallowed-by-exception-readonly-mismatch
       violations: 'yes'
       assertionMessage: ''
@@ -564,7 +692,7 @@ spec:
               hostPath:
                 allowedValues:
                 - path: /proc/etc
-                  readOnly: false
+                  readOnly: true
       object:
         base: admissionPod
         merge:
@@ -579,7 +707,7 @@ spec:
               volumeMounts:
               - mountPath: /host-proc
                 name: proc-volume
-                readOnly: true
+                readOnly: false
             volumes:
             - hostPath:
                 path: /proc/etc
@@ -665,8 +793,7 @@ spec:
         merge:
           metadata:
             name: empty-spec
-          spec:
-            test: test
+          spec: {}
       object:
         base: admissionPod
         merge:

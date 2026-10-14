@@ -1151,12 +1151,6 @@ spec:
         scenario: speMatch
       - path: spec.securityContext.runAsNonRoot.allowedValue
         scenario: speMatch
-      - path: spec.securityContext.runAsGroup.allowedValues
-        scenario: speMatch
-      - path: spec.securityContext.supplementalGroups.allowedValues
-        scenario: speMatch
-      - path: spec.securityContext.fsGroup.allowedValues
-        scenario: speMatch
       exception: ''
       exceptionRef: ''
       inventory:
@@ -1166,21 +1160,11 @@ spec:
             name: allow-root-user
           spec:
             securityContext:
-              fsGroup:
-                allowedValues:
-                - 10
-              runAsGroup:
-                allowedValues:
-                - 10
               runAsNonRoot:
                 allowedValue: false
               runAsUser:
                 allowedValues:
                 - 0
-              supplementalGroups:
-                allowedValues:
-                - 10
-                - 11
       object:
         base: admissionPod
         merge:
@@ -1206,12 +1190,6 @@ spec:
       fields:
       - path: spec.securityContext.runAsUser.allowedValues
         scenario: speMatch
-      - path: spec.securityContext.runAsGroup.allowedValues
-        scenario: speMatch
-      - path: spec.securityContext.supplementalGroups.allowedValues
-        scenario: speMatch
-      - path: spec.securityContext.fsGroup.allowedValues
-        scenario: speMatch
       exception: ''
       exceptionRef: ''
       inventory:
@@ -1221,20 +1199,10 @@ spec:
             name: allow-custom-user-range
           spec:
             securityContext:
-              fsGroup:
-                allowedValues:
-                - 50
-              runAsGroup:
-                allowedValues:
-                - 50
               runAsUser:
                 allowedValues:
                 - 1000
                 - 2000
-              supplementalGroups:
-                allowedValues:
-                - 50
-                - 75
       object:
         base: admissionPod
         merge:
@@ -1260,12 +1228,6 @@ spec:
       fields:
       - path: spec.securityContext.runAsUser.allowedValues
         scenario: speMismatch
-      - path: spec.securityContext.runAsGroup.allowedValues
-        scenario: speMismatch
-      - path: spec.securityContext.supplementalGroups.allowedValues
-        scenario: speMismatch
-      - path: spec.securityContext.fsGroup.allowedValues
-        scenario: speMismatch
       exception: ''
       exceptionRef: ''
       inventory:
@@ -1275,21 +1237,11 @@ spec:
             name: allow-root-user
           spec:
             securityContext:
-              fsGroup:
-                allowedValues:
-                - 10
-              runAsGroup:
-                allowedValues:
-                - 10
               runAsNonRoot:
                 allowedValue: false
               runAsUser:
                 allowedValues:
                 - 0
-              supplementalGroups:
-                allowedValues:
-                - 10
-                - 11
       object:
         base: admissionPod
         merge:
@@ -1314,12 +1266,6 @@ spec:
       fields:
       - path: spec.securityContext.runAsUser.allowedValues
         scenario: speMismatch
-      - path: spec.securityContext.runAsGroup.allowedValues
-        scenario: speMismatch
-      - path: spec.securityContext.supplementalGroups.allowedValues
-        scenario: speMismatch
-      - path: spec.securityContext.fsGroup.allowedValues
-        scenario: speMismatch
       exception: ''
       exceptionRef: ''
       inventory:
@@ -1329,21 +1275,11 @@ spec:
             name: allow-root-user
           spec:
             securityContext:
-              fsGroup:
-                allowedValues:
-                - 10
-              runAsGroup:
-                allowedValues:
-                - 10
               runAsNonRoot:
                 allowedValue: false
               runAsUser:
                 allowedValues:
                 - 0
-              supplementalGroups:
-                allowedValues:
-                - 10
-                - 11
       object:
         base: admissionPod
         merge:
@@ -1370,12 +1306,6 @@ spec:
         scenario: speContainerSpecific
       - path: spec.securityContext.runAsNonRoot.allowedValue
         scenario: speContainerSpecific
-      - path: spec.securityContext.runAsGroup.allowedValues
-        scenario: speContainerSpecific
-      - path: spec.securityContext.supplementalGroups.allowedValues
-        scenario: speContainerSpecific
-      - path: spec.securityContext.fsGroup.allowedValues
-        scenario: speContainerSpecific
       exception: ''
       exceptionRef: ''
       inventory:
@@ -1385,21 +1315,11 @@ spec:
             name: allow-root-user
           spec:
             securityContext:
-              fsGroup:
-                allowedValues:
-                - 10
-              runAsGroup:
-                allowedValues:
-                - 10
               runAsNonRoot:
                 allowedValue: false
               runAsUser:
                 allowedValues:
                 - 0
-              supplementalGroups:
-                allowedValues:
-                - 10
-                - 11
       object:
         base: admissionPod
         merge:
@@ -1435,12 +1355,6 @@ spec:
         scenario: speMismatch
       - path: spec.securityContext.runAsNonRoot.allowedValue
         scenario: speMismatch
-      - path: spec.securityContext.runAsGroup.allowedValues
-        scenario: speMatch
-      - path: spec.securityContext.supplementalGroups.allowedValues
-        scenario: speMatch
-      - path: spec.securityContext.fsGroup.allowedValues
-        scenario: speMatch
       exception: ''
       exceptionRef: ''
       inventory:
@@ -1450,21 +1364,11 @@ spec:
             name: allow-root-user
           spec:
             securityContext:
-              fsGroup:
-                allowedValues:
-                - 10
-              runAsGroup:
-                allowedValues:
-                - 10
               runAsNonRoot:
                 allowedValue: false
               runAsUser:
                 allowedValues:
                 - 0
-              supplementalGroups:
-                allowedValues:
-                - 10
-                - 11
       object:
         base: admissionPod
         merge:
@@ -1492,12 +1396,6 @@ spec:
         scenario: speAbsent
       - path: spec.securityContext.runAsNonRoot.allowedValue
         scenario: speAbsent
-      - path: spec.securityContext.runAsGroup.allowedValues
-        scenario: speAbsent
-      - path: spec.securityContext.supplementalGroups.allowedValues
-        scenario: speAbsent
-      - path: spec.securityContext.fsGroup.allowedValues
-        scenario: speAbsent
       exception: ''
       exceptionRef: ''
       object:
@@ -1522,12 +1420,6 @@ spec:
       fields:
       - path: spec.securityContext.runAsUser.allowedValues
         scenario: speAbsent
-      - path: spec.securityContext.runAsGroup.allowedValues
-        scenario: speAbsent
-      - path: spec.securityContext.supplementalGroups.allowedValues
-        scenario: speAbsent
-      - path: spec.securityContext.fsGroup.allowedValues
-        scenario: speAbsent
       exception: ''
       exceptionRef: ''
       inventory:
@@ -1535,8 +1427,7 @@ spec:
         merge:
           metadata:
             name: empty-spec
-          spec:
-            test: test
+          spec: {}
       object:
         base: admissionPod
         merge:

@@ -424,7 +424,14 @@ spec:
                             type: string
                     seLinux:
                       type: array
-                      description: Specifies which SElinux labels the security context is permitted to use.
+                      description: |
+                        Specifies which SELinux labels the security context is permitted to use.
+
+                        The `seLinuxOptions` of a pod or a container are allowed if they match at least one entry.
+                        A field left unset or empty in `seLinuxOptions` always matches.
+                        A field set in `seLinuxOptions` must equal the same field of the entry,
+                        so an entry that omits `user`, `role` or `type` forbids setting it.
+                        The `level` field is the exception: an entry that omits it allows any level.
                       items:
                         type: object
                         properties:

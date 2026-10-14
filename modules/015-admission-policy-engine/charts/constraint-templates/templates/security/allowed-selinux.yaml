@@ -66,7 +66,7 @@ spec:
             rego: |
               package d8.security_policies
 
-              import data.lib.check_object_match.check_partial_match_in_list
+              import data.lib.check_object_match.check_partial_match_in_list_with_wildcards
               import data.lib.common.has_field
               import data.lib.common.input_containers
               import data.lib.common.pod_spec
@@ -85,10 +85,11 @@ spec:
                 labels := object_labels
                 spe := resolve_spe_from_labels(labels, object_namespace)
                 spe_allowed := allowed_values_or_empty(spe, ["spec", "securityContext", "seLinuxOptions", "allowedValues"])
-                result := check_partial_match_in_list(
+                result := check_partial_match_in_list_with_wildcards(
                   pod_spec.securityContext.seLinuxOptions,
                   input.parameters.allowedSELinuxOptions,
                   ["level", "role", "type", "user"],
+                  selinux_wildcard_fields,
                   spe_allowed
                 )
                 not result.allowed
@@ -103,15 +104,22 @@ spec:
                 labels := object_labels
                 spe := resolve_spe_for_container(c, labels, object_namespace)
                 spe_allowed := allowed_values_or_empty(spe, ["spec", "securityContext", "seLinuxOptions", "allowedValues"])
-                result := check_partial_match_in_list(
+                result := check_partial_match_in_list_with_wildcards(
                   c.securityContext.seLinuxOptions,
                   input.parameters.allowedSELinuxOptions,
                   ["level", "role", "type", "user"],
+                  selinux_wildcard_fields,
                   spe_allowed
                 )
                 not result.allowed
                 msg := violation_message("SELinux options are not allowed", sprintf("%v: %v, container: %v", [review_kind, input.review.object.metadata.name, c.name]), result.detail)
               }
+
+              # A field a container sets must equal the allowed entry, and an entry that
+              # leaves type, user or role empty requires the container to leave it empty
+              # too: this is how PSS baseline forbids custom types, users and roles.
+              # The level is free unless the entry sets it.
+              selinux_wildcard_fields := ["level"]
 
               input_security_context contains c if {
                 c := input_containers[_]
