@@ -49,7 +49,7 @@ func TestApprover_ConcurrencyLimits(t *testing.T) {
 		require.Equal(t, []string{"etcd-1"}, approvedNames(result))
 	})
 
-	t.Run("three nodes workload limit is nodesCount-1 for apiserver", func(t *testing.T) {
+	t.Run("three nodes workload limit is (nodesCount-1)/2 for apiserver", func(t *testing.T) {
 		t.Parallel()
 		ops := []controlplanev1alpha1.ControlPlaneOperation{
 			newOperation("a1", "n1", controlplanev1alpha1.OperationComponentKubeAPIServer, false),
@@ -57,7 +57,109 @@ func TestApprover_ConcurrencyLimits(t *testing.T) {
 			newOperation("a3", "n3", controlplanev1alpha1.OperationComponentKubeAPIServer, false),
 		}
 		result := NewApprover(StaticPodPipeline).SelectApprovable(ops, Nodes{Masters: 3})
-		require.ElementsMatch(t, []string{"a1", "a2"}, approvedNames(result))
+		require.Equal(t, []string{"a1"}, approvedNames(result))
+	})
+
+	t.Run("five nodes workload limit is (nodesCount-1)/2 for apiserver", func(t *testing.T) {
+		t.Parallel()
+		ops := []controlplanev1alpha1.ControlPlaneOperation{
+			newOperation("a1", "n1", controlplanev1alpha1.OperationComponentKubeAPIServer, false),
+			newOperation("a2", "n2", controlplanev1alpha1.OperationComponentKubeAPIServer, false),
+			newOperation("a3", "n3", controlplanev1alpha1.OperationComponentKubeAPIServer, false),
+			newOperation("a4", "n4", controlplanev1alpha1.OperationComponentKubeAPIServer, false),
+			newOperation("a5", "n5", controlplanev1alpha1.OperationComponentKubeAPIServer, false),
+		}
+		result := NewApprover(StaticPodPipeline).SelectApprovable(ops, Nodes{Masters: 5})
+		require.Equal(t, []string{"a1", "a2"}, approvedNames(result))
+	})
+
+	t.Run("three nodes workload limit is (nodesCount-1)/2 for kcm", func(t *testing.T) {
+		t.Parallel()
+		ops := []controlplanev1alpha1.ControlPlaneOperation{
+			newOperation("k1", "n1", controlplanev1alpha1.OperationComponentKubeControllerManager, false),
+			newOperation("k2", "n2", controlplanev1alpha1.OperationComponentKubeControllerManager, false),
+			newOperation("k3", "n3", controlplanev1alpha1.OperationComponentKubeControllerManager, false),
+		}
+		result := NewApprover(StaticPodPipeline).SelectApprovable(ops, Nodes{Masters: 3})
+		require.Equal(t, []string{"k1"}, approvedNames(result))
+	})
+}
+
+func TestApprover_LeadersLast(t *testing.T) {
+	t.Parallel()
+
+	ops := []controlplanev1alpha1.ControlPlaneOperation{
+		newOperation("k1", "n1", controlplanev1alpha1.OperationComponentKubeControllerManager, false),
+		newOperation("k2", "n2", controlplanev1alpha1.OperationComponentKubeControllerManager, false),
+		newOperation("s1", "n1", controlplanev1alpha1.OperationComponentKubeScheduler, false),
+		newOperation("s2", "n2", controlplanev1alpha1.OperationComponentKubeScheduler, false),
+	}
+	result := NewApprover(StaticPodPipeline).SelectApprovable(ops, Nodes{
+		Masters: 3,
+		Leaders: map[controlplanev1alpha1.OperationComponent]Leader{
+			controlplanev1alpha1.OperationComponentKubeControllerManager: {Node: "n1"},
+			controlplanev1alpha1.OperationComponentKubeScheduler:         {Node: "n2"},
+		},
+	})
+	require.ElementsMatch(t, []string{"k2", "s1"}, approvedNames(result))
+
+	t.Run("etcd leader goes last", func(t *testing.T) {
+		t.Parallel()
+		result := NewApprover(StaticPodPipeline).SelectApprovable([]controlplanev1alpha1.ControlPlaneOperation{
+			newOperation("e1", "n1", controlplanev1alpha1.OperationComponentEtcd, false),
+			newOperation("e2", "n2", controlplanev1alpha1.OperationComponentEtcd, false),
+			newOperation("e3", "n3", controlplanev1alpha1.OperationComponentEtcd, false),
+		}, Nodes{
+			Masters: 3,
+			Leaders: map[controlplanev1alpha1.OperationComponent]Leader{controlplanev1alpha1.OperationComponentEtcd: {Node: "n1"}},
+		})
+		require.Equal(t, []string{"e2"}, approvedNames(result))
+	})
+
+	fiveMasters := Nodes{
+		Masters: 5,
+		Leaders: map[controlplanev1alpha1.OperationComponent]Leader{controlplanev1alpha1.OperationComponentKubeControllerManager: {Node: "n1"}},
+	}
+
+	t.Run("leader is not approved alongside a follower", func(t *testing.T) {
+		t.Parallel()
+		result := NewApprover(StaticPodPipeline).SelectApprovable([]controlplanev1alpha1.ControlPlaneOperation{
+			newOperation("k1", "n1", controlplanev1alpha1.OperationComponentKubeControllerManager, false),
+			newOperation("k2", "n2", controlplanev1alpha1.OperationComponentKubeControllerManager, true),
+		}, fiveMasters)
+		require.Empty(t, result)
+	})
+
+	t.Run("leader is approved alone", func(t *testing.T) {
+		t.Parallel()
+		result := NewApprover(StaticPodPipeline).SelectApprovable([]controlplanev1alpha1.ControlPlaneOperation{
+			newOperation("k1", "n1", controlplanev1alpha1.OperationComponentKubeControllerManager, false),
+		}, fiveMasters)
+		require.Equal(t, []string{"k1"}, approvedNames(result))
+	})
+
+	t.Run("waiting kcm leader is not approved, other components go on", func(t *testing.T) {
+		t.Parallel()
+		result := NewApprover(StaticPodPipeline).SelectApprovable([]controlplanev1alpha1.ControlPlaneOperation{
+			newOperation("k1", "n1", controlplanev1alpha1.OperationComponentKubeControllerManager, false),
+			newOperation("s2", "n2", controlplanev1alpha1.OperationComponentKubeScheduler, false),
+		}, Nodes{
+			Masters: 5,
+			Leaders: map[controlplanev1alpha1.OperationComponent]Leader{controlplanev1alpha1.OperationComponentKubeControllerManager: {Node: "n1", Waits: true}},
+		})
+		require.Equal(t, []string{"s2"}, approvedNames(result))
+	})
+
+	t.Run("waiting etcd leader holds back kube-apiserver", func(t *testing.T) {
+		t.Parallel()
+		result := NewApprover(StaticPodPipeline).SelectApprovable([]controlplanev1alpha1.ControlPlaneOperation{
+			newOperation("e1", "n1", controlplanev1alpha1.OperationComponentEtcd, false),
+			newOperation("a2", "n2", controlplanev1alpha1.OperationComponentKubeAPIServer, false),
+		}, Nodes{
+			Masters: 3,
+			Leaders: map[controlplanev1alpha1.OperationComponent]Leader{controlplanev1alpha1.OperationComponentEtcd: {Node: "n1", Waits: true}},
+		})
+		require.Empty(t, result)
 	})
 }
 
@@ -103,19 +205,9 @@ func TestApprover_Etcd(t *testing.T) {
 		require.Empty(t, result)
 	})
 
-	// blocks() for clusterWide stages checks hasAnyReservation() (approvedTotal > 0), not queued
-	// operations, so a merely-queued etcd reservation does not by itself block the rest of the
-	// pipeline cluster-wide. This is intentional and matches old behavior.
-	//
-	// Note: in practice a queued-only (no admitted) etcd reservation is unreachable here, because
-	// etcd concurrency limit is always 1 (see etcdConcurrencyLimit) and queuing only happens once
-	// approvedTotal >= limit, i.e. an etcd op can only be queued once another one is already
-	// admitted. So this test seeds one admitted etcd (via the second etcd op getting queued
-	// behind it) and asserts that apiserver is blocked because of that admitted reservation — the
-	// queued second etcd op contributes nothing extra to the block, demonstrating the asymmetry
-	// documented on stageGate.blocks even though a "queued but not admitted" state can't be
-	// constructed standalone.
-	t.Run("queued etcd reservation adds no extra cluster-wide block beyond the already-admitted one", func(t *testing.T) {
+	// A queued-only etcd operation, with none admitted, blocks the pipeline too: see "waiting etcd
+	// leader holds back kube-apiserver" in TestApprover_LeadersLast.
+	t.Run("queued etcd operation behind an admitted one blocks apiserver", func(t *testing.T) {
 		t.Parallel()
 		ops := []controlplanev1alpha1.ControlPlaneOperation{
 			// etcd-1 is admitted (etcd concurrency limit is 1).
@@ -172,31 +264,59 @@ func TestApprover_StageOrdering(t *testing.T) {
 		require.Equal(t, []string{"a1"}, approvedNames(result))
 	})
 
-	t.Run("allows kcm on another node while apiserver stage has reservation", func(t *testing.T) {
+	t.Run("blocks kcm on another node while apiserver stage has reservation", func(t *testing.T) {
 		t.Parallel()
 		ops := []controlplanev1alpha1.ControlPlaneOperation{
 			newOperation("a1", "n1", controlplanev1alpha1.OperationComponentKubeAPIServer, false),
 			newOperation("k1", "n2", controlplanev1alpha1.OperationComponentKubeControllerManager, false),
 		}
 		result := NewApprover(StaticPodPipeline).SelectApprovable(ops, Nodes{Masters: 3})
-		require.ElementsMatch(t, []string{"a1", "k1"}, approvedNames(result))
+		require.Equal(t, []string{"a1"}, approvedNames(result))
 	})
 
-	t.Run("queued apiserver blocks kcm on same node but not on other nodes", func(t *testing.T) {
+	t.Run("in-flight apiserver blocks scheduler on every node", func(t *testing.T) {
 		t.Parallel()
-		// 3 nodes -> apiserver concurrency limit 2
+		ops := []controlplanev1alpha1.ControlPlaneOperation{
+			newOperation("a1", "n1", controlplanev1alpha1.OperationComponentKubeAPIServer, true),
+			newOperation("s2", "n2", controlplanev1alpha1.OperationComponentKubeScheduler, false),
+			newOperation("s3", "n3", controlplanev1alpha1.OperationComponentKubeScheduler, false),
+		}
+		result := NewApprover(StaticPodPipeline).SelectApprovable(ops, Nodes{Masters: 3})
+		require.Empty(t, result)
+	})
+
+	t.Run("queued apiserver blocks kcm on every node", func(t *testing.T) {
+		t.Parallel()
+		// 5 nodes -> apiserver concurrency limit 2
 		ops := []controlplanev1alpha1.ControlPlaneOperation{
 			newOperation("a1", "n1", controlplanev1alpha1.OperationComponentKubeAPIServer, false),
 			newOperation("a2", "n2", controlplanev1alpha1.OperationComponentKubeAPIServer, false),
 			// a3 hits concurrency limit -> goes to queue on n3
 			newOperation("a3", "n3", controlplanev1alpha1.OperationComponentKubeAPIServer, false),
-			// kcm on n3 must be blocked (apiserver queued on n3)
 			newOperation("k1", "n3", controlplanev1alpha1.OperationComponentKubeControllerManager, false),
-			// kcm on n1 must be blocked (apiserver approved on n1)
 			newOperation("k2", "n1", controlplanev1alpha1.OperationComponentKubeControllerManager, false),
+			// no apiserver operation on n4 at all
+			newOperation("k3", "n4", controlplanev1alpha1.OperationComponentKubeControllerManager, false),
+		}
+		result := NewApprover(StaticPodPipeline).SelectApprovable(ops, Nodes{Masters: 5})
+		require.ElementsMatch(t, []string{"a1", "a2"}, approvedNames(result))
+	})
+
+	t.Run("allows kcm once every apiserver operation is finished", func(t *testing.T) {
+		t.Parallel()
+		completed := newOperation("a1", "n1", controlplanev1alpha1.OperationComponentKubeAPIServer, true)
+		meta.SetStatusCondition(&completed.Status.Conditions, metav1.Condition{
+			Type:               "Completed",
+			Status:             metav1.ConditionTrue,
+			Reason:             controlplanev1alpha1.CPOReasonOperationCompleted,
+			LastTransitionTime: metav1.Now(),
+		})
+		ops := []controlplanev1alpha1.ControlPlaneOperation{
+			completed,
+			newOperation("k2", "n2", controlplanev1alpha1.OperationComponentKubeControllerManager, false),
 		}
 		result := NewApprover(StaticPodPipeline).SelectApprovable(ops, Nodes{Masters: 3})
-		require.ElementsMatch(t, []string{"a1", "a2"}, approvedNames(result))
+		require.Equal(t, []string{"k2"}, approvedNames(result))
 	})
 
 	t.Run("allows kcm and scheduler concurrently on same pipeline stage", func(t *testing.T) {
@@ -215,13 +335,13 @@ func TestApprover_WorkloadConcurrencyAndPerNode(t *testing.T) {
 
 	t.Run("allows up to workload concurrency limit on distinct nodes", func(t *testing.T) {
 		t.Parallel()
-		// 3 nodes -> limit 2 for apiserver
+		// 5 nodes -> limit 2 for apiserver
 		ops := []controlplanev1alpha1.ControlPlaneOperation{
 			newOperation("a1", "n1", controlplanev1alpha1.OperationComponentKubeAPIServer, false),
 			newOperation("a2", "n2", controlplanev1alpha1.OperationComponentKubeAPIServer, false),
 			newOperation("a3", "n3", controlplanev1alpha1.OperationComponentKubeAPIServer, false),
 		}
-		result := NewApprover(StaticPodPipeline).SelectApprovable(ops, Nodes{Masters: 3})
+		result := NewApprover(StaticPodPipeline).SelectApprovable(ops, Nodes{Masters: 5})
 		require.ElementsMatch(t, []string{"a1", "a2"}, approvedNames(result))
 	})
 
@@ -271,6 +391,17 @@ func TestApprover_PartitionAndOrder(t *testing.T) {
 		result := NewApprover(StaticPodPipeline).SelectApprovable(
 			[]controlplanev1alpha1.ControlPlaneOperation{completed, newEtcd}, Nodes{Masters: 1})
 		require.Equal(t, []string{"y"}, approvedNames(result))
+	})
+
+	t.Run("in-flight observe-only apiserver operation does not block kcm", func(t *testing.T) {
+		t.Parallel()
+		observe := newOperation("a-observe", "n1", controlplanev1alpha1.OperationComponentKubeAPIServer, true)
+		observe.Spec.Steps = []controlplanev1alpha1.StepName{controlplanev1alpha1.StepCertObserve}
+		result := NewApprover(StaticPodPipeline).SelectApprovable([]controlplanev1alpha1.ControlPlaneOperation{
+			observe,
+			newOperation("k2", "n2", controlplanev1alpha1.OperationComponentKubeControllerManager, false),
+		}, Nodes{Masters: 3})
+		require.Equal(t, []string{"k2"}, approvedNames(result))
 	})
 
 	t.Run("returned operations are sorted by pipeline stage then name", func(t *testing.T) {

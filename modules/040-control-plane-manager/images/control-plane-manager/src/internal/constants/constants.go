@@ -50,6 +50,8 @@ const (
 	PKIChecksumAnnotationKey            = "control-plane-manager.deckhouse.io/pki-checksum"
 	CAChecksumAnnotationKey             = "control-plane-manager.deckhouse.io/ca-checksum"
 	OperationStartedAtAnnotationKey     = "control-plane-manager.deckhouse.io/operation-started-at"
+	KubernetesVersionAnnotationKey      = "control-plane-manager.deckhouse.io/kubernetes-version"
+	KCMLeaderLeaseAnnotationKey         = "control-plane-manager.deckhouse.io/kcm-leader-lease"
 	NodeNameEnvVar                      = "NODE_NAME"
 	DaemonSetNameEnvVar                 = "DAEMONSET_NAME"
 	EtcdArbiterEnvVar                   = "ETCD_ARBITER"

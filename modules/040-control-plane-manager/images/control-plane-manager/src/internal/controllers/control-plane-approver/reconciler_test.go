@@ -21,6 +21,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
+	coordinationv1 "k8s.io/api/coordination/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -38,6 +39,7 @@ var testScheme = runtime.NewScheme()
 func init() {
 	utilruntime.Must(controlplanev1alpha1.AddToScheme(testScheme))
 	utilruntime.Must(corev1.AddToScheme(testScheme))
+	utilruntime.Must(coordinationv1.AddToScheme(testScheme))
 }
 
 func TestReconciler_Reconcile(t *testing.T) {
@@ -47,7 +49,7 @@ func TestReconciler_Reconcile(t *testing.T) {
 	t.Run("no control plane nodes returns without error", func(t *testing.T) {
 		t.Parallel()
 		cl := fake.NewClientBuilder().WithScheme(testScheme).Build()
-		r := newReconciler(cl)
+		r := newReconciler(cl, cl)
 		_, err := r.Reconcile(ctx, reconcile.Request{})
 		require.NoError(t, err)
 	})
@@ -58,7 +60,7 @@ func TestReconciler_Reconcile(t *testing.T) {
 			WithScheme(testScheme).
 			WithObjects(testControlPlaneNode("n1")).
 			Build()
-		r := newReconciler(cl)
+		r := newReconciler(cl, cl)
 		_, err := r.Reconcile(ctx, reconcile.Request{})
 		require.NoError(t, err)
 	})
@@ -66,7 +68,7 @@ func TestReconciler_Reconcile(t *testing.T) {
 	t.Run("workload components ignore arbiters", func(t *testing.T) {
 		t.Parallel()
 		// 2 masters + 5 arbiters.
-		// For KubeAPIServer, the limit is max(1, masters-1) = max(1, 2-1) = 1.
+		// For KubeAPIServer, the limit is max(1, (masters-1)/2) = max(1, 0) = 1.
 		// Arbiters should be ignored for workload components.
 		op1 := newOperation("op-api-1", "n1", controlplanev1alpha1.OperationComponentKubeAPIServer, false)
 		op2 := newOperation("op-api-2", "n2", controlplanev1alpha1.OperationComponentKubeAPIServer, false)
@@ -86,7 +88,7 @@ func TestReconciler_Reconcile(t *testing.T) {
 			).
 			WithStatusSubresource(&controlplanev1alpha1.ControlPlaneOperation{}).
 			Build()
-		r := newReconciler(cl)
+		r := newReconciler(cl, cl)
 
 		_, err := r.Reconcile(ctx, reconcile.Request{})
 		require.NoError(t, err)
@@ -110,7 +112,8 @@ func TestReconciler_Reconcile(t *testing.T) {
 			WithObjects(testControlPlaneNode("n1"), &op).
 			WithStatusSubresource(&controlplanev1alpha1.ControlPlaneOperation{}).
 			Build()
-		r := newReconciler(cl)
+		r := newReconciler(cl, cl)
+		r.etcdLeader = noEtcdLeader
 
 		_, err := r.Reconcile(ctx, reconcile.Request{})
 		require.NoError(t, err)
@@ -129,7 +132,7 @@ func TestReconciler_Reconcile(t *testing.T) {
 			WithObjects(testControlPlaneNode("n1"), testControlPlaneNode("n2"), &seed, &pending).
 			WithStatusSubresource(&controlplanev1alpha1.ControlPlaneOperation{}).
 			Build()
-		r := newReconciler(cl)
+		r := newReconciler(cl, cl)
 
 		_, err := r.Reconcile(ctx, reconcile.Request{})
 		require.NoError(t, err)

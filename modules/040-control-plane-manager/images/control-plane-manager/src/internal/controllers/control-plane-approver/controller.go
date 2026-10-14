@@ -17,13 +17,17 @@ limitations under the License.
 package controlplaneapprover
 
 import (
+	"context"
 	"time"
 
 	"golang.org/x/time/rate"
+	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/util/workqueue"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/builder"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
+	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
@@ -36,8 +40,15 @@ const (
 	cacheSyncTimeout        = 3 * time.Minute
 )
 
+// enqueueApprover maps every event to the single request the approver queues. Reconcile decides on
+// every operation at once, so a request per object would only repeat that work, and each
+// RequeueAfter would start a polling loop of its own.
+func enqueueApprover(context.Context, client.Object) []reconcile.Request {
+	return []reconcile.Request{{NamespacedName: types.NamespacedName{Name: constants.OperationsApproverControllerName}}}
+}
+
 func Register(mgr manager.Manager) error {
-	r := newReconciler(mgr.GetClient())
+	r := newReconciler(mgr.GetClient(), mgr.GetAPIReader())
 
 	return ctrl.NewControllerManagedBy(mgr).
 		WithOptions(controller.TypedOptions[reconcile.Request]{
@@ -51,9 +62,15 @@ func Register(mgr manager.Manager) error {
 			),
 		}).
 		Named(constants.OperationsApproverControllerName).
-		For(
+		Watches(
 			&controlplanev1alpha1.ControlPlaneOperation{},
+			handler.EnqueueRequestsFromMapFunc(enqueueApprover),
 			builder.WithPredicates(OperationPredicate()),
+		).
+		Watches(
+			&controlplanev1alpha1.ControlPlaneNode{},
+			handler.EnqueueRequestsFromMapFunc(enqueueApprover),
+			builder.WithPredicates(ControlPlaneNodePredicate()),
 		).
 		Complete(r)
 }

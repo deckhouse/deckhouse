@@ -20,6 +20,7 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
+	"time"
 
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/types"
@@ -38,7 +39,7 @@ import (
 // losing quorum.
 func (r *Reconciler) waitForPod(ctx context.Context, state *controlplanev1alpha1.OperationState, logger *log.Logger) (StepResult, error) {
 	op := state.Raw()
-	podName := fmt.Sprintf("%s-%s", op.Spec.Component.PodComponentName(), r.node.Name)
+	podName := mirrorPodName(op.Spec.Component, r.node)
 	pod := &corev1.Pod{}
 	if err := r.client.Get(ctx, client.ObjectKey{Name: podName, Namespace: constants.KubeSystemNamespace}, pod); err != nil {
 		logger.Info("pod not found yet, requeue", slog.String("pod", podName))
@@ -58,12 +59,32 @@ func (r *Reconciler) waitForPod(ctx context.Context, state *controlplanev1alpha1
 		}, nil
 	}
 
+	// The Lease is released as soon as the new instance runs, before it is ready.
+	kcmLeaderRenewing := r.handOverKCMLeader(ctx, op, pod, time.Now(), logger)
+
 	expected := checksumAnnotationsFromSpec(op.Spec)
 	if !isPodReadyWithChecksums(pod, expected) {
 		logger.Info("pod not ready with expected checksums, requeue", slog.String("pod", podName))
 		return StepResult{
 			Outcome:      OutcomePending,
 			Message:      fmt.Sprintf("pod %s is not ready with expected checksums, will retry", podName),
+			RequeueAfter: requeueWaitPod,
+		}, nil
+	}
+
+	if kcmLeaderRenewing {
+		return StepResult{
+			Outcome:      OutcomePending,
+			Message:      "waiting for the stopped kube-controller-manager leader Lease to go stale",
+			RequeueAfter: kcmLeaseRetryPeriod,
+		}, nil
+	}
+
+	if err := r.apiServerReadyz(ctx, op); err != nil {
+		logger.Info("kube-apiserver is not ready yet, requeue", log.Err(err))
+		return StepResult{
+			Outcome:      OutcomePending,
+			Message:      fmt.Sprintf("kube-apiserver is not ready yet: %v", err),
 			RequeueAfter: requeueWaitPod,
 		}, nil
 	}
@@ -136,18 +157,22 @@ func isPodReady(pod *corev1.Pod) bool {
 
 // isPodReadyWithChecksums returns true if the pod has the expected checksum annotations and is in Ready condition.
 func isPodReadyWithChecksums(pod *corev1.Pod, expected checksumAnnotations) bool {
-	if pod == nil {
-		return false
-	}
+	return pod != nil && hasChecksumAnnotations(pod, expected) && isPodReady(pod)
+}
 
-	expectedAnnotations := desiredChecksumAnnotations(expected)
-	for key, value := range expectedAnnotations {
+// hasChecksumAnnotations returns true if the pod has the expected checksum annotations.
+func hasChecksumAnnotations(pod *corev1.Pod, expected checksumAnnotations) bool {
+	for key, value := range desiredChecksumAnnotations(expected) {
 		if pod.Annotations[key] != value {
 			return false
 		}
 	}
+	return true
+}
 
-	return isPodReady(pod)
+// mirrorPodName is the name of the mirror pod of the component's static pod on the node.
+func mirrorPodName(component controlplanev1alpha1.OperationComponent, node NodeIdentity) string {
+	return component.PodComponentName() + "-" + node.Name
 }
 
 func findContainerByName(pod *corev1.Pod, name string) *corev1.Container {

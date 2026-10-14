@@ -29,10 +29,14 @@ var etcdStage = pipelineStage{
 	clusterWide: true, // etcd affects the whole quorum, not just its own node
 }
 
+// apiServerStage wide-blocks kube-controller-manager/kube-scheduler: they reach any kube-apiserver
+// through kubernetes-api-proxy and must not be newer than any of them (Kubernetes version skew
+// policy), so none of them restarts until every kube-apiserver operation has finished.
 var apiServerStage = pipelineStage{
 	components: []controlplanev1alpha1.OperationComponent{
 		controlplanev1alpha1.OperationComponentKubeAPIServer,
 	},
+	clusterWide: true,
 }
 
 var workloadStage = pipelineStage{
@@ -43,7 +47,8 @@ var workloadStage = pipelineStage{
 }
 
 // StaticPodPipeline is the approval pipeline for a static-pod control plane: etcd gates
-// everything else (cluster-wide), then kube-apiserver, then kube-controller-manager/kube-scheduler.
+// everything else (cluster-wide), then kube-apiserver (cluster-wide), then
+// kube-controller-manager/kube-scheduler.
 var StaticPodPipeline = []pipelineStage{etcdStage, apiServerStage, workloadStage}
 
 // Arbiters run etcd only; workload components (apiserver, etc.) run on master nodes exclusively.
@@ -65,6 +70,10 @@ func etcdConcurrencyLimit(nodes int) int {
 	return 1
 }
 
+// controlPlaneWorkloadConcurrencyLimit keeps a majority of kube-apiservers (and of
+// kube-controller-manager/kube-scheduler instances) serving while the rest restart:
+// 3 masters -> 1, 5 masters -> 2. With nodes-1 two of three kube-apiservers restarted at once
+// and the whole API load landed on a single instance.
 func controlPlaneWorkloadConcurrencyLimit(nodes int) int {
-	return max(1, nodes-1)
+	return max(1, (nodes-1)/2)
 }

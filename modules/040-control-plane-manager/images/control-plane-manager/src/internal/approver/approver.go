@@ -33,6 +33,17 @@ import (
 type Nodes struct {
 	Masters  int
 	Arbiters int
+	// Leaders maps a component to its leader. Operations on the leader node are approved last
+	// within their stage, so leadership moves once per rollout.
+	Leaders map[controlplanev1alpha1.OperationComponent]Leader
+}
+
+// Leader is the node holding the leadership of a component.
+type Leader struct {
+	Node string
+	// Waits holds the operation on Node: another node is not updated yet and would take over the
+	// leadership with the old version.
+	Waits bool
 }
 
 func (c Nodes) IsZero() bool {
@@ -59,8 +70,8 @@ func (a *Approver) SelectApprovable(
 	nodes Nodes,
 ) []controlplanev1alpha1.ControlPlaneOperation {
 	approvedOperations, unapprovedOperations := partitionOperationsByApprovalState(operations)
-	sortOperationsByPipelineOrder(a.pipeline, approvedOperations)
-	sortOperationsByPipelineOrder(a.pipeline, unapprovedOperations)
+	sortOperationsByPipelineOrder(a.pipeline, approvedOperations, nil)
+	sortOperationsByPipelineOrder(a.pipeline, unapprovedOperations, nodes.Leaders)
 
 	gates := buildGateChain(a.pipeline, nodes)
 	gates.seedApprovedOperations(approvedOperations)
@@ -80,6 +91,12 @@ func partitionOperationsByApprovalState(operations []controlplanev1alpha1.Contro
 	unapprovedOperations := make([]controlplanev1alpha1.ControlPlaneOperation, 0, len(operations))
 
 	for _, operation := range operations {
+		// Observe-only operations are created pre-approved and restart nothing; seeding them would
+		// take a slot and, for kube-apiserver, hold kube-controller-manager/kube-scheduler cluster-wide.
+		if operation.IsObserveOnlyOperation() {
+			continue
+		}
+
 		if operation.Spec.Approved && !operation.IsTerminal() {
 			approvedOperations = append(approvedOperations, operation)
 			continue
@@ -94,11 +111,26 @@ func partitionOperationsByApprovalState(operations []controlplanev1alpha1.Contro
 }
 
 // sortOperationsByPipelineOrder orders operations by pipelineStageIndex within pipeline.
-// Within the same stage, order is stable by resource name.
-func sortOperationsByPipelineOrder(pipeline []pipelineStage, operations []controlplanev1alpha1.ControlPlaneOperation) {
+// Within the same stage, operations on a component's leader node go last, then order is stable by
+// resource name.
+func sortOperationsByPipelineOrder(
+	pipeline []pipelineStage,
+	operations []controlplanev1alpha1.ControlPlaneOperation,
+	leaders map[controlplanev1alpha1.OperationComponent]Leader,
+) {
+	onLeader := func(op controlplanev1alpha1.ControlPlaneOperation) bool {
+		leader, ok := leaders[op.Spec.Component]
+		return ok && leader.Node == op.Spec.NodeName
+	}
 	slices.SortFunc(operations, func(a, b controlplanev1alpha1.ControlPlaneOperation) int {
 		if c := cmp.Compare(pipelineStageIndex(pipeline, a.Spec.Component), pipelineStageIndex(pipeline, b.Spec.Component)); c != 0 {
 			return c
+		}
+		if aLeader, bLeader := onLeader(a), onLeader(b); aLeader != bLeader {
+			if aLeader {
+				return 1
+			}
+			return -1
 		}
 		return cmp.Compare(a.Name, b.Name)
 	})

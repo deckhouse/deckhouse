@@ -45,6 +45,8 @@ func TestControlplaneRendering(t *testing.T) {
 		"Full Manifests Rendering":      testManifestsRendering,
 		"Encryption API Server args":    testSignatureArgsAPIServerRender,
 		"Resources Requests":            testResourcesRequests,
+		"Graceful Shutdown":             testGracefulShutdown,
+		"Components Via API Proxy":      testComponentsViaAPIProxy,
 	}
 
 	for name, doTest := range tests {
@@ -1027,9 +1029,12 @@ func getBaseTemplateData(k8sVersion string) map[string]any {
 	}
 }
 
+// controlPlaneTemplatesPath is where the control-plane templates live in the CI image.
+var controlPlaneTemplatesPath = "/deckhouse/candi/control-plane"
+
 // Don't pass requestedManifests to get all manifests
 func renderFullManifests(data map[string]any, requestedManifests ...string) (map[string]string, error) {
-	templatesPath := "/deckhouse/candi/control-plane"
+	templatesPath := controlPlaneTemplatesPath
 	manifests := make(map[string]string)
 
 	templateMap := map[string]string{
@@ -1445,6 +1450,75 @@ func testMissingCoverage(t *testing.T) {
 				if !strings.Contains(manifest, "admissionregistration.k8s.io/v1beta1=true") {
 					t.Errorf("Expected runtime-config value not found in %s", name)
 				}
+			}
+		})
+	}
+}
+
+// testGracefulShutdown locks when kube-apiserver drains traffic before it stops:
+// only at runtime on a multi-master control plane, never during the bootstrap.
+func testGracefulShutdown(t *testing.T) {
+	tests := []struct {
+		name        string
+		runType     string
+		multiMaster bool
+		expectDrain bool
+		expectGrace string
+	}{
+		{"multi-master runtime", "Normal", true, true, "terminationGracePeriodSeconds: 80"},
+		{"single master runtime", "Normal", false, false, ""},
+		{"multi-master bootstrap", "ClusterBootstrap", true, false, "terminationGracePeriodSeconds: 1"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			data := getBaseTemplateData("1.34")
+			data["runType"] = tt.runType
+			data["apiserver"] = map[string]any{"gracefulShutdown": tt.multiMaster}
+
+			result, err := renderFullManifests(data, "kube-apiserver")
+			require.NoError(t, err)
+			manifest := result["kube-apiserver.yaml"]
+
+			require.Equal(t, tt.expectDrain, strings.Contains(manifest, "--shutdown-delay-duration=15s"))
+			require.Equal(t, tt.expectDrain, strings.Contains(manifest, "--shutdown-send-retry-after=true"))
+			if tt.expectGrace == "" {
+				require.NotContains(t, manifest, "terminationGracePeriodSeconds")
+			} else {
+				require.Contains(t, manifest, tt.expectGrace)
+			}
+		})
+	}
+}
+
+// testComponentsViaAPIProxy locks when kube-controller-manager and kube-scheduler
+// talk to the API through kubernetes-api-proxy: only at runtime on a
+// multi-master control plane.
+func testComponentsViaAPIProxy(t *testing.T) {
+	tests := []struct {
+		name        string
+		runType     string
+		multiMaster bool
+		expectProxy bool
+	}{
+		{"multi-master runtime", "Normal", true, true},
+		{"single master runtime", "Normal", false, false},
+		{"multi-master bootstrap", "ClusterBootstrap", true, false},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			data := getBaseTemplateData("1.34")
+			data["runType"] = tt.runType
+			data["componentsViaAPIProxy"] = tt.multiMaster
+
+			result, err := renderFullManifests(data, "kube-controller-manager", "kube-scheduler")
+			require.NoError(t, err)
+
+			for _, manifest := range []string{"kube-controller-manager.yaml", "kube-scheduler.yaml"} {
+				require.Equal(t, tt.expectProxy, strings.Contains(result[manifest], "--master=https://127.0.0.1:6445"), manifest)
+				require.Equal(t, tt.expectProxy, strings.Contains(result[manifest], "--leader-elect-renew-deadline=20s"), manifest)
+				require.Equal(t, tt.expectProxy, strings.Contains(result[manifest], "--leader-elect-lease-duration=30s"), manifest)
 			}
 		})
 	}

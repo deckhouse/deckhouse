@@ -46,3 +46,37 @@ func OperationPredicate() predicate.Predicate {
 		},
 	}
 }
+
+// ControlPlaneNodePredicate reacts when a node reports new applied checksums: the leader's
+// operation may be waiting for that node to be updated (see markWaitingLeaders).
+func ControlPlaneNodePredicate() predicate.Predicate {
+	return predicate.Funcs{
+		CreateFunc: func(event.CreateEvent) bool {
+			return false
+		},
+		UpdateFunc: func(e event.UpdateEvent) bool {
+			oldNode, okOld := e.ObjectOld.(*controlplanev1alpha1.ControlPlaneNode)
+			newNode, okNew := e.ObjectNew.(*controlplanev1alpha1.ControlPlaneNode)
+			if !okOld || !okNew {
+				return false
+			}
+			return appliedChecksums(oldNode) != appliedChecksums(newNode)
+		},
+		DeleteFunc: func(event.DeleteEvent) bool {
+			return false
+		},
+		GenericFunc: func(event.GenericEvent) bool {
+			return false
+		},
+	}
+}
+
+func appliedChecksums(cpn *controlplanev1alpha1.ControlPlaneNode) [4]controlplanev1alpha1.Checksums {
+	components := cpn.Status.Components
+	return [4]controlplanev1alpha1.Checksums{
+		components.Etcd.Checksums,
+		components.KubeAPIServer.Checksums,
+		components.KubeControllerManager.Checksums,
+		components.KubeScheduler.Checksums,
+	}
+}

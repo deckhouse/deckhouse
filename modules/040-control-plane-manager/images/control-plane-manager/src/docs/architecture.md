@@ -55,6 +55,7 @@ Observed state comes from:
 ## Execution and Safety Rules
 
 - CPO execution starts only when `spec.approved=true`.
+- The approver approves the operation on the etcd, kube-controller-manager or kube-scheduler leader node last and alone, so leadership moves once per rollout. The leader's operation waits until every other ready node's `ControlPlaneNode` status carries the checksums it applies, including nodes whose operation is not created yet; a node without an operation is waited for 5 minutes after the leader's operation was created, re-checked every 15 seconds. The approver watches `ControlPlaneNode` status checksums for this. It reads the kube-controller-manager and kube-scheduler leaders from their Leases, and asks the local etcd member for the etcd leader only when an etcd operation is pending and none is in flight. A leader it cannot find leaves that component's operations in name order.
 - CPO controller runs with local `NODE_NAME` and watches only operations for this node.
 - Pipeline steps are sequential and idempotent by status conditions.
 - `OperationFailed` is retryable, not terminal. Failed approved operations are retried by the CPO controller with exponential backoff (`5s` to `30m`) and keep their approval slot.

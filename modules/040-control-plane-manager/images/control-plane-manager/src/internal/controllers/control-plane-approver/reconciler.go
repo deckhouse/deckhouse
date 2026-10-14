@@ -19,6 +19,8 @@ package controlplaneapprover
 import (
 	"context"
 	"fmt"
+	"slices"
+	"time"
 
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/labels"
@@ -32,15 +34,26 @@ import (
 	"control-plane-manager/internal/constants"
 )
 
+// recheckInterval is how often Reconcile re-checks operations waiting for kube-apiserver versions
+// or for missingOperationTimeout to run out: neither triggers a reconcile.
+const recheckInterval = 15 * time.Second
+
 type reconciler struct {
-	client   client.Client
-	approver *approver.Approver
+	client client.Client
+	// apiReader reads past the cache: ControlPlaneOperations, so that a decision sees the approvals
+	// of the previous reconcile, and leader election Leases without a cluster-wide Lease informer.
+	apiReader client.Reader
+	approver  *approver.Approver
+	// etcdLeader returns the etcd leader member's name, which is the name of its node.
+	etcdLeader func(context.Context) (string, error)
 }
 
-func newReconciler(cl client.Client) *reconciler {
+func newReconciler(cl client.Client, apiReader client.Reader) *reconciler {
 	return &reconciler{
-		client:   cl,
-		approver: approver.NewApprover(approver.StaticPodPipeline),
+		client:     cl,
+		apiReader:  apiReader,
+		approver:   approver.NewApprover(approver.StaticPodPipeline),
+		etcdLeader: localEtcdLeader,
 	}
 }
 
@@ -55,14 +68,16 @@ func (r *reconciler) Reconcile(ctx context.Context, req reconcile.Request) (reco
 		return reconcile.Result{}, err
 	}
 
-	nodes, nodeNames := r.getReadyNodes(masterList, arbiterList)
+	nodes, masterNames, nodeNames := r.getReadyNodes(masterList, arbiterList)
 	if nodes.IsZero() {
 		log.FromContext(ctx).V(1).Info("no ready control plane nodes found")
 		return reconcile.Result{}, nil
 	}
 
+	// A live list: the cache may still show an operation approved by the previous reconcile as
+	// pending, and a decision on it could approve a second etcd restart.
 	operations := &controlplanev1alpha1.ControlPlaneOperationList{}
-	if err := r.client.List(
+	if err := r.apiReader.List(
 		ctx, operations,
 		client.InNamespace(constants.KubeSystemNamespace),
 		operationsMatchingReadyNodes(nodeNames),
@@ -74,7 +89,25 @@ func (r *reconciler) Reconcile(ctx context.Context, req reconcile.Request) (reco
 		return reconcile.Result{}, nil
 	}
 
-	approvable := r.approver.SelectApprovable(operations.Items, nodes)
+	candidates, recheckAPIServers, err := r.holdBackVersionSkew(ctx, operations.Items, masterNames)
+	if err != nil {
+		return reconcile.Result{}, fmt.Errorf("failed to check kube-apiserver versions: %w", err)
+	}
+
+	cpnList := &controlplanev1alpha1.ControlPlaneNodeList{}
+	if err := r.client.List(ctx, cpnList, client.InNamespace(constants.KubeSystemNamespace)); err != nil {
+		return reconcile.Result{}, err
+	}
+	cp := controlPlane{
+		readyMasters: masterNames,
+		readyEtcd:    nodeNames,
+		cpns:         cpnList.Items,
+	}
+
+	nodes.Leaders = r.leaderNodes(ctx, candidates)
+	recheckLeaders := markWaitingLeaders(ctx, candidates, nodes.Leaders, cp, time.Now())
+
+	approvable := r.approver.SelectApprovable(candidates, nodes)
 	for _, op := range approvable {
 		original := op.DeepCopy()
 		op.Spec.Approved = true
@@ -84,28 +117,35 @@ func (r *reconciler) Reconcile(ctx context.Context, req reconcile.Request) (reco
 		}
 	}
 
+	// recheckAPIServers: kube-controller-manager/kube-scheduler wait for updated kube-apiservers;
+	// recheckLeaders: a leader waits for updated followers, so leadership moves only once.
+	if recheckAPIServers || recheckLeaders {
+		return reconcile.Result{RequeueAfter: recheckInterval}, nil
+	}
+
 	return reconcile.Result{}, nil
 }
 
-func (r *reconciler) getReadyNodes(masterList *corev1.NodeList, arbiterList *corev1.NodeList) (approver.Nodes, []string) {
+// getReadyNodes returns the ready node counts, the ready master names and all ready node names.
+func (r *reconciler) getReadyNodes(masterList *corev1.NodeList, arbiterList *corev1.NodeList) (approver.Nodes, []string, []string) {
 	nodes := approver.Nodes{}
-	var nodeNames []string
+	var masterNames, arbiterNames []string
 
 	for _, node := range masterList.Items {
 		if isNodeReady(node) {
 			nodes.Masters++
-			nodeNames = append(nodeNames, node.Name)
+			masterNames = append(masterNames, node.Name)
 		}
 	}
 
 	for _, node := range arbiterList.Items {
 		if isNodeReady(node) {
 			nodes.Arbiters++
-			nodeNames = append(nodeNames, node.Name)
+			arbiterNames = append(arbiterNames, node.Name)
 		}
 	}
 
-	return nodes, nodeNames
+	return nodes, masterNames, slices.Concat(masterNames, arbiterNames)
 }
 
 func operationsMatchingReadyNodes(nodeNames []string) client.ListOption {

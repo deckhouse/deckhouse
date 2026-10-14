@@ -54,11 +54,13 @@ const (
 )
 
 type Reconciler struct {
-	client  client.Client
-	log     *log.Logger
-	node    NodeIdentity
-	steps   map[controlplanev1alpha1.StepName]Step
-	metrics *metrics
+	client client.Client
+	// apiReader reads the kube-controller-manager Lease without a cluster-wide Lease informer.
+	apiReader client.Reader
+	log       *log.Logger
+	node      NodeIdentity
+	steps     map[controlplanev1alpha1.StepName]Step
+	metrics   *metrics
 }
 
 func Register(mgr manager.Manager, metricsStorage metricsstorage.Storage) error {
@@ -73,15 +75,17 @@ func Register(mgr manager.Manager, metricsStorage metricsstorage.Storage) error 
 	}
 
 	r := &Reconciler{
-		client:  mgr.GetClient(),
-		log:     log.Default().With(slog.String("controller", constants.CpoControllerName)),
-		node:    node,
-		steps:   defaultSteps(),
-		metrics: metricHandlers,
+		client:    mgr.GetClient(),
+		apiReader: mgr.GetAPIReader(),
+		log:       log.Default().With(slog.String("controller", constants.CpoControllerName)),
+		node:      node,
+		steps:     defaultSteps(),
+		metrics:   metricHandlers,
 	}
 	// Inject Reconciler-level deps into steps that need them.
 	r.steps[controlplanev1alpha1.StepWaitPodReady].(*waitPodReadyStep).waitForPod = r.waitForPod
 	r.steps[controlplanev1alpha1.StepDefragEtcd].(*defragEtcdStep).defragEtcd = r.defragEtcd
+	r.steps[controlplanev1alpha1.StepSyncManifests].(*syncManifestsStep).recordKCMLeader = r.recordKCMLeader
 
 	if constants.SignatureEnabled() {
 		kubeClient, err := kubernetes.NewForConfig(mgr.GetConfig())

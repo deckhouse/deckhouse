@@ -323,6 +323,12 @@ func New(client clientset.Interface, certificatesDir string) (Interface, error) 
 	}
 	logger.Info("etcd endpoints read from pods", slog.String("endpoints", strings.Join(endpoints, ",")))
 
+	return NewForEndpoints(endpoints, certificatesDir)
+}
+
+// NewForEndpoints creates an etcd client wrapper for the given endpoints, authenticated with the
+// healthcheck client certificate from certificatesDir.
+func NewForEndpoints(endpoints []string, certificatesDir string) (Interface, error) {
 	cert, err := tls.LoadX509KeyPair(filepath.Join(certificatesDir, constants.EtcdHealthcheckClientCertName), filepath.Join(certificatesDir, constants.EtcdHealthcheckClientKeyName))
 	if err != nil {
 		return nil, err

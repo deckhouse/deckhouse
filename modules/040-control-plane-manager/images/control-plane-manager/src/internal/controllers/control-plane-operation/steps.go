@@ -233,10 +233,17 @@ func (c *joinEtcdClusterStep) Execute(_ context.Context, env *StepEnv, logger *l
 }
 
 // syncManifestsStep writes the static pod manifest (or patches annotations for PKI-only updates).
-type syncManifestsStep struct{}
+type syncManifestsStep struct {
+	// recordKCMLeader records the kube-controller-manager leader Lease before the manifest is
+	// written (see kcm_leader.go). Best effort, optional.
+	recordKCMLeader func(ctx context.Context, op *controlplanev1alpha1.ControlPlaneOperation, logger *log.Logger)
+}
 
-func (c *syncManifestsStep) Execute(_ context.Context, env *StepEnv, logger *log.Logger) (StepResult, error) {
+func (c *syncManifestsStep) Execute(ctx context.Context, env *StepEnv, logger *log.Logger) (StepResult, error) {
 	op := env.State.Raw()
+	if c.recordKCMLeader != nil {
+		c.recordKCMLeader(ctx, op, logger)
+	}
 	component := op.Spec.Component
 	annotations := buildSyncManifestAnnotations(op)
 	var (

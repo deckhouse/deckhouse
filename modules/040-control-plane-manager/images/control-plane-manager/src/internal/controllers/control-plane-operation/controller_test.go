@@ -25,6 +25,7 @@ import (
 
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
+	coordinationv1 "k8s.io/api/coordination/v1"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -47,6 +48,7 @@ var scheme = runtime.NewScheme()
 func init() {
 	utilruntime.Must(controlplanev1alpha1.AddToScheme(scheme))
 	utilruntime.Must(corev1.AddToScheme(scheme))
+	utilruntime.Must(coordinationv1.AddToScheme(scheme))
 }
 
 // mocks
@@ -195,10 +197,11 @@ func newTestReconciler(cmds map[controlplanev1alpha1.StepName]Step, objs ...clie
 		cmds = defaultSteps()
 	}
 	return &Reconciler{
-		client: c,
-		log:    log.NewNop(),
-		node:   NodeIdentity{Name: testNodeName},
-		steps:  cmds,
+		client:    c,
+		apiReader: c,
+		log:       log.NewNop(),
+		node:      NodeIdentity{Name: testNodeName},
+		steps:     cmds,
 	}
 }
 

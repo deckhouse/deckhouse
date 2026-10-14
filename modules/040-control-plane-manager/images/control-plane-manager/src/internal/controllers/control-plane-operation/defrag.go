@@ -116,9 +116,7 @@ func (r *Reconciler) defragEtcd(ctx context.Context, state *controlplanev1alpha1
 		return StepResult{Outcome: OutcomeCompleted}, nil
 	}
 
-	podName := fmt.Sprintf("%s-%s",
-		controlplanev1alpha1.OperationComponentEtcd.PodComponentName(),
-		r.node.Name)
+	podName := mirrorPodName(controlplanev1alpha1.OperationComponentEtcd, r.node)
 	pod := &corev1.Pod{}
 	if err := r.client.Get(ctx, client.ObjectKey{
 		Name:      podName,

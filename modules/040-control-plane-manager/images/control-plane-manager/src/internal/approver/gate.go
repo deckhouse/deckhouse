@@ -46,6 +46,7 @@ type stageGate struct {
 // componentOccupancy is the reservation bookkeeping for a single component within a gate.
 type componentOccupancy struct {
 	limit           int
+	leader          Leader // see Nodes.Leaders; zero when unknown
 	approvedTotal   int
 	approvedPerNode map[string]int
 	queuedOnNode    []controlplanev1alpha1.ControlPlaneOperation
@@ -65,6 +66,7 @@ func buildGateChain(pipeline []pipelineStage, nodes Nodes) *stageGate {
 		for _, c := range stage.components {
 			components[c] = &componentOccupancy{
 				limit:           getConcurrencyLimit(nodes, c),
+				leader:          nodes.Leaders[c],
 				approvedPerNode: make(map[string]int),
 			}
 		}
@@ -119,7 +121,11 @@ func (gate *stageGate) tryAdmit(unapprovedOperation controlplanev1alpha1.Control
 
 	occupancy := gate.components[unapprovedOperation.Spec.Component]
 
-	if occupancy.approvedTotal >= occupancy.limit {
+	// The leader restarts last and alone: a follower not updated yet, or approved alongside it and
+	// still waiting to restart, would take over the leadership.
+	onLeader := unapprovedOperation.Spec.NodeName == occupancy.leader.Node
+	if occupancy.approvedTotal >= occupancy.limit ||
+		onLeader && (occupancy.approvedTotal > 0 || occupancy.leader.Waits) {
 		occupancy.queuedOnNode = append(occupancy.queuedOnNode, unapprovedOperation)
 		return false
 	}
@@ -140,19 +146,21 @@ func (gate *stageGate) handles(component controlplanev1alpha1.OperationComponent
 }
 
 // blocks reports whether this gate's current occupancy should hold back the candidate operation:
-// any reservation at all for wide-block stages, or a reservation on the same node for ordinary
-// per-node stages.
+// any approved or queued operation at all for wide-block stages, or one on the same node for
+// ordinary per-node stages. A queued operation blocks too: the leader's operation waiting for
+// its followers keeps the later stages waiting.
 func (gate *stageGate) blocks(nodeName string) bool {
 	if gate.clusterWide {
-		return gate.hasAnyReservation()
+		return gate.hasAnyActiveOperation()
 	}
 
 	return gate.hasAnyActiveOperationOnNode(nodeName)
 }
 
-func (gate *stageGate) hasAnyReservation() bool {
+// hasAnyActiveOperation returns true if there is any approved or queued operation.
+func (gate *stageGate) hasAnyActiveOperation() bool {
 	for _, occupancy := range gate.components {
-		if occupancy.approvedTotal > 0 {
+		if occupancy.approvedTotal > 0 || len(occupancy.queuedOnNode) > 0 {
 			return true
 		}
 	}
