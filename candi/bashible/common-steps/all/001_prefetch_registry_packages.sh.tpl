@@ -20,7 +20,6 @@
 # Package list MUST stay identical to 007_fetch_registry_packages.sh.tpl.
 
 {{- $kubernetesVersion := printf "%s%s" (.kubernetesVersion | toString) (index .k8s .kubernetesVersion "patch" | toString) | replace "." "" }}
-{{- $kubernetesCniVersion := "1.9.1" | replace "." "" }}
 
 {{- $containerd := "containerd1736"}}
 {{- if eq .cri "ContainerdV2" }}
@@ -86,20 +85,7 @@ if ! systemd-run \
     --description="Prefetch deckhouse registry packages (parallel with bashible system prep)" \
     --collect \
     /bin/bash -c ". \"$env_file\" && exec /opt/deckhouse/bin/rpp-get fetch \
-      \"d8:{{ .images.registrypackages.d8 }}\" \
-      \"yq:{{ .images.registrypackages.yq }}\" \
-      \"curl:{{ .images.registrypackages.d8Curl }}\" \
-      \"e2fsprogs:{{ .images.registrypackages.e2fsprogs }}\" \
-      \"iptables:{{ .images.registrypackages.iptables }}\" \
-      \"socat:{{ .images.registrypackages.socat1734 }}\" \
-      \"jq:{{ .images.registrypackages.jq }}\" \
-      \"nfs-mount:{{- .images.registrypackages.nfsMount }}\" \
-      \"lsblk:{{- index .images.registrypackages "lsblk" }}\" \
-      \"which:{{ .images.registrypackages.which223 }}\" \
-      \"growpart:{{ .images.registrypackages.growpart033 }}\" \
-      \"virt-what:{{ .images.registrypackages.virtWhat125 }}\" \
       \"containerd:{{ index .images.registrypackages $containerd }}\" \
-      \"kubernetes-cni:{{ index .images.registrypackages (printf "kubernetesCni%s" $kubernetesCniVersion) | toString }}\" \
       \"kubelet:{{ index .images.registrypackages (printf "kubelet%s" $kubernetesVersion) | toString }}\" \
       \"crictl:{{ index .images.registrypackages (printf "crictl%s" (.kubernetesVersion | replace "." "")) | toString }}\" \
       \"registry-proxy:{{ .images.registrypackages.registryProxy }}\" \

@@ -22,31 +22,5 @@ __sec() {
   __sec_start=$now
 }
 
-# Per-step prefetch wait: the packages below are prefetched in the background by
-# step 001_prefetch_registry_packages.sh (systemd unit `rpp-prefetch.service`). We
-# wait for each archive to land before calling `rpp-get install`, so install becomes
-# a fast local-extract instead of a serial HTTP download.
-#
-# If any wait times out (or the prefetch unit died) the `|| true` ensures we still
-# fall through to `rpp-get install`, which will fetch the missing archive itself.
-#
-# `d8` is intentionally NOT installed here — it's the largest registrypackage and
-# nothing between this step and 062 needs it. Its wait + install are deferred to
-# step 062 (`d8 completion bash` is the first real use). The 001 prefetch keeps
-# downloading d8 in parallel, so by the time 062 runs the archive is on disk and
-# only the (still synchronous) unpack happens then.
-bb-rpp-wait-fetched "jq" "{{ .images.registrypackages.jq }}" || true
-bb-rpp-wait-fetched "yq" "{{ .images.registrypackages.yq }}" || true
-bb-rpp-wait-fetched "curl" "{{ .images.registrypackages.d8Curl }}" || true
-bb-rpp-wait-fetched "which" "{{ .images.registrypackages.which223 }}" || true
-bb-rpp-wait-fetched "virt-what" "{{ .images.registrypackages.virtWhat125 }}" || true
-bb-rpp-wait-fetched "socat" "{{ .images.registrypackages.socat1734 }}" || true
-bb-rpp-wait-fetched "e2fsprogs" "{{ .images.registrypackages.e2fsprogs }}" || true
-bb-rpp-wait-fetched "iptables" "{{ .images.registrypackages.iptables }}" || true
-bb-rpp-wait-fetched "growpart" "{{ .images.registrypackages.growpart033 }}" || true
-bb-rpp-wait-fetched "lsblk" "{{- index .images.registrypackages "lsblk" }}" || true
-bb-rpp-wait-fetched "nfs-mount" "{{- .images.registrypackages.nfsMount }}" || true
-__sec wait_prefetch
-
-rpp-get install "jq:{{ .images.registrypackages.jq }}" "yq:{{ .images.registrypackages.yq }}" "curl:{{ .images.registrypackages.d8Curl }}" "which:{{ .images.registrypackages.which223 }}" "virt-what:{{ .images.registrypackages.virtWhat125 }}" "socat:{{ .images.registrypackages.socat1734 }}" "e2fsprogs:{{ .images.registrypackages.e2fsprogs }}" "iptables:{{ .images.registrypackages.iptables }}" "growpart:{{ .images.registrypackages.growpart033 }}" "lsblk:{{- index .images.registrypackages "lsblk" }}" "nfs-mount:{{- .images.registrypackages.nfsMount }}"
-__sec rpp_install
+bb-package-wait jq yq curl which virt-what socat e2fsprogs iptables growpart lsblk nfs-mount
+__sec wait_agent

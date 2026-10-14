@@ -19,6 +19,7 @@ package nodeconfig
 import (
 	"context"
 	"fmt"
+	"slices"
 
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -64,7 +65,7 @@ func readNodeConfigOutcomes(ctx context.Context, reader client.Reader) (map[stri
 	outcomes := map[string]nsprOutcome{}
 	for i := range configs.Items {
 		config := &configs.Items[i]
-		if refusal, refused := configRefused(config); refused {
+		if refusal, refused := configRefused(config, staticPodRefusals); refused {
 			for _, pod := range config.Spec.StaticPods {
 				outcome := outcomes[pod.Name]
 				outcome.failed++
@@ -97,14 +98,27 @@ func readNodeConfigOutcomes(ctx context.Context, reader client.Reader) (map[stri
 	return outcomes, nil
 }
 
-// configRefused reports the node's refusal of its current generation as a whole.
-// A config held for a disruption approval is waiting, not refused.
-func configRefused(config *internalv1alpha1.NodeConfig) (string, bool) {
+// configRefusals are the NER's ConfigurationApplied=False refusals (nodelet
+// internal/controllers/controller.go:584-593): PartiallyApplied counts there too, since
+// a failed package names itself in the message.
+var configRefusals = []string{"Rejected", "RolledBackToLastKnownGood", "RollbackFailed", "PartiallyApplied"}
+
+// staticPodRefusals leave out PartiallyApplied: part of the generation is on the node, and
+// status.staticPods says which pods; every pass rebuilds it (nodelet internal/reconcile/loop.go).
+var staticPodRefusals = []string{"Rejected", "RolledBackToLastKnownGood", "RollbackFailed"}
+
+// configRefused reports the node's refusal of its current generation as a whole. A config
+// held for a disruption approval is waiting, not refused; any other False reason (a restart
+// into a new agent build, a bootstrap wait) leaves the answer to the per-pod entries.
+func configRefused(config *internalv1alpha1.NodeConfig, reasons []string) (string, bool) {
 	cond := meta.FindStatusCondition(config.Status.Conditions, configurationAppliedCondition)
 	if cond == nil || cond.Status != metav1.ConditionFalse {
 		return "", false
 	}
 	if cond.ObservedGeneration != config.Generation || disruptionRequested(config) {
+		return "", false
+	}
+	if !slices.Contains(reasons, cond.Reason) {
 		return "", false
 	}
 	return cond.Reason + ": " + cond.Message, true

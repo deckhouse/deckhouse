@@ -150,6 +150,8 @@ func TestNodeConfigOutcomesFollowTheCurrentGeneration(t *testing.T) {
 		atGeneration("behind", 3, 2),
 		atGeneration("rolled-back", 3, 2, notApplied("RolledBackToLastKnownGood", 3)),
 		atGeneration("stale-refusal", 3, 2, notApplied("Rejected", 2)),
+		// A pass that failed to save: no refusal of the pods, and its entries are the old generation's.
+		atGeneration("save-failed", 3, 2, notApplied("PartiallyApplied", 3)),
 		held,
 	).Build()
 
@@ -158,4 +160,47 @@ func TestNodeConfigOutcomesFollowTheCurrentGeneration(t *testing.T) {
 	require.Equal(t, int32(1), outcomes["registry-agent"].applied)
 	require.Equal(t, int32(1), outcomes["registry-agent"].failed)
 	require.Equal(t, "RolledBackToLastKnownGood: the node said why", outcomes["registry-agent"].message)
+}
+
+// ConfigurationApplied=False is more than a refusal: a self-update restart, a bootstrap wait, fields
+// the node does not take, a failed package (PartiallyApplied) next to written pods. Only a refusal
+// fails every pod in the generation; otherwise the per-pod entries answer, or each fault paints all red.
+func TestOnlyARefusedConfigFailsItsStaticPods(t *testing.T) {
+	agent := []internalv1alpha1.StaticPod{{Name: "registry-agent", Manifest: podManifest("registry-agent")}}
+	for _, tc := range []struct {
+		reason  string
+		refused bool
+	}{
+		{reason: "AgentRestarting"},
+		{reason: "Pending"},
+		{reason: "FieldsNotApplicable"},
+		{reason: "UnknownFields"},
+		{reason: "Rejected", refused: true},
+		{reason: "RolledBackToLastKnownGood", refused: true},
+		{reason: "RollbackFailed", refused: true},
+		{reason: "PartiallyApplied"},
+	} {
+		t.Run(tc.reason, func(t *testing.T) {
+			config := nodeConfigWithPod("worker-0", agent,
+				[]internalv1alpha1.StaticPodStatus{{Name: "registry-agent", State: "Written"}})
+			config.Generation = 2
+			config.Status.AppliedGeneration = 2
+			config.Status.Conditions = []metav1.Condition{{
+				Type: configurationAppliedCondition, Status: metav1.ConditionFalse,
+				ObservedGeneration: 2, Reason: tc.reason, Message: "the node said why",
+			}}
+			cl := fake.NewClientBuilder().WithScheme(nodeConfigScheme(t)).WithObjects(config).Build()
+
+			outcomes, err := readNodeConfigOutcomes(context.Background(), cl)
+			require.NoError(t, err)
+
+			if tc.refused {
+				require.Equal(t, int32(1), outcomes["registry-agent"].failed)
+				require.Equal(t, tc.reason+": the node said why", outcomes["registry-agent"].message)
+				return
+			}
+			require.Equal(t, int32(0), outcomes["registry-agent"].failed)
+			require.Equal(t, int32(1), outcomes["registry-agent"].applied, "the per-pod entry answers")
+		})
+	}
 }

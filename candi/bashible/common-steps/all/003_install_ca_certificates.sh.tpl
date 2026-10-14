@@ -13,7 +13,7 @@
 # limitations under the License.
 # bashible: parallel-group=light-prep
 
-rpp-get install "d8-ca-updater:{{ .images.registrypackages.d8CaUpdater }}"
+bb-package-wait d8-ca-updater
 
 mkdir -p /opt/deckhouse/share/ca-certificates/
 

@@ -128,6 +128,7 @@ while [ "$patch_pending" = true ] ; do
   done
 done
 {{- end }}
+{{- tpl (.Files.Get "/deckhouse/candi/bashible/nodelet_install.sh.tpl" | default (.Files.Get "candi/bashible/nodelet_install.sh.tpl")) . | nindent 0 }}
 
 # Get bashible script from secret
 bashible_bundle="$(get_bundle bashible "{{ .nodeGroup.name }}")"

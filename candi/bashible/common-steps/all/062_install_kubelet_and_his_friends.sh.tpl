@@ -13,15 +13,8 @@
 # limitations under the License.
 
 {{- $kubernetesVersion := printf "%s%s" (.kubernetesVersion | toString) (index .k8s .kubernetesVersion "patch" | toString) | replace "." "" }}
-{{- $kubernetesCniVersion := "1.9.1" | replace "." "" }}
 
-# d8 is the largest registrypackage. Step 004 deliberately skips it; the 001 prefetch
-# keeps downloading it in parallel with the rest of bashible. Wait + install happen
-# here, right before the first `d8` invocation below.
-bb-rpp-wait-fetched "d8" "{{ .images.registrypackages.d8 }}" || true
-rpp-get install "d8:{{ .images.registrypackages.d8 }}"
-
-rpp-get install "kubernetes-cni:{{ index .images.registrypackages (printf "kubernetesCni%s" $kubernetesCniVersion) | toString }}"
+bb-package-wait d8 kubernetes-cni
 
 # --result lists what rpp-get actually changed, one "<action> <package>" per line. Step 069
 # restarts kubelet when this flag is set, so reading the result rather than assuming an

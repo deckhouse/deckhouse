@@ -43,6 +43,12 @@ const (
 	imagesDigestsConfigMapName = "bashible-apiserver-files"
 	imagesDigestsKey           = "images_digests.json"
 
+	// platformTemplatesConfigMapName carries the candi templates helm ships with the
+	// release (templates/bashible/bootstrap-templates-cm.yaml); platformDocumentKey
+	// is candi/nodelet/nodeconfig-mutable.yaml.tpl in it.
+	platformTemplatesConfigMapName = "bashible-bootstrap-templates"
+	platformDocumentKey            = "nodeconfig-mutable.yaml.tpl"
+
 	// registryPackagesProxyTokenSecret authenticates the node against the
 	// registry packages proxy it pulls system extensions from.
 	registryPackagesProxyTokenSecret = "registry-packages-proxy-token"

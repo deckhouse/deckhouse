@@ -20,7 +20,9 @@ import (
 	"context"
 	"crypto/rand"
 	"encoding/hex"
+	"errors"
 	"fmt"
+	"slices"
 
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metainternalversion "k8s.io/apimachinery/pkg/apis/meta/internalversion"
@@ -30,6 +32,8 @@ import (
 	k8sruntime "k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/apiserver/pkg/authentication/user"
+	"k8s.io/apiserver/pkg/endpoints/request"
 	"k8s.io/apiserver/pkg/registry/rest"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
@@ -73,9 +77,9 @@ func (s *TemplateStorage) NamespaceScoped() bool { return false }
 
 func (s *TemplateStorage) GetSingularName() string { return "nodeconfigtemplate" }
 
-// Get renders the template of the NodeGroup with this name. A group whose nodes
-// the cluster provisions itself has no template: answering with one would hand
-// an operator a config no machine of that group will ever read.
+// Get renders the template of the NodeGroup with this name. A group bashible
+// manages gets the document its nodes run. Of the Engine groups only one whose
+// machines are installed by hand has a template, and no node may read it.
 func (s *TemplateStorage) Get(ctx context.Context, name string, _ *metav1.GetOptions) (k8sruntime.Object, error) {
 	ng := &v1.NodeGroup{}
 	if err := s.client.Get(ctx, types.NamespacedName{Name: name}, ng); err != nil {
@@ -84,8 +88,15 @@ func (s *TemplateStorage) Get(ctx context.Context, name string, _ *metav1.GetOpt
 		}
 		return nil, fmt.Errorf("read NodeGroup %s: %w", name, err)
 	}
+	if nodeconfig.IsMutable(ng) {
+		return s.renderMutable(ctx, ng)
+	}
 	if !machineOwnedConfig(ng) {
 		return nil, apierrors.NewNotFound(templateGroupResource(), name)
+	}
+	if calledByANode(ctx) {
+		return nil, apierrors.NewForbidden(templateGroupResource(), name,
+			errors.New("a node may read only the template of a group bashible manages"))
 	}
 	tokens, err := nodecommon.BootstrapTokens(ctx, s.client)
 	if err != nil {
@@ -161,10 +172,9 @@ func templateFilter(opts *metainternalversion.ListOptions) (func(name string) bo
 	}, nil
 }
 
-// render fills in the cluster's half of the config and blanks the machine's:
-// the interfaces and the disks are what the operator writes in, and a rendered
-// guess (eth0 with DHCP, the first disk over 2Gi) handed over as a template is
-// one nobody notices is wrong. The node name is theirs to pick too.
+// render fills in the cluster's half of the config and leaves the machine's out: network
+// and storage are absent for the operator to write in, rather than a guess (eth0 with DHCP,
+// the first disk over 2Gi) nobody notices is wrong. The node name is theirs to pick too.
 func (s *TemplateStorage) render(ctx context.Context, ng *v1.NodeGroup, bootstrapToken string) (*templatesv1alpha1.NodeConfigTemplate, error) {
 	spec, err := nodeconfig.RenderBootstrapSpec(ctx, s.client, s.client, ng, "")
 	if err != nil {
@@ -199,6 +209,37 @@ func (s *TemplateStorage) render(ctx context.Context, ng *v1.NodeGroup, bootstra
 		ObjectMeta: metav1.ObjectMeta{Name: ng.Name},
 		Spec:       spec,
 	}, nil
+}
+
+// renderMutable serves a group bashible manages: the document its nodes run, minus the
+// node name, with the requests its labels select. No token is minted: bashible joins the
+// node with its own, and the agent there serves no status port.
+func (s *TemplateStorage) renderMutable(ctx context.Context, ng *v1.NodeGroup) (*templatesv1alpha1.NodeConfigTemplate, error) {
+	spec, err := nodeconfig.RenderMutableSpec(ctx, s.client, ng)
+	if err != nil {
+		return nil, fmt.Errorf("render the node config of %s: %w", ng.Name, err)
+	}
+	return &templatesv1alpha1.NodeConfigTemplate{
+		ObjectMeta: metav1.ObjectMeta{Name: ng.Name},
+		Spec:       spec,
+	}, nil
+}
+
+// nodeIdentityGroups are the identities a node's agent reads a template with: a
+// joining machine's bootstrap token and a node's kubelet certificate. The role
+// in templates/bashible/rbac-for-us.yaml grants exactly these get on every group.
+var nodeIdentityGroups = []string{user.NodesGroup, nodecommon.BootstrapTokenGroup}
+
+// calledByANode reports whether the caller holds a node identity. The API
+// server puts the caller into every request; one without it came from no client.
+func calledByANode(ctx context.Context) bool {
+	caller, ok := request.UserFrom(ctx)
+	if !ok {
+		return false
+	}
+	return slices.ContainsFunc(caller.GetGroups(), func(group string) bool {
+		return slices.Contains(nodeIdentityGroups, group)
+	})
 }
 
 // statusToken mints the bearer a machine will answer its :50000 status port

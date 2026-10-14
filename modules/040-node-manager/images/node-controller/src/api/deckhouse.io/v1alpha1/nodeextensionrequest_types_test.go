@@ -33,6 +33,7 @@ import (
 func TestNERPrinterColumnsSayWhatTheNodesDidWithIt(t *testing.T) {
 	markers := printerColumnMarkers(t, "nodeextensionrequest_types.go")
 	require.Equal(t, [][2]string{
+		{"Kind", ".spec.extension.kind"},
 		{"Phase", ".status.phase"},
 		{"Matched", ".status.matchedNodes"},
 		{"Applied", ".status.appliedNodes"},
@@ -63,4 +64,31 @@ func TestNERPrinterColumnsSayWhatTheNodesDidWithIt(t *testing.T) {
 		shipped = append(shipped, [2]string{column.Name, column.JSONPath})
 	}
 	require.Equal(t, markers, shipped)
+}
+
+// The requester declares what the image is and nothing guesses it: the API server
+// refuses a request without one of the two kinds, and the status keeps no second copy.
+func TestShippedNERCRDRequiresTheExtensionKind(t *testing.T) {
+	paths := testenv.NodeManagerCRDPaths(testenv.NodeExtensionRequestCRDFile)
+	require.Len(t, paths, 1)
+	raw, err := os.ReadFile(paths[0])
+	require.NoError(t, err)
+
+	var crd struct {
+		Spec struct {
+			Versions []struct {
+				Schema struct {
+					OpenAPIV3Schema map[string]any `json:"openAPIV3Schema"`
+				} `json:"schema"`
+			} `json:"versions"`
+		} `json:"spec"`
+	}
+	require.NoError(t, sigsyaml.Unmarshal(raw, &crd))
+	require.Len(t, crd.Spec.Versions, 1)
+	schema := crd.Spec.Versions[0].Schema.OpenAPIV3Schema
+
+	require.Contains(t, crdField(t, schema, "spec", "extension")["required"], "kind")
+	require.Equal(t, []any{string(ExtensionKindPackage), string(ExtensionKindSystemExtension)},
+		crdField(t, schema, "spec", "extension", "kind")["enum"])
+	require.NotContains(t, crdField(t, schema, "status")["properties"], "kind")
 }

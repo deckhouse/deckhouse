@@ -378,6 +378,7 @@ function main() {
 
   if [ -f "/var/lib/bashible/telemetry.env" ]; then
     source "/var/lib/bashible/telemetry.env"
+    export DHCTL_TELEMETRY_ENABLED OTEL_RELAY_ADDRESS
   fi
 
   {{- /*

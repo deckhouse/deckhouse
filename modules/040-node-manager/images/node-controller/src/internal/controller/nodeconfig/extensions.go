@@ -27,29 +27,29 @@ import (
 	internalv1alpha1 "github.com/deckhouse/node-controller/api/internal.deckhouse.io/v1alpha1"
 )
 
-// nodeExtensions aggregates the NodeExtensionRequests that select this node
-// into extensions and kernel modules for its NodeConfig. Invalid or conflicting
-// requests are dropped, not errored — their own status carries the reason.
-// The requests arrive in the uniqueness-contest order (orderedNERs), with the
-// contest already settled: it is cluster-wide, so it is run once per pass rather
-// than once per node, and spec.extensions must not follow the listing order.
-func nodeExtensions(ordered []*deckhousev1alpha1.NodeExtensionRequest, conflicts map[string]nerConflict, node *corev1.Node, ngName string) ([]internalv1alpha1.Extension, []internalv1alpha1.KernelModule) {
+// nodeExtensions collects the requests of this kind that select the node into its NodeConfig.
+// Invalid and losing requests are dropped, not errored: their status says why. The contest
+// is cluster-wide and settled once per pass (settleNERs), not once per node.
+func nodeExtensions(in clusterInputs, kind deckhousev1alpha1.ExtensionKind, node *corev1.Node, ngName string) ([]internalv1alpha1.Extension, []internalv1alpha1.KernelModule) {
 	// Left nil rather than empty: both marshal the same under omitempty, and
 	// callers distinguish "no requests matched" by length either way.
 	var extensions []internalv1alpha1.Extension
 	var modules []internalv1alpha1.KernelModule
 	seenModules := make(map[string]struct{})
 
-	for _, ner := range ordered {
+	for _, ner := range in.NodeExtensions {
+		if !deliverable(ner, kind) {
+			continue
+		}
 		if !nerMatchesNode(ner, node, ngName) {
 			continue
 		}
-		if _, lost := conflicts[ner.Name]; lost {
+		if _, lost := in.NodeExtensionConflicts[ner.Name]; lost {
 			continue
 		}
 
-		// Validity is not checked here: orderedNERs has already dropped every
-		// request with an unusable sysext.
+		// Validity is not checked here: settleNERs has already dropped every
+		// request with an unusable extension.
 		extensions = append(extensions, resolveExtension(ner))
 
 		for _, module := range ner.Spec.KernelModules {
@@ -67,70 +67,88 @@ func nodeExtensions(ordered []*deckhousev1alpha1.NodeExtensionRequest, conflicts
 	return extensions, modules
 }
 
+// deliverable reports whether a request goes to the nodes that install artifacts of this
+// kind: it must ask for one, and a registry package cannot load kernel modules.
+func deliverable(ner *deckhousev1alpha1.NodeExtensionRequest, nodes deckhousev1alpha1.ExtensionKind) bool {
+	if ner.Spec.Extension.Kind != nodes {
+		return false
+	}
+	return nodes == deckhousev1alpha1.ExtensionKindSystemExtension || len(ner.Spec.KernelModules) == 0
+}
+
 // Reasons a request is not ready, reported on its Ready condition. An empty
-// reason means the extension resolved and won its sysext name and digest.
+// reason means the extension resolved and won its name and digest.
 const (
-	reasonResolved       = "Resolved"
-	reasonInvalidSysext  = "InvalidSysext"
-	reasonConflict       = "Conflict"
-	reasonModuleConflict = "KernelModuleConflict"
-	reasonReservedName   = "ReservedName"
+	reasonResolved         = "Resolved"
+	reasonInvalidExtension = "InvalidExtension"
+	reasonConflict         = "Conflict"
+	reasonModuleConflict   = "KernelModuleConflict"
+	reasonReservedName     = "ReservedName"
 	// reasonRefusedByNodes is the request that resolved here and was rejected
 	// where it matters. The others are this controller's own verdicts; this one
 	// is the fleet's.
 	reasonRefusedByNodes = "RefusedByNodes"
+	// reasonNotDeliverable is a request whose selected groups cannot install its kind
+	// of image, or a registry package that asks for kernel modules.
+	reasonNotDeliverable = "NotDeliverable"
 )
 
-// sysextValid reports whether a request names an image the nodes can pull: both
+// extensionValid reports whether a request names an image the nodes can pull: both
 // name and digest are needed. The one refusal this controller resolves on.
-func sysextValid(ner *deckhousev1alpha1.NodeExtensionRequest) bool {
-	return ner.Spec.Sysext.Name != "" && ner.Spec.Sysext.Digest != ""
+func extensionValid(ner *deckhousev1alpha1.NodeExtensionRequest) bool {
+	return ner.Spec.Extension.Name != "" && ner.Spec.Extension.Digest != ""
 }
 
-// resolveExtension turns a request's Sysext into the NodeConfig extension the
+// resolveExtension turns a request's extension into the NodeConfig extension the
 // agent pulls through the registry-packages-proxy; fields pass straight through.
-// Callers filter on sysextValid first.
+// Callers filter on extensionValid first.
 func resolveExtension(ner *deckhousev1alpha1.NodeExtensionRequest) internalv1alpha1.Extension {
-	sysext := ner.Spec.Sysext
+	ext := ner.Spec.Extension
 	return internalv1alpha1.Extension{
-		Name:           sysext.Name,
-		Repository:     sysext.Repository,
-		AdditionalPath: sysext.Path,
-		Digest:         sysext.Digest,
+		Name:           ext.Name,
+		Repository:     ext.Repository,
+		AdditionalPath: ext.Path,
+		Digest:         ext.Digest,
 		RequestedBy:    nerRequestedByPrefix + ner.Name,
 	}
 }
 
-// nerConflict records why a request lost: a reserved platform name, a
-// name/digest clash with an older request (winner names it, field says which),
-// or a kernel module an older request loads with different parameters.
+// nerConflict records why a request lost: a reserved platform name; a platform package's
+// name or digest (platformPackage names the package); a name/digest clash with an older
+// request (winner names it, field says which); a kernel module loaded differently.
 type nerConflict struct {
-	reason string
-	winner string
-	field  string
+	reason          string
+	winner          string
+	field           string
+	platformPackage string
 }
 
-// resolveNERConflicts enforces uniqueness of sysext names, digests and kernel
-// modules over requests already in orderedNERs order; the oldest request
-// (creation time, then name) wins each clash. The result maps each losing
-// request's name to why it lost; winners are absent.
-func resolveNERConflicts(ordered []*deckhousev1alpha1.NodeExtensionRequest) map[string]nerConflict {
+// resolveNERConflicts maps each request losing a name, digest or kernel module to why; the
+// oldest in orderedNERs order wins. Names and digests are unique per kind: a Package reaches
+// bashible nodes only, a SystemExtension Engine ones, and systemType never changes once set.
+func resolveNERConflicts(ordered []*deckhousev1alpha1.NodeExtensionRequest, platform []internalv1alpha1.Extension) map[string]nerConflict {
 	nameOwner := make(map[string]string, len(ordered))
 	digestOwner := make(map[string]string, len(ordered))
 	moduleOwner := make(map[string]*deckhousev1alpha1.NodeExtensionRequest, len(ordered))
 	conflicts := make(map[string]nerConflict)
 
 	for _, ner := range ordered {
-		sysext := ner.Spec.Sysext
-		if deckhousev1alpha1.IsReservedSysextName(sysext.Name) {
+		ext := ner.Spec.Extension
+		if deckhousev1alpha1.IsReservedExtensionName(ext.Name) {
 			conflicts[ner.Name] = nerConflict{reason: reasonReservedName}
 			continue
 		}
-		if owner, taken := nameOwner[sysext.Name]; taken {
+		if conflict, lost := platformConflict(ext, platform); lost {
+			conflicts[ner.Name] = conflict
+			continue
+		}
+		nameKey := string(ext.Kind) + "/" + ext.Name
+		digestKey := string(ext.Kind) + "/" + ext.Digest
+		if owner, taken := nameOwner[nameKey]; taken {
 			conflicts[ner.Name] = nerConflict{reason: reasonConflict, winner: owner, field: "name"}
 			continue
 		}
-		if owner, taken := digestOwner[sysext.Digest]; taken {
+		if owner, taken := digestOwner[digestKey]; taken {
 			conflicts[ner.Name] = nerConflict{reason: reasonConflict, winner: owner, field: "digest"}
 			continue
 		}
@@ -138,8 +156,13 @@ func resolveNERConflicts(ordered []*deckhousev1alpha1.NodeExtensionRequest) map[
 			conflicts[ner.Name] = conflict
 			continue
 		}
-		nameOwner[sysext.Name] = ner.Name
-		digestOwner[sysext.Digest] = ner.Name
+		// deliverable() takes the request's own kind only, so this is "reaches no node":
+		// such a request must not take a name, digest or module from a younger one.
+		if !deliverable(ner, ext.Kind) {
+			continue
+		}
+		nameOwner[nameKey] = ner.Name
+		digestOwner[digestKey] = ner.Name
 		for _, module := range ner.Spec.KernelModules {
 			moduleOwner[module.Name] = ner
 		}
@@ -147,13 +170,31 @@ func resolveNERConflicts(ordered []*deckhousev1alpha1.NodeExtensionRequest) map[
 	return conflicts
 }
 
+// platformConflict reports a registry package request that takes the name or digest of a
+// package the platform installs on the same nodes: the name keys the package there, and
+// removing the request would remove the platform's files. A system extension takes neither.
+func platformConflict(ext deckhousev1alpha1.NodeExtension, platform []internalv1alpha1.Extension) (nerConflict, bool) {
+	if ext.Kind != deckhousev1alpha1.ExtensionKindPackage {
+		return nerConflict{}, false
+	}
+	for _, claim := range platform {
+		if ext.Name == claim.Name {
+			return nerConflict{reason: reasonConflict, field: "name", platformPackage: claim.Name}, true
+		}
+		if ext.Digest == claim.Digest {
+			return nerConflict{reason: reasonConflict, field: "digest", platformPackage: claim.Name}, true
+		}
+	}
+	return nerConflict{}, false
+}
+
 // orderedNERs orders requests oldest first, ties broken by name, and drops the
-// ones with an invalid sysext. One order for both the uniqueness contest and
+// ones with an invalid extension. One order for both the uniqueness contest and
 // the node's array, so neither depends on how the requests were listed.
 func orderedNERs(ners []deckhousev1alpha1.NodeExtensionRequest) []*deckhousev1alpha1.NodeExtensionRequest {
 	ordered := make([]*deckhousev1alpha1.NodeExtensionRequest, 0, len(ners))
 	for i := range ners {
-		if !sysextValid(&ners[i]) {
+		if !extensionValid(&ners[i]) {
 			continue
 		}
 		ordered = append(ordered, &ners[i])
@@ -166,6 +207,14 @@ func orderedNERs(ners []deckhousev1alpha1.NodeExtensionRequest) []*deckhousev1al
 		return ordered[i].Name < ordered[j].Name
 	})
 	return ordered
+}
+
+// settleNERs is what every render and the status pass take from the requests: the valid
+// ones in contest order, and which ones lost the contest to an older request or to the
+// platform packages of the release.
+func settleNERs(ners []deckhousev1alpha1.NodeExtensionRequest, platform []internalv1alpha1.Extension) ([]*deckhousev1alpha1.NodeExtensionRequest, map[string]nerConflict) {
+	ordered := orderedNERs(ners)
+	return ordered, resolveNERConflicts(ordered, platform)
 }
 
 // moduleConflict reports whether a request asks for a kernel module an earlier
@@ -210,6 +259,8 @@ func nerMatchesNode(ner *deckhousev1alpha1.NodeExtensionRequest, node *corev1.No
 // mergeExtensions appends the extra extensions to the base set, dropping any
 // whose name already appears in the base — the base (platform) sysexts win.
 func mergeExtensions(base, extra []internalv1alpha1.Extension) []internalv1alpha1.Extension {
+	// The base is the pass's memoised platform document, shared by every node it renders.
+	base = slices.Clone(base)
 	seen := make(map[string]struct{}, len(base))
 	for _, ext := range base {
 		seen[ext.Name] = struct{}{}

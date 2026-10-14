@@ -70,6 +70,10 @@ func DrainTimeout(ctx context.Context, r client.Reader, ngName string) time.Dura
 // issued for. The bootstrap-secrets controller keeps one rotating secret per group.
 const BootstrapTokenNodeGroupLabel = "node-manager.deckhouse.io/node-group"
 
+// BootstrapTokenGroup is the group a joining machine authenticates in with its
+// bootstrap token (the secret's auth-extra-groups).
+const BootstrapTokenGroup = "system:bootstrappers:d8-node-manager"
+
 // BootstrapTokens returns the newest unexpired bootstrap token of every
 // NodeGroup that has one, keyed by group. Kept in step with
 // groupBootstrapToken in dhctl's pkg/operations/bootstrap/steps_immutable_join.go.

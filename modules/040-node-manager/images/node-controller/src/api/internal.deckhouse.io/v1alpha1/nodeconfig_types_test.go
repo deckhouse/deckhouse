@@ -36,3 +36,12 @@ func TestNodeConfigStatusMarshalsNothingItDoesNotHave(t *testing.T) {
 	require.NotContains(t, string(document), "extensions: null")
 	require.NotContains(t, string(document), "units: null")
 }
+
+// A Mutable document names no OS image. The field is a struct, so omitempty
+// alone would still send osImage: {digest: ""}, which the digest pattern refuses.
+func TestASpecWithoutAnOSImageMarshalsNone(t *testing.T) {
+	document, err := sigsyaml.Marshal(NodeSpec{NodeName: "worker-0"})
+	require.NoError(t, err)
+
+	require.NotContains(t, string(document), "osImage")
+}

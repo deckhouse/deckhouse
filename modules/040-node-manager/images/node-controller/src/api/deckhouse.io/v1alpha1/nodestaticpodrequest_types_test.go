@@ -17,6 +17,7 @@ limitations under the License.
 package v1alpha1
 
 import (
+	"encoding/json"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -261,15 +262,29 @@ func crdField(t *testing.T, schema map[string]any, path ...string) map[string]an
 // The reason vocabulary lives in prose in three places and is generated from
 // none of them: the Conditions doc, the CRD description and its Russian twin.
 // This is what stops the next reason landing in only one of them.
-func TestTheDegradedReasonsAreDocumented(t *testing.T) {
+func TestTheReasonsAreDocumented(t *testing.T) {
 	paths := testenv.NodeManagerCRDPaths(testenv.NodeStaticPodRequestCRDFile)
 	require.Len(t, paths, 1)
 	files := []string{paths[0], filepath.Join(filepath.Dir(paths[0]), "doc-ru-nodestaticpodrequest.yaml"), "nodestaticpodrequest_types.go"}
 	for _, path := range files {
 		raw, err := os.ReadFile(path)
 		require.NoError(t, err)
-		for _, reason := range []string{"InvalidName", "ReservedName", "InvalidManifest", "Conflict", "LimitExceeded", "RefusedByNodes"} {
+		for _, reason := range []string{
+			"InvalidName", "ReservedName", "InvalidManifest", "Conflict", "LimitExceeded", "RefusedByNodes",
+			"ServedByBashible", "NoNodesSelected",
+		} {
 			require.Contains(t, string(raw), reason, "%s must be described in %s", reason, path)
 		}
+	}
+}
+
+// A zero is an answer: "no node refused it" is not "nobody said". Omitted, the
+// printer columns of a healthy request showed nothing at all.
+func TestTheStatusCountersSerializeZero(t *testing.T) {
+	raw, err := json.Marshal(NodeStaticPodRequestStatus{})
+	require.NoError(t, err)
+
+	for _, counter := range []string{"matchedNodes", "appliedNodes", "failedNodes", "pendingNodes"} {
+		require.Contains(t, string(raw), `"`+counter+`":0`)
 	}
 }

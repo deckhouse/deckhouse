@@ -21,6 +21,7 @@ import (
 	"encoding/base64"
 	"fmt"
 	"sort"
+	"strings"
 	"time"
 
 	. "github.com/onsi/ginkgo/v2"
@@ -29,6 +30,7 @@ import (
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -74,6 +76,7 @@ const (
 	testGuestAgentDigest        = testenv.TestGuestAgentDigest
 	testOSImageDigest           = testenv.TestOSImageDigest
 	testClusterCA               = testenv.TestClusterCA
+	testNodeletPackageDigest    = testenv.TestNodeletPackageDigest
 	// The extension one spec asks for through a NodeExtensionRequest, and the
 	// digest it is rebuilt under.
 	testRequestedSysextName          = "custom-ext"
@@ -226,11 +229,13 @@ var _ = Describe("NodeConfig controller", func() {
 			g.Expect(getNodeConfig(ctx, g, nodeName).Spec.Extensions).To(HaveLen(5))
 		}, testenv.EventuallyTimeout, testenv.EventuallyPoll).Should(Succeed())
 
-		By("asking for an extension on the group")
+		By("asking for a system extension on the group, with no registry-packages-proxy running")
 		ner := &v1alpha1.NodeExtensionRequest{
 			ObjectMeta: metav1.ObjectMeta{Name: testenv.UniqueName("ext")},
 			Spec: v1alpha1.NodeExtensionRequestSpec{
-				Sysext:            v1alpha1.Sysext{Name: testRequestedSysextName, Digest: testRequestedSysextDigest},
+				Extension: v1alpha1.NodeExtension{
+					Name: testRequestedSysextName, Digest: testRequestedSysextDigest, Kind: v1alpha1.ExtensionKindSystemExtension,
+				},
 				NodeGroupSelector: v1alpha1.NodeGroupSelector{MatchNames: []string{ngName}},
 			},
 		}
@@ -250,13 +255,46 @@ var _ = Describe("NodeConfig controller", func() {
 
 		By("pointing the request at a rebuilt image")
 		patch := client.MergeFrom(ner.DeepCopy())
-		ner.Spec.Sysext.Digest = testRequestedSysextRebuiltDigest
+		ner.Spec.Extension.Digest = testRequestedSysextRebuiltDigest
 		Expect(k8sClient.Patch(ctx, ner, patch)).To(Succeed())
 
 		Eventually(func(g Gomega) {
 			g.Expect(extensionDigests(getNodeConfig(ctx, g, nodeName))).
 				To(HaveKeyWithValue(testRequestedSysextName, testRequestedSysextRebuiltDigest))
 		}, testenv.EventuallyTimeout, testenv.EventuallyPoll).Should(Succeed())
+	})
+
+	// The request is written with spec.extension: an object in the old shape is refused
+	// rather than stored with nothing to install. Plain fields, whatever the Go type knows.
+	It("refuses a NodeExtensionRequest written with spec.sysext", func(ctx context.Context) {
+		old := &unstructured.Unstructured{Object: map[string]any{
+			"apiVersion": "deckhouse.io/v1alpha1",
+			"kind":       "NodeExtensionRequest",
+			"metadata":   map[string]any{"name": testenv.UniqueName("old-shape")},
+			"spec": map[string]any{
+				"sysext": map[string]any{"name": testRequestedSysextName, "digest": testRequestedSysextDigest},
+			},
+		}}
+		Expect(k8sClient.Create(ctx, old)).To(MatchError(ContainSubstring("spec.extension: Required value")))
+	})
+
+	// The requester names the kind, one of the two: the API server refuses a request that
+	// leaves it to be guessed. Plain fields, whatever the Go type knows.
+	It("refuses a NodeExtensionRequest without one of the two kinds", func(ctx context.Context) {
+		request := func(extension map[string]any) *unstructured.Unstructured {
+			return &unstructured.Unstructured{Object: map[string]any{
+				"apiVersion": "deckhouse.io/v1alpha1",
+				"kind":       "NodeExtensionRequest",
+				"metadata":   map[string]any{"name": testenv.UniqueName("kind")},
+				"spec":       map[string]any{"extension": extension},
+			}}
+		}
+		Expect(k8sClient.Create(ctx, request(map[string]any{
+			"name": testRequestedSysextName, "digest": testRequestedSysextDigest,
+		}))).To(MatchError(ContainSubstring("spec.extension.kind: Required value")))
+		Expect(k8sClient.Create(ctx, request(map[string]any{
+			"name": testRequestedSysextName, "digest": testRequestedSysextDigest, "kind": "Image",
+		}))).To(MatchError(ContainSubstring("spec.extension.kind: Unsupported value")))
 	})
 	// User story: As a platform module, I want the static pod I publish to reach
 	// the nodes of the groups I name and to be told what those nodes made of it,
@@ -745,6 +783,40 @@ var _ = Describe("NodeConfig controller", func() {
 		}, testenv.EventuallyTimeout, testenv.EventuallyPoll).Should(Succeed())
 	})
 
+	// User story: As an operator, I want a release that changes the platform's package
+	// list to reach every bashible node on its own. The document is read from its own
+	// ConfigMap, and with no resync period only a watch on it starts a pass.
+	It("re-renders a bashible node on a new platform document with nothing else moving", func(ctx context.Context) {
+		ngName := testenv.UniqueName("workers-platform")
+		testenv.CreateImmutableNodeGroup(ctx, k8sClient, ngName, managedByBashible(deckhousev1.NodeTypeCloudEphemeral))
+		nodeName := testenv.UniqueName("node")
+		createNode(ctx, nodeName, ngName)
+
+		Eventually(func(g Gomega) {
+			g.Expect(getNodeConfig(ctx, g, nodeName).Spec.Extensions).To(ContainElement(HaveField("Name", "which")))
+		}, testenv.EventuallyTimeout, testenv.EventuallyPoll).Should(Succeed())
+		generation := publishedGeneration(ctx, nodeName)
+
+		// Settled first: publishing a config brings an all-nodes pass along, and one
+		// landing after the write below would pass this spec without the watch.
+		Consistently(func(g Gomega) {
+			g.Expect(getNodeConfig(ctx, g, nodeName).Generation).To(Equal(generation))
+		}, testenv.NegativeCheckDuration, testenv.EventuallyPoll).Should(Succeed())
+
+		By("the release dropping a package from the platform document and nothing else happening")
+		original := testenv.PlatformDocument()
+		withoutWhich := strings.Replace(original, "  - name: which\n    digest: {{ .images.registrypackages.which223 }}\n", "", 1)
+		Expect(withoutWhich).NotTo(Equal(original), "the shipped document no longer lists which")
+		patchConfigMapKey(ctx, platformTemplatesConfigMapName, platformDocumentKey, withoutWhich)
+		DeferCleanup(func(ctx context.Context) {
+			patchConfigMapKey(ctx, platformTemplatesConfigMapName, platformDocumentKey, original)
+		})
+
+		Eventually(func(g Gomega) {
+			g.Expect(getNodeConfig(ctx, g, nodeName).Spec.Extensions).NotTo(ContainElement(HaveField("Name", "which")))
+		}, testenv.EventuallyTimeout, testenv.EventuallyPoll).Should(Succeed())
+	})
+
 	// User story: As an operator watching a rootfs update, I want to see how far
 	// the node has got. The agent publishes that in status.osImage; a field the
 	// CRD does not declare is not merely pruned — the node's whole status apply
@@ -860,10 +932,7 @@ var _ = Describe("NodeConfig controller", func() {
 		// took the change reads as carrying the published spec unproven.
 		ng := &deckhousev1.NodeGroup{}
 		Expect(k8sClient.Get(ctx, types.NamespacedName{Name: ngName}, ng)).To(Succeed())
-		gate := &Reconciler{}
-		gate.Client = stale
-		gate.sources = &sourceReader{Reader: apiReader}
-		gate.derived = &derived_status.Service{Client: k8sClient}
+		gate := gateOver(stale)
 
 		// One node is mid-update and maxConcurrent defaults to one: the other node
 		// must wait, however applied the cache believes the group to be.
@@ -1314,33 +1383,154 @@ var _ = Describe("NodeConfig controller", func() {
 		}, testenv.NegativeCheckDuration, testenv.EventuallyPoll).Should(Succeed())
 	})
 
-	It("leaves nodes of a bashible-managed group alone", func(ctx context.Context) {
+	// User story: as a platform module, I want a static pod on every node bashible
+	// manages too, so that one NodeStaticPodRequest serves the whole cluster.
+	It("renders the agent's document for a node of a bashible-managed group", func(ctx context.Context) {
 		ngName := testenv.UniqueName("workers-mutable")
-		ng := &deckhousev1.NodeGroup{
-			ObjectMeta: metav1.ObjectMeta{Name: ngName},
-			Spec: deckhousev1.NodeGroupSpec{
-				NodeType:   deckhousev1.NodeTypeCloudEphemeral,
-				SystemType: deckhousev1.SystemTypeMutable,
-				CloudInstances: &deckhousev1.CloudInstancesSpec{
-					MinPerZone: 1,
-					MaxPerZone: 3,
-					ClassReference: deckhousev1.ClassReference{
-						Kind: "DVPInstanceClass",
-						Name: "worker",
-					},
+		testenv.CreateImmutableNodeGroup(ctx, k8sClient, ngName, managedByBashible(deckhousev1.NodeTypeCloudEphemeral))
+		nodeName := testenv.UniqueName("node")
+		createNode(ctx, nodeName, ngName)
+		platform := testPlatform(GinkgoT())
+
+		Eventually(func(g Gomega) {
+			nc := getNodeConfig(ctx, g, nodeName)
+			g.Expect(nc.Spec.SystemType).To(Equal(internalv1alpha1.SystemTypeMutable))
+			g.Expect(nc.Spec.NodeName).To(Equal(nodeName))
+			g.Expect(nc.Spec.OSImage).To(BeZero())
+			g.Expect(nc.Spec.APIServerEndpoints).To(ConsistOf(apiServerEndpoints))
+			g.Expect(nc.Spec.FeatureGates).To(Equal(platform.FeatureGates))
+			g.Expect(nc.Spec.Extensions).To(Equal(platform.Extensions))
+			g.Expect(nc.Labels).To(HaveKeyWithValue(managedByLabel, managedByValue))
+		}, testenv.EventuallyTimeout, testenv.EventuallyPoll).Should(Succeed())
+
+		By("asking for a registry package on the group")
+		request := &v1alpha1.NodeExtensionRequest{
+			ObjectMeta: metav1.ObjectMeta{Name: testenv.UniqueName("pkg")},
+			Spec: v1alpha1.NodeExtensionRequestSpec{
+				Extension: v1alpha1.NodeExtension{
+					Name: "sds-utils", Digest: "sha256:" + strings.Repeat("e", 64), Kind: v1alpha1.ExtensionKindPackage,
 				},
+				NodeGroupSelector: v1alpha1.NodeGroupSelector{MatchNames: []string{ngName}},
 			},
 		}
-		Expect(k8sClient.Create(ctx, ng)).To(Succeed())
-		DeferCleanup(func(ctx context.Context) { _ = k8sClient.Delete(ctx, ng) })
+		Expect(k8sClient.Create(ctx, request)).To(Succeed())
+		DeferCleanup(func(ctx context.Context) { _ = k8sClient.Delete(ctx, request) })
 
+		Eventually(func(g Gomega) {
+			extensions := getNodeConfig(ctx, g, nodeName).Spec.Extensions
+			g.Expect(extensions).To(HaveLen(len(platform.Extensions) + 1))
+			g.Expect(extensions[len(extensions)-1].Name).To(Equal("sds-utils"))
+			g.Expect(extensions[len(extensions)-1].RequestedBy).To(Equal(nerRequestedByPrefix + request.Name))
+		}, testenv.EventuallyTimeout, testenv.EventuallyPoll).Should(Succeed())
+	})
+
+	// The object of a node that is not CloudEphemeral carries what the machine was
+	// started with, so the node registers it and this controller completes it.
+	It("leaves the first NodeConfig of a static bashible node to the node", func(ctx context.Context) {
+		ngName := testenv.UniqueName("static-mutable")
+		testenv.CreateImmutableNodeGroup(ctx, k8sClient, ngName, managedByBashible(deckhousev1.NodeTypeStatic))
 		nodeName := testenv.UniqueName("node")
 		createNode(ctx, nodeName, ngName)
 
 		Consistently(func(g Gomega) {
-			nc := &internalv1alpha1.NodeConfig{}
-			err := k8sClient.Get(ctx, types.NamespacedName{Name: nodeName}, nc)
-			g.Expect(err).To(HaveOccurred())
+			err := k8sClient.Get(ctx, types.NamespacedName{Name: nodeName}, &internalv1alpha1.NodeConfig{})
+			g.Expect(apierrors.IsNotFound(err)).To(BeTrue(), "the controller created the object of a static node")
+		}, testenv.NegativeCheckDuration, testenv.EventuallyPoll).Should(Succeed())
+
+		By("the agent registering the seed it was started with")
+		// What the first master's seed carries: the installer's proxy, gone once dhctl
+		// has finished, and the token that proxy takes.
+		seed := &unstructured.Unstructured{Object: map[string]any{
+			"apiVersion": "internal.deckhouse.io/v1alpha1",
+			"kind":       "NodeConfig",
+			"metadata":   map[string]any{"name": nodeName},
+			"spec": map[string]any{
+				"systemType":                          "Mutable",
+				"nodeName":                            nodeName,
+				"registryPackagesProxyEndpoints":      []any{"http://127.0.0.1:5444"},
+				"registryPackagesProxyAccessTokenB64": base64.StdEncoding.EncodeToString([]byte("passthrough")),
+			},
+		}}
+		Expect(k8sClient.Create(ctx, seed)).To(Succeed())
+
+		Eventually(func(g Gomega) {
+			nc := getNodeConfig(ctx, g, nodeName)
+			g.Expect(nc.Spec.FeatureGates).To(HaveKeyWithValue("static-pods", true))
+			g.Expect(nc.Spec.APIServerEndpoints).To(ConsistOf(apiServerEndpoints))
+			g.Expect(nc.Spec.RegistryPackagesProxyAccessTokenB64).To(Equal(base64.StdEncoding.EncodeToString([]byte("proxy-token"))),
+				"the node keeps the installer's token")
+
+			stored := &unstructured.Unstructured{}
+			stored.SetGroupVersionKind(internalv1alpha1.GroupVersion.WithKind("NodeConfig"))
+			g.Expect(k8sClient.Get(ctx, types.NamespacedName{Name: nodeName}, stored)).To(Succeed())
+			_, found, err := unstructured.NestedFieldNoCopy(stored.Object, "spec", "registryPackagesProxyEndpoints")
+			g.Expect(err).NotTo(HaveOccurred())
+			g.Expect(found).To(BeFalse(), "the node keeps the installer's proxy, and fetches nothing once dhctl is gone")
+		}, testenv.EventuallyTimeout, testenv.EventuallyPoll).Should(Succeed())
+	})
+
+	// A change reaches a bashible group the way it reaches an Engine one: a node
+	// at a time, the next one only after the first reports it applied.
+	It("hands a change to a bashible group one node at a time", func(ctx context.Context) {
+		ngName := testenv.UniqueName("workers-mutable-rollout")
+		testenv.CreateImmutableNodeGroup(ctx, k8sClient, ngName, managedByBashible(deckhousev1.NodeTypeCloudEphemeral))
+		nodes := []string{testenv.UniqueName("node"), testenv.UniqueName("node")}
+		for _, name := range nodes {
+			createNode(ctx, name, ngName)
+		}
+		for _, name := range nodes {
+			publishedGeneration(ctx, name)
+			reportApplied(ctx, name)
+		}
+
+		By("publishing a static pod for the group")
+		request := &v1alpha1.NodeStaticPodRequest{
+			ObjectMeta: metav1.ObjectMeta{Name: testenv.UniqueName("pod")},
+			Spec: v1alpha1.NodeStaticPodRequestSpec{
+				NodeGroupSelector: v1alpha1.NodeGroupSelector{MatchNames: []string{ngName}},
+			},
+		}
+		request.Spec.Manifest = podManifest(request.Name)
+		Expect(k8sClient.Create(ctx, request)).To(Succeed())
+		DeferCleanup(func(ctx context.Context) { _ = k8sClient.Delete(ctx, request) })
+
+		withPod := func(g Gomega) []string {
+			var given []string
+			for _, name := range nodes {
+				if len(getNodeConfig(ctx, g, name).Spec.StaticPods) == 1 {
+					given = append(given, name)
+				}
+			}
+			return given
+		}
+		Eventually(func(g Gomega) {
+			g.Expect(withPod(g)).To(HaveLen(1))
+		}, testenv.EventuallyTimeout, testenv.EventuallyPoll).Should(Succeed())
+		Consistently(func(g Gomega) {
+			g.Expect(withPod(g)).To(HaveLen(1))
+		}, testenv.NegativeCheckDuration, testenv.EventuallyPoll).Should(Succeed())
+
+		By("the node that took it reporting it applied")
+		reportApplied(ctx, withPod(Default)[0])
+
+		Eventually(func(g Gomega) {
+			g.Expect(withPod(g)).To(HaveLen(2))
+		}, testenv.EventuallyTimeout, testenv.EventuallyPoll).Should(Succeed())
+	})
+
+	// bashible asks for the disruptions of the nodes it manages itself; an
+	// operation from here would be a second approval for the same node.
+	It("never asks to interrupt a node of a bashible-managed group", func(ctx context.Context) {
+		ngName := testenv.UniqueName("workers-mutable-disruption")
+		testenv.CreateImmutableNodeGroup(ctx, k8sClient, ngName, managedByBashible(deckhousev1.NodeTypeCloudEphemeral))
+		nodeName := testenv.UniqueName("node")
+		createNode(ctx, nodeName, ngName)
+
+		generation := publishedGeneration(ctx, nodeName)
+		requestDisruption(ctx, nodeName, generation)
+
+		Consistently(func(g Gomega) {
+			g.Expect(findOperation(ctx, g, nodeName)).To(BeNil())
 		}, testenv.NegativeCheckDuration, testenv.EventuallyPoll).Should(Succeed())
 	})
 
@@ -1468,7 +1658,7 @@ var _ = Describe("NodeConfig controller", func() {
 		createNode(ctx, nodeName, ngName)
 
 		// The shape the NodeConfigTemplate hands out: network and storage are
-		// blanked, and a DHCP machine fills in neither.
+		// left out, and a DHCP machine fills in neither.
 		published := &internalv1alpha1.NodeConfig{
 			ObjectMeta: metav1.ObjectMeta{Name: nodeName},
 			Spec: internalv1alpha1.NodeSpec{
@@ -1499,6 +1689,66 @@ var _ = Describe("NodeConfig controller", func() {
 		err := k8sClient.Update(ctx, nc)
 		Expect(err).To(HaveOccurred())
 		Expect(err.Error()).To(ContainSubstring("spec.network is written on the machine"))
+	})
+
+	// The agent registers a static node's NodeConfig by name alone. Held back for
+	// a rollout slot without the group label and the Node as owner, the object was
+	// invisible to the gate, and nothing removed it once the node was gone.
+	It("labels and owns a held NodeConfig but leaves its spec to the slot", func(ctx context.Context) {
+		ngName := testenv.UniqueName("static-held")
+		testenv.CreateImmutableNodeGroup(ctx, k8sClient, ngName, func(ng *deckhousev1.NodeGroup) {
+			ng.Spec.NodeType = deckhousev1.NodeTypeStatic
+			ng.Spec.CloudInstances = nil
+		})
+		register := func(nodeName string) *internalv1alpha1.NodeConfig {
+			GinkgoHelper()
+			published := &internalv1alpha1.NodeConfig{
+				ObjectMeta: metav1.ObjectMeta{Name: nodeName},
+				Spec: internalv1alpha1.NodeSpec{
+					NodeName: nodeName,
+					OSImage:  internalv1alpha1.OSImage{Digest: testOSImageDigest},
+				},
+			}
+			Expect(k8sClient.Create(ctx, published)).To(Succeed())
+			DeferCleanup(func(ctx context.Context) { _ = k8sClient.Delete(ctx, published) })
+			return published
+		}
+
+		By("the first node taking the only slot and never reporting back")
+		holder := testenv.UniqueName("static")
+		createNode(ctx, holder, ngName)
+		register(holder)
+		Eventually(func(g Gomega) {
+			g.Expect(getNodeConfig(ctx, g, holder).Spec.APIServerEndpoints).To(ConsistOf(apiServerEndpoints))
+		}, testenv.EventuallyTimeout, testenv.EventuallyPoll).Should(Succeed())
+
+		By("the second node registering while the group has no slot")
+		joiner := testenv.UniqueName("static")
+		node := createNode(ctx, joiner, ngName)
+		published := register(joiner)
+
+		Eventually(func(g Gomega) {
+			nc := getNodeConfig(ctx, g, joiner)
+			g.Expect(nc.Labels).To(HaveKeyWithValue(nodecommon.NodeGroupLabel, ngName))
+			g.Expect(nc.Labels).To(HaveKeyWithValue(managedByLabel, managedByValue))
+			g.Expect(nc.OwnerReferences).To(ConsistOf(HaveField("UID", node.UID)))
+		}, testenv.EventuallyTimeout, testenv.EventuallyPoll).Should(Succeed())
+		held := getNodeConfig(ctx, Default, joiner)
+		Expect(held.Generation).To(Equal(published.Generation), "the spec was written without a slot")
+		Expect(held.Spec).To(Equal(published.Spec))
+
+		By("the gate not counting the held node")
+		ng := &deckhousev1.NodeGroup{}
+		Expect(k8sClient.Get(ctx, types.NamespacedName{Name: ngName}, ng)).To(Succeed())
+		budget, err := gateOver(k8sClient).rolloutBudget(ctx, ng, newPass())
+		Expect(err).NotTo(HaveOccurred())
+		Expect(budget.holders()).To(Equal([]string{holder}))
+
+		By("the first node reporting it applied")
+		reportApplied(ctx, holder)
+		Eventually(func(g Gomega) {
+			g.Expect(getNodeConfig(ctx, g, joiner).Spec.APIServerEndpoints).To(ConsistOf(apiServerEndpoints))
+		}, testenv.EventuallyTimeout, testenv.EventuallyPoll).Should(Succeed())
 	})
 
 	// User story: As a cluster operator, I want a DHCP machine that was handed
@@ -1738,21 +1988,21 @@ func heartbeat(ctx context.Context, nodeName string) {
 func setContainerdDigest(ctx context.Context, digest string) {
 	GinkgoHelper()
 
-	layout := `{"registrypackages":{"containerdSysext224":%q,"kubernetesCniSysext162":%q,"kubeletSysext1356":%q,"nodeletSysext":%q,"qemuGuestAgentSysext":%q},"nodeManager":{"engine":%q},"common":{"pause":%q}}`
-	original := fmt.Sprintf(layout, testContainerdDigest, testCNIDigest, testKubeletDigest, testNodeletDigest,
-		testGuestAgentDigest, testOSImageDigest, testPauseDigest)
-	updated := fmt.Sprintf(layout, digest, testCNIDigest, testKubeletDigest, testNodeletDigest,
-		testGuestAgentDigest, testOSImageDigest, testPauseDigest)
+	patchConfigMapKey(ctx, imagesDigestsConfigMapName, imagesDigestsKey, testenv.ImagesDigestsJSON(digest))
+	DeferCleanup(func(ctx context.Context) {
+		patchConfigMapKey(ctx, imagesDigestsConfigMapName, imagesDigestsKey, testenv.ImagesDigestsJSON(testContainerdDigest))
+	})
+}
 
-	writeDigests := func(ctx context.Context, data string) {
-		cm := &corev1.ConfigMap{}
-		Expect(k8sClient.Get(ctx, types.NamespacedName{Namespace: cloudInstanceManagerNS, Name: imagesDigestsConfigMapName}, cm)).To(Succeed())
-		patch := client.MergeFrom(cm.DeepCopy())
-		cm.Data[imagesDigestsKey] = data
-		Expect(k8sClient.Patch(ctx, cm, patch)).To(Succeed())
-	}
-	writeDigests(ctx, updated)
-	DeferCleanup(func(ctx context.Context) { writeDigests(ctx, original) })
+// patchConfigMapKey sets one key of a ConfigMap the release publishes in cloudInstanceManagerNS.
+func patchConfigMapKey(ctx context.Context, name, key, value string) {
+	GinkgoHelper()
+
+	cm := &corev1.ConfigMap{}
+	Expect(k8sClient.Get(ctx, types.NamespacedName{Namespace: cloudInstanceManagerNS, Name: name}, cm)).To(Succeed())
+	patch := client.MergeFrom(cm.DeepCopy())
+	cm.Data[key] = value
+	Expect(k8sClient.Patch(ctx, cm, patch)).To(Succeed())
 }
 
 // digestOf returns the digest a config carries for one extension.
@@ -1781,6 +2031,15 @@ func writeStaticClusterConfiguration(ctx context.Context, cidrs ...string) {
 	}
 	Expect(k8sClient.Create(ctx, secret)).To(Succeed())
 	DeferCleanup(func(ctx context.Context) { _ = k8sClient.Delete(ctx, secret) })
+}
+
+// gateOver is a reconciler whose cached client is c and whose live reads go to the API server.
+func gateOver(c client.Client) *Reconciler {
+	gate := &Reconciler{}
+	gate.Client = c
+	gate.sources = &sourceReader{Reader: apiReader}
+	gate.derived = &derived_status.Service{Client: k8sClient}
+	return gate
 }
 
 // rolloutSlotFor asks the gate whether a node may be handed a new spec, reading
@@ -2006,4 +2265,16 @@ func createNode(ctx context.Context, name, ngName string) *corev1.Node {
 	Expect(k8sClient.Create(ctx, node)).To(Succeed())
 	DeferCleanup(func(ctx context.Context) { _ = k8sClient.Delete(ctx, node) })
 	return node
+}
+
+// managedByBashible turns the group testenv.CreateImmutableNodeGroup builds into
+// one bashible manages; only a CloudEphemeral one keeps its cloudInstances.
+func managedByBashible(nodeType deckhousev1.NodeType) func(*deckhousev1.NodeGroup) {
+	return func(ng *deckhousev1.NodeGroup) {
+		ng.Spec.SystemType = deckhousev1.SystemTypeMutable
+		ng.Spec.NodeType = nodeType
+		if nodeType != deckhousev1.NodeTypeCloudEphemeral {
+			ng.Spec.CloudInstances = nil
+		}
+	}
 }

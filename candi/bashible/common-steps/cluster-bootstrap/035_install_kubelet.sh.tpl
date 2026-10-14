@@ -14,7 +14,6 @@
 # bashible: parallel-group=pkg-batch
 {{- $kubernetesVersion := printf "%s%s" (.kubernetesVersion | toString) (index .k8s .kubernetesVersion "patch" | toString) | replace "." "" }}
 {{- $kubernetesMajorVersion := .kubernetesVersion | toString | replace "." "" }}
-{{- $kubernetesCniVersion := "1.9.1" | replace "." "" }}
 
 __step_start=$(date +%s.%N)
 __sec() {
@@ -41,12 +40,13 @@ __rpp_wait() {
 
 __rpp_wait "kubelet"        "{{ index .images.registrypackages (printf "kubelet%s" $kubernetesVersion) }}" &
 __rpp_wait "crictl"         "{{ index .images.registrypackages (printf "crictl%s" $kubernetesMajorVersion) }}" &
-__rpp_wait "kubernetes-cni" "{{ index .images.registrypackages (printf "kubernetesCni%s" $kubernetesCniVersion) }}" &
 wait
 __sec wait_prefetch_total
 
+bb-package-wait kubernetes-cni
+__sec wait_agent
+
 rpp-get install \
   "kubelet:{{ index .images.registrypackages (printf "kubelet%s" $kubernetesVersion) }}" \
-  "crictl:{{ index .images.registrypackages (printf "crictl%s" $kubernetesMajorVersion) }}" \
-  "kubernetes-cni:{{ index .images.registrypackages (printf "kubernetesCni%s" $kubernetesCniVersion) }}"
+  "crictl:{{ index .images.registrypackages (printf "crictl%s" $kubernetesMajorVersion) }}"
 __sec pkg_install

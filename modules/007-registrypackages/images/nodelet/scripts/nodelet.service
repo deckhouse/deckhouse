@@ -1,0 +1,12 @@
+[Unit]
+Description=Deckhouse node agent
+Wants=network-online.target
+After=network-online.target
+
+[Service]
+ExecStart=/opt/deckhouse/bin/nodelet -config /var/lib/nodelet/nodeconfig.yaml
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target

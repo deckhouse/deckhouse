@@ -48,17 +48,22 @@ type NodeConfigStatus struct {
 	// even while it is still held for approval (see AppliedGeneration).
 	// +optional
 	ObservedGeneration int64 `json:"observedGeneration,omitempty"`
-	// AppliedGeneration is the spec generation the node is actually running; it
-	// lags ObservedGeneration while a disruptive config is held for approval.
-	// "This node has converged" means AppliedGeneration == metadata.generation.
+	// AppliedGeneration is the spec generation the node runs; converged means it equals
+	// metadata.generation with ConfigurationApplied True at it. It lags while a disruptive
+	// change waits for approval, and while a new agent build for it has not yet run it.
 	// +optional
 	AppliedGeneration int64 `json:"appliedGeneration,omitempty"`
-	// Phase summarises the node. Ready: running the published config, healthy.
-	// Pending: healthy but not yet running the published config (held for
-	// approval). Degraded: a subsystem failed, config rejected, or rolled back.
+	// Phase summarises the node. Ready: running the published config. Pending: healthy,
+	// not yet running it: held for approval, waiting outside the node, or restarting into
+	// a new agent build (AgentRestarting). Degraded: subsystem failed, rejected, rolled back.
 	// +optional
 	// +kubebuilder:validation:Enum=Ready;Pending;Degraded
 	Phase string `json:"phase,omitempty"`
+	// Features are the features that ran on the node in its last pass, sorted: the
+	// gates the document switched on plus the node type's defaults. spec.featureGates
+	// is empty on an Engine node where everything runs, so this is what to read.
+	// +optional
+	Features []string `json:"features,omitempty"`
 	// Conditions are the node-level reconcile outcomes (ConfigurationApplied,
 	// DisruptionRequired) plus the gate subsystems (APIEndpointsReachable,
 	// SysctlApplied); per-extension and per-unit outcomes live in Extensions and Units.
@@ -157,14 +162,17 @@ type NetworkStatus struct {
 
 // ExtensionStatus is the reconcile outcome of one system extension.
 type ExtensionStatus struct {
-	// Name is the extension name, matching spec.extensions[].name.
+	// Name is the extension name: a spec.extensions[].name, or a request the spec
+	// no longer names whose uninstall failed on a Mutable node.
 	Name string `json:"name"`
-	// Digest is the image digest the node installed for it.
+	// Digest depends on State. Ready: installed on the node. Pending: being installed,
+	// or, for the agent's own entry, installed and waiting for the new build to start.
+	// Failed: the one the node refused or could not install.
 	// +optional
 	Digest string `json:"digest,omitempty"`
-	// State is Ready when the extension is installed and merged, Pending while it
-	// is being fetched or waiting for the update window, or Failed with the cause
-	// in Message.
+	// State is Ready when the extension is installed (on an Immutable node, merged),
+	// Pending while it is fetched, waits for the update window, or the agent restarts
+	// into a new build of itself (AgentRestarting), or Failed with the cause in Message.
 	// +kubebuilder:validation:Enum=Ready;Pending;Failed
 	State string `json:"state"`
 	// Message carries the cause when State is Failed.
@@ -210,22 +218,51 @@ type NodeConfigList struct {
 	Items           []NodeConfig `json:"items"`
 }
 
+// SystemType says how a node is managed. The values are NodeGroup's
+// spec.systemType; mirrors internal/config/systemtype.go in the nodelet repository.
+type SystemType string
+
+const (
+	SystemTypeImmutable SystemType = "Immutable"
+	SystemTypeMutable   SystemType = "Mutable"
+)
+
 // NodeSpec is the desired state of the node.
+//
+// +kubebuilder:validation:XValidation:rule="self.systemType == 'Mutable' || has(self.osImage)",message="spec.osImage must be set on an Immutable node"
+// +kubebuilder:validation:XValidation:rule="self.systemType == oldSelf.systemType",message="spec.systemType cannot be changed"
 type NodeSpec struct {
+	// SystemType says how this node is managed. On a Mutable node bashible
+	// configures the machine and the agent does only what bashible does not.
+	// +optional
+	// +kubebuilder:default=Immutable
+	// +kubebuilder:validation:Enum=Immutable;Mutable
+	SystemType SystemType `json:"systemType,omitempty"`
+	// FeatureGates switches the node's features on and off by name. An unset gate is
+	// on for an Immutable node wherever its type allows the feature, and off for a
+	// Mutable node, which runs only what its document switches on. Written by node-controller.
+	// +optional
+	// +kubebuilder:validation:MaxProperties=32
+	// +kubebuilder:validation:XValidation:rule="self.all(k, size(k) <= 63 && k.matches('^[a-z0-9]([-a-z0-9]*[a-z0-9])?$'))",message="a feature name is a DNS label"
+	FeatureGates map[string]bool `json:"featureGates,omitempty"`
 	// NodeName is the Kubernetes node name this config applies to.
 	// +kubebuilder:validation:MinLength=1
 	// +kubebuilder:validation:MaxLength=253
 	// +kubebuilder:validation:Pattern=`^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$`
 	NodeName string `json:"nodeName"`
-	// OSImage is the image the cluster believes this node should run. Required: a
-	// rootfs update is decided by comparing it with what the node recorded at
-	// install, and a config that names no image is one no update can start from.
-	OSImage OSImage `json:"osImage"`
+	// OSImage is the image the cluster believes this node should run; required on
+	// an Immutable node by the rule above. omitzero: a Mutable document must not
+	// carry osImage: {digest: ""}, which the digest pattern refuses.
+	// +optional
+	OSImage OSImage `json:"osImage,omitzero"`
 	// Storage selects the target disk for the OS install. The partition layout
 	// is fixed (boot/config/data), so only the whole-disk device is needed.
+	// omitzero, as Kernel, Network and UpdatePolicy: an empty section is left out.
 	// +optional
-	Storage Storage `json:"storage,omitempty"`
-	// Extensions are the signed verity sysext images to merge onto the root.
+	Storage Storage `json:"storage,omitzero"`
+	// Extensions are what the node installs, pinned by digest: on an Immutable node a
+	// signed dm-verity sysext image, on a Mutable node a registry package whose own
+	// install script runs as root. An entry named nodelet updates the agent itself.
 	// +optional
 	// +listType=map
 	// +listMapKey=name
@@ -238,18 +275,21 @@ type NodeSpec struct {
 	// +listMapKey=name
 	// +kubebuilder:validation:MaxItems=16
 	StaticPods []StaticPod `json:"staticPods,omitempty"`
-	// Kernel holds sysctl settings and kernel modules to load.
+	// Kernel holds sysctl settings and kernel modules to load. omitzero: a Mutable
+	// document has none, and an empty section is left out rather than sent as {}.
 	// +optional
-	Kernel Kernel `json:"kernel,omitempty"`
-	// Network holds hostname, DNS, NTP, interfaces and routes.
+	Kernel Kernel `json:"kernel,omitzero"`
+	// Network holds hostname, DNS, NTP, interfaces and routes; omitzero as Kernel,
+	// which also leaves it out of a NodeConfigTemplate, where the operator writes it.
 	// +optional
-	Network Network `json:"network,omitempty"`
-	// Kubelet holds kubelet configuration parameters.
+	Network Network `json:"network,omitzero"`
+	// Kubelet holds kubelet configuration parameters. omitzero: a Mutable document
+	// sends none, so the API server has no {} to fill with defaults.
 	// +optional
-	Kubelet Kubelet `json:"kubelet,omitempty"`
-	// ContainerRuntime holds containerd configuration.
+	Kubelet Kubelet `json:"kubelet,omitzero"`
+	// ContainerRuntime holds containerd configuration; omitzero as Kubelet.
 	// +optional
-	ContainerRuntime ContainerRuntime `json:"containerRuntime,omitempty"`
+	ContainerRuntime ContainerRuntime `json:"containerRuntime,omitzero"`
 	// APIServerEndpoints is the list of API server URLs the node connects to
 	// (via the node-local API proxy).
 	// +optional
@@ -272,9 +312,9 @@ type NodeSpec struct {
 	// carry-over would write that back, destroying the token.
 	// +optional
 	StatusToken string `json:"statusToken,omitempty"`
-	// UpdatePolicy controls how and when the node is updated.
+	// UpdatePolicy controls how and when the node is updated; omitzero as Kernel.
 	// +optional
-	UpdatePolicy UpdatePolicy `json:"updatePolicy,omitempty"`
+	UpdatePolicy UpdatePolicy `json:"updatePolicy,omitzero"`
 
 	// RegistryPackagesProxyAccessTokenB64 is a base64-encoded token used to
 	// authenticate against the registry packages proxy. Deliberately not marked
@@ -282,6 +322,13 @@ type NodeSpec struct {
 	// +optional
 	// +kubebuilder:validation:Pattern=`^(([A-Za-z0-9+/]{4})*([A-Za-z0-9+/]{2}==|[A-Za-z0-9+/]{3}=)?)?$`
 	RegistryPackagesProxyAccessTokenB64 string `json:"registryPackagesProxyAccessTokenB64,omitempty"`
+
+	// RegistryPackagesProxyEndpoints are registry-packages-proxy addresses, scheme and
+	// port included, the agent uses as given instead of the API server hosts. Only the
+	// first master's seed sets them; node-controller never renders them. Pattern: nodelet's.
+	// +optional
+	// +kubebuilder:validation:items:Pattern=`^https?://(\[[0-9A-Fa-f:]+\]|[A-Za-z0-9]([-A-Za-z0-9]*[A-Za-z0-9])?([.][A-Za-z0-9]([-A-Za-z0-9]*[A-Za-z0-9])?)*):(6553[0-5]|655[0-2][0-9]|65[0-4][0-9]{2}|6[0-4][0-9]{3}|[1-5][0-9]{4}|[1-9][0-9]{0,3})/?$`
+	RegistryPackagesProxyEndpoints []string `json:"registryPackagesProxyEndpoints,omitempty"`
 
 	// Registry is the container registry the node talks to directly, without
 	// the registry-packages-proxy. A node bootstrapping a control plane has no

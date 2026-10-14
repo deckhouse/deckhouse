@@ -79,6 +79,9 @@ type clusterInputs struct {
 	SysextDigests map[string]string
 	// RegistryPackagesProxyToken authenticates against the packages proxy.
 	RegistryPackagesProxyToken string
+	// Platform is what the platform puts on every node bashible configures, and what
+	// its packages claim in the requests' contest (platform.go).
+	Platform platformDocument
 	// RegistryAgentMode says the registry module has handed containerd's
 	// registry.d to its own node agent: containerRuntime.registryOwner says "agent".
 	RegistryAgentMode bool
@@ -86,10 +89,9 @@ type clusterInputs struct {
 	// node gets it: the pulls containerd makes for itself — the control-plane
 	// static pods of a bootstrapping master among them — carry no imagePullSecret.
 	Registry *internalv1alpha1.Registry
-	// NodeExtensions are the operator's requests to merge extra system extensions
-	// onto the nodes they select, in the order their uniqueness contest ran; the
-	// contest is cluster-wide, so it is settled here, once per pass, rather than
-	// once per node. NodeExtensionConflicts says which requests lost it.
+	// NodeExtensions are the operator's requests in the order their uniqueness contest
+	// ran; the contest is cluster-wide, so it is settled here, once per pass, rather than
+	// once per node. NodeExtensionConflicts says which requests lost the contest.
 	NodeExtensions         []*deckhousev1alpha1.NodeExtensionRequest
 	NodeExtensionConflicts map[string]nerConflict
 	// NodeStaticPodRequests are the pods the platform asks kubelet to run outside
@@ -291,15 +293,15 @@ func (s *sourceReader) readReleaseImages(ctx context.Context, in *clusterInputs)
 	if err != nil {
 		return err
 	}
-	in.NodeExtensions = orderedNERs(ners)
-	in.NodeExtensionConflicts = resolveNERConflicts(in.NodeExtensions)
+	// The platform's packages contend with Packages alone, which an Engine node never takes.
+	in.NodeExtensions, in.NodeExtensionConflicts = settleNERs(ners, nil)
 
 	nsprs, err := s.readNodeStaticPodRequests(ctx)
 	if err != nil {
 		return err
 	}
 	in.NodeStaticPodRequests = orderedNSPRs(nsprs)
-	in.NodeStaticPodRequestsRejected = rejectedNSPRs(in.NodeStaticPodRequests)
+	in.NodeStaticPodRequestsRejected, _ = rejectedNSPRs(in.NodeStaticPodRequests)
 
 	return nil
 }
@@ -452,8 +454,8 @@ func digestAt(all map[string]map[string]string, group, name string) (string, err
 }
 
 // readNodeExtensionRequests lists the extension requests; an empty list is fine.
-// The one cached read here: the controller watches this kind, and a live read
-// could disagree with the status pass, which reports from the cached list.
+// Read live, while the status pass lists from the cache: the two halves settle the
+// contest alike eventually, and a newer object costs one more pass.
 func (s *sourceReader) readNodeExtensionRequests(ctx context.Context) ([]deckhousev1alpha1.NodeExtensionRequest, error) {
 	list := &deckhousev1alpha1.NodeExtensionRequestList{}
 	if err := s.Reader.List(ctx, list); err != nil {

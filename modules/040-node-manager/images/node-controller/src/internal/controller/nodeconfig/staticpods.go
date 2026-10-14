@@ -24,6 +24,7 @@ import (
 
 	"sigs.k8s.io/controller-runtime/pkg/log"
 
+	v1 "github.com/deckhouse/node-controller/api/deckhouse.io/v1"
 	deckhousev1alpha1 "github.com/deckhouse/node-controller/api/deckhouse.io/v1alpha1"
 	internalv1alpha1 "github.com/deckhouse/node-controller/api/internal.deckhouse.io/v1alpha1"
 )
@@ -78,49 +79,60 @@ func orderedNSPRs(nsprs []deckhousev1alpha1.NodeStaticPodRequest) []*deckhousev1
 	return ordered
 }
 
-// rejectedNSPRs runs the checks in order (a name the node config would not take,
-// reserved name, invalid manifest, reserved pod, pod already claimed by an older object);
-// the contest is cluster-wide, as in resolveNERConflicts, and a refusal claims nothing.
-func rejectedNSPRs(ordered []*deckhousev1alpha1.NodeStaticPodRequest) map[string]nsprRefusal {
+// rejectedNSPRs runs the checks in order (node-config name, reserved name, manifest, reserved
+// pod, pod claimed by an older object), cluster-wide as in resolveNERConflicts; a refusal
+// claims nothing. The second map adds what a bashible step writes on a Mutable node.
+func rejectedNSPRs(ordered []*deckhousev1alpha1.NodeStaticPodRequest) (map[string]nsprRefusal, map[string]nsprRefusal) {
 	rejected := map[string]nsprRefusal{}
+	onMutable := map[string]nsprRefusal{}
 	claimed := make(map[string]string, len(ordered))
+	refuse := func(name string, refusal nsprRefusal) {
+		rejected[name] = refusal
+		onMutable[name] = refusal
+	}
 
 	for _, nspr := range ordered {
 		if err := deckhousev1alpha1.ValidateStaticPodName(nspr.Name); err != nil {
-			rejected[nspr.Name] = nsprRefusal{reason: reasonInvalidName, message: err.Error()}
+			refuse(nspr.Name, nsprRefusal{reason: reasonInvalidName, message: err.Error()})
 			continue
 		}
 		if deckhousev1alpha1.IsReservedStaticPodName(nspr.Name) {
-			rejected[nspr.Name] = nsprRefusal{
+			refuse(nspr.Name, nsprRefusal{
 				reason:  reasonReservedName,
 				message: "the name belongs to a manifest the node agent or a bashible step writes itself",
-			}
+			})
 			continue
 		}
 		pod, err := deckhousev1alpha1.ValidateStaticPodManifest(nspr.Spec.Manifest)
 		if err != nil {
-			rejected[nspr.Name] = nsprRefusal{reason: reasonInvalidManifest, message: err.Error()}
+			refuse(nspr.Name, nsprRefusal{reason: reasonInvalidManifest, message: err.Error()})
 			continue
 		}
 		if deckhousev1alpha1.IsReservedStaticPod(pod) {
-			rejected[nspr.Name] = nsprRefusal{
+			refuse(nspr.Name, nsprRefusal{
 				reason:  reasonReservedName,
 				message: fmt.Sprintf("the pod %s already has a manifest the node agent or a bashible step writes itself", pod),
-			}
+			})
 			continue
 		}
 		if owner, taken := claimed[pod]; taken {
-			rejected[nspr.Name] = nsprRefusal{
+			refuse(nspr.Name, nsprRefusal{
 				reason: reasonConflict,
 				message: fmt.Sprintf(
 					"the pod %s is already asked for by NodeStaticPodRequest %q, which is older; two manifests for one pod in a node's config are refused by the node as a whole",
 					pod, owner),
-			}
+			})
 			continue
 		}
 		claimed[pod] = nspr.Name
+		if deckhousev1alpha1.IsReservedStaticPodOn(v1.SystemTypeMutable, nspr.Name, pod) {
+			onMutable[nspr.Name] = nsprRefusal{
+				reason:  reasonReservedName,
+				message: "a bashible step writes this manifest on the nodes it manages",
+			}
+		}
 	}
-	return rejected
+	return rejected, onMutable
 }
 
 // nodeStaticPods returns the static pods a node runs: the accepted objects that

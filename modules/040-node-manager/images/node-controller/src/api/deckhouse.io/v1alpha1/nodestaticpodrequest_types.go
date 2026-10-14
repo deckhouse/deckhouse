@@ -33,6 +33,8 @@ import (
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	"k8s.io/apimachinery/pkg/util/validation"
 	utilyaml "k8s.io/apimachinery/pkg/util/yaml"
+
+	v1 "github.com/deckhouse/node-controller/api/deckhouse.io/v1"
 )
 
 // NodeStaticPodRequest asks kubelet on the selected nodes to run one pod outside the
@@ -93,9 +95,9 @@ type NodeStaticPodRequestStatus struct {
 	// +optional
 	Phase string `json:"phase,omitempty"`
 
-	// Conditions carry the details. Ready answers whether the pod resolved:
-	// Resolved, InvalidName, ReservedName, InvalidManifest, Conflict,
-	// LimitExceeded or RefusedByNodes.
+	// Conditions carry the details. Ready answers whether the pod resolved: Resolved,
+	// InvalidName, ReservedName, InvalidManifest, Conflict, LimitExceeded or RefusedByNodes;
+	// one that resolved and reaches no node stays Ready with ServedByBashible or NoNodesSelected.
 	// +optional
 	// +listType=map
 	// +listMapKey=type
@@ -105,20 +107,21 @@ type NodeStaticPodRequestStatus struct {
 	// +optional
 	MatchedNodeGroups []string `json:"matchedNodeGroups,omitempty"`
 
-	// AppliedNodes is how many of the selected nodes report the manifest
-	// written; FailedNodes how many report it refused. Reported by the nodes
-	// themselves: a pod can resolve here and be refused by every node.
+	// AppliedNodes is how many of the selected nodes report the manifest written;
+	// FailedNodes how many report it refused: a pod can resolve here and be refused by
+	// every node. No omitempty on the counters: 0 is an answer the printer columns show.
 	// +optional
-	AppliedNodes int32 `json:"appliedNodes,omitempty"`
+	AppliedNodes int32 `json:"appliedNodes"`
 	// +optional
-	FailedNodes int32 `json:"failedNodes,omitempty"`
+	FailedNodes int32 `json:"failedNodes"`
 
-	// MatchedNodes is how many nodes the selected groups hold; PendingNodes how
-	// many of them have reported neither success nor refusal yet.
+	// MatchedNodes is how many nodes of the selected groups the agent writes the
+	// pod to, leaving out those of groups served by bashible; PendingNodes how many
+	// of them have reported neither success nor refusal yet.
 	// +optional
-	MatchedNodes int32 `json:"matchedNodes,omitempty"`
+	MatchedNodes int32 `json:"matchedNodes"`
 	// +optional
-	PendingNodes int32 `json:"pendingNodes,omitempty"`
+	PendingNodes int32 `json:"pendingNodes"`
 
 	// FailureMessage is what the nodes say about the refusal, taken from one of
 	// them: a bad manifest fails the same way everywhere.
@@ -160,6 +163,28 @@ func IsReservedStaticPodName(name string) bool {
 // manifest: kubelet collides on the pod, whatever the file is called.
 func IsReservedStaticPod(pod string) bool {
 	return slices.Contains(slices.Collect(maps.Values(reservedStaticPods)), pod)
+}
+
+// reservedStaticPodsBySystemType adds, per node system type, the manifests a
+// bashible step writes there and nowhere else: registry-agent on the nodes bashible
+// manages (candi/bashible/common-steps/all/053_configure_registry_agent.sh.tpl).
+var reservedStaticPodsBySystemType = map[v1.SystemType]map[string]string{
+	v1.SystemTypeMutable: {"registry-agent": "kube-system/registry-agent"},
+}
+
+// IsReservedStaticPodOn reports whether a manifest already has a writer on the nodes
+// of this system type, by its file name or by its pod: kubelet collides on either.
+func IsReservedStaticPodOn(systemType v1.SystemType, name, pod string) bool {
+	reserved := reservedStaticPodsBySystemType[systemType]
+	if _, byName := reserved[name]; byName {
+		return true
+	}
+	for _, reservedPod := range reserved {
+		if reservedPod == pod {
+			return true
+		}
+	}
+	return false
 }
 
 // ValidateStaticPodName refuses a name spec.staticPods[].name would not take: a

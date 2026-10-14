@@ -60,7 +60,13 @@ func nsprCreated(name string, created metav1.Time, spec deckhousev1alpha1.NodeSt
 // once, the way renderSpec receives them.
 func staticPodsOf(nsprs []deckhousev1alpha1.NodeStaticPodRequest, ngName string) []internalv1alpha1.StaticPod {
 	ordered := orderedNSPRs(nsprs)
-	return nodeStaticPods(ordered, rejectedNSPRs(ordered), ngName)
+	return nodeStaticPods(ordered, refusedEverywhere(ordered), ngName)
+}
+
+// refusedEverywhere is rejectedNSPRs' first answer: what no node is given.
+func refusedEverywhere(ordered []*deckhousev1alpha1.NodeStaticPodRequest) map[string]nsprRefusal {
+	rejected, _ := rejectedNSPRs(ordered)
+	return rejected
 }
 
 func TestNodeStaticPodRequests(t *testing.T) {
@@ -231,7 +237,7 @@ func TestRejectedNSPRs(t *testing.T) {
 	newer := metav1.NewTime(time.Date(2026, 1, 2, 0, 0, 0, 0, time.UTC))
 
 	reject := func(nsprs ...deckhousev1alpha1.NodeStaticPodRequest) map[string]nsprRefusal {
-		return rejectedNSPRs(orderedNSPRs(nsprs))
+		return refusedEverywhere(orderedNSPRs(nsprs))
 	}
 
 	t.Run("nothing wrong with either of these", func(t *testing.T) {

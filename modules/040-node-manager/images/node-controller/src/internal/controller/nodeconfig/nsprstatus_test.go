@@ -184,9 +184,10 @@ func TestNSPRStatusIsNotPublishedFromAFleetThatCouldNotBeRead(t *testing.T) {
 // identical status is not rewritten: each write wakes every watcher of the kind.
 func TestNSPRStatusSettlesAndIsNotRewritten(t *testing.T) {
 	object := nspr("registry-agent", deckhousev1alpha1.NodeStaticPodRequestSpec{})
+	node := nodeInGroup("worker-0", "worker")
 	cl := fake.NewClientBuilder().
 		WithScheme(nsprStatusScheme(t)).
-		WithObjects(&object, immutableGroup("worker")).
+		WithObjects(&object, immutableGroup("worker"), &node).
 		WithStatusSubresource(&deckhousev1alpha1.NodeStaticPodRequest{}).
 		Build()
 
@@ -205,6 +206,65 @@ func TestNSPRStatusSettlesAndIsNotRewritten(t *testing.T) {
 	again := &deckhousev1alpha1.NodeStaticPodRequest{}
 	require.NoError(t, cl.Get(context.Background(), types.NamespacedName{Name: "registry-agent"}, again))
 	require.Equal(t, written.ResourceVersion, again.ResourceVersion, "an unchanged status must not be patched")
+}
+
+// A merge patch carries only what differs from its base, and a counter that was
+// zero and stays zero never differs: without all four in the write, a request's
+// first status says nothing in the columns where it should say 0.
+func TestTheStatusWriteCarriesEveryCounter(t *testing.T) {
+	object := nspr("static-pod", deckhousev1alpha1.NodeStaticPodRequestSpec{})
+	var patches []string
+	cl := fake.NewClientBuilder().
+		WithScheme(nsprStatusScheme(t)).
+		WithObjects(&object, immutableGroup("worker")).
+		WithStatusSubresource(&deckhousev1alpha1.NodeStaticPodRequest{}).
+		WithInterceptorFuncs(interceptor.Funcs{
+			SubResourcePatch: func(ctx context.Context, c client.Client, subResource string, obj client.Object, patch client.Patch, opts ...client.SubResourcePatchOption) error {
+				data, err := patch.Data(obj)
+				require.NoError(t, err)
+				patches = append(patches, string(data))
+				return c.SubResource(subResource).Patch(ctx, obj, patch, opts...)
+			},
+		}).
+		Build()
+
+	r := &Reconciler{}
+	r.Client = cl
+	require.NoError(t, r.reconcileNSPRStatuses(context.Background(), logr.Discard()))
+
+	require.Len(t, patches, 1)
+	for _, counter := range []string{"matchedNodes", "appliedNodes", "failedNodes", "pendingNodes"} {
+		require.Contains(t, patches[0], `"`+counter+`":0`)
+	}
+}
+
+// The status is written whole, so a field that went empty is gone: a refusal the
+// nodes took back must not leave its message behind.
+func TestTheStatusWriteClearsWhatWentEmpty(t *testing.T) {
+	object := nspr("static-pod", deckhousev1alpha1.NodeStaticPodRequestSpec{})
+	object.Status = deckhousev1alpha1.NodeStaticPodRequestStatus{
+		Phase: phaseDegraded, FailedNodes: 1, FailureMessage: "read-only file system",
+		MatchedNodeGroups: []string{"gone"},
+	}
+	node := nodeInGroup("worker-0", "worker")
+	cl := fake.NewClientBuilder().
+		WithScheme(nsprStatusScheme(t)).
+		WithObjects(&object, immutableGroup("worker"), &node,
+			nodeConfigWithPod("worker-0",
+				[]internalv1alpha1.StaticPod{{Name: "static-pod", Manifest: podManifest("static-pod")}},
+				[]internalv1alpha1.StaticPodStatus{{Name: "static-pod", State: "Written"}})).
+		WithStatusSubresource(&deckhousev1alpha1.NodeStaticPodRequest{}).
+		Build()
+
+	r := &Reconciler{}
+	r.Client = cl
+	require.NoError(t, r.reconcileNSPRStatuses(context.Background(), logr.Discard()))
+
+	fresh := &deckhousev1alpha1.NodeStaticPodRequest{}
+	require.NoError(t, cl.Get(context.Background(), types.NamespacedName{Name: "static-pod"}, fresh))
+	require.Empty(t, fresh.Status.FailureMessage)
+	require.Equal(t, []string{"worker"}, fresh.Status.MatchedNodeGroups)
+	require.Equal(t, int32(0), fresh.Status.FailedNodes)
 }
 
 // A count with no denominator answers nothing: 3 applied out of how many?
@@ -230,26 +290,26 @@ func nodeInGroup(name, group string) corev1.Node {
 		Labels: map[string]string{nodecommon.NodeGroupLabel: group}}}
 }
 
-// Only Immutable groups have a NodeConfig for the pod to land in: a bashible
-// node never answers, so counting it would leave the object pending for ever.
-func TestNSPRStatusCountsOnlyTheNodesOfImmutableGroups(t *testing.T) {
-	object := nspr("registry-agent", deckhousev1alpha1.NodeStaticPodRequestSpec{})
+// Bashible nodes run the agent too, so an empty selector reaches every group,
+// and a group that names no type is a bashible one.
+func TestNSPRStatusCountsTheNodesOfEveryGroup(t *testing.T) {
+	object := nspr("static-pod", deckhousev1alpha1.NodeStaticPodRequestSpec{})
 	engineNode := nodeInGroup("engine-0", "engine")
 	pendingNode := nodeInGroup("engine-1", "engine")
 	bashibleNode := nodeInGroup("worker-0", "worker")
+	legacyNode := nodeInGroup("legacy-0", "legacy")
+	written := []internalv1alpha1.StaticPodStatus{{Name: "static-pod", State: "Written"}}
+	pods := []internalv1alpha1.StaticPod{{Name: "static-pod", Manifest: podManifest("static-pod")}}
 	cl := fake.NewClientBuilder().
 		WithScheme(nsprStatusScheme(t)).
 		WithObjects(
 			&object,
 			immutableGroup("engine"),
-			&v1.NodeGroup{
-				ObjectMeta: metav1.ObjectMeta{Name: "worker"},
-				Spec:       v1.NodeGroupSpec{NodeType: v1.NodeTypeCloudEphemeral, SystemType: v1.SystemTypeMutable},
-			},
-			&engineNode, &pendingNode, &bashibleNode,
-			nodeConfigWithPod("engine-0",
-				[]internalv1alpha1.StaticPod{{Name: "registry-agent", Manifest: podManifest("registry-agent")}},
-				[]internalv1alpha1.StaticPodStatus{{Name: "registry-agent", State: "Written"}}),
+			mutableGroup("worker", v1.SystemTypeMutable),
+			mutableGroup("legacy", ""),
+			&engineNode, &pendingNode, &bashibleNode, &legacyNode,
+			nodeConfigWithPod("engine-0", pods, written),
+			nodeConfigWithPod("worker-0", pods, written),
 		).
 		WithStatusSubresource(&deckhousev1alpha1.NodeStaticPodRequest{}).
 		Build()
@@ -259,11 +319,78 @@ func TestNSPRStatusCountsOnlyTheNodesOfImmutableGroups(t *testing.T) {
 	require.NoError(t, r.reconcileNSPRStatuses(context.Background(), logr.Discard()))
 
 	fresh := &deckhousev1alpha1.NodeStaticPodRequest{}
-	require.NoError(t, cl.Get(context.Background(), types.NamespacedName{Name: "registry-agent"}, fresh))
-	require.Equal(t, []string{"engine"}, fresh.Status.MatchedNodeGroups, "a bashible group is not a target")
-	require.Equal(t, int32(2), fresh.Status.MatchedNodes)
-	require.Equal(t, int32(1), fresh.Status.AppliedNodes)
-	require.Equal(t, int32(1), fresh.Status.PendingNodes)
+	require.NoError(t, cl.Get(context.Background(), types.NamespacedName{Name: "static-pod"}, fresh))
+	require.Equal(t, []string{"engine", "legacy", "worker"}, fresh.Status.MatchedNodeGroups)
+	require.Equal(t, int32(4), fresh.Status.MatchedNodes)
+	require.Equal(t, int32(2), fresh.Status.AppliedNodes)
+	require.Equal(t, int32(2), fresh.Status.PendingNodes)
+}
+
+// registry-agent is bashible's on the nodes it manages (step 053), whether an
+// object asks for it by file name or by pod: their groups match the selector,
+// but nothing is asked of their nodes, so those are neither counted nor waited for.
+func TestNSPRStatusLeavesTheRegistryAgentToBashible(t *testing.T) {
+	byName := nspr("registry-agent", deckhousev1alpha1.NodeStaticPodRequestSpec{})
+	byPod := nspr("agent-copy", deckhousev1alpha1.NodeStaticPodRequestSpec{Manifest: kubeSystemPodManifest("registry-agent")})
+	engineNode := nodeInGroup("engine-0", "engine")
+	bashibleNode := nodeInGroup("worker-0", "worker")
+	cl := fake.NewClientBuilder().
+		WithScheme(nsprStatusScheme(t)).
+		WithObjects(
+			&byName, &byPod,
+			immutableGroup("engine"),
+			mutableGroup("worker", v1.SystemTypeMutable),
+			&engineNode, &bashibleNode,
+		).
+		WithStatusSubresource(&deckhousev1alpha1.NodeStaticPodRequest{}).
+		Build()
+
+	r := &Reconciler{}
+	r.Client = cl
+	require.NoError(t, r.reconcileNSPRStatuses(context.Background(), logr.Discard()))
+
+	for _, name := range []string{"registry-agent", "agent-copy"} {
+		fresh := &deckhousev1alpha1.NodeStaticPodRequest{}
+		require.NoError(t, cl.Get(context.Background(), types.NamespacedName{Name: name}, fresh))
+		require.Equal(t, []string{"engine", "worker"}, fresh.Status.MatchedNodeGroups, name)
+		require.Equal(t, int32(1), fresh.Status.MatchedNodes, name)
+		require.Equal(t, int32(1), fresh.Status.PendingNodes, name)
+	}
+}
+
+// The cap counts what a node is given. A bashible node is not given registry-agent,
+// so it must not push the youngest of sixteen others out of that group's configs.
+func TestTheCapOnABashibleGroupLeavesTheRegistryAgentOut(t *testing.T) {
+	objects := []client.Object{mutableGroup("worker", v1.SystemTypeMutable)}
+	for i := range maxStaticPods {
+		object := nspr(fmt.Sprintf("pod-%02d", i), deckhousev1alpha1.NodeStaticPodRequestSpec{})
+		objects = append(objects, &object)
+	}
+	agent := nspr("registry-agent", deckhousev1alpha1.NodeStaticPodRequestSpec{})
+	objects = append(objects, &agent)
+	cl := fake.NewClientBuilder().
+		WithScheme(nsprStatusScheme(t)).
+		WithObjects(objects...).
+		WithStatusSubresource(&deckhousev1alpha1.NodeStaticPodRequest{}).
+		Build()
+
+	r := &Reconciler{}
+	r.Client = cl
+	require.NoError(t, r.reconcileNSPRStatuses(context.Background(), logr.Discard()))
+
+	for _, name := range []string{fmt.Sprintf("pod-%02d", maxStaticPods-1), "registry-agent"} {
+		fresh := &deckhousev1alpha1.NodeStaticPodRequest{}
+		require.NoError(t, cl.Get(context.Background(), types.NamespacedName{Name: name}, fresh))
+		condition := meta.FindStatusCondition(fresh.Status.Conditions, readyConditionType)
+		require.NotEqual(t, reasonLimitExceeded, condition.Reason, name)
+	}
+}
+
+func mutableGroup(name string, systemType v1.SystemType) *v1.NodeGroup {
+	return &v1.NodeGroup{
+		ObjectMeta: metav1.ObjectMeta{Name: name},
+		Spec:       v1.NodeGroupSpec{NodeType: v1.NodeTypeCloudEphemeral, SystemType: systemType},
+	}
 }
 
 // An object this controller refused was handed to no node, so nobody is late
@@ -385,4 +512,104 @@ func TestNSPRStatusReportsTheObjectTheCapLeftOut(t *testing.T) {
 	kept := &deckhousev1alpha1.NodeStaticPodRequest{}
 	require.NoError(t, cl.Get(context.Background(), types.NamespacedName{Name: "pod-00"}, kept))
 	require.Equal(t, phaseReady, kept.Status.Phase)
+}
+
+// A request that reaches no node is not broken, so it stays Ready for
+// `kubectl wait`, but "0 of 0 node(s)" under Resolved told nobody why: the
+// reason says whether bashible serves it or what keeps it from every node.
+func TestNSPRStatusSaysWhyARequestReachesNoNode(t *testing.T) {
+	engineNode := nodeInGroup("engine-0", "engine")
+	workerNode := nodeInGroup("worker-0", "worker")
+	selecting := func(name string, groups ...string) *deckhousev1alpha1.NodeStaticPodRequest {
+		object := nspr(name, deckhousev1alpha1.NodeStaticPodRequestSpec{
+			NodeGroupSelector: deckhousev1alpha1.NodeGroupSelector{MatchNames: groups},
+		})
+		return &object
+	}
+	for _, tc := range []struct {
+		name          string
+		request       *deckhousev1alpha1.NodeStaticPodRequest
+		reason        string
+		matchedGroups []string
+		matchedNodes  int32
+		mentions      []string
+	}{
+		{
+			name: "a request with nodes is resolved", request: selecting("static-pod", "engine"),
+			reason: reasonResolved, matchedGroups: []string{"engine"}, matchedNodes: 1,
+		},
+		{
+			name: "a request on a bashible group with nodes is resolved", request: selecting("static-pod", "worker"),
+			reason: reasonResolved, matchedGroups: []string{"worker"}, matchedNodes: 1,
+		},
+		{
+			name: "bashible serves registry-agent on its own groups", request: selecting("registry-agent", "worker"),
+			reason: "ServedByBashible", matchedGroups: []string{"worker"}, mentions: []string{"worker"},
+		},
+		{
+			name: "the selector names no existing group", request: selecting("static-pod", "ghost"),
+			reason: "NoNodesSelected", mentions: []string{"ghost"},
+		},
+		{
+			name: "the selected group has no nodes", request: selecting("static-pod", "empty"),
+			reason: "NoNodesSelected", matchedGroups: []string{"empty"}, mentions: []string{"empty", "no nodes"},
+		},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			cl := fake.NewClientBuilder().
+				WithScheme(nsprStatusScheme(t)).
+				WithObjects(tc.request, immutableGroup("engine"), immutableGroup("empty"),
+					mutableGroup("worker", v1.SystemTypeMutable), &engineNode, &workerNode).
+				WithStatusSubresource(&deckhousev1alpha1.NodeStaticPodRequest{}).
+				Build()
+
+			r := &Reconciler{}
+			r.Client = cl
+			require.NoError(t, r.reconcileNSPRStatuses(context.Background(), logr.Discard()))
+
+			fresh := &deckhousev1alpha1.NodeStaticPodRequest{}
+			require.NoError(t, cl.Get(context.Background(), types.NamespacedName{Name: tc.request.Name}, fresh))
+			condition := meta.FindStatusCondition(fresh.Status.Conditions, readyConditionType)
+			require.Equal(t, metav1.ConditionTrue, condition.Status, "a request that reaches no node is not broken")
+			require.Equal(t, phaseReady, fresh.Status.Phase)
+			require.Equal(t, tc.reason, condition.Reason)
+			require.Equal(t, tc.matchedGroups, fresh.Status.MatchedNodeGroups)
+			require.Equal(t, tc.matchedNodes, fresh.Status.MatchedNodes)
+			for _, mention := range tc.mentions {
+				require.Contains(t, condition.Message, mention)
+			}
+		})
+	}
+}
+
+// The statuses read no release input: every bashible group runs the agent. A cluster
+// with no images, apiserver endpoints or proxy token still publishes every request's status.
+func TestNSPRStatusDoesNotWaitForTheRenderInputsOfABashibleNode(t *testing.T) {
+	engineNode := nodeInGroup("engine-0", "engine")
+	workerNode := nodeInGroup("worker-0", "worker")
+	enginePod := nspr("engine-pod", deckhousev1alpha1.NodeStaticPodRequestSpec{
+		NodeGroupSelector: deckhousev1alpha1.NodeGroupSelector{MatchNames: []string{"engine"}},
+	})
+	workerPod := nspr("worker-pod", deckhousev1alpha1.NodeStaticPodRequestSpec{
+		NodeGroupSelector: deckhousev1alpha1.NodeGroupSelector{MatchNames: []string{"worker"}},
+	})
+	cl := fake.NewClientBuilder().
+		WithScheme(nsprStatusScheme(t)).
+		WithObjects(&enginePod, &workerPod, immutableGroup("engine"),
+			mutableGroup("worker", v1.SystemTypeMutable), &engineNode, &workerNode).
+		WithStatusSubresource(&deckhousev1alpha1.NodeStaticPodRequest{}).
+		Build()
+
+	r := &Reconciler{}
+	r.Client = cl
+	r.sources = sourceReaderOver(cl)
+	require.NoError(t, r.reconcileNSPRStatuses(context.Background(), logr.Discard()))
+
+	for name, group := range map[string]string{"engine-pod": "engine", "worker-pod": "worker"} {
+		fresh := &deckhousev1alpha1.NodeStaticPodRequest{}
+		require.NoError(t, cl.Get(context.Background(), types.NamespacedName{Name: name}, fresh))
+		require.Equal(t, []string{group}, fresh.Status.MatchedNodeGroups, name)
+		require.Equal(t, int32(1), fresh.Status.MatchedNodes, name)
+		require.Equal(t, reasonResolved, meta.FindStatusCondition(fresh.Status.Conditions, readyConditionType).Reason, name)
+	}
 }

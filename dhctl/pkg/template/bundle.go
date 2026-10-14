@@ -75,7 +75,7 @@ func PrepareBundle(
 	ctx, span := telemetry.StartSpan(ctx, "PrepareBundle")
 	defer span.End()
 
-	bashibleData, err := metaConfig.ConfigForBashibleBundleTemplate(ctx, nodeIP)
+	bashibleData, err := FirstMasterBashibleData(ctx, metaConfig, nodeIP, globalOptions.CandiDir)
 	if err != nil {
 		return err
 	}

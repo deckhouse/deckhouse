@@ -14,8 +14,4 @@
 
 # bashible: parallel-group=install-systemd-units
 
-{{- $wrapperPkgName := "systemctl-power-commands-wrapper" }}
-{{- $wrapperIndex := "systemctlPowerCommandsWrapper" }}
-{{- $wrapperVersion := "0.2" | replace "." "" }}
-
-rpp-get install "{{ $wrapperPkgName }}:{{ index .images.registrypackages (printf "%s%s" $wrapperIndex $wrapperVersion) | toString }}"
+bb-package-wait systemctl-power-commands-wrapper

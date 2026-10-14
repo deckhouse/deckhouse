@@ -96,7 +96,7 @@ Details: [docs/controller-capi.md](docs/controller-capi.md).
 
 | Controller | Watches | What it does |
 |---|---|---|
-| `node-config` | Node | Renders a `NodeConfig` for every node of an olcedar NodeGroup from the NodeGroup and live cluster state; the on-node agent reconciles the node towards it. Compiles the `NodeStaticPodRequest` objects that select the group into `spec.staticPods`, and owns the `NodeStaticPodRequest` / `NodeExtensionRequest` status counters (matched, applied, failed, pending nodes). |
+| `node-config` | Node | Renders a `NodeConfig` for every node from the NodeGroup and live cluster state: the whole node for an Engine (`systemType: Immutable`) NodeGroup, the static pods, the agent's own package, the platform packages and the registry packages NodeExtensionRequests ask for on a bashible one; the on-node agent reconciles the node towards it. Compiles the `NodeStaticPodRequest` objects that select the group into `spec.staticPods`, and owns the `NodeStaticPodRequest` / `NodeExtensionRequest` status counters (matched, applied, failed, pending nodes). |
 | `node-bootstrap` | NodeBootstrapConfig | Cluster API bootstrap provider for immutable NodeGroups: renders each Machine's `NodeConfig` userdata into a Secret and advertises it through the `NodeBootstrapConfig` status CAPI waits on. |
 | `node-operation` | NodeOperation | Carries a node-interrupting operation (reboot, eviction, permission to apply a disruptive config) from recorded intent to result: evicts, hands over via `InProgress`, the node reports back. |
 

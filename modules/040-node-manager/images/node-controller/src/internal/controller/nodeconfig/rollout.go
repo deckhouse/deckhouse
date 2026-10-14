@@ -55,10 +55,10 @@ func nodeConfigRolloutInputsChanged(before, after client.Object) bool {
 		!slices.EqualFunc(oldConfig.OwnerReferences, newConfig.OwnerReferences, ownerRefEqual) {
 		return true
 	}
-	// readNEROutcomes counts the extension states off this list, and a node can
-	// change one without touching a condition or the applied generation: the
-	// event has to come from the same object the count is read from.
-	if !slices.EqualFunc(oldConfig.Status.Extensions, newConfig.Status.Extensions, extensionStatusEqual) {
+	// readNEROutcomes counts the extension states and digests off this list, and a node
+	// can change one without touching a condition or the applied generation: the event
+	// has to come from the same object the count is read from.
+	if !slices.Equal(oldConfig.Status.Extensions, newConfig.Status.Extensions) {
 		return true
 	}
 	// readNodeConfigOutcomes counts the static pod states off this list, and it is
@@ -69,16 +69,6 @@ func nodeConfigRolloutInputsChanged(before, after client.Object) bool {
 	}
 	return !conditionEqual(oldConfig.Status.Conditions, newConfig.Status.Conditions, configurationAppliedCondition) ||
 		!conditionEqual(oldConfig.Status.Conditions, newConfig.Status.Conditions, disruptionRequiredCondition)
-}
-
-// extensionStatusEqual compares the fields a pass reads. Digest is left out on
-// purpose: nothing here reads it, so a node that only re-recorded a digest is
-// not a re-render of the fleet.
-func extensionStatusEqual(a, b internalv1alpha1.ExtensionStatus) bool {
-	if a.Name != b.Name {
-		return false
-	}
-	return a.State == b.State && a.Message == b.Message
 }
 
 // staticPodStatusEqual compares the fields a pass reads: the state the counts
@@ -155,25 +145,27 @@ func (r *Reconciler) rolloutBudget(ctx context.Context, ng *v1.NodeGroup, p *pas
 		return nil, fmt.Errorf("list NodeConfigs of %s: %w", ng.Name, err)
 	}
 
+	// Every group lists its Nodes: a bashible node's document depends on its labels too,
+	// through the requests that select by them.
 	nodes := &corev1.NodeList{}
 	if err := r.sources.Reader.List(ctx, nodes, client.MatchingLabels{nodecommon.NodeGroupLabel: ng.Name}); err != nil {
 		return nil, fmt.Errorf("list Nodes of %s: %w", ng.Name, err)
 	}
 	// The same render apply() gives the node, so a node that already carries what
-	// the cluster publishes is not mistaken for one left behind. Read once for
-	// the group: renderSpec is pure and the inputs are memoised in the pass.
-	in, err := r.clusterInputs(ctx, ng, p)
-	if err != nil {
-		return nil, err
-	}
+	// the cluster publishes is not mistaken for one left behind. The inputs are
+	// memoised in the pass, so this reads nothing more.
 	desired := make(map[string]internalv1alpha1.NodeSpec, len(nodes.Items))
 	for i := range nodes.Items {
-		desired[nodes.Items[i].Name] = renderSpec(ng, &nodes.Items[i], in)
+		spec, err := r.renderNode(ctx, ng, &nodes.Items[i], p)
+		if err != nil {
+			return nil, fmt.Errorf("render the NodeConfig of %s: %w", nodes.Items[i].Name, err)
+		}
+		desired[nodes.Items[i].Name] = spec
 	}
 
 	budget := &rolloutBudget{
 		concurrency: groupConcurrency(ng, len(configs.Items)),
-		updating:    membersOfUpdating(configs.Items, desired),
+		updating:    membersOfUpdating(configs.Items, desired, IsMutable(ng)),
 	}
 	p.rollouts[ng.Name] = budget
 	return budget, nil
@@ -183,7 +175,7 @@ func (r *Reconciler) rolloutBudget(ctx context.Context, ng *v1.NodeGroup, p *pas
 // now, unproven. A node stuck on an older spec is broken, not mid-rollout, and
 // counting it locks the cure out of a group that is already broken.
 func membersOfUpdating(configs []internalv1alpha1.NodeConfig,
-	desired map[string]internalv1alpha1.NodeSpec) map[string]struct{} {
+	desired map[string]internalv1alpha1.NodeSpec, mutable bool) map[string]struct{} {
 	updating := make(map[string]struct{})
 	for i := range configs {
 		nc := &configs[i]
@@ -192,6 +184,9 @@ func membersOfUpdating(configs []internalv1alpha1.NodeConfig,
 			continue
 		}
 		if applied(nc) {
+			continue
+		}
+		if !holdsSlot(nc, mutable) {
 			continue
 		}
 		// The same carry-over apply() performs: a node keeping what it booted
@@ -204,6 +199,19 @@ func membersOfUpdating(configs []internalv1alpha1.NodeConfig,
 		updating[nc.Name] = struct{}{}
 	}
 	return updating
+}
+
+// holdsSlot reports whether an unapplied document counts against the group's budget.
+// bashible installs a node's agent later, under the group's own update approval, so on
+// its groups a document no agent has reported on holds nothing; an Engine node's does.
+func holdsSlot(nc *internalv1alpha1.NodeConfig, mutable bool) bool {
+	if !mutable {
+		return true
+	}
+	if nc.Status.ObservedGeneration != 0 || nc.Status.AppliedGeneration != 0 {
+		return true
+	}
+	return len(nc.Status.Conditions) > 0
 }
 
 // applied reports whether the node has finished reconciling the spec it was

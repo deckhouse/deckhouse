@@ -22,6 +22,9 @@ spec:
       subresources:
         status: {}
       additionalPrinterColumns:
+        - name: Kind
+          jsonPath: .spec.extension.kind
+          type: string
         - name: Phase
           jsonPath: .status.phase
           type: string
@@ -41,9 +44,11 @@ spec:
         openAPIV3Schema:
           type: object
           description: |
-            Asks for a system extension (a sysext image, optionally with kernel modules) to be merged onto the nodes it selects.
+            Request to install an extension on the selected nodes: a system extension (a sysext image, optionally with kernel modules) or a registry package.
 
-            The image is addressed the way the registry-packages-proxy addresses any package: a name, a digest, and an optional repository and path. node-controller forwards these straight into the NodeConfig extension the on-node agent pulls; it resolves no module or ModuleSource.
+            The requester sets the kind in `spec.extension.kind`. A registry package (`Package`) is installed on the selected nodes that bashible configures. A system extension (`SystemExtension`) is installed on the selected Deckhouse Engine nodes. The kind is never inferred from the image. If none of the selected groups installs extensions of this kind, the `Ready` condition reports the `NotDeliverable` reason.
+
+            The image is addressed the same way as any package in the registry-packages-proxy: a name, a digest, and an optional repository and path. node-controller copies these fields unchanged into `spec.extensions` of the NodeConfig, and the node agent installs the extension. node-controller does not look up the image by module or ModuleSource.
           required:
             - spec
           properties:
@@ -56,15 +61,16 @@ spec:
             spec:
               type: object
               required:
-                - sysext
+                - extension
               properties:
-                sysext:
+                extension:
                   type: object
                   required:
                     - name
                     - digest
+                    - kind
                   description: |
-                    Locates the system-extension image to merge, the way the registry-packages-proxy locates any package.
+                    Image to install and its kind. The image is addressed the same way as any package in the registry-packages-proxy.
                   properties:
                     name:
                       type: string
@@ -72,12 +78,28 @@ spec:
                       maxLength: 63
                       pattern: '^[a-z0-9]([-a-z0-9]*[a-z0-9])?$'
                       description: |
-                        The sysext name: it is matched against the image's extension-release and installed on the node as `<name>.raw`. Copied verbatim into the NodeConfig extension name, so it must be a DNS-label-like token.
+                        Extension name. It is copied unchanged into the extension name in `spec.extensions` of the NodeConfig.
+
+                        A system extension is checked against the extension-release file in the image and installed as `<name>.raw`. A registry package is recorded under `/var/cache/registrypackages/<name>`.
+
+                        The names `containerd`, `kubelet`, `kubernetes-cni` and `nodelet` are reserved.
                     digest:
                       type: string
                       pattern: '^sha256:[a-f0-9]{64}$'
                       description: |
-                        The sysext image manifest digest.
+                        Image manifest digest.
+                    kind:
+                      type: string
+                      enum: ["Package", "SystemExtension"]
+                      description: |
+                        Image kind.
+
+                        - `Package`: a registry package. The node agent installs it on the selected nodes that bashible configures.
+                        - `SystemExtension`: a system extension. The node agent merges it on the selected Deckhouse Engine nodes.
+
+                        Nodes of groups of the other type do not receive the image. If none of the selected groups installs extensions of this kind, the `Ready` condition reports the `NotDeliverable` reason.
+
+                        Cannot be changed after creation. To change the kind, delete the request and create it again.
                     repository:
                       type: string
                       description: |
@@ -111,7 +133,7 @@ spec:
                 kernelModules:
                   type: array
                   description: |
-                    The modules to load once the extension is merged.
+                    Kernel modules to load once the system extension is merged. A registry package cannot load kernel modules, so such a request is not delivered to any node.
                   items:
                     type: object
                     required:
@@ -142,37 +164,40 @@ spec:
                   type: string
                   enum: ["Ready", "Degraded"]
                   description: |
-                    `Ready` when the sysext resolves to an image the selected nodes can pull, `Degraded` when it cannot (the `Ready` condition carries the reason).
+                    - `Ready`: the extension is delivered to the selected nodes.
+                    - `Degraded`: the extension is not delivered. The `Ready` condition gives the reason.
                 matchedNodeGroups:
                   type: array
                   items:
                     type: string
                   description: |
-                    The NodeGroups the selectors currently match.
+                    The selected NodeGroups whose nodes install this kind of image: Deckhouse Engine groups for a system extension, groups bashible manages for a registry package.
                 appliedNodes:
                   type: integer
                   format: int32
                   minimum: 0
                   description: |
-                    How many of the selected nodes report the sysext installed and merged. Reported by the nodes themselves: a request can resolve here and still be refused by every node it reaches.
+                    Number of selected nodes that report the extension installed with the digest from their NodeConfig. While a node waits for a rollout slot, its NodeConfig still carries the request's previous digest.
+
+                    The value comes from node reports. A request can have the `Resolved` reason and still be refused by every node it is delivered to.
                 failedNodes:
                   type: integer
                   format: int32
                   minimum: 0
                   description: |
-                    How many of the selected nodes report the sysext refused.
+                    Number of selected nodes that report the extension refused.
                 matchedNodes:
                   type: integer
                   format: int32
                   minimum: 0
                   description: |
-                    Number of nodes in the selected NodeGroups.
+                    Number of nodes in `matchedNodeGroups` that the selectors pick.
                 pendingNodes:
                   type: integer
                   format: int32
                   minimum: 0
                   description: |
-                    Number of selected nodes that have not yet reported either successful manifest application or a failure.
+                    Number of selected nodes that have reported neither the extension installed nor a refusal yet.
                 failureMessage:
                   type: string
                   description: |
@@ -180,7 +205,9 @@ spec:
                 conditions:
                   type: array
                   description: |
-                    The latest details of the request's progress.
+                    Latest details of the request's progress.
+
+                    The `Ready` condition shows whether the extension is delivered to its nodes. The `Resolved` reason means it is. The other reasons explain why it is not: `InvalidExtension`, `ReservedName`, `Conflict`, `KernelModuleConflict`, `NotDeliverable` (no selected group installs this kind of image), and `RefusedByNodes`.
                   x-kubernetes-list-type: map
                   x-kubernetes-list-map-keys:
                     - type

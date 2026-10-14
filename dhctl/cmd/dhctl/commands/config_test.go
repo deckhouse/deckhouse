@@ -17,11 +17,13 @@ package commands
 import (
 	"os"
 	"path/filepath"
+	"regexp"
 	"testing"
 
 	"github.com/stretchr/testify/require"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app/options"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/tests"
 )
 
@@ -51,4 +53,81 @@ func TestLoadConfigForRender_RefusesTheConfigOfACommandThatCannotRenderIt(t *tes
 
 	require.ErrorContains(t, err, "dhctl config render bashible-bundle", "the message must name the command that cannot proceed")
 	require.ErrorContains(t, err, "ClusterConfiguration")
+}
+
+const staticClusterConfig = `
+---
+apiVersion: deckhouse.io/v1
+kind: ClusterConfiguration
+clusterType: Static
+kubernetesVersion: "1.32"
+podSubnetCIDR: 10.222.0.0/16
+serviceSubnetCIDR: 10.111.0.0/16
+---
+apiVersion: deckhouse.io/v1
+kind: InitConfiguration
+deckhouse:
+  imagesRepo: test
+  devBranch: test
+  registryDockerCfg: eyJhdXRocyI6IHsgInRlc3QiOiB7fX19
+`
+
+// The bundle this command writes is the one bootstrap runs on the first master, and that
+// master's node agent starts from the seed dhctl builds: without it the render stops.
+func TestRenderBashibleBundleSeedsTheFirstMastersAgent(t *testing.T) {
+	candiDir := tests.RequireCandiDir(t)
+	metaConfig, err := config.ParseConfigFromData(t.Context(), staticClusterConfig, config.DummyValidatorProvider(), &options.New().Global)
+	require.NoError(t, err)
+	require.NoError(t, metaConfig.LoadVersionMap(filepath.Join(candiDir, "version_map.yml")))
+	mingetPath := filepath.Join(t.TempDir(), "minget")
+	require.NoError(t, os.WriteFile(mingetPath, []byte("test-minget"), 0o600))
+	t.Setenv("DHCTL_MINGET_PATH", mingetPath)
+	metaConfig.Images = templateImages(t, candiDir)
+	bundleDir := t.TempDir()
+	opts := &options.Options{
+		Global: options.GlobalOptions{CandiDir: candiDir},
+		Render: options.RenderOptions{BashibleBundleDir: bundleDir},
+	}
+
+	require.NoError(t, renderBashibleBundle(t.Context(), metaConfig, opts))
+
+	steps, err := filepath.Glob(filepath.Join(bundleDir, "*", "var", "lib", "bashible", "bundle_steps", "003_install_nodelet*"))
+	require.NoError(t, err)
+	require.Len(t, steps, 1)
+	step, err := os.ReadFile(steps[0])
+	require.NoError(t, err)
+	require.Contains(t, string(step), "@base64d", "the agent's document must come from the seed")
+}
+
+// templateImages gives a digest to every image the templates under candi's bashible and
+// nodelet directories name, so the whole bundle renders without a built release.
+func templateImages(t *testing.T, candiDir string) map[string]map[string]any {
+	t.Helper()
+	references := []*regexp.Regexp{
+		regexp.MustCompile(`\.images\.(\w+)\.(\w+)`),
+		regexp.MustCompile(`index \.images\.(\w+) "(\w+)"`),
+	}
+	images := map[string]map[string]any{}
+	for _, dir := range []string{"bashible", "nodelet"} {
+		err := filepath.WalkDir(filepath.Join(candiDir, dir), func(path string, entry os.DirEntry, err error) error {
+			if err != nil || entry.IsDir() {
+				return err
+			}
+			text, err := os.ReadFile(path)
+			if err != nil {
+				return err
+			}
+			for _, reference := range references {
+				for _, match := range reference.FindAllStringSubmatch(string(text), -1) {
+					if images[match[1]] == nil {
+						images[match[1]] = map[string]any{}
+					}
+					images[match[1]][match[2]] = "sha256:" + match[2]
+				}
+			}
+			return nil
+		})
+		require.NoError(t, err)
+	}
+	return images
 }

@@ -20,4 +20,5 @@
 %s
 
 {{ template "bb-rp" $ }}
+{{ template "bb-telemetry" $ }}
 ` $lib) $ctx }}

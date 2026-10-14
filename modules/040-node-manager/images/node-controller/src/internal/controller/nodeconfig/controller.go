@@ -14,9 +14,9 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-// Package nodeconfig renders a NodeConfig object for every node of a Deckhouse Engine
-// NodeGroup: the on-node agent reconciles the node towards it. This controller
-// writes that desired state from the NodeGroup plus live cluster state.
+// Package nodeconfig renders a NodeConfig object for every node of a NodeGroup:
+// the whole node for a Deckhouse Engine group, the agent's own part for a group
+// bashible manages. The on-node agent reconciles the node towards it.
 package nodeconfig
 
 import (
@@ -133,13 +133,15 @@ func (r *Reconciler) SetupWatches(w register.Watcher) {
 			return obj.GetNamespace() == d8SystemNS && obj.GetName() == registryBashibleConfigSecret
 		},
 	)))
-	// The system extension digests of the release. Without this watch a new
-	// release re-renders nothing until some unrelated input moves: nothing else
-	// enqueues a pass, and no resync period is set. Scoped to the single
-	// ConfigMap, which is also its cache scope.
+	// The image digests and the platform document of the release. Without this
+	// watch a new release re-renders nothing until some unrelated input moves:
+	// nothing else enqueues a pass, and no resync period is set.
 	w.Watches(&corev1.ConfigMap{}, allMapper, builder.WithPredicates(predicate.NewPredicateFuncs(
 		func(obj client.Object) bool {
-			return obj.GetNamespace() == cloudInstanceManagerNS && obj.GetName() == imagesDigestsConfigMapName
+			if obj.GetNamespace() != cloudInstanceManagerNS {
+				return false
+			}
+			return obj.GetName() == imagesDigestsConfigMapName || obj.GetName() == platformTemplatesConfigMapName
 		},
 	)))
 	// Without this watch, an operator editing the network group has nothing enqueuing a pass: it
@@ -169,7 +171,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 	return r.reconcileNode(ctx, req.Name, logger, newPass())
 }
 
-// reconcileAllNodes re-renders every node of every immutable group. One failure
+// reconcileAllNodes re-renders every node of every group. One failure
 // does not stop the others; failures are counted, not logged one by one, and
 // the first error is returned so the pass is retried with backoff.
 func (r *Reconciler) reconcileAllNodes(ctx context.Context, logger logr.Logger) (ctrl.Result, error) {
@@ -252,8 +254,8 @@ func nodeIsReady(node *corev1.Node) bool {
 }
 
 // reconcileNode brings one node's NodeConfig in line with its NodeGroup. A node
-// that is gone, ungrouped, or in a bashible-managed group has no NodeConfig of
-// ours; any leftover object is removed.
+// that is gone or ungrouped has no NodeConfig of ours; any leftover object is
+// removed.
 func (r *Reconciler) reconcileNode(ctx context.Context, nodeName string, logger logr.Logger, p *pass) (ctrl.Result, error) {
 	node := &corev1.Node{}
 	if err := r.Client.Get(ctx, types.NamespacedName{Name: nodeName}, node); err != nil {
@@ -285,16 +287,12 @@ func (r *Reconciler) reconcileNodeObject(ctx context.Context, node *corev1.Node,
 		return ctrl.Result{}, r.deleteOrphaned(ctx, nodeName, logger)
 	}
 
-	if ng.Spec.SystemType != v1.SystemTypeImmutable {
-		return ctrl.Result{}, r.deleteOrphaned(ctx, nodeName, logger)
-	}
-
-	inputs, err := r.clusterInputs(ctx, ng, p)
+	spec, err := r.renderNode(ctx, ng, node, p)
 	if err != nil {
 		return ctrl.Result{}, err
 	}
 
-	desired := newNodeConfig(ng, node, inputs)
+	desired := newNodeConfig(ng, node, spec)
 	// The disruption answer must be about the object as it now stands: a cache
 	// re-read here returned the pre-patch revision, minting an operation for a
 	// generation the node had already left behind.
@@ -305,7 +303,28 @@ func (r *Reconciler) reconcileNodeObject(ctx context.Context, node *corev1.Node,
 	if current == nil {
 		return ctrl.Result{}, nil
 	}
+	// bashible negotiates the disruptions of the nodes it manages itself.
+	if IsMutable(ng) {
+		return ctrl.Result{}, nil
+	}
 	return r.reconcileDisruption(ctx, ng, node, current, logger)
+}
+
+// renderNode is the spec a node of the group is published: the Engine render for
+// an Immutable group, the agent-only one for a group bashible manages.
+func (r *Reconciler) renderNode(ctx context.Context, ng *v1.NodeGroup, node *corev1.Node, p *pass) (internalv1alpha1.NodeSpec, error) {
+	if IsMutable(ng) {
+		in, err := r.mutableInputs(ctx, p)
+		if err != nil {
+			return internalv1alpha1.NodeSpec{}, fmt.Errorf("read the inputs of a bashible node: %w", err)
+		}
+		return renderMutableSpec(node, ng.Name, in), nil
+	}
+	in, err := r.clusterInputs(ctx, ng, p)
+	if err != nil {
+		return internalv1alpha1.NodeSpec{}, fmt.Errorf("read the inputs of an Engine node: %w", err)
+	}
+	return renderSpec(ng, node, in), nil
 }
 
 // apply creates or patches the object and returns it as it now stands — nil
@@ -322,9 +341,22 @@ func (r *Reconciler) apply(ctx context.Context, ng *v1.NodeGroup, node *corev1.N
 	}
 
 	keepBootstrapOnlyFields(&desired.Spec, &existing.Spec)
+	specChanged := !specUpToDate(existing, desired)
 
-	if upToDate(existing, desired) {
-		logger.V(1).Info("NodeConfig unchanged", "node", desired.Name)
+	if !metadataUpToDate(existing, desired) {
+		if existing, err = r.patchMetadata(ctx, existing, desired, logger); existing == nil {
+			return nil, err
+		}
+		// Now listed, a node still applying the published spec holds a slot, and a budget this
+		// pass read before the write has to be told, as create() does. Another spec is the gate's.
+		if !specChanged && !applied(existing) {
+			if budget, ok := p.rollouts[ng.Name]; ok && holdsSlot(existing, IsMutable(ng)) {
+				budget.spend(desired.Name)
+			}
+		}
+	}
+	if !specChanged {
+		logger.V(1).Info("NodeConfig spec unchanged", "node", desired.Name)
 		return existing, nil
 	}
 
@@ -362,7 +394,7 @@ func (r *Reconciler) create(ctx context.Context, ng *v1.NodeGroup, node *corev1.
 	// A node given its first config is updating. A budget this pass has already
 	// read predates the object and has to be told; one read later lists it
 	// itself, still at generation 1 with nothing applied.
-	if budget, ok := p.rollouts[ng.Name]; ok {
+	if budget, ok := p.rollouts[ng.Name]; ok && holdsSlot(desired, IsMutable(ng)) {
 		budget.spend(desired.Name)
 	}
 	r.recordClampedSettings(ng)
@@ -370,36 +402,58 @@ func (r *Reconciler) create(ctx context.Context, ng *v1.NodeGroup, node *corev1.
 }
 
 // patch writes the rendered spec onto the object the slot was granted against.
-// The write is conditional on that revision: two passes rendering one node at
-// once would otherwise both write, the second over a slot the first had spent.
 func (r *Reconciler) patch(ctx context.Context, ng *v1.NodeGroup, existing, desired *internalv1alpha1.NodeConfig, logger logr.Logger, budget *rolloutBudget) (*internalv1alpha1.NodeConfig, error) {
-	patch := client.MergeFromWithOptions(existing.DeepCopy(), client.MergeFromWithOptimisticLock{})
-	existing.Spec = desired.Spec
-	existing.Labels = desired.Labels
-	existing.OwnerReferences = desired.OwnerReferences
-	if err := r.Client.Patch(ctx, existing, patch); err != nil {
-		// Someone wrote the object between the read and this patch. The node is
-		// left to the next pass — the winning write is a NodeConfig change and
-		// the watch enqueues one — rather than failing the walk over a race.
-		if apierrors.IsConflict(err) {
-			logger.V(1).Info("NodeConfig changed while it was being rendered; leaving it to the next pass", "node", desired.Name)
-			return nil, nil
-		}
-		return nil, fmt.Errorf("patch NodeConfig %s: %w", desired.Name, err)
+	updated := existing.DeepCopy()
+	updated.Spec = desired.Spec
+	current, err := r.write(ctx, existing, updated, logger)
+	if current == nil {
+		return nil, err
 	}
 	logger.Info("NodeConfig updated", "node", desired.Name)
-	budget.spend(desired.Name)
+	if holdsSlot(current, IsMutable(ng)) {
+		budget.spend(desired.Name)
+	}
 	r.recordClampedSettings(ng)
-	return existing, nil
+	return current, nil
 }
 
-// upToDate reports whether the object already carries everything the patch
-// writes. Ownership is compared because the patch writes it: left out, a stale
-// or missing ownerReference is never corrected and the object outlives its node.
-func upToDate(existing, desired *internalv1alpha1.NodeConfig) bool {
-	if !apiequality.Semantic.DeepEqual(existing.Spec, desired.Spec) {
-		return false
+// patchMetadata writes the labels and owner, which need no slot: the agent registers an object
+// by name alone, and without them the gate does not list it and nothing removes it with its node.
+func (r *Reconciler) patchMetadata(ctx context.Context, existing, desired *internalv1alpha1.NodeConfig, logger logr.Logger) (*internalv1alpha1.NodeConfig, error) {
+	updated := existing.DeepCopy()
+	updated.Labels = desired.Labels
+	updated.OwnerReferences = desired.OwnerReferences
+	current, err := r.write(ctx, existing, updated, logger)
+	if current == nil {
+		return nil, err
 	}
+	logger.Info("NodeConfig labels and owner updated", "node", desired.Name)
+	return current, nil
+}
+
+// write patches existing into updated, conditional on the revision read: two passes rendering
+// one node at once would otherwise both write, the second over a slot the first had spent.
+// Someone writing in between leaves the node to the next pass, which that write enqueues.
+func (r *Reconciler) write(ctx context.Context, existing, updated *internalv1alpha1.NodeConfig, logger logr.Logger) (*internalv1alpha1.NodeConfig, error) {
+	if err := r.Client.Patch(ctx, updated, client.MergeFromWithOptions(existing, client.MergeFromWithOptimisticLock{})); err != nil {
+		if apierrors.IsConflict(err) {
+			logger.V(1).Info("NodeConfig changed while it was being rendered; leaving it to the next pass", "node", updated.Name)
+			return nil, nil
+		}
+		return nil, fmt.Errorf("patch NodeConfig %s: %w", updated.Name, err)
+	}
+	return updated, nil
+}
+
+// specUpToDate reports whether the object already carries the rendered spec.
+func specUpToDate(existing, desired *internalv1alpha1.NodeConfig) bool {
+	return apiequality.Semantic.DeepEqual(existing.Spec, desired.Spec)
+}
+
+// metadataUpToDate reports whether the object carries the labels and owner. Ownership is
+// compared because it is written: left out, a stale or missing ownerReference is never
+// corrected and the object outlives its node.
+func metadataUpToDate(existing, desired *internalv1alpha1.NodeConfig) bool {
 	if !apiequality.Semantic.DeepEqual(existing.Labels, desired.Labels) {
 		return false
 	}

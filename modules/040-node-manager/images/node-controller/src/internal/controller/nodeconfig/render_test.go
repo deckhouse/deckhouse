@@ -564,7 +564,10 @@ func TestRecordClampedSettings(t *testing.T) {
 
 			r.recordClampedSettings(&v1.NodeGroup{
 				ObjectMeta: metav1.ObjectMeta{Name: "worker"},
-				Spec:       v1.NodeGroupSpec{Kubelet: &v1.KubeletSpec{MaxPods: tt.maxPods}},
+				Spec: v1.NodeGroupSpec{
+					SystemType: v1.SystemTypeImmutable,
+					Kubelet:    &v1.KubeletSpec{MaxPods: tt.maxPods},
+				},
 			})
 			close(recorder.Events)
 
@@ -675,6 +678,9 @@ func TestRenderDefaultsMatchTheShippedCRD(t *testing.T) {
 	require.Equal(t, registryOwnerNodelet,
 		crdField(t, schema, "spec", "containerRuntime", "registryOwner")["default"])
 
+	// The Engine render writes the type the API server would default it to.
+	require.Equal(t, string(internalv1alpha1.SystemTypeImmutable), crdField(t, schema, "spec", "systemType")["default"])
+
 	// The render is what fills the list, so the bound it caps at is the bound the
 	// API server enforces: a longer list is refused whole and the node is left
 	// without a config at all.
@@ -725,10 +731,13 @@ func crdField(t *testing.T, schema map[string]any, path ...string) map[string]an
 func TestRenderTaintsDropsWhatKubeletCannotRegister(t *testing.T) {
 	ng := &v1.NodeGroup{
 		ObjectMeta: metav1.ObjectMeta{Name: "worker"},
-		Spec: v1.NodeGroupSpec{NodeTemplate: &v1.NodeTemplate{Taints: []corev1.Taint{
-			{Key: "dedicated", Value: "frontend"},
-			{Key: "ship-class", Value: "frigate", Effect: corev1.TaintEffectNoExecute},
-		}}},
+		Spec: v1.NodeGroupSpec{
+			SystemType: v1.SystemTypeImmutable,
+			NodeTemplate: &v1.NodeTemplate{Taints: []corev1.Taint{
+				{Key: "dedicated", Value: "frontend"},
+				{Key: "ship-class", Value: "frigate", Effect: corev1.TaintEffectNoExecute},
+			}},
+		},
 	}
 
 	// A machine that has not joined yet: registration taints are only rendered
@@ -787,9 +796,7 @@ func TestKubeletMaySetLabelFollowsKubeletsOwnRule(t *testing.T) {
 // the API server rejects the whole object over any one field, and the group is
 // then left with no configuration at all. Cases come from crds/node_group.yaml.
 func TestRenderedSpecPassesTheAgentSchema(t *testing.T) {
-	if !testenv.AssetsAvailable() {
-		t.Skip("envtest assets not found; run `make envtest` (or set KUBEBUILDER_ASSETS) to run this test")
-	}
+	c := nodeConfigAPIClient(t)
 
 	labels := map[string]string{
 		// Neither a qualified name nor within the length the CEL rules asked
@@ -841,12 +848,6 @@ func TestRenderedSpecPassesTheAgentSchema(t *testing.T) {
 			spec: v1.NodeGroupSpec{NodeTemplate: &v1.NodeTemplate{Labels: labels}},
 		},
 	}
-
-	scheme := k8sruntime.NewScheme()
-	require.NoError(t, internalv1alpha1.AddToScheme(scheme))
-	env, _, c, err := testenv.Start(scheme, testenv.NodeManagerCRDPaths(testenv.NodeConfigCRDFile)...)
-	require.NoError(t, err)
-	t.Cleanup(func() { require.NoError(t, env.Stop()) })
 
 	in := clusterInputs{
 		OSImage:        internalv1alpha1.OSImage{Digest: "sha256:" + strings.Repeat("a", 64)},
@@ -1132,7 +1133,7 @@ func TestRenderSpecCompilesStaticPods(t *testing.T) {
 
 	spec := renderSpec(ng, &corev1.Node{ObjectMeta: metav1.ObjectMeta{Name: "worker-0"}}, clusterInputs{
 		NodeStaticPodRequests:         ordered,
-		NodeStaticPodRequestsRejected: rejectedNSPRs(ordered),
+		NodeStaticPodRequestsRejected: refusedEverywhere(ordered),
 	})
 
 	require.Len(t, spec.StaticPods, 1)
@@ -1164,7 +1165,7 @@ func TestRenderSpecBoundsStaticPods(t *testing.T) {
 
 	spec := renderSpec(ng, &corev1.Node{ObjectMeta: metav1.ObjectMeta{Name: "worker-0"}}, clusterInputs{
 		NodeStaticPodRequests:         ordered,
-		NodeStaticPodRequestsRejected: rejectedNSPRs(ordered),
+		NodeStaticPodRequestsRejected: refusedEverywhere(ordered),
 	})
 
 	require.Len(t, spec.StaticPods, maxStaticPods)
@@ -1224,4 +1225,51 @@ func TestRenderRegistryOwner(t *testing.T) {
 	// directory goes back to nodelet without anybody editing a node.
 	require.Equal(t, registryOwnerNodelet,
 		renderSpec(ng, node, clusterInputs{}).ContainerRuntime.RegistryOwner)
+}
+
+// The API server defaults an unnamed type to Immutable; an Engine render that left
+// it out would never equal the object it wrote, and every pass would patch it.
+func TestTheEngineRenderNamesItsSystemType(t *testing.T) {
+	ng := immutableGroup("worker")
+
+	spec := renderSpec(ng, &corev1.Node{ObjectMeta: metav1.ObjectMeta{Name: "worker-0"}}, clusterInputs{})
+
+	require.Equal(t, internalv1alpha1.SystemTypeImmutable, spec.SystemType)
+}
+
+// The spec's sections are omitzero for the Mutable document and the template; an
+// Engine render sends every one of them, even from no inputs, and keeps the empty
+// objects nested inside them, so its bytes are what they were.
+func TestTheEngineRenderSendsEverySection(t *testing.T) {
+	raw, err := json.Marshal(renderSpec(immutableGroup("worker"), &corev1.Node{ObjectMeta: metav1.ObjectMeta{Name: "worker-0"}}, clusterInputs{}))
+	require.NoError(t, err)
+
+	for _, section := range []string{"kernel", "network", "storage", "updatePolicy", "kubelet", "containerRuntime"} {
+		require.Contains(t, string(raw), `"`+section+`":{`)
+	}
+	for _, nested := range []string{`"dns":{}`, `"ntp":{}`, `"window":{}`} {
+		require.Contains(t, string(raw), nested)
+	}
+}
+
+// The warnings name limits of an Engine node. bashible applies maxPods 1500 and
+// RollingUpdate as written, so the same words on its group would be false.
+func TestRecordClampedSettingsLeavesABashibleGroupAlone(t *testing.T) {
+	recorder := record.NewFakeRecorder(10)
+	r := &Reconciler{}
+	r.Recorder = recorder
+
+	for _, systemType := range []v1.SystemType{v1.SystemTypeMutable, ""} {
+		ng := mutableGroup("worker", systemType)
+		ng.Spec.Kubelet = &v1.KubeletSpec{MaxPods: ptr.To(int32(1500))}
+		ng.Spec.Disruptions = &v1.DisruptionsSpec{ApprovalMode: v1.DisruptionApprovalModeRollingUpdate}
+		r.recordClampedSettings(ng)
+	}
+	close(recorder.Events)
+
+	var messages []string
+	for event := range recorder.Events {
+		messages = append(messages, event)
+	}
+	require.Empty(t, messages)
 }

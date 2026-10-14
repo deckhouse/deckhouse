@@ -18,6 +18,7 @@ package nodeconfig
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"slices"
 	"strings"
@@ -27,6 +28,7 @@ import (
 	apiequality "k8s.io/apimachinery/pkg/api/equality"
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	deckhousev1alpha1 "github.com/deckhouse/node-controller/api/deckhouse.io/v1alpha1"
@@ -48,16 +50,15 @@ func (r *Reconciler) reconcileNSPRStatuses(ctx context.Context, logger logr.Logg
 	}
 
 	ordered := orderedNSPRs(nsprs.Items)
-	rejected := rejectedNSPRs(ordered)
-	groups, err := r.immutableNodeGroupNames(ctx)
+	rejected, onMutable := rejectedNSPRs(ordered)
+	immutable, mutable, err := r.nodeGroupNames(ctx)
 	if err != nil {
 		return err
 	}
 
-	// What the fleet made of these pods, from the one place the answer lives:
-	// the NodeConfig of every node in an Immutable group. Nothing is published
-	// without it: counts absent read as counts zero, so a transient read failure
-	// would turn "every node refused it" into a clean Ready and lose the reason.
+	// What the fleet made of these pods, from every node's NodeConfig. Nothing is published
+	// without it: absent counts read as zero, so one failed read would turn "every node
+	// refused it" into a clean Ready and lose the reason.
 	outcomes, err := readNodeConfigOutcomes(ctx, r.Client)
 	if err != nil {
 		return fmt.Errorf("read what the nodes report about NodeStaticPodRequests: %w", err)
@@ -69,24 +70,99 @@ func (r *Reconciler) reconcileNSPRStatuses(ctx context.Context, logger logr.Logg
 		return fmt.Errorf("list Nodes for the NodeStaticPodRequest counts: %w", err)
 	}
 
+	// A bashible group is capped the way its nodes are rendered: without the
+	// requests a bashible step already serves there.
+	capped := cappedNSPRs(ordered, rejected, immutable)
+	for name, groups := range cappedNSPRs(ordered, onMutable, mutable) {
+		capped[name] = append(capped[name], groups...)
+	}
 	// Iterated in contest order so a reader of the log sees the winner before the
 	// objects that lost to it.
-	capped := cappedNSPRs(ordered, rejected, groups)
 	for _, nspr := range ordered {
-		if err := r.updateNSPRStatus(ctx, nspr, rejected, capped[nspr.Name], groups, nodes.Items, outcomes[nspr.Name]); err != nil {
+		// Refused on a Mutable node and nowhere else: a bashible step serves it there.
+		_, refused := rejected[nspr.Name]
+		_, refusedOnMutable := onMutable[nspr.Name]
+		reach := reachOf(nspr, immutable, mutable, refusedOnMutable && !refused)
+		if err := r.updateNSPRStatus(ctx, nspr, rejected, capped[nspr.Name], reach, nodes.Items, outcomes[nspr.Name]); err != nil {
 			logger.Error(err, "cannot update NodeStaticPodRequest status", "staticPodRequest", nspr.Name)
 		}
 	}
 	return nil
 }
 
+// Ready reasons of a request that resolved and reaches no node. Neither is a
+// fault, so Ready stays True and `kubectl wait --for=condition=Ready` returns.
+const (
+	// reasonServedByBashible is registry-agent on the groups bashible manages:
+	// a bashible step writes it there, and the agent is never asked for it.
+	reasonServedByBashible = "ServedByBashible"
+	// reasonNoNodesSelected names what keeps the request from every node.
+	reasonNoNodesSelected = "NoNodesSelected"
+)
+
+// nsprReach is where one request's static pod goes, by the groups it selects.
+type nsprReach struct {
+	// targets are the groups whose nodes the agent writes the pod to.
+	targets []string
+	// servedByBashible are the bashible groups where a bashible step writes it.
+	servedByBashible []string
+	// missing are the selected names no NodeGroup carries.
+	missing []string
+}
+
+// reachOf is where a request's static pod goes.
+func reachOf(nspr *deckhousev1alpha1.NodeStaticPodRequest, immutable, mutable []string, servedByBashible bool) nsprReach {
+	selected := nspr.Spec.NodeGroupSelector.MatchNames
+	reach := nsprReach{targets: matchedNodeGroups(selected, immutable), missing: missingNodeGroups(selected, immutable, mutable)}
+	bashible := matchedNodeGroups(selected, mutable)
+	if servedByBashible {
+		reach.servedByBashible = bashible
+		return reach
+	}
+	reach.targets = append(reach.targets, bashible...)
+	return reach
+}
+
+// missingNodeGroups are the names a selector lists that no NodeGroup carries.
+func missingNodeGroups(selected, immutable, mutable []string) []string {
+	var missing []string
+	for _, name := range selected {
+		if !slices.Contains(immutable, name) && !slices.Contains(mutable, name) {
+			missing = append(missing, name)
+		}
+	}
+	return missing
+}
+
+// reachedNoNode says why a resolved request is on no node: a bashible step
+// serves it there, or nothing it selects has a node the agent writes to.
+func reachedNoNode(reach nsprReach) (string, string) {
+	if len(reach.servedByBashible) > 0 {
+		return reasonServedByBashible, fmt.Sprintf("a bashible step writes this static pod on the nodes of NodeGroup(s) %s; the node agent is not asked for it",
+			strings.Join(reach.servedByBashible, ", "))
+	}
+	var causes []string
+	if len(reach.missing) > 0 {
+		causes = append(causes, fmt.Sprintf("NodeGroup(s) %s do not exist", strings.Join(reach.missing, ", ")))
+	}
+	if len(reach.targets) > 0 {
+		causes = append(causes, fmt.Sprintf("NodeGroup(s) %s have no nodes", strings.Join(reach.targets, ", ")))
+	}
+	if len(causes) == 0 {
+		causes = append(causes, "there is no NodeGroup to select")
+	}
+	return reasonNoNodesSelected, "the static pod reaches no node: " + strings.Join(causes, "; ")
+}
+
 // updateNSPRStatus computes and patches one object's status, skipping the write
-// when nothing changed.
-func (r *Reconciler) updateNSPRStatus(ctx context.Context, nspr *deckhousev1alpha1.NodeStaticPodRequest, rejected map[string]nsprRefusal, cappedIn []string, nodeGroups []string, nodes []corev1.Node, outcome nsprOutcome) error {
+// when nothing changed. Every group the selector matches is listed; the nodes of
+// those that are served by bashible are not counted.
+func (r *Reconciler) updateNSPRStatus(ctx context.Context, nspr *deckhousev1alpha1.NodeStaticPodRequest, rejected map[string]nsprRefusal, cappedIn []string, reach nsprReach, nodes []corev1.Node, outcome nsprOutcome) error {
 	desired := nspr.Status.DeepCopy()
 	desired.ObservedGeneration = nspr.Generation
-	desired.MatchedNodeGroups = matchedNodeGroups(nspr.Spec.NodeGroupSelector.MatchNames, nodeGroups)
-	desired.MatchedNodes = matchedNodeCount(nodes, desired.MatchedNodeGroups)
+	desired.MatchedNodeGroups = slices.Concat(reach.targets, reach.servedByBashible)
+	slices.Sort(desired.MatchedNodeGroups)
+	desired.MatchedNodes = matchedNodeCount(nodes, reach.targets)
 	desired.AppliedNodes = outcome.applied
 	desired.FailedNodes = outcome.failed
 	desired.FailureMessage = outcome.message
@@ -110,11 +186,17 @@ func (r *Reconciler) updateNSPRStatus(ctx context.Context, nspr *deckhousev1alph
 	if reason != "" {
 		desired.PendingNodes = 0
 	}
+	// A node that reports it written was reached, whatever the node list says yet.
+	reachedNone := desired.MatchedNodes == 0 && outcome.applied == 0
 	switch {
 	case reason == "" && outcome.failed > 0:
 		reason = reasonRefusedByNodes
 		message = fmt.Sprintf("%d node(s) refused the static pod, %d wrote it: %s",
 			outcome.failed, outcome.applied, outcome.message)
+	case reason == "" && reachedNone:
+		desired.Phase = phaseReady
+		status = metav1.ConditionTrue
+		reason, message = reachedNoNode(reach)
 	case reason == "":
 		desired.Phase = phaseReady
 		status = metav1.ConditionTrue
@@ -132,9 +214,13 @@ func (r *Reconciler) updateNSPRStatus(ctx context.Context, nspr *deckhousev1alph
 	if apiequality.Semantic.DeepEqual(&nspr.Status, desired) {
 		return nil
 	}
-	patched := nspr.DeepCopy()
-	patched.Status = *desired
-	if err := r.Client.Status().Patch(ctx, patched, client.MergeFrom(nspr)); err != nil {
+	// The whole status in one JSON patch: a merge patch would leave out the
+	// counters that stay 0 and keep the fields that went empty.
+	patch, err := json.Marshal([]map[string]any{{"op": "add", "path": "/status", "value": desired}})
+	if err != nil {
+		return fmt.Errorf("marshal status: %w", err)
+	}
+	if err := r.Client.Status().Patch(ctx, nspr, client.RawPatch(types.JSONPatchType, patch)); err != nil {
 		return fmt.Errorf("patch status: %w", err)
 	}
 	return nil

@@ -67,9 +67,9 @@ spec:
                 nodeGroupSelector:
                   type: object
                   description: |
-                    Restricts the pod to nodes in the specified NodeGroups. If no groups are specified, all NodeGroups with `systemType: Immutable` are selected.
+                    Restricts the pod to nodes in the specified NodeGroups. If no groups are specified, all NodeGroups are selected.
 
-                    For these groups, the node agent writes the manifest from the corresponding node's NodeConfig. NodeGroups that use bashible are not selected because they do not use NodeConfig.
+                    The node agent writes the manifest from the NodeConfig of each selected node. On nodes managed by bashible, a resource named `registry-agent` or describing the `kube-system/registry-agent` pod is not applied, because bashible writes that manifest itself. If the resource reaches no other node, the `Ready` condition reports the `ServedByBashible` reason.
                   properties:
                     matchNames:
                       type: array
@@ -108,8 +108,12 @@ spec:
 
                     Possible values:
 
-                    - `Ready`: Manifest was successfully processed and accepted by the selected nodes.
+                    - `Ready`: Manifest was successfully processed and accepted by the selected nodes. The reason in the `Ready` condition is `Resolved`, or, if the manifest reaches no node, `ServedByBashible` or `NoNodesSelected`.
                     - `Degraded`: Manifest cannot be applied. The reason is specified in the `Ready` condition: `InvalidName`, `ReservedName`, `InvalidManifest`, `Conflict`, `LimitExceeded`, or `RefusedByNodes`.
+
+                    The `ServedByBashible` reason indicates that the selected NodeGroups are managed by bashible, which writes the `registry-agent` manifest on their nodes itself. The message lists these NodeGroups.
+
+                    The `NoNodesSelected` reason indicates that the manifest reaches no node: the selector matches no existing NodeGroup or the selected NodeGroups have no nodes. The message names the cause.
 
                     The `InvalidName` reason indicates that the NodeStaticPodRequest resource name does not conform to the DNS label format with a maximum length of 63 characters, which is required for using the name in the node configuration.
 
@@ -139,7 +143,7 @@ spec:
                   format: int32
                   minimum: 0
                   description: |
-                    Number of nodes in the selected NodeGroups.
+                    Number of nodes in the selected NodeGroups to which the node agent writes the manifest. Nodes of NodeGroups on which bashible writes the manifest itself are not counted.
                 pendingNodes:
                   type: integer
                   format: int32

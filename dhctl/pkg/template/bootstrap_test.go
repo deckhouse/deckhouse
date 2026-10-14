@@ -33,11 +33,12 @@ func TestPrepareBootstrapUsesDefaultClusterMasterEndpoints(t *testing.T) {
 	mingetPath := filepath.Join(t.TempDir(), "minget")
 	require.NoError(t, os.WriteFile(mingetPath, []byte("test-minget"), 0o600))
 	t.Setenv("DHCTL_MINGET_PATH", mingetPath)
+	metaConfig.Images = map[string]map[string]any{"registrypackages": platformPackages(t)}
 
 	templateController := NewTemplateController("")
 	defer templateController.Close()
 
-	err = PrepareBootstrap(t.Context(), templateController, "127.0.0.1", metaConfig, &options.GlobalOptions{CandiDir: options.DefaultCandiDir})
+	err = PrepareBootstrap(t.Context(), templateController, "127.0.0.1", metaConfig, &options.GlobalOptions{CandiDir: candiDir(t)})
 	require.NoError(t, err)
 
 	renderedBootstrap, err := os.ReadFile(filepath.Join(templateController.TmpDir, "bootstrap", "01-bootstrap-prerequisites.sh"))

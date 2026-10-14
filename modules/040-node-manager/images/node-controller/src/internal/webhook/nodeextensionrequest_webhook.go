@@ -21,6 +21,7 @@ import (
 	"fmt"
 	"net/http"
 
+	admissionv1 "k8s.io/api/admission/v1"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
 
@@ -29,10 +30,9 @@ import (
 
 var nerWebhookLog = logf.Log.WithName("nodeextensionrequest-webhook")
 
-// NodeExtensionRequestValidator refuses a sysext name reserved for a platform
-// extension, which the CRD cannot express. Name, digest and kernel-module
-// clashes between requests are left to the nodeconfig controller: it settles
-// them cluster-wide and writes the reason onto the request that lost.
+// NodeExtensionRequestValidator refuses a reserved extension name and a change of kind, which
+// the CRD cannot express, and a missing or unknown kind. Name, digest and kernel-module clashes
+// are the nodeconfig controller's: it settles them cluster-wide and reports them on the loser.
 type NodeExtensionRequestValidator struct {
 	decoder admission.Decoder
 }
@@ -46,9 +46,28 @@ func (w *NodeExtensionRequestValidator) Handle(_ context.Context, req admission.
 		return admission.Errored(http.StatusBadRequest, err)
 	}
 
-	if name := ner.Spec.Sysext.Name; deckhousev1alpha1.IsReservedSysextName(name) {
+	if name := ner.Spec.Extension.Name; deckhousev1alpha1.IsReservedExtensionName(name) {
 		return admission.Denied(fmt.Sprintf(
-			"it is forbidden to set .spec.sysext.name to %q: the name is reserved for a platform extension", name))
+			"it is forbidden to set .spec.extension.name to %q: the name is reserved for a platform extension", name))
+	}
+
+	kind := ner.Spec.Extension.Kind
+	if kind != deckhousev1alpha1.ExtensionKindPackage && kind != deckhousev1alpha1.ExtensionKindSystemExtension {
+		return admission.Denied(fmt.Sprintf(".spec.extension.kind must be %s or %s, not %q",
+			deckhousev1alpha1.ExtensionKindPackage, deckhousev1alpha1.ExtensionKindSystemExtension, kind))
+	}
+
+	if req.Operation != admissionv1.Update {
+		return admission.Allowed("")
+	}
+	old := &deckhousev1alpha1.NodeExtensionRequest{}
+	if err := w.decoder.DecodeRaw(req.OldObject, old); err != nil {
+		return admission.Errored(http.StatusBadRequest, err)
+	}
+	if old.Spec.Extension.Kind != kind {
+		return admission.Denied(fmt.Sprintf(
+			".spec.extension.kind cannot be changed from %q to %q: delete the NodeExtensionRequest and create it again",
+			old.Spec.Extension.Kind, kind))
 	}
 
 	return admission.Allowed("")

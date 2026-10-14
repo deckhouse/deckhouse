@@ -17,7 +17,10 @@ limitations under the License.
 package nodebootstrap
 
 import (
+	"context"
+	"encoding/json"
 	"fmt"
+	"strings"
 	"testing"
 	"time"
 
@@ -30,6 +33,8 @@ import (
 	"k8s.io/apimachinery/pkg/fields"
 	"k8s.io/apimachinery/pkg/labels"
 	k8sruntime "k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apiserver/pkg/authentication/user"
+	"k8s.io/apiserver/pkg/endpoints/request"
 	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
 	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -37,6 +42,7 @@ import (
 
 	deckhousev1 "github.com/deckhouse/node-controller/api/deckhouse.io/v1"
 	deckhousev1alpha1 "github.com/deckhouse/node-controller/api/deckhouse.io/v1alpha1"
+	internalv1alpha1 "github.com/deckhouse/node-controller/api/internal.deckhouse.io/v1alpha1"
 	templatesv1alpha1 "github.com/deckhouse/node-controller/api/templates.internal.deckhouse.io/v1alpha1"
 	nodecommon "github.com/deckhouse/node-controller/internal/common"
 	"github.com/deckhouse/node-controller/internal/testenv"
@@ -64,6 +70,29 @@ func TestNodeConfigTemplateLeavesTheMachineFieldsToTheOperator(t *testing.T) {
 	require.Empty(t, template.Spec.Network.Interfaces)
 	require.Empty(t, template.Spec.Storage.Device)
 	require.Nil(t, template.Spec.Storage.DiskSelector)
+}
+
+// Intended, not incidental: the template leaves the machine's network and storage
+// out whole rather than as empty objects. The operator writes them in, and a node
+// reads an absent section and an empty one alike.
+func TestNodeConfigTemplateLeavesTheMachineSectionsOut(t *testing.T) {
+	storage := NewTemplateStorage(templateCluster(t,
+		immutableStaticNodeGroup(testTemplateNodeGroup),
+		bootstrapTokenSecret(testTemplateNodeGroup),
+	))
+
+	object, err := storage.Get(t.Context(), testTemplateNodeGroup, &metav1.GetOptions{})
+	require.NoError(t, err)
+	raw, err := json.Marshal(object)
+	require.NoError(t, err)
+
+	var template struct {
+		Spec map[string]json.RawMessage `json:"spec"`
+	}
+	require.NoError(t, json.Unmarshal(raw, &template))
+	require.NotContains(t, template.Spec, "network", "the operator writes the network in")
+	require.NotContains(t, template.Spec, "storage", "the operator writes the disk in")
+	require.Contains(t, template.Spec, "kubelet", "the cluster's half stays")
 }
 
 // The node name is the operator's to pick, and a NodeConfig carries it twice:
@@ -291,15 +320,12 @@ func templateCluster(t *testing.T, objects ...client.Object) client.Client {
 }
 
 func clusterInputs() []client.Object {
-	digests := fmt.Sprintf(`{"registrypackages":{"containerdSysext224":%q,"kubernetesCniSysext162":%q,"kubeletSysext1356":%q,"nodeletSysext":%q,"qemuGuestAgentSysext":%q},"nodeManager":{"engine":%q},"common":{"pause":%q}}`,
-		testenv.TestContainerdDigest, testenv.TestCNIDigest, testenv.TestKubeletDigest, testenv.TestNodeletDigest,
-		testenv.TestGuestAgentDigest, testenv.TestOSImageDigest, testenv.TestPauseDigest)
-
 	return []client.Object{
 		&corev1.ConfigMap{
 			ObjectMeta: metav1.ObjectMeta{Namespace: nodecommon.MachineNamespace, Name: "bashible-apiserver-files"},
-			Data:       map[string]string{"images_digests.json": digests},
+			Data:       map[string]string{"images_digests.json": testenv.ImagesDigestsJSON(testenv.TestContainerdDigest)},
 		},
+		testenv.PlatformTemplatesConfigMap(),
 		&corev1.Secret{
 			ObjectMeta: metav1.ObjectMeta{Namespace: nodecommon.MachineNamespace, Name: "registry-packages-proxy-token"},
 			Data:       map[string][]byte{"token": []byte("proxy-token")},
@@ -357,4 +383,148 @@ func clusterInputs() []client.Object {
 			Spec: corev1.ServiceSpec{ClusterIP: "10.222.0.10"},
 		},
 	}
+}
+
+// A node bashible manages fetches its document here before bashible runs: its render
+// without a node name or the tokens a hand-installed Engine machine needs. A group naming
+// no type is bashible's too, and List keeps serving hand-installed Engine groups only.
+func TestNodeConfigTemplateServesTheDocumentOfABashibleGroup(t *testing.T) {
+	tests := []struct {
+		name       string
+		systemType deckhousev1.SystemType
+	}{
+		{name: "a Mutable group", systemType: deckhousev1.SystemTypeMutable},
+		{name: "a group that names no type", systemType: ""},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			storage := NewTemplateStorage(templateCluster(t, bashibleNodeGroup("worker", tt.systemType)))
+
+			object, err := storage.Get(callerIn(t, "system:nodes"), "worker", &metav1.GetOptions{})
+			require.NoError(t, err)
+			template, ok := object.(*templatesv1alpha1.NodeConfigTemplate)
+			require.True(t, ok, "storage returned %T", object)
+
+			require.Equal(t, "worker", template.Name)
+			require.Equal(t, internalv1alpha1.SystemTypeMutable, template.Spec.SystemType)
+			require.Empty(t, template.Spec.NodeName)
+			require.Empty(t, template.Spec.Kubelet.BootstrapToken)
+			require.Empty(t, template.Spec.StatusToken)
+			require.Equal(t, []string{"https://192.168.199.10:6443"}, template.Spec.APIServerEndpoints)
+			require.NotEmpty(t, template.Spec.RegistryPackagesProxyAccessTokenB64)
+			require.Equal(t, map[string]bool{"static-pods": true, "extensions": true}, template.Spec.FeatureGates)
+			names := make([]string, 0, len(template.Spec.Extensions))
+			for _, ext := range template.Spec.Extensions {
+				names = append(names, ext.Name)
+				require.Equal(t, "node-manager", ext.RequestedBy, ext.Name)
+			}
+			// The list itself is candi/nodelet/nodeconfig-mutable.yaml.tpl's: the agent first.
+			require.Len(t, names, len(testenv.TestPlatformPackageDigests)+1)
+			require.Equal(t, []string{"nodelet", "d8-ca-updater", "jq"}, names[:3])
+			require.Equal(t, testenv.TestNodeletPackageDigest, template.Spec.Extensions[0].Digest)
+			require.Equal(t, testenv.TestPlatformPackageDigests["jq"], template.Spec.Extensions[2].Digest)
+
+			list, err := storage.List(t.Context(), &metainternalversion.ListOptions{})
+			require.NoError(t, err)
+			require.Empty(t, list.(*templatesv1alpha1.NodeConfigTemplateList).Items)
+		})
+	}
+}
+
+// A new node installs the registry packages meant for it before kubelet starts, so its
+// group's template carries them: selected by the labels the node will register with, filed
+// by the kind the requester declared.
+func TestTheTemplateOfABashibleGroupCarriesItsPackageRequests(t *testing.T) {
+	group := &deckhousev1.NodeGroup{
+		ObjectMeta: metav1.ObjectMeta{Name: "worker"},
+		Spec: deckhousev1.NodeGroupSpec{
+			NodeType:     deckhousev1.NodeTypeStatic,
+			SystemType:   deckhousev1.SystemTypeMutable,
+			NodeTemplate: &deckhousev1.NodeTemplate{Labels: map[string]string{"storage": "drbd"}},
+		},
+	}
+	request := func(name, digest string, kind deckhousev1alpha1.ExtensionKind, labels map[string]string) client.Object {
+		return &deckhousev1alpha1.NodeExtensionRequest{
+			ObjectMeta: metav1.ObjectMeta{Name: name},
+			Spec: deckhousev1alpha1.NodeExtensionRequestSpec{
+				Extension:    deckhousev1alpha1.NodeExtension{Name: name, Digest: digest, Kind: kind},
+				NodeSelector: deckhousev1alpha1.NodeSelector{MatchLabels: labels},
+			},
+		}
+	}
+	storage := NewTemplateStorage(templateCluster(t, group,
+		request("sds-utils", "sha256:"+strings.Repeat("e", 64), deckhousev1alpha1.ExtensionKindPackage, map[string]string{"storage": "drbd"}),
+		request("gpu-tools", "sha256:"+strings.Repeat("b", 64), deckhousev1alpha1.ExtensionKindPackage, map[string]string{"gpu": "true"}),
+		request("drbd", "sha256:"+strings.Repeat("d", 64), deckhousev1alpha1.ExtensionKindSystemExtension, map[string]string{"storage": "drbd"}),
+	))
+
+	object, err := storage.Get(callerIn(t, "system:nodes"), "worker", &metav1.GetOptions{})
+	require.NoError(t, err)
+	template, ok := object.(*templatesv1alpha1.NodeConfigTemplate)
+	require.True(t, ok, "storage returned %T", object)
+
+	last := template.Spec.Extensions[len(template.Spec.Extensions)-1]
+	require.Equal(t, "sds-utils", last.Name, "a request comes after the platform packages")
+	for _, ext := range template.Spec.Extensions {
+		require.NotEqual(t, "gpu-tools", ext.Name, "the group's nodes do not carry its label")
+		require.NotEqual(t, "drbd", ext.Name, "a bashible node installs no system extension")
+	}
+}
+
+// The role the agent reads templates with covers every group, and the template of
+// a hand-installed Engine group carries a live bootstrap token: no node identity
+// takes one home. Everyone else is answered as before.
+func TestNodeConfigTemplateRefusesANodeTheTemplateOfAHandInstalledGroup(t *testing.T) {
+	storage := NewTemplateStorage(templateCluster(t,
+		immutableStaticNodeGroup(testTemplateNodeGroup),
+		bootstrapTokenSecret(testTemplateNodeGroup),
+	))
+
+	for _, group := range []string{"system:nodes", "system:bootstrappers:d8-node-manager"} {
+		t.Run(group, func(t *testing.T) {
+			_, err := storage.Get(callerIn(t, group), testTemplateNodeGroup, &metav1.GetOptions{})
+			require.True(t, apierrors.IsForbidden(err), "expected Forbidden, got %v", err)
+		})
+	}
+
+	t.Run("an operator", func(t *testing.T) {
+		_, err := storage.Get(callerIn(t, "system:masters"), testTemplateNodeGroup, &metav1.GetOptions{})
+		require.NoError(t, err)
+	})
+}
+
+// Every edition builds the agent, so a release without its package is broken: the
+// template of a bashible group fails on it by name instead of reading as absent.
+func TestNodeConfigTemplateOfABashibleGroupFailsWithoutTheAgentPackage(t *testing.T) {
+	scheme := k8sruntime.NewScheme()
+	require.NoError(t, clientgoscheme.AddToScheme(scheme))
+	require.NoError(t, deckhousev1.AddToScheme(scheme))
+	cluster := fake.NewClientBuilder().WithScheme(scheme).WithObjects(
+		bashibleNodeGroup("worker", deckhousev1.SystemTypeMutable),
+		&corev1.ConfigMap{
+			ObjectMeta: metav1.ObjectMeta{Namespace: nodecommon.MachineNamespace, Name: "bashible-apiserver-files"},
+			Data:       map[string]string{"images_digests.json": `{"registrypackages":{}}`},
+		},
+		testenv.PlatformTemplatesConfigMap(),
+	).Build()
+
+	_, err := NewTemplateStorage(cluster).Get(callerIn(t, "system:nodes"), "worker", &metav1.GetOptions{})
+	require.ErrorContains(t, err, `"nodelet"`)
+	require.False(t, apierrors.IsNotFound(err), "a broken release reads as a group without a template: %v", err)
+}
+
+func bashibleNodeGroup(name string, systemType deckhousev1.SystemType) client.Object {
+	return &deckhousev1.NodeGroup{
+		ObjectMeta: metav1.ObjectMeta{Name: name},
+		Spec:       deckhousev1.NodeGroupSpec{NodeType: deckhousev1.NodeTypeStatic, SystemType: systemType},
+	}
+}
+
+// callerIn is a request the API server authenticated as a member of the groups.
+func callerIn(t *testing.T, groups ...string) context.Context {
+	t.Helper()
+	return request.WithUser(t.Context(), &user.DefaultInfo{
+		Name:   "caller",
+		Groups: append(groups, "system:authenticated"),
+	})
 }

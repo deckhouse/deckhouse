@@ -9,11 +9,10 @@
 # The unit ships inside the image on purpose: the agent restarts only the units
 # it discovers there (systemd-dissect --list, see extensions/sysext.go), so an
 # image without one is merged and never takes effect.
-{{- if ne $.Env "CSE" }}
-  {{- /* Pinned by release tag: werf keys a shell-cloned source on the rendered
-         instructions alone, so a moving branch would be built once and cached
-         forever. Bump this line to pick up agent changes. */ -}}
-  {{- $nodeletVersion := "v0.1.12" }}
+{{- /* Pinned by release tag: werf keys a shell-cloned source on the rendered
+       instructions alone, so a moving branch would be built once and cached
+       forever. Bump this line to pick up agent changes. */ -}}
+{{- $nodeletVersion := "v0.1.14" }}
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
 final: false
@@ -46,6 +45,7 @@ shell:
   # runs: the binary is the same path whichever copy the overlay serves.
   - cd /src && GOPROXY=$(cat /run/secrets/GOPROXY) CGO_ENABLED=0 GOOS=linux go build -trimpath -ldflags="-w -s -X main.version={{ $nodeletVersion }}" -o /nodelet ./cmd/nodelet
 ---
+{{- if ne $.Env "CSE" }}
 image: {{ $.ModuleName }}/{{ $.ImageName }}-sysext-artifact
 final: false
 from: {{ index $.Images "builder/distroless" }}
@@ -103,3 +103,38 @@ imageSpec:
 ---
 {{- include "vex mitigation" (list $ (printf "%s/%s-sysext" $.ModuleName $.ImageName)) }}
 {{- end }}
+---
+image: {{ $.ModuleName }}/{{ $.ImageName }}-package-artifact
+final: false
+from: {{ index $.Images "builder/scratch" }}
+git:
+- add: /{{ $.ModulePath }}modules/007-{{ $.ModuleName }}/images/{{ $.ImageName }}/scripts
+  to: /
+import:
+- image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
+  add: /nodelet
+  to: /nodelet
+  before: setup
+---
+image: {{ $.ModuleName }}/{{ $.ImageName }}
+from: {{ index $.Images "builder/scratch" }}
+import:
+- image: {{ $.ModuleName }}/{{ $.ImageName }}-package-artifact
+  add: /
+  to: /
+  includePaths:
+  - nodelet
+  - nodelet.service
+  - install
+  - uninstall
+  before: setup
+imageSpec:
+  config:
+    labels: { "distro": "all", "version": "all", "nodelet": "{{ $nodeletVersion }}" }
+    clearUser: true
+    clearWorkingDir: true
+    clearCmd: true
+    clearEntrypoint: true
+    removeEnv: ["/.*/"]
+---
+{{- include "vex mitigation" (list $ (printf "%s/%s" $.ModuleName $.ImageName)) }}

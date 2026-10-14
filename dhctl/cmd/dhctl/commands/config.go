@@ -87,22 +87,7 @@ func DefineRenderBashibleBundle(cmd *kingpin.CmdClause, opts *options.Options) *
 			return err
 		}
 
-		templateData, err := metaConfig.ConfigForBashibleBundleTemplate(ctx, "$MY_IP")
-		if err != nil {
-			return err
-		}
-
-		templateController := template.NewTemplateController(opts.Render.BashibleBundleDir)
-		l.Info(fmt.Sprintf("Bundle Dir: %q", templateController.TmpDir))
-
-		return template.PrepareBashibleBundle(
-			ctx,
-			templateController,
-			templateData,
-			metaConfig.ProviderName,
-			"",
-			&opts.Global,
-		)
+		return renderBashibleBundle(ctx, metaConfig, opts)
 	}
 
 	return cmd.Action(func(c *kingpin.ParseContext) error {
@@ -111,6 +96,27 @@ func DefineRenderBashibleBundle(cmd *kingpin.CmdClause, opts *options.Options) *
 
 		return logger.RunProcess(ctx, l, "Prepare Bashible Bundle", runFunc)
 	})
+}
+
+// renderBashibleBundle writes the first master's bundle, the one bootstrap runs: its node
+// agent starts from the seed dhctl builds, so the scripts are rendered from the same data.
+func renderBashibleBundle(ctx context.Context, metaConfig *config.MetaConfig, opts *options.Options) error {
+	templateData, err := template.FirstMasterBashibleData(ctx, metaConfig, "$MY_IP", opts.Global.CandiDir)
+	if err != nil {
+		return fmt.Errorf("collect the first master's bundle data: %w", err)
+	}
+
+	templateController := template.NewTemplateController(opts.Render.BashibleBundleDir)
+	logger.FromContext(ctx).Info(fmt.Sprintf("Bundle Dir: %q", templateController.TmpDir))
+
+	return template.PrepareBashibleBundle(
+		ctx,
+		templateController,
+		templateData,
+		metaConfig.ProviderName,
+		"",
+		&opts.Global,
+	)
 }
 
 func DefineRenderMasterBootstrap(cmd *kingpin.CmdClause, opts *options.Options) *kingpin.CmdClause {

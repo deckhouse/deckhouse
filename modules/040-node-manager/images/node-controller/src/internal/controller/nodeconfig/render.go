@@ -30,6 +30,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	v1 "github.com/deckhouse/node-controller/api/deckhouse.io/v1"
+	deckhousev1alpha1 "github.com/deckhouse/node-controller/api/deckhouse.io/v1alpha1"
 	internalv1alpha1 "github.com/deckhouse/node-controller/api/internal.deckhouse.io/v1alpha1"
 	nodecommon "github.com/deckhouse/node-controller/internal/common"
 )
@@ -56,13 +57,16 @@ func nodeRenderInputsChanged(before, after client.Object) bool {
 // On the first master it must differ from the installer payload on exactly three
 // fields (caCert, serverTLSBootstrap, proxy token); every other field must agree.
 func renderSpec(ng *v1.NodeGroup, node *corev1.Node, in clusterInputs) internalv1alpha1.NodeSpec {
-	extraExtensions, extraModules := nodeExtensions(in.NodeExtensions, in.NodeExtensionConflicts, node, ng.Name)
+	extraExtensions, extraModules := nodeExtensions(in, deckhousev1alpha1.ExtensionKindSystemExtension, node, ng.Name)
 	staticPods := nodeStaticPods(in.NodeStaticPodRequests, in.NodeStaticPodRequestsRejected, ng.Name)
 
 	kernel := renderKernel()
 	kernel.Modules = extraModules
 
 	return internalv1alpha1.NodeSpec{
+		// Written although it is the CRD default: the stored object carries it, and
+		// a render without it would read as drift on every pass.
+		SystemType:           internalv1alpha1.SystemTypeImmutable,
 		NodeName:             node.Name,
 		OSImage:              in.OSImage,
 		APIServerEndpoints:   in.APIServerEndpoints,
@@ -274,6 +278,10 @@ func configuredReservationMode(ng *v1.NodeGroup) string {
 // did not carry over as written: the agent's schema refuses the value, and
 // silent narrowing would leave the group running something nobody configured.
 func (r *Reconciler) recordClampedSettings(ng *v1.NodeGroup) {
+	// Every warning below names a limit of an Engine node; bashible has none of them.
+	if IsMutable(ng) {
+		return
+	}
 	if maxPods, ok := configuredMaxPods(ng); ok && clampMaxPods(maxPods) != maxPods {
 		r.Recorder.Event(ng, corev1.EventTypeWarning, settingClampedEvent,
 			fmt.Sprintf("kubelet.maxPods %d is outside the 1..%d an immutable node accepts; the nodes of this group are configured with %d",
@@ -485,7 +493,7 @@ func disruptionWindows(ng *v1.NodeGroup) []v1.DisruptionWindow {
 
 // newNodeConfig builds the object for a node, owned by that node so it is
 // garbage-collected together with it.
-func newNodeConfig(ng *v1.NodeGroup, node *corev1.Node, in clusterInputs) *internalv1alpha1.NodeConfig {
+func newNodeConfig(ng *v1.NodeGroup, node *corev1.Node, spec internalv1alpha1.NodeSpec) *internalv1alpha1.NodeConfig {
 	return &internalv1alpha1.NodeConfig{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: node.Name,
@@ -500,6 +508,6 @@ func newNodeConfig(ng *v1.NodeGroup, node *corev1.Node, in clusterInputs) *inter
 				UID:        node.UID,
 			}},
 		},
-		Spec: renderSpec(ng, node, in),
+		Spec: spec,
 	}
 }

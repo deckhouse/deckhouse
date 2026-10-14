@@ -225,3 +225,72 @@ func TestNEROutcomesIgnoreUnrelatedAndStaleRejections(t *testing.T) {
 	require.Equal(t, int32(0), outcomes["bob-request"].failed)
 	require.Equal(t, int32(0), outcomes["bob-request"].applied)
 }
+
+// Only a refusal reason refuses: an agent restarting into a new build names what it installs
+// next. PartiallyApplied refuses for NER, unlike for static pods, and a Ready at the digest a node
+// rolled back to (nodelet internal/reconcile/loop.go keeps the error under Rejected) hides nothing.
+func TestNEROutcomesCountOnlyARefusal(t *testing.T) {
+	for _, tc := range []struct {
+		name, reason string
+		statuses     []internalv1alpha1.ExtensionStatus
+		wantFailed   int32
+	}{
+		{name: "an agent restarting", reason: "AgentRestarting"},
+		{name: "Rejected", reason: "Rejected", wantFailed: 1},
+		{name: "RolledBackToLastKnownGood", reason: "RolledBackToLastKnownGood", wantFailed: 1},
+		{name: "RollbackFailed", reason: "RollbackFailed", wantFailed: 1},
+		{name: "PartiallyApplied", reason: "PartiallyApplied", wantFailed: 1},
+		{
+			name: "rolled back, Ready at the old digest", reason: "Rejected", wantFailed: 1,
+			statuses: []internalv1alpha1.ExtensionStatus{{Name: "bob", Digest: "sha256:d1", State: "Ready"}},
+		},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			config := nodeConfigWith("worker-0",
+				[]internalv1alpha1.Extension{{Name: "bob", Digest: "sha256:d2", RequestedBy: nerRequestedByPrefix + "bob-request"}},
+				tc.statuses)
+			config.Generation = 2
+			config.Status.AppliedGeneration = 2
+			config.Status.Conditions = []metav1.Condition{{
+				Type:               configurationAppliedCondition,
+				Status:             metav1.ConditionFalse,
+				Reason:             tc.reason,
+				ObservedGeneration: 2,
+				Message:            "bob: install failed",
+			}}
+			cl := fake.NewClientBuilder().WithScheme(nodeConfigScheme(t)).WithObjects(config).Build()
+
+			outcomes, err := readNEROutcomes(t.Context(), cl)
+			require.NoError(t, err)
+			require.Zero(t, outcomes["bob-request"].applied)
+			require.Equal(t, tc.wantFailed, outcomes["bob-request"].failed)
+			if tc.wantFailed > 0 {
+				require.Equal(t, "bob: install failed", outcomes["bob-request"].message)
+			}
+		})
+	}
+}
+
+// A node reports Ready at whatever it has installed, and after a rollback that is the
+// old digest: counting it by name alone called a node still on D1 applied for D2.
+func TestNEROutcomesCountOnlyTheDigestOfTheNodeSpec(t *testing.T) {
+	scheme := runtime.NewScheme()
+	require.NoError(t, internalv1alpha1.AddToScheme(scheme))
+
+	client := fake.NewClientBuilder().WithScheme(scheme).WithObjects(
+		nodeConfigWith("worker-0",
+			[]internalv1alpha1.Extension{
+				{Name: "bob", Digest: "sha256:d2", RequestedBy: nerRequestedByPrefix + "bob-request"},
+				{Name: "bob-signed", Digest: "sha256:d2", RequestedBy: nerRequestedByPrefix + "bob-signed-request"},
+			},
+			[]internalv1alpha1.ExtensionStatus{
+				{Name: "bob", Digest: "sha256:d1", State: "Ready"},
+				{Name: "bob-signed", Digest: "sha256:d2", State: "Ready"},
+			}),
+	).Build()
+
+	outcomes, err := readNEROutcomes(context.Background(), client)
+	require.NoError(t, err)
+	require.Equal(t, int32(0), outcomes["bob-request"].applied, "the node is still on the digest the request moved away from")
+	require.Equal(t, int32(1), outcomes["bob-signed-request"].applied)
+}

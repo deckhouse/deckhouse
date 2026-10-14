@@ -23,7 +23,6 @@ import (
 	"strings"
 
 	"k8s.io/apimachinery/pkg/api/meta"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	internalv1alpha1 "github.com/deckhouse/node-controller/api/internal.deckhouse.io/v1alpha1"
@@ -39,21 +38,22 @@ type nerOutcome struct {
 	message string
 }
 
-// readNEROutcomes asks the nodes what became of each request, joining
-// spec.extensions[].requestedBy against status.extensions[].name; counts are of
-// nodes. A node with no status yet counts as neither applied nor failed.
+// readNEROutcomes asks the nodes what became of each request, joining spec.extensions[].requestedBy
+// against status.extensions[].name; counts are of nodes. Ready counts only at the digest the
+// node's spec carries, Failed by name; a node with no status yet counts as neither.
 func readNEROutcomes(ctx context.Context, reader client.Reader) (map[string]nerOutcome, error) {
 	configs := &internalv1alpha1.NodeConfigList{}
 	if err := reader.List(ctx, configs); err != nil {
 		return nil, fmt.Errorf("list NodeConfigs: %w", err)
 	}
 
+	type requested struct{ ner, digest string }
 	outcomes := map[string]nerOutcome{}
 	for i := range configs.Items {
 		config := &configs.Items[i]
 
-		// requestedBy per extension name, for this node.
-		owner := make(map[string]string, len(config.Spec.Extensions))
+		// requestedBy and the digest this node's spec carries, per extension name.
+		byName := make(map[string]requested, len(config.Spec.Extensions))
 		for _, ext := range config.Spec.Extensions {
 			// Only extensions a request put there have a request to report to:
 			// platform ones carry the module marker instead, and counting those
@@ -62,21 +62,25 @@ func readNEROutcomes(ctx context.Context, reader client.Reader) (map[string]nerO
 			if !ok || name == "" {
 				continue
 			}
-			owner[ext.Name] = name
+			byName[ext.Name] = requested{ner: name, digest: ext.Digest}
 		}
-		if len(owner) == 0 {
+		if len(byName) == 0 {
 			continue
 		}
 
 		reported := make(map[string]bool, len(config.Status.Extensions))
 		for _, status := range config.Status.Extensions {
-			ner, ok := owner[status.Name]
+			req, ok := byName[status.Name]
 			if !ok {
 				continue
 			}
-			outcome := outcomes[ner]
+			outcome := outcomes[req.ner]
 			switch status.State {
 			case extensionStateReady:
+				// Ready at another digest: a rollback, or a status from before the spec moved.
+				if status.Digest != req.digest {
+					continue
+				}
 				outcome.applied++
 				reported[status.Name] = true
 			case extensionStateFailed:
@@ -86,30 +90,27 @@ func readNEROutcomes(ctx context.Context, reader client.Reader) (map[string]nerO
 					outcome.message = status.Message
 				}
 			}
-			outcomes[ner] = outcome
+			outcomes[req.ner] = outcome
 		}
 
-		// A wholesale rejection leaves only the ConfigurationApplied condition.
-		// Two guards: the generation (a stale False says nothing) and the message
-		// naming the extension itself (the condition goes False for other reasons).
+		// A wholesale rejection leaves only the ConfigurationApplied condition, and only
+		// a refusal reason counts (configRefusals): an agent restarting into a new build
+		// says False too. The message has to name the extension: the condition covers all.
+		if _, refused := configRefused(config, configRefusals); !refused {
+			continue
+		}
 		cond := meta.FindStatusCondition(config.Status.Conditions, configurationAppliedCondition)
-		if cond == nil || cond.Status != metav1.ConditionFalse {
-			continue
-		}
-		if cond.ObservedGeneration != config.Generation {
-			continue
-		}
 		named := extensionNamesIn(cond.Message)
-		for name, ner := range owner {
+		for name, req := range byName {
 			if reported[name] || !slices.Contains(named, name) {
 				continue
 			}
-			outcome := outcomes[ner]
+			outcome := outcomes[req.ner]
 			outcome.failed++
 			if outcome.message == "" {
 				outcome.message = cond.Message
 			}
-			outcomes[ner] = outcome
+			outcomes[req.ner] = outcome
 		}
 	}
 	return outcomes, nil

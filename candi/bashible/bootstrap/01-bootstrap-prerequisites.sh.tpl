@@ -22,7 +22,10 @@ set -Eeo pipefail
 {{- $ctx := . -}}
 {{- tpl (printf `%s
 {{ template "bb-minget" $ }}
-{{ template "bb-discover-node-name" $ }}` $lib) $ctx }}
+{{ template "bb-discover-node-name" $ }}
+{{- if eq $.runType "ClusterBootstrap" }}
+{{ template "bb-d8-node-name" $ }}
+{{- end }}` $lib) $ctx }}
 export PACKAGES_PROXY_BOOTSTRAP_CLUSTER_UUID="{{ .clusterUUID | default "" }}"
 export PACKAGES_PROXY_BOOTSTRAP_ADDRESSES="{{ .clusterMasterRPPBootstrapAddresses | join " " }}"
 {{ if gt (len .clusterMasterKubeAPIEndpoints) 0 }}
@@ -54,5 +57,8 @@ bb-discover-node-name
 {{- $bbniCandi := "candi/bashible/bb_node_ip.sh.tpl" }}
 {{- $bbniDeckhouse := "/deckhouse/candi/bashible/bb_node_ip.sh.tpl" }}
 {{- $bbni := .Files.Get $bbniDeckhouse | default (.Files.Get $bbniCandi) }}
+(
 {{- tpl $bbni . | nindent 0 }}
+)
+{{- tpl (.Files.Get "/deckhouse/candi/bashible/nodelet_install.sh.tpl" | default (.Files.Get "candi/bashible/nodelet_install.sh.tpl")) . | nindent 0 }}
 {{- end }}

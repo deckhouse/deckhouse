@@ -41,11 +41,13 @@ PATHS_TO_REMOVE=(
   /etc/sudoers.d/sudoers_flant_kubectl
   /etc/sudoers.d/30-deckhouse-nodeadmins
   /home/deckhouse
+  /var/lib/nodelet
 )
 
 SERVICES_TO_REMOVE=(
   bashible.service
   bashible.timer
+  nodelet.service
   d8-bcheck.service
   d8-shutdown-inhibitor.service
   sysctl-tuner.service
@@ -62,6 +64,7 @@ SERVICES_TO_REMOVE=(
 
 SYSTEMD_FILES=(
   /etc/systemd/system/bashible.*
+  /etc/systemd/system/nodelet.service
   /etc/systemd/system/sysctl-tuner.*
   /etc/systemd/system/old-csi-mount-cleaner.*
   /etc/systemd/system/d8-containerd-cgroup-migration.*

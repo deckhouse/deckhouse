@@ -25,6 +25,8 @@ import (
 	"os/exec"
 	"path/filepath"
 	"reflect"
+	"regexp"
+	"strconv"
 	"strings"
 	"time"
 
@@ -32,6 +34,7 @@ import (
 	dhlog "fox.flant.com/deckhouse/cluster-and-infrastructure/libs/lib-dhctl/pkg/logger"
 	"fox.flant.com/deckhouse/cluster-and-infrastructure/libs/lib-dhctl/pkg/retry"
 	"github.com/name212/govalue"
+	"go.opentelemetry.io/otel/trace"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app/options"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
@@ -90,6 +93,26 @@ func (p *BashiblePipelineParams) errIsNil(c string) error {
 type ModulePreparator interface {
 	PrepareModule(ctx context.Context) error
 	Module() string
+}
+
+var timingMarker = regexp.MustCompile(`^\[bashible-timing\] step=(\S+) section=(\S+) dur=([0-9.]+)s$`)
+
+// recordTimingSpan turns a "[bashible-timing] step=S section=N dur=Ds" line, printed by
+// candi/bashible/nodelet_install.sh.tpl, into a span S.N that ended now: a bootstrap
+// script runs before the OTel relay is up and cannot send spans.
+func recordTimingSpan(ctx context.Context, line string) error {
+	m := timingMarker.FindStringSubmatch(strings.TrimSpace(line))
+	if m == nil {
+		return nil
+	}
+	seconds, err := strconv.ParseFloat(m[3], 64)
+	if err != nil {
+		return fmt.Errorf("parse the duration of %q: %w", line, err)
+	}
+	end := time.Now()
+	_, span := telemetry.StartSpan(ctx, m[1]+"."+m[2], trace.WithTimestamp(end.Add(-time.Duration(seconds*float64(time.Second)))))
+	span.End(trace.WithTimestamp(end))
+	return nil
 }
 
 func RunBashiblePipeline(ctx context.Context, params *BashiblePipelineParams) error {
@@ -271,6 +294,9 @@ func prepareMasterNode(ctx context.Context, nodeInterface libcon.Interface, cont
 		cmd := nodeInterface.UploadScript(scriptPath)
 		cmd.WithStdoutHandler(func(l string) {
 			logs = append(logs, l)
+			if err := recordTimingSpan(ctx, l); err != nil {
+				dhlog.FromContext(ctx).DebugContext(ctx, err.Error())
+			}
 			dhlog.FromContext(ctx).DebugContext(ctx, l)
 		})
 		cmd.Sudo()

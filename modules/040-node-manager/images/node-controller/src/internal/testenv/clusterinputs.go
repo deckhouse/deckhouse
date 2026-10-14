@@ -18,7 +18,13 @@ package testenv
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
+	"maps"
+	"os"
+	"path/filepath"
+	"runtime"
+	"strings"
 
 	"github.com/onsi/ginkgo/v2"
 	"github.com/onsi/gomega"
@@ -45,6 +51,7 @@ const (
 	TestPauseDigest             = "sha256:4444444444444444444444444444444444444444444444444444444444444444"
 	TestNodeletDigest           = "sha256:6666666666666666666666666666666666666666666666666666666666666666"
 	TestGuestAgentDigest        = "sha256:8888888888888888888888888888888888888888888888888888888888888888"
+	TestNodeletPackageDigest    = "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
 	TestOSImageDigest           = "sha256:7777777777777777777777777777777777777777777777777777777777777777"
 	TestRegistryAddress         = "registry.example.com"
 	TestRegistryPath            = "/deckhouse/ce"
@@ -52,12 +59,35 @@ const (
 	TestClusterCA               = "-----BEGIN CERTIFICATE-----\ntest\n-----END CERTIFICATE-----\n"
 )
 
+// TestPlatformPackageDigests are the release's platform packages, keyed the way
+// images_digests.json keys them, each at a digest of its own. The keys are the ones
+// candi/nodelet/nodeconfig-mutable.yaml.tpl asks for.
+var TestPlatformPackageDigests = map[string]string{
+	"d8CaUpdater":                     "sha256:" + strings.Repeat("c", 62) + "01",
+	"jq":                              "sha256:" + strings.Repeat("c", 62) + "02",
+	"yq":                              "sha256:" + strings.Repeat("c", 62) + "03",
+	"d8Curl":                          "sha256:" + strings.Repeat("c", 62) + "04",
+	"which223":                        "sha256:" + strings.Repeat("c", 62) + "05",
+	"virtWhat125":                     "sha256:" + strings.Repeat("c", 62) + "06",
+	"socat1734":                       "sha256:" + strings.Repeat("c", 62) + "07",
+	"e2fsprogs":                       "sha256:" + strings.Repeat("c", 62) + "08",
+	"iptables":                        "sha256:" + strings.Repeat("c", 62) + "09",
+	"growpart033":                     "sha256:" + strings.Repeat("c", 62) + "10",
+	"lsblk":                           "sha256:" + strings.Repeat("c", 62) + "11",
+	"nfsMount":                        "sha256:" + strings.Repeat("c", 62) + "12",
+	"d8":                              "sha256:" + strings.Repeat("c", 62) + "13",
+	"kubernetesCni191":                "sha256:" + strings.Repeat("c", 62) + "14",
+	"systemctlPowerCommandsWrapper02": "sha256:" + strings.Repeat("c", 62) + "15",
+}
+
 // The objects a node's configuration is rendered from. Names mirror the
 // constants in internal/controller/nodeconfig/constants.go, which cannot be
 // imported here — nodeconfig imports this package.
 const (
 	imagesDigestsConfigMap     = "bashible-apiserver-files"
 	imagesDigestsKey           = "images_digests.json"
+	platformTemplatesConfigMap = "bashible-bootstrap-templates"
+	platformDocumentKey        = "nodeconfig-mutable.yaml.tpl"
 	proxyTokenSecret           = "registry-packages-proxy-token"
 	registrySecretNS           = "d8-system"
 	registrySecret             = "deckhouse-registry"
@@ -66,6 +96,52 @@ const (
 	clusterKubernetesConfigMap = "d8-cluster-kubernetes"
 	dnsService                 = "kube-dns"
 )
+
+// PlatformDocument is candi/nodelet/nodeconfig-mutable.yaml.tpl of this checkout, the
+// file helm ships to the cluster in the templates ConfigMap.
+func PlatformDocument() string {
+	_, here, _, ok := runtime.Caller(0)
+	if !ok {
+		panic("no caller information to find the repository by")
+	}
+	root := filepath.Join(filepath.Dir(here), "..", "..", "..", "..", "..", "..", "..")
+	text, err := os.ReadFile(filepath.Join(root, "candi", "nodelet", platformDocumentKey))
+	if err != nil {
+		panic(fmt.Sprintf("read the platform node document: %v", err))
+	}
+	return string(text)
+}
+
+// PlatformTemplatesConfigMap is the ConfigMap helm ships the platform document in.
+func PlatformTemplatesConfigMap() *corev1.ConfigMap {
+	return &corev1.ConfigMap{
+		ObjectMeta: metav1.ObjectMeta{Namespace: nodecommon.MachineNamespace, Name: platformTemplatesConfigMap},
+		Data:       map[string]string{platformDocumentKey: PlatformDocument()},
+	}
+}
+
+// ImagesDigestsJSON is the release's images_digests.json: containerd at the given
+// digest, every other image at its Test digest.
+func ImagesDigestsJSON(containerdDigest string) string {
+	packages := map[string]string{
+		"containerdSysext224":    containerdDigest,
+		"kubernetesCniSysext162": TestCNIDigest,
+		"kubeletSysext1356":      TestKubeletDigest,
+		"nodeletSysext":          TestNodeletDigest,
+		"qemuGuestAgentSysext":   TestGuestAgentDigest,
+		"nodelet":                TestNodeletPackageDigest,
+	}
+	maps.Copy(packages, TestPlatformPackageDigests)
+	raw, err := json.Marshal(map[string]map[string]string{
+		"registrypackages": packages,
+		"nodeManager":      {"engine": TestOSImageDigest},
+		"common":           {"pause": TestPauseDigest},
+	})
+	if err != nil {
+		panic(fmt.Sprintf("marshal the images digests: %v", err))
+	}
+	return string(raw)
+}
 
 // EnsureClusterInputs creates the cluster state a node's configuration is
 // rendered from and returns what envtest itself assigned: the DNS ClusterIP and
@@ -78,13 +154,11 @@ func EnsureClusterInputs(ctx context.Context, c client.Client) (string, []string
 	EnsureObject(ctx, c, &corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: nodecommon.MachineNamespace}})
 	EnsureObject(ctx, c, &corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: registrySecretNS}})
 
-	digests := fmt.Sprintf(`{"registrypackages":{"containerdSysext224":%q,"kubernetesCniSysext162":%q,"kubeletSysext1356":%q,"nodeletSysext":%q,"qemuGuestAgentSysext":%q},"nodeManager":{"engine":%q},"common":{"pause":%q}}`,
-		TestContainerdDigest, TestCNIDigest, TestKubeletDigest, TestNodeletDigest, TestGuestAgentDigest,
-		TestOSImageDigest, TestPauseDigest)
 	EnsureObject(ctx, c, &corev1.ConfigMap{
 		ObjectMeta: metav1.ObjectMeta{Namespace: nodecommon.MachineNamespace, Name: imagesDigestsConfigMap},
-		Data:       map[string]string{imagesDigestsKey: digests},
+		Data:       map[string]string{imagesDigestsKey: ImagesDigestsJSON(TestContainerdDigest)},
 	})
+	EnsureObject(ctx, c, PlatformTemplatesConfigMap())
 
 	EnsureObject(ctx, c, &corev1.Secret{
 		ObjectMeta: metav1.ObjectMeta{Namespace: nodecommon.MachineNamespace, Name: proxyTokenSecret},

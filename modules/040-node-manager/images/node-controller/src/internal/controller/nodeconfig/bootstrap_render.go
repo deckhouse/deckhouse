@@ -47,16 +47,18 @@ func RenderBootstrapSpec(ctx context.Context, cl client.Client, reader client.Re
 		return internalv1alpha1.NodeSpec{}, err
 	}
 
-	// Zero CreationTimestamp makes registration taints render. The labels kubelet
-	// will register with must be set too: a NodeExtensionRequest selects by node
-	// label, and a bare-name node would miss its extensions until the first
-	// day-2 render.
+	// Zero CreationTimestamp makes registration taints render.
+	return renderSpec(ng, registeringNode(ng, machineName), in), nil
+}
+
+// registeringNode is a machine as kubelet will register it: named, and labelled so that a
+// NodeExtensionRequest selecting by node label reaches its first document already.
+func registeringNode(ng *v1.NodeGroup, name string) *corev1.Node {
 	labels := map[string]string{}
 	for key, value := range renderNodeLabels(ng) {
 		labels[key] = string(value)
 	}
-	node := &corev1.Node{ObjectMeta: metav1.ObjectMeta{Name: machineName, Labels: labels}}
-	return renderSpec(ng, node, in), nil
+	return &corev1.Node{ObjectMeta: metav1.ObjectMeta{Name: name, Labels: labels}}
 }
 
 // resolveKubernetesVersion derives the group's kubelet version from the cluster

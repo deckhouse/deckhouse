@@ -46,6 +46,9 @@ type pass struct {
 	// rollouts is each group's remaining rollout budget, keyed by group name:
 	// one NodeConfig listing per group per pass instead of one per node.
 	rollouts map[string]*rolloutBudget
+	// mutable is what reading the inputs of a bashible node produced: one read
+	// per pass, since nothing in them depends on the group.
+	mutable *clusterInputsResult
 }
 
 // clusterInputsResult is one attempt at reading the cluster-wide inputs, kept
@@ -115,4 +118,14 @@ func (r *Reconciler) clusterInputs(ctx context.Context, ng *v1.NodeGroup, p *pas
 	in, err := r.sources.readClusterInputs(ctx, version)
 	p.inputs[version] = clusterInputsResult{inputs: in, err: err}
 	return in, err
+}
+
+// mutableInputs returns the render inputs of a node bashible manages, read once
+// per pass and served from the pass after that.
+func (r *Reconciler) mutableInputs(ctx context.Context, p *pass) (clusterInputs, error) {
+	if p.mutable == nil {
+		in, err := r.sources.readMutableInputs(ctx)
+		p.mutable = &clusterInputsResult{inputs: in, err: err}
+	}
+	return p.mutable.inputs, p.mutable.err
 }

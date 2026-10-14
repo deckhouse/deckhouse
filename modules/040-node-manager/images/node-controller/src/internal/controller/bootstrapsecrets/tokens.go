@@ -162,7 +162,7 @@ func mintToken(ctx context.Context, c client.Client, ngName string) (string, err
 			expirationKey:                    []byte(time.Now().Add(tokenTTL).Format(time.RFC3339)),
 			"token-id":                       []byte(id),
 			"token-secret":                   []byte(tokenSecret),
-			"auth-extra-groups":              []byte("system:bootstrappers:d8-node-manager"),
+			"auth-extra-groups":              []byte(nodecommon.BootstrapTokenGroup),
 			"usage-bootstrap-authentication": []byte("true"),
 			"usage-bootstrap-signing":        []byte("true"),
 		},

@@ -22,12 +22,13 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-// NodeExtensionRequest asks for a system extension (a sysext image, optionally
-// with kernel modules) to be merged onto the nodes it selects. The image is
-// addressed by name/digest (+ optional repository, path); no module is resolved.
+// NodeExtensionRequest asks for an extension to be installed on the nodes it selects: a
+// system extension (a sysext image, optionally with kernel modules) or a registry package.
+// The requester says which in spec.extension.kind; no module is resolved.
 // +kubebuilder:object:root=true
 // +kubebuilder:resource:scope=Cluster,shortName=ner
 // +kubebuilder:subresource:status
+// +kubebuilder:printcolumn:name=Kind,jsonPath=.spec.extension.kind,type=string
 // +kubebuilder:printcolumn:name=Phase,jsonPath=.status.phase,type=string
 // +kubebuilder:printcolumn:name=Matched,jsonPath=.status.matchedNodes,type=integer
 // +kubebuilder:printcolumn:name=Applied,jsonPath=.status.appliedNodes,type=integer
@@ -41,10 +42,10 @@ type NodeExtensionRequest struct {
 	Status NodeExtensionRequestStatus `json:"status,omitempty"`
 }
 
-// NodeExtensionRequestSpec describes what to merge and where.
+// NodeExtensionRequestSpec describes what to install and where.
 type NodeExtensionRequestSpec struct {
-	// Sysext locates the extension image to merge.
-	Sysext Sysext `json:"sysext"`
+	// Extension locates the image to install.
+	Extension NodeExtension `json:"extension"`
 
 	// NodeGroupSelector narrows the extension to nodes of the named NodeGroups.
 	// +optional
@@ -54,26 +55,33 @@ type NodeExtensionRequestSpec struct {
 	// +optional
 	NodeSelector NodeSelector `json:"nodeSelector,omitempty"`
 
-	// KernelModules are the modules to load once the extension is merged.
+	// KernelModules are the modules to load once a system extension is merged. A
+	// registry package cannot load any, and such a request reaches no node.
 	// +optional
 	KernelModules []KernelModule `json:"kernelModules,omitempty"`
 }
 
-// Sysext locates a system-extension image the way the registry-packages-proxy
-// locates any package: by name and digest, optionally narrowed to a repository
-// and path. Forwarded verbatim into the NodeConfig extension; no module resolved.
-type Sysext struct {
-	// Name is the sysext name: matched against the image's extension-release,
-	// installed on the node as "<name>.raw", and copied verbatim into the
-	// NodeConfig extension name (so it must be a DNS-label-like token).
+// NodeExtension locates an image the way the registry-packages-proxy locates any package:
+// by name and digest, optionally narrowed to a repository and path, and says what it is.
+// The location is forwarded verbatim into the NodeConfig extension; no module resolved.
+type NodeExtension struct {
+	// Name is copied verbatim into the NodeConfig extension name: a system extension is
+	// installed as "<name>.raw", a registry package is recorded under
+	// /var/cache/registrypackages/<name>.
 	// +kubebuilder:validation:MinLength=1
 	// +kubebuilder:validation:MaxLength=63
 	// +kubebuilder:validation:Pattern=`^[a-z0-9]([-a-z0-9]*[a-z0-9])?$`
 	Name string `json:"name"`
 
-	// Digest is the sysext image manifest digest.
+	// Digest is the image manifest digest.
 	// +kubebuilder:validation:Pattern=`^sha256:[a-f0-9]{64}$`
 	Digest string `json:"digest"`
+
+	// Kind is what the image is, chosen by the requester and immutable: a Package goes to
+	// nodes bashible configures, a SystemExtension to Deckhouse Engine nodes.
+	// +kubebuilder:validation:Required
+	// +kubebuilder:validation:Enum=Package;SystemExtension
+	Kind ExtensionKind `json:"kind"`
 
 	// Repository is the key the registry-packages-proxy resolves credentials by
 	// (its --rpp-repository), for example a ModuleSource's spec.registry.repo. Left
@@ -87,12 +95,23 @@ type Sysext struct {
 	Path string `json:"path,omitempty"`
 }
 
-// IsReservedSysextName reports whether a sysext name belongs to a platform
-// extension and so may not be requested. Kept next to the Sysext contract so the
+// IsReservedExtensionName reports whether an extension name belongs to a platform
+// extension and so may not be requested. Kept next to the NodeExtension contract so the
 // admission webhook and the controller backstop enforce one list.
-func IsReservedSysextName(name string) bool {
+func IsReservedExtensionName(name string) bool {
 	return slices.Contains([]string{"containerd", "kubelet", "kubernetes-cni", "nodelet"}, name)
 }
+
+// ExtensionKind is what the image of a request is, as its requester declares it.
+type ExtensionKind string
+
+const (
+	// ExtensionKindSystemExtension is a sysext image, merged by the agent on an Engine node.
+	ExtensionKindSystemExtension ExtensionKind = "SystemExtension"
+	// ExtensionKindPackage is a registry package with install scripts, installed by the
+	// agent on a node bashible configures.
+	ExtensionKindPackage ExtensionKind = "Package"
+)
 
 // NodeGroupSelector selects NodeGroups by name.
 type NodeGroupSelector struct {
@@ -121,22 +140,22 @@ type KernelModule struct {
 	Params []string `json:"params,omitempty"`
 }
 
-// NodeExtensionRequestStatus is written by node-controller as it resolves the
-// sysext and matches the selectors. It mirrors the NodeConfig status shape: a
-// phase, typed conditions, and the observed generation.
+// NodeExtensionRequestStatus is written by node-controller as it matches the selectors.
+// It mirrors the NodeConfig status shape: a phase, typed conditions, and the observed
+// generation.
 type NodeExtensionRequestStatus struct {
 	// ObservedGeneration is the generation of the spec this status reflects.
 	// +optional
 	ObservedGeneration int64 `json:"observedGeneration,omitempty"`
 
-	// Phase is Ready when the sysext resolves to an image the selected nodes can
-	// pull, or Degraded when it cannot — the Ready condition carries the reason.
+	// Phase is Ready when the extension reaches the nodes it selects, or Degraded
+	// when it does not — the Ready condition carries the reason.
 	// +kubebuilder:validation:Enum=Ready;Degraded
 	// +optional
 	Phase string `json:"phase,omitempty"`
 
 	// Conditions carry the details of the request's progress. Ready answers
-	// whether the sysext resolved.
+	// whether the extension reaches its nodes.
 	// +optional
 	// +listType=map
 	// +listMapKey=type
@@ -146,20 +165,20 @@ type NodeExtensionRequestStatus struct {
 	// +optional
 	MatchedNodeGroups []string `json:"matchedNodeGroups,omitempty"`
 
-	// AppliedNodes is how many of the selected nodes report the sysext installed
-	// and merged; FailedNodes how many report it refused. Reported by the nodes
-	// themselves: a request can resolve here yet be rejected by every node.
+	// AppliedNodes is how many of the selected nodes report the extension installed at the digest
+	// their NodeConfig carries, the previous one while a node waits for a rollout slot; FailedNodes
+	// how many report it refused. No omitempty on the counters: 0 is an answer the printer columns show.
 	// +optional
-	AppliedNodes int32 `json:"appliedNodes,omitempty"`
+	AppliedNodes int32 `json:"appliedNodes"`
 	// +optional
-	FailedNodes int32 `json:"failedNodes,omitempty"`
+	FailedNodes int32 `json:"failedNodes"`
 
-	// MatchedNodes is how many nodes the selected groups hold; PendingNodes how
-	// many of them have reported neither success nor refusal yet.
+	// MatchedNodes is how many nodes of the groups that install this kind of image the
+	// selectors pick; PendingNodes how many of them have reported nothing yet.
 	// +optional
-	MatchedNodes int32 `json:"matchedNodes,omitempty"`
+	MatchedNodes int32 `json:"matchedNodes"`
 	// +optional
-	PendingNodes int32 `json:"pendingNodes,omitempty"`
+	PendingNodes int32 `json:"pendingNodes"`
 
 	// FailureMessage is what the nodes say about the refusal, taken from one of
 	// them. A bad image fails the same way everywhere, so one message is the

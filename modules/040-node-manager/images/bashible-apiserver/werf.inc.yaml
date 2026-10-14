@@ -75,6 +75,7 @@ git:
   - common-steps
   - bootstrap
   - bb_node_ip.sh.tpl
+  - nodelet_install.sh.tpl
   - bashible.sh.tpl
   - lib.sh.tpl
   - cleanup_static_node.sh.tpl
