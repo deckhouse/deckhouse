@@ -23,8 +23,9 @@ shell:
 image: {{ $.ModuleName }}/{{ $.ImageName }}-{{ $image_version }}
 from: scratch
 import:
+# ebsnvme-id is a symlink upstream since v2.3.0: import the copy made in the src stage, not the link
 - image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
-  add: /src/amazon-ec2-utils/ebsnvme-id
+  add: /ebsnvme-id
   to: /ebsnvme-id
   before: setup
 - image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact

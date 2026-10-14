@@ -1,25 +1,38 @@
+{{- $csiBins := list "chmod" "mkdir" "rmdir" "mount" "umount" "findmnt" "lsblk" }}
+{{- $csiSbins := list "blkid" "blkdiscard" "blockdev" "dumpe2fs" "e2fsck" "e2label" "findfs" "fstrim" "fsck" "fsck.ext2" "fsck.ext3" "fsck.ext4" "fsck.xfs" "mke2fs" "mkfs" "mkfs.ext2" "mkfs.ext3" "mkfs.ext4" "mkfs.xfs" "resize2fs" "parted" "xfs_growfs" "xfs_repair" }}
+{{- /* shared libraries needed by the tools above (readelf NEEDED closure) + libparted fs plugin loaded via dlopen; glibc itself (ld-linux, libc, libm) comes with lib64 */}}
+{{- $csiLibs := list "libblkid" "libcom_err" "libdevmapper" "libe2p" "libext2fs" "libmount" "libncursesw" "libparted" "libparted-fs-resize" "libreadline" "libsmartcols" "libtinfo" "libuuid" }}
 {{- $version := include "get_oss_version_by_id" (list "csi-yandex" $) }}
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}
-fromImage: common/distroless
+from: {{ index $.Images "base/distroless" }}
 import:
 - image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
   add: /go/bin/yandex-csi-driver
   to: /bin/yandex-csi-driver
   before: setup
 - image: {{ $.ModuleName }}/{{ $.ImageName }}-binaries-artifact
-  add: /relocate
+  add: /out
   to: /
   before: install
   includePaths:
-  - '**/*'
+  - lib64
+{{- range $csiLibs }}
+  - usr/lib*/{{ . }}.so*
+{{- end }}
+{{- range $csiBins }}
+  - usr/bin/{{ . }}
+{{- end }}
+{{- range $csiSbins }}
+  - usr/sbin/{{ . }}
+{{- end }}
 imageSpec:
   config:
     entrypoint: ["/bin/yandex-csi-driver"]
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
 final: false
-fromImage: common/src-artifact
+from: {{ index $.Images "builder/src" }}
 secrets:
 - id: SOURCE_REPO
   value: {{ .SOURCE_REPO }}
@@ -56,13 +69,9 @@ shell:
     - chown 64535:64535 /go/bin/yandex-csi-driver
     - chmod 0755 /go/bin/yandex-csi-driver
 ---
-{{- $csiBinaries := "/bin/chmod /bin/mount /bin/mkdir /bin/rmdir /bin/umount /bin/findmnt /bin/lsblk /sbin/badblocks /sbin/blockdev /sbin/blk* /sbin/dumpe2fs /sbin/e2* /sbin/findfs /sbin/fsck* /sbin/fstrim /sbin/mke2fs /sbin/mkfs* /sbin/resize2fs /usr/sbin/parted /usr/sbin/xfs*" }}
 image: {{ $.ModuleName }}/{{ $.ImageName }}-binaries-artifact
 final: false
-fromImage: common/relocate-artifact
+from: {{ index $.Images "builder/distroless" }}
 shell:
   beforeInstall:
-    - apt-get update -y
-    - apt-get install -y e2fsprogs xfsprogs parted
-  install:
-    - /binary_replace.sh -i "{{ $csiBinaries }}" -o /relocate
+  - pm install coreutils e2fsprogs xfsprogs util-linux parted libc -d /out
