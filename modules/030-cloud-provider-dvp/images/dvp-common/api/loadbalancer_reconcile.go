@@ -291,6 +291,11 @@ func (lb *LoadBalancerService) ensureNodeLabels(
 }
 
 func lbLabelKey(lbName string) string {
+	return LoadBalancerLabelKey(lbName)
+}
+
+// LoadBalancerLabelKey returns the VM-pod label used to select one load balancer's backends.
+func LoadBalancerLabelKey(lbName string) string {
 	prettified := strings.ToLower(strings.ReplaceAll(lbName, "-", ""))
 	max := 63 - len(DVPLoadBalancerLabelPrefix)
 	if len(prettified) > max {

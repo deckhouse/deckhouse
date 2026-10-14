@@ -30,6 +30,11 @@ checksum/config: {{ include (print $.Template.BasePath "/cloud-controller-manage
     secretKeyRef:
       name: dvp-credentials
       key: namespace
+- name: DVP_NETWORK_POLICY
+  valueFrom:
+    secretKeyRef:
+      name: dvp-credentials
+      key: networkPolicy
 {{- end -}}
 
 {{- if and (not (default false (dig "nodes" "disabled" false .Values.cloudProviderDvp))) (not (default false (dig "ccm" "disabled" false .Values.cloudProviderDvp))) }}
