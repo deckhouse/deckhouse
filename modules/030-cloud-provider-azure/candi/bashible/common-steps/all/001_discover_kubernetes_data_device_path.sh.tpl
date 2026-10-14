@@ -11,7 +11,7 @@ function get_data_device_secret() {
 
   if [ -f /var/lib/bashible/bootstrap-token ]; then
     while true; do
-      for server in {{ .clusterMasterKubeAPIEndpoints | join " " }}; do
+      for server in {{ .normal.apiserverEndpoints | join " " }}; do
         if d8-curl -sS -f -x "" --connect-timeout 10 -X GET \
           "https://$server/api/v1/namespaces/d8-system/secrets/$secret" \
           --header "Authorization: Bearer $(</var/lib/bashible/bootstrap-token)" \
