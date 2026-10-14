@@ -42,6 +42,7 @@ import (
 	deckhouseiocontroller "caps-controller-manager/internal/controller/deckhouse.io"
 	infrastructurecontroller "caps-controller-manager/internal/controller/infrastructure"
 	"caps-controller-manager/internal/event"
+	capswebhook "caps-controller-manager/internal/webhook"
 )
 
 var (
@@ -183,6 +184,10 @@ func main() {
 		setupLog.Error(err, "unable to create webhook", "webhook", "StaticMachineTemplate")
 		os.Exit(1)
 	}
+	// NodeGroup validator — cross-domain: the resource belongs to node-manager,
+	// but spec.staticInstances.labelSelector depends on CAPS state (bound
+	// StaticInstances / StaticMachines), so the guard lives here.
+	(&capswebhook.NodeGroupValidator{Reader: mgr.GetAPIReader()}).SetupWithManager(mgr)
 	// +kubebuilder:scaffold:builder
 
 	if err := mgr.AddHealthzCheck("healthz", healthz.Ping); err != nil {

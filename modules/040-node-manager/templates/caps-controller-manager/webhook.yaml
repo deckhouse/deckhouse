@@ -139,4 +139,28 @@ webhooks:
         resources:
           - staticmachinetemplates
     sideEffects: None
+  # Cross-domain guard on NodeGroup: refuses adding
+  # spec.staticInstances.labelSelector while bound StaticInstances fall
+  # outside the new selector. Lives in CAPS because it reads CAPS state
+  # (StaticMachine / StaticInstance) to decide.
+  - admissionReviewVersions:
+      - v1
+    clientConfig:
+      service:
+        namespace: d8-cloud-instance-manager
+        name: caps-controller-manager-webhook-service
+        path: /validate-deckhouse-io-v1-nodegroup
+      caBundle: {{ .Values.nodeManager.internal.capsControllerManagerWebhookCert.ca | b64enc }}
+    failurePolicy: Fail
+    name: vnodegroup-staticinstances.deckhouse.io
+    rules:
+      - apiGroups:
+          - deckhouse.io
+        apiVersions:
+          - v1
+        operations:
+          - UPDATE
+        resources:
+          - nodegroups
+    sideEffects: None
 {{- end }}

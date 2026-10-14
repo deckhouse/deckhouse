@@ -1740,10 +1740,23 @@ spec:
                       rule: "!has(oldSelf.labelSelector) || self.labelSelector == oldSelf.labelSelector"
                   properties:
                     labelSelector:
-                      description: A label selector is a label query over a set
-                        of `staticInstances` resources. The result of matchLabels and matchExpressions
-                        are ANDed. An empty label selector matches all objects.
-                        A null label selector matches no objects.
+                      description: |
+                        Label selector for choosing the [StaticInstance](/modules/node-manager/cr.html#staticinstance) resources the node group uses.
+
+                        If both `matchLabels` and `matchExpressions` are set, a StaticInstance resource must satisfy all the conditions at once.
+
+                        An empty selector (`{}`) chooses every StaticInstance resource. If the selector is not set, the node group chooses no StaticInstance resources.
+
+                        **Warning.** A selector with at least one condition cannot be modified or removed. To change it, create a new node group and move the static nodes to it.
+
+                        Adding a selector to a node group that already uses StaticInstance resources is possible only when the labels of all those resources satisfy the new selector. Otherwise the webhook rejects the change and lists the resources that do not match the selector in the error message.
+
+                        After the selector is added, existing static nodes are not recreated and keep their previous configuration, but the platform applies the selector to every new node. A StaticInstance resource that does not match the selector cannot be reused, so the node group ends up with fewer nodes than the [`count`](/modules/node-manager/cr.html#nodegroup-v1-spec-staticinstances-count) parameter specifies.
+
+                        To add a selector:
+
+                        - Label all the StaticInstance resources of the node group with the `d8 k label staticinstance <STATIC_INSTANCE> <KEY>=<VALUE>` command.
+                        - Set the selector in the [`spec.staticInstances`](/modules/node-manager/cr.html#nodegroup-v1-spec-staticinstances) parameter of the NodeGroup resource.
                       properties:
                         matchExpressions:
                           type: array
