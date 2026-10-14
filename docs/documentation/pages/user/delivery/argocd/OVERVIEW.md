@@ -22,9 +22,9 @@ Typical work with Argo CD includes:
 
 - creating or using an existing [AppProject](/modules/operator-argo/cr.html#appproject) object;
 - preparing the target namespace for the application;
-- creating an [Application](/modules/operator-argo/cr.html#application) object that describes the application source and synchronization rules;
 - creating an application through the Argo CD web interface;
-- creating an application with the `argocd` CLI utility.
+- creating an application with the `argocd` CLI utility;
+- creating an [Application](/modules/operator-argo/cr.html#application) object that describes the application source and synchronization rules.
 
 ## Prerequisites
 
@@ -50,6 +50,10 @@ Every [Application](/modules/operator-argo/cr.html#application) object must refe
 By default, Argo CD includes the `default` project. You can use it for first experiments and simple scenarios.
 For production environments, create separate AppProject objects to restrict access to repositories, clusters, and namespaces.
 
+{% alert level="warning" %}
+By default, only the cluster administrator (a user with the `SuperAdmin` role) and the Argo CD instance administrator have permissions to create AppProject objects.
+{% endalert %}
+
 The manifest of the `default` AppProject object is shown below:
 
 ```yaml
@@ -71,18 +75,15 @@ spec:
 
 ## Preparing a namespace
 
-Before deploying an application, create the target namespace and add the `argocd.argoproj.io/managed-by` label
-that indicates which Argo CD instance manages resources in this namespace.
+Before deploying an application, ensure that the target namespace has the `argocd.argoproj.io/managed-by` label
+that indicates which Argo CD instance manages resources in this namespace. If the label is missing, contact the administrator to configure it.
 
 Example:
 
-```yaml
-apiVersion: v1
-kind: Namespace
-metadata:
-  name: demo
-  labels:
-    argocd.argoproj.io/managed-by: argocd
+```console
+d8 k get ns demo --show-labels
+NAME   STATUS   AGE     LABELS
+demo   Active   5d18h   argocd.argoproj.io/managed-by=argocd,kubernetes.io/metadata.name=demo
 ```
 
 In this example, the `demo` namespace will be managed by the Argo CD instance deployed in the `argocd` namespace.
@@ -91,15 +92,87 @@ In this example, the `demo` namespace will be managed by the Argo CD instance de
 
 You can create an application in Argo CD in several ways:
 
-- declaratively — with an [Application](/modules/operator-argo/cr.html#application) object;
 - interactively — through the Argo CD web interface;
-- with the `argocd` CLI utility.
+- with the `argocd` CLI utility;
+- declaratively — with an [Application](/modules/operator-argo/cr.html#application) object.
 
 {% alert level="info" %}
 You can download the `argocd` CLI utility binary from the "Documentation" section of the Argo CD web interface. To get help for the CLI utility, run `argocd --help`.
 {% endalert %}
 
+### Creating an application through the Argo CD web interface
+
+You can create an application through the Argo CD web interface. To do this:
+
+1. Open the web interface of the required Argo CD instance.
+1. Go to the "Applications" section.
+1. Click "New App".
+1. Specify the application name, project, repository, revision, path to manifests or chart, and the target cluster and namespace.
+1. If needed, configure automatic synchronization and additional parameters.
+1. Click "Create".
+
+The form fields in the web interface correspond to the main parameters of the Application object:
+project, application source, target cluster, namespace, and synchronization policy.
+
+### Creating an application with the argocd CLI utility
+
+The `argocd` CLI utility lets you create and maintain applications from the command line.
+You can download the `argocd` binary from the "Documentation" section of the Argo CD web interface.
+
+Before creating an application, authenticate with the following command:
+
+```bash
+argocd login <ARGOCD_DOMAIN>:443
+```
+
+{% alert level="info" %}
+When using SSO authentication, add the `--sso` flag to the login command.
+{% endalert %}
+
+Example of creating an application:
+
+```bash
+argocd app create guestbook \
+  --repo https://github.com/argoproj/argocd-example-apps.git \
+  --path guestbook \
+  --dest-namespace demo \
+  --dest-server https://kubernetes.default.svc \
+  --directory-recurse \
+  --sync-policy automated \
+  --self-heal \
+  --auto-prune
+```
+
+The command specifies the application source, target cluster, namespace, and synchronization policy.
+
+To view the status of a deployed application, use the `argocd app get <APP_NAME>` command, for example:
+
+```console
+argocd app get guestbook
+Name:               argocd/guestbook
+Project:            default
+Server:             https://kubernetes.default.svc
+Namespace:          demo
+URL:                https://argocd.192.168.0.235.sslip.io/applications/guestbook
+Source:
+- Repo:             https://github.com/argoproj/argocd-example-apps.git
+  Target:
+  Path:             guestbook
+SyncWindow:         Sync Allowed
+Sync Policy:        Automated (Prune)
+Sync Status:        Synced to  (8088f4c)
+Health Status:      Healthy
+
+GROUP  KIND        NAMESPACE  NAME          STATUS  HEALTH   HOOK  MESSAGE
+apps   Deployment  demo       guestbook-ui  Synced  Healthy        deployment.apps/guestbook-ui unchanged
+       Service     demo       guestbook-ui  Synced  Healthy
+```
+
 ### Creating an application with an Application object
+
+{% alert level="warning" %}
+Before creating an [Application](/modules/operator-argo/cr.html#application) object, ensure that you have the required permissions in the namespace where the Argo CD instance runs (`argocd` in the examples below). By default, only the cluster administrator (a user with the `SuperAdmin` role) has permissions to create Application objects.
+{% endalert %}
 
 An [Application](/modules/operator-argo/cr.html#application) object is used to describe an application. It specifies:
 
@@ -147,72 +220,4 @@ service/demo-helm-guestbook   ClusterIP   10.222.177.84   <none>        80/TCP  
 
 NAME                                       READY   STATUS    RESTARTS   AGE
 pod/demo-helm-guestbook-66d5d69ccd-xfkb7   1/1     Running   0          15s
-```
-
-### Creating an application through the Argo CD web interface
-
-You can create an application through the Argo CD web interface. To do this:
-
-1. Open the web interface of the required Argo CD instance.
-1. Go to the "Applications" section.
-1. Click "New App".
-1. Specify the application name, project, repository, revision, path to manifests or chart, and the target cluster and namespace.
-1. If needed, configure automatic synchronization and additional parameters.
-1. Click "Create".
-
-The form fields in the web interface correspond to the main parameters of the Application object:
-project, application source, target cluster, namespace, and synchronization policy.
-
-### Creating an application with the argocd CLI utility
-
-The `argocd` CLI utility lets you create and maintain applications from the command line.
-You can download the `argocd` binary from the "Documentation" section of the Argo CD web interface.
-
-Before creating an application, authenticate with the following command:
-
-```bash
-argocd login <ARGOCD_DOMAIN>:443
-```
-
-{% alert level="info" %}
-When using SSO authentication, add the `--sso` flag to the login command.
-{% endalert %}
-
-Example of creating an application:
-
-```bash
-argocd app create guestbook \
-  --repo https://github.com/argoproj/argocd-example-apps.git \
-  --path guestbook \
-  --dest-namespace demo \
-  --dest-server https://kubernetes.default.svc \
-  --directory-recurse \
-  --sync-policy automated \
-  --self-heal \
-  --auto-prune
-```
-
-As with creating an Application object, the command specifies the application source, target cluster, namespace, and synchronization policy.
-
-To view the status of a deployed application, use the `argocd app get <APP_NAME>` command, for example:
-
-```console
-argocd app get guestbook
-Name:               argocd/guestbook
-Project:            default
-Server:             https://kubernetes.default.svc
-Namespace:          demo
-URL:                https://argocd.192.168.0.235.sslip.io/applications/guestbook
-Source:
-- Repo:             https://github.com/argoproj/argocd-example-apps.git
-  Target:
-  Path:             guestbook
-SyncWindow:         Sync Allowed
-Sync Policy:        Automated (Prune)
-Sync Status:        Synced to  (8088f4c)
-Health Status:      Healthy
-
-GROUP  KIND        NAMESPACE  NAME          STATUS  HEALTH   HOOK  MESSAGE
-apps   Deployment  demo       guestbook-ui  Synced  Healthy        deployment.apps/guestbook-ui unchanged
-       Service     demo       guestbook-ui  Synced  Healthy
 ```

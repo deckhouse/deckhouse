@@ -22,9 +22,9 @@ Argo CD позволяет описывать приложения деклар�
 
 - создание или использование существующего объекта [AppProject](/modules/operator-argo/cr.html#appproject);
 - подготовку целевого неймспейса для приложения;
-- создание объекта [Application](/modules/operator-argo/cr.html#application), описывающего источник приложения и правила синхронизации;
 - создание приложения через веб-интерфейс Argo CD;
-- создание приложения с помощью CLI-утилиты `argocd`.
+- создание приложения с помощью CLI-утилиты `argocd`;
+- создание объекта [Application](/modules/operator-argo/cr.html#application), описывающего источник приложения и правила синхронизации.
 
 {% alert level="info" %}
 Вы можете скачать CLI-утилиту `argocd` в разделе «Documentation» веб-интерфейса Argo CD. Инструкцию по работе с CLI-утилитой можно получить, выполнив `argocd --help`.
@@ -54,6 +54,10 @@ Argo CD позволяет описывать приложения деклар�
 По умолчанию в Argo CD существует проект `default`. Его можно использовать для первых экспериментов и простых сценариев.
 Для production-окружений рекомендуется создать отдельные объекты AppProject, чтобы ограничить доступ к репозиториям, кластерам и неймспейсам.
 
+{% alert level="warning" %}
+По умолчанию создавать объекты AppProject могут только администратор кластера (пользователь с ролью `SuperAdmin`) и администратор экземпляра Argo CD.
+{% endalert %}
+
 Манифест объекта AppProject `default` приведён ниже:
 
 ```yaml
@@ -75,17 +79,14 @@ spec:
 
 ## Подготовка неймспейса
 
-Перед развёртыванием приложения создайте целевой неймспейс и добавьте лейбл `argocd.argoproj.io/managed-by`, указывающий, какой экземпляр Argo CD управляет ресурсами в этом неймспейсе.
+Перед развёртыванием приложения убедитесь, что у целевого неймспейса есть лейбл `argocd.argoproj.io/managed-by`, указывающий, какой экземпляр Argo CD управляет ресурсами в этом неймспейсе. Если лейбл отсутствует, обратитесь к администратору для его настройки.
 
 Пример:
 
-```yaml
-apiVersion: v1
-kind: Namespace
-metadata:
-  name: demo
-  labels:
-    argocd.argoproj.io/managed-by: argocd
+```console
+d8 k get ns demo --show-labels
+NAME   STATUS   AGE     LABELS
+demo   Active   5d18h   argocd.argoproj.io/managed-by=argocd,kubernetes.io/metadata.name=demo
 ```
 
 В этом примере неймспейс `demo` будет управляться экземпляром Argo CD, развёрнутым в неймспейсе `argocd`.
@@ -94,11 +95,81 @@ metadata:
 
 Приложение в Argo CD можно создать несколькими способами:
 
-- декларативно — с помощью объекта [Application](/modules/operator-argo/cr.html#application);
 - интерактивно — через веб-интерфейс Argo CD;
-- с помощью CLI-утилиты `argocd`.
+- с помощью CLI-утилиты `argocd`;
+- декларативно — с помощью объекта [Application](/modules/operator-argo/cr.html#application).
+
+### Создание приложения через веб-интерфейс Argo CD
+
+Приложение можно создать через веб-интерфейс Argo CD. Для этого:
+
+1. Откройте веб-интерфейс нужного экземпляра Argo CD.
+1. Перейдите в раздел «Applications».
+1. Нажмите «New App».
+1. Укажите имя приложения, проект, репозиторий, ревизию, путь к манифестам или чарту, а также целевой кластер и неймспейс.
+1. При необходимости настройте автоматическую синхронизацию и дополнительные параметры.
+1. Нажмите «Create».
+
+Поля формы в веб-интерфейсе соответствуют основным параметрам объекта Application: проекту, источнику приложения, целевому кластеру, неймспейсу и политике синхронизации.
+
+### Создание приложения с помощью CLI-утилиты argocd
+
+CLI-утилита `argocd` позволяет создавать и сопровождать приложения из командной строки. Бинарный файл `argocd` можно загрузить из раздела «Documentation» веб-интерфейса Argo CD.
+
+Перед созданием приложения аутентифицируйтесь с помощью команды:
+
+```bash
+argocd login <ARGOCD_DOMAIN>:443
+```
+
+{% alert level="info" %}
+При использовании аутентификации через SSO добавьте к команде логина флаг `--sso`.
+{% endalert %}
+
+Пример создания приложения:
+
+```bash
+argocd app create guestbook \
+  --repo https://github.com/argoproj/argocd-example-apps.git \
+  --path guestbook \
+  --dest-namespace demo \
+  --dest-server https://kubernetes.default.svc \
+  --directory-recurse \
+  --sync-policy automated \
+  --self-heal \
+  --auto-prune
+```
+
+В команде указываются источник приложения, целевой кластер, неймспейс и политика синхронизации.
+
+Чтобы просмотреть статус развёрнутого приложения, используйте команду `argocd app get <APP_NAME>`, например:
+
+```console
+argocd app get guestbook
+Name:               argocd/guestbook
+Project:            default
+Server:             https://kubernetes.default.svc
+Namespace:          demo
+URL:                https://argocd.192.168.0.235.sslip.io/applications/guestbook
+Source:
+- Repo:             https://github.com/argoproj/argocd-example-apps.git
+  Target:
+  Path:             guestbook
+SyncWindow:         Sync Allowed
+Sync Policy:        Automated (Prune)
+Sync Status:        Synced to  (8088f4c)
+Health Status:      Healthy
+
+GROUP  KIND        NAMESPACE  NAME          STATUS  HEALTH   HOOK  MESSAGE
+apps   Deployment  demo       guestbook-ui  Synced  Healthy        deployment.apps/guestbook-ui unchanged
+       Service     demo       guestbook-ui  Synced  Healthy
+```
 
 ### Создание приложения с помощью объекта Application
+
+{% alert level="warning" %}
+Перед созданием объекта [Application](/modules/operator-argo/cr.html#application) убедитесь, что у вас есть необходимые права в неймспейсе, в котором запущен экземпляр Argo CD (в примерах ниже — `argocd`). По умолчанию создавать объекты Application может только администратор кластера (пользователь с ролью `SuperAdmin`).
+{% endalert %}
 
 Для описания приложения используется объект [Application](/modules/operator-argo/cr.html#application). В нём указываются:
 
@@ -146,70 +217,4 @@ service/demo-helm-guestbook   ClusterIP   10.222.177.84   <none>        80/TCP  
 
 NAME                                       READY   STATUS    RESTARTS   AGE
 pod/demo-helm-guestbook-66d5d69ccd-xfkb7   1/1     Running   0          15s
-```
-
-### Создание приложения через веб-интерфейс Argo CD
-
-Приложение можно создать через веб-интерфейс Argo CD. Для этого:
-
-1. Откройте веб-интерфейс нужного экземпляра Argo CD.
-1. Перейдите в раздел «Applications».
-1. Нажмите «New App».
-1. Укажите имя приложения, проект, репозиторий, ревизию, путь к манифестам или чарту, а также целевой кластер и неймспейс.
-1. При необходимости настройте автоматическую синхронизацию и дополнительные параметры.
-1. Нажмите «Create».
-
-Поля формы в веб-интерфейсе соответствуют основным параметрам объекта Application: проекту, источнику приложения, целевому кластеру, неймспейсу и политике синхронизации.
-
-### Создание приложения с помощью CLI-утилиты argocd
-
-CLI-утилита `argocd` позволяет создавать и сопровождать приложения из командной строки. Бинарный файл `argocd` можно загрузить из раздела «Documentation» веб-интерфейса Argo CD.
-
-Перед созданием приложения аутентифицируйтесь с помощью команды:
-
-```bash
-argocd login <ARGOCD_DOMAIN>:443
-```
-
-{% alert level="info" %}
-При использовании аутентификации через SSO добавьте к команде логина флаг `--sso`.
-{% endalert %}
-
-Пример создания приложения:
-
-```bash
-argocd app create guestbook \
-  --repo https://github.com/argoproj/argocd-example-apps.git \
-  --path guestbook \
-  --dest-namespace demo \
-  --dest-server https://kubernetes.default.svc \
-  --directory-recurse \
-  --sync-policy automated \
-  --self-heal \
-  --auto-prune
-```
-
-Как и при создании объекта Application, в команде указываются источник приложения, целевой кластер, неймспейс и политика синхронизации.
-
-Чтобы просмотреть статус развёрнутого приложения, используйте команду `argocd app get <APP_NAME>`, например:
-
-```console
-argocd app get guestbook
-Name:               argocd/guestbook
-Project:            default
-Server:             https://kubernetes.default.svc
-Namespace:          demo
-URL:                https://argocd.192.168.0.235.sslip.io/applications/guestbook
-Source:
-- Repo:             https://github.com/argoproj/argocd-example-apps.git
-  Target:
-  Path:             guestbook
-SyncWindow:         Sync Allowed
-Sync Policy:        Automated (Prune)
-Sync Status:        Synced to  (8088f4c)
-Health Status:      Healthy
-
-GROUP  KIND        NAMESPACE  NAME          STATUS  HEALTH   HOOK  MESSAGE
-apps   Deployment  demo       guestbook-ui  Synced  Healthy        deployment.apps/guestbook-ui unchanged
-       Service     demo       guestbook-ui  Synced  Healthy
 ```

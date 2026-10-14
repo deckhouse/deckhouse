@@ -107,7 +107,6 @@ argocd-dex-server-759fff8444-zglp4    1/1     Running   0          2d23h
 argocd-redis-568f5b889c-jg5dr         1/1     Running   0          4d
 argocd-repo-server-78d9d6bcc6-9rwcm   1/1     Running   0          3d22h
 argocd-server-76597597f9-kfqdl        1/1     Running   0          35m
-podinfo-ccdb96645-zv5tm               1/1     Running   0          2d20h
 ```
 
 Когда все компоненты перейдут в статус `Running`, веб-интерфейс экземпляра Argo CD станет доступен по адресу, указанному в параметре [`spec.server.ingress.tls.hosts`](/modules/operator-argo/cr.html#argocd-v1beta1-spec-server-ingress-tls-hosts) (в примере — `https://<ARGOCD_DOMAIN>`).
