@@ -51,6 +51,21 @@ spec:
     - --authentication-kubeconfig=/etc/kubernetes/scheduler.conf
     - --authorization-kubeconfig=/etc/kubernetes/scheduler.conf
     - --kubeconfig=/etc/kubernetes/scheduler.conf
+{{- if and .componentsViaAPIProxy (ne .runType "ClusterBootstrap") }}
+{{- /*
+  # Multi-master only: talk to the API through kubernetes-api-proxy, which
+  # balances over all kube-apiservers. With the local kube-apiserver only, the
+  # leader lost its lease every time that one apiserver restarted. Never at
+  # the bootstrap: the cluster has one master at that point.
+  # The longer lease (30s/20s instead of 15s/10s) keeps the leader through a
+  # short outage of the proxy itself, e.g. its restart on an update (~2.5s), and
+  # through slow lease updates on an overloaded control plane.
+*/}}
+    - --master=https://127.0.0.1:6445
+    - --leader-elect-lease-duration=30s
+    - --leader-elect-renew-deadline=20s
+    - --leader-elect-retry-period=2s
+{{- end }}
     - --leader-elect=true
     - --profiling=false
     - --feature-gates={{ $schedulerFeatureGatesStr }}

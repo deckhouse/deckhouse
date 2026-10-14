@@ -737,6 +737,56 @@ resources:
 			})
 		})
 
+		Context("kube-controller-manager and kube-scheduler API endpoint", func() {
+			renderedPodCommand := func(file string) []string {
+				Expect(f.RenderError).ShouldNot(HaveOccurred())
+				s := f.KubernetesResource("Secret", "kube-system", "d8-control-plane-manager-config")
+				Expect(s.Exists()).To(BeTrue())
+
+				manifest, err := base64.StdEncoding.DecodeString(s.Field("data." + strings.ReplaceAll(file, ".", "\\.")).String())
+				Expect(err).ShouldNot(HaveOccurred())
+
+				var pod corev1.Pod
+				Expect(yaml.Unmarshal(manifest, &pod)).To(Succeed())
+				return pod.Spec.Containers[0].Command
+			}
+			components := []string{"kube-controller-manager.yaml.tpl", "kube-scheduler.yaml.tpl"}
+
+			Context("multi-master control plane", func() {
+				BeforeEach(func() {
+					f.ValuesSet("global.discovery.clusterControlPlaneIsHighlyAvailable", true)
+					f.HelmRender()
+				})
+
+				It("goes through kubernetes-api-proxy", func() {
+					for _, file := range components {
+						Expect(renderedPodCommand(file)).To(ContainElements(
+							"--master=https://127.0.0.1:6445",
+							"--leader-elect-lease-duration=30s",
+							"--leader-elect-renew-deadline=20s",
+							"--leader-elect-retry-period=2s",
+						), file)
+					}
+				})
+			})
+
+			Context("single master", func() {
+				BeforeEach(func() {
+					f.ValuesSet("global.discovery.clusterControlPlaneIsHighlyAvailable", false)
+					f.HelmRender()
+				})
+
+				It("uses the kubeconfig server (the local kube-apiserver)", func() {
+					for _, file := range components {
+						for _, arg := range renderedPodCommand(file) {
+							Expect(arg).NotTo(HavePrefix("--master="), file)
+							Expect(arg).NotTo(HavePrefix("--leader-elect-lease-duration="), file)
+						}
+					}
+				})
+			})
+		})
+
 		Context("only apiserver.serviceAccount.issuer", func() {
 			BeforeEach(func() {
 				f.ValuesSetFromYaml("controlPlaneManager", moduleValuesOnlyIssuer)
