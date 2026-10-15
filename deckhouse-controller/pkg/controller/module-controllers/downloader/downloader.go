@@ -144,6 +144,34 @@ func (md *ModuleDownloader) DownloadMetadataFromReleaseChannel(ctx context.Conte
 	return res, nil
 }
 
+// GetReleaseChannelChecksum returns the digest of the module's release-channel image
+// (registry path .../<moduleName>/release:<releaseChannel>). It reads only the manifest
+// digest - via a cheap HEAD request when the registry supports it (see cr.Client.Digest),
+// falling back to a GET otherwise - without pulling and extracting the image layers.
+//
+// The returned value is the same digest that DownloadMetadataFromReleaseChannel stores as
+// Checksum, so it can be compared against the checksum recorded in the ModuleSource status
+// to detect whether the channel has moved before doing the full (expensive) metadata download.
+func (md *ModuleDownloader) GetReleaseChannelChecksum(ctx context.Context, moduleName, releaseChannel string) (string, error) {
+	ctx, span := otel.Tracer(tracerName).Start(ctx, "GetReleaseChannelChecksum")
+	defer span.End()
+
+	span.SetAttributes(attribute.String("module", moduleName))
+	span.SetAttributes(attribute.String("releaseChannel", releaseChannel))
+
+	regCli, err := md.dc.GetRegistryClient(path.Join(md.ms.Spec.Registry.Repo, moduleName, "release"), md.registryOptions...)
+	if err != nil {
+		return "", fmt.Errorf("get registry client: %w", err)
+	}
+
+	checksum, err := regCli.Digest(ctx, strcase.ToKebab(releaseChannel))
+	if err != nil {
+		return "", fmt.Errorf("get release channel digest: %w", err)
+	}
+
+	return checksum, nil
+}
+
 // DownloadReleaseImageInfoByVersion downloads only module release image with metadata: version.json
 // does not fetch and install the desired version on the module, only fetches its module definition
 func (md *ModuleDownloader) DownloadReleaseImageInfoByVersion(ctx context.Context, moduleName, moduleVersion string) (*ModuleDownloadResult, error) {

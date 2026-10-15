@@ -894,6 +894,121 @@ status:
 	})
 }
 
+// TestSkipUnchangedReleaseChannel verifies the cheap HEAD probe short-circuit: once a
+// module's release-channel checksum is recorded in the ModuleSource status, a later scan
+// that sees the same channel digest must skip the module entirely and must not pull the
+// release image again.
+func (suite *ControllerTestSuite) TestSkipUnchangedReleaseChannel() {
+	suite.Run("unchanged channel digest skips the metadata pull on the next scan", func() {
+		const (
+			moduleName = "enabledmodule"
+			repo       = "dev-registry.deckhouse.io/deckhouse/modules"
+		)
+		channelDigest := "sha256:" + strings.Repeat("a", 64)
+
+		// counts every pull of the module's release repo (channel + version metadata) -
+		// exactly the expensive work the probe must avoid on an unchanged channel.
+		var releaseImagePulls int
+
+		newImage := func(version string) crv1.Image {
+			return &crfake.FakeImage{
+				ManifestStub: manifestStub,
+				LayersStub: func() ([]crv1.Layer, error) {
+					return []crv1.Layer{
+						&utils.FakeLayer{},
+						&utils.FakeLayer{FilesContent: map[string]string{
+							"module.yaml":  "name: " + moduleName + "\nweight: 900\n",
+							"version.json": `{"version": "` + version + `"}`,
+						}},
+					}, nil
+				},
+				DigestStub: func() (crv1.Hash, error) { return crv1.NewHash(channelDigest) },
+			}
+		}
+
+		releaseMock := cr.NewClientMock(suite.T())
+		// the cheap probe: the channel digest never moves between the two scans
+		releaseMock.DigestMock.Optional().Return(channelDigest, nil)
+		releaseMock.ImageMock.Optional().Set(func(_ context.Context, imageTag string) (crv1.Image, error) {
+			releaseImagePulls++
+			version := imageTag
+			if _, err := semver.NewVersion(imageTag); err != nil {
+				version = "v1.2.3" // a channel tag (e.g. "stable") resolves to the channel version
+			}
+			return newImage(version), nil
+		})
+
+		moduleMock := cr.NewClientMock(suite.T())
+		moduleMock.ListTagsMock.Optional().Return([]string{"v1.2.3"}, nil)
+		moduleMock.ImageMock.Optional().Set(func(_ context.Context, _ string) (crv1.Image, error) {
+			return newImage("v1.2.3"), nil
+		})
+
+		dc := dependency.NewMockedContainer()
+		dc.CRClientMap = map[string]cr.Client{
+			repo:                                 cr.NewClientMock(suite.T()).ListTagsMock.Optional().Return([]string{moduleName}, nil),
+			repo + "/" + moduleName:              moduleMock,
+			repo + "/" + moduleName + "/release": releaseMock,
+		}
+
+		manifest := `
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleSource
+metadata:
+  annotations:
+    modules.deckhouse.io/registry-spec-checksum: 912e02634dd8b7222cc42906e35f1e79
+    modules.deckhouse.io/default-source: "true"
+  name: test-source
+spec:
+  registry:
+    dockerCfg: YXNiCg==
+    repo: dev-registry.deckhouse.io/deckhouse/modules
+    scheme: HTTPS
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: Module
+metadata:
+  name: enabledmodule
+properties:
+  availableSources:
+    - test-source
+status:
+  phase: Available
+  conditions:
+    - type: EnabledByModuleConfig
+      status: "True"
+`
+		suite.setupTestControllerRaw(manifest, withDependencyContainer(dc))
+
+		// First scan: pulls the release channel metadata, records the checksum and creates
+		// the ModuleRelease.
+		_, err := suite.r.handleModuleSource(context.TODO(), suite.moduleSource("test-source"))
+		require.NoError(suite.T(), err)
+
+		source := suite.moduleSource("test-source")
+		require.Len(suite.T(), source.Status.AvailableModules, 1)
+		require.Equal(suite.T(), channelDigest, source.Status.AvailableModules[0].Checksum)
+		require.Equal(suite.T(), "v1.2.3", source.Status.AvailableModules[0].Version)
+
+		pullsAfterFirstScan := releaseImagePulls
+		require.Positive(suite.T(), pullsAfterFirstScan, "the first scan must pull the release channel image")
+
+		// Second scan: the cheap probe sees the same channel digest, so the module is
+		// skipped entirely - no further pulls of the release image.
+		_, err = suite.r.handleModuleSource(context.TODO(), suite.moduleSource("test-source"))
+		require.NoError(suite.T(), err)
+
+		assert.Equal(suite.T(), pullsAfterFirstScan, releaseImagePulls,
+			"an unchanged release channel must not pull the release image again")
+
+		// the recorded state survives the skipped scan
+		source = suite.moduleSource("test-source")
+		require.Len(suite.T(), source.Status.AvailableModules, 1)
+		assert.Equal(suite.T(), channelDigest, source.Status.AvailableModules[0].Checksum)
+		assert.Equal(suite.T(), "v1.2.3", source.Status.AvailableModules[0].Version)
+	})
+}
+
 // moduleDefinitionConfig holds configuration for mocking module definition.
 // All fields correspond to properties updated in updateModulePropertiesFromDefinition.
 type moduleDefinitionConfig struct {
