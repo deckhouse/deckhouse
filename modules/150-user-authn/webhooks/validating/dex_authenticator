@@ -132,5 +132,9 @@ function __main__() {
 # shell-operator logs every plain-text line of a hook at info, stderr included; a JSON line carries
 # its own level, so the errors of jq and the other tools the webhook runs go out as warnings.
 exec 3>&2 2> >(jq -R -c '{level: "warn", msg: .}' >&3)
+# webhook-operator is PID 1 of the container and does not reap orphans: wait for this jq before the
+# hook exits, or its process stays behind as a zombie and they pile up to the pids limit.
+stderr_jq_pid=$!
+trap 'exec 2>&3; wait "$stderr_jq_pid" || true' EXIT
 
 hook::run "$@"
