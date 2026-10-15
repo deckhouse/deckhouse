@@ -111,3 +111,39 @@ go test -run=^$ -fuzz=FuzzServeHTTP -fuzztime=12h .
 go test -run=^$ -fuzz=FuzzDecodeTicket$ -fuzztime=12h ./pkg/sessions/persistence
 go test -run=^$ -fuzz=FuzzJwtSessionLoader$ -fuzztime=12h ./pkg/middleware
 ```
+
+<!-- cvefix:begin -->
+### Dependency overrides
+
+`cvefix` from modules-ci maintains this section from `998-fix-cve.patch`. Do not edit it by hand.
+It lists the `go.mod` requirements that the patch set changes over the upstream release.
+
+| Module | Upstream | Patched |
+|---|---|---|
+| `cloud.google.com/go/auth/oauth2adapt` | — | v0.2.8 |
+| `cloud.google.com/go/auth` | — | v0.18.2 |
+| `github.com/felixge/httpsnoop` | — | v1.0.4 |
+| `github.com/go-logr/stdr` | — | v1.2.2 |
+| `github.com/google/s2a-go` | v0.1.4 | v0.1.9 |
+| `github.com/googleapis/enterprise-certificate-proxy` | v0.2.3 | v0.3.11 |
+| `github.com/googleapis/gax-go/v2` | v2.11.0 | v2.17.0 |
+| `github.com/redis/go-redis/v9` | v9.0.2 | v9.6.3 |
+| `github.com/stretchr/testify` | v1.8.4 | v1.11.1 |
+| `go.opentelemetry.io/auto/sdk` | — | v1.2.1 |
+| `go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp` | — | v0.61.0 |
+| `go.opentelemetry.io/otel/metric` | — | v1.44.0 |
+| `go.opentelemetry.io/otel/trace` | — | v1.44.0 |
+| `go.opentelemetry.io/otel` | — | v1.44.0 |
+| `golang.org/x/crypto` | v0.46.0 | v0.57.0 |
+| `golang.org/x/net` | v0.48.0 | v0.60.0 |
+| `golang.org/x/oauth2` | v0.34.0 | v0.36.0 |
+| `golang.org/x/sync` | v0.19.0 | v0.23.0 |
+| `golang.org/x/sys` | v0.39.0 | v0.48.0 |
+| `golang.org/x/text` | v0.32.0 | v0.42.0 |
+| `google.golang.org/api` | v0.126.0 | v0.264.0 |
+| `google.golang.org/genproto/googleapis/rpc` | v0.0.0-20251202230838-ff82c1b0f217 | v0.0.0-20260526163538-3dc84a4a5aaa |
+| `google.golang.org/grpc` | v1.79.3 | v1.83.2 |
+| `google.golang.org/protobuf` | v1.36.10 | v1.36.11 |
+
+The `go` directive of `go.mod` is raised from 1.24.0 to 1.26.0: the patched dependencies require it.
+<!-- cvefix:end -->

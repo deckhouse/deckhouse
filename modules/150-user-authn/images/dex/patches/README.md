@@ -259,3 +259,43 @@ healthz, static) and `FuzzAllHandlers`.
 ```
 go test -vet=off -run=^$ -fuzz=FuzzAllHandlers -fuzztime=12h ./server
 ```
+
+<!-- cvefix:begin -->
+### Dependency overrides
+
+`cvefix` from modules-ci maintains this section from `998-fix-cve.patch`. Do not edit it by hand.
+It lists the `go.mod` requirements that the patch set changes over the upstream release.
+
+| Module | Upstream | Patched |
+|---|---|---|
+| `cloud.google.com/go/auth` | v0.16.5 | v0.18.2 |
+| `cloud.google.com/go/compute/metadata` | v0.8.0 | v0.9.0 |
+| `filippo.io/edwards25519` | v1.1.0 | v1.1.1 |
+| `github.com/Azure/go-ntlmssp` | v0.0.0-20221128193559-754e69321358 | v0.1.1 |
+| `github.com/go-jose/go-jose/v4` | v4.1.2 | v4.1.4 |
+| `github.com/googleapis/enterprise-certificate-proxy` | v0.3.6 | v0.3.11 |
+| `github.com/googleapis/gax-go/v2` | v2.15.0 | v2.17.0 |
+| `github.com/russellhaering/goxmldsig` | v1.5.0 | v1.6.0 |
+| `go.etcd.io/etcd/api/v3` | v3.6.4 | v3.6.14 |
+| `go.etcd.io/etcd/client/pkg/v3` | v3.6.4 | v3.6.14 |
+| `go.etcd.io/etcd/client/v3` | v3.6.4 | v3.6.14 |
+| `go.opentelemetry.io/auto/sdk` | v1.1.0 | v1.2.1 |
+| `go.opentelemetry.io/otel/metric` | v1.37.0 | v1.44.0 |
+| `go.opentelemetry.io/otel/trace` | v1.37.0 | v1.44.0 |
+| `go.opentelemetry.io/otel` | v1.37.0 | v1.44.0 |
+| `golang.org/x/crypto` | v0.41.0 | v0.57.0 |
+| `golang.org/x/mod` | v0.26.0 | v0.41.0 |
+| `golang.org/x/net` | v0.43.0 | v0.60.0 |
+| `golang.org/x/oauth2` | v0.30.0 | v0.36.0 |
+| `golang.org/x/sync` | v0.16.0 | v0.23.0 |
+| `golang.org/x/sys` | v0.35.0 | v0.48.0 |
+| `golang.org/x/text` | v0.28.0 | v0.42.0 |
+| `golang.org/x/tools` | v0.35.0 | v0.49.0 |
+| `google.golang.org/api` | v0.248.0 | v0.264.0 |
+| `google.golang.org/genproto/googleapis/api` | v0.0.0-20250707201910-8d1bb00bc6a7 | v0.0.0-20260526163538-3dc84a4a5aaa |
+| `google.golang.org/genproto/googleapis/rpc` | v0.0.0-20250818200422-3122310a409c | v0.0.0-20260526163538-3dc84a4a5aaa |
+| `google.golang.org/grpc` | v1.75.0 | v1.83.2 |
+| `google.golang.org/protobuf` | v1.36.8 | v1.36.11 |
+
+The `go` directive of `go.mod` is raised from 1.25.0 to 1.26.0: the patched dependencies require it.
+<!-- cvefix:end -->
