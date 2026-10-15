@@ -42,3 +42,27 @@ func IsHealthy(pod corev1.Pod) bool {
 func GetProblematicStatuses() []string {
 	return problematicStatuses
 }
+
+func IsReady(pod *corev1.Pod) bool {
+	if pod == nil {
+		return false
+	}
+	for _, cond := range pod.Status.Conditions {
+		if cond.Type == corev1.PodReady && cond.Status == corev1.ConditionTrue {
+			return true
+		}
+	}
+	return false
+}
+
+func IsCrashLooping(pod *corev1.Pod) bool {
+	if pod == nil {
+		return false
+	}
+	for _, cs := range pod.Status.ContainerStatuses {
+		if cs.State.Waiting != nil && cs.State.Waiting.Reason == "CrashLoopBackOff" {
+			return true
+		}
+	}
+	return false
+}

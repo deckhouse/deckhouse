@@ -22,8 +22,8 @@ import (
 
 	corev1 "k8s.io/api/core/v1"
 
-	podstatus "control-plane-manager/internal/controllers/update-observer/pkg/pod-status"
 	"control-plane-manager/internal/controllers/update-observer/pkg/version"
+	"control-plane-manager/pkg/podstatus"
 )
 
 type MasterNode struct {

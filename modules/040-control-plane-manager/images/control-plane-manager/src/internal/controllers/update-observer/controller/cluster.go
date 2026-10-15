@@ -29,8 +29,8 @@ import (
 
 	"control-plane-manager/internal/controllers/update-observer/cluster"
 	"control-plane-manager/internal/controllers/update-observer/common"
-	podstatus "control-plane-manager/internal/controllers/update-observer/pkg/pod-status"
 	"control-plane-manager/internal/controllers/update-observer/pkg/version"
+	"control-plane-manager/pkg/podstatus"
 )
 
 func (r *reconciler) getClusterState(ctx context.Context, cfg *cluster.Configuration, configmapLabels map[string]string, downgradeInProgress bool) (*cluster.State, error) {

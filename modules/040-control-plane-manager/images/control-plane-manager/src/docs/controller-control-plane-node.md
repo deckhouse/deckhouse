@@ -39,16 +39,12 @@ This mode is useful for manual node maintenance or administrative operations wit
 1. Load `CPN` and all CPOs for this node.
 2. Filter operations to objects owned by the current `CPN` UID.
 3. Compute the plan (`cpnplanner.ComputePlan`, no API calls):
-- target `CPN.status` from operations:
-- for each component, choose operation matching current desired checksums (`DesiredConfig/PKI/CA`)
-- for component condition, priority is deterministic:
-- running (approved, non-terminal) -> pending (not approved) -> completed -> other terminal
+- target `CPN.status.caChecksum` / `status.components` from operations:
 - apply checksums from latest terminal non-observe operation that is either:
 - `Completed`, or
 - has commit-point step completed (`SyncManifests` / `JoinEtcdCluster`)
 - apply cert dates from completed operations that include `CertObserve` step, in monotonic `observedAt` order
 - update per-component `status.components.<component>.lastCertObserveTime`
-- update component conditions and global `CertificatesHealthy`
 - in maintenance mode (label `maintenance`) planning stops here: no operations are created or rotated.
 - operations to create, per component (lifecycle and renewal are independent decisions):
 - lifecycle: converge CPO when `spec != status`; otherwise observe-only CPO when observation is due (interval: 7 days)
@@ -56,6 +52,11 @@ This mode is useful for manual node maintenance or administrative operations wit
 - a converge CPO already includes cert renewal steps when certificates expire soon
 - terminal CPOs to rotate (keep latest 5 per component).
 4. Patch `CPN.status` (optimistic lock) if it changed.
+
+> `status.conditions` are NOT part of this controller anymore: they are owned by
+> `control-plane-node-conditions-controller` (see `controller-control-plane-node-conditions.md`).
+> This controller owns `status.caChecksum` and `status.components` exclusively.
+
 5. Create planned CPOs; dedup is re-checked against an uncached list right before creation.
 6. Delete rotated CPOs.
 
@@ -82,13 +83,8 @@ Observe-only CPO:
 
 ## Condition Logic (CPN)
 
-- `Synced` when component checksums in status match desired and no operation is needed.
-- `PendingUpdate` when matching operation exists but not approved.
-- `Updating` when matching operation is approved and running.
-- `UpdateFailed` when matching operation is in retryable `OperationFailed` state.
-- `CertificatesHealthy=True` when:
-- all static pod components report target CA in status, and
-- all observed component certificates are not expiring within renewal threshold.
+Conditions are owned by `control-plane-node-conditions-controller`:
+see `controller-control-plane-node-conditions.md`.
 
 ## Logic Basis
 

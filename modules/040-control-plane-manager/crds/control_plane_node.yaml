@@ -20,19 +20,19 @@ spec:
   scope: Namespaced
   versions:
   - additionalPrinterColumns:
-    - description: Etcd ready
+    - description: 'Etcd ready: pod ready and configuration in sync'
       jsonPath: .status.conditions[?(@.type=='EtcdReady')].status
       name: ETCD
       type: string
-    - description: API server ready
+    - description: 'API server ready: pod ready and configuration in sync'
       jsonPath: .status.conditions[?(@.type=='APIServerReady')].status
       name: APISERVER
       type: string
-    - description: Controller manager ready
+    - description: 'Controller manager ready: pod ready and configuration in sync'
       jsonPath: .status.conditions[?(@.type=='ControllerManagerReady')].status
       name: CONTROLLERMANAGER
       type: string
-    - description: Scheduler ready
+    - description: 'Scheduler ready: pod ready and configuration in sync'
       jsonPath: .status.conditions[?(@.type=='SchedulerReady')].status
       name: SCHEDULER
       type: string
@@ -336,11 +336,12 @@ spec:
 
                   Possible condition types:
 
-                  - `EtcdReady`: etcd is running and accepting requests (`ETCD` column).
-                  - `APIServerReady`: kube-apiserver is running and accepting requests (`APISERVER` column).
-                  - `ControllerManagerReady`: kube-controller-manager is running (`CONTROLLERMANAGER` column).
-                  - `SchedulerReady`: kube-scheduler is running (`SCHEDULER` column).
+                  - `EtcdPodReady`, `APIServerPodReady`, `ControllerManagerPodReady`, `SchedulerPodReady`: the component's static pod is running and ready.
+                  - `EtcdInSync`, `APIServerInSync`, `ControllerManagerInSync`, `SchedulerInSync`: the desired configuration is applied to the component (`True` with reason `InSync`). `False` with reason `OperationInQueue` means an operation is waiting for approval, `OperationInFlight` means an operation is running (the `message` field contains the operation name(s)), `OutOfSync` means there is no active operation, but the applied configuration differs from the desired one (for example, in maintenance mode).
+                  - `EtcdReady`, `APIServerReady`, `ControllerManagerReady`, `SchedulerReady`: `<Component>PodReady` and `<Component>InSync` are both `True` (`ETCD`, `APISERVER`, `CONTROLLERMANAGER`, `SCHEDULER` columns). When `False`, `reason` and `message` are taken from the failing condition; a not ready pod takes precedence.
                   - `CertificatesHealthy`: All component certificates are valid and have enough lifetime left (`CERTIFICATES` column).
+
+                  The `<Component>PodReady` conditions reflect only the health of the component's static pod. Whether the desired configuration is applied to the component is reported by `<Component>InSync`.
 
                   When `status` is `False`, the cause is described in `reason` and `message`.
                 items:

@@ -33,6 +33,7 @@ import (
 
 	controlplanev1alpha1 "control-plane-manager/api/v1alpha1"
 	"control-plane-manager/internal/constants"
+	"control-plane-manager/pkg/podstatus"
 )
 
 const (
@@ -116,7 +117,7 @@ func (r *Reconciler) defragEtcd(ctx context.Context, state *controlplanev1alpha1
 		return StepResult{Outcome: OutcomeCompleted}, nil
 	}
 
-	podName := mirrorPodName(controlplanev1alpha1.OperationComponentEtcd, r.node)
+	podName := controlplanev1alpha1.OperationComponentEtcd.MirrorPodName(r.node.Name)
 	pod := &corev1.Pod{}
 	if err := r.client.Get(ctx, client.ObjectKey{
 		Name:      podName,
@@ -129,7 +130,7 @@ func (r *Reconciler) defragEtcd(ctx context.Context, state *controlplanev1alpha1
 		return StepResult{}, fmt.Errorf("get pod %s: %w", podName, err)
 	}
 
-	if !isPodReady(pod) {
+	if !podstatus.IsReady(pod) {
 		logger.Info("etcd pod not ready, will retry before defragmentation", slog.String("pod", podName))
 		return waitEtcdPodResult(state.Raw(), podName, "not ready"), nil
 	}

@@ -79,7 +79,7 @@ func (r *Reconciler) recordKCMLeader(ctx context.Context, op *controlplanev1alph
 		return
 	}
 	pod := &corev1.Pod{}
-	if err := r.client.Get(ctx, client.ObjectKey{Namespace: constants.KubeSystemNamespace, Name: mirrorPodName(controlplanev1alpha1.OperationComponentKubeControllerManager, r.node)}, pod); err != nil {
+	if err := r.client.Get(ctx, client.ObjectKey{Namespace: constants.KubeSystemNamespace, Name: controlplanev1alpha1.OperationComponentKubeControllerManager.MirrorPodName(r.node.Name)}, pod); err != nil {
 		logger.Info("cannot read kube-controller-manager pod, its leader Lease will not be released", log.Err(err))
 		return
 	}

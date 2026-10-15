@@ -31,6 +31,7 @@ import (
 
 	controlplanev1alpha1 "control-plane-manager/api/v1alpha1"
 	"control-plane-manager/internal/constants"
+	"control-plane-manager/pkg/podstatus"
 )
 
 // waitForPod checks if the static pod is ready with the expected checksums annotations.
@@ -39,7 +40,7 @@ import (
 // losing quorum.
 func (r *Reconciler) waitForPod(ctx context.Context, state *controlplanev1alpha1.OperationState, logger *log.Logger) (StepResult, error) {
 	op := state.Raw()
-	podName := mirrorPodName(op.Spec.Component, r.node)
+	podName := op.Spec.Component.MirrorPodName(r.node.Name)
 	pod := &corev1.Pod{}
 	if err := r.client.Get(ctx, client.ObjectKey{Name: podName, Namespace: constants.KubeSystemNamespace}, pod); err != nil {
 		logger.Info("pod not found yet, requeue", slog.String("pod", podName))
@@ -50,7 +51,7 @@ func (r *Reconciler) waitForPod(ctx context.Context, state *controlplanev1alpha1
 		}, nil
 	}
 
-	if isPodCrashLooping(pod) {
+	if podstatus.IsCrashLooping(pod) {
 		logger.Warn("pod is crash looping, will retry", slog.String("pod", podName))
 		return StepResult{
 			Outcome:      OutcomePending,
@@ -132,32 +133,9 @@ func (r *Reconciler) mapPodToOperations(ctx context.Context, obj client.Object) 
 	return reqs
 }
 
-// isPodCrashLooping returns true if any container in the pod is in CrashLoopBackOff.
-func isPodCrashLooping(pod *corev1.Pod) bool {
-	if pod == nil {
-		return false
-	}
-	for _, cs := range pod.Status.ContainerStatuses {
-		if cs.State.Waiting != nil && cs.State.Waiting.Reason == "CrashLoopBackOff" {
-			return true
-		}
-	}
-	return false
-}
-
-// isPodReady returns true if the pod has the Ready condition set to True.
-func isPodReady(pod *corev1.Pod) bool {
-	for _, cond := range pod.Status.Conditions {
-		if cond.Type == corev1.PodReady && cond.Status == corev1.ConditionTrue {
-			return true
-		}
-	}
-	return false
-}
-
 // isPodReadyWithChecksums returns true if the pod has the expected checksum annotations and is in Ready condition.
 func isPodReadyWithChecksums(pod *corev1.Pod, expected checksumAnnotations) bool {
-	return pod != nil && hasChecksumAnnotations(pod, expected) && isPodReady(pod)
+	return pod != nil && hasChecksumAnnotations(pod, expected) && podstatus.IsReady(pod)
 }
 
 // hasChecksumAnnotations returns true if the pod has the expected checksum annotations.
@@ -168,11 +146,6 @@ func hasChecksumAnnotations(pod *corev1.Pod, expected checksumAnnotations) bool 
 		}
 	}
 	return true
-}
-
-// mirrorPodName is the name of the mirror pod of the component's static pod on the node.
-func mirrorPodName(component controlplanev1alpha1.OperationComponent, node NodeIdentity) string {
-	return component.PodComponentName() + "-" + node.Name
 }
 
 func findContainerByName(pod *corev1.Pod, name string) *corev1.Container {

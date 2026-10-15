@@ -6,6 +6,7 @@
 
 - `control-plane-configuration-controller` (CPC)
 - `control-plane-node-controller` (CPN)
+- `control-plane-node-conditions-controller` (CPN `status.conditions`)
 - `control-plane-operation-controller` (CPO)
 - `operations-approver-controller`
 - `update-observer-controller`
@@ -45,7 +46,8 @@ Observed state comes from:
 ## Reconciliation Flow
 
 1. `control-plane-configuration` computes desired checksums and applies `CPN.spec`.
-2. `control-plane-node` compares `CPN.spec` vs `CPN.status`, creates missing CPOs, and derives `CPN.status.conditions`.
+2. `control-plane-node` compares `CPN.spec` vs `CPN.status`, creates missing CPOs, and folds CPO results into `CPN.status.components` / `status.caChecksum`.
+   `control-plane-node-conditions` derives `CPN.status.conditions` from static pods, operation presence and `status.components`.
 3. `operations-approver` approves queued CPOs by stage/concurrency rules.
 4. `control-plane-operation` executes approved CPO pipelines on the target node.
 5. Completed CPO results are folded back into `CPN.status`.

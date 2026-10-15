@@ -161,11 +161,21 @@ type ControlPlaneNodeStatus struct {
 	// Conditions reflects the readiness of control plane components on the node.
 	//
 	// Possible condition types:
-	//   - EtcdReady              — etcd is running and accepting requests (shown in the ETCD column).
-	//   - APIServerReady         — kube-apiserver is running and accepting requests (APISERVER column).
-	//   - ControllerManagerReady — kube-controller-manager is running (CONTROLLERMANAGER column).
-	//   - SchedulerReady         — kube-scheduler is running (SCHEDULER column).
+	//   - EtcdPodReady, APIServerPodReady, ControllerManagerPodReady, SchedulerPodReady —
+	//     the component's static pod is running and ready.
+	//   - EtcdInSync, APIServerInSync, ControllerManagerInSync, SchedulerInSync —
+	//     the desired configuration is applied to the component: True/InSync, or False with
+	//     OperationInQueue (an operation waits for approval), OperationInFlight (an operation
+	//     is executing; "message" holds the operation name(s)) or OutOfSync (no operation,
+	//     applied checksums differ).
+	//   - EtcdReady, APIServerReady, ControllerManagerReady, SchedulerReady —
+	//     <Component>PodReady and <Component>InSync are both True (ETCD, APISERVER,
+	//     CONTROLLERMANAGER, SCHEDULER columns). When False, "reason" and "message" are taken
+	//     from the failing condition; a not ready pod wins over InSync.
 	//   - CertificatesHealthy    — all component certificates are valid and have enough lifetime left (CERTIFICATES column).
+	//
+	// The <Component>PodReady conditions reflect the health of the static pod only; convergence to
+	// the desired configuration is reported by <Component>InSync.
 	//
 	// When status is False, the cause is described in "reason" and "message".
 	// +optional
@@ -179,10 +189,10 @@ type ControlPlaneNodeStatus struct {
 // +kubebuilder:object:root=true
 // +kubebuilder:subresource:status
 // +kubebuilder:resource:scope=Namespaced,shortName=cpn
-// +kubebuilder:printcolumn:name="ETCD",type="string",JSONPath=".status.conditions[?(@.type=='EtcdReady')].status",description="Etcd ready"
-// +kubebuilder:printcolumn:name="APISERVER",type="string",JSONPath=".status.conditions[?(@.type=='APIServerReady')].status",description="API server ready"
-// +kubebuilder:printcolumn:name="CONTROLLERMANAGER",type="string",JSONPath=".status.conditions[?(@.type=='ControllerManagerReady')].status",description="Controller manager ready"
-// +kubebuilder:printcolumn:name="SCHEDULER",type="string",JSONPath=".status.conditions[?(@.type=='SchedulerReady')].status",description="Scheduler ready"
+// +kubebuilder:printcolumn:name="ETCD",type="string",JSONPath=".status.conditions[?(@.type=='EtcdReady')].status",description="Etcd ready: pod ready and configuration in sync"
+// +kubebuilder:printcolumn:name="APISERVER",type="string",JSONPath=".status.conditions[?(@.type=='APIServerReady')].status",description="API server ready: pod ready and configuration in sync"
+// +kubebuilder:printcolumn:name="CONTROLLERMANAGER",type="string",JSONPath=".status.conditions[?(@.type=='ControllerManagerReady')].status",description="Controller manager ready: pod ready and configuration in sync"
+// +kubebuilder:printcolumn:name="SCHEDULER",type="string",JSONPath=".status.conditions[?(@.type=='SchedulerReady')].status",description="Scheduler ready: pod ready and configuration in sync"
 // +kubebuilder:printcolumn:name="CERTIFICATES",type="string",JSONPath=".status.conditions[?(@.type=='CertificatesHealthy')].status",description="Certificates healthy"
 // +kubebuilder:printcolumn:name="Age",type="date",JSONPath=".metadata.creationTimestamp"
 

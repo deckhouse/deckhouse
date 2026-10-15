@@ -211,11 +211,12 @@ spec:
 
                     Возможные типы условий:
 
-                    * `EtcdReady` — etcd на узле работает и принимает запросы (колонка `ETCD`);
-                    * `APIServerReady` — kube-apiserver работает и принимает запросы (колонка `APISERVER`);
-                    * `ControllerManagerReady` — kube-controller-manager работает (колонка `CONTROLLERMANAGER`);
-                    * `SchedulerReady` — kube-scheduler работает (колонка `SCHEDULER`);
+                    * `EtcdPodReady`, `APIServerPodReady`, `ControllerManagerPodReady`, `SchedulerPodReady` — статический под компонента запущен и готов;
+                    * `EtcdInSync`, `APIServerInSync`, `ControllerManagerInSync`, `SchedulerInSync` — к компоненту применена целевая конфигурация (`True` с причиной `InSync`). `False` с причиной `OperationInQueue` — операция ожидает одобрения, `OperationInFlight` — операция выполняется (в поле `message` указываются имена операций), `OutOfSync` — активных операций нет, но применённая конфигурация отличается от целевой (например, в режиме обслуживания);
+                    * `EtcdReady`, `APIServerReady`, `ControllerManagerReady`, `SchedulerReady` — условия `<Component>PodReady` и `<Component>InSync` равны `True` (колонки `ETCD`, `APISERVER`, `CONTROLLERMANAGER`, `SCHEDULER`). Если значение `False`, поля `reason` и `message` берутся из невыполненного условия; неготовый под важнее;
                     * `CertificatesHealthy` — все сертификаты компонентов узла действительны и до истечения остаётся достаточно времени (колонка `CERTIFICATES`).
+
+                    Условия `<Component>PodReady` отражают только состояние статического пода компонента. Применена ли к компоненту целевая конфигурация, показывают условия `<Component>InSync`.
 
                     Если значение `status` равно `False`, причину сбоя можно посмотреть в полях `reason` и `message`.
                   items:

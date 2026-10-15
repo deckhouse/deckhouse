@@ -43,6 +43,7 @@ import (
 	controlplaneapprover "control-plane-manager/internal/controllers/control-plane-approver"
 	controlplaneconfiguration "control-plane-manager/internal/controllers/control-plane-configuration"
 	controlplanenode "control-plane-manager/internal/controllers/control-plane-node"
+	controlplanenodeconditions "control-plane-manager/internal/controllers/control-plane-node-conditions"
 	controlplaneoperation "control-plane-manager/internal/controllers/control-plane-operation"
 	updateobservercommon "control-plane-manager/internal/controllers/update-observer/common"
 	updateobserver "control-plane-manager/internal/controllers/update-observer/controller"
@@ -148,6 +149,10 @@ func (c *staticPodConfigurator) configureRuntimeManager(runtimeManager manager.M
 
 	if err := controlplanenode.Register(runtimeManager, metricsStorage); err != nil {
 		return fmt.Errorf("register control-plane-node controller: %w", err)
+	}
+
+	if err := controlplanenodeconditions.Register(runtimeManager); err != nil {
+		return fmt.Errorf("register control-plane-node-conditions controller: %w", err)
 	}
 
 	if err := controlplaneoperation.Register(runtimeManager, metricsStorage); err != nil {

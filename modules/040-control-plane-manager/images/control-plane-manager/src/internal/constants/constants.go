@@ -31,6 +31,7 @@ const (
 const (
 	CpcControllerName                = "control-plane-configuration-controller"
 	CpnControllerName                = "control-plane-node-controller"
+	CpnConditionsControllerName      = "control-plane-node-conditions-controller"
 	CpoControllerName                = "control-plane-operation-controller"
 	OperationsApproverControllerName = "operations_approver_controller"
 )

@@ -90,6 +90,12 @@ func (c OperationComponent) PodComponentName() string {
 	return componentRegistry[c]
 }
 
+// MirrorPodName returns the name of the mirror pod of the component's static pod on the node
+// (kubelet names it "<manifest name>-<node name>").
+func (c OperationComponent) MirrorPodName(nodeName string) string {
+	return c.PodComponentName() + "-" + nodeName
+}
+
 // ComponentRegistry returns the static pod component registry (OperationComponent -> pod name).
 // DONT MODIFY the returned map, it must be treated as read-only by callers.
 func ComponentRegistry() map[OperationComponent]string {
