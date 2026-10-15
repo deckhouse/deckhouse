@@ -107,7 +107,7 @@ webhooks:
       port: 8080
       path: /scheduler
     caBundle: ABCD=
-  timeoutSeconds: 5
+  timeout: 5s
 ```
 
 {% alert level="danger" %}

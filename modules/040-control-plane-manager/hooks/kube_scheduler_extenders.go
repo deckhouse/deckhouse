@@ -20,7 +20,9 @@ import (
 	"context"
 	"encoding/base64"
 	"fmt"
+	"log/slog"
 	"net/url"
+	"time"
 
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
@@ -61,7 +63,7 @@ func handleExtenders(_ context.Context, input *go_hook.HookInput) error {
 	type extenderConfig struct {
 		URLPrefix      string `yaml:"urlPrefix" json:"urlPrefix"`
 		Weight         int    `yaml:"weight" json:"weight"`
-		Timeout        int    `yaml:"timeout" json:"timeout"`
+		Timeout        string `yaml:"timeout" json:"timeout"`
 		Ignorable      bool   `yaml:"ignorable" json:"ignorable"`
 		CAData         string `yaml:"caData" json:"caData"`
 		FilterVerb     string `yaml:"filterVerb" json:"filterVerb"`
@@ -95,10 +97,19 @@ func handleExtenders(_ context.Context, input *go_hook.HookInput) error {
 			if config.PrioritizeVerb == nil {
 				config.PrioritizeVerb = ptr.To("prioritize") // for backward compatibility
 			}
+			// timeoutSeconds is rendered as before timeout existed, so the scheduler config of existing extenders stays the same.
+			timeout := fmt.Sprintf("%ds", config.TimeoutSeconds)
+			if config.Timeout != "" {
+				if d, err := time.ParseDuration(config.Timeout); err == nil && d > 0 {
+					timeout = config.Timeout
+				} else {
+					input.Logger.Warn("webhook timeout is invalid, falling back to timeoutSeconds", slog.String("timeout", config.Timeout))
+				}
+			}
 			newExtender := extenderConfig{
 				URLPrefix:      urlPrefix,
 				Weight:         config.Weight,
-				Timeout:        config.TimeoutSeconds,
+				Timeout:        timeout,
 				Ignorable:      config.FailurePolicy == "Ignore",
 				CAData:         config.ClientConfig.CABundle,
 				FilterVerb:     *config.FilterVerb,
@@ -131,6 +142,7 @@ type KubeSchedulerWebhook struct {
 	Weight         int                              `json:"weight" yaml:"weight"`
 	FailurePolicy  string                           `json:"failurePolicy" yaml:"failurePolicy"`
 	ClientConfig   KubeSchedulerWebhookClientConfig `json:"clientConfig" yaml:"clientConfig"`
+	Timeout        string                           `json:"timeout,omitempty" yaml:"timeout,omitempty"`
 	TimeoutSeconds int                              `json:"timeoutSeconds" yaml:"timeoutSeconds"`
 	FilterVerb     *string                          `yaml:"filterVerb,omitempty" json:"filterVerb,omitempty"`
 	PrioritizeVerb *string                          `yaml:"prioritizeVerb,omitempty" json:"prioritizeVerb,omitempty"`

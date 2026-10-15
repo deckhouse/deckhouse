@@ -139,6 +139,58 @@ webhooks:
     caBundle: ABCD=
   timeoutSeconds: 5
 `
+
+		// The API server always stores timeoutSeconds, at least its default.
+		extender5 = `
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: KubeSchedulerWebhookConfiguration
+metadata:
+  name: test6
+webhooks:
+- weight: 10
+  failurePolicy: Fail
+  clientConfig:
+    service:
+      name: scheduler
+      namespace: test6
+      port: 8080
+      path: /scheduler
+    caBundle: ABCD=
+  timeout: 500ms
+  timeoutSeconds: 10
+`
+
+		extender6 = `
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: KubeSchedulerWebhookConfiguration
+metadata:
+  name: test7
+webhooks:
+- weight: 10
+  failurePolicy: Fail
+  clientConfig:
+    service:
+      name: scheduler
+      namespace: test7
+      port: 8080
+      path: /scheduler
+    caBundle: ABCD=
+  timeout: abc
+  timeoutSeconds: 5
+- weight: 10
+  failurePolicy: Fail
+  clientConfig:
+    service:
+      name: scheduler2
+      namespace: test7
+      port: 8080
+      path: /scheduler
+    caBundle: ABCD=
+  timeout: -1s
+  timeoutSeconds: 60
+`
 	)
 
 	Context("Empty cluster", func() {
@@ -174,7 +226,7 @@ webhooks:
           {
             "urlPrefix": "https://scheduler.test1.svc.cluster.local:8080/scheduler",
             "weight": 5,
-            "timeout": 5,
+            "timeout": "5s",
             "ignorable": true,
             "caData": "` + kubernetesCABase64 + `",
 			"filterVerb": "filter",
@@ -203,7 +255,7 @@ webhooks:
           {
             "urlPrefix": "https://scheduler.test1.svc.cluster.local:8080/scheduler",
             "weight": 5,
-            "timeout": 5,
+            "timeout": "5s",
             "ignorable": true,
             "caData": "` + kubernetesCABase64 + `",
 			"filterVerb": "filter",
@@ -215,7 +267,7 @@ webhooks:
           {
             "urlPrefix": "https://scheduler.test2.svc.cluster.local:8080/scheduler",
             "weight": 10,
-            "timeout": 5,
+            "timeout": "5s",
             "ignorable": false,
             "caData": "` + kubernetesCABase64 + `",
 			"filterVerb": "filter",
@@ -227,7 +279,7 @@ webhooks:
           {
             "urlPrefix": "https://scheduler2.test2.svc.cluster.local:8080/scheduler",
             "weight": 20,
-            "timeout": 10,
+            "timeout": "10s",
             "ignorable": true,
             "caData": "` + kubernetesCABase64 + `",
 			"filterVerb": "filter",
@@ -256,7 +308,7 @@ webhooks:
           {
             "urlPrefix": "https://scheduler.test4.svc.cluster.local:8080/scheduler",
             "weight": 10,
-            "timeout": 5,
+            "timeout": "5s",
             "ignorable": false,
             "caData": "` + kubernetesCABase64 + `",
 			"filterVerb": "filtercustom",
@@ -284,13 +336,60 @@ webhooks:
           {
             "urlPrefix": "https://scheduler.test5.svc.cluster.local:8080/scheduler",
             "weight": 10,
-            "timeout": 5,
+            "timeout": "5s",
             "ignorable": false,
             "caData": "` + kubernetesCABase64 + `",
 			"filterVerb": "filter",
           	"prioritizeVerb": "prioritize",
           	"preemptVerb": "preempt"
 }`))
+		})
+
+	})
+
+	Context("Add one extender, set timeout", func() {
+		BeforeEach(func() {
+			f.ValuesSet("global.discovery.kubernetesCA", kubernetesCA)
+			f.BindingContexts.Set(f.KubeStateSet(extender5))
+			f.RunHook()
+		})
+
+		It("Must be executed successfully", func() {
+			Expect(f).To(ExecuteSuccessfully())
+		})
+
+		It(configPath+" must take the timeout over timeoutSeconds", func() {
+			Expect(len(f.ValuesGet(configPath).Array())).To(Equal(1))
+			Expect(f.ValuesGet(configPath).Array()[0].String()).To(MatchJSON(`
+          {
+            "urlPrefix": "https://scheduler.test6.svc.cluster.local:8080/scheduler",
+            "weight": 10,
+            "timeout": "500ms",
+            "ignorable": false,
+            "caData": "` + kubernetesCABase64 + `",
+            "filterVerb": "filter",
+            "prioritizeVerb": "prioritize",
+            "preemptVerb": ""
+          }`))
+		})
+
+	})
+
+	Context("Add extenders with an invalid timeout", func() {
+		BeforeEach(func() {
+			f.ValuesSet("global.discovery.kubernetesCA", kubernetesCA)
+			f.BindingContexts.Set(f.KubeStateSet(extender6))
+			f.RunHook()
+		})
+
+		It("Must be executed successfully", func() {
+			Expect(f).To(ExecuteSuccessfully())
+		})
+
+		It(configPath+" must fall back to timeoutSeconds", func() {
+			Expect(len(f.ValuesGet(configPath).Array())).To(Equal(2))
+			Expect(f.ValuesGet(configPath).Array()[0].Get("timeout").String()).To(Equal("5s"))
+			Expect(f.ValuesGet(configPath).Array()[1].Get("timeout").String()).To(Equal("60s"))
 		})
 
 	})

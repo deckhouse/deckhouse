@@ -23,3 +23,16 @@ positive:
         - 1.2.3.4
         - 4.3.2.1
         kubeSchedulerExtenders: []
+    - internal:
+        effectiveKubernetesVersion: "1.32"
+        etcdServers:
+        - 1.2.3.4
+        kubeSchedulerExtenders:
+        - urlPrefix: https://scheduler.test.svc.cluster.local:8080/scheduler
+          weight: 5
+          timeout: 500ms
+          ignorable: true
+          caData: ABCD=
+          filterVerb: filter
+          prioritizeVerb: prioritize
+          preemptVerb: ""
