@@ -45,6 +45,7 @@ done | jq -s '
             link: .link,
             description: .description,
             version: .version,
+            versions: ((.versions // []) | map(.version) | map(select(. != null))),
             logo: .logo,
             license: .license
         }
@@ -59,7 +60,7 @@ done | jq -s '
             description: .[0].description,
             logo: .[0].logo,
             license: .[0].license,
-            versions: [.[].version] | map(select(. != null)) | unique | sort,
+            versions: ([.[] | (if (.versions | length) > 0 then .versions[] else .version end)] | map(select(. != null)) | unique | sort),
             modules: [.[].module_id] | unique | sort
         }
     }) |
