@@ -21,6 +21,7 @@ import (
 	"time"
 
 	"golang.org/x/time/rate"
+	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/util/workqueue"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -71,6 +72,11 @@ func Register(mgr manager.Manager) error {
 			&controlplanev1alpha1.ControlPlaneNode{},
 			handler.EnqueueRequestsFromMapFunc(enqueueApprover),
 			builder.WithPredicates(ControlPlaneNodePredicate()),
+		).
+		Watches(
+			&corev1.Pod{},
+			handler.EnqueueRequestsFromMapFunc(enqueueApprover),
+			builder.WithPredicates(ControlPlanePodPredicate()),
 		).
 		Complete(r)
 }

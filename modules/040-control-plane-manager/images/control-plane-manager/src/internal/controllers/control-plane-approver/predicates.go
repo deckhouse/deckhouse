@@ -17,10 +17,14 @@ limitations under the License.
 package controlplaneapprover
 
 import (
+	"maps"
+
+	corev1 "k8s.io/api/core/v1"
 	"sigs.k8s.io/controller-runtime/pkg/event"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 
 	controlplanev1alpha1 "control-plane-manager/api/v1alpha1"
+	"control-plane-manager/internal/constants"
 )
 
 func OperationPredicate() predicate.Predicate {
@@ -69,6 +73,38 @@ func ControlPlaneNodePredicate() predicate.Predicate {
 			return false
 		},
 	}
+}
+
+// ControlPlanePodPredicate reacts when a control-plane-manager Pod or a component's static pod starts
+// or stops running an image: an operation may be waiting for its node to hold it (see
+// holdBackUnpulledImages).
+func ControlPlanePodPredicate() predicate.Predicate {
+	return predicate.Funcs{
+		CreateFunc: func(event.CreateEvent) bool {
+			return false
+		},
+		UpdateFunc: func(e event.UpdateEvent) bool {
+			oldPod, okOld := e.ObjectOld.(*corev1.Pod)
+			newPod, okNew := e.ObjectNew.(*corev1.Pod)
+			if !okOld || !okNew || !isControlPlanePod(newPod) {
+				return false
+			}
+			return !maps.Equal(runningImages(oldPod), runningImages(newPod))
+		},
+		DeleteFunc: func(event.DeleteEvent) bool {
+			return false
+		},
+		GenericFunc: func(event.GenericEvent) bool {
+			return false
+		},
+	}
+}
+
+// isControlPlanePod reports whether pod is a control-plane-manager Pod or a component's static pod.
+func isControlPlanePod(pod *corev1.Pod) bool {
+	component := pod.Labels[constants.StaticPodComponentLabelKey]
+	_, isStaticPod := controlplanev1alpha1.OperationComponentFromPodName(component)
+	return isStaticPod || component == constants.ControlPlaneManagerComponentLabelValue
 }
 
 func appliedChecksums(cpn *controlplanev1alpha1.ControlPlaneNode) [4]controlplanev1alpha1.Checksums {

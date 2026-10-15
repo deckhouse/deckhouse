@@ -34,8 +34,9 @@ import (
 	"control-plane-manager/internal/constants"
 )
 
-// recheckInterval is how often Reconcile re-checks operations waiting for kube-apiserver versions
-// or for missingOperationTimeout to run out: neither triggers a reconcile.
+// recheckInterval is how often Reconcile re-checks operations waiting for kube-apiserver versions,
+// for their images or for missingOperationTimeout to run out. Only a Pod starting to run an image
+// triggers a reconcile (ControlPlanePodPredicate); the config Secret is not watched.
 const recheckInterval = 15 * time.Second
 
 type reconciler struct {
@@ -107,7 +108,10 @@ func (r *reconciler) Reconcile(ctx context.Context, req reconcile.Request) (reco
 	nodes.Leaders = r.leaderNodes(ctx, candidates)
 	recheckLeaders := markWaitingLeaders(ctx, candidates, nodes.Leaders, cp, time.Now())
 
-	approvable := r.approver.SelectApprovable(candidates, nodes)
+	approvable, recheckImages, err := r.holdBackUnpulledImages(ctx, r.approver.SelectApprovable(candidates, nodes))
+	if err != nil {
+		return reconcile.Result{}, fmt.Errorf("failed to check control plane images: %w", err)
+	}
 	for _, op := range approvable {
 		original := op.DeepCopy()
 		op.Spec.Approved = true
@@ -118,8 +122,9 @@ func (r *reconciler) Reconcile(ctx context.Context, req reconcile.Request) (reco
 	}
 
 	// recheckAPIServers: kube-controller-manager/kube-scheduler wait for updated kube-apiservers;
-	// recheckLeaders: a leader waits for updated followers, so leadership moves only once.
-	if recheckAPIServers || recheckLeaders {
+	// recheckLeaders: a leader waits for updated followers, so leadership moves only once;
+	// recheckImages: an operation waits for its node to hold its images.
+	if recheckAPIServers || recheckLeaders || recheckImages {
 		return reconcile.Result{RequeueAfter: recheckInterval}, nil
 	}
 

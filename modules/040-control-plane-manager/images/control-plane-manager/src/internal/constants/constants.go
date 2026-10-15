@@ -68,6 +68,8 @@ const (
 
 	// Built-in k8s label on static pods with the component name
 	StaticPodComponentLabelKey = "component"
+	// StaticPodComponentLabelKey value on the control-plane-manager DaemonSet Pods
+	ControlPlaneManagerComponentLabelValue = "control-plane-manager"
 
 	// Env vars for path overrides for debug/dev
 	ManifestDirEnvVar   = "MANIFEST_DIR"
