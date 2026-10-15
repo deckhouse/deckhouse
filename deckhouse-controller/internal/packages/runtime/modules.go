@@ -257,7 +257,7 @@ func (r *Runtime) loadModule(ctx context.Context, repo registry.Remote, packageP
 		return "", err
 	}
 
-	return module.GetVersion().String(), nil
+	return "v" + module.GetVersion().String(), nil
 }
 
 // loadEmbeddedModule builds a Module from an embedded package directory and registers it,
@@ -284,7 +284,7 @@ func (r *Runtime) loadEmbeddedModule(ctx context.Context, _ registry.Remote, pac
 		return "", err
 	}
 
-	return module.GetVersion().String(), nil
+	return "v" + module.GetVersion().String(), nil
 }
 
 // registerModule wires the runtime's shared managers into conf, builds the module and

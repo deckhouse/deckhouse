@@ -199,7 +199,7 @@ func (r *Runtime) loadApp(ctx context.Context, repo registry.Remote, packagePath
 		return "", status.NewError("DependencyCycle", err)
 	}
 
-	return app.GetVersion().String(), nil
+	return "v" + app.GetVersion().String(), nil
 }
 
 // RemoveApp removes an application, cancels all its running operations and reports whether the
