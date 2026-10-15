@@ -5,10 +5,6 @@ final: false
 from: {{ index $.Images "base/distroless" }}
 import:
 - image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
-  add: /shell-operator/shell-operator
-  to: /shell-operator
-  before: setup
-- image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
   add: /shell-operator/shell_lib.sh
   to: /shell_lib.sh
   before: setup
@@ -163,9 +159,6 @@ import:
   - usr/bin/whoami
   - usr/bin/yes
   before: setup
-imageSpec:
-  config:
-    entrypoint: ["/usr/bin/tini", "--", "/shell-operator"]
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
 from: {{ index $.Images "builder/src" }}
@@ -197,10 +190,7 @@ shell:
   install:
   - export GOPROXY=$(cat /run/secrets/GOPROXY) CGO_ENABLED=0 GOOS=linux
   - cd /src
-  - go mod download -x
-  - go build -ldflags="-s -w -X 'github.com/flant/shell-operator/pkg/app.Version={{ $shellOperatorVersion }}'" -o shell-operator ./cmd/shell-operator
   - mkdir -p /shell-operator
-  - cp -r shell_lib.sh frameworks shell-operator /shell-operator
+  - cp -r shell_lib.sh frameworks /shell-operator
   - chown -R 64535:64535 /shell-operator
-  - chmod 700 /shell-operator/shell-operator
   - ln -s /bin/bash /shell-operator/sh

@@ -1,0 +1,238 @@
+{
+  "@context": "https://openvex.dev/ns/v0.2.0",
+  "@id": "https://openvex.dev/docs/public/vex-ab9a373d3e5f5875123ca85a340ffff768b4143b411ce3d66ec184db390debea",
+  "author": "Deckhouse <contact@deckhouse.io>",
+  "timestamp": "2026-10-13T07:18:45Z",
+  "last_updated": "2026-10-13T09:44:17Z",
+  "version": 2,
+  "statements": [
+    {
+      "vulnerability": {
+        "name": "CVE-2026-78667"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/github.com/flant/docs-builder",
+          "subcomponents": [
+            {
+              "@id": "pkg:golang/stdlib@v1.27.1"
+            }
+          ]
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "docs-builder не раздаёт файлы средствами net/http.FileServer, ServeFile или ServeContent. HTTP API обрабатывает загрузку и сборку документации, а готовые страницы раздаёт отдельный web-контейнер. Уязвимый обработчик Range не входит в исполняемый путь docs-builder.",
+      "timestamp": "2026-10-13T07:18:45Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-97031"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/github.com/flant/docs-builder",
+          "subcomponents": [
+            {
+              "@id": "pkg:golang/stdlib@v1.27.1"
+            }
+          ]
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "API, метрики и опциональный pprof-сервер docs-builder используют HTTP ListenAndServe без TLS. TLS-сервер и обработка ECH ClientHello в этом процессе не запускаются; клиентские TLS-соединения не затронуты этой серверной уязвимостью.",
+      "timestamp": "2026-10-13T07:18:45Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-56866"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/github.com/flant/docs-builder",
+          "subcomponents": [
+            {
+              "@id": "pkg:golang/stdlib@v1.27.1"
+            }
+          ]
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "docs-builder не пересылает входящие CONNECT через http.Transport. Его Kubernetes-клиент выполняет операции Lease методами GET, POST, PUT и DELETE. В HTTP-клиенте Hugo штатная политика разрешает GET/POST и отклоняет CONNECT до создания запроса; proxy-handshake стандартного Transport создаёт CONNECT без Request.Body. Условие отправки CONNECT с непустым телом отсутствует.",
+      "timestamp": "2026-10-13T07:18:45Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-78663"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/github.com/flant/docs-builder",
+          "subcomponents": [
+            {
+              "@id": "pkg:golang/stdlib@v1.27.1"
+            }
+          ]
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "API, метрики и опциональный pprof-сервер docs-builder используют HTTP/1 через ListenAndServe. HTTP/2 и h2c для этих серверов не включены, поэтому серверная обработка HTTP/2 flow control недостижима.",
+      "timestamp": "2026-10-13T07:18:45Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-97032"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/github.com/flant/docs-builder",
+          "subcomponents": [
+            {
+              "@id": "pkg:golang/stdlib@v1.27.1"
+            }
+          ]
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "API, метрики и опциональный pprof-сервер docs-builder используют HTTP/1 через ListenAndServe без HTTP/2 и h2c. Серверный HPACK encoder для ответов HTTP/2 не используется, поэтому уязвимая конкурентная запись недостижима.",
+      "timestamp": "2026-10-13T07:18:45Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-56857"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/github.com/flant/docs-builder",
+          "subcomponents": [
+            {
+              "@id": "pkg:golang/stdlib@v1.27.1"
+            }
+          ]
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "Образ documentation/docs-builder содержит Linux-бинарник. Уязвимость os.Root.Mkdir при обработке junction применима только к Windows; этот исполняемый файл не выполняет Windows-код.",
+      "timestamp": "2026-10-13T07:18:45Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-78659"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/github.com/flant/docs-builder",
+          "subcomponents": [
+            {
+              "@id": "pkg:golang/stdlib@v1.27.1"
+            }
+          ]
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "API, метрики и опциональный pprof-сервер docs-builder используют HTTP/1 через ListenAndServe без HTTP/2 и h2c. Серверная обработка HTTP/2 Trailer-заголовков, затронутая уязвимостью, недостижима.",
+      "timestamp": "2026-10-13T07:18:45Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-78660"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/github.com/flant/docs-builder",
+          "subcomponents": [
+            {
+              "@id": "pkg:golang/stdlib@v1.27.1"
+            }
+          ]
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "docs-builder не реализует HTTP reverse proxy и не пересылает ответы HTTP/2 клиентам HTTP/1 через httputil.ReverseProxy. Этот обработчик не слинкован в бинарник. HTTP-клиент Hugo загружает ресурсы для сборки документации, а уязвимый путь пересылки ответов недостижим.",
+      "timestamp": "2026-10-13T07:18:45Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-94439"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/github.com/flant/docs-builder",
+          "subcomponents": [
+            {
+              "@id": "pkg:golang/stdlib@v1.27.1"
+            }
+          ]
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_cannot_be_controlled_by_adversary",
+      "impact_statement": "В штатном развёртывании модуля documentation HTTP API docs-builder и его метрики доступны через прямые внутрикластерные соединения. Публичный маршрут ведёт через kube-rbac-proxy к отдельному nginx-контейнеру, а не к HTTP-серверу docs-builder. Перед обработчиками docs-builder нет посредника, который после успешного CONNECT переключается в режим туннеля. Поэтому условие рассогласования обработки CONNECT между таким посредником и Go-сервером отсутствует. Исключение относится к поставляемой топологии модуля.",
+      "timestamp": "2026-10-13T09:44:17Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-94440"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/github.com/flant/docs-builder",
+          "subcomponents": [
+            {
+              "@id": "pkg:golang/stdlib@v1.27.1"
+            }
+          ]
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "В штатном развёртывании образа documentation/docs-builder в Deckhouse переменная PPROF_ENABLED не включена, поэтому отдельный pprof-сервер не создаётся. Основной API читает загружаемые архивы как tar, а обработчик метрик не разбирает multipart/form-data. Уязвимый путь через FormValue и multipart.ReadForm относится к отключённому pprof-серверу и не вызывается в этой конфигурации. Исключение не распространяется на ручной запуск с PPROF_ENABLED=true.",
+      "timestamp": "2026-10-13T09:44:17Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-94448"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/github.com/flant/docs-builder",
+          "subcomponents": [
+            {
+              "@id": "pkg:golang/stdlib@v1.27.1"
+            }
+          ]
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "docs-builder использует поставляемые HTML layouts и встроенные HTML-шаблоны Hugo. В них нет последовательных JavaScript template expressions с подстановкой Go-значений, необходимых для этой ошибки экранирования. Загружаемые документы и данные не добавляют HTML layouts. Content adapters, resources.ExecuteAsTemplate и другие динамически разбираемые шаблоны используют отдельный text/template, включая ресурсы с расширением .html. Поэтому уязвимый контекст HTML-шаблона не создаётся. Исключение относится к поставляемому набору HTML-шаблонов.",
+      "timestamp": "2026-10-13T09:44:17Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-97030"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/github.com/flant/docs-builder",
+          "subcomponents": [
+            {
+              "@id": "pkg:golang/stdlib@v1.27.1"
+            }
+          ]
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "В поставляемых HTML layouts docs-builder и встроенных HTML-шаблонах Hugo нет JavaScript keyword yield перед подстановкой Go-значений. Загружаемые документы и данные не заменяют HTML layouts, а content adapters и resources.ExecuteAsTemplate разбираются отдельным text/template. Контекст ошибочного экранирования после yield в HTML-шаблоне не возникает. Исключение относится к поставляемому набору HTML-шаблонов.",
+      "timestamp": "2026-10-13T09:44:17Z"
+    }
+  ]
+}

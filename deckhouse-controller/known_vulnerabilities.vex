@@ -1,8 +1,8 @@
 {
   "@context": "https://openvex.dev/ns/v0.2.0",
   "@id": "https://openvex.dev/docs/public/vex-5a4509a04e8128126aee080324a6b663a7748bf44b58a9a4b9c74d4801844f53",
-  "author": "Deckhouse \u003ccontact@deckhouse.io\u003e",
-  "version": 18,
+  "author": "Deckhouse <contact@deckhouse.io>",
+  "version": 19,
   "statements": [
     {
       "vulnerability": {
@@ -107,7 +107,9 @@
         "name": "CVE-2026-34040"
       },
       "products": [
-        {"@id": "pkg:golang/github.com/docker/docker@v28.3.3+incompatible"}
+        {
+          "@id": "pkg:golang/github.com/docker/docker@v28.3.3+incompatible"
+        }
       ],
       "status": "not_affected",
       "justification": "vulnerable_code_not_in_execute_path",
@@ -119,7 +121,9 @@
         "name": "CVE-2026-42306"
       },
       "products": [
-        {"@id": "pkg:golang/github.com/docker/docker@v28.3.3+incompatible"}
+        {
+          "@id": "pkg:golang/github.com/docker/docker@v28.3.3+incompatible"
+        }
       ],
       "status": "not_affected",
       "justification": "vulnerable_code_not_in_execute_path",
@@ -131,7 +135,9 @@
         "name": "CVE-2026-33997"
       },
       "products": [
-        {"@id": "pkg:golang/github.com/docker/docker@v28.3.3+incompatible"}
+        {
+          "@id": "pkg:golang/github.com/docker/docker@v28.3.3+incompatible"
+        }
       ],
       "status": "not_affected",
       "justification": "vulnerable_code_not_in_execute_path",
@@ -143,7 +149,9 @@
         "name": "CVE-2026-41568"
       },
       "products": [
-        {"@id": "pkg:golang/github.com/docker/docker@v28.3.3+incompatible"}
+        {
+          "@id": "pkg:golang/github.com/docker/docker@v28.3.3+incompatible"
+        }
       ],
       "status": "not_affected",
       "justification": "vulnerable_code_not_in_execute_path",
@@ -155,7 +163,9 @@
         "name": "CVE-2026-46680"
       },
       "products": [
-        {"@id": "pkg:golang/github.com/containerd/containerd@v1.7.29"}
+        {
+          "@id": "pkg:golang/github.com/containerd/containerd@v1.7.29"
+        }
       ],
       "status": "not_affected",
       "justification": "vulnerable_code_not_in_execute_path",
@@ -167,7 +177,9 @@
         "name": "CVE-2026-35206"
       },
       "products": [
-        {"@id": "pkg:golang/helm.sh/helm/v3@v3.19.5"}
+        {
+          "@id": "pkg:golang/helm.sh/helm/v3@v3.19.5"
+        }
       ],
       "status": "not_affected",
       "justification": "vulnerable_code_not_in_execute_path",
@@ -179,7 +191,9 @@
         "name": "CVE-2026-39882"
       },
       "products": [
-        {"@id": "pkg:golang/go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracehttp@v1.33.0"}
+        {
+          "@id": "pkg:golang/go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracehttp@v1.33.0"
+        }
       ],
       "status": "not_affected",
       "justification": "vulnerable_code_cannot_be_controlled_by_adversary",
@@ -191,7 +205,9 @@
         "name": "CVE-2026-26007"
       },
       "products": [
-        {"@id": "pkg:pypi/cryptography@44.0.1"}
+        {
+          "@id": "pkg:pypi/cryptography@44.0.1"
+        }
       ],
       "status": "not_affected",
       "justification": "vulnerable_code_not_in_execute_path",
@@ -203,7 +219,9 @@
         "name": "CVE-2026-34073"
       },
       "products": [
-        {"@id": "pkg:pypi/cryptography@44.0.1"}
+        {
+          "@id": "pkg:pypi/cryptography@44.0.1"
+        }
       ],
       "status": "not_affected",
       "justification": "vulnerable_code_not_in_execute_path",
@@ -215,7 +233,9 @@
         "name": "CVE-2026-27459"
       },
       "products": [
-        {"@id": "pkg:pypi/pyOpenSSL@24.3.0"}
+        {
+          "@id": "pkg:pypi/pyOpenSSL@24.3.0"
+        }
       ],
       "status": "not_affected",
       "justification": "vulnerable_code_not_in_execute_path",
@@ -227,7 +247,9 @@
         "name": "CVE-2026-27448"
       },
       "products": [
-        {"@id": "pkg:pypi/pyOpenSSL@24.3.0"}
+        {
+          "@id": "pkg:pypi/pyOpenSSL@24.3.0"
+        }
       ],
       "status": "not_affected",
       "justification": "vulnerable_code_not_in_execute_path",
@@ -239,7 +261,9 @@
         "name": "CVE-2026-41567"
       },
       "products": [
-        {"@id": "pkg:golang/github.com/docker/docker@v28.3.3+incompatible"}
+        {
+          "@id": "pkg:golang/github.com/docker/docker@v28.3.3+incompatible"
+        }
       ],
       "status": "not_affected",
       "justification": "vulnerable_code_not_in_execute_path",
@@ -251,7 +275,9 @@
         "name": "CVE-2026-48978"
       },
       "products": [
-        {"@id": "pkg:golang/oras.land/oras-go@v1.2.6"}
+        {
+          "@id": "pkg:golang/oras.land/oras-go@v1.2.6"
+        }
       ],
       "status": "not_affected",
       "justification": "vulnerable_code_not_in_execute_path",
@@ -263,7 +289,9 @@
         "name": "GO-2026-5932"
       },
       "products": [
-        {"@id": "pkg:golang/golang.org/x/crypto"}
+        {
+          "@id": "pkg:golang/golang.org/x/crypto"
+        }
       ],
       "status": "not_affected",
       "justification": "vulnerable_code_not_in_execute_path",
@@ -275,7 +303,9 @@
         "name": "CVE-2026-25681"
       },
       "products": [
-        {"@id": "pkg:golang/golang.org/x/net@v0.42.0"}
+        {
+          "@id": "pkg:golang/golang.org/x/net@v0.42.0"
+        }
       ],
       "status": "not_affected",
       "justification": "vulnerable_code_not_in_execute_path",
@@ -287,7 +317,9 @@
         "name": "CVE-2026-27136"
       },
       "products": [
-        {"@id": "pkg:golang/golang.org/x/net@v0.42.0"}
+        {
+          "@id": "pkg:golang/golang.org/x/net@v0.42.0"
+        }
       ],
       "status": "not_affected",
       "justification": "vulnerable_code_not_in_execute_path",
@@ -299,7 +331,9 @@
         "name": "CVE-2026-25680"
       },
       "products": [
-        {"@id": "pkg:golang/golang.org/x/net@v0.42.0"}
+        {
+          "@id": "pkg:golang/golang.org/x/net@v0.42.0"
+        }
       ],
       "status": "not_affected",
       "justification": "vulnerable_code_not_in_execute_path",
@@ -311,7 +345,9 @@
         "name": "CVE-2026-42502"
       },
       "products": [
-        {"@id": "pkg:golang/golang.org/x/net@v0.42.0"}
+        {
+          "@id": "pkg:golang/golang.org/x/net@v0.42.0"
+        }
       ],
       "status": "not_affected",
       "justification": "vulnerable_code_not_in_execute_path",
@@ -323,7 +359,9 @@
         "name": "CVE-2026-42506"
       },
       "products": [
-        {"@id": "pkg:golang/golang.org/x/net@v0.42.0"}
+        {
+          "@id": "pkg:golang/golang.org/x/net@v0.42.0"
+        }
       ],
       "status": "not_affected",
       "justification": "vulnerable_code_not_in_execute_path",
@@ -335,7 +373,9 @@
         "name": "CVE-2025-47911"
       },
       "products": [
-        {"@id": "pkg:golang/golang.org/x/net@v0.42.0"}
+        {
+          "@id": "pkg:golang/golang.org/x/net@v0.42.0"
+        }
       ],
       "status": "not_affected",
       "justification": "vulnerable_code_not_in_execute_path",
@@ -347,7 +387,9 @@
         "name": "CVE-2025-58190"
       },
       "products": [
-        {"@id": "pkg:golang/golang.org/x/net@v0.42.0"}
+        {
+          "@id": "pkg:golang/golang.org/x/net@v0.42.0"
+        }
       ],
       "status": "not_affected",
       "justification": "vulnerable_code_not_in_execute_path",
@@ -359,7 +401,9 @@
         "name": "CVE-2026-33814"
       },
       "products": [
-        {"@id": "pkg:golang/golang.org/x/net@v0.42.0"}
+        {
+          "@id": "pkg:golang/golang.org/x/net@v0.42.0"
+        }
       ],
       "status": "not_affected",
       "justification": "vulnerable_code_not_in_execute_path",
@@ -371,7 +415,9 @@
         "name": "CVE-2026-39821"
       },
       "products": [
-        {"@id": "pkg:golang/golang.org/x/net@v0.42.0"}
+        {
+          "@id": "pkg:golang/golang.org/x/net@v0.42.0"
+        }
       ],
       "status": "not_affected",
       "justification": "vulnerable_code_not_in_execute_path",
@@ -383,7 +429,9 @@
         "name": "CVE-2026-46600"
       },
       "products": [
-        {"@id": "pkg:golang/golang.org/x/net@v0.42.0"}
+        {
+          "@id": "pkg:golang/golang.org/x/net@v0.42.0"
+        }
       ],
       "status": "not_affected",
       "justification": "vulnerable_code_not_in_execute_path",
@@ -395,7 +443,9 @@
         "name": "CVE-2026-56852"
       },
       "products": [
-        {"@id": "pkg:golang/golang.org/x/text@v0.27.0"}
+        {
+          "@id": "pkg:golang/golang.org/x/text@v0.27.0"
+        }
       ],
       "status": "not_affected",
       "justification": "vulnerable_code_not_in_execute_path",
@@ -407,7 +457,9 @@
         "name": "CVE-2026-39824"
       },
       "products": [
-        {"@id": "pkg:golang/golang.org/x/sys@v0.34.0"}
+        {
+          "@id": "pkg:golang/golang.org/x/sys@v0.34.0"
+        }
       ],
       "status": "not_affected",
       "justification": "vulnerable_code_not_in_execute_path",
@@ -419,7 +471,9 @@
         "name": "GHSA-537c-gmf6-5ccf"
       },
       "products": [
-        {"@id": "pkg:pypi/cryptography@44.0.1"}
+        {
+          "@id": "pkg:pypi/cryptography@44.0.1"
+        }
       ],
       "status": "not_affected",
       "justification": "vulnerable_code_not_in_execute_path",
@@ -431,7 +485,9 @@
         "name": "CVE-2026-69247"
       },
       "products": [
-        {"@id": "pkg:pypi/cryptography@44.0.1"}
+        {
+          "@id": "pkg:pypi/cryptography@44.0.1"
+        }
       ],
       "status": "not_affected",
       "justification": "vulnerable_code_not_in_execute_path",
@@ -443,7 +499,9 @@
         "name": "CVE-2026-69249"
       },
       "products": [
-        {"@id": "pkg:pypi/cryptography@44.0.1"}
+        {
+          "@id": "pkg:pypi/cryptography@44.0.1"
+        }
       ],
       "status": "not_affected",
       "justification": "vulnerable_code_not_in_execute_path",
@@ -455,7 +513,9 @@
         "name": "CVE-2026-81871"
       },
       "products": [
-        {"@id": "pkg:golang/go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploggrpc@v0.19.0"}
+        {
+          "@id": "pkg:golang/go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploggrpc@v0.19.0"
+        }
       ],
       "status": "not_affected",
       "justification": "vulnerable_code_not_in_execute_path",
@@ -467,14 +527,529 @@
         "name": "CVE-2026-81872"
       },
       "products": [
-        {"@id": "pkg:golang/go.opentelemetry.io/otel/sdk/log@v0.19.0"}
+        {
+          "@id": "pkg:golang/go.opentelemetry.io/otel/sdk/log@v0.19.0"
+        }
       ],
       "status": "not_affected",
       "justification": "vulnerable_code_not_in_execute_path",
       "impact_statement": "go.opentelemetry.io/otel/sdk/log v0.19.0 попадает в deckhouse-controller транзитивно через dhctl/pkg/telemetry (deckhouse-controller/internal/dhctlcli → dhctl/pkg/telemetry), из которого контроллер использует только telemetry.SpanFromContext. LoggerProvider с BatchProcessor создаётся исключительно в telemetry.Bootstrap, которая вызывается только из точки входа бинаря dhctl (dhctl/cmd/dhctl/main.go) и дополнительно требует переменную DHCTL_TRACE. В deckhouse-controller BatchProcessor не создаётся и логи через OTel SDK не экспортируются — уязвимый цикл опроса буфера не в пути выполнения. Исправление в v0.21.0 требует go.opentelemetry.io/otel/log v0.21.0 с несовместимым API, под который не собирается github.com/090809/oteljsonl v0.0.2.",
       "timestamp": "2026-10-02T12:00:00Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-78667"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/github.com/deckhouse/deckhouse",
+          "subcomponents": [
+            {
+              "@id": "pkg:golang/stdlib@v1.27.1"
+            }
+          ]
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_present",
+      "impact_statement": "В Linux-бинарники deckhouse-controller и caps-deckhouse-controller не слинкован код net/http для FileServer, ServeFile и ServeContent. Обработчики контроллера не используют уязвимую обработку Range-заголовков при отдаче файлов.",
+      "timestamp": "2026-10-12T15:10:20Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-97031"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/github.com/deckhouse/deckhouse",
+          "subcomponents": [
+            {
+              "@id": "pkg:golang/stdlib@v1.27.1"
+            }
+          ]
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "TLS-сервер контроллера не настраивает EncryptedClientHelloKeys или GetEncryptedClientHelloKeys. При отсутствии серверных ECH-ключей crypto/tls завершает обработку ECH до декодирования внутреннего ClientHello; код обработки повторных outer extension references недостижим.",
+      "timestamp": "2026-10-12T15:10:20Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-56866"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/github.com/deckhouse/deckhouse",
+          "subcomponents": [
+            {
+              "@id": "pkg:golang/stdlib@v1.27.1"
+            }
+          ]
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "Контроллер не перенаправляет входящие CONNECT-запросы через общий http.Transport; код httputil.ReverseProxy не слинкован. CONNECT-запросы в используемых клиентских proxy-handshake создаются без Request.Body, поэтому условие десинхронизации через тело CONNECT не возникает.",
+      "timestamp": "2026-10-12T15:10:20Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-94448"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/github.com/deckhouse/deckhouse",
+          "subcomponents": [
+            {
+              "@id": "pkg:golang/stdlib@v1.27.1"
+            }
+          ]
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "html/template присутствует в бинарнике через golang.org/x/net/trace. Используемые им фиксированные HTML/CSS-шаблоны не содержат JavaScript template literals; остальные зависимости используют только типы, FuncMap или HTMLEscapeString. Уязвимая обработка последовательных JavaScript-выражений не вызывается.",
+      "timestamp": "2026-10-12T15:10:20Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-56857"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/github.com/deckhouse/deckhouse",
+          "subcomponents": [
+            {
+              "@id": "pkg:golang/stdlib@v1.27.1"
+            }
+          ]
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_present",
+      "impact_statement": "deckhouse-controller и caps-deckhouse-controller собираются для Linux. Уязвимость относится к обработке Windows junction в os.Root.Mkdir; этот платформенный код отсутствует в данных бинарниках.",
+      "timestamp": "2026-10-12T15:10:20Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-78660"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/github.com/deckhouse/deckhouse",
+          "subcomponents": [
+            {
+              "@id": "pkg:golang/stdlib@v1.27.1"
+            }
+          ]
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_present",
+      "impact_statement": "Контроллер не использует HTTP reverse proxy: httputil.ReverseProxy не слинкован в deckhouse-controller и caps-deckhouse-controller. Уязвимый сценарий пересылки некорректных HTTP/2 framing-заголовков через reverse proxy отсутствует.",
+      "timestamp": "2026-10-12T15:10:20Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-97030"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/github.com/deckhouse/deckhouse",
+          "subcomponents": [
+            {
+              "@id": "pkg:golang/stdlib@v1.27.1"
+            }
+          ]
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "HTML-шаблоны golang.org/x/net/trace, присутствующие в бинарнике, являются фиксированными HTML/CSS-шаблонами без JavaScript-контекстов и ключевого слова yield. Уязвимая ветка JavaScript-экранирования html/template при обработке этих шаблонов не вызывается.",
+      "timestamp": "2026-10-12T15:10:20Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-78667"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/github.com/mikefarah/yq/v4",
+          "subcomponents": [
+            {
+              "@id": "pkg:golang/stdlib@v1.25.13"
+            }
+          ]
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "В Linux-бинарнике yq отсутствуют функции FileServer, ServeFile, ServeContent и HTTP-сервера. Обработка Range-заголовков из этой уязвимости не выполняется.",
+      "timestamp": "2026-10-12T15:23:45Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-78669"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/github.com/mikefarah/yq/v4",
+          "subcomponents": [
+            {
+              "@id": "pkg:golang/stdlib@v1.25.13"
+            }
+          ]
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "В Linux-бинарнике yq отсутствуют функции HTTP/2-клиента и HTTP/2-сервера. Обработка SETTINGS-фреймов из сети не выполняется.",
+      "timestamp": "2026-10-12T15:23:45Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-97031"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/github.com/mikefarah/yq/v4",
+          "subcomponents": [
+            {
+              "@id": "pkg:golang/stdlib@v1.25.13"
+            }
+          ]
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "В Linux-бинарнике yq отсутствуют TLS-сервер и функции обработки ClientHello/ECH. Уязвимое декодирование ECH не выполняется.",
+      "timestamp": "2026-10-12T15:23:45Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-56866"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/github.com/mikefarah/yq/v4",
+          "subcomponents": [
+            {
+              "@id": "pkg:golang/stdlib@v1.25.13"
+            }
+          ]
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "В Linux-бинарнике yq отсутствуют Transport.RoundTrip и ReverseProxy. Отправка CONNECT-запросов с телом и уязвимая обработка ответа не выполняются.",
+      "timestamp": "2026-10-12T15:23:45Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-78663"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/github.com/mikefarah/yq/v4",
+          "subcomponents": [
+            {
+              "@id": "pkg:golang/stdlib@v1.25.13"
+            }
+          ]
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "В Linux-бинарнике yq отсутствуют функции HTTP/2-сервера. Серверная обработка flow control не выполняется.",
+      "timestamp": "2026-10-12T15:23:45Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-94439"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/github.com/mikefarah/yq/v4",
+          "subcomponents": [
+            {
+              "@id": "pkg:golang/stdlib@v1.25.13"
+            }
+          ]
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "В Linux-бинарнике yq отсутствуют HTTP-сервер и обработчики CONNECT-запросов. Уязвимый серверный путь не выполняется.",
+      "timestamp": "2026-10-12T15:23:45Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-94448"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/github.com/mikefarah/yq/v4",
+          "subcomponents": [
+            {
+              "@id": "pkg:golang/stdlib@v1.25.13"
+            }
+          ]
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "В Linux-бинарнике yq отсутствуют функции html/template. Рендеринг JavaScript-контекста HTML-шаблонов не выполняется.",
+      "timestamp": "2026-10-12T15:23:45Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-97032"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/github.com/mikefarah/yq/v4",
+          "subcomponents": [
+            {
+              "@id": "pkg:golang/stdlib@v1.25.13"
+            }
+          ]
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "В Linux-бинарнике yq отсутствуют функции HTTP/2-сервера и серверного HPACK-кодировщика. Уязвимый путь не выполняется.",
+      "timestamp": "2026-10-12T15:23:45Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-56857"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/github.com/mikefarah/yq/v4",
+          "subcomponents": [
+            {
+              "@id": "pkg:golang/stdlib@v1.25.13"
+            }
+          ]
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "yq в этом образе собирается для Linux. Уязвимость os.Root.Mkdir при обработке Windows junction относится к Windows; соответствующий платформенный код отсутствует.",
+      "timestamp": "2026-10-12T15:23:45Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-78659"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/github.com/mikefarah/yq/v4",
+          "subcomponents": [
+            {
+              "@id": "pkg:golang/stdlib@v1.25.13"
+            }
+          ]
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "В Linux-бинарнике yq отсутствуют функции HTTP/2-сервера. Серверная обработка Trailer-заголовков не выполняется.",
+      "timestamp": "2026-10-12T15:23:45Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-78660"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/github.com/mikefarah/yq/v4",
+          "subcomponents": [
+            {
+              "@id": "pkg:golang/stdlib@v1.25.13"
+            }
+          ]
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "В Linux-бинарнике yq отсутствуют ReverseProxy и функции HTTP/2. Проксирование между HTTP/2 и HTTP/1 не выполняется.",
+      "timestamp": "2026-10-12T15:23:45Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-94440"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/github.com/mikefarah/yq/v4",
+          "subcomponents": [
+            {
+              "@id": "pkg:golang/stdlib@v1.25.13"
+            }
+          ]
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "В Linux-бинарнике yq отсутствуют функции mime/multipart.Reader.ReadForm и HTTP Request.ParseMultipartForm. Парсинг multipart-форм не выполняется.",
+      "timestamp": "2026-10-12T15:23:45Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-97030"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/github.com/mikefarah/yq/v4",
+          "subcomponents": [
+            {
+              "@id": "pkg:golang/stdlib@v1.25.13"
+            }
+          ]
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "В Linux-бинарнике yq отсутствуют функции html/template. Контекстное экранирование HTML-шаблонов не выполняется.",
+      "timestamp": "2026-10-12T15:23:45Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-78669"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/github.com/mikefarah/yq/v4",
+          "subcomponents": [
+            {
+              "@id": "pkg:golang/golang.org/x/net@v0.42.0"
+            }
+          ]
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "В Linux-бинарнике yq отсутствуют функции HTTP/2-клиента и HTTP/2-сервера. Обработка SETTINGS-фреймов из сети не выполняется.",
+      "timestamp": "2026-10-12T15:23:45Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-78663"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/github.com/mikefarah/yq/v4",
+          "subcomponents": [
+            {
+              "@id": "pkg:golang/golang.org/x/net@v0.42.0"
+            }
+          ]
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "В Linux-бинарнике yq отсутствуют функции HTTP/2-сервера. Серверная обработка flow control не выполняется.",
+      "timestamp": "2026-10-12T15:23:45Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-97032"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/github.com/mikefarah/yq/v4",
+          "subcomponents": [
+            {
+              "@id": "pkg:golang/golang.org/x/net@v0.42.0"
+            }
+          ]
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "В Linux-бинарнике yq отсутствуют функции HTTP/2-сервера и серверного HPACK-кодировщика. Уязвимый путь не выполняется.",
+      "timestamp": "2026-10-12T15:23:45Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-78659"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/github.com/mikefarah/yq/v4",
+          "subcomponents": [
+            {
+              "@id": "pkg:golang/golang.org/x/net@v0.42.0"
+            }
+          ]
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "В Linux-бинарнике yq отсутствуют функции HTTP/2-сервера. Серверная обработка Trailer-заголовков не выполняется.",
+      "timestamp": "2026-10-12T15:23:45Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-78660"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/github.com/mikefarah/yq/v4",
+          "subcomponents": [
+            {
+              "@id": "pkg:golang/golang.org/x/net@v0.42.0"
+            }
+          ]
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "В Linux-бинарнике yq отсутствуют ReverseProxy и функции HTTP/2. Проксирование между HTTP/2 и HTTP/1 не выполняется.",
+      "timestamp": "2026-10-12T15:23:45Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-56851"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/github.com/mikefarah/yq/v4",
+          "subcomponents": [
+            {
+              "@id": "pkg:golang/golang.org/x/text@v0.27.0"
+            }
+          ]
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "В Linux-бинарнике yq отсутствуют функции пакета golang.org/x/text/secure/precis. Профиль Nickname не вызывается; обработка специально подготовленной строки в коротком буфере назначения из этой уязвимости не выполняется.",
+      "timestamp": "2026-10-12T15:23:45Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-94439"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/github.com/deckhouse/deckhouse",
+          "subcomponents": [
+            {
+              "@id": "pkg:golang/stdlib@v1.27.1"
+            }
+          ]
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_cannot_be_controlled_by_adversary",
+      "impact_statement": "В штатной топологии Deckhouse серверы контроллера доступны напрямую через TCP Service. Единственный поставляемый HTTP-посредник для debug-сервера использует обычный reverse proxy с авторизацией каждого запроса и переключает соединение в туннель только при ответе 101, а не при успешном CONNECT. Атакующий не управляет необходимым для описанного request smuggling посредником, который иначе трактует CONNECT как непрозрачный туннель. Код Go может вернуть 2xx на CONNECT; исключение относится к поставляемой конфигурации и не распространяется на добавленные администратором CONNECT-прокси.",
+      "timestamp": "2026-10-13T06:04:01Z"
     }
   ],
   "timestamp": "2025-10-09T14:31:31Z",
-  "last_updated": "2026-10-02T12:00:00Z"
+  "last_updated": "2026-10-13T06:04:01Z"
 }

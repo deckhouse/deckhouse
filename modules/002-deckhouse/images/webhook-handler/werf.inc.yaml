@@ -112,7 +112,7 @@ shell:
   install:
     - export GOPROXY=$(cat /run/secrets/GOPROXY)
     - cd /src
-    - CGO_ENABLED=0 GOOS=linux go build -ldflags '-s -w -extldflags "-static"' -o /label-converter label_converter.go
+    - CGO_ENABLED=0 GOOS=linux go build -ldflags '-s -w -extldflags "-static"' -o /label-converter .
     - chown 64535:64535 /label-converter
     - chmod 755 /label-converter
 ---
@@ -155,7 +155,7 @@ shell:
     - cd /operator
     - export CGO_ENABLED=0 GOOS=linux GOARCH=amd64
     - GOPROXY=$(cat /run/secrets/GOPROXY) go mod download
-    - go build -o /webhook-operator ./cmd/main.go
+    - go build -o /webhook-operator ./cmd
     - chown 64535:64535 /webhook-operator
     - chmod 0700 /webhook-operator
 ---

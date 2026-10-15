@@ -2,7 +2,7 @@
   "@context": "https://openvex.dev/ns/v0.2.0",
   "@id": "https://openvex.dev/docs/public/vex-5a4509a04e8128126aee080324a6b663a7748bf44b58a9a4b9c74d4801844f53",
   "author": "Deckhouse <contact@deckhouse.io>",
-  "version": 18,
+  "version": 19,
   "statements": [
     {
       "vulnerability": {
@@ -73,20 +73,6 @@
       "justification": "vulnerable_code_not_in_execute_path",
       "impact_statement": "Fulcio SSRF vulnerability - Функционал функции metaRegex() в библиотеке github.com/sigstore/fulcio версии 1.4.5 не используется в рамках текущих функциональных спецификаций и эксплуатационных процессов системы. Все взаимодействия с сертификатами проходят через промежуточные компоненты, не предоставляющие доступа к уязвимому коду, что исключает возможность эксплуатации данной уязвимости.",
       "timestamp": "2026-01-16T12:00:00Z"
-    },
-    {
-      "vulnerability": {
-        "name": "CVE-2025-8869"
-      },
-      "products": [
-        {
-          "@id": "pkg:pypi/pip@25.3"
-        }
-      ],
-      "status": "not_affected",
-      "justification": "vulnerable_code_not_in_execute_path",
-      "impact_statement": "Функционал извлечения tar-архивов с использованием уязвимого fallback-кода pip версии 25.3 не используется в рамках текущих функциональных спецификаций и эксплуатационных процессов системы. Все используемые версии Python соответствуют требованиям PEP 706, что исключает возможность эксплуатации данной уязвимости.",
-      "timestamp": "2025-10-09T14:31:32.069712443Z"
     },
     {
       "vulnerability": {
@@ -188,20 +174,6 @@
     },
     {
       "vulnerability": {
-        "name": "CVE-2025-8869"
-      },
-      "products": [
-        {
-          "@id": "pkg:pip:25.3"
-        }
-      ],
-      "status": "not_affected",
-      "justification": "vulnerable_code_not_in_execute_path",
-      "impact_statement": "Эта неэксплуатируемая уязвимость относится к подкоманде d8 delivery-kit. d8 delivery-kit не использует функционал извлечения tar-архивов с уязвимым fallback pip. Все используемые версии Python соответствуют требованиям PEP 706.",
-      "timestamp": "2025-10-09T14:31:32.069712443Z"
-    },
-    {
-      "vulnerability": {
         "name": "CVE-2024-25621"
       },
       "products": [
@@ -255,20 +227,6 @@
       "justification": "vulnerable_code_not_in_execute_path",
       "impact_statement": "Уязвимость CVE-2026-39883 невозможно эксплуатировать в рамках Deckhouse, поскольку она не оказывает влияния на системы под управлением Linux. Данная проблема безопасности связана с выполнением команды kenv, которая является специфичной для операционных систем на базе BSD и Solaris и отсутвует в Linux",
       "timestamp": "2026-04-10T08:22:34.246444Z"
-    },
-    {
-      "vulnerability": {
-        "name": "CVE-2025-8869"
-      },
-      "products": [
-        {
-          "@id": "pip:25.3"
-        }
-      ],
-      "status": "not_affected",
-      "justification": "vulnerable_code_not_in_execute_path",
-      "impact_statement": "Эта неэксплуатируемая уязвимость относится к подкоманде d8 delivery-kit. d8 delivery-kit не использует функционал извлечения tar-архивов с уязвимым fallback pip. Все используемые версии Python соответствуют требованиям PEP 706.",
-      "timestamp": "2025-10-09T14:31:32.069712443Z"
     },
     {
       "vulnerability": {
@@ -436,90 +394,6 @@
       "status": "not_affected",
       "justification": "vulnerable_code_not_in_execute_path",
       "impact_statement": "Эта неэксплуатируемая уязвимость относится к подкоманде d8 delivery-kit. Зависимость go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetrichttp приходит транзитивно через werf и github.com/docker/buildx/util/metricutil и используется исключительно для экспорта метрик BuildKit-бекенда. d8 delivery-kit по умолчанию использует стандартный Docker backend, путь с BuildKit-метриками не активируется, что исключает возможность эксплуатации данной уязвимости.",
-      "timestamp": "2026-04-22T12:00:00Z"
-    },
-    {
-      "vulnerability": {
-        "name": "CVE-2026-32280"
-      },
-      "products": [
-        {
-          "@id": "pkg:golang/stdlib@v1.25.8"
-        }
-      ],
-      "status": "not_affected",
-      "justification": "vulnerable_code_not_in_execute_path",
-      "impact_statement": "Уязвимость CWE-770 (Allocation of Resources Without Limits) в Go stdlib v1.25.8 не эксплуатируема в бинарнике d8: обработка внешних входных данных ограничена администраторскими сценариями, неограниченное потребление ресурсов не достигается. Бамп Go toolchain в d8-cli будет выполнен в рамках планового апгрейда.",
-      "timestamp": "2026-04-22T12:00:00Z"
-    },
-    {
-      "vulnerability": {
-        "name": "CVE-2026-32281"
-      },
-      "products": [
-        {
-          "@id": "pkg:golang/stdlib@v1.25.8"
-        }
-      ],
-      "status": "not_affected",
-      "justification": "vulnerable_code_not_in_execute_path",
-      "impact_statement": "Уязвимость CWE-295 (Improper Certificate Validation) в Go stdlib v1.25.8 не эксплуатируема в бинарнике d8: TLS-соединения устанавливаются только к заранее доверенным registry-эндпоинтам, список которых определяется администратором, что исключает возможность эксплуатации уязвимости валидации сертификатов. Бамп Go toolchain в d8-cli будет выполнен в рамках планового апгрейда.",
-      "timestamp": "2026-04-22T12:00:00Z"
-    },
-    {
-      "vulnerability": {
-        "name": "CVE-2026-32282"
-      },
-      "products": [
-        {
-          "@id": "pkg:golang/stdlib@v1.25.8"
-        }
-      ],
-      "status": "not_affected",
-      "justification": "vulnerable_code_not_in_execute_path",
-      "impact_statement": "Уязвимость CWE-59 (Improper Link Resolution Before File Access, symlink following) в Go stdlib v1.25.8 не эксплуатируема в бинарнике d8: d8 не обрабатывает произвольные пути файловой системы от недоверенных пользователей - работает только с путями, указанными администратором. Бамп Go toolchain в d8-cli будет выполнен в рамках планового апгрейда.",
-      "timestamp": "2026-04-22T12:00:00Z"
-    },
-    {
-      "vulnerability": {
-        "name": "CVE-2026-32283"
-      },
-      "products": [
-        {
-          "@id": "pkg:golang/stdlib@v1.25.8"
-        }
-      ],
-      "status": "not_affected",
-      "justification": "vulnerable_code_not_in_execute_path",
-      "impact_statement": "Уязвимость CWE-770 (Allocation of Resources Without Limits) в Go stdlib v1.25.8 не эксплуатируема в бинарнике d8: входные данные, приводящие к неограниченному потреблению ресурсов, не могут быть предоставлены недоверенной стороной - d8 запускается локально администратором. Бамп Go toolchain в d8-cli будет выполнен в рамках планового апгрейда.",
-      "timestamp": "2026-04-22T12:00:00Z"
-    },
-    {
-      "vulnerability": {
-        "name": "CVE-2026-32288"
-      },
-      "products": [
-        {
-          "@id": "pkg:golang/stdlib@v1.25.8"
-        }
-      ],
-      "status": "not_affected",
-      "justification": "vulnerable_code_not_in_execute_path",
-      "impact_statement": "Уязвимость CWE-770 (Allocation of Resources Without Limits) в Go stdlib v1.25.8 не эксплуатируема в бинарнике d8: поверхность атаки ограничена локальным запуском администратором, вектор подачи недоверенных данных в уязвимый путь отсутствует. Бамп Go toolchain в d8-cli будет выполнен в рамках планового апгрейда.",
-      "timestamp": "2026-04-22T12:00:00Z"
-    },
-    {
-      "vulnerability": {
-        "name": "CVE-2026-32289"
-      },
-      "products": [
-        {
-          "@id": "pkg:golang/stdlib@v1.25.8"
-        }
-      ],
-      "status": "not_affected",
-      "justification": "vulnerable_code_not_in_execute_path",
-      "impact_statement": "Уязвимость CWE-79 (Cross-site Scripting) в Go stdlib v1.25.8 не эксплуатируема в бинарнике d8: d8 - это CLI-инструмент, не рендерит HTML и не работает как веб-сервер, выводящий контент в браузер. XSS-уязвимости в стандартной библиотеке не достигаются в рамках исполнения d8. Бамп Go toolchain в d8-cli будет выполнен в рамках планового апгрейда.",
       "timestamp": "2026-04-22T12:00:00Z"
     },
     {
@@ -930,34 +804,6 @@
     },
     {
       "vulnerability": {
-        "name": "CVE-2026-56855"
-      },
-      "products": [
-        {
-          "@id": "pkg:golang/golang.org/x/crypto@v0.55.0"
-        }
-      ],
-      "status": "not_affected",
-      "justification": "vulnerable_code_not_in_execute_path",
-      "impact_statement": "Уязвимость в golang.org/x/crypto/ssh версии v0.55.0 (deadlock соединения от специально сформированных сообщений после установления канала). Пакет попадает в бинарь d8 транзитивно через werf (pkg/ssh_agent), go-git (transport/ssh), buildkit (session/sshforward) и vault sdk. Собственных SSH-соединений d8 не устанавливает и SSH-сервер не поднимает: подкоманды работают с container registry по HTTPS, уязвимый код не выполняется. Исправленная версия v0.56.0 требует Go 1.26; закроется бампом Go в deckhouse-cli.",
-      "timestamp": "2026-09-16T12:00:00Z"
-    },
-    {
-      "vulnerability": {
-        "name": "CVE-2026-78662"
-      },
-      "products": [
-        {
-          "@id": "pkg:golang/golang.org/x/crypto@v0.55.0"
-        }
-      ],
-      "status": "not_affected",
-      "justification": "vulnerable_code_not_in_execute_path",
-      "impact_statement": "Уязвимость в golang.org/x/crypto/ssh версии v0.55.0 (deadlock соединения при флуде channel request до установления канала). Пакет попадает в бинарь d8 транзитивно через werf (pkg/ssh_agent), go-git (transport/ssh), buildkit (session/sshforward) и vault sdk. Собственных SSH-соединений d8 не устанавливает и SSH-сервер не поднимает: подкоманды работают с container registry по HTTPS, уязвимый код не выполняется. Исправленная версия v0.56.0 требует Go 1.26; закроется бампом Go в deckhouse-cli.",
-      "timestamp": "2026-09-16T12:00:00Z"
-    },
-    {
-      "vulnerability": {
         "name": "CVE-2026-53493"
       },
       "products": [
@@ -969,8 +815,103 @@
       "justification": "vulnerable_code_cannot_be_controlled_by_adversary",
       "impact_statement": "Уязвимость затрагивает обработку OCI image index в github.com/containerd/containerd v1.7.27, используемом транзитивно через werf/delivery-kit. Обработчики images.Dispatch вызываются через oras-go и buildkit при работе с container registry. Исключение применяется к штатным операциям d8, в которых администратор контролирует используемые реестры и загружаемые артефакты. Обработка специально сформированных артефактов из недоверенного источника не входит в эти условия эксплуатации. Демон containerd и CRI в d8 не запускаются.",
       "timestamp": "2026-10-06T08:42:10Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-97031"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/github.com/deckhouse/deckhouse-cli",
+          "subcomponents": [
+            {
+              "@id": "pkg:golang/stdlib@v1.27.1"
+            }
+          ]
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "d8 не настраивает ключи ECH для TLS-серверов. HTTPS-сервер локальной авторизации не задаёт EncryptedClientHelloKeys или GetEncryptedClientHelloKeys. Без этих ключей Go не расшифровывает внутренний ClientHello и не выполняет уязвимый разбор ссылок на внешние расширения.",
+      "timestamp": "2026-10-12T15:10:20Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-94448"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/github.com/deckhouse/deckhouse-cli",
+          "subcomponents": [
+            {
+              "@id": "pkg:golang/stdlib@v1.27.1"
+            }
+          ]
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "В d8 html/template используется в статических страницах диагностики net/trace и net/rpc без JavaScript и в шаблонах меток delivery-kit. Результат шаблонов меток записывается в Config.Labels образа как данные и не передаётся в HTML-ответ или JavaScript внутри d8. Обработчики OpenAPI docui не включены в бинарник. Шаблоны страниц диагностики не содержат JavaScript template literals, поэтому отсутствует браузерный контекст, необходимый для эксплуатации ошибки экранирования последовательных выражений.",
+      "timestamp": "2026-10-12T15:10:20Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-97030"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/github.com/deckhouse/deckhouse-cli",
+          "subcomponents": [
+            {
+              "@id": "pkg:golang/stdlib@v1.27.1"
+            }
+          ]
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "В d8 html/template используется в статических страницах диагностики net/trace и net/rpc без JavaScript и в шаблонах меток delivery-kit. Результат шаблонов меток записывается в Config.Labels образа как данные и не передаётся в HTML-ответ или JavaScript внутри d8. Обработчики OpenAPI docui не включены в бинарник. Шаблоны страниц диагностики не содержат JavaScript с ключевым словом yield, поэтому отсутствует браузерный контекст, необходимый для эксплуатации этой ошибки экранирования.",
+      "timestamp": "2026-10-12T15:10:20Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-56857"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/github.com/deckhouse/deckhouse-cli",
+          "subcomponents": [
+            {
+              "@id": "pkg:golang/stdlib@v1.27.1"
+            }
+          ]
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_present",
+      "impact_statement": "Образ registrypackages/d8 содержит только d8, собранный для Linux amd64. Уязвимость обработки Windows junction в os.Root.Mkdir относится к Windows; соответствующий платформенный код отсутствует в Linux-бинарнике этого образа.",
+      "timestamp": "2026-10-12T15:10:20Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-78663"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/github.com/deckhouse/deckhouse-cli",
+          "subcomponents": [
+            {
+              "@id": "pkg:golang/stdlib@v1.27.1"
+            }
+          ]
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_cannot_be_controlled_by_adversary",
+      "impact_statement": "HTTP/2 callback сервера входа d8 обрабатывает только GET и параметры URL, не читая Request.Body, поэтому повторный возврат flow-control после RST_STREAM в этом пути не возникает. Читающий тела HTTP/2 сервер BuildKit работает внутри исходящей сессии d8 к Docker/BuildKit daemon, выбранному администратором; входящий сетевой listener для этой сессии не создаётся. В штатном сценарии с доверенным daemon сторонний сетевой клиент не управляет её HTTP/2 фреймами. Подключение к недоверенному или скомпрометированному daemon не входит в это обоснование.",
+      "timestamp": "2026-10-13T06:05:12Z"
     }
   ],
   "timestamp": "2026-01-16T12:00:00Z",
-  "last_updated": "2026-10-06T08:42:10Z"
+  "last_updated": "2026-10-13T06:05:12Z"
 }

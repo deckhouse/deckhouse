@@ -2,7 +2,7 @@
   "@context": "https://openvex.dev/ns/v0.2.0",
   "@id": "https://openvex.dev/docs/public/vex-5a4509a04e8128126aee080324a6b663a7748bf44b58a9a4b9c74d4801844f53",
   "author": "Deckhouse <contact@deckhouse.io>",
-  "version": 20,
+  "version": 21,
   "statements": [
     {
       "vulnerability": {
@@ -85,8 +85,8 @@
       ],
       "status": "not_affected",
       "justification": "vulnerable_code_not_in_execute_path",
-      "impact_statement": "Зависимость github.com/docker/docker версии v28.0.0 поступает через бинарь promtool, импортируемый из образа prometheus/prometheus (модуль 300-prometheus). Уязвимый функционал Docker Engine API не используется в рамках работы webhook-handler — promtool применяется только для валидации правил Prometheus. Бамп требует обновления Prometheus в модуле 300-prometheus.",
-      "timestamp": "2026-06-08T12:00:00Z"
+      "impact_statement": "В webhook-handler promtool вызывается валидатором CustomPrometheusRules командой promtool check rules для временного YAML-файла. Этот путь читает правила с диска и проверяет YAML, PromQL и синтаксис текстовых шаблонов; Docker Engine API и service discovery не используются.",
+      "timestamp": "2026-10-12T15:10:20Z"
     },
     {
       "vulnerability": {
@@ -99,8 +99,8 @@
       ],
       "status": "not_affected",
       "justification": "vulnerable_code_not_in_execute_path",
-      "impact_statement": "Зависимость github.com/docker/docker версии v28.0.0 поступает через бинарь promtool, импортируемый из образа prometheus/prometheus (модуль 300-prometheus). Уязвимый функционал Docker Engine API не используется в рамках работы webhook-handler — promtool применяется только для валидации правил Prometheus. Бамп требует обновления Prometheus в модуле 300-prometheus.",
-      "timestamp": "2026-06-08T12:00:00Z"
+      "impact_statement": "В webhook-handler promtool вызывается валидатором CustomPrometheusRules командой promtool check rules для временного YAML-файла. Этот путь читает правила с диска и проверяет YAML, PromQL и синтаксис текстовых шаблонов; Docker Engine API и service discovery не используются.",
+      "timestamp": "2026-10-12T15:10:20Z"
     },
     {
       "vulnerability": {
@@ -113,8 +113,8 @@
       ],
       "status": "not_affected",
       "justification": "vulnerable_code_not_in_execute_path",
-      "impact_statement": "Зависимость github.com/docker/docker версии v28.0.0 поступает через бинарь promtool, импортируемый из образа prometheus/prometheus (модуль 300-prometheus). Уязвимый функционал Docker Engine API не используется в рамках работы webhook-handler — promtool применяется только для валидации правил Prometheus. Бамп требует обновления Prometheus в модуле 300-prometheus.",
-      "timestamp": "2026-06-08T12:00:00Z"
+      "impact_statement": "В webhook-handler promtool вызывается валидатором CustomPrometheusRules командой promtool check rules для временного YAML-файла. Этот путь читает правила с диска и проверяет YAML, PromQL и синтаксис текстовых шаблонов; Docker Engine API и service discovery не используются.",
+      "timestamp": "2026-10-12T15:10:20Z"
     },
     {
       "vulnerability": {
@@ -127,8 +127,8 @@
       ],
       "status": "not_affected",
       "justification": "vulnerable_code_not_in_execute_path",
-      "impact_statement": "Зависимость github.com/docker/docker версии v28.0.0 поступает через бинарь promtool, импортируемый из образа prometheus/prometheus (модуль 300-prometheus). Уязвимый функционал Docker Engine API не используется в рамках работы webhook-handler — promtool применяется только для валидации правил Prometheus. Бамп требует обновления Prometheus в модуле 300-prometheus.",
-      "timestamp": "2026-06-08T12:00:00Z"
+      "impact_statement": "В webhook-handler promtool вызывается валидатором CustomPrometheusRules командой promtool check rules для временного YAML-файла. Этот путь читает правила с диска и проверяет YAML, PromQL и синтаксис текстовых шаблонов; Docker Engine API и service discovery не используются.",
+      "timestamp": "2026-10-12T15:10:20Z"
     },
     {
       "vulnerability": {
@@ -155,8 +155,8 @@
       ],
       "status": "not_affected",
       "justification": "vulnerable_code_not_in_execute_path",
-      "impact_statement": "Зависимость github.com/docker/docker версии v28.0.0 поступает через бинарь promtool, импортируемый из образа prometheus/prometheus (модуль 300-prometheus). Уязвимый функционал Docker Engine API не используется в рамках работы webhook-handler — promtool применяется только для валидации правил Prometheus. Бамп требует обновления Prometheus в модуле 300-prometheus.",
-      "timestamp": "2026-07-13T12:00:00Z"
+      "impact_statement": "В webhook-handler promtool вызывается валидатором CustomPrometheusRules командой promtool check rules для временного YAML-файла. Этот путь читает правила с диска и проверяет YAML, PromQL и синтаксис текстовых шаблонов; Docker Engine API и service discovery не используются.",
+      "timestamp": "2026-10-12T15:10:20Z"
     },
     {
       "vulnerability": {
@@ -183,8 +183,8 @@
       ],
       "status": "not_affected",
       "justification": "vulnerable_code_not_in_execute_path",
-      "impact_statement": "Зависимость go.mongodb.org/mongo-driver версии v1.14.0 поступает транзитивно через бандл-инструмент образа (promtool из модуля 300-prometheus); webhook-handler не подключается к MongoDB, уязвимый код mongo-драйвера не выполняется.",
-      "timestamp": "2026-07-13T12:00:00Z"
+      "impact_statement": "В webhook-handler promtool вызывается валидатором CustomPrometheusRules командой promtool check rules для временного YAML-файла. Этот путь проверяет локальный файл правил и не подключается к MongoDB; протокольный код MongoDB-драйвера не выполняется.",
+      "timestamp": "2026-10-12T15:10:20Z"
     },
     {
       "vulnerability": {
@@ -197,8 +197,8 @@
       ],
       "status": "not_affected",
       "justification": "vulnerable_code_not_in_execute_path",
-      "impact_statement": "Уязвимость в golang.org/x/crypto/ssh версии v0.49.0 приходит транзитивно через бинарь promtool, импортируемый из образа prometheus/prometheus (модуль 300-prometheus). webhook-handler не использует SSH-функционал (SSH-сервер/клиент, ssh-agent, работу с known_hosts) — promtool применяется только для валидации правил Prometheus, уязвимый код не выполняется. Бамп требует обновления Prometheus в модуле 300-prometheus.",
-      "timestamp": "2026-08-20T12:00:00Z"
+      "impact_statement": "В webhook-handler promtool вызывается валидатором CustomPrometheusRules командой promtool check rules для временного YAML-файла. Этот путь проверяет локальный файл правил и не устанавливает SSH-соединения, не запускает SSH-сервер и не обращается к ssh-agent или known_hosts; уязвимый код SSH не выполняется.",
+      "timestamp": "2026-10-12T15:10:20Z"
     },
     {
       "vulnerability": {
@@ -211,8 +211,8 @@
       ],
       "status": "not_affected",
       "justification": "vulnerable_code_not_in_execute_path",
-      "impact_statement": "Уязвимость в golang.org/x/crypto/ssh версии v0.49.0 приходит транзитивно через бинарь promtool, импортируемый из образа prometheus/prometheus (модуль 300-prometheus). webhook-handler не использует SSH-функционал (SSH-сервер/клиент, ssh-agent, работу с known_hosts) — promtool применяется только для валидации правил Prometheus, уязвимый код не выполняется. Бамп требует обновления Prometheus в модуле 300-prometheus.",
-      "timestamp": "2026-08-20T12:00:00Z"
+      "impact_statement": "В webhook-handler promtool вызывается валидатором CustomPrometheusRules командой promtool check rules для временного YAML-файла. Этот путь проверяет локальный файл правил и не устанавливает SSH-соединения, не запускает SSH-сервер и не обращается к ssh-agent или known_hosts; уязвимый код SSH не выполняется.",
+      "timestamp": "2026-10-12T15:10:20Z"
     },
     {
       "vulnerability": {
@@ -225,8 +225,8 @@
       ],
       "status": "not_affected",
       "justification": "vulnerable_code_not_in_execute_path",
-      "impact_statement": "Уязвимость в golang.org/x/crypto/ssh версии v0.49.0 приходит транзитивно через бинарь promtool, импортируемый из образа prometheus/prometheus (модуль 300-prometheus). webhook-handler не использует SSH-функционал (SSH-сервер/клиент, ssh-agent, работу с known_hosts) — promtool применяется только для валидации правил Prometheus, уязвимый код не выполняется. Бамп требует обновления Prometheus в модуле 300-prometheus.",
-      "timestamp": "2026-08-20T12:00:00Z"
+      "impact_statement": "В webhook-handler promtool вызывается валидатором CustomPrometheusRules командой promtool check rules для временного YAML-файла. Этот путь проверяет локальный файл правил и не устанавливает SSH-соединения, не запускает SSH-сервер и не обращается к ssh-agent или known_hosts; уязвимый код SSH не выполняется.",
+      "timestamp": "2026-10-12T15:10:20Z"
     },
     {
       "vulnerability": {
@@ -239,8 +239,8 @@
       ],
       "status": "not_affected",
       "justification": "vulnerable_code_not_in_execute_path",
-      "impact_statement": "Уязвимость в golang.org/x/crypto/ssh/agent версии v0.49.0 приходит транзитивно через бинарь promtool, импортируемый из образа prometheus/prometheus (модуль 300-prometheus). webhook-handler не использует SSH-функционал (SSH-сервер/клиент, ssh-agent, работу с known_hosts) — promtool применяется только для валидации правил Prometheus, уязвимый код не выполняется. Бамп требует обновления Prometheus в модуле 300-prometheus.",
-      "timestamp": "2026-08-20T12:00:00Z"
+      "impact_statement": "В webhook-handler promtool вызывается валидатором CustomPrometheusRules командой promtool check rules для временного YAML-файла. Этот путь проверяет локальный файл правил и не устанавливает SSH-соединения, не запускает SSH-сервер и не обращается к ssh-agent или known_hosts; уязвимый код SSH не выполняется.",
+      "timestamp": "2026-10-12T15:10:20Z"
     },
     {
       "vulnerability": {
@@ -253,8 +253,8 @@
       ],
       "status": "not_affected",
       "justification": "vulnerable_code_not_in_execute_path",
-      "impact_statement": "Уязвимость в golang.org/x/crypto/ssh/agent версии v0.49.0 приходит транзитивно через бинарь promtool, импортируемый из образа prometheus/prometheus (модуль 300-prometheus). webhook-handler не использует SSH-функционал (SSH-сервер/клиент, ssh-agent, работу с known_hosts) — promtool применяется только для валидации правил Prometheus, уязвимый код не выполняется. Бамп требует обновления Prometheus в модуле 300-prometheus.",
-      "timestamp": "2026-08-20T12:00:00Z"
+      "impact_statement": "В webhook-handler promtool вызывается валидатором CustomPrometheusRules командой promtool check rules для временного YAML-файла. Этот путь проверяет локальный файл правил и не устанавливает SSH-соединения, не запускает SSH-сервер и не обращается к ssh-agent или known_hosts; уязвимый код SSH не выполняется.",
+      "timestamp": "2026-10-12T15:10:20Z"
     },
     {
       "vulnerability": {
@@ -267,8 +267,8 @@
       ],
       "status": "not_affected",
       "justification": "vulnerable_code_not_in_execute_path",
-      "impact_statement": "Уязвимость в golang.org/x/crypto/ssh версии v0.49.0 приходит транзитивно через бинарь promtool, импортируемый из образа prometheus/prometheus (модуль 300-prometheus). webhook-handler не использует SSH-функционал (SSH-сервер/клиент, ssh-agent, работу с known_hosts) — promtool применяется только для валидации правил Prometheus, уязвимый код не выполняется. Бамп требует обновления Prometheus в модуле 300-prometheus.",
-      "timestamp": "2026-08-20T12:00:00Z"
+      "impact_statement": "В webhook-handler promtool вызывается валидатором CustomPrometheusRules командой promtool check rules для временного YAML-файла. Этот путь проверяет локальный файл правил и не устанавливает SSH-соединения, не запускает SSH-сервер и не обращается к ssh-agent или known_hosts; уязвимый код SSH не выполняется.",
+      "timestamp": "2026-10-12T15:10:20Z"
     },
     {
       "vulnerability": {
@@ -281,8 +281,8 @@
       ],
       "status": "not_affected",
       "justification": "vulnerable_code_not_in_execute_path",
-      "impact_statement": "Уязвимость в golang.org/x/crypto/ssh версии v0.49.0 приходит транзитивно через бинарь promtool, импортируемый из образа prometheus/prometheus (модуль 300-prometheus). webhook-handler не использует SSH-функционал (SSH-сервер/клиент, ssh-agent, работу с known_hosts) — promtool применяется только для валидации правил Prometheus, уязвимый код не выполняется. Бамп требует обновления Prometheus в модуле 300-prometheus.",
-      "timestamp": "2026-08-20T12:00:00Z"
+      "impact_statement": "В webhook-handler promtool вызывается валидатором CustomPrometheusRules командой promtool check rules для временного YAML-файла. Этот путь проверяет локальный файл правил и не устанавливает SSH-соединения, не запускает SSH-сервер и не обращается к ssh-agent или known_hosts; уязвимый код SSH не выполняется.",
+      "timestamp": "2026-10-12T15:10:20Z"
     },
     {
       "vulnerability": {
@@ -295,8 +295,8 @@
       ],
       "status": "not_affected",
       "justification": "vulnerable_code_not_in_execute_path",
-      "impact_statement": "Уязвимость в golang.org/x/crypto/ssh версии v0.49.0 приходит транзитивно через бинарь promtool, импортируемый из образа prometheus/prometheus (модуль 300-prometheus). webhook-handler не использует SSH-функционал (SSH-сервер/клиент, ssh-agent, работу с known_hosts) — promtool применяется только для валидации правил Prometheus, уязвимый код не выполняется. Бамп требует обновления Prometheus в модуле 300-prometheus.",
-      "timestamp": "2026-08-20T12:00:00Z"
+      "impact_statement": "В webhook-handler promtool вызывается валидатором CustomPrometheusRules командой promtool check rules для временного YAML-файла. Этот путь проверяет локальный файл правил и не устанавливает SSH-соединения, не запускает SSH-сервер и не обращается к ssh-agent или known_hosts; уязвимый код SSH не выполняется.",
+      "timestamp": "2026-10-12T15:10:20Z"
     },
     {
       "vulnerability": {
@@ -309,8 +309,8 @@
       ],
       "status": "not_affected",
       "justification": "vulnerable_code_not_in_execute_path",
-      "impact_statement": "Уязвимость в golang.org/x/crypto/ssh/knownhosts версии v0.49.0 приходит транзитивно через бинарь promtool, импортируемый из образа prometheus/prometheus (модуль 300-prometheus). webhook-handler не использует SSH-функционал (SSH-сервер/клиент, ssh-agent, работу с known_hosts) — promtool применяется только для валидации правил Prometheus, уязвимый код не выполняется. Бамп требует обновления Prometheus в модуле 300-prometheus.",
-      "timestamp": "2026-08-20T12:00:00Z"
+      "impact_statement": "В webhook-handler promtool вызывается валидатором CustomPrometheusRules командой promtool check rules для временного YAML-файла. Этот путь проверяет локальный файл правил и не устанавливает SSH-соединения, не запускает SSH-сервер и не обращается к ssh-agent или known_hosts; уязвимый код SSH не выполняется.",
+      "timestamp": "2026-10-12T15:10:20Z"
     },
     {
       "vulnerability": {
@@ -323,8 +323,8 @@
       ],
       "status": "not_affected",
       "justification": "vulnerable_code_not_in_execute_path",
-      "impact_statement": "Уязвимость в golang.org/x/crypto/ssh версии v0.49.0 приходит транзитивно через бинарь promtool, импортируемый из образа prometheus/prometheus (модуль 300-prometheus). webhook-handler не использует SSH-функционал (SSH-сервер/клиент, ssh-agent, работу с known_hosts) — promtool применяется только для валидации правил Prometheus, уязвимый код не выполняется. Бамп требует обновления Prometheus в модуле 300-prometheus.",
-      "timestamp": "2026-08-20T12:00:00Z"
+      "impact_statement": "В webhook-handler promtool вызывается валидатором CustomPrometheusRules командой promtool check rules для временного YAML-файла. Этот путь проверяет локальный файл правил и не устанавливает SSH-соединения, не запускает SSH-сервер и не обращается к ssh-agent или known_hosts; уязвимый код SSH не выполняется.",
+      "timestamp": "2026-10-12T15:10:20Z"
     },
     {
       "vulnerability": {
@@ -337,8 +337,8 @@
       ],
       "status": "not_affected",
       "justification": "vulnerable_code_not_in_execute_path",
-      "impact_statement": "Уязвимость в golang.org/x/crypto/ssh версии v0.49.0 приходит транзитивно через бинарь promtool, импортируемый из образа prometheus/prometheus (модуль 300-prometheus). webhook-handler не использует SSH-функционал (SSH-сервер/клиент, ssh-agent, работу с known_hosts) — promtool применяется только для валидации правил Prometheus, уязвимый код не выполняется. Бамп требует обновления Prometheus в модуле 300-prometheus.",
-      "timestamp": "2026-08-20T12:00:00Z"
+      "impact_statement": "В webhook-handler promtool вызывается валидатором CustomPrometheusRules командой promtool check rules для временного YAML-файла. Этот путь проверяет локальный файл правил и не устанавливает SSH-соединения, не запускает SSH-сервер и не обращается к ssh-agent или known_hosts; уязвимый код SSH не выполняется.",
+      "timestamp": "2026-10-12T15:10:20Z"
     },
     {
       "vulnerability": {
@@ -351,8 +351,8 @@
       ],
       "status": "not_affected",
       "justification": "vulnerable_code_not_in_execute_path",
-      "impact_statement": "Уязвимость в golang.org/x/crypto/ssh/agent версии v0.49.0 приходит транзитивно через бинарь promtool, импортируемый из образа prometheus/prometheus (модуль 300-prometheus). webhook-handler не использует SSH-функционал (SSH-сервер/клиент, ssh-agent, работу с known_hosts) — promtool применяется только для валидации правил Prometheus, уязвимый код не выполняется. Бамп требует обновления Prometheus в модуле 300-prometheus.",
-      "timestamp": "2026-08-20T12:00:00Z"
+      "impact_statement": "В webhook-handler promtool вызывается валидатором CustomPrometheusRules командой promtool check rules для временного YAML-файла. Этот путь проверяет локальный файл правил и не устанавливает SSH-соединения, не запускает SSH-сервер и не обращается к ssh-agent или known_hosts; уязвимый код SSH не выполняется.",
+      "timestamp": "2026-10-12T15:10:20Z"
     },
     {
       "vulnerability": {
@@ -365,8 +365,8 @@
       ],
       "status": "not_affected",
       "justification": "vulnerable_code_not_in_execute_path",
-      "impact_statement": "Пакет golang.org/x/crypto/openpgp помечен как неподдерживаемый и небезопасный по своей конструкции. Зависимость приходит транзитивно через бинарь promtool, импортируемый из образа prometheus/prometheus (модуль 300-prometheus). webhook-handler не использует OpenPGP-функционал — promtool применяется только для валидации правил Prometheus, уязвимый код не выполняется. Бамп требует обновления Prometheus в модуле 300-prometheus.",
-      "timestamp": "2026-08-20T12:00:00Z"
+      "impact_statement": "В webhook-handler promtool вызывается валидатором CustomPrometheusRules командой promtool check rules для временного YAML-файла. Этот путь проверяет локальный файл правил и не устанавливает SSH-соединения, не запускает SSH-сервер и не обращается к ssh-agent или known_hosts; уязвимый код SSH не выполняется.",
+      "timestamp": "2026-10-12T15:10:20Z"
     },
     {
       "vulnerability": {
@@ -379,8 +379,8 @@
       ],
       "status": "not_affected",
       "justification": "vulnerable_code_not_in_execute_path",
-      "impact_statement": "Уязвимость в golang.org/x/crypto версии v0.49.0 приходит транзитивно через бинарь promtool, импортируемый из образа prometheus/prometheus (модуль 300-prometheus). webhook-handler не использует SSH-функционал (SSH-сервер/клиент, ssh-agent, работу с known_hosts) — promtool применяется только для валидации правил Prometheus, уязвимый код не выполняется. Бамп требует обновления Prometheus в модуле 300-prometheus.",
-      "timestamp": "2026-08-20T12:00:00Z"
+      "impact_statement": "В webhook-handler promtool вызывается валидатором CustomPrometheusRules командой promtool check rules для временного YAML-файла. Этот путь проверяет локальный файл правил и не устанавливает SSH-соединения, не запускает SSH-сервер и не обращается к ssh-agent или known_hosts; уязвимый код SSH не выполняется.",
+      "timestamp": "2026-10-12T15:10:20Z"
     },
     {
       "vulnerability": {
@@ -393,8 +393,8 @@
       ],
       "status": "not_affected",
       "justification": "vulnerable_code_not_in_execute_path",
-      "impact_statement": "Уязвимость в golang.org/x/net/html версии v0.52.0 (XSS/RCE при парсинге HTML) приходит транзитивно через бинарь promtool, импортируемый из образа prometheus/prometheus (модуль 300-prometheus). webhook-handler не парсит и не рендерит недоверенный HTML — promtool применяется только для валидации правил Prometheus, уязвимый код не выполняется. Бамп требует обновления Prometheus в модуле 300-prometheus.",
-      "timestamp": "2026-08-20T12:00:00Z"
+      "impact_statement": "В webhook-handler promtool вызывается валидатором CustomPrometheusRules командой promtool check rules для временного YAML-файла. Проверка правил использует YAML, PromQL и text/template.Parse. HTML через golang.org/x/net/html не разбирается и не рендерится; уязвимый путь недостижим.",
+      "timestamp": "2026-10-12T15:10:20Z"
     },
     {
       "vulnerability": {
@@ -407,8 +407,8 @@
       ],
       "status": "not_affected",
       "justification": "vulnerable_code_not_in_execute_path",
-      "impact_statement": "Уязвимость в golang.org/x/net/html версии v0.52.0 (XSS при обходе HTML-парсинга) приходит транзитивно через бинарь promtool, импортируемый из образа prometheus/prometheus (модуль 300-prometheus). webhook-handler не парсит и не рендерит недоверенный HTML — promtool применяется только для валидации правил Prometheus, уязвимый код не выполняется. Бамп требует обновления Prometheus в модуле 300-prometheus.",
-      "timestamp": "2026-08-20T12:00:00Z"
+      "impact_statement": "В webhook-handler promtool вызывается валидатором CustomPrometheusRules командой promtool check rules для временного YAML-файла. Проверка правил использует YAML, PromQL и text/template.Parse. HTML через golang.org/x/net/html не разбирается и не рендерится; уязвимый путь недостижим.",
+      "timestamp": "2026-10-12T15:10:20Z"
     },
     {
       "vulnerability": {
@@ -421,8 +421,8 @@
       ],
       "status": "not_affected",
       "justification": "vulnerable_code_not_in_execute_path",
-      "impact_statement": "Уязвимость в golang.org/x/net/html версии v0.52.0 (DoS при избыточном HTML-парсинге) приходит транзитивно через бинарь promtool, импортируемый из образа prometheus/prometheus (модуль 300-prometheus). webhook-handler не парсит и не рендерит недоверенный HTML — promtool применяется только для валидации правил Prometheus, уязвимый код не выполняется. Бамп требует обновления Prometheus в модуле 300-prometheus.",
-      "timestamp": "2026-08-20T12:00:00Z"
+      "impact_statement": "В webhook-handler promtool вызывается валидатором CustomPrometheusRules командой promtool check rules для временного YAML-файла. Проверка правил использует YAML, PromQL и text/template.Parse. HTML через golang.org/x/net/html не разбирается и не рендерится; уязвимый путь недостижим.",
+      "timestamp": "2026-10-12T15:10:20Z"
     },
     {
       "vulnerability": {
@@ -435,8 +435,8 @@
       ],
       "status": "not_affected",
       "justification": "vulnerable_code_not_in_execute_path",
-      "impact_statement": "Уязвимость в golang.org/x/net/html версии v0.52.0 (XSS при неожиданном рендеринге HTML-дерева) приходит транзитивно через бинарь promtool, импортируемый из образа prometheus/prometheus (модуль 300-prometheus). webhook-handler не парсит и не рендерит недоверенный HTML — promtool применяется только для валидации правил Prometheus, уязвимый код не выполняется. Бамп требует обновления Prometheus в модуле 300-prometheus.",
-      "timestamp": "2026-08-20T12:00:00Z"
+      "impact_statement": "В webhook-handler promtool вызывается валидатором CustomPrometheusRules командой promtool check rules для временного YAML-файла. Проверка правил использует YAML, PromQL и text/template.Parse. HTML через golang.org/x/net/html не разбирается и не рендерится; уязвимый путь недостижим.",
+      "timestamp": "2026-10-12T15:10:20Z"
     },
     {
       "vulnerability": {
@@ -449,8 +449,8 @@
       ],
       "status": "not_affected",
       "justification": "vulnerable_code_not_in_execute_path",
-      "impact_statement": "Уязвимость в golang.org/x/net/html версии v0.52.0 (XSS при произвольном HTML-парсинге) приходит транзитивно через бинарь promtool, импортируемый из образа prometheus/prometheus (модуль 300-prometheus). webhook-handler не парсит и не рендерит недоверенный HTML — promtool применяется только для валидации правил Prometheus, уязвимый код не выполняется. Бамп требует обновления Prometheus в модуле 300-prometheus.",
-      "timestamp": "2026-08-20T12:00:00Z"
+      "impact_statement": "В webhook-handler promtool вызывается валидатором CustomPrometheusRules командой promtool check rules для временного YAML-файла. Проверка правил использует YAML, PromQL и text/template.Parse. HTML через golang.org/x/net/html не разбирается и не рендерится; уязвимый путь недостижим.",
+      "timestamp": "2026-10-12T15:10:20Z"
     },
     {
       "vulnerability": {
@@ -463,8 +463,8 @@
       ],
       "status": "not_affected",
       "justification": "vulnerable_code_not_in_execute_path",
-      "impact_statement": "Уязвимость в HTTP/2-стеке golang.org/x/net версии v0.52.0 (DoS через некорректный SETTINGS_MAX_FRAME_SIZE-фрейм) приходит транзитивно через бинарь promtool, импортируемый из образа prometheus/prometheus (модуль 300-prometheus). webhook-handler не обслуживает HTTP/2-соединения из недоверенной сети через данный стек — promtool применяется только для валидации правил Prometheus, уязвимый код не выполняется. Бамп требует обновления Prometheus в модуле 300-prometheus.",
-      "timestamp": "2026-08-20T12:00:00Z"
+      "impact_statement": "В webhook-handler promtool вызывается валидатором CustomPrometheusRules командой promtool check rules для временного YAML-файла. Проверка правил выполняется локально и не создаёт HTTP/2-клиент или сервер; обработка SETTINGS_MAX_FRAME_SIZE не выполняется.",
+      "timestamp": "2026-10-12T15:10:20Z"
     },
     {
       "vulnerability": {
@@ -477,8 +477,8 @@
       ],
       "status": "not_affected",
       "justification": "vulnerable_code_not_in_execute_path",
-      "impact_statement": "Уязвимость в golang.org/x/net/idna версии v0.52.0 (эскалация привилегий при некорректной обработке Punycode-меток) приходит транзитивно через бинарь promtool, импортируемый из образа prometheus/prometheus (модуль 300-prometheus). webhook-handler не обрабатывает недоверенные доменные имена/IDNA через данный код — promtool применяется только для валидации правил Prometheus, уязвимый код не выполняется. Бамп требует обновления Prometheus в модуле 300-prometheus.",
-      "timestamp": "2026-08-20T12:00:00Z"
+      "impact_statement": "В webhook-handler promtool вызывается валидатором CustomPrometheusRules командой promtool check rules для временного YAML-файла. Проверка правил выполняется локально и не разрешает доменные имена, не выполняет IDNA/Punycode-преобразования; уязвимый путь недостижим.",
+      "timestamp": "2026-10-12T15:10:20Z"
     },
     {
       "vulnerability": {
@@ -491,8 +491,8 @@
       ],
       "status": "not_affected",
       "justification": "vulnerable_code_not_in_execute_path",
-      "impact_statement": "Уязвимость в golang.org/x/net версии v0.52.0 (panic при парсинге некорректной SVCB/HTTPS DNS-записи) приходит транзитивно через бинарь promtool, импортируемый из образа prometheus/prometheus (модуль 300-prometheus). webhook-handler не разбирает недоверенные DNS-ответы через данный код — promtool применяется только для валидации правил Prometheus, уязвимый код не выполняется. Бамп требует обновления Prometheus в модуле 300-prometheus.",
-      "timestamp": "2026-08-20T12:00:00Z"
+      "impact_statement": "В webhook-handler promtool вызывается валидатором CustomPrometheusRules командой promtool check rules для временного YAML-файла. Проверка правил выполняется локально и не делает DNS-запросов; разбор SVCB/HTTPS DNS-ответов не выполняется.",
+      "timestamp": "2026-10-12T15:10:20Z"
     },
     {
       "vulnerability": {
@@ -505,8 +505,8 @@
       ],
       "status": "not_affected",
       "justification": "vulnerable_code_not_in_execute_path",
-      "impact_statement": "Уязвимость в golang.org/x/sys/windows версии v0.42.0 (переполнение целочисленного значения в NewNTUnicodeString) относится исключительно к платформе Windows. webhook-handler собирается и исполняется в Linux-контейнере, Windows-специфичный код не компилируется и не выполняется. Зависимость приходит транзитивно через бинарь promtool, импортируемый из образа prometheus/prometheus (модуль 300-prometheus).",
-      "timestamp": "2026-08-20T12:00:00Z"
+      "impact_statement": "В webhook-handler promtool вызывается валидатором CustomPrometheusRules командой promtool check rules для временного YAML-файла. Бинарник собран для Linux amd64; уязвимый Windows-код NewNTUnicodeString в этой сборке не выполняется.",
+      "timestamp": "2026-10-12T15:10:20Z"
     },
     {
       "vulnerability": {
@@ -519,8 +519,8 @@
       ],
       "status": "not_affected",
       "justification": "vulnerable_code_not_in_execute_path",
-      "impact_statement": "Уязвимость в golang.org/x/text версии v0.35.0 (бесконечный цикл в norm.Iter при обработке специально сформированного ввода) приходит транзитивно через бинарь promtool, импортируемый из образа prometheus/prometheus (модуль 300-prometheus). webhook-handler не выполняет Unicode-нормализацию недоверенного ввода через данный код — promtool применяется только для валидации правил Prometheus, уязвимый код не выполняется. Бамп требует обновления Prometheus в модуле 300-prometheus.",
-      "timestamp": "2026-08-20T12:00:00Z"
+      "impact_statement": "В webhook-handler promtool вызывается валидатором CustomPrometheusRules командой promtool check rules для временного YAML-файла. Проверка правил использует YAML, PromQL, валидацию меток и text/template.Parse; Unicode-нормализация через norm.Iter на этом пути не выполняется.",
+      "timestamp": "2026-10-12T15:10:20Z"
     },
     {
       "vulnerability": {
@@ -533,8 +533,8 @@
       ],
       "status": "not_affected",
       "justification": "vulnerable_code_not_in_execute_path",
-      "impact_statement": "Уязвимость в google.golang.org/grpc версии v1.80.0 (проблемы xDS RBAC и HTTP/2) приходит транзитивно через бинарь promtool, импортируемый из образа prometheus/prometheus (модуль 300-prometheus). webhook-handler не использует gRPC-сервер и xDS/RBAC-функционал — promtool применяется только для валидации правил Prometheus, уязвимый код не выполняется. Бамп требует обновления Prometheus в модуле 300-prometheus.",
-      "timestamp": "2026-08-20T12:00:00Z"
+      "impact_statement": "В webhook-handler promtool вызывается валидатором CustomPrometheusRules командой promtool check rules для временного YAML-файла. Этот путь проверяет локальный файл правил, не устанавливает gRPC-соединения и не запускает gRPC-сервер; HTTP/2, xDS и RBAC-фильтры gRPC не используются.",
+      "timestamp": "2026-10-12T15:10:20Z"
     },
     {
       "vulnerability": {
@@ -925,8 +925,8 @@
       ],
       "status": "not_affected",
       "justification": "vulnerable_code_not_in_execute_path",
-      "impact_statement": "Уязвимость в golang.org/x/crypto/ssh версии v0.49.0 (обход ограничения source-address для Permissions из PasswordCallback/KeyboardInteractiveCallback на стороне SSH-сервера). Приходит транзитивно через бинарь promtool (артефакт common/promtool-artifact, prometheus v2.55.1), который добавлен в образ webhook-handler. В репозитории нет обращений к promtool из вебхуков, а сам promtool работает офлайн с файлами правил Prometheus: SSH-сервер не поднимается, уязвимый код не выполняется.",
-      "timestamp": "2026-09-15T12:00:00Z"
+      "impact_statement": "В webhook-handler promtool вызывается валидатором CustomPrometheusRules командой promtool check rules для временного YAML-файла. Этот путь проверяет локальный файл правил и не устанавливает SSH-соединения, не запускает SSH-сервер и не обращается к ssh-agent или known_hosts; уязвимый код SSH не выполняется.",
+      "timestamp": "2026-10-12T15:10:20Z"
     },
     {
       "vulnerability": {
@@ -939,8 +939,8 @@
       ],
       "status": "not_affected",
       "justification": "vulnerable_code_not_in_execute_path",
-      "impact_statement": "Уязвимость в golang.org/x/crypto/ssh версии v0.49.0 (DoS: deadlock соединения из-за некорректных сообщений после установления канала). Приходит транзитивно через бинарь promtool (артефакт common/promtool-artifact, prometheus v2.55.1), который добавлен в образ webhook-handler. В репозитории нет обращений к promtool из вебхуков, а сам promtool работает офлайн с файлами правил Prometheus: SSH-соединения не устанавливаются, уязвимый код не выполняется.",
-      "timestamp": "2026-09-15T12:00:00Z"
+      "impact_statement": "В webhook-handler promtool вызывается валидатором CustomPrometheusRules командой promtool check rules для временного YAML-файла. Этот путь проверяет локальный файл правил и не устанавливает SSH-соединения, не запускает SSH-сервер и не обращается к ssh-agent или known_hosts; уязвимый код SSH не выполняется.",
+      "timestamp": "2026-10-12T15:10:20Z"
     },
     {
       "vulnerability": {
@@ -953,8 +953,8 @@
       ],
       "status": "not_affected",
       "justification": "vulnerable_code_not_in_execute_path",
-      "impact_statement": "Уязвимость в golang.org/x/crypto/ssh версии v0.49.0 (DoS: flood запросов в ещё не установленный канал). Приходит транзитивно через бинарь promtool (артефакт common/promtool-artifact, prometheus v2.55.1), который добавлен в образ webhook-handler. В репозитории нет обращений к promtool из вебхуков, а сам promtool работает офлайн с файлами правил Prometheus: SSH-соединения не устанавливаются, уязвимый код не выполняется.",
-      "timestamp": "2026-09-15T12:00:00Z"
+      "impact_statement": "В webhook-handler promtool вызывается валидатором CustomPrometheusRules командой promtool check rules для временного YAML-файла. Этот путь проверяет локальный файл правил и не устанавливает SSH-соединения, не запускает SSH-сервер и не обращается к ssh-agent или known_hosts; уязвимый код SSH не выполняется.",
+      "timestamp": "2026-10-12T15:10:20Z"
     },
     {
       "vulnerability": {
@@ -967,8 +967,8 @@
       ],
       "status": "not_affected",
       "justification": "vulnerable_code_not_in_execute_path",
-      "impact_statement": "Уязвимость в google.golang.org/grpc версии v1.80.0 (DoS: рост памяти при приёме множества фрагментированных HTTP/2 DATA-фреймов gRPC-сервером). Приходит транзитивно через бинарь promtool (артефакт common/promtool-artifact, prometheus v2.55.1), который добавлен в образ webhook-handler. В репозитории нет обращений к promtool из вебхуков, а сам promtool работает офлайн с файлами правил Prometheus: gRPC-сервер не запускается и gRPC-соединения не принимаются, уязвимый код не выполняется.",
-      "timestamp": "2026-09-15T12:00:00Z"
+      "impact_statement": "В webhook-handler promtool вызывается валидатором CustomPrometheusRules командой promtool check rules для временного YAML-файла. Этот путь проверяет локальный файл правил, не устанавливает gRPC-соединения и не запускает gRPC-сервер; HTTP/2, xDS и RBAC-фильтры gRPC не используются.",
+      "timestamp": "2026-10-12T15:10:20Z"
     },
     {
       "vulnerability": {
@@ -981,8 +981,8 @@
       ],
       "status": "not_affected",
       "justification": "vulnerable_code_not_in_execute_path",
-      "impact_statement": "Уязвимость в google.golang.org/grpc версии v1.80.0 (xDS RBAC HTTP-фильтр не приводит имена заголовков к нижнему регистру, DENY-политика не срабатывает). Приходит транзитивно через бинарь promtool (артефакт common/promtool-artifact, prometheus v2.55.1), который добавлен в образ webhook-handler. В репозитории нет обращений к promtool из вебхуков, а сам promtool работает офлайн с файлами правил Prometheus: xDS и RBAC-фильтры gRPC не используются, уязвимый код не выполняется.",
-      "timestamp": "2026-09-15T12:00:00Z"
+      "impact_statement": "В webhook-handler promtool вызывается валидатором CustomPrometheusRules командой promtool check rules для временного YAML-файла. Этот путь проверяет локальный файл правил, не устанавливает gRPC-соединения и не запускает gRPC-сервер; HTTP/2, xDS и RBAC-фильтры gRPC не используются.",
+      "timestamp": "2026-10-12T15:10:20Z"
     },
     {
       "vulnerability": {
@@ -995,8 +995,8 @@
       ],
       "status": "not_affected",
       "justification": "vulnerable_code_not_in_execute_path",
-      "impact_statement": "Уязвимость в google.golang.org/grpc версии v1.80.0 (panic xDS-сервера при RPC без заголовков :authority и Host). Приходит транзитивно через бинарь promtool (артефакт common/promtool-artifact, prometheus v2.55.1), который добавлен в образ webhook-handler. В репозитории нет обращений к promtool из вебхуков, а сам promtool работает офлайн с файлами правил Prometheus: xDS gRPC-сервер не создаётся, уязвимый код не выполняется.",
-      "timestamp": "2026-09-15T12:00:00Z"
+      "impact_statement": "В webhook-handler promtool вызывается валидатором CustomPrometheusRules командой promtool check rules для временного YAML-файла. Этот путь проверяет локальный файл правил, не устанавливает gRPC-соединения и не запускает gRPC-сервер; HTTP/2, xDS и RBAC-фильтры gRPC не используются.",
+      "timestamp": "2026-10-12T15:10:20Z"
     },
     {
       "vulnerability": {
@@ -1009,10 +1009,1131 @@
       ],
       "status": "not_affected",
       "justification": "vulnerable_code_not_in_execute_path",
-      "impact_statement": "Уязвимость в github.com/gorilla/websocket версии v1.5.0 (использование криптографически слабого math/rand для генерации masking key WebSocket-фреймов, до v1.5.3). Приходит транзитивно через бинарь promtool, импортируемый из образа prometheus/prometheus (модуль 300-prometheus). webhook-handler не устанавливает WebSocket-соединения — promtool применяется только для валидации правил Prometheus, уязвимый код gorilla/websocket не выполняется. Бамп требует обновления Prometheus в модуле 300-prometheus.",
-      "timestamp": "2026-09-16T12:00:00Z"
+      "impact_statement": "В webhook-handler promtool вызывается валидатором CustomPrometheusRules командой promtool check rules для временного YAML-файла. Этот путь проверяет локальный файл правил и не устанавливает WebSocket-соединения; генерация masking key не выполняется.",
+      "timestamp": "2026-10-12T15:10:20Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-78667"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/label-converter",
+          "subcomponents": [
+            {
+              "@id": "pkg:golang/stdlib@v1.27.1"
+            }
+          ]
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "label-converter преобразует JSON и селекторы Kubernetes из stdin в stdout. HTTP-сервер не запускается; FileServer, ServeContent и ServeFile отсутствуют в таблице символов бинарника. Обработка Range-заголовков недостижима.",
+      "timestamp": "2026-10-12T15:10:20Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-78669"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/label-converter",
+          "subcomponents": [
+            {
+              "@id": "pkg:golang/stdlib@v1.27.1"
+            }
+          ]
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "label-converter выполняет локальное преобразование JSON и селекторов Kubernetes. Он не устанавливает сетевые соединения и не запускает HTTP-сервер; обработчики HTTP/2 SETTINGS-фреймов отсутствуют в таблице символов бинарника. Уязвимый клиентский и серверный пути недостижимы.",
+      "timestamp": "2026-10-12T15:10:20Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-97031"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/label-converter",
+          "subcomponents": [
+            {
+              "@id": "pkg:golang/stdlib@v1.27.1"
+            }
+          ]
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "label-converter читает stdin и пишет stdout, TLS-сервер не запускает. Обработка ClientHello с ECH outer extensions на стороне сервера недостижима.",
+      "timestamp": "2026-10-12T15:10:20Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-56866"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/label-converter",
+          "subcomponents": [
+            {
+              "@id": "pkg:golang/stdlib@v1.27.1"
+            }
+          ]
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "label-converter не отправляет HTTP-запросы и не пересылает их через reverse proxy. CONNECT с непустым Request.Body не формируется; символы httputil.ReverseProxy отсутствуют в бинарнике.",
+      "timestamp": "2026-10-12T15:10:20Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-78663"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/label-converter",
+          "subcomponents": [
+            {
+              "@id": "pkg:golang/stdlib@v1.27.1"
+            }
+          ]
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "label-converter выполняет локальное преобразование JSON и селекторов Kubernetes и не запускает HTTP/2-сервер. Серверный путь управления flow control недостижим.",
+      "timestamp": "2026-10-12T15:10:20Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-94439"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/label-converter",
+          "subcomponents": [
+            {
+              "@id": "pkg:golang/stdlib@v1.27.1"
+            }
+          ]
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "label-converter не запускает HTTP-сервер и не обрабатывает CONNECT-запросы. Формирование серверного ответа 2xx на CONNECT недостижимо.",
+      "timestamp": "2026-10-12T15:10:20Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-94448"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/label-converter",
+          "subcomponents": [
+            {
+              "@id": "pkg:golang/stdlib@v1.27.1"
+            }
+          ]
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "label-converter преобразует JSON и селекторы Kubernetes, HTML и JavaScript не рендерит. Символы html/template отсутствуют в бинарнике; уязвимый путь экранирования JavaScript template literals недостижим.",
+      "timestamp": "2026-10-12T15:10:20Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-97032"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/label-converter",
+          "subcomponents": [
+            {
+              "@id": "pkg:golang/stdlib@v1.27.1"
+            }
+          ]
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "label-converter не запускает HTTP/2-сервер. Конкурентная модификация серверного HPACK encoder при обработке SETTINGS и формировании HEADERS недостижима.",
+      "timestamp": "2026-10-12T15:10:20Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-56857"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/label-converter",
+          "subcomponents": [
+            {
+              "@id": "pkg:golang/stdlib@v1.27.1"
+            }
+          ]
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "label-converter в webhook-handler собран для Linux. Уязвимость обработки Windows junction в os.Root.Mkdir и MkdirAll к этому бинарнику не применима; os.Root также отсутствует в таблице символов.",
+      "timestamp": "2026-10-12T15:10:20Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-78659"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/label-converter",
+          "subcomponents": [
+            {
+              "@id": "pkg:golang/stdlib@v1.27.1"
+            }
+          ]
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "label-converter не запускает HTTP/2-сервер и не принимает HTTP-запросы. Серверное выделение памяти по Trailer-заголовкам недостижимо.",
+      "timestamp": "2026-10-12T15:10:20Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-78660"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/label-converter",
+          "subcomponents": [
+            {
+              "@id": "pkg:golang/stdlib@v1.27.1"
+            }
+          ]
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "label-converter не устанавливает HTTP-соединения и не пересылает HTTP-ответы. Reverse proxy отсутствует; перенос некорректных framing-заголовков из HTTP/2 в HTTP/1 недостижим.",
+      "timestamp": "2026-10-12T15:10:20Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-94440"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/label-converter",
+          "subcomponents": [
+            {
+              "@id": "pkg:golang/stdlib@v1.27.1"
+            }
+          ]
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "label-converter разбирает JSON и синтаксис селекторов Kubernetes из stdin, multipart-формы не обрабатывает. Функции mime/multipart.ReadForm и readForm отсутствуют в таблице символов бинарника.",
+      "timestamp": "2026-10-12T15:10:20Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-97030"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/label-converter",
+          "subcomponents": [
+            {
+              "@id": "pkg:golang/stdlib@v1.27.1"
+            }
+          ]
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "label-converter не рендерит HTML или JavaScript. Символы html/template отсутствуют в бинарнике; обработка ключевого слова yield в шаблонах недостижима.",
+      "timestamp": "2026-10-12T15:10:20Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-78667"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/deckhouse.io/webhook",
+          "subcomponents": [
+            {
+              "@id": "pkg:golang/stdlib@v1.27.1"
+            }
+          ]
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "webhook-operator обслуживает webhook-запросы, проверки состояния и метрики, но не отдаёт файлы через FileServer, ServeContent или ServeFile. Эти функции отсутствуют в таблице символов бинарника; уязвимый разбор Range-заголовков недостижим.",
+      "timestamp": "2026-10-12T15:10:20Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-97031"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/deckhouse.io/webhook",
+          "subcomponents": [
+            {
+              "@id": "pkg:golang/stdlib@v1.27.1"
+            }
+          ]
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "TLS-серверы webhook-operator и встроенного shell-operator не задают EncryptedClientHelloKeys или GetEncryptedClientHelloKeys. Без ECH-ключей crypto/tls возвращается до расшифровки ClientHelloInner и восстановления outer extensions; уязвимый путь недостижим.",
+      "timestamp": "2026-10-12T15:10:20Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-56866"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/deckhouse.io/webhook",
+          "subcomponents": [
+            {
+              "@id": "pkg:golang/stdlib@v1.27.1"
+            }
+          ]
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "webhook-operator не формирует CONNECT-запросы с непустым Request.Body и не использует httputil.ReverseProxy. CONNECT в транзитивном gRPC transport создаётся без Body и записывается напрямую в соединение; уязвимый путь http.Transport для CONNECT с телом не выполняется.",
+      "timestamp": "2026-10-12T15:10:20Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-94448"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/deckhouse.io/webhook",
+          "subcomponents": [
+            {
+              "@id": "pkg:golang/stdlib@v1.27.1"
+            }
+          ]
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "webhook-operator использует text/template для webhook-конфигураций. Связанный html/template используется x/net/trace с фиксированными HTML/CSS-шаблонами без JavaScript template literals; sanitize вызывает только HTMLEscapeString. Контекст последовательных выражений в JavaScript template literal не возникает.",
+      "timestamp": "2026-10-12T15:10:20Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-56857"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/deckhouse.io/webhook",
+          "subcomponents": [
+            {
+              "@id": "pkg:golang/stdlib@v1.27.1"
+            }
+          ]
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "webhook-operator в webhook-handler собран для Linux. Уязвимость обработки Windows junction в os.Root.Mkdir и MkdirAll к этому бинарнику не применима; os.Root также отсутствует в таблице символов.",
+      "timestamp": "2026-10-12T15:10:20Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-78660"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/deckhouse.io/webhook",
+          "subcomponents": [
+            {
+              "@id": "pkg:golang/stdlib@v1.27.1"
+            }
+          ]
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "webhook-operator не выполняет reverse proxy и не пересылает полученные HTTP/2-ответы HTTP/1-клиентам. Символы httputil.ReverseProxy отсутствуют в бинарнике; уязвимый путь переноса framing-заголовков недостижим.",
+      "timestamp": "2026-10-12T15:10:20Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-97030"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/deckhouse.io/webhook",
+          "subcomponents": [
+            {
+              "@id": "pkg:golang/stdlib@v1.27.1"
+            }
+          ]
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "webhook-operator использует text/template для webhook-конфигураций. Связанный html/template используется x/net/trace с фиксированными HTML/CSS-шаблонами без JavaScript и контекста yield; sanitize вызывает только HTMLEscapeString. Уязвимый путь экранирования yield не выполняется.",
+      "timestamp": "2026-10-12T15:10:20Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-78667"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/github.com/prometheus/prometheus",
+          "subcomponents": [
+            {
+              "@id": "pkg:golang/stdlib@v1.25.14"
+            }
+          ]
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "В webhook-handler promtool вызывается валидатором CustomPrometheusRules командой promtool check rules для временного YAML-файла. CheckRules читает локальный файл правил; HTTP-сервер и раздача файлов через FileServer, ServeFile или ServeContent не запускаются. Эти функции также отсутствуют в таблице символов бинарника.",
+      "timestamp": "2026-10-12T15:10:20Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-78669"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/github.com/prometheus/prometheus",
+          "subcomponents": [
+            {
+              "@id": "pkg:golang/stdlib@v1.25.14"
+            }
+          ]
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "В webhook-handler promtool вызывается валидатором CustomPrometheusRules командой promtool check rules для временного YAML-файла. CheckRules проверяет YAML, PromQL и синтаксис текстовых шаблонов локально. Сетевые запросы и HTTP/2-сервер не запускаются, функции шаблонов не выполняются; обработка SETTINGS-фреймов клиента или сервера недостижима.",
+      "timestamp": "2026-10-12T15:10:20Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-97031"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/github.com/prometheus/prometheus",
+          "subcomponents": [
+            {
+              "@id": "pkg:golang/stdlib@v1.25.14"
+            }
+          ]
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "В webhook-handler promtool вызывается валидатором CustomPrometheusRules командой promtool check rules для временного YAML-файла. CheckRules проверяет локальный файл правил и не запускает TLS-сервер. Обработка ClientHello с ECH outer extensions на этом пути недостижима.",
+      "timestamp": "2026-10-12T15:10:20Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-56866"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/github.com/prometheus/prometheus",
+          "subcomponents": [
+            {
+              "@id": "pkg:golang/stdlib@v1.25.14"
+            }
+          ]
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "В webhook-handler promtool вызывается валидатором CustomPrometheusRules командой promtool check rules для временного YAML-файла. CheckRules не отправляет HTTP-запросы, включая CONNECT с телом, и не выполняет reverse proxy. Уязвимый путь http.Transport не выполняется; символы httputil.ReverseProxy также отсутствуют в бинарнике.",
+      "timestamp": "2026-10-12T15:10:20Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-78663"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/github.com/prometheus/prometheus",
+          "subcomponents": [
+            {
+              "@id": "pkg:golang/stdlib@v1.25.14"
+            }
+          ]
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "В webhook-handler promtool вызывается валидатором CustomPrometheusRules командой promtool check rules для временного YAML-файла. CheckRules не запускает HTTP/2-сервер. Обработка сброса потоков и возврата flow-control credit на этом пути недостижима.",
+      "timestamp": "2026-10-12T15:10:20Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-94439"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/github.com/prometheus/prometheus",
+          "subcomponents": [
+            {
+              "@id": "pkg:golang/stdlib@v1.25.14"
+            }
+          ]
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "В webhook-handler promtool вызывается валидатором CustomPrometheusRules командой promtool check rules для временного YAML-файла. CheckRules не запускает HTTP-сервер и не формирует ответы на CONNECT-запросы. Уязвимый серверный путь недостижим.",
+      "timestamp": "2026-10-12T15:10:20Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-94448"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/github.com/prometheus/prometheus",
+          "subcomponents": [
+            {
+              "@id": "pkg:golang/stdlib@v1.25.14"
+            }
+          ]
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "В webhook-handler promtool вызывается валидатором CustomPrometheusRules командой promtool check rules для временного YAML-файла. Валидация шаблонов labels и annotations вызывает Expander.ParseTest, который использует text/template.Parse без выполнения шаблона. html/template и экранирование JavaScript template literals на этом пути не используются.",
+      "timestamp": "2026-10-12T15:10:20Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-97032"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/github.com/prometheus/prometheus",
+          "subcomponents": [
+            {
+              "@id": "pkg:golang/stdlib@v1.25.14"
+            }
+          ]
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "В webhook-handler promtool вызывается валидатором CustomPrometheusRules командой promtool check rules для временного YAML-файла. CheckRules не запускает HTTP/2-сервер. Конкурентная модификация серверного HPACK encoder при обработке SETTINGS и формировании HEADERS недостижима.",
+      "timestamp": "2026-10-12T15:10:20Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-56857"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/github.com/prometheus/prometheus",
+          "subcomponents": [
+            {
+              "@id": "pkg:golang/stdlib@v1.25.14"
+            }
+          ]
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "В webhook-handler promtool вызывается валидатором CustomPrometheusRules командой promtool check rules для временного YAML-файла. Бинарник собран для Linux amd64. Уязвимость os.Root.Mkdir и MkdirAll при обработке Windows junction к этой сборке не применима.",
+      "timestamp": "2026-10-12T15:10:20Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-78659"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/github.com/prometheus/prometheus",
+          "subcomponents": [
+            {
+              "@id": "pkg:golang/stdlib@v1.25.14"
+            }
+          ]
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "В webhook-handler promtool вызывается валидатором CustomPrometheusRules командой promtool check rules для временного YAML-файла. CheckRules не запускает HTTP/2-сервер и не принимает HTTP-запросы. Выделение памяти по Trailer-заголовкам на этом пути недостижимо.",
+      "timestamp": "2026-10-12T15:10:20Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-78660"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/github.com/prometheus/prometheus",
+          "subcomponents": [
+            {
+              "@id": "pkg:golang/stdlib@v1.25.14"
+            }
+          ]
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "В webhook-handler promtool вызывается валидатором CustomPrometheusRules командой promtool check rules для временного YAML-файла. CheckRules не устанавливает HTTP-соединения и не выполняет reverse proxy. Перенос framing-заголовков из HTTP/2-ответов в HTTP/1 на этом пути недостижим.",
+      "timestamp": "2026-10-12T15:10:20Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-94440"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/github.com/prometheus/prometheus",
+          "subcomponents": [
+            {
+              "@id": "pkg:golang/stdlib@v1.25.14"
+            }
+          ]
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "В webhook-handler promtool вызывается валидатором CustomPrometheusRules командой promtool check rules для временного YAML-файла. CheckRules читает YAML из локального файла и проверяет правила. HTTP-запросы и multipart-формы не разбираются; mime/multipart.ReadForm на этом пути не вызывается.",
+      "timestamp": "2026-10-12T15:10:20Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-97030"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/github.com/prometheus/prometheus",
+          "subcomponents": [
+            {
+              "@id": "pkg:golang/stdlib@v1.25.14"
+            }
+          ]
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "В webhook-handler promtool вызывается валидатором CustomPrometheusRules командой promtool check rules для временного YAML-файла. Валидация шаблонов labels и annotations использует только text/template.Parse через Expander.ParseTest. HTML-шаблоны не выполняются; экранирование JavaScript-контекста yield из html/template не используется.",
+      "timestamp": "2026-10-12T15:10:20Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-78669"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/github.com/prometheus/prometheus",
+          "subcomponents": [
+            {
+              "@id": "pkg:golang/golang.org/x/net@v0.52.0"
+            }
+          ]
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "В webhook-handler promtool вызывается валидатором CustomPrometheusRules командой promtool check rules для временного YAML-файла. CheckRules проверяет YAML, PromQL и синтаксис текстовых шаблонов локально. Сетевые запросы и HTTP/2-сервер не запускаются, функции шаблонов не выполняются; обработка SETTINGS-фреймов клиента или сервера недостижима.",
+      "timestamp": "2026-10-12T15:10:20Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-78663"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/github.com/prometheus/prometheus",
+          "subcomponents": [
+            {
+              "@id": "pkg:golang/golang.org/x/net@v0.52.0"
+            }
+          ]
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "В webhook-handler promtool вызывается валидатором CustomPrometheusRules командой promtool check rules для временного YAML-файла. CheckRules не запускает HTTP/2-сервер. Обработка сброса потоков и возврата flow-control credit на этом пути недостижима.",
+      "timestamp": "2026-10-12T15:10:20Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-97032"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/github.com/prometheus/prometheus",
+          "subcomponents": [
+            {
+              "@id": "pkg:golang/golang.org/x/net@v0.52.0"
+            }
+          ]
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "В webhook-handler promtool вызывается валидатором CustomPrometheusRules командой promtool check rules для временного YAML-файла. CheckRules не запускает HTTP/2-сервер. Конкурентная модификация серверного HPACK encoder при обработке SETTINGS и формировании HEADERS недостижима.",
+      "timestamp": "2026-10-12T15:10:20Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-78659"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/github.com/prometheus/prometheus",
+          "subcomponents": [
+            {
+              "@id": "pkg:golang/golang.org/x/net@v0.52.0"
+            }
+          ]
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "В webhook-handler promtool вызывается валидатором CustomPrometheusRules командой promtool check rules для временного YAML-файла. CheckRules не запускает HTTP/2-сервер и не принимает HTTP-запросы. Выделение памяти по Trailer-заголовкам на этом пути недостижимо.",
+      "timestamp": "2026-10-12T15:10:20Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-78660"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/github.com/prometheus/prometheus",
+          "subcomponents": [
+            {
+              "@id": "pkg:golang/golang.org/x/net@v0.52.0"
+            }
+          ]
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "В webhook-handler promtool вызывается валидатором CustomPrometheusRules командой promtool check rules для временного YAML-файла. CheckRules не устанавливает HTTP-соединения и не выполняет reverse proxy. Перенос framing-заголовков из HTTP/2-ответов в HTTP/1 на этом пути недостижим.",
+      "timestamp": "2026-10-12T15:10:20Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-56851"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/github.com/prometheus/prometheus",
+          "subcomponents": [
+            {
+              "@id": "pkg:golang/golang.org/x/text@v0.35.0"
+            }
+          ]
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "В webhook-handler promtool вызывается валидатором CustomPrometheusRules командой promtool check rules для временного YAML-файла. CheckRules проверяет YAML, PromQL и синтаксис текстовых шаблонов; преобразование имён профилем precis.Nickname не выполняется. Символы golang.org/x/text/secure/precis и Nickname отсутствуют в бинарнике.",
+      "timestamp": "2026-10-12T15:10:20Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-78667"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/github.com/mikefarah/yq/v4",
+          "subcomponents": [
+            {
+              "@id": "pkg:golang/stdlib@v1.25.13"
+            }
+          ]
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "В Linux-бинарнике yq отсутствуют функции FileServer, ServeFile, ServeContent и HTTP-сервера. Обработка Range-заголовков из этой уязвимости не выполняется.",
+      "timestamp": "2026-10-12T15:23:45Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-78669"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/github.com/mikefarah/yq/v4",
+          "subcomponents": [
+            {
+              "@id": "pkg:golang/stdlib@v1.25.13"
+            }
+          ]
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "В Linux-бинарнике yq отсутствуют функции HTTP/2-клиента и HTTP/2-сервера. Обработка SETTINGS-фреймов из сети не выполняется.",
+      "timestamp": "2026-10-12T15:23:45Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-97031"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/github.com/mikefarah/yq/v4",
+          "subcomponents": [
+            {
+              "@id": "pkg:golang/stdlib@v1.25.13"
+            }
+          ]
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "В Linux-бинарнике yq отсутствуют TLS-сервер и функции обработки ClientHello/ECH. Уязвимое декодирование ECH не выполняется.",
+      "timestamp": "2026-10-12T15:23:45Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-56866"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/github.com/mikefarah/yq/v4",
+          "subcomponents": [
+            {
+              "@id": "pkg:golang/stdlib@v1.25.13"
+            }
+          ]
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "В Linux-бинарнике yq отсутствуют Transport.RoundTrip и ReverseProxy. Отправка CONNECT-запросов с телом и уязвимая обработка ответа не выполняются.",
+      "timestamp": "2026-10-12T15:23:45Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-78663"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/github.com/mikefarah/yq/v4",
+          "subcomponents": [
+            {
+              "@id": "pkg:golang/stdlib@v1.25.13"
+            }
+          ]
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "В Linux-бинарнике yq отсутствуют функции HTTP/2-сервера. Серверная обработка flow control не выполняется.",
+      "timestamp": "2026-10-12T15:23:45Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-94439"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/github.com/mikefarah/yq/v4",
+          "subcomponents": [
+            {
+              "@id": "pkg:golang/stdlib@v1.25.13"
+            }
+          ]
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "В Linux-бинарнике yq отсутствуют HTTP-сервер и обработчики CONNECT-запросов. Уязвимый серверный путь не выполняется.",
+      "timestamp": "2026-10-12T15:23:45Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-94448"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/github.com/mikefarah/yq/v4",
+          "subcomponents": [
+            {
+              "@id": "pkg:golang/stdlib@v1.25.13"
+            }
+          ]
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "В Linux-бинарнике yq отсутствуют функции html/template. Рендеринг JavaScript-контекста HTML-шаблонов не выполняется.",
+      "timestamp": "2026-10-12T15:23:45Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-97032"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/github.com/mikefarah/yq/v4",
+          "subcomponents": [
+            {
+              "@id": "pkg:golang/stdlib@v1.25.13"
+            }
+          ]
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "В Linux-бинарнике yq отсутствуют функции HTTP/2-сервера и серверного HPACK-кодировщика. Уязвимый путь не выполняется.",
+      "timestamp": "2026-10-12T15:23:45Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-56857"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/github.com/mikefarah/yq/v4",
+          "subcomponents": [
+            {
+              "@id": "pkg:golang/stdlib@v1.25.13"
+            }
+          ]
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "yq в этом образе собирается для Linux. Уязвимость os.Root.Mkdir при обработке Windows junction относится к Windows; соответствующий платформенный код отсутствует.",
+      "timestamp": "2026-10-12T15:23:45Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-78659"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/github.com/mikefarah/yq/v4",
+          "subcomponents": [
+            {
+              "@id": "pkg:golang/stdlib@v1.25.13"
+            }
+          ]
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "В Linux-бинарнике yq отсутствуют функции HTTP/2-сервера. Серверная обработка Trailer-заголовков не выполняется.",
+      "timestamp": "2026-10-12T15:23:45Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-78660"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/github.com/mikefarah/yq/v4",
+          "subcomponents": [
+            {
+              "@id": "pkg:golang/stdlib@v1.25.13"
+            }
+          ]
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "В Linux-бинарнике yq отсутствуют ReverseProxy и функции HTTP/2. Проксирование между HTTP/2 и HTTP/1 не выполняется.",
+      "timestamp": "2026-10-12T15:23:45Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-94440"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/github.com/mikefarah/yq/v4",
+          "subcomponents": [
+            {
+              "@id": "pkg:golang/stdlib@v1.25.13"
+            }
+          ]
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "В Linux-бинарнике yq отсутствуют функции mime/multipart.Reader.ReadForm и HTTP Request.ParseMultipartForm. Парсинг multipart-форм не выполняется.",
+      "timestamp": "2026-10-12T15:23:45Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-97030"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/github.com/mikefarah/yq/v4",
+          "subcomponents": [
+            {
+              "@id": "pkg:golang/stdlib@v1.25.13"
+            }
+          ]
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "В Linux-бинарнике yq отсутствуют функции html/template. Контекстное экранирование HTML-шаблонов не выполняется.",
+      "timestamp": "2026-10-12T15:23:45Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-78669"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/github.com/mikefarah/yq/v4",
+          "subcomponents": [
+            {
+              "@id": "pkg:golang/golang.org/x/net@v0.42.0"
+            }
+          ]
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "В Linux-бинарнике yq отсутствуют функции HTTP/2-клиента и HTTP/2-сервера. Обработка SETTINGS-фреймов из сети не выполняется.",
+      "timestamp": "2026-10-12T15:23:45Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-78663"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/github.com/mikefarah/yq/v4",
+          "subcomponents": [
+            {
+              "@id": "pkg:golang/golang.org/x/net@v0.42.0"
+            }
+          ]
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "В Linux-бинарнике yq отсутствуют функции HTTP/2-сервера. Серверная обработка flow control не выполняется.",
+      "timestamp": "2026-10-12T15:23:45Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-97032"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/github.com/mikefarah/yq/v4",
+          "subcomponents": [
+            {
+              "@id": "pkg:golang/golang.org/x/net@v0.42.0"
+            }
+          ]
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "В Linux-бинарнике yq отсутствуют функции HTTP/2-сервера и серверного HPACK-кодировщика. Уязвимый путь не выполняется.",
+      "timestamp": "2026-10-12T15:23:45Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-78659"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/github.com/mikefarah/yq/v4",
+          "subcomponents": [
+            {
+              "@id": "pkg:golang/golang.org/x/net@v0.42.0"
+            }
+          ]
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "В Linux-бинарнике yq отсутствуют функции HTTP/2-сервера. Серверная обработка Trailer-заголовков не выполняется.",
+      "timestamp": "2026-10-12T15:23:45Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-78660"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/github.com/mikefarah/yq/v4",
+          "subcomponents": [
+            {
+              "@id": "pkg:golang/golang.org/x/net@v0.42.0"
+            }
+          ]
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "В Linux-бинарнике yq отсутствуют ReverseProxy и функции HTTP/2. Проксирование между HTTP/2 и HTTP/1 не выполняется.",
+      "timestamp": "2026-10-12T15:23:45Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-56851"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/github.com/mikefarah/yq/v4",
+          "subcomponents": [
+            {
+              "@id": "pkg:golang/golang.org/x/text@v0.27.0"
+            }
+          ]
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "В Linux-бинарнике yq отсутствуют функции пакета golang.org/x/text/secure/precis. Профиль Nickname не вызывается; обработка специально подготовленной строки в коротком буфере назначения из этой уязвимости не выполняется.",
+      "timestamp": "2026-10-12T15:23:45Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-94439"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/deckhouse.io/webhook",
+          "subcomponents": [
+            {
+              "@id": "pkg:golang/stdlib@v1.27.1"
+            }
+          ]
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_cannot_be_controlled_by_adversary",
+      "impact_statement": "В штатной топологии webhook-handler серверы webhook-operator доступны напрямую через TCP Service; перед ними нет HTTP-посредника, переводящего успешный CONNECT в непрозрачный туннель. Атакующий не управляет необходимой для описанного request smuggling цепочкой прокси и не может вызвать различную интерпретацию соединения в поставляемой конфигурации. Код Go может вернуть 2xx на CONNECT; исключение не распространяется на добавленные администратором CONNECT-прокси.",
+      "timestamp": "2026-10-13T06:04:01Z"
     }
   ],
   "timestamp": "2026-02-16T12:00:00Z",
-  "last_updated": "2026-09-15T12:00:00Z"
+  "last_updated": "2026-10-13T06:04:01Z"
 }
