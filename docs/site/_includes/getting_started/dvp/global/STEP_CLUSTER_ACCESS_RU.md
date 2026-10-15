@@ -107,57 +107,45 @@
    sudo -i d8 k get pods -n d8-ingress-nginx -o=jsonpath='{range .items[*]}{.metadata.name}{"\t"}{.status.hostIP}{"\n"}{end}' | grep '^controller' | awk '{print $2}'
    ```
 
-   Добавьте DNS-записи:
+   Настройте DNS одним из следующих способов:
 
-   - **Wildcard-шаблон** (например `%s.domain.my`) — одна wildcard A-запись на IP узла с Ingress.
-   - **Шаблон без wildcard** (например `%s-kube.company.my`) — A- или CNAME-записи для каждого имени:
+   {% tabs dns_options %}
+   {% tab "Wildcard DNS-запись" %}
+   Используйте этот вариант, если у вас есть DNS-сервер, а шаблон DNS-имён кластера — [wildcard-шаблон](https://en.wikipedia.org/wiki/Wildcard_DNS_record) (например, `%s.domain.my`).
 
-     ```text
-     api.domain.my
-     code.domain.my
-     commander.domain.my
-     console.domain.my
-     dex.domain.my
-     documentation.domain.my
-     grafana.domain.my
-     hubble.domain.my
-     istio.domain.my
-     istio-api-proxy.domain.my
-     kubeconfig.domain.my
-     openvpn-admin.domain.my
-     registry.domain.my
-     prometheus.domain.my
-     status.domain.my
-     tools.domain.my
-     upmeter.domain.my
-     virtualization.domain.my
-     ```
+   Добавьте на DNS-сервере wildcard A-запись со значением IP-адреса узла с Ingress-контроллером.
+   {% endtab %}
+   {% tab "Отдельные DNS-записи" %}
+   Используйте этот вариант, если у вас есть DNS-сервер, а шаблон DNS-имён кластера — **не** [wildcard-шаблон](https://en.wikipedia.org/wiki/Wildcard_DNS_record) (например, `%s-kube.company.my`).
 
-   Если DNS-сервера нет, добавьте записи на **рабочей станции** (в Windows — `%SystemRoot%\system32\drivers\etc\hosts`):
+   Добавьте на DNS-сервере A- или CNAME-записи с IP-адресом узла с Ingress-контроллером для следующих DNS-имён:
 
-   ```bash
-   export PUBLIC_IP="<MASTER_IP>"
-   sudo -E bash -c "cat <<EOF >> /etc/hosts
-   $PUBLIC_IP api.domain.my
-   $PUBLIC_IP code.domain.my
-   $PUBLIC_IP commander.domain.my
-   $PUBLIC_IP console.domain.my
-   $PUBLIC_IP dex.domain.my
-   $PUBLIC_IP documentation.domain.my
-   $PUBLIC_IP grafana.domain.my
-   $PUBLIC_IP hubble.domain.my
-   $PUBLIC_IP istio.domain.my
-   $PUBLIC_IP istio-api-proxy.domain.my
-   $PUBLIC_IP kubeconfig.domain.my
-   $PUBLIC_IP openvpn-admin.domain.my
-   $PUBLIC_IP registry.domain.my
-   $PUBLIC_IP prometheus.domain.my
-   $PUBLIC_IP status.domain.my
-   $PUBLIC_IP tools.domain.my
-   $PUBLIC_IP upmeter.domain.my
-   $PUBLIC_IP virtualization.domain.my
-   EOF
-   "
+   ```text
+   api.domain.my
+   code.domain.my
+   commander.domain.my
+   console.domain.my
+   dex.domain.my
+   documentation.domain.my
+   grafana.domain.my
+   hubble.domain.my
+   istio.domain.my
+   istio-api-proxy.domain.my
+   kubeconfig.domain.my
+   openvpn-admin.domain.my
+   prometheus.domain.my
+   registry.domain.my
+   status.domain.my
+   tools.domain.my
+   upmeter.domain.my
+   virtualization.domain.my
    ```
+   {% endtab %}
+   {% tab "Файл hosts" %}
+   Используйте этот вариант, если у вас нет DNS-сервера. Добавьте статические записи в hosts-файл на **рабочей станции** (`/etc/hosts` для Linux, `%SystemRoot%\system32\drivers\etc\hosts` для Windows).
+
+   Чтобы получить команду для добавления записей, воспользуйтесь [генератором данных для hosts-файла](/products/kubernetes-platform/documentation/latest/reference/public-domains.html#генератор-данных-для-hosts-файла): укажите шаблон DNS-имён и IP-адрес узла с Ingress-контроллером. Оба значения выводят команды выше.
+   {% endtab %}
+   {% endtabs %}
 
 Кластер DVP развёрнут и готов к работе.

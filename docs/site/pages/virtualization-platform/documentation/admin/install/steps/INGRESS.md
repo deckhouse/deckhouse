@@ -67,7 +67,7 @@ controller-nginx-r6hxc                     3/3     Running   0          5m
 To access the platform's web interfaces, DNS records need to be configured for the cluster's domain.
 
 {% alert level="warning" %}
-The domain used in the template must not match the domain specified in the `clusterDomain` parameter or the internal network service zone. For example, if `clusterDomain: cluster.local` (default value) is used, and the network service zone is `central1.internal`, the `publicDomainTemplate` cannot be `%s.cluster.local` or `%s.central1.internal`.
+The domain in the template must not match the domain from the `clusterDomain` parameter or the internal network service zone. Example: `clusterDomain: cluster.local` (default value), the network service zone is `central1.internal`. In this case, `publicDomainTemplate` cannot be `%s.cluster.local` or `%s.central1.internal`.
 {% endalert %}
 
 ### Using a Wildcard Domain

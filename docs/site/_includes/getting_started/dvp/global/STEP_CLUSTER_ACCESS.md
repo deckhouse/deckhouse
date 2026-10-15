@@ -107,57 +107,45 @@ Make sure the cluster is healthy and set up DNS so you can open DVP web interfac
    sudo -i d8 k get pods -n d8-ingress-nginx -o=jsonpath='{range .items[*]}{.metadata.name}{"\t"}{.status.hostIP}{"\n"}{end}' | grep '^controller' | awk '{print $2}'
    ```
 
-   Add DNS records:
+   Configure DNS in one of the following ways:
 
-   - **Wildcard template** (for example `%s.domain.my`) — one wildcard A record pointing to the Ingress node IP.
-   - **Non-wildcard template** (for example `%s-kube.company.my`) — A or CNAME records for each hostname:
+   {% tabs dns_options %}
+   {% tab "Wildcard DNS record" %}
+   Use this option if you have a DNS server and your cluster DNS name template is a [wildcard template](https://en.wikipedia.org/wiki/Wildcard_DNS_record) (for example, `%s.domain.my`).
 
-     ```text
-     api.domain.my
-     code.domain.my
-     commander.domain.my
-     console.domain.my
-     dex.domain.my
-     documentation.domain.my
-     grafana.domain.my
-     hubble.domain.my
-     istio.domain.my
-     istio-api-proxy.domain.my
-     kubeconfig.domain.my
-     openvpn-admin.domain.my
-     registry.domain.my
-     prometheus.domain.my
-     status.domain.my
-     tools.domain.my
-     upmeter.domain.my
-     virtualization.domain.my
-     ```
+   On the DNS server, add a wildcard A record pointing to the IP address of the Ingress controller node.
+   {% endtab %}
+   {% tab "Individual DNS records" %}
+   Use this option if you have a DNS server and your cluster DNS name template is **not** a [wildcard template](https://en.wikipedia.org/wiki/Wildcard_DNS_record) (for example, `%s-kube.company.my`).
 
-   If you do not manage DNS, add static mappings on your **workstation** (on Windows — `%SystemRoot%\system32\drivers\etc\hosts`):
+   On the DNS server, add A or CNAME records pointing to the IP address of the Ingress controller node for the following DNS names:
 
-   ```bash
-   export PUBLIC_IP="<MASTER_IP>"
-   sudo -E bash -c "cat <<EOF >> /etc/hosts
-   $PUBLIC_IP api.domain.my
-   $PUBLIC_IP code.domain.my
-   $PUBLIC_IP commander.domain.my
-   $PUBLIC_IP console.domain.my
-   $PUBLIC_IP dex.domain.my
-   $PUBLIC_IP documentation.domain.my
-   $PUBLIC_IP grafana.domain.my
-   $PUBLIC_IP hubble.domain.my
-   $PUBLIC_IP istio.domain.my
-   $PUBLIC_IP istio-api-proxy.domain.my
-   $PUBLIC_IP kubeconfig.domain.my
-   $PUBLIC_IP openvpn-admin.domain.my
-   $PUBLIC_IP registry.domain.my
-   $PUBLIC_IP prometheus.domain.my
-   $PUBLIC_IP status.domain.my
-   $PUBLIC_IP tools.domain.my
-   $PUBLIC_IP upmeter.domain.my
-   $PUBLIC_IP virtualization.domain.my
-   EOF
-   "
+   ```text
+   api.domain.my
+   code.domain.my
+   commander.domain.my
+   console.domain.my
+   dex.domain.my
+   documentation.domain.my
+   grafana.domain.my
+   hubble.domain.my
+   istio.domain.my
+   istio-api-proxy.domain.my
+   kubeconfig.domain.my
+   openvpn-admin.domain.my
+   prometheus.domain.my
+   registry.domain.my
+   status.domain.my
+   tools.domain.my
+   upmeter.domain.my
+   virtualization.domain.my
    ```
+   {% endtab %}
+   {% tab "Hosts file" %}
+   Use this option if you don't have a DNS server. Add static records to the hosts file on your **workstation** (`/etc/hosts` for Linux, `%SystemRoot%\system32\drivers\etc\hosts` for Windows).
+
+   To get the command for adding the records, use the [hosts file data generator](/products/kubernetes-platform/documentation/latest/reference/public-domains.html#hosts-file-data-generator): enter the DNS name template and the IP address of the Ingress controller node. The commands above print both values.
+   {% endtab %}
+   {% endtabs %}
 
 The DVP cluster is deployed and ready to use.

@@ -67,6 +67,7 @@ git:
   includePaths:
   - _assets/js/search.js
   - _data/rbac/
+  - _data/reference/public-domains.yml
   - _includes/rbac/
   - _includes/related_links.liquid
   - _plugins/alert.rb

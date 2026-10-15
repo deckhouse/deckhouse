@@ -67,7 +67,7 @@ controller-nginx-r6hxc                     3/3     Running   0          5m
 Для доступа к веб-интерфейсам платформы необходимо настроить DNS-записи для домена кластера.
 
 {% alert level="warning" %}
-Домен, используемый в шаблоне, не должен совпадать с доменом, указанным в параметре `clusterDomain`, и внутренней сервисной зоной сети. Например, если используется `clusterDomain: cluster.local` (значение по умолчанию),, а сервисная зона сети — `ru-central1.internal`, то `publicDomainTemplate` не может быть `%s.cluster.local` или `%s.ru-central1.internal`.
+Домен в шаблоне не должен совпадать с доменом из параметра `clusterDomain` и с внутренней сервисной зоной сети. Пример: `clusterDomain: cluster.local` (значение по умолчанию), сервисная зона сети — `ru-central1.internal`. Тогда `publicDomainTemplate` не может быть `%s.cluster.local` или `%s.ru-central1.internal`.
 {% endalert %}
 
 ### Использование Wildcard-домена

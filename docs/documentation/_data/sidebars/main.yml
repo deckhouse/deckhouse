@@ -2195,13 +2195,17 @@ entries:
             ru: Параметры sysctl
           url: /reference/sysctl.html
         - title:
-            en: Used software
+            en: Software used
             ru: Используемое ПО
           url: /reference/oss_info.html
         - title:
-            en: Used directors
+            en: Directories Used
             ru: Используемые директории
           url: /reference/used_directories.html
+        - title:
+            en: DNS Names Used
+            ru: Используемые DNS-имена
+          url: /reference/public-domains.html
     - title:
         en: Console utilities
         ru: Консольные утилиты
