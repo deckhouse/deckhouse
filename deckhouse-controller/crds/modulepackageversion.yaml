@@ -508,6 +508,7 @@ spec:
                       CRD; the controller validates this subtree in Go when loading package
                       metadata.
                     type: object
+                    x-kubernetes-map-type: atomic
                     x-kubernetes-preserve-unknown-fields: true
                   valuesSchema:
                     description: |-
@@ -517,6 +518,7 @@ spec:
                       JSON schema that cannot be expressed structurally in a CRD; the
                       controller validates this subtree in Go when loading package metadata.
                     type: object
+                    x-kubernetes-map-type: atomic
                     x-kubernetes-preserve-unknown-fields: true
                 type: object
               used:

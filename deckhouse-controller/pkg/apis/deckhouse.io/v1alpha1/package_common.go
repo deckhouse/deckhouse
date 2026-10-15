@@ -159,6 +159,7 @@ type PackageVersionStatusSchemas struct {
 	// +kubebuilder:validation:Schemaless
 	// +kubebuilder:pruning:PreserveUnknownFields
 	// +kubebuilder:validation:Type=object
+	// +mapType=atomic
 	SettingsSchema *PackageSchema `json:"settingsSchema,omitempty"`
 
 	// ValuesSchema is the OpenAPI v3 schema used to validate the effective
@@ -170,6 +171,7 @@ type PackageVersionStatusSchemas struct {
 	// +kubebuilder:validation:Schemaless
 	// +kubebuilder:pruning:PreserveUnknownFields
 	// +kubebuilder:validation:Type=object
+	// +mapType=atomic
 	ValuesSchema *PackageSchema `json:"valuesSchema,omitempty"`
 }
 
