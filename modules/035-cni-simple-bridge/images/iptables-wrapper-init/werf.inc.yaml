@@ -10,16 +10,12 @@ import:
   add: /iptables-wrapper
   to: /iptables-wrapper
   before: setup
-- image: registrypackages/iptables-artifact
+- image: registrypackages/iptables-static-artifact
   add: /
   to: /_sbin
   includePaths:
   - xtables-legacy-multi
   - xtables-nft-multi
-  before: setup
-- image: registrypackages/iptables-artifact
-  add: /relocate/lib64
-  to: /lib64
   before: setup
 - image: {{ .ModuleName }}/{{ .ImageName }}-relocate-artifact
   add: /relocate

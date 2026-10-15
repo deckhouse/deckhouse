@@ -3,16 +3,12 @@ image: {{ $.ModuleName }}/{{ $.ImageName }}-binaries-artifact
 from: {{ index $.Images "builder/alpine" }}
 final: false
 import:
-- image: registrypackages/iptables-artifact
+- image: registrypackages/iptables-static-artifact
   add: /
   to: /usr/bin
   includePaths:
   - xtables-legacy-multi
   - xtables-nft-multi
-  before: install
-- image: registrypackages/iptables-artifact
-  add: /relocate/lib64
-  to: /lib64
   before: install
 shell:
   install:

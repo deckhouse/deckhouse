@@ -22,16 +22,12 @@ import:
   add: /relocate
   to: /
   before: setup
-- image: registrypackages/iptables-artifact
+- image: registrypackages/iptables-static-artifact
   add: /
   to: /sbin
   includePaths:
   - xtables-legacy-multi
   - xtables-nft-multi
-  before: setup
-- image: registrypackages/iptables-artifact
-  add: /relocate/lib64
-  to: /lib64
   before: setup
 - image: common/iptables-wrapper
   add: /iptables-wrapper

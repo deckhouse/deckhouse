@@ -156,4 +156,4 @@ spec:
         - name: sbin
           emptyDir:
             medium: Memory
-            sizeLimit: 4Mi
+            sizeLimit: 16Mi
