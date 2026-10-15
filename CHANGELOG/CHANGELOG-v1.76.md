@@ -6,6 +6,7 @@
  - A StaticInstance whose connectivity check fails now keeps its reservation for the whole bootstrap window instead of returning to the pool on every failed attempt, and the bootstrap (20 min) and cleanup (10 min) timeouts, which previously never fired, are now reachable.
     If nothing ever ran on the host, the bootstrap timeout returns the instance to the pool after 20 minutes as before.
     If the host was already bootstrapped in part, the instance returns only through MachineHealthCheck remediation (nodeStartupTimeoutSeconds: 1200) plus the cleanup timeout, so it becomes available again roughly 20 + 10 minutes after the failure, and remediation reboots the host as part of the cleanup.
+ - A diff will appear in the Terraform state for the base infrastructure: the E zone will be added. Because of this, the Terraform check will fail on the first master node. Run `dhctl converge` for the base infrastructure, and everything should get back to normal.
  - A new resource, `kubernetes_resource_ready_v1`, has been introduced to perform readiness checks for cloud resources, replacing `wait` blocks. After upgrading, the OpenTofu plan will include adding the new resources and removing `wait` blocks. Running `converge` is required to apply the changes and is safe: it does not modify existing cloud resources. During migration, readiness checks are skipped for resources older than 5 days. Related warnings may appear and can be safely ignored.
  - After the update, the controller adds the annotations and labels of every ServiceWithHealthchecks to the Service created for it.
     If a ServiceWithHealthchecks of the `LoadBalancer` type carries annotations that configure the load balancer
@@ -190,6 +191,8 @@
  - **[cloud-provider-vcd]** Added secrets with `node-manager` dependencies. [#18112](https://github.com/deckhouse/deckhouse/pull/18112)
  - **[cloud-provider-vcd]** Migrated VCD and Huawei Cloud to lib-helm defines; enabled security policy checks for VCD. [#18846](https://github.com/deckhouse/deckhouse/pull/18846)
  - **[cloud-provider-vsphere]** Added secrets with `node-manager` dependencies. [#18112](https://github.com/deckhouse/deckhouse/pull/18112)
+ - **[cloud-provider-yandex]** Add support for the `ru-central1-e` zone in Yandex Cloud. [#550](https://fox.flant.com/deckhouse/deckhouse/-/merge_requests/550)
+    A diff will appear in the Terraform state for the base infrastructure: the E zone will be added. Because of this, the Terraform check will fail on the first master node. Run `dhctl converge` for the base infrastructure, and everything should get back to normal.
  - **[cloud-provider-yandex]** Added secrets with `node-manager` dependencies. [#18112](https://github.com/deckhouse/deckhouse/pull/18112)
  - **[cloud-provider-yandex]** Switched the default CNI to Cilium with VXLAN networking mode for new clusters to unify the configuration. [#19074](https://github.com/deckhouse/deckhouse/pull/19074)
  - **[cloud-provider-zvirt]** Added secrets with `node-manager` dependencies. [#18112](https://github.com/deckhouse/deckhouse/pull/18112)
@@ -342,6 +345,7 @@
  - **[cloud-provider-azure]** Fixed CVEs in `cloud-provider-azure`. [#18067](https://github.com/deckhouse/deckhouse/pull/18067)
  - **[cloud-provider-azure]** fix CVEs in cloud-provider-azure [#18240](https://github.com/deckhouse/deckhouse/pull/18240)
  - **[cloud-provider-azure]** fix GetCapacity not implemented error spam in logs [#23132](https://github.com/deckhouse/deckhouse/pull/23132)
+ - **[cloud-provider-azure]** use .normal.apiserverEndpoints in data device Secret fallback [#696](https://fox.flant.com/deckhouse/deckhouse/-/merge_requests/696)
  - **[cloud-provider-dvp]** Add skip storage class annotation handling to skip discovery of some storage classes from parent clusters, e.g., local disks. [#19783](https://github.com/deckhouse/deckhouse/pull/19783)
  - **[cloud-provider-dvp]** Allowed using `additionalDisks` in master InstanceClasses. [#17352](https://github.com/deckhouse/deckhouse/pull/17352)
  - **[cloud-provider-dvp]** CVE fixes [#20908](https://github.com/deckhouse/deckhouse/pull/20908)
@@ -383,6 +387,7 @@
  - **[cloud-provider-vsphere]** Added filtering discovered zones and datastores by `zones` from provider configurations. [#18378](https://github.com/deckhouse/deckhouse/pull/18378)
  - **[cloud-provider-vsphere]** Enabled the vSphere CSI snapshotter. [#18263](https://github.com/deckhouse/deckhouse/pull/18263)
  - **[cloud-provider-vsphere]** Fix vSphere privilege matrix and describe instructions for setting up environment via vSphere Client [#18725](https://github.com/deckhouse/deckhouse/pull/18725)
+ - **[cloud-provider-vsphere]** Fixed master node creation when the datastore is set as a path with parent folders. [#362](https://fox.flant.com/deckhouse/deckhouse/-/merge_requests/362)
  - **[cloud-provider-vsphere]** fix missing default StorageClass annotation when a DatastoreCluster entry sorts before all Datastore entries [#21457](https://github.com/deckhouse/deckhouse/pull/21457)
  - **[cloud-provider-vsphere]** normalizes new paths and makes bashible resolve existing paths case-insensitively [#19747](https://github.com/deckhouse/deckhouse/pull/19747)
  - **[cloud-provider-yandex]** A Node that cannot be resolved to a Yandex Instance no longer blocks target group synchronization for the whole cluster. [#22465](https://github.com/deckhouse/deckhouse/pull/22465)
@@ -464,6 +469,7 @@
  - **[deckhouse]** Remove notified=false annotation reset from runReleaseDeploy in the module release controller. [#19169](https://github.com/deckhouse/deckhouse/pull/19169)
  - **[deckhouse]** Restore ModuleIsInMaintenanceMode alert by switching to d8_module_config_maintenance sourced from ModuleConfig. [#19352](https://github.com/deckhouse/deckhouse/pull/19352)
  - **[deckhouse]** Restore admin access to list moduleconfigs [#21531](https://github.com/deckhouse/deckhouse/pull/21531)
+ - **[deckhouse]** Restore kubectl plugin lookup in d8 k and d8 kubectl [#587](https://fox.flant.com/deckhouse/deckhouse/-/merge_requests/587)
  - **[deckhouse]** Revoke permission to use moduleconfig to user. [#19698](https://github.com/deckhouse/deckhouse/pull/19698)
  - **[deckhouse]** Stop reserving platform public hostnames at admission; keep the ModuleConfig field so existing settings still validate. [#22533](https://github.com/deckhouse/deckhouse/pull/22533)
     ValidatingAdmissionPolicy reserved-public-hosts-* is removed. Ingresses that were denied because they matched publicDomainTemplate are allowed again. settings.reservedPublicHosts in ModuleConfig deckhouse remains accepted and is ignored. Enforcement returns in a later release.
@@ -484,6 +490,7 @@
  - **[dhctl]** Fixed a panic in infrastructure plan processing when the destructive changes report returns an error. [#18908](https://github.com/deckhouse/deckhouse/pull/18908)
  - **[dhctl]** Fixed namespace updates during cluster bootstrap when the namespace already exists. [#19129](https://github.com/deckhouse/deckhouse/pull/19129)
  - **[dhctl]** Preflight checks are no longer re-run on every dhctl-server restart when the cluster config is unchanged. [#21114](https://github.com/deckhouse/deckhouse/pull/21114)
+ - **[dhctl]** Prevent dhctl converge from panicking when kubeconfig is used without an SSH host. [#499](https://fox.flant.com/deckhouse/deckhouse/-/merge_requests/499)
  - **[dhctl]** Refactored preflight checks. [#17564](https://github.com/deckhouse/deckhouse/pull/17564)
  - **[dhctl]** Skip tmp lock for exporter and auto-converger. [#18736](https://github.com/deckhouse/deckhouse/pull/18736)
  - **[dhctl]** Switched to using the system certificate pool together with custom registry CAs for registry TLS handling. [#18978](https://github.com/deckhouse/deckhouse/pull/18978)
@@ -544,6 +551,7 @@
  - **[istio]** Reduce CPU and RAM for regenerate multicluster JWT token and sort ingressGateway [#18554](https://github.com/deckhouse/deckhouse/pull/18554)
  - **[istio]** Restore Istiod pod anti-affinity for Istio 1.25 installations managed by the Sail Operator. [#22168](https://github.com/deckhouse/deckhouse/pull/22168)
  - **[istio]** Switching back to Istio 1.21 no longer removes the `networking.istio.io/v1` API from the Istio CRDs and no longer breaks the istio release. [#269](https://fox.flant.com/deckhouse/deckhouse/-/merge_requests/269)
+ - **[istio]** The Istio operator now recovers Helm releases stuck in the `pending-*` or `uninstalling` state. [#261](https://fox.flant.com/deckhouse/deckhouse/-/merge_requests/261)
  - **[istio]** added iptables wrapper in cni-v1x21x6 [#18925](https://github.com/deckhouse/deckhouse/pull/18925)
     istio-cni-nodes will be restarted
  - **[istio]** fixed CVE-2026-33186 in v1.21.6 images [#18676](https://github.com/deckhouse/deckhouse/pull/18676)
