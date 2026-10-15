@@ -1,0 +1,54 @@
+diff --git a/api/v1alpha1/yandexmachine_types.go b/api/v1alpha1/yandexmachine_types.go
+--- a/api/v1alpha1/yandexmachine_types.go
++++ b/api/v1alpha1/yandexmachine_types.go
+@@ -59,6 +59,13 @@
+ 	// +kubebuilder:default=standard-v3
+ 	PlatformID *string `json:"platformID,omitempty"`
+ 
++	// Preemptible is set to true if YandexCloud VM should be created as preemptible.
++	// Preemptible VMs are cheaper, but can be stopped by YandexCloud at any time and always after 24 hours.
++	// More information https://yandex.cloud/en/docs/compute/concepts/preemptible-vm .
++	// +optional
++	// +kubebuilder:default=false
++	Preemptible *bool `json:"preemptible,omitempty"`
++
+ 	// Disk is boot storage configuration for YandexCloud VM.
+ 	BootDisk *Disk `json:"bootDisk"`
+ 
+diff --git a/api/v1alpha1/zz_generated.deepcopy.go b/api/v1alpha1/zz_generated.deepcopy.go
+--- a/api/v1alpha1/zz_generated.deepcopy.go
++++ b/api/v1alpha1/zz_generated.deepcopy.go
+@@ -532,6 +532,11 @@
+ 		*out = new(string)
+ 		**out = **in
+ 	}
++	if in.Preemptible != nil {
++		in, out := &in.Preemptible, &out.Preemptible
++		*out = new(bool)
++		**out = **in
++	}
+ 	if in.BootDisk != nil {
+ 		in, out := &in.BootDisk, &out.BootDisk
+ 		*out = new(Disk)
+diff --git a/internal/pkg/cloud/scope/machine.go b/internal/pkg/cloud/scope/machine.go
+--- a/internal/pkg/cloud/scope/machine.go
++++ b/internal/pkg/cloud/scope/machine.go
+@@ -245,6 +245,11 @@
+ 		networkSettings = &compute.NetworkSettings{Type: compute.NetworkSettings_Type(compute.NetworkSettings_Type_value[networkType])}
+ 	}
+ 
++	schedulingPolicy := &compute.SchedulingPolicy{}
++	if m.YandexMachine.Spec.Preemptible != nil {
++		schedulingPolicy.Preemptible = *m.YandexMachine.Spec.Preemptible
++	}
++
+ 	return &compute.CreateInstanceRequest{
+ 		FolderId:      m.ClusterGetter.GetFolderID(),
+ 		Name:          m.YandexMachine.GetName(),
+@@ -268,5 +273,6 @@
+ 		},
+ 		NetworkInterfaceSpecs: networkInterfacesSpecs,
+ 		NetworkSettings:       networkSettings,
++		SchedulingPolicy:      schedulingPolicy,
+ 	}, nil
+ }

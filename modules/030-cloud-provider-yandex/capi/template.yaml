@@ -1,9 +1,10 @@
 version: v2
 
 # InstanceClass fields whose change requires recreating the machines. The list is carried over
-# from the v1 instance-class.checksum one to one, including preemptible, which does not appear in
-# the template below: under v1 it changed the checksum and therefore rolled the machines, and this
-# migration must not change that.
+# from the v1 instance-class.checksum one to one: under v1 every field below changed the checksum
+# and therefore rolled the machines, and this migration must not change that. preemptible is
+# rendered into the template only when it is true, so that the v2 render stays identical to the
+# v1 one, which never emitted it.
 rolloutFields:
   - platformID
   - cores
@@ -32,6 +33,9 @@ template: |
       spec:
         zoneID: {{ .zone | quote }}
         platformID: {{ get .instanceClass "platformID" | default "standard-v3" | quote }}
+        {{- if get .instanceClass "preemptible" }}
+        preemptible: true
+        {{- end }}
         resources:
           cores: {{ .instanceClass.cores | int }}
           coreFraction: {{ get .instanceClass "coreFraction" | default 100 | int }}
