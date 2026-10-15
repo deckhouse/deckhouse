@@ -1,0 +1,23 @@
+{%- assign i18n = site.data.i18n.common %}
+{%- assign domains = site.data.reference.public-domains %}
+
+<table class="public_domains table__small" markdown="0">
+  <thead>
+  <tr>
+    <th style="text-align: left; background-color: #f3f3fa;">{{ i18n.public_domains_name[page.lang] }}</th>
+    <th style="text-align: left; background-color: #f3f3fa;">{{ i18n.public_domains_created_by[page.lang] }}</th>
+    <th style="text-align: left; background-color: #f3f3fa;">{{ i18n.public_domains_purpose[page.lang] }}</th>
+    <th style="text-align: left; background-color: #f3f3fa;">{{ i18n.public_domains_note[page.lang] }}</th>
+  </tr>
+  </thead>
+  <tbody>
+  {%- for domain in domains %}
+    <tr>
+      <td style="text-align: left"><code>{{ domain.name }}</code></td>
+      <td style="text-align: left">{{ domain[page.lang].created_by | markdownify | replace: '<p>', '' | replace: '</p>', '' | replace: '</p><p>', ' ' | strip_newlines }}</td>
+      <td style="text-align: left">{{ domain[page.lang].purpose | markdownify | replace: '<p>', '' | replace: '</p>', '' | replace: '</p><p>', ' ' | strip_newlines }}</td>
+      <td style="text-align: left">{{ domain[page.lang].note | markdownify | replace: '<p>', '' | replace: '</p>', '' | replace: '</p><p>', ' ' | strip_newlines }}</td>
+    </tr>
+  {%- endfor %}
+  </tbody>
+</table>
