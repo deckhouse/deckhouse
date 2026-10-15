@@ -145,7 +145,7 @@ properties:
             weight:
               type: integer
             timeout:
-              type: integer
+              type: string
             ignorable:
               type: boolean
             caData:

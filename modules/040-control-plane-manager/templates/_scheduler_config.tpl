@@ -60,7 +60,7 @@ extenders:
   enableHTTPS: true
   tlsConfig:
     caData: {{ $extender.caData }}
-  httpTimeout: {{ $extender.timeout }}s
+  httpTimeout: {{ $extender.timeout }}
   nodeCacheCapable: true
   ignorable: {{ $extender.ignorable }}
     {{- end }}

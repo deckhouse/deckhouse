@@ -54,10 +54,24 @@ spec:
                     description: |
                       The numeric multiplier for the node scores that the prioritize call generates.
                     minimum: 1
+                  timeout:
+                    type: string
+                    description: |
+                      Webhook timeout: an integer with the `ms` or `s` suffix, for example `500ms` or `30s`. Allowed values are from `1ms` to `60s`.
+
+                      Takes precedence over `timeoutSeconds`. If omitted, the `timeoutSeconds` value is used.
+                    pattern: '^[0-9]+(ms|s)$'
+                    x-doc-examples: ['500ms']
+                    x-kubernetes-validations:
+                      - rule: "duration(self) >= duration('1ms') && duration(self) <= duration('60s')"
+                        message: 'must be a duration between 1ms and 60s, for example 500ms or 5s'
                   timeoutSeconds:
                     type: integer
+                    x-doc-deprecated: true
                     description: |
                       Webhook timeout in seconds.
+
+                      Deprecated. Use the `timeout` parameter instead. Ignored if `timeout` is set.
                     default: 10
                     minimum: 1
                     maximum: 60
@@ -129,10 +143,14 @@ spec:
           name: Path
           description: 'Webhook path.'
           type: string
-        - jsonPath: .webhooks[0].timeoutSeconds
+        - jsonPath: .webhooks[0].timeout
           name: Timeout
           description: 'Webhook timeout.'
           type: string
+        - jsonPath: .webhooks[0].timeoutSeconds
+          name: Timeout seconds
+          description: 'Webhook timeout in seconds (deprecated).'
+          type: integer
         - jsonPath: .webhooks[0].weight
           name: Weight
           description: 'Webhook weight.'

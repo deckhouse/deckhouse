@@ -23,10 +23,12 @@ import (
 	"path"
 	"slices"
 	"strings"
+	"time"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/yaml"
 
 	. "github.com/deckhouse/deckhouse/testing/helm"
@@ -1209,6 +1211,40 @@ resources:
 			Expect(*conf.EnableProfiling).To(BeFalse())
 			Expect(conf.EnableContentionProfiling).NotTo(BeNil())
 			Expect(*conf.EnableContentionProfiling).To(BeFalse())
+		})
+	})
+
+	Context("Scheduler extenders", func() {
+		BeforeEach(func() {
+			f.ValuesSetFromYaml("controlPlaneManager.internal.kubeSchedulerExtenders", `
+- urlPrefix: https://scheduler.test.svc.cluster.local:8080/scheduler
+  weight: 5
+  timeout: 500ms
+  ignorable: true
+  caData: ABCD=
+  filterVerb: filter
+  prioritizeVerb: prioritize
+  preemptVerb: ""
+`)
+			f.HelmRender()
+		})
+
+		It("should pass the extender timeout to kube-scheduler", func() {
+			Expect(f.RenderError).ShouldNot(HaveOccurred())
+
+			s := f.KubernetesResource("Secret", "kube-system", "d8-control-plane-manager-config")
+			data, err := base64.StdEncoding.DecodeString(s.Field("data.extra-file-scheduler-config\\.yaml").String())
+			Expect(err).ShouldNot(HaveOccurred())
+
+			// Decoded the way kube-scheduler decodes Extender.HTTPTimeout.
+			var conf struct {
+				Extenders []struct {
+					HTTPTimeout metav1.Duration `json:"httpTimeout"`
+				} `json:"extenders"`
+			}
+			Expect(yaml.Unmarshal(data, &conf)).To(Succeed())
+			Expect(conf.Extenders).To(HaveLen(1))
+			Expect(conf.Extenders[0].HTTPTimeout.Duration).To(Equal(500 * time.Millisecond))
 		})
 	})
 
