@@ -427,6 +427,45 @@ common:
   show_more:
     en: Show more
     ru: Показать ещё
+  public_domains_name:
+    en: Name
+    ru: Имя
+  public_domains_created_by:
+    en: Source
+    ru: Источник
+  public_domains_purpose:
+    en: Purpose
+    ru: Назначение
+  public_domains_note:
+    en: Note
+    ru: Примечание
+  public_domains_form_template_label:
+    en: 'DNS name template (publicDomainTemplate)'
+    ru: 'Шаблон DNS-имён (publicDomainTemplate)'
+  public_domains_form_ip_label:
+    en: 'IP address of the Ingress controller'
+    ru: 'IP-адрес Ingress-контроллера'
+  public_domains_form_placeholder:
+    en: 'For example, %s.example.com'
+    ru: 'Например, %s.example.com'
+  public_domains_form_ip_placeholder:
+    en: 'IP address, for example, 203.0.113.10'
+    ru: 'IP-адрес, например, 203.0.113.10'
+  public_domains_form_ip_invalid:
+    en: 'Enter a valid IPv4 or IPv6 address.'
+    ru: 'Введите корректный IPv4- или IPv6-адрес.'
+  public_domains_form_generate:
+    en: Generate
+    ru: Сгенерировать
+  public_domains_form_invalid:
+    en: 'Enter a DNS name template containing <code>%s</code>, for example, <code>%s.domain.my</code>, <code>%s-kube.domain.my</code> or <code>kube-%s.domain.my</code>.'
+    ru: 'Введите шаблон DNS-имён, содержащий <code>%s</code>, например, <code>%s.domain.my</code>, <code>%s-kube.domain.my</code> или <code>kube-%s.domain.my</code>.'
+  public_domains_form_hosts_intro_unix:
+    en: 'Run the command to add the entries to the <code>/etc/hosts</code> file:'
+    ru: 'Выполните команду, чтобы добавить записи в файл <code>/etc/hosts</code>:'
+  public_domains_form_hosts_intro_windows:
+    en: 'Run the command in PowerShell as an administrator to add the entries to the <code>%SystemRoot%\System32\drivers\etc\hosts</code> file:'
+    ru: 'Выполните команду в PowerShell от имени администратора, чтобы добавить записи в файл <code>%SystemRoot%\System32\drivers\etc\hosts</code>:'
   feature_gates_available_by_version:
     en: List of available feature gates...
     ru: Список доступных feature gates...

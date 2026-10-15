@@ -1183,9 +1183,10 @@ module JSONSchemaRenderer
         result = []
         result.push('<div markdown="0">')
 
-        if input.nil?
-           input = {}
-        end
+        # The schema usually comes from site.data and is shared with other pages and includes
+        # (for example, the publicDomainTemplate pattern is read from the global schema).
+        # Work on a deep copy, because the code below rewrites 'properties' and 'i18n' in place.
+        input = input.nil? ? {} : Marshal.load(Marshal.dump(input))
 
         versionAPI = get_hash_value(input, 'APIversion')
         resourceName = get_hash_value(input, 'resourceName')

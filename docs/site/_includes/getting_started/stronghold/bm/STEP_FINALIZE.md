@@ -266,66 +266,41 @@ sudo -i d8 k create -f $PWD/user.yml
 ```
 {% endsnippetcut %}
 </li>
-<li><strong>Create DNS records</strong> to organize access to the cluster web-interfaces:
-  <ul><li>Discover public IP address of the node where the Ingress controller is running.</li>
-  <li>If you have the DNS server and you can add a DNS records:
-  <ul>
-    <li>If your cluster DNS name template is a <a href="https://en.wikipedia.org/wiki/Wildcard_DNS_record">wildcard DNS</a> (e.g., <code>%s.kube.my</code>), then add a corresponding wildcard A record containing the public IP, you've discovered previously.
-    </li>
-    <li>If your cluster DNS name template is <strong>NOT</strong> a <a
-            href="https://en.wikipedia.org/wiki/Wildcard_DNS_record">wildcard DNS</a> (e.g., <code>%s-kube.company.my</code>), then add A or CNAME records containing the public IP, you've discovered previously, for the following Deckhouse service DNS names:
-          <div class="highlight">
+<li><strong>Create DNS records</strong> to organize access to the cluster web interfaces:
+{% alert level="warning" %}The domain in the template must not match the domain from the `clusterDomain` parameter or the internal network service zone. Example: `clusterDomain: cluster.local` (default value), the network service zone is `central1.internal`. In this case, `publicDomainTemplate` cannot be `%s.cluster.local` or `%s.central1.internal`.{% endalert %}
+
+<p>Find out the public IP address of the node where the Ingress controller is running. Configure DNS in one of the following ways:</p>
+{% tabs dns_options %}
+{% tab "Wildcard DNS record" %}
+Use this option if you have a DNS server and your cluster DNS name template is a [wildcard template](https://en.wikipedia.org/wiki/Wildcard_DNS_record) (e.g., `%s.kube.company.my`).
+
+On the DNS server, add a wildcard A record containing this public IP address.
+{% endtab %}
+{% tab "Individual DNS records" %}
+Use this option if you have a DNS server and your cluster DNS name template is **not** a [wildcard template](https://en.wikipedia.org/wiki/Wildcard_DNS_record) (e.g., `%s-kube.company.my`).
+
+On the DNS server, add A or CNAME records containing this public IP address for the DNS names from the list. The names in the list are built from the DNS name template you specified when configuring the installation:
+
+<div class="highlight">
 <pre class="highlight">
-<code example-hosts>stronghold.example.com
-api.example.com
-argocd.example.com
-dashboard.example.com
-documentation.example.com
-dex.example.com
-grafana.example.com
-hubble.example.com
-istio.example.com
-istio-api-proxy.example.com
-kubeconfig.example.com
-openvpn-admin.example.com
-registry.example.com
-prometheus.example.com
-status.example.com
-upmeter.example.com</code>
+<code example-hosts>{%- assign domains = site.data.reference.public-domains %}
+{%- for domain in domains %}
+  {%- if domain.gs %}{{ domain.name }}.example.com
+{% endif -%}
+{%- endfor %}</code>
 </pre>
-        </div>
-      </li>
-      <li><strong>Important:</strong> The domain used in the template should not match the domain specified in the clusterDomain parameter and the internal service network zone. For example, if clusterDomain is set to <code>cluster.local</code> (the default value) and the service network zone is <code>ru-central1.internal</code>, then publicDomainTemplate cannot be <code>%s.cluster.local</code> or <code>%s.ru-central1.internal</code>.
-      </li>
-    </ul>
-  </li>
-  <li><p>If you <strong>don't have a DNS server</strong>: on your PC add static entries (specify your public IP address in the <code>PUBLIC_IP</code>variable) that match the names of specific services to the public IP to the <code>/etc/hosts</code> file for Linux (<code>%SystemRoot%\system32\drivers\etc\hosts</code> for Windows):</p>
-{% snippetcut selector="example-hosts" %}
-```bash
-export PUBLIC_IP="<PUT_PUBLIC_IP_HERE>"
-sudo -E bash -c "cat <<EOF >> /etc/hosts
-$PUBLIC_IP stronghold.example.com
-$PUBLIC_IP api.example.com
-$PUBLIC_IP argocd.example.com
-$PUBLIC_IP dashboard.example.com
-$PUBLIC_IP documentation.example.com
-$PUBLIC_IP dex.example.com
-$PUBLIC_IP grafana.example.com
-$PUBLIC_IP hubble.example.com
-$PUBLIC_IP istio.example.com
-$PUBLIC_IP istio-api-proxy.example.com
-$PUBLIC_IP kubeconfig.example.com
-$PUBLIC_IP openvpn-admin.example.com
-$PUBLIC_IP registry.example.com
-$PUBLIC_IP prometheus.example.com
-$PUBLIC_IP status.example.com
-$PUBLIC_IP upmeter.example.com
-EOF
-"
-```
-{% endsnippetcut %}
-</li>
-</ul>
+</div>
+
+{% alert type="info" %}
+The list above contains the DNS names that a cluster deployed using this guide requires. The complete list is given in the [“List of Reserved Deckhouse Platform DNS Names”](/products/kubernetes-platform/documentation/latest/reference/public-domains.html) section of the documentation.
+{% endalert %}
+{% endtab %}
+{% tab "Hosts file" %}
+Use this option if you don't have a DNS server. On the computer from which you need access to Deckhouse services, add static records to the hosts file (`/etc/hosts` for Linux, `%SystemRoot%\system32\drivers\etc\hosts` for Windows). Each record maps a service name to the public IP address of the node where the Ingress controller is running.
+
+To get the command for adding the records, use the [hosts file data generator](/products/kubernetes-platform/documentation/latest/reference/public-domains.html#hosts-file-data-generator): enter the DNS name template and the public IP address of the node where the Ingress controller is running.
+{% endtab %}
+{% endtabs %}
 
 <script type="text/javascript">
 $(document).ready(function () {

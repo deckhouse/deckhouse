@@ -276,70 +276,39 @@ sudo -i d8 k create -f $PWD/user.yml
 {% endsnippetcut %}
 </li>
 <li><strong>Создание DNS-записи</strong>, для доступа в веб-интерфейсы кластера
-  <ul><li>Выясните публичный IP-адрес узла, на котором работает Ingress-контроллер.</li>
-  <li>Если у вас есть возможность добавить DNS-запись используя DNS-сервер:
-    <ul>
-      <li>Если ваш шаблон DNS-имен кластера является <a href="https://en.wikipedia.org/wiki/Wildcard_DNS_record">wildcard
-        DNS-шаблоном</a> (например, <code>%s.kube.my</code>), то добавьте соответствующую wildcard A-запись со значением публичного IP-адреса, который вы получили выше.
-      </li>
-      <li>
-        Если ваш шаблон DNS-имен кластера <strong>НЕ</strong> является <a
-              href="https://en.wikipedia.org/wiki/Wildcard_DNS_record">wildcard DNS-шаблоном</a> (например, <code>%s-kube.company.my</code>),
-        то добавьте А или CNAME-записи со значением публичного IP-адреса, который вы
-        получили выше, для следующих DNS-имен сервисов Deckhouse в вашем кластере:
-        <div class="highlight">
-<pre class="highlight">
-<code example-hosts>stronghold.example.com
-api.example.com
-argocd.example.com
-dashboard.example.com
-documentation.example.com
-dex.example.com
-grafana.example.com
-hubble.example.com
-istio.example.com
-istio-api-proxy.example.com
-kubeconfig.example.com
-openvpn-admin.example.com
-registry.example.com
-prometheus.example.com
-status.example.com
-upmeter.example.com</code>
-</pre>
-        </div>
-      </li>
-      <li><strong>Важно:</strong> Домен, используемый в шаблоне, не должен совпадать с доменом, указанным в параметре clusterDomain и внутренней сервисной зоне сети. Например, если используется <code>clusterDomain: cluster.local</code> (значение по умолчанию), а сервисная зона сети — ru-central1.internal, то publicDomainTemplate не может быть <code>%s.cluster.local</code> или <code>%s.ru-central1.internal</code>.
-      </li>
-    </ul>
-  </li>
+{% alert level="warning" %}Домен в шаблоне не должен совпадать с доменом из параметра `clusterDomain` и с внутренней сервисной зоной сети. Пример: `clusterDomain: cluster.local` (значение по умолчанию), сервисная зона сети — `ru-central1.internal`. Тогда `publicDomainTemplate` не может быть `%s.cluster.local` или `%s.ru-central1.internal`.{% endalert %}
+<p>Узнайте публичный IP-адрес узла, на котором работает Ingress-контроллер. Настройте DNS одним из следующих способов:</p>
+{% tabs dns_options %}
+{% tab "Wildcard DNS-запись" %}
+Используйте этот вариант, если у вас есть DNS-сервер, а шаблон DNS-имён кластера — [wildcard-шаблон](https://en.wikipedia.org/wiki/Wildcard_DNS_record) (например, `%s.kube.company.my`).
 
-  <li><p>Если вы <strong>не</strong> имеете под управлением DNS-сервер: добавьте статические записи соответствия имен конкретных сервисов публичному IP-адресу узла, на котором работает Ingress-контроллер.</p><p>Например, на персональном Linux-компьютере, с которого необходим доступ к сервисам Deckhouse, выполните следующую команду (укажите ваш публичный IP-адрес в переменной <code>PUBLIC_IP</code>) для добавления записей в файл <code>/etc/hosts</code> (для Windows используйте файл <code>%SystemRoot%\system32\drivers\etc\hosts</code>):</p>
-{% snippetcut selector="example-hosts" %}
-```bash
-export PUBLIC_IP="<PUBLIC_IP>"
-sudo -E bash -c "cat <<EOF >> /etc/hosts
-$PUBLIC_IP stronghold.example.com
-$PUBLIC_IP api.example.com
-$PUBLIC_IP argocd.example.com
-$PUBLIC_IP dashboard.example.com
-$PUBLIC_IP documentation.example.com
-$PUBLIC_IP dex.example.com
-$PUBLIC_IP grafana.example.com
-$PUBLIC_IP hubble.example.com
-$PUBLIC_IP istio.example.com
-$PUBLIC_IP istio-api-proxy.example.com
-$PUBLIC_IP kubeconfig.example.com
-$PUBLIC_IP openvpn-admin.example.com
-$PUBLIC_IP registry.example.com
-$PUBLIC_IP prometheus.example.com
-$PUBLIC_IP status.example.com
-$PUBLIC_IP upmeter.example.com
-EOF
-"
-```
-{% endsnippetcut %}
-</li>
-</ul>
+Добавьте на DNS-сервере wildcard A-запись со значением этого публичного IP-адреса.
+{% endtab %}
+{% tab "Отдельные DNS-записи" %}
+Используйте этот вариант, если у вас есть DNS-сервер, а шаблон DNS-имён кластера — **не** [wildcard-шаблон](https://en.wikipedia.org/wiki/Wildcard_DNS_record) (например, `%s-kube.company.my`).
+
+Добавьте на DNS-сервере A- или CNAME-записи со значением этого публичного IP-адреса для DNS-имён из списка. Имена в списке построены по шаблону DNS-имён, который вы указали при настройке установки:
+
+<div class="highlight">
+<pre class="highlight">
+<code example-hosts>{%- assign domains = site.data.reference.public-domains %}
+{%- for domain in domains %}
+  {%- if domain.gs %}{{ domain.name }}.example.com
+{% endif -%}
+{%- endfor %}</code>
+</pre>
+</div>
+
+{% alert type="info" %}
+В списке — DNS-имена, которые нужны кластеру, развёрнутому по этому руководству. Полный список приведён в разделе [«Список зарезервированных DNS-имён Deckhouse Platform»](/products/kubernetes-platform/documentation/latest/reference/public-domains.html) документации.
+{% endalert %}
+{% endtab %}
+{% tab "Файл hosts" %}
+Используйте этот вариант, если у вас нет DNS-сервера. На компьютере, с которого нужен доступ к сервисам Deckhouse, добавьте статические записи в hosts-файл (`/etc/hosts` для Linux, `%SystemRoot%\system32\drivers\etc\hosts` для Windows). Каждая запись связывает имя сервиса с публичным IP-адресом узла, на котором работает Ingress-контроллер.
+
+Чтобы получить команду для добавления записей, воспользуйтесь [генератором данных для hosts-файла](/products/kubernetes-platform/documentation/latest/reference/public-domains.html#генератор-данных-для-hosts-файла): укажите шаблон DNS-имён и публичный IP-адрес узла, на котором работает Ingress-контроллер.
+{% endtab %}
+{% endtabs %}
 
 <script type="text/javascript">
 $(document).ready(function () {

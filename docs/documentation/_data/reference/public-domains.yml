@@ -1,0 +1,332 @@
+# Public DNS names of Deckhouse Platform (DP) components, modules and products.
+#
+# Consumers:
+#   - the reference page docs/documentation/pages/reference/PUBLIC_DOMAINS*.md (table and /etc/hosts generator);
+#   - the getting started guides in docs/site/_includes/getting_started/** (minimal DNS list, entries with gs: true).
+#
+# Fields:
+#   name: the value that replaces %s in the modules.publicDomainTemplate parameter.
+#   gs:   getting started; true if the name belongs to the minimal DNS list of the getting started guides.
+#   en, ru: localized texts, Markdown is allowed.
+#     created_by: the module or product that uses the name.
+#     purpose:    what is served on the name.
+#     note:       availability conditions or other remarks; use '—' if there is nothing to add.
+
+- name: api
+  gs: true
+  en:
+    created_by: 'The [`control-plane-manager`](/modules/control-plane-manager/) module'
+    purpose: 'Kubernetes API publication. External access to the Kubernetes API via Ingress or Gateway API'
+    note: |
+      To make the name available, enable [API publication](/modules/control-plane-manager/configuration.html#parameters-apiserver-publishapi). The [`storage-volume-data-manager`](/modules/storage-volume-data-manager/) module also uses this name for data export and import (DataExport and DataImport resources). The module obtains the certificate from the Ingress that publishes the Kubernetes API. Therefore, this module also requires API publication
+  ru:
+    created_by: 'Модуль [`control-plane-manager`](/modules/control-plane-manager/)'
+    purpose: 'Публикация Kubernetes API. Внешний доступ к Kubernetes API через Ingress или Gateway API'
+    note: |
+      Чтобы имя было доступно, включите [публикацию API](/modules/control-plane-manager/configuration.html#parameters-apiserver-publishapi). Это же имя использует [модуль `storage-volume-data-manager`](/modules/storage-volume-data-manager/) для выгрузки и загрузки данных (ресурсы DataExport и DataImport). Модуль берёт сертификат у Ingress, через который публикуется Kubernetes API. Поэтому этому модулю тоже нужна публикация API
+
+- name: ai-models
+  gs: false
+  en:
+    created_by: 'The [`ai-models`](/modules/ai-models/) module'
+    purpose: 'Model downloads and public model catalog (`/v2`, `/api/distribution/...`)'
+    note: 'The public catalog is available when [`distribution.mode: PublicCatalog`](/modules/ai-models/configuration.html#parameters-distribution-mode) is set'
+  ru:
+    created_by: 'Модуль [`ai-models`](/modules/ai-models/)'
+    purpose: 'Загрузка моделей и публичный каталог моделей (`/v2`, `/api/distribution/...`)'
+    note: 'Публичный каталог доступен, если задан параметр [`distribution.mode: PublicCatalog`](/modules/ai-models/configuration.html#parameters-distribution-mode)'
+
+- name: argocd
+  gs: false
+  en:
+    created_by: 'The [`operator-argo`](/modules/operator-argo/) module'
+    purpose: 'Argo CD web interface'
+    note: 'The name is published only if an Ingress is configured in the ArgoCD resource. The [`spec.server.host`](/modules/operator-argo/cr.html#argocd-v1beta1-spec-server-host) parameter sets the name'
+  ru:
+    created_by: 'Модуль [`operator-argo`](/modules/operator-argo/)'
+    purpose: 'Веб-интерфейс Argo CD'
+    note: 'Имя публикуется, только если в ресурсе ArgoCD настроен Ingress. Имя задаёт [параметр `spec.server.host`](/modules/operator-argo/cr.html#argocd-v1beta1-spec-server-host)'
+
+- name: code
+  gs: true
+  en:
+    created_by: '[Deckhouse Code](/products/code/)'
+    purpose: 'Source code management and CI/CD platform'
+    note: |
+      The name is also used to access Code via SSH. You can override the name in the module settings
+  ru:
+    created_by: '[Deckhouse Code](/products/code/)'
+    purpose: 'Платформа управления исходным кодом и CI/CD'
+    note: |
+      Имя также используется для доступа к Code по SSH. Имя можно переопределить в настройках модуля
+
+- name: code-pages
+  gs: false
+  en:
+    created_by: '[Deckhouse Code](/products/code/)'
+    purpose: 'GitLab Pages sites'
+    note: 'The name is available when Pages are enabled in the CodeInstance resource ([`spec.features.pages`](/modules/code/cr.html#codeinstance-v1-spec-features-pages)). You can override the name with the [`spec.features.pages.ingress.hostname`](/modules/code/cr.html#codeinstance-v1-spec-features-pages-ingress-hostname) parameter'
+  ru:
+    created_by: '[Deckhouse Code](/products/code/)'
+    purpose: 'Сайты GitLab Pages'
+    note: 'Имя доступно, если в ресурсе CodeInstance включены Pages ([параметр `spec.features.pages`](/modules/code/cr.html#codeinstance-v1-spec-features-pages)). Имя можно переопределить [параметром `spec.features.pages.ingress.hostname`](/modules/code/cr.html#codeinstance-v1-spec-features-pages-ingress-hostname) parameter'
+
+- name: code-registry
+  gs: false
+  en:
+    created_by: '[Deckhouse Code](/products/code/)'
+    purpose: 'Deckhouse Code container image registry'
+    note: 'The name is available when the Registry component is enabled in the CodeInstance resource ([`spec.features.registry`](/modules/code/cr.html#codeinstance-v1-spec-features-registry)). You can override the name with the [`spec.features.registry.ingress.hostname`](/modules/code/cr.html#codeinstance-v1-spec-features-registry-ingress-hostname) parameter'
+  ru:
+    created_by: '[Deckhouse Code](/products/code/)'
+    purpose: 'Хранилище образов контейнеров Deckhouse Code'
+    note: 'Имя доступно, если в ресурсе CodeInstance включён компонент Registry ([параметр `spec.features.registry`](/modules/code/cr.html#codeinstance-v1-spec-features-registry)). Имя можно переопределить [параметром `spec.features.registry.ingress.hostname`](/modules/code/cr.html#codeinstance-v1-spec-features-registry-ingress-hostname) parameter'
+
+- name: commander
+  gs: true
+  en:
+    created_by: 'The [`commander`](/modules/commander/) module'
+    purpose: 'Cluster lifecycle management (creation, updates, inventory)'
+  ru:
+    created_by: 'Модуль [`commander`](/modules/commander/)'
+    purpose: 'Управление жизненным циклом кластеров (создание, обновление, инвентарь)'
+
+- name: console
+  gs: true
+  en:
+    created_by: 'The [`console`](/modules/console/) module'
+    purpose: 'Deckhouse web UI'
+  ru:
+    created_by: 'Модуль [`console`](/modules/console/)'
+    purpose: 'Веб-интерфейс Deckhouse'
+
+- name: dashboard
+  gs: false
+  en:
+    created_by: 'The [`dashboard`](/modules/dashboard/) module'
+    purpose: 'Kubernetes Dashboard web interface for manual cluster management'
+    note: |
+      **Deprecated**. If the `dashboard` module is disabled, the `console` module takes over the `dashboard` name and responds with a `301` redirect to its own address
+  ru:
+    created_by: 'Модуль [`dashboard`](/modules/dashboard/)'
+    purpose: 'Веб-интерфейс Kubernetes Dashboard для ручного управления кластером'
+    note: |
+      **Устарел**. Если модуль `dashboard` выключен, имя `dashboard` занимает модуль `console` и отвечает перенаправлением `301` на свой адрес
+
+- name: ddp
+  gs: false
+  en:
+    created_by: '[Deckhouse Development Portal](/products/development-portal/)'
+    purpose: 'Deckhouse Development Portal web interface'
+    note: 'You can override the name with the [`domain.useCustomDomain`](/modules/development-platform/configuration.html#parameters-domain-usecustomdomain) and [`domain.customDomain`](/modules/development-platform/configuration.html#parameters-domain-customdomain) parameters'
+  ru:
+    created_by: '[Deckhouse Development Portal](/products/development-portal/)'
+    purpose: 'Веб-интерфейс Deckhouse Development Portal'
+    note: 'Имя можно переопределить параметрами [`domain.useCustomDomain`](/modules/development-platform/configuration.html#parameters-domain-usecustomdomain) и [`domain.customDomain`](/modules/development-platform/configuration.html#parameters-domain-customdomain)'
+
+- name: dex
+  gs: true
+  en:
+    created_by: 'The [`user-authn`](/modules/user-authn/) module'
+    purpose: 'OIDC provider: single sign-on (SSO) to web interfaces and the Kubernetes API. The name is also used by dex-authenticators of other modules and by basic-auth-proxy'
+  ru:
+    created_by: 'Модуль [`user-authn`](/modules/user-authn/)'
+    purpose: 'OIDC-провайдер: единый вход (SSO) в веб-интерфейсы и в Kubernetes API. Имя также используют dex-authenticator других модулей и basic-auth-proxy'
+
+- name: documentation
+  gs: true
+  en:
+    created_by: 'The [`documentation`](/modules/documentation/) module'
+    purpose: 'Web interface with the documentation for the platform version running in the cluster'
+  ru:
+    created_by: 'Модуль [`documentation`](/modules/documentation/)'
+    purpose: 'Веб-интерфейс документации для версии платформы, которая работает в кластере'
+
+- name: grafana
+  gs: true
+  en:
+    created_by: 'The [`prometheus`](/modules/prometheus/) module'
+    purpose: 'Cluster metrics dashboards'
+    note: |
+      If Grafana of the `prometheus` module is not deployed and the `console` module is enabled, the `prometheus` module responds to this name with a redirect to the `console` module
+  ru:
+    created_by: 'Модуль [`prometheus`](/modules/prometheus/)'
+    purpose: 'Дашборды метрик кластера'
+    note: |
+      Если Grafana модуля `prometheus` не развёрнута, а модуль `console` включён, модуль `prometheus` отвечает на это имя перенаправлением на модуль `console`
+
+- name: hubble
+  gs: true
+  en:
+    created_by: 'The [`cilium-hubble`](/modules/cilium-hubble/) module'
+    purpose: 'Hubble UI: visualization of network interaction and Cilium network policies'
+  ru:
+    created_by: 'Модуль [`cilium-hubble`](/modules/cilium-hubble/)'
+    purpose: 'Hubble UI — визуализация сетевого взаимодействия и сетевых политик Cilium'
+
+- name: istio
+  gs: true
+  en:
+    created_by: 'The [`istio`](/modules/istio/) module'
+    purpose: 'Kiali web interface: service mesh observability'
+  ru:
+    created_by: 'Модуль [`istio`](/modules/istio/)'
+    purpose: 'Веб-интерфейс Kiali — наблюдаемость service mesh'
+
+- name: istio-api-proxy
+  gs: true
+  en:
+    created_by: 'The [`istio`](/modules/istio/) module'
+    purpose: 'Kubernetes API proxy for multicluster: neighboring clusters access the API of this cluster through this proxy'
+  ru:
+    created_by: 'Модуль [`istio`](/modules/istio/)'
+    purpose: 'Прокси Kubernetes API для мультикластера: соседние кластеры обращаются к API этого кластера через этот прокси'
+
+- name: istio-metadata
+  gs: false
+  en:
+    created_by: 'The [`istio`](/modules/istio/) module'
+    purpose: 'Public cluster metadata (root certificate, public keys, API proxy address) for federation and multicluster'
+  ru:
+    created_by: 'Модуль [`istio`](/modules/istio/)'
+    purpose: 'Публичные метаданные кластера (корневой сертификат, публичные ключи, адрес API-прокси) для федерации и мультикластера'
+
+- name: kubeconfig
+  gs: true
+  en:
+    created_by: 'The [`user-authn`](/modules/user-authn/) module'
+    purpose: 'kubeconfig generation web interface for Kubernetes API access'
+    note: |
+      **Deprecated**. Starting from DP version 1.78, the web interface is no longer published
+  ru:
+    created_by: 'Модуль [`user-authn`](/modules/user-authn/)'
+    purpose: 'Веб-интерфейс генерации kubeconfig для доступа к Kubernetes API'
+    note: |
+      **Устарел**. Начиная с версии DP 1.78 веб-интерфейс не публикуется
+
+- name: neuvector
+  gs: false
+  en:
+    created_by: 'The [`neuvector`](/modules/neuvector/) module'
+    purpose: 'NeuVector web interface'
+  ru:
+    created_by: 'Модуль [`neuvector`](/modules/neuvector/)'
+    purpose: 'Веб-интерфейс NeuVector'
+
+- name: neuvector-api
+  gs: false
+  en:
+    created_by: 'The [`neuvector`](/modules/neuvector/) module'
+    purpose: 'NeuVector controller REST API, including the address for connecting other clusters'
+    note: 'The name is available when the [`controller.apiIngress.enable`](/modules/neuvector/configuration.html#parameters-controller-apiingress-enable) parameter is enabled'
+  ru:
+    created_by: 'Модуль [`neuvector`](/modules/neuvector/)'
+    purpose: 'REST API контроллера NeuVector, в том числе адрес для подключения других кластеров'
+    note: 'Имя доступно, если включён [параметр `controller.apiIngress.enable`](/modules/neuvector/configuration.html#parameters-controller-apiingress-enable)'
+
+- name: observability
+  gs: false
+  en:
+    created_by: 'The [`observability`](/modules/observability/) module'
+    purpose: 'External read/write access to metrics (`/metrics/main/api/v1/write`)'
+    note: 'The name is available when the [`externalMetricsAccess.enable`](/modules/observability/configuration.html#parameters-externalmetricsaccess-enable) parameter is enabled'
+  ru:
+    created_by: 'Модуль [`observability`](/modules/observability/)'
+    purpose: 'Внешний доступ к метрикам на чтение и запись (`/metrics/main/api/v1/write`)'
+    note: 'Имя доступно, если включён параметр [`externalMetricsAccess.enable`](/modules/observability/configuration.html#parameters-externalmetricsaccess-enable)'
+
+- name: openvpn-admin
+  gs: true
+  en:
+    created_by: 'The [`openvpn`](/modules/openvpn/) module'
+    purpose: 'Access to cluster resources via OpenVPN with certificate-based authentication'
+  ru:
+    created_by: 'Модуль [`openvpn`](/modules/openvpn/)'
+    purpose: 'Доступ к ресурсам кластера через OpenVPN с аутентификацией по сертификатам'
+
+- name: payload-registry
+  gs: false
+  en:
+    created_by: 'The [`payload-registry`](/modules/payload-registry/) module'
+    purpose: 'Access to payload-registry storage'
+    note: 'The name is not published when [`https.mode: Disabled`](/modules/payload-registry/configuration.html#parameters-https-mode)'
+  ru:
+    created_by: 'Модуль [`payload-registry`](/modules/payload-registry/)'
+    purpose: 'Доступ к хранилищу payload-registry'
+    note: 'Имя не публикуется, если задан параметр [`https.mode: Disabled`](/modules/payload-registry/configuration.html#parameters-https-mode)'
+
+- name: prometheus
+  gs: true
+  en:
+    created_by: 'The [`prometheus`](/modules/prometheus/) module'
+    purpose: 'Prometheus web interface'
+    note: |
+      If Grafana of the `prometheus` module is not deployed and the `console` module is enabled, the `prometheus` module responds to this name with a redirect to the `console` module
+  ru:
+    created_by: 'Модуль [`prometheus`](/modules/prometheus/)'
+    purpose: 'Веб-интерфейс Prometheus'
+    note: |
+      Если Grafana модуля `prometheus` не развёрнута, а модуль `console` включён, модуль `prometheus` отвечает на это имя перенаправлением на модуль `console`
+
+- name: registry
+  gs: true
+  en:
+    created_by: 'The [`registry`](/modules/registry/) module'
+    purpose: 'External access point to the in-cluster image registry'
+  ru:
+    created_by: 'Модуль [`registry`](/modules/registry/)'
+    purpose: 'Внешняя точка доступа к хранилищу образов внутри кластера'
+
+- name: registry-packages-proxy
+  gs: false
+  en:
+    created_by: 'The [`registry-packages-proxy`](/modules/registry-packages-proxy/) module'
+    purpose: 'In-cluster HTTP proxy. Provides access to packages from container image registries'
+  ru:
+    created_by: 'Модуль [`registry-packages-proxy`](/modules/registry-packages-proxy/)'
+    purpose: 'HTTP-прокси внутри кластера. Даёт доступ к пакетам из хранилищ образов контейнеров'
+
+- name: status
+  gs: true
+  en:
+    created_by: 'The [`upmeter`](/modules/upmeter/) module'
+    purpose: 'Component status page. Shows the availability level over the last 10 minutes'
+  ru:
+    created_by: 'Модуль [`upmeter`](/modules/upmeter/)'
+    purpose: 'Страница статуса компонентов. Показывает уровень доступности за последние 10 минут'
+
+- name: stronghold
+  gs: true
+  en:
+    created_by: '[Deckhouse Stronghold](/products/stronghold/)'
+    purpose: 'Secrets management web interface'
+  ru:
+    created_by: '[Deckhouse Stronghold](/products/stronghold/)'
+    purpose: 'Веб-интерфейс управления секретами'
+
+- name: tools
+  gs: true
+  en:
+    created_by: 'The [`deckhouse-tools`](/modules/deckhouse-tools/) module'
+    purpose: 'Deckhouse CLI download page'
+  ru:
+    created_by: 'Модуль [`deckhouse-tools`](/modules/deckhouse-tools/)'
+    purpose: 'Страница загрузки утилиты Deckhouse CLI'
+
+- name: upmeter
+  gs: true
+  en:
+    created_by: 'The [`upmeter`](/modules/upmeter/) module'
+    purpose: 'Web interface that shows the availability of cluster components'
+  ru:
+    created_by: 'Модуль [`upmeter`](/modules/upmeter/)'
+    purpose: 'Веб-интерфейс, который показывает доступность компонентов кластера'
+
+- name: virtualization
+  gs: false
+  en:
+    created_by: 'DP built-in virtualization'
+    purpose: 'Address for uploading images and disks'
+  ru:
+    created_by: 'Встроенная виртуализация DP'
+    purpose: 'Адрес загрузки образов и дисков'
