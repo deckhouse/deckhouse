@@ -577,6 +577,8 @@ apiVersions:
 
                 * `Isolated`: Applies a restrictive NetworkPolicy that allows only network traffic required for platform system components to function. All other traffic is denied.
                 * `None`: The cluster does not request any network policies. Existing project-level restrictions still apply.
+
+                If `Isolated` is selected, `cloud-controller-manager` creates a [network policy](/products/kubernetes-platform/documentation/v1/admin/integrations/virtualization/dvp/services.html#load-balancer-network-policy) for every load balancer so that the balancer traffic reaches the cluster nodes.
               enum:
                 - Isolated
                 - None
