@@ -93,14 +93,16 @@ func GetMasterIPAddressForSSH(ctx context.Context, statePath string, executor Ou
 			return nil, fmt.Errorf("Cannot extract infrastructure output for '%s': %w", k, err)
 		}
 
-		var output string
+		// Decode the value as apply does in getStringOrIntOutput: addresses read from
+		// state and remembered from apply outputs must have the same representation.
+		var output stringOrInt
 
 		err = json.Unmarshal(result, &output)
 		if err != nil {
 			return nil, fmt.Errorf("Failed to unmarshal infrastructure output for '%s': %w", k, err)
 		}
 
-		*v = output
+		*v = string(output)
 	}
 
 	return &res, nil

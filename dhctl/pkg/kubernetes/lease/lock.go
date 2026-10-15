@@ -207,6 +207,14 @@ func (l *LeaseLock) startAutoRenew(ctx context.Context) {
 				continue
 			}
 
+			// Renewal was stopped while this renew was in flight: the kube client it runs
+			// through is being replaced, and its failure says nothing about the lease.
+			select {
+			case <-l.exitRenewCh:
+				return
+			default:
+			}
+
 			if l.config.OnRenewError != nil {
 				l.config.OnRenewError(err)
 			}

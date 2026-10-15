@@ -24,8 +24,8 @@ type InfraActionHook interface {
 	//
 	// It is a parameter rather than something to look up because the distinction is easy to
 	// forget and expensive to get wrong. A hook still has bookkeeping to do after a failed
-	// action - a VM may have been recreated before the failure, and the session pinned to the
-	// old address has to follow it - but anything that waits for the action's result must not
+	// action - a VM may have been recreated before the failure, and the path of its Kubernetes
+	// data device still has to be saved - but anything that waits for the action's result must not
 	// run: the wait cannot be satisfied by an action that did not happen, so it burns its whole
 	// budget and then reports a second failure that only restates the first.
 	AfterAction(ctx context.Context, runner RunnerInterface, actionErr error) error

@@ -21,11 +21,8 @@ import (
 	"strings"
 	"time"
 
-	libcon "fox.flant.com/deckhouse/cluster-and-infrastructure/libs/lib-connection/pkg"
-	"fox.flant.com/deckhouse/cluster-and-infrastructure/libs/lib-connection/pkg/ssh/session"
 	dhlog "fox.flant.com/deckhouse/cluster-and-infrastructure/libs/lib-dhctl/pkg/logger"
 	"fox.flant.com/deckhouse/cluster-and-infrastructure/libs/lib-dhctl/pkg/retry"
-	"github.com/name212/govalue"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
@@ -37,18 +34,15 @@ import (
 )
 
 type HookForDestroyPipeline struct {
-	getter            kubernetes.KubeClientProviderWithCtx
-	sshProvider       libcon.SSHProvider
-	nodeToDestroy     string
-	oldMasterIPForSSH string
-	commanderMode     bool
-	immutableNode     bool
+	getter        kubernetes.KubeClientProviderWithCtx
+	nodeToDestroy string
+	commanderMode bool
+	immutableNode bool
 }
 
-func NewHookForDestroyPipeline(getter kubernetes.KubeClientProviderWithCtx, sshProvider libcon.SSHProvider, nodeToDestroy string, commanderMode, immutableNode bool) *HookForDestroyPipeline {
+func NewHookForDestroyPipeline(getter kubernetes.KubeClientProviderWithCtx, nodeToDestroy string, commanderMode, immutableNode bool) *HookForDestroyPipeline {
 	return &HookForDestroyPipeline{
 		getter:        getter,
-		sshProvider:   sshProvider,
 		nodeToDestroy: nodeToDestroy,
 		commanderMode: commanderMode,
 		immutableNode: immutableNode,
@@ -73,12 +67,9 @@ func (h *HookForDestroyPipeline) BeforeAction(ctx context.Context, runner infras
 	// the node an etcd member for good.
 	masterIP := outputs.MasterIPForSSH
 	if masterIP == "" && !h.immutableNode {
-		h.oldMasterIPForSSH = ""
 		dhlog.FromContext(ctx).InfoContext(ctx, fmt.Sprintf("Got empty master IP for ssh for node %s. Skipping removal of control-plane from node.", h.nodeToDestroy))
 		return false, nil
 	}
-
-	h.oldMasterIPForSSH = masterIP
 
 	kubeClient, err := h.getter.KubeClientCtx(ctx)
 	if err != nil {
@@ -98,26 +89,11 @@ func (h *HookForDestroyPipeline) BeforeAction(ctx context.Context, runner infras
 	return false, nil
 }
 
-// AfterAction forgets the destroyed node's address. It waits for nothing, so it runs the same
-// whether the destroy succeeded or failed: a node that is half gone is not one to keep a session
-// pinned to either.
-func (h *HookForDestroyPipeline) AfterAction(ctx context.Context, _ infrastructure.RunnerInterface, _ error) error {
-	// Nothing to forget for an immutable node: no SSH session was ever pinned to it,
-	// and with no provider at all the call below dereferences nil.
-	if h.commanderMode || h.immutableNode || govalue.IsNil(h.sshProvider) {
-		return nil
-	}
-
-	cl, err := h.sshProvider.Client(ctx)
-	if err != nil {
-		dhlog.FromContext(ctx).DebugContext(ctx, "Node interface is not ssh")
-		return nil
-	}
-
-	if h.oldMasterIPForSSH != "" {
-		cl.Session().RemoveAvailableHosts(session.Host{Host: h.oldMasterIPForSSH, Name: h.nodeToDestroy})
-	}
-
+// AfterAction leaves the SSH session alone. Removing the destroyed node from it here would
+// move the host the session names without moving its open connection. The client was moved
+// off this node before the destroy, and MasterNodeGroupController rebuilds the inventory
+// from the remaining states after it.
+func (h *HookForDestroyPipeline) AfterAction(context.Context, infrastructure.RunnerInterface, error) error {
 	return nil
 }
 

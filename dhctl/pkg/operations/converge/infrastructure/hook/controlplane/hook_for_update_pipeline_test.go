@@ -109,9 +109,9 @@ func (sshProviderWithoutClient) Client(_ context.Context) (libcon.SSHClient, err
 	return nil, fmt.Errorf("no ssh hosts")
 }
 
-func TestAfterActionReportsUnavailableSSHClient(t *testing.T) {
+func TestAfterSuccessfulActionDefersSSHInventoryToController(t *testing.T) {
 	hook := NewHookForUpdatePipeline(
-		nil,
+		unreachableKubeGetter{},
 		sshProviderWithoutClient{},
 		map[string]string{"cluster-master-0": "10.12.1.10"},
 		false,
@@ -121,7 +121,7 @@ func TestAfterActionReportsUnavailableSSHClient(t *testing.T) {
 
 	err := hook.AfterAction(t.Context(), recreatedMasterRunner{}, nil)
 
-	require.ErrorContains(t, err, "get ssh client")
+	require.ErrorContains(t, err, "cluster is unreachable")
 }
 
 // TestAfterActionSkipsWaitsWhenApplyFailed: the waits below the bookkeeping are for the node the
@@ -129,8 +129,9 @@ func TestAfterActionReportsUnavailableSSHClient(t *testing.T) {
 // prompted this failed on plan ordering in seconds and then sat waiting for a master that no
 // longer existed, reporting a second failure that only restated the first.
 //
-// commanderMode skips the SSH bookkeeping, leaving the fake kube client to carry the rest, so what
-// the two cases differ in is only whether the waiting happens.
+// The SSH provider has no client, so reaching for the session would fail both cases: the hook
+// leaves the session to MasterNodeGroupController even after a partial apply. What the two cases
+// differ in is only whether the waiting happens.
 func TestAfterActionSkipsWaitsWhenApplyFailed(t *testing.T) {
 	retry.InTestEnvironment = true
 	t.Cleanup(func() { retry.InTestEnvironment = false })
@@ -141,7 +142,7 @@ func TestAfterActionSkipsWaitsWhenApplyFailed(t *testing.T) {
 			kubernetes.NewSimpleKubeClientGetter(kubeCl),
 			sshProviderWithoutClient{},
 			map[string]string{"cluster-master-0": "10.12.1.10"},
-			true, // commanderMode: no session to move
+			false,
 			true,
 			false,
 		).WithNodeToConverge("cluster-master-0")

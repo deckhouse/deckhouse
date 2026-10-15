@@ -57,6 +57,10 @@ type NodeGroupController struct {
 	// group-wide bashible cloud-init, and their nodes answer no sshd.
 	immutable bool
 
+	// nodesToDelete are taken out of state.State before the nodes are updated, while
+	// their machines keep running until deleteNodes destroys them.
+	nodesToDelete []nodeToDeleteInfo
+
 	globalOptions *options.GlobalOptions
 }
 
@@ -104,6 +108,8 @@ func (c *NodeGroupController) Run(ctx *context.Context) error {
 	if err != nil {
 		return err
 	}
+
+	c.nodesToDelete = nodesToDeleteInfo
 
 	dhlog.FromContext(ctx.Ctx()).DebugContext(ctx.Ctx(), fmt.Sprintf("Nodes to delete: %d. Starting to update nodes", len(nodesToDeleteInfo)))
 
@@ -414,8 +420,10 @@ func (c *NodeGroupController) updateNodes(ctx *context.Context) error {
 			// - after making a plan, before converging a node, we get confirmation from user for start converge
 			allErrs = multierror.Append(allErrs, fmt.Errorf("%s: %w", nodeName, err))
 
-			// in commander mode returns immediately, because we can break all master nodes
-			if ctx.CommanderMode() {
+			// Commander stops after the first failure to avoid breaking multiple master nodes.
+			// A lost SSH client stops it the same way, for the lock is not renewed any more,
+			// and so does an SSH inventory that could not follow a changed master state.
+			if ctx.CommanderMode() || errors.Is(err, context.ErrSSHClientSwitchFailed) || errors.Is(err, errMasterHostsRefreshFailed) {
 				break
 			}
 		}

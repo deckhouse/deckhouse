@@ -70,8 +70,8 @@ func (r *InLockRunner) WithFullUnlock(f bool) *InLockRunner {
 	return r
 }
 
-func (r *InLockRunner) setLock(ctx context.Context) error {
-	unlockConverge, err := lockLease(ctx, r.getter, r.lockConfig, r.forceLock)
+func (r *InLockRunner) setLock(ctx context.Context, force bool) error {
+	unlockConverge, err := lockLease(ctx, r.getter, r.lockConfig, force)
 	if err != nil {
 		return err
 	}
@@ -85,7 +85,7 @@ func (r *InLockRunner) setLock(ctx context.Context) error {
 }
 
 func (r *InLockRunner) Run(ctx context.Context, action func() error) error {
-	err := r.setLock(ctx)
+	err := r.setLock(ctx, r.forceLock)
 	if err != nil {
 		return err
 	}
@@ -105,8 +105,17 @@ func (r *InLockRunner) Run(ctx context.Context, action func() error) error {
 	return action()
 }
 
+// ResetLock takes the lease again after PauseRenew. After a pause the lease is still
+// live and still held under this runner's identity, and a plain lock treats a live lease
+// as taken whoever holds it: it would wait the whole lease duration out. The force only
+// skips that check for a lease this identity holds; a live lease of anyone else is waited
+// for the same way as on any lock.
+//
+// The force trusts the identity, which is shared by runs using the same state cache. If
+// concurrent runs with one state cache become supported, ownership must also be verified
+// with the ResourceVersion observed by this runner before renewing the lease by force.
 func (r *InLockRunner) ResetLock(ctx context.Context) error {
-	err := r.setLock(ctx)
+	err := r.setLock(ctx, true)
 	if err != nil {
 		return err
 	}
@@ -118,6 +127,17 @@ func (r *InLockRunner) ResetLock(ctx context.Context) error {
 
 func (r *InLockRunner) Stop() {
 	r.unlockConverge(true)
+}
+
+// PauseRenew stops renewing the lease but leaves it in the cluster, for the time the
+// kube client it is renewed through is being replaced. Stop would delete the lease, and
+// an auto-converger waiting for it could take it before ResetLock. If ResetLock never
+// comes, neither Stop nor the end of Run deletes the lease any more: it expires after
+// LeaseDurationSeconds, and the next converge waits that long for it.
+func (r *InLockRunner) PauseRenew() {
+	if r.unlockConverge != nil {
+		r.unlockConverge(false)
+	}
 }
 
 func LockConverge(ctx context.Context, provider kubernetes.KubeClientProviderWithCtx, identity, sshUser string) (func(bool), error) {

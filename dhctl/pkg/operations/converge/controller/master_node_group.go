@@ -18,6 +18,7 @@ import (
 	gocontext "context"
 	"errors"
 	"fmt"
+	"maps"
 	"slices"
 	"time"
 
@@ -38,12 +39,16 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/converge/context"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/converge/infrastructure/hook/controlplane"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/phases"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/state"
 	infrastructurestate "github.com/deckhouse/deckhouse/dhctl/pkg/state/infrastructure"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/input"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/maputil"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/tomb"
 )
+
+// errMasterHostsRefreshFailed marks a master state that changed while the SSH inventory
+// and the readiness checks could not follow it. The next master must not be changed: its
+// checks would reach the other masters at addresses that may be gone.
+var errMasterHostsRefreshFailed = errors.New("master SSH hosts do not follow the infrastructure states")
 
 type MasterNodeGroupController struct {
 	*NodeGroupController
@@ -82,34 +87,17 @@ func (c *MasterNodeGroupController) populateNodeToHost(ctx *context.Context) err
 		return nil
 	}
 
-	// A master that is not immutable is reached over SSH. Leaving the map unset makes an
-	// empty one, and an empty one reads as "single-master cluster": a destructive plan
-	// then scales 1→3→1 and destroys the masters that are healthy.
-	if ctx.SSHProviderInitializer == nil {
-		return fmt.Errorf("converge has no ssh connection configuration to reach the master nodes with")
-	}
-
-	var userPassedHosts []session.Host
-	sshProvider, err := ctx.SSHProviderInitializer.GetSSHProvider(ctx.Ctx())
-	if err != nil {
-		return err
-	}
-
-	sshCl, err := sshProvider.Client(ctx.Ctx())
-	if err != nil {
-		return err
-	}
-
-	if sshCl != nil {
-		userPassedHosts = append(make([]session.Host, 0), sshCl.Session().AvailableHosts()...)
-	}
-
 	nodesNames := make([]string, 0, len(c.state.State))
 	for nodeName := range c.state.State {
 		nodesNames = append(nodesNames, nodeName)
 	}
 
-	nodeToHost, err := utils.CheckSSHHosts(userPassedHosts, nodesNames, string(c.convergeState.Phase), confirmOrProceed(ctx))
+	hostsForChecks, err := c.masterHostsForChecks(ctx, nodesNames)
+	if err != nil {
+		return err
+	}
+
+	nodeToHost, err := utils.CheckSSHHosts(hostsForChecks, nodesNames, string(c.convergeState.Phase), confirmOrProceed(ctx))
 	if err != nil {
 		return err
 	}
@@ -117,6 +105,64 @@ func (c *MasterNodeGroupController) populateNodeToHost(ctx *context.Context) err
 	c.nodeToHost = nodeToHost
 
 	return nil
+}
+
+func (c *MasterNodeGroupController) masterHostsForChecks(ctx *context.Context, nodeNames []string) ([]session.Host, error) {
+	// A resumed converge may already have every master state while its newly created SSH
+	// session knows only the address from --ssh-host, with no node name attached. Refresh
+	// first so readiness mapping is built from the authoritative, named state inventory.
+	clientSwitcher := ctx.ClientSwitcher()
+	if !govalue.IsNil(clientSwitcher) {
+		hosts, err := clientSwitcher.RefreshMasterHostsFromStates(ctx.Ctx(), c.inventoryStates())
+		if err != nil {
+			return nil, fmt.Errorf("%w: refresh hosts before building readiness inventory: %w", errMasterHostsRefreshFailed, err)
+		}
+
+		return hostsMatchingNodes(hosts, nodeNames), nil
+	}
+
+	// Keep the old provider path for contexts without a switcher. Production converge
+	// installs one, while focused callers and tests may still supply a provider directly.
+	if ctx.SSHProviderInitializer == nil {
+		return nil, fmt.Errorf("converge has no ssh connection configuration to reach the master nodes with")
+	}
+
+	sshProvider, err := ctx.SSHProviderInitializer.GetSSHProvider(ctx.Ctx())
+	if err != nil {
+		return nil, err
+	}
+
+	sshCl, err := sshProvider.Client(ctx.Ctx())
+	if err != nil {
+		return nil, err
+	}
+
+	var availableHosts []session.Host
+	if sshCl != nil {
+		availableHosts = sshCl.Session().AvailableHosts()
+	}
+
+	// The live session deliberately keeps masters scheduled for deletion until the
+	// client has moved away from them. They are failover candidates, not nodes whose
+	// readiness has to be checked after the scale-down decision. Passing them to
+	// CheckSSHHosts makes it report a false "too many hosts" warning.
+	return hostsMatchingNodes(availableHosts, nodeNames), nil
+}
+
+func hostsMatchingNodes(hosts []session.Host, nodeNames []string) []session.Host {
+	nodes := make(map[string]struct{}, len(nodeNames))
+	for _, nodeName := range nodeNames {
+		nodes[nodeName] = struct{}{}
+	}
+
+	matching := make([]session.Host, 0, len(nodeNames))
+	for _, host := range hosts {
+		if _, ok := nodes[host.Name]; ok {
+			matching = append(matching, host)
+		}
+	}
+
+	return matching
 }
 
 // confirmOrProceed answers the questions converge asks before it recreates a master: the
@@ -228,7 +274,7 @@ func (c *MasterNodeGroupController) switchClientToNotFirstMaster(ctx *context.Co
 		return nil
 	}
 
-	// commander mode and another checks checking inside
+	// Mode-specific skip and validation are handled by the switcher.
 	if err := clientSwitcher.SwitchToNotFirstMaster(ctx.Ctx()); err != nil {
 		return fmt.Errorf("Cannot switch clients to not first control-plane node: %w", err)
 	}
@@ -243,7 +289,7 @@ func (c *MasterNodeGroupController) switchClientToFirstMaster(ctx *context.Conte
 		return nil
 	}
 
-	// commander mode and another checks checking inside
+	// Mode-specific skip and validation are handled by the switcher.
 	if err := clientSwitcher.SwitchToFirstMaster(ctx.Ctx()); err != nil {
 		return fmt.Errorf("Cannot switch clients to first control-plane node: %w", err)
 	}
@@ -269,10 +315,7 @@ func (c *MasterNodeGroupController) addNodes(ctx *context.Context) error {
 		return err
 	}
 
-	var (
-		nodesToWait        []string
-		masterIPForSSHList []session.Host
-	)
+	var nodesToWait []string
 
 	kubeClient, err := ctx.KubeClientCtx(ctx.Ctx())
 	if err != nil {
@@ -304,10 +347,9 @@ func (c *MasterNodeGroupController) addNodes(ctx *context.Context) error {
 				return err
 			}
 
-			masterIPForSSHList = append(masterIPForSSHList, session.Host{Host: output.MasterIPForSSH, Name: candidateName})
-
 			count++
 			c.state.State[candidateName] = output.InfrastructureState
+			c.rememberMasterIPs(ctx, candidateName, output)
 			nodesToWait = append(nodesToWait, candidateName)
 
 			// One at a time: etcd admits a single learner, so the next machine must not
@@ -329,12 +371,10 @@ func (c *MasterNodeGroupController) addNodes(ctx *context.Context) error {
 	// An immutable node answers no sshd, and its payload comes from the cluster rather
 	// than from the group's bashible secret: registering it as an SSH host and waiting
 	// for that secret to list it would both stall on something that never happens.
-	if len(masterIPForSSHList) > 0 && !c.immutable {
-		if err := c.addNewNodesToSSH(ctx, masterIPForSSHList); err != nil {
+	if len(nodesToWait) > 0 && !c.immutable {
+		if err := c.refreshMasterHostsFromStates(ctx); err != nil {
 			return err
 		}
-
-		c.addNewNodesToCache(ctx, masterIPForSSHList)
 	}
 
 	return nil
@@ -352,29 +392,6 @@ func (c *MasterNodeGroupController) beforeUpdateNodes(ctx *context.Context) erro
 	return c.switchClientToNotFirstMaster(ctx)
 }
 
-func (c *MasterNodeGroupController) addNewNodesToSSH(ctx *context.Context, masterIPForSSHList []session.Host) error {
-	if ctx.CommanderMode() {
-		return nil
-	}
-	sshProvider, err := ctx.SSHProviderInitializer.GetSSHProvider(ctx.Ctx())
-	if err != nil {
-		return err
-	}
-
-	sshCl, err := sshProvider.Client(ctx.Ctx())
-	if err != nil {
-		return err
-	}
-
-	if govalue.IsNil(sshCl) {
-		return fmt.Errorf("NodeInterface is not ssh")
-	}
-
-	sshCl.Session().AddAvailableHosts(masterIPForSSHList...)
-
-	return nil
-}
-
 // sshProviderForHooks builds the provider the control-plane hooks reach nodes with.
 // An immutable master is never registered as an SSH host, so there is nothing to
 // build: the lookup fails on a master-hosts cache that was never written.
@@ -384,40 +401,6 @@ func (c *MasterNodeGroupController) sshProviderForHooks(ctx *context.Context) (l
 	}
 
 	return ctx.SSHProviderInitializer.GetSSHProvider(ctx.Ctx())
-}
-
-func (c *MasterNodeGroupController) addNewNodesToCache(ctx *context.Context, masterIPForSSHList []session.Host) {
-	// An immutable node answers no sshd. A cached address makes every later converge
-	// see an SSH-reachable cluster and wait for bashible on a machine without it.
-	if c.immutable {
-		return
-	}
-
-	dhlog.FromContext(ctx.Ctx()).DebugContext(ctx.Ctx(), fmt.Sprintf("Updating master hosts cache with %d new masters", len(masterIPForSSHList)))
-
-	// Get current master hosts from cache
-	stateCache := ctx.StateCache()
-	currentHosts, err := state.GetMasterHostsIPs(ctx.Ctx(), stateCache)
-	if err != nil {
-		dhlog.FromContext(ctx.Ctx()).DebugContext(ctx.Ctx(), fmt.Sprintf("Could not load current master hosts from cache (this is OK for first master): %v", err))
-		currentHosts = []session.Host{}
-	}
-
-	hostsMap := make(map[string]string)
-	for _, host := range currentHosts {
-		hostsMap[host.Name] = host.Host
-	}
-
-	for _, newHost := range masterIPForSSHList {
-		hostsMap[newHost.Name] = newHost.Host
-		dhlog.FromContext(ctx.Ctx()).DebugContext(ctx.Ctx(), fmt.Sprintf("Adding new master to cache: %s -> %s", newHost.Name, newHost.Host))
-	}
-
-	dhlog.FromContext(ctx.Ctx()).DebugContext(ctx.Ctx(), fmt.Sprintf("Saving updated master hosts to cache: %v", hostsMap))
-
-	state.SaveMasterHostsToCache(ctx.Ctx(), stateCache, hostsMap)
-
-	dhlog.FromContext(ctx.Ctx()).DebugContext(ctx.Ctx(), fmt.Sprintf("Successfully updated master hosts cache with %d new masters. hostsMap: %v", len(masterIPForSSHList), hostsMap))
 }
 
 func (c *MasterNodeGroupController) survivingMasterNodeNames(nodeName string) []string {
@@ -583,33 +566,74 @@ func (c *MasterNodeGroupController) updateNode(ctx *context.Context, nodeName st
 
 		dhlog.FromContext(ctx.Ctx()).ErrorContext(ctx.Ctx(), fmt.Sprintf("Failed to converge master node %s:\n%s", nodeName, err.Error()))
 
-		return err
+		return c.afterFailedApply(ctx, nodeName, nodeRunner.GetState, err)
 	}
 
 	if tomb.IsInterrupted() {
 		return global.ErrConvergeInterrupted
 	}
 
+	c.state.State[nodeName] = outputs.InfrastructureState
+	c.rememberMasterIPs(ctx, nodeName, outputs)
+
+	// The inventory follows the state before anything goes to the cluster. The apply can
+	// have replaced the address the client is tunnelled through, and the save would fail
+	// through the dead tunnel. Should the save or the wait fail anyway, the next master's
+	// checks must still reach this one at its new address.
+	refreshErr := c.refreshMasterHostsFromStates(ctx)
+	if errors.Is(refreshErr, context.ErrSSHClientSwitchFailed) {
+		// No working client is left to save through. The node state saver sent the states
+		// to the cluster during the apply, but only as a best effort.
+		dhlog.FromContext(ctx.Ctx()).WarnContext(ctx.Ctx(), fmt.Sprintf(
+			"The infrastructure state of node %s may be missing from the cluster: it could not be saved after the apply.", nodeName))
+		return refreshErr
+	}
+
+	// The refresh can have replaced the SSH client, and the kube client tunnelled through
+	// the old one with it: the provider hands out a new one for a changed session.
 	kubeClient, err := ctx.KubeClientCtx(ctx.Ctx())
 	if err != nil {
-		return fmt.Errorf("Could not get kube client: %w", err)
+		return errors.Join(refreshErr, fmt.Errorf("Could not get kube client: %w", err))
 	}
 
 	err = infrastructurestate.SaveMasterNodeInfrastructureState(ctx.Ctx(), kubeClient, nodeName, outputs.InfrastructureState, []byte(outputs.KubeDataDevicePath))
-	if err != nil {
+	if err := errors.Join(refreshErr, err); err != nil {
 		return err
 	}
 
-	c.state.State[nodeName] = outputs.InfrastructureState
+	return entity.WaitForSingleNodeBecomeReady(ctx.Ctx(), kubeClient, nodeName)
+}
 
-	// Update master hosts IP cache after successful master node creation/update
-	if outputs.MasterIPForSSH != "" {
-		c.addNewNodesToCache(ctx, []session.Host{{Host: outputs.MasterIPForSSH, Name: nodeName}})
-	} else {
-		dhlog.FromContext(ctx.Ctx()).WarnContext(ctx.Ctx(), fmt.Sprintf("No SSH IP received for master node %s, cache not updated", nodeName))
+// afterFailedApply keeps what a failed apply left of the node and refreshes the SSH
+// inventory from it. The apply can have recreated the VM before it stopped: if the update
+// loop continues, readiness checks for the next master must reach this one at the new address.
+// Whatever keeps the inventory from following the state is added to the apply error, and
+// the loop stops on it. The runner writes the node state to its file before the apply,
+// so a state that cannot be read, or is empty, leaves no proof the address stayed the same.
+func (c *MasterNodeGroupController) afterFailedApply(ctx *context.Context, nodeName string, getState func() ([]byte, error), applyErr error) error {
+	partialState, err := getState()
+	if err != nil {
+		return errors.Join(applyErr, fmt.Errorf("%w: cannot read infrastructure state of node %s after the failed apply: %w", errMasterHostsRefreshFailed, nodeName, err))
 	}
 
-	return entity.WaitForSingleNodeBecomeReady(ctx.Ctx(), kubeClient, nodeName)
+	if len(partialState) == 0 {
+		return errors.Join(applyErr, fmt.Errorf("%w: infrastructure state of node %s is empty after the failed apply", errMasterHostsRefreshFailed, nodeName))
+	}
+
+	c.state.State[nodeName] = partialState
+
+	// With the client lost, the provider hands out one built from the connection flags:
+	// refreshing through it would switch the wrong client. An interrupted run refreshes
+	// nothing either: the next one starts from the states.
+	if errors.Is(applyErr, context.ErrSSHClientSwitchFailed) || tomb.IsInterrupted() {
+		return applyErr
+	}
+
+	if err := c.refreshMasterHostsFromStates(ctx); err != nil {
+		return errors.Join(applyErr, err)
+	}
+
+	return applyErr
 }
 
 // newHookForUpdatePipeline reports its failures instead of returning a nil hook:
@@ -659,76 +683,145 @@ func (c *MasterNodeGroupController) deleteNodes(ctx *context.Context, nodesToDel
 
 	title := fmt.Sprintf("Delete Nodes from NodeGroup %s (replicas: %v)", global.MasterNodeGroupName, c.desiredReplicas)
 	return dhlog.RunProcess(ctx.Ctx(), dhlog.FromContext(ctx.Ctx()), title, func(gocontext.Context) error {
-		// Collect names of nodes to be deleted for cache cleanup
-		nodesToDelete := make([]string, 0, len(nodesToDeleteInfo))
-		for _, nodeInfo := range nodesToDeleteInfo {
-			nodesToDelete = append(nodesToDelete, nodeInfo.name)
-		}
-
 		sshProvider, err := c.sshProviderForHooks(ctx)
 		if err != nil {
 			return err
 		}
 
-		err = c.deleteRedundantNodes(
+		// The masters to delete leave the inventory before their destroys start. The destroy
+		// hook takes a master's control-plane role away first, and a failover must not land
+		// on it, whether its destroy then succeeds or fails. SwitchWhenDecreaseMastersIfNeed
+		// has moved the client to a surviving master by now. Excluded masters are not
+		// destroyed and stay. A copy: deleteRedundantNodes ranges over the same array.
+		c.nodesToDelete = slices.DeleteFunc(slices.Clone(c.nodesToDelete), func(node nodeToDeleteInfo) bool {
+			_, excluded := c.excludedNodes[node.name]
+			return !excluded
+		})
+		if err := c.refreshMasterHostsFromStates(ctx); err != nil {
+			return err
+		}
+
+		return c.deleteRedundantNodes(
 			ctx,
 			c.state.Settings,
 			nodesToDeleteInfo,
 			func(nodeName string) infrastructure.InfraActionHook {
 				return controlplane.NewHookForDestroyPipeline(
 					ctx,
-					sshProvider,
 					nodeName,
 					ctx.CommanderMode(),
 					c.immutable,
 				)
 			},
 			func(nodeName string) {
-				standaloneProvider, ok := sshProvider.(libcon.StandaloneClientProvider)
-				if !ok {
-					return
-				}
-
-				standaloneProvider.StopStandaloneClientFor(
-					ctx.Ctx(),
-					controlplane.SSHCheckerClientKey(nodeName),
-				)
+				stopSSHCheckerClient(ctx.Ctx(), sshProvider, nodeName)
 			},
 		)
-
-		// If deletion was successful, update master hosts cache
-		if err == nil && len(nodesToDelete) > 0 {
-			dhlog.FromContext(ctx.Ctx()).DebugContext(ctx.Ctx(), fmt.Sprintf("Updating master hosts cache after deleting %d masters: %v", len(nodesToDelete), nodesToDelete))
-
-			// Get current master hosts from cache
-			stateCache := ctx.StateCache()
-			currentHosts, cacheErr := state.GetMasterHostsIPs(ctx.Ctx(), stateCache)
-			if cacheErr != nil {
-				dhlog.FromContext(ctx.Ctx()).DebugContext(ctx.Ctx(), fmt.Sprintf("Could not load current master hosts from cache: %v", cacheErr))
-				return err
-			}
-
-			hostsMap := make(map[string]string)
-			for _, host := range currentHosts {
-				hostsMap[host.Name] = host.Host
-			}
-
-			for _, deletedNode := range nodesToDelete {
-				if _, exists := hostsMap[deletedNode]; exists {
-					delete(hostsMap, deletedNode)
-					dhlog.FromContext(ctx.Ctx()).DebugContext(ctx.Ctx(), fmt.Sprintf("Removed deleted master from cache: %s", deletedNode))
-				}
-			}
-
-			dhlog.FromContext(ctx.Ctx()).DebugContext(ctx.Ctx(), fmt.Sprintf("Saving updated master hosts to cache after deletion: %v", hostsMap))
-
-			state.SaveMasterHostsToCache(ctx.Ctx(), stateCache, hostsMap)
-
-			dhlog.FromContext(ctx.Ctx()).DebugContext(ctx.Ctx(), fmt.Sprintf("Successfully updated master hosts cache after deleting %d masters. hostsMap: %v", len(nodesToDelete), hostsMap))
-		}
-
-		return err
 	})
+}
+
+// rememberMasterIPs hands the switcher the addresses the apply has already read from the
+// new state, so the refresh after it runs no "output" for this master.
+func (c *MasterNodeGroupController) rememberMasterIPs(ctx *context.Context, nodeName string, outputs *infrastructure.PipelineOutputs) {
+	clientSwitcher := ctx.ClientSwitcher()
+	if c.immutable || govalue.IsNil(clientSwitcher) || outputs == nil {
+		return
+	}
+
+	clientSwitcher.RememberMasterIPs(nodeName, outputs.InfrastructureState, outputs.MasterIPForSSH, outputs.NodeInternalIP)
+}
+
+func (c *MasterNodeGroupController) refreshMasterHostsFromStates(ctx *context.Context) error {
+	// Immutable masters deliberately have no SSH inventory.
+	if c.immutable {
+		return nil
+	}
+
+	clientSwitcher := ctx.ClientSwitcher()
+	if govalue.IsNil(clientSwitcher) {
+		dhlog.FromContext(ctx.Ctx()).DebugContext(ctx.Ctx(), "Skipping refresh of master SSH hosts. Got empty client switcher")
+		return nil
+	}
+
+	hosts, err := clientSwitcher.RefreshMasterHostsFromStates(ctx.Ctx(), c.inventoryStates())
+	if err != nil {
+		return fmt.Errorf("%w: %w", errMasterHostsRefreshFailed, err)
+	}
+
+	err = c.syncNodeToHost(ctx, hosts, func() (libcon.SSHProvider, error) {
+		return c.sshProviderForHooks(ctx)
+	})
+	if err != nil {
+		return fmt.Errorf("%w: %w", errMasterHostsRefreshFailed, err)
+	}
+
+	return nil
+}
+
+// inventoryStates are the states of every master that still serves. The masters to delete
+// are out of c.state.State from the start of the run, yet they stay failover hosts and
+// stay in the saved hosts until deleteNodes starts destroying them: the deletion can still
+// be dismissed. The client connected to one of them keeps its connection until
+// SwitchWhenDecreaseMastersIfNeed moves it.
+func (c *MasterNodeGroupController) inventoryStates() map[string][]byte {
+	if len(c.nodesToDelete) == 0 {
+		return c.state.State
+	}
+
+	// A name in both is a master added again in this run, by the scale to three masters
+	// that updateNode can start: its state in c.state.State is the live one.
+	states := maps.Clone(c.state.State)
+	for _, node := range c.nodesToDelete {
+		if _, ok := states[node.name]; !ok {
+			states[node.name] = node.state
+		}
+	}
+
+	return states
+}
+
+// syncNodeToHost brings the addresses the readiness checks reach the other masters by in
+// line with the refreshed inventory. Only the masters already listed are touched. A master
+// missing from the inventory has no address in its state right now: dropping it would let
+// the checks skip a master that is down, and refilling the map from scratch would ask the
+// user to confirm hosts again. The readiness client of a master whose address changed is
+// stopped, so the next check opens one to the new address. Commander and skipped checks
+// build no SSH checker, so there is no client to stop and no provider to ask for.
+func (c *MasterNodeGroupController) syncNodeToHost(ctx *context.Context, hosts []session.Host, sshProvider func() (libcon.SSHProvider, error)) error {
+	var changed []string
+
+	for _, host := range hosts {
+		if old, ok := c.nodeToHost[host.Name]; ok && old != host.Host {
+			c.nodeToHost[host.Name] = host.Host
+			changed = append(changed, host.Name)
+		}
+	}
+
+	if len(changed) == 0 || ctx.CommanderMode() || c.skipChecks {
+		return nil
+	}
+
+	provider, err := sshProvider()
+	if err != nil {
+		return fmt.Errorf("get ssh provider to reset readiness clients of %v: %w", changed, err)
+	}
+
+	for _, nodeName := range changed {
+		stopSSHCheckerClient(ctx.Ctx(), provider, nodeName)
+	}
+
+	return nil
+}
+
+// stopSSHCheckerClient drops the client the readiness checker keeps for a master. The
+// provider hands out a live keyed client again whatever address it was opened to.
+func stopSSHCheckerClient(ctx gocontext.Context, sshProvider libcon.SSHProvider, nodeName string) {
+	standaloneProvider, ok := sshProvider.(libcon.StandaloneClientProvider)
+	if !ok {
+		return
+	}
+
+	standaloneProvider.StopStandaloneClientFor(ctx, controlplane.SSHCheckerClientKey(nodeName))
 }
 
 func (c *MasterNodeGroupController) totalReplicas() int {

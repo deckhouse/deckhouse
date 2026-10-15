@@ -98,6 +98,24 @@ func TestGetMasterNodeResult(t *testing.T) {
 	}
 }
 
+func TestGetMasterIPAddressForSSHDecodesAsApply(t *testing.T) {
+	for _, resp := range []string{`1`, `"test-data"`} {
+		t.Run(resp, func(t *testing.T) {
+			runner := newTestRunner(&fakeExecutor{outputResp: fakeResponse{resp: []byte(resp)}}).
+				WithName("test").
+				WithStatePath("./mocks/pipeline/empty_state.json")
+
+			applied, err := GetMasterNodeResult(t.Context(), runner, &options.New().Global)
+			require.NoError(t, err)
+
+			read, err := GetMasterIPAddressForSSH(t.Context(), "./mocks/pipeline/empty_state.json", &fakeExecutor{outputResp: fakeResponse{resp: []byte(resp)}})
+			require.NoError(t, err)
+
+			require.Equal(t, OutputMasterIPs{SSH: applied.MasterIPForSSH, Internal: applied.NodeInternalIP}, *read)
+		})
+	}
+}
+
 func TestCheckBaseInfrastructurePipeline(t *testing.T) {
 	tests.RequireDir(t, "/deckhouse/candi/cloud-providers", "werf bundles cloud-providers from modules/030-cloud-provider-* at CI time")
 	okPlan, err := os.ReadFile("./mocks/pipeline/base_infra_ok_plan.json")

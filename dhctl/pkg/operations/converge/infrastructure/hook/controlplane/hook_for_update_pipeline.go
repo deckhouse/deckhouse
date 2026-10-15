@@ -21,7 +21,6 @@ import (
 	"time"
 
 	libcon "fox.flant.com/deckhouse/cluster-and-infrastructure/libs/lib-connection/pkg"
-	"fox.flant.com/deckhouse/cluster-and-infrastructure/libs/lib-connection/pkg/ssh/session"
 	dhlog "fox.flant.com/deckhouse/cluster-and-infrastructure/libs/lib-dhctl/pkg/logger"
 	"fox.flant.com/deckhouse/cluster-and-infrastructure/libs/lib-dhctl/pkg/retry"
 	"github.com/name212/govalue"
@@ -45,13 +44,11 @@ type ClientSwitcher interface {
 
 type HookForUpdatePipeline struct {
 	*Checker
-	kubeGetter        kubernetes.KubeClientProviderWithCtx
-	sshProvider       libcon.SSHProvider
-	nodeToConverge    string
-	oldMasterIPForSSH string
-	commanderMode     bool
-	immutableNode     bool
-	clientSwitcher    ClientSwitcher
+	kubeGetter     kubernetes.KubeClientProviderWithCtx
+	nodeToConverge string
+	commanderMode  bool
+	immutableNode  bool
+	clientSwitcher ClientSwitcher
 }
 
 func NewHookForUpdatePipeline(
@@ -92,7 +89,6 @@ func NewHookForUpdatePipeline(
 	return &HookForUpdatePipeline{
 		Checker:       checker,
 		kubeGetter:    kubeGetter,
-		sshProvider:   sshProvider,
 		commanderMode: commanderMode,
 		immutableNode: immutableNode,
 	}
@@ -152,7 +148,6 @@ func (h *HookForUpdatePipeline) BeforeAction(ctx context.Context, runner infrast
 	// the VM while the old node is still a voting etcd member.
 	masterIP := outputs.MasterIPForSSH
 	if masterIP == "" && !h.immutableNode {
-		h.oldMasterIPForSSH = ""
 		dhlog.FromContext(ctx).InfoContext(ctx, fmt.Sprintf("Got empty master IP for ssh for node %s.", h.nodeToConverge))
 		return false, nil
 	}
@@ -176,8 +171,6 @@ func (h *HookForUpdatePipeline) BeforeAction(ctx context.Context, runner infrast
 			h.nodeToConverge, masterIP))
 	}
 
-	h.oldMasterIPForSSH = masterIP
-
 	kubeClient, err := h.kubeGetter.KubeClientCtx(ctx)
 	if err != nil {
 		return false, fmt.Errorf("Could not get kube client: %w", err)
@@ -196,6 +189,10 @@ func (h *HookForUpdatePipeline) BeforeAction(ctx context.Context, runner infrast
 	return false, nil
 }
 
+// AfterAction leaves the SSH session alone, even after a partial apply that recreated
+// the VM. Changing hosts here could move the host the session names without moving its
+// open connection. MasterNodeGroupController keeps the state of a partial apply and
+// rebuilds the inventory from all the states.
 func (h *HookForUpdatePipeline) AfterAction(ctx context.Context, runner infrastructure.RunnerInterface, actionErr error) error {
 	if runner.GetChangesInPlan() != plan.HasDestructiveChanges {
 		return nil
@@ -211,19 +208,6 @@ func (h *HookForUpdatePipeline) AfterAction(ctx context.Context, runner infrastr
 		return fmt.Errorf("failed to get master node pipeline outputs: %w", err)
 	}
 
-	// Nothing to move for an immutable node: no session was ever pinned to it.
-	if !h.commanderMode && !h.immutableNode {
-		cl, err := h.sshProvider.Client(ctx)
-		if err != nil {
-			return fmt.Errorf("get ssh client to move the session to the recreated node: %w", err)
-		}
-
-		if h.oldMasterIPForSSH != "" {
-			cl.Session().RemoveAvailableHosts(session.Host{Host: h.oldMasterIPForSSH, Name: h.nodeToConverge})
-		}
-		cl.Session().AddAvailableHosts(session.Host{Host: outputs.MasterIPForSSH, Name: h.nodeToConverge})
-	}
-
 	// Before waiting for the master node to be listed as a member of the etcd cluster,
 	// we need to store the path to the Kubernetes data device to avoid deadlock.
 	err = h.saveKubernetesDataDevicePath(ctx, outputs.KubeDataDevicePath)
@@ -231,9 +215,6 @@ func (h *HookForUpdatePipeline) AfterAction(ctx context.Context, runner infrastr
 		return fmt.Errorf("failed to save kubernetes data device path: %w", err)
 	}
 
-	// Everything above is bookkeeping and runs either way: a partial apply can have recreated the
-	// VM before it failed, and the session pinned to the old address has to follow it.
-	//
 	// Everything below waits for the node the apply was supposed to produce, and none of it can be
 	// satisfied by an apply that failed - the node will not join, etcd will not gain a member, and
 	// the control plane will not come up on a VM that was never recreated. Waiting anyway spends
@@ -243,7 +224,7 @@ func (h *HookForUpdatePipeline) AfterAction(ctx context.Context, runner infrastr
 	// a master that no longer existed.
 	if actionErr != nil {
 		dhlog.FromContext(ctx).InfoContext(ctx, fmt.Sprintf(
-			"Infrastructure apply failed, so node %s was not recreated: skipping the checks that wait for it.",
+			"Infrastructure apply failed, so node %s cannot be assumed ready: skipping the checks that wait for it.",
 			h.nodeToConverge))
 		return nil
 	}

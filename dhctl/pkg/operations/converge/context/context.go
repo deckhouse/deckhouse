@@ -21,6 +21,7 @@ import (
 	"time"
 
 	libcon "fox.flant.com/deckhouse/cluster-and-infrastructure/libs/lib-connection/pkg"
+	"fox.flant.com/deckhouse/cluster-and-infrastructure/libs/lib-connection/pkg/ssh/session"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app/options"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
@@ -40,6 +41,8 @@ type MultiMasterClientSwitcher interface {
 	SwitchToNotFirstMaster(ctx context.Context) error
 	SwitchWhenDecreaseMastersIfNeed(ctx context.Context, ngName string, nodesToDeleteInfo []*NodeState) error
 	SwitchClientsToAnotherNodeIfNeed(ctx context.Context, nodeName, ip string) error
+	RefreshMasterHostsFromStates(ctx context.Context, nodesState map[string][]byte) ([]session.Host, error)
+	RememberMasterIPs(nodeName string, state []byte, sshIP, internalIP string)
 }
 
 type Context struct {
