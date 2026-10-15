@@ -26,7 +26,15 @@
       {{- else }}
         {{- $itemLine = .name }}
       {{- end }}
-      {{- if .version }}
+      {{- if and .versions (gt (len .versions) 0) }}
+        {{- $vers := slice }}
+        {{- range .versions }}
+          {{- if .version }}{{- $vers = $vers | append .version }}{{- end }}
+        {{- end }}
+        {{- if gt (len $vers) 0 }}
+          {{- $itemLine = printf "%s %s" $itemLine (delimit $vers ", ") }}
+        {{- end }}
+      {{- else if .version }}
         {{- $itemLine = printf "%s %s" $itemLine .version }}
       {{- end }}
       <p>{{- $itemLine | safeHTML -}}</p>
