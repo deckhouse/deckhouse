@@ -197,15 +197,15 @@
       },
       "products": [
         {
-          "@id": "pkg:golang/golang.org/x/crypto@v0.56.0"
+          "@id": "pkg:golang/golang.org/x/crypto"
         }
       ],
       "status": "not_affected",
       "justification": "vulnerable_code_not_in_execute_path",
       "impact_statement": "GO-2026-5932 относится к пакету golang.org/x/crypto/openpgp, который помечен как unmaintained. Бинарники istioctl не импортируют golang.org/x/crypto/openpgp; модуль golang.org/x/crypto подтягивается транзитивно (в частности через bcrypt/sprig) без исполняемого пути openpgp. Исправленной версии пакета нет; уязвимый код в данном компоненте не выполняется.",
-      "timestamp": "2026-09-10T08:52:27.000000000Z"
+      "timestamp": "2026-10-12T12:43:27.000000000Z"
     }
   ],
   "timestamp": "2026-07-22T14:00:00Z",
-  "last_updated": "2026-09-10T08:52:27Z"
+  "last_updated": "2026-10-12T12:43:27Z"
 }
