@@ -37,3 +37,29 @@ d8 k -n <NAMESPACE> get svc
 ```
 
 Replace `<NAMESPACE>` with the namespace set by the [`namespace`](/modules/cloud-provider-dvp/configuration.html#parameters-provider-parameters-namespace) parameter.
+
+### Load balancer network policy
+
+If the [`networkPolicy`](/modules/cloud-provider-dvp/configuration.html#parameters-provider-parameters-networkpolicy) parameter is set to `Isolated`, the parent cluster restricts ingress traffic to the cluster virtual machines (VMs). This value is used by default. To let the balancer traffic reach the nodes, `cloud-controller-manager` creates a NetworkPolicy resource for every balancer in the same namespace of the parent cluster.
+
+The policy allows ingress traffic from any source to the NodePort ports of the Service object in the child cluster over the protocols specified in this object. The policy applies only to the VMs the balancer directs traffic to, so every balancer has its own policy, even if several balancers use the same nodes.
+
+`cloud-controller-manager` overwrites manual changes to the policy the next time it updates the balancer. The policy is deleted together with the balancer Service object in the parent cluster.
+
+To find the balancer policy, follow these steps:
+
+1. Get the UID of the Service object in the child cluster:
+
+   ```shell
+   d8 k -n <SERVICE_NAMESPACE> get svc <SERVICE_NAME> -o jsonpath='{.metadata.uid}'
+   ```
+
+   Replace `<SERVICE_NAMESPACE>` with the namespace of the Service object and `<SERVICE_NAME>` with its name.
+
+1. Display the policy in the parent cluster:
+
+   ```shell
+   d8 k -n <NAMESPACE> get networkpolicy lb-<SERVICE_UID>
+   ```
+
+   Replace `<NAMESPACE>` with the namespace set by the [`namespace`](/modules/cloud-provider-dvp/configuration.html#parameters-provider-parameters-namespace) parameter and `<SERVICE_UID>` with the UID obtained in the previous step.

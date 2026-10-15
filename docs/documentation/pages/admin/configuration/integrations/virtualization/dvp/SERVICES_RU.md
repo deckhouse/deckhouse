@@ -38,3 +38,29 @@ d8 k -n <NAMESPACE> get svc
 ```
 
 Замените `<NAMESPACE>` на неймспейс, заданный параметром [`namespace`](/modules/cloud-provider-dvp/configuration.html#parameters-provider-parameters-namespace).
+
+### Сетевая политика балансировщика
+
+Если параметр [`networkPolicy`](/modules/cloud-provider-dvp/configuration.html#parameters-provider-parameters-networkpolicy) имеет значение `Isolated`, родительский кластер ограничивает входящий трафик к виртуальным машинам (ВМ) кластера. Это значение используется по умолчанию. Чтобы трафик балансировщика доходил до узлов, `cloud-controller-manager` создаёт для каждого балансировщика ресурс NetworkPolicy в том же неймспейсе родительского кластера.
+
+Политика разрешает входящий трафик из любого источника на порты NodePort объекта Service дочернего кластера по протоколам, указанным в этом объекте. Политика действует только на ВМ, на которые балансировщик направляет трафик, поэтому у каждого балансировщика своя политика, даже если несколько балансировщиков используют одни и те же узлы.
+
+Изменения, внесённые в политику вручную, `cloud-controller-manager` перезаписывает при следующем обновлении балансировщика. Политика удаляется вместе с объектом Service балансировщика в родительском кластере.
+
+Чтобы найти политику балансировщика, выполните следующие действия:
+
+1. Узнайте UID объекта Service в дочернем кластере:
+
+   ```shell
+   d8 k -n <SERVICE_NAMESPACE> get svc <SERVICE_NAME> -o jsonpath='{.metadata.uid}'
+   ```
+
+   Замените `<SERVICE_NAMESPACE>` на неймспейс объекта Service, а `<SERVICE_NAME>` на его имя.
+
+1. Выведите политику в родительском кластере:
+
+   ```shell
+   d8 k -n <NAMESPACE> get networkpolicy lb-<SERVICE_UID>
+   ```
+
+   Замените `<NAMESPACE>` на неймспейс, заданный параметром [`namespace`](/modules/cloud-provider-dvp/configuration.html#parameters-provider-parameters-namespace), а `<SERVICE_UID>` на UID, полученный на предыдущем шаге.

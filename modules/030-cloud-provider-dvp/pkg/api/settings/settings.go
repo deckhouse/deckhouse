@@ -138,10 +138,14 @@ type ProviderParameters struct {
 	//
 	// * `Isolated`: Applies a restrictive NetworkPolicy that allows only network traffic required for platform system components to function. All other traffic is denied.
 	// * `None`: The cluster does not request any network policies. Existing project-level restrictions still apply.
+	//
+	// If `Isolated` is selected, `cloud-controller-manager` creates a [network policy](/products/kubernetes-platform/documentation/v1/admin/integrations/virtualization/dvp/services.html#load-balancer-network-policy) for every load balancer so that the balancer traffic reaches the cluster nodes.
 	// +deckhouse:ru:description:value="Правила управления сетевым трафиком к нагрузкам и от нагрузок, запущенных в рамках ресурса Project."
 	// +deckhouse:ru:description:value=
 	// +deckhouse:ru:description:value="* `Isolated` — применяется ограничивающая allowlist-политика: разрешён только сетевой трафик, необходимый для работы платформенных компонентов; весь остальной трафик запрещён."
 	// +deckhouse:ru:description:value="* `None` — кластер не заказывает сетевые политики. Ограничения, заданные на уровне Project, продолжают действовать."
+	// +deckhouse:ru:description:value=
+	// +deckhouse:ru:description:value="Если выбрано значение `Isolated`, `cloud-controller-manager` создаёт для каждого балансировщика нагрузки [сетевую политику](/products/kubernetes-platform/documentation/v1/admin/integrations/virtualization/dvp/services.html#сетевая-политика-балансировщика), чтобы трафик балансировщика доходил до узлов кластера."
 	// +kubebuilder:validation:Enum=Isolated;None
 	// +optional
 	NetworkPolicy string `json:"networkPolicy,omitempty"`
