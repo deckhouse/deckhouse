@@ -3,17 +3,373 @@
   "extends": [
     "local>p-tfprod/infra/renovate/presets//base.json5"
   ],
+  "baseBranchPatterns": [
+    "$default",
+    "release-1.76",
+    "release-1.77"
+  ],
+  "automerge": true,
+  "platformAutomerge": true,
+  "autoApprove": true,
+  "prConcurrentLimit": 1,
+  "schedule": ["* 4 1-31/2 * *"],
   "packageRules": [
     {
-      "description": "Skip version bumps for internal Go modules in dependency lists",
-      "matchManagers": [
-        "gomod"
-      ],
+      "description": "Skip version bumps for internal Go modules",
+      "matchManagers": ["gomod"],
       "matchPackageNames": [
         "github.com/deckhouse/deckhouse/go_lib/registry",
         "github.com/deckhouse/deckhouse/go_lib/registry-bundle"
       ],
       "enabled": false
+    },
+    {
+      "description": "Group 000-common dependency updates",
+      "matchFileNames": ["**/modules/000-common/**"],
+      "groupName": "000-common dependencies",
+      "groupSlug": "000-common"
+    },
+    {
+      "description": "Group 002-deckhouse dependency updates",
+      "matchFileNames": ["**/modules/002-deckhouse/**"],
+      "groupName": "002-deckhouse dependencies",
+      "groupSlug": "002-deckhouse"
+    },
+    {
+      "description": "Group 007-registrypackages dependency updates",
+      "matchFileNames": ["**/modules/007-registrypackages/**"],
+      "groupName": "007-registrypackages dependencies",
+      "groupSlug": "007-registrypackages"
+    },
+    {
+      "description": "Group 015-admission-policy-engine dependency updates",
+      "matchFileNames": ["**/modules/015-admission-policy-engine/**"],
+      "groupName": "015-admission-policy-engine dependencies",
+      "groupSlug": "015-admission-policy-engine"
+    },
+    {
+      "description": "Group 021-cni-cilium dependency updates",
+      "matchFileNames": ["**/modules/021-cni-cilium/**"],
+      "groupName": "021-cni-cilium dependencies",
+      "groupSlug": "021-cni-cilium"
+    },
+    {
+      "description": "Group 025-static-routing-manager dependency updates",
+      "matchFileNames": ["**/modules/025-static-routing-manager/**"],
+      "groupName": "025-static-routing-manager dependencies",
+      "groupSlug": "025-static-routing-manager"
+    },
+    {
+      "description": "Group 031-local-path-provisioner dependency updates",
+      "matchFileNames": ["**/modules/031-local-path-provisioner/**"],
+      "groupName": "031-local-path-provisioner dependencies",
+      "groupSlug": "031-local-path-provisioner"
+    },
+    {
+      "description": "Group 035-cni-flannel dependency updates",
+      "matchFileNames": ["**/modules/035-cni-flannel/**"],
+      "groupName": "035-cni-flannel dependencies",
+      "groupSlug": "035-cni-flannel"
+    },
+    {
+      "description": "Group 035-cni-simple-bridge dependency updates",
+      "matchFileNames": ["**/modules/035-cni-simple-bridge/**"],
+      "groupName": "035-cni-simple-bridge dependencies",
+      "groupSlug": "035-cni-simple-bridge"
+    },
+    {
+      "description": "Group 036-kube-proxy dependency updates",
+      "matchFileNames": ["**/modules/036-kube-proxy/**"],
+      "groupName": "036-kube-proxy dependencies",
+      "groupSlug": "036-kube-proxy"
+    },
+    {
+      "description": "Group 038-registry dependency updates",
+      "matchFileNames": ["**/modules/038-registry/**"],
+      "groupName": "038-registry dependencies",
+      "groupSlug": "038-registry"
+    },
+    {
+      "description": "Group 039-registry-packages-proxy dependency updates",
+      "matchFileNames": ["**/modules/039-registry-packages-proxy/**"],
+      "groupName": "039-registry-packages-proxy dependencies",
+      "groupSlug": "039-registry-packages-proxy"
+    },
+    {
+      "description": "Group 040-control-plane-manager dependency updates",
+      "matchFileNames": ["**/modules/040-control-plane-manager/**"],
+      "groupName": "040-control-plane-manager dependencies",
+      "groupSlug": "040-control-plane-manager"
+    },
+    {
+      "description": "Group 040-node-manager dependency updates",
+      "matchFileNames": ["**/modules/040-node-manager/**"],
+      "groupName": "040-node-manager dependencies",
+      "groupSlug": "040-node-manager"
+    },
+    {
+      "description": "Group 040-terraform-manager dependency updates",
+      "matchFileNames": ["**/modules/040-terraform-manager/**"],
+      "groupName": "040-terraform-manager dependencies",
+      "groupSlug": "040-terraform-manager"
+    },
+    {
+      "description": "Group 042-kube-dns dependency updates",
+      "matchFileNames": ["**/modules/042-kube-dns/**"],
+      "groupName": "042-kube-dns dependencies",
+      "groupSlug": "042-kube-dns"
+    },
+    {
+      "description": "Group 050-network-policy-engine dependency updates",
+      "matchFileNames": ["**/modules/050-network-policy-engine/**"],
+      "groupName": "050-network-policy-engine dependencies",
+      "groupSlug": "050-network-policy-engine"
+    },
+    {
+      "description": "Group 101-cert-manager dependency updates",
+      "matchFileNames": ["**/modules/101-cert-manager/**"],
+      "groupName": "101-cert-manager dependencies",
+      "groupSlug": "101-cert-manager"
+    },
+    {
+      "description": "Group 110-istio dependency updates",
+      "matchFileNames": ["**/modules/110-istio/**"],
+      "groupName": "110-istio dependencies",
+      "groupSlug": "110-istio"
+    },
+    {
+      "description": "Group 140-user-authz dependency updates",
+      "matchFileNames": ["**/modules/140-user-authz/**"],
+      "groupName": "140-user-authz dependencies",
+      "groupSlug": "140-user-authz"
+    },
+    {
+      "description": "Group 150-user-authn dependency updates",
+      "matchFileNames": ["**/modules/150-user-authn/**"],
+      "groupName": "150-user-authn dependencies",
+      "groupSlug": "150-user-authn"
+    },
+    {
+      "description": "Group 160-multitenancy-manager dependency updates",
+      "matchFileNames": ["**/modules/160-multitenancy-manager/**"],
+      "groupName": "160-multitenancy-manager dependencies",
+      "groupSlug": "160-multitenancy-manager"
+    },
+    {
+      "description": "Group 300-prometheus dependency updates",
+      "matchFileNames": ["**/modules/300-prometheus/**"],
+      "groupName": "300-prometheus dependencies",
+      "groupSlug": "300-prometheus"
+    },
+    {
+      "description": "Group 302-vertical-pod-autoscaler dependency updates",
+      "matchFileNames": ["**/modules/302-vertical-pod-autoscaler/**"],
+      "groupName": "302-vertical-pod-autoscaler dependencies",
+      "groupSlug": "302-vertical-pod-autoscaler"
+    },
+    {
+      "description": "Group 340-extended-monitoring dependency updates",
+      "matchFileNames": ["**/modules/340-extended-monitoring/**"],
+      "groupName": "340-extended-monitoring dependencies",
+      "groupSlug": "340-extended-monitoring"
+    },
+    {
+      "description": "Group 350-node-local-dns dependency updates",
+      "matchFileNames": ["**/modules/350-node-local-dns/**"],
+      "groupName": "350-node-local-dns dependencies",
+      "groupSlug": "350-node-local-dns"
+    },
+    {
+      "description": "Group 380-metallb dependency updates",
+      "matchFileNames": ["**/modules/380-metallb/**"],
+      "groupName": "380-metallb dependencies",
+      "groupSlug": "380-metallb"
+    },
+    {
+      "description": "Group 400-descheduler dependency updates",
+      "matchFileNames": ["**/modules/400-descheduler/**"],
+      "groupName": "400-descheduler dependencies",
+      "groupSlug": "400-descheduler"
+    },
+    {
+      "description": "Group 402-ingress-nginx dependency updates",
+      "matchFileNames": ["**/modules/402-ingress-nginx/**"],
+      "groupName": "402-ingress-nginx dependencies",
+      "groupSlug": "402-ingress-nginx"
+    },
+    {
+      "description": "Group 450-keepalived dependency updates",
+      "matchFileNames": ["**/modules/450-keepalived/**"],
+      "groupName": "450-keepalived dependencies",
+      "groupSlug": "450-keepalived"
+    },
+    {
+      "description": "Group 450-network-gateway dependency updates",
+      "matchFileNames": ["**/modules/450-network-gateway/**"],
+      "groupName": "450-network-gateway dependencies",
+      "groupSlug": "450-network-gateway"
+    },
+    {
+      "description": "Group 470-chrony dependency updates",
+      "matchFileNames": ["**/modules/470-chrony/**"],
+      "groupName": "470-chrony dependencies",
+      "groupSlug": "470-chrony"
+    },
+    {
+      "description": "Group 491-containerized-data-importer dependency updates",
+      "matchFileNames": ["**/modules/491-containerized-data-importer/**"],
+      "groupName": "491-containerized-data-importer dependencies",
+      "groupSlug": "491-containerized-data-importer"
+    },
+    {
+      "description": "Group 500-basic-auth dependency updates",
+      "matchFileNames": ["**/modules/500-basic-auth/**"],
+      "groupName": "500-basic-auth dependencies",
+      "groupSlug": "500-basic-auth"
+    },
+    {
+      "description": "Group 500-cilium-hubble dependency updates",
+      "matchFileNames": ["**/modules/500-cilium-hubble/**"],
+      "groupName": "500-cilium-hubble dependencies",
+      "groupSlug": "500-cilium-hubble"
+    },
+    {
+      "description": "Group 500-dashboard dependency updates",
+      "matchFileNames": ["**/modules/500-dashboard/**"],
+      "groupName": "500-dashboard dependencies",
+      "groupSlug": "500-dashboard"
+    },
+    {
+      "description": "Group 500-okmeter dependency updates",
+      "matchFileNames": ["**/modules/500-okmeter/**"],
+      "groupName": "500-okmeter dependencies",
+      "groupSlug": "500-okmeter"
+    },
+    {
+      "description": "Group 500-openvpn dependency updates",
+      "matchFileNames": ["**/modules/500-openvpn/**"],
+      "groupName": "500-openvpn dependencies",
+      "groupSlug": "500-openvpn"
+    },
+    {
+      "description": "Group 600-namespace-configurator dependency updates",
+      "matchFileNames": ["**/modules/600-namespace-configurator/**"],
+      "groupName": "600-namespace-configurator dependencies",
+      "groupSlug": "600-namespace-configurator"
+    },
+    {
+      "description": "Group 600-secret-copier dependency updates",
+      "matchFileNames": ["**/modules/600-secret-copier/**"],
+      "groupName": "600-secret-copier dependencies",
+      "groupSlug": "600-secret-copier"
+    },
+    {
+      "description": "Group 800-deckhouse-tools dependency updates",
+      "matchFileNames": ["**/modules/800-deckhouse-tools/**"],
+      "groupName": "800-deckhouse-tools dependencies",
+      "groupSlug": "800-deckhouse-tools"
+    },
+    {
+      "description": "Group 810-documentation dependency updates",
+      "matchFileNames": ["**/modules/810-documentation/**"],
+      "groupName": "810-documentation dependencies",
+      "groupSlug": "810-documentation"
+    },
+    {
+      "description": "Group candi/cloud-providers dependency updates",
+      "matchFileNames": ["candi/cloud-providers/**", "ee/candi/cloud-providers/**"],
+      "groupName": "candi-cloud-providers dependencies",
+      "groupSlug": "candi-cloud-providers"
+    },
+    {
+      "description": "Group cloud-controller-manager dependency updates",
+      "matchFileNames": ["cloud-controller-manager/**", "ee/cloud-controller-manager/**"],
+      "groupName": "cloud-controller-manager dependencies",
+      "groupSlug": "cloud-controller-manager"
+    },
+    {
+      "description": "Group crds dependency updates",
+      "matchFileNames": ["crds/**", "ee/crds/**"],
+      "groupName": "crds dependencies",
+      "groupSlug": "crds"
+    },
+    {
+      "description": "Group csi dependency updates",
+      "matchFileNames": ["csi/**", "ee/csi/**"],
+      "groupName": "csi dependencies",
+      "groupSlug": "csi"
+    },
+    {
+      "description": "Group deckhouse-controller dependency updates",
+      "matchFileNames": ["deckhouse-controller/**", "ee/deckhouse-controller/**"],
+      "groupName": "deckhouse-controller dependencies",
+      "groupSlug": "deckhouse-controller"
+    },
+    {
+      "description": "Group dhctl dependency updates",
+      "matchFileNames": ["dhctl/**", "ee/dhctl/**"],
+      "groupName": "dhctl dependencies",
+      "groupSlug": "dhctl"
+    },
+    {
+      "description": "Group docs dependency updates",
+      "matchFileNames": ["docs/**", "ee/docs/**"],
+      "groupName": "docs dependencies",
+      "groupSlug": "docs"
+    },
+    {
+      "description": "Group go_lib/cloud-data dependency updates",
+      "matchFileNames": ["go_lib/cloud-data/**", "ee/go_lib/cloud-data/**"],
+      "groupName": "go-lib-cloud-data dependencies",
+      "groupSlug": "go-lib-cloud-data"
+    },
+    {
+      "description": "Group go_lib/cloud-provider dependency updates",
+      "matchFileNames": ["go_lib/cloud-provider/**", "ee/go_lib/cloud-provider/**"],
+      "groupName": "go-lib-cloud-provider dependencies",
+      "groupSlug": "go-lib-cloud-provider"
+    },
+    {
+      "description": "Group go_lib/controlplane dependency updates",
+      "matchFileNames": ["go_lib/controlplane/**", "ee/go_lib/controlplane/**"],
+      "groupName": "go-lib-controlplane dependencies",
+      "groupSlug": "go-lib-controlplane"
+    },
+    {
+      "description": "Group go_lib/registry dependency updates",
+      "matchFileNames": ["go_lib/registry/**", "ee/go_lib/registry/**"],
+      "groupName": "go-lib-registry dependencies",
+      "groupSlug": "go-lib-registry"
+    },
+    {
+      "description": "Group helm_lib dependency updates",
+      "matchFileNames": ["helm_lib/**", "ee/helm_lib/**"],
+      "groupName": "helm-lib dependencies",
+      "groupSlug": "helm-lib"
+    },
+    {
+      "description": "Group openapi dependency updates",
+      "matchFileNames": ["openapi/**", "ee/openapi/**"],
+      "groupName": "openapi dependencies",
+      "groupSlug": "openapi"
+    },
+    {
+      "description": "Group testing/cloud_layouts dependency updates",
+      "matchFileNames": ["testing/cloud_layouts/**", "ee/testing/cloud_layouts/**"],
+      "groupName": "testing-cloud-layouts dependencies",
+      "groupSlug": "testing-cloud-layouts"
+    },
+    {
+      "description": "Group tools/docs dependency updates",
+      "matchFileNames": ["tools/docs/**", "ee/tools/docs/**"],
+      "groupName": "tools-docs dependencies",
+      "groupSlug": "tools-docs"
+    },
+    {
+      "description": "Group tools/integrity_check_namespaces dependency updates",
+      "matchFileNames": ["tools/integrity_check_namespaces/**", "ee/tools/integrity_check_namespaces/**"],
+      "groupName": "tools-integrity-check-namespaces dependencies",
+      "groupSlug": "tools-integrity-check-namespaces"
     }
   ]
 }
