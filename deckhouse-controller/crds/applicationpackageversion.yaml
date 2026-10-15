@@ -43,7 +43,7 @@ spec:
     name: v1alpha1
     schema:
       openAPIV3Schema:
-        description: ApplicationPackageVersion represents a version of an application
+        description: ApplicationPackageVersion defines a version of an application
           package.
         properties:
           apiVersion:
@@ -54,6 +54,7 @@ spec:
 
               More info [in the Kubernetes documentation](https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources)
             type: string
+            x-doc-skip: true
           kind:
             description: |-
               Kind is a string value representing the REST resource this object represents.
@@ -63,10 +64,12 @@ spec:
 
               More info [in the Kubernetes documentation](https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds)
             type: string
+            x-doc-skip: true
           metadata:
             type: object
+            x-doc-skip: true
           spec:
-            description: Defines the application package version parameters.
+            description: Application package version parameters.
             properties:
               packageName:
                 description: Name of the application package.
@@ -101,55 +104,50 @@ spec:
             - packageVersion
             type: object
           status:
-            description: Application package version status.
+            description: Current state of the application package version.
             properties:
               conditions:
-                description: Conditions reflecting the latest observations of the
-                  package version state.
+                description: Conditions reflecting the current state of the application
+                  package version.
                 items:
-                  description: Condition contains details for one aspect of the current
-                    state of this API Resource.
+                  description: Condition reflecting an aspect of the current state
+                    of the package version.
                   properties:
                     lastTransitionTime:
-                      description: |-
-                        lastTransitionTime is the last time the condition transitioned from one status to another.
-                        This should be when the underlying condition changed.  If that is not known, then using the time when the API field changed is acceptable.
+                      description: Time when the condition status last changed.
                       format: date-time
                       type: string
                     message:
                       description: |-
-                        message is a human readable message indicating details about the transition.
-                        This may be an empty string.
+                        Message with additional information about the condition.
+
+                        May be empty.
                       maxLength: 32768
                       type: string
                     observedGeneration:
                       description: |-
-                        observedGeneration represents the .metadata.generation that the condition was set based upon.
-                        For instance, if .metadata.generation is currently 12, but the .status.conditions[x].observedGeneration is 9, the condition is out of date
-                        with respect to the current state of the instance.
+                        Value of `.metadata.generation` for which the condition was set.
+
+                        Indicates whether the condition corresponds to the current generation of the instance.
                       format: int64
                       minimum: 0
                       type: integer
                     reason:
-                      description: |-
-                        reason contains a programmatic identifier indicating the reason for the condition's last transition.
-                        Producers of specific condition types may define expected values and meanings for this field,
-                        and whether the values are considered a guaranteed API.
-                        The value should be a CamelCase string.
-                        This field may not be empty.
+                      description: Programmatic identifier indicating the reason for
+                        the last condition status change.
                       maxLength: 1024
                       minLength: 1
                       pattern: ^[A-Za-z]([A-Za-z0-9_,:]*[A-Za-z0-9_])?$
                       type: string
                     status:
-                      description: status of the condition, one of True, False, Unknown.
+                      description: Condition status.
                       enum:
                       - "True"
                       - "False"
                       - Unknown
                       type: string
                     type:
-                      description: type of condition in CamelCase or in foo.example.com/CamelCase.
+                      description: Condition type in CamelCase or in the format `foo.example.com/CamelCase`.
                       maxLength: 316
                       pattern: ^([a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*/)?(([A-Za-z0-9][-A-Za-z0-9_.]*)?[A-Za-z0-9])$
                       type: string
@@ -166,129 +164,136 @@ spec:
                 x-kubernetes-list-type: map
               observedGeneration:
                 description: |-
-                  Generation of the spec this status was computed from; a lower value means the status
-                  has not caught up with the latest spec yet.
+                  Value of `.metadata.generation` for which the current status was calculated.
+
+                  If the value is lower than the current `.metadata.generation`, the status does not yet reflect the latest changes to the instance.
                 format: int64
                 minimum: 0
                 type: integer
               packageMetadata:
-                description: Metadata about the package such as description, requirements,
-                  etc.
+                description: Application package version metadata, including the description,
+                  requirements, disable options, and version compatibility rules.
                 properties:
                   category:
-                    description: The category this package belongs to.
+                    description: Application package category.
                     type: string
                   changelog:
-                    description: Information about changes in this version.
+                    description: Information about changes in this package version.
                     properties:
                       features:
-                        description: List of new features in this version.
+                        description: List of new features in this package version.
                         items:
                           type: string
                         type: array
                       fixes:
-                        description: List of bug fixes in this version.
+                        description: List of bugs fixed in this package version.
                         items:
                           type: string
                         type: array
                     type: object
                   description:
-                    description: Localized descriptions of the package.
+                    description: Localized descriptions of the application package.
                     properties:
                       en:
-                        description: English description of the package.
+                        description: English description of the application package.
                         type: string
                       ru:
-                        description: Russian description of the package.
+                        description: Russian description of the application package.
                         type: string
                     type: object
                   disableOptions:
                     description: Parameters of package disable protection.
                     properties:
                       confirmation:
-                        description: Whether confirmation is required to disable the
-                          package.
+                        description: Indicates whether confirmation is required to
+                          disable the application package.
                         type: boolean
                       messages:
-                        description: Localized disable confirmation messages.
+                        description: Localized messages displayed when confirming
+                          package disabling.
                         properties:
                           en:
-                            description: English disable confirmation message.
+                            description: Disable confirmation message in English.
                             type: string
                           ru:
-                            description: Russian disable confirmation message.
+                            description: Disable confirmation message in Russian.
                             type: string
                         type: object
                     type: object
                   licensing:
-                    description: Licensing information for different editions.
+                    description: Application package licensing information for different
+                      editions.
                     properties:
                       editions:
                         additionalProperties:
-                          description: |-
-                            PackageEditionLicense is a single edition's licensing, shared by applications
-                            and modules: whether the edition is available and which bundles enable the
-                            package by default. Bundle membership is meaningful for modules; applications
-                            have no bundles and typically leave EnabledInBundles empty.
                           properties:
                             available:
-                              description: Whether this edition is available for use.
+                              description: Indicates whether the edition is available
+                                for use.
                               type: boolean
                             enabledInBundles:
-                              description: Bundles that enable the module by default
-                                in this edition.
+                              description: |-
+                                Bundles in which the package is enabled by default in this edition.
+
+                                Not used for application packages.
                               items:
                                 type: string
                               type: array
                           type: object
-                        description: Licensing information for different package editions.
+                        description: Licensing settings for different application
+                          package editions.
                         type: object
                     type: object
                   requirements:
-                    description: The system requirements for this package.
+                    description: System requirements for installing and running the
+                      application.
                     properties:
                       deckhouse:
                         description: Required Deckhouse Platform version.
                         properties:
                           constraint:
-                            description: Semver constraint expression.
+                            description: Deckhouse Platform version constraint in
+                              SemVer format.
                             type: string
                         type: object
                       kubernetes:
                         description: Required Kubernetes version.
                         properties:
                           constraint:
-                            description: Semver constraint expression.
+                            description: Kubernetes version constraint in SemVer format.
                             type: string
                         type: object
                       modules:
-                        description: Required modules, partitioned into mandatory,
-                          conditional, anyOf, and noneOf dependencies.
+                        description: 'Deckhouse Platform module requirements: required
+                          and optional dependencies, groups of alternative modules,
+                          and groups of incompatible modules.'
                         properties:
                           anyOf:
                             description: |-
-                              AnyOf groups of alternative dependencies — at least one member of each group
-                              must be installed (and satisfy its constraint, if any) for the package to
-                              start. Groups are checker-only and add no edges to the dependency graph.
+                              Groups of alternative modules.
+
+                              At least one module in each group must be enabled. If a version constraint is specified for a module, its version must satisfy that constraint.
+
+                              These groups do not add edges to the dependency graph.
                             items:
-                              description: |-
-                                PackageModuleGroup is a named group of module dependencies: alternatives in anyOf,
-                                forbidden modules in noneOf. The Name is required and surfaces in scheduler
-                                diagnostics; the Description is optional human-facing documentation.
+                              description: Group of alternative modules, at least
+                                one of which must be enabled.
                               properties:
                                 description:
                                   description: Human-readable description of the group's
                                     purpose.
                                   type: string
                                 modules:
-                                  description: Module dependencies in this group.
+                                  description: Alternative modules in the group.
                                   items:
                                     description: |-
-                                      PackageModuleDependency is a single named module dependency with an optional
-                                      semver constraint. An empty constraint means "any version".
+                                      Module with an optional version constraint in SemVer format.
+
+                                      If no constraint is specified, any version is allowed.
                                     properties:
                                       constraint:
-                                        description: Semver constraint expression.
+                                        description: Module version constraint in
+                                          SemVer format.
                                         type: string
                                       name:
                                         description: Module name.
@@ -310,16 +315,20 @@ spec:
                             type: array
                           conditional:
                             description: |-
-                              Conditional dependencies — not required to be present, but if installed must
-                              satisfy the constraint for the package to function correctly. Replaces the
-                              legacy "!optional" suffix from the v1 requirements format.
+                              Optional modules with version constraints.
+
+                              The module does not have to be enabled. If it is enabled, its version must satisfy the specified constraint.
+
+                              Replaces the deprecated `!optional` suffix from the v1 requirements format.
                             items:
                               description: |-
-                                PackageModuleDependency is a single named module dependency with an optional
-                                semver constraint. An empty constraint means "any version".
+                                Optional module with a version constraint in SemVer format.
+
+                                If no constraint is specified, any version is allowed.
                               properties:
                                 constraint:
-                                  description: Semver constraint expression.
+                                  description: Module version constraint in SemVer
+                                    format.
                                   type: string
                                 name:
                                   description: Module name.
@@ -331,15 +340,18 @@ spec:
                             type: array
                           mandatory:
                             description: |-
-                              Mandatory dependencies — must be present (and satisfy the constraint, if any)
-                              for the package to start.
+                              Modules required for the application to run.
+
+                              Each specified module must be enabled. If a version constraint is specified, the module version must satisfy it.
                             items:
                               description: |-
-                                PackageModuleDependency is a single named module dependency with an optional
-                                semver constraint. An empty constraint means "any version".
+                                Required module with an optional version constraint in SemVer format.
+
+                                If no constraint is specified, any version is allowed.
                               properties:
                                 constraint:
-                                  description: Semver constraint expression.
+                                  description: Module version constraint in SemVer
+                                    format.
                                   type: string
                                 name:
                                   description: Module name.
@@ -351,30 +363,35 @@ spec:
                             type: array
                           noneOf:
                             description: |-
-                              NoneOf groups of forbidden dependencies — no member of any group may be
-                              installed for the package to start. A member with no constraint is forbidden
-                              at any version; a member with a constraint is forbidden only at versions
-                              matching that constraint. Groups are checker-only and add no edges to the
-                              dependency graph.
+                              Groups of incompatible modules.
+
+                              For the application to run, none of the modules in these groups may be enabled with an incompatible version.
+
+                              If no version constraint is specified, all versions of the module are considered incompatible. If a constraint is specified, only versions satisfying that constraint are considered incompatible.
+
+                              These groups do not add edges to the dependency graph.
                             items:
                               description: |-
-                                PackageModuleGroup is a named group of module dependencies: alternatives in anyOf,
-                                forbidden modules in noneOf. The Name is required and surfaces in scheduler
-                                diagnostics; the Description is optional human-facing documentation.
+                                Group of incompatible modules.
+
+                                None of the listed modules may be enabled with an incompatible version.
                               properties:
                                 description:
                                   description: Human-readable description of the group's
                                     purpose.
                                   type: string
                                 modules:
-                                  description: Module dependencies in this group.
+                                  description: Incompatible modules in the group.
                                   items:
                                     description: |-
-                                      PackageModuleDependency is a single named module dependency with an optional
-                                      semver constraint. An empty constraint means "any version".
+                                      Module with an optional version constraint in SemVer format.
+
+                                      If no constraint is specified, all versions of the module are considered incompatible.
                                     properties:
                                       constraint:
-                                        description: Semver constraint expression.
+                                        description: Module version constraint in
+                                          SemVer format defining the range of incompatible
+                                          versions.
                                         type: string
                                       name:
                                         description: Module name.
@@ -397,8 +414,7 @@ spec:
                         type: object
                     type: object
                   stage:
-                    description: The development stage of the package (e.g., Experimental,
-                      Preview, General Availability, Deprecated).
+                    description: Life cycle stage of the application package.
                     type: string
                     x-doc-examples:
                     - Experimental
@@ -416,30 +432,38 @@ spec:
                             minor: 0
                             patches: -1
                         description: Compatibility rules for downgrading from this
-                          version.
+                          application version.
                         properties:
                           step:
-                            description: Step defines the compatibility rule for this
-                              direction.
+                            description: Compatibility rule step.
                             properties:
                               major:
-                                description: How many major versions can be skipped;
-                                  -1 is unlimited, 0 forbids the change. Defaults
-                                  to 0.
+                                description: |-
+                                  Number of major versions that can be skipped during a downgrade.
+
+                                  The `-1` value removes all limits, `0` forbids the change.
+
+                                  Defaults to `0`.
                                 format: int32
                                 minimum: -1
                                 type: integer
                               minor:
-                                description: How many minor versions can be skipped;
-                                  -1 is unlimited, 0 forbids the change. Defaults
-                                  to 1 on upgrade, 0 on downgrade.
+                                description: |-
+                                  Number of minor versions that can be skipped during a downgrade.
+
+                                  The `-1` value removes all limits, `0` forbids the change.
+
+                                  Defaults to `0`.
                                 format: int32
                                 minimum: -1
                                 type: integer
                               patches:
-                                description: How many patch versions can be skipped;
-                                  -1 is unlimited, 0 forbids the change. Defaults
-                                  to -1.
+                                description: |-
+                                  Number of patch versions that can be skipped during a downgrade.
+
+                                  The `-1` value removes all limits, `0` forbids the change.
+
+                                  Defaults to `-1`.
                                 format: int32
                                 minimum: -1
                                 type: integer
@@ -451,30 +475,39 @@ spec:
                             major: 0
                             minor: 1
                             patches: -1
-                        description: Compatibility rules for upgrading to this version.
+                        description: Compatibility rules for upgrading to this application
+                          version.
                         properties:
                           step:
-                            description: Step defines the compatibility rule for this
-                              direction.
+                            description: Compatibility rule step.
                             properties:
                               major:
-                                description: How many major versions can be skipped;
-                                  -1 is unlimited, 0 forbids the change. Defaults
-                                  to 0.
+                                description: |-
+                                  Number of major versions that can be skipped during an upgrade.
+
+                                  The `-1` value removes all limits, `0` forbids the change.
+
+                                  Defaults to `0`.
                                 format: int32
                                 minimum: -1
                                 type: integer
                               minor:
-                                description: How many minor versions can be skipped;
-                                  -1 is unlimited, 0 forbids the change. Defaults
-                                  to 1 on upgrade, 0 on downgrade.
+                                description: |-
+                                  Number of minor versions that can be skipped during an upgrade.
+
+                                  The `-1` value removes all limits, `0` forbids the change.
+
+                                  Defaults to `1`.
                                 format: int32
                                 minimum: -1
                                 type: integer
                               patches:
-                                description: How many patch versions can be skipped;
-                                  -1 is unlimited, 0 forbids the change. Defaults
-                                  to -1.
+                                description: |-
+                                  Number of patch versions that can be skipped during an upgrade.
+
+                                  The `-1` value removes all limits, `0` forbids the change.
+
+                                  Defaults to `-1`.
                                 format: int32
                                 minimum: -1
                                 type: integer
@@ -483,36 +516,32 @@ spec:
                     type: object
                 type: object
               packageSchemas:
-                description: Schemas for validating settings and values passed to
-                  the package.
+                description: OpenAPI schemas for validating user-defined application
+                  settings and final values passed to package hooks and templates.
                 properties:
                   settingsSchema:
                     description: |-
-                      SettingsSchema is the OpenAPI v3 schema used to validate the user-supplied
-                      settings of the package. Stored as an opaque object because its contents
-                      form a recursive JSON schema that cannot be expressed structurally in a
-                      CRD; the controller validates this subtree in Go when loading package
-                      metadata.
+                      OpenAPI v3 schema for validating user-defined application settings in `Application.spec.settings`.
+
+                      The schema is stored as an opaque object because it has a recursive JSON Schema structure. The controller validates it when loading the package metadata.
                     type: object
                     x-kubernetes-map-type: atomic
                     x-kubernetes-preserve-unknown-fields: true
                   valuesSchema:
                     description: |-
-                      ValuesSchema is the OpenAPI v3 schema used to validate the effective
-                      values (defaults merged with settings) passed to the package's hooks and
-                      charts. Stored as an opaque object because its contents form a recursive
-                      JSON schema that cannot be expressed structurally in a CRD; the
-                      controller validates this subtree in Go when loading package metadata.
+                      OpenAPI v3 schema for validating the final set of `values` passed to package hooks and templates.
+
+                      The final set is formed by merging default values with user-defined application settings.
+
+                      The schema is stored as an opaque object because it has a recursive JSON Schema structure. The controller validates it when loading the package metadata.
                     type: object
                     x-kubernetes-map-type: atomic
                     x-kubernetes-preserve-unknown-fields: true
                 type: object
               usedBy:
-                description: Information about applications that are using this package
-                  version.
+                description: List of applications installed from this package version.
                 items:
-                  description: ApplicationPackageVersionStatusInstance identifies
-                    one application using the package version.
+                  description: Application installed from the package version.
                   properties:
                     name:
                       description: Name of the application instance.
@@ -523,8 +552,10 @@ spec:
                   type: object
                 type: array
               usedByCount:
-                description: Number of applications using this package version; kept
-                  equal to the length of usedBy.
+                description: |-
+                  Number of applications installed from this package version.
+
+                  Equals the number of entries in `usedBy`.
                 format: int32
                 minimum: 0
                 type: integer

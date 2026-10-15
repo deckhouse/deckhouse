@@ -45,7 +45,7 @@ spec:
     name: v1alpha1
     schema:
       openAPIV3Schema:
-        description: Application represents a namespace-scoped application instance.
+        description: Application defines an installed application instance in a namespace.
         properties:
           apiVersion:
             description: |-
@@ -55,6 +55,7 @@ spec:
 
               More info [in the Kubernetes documentation](https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources).
             type: string
+            x-doc-skip: true
           kind:
             description: |-
               Kind is a string value representing the REST resource this object represents.
@@ -64,16 +65,20 @@ spec:
 
               More info [in the Kubernetes documentation](https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds).
             type: string
+            x-doc-skip: true
           metadata:
             type: object
+            x-doc-skip: true
           spec:
-            description: Defines the application configuration.
+            description: Application configuration.
             properties:
               maintenance:
                 description: |-
-                  Defines the application maintenance mode.
+                  Application maintenance mode.
 
-                  - `NoResourceReconciliation`: A mode for developing or tweaking the application.
+                  Supported modes:
+
+                  - `NoResourceReconciliation`: A mode for developing or debugging the application.
 
                     In this mode:
 
@@ -92,7 +97,8 @@ spec:
                 x-doc-examples:
                 - console
               packageRepositoryName:
-                description: Name of the PackageRepository where the package is located.
+                description: Name of the PackageRepository object where the application
+                  package is located.
                 type: string
                 x-doc-examples:
                 - deckhouse
@@ -103,26 +109,22 @@ spec:
                 - v1.0.0
               resourceRequests:
                 description: |-
-                  Resource footprint of the workloads the application deploys: how many
-                  replicas each workload runs and what its containers may consume. Entries
-                  override what the application package ships; a workload or container that
-                  is not listed keeps the package defaults.
+                  Resource settings and replica counts for workloads deployed by the application.
 
-                  A workload is addressed by its kind and name, so at most one entry exists
-                  per pair.
+                  Specified values override the settings provided by the application package. Workloads and containers not listed in this parameter retain their settings from the package.
+
+                  Each workload is identified by a combination of kind (`kind`) and name (`name`). Only one entry is allowed for each combination.
                 items:
-                  description: |-
-                    ApplicationResourceRequest pins the resource footprint of a single workload
-                    that the application deploys.
+                  description: Resource settings and replica count for a single application
+                    workload.
                   properties:
                     containers:
                       description: |-
-                        Compute resources of the workload's containers. A container the workload
-                        does not have is ignored.
+                        Compute resources of the workload's containers.
+
+                        If the specified container does not exist in the workload, the entry is ignored.
                       items:
-                        description: |-
-                          ApplicationContainerResourceRequest pins the compute resources of a single
-                          container inside a workload.
+                        description: Resource settings for a single workload container.
                         properties:
                           name:
                             description: Name of the container inside the workload.
@@ -132,38 +134,35 @@ spec:
                             - controller
                           resources:
                             description: |-
-                              Compute resources the container requests and is limited to, in the same
-                              form as a Pod container's `resources`: `cpu`, `memory` and
-                              `ephemeral-storage` for disk.
+                              Container resource requests and limits.
 
-                              Merged into what the package ships resource by resource, so setting only
-                              `memory` leaves the package's `cpu` in place. A resource the package
-                              declares cannot be removed here, only given a different value.
+                              Uses the same format as the `resources` field of a Pod container. Supports `cpu`, `memory`, and `ephemeral-storage`.
+
+                              Specified values are merged with the settings from the application package separately for each resource. For example, if only `memory` is specified, the `cpu` value from the package is retained.
+
+                              Resource requests or limits defined in the package cannot be removed. Their values can only be overridden.
                             properties:
                               claims:
                                 description: |-
-                                  Claims lists the names of resources, defined in spec.resourceClaims,
-                                  that are used by this container.
+                                  List of resource claims used by the container.
 
-                                  This field depends on the
-                                  DynamicResourceAllocation feature gate.
+                                  Each entry references a resource claim defined in `pod.spec.resourceClaims`. Requires the `DynamicResourceAllocation` feature gate to be enabled.
 
                                   This field is immutable. It can only be set for containers.
                                 items:
-                                  description: ResourceClaim references one entry
-                                    in PodSpec.ResourceClaims.
+                                  description: Resource claim used by the container.
                                   properties:
                                     name:
                                       description: |-
-                                        Name must match the name of one entry in pod.spec.resourceClaims of
-                                        the Pod where this field is used. It makes that resource available
-                                        inside a container.
+                                        Name of a ResourceClaim defined in `pod.spec.resourceClaims`.
+
+                                        The referenced claim makes its resources available to the container.
                                       type: string
                                     request:
                                       description: |-
-                                        Request is the name chosen for a request in the referenced claim.
-                                        If empty, everything from the claim is made available, otherwise
-                                        only the result of this request.
+                                        Name of a request defined in the referenced resource claim.
+
+                                        If specified, only the resources allocated for this request are made available to the container. If omitted, all resources allocated for the claim are made available.
                                       type: string
                                   required:
                                   - name
@@ -179,9 +178,8 @@ spec:
                                   - type: string
                                   pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
                                   x-kubernetes-int-or-string: true
-                                description: |-
-                                  Limits describes the maximum amount of compute resources allowed.
-                                  More info: https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/
+                                description: Maximum amount of compute resources available
+                                  to the container.
                                 type: object
                               requests:
                                 additionalProperties:
@@ -191,10 +189,11 @@ spec:
                                   pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
                                   x-kubernetes-int-or-string: true
                                 description: |-
-                                  Requests describes the minimum amount of compute resources required.
-                                  If Requests is omitted for a container, it defaults to Limits if that is explicitly specified,
-                                  otherwise to an implementation-defined value. Requests cannot exceed Limits.
-                                  More info: https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/
+                                  Minimum amount of compute resources required by the container.
+
+                                  If this parameter is not specified, the `limits` value is used if explicitly set. Otherwise, the value is implementation-defined.
+
+                                  The `requests` value cannot exceed `limits`.
                                 type: object
                             type: object
                         required:
@@ -205,7 +204,8 @@ spec:
                       - name
                       x-kubernetes-list-type: map
                     kind:
-                      description: Kind of the workload to size.
+                      description: Kind of workload for which resource settings are
+                        specified.
                       enum:
                       - Deployment
                       - StatefulSet
@@ -218,16 +218,16 @@ spec:
                       x-doc-examples:
                       - Deployment
                     name:
-                      description: Name of the workload to size, as the application
-                        package names it.
+                      description: Workload name as specified in the application package.
                       minLength: 1
                       type: string
                       x-doc-examples:
                       - controller
                     replicas:
                       description: |-
-                        Number of replicas the workload runs. Only meaningful for the kinds that
-                        have a replica count: `Deployment`, `StatefulSet` and `ReplicaSet`.
+                        Number of workload replicas.
+
+                        Applies only to workloads that support replica management: Deployment, StatefulSet, and ReplicaSet.
                       format: int32
                       minimum: 0
                       type: integer
@@ -248,33 +248,33 @@ spec:
                 - name
                 x-kubernetes-list-type: map
               settings:
-                description: Configuration settings for the application.
+                description: Configuration application settings.
                 type: object
                 x-kubernetes-preserve-unknown-fields: true
               update:
                 description: |-
-                  Update settings of the application: the update mode, update windows, and blocking the update on alerts.
+                  Application update settings: update mode, update windows, and blocking updates when alerts are present.
 
-                  If the parameter is omitted, the application uses the global [`applications.update`](global.html#parameters-applications-update) settings. If those are not set either, it uses the Deckhouse update settings: the [`update`](/modules/deckhouse/configuration.html#parameters-update) parameter of the `deckhouse` module.
+                  If this parameter is not specified, the global [`applications.update`](global.html#parameters-applications-update) settings are used. If the global settings are also not specified, the Deckhouse Platform update settings are applied, as defined by the [`update`](/modules/deckhouse/configuration.html#parameters-update) parameter of the `deckhouse` module.
 
-                  Update notifications cannot be configured for a single application. The application always uses the global ones: [`applications.update.notification`](global.html#parameters-applications-update-notification) if the global `applications.update` settings are set, and the Deckhouse notification settings otherwise.
+                  Update notifications cannot be configured separately for an application. If `applications.update` is configured, the global [`applications.update.notification`](global.html#parameters-applications-update-notification) settings are used. Otherwise, the Deckhouse Platform notification settings apply.
                 properties:
                   blockOnAlerts:
-                    description: Settings for blocking the application update while
-                      there are alerts in the cluster.
+                    description: Settings for blocking application updates while there
+                      are alerts in the cluster.
                     properties:
                       enabled:
-                        description: If enabled, the application update is blocked
-                          while there are alerts in the cluster with a severity level
-                          equal to or higher than the one set in the [`severity`](#application-v1alpha1-spec-update-blockonalerts-severity)
+                        description: Indicates whether to block application updates
+                          when the cluster has alerts with a severity level equal
+                          to or higher than the value specified in the [`severity`](#application-v1alpha1-spec-update-blockonalerts-severity)
                           parameter.
                         type: boolean
                       severity:
                         default: 4
                         description: |-
-                          The severity level of the alerts that block the update.
+                          Alert severity level at which updates are blocked.
 
-                          The severity level is a number from 0 to 9, where 0 is the highest severity and 9 is the lowest severity.
+                          Set as a value from `0` to `9`, where `0` is the highest severity and `9` is the lowest.
                         format: int32
                         maximum: 9
                         minimum: 0
@@ -290,9 +290,11 @@ spec:
                         To change a minor version (for example, from `v1.2.*` to `v1.3.*`), confirmation is required.
 
                         A patch version update (for example, from `v1.3.1` to `v1.3.2`) is applied taking into account the [update windows](#application-v1alpha1-spec-update-windows), if they are set.
+
                       - `Auto`: Automatic update mode for all versions.
 
                         Minor version updates (for example, from `v1.2.*` to `v1.3.*`) and patch version updates (for example, from `v1.3.1` to `v1.3.2`) are applied taking into account the [update windows](#application-v1alpha1-spec-update-windows), if they are set.
+
                       - `Manual`: Manual update mode for all versions.
 
                         Confirmation is required for updating both minor and patch versions.
@@ -306,14 +308,14 @@ spec:
                     - Auto
                     - Manual
                   windows:
-                    description: List of update windows during the day.
+                    description: List of application update windows.
                     items:
-                      description: ApplicationUpdateWindow is a time range of a day
-                        in which the application may be updated.
+                      description: Time interval during the day when application updates
+                        are allowed.
                       properties:
                         days:
                           description: |-
-                            The days of the week on which the update window is applied.
+                            Days of the week on which the update window is applied.
 
                             If the parameter is omitted, the update window is applied every day.
                           items:
@@ -331,7 +333,7 @@ spec:
                           description: |-
                             Start time of the update window (UTC timezone).
 
-                            Should be less than the end time of the update window.
+                            Should be earlier than the end time of the update window.
                           pattern: ^(?:\d|[01]\d|2[0-3]):[0-5]\d$
                           type: string
                           x-doc-examples:
@@ -340,7 +342,7 @@ spec:
                           description: |-
                             End time of the update window (UTC timezone).
 
-                            Should be more than the start time of the update window.
+                            Should be later than the start time of the update window.
                           pattern: ^(?:\d|[01]\d|2[0-3]):[0-5]\d$
                           type: string
                           x-doc-examples:
@@ -367,55 +369,46 @@ spec:
             - packageVersion
             type: object
           status:
-            description: Application status.
+            description: Current state of the application.
             properties:
               conditions:
-                description: Conditions reflecting the latest observations of the
-                  application state.
+                description: Conditions reflecting the current state of the application.
                 items:
-                  description: Condition contains details for one aspect of the current
-                    state of this API Resource.
+                  description: Condition reflecting an aspect of the current state
+                    of the application.
                   properties:
                     lastTransitionTime:
-                      description: |-
-                        lastTransitionTime is the last time the condition transitioned from one status to another.
-                        This should be when the underlying condition changed.  If that is not known, then using the time when the API field changed is acceptable.
+                      description: Time when the condition status last changed.
                       format: date-time
                       type: string
                     message:
-                      description: |-
-                        message is a human readable message indicating details about the transition.
-                        This may be an empty string.
+                      description: Message with additional information about the condition.
                       maxLength: 32768
                       type: string
                     observedGeneration:
                       description: |-
-                        observedGeneration represents the .metadata.generation that the condition was set based upon.
-                        For instance, if .metadata.generation is currently 12, but the .status.conditions[x].observedGeneration is 9, the condition is out of date
-                        with respect to the current state of the instance.
+                        Value of `.metadata.generation` for which the condition was set.
+
+                        Indicates whether the condition corresponds to the current generation of the instance.
                       format: int64
                       minimum: 0
                       type: integer
                     reason:
-                      description: |-
-                        reason contains a programmatic identifier indicating the reason for the condition's last transition.
-                        Producers of specific condition types may define expected values and meanings for this field,
-                        and whether the values are considered a guaranteed API.
-                        The value should be a CamelCase string.
-                        This field may not be empty.
+                      description: Programmatic identifier indicating the reason for
+                        the last condition status change.
                       maxLength: 1024
                       minLength: 1
                       pattern: ^[A-Za-z]([A-Za-z0-9_,:]*[A-Za-z0-9_])?$
                       type: string
                     status:
-                      description: status of the condition, one of True, False, Unknown.
+                      description: Condition status.
                       enum:
                       - "True"
                       - "False"
                       - Unknown
                       type: string
                     type:
-                      description: type of condition in CamelCase or in foo.example.com/CamelCase.
+                      description: Condition type in CamelCase or in the format `foo.example.com/CamelCase`.
                       maxLength: 316
                       pattern: ^([a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*/)?(([A-Za-z0-9][-A-Za-z0-9_.]*)?[A-Za-z0-9])$
                       type: string
@@ -431,35 +424,33 @@ spec:
                 - type
                 x-kubernetes-list-type: map
               currentVersion:
-                description: Information about the currently installed version.
+                description: Information about the currently installed application
+                  version.
                 properties:
                   version:
-                    description: Semantic version of the installed application.
+                    description: Installed application version in SemVer format.
                     type: string
                 type: object
               lastAppliedConfiguration:
                 description: |-
-                  LastAppliedConfiguration is the effective settings (user configuration merged
-                  with config-schema defaults) that drove the most recent successful apply.
+                  Application configuration used during the last successful apply.
+
+                  Includes user-defined settings and default values defined in the configuration schema.
                 type: object
                 x-kubernetes-preserve-unknown-fields: true
               summary:
                 description: |-
-                  Summary aggregates the high-level user-facing state, message and
-                  resolution hint for the application. The controller always populates it
-                  on reconcile — every application maps to exactly one lifecycle state — so
-                  it is the single source of truth for the UI; clients should not re-derive
-                  these values from the conditions. The pointer leaves it absent only
-                  before the first status computation.
+                  Summary of the application state, including messages and recommendations for the user.
+
+                  The controller updates this information during each reconciliation. Each application has exactly one lifecycle state.
+
+                  Use this information to display the application state in the web interface. Do not recalculate the state from conditions.
                 properties:
                   message:
-                    description: Message is a human-readable description of the current
-                      state.
+                    description: Description of the current application state.
                     type: string
                   state:
-                    description: |-
-                      State is the high-level lifecycle state observed for the application.
-                      Always one of: Pending, Failed, Updating, Ready, Degraded, Suspended, Deleting.
+                    description: Current application lifecycle state.
                     type: string
                     x-doc-examples:
                     - Pending
@@ -471,32 +462,31 @@ spec:
                     - Deleting
                   tip:
                     description: |-
-                      Tip is a human-readable instruction on how to resolve the current
-                      state. Empty when no action is required.
+                      Recommended action for the current application state.
+
+                      May be empty if no additional action is required.
                     type: string
                 type: object
               tracking:
-                description: Nelm tracking.
+                description: Nelm report on application status.
                 type: object
                 x-kubernetes-preserve-unknown-fields: true
               urls:
-                description: |-
-                  URLs of application endpoints, collected from Ingress resources of the
-                  application chart annotated with `packages.deckhouse.io/application-endpoint-description`.
+                description: Application endpoint URLs obtained from Ingress resources
+                  in the application chart with the `packages.deckhouse.io/application-endpoint-description`
+                  annotation.
                 items:
-                  description: |-
-                    ApplicationStatusURL is a single application endpoint built from an Ingress
-                    of the application chart.
+                  description: Application endpoint defined by an Ingress resource
+                    in the application chart.
                   properties:
                     description:
                       description: |-
-                        Description of the endpoint, taken from the value of the
-                        `packages.deckhouse.io/application-endpoint-description` annotation.
+                        Endpoint description from the `packages.deckhouse.io/application-endpoint-description` annotation.
 
-                        Empty when the annotation value is "true".
+                        The description is empty if the annotation value is `"true"`.
                       type: string
                     url:
-                      description: URL of the application endpoint.
+                      description: Application endpoint URL.
                       type: string
                   required:
                   - url

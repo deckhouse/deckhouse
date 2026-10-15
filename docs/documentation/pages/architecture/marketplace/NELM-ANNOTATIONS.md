@@ -5,45 +5,45 @@ description: "Nelm annotations for Application deployment: ordering, lifecycle, 
 ---
 
 {% raw %}
-Application templates are rendered and deployed by **Nelm**. Nelm extends the standard Helm behavior with annotations that control deployment order, resource lifecycle, readiness tracking, and log output. This page covers the most commonly used annotations.
+Application templates are rendered and deployed by [Nelm](https://github.com/werf/nelm). Nelm extends the standard Helm behavior with annotations that control deployment order, resource lifecycle, readiness tracking, and log output. This page covers the most commonly used annotations.
 
 ## Deployment stages
 
 Nelm processes a deployment in three stages. Different annotation groups affect different stages.
 
-### 1. Render
+### Render
 
-Templates are evaluated with the current values. DP renders the templates with access to the cluster: `.Capabilities` reflects the API server, and `lookup` returns live objects. At this stage:
+Templates are evaluated with the current values. Deckhouse Platform (DP) renders the templates with access to the cluster: `.Capabilities` reflects the API server, and `lookup` returns live objects. At this stage:
 
 - Template functions (`include`, `tpl`, `lookup`, and others) are executed.
 - All resources are rendered and stored in the release, regardless of `werf.io/deploy-on`.
 
-### 2. Plan
+### Plan
 
 Nelm connects to the cluster, reads current resource state, and runs a **dry-run Server-Side Apply** to compute the exact diff. It then builds a **DAG of operations** — which resources to create, update, or delete, and in what order.
 
 At this stage:
+
 - `werf.io/deploy-on` determines for which operations (`install`, `upgrade`, and so on) and in which stage the resource is deployed.
 - Order and dependency annotations (`werf.io/weight`, `werf.io/deploy-dependency-*`, `*.external-dependency.werf.io/*`) shape the DAG.
 - Lifecycle annotations (`werf.io/ownership`, `werf.io/delete-policy`, `werf.io/delete-propagation`) determine which operations enter the plan.
 
 Dry-run SSA means the diff is computed by the API server — defaulting, admission plugins, and mutating webhooks are all applied.
 
-### 3. Apply
+### Apply
 
 The DAG is executed: resources are created, updated, or deleted in dependency order, with parallelism where no dependencies exist. Readiness tracking and log streaming run concurrently.
 
 At this stage:
+
 - Tracking annotations (`werf.io/track-termination-mode`, `werf.io/fail-mode`, `werf.io/failures-allowed-per-replica`, `werf.io/no-activity-timeout`) control waiting behavior.
 - Log annotations control what is printed during deployment.
 
----
-
 ## Common use cases
 
-### 1. Job that must run before the main application
+### Job that must run before the main application
 
-Classic case: database migration before the application starts.
+Database migration before the application starts:
 
 ```yaml
 apiVersion: batch/v1
@@ -63,11 +63,11 @@ metadata:
 spec: ...
 ```
 
-`before-creation` makes Nelm recreate the Job on every deployment, so the migration runs each time. By default, Nelm recreates a Job only when an immutable field of the Job changes. The Deployment waits for `ready`, that is, for the Job to complete successfully.
+The annotation `werf.io/delete-policy: before-creation` makes Nelm recreate the Job on every deployment, so the migration runs each time. By default, Nelm recreates a Job only when an immutable field of the Job changes. The Deployment waits for `ready`, that is, for the Job to complete successfully.
 
-### 2. Preserve a resource across uninstall or chart removal
+### Preserve a resource across uninstall or chart removal
 
-Use case: a PVC with database data that must not be deleted even when the Application is uninstalled.
+A PVC with database data that must not be deleted even when the Application is uninstalled:
 
 ```yaml
 apiVersion: v1
@@ -84,11 +84,11 @@ spec:
   storageClassName: gp3
 ```
 
-`helm.sh/resource-policy: keep` prevents the PVC from being deleted on uninstall or when removed from the chart. It doesn't protect against `d8 k delete pvc`. To keep the data in this case, use a StorageClass with `reclaimPolicy: Retain`: then the PersistentVolume outlives the PVC.
+The annotation `helm.sh/resource-policy: keep` prevents the PVC from being deleted on uninstall or when removed from the chart. It doesn't protect against `d8 k delete pvc`. To keep the data in this case, use a StorageClass with `reclaimPolicy: Retain`: then the PersistentVolume outlives the PVC.
 
-### 3. Resource shared between releases
+### Resource shared between releases
 
-A TLS Secret used by multiple charts should not disappear when any one of them is uninstalled.
+A TLS Secret used by multiple charts should not disappear when any one of them is uninstalled:
 
 ```yaml
 apiVersion: v1
@@ -101,11 +101,11 @@ type: kubernetes.io/tls
 data: ...
 ```
 
-`anyone` tells Nelm it is not the sole owner, so it skips deletion on uninstall. DP still deletes the Secret together with the Application if its kind is listed in [`orphanResources`](lifecycle.html#orphan-resources). To keep the Secret, add `helm.sh/resource-policy: keep`.
+The annotation `werf.io/ownership: anyone` tells Nelm it is not the sole owner, so it skips deletion on uninstall. DP still deletes the Secret together with the Application if its kind is listed in [`orphanResources`](lifecycle.html#orphan-resources). To keep the Secret, add `helm.sh/resource-policy: keep`.
 
-### 4. Wait for a resource created by an operator
+### Wait for a resource created by an operator
 
-Deploy only after cert-manager creates the Certificate object:
+Deploy only after [`cert-manager`](/modules/cert-manager/) creates the Certificate object:
 
 ```yaml
 apiVersion: apps/v1
@@ -117,9 +117,9 @@ metadata:
 spec: ...
 ```
 
-Nelm waits until the `Certificate` object exists before creating the Deployment. Nelm doesn't wait until the certificate is issued.
+Nelm waits until the Certificate object exists before creating the Deployment. Nelm doesn't wait until the certificate is issued.
 
-### 5. Non-critical component that must not fail the deploy
+### Non-critical component that must not fail the deploy
 
 A metrics DaemonSet whose unavailability should not block the release:
 
@@ -136,7 +136,7 @@ spec: ...
 
 Nelm will not wait for readiness and will not fail on timeout.
 
-### 6. Resource rendered only on first install
+### Resource rendered only on first install
 
 An init Job that runs only during `install`, not `upgrade`:
 
@@ -153,7 +153,7 @@ spec: ...
 
 Without `werf.io/ownership: anyone`, on upgrade the resource renders as absent and the owning release removes it. `anyone` prevents that. Nelm doesn't delete such a Job on uninstall either. To make DP delete it together with the Application, list `Job` in [`orphanResources`](lifecycle.html#orphan-resources).
 
-### 7. Slow-starting resource with a large image
+### Slow-starting resource with a large image
 
 StatefulSet with a large Docker image (ML models, Elasticsearch with pre-loaded indices):
 
@@ -169,27 +169,28 @@ metadata:
 spec: ...
 ```
 
-- `no-activity-timeout: 20m` — 20 minutes without events before Nelm considers it timed out. Use this for slow image pulls or long initialization.
-- `failures-allowed-per-replica: "3"` — allows up to 3 tracking errors per replica, for example, container restarts or image pull errors, before the deployment fails. Use for flapping init dependencies.
-- `show-service-messages: "true"` — emit Kubernetes Events in deploy output (useful for diagnosing `ImagePullBackOff`, scheduling failures, OOM events).
+Used annotations:
 
----
+- `no-activity-timeout: 20m`: 20 minutes without events before Nelm considers it timed out. Use this for slow image pulls or long initialization.
+- `failures-allowed-per-replica: "3"`: Allows up to 3 tracking errors per replica, for example, container restarts or image pull errors, before the deployment fails. Use for flapping init dependencies.
+- `show-service-messages: "true"`: Emit Kubernetes Events in deploy output (useful for diagnosing `ImagePullBackOff`, scheduling failures, OOM events).
 
 ## Ordering and dependencies
 
 ### Weights
 
-`werf.io/weight` groups resources: equal weights deploy in parallel; different weights deploy sequentially in ascending order. The weight is ignored for a resource with a `werf.io/deploy-dependency-*` annotation.
+The annotation `werf.io/weight` groups resources: equal weights deploy in parallel; different weights deploy sequentially in ascending order. The weight is ignored for a resource with a `werf.io/deploy-dependency-*` annotation.
 
 ```yaml
 metadata:
   annotations:
-    werf.io/weight: "-10"   # Deploys before default-weight (0) resources
+    # Deploys before default-weight (0) resources.
+    werf.io/weight: "-10"
 ```
 
 ### Direct dependencies
 
-`werf.io/deploy-dependency-<id>` waits for a specific resource in the same release to reach a specific state before deploying the annotated resource.
+The annotation `werf.io/deploy-dependency-<id>` waits for a specific resource in the same release to reach a specific state before deploying the annotated resource.
 
 ```yaml
 metadata:
@@ -200,8 +201,8 @@ metadata:
 
 Dependency states:
 
-- `ready` — resource is in a ready state (for example, `availableReplicas == replicas` for a Deployment).
-- `present` — resource exists in the cluster.
+- `ready`: Resource is in a ready state (for example, `availableReplicas == replicas` for a Deployment).
+- `present`: Resource exists in the cluster.
 
 Full format:
 
@@ -217,7 +218,7 @@ This annotation has no effect if the dependency resource is in a different deplo
 
 ### External dependencies
 
-`<id>.external-dependency.werf.io/resource` waits until a resource **outside the release** (created by an operator or another release) exists. Nelm doesn't wait for the readiness of the resource:
+The annotation `<id>.external-dependency.werf.io/resource` waits until a resource **outside the release** (created by an operator or another release) exists. Nelm doesn't wait for the readiness of the resource:
 
 ```yaml
 metadata:
@@ -234,7 +235,7 @@ Full format:
 
 ### Delete dependencies
 
-`werf.io/delete-dependency-<id>` — the annotated resource will be deleted only after the referenced resource becomes `absent`:
+The annotation `werf.io/delete-dependency-<id>` means that the annotated resource will be deleted only after the referenced resource becomes `absent`:
 
 ```yaml
 metadata:
@@ -242,35 +243,35 @@ metadata:
     werf.io/delete-dependency-app: state=absent,kind=Deployment,name=d8a-{{ .Application.Instance.Name }}-app
 ```
 
----
-
 ## Lifecycle annotations
 
-### `helm.sh/resource-policy`
+### helm.sh/resource-policy
 
-`keep` — do not delete the resource on uninstall or when removed from the chart. The resource continues to be updated on install/upgrade as long as it renders. If `werf.io/resource-policy` is set, Nelm ignores `helm.sh/resource-policy`. DP doesn't delete a resource with `helm.sh/resource-policy: keep` as an [orphan resource](lifecycle.html#orphan-resources), even if `werf.io/resource-policy` is set: only this annotation protects a resource from such deletion.
+The `keep` value instructs Nelm not to delete the resource on uninstall or when removed from the chart. The resource continues to be updated on install/upgrade as long as it renders. If `werf.io/resource-policy` is set, Nelm ignores `helm.sh/resource-policy`. DP doesn't delete a resource with `helm.sh/resource-policy: keep` as an [orphan resource](lifecycle.html#orphan-resources), even if `werf.io/resource-policy` is set: only this annotation protects a resource from such deletion.
 
-### `werf.io/resource-policy`
+### werf.io/resource-policy
 
-A comma-separated list of policies:
+A list of policies:
 
-- `skip-create` — do not create the resource if it doesn't exist in the cluster;
-- `skip-update` — do not update the resource if it already exists;
-- `skip-recreate` — do not recreate the resource when a recreation would otherwise be required;
-- `skip-delete` (alias: `keep`) — do not delete the resource.
+- `skip-create`: Do not create the resource if it doesn't exist in the cluster.
+- `skip-update`: Do not update the resource if it already exists.
+- `skip-recreate`: Do not recreate the resource when a recreation would otherwise be required.
+- `skip-delete` (alias: `keep`): Do not delete the resource.
 
 DP deletes a resource with `skip-delete` or `keep` together with the Application if its kind is listed in [`orphanResources`](lifecycle.html#orphan-resources). To keep the resource, also set `helm.sh/resource-policy: keep`.
 
-### `werf.io/ownership`
+### werf.io/ownership
 
-- `release` (default for regular resources) — resource is deleted on uninstall and when absent from the chart. Release metadata annotations are applied.
-- `anyone` (default for hooks) — resource is not deleted on uninstall. Release metadata annotations are not applied.
+Allowed values:
+
+- `release` (default for regular resources): Resource is deleted on uninstall and when absent from the chart. Release metadata annotations are applied.
+- `anyone` (default for hooks): Resource is not deleted on uninstall. Release metadata annotations are not applied.
 
 Use `anyone` for resources shared between releases or for resources that should survive their release (init Jobs with `werf.io/deploy-on: install`).
 
 Resources that stay after uninstall, that is, hooks and resources with `werf.io/ownership: anyone`, are deleted by DP together with the Application if their kind is listed in [`orphanResources`](lifecycle.html#orphan-resources). To keep such a resource, set `helm.sh/resource-policy: keep`.
 
-### `werf.io/deploy-on`
+### werf.io/deploy-on
 
 Controls on which lifecycle operations the resource is rendered.
 
@@ -278,7 +279,22 @@ Controls on which lifecycle operations the resource is rendered.
 werf.io/deploy-on: pre-install,upgrade,post-install
 ```
 
-Allowed values: `pre-install`, `install`, `post-install`, `pre-upgrade`, `upgrade`, `post-upgrade`, `pre-rollback`, `rollback`, `post-rollback`, `pre-delete`, `delete`, `post-delete`. Default for regular resources: `install,upgrade,rollback`. Hooks are deployed on the events listed in `helm.sh/hook`.
+Allowed values:
+
+- `pre-install`
+- `install`
+- `post-install`
+- `pre-upgrade`
+- `upgrade`
+- `post-upgrade`
+- `pre-rollback`
+- `rollback`
+- `post-rollback`
+- `pre-delete`
+- `delete`
+- `post-delete`
+
+Default for regular resources: `install,upgrade,rollback`. Hooks are deployed on the events listed in `helm.sh/hook`.
 
 {% endraw %}
 {% alert level="warning" %}
@@ -286,20 +302,20 @@ If a resource is rendered for `install` but not `upgrade`, and `werf.io/ownershi
 {% endalert %}
 {% raw %}
 
-### `werf.io/delete-policy`
+### werf.io/delete-policy
 
-Controls when a resource is deleted relative to the apply operation.
+Controls when a resource is deleted relative to the `apply` operation.
 
 | Value | When |
 |---|---|
-| `before-creation` | Always recreate before apply (default for hooks) |
-| `before-creation-if-immutable` | Recreate only on "field is immutable" error (default for Jobs) |
+| `before-creation` | Always recreate before `apply` (default for hooks) |
+| `before-creation-if-immutable` | Recreate only on `field is immutable` error (default for Jobs) |
 | `succeeded` | Delete after successful deploy |
 | `failed` | Delete on readiness-check failure |
 
 Values can be combined with a comma: `before-creation,succeeded`.
 
-### `werf.io/delete-propagation`
+### werf.io/delete-propagation
 
 Kubernetes deletion propagation strategy.
 
@@ -308,8 +324,6 @@ Kubernetes deletion propagation strategy.
 | `Foreground` (default) | Wait for dependent objects to be deleted |
 | `Background` | Delete resource immediately; dependents deleted asynchronously |
 | `Orphan` | Delete resource; leave dependents |
-
----
 
 ## Tracking annotations
 
@@ -321,13 +335,11 @@ Kubernetes deletion propagation strategy.
 | `werf.io/no-activity-timeout` | `4m` | Go duration; timeout on absence of events or status changes |
 | `werf.io/show-service-messages` | `false` | Show Kubernetes Events in deploy output |
 
----
-
 ## Log annotations
 
 {% endraw %}
 {% alert level="info" %}
-DP doesn't collect Pod logs when it deploys Applications, so these annotations don't affect the deployment.
+DP doesn't collect pod logs when it deploys Applications, so these annotations don't affect the deployment.
 {% endalert %}
 {% raw %}
 
@@ -342,11 +354,9 @@ DP doesn't collect Pod logs when it deploys Applications, so these annotations d
 | `werf.io/log-regex-for-<container>` | — | Per-container RE2 filter for showing |
 | `werf.io/log-regex-skip-for-<container>` | — | Per-container RE2 filter for suppressing |
 
----
-
 ## Template functions
 
-### `werf_secret_file`
+### werf_secret_file
 
 Embed the decrypted content of a file from the `secret/` directory:
 
@@ -361,9 +371,9 @@ DP doesn't provide a decryption key for Nelm secrets, so Application packages ca
 {% endalert %}
 {% raw %}
 
-### `dump_debug`, `printf_debug`, `include_debug`, `tpl_debug`
+### dump_debug, printf_debug, include_debug, tpl_debug
 
-`dump_debug` and `printf_debug` render nothing, and `include_debug` and `tpl_debug` render the same output as `include` and `tpl`. The functions write to the log only when Nelm debug logging is enabled. DP doesn't enable it, so in Application packages these functions log nothing.
+The functions `dump_debug` and `printf_debug` render nothing, and `include_debug` and `tpl_debug` render the same output as `include` and `tpl`. The functions write to the log only when Nelm debug logging is enabled. DP doesn't enable it, so in Application packages these functions log nothing.
 
 ```yaml
 {{ dump_debug $ }}
@@ -372,17 +382,15 @@ DP doesn't provide a decryption key for Nelm secrets, so Application packages ca
 {{ tpl_debug "{{ .Values.template }}" . }}
 ```
 
----
+## Known issues and troubleshooting
 
-## Known pitfalls
+- **`null` values and SSA.** Server-Side Apply frequently fails on fields with a `null` value. If `.Values.foo` is `nil`, the manifest gets `foo: null`. Fix with `{{ if .Values.foo }}` guards or `default`.
 
-1. **`null` values and SSA.** Server-Side Apply frequently fails on fields with a `null` value. If `.Values.foo` is `nil`, the manifest gets `foo: null`. Fix with `{{ if .Values.foo }}` guards or `default`.
+- **`lookup` timing.** If cluster resources change between the Plan and Apply stages, the rendered plan may be stale. Avoid `lookup` for critical logic; pass data through values instead.
 
-2. **`lookup` timing.** If cluster resources change between the Plan and Apply stages, the rendered plan may be stale. Avoid `lookup` for critical logic; pass data through values instead.
+- **Non-deterministic functions.** `now`, `randAlphaNum`, `uuidv4`, and the unsorted output of `keys` produce different results on every render. DP applies the templates when the rendered manifests change, so such functions cause a redeployment in every reconciliation run.
 
-3. **Non-deterministic functions.** `now`, `randAlphaNum`, `uuidv4`, and the unsorted output of `keys` produce different results on every render. DP applies the templates when the rendered manifests change, so such functions cause a redeployment in every reconciliation run.
+- **`werf.io/deploy-dependency-*` and stages.** The annotation has no effect across deploy stages (pre/main/post). Cross-stage ordering is implicit in the stage sequence.
 
-4. **`werf.io/deploy-dependency-*` and stages.** The annotation has no effect across deploy stages (pre/main/post). Cross-stage ordering is implicit in the stage sequence.
-
-5. **Resources that disappear after deployment.** DP checks every 4–5 minutes that all regular (non-hook) resources of the release exist and applies the templates again if one is missing (see [Resource restoration](lifecycle.html#resource-restoration)). Therefore, a regular Job that is deleted after it completes, for example, because of `werf.io/delete-policy: succeeded` or `ttlSecondsAfterFinished`, runs again after every check, and a deleted resource that is rendered only on install causes a redeployment after every check. Make such Jobs Helm hooks: DP doesn't check hooks.
+- **Resources that disappear after deployment.** DP checks every 4–5 minutes that all regular (non-hook) resources of the release exist and applies the templates again if one is missing (for details, refer to ["Resource restoration"](lifecycle.html#resource-restoration)). Therefore, a regular Job that is deleted after it completes, for example, because of `werf.io/delete-policy: succeeded` or `ttlSecondsAfterFinished`, runs again after every check, and a deleted resource that is rendered only on install causes a redeployment after every check. Make such Jobs Helm hooks: DP doesn't check hooks.
 {% endraw %}

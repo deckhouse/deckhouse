@@ -14,11 +14,13 @@ DP renders the templates with three value roots:
 
 | Root | Contents |
 |---|---|
-| `.Values` | Application values: settings with default values, internal values, and values set by hooks (see [how DP builds values](settings.html#how-dp-builds-values)). The values are not nested under the package name: a setting is available as `.Values.<SETTING_NAME>` |
+| `.Values` | Application values: settings with default values, internal values, and values set by hooks (for details, refer to ["How DP builds values"](settings.html#how-dp-builds-values)). The values are not nested under the package name: a setting is available as `.Values.<SETTING_NAME>` |
 | `.Application` | Instance and package parameters |
 | `.Platform` | DP global parameters (read-only) |
 
-### .Application
+### Root .Application
+
+The `.Application` root contains instance and package parameters.
 
 | Path | Description |
 |---|---|
@@ -26,20 +28,20 @@ DP renders the templates with three value roots:
 | `.Application.Instance.Namespace` | Namespace the application is installed into |
 | `.Application.Package.Name` | Package name (the `name` field of `package.yaml`) |
 | `.Application.Package.Version` | Package version |
-| `.Application.Package.Images` | Container images of the package: a map of image names to image references with a digest (see [Container images](#container-images)) |
-| `.Application.Package.Registry` | Access parameters of the repository the package is installed from (see [Container images](#container-images)) |
+| `.Application.Package.Images` | Container images of the package: a map of image names to image references with a digest (for details, refer to ["Container images"](#container-images)) |
+| `.Application.Package.Registry` | Access parameters of the repository the package is installed from (for details, refer to ["Container images"](#container-images)) |
 | `.Application.Settings` | Effective settings: `Application.spec.settings` with default values applied |
 
-### .Platform
+### Root .Platform
 
 `.Platform` contains the DP global parameters. The following parameters are useful in application templates:
 
 | Path | Description |
 |---|---|
-| `.Platform.applications.publicDomainTemplate` | DNS name template for application Ingresses (see [Ingress and HTTPS](#ingress-and-https)) |
+| `.Platform.applications.publicDomainTemplate` | DNS name template for application Ingresses (for details, refer to ["Ingress and HTTPS"](#ingress-and-https)) |
 | `.Platform.applications.ingressClass` | IngressClass for application Ingresses. Default: `nginx` |
 | `.Platform.applications.https.mode` | HTTPS mode for applications: `CertManager` (default), `CustomCertificate`, `Disabled`, or `OnlyInURI` |
-| `.Platform.applications.https.certManager.clusterIssuerName` | cert-manager ClusterIssuer for application certificates. Default: `letsencrypt` |
+| `.Platform.applications.https.certManager.clusterIssuerName` | The ClusterIssuer of the [`cert-manager`](/modules/cert-manager/) module for application certificates. Default: `letsencrypt` |
 | `.Platform.discovery.clusterDomain` | Cluster domain, for example, `cluster.local` |
 | `.Platform.discovery.kubernetesVersion` | Kubernetes version of the cluster |
 | `.Platform.deckhouseVersion` | DP version |
@@ -62,11 +64,11 @@ The prefix serves the following purposes:
 
 - Several instances of the package can be installed into the same namespace without name conflicts.
 - The `d8a-` prefix is reserved for applications: the `d8a-prefix.deckhouse.io` admission policy forbids users to create, change, and delete objects whose names start with `d8a-`. Deleting Pods is allowed.
-- DP adds the same prefix to the names of objects that hooks create, patch, or delete. Therefore, a hook can address an object rendered by the templates by its suffix only (see [Hooks](hooks.html#object-names)).
+- DP adds the same prefix to the names of objects that hooks create, patch, or delete. Therefore, a hook can address an object rendered by the templates by its suffix only (for details, refer to ["Hooks"](hooks.html#object-names)).
 
 Don't use `.Release.Name` in object names: the Helm release of an application is named `<NAMESPACE>.<INSTANCE_NAME>`, and the dot is not allowed in the names of many resource kinds.
 
-Keep suffixes short: the instance name can be up to 24 characters long, and the full object name must fit the Kubernetes limits (see [Naming constraints](concepts.html#naming-constraints)).
+Keep suffixes short: the instance name can be up to 24 characters long, and the full object name must fit the Kubernetes limits (for details, refer to ["Naming constraints"](concepts.html#naming-constraints)).
 
 ## Labels and object protection
 
@@ -81,7 +83,7 @@ DP adds the following labels to the metadata of every rendered object:
 
 The labels are added only to the metadata of the rendered objects, not to Pod templates. Define the labels used in Pod selectors in the templates yourself.
 
-When the Application is deleted, DP finds the objects that the instance has left in the namespace by the `packages.deckhouse.io/instance` label (see [Orphan resources](lifecycle.html#orphan-resources)).
+When the Application is deleted, DP finds the objects that the instance has left in the namespace by the `packages.deckhouse.io/instance` label (for details, refer to ["Orphan resources"](lifecycle.html#orphan-resources)).
 
 Objects with the `heritage: deckhouse` label are protected by the `label-objects.deckhouse.io` admission policy, and objects with the `d8a-` name prefix are protected by the `d8a-prefix.deckhouse.io` policy. As a result:
 
@@ -113,7 +115,7 @@ data:
   .dockerconfigjson: {{ .Application.Package.Registry.dockercfg }}
 ```
 
-`.Application.Package.Registry` contains the following fields:
+The section `.Application.Package.Registry` contains the following fields:
 
 | Field | Description |
 |---|---|
@@ -127,9 +129,9 @@ data:
 
 Build host names and TLS settings of application Ingresses from the `.Platform.applications` parameters:
 
-- `publicDomainTemplate` — DNS name template with two `%s` placeholders. The first one is replaced with the instance name, the second one with the namespace. For example, with the `%s.%s.apps.example.com` template, the `grafana` instance in the `monitoring` namespace gets the `grafana.monitoring.apps.example.com` host name. If the parameter is not set, don't create Ingresses.
-- `ingressClass` — IngressClass of the Ingresses.
-- `https.mode` — HTTPS mode. In the `CertManager` mode, request a certificate from the ClusterIssuer specified in `https.certManager.clusterIssuerName`. In the `Disabled` and `OnlyInURI` modes, don't configure TLS on the Ingress.
+- `publicDomainTemplate`: DNS name template with two `%s` placeholders. The first one is replaced with the instance name, the second one with the namespace. For example, with the `%s.%s.apps.example.com` template, the `grafana` instance in the `monitoring` namespace gets the `grafana.monitoring.apps.example.com` host name. If the parameter is not set, don't create Ingresses.
+- `ingressClass`: IngressClass of the Ingresses.
+- `https.mode`: HTTPS mode. In the `CertManager` mode, request a certificate from the ClusterIssuer specified in `https.certManager.clusterIssuerName`. In the `Disabled` and `OnlyInURI` modes, don't configure TLS on the Ingress.
 
 Example Ingress:
 
@@ -168,11 +170,17 @@ spec:
 {{- end }}
 ```
 
-The package skeleton created by `d8 package bootstrap app` contains helpers for these parameters in `templates/_helpers/`: `public_domain`, `ingress_class`, `https_mode`, `https_ingress_tls_enabled`, and `https_cert_manager_cluster_issuer_name`.
+The package skeleton created by `d8 package bootstrap app` contains helpers for these parameters in `templates/_helpers/`:
+
+- `public_domain`
+- `ingress_class`
+- `https_mode`
+- `https_ingress_tls_enabled`
+- `https_cert_manager_cluster_issuer_name`
 
 ## Application endpoints
 
-To show the addresses of an Ingress in the `status.urls` field of the Application (for example, the web interface shows them as links to the application), add the `packages.deckhouse.io/application-endpoint-description` annotation to the Ingress:
+To show the addresses of an Ingress in the [`status.urls`](../../reference/api/cr.html#application-v1alpha1-status-urls) field of the Application (for example, the web interface shows them as links to the application), add the `packages.deckhouse.io/application-endpoint-description` annotation to the Ingress:
 
 - The annotation value is the endpoint description. The `"true"` value adds the endpoint without a description, and the `"false"` value excludes the Ingress.
 - DP builds a URL for every `host` and `path` pair of `spec.rules`. The scheme is `https` if the host is listed in `spec.tls`, and `http` otherwise. A rule without paths gives the `<SCHEME>://<HOST>/` URL. Rules without `host` are skipped.
@@ -197,11 +205,11 @@ Templates must follow the [Application constraints](concepts.html#application-co
 
 By default, `d8 package verify` also requires that:
 
-- every Deployment and StatefulSet has a PodDisruptionBudget whose selector matches the labels of its Pods (the `pdb` rule);
-- every Deployment, StatefulSet, and DaemonSet has a VerticalPodAutoscaler with a policy for each container (the `vpa` rule). The VerticalPodAutoscaler kind is available only if the `vertical-pod-autoscaler` module is enabled, so render it under the `.Capabilities.APIVersions.Has "autoscaling.k8s.io/v1/VerticalPodAutoscaler"` condition, as the package skeleton does;
+- Every Deployment and StatefulSet has a PodDisruptionBudget whose selector matches the labels of its Pods (the `pdb` rule).
+- Every Deployment, StatefulSet, and DaemonSet has a VerticalPodAutoscaler with a policy for each container (the `vpa` rule). The VerticalPodAutoscaler kind is available only if the [`vertical-pod-autoscaler`](/modules/vertical-pod-autoscaler/) module is enabled, so render it under the `.Capabilities.APIVersions.Has "autoscaling.k8s.io/v1/VerticalPodAutoscaler"` condition, as the package skeleton does.
 - Services refer to container ports by name in `targetPort` (the `service-port` rule).
 
-You can lower the severity of these rules in `.pkglint.yaml` (see [Linting](application-development.html#linting)).
+You can lower the severity of these rules in `.pkglint.yaml` (for details, refer to ["Linting"](application-development.html#linting)).
 
 ## Workload health
 

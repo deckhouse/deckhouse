@@ -6,26 +6,26 @@ description: "Create an Application package for Deckhouse Platform Marketplace: 
 
 ## Prerequisites
 
-Install `deckhouse-cli` (`d8`):
+Before you start, do the following:
 
-```bash
-sh -c "$(curl -fsSL https://raw.githubusercontent.com/deckhouse/deckhouse-cli/main/tools/install.sh)"
-```
+1. Install [the Deckhouse CLI (`d8`)](../../cli/d8/):
 
-Log in to the container registry with your [license token](https://license.deckhouse.io/):
+   ```bash
+   sh -c "$(curl -fsSL https://raw.githubusercontent.com/deckhouse/deckhouse-cli/main/tools/install.sh)"
+   ```
 
-```bash
-d8 dk cr login -u license-token dev-registry.deckhouse.io --password <LICENSE_TOKEN>
-```
+1. Log in to the container registry with your license key:
+
+   ```bash
+   d8 dk cr login -u license-token dev-registry.deckhouse.io --password <LICENSE_TOKEN>
+   ```
 
 ## Bootstrapping an Application package
 
-To create a `<APPLICATION_NAME>/` directory in the current working directory with the package skeleton and initialize a Git repository with the first commit, run the command `d8 package bootstrap app <APPLICATION_NAME>` (`application` is an alias of `app`).
-
-Example:
+To create a `<APPLICATION_NAME>/` directory in the current working directory with the package skeleton and initialize a Git repository with the first commit, run the command `d8 package bootstrap app <APPLICATION_NAME>` (you can use the short name `app` instead of `application`):
 
 ```bash
-d8 package bootstrap app myapp --hooks
+d8 package bootstrap application myapp --hooks
 cd myapp
 git remote add origin <GITLAB_REPO_URL>
 git push --set-upstream origin main
@@ -84,9 +84,9 @@ myapp/
     └── vpa.yaml
 ```
 
-Don't add `Chart.yaml` or `values.yaml` to the package root: `d8 package build` doesn't include these files in the package bundle. DP renders the templates as a chart without metadata, and default values are described in the [OpenAPI schemas](settings.html).
+Don't add `Chart.yaml` or `values.yaml` to the package root. The `d8 package build` command doesn't include these files in the package bundle. Deckhouse Platform (DP) renders the templates as a chart without metadata, and default values are described in the [OpenAPI schemas](settings.html).
 
-## package.yaml
+## File package.yaml
 
 The `package.yaml` file is the main manifest for an Application package and defines metadata, type, requirements, and compatibility.
 
@@ -115,7 +115,7 @@ requirements:
         constraint: ">= 1.0.0"
 ```
 
-**Field reference:**
+Field reference:
 
 | Field | Required | Description |
 |---|---|---|
@@ -125,29 +125,29 @@ requirements:
 | `type` | Yes | `Application` or `Module` |
 | `stage` | Yes | Maturity stage (`Preview`, `General Availability`, etc.) |
 | `category` | Yes | Category for catalog classification |
-| `requirements.deckhouse` | No | Minimum Deckhouse Platform (DP) version constraint |
+| `requirements.deckhouse` | No | Minimum DP version constraint |
 | `requirements.kubernetes` | No | Minimum Kubernetes version constraint |
-| `requirements.modules` | No | Module dependencies (SemVer constraints). See [Requirements](#requirements) |
-| `disable` | No | Confirmation before the application is deleted. See [Deletion confirmation](#deletion-confirmation) |
+| `requirements.modules` | No | Module dependencies (SemVer constraints). For details, refer to ["Requirements"](#requirements) |
+| `disable` | No | Confirmation before the application is deleted. For details, refer to ["Deletion confirmation"](#deletion-confirmation) |
 
-When DP scans a repository, it publishes the description, stage, requirements, deletion confirmation, and the contents of `changelog.yaml` in the `status.packageMetadata` field of the [ApplicationPackageVersion](../../reference/api/cr.html#applicationpackageversion) resource.
+When DP scans a repository, it publishes the description, stage, requirements, deletion confirmation, and the contents of `changelog.yaml` in the [`status.packageMetadata`](../../reference/api/cr.html#applicationpackageversion-v1alpha1-status-packagemetadata) field of the ApplicationPackageVersion resource.
 
 ### Requirements
 
 The `requirements` section defines the conditions under which the application can be installed and run:
 
-| Field | Description |
-|---|---|
-| `requirements.deckhouse.constraint` | Constraint on the DP version |
-| `requirements.kubernetes.constraint` | Constraint on the Kubernetes version |
-| `requirements.modules.mandatory` | Modules that must be enabled. `constraint` is optional |
-| `requirements.modules.conditional` | Modules that are not required but, if enabled, must match `constraint`. `constraint` is required |
-| `requirements.modules.anyOf` | Groups of alternative modules: at least one module of each group must be enabled and match its `constraint`, if it is specified |
-| `requirements.modules.noneOf` | Groups of incompatible modules: none of the modules of a group may be enabled. `constraint` narrows the incompatible versions; without it, all versions of the module are incompatible |
+| Requirement | Field |
+| --- | --- |
+| Supported DP version | `requirements.deckhouse.constraint` |
+| Supported Kubernetes version | `requirements.kubernetes.constraint` |
+| Modules that must be enabled. A version constraint (`constraint`) can be specified for each module | `requirements.modules.mandatory` |
+| Optional modules. If such a module is enabled, its version must match the specified constraint (`constraint`) | `requirements.modules.conditional` |
+| Groups of alternative modules. At least one module in each group must be enabled, and its version must match the corresponding `constraint`, if specified | `requirements.modules.anyOf` |
+| Groups of incompatible modules. No module in such a group can be enabled. `constraint` specifies the incompatible versions; if no constraint is specified, all versions of the module are considered incompatible | `requirements.modules.noneOf` |
 
 Each `anyOf` and `noneOf` group has a unique `name`, which is used in error messages, an optional `description`, and a non-empty `modules` list. A module can be listed in only one of the `mandatory`, `conditional`, `anyOf`, and `noneOf` sections. Within `anyOf` or `noneOf`, the same module can be listed in several groups.
 
-Example:
+Example of a populated `requirements` section:
 
 ```yaml
 requirements:
@@ -176,9 +176,9 @@ requirements:
 
 DP checks the requirements:
 
-- When an Application is created or changed. If the requirements are not met, the request is rejected, and the message names the unmet requirement.
-- Before the installation. DP installs the application only after the modules from `requirements.modules.mandatory` are enabled.
-- While the application is installed. If the requirements stop being met, for example, a mandatory module is disabled, DP uninstalls the application (see [Lifecycle and debugging](lifecycle.html#suspension)).
+- **When an Application is created or changed**. If the requirements are not met, the request is rejected, and the message names the unmet requirement.
+- **Before the installation**. DP installs the application only after the modules from `requirements.modules.mandatory` are enabled.
+- **While the application is installed**. If the requirements stop being met, for example, a mandatory module is disabled, DP uninstalls the application (for details, refer to ["Lifecycle and debugging"](lifecycle.html#suspension)).
 
 Module versions are compared with constraints without the pre-release and build metadata parts.
 
@@ -194,9 +194,9 @@ disable:
     ru: "<RU_MESSAGE>"
 ```
 
-DP publishes the section in the `status.packageMetadata.disableOptions` field of the ApplicationPackageVersion, and the web interface shows the message in the language of the user. DP doesn't check the confirmation when an Application is deleted through the Kubernetes API.
+DP publishes the section in the [`status.packageMetadata.disableOptions`](../../reference/api/cr.html#applicationpackageversion-v1alpha1-status-packagemetadata-disableoptions) field of the ApplicationPackageVersion, and the web interface shows the message in the language of the user. DP doesn't check the confirmation when an Application is deleted through the Kubernetes API.
 
-### changelog.yaml
+### File changelog.yaml
 
 The `changelog.yaml` file describes the changes in the package version:
 
@@ -207,22 +207,22 @@ fixes:
   - "Fixed the readiness probe of the replica."
 ```
 
-DP publishes the contents of the file in the `status.packageMetadata.changelog` field of the ApplicationPackageVersion.
+DP publishes the contents of the file in the [`status.packageMetadata.changelog`](../../reference/api/cr.html#applicationpackageversion-v1alpha1-status-packagemetadata-changelog) field of the ApplicationPackageVersion.
 
 ## OpenAPI schemas
 
 The `openapi/` directory defines two schemas:
 
-- `settings.yaml` — the schema for `Application.spec.settings` (user-facing configuration). The legacy name `config-values.yaml` is also supported.
-- `values.yaml` — the schema for the full set of Helm values.
+- `settings.yaml`: Schema for `Application.spec.settings` (user-facing configuration). The legacy name `config-values.yaml` is also supported.
+- `values.yaml`: Schema for the full set of Helm values.
 
-The schemas, validation rules, and the extensions that control defaulting, immutability, and the settings form in the web interface are described in [Application settings](settings.html).
+The schemas, validation rules, and the extensions that control defaulting, immutability, and the settings form in the web interface are described in ["Application settings"](settings.html).
 
 ## Templates and hooks
 
-- The values available to templates and the rules for templates are described in [Templates](templates.html).
-- Go hooks and the settings validation hook are described in [Hooks](hooks.html).
-- How DP installs, updates, and deletes an application and how to debug it is described in [Lifecycle and debugging](lifecycle.html).
+- The values available to templates and the rules for templates are described in ["Templates"](templates.html).
+- Go hooks and the settings validation hook are described in ["Hooks"](hooks.html).
+- How DP installs, updates, and deletes an application and how to debug it is described in ["Lifecycle and debugging"](lifecycle.html).
 
 ## Local rendering
 
@@ -243,7 +243,7 @@ Available options:
 | `-r, --remote <REPOSITORY>/<PACKAGE_NAME>:<PACKAGE_VERSION>` | Render a published package bundle instead of the local directory. A tag or a digest is required |
 | `--remote-user`, `--remote-password` | Container registry credentials. They can also be set in the `PACKAGE_REMOTE_USER` and `PACKAGE_REMOTE_PASSWORD` environment variables |
 
-The command uses stub values instead of the values from a cluster: the `test` instance in the `default` namespace, the `dev` package version, and settings generated from `openapi/settings.yaml` (from `x-example`, `x-examples`, `enum`, or `default`). Image references are stubs keyed by the names of the image directories. To render the templates of an installed application with its actual values, use `deckhouse-controller packages render` (see [Lifecycle and debugging](lifecycle.html#state-in-dp)).
+The command uses stub values instead of the values from a cluster: the `test` instance in the `default` namespace, the `dev` package version, and settings generated from `openapi/settings.yaml` (from `x-example`, `x-examples`, `enum`, or `default`). Image references are stubs keyed by the names of the image directories. To render the templates of an installed application with its actual values, use `deckhouse-controller packages render` (for details, refer to ["Lifecycle and debugging"](lifecycle.html#state-in-dp)).
 
 ## Linting
 
@@ -267,11 +267,21 @@ The rules are grouped by linters:
 | `icon` | Application icon `docs/icon.{png,webp,jpg,jpeg,svg}`: format, size up to 150 KB, and dimensions up to 300×300 pixels |
 | `oss` | Format of `oss.yaml`, if the file exists |
 
-Available options: `--hide-warnings` (don't show warnings), `--show-ignored` (show the findings of ignored rules), `--lint-config <PATH>` (path to the settings file).
+Available options:
 
-To check a published package, run `d8 package verify remote <REPOSITORY> <PACKAGE_NAME>`. By default, the command checks the bundle of the latest version. Use `--version <PACKAGE_VERSION>` to choose the version and `--release` to also check the version metadata image. The command uses the container registry credentials saved with `d8 dk cr login`.
+`--hide-warnings`: Don't show warnings.
+`--show-ignored`: Show the findings of ignored rules.
+`--lint-config <PATH>`: Path to the settings file.
 
-### .pkglint.yaml
+To check a published package, run the following command:
+
+```bash
+d8 package verify remote <REPOSITORY> <PACKAGE_NAME>
+```
+
+By default, the command checks the bundle of the latest version. Use `--version <PACKAGE_VERSION>` to choose the version and `--release` to also check the version metadata image. The command uses the container registry credentials saved with `d8 dk cr login`.
+
+### File .pkglint.yaml
 
 The `.pkglint.yaml` file lowers the severity of the rules. The command looks for it in the package directory and its parent directories (for `verify remote`, in the current directory).
 
@@ -306,7 +316,7 @@ d8 package build -v v0.0.1 -r dev-registry.deckhouse.io/deckhouse/packages
 
 For local development, use the [`payload-registry`](/modules/payload-registry/) module as your own container registry.
 
-Specifics of the command:
+When using the command, consider the following:
 
 - Specify the root path of the packages in `-r`, the same as the `spec.registry.repo` field of the PackageRepository resource. The command appends the package name to the path itself.
 - Specify the version in the `vMAJOR.MINOR.PATCH` format. DP finds only the versions in this format when it scans the repository.
@@ -358,7 +368,7 @@ The package and related data are published to a container registry. The package 
 |---|---|
 | `<REPOSITORY>:<PACKAGE_NAME>` | Package name tag — used to list packages |
 | `<REPOSITORY>/<PACKAGE_NAME>:<PACKAGE_VERSION>` | Bundle — contains templates, `openapi/`, `hooks/` |
-| `<REPOSITORY>/<PACKAGE_NAME>@<DIGEST>` | Container images of the application. Templates reference them by digest (see [Templates](templates.html#container-images)) |
+| `<REPOSITORY>/<PACKAGE_NAME>@<DIGEST>` | Container images of the application. Templates reference them by digest (for details, refer to ["Templates"](templates.html#container-images)) |
 | `<REPOSITORY>/<PACKAGE_NAME>/version:<PACKAGE_VERSION>` | Version metadata |
 | `<REPOSITORY>/<PACKAGE_NAME>/release-channel:<RELEASE_CHANNEL>` | Version recommended for a release channel |
 
@@ -396,9 +406,9 @@ DP reads the version metadata when it scans the repository and creates Applicati
 
 ### Release channels
 
-A release channel is a tag of the `<PACKAGE_NAME>/release-channel` path that points to a copy of the version metadata image of the recommended version. DP recognizes the `alpha`, `beta`, `early-access`, `stable`, `rock-solid`, and `lts` channels. `d8 package build` doesn't create release channel tags; they are published by the CI/CD pipeline.
+A release channel is a tag of the `<PACKAGE_NAME>/release-channel` path that points to a copy of the version metadata image of the recommended version. DP recognizes the `alpha`, `beta`, `early-access`, `stable`, `rock-solid`, and `lts` channels. The `d8 package build` command doesn't create release channel tags; they are published by the CI/CD pipeline.
 
-When DP scans a repository, it records the versions the channels point to in the `status.releaseChannels` field of the [ApplicationPackage](../../reference/api/cr.html#applicationpackage) resource:
+When DP scans a repository, it records the versions the channels point to in the [`status.releaseChannels`](../../reference/api/cr.html#applicationpackage-v1alpha1-status-releasechannels) field of the ApplicationPackage resource:
 
 ```yaml
 status:
@@ -408,4 +418,4 @@ status:
       stable: v0.1.21
 ```
 
-The channels are informational: the version of an application is set in `spec.packageVersion` and changes only when the user changes it.
+The channels are informational: the version of an application is set in [`spec.packageVersion`](../../reference/api/cr.html#application-v1alpha1-spec-packageversion) of the Application resource and changes only when the user changes it.

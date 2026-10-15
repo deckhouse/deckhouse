@@ -6,9 +6,11 @@ lang: ru
 search: Application troubleshooting, application conditions, диагностика приложений, условия приложения, логи приложения
 ---
 
-## Проверка наличия CRD Marketplace
+В этом разделе описан порядок решения типичных проблем при работе с приложениями Marketplace.
 
-Если `d8 k get applications` возвращает ошибку о том, что такого типа ресурсов нет, возможно, CRD Marketplace не установлены. Чтобы это проверить, выполните следующую команду:
+## Проверка наличия кастомных ресурсов Marketplace
+
+Если команда `d8 k get applications` возвращает ошибку о том, что такого типа ресурсов нет, возможно, кастомные ресурсы Marketplace не установлены в кластере. Чтобы это проверить, выполните следующую команду:
 
 ```bash
 d8 k get crd | grep -E 'application|package'
@@ -29,11 +31,11 @@ packagerepositoryoperations.deckhouse.io             2026-02-10T14:54:41Z
 {: .nowrap-default }
 <!-- markdownlint-enable MD031 -->
 
-Если каких-то CRD нет, обратитесь к администратору кластера. Для Marketplace нужна DP версии 1.76 или выше.
+Если каких-то ресурсов нет, обратитесь к администратору кластера. Для Marketplace нужна Deckhouse Platform (DP) версии 1.76 или выше.
 
-## Чтение summary приложения
+## Быстрая диагностика приложения
 
-Быстрее всего понять, почему приложение не работает, можно по полю `status.summary`. Для этого выполните следующую команду:
+Быстро понять причину сбоев в приложении можно по содержанию полей в секции `status.summary` ресурса Application. Для быстрой диагностики выполните следующую команду:
 
 ```bash
 d8 k get applications -n <NAMESPACE> <APPLICATION_NAME> -o yaml | grep -A5 'summary:'
@@ -48,9 +50,7 @@ summary:
   tip: "Wait — the previous version is still working. The update will continue automatically once dependent modules converge."
 ```
 
-- **`state`** — текущее общее состояние приложения: `Pending`, `Failed`, `Updating`, `Ready`, `Degraded`, `Suspended` или `Deleting`.
-- **`message`** — объясняет, почему приложение находится в этом состоянии.
-- **`tip`** — что нужно сделать для решения проблемы или чего ожидает DP.
+Описание полей `status.summary` приведено [в подразделе про ресурс Application](../../reference/api/cr.html#application-v1alpha1-status-summary).
 
 ## Чтение отдельных условий
 
@@ -72,11 +72,11 @@ Scaled: True (Scaled) -
 Ready: True (Ready) -
 ```
 
-В этом примере `Installed=True` означает, что работает ранее установленная версия приложения, а `UpdateInstalled=False` с причиной `Pending` — что обновление ожидает выполнения, например, пока не будут готовы модули, от которых зависит приложение. Установленная версия указана в поле `status.currentVersion.version`.
+В этом примере `Installed: True` означает, что работает ранее установленная версия приложения, а `UpdateInstalled: False` с причиной `Pending` — что обновление ожидает выполнения, например, пока не будут готовы модули, от которых зависит приложение. Установленная версия указана [в поле `status.currentVersion.version`](../../reference/api/cr.html#application-v1alpha1-status-currentversion-version).
 
 ## Просмотр логов DP
 
-Если условий недостаточно для диагностики, попросите администратора кластера посмотреть лог DP. Лог доступен только в неймспейсе `d8-system`:
+Если условий недостаточно для диагностики, попросите администратора кластера проверить лог DP. Лог доступен только в неймспейсе `d8-system`:
 
 ```bash
 d8 k -n d8-system logs svc/deckhouse-leader -c deckhouse | grep '<NAMESPACE>.<APPLICATION_NAME>'
@@ -84,7 +84,7 @@ d8 k -n d8-system logs svc/deckhouse-leader -c deckhouse | grep '<NAMESPACE>.<AP
 
 ## Просмотр логов подов приложения
 
-Объекты приложения называются `d8a-<APPLICATION_NAME>-<SUFFIX>`. Чтобы получить список Deployment и StatefulSet приложения, выполните следующую команду:
+Объекты приложения называются в формате `d8a-<APPLICATION_NAME>-<SUFFIX>`. Чтобы получить список Deployment и StatefulSet приложения, выполните следующую команду:
 
 ```bash
 d8 k get deployments,statefulsets -n <NAMESPACE> -l packages.deckhouse.io/instance=<APPLICATION_NAME>
@@ -110,17 +110,19 @@ d8 k logs -n <NAMESPACE> deployments/d8a-<APPLICATION_NAME>-<SUFFIX>
 
 ## Частые причины условий
 
+В таблице перечислены наиболее частые причины отображения перечисленных [условий](../../reference/api/cr.html#application-v1alpha1-status-conditions-reason).
+
 | Причина | Условия | Значение и что проверить |
 |---|---|---|
 | `Pending` | `Installed`, `UpdateInstalled` | DP ждёт возможности установить версию, например, пока не будут включены модули из `requirements.modules` пакета. Попросите администратора проверить эти модули |
 | `RequirementsUnmet` | `Installed` | Кластер не удовлетворяет требованиям пакета. В сообщении указано невыполненное требование |
-| `DownloadFailed` | `Installed`, `UpdateInstalled`, `ConfigurationApplied`, `Managed`, `Ready` | DP не удаётся загрузить версию пакета. Попросите администратора проверить PackageRepository и доступ к хранилищу образов |
+| `DownloadFailed` | `Installed`, `UpdateInstalled`, `ConfigurationApplied`, `Managed`, `Ready` | DP не удаётся загрузить версию пакета. Попросите администратора проверить PackageRepository и доступ к репозиторию |
 | `LoadFromFilesystemFailed` | `Installed`, `UpdateInstalled`, `Ready` | DP не удаётся прочитать загруженный пакет. Обратитесь к разработчику пакета |
 | `SettingsInvalid` | `Installed`, `UpdateInstalled`, `ConfigurationApplied` | Настройки не прошли проверку. Сверьте `spec.settings` со схемой настроек в [ApplicationPackageVersion](../../reference/api/cr.html#applicationpackageversion) |
 | `HookInitializationFailed`, `HookFailed` | `Installed`, `UpdateInstalled`, `ConfigurationApplied`, `Managed`, `Ready` | Хук пакета завершился с ошибкой. Текст ошибки указан в сообщении |
 | `ManifestsApplyFailed` | `Installed`, `UpdateInstalled`, `ConfigurationApplied`, `Managed`, `Ready` | DP не удаётся применить манифесты пакета. Проверьте сообщение и события в неймспейсе |
-| `ApplyingManifests`, `SettingsChanged` | `UpdateInstalled`, `ConfigurationApplied`, `Managed`, `Ready` | Не ошибка: DP применяет манифесты или изменённые настройки |
-| `Reconciling` | `Scaled` | Идёт развёртывание рабочей нагрузки. Её имя указано в сообщении |
-| `Degraded` | `Scaled` | Рабочую нагрузку не удалось развернуть. Проверьте события и поды рабочей нагрузки с помощью `d8 k describe` |
+| `ApplyingManifests`, `SettingsChanged` | `UpdateInstalled`, `ConfigurationApplied`, `Managed`, `Ready` | Не является ошибкой. DP применяет манифесты или изменённые настройки |
+| `Reconciling` | `Scaled` | Идёт развёртывание рабочей нагрузки. Имя нагрузки указано в сообщении |
+| `Degraded` | `Scaled` | Рабочую нагрузку не удалось развернуть. Проверьте события и поды рабочей нагрузки с помощью команды `d8 k describe` |
 | `NoResourceReconciliation` | `Managed` | Приложение находится в режиме обслуживания (поле `spec.maintenance`) |
 | `Deleting` | Все | Приложение удаляется |

@@ -110,30 +110,30 @@ The `pkg.ApplicationHookConfig` structure defines when the hook runs:
 | `OnBeforeDeleteHelm` | Before the Helm release is uninstalled: when the Application is deleted or when the package requirements stop being met. The hook doesn't run when the package version changes |
 | `OnAfterDeleteHelm` | After the Helm release is uninstalled, in the same cases as `OnBeforeDeleteHelm` |
 | `Schedule` | On schedule in the crontab format |
-| `Kubernetes` | When the watched objects in the application namespace change, and during the synchronization of the binding (see [Kubernetes bindings](#kubernetes-bindings)) |
+| `Kubernetes` | When the watched objects in the application namespace change, and during the synchronization of the binding (for details, refer to ["Kubernetes bindings"](#kubernetes-bindings)) |
 
 Other fields:
 
-- `Queue` — name of the queue for the `Schedule` and `Kubernetes` bindings of the hook (default: `main`). These bindings run in a queue separate from the lifecycle stages, so they can run at the same time as `OnBeforeHelm` or `OnAfterHelm` hooks.
+- `Queue`: Name of the queue for the `Schedule` and `Kubernetes` bindings of the hook (default: `main`). These bindings run in a queue separate from the lifecycle stages, so they can run at the same time as `OnBeforeHelm` or `OnAfterHelm` hooks.
 - `AllowFailure` and `Settings` are not supported for applications.
 
-Hooks with the same binding run in the ascending order of `Order` (the `pkg.OrderedConfig` field). The sequence of lifecycle stages is described in [Lifecycle and debugging](lifecycle.html#installation-pipeline).
+Hooks with the same binding run in the ascending order of `Order` (the `pkg.OrderedConfig` field). The sequence of lifecycle stages is described in ["Lifecycle and debugging"](lifecycle.html#installation-pipeline).
 
 A hook can't combine `OnStartup` with `Kubernetes` bindings: module-sdk panics when such a hook is registered, and DP skips the whole binary.
 
 ### Error handling
 
-- If a hook fails, the stage that ran it fails and is retried with an increasing delay, from 15 seconds up to 2 hours. The next tasks of the application wait. The error is reported in the Application conditions and summary.
+- If a hook fails, the stage that ran it fails and is retried with an increasing delay, from 15 seconds up to 2 hours. The next tasks of the application wait. The error is reported in the Application's [`status.conditions`](../../reference/api/cr.html#application-v1alpha1-status-conditions) and [`status.summary`](../../reference/api/cr.html#application-v1alpha1-status-summary) fields.
 - If an `OnBeforeDeleteHelm` hook fails, DP doesn't uninstall the Helm release and retries the hook. The Application is not deleted until the hook succeeds.
 - If an object operation of the hook fails, the hook run fails, and the values changes made by the run are discarded. The operations that have already been executed are not rolled back.
 
 {% alert level="warning" %}
-module-sdk recovers panics in hook handlers, and the run is considered successful but has no effect: neither values changes nor object operations are applied. Return errors instead of panicking.
+If a hook handler panics, module-sdk recovers from the panic and considers the hook execution successful. However, the handler results are not applied: changes to values and object operations are ignored. Do not use panic in hook handlers. Return errors instead.
 {% endalert %}
 
 ## ApplicationHookInput
 
-The hook handler has the `func(ctx context.Context, input *pkg.ApplicationHookInput) error` signature. `pkg.ApplicationHookInput` contains the following fields:
+The hook handler has the `func(ctx context.Context, input *pkg.ApplicationHookInput) error` signature. The `pkg.ApplicationHookInput` structure contains the following fields:
 
 | Field | Description |
 |---|---|
@@ -141,7 +141,7 @@ The hook handler has the `func(ctx context.Context, input *pkg.ApplicationHookIn
 | `Snapshots` | Snapshots of the Kubernetes bindings of the hook |
 | `Values` | Application values: reading (`Get`, `GetOk`, `Exists`, `ArrayCount`) and changing (`Set`, `Remove`) |
 | `Settings` | Effective settings of the application, read-only |
-| `PatchCollector` | Operations with objects in the application namespace (see [Object operations](#object-operations)) |
+| `PatchCollector` | Operations with objects in the application namespace (for details, refer to ["Object operations"](#object-operations)) |
 | `DC` | Dependencies: an HTTP client (`GetHTTPClient`), a container registry client (`GetRegistryClient`), and a clock (`GetClock`) |
 | `Logger` | Logger. The output is written to the DP log |
 | `MetricsCollector` | Not supported for applications: DP ignores the metrics |
@@ -202,17 +202,17 @@ Behavior:
 
 DP adds the `d8a-<INSTANCE_NAME>-` prefix to the object name in every operation, unless the name already starts with it. For example, for the `myapp` instance:
 
-- `Create` of the `state` ConfigMap creates `d8a-myapp-state`;
+- `Create` of the `state` ConfigMap creates `d8a-myapp-state`.
 - `PatchWithMerge` of the `server` Deployment changes `d8a-myapp-server`, that is, the Deployment named `d8a-<INSTANCE_NAME>-server` in the templates.
 
-As a result, a hook can change only the objects of its own instance. Objects with the `d8a-` prefix are protected from changes by users (see [Templates](templates.html#labels-and-object-protection)).
+As a result, a hook can change only the objects of its own instance. Objects with the `d8a-` prefix are protected from changes by users (for details, refer to ["Templates"](templates.html#labels-and-object-protection)).
 
 ## Values
 
 `input.Values` contains the application values: the same document the templates get as `.Values`. The settings are located at the root of the document, without the package name key.
 
 - `Set(path, value)` and `Remove(path)` accept a path with dot-separated keys, for example, `internal.credentialsCount`. The parent object of the path must exist, so declare intermediate objects in `openapi/values.yaml` with `default: {}`.
-- After the hook completes, DP validates the values against `openapi/values.yaml`. The schema must include the settings schema with `x-extend` (see [Application settings](settings.html#schema-files)): the settings are located at the root of the values, and undeclared fields fail the validation.
+- After the hook completes, DP validates the values against `openapi/values.yaml`. The schema must include the settings schema with `x-extend` (for details, refer to ["Application settings"](settings.html#schema-files)): the settings are located at the root of the values, and undeclared fields fail the validation.
 - The values changes are kept in memory. After DP restarts or the package version changes, they are lost until the hooks run again.
 
 What happens after the values change depends on the binding:
@@ -242,7 +242,7 @@ func Check(_ context.Context, input settingscheck.Input) settingscheck.Result
 - `settingscheck.Allow(warnings...)` — settings are valid; optionally attach warning messages.
 - `settingscheck.Reject(reason)` — settings are invalid.
 
-**Example:**
+Example:
 
 ```go
 func Check(_ context.Context, input settingscheck.Input) settingscheck.Result {
@@ -271,7 +271,7 @@ DP calls the check in the following cases:
 - When the settings of an installed application are changed, and `spec.packageVersion` matches the installed version, the check runs in the validating webhook. A rejection denies the request with the specified reason. Warnings are returned to the client, for example, `d8 k` prints them.
 - When DP applies changed settings. A rejection leaves the new settings unapplied, and the error is reported in the Application conditions. Warnings are ignored.
 
-The check doesn't run in the validating webhook when an Application is created or `spec.packageVersion` changes: in these cases, the request is checked against the settings schema only. Describe critical constraints in the schema, for example, with [CEL rules](settings.html#cel-rules-x-deckhouse-validations), to reject invalid settings before installation.
+The check doesn't run in the validating webhook when an Application is created or `spec.packageVersion` changes: in these cases, the request is checked against the settings schema only. Describe critical constraints in the schema, for example, with [CEL rules](settings.html#cel-rules), to reject invalid settings before installation.
 
 ## Restrictions
 

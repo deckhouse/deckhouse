@@ -59,9 +59,12 @@ var _ runtime.Object = (*Application)(nil)
 // +kubebuilder:printcolumn:name=Age,type=date,JSONPath=.metadata.creationTimestamp
 // +crd-enricher:raw:properties.apiVersion.description="APIVersion defines the versioned schema of this representation of an object.\nServers should convert recognized schemas to the latest internal value, and\nmay reject unrecognized values.\n\nMore info [in the Kubernetes documentation](https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources)."
 // +crd-enricher:raw:properties.kind.description="Kind is a string value representing the REST resource this object represents.\nServers may infer this from the endpoint the client submits requests to.\nCannot be updated.\nIn CamelCase.\n\nMore info [in the Kubernetes documentation](https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds)."
+// +crd-enricher:raw:properties.apiVersion.x-doc-skip=true
+// +crd-enricher:raw:properties.kind.x-doc-skip=true
+// +crd-enricher:raw:properties.metadata.x-doc-skip=true
 
 // +crd-enricher:deckhouse:documentation:examples={apiVersion: deckhouse.io/v1alpha1, kind: Application, metadata: {name: example}, spec: {maintenance: NoResourceReconciliation, packageName: console, packageRepositoryName: deckhouse, packageVersion: v1.0.0, releaseChannel: stable}}
-// Application represents a namespace-scoped application instance.
+// Application defines an installed application instance in a namespace.
 type Application struct {
 	metav1.TypeMeta `json:",inline"`
 	// Standard object's metadata.
@@ -69,10 +72,10 @@ type Application struct {
 	// +optional
 	metav1.ObjectMeta `json:"metadata,omitempty"`
 
-	// Defines the application configuration.
+	// Application configuration.
 	Spec ApplicationSpec `json:"spec"`
 
-	// Application status.
+	// Current state of the application.
 	Status ApplicationStatus `json:"status,omitempty"`
 }
 
@@ -81,7 +84,7 @@ type ApplicationSpec struct {
 	// +crd-enricher:deckhouse:documentation:examples=console
 	PackageName string `json:"packageName"`
 
-	// Name of the PackageRepository where the package is located.
+	// Name of the PackageRepository object where the application package is located.
 	// +optional
 	// +crd-enricher:deckhouse:documentation:examples=deckhouse
 	PackageRepositoryName string `json:"packageRepositoryName,omitempty"`
@@ -90,23 +93,25 @@ type ApplicationSpec struct {
 	// +crd-enricher:deckhouse:documentation:examples=v1.0.0
 	PackageVersion string `json:"packageVersion"`
 
-	// Update settings of the application: the update mode, update windows, and blocking the update on alerts.
+	// Application update settings: update mode, update windows, and blocking updates when alerts are present.
 	//
-	// If the parameter is omitted, the application uses the global [`applications.update`](global.html#parameters-applications-update) settings. If those are not set either, it uses the Deckhouse update settings: the [`update`](/modules/deckhouse/configuration.html#parameters-update) parameter of the `deckhouse` module.
+	// If this parameter is not specified, the global [`applications.update`](global.html#parameters-applications-update) settings are used. If the global settings are also not specified, the Deckhouse Platform update settings are applied, as defined by the [`update`](/modules/deckhouse/configuration.html#parameters-update) parameter of the `deckhouse` module.
 	//
-	// Update notifications cannot be configured for a single application. The application always uses the global ones: [`applications.update.notification`](global.html#parameters-applications-update-notification) if the global `applications.update` settings are set, and the Deckhouse notification settings otherwise.
+	// Update notifications cannot be configured separately for an application. If `applications.update` is configured, the global [`applications.update.notification`](global.html#parameters-applications-update-notification) settings are used. Otherwise, the Deckhouse Platform notification settings apply.
 	// +optional
 	// +crd-enricher:deckhouse:documentation:examples={mode: Auto, windows: [{from: "8:00", to: "15:00", days: [Tue, Sat]}], blockOnAlerts: {enabled: true, severity: 2}}
 	Update *ApplicationUpdate `json:"update,omitempty"`
 
-	// Configuration settings for the application.
+	// Configuration application settings.
 	// +kubebuilder:pruning:PreserveUnknownFields
 	// +optional
 	Settings *MappedFields `json:"settings,omitempty"`
 
-	// Defines the application maintenance mode.
+	// Application maintenance mode.
 	//
-	// - `NoResourceReconciliation`: A mode for developing or tweaking the application.
+	// Supported modes:
+	//
+	// - `NoResourceReconciliation`: A mode for developing or debugging the application.
 	//
 	//   In this mode:
 	//
@@ -119,13 +124,11 @@ type ApplicationSpec struct {
 	// +crd-enricher:deckhouse:documentation:examples=NoResourceReconciliation
 	Maintenance string `json:"maintenance,omitempty"`
 
-	// Resource footprint of the workloads the application deploys: how many
-	// replicas each workload runs and what its containers may consume. Entries
-	// override what the application package ships; a workload or container that
-	// is not listed keeps the package defaults.
+	// Resource settings and replica counts for workloads deployed by the application.
 	//
-	// A workload is addressed by its kind and name, so at most one entry exists
-	// per pair.
+	// Specified values override the settings provided by the application package. Workloads and containers not listed in this parameter retain their settings from the package.
+	//
+	// Each workload is identified by a combination of kind (`kind`) and name (`name`). Only one entry is allowed for each combination.
 	// +listType=map
 	// +listMapKey=kind
 	// +listMapKey=name
@@ -143,9 +146,11 @@ type ApplicationUpdate struct {
 	//   To change a minor version (for example, from `v1.2.*` to `v1.3.*`), confirmation is required.
 	//
 	//   A patch version update (for example, from `v1.3.1` to `v1.3.2`) is applied taking into account the [update windows](#application-v1alpha1-spec-update-windows), if they are set.
+	//
 	// - `Auto`: Automatic update mode for all versions.
 	//
 	//   Minor version updates (for example, from `v1.2.*` to `v1.3.*`) and patch version updates (for example, from `v1.3.1` to `v1.3.2`) are applied taking into account the [update windows](#application-v1alpha1-spec-update-windows), if they are set.
+	//
 	// - `Manual`: Manual update mode for all versions.
 	//
 	//   Confirmation is required for updating both minor and patch versions.
@@ -155,32 +160,32 @@ type ApplicationUpdate struct {
 	// +crd-enricher:deckhouse:documentation:examples=[AutoPatch, Auto, Manual]
 	Mode string `json:"mode,omitempty"`
 
-	// List of update windows during the day.
+	// List of application update windows.
 	// +optional
 	Windows []ApplicationUpdateWindow `json:"windows,omitempty"`
 
-	// Settings for blocking the application update while there are alerts in the cluster.
+	// Settings for blocking application updates while there are alerts in the cluster.
 	// +optional
 	BlockOnAlerts *ApplicationUpdateBlockOnAlerts `json:"blockOnAlerts,omitempty"`
 }
 
-// ApplicationUpdateWindow is a time range of a day in which the application may be updated.
+// Time interval during the day when application updates are allowed.
 type ApplicationUpdateWindow struct {
 	// Start time of the update window (UTC timezone).
 	//
-	// Should be less than the end time of the update window.
+	// Should be earlier than the end time of the update window.
 	// +kubebuilder:validation:Pattern=`^(?:\d|[01]\d|2[0-3]):[0-5]\d$`
 	// +crd-enricher:deckhouse:documentation:examples="13:00"
 	From string `json:"from"`
 
 	// End time of the update window (UTC timezone).
 	//
-	// Should be more than the start time of the update window.
+	// Should be later than the start time of the update window.
 	// +kubebuilder:validation:Pattern=`^(?:\d|[01]\d|2[0-3]):[0-5]\d$`
 	// +crd-enricher:deckhouse:documentation:examples="18:30"
 	To string `json:"to"`
 
-	// The days of the week on which the update window is applied.
+	// Days of the week on which the update window is applied.
 	//
 	// If the parameter is omitted, the update window is applied every day.
 	// +kubebuilder:validation:items:Enum=Mon;Tue;Wed;Thu;Fri;Sat;Sun
@@ -190,13 +195,13 @@ type ApplicationUpdateWindow struct {
 
 // ApplicationUpdateBlockOnAlerts holds the settings for blocking the application update on alerts.
 type ApplicationUpdateBlockOnAlerts struct {
-	// If enabled, the application update is blocked while there are alerts in the cluster with a severity level equal to or higher than the one set in the [`severity`](#application-v1alpha1-spec-update-blockonalerts-severity) parameter.
+	// Indicates whether to block application updates when the cluster has alerts with a severity level equal to or higher than the value specified in the [`severity`](#application-v1alpha1-spec-update-blockonalerts-severity) parameter.
 	// +optional
 	Enabled bool `json:"enabled,omitempty"`
 
-	// The severity level of the alerts that block the update.
+	// Alert severity level at which updates are blocked.
 	//
-	// The severity level is a number from 0 to 9, where 0 is the highest severity and 9 is the lowest severity.
+	// Set as a value from `0` to `9`, where `0` is the highest severity and `9` is the lowest.
 	// +kubebuilder:validation:Minimum=0
 	// +kubebuilder:validation:Maximum=9
 	// +kubebuilder:default=4
@@ -204,90 +209,102 @@ type ApplicationUpdateBlockOnAlerts struct {
 	Severity *int32 `json:"severity,omitempty"`
 }
 
-// ApplicationResourceRequest pins the resource footprint of a single workload
-// that the application deploys.
+// Resource settings and replica count for a single application workload.
 // +kubebuilder:validation:XValidation:rule="has(self.replicas) ? self.kind in ['Deployment','StatefulSet','ReplicaSet'] : true",message="replicas can only be set for Deployment, StatefulSet and ReplicaSet"
 type ApplicationResourceRequest struct {
-	// Kind of the workload to size.
+	// Kind of workload for which resource settings are specified.
 	// +kubebuilder:validation:Enum=Deployment;StatefulSet;DaemonSet;ReplicaSet;Pod;Job;CronJob
 	// +crd-enricher:deckhouse:documentation:examples=Deployment
 	Kind string `json:"kind"`
 
-	// Name of the workload to size, as the application package names it.
+	// Workload name as specified in the application package.
 	// +kubebuilder:validation:MinLength=1
 	// +crd-enricher:deckhouse:documentation:examples=controller
 	Name string `json:"name"`
 
-	// Number of replicas the workload runs. Only meaningful for the kinds that
-	// have a replica count: `Deployment`, `StatefulSet` and `ReplicaSet`.
+	// Number of workload replicas.
+	//
+	// Applies only to workloads that support replica management: Deployment, StatefulSet, and ReplicaSet.
 	// +kubebuilder:validation:Minimum=0
 	// +optional
 	// +crd-enricher:deckhouse:documentation:examples=3
 	Replicas *int32 `json:"replicas,omitempty"`
 
-	// Compute resources of the workload's containers. A container the workload
-	// does not have is ignored.
+	// Compute resources of the workload's containers.
+	//
+	// If the specified container does not exist in the workload, the entry is ignored.
 	// +listType=map
 	// +listMapKey=name
 	// +optional
 	Containers []ApplicationContainerResourceRequest `json:"containers,omitempty"`
 }
 
-// ApplicationContainerResourceRequest pins the compute resources of a single
-// container inside a workload.
+// Resource settings for a single workload container.
 type ApplicationContainerResourceRequest struct {
 	// Name of the container inside the workload.
 	// +kubebuilder:validation:MinLength=1
 	// +crd-enricher:deckhouse:documentation:examples=controller
 	Name string `json:"name"`
 
-	// Compute resources the container requests and is limited to, in the same
-	// form as a Pod container's `resources`: `cpu`, `memory` and
-	// `ephemeral-storage` for disk.
+	// Container resource requests and limits.
 	//
-	// Merged into what the package ships resource by resource, so setting only
-	// `memory` leaves the package's `cpu` in place. A resource the package
-	// declares cannot be removed here, only given a different value.
+	// Uses the same format as the `resources` field of a Pod container. Supports `cpu`, `memory`, and `ephemeral-storage`.
+	//
+	// Specified values are merged with the settings from the application package separately for each resource. For example, if only `memory` is specified, the `cpu` value from the package is retained.
+	//
+	// Resource requests or limits defined in the package cannot be removed. Their values can only be overridden.
 	// +optional
+	// +crd-enricher:raw:properties.claims.description="List of resource claims used by the container.\n\nEach entry references a resource claim defined in `pod.spec.resourceClaims`. Requires the `DynamicResourceAllocation` feature gate to be enabled.\n\nThis field is immutable. It can only be set for containers."
+	// +crd-enricher:raw:properties.claims.items.description="Resource claim used by the container."
+	// +crd-enricher:raw:properties.claims.items.properties.name.description="Name of a ResourceClaim defined in `pod.spec.resourceClaims`.\n\nThe referenced claim makes its resources available to the container."
+	// +crd-enricher:raw:properties.claims.items.properties.request.description="Name of a request defined in the referenced resource claim.\n\nIf specified, only the resources allocated for this request are made available to the container. If omitted, all resources allocated for the claim are made available."
+	// +crd-enricher:raw:properties.limits.description="Maximum amount of compute resources available to the container."
+	// +crd-enricher:raw:properties.requests.description="Minimum amount of compute resources required by the container.\n\nIf this parameter is not specified, the `limits` value is used if explicitly set. Otherwise, the value is implementation-defined.\n\nThe `requests` value cannot exceed `limits`."
 	Resources corev1.ResourceRequirements `json:"resources,omitempty"`
 }
 
 type ApplicationStatus struct {
-	// Summary aggregates the high-level user-facing state, message and
-	// resolution hint for the application. The controller always populates it
-	// on reconcile — every application maps to exactly one lifecycle state — so
-	// it is the single source of truth for the UI; clients should not re-derive
-	// these values from the conditions. The pointer leaves it absent only
-	// before the first status computation.
+	// Summary of the application state, including messages and recommendations for the user.
+	//
+	// The controller updates this information during each reconciliation. Each application has exactly one lifecycle state.
+	//
+	// Use this information to display the application state in the web interface. Do not recalculate the state from conditions.
 	// +optional
 	Summary *ApplicationStatusSummary `json:"summary,omitempty"`
 
-	// Information about the currently installed version.
+	// Information about the currently installed application version.
 	// +optional
 	CurrentVersion *ApplicationStatusVersion `json:"currentVersion,omitempty"`
 
-	// URLs of application endpoints, collected from Ingress resources of the
-	// application chart annotated with `packages.deckhouse.io/application-endpoint-description`.
+	// Application endpoint URLs obtained from Ingress resources in the application chart with the `packages.deckhouse.io/application-endpoint-description` annotation.
 	// +optional
 	URLs []ApplicationStatusURL `json:"urls,omitempty"`
 
-	// Nelm tracking.
+	// Nelm report on application status.
 	// +kubebuilder:pruning:PreserveUnknownFields
 	// +optional
 	Tracking runtime.RawExtension `json:"tracking"`
 
-	// LastAppliedConfiguration is the effective settings (user configuration merged
-	// with config-schema defaults) that drove the most recent successful apply.
+	// Application configuration used during the last successful apply.
+	//
+	// Includes user-defined settings and default values defined in the configuration schema.
 	// +kubebuilder:pruning:PreserveUnknownFields
 	// +optional
 	LastAppliedConfiguration runtime.RawExtension `json:"lastAppliedConfiguration"`
 
-	// Conditions reflecting the latest observations of the application state.
+	// Conditions reflecting the current state of the application.
 	// +optional
 	// +patchMergeKey=type
 	// +patchStrategy=merge
 	// +listType=map
 	// +listMapKey=type
+	// +crd-enricher:raw:items.description="Condition reflecting an aspect of the current state of the application."
+	// +crd-enricher:raw:items.properties.lastTransitionTime.description="Time when the condition status last changed."
+	// +crd-enricher:raw:items.properties.message.description="Message with additional information about the condition."
+	// +crd-enricher:raw:items.properties.observedGeneration.description="Value of `.metadata.generation` for which the condition was set.\n\nIndicates whether the condition corresponds to the current generation of the instance."
+	// +crd-enricher:raw:items.properties.reason.description="Programmatic identifier indicating the reason for the last condition status change."
+	// +crd-enricher:raw:items.properties.status.description="Condition status."
+	// +crd-enricher:raw:items.properties.type.description="Condition type in CamelCase or in the format `foo.example.com/CamelCase`."
 	Conditions []metav1.Condition `json:"conditions,omitempty" patchStrategy:"merge" patchMergeKey:"type"`
 }
 
@@ -296,39 +313,37 @@ type ApplicationStatus struct {
 // source of truth so that the frontend does not have to re-implement the state
 // machine on top of conditions.
 type ApplicationStatusSummary struct {
-	// State is the high-level lifecycle state observed for the application.
-	// Always one of: Pending, Failed, Updating, Ready, Degraded, Suspended, Deleting.
+	// Current application lifecycle state.
 	// +optional
 	// +crd-enricher:deckhouse:documentation:examples=[Pending, Failed, Updating, Ready, Degraded, Suspended, Deleting]
 	State string `json:"state,omitempty"`
 
-	// Message is a human-readable description of the current state.
+	// Description of the current application state.
 	// +optional
 	Message string `json:"message,omitempty"`
 
-	// Tip is a human-readable instruction on how to resolve the current
-	// state. Empty when no action is required.
+	// Recommended action for the current application state.
+	//
+	// May be empty if no additional action is required.
 	// +optional
 	Tip string `json:"tip,omitempty"`
 }
 
-// ApplicationStatusURL is a single application endpoint built from an Ingress
-// of the application chart.
+// Application endpoint defined by an Ingress resource in the application chart.
 type ApplicationStatusURL struct {
-	// URL of the application endpoint.
+	// Application endpoint URL.
 	URL string `json:"url"`
 
-	// Description of the endpoint, taken from the value of the
-	// `packages.deckhouse.io/application-endpoint-description` annotation.
+	// Endpoint description from the `packages.deckhouse.io/application-endpoint-description` annotation.
 	//
-	// Empty when the annotation value is "true".
+	// The description is empty if the annotation value is `"true"`.
 	// +optional
 	Description string `json:"description,omitempty"`
 }
 
 // ApplicationStatusVersion is the installed version; an object, so status stored by earlier releases still decodes.
 type ApplicationStatusVersion struct {
-	// Semantic version of the installed application.
+	// Installed application version in SemVer format.
 	// +optional
 	Version string `json:"version,omitempty"`
 }

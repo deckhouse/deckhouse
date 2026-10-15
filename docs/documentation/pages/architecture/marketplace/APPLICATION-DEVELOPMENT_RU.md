@@ -8,26 +8,26 @@ search: application development, package.yaml, d8 package, разработка 
 
 ## Предварительные условия
 
-Установите `deckhouse-cli` (`d8`):
+Перед началом работы выполните следующее:
 
-```bash
-sh -c "$(curl -fsSL https://raw.githubusercontent.com/deckhouse/deckhouse-cli/main/tools/install.sh)"
-```
+1. Установите [консольную утилиту Deckhouse CLI (`d8`)](../../cli/d8/):
 
-Войдите в хранилище образов с помощью [лицензионного токена](https://license.deckhouse.io/):
+   ```bash
+   sh -c "$(curl -fsSL https://raw.githubusercontent.com/deckhouse/deckhouse-cli/main/tools/install.sh)"
+   ```
 
-```bash
-d8 dk cr login -u license-token dev-registry.deckhouse.io --password <LICENSE_TOKEN>
-```
+1. Войдите в хранилище образов контейнеров с помощью лицензионного ключа:
+
+   ```bash
+   d8 dk cr login -u license-token dev-registry.deckhouse.io --password <LICENSE_TOKEN>
+   ```
 
 ## Бутстрап пакета Application
 
-Чтобы создать директорию `<APPLICATION_NAME>/` в текущей рабочей директории с заготовкой пакета и инициализировать Git-репозиторий с первым коммитом, выполните команду `d8 package bootstrap app <APPLICATION_NAME>` (`application` — псевдоним `app`).
-
-Пример:
+Чтобы создать директорию `<APPLICATION_NAME>/` в текущей рабочей директории с заготовкой пакета и инициализировать Git-репозиторий с первым коммитом, выполните команду `d8 package bootstrap app <APPLICATION_NAME>` (можно использовать сокращение `app` вместо `application`):
 
 ```bash
-d8 package bootstrap app myapp --hooks
+d8 package bootstrap application myapp --hooks
 cd myapp
 git remote add origin <GITLAB_REPO_URL>
 git push --set-upstream origin main
@@ -86,11 +86,11 @@ myapp/
     └── vpa.yaml
 ```
 
-Не добавляйте `Chart.yaml` и `values.yaml` в корень пакета: `d8 package build` не включает эти файлы в bundle пакета. DP рендерит шаблоны как чарт без метаданных, а значения по умолчанию описываются в [OpenAPI-схемах](settings.html).
+Не добавляйте `Chart.yaml` и `values.yaml` в корень пакета. Команда `d8 package build` не включает эти файлы в bundle пакета. Deckhouse Platform (DP) обрабатывает шаблоны как чарт без метаданных, а значения по умолчанию описываются в [OpenAPI-схемах](settings.html).
 
-## package.yaml
+## Файл package.yaml
 
-Файл `package.yaml` — основной манифест пакета Application. Он определяет метаданные, тип, требования и совместимость.
+Файл `package.yaml` — это основной манифест пакета Application. Он определяет метаданные, тип, требования и совместимость.
 
 Пример файла `package.yaml`:
 
@@ -117,7 +117,7 @@ requirements:
         constraint: ">= 1.0.0"
 ```
 
-**Справочник полей:**
+Описание полей:
 
 | Поле | Обязательное | Описание |
 |---|---|---|
@@ -127,29 +127,29 @@ requirements:
 | `type` | Да | `Application` или `Module` |
 | `stage` | Да | Стадия зрелости (`Preview`, `General Availability` и т. д.) |
 | `category` | Да | Категория для классификации в каталоге |
-| `requirements.deckhouse` | Нет | Ограничение на минимальную версию Deckhouse Platform (DP) |
+| `requirements.deckhouse` | Нет | Ограничение на минимальную версию DP |
 | `requirements.kubernetes` | Нет | Ограничение на минимальную версию Kubernetes |
-| `requirements.modules` | Нет | Зависимости от модулей (ограничения версий в формате SemVer). См. [«Требования»](#требования) |
-| `disable` | Нет | Подтверждение перед удалением приложения. См. [«Подтверждение удаления»](#подтверждение-удаления) |
+| `requirements.modules` | Нет | Зависимости от модулей (ограничения версий в формате SemVer). Подробнее — [в подразделе «Требования»](#требования) |
+| `disable` | Нет | Подтверждение перед удалением приложения. Подробнее — [в подразделе «Подтверждение удаления»](#подтверждение-удаления) |
 
-При сканировании репозитория DP публикует описание, стадию, требования, подтверждение удаления и содержимое `changelog.yaml` в поле `status.packageMetadata` ресурса [ApplicationPackageVersion](../../reference/api/cr.html#applicationpackageversion).
+При сканировании репозитория DP публикует описание, стадию, требования, подтверждение удаления и содержимое `changelog.yaml` [в поле `status.packageMetadata`](../../reference/api/cr.html#applicationpackageversion-v1alpha1-status-packagemetadata) ресурса ApplicationPackageVersion.
 
 ### Требования
 
 Раздел `requirements` определяет условия, при которых приложение можно установить и запустить:
 
-| Поле | Описание |
-|---|---|
-| `requirements.deckhouse.constraint` | Ограничение на версию DP |
-| `requirements.kubernetes.constraint` | Ограничение на версию Kubernetes |
-| `requirements.modules.mandatory` | Модули, которые должны быть включены. `constraint` необязателен |
-| `requirements.modules.conditional` | Модули, которые не обязательны, но если включены, должны соответствовать `constraint`. `constraint` обязателен |
-| `requirements.modules.anyOf` | Группы альтернативных модулей: из каждой группы должен быть включён хотя бы один модуль, соответствующий своему `constraint`, если он задан |
-| `requirements.modules.noneOf` | Группы несовместимых модулей: ни один модуль группы не может быть включён. `constraint` сужает диапазон несовместимых версий; без него несовместимы все версии модуля |
+| Требование | Поле |
+| --- | --- |
+| Ограничение на версию DP | `requirements.deckhouse.constraint` |
+| Ограничение на версию Kubernetes | `requirements.kubernetes.constraint` |
+| Модули, которые должны быть включены. Для каждого модуля можно указать ограничение версии (`constraint`) | `requirements.modules.mandatory` |
+| Необязательные модули. Если такой модуль включён, его версия должна соответствовать указанному ограничению (`constraint`) | `requirements.modules.conditional` |
+| Группы альтернативных модулей. В каждой группе должен быть включён хотя бы один модуль, версия которого соответствует указанному для него `constraint`, если ограничение задано | `requirements.modules.anyOf` |
+| Группы несовместимых модулей. Ни один модуль из такой группы не должен быть включён. `constraint` позволяет указать несовместимые версии; если ограничение не задано, несовместимы все версии модуля | `requirements.modules.noneOf` |
 
 У каждой группы `anyOf` и `noneOf` есть уникальное имя `name`, которое используется в сообщениях об ошибках, необязательное описание `description` и непустой список `modules`. Модуль можно указать только в одном из разделов `mandatory`, `conditional`, `anyOf` и `noneOf`. Внутри `anyOf` или `noneOf` один и тот же модуль может входить в несколько групп.
 
-Пример:
+Пример заполненного раздела `requirements`:
 
 ```yaml
 requirements:
@@ -178,9 +178,9 @@ requirements:
 
 DP проверяет требования:
 
-- При создании или изменении Application. Если требования не выполнены, запрос отклоняется, а в сообщении указывается невыполненное требование.
-- Перед установкой. DP устанавливает приложение только после того, как включены модули из `requirements.modules.mandatory`.
-- Пока приложение установлено. Если требования перестают выполняться, например, отключается обязательный модуль, DP удаляет приложение (см. [«Жизненный цикл и отладка»](lifecycle.html#приостановка)).
+- **При создании или изменении Application**. Если требования не выполнены, запрос отклоняется, а в сообщении указывается невыполненное требование.
+- **Перед установкой**. DP устанавливает приложение только после того, как включены модули из `requirements.modules.mandatory`.
+- **Пока приложение установлено**. Если требования перестают выполняться, например, отключается обязательный модуль, DP удаляет приложение (подробнее — [в разделе «Жизненный цикл и отладка»](lifecycle.html#приостановка)).
 
 Версии модулей сравниваются с ограничениями без частей pre-release и build metadata.
 
@@ -196,9 +196,9 @@ disable:
     ru: "Удаление приложения удалит все данные, хранящиеся в его томах."
 ```
 
-DP публикует раздел в поле `status.packageMetadata.disableOptions` ресурса ApplicationPackageVersion, а веб-интерфейс показывает сообщение на языке пользователя. При удалении Application через API Kubernetes DP подтверждение не проверяет.
+DP публикует раздел [в поле `status.packageMetadata.disableOptions`](../../reference/api/cr.html#applicationpackageversion-v1alpha1-status-packagemetadata-disableoptions) ресурса ApplicationPackageVersion, а веб-интерфейс показывает сообщение на языке пользователя. При удалении Application через API Kubernetes DP подтверждение не проверяет.
 
-### changelog.yaml
+### Файл changelog.yaml
 
 Файл `changelog.yaml` описывает изменения в версии пакета:
 
@@ -209,16 +209,16 @@ fixes:
   - "Fixed the readiness probe of the replica."
 ```
 
-DP публикует содержимое файла в поле `status.packageMetadata.changelog` ресурса ApplicationPackageVersion.
+DP публикует содержимое файла [в поле `status.packageMetadata.changelog`](../../reference/api/cr.html#applicationpackageversion-v1alpha1-status-packagemetadata-changelog) ресурса ApplicationPackageVersion.
 
 ## OpenAPI-схемы
 
 Каталог `openapi/` содержит две схемы:
 
-- `settings.yaml` — схема для `Application.spec.settings` (пользовательская конфигурация). Также поддерживается прежнее имя `config-values.yaml`.
+- `settings.yaml` — схема для `Application.spec.settings` (пользовательская конфигурация). Также поддерживается прежнее имя `config-values.yaml`;
 - `values.yaml` — схема для полного набора значений Helm.
 
-Схемы, правила валидации и расширения, управляющие подстановкой значений, неизменяемостью полей и формой настроек в веб-интерфейсе, описаны в разделе [«Настройки приложения»](settings.html).
+Схемы, правила валидации и расширения, управляющие подстановкой значений, неизменяемостью полей и формой настроек в веб-интерфейсе, описаны [в разделе «Настройки приложения»](settings.html).
 
 ## Шаблоны и хуки
 
@@ -245,7 +245,7 @@ d8 package render
 | `-r, --remote <REPOSITORY>/<PACKAGE_NAME>:<PACKAGE_VERSION>` | Отрендерить опубликованный bundle пакета вместо локальной директории. Обязательно указание тега или дайджеста |
 | `--remote-user`, `--remote-password` | Учётные данные для доступа к хранилищу образов. Их также можно задать в переменных окружения `PACKAGE_REMOTE_USER` и `PACKAGE_REMOTE_PASSWORD` |
 
-Команда использует значения-заглушки вместо значений из кластера: экземпляр `test` в неймспейсе `default`, версию пакета `dev` и настройки, сгенерированные по `openapi/settings.yaml` (из `x-example`, `x-examples`, `enum` или `default`). Ссылки на образы — заглушки с ключами по именам каталогов образов. Чтобы отрендерить шаблоны установленного приложения с его фактическими значениями, используйте `deckhouse-controller packages render` (см. [«Жизненный цикл и отладка»](lifecycle.html#состояние-в-dp)).
+Команда использует значения-заглушки вместо значений из кластера: экземпляр `test` в неймспейсе `default`, версию пакета `dev` и настройки, сгенерированные по `openapi/settings.yaml` (из `x-example`, `x-examples`, `enum` или `default`). Ссылки на образы — заглушки с ключами по именам каталогов образов. Чтобы отрендерить шаблоны установленного приложения с его фактическими значениями, используйте `deckhouse-controller packages render` (подробнее — [в разделе «Жизненный цикл и отладка»](lifecycle.html#состояние-в-dp)).
 
 ## Проверка пакета
 
@@ -269,11 +269,21 @@ d8 package verify
 | `icon` | Иконка приложения `docs/icon.{png,webp,jpg,jpeg,svg}`: формат, размер до 150 КБ и размеры до 300×300 пикселей |
 | `oss` | Формат `oss.yaml`, если файл существует |
 
-Доступные параметры: `--hide-warnings` (не показывать предупреждения), `--show-ignored` (показывать результаты игнорируемых правил), `--lint-config <PATH>` (путь к файлу настроек).
+Доступные параметры:
 
-Чтобы проверить опубликованный пакет, выполните `d8 package verify remote <REPOSITORY> <PACKAGE_NAME>`. По умолчанию команда проверяет bundle последней версии. Чтобы выбрать версию, используйте `--version <PACKAGE_VERSION>`, а чтобы проверить также образ метаданных версии — `--release`. Команда использует учётные данные для доступа к хранилищу образов, сохранённые с помощью `d8 dk cr login`.
+- `--hide-warnings` — не показывать предупреждения;
+- `--show-ignored` — показывать результаты игнорируемых правил;
+- `--lint-config <PATH>` — путь к файлу настроек.
 
-### .pkglint.yaml
+Чтобы проверить опубликованный пакет, выполните следующую команду:
+
+```bash
+d8 package verify remote <REPOSITORY> <PACKAGE_NAME>
+```
+
+По умолчанию команда проверяет bundle последней версии. Чтобы выбрать версию, используйте `--version <PACKAGE_VERSION>`, а чтобы проверить также образ метаданных версии — `--release`. Команда использует учётные данные для доступа к хранилищу образов, сохранённые с помощью `d8 dk cr login`.
+
+### Файл .pkglint.yaml
 
 Файл `.pkglint.yaml` понижает строгость правил. Команда ищет его в директории пакета и в родительских директориях (для `verify remote` — в текущей директории).
 
@@ -312,7 +322,7 @@ d8 package build -v v0.0.1 -r dev-registry.deckhouse.io/deckhouse/packages
 
 - В `-r` указывайте корневой путь пакетов — тот же, что в поле `spec.registry.repo` ресурса PackageRepository. Имя пакета команда добавляет к пути сама.
 - Указывайте версию в формате `vMAJOR.MINOR.PATCH`. При сканировании репозитория DP находит только версии в этом формате.
-- Образы собираются с помощью werf (`d8 delivery-kit`) для платформы `linux/amd64`, поэтому директория пакета должна быть Git-репозиторием. Незакоммиченные изменения тоже попадают в сборку.
+- Образы собираются с помощью werf (`d8 delivery-kit`) для платформы `linux/amd64`, поэтому директория пакета должна быть Git-репозиторием. Изменения, не зафиксированные в Git, тоже попадают в сборку.
 - Каталог `images/` должен содержать хотя бы один образ.
 - Если версия уже есть в хранилище образов, команда завершается без сборки. Чтобы пересобрать версию, используйте `-f`.
 
@@ -360,7 +370,7 @@ git push origin v0.1.0
 |---|---|
 | `<REPOSITORY>:<PACKAGE_NAME>` | Тег с именем пакета — используется для получения списка пакетов |
 | `<REPOSITORY>/<PACKAGE_NAME>:<PACKAGE_VERSION>` | Bundle — содержит шаблоны, `openapi/`, `hooks/` |
-| `<REPOSITORY>/<PACKAGE_NAME>@<DIGEST>` | Образы контейнеров приложения. Шаблоны ссылаются на них по дайджесту (см. [«Шаблоны»](templates.html#образы-контейнеров)) |
+| `<REPOSITORY>/<PACKAGE_NAME>@<DIGEST>` | Образы контейнеров приложения. Шаблоны ссылаются на них по дайджесту (подробнее — [в разделе «Шаблоны»](templates.html#образы-контейнеров)) |
 | `<REPOSITORY>/<PACKAGE_NAME>/version:<PACKAGE_VERSION>` | Метаданные версии |
 | `<REPOSITORY>/<PACKAGE_NAME>/release-channel:<RELEASE_CHANNEL>` | Рекомендуемая версия для канала обновлений |
 
@@ -398,9 +408,9 @@ DP читает метаданные версии при сканировани�
 
 ### Каналы обновлений
 
-Канал обновлений — это тег пути `<PACKAGE_NAME>/release-channel`, указывающий на копию образа метаданных рекомендуемой версии. DP распознаёт каналы `alpha`, `beta`, `early-access`, `stable`, `rock-solid` и `lts`. `d8 package build` не создаёт теги каналов обновлений — их публикует пайплайн CI/CD.
+Канал обновлений — это тег пути `<PACKAGE_NAME>/release-channel`, указывающий на копию образа метаданных рекомендуемой версии. DP распознаёт каналы `alpha`, `beta`, `early-access`, `stable`, `rock-solid` и `lts`. Команда `d8 package build` не создаёт теги каналов обновлений — их публикует пайплайн CI/CD.
 
-При сканировании репозитория DP записывает версии, на которые указывают каналы, в поле `status.releaseChannels` ресурса [ApplicationPackage](../../reference/api/cr.html#applicationpackage):
+При сканировании репозитория DP записывает версии, на которые указывают каналы, [в поле `status.releaseChannels`](../../reference/api/cr.html#applicationpackage-v1alpha1-status-releasechannels) ресурса ApplicationPackage:
 
 ```yaml
 status:
@@ -410,4 +420,4 @@ status:
       stable: v0.1.21
 ```
 
-Каналы носят информационный характер: версия приложения задаётся в `spec.packageVersion` и меняется, только когда её меняет пользователь.
+Каналы носят информационный характер. Версия приложения задаётся [в поле `spec.packageVersion`](../../reference/api/cr.html#application-v1alpha1-spec-packageversion) ресурса Application и меняется только когда её меняет пользователь.

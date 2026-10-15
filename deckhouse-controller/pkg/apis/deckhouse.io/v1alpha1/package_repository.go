@@ -61,9 +61,12 @@ var _ runtime.Object = (*PackageRepository)(nil)
 // +kubebuilder:printcolumn:name=MSG,type=string,JSONPath=.status.conditions[?(@.type=='LastScanSucceeded')].message
 // +crd-enricher:raw:properties.apiVersion.description="APIVersion defines the versioned schema of this representation of an object.\nServers should convert recognized schemas to the latest internal value, and\nmay reject unrecognized values.\n\nMore info [in the Kubernetes documentation](https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources)."
 // +crd-enricher:raw:properties.kind.description="Kind is a string value representing the REST resource this object represents.\nServers may infer this from the endpoint the client submits requests to.\nCannot be updated.\nIn CamelCase.\n\nMore info [in the Kubernetes documentation](https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds)."
+// +crd-enricher:raw:properties.apiVersion.x-doc-skip=true
+// +crd-enricher:raw:properties.kind.x-doc-skip=true
+// +crd-enricher:raw:properties.metadata.x-doc-skip=true
 
 // +crd-enricher:deckhouse:documentation:examples={apiVersion: deckhouse.io/v1alpha1, kind: PackageRepository, metadata: {name: example}, spec: {registry: {ca: <PEM-encoded CA certificate>, dockerCfg: <base64 encoded credentials>, login: admin, password: <password>, repo: registry.example.io/packages, scheme: https}, scanInterval: 5m}}
-// PackageRepository is a source of packages for Deckhouse Platform.
+// PackageRepository defines a package repository available in Deckhouse Platform.
 type PackageRepository struct {
 	metav1.TypeMeta `json:",inline"`
 	// Standard object's metadata.
@@ -71,17 +74,15 @@ type PackageRepository struct {
 	// +optional
 	metav1.ObjectMeta `json:"metadata,omitempty"`
 
-	// Defines the package repository configuration.
+	// Package repository configuration.
 	Spec PackageRepositorySpec `json:"spec"`
 
-	// Package repository status.
+	// Current state of the package repository.
 	Status PackageRepositoryStatus `json:"status,omitempty"`
 }
 
 type PackageRepositorySpec struct {
-	// Interval for container registry scan.
-	//
-	// Defines the frequency of checking the container registry for new packages.
+	// Interval between automatic scans of the package repository for discovering new packages and versions.
 	// +optional
 	// +kubebuilder:validation:Type=string
 	// +kubebuilder:validation:Pattern=`^(\d+h)?(\d+m)?(\d+s)?$`
@@ -90,12 +91,12 @@ type PackageRepositorySpec struct {
 	// +crd-enricher:deckhouse:documentation:examples=1h
 	// +crd-enricher:deckhouse:documentation:examples=6h30m
 	ScanInterval *metav1.Duration `json:"scanInterval,omitempty"`
-	// Configuration for accessing the container registry with packages.
+	// Access parameters for the container registry where the package repository is located.
 	Registry PackageRepositorySpecRegistry `json:"registry"`
 }
 
 type PackageRepositorySpecRegistry struct {
-	// Protocol for accessing the repository (for example, `https`).
+	// Protocol used to access the package repository, for example, `https`.
 	// +optional
 	// +crd-enricher:deckhouse:documentation:examples=https
 	Scheme string `json:"scheme,omitempty"`
@@ -104,15 +105,17 @@ type PackageRepositorySpecRegistry struct {
 	// +crd-enricher:deckhouse:documentation:examples=registry.example.io/packages
 	Repo string `json:"repo"`
 
-	// Container registry access token in Base64 (`~/.docker/config.json` format).
-	// Leave this field empty if anonymous access to the container registry is used.
+	// Container registry access configuration in `~/.docker/config.json` format, encoded in Base64.
+	//
+	// Leave this field empty for anonymous access.
 	// +optional
 	// +crd-enricher:deckhouse:sensitive-data
 	// +crd-enricher:deckhouse:documentation:examples=<base64 encoded credentials>
 	DockerCFG string `json:"dockerCfg,omitempty"`
 
-	// Root CA certificate (PEM format) used to verify the container registry certificate over HTTPS
-	// (if the container registry uses self-signed SSL certificates).
+	// Root certificate in PEM format used to verify the TLS certificate of the container registry when connecting over HTTPS.
+	//
+	// Used if the registry uses self-signed SSL certificates.
 	// +optional
 	// +crd-enricher:deckhouse:documentation:examples=<PEM-encoded CA certificate>
 	CA string `json:"ca,omitempty"`
@@ -131,26 +134,29 @@ type PackageRepositorySpecRegistry struct {
 }
 
 type PackageRepositoryStatus struct {
-	// Time of the most recent completed scan. A failed scan does not update it: the failure is
-	// reported in the `LastScanSucceeded` condition.
+	// Time of the last successfully completed scan.
+	//
+	// If a scan fails, the value is not updated, and the error is reflected in the `LastScanSucceeded` condition.
 	// +optional
 	LastScanTime *metav1.Time `json:"lastScanTime,omitempty"`
 
-	// Time of the most recent scan that found at least one new version.
-	// Scans that found nothing new do not advance this timestamp.
+	// Time of the last scan that discovered at least one new package version.
+	//
+	// If no new versions are discovered, the value is not updated.
 	// +optional
 	LastChangeTime *metav1.Time `json:"lastChangeTime,omitempty"`
 
-	// Number of new versions found by the most recent scan.
-	// Set to zero when the last scan found nothing new.
+	// Number of new package versions discovered during the last scan.
+	//
+	// Equals `0` if no new versions were discovered.
 	// +optional
 	LastNewVersions int `json:"lastNewVersions,omitempty"`
 
-	// List of packages available in this repository.
+	// List of packages available in the repository.
 	// +optional
 	Packages []PackageRepositoryStatusPackage `json:"packages,omitempty"`
 
-	// Total number of packages in this repository.
+	// Total number of packages in the repository.
 	// +optional
 	PackagesCount int `json:"packagesCount,omitempty"`
 
@@ -158,22 +164,29 @@ type PackageRepositoryStatus struct {
 	// +optional
 	Phase string `json:"phase,omitempty"`
 
-	// Human-readable message about the repository status.
+	// Message with additional information about the state of the package repository.
 	// +optional
 	Message string `json:"message,omitempty"`
 
-	// Conditions reflecting the latest observations of the repository state.
+	// Conditions reflecting the current state of the package repository.
 	// +optional
 	// +patchMergeKey=type
 	// +patchStrategy=merge
+	// +crd-enricher:raw:items.description="Condition reflecting an aspect of the current state of the package repository."
+	// +crd-enricher:raw:items.properties.lastTransitionTime.description="Time when the condition status last changed."
+	// +crd-enricher:raw:items.properties.message.description="Message with additional information about the condition.\n\nMay be empty."
+	// +crd-enricher:raw:items.properties.observedGeneration.description="Value of `.metadata.generation` for which the condition was set.\n\nIndicates whether the condition corresponds to the current generation of the instance."
+	// +crd-enricher:raw:items.properties.reason.description="Programmatic identifier indicating the reason for the last condition status change."
+	// +crd-enricher:raw:items.properties.status.description="Condition status."
+	// +crd-enricher:raw:items.properties.type.description="Condition type in CamelCase or in the format `foo.example.com/CamelCase`."
 	Conditions []metav1.Condition `json:"conditions,omitempty" patchStrategy:"merge" patchMergeKey:"type"`
 }
 
 type PackageRepositoryStatusPackage struct {
-	// Name of the package.
+	// Package name.
 	Name string `json:"name"`
 
-	// Type of the package.
+	// Package type.
 	Type string `json:"type"`
 }
 

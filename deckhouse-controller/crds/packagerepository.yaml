@@ -33,7 +33,8 @@ spec:
     name: v1alpha1
     schema:
       openAPIV3Schema:
-        description: PackageRepository is a source of packages for Deckhouse Platform.
+        description: PackageRepository defines a package repository available in Deckhouse
+          Platform.
         properties:
           apiVersion:
             description: |-
@@ -43,6 +44,7 @@ spec:
 
               More info [in the Kubernetes documentation](https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources).
             type: string
+            x-doc-skip: true
           kind:
             description: |-
               Kind is a string value representing the REST resource this object represents.
@@ -52,26 +54,30 @@ spec:
 
               More info [in the Kubernetes documentation](https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds).
             type: string
+            x-doc-skip: true
           metadata:
             type: object
+            x-doc-skip: true
           spec:
-            description: Defines the package repository configuration.
+            description: Package repository configuration.
             properties:
               registry:
-                description: Configuration for accessing the container registry with
-                  packages.
+                description: Access parameters for the container registry where the
+                  package repository is located.
                 properties:
                   ca:
                     description: |-
-                      Root CA certificate (PEM format) used to verify the container registry certificate over HTTPS
-                      (if the container registry uses self-signed SSL certificates).
+                      Root certificate in PEM format used to verify the TLS certificate of the container registry when connecting over HTTPS.
+
+                      Used if the registry uses self-signed SSL certificates.
                     type: string
                     x-doc-examples:
                     - <PEM-encoded CA certificate>
                   dockerCfg:
                     description: |-
-                      Container registry access token in Base64 (`~/.docker/config.json` format).
-                      Leave this field empty if anonymous access to the container registry is used.
+                      Container registry access configuration in `~/.docker/config.json` format, encoded in Base64.
+
+                      Leave this field empty for anonymous access.
                     type: string
                     x-doc-examples:
                     - <base64 encoded credentials>
@@ -95,8 +101,8 @@ spec:
                     x-doc-examples:
                     - registry.example.io/packages
                   scheme:
-                    description: Protocol for accessing the repository (for example,
-                      `https`).
+                    description: Protocol used to access the package repository, for
+                      example, `https`.
                     type: string
                     x-doc-examples:
                     - https
@@ -104,10 +110,8 @@ spec:
                 - repo
                 type: object
               scanInterval:
-                description: |-
-                  Interval for container registry scan.
-
-                  Defines the frequency of checking the container registry for new packages.
+                description: Interval between automatic scans of the package repository
+                  for discovering new packages and versions.
                 pattern: ^(\d+h)?(\d+m)?(\d+s)?$
                 type: string
                 x-doc-default: 6h
@@ -119,55 +123,50 @@ spec:
             - registry
             type: object
           status:
-            description: Package repository status.
+            description: Current state of the package repository.
             properties:
               conditions:
-                description: Conditions reflecting the latest observations of the
-                  repository state.
+                description: Conditions reflecting the current state of the package
+                  repository.
                 items:
-                  description: Condition contains details for one aspect of the current
-                    state of this API Resource.
+                  description: Condition reflecting an aspect of the current state
+                    of the package repository.
                   properties:
                     lastTransitionTime:
-                      description: |-
-                        lastTransitionTime is the last time the condition transitioned from one status to another.
-                        This should be when the underlying condition changed.  If that is not known, then using the time when the API field changed is acceptable.
+                      description: Time when the condition status last changed.
                       format: date-time
                       type: string
                     message:
                       description: |-
-                        message is a human readable message indicating details about the transition.
-                        This may be an empty string.
+                        Message with additional information about the condition.
+
+                        May be empty.
                       maxLength: 32768
                       type: string
                     observedGeneration:
                       description: |-
-                        observedGeneration represents the .metadata.generation that the condition was set based upon.
-                        For instance, if .metadata.generation is currently 12, but the .status.conditions[x].observedGeneration is 9, the condition is out of date
-                        with respect to the current state of the instance.
+                        Value of `.metadata.generation` for which the condition was set.
+
+                        Indicates whether the condition corresponds to the current generation of the instance.
                       format: int64
                       minimum: 0
                       type: integer
                     reason:
-                      description: |-
-                        reason contains a programmatic identifier indicating the reason for the condition's last transition.
-                        Producers of specific condition types may define expected values and meanings for this field,
-                        and whether the values are considered a guaranteed API.
-                        The value should be a CamelCase string.
-                        This field may not be empty.
+                      description: Programmatic identifier indicating the reason for
+                        the last condition status change.
                       maxLength: 1024
                       minLength: 1
                       pattern: ^[A-Za-z]([A-Za-z0-9_,:]*[A-Za-z0-9_])?$
                       type: string
                     status:
-                      description: status of the condition, one of True, False, Unknown.
+                      description: Condition status.
                       enum:
                       - "True"
                       - "False"
                       - Unknown
                       type: string
                     type:
-                      description: type of condition in CamelCase or in foo.example.com/CamelCase.
+                      description: Condition type in CamelCase or in the format `foo.example.com/CamelCase`.
                       maxLength: 316
                       pattern: ^([a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*/)?(([A-Za-z0-9][-A-Za-z0-9_.]*)?[A-Za-z0-9])$
                       type: string
@@ -181,33 +180,37 @@ spec:
                 type: array
               lastChangeTime:
                 description: |-
-                  Time of the most recent scan that found at least one new version.
-                  Scans that found nothing new do not advance this timestamp.
+                  Time of the last scan that discovered at least one new package version.
+
+                  If no new versions are discovered, the value is not updated.
                 format: date-time
                 type: string
               lastNewVersions:
                 description: |-
-                  Number of new versions found by the most recent scan.
-                  Set to zero when the last scan found nothing new.
+                  Number of new package versions discovered during the last scan.
+
+                  Equals `0` if no new versions were discovered.
                 type: integer
               lastScanTime:
                 description: |-
-                  Time of the most recent completed scan. A failed scan does not update it: the failure is
-                  reported in the `LastScanSucceeded` condition.
+                  Time of the last successfully completed scan.
+
+                  If a scan fails, the value is not updated, and the error is reflected in the `LastScanSucceeded` condition.
                 format: date-time
                 type: string
               message:
-                description: Human-readable message about the repository status.
+                description: Message with additional information about the state of
+                  the package repository.
                 type: string
               packages:
-                description: List of packages available in this repository.
+                description: List of packages available in the repository.
                 items:
                   properties:
                     name:
-                      description: Name of the package.
+                      description: Package name.
                       type: string
                     type:
-                      description: Type of the package.
+                      description: Package type.
                       type: string
                   required:
                   - name
@@ -215,7 +218,7 @@ spec:
                   type: object
                 type: array
               packagesCount:
-                description: Total number of packages in this repository.
+                description: Total number of packages in the repository.
                 type: integer
               phase:
                 description: Current phase of the repository.

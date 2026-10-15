@@ -4,15 +4,15 @@ permalink: en/architecture/marketplace/settings.html
 description: "Settings and values schemas of an Application package: validation, defaults, CEL rules, grantable resources, immutable fields, and web interface form extensions."
 ---
 
-The user configures an application instance in the `spec.settings` field of the [Application](../../reference/api/cr.html#application) resource. The package describes the allowed settings with an OpenAPI schema. Deckhouse Platform (DP) validates the settings against this schema, applies default values, and passes the result to templates and hooks. The DP web interface builds the application settings form from the same schema.
+The user configures an application instance in the [`spec.settings`](../../reference/api/cr.html#application-v1alpha1-spec-settings) field of the Application resource. The package describes the allowed settings with an OpenAPI schema. Deckhouse Platform (DP) validates the settings against this schema, applies default values, and passes the result to templates and hooks. The DP web interface builds the application settings form from the same schema.
 
 ## Schema files
 
 The `openapi/` directory of the package contains two schemas:
 
-- `settings.yaml` — the schema of `Application.spec.settings`, that is, of the settings the user can change. The legacy file name `config-values.yaml` is supported for backward compatibility: DP reads it only if `settings.yaml` is absent.
-- `values.yaml` — the schema of the full set of values available to templates as `.Values`, including internal values set by hooks. In this schema, the package also lists the kinds of [orphan resources](lifecycle.html#orphan-resources) that DP deletes together with the application.
-- `doc-ru-settings.yaml` — Russian descriptions of the settings. The `d8 package verify` command requires a `doc-ru-<NAME>.yaml` file for every schema file except `values.yaml`.
+- `settings.yaml`: Schema of `Application.spec.settings`, that is, of the settings the user can change. The legacy file name `config-values.yaml` is supported for backward compatibility: DP reads it only if `settings.yaml` is absent.
+- `values.yaml`: Schema of the full set of values available to templates as `.Values`, including internal values set by hooks. In this schema, the package also lists the kinds of [orphan resources](lifecycle.html#orphan-resources) that DP deletes together with the application.
+- `doc-ru-settings.yaml`: Russian descriptions of the settings. The `d8 package verify` command requires a `doc-ru-<NAME>.yaml` file for every schema file except `values.yaml`.
 
 The settings are located at the root of the values, so the values schema must declare them too. To include all settings in the values schema without duplicating them, add the `x-extend` extension to `openapi/values.yaml`. Without it, the values fail the validation when a hook changes them.
 
@@ -31,19 +31,19 @@ properties:
         type: string
 ```
 
-When DP scans a repository, it publishes both schemas in the `status.packageSchemas` field of the [ApplicationPackageVersion](../../reference/api/cr.html#applicationpackageversion) resource. The web interface and the Application validating webhook use the published schemas. Only standard OpenAPI keywords and the `x-deckhouse-*` extensions described on this page are published. Other `x-*` extensions are removed from the published schema.
+When DP scans a repository, it publishes both schemas in the [`status.packageSchemas`](../../reference/api/cr.html#applicationpackageversion-v1alpha1-status-packageschemas) field of the ApplicationPackageVersion resource. The web interface and the Application validating webhook use the published schemas. Only standard OpenAPI keywords and the `x-deckhouse-*` extensions described on this page are published. Other `x-*` extensions are removed from the published schema.
 
 ## How DP builds values
 
 DP builds values from the following sources, in the order listed:
 
 1. Default values from `openapi/settings.yaml`.
-2. Project defaults for fields with the [`x-deckhouse-grantable-resource`](#defaulting-a-grantable-cluster-wide-resource-value-x-deckhouse-grantable-resource) extension.
+2. Project defaults for fields with the [`x-deckhouse-grantable-resource`](#defaulting-a-grantable-cluster-wide-resource-value) extension.
 3. User settings from `Application.spec.settings`. They override the values from the previous sources.
 4. Default values from `openapi/values.yaml` for the fields that are still not set.
 5. Values set by hooks.
 
-Templates get the result as `.Values`. The effective settings (sources 1–3) are also available to templates as `.Application.Settings`. After the settings are applied successfully, DP saves the effective settings in the `status.lastAppliedConfiguration` field of the Application.
+Templates get the result as `.Values`. The effective settings (sources 1–3) are also available to templates as `.Application.Settings`. After the settings are applied successfully, DP saves the effective settings in the [`status.lastAppliedConfiguration`](../../reference/api/cr.html#application-v1alpha1-status-lastappliedconfiguration) field of the Application.
 
 ## Validation
 
@@ -75,7 +75,7 @@ Fields declared only inside `oneOf`, `anyOf`, or `allOf` branches are also rejec
 | DP applies the settings | The same as in the previous row | The settings are not applied, the error is reported in the Application conditions |
 | A hook changes values | The `openapi/values.yaml` schema, including CEL rules | The hook fails |
 
-### CEL rules (x-deckhouse-validations)
+### CEL rules
 
 Both schemas support the `x-deckhouse-validations` extension with rules in the Common Expression Language (CEL). The syntax and the semantics are the same as in [module schemas](../module-development/structure/#validations-with-x-deckhouse-validations): a rule consists of `expression` and `message`, the value at the current level is available as `self`, and the previous value is available as `oldSelf`.
 
@@ -95,9 +95,9 @@ x-deckhouse-validations:
     message: "replicas must not exceed maxReplicas"
 ```
 
-Rules that reference `oldSelf` compare the new settings with the previously applied ones. Such rules are checked only when the settings of an installed application change: they are skipped on installation and when `spec.packageVersion` changes. To forbid changing a field after installation, use [`x-deckhouse-immutable`](#immutable-fields-x-deckhouse-immutable), which is checked on every update.
+Rules that reference `oldSelf` compare the new settings with the previously applied ones. Such rules are checked only when the settings of an installed application change: they are skipped on installation and when `spec.packageVersion` changes. To forbid changing a field after installation, use [`x-deckhouse-immutable`](#immutable-fields), which is checked on every update.
 
-### Defaulting a grantable cluster-wide resource value (x-deckhouse-grantable-resource)
+### Defaulting a grantable cluster-wide resource value
 
 A `settings` field of type `string` can be bound to a grantable cluster-wide resource managed by the [`multitenancy-manager`](/modules/multitenancy-manager/) (for example, a StorageClass).
 
@@ -131,7 +131,7 @@ Behavior:
 - An explicitly specified user value has higher priority than the project default.
 - If the custom resource definition (CRD) is absent, no catalog exists for the project, or the catalog has no default value, the field remains unchanged. No value is injected or validated.
 
-### Immutable fields (x-deckhouse-immutable)
+### Immutable fields
 
 Some settings should not be changed after the application configuration is applied. For example, changing a `storageClass` after volumes have been created either has no effect or can cause application failures. To prevent changes to the value of such a field after the application configuration has been successfully applied, add the `x-deckhouse-immutable: true` extension to it.
 
@@ -178,7 +178,7 @@ The web interface builds the application settings form from `openapi/settings.ya
 | `x-deckhouse-ui-advanced` | `true` | The field is hidden behind the advanced settings toggle. The extension is taken into account only for top-level fields |
 | `x-deckhouse-ui-validation-message` | String | The message shown under the field instead of the schema validation error, for example, instead of a regular expression that the value doesn't match |
 | `x-deckhouse-ui-resource-name` | Object with the `apiVersion` and `kind` fields and an optional `labelSelector` field | For a field of type `string`: a drop-down list with the names of resources of the specified kind from the application namespace. `labelSelector` is a standard Kubernetes label selector that narrows the list |
-| `x-deckhouse-enum-switch-settings` | List, declared on a `oneOf` branch | Confirmation dialogs shown before switching to another branch. See [the next section](#confirmation-before-switching-a-mode-x-deckhouse-enum-switch-settings) |
+| `x-deckhouse-enum-switch-settings` | List, declared on a `oneOf` branch | Confirmation dialogs shown before switching to another branch. See [the next section](#confirmation-before-switching-a-mode) |
 
 Example `openapi/settings.yaml` with form extensions:
 
@@ -210,15 +210,15 @@ properties:
     x-deckhouse-ui-advanced: true
 ```
 
-### Confirmation before switching a mode (x-deckhouse-enum-switch-settings)
+### Confirmation before switching a mode
 
 Some settings switches can't be reverted without data loss, for example, switching the storage of an application from an in-cluster one to an external one. To make the web interface ask for a confirmation before such a switch, add the `x-deckhouse-enum-switch-settings` extension to a `oneOf` branch. The confirmation is shown when the branch discriminator (the field whose `enum` value selects the branch) changes from a value of this branch to one of the target values.
 
 Each list item contains the following fields:
 
-- `to` — target discriminator values the confirmation applies to. The values are compared as strings, so boolean discriminators are specified as `"true"` and `"false"`.
-- `impact` — severity of the switch: `info` (default), `warning`, or `destructive`. The web interface applies a `destructive` switch only after an explicit acknowledgement and records it in the `applications.deckhouse.io/allow-destructive-settings-switch` annotation of the Application.
-- `messages` — dialog text in Markdown by language code (`en`, `ru`).
+- `to`: Target discriminator values the confirmation applies to. The values are compared as strings, so boolean discriminators are specified as `"true"` and `"false"`.
+- `impact`: Severity of the switch: `info` (default), `warning`, or `destructive`. The web interface applies a `destructive` switch only after an explicit acknowledgement and records it in the `applications.deckhouse.io/allow-destructive-settings-switch` annotation of the Application.
+- `messages`: Dialog text in Markdown by language code (`en`, `ru`).
 
 Example `openapi/settings.yaml` with `x-deckhouse-enum-switch-settings`:
 

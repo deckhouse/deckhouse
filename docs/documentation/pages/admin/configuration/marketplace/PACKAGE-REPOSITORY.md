@@ -1,10 +1,10 @@
 ---
 title: Package repositories
 permalink: en/admin/configuration/marketplace/package-repository.html
-description: "Connect a container registry with packages to Deckhouse Platform Marketplace using PackageRepository. Configure authentication, scan intervals, and monitor repository status."
+description: "Connect a package repository to Deckhouse Platform Marketplace using PackageRepository. Configure authentication, scan intervals, and monitor repository status."
 ---
 
-To connect Deckhouse Platform (DP) to a container registry with application packages, use the [PackageRepository](../../../reference/api/cr.html#packagerepository) resource. Once the resource is created, DP scans the registry and creates an [ApplicationPackageVersion](../../../reference/api/cr.html#applicationpackageversion) object for each discovered package version.
+To connect Deckhouse Platform (DP) to an application package repository, use the [PackageRepository](../../../reference/api/cr.html#packagerepository) resource. Once the resource is created, DP scans the repository and creates an [ApplicationPackageVersion](../../../reference/api/cr.html#applicationpackageversion) object for each discovered package version.
 
 Example of a PackageRepository manifest:
 
@@ -24,10 +24,10 @@ spec:
 
 ### Authentication
 
-Use one of the following methods to authenticate to the container registry:
+To authenticate to the package repository, use one of the following methods:
 
-- **`dockerCfg`**: Docker configuration in the `~/.docker/config.json` format, Base64-encoded. It must contain an `auths` entry for the registry host: DP uses the username and password from this entry.
-- **`login` + `password`**: explicit credentials. If both methods are specified, `login` and `password` take precedence.
+- [`dockerCfg`](../../../reference/api/cr.html#packagerepository-v1alpha1-spec-registry-dockercfg): Docker configuration in the `~/.docker/config.json` format, Base64-encoded. It must contain an `auths` entry for the repository host. DP uses the username and password from this entry.
+- [`login`](../../../reference/api/cr.html#packagerepository-v1alpha1-spec-registry-login) and [`password`](../../../reference/api/cr.html#packagerepository-v1alpha1-spec-registry-password): Explicit credentials. If both methods are specified, `login` and `password` take precedence.
 
   ```yaml
   spec:
@@ -38,7 +38,7 @@ Use one of the following methods to authenticate to the container registry:
       password: my-password
   ```
 
-If the registry uses a self-signed TLS certificate, specify the CA certificate in the `ca` parameter:
+If the repository uses a self-signed TLS certificate, specify the CA certificate in the [`ca`](../../../reference/api/cr.html#packagerepository-v1alpha1-spec-registry-ca) parameter:
 
 ```yaml
 spec:
@@ -54,7 +54,7 @@ spec:
 
 ### Scan interval
 
-By default, DP scans the registry every **6 hours**. To change the interval, set the `scanInterval` parameter. The minimum interval is 3 minutes:
+By default, DP scans the repository **every 6 hours**. To change the interval, set the [`scanInterval`](../../../reference/api/cr.html#packagerepository-v1alpha1-spec-scaninterval) parameter. The minimum interval is 3 minutes:
 
 ```yaml
 spec:
@@ -63,7 +63,7 @@ spec:
   scanInterval: 1h30m
 ```
 
-When scans start and how to start one manually is described in [Scanning](scanning.html#triggering-a-manual-scan).
+For details about starting a scanning or viewing results, refer to ["Scanning"](scanning.html).
 
 ## Checking repository status
 
@@ -79,9 +79,9 @@ Output columns:
 
 | Column | Description |
 |---|---|
-| `Phase` | Repository phase: `Active` after the first successful scan |
+| `Phase` | Repository phase. Displayed as `Active` after the first successful scan |
 | `Scan` | Time of the last successful scan |
-| `Repository` | Repository address (`spec.registry.repo`) |
+| `Repository` | Repository address ([`spec.registry.repo`](../../../reference/api/cr.html#packagerepository-v1alpha1-spec-registry-repo)) |
 | `Packages` | Number of packages in the repository |
 | `MSG` | Message of the `LastScanSucceeded` condition, for example, the error of the last scan |
 
@@ -91,17 +91,7 @@ For detailed information about the status, use the following command:
 d8 k get packagerepository <REPOSITORY_NAME> -o yaml
 ```
 
-Key status fields:
-
-| Field | Description |
-|---|---|
-| `status.phase` | Repository phase: `Active` after the first successful scan |
-| `status.lastScanTime` | Time of the last successful scan. A failed scan doesn't update it |
-| `status.lastChangeTime` | Time of the last scan that found at least one new version |
-| `status.lastNewVersions` | Number of new versions found in the last successful scan |
-| `status.packagesCount` | Total number of packages in the repository |
-| `status.packages[]` | List of packages with `name` and `type` fields |
-| `status.conditions` | Detailed conditions, including `LastScanSucceeded` |
+For status field descriptions, refer to the [PackageRepository](../../../reference/api/cr.html#packagerepository-v1alpha1-status) documentation.
 
 To check the result of the last scan, view the `LastScanSucceeded` condition:
 
@@ -110,11 +100,13 @@ d8 k get packagerepository <REPOSITORY_NAME> \
   -o jsonpath='{.status.conditions[?(@.type=="LastScanSucceeded")]}'
 ```
 
-The condition is `True` if the last scan succeeded. Otherwise, it is `False`, and its message contains the error.
+If the last scan completed successfully, the condition status is set to `True`. Otherwise, it is `False`, and the error details are available in the status message.
 
 ## Viewing discovered package versions
 
-After a successful scan, [ApplicationPackageVersion](../../../reference/api/cr.html#applicationpackageversion) objects appear in the cluster (you can use the short name `apv`):
+After a successful scan, [ApplicationPackageVersion](../../../reference/api/cr.html#applicationpackageversion) objects (or `apv` for short) are automatically created in the cluster.
+
+To print out a list of all created ApplicationPackageVersion objects, run the following command:
 
 ```bash
 d8 k get apv
@@ -138,5 +130,5 @@ d8 k get apv -l packages.deckhouse.io/package=redis
 ```
 
 {% alert level="info" %}
-`MetadataLoaded=True` means that the package's OpenAPI schema, description, and requirements were successfully loaded from the container registry. A package version with `MetadataLoaded=False` cannot be installed until the metadata is loaded.
+`MetadataLoaded=True` means that the package's OpenAPI schema, description, and requirements were successfully loaded from the repository. A package version with `MetadataLoaded=False` cannot be installed until the metadata is loaded.
 {% endalert %}

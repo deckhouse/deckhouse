@@ -71,9 +71,12 @@ var _ runtime.Object = (*ApplicationPackageVersion)(nil)
 // +kubebuilder:printcolumn:name="Message",type="string",priority=1,JSONPath=".status.conditions[?(@.type=='MetadataLoaded')].message"
 // +crd-enricher:raw:properties.apiVersion.description="APIVersion defines the versioned schema of this representation of an object.\nServers should convert recognized schemas to the latest internal value, and\nmay reject unrecognized values.\n\nMore info [in the Kubernetes documentation](https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources)"
 // +crd-enricher:raw:properties.kind.description="Kind is a string value representing the REST resource this object represents.\nServers may infer this from the endpoint the client submits requests to.\nCannot be updated.\nIn CamelCase.\n\nMore info [in the Kubernetes documentation](https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds)"
+// +crd-enricher:raw:properties.apiVersion.x-doc-skip=true
+// +crd-enricher:raw:properties.kind.x-doc-skip=true
+// +crd-enricher:raw:properties.metadata.x-doc-skip=true
 
 // +crd-enricher:deckhouse:documentation:examples={apiVersion: deckhouse.io/v1alpha1, kind: ApplicationPackageVersion, metadata: {name: example}, spec: {packageName: console, packageRepositoryName: deckhouse, packageVersion: v1.0.0}}
-// ApplicationPackageVersion represents a version of an application package.
+// ApplicationPackageVersion defines a version of an application package.
 type ApplicationPackageVersion struct {
 	metav1.TypeMeta `json:",inline"`
 	// Standard object's metadata.
@@ -81,10 +84,10 @@ type ApplicationPackageVersion struct {
 	// +optional
 	metav1.ObjectMeta `json:"metadata,omitempty"`
 
-	// Defines the application package version parameters.
+	// Application package version parameters.
 	Spec ApplicationPackageVersionSpec `json:"spec,omitempty"`
 
-	// Application package version status.
+	// Current state of the application package version.
 	Status ApplicationPackageVersionStatus `json:"status,omitempty"`
 }
 
@@ -113,39 +116,51 @@ type ApplicationPackageVersionSpec struct {
 // ApplicationPackageVersionStatus reports loaded package metadata, schemas and which
 // applications use the version.
 type ApplicationPackageVersionStatus struct {
-	// Generation of the spec this status was computed from; a lower value means the status
-	// has not caught up with the latest spec yet.
+	// Value of `.metadata.generation` for which the current status was calculated.
+	//
+	// If the value is lower than the current `.metadata.generation`, the status does not yet reflect the latest changes to the instance.
 	// +optional
 	// +kubebuilder:validation:Minimum=0
 	ObservedGeneration int64 `json:"observedGeneration,omitempty"`
 
-	// Metadata about the package such as description, requirements, etc.
+	// Application package version metadata, including the description, requirements, disable options, and version compatibility rules.
 	// +optional
 	PackageMetadata *ApplicationPackageVersionStatusMetadata `json:"packageMetadata,omitempty"`
 
-	// Schemas for validating settings and values passed to the package.
+	// OpenAPI schemas for validating user-defined application settings and final values passed to package hooks and templates.
 	// +optional
+	// +crd-enricher:raw:properties.settingsSchema.description="OpenAPI v3 schema for validating user-defined application settings in `Application.spec.settings`.\n\nThe schema is stored as an opaque object because it has a recursive JSON Schema structure. The controller validates it when loading the package metadata."
+	// +crd-enricher:raw:properties.valuesSchema.description="OpenAPI v3 schema for validating the final set of `values` passed to package hooks and templates.\n\nThe final set is formed by merging default values with user-defined application settings.\n\nThe schema is stored as an opaque object because it has a recursive JSON Schema structure. The controller validates it when loading the package metadata."
 	PackageSchemas *PackageVersionStatusSchemas `json:"packageSchemas,omitempty"`
 
-	// Conditions reflecting the latest observations of the package version state.
+	// Conditions reflecting the current state of the application package version.
 	// +optional
 	// +patchMergeKey=type
 	// +patchStrategy=merge
 	// +listType=map
 	// +listMapKey=type
+	// +crd-enricher:raw:items.description="Condition reflecting an aspect of the current state of the package version."
+	// +crd-enricher:raw:items.properties.lastTransitionTime.description="Time when the condition status last changed."
+	// +crd-enricher:raw:items.properties.message.description="Message with additional information about the condition.\n\nMay be empty."
+	// +crd-enricher:raw:items.properties.observedGeneration.description="Value of `.metadata.generation` for which the condition was set.\n\nIndicates whether the condition corresponds to the current generation of the instance."
+	// +crd-enricher:raw:items.properties.reason.description="Programmatic identifier indicating the reason for the last condition status change."
+	// +crd-enricher:raw:items.properties.status.description="Condition status."
+	// +crd-enricher:raw:items.properties.type.description="Condition type in CamelCase or in the format `foo.example.com/CamelCase`."
 	Conditions []metav1.Condition `json:"conditions,omitempty" patchStrategy:"merge" patchMergeKey:"type"`
 
-	// Information about applications that are using this package version.
+	// List of applications installed from this package version.
 	// +optional
 	UsedBy []ApplicationPackageVersionStatusInstance `json:"usedBy,omitempty"`
 
-	// Number of applications using this package version; kept equal to the length of usedBy.
+	// Number of applications installed from this package version.
+	//
+	// Equals the number of entries in `usedBy`.
 	// +optional
 	// +kubebuilder:validation:Minimum=0
 	UsedByCount int32 `json:"usedByCount,omitempty"`
 }
 
-// ApplicationPackageVersionStatusInstance identifies one application using the package version.
+// Application installed from the package version.
 type ApplicationPackageVersionStatusInstance struct {
 	// Namespace where the application is installed.
 	// +optional
@@ -158,38 +173,79 @@ type ApplicationPackageVersionStatusInstance struct {
 
 // ApplicationPackageVersionStatusMetadata is the package metadata loaded from the registry.
 type ApplicationPackageVersionStatusMetadata struct {
-	// Localized descriptions of the package.
+	// Localized descriptions of the application package.
 	// +optional
+	// +crd-enricher:raw:properties.en.description="English description of the application package."
+	// +crd-enricher:raw:properties.ru.description="Russian description of the application package."
 	Description *PackageDescription `json:"description,omitempty"`
 
 	// Parameters of package disable protection.
 	// +optional
+	// +crd-enricher:raw:properties.confirmation.description="Indicates whether confirmation is required to disable the application package."
+	// +crd-enricher:raw:properties.messages.description="Localized messages displayed when confirming package disabling."
+	// +crd-enricher:raw:properties.messages.properties.en.description="Disable confirmation message in English."
+	// +crd-enricher:raw:properties.messages.properties.ru.description="Disable confirmation message in Russian."
 	DisableOptions *PackageDisableOptions `json:"disableOptions,omitempty"`
 
-	// The category this package belongs to.
+	// Application package category.
 	// +optional
 	Category string `json:"category,omitempty"`
 
-	// The development stage of the package (e.g., Experimental, Preview, General Availability, Deprecated).
+	// Life cycle stage of the application package.
 	// +optional
 	// +crd-enricher:deckhouse:documentation:examples=[Experimental, Preview, General Availability, Deprecated]
 	Stage string `json:"stage,omitempty"`
 
-	// The system requirements for this package.
+	// System requirements for installing and running the application.
 	// +optional
+	// +crd-enricher:raw:properties.deckhouse.properties.constraint.description="Deckhouse Platform version constraint in SemVer format."
+	// +crd-enricher:raw:properties.kubernetes.properties.constraint.description="Kubernetes version constraint in SemVer format."
+	// +crd-enricher:raw:properties.modules.description="Deckhouse Platform module requirements: required and optional dependencies, groups of alternative modules, and groups of incompatible modules."
+	// +crd-enricher:raw:properties.modules.properties.mandatory.description="Modules required for the application to run.\n\nEach specified module must be enabled. If a version constraint is specified, the module version must satisfy it."
+	// +crd-enricher:raw:properties.modules.properties.mandatory.items.description="Required module with an optional version constraint in SemVer format.\n\nIf no constraint is specified, any version is allowed."
+	// +crd-enricher:raw:properties.modules.properties.mandatory.items.properties.constraint.description="Module version constraint in SemVer format."
+	// +crd-enricher:raw:properties.modules.properties.conditional.description="Optional modules with version constraints.\n\nThe module does not have to be enabled. If it is enabled, its version must satisfy the specified constraint.\n\nReplaces the deprecated `!optional` suffix from the v1 requirements format."
+	// +crd-enricher:raw:properties.modules.properties.conditional.items.description="Optional module with a version constraint in SemVer format.\n\nIf no constraint is specified, any version is allowed."
+	// +crd-enricher:raw:properties.modules.properties.conditional.items.properties.constraint.description="Module version constraint in SemVer format."
+	// +crd-enricher:raw:properties.modules.properties.anyOf.description="Groups of alternative modules.\n\nAt least one module in each group must be enabled. If a version constraint is specified for a module, its version must satisfy that constraint.\n\nThese groups do not add edges to the dependency graph."
+	// +crd-enricher:raw:properties.modules.properties.anyOf.items.description="Group of alternative modules, at least one of which must be enabled."
+	// +crd-enricher:raw:properties.modules.properties.anyOf.items.properties.modules.description="Alternative modules in the group."
+	// +crd-enricher:raw:properties.modules.properties.anyOf.items.properties.modules.items.description="Module with an optional version constraint in SemVer format.\n\nIf no constraint is specified, any version is allowed."
+	// +crd-enricher:raw:properties.modules.properties.anyOf.items.properties.modules.items.properties.constraint.description="Module version constraint in SemVer format."
+	// +crd-enricher:raw:properties.modules.properties.noneOf.description="Groups of incompatible modules.\n\nFor the application to run, none of the modules in these groups may be enabled with an incompatible version.\n\nIf no version constraint is specified, all versions of the module are considered incompatible. If a constraint is specified, only versions satisfying that constraint are considered incompatible.\n\nThese groups do not add edges to the dependency graph."
+	// +crd-enricher:raw:properties.modules.properties.noneOf.items.description="Group of incompatible modules.\n\nNone of the listed modules may be enabled with an incompatible version."
+	// +crd-enricher:raw:properties.modules.properties.noneOf.items.properties.modules.description="Incompatible modules in the group."
+	// +crd-enricher:raw:properties.modules.properties.noneOf.items.properties.modules.items.description="Module with an optional version constraint in SemVer format.\n\nIf no constraint is specified, all versions of the module are considered incompatible."
+	// +crd-enricher:raw:properties.modules.properties.noneOf.items.properties.modules.items.properties.constraint.description="Module version constraint in SemVer format defining the range of incompatible versions."
 	Requirements *PackageRequirements `json:"requirements,omitempty"`
 
-	// Licensing information for different editions.
+	// Application package licensing information for different editions.
 	// +optional
+	// +crd-enricher:raw:properties.editions.description="Licensing settings for different application package editions."
+	// +crd-enricher:unset:properties.editions.additionalProperties.description
+	// +crd-enricher:raw:properties.editions.additionalProperties.properties.available.description="Indicates whether the edition is available for use."
+	// +crd-enricher:raw:properties.editions.additionalProperties.properties.enabledInBundles.description="Bundles in which the package is enabled by default in this edition.\n\nNot used for application packages."
 	Licensing *PackageLicensing `json:"licensing,omitempty"`
 
-	// Information about changes in this version.
+	// Information about changes in this package version.
 	// +optional
+	// +crd-enricher:raw:properties.features.description="List of new features in this package version."
+	// +crd-enricher:raw:properties.fixes.description="List of bugs fixed in this package version."
 	Changelog *PackageChangelog `json:"changelog,omitempty"`
 
 	// Version compatibility rules for upgrades and downgrades.
 	// +kubebuilder:default={}
 	// +optional
+	// +crd-enricher:raw:properties.upgrade.description="Compatibility rules for upgrading to this application version."
+	// +crd-enricher:raw:properties.upgrade.properties.step.description="Compatibility rule step."
+	// +crd-enricher:raw:properties.upgrade.properties.step.properties.major.description="Number of major versions that can be skipped during an upgrade.\n\nThe `-1` value removes all limits, `0` forbids the change.\n\nDefaults to `0`."
+	// +crd-enricher:raw:properties.upgrade.properties.step.properties.minor.description="Number of minor versions that can be skipped during an upgrade.\n\nThe `-1` value removes all limits, `0` forbids the change.\n\nDefaults to `1`."
+	// +crd-enricher:raw:properties.upgrade.properties.step.properties.patches.description="Number of patch versions that can be skipped during an upgrade.\n\nThe `-1` value removes all limits, `0` forbids the change.\n\nDefaults to `-1`."
+	// +crd-enricher:raw:properties.downgrade.description="Compatibility rules for downgrading from this application version."
+	// +crd-enricher:raw:properties.downgrade.properties.step.description="Compatibility rule step."
+	// +crd-enricher:raw:properties.downgrade.properties.step.properties.major.description="Number of major versions that can be skipped during a downgrade.\n\nThe `-1` value removes all limits, `0` forbids the change.\n\nDefaults to `0`."
+	// +crd-enricher:raw:properties.downgrade.properties.step.properties.minor.description="Number of minor versions that can be skipped during a downgrade.\n\nThe `-1` value removes all limits, `0` forbids the change.\n\nDefaults to `0`."
+	// +crd-enricher:raw:properties.downgrade.properties.step.properties.patches.description="Number of patch versions that can be skipped during a downgrade.\n\nThe `-1` value removes all limits, `0` forbids the change.\n\nDefaults to `-1`."
 	Compatibility *PackageVersionCompatibilityRules `json:"versionCompatibilityRules,omitempty"`
 }
 

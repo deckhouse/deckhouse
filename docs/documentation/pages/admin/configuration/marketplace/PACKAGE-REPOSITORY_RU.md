@@ -1,12 +1,12 @@
 ---
 title: Репозитории пакетов
 permalink: ru/admin/configuration/marketplace/package-repository.html
-description: "Подключение хранилища образов с пакетами к Deckhouse Platform Marketplace с помощью PackageRepository. Настройка аутентификации, интервала сканирования и мониторинг статуса репозитория."
+description: "Подключение репозитория пакетов к Deckhouse Platform Marketplace с помощью PackageRepository. Настройка аутентификации, интервала сканирования и мониторинг статуса репозитория."
 lang: ru
 search: PackageRepository, package repository, container registry, репозиторий пакетов, хранилище образов, сканирование
 ---
 
-Чтобы подключить Deckhouse Platform (DP) к хранилищу образов с пакетами приложений, используйте ресурс [PackageRepository](../../../reference/api/cr.html#packagerepository). После создания ресурса DP сканирует хранилище образов и создаёт объект [ApplicationPackageVersion](../../../reference/api/cr.html#applicationpackageversion) для каждой обнаруженной версии пакета.
+Чтобы подключить Deckhouse Platform (DP) к репозиторию пакетов приложений, используйте ресурс [PackageRepository](../../../reference/api/cr.html#packagerepository). После создания ресурса DP сканирует репозиторий и создаёт объект [ApplicationPackageVersion](../../../reference/api/cr.html#applicationpackageversion) для каждой обнаруженной версии пакета.
 
 Пример манифеста PackageRepository:
 
@@ -26,10 +26,10 @@ spec:
 
 ### Аутентификация
 
-Для аутентификации в хранилище образов используйте один из следующих способов:
+Для аутентификации в репозитории используйте один из следующих способов:
 
-- **`dockerCfg`**: конфигурация Docker в формате `~/.docker/config.json` в кодировке Base64. Она должна содержать запись `auths` для хоста хранилища образов: DP использует имя пользователя и пароль из этой записи.
-- **`login` + `password`**: явно заданные учётные данные. Если указаны оба способа, используются `login` и `password`.
+- [`dockerCfg`](../../../reference/api/cr.html#packagerepository-v1alpha1-spec-registry-dockercfg) — конфигурация Docker в формате `~/.docker/config.json` в кодировке Base64. Она должна содержать запись `auths` для хоста репозитория. DP использует имя пользователя и пароль из этой записи;
+- [`login`](../../../reference/api/cr.html#packagerepository-v1alpha1-spec-registry-login) и [`password`](../../../reference/api/cr.html#packagerepository-v1alpha1-spec-registry-password) — явно заданные учётные данные. Если указаны оба способа, используются `login` и `password`.
 
   ```yaml
   spec:
@@ -40,7 +40,7 @@ spec:
       password: my-password
   ```
 
-Если хранилище образов использует самоподписанный TLS-сертификат, укажите CA-сертификат в параметре `ca`:
+Если в репозитории используется самоподписанный TLS-сертификат, укажите CA-сертификат [в параметре `ca`](../../../reference/api/cr.html#packagerepository-v1alpha1-spec-registry-ca):
 
 ```yaml
 spec:
@@ -56,7 +56,7 @@ spec:
 
 ### Интервал сканирования
 
-По умолчанию DP сканирует хранилище образов каждые **6 часов**. Чтобы изменить интервал, задайте параметр `scanInterval`. Минимальный интервал — 3 минуты:
+По умолчанию DP сканирует репозиторий **каждые 6 часов**. Чтобы изменить интервал, задайте [параметр `scanInterval`](../../../reference/api/cr.html#packagerepository-v1alpha1-spec-scaninterval). Минимальный интервал — 3 минуты. Пример настройки:
 
 ```yaml
 spec:
@@ -65,7 +65,7 @@ spec:
   scanInterval: 1h30m
 ```
 
-Когда запускается сканирование и как запустить его вручную, описано в разделе [«Сканирование»](scanning.html#запуск-сканирования-вручную).
+Подробнее о запуске и просмотре результатов сканирования — [в разделе «Сканирование»](scanning.html).
 
 ## Проверка состояния репозитория
 
@@ -81,9 +81,9 @@ d8 k get packagerepository <REPOSITORY_NAME>
 
 | Колонка | Описание |
 |---|---|
-| `Phase` | Фаза репозитория: `Active` после первого успешного сканирования |
+| `Phase` | Фаза репозитория. После первого успешного сканирования будет указано `Active` |
 | `Scan` | Время последнего успешного сканирования |
-| `Repository` | Адрес репозитория (`spec.registry.repo`) |
+| `Repository` | Адрес репозитория ([`spec.registry.repo`](../../../reference/api/cr.html#packagerepository-v1alpha1-spec-registry-repo)) |
 | `Packages` | Количество пакетов в репозитории |
 | `MSG` | Сообщение условия `LastScanSucceeded`, например, ошибка последнего сканирования |
 
@@ -93,30 +93,22 @@ d8 k get packagerepository <REPOSITORY_NAME>
 d8 k get packagerepository <REPOSITORY_NAME> -o yaml
 ```
 
-Ключевые поля статуса:
+Описание полей статуса приведено [в подразделе про ресурс PackageRepository](../../../reference/api/cr.html#packagerepository-v1alpha1-status).
 
-| Поле | Описание |
-|---|---|
-| `status.phase` | Фаза репозитория: `Active` после первого успешного сканирования |
-| `status.lastScanTime` | Время последнего успешного сканирования. Неудачное сканирование его не обновляет |
-| `status.lastChangeTime` | Время последнего сканирования, которое нашло хотя бы одну новую версию |
-| `status.lastNewVersions` | Количество новых версий, найденных при последнем успешном сканировании |
-| `status.packagesCount` | Общее количество пакетов в репозитории |
-| `status.packages[]` | Список пакетов с полями `name` и `type` |
-| `status.conditions` | Подробные условия, включая `LastScanSucceeded` |
-
-Чтобы проверить результат последнего сканирования, посмотрите условие `LastScanSucceeded`:
+Чтобы проверить результат последнего сканирования, проверьте условие `LastScanSucceeded`:
 
 ```bash
 d8 k get packagerepository <REPOSITORY_NAME> \
   -o jsonpath='{.status.conditions[?(@.type=="LastScanSucceeded")]}'
 ```
 
-Условие имеет статус `True`, если последнее сканирование прошло успешно. Иначе оно имеет статус `False`, а его сообщение содержит ошибку.
+Если последнее сканирование прошло успешно, у условия будет статус `True`. В обратном случае будет указан статус `False`, а детали ошибки будут указаны в сообщении статуса.
 
 ## Просмотр обнаруженных версий пакетов
 
-После успешного сканирования в кластере появляются объекты [ApplicationPackageVersion](../../../reference/api/cr.html#applicationpackageversion) (можно использовать сокращённое имя — `apv`):
+После успешного сканирования в кластере автоматически создаются объекты [ApplicationPackageVersion](../../../reference/api/cr.html#applicationpackageversion) (сокращённое имя — `apv`).
+
+Чтобы вывести список всех созданных объектов ApplicationPackageVersion, выполните следующую команду:
 
 ```bash
 d8 k get apv
@@ -140,5 +132,5 @@ d8 k get apv -l packages.deckhouse.io/package=redis
 ```
 
 {% alert level="info" %}
-`MetadataLoaded=True` означает, что OpenAPI-схема пакета, описание и требования успешно загружены из хранилища образов. Версию пакета с `MetadataLoaded=False` нельзя установить, пока не загружены метаданные.
+`MetadataLoaded=True` в выводе означает, что OpenAPI-схема пакета, описание и требования успешно загружены из репозитория. Версию пакета с `MetadataLoaded=False` нельзя установить, пока не загружены метаданные.
 {% endalert %}

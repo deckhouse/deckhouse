@@ -55,9 +55,12 @@ var _ runtime.Object = (*ApplicationPackage)(nil)
 // +kubebuilder:printcolumn:name="Age",type=date,JSONPath=`.metadata.creationTimestamp`
 // +crd-enricher:raw:properties.apiVersion.description="APIVersion defines the versioned schema of this representation of an object.\nServers should convert recognized schemas to the latest internal value, and\nmay reject unrecognized values.\n\nMore info [in the Kubernetes documentation](https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources)"
 // +crd-enricher:raw:properties.kind.description="Kind is a string value representing the REST resource this object represents.\nServers may infer this from the endpoint the client submits requests to.\nCannot be updated.\nIn CamelCase.\n\nMore info [in the Kubernetes documentation](https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds)"
+// +crd-enricher:raw:properties.apiVersion.x-doc-skip=true
+// +crd-enricher:raw:properties.kind.x-doc-skip=true
+// +crd-enricher:raw:properties.metadata.x-doc-skip=true
 
 // +crd-enricher:deckhouse:documentation:examples={apiVersion: deckhouse.io/v1alpha1, kind: ApplicationPackage, metadata: {name: example}}
-// ApplicationPackage represents information about available application package.
+// ApplicationPackage defines an application package available for installation.
 type ApplicationPackage struct {
 	metav1.TypeMeta `json:",inline"`
 	// Standard object's metadata.
@@ -65,33 +68,36 @@ type ApplicationPackage struct {
 	// +optional
 	metav1.ObjectMeta `json:"metadata,omitempty"`
 
-	// Application package status.
+	// Current state of the application package.
 	Status ApplicationPackageStatus `json:"status,omitempty"`
 }
 
 // ApplicationPackageStatus reports which applications use the package and where it is available.
 type ApplicationPackageStatus struct {
-	// Information about applications using this package.
+	// List of applications installed from this package.
 	// +optional
 	UsedBy []ApplicationPackageStatusInstance `json:"usedBy,omitempty"`
 
-	// Number of applications using this package; kept equal to the length of usedBy.
+	// Number of applications installed from this package.
+	//
+	// Equals the number of entries in `usedBy`.
 	// +optional
 	UsedByCount int32 `json:"usedByCount,omitempty"`
 
-	// List of repository names where this application package is available.
+	// List of repository names where the application package is available.
 	// +optional
 	AvailableRepositories []string `json:"availableRepositories,omitempty"`
 
-	// Versions the release channels of each repository point to, keyed by repository name and then
-	// by release channel name.
+	// Application package versions associated with release channels in each repository.
+	//
+	// The first-level key is the package repository name, and the second-level key is the release channel name.
 	// +optional
 	ReleaseChannels PackageReleaseChannels `json:"releaseChannels,omitempty"`
 }
 
-// ApplicationPackageStatusInstance identifies one application using the package, and at which version.
+// Application installed from the package.
 type ApplicationPackageStatusInstance struct {
-	// Used PackageRepository.
+	// Name of the PackageRepository from which the application was installed.
 	// +optional
 	RepositoryName string `json:"repositoryName,omitempty"`
 
@@ -103,7 +109,7 @@ type ApplicationPackageStatusInstance struct {
 	// +optional
 	Name string `json:"name,omitempty"`
 
-	// Version of the package used by this application.
+	// Package version used by the application.
 	// +optional
 	Version string `json:"version,omitempty"`
 }

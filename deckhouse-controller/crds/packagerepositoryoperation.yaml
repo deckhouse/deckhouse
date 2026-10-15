@@ -32,8 +32,8 @@ spec:
     name: v1alpha1
     schema:
       openAPIV3Schema:
-        description: PackageRepositoryOperation represents an operation to scan/update
-          a package repository.
+        description: PackageRepositoryOperation represents an operation for scanning
+          or updating a package repository.
         properties:
           apiVersion:
             description: |-
@@ -43,6 +43,7 @@ spec:
 
               More info [in the Kubernetes documentation](https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources)
             type: string
+            x-doc-skip: true
           kind:
             description: |-
               Kind is a string value representing the REST resource this object represents.
@@ -52,29 +53,33 @@ spec:
 
               More info [in the Kubernetes documentation](https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds)
             type: string
+            x-doc-skip: true
           metadata:
             type: object
+            x-doc-skip: true
           spec:
-            description: Defines parameters for the package repository operation.
+            description: Package repository operation parameters.
             properties:
               packageRepositoryName:
-                description: Name of the package repository to operate on.
+                description: Name of the package repository for which the operation
+                  is performed.
                 type: string
                 x-doc-examples:
                 - deckhouse
               type:
-                description: Type of operation to perform.
+                description: Operation type.
                 enum:
                 - Update
                 type: string
               update:
-                description: Configuration for update operations.
+                description: Update operation parameters.
                 properties:
                   fullScan:
-                    description: Whether to perform a full scan of the repository.
+                    description: Indicates whether to perform a full scan of the package
+                      repository.
                     type: boolean
                   timeout:
-                    description: Timeout for the operation.
+                    description: Operation timeout.
                     type: string
                     x-doc-examples:
                     - 5m
@@ -84,7 +89,7 @@ spec:
             - type
             type: object
           status:
-            description: Package repository operation status.
+            description: Current state of the package repository operation.
             properties:
               completionTime:
                 description: Time when the operation completed.
@@ -92,41 +97,34 @@ spec:
                 type: string
               conditions:
                 description: |-
-                  Conditions reflecting the latest observations of the operation state.
-                  The operation phase is determined by the `Completed` condition: while its status is `False`,
-                  the operation is in one of the intermediate phases (`Discover`, `Processing`);
-                  when the status is `True`, the operation has finished with reason `ScanSucceeded` or `ScanFailed`.
+                  Conditions reflecting the current state of the operation.
+
+                  The operation phase is determined by the `Completed` condition: while its status is `False`, the operation is in one of the intermediate phases (`Discover` or `Processing`). A `True` status indicates that the operation has completed with the `ScanSucceeded` or `ScanFailed` reason.
                 items:
-                  description: Condition contains details for one aspect of the current
-                    state of this API Resource.
+                  description: Condition reflecting an aspect of the current state
+                    of the operation.
                   properties:
                     lastTransitionTime:
-                      description: |-
-                        lastTransitionTime is the last time the condition transitioned from one status to another.
-                        This should be when the underlying condition changed.  If that is not known, then using the time when the API field changed is acceptable.
+                      description: Time when the condition status last changed.
                       format: date-time
                       type: string
                     message:
-                      description: |-
-                        message is a human readable message indicating details about the transition.
-                        This may be an empty string.
+                      description: Message with additional information about the condition.
                       maxLength: 32768
                       type: string
                     observedGeneration:
                       description: |-
-                        observedGeneration represents the .metadata.generation that the condition was set based upon.
-                        For instance, if .metadata.generation is currently 12, but the .status.conditions[x].observedGeneration is 9, the condition is out of date
-                        with respect to the current state of the instance.
+                        Value of `.metadata.generation` for which the condition was set.
+
+                        Indicates whether the condition corresponds to the current generation of the instance.
                       format: int64
                       minimum: 0
                       type: integer
                     reason:
                       description: |-
-                        reason contains a programmatic identifier indicating the reason for the condition's last transition.
-                        Producers of specific condition types may define expected values and meanings for this field,
-                        and whether the values are considered a guaranteed API.
-                        The value should be a CamelCase string.
-                        This field may not be empty.
+                        Programmatic identifier indicating the reason for the last condition status change.
+
+                        For the `Completed` condition, possible values are `Discover`, `Processing`, `ScanSucceeded`, and `ScanFailed`.
                       maxLength: 1024
                       minLength: 1
                       pattern: ^[A-Za-z]([A-Za-z0-9_,:]*[A-Za-z0-9_])?$
@@ -137,14 +135,17 @@ spec:
                       - Succeeded
                       - Failed
                     status:
-                      description: status of the condition, one of True, False, Unknown.
+                      description: Condition status.
                       enum:
                       - "True"
                       - "False"
                       - Unknown
                       type: string
                     type:
-                      description: type of condition in CamelCase or in foo.example.com/CamelCase.
+                      description: |-
+                        Condition type in CamelCase or in the format `foo.example.com/CamelCase`.
+
+                        This resource uses the `Completed` condition, which indicates whether the operation has completed.
                       maxLength: 316
                       pattern: ^([a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*/)?(([A-Za-z0-9][-A-Za-z0-9_.]*)?[A-Za-z0-9])$
                       type: string
@@ -164,8 +165,9 @@ spec:
                 properties:
                   discovered:
                     description: |-
-                      Packages discovered during the operation that are still waiting to be processed.
-                      The list is empty once the operation completes.
+                      Packages discovered during the operation and awaiting processing.
+
+                      The list is empty after the operation completes.
                     items:
                       properties:
                         name:
@@ -176,19 +178,18 @@ spec:
                       type: object
                     type: array
                   failed:
-                    description: List of packages that failed processing.
+                    description: Packages that could not be processed.
                     items:
                       properties:
                         errors:
-                          description: List of errors encountered while processing
-                            this package.
+                          description: Errors that occurred while processing the package.
                           items:
                             properties:
                               message:
-                                description: Message of the error.
+                                description: Error message.
                                 type: string
                               version:
-                                description: Version of the package that failed.
+                                description: Package version for which the error occurred.
                                 type: string
                             required:
                             - message
@@ -196,7 +197,7 @@ spec:
                             type: object
                           type: array
                         name:
-                          description: Name of the package that failed.
+                          description: Name of the package that could not be processed.
                           type: string
                       required:
                       - errors
@@ -205,44 +206,43 @@ spec:
                     type: array
                   newVersionsOverall:
                     description: |-
-                      Total number of newly found versions across all packages in this operation.
+                      Total number of new package versions discovered during the operation.
 
-                      A version is counted as new if its ApplicationPackageVersion or
-                      ModulePackageVersion did not exist in the cluster, or (ApplicationPackageVersion
-                      only) existed with the "not in the container registry" mark and its image was
-                      found in the registry during this operation.
+                      A version is considered new if the corresponding ApplicationPackageVersion or ModulePackageVersion did not exist in the cluster.
+
+                      An ApplicationPackageVersion is also considered new if it was previously marked as missing from the container registry, but its image was discovered during the current operation.
                     type: integer
                   processed:
-                    description: List of packages successfully processed.
+                    description: Successfully processed packages.
                     items:
                       properties:
                         foundVersions:
-                          description: Number of versions found during this operation.
+                          description: Number of package versions discovered during
+                            the operation.
                           type: integer
                         name:
                           description: Name of the processed package.
                           type: string
                         newVersions:
                           description: |-
-                            Number of newly found versions during this operation.
+                            Number of new package versions discovered during the operation.
 
-                            A version is counted as new if its ApplicationPackageVersion or
-                            ModulePackageVersion did not exist in the cluster, or (ApplicationPackageVersion
-                            only) existed with the "not in the container registry" mark and its image was
-                            found in the registry during this operation.
+                            A version is considered new if the corresponding ApplicationPackageVersion or ModulePackageVersion did not exist in the cluster.
+
+                            An ApplicationPackageVersion is also considered new if it was previously marked as missing from the container registry, but its image was discovered during the current operation.
                           type: integer
                         type:
-                          description: Type of the package.
+                          description: Package type.
                           type: string
                       required:
                       - name
                       type: object
                     type: array
                   processedOverall:
-                    description: Total number of packages processed.
+                    description: Total number of processed packages.
                     type: integer
                   total:
-                    description: Total number of packages found.
+                    description: Total number of discovered packages.
                     type: integer
                 type: object
               startTime:

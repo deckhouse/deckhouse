@@ -4,22 +4,35 @@ permalink: en/architecture/marketplace/
 description: "Architecture of the Deckhouse Platform Marketplace system. Package abstraction, delivery unit types, resource model, and subsystem overview."
 ---
 
-Marketplace is the subsystem in Deckhouse Platform (DP) that manages the lifecycle of delivery units called **Packages**. A Package can be either an **Application** (a user workload deployed into a namespace) or a **Module** (a cluster capability extension). Currently, only Applications are supported; Module support is planned for a future version.
+Marketplace is a package management system in Deckhouse Platform (DP). There are two types of packages:
 
-Marketplace is available starting from DP version 1.76.
+- **Application**: A user workload deployed into a namespace.
+- **Module**: A cluster capability extension.
+
+Currently, only Application packages are supported. Module support is planned for a future DP version.
+
+{% alert level="info" %}
+Marketplace is available in DP starting from version 1.76.
+{% endalert %}
+
+To learn about connecting package repositories and managing repository scanning, refer to ["Administration"](../../admin/configuration/marketplace/).
+
+To learn about installing and removing applications from Marketplace, as well as troubleshooting, refer to ["Usage"](../../user/marketplace/).
 
 ## Sections
 
-The [Concepts](concepts.html) section describes the Package abstraction, resource model, Application constraints, and the full scan-to-deploy lifecycle.
+The Marketplace documentation is divided into the following sections:
 
-The [Application development](application-development.html) section describes how to create an Application package from scratch: bootstrapping, project structure, `package.yaml`, local rendering and linting, build, CI/CD, and package artifacts in the container registry.
+- The ["Concepts"](concepts.html) section describes package types, resource model, Application constraints, and application installation steps.
 
-The [Application settings](settings.html) section describes the OpenAPI schemas of settings and values: validation, default values, and the extensions that control the settings form in the web interface.
+- The ["Application development"](application-development.html) section describes how to create an Application package from scratch: bootstrapping, project structure, `package.yaml`, local rendering and linting, build, CI/CD, and package artifacts in the container registry.
 
-The [Templates](templates.html) section describes the values available to Application templates, object naming, container images, Ingress, and application endpoints.
+- The ["Application settings"](settings.html) section describes the OpenAPI schemas of settings and values: validation, default values, and the extensions that control the settings form in the web interface.
 
-The [Nelm annotations](nelm-annotations.html) section covers the full set of Nelm annotations used in Application templates to control deployment order, resource lifecycle, tracking, and logging.
+- The ["Templates"](templates.html) section describes the values available to Application templates, object naming, container images, Ingress, and application endpoints.
 
-The [Hooks](hooks.html) section describes how to write Go hooks for Applications using the `ApplicationHookInput` type from module-sdk.
+- The ["Nelm annotations"](nelm-annotations.html) section covers the full set of Nelm annotations used in Application templates to control deployment order, resource lifecycle, tracking, and logging.
 
-The [Lifecycle and debugging](lifecycle.html) section describes how DP installs, updates, and deletes an Application, and which tools help to debug a package.
+- The ["Hooks"](hooks.html) section describes how to write Go hooks for Applications using the `ApplicationHookInput` type from module-sdk.
+
+- The ["Lifecycle and debugging"](lifecycle.html) section describes how DP installs, updates, and deletes an Application, and which tools help to debug a package.
