@@ -19,6 +19,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"os"
 	"os/exec"
 
 	dhlog "fox.flant.com/deckhouse/cluster-and-infrastructure/libs/lib-dhctl/pkg/logger"
@@ -109,6 +110,11 @@ type fakeExecutor struct {
 	planResp    fakeResponse
 	destroyResp fakeResponse
 	VMResource  string
+
+	// calls records what the runner asked for. A "plan" call carries the
+	// variables seen at plan time and writes them into the plan file, so an
+	// "apply" call shows which variables the applied plan was built from.
+	calls []string
 }
 
 func (e *fakeExecutor) IsVMChange(rc plan.ResourceChange) bool {
@@ -132,10 +138,16 @@ func (e *fakeExecutor) Init(ctx context.Context) error {
 }
 
 func (e *fakeExecutor) Apply(ctx context.Context, opts ApplyOpts) error {
+	planned, _ := os.ReadFile(opts.PlanPath)
+	e.calls = append(e.calls, "apply:"+string(planned))
 	return nil
 }
 
 func (e *fakeExecutor) Plan(ctx context.Context, opts PlanOpts) (int, error) {
+	variables, _ := os.ReadFile(opts.VariablesPath)
+	e.calls = append(e.calls, "plan:"+string(variables))
+	// Show reads showResp, so the plan file may hold anything.
+	_ = os.WriteFile(opts.OutPath, variables, 0o600)
 	return e.planResp.code, e.planResp.err
 }
 

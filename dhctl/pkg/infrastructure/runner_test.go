@@ -403,7 +403,10 @@ var destructivelyChanged = &plan.DestructiveChanges{
 	},
 }
 
-var destructiveChangesReportVar = &destructiveChangesReport{changes: destructivelyChanged, hasVMChanges: true}
+var destructiveChangesReportVar = &destructiveChangesReport{
+	changes:      destructivelyChanged,
+	hasVMChanges: true,
+}
 
 var destructivelyChangedWithoutVM = &plan.DestructiveChanges{
 	ResourcesDeleted: nil,
@@ -444,4 +447,233 @@ var destructivelyChangedWithoutVM = &plan.DestructiveChanges{
 var destructiveChangesReportWithoutVM = &destructiveChangesReport{
 	changes:      destructivelyChangedWithoutVM,
 	hasVMChanges: false,
+}
+
+func newVMDestructionTestRunner(t *testing.T) (*Runner, *fakeExecutor) {
+	t.Helper()
+
+	executor := &fakeExecutor{
+		showResp:   fakeResponse{resp: mustReadFile(t, "./mocks/checkplan/destructively_changed.json")},
+		planResp:   fakeResponse{code: infraexec.HasChangesExitCode},
+		VMResource: "yandex_compute_instance",
+	}
+
+	runner := newTestRunner(executor).
+		WithVariables([]byte("old variables")).
+		WithHook(&recordingHook{executor: executor})
+
+	// A test may clear variablesPath, so remove the file created here. planPath is
+	// read at cleanup time: a successful replan removes the previous plan itself.
+	variablesPath := runner.variablesPath
+	t.Cleanup(func() {
+		_ = os.Remove(variablesPath)
+		_ = os.Remove(runner.planPath)
+	})
+
+	require.NoError(t, runner.Plan(t.Context(), false, false))
+	require.True(t, runner.HasVMDestruction())
+
+	return runner, executor
+}
+
+type recordingHook struct {
+	executor *fakeExecutor
+}
+
+func (h *recordingHook) BeforeAction(context.Context, RunnerInterface) (bool, error) {
+	h.executor.calls = append(h.executor.calls, "before")
+	return false, nil
+}
+
+func (h *recordingHook) IsReady() error { return nil }
+
+func (h *recordingHook) AfterAction(context.Context, RunnerInterface, error) error {
+	h.executor.calls = append(h.executor.calls, "after")
+	return nil
+}
+
+func TestRunnerRefreshVariablesAndReplanBeforeVMDestruction(t *testing.T) {
+	runner, executor := newVMDestructionTestRunner(t)
+	oldPlanPath := runner.GetPlanPath()
+
+	runner.WithVariablesRefresher(func(context.Context) ([]byte, error) {
+		executor.planResp = fakeResponse{code: 0}
+		return []byte("new variables"), nil
+	})
+
+	require.NoError(t, runner.refreshVariablesAndReplanBeforeVMDestruction(t.Context()))
+
+	require.Equal(t, []string{"plan:old variables", "plan:new variables"}, executor.calls)
+	require.Equal(t, []byte("new variables"), runner.variablesData)
+	require.Equal(t, plan.HasNoChanges, runner.GetChangesInPlan())
+	require.False(t, runner.HasVMDestruction())
+	require.Nil(t, runner.GetPlanDestructiveChanges())
+	require.NotEqual(t, oldPlanPath, runner.GetPlanPath())
+	require.NoFileExists(t, oldPlanPath)
+}
+
+func TestRunnerRefreshVariablesFailures(t *testing.T) {
+	tests := []struct {
+		name          string
+		refresher     VariablesRefresher
+		emptyVarsPath bool
+		planErr       error
+		errContains   string
+		variables     string
+	}{
+		{
+			name:        "refresher error",
+			refresher:   func(context.Context) ([]byte, error) { return nil, errors.New("boom") },
+			errContains: "failed to refresh infrastructure variables before VM destruction: boom",
+			variables:   "old variables",
+		},
+		{
+			name:        "empty refreshed variables",
+			refresher:   func(context.Context) ([]byte, error) { return nil, nil },
+			errContains: "refreshed infrastructure variables are empty",
+			variables:   "old variables",
+		},
+		{
+			name:          "empty variables path",
+			refresher:     func(context.Context) ([]byte, error) { return []byte("new variables"), nil },
+			emptyVarsPath: true,
+			errContains:   "variables path is empty",
+			variables:     "old variables",
+		},
+		{
+			// The file on disk already holds the new variables, and so does the runner.
+			name:        "plan error",
+			refresher:   func(context.Context) ([]byte, error) { return []byte("new variables"), nil },
+			planErr:     errors.New("plan failed"),
+			errContains: "failed to rebuild infrastructure plan with refreshed variables: plan failed",
+			variables:   "new variables",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			runner, executor := newVMDestructionTestRunner(t)
+			refreshed := false
+			runner.WithVariablesRefresher(func(ctx context.Context) ([]byte, error) {
+				refreshed = true
+				return tt.refresher(ctx)
+			})
+			executor.planResp = fakeResponse{err: tt.planErr}
+			if tt.emptyVarsPath {
+				runner.variablesPath = ""
+			}
+
+			err := runner.refreshVariablesAndReplanBeforeVMDestruction(t.Context())
+			require.ErrorContains(t, err, tt.errContains)
+			require.Equal(t, []byte(tt.variables), runner.variablesData)
+			// Without a variables path the refresher must not even be called.
+			require.Equal(t, !tt.emptyVarsPath, refreshed)
+		})
+	}
+}
+
+func TestRunnerSkipsVariablesRefreshWithoutVMDestruction(t *testing.T) {
+	executor := &fakeExecutor{
+		showResp:   fakeResponse{resp: mustReadFile(t, "./mocks/checkplan/destructively_changed_without_vm.json")},
+		planResp:   fakeResponse{code: infraexec.HasChangesExitCode},
+		VMResource: "yandex_compute_instance",
+	}
+
+	refreshCalls := 0
+	runner := newTestRunner(executor).
+		WithVariables([]byte("old variables")).
+		WithVariablesRefresher(func(context.Context) ([]byte, error) {
+			refreshCalls++
+			return []byte("new variables"), nil
+		})
+
+	variablesPath := runner.variablesPath
+	t.Cleanup(func() {
+		_ = os.Remove(variablesPath)
+		_ = os.Remove(runner.planPath)
+	})
+
+	require.NoError(t, runner.Plan(t.Context(), false, false))
+	require.Equal(t, plan.HasDestructiveChanges, runner.GetChangesInPlan())
+	require.False(t, runner.HasVMDestruction())
+
+	require.NoError(t, runner.refreshVariablesAndReplanBeforeVMDestruction(t.Context()))
+	require.Zero(t, refreshCalls)
+}
+
+func TestRunnerApplyRefreshesVariablesBeforeConfirm(t *testing.T) {
+	refreshErr := errors.New("boom")
+
+	tests := []struct {
+		name             string
+		confirm          bool
+		dismissDestroy   bool
+		dismissChanges   bool
+		refreshErr       error
+		expectedErr      error
+		expectedCalls    []string
+		expectedConfirms int
+	}{
+		{
+			name:             "confirmed",
+			confirm:          true,
+			expectedCalls:    []string{"plan:old variables", "refresh", "plan:new variables", "before", "apply:new variables", "after"},
+			expectedConfirms: 1,
+		},
+		{
+			name:             "denied",
+			expectedCalls:    []string{"plan:old variables", "refresh", "plan:new variables"},
+			expectedConfirms: 1,
+		},
+		{
+			name:           "destructive changes dismissed",
+			dismissDestroy: true,
+			expectedCalls:  []string{"plan:old variables"},
+		},
+		{
+			name:           "changes dismissed",
+			dismissChanges: true,
+			expectedErr:    ErrInfrastructureApplyAborted,
+			expectedCalls:  []string{"plan:old variables"},
+		},
+		{
+			name:          "refresh error",
+			refreshErr:    refreshErr,
+			expectedErr:   refreshErr,
+			expectedCalls: []string{"plan:old variables", "refresh"},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			runner, executor := newVMDestructionTestRunner(t)
+
+			confirms := 0
+			runner.
+				WithSkipChangesOnDeny(true).
+				WithAutoDismissDestructiveChanges(tt.dismissDestroy).
+				WithAutoDismissChanges(tt.dismissChanges).
+				WithConfirm(func() *input.Confirmation {
+					confirms++
+					if tt.confirm {
+						return input.NewConfirmation().WithYesByDefault()
+					}
+					return input.NewConfirmation()
+				}).
+				WithVariablesRefresher(func(context.Context) ([]byte, error) {
+					executor.calls = append(executor.calls, "refresh")
+					return []byte("new variables"), tt.refreshErr
+				})
+
+			err := runner.Apply(t.Context())
+			if tt.expectedErr != nil {
+				require.ErrorIs(t, err, tt.expectedErr)
+			} else {
+				require.NoError(t, err)
+			}
+
+			require.Equal(t, tt.expectedCalls, executor.calls)
+			require.Equal(t, tt.expectedConfirms, confirms)
+		})
+	}
 }

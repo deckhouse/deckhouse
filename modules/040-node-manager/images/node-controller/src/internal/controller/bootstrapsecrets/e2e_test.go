@@ -337,9 +337,8 @@ var _ = Describe("Bootstrap secrets controller", func() {
 		}, eventuallyTimeout, eventuallyPoll).Should(Succeed())
 	})
 
-	// dhctl adds a master and waits for its address in apiserverEndpoints (entity/node.go:111).
-	// A new kube-apiserver Pod bumps no NodeGroup, so without a watch the address arrives only
-	// with the 30-minute resync and dhctl gives up first.
+	// A new kube-apiserver Pod does not update a NodeGroup, so without this watch
+	// its address reaches bootstrap Secrets only during the periodic resync.
 	It("re-renders the secrets when a kube-apiserver pod becomes ready", func() {
 		name := testenv.UniqueName("apiserver-pod")
 		createNodeGroup(staticNodeGroup(name))

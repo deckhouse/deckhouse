@@ -60,7 +60,8 @@ If you want to drop the cache and continue, please run dhctl with "--yes-i-want-
 )
 
 type (
-	StateChecker func([]byte) error
+	StateChecker       func([]byte) error
+	VariablesRefresher func(context.Context) ([]byte, error)
 )
 
 type destructiveChangesReport struct {
@@ -101,8 +102,9 @@ type Runner struct {
 	hasVMDestruction       bool
 	stateCache             state.Cache
 
-	stateSaver   *StateSaver
-	stateChecker StateChecker
+	stateSaver         *StateSaver
+	stateChecker       StateChecker
+	variablesRefresher VariablesRefresher
 
 	confirm func() *input.Confirmation
 	stopped bool
@@ -244,6 +246,11 @@ func (r *Runner) WithVariables(variablesData []byte) *Runner {
 
 	dhlog.FromContext(ctx).DebugContext(ctx, fmt.Sprintf("tfvars path: %s", r.variablesPath))
 	r.variablesData = variablesData
+	return r
+}
+
+func (r *Runner) WithVariablesRefresher(refresher VariablesRefresher) *Runner {
+	r.variablesRefresher = refresher
 	return r
 }
 
@@ -440,6 +447,56 @@ func (r *Runner) isSkipChanges(ctx context.Context) (bool, error) {
 	return false, r.runBeforeActionAndWaitReady(ctx)
 }
 
+// refreshVariablesAndReplanBeforeVMDestruction rebuilds a plan that destroys a VM
+// with fresh variables, so the new VM gets an up-to-date cloud config. Plans
+// that will not be applied anyway are left alone.
+func (r *Runner) refreshVariablesAndReplanBeforeVMDestruction(ctx context.Context) error {
+	if r.variablesRefresher == nil ||
+		r.changesInPlan != plan.HasDestructiveChanges ||
+		!r.hasVMDestruction ||
+		r.changeSettings.AutoDismissDestructive ||
+		r.changeSettings.AutoDismissChanges {
+		return nil
+	}
+
+	if r.variablesPath == "" {
+		return errors.New("cannot refresh infrastructure variables: variables path is empty")
+	}
+
+	variablesData, err := r.variablesRefresher(ctx)
+	if err != nil {
+		return fmt.Errorf("failed to refresh infrastructure variables before VM destruction: %w", err)
+	}
+
+	if len(variablesData) == 0 {
+		return errors.New("refreshed infrastructure variables are empty")
+	}
+
+	if err := os.WriteFile(r.variablesPath, variablesData, 0o600); err != nil {
+		return fmt.Errorf("failed to write refreshed infrastructure variables: %w", err)
+	}
+
+	r.variablesData = variablesData
+
+	dhlog.FromContext(ctx).InfoContext(
+		ctx,
+		"Infrastructure variables refreshed; rebuilding plan before VM destruction. The rebuilt plan is the one to be applied.",
+	)
+
+	oldPlanPath := r.planPath
+	if err := r.Plan(ctx, false, false); err != nil {
+		return fmt.Errorf("failed to rebuild infrastructure plan with refreshed variables: %w", err)
+	}
+
+	if oldPlanPath != "" && oldPlanPath != r.planPath {
+		if err := os.Remove(oldPlanPath); err != nil {
+			dhlog.FromContext(ctx).WarnContext(ctx, fmt.Sprintf("Can't remove previous plan file '%s': %v", oldPlanPath, err))
+		}
+	}
+
+	return nil
+}
+
 func (r *Runner) Apply(ctx context.Context) error {
 	if r.stopped {
 		return ErrRunnerStopped
@@ -454,6 +511,12 @@ func (r *Runner) Apply(ctx context.Context) error {
 	r.traceStateAndVars(span)
 
 	return dhlog.RunProcess(ctx, dhlog.FromContext(ctx), "infrastructure apply ...", func(ctx context.Context) error {
+		// The operator must confirm the plan that is applied, so the refreshed
+		// plan is built and shown before the question.
+		if err := r.refreshVariablesAndReplanBeforeVMDestruction(ctx); err != nil {
+			return err
+		}
+
 		skip, err := r.isSkipChanges(ctx)
 		if err != nil {
 			return err
@@ -540,6 +603,10 @@ func (r *Runner) Plan(ctx context.Context, destroy, noout bool) error {
 		return ErrRunnerStopped
 	}
 
+	r.changesInPlan = plan.HasNoChanges
+	r.planDestructiveChanges = nil
+	r.hasVMDestruction = false
+
 	ctx, span := telemetry.StartSpan(ctx, "runner.Plan")
 	defer span.End()
 	span.SetAttributes(
@@ -554,6 +621,14 @@ func (r *Runner) Plan(ctx context.Context, destroy, noout bool) error {
 		if err != nil {
 			return fmt.Errorf("Can't create temp file for plan: %w", err)
 		}
+		// Only the name is needed: the infrastructure utility writes the plan itself.
+		_ = tmpFile.Close()
+		// A failed plan never becomes r.planPath, so nothing else would remove its file.
+		defer func() {
+			if r.planPath != tmpFile.Name() {
+				_ = os.Remove(tmpFile.Name())
+			}
+		}()
 
 		exitCode, err := r.execInfrastructureUtility(ctx, func(ctx context.Context) (int, error) {
 			return r.infraExecutor.Plan(ctx, PlanOpts{

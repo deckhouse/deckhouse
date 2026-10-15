@@ -134,8 +134,9 @@ func (r *Reconciler) SetupWatches(w register.Watcher) {
 	w.Watches(&corev1.Secret{}, cloudprovider.NodeGroupHandler(r.Client),
 		builder.WithPredicates(cloudprovider.RegistrationSecretPredicate()))
 
-	// apiserverEndpoints comes from these two sources (bashiblecontext.ReadEndpoints), and dhctl
-	// waits for a new master to appear there. Same watches as nodegroup/bashiblecontext/controller.go.
+	// apiserverEndpoints comes from these two sources (bashiblecontext.ReadEndpoints).
+	// Reconcile bootstrap Secrets whenever either source changes.
+	// Same watches as nodegroup/bashiblecontext/controller.go.
 	w.Watches(&corev1.Pod{}, handler.EnqueueRequestsFromMapFunc(r.allNodeGroups),
 		builder.WithPredicates(predicate.NewPredicateFuncs(func(obj client.Object) bool {
 			return nodecommon.IsAPIServerPod(obj)
