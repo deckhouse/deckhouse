@@ -20,19 +20,60 @@ admission-policy-engine:
         Disabling the module deletes the webhook configurations before Gatekeeper, so the uninstall no
         longer blocks `exec` and the Deckhouse queue.
       pull_request: https://fox.flant.com/deckhouse/deckhouse/-/merge_requests/510
+    - summary: >-
+        Fixed CVE-2026-78659, CVE-2026-78660, CVE-2026-78663, CVE-2026-78669 and CVE-2026-97032 in `golang.org/x/net`
+        and CVE-2026-56851 in `golang.org/x/text`.
+      pull_request: https://fox.flant.com/deckhouse/deckhouse/-/merge_requests/733
 candi:
   fixes:
     - summary: >-
         Restored the lost `kubelet-disable-k-panic-check` patch for k8s 1.35 and 1.36, so kubelet no longer
         enforces `kernel.panic=10` on these versions.
       pull_request: https://fox.flant.com/deckhouse/deckhouse/-/merge_requests/426
+    - summary: >-
+        New nodes reboot on the first bashible run again when a step requests it. Only the first master
+        skips this reboot.
+      pull_request: https://fox.flant.com/deckhouse/deckhouse/-/merge_requests/643
 cert-manager:
   features:
     - summary: >-
         Add the `highAvailability` parameter to control the HA mode of the module independently of the
         global setting.
       pull_request: https://fox.flant.com/deckhouse/deckhouse/-/merge_requests/504
+    - summary: >-
+        `cert-manager` uses the cluster-wide proxy server from the `proxy` parameter of `ClusterConfiguration`.
+      pull_request: https://fox.flant.com/deckhouse/deckhouse/-/merge_requests/688
+      impact: >-
+        In a cluster with the `proxy` parameter of `ClusterConfiguration` set, the `cert-manager` controller
+
+        sends requests to the ACME server, HashiCorp Vault and the DNS provider APIs through the proxy
+        server.
+
+        The `HTTP-01` self-check also requests the domain through the proxy server.
+
+        If the proxy server cannot reach the issuer or the public address of the cluster, add these addresses
+        to `noProxy`.
+  fixes:
+    - summary: >-
+        The webhook keeps serving requests during a rollout and during a rotation of its CA, and the controller
+        waits for the API server at startup instead of restarting.
+      pull_request: https://fox.flant.com/deckhouse/deckhouse/-/merge_requests/680
+    - summary: >-
+        The `spec.certificateOwnerRef` field of a certificate no longer causes an endless Secret update
+        loop when it differs from the global owner reference setting that `cleanupOrphanSecrets` enables
+        in the `CertManager` HTTPS mode, and is applied to an already issued Secret.
+      pull_request: https://fox.flant.com/deckhouse/deckhouse/-/merge_requests/688
+    - summary: >-
+        Fixed CVE-2026-78659, CVE-2026-78660, CVE-2026-78663, CVE-2026-78669 and CVE-2026-97032 in `golang.org/x/net`.
+      pull_request: https://fox.flant.com/deckhouse/deckhouse/-/merge_requests/732
+chrony:
+  fixes:
+    - summary: Bump golang.org/x/crypto in chrony_exporter to fix CVE-2026-56855, CVE-2026-78662.
+      pull_request: https://fox.flant.com/deckhouse/deckhouse/-/merge_requests/544
 cloud-provider-dvp:
+  features:
+    - summary: Makes CCM create NPs on every lb creation while using networkPolicy - Restricted
+      pull_request: https://fox.flant.com/deckhouse/deckhouse/-/merge_requests/656
   fixes:
     - summary: >-
         The CSI driver reports a volume as detached from a node only after the disk is released by the
@@ -50,6 +91,27 @@ cloud-provider-vsphere:
   fixes:
     - summary: Fixed master node creation when the datastore is set as a path with parent folders.
       pull_request: https://fox.flant.com/deckhouse/deckhouse/-/merge_requests/361
+cloud-provider-yandex:
+  fixes:
+    - summary: >-
+        Restored `additionalSubnets`, `networkType` and VM labels (`nodes.parameters.labels`, `additionalLabels`)
+        for CAPI-managed Yandex nodes.
+      pull_request: https://fox.flant.com/deckhouse/deckhouse/-/merge_requests/671
+      impact: >-
+        Machines are not recreated on update. Machines created before the update keep the standard network
+        type and no labels until the NodeGroup is rolled out (change a rolling InstanceClass field or
+        set the `manual-rollout-id` annotation on the NodeGroup). Machines stuck in provisioning because
+        of `additionalSubnets` become ready without recreation.
+cloud-provider-zvirt:
+  fixes:
+    - summary: VMs are now actually removed from zVirt on NodeGroup scale-down and cluster destroy
+      pull_request: https://fox.flant.com/deckhouse/deckhouse/-/merge_requests/205
+cni-cilium:
+  features:
+    - summary: >-
+        Added an alert and a release requirement that block the Cilium update while CiliumNetworkPolicy
+        or CiliumClusterwideNetworkPolicy objects use the `fromRequires` or `toRequires` fields.
+      pull_request: https://fox.flant.com/deckhouse/deckhouse/-/merge_requests/687
 common:
   fixes:
     - summary: >-
@@ -57,14 +119,31 @@ common:
         or `test` operation lacks the `value` field; such requests are now rejected with a validation
         error.
       pull_request: https://fox.flant.com/deckhouse/deckhouse/-/merge_requests/324
+    - summary: >-
+        kube-apiserver returns a single short validation error for an invalid `fieldManager` instead of
+        an error for every invalid character.
+      pull_request: https://fox.flant.com/deckhouse/deckhouse/-/merge_requests/541
+    - summary: >-
+        Fixed CVE-2026-78659, CVE-2026-78660, CVE-2026-78663, CVE-2026-78669 and CVE-2026-97032 in `golang.org/x/net`
+        in kube-rbac-proxy.
+      pull_request: https://fox.flant.com/deckhouse/deckhouse/-/merge_requests/732
 control-plane-manager:
   fixes:
     - summary: Keep `resource.k8s.io/v1beta1` enabled in `kube-apiserver` 1.34.
       pull_request: https://fox.flant.com/deckhouse/deckhouse/-/merge_requests/415
 deckhouse:
+  features:
+    - summary: >-
+        ModuleSource scans skip unchanged release channels using a cheap registry HEAD request instead
+        of pulling the whole release image every cycle.
+      pull_request: https://fox.flant.com/deckhouse/deckhouse/-/merge_requests/745
   fixes:
     - summary: Fixed CVEs in d8 CLI dependencies by updating d8 to v0.33.25.
       pull_request: https://fox.flant.com/deckhouse/deckhouse/-/merge_requests/471
+    - summary: Restore kubectl plugin lookup in d8 k and d8 kubectl
+      pull_request: https://fox.flant.com/deckhouse/deckhouse/-/merge_requests/588
+    - summary: Update runtime libraries and VEX exceptions for known vulnerabilities
+      pull_request: https://fox.flant.com/deckhouse/deckhouse/-/merge_requests/664
 deckhouse-controller:
   features:
     - summary: >-
@@ -90,7 +169,16 @@ dhctl:
         Destroy and abort of a static cluster now fail instead of reporting success when a control-plane
         node was not cleaned because of an SSH error or cleanup timeout.
       pull_request: https://fox.flant.com/deckhouse/deckhouse/-/merge_requests/333
+    - summary: >-
+        Bump golang.org/x/crypto and OpenTelemetry to fix CVE-2026-56855, CVE-2026-78662, CVE-2026-81870,
+        CVE-2026-81871, CVE-2026-81872.
+      pull_request: https://fox.flant.com/deckhouse/deckhouse/-/merge_requests/544
 docs:
+  features:
+    - summary: Add user-authz module architecture section.
+      pull_request: https://fox.flant.com/deckhouse/deckhouse/-/merge_requests/155
+    - summary: Add service-with-healthchecks module architecture section.
+      pull_request: https://fox.flant.com/deckhouse/deckhouse/-/merge_requests/265
   fixes:
     - summary: Correct typo in managed-rabbit key in modules library.
       pull_request: https://fox.flant.com/deckhouse/deckhouse/-/merge_requests/360
@@ -104,6 +192,26 @@ docs:
       pull_request: https://fox.flant.com/deckhouse/deckhouse/-/merge_requests/405
     - summary: Enhance tab shortcode functionality.
       pull_request: https://fox.flant.com/deckhouse/deckhouse/-/merge_requests/462
+    - summary: Remove raw tags from usage documentation.
+      pull_request: https://fox.flant.com/deckhouse/deckhouse/-/merge_requests/625
+    - summary: Show expand icon on non-collapsible top-level CRD parameters in the documentation.
+      pull_request: https://fox.flant.com/deckhouse/deckhouse/-/merge_requests/641
+    - summary: Added experimental module enable note to the lifecycle badge.
+      pull_request: https://fox.flant.com/deckhouse/deckhouse/-/merge_requests/492
+    - summary: Added registry module port 5001 to Deckhouse ports documentation
+      pull_request: https://fox.flant.com/deckhouse/deckhouse/-/merge_requests/506
+    - summary: Rendered all versions from oss.yaml versions array.
+      pull_request: https://fox.flant.com/deckhouse/deckhouse/-/merge_requests/705
+    - summary: Update hugo to 0.168.0 in docs-builder
+      pull_request: https://fox.flant.com/deckhouse/deckhouse/-/merge_requests/708
+    - summary: Page with DNS names full list was added in to reference.
+      pull_request: https://fox.flant.com/deckhouse/deckhouse/-/merge_requests/755
+documentation:
+  features:
+    - summary: The in-cluster documentation now includes the guides.
+      pull_request: https://fox.flant.com/deckhouse/deckhouse/-/merge_requests/519
+    - summary: Documentation updates for DP CSE 1.77.
+      pull_request: https://fox.flant.com/deckhouse/deckhouse/-/merge_requests/657
 helm_lib:
   fixes:
     - summary: >-
@@ -119,6 +227,10 @@ helm_lib:
         to
 
         the recommender's 64Mi quantum.
+istio:
+  fixes:
+    - summary: Fixed CVEs in istio, kiali and operator images (golang.org/x/net, golang.org/x/text).
+      pull_request: https://fox.flant.com/deckhouse/deckhouse/-/merge_requests/699
 multitenancy-manager:
   features:
     - summary: >-
@@ -155,6 +267,11 @@ multitenancy-manager:
         The Project conversions of the next release are registered in advance, so reads and writes of
         projects keep working while webhook-handler is updated in HA mode.
       pull_request: https://fox.flant.com/deckhouse/deckhouse/-/merge_requests/214
+    - summary: >-
+        Fixed CVE-2026-78659, CVE-2026-78660, CVE-2026-78663, CVE-2026-78669 and CVE-2026-97032 in `golang.org/x/net`.
+      pull_request: https://fox.flant.com/deckhouse/deckhouse/-/merge_requests/733
+    - summary: The webhooks no longer leave zombie processes in webhook-handler until it runs out of pids.
+      pull_request: https://fox.flant.com/deckhouse/deckhouse/-/merge_requests/751
 node-manager:
   fixes:
     - summary: >-
@@ -169,10 +286,50 @@ node-manager:
         Fixed CVEs in cluster-autoscaler Go dependencies (OpenTelemetry, and grpc and x/crypto for Kubernetes
         1.31).
       pull_request: https://fox.flant.com/deckhouse/deckhouse/-/merge_requests/487
+    - summary: >-
+        A StaticInstance whose StaticMachine was deleted is returned to Pending and becomes available
+        for bootstrapping again instead of staying out of the pool forever.
+      pull_request: https://fox.flant.com/deckhouse/deckhouse/-/merge_requests/457
+    - summary: >-
+        Fixed cluster-autoscaler not scaling CAPI node groups up from zero for pods requesting ephemeral
+        storage, and putting the whole scale-up of a multi-zone node group into a single zone.
+      pull_request: https://fox.flant.com/deckhouse/deckhouse/-/merge_requests/576
+    - summary: Bump golang.org/x/crypto and OpenTelemetry in bashible-apiserver and capi-controller-manager.
+      pull_request: https://fox.flant.com/deckhouse/deckhouse/-/merge_requests/544
+    - summary: >-
+        Fixed the CAPI MachineHealthCheck replacing cloud nodes that take longer than 5 minutes to become
+        Ready after registering, and limited remediation to when at most half of the CAPI machines are
+        unhealthy.
+      pull_request: https://fox.flant.com/deckhouse/deckhouse/-/merge_requests/584
+      impact: >-
+        The cloud MachineHealthCheck is updated in existing clusters. A node in Ready=False is replaced
+        after 10 minutes instead of 5 (Ready=Unknown still after 5), and remediation stops while more
+        than 50% of the cluster's CAPI machines are unhealthy.
+    - summary: >-
+        Fixed node-manager failing to apply its values in the BE, SE, SE+, EE, FE and CSE editions when
+        a CAPI node group has a known boot disk size.
+      pull_request: https://fox.flant.com/deckhouse/deckhouse/-/merge_requests/690
+registry:
+  fixes:
+    - summary: Build docker-auth from the new fork repository at flant-1.0.0, which fixes CVE-2026-81870.
+      pull_request: https://fox.flant.com/deckhouse/deckhouse/-/merge_requests/544
 registrypackages:
   fixes:
     - summary: Fixed CVEs in crictl 1.31.
       pull_request: https://fox.flant.com/deckhouse/deckhouse/-/merge_requests/386
+service-with-healthchecks:
+  fixes:
+    - summary: Go deps are updated.
+      pull_request: https://fox.flant.com/deckhouse/deckhouse/-/merge_requests/734
+      impact: The controller and agents will be restarted.
+terraform-manager:
+  fixes:
+    - summary: Bump opentofu to 1.12.7 to fix CVE-2026-56855, CVE-2026-78662.
+      pull_request: https://fox.flant.com/deckhouse/deckhouse/-/merge_requests/544
+tools:
+  fixes:
+    - summary: Remove d8-gpu namespace from integrity check.
+      pull_request: https://fox.flant.com/deckhouse/deckhouse/-/merge_requests/634
 user-authn:
   fixes:
     - summary: >-
@@ -180,6 +337,32 @@ user-authn:
         6 hours or more is replaced with `5h59m` by the next settings version, and what lowering it does
         to DexAuthenticator sessions and issued ID tokens.
       pull_request: https://fox.flant.com/deckhouse/deckhouse/-/merge_requests/218
+    - summary: >-
+        Restrict the Job that issues the `basic-auth-proxy` certificate to the read-only front-proxy CA
+        files and cover it with a SecurityPolicyException.
+      pull_request: https://fox.flant.com/deckhouse/deckhouse/-/merge_requests/523
+    - summary: >-
+        A DexClient or a DexAuthenticator in a namespace whose name YAML reads as a number or a boolean
+        no longer breaks the user-authn release.
+      pull_request: https://fox.flant.com/deckhouse/deckhouse/-/merge_requests/604
+    - summary: >-
+        A DexAuthenticator with a name longer than 45 characters no longer logs its users out on every
+        run of the hook.
+      pull_request: https://fox.flant.com/deckhouse/deckhouse/-/merge_requests/621
+    - summary: >-
+        The DexAuthenticator validating webhook no longer logs a jq error for an object without additionalApplications.
+      pull_request: https://fox.flant.com/deckhouse/deckhouse/-/merge_requests/626
+    - summary: >-
+        Errors the webhook scripts of user-authn, user-authz and multitenancy-manager write to stderr
+        are logged as warnings instead of info messages.
+      pull_request: https://fox.flant.com/deckhouse/deckhouse/-/merge_requests/626
+    - summary: Protected applications keep serving users during a short dex outage and during restarts.
+      pull_request: https://fox.flant.com/deckhouse/deckhouse/-/merge_requests/678
+    - summary: >-
+        Fixed CVE-2026-78659, CVE-2026-78660, CVE-2026-78663, CVE-2026-78669 and CVE-2026-97032 in `golang.org/x/net`.
+      pull_request: https://fox.flant.com/deckhouse/deckhouse/-/merge_requests/731
+    - summary: The webhooks no longer leave zombie processes in webhook-handler until it runs out of pids.
+      pull_request: https://fox.flant.com/deckhouse/deckhouse/-/merge_requests/751
 user-authz:
   features:
     - summary: >-
@@ -230,3 +413,20 @@ user-authz:
         next role model does not collect, or that loses its RoleBindings in the namespaces of the modules,
         and the FAQ describes how to prepare such a role before the update without losing access.
       pull_request: https://fox.flant.com/deckhouse/deckhouse/-/merge_requests/240
+    - summary: >-
+        An AuthorizationRule in a namespace whose name YAML reads as a number, a boolean or null no longer
+        breaks the module's bindings.
+      pull_request: https://fox.flant.com/deckhouse/deckhouse/-/merge_requests/553
+    - summary: >-
+        Managers who assign roles by range can again change DexProviders, UserOperations, Users and Groups
+        of identities that hold a ClusterAuthorizationRule.
+      pull_request: https://fox.flant.com/deckhouse/deckhouse/-/merge_requests/619
+    - summary: The authorization webhook answers the requests in flight when it restarts instead of denying
+        them.
+      pull_request: https://fox.flant.com/deckhouse/deckhouse/-/merge_requests/678
+    - summary: >-
+        Fixed CVE-2026-78659, CVE-2026-78660, CVE-2026-78663, CVE-2026-78669 and CVE-2026-97032 in `golang.org/x/net`
+        and CVE-2026-56851 in `golang.org/x/text`.
+      pull_request: https://fox.flant.com/deckhouse/deckhouse/-/merge_requests/731
+    - summary: The webhooks no longer leave zombie processes in webhook-handler until it runs out of pids.
+      pull_request: https://fox.flant.com/deckhouse/deckhouse/-/merge_requests/751
