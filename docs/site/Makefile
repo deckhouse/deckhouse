@@ -7,7 +7,7 @@ WERF_BIN := $(ROOT_DIR)/bin/werf
 MODULE_PATH ?=
 CHANNEL ?= alpha
 MODULE_VERSION ?= v0.1.0
-HUGO_IMAGE ?= ghcr.io/gohugoio/hugo:v0.163.3
+HUGO_IMAGE ?= ghcr.io/gohugoio/hugo:v0.168.0
 AI_EXPORT_SRC ?= backends/docs-builder-template
 
 WERF_REPO ?= :local

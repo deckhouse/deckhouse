@@ -112,7 +112,7 @@ func (b *hugoBuilder) buildSites(ctx context.Context) error {
 	defer mu.Unlock()
 
 	// Last cancellation checkpoint before the heavy render. hugo's
-	// HugoSites.Build takes no context (v0.163.3 builds under an internal
+	// HugoSites.Build takes no context (v0.168.0 builds under an internal
 	// context.Background), so once this call starts it runs to completion;
 	// guarding here keeps a canceled request from kicking off a fresh pass.
 	if err := ctx.Err(); err != nil {
@@ -161,7 +161,7 @@ func (b *hugoBuilder) copyStaticTo(sourceFs *filesystems.SourceFilesystem) (uint
 		syncer.DestFs = conf.fs.PublishDirStatic
 		// Now that we are using a unionFs for the static directories
 		// We can effectively clean the publishDir on initial sync
-		syncer.Delete = conf.configs.Base.CleanDestinationDir
+		syncer.Delete = conf.configs.Base.Build.CleanDestinationDir.Enable
 	})
 
 	syncer.SrcFs = fs
@@ -254,7 +254,7 @@ func (b *hugoBuilder) fullBuild(ctx context.Context) error {
 	// and it does so at the end of copyStatic() call.
 	var cleanDestinationDir bool
 	b.withConf(func(conf *commonConfig) {
-		cleanDestinationDir = conf.configs.Base.CleanDestinationDir
+		cleanDestinationDir = conf.configs.Base.Build.CleanDestinationDir.Enable
 	})
 	if cleanDestinationDir {
 		if err := copyStaticFunc(); err != nil {

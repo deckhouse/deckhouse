@@ -1,5 +1,7 @@
 
-cleanDestinationDir: true
+build:
+  cleanDestinationDir:
+    enable: true
 
 sectionPagesMenu: main
 
