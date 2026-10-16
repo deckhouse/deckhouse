@@ -210,6 +210,7 @@ done
 # Remove Users
 log_info "Removing users"
 userdel deckhouse 2>/dev/null
+groupdel deckhouse 2>/dev/null
 groupdel nodeadmin 2>/dev/null
 grep "created by deckhouse" /etc/passwd | cut -d: -f1 | xargs -r -n1 userdel 2>/dev/null
 
