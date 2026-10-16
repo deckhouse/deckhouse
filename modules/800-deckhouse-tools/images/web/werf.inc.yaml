@@ -80,7 +80,8 @@ shell:
     - ssh-keyscan -H ${PRIVATE_REPO} >> ~/.ssh/known_hosts
 
     - cd /src
-    - task build:dist:all
+    # Build with the pinned version: git describe in the clone can pick another tag on the same commit.
+    - task build:dist:all version={{ .CandiVersionMap.d8.d8CliVersion }}
     - mkdir -p /app/files/d8-cli
     - mv dist/{{ .CandiVersionMap.d8.d8CliVersion }}/* /app/files/d8-cli
     - jq '[.[] | .version="{{ .CandiVersionMap.d8.d8CliVersion }}"]' /static/tools.json > /app/tools.json

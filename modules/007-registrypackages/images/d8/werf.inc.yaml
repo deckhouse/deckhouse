@@ -70,7 +70,8 @@ shell:
   - ssh-keyscan -H ${PRIVATE_REPO} >> ~/.ssh/known_hosts
 
   - cd /src/deckhouse-cli
-  - task build:dist:linux:amd64
+  # Build with the pinned version: git describe in the clone can pick another tag on the same commit.
+  - task build:dist:linux:amd64 version={{ .CandiVersionMap.d8.d8CliVersion }}
   - mv ./dist/{{ .CandiVersionMap.d8.d8CliVersion }}/linux-amd64/bin/d8 /d8
   - mv /src/scripts/* /
   - chmod +x /d8 /install /uninstall
